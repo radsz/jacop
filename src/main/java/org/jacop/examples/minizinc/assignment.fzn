@@ -1,0 +1,8 @@
+predicate jacop_networkflow(array [int] of int: arc, array [int] of var int: flow, array [int] of var int: weight, array [int] of int: balance, var int: cost);
+array [1..24] of int: arc = [1, 6, 1, 7, 1, 8, 2, 5, 2, 6, 2, 7, 3, 5, 3, 7, 3, 8, 4, 5, 4, 7, 4, 8];
+array [1..8] of int: b = [1, 1, 1, 1, -1, -1, -1, -1];
+array [1..12] of int: unit_cost = [9, 7, 13, 16, 13, 8, 10, 6, 15, 11, 13, 17];
+var int: cost :: output_var;
+array [1..12] of var 0..1: flow :: output_array([1..12]);
+constraint jacop_networkflow([1, 6, 1, 7, 1, 8, 2, 5, 2, 6, 2, 7, 3, 5, 3, 7, 3, 8, 4, 5, 4, 7, 4, 8], flow, unit_cost, b, cost);
+solve minimize cost;

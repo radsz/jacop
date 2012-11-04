@@ -1,0 +1,83 @@
+Fz2jacop -- FlatZinc for JaCoP
+==============================
+
+FlatZinc is a low-level solver input language that is the target
+language for MiniZinc. It is designed to be easy to translate into the
+form required by a CP solver. JaCoP package JaCoP.fz contains a
+compiler, constraint and search generation as well as invokes JaCoP
+solver to solve a compiled FlatZinc model. More information on
+MiniZinc and FlatZinc as well as related software can be found on
+http://www.g12.cs.mu.oz.au/minizinc/.
+
+Installation
+============
+
+The package is a part of JaCoP distribution. It can be compiled with
+javacc and java compiler. The specific JaCoP predicate definitions for
+MiniZinc are available in org/jacop/minizinc/mznlib. They can be used in mzn2fzn
+compilation with either -I or -G options, as described later. Please,
+note that if this library is not used mzn2fzn will use only simple
+constraints for all predicates. For example, MiniZinc all_different
+constraint will use inequality constraints instead of using JaCoP
+Alldiff or Alldistinct constraints.
+
+Executing MiniZinc models
+=========================
+
+MiniZinc models needs to be first compiled into FlatZinc. It is
+achieved with mzn2fzn compiler available in MiniZinc distribution
+(http://www.g12.cs.mu.oz.au/minizinc/). The command usually looks as
+follows.
+
+$ mzn2fzn -I <path_to_mznlib> <file>.mzn
+
+path_to_mznlib is the **complete path** to the mznlib directory. "."
+and ".." are not interpreted correctly.
+
+The command can be also given as 
+
+$ mzn2fzn -G jacop <file>.mzn
+
+if the directory mznlib will be copied to lib/minizinc directory of
+the MiniZinc installation and renamed to jacop.
+
+mzn2fzn accepts other options. Please, run mzn2fzn -h for more
+details. A useful option is "--no-output-pred-decls" since Fz2jacop
+does not process predicates anyway.
+
+Once the FlatZinc file has been generated the execution in JaCoP can
+be achieved by issuing the following command.
+
+$ java -cp <class_path_to_JaCoP>:<class_path_to_jdom.jar> JaCoP.fz.Fz2jacop <file>.fzn
+
+This command will compile FlatZinc model and execute it using JaCoP solver.
+
+NOTE 1: Large models might require to increase memory available for
+        JVM. This is achieved by giving java option. For example,
+        -Xmx1G extends heap memory to 1GB and -Xmx700M to 700MB.
+
+NOTE 2: All definitions of integer variables ("var int:" and "array[...]
+        of var int:" are translated to JaCoP finite domain variable with
+        min/max intervals, i.e., -10000000..10000000. It may create
+        that the model will report overflow/underflow or it will be
+        unsatisfiable. The problem might still be solvable if finite
+        domain variables will be defined with explicit intervals
+        instead (with lower bounds).
+
+Execution of Fz2jacop compiler gives the set of actually accepted
+options, as shown below.
+
+Usage: java Fz2jacop [<options>] <file>.fzn
+Options:
+    -h, --help
+        Print this message.
+    -a, --all-solutions
+    -v, --verbose
+    -t <value>, --time-out <value>
+        <value> - time in second.
+    -s, --statistics
+    -n <value>, --num-solutions <value>
+        <value> - limit on solution number.
+
+
+

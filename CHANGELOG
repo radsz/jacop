@@ -1,0 +1,165 @@
+Version 4.0
+===========
+
+1. Introduction of stochastic varibales and constraints (preliminary).
+
+2. SAT solver...
+
+3. Adding constraint SumWeightDom that implements domain consistency
+   for weighted sum of linear terms.
+
+4. Adding additional propagation to Min and Max constraint. It
+   propagates in situations when one variable on the list is lowest
+   (greatest). It enforces that this variable from the list is equal
+   min (max) variable.
+
+
+Version 3.1.2
+=============
+
+The release of JaCoP version 3.1.2 fixes several bugs and makes JaCoP compatible with minizinc v.1.4.
+
+1. Compatibility changes for minizinc 1.4.
+2. Bug fix when reifing several primitive set constraints that makes pruning working correctly.
+3. New method for pruning length of rectangles in Diff/Diff2 constraints.
+4. Several small bug fixes.
+
+Version 3.1.1
+=============
+
+1. Changes to bo compatible with minizinc v. 1.3.
+2. New pruning methods for multiplication and division constraints, icluding div and mod.
+3. Bug fix in Among constraint.
+4. Bug fix in SmallDenseDomain.
+
+
+Version 3.1
+===========
+
+This release fixes few bugs as well as provides a new Binpacking constraint. 
+
+The Binpacking constraint allows modeling of problems exhibiting bin
+packing problem structure. The addition of this constraint introduced
+changes to minizinc/fz library in JaCoP since the definitions of
+bin_packing.mzn, bin_packin_capa.mzn and bin_packing_load.mzn have
+been added. The JaCoP guide has been updated to explain how to use
+Binpacking constraint.
+
+Version 3.0
+===========
+
+We have just released JaCoP 3.0 final. Since the previous release
+(RC2) we have fixed one rarely triggering bug in ElementInteger
+constraint, as well as added code supporting generation of data for
+CP-viz framework. Here is the list of most important changes since
+version 2.4.
+
+1) The introduction of Network Flow constraint, which allows efficient
+  modeling of problems with network flow structure. The constraint
+  allows to specify minimum cost flow problem in terms of finite
+  domain variables.  It uses network simplex algorithm as an
+  propagator for network-like structure. It is a very expressive
+  constraint where arc flow and arc unit costs can be specified by
+  variables.
+
+2) The introduction of set package forced changes in the design of
+  core interfaces. There are IntVar and SetVar classes which inherit
+  from Var class. This change allowed to refactor and improve set package
+  so it is designed in cleaner and more efficient manner.
+
+3) The introduction of special domain representation SmallDenseDomain,
+  which uses bits within a long primitive type to encode small
+  domains of range not larger than 64.
+
+4) The introduction of Soft-alldifferent as well as Soft-GCC global
+  constraints. The soft-alldifferent constraint implements Variable
+  and Decomposition based violation metrics. The soft-gcc constraint
+  implements value based violation metric. Both are decomposed constraints
+  based on network flow constraint.
+
+5) Examples have been updated by moving multiple solving functionality
+  from main function to test function, so user can easily see what is
+  the best model just by looking at main function. BIBD example has
+  been added.  Examples with Set variables have been updated to
+  reflect the changes.
+
+6) A number of bug fixes and changes in flatzinc interface to better
+  comply with minizinc 1.1. We have also added into minizinc
+  predicates networkflow that uses newly introduced JaCoP Network
+  Flow constraint.
+
+7) A number of minor API changes to improve intuitiveness of use
+  (e.g. order of arguments in constructors).
+
+8) The JaCoP guide has been updated to reflect the changes and additions
+  to the newest version.
+
+Version 2.4.2
+=============
+
+The main reason for this release is change of Minizinc standard, the
+newest version handles Minizinc 1.1.
+
+Version 2.4.1
+=============
+
+???
+
+Version 2.4
+===========
+
+The version 2.4 has a number of new features in addition to some bug
+fixes. The most important additions in this version are:
+
+The flatzinc interface that makes it possible to run minizinc programs
+using JaCoP. The distribution contains number of different minizinc
+examples.
+
+Geometrical constraint, geost, based on pruning algorithms originally
+proposed by Nicolas Beldiceanu et al. This constraint makes it
+possible to define placement problems of non-convex objects in
+k-dimensional space.
+
+Knapsack constraint, which is based on the work published by Irit
+Katriel et al. We extend the original work in number of ways, for
+example by making it possible to use non-boolean quantity variables.
+
+Set constraints defining typical operation on sets using set interval
+variables.
+
+Version 2.3
+===========
+
+As with previous releases, JaCoP focuses on ease of use, efficiency,
+and modeling power by providing more and more global constraints.
+
+In JaCoP 2.3 you'll notice:
+
+Number of new global constraints implemented, namely Among, GCC,
+Regular, two new variants of ExtensionalSupport constraint (STR, MDD),
+Stretch, and Sequence constraints.
+
+Redesigned search functionality making it possible to express search
+as by designing search plugins and transforming available search.
+
+Redesigned part of the JaCoP core focusing on domains, making it
+easier to add new domains representations.
+
+Significantly improved Java Doc API making code even better
+documented.
+
+Number of new examples explaining how to apply CP technology.
+
+
+Version JaCoP 2.2 
+=================
+
+
+Version JaCoP 2.1 
+=================
+
+Version JaCoP 1.7 
+=================
+
+Version JaCoP 1.3 
+=================

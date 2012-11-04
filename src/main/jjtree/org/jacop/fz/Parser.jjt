@@ -1,0 +1,870 @@
+/**
+ *  Parser.jjt 
+ *  This file is part of JaCoP.
+ *
+ *  JaCoP is a Java Constraint Programming solver. 
+ *	
+ *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU Affero General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU Affero General Public License for more details.
+ *  
+ *  Notwithstanding any other provision of this License, the copyright
+ *  owners of this work supplement the terms of this License with terms
+ *  prohibiting misrepresentation of the origin of this work and requiring
+ *  that modified versions of this work be marked in reasonable ways as
+ *  different from the original version. This supplement of the license
+ *  terms is in accordance with Section 7 of GNU Affero General Public
+ *  License version 3.
+ *
+ *  You should have received a copy of the GNU Affero General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+  
+/* ************************************************************
+*    JavaCC Options
+************************************************************ */
+
+options {
+  STATIC = false;                                                                   
+  NODE_PREFIX = "AST";
+  MULTI = true;
+  NODE_DEFAULT_VOID = true;
+  NODE_PACKAGE = "org.jacop.fz";
+}
+
+ 
+/* ************************************************************
+*    Parser Properties
+************************************************************ */
+
+PARSER_BEGIN(Parser)  
+package org.jacop.fz;
+
+import java.util.ArrayList;
+import org.jacop.core.Store;
+
+public class Parser {
+    Store store = new Store();
+    Tables dict = new Tables(store);
+    VariablesParameters cg = new VariablesParameters();
+    Constraints cc = new Constraints(store);
+    Solve solver = new Solve(store);
+    Options options;
+
+    void setOptions(Options opt) {
+	options = opt;
+    }
+
+    Store getStore() {
+	return store;
+    }
+}
+PARSER_END(Parser)
+
+
+/************************************************************** 
+*
+*      Lexical Specification Starts
+*
+***************************************************************/
+
+/* WHITE SPACE (Always Skipped) */
+SKIP :
+{
+  " "
+| "\t"
+| "\n"
+| "\r"
+| "\f"
+}
+
+/* COMMENTS (Default is Skip) */
+SPECIAL_TOKEN :
+{
+  <SINGLE_LINE_COMMENT: "%" (~["\n","\r"])* ("\n"|"\r"|"\r\n")>
+}
+
+/* LITERALS */
+// string_literal  \"[^"\n]*\"
+TOKEN :
+{
+    < STRING_LITERAL : "\"" (~["\n", "\r", "\f"])* "\"">
+}
+
+// int_literal     -?[0-9]+|-?0x[0-9A-Fa-f]+|-?0o[0-7]+
+TOKEN :
+{
+    < INT_LITERAL : (["-"])? (["0"-"9"])+ | (["-"])? "0x" (["0"-"9", "A"-"F", "a"-"f"])+ |
+	(["-"])? "0o" (["0"-"7"])+ >
+}
+
+//float_literal   -?[0-9]+\.[0-9]+|-?[0-9]+\.[0-9]+[Ee][-+]?[0-9]+|-?[0-9]+[Ee][-+]?[0-9]+
+TOKEN :
+{
+    < FLOAT_LITERAL : ("-")? (["0"-"9"])+ "." (["0"-"9"])+ |
+	("-")? (["0"-"9"])+ "." (["0"-"9"])+ ("E" | "e") ("-" | "+")? (["0"-"9"])+ |
+	("-")? (["0"-"9"])+ ("E" | "e") ("-" | "+")? (["0"-"9"])+ >
+}
+
+/* SEPARATORS */
+TOKEN :
+{
+      < SC: ";" >
+|     < COLON: ":" >
+|     < COMMA: "," >
+}
+
+/* DELIMETERS */
+TOKEN :
+{
+      < LP: "(" >
+|     < RP: ")" >
+|     < LBOX: "[" >
+|     < RBOX: "]" >
+|     < LB: "{" >
+|     < RB: "}" >
+}
+
+/* OPERATORS */
+TOKEN :
+{
+      < ASGN: "=" >
+}
+
+
+/* Reserved words */
+TOKEN :
+{
+          < ARRAY: "array" >
+	| < BOOL: "bool" >
+	| < CONSTRAINT: "constraint" >
+	| < FALSE: "false" >
+	| < FLOAT: "float" >
+	| < INT: "int" >
+	| < MINIMIZE: "minimize" >
+	| < MAXIMIZE: "maximize" >
+	| < OF: "of" >
+	| < OUTPUT: "output" >
+	| < PREDICATE: "predicate" >
+	| < SATISFY: "satisfy" >
+	| < SET: "set" >
+	| < SHOW: "show" >
+	| < SHOW_COND: "show_cond" >
+	| < SOLVE: "solve" >
+	| < TRUE: "true" >
+	| < VAR: "var" >
+	| < DOTDOT: ".." >
+	| < COLONCOLON: "::">
+}
+
+/* IDENTIFIER */
+// ident           [A-Za-z][A-Za-z0-9_]*
+TOKEN :
+{
+      < IDENT: (["_"])* ["a"-"z", "A"-"Z"] (["a"-"z", "A"-"Z", "0"-"9", "_"])* >
+    //     |  < VAR_PAR_ID: (["_"])* ["a"-"z", "A"-"Z"] (["a"-"z", "A"-"Z", "0"-"9", "_"])* >
+    //     |  < PRED_ANN_ID: ["a"-"z", "A"-"Z"] (["a"-"z", "A"-"Z", "0"-"9", "_"])* >
+}
+
+/************************************************************** 
+*
+*      GRAMMER STARTS
+*
+***************************************************************/
+
+//---------------------------------------------------------------------------
+// Model top-level
+//---------------------------------------------------------------------------
+
+// model          : pred_decl_items var_decl_items constraint_items model_end
+
+void model() #model:
+{}
+{
+    pred_decl_items()
+    var_decl_items() 
+    constraint_items()
+    model_end()
+    <EOF>
+// 	{jjtThis.dump("");}
+}
+
+// pred_decl_items : pred_decl_items pred_decl_item ';'
+//                 | pred_decl_items error ';' { yyerrok; }
+// 		| /* empty */
+
+void pred_decl_items() :
+{}
+{
+    ( pred_decl_item() <SC> )*
+}
+
+// var_decl_items : var_decl_items var_decl_item ';'
+//                | /* empty */
+
+void var_decl_items() #VarDeclItems:
+{}
+{
+    ( var_decl_item() <SC> )*
+ 	{   //jjtThis.dump("");
+	    jjtThis.removeChildren();
+	    solver.setNumberBoolVariables(cg.numberBooleanVariables);
+	}
+//             	{ System.out.println(dict); }
+}
+ 
+// constraint_items: constraint_items constraint_item ';'
+//                | /* empty */
+
+void constraint_items() #ConstraintItems:
+{}
+{
+    ( constraint_item() <SC> )*
+ 	{  //jjtThis.dump("");
+
+	    cc.poseDelayedConstraints();
+
+	    jjtThis.removeChildren();
+	}
+}
+ 
+// model_end      : solve_item ';'
+//                | solve_item ';' output_item ';'
+
+void model_end() #ModelEnd:
+{}
+{
+    solve_item() <SC> 
+	[ output_item() <SC> ]
+}
+    
+    
+//---------------------------------------------------------------------------
+// Items
+//---------------------------------------------------------------------------
+
+// pred_decl_item:
+//     PREDICATE IDENT '(' pred_decl_args ')'
+
+void pred_decl_item() :
+{}
+{
+    <PREDICATE> <IDENT> <LP> pred_decl_args() <RP>
+}
+
+
+// var_decl_item:
+//     VAR    non_array_ti_expr_tail ':' ident_anns var_decl_item2
+//   |        non_array_ti_expr_tail ':' ident_anns '=' non_array_flat_expr
+//   | ARRAY '[' INT_LITERAL DOTDOT INT_LITERAL ']' OF array_decl_tail
+
+void var_decl_item() #VarDeclItem:
+{
+    Token t, t1, t2;
+    //kind -- 0=var, 1=non-var; 2=array-var, 3=array-non-var
+}
+{
+    <VAR> non_array_ti_expr_tail() <COLON> t=ident_anns() [ <ASGN> non_array_flat_expr() ] //var_decl_item2()
+ 	{ 
+	    jjtThis.setKind(0); jjtThis.setId(t.image); 
+	    cg.generateVariables(jjtThis, dict, store);
+	    jjtThis.removeChildren();
+	}
+
+   | non_array_ti_expr_tail() <COLON> t=ident_anns() <ASGN> non_array_flat_expr() 
+	 { jjtThis.setKind(1); 
+	   jjtThis.setId(t.image);
+	   cg.generateParameters(jjtThis, dict);
+	   jjtThis.removeChildren();
+	 }
+
+   | <ARRAY> <LBOX> t1=<INT_LITERAL> <DOTDOT> t2=<INT_LITERAL> <RBOX> <OF> array_decl_tail(jjtThis)
+	  {   jjtThis.setIndexes(Integer.parseInt(t1.image), Integer.parseInt(t2.image)); 
+	      cg.generateArray(jjtThis, dict, store);
+	      jjtThis.removeChildren();
+	  }
+}
+
+// var_decl_item2:
+//     '=' non_array_flat_expr
+//   | /*empty*/
+
+// void var_decl_item2() :
+// {}
+// {
+//     [ <ASGN> non_array_flat_expr() ]
+// }
+
+// array_decl_tail:
+//         non_array_ti_expr_tail ':' ident_anns '=' array_literal
+//   | VAR non_array_ti_expr_tail ':' ident_anns array_decl_tail2
+
+void array_decl_tail(ASTVarDeclItem v) :
+{Token t;}
+{
+    (
+     non_array_ti_expr_tail() <COLON> t=ident_anns() <ASGN> array_literal()
+     {v.setKind(3); 
+     }
+     | <VAR> non_array_ti_expr_tail() <COLON> t=ident_anns() [ <ASGN> array_literal() ] //array_decl_tail2()
+	 {v.setKind(2); }
+     )
+
+  	{v.setId(t.image);}
+}
+
+// array_decl_tail2:
+//     '=' array_literal
+//   | /*empty*/
+
+// void array_decl_tail2() :
+// {}
+// {
+//     [ <ASGN> array_literal() ]
+// }
+
+// ident_anns:
+//     IDENT annotations
+
+Token  ident_anns() :
+{Token t;}
+{
+    t=<IDENT> annotations()
+
+	{return t;}
+}
+
+// constraint_item:
+//     CONSTRAINT constraint_elem annotations
+
+void constraint_item() #Constraint:
+{}
+{
+    <CONSTRAINT> constraint_elem() annotations()
+ 	{  	// jjtThis.dump(""); 
+	        cc.generateConstraints(jjtThis, dict);
+	        jjtThis.removeChildren();
+        }
+}
+
+// constraint_elem:
+//     IDENT '(' flat_exprs ')'
+// |   variable_expr
+
+void constraint_elem() #ConstElem:
+{Token t;}
+{
+//     (
+//     LOOKAHEAD(2)
+    t =<IDENT> <LP> flat_exprs() <RP>  	
+     {jjtThis.setName(t.image);
+     }
+    // new flatzinc does not support variable as constraint any longer
+    // can be deleted
+//    |   variable_expr()
+//     {
+// 	cc.generateVarConstraint(jjtThis, dict);
+// 	jjtThis.removeChildren();
+//     }
+//      )
+
+}
+
+// solve_item:
+//     SOLVE annotations solve_kind
+
+void solve_item() #SolveItem:
+{}
+{
+    <SOLVE> annotations() solve_kind()
+	{
+	    solver.search(jjtThis, dict, options);
+	}
+}
+
+// solve_kind:
+//     SATISFY
+//   | MINIMIZE solve_expr
+//   | MAXIMIZE solve_expr
+
+void solve_kind() #SolveKind:
+{Token t;}
+{
+    ( t=<SATISFY>
+	| t=<MINIMIZE> solve_expr()
+	| t=<MAXIMIZE> solve_expr()
+      )
+
+	{jjtThis.setKind(t.image);}
+}
+
+// output_item:
+//     OUTPUT '[' output_elems ']'
+
+void output_item() :
+{}
+{
+    <OUTPUT> <LBOX> output_elems() <RBOX>
+}
+
+// output_elems:
+//     output_elem ',' output_elems
+//   | output_elem
+
+void output_elems() :
+{}
+{
+    output_elem() ( <COMMA> output_elem() )*
+}
+
+// output_elem:
+//     SHOW '(' flat_expr ')'
+//   | SHOW_COND '(' flat_expr ',' flat_expr ',' flat_expr ')'
+//   | STRING_LITERAL
+
+void output_elem() :
+{}
+{
+    <SHOW> <LP> flat_expr() <RP>
+	| <SHOW_COND> <LP> flat_expr() <COMMA> flat_expr() <COMMA> flat_expr() <RP>
+	| <STRING_LITERAL>
+}
+
+//---------------------------------------------------------------------------
+// Predicate parameters
+//---------------------------------------------------------------------------
+
+// pred_decl_args:
+//     pred_decl_arg "," pred_decl_args
+//   | pred_decl_arg
+
+void pred_decl_args() :
+{}
+{
+    pred_decl_arg() ( <COMMA> pred_decl_arg() )*
+}
+
+// pred_decl_arg:
+//      non_array_ti_expr_tail ':' IDENT
+//    | VAR non_array_ti_expr_tail ':' IDENT
+//    | ARRAY '[' pred_arg_array_index ']' OF  pred_arg_array_tail ':' IDENT
+
+void pred_decl_arg() :
+{}
+{
+    non_array_ti_expr_tail() <COLON> <IDENT>
+	| <VAR> non_array_ti_expr_tail() <COLON> <IDENT>
+	| <ARRAY> <LBOX> pred_arg_array_index() (<COMMA> pred_arg_array_index())* <RBOX> <OF>  pred_arg_array_tail() <COLON> <IDENT>
+}
+
+// pred_arg_array_index:
+//     INT
+//   | INT_LITERAL DOTDOT INT_LITERAL
+
+void pred_arg_array_index() :
+{}
+{
+    <INT> | <INT_LITERAL> <DOTDOT> <INT_LITERAL>  
+
+}
+
+// pred_arg_array_tail:
+//     non_array_ti_expr_tail
+//   | VAR non_array_ti_expr_tail
+
+void pred_arg_array_tail() :
+{}
+{
+    non_array_ti_expr_tail()
+	| <VAR> non_array_ti_expr_tail()
+}
+
+//---------------------------------------------------------------------------
+// Type-Inst Expression Tails
+//---------------------------------------------------------------------------
+
+// non_array_ti_expr_tail:
+//     scalar_ti_expr_tail
+//   | set_ti_expr_tail
+
+void non_array_ti_expr_tail() :
+{}
+{
+    scalar_ti_expr_tail()
+	| set_ti_expr_tail()
+}
+
+// scalar_ti_expr_tail:
+//     bool_ti_expr_tail
+//   | int_ti_expr_tail
+//   | float_ti_expr_tail
+
+void scalar_ti_expr_tail() :
+{}
+{
+    ( 
+     bool_ti_expr_tail()
+     | int_ti_expr_tail()
+     | float_ti_expr_tail()
+     )
+}
+
+// bool_ti_expr_tail:
+//     BOOL
+
+void bool_ti_expr_tail() #BoolTiExprTail:
+{}
+{
+    <BOOL>
+}
+
+// int_ti_expr_tail:
+//     INT
+//   | INT_LITERAL DOTDOT INT_LITERAL
+//   | '{' int_literals '}'
+
+void int_ti_expr_tail() #IntTiExprTail:
+{//type 0=int; 1=interval; 2=list; 
+    Token t1, t2;
+}
+{
+    <INT> {jjtThis.setType(0);}
+    | t1=<INT_LITERAL> <DOTDOT> t2=<INT_LITERAL> 
+	  {
+	      jjtThis.setType(1); 
+	      jjtThis.setLowHigh(Integer.parseInt(t1.image), Integer.parseInt(t2.image));
+	  }
+    | <LB> int_literals() <RB> 
+	   {jjtThis.setType(2);}
+}
+
+// float_ti_expr_tail:
+//     FLOAT
+//   | FLOAT_LITERAL DOTDOT FLOAT_LITERAL
+
+void float_ti_expr_tail() :
+{}
+{
+    (
+     <FLOAT>
+     | <FLOAT_LITERAL> <DOTDOT> <FLOAT_LITERAL>
+     )
+	{ System.err.println("Float not supported; compilation aborted."); System.exit(0); }
+}
+
+// set_ti_expr_tail:
+//     SET OF scalar_ti_expr_tail
+
+void set_ti_expr_tail() #SetTiExprTail:
+{}
+{
+    <SET> <OF> scalar_ti_expr_tail()
+}
+
+//---------------------------------------------------------------------------
+// Expressions
+//---------------------------------------------------------------------------
+
+// ann_exprs:
+//     ann_expr ',' ann_exprs
+//   | ann_expr
+
+void ann_exprs() :
+{}
+{
+    ann_expr() ( <COMMA> ann_expr() )*
+}
+
+// ann_expr:
+//     IDENT '(' ann_exprs ')'
+//   | flat_expr
+
+void ann_expr() #AnnExpr:
+{Token t;}
+{
+
+ LOOKAHEAD(2)
+ t = <IDENT> <LP> ann_exprs() <RP> 
+     { jjtThis.setIdent(t.image); }
+|  flat_expr() 
+
+}
+
+// flat_exprs:
+//     flat_expr ',' flat_exprs
+//   | flat_expr
+
+void flat_exprs() :
+{}
+{
+    flat_expr() (<COMMA>  flat_expr())*
+}
+
+// flat_expr:
+//     non_array_flat_expr
+//   | array_literal
+
+void flat_expr() :
+{}
+{
+     non_array_flat_expr()
+	 | array_literal()
+}
+
+// non_array_flat_exprs:
+//     non_array_flat_expr ',' non_array_flat_exprs
+//   | non_array_flat_expr
+
+void non_array_flat_exprs() :
+{}
+{
+    non_array_flat_expr() ( <COMMA> non_array_flat_expr() )*
+}
+
+// non_array_flat_expr:
+//     scalar_flat_expr
+//   | set_literal
+
+void non_array_flat_expr() :
+{}
+{
+//     LOOKAHEAD(set_literal())
+    LOOKAHEAD(3)
+	set_literal()
+	| scalar_flat_expr()
+}
+
+// scalar_flat_exprs:
+//     scalar_flat_expr ',' scalar_flat_exprs
+//   | scalar_flat_expr
+
+void scalar_flat_exprs() :
+{}
+{
+    scalar_flat_expr() ( <COMMA> scalar_flat_expr())*
+}
+
+// scalar_flat_expr:
+//     IDENT
+//   | array_access_expr
+//   | bool_literal
+//   | INT_LITERAL
+//   | FLOAT_LITERAL
+//   | STRING_LITERAL
+
+void scalar_flat_expr() #ScalarFlatExpr:
+{Token t;
+    // type = 0-int; 1=bool; 2=ident; 3= array_access; 4=string; 5=float;
+    ArrayAccess aa;
+}
+{
+//     LOOKAHEAD(array_access_expr())
+    LOOKAHEAD(2)
+    aa = array_access_expr()
+	{ jjtThis.setType(3); 
+	  jjtThis.setIdent(aa.getIdent()); 
+	  jjtThis.setInt(aa.getIndex()); 
+	}
+    | t = <IDENT> 
+	{ jjtThis.setType(2); jjtThis.setIdent(t.image); }
+    | t = bool_literal() 
+	{ jjtThis.setType(1); 
+	  int val = Boolean.parseBoolean(t.image)==true?1:0;
+	  jjtThis.setInt(val);
+	} 
+    | t = <INT_LITERAL> { jjtThis.setType(0); jjtThis.setInt(Integer.parseInt(t.image)); } 
+    | t = <FLOAT_LITERAL> { jjtThis.setType(5); } 
+    | t = <STRING_LITERAL> { jjtThis.setType(4); } 
+}
+
+// int_flat_expr:
+//     IDENT
+//   | array_access_expr
+//   | INT_LITERAL
+
+void int_flat_expr() #IntFlatExpr:
+{    Token t;
+    ArrayAccess aa;
+}
+{
+ LOOKAHEAD(2)
+     <IDENT> // look-up
+     | aa = array_access_expr() //look-up
+     {   int[] intArray = dict.getIntArray(aa.getIdent());
+	 if (intArray != null) {
+	     int value = intArray[aa.getIndex() - 1];
+	     jjtThis.setInt(value); 
+	 }
+	 else 
+	     System.err.println("Cannot find value for "+aa); System.exit(0);
+	}
+     | t=<INT_LITERAL> {jjtThis.setInt(Integer.parseInt(t.image));}
+}
+
+// variable_expr:
+//     IDENT
+//   | array_access_expr
+
+void variable_expr() #VariableExpr:
+{    Token t;
+     ArrayAccess aa=null;     
+//      String ident=null;
+}
+{
+    LOOKAHEAD(2)
+	aa = array_access_expr() {jjtThis.setArrayAccess(aa); }
+    |   t=<IDENT> {jjtThis.setIdent(t.image);}
+}
+
+// solve_expr:
+//     IDENT
+//   | array_access_expr
+//   | IDENT '(' flat_exprs ')'
+
+void solve_expr() #SolveExpr:
+{   Token t;
+    ArrayAccess aa;
+}
+{
+    LOOKAHEAD(2)
+	aa = array_access_expr()
+	{jjtThis.setType(1); jjtThis.setIdent(aa.getIdent()); jjtThis.setIndex(aa.getIndex()); }
+	| LOOKAHEAD(2) <IDENT> <LP> flat_exprs() <RP> 
+	| t = <IDENT> 
+	{jjtThis.setType(0); jjtThis.setIdent(t.image); }
+}
+
+// array_access_expr:
+//     IDENT '[' int_index_expr ']'
+
+ArrayAccess array_access_expr() :
+{Token t;
+    String ident;
+    int index;}
+{
+    t=<IDENT> <LBOX> index=int_index_expr() <RBOX>
+	{ ident = t.image; }
+    { return new ArrayAccess(ident, index); }
+}
+
+// int_index_expr:
+//     IDENT
+//   | INT_LITERAL
+
+int int_index_expr() :
+{   Token t;
+    int i=-1;
+}
+{
+    t=<IDENT>  // need to make a look-up in a dictionary
+	{ String ident = t.image; 
+	  i = dict.getInt(ident);	   
+	  return i;
+	}
+	| 
+	( t=<INT_LITERAL> {i = Integer.parseInt(t.image) - 1; /* -1 since java starts arrays from 0 not 1 */})
+
+//  	{System.out.println("index = " + i);}
+	{return i;}
+}
+
+// bool_literal:
+//     FALSE
+//   | TRUE
+
+Token bool_literal() :
+{Token t;}
+{
+    (
+    t=<FALSE> | t=<TRUE>
+     )
+	{return t;}
+}
+
+// int_literals:
+//     INT_LITERAL ',' int_literals
+//   | INT_LITERAL
+
+void int_literals() #IntLiterals:
+{
+Token t;
+ArrayList<Integer> l = new ArrayList<Integer>();
+}
+
+{
+    (
+     t=<INT_LITERAL> {l.add(Integer.parseInt(t.image)); } 
+        ( <COMMA> t=<INT_LITERAL> {l.add(Integer.parseInt(t.image));})*
+     )
+
+	{jjtThis.setList(l);}
+}
+
+// set_literal:
+//     '{' scalar_flat_exprs '}'
+//   | '{' '}'
+//   | int_flat_expr DOTDOT int_flat_expr
+
+void set_literal() #SetLiteral:
+{}
+{
+
+    ( <LB> [ scalar_flat_exprs() ] <RB>
+	{jjtThis.setType(1);}
+     )
+    | (int_flat_expr() <DOTDOT> int_flat_expr() 
+	{jjtThis.setType(0);}
+       )
+}
+
+// array_literal:
+//     '[' non_array_flat_exprs ']'
+//   | '[' ']'
+
+void array_literal() #ArrayLiteral:
+{}
+{
+    <LBOX> [ non_array_flat_exprs() ] <RBOX>
+}
+
+//---------------------------------------------------------------------------
+// Annotations
+//---------------------------------------------------------------------------
+
+// annotations:
+//     COLONCOLON annotation annotations
+//   | /* empty */
+
+void annotations() :
+{}
+{
+    ( <COLONCOLON> annotation() )*
+}
+
+// annotation:
+//     IDENT '(' ann_exprs ')'
+//   | IDENT
+
+void annotation() #Annotation:
+{Token t;}
+{
+	LOOKAHEAD(5) 
+	t=<IDENT> <LP> ann_exprs() <RP>
+	{jjtThis.setId(t.image); }
+       | 
+	 LOOKAHEAD(2)  // addition to accept seq_search([ int_search(....
+     	 t=<IDENT> <LP> <LBOX> annotation() (<COMMA> annotation() )* <RBOX> <RP> 
+	 {jjtThis.setId(t.image); }
+	|
+	 t=<IDENT>
+	 {jjtThis.setId(t.image); }
+}

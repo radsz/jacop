@@ -4,3 +4,22 @@
 *.jar
 *.war
 *.ear
+
+# svn artifacts
+.svn
+
+# private stuff still not ready to distribute
+aspect
+aop.xml
+*TODO*
+comments.txt
+log4j.xml
+
+# maven artifacts
+target
+
+# Intelij IDEA
+*.iml
+.idea
+
+
