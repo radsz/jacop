@@ -1541,23 +1541,26 @@ public class Constraints implements ParserTreeConstants {
 		else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
 		    pose(new Reified(new XplusCeqZ(p2[0], p3, p2[1]), p4));
 		} else {
-		    t = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
-		    if (allWeightsOne(p1))
-			pose(new Sum(p2, t));
-		    else
-			pose(new SumWeight(p2, p1, t));
-		    pose(new Reified(new XeqC(t, p3), p4));
+		    // t = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
+		    // if (allWeightsOne(p1))
+		    // 	pose(new Sum(p2, t));
+		    // else
+		    // 	pose(new SumWeight(p2, p1, t));
+		    // pose(new Reified(new XeqC(t, p3), p4));
+		    pose(new Reified(new Linear(store, p2, p1, "==", p3), p4));
 		}
 		break;
 	    case ne :
-		t = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
-		pose(new SumWeight(p2, p1, t));
-		pose(new Reified(new XneqC(t, p3), p4));
+		// t = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
+		// pose(new SumWeight(p2, p1, t));
+		// pose(new Reified(new XneqC(t, p3), p4));
+		pose(new Reified(new Linear(store, p2, p1, "!=", p3), p4));
 		break;
 	    case lt :
-		t = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
-		pose(new SumWeight(p2, p1, t));
-		pose(new Reified(new XltC(t, p3), p4));
+		// t = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
+		// pose(new SumWeight(p2, p1, t));
+		// pose(new Reified(new XltC(t, p3), p4));
+		pose(new Reified(new Linear(store, p2, p1, "<", p3), p4));
 		break;
 		// gt not present in the newest flatzinc version
 	    // case gt :
@@ -1580,9 +1583,10 @@ public class Constraints implements ParserTreeConstants {
 		    pose(new Reified(new XlteqC(t, p3), p4));
 		}
 		else {
-		    t = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
-		    pose(new SumWeight(p2, p1, t));
-		    pose(new Reified(new XlteqC(t, p3), p4));
+		    // t = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
+		    // pose(new SumWeight(p2, p1, t));
+		    // pose(new Reified(new XlteqC(t, p3), p4));
+		    pose(new Reified(new Linear(store,p2, p1, "<=", p3), p4));
 		}
 		break;
 		// ge not present in the newest flatzinc version
@@ -1591,10 +1595,12 @@ public class Constraints implements ParserTreeConstants {
 	    // 	pose(new SumWeight(p2, p1, t));
 	    // 	pose(new Reified(new XgteqC(t, p3), p4));
 	    // 	break;
+	    default:
+		System.err.println("ERROR: Constraint "+p+" not supported.");
+		System.exit(0);
 	    }
 	}
 	else { // non reified
-
 
 	    // If a linear term contains only constants and can be evaluated 
 	    // check if satisfied and do not generate constraint
@@ -1607,7 +1613,6 @@ public class Constraints implements ParserTreeConstants {
 		    el++;
 		}
 	    }
-
 
 	    IntVar t;
 	    switch (operation) {
@@ -1672,10 +1677,12 @@ public class Constraints implements ParserTreeConstants {
 			    pose(new Sum(vars, p2[p2.length-1]));
 			}
 			else {
-				pose(new SumWeight(p2, p1, v));
+			    // pose(new SumWeight(p2, p1, v));
+			    pose(new org.jacop.constraints.Linear(store, p2, p1, "==", p3));
 			}
 		    else {
-				pose(new SumWeight(p2, p1, v));
+			// pose(new SumWeight(p2, p1, v));
+			pose(new Linear(store, p2, p1, "==", p3));
 		    }
 		}
 		break;
@@ -1690,10 +1697,11 @@ public class Constraints implements ParserTreeConstants {
  		if (p1.length == 2 && p3 == 0 && ( (p1[0] == 1 && p1[1] == -1) || (p1[0] == -1 && p1[1] == 1) ))
 			pose(new XneqY(p2[0], p2[1]));
 		else {
-		    IntervalDomain dne = new IntervalDomain(IntDomain.MinInt, p3-1);
-		    dne.unionAdapt(p3+1, IntDomain.MaxInt);
-		    t = new IntVar(store, "", dne);
-		    pose(new SumWeight(p2, p1, t));
+		    // IntervalDomain dne = new IntervalDomain(IntDomain.MinInt, p3-1);
+		    // dne.unionAdapt(p3+1, IntDomain.MaxInt);
+		    // t = new IntVar(store, "", dne);
+		    // pose(new SumWeight(p2, p1, t));
+		    pose(new Linear(store, p2, p1, "!=", p3));
 		}
 		break;
 	    case lt :
@@ -1709,8 +1717,9 @@ public class Constraints implements ParserTreeConstants {
  		else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1 && p3 == 0)
 		    pose(new XltY(p2[1], p2[0]));
 		else {
-		    t = new IntVar(store, IntDomain.MinInt, p3-1);
-		    pose(new SumWeight(p2, p1, t));
+		    //t = new IntVar(store, IntDomain.MinInt, p3-1);
+		    //pose(new SumWeight(p2, p1, t));
+		    pose(new Linear(store, p2, p1, "<", p3));
 		}
 		break;
 		// gt not present in the newest flatzinc version
@@ -1749,8 +1758,9 @@ public class Constraints implements ParserTreeConstants {
 		//     pose(new Sum(p2, t));		    
 		// }
 		else {
-		    t = new IntVar(store, IntDomain.MinInt, p3);
-		    pose(new SumWeight(p2, p1, t));
+		    //t = new IntVar(store, IntDomain.MinInt, p3);
+		    //pose(new SumWeight(p2, p1, t));
+		    pose(new Linear(store,p2, p1, "<=", p3));
 		}
 		break;
 		// ge not present in the newest flatzinc version
@@ -1764,6 +1774,9 @@ public class Constraints implements ParserTreeConstants {
 	    // 	    pose(new SumWeight(p2, p1, t));
 	    // 	}
 	    // 	break;
+		default:
+		    System.err.println("ERROR: Constraint "+p+" not supported.");
+		    System.exit(0);
 	    }
 	}
     }

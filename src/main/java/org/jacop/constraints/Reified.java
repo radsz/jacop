@@ -114,7 +114,7 @@ public class Reified extends Constraint {
 	@Override
 	public void consistency(Store store) {
 
-		if (b.max() == 0) // C must be false
+	    if (b.max() == 0) // C must be false
 			c.notConsistency(store);
 		else if (b.min() == 1) // C must be true
 			c.consistency(store);
@@ -174,6 +174,8 @@ public class Reified extends Constraint {
 			V.putModelConstraint(this, getConsistencyPruningEvent(V));
 		}
 
+		store.registerRemoveLevelLateListener(this);
+
 		store.addChanged(this);
 		store.countConstraint();
 	}
@@ -212,10 +214,14 @@ public class Reified extends Constraint {
     @Override
     public void queueVariable(int level, Var variable) {
 
-        if (needQueueVariable)
-            c.queueVariable(level, variable);
+        if (!variable.equals(b))
+	    if (needQueueVariable)
+		c.queueVariable(level, variable);
 
     }
 
+	public void removeLevelLate(int level) {
+	    c.removeLevelLate(level);
+	}
 
 }
