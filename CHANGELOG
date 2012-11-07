@@ -13,6 +13,8 @@ Version 4.0
    (greatest). It enforces that this variable from the list is equal
    min (max) variable.
 
+5. New primitive constraint Linear and its use in flatzinc.
+
 
 Version 3.1.2
 =============
