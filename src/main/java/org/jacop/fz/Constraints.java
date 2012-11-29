@@ -1519,13 +1519,13 @@ public class Constraints implements ParserTreeConstants {
 
 	int p3 = getInt((ASTScalarFlatExpr)node.jjtGetChild(2));
 
-	// Possible overflow becayse of two high weigts in SumWeight
+	// Possible overflow because of too high weigts in SumWeight
 	for (int i = 0; i < p1.length; i++)
 	    if (p1[i] >= IntDomain.MaxInt || p1[i] <= IntDomain.MinInt) {
 		int min = p2[i].domain.multiply(p1[i], p2[i].min());
 		int max = p2[i].domain.multiply(p1[i], p2[i].max());
 		if (min >= IntDomain.MaxInt || min <= IntDomain.MinInt || max >= IntDomain.MaxInt || max <= IntDomain.MinInt)
-		    throw new ArithmeticException("Two high or low value for domain assignment");
+		    throw new ArithmeticException("Too high or low value for domain assignment");
 	    }
 
 
@@ -1626,7 +1626,6 @@ public class Constraints implements ParserTreeConstants {
 
 		if (domainConsistency) {
 
-		    //pose(new org.jacop.constraints.SumWeightDomain(p2, p1, new IntVar(store, p3, p3)));
 		    pose(new SumWeightDom(p2, p1, p3));
 
 		}
@@ -1678,7 +1677,7 @@ public class Constraints implements ParserTreeConstants {
 			}
 			else {
 			    // pose(new SumWeight(p2, p1, v));
-			    pose(new org.jacop.constraints.Linear(store, p2, p1, "==", p3));
+			    pose(new Linear(store, p2, p1, "==", p3));
 			}
 		    else {
 			// pose(new SumWeight(p2, p1, v));
@@ -1749,10 +1748,10 @@ public class Constraints implements ParserTreeConstants {
 		    pose(new XplusClteqZ(p2[0], -p3, p2[1]) );
 		else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1)
 		    pose(new XplusClteqZ(p2[1], -p3, p2[0]) );
-		else if (allWeightsOne(p1)) {
-		    t = new IntVar(store, IntDomain.MinInt, p3);
-		    pose(new Sum(p2, t));		    
-		}
+		// else if (allWeightsOne(p1)) {
+		//     t = new IntVar(store, IntDomain.MinInt, p3);
+		//     pose(new Sum(p2, t));		    
+		// }
 		// else if (allWeightsMinusOne(p1)) {
 		//     t = new IntVar(store, -p3, IntDomain.MaxInt);
 		//     pose(new Sum(p2, t));		    
@@ -1760,7 +1759,7 @@ public class Constraints implements ParserTreeConstants {
 		else {
 		    //t = new IntVar(store, IntDomain.MinInt, p3);
 		    //pose(new SumWeight(p2, p1, t));
-		    pose(new Linear(store,p2, p1, "<=", p3));
+		    pose(new Linear(store, p2, p1, "<=", p3));
 		}
 		break;
 		// ge not present in the newest flatzinc version

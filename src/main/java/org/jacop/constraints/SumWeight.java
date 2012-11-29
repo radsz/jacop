@@ -126,6 +126,7 @@ public class SumWeight extends Constraint {
 			i++;
 		}
 
+		checkForOverflow();
 
 	}
 
@@ -199,27 +200,27 @@ public class SumWeight extends Constraint {
 
 				assert (!currentDomain.singleton()) : "Singletons should not occur in this part of the array";
 
-				// 		int mul1 = currentDomain.min() * w[i];
-				// 		int mul2 = currentDomain.max() * w[i];
-				int mul1 = IntDomain.multiply(currentDomain.min(), weights[i]);
-				int mul2 = IntDomain.multiply(currentDomain.max(), weights[i]);
+				int mul1 = currentDomain.min() * weights[i];
+				int mul2 = currentDomain.max() * weights[i];
+				// int mul1 = IntDomain.multiply(currentDomain.min(), weights[i]);
+				// int mul2 = IntDomain.multiply(currentDomain.max(), weights[i]);
 				
 				if (mul1 <= mul2) {
-					// 		    lMin += mul1;
-					lMin = add(lMin, mul1);
-					lMinArray[i] = mul1;
-					// 		    lMax += mul2;
-					lMax = add(lMax, mul2);
-					lMaxArray[i] = mul2;
+				    lMin += mul1;
+				    // lMin = add(lMin, mul1);
+				    lMinArray[i] = mul1;
+				    lMax += mul2;
+				    // lMax = add(lMax, mul2);
+				    lMaxArray[i] = mul2;
 				}
 				else {
 
-					// 		    lMin += mul2;
-					lMin = add(lMin, mul2);
-					lMinArray[i] = mul2;
-					// 		    lMax += mul1;
-					lMax = add(lMax, mul1);
-					lMaxArray[i] = mul1;
+				    lMin += mul2;
+				    // lMin = add(lMin, mul2);
+				    lMinArray[i] = mul2;
+				    lMax += mul1;
+				    // lMax = add(lMax, mul1);
+				    lMaxArray[i] = mul1;
 
 				}
 
@@ -233,8 +234,10 @@ public class SumWeight extends Constraint {
 
 			store.propagationHasOccurred = false;
 
-			int min = subtract(sum.min(), lMax);
-			int max = subtract(sum.max(), lMin);
+			int min = sum.min() - lMax;
+			int max = sum.max() - lMin;
+			// int min = subtract(sum.min(), lMax);
+			// int max = subtract(sum.max(), lMin);
 
 			int pointer1 = nextGroundedPosition.value();
 
@@ -365,12 +368,12 @@ public class SumWeight extends Constraint {
 
 			}
 
-			sumJustGrounded = add(sumJustGrounded, IntDomain.multiply(value, weightGrounded));
+			sumJustGrounded += value * weightGrounded; // add(sumJustGrounded, IntDomain.multiply(value, weightGrounded));
 
 			sumGrounded.update( sumGrounded.value() + sumJustGrounded );
 
-			lMin = add(lMin, sumJustGrounded - lMinArray[pointer]);
-			lMax = add(lMax, sumJustGrounded - lMaxArray[pointer]);
+			lMin += sumJustGrounded - lMinArray[pointer]; //add(lMin, sumJustGrounded - lMinArray[pointer]);
+			lMax += sumJustGrounded - lMaxArray[pointer];
 			lMinArray[pointer] = sumJustGrounded;
 			lMaxArray[pointer] = sumJustGrounded;
 
@@ -383,25 +386,27 @@ public class SumWeight extends Constraint {
 
 			int i = positionMaping.get(var);
 
-			int mul1 = IntDomain.multiply(((IntVar)var).min(), weights[i]);
-			int mul2 = IntDomain.multiply(((IntVar)var).max(), weights[i]);
+			int mul1 = ((IntVar)var).min() * weights[i];
+			int mul2 = ((IntVar)var).max() * weights[i];
+			// int mul1 = IntDomain.multiply(((IntVar)var).min(), weights[i]);
+			// int mul2 = IntDomain.multiply(((IntVar)var).max(), weights[i]);
 
 			if (mul1 <= mul2) {
 
-				lMin = add(lMin, mul1 - lMinArray[i]);
-				lMinArray[i] = mul1;
+			    lMin += mul1 - lMinArray[i]; //add(lMin, mul1 - lMinArray[i]);
+			    lMinArray[i] = mul1;
 
-				lMax = add(lMax, mul2 - lMaxArray[i]);
-				lMaxArray[i] = mul2;
+			    lMax += mul2 - lMaxArray[i]; //add(lMax, mul2 - lMaxArray[i]);
+			    lMaxArray[i] = mul2;
 
 			}
 			else {
 
-				lMin = add(lMin, mul2 - lMinArray[i]);
-				lMinArray[i] = mul2;
+			    lMin += mul2 - lMinArray[i]; //add(lMin, mul2 - lMinArray[i]);
+			    lMinArray[i] = mul2;
 
-				lMax = add(lMax, mul1 - lMaxArray[i]);
-				lMaxArray[i] = mul1;
+			    lMax += mul1 - lMaxArray[i]; //add(lMax, mul1 - lMaxArray[i]);
+			    lMaxArray[i] = mul1;
 
 			}
 
@@ -432,6 +437,36 @@ public class SumWeight extends Constraint {
 		return true;
 
 	}
+
+    void checkForOverflow() {
+
+	int s1 = IntDomain.multiply(sum.min(), -1);
+	int s2 = IntDomain.multiply(sum.max(), -1);
+
+	int sumMin=0, sumMax=0;
+	if (s1 <= s2) {
+	    sumMin = add(sumMin, s1);
+	    sumMax = add(sumMax, s2);
+	}
+	else {
+	    sumMin = add(sumMin, s2);
+	    sumMax = add(sumMax, s1);
+	}
+
+	for (int i=0; i<list.length; i++) {
+	    int n1 = IntDomain.multiply(list[i].min(), weights[i]);
+	    int n2 = IntDomain.multiply(list[i].max(), weights[i]);
+
+	    if (n1 <= n2) {
+		sumMin = add(sumMin, n1);
+		sumMax = add(sumMax, n2);
+	    }
+	    else {
+		sumMin = add(sumMin, n2);
+		sumMax = add(sumMax, n1);
+	    }
+	}
+    }
 
 	@Override
 	public String toString() {
