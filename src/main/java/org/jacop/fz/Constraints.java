@@ -80,7 +80,10 @@ public class Constraints implements ParserTreeConstants {
     final static int eq=0, ne=1, lt=2, gt=3, le=4, ge=5;
     boolean intPresent = true;
 
+    // =========== Annotations ===========
     boolean boundsConsistency = true, domainConsistency = false;
+    // defines_var
+    IntVar definedVar = null;
 
     ArrayList<IntVar[]> parameterListForAlldistincts = new ArrayList<IntVar[]>();
     ArrayList<Constraint> delayedConstraints = new ArrayList<Constraint>();
@@ -156,6 +159,7 @@ public class Constraints implements ParserTreeConstants {
 	// default consistency - bounds
  	boundsConsistency = true; 
  	domainConsistency = false;
+	definedVar = null;
 
 	dictionary = table;
  	this.zero = table.zero; 
@@ -322,8 +326,8 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar v2 = getVariable(p2);
 		    IntVar v3 = getVariable(p3);
 
-		    //pose(new IfThen(new XlteqY(v1,v2), new XeqY(v1,v3)));
-		    //pose(new IfThen(new XlteqY(v2,v1), new XeqY(v2,v3)));
+		    // pose(new IfThen(new XlteqY(v1,v2), new XeqY(v1,v3)));
+		    // pose(new IfThen(new XlteqY(v2,v1), new XeqY(v2,v3)));
 		    pose(new Min(new IntVar[] {v1, v2}, v3));
 		}
 		else if (p.startsWith("max", 4)) {
@@ -344,8 +348,11 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar v1 = getVariable(p1);
 		    IntVar v2 = getVariable(p2);
 
-		    //pose(new Distance(v1, zero, v2));
-		    pose(new AbsXeqY(v1, v2));
+		    if (boundsConsistency)
+		    	pose(new AbsXeqY(v1, v2));
+		    else
+			pose(new AbsXeqY(v1, v2, true));
+
 		}
 		else
 		    System.out.println("TODO: "+p);
@@ -2187,25 +2194,27 @@ public class Constraints implements ParserTreeConstants {
 		boundsConsistency = false; 
 		domainConsistency = true;
 	    }
-// 	    else if ( ann.getAnnId().equals("defines_var") ) {  // no used in JaCoP yet
-// 		ASTAnnExpr expr = (ASTAnnExpr)ann.jjtGetChild(0);
-// 		Var v = getAnnVar(expr);
-// 	    }
+	    else if ( ann.getAnnId().equals("defines_var") ) {  // no used in JaCoP yet
+		ASTAnnExpr expr = (ASTAnnExpr)ann.jjtGetChild(0);
+		Var v = getAnnVar(expr);
+
+		definedVar = (IntVar)v;
+	    }
 	}
     }
-    /*
+
     Var getAnnVar(ASTAnnExpr node) {
 
 	ASTScalarFlatExpr e = (ASTScalarFlatExpr)node.jjtGetChild(0);
 	if (e != null)
 	    return dictionary.getVariable( e.getIdent());
 	else{
-	    System.err.println("Wrong variable identifies in \"defines_var\" annotation" + node);
+	    System.err.println("Wrong variable identified in \"defines_var\" annotation" + node);
 	    System.exit(0);
 	    return new IntVar(store);
 	}
     }
-    */
+
 
     boolean allConstants(IntVar[] p) {
 	boolean sat = true;

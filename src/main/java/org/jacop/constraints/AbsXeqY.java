@@ -45,7 +45,7 @@ import org.jacop.core.Var;
 /**
  * Constraints |X| #= Y
  * 
- * Domain consistency is used.
+ * Domain and bounds consistency can be used; third parameter of constructor controls this.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 3.0
@@ -58,6 +58,8 @@ public class AbsXeqY extends PrimitiveConstraint {
 	static final boolean debugAll = false;
 
 	boolean firstConsistencyCheck = true;
+
+    boolean domainConsistent = false;
 
 	int firstConsistencyLevel;
 
@@ -94,6 +96,19 @@ public class AbsXeqY extends PrimitiveConstraint {
 		this.y = y;
 	}
 
+	/**
+	 * It constructs |X| = Y constraints.
+	 * @param x variable X1
+	 * @param y variable Y
+	 * @param somConsistency controls which consistency method is used; true = domain, false = bound
+	 */
+    public AbsXeqY(IntVar x, IntVar y, boolean domConsistency) {
+	    this(x, y);
+
+	    domainConsistent = domConsistency;
+	}
+
+
 	@Override
 	public ArrayList<Var> arguments() {
 
@@ -118,6 +133,15 @@ public class AbsXeqY extends PrimitiveConstraint {
 			firstConsistencyCheck = false;
 			firstConsistencyLevel = store.level;
 		}
+
+		if (domainConsistent)
+		    domainConsistency(store);
+		else
+		    boundConsistency(store);
+
+	}
+
+    void domainConsistency(Store store) {
 
 		do {
 
@@ -216,8 +240,32 @@ public class AbsXeqY extends PrimitiveConstraint {
 
 		} while (store.propagationHasOccurred);
 
+    }
 
-	}
+    void boundConsistency(Store store) {
+
+	do {
+
+	    store.propagationHasOccurred = false;
+
+	    if (x.min() >= 0) {
+		x.domain.in(store.level, x, y.domain);
+		y.domain.in(store.level, y, x.domain);
+	    }
+	    else if (x.max() < 0) {
+		x.domain.in(store.level, x, -y.max(), -y.min());
+		y.domain.in(store.level, y, -x.max(), -x.min());			
+	    }
+	    else { // x.min() <= && x.max() >= 0
+		int xBound = Math.max(y.min(), y.max());
+		x.domain.in(store.level, x, -xBound, xBound);
+		y.domain.inMax(store.level, y, Math.max(-x.min(), x.max()));			
+	    }
+
+	} while (store.propagationHasOccurred);
+
+    }
+
 
 	@Override
 	public int getNestedPruningEvent(Var var, boolean mode) {
@@ -229,7 +277,11 @@ public class AbsXeqY extends PrimitiveConstraint {
 				if (possibleEvent != null)
 					return possibleEvent;
 			}
-			return IntDomain.ANY;
+			
+			if (domainConsistent)
+			    return IntDomain.ANY;
+			else
+			    return IntDomain.BOUND;
 		}
 		// If notConsistency function mode
 		else {
@@ -251,7 +303,11 @@ public class AbsXeqY extends PrimitiveConstraint {
 			if (possibleEvent != null)
 				return possibleEvent;
 		}
-		return IntDomain.ANY;
+
+		if (domainConsistent)
+		    return IntDomain.ANY;
+		else
+		    return IntDomain.BOUND;
 
 	}
 
