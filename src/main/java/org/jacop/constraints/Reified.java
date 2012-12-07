@@ -64,6 +64,8 @@ public class Reified extends Constraint {
 
 
     boolean needQueueVariable = false;
+     
+    boolean needRemoveLevelLate = false;
 
 	/**
 	 * It specifies the arguments required to be saved by an XML format as well as 
@@ -95,6 +97,14 @@ public class Reified extends Constraint {
             needQueueVariable = true;
         } catch (NoSuchMethodException e) {
             needQueueVariable = false;
+        }
+
+
+        try {
+            c.getClass().getDeclaredMethod("removeLevelLate", int.class);
+            needRemoveLevelLate = true;
+        } catch (NoSuchMethodException e) {
+            needRemoveLevelLate = false;
         }
 
     }
@@ -214,14 +224,15 @@ public class Reified extends Constraint {
     @Override
     public void queueVariable(int level, Var variable) {
 
-        if (!variable.equals(b))
-	    if (needQueueVariable)
+	if (needQueueVariable)
+	    if (!variable.equals(b))
 		c.queueVariable(level, variable);
 
     }
 
-	public void removeLevelLate(int level) {
+    public void removeLevelLate(int level) {
+	if (needRemoveLevelLate)
 	    c.removeLevelLate(level);
-	}
+    }
 
 }
