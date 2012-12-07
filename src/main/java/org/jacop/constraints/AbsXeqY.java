@@ -249,8 +249,13 @@ public class AbsXeqY extends PrimitiveConstraint {
 	    store.propagationHasOccurred = false;
 
 	    if (x.min() >= 0) {
-		x.domain.in(store.level, x, y.domain);
-		y.domain.in(store.level, y, x.domain);
+		// possible domain consistecny for this case
+		// x.domain.in(store.level, x, y.domain);
+		// y.domain.in(store.level, y, x.domain);
+
+		// bounds consistency
+		x.domain.in(store.level, x, y.min(), y.max());
+		y.domain.in(store.level, y, x.min(), x.max());
 	    }
 	    else if (x.max() < 0) {
 		x.domain.in(store.level, x, -y.max(), -y.min());
