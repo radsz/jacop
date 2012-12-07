@@ -45,7 +45,7 @@ public final class SwitchesPruningLogging {
 	/**
 	 * It is a general switch which can be turned off to switch off all printouts.
 	 */
-	public static final boolean trace = true;
+	public static final boolean trace = false;
 	
 	/**
 	 * It turns on all trace printouts in variables.
