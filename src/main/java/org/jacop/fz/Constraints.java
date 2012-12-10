@@ -1547,7 +1547,14 @@ public class Constraints implements ParserTreeConstants {
 		}
 		else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
 		    pose(new Reified(new XplusCeqZ(p2[0], p3, p2[1]), p4));
-		} else {
+		} 
+		else if (p1.length == 2 && p1[0] == 1 && p1[1] == 1) {
+		    pose(new Reified(new XplusYeqC(p2[0], p2[1], p3), p4));
+		} 
+		else if (p1.length == 2 && p1[0] == -1 && p1[1] == -1) {
+		    pose(new Reified(new XplusYeqC(p2[0], p2[1], -p3), p4));
+		} 
+		else {
 		    // t = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
 		    // if (allWeightsOne(p1))
 		    // 	pose(new Sum(p2, t));
@@ -1669,6 +1676,10 @@ public class Constraints implements ParserTreeConstants {
 			v = new IntVar(store, p3, p3);
 		    if (allWeightsOne(p1))
 			pose(new Sum(p2, v));
+		    else if (allWeightsMinusOne(p1)) {
+			v = new IntVar(store, -p3, -p3);
+			pose(new Sum(p2, v));
+		    }
 		    else if (p3 == 0) 
 			if (sumPossible1(p1)) { // case when weights are [1, -1, ..., -1] or [-1, 1, ..., 1]
  			    IntVar[] vars = new IntVar[p2.length-1];
@@ -1747,7 +1758,11 @@ public class Constraints implements ParserTreeConstants {
 		    else
 			throw store.failException;
 
- 		if (p1.length == 2 && p1[0] == 1 && p1[1] == -1 && p3 == 0)
+		if (p1.length == 1) {
+		    t = new IntVar(store, IntDomain.MinInt, p3);
+		    pose(new XmulCeqZ(p2[0], p1[0], t));
+		}
+ 		else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1 && p3 == 0)
 		    pose(new XlteqY(p2[0], p2[1]));
  		else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1 && p3 == 0)
 		    pose(new XlteqY(p2[1], p2[0]));
@@ -1795,13 +1810,13 @@ public class Constraints implements ParserTreeConstants {
 	return true;
     }
 
-    // boolean allWeightsMinusOne(int[] w) {
-    // 	//boolean allOne=true;
-    // 	for (int i=0; i<w.length; i++)
-    // 	    if (w[i] != -1)
-    // 		return false;
-    // 	return true;
-    // }
+    boolean allWeightsMinusOne(int[] w) {
+    	//boolean allOne=true;
+    	for (int i=0; i<w.length; i++)
+    	    if (w[i] != -1)
+    		return false;
+    	return true;
+    }
 
     boolean sumPossible1(int[] w) {
 	//boolean sum = true;
