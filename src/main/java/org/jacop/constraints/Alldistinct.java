@@ -194,7 +194,7 @@ public class Alldistinct extends Constraint {
 	 */
 	public Alldistinct(IntVar[] list) {
 
-		queueIndex = 0;
+		queueIndex = 2;
 
 		numberId = idNumber++;
 

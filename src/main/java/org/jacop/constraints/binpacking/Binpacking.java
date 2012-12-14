@@ -108,6 +108,7 @@ public class Binpacking extends Constraint {
 		this.numberId = idNumber++;
 		this.item = new BinItem[bin.length];
 		this.numberArgs = (short) bin.length + load.length;
+		this.queueIndex = 1;
 
 		minBinNumber = bin[0].min();
 		for (int i = 0; i < bin.length; i++) {

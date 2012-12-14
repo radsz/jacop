@@ -92,6 +92,7 @@ public class AbsXeqY extends PrimitiveConstraint {
 		numberId = IdNumber++;
 		numberArgs = 2;
 
+		this.queueIndex = 0;
 		this.x = x;
 		this.y = y;
 	}
@@ -106,6 +107,11 @@ public class AbsXeqY extends PrimitiveConstraint {
 	    this(x, y);
 
 	    domainConsistent = domConsistency;
+
+	    if (domainConsistent)
+		this.queueIndex = 1;
+	    else
+		this.queueIndex = 0;
 	}
 
 

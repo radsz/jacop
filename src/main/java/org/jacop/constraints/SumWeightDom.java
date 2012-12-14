@@ -46,8 +46,10 @@ import org.jacop.core.IntervalEnumeration;
 
 /**
  * SumWeightDom constraint implements the weighted summation over several
- * Variable's . It provides the weighted sum from all Variable's on the list.
- * The weights must be positive integers.
+ * variable's . It provides the weighted sum from all variable's on the list.
+ * The weights are integers.
+ *
+ * The complexity of domain consistency is exponential in worst case. Use it carefully!
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 3.1
@@ -116,7 +118,7 @@ public class SumWeightDom extends Constraint {
 	
     private void commonInitialization(IntVar[] list, int[] weights, int sum) {
 		
-	queueIndex = 1;
+	queueIndex = 4;
 
 	assert ( list.length == weights.length ) : "\nLength of two vectors different in SumWeightDom";
 
@@ -153,7 +155,7 @@ public class SumWeightDom extends Constraint {
 	    i++;
 	}
 
-
+	checkForOverflow();
     }
 
     /**
@@ -254,9 +256,9 @@ public class SumWeightDom extends Constraint {
 
 	do {
 			
-	    int pointer = nextGroundedPosition.value();
-
 	    store.propagationHasOccurred = false;
+
+	    int pointer = nextGroundedPosition.value();
 
 	    LinkedHashSet<IntVar> fdvs = variableQueue;
 	    variableQueue = new LinkedHashSet<IntVar>();
@@ -388,7 +390,7 @@ public class SumWeightDom extends Constraint {
 
 	    }
 
-	    sumJustGrounded = add(sumJustGrounded, IntDomain.multiply(value, weightGrounded));
+	    sumJustGrounded += value * weightGrounded;
 
 	    sumGrounded.update( sumGrounded.value() + sumJustGrounded );
 
@@ -473,14 +475,17 @@ public class SumWeightDom extends Constraint {
 		IntervalDomain mulDom = new IntervalDomain();
 		if ( c > 0) 
 		    for (int k=i.min(); k<=i.max(); k++) {
-			mulDom.addDom(new IntervalDomain(k*c, k*c));
+			// mulDom.addDom(new IntervalDomain(k*c, k*c));
+			mulDom.unionAdapt(k*c, k*c);
 		    }
 		else // c < 0
 		    for (int k=i.max(); k>=i.min(); k--) {	
-			mulDom.addDom(new IntervalDomain(k*c, k*c));
+			// mulDom.addDom(new IntervalDomain(k*c, k*c));
+			mulDom.unionAdapt(k*c, k*c);
 		    }
 
-		temp.addDom(mulDom);
+		// temp.addDom(mulDom);
+		temp.unionAdapt(mulDom);
 
 	    }
 	}
@@ -527,22 +532,25 @@ public class SumWeightDom extends Constraint {
 	    for (IntervalEnumeration e1 = d.intervalEnumeration(); e1.hasMoreElements();) {
 		Interval i = e1.nextElement();
 
-		IntervalDomain divDom = new IntervalDomain(1);
+		IntervalDomain divDom = new IntervalDomain();
 
 		if ( c > 0)
 		    for (int k=i.min(); k<=i.max(); k++) {
 
 			if (k % c == 0)
-			divDom.addDom(new IntervalDomain(k/c, k/c));
+			    // divDom.addDom(new IntervalDomain(k/c, k/c));
+			    divDom.unionAdapt(k/c, k/c);
 		    }
 		else // c < 0
 		    for (int k=i.max(); k>=i.min(); k--) {	
 
 			if (k % c == 0)
-			    divDom.addDom(new IntervalDomain(k/c, k/c));
+			    // divDom.addDom(new IntervalDomain(k/c, k/c));
+			    divDom.unionAdapt(k/c, k/c);
 		    }
 
-		temp.addDom(divDom);
+		// temp.addDom(divDom);
+		temp.unionAdapt(divDom);
 
 	    }
 	}
@@ -552,6 +560,7 @@ public class SumWeightDom extends Constraint {
 	return temp;
     }
 
+    /*
     IntDomain plusDom(IntDomain d1, IntDomain d2) {
 	IntDomain temp;
 	// System.out.println (d1 + " + " + d2);
@@ -564,7 +573,8 @@ public class SumWeightDom extends Constraint {
 
 	    for (IntervalEnumeration e2 = d2.intervalEnumeration(); e2.hasMoreElements();) {
 		Interval i2 = e2.nextElement();
-		temp.addDom(new IntervalDomain(i1min+i2.min(), i1Max+i2.max()));
+		// temp.addDom(new IntervalDomain(i1min+i2.min(), i1Max+i2.max()));
+		temp.unionAdapt(i1min+i2.min(), i1Max+i2.max());
 	    }
 	}
 
@@ -572,6 +582,7 @@ public class SumWeightDom extends Constraint {
 
 	return temp;
     }
+    */
 
     IntDomain subtractDom(IntDomain d1, IntDomain d2) {
 
@@ -584,7 +595,8 @@ public class SumWeightDom extends Constraint {
 
 	    for (IntervalEnumeration e2 = d2.intervalEnumeration(); e2.hasMoreElements();) {
 		Interval i2 = e2.nextElement();
-		temp.addDom(new IntervalDomain(i1min-i2.max(), i1max-i2.min()));
+		// temp.addDom(new IntervalDomain(i1min-i2.max(), i1max-i2.min()));
+		temp.unionAdapt(i1min-i2.max(), i1max-i2.min());
 	    }
 	}
 
@@ -592,6 +604,24 @@ public class SumWeightDom extends Constraint {
 
 	return temp;
 
+    }
+
+    void checkForOverflow() {
+
+	int sumMin=0, sumMax=0;
+	for (int i=0; i<list.length; i++) {
+	    int n1 = IntDomain.multiply(list[i].min(), weights[i]);
+	    int n2 = IntDomain.multiply(list[i].max(), weights[i]);
+
+	    if (n1 <= n2) {
+		sumMin = add(sumMin, n1);
+		sumMax = add(sumMax, n2);
+	    }
+	    else {
+		sumMin = add(sumMin, n2);
+		sumMax = add(sumMax, n1);
+	    }
+	}
     }
 
 }
