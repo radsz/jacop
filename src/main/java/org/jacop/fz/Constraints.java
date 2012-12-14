@@ -392,9 +392,7 @@ public class Constraints implements ParserTreeConstants {
 			SimpleNode p1 = (SimpleNode)node.jjtGetChild(0);
 			IntVar[] a1 = getVarArray(p1);
 
-			IntVar t1 = new IntVar(store, 0, a1.length);
-			pose(new Sum(a1, t1));
-			pose(new XmodYeqZ(t1, new IntVar(store, 2,2), one));
+			pose(new XorBoolArray(a1));
 
 		    }
 		    else if (p.startsWith("element", 11)) {
@@ -816,7 +814,7 @@ public class Constraints implements ParserTreeConstants {
 			else { // domain consistency
 			    parameterListForAlldistincts.add(v);
 
-//    			    System.out.println("Alldistinct imposed");
+    			    // System.out.println("Alldistinct imposed");
 			}
 		    }
 		    else {
