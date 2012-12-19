@@ -238,8 +238,9 @@ public class Linear extends PrimitiveConstraint {
 
 	    pruneRelation(store, relationType);
 
-	    if (satisfied())
-	    	removeConstraint();
+	    if (relationType != eq)
+	    	if (satisfied())
+	    	    removeConstraint();
 	}
 
 	@Override
@@ -247,8 +248,9 @@ public class Linear extends PrimitiveConstraint {
 
 	    pruneRelation(store, negRel[relationType]);
 
-	    if (notSatisfied()) 
-	    	removeConstraint();
+	    if (negRel[relationType] != eq)
+	    	if (notSatisfied()) 
+	    	    removeConstraint();
 		
 	}
 
