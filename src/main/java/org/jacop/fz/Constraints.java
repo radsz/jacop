@@ -392,7 +392,7 @@ public class Constraints implements ParserTreeConstants {
 			SimpleNode p1 = (SimpleNode)node.jjtGetChild(0);
 			IntVar[] a1 = getVarArray(p1);
 
-			pose(new XorBoolArray(a1));
+			pose(new XorBool(a1, one));
 
 		    }
 		    else if (p.startsWith("element", 11)) {
@@ -500,7 +500,7 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar v2 = getVariable(p2);
 		    IntVar v3 = getVariable(p3);
 
-		    pose(new XorBool(v1, v2, v3));
+		    pose(new XorBool(new IntVar[] {v1, v2}, v3));
 		    // 					pose(new Reified(new XneqY(v1, v2), v3));
 		}
 		// bool_not

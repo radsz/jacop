@@ -1048,7 +1048,8 @@ class BoolVar(name: String, min1: Int, max1: Int) extends org.jacop.core.Boolean
  */
   def xor(that: org.jacop.core.IntVar) = {
     val result = new BoolVar()
-    val c = new org.jacop.constraints.XorBool(this, that, result)
+    val parameters = Array(this, that)
+    val c = new org.jacop.constraints.XorBool(parameters, result)
     Model.constr += c
     result
   }

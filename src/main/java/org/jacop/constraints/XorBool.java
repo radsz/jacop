@@ -40,7 +40,7 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 
 /**
- * Constraint ( X xor Y ) <=> Z.
+ * Constraint ( x_0 xor x_1 xor ... xor x_n ) <=> y
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 3.0
@@ -49,6 +49,12 @@ import org.jacop.core.Var;
 public class XorBool extends PrimitiveConstraint {
 
 	/*
+	 * The logical XOR (exclusive OR) function gives True if an odd number of its arguments 
+	 * is True, and the rest are False. It gives False if an even number of its arguments is True, 
+	 * and the rest are False.
+	 *
+	 * For two arguments the truth table is
+	 *
 	 * X | Y | Z
 	 * 0   0   0
 	 * 0   1   1
@@ -59,43 +65,33 @@ public class XorBool extends PrimitiveConstraint {
 	static int idNumber = 1;
 
 	/**
-	 * It specifies variable x in constraint ( X xor Y ) <=> Z.
+	 * It specifies variables x for the constraint.
 	 */
-	public IntVar x;
+	public IntVar[] x;
 
-	/**
-	 * It specifies variable y in constraint ( X xor Y ) <=> Z.
-	 */
-	public IntVar y;
-
-	/**
-	 * It specifies variable z in constraint ( X xor Y ) <=> Z.
-	 */
-	public IntVar z;
+        public IntVar y;
 
 	/**
 	 * It specifies the arguments required to be saved by an XML format as well as 
 	 * the constructor being called to recreate an object from an XML format.
 	 */
-	public static String[] xmlAttributes = {"x", "y", "z"};
+    public static String[] xmlAttributes = {"x", "y"};
 
-	/** It constructs constraint (X xor Y ) <=> Z.
-	 * @param x variable x.
+	/** It constructs constraint (x_0 xor x_1 xor ... xor x_n ) <=> y.
+	 * @param x variables x.
 	 * @param y variable y.
-	 * @param z variable z.
 	 */
-	public XorBool(IntVar x, IntVar y, IntVar z) {
+    public XorBool(IntVar[] x, IntVar y) {
 
-		assert (x != null) : "Variable x is null";
+		assert (x != null) : "Variables x is null";
 		assert (y != null) : "Variable y is null";
-		assert (z != null) : "Variable z is null";
 
+	        queueIndex = 0;
 		numberId = idNumber++;
-		numberArgs = 3;
+		numberArgs = x.length + 1;
 
 		this.x = x;
 		this.y = y;
-		this.z = z;
 
 		assert ( checkInvariants() == null) : checkInvariants();
 
@@ -109,14 +105,12 @@ public class XorBool extends PrimitiveConstraint {
 	 */
 	public String checkInvariants() {
 
-		if (x.min() < 0 || x.max() > 1)
-			return "Variable " + x + " does not have boolean domain";
-
+	    for (IntVar e : x)
+		if (e.min() < 0 || e.max() > 1)
+		    return "Variable " + x + " does not have boolean domain";
+	
 		if (y.min() < 0 || y.max() > 1)
 			return "Variable " + y + " does not have boolean domain";
-
-		if (z.min() < 0 || z.max() > 1)
-			return "Variable " + z + " does not have boolean domain";
 
 		return null;
 	}
@@ -126,50 +120,99 @@ public class XorBool extends PrimitiveConstraint {
 
 		ArrayList<Var> variables = new ArrayList<Var>(3);
 
-		variables.add(x);
+		for (IntVar e : x)
+		    variables.add(e);
+
 		variables.add(y);
-		variables.add(z);
+
 		return variables;
 	}
 
 	@Override
 	public void consistency(Store store) {
 
-		do {
+	    do {
 		
-			store.propagationHasOccurred = false;
+		store.propagationHasOccurred = false;
+
+		IntVar nonGround = null;
+
+		int numberOnes = 0;
+		for (IntVar e : x)
+		    if (e.min() == 1)
+			numberOnes++;
+		    else if (e.max() != 0)
+			nonGround = e;
+
+		int numberZeros = 0;
+		for (IntVar e : x)
+		    if (e.max() == 0)
+			numberZeros++;
+		    else if (e.min() != 1)
+			nonGround = e;
+
+		if (numberOnes + numberZeros == x.length)
+		    if (numberOnes % 2 == 1)
+			y.domain.in(store.level, y, 1, 1);
+		    else
+			y.domain.in(store.level, y, 0, 0);
+		else if (numberOnes + numberZeros == x.length - 1)
+		    if (y.min() == 1)
+			if (numberOnes % 2 == 1)
+			    nonGround.domain.in(store.level, nonGround, 0,0);
+			else
+			    nonGround.domain.in(store.level, nonGround, 1,1);
+		    else if (y.max() == 0)
+			if (numberOnes % 2 == 1)
+			    nonGround.domain.in(store.level, nonGround, 1,1);
+			else
+			    nonGround.domain.in(store.level, nonGround, 0,0);
+
+	    } while (store.propagationHasOccurred);
+	}
+
+        @Override
+	public void notConsistency(Store store) {
+		
+	    do {
 			
-			if (z.max() == 0) {
-				x.domain.in(store.level, x, y.domain);
-				y.domain.in(store.level, y, x.domain);
-			} else if (z.min() == 1) {
-				if (y.singleton())
-					x.domain.inComplement(store.level, x, y.value() );
-				if (x.singleton())
-					y.domain.inComplement(store.level, y, x.value() );					
-			}
+		store.propagationHasOccurred = false;			
 
-			if (x.max() == 0) {
-				z.domain.in(store.level, z, y.domain);
-				y.domain.in(store.level, y, z.domain);				
-			} else if (x.min() == 1) {
-				if (y.singleton())
-					z.domain.inComplement(store.level, z, y.value() );
-				if (z.singleton())
-					y.domain.inComplement(store.level, y, z.value() );
-			}
+		IntVar nonGround = null;
 
-			if (y.max() == 0) {
-				z.domain.in(store.level, z, x.domain);
-				x.domain.in(store.level, x, z.domain);				
-			} else if (y.min() == 1) {
-				if (x.singleton())
-					z.domain.inComplement(store.level, z, x.value() );
-				if (z.singleton())
-					x.domain.inComplement(store.level, x, z.value() );
-			}
+		int numberOnes = 0;
+		for (IntVar e : x)
+		    if (e.min() == 1)
+			numberOnes++;
+		    else if (e.max() != 0)
+			nonGround = e;
+
+		int numberZeros = 0;
+		for (IntVar e : x)
+		    if (e.max() == 0)
+			numberZeros++;
+		    else if (e.min() != 1)
+			nonGround = e;
+
+		if (numberOnes + numberZeros == x.length)
+		    if (numberOnes % 2 == 1)
+			y.domain.in(store.level, y, 0, 0);
+		    else 
+			y.domain.in(store.level, y, 1, 1);
+		else if (numberOnes + numberZeros == x.length - 1)
+		    if (y.min() == 1)
+			if (numberOnes % 2 == 1)
+			    nonGround.domain.in(store.level, nonGround, 1,1);
+			else
+			    nonGround.domain.in(store.level, nonGround, 0,0);
+		    else if (y.max() == 0)
+			if (numberOnes % 2 == 1)
+			    nonGround.domain.in(store.level, nonGround, 0,0);
+			else
+			    nonGround.domain.in(store.level, nonGround, 1,1);
 
 		} while (store.propagationHasOccurred);
+		
 	}
 
 	@Override
@@ -222,128 +265,79 @@ public class XorBool extends PrimitiveConstraint {
 	@Override
 	public void impose(Store store) {
 
-		x.putModelConstraint(this, getConsistencyPruningEvent(x));
+	    for (IntVar e : x)
+		e.putModelConstraint(this, getConsistencyPruningEvent(e));
+
 		y.putModelConstraint(this, getConsistencyPruningEvent(y));
-		z.putModelConstraint(this, getConsistencyPruningEvent(z));
+
 		store.addChanged(this);
 		store.countConstraint();
 	}
 
 	@Override
-	public void notConsistency(Store store) {
-		
-		do {
-			
-			store.propagationHasOccurred = false;
-			
-			if (z.singleton()) {
+	public boolean satisfied() {
 
-				if (z.max() == 0) {
-					if (y.singleton())
-						x.domain.inComplement(store.level, x, y.value() );
-					if (x.singleton())
-						y.domain.inComplement(store.level, y, x.value() );					
-				}
+	    if (! y.singleton())
+		return false;
+	    else
+		for (IntVar e : x)
+		    if (! e.singleton())
+			return false;
 
-				if (z.min() == 1) {
-					x.domain.in(store.level, x, y.domain);
-					y.domain.in(store.level, y, x.domain);
-				}
+	    int sum = 0;
+	    for (IntVar e : x)
+		sum += e.value();
 
-			}
+	    if (sum % 2 == 1 && y.min() == 1)
+		return true;
+	    else if (sum % 2 == 0 && y.max() == 0)
+		return true;
 
-			if (x.singleton()) {
+	    return false;
 
-				if (x.max() == 0) {
-					if (y.singleton())
-						z.domain.inComplement(store.level, z, y.value() );
-					if (z.singleton())
-						y.domain.inComplement(store.level, y, z.value() );
-				}
-
-				if (x.min() == 1) {
-					z.domain.in(store.level, z, y.domain);
-					y.domain.in(store.level, y, z.domain);				
-				}
-			}
-
-			if (y.singleton()) {
-
-				if (y.max() == 0) {
-					if (x.singleton())
-						z.domain.inComplement(store.level, z, x.value() );
-					if (z.singleton())
-						x.domain.inComplement(store.level, x, z.value() );
-				}
-
-				if (y.min() == 1) {
-					z.domain.in(store.level, z, y.domain);
-					y.domain.in(store.level, y, z.domain);				
-				}
-
-			}
-
-		} while (store.propagationHasOccurred);
-		
 	}
 
 	@Override
 	public boolean notSatisfied() {
 
-		if (!x.singleton())
-			return false;
-		if (!z.singleton())
-			return false;
-		if (!y.singleton())
-			return false;
-
-		int sum = x.value() + y.value() + z.value();
-
-		if (sum == 1 || sum == 3)
-			return true;
-
+	    if (! y.singleton())
 		return false;
+	    else
+		for (IntVar e : x)
+		    if (! e.singleton())
+			return false;
+
+	    int sum = 0;
+	    for (IntVar e : x)
+		sum += e.value();
+
+	    if (sum % 2 == 1 && y.min() == 0)
+		return true;
+	    else if (sum % 2 == 0 && y.min() == 1)
+		return true;
+
+	    return false;
 	}
 
 	@Override
 	public void removeConstraint() {
-		x.removeConstraint(this);
-		y.removeConstraint(this);
-		z.removeConstraint(this);
-	}
+	    for (IntVar e : x)
+		e.removeConstraint(this);
 
-	@Override
-	public boolean satisfied() {
-
-		if (!x.singleton())
-			return false;
-		if (!z.singleton())
-			return false;
-		if (!y.singleton())
-			return false;
-
-		int sum = x.value() + y.value() + z.value();
-
-		if (sum == 0 || sum == 2)
-			return true;
-
-		return false;
-
+	    y.removeConstraint(this);
 	}
 
 	@Override
 	public String toString() {
 
-		return id() + " : XorBool( (" + x + ", " + y + ") <=> " + z + " )";
+	    return id() + " : XorBool( (" + java.util.Arrays.asList(x) + ") <=>  " + y + ")";
 	}
 
 	@Override
 	public void increaseWeight() {
-		if (increaseWeight) {
-			x.weight++;
-			y.weight++;
-			z.weight++;
-		}
+	    if (increaseWeight) 
+		for (IntVar e : x)
+		    e.weight++;
 	}
 
 }
