@@ -6,6 +6,8 @@ package org.jacop.scala
 import org.jacop.constraints._
 import org.jacop.set.constraints._
 
+import scala.language.implicitConversions
+
 /**
 * Manages all variables, constraints and global constraints for [[JaCoP]] constraint solver.
 * Keeps also labels for search.
@@ -774,7 +776,7 @@ class SetVar(name : String, glb : Int, lub : Int) extends org.jacop.set.core.Set
  * @param that second parameter for the constraint.
  * @return result set variable that is the result for this constraint.
  */
-  def \ (that: SetVar) {
+  def \ (that: SetVar) = {
     val result = new SetVar()
     val c = new AdiffBeqC(this, that, result)
     Model.constr += c

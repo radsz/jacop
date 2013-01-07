@@ -125,11 +125,15 @@ setup to run configuration. -->
                             <goal>testCompile</goal>
                         </goals>
                         <configuration>
-                            <sendJavaToScalac>false</sendJavaToScalac>
-                            <sourceDir>src/main/scala</sourceDir>
-                            <includes>
-                                <include>**/*.scala</include>
-                            </includes>
+			  <args>
+			    <arg>-deprecation</arg>
+			    <arg>-feature</arg>
+			  </args>
+			  <sendJavaToScalac>false</sendJavaToScalac>
+			  <sourceDir>src/main/scala</sourceDir>
+			  <includes>
+			    <include>**/*.scala</include>
+			  </includes>
                         </configuration>
                     </execution>
                 </executions>
@@ -329,12 +333,12 @@ setup to run configuration. -->
         <dependency>
             <groupId>org.scala-lang</groupId>
             <artifactId>scala-library</artifactId>
-            <version>2.9.1</version>
+            <version>2.10.0</version>
         </dependency>
         <dependency>
             <groupId>org.scala-lang</groupId>
             <artifactId>scala-compiler</artifactId>
-            <version>2.9.1</version>
+            <version>2.10.0</version>
         </dependency>
 
     </dependencies>
