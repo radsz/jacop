@@ -202,13 +202,13 @@ object Nonogram extends jacop {
       val result = createAutomaton(row_rules(i));
 			
       if (slideDecomposition)
-  	Model.imposeDecomposition(new Regular(result, board(i).asInstanceOf[Array[org.jacop.core.IntVar]]));
+  	getModel.imposeDecomposition(new Regular(result, board(i).asInstanceOf[Array[org.jacop.core.IntVar]]));
       
       if (regularConstr)
 	regular(result, board(i).toList)
 			
       if (extensionalMDD)
- 	Model.impose(new ExtensionalSupportMDD(result.transformDirectlyIntoMDD(board(i).asInstanceOf[Array[org.jacop.core.IntVar]])));
+ 	getModel.impose(new ExtensionalSupportMDD(result.transformDirectlyIntoMDD(board(i).asInstanceOf[Array[org.jacop.core.IntVar]])));
 
     }
 
@@ -219,13 +219,13 @@ object Nonogram extends jacop {
       val column = Array.tabulate(row_rules.length)( j => board(j)(i))
 							
       if (slideDecomposition)
- 	Model.imposeDecomposition(new Regular(result, column.asInstanceOf[Array[org.jacop.core.IntVar]]));
+ 	getModel.imposeDecomposition(new Regular(result, column.asInstanceOf[Array[org.jacop.core.IntVar]]));
 
       if (regularConstr)
 	regular(result, column.toList)
 
       if (extensionalMDD)
- 	Model.impose(new ExtensionalSupportMDD(result.transformDirectlyIntoMDD(column.asInstanceOf[Array[org.jacop.core.IntVar]])));
+ 	getModel.impose(new ExtensionalSupportMDD(result.transformDirectlyIntoMDD(column.asInstanceOf[Array[org.jacop.core.IntVar]])));
 	
     }
 
