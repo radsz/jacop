@@ -167,9 +167,9 @@ public final class Node {
 	// a string representation of the state
 	public String toString() {
 		// TODO only for debugging, otherwise we would use StringBuilder
-		return "[node: " + name + ", balance=" + balance + ", delta="
-				+ deltaBalance + ", potential=" + potential + ", depth="
-				+ depth + ", parent=" + (parent == null ? null : parent.name)
-				+ ", thread=" + thread.name + "]";
+	    return "[node: " + name + ", balance=" + balance + ", delta="
+		+ deltaBalance + ", potential=" + potential + ", depth="
+		+ depth + ", parent=" + (parent == null ? null : parent.name)
+		+ ", thread=" + (thread == null ? null : thread.name) + "]";
 	}
 }
