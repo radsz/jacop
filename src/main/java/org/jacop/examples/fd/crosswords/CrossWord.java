@@ -64,10 +64,10 @@ import org.jacop.util.MDD;
 */
 public class CrossWord extends ExampleFD {
 
-    int r;          // number of rows
-    int c;          // number of column
-    char[][] matrix; // the clues matrix
-    ArrayList<Integer> wordSizes;
+    int r = 5;          // number of rows
+    int c = 5;          // number of column
+    int[] wordSizesPrimitive = {4, 5};
+    ArrayList<Integer> wordSizes = new ArrayList<Integer>();
     // * - black wall
     // letter - letter which must be in crossword
     // _ - unknown letter, any letter is accepted.
@@ -82,7 +82,13 @@ public class CrossWord extends ExampleFD {
 
     
   	HashMap<Integer, MDD> mdds = new HashMap<Integer, MDD>();
-  	
+
+    char[][] crosswordTemplate = {{'*', '_', '_', '_', '_'},
+                                  {'_', '_', '_', 'l', '_'},
+                                  {'_', '_', '_', '_', '_'},
+                                  {'_', 'e', '_', '_', '_'},
+                                  {'_', '_', 'm', '_', '_'}};
+
     /**
      *
      *  model()
@@ -149,29 +155,15 @@ public class CrossWord extends ExampleFD {
         mappingReverse.put(26,"m");
 
         blank = new IntVar(store, "blank", 1, 26);
-        
-        if (matrix == null) {
 
-            System.out.println("Using the default problem.");
+        for (int s : wordSizesPrimitive)
+            wordSizes.add(s);
 
-            char[][] matrixTemp = {{'_', '_', '_', '_', '_'},
-                                   {'_', 'a', '_', '_', '_'},
-                                   {'_', '_', '_', '_', '_'},
-                                   {'a', '_', '_', '_', '_'},
-                                   {'_', '_', '_', '_', '_'}};
-            	
-            r = 5;
-            c = 5;
-            matrix = matrixTemp;
-            wordSizes = new ArrayList<Integer>();
+        x = new IntVar[crosswordTemplate.length][];
 
-            wordSizes.add(5);
+        for (int i = 0; i < crosswordTemplate.length; i++)
+           	x[i] = new IntVar[crosswordTemplate[i].length];
 
-            x = new IntVar[matrix.length][];
-            for (int i = 0; i < matrix.length; i++)
-            	x[i] = new IntVar[matrix[i].length];
-        }
-        
         readDictionaryFromFile(defaultDictionary, wordSizes);
         
         
@@ -181,9 +173,11 @@ public class CrossWord extends ExampleFD {
         
         for(int i = 0; i < r; i++) {
             for(int j = 0; j < c; j++) {
-                x[i][j] = new IntVar(store, "x_" + i + "_" + j, 1, 26);
-                if (matrix[i][j] != '_') {
-                    store.impose(new XeqC(x[i][j], mapping.get(String.valueOf(matrix[i][j]))));
+                if (crosswordTemplate[i][j] != '*') {
+                    x[i][j] = new IntVar(store, "x_" + i + "_" + j, 1, 26);
+                    if (crosswordTemplate[i][j] != '_') {
+                        store.impose(new XeqC(x[i][j], mapping.get(String.valueOf(crosswordTemplate[i][j]))));
+                    }
                 }
             }
         }
@@ -194,7 +188,7 @@ public class CrossWord extends ExampleFD {
 
             for(int j = 0; j < c; j++) {
 
-            	if (matrix[i][j] == '*') {
+            	if (crosswordTemplate[i][j] == '*') {
             		if (wordSizes.contains(word.size())) {
             			MDD mdd4word = mdds.get(word.size()).reuse(word.toArray(new IntVar[0]));
             			store.impose(new ExtensionalSupportMDD(mdd4word));
@@ -225,7 +219,7 @@ public class CrossWord extends ExampleFD {
 
             for(int i = 0; i < r; i++) {
 
-            	if (matrix[i][j] == '*') {
+            	if (crosswordTemplate[i][j] == '*') {
             		if (wordSizes.contains(word.size())) {
             			MDD mdd4word = mdds.get(word.size()).reuse(word.toArray(new IntVar[0]));
             			store.impose(new ExtensionalSupportMDD(mdd4word));
@@ -253,20 +247,25 @@ public class CrossWord extends ExampleFD {
 
         for(int i = 0; i < r; i++) 
             for(int j = 0; j < c; j++)
-            	vars.add(x[i][j]);
+                if (x[i][j] != null)
+            	    vars.add(x[i][j]);
                     
     }
 
 
     /**
-     * It prints a variable matrix.
+     * It prints a variable crosswordTemplate.
+     * @param crossWordTemplate
      */
-    public void printSolution() {
+    public void printSolution(char[][] crossWordTemplate) {
 
     	System.out.println();
         for(int i = 0; i < r; i++) {
             for(int j = 0; j < c; j++) {
-                System.out.print(mappingReverse.get(x[i][j].value() ) + " ");
+                if (crossWordTemplate[i][j] != '*')
+                    System.out.print(mappingReverse.get(x[i][j].value() ) + " ");
+                else
+                    System.out.print("* ");
             }
             System.out.println();
         }
@@ -355,7 +354,7 @@ public class CrossWord extends ExampleFD {
 				new SmallestDomain<IntVar>(), new IndomainMin<IntVar>());
 
 		Search<IntVar> search = new DepthFirstSearch<IntVar>();
-		search.setSolutionListener(new PrintListener<IntVar>());
+		search.setSolutionListener(new PrintListener<IntVar>(crosswordTemplate));
 		
 		search.getSolutionListener().searchAll(true);
 		search.getSolutionListener().recordSolutions(false);
@@ -416,14 +415,19 @@ public class CrossWord extends ExampleFD {
 	 */
 	public class PrintListener<T extends Var> extends SimpleSolutionListener<T> {
 
-		@Override
+        char [][] crossWordTemplate;
+        public PrintListener(char[][] crosswordTemplate) {
+            this.crossWordTemplate = crosswordTemplate;
+        }
+
+        @Override
 		public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
 
 			boolean returnCode = super.executeAfterSolution(search, select);
 			
 			if (noSolutions % 10 == 0) {
 				System.out.println("Solution # " + noSolutions);
-				printSolution();
+				printSolution(crossWordTemplate);
 			}
 			
 			return returnCode;
