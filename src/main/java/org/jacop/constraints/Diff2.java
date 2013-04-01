@@ -243,6 +243,7 @@ public class Diff2 extends Diff {
 	    for (int i = 0; i < list.size(); i++)
 	    	this.exclusiveList[i] = list.get(i);
 		
+
 	}
 
 	/**
@@ -278,23 +279,24 @@ public class Diff2 extends Diff {
 
 		ArrayList<Rectangle> list = new ArrayList<Rectangle>();
 		
-		for (int i = 0; i < rectangles.length; i++)
+		for (int i = 0; i < rectangles.length; i++) 
 			if (notOverlapping(index + 1, i + 1, exclusiveList))
 				list.add(rectangles[i]);
-				
+
 		return list.toArray(new Rectangle[list.size()]);
 	}
 
 	boolean notOverlapping(int i, 
-						   int j,
-						   int[] exclusiveList) {
+			       int j,
+			       int[] exclusiveList) {
 
 		boolean onList = false;
 		int l = 0;
-		
-		while (!onList && l < exclusiveList.length) {
+
+		while (!onList && l < exclusiveList.length/2) {
 			int el1 = exclusiveList[l*2];
 			int el2 = exclusiveList[l*2+1];
+
 			onList = (i == el1 && j == el2)
 					|| (i == el2 && j == el1);
 			l++;

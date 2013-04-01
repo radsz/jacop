@@ -6,11 +6,13 @@ package org.jacop.scala
 import org.jacop.constraints._
 import org.jacop.set.constraints._
 
+import scala.language.implicitConversions
+
 /**
 * Manages all variables, constraints and global constraints for [[JaCoP]] constraint solver.
 * Keeps also labels for search.
 */
-object Model extends org.jacop.core.Store {
+class Model extends org.jacop.core.Store {
 
   var n = 0
 
@@ -19,10 +21,10 @@ object Model extends org.jacop.core.Store {
   val constr = new ListBuffer[Constraint]
 
   def imposeAllConstraints() {
-    Model.constr.foreach(e => Model.impose(e))
+    this.constr.foreach(e => this.impose(e))
     if (trace) 
-      Model.constr.foreach(println _)
-    Model.constr.clear()
+      this.constr.foreach(println _)
+    this.constr.clear()
   }
 }
 
@@ -33,7 +35,7 @@ trait jacop {
 /**
  * Converts integer to IntVar.
  *
- * @param i intger to be converted.
+ * @param i integer to be converted.
  */
   implicit def intToIntVar(i: Int): IntVar = {
     val v = new IntVar(i, i)
@@ -196,7 +198,7 @@ class IntSet extends org.jacop.core.IntervalDomain {
  * @param min minimal value of variable's domain.
  * @param max maximal value of variable's domain.
  */
-class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Model, name, min, max) with jacop {
+class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(getModel, name, min, max) with jacop {
 
 /**
  * Defines an anonymous finite domain integer variable.
@@ -206,8 +208,8 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
  * @param max maximal value of variable's domain.
  */
   def this(min: Int, max: Int) = {
-    this ("_$" + Model.n, min, max)
-    Model.n += 1
+    this ("_$" + getModel.n, min, max)
+    getModel.n += 1
   }
 
 /**
@@ -219,7 +221,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
  */
   def this(name: String) = {
     this (name, org.jacop.core.IntDomain.MinInt, org.jacop.core.IntDomain.MaxInt)
-    Model.n += 1
+    getModel.n += 1
   }
 
 /**
@@ -230,7 +232,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
  */
   def this() = {
     this (org.jacop.core.IntDomain.MinInt, org.jacop.core.IntDomain.MaxInt)
-    Model.n += 1
+    getModel.n += 1
   }
 
 /**
@@ -242,7 +244,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
   def this(dom: IntSet) = {
     this ()
     this.dom.intersectAdapt(dom)
-    Model.n += 1
+    getModel.n += 1
   }
 
 /**
@@ -256,7 +258,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
   def this(name:String, dom: IntSet) = {
     this (name)
     this.dom.intersectAdapt(dom)
-    Model.n += 1
+    getModel.n += 1
   }
 
 /**
@@ -268,7 +270,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
    def +(that: org.jacop.core.IntVar) = {
      val result = new IntVar()
      val c = new XplusYeqZ(this, that, result)
-     Model.constr += c
+     getModel.constr += c
      result
    }
 
@@ -281,7 +283,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
   def +(that: Int) = {
     val result = new IntVar()
     val c = new XplusCeqZ(this, that, result)
-    Model.constr += c
+    getModel.constr += c
     result
   }
 
@@ -294,7 +296,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
   def -(that: org.jacop.core.IntVar) = {
     val result = new IntVar()
     val c = new XplusYeqZ(result, that, this)
-    Model.constr += c
+    getModel.constr += c
     result
   }
 
@@ -307,7 +309,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
   def -(that: Int) = {
     val result = new IntVar()
     val c = new XplusCeqZ(result, that, this)
-    Model.constr += c
+    getModel.constr += c
     result
   }
 
@@ -320,7 +322,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
    def *(that: org.jacop.core.IntVar) = {
      val result = new IntVar()
      val c = new XmulYeqZ(this, that, result)
-     Model.constr += c
+     getModel.constr += c
      result
    }
 
@@ -333,7 +335,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
   def *(that: Int) = {
     val result = new IntVar()
     val c = new XmulCeqZ(this, that, result)
-    Model.constr += c
+    getModel.constr += c
     result
   }
 
@@ -346,7 +348,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
   def div(that: org.jacop.core.IntVar) = {
     val result = new IntVar()
     val c = new XdivYeqZ(this, that, result)
-    Model.constr += c
+    getModel.constr += c
     result
   }
 
@@ -359,7 +361,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
   def mod(that: org.jacop.core.IntVar) = {
      val result = new IntVar()
      val c = new XmodYeqZ(this, that, result)
-     Model.constr += c
+     getModel.constr += c
      result
    }
 
@@ -372,7 +374,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
   def ^(that: org.jacop.core.IntVar) = {
      val result = new IntVar()
      val c = new XexpYeqZ(this, that, result)
-     Model.constr += c
+     getModel.constr += c
      result
    }
 
@@ -384,7 +386,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
   def unary_- = {
     val result = new IntVar()
     val c = new XplusYeqC(this, result, 0)
-    Model.constr += c
+    getModel.constr += c
     result
   }
 
@@ -397,7 +399,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
   @deprecated("use #= instead", "1.0")
   def ==(that: org.jacop.core.IntVar) = { 
     val c = new XeqY(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -409,7 +411,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
  */
   def #=(that: org.jacop.core.IntVar) = { 
     val c = new XeqY(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -422,7 +424,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
   @deprecated("use #= instead", "1.0") 
   def ==(that: Int) = {
     val c = new XeqC(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -434,7 +436,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
  */
   def #=(that: Int) = {
     val c = new XeqC(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -447,7 +449,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
   @deprecated("use #\\= instead", "1.0") 
   def !=(that: org.jacop.core.IntVar) = {
     val c = new XneqY(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -459,7 +461,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
  */
   def #\=(that: org.jacop.core.IntVar) = {
     val c = new XneqY(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -473,7 +475,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
   @deprecated("use #\\= instead", "1.0") 
   def !=(that: Int) = {
     val c = new XneqC(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -485,7 +487,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
  */
   def #\=(that: Int) = {
     val c = new XneqC(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -498,7 +500,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
   @deprecated("use #< instead", "1.0") 
   def <(that: org.jacop.core.IntVar) = {
     val c = new XltY(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -510,7 +512,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
  */
   def #<(that: org.jacop.core.IntVar) = {
     val c = new XltY(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -523,7 +525,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
   @deprecated("use #< instead", "1.0") 
   def <(that: Int) = {
     val c = new XltC(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -535,7 +537,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
  */
   def #<(that: Int) = {
     val c = new XltC(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -548,7 +550,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
   @deprecated("use #<= instead", "1.0") 
   def <=(that: org.jacop.core.IntVar) = {
     val c = new XlteqY(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -560,7 +562,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
  */
   def #<=(that: org.jacop.core.IntVar) = {
     val c = new XlteqY(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -573,7 +575,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
   @deprecated("use #<= instead", "1.0") 
   def <=(that: Int) = {
     val c = new XlteqC(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -585,7 +587,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
  */
   def #<=(that: Int) = {
     val c = new XlteqC(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -598,7 +600,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
   @deprecated("use #> instead", "1.0") 
   def >(that: org.jacop.core.IntVar) = {
     val c = new XgtY(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -610,7 +612,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
  */
   def #>(that: org.jacop.core.IntVar) = {
     val c = new XgtY(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -623,7 +625,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
   @deprecated("use #> instead", "1.0") 
   def >(that: Int) = {
     val c = new XgtC(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -635,7 +637,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
  */
   def #>(that: Int) = {
     val c = new XgtC(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -648,7 +650,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
   @deprecated("use #>= instead", "1.0") 
   def >=(that: org.jacop.core.IntVar) = {
     val c = new XgteqY(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -660,7 +662,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
  */
   def #>=(that: org.jacop.core.IntVar) = {
     val c = new XgteqY(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -673,7 +675,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
   @deprecated("use #>= instead", "1.0") 
   def >=(that: Int) = {
     val c = new XgteqC(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -685,7 +687,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
  */
   def #>=(that: Int) = {
     val c = new XgteqC(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -698,12 +700,12 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
   def in (that: SetVar) : PrimitiveConstraint = {
     if (min == max) {
       val c = new EinA(min, that)
-      Model.constr += c
+      getModel.constr += c
       return c
     }
     else {
       val c = new XinA(this, that)
-      Model.constr += c
+      getModel.constr += c
       return c
     }
   }
@@ -718,7 +720,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(Mod
  * @param glb greatest lower bound for variable's domain.
  * @param lub least upper bound on variable's domain.
  */
-class SetVar(name : String, glb : Int, lub : Int) extends org.jacop.set.core.SetVar(Model, name, glb, lub) {
+class SetVar(name : String, glb : Int, lub : Int) extends org.jacop.set.core.SetVar(getModel, name, glb, lub) {
 
 /**
  * Defines an anonymous set variable.
@@ -728,8 +730,8 @@ class SetVar(name : String, glb : Int, lub : Int) extends org.jacop.set.core.Set
  * @param lub least upper bound on variable's domain.
  */
   def this(glb: Int, lub: Int) = {
-    this("_$" + Model.n, glb, lub)
-    Model.n += 1
+    this("_$" + getModel.n, glb, lub)
+    getModel.n += 1
   }
 
 /**
@@ -738,8 +740,8 @@ class SetVar(name : String, glb : Int, lub : Int) extends org.jacop.set.core.Set
  * @constructor Creates a new finite domain integer variable.
  */
   def this() = {
-    this("_$" + Model.n, org.jacop.core.IntDomain.MinInt, org.jacop.core.IntDomain.MaxInt)
-    Model.n += 1
+    this("_$" + getModel.n, org.jacop.core.IntDomain.MinInt, org.jacop.core.IntDomain.MaxInt)
+    getModel.n += 1
   }
 
 /**
@@ -751,7 +753,7 @@ class SetVar(name : String, glb : Int, lub : Int) extends org.jacop.set.core.Set
   def * (that: SetVar) =  {
     val result = new SetVar()
     val c = new AintersectBeqC(this, that, result)
-    Model.constr += c
+    getModel.constr += c
     result
   }
 
@@ -764,7 +766,7 @@ class SetVar(name : String, glb : Int, lub : Int) extends org.jacop.set.core.Set
   def + (that: SetVar) =  {
     val result = new SetVar()
     val c = new AunionBeqC(this, that, result)
-    Model.constr += c
+    getModel.constr += c
     result
   }
 
@@ -774,10 +776,10 @@ class SetVar(name : String, glb : Int, lub : Int) extends org.jacop.set.core.Set
  * @param that second parameter for the constraint.
  * @return result set variable that is the result for this constraint.
  */
-  def \ (that: SetVar) {
+  def \ (that: SetVar) = {
     val result = new SetVar()
     val c = new AdiffBeqC(this, that, result)
-    Model.constr += c
+    getModel.constr += c
     result
   }
 
@@ -789,7 +791,7 @@ class SetVar(name : String, glb : Int, lub : Int) extends org.jacop.set.core.Set
  */
   def <> (that: SetVar)  = {
     val c = new AdisjointB(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -801,7 +803,7 @@ class SetVar(name : String, glb : Int, lub : Int) extends org.jacop.set.core.Set
  */
   def in (that: SetVar)  = {
     val c = new AinB(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -813,7 +815,7 @@ class SetVar(name : String, glb : Int, lub : Int) extends org.jacop.set.core.Set
  */
   def in (that: IntSet)  = {
     val c = new AinS(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -826,7 +828,7 @@ class SetVar(name : String, glb : Int, lub : Int) extends org.jacop.set.core.Set
   @deprecated("use #= instead", "1.0") 
   def == (that: SetVar) = {
     val c = new AeqB(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -838,7 +840,7 @@ class SetVar(name : String, glb : Int, lub : Int) extends org.jacop.set.core.Set
  */
   def #= (that: SetVar) = {
     val c = new AeqB(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -851,7 +853,7 @@ class SetVar(name : String, glb : Int, lub : Int) extends org.jacop.set.core.Set
   @deprecated("use #= instead", "1.0") 
   def == (that: IntSet) = {
     val c = new AeqS(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -863,7 +865,7 @@ class SetVar(name : String, glb : Int, lub : Int) extends org.jacop.set.core.Set
  */
   def #= (that: IntSet) = {
     val c = new AeqS(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -876,7 +878,7 @@ class SetVar(name : String, glb : Int, lub : Int) extends org.jacop.set.core.Set
   @deprecated("use #>= instead", "1.0") 
   def >= (that: SetVar) = {
     val c = new org.jacop.set.constraints.Lex(that, this)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -888,7 +890,7 @@ class SetVar(name : String, glb : Int, lub : Int) extends org.jacop.set.core.Set
  */
   def #>= (that: SetVar) = {
     val c = new org.jacop.set.constraints.Lex(that, this)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -901,7 +903,7 @@ class SetVar(name : String, glb : Int, lub : Int) extends org.jacop.set.core.Set
   @deprecated("use #<= instead", "1.0") 
   def <= (that: SetVar) = {
     val c = new org.jacop.set.constraints.Lex(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -913,7 +915,7 @@ class SetVar(name : String, glb : Int, lub : Int) extends org.jacop.set.core.Set
  */
   def #<= (that: SetVar) = {
     val c = new org.jacop.set.constraints.Lex(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 }
@@ -926,7 +928,7 @@ class SetVar(name : String, glb : Int, lub : Int) extends org.jacop.set.core.Set
  * @param min minimal value for variable's domain.
  * @param max maximal value for variable's domain.
  */
-class BoolVar(name: String, min1: Int, max1: Int) extends org.jacop.core.BooleanVar (Model, name, min1, max1) 
+class BoolVar(name: String, min1: Int, max1: Int) extends org.jacop.core.BooleanVar (getModel, name, min1, max1) 
                with jacop {
 
 /**
@@ -937,7 +939,7 @@ class BoolVar(name: String, min1: Int, max1: Int) extends org.jacop.core.Boolean
  */
   def this(name: String) = {
      this (name, 0, 1)
-     Model.n += 1
+     getModel.n += 1
    }
 
 /**
@@ -946,8 +948,8 @@ class BoolVar(name: String, min1: Int, max1: Int) extends org.jacop.core.Boolean
  * @constructor Creates a new boolean variable.
  */
   def this() = {
-    this ("_$" + Model.n, 0, 1)
-    Model.n += 1
+    this ("_$" + getModel.n, 0, 1)
+    getModel.n += 1
   }
 
 /**
@@ -958,8 +960,8 @@ class BoolVar(name: String, min1: Int, max1: Int) extends org.jacop.core.Boolean
  * @param max maximal value for variable's domain.
  */
   def this(l: Int, r: Int) = {
-    this ("_$" + Model.n, l, r)
-    Model.n += 1
+    this ("_$" + getModel.n, l, r)
+    getModel.n += 1
   }
 
 /**
@@ -971,7 +973,7 @@ class BoolVar(name: String, min1: Int, max1: Int) extends org.jacop.core.Boolean
   @deprecated("use #= instead", "1.0") 
   def ==(that: org.jacop.core.IntVar) = { 
     val c = new org.jacop.constraints.XeqY(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -983,7 +985,7 @@ class BoolVar(name: String, min1: Int, max1: Int) extends org.jacop.core.Boolean
  */
   def #=(that: org.jacop.core.IntVar) = { 
     val c = new org.jacop.constraints.XeqY(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -996,7 +998,7 @@ class BoolVar(name: String, min1: Int, max1: Int) extends org.jacop.core.Boolean
   @deprecated("use #= instead", "1.0") 
   def ==(that: Int) = {
     val c = new XeqC(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -1008,7 +1010,7 @@ class BoolVar(name: String, min1: Int, max1: Int) extends org.jacop.core.Boolean
  */
   def #=(that: Int) = {
     val c = new XeqC(this, that)
-    Model.constr += c
+    getModel.constr += c
     c
   }
 
@@ -1022,7 +1024,7 @@ class BoolVar(name: String, min1: Int, max1: Int) extends org.jacop.core.Boolean
     val result = new BoolVar()
     val parameters = Array(this, that)
     val c = new org.jacop.constraints.AndBool(parameters, result)
-    Model.constr += c
+    getModel.constr += c
     result
   }
 
@@ -1036,7 +1038,7 @@ class BoolVar(name: String, min1: Int, max1: Int) extends org.jacop.core.Boolean
     val result = new BoolVar()
     val parameters = Array(this, that)
     val c = new org.jacop.constraints.OrBool(parameters, result)
-    Model.constr += c
+    getModel.constr += c
     result
   }
 
@@ -1048,8 +1050,9 @@ class BoolVar(name: String, min1: Int, max1: Int) extends org.jacop.core.Boolean
  */
   def xor(that: org.jacop.core.IntVar) = {
     val result = new BoolVar()
-    val c = new org.jacop.constraints.XorBool(this, that, result)
-    Model.constr += c
+    val parameters = Array(this, that)
+    val c = new org.jacop.constraints.XorBool(parameters, result)
+    getModel.constr += c
     result
   }
 
@@ -1061,7 +1064,7 @@ class BoolVar(name: String, min1: Int, max1: Int) extends org.jacop.core.Boolean
   def unary_~ = {
     val result = new BoolVar()
     val c = new XplusYeqC(this, result, 1)
-    Model.constr += c
+    getModel.constr += c
     result
   }
 
@@ -1073,8 +1076,8 @@ class BoolVar(name: String, min1: Int, max1: Int) extends org.jacop.core.Boolean
  */
   def ->(thenConstr: PrimitiveConstraint): Constraint = {
     val c: Constraint = new IfThen(new XeqC(this, 1), thenConstr)
-    Model.constr.remove(Model.constr.length - 1)
-    Model.constr += c
+    getModel.constr.remove(getModel.constr.length - 1)
+    getModel.constr += c
     c
   }
 
@@ -1086,8 +1089,8 @@ class BoolVar(name: String, min1: Int, max1: Int) extends org.jacop.core.Boolean
  */
   def <=>(reifC: PrimitiveConstraint): Constraint = {
     val c: Constraint = new Reified(reifC, this)
-    Model.constr.remove(Model.constr.length - 1)
-    Model.constr += c
+    getModel.constr.remove(getModel.constr.length - 1)
+    getModel.constr += c
     c
   }
 }
@@ -1095,8 +1098,8 @@ class BoolVar(name: String, min1: Int, max1: Int) extends org.jacop.core.Boolean
 //class XgtC(name: IntVar, const: Int) extends org.jacop.constraints.XgtC(name, const) {
 //  def <=>(that: IntVar) = {
 //    val c = new Reified(this, that)
-//    Model.constr.remove(Model.constr.length - 1)
-//    Model.constr += c
+//    getModel.constr.remove(getModel.constr.length - 1)
+//    getModel.constr += c
 //    c
 //  }
 //}
@@ -1292,8 +1295,8 @@ class ScalaSolutionListener[T <: org.jacop.core.Var] extends org.jacop.search.Si
 class Reifier[T <: PrimitiveConstraint](reifC: T) {
 	def <=>(b: BoolVar): Constraint = {
 		val c: Constraint = new Reified(reifC, b)
-		Model.constr.remove(Model.constr.length - 1)
-		Model.constr += c
+		getModel.constr.remove(getModel.constr.length - 1)
+		getModel.constr += c
 		c
 	}
 }

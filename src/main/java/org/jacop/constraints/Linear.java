@@ -395,33 +395,8 @@ public class Linear extends PrimitiveConstraint {
 	
 	} while (store.propagationHasOccurred);
 
-	switch (rel) {
-	case eq: 
-	    if ( sum < lMin || sum > lMax )
-		throw Store.failException;
-	    break;
-	case lt: 
-	    if ( lMin >= sum )
-		throw Store.failException;
-	    break;
-	case le: 
-	    if ( lMin > sum )
-		throw Store.failException;
-	    break;
-	case ne: 
-	    if (lMin == lMax && sum == lMin)
-	    // if (nextGroundedPosition.value() == list.length && sumGrounded.value() == sum)
-		throw Store.failException;
-	    break;
-	case gt: 
-	    if ( lMax <= sum )
-		throw Store.failException;
-	    break;
-	case ge: 
-	    if ( lMax < sum )
-		throw Store.failException;
-	    break;
-	}
+	if (entailed(negRel[rel]))
+	    throw Store.failException;
 
     }
 
@@ -579,19 +554,6 @@ public class Linear extends PrimitiveConstraint {
     @Override
     public boolean satisfied() {
 
-	return entailed(relationType);
-
-    }
-
-    @Override
-    public boolean notSatisfied() {
-
-	return entailed(negRel[relationType]);
-
-    }
-
-    private boolean entailed(byte rel) {
-	    
 	if (reified && backtrackHasOccured) {
 
 	    backtrackHasOccured = false;
@@ -599,6 +561,26 @@ public class Linear extends PrimitiveConstraint {
 	    recomputeBounds();
 	}
 
+	return entailed(relationType);
+
+    }
+
+    @Override
+    public boolean notSatisfied() {
+
+	if (reified && backtrackHasOccured) {
+
+	    backtrackHasOccured = false;
+
+	    recomputeBounds();
+	}
+
+	return entailed(negRel[relationType]);
+
+    }
+
+    private boolean entailed(byte rel) {
+	    
 	switch (rel) {
 	case eq : 
 	    if (lMin == lMax && lMin == sum) //nextGroundedPosition.value() == list.length && sumGrounded.value() == sum) 

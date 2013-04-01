@@ -14,6 +14,7 @@ import org.jacop.set.core._
 import org.jacop.set.constraints._
 import org.jacop.set.search._
 
+import _root_.scala.reflect._
 
 package object scala {
 
@@ -32,6 +33,14 @@ package object scala {
 
   var recordSolutions = false;
 
+  /*
+   * private var impModel corresponds to the currently used store/model. 
+   * getModel is used in jacop.scala to get the current object Model.
+   */
+  private var impModel : Model = new Model()	// the current impModel-store
+  def getModel = impModel	// returns the current impModel
+  def setModel(that : Model) = impModel = that	// sets the current impModel
+
   // =============== Global constraints ===============
 
 /**
@@ -42,7 +51,7 @@ package object scala {
   def alldifferent(x: Array[IntVar])  {
     val c = new Alldiff( x.asInstanceOf[Array[org.jacop.core.IntVar]] )
     if (trace) println(c)
-    Model.impose( c )
+    impModel.impose( c )
   }
 
 /**
@@ -53,7 +62,7 @@ package object scala {
   def alldistinct(x: Array[IntVar]) {
     val c = new Alldistinct( x.asInstanceOf[Array[org.jacop.core.IntVar]] )
     if (trace) println(c)
-    Model.impose( c )
+    impModel.impose( c )
   }
 
 /**
@@ -65,7 +74,7 @@ package object scala {
   def gcc(x: Array[IntVar], y: Array[IntVar]) {
     val c = new GCC( x.asInstanceOf[Array[org.jacop.core.IntVar]], y.asInstanceOf[Array[org.jacop.core.IntVar]] )
     if (trace) println(c)
-    Model.impose( c )
+    impModel.impose( c )
   }
 
 /**
@@ -74,10 +83,10 @@ package object scala {
 * @param res array of variables to be summed up. 
 * @param result summation result. 
 */
-  def sum[T <: org.jacop.core.IntVar](res: List[T], result: IntVar)(implicit m: ClassManifest[T])  {
+  def sum[T <: org.jacop.core.IntVar](res: List[T], result: IntVar)(implicit m: ClassTag[T])  {
      val c = new Sum(res.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], result)
      if (trace) println(c)
-     Model.impose( c )
+     impModel.impose( c )
    }
 
 /**
@@ -86,10 +95,10 @@ package object scala {
 * @param res array of variables to be summed up. 
 * @return summation result. 
 */
-  def sum[T <: org.jacop.core.IntVar](res: List[T])(implicit m: ClassManifest[T]) : IntVar = {
+  def sum[T <: org.jacop.core.IntVar](res: List[T])(implicit m: ClassTag[T]) : IntVar = {
     val result = new IntVar()
     val c = new Sum(res.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], result)
-    Model.constr += c
+    impModel.constr += c
     return result
   }
 
@@ -100,10 +109,10 @@ package object scala {
 * @param w array of weights. 
 * @param result summation result. 
 */
-  def weightedSum[T <: org.jacop.core.IntVar](res: List[T], w: Array[Int], result: IntVar)(implicit m: ClassManifest[T]) {
+  def weightedSum[T <: org.jacop.core.IntVar](res: List[T], w: Array[Int], result: IntVar)(implicit m: ClassTag[T]) {
     val c = new SumWeight(res.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], w, result)
     if (trace) println(c)
-    Model.impose( c )
+    impModel.impose( c )
   }
 
 /**
@@ -113,11 +122,11 @@ package object scala {
 * @param w array of weights. 
 * @return summation result. 
 */
-  def sum[T <: org.jacop.core.IntVar](res: List[T], w: Array[Int])(implicit m: ClassManifest[T]) : IntVar = {
+  def sum[T <: org.jacop.core.IntVar](res: List[T], w: Array[Int])(implicit m: ClassTag[T]) : IntVar = {
     val result = new IntVar()
     val c = new SumWeight(res.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], w, result)
     if (trace) println(c)
-    Model.impose( c )
+    impModel.impose( c )
     return result
   }
 
@@ -128,10 +137,10 @@ package object scala {
 * @param w array of weights. 
 * @param result summation result. 
 */
-  def weightedSumDom[T <: org.jacop.core.IntVar](res: List[T], w: Array[Int], result: IntVar)(implicit m: ClassManifest[T]) {
+  def weightedSumDom[T <: org.jacop.core.IntVar](res: List[T], w: Array[Int], result: IntVar)(implicit m: ClassTag[T]) {
     val c = new SumWeightDom(res.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], w, result)
     if (trace) println(c)
-    Model.impose( c )
+    impModel.impose( c )
   }
 
 /**
@@ -141,11 +150,11 @@ package object scala {
 * @param w array of weights. 
 * @return summation result. 
 */
-  def sumDom[T <: org.jacop.core.IntVar](res: List[T], w: Array[Int])(implicit m: ClassManifest[T]) : IntVar = {
+  def sumDom[T <: org.jacop.core.IntVar](res: List[T], w: Array[Int])(implicit m: ClassTag[T]) : IntVar = {
     val result = new IntVar()
     val c = new SumWeightDom(res.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], w, result)
     if (trace) println(c)
-    Model.impose( c )
+    impModel.impose( c )
     return result
   }
 
@@ -159,7 +168,7 @@ package object scala {
     val result = new IntVar()
     val c = new AbsXeqY(x, result)
     if (trace) println(c)
-    Model.impose( c )
+    impModel.impose( c )
     return result
   }
 
@@ -169,10 +178,10 @@ package object scala {
 * @param x array of variables where maximum values is to be found. 
 * @param mx maxumum value. 
 */
-  def max[T <: org.jacop.core.IntVar](x: List[T], mx: org.jacop.core.IntVar)(implicit m: ClassManifest[T])  {
+  def max[T <: org.jacop.core.IntVar](x: List[T], mx: org.jacop.core.IntVar)(implicit m: ClassTag[T])  {
     val c = new Max(x.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], mx)
     if (trace) println(c)
-    Model.impose(c)
+    impModel.impose(c)
   }
 
 /**
@@ -181,10 +190,10 @@ package object scala {
 * @param x array of variables where mnimimum values is to be found. 
 * @param mx minimum value. 
 */
-  def min[T <: org.jacop.core.IntVar](x: List[T], mn: org.jacop.core.IntVar )(implicit m: ClassManifest[T]) {
+  def min[T <: org.jacop.core.IntVar](x: List[T], mn: org.jacop.core.IntVar )(implicit m: ClassTag[T]) {
     val c = new Min(x.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], mn)
     if (trace) println(c)
-    Model.impose(c)
+    impModel.impose(c)
   }
 
 /**
@@ -193,10 +202,10 @@ package object scala {
 * @param res array of variables where maximum values is to be found. 
 * @return max value. 
 */
-  def max[T <: org.jacop.core.IntVar](x: List[T])(implicit m: ClassManifest[T]) : IntVar = {
+  def max[T <: org.jacop.core.IntVar](x: List[T])(implicit m: ClassTag[T]) : IntVar = {
     val result = new IntVar()
     val c = new Max(x.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], result)
-    Model.constr += c
+    impModel.constr += c
     return result
   }
 
@@ -206,10 +215,10 @@ package object scala {
 * @param res array of variables where minimum values is to be found. 
 * @return minimum value. 
 */
-  def min[T <: org.jacop.core.IntVar](x: List[T])(implicit m: ClassManifest[T]) : IntVar = {
+  def min[T <: org.jacop.core.IntVar](x: List[T])(implicit m: ClassTag[T]) : IntVar = {
     val result = new IntVar()
     val c = new Min(x.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], result)
-    Model.constr += c
+    impModel.constr += c
     return result
   }
 
@@ -219,10 +228,10 @@ package object scala {
 * @param list list of variables to count number of values value. 
 * @param count of values value. 
 */
-  def count[T <: org.jacop.core.IntVar](list: List[T], count: T, value: Int)(implicit m: ClassManifest[T])  {
+  def count[T <: org.jacop.core.IntVar](list: List[T], count: T, value: Int)(implicit m: ClassTag[T])  {
     val c = new Count(list.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], count, value)
     if (trace) println(c)
-    Model.impose( c )
+    impModel.impose( c )
   }
 
 /**
@@ -231,10 +240,10 @@ package object scala {
 * @param list list of variables to count number of values value. 
 * @return number of values value. 
 */
-  def count[T <: org.jacop.core.IntVar](list: List[T], value: Int)(implicit m: ClassManifest[T]) : IntVar = {
+  def count[T <: org.jacop.core.IntVar](list: List[T], value: Int)(implicit m: ClassTag[T]) : IntVar = {
     val result = new IntVar()
     val c = new Count(list.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], result, value)
-    Model.constr += c
+    impModel.constr += c
     println(result) 
     return result
   }
@@ -245,10 +254,10 @@ package object scala {
 * @param list list of variables to count number of different values. 
 * @param count of different values. 
 */
-  def values[T <: org.jacop.core.IntVar](list: List[T], count: IntVar)(implicit m: ClassManifest[T])  {
+  def values[T <: org.jacop.core.IntVar](list: List[T], count: IntVar)(implicit m: ClassTag[T])  {
     val c = new Values(list.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], count)
     if (trace) println(c)
-    Model.impose( c )
+    impModel.impose( c )
   }
 
 /**
@@ -257,10 +266,10 @@ package object scala {
 * @param list list of variables to count number of different values. 
 * @return number of different values. 
 */
-  def values[T <: org.jacop.core.IntVar](list: List[T])(implicit m: ClassManifest[T]) : IntVar = {
+  def values[T <: org.jacop.core.IntVar](list: List[T])(implicit m: ClassTag[T]) : IntVar = {
     val result = new IntVar()
     val c = new Values(list.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], result)
-    Model.constr += c
+    impModel.constr += c
     return result
   }
 
@@ -274,7 +283,7 @@ package object scala {
   def element(index: org.jacop.core.IntVar, elements: Array[Int], value: org.jacop.core.IntVar)  {
     val c = new Element(index, elements, value)
     if (trace) println(c)
-    Model.impose( c )
+    impModel.impose( c )
   }
 
 
@@ -289,7 +298,7 @@ package object scala {
   def element(index: org.jacop.core.IntVar, elements: Array[Int], value: org.jacop.core.IntVar, offset: Int)  {
     val c = new Element(index, elements, value, offset)
     if (trace) println(c)
-    Model.impose( c )
+    impModel.impose( c )
   }
  
 /**
@@ -299,10 +308,10 @@ package object scala {
 * @param elements array of varibales that can be assigned to values. 
 * @param value value selected from list of elements. 
 */
-  def element[T <: org.jacop.core.IntVar](index: org.jacop.core.IntVar, elements: List[T], value: org.jacop.core.IntVar)(implicit m: ClassManifest[T])  {
+  def element[T <: org.jacop.core.IntVar](index: org.jacop.core.IntVar, elements: List[T], value: org.jacop.core.IntVar)(implicit m: ClassTag[T])  {
     val c = new Element(index, elements.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], value)
     if (trace) println(c)
-    Model.impose( c )
+    impModel.impose( c )
   }
 
 /**
@@ -313,10 +322,10 @@ package object scala {
 * @param value value selected from list of elements. 
 * @param offset value of index offset (shift). 
 */
-  def element[T <: org.jacop.core.IntVar](index: org.jacop.core.IntVar, elements: List[T], value: org.jacop.core.IntVar, offset: Int)(implicit m: ClassManifest[T])  {
+  def element[T <: org.jacop.core.IntVar](index: org.jacop.core.IntVar, elements: List[T], value: org.jacop.core.IntVar, offset: Int)(implicit m: ClassTag[T])  {
     val c = new Element(index, elements.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], value, offset)
     if (trace) println(c)
-    Model.impose( c )
+    impModel.impose( c )
   }
 
 /**
@@ -331,7 +340,7 @@ package object scala {
     val c = new Diff(x.asInstanceOf[Array[org.jacop.core.IntVar]], y.asInstanceOf[Array[org.jacop.core.IntVar]],
 		     lx.asInstanceOf[Array[org.jacop.core.IntVar]], ly.asInstanceOf[Array[org.jacop.core.IntVar]])
     if (trace) println(c)
-    Model.impose(c)
+    impModel.impose(c)
   }
 
 /**
@@ -342,7 +351,7 @@ package object scala {
   def diff2(rectangles: Array[Array[IntVar]])  {
     val c = new Diff(rectangles.asInstanceOf[Array[Array[org.jacop.core.IntVar]]])
     if (trace) println(c)
-    Model.impose( new Diff(rectangles.asInstanceOf[Array[Array[org.jacop.core.IntVar]]]) )
+    impModel.impose( new Diff(rectangles.asInstanceOf[Array[Array[org.jacop.core.IntVar]]]) )
   }
 
 /**
@@ -358,7 +367,7 @@ package object scala {
 			   d.asInstanceOf[Array[org.jacop.core.IntVar]],
 			   r.asInstanceOf[Array[org.jacop.core.IntVar]], limit)
     if (trace) println(c)
-    Model.impose( c )
+    impModel.impose( c )
   }
 
 /**
@@ -369,7 +378,7 @@ package object scala {
   def circuit(n: Array[IntVar])  {
     val c = new Circuit(n.asInstanceOf[Array[org.jacop.core.IntVar]])
     if (trace) println(c)
-    Model.impose( c )
+    impModel.impose( c )
   }
 
 /**
@@ -381,7 +390,7 @@ package object scala {
   def assignment(x: Array[IntVar], y: Array[IntVar])  {
     val c = new Assignment(x.asInstanceOf[Array[org.jacop.core.IntVar]], y.asInstanceOf[Array[org.jacop.core.IntVar]])
     if (trace) println(c)
-    Model.impose( c )
+    impModel.impose( c )
   }
 
 /**
@@ -394,7 +403,7 @@ package object scala {
   def among(list: Array[IntVar], kSet: IntSet, n: IntVar) {
     val c = new Among(list.asInstanceOf[Array[org.jacop.core.IntVar]], kSet, n)
     if (trace) println(c)
-    Model.impose( c )
+    impModel.impose( c )
   }
 
 /**
@@ -407,7 +416,7 @@ package object scala {
   def among(listX: Array[IntVar], listY: Array[IntVar], n: IntVar) {
     val c = new AmongVar(listX.asInstanceOf[Array[org.jacop.core.IntVar]], listY.asInstanceOf[Array[org.jacop.core.IntVar]], n)
     if (trace) println(c)
-    Model.impose( c )
+    impModel.impose( c )
   }
 
 /**
@@ -416,10 +425,10 @@ package object scala {
 * @param list array of variables. 
 * @param tuples array of tuples allowed to be assigned to variables.
 */
-  def table[T <: org.jacop.core.IntVar](list: List[T], tuples: Array[Array[Int]])(implicit m: ClassManifest[T]) {
+  def table[T <: org.jacop.core.IntVar](list: List[T], tuples: Array[Array[Int]])(implicit m: ClassTag[T]) {
     val c = new ExtensionalSupportVA(list.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], tuples)
     if (trace) println(c)
-    Model.impose( c )
+    impModel.impose( c )
   }
 
 /**
@@ -435,7 +444,7 @@ package object scala {
 	       knapsackCapacity: IntVar, knapsackProfit: IntVar ) {
     val c = new Knapsack(profits, weights, quantity.toArray, knapsackCapacity, knapsackProfit)
     if (trace) println(c)
-    Model.impose( c )    
+    impModel.impose( c )    
   }
 
 /**
@@ -448,7 +457,7 @@ package object scala {
   def binpacking(bin: List[IntVar], load: List[IntVar], w: Array[Int]) {
     val c = new Binpacking(bin.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], load.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], w)
     if (trace) println(c)
-    Model.impose( c )    
+    impModel.impose( c )    
   }
 
 /**
@@ -460,7 +469,7 @@ package object scala {
   def regular(dfa: fsm, vars: List[IntVar]) {
     val c = new Regular(dfa, vars.toArray)
     if (trace) println(c)
-    Model.impose( c )
+    impModel.impose( c )
   }
 
   // ================== Decompose constraints
@@ -477,7 +486,7 @@ package object scala {
   def sequence(list: Array[IntVar], set: IntSet, q: Int, min: Int, max: Int) {
     val c = new Sequence(list.asInstanceOf[Array[org.jacop.core.IntVar]], set, q, min, max)
     if (trace) println(c)
-    Model.imposeDecomposition( c )
+    impModel.imposeDecomposition( c )
 }
 
 /**
@@ -491,7 +500,7 @@ package object scala {
   def stretch(values: Array[Int], min: Array[Int], max: Array[Int], x: Array[IntVar]) {
     val c = new Stretch(values, min, max, x.asInstanceOf[Array[org.jacop.core.IntVar]])
     if (trace) println(c)
-    Model.imposeDecomposition( c )
+    impModel.imposeDecomposition( c )
 }
 
 /**
@@ -502,7 +511,7 @@ package object scala {
   def lex(x: Array[Array[IntVar]]) {
     val c = new org.jacop.constraints.Lex(x.asInstanceOf[Array[Array[org.jacop.core.IntVar]]])
     if (trace) println(c)
-    Model.imposeDecomposition(c)
+    impModel.imposeDecomposition(c)
   }
 
 /**
@@ -515,7 +524,7 @@ package object scala {
     val violationMeasure = ViolationMeasure.VALUE_BASED
     val c = new SoftAlldifferent(xVars.asInstanceOf[Array[org.jacop.core.IntVar]], costVar, violationMeasure)
     if (trace) println(c)
-    Model.imposeDecomposition( c )
+    impModel.imposeDecomposition( c )
   }
 
 /**
@@ -537,13 +546,13 @@ package object scala {
 			softCounters.asInstanceOf[Array[org.jacop.core.IntVar]],  
 			costVar, violationMeasure)
     if (trace) println(c)
-    Model.imposeDecomposition( c )
+    impModel.imposeDecomposition( c )
 }
 
   def network_flow(net: org.jacop.constraints.netflow.NetworkBuilder) {
     val c = new NetworkFlow(net)
     if (trace) println(c)
-    Model.impose( c )
+    impModel.impose( c )
   }
 
   // ================== Logical operations on constraints
@@ -557,8 +566,8 @@ package object scala {
 */
   def OR(list: PrimitiveConstraint*)  : PrimitiveConstraint = {
     val c = new Or(list.toArray)
-    list.foreach( e => Model.constr.remove(Model.constr.indexOf(e)) )
-    Model.constr += c
+    list.foreach( e => impModel.constr.remove(impModel.constr.indexOf(e)) )
+    impModel.constr += c
     return c
   }
 
@@ -570,8 +579,8 @@ package object scala {
 */
   def OR(list: List[PrimitiveConstraint])  : PrimitiveConstraint = {
     val c = new Or(list.toArray)
-    list.foreach( e => Model.constr.remove(Model.constr.indexOf(e)) )
-    Model.constr += c
+    list.foreach( e => impModel.constr.remove(impModel.constr.indexOf(e)) )
+    impModel.constr += c
     return c
   }
 
@@ -583,8 +592,8 @@ package object scala {
 */
   def AND(list: PrimitiveConstraint*) : PrimitiveConstraint = {
     val c = new And(list.toArray)
-    list.foreach( e => Model.constr.remove(Model.constr.indexOf(e)) )
-    Model.constr += c
+    list.foreach( e => impModel.constr.remove(impModel.constr.indexOf(e)) )
+    impModel.constr += c
     return c
   }
 
@@ -596,8 +605,8 @@ package object scala {
 */
   def AND(list: List[PrimitiveConstraint]) : PrimitiveConstraint = {
     val c = new And(list.toArray)
-    list.foreach( e => Model.constr.remove(Model.constr.indexOf(e)) )
-    Model.constr += c
+    list.foreach( e => impModel.constr.remove(impModel.constr.indexOf(e)) )
+    impModel.constr += c
     return c
   }
 
@@ -609,8 +618,8 @@ package object scala {
 */
   def NOT(constr: PrimitiveConstraint) : PrimitiveConstraint = {
     val c = new Not(constr)
-    Model.constr.remove(Model.constr.indexOf(constr))
-    Model.constr += c
+    impModel.constr.remove(impModel.constr.indexOf(constr))
+    impModel.constr += c
     return c
   }
 
@@ -626,7 +635,7 @@ package object scala {
   def card(s: SetVar) : IntVar = {
     val result = new IntVar()
     val c = new CardAeqX(s, result)
-    Model.constr += c
+    impModel.constr += c
     return result
   }
 
@@ -639,7 +648,7 @@ package object scala {
   def card(s: SetVar, n: Int)  {
     val c = new CardA(s, n)
     if (trace) println(c)
-    Model.impose( c )
+    impModel.impose( c )
   }
 
 /**
@@ -651,7 +660,7 @@ package object scala {
   def card(s: SetVar, n: org.jacop.core.IntVar)  {
     val c = new CardAeqX(s, n)
     if (trace) println(c)
-    Model.impose( c )
+    impModel.impose( c )
   }
 
 /**
@@ -660,10 +669,10 @@ package object scala {
 * @param a  a set variable to be matched against list of IntVar.
 * @param list varibales that get values from the set.
 */
-  def matching[T <: org.jacop.core.IntVar](a: SetVar, list: List[T])(implicit m: ClassManifest[T]) {
+  def matching[T <: org.jacop.core.IntVar](a: SetVar, list: List[T])(implicit m: ClassTag[T]) {
     val c = new Match(a, list.toArray)
     if (trace) println(c)
-    Model.impose( c )
+    impModel.impose( c )
   }
 
   // =============== Search methods ===================
@@ -675,9 +684,9 @@ package object scala {
 * @param cost Cost variable
 * @return true if solution found and false otherwise.
 */
-   def minimize[T <: org.jacop.core.Var](select: SelectChoicePoint[T], cost: IntVar, printSolutions: (() => Unit)*)(implicit m: ClassManifest[T]): Boolean = {
+   def minimize[T <: org.jacop.core.Var](select: SelectChoicePoint[T], cost: IntVar, printSolutions: (() => Unit)*)(implicit m: ClassTag[T]): Boolean = {
 
-     Model.imposeAllConstraints
+     impModel.imposeAllConstraints
 
      val label = dfs
      labels = Array(label)
@@ -700,7 +709,7 @@ package object scala {
        label.respectSolutionListenerAdvice=true
      }
 
-     return label.labeling(Model, select, cost)
+     return label.labeling(impModel, select, cost)
    }
 
 
@@ -711,7 +720,7 @@ package object scala {
 * @param cost Cost variable
 * @return true if solution found and false otherwise.
 */
-  def maximize[T <: org.jacop.core.Var](select: SelectChoicePoint[T], cost: IntVar, printSolutions: (() => Unit)*)(implicit m: ClassManifest[T]): Boolean = {
+  def maximize[T <: org.jacop.core.Var](select: SelectChoicePoint[T], cost: IntVar, printSolutions: (() => Unit)*)(implicit m: ClassTag[T]): Boolean = {
 
     val costN = new IntVar("newCost", org.jacop.core.IntDomain.MinInt, org.jacop.core.IntDomain.MaxInt)
     costN #= -cost
@@ -727,9 +736,9 @@ package object scala {
 * @return true if solution found and false otherwise.
 */
 
-  def satisfy[T <: org.jacop.core.Var](select: SelectChoicePoint[T], printSolutions: (() => Unit)*)(implicit m: ClassManifest[T]): Boolean = {
+  def satisfy[T <: org.jacop.core.Var](select: SelectChoicePoint[T], printSolutions: (() => Unit)*)(implicit m: ClassTag[T]): Boolean = {
 
-    Model.imposeAllConstraints
+    impModel.imposeAllConstraints
 
     val label = dfs
     labels = Array(label)
@@ -758,7 +767,7 @@ package object scala {
     
     label.getSolutionListener().recordSolutions(recordSolutions)
 
-    return label.labeling(Model, select)
+    return label.labeling(impModel, select)
 
   }
 
@@ -769,7 +778,7 @@ package object scala {
 * @param cost Cost variable
 * @return true if solution found and false otherwise.
 */
-  def satisfyAll[T <: org.jacop.core.Var](select: SelectChoicePoint[T], printSolutions: (() => Unit)*)(implicit m: ClassManifest[T]): Boolean = {
+  def satisfyAll[T <: org.jacop.core.Var](select: SelectChoicePoint[T], printSolutions: (() => Unit)*)(implicit m: ClassTag[T]): Boolean = {
 
     allSolutions = true
 
@@ -785,9 +794,9 @@ package object scala {
 * @param cost Cost variable
 * @return true if solution found and false otherwise.
 */
-  def minimize_seq[T <: org.jacop.core.Var](select: List[SelectChoicePoint[T]], cost: IntVar, printSolutions: (() => Unit)*) (implicit m: ClassManifest[T]): Boolean = {
+  def minimize_seq[T <: org.jacop.core.Var](select: List[SelectChoicePoint[T]], cost: IntVar, printSolutions: (() => Unit)*) (implicit m: ClassTag[T]): Boolean = {
 
-    Model.imposeAllConstraints
+    impModel.imposeAllConstraints
 
     val masterLabel = dfs
     labels = new Array(select.size)
@@ -844,7 +853,7 @@ package object scala {
       }
     }
 
-    return masterLabel.labeling(Model, select(0), cost)
+    return masterLabel.labeling(impModel, select(0), cost)
   }
   
 /**
@@ -854,7 +863,7 @@ package object scala {
 * @param cost Cost variable
 * @return true if solution found and false otherwise.
 */
-  def maximize_seq[T <: org.jacop.core.Var](select: List[SelectChoicePoint[T]], cost: IntVar, printSolutions: (() => Unit)*)(implicit m: ClassManifest[T]): Boolean = {
+  def maximize_seq[T <: org.jacop.core.Var](select: List[SelectChoicePoint[T]], cost: IntVar, printSolutions: (() => Unit)*)(implicit m: ClassTag[T]): Boolean = {
 
     val costN = new IntVar("newCost", org.jacop.core.IntDomain.MinInt, org.jacop.core.IntDomain.MaxInt)
     costN #= -cost
@@ -870,9 +879,9 @@ package object scala {
 * @param cost Cost variable
 * @return true if solution found and false otherwise.
 */
-  def satisfy_seq[T <: org.jacop.core.Var](select: List[SelectChoicePoint[T]], printSolutions: (() => Unit)*)(implicit m: ClassManifest[T]): Boolean = {
+  def satisfy_seq[T <: org.jacop.core.Var](select: List[SelectChoicePoint[T]], printSolutions: (() => Unit)*)(implicit m: ClassTag[T]): Boolean = {
 
-    Model.imposeAllConstraints
+    impModel.imposeAllConstraints
 
     val masterLabel = dfs
     labels = new Array(select.size)
@@ -933,7 +942,7 @@ package object scala {
 
     lastLabel.getSolutionListener().recordSolutions(recordSolutions)
 
-    return masterLabel.labeling(Model, select(0))
+    return masterLabel.labeling(impModel, select(0))
   }
 
 /**
@@ -943,7 +952,7 @@ package object scala {
 * @param cost Cost variable
 * @return true if solution found and false otherwise.
 */
-  def satisfyAll_seq[T <: org.jacop.core.Var](select: List[SelectChoicePoint[T]], printSolutions: (() => Unit)*)(implicit m: ClassManifest[T]): Boolean = {
+  def satisfyAll_seq[T <: org.jacop.core.Var](select: List[SelectChoicePoint[T]], printSolutions: (() => Unit)*)(implicit m: ClassTag[T]): Boolean = {
 
     allSolutions = true
 
@@ -956,7 +965,7 @@ package object scala {
 *
 * @return standard depth first search.
 */
-  def dfs[T <: org.jacop.core.Var](implicit m: ClassManifest[T]) : DepthFirstSearch[T] = {
+  def dfs[T <: org.jacop.core.Var](implicit m: ClassTag[T]) : DepthFirstSearch[T] = {
     val label = new DepthFirstSearch[T]
 
     label.setAssignSolution(true);
@@ -973,7 +982,7 @@ package object scala {
 *
 * @return select method for search.
 */
-  def search[T <: org.jacop.core.Var](vars: List[T], heuristic: ComparatorVariable[T], indom: Indomain[T])(implicit m: ClassManifest[T]) : SelectChoicePoint[T] = {
+  def search[T <: org.jacop.core.Var](vars: List[T], heuristic: ComparatorVariable[T], indom: Indomain[T])(implicit m: ClassTag[T]) : SelectChoicePoint[T] = {
     new SimpleSelect[T](vars.toArray, heuristic, indom)    
   }
 
@@ -982,7 +991,7 @@ package object scala {
 *
 * @return select method for search.
 */
-  def search_vector[T <: org.jacop.core.Var](vars: List[List[T]], heuristic: ComparatorVariable[T], indom: Indomain[T])(implicit m: ClassManifest[T]) : SelectChoicePoint[T] = {
+  def search_vector[T <: org.jacop.core.Var](vars: List[List[T]], heuristic: ComparatorVariable[T], indom: Indomain[T])(implicit m: ClassTag[T]) : SelectChoicePoint[T] = {
 
     val varsArray = new Array[Array[T]](vars.length)
     for (i <- 0 until vars.length)
@@ -996,7 +1005,7 @@ package object scala {
 *
 * @return select method for search.
 */
-  def search_split[T <: org.jacop.core.IntVar](vars: List[T], heuristic: ComparatorVariable[T])(implicit m: ClassManifest[T]) : SelectChoicePoint[T] = {
+  def search_split[T <: org.jacop.core.IntVar](vars: List[T], heuristic: ComparatorVariable[T])(implicit m: ClassTag[T]) : SelectChoicePoint[T] = {
     new SplitSelect[T](vars.toArray, heuristic, new IndomainMiddle[T]())
   }
 
