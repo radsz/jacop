@@ -379,10 +379,10 @@ public class Solve implements ParserTreeConstants {
 			    System.out.println("==========");
 		    }
 		    else
-			System.out.println("=====TIME-OUT=====");
+			System.out.println("%% =====TIME-OUT=====");
 		else
 		    if (label.timeOutOccured) 
-			System.out.println("=====TIME-OUT=====");
+			System.out.println("%% =====TIME-OUT=====");
 	    }
 	    else if (optimization) {
 		if (si.exploration().equals("complete"))
@@ -391,16 +391,16 @@ public class Solve implements ParserTreeConstants {
 			    System.out.println("==========");
 		    }    
 		    else
-			System.out.println("=====TIME-OUT=====");
+			System.out.println("%% =====TIME-OUT=====");
 		else
 		    if (label.timeOutOccured) 
-			System.out.println("=====TIME-OUT=====");
+			System.out.println("%% =====TIME-OUT=====");
 	    }
 	}
 	else
 	    if (label.timeOutOccured) {
 		System.out.println("=====UNKNOWN=====");
-		System.out.println("=====TIME-OUT=====");
+		System.out.println("%% =====TIME-OUT=====");
 	    }
 	    else
 		if (si.exploration().equals("complete"))
@@ -776,10 +776,10 @@ public class Solve implements ParserTreeConstants {
 			    System.out.println("==========");
 		    }
 		    else
-			System.out.println("=====TIME-OUT=====");
+			System.out.println("%% =====TIME-OUT=====");
 		else
 		    if (anyTimeOutOccured(list_seq_searches)) 
-			System.out.println("=====TIME-OUT=====");
+			System.out.println("%% =====TIME-OUT=====");
 	    }
 	    else if (optimization) {
 		if (!heuristicSeqSearch)
@@ -788,16 +788,16 @@ public class Solve implements ParserTreeConstants {
 			    System.out.println("==========");
 		    }
 		    else
-			System.out.println("=====TIME-OUT=====");
+			System.out.println("%% =====TIME-OUT=====");
 		else
 		    if (anyTimeOutOccured(list_seq_searches)) 
-			System.out.println("=====TIME-OUT=====");
+			System.out.println("%% =====TIME-OUT=====");
 	    }
 	}
 	else
 	    if (anyTimeOutOccured(list_seq_searches)) {
 		System.out.println("=====UNKNOWN=====");
-		System.out.println("=====TIME-OUT=====");
+		System.out.println("%% =====TIME-OUT=====");
 	    }
 	    else 
 		System.out.println("=====UNSATISFIABLE=====");
@@ -906,9 +906,15 @@ public class Solve implements ParserTreeConstants {
         return new DepthFirstSearch<Var>();
     }
 
+
+    // long T, TOld = 0;
+
     void printSolution() {
 
-	// System.out.println("*** Solution :");
+	// T = System.currentTimeMillis();
+	// System.out.println("% Search time since last solution : " + (T - TOld)/1000 + " s");
+	// TOld = T;
+
 	if (dictionary.outputVariables.size() > 0)
 	    for (int i=0; i<dictionary.outputVariables.size(); i++) {
 		Var v = dictionary.outputVariables.get(i);
@@ -1070,6 +1076,13 @@ public class Solve implements ParserTreeConstants {
 	public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
 
 	    boolean returnCode = super.executeAfterSolution(search, select);
+
+	    /* // === used to print number of search nodes for each solution
+	    int nodes=0;
+	    for (Search<Var> label : list_seq_searches) 
+		nodes += label.getNodes();
+	    System.out.println("%% Search nodes : "+ nodes );
+	    */
 
 	    if (costVariable != null)
 		costValue = ((IntVar)costVariable).value();
