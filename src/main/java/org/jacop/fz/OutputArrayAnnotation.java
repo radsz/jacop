@@ -35,7 +35,9 @@ import java.util.ArrayList;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Var;
-
+import org.jacop.set.core.SetVar;
+import org.jacop.set.core.SetDomain;
+import org.jacop.core.ValueEnumeration;
 
 /**
  * 
@@ -107,6 +109,23 @@ public class OutputArrayAnnotation {
 			break;
 		    default: s.append(v.dom().toString());
 		    }
+		else
+		    s.append("false..true");
+	    }
+	    else if (v instanceof SetVar) {
+		if (v.singleton()) {
+		    IntDomain glb = ((SetVar)v).dom().glb();
+		    s.append("{");
+		    for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements();) {
+			int element = e.nextElement();
+			s.append(element);
+			if (e.hasMoreElements())
+			    s.append(", ");
+		    }
+		    s.append("}");
+		}
+		else
+		    s.append(v.dom().toString());
 	    }
 	    else {
 		s.append(v.dom().toString());

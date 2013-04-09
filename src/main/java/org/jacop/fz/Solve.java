@@ -42,6 +42,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.core.ValueEnumeration;
 import org.jacop.search.CreditCalculator;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMin;
@@ -920,6 +921,7 @@ public class Solve implements ParserTreeConstants {
 		Var v = dictionary.outputVariables.get(i);
 
  		if (v instanceof BooleanVar) {
+		    // print boolean variables
 		    String boolVar = v.id()+" = ";
 		    if (v.singleton())
 			switch ( ((BooleanVar)v).value()) {
@@ -929,7 +931,27 @@ public class Solve implements ParserTreeConstants {
 			    break;
 			default: boolVar += v.dom();
 			}
+		    else
+			boolVar += "false..true";
 		    System.out.println(boolVar+";");
+		}
+		else if (v instanceof SetVar) {
+		    // print set variables
+		    String setVar = v.id() + " = ";
+		    if (v.singleton()) {
+			IntDomain glb = ((SetVar)v).dom().glb();
+			setVar += "{";
+			for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements();) {
+			    int element = e.nextElement();
+			    setVar += element;
+			    if (e.hasMoreElements())
+				setVar += ", ";
+			}
+			setVar += "}";
+		    }
+		    else
+			setVar += v.dom().toString();
+		    System.out.println(setVar+";");
 		}
 		else
 		    System.out.println(v+";");
