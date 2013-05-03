@@ -316,8 +316,6 @@ public class Solve implements ParserTreeConstants {
 		if (options.getAll()) { // all solutions
  		    label.getSolutionListener().searchAll(true); 
  		    label.getSolutionListener().recordSolutions(false);
-		    if (options.getNumberSolutions()>0)
-			last_search.getSolutionListener().setSolutionLimit(options.getNumberSolutions());
 
 		    // =====> add "search for all" flag to all sub-searches, 2012-03-19
 		    java.util.LinkedHashSet<Search<? extends Var>> l = 
@@ -338,7 +336,9 @@ public class Solve implements ParserTreeConstants {
 			}
 			l = ns;
 		    }
-		// <=====
+		    // <=====
+		    if (options.getNumberSolutions()>0) 
+			last_search.getSolutionListener().setSolutionLimit(options.getNumberSolutions());
 		}
 
 		// printSearch(label);
