@@ -237,6 +237,6 @@ public class XmodYeqZ extends Constraint {
     }
 
     int mod(int a, int b) {
-	return a - (int)Math.floor((float)a / (float)b) * b;
+	return a - div(a, b) * b;
     }
 }
