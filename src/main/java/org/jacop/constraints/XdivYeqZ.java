@@ -194,7 +194,7 @@ public class XdivYeqZ extends Constraint {
 		IntDomain xDom = z.dom(), yDom = y.dom(), zDom = x.dom();
 
 		return xDom.singleton() && yDom.singleton() && zDom.singleton() &&
-		( yDom.min() * xDom.min() <= zDom.min() || yDom.min() * xDom.min() < zDom.min() + yDom.min());
+		       zDom.min() == div(xDom.min(), yDom.min());
 	}
 
 	@Override
@@ -212,4 +212,11 @@ public class XdivYeqZ extends Constraint {
 		}
 	}
 
+    int div(int a, int b) {
+	return (int)Math.floor((float)a / (float)b);
+    }
+
+    int mod(int a, int b) {
+	return a - (int)Math.floor((float)a / (float)b) * b;
+    }
 }
