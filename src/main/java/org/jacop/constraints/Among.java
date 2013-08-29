@@ -172,10 +172,14 @@ public class Among extends Constraint {
 		// For the variable that signaled the change of domain
 		// Count those that entered lbS, or ubS
 		for (IntVar var : variableQueue) {
+
+            int posVar = position.get(var);
+
+            if (posVar < currentLB || posVar > currentUB)
+                continue;
+
 			if (kSet.contains(var.domain)) {
 
-				int posVar = position.get(var);
-				
 				assert posVar >= currentLB : "Variable " + var + " counted for lowerbound multiple times";
 				
 				if (posVar != currentLB) {
@@ -192,8 +196,6 @@ public class Among extends Constraint {
 
 			}
 			if (!kSet.isIntersecting(var.domain)) {
-				
-				int posVar = position.get(var);
 				
 				assert posVar <= currentUB : "Variable " + var + " counted for upperbound multiple times";
 
@@ -274,7 +276,7 @@ public class Among extends Constraint {
 				var.removeConstraint(this);
 			}
 			
-			// since the constraint is satisfied LB is equal to UB. 
+			// since the constraint is satisfied LB is equal to UB.
 			lowerBorder.update(currentUB);
 			
 			// The constrain became satisfied
