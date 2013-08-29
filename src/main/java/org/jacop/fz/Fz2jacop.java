@@ -57,6 +57,20 @@ public class Fz2jacop {
 	
     public static void main(String[] args) {
 
+	// org.jacop.core.SwitchesPruningLogging.traceVar =  false;
+	// org.jacop.core.SwitchesPruningLogging.traceConstraint =  false;
+	// org.jacop.core.SwitchesPruningLogging.traceConsistencyCheck =  false;
+	// org.jacop.core.SwitchesPruningLogging.traceQueueingConstraint =  false;
+	// org.jacop.core.SwitchesPruningLogging.traceAlreadyQueuedConstraint =  false;
+	// org.jacop.core.SwitchesPruningLogging.traceConstraintImposition =  false;
+	// org.jacop.core.SwitchesPruningLogging.traceFailedConstraint =  false;
+	// org.jacop.core.SwitchesPruningLogging.traceLevelRemoval =  false;
+	// org.jacop.core.SwitchesPruningLogging.traceConstraintFailure =  false;
+	// org.jacop.core.SwitchesPruningLogging.traceStoreRemoveLevel =  false;
+	// org.jacop.core.SwitchesPruningLogging.traceVariableCreation =  false;
+	// org.jacop.core.SwitchesPruningLogging.traceOperationsOnLevel =  false;
+	// org.jacop.core.SwitchesPruningLogging.traceSearchTree =  false;
+
 	Options opt = new Options(args);
 
 	if (opt.getVerbose())
@@ -76,19 +90,18 @@ public class Fz2jacop {
 	} catch (FailException e) {
 	    System.err.println("=====UNSATISFIABLE====="); // "*** Evaluation of model resulted in fail.");
 	} catch (ArithmeticException e) {
-	    System.err.println("*** Evaluation of model resulted in integer overflow.");
+	    System.err.println("%% Evaluation of model resulted in integer overflow.");
 	} catch (ParseException e) {
-	    System.out.println("*** Parser exception "+ e);
+	    System.out.println("%% Parser exception "+ e);
 	} catch (TokenMgrError e) {
-	    System.out.println("*** Parser exception "+ e);
+	    System.out.println("%% Parser exception "+ e);
  	} catch (ArrayIndexOutOfBoundsException e) {
- 	    System.out.println("*** Array out of bound exception "+ e);
+ 	    System.out.println("%% Array out of bound exception "+ e);
 	} catch (OutOfMemoryError e) {
-	    System.out.println("*** Out of memory error; consider option -Xmx... for JVM");
+	    System.out.println("%% Out of memory error; consider option -Xmx... for JVM");
 	} catch (StackOverflowError e) {
-	    System.out.println("*** Stack overflow exception error; consider option -Xss... for JVM");
+	    System.out.println("%% Stack overflow exception error; consider option -Xss... for JVM");
 	}
-
 
 	if (opt.getStatistics()) {
 	    System.out.println("\n%% Total CPU time : " + 

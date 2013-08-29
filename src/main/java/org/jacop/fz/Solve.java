@@ -42,6 +42,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.core.ValueEnumeration;
 import org.jacop.search.CreditCalculator;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMin;
@@ -315,8 +316,6 @@ public class Solve implements ParserTreeConstants {
 		if (options.getAll()) { // all solutions
  		    label.getSolutionListener().searchAll(true); 
  		    label.getSolutionListener().recordSolutions(false);
-		    if (options.getNumberSolutions()>0)
-			last_search.getSolutionListener().setSolutionLimit(options.getNumberSolutions());
 
 		    // =====> add "search for all" flag to all sub-searches, 2012-03-19
 		    java.util.LinkedHashSet<Search<? extends Var>> l = 
@@ -337,7 +336,9 @@ public class Solve implements ParserTreeConstants {
 			}
 			l = ns;
 		    }
-		// <=====
+		    // <=====
+		    if (options.getNumberSolutions()>0) 
+			last_search.getSolutionListener().setSolutionLimit(options.getNumberSolutions());
 		}
 
 		// printSearch(label);
@@ -379,10 +380,10 @@ public class Solve implements ParserTreeConstants {
 			    System.out.println("==========");
 		    }
 		    else
-			System.out.println("=====TIME-OUT=====");
+			System.out.println("%% =====TIME-OUT=====");
 		else
 		    if (label.timeOutOccured) 
-			System.out.println("=====TIME-OUT=====");
+			System.out.println("%% =====TIME-OUT=====");
 	    }
 	    else if (optimization) {
 		if (si.exploration().equals("complete"))
@@ -391,16 +392,16 @@ public class Solve implements ParserTreeConstants {
 			    System.out.println("==========");
 		    }    
 		    else
-			System.out.println("=====TIME-OUT=====");
+			System.out.println("%% =====TIME-OUT=====");
 		else
 		    if (label.timeOutOccured) 
-			System.out.println("=====TIME-OUT=====");
+			System.out.println("%% =====TIME-OUT=====");
 	    }
 	}
 	else
 	    if (label.timeOutOccured) {
 		System.out.println("=====UNKNOWN=====");
-		System.out.println("=====TIME-OUT=====");
+		System.out.println("%% =====TIME-OUT=====");
 	    }
 	    else
 		if (si.exploration().equals("complete"))
@@ -776,10 +777,10 @@ public class Solve implements ParserTreeConstants {
 			    System.out.println("==========");
 		    }
 		    else
-			System.out.println("=====TIME-OUT=====");
+			System.out.println("%% =====TIME-OUT=====");
 		else
 		    if (anyTimeOutOccured(list_seq_searches)) 
-			System.out.println("=====TIME-OUT=====");
+			System.out.println("%% =====TIME-OUT=====");
 	    }
 	    else if (optimization) {
 		if (!heuristicSeqSearch)
@@ -788,16 +789,16 @@ public class Solve implements ParserTreeConstants {
 			    System.out.println("==========");
 		    }
 		    else
-			System.out.println("=====TIME-OUT=====");
+			System.out.println("%% =====TIME-OUT=====");
 		else
 		    if (anyTimeOutOccured(list_seq_searches)) 
-			System.out.println("=====TIME-OUT=====");
+			System.out.println("%% =====TIME-OUT=====");
 	    }
 	}
 	else
 	    if (anyTimeOutOccured(list_seq_searches)) {
 		System.out.println("=====UNKNOWN=====");
-		System.out.println("=====TIME-OUT=====");
+		System.out.println("%% =====TIME-OUT=====");
 	    }
 	    else 
 		System.out.println("=====UNSATISFIABLE=====");
@@ -906,14 +907,21 @@ public class Solve implements ParserTreeConstants {
         return new DepthFirstSearch<Var>();
     }
 
+
+    // long T, TOld = 0;
+
     void printSolution() {
 
-	// System.out.println("*** Solution :");
+	// T = System.currentTimeMillis();
+	// System.out.println("% Search time since last solution : " + (T - TOld)/1000 + " s");
+	// TOld = T;
+
 	if (dictionary.outputVariables.size() > 0)
 	    for (int i=0; i<dictionary.outputVariables.size(); i++) {
 		Var v = dictionary.outputVariables.get(i);
 
  		if (v instanceof BooleanVar) {
+		    // print boolean variables
 		    String boolVar = v.id()+" = ";
 		    if (v.singleton())
 			switch ( ((BooleanVar)v).value()) {
@@ -923,7 +931,27 @@ public class Solve implements ParserTreeConstants {
 			    break;
 			default: boolVar += v.dom();
 			}
+		    else
+			boolVar += "false..true";
 		    System.out.println(boolVar+";");
+		}
+		else if (v instanceof SetVar) {
+		    // print set variables
+		    String setVar = v.id() + " = ";
+		    if (v.singleton()) {
+			IntDomain glb = ((SetVar)v).dom().glb();
+			setVar += "{";
+			for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements();) {
+			    int element = e.nextElement();
+			    setVar += element;
+			    if (e.hasMoreElements())
+				setVar += ", ";
+			}
+			setVar += "}";
+		    }
+		    else
+			setVar += v.dom().toString();
+		    System.out.println(setVar+";");
 		}
 		else
 		    System.out.println(v+";");
@@ -1070,6 +1098,13 @@ public class Solve implements ParserTreeConstants {
 	public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
 
 	    boolean returnCode = super.executeAfterSolution(search, select);
+
+	    /* // === used to print number of search nodes for each solution
+	    int nodes=0;
+	    for (Search<Var> label : list_seq_searches) 
+		nodes += label.getNodes();
+	    System.out.println("%% Search nodes : "+ nodes );
+	    */
 
 	    if (costVariable != null)
 		costValue = ((IntVar)costVariable).value();

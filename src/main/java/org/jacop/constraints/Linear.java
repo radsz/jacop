@@ -50,7 +50,7 @@ import org.jacop.core.Var;
  */
 
 public class Linear extends PrimitiveConstraint {
-
+    Store store;
 	static int counter = 1;
 
     /**
@@ -133,7 +133,7 @@ public class Linear extends PrimitiveConstraint {
 	}
 	
     private void commonInitialization(Store store, IntVar[] list, int[] weights, int sum) {
-		
+	this.store=store;
 		queueIndex = 1;
 
 		assert ( list.length == weights.length ) : "\nLength of two vectors different in Linear";
@@ -173,7 +173,10 @@ public class Linear extends PrimitiveConstraint {
 
 		sumGrounded = new TimeStamp<Integer>(store, 0);
 		nextGroundedPosition = new TimeStamp<Integer>(store, 0);
-		positionMaping = new HashMap<Var, Integer>();
+		int capacity = list.length*4/3+1;
+		if (capacity < 16)
+		    capacity = 16;
+		positionMaping = new HashMap<Var, Integer>(capacity);
 
 		store.registerRemoveLevelLateListener(this);
 
@@ -182,15 +185,20 @@ public class Linear extends PrimitiveConstraint {
 		lMin = 0;
 		lMax = 0;
 
+		recomputeBounds();
+
 		for (int j = 0; j < this.list.length; j++) {
 
 			assert (positionMaping.get(this.list[j]) == null) : "The variable occurs twice in the list, not able to make a maping from the variable to its list index.";
 
-			positionMaping.put(this.list[j], new Integer(j));
+			positionMaping.put(this.list[j], j);
 			queueVariable(store.level, this.list[j]);
+
+			
 		}
 
 		checkForOverflow();
+
 	}
 
 	/**
@@ -267,8 +275,8 @@ public class Linear extends PrimitiveConstraint {
 
 	    store.propagationHasOccurred = false;
 
-	    int min = sum - lMax; //subtract(sum, lMax);
-	    int max = sum - lMin; // subtract(sum, lMin);
+	    int min = sum - lMax;
+	    int max = sum - lMin;
 
 	    int pointer1 = nextGroundedPosition.value();
 
@@ -279,42 +287,43 @@ public class Linear extends PrimitiveConstraint {
 
 		IntVar v = list[i];
 
-		float d1 = ((float)(min + lMaxArray[i]) / weights[i]); // add(min, lMaxArray[i])) / weights[i]);
-		float d2 = ((float)(max + lMinArray[i]) / weights[i]); // add(max, lMinArray[i])) / weights[i]);
+		float d1 = ((float)(min + lMaxArray[i]) / weights[i]);
+		float d2 = ((float)(max + lMinArray[i]) / weights[i]);
 		int divMin, divMax;
 
 		switch (rel) {
 		case eq : //============================================= 
 
 		    if (d1 <= d2) {
-			divMin = toInt( Math.round( Math.ceil ( d1 ) ) );
-			divMax = toInt( Math.round( Math.floor( d2 ) ) );
+			divMin = (int)( Math.round( Math.ceil ( d1 ) ) );
+			divMax = (int)( Math.round( Math.floor( d2 ) ) );
 		    }
 		    else {
-			divMin = toInt( Math.round( Math.ceil ( d2 ) ) );
-			divMax = toInt( Math.round( Math.floor( d1 ) ) );
+			divMin = (int)( Math.round( Math.ceil ( d2 ) ) );
+			divMax = (int)( Math.round( Math.floor( d1 ) ) );
 		    }
 
 		    if (divMin > divMax) 
 			throw Store.failException;
 
 		    v.domain.in(store.level, v, divMin, divMax);
+
 		    break;
 		case lt : //=============================================
 
 		    if (weights[i] < 0) {
 			if (d1 <= d2) 
-			    divMin = toInt( Math.round( Math.floor ( d1 ) ) );
+			    divMin = (int)( Math.round( Math.floor ( d1 ) ) );
 			else
-			    divMin = toInt( Math.round( Math.floor( d2 ) ) );
+			    divMin = (int)( Math.round( Math.floor( d2 ) ) );
 
 			v.domain.inMin(store.level, v, divMin + 1);
 		    }
 		    else {
 			if (d1 <= d2) 
-			    divMax = toInt( Math.round( Math.ceil( d2 ) ) );
+			    divMax = (int)( Math.round( Math.ceil( d2 ) ) );
 			else 
-			    divMax = toInt( Math.round( Math.ceil( d1 ) ) );
+			    divMax = (int)( Math.round( Math.ceil( d1 ) ) );
 
 			v.domain.inMax(store.level, v, divMax - 1);
 		    }
@@ -323,17 +332,17 @@ public class Linear extends PrimitiveConstraint {
 
 		    if (weights[i] < 0) {
 			if (d1 <= d2) 
-			    divMin = toInt( Math.round( Math.ceil ( d1 ) ) );
+			    divMin = (int)( Math.round( Math.ceil ( d1 ) ) );
 			else
-			    divMin = toInt( Math.round( Math.ceil ( d2 ) ) );
+			    divMin = (int)( Math.round( Math.ceil ( d2 ) ) );
 
 			v.domain.inMin(store.level, v, divMin);
 		    }
 		    else {
 			if (d1 <= d2)
-			    divMax = toInt( Math.round( Math.floor( d2 ) ) );
+			    divMax = (int)( Math.round( Math.floor( d2 ) ) );
 			else
-			    divMax = toInt( Math.round( Math.floor( d1 ) ) );
+			    divMax = (int)( Math.round( Math.floor( d1 ) ) );
 
 			v.domain.inMax(store.level, v, divMax);
 		    }
@@ -341,12 +350,12 @@ public class Linear extends PrimitiveConstraint {
 		case ne : //=============================================
 
 		    if (d1 <= d2) {
-			divMin = toInt( Math.round( Math.ceil ( d1 ) ) );
-			divMax = toInt( Math.round( Math.floor( d2 ) ) );
+			divMin = (int)( Math.round( Math.ceil ( d1 ) ) );
+			divMax = (int)( Math.round( Math.floor( d2 ) ) );
 		    }
 		    else {
-			divMin = toInt( Math.round( Math.ceil ( d2 ) ) );
-			divMax = toInt( Math.round( Math.floor( d1 ) ) );
+			divMin = (int)( Math.round( Math.ceil ( d2 ) ) );
+			divMax = (int)( Math.round( Math.floor( d1 ) ) );
 		    }
 
 		    if ( divMin == divMax) 
@@ -356,17 +365,17 @@ public class Linear extends PrimitiveConstraint {
 
 		    if (weights[i] < 0) {
 			if (d1 <= d2) 
-			    divMax = toInt( Math.round( Math.ceil( d2 ) ) );
+			    divMax = (int)( Math.round( Math.ceil( d2 ) ) );
 			else
-			    divMax = toInt( Math.round( Math.ceil( d1 ) ) );
+			    divMax = (int)( Math.round( Math.ceil( d1 ) ) );
 
 			    v.domain.inMax(store.level, v, divMax - 1);
 		    }
 		    else {
 			if (d1 <= d2)
-			    divMin = toInt( Math.round( Math.floor ( d1 ) ) );
+			    divMin = (int)( Math.round( Math.floor ( d1 ) ) );
 			else
-			    divMin = toInt( Math.round( Math.floor( d2 ) ) );
+			    divMin = (int)( Math.round( Math.floor( d2 ) ) );
 
 			v.domain.inMin(store.level, v, divMin + 1);
 		    }
@@ -375,24 +384,24 @@ public class Linear extends PrimitiveConstraint {
 
 		    if (weights[i] < 0) {
 			if (d1 <= d2)
-			    divMax = toInt( Math.round( Math.floor( d2 ) ) );
+			    divMax = (int)( Math.round( Math.floor( d2 ) ) );
 			else
-			    divMax = toInt( Math.round( Math.floor( d1 ) ) );
+			    divMax = (int)( Math.round( Math.floor( d1 ) ) );
 
 			v.domain.inMax(store.level, v, divMax);
 		    }
 		    else {
 			if (d1 <= d2)
-			    divMin = toInt( Math.round( Math.ceil ( d1 ) ) );
+			    divMin = (int)( Math.round( Math.ceil ( d1 ) ) );
 			else
-			    divMin = toInt( Math.round( Math.ceil ( d2 ) ) );
+			    divMin = (int)( Math.round( Math.ceil ( d2 ) ) );
 
 			v.domain.inMin(store.level, v, divMin);
 		    }
 		    break;
 		}
 	    }
-	
+
 	} while (store.propagationHasOccurred);
 
 	if (entailed(negRel[rel]))
@@ -502,12 +511,12 @@ public class Linear extends PrimitiveConstraint {
 
 			}
 
-			sumJustGrounded += value * weightGrounded; // add(sumJustGrounded, IntDomain.multiply(value, weightGrounded));
+			sumJustGrounded += value * weightGrounded;
 
-			sumGrounded.update( sumGrounded.value() + sumJustGrounded ); // add(sumGrounded.value(), sumJustGrounded) );
+			sumGrounded.update( sumGrounded.value() + sumJustGrounded );
 
-			lMin += sumJustGrounded - lMinArray[pointer]; // add(lMin, sumJustGrounded - lMinArray[pointer]); // add(sumJustGrounded, - lMinArray[pointer]));
-			lMax += sumJustGrounded - lMaxArray[pointer]; // add(lMax, sumJustGrounded - lMaxArray[pointer]); // add(sumJustGrounded, - lMaxArray[pointer]));
+			lMin += sumJustGrounded - lMinArray[pointer];
+			lMax += sumJustGrounded - lMaxArray[pointer];
 			lMinArray[pointer] = sumJustGrounded;
 			lMaxArray[pointer] = sumJustGrounded;
 
@@ -520,28 +529,40 @@ public class Linear extends PrimitiveConstraint {
 
 			int i = positionMaping.get(var);
 
-			int mul1 = ((IntVar)var).min() * weights[i]; // IntDomain.multiply(((IntVar)var).min(), weights[i]);
-			int mul2 = ((IntVar)var).max() * weights[i]; // IntDomain.multiply(((IntVar)var).max(), weights[i]);
+			int mul1 = ((IntVar)var).min() * weights[i];
+			int mul2 = ((IntVar)var).max() * weights[i];
 
 			if (mul1 <= mul2) {
 
-			    lMin += mul1 - lMinArray[i]; // add(lMin, mul1 - lMinArray[i]); // add(mul1, - lMinArray[i]));
+			    lMin += mul1 - lMinArray[i];
 			    lMinArray[i] = mul1;
 
-			    lMax += mul2 - lMaxArray[i]; // add(lMax, mul2 - lMaxArray[i]); // add(mul2, - lMaxArray[i]));
+			    lMax += mul2 - lMaxArray[i];
 			    lMaxArray[i] = mul2;
 
 			}
 			else {
 
-			    lMin += mul2 - lMinArray[i]; // add(lMin, mul2 - lMinArray[i]); // add(mul2, - lMinArray[i]));
+			    lMin += mul2 - lMinArray[i];
 			    lMinArray[i] = mul2;
 
-			    lMax += mul1 - lMaxArray[i]; // add(lMax, mul1 - lMaxArray[i]); // add(mul1, - lMaxArray[i])); 
+			    lMax += mul1 - lMaxArray[i];
 			    lMaxArray[i] = mul1;
 
 			}
 
+		}
+
+		if (!reified) {
+		    if (backtrackHasOccured) {
+		    
+			backtrackHasOccured = false;
+
+			recomputeBounds();
+		    }
+		    
+		    if (entailed(negRel[relationType])) 
+			throw Store.failException;
 		}
 	}
 
@@ -583,7 +604,7 @@ public class Linear extends PrimitiveConstraint {
 	    
 	switch (rel) {
 	case eq : 
-	    if (lMin == lMax && lMin == sum) //nextGroundedPosition.value() == list.length && sumGrounded.value() == sum) 
+	    if (lMin == lMax && lMin == sum)
 		return true;
 	    break;
 	case lt : 
@@ -626,30 +647,23 @@ public class Linear extends PrimitiveConstraint {
 
 	    int mul1 = currentDomain.min() * weights[i];
 	    int mul2 = currentDomain.max() * weights[i];
-	    // int mul1 = IntDomain.multiply(currentDomain.min(), weights[i]);
-	    // int mul2 = IntDomain.multiply(currentDomain.max(), weights[i]);
 				
 	    if (mul1 <= mul2) {
 		lMin += mul1;
-		// lMin = add(lMin, mul1);
 		lMinArray[i] = mul1;
+
 		lMax += mul2;
-		// lMax = add(lMax, mul2);
 		lMaxArray[i] = mul2;
 	    }
 	    else {
 
 		lMin += mul2;
-		// lMin = add(lMin, mul2);
 		lMinArray[i] = mul2;
+
 		lMax += mul1;
-		// lMax = add(lMax, mul1);
 		lMaxArray[i] = mul1;
-
 	    }
-
 	}
-
     }
 
     void checkForOverflow() {

@@ -199,7 +199,7 @@ public class XmodYeqZ extends Constraint {
 		IntDomain Xdom = z.dom(), Ydom = y.dom(), Zdom = x.dom();
 
 		return Xdom.singleton() && Ydom.singleton() && Zdom.singleton() &&
-		( Ydom.min() * Xdom.min() <= Zdom.min() || Ydom.min() * Xdom.min() < Zdom.min() + Ydom.min());
+		    Zdom.min() == mod(Xdom.min(), Ydom.min());
 	}
 
 	@Override
@@ -231,4 +231,12 @@ public class XmodYeqZ extends Constraint {
 			result = null;
 		return result;
 	}
+
+    int div(int a, int b) {
+	return (int)Math.floor((float)a / (float)b);
+    }
+
+    int mod(int a, int b) {
+	return a - div(a, b) * b;
+    }
 }

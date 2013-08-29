@@ -180,7 +180,7 @@ public class Constraints implements ParserTreeConstants {
 	    p = ((ASTConstElem)node).getName();
 
 	    if (p.startsWith("float_") ) {
-		System.err.println("ERROR: JaCoP does not suppoprt constraints on floats");
+		System.err.println("%% ERROR: JaCoP does not suppoprt constraints on floats");
 		System.exit(0);
 	    }
 	    // int_* predicates
@@ -400,7 +400,7 @@ public class Constraints implements ParserTreeConstants {
 			generateIntElementConstraint(node);
 		    }
 		    else
-			System.err.println("ERROR: Not expected constraint : "+p);
+			System.err.println("%% ERROR: Not expected constraint : "+p);
 		}
 		else if (p.startsWith("var_bool_element", 6) ) {
 		    // array_var_bool_element
@@ -809,7 +809,7 @@ public class Constraints implements ParserTreeConstants {
 
 			if (boundsConsistency) {
 			    pose(new Alldiff(v));
-//  			    System.out.println("Alldiff imposed");
+  			    // System.out.println("Alldiff imposed");
 			}
 			else { // domain consistency
 			    parameterListForAlldistincts.add(v);
@@ -869,7 +869,7 @@ public class Constraints implements ParserTreeConstants {
 
 		    for (int i=0; i<x.length; i++) {
 			if (index_min>x[i].max() || index_max<x[i].min()) {
-			    System.err.println("ERROR: gcc domain error in variable " + x[i]);
+			    System.err.println("%% ERROR: gcc domain error in variable " + x[i]);
 			    System.exit(0);
 			}
 			if (index_min>x[i].min() && index_min<x[i].max()) 
@@ -1117,11 +1117,11 @@ public class Constraints implements ParserTreeConstants {
 		    int[] balance = getIntArray((SimpleNode)node.jjtGetChild(3));
 		    IntVar cost = getVariable((ASTScalarFlatExpr)node.jjtGetChild(4));
 
-//   		    System.out.println("NetworkFlow("+ arc +
-//  				       ", " + java.util.Arrays.asList(flow) +
-//  				       ", " + java.util.Arrays.asList(weight) +
-//  				       ", "+ balance+
-// 				       ", "+ cost +")");   
+  		    // System.out.println("NetworkFlow("+ arc +
+ 		    // 		       ", " + java.util.Arrays.asList(flow) +
+ 		    // 		       ", " + java.util.Arrays.asList(weight) +
+ 		    // 		       ", "+ balance +
+		    // 		       ", "+ cost +")");   
 
 		    NetworkBuilder net = new NetworkBuilder();
 
@@ -1164,10 +1164,10 @@ public class Constraints implements ParserTreeConstants {
 //   		    delayedConstraints.add(binPack);
 		}
 		else
-		    System.err.println("ERROR: Constraint "+p+" not supported.");
+		    System.err.println("%% ERROR: Constraint "+p+" not supported.");
 	    // >>========== JaCoP constraints ==================
 	    else
-		System.err.println("ERROR: Constraint "+p+" not supported.");
+		System.err.println("%% ERROR: Constraint "+p+" not supported.");
 	}
     }
 
@@ -1608,7 +1608,7 @@ public class Constraints implements ParserTreeConstants {
 	    // 	pose(new Reified(new XgteqC(t, p3), p4));
 	    // 	break;
 	    default:
-		System.err.println("ERROR: Constraint "+p+" not supported.");
+		System.err.println("%% ERROR: Constraint "+p+" not supported.");
 		System.exit(0);
 	    }
 	}
@@ -1794,7 +1794,7 @@ public class Constraints implements ParserTreeConstants {
 	    // 	}
 	    // 	break;
 		default:
-		    System.err.println("ERROR: Constraint "+p+" not supported.");
+		    System.err.println("%% ERROR: Constraint "+p+" not supported.");
 		    System.exit(0);
 	    }
 	}
