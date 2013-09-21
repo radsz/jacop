@@ -114,7 +114,7 @@ public class GCC extends Constraint {
 	int [] compOfY;
 
 	XDomain[] xDomain;
-	BoundDomain[] yDomain;	
+	BoundDomain[] yDomain;
 
 	int xSize;
 	int ySize; 
@@ -201,6 +201,9 @@ public class GCC extends Constraint {
 	}
 
 	HashSet<IntVar> zeroCounters;
+
+	/** Fix suggested by Radek: a set that keeps track of the variables that have changed and need to be revisited in the consistency method */
+	private HashSet<Var> changedVariables = new HashSet<Var> ();
 	
 	private IntVar[] removeZeroCounters(IntVar[] x, IntVar[] counters) {
 
@@ -243,8 +246,8 @@ public class GCC extends Constraint {
 	 * @param x variables which values are counted.
 	 * @param counters variables which count the values.
 	 */	
-	public GCC(ArrayList<? extends IntVar> x, 
-			   ArrayList<? extends IntVar> counters) {
+	public GCC(ArrayList<? extends IntVar> x,
+               ArrayList<? extends IntVar> counters) {
 
 		this(x.toArray(new IntVar[x.size()]),
 			 counters.toArray(new IntVar[counters.size()]));
@@ -303,9 +306,12 @@ public class GCC extends Constraint {
 			}
 			firstConsistencyCheck = false;
 			firstConsistencyLevel = store.level;
+
+            assert checkXorder() : "Inconsistent X variable order: " + Arrays.toString(this.x);
+
 		}
 
-		// no need to rerun the consistancy function as the reduction on x domains doesn't affect 
+		// no need to rerun the consistancy function as the reduction on x domains doesn't affect
 		// the matching and the y count is base on the matching and doesn't affect it. So
 		// rerunning the constraint doesn't bring anything new. We can suppose that y counting 
 		// achieve bound consistancy.
@@ -315,6 +321,24 @@ public class GCC extends Constraint {
 			
 			store.propagationHasOccurred = false;
 			
+			// Fix suggested by Radek (moved from queueVariable)
+			HashSet<Var> changedVariablesCopy = this.changedVariables;
+			this.changedVariables = new HashSet<Var> ();
+			for (Var var : changedVariablesCopy) {		
+				// if v is singleton and is an X variable
+				if (var.singleton() && xNodesHash.containsKey(var)) {
+					// if 
+					if (xNodesHash.get(var) <= stamp.value()) {
+						if (debug)
+							System.out.println(" in xVariableToChange: " + var);
+						stamp.update(stamp.value() - 1);
+						putToTheEnd(x, xNodesHash.get(var));
+					}
+				}
+			}
+			
+			assert checkXorder() : "Inconsistent X variable order: " + Arrays.toString(this.x);
+
 			if (debug) {
 				System.out.println("XNodes");
 				for (int i = 0; i < xSize; i++)
@@ -433,6 +457,22 @@ public class GCC extends Constraint {
 		
 	}
 
+	/** A method to be called in asserts that checks whether all grounded X variables are correctly put at the end of the list
+	 * @return false if the X variable order is inconsistent
+	 */
+	private boolean checkXorder() {
+		
+		for (int i = this.stamp.value() - 1; i >= 0; i--) 
+			if (this.x[i].singleton()) 
+				return false;
+		
+		for (int i = this.stamp.value(); i < this.x.length; i++) 
+			if (! this.x[i].singleton()) 
+				return false;
+		
+		return true;
+	}
+
 	@Override
 	public int getConsistencyPruningEvent(Var var) {
 		// If consistency function mode
@@ -442,6 +482,14 @@ public class GCC extends Constraint {
 					return possibleEvent;
 			}
 			return IntDomain.BOUND;
+	}
+
+	@Override
+	public String id() {
+		if (id != null)
+			return id;
+		else
+			return this.getClass().getSimpleName() + numberId;
 	}
 
 	@Override
@@ -501,16 +549,9 @@ public class GCC extends Constraint {
 	public void queueVariable(int level, Var var) {
 		if (debug)
 			System.out.println("in queue variable "+var +" level "+ level);
-		// if v is singleton and is an X variable
-		if (var.singleton() && xNodesHash.containsKey(var)) {
-			// if 
-			if (xNodesHash.get(var) <= stamp.value()) {
-				if (debug)
-					System.out.println(" in xVariableToChange: " + var);
-				stamp.update(stamp.value() - 1);
-				putToTheEnd(x, xNodesHash.get(var));
-			}
-		}
+		
+		// Fix suggested by Radek: the queueVariable function should store the variables that are changing in a HashSet
+		this.changedVariables.add(var);
 	}
 
 	@Override
