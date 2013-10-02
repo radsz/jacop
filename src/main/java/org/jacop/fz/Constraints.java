@@ -328,7 +328,10 @@ public class Constraints implements ParserTreeConstants {
 
 		    // pose(new IfThen(new XlteqY(v1,v2), new XeqY(v1,v3)));
 		    // pose(new IfThen(new XlteqY(v2,v1), new XeqY(v2,v3)));
-		    pose(new Min(new IntVar[] {v1, v2}, v3));
+		    if (v1.eq(v2)) 
+			pose(new XeqY(v1, v3));
+		    else
+			pose(new Min(new IntVar[] {v1, v2}, v3));
 		}
 		else if (p.startsWith("max", 4)) {
 		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
@@ -814,7 +817,7 @@ public class Constraints implements ParserTreeConstants {
 			else { // domain consistency
 			    parameterListForAlldistincts.add(v);
 
-    			    // System.out.println("Alldistinct imposed");
+    			    // System.out.println("Alldistinct imposed on " + java.util.Arrays.asList(v));
 			}
 		    }
 		    else {
@@ -1638,11 +1641,15 @@ public class Constraints implements ParserTreeConstants {
 
 		if (domainConsistency) {
 
+		    // Constraint c = new SumWeightDom(p2, p1, p3);
+		    // if (p1.length <= 3)
+		    // 	c.queueIndex = 1;
+		    // pose(c);
+
 		    pose(new SumWeightDom(p2, p1, p3));
 
 		}
-		else
-		if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
+		else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
 		    if (p3 != 0)
 			pose(new XplusCeqZ(p2[1], p3, p2[0]));
 		    else
@@ -1672,7 +1679,7 @@ public class Constraints implements ParserTreeConstants {
 			v = one;
 		    else 
 			v = new IntVar(store, p3, p3);
-		    if (allWeightsOne(p1))
+		    if (allWeightsOne(p1)) 
 			pose(new Sum(p2, v));
 		    else if (allWeightsMinusOne(p1)) {
 			v = new IntVar(store, -p3, -p3);
@@ -1692,7 +1699,7 @@ public class Constraints implements ParserTreeConstants {
 			    pose(new Sum(vars, p2[p2.length-1]));
 			}
 			else {
-			    // pose(new SumWeight(p2, p1, v));
+			    //pose(new SumWeight(p2, p1, v));
 			    pose(new Linear(store, p2, p1, "==", p3));
 			}
 		    else {
@@ -2168,6 +2175,7 @@ public class Constraints implements ParserTreeConstants {
 			IntVar[] aa = new IntVar[ia.length];
 			for (int i=0; i<ia.length; i++)
 			    aa[i] = new IntVar(store, ia[i], ia[i]);
+			    // aa[i] = new IntVar(store, new IntervalDomain(ia[i], ia[i]));
 			return aa;
 		    }
 		    else {

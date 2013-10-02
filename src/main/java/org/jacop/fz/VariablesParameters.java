@@ -149,6 +149,7 @@ public class VariablesParameters implements ParserTreeConstants {
 	case 0: // int
 	    ident = ((ASTVarDeclItem)node).getIdent();
 	    varInt = new IntVar(store, ident, IntDomain.MinInt, IntDomain.MaxInt);
+
 	    table.addVariable(ident, varInt);
 	    if (initChild < ((ASTVarDeclItem)node).jjtGetNumChildren()) {
 
@@ -287,7 +288,7 @@ public class VariablesParameters implements ParserTreeConstants {
 // 		    System.out.println(c);
 		} else {
  		    Var initSetVar = getSetFlatExpr_var(store, node, initChild);
-		    System.out.println ("intSetVar = "+ initSetVar);
+//		    System.out.println ("intSetVar = "+ initSetVar);
 
 		    AeqB c = new AeqB((SetVar)varSet, (SetVar)initSetVar);
 		    store.impose(c);
@@ -453,7 +454,8 @@ public class VariablesParameters implements ParserTreeConstants {
 	    else { // no init values
 		varArrayInt = new IntVar[size];
 		for (int i=0; i<size; i++)
-		    varArrayInt[i] = new IntVar(store, ident+"["+ i +"]", IntDomain.MinInt, IntDomain.MaxInt);
+		    // varArrayInt[i] = new IntVar(store, ident+"["+ i +"]", IntDomain.MinInt, IntDomain.MaxInt);
+		    varArrayInt[i] = new IntVar(store, ident+"["+ i +"]", new IntervalDomain(IntDomain.MinInt, IntDomain.MaxInt));
 		table.addSearchArray(varArrayInt);
 	    }
 	    table.addVariableArray(ident, varArrayInt);
@@ -475,7 +477,8 @@ public class VariablesParameters implements ParserTreeConstants {
 	    else { // no init values
 		varArrayInt = new IntVar[size];
 		for (int i=0; i<size; i++)
-		    varArrayInt[i] = new IntVar(store, ident+"["+ i +"]", lowInterval, highInterval);
+		    // varArrayInt[i] = new IntVar(store, ident+"["+ i +"]", lowInterval, highInterval);
+		    varArrayInt[i] = new IntVar(store, ident+"["+ i +"]", new IntervalDomain(lowInterval, highInterval));
 		table.addSearchArray(varArrayInt);
 	    }
 	    table.addVariableArray(ident, varArrayInt);

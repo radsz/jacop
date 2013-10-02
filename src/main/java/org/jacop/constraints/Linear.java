@@ -148,17 +148,22 @@ public class Linear extends PrimitiveConstraint {
 
 		for (int i = 0; i < list.length; i++) {
 
-			assert (list[i] != null) : i + "-th element of list in Linear constraint is null";
+		    assert (list[i] != null) : i + "-th element of list in Linear constraint is null";
 			
-			if (parameters.get(list[i]) != null) {
-				// variable ordered in the scope of the Sum Weight constraint.
+		    if (weights[i] != 0) {
+			if (list[i].singleton()) 
+			    this.sum -= list[i].value() * weights[i];
+			else
+			    if (parameters.get(list[i]) != null) {
+				// variable ordered in the scope of the Linear constraint.
 				Integer coeff = parameters.get(list[i]);
 				Integer sumOfCoeff = coeff + weights[i];
 				parameters.put(list[i], sumOfCoeff);
-			}
-			else
+			    }
+			    else
 				parameters.put(list[i], weights[i]);
 
+		    }
 		}
 
 		this.list = new IntVar[parameters.size()];
@@ -271,6 +276,9 @@ public class Linear extends PrimitiveConstraint {
 	    recomputeBounds();
 	 }
 
+	if (entailed(negRel[rel]))
+	    throw Store.failException;
+
 	do {
 
 	    store.propagationHasOccurred = false;
@@ -282,72 +290,87 @@ public class Linear extends PrimitiveConstraint {
 
 	    for (int i = pointer1; i < list.length; i++) {
 
-		if (weights[i] == 0)
-		    continue;
-
 		IntVar v = list[i];
 
-		float d1 = ((float)(min + lMaxArray[i]) / weights[i]);
-		float d2 = ((float)(max + lMinArray[i]) / weights[i]);
+		float d1, d2;
 		int divMin, divMax;
 
 		switch (rel) {
 		case eq : //============================================= 
+		    if ((lMaxArray[i] > max + lMinArray[i]) || (lMinArray[i] < min + lMaxArray[i])) {
 
-		    if (d1 <= d2) {
-			divMin = (int)( Math.round( Math.ceil ( d1 ) ) );
-			divMax = (int)( Math.round( Math.floor( d2 ) ) );
+			d1 = ((float)(min + lMaxArray[i]) / weights[i]);
+			d2 = ((float)(max + lMinArray[i]) / weights[i]);
+
+			if (d1 <= d2) {
+			    divMin = (int)( Math.round( Math.ceil ( d1 ) ) );
+			    divMax = (int)( Math.round( Math.floor( d2 ) ) );
+			}
+			else {
+			    divMin = (int)( Math.round( Math.ceil ( d2 ) ) );
+			    divMax = (int)( Math.round( Math.floor( d1 ) ) );
+			}
+
+			if (divMin > divMax) 
+			    throw Store.failException;
+
+			v.domain.in(store.level, v, divMin, divMax);
 		    }
-		    else {
-			divMin = (int)( Math.round( Math.ceil ( d2 ) ) );
-			divMax = (int)( Math.round( Math.floor( d1 ) ) );
-		    }
-
-		    if (divMin > divMax) 
-			throw Store.failException;
-
-		    v.domain.in(store.level, v, divMin, divMax);
-
 		    break;
 		case lt : //=============================================
 
-		    if (weights[i] < 0) {
-			if (d1 <= d2) 
-			    divMin = (int)( Math.round( Math.floor ( d1 ) ) );
-			else
-			    divMin = (int)( Math.round( Math.floor( d2 ) ) );
+		    if (lMaxArray[i] >= max + lMinArray[i]) {  // based on "Bounds Consistency Techniques for Long Linear Constraints", W. Harvey and J. Schimpf
 
-			v.domain.inMin(store.level, v, divMin + 1);
-		    }
-		    else {
-			if (d1 <= d2) 
-			    divMax = (int)( Math.round( Math.ceil( d2 ) ) );
-			else 
-			    divMax = (int)( Math.round( Math.ceil( d1 ) ) );
+			d1 = ((float)(min + lMaxArray[i]) / weights[i]);
+			d2 = ((float)(max + lMinArray[i]) / weights[i]);
 
-			v.domain.inMax(store.level, v, divMax - 1);
+			if (weights[i] < 0) {
+			    if (d1 <= d2) 
+				divMin = (int)( Math.round( Math.floor ( d1 ) ) );
+			    else
+				divMin = (int)( Math.round( Math.floor( d2 ) ) );
+
+			    v.domain.inMin(store.level, v, divMin + 1);
+			}
+			else {
+			    if (d1 <= d2) 
+				divMax = (int)( Math.round( Math.ceil( d2 ) ) );
+			    else 
+				divMax = (int)( Math.round( Math.ceil( d1 ) ) );
+
+			    v.domain.inMax(store.level, v, divMax - 1);
+			}
 		    }
 		    break;
 		case le : //=============================================
 
-		    if (weights[i] < 0) {
-			if (d1 <= d2) 
-			    divMin = (int)( Math.round( Math.ceil ( d1 ) ) );
-			else
-			    divMin = (int)( Math.round( Math.ceil ( d2 ) ) );
+		    if (lMaxArray[i] > max + lMinArray[i]) {  // based on "Bounds Consistency Techniques for Long Linear Constraints", W. Harvey and J. Schimpf
 
-			v.domain.inMin(store.level, v, divMin);
-		    }
-		    else {
-			if (d1 <= d2)
-			    divMax = (int)( Math.round( Math.floor( d2 ) ) );
-			else
-			    divMax = (int)( Math.round( Math.floor( d1 ) ) );
+			d1 = ((float)(min + lMaxArray[i]) / weights[i]);
+			d2 = ((float)(max + lMinArray[i]) / weights[i]);
 
-			v.domain.inMax(store.level, v, divMax);
+			if (weights[i] < 0) {
+			    if (d1 <= d2) 
+				divMin = (int)( Math.round( Math.ceil ( d1 ) ) );
+			    else
+				divMin = (int)( Math.round( Math.ceil ( d2 ) ) );
+
+			    v.domain.inMin(store.level, v, divMin);
+			}
+			else {
+			    if (d1 <= d2)
+				divMax = (int)( Math.round( Math.floor( d2 ) ) );
+			    else
+				divMax = (int)( Math.round( Math.floor( d1 ) ) );
+
+			    v.domain.inMax(store.level, v, divMax);
+			}
 		    }
 		    break;
 		case ne : //=============================================
+
+		    d1 = ((float)(min + lMaxArray[i]) / weights[i]);
+		    d2 = ((float)(max + lMinArray[i]) / weights[i]);
 
 		    if (d1 <= d2) {
 			divMin = (int)( Math.round( Math.ceil ( d1 ) ) );
@@ -363,40 +386,53 @@ public class Linear extends PrimitiveConstraint {
 		    break;
 		case gt : //=============================================
 
-		    if (weights[i] < 0) {
-			if (d1 <= d2) 
-			    divMax = (int)( Math.round( Math.ceil( d2 ) ) );
-			else
-			    divMax = (int)( Math.round( Math.ceil( d1 ) ) );
+		    if (lMinArray[i] <= min + lMaxArray[i]) { // based on "Bounds Consistency Techniques for Long Linear Constraints", W. Harvey and J. Schimpf
+
+
+			d1 = ((float)(min + lMaxArray[i]) / weights[i]);
+			d2 = ((float)(max + lMinArray[i]) / weights[i]);
+
+			if (weights[i] < 0) {
+			    if (d1 <= d2) 
+				divMax = (int)( Math.round( Math.ceil( d2 ) ) );
+			    else
+				divMax = (int)( Math.round( Math.ceil( d1 ) ) );
 
 			    v.domain.inMax(store.level, v, divMax - 1);
-		    }
-		    else {
-			if (d1 <= d2)
-			    divMin = (int)( Math.round( Math.floor ( d1 ) ) );
-			else
-			    divMin = (int)( Math.round( Math.floor( d2 ) ) );
+			}
+			else {
+			    if (d1 <= d2)
+				divMin = (int)( Math.round( Math.floor ( d1 ) ) );
+			    else
+				divMin = (int)( Math.round( Math.floor( d2 ) ) );
 
-			v.domain.inMin(store.level, v, divMin + 1);
+			    v.domain.inMin(store.level, v, divMin + 1);
+			}
 		    }
 		    break;
 		case ge : //=============================================
 
-		    if (weights[i] < 0) {
-			if (d1 <= d2)
-			    divMax = (int)( Math.round( Math.floor( d2 ) ) );
-			else
-			    divMax = (int)( Math.round( Math.floor( d1 ) ) );
+		    if (lMinArray[i] < min + lMaxArray[i]) { // based on "Bounds Consistency Techniques for Long Linear Constraints", W. Harvey and J. Schimpf
 
-			v.domain.inMax(store.level, v, divMax);
-		    }
-		    else {
-			if (d1 <= d2)
-			    divMin = (int)( Math.round( Math.ceil ( d1 ) ) );
-			else
-			    divMin = (int)( Math.round( Math.ceil ( d2 ) ) );
+			d1 = ((float)(min + lMaxArray[i]) / weights[i]);
+			d2 = ((float)(max + lMinArray[i]) / weights[i]);
 
-			v.domain.inMin(store.level, v, divMin);
+			if (weights[i] < 0) {
+			    if (d1 <= d2)
+				divMax = (int)( Math.round( Math.floor( d2 ) ) );
+			    else
+				divMax = (int)( Math.round( Math.floor( d1 ) ) );
+
+			    v.domain.inMax(store.level, v, divMax);
+			}
+			else {
+			    if (d1 <= d2)
+				divMin = (int)( Math.round( Math.ceil ( d1 ) ) );
+			    else
+				divMin = (int)( Math.round( Math.ceil ( d2 ) ) );
+
+			    v.domain.inMin(store.level, v, divMin);
+			}
 		    }
 		    break;
 		}
@@ -461,6 +497,9 @@ public class Linear extends PrimitiveConstraint {
 
 	@Override
 	public void impose(Store store) {
+
+	    if (list == null)
+		return;
 
 	    reified = false;
 
