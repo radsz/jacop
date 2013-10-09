@@ -328,10 +328,11 @@ public class Constraints implements ParserTreeConstants {
 
 		    // pose(new IfThen(new XlteqY(v1,v2), new XeqY(v1,v3)));
 		    // pose(new IfThen(new XlteqY(v2,v1), new XeqY(v2,v3)));
+
 		    if (v1.eq(v2)) 
-			pose(new XeqY(v1, v3));
+		    	pose(new XeqY(v1, v3));
 		    else
-			pose(new Min(new IntVar[] {v1, v2}, v3));
+		    	pose(new Min(new IntVar[] {v1, v2}, v3));
 		}
 		else if (p.startsWith("max", 4)) {
 		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
@@ -798,6 +799,11 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar[] v = getVarArray((SimpleNode)node.jjtGetChild(0));
 
 		    pose(new Circuit(v));
+		}
+		else if (p.startsWith("subcircuit", 6)) {
+		    IntVar[] v = getVarArray((SimpleNode)node.jjtGetChild(0));
+
+		    pose(new Subcircuit(v));
 		}
 		else if (p.startsWith("alldiff", 6)) {
 		    IntVar[] v = getVarArray((SimpleNode)node.jjtGetChild(0));
@@ -1699,7 +1705,7 @@ public class Constraints implements ParserTreeConstants {
 			    pose(new Sum(vars, p2[p2.length-1]));
 			}
 			else {
-			    //pose(new SumWeight(p2, p1, v));
+			    // pose(new SumWeight(p2, p1, v));
 			    pose(new Linear(store, p2, p1, "==", p3));
 			}
 		    else {
@@ -1872,7 +1878,16 @@ public class Constraints implements ParserTreeConstants {
 	//     rel[i][1] = p2[i];
 	// }
 	// pose(new org.jacop.constraints.ExtensionalSupportVA(new IntVar[] {p1, p3}, rel));
-	pose(new Element(p1, p2, p3));
+
+
+	int[] newP2 = new int[p1.max() - p1.min() + 1];
+	for (int i=0; i < newP2.length; i++) 
+	    newP2[i] = p2[p1.min() - 1 + i];
+
+	pose(new Element(p1, newP2, p3, p1.min() - 1));
+
+
+	// pose(new Element(p1, p2, p3));
     }
 
     void generateVarElementConstraint(SimpleNode node) throws FailException {
@@ -1883,9 +1898,10 @@ public class Constraints implements ParserTreeConstants {
 // 	if (p2 != null)
 // 	    pose(new Element(p1, p2, p3));
 // 	else {
-	    IntVar[] p2var = getVarArray((SimpleNode)node.jjtGetChild(1));
+	IntVar[] p2var = getVarArray((SimpleNode)node.jjtGetChild(1));
 
-	    pose(new Element(p1, p2var, p3));
+	pose(new Element(p1, p2var, p3));
+
 // 	}
     }
 

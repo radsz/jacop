@@ -315,13 +315,13 @@ public class AndBool extends PrimitiveConstraint {
 
 		StringBuffer resultString = new StringBuffer( id() );
 
-		resultString.append(" : andBool( ");
+		resultString.append(" : andBool([ ");
 		for (int i = 0; i < list.length; i++) {
 			resultString.append( list[i] );
 			if (i < list.length - 1)
 				resultString.append(", ");
 		}
-		resultString.append(", ");
+		resultString.append("], ");
 		resultString.append(result);
 		resultString.append(")");
 		return resultString.toString();

@@ -80,6 +80,12 @@ public class SumWeightDom extends Constraint {
     LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
 
 
+    IntDomain[] lArray;
+
+    HashMap<Var, Integer> positionMaping;
+
+    boolean backtrackHasOccured = false;
+
     /**
      * It specifies the arguments required to be saved by an XML format as well as 
      * the constructor being called to recreate an object from an XML format.
@@ -347,12 +353,6 @@ public class SumWeightDom extends Constraint {
 	store.countConstraint();
     }
 
-    IntDomain[] lArray;
-
-    HashMap<Var, Integer> positionMaping;
-
-    boolean backtrackHasOccured = false;
-
     @Override
 	public void queueVariable(int level, Var var) {
 
@@ -460,12 +460,12 @@ public class SumWeightDom extends Constraint {
 	}
     }
 
-
     IntDomain multiplyDom(IntDomain d, int c) {
 	IntDomain temp;
 	// System.out.println (d + " * " + c);
 
-	if (c == 1) temp = d;
+	if (c == 1) 
+	    return d;
 	else if ( c == -1) temp = invertDom(d);
 	else {
 	    temp = new IntervalDomain();
@@ -475,8 +475,8 @@ public class SumWeightDom extends Constraint {
 		IntervalDomain mulDom = new IntervalDomain();
 		if ( c > 0) 
 		    for (int k=i.min(); k<=i.max(); k++) {
-			// mulDom.addDom(new IntervalDomain(k*c, k*c));
-			mulDom.unionAdapt(k*c, k*c);
+		    	// mulDom.addDom(new IntervalDomain(k*c, k*c));
+		    	mulDom.unionAdapt(k*c, k*c);
 		    }
 		else // c < 0
 		    for (int k=i.max(); k>=i.min(); k--) {	
@@ -523,7 +523,8 @@ public class SumWeightDom extends Constraint {
 	IntDomain temp;
 	// System.out.println (d + " / " + c);
 
-	if (c == 1) temp = d;
+	if (c == 1) 
+	    return d;
 	else if ( c == -1) temp = invertDom(d);
 	else {
 
@@ -531,22 +532,46 @@ public class SumWeightDom extends Constraint {
 
 	    for (IntervalEnumeration e1 = d.intervalEnumeration(); e1.hasMoreElements();) {
 		Interval i = e1.nextElement();
+		int iMin = i.min();
+		int iMax = i.max();
 
 		IntervalDomain divDom = new IntervalDomain();
 
-		if ( c > 0)
-		    for (int k=i.min(); k<=i.max(); k++) {
+		    if ( c > 0) {
 
-			if (k % c == 0)
-			    // divDom.addDom(new IntervalDomain(k/c, k/c));
-			    divDom.unionAdapt(k/c, k/c);
+			int k = (int)Math.round( Math.ceil( (float)iMin/c ) );
+
+		    	while (k*c <= iMax) {
+		    	    divDom.unionAdapt(k, k);
+		    	    k++;
+		    	}
+
+			/*
+		    	for (int k=iMin; k<=iMax; k++) {
+
+		    	    if (k % c == 0)
+		    		// divDom.addDom(new IntervalDomain(k/c, k/c));
+		    		divDom.unionAdapt(k/c, k/c);
+		    	}
+			*/
 		    }
-		else // c < 0
-		    for (int k=i.max(); k>=i.min(); k--) {	
+		    else {// c <= 0
 
-			if (k % c == 0)
-			    // divDom.addDom(new IntervalDomain(k/c, k/c));
-			    divDom.unionAdapt(k/c, k/c);
+			int k = (int)Math.round( Math.ceil( (float)iMax/c ) );
+
+		    	while (k*c >= iMin) {
+		    	    divDom.unionAdapt(k, k);
+		    	    k++;
+		    	}
+
+			/*
+			for (int k=iMax; k>=iMin; k--) {	
+
+			    if (k % c == 0)
+				// divDom.addDom(new IntervalDomain(k/c, k/c));
+				divDom.unionAdapt(k/c, k/c);
+			}
+			*/
 		    }
 
 		// temp.addDom(divDom);
@@ -588,16 +613,20 @@ public class SumWeightDom extends Constraint {
 
 	IntDomain temp;
 	temp = new IntervalDomain();
-	
+
+	int d1Min = d1.min();
+	int d1Max = d1.max();
+
 	for (IntervalEnumeration e1 = d1.intervalEnumeration(); e1.hasMoreElements();) {
 	    Interval i1 = e1.nextElement(); 
 	    int i1min = i1.min(), i1max = i1.max();
 
-	    for (IntervalEnumeration e2 = d2.intervalEnumeration(); e2.hasMoreElements();) {
-		Interval i2 = e2.nextElement();
-		// temp.addDom(new IntervalDomain(i1min-i2.max(), i1max-i2.min()));
-		temp.unionAdapt(i1min-i2.max(), i1max-i2.min());
-	    }
+		for (IntervalEnumeration e2 = d2.intervalEnumeration(); e2.hasMoreElements();) {
+		    Interval i2 = e2.nextElement();
+
+		    // temp.addDom(new IntervalDomain(i1min-i2.max(), i1max-i2.min()));
+		    temp.unionAdapt(i1min-i2.max(), i1max-i2.min());
+		}
 	}
 
 	// System.out.println ("result- = " + temp);
@@ -605,6 +634,7 @@ public class SumWeightDom extends Constraint {
 	return temp;
 
     }
+
 
     void checkForOverflow() {
 

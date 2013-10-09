@@ -309,13 +309,13 @@ public class OrBool extends PrimitiveConstraint {
 
 		StringBuffer resultString = new StringBuffer( id() );
 
-		resultString.append(" : orBool( ");
+		resultString.append(" : orBool([ ");
 		for (int i = 0; i < list.length; i++) {
 			resultString.append( list[i] );
 			if (i < list.length - 1)
 				resultString.append(", ");
 		}
-		resultString.append(", ");
+		resultString.append("], ");
 		resultString.append(result);
 		resultString.append(")");
 		return resultString.toString();

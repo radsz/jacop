@@ -273,7 +273,7 @@ public class ElementInteger extends Constraint {
 			indexHasChanged = false;
 			
 		}
-	
+		
 	}
 
 	@Override
@@ -391,7 +391,7 @@ public class ElementInteger extends Constraint {
 				result.append(", ");
 		}
 		
-		result.append("], ").append(value).append(" )");
+		result.append("], ").append(value).append(", " + indexOffset + " )");
 
 		return result.toString();
 	}
