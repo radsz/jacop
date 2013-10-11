@@ -46,6 +46,8 @@ public class Options {
 	String[] argument;
 	
 	FileInputStream file;
+
+    String fileName;
 	
     boolean all = false, verbose = false;
 	
@@ -89,12 +91,7 @@ public class Options {
 				System.exit(0);
 			}
 			else { // input file
-				try {
-					file = new java.io.FileInputStream(args[0]);
-				} catch (java.io.FileNotFoundException e) {
-					System.out.println("Flatzinc2JaCoP Parser Version 0.1:  File " + args[0] + " not found.");
-					System.exit(0);
-				}
+			    fileName = args[0];
 			}
 		}
 		else { // args.length > 1
@@ -128,12 +125,8 @@ public class Options {
 					i++;
 				}
 			}	    
-			try {
-				file = new java.io.FileInputStream(args[args.length-1]);
-			} catch (java.io.FileNotFoundException e) {
-				System.out.println("Flatzinc2JaCoP Parser Version 0.1:  File " + args[0] + " not found.");
-				System.exit(0);
-			}
+
+			fileName = args[args.length-1];
 		}
 	}
 
@@ -142,7 +135,22 @@ public class Options {
 	 * @return file containing flatzinc description.
 	 */
 	public FileInputStream getFile() {
-		return file;
+	    try {
+		file = new java.io.FileInputStream(fileName);
+	    } catch (java.io.FileNotFoundException e) {
+		System.out.println("Flatzinc2JaCoP Parser Version 0.1:  File " + fileName + " not found.");
+		System.exit(0);
+	    }
+
+	    return file;
+	}
+
+	/**
+	 * It returns the file name for the file containing flatzinc description. 
+	 * @return file name containing flatzinc description.
+	 */
+	public String getFileName() {
+		return fileName;
 	}
 
 	/**
