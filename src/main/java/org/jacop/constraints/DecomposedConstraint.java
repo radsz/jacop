@@ -50,6 +50,12 @@ public abstract class DecomposedConstraint {
 	/**
 	 * It specifies the queue (index), which is used to record that constraint
 	 * needs to be re-evaluated.
+	 *
+	 * Priorytet 0 - O(c), constant execution time, e.g. primitive constraints 
+	 * Priorytet 1 - O(n), linear execution time, e.g. Sum, SumWeight
+	 * Priorytet 2 - O(n^2) quadratic execution time, e.g. Cumulative Diff2
+	 * Priorytet 3 - plynomial execution time
+	 * Priorytet 4 - execution time can be exponential in worst case, SumWeightDom
 	 */
 
 	public int queueIndex = 0;

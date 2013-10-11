@@ -329,10 +329,11 @@ public class Constraints implements ParserTreeConstants {
 		    // pose(new IfThen(new XlteqY(v1,v2), new XeqY(v1,v3)));
 		    // pose(new IfThen(new XlteqY(v2,v1), new XeqY(v2,v3)));
 
-		    if (v1.eq(v2)) 
+		    if (v1 == v2)
 		    	pose(new XeqY(v1, v3));
 		    else
 		    	pose(new Min(new IntVar[] {v1, v2}, v3));
+
 		}
 		else if (p.startsWith("max", 4)) {
 		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
@@ -343,7 +344,11 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar v2 = getVariable(p2);
 		    IntVar v3 = getVariable(p3);
 
-		    pose(new Max(new IntVar[] {v1, v2}, v3));
+		    if (v1 == v2)
+		    	pose(new XeqY(v1, v3));
+		    else
+			pose(new Max(new IntVar[] {v1, v2}, v3));
+
 		}
 		else if (p.startsWith("abs", 4)) {
 		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
@@ -790,7 +795,7 @@ public class Constraints implements ParserTreeConstants {
 		    // 	b = new IntVar(store, 0, b.max());
 
 		    // if (boundsConsistency) 
-		    // 	pose(new Cumulative(s, d, r, b, true, false));
+		    //  	pose(new Cumulative(s, d, r, b, true, false));
 		    // else 
 		    pose(new Cumulative(s, d, r, b, true, true, false));
 
@@ -959,6 +964,8 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar c = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
 
 		    pose(new Count(x, c, y));
+
+		    // pose(new Among(x, new IntervalDomain(y,y), c));
 		}
 		else if (p.startsWith("nvalue", 6)) {
 		    IntVar n = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
@@ -989,10 +996,10 @@ public class Constraints implements ParserTreeConstants {
 			for (int j=0; j<size; j++)
 			    t[i][j] = tbl[size*i+j];
 
-		    // we do not not pose AmongVar directly because of possible inconsistency with its 
+		    // we do not not pose ExtensionalSupportMDD directly because of possible inconsistency with its 
 		    // intiallization; we collect all constraints and pose them at the end when all other constraints are posed
 
-		    delayedConstraints.add(new ExtensionalSupportMDD(v, t));
+		    delayedConstraints.add(new ExtensionalSupportSTR(v, t));
  		    //pose(new ExtensionalSupportMDD(v, t));
 		}
 		else if (p.startsWith("assignment", 6)) {
@@ -1001,7 +1008,7 @@ public class Constraints implements ParserTreeConstants {
 		    int index_f = getInt((ASTScalarFlatExpr)node.jjtGetChild(2));
 		    int index_invf = getInt((ASTScalarFlatExpr)node.jjtGetChild(3));
 
-		    // we do not not pose AmongVar directly because of possible inconsistency with its 
+		    // we do not not pose Assignment directly because of possible inconsistency with its 
 		    // intiallization; we collect all constraints and pose them at the end when all other constraints are posed
 
 		    delayedConstraints.add(new Assignment(f, invf, index_f, index_invf));
@@ -1645,17 +1652,7 @@ public class Constraints implements ParserTreeConstants {
 		    else
 			throw store.failException;
 
-		if (domainConsistency) {
-
-		    // Constraint c = new SumWeightDom(p2, p1, p3);
-		    // if (p1.length <= 3)
-		    // 	c.queueIndex = 1;
-		    // pose(c);
-
-		    pose(new SumWeightDom(p2, p1, p3));
-
-		}
-		else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
+		if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
 		    if (p3 != 0)
 			pose(new XplusCeqZ(p2[1], p3, p2[0]));
 		    else
@@ -1676,6 +1673,12 @@ public class Constraints implements ParserTreeConstants {
 			pose(new XplusYeqC(p2[0], p2[1], p3));
 		    else
 			pose(new XplusYeqC(p2[0], p2[1], -p3));
+		}
+		else if (domainConsistency) { // && ! (p1.length == 2 && allWeightsOneOrMinusOne(p1)) ) {
+		    // We do not impose linear constraint with domain consistency if 
+		    // the cases are covered by four cases above with domain consistency.
+
+		    pose(new SumWeightDom(p2, p1, p3));
 		}
 		else {
 		    IntVar v;
@@ -1829,6 +1832,14 @@ public class Constraints implements ParserTreeConstants {
     	return true;
     }
 
+    boolean allWeightsOneOrMinusOne(int[] w) {
+	boolean allOne = true;
+	for (int i=0; i<w.length; i++) 
+	    if (w[i] != 1 && w[i] != -1)
+		return false;
+	return true;
+    }
+
     boolean sumPossible1(int[] w) {
 	//boolean sum = true;
 	if (w[0] == 1) {
@@ -1879,6 +1890,13 @@ public class Constraints implements ParserTreeConstants {
 	// }
 	// pose(new org.jacop.constraints.ExtensionalSupportVA(new IntVar[] {p1, p3}, rel));
 
+	/*
+	if (listEqualIndex(p2)) {
+	    pose(new XeqY(p1, p3));
+
+	    return;
+	}
+	*/
 
 	int[] newP2 = new int[p1.max() - p1.min() + 1];
 	for (int i=0; i < newP2.length; i++) 
@@ -1889,6 +1907,19 @@ public class Constraints implements ParserTreeConstants {
 
 	// pose(new Element(p1, p2, p3));
     }
+
+    /*
+    boolean listEqualIndex(int[] p) {
+	int n = 1;
+	for (int i = 0; i < p.length; i++) {
+	    if (p[i] == n++)
+		continue;
+	    else
+		return false;
+	}
+	return true;
+    }
+    */
 
     void generateVarElementConstraint(SimpleNode node) throws FailException {
 	IntVar p1 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));	    

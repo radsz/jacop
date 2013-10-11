@@ -291,7 +291,7 @@ public class ExtensionalSupportMDD extends Constraint {
 		result.append(" : extensionalSupportMDD( ");
 
 		for (int i = 0; i < mdd.vars.length; i++)
-			result.append( mdd.vars[i].id() ).append(" ");
+			result.append( mdd.vars[i] ).append(" ");
 
 		result.append(")").append("size = ").append( mdd.freePosition).append(")\n");
 
