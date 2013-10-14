@@ -344,10 +344,14 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar v2 = getVariable(p2);
 		    IntVar v3 = getVariable(p3);
 
+
+		    // pose(new IfThen(new XgteqY(v1,v2), new XeqY(v1,v3)));
+		    // pose(new IfThen(new XgteqY(v2,v1), new XeqY(v2,v3)));
+
 		    if (v1 == v2)
 		    	pose(new XeqY(v1, v3));
 		    else
-			pose(new Max(new IntVar[] {v1, v2}, v3));
+		    	pose(new Max(new IntVar[] {v1, v2}, v3));
 
 		}
 		else if (p.startsWith("abs", 4)) {
@@ -1676,10 +1680,14 @@ public class Constraints implements ParserTreeConstants {
 		}
 		else if (domainConsistency) { // && ! (p1.length == 2 && allWeightsOneOrMinusOne(p1)) ) {
 		    // We do not impose linear constraint with domain consistency if 
-		    // the cases are covered by four cases above with domain consistency.
+		    // the cases are covered by four cases above.
 
 		    pose(new SumWeightDom(p2, p1, p3));
 		}
+		else if ( (p3 == 0 && p1.length == 3) && 
+		     ((p1[0] == -1 && p1[1] == -1 && p1[2] == 1) || (p1[0] == 1 && p1[1] == 1 && p1[2] == -1)) )
+		    pose(new XplusYeqZ(p2[0], p2[1], p2[2]));
+		    // pose(new Linear(store, p2, p1, "==", p3));
 		else {
 		    IntVar v;
 		    if (p3==0) 
@@ -1688,29 +1696,38 @@ public class Constraints implements ParserTreeConstants {
 			v = one;
 		    else 
 			v = new IntVar(store, p3, p3);
-		    if (allWeightsOne(p1)) 
+		    if (sumPossible(p1, p3) > -1) {
+			int pos = sumPossible(p1, p3);
+			IntVar[] vect = new IntVar[p1.length-1];
+			int n = 0;
+			for (int i=0; i<p2.length; i++)
+			    if (i != pos)
+				vect[n++] = p2[i];
+			pose(new Sum(vect, p2[pos]));
+		    }
+		    else if (allWeightsOne(p1)) 
 			pose(new Sum(p2, v));
 		    else if (allWeightsMinusOne(p1)) {
 			v = new IntVar(store, -p3, -p3);
 			pose(new Sum(p2, v));
 		    }
-		    else if (p3 == 0) 
-			if (sumPossible1(p1)) { // case when weights are [1, -1, ..., -1] or [-1, 1, ..., 1]
- 			    IntVar[] vars = new IntVar[p2.length-1];
- 			    for (int i=1; i<p2.length; i++)
- 				vars[i-1] = p2[i];
- 			    pose(new Sum(vars, p2[0]));
-			}
-			else if (sumPossible2(p1)) { // case when weights are [-1, ..., -1, 1] or [1, ..., 1, -1]
-			    IntVar[] vars = new IntVar[p2.length-1];
-			    for (int i=0; i<p2.length-1; i++)
-				vars[i] = p2[i];
-			    pose(new Sum(vars, p2[p2.length-1]));
-			}
-			else {
-			    // pose(new SumWeight(p2, p1, v));
-			    pose(new Linear(store, p2, p1, "==", p3));
-			}
+		    // else if (p3 == 0) 
+		    // 	if (sumPossible1(p1)) { // case when weights are [1, -1, ..., -1] or [-1, 1, ..., 1]
+ 		    // 	    IntVar[] vars = new IntVar[p2.length-1];
+ 		    // 	    for (int i=1; i<p2.length; i++)
+ 		    // 		vars[i-1] = p2[i];
+ 		    // 	    pose(new Sum(vars, p2[0]));
+		    // 	}
+		    // 	else if (sumPossible2(p1)) { // case when weights are [-1, ..., -1, 1] or [1, ..., 1, -1]
+		    // 	    IntVar[] vars = new IntVar[p2.length-1];
+		    // 	    for (int i=0; i<p2.length-1; i++)
+		    // 		vars[i] = p2[i];
+		    // 	    pose(new Sum(vars, p2[p2.length-1]));
+		    // 	}
+		    // 	else {
+		    // 	    // pose(new SumWeight(p2, p1, v));
+		    // 	    pose(new Linear(store, p2, p1, "==", p3));
+		    // 	}
 		    else {
 			// pose(new SumWeight(p2, p1, v));
 			pose(new Linear(store, p2, p1, "==", p3));
@@ -1753,7 +1770,7 @@ public class Constraints implements ParserTreeConstants {
 		    pose(new Linear(store, p2, p1, "<", p3));
 		}
 		break;
-		// gt not present in the newest flatzinc version
+	    // gt not present in the newest flatzinc version
 	    // case gt :
  	    // 	if (p1.length == 2 && p1[0] == 1 && p1[1] == -1 && p3 == 0)
 	    // 	    pose(new XgtY(p2[0], p2[1]));
@@ -1772,18 +1789,19 @@ public class Constraints implements ParserTreeConstants {
 		    else
 			throw store.failException;
 
-		if (p1.length == 1) {
-		    t = new IntVar(store, IntDomain.MinInt, p3);
-		    pose(new XmulCeqZ(p2[0], p1[0], t));
-		}
- 		else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1 && p3 == 0)
-		    pose(new XlteqY(p2[0], p2[1]));
- 		else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1 && p3 == 0)
-		    pose(new XlteqY(p2[1], p2[0]));
-		else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) 
-		    pose(new XplusClteqZ(p2[0], -p3, p2[1]) );
-		else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1)
-		    pose(new XplusClteqZ(p2[1], -p3, p2[0]) );
+		// if (p1.length == 1) {
+		//     t = new IntVar(store, IntDomain.MinInt, p3);
+		//     pose(new XmulCeqZ(p2[0], p1[0], t));
+		// }
+ 		// else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1 && p3 == 0)
+		//     pose(new XlteqY(p2[0], p2[1]));
+ 		// else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1 && p3 == 0)
+		//     pose(new XlteqY(p2[1], p2[0]));
+		// else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) 
+		//     pose(new XplusClteqZ(p2[0], -p3, p2[1]) );
+		// else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1)
+		//     pose(new XplusClteqZ(p2[1], -p3, p2[0]) );
+
 		// else if (allWeightsOne(p1)) {
 		//     t = new IntVar(store, IntDomain.MinInt, p3);
 		//     pose(new Sum(p2, t));		    
@@ -1792,9 +1810,21 @@ public class Constraints implements ParserTreeConstants {
 		//     t = new IntVar(store, -p3, IntDomain.MaxInt);
 		//     pose(new Sum(p2, t));		    
 		// }
+		// else if (sumPossible(p1, p3) > -1) {
+		//     int pos = sumPossible(p1, p3);
+		//     IntVar[] vect = new IntVar[p1.length-1];
+		//     int n = 0;
+		//     for (int i=0; i<p2.length; i++)
+		// 	if (i != pos)
+		// 	    vect[n++] = p2[i];
+		//     IntVar le = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
+		//     pose(new XlteqY(le, p2[pos]));
+		//     pose(new Sum(vect, le));
+		// }
+
 		else {
-		    //t = new IntVar(store, IntDomain.MinInt, p3);
-		    //pose(new SumWeight(p2, p1, t));
+		    // t = new IntVar(store, IntDomain.MinInt, p3);
+		    // pose(new SumWeight(p2, p1, t));
 		    pose(new Linear(store, p2, p1, "<=", p3));
 		}
 		break;
@@ -1832,6 +1862,7 @@ public class Constraints implements ParserTreeConstants {
     	return true;
     }
 
+    /*
     boolean allWeightsOneOrMinusOne(int[] w) {
 	boolean allOne = true;
 	for (int i=0; i<w.length; i++) 
@@ -1839,7 +1870,35 @@ public class Constraints implements ParserTreeConstants {
 		return false;
 	return true;
     }
+    */
 
+    int sumPossible(int[] ws, int result) {
+	if (result == 0) {
+	    int one = 0, minusOne = 0;
+	    int lastOnePosition = -1, lastMinusOnePosition = -1;
+	    //boolean sum = true;
+	    for (int i=0; i<ws.length; i++)
+		if (ws[i] == 1) {
+		    one++;
+		    lastOnePosition = i;
+		}
+		else if (ws[i] == -1) {
+		    minusOne++;
+		    lastMinusOnePosition = i;
+		}
+
+	    if (one == 1 && minusOne == ws.length - 1)
+		return lastOnePosition;
+	    else if (minusOne == 1 && one == ws.length - 1)
+		return lastMinusOnePosition;
+	    else
+		return -1;
+	}
+	else
+	    return -1;
+    }
+
+    /*
     boolean sumPossible1(int[] w) {
 	//boolean sum = true;
 	if (w[0] == 1) {
@@ -1847,14 +1906,13 @@ public class Constraints implements ParserTreeConstants {
 		if (w[i] != -1)
 		    return false;
 	}
-	else 
-	    if (w[0] == -1) {
-		for (int i=1; i<w.length; i++) 
-		    if (w[i] != 1)
-			return false;
-	    }
-	    else
-		return false;
+	else  if (w[0] == -1) {
+	    for (int i=1; i<w.length; i++) 
+		if (w[i] != 1)
+		    return false;
+	}
+	else
+	    return false;
 	return true;
     }
 
@@ -1865,16 +1923,16 @@ public class Constraints implements ParserTreeConstants {
 		if (w[i] != -1)
 		    return false;
 	}
-	else 
-	    if (w[w.length-1] == -1) {
-		for (int i=0; i<w.length-1; i++) 
-		    if (w[i] != 1)
-			return false;
-	    }
-	    else
-		return false;
+	else if (w[w.length-1] == -1) {
+	    for (int i=0; i<w.length-1; i++) 
+		if (w[i] != 1)
+		    return false;
+	}
+	else
+	    return false;
 	return true;
     }
+    */
 
     void generateIntElementConstraint(SimpleNode node) throws FailException {
 
