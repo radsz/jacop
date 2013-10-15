@@ -1586,7 +1586,20 @@ public class Constraints implements ParserTreeConstants {
 		// t = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
 		// pose(new SumWeight(p2, p1, t));
 		// pose(new Reified(new XneqC(t, p3), p4));
-		pose(new Reified(new Linear(store, p2, p1, "!=", p3), p4));
+		if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
+		    pose(new Reified(new Not(new XplusCeqZ(p2[1], p3, p2[0])), p4));
+		}
+		else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
+		    pose(new Reified(new Not(new XplusCeqZ(p2[0], p3, p2[1])), p4));
+		} 
+		else if (p1.length == 2 && p1[0] == 1 && p1[1] == 1) {
+		    pose(new Reified(new Not(new XplusYeqC(p2[0], p2[1], p3)), p4));
+		} 
+		else if (p1.length == 2 && p1[0] == -1 && p1[1] == -1) {
+		    pose(new Reified(new Not(new XplusYeqC(p2[0], p2[1], -p3)), p4));
+		} 
+		else 
+		    pose(new Reified(new Linear(store, p2, p1, "!=", p3), p4));
 		break;
 	    case lt :
 		// t = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
