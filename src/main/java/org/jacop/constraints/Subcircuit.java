@@ -37,9 +37,7 @@ import java.util.LinkedHashSet;
 import java.util.Stack;
 
 import org.jacop.core.IntDomain;
-import org.jacop.core.IntervalDomain;
 import org.jacop.core.IntVar;
-import org.jacop.core.MutableVar;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
@@ -218,7 +216,7 @@ public class Subcircuit extends Alldiff {
 
 	int maxCycle = 0;
 
-	ArrayList<ArrayList<IntVar>> sccList = new ArrayList<ArrayList<IntVar>>();
+	//ArrayList<ArrayList<IntVar>> sccList = new ArrayList<ArrayList<IntVar>>();
 
 	// for (int i = 0; i < val.length; i++)
 	//     val[i] = 0;
@@ -234,10 +232,10 @@ public class Subcircuit extends Alldiff {
 
  		// System.out.print("Node " + i + ": cycle = " );
 
-		visit(i, store);
+		visit(i);
 
 		maxCycle = (sccLength > maxCycle) ? sccLength : maxCycle;
-		sccList.add(cycleVar);
+		//sccList.add(cycleVar);
 
 		// System.out.println (cycleVar + " cycle length = " + sccLength);
 
@@ -310,7 +308,7 @@ public class Subcircuit extends Alldiff {
 
  		// System.out.print("Node " + i + ": cycle = " );
 
-		visit(i, store);
+		visit(i);
 
 		totalNodes += sccLength;
 
@@ -322,7 +320,7 @@ public class Subcircuit extends Alldiff {
 	return totalNodes;
     }
 
-    int visit(int k, Store store) {
+    int visit(int k) {
 
 	int m, min = 0, t;
 	idd++;
@@ -335,7 +333,7 @@ public class Subcircuit extends Alldiff {
 
 	    t = e.nextElement() - 1;
 	    if (val[t] == 0)
-		m = visit(t, store);
+		m = visit(t);
 	    else
 		m = val[t];
 	    if (m < min)
