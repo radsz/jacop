@@ -38,6 +38,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.core.FailException;
 
 /**
  * Constraint X * C #= Z
@@ -48,9 +49,7 @@ import org.jacop.core.Var;
  * @version 3.1
  */
 
-public class XmulCeqZ extends Constraint {
-
-	//FIXME Make this constraint PrimitiveConstraint.
+public class XmulCeqZ extends PrimitiveConstraint {
 
 	static int idNumber = 1;
 
@@ -107,25 +106,71 @@ public class XmulCeqZ extends Constraint {
 	@Override
 	public void consistency (Store store) {
 
-		if (c != 0)
-			do {
+	    if (c != 0)
+		do {
 
-				store.propagationHasOccurred = false;
+		    store.propagationHasOccurred = false;
 				
-				// Bounds for X
- 				IntervalDomain xBounds = IntDomain.divIntBounds(z.min(), z.max(), c, c);
+		    // Bounds for X
+		    IntervalDomain xBounds = IntDomain.divIntBounds(z.min(), z.max(), c, c);
 
-  				x.domain.in(store.level, x, xBounds);
+		    x.domain.in(store.level, x, xBounds);
 
-				// Bounds for Z
-				IntervalDomain zBounds = IntDomain.mulBounds(x.min(), x.max(), c, c);
+		    // Bounds for Z
+		    IntervalDomain zBounds = IntDomain.mulBounds(x.min(), x.max(), c, c);
 
-				z.domain.in(store.level, z, zBounds);
+		    z.domain.in(store.level, z, zBounds);
 				
-			} while (store.propagationHasOccurred);
-		else
-			z.domain.in(store.level, z, 0, 0);
+		} while (store.propagationHasOccurred);
+	    else
+		z.domain.in(store.level, z, 0, 0);
 	}
+
+	@Override
+	public void notConsistency (Store store) {
+
+	    if (c != 0) {
+
+		if ( x.singleton() ) 
+
+		    z.domain.inComplement(store.level, z, x.value()*c);
+
+		if ( z.singleton() ) {
+		    IntervalDomain xBounds;
+
+		    try {
+			xBounds = IntDomain.divIntBounds(z.min(), z.max(), c, c);
+		    } catch (FailException e) {
+			// z/c does not produce integer value; nothing to do since inequality holds
+			return;
+		    }
+
+		    x.domain.inComplement(store.level, x, xBounds.value());
+		}
+
+	    }
+	    else
+		z.domain.inComplement(store.level, z, 0);
+	}
+
+	@Override
+	public boolean satisfied() {
+		IntDomain Xdom = x.dom(), Zdom = z.dom();
+		return Xdom.singleton() && Zdom.singleton()
+		&& Xdom.min() * c == Zdom.min();
+	}
+
+	@Override
+	public boolean notSatisfied() {
+
+	    return ! z.domain.isIntersecting(IntDomain.mulBounds(x.min(), x.max(), c, c));
+
+	    // IntDomain Xdom = x.dom();
+	    // IntDomain Zdom = z.dom();
+	    // return Xdom.singleton() && Zdom.singleton() && Xdom.min() * c != Zdom.min();
+	}
+
+
 
 	@Override
 	public int getConsistencyPruningEvent(Var var) {
@@ -140,6 +185,44 @@ public class XmulCeqZ extends Constraint {
 	}
 
 	@Override
+	public int getNestedPruningEvent(Var var, boolean mode) {
+
+		// If consistency function mode
+		if (mode) {
+			if (consistencyPruningEvents != null) {
+				Integer possibleEvent = consistencyPruningEvents.get(var);
+				if (possibleEvent != null)
+					return possibleEvent;
+			}
+			return IntDomain.BOUND;
+		}
+
+		// If notConsistency function mode
+		else {
+			if (notConsistencyPruningEvents != null) {
+				Integer possibleEvent = notConsistencyPruningEvents.get(var);
+				if (possibleEvent != null)
+					return possibleEvent;
+			}
+			return IntDomain.GROUND;
+		}
+
+	}
+
+	@Override
+	public int getNotConsistencyPruningEvent(Var var) {
+
+		// If notConsistency function mode
+		if (notConsistencyPruningEvents != null) {
+			Integer possibleEvent = notConsistencyPruningEvents.get(var);
+			if (possibleEvent != null)
+				return possibleEvent;
+		}
+		return IntDomain.GROUND;
+		
+	}
+
+	@Override
 	public void impose(Store store) {
 		x.putModelConstraint(this, getConsistencyPruningEvent(x));
 		z.putModelConstraint(this, getConsistencyPruningEvent(z));
@@ -151,13 +234,6 @@ public class XmulCeqZ extends Constraint {
 	public void removeConstraint() {
 		x.removeConstraint(this);
 		z.removeConstraint(this);
-	}
-
-	@Override
-	public boolean satisfied() {
-		IntDomain Xdom = x.dom(), Zdom = z.dom();
-		return Xdom.singleton() && Zdom.singleton()
-		&& Xdom.min() * c == Zdom.min();
 	}
 
 	@Override

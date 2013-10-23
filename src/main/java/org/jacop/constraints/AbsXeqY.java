@@ -267,8 +267,9 @@ public class AbsXeqY extends PrimitiveConstraint {
 		x.domain.in(store.level, x, -y.max(), -y.min());
 		y.domain.in(store.level, y, -x.max(), -x.min());			
 	    }
-	    else { // x.min() <= && x.max() >= 0
-		int xBound = Math.max(y.min(), y.max());
+	    else { // x.min() < 0 && x.max() >= 0
+		// int xBound = Math.max(y.min(), y.max());
+		int xBound = y.max();   // y is always >= 0
 		x.domain.in(store.level, x, -xBound, xBound);
 		y.domain.inMax(store.level, y, Math.max(-x.min(), x.max()));			
 	    }

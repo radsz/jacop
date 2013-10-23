@@ -105,6 +105,8 @@ public class In extends PrimitiveConstraint {
 	@Override
 	public void consistency(Store store) {
 		x.domain.in(store.level, x, dom);
+		
+		removeConstraint();
 	}
 
 	@Override
@@ -140,12 +142,17 @@ public class In extends PrimitiveConstraint {
 
 	@Override
 	public void notConsistency(Store store) {
-		x.domain.in(store.level, x, DomComplement);
+	    // wrong it only does not need to be included in dom
+	    // x.domain.in(store.level, x, DomComplement);
+
+	    if (dom.contains(x.domain))
+		throw Store.failException;
 	}
 
 	@Override
 	public boolean notSatisfied() {
-	    return !x.domain.isIntersecting(dom);
+	    return //!x.domain.isIntersecting(dom);
+		!dom.contains(x.domain);
 	}
 
 	@Override
@@ -155,7 +162,8 @@ public class In extends PrimitiveConstraint {
 
 	@Override
 	public boolean satisfied() {
-		return x.singleton() && dom.contains(x.domain);
+	    return //x.singleton() && 
+		dom.contains(x.domain);
 	}
 
 	@Override
