@@ -1669,7 +1669,10 @@ public class Constraints implements ParserTreeConstants {
 		    else
 			throw store.failException;
 
-		if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
+		if (p1.length == 1) {
+		    pose(new XmulCeqZ(p2[0], p1[0], new IntVar(store, p3, p3)));
+		}
+		else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
 		    if (p3 != 0)
 			pose(new XplusCeqZ(p2[1], p3, p2[0]));
 		    else
@@ -1802,18 +1805,35 @@ public class Constraints implements ParserTreeConstants {
 		    else
 			throw store.failException;
 
-		// if (p1.length == 1) {
-		//     t = new IntVar(store, IntDomain.MinInt, p3);
-		//     pose(new XmulCeqZ(p2[0], p1[0], t));
-		// }
- 		// else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1 && p3 == 0)
-		//     pose(new XlteqY(p2[0], p2[1]));
- 		// else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1 && p3 == 0)
-		//     pose(new XlteqY(p2[1], p2[0]));
-		// else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) 
-		//     pose(new XplusClteqZ(p2[0], -p3, p2[1]) );
-		// else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1)
-		//     pose(new XplusClteqZ(p2[1], -p3, p2[0]) );
+		if (p1.length == 1) {
+
+		    if (p1[0] < 0) {
+			int rhsValue = (int)( Math.round( Math.ceil ( ((float)(p3/p1[0])) )));
+
+			p2[0].domain.inMin(store.level, p2[0], rhsValue);
+			if (debug)
+			    System.out.println ("Pruned variable " + p2[0] + " to be >= " + rhsValue);
+
+			// pose(new XgteqC(p2[0], rhsValue));
+		    }
+		    else { // weight > 0
+			int rhsValue = (int)( Math.round( Math.floor ( ((float)(p3/p1[0])) )));
+
+			p2[0].domain.inMax(store.level, p2[0], rhsValue);
+
+			if (debug)
+			    System.out.println ("Pruned variable " + p2[0] + " to be <= " + rhsValue);
+			// pose(new XlteqC(p2[0], rhsValue));
+		    }
+		}
+ 		else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1 && p3 == 0)
+		    pose(new XlteqY(p2[0], p2[1]));
+ 		else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1 && p3 == 0)
+		    pose(new XlteqY(p2[1], p2[0]));
+		else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) 
+		    pose(new XplusClteqZ(p2[0], -p3, p2[1]) );
+		else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1)
+		    pose(new XplusClteqZ(p2[1], -p3, p2[0]) );
 
 		// else if (allWeightsOne(p1)) {
 		//     t = new IntVar(store, IntDomain.MinInt, p3);

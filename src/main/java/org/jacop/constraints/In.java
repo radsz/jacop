@@ -151,8 +151,8 @@ public class In extends PrimitiveConstraint {
 
 	@Override
 	public boolean notSatisfied() {
-	    return //!x.domain.isIntersecting(dom);
-		!dom.contains(x.domain);
+	    return !x.domain.isIntersecting(dom);
+		// !dom.contains(x.domain);
 	}
 
 	@Override
@@ -162,7 +162,7 @@ public class In extends PrimitiveConstraint {
 
 	@Override
 	public boolean satisfied() {
-	    return //x.singleton() && 
+	    return x.singleton() && 
 		dom.contains(x.domain);
 	}
 
