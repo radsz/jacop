@@ -1215,8 +1215,9 @@ public class Cumulative extends Constraint {
 													UpdateMin,
 													UpdateMax));
 
+							    if (UpdateMin <= UpdateMax)
 								Start.domain.inComplement(store.level, Start,
-										UpdateMin, UpdateMax);
+											  UpdateMin, UpdateMax);
 								if (debugNarr)
 									System.out.println(" => " + Start);
 							}
@@ -1235,8 +1236,9 @@ public class Cumulative extends Constraint {
 													UpdateMin,
 													UpdateMax));
 
+							    if (UpdateMin <= UpdateMax)
 								Start.domain.inComplement(store.level, Start,
-										UpdateMin, UpdateMax);
+											  UpdateMin, UpdateMax);
 								if (debugNarr)
 									System.out.println(" => " + Start);
 							}
@@ -1264,9 +1266,10 @@ public class Cumulative extends Constraint {
 										+ " \\ "
 										+ new IntervalDomain(UpdateMin,
 												UpdateMax));
-
+						    if (UpdateMin <= UpdateMax)
 							Start.domain.inComplement(store.level, Start,
 									UpdateMin, UpdateMax);
+
 							if (debugNarr)
 								System.out.println(" => " + Start);
 						}

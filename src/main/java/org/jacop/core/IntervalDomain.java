@@ -531,6 +531,9 @@ public class IntervalDomain extends IntDomain {
 			
 			SmallDenseDomain input = (SmallDenseDomain) domain;
 		
+			if ( isEmpty() )
+			    return false;
+
 			if (input.min == min() || input.max() == max())
 				return true;
 			

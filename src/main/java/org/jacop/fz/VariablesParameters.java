@@ -172,7 +172,7 @@ public class VariablesParameters implements ParserTreeConstants {
 	    break;
 	case 1: // int interval
 	    ident = ((ASTVarDeclItem)node).getIdent();
-	    //varInt = new IntVar(store, ident, lowInterval, highInterval); // more efficient but SmallDenseDomain does not work with AmongVar
+	    // varInt = new IntVar(store, ident, lowInterval, highInterval); // more efficient but SmallDenseDomain does not work with Among in benchmark two_cube_calender
 	    varInt = new IntVar(store, ident, new IntervalDomain(lowInterval, highInterval));
 	    table.addVariable(ident, varInt);
 	    if (initChild < ((ASTVarDeclItem)node).jjtGetNumChildren()) {
@@ -454,8 +454,8 @@ public class VariablesParameters implements ParserTreeConstants {
 	    else { // no init values
 		varArrayInt = new IntVar[size];
 		for (int i=0; i<size; i++)
-		    // varArrayInt[i] = new IntVar(store, ident+"["+ i +"]", IntDomain.MinInt, IntDomain.MaxInt);
-		    varArrayInt[i] = new IntVar(store, ident+"["+ i +"]", new IntervalDomain(IntDomain.MinInt, IntDomain.MaxInt));
+		    varArrayInt[i] = new IntVar(store, ident+"["+ i +"]", IntDomain.MinInt, IntDomain.MaxInt);
+		    // varArrayInt[i] = new IntVar(store, ident+"["+ i +"]", new IntervalDomain(IntDomain.MinInt, IntDomain.MaxInt));
 		table.addSearchArray(varArrayInt);
 	    }
 	    table.addVariableArray(ident, varArrayInt);

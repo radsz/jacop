@@ -868,15 +868,15 @@ public class Constraints implements ParserTreeConstants {
 		    // if (s.singleton()) 
 		    // 	pose(new Count(x, v, s.value()));
 		    // else {
-			IntervalDomain setImpl = new IntervalDomain();
-			for(int i = 0; true ;i++) {
-			    Interval val = s.getInterval(i);
-			    if (val != null)
-				setImpl.unionAdapt(val);
-			    else
-		    		break;
-			}
-			pose(new Among(x, setImpl, v));
+
+		    IntervalDomain setImpl = new IntervalDomain();
+		    for (ValueEnumeration e = s.valueEnumeration(); e.hasMoreElements();) {
+			int val = e.nextElement();
+
+			setImpl.unionAdapt(new IntervalDomain(val, val));
+		    }
+
+		    pose(new Among(x, setImpl, v));
 		    // }
 		}
 		else if (p.startsWith("gcc", 6)) {
@@ -2152,7 +2152,7 @@ public class Constraints implements ParserTreeConstants {
 		IntDomain s= new IntervalDomain();
 		int el=-1111;
 		int count = child.jjtGetNumChildren();
-		for (int i=0;i<count;i++) {
+		for (int i=0; i<count; i++) {
 		    el = getScalarFlatExpr(child, i);
 		    s.unionAdapt(el);
 		}
