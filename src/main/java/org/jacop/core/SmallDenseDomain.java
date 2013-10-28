@@ -801,9 +801,12 @@ public class SmallDenseDomain extends IntDomain {
 			return;
 		if (complement > min + 63)
 			return;
-		
+
 		long bitsResult = bits & ~TWO_N_ARRAY[63 - ( complement - min)];
-		
+
+		if (bitsResult == bits)
+		    return;  // no change in the domain; ADDED BY KKU
+
 		int newSize = getSize( bitsResult );
 
 		if (newSize == 0)

@@ -3404,11 +3404,14 @@ public class IntervalDomain extends IntDomain {
 			SmallDenseDomain input = (SmallDenseDomain)domain;
 			
 			SmallDenseDomain result = input.intersect(this, 0);
-			
+
 			if (result.isEmpty())
 				throw Store.failException;
 
-			
+			// ADDED BY KKU
+			if ( eq(result) ) 
+			    return;
+
 			int returnedEvent = IntDomain.ANY;
 
 			assert checkInvariants() == null : checkInvariants() ;
@@ -3467,6 +3470,10 @@ public class IntervalDomain extends IntDomain {
 				
 				if (result.isEmpty())
 					throw failException;
+
+				// ADDED BY KKU
+				if ( eq(result) ) 
+				    return;
 
 				int returnedEvent = IntDomain.ANY;
 
