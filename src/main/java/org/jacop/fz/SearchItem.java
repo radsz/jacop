@@ -290,7 +290,7 @@ public class SearchItem implements ParserTreeConstants {
 // 	    return new IndomainSetMiddle();
 // 	else if (indomain.equals("indomain_random")) 
 // 	    return new IndomainSetRandom();
-	else
+	else 
 	    System.err.println("Warning: Not implemented indomain method \""+ 
 			       indomain +"\"; used indomain_min");
 	return new IndomainSetMin<SetVar>();
@@ -327,8 +327,10 @@ public class SearchItem implements ParserTreeConstants {
 	    return null;
 	else if (var_selection_heuristic.equals("first_fail")) 
  	    return new SmallestDomain();
-	else if (var_selection_heuristic.equals("anti_first_fail"))
+	else if (var_selection_heuristic.equals("anti_first_fail")) {
+	    tieBreaking = new MostConstrainedStatic();
 	    return new LargestDomain();
+	}
 	else if (var_selection_heuristic.equals("most_constrained")) {
 	    tieBreaking = new MostConstrainedStatic();
 	    return new SmallestDomain();
@@ -336,7 +338,8 @@ public class SearchItem implements ParserTreeConstants {
 	else if (var_selection_heuristic.equals("occurrence"))
 	    return new MostConstrainedStatic();
 	else if (var_selection_heuristic.equals("smallest")) {
- 	    tieBreaking = new SmallestDomain();
+	    // does not follow flatzinc definition but may give bettern results ;)
+ 	    // tieBreaking = new MostConstrainedStatic(); //SmallestDomain();
 	    return new SmallestMin();
 	}
 	else if (var_selection_heuristic.equals("largest"))

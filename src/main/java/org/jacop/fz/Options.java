@@ -76,7 +76,7 @@ public class Options {
 			String arg = args[0];
 			if (arg.equals("-h") || arg.equals("--help")) {
 				System.out.println(
-						"Usage: java JaCoP.fz.Fz2jacop [<options>] <file>.fzn\n"+
+						"Usage: java org.jacop.fz.Fz2jacop [<options>] <file>.fzn\n"+
 						"Options:\n"+
 						"    -h, --help\n"+
 						"        Print this message.\n"+

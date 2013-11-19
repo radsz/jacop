@@ -348,7 +348,19 @@ public class Constraints implements ParserTreeConstants {
 		    // pose(new IfThen(new XgteqY(v1,v2), new XeqY(v1,v3)));
 		    // pose(new IfThen(new XgteqY(v2,v1), new XeqY(v2,v3)));
 
-		    if (v1 == v2)
+		    if (  v1.singleton() && v2.singleton() ) {
+			int max = java.lang.Math.max(v1.value(), v2.value());
+			v3.domain.in(store.level, v3, max, max);
+		    }
+		    else if (v1.singleton() && v1.value() >= v2.max() ) {
+			int max = v1.value();
+			v3.domain.in(store.level, v3, max, max);
+		    }
+		    else if (v2.singleton() && v2.value() >= v1.max() ) {
+			int max = v2.value();
+			v3.domain.in(store.level, v3, max, max);
+		    }
+		    else if (v1 == v2)
 		    	pose(new XeqY(v1, v3));
 		    else
 		    	pose(new Max(new IntVar[] {v1, v2}, v3));
@@ -679,7 +691,15 @@ public class Constraints implements ParserTreeConstants {
 		    SetVar v1 = getSetVariable(node, 0);
 		    IntVar v2 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
 
-		    pose(new CardAeqX(v1, v2));
+		    if (v2.singleton()) {
+			v1.domain.inCardinality(store.level, v1, v2.min(), v2.max());
+
+			if (debug)
+			    System.out.println ("Cardinality of set " + v1 + " = " + v2);
+
+		    }
+		    else
+			pose(new CardAeqX(v1, v2));
 		}
 		else if (p.startsWith("in", 4)) {
 
@@ -690,7 +710,12 @@ public class Constraints implements ParserTreeConstants {
 		    if (v1Type.getId() == JJTSETLITERAL) {
 			IntDomain d = getSetLiteral(node, 1);
 			IntVar v1 = getVariable(p1);
-			c = new org.jacop.constraints.In(v1, d);
+			if (p.startsWith("_reif", 6)) 
+			    c = new org.jacop.constraints.In(v1, d);
+			else { 
+			    v1.domain.in(store.level, v1, d);
+			    return;
+			}
 		    }
 		    else {
 			SetVar v2 = getSetVariable(node, 1);
@@ -799,7 +824,7 @@ public class Constraints implements ParserTreeConstants {
 		    // 	b = new IntVar(store, 0, b.max());
 
 		    // if (boundsConsistency) 
-		    //  	pose(new Cumulative(s, d, r, b, true, false));
+		    //  	pose(new Cumulative(s, d, r, b, true, false, false));
 		    // else 
 		    pose(new Cumulative(s, d, r, b, true, true, false));
 
@@ -866,7 +891,7 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar v = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
 
 		    // if (s.singleton()) 
-		    // 	pose(new Count(x, v, s.value()));
+		    // pose(new Count(x, v, s.value()));
 		    // else {
 
 		    IntervalDomain setImpl = new IntervalDomain();
@@ -877,6 +902,7 @@ public class Constraints implements ParserTreeConstants {
 		    }
 
 		    pose(new Among(x, setImpl, v));
+
 		    // }
 		}
 		else if (p.startsWith("gcc", 6)) {
@@ -1247,40 +1273,220 @@ public class Constraints implements ParserTreeConstants {
 
 	if (reified) { // reified constraint
 	    PrimitiveConstraint c = null;
-	    IntVar v1 = getVariable(p1);
 	    ASTScalarFlatExpr p3 = (ASTScalarFlatExpr)node.jjtGetChild(2);
 	    IntVar v3 = getVariable(p3);
 
-	    if (p2.getType() == 0) { // var rel int
+	    if (p2.getType() == 0 || p2.getType() == 1) { // var rel int or bool
+		IntVar v1 = getVariable(p1);
+
 		int i2 = getInt(p2);
 		switch (operation) {
+
 		case eq :
-		    c = new XeqC(v1, i2);
+		    if (v1.min() > i2 || v1.max() < i2) {
+		    	v3.domain.in(store.level, v3, 0, 0);
+			return;
+		    }
+		    else if (v1.min() == i2 && v1.singleton() ) {
+		    	v3.domain.in(store.level, v3, 1, 1);
+			return;
+		    } else if (v3.max() == 0) {
+			v1.domain.inComplement(store.level, v1, i2);
+			return;
+		    }
+		    else if (v3.min() == 1) {
+			v1.domain.in(store.level, v1, i2, i2);
+			return;
+		    }
+		    else
+			c = new XeqC(v1, i2);
 		    break;
+
 		case ne :
-		    c = new XneqC(v1, i2);
+		    if (v1.min() > i2 || v1.max() < i2) {
+		    	v3.domain.in(store.level, v3, 1, 1);
+		    	return;
+		    }
+		    else if (v1.min() == i2 && v1.singleton() ) {
+		    	v3.domain.in(store.level, v3, 0, 0);
+		    	return;
+		    } else if (v3.max() == 0) {
+			v1.domain.in(store.level, v1, i2, i2);
+			return;
+		    }
+		    else if (v3.min() == 1) {
+			v1.domain.inComplement(store.level, v1, i2);
+			return;
+		    }
+		    else
+			c = new XneqC(v1, i2);
 		    break;
 		case lt :
-		    c = new XltC(v1, i2);
+		    if (v1.max() < i2) {
+		    	v3.domain.in(store.level, v3, 1, 1);
+		    	return;
+		    }
+		    else if (v1.min() >= i2 ) {
+		    	v3.domain.in(store.level, v3, 0, 0);
+		    	return;
+		    }
+		    else
+			c = new XltC(v1, i2);
 		    break;
 		case gt :
-		    c = new XgtC(v1, i2);
+		    if (v1.min() > i2) {
+			v3.domain.in(store.level, v3, 1, 1);
+			return;
+		    }
+		    else if (v1.max() <= i2 ) {
+			v3.domain.in(store.level, v3, 0, 0);
+			return;
+		    }
+		    else
+			c = new XgtC(v1, i2);
 		    break;
 		case le :
-		    // 		v1.domain.in(store.level, v1, IntDomain.MinInt, i2);
-		    c = new XlteqC(v1, i2);
+		    if (v1.max() <= i2) {
+		    	v3.domain.in(store.level, v3, 1, 1);
+		    	return;
+		    }
+		    else if (v1.min() > i2 ) {
+		    	v3.domain.in(store.level, v3, 0, 0);
+		    	return;
+		    }
+		    else
+			c = new XlteqC(v1, i2);
 		    break;
 		case ge :
-		    c = new XgteqC(v1, i2);
+		    if (v1.min() >= i2) {
+			v3.domain.in(store.level, v3, 1, 1);
+			return;
+		    }
+		    else if (v1.max() < i2 ) {
+			v3.domain.in(store.level, v3, 0, 0);
+			return;
+		    }
+		    else
+			c = new XgteqC(v1, i2);
 		    break;
 		}
-	    }
-	    else { // var rel var
+	    } else if (p1.getType() == 0 || p1.getType() == 1) { // int rel var or bool
+		IntVar v2 = getVariable(p2);
+		int i1 = getInt(p1);
+
+		switch (operation) {
+
+		case eq :
+		    if (v2.min() > i1 || v2.max() < i1) {
+		    	v3.domain.in(store.level, v3, 0, 0);
+			return;
+		    }
+		    else if (v2.min() == i1 && v2.singleton() ) {
+		    	v3.domain.in(store.level, v3, 1, 1);
+			return;
+		    }
+		    else if (v3.max() == 0) {
+			v2.domain.inComplement(store.level, v2, i1);
+			return;
+		    }
+		    else if (v3.min() == 1) {
+			v2.domain.in(store.level, v2, i1, i1);
+			return;
+		    }
+		    else
+			c = new XeqC(v2, i1);
+		    break;
+
+		case ne :
+		    if (v2.min() > i1 || v2.max() < i1) {
+		    	v3.domain.in(store.level, v3, 1, 1);
+		    	return;
+		    }
+		    else if (v2.min() == i1 && v2.singleton() ) {
+		    	v3.domain.in(store.level, v3, 0, 0);
+		    	return;
+		    }
+		    else
+			c = new XneqC(v2, i1);
+		    break;
+		case lt :
+		    if (i1 < v2.min()) {
+		    	v3.domain.in(store.level, v3, 1, 1);
+		    	return;
+		    }
+		    else if (i1 >= v2.max() ) {
+		    	v3.domain.in(store.level, v3, 0, 0);
+		    	return;
+		    }
+		    else
+			c = new XgtC(v2, i1);
+		    break;
+		case gt :
+		    if (i1 > v2.max()) {
+			v3.domain.in(store.level, v3, 1, 1);
+			return;
+		    }
+		    else if (i1 <= v2.min() ) {
+			v3.domain.in(store.level, v3, 0, 0);
+			return;
+		    }
+		    else
+			c = new XltC(v2, i1);
+		    break;
+		case le :
+		    if (i1 <= v2.min()) {
+		    	v3.domain.in(store.level, v3, 1, 1);
+		    	return;
+		    }
+		    else if (i1 > v2.max() ) {
+		    	v3.domain.in(store.level, v3, 0, 0);
+		    	return;
+		    }
+		    else
+			c = new XgteqC(v2, i1);
+		    break;
+		case ge :
+		    if (i1 > v2.max()) {
+			v3.domain.in(store.level, v3, 1, 1);
+			return;
+		    }
+		    else if (i1 < v2.min() ) {
+			v3.domain.in(store.level, v3, 0, 0);
+			return;
+		    }
+		    else
+			c = new XlteqC(v2, i1);
+		    break;
+		}
+	    } else { // var rel var
+		IntVar v1 = getVariable(p1);
 		IntVar v2 = getVariable(p2);
 
 		switch (operation) {
 		case eq :
 		    c = new XeqY(v1, v2);
+
+		    // if (v3.singleton())
+		    // 	if (v3.min() == 1) 
+		    // 	    if (v1.singleton()) {
+		    // 		v2.domain.in(store.level, v2, v1.domain);
+		    // 		return;
+		    // 	    }
+		    // 	    else {
+		    // 		pose(c);
+		    // 		return;
+		    // 	    }
+		    // 	else { // v3.max() == 0
+		    // 	    if (v1.singleton()) {
+		    // 		v2.domain.inComplement(store.level, v2, v1.min());
+		    // 		return;
+		    // 	    }
+		    // 	    else {
+		    // 		pose(c);
+		    // 		return;
+		    // 	    }
+		    // 	}
+
 		    break;
 		case ne :
 		    c = new XneqY(v1, v2);
@@ -1299,13 +1505,14 @@ public class Constraints implements ParserTreeConstants {
 		    break;
 		}
 	    }
+
  	    Constraint cr = new Reified(c, v3);
  	    pose(cr);
 	}
 	else  { // not reified constraints
 
-	    if (p1.getType() == 0) { // first parameter int
-		if (p2.getType() == 0) { // first parameter int & second parameter int
+	    if (p1.getType() == 0 || p1.getType() == 1) { // first parameter int or bool
+		if (p2.getType() == 0 || p2.getType() == 1) { // first parameter int/bool & second parameter int/bool
 		    int i1 = getInt(p1);
 		    int i2 = getInt(p2);
 		    switch (operation) {
@@ -1329,7 +1536,7 @@ public class Constraints implements ParserTreeConstants {
 			break;
 		    }
 		} 
-		else { // first parameter int & second parameter var
+		else { // first parameter int/bool & second parameter var
 
 		    int i1 = getInt(p1);
 		    IntVar v2 = getVariable(p2);
@@ -1357,7 +1564,7 @@ public class Constraints implements ParserTreeConstants {
 		}
 	    }
 	    else { // first parameter var
-		if (p2.getType() == 0) { // first parameter var & second parameter int
+		if (p2.getType() == 0 || p2.getType() == 1) { // first parameter var & second parameter int
 
 		    IntVar v1 = getVariable(p1);
 		    int i2 = getInt(p2);
@@ -1705,13 +1912,13 @@ public class Constraints implements ParserTreeConstants {
 		    pose(new XplusYeqZ(p2[0], p2[1], p2[2]));
 		    // pose(new Linear(store, p2, p1, "==", p3));
 		else {
-		    IntVar v;
-		    if (p3==0) 
-			v = zero;
-		    else if (p3 == 1) 
-			v = one;
-		    else 
-			v = new IntVar(store, p3, p3);
+		    // IntVar v;
+		    // if (p3==0) 
+		    // 	v = zero;
+		    // else if (p3 == 1) 
+		    // 	v = one;
+		    // else 
+		    // 	v = new IntVar(store, p3, p3);
 		    if (sumPossible(p1, p3) > -1) {
 			int pos = sumPossible(p1, p3);
 			IntVar[] vect = new IntVar[p1.length-1];
@@ -1721,10 +1928,22 @@ public class Constraints implements ParserTreeConstants {
 				vect[n++] = p2[i];
 			pose(new Sum(vect, p2[pos]));
 		    }
-		    else if (allWeightsOne(p1)) 
+		    else if (allWeightsOne(p1)) {
+			IntVar v;
+			if (p3==0) 
+			    v = zero;
+			else if (p3 == 1) 
+			    v = one;
+			else
+			    v = new IntVar(store, p3, p3);
 			pose(new Sum(p2, v));
+		    }
 		    else if (allWeightsMinusOne(p1)) {
-			v = new IntVar(store, -p3, -p3);
+			IntVar v;
+			if (p3==0) 
+			    v = zero;
+			else
+			    v = new IntVar(store, -p3, -p3);
 			pose(new Sum(p2, v));
 		    }
 		    // else if (p3 == 0) 
@@ -2233,8 +2452,7 @@ public class Constraints implements ParserTreeConstants {
 	    if (int_boolVar == null) {
 		int bInt = dictionary.getInt(node.getIdent());
 		return new IntVar(store, bInt, bInt);
-	    }
-	    return int_boolVar;
+	    }	    return int_boolVar;
 	}
 	else if (node.getType() == 3) {// array access
 	    if (node.getInt() > dictionary.getVariableArray(node.getIdent()).length ||
