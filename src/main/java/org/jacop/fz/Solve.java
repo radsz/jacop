@@ -73,6 +73,10 @@ public class Solve implements ParserTreeConstants {
     int initNumberConstraints;
     int NumberBoolVariables;
 
+    Thread tread;
+    java.lang.management.ThreadMXBean searchTimeMeter;
+    long startCPU;
+
     //ComparatorVariable tieBreaking=null;
     SelectChoicePoint<Var> variable_selection;
     ArrayList<Search<Var>> list_seq_searches = null;
@@ -87,6 +91,21 @@ public class Solve implements ParserTreeConstants {
     int costValue;
 
     Parser parser;
+
+    // -------- for print-out of statistics
+    boolean singleSearch;
+    boolean Result;
+    boolean optimization;
+    SearchItem si;
+
+    // single search
+    boolean defaultSearch;
+    DepthFirstSearch<Var> label;
+    DepthFirstSearch<Var>[] final_search;
+
+    // sequence search 
+    Search<Var> final_search_seq;
+    // --------
 
     /**
      * It creates a parser for the solve part of the flatzinc file. 
@@ -179,7 +198,11 @@ public class Solve implements ParserTreeConstants {
 
     void run_single_search(int solveKind, SimpleNode kind, SearchItem si) {
 
-	boolean defaultSearch = false;
+	singleSearch = true;
+
+	defaultSearch = false;
+
+	this.si = si;
 
 	if (options.getVerbose()) {
 	    String solve="notKnown";
@@ -191,13 +214,13 @@ public class Solve implements ParserTreeConstants {
 	    case 2: 
 		solve = "%% maximize("+ getCost((ASTSolveExpr)kind.jjtGetChild(0))+") "; break; // maximize
 	    }
-  	    System.out.println(solve + " : " + si);
+	    System.out.println(solve + " : " + si);
 	}
 
 	IntVar cost = null;
 	IntVar max_cost = null;
-	DepthFirstSearch<Var> label = null;
-	boolean optimization = false;
+	label = null;
+	optimization = false;
 	list_seq_searches = new ArrayList<Search<Var>>();
 
 	label = null;
@@ -256,7 +279,7 @@ public class Solve implements ParserTreeConstants {
 	}
 
 	// adds child search for cost; to be sure that all variables get a value
-	DepthFirstSearch<Var>[] final_search = setSubSearchForAll(label, options);
+	final_search = setSubSearchForAll(label, options);
 	Search last_search;
 
 	if (si == null) {
@@ -297,13 +320,13 @@ public class Solve implements ParserTreeConstants {
 	else if (si.exploration().equals("credit")) 
 	    credit_search(label, si.creditValue, si.bbsValue);
 
-	boolean Result = false;	
+	Result = false;	
 
-	Thread tread = java.lang.Thread.currentThread();
+	tread = java.lang.Thread.currentThread();
 	java.lang.management.ThreadMXBean b = java.lang.management.ManagementFactory.getThreadMXBean();
+	searchTimeMeter = b;
 
-
-	long startCPU = b.getThreadCpuTime(tread.getId());
+	startCPU = b.getThreadCpuTime(tread.getId());
 	// 	long startUser = b.getThreadUserTime(tread.getId());
 
 	if (si == null || si.exploration() == null || si.exploration().equals("complete") 
@@ -332,6 +355,7 @@ public class Solve implements ParserTreeConstants {
 
 				    s.getSolutionListener().searchAll(true); 
 				    s.getSolutionListener().recordSolutions(false);
+
 				}	    
 			}
 			l = ns;
@@ -339,11 +363,14 @@ public class Solve implements ParserTreeConstants {
 		    // <=====
 		    if (options.getNumberSolutions()>0) 
 			last_search.getSolutionListener().setSolutionLimit(options.getNumberSolutions());
+
 		}
 
 		// printSearch(label);
 
 		Result = label.labeling(store, variable_selection);
+		this.si = si;
+
 		break;
 	    case 1: // minimize
 
@@ -354,6 +381,8 @@ public class Solve implements ParserTreeConstants {
 		}
 
 		Result = label.labeling(store, variable_selection, cost);
+		this.si = si;
+
 		break;
 	    case 2: //maximize
 
@@ -364,6 +393,8 @@ public class Solve implements ParserTreeConstants {
 		}
 
 		Result = label.labeling(store, variable_selection, max_cost);
+		this.si = si;
+
 		break;
 	    }
 	else {
@@ -371,31 +402,51 @@ public class Solve implements ParserTreeConstants {
 	    System.exit(0);
 	}
 
+	printStatisticsForSingleSearch(false);
+
+    }
+
+    void printStatistics(boolean interrupted) {
+
+	if (singleSearch)
+	    printStatisticsForSingleSearch(interrupted);
+	else
+	    printStatisticsForSeqSearch(interrupted);
+    }
+
+    void printStatisticsForSingleSearch(boolean interrupted) {
+
+	if (label == null) {
+	    System.out.println ("%% =====INTERRUPTED=====\n%% Model not yet posed..");
+	    return;
+	}
+
 	if (Result) {
 	    if (!optimization && options.getAll()) {
-		// 		label.getSolutionListener().printAllSolutions();
-		if (si.exploration().equals("complete")) 
-		    if (! label.timeOutOccured) {
-			if (options.getNumberSolutions() == -1 || options.getNumberSolutions() > label.getSolutionListener().solutionsNo())
-			    System.out.println("==========");
-		    }
+		if (!interrupted)
+		    if (si.exploration().equals("complete")) 
+			if (! label.timeOutOccured) {
+			    if (options.getNumberSolutions() == -1 || options.getNumberSolutions() > label.getSolutionListener().solutionsNo())
+				System.out.println("==========");
+			}
+			else
+			    System.out.println("%% =====TIME-OUT=====");
 		    else
-			System.out.println("%% =====TIME-OUT=====");
-		else
-		    if (label.timeOutOccured) 
-			System.out.println("%% =====TIME-OUT=====");
+			if (label.timeOutOccured) 
+			    System.out.println("%% =====TIME-OUT=====");
 	    }
 	    else if (optimization) {
-		if (si.exploration().equals("complete"))
-		    if (! label.timeOutOccured) {
-			if (options.getNumberSolutions() == -1 || options.getNumberSolutions() > label.getSolutionListener().solutionsNo())
-			    System.out.println("==========");
-		    }    
+		if (!interrupted)
+		    if (si.exploration().equals("complete"))
+			if (! label.timeOutOccured) {
+			    if (options.getNumberSolutions() == -1 || options.getNumberSolutions() > label.getSolutionListener().solutionsNo())
+				System.out.println("==========");
+			}    
+			else
+			    System.out.println("%% =====TIME-OUT=====");
 		    else
-			System.out.println("%% =====TIME-OUT=====");
-		else
-		    if (label.timeOutOccured) 
-			System.out.println("%% =====TIME-OUT=====");
+			if (label.timeOutOccured) 
+			    System.out.println("%% =====TIME-OUT=====");
 	    }
 	}
 	else
@@ -403,11 +454,14 @@ public class Solve implements ParserTreeConstants {
 		System.out.println("=====UNKNOWN=====");
 		System.out.println("%% =====TIME-OUT=====");
 	    }
-	    else
-		if (si.exploration().equals("complete"))
-		    System.out.println("=====UNSATISFIABLE=====");
+	    else 
+		if (interrupted)
+		    System.out.println ("%% =====INTERRUPTED=====");
 		else
-		    System.out.println("=====UNKNOWN=====");
+		    if (si.exploration().equals("complete"))
+			System.out.println("=====UNSATISFIABLE=====");
+		    else
+			System.out.println("=====UNKNOWN=====");
 
 	if (options.getStatistics()) {
 	    int nodes = 0, //label.getNodes(), 
@@ -436,16 +490,17 @@ public class Solve implements ParserTreeConstants {
                 solutions = l.getSolutionListener().solutionsNo();
             }
         }
-	    System.out.println("\n%% Model variables : "+ (store.size()+NumberBoolVariables)+
-			       "\n%% Model constraints : "+initNumberConstraints+
-			       "\n\n%% Search CPU time : " + (b.getThreadCpuTime(tread.getId()) - startCPU)/(long)1e+6 + "ms"+
-			       "\n%% Search nodes : "+nodes+
-			       "\n%% Search decisions : "+decisions+
-			       "\n%% Wrong search decisions : "+wrong+
-			       "\n%% Search backtracks : "+backtracks+
-			       "\n%% Max search depth : "+depth+
-			       "\n%% Number solutions : "+ solutions 
-			       );
+
+	System.out.println("\n%% Model variables : "+ (store.size()+NumberBoolVariables)+
+			   "\n%% Model constraints : "+initNumberConstraints+
+			   "\n\n%% Search CPU time : " + (searchTimeMeter.getThreadCpuTime(tread.getId()) - startCPU)/(long)1e+6 + "ms"+
+			   "\n%% Search nodes : "+nodes+
+			   "\n%% Search decisions : "+decisions+
+			   "\n%% Wrong search decisions : "+wrong+
+			   "\n%% Search backtracks : "+backtracks+
+			   "\n%% Max search depth : "+depth+
+			   "\n%% Number solutions : "+ solutions 
+			   );
 	}
     }
 
@@ -643,6 +698,10 @@ public class Solve implements ParserTreeConstants {
 
     void run_sequence_search(int solveKind, SimpleNode kind, SearchItem si) {
 
+	singleSearch = false;
+
+	this.si = si;
+
 	if (options.getVerbose()) {
 	    String solve="notKnown";
 	    switch (solveKind) {
@@ -686,16 +745,17 @@ public class Solve implements ParserTreeConstants {
 
        	// System.out.println("*** " + list_seq_searches);
 
-	boolean Result = false;	
+	Result = false;	
 	IntVar cost;
-	boolean optimization = false;
+	optimization = false;
 
-	Search<Var> final_search = list_seq_searches.get(list_seq_searches.size()-1);
+	Search<Var> final_search_seq = list_seq_searches.get(list_seq_searches.size()-1);
 
-	Thread tread = java.lang.Thread.currentThread();
+	tread = java.lang.Thread.currentThread();
 	java.lang.management.ThreadMXBean b = java.lang.management.ManagementFactory.getThreadMXBean();
+	searchTimeMeter = b;
 
-	long startCPU = b.getThreadCpuTime(tread.getId());
+	startCPU = b.getThreadCpuTime(tread.getId());
 	// 	long startUser = b.getThreadUserTime(tread.getId());
 
 	int to = options.getTimeOut();
@@ -726,14 +786,14 @@ public class Solve implements ParserTreeConstants {
 
  		// Result = restart_search(masterLabel, masterSelect, cost, true);
 
-            for (Search<Var> list_seq_searche : list_seq_searches)
-                list_seq_searche.setOptimize(true);
+		for (Search<Var> list_seq_searche : list_seq_searches)
+		    list_seq_searche.setOptimize(true);
 
 		if (ns > 0) {
-		    for (int i=0; i<list_seq_searches.size()-1; i++) 
-		     	((DepthFirstSearch)list_seq_searches.get(i)).respectSolutionListenerAdvice =true;
-		    final_search.getSolutionListener().setSolutionLimit(ns);
-		    ((DepthFirstSearch)final_search).respectSolutionListenerAdvice =true;
+		    for (int i=0; i<list_seq_searches.size()-1; i++)
+		     	((DepthFirstSearch)list_seq_searches.get(i)).respectSolutionListenerAdvice = true;
+		    final_search_seq.getSolutionListener().setSolutionLimit(ns);
+		    ((DepthFirstSearch)final_search_seq).respectSolutionListenerAdvice = true;
 		}
 
 		Result = masterLabel.labeling(store, masterSelect, cost);
@@ -755,8 +815,8 @@ public class Solve implements ParserTreeConstants {
 		if (ns > 0) {
 		    for (int i=0; i<list_seq_searches.size()-1; i++)
 			((DepthFirstSearch)list_seq_searches.get(i)).respectSolutionListenerAdvice=true;
-		    final_search.getSolutionListener().setSolutionLimit(ns);
-		    ((DepthFirstSearch)final_search).respectSolutionListenerAdvice=true;
+		    final_search_seq.getSolutionListener().setSolutionLimit(ns);
+		    ((DepthFirstSearch)final_search_seq).respectSolutionListenerAdvice=true;
 		}
 
 		Result = masterLabel.labeling(store, masterSelect, max_cost);
@@ -769,11 +829,23 @@ public class Solve implements ParserTreeConstants {
 	    System.exit(0);
 	}
 
+	printStatisticsForSeqSearch(false);
+
+    }
+
+
+    void printStatisticsForSeqSearch(boolean interrupted) {
+
+	if (list_seq_searches == null) {
+	    System.out.println ("%% =====INTERRUPTED=====\n%% Model not yet posed..");
+	    return;
+	}
+
 	if (Result) {
 	    if (!optimization && options.getAll()) {
 		if (!heuristicSeqSearch)
 		    if (! anyTimeOutOccured(list_seq_searches)) {
-			if (options.getNumberSolutions() == -1 || options.getNumberSolutions() > final_search.getSolutionListener().solutionsNo())
+			if (options.getNumberSolutions() == -1 || options.getNumberSolutions() > final_search_seq.getSolutionListener().solutionsNo())
 			    System.out.println("==========");
 		    }
 		    else
@@ -785,7 +857,7 @@ public class Solve implements ParserTreeConstants {
 	    else if (optimization) {
 		if (!heuristicSeqSearch)
 		    if (! anyTimeOutOccured(list_seq_searches)) {
-			if (options.getNumberSolutions() == -1 || options.getNumberSolutions() > final_search.getSolutionListener().solutionsNo())
+			if (options.getNumberSolutions() == -1 || options.getNumberSolutions() > final_search_seq.getSolutionListener().solutionsNo())
 			    System.out.println("==========");
 		    }
 		    else
@@ -800,8 +872,11 @@ public class Solve implements ParserTreeConstants {
 		System.out.println("=====UNKNOWN=====");
 		System.out.println("%% =====TIME-OUT=====");
 	    }
-	    else 
-		System.out.println("=====UNSATISFIABLE=====");
+	    else
+		if (interrupted)
+		    System.out.println ("%% =====INTERRUPTED=====");
+		else
+		    System.out.println("=====UNSATISFIABLE=====");
 
 	if (options.getStatistics()) {
 	    int nodes=0, decisions=0, wrong=0, backtracks=0, depth=0,solutions=0;
@@ -813,17 +888,19 @@ public class Solve implements ParserTreeConstants {
             depth += label.getMaximumDepth();
             solutions = label.getSolutionListener().solutionsNo();
         }
-	    System.out.println("\n%% Model variables : "+ (store.size()+ NumberBoolVariables) +
-			       "\n%% Model constraints : "+initNumberConstraints+
-			       "\n\n%% Search CPU time : " + (b.getThreadCpuTime(tread.getId()) - startCPU)/(long)1e+6 + "ms"+
-			       "\n%% Search nodes : "+nodes+
-			       "\n%% Search decisions : "+decisions+
-			       "\n%% Wrong search decisions : "+wrong+
-			       "\n%% Search backtracks : "+backtracks+
-			       "\n%% Max search depth : "+depth+
-			       "\n%% Number solutions : "+ solutions 
-			       );
+
+	System.out.println("\n%% Model variables : "+ (store.size()+ NumberBoolVariables) +
+			   "\n%% Model constraints : "+initNumberConstraints+
+			   "\n\n%% Search CPU time : " + (searchTimeMeter.getThreadCpuTime(tread.getId()) - startCPU)/(long)1e+6 + "ms"+
+			   "\n%% Search nodes : "+nodes+
+			   "\n%% Search decisions : "+decisions+
+			   "\n%% Wrong search decisions : "+wrong+
+			   "\n%% Search backtracks : "+backtracks+
+			   "\n%% Max search depth : "+depth+
+			   "\n%% Number solutions : "+ solutions 
+			   );
 	}
+
     }
 
     boolean anyTimeOutOccured(ArrayList<Search<Var>> list_seq_searches) {

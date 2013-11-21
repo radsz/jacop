@@ -83,12 +83,16 @@ public class Fz2jacop {
 	Parser parser = new Parser(opt.getFile());
 	parser.setOptions(opt);
 
-	try {
+	RunWhenShuttingDown t = new RunWhenShuttingDown(parser);
+	if (opt.getStatistics())
+	    Runtime.getRuntime().addShutdownHook(t);
+
+	try {	    
 
 	    parser.model();
 
 	} catch (FailException e) {
-	    System.err.println("=====UNSATISFIABLE====="); // "*** Evaluation of model resulted in fail.");
+            System.err.println("=====UNSATISFIABLE====="); // "*** Evaluation of model resulted in fail.");
 	} catch (ArithmeticException e) {
 	    System.err.println("%% Evaluation of model resulted in integer overflow.");
 	} catch (ParseException e) {
@@ -96,7 +100,7 @@ public class Fz2jacop {
 	} catch (TokenMgrError e) {
 	    System.out.println("%% Parser exception "+ e);
  	} catch (ArrayIndexOutOfBoundsException e) {
- 	    System.out.println("%% Array out of bound exception "+ e);
+ 	    System.out.println("%% JaCoP internal error. Array out of bound exception "+ e);
 	} catch (OutOfMemoryError e) {
 	    System.out.println("%% Out of memory error; consider option -Xmx... for JVM");
 	} catch (StackOverflowError e) {
@@ -104,9 +108,9 @@ public class Fz2jacop {
 	}
 
 	if (opt.getStatistics()) {
-	    System.out.println("\n%% Total CPU time : " + 
-			       (b.getThreadCpuTime(tread.getId()) - startCPU)/(long)1e+6 + "ms");
-
+	    Runtime.getRuntime().removeShutdownHook(t); 
+	
+	    System.out.println("\n%% Total CPU time : " + (b.getThreadCpuTime(tread.getId()) - startCPU)/(long)1e+6 + "ms");
 	}
 
     }
