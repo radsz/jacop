@@ -749,7 +749,7 @@ public class Solve implements ParserTreeConstants {
 	IntVar cost;
 	optimization = false;
 
-	Search<Var> final_search_seq = list_seq_searches.get(list_seq_searches.size()-1);
+	final_search_seq = list_seq_searches.get(list_seq_searches.size()-1);
 
 	tread = java.lang.Thread.currentThread();
 	java.lang.management.ThreadMXBean b = java.lang.management.ManagementFactory.getThreadMXBean();
