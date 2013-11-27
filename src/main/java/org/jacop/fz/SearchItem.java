@@ -338,8 +338,9 @@ public class SearchItem implements ParserTreeConstants {
 	else if (var_selection_heuristic.equals("occurrence"))
 	    return new MostConstrainedStatic();
 	else if (var_selection_heuristic.equals("smallest")) {
-	    // does not follow flatzinc definition but may give bettern results ;)
- 	    // tieBreaking = new MostConstrainedStatic(); //SmallestDomain();
+	    // does not follow flatzinc definition but may give better results ;)
+ 	    // tieBreaking = new MostConstrainedStatic(); 
+	    tieBreaking = new SmallestDomain();
 	    return new SmallestMin();
 	}
 	else if (var_selection_heuristic.equals("largest"))

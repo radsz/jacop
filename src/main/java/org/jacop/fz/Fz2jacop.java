@@ -55,7 +55,7 @@ public class Fz2jacop {
      * @throws TokenMgrError
      */
 	
-    public static void main(String[] args) {
+    public static void main(String[] args)  {
 
 	// org.jacop.core.SwitchesPruningLogging.traceVar =  false;
 	// org.jacop.core.SwitchesPruningLogging.traceConstraint =  false;
@@ -101,6 +101,8 @@ public class Fz2jacop {
 	    System.out.println("%% Parser exception "+ e);
  	} catch (ArrayIndexOutOfBoundsException e) {
  	    System.out.println("%% JaCoP internal error. Array out of bound exception "+ e);
+	    if (e.getStackTrace().length > 0)
+		System.out.println ("%%\t" + e.getStackTrace()[0]);
 	} catch (OutOfMemoryError e) {
 	    System.out.println("%% Out of memory error; consider option -Xmx... for JVM");
 	} catch (StackOverflowError e) {
