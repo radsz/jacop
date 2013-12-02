@@ -1,20 +1,35 @@
 Version 4.0
 ===========
 
-1. Introduction of stochastic varibales and constraints (preliminary).
+1. Maven support and new directory structure. The package has changed name from JaCoP to org.jacop and files are placed in the new directory structure. 
 
-2. SAT solver...
+2. Introduction of stochastic variables and constraints (preliminary).
 
-3. Adding constraint SumWeightDom that implements domain consistency
+3. SAT solver...
+
+4. Adding constraint SumWeightDom that implements domain consistency
    for weighted sum of linear terms.
 
-4. Adding additional propagation to Min and Max constraint. It
+5. New primitive constraint Linear and its use in flatzinc.
+
+6. New global constraint Subcircuit.
+
+7. Adding additional propagation to Min and Max constraint. It
    propagates in situations when one variable on the list is lowest
    (greatest). It enforces that this variable from the list is equal
    min (max) variable.
 
-5. New primitive constraint Linear and its use in flatzinc.
+8. Print of statistics for flatzinc (org.jacop.fz.Fz2jacop) after Ctrl-C.
 
+9. Updated JaCoP guide to reflect new features.
+
+10. Bug fixes.
+
+Version 3.2
+=============
+
+1. Fixes few bugs
+2. Provides an interface from Scala to JaCoP. Examples using Scala are provided in ExamplesScala package.
 
 Version 3.1.2
 =============
@@ -22,9 +37,10 @@ Version 3.1.2
 The release of JaCoP version 3.1.2 fixes several bugs and makes JaCoP compatible with minizinc v.1.4.
 
 1. Compatibility changes for minizinc 1.4.
-2. Bug fix when reifing several primitive set constraints that makes pruning working correctly.
+2. Bug fix of reification in several primitive set constraints that made pruning working correctly.
 3. New method for pruning length of rectangles in Diff/Diff2 constraints.
 4. Several small bug fixes.
+5. Bug fix in search to make limit on a number of solutions work correctly (specially for sequence search).
 
 Version 3.1.1
 =============
