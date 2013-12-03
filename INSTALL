@@ -1,0 +1,12 @@
+JaCoP v. 4.0 RC1- Installation Guide
+
+The easiest way to make jar file for JaCoP is to use maven. First, install maven on your computer and then write 
+
+mvn install -DskipTests
+
+The jar file will be generated into directory jacop/target.
+
+Compilation of JaCoP can be easily done by issuing the following command
+
+mvn compile
+
