@@ -1196,6 +1196,8 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar[] x = getVarArray((SimpleNode)node.jjtGetChild(0));
 		    IntVar[] y = getVarArray((SimpleNode)node.jjtGetChild(1));
 
+		    System.out.println ("lex_lesseq_int: x.length = " + x.length +  " y.length = " + y.length);
+
 		    DecomposedConstraint c = new org.jacop.constraints.Lex(new IntVar[][] {x, y});
 
 		    store.imposeDecomposition(c);
@@ -1856,6 +1858,7 @@ public class Constraints implements ParserTreeConstants {
 
 	    // If a linear term contains only constants and can be evaluated 
 	    // check if satisfied and do not generate constraint
+
 	    boolean p2Fixed = allConstants(p2);
 	    int s=0;
 	    if (p2Fixed) {
@@ -1964,6 +1967,29 @@ public class Constraints implements ParserTreeConstants {
 		    // 	    pose(new Linear(store, p2, p1, "==", p3));
 		    // 	}
 		    else {
+			/*
+ 			ArrayList<IntVar> multipliedByOne = new ArrayList<IntVar>();
+			ArrayList<IntVar> others = new ArrayList<IntVar>();
+			ArrayList<Integer> othersWeights = new ArrayList<Integer>();
+			if (p1.length > 100) {
+			    for (int i = 0; i < p1.length; i++) 
+				if (p1[i] == 1)
+				    multipliedByOne.add(p2[i]);
+				else {
+				    others.add(p2[i]);
+				    othersWeights.add(p1[i]);
+				}
+			    if (multipliedByOne.size() > 0) {
+				IntVar tmp1 = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
+				IntVar tmp2 = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
+				pose(new Sum(multipliedByOne, tmp1));
+				pose(new SumWeight(others, othersWeights, tmp2));
+				pose(new XplusYeqC(tmp1, tmp2, p3));
+				return;
+			    }
+			}
+			*/
+
 			// pose(new SumWeight(p2, p1, v));
 			pose(new Linear(store, p2, p1, "==", p3));
 		    }
