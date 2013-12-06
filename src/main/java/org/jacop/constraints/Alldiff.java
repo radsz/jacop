@@ -88,6 +88,8 @@ public class Alldiff extends Alldifferent {
 		super(variables);
 		Alldifferent.idNumber--;
 		
+	        queueIndex = 2;
+
 		this.queueIndex = 1;
 		this.numberId = idNumber++;
 		this.numberArgs = (short) variables.length;

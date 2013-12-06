@@ -124,6 +124,8 @@ public class ElementInteger extends Constraint {
 
 	private void commonInitialization(IntVar index, int[] list, IntVar value) {
 
+	        queueIndex = 1;
+
 		assert (index != null) : "Argument index is null";
 		assert (list != null) : "Argument list is null";
 		assert (value != null) : "Argument value is null";
@@ -241,8 +243,9 @@ public class ElementInteger extends Constraint {
 			for (IntDomain duplicate : duplicates) {
 				if (indexDom.isIntersecting(duplicate)) {
 					domValue.unionAdapt(list[duplicate.min() - 1 - indexOffset]);								
+
+					indexDom = indexDom.subtract(duplicate);
 				}
-				indexDom = indexDom.subtract(duplicate);
 			}
 			
 			// values of index for duplicated values within list are already taken care of above.
@@ -265,8 +268,9 @@ public class ElementInteger extends Constraint {
 
 			for (ValueEnumeration e = valDom.valueEnumeration(); e.hasMoreElements();) {
 				IntDomain i = mappingValuesToIndex.get(e.nextElement());
-				if (i != null)
-					domIndex.addDom(i);
+				if (i != null) {
+				    domIndex.addDom(i);
+				}
 			}
 
 			index.domain.in(store.level, index, domIndex);
@@ -314,7 +318,7 @@ public class ElementInteger extends Constraint {
 		}
 		
 		for (IntDomain duplicate: map.values()) {
-			if ( duplicate.getSize() > 3 )
+			if ( duplicate.getSize() > 20 )
 				duplicates.add(duplicate);
 		}
 		
