@@ -15,7 +15,7 @@ object QueenGlobal extends App with jacop {
   val q2 = Array.tabulate(n)( i => q(i) - i )
   alldifferent(q2)
   
-  val result = satisfy( search(q.toList, first_fail, indomain_middle) )
+  val result = satisfy( search(q, first_fail, indomain_middle) )
 
   if (result) println("Yes")
   else println("No solution")

@@ -41,6 +41,14 @@ package object scala {
   def getModel = impModel	// returns the current impModel
   def setModel(that : Model) = impModel = that	// sets the current impModel
 
+  implicit class IntVarSeq(val peer: Array[IntVar]) extends AnyVal {
+    def apply(index: IntVar) : IntVar = intVarAt(index, peer)
+  }
+
+  implicit class IntSeq(val peer: Array[Int]) extends AnyVal {
+    def apply(index: IntVar) : IntVar = intAt(index, peer)
+  }
+
   // =============== Global constraints ===============
 
 /**
@@ -326,6 +334,29 @@ package object scala {
     val c = new Element(index, elements.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], value, offset)
     if (trace) println(c)
     impModel.impose( c )
+  }
+
+  /** Wrapper for [[org.jacop.constraints.Element]].
+    *
+    * @param index    index to select element from list of elements.
+    * @param xs       array of integers that can be assigned to values.
+    * @param offset   value of index offset (shift).
+    * @return         the variable yielding the element at the given index
+    */
+  def intAt(index: IntVar, xs: Array[Int], offset: Int = 0) : IntVar = {
+    val result  = new IntVar()
+    val c       = new Element(index, xs, result, offset)
+    if (trace) println(c)
+    impModel.impose(c)
+    result
+  }
+
+  def intVarAt(index: IntVar, xs: Array[IntVar], offset: Int = 0) : IntVar = {
+    val result  = new IntVar()
+    val c       = new Element(index, xs.asInstanceOf[Array[org.jacop.core.IntVar]], result, offset)
+    if (trace) println(c)
+    impModel.impose(c)
+    result
   }
 
 /**

@@ -318,7 +318,7 @@ object MUCA  extends jacop {
   def searchSpecial : Boolean = {
 
     val search1 = search(bidCosts, max_regret, indomain_min)
-    val search2 = search(transitions.toList, input_order, indomain_min);       
+    val search2 = search(transitions.toList, input_order, indomain_min);
 
     val result = minimize_seq(List(search1, search2), cost)
 

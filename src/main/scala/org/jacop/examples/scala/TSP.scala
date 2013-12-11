@@ -44,7 +44,7 @@ object TSP extends App with jacop {
   // Computes a cost of traveling between ith city
   // and city[i]-th city
   for (i <- 0 until noCities) 
-    element(cities(i), distance(i), costs(i))
+    distance(i)(cities(i)) #= costs(i)
 
   // Computes overall cost of traveling
   // simply sum of all costs

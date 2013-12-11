@@ -161,7 +161,7 @@ object SocialGolfer extends jacop {
 	    for (l <- 0 until groups) 
 	      card( golferGroup(i)(k) * golferGroup(j)(l) ) #<= 1
 
-    var v: Array[IntVar] = new Array[IntVar](weeks)
+    val v: Array[IntVar] = new Array[IntVar](weeks)
     val var1 = List.tabulate(weeks, players)( (i,j) => new IntVar("var"+i+"-"+j, 1, N))
 
     for (i <- 0 until weeks) {

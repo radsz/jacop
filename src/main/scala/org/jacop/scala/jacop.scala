@@ -61,6 +61,7 @@ trait jacop {
   implicit def arrayToList[A](a: Array[A]) = a.toList
 
   implicit def makeReifiable[T <: PrimitiveConstraint](reifC: T): Reifier[T] = new Reifier(reifC)
+
 }
 
 /**
