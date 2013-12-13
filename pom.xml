@@ -105,7 +105,8 @@ setup to run configuration. -->
                     <artifactId>aspectjrt</artifactId>
                     <version>${aspectj.version}</version>
                 </dependency>
-            </dependencies>
+
+	    </dependencies>
 
         </profile>
     </profiles>
@@ -333,12 +334,12 @@ setup to run configuration. -->
         <dependency>
             <groupId>org.scala-lang</groupId>
             <artifactId>scala-library</artifactId>
-            <version>2.10.0</version>
+            <version>2.10.3</version>
         </dependency>
         <dependency>
             <groupId>org.scala-lang</groupId>
             <artifactId>scala-compiler</artifactId>
-            <version>2.10.0</version>
+            <version>2.10.3</version>
         </dependency>
 
     </dependencies>
