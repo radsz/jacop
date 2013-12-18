@@ -1,11 +1,10 @@
 package org.jacop.examples.scala
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.regex.Pattern;
+import java.io.BufferedReader
+import java.io.FileNotFoundException
+import java.io.FileReader
+import java.io.IOException
+import java.util.regex.Pattern
 
 import scala.collection.mutable.ArrayBuffer
 import org.jacop.scala._
@@ -24,12 +23,12 @@ object Nonogram extends jacop {
   /**
    * The value that represents a black dot.
    */
-  val black = 1;
+  val black = 1
 	
   /**
    * The value that represents a white dot.
    */
-  val white = 0;
+  val white = 0
 
   /**
    * A board to be painted in white/black dots.
@@ -56,49 +55,46 @@ object Nonogram extends jacop {
 
   def readFromFile(filename: String) {
 		
-    var lines = new Array[String](100);
+    var lines = new Array[String](100)
 
-    var dimensions = new Array[Int](2);
+    val dimensions = new Array[Int](2)
 
     /* read from file args[0] or qcp.txt */
     try {
       
-      val in = new BufferedReader(new FileReader(filename));
+      val in = new BufferedReader(new FileReader(filename))
 
-      var str = in.readLine();
+      var str = in.readLine()
 
-      var pat = Pattern.compile(" ");
-      var result = pat.split(str);
+      val pat = Pattern.compile(" ")
+      val result = pat.split(str)
 			
-      var current = 0;
+      var current = 0
 
       for (j <- 0 until result.length)
 	try {
-	  var currentNo = result(j).toInt
-	  dimensions(current) = currentNo;
+	  val currentNo = result(j).toInt
+	  dimensions(current) = currentNo
 	  current += 1
 	} catch {
-	  case ex : Exception => {
-	  }
+	  case ex : Exception =>
 	}
 
       lines = new Array[String](dimensions(0) + dimensions(1))
 			
-      var n = 0;
+      var n = 0
 
       str = in.readLine()	
       while (str != null && n < lines.length) {
-	lines(n) = str;
+	lines(n) = str
 	n += 1
 	str = in.readLine()
       }
-      in.close();
+      in.close()
     } catch {
-      case e : FileNotFoundException => {
-	System.err.println("I can not find file " + filename);
-      } 
+      case e : FileNotFoundException => System.err.println("I can not find file " + filename)
       case e : IOException => {
-	System.err.println("Something is wrong with file" + filename);
+	System.err.println("Something is wrong with file" + filename)
       }
  
       row_rules = new Array[Array[Int]](dimensions(1)) 
@@ -107,22 +103,22 @@ object Nonogram extends jacop {
       // Transforms strings into ints
       for (i <- 0 until lines.length) {
 			
-	var pat = Pattern.compile(" ");
-	var result = pat.split(lines(i));
+	val pat = Pattern.compile(" ")
+	val result = pat.split(lines(i))
 
-	var sequence = new Array[Int](result.length);
+	val sequence = new Array[Int](result.length)
 			
-	var current = 0;
+	var current = 0
 	for (j <- 0 until result.length)
 	  try {
 	    sequence(current) = result(j).toInt
 	    current += 1
 	  } catch {
-	    case ex : Exception => { }
+	    case ex : Exception =>
 	  }
-	if (i < row_rules.length) row_rules(i) = sequence;
+	if (i < row_rules.length) row_rules(i) = sequence
 	else
-	  col_rules(i - row_rules.length) = sequence;
+	  col_rules(i - row_rules.length) = sequence
       }
       
     }
@@ -133,7 +129,7 @@ object Nonogram extends jacop {
    * It produces and FSM given a sequence representing a rule. e.g. [2, 3]
    * specifies that there are two black dots followed by three black dots.
    * 
-   * @param sequence
+   * @param sequence - input parameter
    * @return Finite State Machine used by Regular automaton to enforce proper sequence.
    */
   def createAutomaton(sequence: Array[Int]) : fsm = {
@@ -159,7 +155,7 @@ object Nonogram extends jacop {
 	  val nextState = new state
 	  result += nextState
 	  currentState -> (white, nextState)
-	  currentState = nextState;
+	  currentState = nextState
 	}  
 	currentState -> (white, currentState)
       }
@@ -167,7 +163,7 @@ object Nonogram extends jacop {
 
     result.addFinalStates( Array(currentState) )
 
-    return result;
+     result
 
   }
 
@@ -188,48 +184,48 @@ object Nonogram extends jacop {
     // Zigzag based variable ordering. 
     for (m <- 0 until row_rules.length + col_rules.length - 1) {
       for (j <- 0 until m if j < col_rules.length) {
-	val i = m - j;
+	val i = m - j
    	if (i < row_rules.length)
    	  vars :+= board(i)(j)
       }
     }		
 		
-    println("Size " + vars.length);
+    println("Size " + vars.length)
 		
     // Making sure that rows respect the rules.
     for (i <- 0 until row_rules.length) {
 			
-      val result = createAutomaton(row_rules(i));
+      val result = createAutomaton(row_rules(i))
 			
       if (slideDecomposition)
-  	getModel.imposeDecomposition(new Regular(result, board(i).asInstanceOf[Array[org.jacop.core.IntVar]]));
+  	getModel.imposeDecomposition(new Regular(result, board(i).asInstanceOf[Array[org.jacop.core.IntVar]]))
       
       if (regularConstr)
 	regular(result, board(i).toList)
 			
       if (extensionalMDD)
- 	getModel.impose(new ExtensionalSupportMDD(result.transformDirectlyIntoMDD(board(i).asInstanceOf[Array[org.jacop.core.IntVar]])));
+ 	getModel.impose(new ExtensionalSupportMDD(result.transformDirectlyIntoMDD(board(i).asInstanceOf[Array[org.jacop.core.IntVar]])))
 
     }
 
     // Making sure that columns respect the rules.
     for (i <- 0 until col_rules.length) {
 					
-      val result = createAutomaton(col_rules(i));
+      val result = createAutomaton(col_rules(i))
       val column = Array.tabulate(row_rules.length)( j => board(j)(i))
 							
       if (slideDecomposition)
- 	getModel.imposeDecomposition(new Regular(result, column.asInstanceOf[Array[org.jacop.core.IntVar]]));
+ 	getModel.imposeDecomposition(new Regular(result, column.asInstanceOf[Array[org.jacop.core.IntVar]]))
 
       if (regularConstr)
 	regular(result, column.toList)
 
       if (extensionalMDD)
- 	getModel.impose(new ExtensionalSupportMDD(result.transformDirectlyIntoMDD(column.asInstanceOf[Array[org.jacop.core.IntVar]])));
+ 	getModel.impose(new ExtensionalSupportMDD(result.transformDirectlyIntoMDD(column.asInstanceOf[Array[org.jacop.core.IntVar]])))
 	
     }
 
-    val solved = satisfy( search(vars.toList, input_order, indomain_min) )
+    satisfy( search(vars.toList, input_order, indomain_min) )
 
   }
 			
@@ -242,11 +238,11 @@ object Nonogram extends jacop {
         for(i <- 0 until matrix.length) {
             for(j <- 0 until matrix(i).length) {
             	if ( matrix(i)(j).value() == black )
-            		print("0");
+            		print("0")
             	else
-            		print(" ");
+            		print(" ")
             }
-            println();
+            println()
         }
     }
 
@@ -256,7 +252,7 @@ object Nonogram extends jacop {
    */
   def main(args : Array[String]) {
 
-    model
+    model()
     printMatrix(board)
 
 /*

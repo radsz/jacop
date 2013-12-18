@@ -35,7 +35,7 @@ object TSP extends App with jacop {
   val cities = Array.tabulate(noCities)( i => new IntVar("cities[" + (i + 1) + "]", 1, noCities))
 
   // Denotes a cost of traveling between index city and next city
-  val costs = Array.tabulate(noCities)(i => new IntVar("costs[" + (i + 1) + "]", 0, 1000));
+  val costs = Array.tabulate(noCities)(i => new IntVar("costs[" + (i + 1) + "]", 0, 1000))
 
   // Impose cuircuit constraint which makes sure
   // that array cities is a hamiltonian circuit

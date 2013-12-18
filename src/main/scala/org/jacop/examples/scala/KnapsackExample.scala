@@ -31,7 +31,7 @@ object KnapsackExample extends jacop {
 
     args = arguments
 
-    model
+    model()
 	
   }	
 
@@ -39,10 +39,10 @@ object KnapsackExample extends jacop {
 	 * It stores the parameters of the main function to be 
 	 * used by the model functions.
 	 */
-  def model {
+  def model() {
 
-    var noItems = 3;
-    var volume = 9;
+    var noItems = 3
+    var volume = 9
     var weights = Array( 4, 3, 2 )
     var profits = Array( 15, 10, 7 )
     var names = Array( "whisky", "perfumes", "cigarets" )
@@ -54,11 +54,11 @@ object KnapsackExample extends jacop {
     // name )
     if (args.length >= 5 && ((args.length - 1) % 4) == 0) {
       volume = args(0).toInt
-      noItems = (args.length - 1) / 4;
+      noItems = (args.length - 1) / 4
       weights = new Array[Int](noItems)
-      profits = new Array[Int](noItems);
-      maxs = new Array[Int](noItems);
-      names = new Array[String](noItems);
+      profits = new Array[Int](noItems)
+      maxs = new Array[Int](noItems)
+      names = new Array[String](noItems)
       var i = 1
       while (i < args.length) {
 	weights((i - 1) / 4) = args(i).toInt ; i +=1
@@ -72,14 +72,14 @@ object KnapsackExample extends jacop {
     // Each quantity variable has a domain from 0 to max value
     val quantity = List.tabulate(noItems)( i => new IntVar("Quantity_" + names(i), 0, maxs(i)))
 
-    val profit = new IntVar("Profit", 0, 1000000);
-    val weight = new IntVar("Weight", 0, 1000000);
+    val profit = new IntVar("Profit", 0, 1000000)
+    val weight = new IntVar("Weight", 0, 1000000)
 
     knapsack(profits, weights, quantity, weight, profit)
 		
     weight #<= volume
 
-    val result = maximize( search(quantity, first_fail, indomain_min), profit )
+    maximize( search(quantity, first_fail, indomain_min), profit )
 
   }
 	

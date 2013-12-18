@@ -39,8 +39,8 @@ object Jobshop extends App with jacop {
   val ones = Array.tabulate(n) ( i => one)
 
   for ( l <- 0 until max_res) {
-    val Ts = for (i <- Array.range(0, n); j <- Array.range (0, k) if (m(i)(j) == l)) yield  t(i)(j)
-    val Ds = for (i <- Array.range (0, n); j <- Array.range (0, k) if (m(i)(j) == l)) yield   new IntVar("", d(i)(j), d(i)(j))
+    val Ts = for (i <- Array.range(0, n); j <- Array.range (0, k) if m(i)(j) == l) yield  t(i)(j)
+    val Ds = for (i <- Array.range (0, n); j <- Array.range (0, k) if m(i)(j) == l) yield   new IntVar("", d(i)(j), d(i)(j))
 
     cumulative(Ts, Ds, ones, 1)
   }
@@ -48,7 +48,7 @@ object Jobshop extends App with jacop {
   val t_list : List[IntVar] = List.tabulate(n,k)( (i,j) => t(i)(j)).flatten
   val result = minimize( search(t_list, smallest, indomain_min), end, printSol)
 
-  statistics
+  statistics()
 
   def printSol() : Unit = {
     println("\nSolution with cost: " + end.value + "\n=======================")

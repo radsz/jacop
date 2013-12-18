@@ -45,7 +45,7 @@ object ArchFriends extends App with jacop {
   val shopNames = Array( "FootFarm", "HeelsInAHandcart", "TheShoePalace",
 				"Tootsies" )
 
-  val iFootFarm = 0; val iHeelsInAHandcart = 1; val iTheShoePalace = 2; val iTootsies = 3;
+  val iFootFarm = 0; val iHeelsInAHandcart = 1; val iTheShoePalace = 2; val iTootsies = 3
 
   // Variables shoe and shop
 

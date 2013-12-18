@@ -86,27 +86,27 @@ import org.jacop.scala._
 object Flowers extends App with jacop {
 		
 
-  println("Program to solve Flower logic puzzle");
+  println("Program to solve Flower logic puzzle")
 
   val wifeWeek = Array( "Emma", "Kristin", "Lynn", "Toni" )
   val wifeDay =  Array( "EmmaDay", "KristinDay", "LynnDay", "ToniDay" )
   // index to women for ease of referring.
-  val iEmma = 0; val iKristin = 1; val iLynn = 2; val iToni = 3;
+  val iEmma = 0; val iKristin = 1; val iLynn = 2; val iToni = 3
 
   val husbandWeek = Array( "Doug", "Justin", "Shane", "Theo" )
   val husbandDay =  Array( "DougDay", "JustinDay", "ShaneDay", "TheoDay" )
   // index to men for ease of referring.
-  val iDoug = 0; val iJustin = 1; val iShane = 2; val iTheo = 3;
+  val iDoug = 0; val iJustin = 1; val iShane = 2; val iTheo = 3
 
   val flowerWeek = Array( "Violets", "Roses", "Chrys", "Daises" )
   val flowerDay =  Array( "VioletsDay", "RosesDay", "ChrysDay", "DaisesDay" )
   // index to flowers for ease of referring.
-  val iViolets = 0; val iRoses = 1; val iChrys = 2; val iDaises = 3;
+  val iViolets = 0; val iRoses = 1; val iChrys = 2; val iDaises = 3
 
   val occasionWeek = Array( "Walentynki", "Awans", "Urodziny", "Rocznica" )
   val occasionDay =  Array( "WalentynkiDay", "AwansDay", "UrodzinyDay", "RocznicaDay" )
   // index to occasions for ease of referring.
-  val iWalentynki = 0; val iAwans = 1; val iUrodziny = 2; val iRocznica = 3;
+  val iWalentynki = 0; val iAwans = 1; val iUrodziny = 2; val iRocznica = 3
 
   // For each (wife, husband, flower, occassion) there are two sets of
   // variables. One denotes a day and the
@@ -141,13 +141,13 @@ object Flowers extends App with jacop {
   // that days match up. (
   for (x <- 0 until 4) {
 
-    val xz = new IntVar("xz" + x, 1, 4);
+    val xz = new IntVar("xz" + x, 1, 4)
     wifeD(xz) #= husbandD(x)
 
-    val xc = new IntVar("xc" + x, 1, 4);
+    val xc = new IntVar("xc" + x, 1, 4)
     occasionD(xc) #= husbandD(x)
 
-    val xy = new IntVar("xy" + x, 1, 4);
+    val xy = new IntVar("xy" + x, 1, 4)
     flowerD(xy) #= husbandD(x)
   }
 

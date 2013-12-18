@@ -61,7 +61,7 @@ object Filter extends App with jacop {
   // val result = minimize_seq( List(search(t, smallest_min, indomain_min), search(r, input_order, indomain_min)), 
 			    // end, printSol )
 
-  statistics
+  statistics()
 
   def printSol() : Unit = {
     println("\nSolution with cost: " + end.value + "\n=======================")

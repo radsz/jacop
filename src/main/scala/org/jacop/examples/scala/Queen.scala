@@ -22,7 +22,7 @@ object Queen extends App with jacop {
     q.foreach(qi => {
       for( i <- 0 until n) 
  	if (qi.value() == i) print(" # ") else print(" . ")
-      println
+      println()
 
     })
   else println("No solution")

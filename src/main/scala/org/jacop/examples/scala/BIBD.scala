@@ -7,23 +7,23 @@ object BIBD extends jacop {
   /**
    * It specifies number of rows in the incidence matrix. 
    */
-  var v = 7;
+  var v = 7
   /**
    * It specifies number of columns in the incidence matrix. 
    */
-  var b = 7;
+  var b = 7
   /**
    * It specifies number of ones in each row.
    */
-  var r = 3;
+  var r = 3
   /**
    * It specifies number of ones in each column. 
    */
-  var k = 3;
+  var k = 3
   /**
    * It specifies the value of the scalar product of any two distinct rows.
    */
-  var lambda = 1;
+  var lambda = 1
 
   def main(args: Array[String]) {
 
@@ -36,13 +36,13 @@ object BIBD extends jacop {
  	lambda = args(4).toInt
       }
       catch {
- 	case ex: Exception => println("Program parameters if provided must specify v, b, r, k, and lambda");
+ 	case ex: Exception => println("Program parameters if provided must specify v, b, r, k, and lambda")
       }
     }	
-    model
+    model()
   }
 
-  def model = {
+  def model() = {
 
     val x = List.tabulate(v,b)( (i,j) => new BoolVar("x" + i + "_" + j))
 
@@ -64,7 +64,7 @@ object BIBD extends jacop {
       for (i <- 0 until v) {
 	for (j <- 0 until b)
 	  print(""+x(i)(j).value+" ")
-	println
+	println()
       }
     else println("No solution")	
 

@@ -37,7 +37,7 @@ import org.jacop.scala._
 
 object BreakingNews extends App with jacop {
 
-  println("Program to solve Breaking News ");
+  println("Program to solve Breaking News ")
 
   // String arrays with reporters names.
   val ReporterName = Array( "Corey", "Jimmy", "Lous", "Perry" )
@@ -50,13 +50,13 @@ object BreakingNews extends App with jacop {
 				"SouthAmboy" )
 		
   // Constant indexes to ease referring to variables denoting locations.
-  val iBayonne = 0; val iNewHope = 1; val iPortCharles = 2; val iSouthAmboy = 3;
+  val iBayonne = 0; val iNewHope = 1; val iPortCharles = 2; val iSouthAmboy = 3
 
   // String arrays with stories names.
   val StoryName = Array( "30pound", "blimp", "skyscraper", "beached" )
 
   // Constant indexes to ease referring to variables denoting stories.
-  val i30pound = 0; val iblimp = 1; val iskyscraper = 2; val ibeached = 3;
+  val i30pound = 0; val iblimp = 1; val iskyscraper = 2; val ibeached = 3
 
   // All variables are created with domain 1..4. Variables from
   // different arrays with the same values denote the same person.

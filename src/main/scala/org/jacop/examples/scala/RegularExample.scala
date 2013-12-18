@@ -13,7 +13,7 @@ object RegularExample extends App with jacop {
 //   for (i <- 0 until 8) dfa += new state()
 
   dfa.init( dfa(0) )
-  dfa.addFinalStates( Array(dfa(7)) ); 
+  dfa.addFinalStates( Array(dfa(7)) )
 
   dfa(0) -> (0, dfa(1))
   dfa(0) -> (1, dfa(2))

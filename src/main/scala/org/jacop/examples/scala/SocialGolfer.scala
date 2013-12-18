@@ -13,11 +13,11 @@ object SocialGolfer extends jacop {
 
   // 2, 7, 4
 	
-  var weeks = 3;
+  var weeks = 3
 
-  var groups = 2;
+  var groups = 2
 
-  var players = 2;
+  var players = 2
 
   var golferGroup: Array[Array[SetVar]] = null
 
@@ -27,113 +27,113 @@ object SocialGolfer extends jacop {
    * 
    * It runs a number of social golfer problems.
    * 
-   * @param args
+   * @param args- command's arguments
    */
   def main (args: Array[String]) {
 
-    setup(3, 2, 2);
-    model();
-    solve();
+    setup(3, 2, 2)
+    model()
+    solve()
 		
     // Solved
-    setup(2,5,4); // weeks - groups - players in each group
-    model();
-    solve();
+    setup(2,5,4) // weeks - groups - players in each group
+    model()
+    solve()
 		
-    setup(2,6,4); // weeks - groups - players in each group
-    model();
-    solve();
+    setup(2,6,4) // weeks - groups - players in each group
+    model()
+    solve()
 		
-    setup(2,7,4); // weeks - groups - players in each group
-    model();
-    solve();
+    setup(2,7,4) // weeks - groups - players in each group
+    model()
+    solve()
 		
-    setup(3,5,4); // weeks - groups - players in each group
-    model();
-    solve();
+    setup(3,5,4) // weeks - groups - players in each group
+    model()
+    solve()
 		
-    setup(3,6,4); // weeks - groups - players in each group
-    model();
-    solve();
+    setup(3,6,4) // weeks - groups - players in each group
+    model()
+    solve()
 		
-    setup(3,7,4); // weeks - groups - players in each group
-    model();
-    solve();
+    setup(3,7,4) // weeks - groups - players in each group
+    model()
+    solve()
 		
-    setup(4,5,4); // weeks - groups - players in each group
-    model();
-    solve();
+    setup(4,5,4) // weeks - groups - players in each group
+    model()
+    solve()
 		
-    setup(4,6,5); // weeks - groups - players in each group
-    model();
-    solve();
+    setup(4,6,5) // weeks - groups - players in each group
+    model()
+    solve()
 		
-    setup(4,7,4); // weeks - groups - players in each group
-    model();
-    solve();
+    setup(4,7,4) // weeks - groups - players in each group
+    model()
+    solve()
 		
-    setup(4,9,4); // weeks - groups - players in each group
-    model();
-    solve();
+    setup(4,9,4) // weeks - groups - players in each group
+    model()
+    solve()
 		
-    setup(5,5,3); // weeks - groups - players in each group
-    model();
-    solve();
+    setup(5,5,3) // weeks - groups - players in each group
+    model()
+    solve()
 		
-    setup(5,7,4); // weeks - groups - players in each group
-    model();
-    solve();
+    setup(5,7,4) // weeks - groups - players in each group
+    model()
+    solve()
     
-    setup(5,8,3); // weeks - groups - players in each group
-    model();
-    solve();
+    setup(5,8,3) // weeks - groups - players in each group
+    model()
+    solve()
 		
-    setup(6,6,3); // weeks - groups - players in each group
-    model();
-    solve();
+    setup(6,6,3) // weeks - groups - players in each group
+    model()
+    solve()
 		
-    setup(5,3,2); // weeks - groups - players in each group
-    model();
-    solve();
+    setup(5,3,2) // weeks - groups - players in each group
+    model()
+    solve()
 		
-    setup(4,3,3); // weeks - groups - players in each group
-    model();
-    solve();
+    setup(4,3,3) // weeks - groups - players in each group
+    model()
+    solve()
 		
   }
 
   /**
    * It sets the parameters for the model creation function. 
    * 
-   * @param weeks
-   * @param groups
-   * @param players
+   * @param w- weeks
+   * @param g- groups
+   * @param p- players
    */
   def setup(w: Int, g: Int, p: Int) {
 
     weeks = w
-    groups = g;
-    players = p;
+    groups = g
+    players = p
 
   }
 
   def model() {
 
-    val N = groups * players;
+    val N = groups * players
 		
     val weights = new Array[Int](players)
 		
-    val base = scala.math.max(10, players + 1); //at least players + 1
+    val base = scala.math.max(10, players + 1) //at least players + 1
 		
-    weights(players - 1) = 1;
+    weights(players - 1) = 1
 
     var i = players - 2
     while (i >= 0) { 
-      weights(i) = weights(i+1)*base;
+      weights(i) = weights(i+1)*base
       i -= 1
     }
  
-    println("\nSocial golfer problem " + weeks + "-" + groups + "-" + players);
+    println("\nSocial golfer problem " + weeks + "-" + groups + "-" + players)
 
     golferGroup = Array.tabulate(weeks, groups)( (i, j) => new SetVar("g_"+i+"_"+j, 1, N))
 
@@ -178,39 +178,39 @@ object SocialGolfer extends jacop {
 
     def solve() {
 
-      val tread = java.lang.Thread.currentThread();
-      val b = java.lang.management.ManagementFactory.getThreadMXBean();
+      val tread = java.lang.Thread.currentThread()
+      val b = java.lang.management.ManagementFactory.getThreadMXBean()
 
-      val startCPU = b.getThreadCpuTime(tread.getId());
-      val startUser = b.getThreadUserTime(tread.getId());
+      val startCPU = b.getThreadCpuTime(tread.getId())
+      val startUser = b.getThreadUserTime(tread.getId())
 
       val result = satisfy( search(vars, min_lub_card, indomain_min_set),  printSolution)
 
 	if (result) {
-	  println("*** Yes");
+	  println("*** Yes")
 	  // for (i <- 0 until weeks) {
 	  //   for (j <- 0 until groups) {
-	  //     print(golferGroup(i)(j).dom()+" ");
+	  //     print(golferGroup(i)(j).dom()+" ")
 	  //   }
 	  //   println
 	  // }
 	}
 	else
-	  println("*** No");
+	  println("*** No")
 
-      statistics
+      statistics()
 
-      println( "ThreadCpuTime = " + (b.getThreadCpuTime(tread.getId()) - startCPU)/1e+6 + "ms");
-      println( "ThreadUserTime = " + (b.getThreadUserTime(tread.getId()) - startUser)/1e+6 + "ms" );
+      println( "ThreadCpuTime = " + (b.getThreadCpuTime(tread.getId()) - startCPU)/1e+6 + "ms")
+      println( "ThreadUserTime = " + (b.getThreadUserTime(tread.getId()) - startUser)/1e+6 + "ms" )
 
     }
 
   def printSolution() = {
     for (i <- 0 until weeks) {
       for (j <- 0 until groups) {
-	print(golferGroup(i)(j).dom()+" ");
+	print(golferGroup(i)(j).dom()+" ")
       }
-      println
+      println()
     }
   }
 

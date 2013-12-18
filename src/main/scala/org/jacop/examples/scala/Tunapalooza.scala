@@ -51,22 +51,22 @@ import org.jacop.scala._
 
 object Tunapalooza extends App with jacop {
 
-  var vars = new ArrayBuffer[org.jacop.core.IntVar]();
+  var vars = new ArrayBuffer[org.jacop.core.IntVar]()
 		
   // names
-  val Ellyfish = 1; val Korrupt = 2; val Retread = 3; val Yellow = 4;
+  val Ellyfish = 1; val Korrupt = 2; val Retread = 3; val Yellow = 4
 
 
   // types
-  val country = new IntVar("country", 1, 4);
-  val grunge = new IntVar("grunge", 1, 4);
-  val reggae = new IntVar("reggae", 1, 4);
-  val metal = new IntVar("metal", 1, 4);
+  val country = new IntVar("country", 1, 4)
+  val grunge = new IntVar("grunge", 1, 4)
+  val reggae = new IntVar("reggae", 1, 4)
+  val metal = new IntVar("metal", 1, 4)
   // places
-  val carnival = new IntVar("carnival", 1, 4);
-  val information = new IntVar("information", 1, 4);
-  val mosh = new IntVar("mosh", 1, 4);
-  val vendor = new IntVar("vendor", 1, 4);
+  val carnival = new IntVar("carnival", 1, 4)
+  val information = new IntVar("information", 1, 4)
+  val mosh = new IntVar("mosh", 1, 4)
+  val vendor = new IntVar("vendor", 1, 4)
 
 		// arrays of variables
   val types= Array( country, grunge, reggae, metal )
@@ -100,9 +100,9 @@ object Tunapalooza extends App with jacop {
   // c) The two friends won't meet at the T-shirt vendor while Yellow Reef
   // is playing.
 
-  val statement1 = new BoolVar("s1");
-  val statement2 = new BoolVar("s2");
-  val statement3 = new BoolVar("s3");
+  val statement1 = new BoolVar("s1")
+  val statement2 = new BoolVar("s2")
+  val statement3 = new BoolVar("s3")
 
   (grunge #= Ellyfish) <=> statement1
   statement2 <=> (information #\= Retread)

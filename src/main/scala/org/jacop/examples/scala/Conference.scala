@@ -72,9 +72,9 @@ object Conference extends App with jacop {
   // Every half a day is a resource of capacity 3, and session J which
   // is assigned the last half a day has a resource requirement 2, others 1.
 
-  val one = new IntVar("one", 1, 1);
-  val two = new IntVar("two", 2, 2);
-  val three = new IntVar("three", 3, 3);
+  val one = new IntVar("one", 1, 1)
+  val two = new IntVar("two", 2, 2)
+  val three = new IntVar("three", 3, 3)
 
   val durations = Array.tabulate(11)( i => one)
 

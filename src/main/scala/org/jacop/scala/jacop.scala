@@ -1,5 +1,5 @@
 /**
-* Package for defining variables, constraints, global constraints and search methods for [[JaCoP]] constraint solver in Scala.
+* Package for defining variables, constraints, global constraints and search methods for [[org.jacop]] constraint solver in Scala.
 */
 package org.jacop.scala
 
@@ -7,9 +7,10 @@ import org.jacop.constraints._
 import org.jacop.set.constraints._
 
 import scala.language.implicitConversions
+import scala.collection.mutable
 
 /**
-* Manages all variables, constraints and global constraints for [[JaCoP]] constraint solver.
+* Manages all variables, constraints and global constraints for [[org.jacop]] constraint solver.
 * Keeps also labels for search.
 */
 class Model extends org.jacop.core.Store {
@@ -23,7 +24,7 @@ class Model extends org.jacop.core.Store {
   def imposeAllConstraints() {
     this.constr.foreach(e => this.impose(e))
     if (trace) 
-      this.constr.foreach(println _)
+      this.constr.foreach(println(_))
     this.constr.clear()
   }
 }
@@ -45,7 +46,7 @@ trait jacop {
 /**
  * Converts integer to BoolVar.
  *
- * @param i intger to be converted.
+ * @param b boolean to be converted.
  */
   implicit def boolToBoolVar(b: Boolean): BoolVar = {
     val i = if (b) 1 else 0
@@ -66,10 +67,6 @@ trait jacop {
 
 /**
  * Defines an ordered set of integers and basic operations on these sets.
- *
- * @constructor Create a new ordered empty set of integers.
- * @param min minimal value of a set interval.
- * @param max maximal value of a set interval.
  */
 class IntSet extends org.jacop.core.IntervalDomain {
 
@@ -105,7 +102,7 @@ class IntSet extends org.jacop.core.IntervalDomain {
     val tmp = new IntSet
     tmp.unionAdapt(this)
     tmp.unionAdapt(n)
-    return tmp
+    tmp
   }
 
 /**
@@ -117,7 +114,7 @@ class IntSet extends org.jacop.core.IntervalDomain {
     val tmp = new IntSet
     tmp.unionAdapt(this)
     tmp.unionAdapt(that)
-    return tmp
+    tmp
   }
 
 /**
@@ -129,7 +126,7 @@ class IntSet extends org.jacop.core.IntervalDomain {
     val tmp = new IntSet
     tmp.unionAdapt(this)
     tmp.intersectAdapt(n,n)
-    return tmp
+    tmp
   }
 
 /**
@@ -141,7 +138,7 @@ class IntSet extends org.jacop.core.IntervalDomain {
     val tmp = new IntSet
     tmp.unionAdapt(this)
     tmp.intersectAdapt(that)
-    return tmp
+    tmp
   }
 
 /**
@@ -153,13 +150,13 @@ class IntSet extends org.jacop.core.IntervalDomain {
     val tmp = new IntSet
     tmp.unionAdapt(this)
     tmp.subtractAdapt(n)
-    return tmp
+    tmp
   }
 
 /**
  * Set subtraction  operation on a set and a set with one value.
  *
- * @param n element of set.
+ * @param that element of set.
  */
   def \ (that: IntSet) : IntSet =  {
     val tmp = new IntSet
@@ -167,7 +164,7 @@ class IntSet extends org.jacop.core.IntervalDomain {
     for (i <- 0 until that.size) {
       tmp.subtractAdapt(that.intervals(i).min, that.intervals(i).max)
     }
-    return tmp
+    tmp
   }
 
 /**
@@ -178,7 +175,7 @@ class IntSet extends org.jacop.core.IntervalDomain {
     val tmp = new IntSet(org.jacop.core.IntDomain.MinInt, org.jacop.core.IntDomain.MaxInt)
     for (i <- 0 until this.size)
       tmp.subtractAdapt(intervals(i).min, intervals(i).max)
-    return tmp
+    tmp
   }
 
 /**
@@ -187,7 +184,7 @@ class IntSet extends org.jacop.core.IntervalDomain {
  */
   override def toString : String = {
     val s = if (singleton) "{" + value +"}" else super.toString
-    return s
+    s
   }
 }
 
@@ -702,12 +699,12 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(get
     if (min == max) {
       val c = new EinA(min, that)
       getModel.constr += c
-      return c
+      c
     }
     else {
       val c = new XinA(this, that)
       getModel.constr += c
-      return c
+      c
     }
   }
 }
@@ -926,8 +923,8 @@ class SetVar(name : String, glb : Int, lub : Int) extends org.jacop.set.core.Set
  *
  * @constructor Creates a new boolean variable.
  * @param name variable's identifier.
- * @param min minimal value for variable's domain.
- * @param max maximal value for variable's domain.
+ * @param min1 minimal value for variable's domain.
+ * @param max1 maximal value for variable's domain.
  */
 class BoolVar(name: String, min1: Int, max1: Int) extends org.jacop.core.BooleanVar (getModel, name, min1, max1) 
                with jacop {
@@ -957,8 +954,8 @@ class BoolVar(name: String, min1: Int, max1: Int) extends org.jacop.core.Boolean
  * Define an anonymous boolean variable.
  *
  * @constructor Creates a new boolean variable.
- * @param min minimal value for variable's domain.
- * @param max maximal value for variable's domain.
+ * @param l minimal value for variable's domain.
+ * @param r maximal value for variable's domain.
  */
   def this(l: Int, r: Int) = {
     this ("_$" + getModel.n, l, r)
@@ -1152,7 +1149,7 @@ class fsm extends org.jacop.util.fsm.FSM {
   def +(s: state) : fsm = {
     states +=  s
     allStates.add(s)
-    return this
+    this
   }
 
 /**
@@ -1168,7 +1165,7 @@ class fsm extends org.jacop.util.fsm.FSM {
  * @return n-th state
  */
   def apply(n: Int) : state = {     
-    return states(n)
+    states(n)
   }
 }
 
@@ -1209,9 +1206,9 @@ class state extends org.jacop.util.fsm.FSMState {
  */ 
 class network extends org.jacop.constraints.netflow.NetworkBuilder {
 
-  import scala.collection.mutable.HashMap
+  //import scala.collection.mutable.HashMap
 
-  var nodes = HashMap[node, org.jacop.constraints.netflow.simplex.Node]()
+  var nodes = mutable.HashMap[node, org.jacop.constraints.netflow.simplex.Node]()
 
 /**
  * Adds nodes to the network
@@ -1222,7 +1219,7 @@ class network extends org.jacop.constraints.netflow.NetworkBuilder {
     val N = addNode(n.name, n.balance)
     nodes += (n -> N)
     // println("## " + N.name + ", " + N.balance) 
-    return this
+    this
   }
 
 /**
@@ -1231,7 +1228,7 @@ class network extends org.jacop.constraints.netflow.NetworkBuilder {
  * @param n node
  */ 
   def apply(n: node): org.jacop.constraints.netflow.simplex.Node = {
-    return nodes(n)
+    nodes(n)
   }
 
 /**
@@ -1285,11 +1282,11 @@ class ScalaSolutionListener[T <: org.jacop.core.Var] extends org.jacop.search.Si
 
   override def executeAfterSolution(search: org.jacop.search.Search[T], select: org.jacop.search.SelectChoicePoint[T]) : Boolean = {
 
-    val returnCode = super.executeAfterSolution(search, select);
+    val returnCode = super.executeAfterSolution(search, select)
 
-    printFunctions.foreach(_.apply)
+    printFunctions.foreach(_.apply())
 
-    return returnCode;
+    returnCode
   }
 }
 
