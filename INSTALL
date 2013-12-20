@@ -10,3 +10,10 @@ Compilation of JaCoP can be easily done by issuing the following command
 
 mvn compile
 
+Generation of Java API documentation
+
+mvn javadoc:javadoc
+
+Generation of Scala formatted API documentation for Java and Scala
+
+mvn scala:doc
