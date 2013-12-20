@@ -101,7 +101,7 @@ public class AbsXeqY extends PrimitiveConstraint {
 	 * It constructs |X| = Y constraints.
 	 * @param x variable X1
 	 * @param y variable Y
-	 * @param somConsistency controls which consistency method is used; true = domain, false = bound
+	 * @param domConsistency controls which consistency method is used; true = domain, false = bound
 	 */
     public AbsXeqY(IntVar x, IntVar y, boolean domConsistency) {
 	    this(x, y);

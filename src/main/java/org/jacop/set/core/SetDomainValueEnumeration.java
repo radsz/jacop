@@ -129,7 +129,7 @@ public class SetDomainValueEnumeration extends ValueEnumeration {
 	 *  
 	 * @param level = Number of element from the ground set(lub\glb) that should be added
 	 * @param place = The position in this level for the wanted element
-	 * @return
+	 * @return domain that specifies Pascal triangle element at positions (level, place)
 	 */
 	private IntDomain getPascal(int level,int place) {
 		if(level == this.maxLevel)
@@ -166,7 +166,7 @@ public class SetDomainValueEnumeration extends ValueEnumeration {
 	/**
 	 * Returns the maximum place number for an element in this level
 	 * @param level
-	 * @return
+	 * @return the maximum place number for an element in this level
 	 */
 	private int getMaxPascal(int level){
 		return getPascalNbr(this.maxLevel,level+1);

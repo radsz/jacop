@@ -180,6 +180,7 @@ public abstract class IntDomain extends Domain {
 			}
 		}
 		else {
+
 			ValueEnumeration enumer = domain.valueEnumeration();
 			while (enumer.hasMoreElements())
 				if (contains(enumer.nextElement()))
@@ -625,7 +626,7 @@ public abstract class IntDomain extends Domain {
 
     /**
      * It returns domain at earlier level at which the change has occurred.
-     * @return
+     * @return previous domain
      */
     public abstract IntDomain previousDomain();
 
@@ -876,10 +877,10 @@ public abstract class IntDomain extends Domain {
 	}
 
 	/* 
-	 * Finds result interval for division of {a..b} / {c..d} for div and moc constraints
+	 * Finds result interval for division of {a..b} / {c..d} for div and mod constraints
 	 */
 	public final static IntervalDomain divBounds (int a, int b, int c, int d) {
-		
+
 		int min=0, max=0;
 
 		IntervalDomain result = null;
