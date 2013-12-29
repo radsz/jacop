@@ -38,8 +38,6 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.jasat.utils.structures.IntVec;
-import org.jacop.satwrapper.SatWrapper;
 
 /**
  * If all x's are equal 1 then result variable is equal 1 too. Otherwise, result variable 
@@ -361,58 +359,6 @@ public class AndBool extends PrimitiveConstraint {
 
 	}
 
-        /**
-	 * impose this constraint in the enslaved SAT solver
-	 * @param wrapper	the wrapper around the SAT solver
-	 */
-	public void imposeToSat(SatWrapper wrapper) {
-		
-		//String msg = "";
-		//for (IntVar v: list)	msg += v+" ";
-		//wrapper.log(this, "registering for "+msg+" (and) "+result);
-		
-		// register all variables
-		wrapper.register(result);
-		for (IntVar v : list)
-			wrapper.register(v);
-
-		// get literals to represent propositions on CP variables
-		int[] listIsOne = new int[list.length];
-		int[] listIsZero = new int[list.length];
-		for (int i = 0; i < list.length; ++i) {
-			listIsOne[i] = wrapper.cpVarToBoolVar(list[i], 1, true);
-			listIsZero[i] = wrapper.cpVarToBoolVar(list[i], 0, true);
-		}
-		int resultIsOne = wrapper.cpVarToBoolVar(result, 1, true);
-		int resultIsZero = wrapper.cpVarToBoolVar(result, 0, true);
-
-        IntVec clause = new IntVec(wrapper.pool);
-
-		// generate clauses 'list[i]=0 => result=0'
-		for (int i = 0; i < list.length; ++i) {
-			clause.clear();
-                        clause.add(- listIsZero[i]);
-			clause.add(resultIsZero);
-			wrapper.addModelClause(clause.toArray());
-		}
-
-		// clauses 'result=1 => list[i]=1'
-		for (int i = 0; i < list.length; ++i) {
-			clause.clear();
-                        clause.add(- resultIsOne);
-			clause.add(listIsOne[i]);
-			wrapper.addModelClause(clause.toArray());
-		}
-				
-		// clause '(for all i, list[i]=1) => result=1'
-		clause.clear();
-		clause.add(resultIsOne);
-		for (int i = 0; i < list.length; ++i)
-			clause.add(- listIsOne[i]);
-		wrapper.addModelClause(clause.toArray());
-
-	}
-        
 	@Override
 	public void increaseWeight() {
 		if (increaseWeight) {

@@ -37,7 +37,6 @@ import java.util.HashSet;
 
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
-import org.jacop.satwrapper.SatWrapper;
 import org.jacop.util.SimpleHashSet;
 import org.jacop.util.SparseSet;
 
@@ -384,9 +383,6 @@ public class Store {
 		//trailManager = new SimpleBacktrackableManager(vars, 0);
 		trailManager = new IntervalBasedBacktrackableManager(vars, this.size, 10, Math.max( size / 10, 4 ));
 		
-		satWrapper = new SatWrapper();
-		this.impose(satWrapper);
-
 	}
 
 	/**
@@ -1261,11 +1257,6 @@ public class Store {
 	public int sparseSetSize = 0;
 
 	/**
-	 * It is a wrapper around a SAT solver.
-	 */
-	public SatWrapper satWrapper;
-
-	/**
 	 * It recordTuples to store so tuples can be reused across multiple
 	 * extensional constraints. It can potentially save memory.
 	 * @param ts tuples to be recorded.
@@ -1494,15 +1485,6 @@ public class Store {
 				return "Removal of old values was done properly " + vars[i];
 			
 		return null;
-	}
-
-	public void imposeToSat(Constraint constraint) {
-		if (SwitchesPruningLogging.trace)
-			if (SwitchesPruningLogging.traceStore)
-				if (SwitchesPruningLogging.traceConstraintImposition)
-					System.out.println("Constraint imposed to the SAT store " + constraint);
-
-		constraint.imposeToSat(this.satWrapper);
 	}
 
 }

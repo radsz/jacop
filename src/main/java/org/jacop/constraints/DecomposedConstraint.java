@@ -35,7 +35,6 @@ import java.util.ArrayList;
 
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.satwrapper.SatWrapper;
 
 /**
  * Standard unified interface/abstract class for constraints, which can only be decomposed. 
@@ -99,12 +98,4 @@ public abstract class DecomposedConstraint {
 	 */
 	public ArrayList<Var> auxiliaryVariables() { return null; }
 
-	/**
-	 * It imposes to a SAT solver the cnf description of the constrain being imposed.
-	 * @param wrapper
-	 */
-	public void imposeToSat(SatWrapper wrapper) {
-		throw new UnsupportedOperationException();
-	}
-	
 }
