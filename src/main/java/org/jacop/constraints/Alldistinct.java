@@ -61,7 +61,7 @@ import org.jacop.util.SimpleHashSet;
  * 0..1000000 will make it use few MB already and kill the efficiency.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 3.0
+ * @version 4.0
  */
 
 public class Alldistinct extends Constraint {

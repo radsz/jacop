@@ -47,7 +47,7 @@ import org.jacop.core.Store;
  * It solves Langford problem. 
  * 
  * @author Radoslaw Szymanek
- * @version 3.0
+ * @version 4.0
  */
 
 public class Langford extends ExampleFD {

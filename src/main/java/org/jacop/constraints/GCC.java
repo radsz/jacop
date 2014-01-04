@@ -58,7 +58,7 @@ import org.jacop.core.Var;
 * 
 * @author Jocelyne Lotfi and Radoslaw Szymanek.
 * 
-* @version 3.0
+* @version 4.0
 */
 
 public class GCC extends Constraint {

@@ -44,7 +44,7 @@ package org.jacop.core;
  * timestamp may ask for the level at which the timestamp was recently updated.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 3.0
+ * @version 4.0
  * @param <T> a class being stored at different time stamps. 
  */
 

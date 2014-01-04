@@ -45,7 +45,7 @@ import org.jacop.core.Var;
  * Constraint X + Y #= C
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 3.0
+ * @version 4.0
  */
 
 public class XplusYeqC extends PrimitiveConstraint {

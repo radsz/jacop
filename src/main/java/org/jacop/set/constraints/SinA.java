@@ -45,7 +45,7 @@ import org.jacop.set.core.SetVar;
  * included in a set variable a.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 3.0
+ * @version 4.0
  */
 
 public class SinA extends PrimitiveConstraint {

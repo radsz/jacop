@@ -38,7 +38,7 @@ import org.jacop.core.Store;
  * the labeling procedure.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 3.0
+ * @version 4.0
  */
 
 public interface ExitListener {

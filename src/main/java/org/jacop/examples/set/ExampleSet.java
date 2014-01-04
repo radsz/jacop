@@ -50,7 +50,7 @@ import org.jacop.set.search.IndomainSetMin;
  * It is an abstract class to describe all necessary functions of any store.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 3.0
+ * @version 4.0
  */
 
 public abstract class ExampleSet {

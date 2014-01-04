@@ -39,7 +39,7 @@ import org.jacop.core.Var;
  * search to change your depth first search into limited discrepancy search.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 3.0
+ * @version 4.0
  * @param <T> type of variable being used in the search.
  */
 

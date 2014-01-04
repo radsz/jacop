@@ -38,7 +38,7 @@ package org.jacop.constraints;
  * belongs to it nad b does not) and the value.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 3.0
+ * @version 4.0
  */
 
 public class ProfileItem {

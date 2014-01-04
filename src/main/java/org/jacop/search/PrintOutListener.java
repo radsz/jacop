@@ -36,7 +36,7 @@ package org.jacop.search;
  * add your own functionality.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 3.0
+ * @version 4.0
  */
 import org.jacop.core.Var;
 

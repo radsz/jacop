@@ -40,7 +40,7 @@ import java.util.Iterator;
  * current value.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 3.0
+ * @version 4.0
  */
 
 public class Profile extends ArrayList<ProfileItem> {

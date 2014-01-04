@@ -51,7 +51,7 @@ import org.jacop.core.Var;
  * sub-domain and it is inactive otherwise.
  * 
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 3.0
+ * @version 4.0
  * 
  */
 

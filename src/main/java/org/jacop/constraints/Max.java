@@ -45,7 +45,7 @@ import org.jacop.core.Var;
  * max(list) = max.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 3.0
+ * @version 4.0
  */
 
 public class Max extends Constraint {

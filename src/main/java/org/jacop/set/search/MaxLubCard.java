@@ -40,7 +40,7 @@ import org.jacop.set.core.SetVar;
  * cardinality for the least upper bound has the priority.
  * 
  * @author Krzysztof Kuchcinski and Robert Åkemalm 
- * @version 3.0
+ * @version 4.0
  * @param <T> 
  */
 
