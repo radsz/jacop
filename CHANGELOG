@@ -3,9 +3,13 @@ Version 4.0
 
 1. Maven support and new directory structure. The package has changed name from JaCoP to org.jacop and files are placed in the new directory structure. 
 
-2. Introduction of stochastic variables and constraints (preliminary).
+2. Experimental feature - stochastic variables and constraints - is moved to feature branch as it still requires additional testing.
+   It is excluded from this release, but we encourage contribution in this branch (examples/tests in particular) to help us make it
+   quicker a part of the next release.
 
-3. SAT solver...
+3. Experimental feature SAT solver - JaSAT - is moved to experimental feature branch as its performance and integration with JaCoP still
+   requires extra work. It is excluded from this release, but we encourage contribution in this branch to help us make it quicker a part
+    of the next release.
 
 4. Adding constraint SumWeightDom that implements domain consistency
    for weighted sum of linear terms.
