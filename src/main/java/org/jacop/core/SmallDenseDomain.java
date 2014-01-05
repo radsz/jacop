@@ -440,6 +440,9 @@ public class SmallDenseDomain extends IntDomain {
 		if (min <= this.min && max >= this.max)
 			return;
 
+        if (singleton)
+            return;
+
 		long bitsResult = bits;
 		
 //		System.out.println( "Starting with " + new SmallDenseDomain(min, bitsResult));
@@ -931,8 +934,11 @@ public class SmallDenseDomain extends IntDomain {
 			maxComplement = max;
 		
 		long bitsResult = bits & ~( SEQ_ARRAY[maxComplement - minComplement] << ( min + 63 - maxComplement ) );
-		
-		int newSize = getSize( bitsResult );
+
+        if (bitsResult == bits)
+            return;
+
+        int newSize = getSize( bitsResult );
 
 		if (newSize == 0)
 			throw failException;
