@@ -48,7 +48,7 @@ import org.jacop.core.Var;
  * given the scope of the variables of interest.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 3.0
+ * @version 4.0
  */
 
 public class TransformExtensional implements InitializeListener {

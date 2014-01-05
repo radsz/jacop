@@ -35,7 +35,7 @@ package org.jacop.util;
  * Sparse set representation of the set.
  *  
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 3.0
+ * @version 4.0
  */
 
 public class SparseSet {

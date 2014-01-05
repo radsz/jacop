@@ -34,13 +34,12 @@ package org.jacop.core;
 import java.util.ArrayList;
 
 import org.jacop.constraints.Constraint;
-import org.jacop.satwrapper.translation.SatCPBridge;
 
 /**
  * Defines a Finite Domain Variable (FDV) and related operations on it.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 3.0
+ * @version 4.0
  */
 
 public class IntVar extends Var {
@@ -50,11 +49,6 @@ public class IntVar extends Var {
 	 * stamp.
 	 */
 	public IntDomain domain;
-
-	/**
-	 * It stores information about the variable in SAT domain.
-	 */
-	public SatCPBridge satBridge;
 
 	/**
 	 * It specifies the arguments required to be saved by an XML format as well as 

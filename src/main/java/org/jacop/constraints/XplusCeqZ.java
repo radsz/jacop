@@ -38,14 +38,12 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
-import org.jacop.jasat.utils.structures.IntVec;
-import org.jacop.satwrapper.SatWrapper;
 
 /**
  * Constraint X + C #= Z.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 3.0
+ * @version 4.0
  */
 
 public class XplusCeqZ extends PrimitiveConstraint {
@@ -172,42 +170,6 @@ public class XplusCeqZ extends PrimitiveConstraint {
 		z.putModelConstraint(this, getConsistencyPruningEvent(z));
 		store.addChanged(this);
 		store.countConstraint();
-	}
-        
-        /**
-	 * impose this constraint in the enslaved SAT solver
-	 * @param wrapper	the wrapper around the SAT solver
-	 */
-	public void imposeToSat(SatWrapper wrapper) {
-
-		//String msg = "";
-		//for (IntVar v: list)	msg += v+" ";
-		//wrapper.log(this, "registering for "+msg+" (and) "+result);
-
-		// register all variables
-		wrapper.register(x);
-		wrapper.register(z);
-
-		IntVec clause = new IntVec(wrapper.pool);
-                
-		for(ValueEnumeration en1 = x.domain.valueEnumeration(); en1.hasMoreElements();) {
-			int xEl = en1.nextElement();
-			for(ValueEnumeration en2 = z.domain.valueEnumeration(); en2.hasMoreElements();) {
-
-				int zEl = en2.nextElement();
-
-				if (xEl + c != zEl) {
-					clause.clear();
-					clause.add( - wrapper.cpVarToBoolVar(x, xEl, true) );
-					clause.add( - wrapper.cpVarToBoolVar(z, zEl, true) );
-					wrapper.addModelClause(clause.toArray());
-					//System.out.print(clause + " ");
-					//System.out.println( wrapper.showClauseMeaning(clause) );
-				}
-
-			}
-		}
-
 	}
 
 	@Override

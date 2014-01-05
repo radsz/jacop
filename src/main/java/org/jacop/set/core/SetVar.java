@@ -42,7 +42,7 @@ import org.jacop.core.Var;
  * Defines a Finite Domain Variable (FDV) and related operations on it.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 3.0
+ * @version 4.0
  */
 
 public class SetVar extends Var {

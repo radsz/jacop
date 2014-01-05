@@ -35,7 +35,7 @@ import java.util.HashSet;
 
 /**
  * @author Radoslaw Szymanek
- * @version 3.0
+ * @version 4.0
  */
 
 public class FSMState {	

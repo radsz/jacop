@@ -19,7 +19,7 @@ import org.jacop.search.TraceGenerator;
  * It is used for test purpose only.
  *
  * @author Krzysztof Kuchcinski
- * @version 3.0
+ * @version 4.0
  */
 public class CPvizNetworkFlow{
     Store store;

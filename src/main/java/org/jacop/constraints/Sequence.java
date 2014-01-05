@@ -52,7 +52,7 @@ import org.jacop.util.fsm.FSMTransition;
  * contains between min and max values from the given set.
  * 
  * @author Radoslaw Szymanek and Polina Makeeva
- * @version 3.0
+ * @version 4.0
  */
 
 public class Sequence extends DecomposedConstraint {

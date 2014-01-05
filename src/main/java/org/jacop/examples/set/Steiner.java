@@ -55,7 +55,7 @@ import org.jacop.set.search.MaxCardDiff;
  * It models and solves Steiner problem.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 3.0
+ * @version 4.0
  */
 
 public class Steiner extends ExampleSet {

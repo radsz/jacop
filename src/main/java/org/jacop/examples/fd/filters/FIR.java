@@ -41,7 +41,7 @@ import java.util.ArrayList;
  * (Vol. 13, No. 3), pp. 88-96
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 3.0
+ * @version 4.0
  */
 
 public class FIR extends Filter {

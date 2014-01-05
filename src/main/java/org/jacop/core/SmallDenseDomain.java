@@ -40,7 +40,7 @@ import org.jacop.constraints.Constraint;
  * Defines small dense domain based on bits within a long number. 
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 3.0
+ * @version 4.0
  */
 
 public class SmallDenseDomain extends IntDomain {

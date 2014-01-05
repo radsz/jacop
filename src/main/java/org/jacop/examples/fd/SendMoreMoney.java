@@ -60,7 +60,7 @@ import org.jacop.search.SmallestDomain;
  * MONEY          10652
  * 
  * @author Radoslaw Szymanek
- * @version 3.0
+ * @version 4.0
  *
  */
 public class SendMoreMoney extends ExampleFD {

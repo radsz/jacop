@@ -44,15 +44,13 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.Var;
-import org.jacop.jasat.utils.structures.IntVec;
-import org.jacop.satwrapper.SatWrapper;
 
 /**
  * Alldifferent constraint assures that all FDVs has differnet values. It uses
  * partial consistency technique.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 3.0
+ * @version 4.0
  */
 
 public class Alldifferent extends Constraint {
@@ -223,48 +221,6 @@ public class Alldifferent extends Constraint {
 		
 		store.addChanged(this);
 		store.countConstraint();
-	}
-
-        /**
-        * impose this constraint via clauses in the SAT solver
-        * @param wrapper	the wrapper around the SAT solver
-        */
-        @Override
-        public void imposeToSat(SatWrapper wrapper) {
-		// register vars; set vars domains; generate clauses; add clauses
-
-		// register vars involved
-		for (IntVar v : list) {
-			wrapper.register(v);
-		}
-
-		/*
-		 * begin generating clauses
-		 */
-		IntVec clause = new IntVec(wrapper.pool);
-
-		// (x_i = v) => (forall x_j \in list, (x_j != x_i) => (x_j != v))
-		for (int i = 0; i < list.length; i++) {
-			IntVar vi = list[i];
-			for (int j = i + 1; j < list.length; j++) {
-				IntVar vj = list[j];
-
-				// vi != vj. So, for all v in domain of vi, if vi=v, then vj!=v
-				for (int v : vi.domain.toIntArray()) {
-
-					// see if vj=v is possible (if not, continue)
-					if (! vj.domain.contains(v))
-						continue;
-
-					// clause 'vi!=v or vj!=v' (ie vi=v => vj!=v)
-					clause.clear();
-					clause.add(- wrapper.cpVarToBoolVar(vi, v, true));
-					clause.add(- wrapper.cpVarToBoolVar(vj, v, true));
-					wrapper.addModelClause(clause.toArray());
-					// System.out.println("add clause "+ clause + " " + wrapper.showLiteralMeaning(clause));
-				}
-			}
-		}
 	}
         
 	@Override

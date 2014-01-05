@@ -43,7 +43,7 @@ import org.jacop.core.Var;
  * Constraints X #\= C
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 3.0
+ * @version 4.0
  */
 
 public class XneqC extends PrimitiveConstraint {

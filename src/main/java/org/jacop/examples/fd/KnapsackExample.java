@@ -46,7 +46,7 @@ import org.jacop.core.Store;
  * It shows the capabilities and usage of Knapsack constraint.
  * 
  * @author Radoslaw Szymanek
- * @version 3.0
+ * @version 4.0
  * 
  * It models and solves a simple knapsack problem. There 
  * are two different models. The first one uses quantity

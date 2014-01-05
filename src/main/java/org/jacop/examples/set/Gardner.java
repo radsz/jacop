@@ -52,7 +52,7 @@ import org.jacop.set.search.IndomainSetMin;
  * It specifies a simple Gardner problem which use set functionality from JaCoP. 
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 3.0
+ * @version 4.0
  */
 
 public class Gardner extends ExampleSet {
