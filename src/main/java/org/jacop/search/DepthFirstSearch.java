@@ -52,7 +52,7 @@ import org.jacop.set.core.SetVar;
  * be attached to modify the search.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 3.0
+ * @version 4.0
  * @param <T> type of variables used in this search. 
  */
 

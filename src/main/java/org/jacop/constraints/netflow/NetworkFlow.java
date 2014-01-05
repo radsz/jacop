@@ -54,7 +54,7 @@ import org.jacop.core.Var;
  * instantiate the network.
  * 
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 3.0
+ * @version 4.0
  * 
  */
 

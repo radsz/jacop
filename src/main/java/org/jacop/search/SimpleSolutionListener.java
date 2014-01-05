@@ -48,7 +48,7 @@ import org.jacop.set.core.SetVar;
  * functionality of search when a solution is encountered are required.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 3.0
+ * @version 4.0
  * @param <T> type of variable being used in search. 
  */
 

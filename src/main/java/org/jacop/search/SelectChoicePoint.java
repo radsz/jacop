@@ -43,7 +43,7 @@ import org.jacop.core.Var;
  * enforced.
  * 
  * @author Radoslaw Szymanek and Radoslaw Szymanek
- * @version 3.0
+ * @version 4.0
  * @param <T> type of the variable for which choice point is being created.
  */
 

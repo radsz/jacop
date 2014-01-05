@@ -51,7 +51,7 @@ import org.jacop.core.TimeStamp;
  * data structures for removal and modification of arcs.
  *
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 3.0
+ * @version 4.0
  * 
  */
 

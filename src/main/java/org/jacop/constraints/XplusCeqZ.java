@@ -43,7 +43,7 @@ import org.jacop.core.Var;
  * Constraint X + C #= Z.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 3.0
+ * @version 4.0
  */
 
 public class XplusCeqZ extends PrimitiveConstraint {

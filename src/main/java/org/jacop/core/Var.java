@@ -37,7 +37,7 @@ import org.jacop.constraints.Constraint;
  * Defines a variable and related operations on it.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 3.0
+ * @version 4.0
  */
 
 public abstract class Var implements Backtrackable {

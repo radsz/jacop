@@ -43,7 +43,7 @@ import org.jacop.util.SimpleHashSet;
  * 
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 3.0
+ * @version 4.0
  */
 
 public class Or extends PrimitiveConstraint {
