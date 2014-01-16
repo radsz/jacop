@@ -359,7 +359,11 @@ public class Constraints implements ParserTreeConstants {
 		    else if (v2.singleton() && v2.value() >= v1.max() ) {
 			int max = v2.value();
 			v3.domain.in(store.level, v3, max, max);
-		    }
+		    } 
+		    else if (v1.min() >= v2.max() )
+			pose(new XeqY(v1, v3));
+		    else if (v2.min() >= v1.max() )
+			pose(new XeqY(v2, v3));
 		    else if (v1 == v2)
 		    	pose(new XeqY(v1, v3));
 		    else
