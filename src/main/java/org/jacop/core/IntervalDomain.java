@@ -3408,8 +3408,7 @@ public class IntervalDomain extends IntDomain {
 			if (result.isEmpty())
 				throw Store.failException;
 
-			// ADDED BY KKU
-			if ( eq(result) ) 
+			if ( result.eq(this) )
 			    return;
 
 			int returnedEvent = IntDomain.ANY;
