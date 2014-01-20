@@ -102,25 +102,9 @@ public class IndomainMiddle<T extends IntVar> implements Indomain<T> {
 			} else
 				return middle;
 
-		}
-
-		IntDomain dom = var.dom();
-		
-		if (dom.isSparseRepresentation()) {
+		} else {
 			
-			int size = dom.getSize() / 2;
-			
-			ValueEnumeration enumer = dom.valueEnumeration();
-			
-			while (enumer.hasMoreElements() && size > 0) {
-				enumer.nextElement();
-				size--;
-			}
-
-			return enumer.nextElement();
-		}
-		else {
-			
+		        IntDomain dom = var.dom();
 			int dMin = dom.min(), dMax = dom.max();
 
 			if (dom.singleton())
