@@ -837,6 +837,10 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar[] v = getVarArray((SimpleNode)node.jjtGetChild(0));
 
 		    pose(new Circuit(v));
+
+		    if ( domainConsistency )  // we add additional implied constraint if domain consistency is required
+			parameterListForAlldistincts.add(v);
+
 		}
 		else if (p.startsWith("subcircuit", 6)) {
 		    IntVar[] v = getVarArray((SimpleNode)node.jjtGetChild(0));
@@ -1203,7 +1207,7 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar[] x = getVarArray((SimpleNode)node.jjtGetChild(0));
 		    IntVar[] y = getVarArray((SimpleNode)node.jjtGetChild(1));
 
-		    System.out.println ("lex_lesseq_int: x.length = " + x.length +  " y.length = " + y.length);
+		    //System.out.println ("lex_lesseq_int: x.length = " + x.length +  " y.length = " + y.length);
 
 		    DecomposedConstraint c = new org.jacop.constraints.Lex(new IntVar[][] {x, y});
 
