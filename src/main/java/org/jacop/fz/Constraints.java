@@ -1045,6 +1045,9 @@ public class Constraints implements ParserTreeConstants {
 		    // we do not not pose Assignment directly because of possible inconsistency with its 
 		    // intiallization; we collect all constraints and pose them at the end when all other constraints are posed
 
+		    if ( domainConsistency )  // we add additional implied constraint if domain consistency is required
+			parameterListForAlldistincts.add(f);
+
 		    delayedConstraints.add(new Assignment(f, invf, index_f, index_invf));
 
 // 		    pose(new Assignment(f, invf, index_f, index_invf));
