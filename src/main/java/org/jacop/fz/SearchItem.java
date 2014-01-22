@@ -59,6 +59,7 @@ import org.jacop.set.search.IndomainSetMin;
 import org.jacop.set.search.MaxCardDiff;
 import org.jacop.set.search.MinCardDiff;
 import org.jacop.set.search.MinGlbCard;
+import org.jacop.set.search.MaxLubCard;
 
 
 /**
@@ -381,8 +382,8 @@ public class SearchItem implements ParserTreeConstants {
 	// 	    tieBreaking = new MostConstrainedStatic();
 	//  	    return new SmallestDomain();
 	// 	}
-	// 	else if (var_selection_heuristic.equals("largest"))
-	// 	    return new LargestMin();
+	else if (var_selection_heuristic.equals("largest"))
+	    return new MaxLubCard();
 	// 	else if (var_selection_heuristic.equals("max_regret"))
 	// 	    return new MaxRegret();
 	else 
