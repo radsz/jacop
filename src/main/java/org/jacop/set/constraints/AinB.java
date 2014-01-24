@@ -220,7 +220,7 @@ public class AinB extends PrimitiveConstraint {
 	@Override
 	public boolean notSatisfied() {
 
-			return (!((SetDomain) b.dom()).lub().contains(((SetDomain) a.dom()).lub()) );
+	    return ((SetDomain) b.dom()).lub().intersect(((SetDomain) a.dom()).lub()).isEmpty();  //(!((SetDomain) b.dom()).lub().contains(((SetDomain) a.dom()).lub()) );
 
 	}
 
