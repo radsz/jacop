@@ -647,7 +647,15 @@ public class Constraints implements ParserTreeConstants {
 		    SetVar v1 = getSetVariable(node, 0);
 		    SetVar v2 = getSetVariable(node, 1);
 
-		    pose(new Not(new org.jacop.set.constraints.AeqB(v1, v2)));
+		    PrimitiveConstraint c = new Not(new org.jacop.set.constraints.AeqB(v1, v2));
+
+		    if (p.startsWith("_reif", 6)) {
+			IntVar v3 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
+
+			pose(new Reified(c, v3));
+		    }
+		    else
+			pose(c);
 		}
 		else if (p.startsWith("lt", 4)) {
 
