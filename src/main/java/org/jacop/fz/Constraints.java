@@ -2292,6 +2292,12 @@ public class Constraints implements ParserTreeConstants {
 	IntDomain[] p2 = getSetArray((SimpleNode)node.jjtGetChild(1));
 	SetVar p3 = getSetVariable(node, 2);
 
+	for (int i=0; i < p2.length; i++)
+	    if (p2[i] == null) {
+	    System.err.println("%% var_set_element with list of set variables is not avaible in org.jacop.set");
+	    System.exit(0);
+	}
+	
 	pose(new ElementSet(p1, p2, p3));
     }
 
@@ -2301,10 +2307,19 @@ public class Constraints implements ParserTreeConstants {
 	SetVar p3 = getSetVariable(node, 2);
 
 	IntDomain[] p2 = getSetArray((SimpleNode)node.jjtGetChild(1));
-	if (p2 != null)
+	if (p2 != null) {
+
+	    for (int i=0; i < p2.length; i++)
+		if (p2[i] == null) {
+		    System.err.println("%% var_set_element with list of set variables is not avaible in org.jacop.set");
+		    System.exit(0);
+		}
+	    
 	    pose(new ElementSet(p1, p2, p3));
+
+	}
 	else {
-	    System.err.println("var_set_element with list of set variables is not avaible in org.jacop.set");
+	    System.err.println("%% var_set_element with list of set variables is not avaible in org.jacop.set");
 	    System.exit(0);
 	}
     }
@@ -2389,7 +2404,7 @@ public class Constraints implements ParserTreeConstants {
 		}
 	    }
 	    else {
-		System.err.println("Wring set array."); 
+		System.err.println("Wrong set array."); 
 		System.exit(0);
 	    }
 	}
