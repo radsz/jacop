@@ -2245,8 +2245,12 @@ public class Constraints implements ParserTreeConstants {
 	}
 	*/
 
-	int[] newP2 = new int[p1.max() - p1.min() + 1];
-	for (int i=0; i < newP2.length; i++) 
+	p1.domain.in(store.level, p1, 1, IntDomain.MaxInt);
+
+	int newP2Length = p1.max() - p1.min() + 1;
+	int listLength = (p2.length < newP2Length) ? p2.length : newP2Length;
+	int[] newP2 = new int[listLength];
+	for (int i=0; i < listLength; i++) 
 	    newP2[i] = p2[p1.min() - 1 + i];
 
 	pose(new Element(p1, newP2, p3, p1.min() - 1));
