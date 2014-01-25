@@ -672,22 +672,20 @@ public class Constraints implements ParserTreeConstants {
 		    pose(new Lex(v2, v1));
 		}
 		else if (p.startsWith("le", 4)) {
-			// FIXME, either change Lex to accept nonstrict relation, or use other constraints.
-		    // not OK, Lex does not allow eq
+
 		    SetVar v1 = getSetVariable(node, 0);
 		    SetVar v2 = getSetVariable(node, 1);
 
-		    pose(new Lex(v1, v2));
-		    // 		    System.err.println("Used lex ordering constraint instead of set_le; Lex inforces strict order, not equality");
+		    pose(new Lex(v1, v2, false));
+
 		}
 		else if (p.startsWith("ge", 4))  {
-		    // not OK, because Lex does not allow eq
-			// FIXME, either change Lex to accept nonstrict relation, or use other constraints.
+
 		    SetVar v1 = getSetVariable(node, 0);
 		    SetVar v2 = getSetVariable(node, 1);
 
-		    pose(new Lex(v2, v1));
-		    // 		    System.err.println("Used lex ordering constraint instead of set_ge; Lex inforces strict order, not equality");
+		    pose(new Lex(v2, v1, false));
+
 		}
 
 		else  if (p.startsWith("intersect", 4)) {
