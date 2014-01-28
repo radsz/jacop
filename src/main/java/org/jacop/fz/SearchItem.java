@@ -329,11 +329,12 @@ public class SearchItem implements ParserTreeConstants {
 	else if (var_selection_heuristic.equals("first_fail")) 
  	    return new SmallestDomain();
 	else if (var_selection_heuristic.equals("anti_first_fail")) {
-	    tieBreaking = new MostConstrainedStatic();
+	    // does not follow flatzinc definition but may give better results ;)
+	    //tieBreaking = new MostConstrainedStatic();
 	    return new LargestDomain();
 	}
 	else if (var_selection_heuristic.equals("most_constrained")) {
-	    tieBreaking = new MostConstrainedStatic();
+	    //tieBreaking = new MostConstrainedStatic();
 	    return new SmallestDomain();
 	}
 	else if (var_selection_heuristic.equals("occurrence"))
@@ -341,7 +342,7 @@ public class SearchItem implements ParserTreeConstants {
 	else if (var_selection_heuristic.equals("smallest")) {
 	    // does not follow flatzinc definition but may give better results ;)
  	    // tieBreaking = new MostConstrainedStatic(); 
-	    tieBreaking = new SmallestDomain();
+	    //tieBreaking = new SmallestDomain();
 	    return new SmallestMin();
 	}
 	else if (var_selection_heuristic.equals("largest"))

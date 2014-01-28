@@ -176,6 +176,9 @@ public class VariablesParameters implements ParserTreeConstants {
 	case 1: // int interval
 	    ident = ((ASTVarDeclItem)node).getIdent();
 
+	    if (lowInterval > highInterval)
+		throw Store.failException;		
+
 	    if (interval)
 		varInt = new IntVar(store, ident, new IntervalDomain(lowInterval, highInterval));
 	    else
@@ -284,7 +287,8 @@ public class VariablesParameters implements ParserTreeConstants {
 	    break;
 	case 5: // set interval
 	    ident = ((ASTVarDeclItem)node).getIdent();
-	    varSet = new SetVar(store, ident, new BoundSetDomain(lowInterval, highInterval));
+	    varSet = new SetVar(store, ident, new BoundSetDomain(new IntervalDomain(),
+								 new IntervalDomain(lowInterval, highInterval)));
 	    table.addSetVariable(ident, (SetVar) varSet);
 	    if (initChild < ((ASTVarDeclItem)node).jjtGetNumChildren()) {
 
@@ -474,6 +478,10 @@ public class VariablesParameters implements ParserTreeConstants {
 	case 1: // array of int interval
 	    size = ((ASTVarDeclItem)node).getHighIndex() - ((ASTVarDeclItem)node).getLowIndex() + 1;
 	    varArrayInt = null;
+
+	    if (lowInterval > highInterval)
+		throw Store.failException;		
+
 	    if (initChild < ((ASTVarDeclItem)node).jjtGetNumChildren()) {
 		// array initialization
 		varArrayInt = getScalarFlatExpr_ArrayVar(store, node, initChild);
@@ -483,6 +491,7 @@ public class VariablesParameters implements ParserTreeConstants {
 	    }
 	    else { // no init values
 		varArrayInt = new IntVar[size];
+
 		for (int i=0; i<size; i++)
 		    if (interval)
 			varArrayInt[i] = new IntVar(store, ident+"["+ i +"]", new IntervalDomain(lowInterval, highInterval));
@@ -572,7 +581,8 @@ public class VariablesParameters implements ParserTreeConstants {
 	    else { // no init values
 		varArraySet = new SetVar[size];
 		for (int i=0; i<size; i++)
-		    varArraySet[i] = new SetVar(store, ident+"["+i+"]", new BoundSetDomain(lowInterval, highInterval));
+		    varArraySet[i] = new SetVar(store, ident+"["+i+"]", new BoundSetDomain(new IntervalDomain(),
+											   new IntervalDomain(lowInterval, highInterval)));
 		table.addSearchSetArray(varArraySet);
 	    }
 	    table.addSetVariableArray(ident, varArraySet);

@@ -659,12 +659,22 @@ public class Constraints implements ParserTreeConstants {
 		}
 		else if (p.startsWith("lt", 4)) {
 
+		    if (p.startsWith("_reif", 6)) {
+			System.err.println("%% set_lt_reif with list of set variables is not avaible in org.jacop.set");
+			System.exit(0);
+		    }
+
 		    SetVar v1 = getSetVariable(node, 0);
 		    SetVar v2 = getSetVariable(node, 1);
 
 		    pose(new Lex(v1, v2));
 		}
 		else if (p.startsWith("gt", 4)) {
+
+		    if (p.startsWith("_reif", 6)) {
+			System.err.println("%% set_gt_reif with list of set variables is not avaible in org.jacop.set");
+			System.exit(0);
+		    }
 
 		    SetVar v1 = getSetVariable(node, 0);
 		    SetVar v2 = getSetVariable(node, 1);
@@ -673,6 +683,11 @@ public class Constraints implements ParserTreeConstants {
 		}
 		else if (p.startsWith("le", 4)) {
 
+		    if (p.startsWith("_reif", 6)) {
+			System.err.println("%% set_le_reif with list of set variables is not avaible in org.jacop.set");
+			System.exit(0);
+		    }
+
 		    SetVar v1 = getSetVariable(node, 0);
 		    SetVar v2 = getSetVariable(node, 1);
 
@@ -680,6 +695,11 @@ public class Constraints implements ParserTreeConstants {
 
 		}
 		else if (p.startsWith("ge", 4))  {
+
+		    if (p.startsWith("_reif", 6)) {
+			System.err.println("%% set_ge_reif with list of set variables is not avaible in org.jacop.set");
+			System.exit(0);
+		    }
 
 		    SetVar v1 = getSetVariable(node, 0);
 		    SetVar v2 = getSetVariable(node, 1);
