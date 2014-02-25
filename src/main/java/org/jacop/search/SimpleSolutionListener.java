@@ -42,6 +42,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.set.core.SetVar;
+import org.jacop.floats.core.FloatVar;
 
 /**
  * It defines a simple solution listener which should be used if some basic
@@ -254,6 +255,8 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 						vars = (T[]) new IntVar[position.size()];
 					if (current instanceof SetVar)
 						vars = (T[]) new SetVar[position.size()];	 
+					if (current instanceof FloatVar)
+						vars = (T[]) new FloatVar[position.size()];	 
 				}
 				vars[position.get(current)] = current;
 			}
