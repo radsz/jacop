@@ -2089,10 +2089,6 @@ public class FloatIntervalDomain extends FloatDomain {
     public void in(int storeLevel, Var var, double min, double max) {
 	// System.out.println (var + " in " + min+".."+max);
 
-	// taking into account precision
-	// min = min - FloatDomain.ulp(min);
-	// max = max + FloatDomain.ulp(max);
-
 	assert checkInvariants() == null : checkInvariants() ;
 		
 	assert (min - FloatDomain.ulp(min) <= max + FloatDomain.ulp(max)) : "Min value greater than max value " + min + " > " + max;

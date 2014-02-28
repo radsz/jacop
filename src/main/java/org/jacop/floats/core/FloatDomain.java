@@ -64,6 +64,17 @@ public abstract class FloatDomain extends Domain {
     public static final double MaxFloat = 1e150;	
 
     /**
+     * It specifies the constant pi, as defined in java.lang.Math package.
+     */
+    public static final double PI = java.lang.Math.PI;
+
+    /**
+     * It specifies the constant e, as defined in java.lang.Math package.
+     */
+    public static final double E = java.lang.Math.E;
+
+
+    /**
      * It specifies the method for printing a domain.
      * If true, we print each domain as an interval regardles of
      * the current precision of calculations.

@@ -125,6 +125,7 @@ public final class FloatInterval {
 	//	System.out.println ("precision = " + FloatDomain.precision() + ", ulp = " + FloatDomain.ulp(large) + ", espsilon = " + FloatDomain.epsilon(large));
 
 	return (max-min) <= FloatDomain.epsilon(large);
+
     }
 
     /**

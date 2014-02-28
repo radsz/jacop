@@ -85,6 +85,8 @@ public class PeqQ extends PrimitiveConstraint {
 		numberId = idNumber++;
 		numberArgs = 2;
 
+		this.queueIndex = 0;
+
 		this.p = p;
 		this.q = q;
 	}
@@ -106,11 +108,11 @@ public class PeqQ extends PrimitiveConstraint {
 	    do {
 			
 		// domain consistency
-		p.domain.in(store.level, p, q.min(), q.max());
+		p.domain.in(store.level, p, q.dom()); //min(), q.max());
 			
 		store.propagationHasOccurred = false;
 			
-		q.domain.in(store.level, q, p.min(), p.max());
+		q.domain.in(store.level, q, p.dom()); //min(), p.max());
 
 	    } while (store.propagationHasOccurred);
 
