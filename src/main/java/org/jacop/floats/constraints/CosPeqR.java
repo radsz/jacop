@@ -32,17 +32,23 @@
 package org.jacop.floats.constraints;
 
 import java.util.ArrayList;
+import java.lang.Math;
 
-import org.jacop.core.Var;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Interval;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.IntervalEnumeration;
+import org.jacop.core.SmallDenseDomain;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
+
 import org.jacop.constraints.Constraint;
-import org.jacop.constraints.DecomposedConstraint;
-
 import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.constraints.PplusCeqR;
-import org.jacop.floats.constraints.SinPeqR;
 import org.jacop.floats.core.FloatDomain;
-
+import org.jacop.floats.core.FloatIntervalDomain;
+import org.jacop.floats.core.FloatInterval;
+import org.jacop.floats.core.InternalException;
 
 /**
  * Constraints cos(P) = R
@@ -57,6 +63,12 @@ public class CosPeqR extends Constraint {
 
     static int IdNumber = 1;
 
+    static final boolean debugAll = false;
+
+    boolean firstConsistencyCheck = true;
+
+    int firstConsistencyLevel;
+
     /**
      * It contains variable p.
      */
@@ -68,9 +80,10 @@ public class CosPeqR extends Constraint {
     public FloatVar q;
 
     /**
-     * It contains constraints of the CosPeqR constraint decomposition. 
+     * It specifies the arguments required to be saved by an XML format as well as 
+     * the constructor being called to recreate an object from an XML format.
      */
-    ArrayList<Constraint> constraints;
+    public static String[] xmlAttributes = {"p", "q"};
 
     /**
      * It constructs cos(P) = Q constraints.
@@ -85,6 +98,7 @@ public class CosPeqR extends Constraint {
 	numberId = IdNumber++;
 	numberArgs = 2;
 
+	this.queueIndex = 1;
 	this.p = p;
 	this.q = q;
     }
@@ -92,87 +106,321 @@ public class CosPeqR extends Constraint {
 
     @Override
     public ArrayList<Var> arguments() {
-	ArrayList<Var> args = new ArrayList<Var>();
 
-	for (Constraint c : constraints)
-	    for (Var v : c.arguments())
-		args.add(v);
+	ArrayList<Var> variables = new ArrayList<Var>(2);
 
-	return args;
+	variables.add(p);
+	variables.add(q);
+	return variables;
+    }
+
+    @Override
+    public void removeLevel(int level) {
+	if (level == firstConsistencyLevel) 
+	    firstConsistencyCheck = true;
     }
 
     @Override
     public void consistency(Store store) {
-	// for (Constraint c : constraints)
-	//     c.consistency(store);
+
+	if (firstConsistencyCheck) {
+	    q.domain.in(store.level, q, -1.0, 1.0);
+	    firstConsistencyCheck = false;
+	    firstConsistencyLevel = store.level;
+	}
+
+	boundConsistency(store);
+
+    }
+
+    void boundConsistency(Store store) {
+
+	// System.out.println ("1. CosPeqR("+p+", "+q+")");
+
+	if (p.max() - p.min() >= 2*FloatDomain.PI)
+	    return;
+
+	do {
+
+	    store.propagationHasOccurred = false;
+
+	    if (satisfied())
+	    	return;
+
+	    double min = p.min();
+	    double max = p.max();
+	    if (p.min() < -2*FloatDomain.PI || p.max() > 2*FloatDomain.PI) {
+		// normalize to -2*PI..2*PI
+
+		min = rest(p.min(), true);
+		max = rest(p.max(), false);
+
+		// System.out.println ("min = " + min + ", max = " + max);
+
+		if (min > max) {
+		    // System.out.println ("*** subtracting 2_PI from " + min);
+
+		    min -= 2*FloatDomain.PI;
+		}
+		double N = period(p.min(), min);
+		    
+		if ( Math.abs(N) < FloatDomain.precision())
+		    N = 0;
+
+		// System.out.println ("Not-normalized " + p);
+		// System.out.println ("Normalized interval within -2*PI..2*PI interval = " + min + ".." + max);
+		// System.out.println ("period = " + N);
+	    }
+
+	    int intervalForMin = intervalNo(min);
+	    int intervalForMax = intervalNo(max);
+
+	    // System.out.println ("min in interval " + intervalForMin);
+	    // System.out.println ("max in interval " + intervalForMax);
+
+	    double qMin=-1.0, qMax=1.0;
+	    switch (intervalForMin) {
+
+	    case 1: 
+		switch (intervalForMax) {
+		case 1: 
+		    qMin = Math.cos(max);
+		    qMax = Math.cos(min);
+		    qMin -= FloatDomain.ulp(qMin);
+		    qMax += FloatDomain.ulp(qMax);
+		    break;
+		case 2: 
+		    qMin = -1.0;
+		    qMax = Math.max(Math.cos(min), Math.cos(max));
+		    qMax += FloatDomain.ulp(qMax);
+		    break;
+		case 3: 
+		case 4: 
+		    qMin = -1.0;
+		    qMax =  1.0;		    
+		    break;
+		default: 
+		    throw new InternalException("Selected impossible case in sin, cos, asin or acos constraint");
+		};
+		break;
+
+	    case 2: 
+		switch (intervalForMax) {
+		case 2: 
+		    qMin = Math.cos(min);
+		    qMax = Math.cos(max);
+		    qMin -= FloatDomain.ulp(qMin);
+		    qMax += FloatDomain.ulp(qMax);
+		    break;
+		case 3: 
+		    qMin = Math.min(Math.cos(min), Math.cos(max));
+		    qMax = 1.0; 
+		    qMin -= FloatDomain.ulp(qMin);
+		    break;
+		case 4: 
+		    qMin = -1.0;
+		    qMax =  1.0;		    
+		break;
+		default: 
+		    throw new InternalException("Selected impossible case in sin, cos, asin or acos constraint");
+		};
+		break;
+
+	    case 3: 
+
+		switch (intervalForMax) {
+		case 3: 
+		    qMin = Math.cos(max);
+		    qMax = Math.cos(min);
+		    qMin -= FloatDomain.ulp(qMin);
+		    qMax += FloatDomain.ulp(qMax);
+		    break;
+		case 4: 
+		    qMin = -1.0;
+		    qMax = Math.max(Math.cos(min), Math.cos(max));
+		    qMax += FloatDomain.ulp(qMax);
+		    break;
+		default: 
+		    throw new InternalException("Selected impossible case in sin, cos, asin or acos constraint");
+		};
+		break;
+
+	    case 4: 
+		switch (intervalForMax) {
+		case 4: 
+		    qMin = Math.cos(min);
+		    qMax = Math.cos(max);
+		    qMin -= FloatDomain.ulp(qMin);
+		    qMax += FloatDomain.ulp(qMax);
+		    break;
+
+		default:
+		    throw new InternalException("Selected impossible case in sin, cos, asin or acos constraint");
+		}
+		break;
+
+	    default: 
+		throw new InternalException("Selected impossible case in sin, cos, asin or acos constraint");
+	    };
+
+	    // System.out.println (q + " in " + qMin + ".." + qMax);
+
+	    q.domain.in(store.level, q, qMin, qMax);
+
+	    // System.out.println ("q after in " + q);
+
+	    // p update
+	    double pMin = Math.acos(qMax);  // range 0..PI
+	    double pMax = Math.acos(qMin);  // range 0..PI
+
+	    // System.out.println ("acos result " + p + " in " + pMin +".." + pMax + " copied to  n times 0 .. PI");
+	    
+	    pMin -= FloatDomain.ulp(pMin);
+	    pMax += FloatDomain.ulp(pMax);
+	    if (java.lang.Double.isNaN(pMin))
+	    	pMin = 0.0;
+	    if (java.lang.Double.isNaN(pMax))
+	    	pMax = FloatDomain.PI;
+
+	    FloatIntervalDomain pDom = new FloatIntervalDomain(pMin, pMax);
+	    if (p.min() < 0.0) {
+		double dist = p.min();
+		double noIntervals = - Math.floor(dist / FloatDomain.PI) + 1.0;
+
+		// System.out.println (p + " extend left by "+ noIntervals +" intervals"); 
+		
+		for (int i = 0; i < noIntervals; i++) {
+		    // System.out.println ("1. adding " +  (double)(-(i+1)*FloatDomain.PI + pMin) +".."+ (double)(-(i+1)*FloatDomain.PI + pMax));
+		    pDom.unionAdapt( -(i+1)*FloatDomain.PI + pMin, -(i+1)*FloatDomain.PI + pMax);
+		}
+	    }
+	    if (p.max() > FloatDomain.PI) {
+
+		// System.out.println ("p.max() = " + p.max());
+
+		double dist = p.max() - FloatDomain.PI;
+		double noIntervals = Math.ceil(dist / FloatDomain.PI);
+
+		// System.out.println (p + " extend rigth by " + noIntervals + " intervals");
+		
+		for (int i = 0; i < noIntervals; i++) {
+			// System.out.println ("4. adding " +  (double)((i+1)*FloatDomain.PI + pMax) +".."+ (double)((i+1)*FloatDomain.PI + pMin));
+		     	pDom.unionAdapt((i+1)*FloatDomain.PI + pMin, (i+1)*FloatDomain.PI + pMax); 
+		}
+	    }
+
+
+	    // System.out.println ("2. " + p + " in " + pDom  + " p.min() - pMin = " + (double)(p.min() - pMin));
+
+	    p.domain.in(store.level, p, pDom.min(), pDom.max());
+
+	    // System.out.println ("p after in " + p);
+
+	} while (store.propagationHasOccurred);
+
+	// System.out.println ("2. CosPeqR("+p+", "+q+")");
+
+    }
+
+    /*
+     * Normalizes argument to interval -2*PI..2*PI
+     */
+    double rest(double d, boolean min) {
+
+	double rest = d % (2*FloatDomain.PI);
+
+	if (min)
+	    rest -= FloatDomain.ulp(rest);
+	else
+	    rest += FloatDomain.ulp(rest);
+
+	return rest;
+    }
+
+    double period(double d, double rest) {
+
+	// System.out.println ("rest for " + d +"  is " + rest);
+
+	double n = (d - rest)/(2*FloatDomain.PI);
+
+	return n;
+    }
+
+    int intervalNo(double d) {
+	if (d >= -2.0*FloatDomain.PI && d <= -FloatDomain.PI)
+	    return 1;
+	if (d >= -FloatDomain.PI && d <= 0.0)
+	    return 2;
+	if (d >= 0.0 && d <= FloatDomain.PI)
+	    return 3;
+	if (d >= FloatDomain.PI && d <= 2*FloatDomain.PI)
+	    return 4;
+	else 
+	    return 0;  // should not return this
     }
 
     @Override
     public int getConsistencyPruningEvent(Var var) {
 
-	int event=-1;
-	for (Constraint c : constraints)
-	    if (event <= c.getConsistencyPruningEvent(var))
-		event = c.getConsistencyPruningEvent(var);
+	// consistency function mode
+	if (consistencyPruningEvents != null) {
+	    Integer possibleEvent = consistencyPruningEvents.get(var);
+	    if (possibleEvent != null)
+		return possibleEvent;
+	}
 
-	return event;
+	return IntDomain.BOUND;
+
     }
+
 
     @Override
     public void impose(Store store) {
-	constraints = new ArrayList<Constraint>();
-
-	FloatVar pPlus = new FloatVar(store, FloatDomain.MinFloat, FloatDomain.MaxFloat);
-	Constraint c1 = new PplusCeqR(p, FloatDomain.PI/2, pPlus);
-	Constraint c2 = new SinPeqR(pPlus, q);
-
-	constraints.add(c1);
-	constraints.add(c2);
-
-	c1.impose(store);
-	c2.impose(store);
-    }
-
-    @Override
-    public void queueVariable(int level, Var V) {
-
+	p.putModelConstraint(this, getConsistencyPruningEvent(p));
+	q.putModelConstraint(this, getConsistencyPruningEvent(q));
+	store.addChanged(this);
+	store.countConstraint();
     }
 
     @Override
     public void removeConstraint() {
-
-	for (Constraint c : constraints)
-	    c.removeConstraint();
-
+	p.removeConstraint(this);
+	q.removeConstraint(this);
     }
 
     @Override
     public boolean satisfied() {
-	boolean sat = true;
-	for (Constraint c : constraints)
-	    sat = sat && c.satisfied();
 
-	return sat;
+	if (p.singleton() && q.singleton()) {
+	    double cosMin = Math.cos(p.min()), cosMax = Math.cos(p.max());
+	    
+	    FloatInterval minDiff = (cosMin <  q.min()) ?  new FloatInterval(cosMin, q.min()) : new FloatInterval(q.min(), cosMin);
+	    FloatInterval maxDiff = (cosMax <  q.max()) ?  new FloatInterval(cosMax, q.max()) : new FloatInterval(q.max(), cosMax);
+
+	    return minDiff.singleton() && maxDiff.singleton();
+	}
+	else
+	    return false;
     }
 
-    @Override
-    public void increaseWeight() {
-	for (Constraint c : constraints)
-	    c.increaseWeight();
-    }
 
     @Override
     public String toString() {
 
-    	StringBuffer result = new StringBuffer( id() + ": {");
+	StringBuffer result = new StringBuffer( id() );
 
-    	// result.append(" : CosPeqR(").append(p).append(", ").append(q).append(" )");
+	result.append(" : CosPeqR(").append(p).append(", ").append(q).append(" )");
 
-	for (Constraint c : constraints)
-	    result.append(c).append(" }");
+	return result.toString();
 
-    	return result.toString();
+    }
 
+    @Override
+    public void increaseWeight() {
+	if (increaseWeight) {
+	    p.weight++;
+	    q.weight++;
+	}
     }
 
 }
