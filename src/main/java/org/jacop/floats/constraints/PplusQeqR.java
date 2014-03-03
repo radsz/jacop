@@ -114,9 +114,9 @@ public class PplusQeqR extends PrimitiveConstraint {
 	do {
 	    store.propagationHasOccurred = false;
 
-	    p.domain.in(store.level, p, r.min() - q.max() - FloatDomain.ulp(q.max()), r.max() - q.min() + FloatDomain.ulp(q.min()));
-	    q.domain.in(store.level, q, r.min() - p.max() - FloatDomain.ulp(p.max()), r.max() - p.min() + FloatDomain.ulp(p.min()));
-	    r.domain.in(store.level, r, p.min() + q.min() - FloatDomain.ulp(q.min()), p.max() + q.max() + FloatDomain.ulp(q.max()));
+	    p.domain.in(store.level, p, FloatDomain.down(r.min() - q.max()), FloatDomain.up(r.max() - q.min()));
+	    q.domain.in(store.level, q, FloatDomain.down(r.min() - p.max()), FloatDomain.up(r.max() - p.min()));
+	    r.domain.in(store.level, r, FloatDomain.down(p.min() + q.min()), FloatDomain.up(p.max() + q.max()));
 
 	} while (store.propagationHasOccurred);
 		
@@ -218,7 +218,7 @@ public class PplusQeqR extends PrimitiveConstraint {
     public boolean satisfied() {
 
 	return (p.singleton() && q.singleton() && r.singleton() 
-		&& r.value() - p.value() - q.value() < FloatDomain.ulp(r.value() - p.value() - q.value()));
+		&& r.value() - p.value() - q.value() < FloatDomain.epsilon(r.value() - p.value() - q.value()));
 		
     }
 

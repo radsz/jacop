@@ -272,7 +272,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 	assert checkInvariants() == null : checkInvariants() ;
 
-	if (intervals[size-1].max() + FloatDomain.ulp(intervals[size-1].max()) >= i)
+	if (next(intervals[size-1].max()) >= i)
 	    intervals[size-1] = new FloatInterval(intervals[size-1].min(),i);
 	else {
 	    if (size == intervals.length) {
@@ -341,11 +341,11 @@ public class FloatIntervalDomain extends FloatDomain {
 	    for (; i < size; i++) {
 		// i - position of the interval which touches with or intersects with min..max
 
-		if ((max + FloatDomain.ulp(max) >= intervals[i].min && max <= intervals[i].max + FloatDomain.ulp(max)) || 
-		    (min + FloatDomain.ulp(min) >= intervals[i].min && min <= intervals[i].max + FloatDomain.ulp(max)) ||
+		if ((next(max) >= intervals[i].min && max <= next(intervals[i].max)) || 
+		    (next(min) >= intervals[i].min && min <= next(intervals[i].max)) ||
 		    (min <= intervals[i].min && intervals[i].max <= max ))
 		    break;
-		if (max + FloatDomain.ulp(max) < intervals[i].min) {
+		if (next(max) < intervals[i].min) {
 		    // interval is inserted at position i
 					
 		    if (size == intervals.length) {
@@ -410,7 +410,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 	    if (target == size)
 		newMax = max;
-	    else if (intervals[target].min > max + FloatDomain.ulp(max))
+	    else if (intervals[target].min > next(max))
 		newMax = max;
 	    else {
 		newMax = intervals[target].max;
@@ -639,14 +639,13 @@ public class FloatIntervalDomain extends FloatDomain {
 	FloatIntervalDomain result = new FloatIntervalDomain(size + 1);
 
 	if (min() != FloatDomain.MinFloat)
-	    result.unionAdapt(new FloatInterval(FloatDomain.MinFloat, intervals[0].min - FloatDomain.ulp(intervals[0].min)));
+	    result.unionAdapt(new FloatInterval(FloatDomain.MinFloat, previous(intervals[0].min)));
 
 	for (int i = 0; i < size - 1; i++)
-	    result.unionAdapt(new FloatInterval(intervals[i].max + FloatDomain.ulp(intervals[i].max),
-						intervals[i + 1].min - FloatDomain.ulp(intervals[i + 1].min)));
+	    result.unionAdapt(new FloatInterval(next(intervals[i].max), previous(intervals[i + 1].min)));
 
 	if (max() != FloatDomain.MaxFloat)
-	    result.unionAdapt(new FloatInterval(max() + FloatDomain.ulp(max()), FloatDomain.MaxFloat));
+	    result.unionAdapt(new FloatInterval(next(max()), FloatDomain.MaxFloat));
 
 	assert result.checkInvariants() == null : result.checkInvariants() ;
 	return result;
@@ -682,8 +681,8 @@ public class FloatIntervalDomain extends FloatDomain {
 	for (int m = 0; m < size; m++) {
 	    FloatInterval i = intervals[m];
 	    if (i.max > value)
-		if (value >= i.min - 1)
-		    return value + FloatDomain.ulp(value);
+		if (value >= previous(i.min))
+		    return next(value);
 		else
 		    return i.min;
 	}
@@ -691,55 +690,6 @@ public class FloatIntervalDomain extends FloatDomain {
 	return value;
 
     }
-
-    /**
-     * It divides the domain. E.g. (5..9, 11..13) / 3 = 2..4.
-     * @param div divider.
-     * @return domain after division.
-     */
-    // public IntDomain divide(int div) {
-
-    // 	assert checkInvariants() == null : checkInvariants() ;
-		
-    // 	IntervalDomain temp = new IntervalDomain(size);
-
-    // 	int newMin;
-    // 	int newMax;
-
-    // 	boolean current = false;
-    // 	int currentMin = -1;
-    // 	int currentMax = -1;
-
-    // 	for (int m = 0; m < size; m++) {
-
-    // 		Interval I1 = intervals[m];
-
-    // 		newMin = div(I1.min, div);
-    // 		newMax = I1.max / div;
-
-    // 		if (current != false && currentMax + 1 == newMin) {
-    // 			currentMax = newMax;
-    // 			continue;
-    // 		}
-
-    // 		if (newMin <= newMax) {
-
-    // 			if (current) {
-    // 				temp.unionAdapt(currentMin, currentMax);
-    // 			}
-
-    // 			current = true;
-
-    // 			currentMin = newMin;
-    // 			currentMax = newMax;
-    // 		}
-    // 	}
-
-    // 	assert temp.checkInvariants() == null : temp.checkInvariants() ;
-    // 	return temp;
-
-    // }
-
 
     /**
      * It returns value enumeration of the domain values.
@@ -1051,19 +1001,18 @@ public class FloatIntervalDomain extends FloatDomain {
 		    double oldMax = interval1.max;
 		    // replace min..max with interval1.min..value-1
 		    result.intervals[pointer1] = new FloatInterval(interval1.min,
-								   value - FloatDomain.ulp(value));
+								   previous(value));
 		    pointer1++;
 
 		    if (value != oldMax) {
 			// add domain value+1..oldMax
-			result.unionAdapt(value + FloatDomain.ulp(value), oldMax);
+			result.unionAdapt(next(value), oldMax);
 			pointer1++;
 		    }
 
 		} else if (interval1.max != value) {
 		    // replace value..max with value+1..interval1.max
-		    result.intervals[pointer1] = new FloatInterval(value + FloatDomain.ulp(value),
-								   interval1.max);
+		    result.intervals[pointer1] = new FloatInterval(next(value), interval1.max);
 		    pointer1++;
 		} else {
 		    result.removeInterval(pointer1);
@@ -1306,8 +1255,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 		    if (i2 == max2
 			|| currentDomain2.min > currentDomain1.max) {
-			result.unionAdapt(new FloatInterval(oldMax + FloatDomain.ulp(oldMax),
-							    currentDomain1.max));
+			result.unionAdapt(new FloatInterval(next(oldMax), currentDomain1.max));
 			i1++;
 			if (i1 == size)
 			    break;
@@ -1318,8 +1266,9 @@ public class FloatIntervalDomain extends FloatDomain {
 			    break;
 		    } else {
 
-			result.unionAdapt(new FloatInterval(oldMax + FloatDomain.ulp(oldMax),
-							    currentDomain2.min - 1));
+			result.unionAdapt(new FloatInterval(next(oldMax), 
+							    // currentDomain2.min - 1));
+							    previous(currentDomain2.min)));
 			minIncluded = true;
 		    }
 
@@ -1333,8 +1282,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 		    if (!minIncluded)
 			if (currentDomain1.max >= currentDomain2.min)
-			    result.unionAdapt(new FloatInterval(currentDomain1.min,
-								currentDomain2.min - FloatDomain.ulp(currentDomain2.min)));
+			    result.unionAdapt(new FloatInterval(currentDomain1.min, previous(currentDomain2.min)));
 			else
 			    result.unionAdapt(new FloatInterval(currentDomain1.min,
 								currentDomain1.max));
@@ -1352,8 +1300,7 @@ public class FloatIntervalDomain extends FloatDomain {
 		    // currentDomain1.max
 
 		    if (!minIncluded) {
-			result.unionAdapt(new FloatInterval(currentDomain1.min,
-							    currentDomain2.min - FloatDomain.ulp(currentDomain2.min)));
+			result.unionAdapt(new FloatInterval(currentDomain1.min, previous(currentDomain2.min)));
 			minIncluded = true;
 		    }
 
@@ -1364,8 +1311,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 		    if (i2 == max2
 			|| currentDomain2.min > currentDomain1.max) {
-			result.unionAdapt(new FloatInterval(oldMax + FloatDomain.ulp(oldMax),
-							    currentDomain1.max));
+			result.unionAdapt(new FloatInterval(next(oldMax), currentDomain1.max));
 			i1++;
 			if (i1 == size)
 			    break;
@@ -1380,8 +1326,7 @@ public class FloatIntervalDomain extends FloatDomain {
 			// if (i1 == size)
 			// break;
 
-			result.unionAdapt(new FloatInterval(oldMax + FloatDomain.ulp(oldMax),
-							    currentDomain2.min - FloatDomain.ulp(currentDomain2.min)));
+			result.unionAdapt(new FloatInterval(next(oldMax), previous(currentDomain2.min)));
 
 		    }
 
@@ -1458,7 +1403,7 @@ public class FloatIntervalDomain extends FloatDomain {
 		    // BUT next currentdomain2.min needs to be larger than
 		    // currentDomain1.max
 
-		    result.unionAdapt(new FloatInterval(max + FloatDomain.ulp(max), currentInterval1.max));
+		    result.unionAdapt(new FloatInterval(next(max), currentInterval1.max));
 
 		    i1++;
 		    break;
@@ -1471,7 +1416,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 		if (currentInterval1.max <= max) {
 
-		    result.unionAdapt(new FloatInterval(currentInterval1.min, min - FloatDomain.ulp(min)));
+		    result.unionAdapt(new FloatInterval(currentInterval1.min, previous(min)));
 
 		    i1++;
 
@@ -1486,8 +1431,8 @@ public class FloatIntervalDomain extends FloatDomain {
 		    // interval of min..max ends before interval of dom1 ends
 		    // max+1 .. currentDomain1.max
 
-		    result.unionAdapt(currentInterval1.min, min - FloatDomain.ulp(min));
-		    result.unionAdapt(max + FloatDomain.ulp(max), currentInterval1.max);
+		    result.unionAdapt(currentInterval1.min, previous(min));
+		    result.unionAdapt(next(max), currentInterval1.max);
 					
 		    i1++;
 		    break;
@@ -1544,7 +1489,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 	while (true) {
 
-	    if (currentDomain1.max + FloatDomain.ulp(currentDomain1.max) < currentDomain2.min) {
+	    if (next(currentDomain1.max) < currentDomain2.min) {
 		result.unionAdapt(new FloatInterval(currentDomain1.min,
 						    currentDomain1.max));
 		i1++;
@@ -1554,7 +1499,7 @@ public class FloatIntervalDomain extends FloatDomain {
 		continue;
 	    }
 
-	    if (currentDomain2.max + FloatDomain.ulp(currentDomain2.max) < currentDomain1.min) {
+	    if (next(currentDomain2.max) < currentDomain1.min) {
 		result.unionAdapt(new FloatInterval(currentDomain2.min,
 						    currentDomain2.max));
 		i2++;
@@ -1574,8 +1519,8 @@ public class FloatIntervalDomain extends FloatDomain {
 	    else
 		min = currentDomain2.min;
 
-	    while ((currentDomain1.max + FloatDomain.ulp(currentDomain1.max) >= currentDomain2.min && currentDomain1.min <= currentDomain2.min)
-		   || (currentDomain2.max + FloatDomain.ulp(currentDomain2.max) >= currentDomain1.min && currentDomain2.min <= currentDomain1.min)) {
+	    while ((next(currentDomain1.max) >= currentDomain2.min && currentDomain1.min <= currentDomain2.min)
+		   || (next(currentDomain2.max) >= currentDomain1.min && currentDomain2.min <= currentDomain1.min)) {
 
 		if (currentDomain1.max <= currentDomain2.max) {
 		    i1++;
@@ -1605,7 +1550,7 @@ public class FloatIntervalDomain extends FloatDomain {
 		}
 
 		if (currentDomain1.max <= currentDomain2.max
-		    && currentDomain1.max + FloatDomain.ulp(currentDomain1.max) >= currentDomain2.min) {
+		    && next(currentDomain1.max) >= currentDomain2.min) {
 		    result.unionAdapt(new FloatInterval(min, currentDomain2.max));
 		    i2++;
 		} else {
@@ -1623,8 +1568,7 @@ public class FloatIntervalDomain extends FloatDomain {
 		    currentDomain1 = intervals[i1];
 		}
 
-		if (currentDomain2.max <= currentDomain1.max
-		    && currentDomain2.max + FloatDomain.ulp(currentDomain2.max) >= currentDomain1.min) {
+		if (currentDomain2.max <= currentDomain1.max && next(currentDomain2.max) >= currentDomain1.min) {
 		    result.unionAdapt(new FloatInterval(min, currentDomain1.max));
 		    i1++;
 		} else {
@@ -1685,7 +1629,7 @@ public class FloatIntervalDomain extends FloatDomain {
 	while (true) {
 
 	    // all intervals before and not glued (min..max) are included
-	    if (currentInterval1.max + FloatDomain.ulp(currentInterval1.max) < min) {
+	    if (next(currentInterval1.max) < min) {
 		result.unionAdapt(currentInterval1);
 		i1++;
 		if (i1 == size) {
@@ -1697,7 +1641,7 @@ public class FloatIntervalDomain extends FloatDomain {
 	    }
 
 	    // currentInterval if after and not glued
-	    if (max + FloatDomain.ulp(max) < currentInterval1.min) {
+	    if (next(max) < currentInterval1.min) {
 		result.unionAdapt(new FloatInterval(min, max));
 		break;
 	    }
@@ -1729,7 +1673,7 @@ public class FloatIntervalDomain extends FloatDomain {
 		}
 			
 		// if current interval is glued or intersects with (min..max)
-		if (max + 1 >= currentInterval1.min) {
+		if (next(max) >= currentInterval1.min) {
 		    result.unionAdapt(new FloatInterval(tempMin, currentInterval1.max));
 		    i1++;
 		}
@@ -1771,7 +1715,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 	while (true) {
 
-	    if (currentInterval.max + FloatDomain.ulp(currentInterval.max) < value) {
+	    if (next(currentInterval.max) < value) {
 		result.unionAdapt(currentInterval);
 		i1++;
 		if (i1 == size) {
@@ -1786,7 +1730,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 	}
 
-	if (value + FloatDomain.ulp(value) < currentInterval.min) {
+	if (next(value) < currentInterval.min) {
 	    result.unionAdapt(new FloatInterval(value, value));
 	} else {
 
@@ -1798,7 +1742,7 @@ public class FloatIntervalDomain extends FloatDomain {
 	    if (currentInterval.max > value)
 		tempMax = currentInterval.max;
 
-	    if (i1 + 1 < size && tempMax + FloatDomain.ulp(tempMax) == intervals[i1+1].min) {
+	    if (i1 + 1 < size && next(tempMax) == intervals[i1+1].min) {
 		tempMax = intervals[i1+1].max;
 		i1++;
 	    }
@@ -1913,8 +1857,6 @@ public class FloatIntervalDomain extends FloatDomain {
     public void inMin(int storeLevel, Var var, double min) {
 	// System.out.println (var + " inMin " + min);
 
-	// min = min - FloatDomain.ulp(min);
-
 	assert checkInvariants() == null : checkInvariants() ;
 		
 	if (min > intervals[size - 1].max)
@@ -2003,8 +1945,6 @@ public class FloatIntervalDomain extends FloatDomain {
     public void inMax(int storeLevel, Var var, double max) {
 	// System.out.println (var + " inMax " + max);
 
-	// max = max + FloatDomain.ulp(max);
-
 	assert checkInvariants() == null : checkInvariants() ;
 		
 	if (max < intervals[0].min)
@@ -2091,7 +2031,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 	assert checkInvariants() == null : checkInvariants() ;
 		
-	assert (min - FloatDomain.ulp(min) <= max + FloatDomain.ulp(max)) : "Min value greater than max value " + min + " > " + max;
+	assert (min <= max ) : "Min value greater than max value " + min + " > " + max;
 
 	if ( max < intervals[0].min)
 	    throw failException;
@@ -2433,8 +2373,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 		if (intervals[counter].max != complement) {
 
-		    intervals[counter] = new FloatInterval(complement + FloatDomain.ulp(complement),
-							   intervals[counter].max);
+		    intervals[counter] = new FloatInterval(next(complement), intervals[counter].max);
 
 		    assert checkInvariants() == null : checkInvariants() ;
 					
@@ -2488,8 +2427,7 @@ public class FloatIntervalDomain extends FloatDomain {
 		// domain like this 1..3, 5, 7..10, and 5 being
 		// removed taken care of above.
 
-		intervals[counter] = new FloatInterval(intervals[counter].min,
-						       complement - FloatDomain.ulp(complement));
+		intervals[counter] = new FloatInterval(intervals[counter].min, previous(complement));
 
 		assert checkInvariants() == null : checkInvariants() ;
 				
@@ -2521,10 +2459,9 @@ public class FloatIntervalDomain extends FloatDomain {
 
 	    double  max = intervals[counter].max;
 
-	    intervals[counter] = new FloatInterval(intervals[counter].min,
-						   complement - FloatDomain.ulp(complement));
+	    intervals[counter] = new FloatInterval(intervals[counter].min, previous(complement));
 
-	    intervals[counter + 1] = new FloatInterval(complement + FloatDomain.ulp(complement), max);
+	    intervals[counter + 1] = new FloatInterval(next(complement), max);
 
 	    // One interval has been split, size increased by one.
 	    size++;
@@ -2560,8 +2497,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 		    System.arraycopy(intervals, 0, result.intervals, 0, size);
 
-		    result.intervals[counter] = new FloatInterval(complement + FloatDomain.ulp(complement),
-								  result.intervals[counter].max);
+		    result.intervals[counter] = new FloatInterval(next(complement), result.intervals[counter].max);
 
 		    result.size = size;
 
@@ -2615,8 +2551,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 		System.arraycopy(intervals, 0, result.intervals, 0, size);
 
-		result.intervals[counter] = new FloatInterval(
-							      result.intervals[counter].min, complement - FloatDomain.ulp(complement));
+		result.intervals[counter] = new FloatInterval(result.intervals[counter].min, previous(complement));
 
 		result.size = size;
 
@@ -2650,9 +2585,8 @@ public class FloatIntervalDomain extends FloatDomain {
 
 	    double max = intervals[counter].max;
 
-	    result.intervals[counter] = new FloatInterval(intervals[counter].min,
-							  complement - FloatDomain.ulp(complement));
-	    result.intervals[counter + 1] = new FloatInterval(complement + FloatDomain.ulp(complement), max);
+	    result.intervals[counter] = new FloatInterval(intervals[counter].min, previous(complement));
+	    result.intervals[counter + 1] = new FloatInterval(next(complement), max);
 
 	    result.size = size + 1;
 
@@ -2708,10 +2642,8 @@ public class FloatIntervalDomain extends FloatDomain {
 			for (int i = size; i > counter; i--)
 			    intervals[i] = intervals[i - 1];
 
-			intervals[counter + 1] = new FloatInterval(max + FloatDomain.ulp(max),
-								   intervals[counter].max);
-			intervals[counter] = new FloatInterval(
-							       intervals[counter].min, min - FloatDomain.ulp(min));
+			intervals[counter + 1] = new FloatInterval(next(max), intervals[counter].max);
+			intervals[counter] = new FloatInterval(intervals[counter].min, previous(min));
 
 			size++;
 
@@ -2732,10 +2664,8 @@ public class FloatIntervalDomain extends FloatDomain {
 			System.arraycopy(oldIntervals, counter + 1, intervals,
 					 counter + 2, size - counter - 1);
 
-			intervals[counter + 1] = new FloatInterval(max + FloatDomain.ulp(max),
-								   oldIntervals[counter].max);
-			intervals[counter] = new FloatInterval(
-							       oldIntervals[counter].min, min - FloatDomain.ulp(min));
+			intervals[counter + 1] = new FloatInterval(next(max), oldIntervals[counter].max);
+			intervals[counter] = new FloatInterval(oldIntervals[counter].min, previous(min));
 
 			size++;
 
@@ -2747,8 +2677,7 @@ public class FloatIntervalDomain extends FloatDomain {
 		    // intervals[counter].max <= max
 		    // intervals[counter].min..min-1
 
-		    intervals[counter] = new FloatInterval(intervals[counter].min,
-							   min - FloatDomain.ulp(min));
+		    intervals[counter] = new FloatInterval(intervals[counter].min, previous(min));
 
 		    int position = ++counter;
 
@@ -2767,8 +2696,7 @@ public class FloatIntervalDomain extends FloatDomain {
 		    size -= noRemoved;
 
 		    if (counter < size && intervals[counter].min <= max)
-			intervals[counter] = new FloatInterval(max + FloatDomain.ulp(max),
-							       intervals[counter].max);
+			intervals[counter] = new FloatInterval(next(max), intervals[counter].max);
 
 		    assert checkInvariants() == null : checkInvariants() ;
 
@@ -2787,8 +2715,7 @@ public class FloatIntervalDomain extends FloatDomain {
 		if (intervals[counter].max > max) {
 		    // max+1..intervals[counter].max
 
-		    intervals[counter] = new FloatInterval(max + FloatDomain.ulp(max),
-							   intervals[counter].max);
+		    intervals[counter] = new FloatInterval(next(max), intervals[counter].max);
 
 		    assert checkInvariants() == null : checkInvariants() ;
 					
@@ -2818,8 +2745,7 @@ public class FloatIntervalDomain extends FloatDomain {
 		    size -= noRemoved;
 
 		    if (counter < size && intervals[counter].min <= max)
-			intervals[counter] = new FloatInterval(max + FloatDomain.ulp(max),
-							       intervals[counter].max);
+			intervals[counter] = new FloatInterval(next(max), intervals[counter].max);
 
 		    assert checkInvariants() == null : checkInvariants() ;
 					
@@ -2867,10 +2793,8 @@ public class FloatIntervalDomain extends FloatDomain {
 		    for (int i = size; i > counter; i--)
 			result.intervals[i] = intervals[i - 1];
 
-		    result.intervals[counter + 1] = new FloatInterval(max + FloatDomain.ulp(max),
-								      intervals[counter].max);
-		    result.intervals[counter] = new FloatInterval(
-								  intervals[counter].min, min - FloatDomain.ulp(min));
+		    result.intervals[counter + 1] = new FloatInterval(next(max), intervals[counter].max);
+		    result.intervals[counter] = new FloatInterval(intervals[counter].min, previous(min));
 
 		    result.size++;
 
@@ -2881,8 +2805,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 		} else {
 
-		    result.intervals[counter] = new FloatInterval(
-								  intervals[counter].min, min - FloatDomain.ulp(min));
+		    result.intervals[counter] = new FloatInterval(intervals[counter].min, previous(min));
 
 		    int position = ++counter;
 
@@ -2895,7 +2818,7 @@ public class FloatIntervalDomain extends FloatDomain {
 			result.intervals[i] = intervals[i + noRemoved];
 
 		    if (counter + noRemoved < size && intervals[counter+noRemoved].min <= max)
-			result.intervals[counter] = new FloatInterval(max + FloatDomain.ulp(max), intervals[counter+noRemoved].max);
+			result.intervals[counter] = new FloatInterval(next(max), intervals[counter+noRemoved].max);
 					
 		    result.size -= noRemoved;
 
@@ -2921,8 +2844,7 @@ public class FloatIntervalDomain extends FloatDomain {
 		    for (int i = counter + 1; i < size; i++)
 			result.intervals[i] = intervals[i];
 
-		    result.intervals[counter] = new FloatInterval(max + FloatDomain.ulp(max),
-								  intervals[counter].max);
+		    result.intervals[counter] = new FloatInterval(next(max), intervals[counter].max);
 
 		    assert checkInvariants() == null : checkInvariants() ;
 		    assert result.checkInvariants() == null : result.checkInvariants() ;
@@ -2957,7 +2879,7 @@ public class FloatIntervalDomain extends FloatDomain {
 		    //					intervals[counter].max);
 
 		    if (counter + noRemoved < size && intervals[counter+noRemoved].min <= max)
-			result.intervals[counter] = new FloatInterval(max + FloatDomain.ulp(max), intervals[counter+noRemoved].max);
+			result.intervals[counter] = new FloatInterval(next(max), intervals[counter+noRemoved].max);
 					
 		    assert checkInvariants() == null : checkInvariants() ;
 		    assert result.checkInvariants() == null : result.checkInvariants() ;
@@ -3696,7 +3618,7 @@ public class FloatIntervalDomain extends FloatDomain {
 		    + this;
 		
 	for (int i = 0; i < size - 1; i++)
-	    if (this.intervals[i].max + FloatDomain.ulp(this.intervals[i].max) == this.intervals[i+1].min )
+	    if (next(this.intervals[i].max) == this.intervals[i+1].min )
 		return "Two consequtive intervals should be merged. Improper representation" + 
 		    this;
 		
@@ -3722,8 +3644,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 	    if (intervals[counter].max != value) {
 
-		intervals[counter] = new FloatInterval(value + FloatDomain.ulp(value),
-						       intervals[counter].max);
+		intervals[counter] = new FloatInterval(next(value), intervals[counter].max);
 
 		assert checkInvariants() == null : checkInvariants() ;
 
@@ -3750,8 +3671,7 @@ public class FloatIntervalDomain extends FloatDomain {
 	    // domain like this 1..3, 5, 7..10, and 5 being
 	    // removed taken care of above.
 
-	    intervals[counter] = new FloatInterval(intervals[counter].min,
-						   value - FloatDomain.ulp(value));
+	    intervals[counter] = new FloatInterval(intervals[counter].min, previous(value));
 
 	    assert checkInvariants() == null : checkInvariants() ;
 			
@@ -3771,8 +3691,8 @@ public class FloatIntervalDomain extends FloatDomain {
 	}
 
 	double max = intervals[counter].max;
-	intervals[counter] = new FloatInterval(intervals[counter].min, value - FloatDomain.ulp(value));
-	intervals[counter + 1] = new FloatInterval(value + FloatDomain.ulp(value), max);
+	intervals[counter] = new FloatInterval(intervals[counter].min, previous(value));
+	intervals[counter + 1] = new FloatInterval(next(value), max);
 
 	// One interval has been split, size increased by one.
 	size++;
@@ -3802,8 +3722,7 @@ public class FloatIntervalDomain extends FloatDomain {
 	    // removing will not create more intervals.
 	    if (intervals[current].max > maxValue) {
 
-		intervals[current] = new FloatInterval(maxValue + FloatDomain.ulp(maxValue),
-						       intervals[current].max);
+		intervals[current] = new FloatInterval(next(maxValue), intervals[current].max);
 
 		assert checkInvariants() == null : checkInvariants() ;
 
@@ -3822,7 +3741,7 @@ public class FloatIntervalDomain extends FloatDomain {
 		}
 
 		if (maxValue >= intervals[maxCurrent].min)
-		    intervals[maxCurrent] = new FloatInterval(maxValue + FloatDomain.ulp(maxValue), intervals[maxCurrent].max);
+		    intervals[maxCurrent] = new FloatInterval(next(maxValue), intervals[maxCurrent].max);
 				
 		int i = current;
 		for (; maxCurrent < size; i++, maxCurrent++) {
@@ -3850,8 +3769,8 @@ public class FloatIntervalDomain extends FloatDomain {
 		for (int i = size; i > current; i--)
 		    intervals[i] = intervals[i-1];
 				
-		intervals[current] = new FloatInterval(intervals[current].min, minValue - FloatDomain.ulp(minValue));
-		intervals[current+1] = new FloatInterval(maxValue + FloatDomain.ulp(maxValue), intervals[current+1].max);
+		intervals[current] = new FloatInterval(intervals[current].min, previous(minValue));
+		intervals[current+1] = new FloatInterval(next(maxValue), intervals[current+1].max);
 				
 		size++;
 
@@ -3863,7 +3782,7 @@ public class FloatIntervalDomain extends FloatDomain {
 		// maxValue >= intervals[current].max
 				
 		// at least one complete interval is being removed.
-		intervals[current] = new FloatInterval(intervals[current].min, minValue - FloatDomain.ulp(minValue));
+		intervals[current] = new FloatInterval(intervals[current].min, previous(minValue));
 		current++;
 				
 		int maxCurrent = current;
@@ -3876,7 +3795,7 @@ public class FloatIntervalDomain extends FloatDomain {
 		}
 				
 		if (intervals[maxCurrent].min <= maxValue)
-		    intervals[maxCurrent] = new FloatInterval(maxValue + FloatDomain.ulp(maxValue), intervals[maxCurrent].max);
+		    intervals[maxCurrent] = new FloatInterval(next(maxValue), intervals[maxCurrent].max);
 				
 				
 		int i = current;
@@ -4221,7 +4140,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 		    if (interval1.max <= interval2.max) {
 
-			temp += interval1.max - interval2.min + FloatDomain.ulp(interval1.max - interval2.min);
+			temp += next(interval1.max - interval2.min);
 			pointer1++;
 			if (pointer1 < size1) {
 			    interval1 = intervals[pointer1];
@@ -4229,7 +4148,7 @@ public class FloatIntervalDomain extends FloatDomain {
 			} else
 			    break;
 		    } else {
-			temp += interval2.max - interval2.min + FloatDomain.ulp(interval2.max - interval2.min);
+			temp += next(interval2.max - interval2.min);
 			pointer2++;
 			if (pointer2 < size2) {
 			    interval2 = input.intervals[pointer2];
@@ -4244,7 +4163,7 @@ public class FloatIntervalDomain extends FloatDomain {
 		    // interval1.min > interval2.min
 		    {
 			if (interval2.max <= interval1.max) {
-			    temp += interval2.max - interval1.min + FloatDomain.ulp(interval2.max - interval1.min);
+			    temp += next(interval2.max - interval1.min);
 			    pointer2++;
 			    if (pointer2 < size2) {
 				interval2 = input.intervals[pointer2];
@@ -4252,7 +4171,7 @@ public class FloatIntervalDomain extends FloatDomain {
 			    } else
 				break;
 			} else {
-			    temp += interval1.max - interval1.min + FloatDomain.ulp(interval1.max - interval1.min);
+			    temp += next(interval1.max - interval1.min);
 			    pointer1++;
 			    if (pointer1 < size1) {
 				interval1 = intervals[pointer1];

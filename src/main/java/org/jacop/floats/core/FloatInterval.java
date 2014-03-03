@@ -118,13 +118,10 @@ public final class FloatInterval {
      */
     public boolean singleton() {
 
-	double large = (java.lang.Math.abs(max) >= java.lang.Math.abs(min)) ? max : min;  
+	// double large = (java.lang.Math.abs(max) >= java.lang.Math.abs(min)) ? max : min;  
+	double small = (java.lang.Math.abs(max) >= java.lang.Math.abs(min)) ? min : max;  
 
-	// if ((max-min) <= FloatDomain.epsilon(large))
-	//     System.out.println ("singleton " + min+".."+max + " with precision " + FloatDomain.epsilon(large));
-	//	System.out.println ("precision = " + FloatDomain.precision() + ", ulp = " + FloatDomain.ulp(large) + ", espsilon = " + FloatDomain.epsilon(large));
-
-	return (max-min) <= FloatDomain.epsilon(large);
+	return (max-min) <= FloatDomain.epsilon(small);
 
     }
 
@@ -156,6 +153,9 @@ public final class FloatInterval {
 	    result = String.format(locale, form, (double)((min+max)/2)); // mean value if singleton considering precision
 	else
 	    result = String.format(locale, form, min) + ".." + String.format(locale, form, max);  // String.format("%.16f..%.16f", min, max); // interval
+
+	// result += "[±"+ FloatDomain.ulp(min) + "]";
+
 	return result;
     }
 

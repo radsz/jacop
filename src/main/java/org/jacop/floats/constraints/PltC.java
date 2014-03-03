@@ -100,7 +100,7 @@ public class PltC extends PrimitiveConstraint {
 	@Override
 	public void consistency(Store store) {
 
-	    p.domain.inMax(store.level, p, c - FloatDomain.ulp(c));
+	    p.domain.inMax(store.level, p, FloatDomain.previous(c));
 	}
 
 	@Override

@@ -111,9 +111,9 @@ public class ExpPeqR extends Constraint {
 	    }
 	    else {
 		qMin = java.lang.Math.exp(p.min());
-		qMin = qMin - FloatDomain.ulp(qMin);
+		qMin = FloatDomain.down(qMin);
 		qMax = java.lang.Math.exp(p.max());
-		qMax = qMax + FloatDomain.ulp(qMax);
+		qMax = FloatDomain.up(qMax);
 	    }
 
 	    q.domain.in(store.level, q, qMin, qMax);
@@ -127,9 +127,9 @@ public class ExpPeqR extends Constraint {
 	    }
 	    else {
 		pMin = java.lang.Math.log(q.min());
-		pMin = pMin - FloatDomain.ulp(pMin);
+		pMin = FloatDomain.down(pMin);
 		pMax = java.lang.Math.log(q.max());
-		pMax = pMax + FloatDomain.ulp(pMax);
+		pMax = FloatDomain.up(pMax);
 	    }
 
 	    p.domain.in(store.level, p, pMin, pMax);

@@ -73,6 +73,19 @@ public abstract class FloatDomain extends Domain {
      */
     public static final double E = java.lang.Math.E;
 
+    /**
+     * It specifies the rounding method;
+     * true - extend interval outward
+     * false - does not extend interval and use calculation results.
+     */
+    public static boolean outward = true;
+
+    /**
+     * It defines rounding method
+     */
+    public static void setOutward(boolean out) {
+	outward = out;
+    }
 
     /**
      * It specifies the method for printing a domain.
@@ -128,6 +141,64 @@ public abstract class FloatDomain extends Domain {
 	return java.lang.Math.ulp(f.max());
 
     }
+
+    // returns previous (toward -inf) floating-point number before d 
+    // supposed to be used by constraints
+    public static double down(double d) {
+	if (outward)
+	    return d - ulp(d);
+	else
+	    return d;
+    }
+
+    // returns next (toward inf) floating-point number after d 
+    // supposed to be used by constraints
+    public static double up(double d) {
+	if (outward)
+	    return d + ulp(d);
+	else
+	    return d;
+    }
+
+    /*
+  public static double next(double x) {
+    double y;
+
+    if (x==0)
+      return Double.longBitsToDouble(1);
+    else if (x < Double.POSITIVE_INFINITY) {
+      long xx = Double.doubleToLongBits(x);
+      if (x > 0)
+         y = Double.longBitsToDouble(xx+1);
+      else if (x==0)   // this case should never happen
+	  y = Double.longBitsToDouble(1); 
+      else
+         y = Double.longBitsToDouble(xx-1);
+      return(y);
+    }else 
+     return (x);
+  }
+
+  public static double previous(double x) {
+    if (x==0) 
+      return(-next(0.0));
+    else 
+      return(-next(-x));
+  }
+    */
+
+    // returns previous (toward -inf) floating-point number before d 
+    // supposed to be used by methods for domain computations
+    public static double previous(double d) {
+	return d - ulp(d);
+    }
+
+    // returns next (toward inf) floating-point number after d 
+    // supposed to be used by methods for domain computations
+    public static double next(double d) {
+	return d + ulp(d);
+    }
+
 
     /**
      * It specifies the constant for GROUND event. It has to be smaller 
@@ -958,10 +1029,10 @@ public abstract class FloatDomain extends Domain {
     public final static FloatIntervalDomain mulBounds(double a, double b, double c, double d) {
 	
 	double minValue = Math.min(Math.min(a*c, a*d), Math.min(b*c, b*d));
-	double min = minValue - FloatDomain.ulp(minValue);
+	double min = down(minValue);
 
 	double maxValue = Math.max(Math.max(a*c, a*d), Math.max(b*c, b*d));
-	double max = maxValue + FloatDomain.ulp(maxValue);
+	double max = up(maxValue);
 		
 	return new FloatIntervalDomain(min, max);
     }
@@ -995,26 +1066,26 @@ public abstract class FloatDomain extends Domain {
 
 	if (P1_1)
 	    if (P1_2) { // P1 /\ P1
-		min = a/d - FloatDomain.ulp(a/d);
-		max = b/c + FloatDomain.ulp(b/c);
+		min = down(a/d);
+		max = up(b/c);
 		return new FloatIntervalDomain(min, max); //.subtract(0.0);
 	    }
 	    else if (P0_2) { // P1 /\ P0
-		min = a/d - FloatDomain.ulp(a/d);
+		min = down(a/d);
 		return new FloatIntervalDomain(a/d, FloatDomain.MaxFloat); //.subtract(0.0);
 	    }
 	    else if (M_2) { // P1 /\ M
-		min = a/d - FloatDomain.ulp(a/d);
-		max = a/c + FloatDomain.ulp(a/c);
+		min = down(a/d);
+		max = up(a/c);
 		return (FloatIntervalDomain)new FloatIntervalDomain(FloatDomain.MinFloat, max).union(new FloatIntervalDomain(min, FloatDomain.MaxFloat)); //.subtract(0.0)
 	    }
 	    else if (N1_2) {// P1 /\ N1
-		min = b/d - FloatDomain.ulp(b/d);
-		max = a/c + FloatDomain.ulp(a/c);
+		min = down(b/d);
+		max = up(a/c);
 		return new FloatIntervalDomain(min, max); //.subtract(0.0);		
 	    }
 	    else if (N0_2) { // P1 /\ N0
-		max = a/c + FloatDomain.ulp(a/c);
+		max = up(a/c);
 		return new FloatIntervalDomain(FloatDomain.MinFloat, max); //.subtract(0.0);
 	    }
 	    else // P1 /\ Z
@@ -1023,11 +1094,11 @@ public abstract class FloatDomain extends Domain {
 	else if (P0_1)
 	    if (P1_2) { // P0 /\ P1
 		min = 0.0;
-		max = b/c + FloatDomain.ulp(b/c);
+		max = up(b/c);
 		return new FloatIntervalDomain(min, max);
 	    }
 	    else if (N1_2) { //P0 /\ N1
-		min = b/d - FloatDomain.ulp(b/d);
+		min = down(b/d);
 		max = 0.0;
 		return new FloatIntervalDomain(min, max);
 	    }
@@ -1036,13 +1107,13 @@ public abstract class FloatDomain extends Domain {
 
 	else if (M_1)
 	    if (P1_2) { // M /\ P
-		min = a/c - FloatDomain.ulp(a/c);
-		max = b/c + FloatDomain.ulp(b/c);
+		min = down(a/c);
+		max = up(b/c);
 		return new FloatIntervalDomain(min, max);
 	    }
 	    else if (N1_2) { // M /\ N1
-		min = b/d - FloatDomain.ulp(b/d);
-		max = a/d + FloatDomain.ulp(a/d);
+		min = down(b/d);
+		max = up(a/d);
 		return new FloatIntervalDomain(min, max);
 	    }
 	    else 
@@ -1050,27 +1121,27 @@ public abstract class FloatDomain extends Domain {
 
 	else if (N1_1)
 	    if (P1_2)  { // N1 /\ P1
-		min = a/c - FloatDomain.ulp(a/c);
-		max = b/d + FloatDomain.ulp(b/d);
+		min = down(a/c);
+		max = up(b/d);
 		return new FloatIntervalDomain(min, max); //.subtract(0.0);
 	    }
 	    else if (P0_2) { // N1 /\ P0
-		max = b/d + FloatDomain.ulp(b/d);
+		max = up(b/d);
 		return new FloatIntervalDomain(FloatDomain.MinFloat, max); //.subtract(0.0);
 	    }
 	    else if (M_2) {
-		min = b/c - FloatDomain.ulp(b/c);
-		max = b/d + FloatDomain.ulp(b/d);
+		min = down(b/c);
+		max = up(b/d);
 
 		return (FloatIntervalDomain)new FloatIntervalDomain(FloatDomain.MinFloat, max).union(new FloatIntervalDomain(min, FloatDomain.MaxFloat)); //.subtract(0.0)
 	    }
 	    else if (N1_2)  { // N1 /\ N1
-		min = b/c - FloatDomain.ulp(b/c);
-		max = a/d + FloatDomain.ulp(a/d);
+		min = down(b/c);
+		max = up(a/d);
 		return new FloatIntervalDomain(min, max); //.subtract(0.0);
 	    }
 	    else if (N0_2) { // N1 /\ N0
-		min = b/c - FloatDomain.ulp(b/c);
+		min = down(b/c);
 		return new FloatIntervalDomain(min, FloatDomain.MaxFloat); //.subtract(0.0);
 	    }
 	    else // N1 /\ Z
@@ -1078,13 +1149,13 @@ public abstract class FloatDomain extends Domain {
 
 	else if (N0_1)
 	    if (P1_2) { // N0 /\ P1
-		min = a/c - FloatDomain.ulp(a/c);
+		min = down(a/c);
 		max = 0.0;
 		return new FloatIntervalDomain(min, max);
 	    }
 	    else if (N1_2) { // N0 /\ N1
 		min = 0.0;
-		max = a/d + FloatDomain.ulp(a/d);		
+		max = up(a/d);
 		return new FloatIntervalDomain(min, max);
 	    }
 	    else // N0 /\ {M \/ Z \/ P0 \/ N0}}

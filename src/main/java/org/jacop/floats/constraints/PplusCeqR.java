@@ -112,8 +112,8 @@ public class PplusCeqR extends PrimitiveConstraint {
 	do {
 	    store.propagationHasOccurred = false;
 
-	    p.domain.in(store.level, p, r.min() - c - FloatDomain.ulp(c), r.max() - c + FloatDomain.ulp(c));
-	    r.domain.in(store.level, r, p.min() + c - FloatDomain.ulp(c), p.max() + c + FloatDomain.ulp(c));
+	    p.domain.in(store.level, p, FloatDomain.down(r.min() - c), FloatDomain.up(r.max() - c));
+	    r.domain.in(store.level, r, FloatDomain.down(p.min() + c), FloatDomain.up(p.max() + c));
 
 	} while (store.propagationHasOccurred);
 		
@@ -210,7 +210,7 @@ public class PplusCeqR extends PrimitiveConstraint {
     public boolean satisfied() {
 
 	return (p.singleton() && r.singleton() 
-		&& r.value() - p.value() - c < FloatDomain.ulp(r.value() - p.value() - c));
+		&& r.value() - p.value() - c < FloatDomain.epsilon(r.value() - p.value() - c));
 		
     }
 

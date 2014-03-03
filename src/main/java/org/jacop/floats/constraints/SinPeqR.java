@@ -186,13 +186,13 @@ public class SinPeqR extends Constraint {
 		case 1: 
 		    qMin = Math.sin(min);
 		    qMax = Math.sin(max);
-		    qMin -= FloatDomain.ulp(qMin);
-		    qMax += FloatDomain.ulp(qMax);
+		    qMin = FloatDomain.down(qMin);
+		    qMax = FloatDomain.up(qMax);
 		    break;
 		case 2: 
 		    qMin = Math.min(Math.sin(min), Math.sin(max));
 		    qMax = 1.0;
-		    qMin -= FloatDomain.ulp(qMin);
+		    qMin = FloatDomain.down(qMin);
 		    break;
 		case 3: 
 		case 4: 
@@ -210,13 +210,13 @@ public class SinPeqR extends Constraint {
 		case 2: 
 		    qMin = Math.sin(max);
 		    qMax = Math.sin(min);
-		    qMin -= FloatDomain.ulp(qMin);
-		    qMax += FloatDomain.ulp(qMax);
+		    qMin = FloatDomain.down(qMin);
+		    qMax = FloatDomain.up(qMax);
 		    break;
 		case 3: 
 		    qMin = -1.0;
 		    qMax = Math.max(Math.sin(min), Math.sin(max));
-		    qMax += FloatDomain.ulp(qMax);
+		    qMax = FloatDomain.up(qMax);
 		    break;
 		case 4: 
 		case 5: 
@@ -233,13 +233,13 @@ public class SinPeqR extends Constraint {
 		case 3: 
 		    qMin = Math.sin(min);
 		    qMax = Math.sin(max);
-		    qMin -= FloatDomain.ulp(qMin);
-		    qMax += FloatDomain.ulp(qMax);
+		    qMin = FloatDomain.down(qMin);
+		    qMax = FloatDomain.up(qMax);
 		    break;
 		case 4: 
 		    qMin = Math.min(Math.sin(min), Math.sin(max));
 		    qMax = 1.0; 
-		    qMin -= FloatDomain.ulp(qMin);
+		    qMin = FloatDomain.down(qMin);
 		    break;
 		case 5: 
 		    qMin = -1.0;
@@ -255,13 +255,13 @@ public class SinPeqR extends Constraint {
 		case 4: 
 		    qMin = Math.sin(max);
 		    qMax = Math.sin(min);
-		    qMin -= FloatDomain.ulp(qMin);
-		    qMax += FloatDomain.ulp(qMax);
+		    qMin = FloatDomain.down(qMin);
+		    qMax = FloatDomain.up(qMax);
 		    break;
 		case 5: 
 		    qMin = -1.0;
 		    qMax = Math.max(Math.sin(min), Math.sin(max));
-		    qMax += FloatDomain.ulp(qMax);
+		    qMax = FloatDomain.up(qMax);
 		    break;
 		default:
 		    throw new InternalException("Selected impossible case in sin, cos, asin or acos constraint");
@@ -273,8 +273,8 @@ public class SinPeqR extends Constraint {
 		case 5: 
 		    qMin = Math.sin(min);
 		    qMax = Math.sin(max);
-		    qMin -= FloatDomain.ulp(qMin);
-		    qMax += FloatDomain.ulp(qMax);
+		    qMin = FloatDomain.down(qMin);
+		    qMax = FloatDomain.up(qMax);
 		    break;
 		default: 
 		    throw new InternalException("Selected impossible case in sin, cos, asin or acos constraint");
@@ -295,8 +295,8 @@ public class SinPeqR extends Constraint {
 
 	    // System.out.println ("asin result " + p + " in " + pMin +".." + pMax + " copied to  n times -PI/2 .. PI/2");
 	    
-	    pMin -= FloatDomain.ulp(pMin);
-	    pMax += FloatDomain.ulp(pMax);
+	    pMin = FloatDomain.down(pMin);
+	    pMax = FloatDomain.up(pMax);
 	    if (java.lang.Double.isNaN(pMin))
 	    	pMin = -FloatDomain.PI/2;
 	    if (java.lang.Double.isNaN(pMax))
@@ -366,9 +366,9 @@ public class SinPeqR extends Constraint {
 	double rest = d % (2*FloatDomain.PI);
 
 	if (min)
-	    rest -= FloatDomain.ulp(rest);
+	    rest = FloatDomain.down(rest);
 	else
-	    rest += FloatDomain.ulp(rest);
+	    rest = FloatDomain.up(rest);
 
 	return rest;
     }

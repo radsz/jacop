@@ -146,8 +146,8 @@ public class PmulQeqR extends Constraint {
 		if ( pMin > pMax ) 
 		    throw Store.failException;
 
-		FloatDomain dom = new FloatIntervalDomain(-pMax - FloatDomain.ulp(pMax), -pMin + FloatDomain.ulp(pMin));
-		dom.unionAdapt(pMin - FloatDomain.ulp(pMin), pMax + FloatDomain.ulp(pMax));
+		FloatDomain dom = new FloatIntervalDomain(FloatDomain.down(-pMax), FloatDomain.up(-pMin));
+		dom.unionAdapt(FloatDomain.down(pMin), FloatDomain.up(pMax));
 
 		p.domain.in(store.level, p, dom);
 

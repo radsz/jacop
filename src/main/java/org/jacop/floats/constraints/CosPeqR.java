@@ -186,13 +186,13 @@ public class CosPeqR extends Constraint {
 		case 1: 
 		    qMin = Math.cos(max);
 		    qMax = Math.cos(min);
-		    qMin -= FloatDomain.ulp(qMin);
-		    qMax += FloatDomain.ulp(qMax);
+		    qMin = FloatDomain.down(qMin);
+		    qMax = FloatDomain.up(qMax);
 		    break;
 		case 2: 
 		    qMin = -1.0;
 		    qMax = Math.max(Math.cos(min), Math.cos(max));
-		    qMax += FloatDomain.ulp(qMax);
+		    qMax = FloatDomain.up(qMax);
 		    break;
 		case 3: 
 		case 4: 
@@ -209,13 +209,13 @@ public class CosPeqR extends Constraint {
 		case 2: 
 		    qMin = Math.cos(min);
 		    qMax = Math.cos(max);
-		    qMin -= FloatDomain.ulp(qMin);
-		    qMax += FloatDomain.ulp(qMax);
+		    qMin = FloatDomain.down(qMin);
+		    qMax = FloatDomain.up(qMax);
 		    break;
 		case 3: 
 		    qMin = Math.min(Math.cos(min), Math.cos(max));
 		    qMax = 1.0; 
-		    qMin -= FloatDomain.ulp(qMin);
+		    qMin = FloatDomain.down(qMin);
 		    break;
 		case 4: 
 		    qMin = -1.0;
@@ -232,13 +232,13 @@ public class CosPeqR extends Constraint {
 		case 3: 
 		    qMin = Math.cos(max);
 		    qMax = Math.cos(min);
-		    qMin -= FloatDomain.ulp(qMin);
-		    qMax += FloatDomain.ulp(qMax);
+		    qMin = FloatDomain.down(qMin);
+		    qMax = FloatDomain.up(qMax);
 		    break;
 		case 4: 
 		    qMin = -1.0;
 		    qMax = Math.max(Math.cos(min), Math.cos(max));
-		    qMax += FloatDomain.ulp(qMax);
+		    qMax = FloatDomain.up(qMax);
 		    break;
 		default: 
 		    throw new InternalException("Selected impossible case in sin, cos, asin or acos constraint");
@@ -250,8 +250,8 @@ public class CosPeqR extends Constraint {
 		case 4: 
 		    qMin = Math.cos(min);
 		    qMax = Math.cos(max);
-		    qMin -= FloatDomain.ulp(qMin);
-		    qMax += FloatDomain.ulp(qMax);
+		    qMin = FloatDomain.down(qMin);
+		    qMax = FloatDomain.up(qMax);
 		    break;
 
 		default:
@@ -275,8 +275,8 @@ public class CosPeqR extends Constraint {
 
 	    // System.out.println ("acos result " + p + " in " + pMin +".." + pMax + " copied to  n times 0 .. PI");
 	    
-	    pMin -= FloatDomain.ulp(pMin);
-	    pMax += FloatDomain.ulp(pMax);
+	    pMin = FloatDomain.down(pMin);
+	    pMax = FloatDomain.up(pMax);
 	    if (java.lang.Double.isNaN(pMin))
 	    	pMin = 0.0;
 	    if (java.lang.Double.isNaN(pMax))
@@ -330,9 +330,9 @@ public class CosPeqR extends Constraint {
 	double rest = d % (2*FloatDomain.PI);
 
 	if (min)
-	    rest -= FloatDomain.ulp(rest);
+	    rest = FloatDomain.down(rest);
 	else
-	    rest += FloatDomain.ulp(rest);
+	    rest = FloatDomain.up(rest);
 
 	return rest;
     }

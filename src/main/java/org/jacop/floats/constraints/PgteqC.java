@@ -161,7 +161,7 @@ public class PgteqC extends PrimitiveConstraint {
 
 	@Override
 	public void notConsistency(Store store) {
-	    p.domain.inMax(store.level, p, c - FloatDomain.ulp(c));
+	    p.domain.inMax(store.level, p, FloatDomain.previous(c));
 	}
 
 	@Override

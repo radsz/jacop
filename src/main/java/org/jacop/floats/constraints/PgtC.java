@@ -99,7 +99,7 @@ public class PgtC extends PrimitiveConstraint {
 
 	@Override
 	public void consistency(Store store) {
-	    p.domain.inMin(store.level, p, c + FloatDomain.ulp(c));
+	    p.domain.inMin(store.level, p, FloatDomain.next(c));
 	}
 
 	@Override
