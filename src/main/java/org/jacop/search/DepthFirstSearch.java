@@ -1243,7 +1243,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 			
 			if (match == -1)
 				return false;
-			return childSearches[currentChildSearch-1].assignSolution(match);
+			return childSearches[currentChildSearch-1].assignSolution(no);
 		}
 
 		return true;
