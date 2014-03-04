@@ -263,8 +263,8 @@ public class LinearFloat extends PrimitiveConstraint {
 
 	    assert (lMin <= lMax) : "==============WRONG============\n"+ lMin+".."+lMax+"\n==============";
 
-	    double min = FloatDomain.down(sum - lMax); // FloatDomain.down(sum - lMax); // it is already taken into acctount in recomputeDounds
-	    double max = FloatDomain.up(sum - lMin); // FloatDomain.up(sum - lMin); // it is already taken into acctount in recomputeDounds
+	    double min = FloatDomain.down(sum - lMax);
+	    double max = FloatDomain.up(sum - lMin);
 
 	    for (int i = 0; i < list.length; i++) {
 
@@ -302,14 +302,15 @@ public class LinearFloat extends PrimitiveConstraint {
 			if (divMin > divMax) 
 			    throw Store.failException;
 
-			// System.out.println ("***"+v + " in " + divMin +".."+ divMax);
+			// if (v.id() == "z")
+			//     System.out.println ("***"+v + " in " + divMin +".."+ divMax);
 
 			v.domain.in(store.level, v, divMin, divMax);
 
 			// System.out.println ("result="+v);
 
-			// if (v.id() == "cost")
-			//     System.out.println ("2. "+ v + ")");
+			// if (v.id() == "z")
+			//     System.out.println ("2. "+ v);
 		    }
 		    break;
 		case lt : //=============================================

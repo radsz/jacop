@@ -127,21 +127,30 @@ public class PmulQeqR extends Constraint {
 		store.propagationHasOccurred = false;
 
 		// Bounds for R
-		FloatIntervalDomain rBounds = FloatDomain.mulBounds(p.min(), p.max(), p.min(), p.max());
-		r.domain.in(store.level, r, rBounds);
+		// FloatIntervalDomain rBounds = FloatDomain.mulBounds(p.min(), p.max(), p.min(), p.max());
+		// r.domain.in(store.level, r, rBounds);
+
+		double p1 = Math.min(p.min()*p.min(), p.max()*p.max());
+		double p2 = Math.max(p.min()*p.min(), p.max()*p.max());
+		double min = (p1 <= p2) ? p1 : p2;
+		double max = (p1 >= p2) ? p1 : p2;
+		if (p.min() <= 0.0 && p.max() >= 0.0)
+		    min = 0.0;
+
+		r.domain.in(store.level, r, FloatDomain.down(min), FloatDomain.up(max));
 
 		// Bounds for P
 		double pMin;
-		if (r.min() < 0.0)
+		if (r.min() <= 0.0)
 		    pMin = 0.0;
 		else
-		    pMin = Math.sqrt((double)r.min());
+		    pMin = Math.sqrt(r.min());
 
 		double pMax;
 		if (r.max() < 0.0)
 		    throw Store.failException;
 		else
-		    pMax = Math.sqrt((double)r.max());
+		    pMax = Math.sqrt(r.max());
 
 		if ( pMin > pMax ) 
 		    throw Store.failException;
