@@ -861,7 +861,7 @@ public class Store {
 	 * @param var variable to be registered.
 	 * @return position of the variable at which it is being stored.
 	 */
-	public int putVariable(Var var) {
+	public synchronized int putVariable(Var var) {
 
 		Var previousVar = variablesHashMap.put(var.id(), var);
 		
