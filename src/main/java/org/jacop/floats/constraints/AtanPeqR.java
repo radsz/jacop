@@ -1,5 +1,5 @@
 /**
- *  AsinPeqR.java 
+ *  AtanPeqR.java 
  *  This file is part of JaCoP.
  *
  *  JaCoP is a Java Constraint Programming solver. 
@@ -31,25 +31,10 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.ArrayList;
-
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Interval;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.IntervalEnumeration;
-import org.jacop.core.SmallDenseDomain;
-import org.jacop.core.Store;
-import org.jacop.core.Var;
-
-import org.jacop.constraints.Constraint;
 import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.core.FloatIntervalDomain;
-import org.jacop.floats.core.InternalException;
 
 /**
- * Constraints asin(P) = R
+ * Constraints atan(P) = R
  * 
  * Bounds consistency can be used; third parameter of constructor controls this.
  * 
@@ -57,14 +42,14 @@ import org.jacop.floats.core.InternalException;
  * @version 4.0
  */
 
-public class AsinPeqR extends SinPeqR {
+public class AtanPeqR extends TanPeqR {
 
     /**
      * It constructs sin(P) = Q constraints.
      * @param p variable P
      * @param q variable Q
      */
-    public AsinPeqR(FloatVar p, FloatVar q) {
+    public AtanPeqR(FloatVar p, FloatVar q) {
 	super(q, p);
     }
 
@@ -73,7 +58,7 @@ public class AsinPeqR extends SinPeqR {
 
 	StringBuffer result = new StringBuffer( id() );
 
-	result.append(" : AsinPeqR(").append(q).append(", ").append(p).append(" )");
+	result.append(" : AtanPeqR(").append(p).append(", ").append(q).append(" )");
 
 	return result.toString();
 

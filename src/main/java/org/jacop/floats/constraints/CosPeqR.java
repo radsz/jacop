@@ -152,20 +152,9 @@ public class CosPeqR extends Constraint {
 	    if (p.min() < -2*FloatDomain.PI || p.max() > 2*FloatDomain.PI) {
 		// normalize to -2*PI..2*PI
 
-		min = rest(p.min(), true);
-		max = rest(p.max(), false);
-
-		// System.out.println ("min = " + min + ", max = " + max);
-
-		if (min > max) {
-		    // System.out.println ("*** subtracting 2_PI from " + min);
-
-		    min -= 2*FloatDomain.PI;
-		}
-		double N = period(p.min(), min);
-		    
-		if ( Math.abs(N) < FloatDomain.precision())
-		    N = 0;
+		FloatInterval normP = normalize(p);
+		min = normP.min();
+		max = normP.max();
 
 		// System.out.println ("Not-normalized " + p);
 		// System.out.println ("Normalized interval within -2*PI..2*PI interval = " + min + ".." + max);
@@ -284,29 +273,33 @@ public class CosPeqR extends Constraint {
 
 	    FloatIntervalDomain pDom = new FloatIntervalDomain(pMin, pMax);
 	    if (p.min() < 0.0) {
-		double dist = p.min();
-		double noIntervals = - Math.floor(dist / FloatDomain.PI) + 1.0;
 
-		// System.out.println (p + " extend left by "+ noIntervals +" intervals"); 
-		
-		for (int i = 0; i < noIntervals; i++) {
-		    // System.out.println ("1. adding " +  (double)(-(i+1)*FloatDomain.PI + pMin) +".."+ (double)(-(i+1)*FloatDomain.PI + pMax));
-		    pDom.unionAdapt( -(i+1)*FloatDomain.PI + pMin, -(i+1)*FloatDomain.PI + pMax);
-		}
+		int i=1;
+		double lo, hi;
+		do {
+		    lo = FloatDomain.down(- i*FloatDomain.PI + pMin);
+		    hi = FloatDomain.up(- i*FloatDomain.PI + pMax);
+		    i++;
+		    // System.out.println ("1. adding " +  i + ": " + lo +".."+ hi);
+
+		    pDom.unionAdapt(lo, hi);
+
+		} while (lo > p.min());
+
 	    }
 	    if (p.max() > FloatDomain.PI) {
 
-		// System.out.println ("p.max() = " + p.max());
+		int i=1;
+		double lo, hi;
+		do {
+		    lo = FloatDomain.down(i*FloatDomain.PI + pMin);
+		    hi = FloatDomain.up(i*FloatDomain.PI + pMax);
+		    i++;
+		    // System.out.println ("2. adding " +  i + ": " + lo +".."+ hi);
 
-		double dist = p.max() - FloatDomain.PI;
-		double noIntervals = Math.ceil(dist / FloatDomain.PI);
+		    pDom.unionAdapt(lo, hi);
 
-		// System.out.println (p + " extend rigth by " + noIntervals + " intervals");
-		
-		for (int i = 0; i < noIntervals; i++) {
-			// System.out.println ("4. adding " +  (double)((i+1)*FloatDomain.PI + pMax) +".."+ (double)((i+1)*FloatDomain.PI + pMin));
-		     	pDom.unionAdapt((i+1)*FloatDomain.PI + pMin, (i+1)*FloatDomain.PI + pMax); 
-		}
+		} while (hi < p.max());
 	    }
 
 
@@ -325,25 +318,20 @@ public class CosPeqR extends Constraint {
     /*
      * Normalizes argument to interval -2*PI..2*PI
      */
-    double rest(double d, boolean min) {
+    FloatInterval normalize(FloatVar v) {
+	double min = p.min();
+	double max = p.max();
 
-	double rest = d % (2*FloatDomain.PI);
+	double normMin = FloatDomain.down(min % (2*FloatDomain.PI));
+	double normMax = FloatDomain.up(normMin + max - min);
 
-	if (min)
-	    rest = FloatDomain.down(rest);
-	else
-	    rest = FloatDomain.up(rest);
+	if (normMax >= 2*FloatDomain.PI) {
+	    normMin = FloatDomain.down(normMin - 2*FloatDomain.PI);
+	    normMax = FloatDomain.up(normMax - 2*FloatDomain.PI);
+	}
 
-	return rest;
-    }
+	return new FloatInterval(normMin, normMax);
 
-    double period(double d, double rest) {
-
-	// System.out.println ("rest for " + d +"  is " + rest);
-
-	double n = (d - rest)/(2*FloatDomain.PI);
-
-	return n;
     }
 
     int intervalNo(double d) {

@@ -1,5 +1,5 @@
 /**
- *  SinPeqR.java 
+ *  TanPeqR.java 
  *  This file is part of JaCoP.
  *
  *  JaCoP is a Java Constraint Programming solver. 
@@ -59,15 +59,11 @@ import org.jacop.floats.core.InternalException;
  * @version 4.0
  */
 
-public class SinPeqR extends Constraint {
+public class TanPeqR extends Constraint {
 
     static int IdNumber = 1;
 
     static final boolean debugAll = false;
-
-    boolean firstConsistencyCheck = true;
-
-    int firstConsistencyLevel;
 
     /**
      * It contains variable p.
@@ -90,7 +86,7 @@ public class SinPeqR extends Constraint {
      * @param p variable P
      * @param q variable Q
      */
-    public SinPeqR(FloatVar p, FloatVar q) {
+    public TanPeqR(FloatVar p, FloatVar q) {
 
 	assert (p != null) : "Variable p is null";
 	assert (q != null) : "Variable q is null";
@@ -116,18 +112,10 @@ public class SinPeqR extends Constraint {
 
     @Override
     public void removeLevel(int level) {
-	if (level == firstConsistencyLevel) 
-	    firstConsistencyCheck = true;
     }
 
     @Override
     public void consistency(Store store) {
-
-	if (firstConsistencyCheck) {
-	    q.domain.in(store.level, q, -1.0, 1.0);
-	    firstConsistencyCheck = false;
-	    firstConsistencyLevel = store.level;
-	}
 
 	boundConsistency(store);
 
@@ -135,9 +123,9 @@ public class SinPeqR extends Constraint {
 
     void boundConsistency(Store store) {
 
-	// System.out.println ("1. SinPeqR("+p+", "+q+")");
+	// System.out.println ("1. " + this);
 
-	if (p.max() - p.min() >= 2*FloatDomain.PI)
+	if (p.max() - p.min() >= FloatDomain.PI)
 	    return;
 
 	do {
@@ -149,16 +137,24 @@ public class SinPeqR extends Constraint {
 
 	    double min = p.min();
 	    double max = p.max();
-	    if (p.min() < -2*FloatDomain.PI || p.max() > 2*FloatDomain.PI) {
-		// normalize to -2*PI..2*PI
+	    if (p.min() < -FloatDomain.PI || p.max() > FloatDomain.PI) {
+		// normalize to -PI..PI
 
 		FloatInterval normP = normalize(p);
 		min = normP.min();
 		max = normP.max();
 
 		// System.out.println ("Not-normalized " + p);
-		// System.out.println ("Normalized interval within -2*PI..2*PI interval = " + min + ".." + max);
+		// System.out.println ("Normalized interval within -PI..PI interval = " + min + ".." + max);
 	    }
+
+	    // System.out.println ("Normalized min/max = " + min+".."+max);
+
+	    FloatInterval minMax = new FloatInterval(min, max);
+	    if (minMax.singleton())
+	    	if ( (FloatDomain.PI/2 >= min && FloatDomain.PI/2 <= max) || 
+	    	     (-FloatDomain.PI/2 >= min && -FloatDomain.PI/2 <= max))
+	    	    throw Store.failException;
 
 	    int intervalForMin = intervalNo(min);
 	    int intervalForMax = intervalNo(max);
@@ -167,108 +163,51 @@ public class SinPeqR extends Constraint {
 
 	    double qMin=-1.0, qMax=1.0;
 	    switch (intervalForMin) {
-
-	    case 1: 
+	    case 1:
 		switch (intervalForMax) {
 		case 1: 
-		    qMin = Math.sin(min);
-		    qMax = Math.sin(max);
+		    qMin = Math.tan(min);
+		    qMax = Math.tan(max);
 		    qMin = FloatDomain.down(qMin);
 		    qMax = FloatDomain.up(qMax);
 		    break;
-		case 2: 
-		    qMin = Math.min(Math.sin(min), Math.sin(max));
-		    qMax = 1.0;
-		    qMin = FloatDomain.down(qMin);
-		    break;
-		case 3: 
-		case 4: 
-		case 5: 
-		    qMin = -1.0;
-		    qMax =  1.0;		    
-		    break;
 		default: 
-		    throw new InternalException("Selected impossible case in sin, cos, asin or acos constraint");
+		    return;
+		    // throw new InternalException("Selected impossible case in tan and atan constraint");
 		};
 		break;
 
 	    case 2: 
 		switch (intervalForMax) {
 		case 2: 
-		    qMin = Math.sin(max);
-		    qMax = Math.sin(min);
+		    qMin = Math.tan(min);
+		    qMax = Math.tan(max);
 		    qMin = FloatDomain.down(qMin);
 		    qMax = FloatDomain.up(qMax);
 		    break;
-		case 3: 
-		    qMin = -1.0;
-		    qMax = Math.max(Math.sin(min), Math.sin(max));
-		    qMax = FloatDomain.up(qMax);
-		    break;
-		case 4: 
-		case 5: 
-		    qMin = -1.0;
-		    qMax =  1.0;		    
-		break;
 		default: 
-		    throw new InternalException("Selected impossible case in sin, cos, asin or acos constraint");
+		    return;
+		    // throw new InternalException("Selected impossible case in tan and atan constraint");
 		};
 		break;
 
 	    case 3: 
 		switch (intervalForMax) {
 		case 3: 
-		    qMin = Math.sin(min);
-		    qMax = Math.sin(max);
+		    qMin = Math.tan(min);
+		    qMax = Math.tan(max);
 		    qMin = FloatDomain.down(qMin);
-		    qMax = FloatDomain.up(qMax);
-		    break;
-		case 4: 
-		    qMin = Math.min(Math.sin(min), Math.sin(max));
-		    qMax = 1.0; 
-		    qMin = FloatDomain.down(qMin);
-		    break;
-		case 5: 
-		    qMin = -1.0;
-		    qMax =  1.0;		    
-		    break;
-		default: 
-		    throw new InternalException("Selected impossible case in sin, cos, asin or acos constraint");
-		};
-		break;
-
-	    case 4: 
-		switch (intervalForMax) {
-		case 4: 
-		    qMin = Math.sin(max);
-		    qMax = Math.sin(min);
-		    qMin = FloatDomain.down(qMin);
-		    qMax = FloatDomain.up(qMax);
-		    break;
-		case 5: 
-		    qMin = -1.0;
-		    qMax = Math.max(Math.sin(min), Math.sin(max));
 		    qMax = FloatDomain.up(qMax);
 		    break;
 		default:
-		    throw new InternalException("Selected impossible case in sin, cos, asin or acos constraint");
-		}
-		break;
-
-	    case 5: 
-		switch (intervalForMax) {
-		case 5: 
-		    qMin = Math.sin(min);
-		    qMax = Math.sin(max);
-		    qMin = FloatDomain.down(qMin);
-		    qMax = FloatDomain.up(qMax);
-		    break;
-		default: 
-		    throw new InternalException("Selected impossible case in sin, cos, asin or acos constraint");
+		    return;
+		    // throw new InternalException("Selected impossible case in tan and atan constraint");	
+		    
 		};
 		break;
-	    default: 
-		throw new InternalException("Selected impossible case in sin, cos, asin or acos constraint");
+	    default:
+		return;
+		// throw new InternalException("Selected impossible case in tan and atan constraint");
 	    };
 
 	    // System.out.println (q + " in " + qMin + ".." + qMax);
@@ -276,11 +215,12 @@ public class SinPeqR extends Constraint {
 	    q.domain.in(store.level, q, qMin, qMax);
 
 	    // System.out.println ("q after in " + q);
-	    // p update
-	    double pMin = Math.asin(qMin);  // range -PI/2..PI/2
-	    double pMax = Math.asin(qMax);  // range -PI/2..PI/2
 
-	    // System.out.println ("asin result " + p + " in " + pMin +".." + pMax + " copied to  n times -PI/2 .. PI/2");
+	    // p update
+	    double pMin = Math.atan(qMin);  // range -PI/2..PI/2
+	    double pMax = Math.atan(qMax);  // range -PI/2..PI/2
+
+	    // System.out.println ("atan result " + p + " in " + pMin +".." + pMax + " copied to  n times -PI/2 .. PI/2");
 	    
 	    pMin = FloatDomain.down(pMin);
 	    pMax = FloatDomain.up(pMax);
@@ -291,21 +231,14 @@ public class SinPeqR extends Constraint {
 
 	    FloatIntervalDomain pDom = new FloatIntervalDomain(pMin, pMax);
 	    if (p.min() < -FloatDomain.PI/2) {
-
+		
 		int i=1;
 		double lo, hi;
 		do {
-		    if ( i%2 == 1) {
-			lo = FloatDomain.down(- i*FloatDomain.PI - pMax);
-			hi = FloatDomain.up(- i*FloatDomain.PI - pMin);
-		    }
-		    else {
-			lo = FloatDomain.down(- i*FloatDomain.PI + pMin);
-			hi = FloatDomain.up(- i*FloatDomain.PI + pMax);
-		    }
-		    // System.out.println ("1. adding " +  i + ": " +lo +".."+ hi);
-
+		    lo = - i*FloatDomain.PI + pMin;
+		    hi = - i*FloatDomain.PI + pMax;
 		    i++;
+		    // System.out.println ("1. adding " +  lo +".."+ hi);
 
 		    pDom.unionAdapt(lo, hi);
 
@@ -316,22 +249,16 @@ public class SinPeqR extends Constraint {
 		int i=1;
 		double lo, hi;
 		do {
-		    if ( i%2 == 1) {
-			lo = FloatDomain.down(i*FloatDomain.PI - pMax);
-			hi = FloatDomain.up(i*FloatDomain.PI - pMin);
-		    }
-		    else {
-			lo = FloatDomain.down(i*FloatDomain.PI + pMin);
-			hi = FloatDomain.up(i*FloatDomain.PI + pMax);
-		    }
-		    // System.out.println ("2. adding " +  i + ": " + lo +".."+ hi);
-
+		    lo = i*FloatDomain.PI + pMin;
+		    hi = i*FloatDomain.PI + pMax;
 		    i++;
+		    // System.out.println ("2. adding " +  lo +".."+ hi);
 
 		    pDom.unionAdapt(lo, hi);
 
 		} while (hi < p.max());
 	    }
+
 
 	    // System.out.println ("2. " + p + " in " + pDom  + " p.min() - pMin = " + (double)(p.min() - pMin));
 
@@ -341,54 +268,38 @@ public class SinPeqR extends Constraint {
 
 	} while (store.propagationHasOccurred);
 
-	// System.out.println ("2. SinPeqR("+p+", "+q+")");
+	// System.out.println ("2. TanPeqR("+p+", "+q+")");
 
     }
 
     /*
-     * Normalizes argument to interval -2*PI..2*PI
+     * Normalizes argument to interval -PI..PI
      */
     FloatInterval normalize(FloatVar v) {
 	double min = p.min();
 	double max = p.max();
 
-	double normMin = FloatDomain.down(min % (2*FloatDomain.PI));
-	double normMax = FloatDomain.up(normMin + max - min);
+	double normMin = min % FloatDomain.PI;
+	double normMax = normMin + max - min;
 
-	if (normMax >= 2*FloatDomain.PI) {
-	    normMin = FloatDomain.down(normMin - 2*FloatDomain.PI);
-	    normMax = FloatDomain.up(normMax - 2*FloatDomain.PI);
+	if (normMax >= FloatDomain.PI) {
+	    normMin -= FloatDomain.PI;
+	    normMax -= FloatDomain.PI;
 	}
 
 	return new FloatInterval(normMin, normMax);
 
     }
 
-    // double rest(double d, boolean min) {
-
-    // 	double rest = d % (2*FloatDomain.PI);
-
-    // 	if (min)
-    // 	    rest = FloatDomain.down(rest);
-    // 	else
-    // 	    rest = FloatDomain.up(rest);
-
-    // 	return rest;
-    // }
-
     int intervalNo(double d) {
-	if (d >= -2.0*FloatDomain.PI && d <= -1.5*FloatDomain.PI)
+	if (d >= -FloatDomain.PI && d < -FloatDomain.PI/2)
 	    return 1;
-	if (d >= -1.5*FloatDomain.PI && d <= -0.5*FloatDomain.PI)
+	if (d >= -FloatDomain.PI/2 && d < FloatDomain.PI/2)
 	    return 2;
-	if (d >= -0.5*FloatDomain.PI && d <= 0.5*FloatDomain.PI)
+	if (d >= FloatDomain.PI/2 && d <= FloatDomain.PI)
 	    return 3;
-	if (d >= 0.5*FloatDomain.PI && d <= 1.5*FloatDomain.PI)
-	    return 4;
-	if (d >= 1.5*FloatDomain.PI && d <= 2.0*FloatDomain.PI)
-	    return 5;
 	else 
-	    return 0;  // should not return this
+	    return 0;  // undefined
     }
 
     @Override
@@ -424,10 +335,10 @@ public class SinPeqR extends Constraint {
     public boolean satisfied() {
 
 	if (p.singleton() && q.singleton()) {
-	    double sinMin = Math.sin(p.min()), sinMax = Math.sin(p.max());
+	    double tanMin = Math.tan(p.min()), tanMax = Math.tan(p.max());
 	    
-	    FloatInterval minDiff = (sinMin <  q.min()) ?  new FloatInterval(sinMin, q.min()) : new FloatInterval(q.min(), sinMin);
-	    FloatInterval maxDiff = (sinMax <  q.max()) ?  new FloatInterval(sinMax, q.max()) : new FloatInterval(q.max(), sinMax);
+	    FloatInterval minDiff = (tanMin <  q.min()) ?  new FloatInterval(tanMin, q.min()) : new FloatInterval(q.min(), tanMin);
+	    FloatInterval maxDiff = (tanMax <  q.max()) ?  new FloatInterval(tanMax, q.max()) : new FloatInterval(q.max(), tanMax);
 
 	    return minDiff.singleton() && maxDiff.singleton();
 	}
@@ -441,7 +352,7 @@ public class SinPeqR extends Constraint {
 
 	StringBuffer result = new StringBuffer( id() );
 
-	result.append(" : SinPeqR(").append(p).append(", ").append(q).append(" )");
+	result.append(" : TanPeqR(").append(p).append(", ").append(q).append(" )");
 
 	return result.toString();
 
