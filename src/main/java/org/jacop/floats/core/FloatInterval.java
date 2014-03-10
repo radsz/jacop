@@ -31,7 +31,6 @@
 
 package org.jacop.floats.core;
 
-import java.lang.Float;
 import java.lang.Math;
 
 /**
@@ -91,7 +90,7 @@ public final class FloatInterval {
     public boolean eq(FloatInterval interval) {
 	// return min == interval.min && max == interval.max;
 
-	double v = java.lang.Math.max(java.lang.Math.abs(min - interval.min), java.lang.Math.abs(max - interval.max));
+	double v = Math.max(Math.abs(min - interval.min), Math.abs(max - interval.max));
 	return v <= FloatDomain.epsilon(v);
 
     }
@@ -118,8 +117,8 @@ public final class FloatInterval {
      */
     public boolean singleton() {
 
-	// double large = (java.lang.Math.abs(max) >= java.lang.Math.abs(min)) ? max : min;  
-	double small = (java.lang.Math.abs(max) >= java.lang.Math.abs(min)) ? min : max;  
+	// double large = (Math.abs(max) >= Math.abs(min)) ? max : min;  
+	double small = (Math.abs(max) >= Math.abs(min)) ? min : max;  
 
 	return (max-min) <= FloatDomain.epsilon(small);
 
@@ -141,11 +140,11 @@ public final class FloatInterval {
     public String toString() {
 
 	java.util.Locale locale = new java.util.Locale("ENGLISH", "GERMANY");
-	long p = new Double(java.lang.Math.ceil(java.lang.Math.log10(1/FloatDomain.precision()))).longValue();
-	String form = (java.lang.Math.abs(min) >= 1.0E+7d || 
-		       java.lang.Math.abs(max) >= 1.0E+7 || 
-		       (java.lang.Math.abs(min) <= 1.0E-3 && min != 0) || 
-		       (java.lang.Math.abs(max) <= 1.0E-3 && max != 0)) ? "%."+p+"e" : "%."+p+"f";
+	long p = new Double(Math.ceil(Math.log10(1/FloatDomain.precision()))).longValue();
+	String form = (Math.abs(min) >= 1.0E+7d || 
+		       Math.abs(max) >= 1.0E+7 || 
+		       (Math.abs(min) <= 1.0E-3 && min != 0) || 
+		       (Math.abs(max) <= 1.0E-3 && max != 0)) ? "%."+p+"e" : "%."+p+"f";
 
 	String result;
 

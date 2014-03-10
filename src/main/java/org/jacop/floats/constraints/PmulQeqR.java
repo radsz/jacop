@@ -35,8 +35,6 @@ package org.jacop.floats.constraints;
 import java.util.ArrayList;
 
 import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 
@@ -134,10 +132,15 @@ public class PmulQeqR extends Constraint {
 		double p2 = Math.max(p.min()*p.min(), p.max()*p.max());
 		double min = (p1 <= p2) ? p1 : p2;
 		double max = (p1 >= p2) ? p1 : p2;
-		if (p.min() <= 0.0 && p.max() >= 0.0)
+		if (p.min() <= 0.0 && p.max() >= 0.0) {
 		    min = 0.0;
-
-		r.domain.in(store.level, r, FloatDomain.down(min), FloatDomain.up(max));
+		    max = FloatDomain.up(max);
+		}
+		else {
+		    min = FloatDomain.down(min);
+		    max = FloatDomain.up(max);
+		}
+		r.domain.in(store.level, r, min, max);
 
 		// Bounds for P
 		double pMin;

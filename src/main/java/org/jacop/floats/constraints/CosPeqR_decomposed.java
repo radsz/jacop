@@ -36,11 +36,8 @@ import java.util.ArrayList;
 import org.jacop.core.Var;
 import org.jacop.core.Store;
 import org.jacop.constraints.Constraint;
-import org.jacop.constraints.DecomposedConstraint;
 
 import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.constraints.PplusCeqR;
-import org.jacop.floats.constraints.SinPeqR;
 import org.jacop.floats.core.FloatDomain;
 
 

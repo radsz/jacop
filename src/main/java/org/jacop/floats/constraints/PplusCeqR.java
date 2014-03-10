@@ -41,6 +41,7 @@ import org.jacop.core.Var;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatIntervalDomain;
 
 /**
  * Constraint P + C #= R
@@ -112,8 +113,11 @@ public class PplusCeqR extends PrimitiveConstraint {
 	do {
 	    store.propagationHasOccurred = false;
 
-	    p.domain.in(store.level, p, FloatDomain.down(r.min() - c), FloatDomain.up(r.max() - c));
-	    r.domain.in(store.level, r, FloatDomain.down(p.min() + c), FloatDomain.up(p.max() + c));
+	    FloatIntervalDomain pDom = FloatDomain.subBounds(r.min(), r.max(), c, c);
+	    p.domain.in(store.level, p, pDom.min(), pDom.max());
+
+	    FloatIntervalDomain rDom = FloatDomain.addBounds(p.min(), p.max(), c, c);
+	    r.domain.in(store.level, r, rDom.min(), rDom.max());
 
 	} while (store.propagationHasOccurred);
 		

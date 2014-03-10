@@ -63,8 +63,6 @@ public class SinPeqR extends Constraint {
 
     static int IdNumber = 1;
 
-    static final boolean debugAll = false;
-
     boolean firstConsistencyCheck = true;
 
     int firstConsistencyLevel;
@@ -349,8 +347,8 @@ public class SinPeqR extends Constraint {
      * Normalizes argument to interval -2*PI..2*PI
      */
     FloatInterval normalize(FloatVar v) {
-	double min = p.min();
-	double max = p.max();
+	double min = v.min();
+	double max = v.max();
 
 	double normMin = FloatDomain.down(min % (2*FloatDomain.PI));
 	double normMax = FloatDomain.up(normMin + max - min);

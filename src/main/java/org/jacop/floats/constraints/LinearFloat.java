@@ -35,9 +35,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
 import org.jacop.core.Var;
 import org.jacop.constraints.PrimitiveConstraint;
 
@@ -261,16 +259,24 @@ public class LinearFloat extends PrimitiveConstraint {
 
 	    recomputeBounds();
 
-	    assert (lMin <= lMax) : "==============WRONG============\n"+ lMin+".."+lMax+"\n==============";
+	    assert (lMin <= lMax) : "==============WRONG============\n"+ lMin+".."+lMax+"in LinearFloat\n==============";
 
-	    double min = FloatDomain.down(sum - lMax);
-	    double max = FloatDomain.up(sum - lMin);
+	    double min, max;
+
+	    if (sum == 0.0) {
+		min = - lMax;
+		max = - lMin;
+	    }
+	    else {
+		min = FloatDomain.down(sum - lMax);
+		max = FloatDomain.up(sum - lMin);
+	    }
 
 	    for (int i = 0; i < list.length; i++) {
 
 		FloatVar v = list[i];
 
-		double d1, d2;
+		FloatIntervalDomain d;
 		double divMin, divMax;
 		double min1, max1;
 
@@ -278,63 +284,61 @@ public class LinearFloat extends PrimitiveConstraint {
 		case eq : //============================================= 
 		    if ((lMaxArray[i] > max + lMinArray[i]) || (lMinArray[i] < min + lMaxArray[i])) {
 
-			// if (v.id() == "cost")
-			//     System.out.println ("1. "+ v + ")");
-
-			// System.out.println ("min="+min+", max="+max+", lMinArray[i]="+lMinArray[i]+", lMaxArray[i]="+lMaxArray[i]+", weights[i]="+weights[i]);
-
 			min1 = FloatDomain.down(min + lMaxArray[i]);
 			max1 = FloatDomain.up(max + lMinArray[i]);
-			d1 = min1 / weights[i];
-			d2 = max1 / weights[i];
 
-			// System.out.println ("d1="+d1+", d2="+d2);
+			d = FloatDomain.divBounds(min1, max1, weights[i], weights[i]);
+			divMin = d.min();
+			divMax = d.max();
 
-			if (d1 <= d2) {
-			    divMin = FloatDomain.down(d1);
-			    divMax = FloatDomain.up(d2);
-			}
-			else {
-			    divMin = FloatDomain.down(d2);
-			    divMax = FloatDomain.up(d1);
-			}
+			// d1 = min1 / weights[i];
+			// d2 = max1 / weights[i];
+
+			// // System.out.println ("d1="+d1+", d2="+d2);
+
+			// if (d1 <= d2) {
+			//     divMin = FloatDomain.down(d1);
+			//     divMax = FloatDomain.up(d2);
+			// }
+			// else {
+			//     divMin = FloatDomain.down(d2);
+			//     divMax = FloatDomain.up(d1);
+			// }
 
 			if (divMin > divMax) 
 			    throw Store.failException;
 
-			// if (v.id() == "z")
-			//     System.out.println ("***"+v + " in " + divMin +".."+ divMax);
-
 			v.domain.in(store.level, v, divMin, divMax);
 
-			// System.out.println ("result="+v);
-
-			// if (v.id() == "z")
-			//     System.out.println ("2. "+ v);
 		    }
 		    break;
 		case lt : //=============================================
 
 		    if (lMaxArray[i] >= max + lMinArray[i]) {  // based on "Bounds Consistency Techniques for Long Linear Constraints", W. Harvey and J. Schimpf
 
-			min1 = min + FloatDomain.down(lMaxArray[i]);
-			max1 = max + FloatDomain.up(lMinArray[i]);
-			d1 = min1 / weights[i];
-			d2 = max1 / weights[i];
+			min1 = FloatDomain.down(min + lMaxArray[i]);
+			max1 = FloatDomain.up(max + lMinArray[i]);
+
+			d = FloatDomain.divBounds(min1, max1, weights[i], weights[i]);
+			divMin = d.min();
+			divMax = d.max();
+
+			// d1 = min1 / weights[i];
+			// d2 = max1 / weights[i];
 
 			if (weights[i] < 0) {
-			    if (d1 <= d2) 
-				divMin = d1;
-			    else
-				divMin = d2;
+			    // if (d1 <= d2) 
+			    // 	divMin = d1;
+			    // else
+			    // 	divMin = d2;
 
 			    v.domain.inMin(store.level, v, FloatDomain.next(divMin));
 			}
 			else {
-			    if (d1 <= d2) 
-				divMax = d2;
-			    else 
-				divMax = d1;
+			    // if (d1 <= d2) 
+			    // 	divMax = d2;
+			    // else 
+			    // 	divMax = d1;
 
 			    v.domain.inMax(store.level, v, FloatDomain.previous(divMax));
 			}
@@ -344,24 +348,29 @@ public class LinearFloat extends PrimitiveConstraint {
 
 		    if (lMaxArray[i] > max + lMinArray[i]) {  // based on "Bounds Consistency Techniques for Long Linear Constraints", W. Harvey and J. Schimpf
 
-			min1 = min + FloatDomain.down(lMaxArray[i]);
-			max1 = max + FloatDomain.up(lMinArray[i]);
-			d1 = min1 / weights[i];
-			d2 = max1 / weights[i];
+			min1 = FloatDomain.down(min + lMaxArray[i]);
+			max1 = FloatDomain.up(max + lMinArray[i]);
+
+			d = FloatDomain.divBounds(min1, max1, weights[i], weights[i]);
+			divMin = d.min();
+			divMax = d.max();
+
+			// d1 = min1 / weights[i];
+			// d2 = max1 / weights[i];
 
 			if (weights[i] < 0) {
-			    if (d1 <= d2) 
-				divMin = d1;
-			    else
-				divMin = d2;
+			    // if (d1 <= d2) 
+			    // 	divMin = d1;
+			    // else
+			    // 	divMin = d2;
 
 			    v.domain.inMin(store.level, v, divMin);
 			}
 			else {
-			    if (d1 <= d2)
-				divMax = d2;
-			    else
-				divMax = d1;
+			    // if (d1 <= d2)
+			    // 	divMax = d2;
+			    // else
+			    // 	divMax = d1;
 
 			    v.domain.inMax(store.level, v, divMax);
 			}
@@ -369,19 +378,24 @@ public class LinearFloat extends PrimitiveConstraint {
 		    break;
 		case ne : //=============================================
 
-		    min1 = min + FloatDomain.down(lMaxArray[i]);
-		    max1 = max + FloatDomain.up(lMinArray[i]);
-		    d1 = min1 / weights[i];
-		    d2 = max1 / weights[i];
+		    min1 = FloatDomain.down(min + lMaxArray[i]);
+		    max1 = FloatDomain.up(max + lMinArray[i]);
 
-		    if (d1 <= d2) {
-			divMin = d1;
-			divMax = d2;
-		    }
-		    else {
-			divMin = d2;
-			divMax = d1;
-		    }
+		    d = FloatDomain.divBounds(min1, max1, weights[i], weights[i]);
+		    divMin = d.min();
+		    divMax = d.max();
+
+		    // d1 = min1 / weights[i];
+		    // d2 = max1 / weights[i];
+
+		    // if (d1 <= d2) {
+		    // 	divMin = d1;
+		    // 	divMax = d2;
+		    // }
+		    // else {
+		    // 	divMin = d2;
+		    // 	divMax = d1;
+		    // }
 
 		    FloatInterval fi = new FloatInterval(divMin, divMax);
 
@@ -392,24 +406,29 @@ public class LinearFloat extends PrimitiveConstraint {
 
 		    if (lMinArray[i] <= min + lMaxArray[i]) { // based on "Bounds Consistency Techniques for Long Linear Constraints", W. Harvey and J. Schimpf
 
-			min1 = min + FloatDomain.down(lMaxArray[i]); 
-			max1 = max + FloatDomain.up(lMinArray[i]);
-			d1 = min1 / weights[i];
-			d2 = max1 / weights[i];
+			min1 = FloatDomain.down(min + lMaxArray[i]); 
+			max1 = FloatDomain.up(max + lMinArray[i]);
+
+			d = FloatDomain.divBounds(min1, max1, weights[i], weights[i]);
+			divMin = d.min();
+			divMax = d.max();
+
+			// d1 = min1 / weights[i];
+			// d2 = max1 / weights[i];
 
 			if (weights[i] < 0) {
-			    if (d1 <= d2) 
-				divMax = d2;
-			    else
-				divMax = d1;
+			    // if (d1 <= d2) 
+			    // 	divMax = d2;
+			    // else
+			    // 	divMax = d1;
 
 			    v.domain.inMax(store.level, v, FloatDomain.previous(divMax));
 			}
 			else {
-			    if (d1 <= d2)
-				divMin = d1;
-			    else
-				divMin = d2;
+			    // if (d1 <= d2)
+			    // 	divMin = d1;
+			    // else
+			    // 	divMin = d2;
 
 			    v.domain.inMin(store.level, v, FloatDomain.next(divMin));
 			}
@@ -419,24 +438,29 @@ public class LinearFloat extends PrimitiveConstraint {
 
 		    if (lMinArray[i] < min + lMaxArray[i]) { // based on "Bounds Consistency Techniques for Long Linear Constraints", W. Harvey and J. Schimpf
 
-			min1 = min + FloatDomain.down(lMaxArray[i]);
-			max1 = max + FloatDomain.up(lMinArray[i]);
-			d1 = min1 / weights[i];
-			d2 = max1 / weights[i];
+			min1 = FloatDomain.down(min + lMaxArray[i]);
+			max1 = FloatDomain.up(max + lMinArray[i]);
+
+			d = FloatDomain.divBounds(min1, max1, weights[i], weights[i]);
+			divMin = d.min();
+			divMax = d.max();
+
+			// d1 = min1 / weights[i];
+			// d2 = max1 / weights[i];
 
 			if (weights[i] < 0) {
-			    if (d1 <= d2)
-				divMax = d2;
-			    else
-				divMax = d1;
+			    // if (d1 <= d2)
+			    // 	divMax = d2;
+			    // else
+			    // 	divMax = d1;
 
 			    v.domain.inMax(store.level, v, divMax);
 			}
 			else {
-			    if (d1 <= d2)
-				divMin = d1;
-			    else
-				divMin = d2;
+			    // if (d1 <= d2)
+			    // 	divMin = d1;
+			    // else
+			    // 	divMin = d2;
 
 			    v.domain.inMin(store.level, v, divMin);
 			}
@@ -460,21 +484,14 @@ public class LinearFloat extends PrimitiveConstraint {
 
 	    FloatDomain listDom = list[i].dom();
 
-	    double min_i = listDom.min()*weights[i];
-	    double max_i = listDom.max()*weights[i];
+	    FloatIntervalDomain mul = FloatDomain.mulBounds(listDom.min(), listDom.max(), weights[i], weights[i]);
+	    lMinArray[i] = mul.min();
+	    lMaxArray[i] = mul.max();
 
-	    if (min_i <= max_i) {
-		lMinArray[i] = FloatDomain.down(min_i);
-		lMaxArray[i] = FloatDomain.up(max_i);
-	    }
-	    else {
-		lMinArray[i] = FloatDomain.down(max_i);
-		lMaxArray[i] = FloatDomain.up(min_i);
-	    }
-
-	    lMin = FloatDomain.down(lMin + lMinArray[i]);
-	    lMax = FloatDomain.up(lMax + lMaxArray[i]);
-
+	    if (lMinArray[i] != 0.0)
+		lMin = FloatDomain.down(lMin + lMinArray[i]);
+	    if (lMaxArray[i] != 0.0)
+		lMax = FloatDomain.up(lMax + lMaxArray[i]);
 	}
 
 	// System.out.println (lMin+".."+lMax);

@@ -38,8 +38,6 @@ import org.jacop.core.Var;
 
 import org.jacop.core.ValueEnumeration;
 
-import java.util.Random;
-
 /**
  * Defines an integer domain and related operations on it.
  * 
@@ -56,12 +54,12 @@ public abstract class FloatDomain extends Domain {
     /**
      * It specifies the minimum element in the domain.
      */
-    public static final double MinFloat = -1e150;
+    public static final double MinFloat = -Double.MAX_VALUE; // -1e150;
 
     /**
      * It specifies the maximum element in the domain.
      */
-    public static final double MaxFloat = 1e150;	
+    public static final double MaxFloat = Double.MAX_VALUE; // 1e150;
 
     /**
      * It specifies the constant pi, as defined in java.lang.Math package.
@@ -145,8 +143,9 @@ public abstract class FloatDomain extends Domain {
     // returns previous (toward -inf) floating-point number before d 
     // supposed to be used by constraints
     public static double down(double d) {
+
 	if (outward)
-	    return d - ulp(d);
+	    return downBit(d); //d - ulp(d);  // 
 	else
 	    return d;
     }
@@ -154,49 +153,53 @@ public abstract class FloatDomain extends Domain {
     // returns next (toward inf) floating-point number after d 
     // supposed to be used by constraints
     public static double up(double d) {
+
 	if (outward)
-	    return d + ulp(d);
+	    return upBit(d); //d + ulp(d); // 
 	else
 	    return d;
     }
 
-    /*
-  public static double next(double x) {
-    double y;
+    // returns previous (toward -inf) floating-point number before d 
+    // supposed to be used by constraints
+    public static double upBit(double x) {
+	double y;
 
-    if (x==0)
-      return Double.longBitsToDouble(1);
-    else if (x < Double.POSITIVE_INFINITY) {
-      long xx = Double.doubleToLongBits(x);
-      if (x > 0)
-         y = Double.longBitsToDouble(xx+1);
-      else if (x==0)   // this case should never happen
-	  y = Double.longBitsToDouble(1); 
-      else
-         y = Double.longBitsToDouble(xx-1);
-      return(y);
-    }else 
-     return (x);
-  }
+	if (Double.isInfinite(x) && x > 0)
+		return FloatDomain.MaxFloat; //Double.NaN;		
 
-  public static double previous(double x) {
-    if (x==0) 
-      return(-next(0.0));
-    else 
-      return(-next(-x));
-  }
-    */
+	long xBits = Double.doubleToLongBits(x);
+	if (x > 0.0)
+	    y = Double.longBitsToDouble(xBits + 1);
+	else 
+	    if (x == 0.0) 
+		y = Double.longBitsToDouble(1); 
+	    else
+		y = Double.longBitsToDouble(xBits - 1);
+	return y;
+    }
+    
+    // returns previous (toward -inf) floating-point number before d 
+    // supposed to be used by constraints
+    public static double downBit(double x) {
+
+	if (x == 0.0) 
+	    return -upBit(0.0);
+	else 
+	    return -upBit(-x);
+    }
+
 
     // returns previous (toward -inf) floating-point number before d 
     // supposed to be used by methods for domain computations
     public static double previous(double d) {
-	return d - ulp(d);
+	return downBit(d); //d - ulp(d);
     }
 
     // returns next (toward inf) floating-point number after d 
     // supposed to be used by methods for domain computations
     public static double next(double d) {
-	return d + ulp(d);
+	return upBit(d); // d + ulp(d);
     }
 
 
@@ -247,18 +250,6 @@ public abstract class FloatDomain extends Domain {
      */
 
     public static final int IntervalDomainID = 0;
-
-    /**
-     * Unique identifier for a bound domain type.
-     */
-    
-    public static final int BoundDomainID = 1;
-
-    /**
-     * Unique identifier for a small dense domain type.
-     */
-
-    public static final int SmallDenseDomainID = 2;
 
     /**
      * It specifies an empty integer domain. 
@@ -1022,22 +1013,209 @@ public abstract class FloatDomain extends Domain {
 
     }
 
+    /* 
+     * Finds result interval for addition of {a..b} - {c..d}
+     */
+    public final static FloatIntervalDomain addBounds(double a, double b, double c, double d) {
 
+	double min = FloatDomain.down(a + c);
+	double max = FloatDomain.up(b + d);
+
+	if (d == 0.0) 
+	    max = b;
+	else if (c == 0.0)
+	    min = a;
+
+	if ( a == 0.0)
+	    min = c;
+	else if (b == 0.0)
+	    max = d;
+
+	return new FloatIntervalDomain(min, max);
+    }
+	    
+
+    /* 
+     * Finds result interval for subtraction of {a..b} - {c..d}
+     */
+    public final static FloatIntervalDomain subBounds(double a, double b, double c, double d) {
+
+	double min = FloatDomain.down(a - d);
+	double max = FloatDomain.up(b - c);
+
+	if (d == 0.0) 
+	    min = a;
+	else if (c == 0.0)
+	    max = b;
+
+	if ( a == 0.0)
+	    min = -d;
+	else if (b == 0.0)
+	    max = -c;
+
+	return new FloatIntervalDomain(min, max);
+    }
+	    
     /* 
      * Finds result interval for multiplication of {a..b} * {c..d}
      */
     public final static FloatIntervalDomain mulBounds(double a, double b, double c, double d) {
-	
+
+	// System.out.println ("[" + a +".." +b +"] * [" + c + ".." + d + "]");
+
+	boolean M_1 =  (a < 0 && b > 0);        // contains zero
+	boolean Z_1 =  (a == 0  && b == 0);     // zero
+	boolean P0_1 = (a == 0 && b > 0);       // positive with zero
+	boolean P1_1 = (a > 0 && b > 0);        // strictly positive
+	boolean N0_1 = (a < 0 && b == 0);       // negative with zero
+	boolean N1_1 = (a < 0 && b < 0);        // strictly negative
+
+	boolean M_2 =  (c < 0 && d > 0);
+	boolean Z_2 =  (c == 0  && d == 0);
+	boolean P0_2 = (c == 0 && d > 0);
+	boolean P1_2 = (c > 0 && d > 0);
+	boolean N0_2 = (c < 0 && d == 0);
+	boolean N1_2 = (c < 0 && d < 0);
+
+    	double min=0, max=0;
+
+	if (P1_1)
+	    if (P1_2) { // P1 /\ P1
+		min = down(a*c);
+		max = up(b*d);
+		return new FloatIntervalDomain(min, max);
+	    }
+	    else if (P0_2) { // P1 /\ P0
+		min = 0.0; //down(a*c);
+		max = up(b*d);		
+		return new FloatIntervalDomain(min, max);
+	    }
+	    else if (M_2) { // P1 /\ M
+		min = down(b*c);
+		max = up(b*d);
+		return new FloatIntervalDomain(min, max);
+	    }
+	    else if (N1_2) {// P1 /\ N1
+		min = down(b*c);
+		max = up(a*d);
+		return new FloatIntervalDomain(min, max);
+	    }
+	    else if (N0_2) { // P1 /\ N0
+		min = down(b*c);
+		max = 0.0; // up(a*d);
+		return new FloatIntervalDomain(min, max);
+	    }
+	    else {// P1 /\ Z
+		return new FloatIntervalDomain(0.0, 0.0);
+	    }
+
+	else if (P0_1)
+	    if (P1_2 || P0_2) { // P0 /\ { P1 \/ P0}
+		min = 0.0;
+		max = up(b*d);
+		return new FloatIntervalDomain(min, max);
+	    } else if (N1_2 || N0_2) { //P0 /\ { N0 \/ N1 } 
+		min = down(b*c);
+		max = 0.0; //up(a*d);
+		return new FloatIntervalDomain(min, max);
+	    } else if (M_2) { // P0 /\ M 
+		min = down(b*c);
+		max = up(b*d);
+		return new FloatIntervalDomain(min, max);
+	    } else {//if (Z_2) // P0 /\ Z 
+		return new FloatIntervalDomain(0.0, 0.0);
+	    }
+
+	else if (M_1)
+	    if (P0_2 || P1_2) { // M /\ { P0 \/ P1}
+		min = down(a*d);
+		max = up(b*d);
+		return new FloatIntervalDomain(min, max);
+	    }
+	    else if (N0_2 || N1_2 ) { // M /\ { N0 \/ N1}
+		min = down(b*c);
+		max = up(a*c);
+		return new FloatIntervalDomain(min, max);
+	    } else if (M_2) { // M /\ M
+		min = Math.min(a*d, b*c);
+		max = Math.max(a*c, b*d);
+		return new FloatIntervalDomain(min, max);
+	    }
+	    else {// if (Z_2) M /\ Z
+		return new FloatIntervalDomain(0.0, 0.0);
+	    }
+
+	else if (N1_1)
+	    if (P1_2)  { // N1 /\ P1
+		min = down(a*d);
+		max = up(b*c);
+		return new FloatIntervalDomain(min, max);
+	    }
+	    else if (P0_2) { // N1 /\ P0
+		min = down(a*d);
+		max = 0.0; //up(b*c);
+		return new FloatIntervalDomain(min, max);
+	    }
+	    else if (M_2) {  // N1 /\ M
+		min = down(a*d);
+		max = up(a*c);
+		return new FloatIntervalDomain(min, max);
+	    }
+	    else if (N1_2)  { // N1 /\ N1
+		min = down(b*d);
+		max = up(a*c);
+		return new FloatIntervalDomain(min, max);
+	    }
+	    else if (N0_2) { // N1 /\ N0
+		min = 0.0; //down(b*d);
+		max = up(a*c);
+		return new FloatIntervalDomain(min, max);
+	    }
+	    else {// N1 /\ Z
+		return new FloatIntervalDomain(0.0, 0.0);
+	    }
+
+	else if (N0_1)
+	    if (P0_2 || P1_2) { // N0 /\ { P0 \/ P1}
+		min = down(a*d);
+		max = 0.0; //up(b*c);
+		return new FloatIntervalDomain(min, max);
+	    }
+	    else if (N0_2 || N1_2) { // N0 /\ { N0 \/ N1}
+		min = 0.0; //down(b*d);
+		max = up(a*c);
+		return new FloatIntervalDomain(min, max);
+	    }
+	    else if (M_2) {// N0 /\ M 
+		min = down(a*d);
+		max = up(a*c);
+		return new FloatIntervalDomain(min, max);
+	    } else {// N0 /\ Z 
+		return new FloatIntervalDomain(0.0, 0.0);
+	    }
+	else  { //  Z /\ {ALL}
+		return new FloatIntervalDomain(0.0, 0.0);
+	}
+
+    }
+
+    /*
+    static FloatIntervalDomain mulOld(double a, double b, double c, double d) {
+
+    	if (a == 0.0 && b == 0.0)
+	    return new FloatIntervalDomain(0.0, 0.0);
+	else if (c == 0.0 && d == 0.0)
+	    return new FloatIntervalDomain(0.0, 0.0);
+
 	double minValue = Math.min(Math.min(a*c, a*d), Math.min(b*c, b*d));
 	double min = down(minValue);
 
 	double maxValue = Math.max(Math.max(a*c, a*d), Math.max(b*c, b*d));
 	double max = up(maxValue);
-		
+	
 	return new FloatIntervalDomain(min, max);
     }
-
-
+    */
 
     /* 
      * Finds result interval for division of {a..b} / {c..d} for div and mod constraints
@@ -1062,7 +1240,7 @@ public abstract class FloatDomain extends Domain {
 
     	double min=0, max=0;
 
-    	FloatIntervalDomain result = null;
+    	// FloatIntervalDomain result = null;
 
 	if (P1_1)
 	    if (P1_2) { // P1 /\ P1
@@ -1072,7 +1250,7 @@ public abstract class FloatDomain extends Domain {
 	    }
 	    else if (P0_2) { // P1 /\ P0
 		min = down(a/d);
-		return new FloatIntervalDomain(a/d, FloatDomain.MaxFloat); //.subtract(0.0);
+		return new FloatIntervalDomain(min, FloatDomain.MaxFloat); //.subtract(0.0);
 	    }
 	    else if (M_2) { // P1 /\ M
 		min = down(a/d);
@@ -1200,7 +1378,7 @@ public abstract class FloatDomain extends Domain {
     	    result = new FloatIntervalDomain(min, max);
     	}
 	*/
-    	return result;
+    	return null;
     }
 
 }

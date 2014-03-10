@@ -41,6 +41,7 @@ import org.jacop.core.Var;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatIntervalDomain; 
 
 /**
  * Constraint P + Q #= R
@@ -114,9 +115,14 @@ public class PplusQeqR extends PrimitiveConstraint {
 	do {
 	    store.propagationHasOccurred = false;
 
-	    p.domain.in(store.level, p, FloatDomain.down(r.min() - q.max()), FloatDomain.up(r.max() - q.min()));
-	    q.domain.in(store.level, q, FloatDomain.down(r.min() - p.max()), FloatDomain.up(r.max() - p.min()));
-	    r.domain.in(store.level, r, FloatDomain.down(p.min() + q.min()), FloatDomain.up(p.max() + q.max()));
+	    FloatIntervalDomain pDom = FloatDomain.subBounds(r.min(), r.max(), q.min(), q.max());
+	    p.domain.in(store.level, p, pDom.min(), pDom.max());
+
+	    FloatIntervalDomain qDom = FloatDomain.subBounds(r.min(), r.max(), p.min(), p.max());
+	    q.domain.in(store.level, q, qDom.min(), qDom.max());
+
+	    FloatIntervalDomain rDom = FloatDomain.addBounds(p.min(), p.max(), q.min(), q.max());
+	    r.domain.in(store.level, r, rDom.min(), rDom.max());
 
 	} while (store.propagationHasOccurred);
 		

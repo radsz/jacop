@@ -63,8 +63,6 @@ public class TanPeqR extends Constraint {
 
     static int IdNumber = 1;
 
-    static final boolean debugAll = false;
-
     /**
      * It contains variable p.
      */
@@ -276,8 +274,8 @@ public class TanPeqR extends Constraint {
      * Normalizes argument to interval -PI..PI
      */
     FloatInterval normalize(FloatVar v) {
-	double min = p.min();
-	double max = p.max();
+	double min = v.min();
+	double max = v.max();
 
 	double normMin = min % FloatDomain.PI;
 	double normMax = normMin + max - min;

@@ -119,12 +119,12 @@ public class SplitSelectFloat<T extends FloatVar> extends SimpleSelect<T> {
 		double value = (var.min() + var.max()) / 2.0;
 
 		if (leftFirst)
-		    if ( (var.max() - value) > FloatDomain.ulp(var.max() - value) ) 
+		    if ( var.max() > value ) //(var.max() - value) > FloatDomain.ulp(var.max() - value) ) 
 			return new PlteqC(var, value);
 		    else 
 			return new PltC(var, value);
 		else
-		    if ( (var.max() - value ) > FloatDomain.ulp(var.max() - value))
+		    if ( var.max() > value) //(var.max() - value ) > FloatDomain.ulp(var.max() - value))
 			return new PgtC(var, value);
 		    else
 			return new PeqC(var, value);
