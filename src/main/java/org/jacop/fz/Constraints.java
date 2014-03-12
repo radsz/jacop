@@ -45,6 +45,23 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.core.ValueEnumeration;
+import org.jacop.floats.core.FloatVar;
+import org.jacop.floats.constraints.PplusQeqR;
+import org.jacop.floats.constraints.PplusCeqR;
+import org.jacop.floats.constraints.PeqQ;
+import org.jacop.floats.constraints.PneqQ;
+import org.jacop.floats.constraints.PltQ;
+import org.jacop.floats.constraints.PlteqQ;
+import org.jacop.floats.constraints.PeqC;
+import org.jacop.floats.constraints.PneqC;
+import org.jacop.floats.constraints.PltC;
+import org.jacop.floats.constraints.PlteqC;
+import org.jacop.floats.constraints.PgtC;
+import org.jacop.floats.constraints.PgteqC;
+import org.jacop.floats.constraints.PmulQeqR;
+import org.jacop.floats.constraints.LinearFloat;
+import org.jacop.floats.constraints.XeqP;
+import org.jacop.floats.constraints.ElementFloat;
 import org.jacop.set.constraints.AdiffBeqC;
 import org.jacop.set.constraints.AinB;
 import org.jacop.set.constraints.AintersectBeqC;
@@ -79,6 +96,7 @@ public class Constraints implements ParserTreeConstants {
     IntVar zero, one;
     final static int eq=0, ne=1, lt=2, gt=3, le=4, ge=5;
     boolean intPresent = true;
+    boolean floatPresent = true;
 
     // =========== Annotations ===========
     boolean boundsConsistency = true, domainConsistency = false;
@@ -179,9 +197,67 @@ public class Constraints implements ParserTreeConstants {
 
 	    p = ((ASTConstElem)node).getName();
 
-	    if (p.startsWith("float_") ) {
-		System.err.println("%% ERROR: JaCoP does not suppoprt constraints on floats");
-		System.exit(0);
+	    if (p.startsWith("int2float")) {
+
+		ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
+		ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
+
+		pose(new XeqP(getVariable(p1), getFloatVariable(p2)));
+	    }
+
+	    else if (p.startsWith("float_") ) {
+		int operation = comparisonPredicate(p, 6);
+
+		// node.dump("");
+		// System.out.println(p + " op = " + operation);
+
+		// int_eq*, int_ne*, int_lt*, int_gt*, int_le*, and int_ge*
+		if ( operation != -1) {
+		    float_comparison(operation, node, 6);
+		}
+
+		// int_lin_* (eq, ne, lt, gt, le, ge)
+		else if (p.startsWith("lin_", 6)) {
+		    operation = comparisonPredicate(p, 10);
+		    float_lin_relation(operation, node);
+		} 
+
+		else if (p.startsWith("plus", 6)) {
+
+		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
+		    ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
+		    ASTScalarFlatExpr p3 = (ASTScalarFlatExpr)node.jjtGetChild(2);
+
+		    if (p1.getType() == 5) {// p1 int
+		    	pose(new PplusCeqR(getFloatVariable(p2), getFloat(p1), getFloatVariable(p3)));
+		    }
+		    else if (p2.getType() == 5) {// p2 int
+		    	pose(new PplusCeqR(getFloatVariable(p1), getFloat(p2), getFloatVariable(p3)));
+		    }
+		    else
+			pose(new PplusQeqR(getFloatVariable(p1), getFloatVariable(p2), getFloatVariable(p3)));
+
+		} else if (p.startsWith("times", 6)) {
+
+		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
+		    ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
+		    ASTScalarFlatExpr p3 = (ASTScalarFlatExpr)node.jjtGetChild(2);
+
+		    pose(new PmulQeqR(getFloatVariable(p1), getFloatVariable(p2), getFloatVariable(p3)));
+
+		} else if (p.startsWith("div", 6)) {
+
+		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
+		    ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
+		    ASTScalarFlatExpr p3 = (ASTScalarFlatExpr)node.jjtGetChild(2);
+
+		    pose(new PmulQeqR(getFloatVariable(p2), getFloatVariable(p3), getFloatVariable(p1)));
+		}
+		else {
+		    System.err.println("%% ERROR: JaCoP does not implement this constraints on floats");
+		    System.exit(0);
+		}
+
 	    }
 	    // int_* predicates
 	    else if (p.startsWith("int_") ) {
@@ -452,6 +528,9 @@ public class Constraints implements ParserTreeConstants {
 		else if (p.startsWith("set_element", 6)) {
 		    // array_set_element
 		    generateVarSetElementConstraint(node);
+		} 
+		else if (p.startsWith("float_element", 6)) {
+		    generateFloatElementConstraint(node);
 		}
 		else
 		    System.out.println("TODO: "+p);
@@ -1663,6 +1742,351 @@ public class Constraints implements ParserTreeConstants {
 	}
     }
 
+
+
+    void float_comparison(int operation, SimpleNode node, int reifStart) {
+
+	//   	 node.dump("");
+
+	ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
+	ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
+
+	boolean reified = false; 
+	if (p.startsWith("_reif", reifStart)) {
+	    reified = true;
+	}
+
+	if (reified) { // reified constraint
+	    PrimitiveConstraint c = null;
+	    ASTScalarFlatExpr p3 = (ASTScalarFlatExpr)node.jjtGetChild(2);
+	    IntVar v3 = getVariable(p3);
+
+	    if (p2.getType() == 5) { // var rel float
+		FloatVar v1 = getFloatVariable(p1);
+
+		double i2 = getFloat(p2);
+		switch (operation) {
+
+		case eq :
+		    if (v1.min() > i2 || v1.max() < i2) {
+		    	v3.domain.in(store.level, v3, 0, 0);
+			return;
+		    }
+		    else if (v1.min() == i2 && v1.singleton() ) {
+		    	v3.domain.in(store.level, v3, 1, 1);
+			return;
+		    } else if (v3.max() == 0) {
+			v1.domain.inComplement(store.level, v1, i2);
+			return;
+		    }
+		    else if (v3.min() == 1) {
+			v1.domain.in(store.level, v1, i2, i2);
+			return;
+		    }
+		    else
+			c = new PeqC(v1, i2);
+		    break;
+
+		case ne :
+		    if (v1.min() > i2 || v1.max() < i2) {
+		    	v3.domain.in(store.level, v3, 1, 1);
+		    	return;
+		    }
+		    else if (v1.min() == i2 && v1.singleton() ) {
+		    	v3.domain.in(store.level, v3, 0, 0);
+		    	return;
+		    } else if (v3.max() == 0) {
+			v1.domain.in(store.level, v1, i2, i2);
+			return;
+		    }
+		    else if (v3.min() == 1) {
+			v1.domain.inComplement(store.level, v1, i2);
+			return;
+		    }
+		    else
+			c = new PneqC(v1, i2);
+		    break;
+		case lt :
+		    if (v1.max() < i2) {
+		    	v3.domain.in(store.level, v3, 1, 1);
+		    	return;
+		    }
+		    else if (v1.min() >= i2 ) {
+		    	v3.domain.in(store.level, v3, 0, 0);
+		    	return;
+		    }
+		    else
+			c = new PltC(v1, i2);
+		    break;
+		case le :
+		    if (v1.max() <= i2) {
+		    	v3.domain.in(store.level, v3, 1, 1);
+		    	return;
+		    }
+		    else if (v1.min() > i2 ) {
+		    	v3.domain.in(store.level, v3, 0, 0);
+		    	return;
+		    }
+		    else
+			c = new PlteqC(v1, i2);
+		    break;
+		// case gt :
+		//     if (v1.min() > i2) {
+		// 	v3.domain.in(store.level, v3, 1, 1);
+		// 	return;
+		//     }
+		//     else if (v1.max() <= i2 ) {
+		// 	v3.domain.in(store.level, v3, 0, 0);
+		// 	return;
+		//     }
+		//     else
+		// 	c = new PgtC(v1, i2);
+		//     break;
+		// case ge :
+		//     if (v1.min() >= i2) {
+		// 	v3.domain.in(store.level, v3, 1, 1);
+		// 	return;
+		//     }
+		//     else if (v1.max() < i2 ) {
+		// 	v3.domain.in(store.level, v3, 0, 0);
+		// 	return;
+		//     }
+		//     else
+		// 	c = new PgteqC(v1, i2);
+		//     break;
+		}
+	    } else if (p1.getType() == 5) { // float rel var
+		FloatVar v2 = getFloatVariable(p2);
+		double i1 = getInt(p1);
+
+		switch (operation) {
+
+		case eq :
+		    if (v2.min() > i1 || v2.max() < i1) {
+		    	v3.domain.in(store.level, v3, 0, 0);
+			return;
+		    }
+		    else if (v2.min() == i1 && v2.singleton() ) {
+		    	v3.domain.in(store.level, v3, 1, 1);
+			return;
+		    }
+		    else if (v3.max() == 0) {
+			v2.domain.inComplement(store.level, v2, i1);
+			return;
+		    }
+		    else if (v3.min() == 1) {
+			v2.domain.in(store.level, v2, i1, i1);
+			return;
+		    }
+		    else
+			c = new PeqC(v2, i1);
+		    break;
+
+		case ne :
+		    if (v2.min() > i1 || v2.max() < i1) {
+		    	v3.domain.in(store.level, v3, 1, 1);
+		    	return;
+		    }
+		    else if (v2.min() == i1 && v2.singleton() ) {
+		    	v3.domain.in(store.level, v3, 0, 0);
+		    	return;
+		    }
+		    else
+			c = new PneqC(v2, i1);
+		    break;
+		case lt :
+		    if (i1 < v2.min()) {
+		    	v3.domain.in(store.level, v3, 1, 1);
+		    	return;
+		    }
+		    else if (i1 >= v2.max() ) {
+		    	v3.domain.in(store.level, v3, 0, 0);
+		    	return;
+		    }
+		    else
+			c = new PgtC(v2, i1);
+		    break;
+		case le :
+		    if (i1 <= v2.min()) {
+		    	v3.domain.in(store.level, v3, 1, 1);
+		    	return;
+		    }
+		    else if (i1 > v2.max() ) {
+		    	v3.domain.in(store.level, v3, 0, 0);
+		    	return;
+		    }
+		    else
+			c = new PgteqC(v2, i1);
+		    break;
+		// case gt :
+		//     if (i1 > v2.max()) {
+		// 	v3.domain.in(store.level, v3, 1, 1);
+		// 	return;
+		//     }
+		//     else if (i1 <= v2.min() ) {
+		// 	v3.domain.in(store.level, v3, 0, 0);
+		// 	return;
+		//     }
+		//     else
+		// 	c = new PltC(v2, i1);
+		//     break;
+		// case ge :
+		//     if (i1 > v2.max()) {
+		//     	v3.domain.in(store.level, v3, 1, 1);
+		//     	return;
+		//     }
+		//     else if (i1 < v2.min() ) {
+		//     	v3.domain.in(store.level, v3, 0, 0);
+		//     	return;
+		//     }
+		//     else
+		//     	c = new PlteqC(v2, i1);
+		//     break;
+		}
+	    } else { // var rel var
+		FloatVar v1 = getFloatVariable(p1);
+		FloatVar v2 = getFloatVariable(p2);
+
+		switch (operation) {
+		case eq :
+		    c = new PeqQ(v1, v2);
+		    break;
+		case ne :
+		    c = new PneqQ(v1, v2);
+		    break;
+		case lt :
+		    c = new PltQ(v1, v2);
+		    break;
+		case le :
+		    c = new PlteqQ(v1, v2);
+		    break;
+		// case gt :
+		//     c = new PgtQ(v1, v2);
+		//     break;
+		// case ge :
+		//     c = new PgteqQ(v1, v2);
+		//     break;
+		}
+	    }
+
+ 	    Constraint cr = new Reified(c, v3);
+ 	    pose(cr);
+	}
+	else  { // not reified constraints
+
+	    if (p1.getType() == 5) { // first parameter float
+		if (p2.getType() == 0 || p2.getType() == 1) { // first parameter float & second parameter float
+		    double i1 = getInt(p1);
+		    double i2 = getInt(p2);
+		    switch (operation) {
+		    case eq :
+			if (i1 != i2) throw Store.failException;
+			break;
+		    case ne :
+			if (i1 == i2) throw Store.failException;
+			break;
+		    case lt :
+			if (i1 >= i2) throw Store.failException;
+			break;
+		    case le :
+			if (i1 > i2) throw Store.failException;
+			break;
+		    // case gt :
+		    // 	if (i1 <= i2) throw Store.failException;
+		    // 	break;
+		    // case ge :
+		    // 	if (i1 < i2) throw Store.failException;
+		    // 	break;
+		    }
+		} 
+		else { // first parameter float & second parameter var
+
+		    double i1 = getFloat(p1);
+		    FloatVar v2 = getFloatVariable(p2);
+
+		    switch (operation) {
+		    case eq :
+			v2.domain.in(store.level, v2, i1, i1);
+			break;
+		    case ne :
+			v2.domain.inComplement(store.level, v2, i1);
+			break;
+		    case lt :
+			v2.domain.in(store.level, v2, i1+1, IntDomain.MaxInt);
+			break;
+		    case le :
+			v2.domain.in(store.level, v2, i1, IntDomain.MaxInt);
+			break;
+		    // case gt :
+		    // 	v2.domain.in(store.level, v2, IntDomain.MinInt, i1-1);
+		    // 	break;
+		    // case ge :
+		    // 	v2.domain.in(store.level, v2, IntDomain.MinInt, i1);
+		    // 	break;
+		    }
+		}
+	    }
+	    else { // first parameter var
+		if (p2.getType() == 5) { // first parameter var & second parameter float
+
+		    FloatVar v1 = getFloatVariable(p1);
+		    double i2 = getFloat(p2);
+
+		    switch (operation) {
+		    case eq :
+			v1.domain.in(store.level, v1, i2, i2);
+			break;
+		    case ne :
+			v1.domain.inComplement(store.level, v1, i2);
+			break;
+		    case lt :
+			v1.domain.in(store.level, v1, VariablesParameters.MIN_FLOAT, i2-1);
+			break;
+		    case le :
+			v1.domain.in(store.level, v1, VariablesParameters.MIN_FLOAT, i2);
+			break;
+		    // case gt :
+		    // 	v1.domain.in(store.level, v1, i2+1, VariablesParameters.MAX_FLOAT);
+		    // 	break;
+		    // case ge :
+		    // 	v1.domain.in(store.level, v1, i2, VariablesParameters.MAX_FLOAT);
+		    // 	break;
+		    }
+
+		} 
+		else { // first parameter var & second parameter var
+
+		    PrimitiveConstraint c = null;
+		    FloatVar v1 = getFloatVariable(p1);
+		    FloatVar v2 = getFloatVariable(p2);
+
+		    switch (operation) {
+		    case eq :
+			c = new PeqQ(v1, v2);
+			break;
+		    case ne :
+			c = new PneqQ(v1, v2);
+			break;
+		    case lt :
+			c = new PltQ(v1, v2);
+			break;
+		    case le :
+			c = new PlteqQ(v1, v2);
+			break;
+		    // case gt :
+		    // 	c = new PgtQ(v1, v2);
+		    // 	break;
+		    // case ge :
+		    // 	c = new PgteqQ(v1, v2);
+		    // 	break;
+		    }
+		    pose(c);
+		}
+	    }
+
+	}
+    }
+
 //     void int_comparison(int operation, SimpleNode node, int reifStart) throws FailException {
 
 // 	//   	 node.dump("");
@@ -2161,6 +2585,57 @@ public class Constraints implements ParserTreeConstants {
 	}
     }
 
+    void float_lin_relation(int operation, SimpleNode node) throws FailException {
+	// float_lin_*[_reif] (* = eq | ne | lt | gt | le | ge)
+
+	// node.dump("");
+	double[] p1 = getFloatArray((SimpleNode)node.jjtGetChild(0));
+	FloatVar[] p2 = getFloatVarArray((SimpleNode)node.jjtGetChild(1));
+
+	double p3 = getFloat((ASTScalarFlatExpr)node.jjtGetChild(2));
+
+	if (p.startsWith("_reif", 12)) { // reified
+	    IntVar p4 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(3));
+
+	    switch (operation) {
+	    case eq :
+		pose(new Reified(new LinearFloat(store, p2, p1, "==", p3), p4));
+		break;
+	    case ne :
+		pose(new Reified(new LinearFloat(store, p2, p1, "!=", p3), p4));
+		break;
+	    case lt :
+		pose(new Reified(new LinearFloat(store, p2, p1, "<", p3), p4));
+		break;
+	    case le :
+		pose(new Reified(new LinearFloat(store,p2, p1, "<=", p3), p4));
+		break;
+	    default:
+		System.err.println("%% ERROR: Constraint "+p+" not supported.");
+		System.exit(0);
+	    }
+	}
+	else { // non reified
+	    switch (operation) {
+	    case eq :
+		pose(new LinearFloat(store, p2, p1, "==", p3));
+		break;
+	    case ne :
+		pose(new LinearFloat(store, p2, p1, "!=", p3));
+		break;
+	    case lt :
+		pose(new LinearFloat(store, p2, p1, "<", p3));
+		break;
+	    case le :
+		pose(new LinearFloat(store, p2, p1, "<=", p3));
+		break;
+		default:
+		    System.err.println("%% ERROR: Constraint "+p+" not supported.");
+		    System.exit(0);
+	    }
+	}
+    }
+
     boolean allWeightsOne(int[] w) {
 	//boolean allOne=true;
 	for (int i=0; i<w.length; i++)
@@ -2350,6 +2825,27 @@ public class Constraints implements ParserTreeConstants {
 	}
     }
 
+
+    void generateFloatElementConstraint(SimpleNode node) throws FailException {
+
+	IntVar p1 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
+	double[] p2 = getFloatArray((SimpleNode)node.jjtGetChild(1));
+	FloatVar p3 = getFloatVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
+
+	p1.domain.in(store.level, p1, 1, IntDomain.MaxInt);
+
+	int newP2Length = p1.max() - p1.min() + 1;
+	int listLength = (p2.length < newP2Length) ? p2.length : newP2Length;
+	double[] newP2 = new double[listLength];
+	for (int i=0; i < listLength; i++) 
+	    newP2[i] = p2[p1.min() - 1 + i];
+
+	pose(new ElementFloat(p1, newP2, p3, p1.min() - 1));
+
+
+	// pose(new ElementFloat(p1, p2, p3));
+    }
+
     int getInt(ASTScalarFlatExpr node) {
 	intPresent = true;
 
@@ -2369,7 +2865,30 @@ public class Constraints implements ParserTreeConstants {
 		return intTable[node.getInt()];
 	}
 	else {
-	    System.err.println("Wrong parameter " + node);
+	    System.err.println("getInt: Wrong parameter " + node);
+	    System.exit(0);
+	    return 0;
+	}
+    }
+
+    double getFloat(ASTScalarFlatExpr node) {
+	floatPresent = true;
+
+	if (node.getType() == 5) //int
+	    return node.getFloat();
+	else if (node.getType() == 2) // ident
+	    return dictionary.getFloat(node.getIdent());
+	else if (node.getType() == 3) {// array access
+	    double[] floatTable = dictionary.getFloatArray(node.getIdent());
+	    if (floatTable == null) {
+		floatPresent = false;
+		return VariablesParameters.MIN_FLOAT;
+	    }
+	    else
+		return floatTable[node.getInt()];
+	}
+	else {
+	    System.err.println("getFloat: Wrong parameter " + node);
 	    System.exit(0);
 	    return 0;
 	}
@@ -2515,6 +3034,36 @@ public class Constraints implements ParserTreeConstants {
 	}
     }
 
+    double[] getFloatArray(SimpleNode node) {
+	if (node.getId() == JJTARRAYLITERAL) {
+	    int count = node.jjtGetNumChildren();
+	    double[] aa = new double[count];
+	    for (int i=0;i<count;i++) {
+		ASTScalarFlatExpr child = (ASTScalarFlatExpr)node.jjtGetChild(i);
+		double el = getFloat(child);
+		if (! floatPresent)
+		    return null;
+		else
+		    aa[i] = el;
+	    }
+	    return aa;
+	}
+	else if (node.getId() == JJTSCALARFLATEXPR) {
+	    if (((ASTScalarFlatExpr)node).getType() == 2) // ident
+		return dictionary.getFloatArray(((ASTScalarFlatExpr)node).getIdent());
+	    else {
+		System.err.println("Wrong type of int array; compilation aborted."); 
+		System.exit(0);
+		return new double[] {};
+	    }
+	}
+	else {
+	    System.err.println("Wrong type of int array; compilation aborted."); 
+	    System.exit(0);
+	    return new double[] {};
+	}
+    }
+
     IntVar getVariable(ASTScalarFlatExpr node) {
 
 	if (node.getType() == 0) {// int
@@ -2550,6 +3099,39 @@ public class Constraints implements ParserTreeConstants {
 	    System.err.println("Wrong parameter " + node);
 	    System.exit(0);
 	    return new IntVar(store);
+	}
+    }
+
+    FloatVar getFloatVariable(ASTScalarFlatExpr node) {
+
+	if (node.getType() == 5) {// float
+	    double val = node.getFloat();
+	    // if (val == 0) return zero;
+	    // else if (val == 1) return one;
+	    // else 
+	    return new FloatVar(store, val, val);
+	}
+	else if (node.getType() == 2) { // ident
+	    FloatVar float_Var = dictionary.getFloatVariable(node.getIdent());
+	    if (float_Var == null) {
+		double bFloat = dictionary.getFloat(node.getIdent());
+		return new FloatVar(store, bFloat, bFloat);
+	    }	    return float_Var;
+	}
+	else if (node.getType() == 3) {// array access
+	    if (node.getInt() > dictionary.getVariableFloatArray(node.getIdent()).length ||
+		node.getFloat() < 0) {
+		System.out.println("Index out of bound for " + node.getIdent() + "["+node.getInt()+"]");
+		System.exit(0);
+		return new FloatVar(store);
+	    }
+	    else
+		return dictionary.getVariableFloatArray(node.getIdent())[node.getInt()];
+	}
+	else {
+	    System.err.println("getFloatVariable: Wrong parameter " + node);
+	    System.exit(0);
+	    return new FloatVar(store);
 	}
     }
 
@@ -2634,6 +3216,52 @@ public class Constraints implements ParserTreeConstants {
 	    System.err.println("Wrong type of Variable array; compilation aborted."); 
 	    System.exit(0);
 	    return new IntVar[] {};
+	}
+    }
+
+    FloatVar[] getFloatVarArray(SimpleNode node) {
+	if (node.getId() == JJTARRAYLITERAL) {
+	    int count = node.jjtGetNumChildren();
+	    FloatVar[] aa = new FloatVar[count];
+	    for (int i=0;i<count;i++) {
+		ASTScalarFlatExpr child = (ASTScalarFlatExpr)node.jjtGetChild(i);
+		FloatVar el = getFloatVariable(child);
+		aa[i] = el;
+	    }
+	    return aa;
+	}
+	else if (node.getId() == JJTSCALARFLATEXPR) {
+	    if (((ASTScalarFlatExpr)node).getType() == 2) {// ident
+		// array of var
+		FloatVar[] v = dictionary.getVariableFloatArray(((ASTScalarFlatExpr)node).getIdent());
+		if (v != null)
+		    return v;
+		else { // array of int
+		    double[] ia = dictionary.getFloatArray(((ASTScalarFlatExpr)node).getIdent());
+		    if (ia != null) {
+			FloatVar[] aa = new FloatVar[ia.length];
+			for (int i=0; i<ia.length; i++)
+			    aa[i] = new FloatVar(store, ia[i], ia[i]);
+			return aa;
+		    }
+		    else {
+			System.err.println("Cannot find array " +((ASTScalarFlatExpr)node).getIdent() +
+					   "; compilation aborted."); 
+			System.exit(0);
+			return new FloatVar[] {};
+		    }
+		}
+	    }
+	    else {
+		System.err.println("Wrong type of Variable array; compilation aborted."); 
+		System.exit(0);
+		return new FloatVar[] {};
+	    }
+	}
+	else {
+	    System.err.println("Wrong type of Variable array; compilation aborted."); 
+	    System.exit(0);
+	    return new FloatVar[] {};
 	}
     }
 

@@ -41,6 +41,8 @@ import org.jacop.floats.constraints.PlteqC;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatDomain;
 
+import org.jacop.core.Var;
+
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.ComparatorVariable;
 import org.jacop.search.Indomain;
@@ -56,7 +58,7 @@ import org.jacop.search.Indomain;
  * @param <T> type of variable being used in the search.
  */
 
-public class SplitSelectFloat<T extends FloatVar> extends SimpleSelect<T> {
+public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
 
 
     /**
@@ -116,18 +118,18 @@ public class SplitSelectFloat<T extends FloatVar> extends SimpleSelect<T> {
 		// assert (index < searchVar.length);
 		// assert (searchVar[index].dom() != null);
 
-		double value = (var.min() + var.max()) / 2.0;
+		double value = (((FloatVar)var).min() + ((FloatVar)var).max()) / 2.0;
 
 		if (leftFirst)
-		    if ( var.max() > value ) //(var.max() - value) > FloatDomain.ulp(var.max() - value) ) 
-			return new PlteqC(var, value);
+		    if ( ((FloatVar)var).max() > value ) //(var.max() - value) > FloatDomain.ulp(var.max() - value) ) 
+			return new PlteqC((FloatVar)var, value);
 		    else 
-			return new PltC(var, value);
+			return new PltC((FloatVar)var, value);
 		else
-		    if ( var.max() > value) //(var.max() - value ) > FloatDomain.ulp(var.max() - value))
-			return new PgtC(var, value);
+		    if ( ((FloatVar)var).max() > value) //(var.max() - value ) > FloatDomain.ulp(var.max() - value))
+			return new PgtC((FloatVar)var, value);
 		    else
-			return new PeqC(var, value);
+			return new PeqC((FloatVar)var, value);
 	}
 	
 }

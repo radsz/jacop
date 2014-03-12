@@ -396,7 +396,7 @@ public class ElementFloat extends Constraint {
 		
 	StringBuffer result = new StringBuffer( id() );
 		
-	result.append(" : elementInteger").append("( ").append(index).append(", [");
+	result.append(" : elementFloat").append("( ").append(index).append(", [");
 		
 	for (int i = 0; i < list.length; i++) {
 	    result.append( list[i] );

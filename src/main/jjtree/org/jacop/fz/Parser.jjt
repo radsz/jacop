@@ -195,7 +195,7 @@ void model() #model:
     constraint_items()
     model_end()
     <EOF>
-// 	{jjtThis.dump("");}
+// {jjtThis.dump("");}
 }
 
 // pred_decl_items : pred_decl_items pred_decl_item ';'
@@ -551,14 +551,20 @@ void int_ti_expr_tail() #IntTiExprTail:
 //     FLOAT
 //   | FLOAT_LITERAL DOTDOT FLOAT_LITERAL
 
-void float_ti_expr_tail() :
-{}
+void float_ti_expr_tail() #FloatTiExprTail:
+{//type 0=int; 1=interval;
+    Token t1, t2;
+}
 {
     (
-     <FLOAT>
-     | <FLOAT_LITERAL> <DOTDOT> <FLOAT_LITERAL>
+     <FLOAT> {jjtThis.setType(0);}
+     | t1=<FLOAT_LITERAL> <DOTDOT> t2=<FLOAT_LITERAL>
+	  {
+	      jjtThis.setType(1); 
+	      jjtThis.setLowHigh(Double.parseDouble(t1.image), Double.parseDouble(t2.image));
+	  }
      )
-	{ System.err.println("Float not supported; compilation aborted."); System.exit(0); }
+	// { System.err.println("Float not supported; compilation aborted."); System.exit(0); }
 }
 
 // set_ti_expr_tail:
@@ -682,7 +688,7 @@ void scalar_flat_expr() #ScalarFlatExpr:
 	  jjtThis.setInt(val);
 	} 
     | t = <INT_LITERAL> { jjtThis.setType(0); jjtThis.setInt(Integer.parseInt(t.image)); } 
-    | t = <FLOAT_LITERAL> { jjtThis.setType(5); } 
+    | t = <FLOAT_LITERAL> { jjtThis.setType(5); jjtThis.setFloat(Double.parseDouble(t.image));} 
     | t = <STRING_LITERAL> { jjtThis.setType(4); } 
 }
 
