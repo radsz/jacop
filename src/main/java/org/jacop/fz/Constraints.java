@@ -58,10 +58,22 @@ import org.jacop.floats.constraints.PltC;
 import org.jacop.floats.constraints.PlteqC;
 import org.jacop.floats.constraints.PgtC;
 import org.jacop.floats.constraints.PgteqC;
+import org.jacop.floats.constraints.PgteqQ;
 import org.jacop.floats.constraints.PmulQeqR;
 import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.constraints.XeqP;
+import org.jacop.floats.constraints.AbsPeqR;
+import org.jacop.floats.constraints.SqrtPeqR;
+import org.jacop.floats.constraints.SinPeqR;
+import org.jacop.floats.constraints.CosPeqR;
+import org.jacop.floats.constraints.TanPeqR;
+import org.jacop.floats.constraints.AsinPeqR;
+import org.jacop.floats.constraints.AcosPeqR;
+import org.jacop.floats.constraints.AtanPeqR;
+import org.jacop.floats.constraints.LnPeqR;
+import org.jacop.floats.constraints.ExpPeqR;
 import org.jacop.floats.constraints.ElementFloat;
+
 import org.jacop.set.constraints.AdiffBeqC;
 import org.jacop.set.constraints.AinB;
 import org.jacop.set.constraints.AintersectBeqC;
@@ -252,6 +264,90 @@ public class Constraints implements ParserTreeConstants {
 		    ASTScalarFlatExpr p3 = (ASTScalarFlatExpr)node.jjtGetChild(2);
 
 		    pose(new PmulQeqR(getFloatVariable(p2), getFloatVariable(p3), getFloatVariable(p1)));
+		}
+		else if (p.startsWith("abs", 6)) {
+		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
+		    ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
+
+		    pose(new AbsPeqR(getFloatVariable(p1), getFloatVariable(p2)));
+		}
+		else if (p.startsWith("sqrt", 6)) {
+		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
+		    ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
+
+		    pose(new SqrtPeqR(getFloatVariable(p1), getFloatVariable(p2)));
+		}
+		else if (p.startsWith("sin", 6)) {
+		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
+		    ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
+
+		    pose(new SinPeqR(getFloatVariable(p1), getFloatVariable(p2)));
+		}
+		else if (p.startsWith("cos", 6)) {
+		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
+		    ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
+
+		    pose(new CosPeqR(getFloatVariable(p1), getFloatVariable(p2)));
+		}
+		else if (p.startsWith("asin", 6)) {
+		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
+		    ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
+
+		    pose(new AsinPeqR(getFloatVariable(p1), getFloatVariable(p2)));
+		}
+		else if (p.startsWith("acos", 6)) {
+		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
+		    ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
+
+		    pose(new AcosPeqR(getFloatVariable(p1), getFloatVariable(p2)));
+		}
+		else if (p.startsWith("tan", 6)) {
+		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
+		    ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
+
+		    pose(new TanPeqR(getFloatVariable(p1), getFloatVariable(p2)));
+		}
+		else if (p.startsWith("atan", 6)) {
+		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
+		    ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
+
+		    pose(new AtanPeqR(getFloatVariable(p1), getFloatVariable(p2)));
+		}
+		else if (p.startsWith("exp", 6)) {
+		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
+		    ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
+
+		    pose(new ExpPeqR(getFloatVariable(p1), getFloatVariable(p2)));
+		}
+		else if (p.startsWith("ln", 6)) {
+		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
+		    ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
+
+		    pose(new LnPeqR(getFloatVariable(p1), getFloatVariable(p2)));
+		}
+		else if (p.startsWith("min", 6)) {
+		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
+		    ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
+		    ASTScalarFlatExpr p3 = (ASTScalarFlatExpr)node.jjtGetChild(2);
+
+		    FloatVar v1 = getFloatVariable(p1);
+		    FloatVar v2 = getFloatVariable(p2);
+		    FloatVar v3 = getFloatVariable(p3);
+
+		    pose(new IfThen(new PlteqQ(v1,v2), new PeqQ(v1,v3)));
+		    pose(new IfThen(new PlteqQ(v2,v1), new PeqQ(v2,v3)));
+		}
+		else if (p.startsWith("max", 6)) {
+		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
+		    ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
+		    ASTScalarFlatExpr p3 = (ASTScalarFlatExpr)node.jjtGetChild(2);
+
+		    FloatVar v1 = getFloatVariable(p1);
+		    FloatVar v2 = getFloatVariable(p2);
+		    FloatVar v3 = getFloatVariable(p3);
+
+		    pose(new IfThen(new PgteqQ(v1,v2), new PeqQ(v1,v3)));
+		    pose(new IfThen(new PgteqQ(v2,v1), new PeqQ(v2,v3)));
 		}
 		else {
 		    System.err.println("%% ERROR: JaCoP does not implement this constraints on floats");
@@ -523,11 +619,11 @@ public class Constraints implements ParserTreeConstants {
 		}
 		else if (p.startsWith("var_set_element", 6) ) {
 		    // array_var_set_element
-		    generateSetElementConstraint(node);
+		    generateVarSetElementConstraint(node);
 		}
 		else if (p.startsWith("set_element", 6)) {
 		    // array_set_element
-		    generateVarSetElementConstraint(node);
+		    generateSetElementConstraint(node);
 		} 
 		else if (p.startsWith("float_element", 6)) {
 		    generateFloatElementConstraint(node);

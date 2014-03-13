@@ -195,6 +195,7 @@ public class PlteqQ extends PrimitiveConstraint {
 	public void increaseWeight() {
 		if (increaseWeight) {
 			p.weight++;
+			q.weight++;
 		}
 	}	
 	

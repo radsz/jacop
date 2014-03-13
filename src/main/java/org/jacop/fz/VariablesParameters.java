@@ -382,15 +382,14 @@ public class VariablesParameters implements ParserTreeConstants {
 
 		if ( constant_float(node, initChild) ) {
 		    initValFloat = getScalarFlatExprFloat(node, initChild);
-		    PeqC c = new PeqC(varFloat, initValFloat);
-		    store.impose(c);
-// 		    System.out.println(c);
+		    varFloat.domain.in(store.level, varFloat, initValFloat, initValFloat);
+		    // PeqC c = new PeqC(varFloat, initValFloat);
+		    // store.impose(c);
 		}
 		else {
 		    initVarFloat = getScalarFlatExpr_varFloat(store, node, initChild); 
 		    PeqQ c = new PeqQ(varFloat, initVarFloat);
 		    store.impose(c);
-// 		    System.out.println(c);
 		}
 
 	    }
@@ -410,8 +409,9 @@ public class VariablesParameters implements ParserTreeConstants {
 
 		if ( constant_float(node, initChild) ) {
 		    initValFloat = getScalarFlatExprFloat(node, initChild);
-		    PeqC c = new PeqC(varFloat, initValFloat);
-		    store.impose(c);
+		    varFloat.domain.in(store.level, varFloat, initValFloat, initValFloat);
+		    // PeqC c = new PeqC(varFloat, initValFloat);
+		    // store.impose(c);
  		    // System.out.println(c);
 		}
 		else {

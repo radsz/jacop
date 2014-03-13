@@ -43,19 +43,21 @@ import java.io.FileInputStream;
  */
 public class Options {
 
-	String[] argument;
+    String[] argument;
 	
-	FileInputStream file;
+    FileInputStream file;
 
     String fileName;
 	
     boolean all = false, verbose = false;
 	
-	boolean statistics = false;
+    boolean statistics = false;
 	
-	int time_out = 0;
-	
-	int number_solutions = -1;
+    int time_out = 0;
+    
+    int number_solutions = -1;
+
+    boolean interval = false;
 
 	/**
 	 * It constructs an Options object and parses all the parameters/options provided 
@@ -86,7 +88,8 @@ public class Options {
 						"        <value> - time in second.\n"+
 						"    -s, --statistics\n"+
 						"    -n <value>, --num-solutions <value>\n"+
-						"        <value> - limit on solution number.\n"
+						"        <value> - limit on solution number.\n"+
+						"    -i, --interval print intervals instead of values for floating variables\n"
 				);
 				System.exit(0);
 			}
@@ -119,6 +122,10 @@ public class Options {
 				else if (args[i].equals("-v") || args[i].equals("--verbose")) {
 					    verbose = true;
 					i++;
+				}
+				else if (args[i].equals("-i") || args[i].equals("--interval")) {
+				    interval = true;
+				    i++;
 				}
 				else {
 					System.out.println("fz2jacop: not recognized option "+ args[i]);
@@ -194,6 +201,14 @@ public class Options {
 	 */
 	public int getNumberSolutions() {
 		return number_solutions;
+	}
+
+	/**
+	 * It returns true if the interval print mode has been requested.
+	 * @return true if the interval print mode is active, false otherwise. 
+	 */
+	public boolean getInterval() {
+		return interval;
 	}
 	
 }

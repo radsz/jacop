@@ -94,7 +94,7 @@ public class Fz2jacop {
 	} catch (FailException e) {
             System.out.println("=====UNSATISFIABLE====="); // "*** Evaluation of model resulted in fail.");
 	} catch (ArithmeticException e) {
-	    System.err.println("%% Evaluation of model resulted in integer overflow.");
+	    System.err.println("%% Evaluation of model resulted in an overflow.");
 	} catch (ParseException e) {
 	    System.out.println("%% Parser exception "+ e);
 	} catch (TokenMgrError e) {

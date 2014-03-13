@@ -363,7 +363,7 @@ public class SearchItem implements ParserTreeConstants {
 	    }
 	}
 	else {
-	    System.err.println("Wrong parameters for float_search. Only indomain_split or indomain_split_reverse are allowed.");
+	    System.err.println("Wrong parameters for float_search. Only indomain_split or indomain_reverse_split are allowed.");
 	    System.exit(0);
 	    return null;
 	}

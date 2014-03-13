@@ -349,6 +349,8 @@ public class Solve implements ParserTreeConstants {
 	    else if (final_search[2] != null) {
 		label = final_search[2];
 		list_seq_searches.add(label);
+		if (final_search[3] != null)
+		    list_seq_searches.add(final_search[3]);
 	    }
 	    else if (final_search[3] != null) {
 		label = final_search[3];
@@ -385,6 +387,8 @@ public class Solve implements ParserTreeConstants {
 		)
 	    switch (solveKind) {
 	    case 0: // satisfy
+
+		FloatDomain.intervalPrint(options.getInterval()); // print intervals for float variables
 
 		if (options.getAll()) { // all solutions
  		    label.getSolutionListener().searchAll(true); 
@@ -424,6 +428,8 @@ public class Solve implements ParserTreeConstants {
 		break;
 	    case 1: // minimize
 
+		FloatDomain.intervalPrint(options.getInterval()); // print intervals for float variables
+
 		if (options.getNumberSolutions()>0) {
 		    for (Search<Var> list_seq_searche : list_seq_searches)
 			((DepthFirstSearch) list_seq_searche).respectSolutionListenerAdvice = true;
@@ -435,6 +441,8 @@ public class Solve implements ParserTreeConstants {
 
 		break;
 	    case 2: //maximize
+
+		FloatDomain.intervalPrint(options.getInterval()); // print intervals for float variables
 
 		if (options.getNumberSolutions()>0) {
 		    for (Search<Var> list_seq_searche : list_seq_searches)
@@ -653,7 +661,8 @@ public class Solve implements ParserTreeConstants {
 	    if (lastSearch != null) 
 		lastSearch.addChildSearch(intSearch);
 	    lastSearch = intSearch;
-	    if (bool_search_variables.length == 0 && set_search_variables.length == 0 ) {
+	    if (bool_search_variables.length == 0 && set_search_variables.length == 0 
+		&& float_search_variables.length == 0) {
 		intSearch.setSolutionListener(new CostListener<Var>());
 
 		if (costVariable != null) {
@@ -693,7 +702,7 @@ public class Solve implements ParserTreeConstants {
 	    if (lastSearch != null) 
 		lastSearch.addChildSearch(boolSearch);
 	    lastSearch = boolSearch;
-	    if (set_search_variables.length == 0) {
+	    if (set_search_variables.length == 0 && float_search_variables.length == 0) {
 		boolSearch.setSolutionListener(new CostListener<Var>()); 
 
 		if (costVariable != null) {
@@ -724,7 +733,8 @@ public class Solve implements ParserTreeConstants {
 	    setSearch.setPrintInfo(false);
 	    if (lastSearch != null) 
 		lastSearch.addChildSearch(setSearch);
-   	    setSearch.setSolutionListener(new CostListener<Var>());
+	    if (float_search_variables.length == 0)
+		setSearch.setSolutionListener(new CostListener<Var>());
 
 	    if (costVariable != null) {
 		intSearch.setCostVar( costVariable);
@@ -868,6 +878,9 @@ public class Solve implements ParserTreeConstants {
 	if (si.exploration() == null || si.exploration().equals("complete"))
 	    switch (solveKind) {
 	    case 0: // satisfy
+
+		FloatDomain.intervalPrint(options.getInterval()); // print intervals for float variables
+
  		if (options.getAll() ) { // all solutions
   		    for (int i=0; i<si.getSearchItems().size(); i++) {  //list_seq_searches.size(); i++) {
   			list_seq_searches.get(i).getSolutionListener().searchAll(true);
@@ -883,6 +896,8 @@ public class Solve implements ParserTreeConstants {
 
 	    case 1: // minimize
 		optimization = true;
+
+		FloatDomain.intervalPrint(options.getInterval()); // print intervals for float variables
 
 		cost = getCost((ASTSolveExpr)kind.jjtGetChild(0));
 		if (cost != null)
@@ -911,20 +926,22 @@ public class Solve implements ParserTreeConstants {
 		optimization = true;
 		// cost = getCost((ASTSolveExpr)kind.jjtGetChild(0));
 
-	    cost = getCost((ASTSolveExpr)kind.jjtGetChild(0));
-	    if (cost != null) { // maximize
+		FloatDomain.intervalPrint(options.getInterval()); // print intervals for float variables
+
+		cost = getCost((ASTSolveExpr)kind.jjtGetChild(0));
+		if (cost != null) { // maximize
 		    max_cost = new IntVar(store, "-"+cost.id(), IntDomain.MinInt, 
 					  IntDomain.MaxInt);
 		    pose(new XplusYeqC((IntVar)max_cost, (IntVar)cost, 0));
 		    costVariable = max_cost;
-	    }
-	    else {
-		cost = getCostFloat((ASTSolveExpr)kind.jjtGetChild(0));
-		max_cost = new FloatVar(store, "-"+cost.id(), VariablesParameters.MIN_FLOAT, 
-					VariablesParameters.MAX_FLOAT);
-		pose(new PplusQeqR((FloatVar)max_cost, (FloatVar)cost, new FloatVar(store, 0.0, 0.0)));
-		costVariable = max_cost;
-	    }
+		}
+		else {
+		    cost = getCostFloat((ASTSolveExpr)kind.jjtGetChild(0));
+		    max_cost = new FloatVar(store, "-"+cost.id(), VariablesParameters.MIN_FLOAT, 
+					    VariablesParameters.MAX_FLOAT);
+		    pose(new PplusQeqR((FloatVar)max_cost, (FloatVar)cost, new FloatVar(store, 0.0, 0.0)));
+		    costVariable = max_cost;
+		}
 
 		// Result = restart_search(masterLabel, masterSelect, cost, false);
 

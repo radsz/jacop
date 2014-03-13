@@ -1,5 +1,5 @@
 /**
- *  PltQ.java 
+ *  PgteqQ.java 
  *  This file is part of JaCoP.
  *
  *  JaCoP is a Java Constraint Programming solver. 
@@ -45,23 +45,23 @@ import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatDomain;
 
 /**
- * Constraint P < Q for floats
+ * Constraints P >= Q for floats
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.0
  */
 
-public class PltQ extends PrimitiveConstraint {
+public class PgteqQ extends PrimitiveConstraint {
 
 	static int idNumber = 1;
 
 	/**
-	 * It specifies variable p to be lower than q.
+	 * It specifies variables p which must be greater or equal to a given varibale.
 	 */
 	public FloatVar p;
 
 	/**
-	 * It specifies the second parameter 
+	 * It specifies variablw q from which a given variable must be greater or equal.
 	 */
 	public FloatVar q;
 
@@ -70,22 +70,23 @@ public class PltQ extends PrimitiveConstraint {
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"p", "q"};
-	
+
 	/**
-	 * It constructs constraint P < C.
+	 * It constructs constraint P >= Q.
 	 * @param p variable p.
-	 * @param c constant c.
+	 * @param q variable q.
 	 */
-	public PltQ(FloatVar p, FloatVar q) {
+	public PgteqQ(FloatVar p, FloatVar q) {
 		
 		assert (p != null) : "Variable p is null";
 		assert (q != null) : "Variable q is null";
 
 		numberId = idNumber++;
 		numberArgs = 1;
-
+		
 		this.p = p;
 		this.q = q;
+	
 	}
 
 	@Override
@@ -95,31 +96,31 @@ public class PltQ extends PrimitiveConstraint {
 
 		variables.add(p);
 		variables.add(q);
-		
 		return variables;
 	}
 
 	@Override
 	public void consistency(Store store) {
 
+	    p.domain.inMin(store.level, p, q.min());
+	    q.domain.inMax(store.level, q, p.max());
+	
+	}
+
+	@Override
+	public void notConsistency(Store store) {
 	    p.domain.inMax(store.level, p, FloatDomain.previous(q.max()));
 	    q.domain.inMin(store.level, q, FloatDomain.next(p.min()));
 	}
 
 	@Override
-	public void notConsistency(Store store) {
-	    p.domain.inMin(store.level, p, q.min());
-	    q.domain.inMax(store.level, q, p.max());
-	}
-
-	@Override
 	public boolean satisfied() {
-	    return p.max() < q.min();
+	    return p.min() >= q.max();
 	}
 
 	@Override
 	public boolean notSatisfied() {
-	    return p.min() >= q.max();
+	    return p.max() < q.min();
 	}
 
 	@Override
@@ -157,6 +158,7 @@ public class PltQ extends PrimitiveConstraint {
 			return Domain.NONE;
 		}
 
+	
 	@Override
 	public int getNotConsistencyPruningEvent(Var var) {
 
@@ -167,7 +169,6 @@ public class PltQ extends PrimitiveConstraint {
 					return possibleEvent;
 			}
 			return Domain.NONE;
-			
 	}
 
 	@Override
@@ -184,9 +185,9 @@ public class PltQ extends PrimitiveConstraint {
 
 	@Override
 	public String toString() {
-		return id() + " : PltQ(" + p + ", " + q + " )";
+		return id() + " : PgteqQ(" + p + ", " + q + " )";
 	}
-	
+
 	@Override
 	public void increaseWeight() {
 		if (increaseWeight) {
