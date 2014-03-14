@@ -48,7 +48,7 @@ public abstract class Var implements Backtrackable {
 	/**
 	 * It is a counter to indicate number of created variables.
 	 */
-	public static int idNumber = 0;
+	public static volatile int idNumber = 0;
 
 	/**
 	 * Id string of the variable.

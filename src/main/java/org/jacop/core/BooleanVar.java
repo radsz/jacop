@@ -49,6 +49,11 @@ public class BooleanVar extends IntVar {
 	 */
 	public BooleanVar() {
 	}
+	
+	synchronized static int incrementAndGetIdNumber()
+	{
+		return idNumber++;
+	}
 
 	/**
 	 * This constructor creates a variable with empty domain (standard FD
@@ -57,7 +62,7 @@ public class BooleanVar extends IntVar {
 	 * @param store It specifies the store in which boolean variable should be created.
 	 */
 	public BooleanVar(final Store store) {
-		this(store, store.getVariableIdPrefix() + idNumber++,
+		this(store, store.getVariableIdPrefix() + incrementAndGetIdNumber(),
 				new BoundDomain(0, 1));
 	}
 
