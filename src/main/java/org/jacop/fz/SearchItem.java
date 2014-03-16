@@ -55,6 +55,9 @@ import org.jacop.search.SmallestMin;
 import org.jacop.search.SplitSelect;
 import org.jacop.search.WeightedDegree;
 import org.jacop.floats.search.SmallestDomainFloat;
+import org.jacop.floats.search.LargestDomainFloat;
+import org.jacop.floats.search.SmallestMinFloat;
+import org.jacop.floats.search.LargestMaxFloat;
 import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.set.core.SetVar;
 import org.jacop.set.search.IndomainSetMax;
@@ -473,25 +476,25 @@ public class SearchItem implements ParserTreeConstants {
 	    return null;
 	else if (var_selection_heuristic.equals("first_fail")) 
  	    return new SmallestDomainFloat();
-	// else if (var_selection_heuristic.equals("anti_first_fail")) {
-	//     // does not follow flatzinc definition but may give better results ;)
-	//     //tieBreaking = new MostConstrainedStatic();
-	//     return new LargestDomain();
-	// }
+	else if (var_selection_heuristic.equals("anti_first_fail")) {
+	    // does not follow flatzinc definition but may give better results ;)
+	    //tieBreaking = new MostConstrainedStatic();
+	    return new LargestDomainFloat();
+	}
 	// else if (var_selection_heuristic.equals("most_constrained")) {
 	//     //tieBreaking = new MostConstrainedStatic();
 	//     return new SmallestDomainFloat();
 	// }
 	else if (var_selection_heuristic.equals("occurrence"))
 	    return new MostConstrainedStatic();
-	// else if (var_selection_heuristic.equals("smallest")) {
-	//     // does not follow flatzinc definition but may give better results ;)
- 	//     // tieBreaking = new MostConstrainedStatic(); 
-	//     //tieBreaking = new SmallestDomain();
-	//     return new SmallestMin();
-	// }
-	// else if (var_selection_heuristic.equals("largest"))
-	//     return new LargestMax();
+	else if (var_selection_heuristic.equals("smallest")) {
+	    // does not follow flatzinc definition but may give better results ;)
+ 	    // tieBreaking = new MostConstrainedStatic(); 
+	    //tieBreaking = new SmallestDomain();
+	    return new SmallestMinFloat();
+	}
+	else if (var_selection_heuristic.equals("largest"))
+	    return new LargestMaxFloat();
 	// else if (var_selection_heuristic.equals("max_regret"))
 	//     return new MaxRegret();
 	// else if (var_selection_heuristic.equals("weighted_degree")) {
