@@ -105,7 +105,7 @@ public class Markov {
 			    );
 
 	DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
-	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(vars, null); //new SmallestDomainFloat<FloatVar>());
+	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, vars, null); //new SmallestDomainFloat<FloatVar>());
 	label.setAssignSolution(true);
 	// label.setSolutionListener(new PrintOutListener<FloatVar>());
 	label.getSolutionListener().recordSolutions(true); 

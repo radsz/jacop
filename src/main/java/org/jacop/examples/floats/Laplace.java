@@ -97,7 +97,7 @@ public class Laplace {
 
 	// solve minimize cost;
 	DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
-	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(xs, null);
+	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, xs, null);
 	label.setAssignSolution(true);
 	s.leftFirst = false;
 

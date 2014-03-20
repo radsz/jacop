@@ -135,7 +135,7 @@ public class Loan {
 
 	// solve minimize cost;
 	DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
-	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(new FloatVar[] {B1, B2, B3, B4, P, R}, null);
+	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, new FloatVar[] {B1, B2, B3, B4, P, R}, null);
 	// s.leftFirst = false;
 
 	label.setSolutionListener(new PrintOutListener<FloatVar>());

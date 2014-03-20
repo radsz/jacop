@@ -224,7 +224,7 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 		} else {
 
 			for (int i = 0; i < vars.length; i++) {
-				if (!vars[i].singleton())
+			    if (!vars[i].singleton()) 
 					throw new RuntimeException("Variable is not grounded in the solution");
 				solutions[0][i] = vars[i].dom();
 			}

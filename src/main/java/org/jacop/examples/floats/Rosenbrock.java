@@ -55,8 +55,12 @@ package org.jacop.examples.floats;
 import java.util.ArrayList;
 
 import org.jacop.core.Store;
+import org.jacop.core.Var;
+import org.jacop.search.Search;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.PrintOutListener;
+import org.jacop.search.SimpleSolutionListener;
+import org.jacop.search.SelectChoicePoint;
 
 import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatDomain;
@@ -65,6 +69,7 @@ import org.jacop.floats.constraints.PplusQeqR;
 import org.jacop.floats.constraints.PmulQeqR;
 import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.floats.search.SmallestDomainFloat;
+import org.jacop.floats.search.Optimize;
 
 public class Rosenbrock {
 
@@ -80,7 +85,7 @@ public class Rosenbrock {
 
 	Store store = new Store();
 
-	FloatDomain.setPrecision(1e-3);
+	FloatDomain.setPrecision(1e-14);
 	FloatDomain.intervalPrint(false);
 
 	FloatVar x1 = new FloatVar(store, "x1", -1.0, 8.0);
@@ -105,17 +110,26 @@ public class Rosenbrock {
 	System.out.println( "\bFloatVar store size: "+ store.size()+
   			    "\nNumber of constraints: " + store.numberConstraints()
 			    );
-
+	/*
 	DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
-	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(new FloatVar[] {x1, x2, z}, new SmallestDomainFloat<FloatVar>());
+	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, new FloatVar[] {x1, x2, z}, new SmallestDomainFloat<FloatVar>());
 	label.setAssignSolution(true);
 	// s.leftFirst = false;
 
 	// label.setSolutionListener(new PrintOutListener<FloatVar>());
 
 	label.labeling(store, s, z);
+	*/
 
-	System.out.println (z);
+	DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
+	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, new FloatVar[] {x1, x2}, null);
+	label.setAssignSolution(false);
+	label.setPrintInfo(false);
+
+	label.setSolutionListener(new ResultListener<FloatVar>(new FloatVar[] {x1, x2}));
+
+	Optimize min = new Optimize(store, label, s, z);
+	boolean result = min.minimize();
 
 	System.out.println ("\nPrecision = " + FloatDomain.precision());
 
@@ -137,4 +151,22 @@ public class Rosenbrock {
 	example.rosenbrock();
 
     }			
+
+    public class ResultListener<T extends Var> extends SimpleSolutionListener<T> {
+
+	FloatVar[] var;
+
+	public ResultListener(FloatVar[] v) {
+	    var = v;
+	}
+
+	public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
+
+	    boolean returnCode = super.executeAfterSolution(search, select);
+
+	    System.out.println (java.util.Arrays.asList(var));
+
+	    return returnCode;
+	}
+    }
 }

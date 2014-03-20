@@ -437,6 +437,9 @@ public class Solve implements ParserTreeConstants {
 		}
 
 		Result = label.labeling(store, variable_selection, cost);
+		// last_search.setSolutionListener(new ResultListener(si.vars()));
+		// org.jacop.floats.search.Optimize opt = new org.jacop.floats.search.Optimize(store, label, variable_selection, (FloatVar)cost);
+		// Result = opt.minimize();
 		this.si = si;
 
 		break;
@@ -752,7 +755,7 @@ public class Solve implements ParserTreeConstants {
 	if (float_search_variables.length != 0) {
 	    // add float search containing all variables to be sure that they get a value
 	    DepthFirstSearch<Var> floatSearch = new DepthFirstSearch<Var>();
-	    SelectChoicePoint<Var> floatSelect = new SplitSelectFloat<Var>(float_search_variables, null);
+	    SelectChoicePoint<Var> floatSelect = new SplitSelectFloat<Var>(store, float_search_variables, null);
 
 	    if (variable_selection == null)
 		variable_selection = floatSelect;
@@ -1219,8 +1222,13 @@ public class Solve implements ParserTreeConstants {
     IntVar getCost(ASTSolveExpr node) {
 	if (node.getType() == 0) // ident
 	    return dictionary.getVariable(node.getIdent());
-	else if (node.getType() == 1) // array access
-	    return dictionary.getVariableArray(node.getIdent())[node.getIndex()];
+	else if (node.getType() == 1) { // array access
+	    IntVar[] a = dictionary.getVariableArray(node.getIdent());
+	    if ( a != null)
+		return a[node.getIndex()];
+	    else
+		return null;
+	}
 	else {
 	    System.err.println("Wrong cost function specification " + node);
 	    System.exit(0);
@@ -1406,4 +1414,26 @@ public class Solve implements ParserTreeConstants {
 	    return v1 - v2;
 	}
     }
+
+    // public class ResultListener<T extends Var> extends SimpleSolutionListener<T> {
+
+    // 	Var[] var;
+
+    // 	public ResultListener(Var[] v) {
+    // 	    var = v;
+    // 	}
+
+    // 	public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
+
+    // 	    boolean returnCode = super.executeAfterSolution(search, select);
+
+    // 	    FinalNumberSolutions++;
+
+    // 	    printSolution();
+    // 	    System.out.println("----------");
+
+    // 	    return returnCode;
+    // 	}
+    // }
+
 }

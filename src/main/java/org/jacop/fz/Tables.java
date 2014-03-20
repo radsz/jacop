@@ -325,13 +325,17 @@ public class Tables {
 	IntVar[]  a = variableArrayTable.get(ident);
 	if (a == null) {
 	    int[] intA = intArrayTable.get(ident);
-	    a = new IntVar[intA.length];
-	    for (int i =0; i<intA.length; i++) {
-		if (intA[i] == 0) a[i] = zero;
-		else if (intA[i] == 1) a[i] = one;
-		else
-		    a[i] = new IntVar(store, intA[i], intA[i]);
+	    if (intA != null) {
+		a = new IntVar[intA.length];
+		for (int i =0; i<intA.length; i++) {
+		    if (intA[i] == 0) a[i] = zero;
+		    else if (intA[i] == 1) a[i] = one;
+		    else
+			a[i] = new IntVar(store, intA[i], intA[i]);
+		}
 	    }
+	    else
+		return null;
 	}
 	return a;
     }

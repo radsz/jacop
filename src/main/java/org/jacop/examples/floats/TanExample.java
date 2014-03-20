@@ -47,6 +47,7 @@ import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.constraints.TanPeqR;
 import org.jacop.floats.constraints.PplusQeqR;
 import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.floats.search.SmallestDomainFloat;
 
 public class TanExample {
 
@@ -73,11 +74,12 @@ public class TanExample {
 			    );		
 		
 	DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
-	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(new FloatVar[] {p, q}, null); //new SmallestDomainFloat<FloatVar>());
+	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, new FloatVar[] {p, q}, null); //new SmallestDomainFloat<FloatVar>());
 	label.setAssignSolution(true);
 	// label.setSolutionListener(new PrintOutListener<FloatVar>());
 	label.getSolutionListener().recordSolutions(true); 
 	label.getSolutionListener().searchAll(true); 
+	s.roundRobin = false;
 	//s.leftFirst = false;
 
 	boolean result = label.labeling(store, s);

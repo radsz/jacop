@@ -1,5 +1,5 @@
 /**
- *  PplusCeqR.java 
+ *  PmulCeqR.java 
  *  This file is part of JaCoP.
  *
  *  JaCoP is a Java Constraint Programming solver. 
@@ -29,67 +29,68 @@
  *
  */
 
+
 package org.jacop.floats.constraints;
 
 import java.util.ArrayList;
 
 import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 
-import org.jacop.constraints.PrimitiveConstraint;
+import org.jacop.constraints.Constraint;
+
 import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatIntervalDomain;
 
 /**
- * Constraint P + C #= R
+ * Constraint P * C = R for floats
  * 
- * Bound consistency is used.
+ * Boundary consistency is used.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.0
  */
 
-public class PplusCeqR extends PrimitiveConstraint {
+public class PmulCeqR extends Constraint {
 
-    static int idNumber = 1;
+    static int counter = 1;
 
     /**
-     * It specifies variable p in constraint p+c=r. 
+     * It specifies variable p in constraint p * c = r. 
      */
     public FloatVar p;
 
     /**
-     * It specifies constant c in constraint p+c=r. 
+     * It specifies constants c in constraint p * c = r. 
      */
-    double c;
+    public double c;
 
     /**
-     * It specifies variable r in constraint p+c=r. 
+     * It specifies variable r in constraint p * c = r. 
      */
     public FloatVar r;
 
-	
     /**
      * It specifies the arguments required to be saved by an XML format as well as 
      * the constructor being called to recreate an object from an XML format.
      */
     public static String[] xmlAttributes = {"p", "c", "r"};
 
-    /** It constructs constraint P+C=R.
+    /**
+     * It constructs a constraint P * C = R.
      * @param p variable p.
-     * @param c constant c.
+     * @param c constnat c.
      * @param r variable r.
      */
-    public PplusCeqR(FloatVar p, double c, FloatVar r) {
-		
+    public PmulCeqR(FloatVar p, double c, FloatVar r) {
+
 	assert (p != null) : "Variable p is null";
 	assert (r != null) : "Variable r is null";
 
-	numberId = idNumber++;
-	numberArgs = 3;
+	numberId = counter++;
+	numberArgs = 2;
 
 	this.p = p;
 	this.c = c;
@@ -104,46 +105,28 @@ public class PplusCeqR extends PrimitiveConstraint {
 	variables.add(p);
 	variables.add(r);
 	return variables;
-	
     }
 
     @Override
-    public void consistency(Store store) {
-		
-	do {
-	    store.propagationHasOccurred = false;
+    public void consistency (Store store) {
 
-	    FloatIntervalDomain pDom = FloatDomain.subBounds(r.min(), r.max(), c, c);
-	    p.domain.in(store.level, p, pDom.min(), pDom.max());
 
-	    FloatIntervalDomain rDom = FloatDomain.addBounds(p.min(), p.max(), c, c);
-	    r.domain.in(store.level, r, rDom.min(), rDom.max());
+	    do {
 
-	} while (store.propagationHasOccurred);
-		
-    }
+		store.propagationHasOccurred = false;
 
-    @Override
-    public int getNestedPruningEvent(Var var, boolean mode) {
+		// Bounds for P
+		FloatIntervalDomain pBounds = FloatDomain.divBounds(r.min(), r.max(), c, c);
 
-	// If consistency function mode
-	if (mode) {
-	    if (consistencyPruningEvents != null) {
-		Integer possibleEvent = consistencyPruningEvents.get(var);
-		if (possibleEvent != null)
-		    return possibleEvent;
-	    }
-	    return IntDomain.GROUND;
-	}
-	// If notConsistency function mode
-	else {
-	    if (notConsistencyPruningEvents != null) {
-		Integer possibleEvent = notConsistencyPruningEvents.get(var);
-		if (possibleEvent != null)
-		    return possibleEvent;
-	    }
-	    return IntDomain.BOUND;
-	}
+		p.domain.in(store.level, p, pBounds); //.min(), pBounds.max());
+
+		// Bounds for R
+		FloatIntervalDomain rBounds = FloatDomain.mulBounds(p.min(), p.max(), c, c);
+
+		r.domain.in(store.level, r, rBounds); //.min(), rBounds.max());
+
+	    } while (store.propagationHasOccurred);
+
     }
 
     @Override
@@ -156,52 +139,14 @@ public class PplusCeqR extends PrimitiveConstraint {
 		return possibleEvent;
 	}
 	return IntDomain.BOUND;
-
-    }
-
-    @Override
-    public int getNotConsistencyPruningEvent(Var var) {
-
-	// If notConsistency function mode
-	if (notConsistencyPruningEvents != null) {
-	    Integer possibleEvent = notConsistencyPruningEvents.get(var);
-	    if (possibleEvent != null)
-		return possibleEvent;
-	}
-	return IntDomain.GROUND;
     }
 
     @Override
     public void impose(Store store) {
-
 	p.putModelConstraint(this, getConsistencyPruningEvent(p));
 	r.putModelConstraint(this, getConsistencyPruningEvent(r));
 	store.addChanged(this);
 	store.countConstraint();
-    }
-
-    @Override
-    public void notConsistency(Store store) {
-	
-	do {
-			
-	    store.propagationHasOccurred = false;
-
-	    if (r.singleton() )
-		p.domain.inComplement(store.level, p, r.min() - c);
-
-	    if (p.singleton())
-		r.domain.inComplement(store.level, r, p.min() + c);
-			
-	} while (store.propagationHasOccurred);
-		
-    }
-
-    @Override
-    public boolean notSatisfied() {
-	FloatDomain pDom = p.dom(), rDom = r.dom();
-	return (pDom.max() + c < rDom.min() || 
-		pDom.min() + c > rDom.max());
     }
 
     @Override
@@ -212,17 +157,17 @@ public class PplusCeqR extends PrimitiveConstraint {
 
     @Override
     public boolean satisfied() {
-
-	return (p.singleton() && r.singleton() 
-		&& r.value() - p.value() - c < FloatDomain.epsilon(r.value() - p.value() - c));
-		
+	FloatDomain pDom = p.dom(), rDom = r.dom();
+	return pDom.singleton() && rDom.singleton()
+	    && pDom.min() * c == rDom.min();
     }
 
     @Override
     public String toString() {
 
-	return id() + " : PplusCeqR(" + p + ", " + c + ", " + r + " )";
+	return id() + " : PmulCeqR(" + p + ", " + c + ", " + r + " )";
     }
+
 
     @Override
     public void increaseWeight() {
@@ -231,5 +176,5 @@ public class PplusCeqR extends PrimitiveConstraint {
 	    r.weight++;
 	}
     }
-			
+
 }

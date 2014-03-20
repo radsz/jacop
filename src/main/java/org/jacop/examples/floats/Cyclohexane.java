@@ -145,7 +145,7 @@ public class Cyclohexane {
 			    );
 
 	DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
-	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(new FloatVar[] {x, y, z}, null); //new SmallestDomainFloat<FloatVar>());
+	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, new FloatVar[] {x, y, z}, null); //new SmallestDomainFloat<FloatVar>());
 	label.setSolutionListener(new PrintOutListener<FloatVar>());
 	label.getSolutionListener().recordSolutions(true); 
 	// label.getSolutionListener().searchAll(true); 

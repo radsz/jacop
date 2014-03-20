@@ -74,7 +74,8 @@ public class SinCosExample {
 
 
 	DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
-	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(new FloatVar[] {p, q}, null); //new SmallestDomainFloat<FloatVar>());
+	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, new FloatVar[] {p, q}, null); //new SmallestDomainFloat<FloatVar>());
+	s.roundRobin=false;
 	label.setAssignSolution(true);
 	// label.setSolutionListener(new PrintOutListener<FloatVar>());
 	label.getSolutionListener().recordSolutions(true); 

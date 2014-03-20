@@ -64,6 +64,8 @@ import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.constraints.PplusCeqR;
 import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.floats.search.SmallestDomainFloat;
+import org.jacop.floats.search.LargestDomainFloat;
+import org.jacop.floats.search.Optimize; 
 
 public class MinCostFlow {
 
@@ -151,17 +153,26 @@ public class MinCostFlow {
 
 	// solve minimize cost;
 	DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
-	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(vars, new SmallestDomainFloat<FloatVar>());
+	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, X, new SmallestDomainFloat<FloatVar>());
 	label.setAssignSolution(true);
 	// s.leftFirst = false;
 	label.setTimeOut(1);
-
 	// label.setSolutionListener(new PrintOutListener<FloatVar>());
 
 	label.labeling(store, s, cost); 
 
-	// System.out.println (cost);
-	System.out.printf ("cost = %.2f\n", cost.value());
+	/*
+	DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
+	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, X, null); //new LargestDomainFloat<FloatVar>());
+	label.setAssignSolution(false);
+	// s.leftFirst = false;
+
+	Optimize opt = new Optimize(store, label, s, cost);
+	opt.minimize();
+	*/
+
+	System.out.println (cost);
+	// System.out.printf ("cost = %.2f\n", cost.value());
 
 	for (int i = 0; i < X.length; i++) 
 	    System.out.printf ("%.2f, ", X[i].value());

@@ -146,7 +146,7 @@ public class CurveFitting {
 
 	// solve minimize cost;
 	DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
-	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(vars, null); //new SmallestDomainFloat<FloatVar>());
+	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, vars, null); //new SmallestDomainFloat<FloatVar>());
 	label.setAssignSolution(true);
 	// s.leftFirst = false;
 

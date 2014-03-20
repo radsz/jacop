@@ -163,11 +163,13 @@ public class TanPeqR extends Constraint {
 	    switch (intervalForMin) {
 	    case 1:
 		switch (intervalForMax) {
-		case 1: 
+		case 1: // d >= -FloatDomain.PI && d < -FloatDomain.PI/2
 		    qMin = Math.tan(min);
 		    qMax = Math.tan(max);
 		    qMin = FloatDomain.down(qMin);
 		    qMax = FloatDomain.up(qMax);
+		    if (qMax < 0)
+			qMax = FloatDomain.MaxFloat;
 		    break;
 		default: 
 		    return;
@@ -177,11 +179,17 @@ public class TanPeqR extends Constraint {
 
 	    case 2: 
 		switch (intervalForMax) {
-		case 2: 
+		case 2: // d >= -FloatDomain.PI/2 && d < FloatDomain.PI/2
 		    qMin = Math.tan(min);
 		    qMax = Math.tan(max);
 		    qMin = FloatDomain.down(qMin);
 		    qMax = FloatDomain.up(qMax);
+		    if (qMin > qMax) {
+			if (qMax > 0)
+			    qMin = - FloatDomain.MaxFloat;
+			else if (qMin < 0)
+			    qMax = FloatDomain.MaxFloat;
+		    }
 		    break;
 		default: 
 		    return;
@@ -191,11 +199,13 @@ public class TanPeqR extends Constraint {
 
 	    case 3: 
 		switch (intervalForMax) {
-		case 3: 
+		case 3: // d >= FloatDomain.PI/2 && d <= FloatDomain.PI
 		    qMin = Math.tan(min);
 		    qMax = Math.tan(max);
 		    qMin = FloatDomain.down(qMin);
 		    qMax = FloatDomain.up(qMax);
+		    if (qMin > 0)
+			qMin = - FloatDomain.MaxFloat;
 		    break;
 		default:
 		    return;

@@ -349,18 +349,18 @@ public class SearchItem implements ParserTreeConstants {
 
 	if (indomain.equals("indomain_split")) {
 	    if (tieBreaking == null)
-		return new SplitSelectFloat<FloatVar>(searchVars, var_sel);
+		return new SplitSelectFloat<FloatVar>(store, searchVars, var_sel);
 	    else
-		return new SplitSelectFloat<FloatVar>( searchVars, var_sel, tieBreaking);
+		return new SplitSelectFloat<FloatVar>(store,  searchVars, var_sel, tieBreaking);
 	}
 	else if (indomain.equals("indomain_reverse_split")) {
 	    if (tieBreaking == null) {
-		SplitSelectFloat<FloatVar> sel = new SplitSelectFloat<FloatVar>(searchVars, var_sel);
+		SplitSelectFloat<FloatVar> sel = new SplitSelectFloat<FloatVar>(store, searchVars, var_sel);
 		sel.leftFirst = false;
 		return sel;
 	    }
 	    else {
-		SplitSelectFloat<FloatVar> sel = new SplitSelectFloat<FloatVar>( searchVars, var_sel, tieBreaking);
+		SplitSelectFloat<FloatVar> sel = new SplitSelectFloat<FloatVar>(store,  searchVars, var_sel, tieBreaking);
 		sel.leftFirst = false;
 		return sel;
 	    }

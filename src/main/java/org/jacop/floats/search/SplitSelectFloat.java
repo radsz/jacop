@@ -42,10 +42,12 @@ import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatDomain;
 
 import org.jacop.core.Var;
+import org.jacop.core.Store;
 
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.ComparatorVariable;
 import org.jacop.search.Indomain;
+import org.jacop.core.TimeStamp;
 
 /**
  * It is simple and customizable selector of decisions (constraints) which will
@@ -71,16 +73,22 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
 	 */
 	public boolean leftFirst = true;
 	
+	public boolean roundRobin = true;
+
+	TimeStamp<Integer> currentIndex;
+
 	/**
 	 * The constructor to create a simple choice select mechanism.
 	 * @param variables variables upon which the choice points are created.
 	 * @param varSelect the variable comparator to choose the variable.
 	 * @param indomain the value heuristic to choose a value for a given variable.
 	 */
-	public SplitSelectFloat(T[] variables, 
+	public SplitSelectFloat(Store store, T[] variables, 
 				ComparatorVariable<T> varSelect) {
 
 	    super(variables, varSelect, null);
+
+	    currentIndex = new TimeStamp<Integer>(store, 0);
 
 	}
 
@@ -91,13 +99,15 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
 	 * @param tieBreakerVarSelect secondary variable comparator employed if the first one gives the same metric.
 	 * @param indomain the heuristic to choose value assigned to a chosen variable.
 	 */
-	public SplitSelectFloat(T[] variables, 
+	public SplitSelectFloat(Store store, T[] variables, 
 				ComparatorVariable<T> varSelect,
 				ComparatorVariable<T> tieBreakerVarSelect) {
 				// , 
 				// 	   Indomain<T> indomain) {
 
 	    super(variables, varSelect, tieBreakerVarSelect, null);
+
+	    currentIndex = new TimeStamp<Integer>(store, 0);
 
 	}
 	
@@ -108,28 +118,62 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
 	
 	@Override
 	public PrimitiveConstraint getChoiceConstraint(int index) {
+			    
+	    T var = super.getChoiceVariable(index);
+
+	    if (variableOrdering == null && roundRobin)
+		    var = roundRobinVarSelection(index);
+	    else
+		var = super.getChoiceVariable(index);
+
+	    if (var == null)
+		return null;
 		
-		T var = super.getChoiceVariable(index);
+	    assert (index >= 0);
+	    // assert (index < searchVar.length);
+	    // assert (searchVar[index].dom() != null);
 
-		if (var == null)
-			return null;
-		
-		assert (index >= 0);
-		// assert (index < searchVar.length);
-		// assert (searchVar[index].dom() != null);
+	    double value = (((FloatVar)var).min() + ((FloatVar)var).max()) / 2.0;
 
-		double value = (((FloatVar)var).min() + ((FloatVar)var).max()) / 2.0;
+	    // System.out.println (var + ", value = " + value);
 
-		if (leftFirst)
-		    if ( ((FloatVar)var).max() > value ) //(var.max() - value) > FloatDomain.ulp(var.max() - value) ) 
-			return new PlteqC((FloatVar)var, value);
-		    else 
-			return new PltC((FloatVar)var, value);
+	    if (leftFirst)
+		if ( ((FloatVar)var).max() > value ) //(var.max() - value) > FloatDomain.ulp(var.max() - value) ) 
+		    return new PlteqC((FloatVar)var, value);
+		else 
+		    return new PltC((FloatVar)var, value);
+	    else
+		if ( ((FloatVar)var).max() > value) //(var.max() - value ) > FloatDomain.ulp(var.max() - value))
+		    return new PgtC((FloatVar)var, value);
 		else
-		    if ( ((FloatVar)var).max() > value) //(var.max() - value ) > FloatDomain.ulp(var.max() - value))
-			return new PgtC((FloatVar)var, value);
-		    else
-			return new PeqC((FloatVar)var, value);
+		    return new PeqC((FloatVar)var, value);
+	}
+	
+
+	T roundRobinVarSelection(int index) {
+
+		assert (index < searchVariables.length);
+
+		int N = searchVariables.length;
+
+		int n = 0;
+		int i = currentIndex.value();
+		int ii = i;
+		do {
+
+		    if (!searchVariables[i].singleton()) {
+			currentIndex.update( (i+1) % N );
+
+			return searchVariables[i];
+		    }
+
+		    ii = i;
+		    i = (i + 1 ) % N;
+		    n++;
+
+		} while (searchVariables[ii].singleton() && n < N);
+
+		return null;
 	}
 	
 }

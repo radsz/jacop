@@ -268,8 +268,8 @@ public class LinearFloat extends PrimitiveConstraint {
 		max = - lMin;
 	    }
 	    else {
-		min = FloatDomain.down(sum - lMax);
-		max = FloatDomain.up(sum - lMin);
+		min = FloatDomain.down(FloatDomain.subBounds(sum, sum, lMax, lMax).min());
+		max = FloatDomain.up(FloatDomain.subBounds(sum, sum, lMin, lMin).max());
 	    }
 
 	    for (int i = 0; i < list.length; i++) {
@@ -284,8 +284,8 @@ public class LinearFloat extends PrimitiveConstraint {
 		case eq : //============================================= 
 		    if ((lMaxArray[i] > max + lMinArray[i]) || (lMinArray[i] < min + lMaxArray[i])) {
 
-			min1 = FloatDomain.down(min + lMaxArray[i]);
-			max1 = FloatDomain.up(max + lMinArray[i]);
+			min1 = FloatDomain.addBounds(min, min, lMaxArray[i], lMaxArray[i]).min();
+			max1 = FloatDomain.addBounds(max, max, lMinArray[i], lMinArray[i]).max();
 
 			d = FloatDomain.divBounds(min1, max1, weights[i], weights[i]);
 			divMin = d.min();
@@ -489,9 +489,9 @@ public class LinearFloat extends PrimitiveConstraint {
 	    lMaxArray[i] = mul.max();
 
 	    if (lMinArray[i] != 0.0)
-		lMin = FloatDomain.down(lMin + lMinArray[i]);
+		lMin = FloatDomain.addBounds(lMin, lMin, lMinArray[i], lMinArray[i]).min(); //FloatDomain.down(lMin + lMinArray[i]);
 	    if (lMaxArray[i] != 0.0)
-		lMax = FloatDomain.up(lMax + lMaxArray[i]);
+		lMax = FloatDomain.addBounds(lMax, lMax, lMaxArray[i], lMaxArray[i]).max(); // FloatDomain.up(lMax + lMaxArray[i]);
 	}
 
 	// System.out.println (lMin+".."+lMax);

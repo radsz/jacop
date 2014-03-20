@@ -60,6 +60,7 @@ import org.jacop.floats.constraints.PgtC;
 import org.jacop.floats.constraints.PgteqC;
 import org.jacop.floats.constraints.PgteqQ;
 import org.jacop.floats.constraints.PmulQeqR;
+import org.jacop.floats.constraints.PmulCeqR;
 import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.constraints.XeqP;
 import org.jacop.floats.constraints.AbsPeqR;
@@ -255,7 +256,14 @@ public class Constraints implements ParserTreeConstants {
 		    ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
 		    ASTScalarFlatExpr p3 = (ASTScalarFlatExpr)node.jjtGetChild(2);
 
-		    pose(new PmulQeqR(getFloatVariable(p1), getFloatVariable(p2), getFloatVariable(p3)));
+		    if (p1.getType() == 5) {// p1 float
+			pose(new PmulCeqR(getFloatVariable(p2), getFloat(p1), getFloatVariable(p3)));
+		    }
+		    else if (p2.getType() == 5) {// p2 float
+			pose(new PmulCeqR(getFloatVariable(p1), getFloat(p2), getFloatVariable(p3)));
+		    }
+		    else
+			pose(new PmulQeqR(getFloatVariable(p1), getFloatVariable(p2), getFloatVariable(p3)));
 
 		} else if (p.startsWith("div", 6)) {
 

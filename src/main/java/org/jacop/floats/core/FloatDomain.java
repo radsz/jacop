@@ -1063,6 +1063,11 @@ public abstract class FloatDomain extends Domain {
 
 	// System.out.println ("[" + a +".." +b +"] * [" + c + ".." + d + "]");
 
+	if ( c == 1.0 && d == 1.0 ) 
+	    return new FloatIntervalDomain(a, b);
+	else if (c == -1.0 && d == -1.0 ) 
+	    return new FloatIntervalDomain(-b, -a);
+
 	boolean M_1 =  (a < 0 && b > 0);        // contains zero
 	boolean Z_1 =  (a == 0  && b == 0);     // zero
 	boolean P0_1 = (a == 0 && b > 0);       // positive with zero
@@ -1137,8 +1142,8 @@ public abstract class FloatDomain extends Domain {
 		max = up(a*c);
 		return new FloatIntervalDomain(min, max);
 	    } else if (M_2) { // M /\ M
-		min = Math.min(a*d, b*c);
-		max = Math.max(a*c, b*d);
+		min = down(Math.min(a*d, b*c));
+		max = up(Math.max(a*c, b*d));
 		return new FloatIntervalDomain(min, max);
 	    }
 	    else {// if (Z_2) M /\ Z
@@ -1223,6 +1228,11 @@ public abstract class FloatDomain extends Domain {
     public final static FloatIntervalDomain divBounds (double a, double b, double c, double d) {
 
 	// System.out.println ("[" + a +".." +b +"] / [" + c + ".." + d + "]");
+
+	if ( c == 1.0 && d == 1.0 ) 
+	    return new FloatIntervalDomain(a, b);
+	else if (c == -1.0 && d == -1.0 ) 
+	    return new FloatIntervalDomain(-b, -a);
 
 	boolean M_1 =  (a < 0 && b > 0);        // contains zero
 	boolean Z_1 =  (a == 0  && b == 0);     // zero

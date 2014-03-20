@@ -107,7 +107,7 @@ public class Wilkinson {
 			    );
 
 	DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
-	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(new FloatVar[] {x}, new SmallestDomainFloat<FloatVar>());
+	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, new FloatVar[] {x}, new SmallestDomainFloat<FloatVar>());
 	label.setAssignSolution(true);
 	// s.leftFirst = false;
 
