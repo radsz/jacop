@@ -45,12 +45,12 @@ import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatIntervalDomain;
 
 /**
- * Constraint P * Q #= R for floats
+ * Constraint P * Q = R for floats
  * 
  * Boundary consistency is used.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 3.1
+ * @version 4.0
  */
 
 public class PmulQeqR extends Constraint {
@@ -238,6 +238,52 @@ public class PmulQeqR extends Constraint {
 	    q.weight++;
 	    r.weight++;
 	}
+    }
+
+    public FloatVar derivative(Store store, FloatVar f, java.util.Set<FloatVar> vars, FloatVar x) {
+
+	if (f.equals(r)) {
+	    // f = p * q
+	    // f' = p*d(q) + d(p)*q
+	    FloatVar v1 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    FloatVar v2 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    FloatVar v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    Derivative.poseDerivativeConstraint(new PmulQeqR(Derivative.getDerivative(store, p, vars, x), q, v1));
+	    Derivative.poseDerivativeConstraint(new PmulQeqR(Derivative.getDerivative(store, q, vars, x), p, v2));
+	    Derivative.poseDerivativeConstraint(new PplusQeqR(v1, v2, v));
+	    return v;
+		
+	}
+	else if (f.equals(p)) {
+	    // f = r / q
+	    // f' = (d(r) - (r/q)*d(q))/q
+	    FloatVar v1 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    FloatVar v2 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    FloatVar v3 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    FloatVar v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    Derivative.poseDerivativeConstraint(new PdivQeqR(r, q, v1));
+	    Derivative.poseDerivativeConstraint(new PmulQeqR(v1, Derivative.getDerivative(store, q, vars, x), v2));
+	    Derivative.poseDerivativeConstraint(new PminusQeqR(Derivative.getDerivative(store, r, vars, x), v2, v3));
+	    Derivative.poseDerivativeConstraint(new PdivQeqR(v3, q, v));
+	    return v;
+	}
+	else if (f.equals(q)) {
+	    // f = r / p
+	    // f' = (d(r) - (r/p)*d(p))/p
+	    FloatVar v1 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    FloatVar v2 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    FloatVar v3 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    FloatVar v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    Derivative.poseDerivativeConstraint(new PdivQeqR(r, p, v1));
+	    Derivative.poseDerivativeConstraint(new PmulQeqR(v1, Derivative.getDerivative(store, p, vars, x), v2));
+	    Derivative.poseDerivativeConstraint(new PminusQeqR(Derivative.getDerivative(store, r, vars, x), v2, v3));
+	    Derivative.poseDerivativeConstraint(new PdivQeqR(v3, p, v));
+	    return v;
+
+	}
+
+	return null;
+
     }
 
 }

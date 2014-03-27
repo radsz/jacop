@@ -43,8 +43,10 @@ import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatIntervalDomain; 
 
+import org.jacop.floats.constraints.Derivative;
+
 /**
- * Constraint P + Q #= R
+ * Constraint P + Q = R
  * 
  * Bound consistency is used.
  * 
@@ -241,6 +243,39 @@ public class PplusQeqR extends PrimitiveConstraint {
 	    q.weight++;
 	    r.weight++;
 	}
+    }
+
+    public FloatVar derivative(Store store, FloatVar f, java.util.Set<FloatVar> vars, FloatVar x) {
+	if (f.equals(r)) {
+	    // f = p + q
+	    // f' = d(p) + d(q)
+	    FloatVar v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    Derivative.poseDerivativeConstraint(new PplusQeqR(Derivative.getDerivative(store, p, vars, x), 
+				       Derivative.getDerivative(store, q, vars, x), v));
+	    return v;
+		
+	}
+	else if (f.equals(p)) {
+	    // f = r - q
+	    // f' = d(r) - d(q)
+	    FloatVar v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    Derivative.poseDerivativeConstraint(new PminusQeqR(Derivative.getDerivative(store, r, vars, x),
+							       Derivative.getDerivative(store, q, vars, x), v));
+	    return v;
+		
+	}
+	else if (f.equals(q)) {
+	    // f = r - p
+	    // f' = d(r) - d(p)
+	    FloatVar v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    Derivative.poseDerivativeConstraint(new PminusQeqR(Derivative.getDerivative(store, r, vars, x),
+							       Derivative.getDerivative(store, p, vars, x), v));
+			
+	    return v;
+	}
+
+	return null;
+
     }
 			
 }

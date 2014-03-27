@@ -342,8 +342,8 @@ public class Constraints implements ParserTreeConstants {
 		    FloatVar v2 = getFloatVariable(p2);
 		    FloatVar v3 = getFloatVariable(p3);
 
-		    pose(new IfThen(new PlteqQ(v1,v2), new PeqQ(v1,v3)));
-		    pose(new IfThen(new PlteqQ(v2,v1), new PeqQ(v2,v3)));
+		    pose(new IfThen(new PltQ(v1,v2), new PeqQ(v1,v3)));
+		    pose(new IfThen(new PltQ(v2,v1), new PeqQ(v2,v3)));
 		}
 		else if (p.startsWith("max", 6)) {
 		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
@@ -354,8 +354,8 @@ public class Constraints implements ParserTreeConstants {
 		    FloatVar v2 = getFloatVariable(p2);
 		    FloatVar v3 = getFloatVariable(p3);
 
-		    pose(new IfThen(new PgteqQ(v1,v2), new PeqQ(v1,v3)));
-		    pose(new IfThen(new PgteqQ(v2,v1), new PeqQ(v2,v3)));
+		    pose(new IfThen(new PltQ(v2,v1), new PeqQ(v1,v3)));
+		    pose(new IfThen(new PltQ(v1,v2), new PeqQ(v2,v3)));
 		}
 		else {
 		    System.err.println("%% ERROR: JaCoP does not implement this constraints on floats");

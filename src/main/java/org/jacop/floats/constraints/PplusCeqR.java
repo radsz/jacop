@@ -232,4 +232,23 @@ public class PplusCeqR extends PrimitiveConstraint {
 	}
     }
 			
+    public FloatVar derivative(Store store, FloatVar f, java.util.Set<FloatVar> vars, FloatVar x) {
+	if (f.equals(r)) {
+	    // f = p + c
+	    // f' = d(p) 
+	    FloatVar v = Derivative.getDerivative(store, p, vars, x);
+	    return v;
+		
+	}
+	else if (f.equals(p)) {
+	    // f = r - c
+	    // f' = d(r)
+	    FloatVar v = Derivative.getDerivative(store, r, vars, x);
+	    return v;
+		
+	}
+
+	return null;
+
+    }
 }

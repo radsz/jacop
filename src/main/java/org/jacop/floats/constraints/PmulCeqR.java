@@ -177,4 +177,23 @@ public class PmulCeqR extends Constraint {
 	}
     }
 
+    public FloatVar derivative(Store store, FloatVar f, java.util.Set<FloatVar> vars, FloatVar x) {
+
+	if (f.equals(r)) {
+	    // f = c * p
+	    // f' = c * d(p)
+	    FloatVar v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    Derivative.poseDerivativeConstraint(new PmulCeqR(Derivative.getDerivative(store, p, vars, x), c, v));
+	    return v;
+	}
+	else if (f.equals(p)) {
+	    // f = 1/c * r
+	    // f' = 1/c * d(r)
+	    FloatVar v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    Derivative.poseDerivativeConstraint(new PmulCeqR(Derivative.getDerivative(store, r, vars, x), 1/c, v));
+	    return v;
+	}
+
+	return null;
+    }
 }

@@ -717,4 +717,43 @@ public class LinearFloat extends PrimitiveConstraint {
 	    for (Var v : list) v.weight++;
 	}
     }
+
+    public FloatVar derivative(Store store, FloatVar f, java.util.Set<FloatVar> vars, FloatVar x) {
+
+	// System.out.println ("FloatLinear of " + f + " on " + x);
+
+	int fIndex = 0;
+	while (list[fIndex] != f)
+	    fIndex++;
+
+	if (fIndex == list.length) {
+	    System.out.println ("Wrong variable in derivative of " + this);
+	    System.exit(0);
+	}
+
+	double w = weights[fIndex];
+	FloatVar[] df = new FloatVar[list.length];
+	double[] ww = new double[list.length];
+	FloatVar v = null;
+
+	for (int i = 0; i < list.length; i++) {
+	    if ( i != fIndex) {
+		df[i] = Derivative.getDerivative(store, list[i], vars, x);
+
+		// System.out.println ("derivate of " + list[i] + " = " + df[i]);
+
+		ww[i] = weights[i]/(-weights[fIndex]);
+	    }
+	    else {
+		v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+		df[i] = v;
+		ww[i] = -1.0;
+	    }
+	}
+
+	Derivative.poseDerivativeConstraint(new LinearFloat(store, df, ww, "==", 0.0));
+
+	return v;
+   }
+
 }

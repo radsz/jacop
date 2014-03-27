@@ -1,5 +1,5 @@
 /**
- *  SqrtPeqR.java 
+ *  PdivQeqR.java 
  *  This file is part of JaCoP.
  *
  *  JaCoP is a Java Constraint Programming solver. 
@@ -32,11 +32,10 @@
 
 package org.jacop.floats.constraints;
 
-import org.jacop.core.Store;
 import org.jacop.floats.core.FloatVar;
 
 /**
- * Constraint sqrt(P) = R for floats
+ * Constraint P / Q = R for floats
  * 
  * Boundary consistency is used.
  * 
@@ -44,31 +43,21 @@ import org.jacop.floats.core.FloatVar;
  * @version 4.0
  */
 
-public class SqrtPeqR extends PmulQeqR {
+public class PdivQeqR extends PmulQeqR {
 
     /**
-     * It constructs a constraint sqrt(P) = R.
+     * It constructs a constraint P / Q = R.
      * @param p variable p.
+     * @param q variable q.
      * @param r variable r.
      */
-    public SqrtPeqR(FloatVar p, FloatVar r) {
-	super(r, r, p);
+    public PdivQeqR(FloatVar p, FloatVar q, FloatVar r) {
+	super(q, r, p);
     }
-
-    @Override
-    public void consistency (Store store) {
-	// definition of SQRT requires that both p & r qre non-negative
-	// r will be bound to non negative in super class
-	p.domain.inMin(store.level, p, 0.0);
-
-	super.consistency(store);
-    }
-
 
     @Override
     public String toString() {
 
-	return id() + " : SqrtPeqR(" + p + ", " + r + " )";
+	return id() + " : PdivQeqR(" + q + ", " + r + ", " + p + " )";
     }
-
 }
