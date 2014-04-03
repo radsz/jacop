@@ -58,7 +58,7 @@ public class Derivative {
 
     static Stack<Constraint> eval;
 
-    static Set<Constraint> derivateConstraints;
+    public static Set<Constraint> derivateConstraints;
 
     static HashMap<FloatVar, Constraint> definitionConstraint;
 
@@ -179,11 +179,11 @@ public class Derivative {
 		    if ( f.equals(((PminusQeqR)cc).p) )
 			resolved.add(cc);
 		}
-		if (cc instanceof PdivQeqR) {
+		else if (cc instanceof PdivQeqR) {
 		    if ( f.equals(((PdivQeqR)cc).p) )
 			resolved.add(cc);
 		}
-		if (cc instanceof LinearFloat) {
+		else if (cc instanceof LinearFloat) {
 		    if ( ((LinearFloat)cc).relationType == LinearFloat.eq) {
 			double[] ws = ((LinearFloat)cc).weights;		    
 			FloatVar[] ls = ((LinearFloat)cc).list;
@@ -193,6 +193,8 @@ public class Derivative {
 			}
 		    }
 		}
+		else if (c instanceof EquationSystem)
+		    ;
 	    }
 
 	if (resolved.size() == 1)

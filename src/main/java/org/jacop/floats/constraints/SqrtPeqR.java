@@ -71,4 +71,33 @@ public class SqrtPeqR extends PmulQeqR {
 	return id() + " : SqrtPeqR(" + p + ", " + r + " )";
     }
 
+    public FloatVar derivative(Store store, FloatVar f, java.util.Set<FloatVar> vars, FloatVar x) {
+
+	if (f.equals(r)) {
+	    // f = sqrt(p)
+	    // f' = d(p)*(1/sqrt(p)
+	    FloatVar v1 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    FloatVar v2 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    FloatVar v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    Derivative.poseDerivativeConstraint(new SqrtPeqR(p, v1));
+	    Derivative.poseDerivativeConstraint(new PdivQeqR(new FloatVar(store, 1.0, 1.0), v1, v2));
+	    Derivative.poseDerivativeConstraint(new PmulQeqR(Derivative.getDerivative(store, p, vars, x), v2, v));
+	    return v;
+		
+	}
+	else if (f.equals(p)) {
+	    // f = r^2
+	    // f' = d(r)*2*r
+	    FloatVar v1 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    FloatVar v2 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    FloatVar v3 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    FloatVar v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    Derivative.poseDerivativeConstraint(new PmulCeqR(r, 2.0, v1));
+	    Derivative.poseDerivativeConstraint(new PmulQeqR(Derivative.getDerivative(store, r, vars, x), v1, v));
+	    return v;
+	}
+
+	return null;
+
+    }
 }

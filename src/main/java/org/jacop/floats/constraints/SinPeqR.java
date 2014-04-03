@@ -472,7 +472,7 @@ public class SinPeqR extends Constraint {
 	    FloatVar v3 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
 	    FloatVar v4 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
 	    Derivative.poseDerivativeConstraint(new PmulQeqR(q, q, v1));
-	    Derivative.poseDerivativeConstraint(new PplusQeqR(v2, v1, new FloatVar(store, 1.0, 1.0)));
+	    Derivative.poseDerivativeConstraint(new PminusQeqR(new FloatVar(store, 1.0, 1.0), v1, v2));
 	    Derivative.poseDerivativeConstraint(new SqrtPeqR(v2, v3));
 	    Derivative.poseDerivativeConstraint(new PdivQeqR(new FloatVar(store, 1.0, 1.0), v3, v4));
 	    Derivative.poseDerivativeConstraint(new PmulQeqR(Derivative.getDerivative(store, q, vars, x), v4, v));

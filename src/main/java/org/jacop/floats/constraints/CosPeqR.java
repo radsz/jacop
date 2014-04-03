@@ -404,4 +404,35 @@ public class CosPeqR extends Constraint {
 	}
     }
 
+    public FloatVar derivative(Store store, FloatVar f, java.util.Set<FloatVar> vars, FloatVar x) {
+	if (f.equals(q)) {
+	    // f = cos(p)
+	    // f' = -sin(p) * d(p)
+	    FloatVar v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    FloatVar v1 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    FloatVar v2 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    Derivative.poseDerivativeConstraint(new SinPeqR(p, v1));
+	    Derivative.poseDerivativeConstraint(new PmulCeqR(v1, -1.0, v2));
+	    Derivative.poseDerivativeConstraint(new PmulQeqR(v2, Derivative.getDerivative(store, p, vars, x), v));
+	    return v;
+	}
+	else if (f.equals(p)) {
+	    // f = acos(q)
+	    // f' = d(q) * (-1/sqrt(1-q^2))
+	    FloatVar v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    FloatVar v1 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    FloatVar v2 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    FloatVar v3 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    FloatVar v4 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    Derivative.poseDerivativeConstraint(new PmulQeqR(q, q, v1));
+	    Derivative.poseDerivativeConstraint(new PminusQeqR(new FloatVar(store, 1.0, 1.0), v1, v2));
+	    Derivative.poseDerivativeConstraint(new SqrtPeqR(v2, v3));
+	    Derivative.poseDerivativeConstraint(new PdivQeqR(new FloatVar(store, -1.0, -1.0), v3, v4));
+	    Derivative.poseDerivativeConstraint(new PmulQeqR(Derivative.getDerivative(store, q, vars, x), v4, v));
+	    return v;		
+	}
+
+	return null;
+
+    }
 }

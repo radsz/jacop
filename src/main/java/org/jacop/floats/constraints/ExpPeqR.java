@@ -182,4 +182,28 @@ public class ExpPeqR extends Constraint {
 	}
     }
 
+    public FloatVar derivative(Store store, FloatVar f, java.util.Set<FloatVar> vars, FloatVar x) {
+
+	if (f.equals(q)) {
+	    // f = exp(p)
+	    // f' = d(p)*exp(p)
+	    FloatVar v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    Derivative.poseDerivativeConstraint(new PmulQeqR(Derivative.getDerivative(store, p, vars, x), f, v));
+	    return v;
+		
+	}
+	else if (f.equals(p)) {
+	    // f = ln(q)
+	    // f' = (1/q)*d(q)
+	    FloatVar v1 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    FloatVar v2 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    FloatVar v3 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    FloatVar v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+	    Derivative.poseDerivativeConstraint(new PdivQeqR(new FloatVar(store, 1.0, 1.0), q, v1));
+	    Derivative.poseDerivativeConstraint(new PminusQeqR(Derivative.getDerivative(store, q, vars, x), v1, v));
+	    return v;
+	}
+
+	return null;
+    }
 }
