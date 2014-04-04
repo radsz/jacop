@@ -195,7 +195,7 @@ public class MultivariateIntervalNewton {
 	eval.push(c);
 
 	// if (debug)
-	//     System.out.println ("current constraint for variable " + f + " is " + c);
+	//      System.out.println ("current constraint for variable " + f + " is " + c);
 
 	double result = 0.0;
 
@@ -216,7 +216,7 @@ public class MultivariateIntervalNewton {
 		System.exit(0);
 	    }
 	}
-	if (c instanceof PdivQeqR) {
+	else if (c instanceof PdivQeqR) {
 	    if (f.equals(((PdivQeqR)c).r)) {
 		result =  value(((PdivQeqR)c).p) / value(((PdivQeqR)c).q);
 	    }
@@ -273,6 +273,10 @@ public class MultivariateIntervalNewton {
 		System.out.println ("!!! Anable to compute middle value for " + f + "; + Constraint " + c + " does not define a function for variable\n");
 		System.exit(0);
 	    }
+	}
+	else {
+	    System.out.println ("!!! Constraint " + c + " is not yet supported in Newtoen method\n");
+	    System.exit(0);
 	}
 
 	eval.pop();

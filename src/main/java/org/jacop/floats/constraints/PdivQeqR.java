@@ -52,12 +52,12 @@ public class PdivQeqR extends PmulQeqR {
      * @param r variable r.
      */
     public PdivQeqR(FloatVar p, FloatVar q, FloatVar r) {
-	super(q, r, p);
+	super(r, q, p);
     }
 
     @Override
     public String toString() {
 
-	return id() + " : PdivQeqR(" + q + ", " + r + ", " + p + " )";
+	return id() + " : PdivQeqR(" + r + ", " + q + ", " + p + " )";
     }
 }

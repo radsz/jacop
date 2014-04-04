@@ -46,34 +46,7 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.constraints.PplusQeqR;
-import org.jacop.floats.constraints.PplusCeqR;
-import org.jacop.floats.constraints.PeqQ;
-import org.jacop.floats.constraints.PneqQ;
-import org.jacop.floats.constraints.PltQ;
-import org.jacop.floats.constraints.PlteqQ;
-import org.jacop.floats.constraints.PeqC;
-import org.jacop.floats.constraints.PneqC;
-import org.jacop.floats.constraints.PltC;
-import org.jacop.floats.constraints.PlteqC;
-import org.jacop.floats.constraints.PgtC;
-import org.jacop.floats.constraints.PgteqC;
-import org.jacop.floats.constraints.PgteqQ;
-import org.jacop.floats.constraints.PmulQeqR;
-import org.jacop.floats.constraints.PmulCeqR;
-import org.jacop.floats.constraints.LinearFloat;
-import org.jacop.floats.constraints.XeqP;
-import org.jacop.floats.constraints.AbsPeqR;
-import org.jacop.floats.constraints.SqrtPeqR;
-import org.jacop.floats.constraints.SinPeqR;
-import org.jacop.floats.constraints.CosPeqR;
-import org.jacop.floats.constraints.TanPeqR;
-import org.jacop.floats.constraints.AsinPeqR;
-import org.jacop.floats.constraints.AcosPeqR;
-import org.jacop.floats.constraints.AtanPeqR;
-import org.jacop.floats.constraints.LnPeqR;
-import org.jacop.floats.constraints.ExpPeqR;
-import org.jacop.floats.constraints.ElementFloat;
+import org.jacop.floats.constraints.*;
 
 import org.jacop.set.constraints.AdiffBeqC;
 import org.jacop.set.constraints.AinB;
@@ -271,7 +244,7 @@ public class Constraints implements ParserTreeConstants {
 		    ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
 		    ASTScalarFlatExpr p3 = (ASTScalarFlatExpr)node.jjtGetChild(2);
 
-		    pose(new PmulQeqR(getFloatVariable(p2), getFloatVariable(p3), getFloatVariable(p1)));
+		    pose(new PdivQeqR(getFloatVariable(p1), getFloatVariable(p2), getFloatVariable(p3)));
 		}
 		else if (p.startsWith("abs", 6)) {
 		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
