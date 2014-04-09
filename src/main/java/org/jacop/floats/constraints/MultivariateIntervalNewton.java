@@ -49,7 +49,6 @@ import org.jacop.floats.core.FloatVar;
 import org.jacop.constraints.Constraint;
 //import org.jacop.floats.constraints.PmulQeqR;
 
-
 /**
  * MultivariateIntervalNewton implements multivariate interval Newton
  * method for solving a system of non linear equations.
@@ -69,6 +68,9 @@ public class MultivariateIntervalNewton {
     FloatVar[][] fprime;
 
     double[] xInit;
+
+    FloatInterval[][] A;
+    double[] b;
 
     HashMap<FloatVar,Double> map;
     Stack<Constraint> eval;
@@ -104,59 +106,51 @@ public class MultivariateIntervalNewton {
 
     public FloatInterval[]  solve() {
 
-	// boolean containsZero = false;
-
-	FloatInterval[][] A = new FloatInterval[fprime.length][];
+	A = new FloatInterval[fprime.length][];
 	for (int i = 0; i < fprime.length; i++) {
 	    A[i] = new FloatInterval[fprime[i].length];
 	    for (int j = 0; j < fprime[i].length; j++) {
 		A[i][j] = new FloatInterval(fprime[i][j].min(), fprime[i][j].max());
-
-		// if ( i == j && fprime[i][j].min() <= 0.0 &&  fprime[i][j].max() >= 0.0)
-		//     containsZero = true;
 	    }
 	}
 
-	// if (!containsZero) {
+	xInit = new double[x.length];
+	for (int i = 0; i < x.length; i++) 
+	    xInit[i] = (x[i].max() + x[i].min())/2.0;
 
-	    xInit = new double[x.length];
-	    for (int i = 0; i < x.length; i++) 
-		xInit[i] = (x[i].max() + x[i].min())/2.0;
+	b = values();
 
-	    double[] b = values();
-	    if (debug) {
-		System.out.println ("Middle values for x");
-		for (int i = 0; i < xInit.length; i++) 
-		    System.out.print (xInit[i] + " ");
-		System.out.println ();
+	if (debug) {
+	    System.out.println ("Middle values for x");
+	    for (int i = 0; i < xInit.length; i++) 
+		System.out.print (xInit[i] + " ");
+	    System.out.println ();
 
-		System.out.println ("Middle values for f");
-		for (int i = 0; i < b.length; i++) 
-		    System.out.print (b[i] + ", ");
-		System.out.println ();
-	    }
+	    System.out.println ("Middle values for f");
+	    for (int i = 0; i < b.length; i++) 
+		System.out.print (b[i] + ", ");
+	    System.out.println ();
+	}
 
-	    IntervalGaussSeidel igs = new IntervalGaussSeidel(A, b);
+	IntervalGaussSeidel igs = new IntervalGaussSeidel(A, b);
 
-	    if (debug)
-		System.out.println (igs);
+	if (debug)
+	    System.out.println (igs);
 	
-	    FloatInterval[] v = igs.solve();
+	FloatInterval[] v = igs.solve();
 
-	    FloatInterval[] result = new FloatInterval[v.length];
-	    for (int i = 0; i < v.length; i++) {
-		FloatIntervalDomain r = FloatDomain.addBounds(v[i].min(), v[i].max(), xInit[i], xInit[i]);
-		result[i] = new FloatInterval(r.min(), r.max());
-	    }
+	if (v == null)
+	    return null;
 
-	    return result;
+	FloatInterval[] result = new FloatInterval[v.length];
+	for (int i = 0; i < v.length; i++) {
+	    FloatIntervalDomain r = FloatDomain.addBounds(v[i].min(), v[i].max(), xInit[i], xInit[i]);
+	    result[i] = new FloatInterval(r.min(), r.max());
+	}
 
-	// }
-	// else 
-	//     return null;
+	return result;
 
     }
-
 
     // computes -f(xInit), RHS of equation for Gauss-Seidler method a
     // little bit tricky since we need to use constraints and their
