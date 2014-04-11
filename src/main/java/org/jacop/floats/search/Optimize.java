@@ -38,7 +38,10 @@ import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Not;
 
 import org.jacop.floats.core.FloatVar;
+import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.floats.constraints.PlteqC;
+import org.jacop.floats.constraints.PgtC;
 
 /**
  * Implements optimization for floating point varibales
@@ -71,35 +74,31 @@ public class Optimize  {
 
 	PrimitiveConstraint choice = split.getChoiceConstraint(0);
 
+	if (choice == null) 
+	    return true;
+
 	store.setLevel(store.level+1);
 
 	boolean result = search.labeling(store, select);
 
 	if (result) {
-	    if (cost.singleton()) {
-		System.out.println ("% Cost: " + cost);
-
-		store.removeLevel(store.level);
-		store.setLevel(store.level-1);
-		return true;
-	    }
-	    else {
-		// System.out.println ("Level = " + store.level + ", add constraint "+choice);
 
 		if (printInfo)
 		    System.out.println ("% Current cost bounds: " + cost + "\n----------");
+		// System.out.println ("choice point: "+ choice);
 
 		store.impose(choice);
 		result = minimize();
 
 		if (result) {
+
 		    store.removeLevel(store.level);
 		    store.setLevel(store.level-1);
 
-		    return true;
+		    return result;
 		}
 		else {
-		    // System.out.println ("Level = " + store.level + ", add constraint, Not("+ choice + ")");
+		    // System.out.println ("not choice point: " + choice);
 
 		    store.impose(new Not(choice));
 		    result = minimize();
@@ -109,7 +108,6 @@ public class Optimize  {
 
 		    return result;
 		}
-	    }
 	}
 	else {
 	    // System.out.println ("Level = " + store.level + ", FAIL");

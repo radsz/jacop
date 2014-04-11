@@ -140,6 +140,7 @@ public class IntervalGaussSeidel {
 
 	if (!dominant) {
  
+	    // try to precondition to make it non-dominant
 	    precondition(A, b);
 
 	    d = new boolean[A.length];
