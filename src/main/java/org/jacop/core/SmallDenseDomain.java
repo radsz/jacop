@@ -1283,6 +1283,18 @@ public class SmallDenseDomain extends IntDomain {
 			return result;
 			
 		}
+
+		if (domain.domainID() == IntDomain.BoundDomainID) {
+			
+		    IntervalDomain input = new IntervalDomain( domain.min(), domain.max());
+			
+			SmallDenseDomain result = intersect(input, 0);
+			
+			assert result.checkInvariants() == null : result.checkInvariants() ;
+
+			return result;
+			
+		}
 		
 		assert false : "Not implemented for class " + domain.getClass();
 
