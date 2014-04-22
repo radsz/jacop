@@ -402,6 +402,15 @@ public class VariablesParameters implements ParserTreeConstants {
 	    if (lowFloatInterval > highFloatInterval) 
 		throw Store.failException;		
 
+	    if (lowFloatInterval < MIN_FLOAT) {
+		System.err.println ("Minimal value for float variable "+ident+" too low; changed to " + MIN_FLOAT);
+		lowFloatInterval = MIN_FLOAT;
+	    }
+	    if (highFloatInterval > MAX_FLOAT) {
+		System.err.println ("Maximal value for float variable "+ident+" too high; changed to " + MAX_FLOAT);
+		highFloatInterval = MAX_FLOAT;
+	    }
+
 	    varFloat = new FloatVar(store, ident, lowFloatInterval, highFloatInterval); 
 
 	    table.addFloatVariable(ident, varFloat);
@@ -738,6 +747,15 @@ public class VariablesParameters implements ParserTreeConstants {
 
 	    if (lowFloatInterval > highFloatInterval)
 		throw Store.failException;		
+
+	    if (lowFloatInterval < MIN_FLOAT) {
+		System.err.println ("Minimal value for array float variable "+ident+" too low; changed to " + MIN_FLOAT);
+		lowFloatInterval = MIN_FLOAT;
+	    }
+	    if (highFloatInterval > MAX_FLOAT) {
+		System.err.println ("Maximal value for array float variable "+ident+" too high; changed to " + MAX_FLOAT);
+		highFloatInterval = MAX_FLOAT;
+	    }
 
 	    if (initChild < ((ASTVarDeclItem)node).jjtGetNumChildren()) {
 		// array initialization
