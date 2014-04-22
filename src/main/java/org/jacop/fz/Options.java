@@ -32,6 +32,7 @@
 package org.jacop.fz;
 
 import java.io.FileInputStream;
+import org.jacop.floats.core.FloatDomain;
 
 /**
  * 
@@ -58,6 +59,9 @@ public class Options {
     int number_solutions = -1;
 
     boolean interval = false;
+
+    boolean precisionDefined = false;
+    double precision;
 
 	/**
 	 * It constructs an Options object and parses all the parameters/options provided 
@@ -89,7 +93,9 @@ public class Options {
 						"    -s, --statistics\n"+
 						"    -n <value>, --num-solutions <value>\n"+
 						"        <value> - limit on solution number.\n"+
-						"    -i, --interval print intervals instead of values for floating variables\n"
+						"    -i, --interval print intervals instead of values for floating variables\n"+
+						"    -p <value>, --precision <value> defines precision for floating operations\n"+
+						"        overrides precision definition in search annotation."
 				);
 				System.exit(0);
 			}
@@ -126,6 +132,12 @@ public class Options {
 				else if (args[i].equals("-i") || args[i].equals("--interval")) {
 				    interval = true;
 				    i++;
+				}
+				else if (args[i].equals("-p") || args[i].equals("--precision")) {
+				        precisionDefined = true;
+					precision = Double.parseDouble(args[++i]);
+					FloatDomain.setPrecision(precision);
+					i++;
 				}
 				else {
 					System.out.println("fz2jacop: not recognized option "+ args[i]);
@@ -209,6 +221,23 @@ public class Options {
 	 */
 	public boolean getInterval() {
 		return interval;
+	}
+
+
+	/**
+	 * It returns precision defined in  the command line
+	 * @return precision. 
+	 */
+	public double getPrecision() {
+		return precision;
+	}
+
+	/**
+	 * It return true if precision is defined otherwise false
+	 * @return true if precision defined. 
+	 */
+	public boolean precision() {
+		return precisionDefined;
 	}
 	
 }

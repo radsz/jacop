@@ -1144,13 +1144,16 @@ public class Solve implements ParserTreeConstants {
         variable_selection = si.getFloatSelect();
 
 	DepthFirstSearch<Var> label = new DepthFirstSearch<Var>();
-	label.setInitializeListener(new PrecisionSetting(si.precision));
+
+	if (options.precision())
+	    label.setInitializeListener(new PrecisionSetting(options.getPrecision()));
+	else
+	    label.setInitializeListener(new PrecisionSetting(si.precision));
 
         return label;
     }
 
 
-    // long T, TOld = 0;
 
     void printSolution() {
 

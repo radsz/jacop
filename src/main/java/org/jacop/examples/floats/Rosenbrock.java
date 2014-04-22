@@ -123,10 +123,6 @@ public class Rosenbrock {
 
 	DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
 	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, new FloatVar[] {x1, x2}, null);
-	label.setAssignSolution(false);
-	label.setPrintInfo(false);
-
-	label.setSolutionListener(new ResultListener<FloatVar>(new FloatVar[] {x1, x2}));
 
 	Optimize min = new Optimize(store, label, s, z);
 	boolean result = min.minimize();
@@ -151,22 +147,4 @@ public class Rosenbrock {
 	example.rosenbrock();
 
     }			
-
-    public class ResultListener<T extends Var> extends SimpleSolutionListener<T> {
-
-	FloatVar[] var;
-
-	public ResultListener(FloatVar[] v) {
-	    var = v;
-	}
-
-	public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
-
-	    boolean returnCode = super.executeAfterSolution(search, select);
-
-	    System.out.println (java.util.Arrays.asList(var));
-
-	    return returnCode;
-	}
-    }
 }

@@ -32,8 +32,11 @@
 package org.jacop.floats.search;
 
 import org.jacop.core.Store;
+import org.jacop.core.Var;
+import org.jacop.search.Search;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.SimpleSolutionListener;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Not;
 
@@ -42,6 +45,8 @@ import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.floats.constraints.PlteqC;
 import org.jacop.floats.constraints.PgtC;
+
+import java.lang.Double;
 
 /**
  * Implements optimization for floating point varibales
@@ -57,6 +62,8 @@ public class Optimize  {
     FloatVar cost;
     SplitSelectFloat<FloatVar> split;
     SelectChoicePoint select;
+    Var[] variables;
+    double costValue = Double.NaN;
 
     boolean printInfo = true;
 
@@ -67,6 +74,12 @@ public class Optimize  {
 	this.select = select;
 	this.cost = cost;
 
+	search.setAssignSolution(false);
+	search.setPrintInfo(false);
+
+	variables = ((SplitSelectFloat)select).searchVariables;
+	search.setSolutionListener(new ResultListener<Var>(variables));
+
 	split = new SplitSelectFloat<FloatVar>(store, new FloatVar[] {cost}, null);
     }
 
@@ -76,6 +89,12 @@ public class Optimize  {
 
 	if (choice == null) 
 	    return true;
+
+	double selValue = ((PlteqC)choice).c;
+	if (costValue != Double.NaN)
+	    if (costValue < selValue) {
+		choice = new PlteqC(cost, costValue);
+	    }
 
 	store.setLevel(store.level+1);
 
@@ -123,5 +142,27 @@ public class Optimize  {
 	split.leftFirst = false;
 
 	return minimize();
+    }
+
+
+    public class ResultListener<T extends Var> extends SimpleSolutionListener<T> {
+
+	Var[] var;
+
+	public ResultListener(Var[] v) {
+	    var = v;
+	}
+
+	public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
+
+	    boolean returnCode = super.executeAfterSolution(search, select);
+
+	    costValue = cost.max();
+
+	    System.out.println (java.util.Arrays.asList(var));
+	    System.out.println ("% Found solution with cost " + cost);
+
+	    return returnCode;
+	}
     }
 }
