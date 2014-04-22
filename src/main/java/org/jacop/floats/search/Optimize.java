@@ -138,11 +138,11 @@ public class Optimize  {
 	}
     }
 
-    public boolean maximize() {
-	split.leftFirst = false;
+    // public boolean maximize() {
+    // 	split.leftFirst = false;
 
-	return minimize();
-    }
+    // 	return minimize();
+    // }
 
 
     public class ResultListener<T extends Var> extends SimpleSolutionListener<T> {
