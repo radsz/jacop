@@ -3165,7 +3165,7 @@ public class Constraints implements ParserTreeConstants {
 	    }	    return int_boolVar;
 	}
 	else if (node.getType() == 3) {// array access
-	    if (node.getInt() > dictionary.getVariableArray(node.getIdent()).length ||
+	    if (node.getInt() >= dictionary.getVariableArray(node.getIdent()).length ||
 		node.getInt() < 0) {
 		System.out.println("Index out of bound for " + node.getIdent() + "["+node.getInt()+"]");
 		System.exit(0);
@@ -3198,7 +3198,7 @@ public class Constraints implements ParserTreeConstants {
 	    }	    return float_Var;
 	}
 	else if (node.getType() == 3) {// array access
-	    if (node.getInt() > dictionary.getVariableFloatArray(node.getIdent()).length ||
+	    if (node.getInt() >= dictionary.getVariableFloatArray(node.getIdent()).length ||
 		node.getFloat() < 0) {
 		System.out.println("Index out of bound for " + node.getIdent() + "["+node.getInt()+"]");
 		System.exit(0);
