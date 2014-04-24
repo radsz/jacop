@@ -113,7 +113,17 @@ public class PplusQeqR extends PrimitiveConstraint {
 
     @Override
     public void consistency(Store store) {
-		
+
+	// identity elements
+	if (p.equals(r)) {
+	    q.domain.in(store.level, q, 0.0, 0.0); 
+	    return;
+	}
+	else if (q.equals(r)) {
+	    p.domain.in(store.level, p, 0.0, 0.0);
+	    return;
+	}
+
 	do {
 	    store.propagationHasOccurred = false;
 

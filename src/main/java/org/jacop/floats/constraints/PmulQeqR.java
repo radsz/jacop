@@ -116,6 +116,16 @@ public class PmulQeqR extends Constraint {
     @Override
     public void consistency (Store store) {
 
+	// identity elements
+	if (p.equals(r)) {
+	    q.domain.in(store.level, q, 1.0, 1.0); 
+	    return;
+	}
+	else if (q.equals(r)) {
+	    p.domain.in(store.level, p, 1.0, 1.0);
+	    return;
+	}
+
 	if (xSquare)  // P^2 = R
 	    do {
 				

@@ -68,8 +68,8 @@ import org.jacop.floats.search.Optimize;
 
 public class SixHumpCamelFunction {
 
-    double MIN_FLOAT = -1e+150;
-    double MAX_FLOAT =  1e+150;
+    double MIN_FLOAT = -1e+20;
+    double MAX_FLOAT =  1e+20;
 
     void six_hump_camel_function() {
 
