@@ -1018,8 +1018,8 @@ public abstract class FloatDomain extends Domain {
      */
     public final static FloatIntervalDomain addBounds(double a, double b, double c, double d) {
 
-	double min = FloatDomain.down(a + c);
-	double max = FloatDomain.up(b + d);
+	double min = down(a + c);
+	double max = up(b + d);
 
 	if (d == 0.0) 
 	    max = b;
@@ -1040,8 +1040,8 @@ public abstract class FloatDomain extends Domain {
      */
     public final static FloatIntervalDomain subBounds(double a, double b, double c, double d) {
 
-	double min = FloatDomain.down(a - d);
-	double max = FloatDomain.up(b - c);
+	double min = down(a - d);
+	double max = up(b - c);
 
 	if (d == 0.0) 
 	    min = a;
@@ -1204,24 +1204,6 @@ public abstract class FloatDomain extends Domain {
 
     }
 
-    /*
-    static FloatIntervalDomain mulOld(double a, double b, double c, double d) {
-
-    	if (a == 0.0 && b == 0.0)
-	    return new FloatIntervalDomain(0.0, 0.0);
-	else if (c == 0.0 && d == 0.0)
-	    return new FloatIntervalDomain(0.0, 0.0);
-
-	double minValue = Math.min(Math.min(a*c, a*d), Math.min(b*c, b*d));
-	double min = down(minValue);
-
-	double maxValue = Math.max(Math.max(a*c, a*d), Math.max(b*c, b*d));
-	double max = up(maxValue);
-	
-	return new FloatIntervalDomain(min, max);
-    }
-    */
-
     /* 
      * Finds result interval for division of {a..b} / {c..d} for div and mod constraints
      */
@@ -1358,36 +1340,6 @@ public abstract class FloatDomain extends Domain {
 	    else
 		return new FloatIntervalDomain(FloatDomain.MinFloat, FloatDomain.MaxFloat);
 
-	/*
-	if (a <= 0 && b >= 0 && c <= 0 && d >= 0) { // case 1
-    	    min = FloatDomain.MinFloat;
-    	    max = FloatDomain.MaxFloat;
-    	    result = new FloatIntervalDomain(min, max);
-    	}
-
-	else if (c == 0 && d == 0 && (a > 0 || b < 0)) // case 2
-    	    throw Store.failException;
-
-    	else if ( c < 0 && d > 0 && (a > 0 || b < 0)) { // case 3
-    	    max = Math.max(Math.abs(a), Math.abs(b));
-    	    min = -max;
-    	    result = new FloatIntervalDomain(min, max);	    
-    	}
-
-    	else if (c == 0 && d != 0 && (a > 0 || b < 0)) // case 4 a
-    	    result = divBounds(a, b, 1, d);
-    	else if (c != 0 && d == 0 && (a > 0 || b < 0)) // case 4 b
-    	    result = divBounds(a, b, c, -1);
-
-    	else { // if (c > 0 || d < 0) { // case 5
-    	    double ac = a/c, ad = a/d, bc = b/c, bd =b/d;
-	    // System.out.println (ac +", " +  ad + ", " + bc + ", " + bd);
-
-    	    min = Math.min(Math.min(ac, ad), Math.min(bc, bd));
-    	    max = Math.max(Math.max(ac, ad), Math.max(bc, bd));
-    	    result = new FloatIntervalDomain(min, max);
-    	}
-	*/
     	return null;
     }
 

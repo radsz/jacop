@@ -186,7 +186,11 @@ public class MultivariateIntervalNewton {
 	//     return f.value();
 
 	Constraint c = constraint(f);
-	eval.push(c);
+	if (c != null)
+	    eval.push(c);
+	else 
+	    if (f.singleton())
+		return f.value();
 
 	// if (debug)
 	//      System.out.println ("current constraint for variable " + f + " is " + c);

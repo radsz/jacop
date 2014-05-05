@@ -38,7 +38,6 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 
-// import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Constraint;
 
 import org.jacop.floats.core.FloatVar;

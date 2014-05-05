@@ -179,7 +179,7 @@ public class LinearFloat extends PrimitiveConstraint {
 	lMin = 0.0;
 	lMax = 0.0;
 
-	// recomputeBounds();
+	// recomputeLHSBounds();
 
 	for (int j = 0; j < this.list.length; j++) {
 
@@ -250,101 +250,47 @@ public class LinearFloat extends PrimitiveConstraint {
 
     private void pruneRelation(Store store, byte rel) {
 
-	// if (entailed(negRel[rel]))
-	//     throw Store.failException;
-
-	recomputeBounds();
-
-	assert (lMin <= lMax) : "==============WRONG============\n"+ lMin+".."+lMax+"in LinearFloat\n==============";
-
-	double min, max;
-
-	if (sum == 0.0) {
-	    min = - lMax;
-	    max = - lMin;
-	}
-	else {
-	    min = FloatDomain.down(FloatDomain.subBounds(sum, sum, lMax, lMax).min());
-	    max = FloatDomain.up(FloatDomain.subBounds(sum, sum, lMin, lMin).max());
-	}
-
 	do {
 
 	    store.propagationHasOccurred = false;
-
 
 	    for (int i = 0; i < list.length; i++) {
 
 		FloatVar v = list[i];
 
-		FloatIntervalDomain d;
-		double divMin, divMax;
-		double min1, max1;
+		computeBounds(i);
+		FloatIntervalDomain d = FloatDomain.divBounds(lMin, lMax, weights[i], weights[i]);
+		double divMin = d.min();
+		double divMax = d.max();
 
 		switch (rel) {
 		case eq : //============================================= 
-		    if ((lMaxArray[i] > max + lMinArray[i]) || (lMinArray[i] < min + lMaxArray[i])) {
 
-			min1 = FloatDomain.addBounds(min, min, lMaxArray[i], lMaxArray[i]).min();
-			max1 = FloatDomain.addBounds(max, max, lMinArray[i], lMinArray[i]).max();
+		    if (divMin > divMax) 
+			throw Store.failException;
 
-			d = FloatDomain.divBounds(min1, max1, weights[i], weights[i]);
-			divMin = d.min();
-			divMax = d.max();
+		    v.domain.in(store.level, v, divMin, divMax);
 
-			if (divMin > divMax) 
-			    throw Store.failException;
-
-			v.domain.in(store.level, v, divMin, divMax);
-
-		    }
 		    break;
 		case lt : //=============================================
 
-		    if (lMaxArray[i] >= max + lMinArray[i]) {  // based on "Bounds Consistency Techniques for Long Linear Constraints", W. Harvey and J. Schimpf
-
-			min1 = FloatDomain.addBounds(min, min, lMaxArray[i], lMaxArray[i]).min();
-			max1 = FloatDomain.addBounds(max, max, lMinArray[i], lMinArray[i]).max();
-
-			d = FloatDomain.divBounds(min1, max1, weights[i], weights[i]);
-			divMin = d.min();
-			divMax = d.max();
-
-			if (weights[i] < 0) {
-			    v.domain.inMin(store.level, v, FloatDomain.next(divMin));
-			}
-			else {
-			    v.domain.inMax(store.level, v, FloatDomain.previous(divMax));
-			}
+		    if (weights[i] < 0) {
+			v.domain.inMin(store.level, v, FloatDomain.next(divMin));
+		    }
+		    else {
+			v.domain.inMax(store.level, v, FloatDomain.previous(divMax));
 		    }
 		    break;
 		case le : //=============================================
 
-		    if (lMaxArray[i] > max + lMinArray[i]) {  // based on "Bounds Consistency Techniques for Long Linear Constraints", W. Harvey and J. Schimpf
-
-			min1 = FloatDomain.addBounds(min, min, lMaxArray[i], lMaxArray[i]).min();
-			max1 = FloatDomain.addBounds(max, max, lMinArray[i], lMinArray[i]).max();
-
-			d = FloatDomain.divBounds(min1, max1, weights[i], weights[i]);
-			divMin = d.min();
-			divMax = d.max();
-
-			if (weights[i] < 0) {
-			    v.domain.inMin(store.level, v, divMin);
-			}
-			else {
-			    v.domain.inMax(store.level, v, divMax);
-			}
+		    if (weights[i] < 0) {
+			v.domain.inMin(store.level, v, divMin);
+		    }
+		    else {
+			v.domain.inMax(store.level, v, divMax);
 		    }
 		    break;
 		case ne : //=============================================
-
-		    min1 = FloatDomain.addBounds(min, min, lMaxArray[i], lMaxArray[i]).min();
-		    max1 = FloatDomain.addBounds(max, max, lMinArray[i], lMinArray[i]).max();
-
-		    d = FloatDomain.divBounds(min1, max1, weights[i], weights[i]);
-		    divMin = d.min();
-		    divMax = d.max();
 
 		    FloatInterval fi = new FloatInterval(divMin, divMax);
 
@@ -353,53 +299,29 @@ public class LinearFloat extends PrimitiveConstraint {
 		    break;
 		case gt : //=============================================
 
-		    if (lMinArray[i] <= min + lMaxArray[i]) { // based on "Bounds Consistency Techniques for Long Linear Constraints", W. Harvey and J. Schimpf
-
-			min1 = FloatDomain.addBounds(min, min, lMaxArray[i], lMaxArray[i]).min();
-			max1 = FloatDomain.addBounds(max, max, lMinArray[i], lMinArray[i]).max();
-
-			d = FloatDomain.divBounds(min1, max1, weights[i], weights[i]);
-			divMin = d.min();
-			divMax = d.max();
-
-			if (weights[i] < 0) {
-			    v.domain.inMax(store.level, v, FloatDomain.previous(divMax));
-			}
-			else {
-			    v.domain.inMin(store.level, v, FloatDomain.next(divMin));
-			}
+		    if (weights[i] < 0) {
+			v.domain.inMax(store.level, v, FloatDomain.previous(divMax));
+		    }
+		    else {
+			v.domain.inMin(store.level, v, FloatDomain.next(divMin));
 		    }
 		    break;
 		case ge : //=============================================
 
-		    if (lMinArray[i] < min + lMaxArray[i]) { // based on "Bounds Consistency Techniques for Long Linear Constraints", W. Harvey and J. Schimpf
-
-			min1 = FloatDomain.addBounds(min, min, lMaxArray[i], lMaxArray[i]).min();
-			max1 = FloatDomain.addBounds(max, max, lMinArray[i], lMinArray[i]).max();
-
-			d = FloatDomain.divBounds(min1, max1, weights[i], weights[i]);
-			divMin = d.min();
-			divMax = d.max();
-
-			if (weights[i] < 0) {
-			    v.domain.inMax(store.level, v, divMax);
-			}
-			else {
-			    v.domain.inMin(store.level, v, divMin);
-			}
+		    if (weights[i] < 0) {
+			v.domain.inMax(store.level, v, divMax);
+		    }
+		    else {
+			v.domain.inMin(store.level, v, divMin);
 		    }
 		    break;
 		}
 	    }
 
 	} while (store.propagationHasOccurred);
-
-	// if (entailed(negRel[rel]))
-	//     throw Store.failException;
-
     }
 
-    void recomputeBounds() {
+    void recomputeLHSBounds() {
 
 	lMin = 0.0;
 	lMax = 0.0;
@@ -412,14 +334,42 @@ public class LinearFloat extends PrimitiveConstraint {
 	    lMaxArray[i] = mul.max();
 
 	    if (lMinArray[i] != 0.0)
-		lMin = FloatDomain.addBounds(lMin, lMin, lMinArray[i], lMinArray[i]).min(); //FloatDomain.down(lMin + lMinArray[i]);
+		lMin = FloatDomain.addBounds(lMin, lMin, lMinArray[i], lMinArray[i]).min();
 	    if (lMaxArray[i] != 0.0)
-		lMax = FloatDomain.addBounds(lMax, lMax, lMaxArray[i], lMaxArray[i]).max(); // FloatDomain.up(lMax + lMaxArray[i]);
+		lMax = FloatDomain.addBounds(lMax, lMax, lMaxArray[i], lMaxArray[i]).max();
 	}
 
-	// System.out.println (this + "\n" + lMin+".."+lMax);
+	// System.out.println (this + "\n" + lMin+".."+max);
 
     }
+
+    void computeBounds(int index) {
+
+	double min = sum;
+	double max = sum;
+	for (int i=0; i<list.length; i++) {
+
+	    if ( i != index) {
+		FloatDomain listDom = list[i].dom();
+
+		FloatIntervalDomain mul = FloatDomain.mulBounds(listDom.min(), listDom.max(), weights[i], weights[i]);
+		double min_i = mul.min();
+		double max_i = mul.max();
+
+		if (max_i != 0.0)
+		    min = FloatDomain.subBounds(min, min, max_i, max_i).min();
+		if (min_i != 0.0)
+		    max = FloatDomain.subBounds(max, max, min_i, min_i).max();
+	    }
+	}
+
+	lMin = min;
+	lMax = max;
+
+	// System.out.println (this + "\n" + min+".."+max);
+
+    }
+
 
     @Override
     public int getConsistencyPruningEvent(Var var) {
@@ -495,8 +445,7 @@ public class LinearFloat extends PrimitiveConstraint {
     @Override
     public boolean satisfied() {
 
-	if (reified) 
-	    recomputeBounds();
+	recomputeLHSBounds();
 
 	return entailed(relationType);
 
@@ -505,8 +454,7 @@ public class LinearFloat extends PrimitiveConstraint {
     @Override
     public boolean notSatisfied() {
 
-	if (reified)
-	    recomputeBounds();
+	recomputeLHSBounds();
 
 	return entailed(negRel[relationType]);
 
@@ -674,7 +622,10 @@ public class LinearFloat extends PrimitiveConstraint {
 	    }
 	}
 
-	Derivative.poseDerivativeConstraint(new LinearFloat(store, df, ww, "==", 0.0));
+	org.jacop.constraints.Constraint c = new LinearFloat(store, df, ww, "==", 0.0);
+	Derivative.poseDerivativeConstraint(c);
+
+	// System.out.println ("Derivative of " + f + " over " + x + " is " + c);
 
 	return v;
    }

@@ -141,6 +141,9 @@ public class IntervalGaussSeidel {
 	if (!dominant) {
  
 	    // try to precondition to make it non-dominant
+	    // current method for computing preconditioner is far too slow
+	    // and need to be improved.
+
 	    precondition(A, b);
 
 	    d = new boolean[A.length];
@@ -152,20 +155,22 @@ public class IntervalGaussSeidel {
 		return null;
 	}
 
-	// System.out.println (dominant + "===================================");
-	// for (int i = 0; i < A.length; i++) {
-	//     for (int j = 0; j < A[i].length; j++) {
-	// 	if (A[i][j].min <= 0 && A[i][j].max() >= 0)
-	// 	    System.out.print ("0 ");
-	// 	else if (A[i][j].min() > 0)
-	// 	    System.out.print ("+ ");
-	// 	else if (A[i][j].min() < 0)
-	// 	    System.out.print ("- ");
-	// 	else
-	// 	    System.out.print ("? ");
-	//     }
-	//     System.out.println ();
-	// }
+	if (debug) {
+	    System.out.println ("dominant = " + dominant + " ===================================");
+	    for (int i = 0; i < A.length; i++) {
+		for (int j = 0; j < A[i].length; j++) {
+		    if (A[i][j].min <= 0 && A[i][j].max() >= 0)
+			System.out.print ("0 ");
+		    else if (A[i][j].min() > 0)
+			System.out.print ("+ ");
+		    else if (A[i][j].min() < 0)
+			System.out.print ("- ");
+		    else
+			System.out.print ("? ");
+		}
+		System.out.println ();
+	    }
+	}
 
 	while (true) {
 
@@ -225,7 +230,8 @@ public class IntervalGaussSeidel {
 
     void precondition(FloatInterval[][] AA, double[] bb) {
 
-	// System.out.println ("Before preconditioning\n"+this);
+	if (debug)
+	    System.out.println ("Before preconditioning\n"+this);
 
 	double[][] midPoint = new double[AA.length][AA[0].length];
 
@@ -252,7 +258,8 @@ public class IntervalGaussSeidel {
 		A[i][j] = new FloatInterval(newA[i][j].min(), newA[i][j].max());
 	b = newB;
 
-	// System.out.println ("After preconditioning\n"+this);
+	if (debug)
+	    System.out.println ("After preconditioning\n"+this);
 
     }
 
