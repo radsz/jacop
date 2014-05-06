@@ -56,7 +56,7 @@ import org.xml.sax.SAXException;
  * 
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.0
+ * @version 4.1
  */
 
 public class FloatIntervalDomain extends FloatDomain {

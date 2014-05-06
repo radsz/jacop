@@ -46,7 +46,7 @@ import org.jacop.util.Matrix;
  * coefficients.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.0
+ * @version 4.1
  */
 
 public class IntervalGaussSeidel {

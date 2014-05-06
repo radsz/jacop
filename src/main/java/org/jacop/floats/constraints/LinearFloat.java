@@ -49,7 +49,7 @@ import org.jacop.floats.core.FloatInterval;
  * Variable's . It provides the weighted sum from all Variable's on the list.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.0
+ * @version 4.1
  */
 
 public class LinearFloat extends PrimitiveConstraint {

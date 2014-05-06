@@ -47,7 +47,7 @@ import org.jacop.search.ComparatorVariable;
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * 
- * @version 4.0
+ * @version 4.1
  * @param <T> type of variable being compared.
  * 
  */

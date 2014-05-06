@@ -49,7 +49,7 @@ import org.jacop.floats.core.FloatIntervalDomain;
  * Bound consistency is used.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.0
+ * @version 4.1
  */
 
 public class PplusCeqR extends PrimitiveConstraint {
