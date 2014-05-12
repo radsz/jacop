@@ -55,11 +55,11 @@ public class SimpleSelect<T extends Var> implements SelectChoicePoint<T> {
 	 */
 	public boolean inputOrderTieBreaking = true;
 
-	T[] searchVariables;
+	public T[] searchVariables;
 
-	ComparatorVariable<T> variableOrdering;
+	public ComparatorVariable<T> variableOrdering;
 
-	ComparatorVariable<T> tieBreakingComparator = null;
+	public ComparatorVariable<T> tieBreakingComparator = null;
 
 	Indomain<T> valueOrdering;
 

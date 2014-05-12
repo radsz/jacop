@@ -1,3 +1,14 @@
+Version 4.1
+===========
+
+1. New floating point variables and constraints on these variables.
+
+2. Flatzinc interface for JaCoP's floating point constraints.
+
+3. Fixing a bug in knapsack constraints when large numbers are used.
+
+4. Implementing intersection method between SmallDenseDomain and BoundDomain.
+
 Version 4.0
 ===========
 

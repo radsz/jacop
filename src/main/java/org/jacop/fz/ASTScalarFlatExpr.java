@@ -17,6 +17,7 @@ class ASTScalarFlatExpr extends SimpleNode {
     // type = 0-int; 1=bool; 2-ident 3=array acces; 4=string; 5=float;
     int type=-1;
     int intValue;  // keeps int & boolean 0/1 value
+    double doubleValue;  // keeps int & boolean 0/1 value
     String ident;
 
     public void setType(int t) {
@@ -35,8 +36,17 @@ class ASTScalarFlatExpr extends SimpleNode {
 //  	    System.exit(0);
 //   	}
     }
+
     public int getInt() {
 	return intValue;
+    }
+
+    public void setFloat(double d) {
+	    doubleValue = d;
+    }
+
+    public double getFloat() {
+	return doubleValue;
     }
 
     public void setIdent(String i) {
@@ -56,7 +66,7 @@ class ASTScalarFlatExpr extends SimpleNode {
 	    case 2: val = "(ident): " + ident; break;
 	    case 3: val = "(array access): "+ident+"["+intValue+"]"; break;
 	    case 4: val = "(string): "; break;
-	    case 5: val = "(float): "; break;
+	    case 5: val = "(float): " + doubleValue; break;
 	    }
 	}
 

@@ -41,6 +41,8 @@ import org.jacop.core.Var;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
 
+import org.jacop.floats.core.FloatVar;
+
 /**
  * 
  * This class contains information about all variables, including 
@@ -56,8 +58,12 @@ public class Tables {
 
     // intTable keeps both int & bool (0=false, 1=true) parameters
     HashMap<String, Integer> intTable = new HashMap<String, Integer>();
+
+    HashMap<String, Double> floatTable = new HashMap<String, Double>();
 	
     HashMap<String, int[]> intArrayTable = new HashMap<String, int[]>(); // boolean are also stored here as 0/1 values
+
+    HashMap<String, double[]> floatArrayTable = new HashMap<String, double[]>();
 
     HashMap<String, IntDomain> setTable = new HashMap<String, IntDomain>();
 
@@ -66,6 +72,10 @@ public class Tables {
     HashMap<String, IntVar> variableTable = new HashMap<String, IntVar>();
 
     HashMap<String, IntVar[]> variableArrayTable = new HashMap<String, IntVar[]>();
+
+    HashMap<String, FloatVar> variableFloatTable = new HashMap<String, FloatVar>();
+
+    HashMap<String, FloatVar[]> variableFloatArrayTable = new HashMap<String, FloatVar[]>();
 
     HashMap<String, SetVar> setVariableTable = new HashMap<String, SetVar>();
 
@@ -77,7 +87,11 @@ public class Tables {
 
     ArrayList<Var> defaultSearchVariables = new ArrayList<Var>();
 
+    ArrayList<Var> defaultSearchFloatVariables = new ArrayList<Var>();
+
     ArrayList<Var[]> defaultSearchArrays = new ArrayList<Var[]>();
+
+    ArrayList<Var[]> defaultSearchFloatArrays = new ArrayList<Var[]>();
 
     ArrayList<Var> defaultSearchSetVariables = new ArrayList<Var>();
 
@@ -93,6 +107,7 @@ public class Tables {
 	this.zero = new IntVar(store, "zero", 0,0);
 	this.one = new IntVar(store, "one", 1,1);
     }
+
     /**
      * It adds an int parameter.
      * 
@@ -127,6 +142,43 @@ public class Tables {
      */
     public Integer checkInt(String ident) {
 	return intTable.get(ident);
+    }
+
+
+    /**
+     * It adds an float parameter.
+     * 
+     * @param ident the identity of the added int parameter.
+     * @param val the value of the parameter.
+     */
+    public void addFloat(String ident, double val) {
+	floatTable.put(ident, val);
+    }
+    /**
+     * It returns an float parameter of a given identity.
+     * 
+     * @param ident the identify of the parameter.
+     * @return the double value of the specified parameter.
+     */
+    public double getFloat(String ident) {
+	Double dVal = floatTable.get(ident);
+	if (dVal != null)
+	    return dVal.doubleValue();
+	else {
+	    System.err.println("Symbol \""+ident+ "\" does not have assigned value when refered; execution aborted");
+	    System.exit(0);
+	    return -1;
+	}
+    }
+
+    /**
+     * It returns an Double parameter of a given identity.
+     * 
+     * @param ident the identify of the parameter.
+     * @return the Double value of the specified parameter.
+     */
+    public Double checkFloat(String ident) {
+	return floatTable.get(ident);
     }
 
 
@@ -192,6 +244,22 @@ public class Tables {
 	return setArrayTable.get(ident);
     }
 
+    public void addFloatArray(String ident, double[] array) {
+	// TODO, asserts to prevent multiple array being put with the same identity?
+	// assert ( intArrayTable.get(ident) == null ) : "The int array with identity " + ident + " already exists ";
+	floatArrayTable.put(ident, array);
+    }
+	
+    /**
+     * It obtains the int array of the given unique identity.
+     * 
+     * @param ident the identity of the required array.
+     * @return the int array with the specified identity.
+     */
+    public double[] getFloatArray(String ident) {
+	return floatArrayTable.get(ident);
+    }
+
     /**
      * It adds a variable with a given identity to the storage. 
      * 
@@ -212,6 +280,29 @@ public class Tables {
     public IntVar getVariable(String ident) {
 	return variableTable.get(ident);
     }
+
+
+    /**
+     * It adds a variable with a given identity to the storage. 
+     * 
+     * @param ident the identity of the added variable. 
+     * @param var the variable being added.
+     */
+    public void addFloatVariable(String ident, FloatVar var) {
+    	variableFloatTable.put(ident, var);
+    }
+	
+	
+    /**
+     * It returns the variable of the given identity. 
+     * 
+     * @param ident the identity of the returned variable.
+     * @return the variable of the given identity.
+     */
+    public FloatVar getFloatVariable(String ident) {
+	return variableFloatTable.get(ident);
+    }
+
 
     /**
      * It adds a variable array to the storage.
@@ -234,12 +325,51 @@ public class Tables {
 	IntVar[]  a = variableArrayTable.get(ident);
 	if (a == null) {
 	    int[] intA = intArrayTable.get(ident);
-	    a = new IntVar[intA.length];
-	    for (int i =0; i<intA.length; i++) {
-		if (intA[i] == 0) a[i] = zero;
-		else if (intA[i] == 1) a[i] = one;
-		else
-		    a[i] = new IntVar(store, intA[i], intA[i]);
+	    if (intA != null) {
+		a = new IntVar[intA.length];
+		for (int i =0; i<intA.length; i++) {
+		    if (intA[i] == 0) a[i] = zero;
+		    else if (intA[i] == 1) a[i] = one;
+		    else
+			a[i] = new IntVar(store, intA[i], intA[i]);
+		}
+	    }
+	    else
+		return null;
+	}
+	return a;
+    }
+
+
+    /**
+     * It adds a float variable array to the storage.
+     * 
+     * @param ident the identity of the added variable array.
+     * @param array the array of variables being added.
+     */
+    public void addVariableFloatArray(String ident, FloatVar[] array) {
+    	variableFloatArrayTable.put(ident, array);
+    }
+	
+	
+    /**
+     * It returns the float variable array of the given identity.
+     * 
+     * @param ident the identity of the returned variable array.
+     * @return the variable array of the given identity.
+     */
+    public FloatVar[] getVariableFloatArray(String ident) {
+	FloatVar[]  a = variableFloatArrayTable.get(ident);
+	if (a == null) {
+	    double[] floatA = floatArrayTable.get(ident);
+	    a = new FloatVar[floatA.length];
+	    for (int i =0; i<floatA.length; i++) {
+		// if (floatA[i] == 0) 
+		//     a[i] = zero;
+		// else if (floatA[i] == 1) 
+		//     a[i] = one;
+		// else
+		a[i] = new FloatVar(store, floatA[i], floatA[i]);
 	    }
 	}
 	return a;
@@ -317,12 +447,24 @@ public class Tables {
      */
     public void addSearchVar(Var v) { defaultSearchVariables.add(v); }
 	
-	
+    /**
+     * It adds a search variable. 
+     * 
+     * @param v the search variable being added.
+     */
+    public void addSearchFloatVar(Var v) { defaultSearchFloatVariables.add(v); }
+
     /**
      * It adds a search array.
      * @param v the search array being added.
      */
     public void addSearchArray(Var[] v) { defaultSearchArrays.add(v); }
+
+    /**
+     * It adds a search array.
+     * @param v the search array being added.
+     */
+    public void addSearchFloatArray(Var[] v) { defaultSearchFloatArrays.add(v); }
 
     /**
      * It adds a search set variable. 
@@ -343,26 +485,31 @@ public class Tables {
     @SuppressWarnings("unchecked")
 	public String toString() {
 		
-	HashMap[] dictionary = { intTable,
-				 intArrayTable,
-				 setTable,
-				 setArrayTable,
-				 variableTable,
-				 variableArrayTable,
-				 setVariableTable,
-				 setVariableArrayTable
+	HashMap[] dictionary = { intTable,   // 0
+				 intArrayTable,  // 1
+				 setTable,       // 2
+				 setArrayTable,  // 3
+				 variableTable,  // 4
+				 variableArrayTable,  // 5
+				 setVariableTable,    // 6
+				 setVariableArrayTable,  // 7
+				 floatArrayTable,        // 8
+				 floatTable,             // 9
+				 variableFloatTable,     // 10
+				 variableFloatArrayTable  // 11
 	};
 		
 	int indexIntArray = 1;
 	int indexSetArray = 3;
 	int indexVariableArray = 5;
 	int indexSetVariableArray = 7;
-		
+	int indexFloatArray = 8;
+	int indexFloat = 9;
+	int indexFloatVariableArray = 11;
+
 	String s = "";
 	for (int i=0; i<dictionary.length; i++) {
-
-	
-		
+	     
 	    // int array
 	    if (i == indexIntArray) {
 		s+="Int arrays\n";
@@ -370,6 +517,23 @@ public class Tables {
 		java.util.Set<String> keys = dictionary[i].keySet();
 		for (String k : keys) {
 		    int[] a = (int[])dictionary[i].get(k);
+		    s += k+"=[";
+		    for (int j=0; j<a.length; j++) {
+			s += a[j];
+			if (j < a.length-1)
+			    s += ", ";
+		    }
+		    s += "], ";
+		}
+		s+="}\n";
+	    }
+	    // float array
+	    if (i == indexFloatArray) {
+		s+="Float arrays\n";
+		s +="{";
+		java.util.Set<String> keys = dictionary[i].keySet();
+		for (String k : keys) {
+		    double[] a = (double[])dictionary[i].get(k);
 		    s += k+"=[";
 		    for (int j=0; j<a.length; j++) {
 			s += a[j];
@@ -395,7 +559,20 @@ public class Tables {
 	    }
 	    // Variable Array
 	    else if (i == indexVariableArray) {
-		s+="Var arrays\n";
+		s+="IntVar arrays\n";
+		s +="{";
+		java.util.Set<String> keys = dictionary[i].keySet();
+		for (String k : keys) {
+		    Var[] a = (Var[])dictionary[i].get(k);
+		    s += k+"=";
+		    s += Arrays.asList(a);
+		    s += ", ";
+		}
+		s+="}\n";
+	    }
+	    // Float Variable Array
+	    else if (i == indexFloatVariableArray) {
+		s+="FloatVar arrays\n";
 		s +="{";
 		java.util.Set<String> keys = dictionary[i].keySet();
 		for (String k : keys) {
@@ -432,10 +609,18 @@ public class Tables {
 	    s += ", ";
 	}
 	s += "]\n";
-	s += "Search variables = "+ defaultSearchVariables+"\n";
-	s += "Search arrays = ["; //+ defaultSearchArrays+"\n";
+	s += "Search int variables = "+ defaultSearchVariables+"\n";
+	s += "Search int variable arrays = ["; //+ defaultSearchArrays+"\n";
 	for (int i=0; i<defaultSearchArrays.size(); i++) {
 	    Var[] a = defaultSearchArrays.get(i);
+	    s += Arrays.asList(a);
+	    s += ", ";
+	}
+	s += "]\n";
+	s += "Search float variables = "+ defaultSearchFloatVariables+"\n";
+	s += "Search float variables arrays = ["; //+ defaultSearchArrays+"\n";
+	for (int i=0; i<defaultSearchFloatArrays.size(); i++) {
+	    Var[] a = defaultSearchFloatArrays.get(i);
 	    s += Arrays.asList(a);
 	    s += ", ";
 	}

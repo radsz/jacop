@@ -36,6 +36,7 @@ import java.util.Arrays;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.floats.core.FloatVar;
 import org.jacop.search.ComparatorVariable;
 import org.jacop.search.Indomain;
 import org.jacop.search.IndomainMax;
@@ -53,6 +54,11 @@ import org.jacop.search.SmallestDomain;
 import org.jacop.search.SmallestMin;
 import org.jacop.search.SplitSelect;
 import org.jacop.search.WeightedDegree;
+import org.jacop.floats.search.SmallestDomainFloat;
+import org.jacop.floats.search.LargestDomainFloat;
+import org.jacop.floats.search.SmallestMinFloat;
+import org.jacop.floats.search.LargestMaxFloat;
+import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.set.core.SetVar;
 import org.jacop.set.search.IndomainSetMax;
 import org.jacop.set.search.IndomainSetMin;
@@ -78,6 +84,9 @@ public class SearchItem implements ParserTreeConstants {
     Var[] search_variables;
     String search_type, explore="complete", indomain, var_selection_heuristic;
 
+    boolean floatSearch = false;
+    double precision = 0.0; // for float_search
+
     int ldsValue = 0, creditValue = 0, bbsValue = 0;
 
     ComparatorVariable tieBreaking=null;
@@ -96,7 +105,7 @@ public class SearchItem implements ParserTreeConstants {
 
     void searchParameters(SimpleNode node, int n) {
 
-// 	node.dump("");
+ 	// node.dump("");
 
 	ASTAnnotation ann = (ASTAnnotation)node.jjtGetChild(n);
 	search_type = ann.getAnnId();
@@ -198,6 +207,72 @@ public class SearchItem implements ParserTreeConstants {
 		System.exit(0);
 	    }
 	}
+
+	if (search_type.equals("float_search")) {
+	    floatSearch = true;
+
+	    ASTAnnExpr expr1 = (ASTAnnExpr)ann.jjtGetChild(0);
+	    search_variables = getFloatVarArray((SimpleNode)expr1.jjtGetChild(0));
+
+	    ASTAnnExpr expr2 = (ASTAnnExpr)ann.jjtGetChild(2);
+	    var_selection_heuristic = ((ASTScalarFlatExpr)expr2.jjtGetChild(0)).getIdent();
+
+	    ASTAnnExpr expr3 = (ASTAnnExpr)ann.jjtGetChild(3);
+	    indomain = ((ASTScalarFlatExpr)expr3.jjtGetChild(0)).getIdent();
+
+
+	    ASTAnnExpr expr4 = (ASTAnnExpr)ann.jjtGetChild(4);
+	    if (! expr4.idPresent()) //(expr4.jjtGetNumChildren() == 1)
+		explore = ((ASTScalarFlatExpr)expr4.jjtGetChild(0)).getIdent();
+	    else if (expr4.getIdent().equals("credit")) {
+		explore = "credit";
+		if (expr4.jjtGetNumChildren() == 2) {
+		    if (((SimpleNode)expr4.jjtGetChild(0)).getId() == JJTANNEXPR) {
+			ASTAnnExpr cp = (ASTAnnExpr)expr4.jjtGetChild(0);
+			if (cp.jjtGetNumChildren() == 1) {
+			    creditValue = ((ASTScalarFlatExpr)cp.jjtGetChild(0)).getInt();
+			}
+		    }
+		    ASTAnnExpr bbs = (ASTAnnExpr)expr4.jjtGetChild(1);
+		    if (bbs.getId() == JJTANNEXPR && bbs.getIdent().equals("bbs")) {
+			if (bbs.jjtGetNumChildren() == 1) {
+			    if (((SimpleNode)bbs.jjtGetChild(0)).getId() == JJTANNEXPR) {
+				ASTAnnExpr bv = (ASTAnnExpr)bbs.jjtGetChild(0);
+				if (bv.jjtGetNumChildren() == 1) {
+				    bbsValue = ((ASTScalarFlatExpr)bv.jjtGetChild(0)).getInt();
+				    //  				    System.out.println("Credit("+creditValue+", "+bbsValue+")");
+				    return;
+				}
+			    }
+			}
+		    }
+		}
+		explore = "complete";
+		System.err.println("Warning: not recognized search exploration type; use \"complete\"");
+	    }
+	    else if  (expr4.getIdent().equals("lds")) {
+		explore = "lds";
+		if (expr4.jjtGetNumChildren() == 1) {
+		    if (((SimpleNode)expr4.jjtGetChild(0)).getId() == JJTANNEXPR) {
+			ASTAnnExpr ae = (ASTAnnExpr)expr4.jjtGetChild(0);
+			if (ae.jjtGetNumChildren() == 1) {
+			    ldsValue = ((ASTScalarFlatExpr)ae.jjtGetChild(0)).getInt();
+			    return;
+			}
+		    }
+		}
+		explore = "complete";
+		System.err.println("Warning: not recognized search exploration type; use \"complete\"");
+	    }
+	    else {
+		System.err.println("Error: not recognized search exploration type; execution aborted");
+		System.exit(0);
+	    }
+
+	    ASTAnnExpr expr5 = (ASTAnnExpr)ann.jjtGetChild(1);
+	    precision = ((ASTScalarFlatExpr)expr5.jjtGetChild(0)).getFloat();
+
+	}
 	else if (search_type.equals("seq_search")) {
 	    int count = ann.jjtGetNumChildren();
 	    for (int i=0; i<count; i++) {
@@ -265,6 +340,38 @@ public class SearchItem implements ParserTreeConstants {
 		return new SimpleSelect(search_variables, var_sel, tieBreaking, indom);
 	}
     }
+
+    SelectChoicePoint getFloatSelect() {
+	ComparatorVariable<FloatVar> var_sel = getFloatVarSelect();
+	FloatVar[] searchVars = new FloatVar[search_variables.length];
+	for (int i = 0; i < search_variables.length; i++)
+		searchVars[i] = (FloatVar) search_variables[i];
+
+	if (indomain.equals("indomain_split")) {
+	    if (tieBreaking == null)
+		return new SplitSelectFloat<FloatVar>(store, searchVars, var_sel);
+	    else
+		return new SplitSelectFloat<FloatVar>(store,  searchVars, var_sel, tieBreaking);
+	}
+	else if (indomain.equals("indomain_reverse_split")) {
+	    if (tieBreaking == null) {
+		SplitSelectFloat<FloatVar> sel = new SplitSelectFloat<FloatVar>(store, searchVars, var_sel);
+		sel.leftFirst = false;
+		return sel;
+	    }
+	    else {
+		SplitSelectFloat<FloatVar> sel = new SplitSelectFloat<FloatVar>(store,  searchVars, var_sel, tieBreaking);
+		sel.leftFirst = false;
+		return sel;
+	    }
+	}
+	else {
+	    System.err.println("Wrong parameters for float_search. Only indomain_split or indomain_reverse_split are allowed.");
+	    System.exit(0);
+	    return null;
+	}
+    }
+
 
     SelectChoicePoint getSetSelect() {
 	ComparatorVariable<SetVar> var_sel = getsetVarSelect();
@@ -360,6 +467,47 @@ public class SearchItem implements ParserTreeConstants {
 	return null; // input_order
     }
 
+    ComparatorVariable getFloatVarSelect() {
+
+	tieBreaking = null;
+	if (var_selection_heuristic == null)
+	    return null;
+	else if (var_selection_heuristic.equals("input_order"))
+	    return null;
+	else if (var_selection_heuristic.equals("first_fail")) 
+ 	    return new SmallestDomainFloat();
+	else if (var_selection_heuristic.equals("anti_first_fail")) {
+	    // does not follow flatzinc definition but may give better results ;)
+	    //tieBreaking = new MostConstrainedStatic();
+	    return new LargestDomainFloat();
+	}
+	// else if (var_selection_heuristic.equals("most_constrained")) {
+	//     //tieBreaking = new MostConstrainedStatic();
+	//     return new SmallestDomainFloat();
+	// }
+	else if (var_selection_heuristic.equals("occurrence"))
+	    return new MostConstrainedStatic();
+	else if (var_selection_heuristic.equals("smallest")) {
+	    // does not follow flatzinc definition but may give better results ;)
+ 	    // tieBreaking = new MostConstrainedStatic(); 
+	    //tieBreaking = new SmallestDomain();
+	    return new SmallestMinFloat();
+	}
+	else if (var_selection_heuristic.equals("largest"))
+	    return new LargestMaxFloat();
+	// else if (var_selection_heuristic.equals("max_regret"))
+	//     return new MaxRegret();
+	// else if (var_selection_heuristic.equals("weighted_degree")) {
+	//     store.variableWeightManagement = true;
+	//     return new WeightedDegree();
+	// }
+	else 
+	    System.err.println("Warning: Not implemented variable selection heuristic \""+
+			       var_selection_heuristic +"\"; used input_order");
+
+	return null; // input_order
+    }
+
     ComparatorVariable getsetVarSelect() {
 
 	tieBreaking = null;
@@ -416,6 +564,28 @@ public class SearchItem implements ParserTreeConstants {
 	}
     }
 
+    Var getFloatVariable(ASTScalarFlatExpr node) {
+	if (node.getType() == 5) //float
+	    return new FloatVar(store, node.getFloat(), node.getFloat());
+	else if (node.getType() == 2) // ident
+	    return dictionary.getFloatVariable(node.getIdent());
+	else if (node.getType() == 3) {// array access
+	    if (node.getInt() > dictionary.getVariableFloatArray(node.getIdent()).length ||
+		node.getInt() < 0) {
+		System.out.println("Index out of bound for " + node.getIdent() + "["+node.getInt()+"]");
+		System.exit(0);
+		return new FloatVar(store);
+	    }
+	    else
+		return dictionary.getVariableFloatArray(node.getIdent())[node.getInt()];
+	}
+	else {
+	    System.err.println("Wrong parameter " + node);
+	    System.exit(0);
+	    return new FloatVar(store);
+	}
+    }
+
     Var[] getVarArray(SimpleNode node) {
 	if (node.getId() == JJTARRAYLITERAL) {
 	    int count = node.jjtGetNumChildren();
@@ -442,6 +612,34 @@ public class SearchItem implements ParserTreeConstants {
 	    return new Var[] {};
 	}
     }
+
+    Var[] getFloatVarArray(SimpleNode node) {
+	if (node.getId() == JJTARRAYLITERAL) {
+	    int count = node.jjtGetNumChildren();
+	    Var[] aa = new Var[count];
+	    for (int i=0;i<count;i++) {
+		ASTScalarFlatExpr child = (ASTScalarFlatExpr)node.jjtGetChild(i);
+		Var el = getFloatVariable(child);
+		aa[i] = el;
+	    }
+	    return aa;
+	}
+	else if (node.getId() == JJTSCALARFLATEXPR) {
+	    if (((ASTScalarFlatExpr)node).getType() == 2) // ident
+		return dictionary.getVariableFloatArray(((ASTScalarFlatExpr)node).getIdent());
+	    else {
+		System.err.println("Wrong type of Variable array; compilation aborted."); 
+		System.exit(0);
+		return new Var[] {};
+	    }
+	}
+	else {
+	    System.err.println("Wrong type of Variable array; compilation aborted."); 
+	    System.exit(0);
+	    return new Var[] {};
+	}
+    }
+
 
     Var getSetVariable(ASTScalarFlatExpr node) {
 	if (node.getType() == 2) // ident
@@ -516,8 +714,11 @@ public class SearchItem implements ParserTreeConstants {
 
     public String toString() {
 	String s="";
-	if (search_seq.size() == 0)
+	if (search_seq.size() == 0) {
 	    s = search_type + ", "+ Arrays.asList(search_variables) +", "+explore + ", " + var_selection_heuristic+", "+indomain;
+	    if (floatSearch)
+		s += ", " + precision;
+	}
 	else {
 	    for (SearchItem se : search_seq)
 		s += se +"\n";
