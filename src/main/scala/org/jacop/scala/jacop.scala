@@ -5,6 +5,7 @@ package org.jacop.scala
 
 import org.jacop.constraints._
 import org.jacop.set.constraints._
+import org.jacop.floats.constraints._
 
 import scala.language.implicitConversions
 import scala.collection.mutable
@@ -51,6 +52,16 @@ trait jacop {
   implicit def boolToBoolVar(b: Boolean): BoolVar = {
     val i = if (b) 1 else 0
     val v = new BoolVar(i, i)
+    v
+  }
+
+/**
+ * Converts double to FloatVar.
+ *
+ * @param i integer to be converted.
+ */
+  implicit def doubleToFloatVar(d: Double): FloatVar = {
+    val v = new FloatVar(d, d)
     v
   }
 
@@ -706,6 +717,300 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(get
       getModel.constr += c
       c
     }
+  }
+}
+
+/**
+ * Defines a floating point variable and its primitive constraints.
+ *
+ * @constructor Creates a new floating point variable.
+ * @param name variable identifier.
+ * @param min minimal value of variable's domain.
+ * @param max maximal value of variable's domain.
+ */
+class FloatVar(name: String, min: Double, max: Double) extends org.jacop.floats.core.FloatVar(getModel, name, min, max) with jacop {
+
+/**
+ * Defines an anonymous finite domain integer variable.
+ *
+ * @constructor Creates a new finite domain integer variable.
+ * @param min minimal value of variable's domain.
+ * @param max maximal value of variable's domain.
+ */
+  def this(min: Double, max: Double) = {
+    this ("_$" + getModel.n, min, max)
+    getModel.n += 1
+  }
+
+/**
+ * Defines an anonymous floating point variable.
+ *
+ * @constructor Creates a new floating point variable with minimal and maximal
+ * @param name variable's identifier.
+ */
+  def this(name: String) = {
+    this (name, -1e150, 1e150)
+    getModel.n += 1
+  }
+
+/**
+ * Defines an anonymous floating point variable.
+ *
+ * @constructor Creates a new floating point variable with minimal and maximal
+ * values in the domain defined by org.jacop.
+ */
+  def this() = {
+    this (-1e150, 1e150)
+    getModel.n += 1
+  }
+
+
+/**
+ * Defines add constraint between two FloatVar.
+ *
+ * @param that a second parameter for the addition constraint.
+ * @return FloatVar variable being the result of the addition constraint. 
+ */
+   def +(that: org.jacop.floats.core.FloatVar) = {
+     val result = new FloatVar()
+     val c = new PplusQeqR(this, that, result)
+     getModel.constr += c
+     result
+   }
+
+/**
+ * Defines add constraint between FloatVar and an Double value.
+ *
+ * @param that a second double parameter for the addition constraint.
+ * @return FloatVar variable being the result of the addition constraint. 
+ */
+  def +(that: Double) = {
+    val result = new FloatVar()
+    val c = new PplusCeqR(this, that, result)
+    getModel.constr += c
+    result
+  }
+
+/**
+ * Defines subtract constraint between two FloatVar.
+ *
+ * @param that a second parameter for the subtraction constraint.
+ * @return FloatVar variable being the result of the subtraction constraint. 
+ */
+  def -(that: org.jacop.floats.core.FloatVar) = {
+    val result = new FloatVar()
+    val c = new PminusQeqR(this, that, result)
+    getModel.constr += c
+    result
+  }
+
+/**
+ * Defines subtract constraint between FloatVar and an double value.
+ *
+ * @param that a second double parameter for the subtraction constraint.
+ * @return FloatVar variable being the result of the subtraction constraint. 
+ */
+  def -(that: Double) = {
+    val result = new FloatVar()
+    val c = new PminusCeqR(this, that, result)
+    getModel.constr += c
+    result
+  }
+
+/**
+ * Defines multiplication constraint between two FloatVar.
+ *
+ * @param that a second parameter for the multiplication constraint.
+ * @return FloatVar variable being the result of the multiplication constraint.
+ */
+   def *(that: org.jacop.floats.core.FloatVar) = {
+     val result = new FloatVar()
+     val c = new PmulQeqR(this, that, result)
+     getModel.constr += c
+     result
+   }
+
+/**
+ * Defines multiplication constraint between FloatVar and an double value.
+ *
+ * @param that a second parameter for the multiplication constraint.
+ * @return FloatVar variable being the result of the multiplication constraint. 
+ */
+  def *(that: Double) = {
+    val result = new FloatVar()
+    val c = new PmulCeqR(this, that, result)
+    getModel.constr += c
+    result
+  }
+
+/**
+ * Defines division constraint between two FlaotVar.
+ *
+ * @param that a second parameter for the division constraint.
+ * @return FloatVar variable being the result of the division constraint.
+ */
+  def div(that: org.jacop.floats.core.FloatVar) = {
+    val result = new FloatVar()
+    val c = new PdivQeqR(this, that, result)
+    getModel.constr += c
+    result
+  }
+
+/**
+ * Defines unary "-" constraint for FlaotVar.
+ *
+ * @return the defined constraint.
+ */
+  def unary_- = {
+    val result = new FloatVar()
+    val c = new PplusQeqR(this, result, new FloatVar(0.0, 0.0))
+    getModel.constr += c
+    result
+  }
+
+
+/**
+ * Defines equation constraint between two FloatVar.
+ *
+ * @param that a second parameter for equation constraint.
+ * @return the defined constraint.
+ */
+  def #=(that: org.jacop.floats.core.FloatVar) = { 
+    val c = new PeqQ(this, that)
+    getModel.constr += c
+    c
+  }
+
+/**
+ * Defines equation constraint between FlaotVar and a double constant.
+ *
+ * @param that a second parameter for equation constraint.
+ * @return the defined constraint.
+ */
+  def #=(that: Double) = {
+    val c = new PeqC(this, that)
+    getModel.constr += c
+    c
+  }
+
+/**
+ * Defines inequality constraint between two FloatVar.
+ *
+ * @param that a second parameter for inequality constraint.
+ * @return the defined constraint.
+ */
+  def #\=(that: org.jacop.floats.core.FloatVar) = {
+    val c = new PneqQ(this, that)
+    getModel.constr += c
+    c
+  }
+
+/**
+ * Defines inequality constraint between FloatVar and double constant.
+ *
+ * @param that a second parameter for inequality constraint.
+ * @return the defined constraint.
+ */
+  def #\=(that: Double) = {
+    val c = new PneqC(this, that)
+    getModel.constr += c
+    c
+  }
+
+/**
+ * Defines "less than" constraint between two FloatVar.
+ *
+ * @param that a second parameter for "less than" constraint.
+ * @return the defined constraint.
+ */
+  def #<(that: org.jacop.floats.core.FloatVar) = {
+    val c = new PltQ(this, that)
+    getModel.constr += c
+    c
+  }
+
+/**
+ * Defines "less than" constraint between FloatVar and double constant.
+ *
+ * @param that a second parameter for "less than" constraint.
+ * @return the equation constraint.
+ */
+  def #<(that: Double) = {
+    val c = new PltC(this, that)
+    getModel.constr += c
+    c
+  }
+
+/**
+ * Defines "less than or equal" constraint between two FloatVar.
+ *
+ * @param that a second parameter for "less than or equal" constraint.
+ * @return the defined constraint.
+ */
+  def #<=(that: org.jacop.floats.core.FloatVar) = {
+    val c = new PlteqQ(this, that)
+    getModel.constr += c
+    c
+   }
+
+/**
+ * Defines "less than or equal" constraint between FloatVar and double constant.
+ *
+ * @param that a second parameter for "less than or equal" constraint.
+ * @return the equation constraint.
+ */
+  def #<=(that: Double) = {
+    val c = new PlteqC(this, that)
+    getModel.constr += c
+    c
+  }
+
+/**
+ * Defines "greater than" constraint between two FlaotVar.
+ *
+ * @param that a second parameter for "greater than" constraint.
+ * @return the defined constraint.
+ */
+  def #>(that: org.jacop.floats.core.FloatVar) = {
+    val c = new PgtQ(this, that)
+    getModel.constr += c
+    c
+  }
+
+/**
+ * Defines "greater than" constraint between FloatVar and double constant.
+ *
+ * @param that a second parameter for "greater than" constraint.
+ * @return the equation constraint.
+ */
+  def #>(that: Double) = {
+    val c = new PgtC(this, that)
+    getModel.constr += c
+    c
+  }
+
+/**
+ * Defines "greater than or equal" constraint between two FloatVar.
+ *
+ * @param that a second parameter for "greater than or equal" constraint.
+ * @return the defined constraint.
+ */
+  def #>=(that: org.jacop.floats.core.FloatVar) = {
+    val c = new PgteqQ(this, that)
+    getModel.constr += c
+    c
+  }
+
+/**
+ * Defines "greater than or equal" constraint between FloatVar and integer constant.
+ *
+ * @param that a second parameter for "greater than or equal" constraint.
+ * @return the equation constraint.
+ */
+  def #>=(that: Double) = {
+    val c = new PgteqC(this, that)
+    getModel.constr += c
+    c
   }
 }
 
