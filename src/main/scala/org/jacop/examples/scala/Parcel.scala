@@ -32,7 +32,7 @@ object Parcel extends App with jacop {
   // Denotes a city to go to from index city
   val cities = Array.tabulate(noCities)( i => new IntVar("cities[" + i + "]", 1, noCities))
   // Denotes a cost of traveling between index city and next city
-  val costs = Array.tabulate(noCities)( i => new IntVar("costs[" + i + "]", 0, 1000))
+  val costs = List.tabulate(noCities)( i => new IntVar("costs[" + i + "]", 0, 1000))
   // Denotes load of person at each city
   val loads = Array.tabulate(noCities)( i => new IntVar("nextLoad[" + i + "]", minLoad, maxLoad))
 
