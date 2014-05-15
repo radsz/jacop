@@ -42,7 +42,7 @@ import org.jacop.core.Var;
  * 
  * @author Radoslaw Szymanek 
  * 
- * @version 4.0
+ * @version 4.1
  * @param <T> type of variable being used in the search.
  */
 

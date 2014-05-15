@@ -38,7 +38,7 @@ import org.jacop.core.IntVar;
  * have a priority over variable with maximum value equal 10.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.0
+ * @version 4.1
  * @param <T> type of variable being used in the search.
  */
 

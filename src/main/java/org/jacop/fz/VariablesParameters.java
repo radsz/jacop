@@ -58,7 +58,7 @@ import org.jacop.floats.constraints.PeqQ;
  * generateParameters(...) below.
  * 
  * @author Krzysztof Kuchcinski
- * @version 4.0
+ * @version 4.1
  *
  */
 public class VariablesParameters implements ParserTreeConstants {

@@ -43,7 +43,7 @@ import org.jacop.constraints.Constraint;
  * 
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.0
+ * @version 4.1
  */
 
 public class BoundDomain extends IntDomain {

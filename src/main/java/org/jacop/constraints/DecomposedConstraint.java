@@ -41,7 +41,7 @@ import org.jacop.core.Var;
  * Defines how to construct a constraint out of other constraints.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.0
+ * @version 4.1
  */
 
 public abstract class DecomposedConstraint {

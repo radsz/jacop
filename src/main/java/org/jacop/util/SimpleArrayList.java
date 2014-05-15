@@ -40,7 +40,7 @@ import java.util.Collection;
  * tailored for JaCoP. Use with care, check when it uses == instead of equals().
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.0
+ * @version 4.1
  * @param <V> the type which is being stored by this class.
  */
 

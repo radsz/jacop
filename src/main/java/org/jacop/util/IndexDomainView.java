@@ -41,7 +41,7 @@ import org.jacop.core.ValueEnumeration;
  * Defines index domain view for a variable and related operations on it.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.0
+ * @version 4.1
  */
 
 public class IndexDomainView {

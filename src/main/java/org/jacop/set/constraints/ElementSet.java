@@ -51,7 +51,7 @@ import org.jacop.set.core.SetVar;
  * then indexOffset must be specified to be equal to -1. 
  * 
  * @author Radoslaw Szymanek, Krzysztof Kuchcinski and Robert Åkemalm
- * @version 4.0
+ * @version 4.1
  */
 
 public class ElementSet extends Constraint {
