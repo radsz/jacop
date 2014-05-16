@@ -41,7 +41,7 @@ import org.jacop.floats.core.FloatIntervalDomain;
  * Matrix and operations on matrices.
  *  
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.0
+ * @version 4.1
  */
 
 public class Matrix {

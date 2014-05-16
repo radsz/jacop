@@ -49,7 +49,7 @@ import org.jacop.core.Var;
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * 
- * @version 4.0
+ * @version 4.1
  */
 
 public class Assignment extends Constraint {

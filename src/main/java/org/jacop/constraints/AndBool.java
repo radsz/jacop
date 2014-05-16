@@ -44,7 +44,7 @@ import org.jacop.core.Var;
  * is equal to zero. It restricts the domain of all x as well as result to be between 0 and 1.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.0
+ * @version 4.1
  */
 
 public class AndBool extends PrimitiveConstraint {

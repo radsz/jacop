@@ -38,7 +38,7 @@ import org.jacop.core.ValueEnumeration;
  * Defines a methods for enumerating values contained in the SetDomain.
  * 
  * @author Robert Åkemalm
- * @version 4.0
+ * @version 4.1
  */
 
 public class SetDomainValueEnumeration extends ValueEnumeration {

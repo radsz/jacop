@@ -35,7 +35,7 @@ package org.jacop.core;
  * Defines a methods for enumerating values contained in the BoundDomain.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.0
+ * @version 4.1
  */
 
 public class BoundDomainValueEnumeration extends ValueEnumeration {

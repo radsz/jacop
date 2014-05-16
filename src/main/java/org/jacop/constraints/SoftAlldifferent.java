@@ -49,7 +49,7 @@ import org.jacop.core.ValueEnumeration;
  * either into a network flow constraint or a set of primitive constraints. 
  *
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.0
+ * @version 4.1
  * 
  */
 

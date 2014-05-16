@@ -35,7 +35,7 @@ package org.jacop.constraints;
 /**
  * 
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.0
+ * @version 4.1
  * 
  */
 
