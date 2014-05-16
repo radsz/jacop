@@ -47,7 +47,7 @@ import org.jacop.util.fsm.FSMTransition;
  * It constructs a Lex (lexicographical order) constraint. 
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.0
+ * @version 4.1
  */
 
 public class Lex extends DecomposedConstraint {
@@ -123,13 +123,13 @@ public class Lex extends DecomposedConstraint {
 	if (constraints != null)
 	    return constraints;
 
-	if (x.length == 2 && x[0].length > 100)
+	if (x.length == 2) // && x[0].length > 100)
 	    if (lexLT)
 		return decomposeLT(store);
 	    else
 		return decomposeLE(store);
 
-	// smaller Lex can be decompose with Regular
+	// smaller Lex with several lists can be decompose with Regular
 	if (lexLT)
 	    return decomposeLTRegular(store);
 	else

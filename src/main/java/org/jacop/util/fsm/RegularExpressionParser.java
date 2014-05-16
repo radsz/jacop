@@ -42,7 +42,7 @@ import org.jacop.core.IntervalDomain;
  * Instances of this class parse the word combination little language.
  * 
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.0
+ * @version 4.1
  */
 
 public class RegularExpressionParser {

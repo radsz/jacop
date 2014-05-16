@@ -44,7 +44,7 @@ import org.jacop.core.Store;
  * rectangles does not overlap in at least one direction.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.0
+ * @version 4.1
  */
 
 public class Disjoint extends Diff {

@@ -42,7 +42,7 @@ import org.jacop.core.IntDomain;
  * value.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.0
+ * @version 4.1
  */
 
 class DiffnProfile extends Profile {

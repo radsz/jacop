@@ -43,7 +43,7 @@ import org.jacop.core.Var;
  * Constraint ( x_0 xor x_1 xor ... xor x_n ) <=> y
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.0
+ * @version 4.1
  */
 
 public class XorBool extends PrimitiveConstraint {

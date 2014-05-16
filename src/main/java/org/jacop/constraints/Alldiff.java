@@ -55,7 +55,7 @@ import org.jacop.core.Var;
  * It extends basic functionality of Alldifferent constraint.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.0
+ * @version 4.1
  */
 
 public class Alldiff extends Alldifferent {
@@ -88,9 +88,8 @@ public class Alldiff extends Alldifferent {
 		super(variables);
 		Alldifferent.idNumber--;
 		
-	        queueIndex = 2;
+	        this.queueIndex = 2;
 
-		this.queueIndex = 1;
 		this.numberId = idNumber++;
 		this.numberArgs = (short) variables.length;
 		listAlldiff = new IntVar[variables.length];

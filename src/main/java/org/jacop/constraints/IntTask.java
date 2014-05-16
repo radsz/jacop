@@ -36,7 +36,7 @@ package org.jacop.constraints;
  * cumulative constraint
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.0
+ * @version 4.1
  */
 
 class IntTask {

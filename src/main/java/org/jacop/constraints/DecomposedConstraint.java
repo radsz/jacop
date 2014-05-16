@@ -41,7 +41,7 @@ import org.jacop.core.Var;
  * Defines how to construct a constraint out of other constraints.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.0
+ * @version 4.1
  */
 
 public abstract class DecomposedConstraint {
@@ -97,5 +97,14 @@ public abstract class DecomposedConstraint {
 	 * @return null if no auxiliary variables were created, otherwise a list with variables.
 	 */
 	public ArrayList<Var> auxiliaryVariables() { return null; }
+
+
+    public org.jacop.floats.core.FloatVar derivative(Store store, org.jacop.floats.core.FloatVar f, java.util.Set<org.jacop.floats.core.FloatVar> vars, org.jacop.floats.core.FloatVar x) {
+
+	System.out.println ("!!! Derivative not implemented for constraint " + this);
+	System.exit(0);
+
+	return null;
+    }
 
 }

@@ -44,7 +44,7 @@ import org.jacop.set.core.SetVar;
  * in the set value of set variable B.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.0
+ * @version 4.1
  */
 
 public class AinB extends PrimitiveConstraint {
@@ -220,7 +220,7 @@ public class AinB extends PrimitiveConstraint {
 	@Override
 	public boolean notSatisfied() {
 
-			return (!((SetDomain) b.dom()).lub().contains(((SetDomain) a.dom()).lub()) );
+	    return ((SetDomain) b.dom()).lub().intersect(((SetDomain) a.dom()).lub()).isEmpty();  //(!((SetDomain) b.dom()).lub().contains(((SetDomain) a.dom()).lub()) );
 
 	}
 

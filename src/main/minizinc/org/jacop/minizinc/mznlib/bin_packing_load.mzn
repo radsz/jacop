@@ -4,6 +4,8 @@
 % Assumptions:
 % - forall i, w[i] >= 0
 %-----------------------------------------------------------------------------%
+include "bin_packing.mzn";
+
 predicate bin_packing_load(array[int] of int: l,
                            array[int] of var int: bin,
                            array[int] of int: w) =

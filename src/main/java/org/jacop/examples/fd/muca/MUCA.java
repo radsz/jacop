@@ -62,7 +62,7 @@ import org.jacop.search.SimpleSelect;
  * It solves the Mixed Multi-Unit Combinatorial Auctions. 
  * 
  * @author Radoslaw Szymanek
- * @version 4.0
+ * @version 4.1
  * 
  * 
  * The idea originated from reading the following paper 

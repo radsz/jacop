@@ -32,6 +32,7 @@
 package org.jacop.fz;
 
 import java.io.FileInputStream;
+import org.jacop.floats.core.FloatDomain;
 
 /**
  * 
@@ -43,19 +44,24 @@ import java.io.FileInputStream;
  */
 public class Options {
 
-	String[] argument;
+    String[] argument;
 	
-	FileInputStream file;
+    FileInputStream file;
 
     String fileName;
 	
     boolean all = false, verbose = false;
 	
-	boolean statistics = false;
+    boolean statistics = false;
 	
-	int time_out = 0;
-	
-	int number_solutions = -1;
+    int time_out = 0;
+    
+    int number_solutions = -1;
+
+    boolean interval = false;
+
+    boolean precisionDefined = false;
+    double precision;
 
 	/**
 	 * It constructs an Options object and parses all the parameters/options provided 
@@ -86,7 +92,10 @@ public class Options {
 						"        <value> - time in second.\n"+
 						"    -s, --statistics\n"+
 						"    -n <value>, --num-solutions <value>\n"+
-						"        <value> - limit on solution number.\n"
+						"        <value> - limit on solution number.\n"+
+						"    -i, --interval print intervals instead of values for floating variables\n"+
+						"    -p <value>, --precision <value> defines precision for floating operations\n"+
+						"        overrides precision definition in search annotation."
 				);
 				System.exit(0);
 			}
@@ -118,6 +127,16 @@ public class Options {
 				}
 				else if (args[i].equals("-v") || args[i].equals("--verbose")) {
 					    verbose = true;
+					i++;
+				}
+				else if (args[i].equals("-i") || args[i].equals("--interval")) {
+				    interval = true;
+				    i++;
+				}
+				else if (args[i].equals("-p") || args[i].equals("--precision")) {
+				        precisionDefined = true;
+					precision = Double.parseDouble(args[++i]);
+					FloatDomain.setPrecision(precision);
 					i++;
 				}
 				else {
@@ -194,6 +213,31 @@ public class Options {
 	 */
 	public int getNumberSolutions() {
 		return number_solutions;
+	}
+
+	/**
+	 * It returns true if the interval print mode has been requested.
+	 * @return true if the interval print mode is active, false otherwise. 
+	 */
+	public boolean getInterval() {
+		return interval;
+	}
+
+
+	/**
+	 * It returns precision defined in  the command line
+	 * @return precision. 
+	 */
+	public double getPrecision() {
+		return precision;
+	}
+
+	/**
+	 * It return true if precision is defined otherwise false
+	 * @return true if precision defined. 
+	 */
+	public boolean precision() {
+		return precisionDefined;
 	}
 	
 }

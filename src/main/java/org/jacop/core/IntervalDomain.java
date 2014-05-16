@@ -50,7 +50,7 @@ import org.xml.sax.SAXException;
  * 
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.0
+ * @version 4.1
  */
 
 public class IntervalDomain extends IntDomain {
@@ -3408,8 +3408,7 @@ public class IntervalDomain extends IntDomain {
 			if (result.isEmpty())
 				throw Store.failException;
 
-			// ADDED BY KKU
-			if ( eq(result) ) 
+			if ( result.eq(this) )
 			    return;
 
 			int returnedEvent = IntDomain.ANY;

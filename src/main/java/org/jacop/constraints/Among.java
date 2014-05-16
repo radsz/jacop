@@ -53,7 +53,7 @@ import org.jacop.core.Var;
  * backtracking) to improve the constraint further. 
  * 
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.0
+ * @version 4.1
  */
 
 public class Among extends Constraint {

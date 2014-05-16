@@ -592,6 +592,11 @@ public class Linear extends PrimitiveConstraint {
 
 		}
 
+		// FailException cannot be thrown here since it will not be cought
+		// in a situation when a DepthFirstSearch is defining a choice-point :(
+		// In such situations the variable might be queued but there is not catching
+		// of FailException.
+		/*
 		if (!reified) {
 		    if (backtrackHasOccured) {
 		    
@@ -601,8 +606,9 @@ public class Linear extends PrimitiveConstraint {
 		    }
 		    
 		    if (entailed(negRel[relationType])) 
-			throw Store.failException;
+		    	throw Store.failException;
 		}
+		*/
 	}
 
 	@Override

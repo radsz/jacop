@@ -40,7 +40,7 @@ import org.jacop.constraints.Constraint;
  * Defines small dense domain based on bits within a long number. 
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.0
+ * @version 4.1
  */
 
 public class SmallDenseDomain extends IntDomain {
@@ -439,6 +439,9 @@ public class SmallDenseDomain extends IntDomain {
 
 		if (min <= this.min && max >= this.max)
 			return;
+
+        if (singleton)
+            return;
 
 		long bitsResult = bits;
 		
@@ -931,8 +934,11 @@ public class SmallDenseDomain extends IntDomain {
 			maxComplement = max;
 		
 		long bitsResult = bits & ~( SEQ_ARRAY[maxComplement - minComplement] << ( min + 63 - maxComplement ) );
-		
-		int newSize = getSize( bitsResult );
+
+        if (bitsResult == bits)
+            return;
+
+        int newSize = getSize( bitsResult );
 
 		if (newSize == 0)
 			throw failException;
@@ -1269,6 +1275,18 @@ public class SmallDenseDomain extends IntDomain {
 		if (domain.domainID() == IntDomain.IntervalDomainID) {
 			
 			IntervalDomain input = (IntervalDomain) domain;
+			
+			SmallDenseDomain result = intersect(input, 0);
+			
+			assert result.checkInvariants() == null : result.checkInvariants() ;
+
+			return result;
+			
+		}
+
+		if (domain.domainID() == IntDomain.BoundDomainID) {
+			
+		    IntervalDomain input = new IntervalDomain( domain.min(), domain.max());
 			
 			SmallDenseDomain result = intersect(input, 0);
 			

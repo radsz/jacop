@@ -43,7 +43,7 @@ import org.jacop.core.Var;
  * in the right place and act accordingly to the output of listeners.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.0
+ * @version 4.1
  * @param <T> type of variables used in this search.
  */
 
@@ -77,14 +77,20 @@ public interface Search<T extends Var> {
 	 * It returns the cost variable. 
 	 * @return cost variable.
 	 */
-	public IntVar getCostVariable();
+	public Var getCostVariable();
 	
 	
 	/**
-	 * It returns the value of the cost variable for the best solution.
+	 * It returns the value of the cost int variable for the best solution.
 	 * @return the cost value.
 	 */
 	public int getCostValue();
+
+	/**
+	 * It returns the value of the cost float variable for the best solution.
+	 * @return the cost value.
+	 */
+	public double getCostValueFloat();
 	
 	/**
 	 * It sets the optimization flag.
@@ -174,7 +180,7 @@ public interface Search<T extends Var> {
 	 * @param costVar variable to specify cost.
 	 * @return true if the solution was found.
 	 */
-	public boolean labeling(Store store, SelectChoicePoint<T> select, IntVar costVar);
+	public boolean labeling(Store store, SelectChoicePoint<T> select, Var costVar);
 
 	/**
 	 * It decides if a solution is assigned to store after search exits.
@@ -325,7 +331,7 @@ public interface Search<T extends Var> {
 	 * that the search optimizes. 
 	 * @param cost variable used as a cost metric.
 	 */
-	public void setCostVar(IntVar cost);
+	public void setCostVar(Var cost);
 
 	/**
 	 * If the search is called by a master search then the search may need to

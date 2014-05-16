@@ -50,7 +50,7 @@ import org.jacop.core.Var;
  * partial consistency technique.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.0
+ * @version 4.1
  */
 
 public class Alldifferent extends Constraint {

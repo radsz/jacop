@@ -304,7 +304,7 @@ public class Tree {
 	
 		availableWeightOfCriticalItem = criticalLeaf.getWSum() - takenWeightOfCriticalItem;
 		
-		obtainedProfit += ((criticalLeaf.getPSum() * takenWeightOfCriticalItem) / (double)  criticalLeaf.getWSum());
+		obtainedProfit += (((double)criticalLeaf.getPSum() * (double)takenWeightOfCriticalItem) / (double)  criticalLeaf.getWSum());
 	
 		optimalProfit = obtainedProfit;
 	

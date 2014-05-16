@@ -41,7 +41,7 @@ import org.jacop.core.ValueEnumeration;
  * middle value in the domain of FD variable and then right and left values.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.0
+ * @version 4.1
  * @param <T> type of variable being used in search.
  */
 
@@ -102,25 +102,9 @@ public class IndomainMiddle<T extends IntVar> implements Indomain<T> {
 			} else
 				return middle;
 
-		}
-
-		IntDomain dom = var.dom();
-		
-		if (dom.isSparseRepresentation()) {
+		} else {
 			
-			int size = dom.getSize() / 2;
-			
-			ValueEnumeration enumer = dom.valueEnumeration();
-			
-			while (enumer.hasMoreElements() && size > 0) {
-				enumer.nextElement();
-				size--;
-			}
-
-			return enumer.nextElement();
-		}
-		else {
-			
+		        IntDomain dom = var.dom();
 			int dMin = dom.min(), dMax = dom.max();
 
 			if (dom.singleton())
