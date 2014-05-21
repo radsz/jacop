@@ -40,7 +40,7 @@ package org.jacop.examples.floats;
  *       4 = X^2 + Y^2,
  *       4 = (X-1)^2 + (Y-1)^2,
  *
- * Based on minizinc model circle_intersection.mzn by Håkan Kjellstrand
+ * Based on minizinc model circle_intersection.mzn by Håkan Kjellerstrand
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * 

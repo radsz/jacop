@@ -33,8 +33,6 @@ package org.jacop.examples.floats;
 
 /**
  * 
- * It models rosenbrock for floating solver based on minizinc model 
- * by Håkan Kjellstrand
  *
  * SixHumpCamelFunction function (a nonlinear standard problem).
  *

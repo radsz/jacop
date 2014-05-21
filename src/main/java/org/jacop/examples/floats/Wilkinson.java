@@ -34,7 +34,7 @@ package org.jacop.examples.floats;
 /**
  * 
  * It models wilkinson problem for floating solver based  
- * on minizinc model by Håkan Kjellstrand
+ * on minizinc model by Håkan Kjellerstrand
  *
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek

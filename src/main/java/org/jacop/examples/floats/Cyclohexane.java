@@ -34,7 +34,7 @@ package org.jacop.examples.floats;
 /**
  * 
  * This model is based on
- * minizinc model cyclohexane.mzn by Håkan Kjellstrand
+ * minizinc model cyclohexane.mzn by Håkan Kjellerstrand
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * 
