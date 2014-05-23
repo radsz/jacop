@@ -10,6 +10,8 @@ predicate count(array[int] of var int: x, var int: y, var int: c) =
 predicate count(array[int] of var int: x, int: y, var int: c) =
     jacop_count(x, y, c);
 
+function var int: count(array[int] of var int: x, var int: y) =
+  let { var 0..length(x): c; constraint count(x,y,c); } in c;
 
 %-----------------------------------------------------------------------------%
 % Reified version of count.

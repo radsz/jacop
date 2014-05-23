@@ -12,3 +12,6 @@ predicate nvalue(var int: n, array[int] of var int: x) =
 %         );
 
 predicate jacop_nvalue(var int: n, array[int] of var int: x);
+
+function var int: nvalue(array[int] of var int: x) =
+  let { var 0..length(x): n; constraint nvalue(n,x); } in n;
