@@ -257,7 +257,7 @@ public class ExtensionalSupportMDD extends Constraint {
 	public ArrayList<Var> arguments() {
 		ArrayList<Var> result = new ArrayList<Var>();
 
-		for (Var v : mdd.vars)
+		for (Var v : (mdd != null ? mdd.vars : vars))
 			result.add(v);
 
 		return result;
@@ -266,20 +266,20 @@ public class ExtensionalSupportMDD extends Constraint {
 
 	@Override
 	public void increaseWeight() {
-		for (Var v : mdd.vars)
+		for (Var v : (mdd != null ? mdd.vars : vars))
 			v.weight++;
 	}
 
 	@Override
 	public void removeConstraint() {
-		for (Var var : mdd.vars)
+		for (Var var : (mdd != null ? mdd.vars : vars))
 			var.removeConstraint(this);
 	}
 
 
 	@Override
 	public boolean satisfied() {
-		return mdd.checkIfAllowed();
+		return mdd != null ? mdd.checkIfAllowed() : true;
 	}
 
 
@@ -290,10 +290,16 @@ public class ExtensionalSupportMDD extends Constraint {
 
 		result.append(" : extensionalSupportMDD( ");
 
-		for (int i = 0; i < mdd.vars.length; i++)
-			result.append( mdd.vars[i] ).append(" ");
+		IntVar[] vars = (mdd != null ? mdd.vars : this.vars);
+		for (int i = 0; i < vars.length; i++)
+			result.append( vars[i] ).append(" ");
 
-		result.append(")").append("size = ").append( mdd.freePosition).append(")\n");
+		result.append(")");
+		
+		if (mdd != null) 
+			result.append("size = ").append( mdd.freePosition);
+			
+		result.append(")\n");
 
 		return result.toString();
 	}
