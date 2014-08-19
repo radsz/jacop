@@ -1,0 +1,503 @@
+/**
+ *  SGMPCSearch.java 
+ *  This file is part of JaCoP.
+ *
+ *  JaCoP is a Java Constraint Programming solver. 
+ *	
+ *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU Affero General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU Affero General Public License for more details.
+ *  
+ *  Notwithstanding any other provision of this License, the copyright
+ *  owners of this work supplement the terms of this License with terms
+ *  prohibiting misrepresentation of the origin of this work and requiring
+ *  that modified versions of this work be marked in reasonable ways as
+ *  different from the original version. This supplement of the license
+ *  terms is in accordance with Section 7 of GNU Affero General Public
+ *  License version 3.
+ *
+ *  You should have received a copy of the GNU Affero General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+package org.jacop.search.sgmpcs;
+
+import java.util.HashMap;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Random;
+
+import java.lang.Math;
+
+import org.jacop.core.Store;
+import org.jacop.core.Var;
+import org.jacop.core.IntVar;
+import org.jacop.core.Domain;
+import org.jacop.core.IntDomain;
+
+import org.jacop.constraints.XltC;
+
+import org.jacop.search.Search;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.SimpleSelect;
+import org.jacop.search.IndomainRandom;
+import org.jacop.search.IndomainMin;
+import org.jacop.search.IndomainDefaultValue;
+import org.jacop.search.SmallestMax;
+import org.jacop.search.SmallestMin;
+import org.jacop.search.SimpleSolutionListener;
+
+/**
+ * SGMPCSearch - implements Solution-Guided Multi-Point Constructive
+ * Search. This search starts with several elite solutions and tries
+ * to impove (minimizing cost variable) them by doing either search
+ * assuming an elite solution or staring with an empty solution.
+ *
+ * This implementation is based on paper "Solution-guided Multi-point
+ * Constructive Search for Job Shop Scheduling" by J. Christopher
+ * Beck, Journal of Artificial Intelligence Research 29 (2007) 49–77.
+ *
+ * @author Krzysztof Kuchcinski
+ * 
+ * @version 4.1
+ */
+
+public class SGMPCSearch {
+
+    Store store;
+
+    boolean trace = true;
+
+    // Start time of the search to compute termination criteria
+    long searchStartTime;
+
+    /**
+     * Variables for search
+     */
+    IntVar[] vars;
+
+    /**
+     * Cost variable
+     */
+    IntVar cost;
+
+    /*
+     * The cost produced by last search
+     */
+    int searchCost;
+
+    /**
+     * Parameters
+     */
+
+    // p- probablity of selecting search starting from reference
+    // solution or from empty solution
+    double p = 0.25;
+
+    // e- number of elite solutions
+    int e = 4;
+
+    // eInit- number of solution for selecting the best e elite solutions
+    int eInit = 20;
+
+    // l- current fail limit
+    int l;
+
+    // strategy to get limit l on fails
+    public final int luby = 1;
+    public final int poly = 2;
+    int strategy = poly;
+
+    // elite solutions 
+    // at position 0 is cost and values of variables start at positions 1
+    int[][] elite;
+
+    // number of consequtive fails when searching for a solution
+    int numberConsecutiveFails = 0;
+
+    // index fro computing Luby number
+    int lubyIndex = 1;
+
+    SGMPCSCalculator failCalculator;
+
+    public SGMPCSearch(Store store, IntVar[] vars, IntVar cost) {
+
+	this.store = store;
+	this.vars = vars;
+	this.cost = cost;       
+
+    }
+
+
+    public boolean search() {
+
+	l = (strategy == luby) ? getLuby(1) : 32;
+
+	findEliteSolutions();
+
+	int bestCostSolution = bestCostSolution();
+	if (trace)
+	    System.out.println("%% Best Cost elite solution is " + bestCostSolution + " with cost " + 
+			       elite[bestCostSolution][elite[bestCostSolution].length-1]);
+
+
+	improveSolution();
+
+	return true;
+    }
+
+    /*
+     * 	Finds elite solutions if they do not exist yet
+     */
+    boolean findEliteSolutions() {
+
+	if (elite == null) {
+	    elite = new int[e][];
+	    for (int i = 0; i < e; i++) 
+		elite[i] = new int[vars.length+1];
+	}
+	else
+	    return true;
+
+	IntVar[] v = new IntVar[vars.length+1];
+	for (int i = 0; i < vars.length; i++) 
+	    v[i] = vars[i];
+	v[vars.length] = cost;
+	DepthFirstSearch<IntVar> label = new DepthFirstSearch<IntVar>();
+	SelectChoicePoint<IntVar> select = new SimpleSelect<IntVar>(v, null,
+								    new IndomainMin<IntVar>());
+	label.getSolutionListener().searchAll(true); 
+	label.getSolutionListener().recordSolutions(true);
+	label.getSolutionListener().setSolutionLimit(eInit);
+	label.setAssignSolution(false);
+	label.setPrintInfo(false);
+
+	label.labeling(store, select);
+
+	int[][] solutionPool = new int[label.getSolutionListener().solutionsNo()][];
+	for (int i=0; i<label.getSolutionListener().solutionsNo(); i++){ 
+	    solutionPool[i] = new int[v.length];
+	    for (int j=0; j<label.getSolution(i+1).length; j++) 
+		solutionPool[i][j] = ((IntDomain)label.getSolution(i+1)[j]).value();
+	}
+
+	if (trace) {
+	    System.out.println("%% Initial pool of solutions");
+
+	    for (int i=0; i<solutionPool.length; i++){ 
+		System.out.print("%% Solution " + (int)(i+1) + ": "); 
+		for (int j=0; j<v.length; j++) 
+		    System.out.print(solutionPool[i][j] + " ");
+		System.out.println(); 
+	    }
+	}
+
+	Arrays.sort(solutionPool, new SolutionComparator());
+
+	elite = new int[e][];
+	for (int i=0; i<e; i++){ 
+	    elite[i] = new int[solutionPool[i].length];
+	    for (int j=0; j<elite[i].length; j++) 
+		elite[i][j] = solutionPool[i][j];
+	}
+	
+
+	if (trace) {
+	    System.out.println("%% Selected best " + e + " solutions");
+	    
+	    for (int i=0; i<e; i++){
+		System.out.print("%% Solution " + (int)(i+1) + ": "); 
+		for (int j=0; j<v.length; j++) 
+		    System.out.print(elite[i][j] + " ");
+		System.out.println(); 
+	    }
+	}
+
+	return true;
+    }
+
+
+    /*
+     * method tries to improve elite solutions by using
+     * solution-guided multi-point constructive search
+     */
+    boolean improveSolution() {
+    
+	Random rand = new Random();
+	Random randomSolution = new Random();
+
+	searchStartTime = System.currentTimeMillis();
+
+	while (! terminationCriteria() ) {
+
+	    if (rand.nextFloat() < p) {
+
+		// if (trace)
+		//     System.out.println("%% Search with empty solution");
+
+		int bestCost = elite[bestCostSolution()][elite[bestCostSolution()].length-1];
+		store.impose(new XltC(cost, bestCost));
+
+		DepthFirstSearch<IntVar> label = new DepthFirstSearch<IntVar>();
+		SelectChoicePoint<IntVar> select = new SimpleSelect<IntVar>(vars, new SmallestMax(), new IndomainMin<IntVar>());
+		label.setAssignSolution(false);
+		label.setSolutionListener(new CostListener<IntVar>());
+		failCalculator = new SGMPCSCalculator(l);
+		label.setConsistencyListener(failCalculator);
+		label.setPrintInfo(false);
+
+		boolean result = label.labeling(store, select);
+
+		if (!result) {
+		    numberConsecutiveFails++;
+		    updateFailLimit(true);
+		}
+		else {
+		    if (trace)
+			System.out.println("Fails "+ failCalculator.getNumberFails() + "(" + failCalculator.getFailLimit() + ")");
+
+		    Domain[] domSolution = label.getSolution();
+		    int[] solution = new int[domSolution.length];
+		    for (int i = 0; i < domSolution.length; i++) 
+			solution[i] = ((IntDomain)domSolution[i]).value();
+
+		    if (trace) {
+			System.out.println("%% Solution starting from empty " );
+			for (int i = 0; i < solution.length; i++) {
+			    System.out.print(solution[i] + " ");
+
+			}
+			System.out.println();
+		    }
+
+		    numberConsecutiveFails = 0;
+
+		    int worst = worstCostSolution();
+		    if (elite[worst][elite[worst].length-1] > searchCost) {
+			replacedEliteSolution(worst, solution, searchCost);
+		    }
+
+		    updateFailLimit(false);
+		}
+		
+	    } else {
+
+		// if (trace)
+		//     System.out.println("%% Search with reference solution");
+
+		int bestCost = elite[bestCostSolution()][elite[bestCostSolution()].length-1];
+		store.impose(new XltC(cost, bestCost));
+
+		// select random solution fron e elite solutions
+		int n = randomSolution.nextInt(e);
+		HashMap<IntVar, Integer> mapping = new HashMap<IntVar, Integer>();
+		for (int i = 0; i < elite[n].length-1; i++) 
+		    mapping.put(vars[i], elite[n][i]);
+		// System.out.println(mapping);
+
+
+		DepthFirstSearch<IntVar> label = new DepthFirstSearch<IntVar>();
+		SelectChoicePoint<IntVar> select = new SimpleSelect<IntVar>(vars, new SmallestMax(), new IndomainDefaultValue<IntVar>(mapping, new IndomainMin<IntVar>()));
+		label.setAssignSolution(false);
+		label.setSolutionListener(new CostListener<IntVar>());
+		failCalculator = new SGMPCSCalculator(l);
+		label.setConsistencyListener(failCalculator);
+		label.setPrintInfo(false);
+
+		boolean result = label.labeling(store, select);
+
+		if (!result) {
+		    numberConsecutiveFails++;
+		    updateFailLimit(true);
+		}
+		else {
+
+		    if (trace)
+			System.out.println("Fails "+ failCalculator.getNumberFails() + "(" + failCalculator.getFailLimit() + ")");
+
+		    Domain[] domSolution = label.getSolution();
+		    int[] solution = new int[domSolution.length];
+		    for (int i = 0; i < domSolution.length; i++) 
+			solution[i] = ((IntDomain)domSolution[i]).value();
+
+		    if (trace) {
+			System.out.println("%% Solution starting from reference " );
+			for (int i = 0; i < solution.length; i++) {
+			    System.out.print(solution[i] + " ");
+
+			}
+			System.out.println();
+		    }
+
+		    numberConsecutiveFails = 0;
+
+		    replacedEliteSolution(n, solution, searchCost);
+			
+		    updateFailLimit(false);
+		}
+	    }
+	}
+
+	return true;
+    }
+
+    boolean terminationCriteria() {
+
+	boolean termination= false;
+
+	long currentTime = System.currentTimeMillis();
+	// terminate after time-out or when optimal
+	termination = (currentTime - searchStartTime > 60000) || (numberConsecutiveFails > 0 && failCalculator.getNumberFails() < failCalculator.getFailLimit());
+
+	// termination = numberConsecutiveFails >= 5;
+
+	if (trace && termination)
+	    System.out.println("%% Termination search fails "+ failCalculator.getNumberFails() + "(" + failCalculator.getFailLimit() + ")");
+
+	return termination;
+    }
+
+
+    void updateFailLimit(boolean fail) {
+
+	if (strategy == poly) {
+	    if (fail)
+		l += 32;
+	    else
+		l = 32;
+
+	    // if (trace)
+	    // 	System.out.println("Poly with limit " + l);
+	} 
+	// Luby
+	else {
+	    l = getLuby(lubyIndex);
+	    // if (trace)
+	    // 	System.out.println("Luby with limit " + l);
+
+	    lubyIndex++;
+	}
+    }
+
+    public int getLuby(int i) {
+
+	if ( i == 1) {
+	    return 1;
+	}
+
+	double k = Math.log(i+1)/Math.log(2d);
+
+	if (k == Math.floor(k+0.5)) {
+	    return (int)Math.pow(2, k-1);
+	} else {
+	    k = Math.floor(k);
+	    return getLuby(i - (int)Math.pow(2, k) + 1);
+	}
+    }
+
+    /* 
+     * Finds a solution with minimal cost
+     */
+    int bestCostSolution() {
+	 int currentCost = IntDomain.MaxInt;
+	 int solution = -1;
+
+	 for (int i = 0; i < elite.length; i++) 
+	     if (currentCost > elite[i][elite[i].length-1]) {
+		 currentCost = elite[i][elite[i].length-1];
+		 solution = i;
+	     }
+
+	 return solution;
+     }
+
+    /* 
+     * Finds a solution with maximal cost
+     */
+    int worstCostSolution() {
+	 int currentCost = IntDomain.MinInt;
+	 int solution = -1;
+
+	 for (int i = 0; i < elite.length; i++) 
+	     if (currentCost < elite[i][elite[i].length-1]) {
+		 currentCost = elite[i][elite[i].length-1];
+		 solution = i;
+	     }
+
+	 return solution;
+     }
+
+    void replacedEliteSolution(int n, int[] solution, int searchCost) {
+
+	for (int i = 0; i < elite[n].length-1; i++) 
+	    elite[n][i] = solution[i];
+	elite[n][elite[n].length-1] = searchCost;
+
+    }
+
+
+    public void setProbability(double p) {
+	this.p = p;
+    }
+
+    public void setEliteSize(int e) {
+	this.e = e;
+    }
+
+    public void setInitialSolutionsSize(int eInit) {
+	this.eInit = eInit;
+    }
+
+    public void setFailStrategy(int strategy) {
+	if (strategy == poly || strategy == luby)
+	    this.strategy = strategy;
+	else {
+	    System.out.println("Wrong fail strategy limit; assumed poly");
+
+	    this.strategy = poly;
+	}
+    }
+
+    /**
+     * Saves the cost produced by a given search
+     * 
+     * @author Krzysztof Kuchcinski
+     *
+     */
+    public class CostListener<T extends Var> extends SimpleSolutionListener<T> {
+
+	public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
+
+	    boolean returnCode = super.executeAfterSolution(search, select);
+
+	    searchCost = cost.value();
+
+	    System.out.println("----------\nCost = " + searchCost);
+
+	    return returnCode;
+	}
+    }
+
+    class SolutionComparator implements Comparator<int[]> {
+
+	SolutionComparator() {
+	}
+
+	@Override
+	public int compare(int[] o1, int[] o2) {
+	    return (o1[o1.length-1] - o2[o2.length-1]);
+	}
+    }
+
+
+}
