@@ -180,9 +180,9 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
      * @author Krzysztof Kuchcinski
      *
      */
-    public class CostListener<T1 extends IntVar> extends SimpleSolutionListener<T1> {
+    public class CostListener<T extends IntVar> extends SimpleSolutionListener<T> {
 
-	public boolean executeAfterSolution(Search<T1> search, SelectChoicePoint<T1> select) {
+	public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
 
 	    boolean returnCode = super.executeAfterSolution(search, select);
 
