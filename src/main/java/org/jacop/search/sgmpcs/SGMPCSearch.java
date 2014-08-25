@@ -128,7 +128,11 @@ public class SGMPCSearch {
     // index fro computing Luby number
     int lubyIndex = 1;
 
-    SGMPCSCalculator failCalculator;
+    // time-out value in miliseconds (default 10 second)
+    long timeOut=10000; 
+
+    ImproveSolution<IntVar> search;
+
 
     public SGMPCSearch(Store store, IntVar[] vars, IntVar cost) {
 
@@ -159,7 +163,7 @@ public class SGMPCSearch {
     /*
      * 	Finds elite solutions if they do not exist yet
      */
-    boolean findEliteSolutions() {
+    void findEliteSolutions() {
 
 	if (elite == null) {
 	    elite = new int[e][];
@@ -167,7 +171,7 @@ public class SGMPCSearch {
 		elite[i] = new int[vars.length+1];
 	}
 	else
-	    return true;
+	    return;
 
 	IntVar[] v = new IntVar[vars.length+1];
 	for (int i = 0; i < vars.length; i++) 
@@ -222,8 +226,6 @@ public class SGMPCSearch {
 		System.out.println(); 
 	    }
 	}
-
-	return true;
     }
 
 
@@ -238,25 +240,16 @@ public class SGMPCSearch {
 
 	searchStartTime = System.currentTimeMillis();
 
+	search = new SimpleImprovementSearch<IntVar>(store, vars, cost);
+
 	while (! terminationCriteria() ) {
+
+	    int bestCost = elite[bestCostSolution()][elite[bestCostSolution()].length-1];
+	    store.impose(new XltC(cost, bestCost));
 
 	    if (rand.nextFloat() < p) {
 
-		// if (trace)
-		//     System.out.println("%% Search with empty solution");
-
-		int bestCost = elite[bestCostSolution()][elite[bestCostSolution()].length-1];
-		store.impose(new XltC(cost, bestCost));
-
-		DepthFirstSearch<IntVar> label = new DepthFirstSearch<IntVar>();
-		SelectChoicePoint<IntVar> select = new SimpleSelect<IntVar>(vars, new SmallestMax(), new IndomainMin<IntVar>());
-		label.setAssignSolution(false);
-		label.setSolutionListener(new CostListener<IntVar>());
-		failCalculator = new SGMPCSCalculator(l);
-		label.setConsistencyListener(failCalculator);
-		label.setPrintInfo(false);
-
-		boolean result = label.labeling(store, select);
+		boolean result = search.searchFromEmptySolution(l);
 
 		if (!result) {
 		    numberConsecutiveFails++;
@@ -264,57 +257,28 @@ public class SGMPCSearch {
 		}
 		else {
 		    if (trace)
-			System.out.println("Fails "+ failCalculator.getNumberFails() + "(" + failCalculator.getFailLimit() + ")");
+		    	System.out.println("Fails "+ search.getNumberFails() + "(" + search.getFailLimit() + ")");
 
-		    Domain[] domSolution = label.getSolution();
-		    int[] solution = new int[domSolution.length];
-		    for (int i = 0; i < domSolution.length; i++) 
-			solution[i] = ((IntDomain)domSolution[i]).value();
+		    int[] solution = search.getSolution();
 
-		    if (trace) {
-			System.out.println("%% Solution starting from empty " );
-			for (int i = 0; i < solution.length; i++) {
-			    System.out.print(solution[i] + " ");
-
-			}
-			System.out.println();
-		    }
+		    System.out.println("%% Solution starting from empty " );
+		    printSolution(solution);
 
 		    numberConsecutiveFails = 0;
 
 		    int worst = worstCostSolution();
-		    if (elite[worst][elite[worst].length-1] > searchCost) {
-			replacedEliteSolution(worst, solution, searchCost);
+		    if (elite[worst][elite[worst].length-1] > search.getCurrentCost()) {
+			replaceEliteSolution(worst, solution, search.getCurrentCost());
 		    }
 
 		    updateFailLimit(false);
-		}
-		
+		}	
 	    } else {
 
-		// if (trace)
-		//     System.out.println("%% Search with reference solution");
-
-		int bestCost = elite[bestCostSolution()][elite[bestCostSolution()].length-1];
-		store.impose(new XltC(cost, bestCost));
-
-		// select random solution fron e elite solutions
+		// select random solution from e elite solutions
 		int n = randomSolution.nextInt(e);
-		HashMap<IntVar, Integer> mapping = new HashMap<IntVar, Integer>();
-		for (int i = 0; i < elite[n].length-1; i++) 
-		    mapping.put(vars[i], elite[n][i]);
-		// System.out.println(mapping);
 
-
-		DepthFirstSearch<IntVar> label = new DepthFirstSearch<IntVar>();
-		SelectChoicePoint<IntVar> select = new SimpleSelect<IntVar>(vars, new SmallestMax(), new IndomainDefaultValue<IntVar>(mapping, new IndomainMin<IntVar>()));
-		label.setAssignSolution(false);
-		label.setSolutionListener(new CostListener<IntVar>());
-		failCalculator = new SGMPCSCalculator(l);
-		label.setConsistencyListener(failCalculator);
-		label.setPrintInfo(false);
-
-		boolean result = label.labeling(store, select);
+		boolean result = search.searchFromEliteSolution(elite[n], l);
 
 		if (!result) {
 		    numberConsecutiveFails++;
@@ -323,25 +287,16 @@ public class SGMPCSearch {
 		else {
 
 		    if (trace)
-			System.out.println("Fails "+ failCalculator.getNumberFails() + "(" + failCalculator.getFailLimit() + ")");
+		    	System.out.println("Fails "+ search.getNumberFails() + "(" + search.getFailLimit() + ")");
 
-		    Domain[] domSolution = label.getSolution();
-		    int[] solution = new int[domSolution.length];
-		    for (int i = 0; i < domSolution.length; i++) 
-			solution[i] = ((IntDomain)domSolution[i]).value();
+		    int[] solution = search.getSolution();
 
-		    if (trace) {
-			System.out.println("%% Solution starting from reference " );
-			for (int i = 0; i < solution.length; i++) {
-			    System.out.print(solution[i] + " ");
-
-			}
-			System.out.println();
-		    }
+		    System.out.println("%% Solution starting from reference with cost " + elite[n][elite[n].length-1]);
+		    printSolution(solution);
 
 		    numberConsecutiveFails = 0;
 
-		    replacedEliteSolution(n, solution, searchCost);
+		    replaceEliteSolution(n, solution, search.getCurrentCost());
 			
 		    updateFailLimit(false);
 		}
@@ -356,17 +311,21 @@ public class SGMPCSearch {
 	boolean termination= false;
 
 	long currentTime = System.currentTimeMillis();
-	// terminate after time-out or when optimal
-	termination = (currentTime - searchStartTime > 60000) || (numberConsecutiveFails > 0 && failCalculator.getNumberFails() < failCalculator.getFailLimit());
 
-	// termination = numberConsecutiveFails >= 5;
+	// terminate after time-out or when optimal
+	termination = (currentTime - searchStartTime > timeOut) || 
+	    (numberConsecutiveFails > 0 && search.getNumberFails() < search.getFailLimit());
 
 	if (trace && termination)
-	    System.out.println("%% Termination search fails "+ failCalculator.getNumberFails() + "(" + failCalculator.getFailLimit() + ")");
+	    System.out.println("%% Termination search fails "+ search.getNumberFails() + 
+			       "(" + search.getFailLimit() + ")");
 
 	return termination;
     }
 
+    public void setTimeOut(long t) {
+	timeOut = t;
+    }
 
     void updateFailLimit(boolean fail) {
 
@@ -376,14 +335,10 @@ public class SGMPCSearch {
 	    else
 		l = 32;
 
-	    // if (trace)
-	    // 	System.out.println("Poly with limit " + l);
 	} 
 	// Luby
 	else {
 	    l = getLuby(lubyIndex);
-	    // if (trace)
-	    // 	System.out.println("Luby with limit " + l);
 
 	    lubyIndex++;
 	}
@@ -437,7 +392,21 @@ public class SGMPCSearch {
 	 return solution;
      }
 
-    void replacedEliteSolution(int n, int[] solution, int searchCost) {
+    public void setEliteSolutions(int[][] solutions) {
+	if (solutions.length != e) {
+	    System.out.println("Number of initial siolutions not correct; it is " + solutions.length + "and should be " + e);
+	    return;
+	}
+
+	elite = new int[e][];
+	for (int i=0; i<e; i++){ 
+	    elite[i] = new int[solutions[i].length];
+	    for (int j=0; j<elite[i].length; j++) 
+		elite[i][j] = solutions[i][j];
+	}
+    }
+
+    void replaceEliteSolution(int n, int[] solution, int searchCost) {
 
 	for (int i = 0; i < elite[n].length-1; i++) 
 	    elite[n][i] = solution[i];
@@ -468,24 +437,17 @@ public class SGMPCSearch {
 	}
     }
 
-    /**
-     * Saves the cost produced by a given search
-     * 
-     * @author Krzysztof Kuchcinski
-     *
-     */
-    public class CostListener<T extends Var> extends SimpleSolutionListener<T> {
 
-	public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
+    public void printSolution(int[] solution) {
 
-	    boolean returnCode = super.executeAfterSolution(search, select);
+	if (trace) {
+	    for (int i = 0; i < solution.length; i++) {
+		System.out.print(solution[i] + " ");
 
-	    searchCost = cost.value();
-
-	    System.out.println("----------\nCost = " + searchCost);
-
-	    return returnCode;
+	    }
+	    System.out.println();
 	}
+
     }
 
     class SolutionComparator implements Comparator<int[]> {
