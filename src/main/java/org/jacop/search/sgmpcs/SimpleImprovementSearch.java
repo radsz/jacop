@@ -65,6 +65,9 @@ import org.jacop.search.sgmpcs.SGMPCSCalculator;
 
 public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolution<T> {
 
+
+    boolean printInfo = true;
+
     /*
      * current store
      */
@@ -167,6 +170,10 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
 	return failCalculator.getFailLimit();
     }
 
+    public void setPrintInfo(boolean print) {
+	printInfo = print;
+    }
+
     /**
      * Saves the cost produced by a given search
      * 
@@ -181,7 +188,8 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
 
 	    searchCost = cost.value();
 
-	    System.out.println("----------\nCost = " + searchCost);
+	    if (printInfo)
+		System.out.println("----------\nCost = " + searchCost);
 
 	    return returnCode;
 	}

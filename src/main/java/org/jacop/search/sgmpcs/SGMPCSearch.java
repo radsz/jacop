@@ -76,7 +76,8 @@ public class SGMPCSearch {
 
     Store store;
 
-    boolean trace = true;
+    boolean trace = false;
+    boolean printInfo = true;
 
     // Start time of the search to compute termination criteria
     long searchStartTime;
@@ -127,6 +128,10 @@ public class SGMPCSearch {
 
     // index fro computing Luby number
     int lubyIndex = 1;
+
+    // last found solution
+    int[] solution;
+
 
     // time-out value in miliseconds (default 10 second)
     long timeOut=10000; 
@@ -241,6 +246,7 @@ public class SGMPCSearch {
 	searchStartTime = System.currentTimeMillis();
 
 	search = new SimpleImprovementSearch<IntVar>(store, vars, cost);
+	search.setPrintInfo(printInfo);
 
 	while (! terminationCriteria() ) {
 
@@ -256,13 +262,15 @@ public class SGMPCSearch {
 		    updateFailLimit(true);
 		}
 		else {
-		    if (trace)
-		    	System.out.println("Fails "+ search.getNumberFails() + "(" + search.getFailLimit() + ")");
+		    if (printInfo)
+		    	System.out.println("%% Fails "+ search.getNumberFails() + "(" + search.getFailLimit() + ")");
 
-		    int[] solution = search.getSolution();
+		    solution = search.getSolution();
 
-		    System.out.println("%% Solution starting from empty " );
-		    printSolution(solution);
+		    if (printInfo) {
+			System.out.println("%% Solution starting from empty " );
+			printSolution(solution);
+		    }
 
 		    numberConsecutiveFails = 0;
 
@@ -271,6 +279,7 @@ public class SGMPCSearch {
 			replaceEliteSolution(worst, solution, search.getCurrentCost());
 		    }
 
+		    searchCost = search.getCurrentCost();
 		    updateFailLimit(false);
 		}	
 	    } else {
@@ -286,18 +295,21 @@ public class SGMPCSearch {
 		}
 		else {
 
-		    if (trace)
-		    	System.out.println("Fails "+ search.getNumberFails() + "(" + search.getFailLimit() + ")");
+		    if (printInfo)
+		    	System.out.println("%% Fails "+ search.getNumberFails() + "(" + search.getFailLimit() + ")");
 
-		    int[] solution = search.getSolution();
+		    solution = search.getSolution();
 
-		    System.out.println("%% Solution starting from reference with cost " + elite[n][elite[n].length-1]);
-		    printSolution(solution);
+		    if (printInfo) {
+			System.out.println("%% Solution starting from reference with cost " + elite[n][elite[n].length-1]);
+			printSolution(solution);
+		    }
 
 		    numberConsecutiveFails = 0;
 
 		    replaceEliteSolution(n, solution, search.getCurrentCost());
 			
+		    searchCost = search.getCurrentCost();
 		    updateFailLimit(false);
 		}
 	    }
@@ -316,7 +328,7 @@ public class SGMPCSearch {
 	termination = (currentTime - searchStartTime > timeOut) || 
 	    (numberConsecutiveFails > 0 && search.getNumberFails() < search.getFailLimit());
 
-	if (trace && termination)
+	if (printInfo && termination)
 	    System.out.println("%% Termination search fails "+ search.getNumberFails() + 
 			       "(" + search.getFailLimit() + ")");
 
@@ -437,17 +449,26 @@ public class SGMPCSearch {
 	}
     }
 
+    public void setPrintInfo(boolean print) {
+	printInfo = print;
+    }
 
     public void printSolution(int[] solution) {
 
-	if (trace) {
 	    for (int i = 0; i < solution.length; i++) {
 		System.out.print(solution[i] + " ");
 
 	    }
 	    System.out.println();
-	}
+    }
 
+
+    public int[] lastSolution() {
+	return solution;
+    }
+
+    public int lastCost() {
+	return searchCost;
     }
 
     class SolutionComparator implements Comparator<int[]> {

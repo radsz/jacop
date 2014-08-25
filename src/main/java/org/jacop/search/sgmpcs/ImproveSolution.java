@@ -58,4 +58,6 @@ public interface ImproveSolution<T extends Var> {
 
     public int getFailLimit();
 
+    public void setPrintInfo(boolean p);
+
 }
