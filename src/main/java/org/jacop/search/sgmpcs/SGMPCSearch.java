@@ -145,6 +145,17 @@ public class SGMPCSearch {
 	this.vars = vars;
 	this.cost = cost;       
 
+	search = new SimpleImprovementSearch<IntVar>(store, vars, cost);
+    }
+
+    public SGMPCSearch(Store store, IntVar[] vars, IntVar cost, ImproveSolution search) {
+
+    	this.store = store;
+    	this.vars = vars;
+    	this.cost = cost;
+
+	this.search = search;
+
     }
 
 
@@ -245,7 +256,6 @@ public class SGMPCSearch {
 
 	searchStartTime = System.currentTimeMillis();
 
-	search = new SimpleImprovementSearch<IntVar>(store, vars, cost);
 	search.setPrintInfo(printInfo);
 
 	while (! terminationCriteria() ) {
