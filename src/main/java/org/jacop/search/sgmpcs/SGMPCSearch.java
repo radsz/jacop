@@ -74,7 +74,7 @@ import org.jacop.search.SimpleSolutionListener;
 
 public class SGMPCSearch {
 
-    Store store;
+    public Store store;
 
     boolean trace = false;
     boolean printInfo = true;
@@ -85,12 +85,12 @@ public class SGMPCSearch {
     /**
      * Variables for search
      */
-    IntVar[] vars;
+    public IntVar[] vars;
 
     /**
      * Cost variable
      */
-    IntVar cost;
+    public IntVar cost;
 
     /*
      * The cost produced by last search
@@ -106,10 +106,10 @@ public class SGMPCSearch {
     double p = 0.25;
 
     // e- number of elite solutions
-    int e = 4;
+    public int e = 4;
 
     // eInit- number of solution for selecting the best e elite solutions
-    int eInit = 20;
+    public int eInit = 20;
 
     // l- current fail limit
     int l;
@@ -121,7 +121,7 @@ public class SGMPCSearch {
 
     // elite solutions 
     // at position 0 is cost and values of variables start at positions 1
-    int[][] elite;
+    public int[][] elite;
 
     // number of consequtive fails when searching for a solution
     int numberConsecutiveFails = 0;
@@ -179,7 +179,7 @@ public class SGMPCSearch {
     /*
      * 	Finds elite solutions if they do not exist yet
      */
-    void findEliteSolutions() {
+    public void findEliteSolutions() {
 
 	if (elite == null) {
 	    elite = new int[e][];
@@ -481,9 +481,9 @@ public class SGMPCSearch {
 	return searchCost;
     }
 
-    class SolutionComparator implements Comparator<int[]> {
+    public class SolutionComparator implements Comparator<int[]> {
 
-	SolutionComparator() {
+	public SolutionComparator() {
 	}
 
 	@Override

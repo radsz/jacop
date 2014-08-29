@@ -71,12 +71,12 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
     /*
      * current store
      */
-    Store store;
+    public Store store;
 
     /*
      * search variable
      */
-    IntVar[] vars;
+    public IntVar[] vars;
 
     /*
      * cost variable
@@ -86,14 +86,14 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
     /*
      * The solution produced by last search
      */
-    int[] solution;
+    public int[] solution;
 
     /*
      * The cost produced by last search
      */
     int searchCost;
 
-    SGMPCSCalculator failCalculator;
+    public SGMPCSCalculator failCalculator;
 
     public SimpleImprovementSearch(Store store, IntVar[] vars, IntVar cost) {
 	this.store = store;
@@ -104,7 +104,7 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
     public boolean searchFromEmptySolution(int failLimit) {
 
 		DepthFirstSearch<IntVar> label = new DepthFirstSearch<IntVar>();
-		SelectChoicePoint<IntVar> select = new SimpleSelect<IntVar>(vars, new SmallestMin(), new IndomainMin<IntVar>());
+		SelectChoicePoint<IntVar> select = new SimpleSelect<IntVar>(vars, new SmallestMin<IntVar>(), new IndomainMin<IntVar>());
 		// SelectChoicePoint<IntVar> select = new RandomSelect<IntVar>(vars, new IndomainRandom<IntVar>());
 		label.setAssignSolution(false);
 		label.setSolutionListener(new CostListener<IntVar>());
@@ -132,7 +132,7 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
 		    mapping.put(vars[i], eliteSolution[i]);
 
 		DepthFirstSearch<IntVar> label = new DepthFirstSearch<IntVar>();
-		// SelectChoicePoint<IntVar> select = new SimpleSelect<IntVar>(vars, new SmallestMax(), 
+		// SelectChoicePoint<IntVar> select = new SimpleSelect<IntVar>(vars, new SmallestMax<IntVar>(), 
 		// 					       new IndomainDefaultValue<IntVar>(mapping, new IndomainRandom<IntVar>()));
 		SelectChoicePoint<IntVar> select = new RandomSelect<IntVar>(vars, new IndomainDefaultValue<IntVar>(mapping, new IndomainMin<IntVar>()));
 		label.setAssignSolution(false);
