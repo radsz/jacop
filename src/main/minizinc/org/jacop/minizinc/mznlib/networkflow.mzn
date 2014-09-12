@@ -1,5 +1,5 @@
 %-----------------------------------------------------------------------------%
-% Defines decomposition on network flow constraint.
+% Defines decomposition on minimal cost network flow constraint.
 % arc- defines for each position on the array a pair [source, sink] nodes
 % flow- defines the variable defining posisble low and upper bound for the flow on each arc.
 % weight- defines the unit cost of the flow through the arc.
