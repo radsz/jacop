@@ -29,7 +29,7 @@ predicate knapsack(array[int] of int: w, array[int] of int:p,
 	} in 
 	    jacop_knapsack([w[i] | i in index_set(w) where w[i] > 0], [p[i] | i in index_set(p) where w[i] > 0], W, profit, [x[i] | i in index_set(x) where w[i] > 0])
 	    /\
-	    P = profit + sum( i in index_set(p)) (c[i]*x[i]*bool2int(w[i]=0)) 
+	    P = profit + sum( i in index_set(p)) (p[i]*x[i]*bool2int(w[i]=0)) 
 	 ))));
 
 predicate
