@@ -2444,7 +2444,8 @@ public class Constraints implements ParserTreeConstants {
 		    else
 			pose(new XplusYeqC(p2[0], p2[1], -p3));
 		}
-		else if (domainConsistency) { // && ! (p1.length == 2 && allWeightsOneOrMinusOne(p1)) ) {
+		else if (domainConsistency && (maxDomain(p2) <= 4 || p2.length <= 2) ) { // heuristic rule to select domain consistency since 
+		                                                                         // its complexity is O(d^n), d <= 4 or n <= 2 ;)
 		    // We do not impose linear constraint with domain consistency if 
 		    // the cases are covered by four cases above.
 
@@ -2662,6 +2663,16 @@ public class Constraints implements ParserTreeConstants {
 		    System.exit(0);
 	    }
 	}
+    }
+
+    int maxDomain(IntVar[] vs) {
+	int s = IntDomain.MinInt;
+
+	for (IntVar v : vs) 
+	    s = (s > v.getSize()) ? s : v.getSize();
+	
+	return s;
+
     }
 
     void float_lin_relation(int operation, SimpleNode node) throws FailException {
