@@ -52,12 +52,12 @@ public abstract class IntDomain extends Domain {
 	/**
 	 * It specifies the minimum element in the domain.
 	 */
-	public static final int MinInt = -10000000;
+	public static final int MinInt = -1000000000;
 
 	/**
 	 * It specifies the maximum element in the domain.
 	 */
-	public static final int MaxInt = 10000000;	
+	public static final int MaxInt = 1000000000;	
 
 	/**
 	 * It specifies the constant for GROUND event. It has to be smaller 
