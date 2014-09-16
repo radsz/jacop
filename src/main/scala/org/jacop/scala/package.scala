@@ -969,6 +969,9 @@ package object scala {
        label.setSolutionListener(new ScalaSolutionListener[T])
      }
 
+    if (timeOutValue > 0)
+      label.setTimeOut(timeOutValue)
+
      if (limitOnSolutions > 0) {
        label.getSolutionListener().setSolutionLimit(limitOnSolutions)
        label.respectSolutionListenerAdvice=true
@@ -1003,6 +1006,9 @@ package object scala {
        label.setPrintInfo(false)
        label.setSolutionListener(new ScalaSolutionListener[T])
      }
+
+    if (timeOutValue > 0)
+      label.setTimeOut(timeOutValue)
 
      if (limitOnSolutions > 0) {
        label.getSolutionListener().setSolutionLimit(limitOnSolutions)
