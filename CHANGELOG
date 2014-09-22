@@ -2,7 +2,7 @@ Version 4.1.1
 ===========
 
 1. New global constraint LexOrder that defines lexicographical order
-   between two vestors of IntVar. Vectors must be of the same size.
+   between two vectors of IntVar. Vectors must be of the same size.
 2. Performance improvements in AndBool and OrBool. it is no longer needed
    to scan the whole list for achieving consistency.
 3. Checking for overflow in Sum and improvement in detecting overflow for
@@ -24,7 +24,7 @@ Version 4.1
 Version 4.0
 ===========
 
-1. Maven support and new directory structure. The package has changed name from JaCoP to org.jacop and files are placed in the new directory structure. 
+1. Maven support and new directory structure. The package has changed name from JaCoP to org.jacop and files are placed in the new directory structure.
 
 2. Experimental feature - stochastic variables and constraints - is moved to feature branch as it still requires additional testing.
    It is excluded from this release, but we encourage contribution in this branch (examples/tests in particular) to help us make it
