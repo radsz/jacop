@@ -358,7 +358,18 @@ public class IfThenElse extends PrimitiveConstraint {
 		store.addChanged(this);
 		store.countConstraint();
 
+		condC.include(store);
+		thenC.include(store);
+		elseC.include(store);
+
 		imposed = true;
+	}
+
+	@Override
+	public void include(Store store) {
+	    condC.include(store);
+	    thenC.include(store);
+	    elseC.include(store);
 	}
 
 	@Override

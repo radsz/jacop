@@ -1,3 +1,13 @@
+Version 4.1.1
+===========
+
+1. New global constraint LexOrder that defines lexicographical order
+   between two vestors of IntVar. Vectors must be of the same size.
+2. Performance improvements in AndBool and OrBool. it is no longer needed
+   to scan the whole list for achieving consistency.
+3. Checking for overflow in Sum and improvement in detecting overflow for
+   addition.
+
 Version 4.1
 ===========
 

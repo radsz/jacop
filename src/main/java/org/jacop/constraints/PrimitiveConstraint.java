@@ -89,6 +89,13 @@ public abstract class PrimitiveConstraint extends Constraint {
 	 */
 	public abstract boolean notSatisfied();
 
+
+	/**
+	 * It provide store for constraints that are not imposed but called from ather constraints.
+	 * @param store the constraint store in which context the constraint is executed.
+	 */
+    public void include(Store store) {}
+
 	/**
 	 * It allows to specify customized events required to trigger execution 
 	 * of notConsitency() method.

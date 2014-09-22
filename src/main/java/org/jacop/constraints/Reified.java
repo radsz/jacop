@@ -184,6 +184,8 @@ public class Reified extends Constraint {
 			V.putModelConstraint(this, getConsistencyPruningEvent(V));
 		}
 
+		c.include(store);
+
 		store.registerRemoveLevelLateListener(this);
 
 		store.addChanged(this);

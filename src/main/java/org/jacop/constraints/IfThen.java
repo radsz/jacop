@@ -278,8 +278,17 @@ public class IfThen extends PrimitiveConstraint {
 		store.addChanged(this);
 		store.countConstraint();
 
+		condC.include(store);
+		thenC.include(store);
+
 		imposed = true;
 
+	}
+
+	@Override
+	public void include(Store store) {
+	    condC.include(store);
+	    thenC.include(store);
 	}
 
 	@Override

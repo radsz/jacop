@@ -98,6 +98,8 @@ public class Sum extends Constraint {
 		
 		System.arraycopy(list, 0, this.list, 0, list.length);
 		numberArgs += list.length;		
+
+		checkForOverflow();
 	}
 
 	/**
@@ -258,6 +260,18 @@ public class Sum extends Constraint {
 		}
 		return (sat && sumAll == sum.min());
 	}
+
+    void checkForOverflow() {
+
+	int sumMin=0, sumMax=0;
+	for (int i=0; i<list.length; i++) {
+	    int n1 = list[i].min();
+	    int n2 = list[i].max();
+
+	    sumMin = add(sumMin, n1);
+	    sumMax = add(sumMax, n2);
+	}
+    }
 
 	@Override
 	public String toString() {

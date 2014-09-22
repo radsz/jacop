@@ -234,8 +234,18 @@ public class Or extends PrimitiveConstraint {
 			V.putModelConstraint(this, getConsistencyPruningEvent(V));
 		}
 
+
+		for (PrimitiveConstraint c : listOfC)
+		    c.include(store);
+
 		store.addChanged(this);
 		store.countConstraint(listOfC.length);
+	}
+
+        @Override
+        public void include(Store store) {
+		for (PrimitiveConstraint c : listOfC)
+		    c.include(store);
 	}
 
 	@Override

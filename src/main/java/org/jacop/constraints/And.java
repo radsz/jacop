@@ -227,8 +227,17 @@ public class And extends PrimitiveConstraint {
 			var.putModelConstraint(this, getConsistencyPruningEvent(var));
 		}
 
+		for (PrimitiveConstraint c : listOfC)
+		    c.include(store);
+
 		store.addChanged(this);
 		store.countConstraint(listOfC.length);
+	}
+
+        @Override
+        public void include(Store store) {
+		for (PrimitiveConstraint c : listOfC)
+		    c.include(store);
 	}
 
 	@Override

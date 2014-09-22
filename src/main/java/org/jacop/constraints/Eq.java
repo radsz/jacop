@@ -221,9 +221,20 @@ public class Eq extends PrimitiveConstraint {
 			V.putModelConstraint(this, getConsistencyPruningEvent(V));
 		}
 
+		c1.include(store);
+		c2.include(store);
+
 		store.addChanged(this);
 		store.countConstraint(2);
 	}
+
+    @Override
+    public void include(Store store) {
+
+	c1.include(store);
+	c2.include(store);
+
+    }
 
 	@Override
 	public void notConsistency(Store store) {

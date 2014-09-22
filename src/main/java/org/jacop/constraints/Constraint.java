@@ -323,10 +323,10 @@ public abstract class Constraint extends DecomposedConstraint {
 
 	int add(int a, int b) {  
 		
-		int c = a + b;  
-		
-		if (   (a > 0 && b > 0 && (c < a || c < b))  
-			|| (a < 0 && b < 0 && (c > a || c > b)) )  
+	    long cc = (long)a + (long)b;
+	    int c = a + b;
+
+	    if (c != cc)
 			throw new ArithmeticException("Overflow occurred from int " + a + " + " + b);  
 		
 		return c;  
