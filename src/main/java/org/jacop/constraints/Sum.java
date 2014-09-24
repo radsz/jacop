@@ -271,6 +271,9 @@ public class Sum extends Constraint {
 	    sumMin = add(sumMin, n1);
 	    sumMax = add(sumMax, n2);
 	}
+
+	sumMin = subtract(sumMin, sum.max());
+	sumMax = subtract(sumMax, sum.min());
     }
 
 	@Override

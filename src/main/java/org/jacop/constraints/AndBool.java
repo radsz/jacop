@@ -228,6 +228,7 @@ public class AndBool extends PrimitiveConstraint {
 		    else
 			if (list[i].max() == 0) { 
 			    result.domain.in(store.level, result, 0, 0);
+			    removeConstraint();
 			    return;
 			}
 		}

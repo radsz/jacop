@@ -958,13 +958,12 @@ public abstract class IntDomain extends Domain {
 	}
 
 	public final static int multiply(int a, int b)  {
-		if (a == 0 || b == 0)  
-			return 0;  
-		int product = (int)(a * b);  
-		int a2 = (int)(product / b);  
-		if (a != a2)  
-			throw new ArithmeticException("Overflow occurred from int " + a + " * " + b);  
-		return product;  
+
+	    long m = (long)a * (long)b;
+	    if (m < Integer.MIN_VALUE || m > Integer.MAX_VALUE) 
+		throw new ArithmeticException("Overflow occurred from int " + a + " * " + b);  
+
+	    return a*b;  
 	}
 
 }

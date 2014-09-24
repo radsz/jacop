@@ -66,6 +66,7 @@ public class VariablesParameters implements ParserTreeConstants {
     final static boolean interval = false; // selection of interval or dense, if possible, domain for variables
 
     final static double MIN_FLOAT = -1e150, MAX_FLOAT = 1e150;
+    final static int MIN_INT = Integer.MIN_VALUE, MAX_INT = Integer.MAX_VALUE;
 
     Tables dictionary;
     int lowInterval, highInterval;
@@ -801,14 +802,14 @@ public class VariablesParameters implements ParserTreeConstants {
 	    case 1: // int interval
 		lowInterval = ((ASTIntTiExprTail)child).getLow(); 
 		highInterval = ((ASTIntTiExprTail)child).getHigh(); 
-		if (lowInterval < IntDomain.MinInt || highInterval > IntDomain.MaxInt)
+		if (lowInterval < MIN_INT || highInterval > MAX_INT)
 		    throw new ArithmeticException("Too large bounds on intervals " + lowInterval + ".." + highInterval);
 		break;
 	    case 2: // int list
 		SimpleNode grand_child = (SimpleNode)child.jjtGetChild(0);
 		intList = ((ASTIntLiterals)grand_child).getList();
 		for (Integer e : intList)
-		    if (e.intValue() < IntDomain.MinInt || e.intValue() > IntDomain.MaxInt)
+		    if (e.intValue() < MIN_INT || e.intValue() > MAX_INT)
 			throw new ArithmeticException("Too large element in set " + e.intValue());
 		break;
 	    }
@@ -827,14 +828,14 @@ public class VariablesParameters implements ParserTreeConstants {
 		case 1: // int interval
 		    lowInterval = ((ASTIntTiExprTail)grand_child).getLow(); 
 		    highInterval = ((ASTIntTiExprTail)grand_child).getHigh(); 
-		    if (lowInterval < IntDomain.MinInt || highInterval > IntDomain.MaxInt)
+		    if (lowInterval < MIN_INT || highInterval > MAX_INT)
 			throw new ArithmeticException("Too large bounds on intervals " + lowInterval + ".." + highInterval);
 		    break;
 		case 2: // int list
 		    SimpleNode grand_grand_child = (SimpleNode)grand_child.jjtGetChild(0);
 		    intList = ((ASTIntLiterals)grand_grand_child).getList();
 		    for (Integer e : intList)
-			if (e.intValue() < IntDomain.MinInt || e.intValue() > IntDomain.MaxInt)
+			if (e.intValue() < MIN_INT || e.intValue() > MAX_INT)
 			    throw new ArithmeticException("Too large element in set " + e.intValue());
 		    break;
 		}

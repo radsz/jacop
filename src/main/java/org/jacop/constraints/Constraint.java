@@ -308,43 +308,33 @@ public abstract class Constraint extends DecomposedConstraint {
 	public void cleanAfterFailure() {
 	};	
 
-	// 	/**
-	// 	 * Methods that check for overflow/underflow 
-	// 	 */
-	//      int multiply(int a, int b)  {
-	// 	if (a == 0 || b == 0)  
-	// 	    return 0;  
-	// 	int product = (int)(a * b);  
-	// 	int a2 = (int)(product / b);  
-	// 	if (a != a2)  
-	// 	    throw new ArithmeticException("Overflow occurred from int " + a + " * " + b);  
-	// 	return product;  
-	//     }
 
-	int add(int a, int b) {  
-		
-	    long cc = (long)a + (long)b;
-	    int c = a + b;
+    /**
+     * Methods that check for overflow/underflow 
+     */
 
-	    if (c != cc)
-			throw new ArithmeticException("Overflow occurred from int " + a + " + " + b);  
+    int add(int a, int b) {  
 		
-		return c;  
+	long cc = (long)a + (long)b;
+
+	if ( cc < Integer.MIN_VALUE || cc > Integer.MAX_VALUE)
+	    throw new ArithmeticException("Overflow occurred from int " + a + " + " + b);  
 		
-	} 
+	return a + b;  
+		
+    } 
 	
 
-	int subtract(int a, int b) {  
+    int subtract(int a, int b) {  
 		
-		int c = a - b;  
+	long cc = (long)a - (long)b;
 		
-		if (   (c > 0 && b > 0 && (a < c || a < b))  
-			|| (c < 0 && b < 0 && (a > c || a > b)) )  
-			throw new ArithmeticException("Overflow occurred from int " + a + " + " + b);  
+	if ( cc < Integer.MIN_VALUE || cc > Integer.MAX_VALUE)
+	    throw new ArithmeticException("Overflow occurred from int " + a + " - " + b);  
 		
-		return c;  
+	return a - b;  
 		
-	} 
+    } 
 
 	int toInt(final float f) {
 		
