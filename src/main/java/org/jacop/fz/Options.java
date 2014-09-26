@@ -63,6 +63,8 @@ public class Options {
     boolean precisionDefined = false;
     double precision;
 
+    boolean runSearch = true;
+
 	/**
 	 * It constructs an Options object and parses all the parameters/options provided 
 	 * to flatzinc to jacop parser.
@@ -223,6 +225,21 @@ public class Options {
 		return interval;
 	}
 
+	/**
+	 * It defines whether to run the solver. 
+	 */
+	public void doNotRunSearch() {
+	    this.runSearch = false;
+	}
+
+	/**
+	 * It returns true if the search must be run and false otherwise.
+	 * @return true if run search, false otherwise. 
+	 */
+	public boolean runSearch() {
+		return runSearch;
+	}
+
 
 	/**
 	 * It returns precision defined in  the command line
@@ -233,8 +250,7 @@ public class Options {
 	}
 
 	/**
-	 * It return true if precision is defined otherwise false
-	 * @return true if precision defined. 
+	 * It defines precision. 
 	 */
 	public boolean precision() {
 		return precisionDefined;

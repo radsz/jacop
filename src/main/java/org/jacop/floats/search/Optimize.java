@@ -67,6 +67,9 @@ public class Optimize  {
 
     boolean printInfo = true;
 
+    FloatInterval finalCost;
+    FloatInterval[] finalVarValues;
+
     public Optimize(Store store, DepthFirstSearch search, SelectChoicePoint select, FloatVar cost) {
 
 	this.store = store;
@@ -81,6 +84,9 @@ public class Optimize  {
 	search.setSolutionListener(new ResultListener<Var>(variables));
 
 	split = new SplitSelectFloat<FloatVar>(store, new FloatVar[] {cost}, null);
+
+	finalVarValues = new FloatInterval[variables.length];
+
     }
 
     public boolean minimize() {
@@ -138,12 +144,13 @@ public class Optimize  {
 	}
     }
 
-    // public boolean maximize() {
-    // 	split.leftFirst = false;
+    public FloatInterval getFinalCost() {
+	return finalCost;
+    }
 
-    // 	return minimize();
-    // }
-
+    public FloatInterval[] getFinalVarValues() {
+	return finalVarValues;
+    }
 
     public class ResultListener<T extends Var> extends SimpleSolutionListener<T> {
 
@@ -161,6 +168,12 @@ public class Optimize  {
 
 	    System.out.println (java.util.Arrays.asList(var));
 	    System.out.println ("% Found solution with cost " + cost);
+
+	    finalCost = new FloatInterval(cost.min(), cost.max());
+	    for (int i=0; i < variables.length; i++) {
+		FloatVar v = (FloatVar)variables[i];
+		finalVarValues[i] = new FloatInterval(v.min(), v.max());
+	    }
 
 	    return returnCode;
 	}
