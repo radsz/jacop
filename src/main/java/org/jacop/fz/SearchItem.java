@@ -426,7 +426,7 @@ public class SearchItem implements ParserTreeConstants {
     }
 
     
-    ComparatorVariable getVarSelect() {
+    public ComparatorVariable getVarSelect() {
 
 	tieBreaking = null;
 	if (var_selection_heuristic == null)
@@ -467,7 +467,7 @@ public class SearchItem implements ParserTreeConstants {
 	return null; // input_order
     }
 
-    ComparatorVariable getFloatVarSelect() {
+    public ComparatorVariable getFloatVarSelect() {
 
 	tieBreaking = null;
 	if (var_selection_heuristic == null)

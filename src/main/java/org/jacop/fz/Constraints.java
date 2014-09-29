@@ -2714,7 +2714,25 @@ public class Constraints implements ParserTreeConstants {
 	else { // non reified
 	    switch (operation) {
 	    case eq :
-		pose(new LinearFloat(store, p2, p1, "==", p3));
+
+		if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
+		    if (p3 != 0)
+			pose(new PplusCeqR(p2[1], p3, p2[0]));
+		    else
+			pose(new PeqQ(p2[1], p2[0]));
+		}
+		else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
+		    if (p3 != 0) {
+			    pose(new PplusCeqR(p2[0], p3, p2[1]));
+		    }
+		    else
+			pose(new PeqQ(p2[0], p2[1]));
+		}
+		else if (p1.length == 2 && p1[0] == 1 && p1[1] == 1) {
+		    pose(new PplusQeqR(p2[0], p2[1], new FloatVar(store, p3,p3)));
+		} 
+		else
+		    pose(new LinearFloat(store, p2, p1, "==", p3));
 		break;
 	    case ne :
 		pose(new LinearFloat(store, p2, p1, "!=", p3));
