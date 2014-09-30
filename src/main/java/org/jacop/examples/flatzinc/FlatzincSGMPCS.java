@@ -1,5 +1,5 @@
 /**
- *  FloatMinimize.java 
+ *  FlatzincSGMPCS.java 
  *  This file is part of JaCoP.
  *
  *  JaCoP is a Java Constraint Programming solver. 
@@ -35,11 +35,12 @@ import java.util.*;
 
 import org.jacop.core.*;
 import org.jacop.constraints.*;
+import org.jacop.constraints.netflow.*;
+import org.jacop.constraints.netflow.simplex.*;
 import org.jacop.search.*;
+import org.jacop.search.sgmpcs.*;
 import org.jacop.fz.*;
 
-import org.jacop.floats.search.*;
-import org.jacop.floats.core.*;
 
 /**
  * The class Run is used to run test programs for JaCoP package.
@@ -48,18 +49,18 @@ import org.jacop.floats.core.*;
  * @author Krzysztof Kuchcinski
  * @version 4.1
  */
-public class FloatMinimize {
+public class FlatzincSGMPCS {
     Store store;
 
     public static void main (String args[]) {
 
-      FloatMinimize run = new FloatMinimize();
+      FlatzincSGMPCS run = new FlatzincSGMPCS();
 
       run.ex(args);
 
     }
 
-    FloatMinimize() {}
+    FlatzincSGMPCS() {}
 
     void ex(String[] args) {
 
@@ -68,11 +69,8 @@ public class FloatMinimize {
 
 	if (args.length == 0) {
 	    args = new String[2];
-	    args[0] = "-s"; args[1] = "camel6.fzn";
-	}
-
-	FloatDomain.setPrecision(1E-4);
-
+	    args[0] = "-s"; args[1] = "jobshop.fzn";
+    }
 	FlatzincLoader fl = new FlatzincLoader(args); 
 	fl.load();
 
@@ -80,42 +78,47 @@ public class FloatMinimize {
 
 	// System.out.println (store);
 
-	System.out.println( "\nVar store size: "+ store.size()+
+	// System.out.println("============================================");
+	// System.out.println(fl.getTables());
+	// System.out.println("============================================");
+
+	System.out.println( "\nIntVar store size: "+ store.size()+
 			    "\nNumber of constraints: " + store.numberConstraints()
 			    );
 
-
-	if ( fl.getSearch().type() == null || (! fl.getSearch().type().equals("float_search")) ) {
-	    System.out.println("The problem is not of type float_search and cannot be handled by this method");
+	if ( fl.getSearch().type() == null || (! fl.getSearch().type().equals("int_search")) ) {
+	    System.out.println("The problem is of type int_search and cannot be handled by this method");
 
 	    System.exit(0);	    
 	}
+
 	if (fl.getSolve().getSolveKind() != 1) {
 	    System.out.println("The problem is not minimization problem and cannot be handled by this method");
 
 	    System.exit(0);
 	}
 
-	FloatVar[] vars = (FloatVar[])fl.getSearch().vars();
+	IntVar[] vars = (IntVar[])fl.getSearch().vars();
+	IntVar cost = (IntVar)fl.getCost();
 
-	System.out.println("Decision variables: " + Arrays.asList(vars) + "\n");
+ 	SGMPCSearch label = new SGMPCSearch(store, vars, cost);
+	label.setFailStrategy(label.luby);  // luby or poly
+	label.setProbability(0.25);         // limit for probability of selecting search from empty 
+	label.setEliteSize(4);              // size of the set of reference solutions
+	label.setTimeOut(900000);           // time-out in miliseconds (default 900000 = 15 minutes)
+	label.setInitialSolutionsSize(10);  // size of the random initial solutions
 
-	DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
-	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, vars, fl.getSearch().getFloatVarSelect());
-	
-	Optimize min = new Optimize(store, label, s, (FloatVar)fl.getCost());
-	boolean result = min.minimize();
+	label.setPrintInfo(true);
 
-  	if ( result ) {
-	    System.out.println("Final cost = " + min.getFinalCost());
-	    System.out.println("Variables: ");
-	    FloatInterval[] values = min.getFinalVarValues();
-	    for (int i = 0; i < vars.length; i++) 
-		System.out.println(vars[i].id() + " = " + values[i]);
-  	    System.out.println("Yes");
+  	boolean Result = label.search();
+
+	if (Result) {
+	    int[] sol = label.lastSolution();
+	    System.out.println("\n%%% Last found solution with cost " + label.lastCost());
+	    for (int i = 0; i < sol.length; i++) {
+		System.out.print(sol[i] + " ");	    
+	    }
 	}
-	else 
-	    System.out.println("*** No");
 
 	T2 = System.currentTimeMillis();
 	T = T2 - T1;

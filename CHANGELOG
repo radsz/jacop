@@ -3,9 +3,12 @@ Version 4.1.1
 
 1. New global constraint LexOrder that defines lexicographical order
    between two vectors of IntVar. Vectors must be of the same size.
-2. Performance improvements in AndBool and OrBool. it is no longer needed
+2. Implementation of a loader for flazinc models and related examples. The
+   loader makes it possible to load the model and then define own search
+   methods as well as use all variables defined in the model and their values.
+3. Performance improvements in AndBool and OrBool. it is no longer needed
    to scan the whole list for achieving consistency.
-3. Checking for overflow in Sum and improvement in detecting overflow for
+4. Checking for overflow in Sum and improvement in detecting overflow for
    addition.
 
 Version 4.1
