@@ -105,7 +105,7 @@ public class FlatzincSGMPCS {
 	label.setFailStrategy(label.luby);  // luby or poly
 	label.setProbability(0.25);         // limit for probability of selecting search from empty 
 	label.setEliteSize(4);              // size of the set of reference solutions
-	label.setTimeOut(900000);           // time-out in miliseconds (default 900000 = 15 minutes)
+	label.setTimeOut(60000);           // time-out in miliseconds (default 900000 = 15 minutes)
 	label.setInitialSolutionsSize(10);  // size of the random initial solutions
 
 	label.setPrintInfo(true);
@@ -114,10 +114,14 @@ public class FlatzincSGMPCS {
 
 	if (Result) {
 	    int[] sol = label.lastSolution();
-	    System.out.println("\n%%% Last found solution with cost " + label.lastCost());
-	    for (int i = 0; i < sol.length; i++) {
-		System.out.print(sol[i] + " ");	    
+	    if (sol != null) {
+		System.out.println("\n%%% Last found solution with cost " + label.lastCost());
+		for (int i = 0; i < sol.length; i++) {
+		    System.out.print(sol[i] + " ");	    
+		}
 	    }
+	    else
+		System.out.println("\n%%% No solution found with this method");
 	}
 
 	T2 = System.currentTimeMillis();
