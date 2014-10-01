@@ -105,7 +105,7 @@ public class FlatzincSGMPCS {
 	label.setFailStrategy(label.luby);  // luby or poly
 	label.setProbability(0.25);         // limit for probability of selecting search from empty 
 	label.setEliteSize(4);              // size of the set of reference solutions
-	label.setTimeOut(60000);           // time-out in miliseconds (default 900000 = 15 minutes)
+	label.setTimeOut(900);              // time-out in seconds (default 900 = 15 minutes)
 	label.setInitialSolutionsSize(10);  // size of the random initial solutions
 
 	label.setPrintInfo(true);

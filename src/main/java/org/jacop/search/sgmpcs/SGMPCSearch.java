@@ -265,6 +265,9 @@ public class SGMPCSearch {
 
 	while (! terminationCriteria() ) {
 
+	    long currentTime = System.currentTimeMillis();
+	    search.setTimeOut( (timeOut - (currentTime - searchStartTime))/1000 );
+
 	    int bestCost = elite[bestCostSolution()][costPosition];
 	    store.impose(new XltC(cost, bestCost));
 
@@ -350,8 +353,8 @@ public class SGMPCSearch {
 	return termination;
     }
 
-    public void setTimeOut(long t) {
-	timeOut = t;
+    public void setTimeOut(long t) { // t in seconds
+	timeOut = t * 1000;
     }
 
     void updateFailLimit(boolean fail) {
