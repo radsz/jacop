@@ -191,13 +191,20 @@ public class SGMPCSearch {
 	    return;
 
 	costPosition = vars.length;
-	IntVar[] v = new IntVar[vars.length+1];
-	for (int i = 0; i < vars.length; i++) {
-	    v[i] = vars[i];
-	    if (v[i] == cost)
+	for (int i = 0; i < vars.length; i++) 
+	    if (vars[i] == cost)
 		costPosition = i;
+
+	IntVar[] v;
+	if (costPosition == vars.length) {
+	    v = new IntVar[vars.length+1];
+	    for (int i = 0; i < vars.length; i++) 
+		v[i] = vars[i];
+	    v[vars.length] = cost;
 	}
-	v[vars.length] = cost;
+	else
+	    v = vars;
+
 	DepthFirstSearch<IntVar> label = new DepthFirstSearch<IntVar>();
 	SelectChoicePoint<IntVar> select = new SimpleSelect<IntVar>(v, null,
 								    new IndomainMin<IntVar>());

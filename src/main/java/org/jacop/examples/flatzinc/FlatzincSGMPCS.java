@@ -98,6 +98,10 @@ public class FlatzincSGMPCS {
 	    System.exit(0);
 	}
 
+	int timeOut = fl.getOptions().getTimeOut();
+	if (timeOut == 0)
+	    timeOut = 900;     // default time-out 900s=15min
+
 	IntVar[] vars = (IntVar[])fl.getSearch().vars();
 	IntVar cost = (IntVar)fl.getCost();
 
@@ -105,7 +109,7 @@ public class FlatzincSGMPCS {
 	label.setFailStrategy(label.luby);  // luby or poly
 	label.setProbability(0.25);         // limit for probability of selecting search from empty 
 	label.setEliteSize(4);              // size of the set of reference solutions
-	label.setTimeOut(900);              // time-out in seconds (default 900 = 15 minutes)
+	label.setTimeOut(timeOut);          // time-out in seconds
 	label.setInitialSolutionsSize(10);  // size of the random initial solutions
 
 	label.setPrintInfo(true);

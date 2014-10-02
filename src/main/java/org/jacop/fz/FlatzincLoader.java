@@ -130,4 +130,8 @@ public class FlatzincLoader {
     public SearchItem getSearch() {
 	return getSolve().getSearch();
     }
+
+    public Options getOptions() {
+	return opt;
+    }
 }
