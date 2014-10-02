@@ -171,7 +171,6 @@ public class SGMPCSearch {
 	    System.out.println("%% Best Cost elite solution is " + bestCostSolution + " with cost " + 
 			       elite[bestCostSolution][costPosition]);
 
-
 	improveSolution();
 
 	return true;
@@ -273,7 +272,11 @@ public class SGMPCSearch {
 	while (! terminationCriteria() ) {
 
 	    long currentTime = System.currentTimeMillis();
-	    search.setTimeOut( (timeOut - (currentTime - searchStartTime))/1000 );
+	    long restTimeOut = (timeOut - (currentTime - searchStartTime))/1000;
+	    if (restTimeOut <= 0)
+		break; 
+
+	    search.setTimeOut( restTimeOut );
 
 	    int bestCost = elite[bestCostSolution()][costPosition];
 	    store.impose(new XltC(cost, bestCost));
@@ -353,9 +356,21 @@ public class SGMPCSearch {
 	termination = (currentTime - searchStartTime > timeOut) || 
 	    (numberConsecutiveFails > 0 && search.getNumberFails() < search.getFailLimit());
 
-	if (printInfo && termination)
+	if (printInfo && termination) {
 	    System.out.println("%% Termination search fails "+ search.getNumberFails() + 
 			       "(" + search.getFailLimit() + ")");
+
+	    if (solution == null) {
+
+		int bestCostSolution = bestCostSolution();
+
+		solution = new int[vars.length];
+		System.arraycopy(elite[bestCostSolution], 0, solution, 0, vars.length);
+
+		searchCost = elite[bestCostSolution][costPosition];
+	    }
+
+	}
 
 	return termination;
     }

@@ -91,6 +91,10 @@ public class Optimize  {
 
     public boolean minimize() {
 
+	store.setLevel(store.level+1);
+
+	boolean result = search.labeling(store, select);
+
 	PrimitiveConstraint choice = split.getChoiceConstraint(0);
 
 	if (choice == null) 
@@ -101,10 +105,6 @@ public class Optimize  {
 	    if (costValue < selValue) {
 		choice = new PlteqC(cost, costValue);
 	    }
-
-	store.setLevel(store.level+1);
-
-	boolean result = search.labeling(store, select);
 
 	if (result) {
 

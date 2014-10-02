@@ -87,7 +87,7 @@ public class FlatzincSGMPCS {
 			    );
 
 	if ( fl.getSearch().type() == null || (! fl.getSearch().type().equals("int_search")) ) {
-	    System.out.println("The problem is of type int_search and cannot be handled by this method");
+	    System.out.println("The problem is not of type int_search and cannot be handled by this method");
 
 	    System.exit(0);	    
 	}
