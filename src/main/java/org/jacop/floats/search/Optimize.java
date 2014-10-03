@@ -67,8 +67,8 @@ public class Optimize  {
 
     boolean printInfo = true;
 
-    FloatInterval finalCost;
-    FloatInterval[] finalVarValues;
+    FloatInterval lastCost;
+    FloatInterval[] lastVarValues;
 
     public Optimize(Store store, DepthFirstSearch search, SelectChoicePoint select, FloatVar cost) {
 
@@ -80,12 +80,16 @@ public class Optimize  {
 	search.setAssignSolution(false);
 	search.setPrintInfo(false);
 
-	variables = ((SplitSelectFloat)select).searchVariables;
+	Var[] sVar = ((SplitSelectFloat)select).searchVariables;
+	variables = new Var[sVar.length];
+	for (int i = 0; i < sVar.length; i++) 
+	    variables[i] = sVar[i];
+
 	search.setSolutionListener(new ResultListener<Var>(variables));
 
 	split = new SplitSelectFloat<FloatVar>(store, new FloatVar[] {cost}, null);
 
-	finalVarValues = new FloatInterval[variables.length];
+	lastVarValues = new FloatInterval[variables.length];
 
     }
 
@@ -93,7 +97,19 @@ public class Optimize  {
 
 	store.setLevel(store.level+1);
 
-	boolean result = search.labeling(store, select);
+	boolean result = store.consistency();
+
+	if (result)
+	    if (lastCost != null) {
+
+		if ( !( lastCost.min() >= cost.min() && lastCost.max() <= cost.max()) ) 
+		    result = search.labeling(store, select);
+		else 
+		    printLastSolution();
+
+	    }
+	    else
+		result = search.labeling(store, select);
 
 	PrimitiveConstraint choice = split.getChoiceConstraint(0);
 
@@ -144,12 +160,25 @@ public class Optimize  {
 	}
     }
 
+    void printLastSolution() {
+
+	System.out.print("[");
+	for (int i = 0; i < lastVarValues.length; i++) {
+	    System.out.print(variables[i].id() + " = " + lastVarValues[i]);
+	    if (i < lastVarValues.length - 1)
+		System.out.print(", ");
+	}
+	System.out.println("]");
+	System.out.println ("% Solution with cost " + cost.id() + "::{" + lastCost + "}");
+
+    }
+
     public FloatInterval getFinalCost() {
-	return finalCost;
+	return lastCost;
     }
 
     public FloatInterval[] getFinalVarValues() {
-	return finalVarValues;
+	return lastVarValues;
     }
 
     public class ResultListener<T extends Var> extends SimpleSolutionListener<T> {
@@ -169,10 +198,10 @@ public class Optimize  {
 	    System.out.println (java.util.Arrays.asList(var));
 	    System.out.println ("% Found solution with cost " + cost);
 
-	    finalCost = new FloatInterval(cost.min(), cost.max());
+	    lastCost = new FloatInterval(cost.min(), cost.max());
 	    for (int i=0; i < variables.length; i++) {
 		FloatVar v = (FloatVar)variables[i];
-		finalVarValues[i] = new FloatInterval(v.min(), v.max());
+		lastVarValues[i] = new FloatInterval(v.min(), v.max());
 	    }
 
 	    return returnCode;
