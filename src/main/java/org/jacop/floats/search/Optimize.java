@@ -124,9 +124,11 @@ public class Optimize  {
 
 	if (result) {
 
-		if (printInfo)
+	    if (printInfo) {
 		    System.out.println ("% Current cost bounds: " + cost + "\n----------");
-		// System.out.println ("choice point: "+ choice);
+		    FloatInterval f = new FloatInterval(cost.min(), ((PlteqC)choice).c);
+		    System.out.println ("% Checking interval " + f);
+	    }
 
 		store.impose(choice);
 		result = minimize();
@@ -139,7 +141,13 @@ public class Optimize  {
 		    return result;
 		}
 		else {
-		    // System.out.println ("not choice point: " + choice);
+
+		    if (printInfo) {
+			System.out.println("% No solution");
+
+			FloatInterval f = new FloatInterval(org.jacop.floats.core.FloatDomain.next(((PlteqC)choice).c), cost.max());
+			System.out.println ("% Checking interval " + f);
+		    }
 
 		    store.impose(new Not(choice));
 		    result = minimize();
