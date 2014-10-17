@@ -107,8 +107,6 @@ public class Linear extends PrimitiveConstraint {
 
     BTree linearTree;
 
-    Constraint c = null;
-
     VariableNode[] sortedVarNodes;
 
     /**
@@ -173,36 +171,29 @@ public class Linear extends PrimitiveConstraint {
 	}
 
 
-	if  (this.list.length == 0 && sum == 0)
-	    return;
+	if  (this.list.length == 0) {
+
+	    this.list = new FloatVar[2];
+	    this.weights = new double[2];
+	    this.list[0] = new FloatVar(store, 0,0);
+	    this.weights[0] = 1;
+	    this.list[1] = new FloatVar(store, 0,0);
+	    this.weights[1] = 1;
+	    
+	}
+
 	if ( this.list.length == 1) {
-	    System.out.println("Warrning: List of length 1 in LinearFloat(["+this.list[0].id()+"], ["+this.weights[0] +"], "+rel2String()+", " + this.sum+")");
+	    // System.out.println("% Warrning: List of length 1 in LinearFloat(["+this.list[0].id()+"], ["+this.weights[0] +"], "+rel2String()+", " + this.sum+")");
 
-	    switch (relationType) {
-	    case eq : 
-		c = new PmulCeqR(this.list[0], this.weights[0], new FloatVar(store, sum-FloatDomain.precision()/2, sum+FloatDomain.precision()/2));
-		break;
-	    case lt : 
-		c = new PmulCeqR(this.list[0], this.weights[0], new FloatVar(store, FloatDomain.MinFloat, FloatDomain.previous(sum)));
-		break;
-	    case le : 
-		c = new PmulCeqR(this.list[0], this.weights[0], new FloatVar(store, FloatDomain.MinFloat, sum));
-		break;
-	    case ne :
-		FloatDomain d = new FloatIntervalDomain(FloatDomain.MinFloat, FloatDomain.MaxFloat);
-		d.subtract(sum);
-		c = new PmulCeqR(this.list[0], this.weights[0], new FloatVar(store, d));
-		break;
-	    case gt : 
-		c = new PmulCeqR(this.list[0], this.weights[0], new FloatVar(store, FloatDomain.next(sum), FloatDomain.MaxFloat));
-		break;
-	    case ge : 
-		c = new PmulCeqR(this.list[0], this.weights[0], new FloatVar(store, sum, FloatDomain.MaxFloat));
-		break;
-	    }
-
-
-	    return;
+	    FloatVar v = list[0];
+	    double w = weights[0];
+	    this.list = new FloatVar[2];
+	    this.weights = new double[2];
+	    this.list[0] = v;
+	    this.weights[0] = w;
+	    this.list[1] = new FloatVar(store, 0,0);
+	    this.weights[1] = 1;
+	    
 	}
 
 	VariableNode[] leafNodes = new VariableNode[this.list.length];
@@ -419,11 +410,6 @@ public class Linear extends PrimitiveConstraint {
     public void impose(Store store) {	
 
 	reified = false;
-
-	if (c != null) {
-	    store.impose(c);
-	    return;
-	}
 
 	for (Var v : list) {
 	    v.putModelConstraint(this, getConsistencyPruningEvent(v));
