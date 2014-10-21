@@ -32,6 +32,7 @@
 package org.jacop.floats.constraints;
 
 
+import org.jacop.core.Var;
 import org.jacop.floats.constraints.linear.Linear;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.core.Store;
@@ -68,6 +69,11 @@ public class LinearFloat extends Linear {
 		       ArrayList<Double> weights, String rel, double sum) {
 
 	super(store, variables, weights, rel, sum);
+    }
+
+    @Override
+    public void queueVariable(int level, Var var) {
+	super.queueVariable(level, var);
     }
 
     public FloatVar derivative(Store store, FloatVar f, java.util.Set<FloatVar> vars, FloatVar x) {

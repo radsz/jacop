@@ -197,12 +197,12 @@ public class Constraints implements ParserTreeConstants {
 		// node.dump("");
 		// System.out.println(p + " op = " + operation);
 
-		// int_eq*, int_ne*, int_lt*, int_gt*, int_le*, and int_ge*
+		// float_eq*, float_ne*, float_lt*, float_gt*, float_le*, and float_ge*
 		if ( operation != -1) {
-		    float_comparison(operation, node, 6);
+		    float_comparison(operation, node, 8);
 		}
 
-		// int_lin_* (eq, ne, lt, gt, le, ge)
+		// float_lin_* (eq, ne, lt, gt, le, ge)
 		else if (p.startsWith("lin_", 6)) {
 		    operation = comparisonPredicate(p, 10);
 		    float_lin_relation(operation, node);
@@ -1847,6 +1847,7 @@ public class Constraints implements ParserTreeConstants {
 	    IntVar v3 = getVariable(p3);
 
 	    if (p2.getType() == 5) { // var rel float
+
 		FloatVar v1 = getFloatVariable(p1);
 
 		double i2 = getFloat(p2);
@@ -1942,7 +1943,7 @@ public class Constraints implements ParserTreeConstants {
 		}
 	    } else if (p1.getType() == 5) { // float rel var
 		FloatVar v2 = getFloatVariable(p2);
-		double i1 = getInt(p1);
+		double i1 = getFloat(p1);
 
 		switch (operation) {
 
@@ -3445,7 +3446,7 @@ public class Constraints implements ParserTreeConstants {
     }
 
     void pose(Constraint c) throws FailException {
- 	
+
 	store.imposeWithConsistency(c);	
 	
 	if (debug)
