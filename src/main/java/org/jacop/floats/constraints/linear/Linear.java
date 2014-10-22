@@ -185,15 +185,15 @@ public class Linear extends PrimitiveConstraint {
 	if ( this.list.length == 1) {
 	    // System.out.println("% Warrning: List of length 1 in LinearFloat(["+this.list[0].id()+"], ["+this.weights[0] +"], "+rel2String()+", " + this.sum+")");
 
-	    FloatVar v = list[0];
-	    double w = weights[0];
+	    FloatVar v = this.list[0];
+	    double w = this.weights[0];
 	    this.list = new FloatVar[2];
 	    this.weights = new double[2];
 	    this.list[0] = v;
 	    this.weights[0] = w;
 	    this.list[1] = new FloatVar(store, 0,0);
 	    this.weights[1] = 1;
-	    
+
 	}
 
 	VariableNode[] leafNodes = new VariableNode[this.list.length];
@@ -207,8 +207,6 @@ public class Linear extends PrimitiveConstraint {
 	    leafNodes[i].rel = relationType;
 
 	    varMap.put(this.list[i], leafNodes[i]);
-
-	    // System.out.println (leafNodes[i]);
 
 	}
 

@@ -138,7 +138,12 @@ public class Options {
 				else if (args[i].equals("-p") || args[i].equals("--precision")) {
 				        precisionDefined = true;
 					precision = Double.parseDouble(args[++i]);
-					FloatDomain.setPrecision(precision);
+					if (precision >= 0)
+					    FloatDomain.setPrecision(precision);
+					else {
+					    precision = FloatDomain.precision();
+					    System.err.println("%% Precisison parameter not correct; using default precision " + precision);
+					}
 					i++;
 				}
 				else {

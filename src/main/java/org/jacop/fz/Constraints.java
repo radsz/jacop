@@ -46,6 +46,7 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.floats.core.FloatVar;
+import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.constraints.*;
 
 import org.jacop.set.constraints.AdiffBeqC;
@@ -2062,8 +2063,8 @@ public class Constraints implements ParserTreeConstants {
 
 	    if (p1.getType() == 5) { // first parameter float
 		if (p2.getType() == 0 || p2.getType() == 1) { // first parameter float & second parameter float
-		    double i1 = getInt(p1);
-		    double i2 = getInt(p2);
+		    double i1 = getFloat(p1);
+		    double i2 = getFloat(p2);
 		    switch (operation) {
 		    case eq :
 			if (i1 != i2) throw Store.failException;
@@ -2098,10 +2099,10 @@ public class Constraints implements ParserTreeConstants {
 			v2.domain.inComplement(store.level, v2, i1);
 			break;
 		    case lt :
-			v2.domain.in(store.level, v2, i1+1, IntDomain.MaxInt);
+			v2.domain.in(store.level, v2, FloatDomain.next(i1), VariablesParameters.MAX_FLOAT);
 			break;
 		    case le :
-			v2.domain.in(store.level, v2, i1, IntDomain.MaxInt);
+			v2.domain.in(store.level, v2, i1, VariablesParameters.MAX_FLOAT);
 			break;
 		    // case gt :
 		    // 	v2.domain.in(store.level, v2, IntDomain.MinInt, i1-1);
