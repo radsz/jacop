@@ -316,9 +316,12 @@ public class Constraints implements ParserTreeConstants {
 		    FloatVar v2 = getFloatVariable(p2);
 		    FloatVar v3 = getFloatVariable(p3);
 
+		    pose(new org.jacop.floats.constraints.Min(new FloatVar[] {v1, v2}, v3));
+		    // 1.
 		    // pose(new IfThenElse(new PlteqQ(v1,v2), new PeqQ(v1,v3), new PeqQ(v2,v3)));
-		    pose(new IfThen(new PltQ(v1,v2), new PeqQ(v1,v3)));
-		    pose(new IfThen(new PltQ(v2,v1), new PeqQ(v2,v3)));
+		    // 2.
+		    // pose(new IfThen(new PltQ(v1,v2), new PeqQ(v1,v3)));
+		    // pose(new IfThen(new PltQ(v2,v1), new PeqQ(v2,v3)));
 		}
 		else if (p.startsWith("max", 6)) {
 		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
@@ -329,9 +332,13 @@ public class Constraints implements ParserTreeConstants {
 		    FloatVar v2 = getFloatVariable(p2);
 		    FloatVar v3 = getFloatVariable(p3);
 
-		    // pose(new IfThenElse(new PltQ(v2,v1), new PeqQ(v1,v3), new PeqQ(v2,v3)));
-		    pose(new IfThen(new PltQ(v2,v1), new PeqQ(v1,v3)));
-		    pose(new IfThen(new PltQ(v1,v2), new PeqQ(v2,v3)));
+		    pose(new org.jacop.floats.constraints.Max(new FloatVar[] {v1, v2}, v3));
+
+		    // 1.
+		    pose(new IfThenElse(new PltQ(v2,v1), new PeqQ(v1,v3), new PeqQ(v2,v3)));
+		    // 2.
+		    // pose(new IfThen(new PltQ(v2,v1), new PeqQ(v1,v3)));
+		    // pose(new IfThen(new PltQ(v1,v2), new PeqQ(v2,v3)));
 		}
 		else {
 		    System.err.println("%% ERROR: JaCoP does not implement this constraints on floats");
@@ -488,7 +495,7 @@ public class Constraints implements ParserTreeConstants {
 		    if (v1 == v2)
 		    	pose(new XeqY(v1, v3));
 		    else
-		    	pose(new Min(new IntVar[] {v1, v2}, v3));
+		    	pose(new org.jacop.constraints.Min(new IntVar[] {v1, v2}, v3));
 
 		}
 		else if (p.startsWith("max", 4)) {
@@ -523,7 +530,7 @@ public class Constraints implements ParserTreeConstants {
 		    else if (v1 == v2)
 		    	pose(new XeqY(v1, v3));
 		    else
-		    	pose(new Max(new IntVar[] {v1, v2}, v3));
+		    	pose(new org.jacop.constraints.Max(new IntVar[] {v1, v2}, v3));
 
 		}
 		else if (p.startsWith("abs", 4)) {
@@ -1200,13 +1207,13 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar n = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
 		    IntVar[] x = getVarArray((SimpleNode)node.jjtGetChild(1));
 
-		    pose(new Min(x, n));
+		    pose(new org.jacop.constraints.Min(x, n));
 		}
 		else if (p.startsWith("maximum", 6)) {
 		    IntVar n = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
 		    IntVar[] x = getVarArray((SimpleNode)node.jjtGetChild(1));
 
-		    pose(new Max(x, n));
+		    pose(new org.jacop.constraints.Max(x, n));
 		}
 		else if (p.startsWith("table_int", 6) ||
 			 p.startsWith("table_bool", 6)) { 
