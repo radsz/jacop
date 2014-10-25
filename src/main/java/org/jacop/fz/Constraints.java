@@ -1420,6 +1420,18 @@ public class Constraints implements ParserTreeConstants {
 //   		    Constraint binPack = new org.jacop.constraints.binpacking.Binpacking(bin, capacity, w);
 //   		    delayedConstraints.add(binPack);
 		}
+		else if (p.startsWith("float_maximum", 6)) {
+		    FloatVar p2 = getFloatVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
+		    FloatVar[] p1 = getFloatVarArray((SimpleNode)node.jjtGetChild(0));
+
+		    pose(new org.jacop.floats.constraints.Max(p1, p2));
+		}
+		else if (p.startsWith("float_minimum", 6)) {
+		    FloatVar p2 = getFloatVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
+		    FloatVar[] p1 = getFloatVarArray((SimpleNode)node.jjtGetChild(0));
+
+		    pose(new org.jacop.floats.constraints.Min(p1, p2));
+		}
 		else
 		    System.err.println("%% ERROR: Constraint "+p+" not supported.");
 	    // >>========== JaCoP constraints ==================
