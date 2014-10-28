@@ -205,7 +205,7 @@ package object scala {
 * @param mx maxumum value. 
 */
   def max[T <: org.jacop.core.IntVar](x: List[T], mx: org.jacop.core.IntVar)(implicit m: ClassTag[T])  {
-    val c = new Max(x.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], mx)
+    val c = new org.jacop.constraints.Max(x.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], mx)
     if (trace) println(c)
     impModel.impose(c)
   }
@@ -217,7 +217,7 @@ package object scala {
 * @param mn minimum value.
 */
   def min[T <: org.jacop.core.IntVar](x: List[T], mn: org.jacop.core.IntVar )(implicit m: ClassTag[T]) {
-    val c = new Min(x.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], mn)
+    val c = new org.jacop.constraints.Min(x.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], mn)
     if (trace) println(c)
     impModel.impose(c)
   }
@@ -230,7 +230,7 @@ package object scala {
 */
   def max[T <: org.jacop.core.IntVar](x: List[T])(implicit m: ClassTag[T]) : IntVar = {
     val result = new IntVar()
-    val c = new Max(x.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], result)
+    val c = new org.jacop.constraints.Max(x.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], result)
     impModel.constr += c
     result
   }
@@ -243,7 +243,7 @@ package object scala {
 */
   def min[T <: org.jacop.core.IntVar](x: List[T])(implicit m: ClassTag[T]) : IntVar = {
     val result = new IntVar()
-    val c = new Min(x.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], result)
+    val c = new org.jacop.constraints.Min(x.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], result)
     impModel.constr += c
     result
   }
