@@ -76,7 +76,7 @@ public class SGMPCSearch {
 
     public Store store;
 
-    boolean trace = false;
+    boolean trace = true;
     boolean printInfo = true;
 
     // Start time of the search to compute termination criteria
@@ -138,7 +138,7 @@ public class SGMPCSearch {
 
     ImproveSolution<IntVar> search;
 
-    int costPosition;
+    public int costPosition;
 
     public SGMPCSearch(Store store, IntVar[] vars, IntVar cost) {
 
