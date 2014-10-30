@@ -76,7 +76,7 @@ public class SGMPCSearch {
 
     public Store store;
 
-    boolean trace = true;
+    boolean trace = false;
     boolean printInfo = true;
 
     // Start time of the search to compute termination criteria
