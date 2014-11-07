@@ -46,7 +46,7 @@ import org.jacop.core.IntervalEnumeration;
 
 /**
  * SumWeightDom constraint implements the weighted summation over several
- * variable's . It provides the weighted sum from all variable's on the list.
+ * variables . It provides the weighted sum from all variables on the list.
  * The weights are integers.
  *
  * The complexity of domain consistency is exponential in worst case. Use it carefully!
