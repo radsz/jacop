@@ -1229,7 +1229,7 @@ public class Constraints implements ParserTreeConstants {
 		    // we do not not pose ExtensionalSupportMDD directly because of possible inconsistency with its 
 		    // intiallization; we collect all constraints and pose them at the end when all other constraints are posed
 
-		    delayedConstraints.add(new ExtensionalSupportSTR(v, t));
+		    delayedConstraints.add(new ExtensionalSupportMDD(v, t));
  		    //pose(new ExtensionalSupportMDD(v, t));
 		}
 		else if (p.startsWith("assignment", 6)) {
