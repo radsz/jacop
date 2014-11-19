@@ -58,7 +58,7 @@ trait jacop {
 /**
  * Converts double to FloatVar.
  *
- * @param i integer to be converted.
+ * @param d float to be converted.
  */
   implicit def doubleToFloatVar(d: Double): FloatVar = {
     val v = new FloatVar(d, d)

@@ -13,7 +13,7 @@ import org.jacop.search._
 //import org.jacop.set.core._
 import org.jacop.set.constraints._
 import org.jacop.set.search._
-import org.jacop.floats.core._
+import org.jacop.floats.core.FloatDomain
 import org.jacop.floats.constraints._
 import org.jacop.floats.search._
 
@@ -377,7 +377,7 @@ package object scala {
     result
   }
 
-  /** Wrapper for [[org.jacop.float.constraints.Element]].
+  /** Wrapper for [[org.jacop.floats.constraints.ElementFloat]].
     *
     * @param index    index to select element from list of elements.
     * @param xs       array of integers that can be assigned to values.
@@ -512,7 +512,7 @@ package object scala {
   }
 
 /**
-* Wrapper for [[org.jacop.constraints.binpack.Binpack]].
+* Wrapper for [[org.jacop.constraints.binpacking.Binpacking]].
 *
 * @param bin list containing which bin is assigned to an item. 
 * @param load list of loads for bins.
