@@ -10,6 +10,10 @@ Version 4.1.1
    to scan the whole list for achieving consistency.
 4. Checking for overflow in Sum and improvement in detecting overflow for
    addition.
+5. Since domain consistency is computationally expensive minizinc uses
+   domain consistency for linear constraints only when constrained are
+   annotated ":: domain" and the size of maximal domains is <= 4 and
+   there is no more than 2 variables.
 
 Version 4.1
 ===========
