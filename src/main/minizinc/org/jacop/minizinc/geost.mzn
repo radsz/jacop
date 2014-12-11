@@ -57,20 +57,6 @@ predicate geost(
         /\  % Posting the geost constraint
 	jacop_geost(k, rect_size, rect_offset, shape, x, kind)
 
-        % forall(o1, o2 in OBJECTS where o1 < o2)(
-        %     forall(s1 in dom(kind[o1]), s2 in dom(kind[o2]))(
-        %         (kind[o1] = s1 /\ kind[o2] = s2 ->  
-        %             forall(r1 in shape[s1], r2 in shape[s2])(
-        %                 geost_nonoverlap_k(
-        %                     [ x[o1,j] + rect_offset[r1,j] | j in DIMS ],   
-        %                     [ rect_size[r1,j]             | j in DIMS ], 
-        %                     [ x[o2,j] + rect_offset[r2,j] | j in DIMS ],   
-        %                     [ rect_size[r2,j]             | j in DIMS ]
-        %                 )
-        %             )
-        %         )
-        %     )
-        % )
     ); % End assert statement
 
 
@@ -112,17 +98,6 @@ predicate geost_bb(
         } in
         % Posting the geost constraint
         jacop_geost_bb(k, rect_size, rect_offset, shape, x, kind, l, u)
-        % /\ % Posting the bounding box constraints
-        % forall(o in OBJECTS)(
-        %     forall(s in dom(kind[o]))(
-        %         (kind[o] = s ->
-        %             forall(r in shape[s], j in DIMS)(
-        %                 x[o,j] + rect_offset[r,j] >= l[j]
-        %             /\  x[o,j] + rect_offset[r,j] + rect_size[r,j] <= u[j]
-        %             )
-        %         )
-        %     )
-        % )
     );
 
 predicate jacop_geost(
@@ -159,11 +134,6 @@ predicate geost_nonoverlap_k(
         % Error message
         "geost_nonoverlap_k: index sets of arguments do not match",
 	true
-
-        % Non-overlap constraint
-        % exists(j in index_set(x1))(
-        %     x1[j] + w1[j] <= x2[j] \/ x2[j] + w2[j] <= x1[j]
-        % )
     );
 
 
@@ -182,9 +152,4 @@ test geost_nonoverlap_k(
         "geost_nonoverlap_k: index sets of arguments do not match",
 
 	true
-
-        % Non-overlap test
-        % exists(j in index_set(x1))(
-        %     x1[j] + w1[j] <= x2[j] \/ x2[j] + w2[j] <= x1[j]
-        % )
     );
