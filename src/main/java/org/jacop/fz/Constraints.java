@@ -1431,7 +1431,7 @@ public class Constraints implements ParserTreeConstants {
 
 		    ArrayList<Shape> shapes = new ArrayList<Shape>(); 
 
-		    // dymmy shape to have right indexes for kind (starting from 1)
+		    // dummy shape to have right indexes for kind (starting from 1)
 		    ArrayList<DBox> dummy = new ArrayList<DBox>();
 		    int[] offsetDummy = new int[dim];
 		    int[] sizeDummy = new int[dim];
