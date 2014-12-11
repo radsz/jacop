@@ -1,3 +1,10 @@
+Version 4.2
+===========
+1. Support for minizinc 2.0
+2. Constraint Geost avaible is now from minizinc.
+3. Implementation of Solution-Guided Multi-Point Constructive Search.
+4. Improvements in minimization method for floating-point variables.
+
 Version 4.1.1
 ===========
 
