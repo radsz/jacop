@@ -58,6 +58,7 @@ import org.jacop.set.constraints.ElementSet;
 import org.jacop.set.constraints.Lex;
 import org.jacop.set.constraints.XinA;
 import org.jacop.set.constraints.AdisjointB;
+import org.jacop.constraints.geost.*;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
 import org.jacop.util.fsm.FSM;
@@ -1411,6 +1412,115 @@ public class Constraints implements ParserTreeConstants {
    		    pose( new org.jacop.constraints.binpacking.Binpacking(bin, capacity, w) );
 //   		    Constraint binPack = new org.jacop.constraints.binpacking.Binpacking(bin, capacity, w);
 //   		    delayedConstraints.add(binPack);
+		}
+ 		else if (p.startsWith("geost", 6)) {
+
+		    int dim = getInt((ASTScalarFlatExpr)node.jjtGetChild(0));
+		    int[] rect_size = getIntArray((SimpleNode)node.jjtGetChild(1));
+		    int[] rect_offset = getIntArray((SimpleNode)node.jjtGetChild(2));
+		    IntDomain[] shape =  getSetArray((SimpleNode)node.jjtGetChild(3));
+		    IntVar[] x = getVarArray((SimpleNode)node.jjtGetChild(4));
+		    IntVar[] kind = getVarArray((SimpleNode)node.jjtGetChild(5));
+
+		    // System.out.println("dim = " + dim);
+		    // System.out.print("rect_size = [");
+		    // for (int i = 0; i < rect_size.length; i++) 
+		    // 	System.out.print(" " + rect_size[i]);
+		    // System.out.print("]\nrect_offset = [");
+		    // for (int i = 0; i < rect_offset.length; i++) 
+		    // 	System.out.print(" " + rect_offset[i]);
+		    // System.out.println("]\nshape = " + java.util.Arrays.asList(shape));
+		    // System.out.println("x = " + java.util.Arrays.asList(x));
+		    // System.out.println("kind = " + java.util.Arrays.asList(kind));
+		    // System.out.println("===================");
+
+
+		    ArrayList<Shape> shapes = new ArrayList<Shape>(); 
+
+		    // dummy shape to have right indexes for kind (starting from 1)
+		    ArrayList<DBox> dummy = new ArrayList<DBox>();
+		    int[] offsetDummy = new int[dim];
+		    int[] sizeDummy = new int[dim];
+		    for (int k = 0; k < dim; k++) {
+			offsetDummy[k] = 0;
+			sizeDummy[k] = 1;
+		    }
+		    dummy.add(new DBox(offsetDummy, sizeDummy));
+		    shapes.add( new Shape(0, dummy));
+
+		    // create all shapes (starting with id=1)
+		    for (int i = 0; i < shape.length; i++) {
+			ArrayList<DBox> shape_i = new ArrayList<DBox>();
+
+			for (ValueEnumeration e = shape[i].valueEnumeration(); e.hasMoreElements();) {
+			    int j = e.nextElement();
+
+			    int[] offset = new int[dim];
+			    int[] size = new int[dim];
+
+			    for (int k = 0; k < dim; k++) {
+				offset[k] = rect_offset[(j-1)*dim+k];
+				size[k] = rect_size[(j-1)*dim+k];
+			    }
+			    shape_i.add(new DBox(offset, size));
+
+			}
+			shapes.add( new Shape((i+1), shape_i) );
+		    }		    
+
+		    // for (int i = 0; i < shapes.size(); i++) 
+		    // 	System.out.println("*** " + shapes.get(i));
+
+		    ArrayList<GeostObject> objects = new ArrayList<GeostObject>(); 
+
+		    for (int i = 0; i < kind.length; i++) {
+
+			IntVar[] coords = new IntVar[dim]; 
+
+			for (int k = 0; k < dim; k++) 
+			    coords[k] = x[i*dim+k];
+
+			// System.out.println("coords = " + java.util.Arrays.asList(coords));
+
+			IntVar start = new IntVar(store, "start["+i+"]", 0,0); 
+			IntVar duration = new IntVar(store, "duration["+i+"]", 1,1); 
+			IntVar end = new IntVar(store, "end["+i+"]", 1, 1); 
+			GeostObject obj = new GeostObject(i, coords, kind[i], start, duration, end); 
+			objects.add(obj);
+		    }
+
+		    // System.out.println("===========");
+		    // for (int i = 0; i < objects.size(); i++) 
+		    // 	System.out.println(objects.get(i));
+		    // System.out.println("===========");
+
+		    ArrayList<ExternalConstraint> constraints = new ArrayList<ExternalConstraint>(); 
+		    int[] dimensions = new int[dim+1]; 
+		    for (int i = 0; i < dim+1; i++) 
+			dimensions[i] = i;
+
+		    NonOverlapping constraint1 = new NonOverlapping(objects, dimensions); 
+		    constraints.add(constraint1); 
+
+		    if (p.startsWith("geost_bb", 6)) {
+
+			int[] lb = getIntArray((SimpleNode)node.jjtGetChild(6));
+			int[] ub = getIntArray((SimpleNode)node.jjtGetChild(7));
+
+			// System.out.print("[");
+			// for (int i = 0; i < lb.length; i++) 
+			// 	System.out.print(" " + lb[i]);
+			// System.out.print("]\n[");
+			// for (int i = 0; i < ub.length; i++) 
+			// 	System.out.print(" " + ub[i]);
+			// System.out.println("]");
+
+			InArea constraint2 = new InArea(new DBox(lb, ub), null); 
+			constraints.add(constraint2);
+		    }
+
+   		    pose( new Geost(objects, constraints, shapes) );
+
 		}
 		else
 		    System.err.println("%% ERROR: Constraint "+p+" not supported.");

@@ -11,14 +11,6 @@ predicate table_bool(array[int] of var bool: x, array[int, int] of bool: t) =
 
 predicate jacop_table_bool(array[int] of var bool: x, array[int, int] of bool: t);
 
-
-%        let { int: l = min(index_set(x)),
-%              int: u = max(index_set(x)),
-%              int: lt = min(index_set_1of2(t)),
-%              int: ut = max(index_set_1of2(t)),
-%              var lt..ut: i } 
-%        in
-%              forall(j in l..u) (
-%                t[i,j] = x[j]
-%             )
-%        );
+predicate table_bool_reif(array[int] of var bool: x, array[int, int] of bool: t,
+      var bool: b) = 
+   abort("Reified table/2 for Booleans is not supported.");
