@@ -1,5 +1,5 @@
 /**
- *  RunWhenShuttingDown.java 
+ *  BinaryNode.java 
  *  This file is part of JaCoP.
  *
  *  JaCoP is a Java Constraint Programming solver. 
@@ -29,21 +29,49 @@
  *
  */
 
+package org.jacop.floats.constraints.linear;
 
-package org.jacop.fz;
+/**
+ * Binary Node of the tree representing linear constraint.
+ * 
+ * @author Krzysztof Kuchcinski
+ * @version 4.1
+ */
 
-public class RunWhenShuttingDown extends Thread {
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatInterval;
+import org.jacop.core.Store;
+import org.jacop.floats.constraints.linear.BoundsVar;
+import org.jacop.floats.constraints.linear.BoundsVarValue;
 
-    Parser parser;
+public abstract class BinaryNode {
 
-    public RunWhenShuttingDown(Parser parser) {
-	this.parser = parser;
-    }
+    static int n = 0;
+    int id;
 
-    public void run() {
-
-	parser.solver.printStatisticsIterrupt();
-
-    }
+    // tree structure
+    BinaryNode parent = null;
+    BinaryNode left = null;
+    BinaryNode right = null;
+    BinaryNode sibling = null;
     
+    abstract void propagateAndPrune();
+
+    abstract void prune();
+
+    abstract void propagate();
+
+    abstract double min();
+
+    abstract double max();
+
+    abstract double lb();
+
+    abstract double ub();
+
+    abstract void updateBounds(double min, double max, double lb, double ub);
+
+    public String toString() {
+    	return "" + id; 
+    }
 }

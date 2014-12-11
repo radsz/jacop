@@ -1,5 +1,5 @@
 /**
- *  RunWhenShuttingDown.java 
+ *  VarNode.java 
  *  This file is part of JaCoP.
  *
  *  JaCoP is a Java Constraint Programming solver. 
@@ -29,21 +29,75 @@
  *
  */
 
+package org.jacop.floats.constraints.linear;
 
-package org.jacop.fz;
+/**
+ * Binary Node of the tree representing linear constraint.
+ * 
+ * @author Krzysztof Kuchcinski
+ * @version 4.1
+ */
 
-public class RunWhenShuttingDown extends Thread {
+import org.jacop.floats.core.FloatVar;
+import org.jacop.core.Store;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.constraints.linear.BoundsVar;
+import org.jacop.floats.constraints.linear.BoundsVarValue;
+import org.jacop.floats.constraints.linear.Linear;
 
-    Parser parser;
+public class VarNode extends VariableNode {
 
-    public RunWhenShuttingDown(Parser parser) {
-	this.parser = parser;
+    public VarNode(Store store, FloatVar v){
+
+	id = n++;
+	this.store = store;
+
+	var = v;
+
     }
 
-    public void run() {
 
-	parser.solver.printStatisticsIterrupt();
+    void propagateAndPrune() {
+
+	parent.propagateAndPrune();
 
     }
-    
+
+    void prune() {
+
+	// Pruning for variable is done in updateBounds since there is not weight
+
+    }
+
+    void propagate() {
+
+	parent.propagate();
+
+    }
+
+    double min() {
+	 return var.min();
+    }
+
+    double max() {
+	return var.max();
+    }
+
+    double lb() {
+	 return var.min();
+    }
+
+    double ub() {
+	return var.max();
+    }
+
+    void updateBounds(double min, double max, double lb, double ub) {
+
+	var.domain.in(store.level, var, min, max);
+
+    }
+
+   public String toString() {
+	return super.toString() + " (rel = " + rel + ", " + var + ")";
+    }
 }

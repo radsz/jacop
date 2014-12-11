@@ -46,7 +46,7 @@ import org.jacop.core.Store;
 
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.ComparatorVariable;
-import org.jacop.search.Indomain;
+// import org.jacop.search.Indomain;
 import org.jacop.core.TimeStamp;
 
 /**
@@ -81,7 +81,6 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
 	 * The constructor to create a simple choice select mechanism.
 	 * @param variables variables upon which the choice points are created.
 	 * @param varSelect the variable comparator to choose the variable.
-	 * @param indomain the value heuristic to choose a value for a given variable.
 	 */
 	public SplitSelectFloat(Store store, T[] variables, 
 				ComparatorVariable<T> varSelect) {
@@ -97,7 +96,6 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
 	 * @param variables variables used as basis of the choice point.
 	 * @param varSelect the main variable comparator.
 	 * @param tieBreakerVarSelect secondary variable comparator employed if the first one gives the same metric.
-	 * @param indomain the heuristic to choose value assigned to a chosen variable.
 	 */
 	public SplitSelectFloat(Store store, T[] variables, 
 				ComparatorVariable<T> varSelect,

@@ -60,4 +60,6 @@ public interface ImproveSolution<T extends Var> {
 
     public void setPrintInfo(boolean p);
 
+    public void setTimeOut(long timeOut);
+
 }

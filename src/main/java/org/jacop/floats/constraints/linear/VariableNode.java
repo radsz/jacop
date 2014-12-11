@@ -1,5 +1,5 @@
 /**
- *  RunWhenShuttingDown.java 
+ *  VariableNode.java 
  *  This file is part of JaCoP.
  *
  *  JaCoP is a Java Constraint Programming solver. 
@@ -29,21 +29,26 @@
  *
  */
 
+package org.jacop.floats.constraints.linear;
 
-package org.jacop.fz;
+/**
+ * Binary Node of the tree representing linear constraint.
+ * 
+ * @author Krzysztof Kuchcinski
+ * @version 4.1
+ */
 
-public class RunWhenShuttingDown extends Thread {
+import org.jacop.floats.core.FloatVar;
+import org.jacop.core.Store;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.constraints.linear.BoundsVar;
+import org.jacop.floats.constraints.linear.BoundsVarValue;
+import org.jacop.floats.constraints.linear.Linear;
 
-    Parser parser;
+public abstract class VariableNode extends BinaryNode{
 
-    public RunWhenShuttingDown(Parser parser) {
-	this.parser = parser;
-    }
+    Store store;
+    FloatVar var = null;
+    byte rel;
 
-    public void run() {
-
-	parser.solver.printStatisticsIterrupt();
-
-    }
-    
 }

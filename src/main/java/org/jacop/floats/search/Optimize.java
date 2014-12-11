@@ -67,6 +67,9 @@ public class Optimize  {
 
     boolean printInfo = true;
 
+    FloatInterval lastCost;
+    FloatInterval[] lastVarValues;
+
     public Optimize(Store store, DepthFirstSearch search, SelectChoicePoint select, FloatVar cost) {
 
 	this.store = store;
@@ -77,13 +80,36 @@ public class Optimize  {
 	search.setAssignSolution(false);
 	search.setPrintInfo(false);
 
-	variables = ((SplitSelectFloat)select).searchVariables;
+	Var[] sVar = ((SplitSelectFloat)select).searchVariables;
+	variables = new Var[sVar.length];
+	for (int i = 0; i < sVar.length; i++) 
+	    variables[i] = sVar[i];
+
 	search.setSolutionListener(new ResultListener<Var>(variables));
 
 	split = new SplitSelectFloat<FloatVar>(store, new FloatVar[] {cost}, null);
+
+	lastVarValues = new FloatInterval[variables.length];
+
     }
 
     public boolean minimize() {
+
+	store.setLevel(store.level+1);
+
+	boolean result = store.consistency();
+
+	if (result)
+	    if (lastCost != null) {
+
+		if ( !( lastCost.min() >= cost.min() && lastCost.max() <= cost.max()) ) 
+		    result = search.labeling(store, select);
+		else 
+		    printLastSolution();
+
+	    }
+	    else
+		result = search.labeling(store, select);
 
 	PrimitiveConstraint choice = split.getChoiceConstraint(0);
 
@@ -96,15 +122,13 @@ public class Optimize  {
 		choice = new PlteqC(cost, costValue);
 	    }
 
-	store.setLevel(store.level+1);
-
-	boolean result = search.labeling(store, select);
-
 	if (result) {
 
-		if (printInfo)
+	    if (printInfo) {
 		    System.out.println ("% Current cost bounds: " + cost + "\n----------");
-		// System.out.println ("choice point: "+ choice);
+		    FloatInterval f = new FloatInterval(cost.min(), ((PlteqC)choice).c);
+		    System.out.println ("% Checking interval " + f);
+	    }
 
 		store.impose(choice);
 		result = minimize();
@@ -117,7 +141,13 @@ public class Optimize  {
 		    return result;
 		}
 		else {
-		    // System.out.println ("not choice point: " + choice);
+
+		    if (printInfo) {
+			System.out.println("% No solution");
+
+			FloatInterval f = new FloatInterval(org.jacop.floats.core.FloatDomain.next(((PlteqC)choice).c), cost.max());
+			System.out.println ("% Checking interval " + f);
+		    }
 
 		    store.impose(new Not(choice));
 		    result = minimize();
@@ -138,12 +168,26 @@ public class Optimize  {
 	}
     }
 
-    // public boolean maximize() {
-    // 	split.leftFirst = false;
+    void printLastSolution() {
 
-    // 	return minimize();
-    // }
+	System.out.print("[");
+	for (int i = 0; i < lastVarValues.length; i++) {
+	    System.out.print(variables[i].id() + " = " + lastVarValues[i]);
+	    if (i < lastVarValues.length - 1)
+		System.out.print(", ");
+	}
+	System.out.println("]");
+	System.out.println ("% Solution with cost " + cost.id() + "::{" + lastCost + "}");
 
+    }
+
+    public FloatInterval getFinalCost() {
+	return lastCost;
+    }
+
+    public FloatInterval[] getFinalVarValues() {
+	return lastVarValues;
+    }
 
     public class ResultListener<T extends Var> extends SimpleSolutionListener<T> {
 
@@ -161,6 +205,12 @@ public class Optimize  {
 
 	    System.out.println (java.util.Arrays.asList(var));
 	    System.out.println ("% Found solution with cost " + cost);
+
+	    lastCost = new FloatInterval(cost.min(), cost.max());
+	    for (int i=0; i < variables.length; i++) {
+		FloatVar v = (FloatVar)variables[i];
+		lastVarValues[i] = new FloatInterval(v.min(), v.max());
+	    }
 
 	    return returnCode;
 	}

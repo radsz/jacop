@@ -1,12 +1,26 @@
+Version 4.2
+===========
+1. Support for minizinc 2.0
+2. Constraint Geost avaible is now from minizinc.
+3. Implementation of Solution-Guided Multi-Point Constructive Search.
+4. Improvements in minimization method for floating-point variables.
+
 Version 4.1.1
 ===========
 
 1. New global constraint LexOrder that defines lexicographical order
    between two vectors of IntVar. Vectors must be of the same size.
-2. Performance improvements in AndBool and OrBool. it is no longer needed
+2. Implementation of a loader for flazinc models and related examples. The
+   loader makes it possible to load the model and then define own search
+   methods as well as use all variables defined in the model and their values.
+3. Performance improvements in AndBool and OrBool. it is no longer needed
    to scan the whole list for achieving consistency.
-3. Checking for overflow in Sum and improvement in detecting overflow for
+4. Checking for overflow in Sum and improvement in detecting overflow for
    addition.
+5. Since domain consistency is computationally expensive minizinc uses
+   domain consistency for linear constraints only when constrained are
+   annotated ":: domain" and the size of maximal domains is <= 4 and
+   there is no more than 2 variables.
 
 Version 4.1
 ===========

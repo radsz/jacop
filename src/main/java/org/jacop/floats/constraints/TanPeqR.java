@@ -237,40 +237,14 @@ public class TanPeqR extends Constraint {
 	    if (java.lang.Double.isNaN(pMax))
 	    	pMax = FloatDomain.PI/2;
 
-	    FloatIntervalDomain pDom = new FloatIntervalDomain(pMin, pMax);
-	    if (p.min() < -FloatDomain.PI/2) {
-		
-		int i=1;
-		double lo, hi;
-		do {
-		    lo = - i*FloatDomain.PI + pMin;
-		    hi = - i*FloatDomain.PI + pMax;
-		    i++;
-		    // System.out.println ("1. adding " +  lo +".."+ hi);
+	    double low, high;
+	    double k = Math.floor(p.min()/FloatDomain.PI);
+	    low = FloatDomain.down(pMin + k*FloatDomain.PI);
+	    k = Math.ceil(p.max()/FloatDomain.PI);
+	    high = FloatDomain.up(pMax + k*FloatDomain.PI);
+	    FloatIntervalDomain pDom = new FloatIntervalDomain(low, high);
 
-		    pDom.unionAdapt(lo, hi);
-
-		} while (lo > p.min());
-	    }
-	    if (p.max() > FloatDomain.PI/2) {
-
-		int i=1;
-		double lo, hi;
-		do {
-		    lo = i*FloatDomain.PI + pMin;
-		    hi = i*FloatDomain.PI + pMax;
-		    i++;
-		    // System.out.println ("2. adding " +  lo +".."+ hi);
-
-		    pDom.unionAdapt(lo, hi);
-
-		} while (hi < p.max());
-	    }
-
-
-	    // System.out.println ("2. " + p + " in " + pDom  + " p.min() - pMin = " + (double)(p.min() - pMin));
-
-	    p.domain.in(store.level, p, pDom.min(), pDom.max());
+	    p.domain.in(store.level, p, pDom); //.min(), pDom.max());		
 
 	    // System.out.println ("p after in " + p);
 

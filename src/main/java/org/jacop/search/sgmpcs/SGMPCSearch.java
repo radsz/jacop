@@ -138,6 +138,7 @@ public class SGMPCSearch {
 
     ImproveSolution<IntVar> search;
 
+    public int costPosition;
 
     public SGMPCSearch(Store store, IntVar[] vars, IntVar cost) {
 
@@ -168,8 +169,7 @@ public class SGMPCSearch {
 	int bestCostSolution = bestCostSolution();
 	if (trace)
 	    System.out.println("%% Best Cost elite solution is " + bestCostSolution + " with cost " + 
-			       elite[bestCostSolution][elite[bestCostSolution].length-1]);
-
+			       elite[bestCostSolution][costPosition]);
 
 	improveSolution();
 
@@ -189,10 +189,21 @@ public class SGMPCSearch {
 	else
 	    return;
 
-	IntVar[] v = new IntVar[vars.length+1];
+	costPosition = vars.length;
 	for (int i = 0; i < vars.length; i++) 
-	    v[i] = vars[i];
-	v[vars.length] = cost;
+	    if (vars[i] == cost)
+		costPosition = i;
+
+	IntVar[] v;
+	if (costPosition == vars.length) {
+	    v = new IntVar[vars.length+1];
+	    for (int i = 0; i < vars.length; i++) 
+		v[i] = vars[i];
+	    v[vars.length] = cost;
+	}
+	else
+	    v = vars;
+
 	DepthFirstSearch<IntVar> label = new DepthFirstSearch<IntVar>();
 	SelectChoicePoint<IntVar> select = new SimpleSelect<IntVar>(v, null,
 								    new IndomainMin<IntVar>());
@@ -222,7 +233,7 @@ public class SGMPCSearch {
 	    }
 	}
 
-	Arrays.sort(solutionPool, new SolutionComparator());
+	Arrays.sort(solutionPool, new SolutionComparator(costPosition));
 
 	elite = new int[e][];
 	for (int i=0; i<e; i++){ 
@@ -260,7 +271,14 @@ public class SGMPCSearch {
 
 	while (! terminationCriteria() ) {
 
-	    int bestCost = elite[bestCostSolution()][elite[bestCostSolution()].length-1];
+	    long currentTime = System.currentTimeMillis();
+	    long restTimeOut = (timeOut - (currentTime - searchStartTime))/1000;
+	    if (restTimeOut <= 0)
+		break; 
+
+	    search.setTimeOut( restTimeOut );
+
+	    int bestCost = elite[bestCostSolution()][costPosition];
 	    store.impose(new XltC(cost, bestCost));
 
 	    if (rand.nextFloat() < p) {
@@ -285,7 +303,7 @@ public class SGMPCSearch {
 		    numberConsecutiveFails = 0;
 
 		    int worst = worstCostSolution();
-		    if (elite[worst][elite[worst].length-1] > search.getCurrentCost()) {
+		    if (elite[worst][costPosition] > search.getCurrentCost()) {
 			replaceEliteSolution(worst, solution, search.getCurrentCost());
 		    }
 
@@ -311,7 +329,7 @@ public class SGMPCSearch {
 		    solution = search.getSolution();
 
 		    if (printInfo) {
-			System.out.println("%% Solution starting from reference with cost " + elite[n][elite[n].length-1]);
+			System.out.println("%% Solution starting from reference with cost " + elite[n][costPosition]);
 			printSolution(solution);
 		    }
 
@@ -330,7 +348,7 @@ public class SGMPCSearch {
 
     boolean terminationCriteria() {
 
-	boolean termination= false;
+	boolean termination = false;
 
 	long currentTime = System.currentTimeMillis();
 
@@ -338,15 +356,27 @@ public class SGMPCSearch {
 	termination = (currentTime - searchStartTime > timeOut) || 
 	    (numberConsecutiveFails > 0 && search.getNumberFails() < search.getFailLimit());
 
-	if (printInfo && termination)
+	if (printInfo && termination) {
 	    System.out.println("%% Termination search fails "+ search.getNumberFails() + 
 			       "(" + search.getFailLimit() + ")");
+
+	    if (solution == null) {
+
+		int bestCostSolution = bestCostSolution();
+
+		solution = new int[vars.length];
+		System.arraycopy(elite[bestCostSolution], 0, solution, 0, vars.length);
+
+		searchCost = elite[bestCostSolution][costPosition];
+	    }
+
+	}
 
 	return termination;
     }
 
-    public void setTimeOut(long t) {
-	timeOut = t;
+    public void setTimeOut(long t) { // t in seconds
+	timeOut = t * 1000;
     }
 
     void updateFailLimit(boolean fail) {
@@ -390,8 +420,8 @@ public class SGMPCSearch {
 	 int solution = -1;
 
 	 for (int i = 0; i < elite.length; i++) 
-	     if (currentCost > elite[i][elite[i].length-1]) {
-		 currentCost = elite[i][elite[i].length-1];
+	     if (currentCost > elite[i][costPosition]) {
+		 currentCost = elite[i][costPosition];
 		 solution = i;
 	     }
 
@@ -406,8 +436,8 @@ public class SGMPCSearch {
 	 int solution = -1;
 
 	 for (int i = 0; i < elite.length; i++) 
-	     if (currentCost < elite[i][elite[i].length-1]) {
-		 currentCost = elite[i][elite[i].length-1];
+	     if (currentCost < elite[i][costPosition]) {
+		 currentCost = elite[i][costPosition];
 		 solution = i;
 	     }
 
@@ -432,7 +462,7 @@ public class SGMPCSearch {
 
 	for (int i = 0; i < elite[n].length-1; i++) 
 	    elite[n][i] = solution[i];
-	elite[n][elite[n].length-1] = searchCost;
+	elite[n][costPosition] = searchCost;
 
     }
 
@@ -483,12 +513,15 @@ public class SGMPCSearch {
 
     public class SolutionComparator implements Comparator<int[]> {
 
-	public SolutionComparator() {
+	int p;
+
+	public SolutionComparator(int costPosition) {
+	    p = costPosition;
 	}
 
 	@Override
 	public int compare(int[] o1, int[] o2) {
-	    return (o1[o1.length-1] - o2[o2.length-1]);
+	    return (o1[p] - o2[p]);
 	}
     }
 

@@ -426,7 +426,7 @@ public class SearchItem implements ParserTreeConstants {
     }
 
     
-    ComparatorVariable getVarSelect() {
+    public ComparatorVariable getVarSelect() {
 
 	tieBreaking = null;
 	if (var_selection_heuristic == null)
@@ -467,7 +467,7 @@ public class SearchItem implements ParserTreeConstants {
 	return null; // input_order
     }
 
-    ComparatorVariable getFloatVarSelect() {
+    public ComparatorVariable getFloatVarSelect() {
 
 	tieBreaking = null;
 	if (var_selection_heuristic == null)
@@ -542,7 +542,7 @@ public class SearchItem implements ParserTreeConstants {
 	return null; // input_order
     }
 
-    Var getVariable(ASTScalarFlatExpr node) {
+    IntVar getVariable(ASTScalarFlatExpr node) {
 	if (node.getType() == 0) //int
 	    return new IntVar(store, node.getInt(), node.getInt());
 	else if (node.getType() == 2) // ident
@@ -564,7 +564,7 @@ public class SearchItem implements ParserTreeConstants {
 	}
     }
 
-    Var getFloatVariable(ASTScalarFlatExpr node) {
+    FloatVar getFloatVariable(ASTScalarFlatExpr node) {
 	if (node.getType() == 5) //float
 	    return new FloatVar(store, node.getFloat(), node.getFloat());
 	else if (node.getType() == 2) // ident
@@ -586,13 +586,13 @@ public class SearchItem implements ParserTreeConstants {
 	}
     }
 
-    Var[] getVarArray(SimpleNode node) {
+    IntVar[] getVarArray(SimpleNode node) {
 	if (node.getId() == JJTARRAYLITERAL) {
 	    int count = node.jjtGetNumChildren();
-	    Var[] aa = new Var[count];
+	    IntVar[] aa = new IntVar[count];
 	    for (int i=0;i<count;i++) {
 		ASTScalarFlatExpr child = (ASTScalarFlatExpr)node.jjtGetChild(i);
-		Var el = getVariable(child);
+		IntVar el = getVariable(child);
 		aa[i] = el;
 	    }
 	    return aa;
@@ -603,23 +603,23 @@ public class SearchItem implements ParserTreeConstants {
 	    else {
 		System.err.println("Wrong type of Variable array; compilation aborted."); 
 		System.exit(0);
-		return new Var[] {};
+		return new IntVar[] {};
 	    }
 	}
 	else {
 	    System.err.println("Wrong type of Variable array; compilation aborted."); 
 	    System.exit(0);
-	    return new Var[] {};
+	    return new IntVar[] {};
 	}
     }
 
-    Var[] getFloatVarArray(SimpleNode node) {
+    FloatVar[] getFloatVarArray(SimpleNode node) {
 	if (node.getId() == JJTARRAYLITERAL) {
 	    int count = node.jjtGetNumChildren();
-	    Var[] aa = new Var[count];
+	    FloatVar[] aa = new FloatVar[count];
 	    for (int i=0;i<count;i++) {
 		ASTScalarFlatExpr child = (ASTScalarFlatExpr)node.jjtGetChild(i);
-		Var el = getFloatVariable(child);
+		FloatVar el = (FloatVar)getFloatVariable(child);
 		aa[i] = el;
 	    }
 	    return aa;
@@ -630,18 +630,18 @@ public class SearchItem implements ParserTreeConstants {
 	    else {
 		System.err.println("Wrong type of Variable array; compilation aborted."); 
 		System.exit(0);
-		return new Var[] {};
+		return new FloatVar[] {};
 	    }
 	}
 	else {
 	    System.err.println("Wrong type of Variable array; compilation aborted."); 
 	    System.exit(0);
-	    return new Var[] {};
+	    return new FloatVar[] {};
 	}
     }
 
 
-    Var getSetVariable(ASTScalarFlatExpr node) {
+    SetVar getSetVariable(ASTScalarFlatExpr node) {
 	if (node.getType() == 2) // ident
 	    return dictionary.getSetVariable(node.getIdent());
 	else if (node.getType() == 3) // array access
@@ -650,16 +650,17 @@ public class SearchItem implements ParserTreeConstants {
 	    System.err.println("Wrong parameter on list of search set varibales" + node);
 	    System.exit(0);
 	    // FIXME, why not return null?
-	    return new IntVar(store);
+	    return new SetVar(store);
 	}
     }
-    Var[] getSetVarArray(SimpleNode node) {
+
+    SetVar[] getSetVarArray(SimpleNode node) {
 	if (node.getId() == JJTARRAYLITERAL) {
 	    int count = node.jjtGetNumChildren();
-	    Var[] aa = new Var[count];
+	    SetVar[] aa = new SetVar[count];
 	    for (int i=0;i<count;i++) {
 		ASTScalarFlatExpr child = (ASTScalarFlatExpr)node.jjtGetChild(i);
-		Var el = getSetVariable(child);
+		SetVar el = getSetVariable(child);
 		aa[i] = el;
 	    }
 	    return aa;
@@ -670,33 +671,33 @@ public class SearchItem implements ParserTreeConstants {
 	    else {
 		System.err.println("Wrong type of Variable array; compilation aborted."); 
 		System.exit(0);
-		return new Var[] {};
+		return new SetVar[] {};
 	    }
 	}
 	else {
 	    System.err.println("Wrong type of Variable array; compilation aborted."); 
 	    System.exit(0);
-	    return new Var[] {};
+	    return new SetVar[] {};
 	}
     }
 
-    String type() {
+    public String type() {
 	return search_type;
     }
 
-    String exploration() {
+    public String exploration() {
 	return explore;
     }
 
-    String indomain() {
+    public String indomain() {
 	return indomain;
     }
 
-    String var_selection() {
+    public String var_selection() {
 	return var_selection_heuristic;
     }
 
-    Var[] vars() {
+    public Var[] vars() {
 	return search_variables;
     }
 
@@ -714,8 +715,15 @@ public class SearchItem implements ParserTreeConstants {
 
     public String toString() {
 	String s="";
-	if (search_seq.size() == 0) {
-	    s = search_type + ", "+ Arrays.asList(search_variables) +", "+explore + ", " + var_selection_heuristic+", "+indomain;
+	if (search_type == null)
+	    s += "defult_search\n";
+	else if (search_seq.size() == 0) {
+	    s = search_type + ", ";
+	    if (search_variables == null)
+		s += "[]";
+	    else 
+		s += Arrays.asList(search_variables);
+	    s += ", "+explore + ", " + var_selection_heuristic+", "+indomain;
 	    if (floatSearch)
 		s += ", " + precision;
 	}

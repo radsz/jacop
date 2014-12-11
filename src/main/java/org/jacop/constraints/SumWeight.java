@@ -42,8 +42,8 @@ import org.jacop.core.Var;
 
 /**
  * SumWeight constraint implements the weighted summation over several
- * Variable's . It provides the weighted sum from all Variable's on the list.
- * The weights must be positive integers.
+ * variables . It provides the weighted sum from all variables on the list.
+ * The weights are integers.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 3.1

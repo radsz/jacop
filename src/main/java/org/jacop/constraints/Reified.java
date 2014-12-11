@@ -182,6 +182,7 @@ public class Reified extends Constraint {
 		while (!variables.isEmpty()) {
 			Var V = variables.removeFirst();
 			V.putModelConstraint(this, getConsistencyPruningEvent(V));
+			queueVariable(store.level, V);
 		}
 
 		c.include(store);

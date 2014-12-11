@@ -1,5 +1,5 @@
 /**
- *  RunWhenShuttingDown.java 
+ *  BTree.java 
  *  This file is part of JaCoP.
  *
  *  JaCoP is a Java Constraint Programming solver. 
@@ -29,21 +29,44 @@
  *
  */
 
+package org.jacop.floats.constraints.linear;
 
-package org.jacop.fz;
+/**
+ * Binary Node of the tree representing linear constraint.
+ * 
+ * @author Krzysztof Kuchcinski
+ * @version 4.1
+ */
 
-public class RunWhenShuttingDown extends Thread {
+public class BTree{
 
-    Parser parser;
+    // tree structure
+    RootBNode root = null;
 
-    public RunWhenShuttingDown(Parser parser) {
-	this.parser = parser;
+    public BTree(RootBNode root){
+	this.root = root;
     }
 
-    public void run() {
+    public String toString() {
 
-	parser.solver.printStatisticsIterrupt();
-
+	String output = printNode(root);
+	return output;
     }
-    
+
+    String printNode(BinaryNode node) {
+
+	String output = "";
+	if (node.left != null) {
+	    output += node + " -> ";
+	    output += node.left + "\n";
+	    output += printNode(node.left);
+	}
+	if (node.right != null) {
+	    output += node + " -> ";
+	    output += node.right + "\n";
+	    output += printNode(node.right);
+	}
+	return output;
+    }
+
 }

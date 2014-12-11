@@ -67,6 +67,10 @@ public class Parser {
     Store getStore() {
 	return store;
     }
+
+    Tables getTables() {
+	return dict;
+    }
 }
 PARSER_END(Parser)
 
