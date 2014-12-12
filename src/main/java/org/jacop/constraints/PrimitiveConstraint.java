@@ -43,7 +43,7 @@ import org.jacop.core.Var;
  * arguments to constraints Not, And, Or, etc.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.1
+ * @version 4.2
  */
 
 public abstract class PrimitiveConstraint extends Constraint {

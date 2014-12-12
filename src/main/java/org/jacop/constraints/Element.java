@@ -44,7 +44,7 @@ import org.jacop.core.Var;
  * The first index in the variables list is equal to 1.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.1
+ * @version 4.2
  */
 
 public class Element extends Constraint {

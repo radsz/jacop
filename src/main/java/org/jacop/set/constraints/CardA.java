@@ -45,7 +45,7 @@ import org.jacop.set.core.SetVar;
  * The set cardinality constraint.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.1
+ * @version 4.2
  */
 
 public class CardA extends Constraint {

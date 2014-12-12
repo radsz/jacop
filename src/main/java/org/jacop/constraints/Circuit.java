@@ -48,7 +48,7 @@ import org.jacop.core.Var;
  * the circuit. Variables create one circuit. 
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.1
+ * @version 4.2
  */
 
 public class Circuit extends Alldiff {

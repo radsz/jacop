@@ -44,7 +44,7 @@ import org.jacop.core.Var;
  * is equal to zero. It restricts the domains of all variables to be either 0 or 1.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.1
+ * @version 4.2
  */
 
 public class EqBool extends PrimitiveConstraint {

@@ -47,7 +47,7 @@ import org.jacop.util.fsm.FSMTransition;
  * It constructs a Lex (lexicographical order) constraint. 
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.1
+ * @version 4.2
  */
 
 public class Lex extends DecomposedConstraint {

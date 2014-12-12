@@ -69,7 +69,7 @@ import org.jacop.search.SimpleSolutionListener;
  *
  * @author Krzysztof Kuchcinski
  * 
- * @version 4.1
+ * @version 4.2
  */
 
 public class SGMPCSearch {

@@ -44,7 +44,7 @@ import java.util.ArrayList;
  * Variable's . It provides the weighted sum from all Variable's on the list.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.1
+ * @version 4.2
  */
 
 public class LinearFloat extends Linear {

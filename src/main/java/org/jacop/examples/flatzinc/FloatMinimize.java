@@ -46,7 +46,7 @@ import org.jacop.floats.core.*;
  * It is used for test purpose only.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.1
+ * @version 4.2
  */
 public class FloatMinimize {
     Store store;

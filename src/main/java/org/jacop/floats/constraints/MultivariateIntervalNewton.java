@@ -54,7 +54,7 @@ import org.jacop.constraints.Constraint;
  * method for solving a system of non linear equations.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.1
+ * @version 4.2
  */
 
 public class MultivariateIntervalNewton {

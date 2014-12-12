@@ -58,7 +58,7 @@ import org.jacop.set.search.MinLubCard;
  * It is a Social Golfer example based on set variables.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.1
+ * @version 4.2
  */
 
 public class SocialGolfer extends ExampleSet {
