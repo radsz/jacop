@@ -54,7 +54,7 @@ import org.jacop.util.SimpleHashSet;
  * The weights must be positive integers.
  * 
  * @author Krzysztof Kuchcinski
- * @version 4.1
+ * @version 4.2
  */
 
 public class Linear extends PrimitiveConstraint {

@@ -37,7 +37,7 @@ import org.jacop.core.Var;
  * Defines a interface for different indomain enumeration methods.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.1
+ * @version 4.2
  * @param <T> type of variable for which the assignment value is being generated.
  */
 

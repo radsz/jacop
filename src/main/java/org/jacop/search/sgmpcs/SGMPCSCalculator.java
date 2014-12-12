@@ -38,7 +38,7 @@ import org.jacop.search.ConsistencyListener;
  * Defines functionality for SGMPCS search
  * 
  * @author Krzysztof Kuchcinski
- * @version 4.1
+ * @version 4.2
  */
 
 public class SGMPCSCalculator<T extends Var> implements ConsistencyListener {

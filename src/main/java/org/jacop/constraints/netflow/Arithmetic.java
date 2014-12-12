@@ -47,7 +47,7 @@ import org.jacop.core.Store;
 /**
  * 
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.1
+ * @version 4.2
  * 
  */
 

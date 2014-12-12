@@ -39,7 +39,7 @@ import org.jacop.core.IntervalDomain;
  * Represents tasks for cumulative constraint
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.1
+ * @version 4.2
  */
 
 class Task {

@@ -73,7 +73,7 @@ import org.jacop.core.Store;
  * 
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.1
+ * @version 4.2
  */
 
 public class Shaving<T extends IntVar> implements ExitChildListener<T>, ConsistencyListener {

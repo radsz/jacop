@@ -44,7 +44,7 @@ import org.jacop.core.Var;
  * Boundary consistency is used.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.1
+ * @version 4.2
  */
 
 public class XplusClteqZ extends PrimitiveConstraint {

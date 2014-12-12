@@ -54,7 +54,7 @@ import org.jacop.floats.core.InternalException;
  * Bounds consistency can be used; third parameter of constructor controls this.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.1
+ * @version 4.2
  */
 
 public class AsinPeqR extends SinPeqR {

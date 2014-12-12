@@ -41,7 +41,7 @@ import org.jacop.core.Store;
  * again search for a single solution.
  * 
  * @author Krzysztof Kuchcinski
- * @version 4.1
+ * @version 4.2
  */
 
 public class OneSolution<T extends Var>  extends SimpleSolutionListener<T> implements ConsistencyListener, InitializeListener {

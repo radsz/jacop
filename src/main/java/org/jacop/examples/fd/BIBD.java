@@ -44,7 +44,7 @@ import org.jacop.core.Store;
  * It models and solves Balanced Incomplete Block Design (BIBD) problem (CSPLIB-P28). 
  * 
  * @author Radoslaw Szymanek
- * @version 4.1
+ * @version 4.2
  */
 
 public class BIBD extends ExampleFD {

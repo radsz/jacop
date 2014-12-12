@@ -44,7 +44,7 @@ import org.jacop.core.Var;
  * be enforced by search.
  * 
  * @author  Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.1
+ * @version 4.2
  */
 
 public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {

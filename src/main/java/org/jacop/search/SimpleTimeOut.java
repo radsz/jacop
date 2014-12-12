@@ -38,7 +38,7 @@ package org.jacop.search;
  * before the timeout.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.1
+ * @version 4.2
  */
 
 public class SimpleTimeOut implements TimeOutListener {

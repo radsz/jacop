@@ -49,7 +49,7 @@ import org.jacop.set.core.SetVar;
  * The sum must be equal to the specified sum variable. 
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.1
+ * @version 4.2
  */
 
 public class SumWeightedSet extends Constraint {

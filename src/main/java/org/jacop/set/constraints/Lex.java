@@ -54,7 +54,7 @@ import org.jacop.set.core.SetVar;
  * {1} < {2}
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.1
+ * @version 4.2
  */
 
 public class Lex extends Constraint {

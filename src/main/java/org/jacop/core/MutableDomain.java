@@ -33,7 +33,7 @@ package org.jacop.core;
 
 /**
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.1
+ * @version 4.2
  */
 public class MutableDomain implements MutableVar {
 

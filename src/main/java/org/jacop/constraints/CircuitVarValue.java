@@ -37,7 +37,7 @@ import org.jacop.core.MutableVarValue;
  * Defines a current value of the CircuitVar and related operations on it.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.1
+ * @version 4.2
  */
 
 class CircuitVarValue implements MutableVarValue {
