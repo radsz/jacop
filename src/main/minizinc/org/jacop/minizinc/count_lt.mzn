@@ -1,0 +1,17 @@
+include "among_var.mzn";
+
+/** @group globals.counting
+  Constrains \a c to be strictly less than the number of occurrences
+  of \a y in \a x. 
+*/
+predicate count_lt(array[int] of var int: x, var int: y, var int: c) =
+%    c < sum(i in index_set(x)) ( bool2int(x[i] == y) );
+     let {
+       var int: limit
+     }
+     in 
+       c < limit /\
+       among_var(limit, x, [y]);
+
+%-----------------------------------------------------------------------------%
+%-----------------------------------------------------------------------------%

@@ -45,7 +45,7 @@ import org.jacop.set.core.SetVar;
  * in the domain of the set variable.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.1
+ * @version 4.2
  */
 
 public class EinA extends PrimitiveConstraint {

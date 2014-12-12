@@ -56,7 +56,7 @@ import org.jacop.floats.core.InternalException;
  * Bounds consistency can be used; third parameter of constructor controls this.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.1
+ * @version 4.2
  */
 
 public class SinPeqR extends Constraint {
@@ -287,53 +287,16 @@ public class SinPeqR extends Constraint {
 	    if (java.lang.Double.isNaN(pMax))
 	    	pMax = FloatDomain.PI/2;
 
-	    FloatIntervalDomain pDom = new FloatIntervalDomain(pMin, pMax);
-	    if (p.min() < -FloatDomain.PI/2) {
+	    double low, high;
+	    double k = Math.floor(p.min()/(2*FloatDomain.PI));
+	    low = FloatDomain.down(pMin + 2*k*FloatDomain.PI);
+	    k = Math.ceil(p.max()/(2*FloatDomain.PI));
+	    high = FloatDomain.up(pMax + 2*k*FloatDomain.PI);
+	    FloatIntervalDomain pDom = new FloatIntervalDomain(low, high);
 
-		int i=1;
-		double lo, hi;
-		do {
-		    if ( i%2 == 1) {
-			lo = FloatDomain.down(- i*FloatDomain.PI - pMax);
-			hi = FloatDomain.up(- i*FloatDomain.PI - pMin);
-		    }
-		    else {
-			lo = FloatDomain.down(- i*FloatDomain.PI + pMin);
-			hi = FloatDomain.up(- i*FloatDomain.PI + pMax);
-		    }
-		    // System.out.println ("1. adding " +  i + ": " +lo +".."+ hi);
+	    // System.out.println ("2. " + p + " in " + pDom  + " low..high = " + low+".."+high + ", k = " + k);
 
-		    i++;
-
-		    pDom.unionAdapt(lo, hi);
-
-		} while (lo > p.min());
-	    }
-	    if (p.max() > FloatDomain.PI/2) {
-
-		int i=1;
-		double lo, hi;
-		do {
-		    if ( i%2 == 1) {
-			lo = FloatDomain.down(i*FloatDomain.PI - pMax);
-			hi = FloatDomain.up(i*FloatDomain.PI - pMin);
-		    }
-		    else {
-			lo = FloatDomain.down(i*FloatDomain.PI + pMin);
-			hi = FloatDomain.up(i*FloatDomain.PI + pMax);
-		    }
-		    // System.out.println ("2. adding " +  i + ": " + lo +".."+ hi);
-
-		    i++;
-
-		    pDom.unionAdapt(lo, hi);
-
-		} while (hi < p.max());
-	    }
-
-	    // System.out.println ("2. " + p + " in " + pDom  + " p.min() - pMin = " + (double)(p.min() - pMin));
-
-	    p.domain.in(store.level, p, pDom.min(), pDom.max());
+	    p.domain.in(store.level, p, pDom); //.min(), pDom.max());
 
 	    // System.out.println ("p after in " + p);
 
@@ -351,7 +314,8 @@ public class SinPeqR extends Constraint {
 	double max = v.max();
 
 	double normMin = FloatDomain.down(min % (2*FloatDomain.PI));
-	double normMax = FloatDomain.up(normMin + max - min);
+	double maxmin = max-min;
+	double normMax = FloatDomain.up(normMin + maxmin);
 
 	if (normMax >= 2*FloatDomain.PI) {
 	    normMin = FloatDomain.down(normMin - 2*FloatDomain.PI);

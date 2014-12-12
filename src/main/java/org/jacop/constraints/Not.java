@@ -42,7 +42,7 @@ import org.jacop.util.SimpleHashSet;
  * 
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.1
+ * @version 4.2
  */
 
 public class Not extends PrimitiveConstraint {
@@ -127,8 +127,15 @@ public class Not extends PrimitiveConstraint {
 			V.putModelConstraint(this, getConsistencyPruningEvent(V));
 		}
 
+		c.include(store);
+
 		store.addChanged(this);
 		store.countConstraint();
+	}
+
+        @Override
+        public void include(Store store) {
+	    c.include(store);
 	}
 
 	@Override

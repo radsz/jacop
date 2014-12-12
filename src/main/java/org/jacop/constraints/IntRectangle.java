@@ -40,7 +40,7 @@ import org.jacop.core.IntDomain;
  * constraint.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.1
+ * @version 4.2
  */
 
 class IntRectangle {

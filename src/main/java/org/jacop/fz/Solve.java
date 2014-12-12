@@ -114,6 +114,13 @@ public class Solve implements ParserTreeConstants {
     Search<Var> final_search_seq;
     // --------
 
+    // Values for search created from flatzinc
+    DepthFirstSearch<Var> flatzincDFS;
+    SelectChoicePoint<Var> flatzincVariableSelection;
+    Var flatzincCost;
+
+    int solveKind=-1;
+
     /**
      * It creates a parser for the solve part of the flatzinc file. 
      * 
@@ -142,7 +149,7 @@ public class Solve implements ParserTreeConstants {
 
 	dictionary = table;
 	options = opt;
-	int solveKind=-1;
+	solveKind=-1;
 
 	// node.dump("");
 
@@ -422,8 +429,17 @@ public class Solve implements ParserTreeConstants {
 
 		// printSearch(label);
 
-		Result = label.labeling(store, variable_selection);
 		this.si = si;
+
+		if (options.runSearch())
+		    Result = label.labeling(store, variable_selection);
+		else {
+		    // storing flatiznc defined search
+		    flatzincDFS = label;
+		    flatzincVariableSelection = variable_selection;
+		    flatzincCost = null;
+		    return;
+		}
 
 		break;
 	    case 1: // minimize
@@ -436,11 +452,21 @@ public class Solve implements ParserTreeConstants {
 		    last_search.getSolutionListener().setSolutionLimit(options.getNumberSolutions());
 		}
 
-		Result = label.labeling(store, variable_selection, cost);
+		this.si = si;
+
+		if (options.runSearch())
+		    Result = label.labeling(store, variable_selection, cost);
+		else {
+		    // storing flatiznc defined search
+		    flatzincDFS = label;
+		    flatzincVariableSelection = variable_selection;
+		    flatzincCost = cost;
+		    return;
+		}
+
 		// last_search.setSolutionListener(new ResultListener(si.vars()));
 		// org.jacop.floats.search.Optimize opt = new org.jacop.floats.search.Optimize(store, label, variable_selection, (FloatVar)cost);
 		// Result = opt.minimize();
-		this.si = si;
 
 		break;
 	    case 2: //maximize
@@ -453,8 +479,17 @@ public class Solve implements ParserTreeConstants {
 		    last_search.getSolutionListener().setSolutionLimit(options.getNumberSolutions());
 		}
 
-		Result = label.labeling(store, variable_selection, max_cost);
 		this.si = si;
+
+		if (options.runSearch())
+		    Result = label.labeling(store, variable_selection, max_cost);
+		else {
+		    // storing flatiznc defined search
+		    flatzincDFS = label;
+		    flatzincVariableSelection = variable_selection;
+		    flatzincCost = max_cost;
+		    return;
+		}
 
 		break;
 	    }
@@ -463,26 +498,35 @@ public class Solve implements ParserTreeConstants {
 	    System.exit(0);
 	}
 
-	printStatisticsForSingleSearch(false);
+	printStatisticsForSingleSearch(false, Result);
 
     }
 
-    void printStatistics(boolean interrupted) {
+    public void statistics(boolean result) {
+
+	printStatistics(false, result);
+    }
+
+    public void printStatisticsIterrupt() {
+	printStatistics(true, Result);
+    }
+
+    public void printStatistics(boolean interrupted, boolean result) {
 
 	if (singleSearch)
-	    printStatisticsForSingleSearch(interrupted);
+	    printStatisticsForSingleSearch(interrupted, result);
 	else
-	    printStatisticsForSeqSearch(interrupted);
+	    printStatisticsForSeqSearch(interrupted, result);
     }
 
-    void printStatisticsForSingleSearch(boolean interrupted) {
+    void printStatisticsForSingleSearch(boolean interrupted, boolean result) {
 
 	if (label == null) {
 	    System.out.println ("%% =====INTERRUPTED=====\n%% Model not yet posed..");
 	    return;
 	}
 
-	if (Result) {
+	if (result) {
 	    if (!optimization && options.getAll()) {
 		if (!interrupted)
 		    if (si.exploration().equals("complete")) 
@@ -893,7 +937,15 @@ public class Solve implements ParserTreeConstants {
  		    }
  		}
 
-		Result = masterLabel.labeling(store, masterSelect);
+		if (options.runSearch())
+		    Result = masterLabel.labeling(store, masterSelect);
+		else {
+		    // storing flatiznc defined search
+		    flatzincDFS = masterLabel;
+		    flatzincVariableSelection = masterSelect;
+		    flatzincCost = null;
+		    return;
+		}
 
 		break;
 
@@ -922,7 +974,15 @@ public class Solve implements ParserTreeConstants {
 		    ((DepthFirstSearch)final_search_seq).respectSolutionListenerAdvice = true;
 		}
 
-		Result = masterLabel.labeling(store, masterSelect, cost);
+		if (options.runSearch())
+		    Result = masterLabel.labeling(store, masterSelect, cost);
+		else {
+		    // storing flatiznc defined search
+		    flatzincDFS = masterLabel;
+		    flatzincVariableSelection = masterSelect;
+		    flatzincCost = cost;
+		    return;
+		}
 
 		break;
 	    case 2: //maximize
@@ -958,7 +1018,15 @@ public class Solve implements ParserTreeConstants {
 		    ((DepthFirstSearch)final_search_seq).respectSolutionListenerAdvice=true;
 		}
 
-		Result = masterLabel.labeling(store, masterSelect, max_cost);
+		if (options.runSearch())
+		    Result = masterLabel.labeling(store, masterSelect, max_cost);
+		else {
+		    // storing flatiznc defined search
+		    flatzincDFS = masterLabel;
+		    flatzincVariableSelection = masterSelect;
+		    flatzincCost = max_cost;
+		    return;
+		}
 
 		break;
 	    }
@@ -968,19 +1036,19 @@ public class Solve implements ParserTreeConstants {
 	    System.exit(0);
 	}
 
-	printStatisticsForSeqSearch(false);
-
+	printStatisticsForSeqSearch(false, Result);
+    
     }
 
 
-    void printStatisticsForSeqSearch(boolean interrupted) {
+    void printStatisticsForSeqSearch(boolean interrupted, boolean result) {
 
 	if (list_seq_searches == null) {
 	    System.out.println ("%% =====INTERRUPTED=====\n%% Model not yet posed..");
 	    return;
 	}
 
-	if (Result) {
+	if (result) {
 	    if (!optimization && options.getAll()) {
 		if (!heuristicSeqSearch)
 		    if (! anyTimeOutOccured(list_seq_searches)) {
@@ -1416,6 +1484,14 @@ public class Solve implements ParserTreeConstants {
 	    int v2 = o2.getSize();
 	    return v1 - v2;
 	}
+    }
+
+    public SearchItem getSearch() {
+	return si;
+    }
+
+    public int getSolveKind() {
+	return solveKind;
     }
 
     // public class ResultListener<T extends Var> extends SimpleSolutionListener<T> {

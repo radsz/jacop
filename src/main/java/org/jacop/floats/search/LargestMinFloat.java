@@ -39,7 +39,7 @@ import org.jacop.search.ComparatorVariable;
  * Defines a LargestMinFloat comparator for Variables.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.1
+ * @version 4.2
  * @param <T> type of IntVar being compared.
  */
 

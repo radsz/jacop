@@ -41,7 +41,7 @@ import org.jacop.core.Var;
  * Constraint if constraint1 then constraint2 else constraint3
  *  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.1
+ * @version 4.2
  */
 
 public class IfThenElse extends PrimitiveConstraint {
@@ -358,7 +358,18 @@ public class IfThenElse extends PrimitiveConstraint {
 		store.addChanged(this);
 		store.countConstraint();
 
+		condC.include(store);
+		thenC.include(store);
+		elseC.include(store);
+
 		imposed = true;
+	}
+
+	@Override
+	public void include(Store store) {
+	    condC.include(store);
+	    thenC.include(store);
+	    elseC.include(store);
 	}
 
 	@Override

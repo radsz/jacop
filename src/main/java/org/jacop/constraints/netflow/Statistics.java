@@ -38,7 +38,7 @@ import java.text.DecimalFormat;
  * This class stores all the statistics gather during the execution of the network flow constraint. 
  * 
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.1
+ * @version 4.2
  * 
  */
 

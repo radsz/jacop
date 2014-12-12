@@ -35,7 +35,7 @@ package org.jacop.core;
  * Standard mutable variable definition
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.1
+ * @version 4.2
  */
 
 public interface MutableVar {

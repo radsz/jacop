@@ -13,7 +13,7 @@ import org.jacop.search._
 //import org.jacop.set.core._
 import org.jacop.set.constraints._
 import org.jacop.set.search._
-import org.jacop.floats.core._
+import org.jacop.floats.core.FloatDomain
 import org.jacop.floats.constraints._
 import org.jacop.floats.search._
 
@@ -205,7 +205,7 @@ package object scala {
 * @param mx maxumum value. 
 */
   def max[T <: org.jacop.core.IntVar](x: List[T], mx: org.jacop.core.IntVar)(implicit m: ClassTag[T])  {
-    val c = new Max(x.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], mx)
+    val c = new org.jacop.constraints.Max(x.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], mx)
     if (trace) println(c)
     impModel.impose(c)
   }
@@ -217,7 +217,7 @@ package object scala {
 * @param mn minimum value.
 */
   def min[T <: org.jacop.core.IntVar](x: List[T], mn: org.jacop.core.IntVar )(implicit m: ClassTag[T]) {
-    val c = new Min(x.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], mn)
+    val c = new org.jacop.constraints.Min(x.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], mn)
     if (trace) println(c)
     impModel.impose(c)
   }
@@ -230,7 +230,7 @@ package object scala {
 */
   def max[T <: org.jacop.core.IntVar](x: List[T])(implicit m: ClassTag[T]) : IntVar = {
     val result = new IntVar()
-    val c = new Max(x.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], result)
+    val c = new org.jacop.constraints.Max(x.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], result)
     impModel.constr += c
     result
   }
@@ -243,7 +243,7 @@ package object scala {
 */
   def min[T <: org.jacop.core.IntVar](x: List[T])(implicit m: ClassTag[T]) : IntVar = {
     val result = new IntVar()
-    val c = new Min(x.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], result)
+    val c = new org.jacop.constraints.Min(x.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], result)
     impModel.constr += c
     result
   }
@@ -377,7 +377,7 @@ package object scala {
     result
   }
 
-  /** Wrapper for [[org.jacop.float.constraints.Element]].
+  /** Wrapper for [[org.jacop.floats.constraints.ElementFloat]].
     *
     * @param index    index to select element from list of elements.
     * @param xs       array of integers that can be assigned to values.
@@ -512,7 +512,7 @@ package object scala {
   }
 
 /**
-* Wrapper for [[org.jacop.constraints.binpack.Binpack]].
+* Wrapper for [[org.jacop.constraints.binpacking.Binpacking]].
 *
 * @param bin list containing which bin is assigned to an item. 
 * @param load list of loads for bins.
@@ -969,6 +969,9 @@ package object scala {
        label.setSolutionListener(new ScalaSolutionListener[T])
      }
 
+    if (timeOutValue > 0)
+      label.setTimeOut(timeOutValue)
+
      if (limitOnSolutions > 0) {
        label.getSolutionListener().setSolutionLimit(limitOnSolutions)
        label.respectSolutionListenerAdvice=true
@@ -1003,6 +1006,9 @@ package object scala {
        label.setPrintInfo(false)
        label.setSolutionListener(new ScalaSolutionListener[T])
      }
+
+    if (timeOutValue > 0)
+      label.setTimeOut(timeOutValue)
 
      if (limitOnSolutions > 0) {
        label.getSolutionListener().setSolutionLimit(limitOnSolutions)

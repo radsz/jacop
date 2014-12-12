@@ -37,7 +37,7 @@ package org.jacop.core;
  * 
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.1
+ * @version 4.2
  */
 
 public final class Interval {

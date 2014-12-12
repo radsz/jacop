@@ -39,7 +39,7 @@ package org.jacop.examples.floats;
  * Solves the Dirichlet problem for Laplace's equation using
  * Leibman's five-point finite-difference approximation. 
  * 
- * Based on minizinc program written by Håkan Kjellstrand
+ * Based on minizinc program written by Håkan Kjellerstrand
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * 

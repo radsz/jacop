@@ -41,7 +41,7 @@ import org.jacop.search.ComparatorVariable;
  * domain has the priority.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.1
+ * @version 4.2
  * @param <T> type of variable being used in the search.
  */
 

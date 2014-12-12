@@ -51,7 +51,7 @@ import org.jacop.floats.core.InternalException;
  * Bounds consistency can be used; third parameter of constructor controls this.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.1
+ * @version 4.2
  */
 
 public class CosPeqR extends Constraint {
@@ -264,41 +264,16 @@ public class CosPeqR extends Constraint {
 	    if (java.lang.Double.isNaN(pMax))
 	    	pMax = FloatDomain.PI;
 
-	    FloatIntervalDomain pDom = new FloatIntervalDomain(pMin, pMax);
-	    if (p.min() < 0.0) {
-
-		int i=1;
-		double lo, hi;
-		do {
-		    lo = FloatDomain.down(- i*FloatDomain.PI + pMin);
-		    hi = FloatDomain.up(- i*FloatDomain.PI + pMax);
-		    i++;
-		    // System.out.println ("1. adding " +  i + ": " + lo +".."+ hi);
-
-		    pDom.unionAdapt(lo, hi);
-
-		} while (lo > p.min());
-
-	    }
-	    if (p.max() > FloatDomain.PI) {
-
-		int i=1;
-		double lo, hi;
-		do {
-		    lo = FloatDomain.down(i*FloatDomain.PI + pMin);
-		    hi = FloatDomain.up(i*FloatDomain.PI + pMax);
-		    i++;
-		    // System.out.println ("2. adding " +  i + ": " + lo +".."+ hi);
-
-		    pDom.unionAdapt(lo, hi);
-
-		} while (hi < p.max());
-	    }
-
+	    double low, high;
+	    double k = Math.floor(p.min()/(2*FloatDomain.PI));
+	    low = FloatDomain.down(pMin + 2*k*FloatDomain.PI);
+	    k = Math.ceil(p.max()/(2*FloatDomain.PI));
+	    high = FloatDomain.up(pMax + 2*k*FloatDomain.PI);
+	    FloatIntervalDomain pDom = new FloatIntervalDomain(low, high);
 
 	    // System.out.println ("2. " + p + " in " + pDom  + " p.min() - pMin = " + (double)(p.min() - pMin));
 
-	    p.domain.in(store.level, p, pDom.min(), pDom.max());
+	    p.domain.in(store.level, p, pDom);
 
 	    // System.out.println ("p after in " + p);
 
@@ -316,7 +291,8 @@ public class CosPeqR extends Constraint {
 	double max = v.max();
 
 	double normMin = FloatDomain.down(min % (2*FloatDomain.PI));
-	double normMax = FloatDomain.up(normMin + max - min);
+	double maxmin = max - min;
+	double normMax = FloatDomain.up(normMin + maxmin);
 
 	if (normMax >= 2*FloatDomain.PI) {
 	    normMin = FloatDomain.down(normMin - 2*FloatDomain.PI);

@@ -45,7 +45,7 @@ import org.jacop.core.ValueEnumeration;
  * to the given successor state.
  * 
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.1
+ * @version 4.2
  */
 
 public class RegStateDom extends RegState {

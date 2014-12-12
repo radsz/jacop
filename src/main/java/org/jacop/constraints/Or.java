@@ -43,7 +43,7 @@ import org.jacop.util.SimpleHashSet;
  * 
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.1
+ * @version 4.2
  */
 
 public class Or extends PrimitiveConstraint {
@@ -234,8 +234,18 @@ public class Or extends PrimitiveConstraint {
 			V.putModelConstraint(this, getConsistencyPruningEvent(V));
 		}
 
+
+		for (PrimitiveConstraint c : listOfC)
+		    c.include(store);
+
 		store.addChanged(this);
 		store.countConstraint(listOfC.length);
+	}
+
+        @Override
+        public void include(Store store) {
+		for (PrimitiveConstraint c : listOfC)
+		    c.include(store);
 	}
 
 	@Override

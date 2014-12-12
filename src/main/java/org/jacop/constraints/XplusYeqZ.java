@@ -44,7 +44,7 @@ import org.jacop.core.Var;
  * Bound consistency is used.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.1
+ * @version 4.2
  */
 
 public class XplusYeqZ extends PrimitiveConstraint {
@@ -89,8 +89,10 @@ public class XplusYeqZ extends PrimitiveConstraint {
 
 		this.x = x;
 		this.y = y;
-		this.z = z;
-	}
+		this.z =  z;
+
+		checkForOverflow();
+ 	}
 
 	@Override
 	public ArrayList<Var> arguments() {
@@ -134,6 +136,20 @@ public class XplusYeqZ extends PrimitiveConstraint {
 		} while (store.propagationHasOccurred);
 		
 	}
+
+    void checkForOverflow() {
+
+	int sumMin=0, sumMax=0;
+
+	sumMin = add(sumMin, x.min());
+	sumMax = add(sumMax, x.max());
+
+	sumMin = add(sumMin, y.min());
+	sumMax = add(sumMax, y.max());
+
+	sumMin = subtract(sumMin, z.max());
+	sumMax = subtract(sumMax, z.min());
+    }
 
 	@Override
 	public int getNestedPruningEvent(Var var, boolean mode) {

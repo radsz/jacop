@@ -63,6 +63,8 @@ public class Options {
     boolean precisionDefined = false;
     double precision;
 
+    boolean runSearch = true;
+
 	/**
 	 * It constructs an Options object and parses all the parameters/options provided 
 	 * to flatzinc to jacop parser.
@@ -136,7 +138,12 @@ public class Options {
 				else if (args[i].equals("-p") || args[i].equals("--precision")) {
 				        precisionDefined = true;
 					precision = Double.parseDouble(args[++i]);
-					FloatDomain.setPrecision(precision);
+					if (precision >= 0)
+					    FloatDomain.setPrecision(precision);
+					else {
+					    precision = FloatDomain.precision();
+					    System.err.println("%% Precisison parameter not correct; using default precision " + precision);
+					}
 					i++;
 				}
 				else {
@@ -223,6 +230,21 @@ public class Options {
 		return interval;
 	}
 
+	/**
+	 * It defines whether to run the solver. 
+	 */
+	public void doNotRunSearch() {
+	    this.runSearch = false;
+	}
+
+	/**
+	 * It returns true if the search must be run and false otherwise.
+	 * @return true if run search, false otherwise. 
+	 */
+	public boolean runSearch() {
+		return runSearch;
+	}
+
 
 	/**
 	 * It returns precision defined in  the command line
@@ -233,8 +255,7 @@ public class Options {
 	}
 
 	/**
-	 * It return true if precision is defined otherwise false
-	 * @return true if precision defined. 
+	 * It defines precision. 
 	 */
 	public boolean precision() {
 		return precisionDefined;
