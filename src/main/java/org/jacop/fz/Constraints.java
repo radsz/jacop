@@ -1522,7 +1522,7 @@ public class Constraints implements ParserTreeConstants {
 		    NonOverlapping constraint1 = new NonOverlapping(objects, dimensions); 
 		    constraints.add(constraint1); 
 
-		    /*
+		    /* does not work since Geost InArea can contain only integers
 		    if (p.startsWith("geost_bb", 6)) {
 
 			int[] lb = getIntArray((SimpleNode)node.jjtGetChild(6));
