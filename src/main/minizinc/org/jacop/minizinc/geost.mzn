@@ -97,7 +97,18 @@ predicate geost_bb(
             set of int: OBJECTS = index_set(kind); 
         } in
         % Posting the geost constraint
-        jacop_geost_bb(k, rect_size, rect_offset, shape, x, kind, l, u)
+        jacop_geost(k, rect_size, rect_offset, shape, x, kind)
+        /\ % Posting the bounding box constraints
+        forall(o in OBJECTS)(
+            forall(s in dom(kind[o]))(
+                (kind[o] = s ->
+                    forall(r in shape[s], j in DIMS)(
+                        x[o,j] + rect_offset[r,j] >= l[j]
+                    /\  x[o,j] + rect_offset[r,j] + rect_size[r,j] <= u[j]
+                    )
+                )
+            )
+        )
     );
 
 predicate jacop_geost(
@@ -109,16 +120,6 @@ predicate jacop_geost(
     array[int    ] of var int    : kind
 );
 
-predicate jacop_geost_bb(
-                      int        : k           ,
-    array[int,int] of int        : rect_size   ,
-    array[int,int] of int        : rect_offset ,
-    array[int    ] of set of int : shape       , 
-    array[int,int] of var int    : x           ,
-    array[int    ] of var int    : kind        ,
-    array[int    ] of var int    : l           ,
-    array[int    ] of var int    : u
-);
 
 predicate geost_nonoverlap_k(
     array[int] of var int : x1, 
