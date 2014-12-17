@@ -434,8 +434,13 @@ public class Linear extends PrimitiveConstraint {
     @Override
 	public boolean satisfied() {
 
-	if (reified) 
-	    propagate(variableQueue);
+	if (reified) {
+	    try{
+		propagate(variableQueue);
+	    } catch (org.jacop.core.FailException e) {
+		return false;
+	    }
+	}
 
 	return entailed(relationType);
     }
@@ -443,8 +448,13 @@ public class Linear extends PrimitiveConstraint {
     @Override
 	public boolean notSatisfied() {
 
-	if (reified)
-	    propagate(variableQueue);
+	if (reified) {
+	    try{
+		propagate(variableQueue);
+	    } catch (org.jacop.core.FailException e) {
+		return true;
+	    }
+	}
 
 	return entailed(negRel[relationType]);
     }
