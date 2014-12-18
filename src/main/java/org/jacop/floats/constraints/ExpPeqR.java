@@ -126,8 +126,12 @@ public class ExpPeqR extends Constraint {
 		pMax = 0.0;
 	    }
 	    else {
-		pMin = java.lang.Math.log(q.min());
-		pMin = FloatDomain.down(pMin);
+		if ( q.min() > 0) {
+		    pMin = java.lang.Math.log(q.min());
+		    pMin = FloatDomain.down(pMin);
+		}
+		else 
+		    pMin = FloatDomain.ulp(0);
 		pMax = java.lang.Math.log(q.max());
 		pMax = FloatDomain.up(pMax);
 	    }
