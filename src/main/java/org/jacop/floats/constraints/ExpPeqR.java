@@ -42,6 +42,7 @@ import org.jacop.constraints.Constraint;
 
 import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.InternalException;
 
 /**
  * Constraints exp(P) #= Q for P and Q floats
@@ -111,8 +112,13 @@ public class ExpPeqR extends Constraint {
 	    }
 	    else {
 		qMin = java.lang.Math.exp(p.min());
+		if (Double.isNaN(qMin) || Double.isInfinite(qMin) )
+		    throw new InternalException("Floating-point overflow in constraint " + this);
 		qMin = FloatDomain.down(qMin);
+
 		qMax = java.lang.Math.exp(p.max());
+		if (Double.isNaN(qMax) || Double.isInfinite(qMax) )
+		    throw new InternalException("Floating-point overflow in constraint " + this);
 		qMax = FloatDomain.up(qMax);
 	    }
 
@@ -128,11 +134,18 @@ public class ExpPeqR extends Constraint {
 	    else {
 		if ( q.min() > 0) {
 		    pMin = java.lang.Math.log(q.min());
+		    if (Double.isNaN(pMin) || Double.isInfinite(pMin) )
+			throw new InternalException("Floating-point overflow in constraint " + this);
 		    pMin = FloatDomain.down(pMin);
 		}
-		else 
-		    pMin = FloatDomain.ulp(0);
+		else // q.min() <= 0
+		    if (q.max() > 0)
+			pMin = FloatDomain.MinFloat;
+		    else
+			throw Store.failException;
 		pMax = java.lang.Math.log(q.max());
+		if (Double.isNaN(pMax) || Double.isInfinite(pMax) )
+		    throw new InternalException("Floating-point overflow in constraint " + this);
 		pMax = FloatDomain.up(pMax);
 	    }
 
