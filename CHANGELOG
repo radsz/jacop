@@ -1,3 +1,8 @@
+Version 4.2.1
+===========
+1. Implementation of constraints AergMin and ArgMax as well connection to
+   flatzinc constraints arg_min_int and arg_max_int.
+
 Version 4.2
 ===========
 1. Support for minizinc 2.0
