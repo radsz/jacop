@@ -1204,11 +1204,25 @@ public class Constraints implements ParserTreeConstants {
 
 		    pose(new Values(x, n));
 		}
+ 		else if (p.startsWith("minimum_arg_int", 6)) {
+		    IntVar[] x = getVarArray((SimpleNode)node.jjtGetChild(0));
+		    IntVar index = getVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
+
+		    pose(new org.jacop.constraints.ArgMin(x, index));
+
+		}
 		else if (p.startsWith("minimum", 6)) {
 		    IntVar n = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
 		    IntVar[] x = getVarArray((SimpleNode)node.jjtGetChild(1));
 
 		    pose(new org.jacop.constraints.Min(x, n));
+		}
+ 		else if (p.startsWith("maximum_arg_int", 6)) {
+		    IntVar[] x = getVarArray((SimpleNode)node.jjtGetChild(0));
+		    IntVar index = getVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
+
+		    pose(new org.jacop.constraints.ArgMax(x, index));
+
 		}
 		else if (p.startsWith("maximum", 6)) {
 		    IntVar n = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
