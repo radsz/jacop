@@ -42,7 +42,9 @@ import org.jacop.core.Store;
 /**
  * Disjoint constraint assures that any two rectangles from a vector of
  * rectangles does not overlap in at least one direction.
- * 
+ *
+ * Zero-width rectangles does not overlap with any other rectangle. 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
@@ -175,7 +177,8 @@ public class Disjoint extends Diff {
 	 * @param rectangles list of rectangles with origins and lengths in both dimensions.
 	 */
 
-	public Disjoint(Store store, IntVar[][] rectangles) {
+	public Disjoint(IntVar[][] rectangles) {
+
 		super(rectangles);
 
 		Diff.IdNumber--;
@@ -183,16 +186,6 @@ public class Disjoint extends Diff {
 
 	}
 
-	public void impose(Store store) {
-		
-		super.impose(store);
-		
-		evalRects = new Diff2Var[rectangles.length];
-		
-		for (int j = 0; j < evalRects.length; j++)
-			evalRects[j] = new Diff2Var(store, rectangles);
-		
-	}
 	/**
 	 * It creates a diff2 constraint.
 	 * @param rectangles list of rectangles with origins and lengths in both dimensions.
@@ -203,33 +196,24 @@ public class Disjoint extends Diff {
 		super(rectangles, profile);
 	}	
 	
-	@Override
-	public boolean satisfied() {
-		boolean sat = true;
-
-		Rectangle recti, rectj;
-		int i = 0;
-		while (sat && i < rectangles.length) {
-			recti = rectangles[i];
-			int j = 0;
-			Rectangle toEvaluate[] = ((Diff2VarValue) evalRects[i].value()).Rects;
-			while (sat && j < toEvaluate.length) {
-				rectj = toEvaluate[j];
-				sat = sat && !recti.domOverlap(rectj);
-				j++;
-			}
-			i++;
-		}
-		return sat;
+	public void impose(Store store) {
+		
+		super.impose(store);
+		
+		evalRects = new Diff2Var[rectangles.length];
+		
+		for (int j = 0; j < evalRects.length; j++)
+			evalRects[j] = new Diff2Var(store, rectangles);
+		
 	}
 
 	@Override
 	void narrowRectangles(HashSet<IntVar> fdvQueue) {
-		Rectangle r;
+
 		boolean needToNarrow = false;
 
 		for (int l = 0; l < rectangles.length; l++) {
-			r = rectangles[l];
+		Rectangle r = rectangles[l];
 
 			boolean settled = true, minLengthEq0 = false;
 			int maxLevel = 0;
@@ -282,13 +266,12 @@ public class Disjoint extends Diff {
 	boolean findRectangles(Rectangle r, int index,
 			ArrayList<IntRectangle> UsedRect,
 			ArrayList<Rectangle> ProfileCandidates,
-			ArrayList<Rectangle> OverlappingRects, 
-			HashSet<IntVar> fdvQueue) {
+			ArrayList<Rectangle> OverlappingRects, HashSet<IntVar> fdvQueue) {
 		
-		Rectangle s;
 		boolean contains = false, checkArea = false;
 
 		long area = 0;
+		long commonArea = 0;
 		int totalNumberOfRectangles = 0;
 		int dim = r.dim();
 		int startMin[] = new int[dim];
@@ -306,17 +289,16 @@ public class Disjoint extends Diff {
 			r_max[i] = rOriginDom.max() + rLengthDom.max();
 		}
 
-		Rectangle toEvaluate[] = ((Diff2VarValue) evalRects[index].value()).Rects;
-		for (int l = 0; l < toEvaluate.length; l++) {
-			s = toEvaluate[l];
-
+		for (Rectangle s : ((Diff2VarValue) evalRects[index].value()).Rects) {
 			boolean overlap = true;
 
 			if (r != s) {
+
 				boolean sChanged = containsChangedVariable(s, fdvQueue);
 
 				IntRectangle Use = new IntRectangle(dim);
 				long sArea = 1;
+				long partialCommonArea = 1;
 
 				boolean use = true, minLength0 = false;
 				int s_min, s_max, start, stop;
@@ -345,11 +327,9 @@ public class Disjoint extends Diff {
 					if (start <= stop) {
 						Use.add(start, stop - start);
 						j++;
-						// Profile[j] += length;
 					} else
 						use = false;
 
-					// min length == 0
 					minLength0 = minLength0 || (sLengthMin[m] <= 0);
 
 					m++;
@@ -383,8 +363,50 @@ public class Disjoint extends Diff {
 							sArea = sArea * sLengthMin[i];
 						}
 						area += sArea;
+					} // profile candidate end
+
+					// calculate area within rectangle r possible placement
+					for (int i = 0; i < dim; i++) {
+						if (sOriginMin[i] <= r_min[i]) {
+							if (sOriginMax[i] <= r_max[i]) {
+								int distance1 = sOriginMin[i] + sLengthMin[i] - r_min[i];
+								sLengthMin[i] = (distance1 > 0 ) ? distance1 : 0;
+							}
+							else {
+								// sOriginMax[i] > r_max[i])
+								int rmax = r.origin[i].max() + r.length[i].min();
+
+								int distance1 = sOriginMin[i] + sLengthMin[i] - r_min[i];
+								int distance2 = sLengthMin[i] - (sOriginMax[i] - rmax);
+								if (distance1 > rmax - r_min[i]) distance1 = rmax - r_min[i];
+								if (distance2 > rmax - r_min[i]) distance2 = rmax - r_min[i];
+								if (distance1 < distance2)
+									sLengthMin[i] = (distance1 > 0) ? distance1 : 0;
+								else
+									if (distance2 > 0) {
+										if (distance2 < sLengthMin[i])
+											sLengthMin[i] = distance2;
+									}
+									else
+										sLengthMin[i] = 0;
+							}
+						}
+						else // sOriginMin[i] > r_min[i]
+							if (sOriginMax[i] > r_max[i]) {
+								int distance2 = sLengthMin[i] - (sOriginMax[i] - (r.origin[i].max() + r.length[i].min()));
+								if (distance2 > 0) {
+									if (distance2 < sLengthMin[i])
+										sLengthMin[i] = distance2;
+								}
+								else
+									sLengthMin[i] = 0;
+							}
+						partialCommonArea = partialCommonArea * sLengthMin[i];
 					}
+					commonArea += partialCommonArea;
 				}
+				if (commonArea + r.minArea() > (r_max[0]-r_min[0])*(r_max[1]-r_min[1]))
+				    throw Store.failException;
 			}
 		}
 
@@ -428,8 +450,7 @@ public class Disjoint extends Diff {
 	}
 
 	@Override
-	void profileNarrowing(int i, Rectangle r,
-			ArrayList<Rectangle> ProfileCandidates) {
+	void profileNarrowing(int i, Rectangle r, ArrayList<Rectangle> ProfileCandidates) {
 		// check profile first
 
 		IntDomain rOriginIdom = r.origin[i].dom();
@@ -458,6 +479,26 @@ public class Disjoint extends Diff {
 		}
 	}
 	
+	@Override
+	public boolean satisfied() {
+		boolean sat = true;
+
+		Rectangle recti, rectj;
+		int i = 0;
+		while (sat && i < rectangles.length) {
+			recti = rectangles[i];
+			int j = 0;
+			Rectangle[] toEvaluate = ((Diff2VarValue) evalRects[i].value()).Rects;
+			while (sat && j < toEvaluate.length) {
+				rectj = toEvaluate[j];
+				sat = sat && !recti.domOverlap(rectj);
+				j++;
+			}
+			i++;
+		}
+		return sat;
+	}
+
 	@Override
 	public String toString() {
 

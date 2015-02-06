@@ -1171,6 +1171,14 @@ public class Constraints implements ParserTreeConstants {
 
 		    pose( new GCC(x, counter));
 		}
+		else if (p.startsWith("diff2_strict", 6)) {
+		    IntVar[] x = getVarArray((SimpleNode)node.jjtGetChild(0));
+		    IntVar[] y = getVarArray((SimpleNode)node.jjtGetChild(1));
+		    IntVar[] lx = getVarArray((SimpleNode)node.jjtGetChild(2));
+		    IntVar[] ly = getVarArray((SimpleNode)node.jjtGetChild(3));
+
+		    pose(new Disjoint(x, y, lx, ly));
+		}
 		else if (p.startsWith("diff2", 6)) {
 		    IntVar[] v = getVarArray((SimpleNode)node.jjtGetChild(0));
 

@@ -1,8 +1,15 @@
 Version 4.2.1
 ===========
-1. Implementation of constraints AergMin and ArgMax as well connection to
+1. Implementation of constraints ArgMin and ArgMax as well connection to
    flatzinc constraints arg_min_int and arg_max_int.
 
+2. Correcting implementation of Diff2 and Disjoint. Currently Diff2
+   implements non-strict version of diffn constraint (minizinc constraint
+   diffn_nonstrict) that makes it possible to pack zero-width rectangles
+   anywhere. Disjoint implements a strict version of diffn constraint
+   (minizinc diffn constraint). It requires that zero-width rectangles
+   does not overlap with any other rectangle. 
+	
 Version 4.2
 ===========
 1. Support for minizinc 2.0

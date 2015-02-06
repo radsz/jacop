@@ -40,11 +40,13 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
 /**
- * Diff2 constraint assures that any two rectangles from a vector of rectangles
- * does not overlap in at least one direction.
+ * Diff2 constraint assures that any two rectangles from a vector of
+ * rectangles does not overlap in at least one direction.
  * 
+ * Zero-width rectangles can be packed anywhere.
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 3.1
+ * @version 4.2
  */
 
 public class Diff2 extends Diff {
@@ -212,8 +214,7 @@ public class Diff2 extends Diff {
 	 */
 
 	public Diff2(IntVar[][] rectangles, boolean profile) {
-		super(rectangles);
-		doProfile = profile;
+	    super(rectangles, profile);
 	}
 
 	/**
@@ -326,12 +327,67 @@ public class Diff2 extends Diff {
 		
 	}
 	
+	@Override
+	void narrowRectangles(HashSet<IntVar> fdvQueue) {
+
+		boolean needToNarrow = false;
+
+		for (int l = 0; l < rectangles.length; l++) {
+			Rectangle r = rectangles[l];
+
+			boolean settled = true, minLengthEq0 = false;
+			int maxLevel = 0;
+			for (int i = 0; i < r.dim(); i++) {
+				IntDomain rOrigin = r.origin[i].dom();
+				IntDomain rLength = r.length[i].dom();
+				settled = settled && rOrigin.singleton() && rLength.singleton();
+
+				minLengthEq0 = minLengthEq0 || (rLength.min() <= 0);
+
+				int originStamp = rOrigin.stamp, lengthStamp = rLength.stamp;
+				if (maxLevel < originStamp)
+					maxLevel = originStamp;
+				if (maxLevel < lengthStamp)
+					maxLevel = lengthStamp;
+			}
+
+			if (!minLengthEq0 && // Check for rectangle r which has
+					// all lengths > 0
+					!(settled && maxLevel < currentStore.level)) {
+				// and are not fixed already
+
+				needToNarrow = needToNarrow
+				|| containsChangedVariable(r, fdvQueue);
+
+				ArrayList<IntRectangle> UsedRect = new ArrayList<IntRectangle>();
+				ArrayList<Rectangle> ProfileCandidates = new ArrayList<Rectangle>();
+				ArrayList<Rectangle> OverlappingRects = new ArrayList<Rectangle>();
+				boolean ntN = findRectangles(r, l, UsedRect, ProfileCandidates,
+						OverlappingRects, fdvQueue);
+
+				needToNarrow = needToNarrow || ntN;
+
+				// Checking r against all s with minUse in the domain of r
+				if (needToNarrow) {
+
+					if (OverlappingRects.size() != ((Diff2VarValue) EvalRects[l]
+					                                                          .value()).Rects.length) {
+						Diff2VarValue newRects = new Diff2VarValue();
+						newRects.setValue(OverlappingRects);
+						EvalRects[l].update(newRects);
+					}
+
+					narrowRectangle(r, UsedRect, ProfileCandidates);
+				}
+			}
+		}
+	}		
+
 	boolean findRectangles(Rectangle r, int index,
 			ArrayList<IntRectangle> UsedRect,
 			ArrayList<Rectangle> ProfileCandidates,
 			ArrayList<Rectangle> OverlappingRects, HashSet<IntVar> fdvQueue) {
 
-		// Rectangle s;
 		boolean contains = false, checkArea = false;
 
 		long area = 0;
@@ -514,62 +570,6 @@ public class Diff2 extends Diff {
 	}		
 
 	@Override
-	void narrowRectangles(HashSet<IntVar> fdvQueue) {
-
-		boolean needToNarrow = false;
-
-		for (int l = 0; l < rectangles.length; l++) {
-			Rectangle r = rectangles[l];
-
-			boolean settled = true, minLengthEq0 = false;
-			int maxLevel = 0;
-			for (int i = 0; i < r.dim(); i++) {
-				IntDomain rOrigin = r.origin[i].dom();
-				IntDomain rLength = r.length[i].dom();
-				settled = settled && rOrigin.singleton() && rLength.singleton();
-
-				minLengthEq0 = minLengthEq0 || (rLength.min() <= 0);
-
-				int originStamp = rOrigin.stamp, lengthStamp = rLength.stamp;
-				if (maxLevel < originStamp)
-					maxLevel = originStamp;
-				if (maxLevel < lengthStamp)
-					maxLevel = lengthStamp;
-			}
-
-			if (//!minLengthEq0 && // Check for rectangle r which has
-					// all lengths > 0
-					!(settled && maxLevel < currentStore.level)) {
-				// and are not fixed already
-
-				needToNarrow = needToNarrow
-				|| containsChangedVariable(r, fdvQueue);
-
-				ArrayList<IntRectangle> UsedRect = new ArrayList<IntRectangle>();
-				ArrayList<Rectangle> ProfileCandidates = new ArrayList<Rectangle>();
-				ArrayList<Rectangle> OverlappingRects = new ArrayList<Rectangle>();
-				boolean ntN = findRectangles(r, l, UsedRect, ProfileCandidates,
-						OverlappingRects, fdvQueue);
-
-				needToNarrow = needToNarrow || ntN;
-
-				if (needToNarrow) {
-
-					if (OverlappingRects.size() != ((Diff2VarValue) EvalRects[l]
-					                                                          .value()).Rects.length) {
-						Diff2VarValue newRects = new Diff2VarValue();
-						newRects.setValue(OverlappingRects);
-						EvalRects[l].update(newRects);
-					}
-
-					narrowRectangle(r, UsedRect, ProfileCandidates);
-				}
-			}
-		}
-	}		
-
-
-	@Override
 	public boolean satisfied() {
 		boolean sat = true;
 
@@ -589,14 +589,6 @@ public class Diff2 extends Diff {
 		return sat;
 	}
 
-	@Override
-	public String id() {
-		if (id != null)
-			return id;
-		else
-			return  this.getClass().getSimpleName() + numberId;
-	}
-	
 	@Override
 	public String toString() {
 		
