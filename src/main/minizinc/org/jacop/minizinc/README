@@ -39,7 +39,7 @@ details.
 Once the FlatZinc file has been generated the execution in JaCoP can
 be achieved by issuing the following command.
 
-$ java -cp <class_path_to_JaCoP>:<class_path_to_jdom.jar> JaCoP.fz.Fz2jacop <file>.fzn
+$ java -cp <class_path_to_JaCoP> JaCoP.fz.Fz2jacop <file>.fzn
 
 This command will compile FlatZinc model and execute it using JaCoP solver.
 
