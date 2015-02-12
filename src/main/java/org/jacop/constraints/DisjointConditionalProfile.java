@@ -32,7 +32,7 @@
 
 package org.jacop.constraints;
 
-import java.util.Vector;
+import java.util.ArrayList;
 
 import org.jacop.core.IntDomain;
 
@@ -55,7 +55,7 @@ class DisjointConditionalProfile extends ProfileConditional {
 	}
 
 	void make(int i, int j, Rectangle r, int begin, int end,
-			Vector<RectangleWithCondition> Rs, ExclusiveList ExList) {
+			ArrayList<RectangleWithCondition> Rs, ExclusiveList ExList) {
 
 		clear();
 		MaxProfile = 0;

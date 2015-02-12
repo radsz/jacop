@@ -32,7 +32,7 @@
 
 package org.jacop.constraints;
 
-import java.util.Vector;
+import java.util.ArrayList;
 
 import org.jacop.core.MutableVarValue;
 
@@ -84,7 +84,7 @@ class DisjointCondVarValue implements MutableVarValue {
 		Rects = R;
 	}
 
-	void setValue(Vector<RectangleWithCondition> VR) {
+	void setValue(ArrayList<RectangleWithCondition> VR) {
 		Rects = new RectangleWithCondition[VR.size()];
 		for (int i = 0; i < Rects.length; i++)
 			Rects[i] = VR.get(i);
