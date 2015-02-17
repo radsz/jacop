@@ -99,6 +99,8 @@ public class ExtensionalSupportMDD extends Constraint {
 	 */
 	public ExtensionalSupportMDD(MDD diagram) {
 
+		queueIndex = 1;
+
 		this.mdd = diagram;
 		this.views = diagram.views;
 
@@ -148,6 +150,8 @@ public class ExtensionalSupportMDD extends Constraint {
 	 * @param table list of tuples which are allowed.
 	 */
 	public ExtensionalSupportMDD(IntVar [] vars, int [][] table) {
+
+		queueIndex = 1;
 
 		this.table = table;
 		this.vars = vars;

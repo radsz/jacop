@@ -45,7 +45,7 @@ import org.jacop.util.SimpleHashSet;
  * 
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.1
+ * @version 4.2
  */
 
 public class Reified extends Constraint {
@@ -182,7 +182,10 @@ public class Reified extends Constraint {
 		while (!variables.isEmpty()) {
 			Var V = variables.removeFirst();
 			V.putModelConstraint(this, getConsistencyPruningEvent(V));
+			queueVariable(store.level, V);
 		}
+
+		c.include(store);
 
 		store.registerRemoveLevelLateListener(this);
 

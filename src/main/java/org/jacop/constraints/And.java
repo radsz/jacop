@@ -44,7 +44,7 @@ import org.jacop.util.SimpleHashSet;
  * 
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.1
+ * @version 4.2
  */
 
 public class And extends PrimitiveConstraint {
@@ -227,8 +227,17 @@ public class And extends PrimitiveConstraint {
 			var.putModelConstraint(this, getConsistencyPruningEvent(var));
 		}
 
+		for (PrimitiveConstraint c : listOfC)
+		    c.include(store);
+
 		store.addChanged(this);
 		store.countConstraint(listOfC.length);
+	}
+
+        @Override
+        public void include(Store store) {
+		for (PrimitiveConstraint c : listOfC)
+		    c.include(store);
 	}
 
 	@Override

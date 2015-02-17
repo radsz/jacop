@@ -49,7 +49,7 @@ import org.jacop.floats.core.FloatDomain;
  * Domain consistency is used.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.1
+ * @version 4.2
  */
 
 public class XeqP extends Constraint {
@@ -110,7 +110,7 @@ public class XeqP extends Constraint {
 		if (Math.abs(p.min()) < (double)IntDomain.MaxInt)
 		    xMin = (int)( Math.round(Math.ceil(p.min())) );
 		else
-		    xMin = IntDomain.MaxInt;
+		    xMin = IntDomain.MinInt;
 
 		int xMax;
 		if (Math.abs(p.max()) < (double)IntDomain.MaxInt)
@@ -123,11 +123,11 @@ public class XeqP extends Constraint {
 		    xMax = xMin;
 		    xMin = t;
 		}
-		
+
 		x.domain.in(store.level, x, xMin, xMax);
 			
 		store.propagationHasOccurred = false;
-			
+
 		p.domain.in(store.level, p, x.min(), x.max());
 
 	    } while (store.propagationHasOccurred);

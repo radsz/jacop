@@ -48,7 +48,7 @@ import org.jacop.search.*;
 
 /**
  *  @author Radoslaw Szymanek
- *  @version 4.1
+ *  @version 4.2
  */
 
 public class CPvizSudoku {

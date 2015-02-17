@@ -42,7 +42,7 @@ import org.jacop.core.Var;
  * Constraint if constraint1 then constraint2
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.1
+ * @version 4.2
  */
 
 public class IfThen extends PrimitiveConstraint {
@@ -278,8 +278,17 @@ public class IfThen extends PrimitiveConstraint {
 		store.addChanged(this);
 		store.countConstraint();
 
+		condC.include(store);
+		thenC.include(store);
+
 		imposed = true;
 
+	}
+
+	@Override
+	public void include(Store store) {
+	    condC.include(store);
+	    thenC.include(store);
 	}
 
 	@Override

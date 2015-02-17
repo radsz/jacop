@@ -38,13 +38,14 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.core.TimeStamp;
 
 /**
  * If all x's are equal 1 then result variable is equal 1 too. Otherwise, result variable 
  * is equal to zero. It restricts the domain of all x as well as result to be between 0 and 1.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.1
+ * @version 4.2
  */
 
 public class AndBool extends PrimitiveConstraint {
@@ -66,6 +67,11 @@ public class AndBool extends PrimitiveConstraint {
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"list", "result"};
+
+    /*
+     * Defines first position of the variable that is not ground to 1
+     */
+    private TimeStamp<Integer> position;
 
 	/**
 	 * It constructs AndBool. 
@@ -185,6 +191,8 @@ public class AndBool extends PrimitiveConstraint {
 
 		result.putModelConstraint(this, getConsistencyPruningEvent(result));
 
+		position = new TimeStamp<Integer>(store, 0);
+
 		for (Var V : list)
 			V.putModelConstraint(this, getConsistencyPruningEvent(V));
 
@@ -193,80 +201,117 @@ public class AndBool extends PrimitiveConstraint {
 
 	}
 
+	@Override
+	public void include(Store store) {
+
+	    position = new TimeStamp<Integer>(store, 0);
+
+	}
+
 	public void consistency(Store store) {
 
-		int x1=0, index_01=0;
+	    int start = position.value();
+	    int index_01=list.length-1;
 
 		if (result.min() == 1) {
-			for (int i=0; i<list.length; i++)
+			for (int i=start; i<list.length; i++)
 				list[i].domain.in(store.level, list[i], 1, 1);
 			return;
 		}
 
-		for (int i = 0; i < list.length; i++) {
-			if (list[i].min() == 1) x1++;
-			else
-				if (list[i].max() == 0) { 
-					result.domain.in(store.level, result, 0, 0);
-					return;
-				}
-				else
-					index_01 = i;
+		for (int i = start; i < list.length; i++) {
+		    if (list[i].min() == 1) {
+			    swap(start, i);
+			    start++;
+			    position.update(start);
+		    }
+		    else
+			if (list[i].max() == 0) { 
+			    result.domain.in(store.level, result, 0, 0);
+			    removeConstraint();
+			    return;
+			}
 		}
 
-		if (x1 == list.length) {
+		if (start == list.length) {
 			result.domain.in(store.level, result, 1, 1);
 			return;
 		}
 
 		if (result.max() == 0)
-			if (x1 == list.length - 1)
+			if (start == list.length - 1)
 				list[index_01].domain.in(store.level, list[index_01], 0, 0);
 
 	}
 
+    private void swap(int i, int j) {
+	if ( i != j) {
+	    IntVar tmp = list[i];
+	    list[i] = list[j];
+	    list[j] = tmp;
+	}
+    }
+
 	@Override
 	public void notConsistency(Store store) {
 
-		int x1=0, x0=0, index_01=0;
+	    int start = position.value();
 
-		for (int i = 0; i < list.length; i++) {
-			if (list[i].min() == 1) x1++;
-			else
-				if (list[i].max() == 0) x0++;
-				else
-					index_01 = i;
+	    int index_01=list.length-1;
+
+		if (result.max() == 0) {
+			for (int i=start; i<list.length; i++)
+				list[i].domain.in(store.level, list[i], 1, 1);
+			return;
 		}
 
-		if (result.min() == 1) {
-			if (x0 == 0 && x1 == list.length - 1)
-				list[index_01].domain.in(store.level, list[index_01], 0, 0);
-		}
-		else {
-			if (result.max() == 0) {
-				if (x1 == 0 && x0 == list.length - 1)
-					list[index_01].domain.in(store.level, list[index_01], 1, 1);						
+		for (int i = start; i < list.length; i++) {
+		    if (list[i].min() == 1) {
+			    swap(start, i);
+			    start++;
+			    position.update(start);
+		    }
+		    else
+			if (list[i].max() == 0) { 
+			    result.domain.in(store.level, result, 1, 1);
+			    return;
 			}
 		}
 
-		if (x0 != 0) 
-			result.domain.in(store.level, result, 1, 1);
-		else
-			if (x1 == list.length)
-				result.domain.in(store.level, result, 0, 0);
+		if (start == list.length) {
+		    result.domain.in(store.level, result, 0, 0);
+			return;
+		}
 
+		if (result.max() == 0)
+			if (start == list.length - 1)
+			    list[index_01].domain.in(store.level, list[index_01], 1, 1);
 	}
 
 	@Override
 	public boolean satisfied() {
 
+	    int start = position.value();
+
 		if (result.min() == 1) {
-			for (int i=0; i<list.length; i++)
-				if (list[i].max() == 0) return false;
+			for (int i = start; i<list.length; i++)
+				if (list[i].min() != 1) 
+				    return false;
+				else {
+				    swap(start, i);
+				    start++;
+				    position.update(start);
+				}
 			return true;
 		} else if (result.max() == 0) {
-			for (int i=0; i<list.length; i++)
-				if (list[i].max() == 0) return true;
+			for (int i = start; i<list.length; i++)
+				if (list[i].max() == 0) 
+				    return true;
+				else if (list[i].min() == 1) {
+				    swap(start, i);
+				    start++;
+				    position.update(start);
+				}
 			return false;
 		}
 
@@ -277,11 +322,18 @@ public class AndBool extends PrimitiveConstraint {
 	@Override
 	public boolean notSatisfied() {
 
+	    int start = position.value();
+
 		if (result.max() == 0) {
 
-			for (int i = 0; i < list.length; i++)
-				if (list[i].min() == 0)
+			for (int i = start; i < list.length; i++)
+				if (list[i].min() != 1)
 					return false;
+				else {
+				    swap(start, i);
+				    start++;
+				    position.update(start);
+				}
 
 			return true;
 
@@ -290,10 +342,14 @@ public class AndBool extends PrimitiveConstraint {
 
 			if (result.min() == 1) {
 
-				for (int i = 0; i < list.length; i++)
+				for (int i = start; i < list.length; i++)
 					if (list[i].max() == 0)
 						return true;					
-
+				else if (list[i].min() == 1) {
+				    swap(start, i);
+				    start++;
+				    position.update(start);
+				}
 			}
 		}
 

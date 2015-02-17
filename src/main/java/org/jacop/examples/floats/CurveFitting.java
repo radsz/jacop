@@ -36,7 +36,7 @@ package org.jacop.examples.floats;
  * It models curve fitting flow for floating solver.
  *
  * Curve fitting problem by Least Squares based on
- * minizinc model curve_fitting3.mzn by Håkan Kjellstrand
+ * minizinc model curve_fitting3.mzn by Håkan Kjellerstrand
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * 

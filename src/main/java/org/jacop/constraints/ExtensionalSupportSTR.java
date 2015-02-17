@@ -56,7 +56,7 @@ import org.xml.sax.SAXException;
  * available, which helped to create our own version of this algorithm.
  * 
  * @author Radoslaw Szymanek
- * @version 4.1
+ * @version 4.2
  */
 
 

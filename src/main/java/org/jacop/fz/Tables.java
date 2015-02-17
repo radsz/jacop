@@ -364,11 +364,6 @@ public class Tables {
 	    double[] floatA = floatArrayTable.get(ident);
 	    a = new FloatVar[floatA.length];
 	    for (int i =0; i<floatA.length; i++) {
-		// if (floatA[i] == 0) 
-		//     a[i] = zero;
-		// else if (floatA[i] == 1) 
-		//     a[i] = one;
-		// else
 		a[i] = new FloatVar(store, floatA[i], floatA[i]);
 	    }
 	}
@@ -507,12 +502,26 @@ public class Tables {
 	int indexFloat = 9;
 	int indexFloatVariableArray = 11;
 
+	String[] tableNames = {"int",   // 0
+			       "int arrays",  // 1
+			       "set",       // 2
+			       "set arrays",  // 3
+			       "IntVar",  // 4
+			       "IntVar Arrays",  // 5
+			       "SetVar",    // 6
+			       "SetVar arrays",  // 7
+			       "float arrays",        // 8
+			       "float",             // 9
+			       "FloatVar",     // 10
+			       "FloatVar arrays"  // 11
+};
+
 	String s = "";
 	for (int i=0; i<dictionary.length; i++) {
 	     
-	    // int array
+	    // int array || float array
 	    if (i == indexIntArray) {
-		s+="Int arrays\n";
+		s+= tableNames[i]+"\n";
 		s +="{";
 		java.util.Set<String> keys = dictionary[i].keySet();
 		for (String k : keys) {
@@ -528,25 +537,25 @@ public class Tables {
 		s+="}\n";
 	    }
 	    // float array
-	    if (i == indexFloatArray) {
-		s+="Float arrays\n";
-		s +="{";
-		java.util.Set<String> keys = dictionary[i].keySet();
-		for (String k : keys) {
-		    double[] a = (double[])dictionary[i].get(k);
-		    s += k+"=[";
-		    for (int j=0; j<a.length; j++) {
-			s += a[j];
-			if (j < a.length-1)
-			    s += ", ";
-		    }
-		    s += "], ";
-		}
-		s+="}\n";
+	    else if (i == indexFloatArray) {
+	    	s+= tableNames[i]+"\n";
+	    	s +="{";
+	    	java.util.Set<String> keys = dictionary[i].keySet();
+	    	for (String k : keys) {
+	    	    double[] a = (double[])dictionary[i].get(k);
+	    	    s += k+"=[";
+	    	    for (int j=0; j<a.length; j++) {
+	    		s += a[j];
+	    		if (j < a.length-1)
+	    		    s += ", ";
+	    	    }
+	    	    s += "], ";
+	    	}
+	    	s+="}\n";
 	    }
-	    // Set Array
+	    // Set Array 
 	    else if (i == indexSetArray) {
-		s+="Set arrays\n";
+		s+= tableNames[i]+"\n";
 		s +="{";
 		java.util.Set<String> keys = dictionary[i].keySet();
 		for (String k : keys) {
@@ -557,48 +566,50 @@ public class Tables {
 		}
 		s+="}\n";
 	    }
-	    // Variable Array
-	    else if (i == indexVariableArray) {
-		s+="IntVar arrays\n";
-		s +="{";
-		java.util.Set<String> keys = dictionary[i].keySet();
-		for (String k : keys) {
-		    Var[] a = (Var[])dictionary[i].get(k);
-		    s += k+"=";
-		    s += Arrays.asList(a);
-		    s += ", ";
-		}
-		s+="}\n";
+	    // Variable Array (IntVar, FloatVar, SetVar)
+	    else if (i == indexVariableArray || i == indexFloatVariableArray || i == indexSetVariableArray) {
+	    	s+= tableNames[i]+"\n";
+	    	s +="{";
+	    	java.util.Set<String> keys = dictionary[i].keySet();
+	    	for (String k : keys) {
+	    	    Var[] a = (Var[])dictionary[i].get(k);
+	    	    s += k+"=";
+	    	    s += Arrays.asList(a);
+	    	    s += ", ";
+	    	}
+	    	s+="}\n";
 	    }
-	    // Float Variable Array
-	    else if (i == indexFloatVariableArray) {
-		s+="FloatVar arrays\n";
-		s +="{";
-		java.util.Set<String> keys = dictionary[i].keySet();
-		for (String k : keys) {
-		    Var[] a = (Var[])dictionary[i].get(k);
-		    s += k+"=";
-		    s += Arrays.asList(a);
-		    s += ", ";
-		}
-		s+="}\n";
-	    }
-	    // Set Variables Array
-	    else if (i == indexSetVariableArray) {
-		s+="Set var arrays\n";
-		s +="{";
-		java.util.Set<String> keys = dictionary[i].keySet();
-		for (String k : keys) {
-		    Var[] a = (Var[])dictionary[i].get(k);
-		    s += k+"=";
-		    s += Arrays.asList(a);
-		    s += ", ";
-		}
-		s+="}\n";
-	    }
+	    // // Float Variable Array
+	    // else if (i == indexFloatVariableArray) {
+	    // 	s+= tableNames[i]+"\n"; //"FloatVar arrays\n";
+	    // 	s +="{";
+	    // 	java.util.Set<String> keys = dictionary[i].keySet();
+	    // 	for (String k : keys) {
+	    // 	    Var[] a = (Var[])dictionary[i].get(k);
+	    // 	    s += k+"=";
+	    // 	    s += Arrays.asList(a);
+	    // 	    s += ", ";
+	    // 	}
+	    // 	s+="}\n";
+	    // }
+	    // // Set Variables Array
+	    // else if (i == indexSetVariableArray) {
+	    // 	s+= tableNames[i]+"\n"; //"Set var arrays\n";
+	    // 	s +="{";
+	    // 	java.util.Set<String> keys = dictionary[i].keySet();
+	    // 	for (String k : keys) {
+	    // 	    Var[] a = (Var[])dictionary[i].get(k);
+	    // 	    s += k+"=";
+	    // 	    s += Arrays.asList(a);
+	    // 	    s += ", ";
+	    // 	}
+	    // 	s+="}\n";
+	    // }
 	    // others
-	    else
-		s += dictionary[i] +"\n";
+	    else {
+		s+= tableNames[i]+"\n";
+		s += dictionary[i] + "\n";
+	    }
 	}
 
 	s += "Output variables = "+ outputVariables+"\n";

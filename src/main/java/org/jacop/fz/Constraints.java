@@ -46,6 +46,7 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.floats.core.FloatVar;
+import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.constraints.*;
 
 import org.jacop.set.constraints.AdiffBeqC;
@@ -66,6 +67,7 @@ import org.jacop.util.fsm.FSMTransition;
 import org.jacop.constraints.netflow.NetworkBuilder;
 import org.jacop.constraints.netflow.NetworkFlow;
 import org.jacop.constraints.netflow.simplex.Node;
+import org.jacop.constraints.geost.*;
 
 /**
  * 
@@ -197,12 +199,12 @@ public class Constraints implements ParserTreeConstants {
 		// node.dump("");
 		// System.out.println(p + " op = " + operation);
 
-		// int_eq*, int_ne*, int_lt*, int_gt*, int_le*, and int_ge*
+		// float_eq*, float_ne*, float_lt*, float_gt*, float_le*, and float_ge*
 		if ( operation != -1) {
-		    float_comparison(operation, node, 6);
+		    float_comparison(operation, node, 8);
 		}
 
-		// int_lin_* (eq, ne, lt, gt, le, ge)
+		// float_lin_* (eq, ne, lt, gt, le, ge)
 		else if (p.startsWith("lin_", 6)) {
 		    operation = comparisonPredicate(p, 10);
 		    float_lin_relation(operation, node);
@@ -315,9 +317,12 @@ public class Constraints implements ParserTreeConstants {
 		    FloatVar v2 = getFloatVariable(p2);
 		    FloatVar v3 = getFloatVariable(p3);
 
+		    pose(new org.jacop.floats.constraints.Min(new FloatVar[] {v1, v2}, v3));
+		    // 1.
 		    // pose(new IfThenElse(new PlteqQ(v1,v2), new PeqQ(v1,v3), new PeqQ(v2,v3)));
-		    pose(new IfThen(new PltQ(v1,v2), new PeqQ(v1,v3)));
-		    pose(new IfThen(new PltQ(v2,v1), new PeqQ(v2,v3)));
+		    // 2.
+		    // pose(new IfThen(new PltQ(v1,v2), new PeqQ(v1,v3)));
+		    // pose(new IfThen(new PltQ(v2,v1), new PeqQ(v2,v3)));
 		}
 		else if (p.startsWith("max", 6)) {
 		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
@@ -328,9 +333,13 @@ public class Constraints implements ParserTreeConstants {
 		    FloatVar v2 = getFloatVariable(p2);
 		    FloatVar v3 = getFloatVariable(p3);
 
-		    // pose(new IfThenElse(new PltQ(v2,v1), new PeqQ(v1,v3), new PeqQ(v2,v3)));
-		    pose(new IfThen(new PltQ(v2,v1), new PeqQ(v1,v3)));
-		    pose(new IfThen(new PltQ(v1,v2), new PeqQ(v2,v3)));
+		    pose(new org.jacop.floats.constraints.Max(new FloatVar[] {v1, v2}, v3));
+
+		    // 1.
+		    pose(new IfThenElse(new PltQ(v2,v1), new PeqQ(v1,v3), new PeqQ(v2,v3)));
+		    // 2.
+		    // pose(new IfThen(new PltQ(v2,v1), new PeqQ(v1,v3)));
+		    // pose(new IfThen(new PltQ(v1,v2), new PeqQ(v2,v3)));
 		}
 		else {
 		    System.err.println("%% ERROR: JaCoP does not implement this constraints on floats");
@@ -487,7 +496,7 @@ public class Constraints implements ParserTreeConstants {
 		    if (v1 == v2)
 		    	pose(new XeqY(v1, v3));
 		    else
-		    	pose(new Min(new IntVar[] {v1, v2}, v3));
+		    	pose(new org.jacop.constraints.Min(new IntVar[] {v1, v2}, v3));
 
 		}
 		else if (p.startsWith("max", 4)) {
@@ -522,7 +531,7 @@ public class Constraints implements ParserTreeConstants {
 		    else if (v1 == v2)
 		    	pose(new XeqY(v1, v3));
 		    else
-		    	pose(new Max(new IntVar[] {v1, v2}, v3));
+		    	pose(new org.jacop.constraints.Max(new IntVar[] {v1, v2}, v3));
 
 		}
 		else if (p.startsWith("abs", 4)) {
@@ -1199,13 +1208,13 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar n = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
 		    IntVar[] x = getVarArray((SimpleNode)node.jjtGetChild(1));
 
-		    pose(new Min(x, n));
+		    pose(new org.jacop.constraints.Min(x, n));
 		}
 		else if (p.startsWith("maximum", 6)) {
 		    IntVar n = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
 		    IntVar[] x = getVarArray((SimpleNode)node.jjtGetChild(1));
 
-		    pose(new Max(x, n));
+		    pose(new org.jacop.constraints.Max(x, n));
 		}
 		else if (p.startsWith("table_int", 6) ||
 			 p.startsWith("table_bool", 6)) { 
@@ -1221,7 +1230,7 @@ public class Constraints implements ParserTreeConstants {
 		    // we do not not pose ExtensionalSupportMDD directly because of possible inconsistency with its 
 		    // intiallization; we collect all constraints and pose them at the end when all other constraints are posed
 
-		    delayedConstraints.add(new ExtensionalSupportSTR(v, t));
+		    delayedConstraints.add(new ExtensionalSupportMDD(v, t));
  		    //pose(new ExtensionalSupportMDD(v, t));
 		}
 		else if (p.startsWith("assignment", 6)) {
@@ -1383,19 +1392,25 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar[] x = getVarArray((SimpleNode)node.jjtGetChild(0));
 		    IntVar[] y = getVarArray((SimpleNode)node.jjtGetChild(1));
 
-		    DecomposedConstraint c = new org.jacop.constraints.Lex(new IntVar[][] {x, y}, true);
+		    // DecomposedConstraint c = new org.jacop.constraints.Lex(new IntVar[][] {x, y}, true);
+		    // store.imposeDecomposition(c);
 
-		    store.imposeDecomposition(c);
+		    Constraint c = new LexOrder(x, y, true);
+		    store.impose(c);
+
 		}
 		else if (p.startsWith("lex_lesseq_int", 6) || p.startsWith("lex_lesseq_bool", 6)) {
 		    IntVar[] x = getVarArray((SimpleNode)node.jjtGetChild(0));
 		    IntVar[] y = getVarArray((SimpleNode)node.jjtGetChild(1));
 
-		    //System.out.println ("lex_lesseq_int: x.length = " + x.length +  " y.length = " + y.length);
+		    // System.out.println ("lex_lesseq_int: x.length = " + x.length +  " y.length = " + y.length);
 
-		    DecomposedConstraint c = new org.jacop.constraints.Lex(new IntVar[][] {x, y});
+		    // DecomposedConstraint c = new org.jacop.constraints.Lex(new IntVar[][] {x, y});
+		    // store.imposeDecomposition(c);
 
-		    store.imposeDecomposition(c);
+		    Constraint c = new LexOrder(x, y, false);
+		    store.impose(c);
+
 		}
  		else if (p.startsWith("bin_packing", 6)) {
 		    IntVar[] bin = getVarArray((SimpleNode)node.jjtGetChild(0));
@@ -1405,6 +1420,126 @@ public class Constraints implements ParserTreeConstants {
    		    pose( new org.jacop.constraints.binpacking.Binpacking(bin, capacity, w) );
 //   		    Constraint binPack = new org.jacop.constraints.binpacking.Binpacking(bin, capacity, w);
 //   		    delayedConstraints.add(binPack);
+		}
+		else if (p.startsWith("float_maximum", 6)) {
+		    FloatVar p2 = getFloatVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
+		    FloatVar[] p1 = getFloatVarArray((SimpleNode)node.jjtGetChild(0));
+
+		    pose(new org.jacop.floats.constraints.Max(p1, p2));
+		}
+		else if (p.startsWith("float_minimum", 6)) {
+		    FloatVar p2 = getFloatVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
+		    FloatVar[] p1 = getFloatVarArray((SimpleNode)node.jjtGetChild(0));
+
+		    pose(new org.jacop.floats.constraints.Min(p1, p2));
+		}
+ 		else if (p.startsWith("geost", 6)) {
+
+		    int dim = getInt((ASTScalarFlatExpr)node.jjtGetChild(0));
+		    int[] rect_size = getIntArray((SimpleNode)node.jjtGetChild(1));
+		    int[] rect_offset = getIntArray((SimpleNode)node.jjtGetChild(2));
+		    IntDomain[] shape =  getSetArray((SimpleNode)node.jjtGetChild(3));
+		    IntVar[] x = getVarArray((SimpleNode)node.jjtGetChild(4));
+		    IntVar[] kind = getVarArray((SimpleNode)node.jjtGetChild(5));
+
+		    // System.out.println("dim = " + dim);
+		    // System.out.print("rect_size = [");
+		    // for (int i = 0; i < rect_size.length; i++) 
+		    // 	System.out.print(" " + rect_size[i]);
+		    // System.out.print("]\nrect_offset = [");
+		    // for (int i = 0; i < rect_offset.length; i++) 
+		    // 	System.out.print(" " + rect_offset[i]);
+		    // System.out.println("]\nshape = " + java.util.Arrays.asList(shape));
+		    // System.out.println("x = " + java.util.Arrays.asList(x));
+		    // System.out.println("kind = " + java.util.Arrays.asList(kind));
+		    // System.out.println("===================");
+
+
+		    ArrayList<Shape> shapes = new ArrayList<Shape>(); 
+
+		    // dummy shape to have right indexes for kind (starting from 1)
+		    ArrayList<DBox> dummy = new ArrayList<DBox>();
+		    int[] offsetDummy = new int[dim];
+		    int[] sizeDummy = new int[dim];
+		    for (int k = 0; k < dim; k++) {
+			offsetDummy[k] = 0;
+			sizeDummy[k] = 1;
+		    }
+		    dummy.add(new DBox(offsetDummy, sizeDummy));
+		    shapes.add( new Shape(0, dummy));
+
+		    // create all shapes (starting with id=1)
+		    for (int i = 0; i < shape.length; i++) {
+			ArrayList<DBox> shape_i = new ArrayList<DBox>();
+
+			for (ValueEnumeration e = shape[i].valueEnumeration(); e.hasMoreElements();) {
+			    int j = e.nextElement();
+
+			    int[] offset = new int[dim];
+			    int[] size = new int[dim];
+
+			    for (int k = 0; k < dim; k++) {
+				offset[k] = rect_offset[(j-1)*dim+k];
+				size[k] = rect_size[(j-1)*dim+k];
+			    }
+			    shape_i.add(new DBox(offset, size));
+
+			}
+			shapes.add( new Shape((i+1), shape_i) );
+		    }		    
+
+		    // for (int i = 0; i < shapes.size(); i++) 
+		    // 	System.out.println("*** " + shapes.get(i));
+
+		    ArrayList<GeostObject> objects = new ArrayList<GeostObject>(); 
+
+		    for (int i = 0; i < kind.length; i++) {
+
+			IntVar[] coords = new IntVar[dim]; 
+
+			for (int k = 0; k < dim; k++) 
+			    coords[k] = x[i*dim+k];
+
+			// System.out.println("coords = " + java.util.Arrays.asList(coords));
+
+			IntVar start = new IntVar(store, "start["+i+"]", 0,0); 
+			IntVar duration = new IntVar(store, "duration["+i+"]", 1,1); 
+			IntVar end = new IntVar(store, "end["+i+"]", 1, 1); 
+			GeostObject obj = new GeostObject(i, coords, kind[i], start, duration, end); 
+			objects.add(obj);
+		    }
+
+		    // System.out.println("===========");
+		    // for (int i = 0; i < objects.size(); i++) 
+		    // 	System.out.println(objects.get(i));
+		    // System.out.println("===========");
+
+		    ArrayList<ExternalConstraint> constraints = new ArrayList<ExternalConstraint>(); 
+		    int[] dimensions = new int[dim+1]; 
+		    for (int i = 0; i < dim+1; i++) 
+			dimensions[i] = i;
+
+		    NonOverlapping constraint1 = new NonOverlapping(objects, dimensions); 
+		    constraints.add(constraint1); 
+
+		    if (p.startsWith("geost_bb", 6)) {
+
+			int[] lb = getIntArray((SimpleNode)node.jjtGetChild(6));
+			int[] ub = getIntArray((SimpleNode)node.jjtGetChild(7));
+
+			// System.out.print("[");
+			// for (int i = 0; i < lb.length; i++) 
+			// 	System.out.print(" " + lb[i]);
+			// System.out.print("]\n[");
+			// for (int i = 0; i < ub.length; i++) 
+			// 	System.out.print(" " + ub[i]);
+			// System.out.println("]");
+
+			InArea constraint2 = new InArea(new DBox(lb, ub), null); 
+			constraints.add(constraint2);
+		    }
+
+   		    pose( new Geost(objects, constraints, shapes) );
 		}
 		else
 		    System.err.println("%% ERROR: Constraint "+p+" not supported.");
@@ -1841,6 +1976,7 @@ public class Constraints implements ParserTreeConstants {
 	    IntVar v3 = getVariable(p3);
 
 	    if (p2.getType() == 5) { // var rel float
+
 		FloatVar v1 = getFloatVariable(p1);
 
 		double i2 = getFloat(p2);
@@ -1936,7 +2072,7 @@ public class Constraints implements ParserTreeConstants {
 		}
 	    } else if (p1.getType() == 5) { // float rel var
 		FloatVar v2 = getFloatVariable(p2);
-		double i1 = getInt(p1);
+		double i1 = getFloat(p1);
 
 		switch (operation) {
 
@@ -2055,8 +2191,8 @@ public class Constraints implements ParserTreeConstants {
 
 	    if (p1.getType() == 5) { // first parameter float
 		if (p2.getType() == 0 || p2.getType() == 1) { // first parameter float & second parameter float
-		    double i1 = getInt(p1);
-		    double i2 = getInt(p2);
+		    double i1 = getFloat(p1);
+		    double i2 = getFloat(p2);
 		    switch (operation) {
 		    case eq :
 			if (i1 != i2) throw Store.failException;
@@ -2091,10 +2227,10 @@ public class Constraints implements ParserTreeConstants {
 			v2.domain.inComplement(store.level, v2, i1);
 			break;
 		    case lt :
-			v2.domain.in(store.level, v2, i1+1, IntDomain.MaxInt);
+			v2.domain.in(store.level, v2, FloatDomain.next(i1), VariablesParameters.MAX_FLOAT);
 			break;
 		    case le :
-			v2.domain.in(store.level, v2, i1, IntDomain.MaxInt);
+			v2.domain.in(store.level, v2, i1, VariablesParameters.MAX_FLOAT);
 			break;
 		    // case gt :
 		    // 	v2.domain.in(store.level, v2, IntDomain.MinInt, i1-1);
@@ -2444,7 +2580,8 @@ public class Constraints implements ParserTreeConstants {
 		    else
 			pose(new XplusYeqC(p2[0], p2[1], -p3));
 		}
-		else if (domainConsistency) { // && ! (p1.length == 2 && allWeightsOneOrMinusOne(p1)) ) {
+		else if (domainConsistency && (maxDomain(p2) <= 4 || p2.length <= 2) ) { // heuristic rule to select domain consistency since 
+		                                                                         // its complexity is O(d^n), d <= 4 or n <= 2 ;)
 		    // We do not impose linear constraint with domain consistency if 
 		    // the cases are covered by four cases above.
 
@@ -2664,6 +2801,16 @@ public class Constraints implements ParserTreeConstants {
 	}
     }
 
+    int maxDomain(IntVar[] vs) {
+	int s = IntDomain.MinInt;
+
+	for (IntVar v : vs) 
+	    s = (s > v.getSize()) ? s : v.getSize();
+	
+	return s;
+
+    }
+
     void float_lin_relation(int operation, SimpleNode node) throws FailException {
 	// float_lin_*[_reif] (* = eq | ne | lt | gt | le | ge)
 
@@ -2697,7 +2844,25 @@ public class Constraints implements ParserTreeConstants {
 	else { // non reified
 	    switch (operation) {
 	    case eq :
-		pose(new LinearFloat(store, p2, p1, "==", p3));
+
+		if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
+		    if (p3 != 0)
+			pose(new PplusCeqR(p2[1], p3, p2[0]));
+		    else
+			pose(new PeqQ(p2[1], p2[0]));
+		}
+		else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
+		    if (p3 != 0) {
+			    pose(new PplusCeqR(p2[0], p3, p2[1]));
+		    }
+		    else
+			pose(new PeqQ(p2[0], p2[1]));
+		}
+		else if (p1.length == 2 && p1[0] == 1 && p1[1] == 1) {
+		    pose(new PplusQeqR(p2[0], p2[1], new FloatVar(store, p3,p3)));
+		} 
+		else
+		    pose(new LinearFloat(store, p2, p1, "==", p3));
 		break;
 	    case ne :
 		pose(new LinearFloat(store, p2, p1, "!=", p3));
@@ -3410,7 +3575,7 @@ public class Constraints implements ParserTreeConstants {
     }
 
     void pose(Constraint c) throws FailException {
- 	
+
 	store.imposeWithConsistency(c);	
 	
 	if (debug)
