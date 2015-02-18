@@ -117,7 +117,7 @@ public class ArgMax extends Constraint {
 
     /**
      * It constructs max constraint.
-     * @param max variable denoting the maximum value
+     * @param maxIndex variable denoting index of the maximum value
      * @param variables the array of variables for which the maximum value is imposed.
      */
     public ArgMax(ArrayList<? extends IntVar> variables, IntVar maxIndex, int indexOffset, boolean tiebreak) {

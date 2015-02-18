@@ -74,7 +74,7 @@ public class PltQ extends PrimitiveConstraint {
 	/**
 	 * It constructs constraint P < C.
 	 * @param p variable p.
-	 * @param c constant c.
+	 * @param q constant q.
 	 */
 	public PltQ(FloatVar p, FloatVar q) {
 		

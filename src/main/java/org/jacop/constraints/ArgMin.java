@@ -117,8 +117,8 @@ public class ArgMin extends Constraint {
 
     /**
      * It constructs max constraint.
-     * @param max variable denoting the maximum value
-     * @param variables the array of variables for which the maximum value is imposed.
+     * @param minIndex variable denoting the index of minimum value
+     * @param variables the array of variables for which the minimum value is imposed.
      */
     public ArgMin(ArrayList<? extends IntVar> variables, IntVar minIndex, int indexOffset, boolean tiebreak) {
 	this(variables, minIndex);

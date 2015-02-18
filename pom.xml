@@ -234,6 +234,14 @@ setup to run configuration. -->
                 <version>3.0</version>
             </plugin>
 
+	    <plugin>
+	      <groupId>org.apache.maven.plugins</groupId>
+	      <artifactId>maven-javadoc-plugin</artifactId>
+	      <configuration>
+		<additionalparam>-Xdoclint:none</additionalparam>
+	      </configuration>
+              <version>2.10.1</version>
+	    </plugin>
         </plugins>
 
         <pluginManagement>
@@ -278,14 +286,9 @@ setup to run configuration. -->
                 <version>2.5</version>
             </plugin>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <version>2.8</version>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-report-plugin</artifactId>
-                <version>2.9</version>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-surefire-report-plugin</artifactId>
+              <version>2.9</version>
             </plugin>
             <!--
             <plugin>

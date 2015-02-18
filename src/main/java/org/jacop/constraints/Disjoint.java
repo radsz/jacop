@@ -173,7 +173,6 @@ public class Disjoint extends Diff {
 
 	/**
 	 * It creates a diff2 constraint.
-	 * @param store constraint store in which the constraint is created.
 	 * @param rectangles list of rectangles with origins and lengths in both dimensions.
 	 */
 

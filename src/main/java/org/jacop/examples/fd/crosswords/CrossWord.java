@@ -382,8 +382,6 @@ public class CrossWord extends ExampleFD {
      *  It executes the program to create a model and solve
      *  crossword problem. 
      *  
-     *  @todo Add additional parameter which allows to specify the crossword.
-     *  
      *  @param args no arguments used.
      *
      */
