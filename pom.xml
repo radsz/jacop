@@ -1,77 +1,103 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org</groupId>
-    <artifactId>jacop</artifactId>
-    <version>4.3.0-SNAPSHOT</version>
-    <packaging>jar</packaging>
+	<groupId>org.jacop</groupId>
+	<artifactId>jacop</artifactId>
+	<version>4.3.0-SNAPSHOT</version>
+	<packaging>jar</packaging>
 
-    <name>jacop</name>
-    <url>http://jacop.osolpro.com</url>
-    <description>Finite domain solver written in java.</description>
+	<name>JaCoP</name>
+	<url>http://jacop.osolpro.com</url>
+	<description>Finite domain solver written in java.</description>
 
-    <developers>
-      <developer>
-	<id>kris</id>
-	<name>Krzysztof Kuchcinski</name>
-	<email>krzysztof.kuchcinski@cs.lth.se</email>
-	<roles>
-	  <role>Core developer</role>
-	</roles>
-	<organization>cs.lth.se</organization>
-	<timezone>+1</timezone>
-      </developer>         
-      <developer>
-	<id>radek</id>
-	<name>Radoslaw Szymanek</name>
-	<email>radoslaw.szymanek@gmail.com</email>
-	<roles>
-	  <role>Core developer</role>
-	</roles>
-	<organization>osolpro.eu</organization>
-	<timezone>+1</timezone>
-      </developer>         
-    </developers>
+	<distributionManagement>
+		<snapshotRepository>
+			<id>lth-snapshots</id>
+			<name>CS LTH snapshots maven repo</name>
+			<url>http://maven.cs.lth.se/content/repositories/snapshots</url>
+		</snapshotRepository>
+		<repository>
+			<id>lth-releases</id>
+			<name>CS LTH release maven repo</name>
+			<url>http://maven.cs.lth.se/content/repositories/releases</url>
+		</repository>
+	</distributionManagement>
 
-    <scm>
-      <connection>scm:svn:http://sourceforge.net/projects/jacop-solver/</connection>
-      <developerConnection>scm:svn:http://sourceforge.net/projects/jacop-solver/</developerConnection>
-      <url>http://sourceforge.net/projects/jacop-solver/</url>
-    </scm> 
+	<developers>
+		<developer>
+			<id>kris</id>
+			<name>Krzysztof Kuchcinski</name>
+			<email>krzysztof.kuchcinski@cs.lth.se</email>
+			<roles>
+				<role>Core developer</role>
+			</roles>
+			<organization>Lunds Tekniska Högskola</organization>
+			<organizationUrl>cs.lth.se</organizationUrl>
+			<timezone>+1</timezone>
+		</developer>
+		<developer>
+			<id>radek</id>
+			<name>Radoslaw Szymanek</name>
+			<email>radoslaw.szymanek@gmail.com</email>
+			<roles>
+				<role>Core developer</role>
+			</roles>
+			<organization>osolpro</organization>
+			<organizationUrl>osolpro.eu</organizationUrl>
+			<timezone>+1</timezone>
+		</developer>
+	</developers>
 
+	<licenses>
+		<license>
+			<name>GNU Affero General Public License, Version 3</name>
+			<url>http://www.gnu.org/licenses/agpl-3.0-standalone.html</url>
+		</license>
+	</licenses>
 
-    <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>1.6</maven.compiler.source>
-        <maven.compiler.target>1.6</maven.compiler.target>
-        <aspectj.version>1.6.11</aspectj.version>
-    </properties>
+	<!-- <scm>
+		<connection>scm:svn:http://sourceforge.net/projects/jacop-solver/</connection>
+		<developerConnection>scm:svn:http://sourceforge.net/projects/jacop-solver/</developerConnection>
+		<url>http://sourceforge.net/projects/jacop-solver/</url>
+	</scm> -->
+
+	<scm>
+		<connection>scm:git:git@github.com:radsz/jacop.git</connection>
+		<developerConnection>scm:git:git@github.com:radsz/jacop.git</developerConnection>
+		<url>git@github.com:radsz/jacop.git</url>
+	</scm>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<maven.compiler.source>1.7</maven.compiler.source>
+		<maven.compiler.target>1.7</maven.compiler.target>
+		<aspectj.version>1.8.6</aspectj.version>
+	</properties>
 
     <!-- In order to see logging output,
 then -Dlog4j.configuration=log4j.xml should be
 setup to run configuration. -->
 
-    <profiles>
-        <profile>
-            <id>logging</id>
-            <build>
-
-                <plugins>
-
-                    <plugin>
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>aspectj-maven-plugin</artifactId>
-                        <version>1.4</version>
-                        <executions>
-                            <execution>
-                                <goals>
-                                    <goal>compile</goal>
-                                    <goal>test-compile</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                        <configuration>
+	<profiles>
+		<profile>
+			<id>logging</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>aspectj-maven-plugin</artifactId>
+						<version>1.7</version>
+						<executions>
+							<execution>
+								<goals>
+									<goal>compile</goal>
+									<goal>test-compile</goal>
+								</goals>
+							</execution>
+						</executions>
+						<configuration>
                             <!--
                             <aspectLibraries>
                                     <aspectLibrary>
@@ -80,229 +106,239 @@ setup to run configuration. -->
                                     </aspectLibrary>
                             </aspectLibraries>
                             -->
-                            <verbose>true</verbose>
-                            <source>${maven.compiler.source}</source>
-                            <target>${maven.compiler.target}</target>
+							<verbose>true</verbose>
+							<source>${maven.compiler.source}</source>
+							<target>${maven.compiler.target}</target>
                         </configuration>
                     </plugin>
                 </plugins>
             </build>
 
-            <dependencies>
-                <dependency>
-                    <groupId>org.aspectj</groupId>
-                    <artifactId>aspectjweaver</artifactId>
-                    <version>${aspectj.version}</version>
-                </dependency>
-
-                <dependency>
-                    <groupId>org.aspectj</groupId>
-                    <artifactId>aspectjtools</artifactId>
-                    <version>${aspectj.version}</version>
-                </dependency>
-                <dependency>
-                    <groupId>org.aspectj</groupId>
-                    <artifactId>aspectjrt</artifactId>
-                    <version>${aspectj.version}</version>
-                </dependency>
-
-	    </dependencies>
-
+			<dependencies>
+				<dependency>
+					<groupId>org.aspectj</groupId>
+					<artifactId>aspectjweaver</artifactId>
+					<version>${aspectj.version}</version>
+				</dependency>
+				<dependency>
+					<groupId>org.aspectj</groupId>
+					<artifactId>aspectjtools</artifactId>
+					<version>${aspectj.version}</version>
+				</dependency>
+				<dependency>
+					<groupId>org.aspectj</groupId>
+					<artifactId>aspectjrt</artifactId>
+					<version>${aspectj.version}</version>
+				</dependency>
+			</dependencies>
         </profile>
     </profiles>
 
-    <build>
-        <plugins>
+	<build>
 
-            <!-- Scala plugin -->
-            <plugin>
-                <groupId>org.scala-tools</groupId>
-                <artifactId>maven-scala-plugin</artifactId>
-                <version>2.15.2</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>compile</goal>
-                            <goal>testCompile</goal>
-                        </goals>
-                        <configuration>
-			  <args>
-			    <arg>-deprecation</arg>
-			    <arg>-feature</arg>
-			  </args>
-			  <sendJavaToScalac>false</sendJavaToScalac>
-			  <sourceDir>src/main/scala</sourceDir>
-			  <includes>
-			    <include>**/*.scala</include>
-			  </includes>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-surefire-report-plugin</artifactId>
+					<version>2.18.1</version>
+				</plugin>
+			</plugins>
+		</pluginManagement>
 
-            <!-- JJTree and javacc plugin -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>javacc-maven-plugin</artifactId>
-                <version>2.6</version>
-                <executions>
-                    <execution>
-                        <id>javacc</id>
-                        <goals>
-                            <goal>jjtree-javacc</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
+		<plugins>
+			<!-- Scala plugin -->
+			<plugin>
+				<groupId>org.scala-tools</groupId>
+				<artifactId>maven-scala-plugin</artifactId>
+				<version>2.15.2</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>compile</goal>
+							<goal>testCompile</goal>
+						</goals>
+						<configuration>
+							<args>
+								<arg>-deprecation</arg>
+								<arg>-feature</arg>
+							</args>
+							<sendJavaToScalac>false</sendJavaToScalac>
+							<sourceDir>src/main/scala</sourceDir>
+							<includes>
+								<include>**/*.scala</include>
+							</includes>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
 
-            <!-- Defines sources -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>build-helper-maven-plugin</artifactId>
-                <version>1.7</version>
-                <executions>
-                    <execution>
-                        <phase>generate-sources</phase>
-                        <goals><goal>add-source</goal></goals>
-                        <configuration>
-                            <sources>
-                                <!-- <source>src/main/java</source> -->
-                                <source>src/main/scala</source>
-                                <source>src/main/jjtree</source>
-                                <source>src/main/minizinc</source>
-                            </sources>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
+			<!-- JJTree and javacc plugin -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>javacc-maven-plugin</artifactId>
+				<version>2.6</version>
+				<executions>
+					<execution>
+						<id>javacc</id>
+						<goals>
+							<goal>jjtree-javacc</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 
-            <!-- Plugin for creation of jar file with sources -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-source-plugin</artifactId>
-                <version>2.1.2</version>
-                <executions>
-                    <execution>
-                        <id>attach-sources</id>
-                        <goals>
-                            <goal>jar</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <outputDirectory>target</outputDirectory>
-                    <finalName>JaCoP-${project.version}</finalName>
-                </configuration>
-            </plugin>
+			<!-- Defines sources -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>build-helper-maven-plugin</artifactId>
+				<version>1.9.1</version>
+				<executions>
+					<execution>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>add-source</goal>
+						</goals>
+						<configuration>
+							<sources>
+								<!-- <source>src/main/java</source> -->
+								<source>src/main/scala</source>
+								<source>src/main/jjtree</source>
+								<source>src/main/minizinc</source>
+							</sources>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
 
+			<!-- Plugin for creation of jar file with sources -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<version>2.4</version>
+				<executions>
+					<execution>
+						<id>attach-sources</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<outputDirectory>target</outputDirectory>
+				</configuration>
+			</plugin>
 
-            <!-- Plugin for creation of jar with executables -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <version>2.3.2</version>
-                <configuration>
-                    <archive>
-                        <manifest>
-                            <mainClass>org.jacop.examples.RunExample</mainClass>
-                            <packageName>org.jacop</packageName>
-                        </manifest>
-                        <manifestEntries>
-                            <mode>development</mode>
-                            <url>${project.url}</url>
-                        </manifestEntries>
-                    </archive>
-                </configuration>
-            </plugin>
+			<!-- Plugin for creation of jar with executables -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>2.5</version>
+				<configuration>
+					<archive>
+						<manifest>
+							<mainClass>org.jacop.examples.RunExample</mainClass>
+							<packageName>org.jacop</packageName>
+						</manifest>
+						<manifestEntries>
+							<mode>development</mode>
+							<url>${project.url}</url>
+						</manifestEntries>
+					</archive>
+				</configuration>
+			</plugin>
 
-            <!-- Plugin to execute java programs -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>1.2</version>
-            </plugin>
+			<!-- Plugin for generating javadoc jar -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>2.10.3</version>
+				<!--If using less than 1.8 Java to build then this parameter has to be commented out.-->
+				<configuration>
+					<additionalparam>-Xdoclint:none</additionalparam>
+				</configuration>
+				<executions>
+					<execution>
+						<id>attach-javadocs</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.9</version>
-            </plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.18.1</version>
+			</plugin>
 
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-site-plugin</artifactId>
-                <version>3.0</version>
-            </plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-site-plugin</artifactId>
+				<version>3.4</version>
+			</plugin>
+		</plugins>
+	</build>
 
-	    <plugin>
-	      <groupId>org.apache.maven.plugins</groupId>
-	      <artifactId>maven-javadoc-plugin</artifactId>
-	      <configuration>
-		<additionalparam>-Xdoclint:none</additionalparam>
-	      </configuration>
-              <version>2.10.1</version>
-	    </plugin>
+	<reporting>
+		<plugins>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>cobertura-maven-plugin</artifactId>
+				<version>2.5.1</version>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jxr-plugin</artifactId>
+				<version>2.3</version>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>findbugs-maven-plugin</artifactId>
+				<version>2.3.2</version>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-pmd-plugin</artifactId>
+				<version>2.5</version>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>2.10.1</version>
+				<configuration>
+					<additionalparam>-Xdoclint:none</additionalparam>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-report-plugin</artifactId>
+				<version>2.18.1</version>
+			</plugin>
         </plugins>
-
-        <pluginManagement>
-            <plugins>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-surefire-plugin</artifactId>
-                    <version>2.9</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-site-plugin</artifactId>
-                    <version>3.0</version>
-                </plugin>
-            </plugins>
-
-        </pluginManagement>
-
-    </build>
-
-    <reporting>
-
-        <plugins>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>cobertura-maven-plugin</artifactId>
-                <version>2.5.1</version>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jxr-plugin</artifactId>
-                <version>2.3</version>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>findbugs-maven-plugin</artifactId>
-                <version>2.3.2</version>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-pmd-plugin</artifactId>
-                <version>2.5</version>
-            </plugin>
-            <plugin>
-              <groupId>org.apache.maven.plugins</groupId>
-              <artifactId>maven-surefire-report-plugin</artifactId>
-              <version>2.9</version>
-            </plugin>
-            <!--
-            <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-checkstyle-plugin</artifactId>
-                    <version>2.7</version>
-                  </plugin>
-            -->
-        </plugins>
-
     </reporting>
 
     <dependencies>
-        <dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.11</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.scala-lang</groupId>
+			<artifactId>scala-library</artifactId>
+			<version>2.11.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.scala-lang</groupId>
+			<artifactId>scala-compiler</artifactId>
+			<version>2.11.0</version>
+		</dependency>
+		
+		<!--  -->
+		<dependency>
             <groupId>org.perf4j</groupId>
             <artifactId>perf4j</artifactId>
             <version>0.9.14</version>
@@ -318,12 +354,6 @@ setup to run configuration. -->
             <version>1.1</version>
         </dependency>
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.8.2</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <version>1.6.2</version>
@@ -333,91 +363,5 @@ setup to run configuration. -->
             <artifactId>slf4j-log4j12</artifactId>
             <version>1.6.2</version>
         </dependency>
-
-        <dependency>
-            <groupId>org.scala-lang</groupId>
-            <artifactId>scala-library</artifactId>
-            <version>2.11.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.scala-lang</groupId>
-            <artifactId>scala-compiler</artifactId>
-            <version>2.11.0</version>
-        </dependency>
-
-    </dependencies>
-
-    <pluginRepositories>
-        <pluginRepository>
-            <id>scala</id>
-            <name>Scala Tools</name>
-            <url>http://scala-tools.org/repo-releases/</url>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </pluginRepository>
-        <pluginRepository>
-            <id>central</id>
-            <name>Maven Plugin Repository</name>
-            <url>http://repo1.maven.org/maven2</url>
-            <layout>default</layout>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-            <releases>
-                <updatePolicy>never</updatePolicy>
-            </releases>
-        </pluginRepository>
-    </pluginRepositories>
-
-    <repositories>
-        <repository>
-            <id>scala</id>
-            <name>Scala Tools</name>
-            <url>http://scala-tools.org/repo-releases/</url>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </repository>
-        <repository>
-            <id>codehaus</id>
-            <name>Codehaus</name>
-            <releases>
-                <enabled>true</enabled>
-                <updatePolicy>always</updatePolicy>
-                <checksumPolicy>warn</checksumPolicy>
-            </releases>
-            <snapshots>
-                <enabled>true</enabled>
-                <updatePolicy>never</updatePolicy>
-                <checksumPolicy>fail</checksumPolicy>
-            </snapshots>
-            <url>http://repository.codehaus.org/</url>
-            <layout>default</layout>
-        </repository>
-        <repository>
-            <id>apache</id>
-            <name>Apache</name>
-            <releases>
-                <enabled>true</enabled>
-                <updatePolicy>always</updatePolicy>
-                <checksumPolicy>warn</checksumPolicy>
-            </releases>
-            <snapshots>
-                <enabled>true</enabled>
-                <updatePolicy>never</updatePolicy>
-                <checksumPolicy>fail</checksumPolicy>
-            </snapshots>
-            <url>http://maven.apache.org/</url>
-            <layout>default</layout>
-        </repository>
-
-    </repositories>
-
+	</dependencies>
 </project>
