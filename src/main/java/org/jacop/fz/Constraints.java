@@ -2890,10 +2890,20 @@ public class Constraints implements ParserTreeConstants {
 		pose(new LinearFloat(store, p2, p1, "!=", p3));
 		break;
 	    case lt :
-		pose(new LinearFloat(store, p2, p1, "<", p3));
+		if (p1.length == 2 && p1[0] == 1 && p1[1] == -1 && p3 == 0)
+		    pose(new PltQ(p2[0], p2[1]));
+		else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1 && p3 == 0)
+		    pose(new PltQ(p2[1], p2[0]));
+		else
+		    pose(new LinearFloat(store, p2, p1, "<", p3));
 		break;
 	    case le :
-		pose(new LinearFloat(store, p2, p1, "<=", p3));
+		if (p1.length == 2 && p1[0] == 1 && p1[1] == -1 && p3 == 0)
+		    pose(new PlteqQ(p2[0], p2[1]));
+		else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1 && p3 == 0)
+		    pose(new PlteqQ(p2[1], p2[0]));
+		else
+		    pose(new LinearFloat(store, p2, p1, "<=", p3));
 		break;
 		default:
 		    System.err.println("%% ERROR: Constraint "+p+" not supported.");
