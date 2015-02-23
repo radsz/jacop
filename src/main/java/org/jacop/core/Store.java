@@ -236,7 +236,13 @@ public class Store {
 
 	protected int size = 0;
 
-	/**
+
+    /**
+     * Number of calls to consistency methods of constraints
+     */
+    public long numberConsistencyCalls = 0;
+
+    /**
 	 * TimeStamp variable is a simpler version of a mutable variable. It is
 	 * basically a stack. During search items are push onto the stack. If the
 	 * search backtracks then the old values can be simply restored. Simple and
@@ -518,7 +524,8 @@ public class Store {
 					while (!changed[currentQueue].isEmpty()) {
 
 						currentConstraint = getFirstChanged();
-						
+
+						numberConsistencyCalls++;
 						currentConstraint.consistency(this);
 
 						if (removeConstraints && currentConstraint.satisfied()) {

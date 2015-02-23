@@ -600,6 +600,7 @@ public class Solve implements ParserTreeConstants {
 			   "\n%% Model constraints : "+initNumberConstraints+
 			   "\n\n%% Search CPU time : " + (searchTimeMeter.getThreadCpuTime(tread.getId()) - startCPU)/(long)1e+6 + "ms"+
 			   "\n%% Search nodes : "+nodes+
+			   "\n%% Propagations : "+store.numberConsistencyCalls+
 			   "\n%% Search decisions : "+decisions+
 			   "\n%% Wrong search decisions : "+wrong+
 			   "\n%% Search backtracks : "+backtracks+
@@ -836,6 +837,7 @@ public class Solve implements ParserTreeConstants {
 				   "\n%% Model constraints : "+initNumberConstraints+
 				   "\n\n%% Search CPU time : " + "0ms"+
 				   "\n%% Search nodes : 0"+
+				   "\n%% Propagations : "+store.numberConsistencyCalls+
 				   "\n%% Search decisions : 0"+
 				   "\n%% Wrong search decisions : 0"+
 				   "\n%% Search backtracks : 0"+
@@ -1100,6 +1102,7 @@ public class Solve implements ParserTreeConstants {
 			   "\n%% Model constraints : "+initNumberConstraints+
 			   "\n\n%% Search CPU time : " + (searchTimeMeter.getThreadCpuTime(tread.getId()) - startCPU)/(long)1e+6 + "ms"+
 			   "\n%% Search nodes : "+nodes+
+			   "\n%% Propagations : "+store.numberConsistencyCalls+
 			   "\n%% Search decisions : "+decisions+
 			   "\n%% Wrong search decisions : "+wrong+
 			   "\n%% Search backtracks : "+backtracks+
