@@ -3242,7 +3242,10 @@ public class Constraints implements ParserTreeConstants {
 		if (grand_child_1.getId() == JJTINTFLATEXPR && grand_child_2.getId() == JJTINTFLATEXPR) {
 		    int i1 = ((ASTIntFlatExpr)grand_child_1).getInt();
 		    int i2 = ((ASTIntFlatExpr)grand_child_2).getInt();
-		    return new IntervalDomain(i1, i2);
+		    if (i1 > i2)
+			return new IntervalDomain();
+		    else
+			return new IntervalDomain(i1, i2);
 		}
 	    case 1: // list
 		IntDomain s= new IntervalDomain();
