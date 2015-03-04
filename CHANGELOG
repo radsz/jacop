@@ -8,7 +8,15 @@ Version 4.2.1
    diffn_nonstrict) that makes it possible to pack zero-width rectangles
    anywhere. Disjoint implements a strict version of diffn constraint
    (minizinc diffn constraint). It requires that zero-width rectangles
-   does not overlap with any other rectangle. 
+   does not overlap with any other rectangle.
+	
+3. Implementation of primitive constraint BoolClause implementing flatzinc
+   constraint bool_clause.
+	
+4. Sets of integer with bounds 1..0 are treated by flatzinc parser as
+   empty sets. This implements a way minizinc 2.0 represents empty sets.
+
+5. Bug fixes.
 	
 Version 4.2
 ===========

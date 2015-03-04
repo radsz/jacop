@@ -735,49 +735,22 @@ public class Constraints implements ParserTreeConstants {
 		    //  		    pose(new ExtensionalSupportMDD(new Variable[] {v1, v2, v3}, 
 		    //  						   new int[][] {{0,0,1}, {0,1,1}, {1,0,0},{1,1,1}}));
 		}
-		// bool_clause[_reified]+
-		// bool_clause([x1,..., xm], [y1,..., yn], true) ===>
-		// ===> array_bool_or([x1,..., xm, not y1,..., not yn], true)
+		// bool_clause([x1,..., xm], [y1,..., yn]) ===>
+		// x1 \/ ... \/ xm \/ not y1 \/ ... \/ not yn
 		else if (p.startsWith("clause", 5)) {
 
 		    IntVar[] a1 = getVarArray((SimpleNode)node.jjtGetChild(0));
 		    IntVar[] a2 = getVarArray((SimpleNode)node.jjtGetChild(1));
 
-		    if (a1.length ==0 && a2.length ==0 )
+		    if (a1.length == 0 && a2.length == 0 )
 			return;
 
-		    BooleanVar t3;
-		    if (a1.length ==0 ) {
-			BoundDomain d = new BoundDomain(0,0);
-			t3 = new BooleanVar(store, "", d);
-		    }
-		    else {
-  			t3 = new BooleanVar(store);
-  			pose(new OrBool(a1, t3));
-		    }
-
-		    BooleanVar t4;
-		    if (a2.length ==0 ) {
-			BoundDomain d = new BoundDomain(0,0);
-			t4 = new BooleanVar(store, "", d);
-		    }
-		    else {
-			// de Morgan law not y1 \/ not y2 ...\/ not yn = not(y1 /\ y2 .../\ yn)
-			BooleanVar t2 = new BooleanVar(store);
-			t4 = new BooleanVar(store);
-			pose(new AndBool(a2, t2)); // and
-			pose(new XneqY(t2,t4));  // not
-		    }
-
+		    // bool_clause_reif/3 does not exist from v.1.2 any longer ... but we still support it.
 		    if (p.startsWith("_reif", 11)) {
 			IntVar v3 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
-			pose(new Reified(new XplusYgtC(t3, t4, 0), v3));
-			//  			pose(new Reified(new Or(new XgtC(t3, 0), new XgtC(t4, 0)), v3));
-		    }
+			pose(new Reified(new BoolClause(a1, a2), v3));		    }
 		    else
-			pose(new XplusYgtC(t3, t4, 0));
-		    // 			pose(new Or(new XgtC(t3, 0), new XgtC(t4, 0)));
-
+			pose(new BoolClause(a1, a2));
 		}
 		// bool_lin_* (eq, ne, lt, gt, le, ge)
 		else if (p.startsWith("lin_", 5)) {
