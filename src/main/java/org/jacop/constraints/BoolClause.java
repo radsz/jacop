@@ -313,7 +313,7 @@ public class BoolClause extends PrimitiveConstraint {
 	for (int i = startY; i < y.length; i++)
 	    if (y[i].max() == 0) 
 		return true;
-	    else if (x[i].min() == 1) {
+	    else if (y[i].min() == 1) {
 		swap(y, startY, i);
 		startY++;
 		positionY.update(startY);
