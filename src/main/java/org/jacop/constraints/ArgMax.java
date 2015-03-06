@@ -292,7 +292,7 @@ public class ArgMax extends Constraint {
 
 	boolean sat = maxIndex.singleton();
 
-	int MAX = list[maxIndex.value()].value();
+	int MAX = list[maxIndex.value() - 1 - indexOffset].value();
 	int i = 0, eq = 0;
 	while (sat && i < list.length) {
 	    if (list[i].singleton() && list[i].value() <= MAX)

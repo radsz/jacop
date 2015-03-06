@@ -571,11 +571,10 @@ public abstract class SetDomain extends Domain {
 					modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = C;
 				}
 
-				int[] newModelConstraintsToEvaluate = new int[3];
-
-				newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
-				newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
-				newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
+				int[] newModelConstraintsToEvaluate = new int[modelConstraintsToEvaluate.length];
+				for (int k = 0; k < modelConstraintsToEvaluate.length; k++) {
+				    newModelConstraintsToEvaluate[k] = modelConstraintsToEvaluate[k];
+				}
 
 				newModelConstraintsToEvaluate[pruningEvent]--;
 
@@ -612,11 +611,10 @@ public abstract class SetDomain extends Domain {
 					modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = C;
 				}
 
-				int[] newModelConstraintsToEvaluate = new int[3];
-
-				newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
-				newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
-				newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
+				int[] newModelConstraintsToEvaluate = new int[modelConstraintsToEvaluate.length];
+				for (int k = 0; k < modelConstraintsToEvaluate.length; k++) {
+				    newModelConstraintsToEvaluate[k] = modelConstraintsToEvaluate[k];
+				}
 
 				newModelConstraintsToEvaluate[pruningEvent]--;
 
@@ -635,7 +633,7 @@ public abstract class SetDomain extends Domain {
 		if (pruningEventConstraints != null) {
 
 			boolean isImposed = false;
-
+			
 			int i;
 
 			for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--)
@@ -656,11 +654,10 @@ public abstract class SetDomain extends Domain {
 					modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = C;
 				}
 
-				int[] newModelConstraintsToEvaluate = new int[3];
-
-				newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
-				newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
-				newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
+				int[] newModelConstraintsToEvaluate = new int[modelConstraintsToEvaluate.length];
+				for (int k = 0; k < modelConstraintsToEvaluate.length; k++) {
+				    newModelConstraintsToEvaluate[k] = modelConstraintsToEvaluate[k];
+				}
 
 				newModelConstraintsToEvaluate[pruningEvent]--;
 

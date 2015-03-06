@@ -292,7 +292,7 @@ public class ArgMin extends Constraint {
 
 	boolean sat = minIndex.singleton();
 
-	int MIN = list[minIndex.value()].value();
+	int MIN = list[minIndex.value() - 1 - indexOffset].value();
 	int i = 0, eq = 0;
 	while (sat && i < list.length) {
 	    if (list[i].singleton() && list[i].value() >= MIN)

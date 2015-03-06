@@ -206,7 +206,7 @@ public class Store {
 	 * imposition stage.
 	 */
 
-	public boolean raiseLevelBeforeConsistency = false;
+	public boolean raiseLevelBeforeConsistency = true;
 
 	/**
 	 * It specifies if evaluated constraint should be checked for satisfiability
@@ -214,7 +214,7 @@ public class Store {
 	 * reduce execution time.
 	 */
 
-	protected boolean removeConstraints = false;
+	protected boolean removeConstraints = true;
 
 	
 	/**
