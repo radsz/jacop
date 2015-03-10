@@ -409,9 +409,9 @@ public class Solve implements ParserTreeConstants {
 		    java.util.LinkedHashSet<Search<? extends Var>> ns = 
 			new java.util.LinkedHashSet<Search<? extends Var>>();
 			for (Search s1 : l) {
-			    Search<? extends Var>[] child = ((DepthFirstSearch)s1).childSearches;
+			    Search<? extends Var>[] child = (Search<? extends Var>[])((DepthFirstSearch)s1).childSearches;
 			    if (child != null)
-				for (Search s : child) {
+				for (Search<? extends Var> s : child) {
 				    ns.add(s);	
 
 				    s.getSolutionListener().searchAll(true); 
@@ -611,6 +611,7 @@ public class Solve implements ParserTreeConstants {
 
     }
 
+    @SuppressWarnings("unchecked")
     DepthFirstSearch<Var>[] setSubSearchForAll(DepthFirstSearch<Var> label, Options opt) {
 
 	DepthFirstSearch<Var>[] intAndSetSearch = new DepthFirstSearch[4];
@@ -1198,18 +1199,21 @@ public class Solve implements ParserTreeConstants {
 	return label;
     }
 
+    @SuppressWarnings("unchecked")
     DepthFirstSearch<Var> int_search(SearchItem si) {
 
         variable_selection = si.getIntSelect();
         return new DepthFirstSearch<Var>();
     }
 
+    @SuppressWarnings("unchecked")
     DepthFirstSearch<Var> set_search(SearchItem si) {
 
         variable_selection = si.getSetSelect();
         return new DepthFirstSearch<Var>();
     }
 
+    @SuppressWarnings("unchecked")
     DepthFirstSearch<Var> float_search(SearchItem si) {
 
         variable_selection = si.getFloatSelect();
@@ -1392,7 +1396,8 @@ public class Solve implements ParserTreeConstants {
 	NumberBoolVariables = n;
     }
 
-    void printSearch(Search label) {
+    @SuppressWarnings("unchecked")
+    void printSearch(Search<? extends Var> label) {
 
 	int N = 1;
 	System.out.println (N++ + ". " + label);

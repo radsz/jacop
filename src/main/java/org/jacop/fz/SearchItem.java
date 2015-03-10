@@ -308,6 +308,7 @@ public class SearchItem implements ParserTreeConstants {
 	}
     }
 
+    @SuppressWarnings("unchecked")
     SelectChoicePoint getIntSelect() {
 	ComparatorVariable<IntVar> var_sel = getVarSelect();
 	IntVar[] searchVars = new IntVar[search_variables.length];
@@ -341,6 +342,7 @@ public class SearchItem implements ParserTreeConstants {
 	}
     }
 
+    @SuppressWarnings("unchecked")
     SelectChoicePoint getFloatSelect() {
 	ComparatorVariable<FloatVar> var_sel = getFloatVarSelect();
 	FloatVar[] searchVars = new FloatVar[search_variables.length];
@@ -373,6 +375,7 @@ public class SearchItem implements ParserTreeConstants {
     }
 
 
+    @SuppressWarnings("unchecked")
     SelectChoicePoint getSetSelect() {
 	ComparatorVariable<SetVar> var_sel = getsetVarSelect();
 	Indomain<SetVar> indom = getIndomain4Set(indomain);
@@ -393,7 +396,7 @@ public class SearchItem implements ParserTreeConstants {
 	else if (indomain.equals("indomain_min")) 
 	    return new IndomainSetMin<SetVar>();
 	else if (indomain.equals("indomain_max")) 
-	    return new IndomainSetMax();
+	    return new IndomainSetMax<SetVar>();
 // 	else if (indomain.equals("indomain_middle")) 
 // 	    return new IndomainSetMiddle();
 // 	else if (indomain.equals("indomain_random")) 

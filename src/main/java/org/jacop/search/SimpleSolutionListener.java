@@ -239,6 +239,7 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 
 	}
 
+    @SuppressWarnings("unchecked")
 	public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
 
 		if (vars == null) {
@@ -435,6 +436,7 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 
 	}
 
+    @SuppressWarnings("unchecked")
 	public void setChildrenListeners(SolutionListener<T> child) {
 		childrenSolutionListeners = new SolutionListener[1];
 		childrenSolutionListeners[0] = child;
