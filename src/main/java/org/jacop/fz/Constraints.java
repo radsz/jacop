@@ -745,7 +745,7 @@ public class Constraints implements ParserTreeConstants {
 		    if (a1.length == 0 && a2.length == 0 )
 			return;
 
-		    // bool_clause_reif/3 does not exist from v.1.2 any longer ... but we still support it.
+		    // bool_clause_reif/3 defined in redefinitions-2.0.
 		    if (p.startsWith("_reif", 11)) {
 			IntVar v3 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
 			pose(new Reified(new BoolClause(a1, a2), v3));		    }

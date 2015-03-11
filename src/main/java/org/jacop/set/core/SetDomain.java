@@ -543,7 +543,7 @@ public abstract class SetDomain extends Domain {
 			return;
 		}
 
-		int pruningEvent = IntDomain.GROUND;
+		int pruningEvent = SetDomain.GROUND;
 
 		Constraint[] pruningEventConstraints = modelConstraints[pruningEvent];
 
@@ -586,7 +586,7 @@ public abstract class SetDomain extends Domain {
 
 		}
 
-		pruningEvent = IntDomain.BOUND;
+		pruningEvent = SetDomain.BOUND;
 
 		pruningEventConstraints = modelConstraints[pruningEvent];
 
@@ -626,7 +626,7 @@ public abstract class SetDomain extends Domain {
 
 		}
 
-		pruningEvent = IntDomain.ANY;
+		pruningEvent = SetDomain.ANY;
 
 		pruningEventConstraints = modelConstraints[pruningEvent];
 
