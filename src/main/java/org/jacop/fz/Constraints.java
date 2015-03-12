@@ -547,6 +547,17 @@ public class Constraints implements ParserTreeConstants {
 			pose(new AbsXeqY(v1, v2, true));
 
 		}
+		else if (p.startsWith("pow", 4)) {
+		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
+		    ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
+		    ASTScalarFlatExpr p3 = (ASTScalarFlatExpr)node.jjtGetChild(2);
+
+		    IntVar v1 = getVariable(p1);
+		    IntVar v2 = getVariable(p2);
+		    IntVar v3 = getVariable(p3);
+
+		    pose(new XexpYeqZ(v1, v2, v3));
+		}
 		else
 		    System.out.println("TODO: "+p);
 	    }
