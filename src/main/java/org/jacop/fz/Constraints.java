@@ -1398,11 +1398,16 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar[] x = getVarArray((SimpleNode)node.jjtGetChild(0));
 		    IntVar[] y = getVarArray((SimpleNode)node.jjtGetChild(1));
 
-		    // DecomposedConstraint c = new org.jacop.constraints.Lex(new IntVar[][] {x, y}, true);
-		    // store.imposeDecomposition(c);
+		    // System.out.println ("lex_less_int: x.length = " + x.length +  " y.length = " + y.length);
 
-		    Constraint c = new LexOrder(x, y, true);
-		    store.impose(c);
+		    if (x.length == y.length) {
+			Constraint c = new LexOrder(x, y, true);
+			pose(c);
+		    }
+		    else {
+			DecomposedConstraint c = new org.jacop.constraints.Lex(new IntVar[][] {x, y}, true);
+			store.imposeDecomposition(c);
+		    }
 
 		}
 		else if (p.startsWith("lex_lesseq_int", 6) || p.startsWith("lex_lesseq_bool", 6)) {
@@ -1411,12 +1416,15 @@ public class Constraints implements ParserTreeConstants {
 
 		    // System.out.println ("lex_lesseq_int: x.length = " + x.length +  " y.length = " + y.length);
 
-		    // DecomposedConstraint c = new org.jacop.constraints.Lex(new IntVar[][] {x, y});
-		    // store.imposeDecomposition(c);
-
-		    Constraint c = new LexOrder(x, y, false);
-		    store.impose(c);
-
+		    if (x.length == y.length) {
+			Constraint c = new LexOrder(x, y, false);
+			pose(c);
+		    }
+		    else {
+			DecomposedConstraint c = new org.jacop.constraints.Lex(new IntVar[][] {x, y});
+			store.imposeDecomposition(c);
+		    }
+		    
 		}
  		else if (p.startsWith("bin_packing", 6)) {
 		    IntVar[] bin = getVarArray((SimpleNode)node.jjtGetChild(0));
