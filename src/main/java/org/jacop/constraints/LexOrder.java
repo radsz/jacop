@@ -69,7 +69,7 @@ public class LexOrder extends Constraint {
     /**
      * Is Lex enforcing "<" relationship?
      */
-    public final boolean lexLT;
+    public boolean lexLT;
 
     /**
      * size of the longest vector
@@ -91,8 +91,8 @@ public class LexOrder extends Constraint {
     /**
      * It creates a lexicographical order for vectors x and y, 
      *
-     * vectors x and does not need to be of the same size.
-     * boolea lt defines if we require strict order, Lex_{<} (lt = true) or Lex_{=<} (lt = false)
+     * vectors x and y does not need to be of the same size.
+     * boolean lt defines if we require strict order, Lex_{<} (lt = true) or Lex_{=<} (lt = false)
      *
      * @param x vector of vectors which assignment is constrained by LexOrder constraint. 
      */
@@ -106,7 +106,6 @@ public class LexOrder extends Constraint {
 		
 	assert (x != null) : "x list is null.";
 	assert (y != null) : "y list is null.";
-	assert ( x.length == y.length ) : "\nLength of two vectors different in LexOrder";
 
 	queueIndex = 1;
 
@@ -115,7 +114,12 @@ public class LexOrder extends Constraint {
         this.x = x;
         this.y = y;
 		
-	this.n = x.length;
+	if (x.length < y.length) {
+	    lexLT = false;
+	    this.n = x.length;
+	}
+	else
+	    this.n = y.length;
 
     }
 
@@ -145,11 +149,11 @@ public class LexOrder extends Constraint {
 
 	store.registerRemoveLevelLateListener(this);
 
-	for (int i = 0; i < x.length; i++) {
+	for (int i = 0; i < n; i++) {
 	    varToIndex.put(x[i], i);
 	    x[i].putModelConstraint(this, getConsistencyPruningEvent(x[i]));
 	}
-	for (int i = 0; i < y.length; i++) {
+	for (int i = 0; i < n; i++) {
 	    varToIndex.put(y[i], i);
 	    y[i].putModelConstraint(this, getConsistencyPruningEvent(y[i]));
 	}

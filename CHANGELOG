@@ -18,8 +18,7 @@ Version 4.2.1
 
 5. Adding int_pow build-in predicate to flatzinc interpreter.
 
-6. For flatzinc we generate LexOrder global constraints if two vectors
-   are of the same size and Lex decomposed constraint otherwise.
+6. LexOrder global constraints accepts vectors of different sizes.
 
 7. Bug fixes.
 	
