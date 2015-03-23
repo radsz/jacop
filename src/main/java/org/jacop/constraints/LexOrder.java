@@ -196,6 +196,7 @@ public class LexOrder extends Constraint {
 
 	} while (store.propagationHasOccurred);
 
+	// if (satisfied()) 
 	if (satisfied) 
 	    removeConstraint();
     }
@@ -203,19 +204,23 @@ public class LexOrder extends Constraint {
     @Override
     public boolean satisfied() {
 
-	if (ground(x) && ground(y)) {
-
-	    for (int i = 0; i < x.length; i++) 
-		if (x[i].value() < y[i].value())
+	    for (int i = 0; i < n; i++) 
+		if (x[i].max() < y[i].min())
 		    return true;
-		else if (x[i].value() > y[i].value())
-		    return false;	     
-
-	    if (lexLT) // <
-		return false;
-	    else // <=
-		return true;
-	}
+		else
+		    if (x[i].max() > y[i].min())
+			return false;
+		    else
+			if (eqSingletons(x[i], y[i])) 
+			    if (lexLT) // <
+				return false;
+			    else // <=
+				if (i == n-1)
+				    return true;
+				else
+				    continue;
+			else
+			    return false;
 
 	return false;
     }
@@ -223,9 +228,9 @@ public class LexOrder extends Constraint {
     @Override
     public void removeConstraint() {
 
-	for (int i = 0; i < x.length; i++) 
+	for (int i = 0; i < n; i++) 
 	    x[i].removeConstraint(this);
-	for (int i = 0; i < y.length; i++) 
+	for (int i = 0; i < n; i++) 
 	    y[i].removeConstraint(this);
     }
 
@@ -234,9 +239,9 @@ public class LexOrder extends Constraint {
     public void increaseWeight() {
 	if (increaseWeight) {
 
-	    for (int i = 0; i < x.length; i++) 
+	    for (int i = 0; i < n; i++) 
 		x[i].weight++;
-	    for (int i = 0; i < y.length; i++) 
+	    for (int i = 0; i < n; i++) 
 		y[i].weight++;
 
 	}
@@ -466,16 +471,16 @@ public class LexOrder extends Constraint {
 
     }
 
-    private boolean ground(IntVar[] v) {
-	boolean single = true;
+    // private boolean ground(IntVar[] v) {
+    // 	boolean single = true;
 
-	int i = 0;
-	while (single && i < v.length) {
-	    single = v[i].singleton();
-	    i++;
-	}
+    // 	int i = 0;
+    // 	while (single && i < v.length) {
+    // 	    single = v[i].singleton();
+    // 	    i++;
+    // 	}
 
-	return single;
-    }
+    // 	return single;
+    // }
 
 }
