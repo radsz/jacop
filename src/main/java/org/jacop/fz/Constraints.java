@@ -2674,6 +2674,7 @@ public class Constraints implements ParserTreeConstants {
 			*/
 
 			// pose(new SumWeight(p2, p1, v));
+			// pose(new LinearEq(store, p2, p1, p3));
 			pose(new Linear(store, p2, p1, "==", p3));
 		    }
 		}
@@ -3016,7 +3017,6 @@ public class Constraints implements ParserTreeConstants {
 
 	pose(new Element(p1, newP2, p3, p1.min() - 1));
 
-
 	// pose(new Element(p1, p2, p3));
     }
 
@@ -3043,7 +3043,7 @@ public class Constraints implements ParserTreeConstants {
 // 	else {
 	IntVar[] p2var = getVarArray((SimpleNode)node.jjtGetChild(1));
 
-	pose(new Element(p1, p2var, p3));
+	pose(new ElementVariableFast(p1, p2var, p3));
 
 // 	}
     }
