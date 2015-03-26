@@ -81,6 +81,12 @@ public class ElementInteger extends Constraint {
 	public final int indexOffset;
 
 	/**
+	 * It specifies whether duplicate values should be treated specially (combined to a single check).
+	 * In general a good idea but when lists are long it makes the process slower instead of faster.
+	 */
+	public final boolean checkDuplicates;
+
+        /**
 	 * It specifies list of variables within an element constraint list[index-indexOffset] = value.
 	 * The list is addressed by positive integers (>=1) if indexOffset is equal to 0. 
 	 */
@@ -90,7 +96,7 @@ public class ElementInteger extends Constraint {
 	 * It specifies for each value what are the possible values of the index variable (it 
 	 * takes into account indexOffset. 
 	 */
-	Hashtable<Integer, IntDomain> mappingValuesToIndex = new Hashtable<Integer, IntDomain>();
+	// Hashtable<Integer, IntDomain> mappingValuesToIndex = new Hashtable<Integer, IntDomain>();
 
 	boolean indexHasChanged = true;
 	boolean valueHasChanged = true;
@@ -118,6 +124,7 @@ public class ElementInteger extends Constraint {
 	public ElementInteger(IntVar index, int[] list, IntVar value, int indexOffset) {
 
 		this.indexOffset = indexOffset;
+		this.checkDuplicates = false;
 		commonInitialization(index, list, value);
 		
 	}
@@ -142,13 +149,13 @@ public class ElementInteger extends Constraint {
 			Integer listElement = list[i];
 			this.list[i] = list[i];
 			
-			IntDomain oldFD = mappingValuesToIndex.get(listElement);
-			if (oldFD == null) {
- 			    mappingValuesToIndex.put(listElement, new IntervalDomain(i + 1 + indexOffset, i + 1 + indexOffset));
-			}
-			else
-    			    ((IntervalDomain)oldFD).addLastElement(i + 1 + indexOffset);
-//     			    oldFD.unionAdapt(i + 1 + indexOffset, i + 1 + indexOffset);
+// 			IntDomain oldFD = mappingValuesToIndex.get(listElement);
+// 			if (oldFD == null) {
+//  			    mappingValuesToIndex.put(listElement, new IntervalDomain(i + 1 + indexOffset, i + 1 + indexOffset));
+// 			}
+// 			else
+//     			    ((IntervalDomain)oldFD).addLastElement(i + 1 + indexOffset);
+// //     			    oldFD.unionAdapt(i + 1 + indexOffset, i + 1 + indexOffset);
 			
 		}
 
@@ -178,6 +185,7 @@ public class ElementInteger extends Constraint {
 	public ElementInteger(IntVar index, ArrayList<Integer> list, IntVar value, int indexOffset) {
 		
 		this.indexOffset = indexOffset;
+		this.checkDuplicates = false;
 		
 		int [] listOfInts = new int[list.size()];
 		for (int i = 0; i < list.size(); i++)
@@ -187,6 +195,28 @@ public class ElementInteger extends Constraint {
 		
 	}
 
+	/**
+	 * It constructs an element constraint. 
+	 * 
+	 * @param index variable index
+	 * @param list list of integers from which an index-th element is taken
+	 * @param value a value of the index-th element from list
+	 * @param indexOffset shift applied to index variable. 
+	 * @param checkDuplicates informs whether to create duplicates list for values from list (default = false). 
+	 */
+        public ElementInteger(IntVar index, ArrayList<Integer> list, IntVar value, int indexOffset, boolean checkDuplicates) {
+		
+		this.indexOffset = indexOffset;
+		this.checkDuplicates = checkDuplicates;
+		
+		int [] listOfInts = new int[list.size()];
+		for (int i = 0; i < list.size(); i++)
+			listOfInts[i] = list.get(i);
+		
+		commonInitialization(index, listOfInts, value);
+		
+	}
+    
 	/**
 	 * It constructs an element constraint with indexOffset by default set to 0.  
 	 * 
@@ -240,13 +270,14 @@ public class ElementInteger extends Constraint {
 			IntDomain indexDom = index.dom().cloneLight();
 			IntDomain domValue = new IntervalDomain(5);
 
-			for (IntDomain duplicate : duplicates) {
+			if (checkDuplicates)
+			    for (IntDomain duplicate : duplicates) {
 				if (indexDom.isIntersecting(duplicate)) {
-					domValue.unionAdapt(list[duplicate.min() - 1 - indexOffset]);								
+					domValue.unionAdapt(list[duplicate.min() - 1 - indexOffset]);
 
 					indexDom = indexDom.subtract(duplicate);
 				}
-			}
+			    }
 			
 			// values of index for duplicated values within list are already taken care of above.
 			for (ValueEnumeration e = indexDom.valueEnumeration(); e.hasMoreElements();) {
@@ -262,23 +293,55 @@ public class ElementInteger extends Constraint {
 		// the if statement above can change value variable but those changes can be ignored.
 		if (copyOfValueHasChanged) {
 
-			valueHasChanged = false;
-			IntDomain valDom = value.dom();
-			IntDomain domIndex = new IntervalDomain(5);
+		    valueHasChanged = false;
 
-			for (ValueEnumeration e = valDom.valueEnumeration(); e.hasMoreElements();) {
-				IntDomain i = mappingValuesToIndex.get(e.nextElement());
-				if (i != null) {
-				    domIndex.addDom(i);
-				}
-			}
+		    IntervalDomain indexDom = new IntervalDomain(5);
+		    for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements();) {
+			int position = e.nextElement() - 1 - indexOffset;
+			int val = list[position];
+		    
+			if (disjoint(value.domain, val))
+			    indexDom.unionAdapt(position + 1 + indexOffset);
 
-			index.domain.in(store.level, index, domIndex);
-			indexHasChanged = false;
+		    }
+
+		    index.domain.in(store.level, index, indexDom.complement());
+		    indexHasChanged = false;
 			
 		}
+
+		// !!! removing this part since it is too slow; specially addDom is very costly
+		// !!! the version above is much faster
+		// if (copyOfValueHasChanged) {
+		
+		// 	valueHasChanged = false;
+		// 	IntDomain valDom = value.dom();
+		// 	IntDomain domIndex = new IntervalDomain(5);
+
+		// 	for (ValueEnumeration e = valDom.valueEnumeration(); e.hasMoreElements();) {
+		// 		IntDomain i = mappingValuesToIndex.get(e.nextElement());
+		// 		if (i != null) {
+		// 		    domIndex.addDom(i);
+		// 		}
+		// 	}
+
+		// 	index.domain.in(store.level, index, domIndex);
+		// 	indexHasChanged = false;
+			
+		// }
 		
 	}
+
+    boolean disjoint(IntDomain v1, int v2) {
+	if (v1.min() > v2 || v2 > v1.max()) 
+	    return true;
+	else
+	    if (! v1.contains(v2))
+		return true;
+	    else
+		return false;
+    }
+    
 
 	@Override
 	public int getConsistencyPruningEvent(Var var) {
@@ -300,12 +363,13 @@ public class ElementInteger extends Constraint {
 
 		store.addChanged(this);
 		store.countConstraint();
+
+		if (checkDuplicates) {
+		    duplicates = new ArrayList<IntDomain>();
 		
-		duplicates = new ArrayList<IntDomain>();
-		
-		HashMap<Integer, IntDomain> map = new HashMap<Integer, IntDomain>();
-		
-		for (int pos = 0; pos < list.length; pos++) {
+		    HashMap<Integer, IntDomain> map = new HashMap<Integer, IntDomain>();
+
+		    for (int pos = 0; pos < list.length; pos++) {
 		
 			int el = list[pos];
 			IntDomain indexes = map.get(el);
@@ -314,12 +378,13 @@ public class ElementInteger extends Constraint {
 				map.put(el, indexes);
 			}
 			else 
-				indexes.unionAdapt(pos + 1 + indexOffset);
+			    indexes.unionAdapt(pos + 1 + indexOffset);
 		}
 		
-		for (IntDomain duplicate: map.values()) {
+		    for (IntDomain duplicate: map.values()) {
 			if ( duplicate.getSize() > 20 )
 				duplicates.add(duplicate);
+		    }
 		}
 		
 		valueHasChanged = true;

@@ -37,7 +37,6 @@ import java.util.HashMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
 import org.jacop.core.Var;
 
 /**
