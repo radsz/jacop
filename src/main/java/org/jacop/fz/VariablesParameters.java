@@ -66,7 +66,8 @@ public class VariablesParameters implements ParserTreeConstants {
     final static boolean interval = false; // selection of interval or dense, if possible, domain for variables
 
     final static double MIN_FLOAT = -1e150, MAX_FLOAT = 1e150;
-    final static int MIN_INT = Integer.MIN_VALUE, MAX_INT = Integer.MAX_VALUE;
+    // final static int MIN_INT = Integer.MIN_VALUE, MAX_INT = Integer.MAX_VALUE;
+    final static int MIN_INT = IntDomain.MinInt, MAX_INT = IntDomain.MaxInt;
 
     Tables dictionary;
     int lowInterval, highInterval;
@@ -196,6 +197,9 @@ public class VariablesParameters implements ParserTreeConstants {
 	    if (lowInterval > highInterval)
 		throw Store.failException;		
 
+	    if (lowInterval < MIN_INT || highInterval > MAX_INT)
+		throw new ArithmeticException("Bounds for " + ident + ": "+ lowInterval +".."+ highInterval + " are too low/high");  
+		
 	    if (interval)
 		varInt = new IntVar(store, ident, new IntervalDomain(lowInterval, highInterval));
 	    else
@@ -224,8 +228,14 @@ public class VariablesParameters implements ParserTreeConstants {
 	case 2: // int list
 	    ident = ((ASTVarDeclItem)node).getIdent();
 	    varInt = new IntVar(store, ident);
-	    for (Integer e : intList)
-		((IntVar)varInt).addDom(e.intValue(), e.intValue());
+	    for (Integer e : intList) {
+		int element = e.intValue();
+
+		if (element < MIN_INT || element > MAX_INT)
+		    throw new ArithmeticException("Domain value for " + ident + " is too high/low ("+ element + ")");  
+		
+		((IntVar)varInt).addDom(element, element);
+	    }
 	    table.addVariable(ident, varInt);
 	    if (initChild < ((ASTVarDeclItem)node).jjtGetNumChildren()) {
 

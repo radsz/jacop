@@ -531,7 +531,7 @@ public class SumWeightDom extends Constraint {
       }
     */
 
-    IntDomain invertDom(IntDomain d) {
+    IntervalDomain invertDom(IntDomain d) {
 	IntervalDomain temp = new IntervalDomain();
 
 	if (d.domainID() == IntDomain.IntervalDomainID) {
@@ -544,18 +544,23 @@ public class SumWeightDom extends Constraint {
 		temp.intervals[k++] = new Interval(-e.max(), -e.min());
 	    }
 	}
-	else 
+	else {
+	    ArrayList<Interval> ranges = new ArrayList<Interval>();
+
 	    for (IntervalEnumeration e = d.intervalEnumeration(); e.hasMoreElements();) {
 		Interval i = e.nextElement();
-		temp.addDom(new IntervalDomain(-i.max(), -i.min()));
+		ranges.add(new Interval(-i.max(), -i.min()));
 	    }
 
+	    for (int i = ranges.size() - 1 ; i >= 0; i--) 
+		temp.unionAdapt(ranges.get(i));
+	}
 	return temp;
     }
 
     IntDomain divDom(IntDomain d, int c) {
 
-    	IntDomain temp;
+    	IntervalDomain temp;
     	// System.out.println (d + " / " + c);
 
     	if (c == 1) 
@@ -566,17 +571,17 @@ public class SumWeightDom extends Constraint {
     	    temp = new IntervalDomain();
 
 	    if ( c > 0) {
-
+	
 		for (IntervalEnumeration e1 = d.intervalEnumeration(); e1.hasMoreElements();) {
+
 		    Interval i = e1.nextElement();
 		    int iMin = i.min();
 		    int iMax = i.max();
 
 		    int min = (int)Math.round( Math.ceil( (float)iMin/c ) );
 		    int max = (int)Math.round( Math.floor( (float)iMax/c ) );
-		    if ( min <= max)
+		    if ( min <= max) 
 			temp.unionAdapt(min, max);
-
 		}
 	    }
 	    else {// c <= 0
@@ -595,7 +600,7 @@ public class SumWeightDom extends Constraint {
 			    temp.unionAdapt(min, max);
 		    }
 		}
-		else
+		else 
 		    for (IntervalEnumeration e1 = d.intervalEnumeration(); e1.hasMoreElements();) {
 			Interval i = e1.nextElement();
 			int iMin = i.min();
@@ -605,7 +610,7 @@ public class SumWeightDom extends Constraint {
 			int max = (int)Math.round( Math.floor( (float)iMin/c ) );
 			if ( min <= max)
 			    temp.unionAdapt(min, max);
-		    }
+		}
     	    }
     	}
 
@@ -661,7 +666,6 @@ public class SumWeightDom extends Constraint {
 		int d1Value = d1.value();
 		for (IntervalEnumeration e2 = d2.intervalEnumeration(); e2.hasMoreElements();) {
 		    Interval i2 = e2.nextElement();
-		    temp.unionAdapt(new Interval(d1Value - i2.max(), d1Value - i2.min()));
 		    ranges.add(new Interval(d1Value - i2.max(), d1Value - i2.min()));
 		}
 
