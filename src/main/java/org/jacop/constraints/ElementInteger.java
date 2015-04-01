@@ -121,10 +121,18 @@ public class ElementInteger extends Constraint {
 	 * @param value a value of the index-th element from list
 	 * @param indexOffset shift applied to index variable. 
 	 */
-	public ElementInteger(IntVar index, int[] list, IntVar value, int indexOffset) {
+    public ElementInteger(IntVar index, int[] list, IntVar value, int indexOffset) {
 
 		this.indexOffset = indexOffset;
-		this.checkDuplicates = false;
+		this.checkDuplicates = true;
+		commonInitialization(index, list, value);
+		
+	}
+
+    public ElementInteger(IntVar index, int[] list, IntVar value, int indexOffset, boolean checkDuplicates) {
+
+		this.indexOffset = indexOffset;
+		this.checkDuplicates = checkDuplicates;
 		commonInitialization(index, list, value);
 		
 	}
@@ -185,7 +193,7 @@ public class ElementInteger extends Constraint {
 	public ElementInteger(IntVar index, ArrayList<Integer> list, IntVar value, int indexOffset) {
 		
 		this.indexOffset = indexOffset;
-		this.checkDuplicates = false;
+		this.checkDuplicates = true;
 		
 		int [] listOfInts = new int[list.size()];
 		for (int i = 0; i < list.size(); i++)
@@ -202,7 +210,7 @@ public class ElementInteger extends Constraint {
 	 * @param list list of integers from which an index-th element is taken
 	 * @param value a value of the index-th element from list
 	 * @param indexOffset shift applied to index variable. 
-	 * @param checkDuplicates informs whether to create duplicates list for values from list (default = false). 
+	 * @param checkDuplicates informs whether to create duplicates list for values from list (default = true). 
 	 */
         public ElementInteger(IntVar index, ArrayList<Integer> list, IntVar value, int indexOffset, boolean checkDuplicates) {
 		
