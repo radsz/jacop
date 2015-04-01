@@ -26,9 +26,9 @@ Version 4.2.1
    ElementIntegerFast and ElementVariableFast that implement a
    straightforward pruning method.
 
-9. Two new primitive constraints LinearInt and SumInt that implement
-   pruning methods from paper "Bounds Consistency Techniques for Long
-   Linear Constraints" by Warwick Harvey and Joachim Schimpf
+9. A new primitive constraints SumInt that implement pruning methods
+   from paper "Bounds Consistency Techniques for Long Linear
+   Constraints" by Warwick Harvey and Joachim Schimpf.
 
 10.Bug fixes.
 	
