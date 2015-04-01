@@ -161,9 +161,13 @@ public class Min extends Constraint {
 				else 
 				    pos = i;
 			}
-			if (n == list.length-1) // one variable on the list is minimal; its is max < min of all other variables
+			if (n == list.length-1) { // one variable on the list is minimal; its is max < min of all other variables
 			    list[pos].domain.in(store.level, list[pos], min.dom());
 
+			    if (min.singleton())
+				removeConstraint();
+
+			}
 		} while (store.propagationHasOccurred);
 		
 	}

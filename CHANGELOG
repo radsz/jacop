@@ -20,7 +20,17 @@ Version 4.2.1
 
 6. LexOrder global constraints accepts vectors of different sizes.
 
-7. Bug fixes.
+7. Performance improvement for SumWeightDom.
+
+8. Performance improvement for ElementInteger and two new constraints
+   ElementIntegerFast and ElementVariableFast that implement a
+   straightforward pruning method.
+
+9. Two new primitive constraints LinearInt and SumInt that implement
+   pruning methods from paper "Bounds Consistency Techniques for Long
+   Linear Constraints" by Warwick Harvey and Joachim Schimpf
+
+10.Bug fixes.
 	
 Version 4.2
 ===========

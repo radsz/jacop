@@ -154,9 +154,13 @@ public class Max extends Constraint {
 				else 
 				    pos = i;
 			}
-			if (n == list.length-1)  // one variable on the list is maximal; its is min > max of all other variables 
+			if (n == list.length-1) { // one variable on the list is maximal; its is min > max of all other variables 
 			    list[pos].domain.in(store.level, list[pos], max.dom());
 
+			    if (max.singleton())
+				removeConstraint();
+
+			}
 		} while (store.propagationHasOccurred);
 		
 	}

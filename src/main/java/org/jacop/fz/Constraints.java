@@ -2308,97 +2308,6 @@ public class Constraints implements ParserTreeConstants {
 	}
     }
 
-//     void int_comparison(int operation, SimpleNode node, int reifStart) throws FailException {
-
-// 	//   	 node.dump("");
-
-// 	ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
-// 	ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
-
-// 	PrimitiveConstraint c = null;
-
-// 	if (p2.getType() == 0) { // var rel int
-// 	    int i2 = getInt(p2);
-// 	    IntVar v1 = getVariable(p1);
-// 	    switch (operation) {
-// 	    case eq :
-// 		c = new XeqC(v1, i2);
-// 		break;
-// 	    case ne :
-// 		c = new XneqC(v1, i2);
-// 		break;
-// 	    case lt :
-// 		c = new XltC(v1, i2);
-// 		break;
-// 	    case gt :
-// 		c = new XgtC(v1, i2);
-// 		break;
-// 	    case le :
-//  		c = new XlteqC(v1, i2);
-// 		break;
-// 	    case ge :
-// 		c = new XgteqC(v1, i2);
-// 		break;
-// 	    }
-// 	} else if (p1.getType() == 0) { // int rel var
-// 	    int i1 = getInt(p1);
-// 	    IntVar v2 = getVariable(p2);
-// 	    switch (operation) {
-// 	    case eq :
-// 		c = new XeqC(v2, i1);
-// 		break;
-// 	    case ne :
-// 		c = new XneqC(v2, i1);
-// 		break;
-// 	    case lt :
-// 		c = new XgtC(v2, i1);
-// 		break;
-// 	    case gt :
-// 		c = new XltC(v2, i1);
-// 		break;
-// 	    case le :
-//  		c = new XgteqC(v2, i1);
-// 		break;
-// 	    case ge :
-// 		c = new XlteqC(v2, i1);
-// 		break;
-// 	    }
-// 	}
-// 	else { // var rel var
-// 	    IntVar v1 = getVariable(p1);
-// 	    IntVar v2 = getVariable(p2);
-// 	    switch (operation) {
-// 	    case eq :
-// 		c = new XeqY(v1, v2);
-// 		break;
-// 	    case ne :
-// 		c = new XneqY(v1, v2);
-// 		break;
-// 	    case lt :
-// 		c = new XltY(v1, v2);
-// 		break;
-// 	    case gt :
-// 		c = new XgtY(v1, v2);
-// 		break;
-// 	    case le :
-// 		c = new XlteqY(v1, v2);
-// 		break;
-// 	    case ge :
-// 		c = new XgteqY(v1, v2);
-// 		break;
-// 	    }
-// 	}
-// 	if (p.startsWith("_reif", reifStart)) {
-// 	    ASTScalarFlatExpr p3 = (ASTScalarFlatExpr)node.jjtGetChild(2);
-// 	    IntVar v3 = getVariable(p3);
-// 	    Constraint cr = new Reified(c, v3);
-// 	    pose(cr);
-// 	}
-// 	else {
-// 	    pose(c);
-// 	}
-//     }
-
     void int_lin_relation(int operation, SimpleNode node) throws FailException {
 	// int_lin_*[_reif] (* = eq | ne | lt | gt | le | ge)
 
@@ -2440,8 +2349,13 @@ public class Constraints implements ParserTreeConstants {
 	    if (p1[i] >= IntDomain.MaxInt || p1[i] <= IntDomain.MinInt) {
 		int min = p2[i].domain.multiply(p1[i], p2[i].min());
 		int max = p2[i].domain.multiply(p1[i], p2[i].max());
-		if (min >= IntDomain.MaxInt || min <= IntDomain.MinInt || max >= IntDomain.MaxInt || max <= IntDomain.MinInt)
-		    throw new ArithmeticException("Too high or low value for domain assignment");
+		if (min >= IntDomain.MaxInt || min <= IntDomain.MinInt || max >= IntDomain.MaxInt || max <= IntDomain.MinInt) {
+		    ArrayList<Integer> l = new ArrayList<Integer>();
+		    for (int j = 0; j < p1.length; j++) 
+			l.add(p1[j]);
+		    throw new ArithmeticException("Too high or low value for domain assignment int_lin_eq(" + l +
+						  ", " + java.util.Arrays.asList(p2) + ", " + p3 + ")");
+		}
 	    }
 
 
@@ -2464,13 +2378,18 @@ public class Constraints implements ParserTreeConstants {
 		    pose(new Reified(new XplusYeqC(p2[0], p2[1], -p3), p4));
 		} 
 		else {
-		    // t = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
-		    // if (allWeightsOne(p1))
-		    // 	pose(new Sum(p2, t));
-		    // else
-		    // 	pose(new SumWeight(p2, p1, t));
-		    // pose(new Reified(new XeqC(t, p3), p4));
-		    pose(new Reified(new Linear(store, p2, p1, "==", p3), p4));
+		    int pos = sumPossible(p1, p3);
+		    if (pos > -1) {
+			IntVar[] vect = new IntVar[p1.length-1];
+			int n = 0;
+			for (int i=0; i<p2.length; i++)
+			    if (i != pos)
+				vect[n++] = p2[i];
+			pose(new Reified(new SumInt(store, vect, "==", p2[pos]), p4));
+		    }
+		    else {
+			pose(new Reified(new Linear(store, p2, p1, "==", p3), p4));
+		    }
 		}
 		break;
 	    case ne :
@@ -2493,9 +2412,6 @@ public class Constraints implements ParserTreeConstants {
 		    pose(new Reified(new Linear(store, p2, p1, "!=", p3), p4));
 		break;
 	    case lt :
-		// t = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
-		// pose(new SumWeight(p2, p1, t));
-		// pose(new Reified(new XltC(t, p3), p4));
 		pose(new Reified(new Linear(store, p2, p1, "<", p3), p4));
 		break;
 		// gt not present in the newest flatzinc version
@@ -2514,14 +2430,10 @@ public class Constraints implements ParserTreeConstants {
 		else if (p1.length == 1 && p1[0] == -1) 
 		    pose(new Reified(new org.jacop.constraints.XgteqC(p2[0], -p3), p4));
 		else if (allWeightsOne(p1)) {
-		    t = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
-		    pose(new Sum(p2, t));
-		    pose(new Reified(new XlteqC(t, p3), p4));
+		    t = new IntVar(store, p3, p3);
+		    pose(new Reified(new SumInt(store, p2, "<=", t), p4));
 		}
 		else {
-		    // t = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
-		    // pose(new SumWeight(p2, p1, t));
-		    // pose(new Reified(new XlteqC(t, p3), p4));
 		    pose(new Reified(new Linear(store,p2, p1, "<=", p3), p4));
 		}
 		break;
@@ -2593,10 +2505,18 @@ public class Constraints implements ParserTreeConstants {
 
 		    pose(new SumWeightDom(p2, p1, p3));
 		}
-		else if ( (p3 == 0 && p1.length == 3) && 
-		     ((p1[0] == -1 && p1[1] == -1 && p1[2] == 1) || (p1[0] == 1 && p1[1] == 1 && p1[2] == -1)) )
-		    pose(new XplusYeqZ(p2[0], p2[1], p2[2]));
-		    // pose(new Linear(store, p2, p1, "==", p3));
+		else if ((p3 == 0 && p1.length == 3)
+			 && ((p1[0] == -1 && p1[1] == -1 && p1[2] == 1) || (p1[0] == 1 && p1[1] == 1 && p1[2] == -1)))
+			pose(new XplusYeqZ(p2[0], p2[1], p2[2]));
+		else if ((p3 == 0 && p1.length == 3)
+			     && ((p1[0] == 1 && p1[1] == -1 && p1[2] == -1) || (p1[0] == -1 && p1[1] == 1 && p1[2] == 1))) {
+		    if (paramZero(p2[1]))
+			pose(new XeqY(p2[2], p2[0]));
+		    else if (paramZero(p2[2]))
+			pose(new XeqY(p2[1], p2[0]));
+		    else
+			pose(new XplusYeqZ(p2[1], p2[2], p2[0]));    
+		}
 		else {
 		    // IntVar v;
 		    // if (p3==0) 
@@ -2605,13 +2525,14 @@ public class Constraints implements ParserTreeConstants {
 		    // 	v = one;
 		    // else 
 		    // 	v = new IntVar(store, p3, p3);
-		    if (sumPossible(p1, p3) > -1) {
-			int pos = sumPossible(p1, p3);
+		    int pos = sumPossible(p1, p3);
+		    if (pos > -1) {
 			IntVar[] vect = new IntVar[p1.length-1];
 			int n = 0;
 			for (int i=0; i<p2.length; i++)
 			    if (i != pos)
 				vect[n++] = p2[i];
+			// pose(new SumInt(store, vect, "==", p2[pos]));
 			pose(new Sum(vect, p2[pos]));
 		    }
 		    else if (allWeightsOne(p1)) {
@@ -2631,50 +2552,9 @@ public class Constraints implements ParserTreeConstants {
 			else
 			    v = new IntVar(store, -p3, -p3);
 			pose(new Sum(p2, v));
+			// pose(new SumInt(store, p2, "==", v));
 		    }
-		    // else if (p3 == 0) 
-		    // 	if (sumPossible1(p1)) { // case when weights are [1, -1, ..., -1] or [-1, 1, ..., 1]
- 		    // 	    IntVar[] vars = new IntVar[p2.length-1];
- 		    // 	    for (int i=1; i<p2.length; i++)
- 		    // 		vars[i-1] = p2[i];
- 		    // 	    pose(new Sum(vars, p2[0]));
-		    // 	}
-		    // 	else if (sumPossible2(p1)) { // case when weights are [-1, ..., -1, 1] or [1, ..., 1, -1]
-		    // 	    IntVar[] vars = new IntVar[p2.length-1];
-		    // 	    for (int i=0; i<p2.length-1; i++)
-		    // 		vars[i] = p2[i];
-		    // 	    pose(new Sum(vars, p2[p2.length-1]));
-		    // 	}
-		    // 	else {
-		    // 	    // pose(new SumWeight(p2, p1, v));
-		    // 	    pose(new Linear(store, p2, p1, "==", p3));
-		    // 	}
 		    else {
-			/*
- 			ArrayList<IntVar> multipliedByOne = new ArrayList<IntVar>();
-			ArrayList<IntVar> others = new ArrayList<IntVar>();
-			ArrayList<Integer> othersWeights = new ArrayList<Integer>();
-			if (p1.length > 100) {
-			    for (int i = 0; i < p1.length; i++) 
-				if (p1[i] == 1)
-				    multipliedByOne.add(p2[i]);
-				else {
-				    others.add(p2[i]);
-				    othersWeights.add(p1[i]);
-				}
-			    if (multipliedByOne.size() > 0) {
-				IntVar tmp1 = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
-				IntVar tmp2 = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
-				pose(new Sum(multipliedByOne, tmp1));
-				pose(new SumWeight(others, othersWeights, tmp2));
-				pose(new XplusYeqC(tmp1, tmp2, p3));
-				return;
-			    }
-			}
-			*/
-
-			// pose(new SumWeight(p2, p1, v));
-			// pose(new LinearEq(store, p2, p1, p3));
 			pose(new Linear(store, p2, p1, "==", p3));
 		    }
 		}
@@ -2690,11 +2570,19 @@ public class Constraints implements ParserTreeConstants {
  		if (p1.length == 2 && p3 == 0 && ( (p1[0] == 1 && p1[1] == -1) || (p1[0] == -1 && p1[1] == 1) ))
 			pose(new XneqY(p2[0], p2[1]));
 		else {
-		    // IntervalDomain dne = new IntervalDomain(IntDomain.MinInt, p3-1);
-		    // dne.unionAdapt(p3+1, IntDomain.MaxInt);
-		    // t = new IntVar(store, "", dne);
-		    // pose(new SumWeight(p2, p1, t));
-		    pose(new Linear(store, p2, p1, "!=", p3));
+		    int pos = sumPossible(p1, p3);
+		    if (pos > -1) {
+			IntVar[] vect = new IntVar[p1.length-1];
+			int n = 0;
+			for (int i=0; i<p2.length; i++)
+			    if (i != pos)
+				vect[n++] = p2[i];
+			pose(new SumInt(store, vect, "!=", p2[pos]));
+		    }
+		    else {
+			// pose(new Linear(store, p2, p1, "!=", p3));
+			pose(new Linear(store, p2, p1, "!=", p3));
+		    }
 		}
 		break;
 	    case lt :
@@ -2710,9 +2598,28 @@ public class Constraints implements ParserTreeConstants {
  		else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1 && p3 == 0)
 		    pose(new XltY(p2[1], p2[0]));
 		else {
-		    //t = new IntVar(store, IntDomain.MinInt, p3-1);
-		    //pose(new SumWeight(p2, p1, t));
+		    int posLe = sumLePossible(p1, p3);
+		    int posGe = sumGePossible(p1, p3);
+		    if (posLe > -1) {
+			IntVar[] vect = new IntVar[p1.length-1];
+			int n = 0;
+			for (int i=0; i<p2.length; i++)
+			    if (i != posLe)
+				vect[n++] = p2[i];
+			pose(new SumInt(store, vect, "<", p2[posLe]));
+		    }
+		    else if (posGe > -1) {
+			IntVar[] vect = new IntVar[p1.length-1];
+			int n = 0;
+			for (int i=0; i<p2.length; i++)
+			    if (i != posGe)
+				vect[n++] = p2[i];
+			pose(new SumInt(store, vect, ">", p2[posGe]));
+		    }
+		    else {
+		    // pose(new Linear(store, p2, p1, "<", p3));
 		    pose(new Linear(store, p2, p1, "<", p3));
+		    }
 		}
 		break;
 	    // gt not present in the newest flatzinc version
@@ -2783,11 +2690,28 @@ public class Constraints implements ParserTreeConstants {
 		//     pose(new XlteqY(le, p2[pos]));
 		//     pose(new Sum(vect, le));
 		// }
-
 		else {
-		    // t = new IntVar(store, IntDomain.MinInt, p3);
-		    // pose(new SumWeight(p2, p1, t));
-		    pose(new Linear(store, p2, p1, "<=", p3));
+		    int posLe = sumLePossible(p1, p3);
+		    int posGe = sumGePossible(p1, p3);
+		    if (posLe > -1) {
+			IntVar[] vect = new IntVar[p1.length-1];
+			int n = 0;
+			for (int i=0; i<p2.length; i++)
+			    if (i != posLe)
+				vect[n++] = p2[i];
+			pose(new SumInt(store, vect, "<=", p2[posLe]));
+		    }
+		    else if (posGe > -1) {
+			IntVar[] vect = new IntVar[p1.length-1];
+			int n = 0;
+			for (int i=0; i<p2.length; i++)
+			    if (i != posGe)
+				vect[n++] = p2[i];
+			pose(new SumInt(store, vect, ">=", p2[posGe]));
+		    }
+		    else {
+			pose(new Linear(store, p2, p1, "<=", p3));
+		    }
 		}
 		break;
 		// ge not present in the newest flatzinc version
@@ -2806,6 +2730,10 @@ public class Constraints implements ParserTreeConstants {
 		    System.exit(0);
 	    }
 	}
+    }
+
+    boolean paramZero(IntVar v) {
+	return v.singleton() && v.value() == 0;
     }
 
     int maxDomain(IntVar[] vs) {
@@ -2942,6 +2870,54 @@ public class Constraints implements ParserTreeConstants {
 		return lastOnePosition;
 	    else if (minusOne == 1 && one == ws.length - 1)
 		return lastMinusOnePosition;
+	    else
+		return -1;
+	}
+	else
+	    return -1;
+    }
+
+    int sumLePossible(int[] ws, int result) {
+	if (result == 0) {
+	    int one = 0, minusOne = 0;
+	    int lastOnePosition = -1, lastMinusOnePosition = -1;
+	    //boolean sum = true;
+	    for (int i=0; i<ws.length; i++)
+		if (ws[i] == 1) {
+		    one++;
+		    lastOnePosition = i;
+		}
+		else if (ws[i] == -1) {
+		    minusOne++;
+		    lastMinusOnePosition = i;
+		}
+
+	    if (minusOne == 1 && one == ws.length - 1)
+		return lastMinusOnePosition;
+	    else
+		return -1;
+	}
+	else
+	    return -1;
+    }
+
+    int sumGePossible(int[] ws, int result) {
+	if (result == 0) {
+	    int one = 0, minusOne = 0;
+	    int lastOnePosition = -1, lastMinusOnePosition = -1;
+	    //boolean sum = true;
+	    for (int i=0; i<ws.length; i++)
+		if (ws[i] == 1) {
+		    one++;
+		    lastOnePosition = i;
+		}
+		else if (ws[i] == -1) {
+		    minusOne++;
+		    lastMinusOnePosition = i;
+		}
+
+	    if (one == 1 && minusOne == ws.length - 1)
+		return lastOnePosition;
 	    else
 		return -1;
 	}
