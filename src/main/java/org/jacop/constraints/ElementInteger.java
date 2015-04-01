@@ -37,6 +37,7 @@ import java.util.HashMap;
 import java.util.Hashtable;
 
 import org.jacop.core.IntDomain;
+import org.jacop.core.Interval;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
@@ -381,23 +382,29 @@ public class ElementInteger extends Constraint {
 		
 			int el = list[pos];
 			IntDomain indexes = map.get(el);
+			int elementIndex = pos + 1 + indexOffset;
 			if (indexes == null) {
-				indexes = new IntervalDomain(pos + 1 + indexOffset, pos + 1 + indexOffset);
+				indexes = new IntervalDomain(elementIndex, elementIndex);
 				map.put(el, indexes);
 			}
-			else 
-			    indexes.unionAdapt(pos + 1 + indexOffset);
+			else {
+			    if (indexes.max() + 1 == elementIndex)
+				indexes.unionAdapt(elementIndex);
+			    else
+				// adds the interval at the end without checking for proper union
+				// it is OK here since elementIndex are always in ascending order (for-loop)
+				indexes.unionAdapt(new Interval(elementIndex, elementIndex));
+			}
 		}
 		
 		    for (IntDomain duplicate: map.values()) {
-			if ( duplicate.getSize() > 20 )
+			if ( duplicate.getSize() > 10 )
 				duplicates.add(duplicate);
 		    }
 		}
 		
 		valueHasChanged = true;
 		indexHasChanged = true;
-		
 	}
 
 	@Override
