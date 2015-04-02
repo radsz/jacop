@@ -63,6 +63,11 @@ public class Max extends Constraint {
 	public IntVar max;
 
 	/**
+	 * It specifies length of the list. 
+	 */
+        int l;
+
+       /**
 	 * It specifies the arguments required to be saved by an XML format as well as 
 	 * the constructor being called to recreate an object from an XML format.
 	 */
@@ -80,11 +85,12 @@ public class Max extends Constraint {
 
 		this.queueIndex = 1;
 		this.numberId = counter++;
-		this.numberArgs = (short) (list.length + 1);
+		this.l = list.length;
+		this.numberArgs = (short) (l + 1);
 		this.max = max;
-		this.list = new IntVar[list.length];
-		
-		for (int i = 0; i < list.length; i++) {
+		this.list = new IntVar[l];
+
+		for (int i = 0; i < l; i++) {
 			assert (list[i] != null) : i + "-th variable in the list is null";
 			this.list[i] = list[i];
 		}
@@ -130,7 +136,7 @@ public class Max extends Constraint {
 			int maxValue = IntDomain.MinInt;
 		
 			int maxMax = max.max();
-			for (int i = 0; i < list.length; i++) {
+			for (int i = 0; i < l; i++) {
 				
 				var = list[i];
 
@@ -147,7 +153,7 @@ public class Max extends Constraint {
 			max.domain.in(store.level, max, minValue, maxValue);
 
 			int n=0, pos=-1;
-			for (int i = 0; i < list.length; i++) {
+			for (int i = 0; i < l; i++) {
 				var = list[i];
 				if (minValue > var.max())
 				    n++;

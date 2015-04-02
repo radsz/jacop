@@ -223,7 +223,12 @@ public class ElementIntegerFast extends Constraint {
 			int val = list[position];
 		    
 			if (disjoint(value, val))
-			    indexDom.unionAdapt(position + 1 + indexOffset);
+			    if (indexDom.size == 0)
+				indexDom.unionAdapt(position + 1 + indexOffset);
+			    else
+			    	// indexes are in ascending order and can be added at the end if the last element
+			    	// plus 1 is not equal a new value. In such case the max must be changed.
+				indexDom.addLastElement(position + 1 + indexOffset);
 			else
 			    if (val == list[maxIndex - 1 - indexOffset])
 				break;
@@ -231,12 +236,6 @@ public class ElementIntegerFast extends Constraint {
 
 		    index.domain.in(store.level, index, indexDom.complement());
 
-		    // while (index.domain.contains(minIndex) && !value.domain.contains(list[minIndex - 1 - indexOffset]) ) 
-		    // 	minIndex++;
-		    // while (index.domain.contains(maxIndex) && !value.domain.contains(list[maxIndex - 1 - indexOffset]) )
-		    // 	maxIndex--;
-
-		    // index.domain.in(store.level, index, minIndex, maxIndex);
 		}
 		else if (sort == detect) {
 		
@@ -253,7 +252,12 @@ public class ElementIntegerFast extends Constraint {
 			int val = list[position];
 		    
 			if (disjoint(value, val))
-			    indexDom.unionAdapt(position + 1 + indexOffset);
+			    if (indexDom.size == 0)
+				indexDom.unionAdapt(position + 1 + indexOffset);
+			    else
+			    	// indexes are in ascending order and can be added at the end if the last element
+			    	// plus 1 is not equal a new value. In such case the max must be changed.
+				indexDom.addLastElement(position + 1 + indexOffset);
 			else {
 			    min = Math.min(min, val);
 			    max = Math.max(max, val);
@@ -292,7 +296,12 @@ public class ElementIntegerFast extends Constraint {
 			int val = list[position];
 
 			if (disjoint(value, val))
-			    indexDom.unionAdapt(position + 1 + indexOffset);
+			    if (indexDom.size == 0)
+				indexDom.unionAdapt(position + 1 + indexOffset);
+			    else
+			    	// indexes are in ascending order and can be added at the end if the last element
+			    	// plus 1 is not equal a new value. In such case the max must be changed.
+				indexDom.addLastElement(position + 1 + indexOffset);
 			else {
 			    min = Math.min(min, val);
 			    max = Math.max(max, val);

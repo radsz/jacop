@@ -61,6 +61,11 @@ public class Min extends Constraint {
 	public IntVar min;
 
 	/**
+	 * It specifies the length of the list.
+	 */
+        int l;
+
+	/**
 	 * It specifies the arguments required to be saved by an XML format as well as 
 	 * the constructor being called to recreate an object from an XML format.
 	 */
@@ -78,10 +83,12 @@ public class Min extends Constraint {
 
 		this.queueIndex = 1;
 		this.numberId = IdNumber++;
-		this.numberArgs = (short) (list.length + 1) ;
+		this.l = list.length;
+		this.numberArgs = (short) (l + 1) ;
 		this.min = min;
-		this.list = new IntVar[list.length];
-		for (int i = 0; i < list.length; i++) {
+		this.list = new IntVar[l];
+		
+		for (int i = 0; i < l; i++) {
 			assert (list[i] != null) : i + "-th variable in a list is null";
 			this.list[i] = list[i];
 		}
@@ -131,7 +138,7 @@ public class Min extends Constraint {
 //            int minMaxValue=IntDomain.MaxInt;
 
 			int minMin = min.min();
-			for (int i = 0; i < list.length; i++) {
+			for (int i = 0; i < l; i++) {
 				var = list[i];
 
 				var.domain.inMin(store.level, var, minMin);
@@ -153,7 +160,7 @@ public class Min extends Constraint {
 			min.domain.in(store.level, min, minValue, maxValue);
 
 			int n=0, pos=-1;
-			for (int i = 0; i < list.length; i++) {
+			for (int i = 0; i < l; i++) {
 				var = list[i];
 //				if (minMaxValue <= var.min())
                 if (maxValue < var.min())

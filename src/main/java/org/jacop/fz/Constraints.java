@@ -336,7 +336,7 @@ public class Constraints implements ParserTreeConstants {
 		    pose(new org.jacop.floats.constraints.Max(new FloatVar[] {v1, v2}, v3));
 
 		    // 1.
-		    pose(new IfThenElse(new PltQ(v2,v1), new PeqQ(v1,v3), new PeqQ(v2,v3)));
+		    // pose(new IfThenElse(new PltQ(v2,v1), new PeqQ(v1,v3), new PeqQ(v2,v3)));
 		    // 2.
 		    // pose(new IfThen(new PltQ(v2,v1), new PeqQ(v1,v3)));
 		    // pose(new IfThen(new PltQ(v1,v2), new PeqQ(v2,v3)));
