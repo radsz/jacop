@@ -310,8 +310,12 @@ public class ElementInteger extends Constraint {
 			int val = list[position];
 		    
 			if (disjoint(value.domain, val))
-			    indexDom.unionAdapt(position + 1 + indexOffset);
-
+			    if (indexDom.size == 0)
+				indexDom.unionAdapt(position + 1 + indexOffset);
+			    else
+			    	// indexes are in ascending order and can be added at the end if the last element
+			    	// plus 1 is not equal a new value. In such case the max must be changed.
+				indexDom.addLastElement(position + 1 + indexOffset);
 		    }
 
 		    index.domain.in(store.level, index, indexDom.complement());
@@ -376,25 +380,19 @@ public class ElementInteger extends Constraint {
 		if (checkDuplicates) {
 		    duplicates = new ArrayList<IntDomain>();
 		
-		    HashMap<Integer, IntDomain> map = new HashMap<Integer, IntDomain>();
+		    HashMap<Integer, IntervalDomain> map = new HashMap<Integer, IntervalDomain>();
 
 		    for (int pos = 0; pos < list.length; pos++) {
 		
 			int el = list[pos];
-			IntDomain indexes = map.get(el);
+			IntervalDomain indexes = map.get(el);
 			int elementIndex = pos + 1 + indexOffset;
 			if (indexes == null) {
 				indexes = new IntervalDomain(elementIndex, elementIndex);
 				map.put(el, indexes);
 			}
-			else {
-			    if (indexes.max() + 1 == elementIndex)
-				indexes.unionAdapt(elementIndex);
-			    else
-				// adds the interval at the end without checking for proper union
-				// it is OK here since elementIndex are always in ascending order (for-loop)
-				indexes.unionAdapt(new Interval(elementIndex, elementIndex));
-			}
+			else 
+			    indexes.addLastElement(elementIndex);
 		}
 		
 		    for (IntDomain duplicate: map.values()) {
