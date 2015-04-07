@@ -56,7 +56,12 @@ public class AndBool extends PrimitiveConstraint {
 	 * It specifies a list of variables which all must be equal to 1 to set result variable to 1.
 	 */
 	public IntVar [] list;
-	
+
+	/**
+	 * It specifies the length of the list.
+	 */
+        final int l;
+    
 	/**
 	 * It specifies variable result, storing the result of and function performed a list of variables.
 	 */
@@ -85,10 +90,11 @@ public class AndBool extends PrimitiveConstraint {
 		assert ( result != null ) : "Result variable is null";
 		
 		this.numberId = counter++;
-		this.numberArgs = (short)(list.length + 1);
+		this.l = list.length;
+		this.numberArgs = (short)(l + 1);
 		
-		this.list = new IntVar[list.length];
-		for (int i = 0; i < list.length; i++) {
+		this.list = new IntVar[l];
+		for (int i = 0; i < l; i++) {
 			assert (list[i] != null) : i + "-th element in the list is null";
 			this.list[i] = list[i];
 		}
@@ -96,6 +102,11 @@ public class AndBool extends PrimitiveConstraint {
 		this.result = result;
 		
 		assert ( checkInvariants() == null) : checkInvariants();
+
+		if (l > 2)
+		    queueIndex = 1;
+		else
+		    queueIndex = 0;
 
 	}
 
@@ -129,10 +140,10 @@ public class AndBool extends PrimitiveConstraint {
 	@Override
 	public ArrayList<Var> arguments() {
 
-		ArrayList<Var> variables = new ArrayList<Var>(list.length + 1);
+		ArrayList<Var> variables = new ArrayList<Var>(l + 1);
 
 		variables.add(result);
-		for (int i = 0; i < list.length; i++)
+		for (int i = 0; i < l; i++)
 			variables.add(list[i]);
 		return variables;
 	}
@@ -211,15 +222,15 @@ public class AndBool extends PrimitiveConstraint {
 	public void consistency(Store store) {
 
 	    int start = position.value();
-	    int index_01=list.length-1;
+	    int index_01=l-1;
 
 		if (result.min() == 1) {
-			for (int i=start; i<list.length; i++)
+			for (int i=start; i<l; i++)
 				list[i].domain.in(store.level, list[i], 1, 1);
 			return;
 		}
 
-		for (int i = start; i < list.length; i++) {
+		for (int i = start; i < l; i++) {
 		    if (list[i].min() == 1) {
 			    swap(start, i);
 			    start++;
@@ -233,13 +244,13 @@ public class AndBool extends PrimitiveConstraint {
 			}
 		}
 
-		if (start == list.length) {
+		if (start == l) {
 			result.domain.in(store.level, result, 1, 1);
 			return;
 		}
 
 		if (result.max() == 0)
-			if (start == list.length - 1)
+			if (start == l - 1)
 				list[index_01].domain.in(store.level, list[index_01], 0, 0);
 
 	}
@@ -257,15 +268,15 @@ public class AndBool extends PrimitiveConstraint {
 
 	    int start = position.value();
 
-	    int index_01=list.length-1;
+	    int index_01=l-1;
 
 		if (result.max() == 0) {
-			for (int i=start; i<list.length; i++)
+			for (int i=start; i<l; i++)
 				list[i].domain.in(store.level, list[i], 1, 1);
 			return;
 		}
 
-		for (int i = start; i < list.length; i++) {
+		for (int i = start; i < l; i++) {
 		    if (list[i].min() == 1) {
 			    swap(start, i);
 			    start++;
@@ -278,13 +289,13 @@ public class AndBool extends PrimitiveConstraint {
 			}
 		}
 
-		if (start == list.length) {
+		if (start == l) {
 		    result.domain.in(store.level, result, 0, 0);
 			return;
 		}
 
 		if (result.max() == 0)
-			if (start == list.length - 1)
+			if (start == l - 1)
 			    list[index_01].domain.in(store.level, list[index_01], 1, 1);
 	}
 
@@ -294,7 +305,7 @@ public class AndBool extends PrimitiveConstraint {
 	    int start = position.value();
 
 		if (result.min() == 1) {
-			for (int i = start; i<list.length; i++)
+			for (int i = start; i<l; i++)
 				if (list[i].min() != 1) 
 				    return false;
 				else {
@@ -304,7 +315,7 @@ public class AndBool extends PrimitiveConstraint {
 				}
 			return true;
 		} else if (result.max() == 0) {
-			for (int i = start; i<list.length; i++)
+			for (int i = start; i<l; i++)
 				if (list[i].max() == 0) 
 				    return true;
 				else if (list[i].min() == 1) {
@@ -326,7 +337,7 @@ public class AndBool extends PrimitiveConstraint {
 
 		if (result.max() == 0) {
 
-			for (int i = start; i < list.length; i++)
+			for (int i = start; i < l; i++)
 				if (list[i].min() != 1)
 					return false;
 				else {
@@ -342,7 +353,7 @@ public class AndBool extends PrimitiveConstraint {
 
 			if (result.min() == 1) {
 
-				for (int i = start; i < list.length; i++)
+				for (int i = start; i < l; i++)
 					if (list[i].max() == 0)
 						return true;					
 				else if (list[i].min() == 1) {
@@ -359,7 +370,7 @@ public class AndBool extends PrimitiveConstraint {
 	@Override
 	public void removeConstraint() {
 		result.removeConstraint(this);
-		for (int i = 0; i < list.length; i++) {
+		for (int i = 0; i < l; i++) {
 			list[i].removeConstraint(this);
 		}
 	}
@@ -370,9 +381,9 @@ public class AndBool extends PrimitiveConstraint {
 		StringBuffer resultString = new StringBuffer( id() );
 
 		resultString.append(" : andBool([ ");
-		for (int i = 0; i < list.length; i++) {
+		for (int i = 0; i < l; i++) {
 			resultString.append( list[i] );
-			if (i < list.length - 1)
+			if (i < l - 1)
 				resultString.append(", ");
 		}
 		resultString.append("], ");
@@ -388,7 +399,7 @@ public class AndBool extends PrimitiveConstraint {
 
 		constraints = new ArrayList<Constraint>();
 
-		PrimitiveConstraint [] andConstraints = new PrimitiveConstraint[list.length];
+		PrimitiveConstraint [] andConstraints = new PrimitiveConstraint[l];
 
 		IntervalDomain booleanDom = new IntervalDomain(0, 1);
 

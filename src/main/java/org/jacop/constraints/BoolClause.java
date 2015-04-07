@@ -61,7 +61,11 @@ public class BoolClause extends PrimitiveConstraint {
     public IntVar[] x;
     public IntVar[] y;
 	
-
+    /**
+     * It specifies length of lists x and y respectively.
+     */
+    final int lx, ly;
+    
     /**
      * It specifies the arguments required to be saved by an XML format as well as 
      * the constructor being called to recreate an object from an XML format.
@@ -86,22 +90,28 @@ public class BoolClause extends PrimitiveConstraint {
 	assert ( y != null ) : "Result variable is null";
 		
 	this.numberId = counter++;
-	this.numberArgs = (short)(x.length + y.length);
-		
-	this.x = new IntVar[x.length];
-	for (int i = 0; i < x.length; i++) {
+	this.lx = x.length;
+	this.ly = y.length;
+	this.numberArgs = (short)(lx + ly);
+	
+	this.x = new IntVar[lx];
+	for (int i = 0; i < lx; i++) {
 	    assert (x[i] != null) : i + "-th element in the list is null";
 	    this.x[i] = x[i];
 	}
 
-	this.y = new IntVar[y.length];
-	for (int i = 0; i < y.length; i++) {
+	this.y = new IntVar[ly];
+	for (int i = 0; i < ly; i++) {
 	    assert (y[i] != null) : i + "-th element in the list is null";
 	    this.y[i] = y[i];
 	}
-		
+	
 	assert ( checkInvariants() == null) : checkInvariants();
 
+	if (lx > 2 || ly > 2)
+	    queueIndex = 1;
+	else
+	    queueIndex = 0;
     }
 
     /**
@@ -138,12 +148,12 @@ public class BoolClause extends PrimitiveConstraint {
     @Override
     public ArrayList<Var> arguments() {
 
-	ArrayList<Var> variables = new ArrayList<Var>(x.length + y.length);
+	ArrayList<Var> variables = new ArrayList<Var>(lx + ly);
 
-	for (int i = 0; i < x.length; i++)
+	for (int i = 0; i < lx; i++)
 	    variables.add(x[i]);
 
-	for (int i = 0; i < y.length; i++)
+	for (int i = 0; i < ly; i++)
 	    variables.add(y[i]);
 
 	return variables;
@@ -231,7 +241,7 @@ public class BoolClause extends PrimitiveConstraint {
 	int startX = positionX.value();
 	int startY = positionY.value();
 
-	for (int i = startX; i < x.length; i++) {
+	for (int i = startX; i < lx; i++) {
 	    if (x[i].max() == 0) {
 		swap(x, startX, i);
 		startX++;
@@ -244,7 +254,7 @@ public class BoolClause extends PrimitiveConstraint {
 		}
 	}
 
-	for (int i = startY; i < y.length; i++) {
+	for (int i = startY; i < ly; i++) {
 	    if (y[i].min() == 1) {
 		swap(y, startY, i);
 		startY++;
@@ -258,14 +268,14 @@ public class BoolClause extends PrimitiveConstraint {
 	}
 
 	// all x are = 0 and all y = 1 => FAIL
-	if (startX == x.length && startY == y.length) 
+	if (startX == lx && startY == ly) 
 	    throw Store.failException;
 	// last x must be 1
-	else if (startX == x.length - 1 && startY == y.length) 
-	    x[x.length-1].domain.in(store.level, x[x.length-1], 1, 1);
+	else if (startX == lx - 1 && startY == ly) 
+	    x[lx-1].domain.in(store.level, x[lx-1], 1, 1);
 	// last y must be 0
-	else if (startX == x.length && startY == y.length - 1) 
-	    y[y.length-1].domain.in(store.level, y[y.length-1], 0, 0);
+	else if (startX == lx && startY == ly - 1) 
+	    y[ly-1].domain.in(store.level, y[ly-1], 0, 0);
 	    
     }
 
@@ -286,9 +296,9 @@ public class BoolClause extends PrimitiveConstraint {
      */
     public void notConsistency(Store store) {
 
-	for (int i = 0; i < x.length; i++)
+	for (int i = 0; i < lx; i++)
 	    x[i].domain.in(store.level, x[i], 0, 0);
-	for (int i = 0; i < x.length; i++)
+	for (int i = 0; i < lx; i++)
 	    y[i].domain.in(store.level, y[i], 1, 1);
 
 	removeConstraint();
@@ -301,7 +311,7 @@ public class BoolClause extends PrimitiveConstraint {
 	int startX = positionX.value();
 	int startY = positionY.value();
 
-	for (int i = startX; i < x.length; i++)
+	for (int i = startX; i < lx; i++)
 	    if (x[i].min() == 1) 
 		return true;
 	    else if (x[i].max() == 0) {
@@ -310,7 +320,7 @@ public class BoolClause extends PrimitiveConstraint {
 		positionX.update(startX);
 	    }
 
-	for (int i = startY; i < y.length; i++)
+	for (int i = startY; i < ly; i++)
 	    if (y[i].max() == 0) 
 		return true;
 	    else if (y[i].min() == 1) {
@@ -329,7 +339,7 @@ public class BoolClause extends PrimitiveConstraint {
 	int startX = positionX.value();
 	int startY = positionY.value();
 
-	for (int i = startX; i < x.length; i++)
+	for (int i = startX; i < lx; i++)
 	    if (x[i].max() == 0) {
 		swap(x, startX, i);
 		startX++;
@@ -338,7 +348,7 @@ public class BoolClause extends PrimitiveConstraint {
 	    else
 		return false;
 	
-	for (int i = startY; i < y.length; i++)
+	for (int i = startY; i < ly; i++)
 	    if (y[i].min() == 1) {
 		swap(y, startY, i);
 		startY++;
@@ -347,7 +357,7 @@ public class BoolClause extends PrimitiveConstraint {
 	    else
 		return false;
 
-	if (startX == x.length && startY == y.length) 
+	if (startX == lx && startY == ly) 
 	    return true;
 	else
 	    return false;
@@ -356,9 +366,9 @@ public class BoolClause extends PrimitiveConstraint {
     @Override
     public void removeConstraint() {
 
-	for (int i = 0; i < x.length; i++) 
+	for (int i = 0; i < lx; i++) 
 	    x[i].removeConstraint(this);
-	for (int i = 0; i < y.length; i++) 
+	for (int i = 0; i < ly; i++) 
 	    y[i].removeConstraint(this);
 
     }
@@ -369,16 +379,16 @@ public class BoolClause extends PrimitiveConstraint {
 	StringBuffer resultString = new StringBuffer( id() );
 
 	resultString.append(" : BoolClause([ ");
-	for (int i = 0; i < x.length; i++) {
+	for (int i = 0; i < lx; i++) {
 	    resultString.append( x[i] );
-	    if (i < x.length - 1)
+	    if (i < lx - 1)
 		resultString.append(", ");
 	}
 	resultString.append("], [");
 
-	for (int i = 0; i < y.length; i++) {
+	for (int i = 0; i < ly; i++) {
 	    resultString.append( y[i] );
-	    if (i < y.length - 1)
+	    if (i < ly - 1)
 		resultString.append(", ");
 	}
 	resultString.append("])");

@@ -396,7 +396,7 @@ public class ElementInteger extends Constraint {
 		}
 		
 		    for (IntDomain duplicate: map.values()) {
-			if ( duplicate.getSize() > 10 )
+			if ( duplicate.getSize() > 3 )
 				duplicates.add(duplicate);
 		    }
 		}

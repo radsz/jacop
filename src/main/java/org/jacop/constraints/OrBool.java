@@ -65,6 +65,10 @@ public class OrBool extends PrimitiveConstraint {
 	public IntVar result;
 
 	/**
+	 * It specifies the length of the list of variables.
+	 */
+        final int l;
+        /**
 	 * It specifies the arguments required to be saved by an XML format as well as 
 	 * the constructor being called to recreate an object from an XML format.
 	 */
@@ -87,10 +91,11 @@ public class OrBool extends PrimitiveConstraint {
 		assert ( result != null ) : "Result variable is null";
 		
 		this.numberId = counter++;
-		this.numberArgs = (short)(list.length + 1);
+		this.l = list.length;
+		this.numberArgs = (short)(l + 1);
 		
-		this.list = new IntVar[list.length];
-		for (int i = 0; i < list.length; i++) {
+		this.list = new IntVar[l];
+		for (int i = 0; i < l; i++) {
 			assert (list[i] != null) : i + "-th element in the list is null";
 			this.list[i] = list[i];
 		}
@@ -98,6 +103,10 @@ public class OrBool extends PrimitiveConstraint {
 		this.result = result;
 		assert ( checkInvariants() == null) : checkInvariants();
 
+		if (l > 2)
+		    queueIndex = 1;
+		else
+		    queueIndex = 0;
 	}
 
 	/**
@@ -130,10 +139,10 @@ public class OrBool extends PrimitiveConstraint {
 	@Override
 	public ArrayList<Var> arguments() {
 
-		ArrayList<Var> variables = new ArrayList<Var>(list.length + 1);
+		ArrayList<Var> variables = new ArrayList<Var>(l + 1);
 
 		variables.add(result);
-		for (int i = 0; i < list.length; i++)
+		for (int i = 0; i < l; i++)
 			variables.add(list[i]);
 		return variables;
 	}
@@ -211,9 +220,9 @@ public class OrBool extends PrimitiveConstraint {
 	public void consistency(Store store) {
 
 	                int start = position.value();
-			int index_01 = list.length-1;
+			int index_01 = l-1;
 
-			for (int i = start; i < list.length; i++) {
+			for (int i = start; i < l; i++) {
 				if (list[i].min() == 1) {
 				    result.domain.in(store.level, result, 1, 1);
 				    removeConstraint();
@@ -227,15 +236,15 @@ public class OrBool extends PrimitiveConstraint {
 				    }
 			}
 
-			if (start == list.length) 
+			if (start == l) 
 				result.domain.in(store.level, result, 0, 0);
 
 			// for case >, then the in() will fail as the constraint should.
-			if (result.min() == 1 && start >= list.length - 1)
+			if (result.min() == 1 && start >= l - 1)
 				list[index_01].domain.in(store.level, list[index_01], 1, 1);
 				
-			if (result.max() == 0 && start < list.length)
-				for (int i = start; i < list.length; i++)
+			if (result.max() == 0 && start < l)
+				for (int i = start; i < l; i++)
 					list[i].domain.in(store.level, list[i], 0, 0);
 	}
 
@@ -255,9 +264,9 @@ public class OrBool extends PrimitiveConstraint {
 			store.propagationHasOccurred = false;
 			
 	                int start = position.value();
-			int index_01 = list.length-1;
+			int index_01 = l-1;
 
-			for (int i = start; i < list.length; i++) {
+			for (int i = start; i < l; i++) {
 				if (list[i].min() == 1) {
 					result.domain.in(store.level, result, 0, 0);
 					return;
@@ -272,15 +281,15 @@ public class OrBool extends PrimitiveConstraint {
 					// 	index_01 = i;
 			}
 
-			if (start == list.length) 
+			if (start == l) 
 				result.domain.in(store.level, result, 1, 1);
 
 			// for case >, then the in() will fail as the constraint should.
-			if (result.min() == 1 && start < list.length)
-				for (int i = 0; i < list.length; i++)
+			if (result.min() == 1 && start < l)
+				for (int i = 0; i < l; i++)
 					list[i].domain.in(store.level, list[i], 0, 0);
 				
-			if (result.max() == 0 && start >= list.length - 1)
+			if (result.max() == 0 && start >= l - 1)
 				list[index_01].domain.in(store.level, list[index_01], 1, 1);
 
 		} while (store.propagationHasOccurred);
@@ -294,7 +303,7 @@ public class OrBool extends PrimitiveConstraint {
 
 		if (result.max() == 0) {
 
-			for (int i = start; i < list.length; i++)
+			for (int i = start; i < l; i++)
 				if (list[i].max() != 0)
 				    return false;
 				else {
@@ -310,7 +319,7 @@ public class OrBool extends PrimitiveConstraint {
 			
 			if (result.min() == 1) {
 
-				for (int i = start; i < list.length; i++)
+				for (int i = start; i < l; i++)
 					if (list[i].min() == 1)
 					    return true;
 					else if (list[i].max() == 0) {
@@ -334,7 +343,7 @@ public class OrBool extends PrimitiveConstraint {
 
 		int x1 = 0, x0 = start;
 
-		for (int i = start; i < list.length; i++) {
+		for (int i = start; i < l; i++) {
 			if (list[i].min() == 1) 
 			    x1++;
 			else if (list[i].max() == 0) {
@@ -345,14 +354,14 @@ public class OrBool extends PrimitiveConstraint {
 			}
 		}
 
-		return (x0 == list.length && result.min() == 1) || (x1 != 0 && result.max() == 0);
+		return (x0 == l && result.min() == 1) || (x1 != 0 && result.max() == 0);
 
 	}
 
 	@Override
 	public void removeConstraint() {
 		result.removeConstraint(this);
-		for (int i = 0; i < list.length; i++) {
+		for (int i = 0; i < l; i++) {
 			list[i].removeConstraint(this);
 		}
 	}
@@ -363,9 +372,9 @@ public class OrBool extends PrimitiveConstraint {
 		StringBuffer resultString = new StringBuffer( id() );
 
 		resultString.append(" : orBool([ ");
-		for (int i = 0; i < list.length; i++) {
+		for (int i = 0; i < l; i++) {
 			resultString.append( list[i] );
-			if (i < list.length - 1)
+			if (i < l - 1)
 				resultString.append(", ");
 		}
 		resultString.append("], ");
@@ -381,7 +390,7 @@ public class OrBool extends PrimitiveConstraint {
 
 		constraints = new ArrayList<Constraint>();
 
-		PrimitiveConstraint [] orConstraints = new PrimitiveConstraint[list.length];
+		PrimitiveConstraint [] orConstraints = new PrimitiveConstraint[l];
 
 		IntervalDomain booleanDom = new IntervalDomain(0, 1);
 

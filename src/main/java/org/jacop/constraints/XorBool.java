@@ -71,7 +71,9 @@ public class XorBool extends PrimitiveConstraint {
 
         public IntVar y;
 
-	/**
+        final int l;
+
+        /**
 	 * It specifies the arguments required to be saved by an XML format as well as 
 	 * the constructor being called to recreate an object from an XML format.
 	 */
@@ -88,13 +90,18 @@ public class XorBool extends PrimitiveConstraint {
 
 	        queueIndex = 0;
 		numberId = idNumber++;
-		numberArgs = x.length + 1;
+		this.l = x.length;
+		numberArgs = l + 1;
 
 		this.x = x;
 		this.y = y;
 
 		assert ( checkInvariants() == null) : checkInvariants();
 
+		if (l > 2)
+		    queueIndex = 1;
+		else
+		    queueIndex = 0;
 	}
 
 	/**
@@ -151,12 +158,12 @@ public class XorBool extends PrimitiveConstraint {
 		    else if (e.min() != 1)
 			nonGround = e;
 
-		if (numberOnes + numberZeros == x.length)
+		if (numberOnes + numberZeros == l)
 		    if (numberOnes % 2 == 1)
 			y.domain.in(store.level, y, 1, 1);
 		    else
 			y.domain.in(store.level, y, 0, 0);
-		else if (numberOnes + numberZeros == x.length - 1)
+		else if (numberOnes + numberZeros == l - 1)
 		    if (y.min() == 1)
 			if (numberOnes % 2 == 1)
 			    nonGround.domain.in(store.level, nonGround, 0,0);
@@ -194,12 +201,12 @@ public class XorBool extends PrimitiveConstraint {
 		    else if (e.min() != 1)
 			nonGround = e;
 
-		if (numberOnes + numberZeros == x.length)
+		if (numberOnes + numberZeros == l)
 		    if (numberOnes % 2 == 1)
 			y.domain.in(store.level, y, 0, 0);
 		    else 
 			y.domain.in(store.level, y, 1, 1);
-		else if (numberOnes + numberZeros == x.length - 1)
+		else if (numberOnes + numberZeros == l - 1)
 		    if (y.min() == 1)
 			if (numberOnes % 2 == 1)
 			    nonGround.domain.in(store.level, nonGround, 1,1);
