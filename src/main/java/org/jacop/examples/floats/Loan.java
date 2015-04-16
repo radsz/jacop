@@ -1,9 +1,9 @@
 /**
- *  Loan.java 
+ *  Loan.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,24 +32,25 @@
 package org.jacop.examples.floats;
 
 /**
- * 
+ *
  * It models tan(x) = -x for floating solver.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * 
+ *
  */
 
 import org.jacop.core.Store;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.PrintOutListener;
-
-import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.constraints.PmulQeqR;
 import org.jacop.floats.constraints.PplusQeqR;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.PrintOutListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class Loan {
+public class Loan { private static Logger logger = LoggerFactory.getLogger(Loan.class);
 
     public void loan(double i, double p, double r, double b4) {
 
@@ -66,34 +67,34 @@ public class Loan {
 //             B4 = 0.0;
 //	       result P = 907.47 (precision 1e-4)
 
-	System.out.println ("\nProgram to solve loan payments under four quaeter\nI- interest rate, P- principal initially borrowed\nR- quarterly repayment and B4- balance owing at end\nParameters:");
+	logger.info ("\nProgram to solve loan payments under four quaeter\nI- interest rate, P- principal initially borrowed\nR- quarterly repayment and B4- balance owing at end\nParameters:");
 
 	Store store = new Store();
 
 	FloatDomain.setPrecision(1e-13);
 
-	FloatVar one = new FloatVar(store, "1.0", 1.0, 1.0); 
-	FloatVar zero = new FloatVar(store, "0.0", 0.0, 0.0); 
+	FloatVar one = new FloatVar(store, "1.0", 1.0, 1.0);
+	FloatVar zero = new FloatVar(store, "0.0", 0.0, 0.0);
 
 	FloatVar R;  // quarterly repayment
 	if (r != 0.0) {
 	    R = new FloatVar(store, "R", r, r);
-	    System.out.println ("R = " + r);
+	    logger.info ("R = " + r);
 	}
 	else {
 	    R = new FloatVar(store, "R", FloatDomain.MinFloat, FloatDomain.MaxFloat);
-	    System.out.println ("R = ?");
+	    logger.info ("R = ?");
 	}
 
 
 	FloatVar P;   // principal initially borrowed
 	if (p != 0.0) {
 	    P = new FloatVar(store, "P", p, p);
-	    System.out.println ("P = " + p);
+	    logger.info ("P = " + p);
 	}
 	else {
 	    P = new FloatVar(store, "P", FloatDomain.MinFloat, FloatDomain.MaxFloat);
-	    System.out.println ("P = ?");
+	    logger.info ("P = ?");
 	}
 
 
@@ -106,11 +107,11 @@ public class Loan {
 	FloatVar B4; //  balance owing at end
 	if (b4 >= 0.0) {
 	    B4 = new FloatVar(store, "B4", b4, b4);
-	    System.out.println ("B4 = " + b4);
+	    logger.info ("B4 = " + b4);
 	}
 	else {
 	    B4 = new FloatVar(store, "B4", FloatDomain.MinFloat, FloatDomain.MaxFloat);
-	    System.out.println ("B4 = ?");
+	    logger.info ("B4 = ?");
 	}
 
 	FloatVar t1 = new FloatVar(store, "t1", 1.0, 2.0);
@@ -142,22 +143,22 @@ public class Loan {
 
 	label.labeling(store, s);
 
-	System.out.println (B4+"\n"+P+"\n"+R);
+	logger.info (B4+"\n"+P+"\n"+R);
 
-	System.out.println ("Precision = " + FloatDomain.precision());
+	logger.info ("Precision = " + FloatDomain.precision());
     }
-	
+
     /**
-     * It executes the program which computes values for tan(x) = -x. 
-     * 
+     * It executes the program which computes values for tan(x) = -x.
+     *
      * @param args no arguments
      */
     public static void main(String args[]) {
-		
+
 	Loan example = new Loan();
 
 	if (args.length != 4)
-	    System.out.println ("Wring number of parameters");
+	    logger.info ("Wring number of parameters");
 	else {
 	    double i = Double.parseDouble(args[0]);
 	    double p = Double.parseDouble(args[1]);
@@ -166,7 +167,7 @@ public class Loan {
 
 	    example.loan(i, p, r, b4);
 	}
-    }			
+    }
 
 
 }

@@ -1,9 +1,9 @@
 /**
- *  Or.java 
+ *  Or.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,22 +31,23 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.core.Domain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.util.SimpleHashSet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Constraint c1 \/ c2 \/ ... \/ cn.
- * 
- * 
+ *
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class Or extends PrimitiveConstraint {
+public class Or extends PrimitiveConstraint { private static Logger logger = LoggerFactory.getLogger(Or.class);
 
 	static int IdNumber = 1;
 
@@ -61,7 +62,7 @@ public class Or extends PrimitiveConstraint {
 	private boolean propagation;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"listOfC"};
@@ -71,20 +72,20 @@ public class Or extends PrimitiveConstraint {
 	 * @param listOfC list of primitive constraints which at least one of them has to be satisfied.
 	 */
 	public Or(PrimitiveConstraint[] listOfC) {
-		
+
 		assert (listOfC != null) : "List of constraints is null";
-		
+
 		this.queueIndex = 1;
 		this.numberId = IdNumber++;
 		this.listOfC = new PrimitiveConstraint[listOfC.length];
-		
+
 		for (int i = 0; i < listOfC.length; i++) {
 			assert (listOfC[i] != null) : i + "-th element of list of constraints is null";
-			
+
 			this.numberArgs += listOfC[i].numberArgs();
 			this.listOfC[i] = listOfC[i];
 		}
-		
+
 	}
 
 	/**
@@ -92,9 +93,9 @@ public class Or extends PrimitiveConstraint {
 	 * @param listOfC list of primitive constraints which at least one of them has to be satisfied.
 	 */
 	public Or(ArrayList<PrimitiveConstraint> listOfC) {
-		
+
 		this(listOfC.toArray(new PrimitiveConstraint[listOfC.size()]));
-		
+
 	}
 
 	/**
@@ -103,7 +104,7 @@ public class Or extends PrimitiveConstraint {
 	 * @param c2 the second constraint which can be satisfied.
 	 */
 	public Or(PrimitiveConstraint c1, PrimitiveConstraint c2) {
-		
+
 		this.queueIndex = 1;
 		this.numberId = IdNumber++;
 		this.listOfC = new PrimitiveConstraint[2];
@@ -129,9 +130,9 @@ public class Or extends PrimitiveConstraint {
 	@Override
 	public void consistency(Store store) {
 
-		//@todo, why so much work? 
+		//@todo, why so much work?
 		// search for the first one which returns false for notSatisfied() call
-		// use circular buffer approach to remember the last notSatisfied()== false to start checking from this one.  
+		// use circular buffer approach to remember the last notSatisfied()== false to start checking from this one.
 		int numberSat = 0;
 		int numberNotSat = 0;
 		int j = 0;
@@ -150,14 +151,14 @@ public class Or extends PrimitiveConstraint {
 		}
 
 		if (numberSat == 0) {
-		
+
 			if (numberNotSat == listOfC.length - 1)
 				listOfC[j].consistency(store);
 			else if (numberNotSat == listOfC.length)
 		    	throw Store.failException;
-		
+
 		}
-		
+
 	}
 
 	@Override
@@ -193,10 +194,10 @@ public class Or extends PrimitiveConstraint {
 				return eventAcross;
 
 		}
-		
+
 	@Override
 	public int getNotConsistencyPruningEvent(Var var) {
-			
+
 		// If notConsistency function mode
 			if (notConsistencyPruningEvents != null) {
 				Integer possibleEvent = notConsistencyPruningEvents.get(var);
@@ -264,7 +265,7 @@ public class Or extends PrimitiveConstraint {
 				listOfC[i].notConsistency(store);
 
 		} while (propagation);
-		
+
 	}
 
 	@Override
@@ -302,7 +303,7 @@ public class Or extends PrimitiveConstraint {
 
 	@Override
 	public String toString() {
-		
+
 		StringBuffer result = new StringBuffer( id() );
 		result.append(" : Or( ");
 		for (int i = 0; i < listOfC.length; i++) {

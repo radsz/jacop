@@ -1,9 +1,9 @@
 /**
- *  Among.java 
+ *  Among.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2008 Polina Maakeva and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,33 +31,32 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Among constraint in its simplest form. It establishes the following
  * relation. The given number N of X`s take values from the supplied set
- * of values Kset. 
- * 
- * This constraint implements a simple and polynomial algorithm to establish 
- * GAC as presented in different research papers. There are number of 
- * improvements (iterative execution, optimization of computational load upon 
- * backtracking) to improve the constraint further. 
- * 
+ * of values Kset.
+ *
+ * This constraint implements a simple and polynomial algorithm to establish
+ * GAC as presented in different research papers. There are number of
+ * improvements (iterative execution, optimization of computational load upon
+ * backtracking) to improve the constraint further.
+ *
  * @author Polina Makeeva and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class Among extends Constraint {
-	
+public class Among extends Constraint { private static Logger logger = LoggerFactory.getLogger(Among.class);
+
 	static final boolean debugAll = false;
 
 	static int counter = 1;
@@ -90,9 +89,9 @@ public class Among extends Constraint {
 	LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
 
 	private HashMap<IntVar, Integer> position;
-	
+
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"list", "kSet", "n"};
@@ -108,9 +107,9 @@ public class Among extends Constraint {
 		assert (list != null) : "List of variables is null";
 		assert (kSet != null) : "Set of values is null";
 		assert (n != null) : "N variable is null";
-		
+
 		this.queueIndex = 1;
-		
+
 		numberId = counter++;
 
 		this.list = new IntVar[list.length];
@@ -118,11 +117,11 @@ public class Among extends Constraint {
 			assert (list[i] != null) : i + "-th element in list is null";
 			this.list[i] = list[i];
 		}
-		
+
 		this.numberArgs = (short) (1 + list.length);
 		this.kSet = kSet.clone();
 		this.n = n;
-		
+
 	}
 
 	/**
@@ -134,9 +133,9 @@ public class Among extends Constraint {
 	public Among(ArrayList<IntVar> list, IntervalDomain kSet, IntVar n) {
 
 		this(list.toArray(new IntVar[list.size()]), kSet, n);
-		
+
 	}
-	
+
 	@Override
 	public ArrayList<Var> arguments() {
 
@@ -159,8 +158,8 @@ public class Among extends Constraint {
 	public void consistency(Store store) {
 		// ----------------------------------------------------------
 		if (debugAll) {
-			System.out.println("LEVEL : " + store.level);
-			System.out.println(this);
+			logger.info("LEVEL : " + store.level);
+			logger.info(this.toString());
 		}
 		// ----------------------------------------------------------
 
@@ -181,7 +180,7 @@ public class Among extends Constraint {
 			if (kSet.contains(var.domain)) {
 
 				assert posVar >= currentLB : "Variable " + var + " counted for lowerbound multiple times";
-				
+
 				if (posVar != currentLB) {
 					list[posVar] = list[currentLB];
 					list[currentLB] = var;
@@ -196,7 +195,7 @@ public class Among extends Constraint {
 
 			}
 			if (!kSet.isIntersecting(var.domain)) {
-				
+
 				assert posVar <= currentUB : "Variable " + var + " counted for upperbound multiple times";
 
 				if (posVar != currentUB) {
@@ -218,17 +217,17 @@ public class Among extends Constraint {
 
 		// ----------------------------------------------------------
 		if (debugAll) {
-			System.out.println("lbS = " + currentLB);
-			System.out.println("ubS = " + currentUB);
-			System.out.println(" domain of N " + n.domain + " is in [ "
+			logger.info("lbS = " + currentLB);
+			logger.info("ubS = " + currentUB);
+			logger.info(" domain of N " + n.domain + " is in [ "
 					+ Math.max(n.min(), currentLB) + ", "
 					+ Math.min(n.max(), currentUB) + " ]");
 		}
 		// ----------------------------------------------------------
-		
+
 		if (Math.max(n.min(), currentLB) > Math.min(n.max(), currentUB))
 			throw Store.failException;
-		
+
 		n.domain.in(store.level, n, Math.max(n.min(), currentLB), Math.min(n.max(),
 				currentUB));
 
@@ -244,26 +243,26 @@ public class Among extends Constraint {
 				IntVar var = list[i];
 				if (!kSet.contains(var.domain)) {
 					if (debugAll) {
-						System.out.println("lb >> The value before in of "
+						logger.info("lb >> The value before in of "
 								+ var.id + ": " + var.domain);
-						System.out.println("lb >> subtrack " + kSet);
-						System.out.println("lb >> equals "
+						logger.info("lb >> subtrack " + kSet);
+						logger.info("lb >> equals "
 								+ var.domain.subtract(kSet));
 					}
 					var.domain.in(store.level, var, var.domain.subtract(kSet));
 					var.removeConstraint(this);
 					if (debugAll)
-						System.out.println("lb >> The value after in of "
+						logger.info("lb >> The value after in of "
 								+ var.id + ": " + var.domain);
 				}
 			}
-			
-			// since the constraint is satisfied UB is equal to LB. 
+
+			// since the constraint is satisfied UB is equal to LB.
 			upperBorder.update(currentLB);
-			
+
 			// The constrain became satisfied
 			if (debugAll)
-				System.out.println("Simple Among is satisfied");
+				logger.info("Simple Among is satisfied");
 		}
 
 		if (currentUB == n.min() && n.domain.singleton()) {
@@ -275,17 +274,17 @@ public class Among extends Constraint {
 				var.domain.in(store.level, var, kSet);
 				var.removeConstraint(this);
 			}
-			
+
 			// since the constraint is satisfied LB is equal to UB.
 			lowerBorder.update(currentUB);
-			
+
 			// The constrain became satisfied
 			if (debugAll)
-				System.out.println("Simple Among is satisfied");
+				logger.info("Simple Among is satisfied");
 		}
 
 		if (debugAll)
-			System.out.println(this);
+			logger.info(this.toString());
 	}
 
 	@Override
@@ -316,7 +315,7 @@ public class Among extends Constraint {
 			pos++;
 		}
 		n.putConstraint(this);
-		
+
 		store.addChanged(this);
 		store.countConstraint();
 
@@ -325,7 +324,7 @@ public class Among extends Constraint {
 	@Override
 	public void queueVariable(int level, Var var) {
 		if (debugAll)
-			System.out.println("Var " + var + ((IntVar)var).recentDomainPruning());
+			logger.info("Var " + var + ((IntVar)var).recentDomainPruning());
 
 		if (var != n)
 			variableQueue.add( (IntVar)var);
@@ -349,17 +348,17 @@ public class Among extends Constraint {
 
 	@Override
 	public String toString() {
-		
+
 		StringBuffer result = new StringBuffer( id () );
-		
+
 		result.append(" Among(");
-		
+
 		for(IntVar var : this.list)
 			result.append("variable").append(var.id).append(" : ").append(var.domain).append(" ");
 
 		result.append(")\n Kset : ").append(this.kSet).append("\n");
 		result.append("variable ").append(n.id).append(" : ").append(n.domain).append(")\n");
-		
+
 		return result.toString();
 	}
 

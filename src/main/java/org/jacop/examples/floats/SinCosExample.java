@@ -1,9 +1,9 @@
 /**
- *  SinCosExample.java 
+ *  SinCosExample.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,30 +32,31 @@
 package org.jacop.examples.floats;
 
 /**
- * 
+ *
  * It models tan(x) = -x for floating solver.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * 
+ *
  */
 
 import org.jacop.core.Store;
-import org.jacop.search.DepthFirstSearch;
-
-import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.constraints.SinPeqR;
 import org.jacop.floats.constraints.CosPeqR;
+import org.jacop.floats.constraints.SinPeqR;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.search.DepthFirstSearch;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class SinCosExample {
+public class SinCosExample { private static Logger logger = LoggerFactory.getLogger(SinCosExample.class);
 
     void model() {
 
        long T1, T2, T;
 	T1 = System.currentTimeMillis();
 
-	System.out.println("\nProgram to solve sin(x) = cos(x) problem in interval -4*pi..4*pi");
+	logger.info("\nProgram to solve sin(x) = cos(x) problem in interval -4*pi..4*pi");
 
 	Store store = new Store();
 
@@ -68,7 +69,7 @@ public class SinCosExample {
 	store.impose(new SinPeqR(p, q));
 	store.impose(new CosPeqR(p, q));
 
-	System.out.println( "\bVar store size: "+ store.size()+
+	logger.info( "\bVar store size: "+ store.size()+
   			    "\nNumber of constraints: " + store.numberConstraints()
 			    );
 
@@ -78,8 +79,8 @@ public class SinCosExample {
 	s.roundRobin=false;
 	label.setAssignSolution(true);
 	// label.setSolutionListener(new PrintOutListener<FloatVar>());
-	label.getSolutionListener().recordSolutions(true); 
-	label.getSolutionListener().searchAll(true); 
+	label.getSolutionListener().recordSolutions(true);
+	label.getSolutionListener().searchAll(true);
 	//s.leftFirst = false;
 
 	boolean result = label.labeling(store, s);
@@ -88,29 +89,29 @@ public class SinCosExample {
 	if (result)
 	    label.printAllSolutions();
 	else
-	    System.out.println ("NO SOLUTION");
+	    logger.info ("NO SOLUTION");
 
-	System.out.println ("\nPrecision = " + FloatDomain.precision());
+	logger.info ("\nPrecision = " + FloatDomain.precision());
 
 	T2 = System.currentTimeMillis();
 	T = T2 - T1;
 
-	System.out.println("\n\t*** Execution time = "+ T + " ms");
+	logger.info("\n\t*** Execution time = "+ T + " ms");
 
     }
-	
+
     /**
-     * It executes the program which computes values for sin(x) = cos(x). 
-     * 
+     * It executes the program which computes values for sin(x) = cos(x).
+     *
      * @param args no arguments
      */
     public static void main(String args[]) {
-		
+
 	SinCosExample example = new SinCosExample();
-		
+
 	example.model();
 
-    }			
+    }
 
 
 }

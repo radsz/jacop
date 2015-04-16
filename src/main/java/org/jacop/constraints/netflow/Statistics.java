@@ -1,9 +1,9 @@
 /**
- *  Statistics.java 
+ *  Statistics.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,18 +32,20 @@
 package org.jacop.constraints.netflow;
 
 import java.text.DecimalFormat;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
- * This class stores all the statistics gather during the execution of the network flow constraint. 
- * 
+ * This class stores all the statistics gather during the execution of the network flow constraint.
+ *
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.2
- * 
+ *
  */
 
-public class Statistics {
-	
+public class Statistics { private static Logger logger = LoggerFactory.getLogger(Statistics.class);
+
 	private static final DecimalFormat DF = new DecimalFormat("0.###");
 
 	public static int consistencyCalls = 0;
@@ -58,52 +60,52 @@ public class Statistics {
 	public int amountPruned = 0;
 	public long maxScoreSum = 0L;
 	public long minScoreSum = 0L;
-	
+
 	private void toString(StringBuilder str) {
-	
+
 		str.append("\t# arcs examined : ");
 		str.append(arcsExamined);
 		str.append("\t(avg ");
 		str.append(DF.format((double)arcsExamined / consistencyIterations));
-		
+
 		str.append(")\n\t# arcs pruned   : ");
 		str.append(arcsPruned);
 		str.append("\t(avg ");
 		str.append(DF.format((double)arcsPruned / arcsExamined));
-		
+
 		str.append(")\n\tAmount pruned   : ");
 		str.append(amountPruned);
 		str.append("\t(avg ");
 		str.append(DF.format((double)amountPruned / arcsPruned));
-		
+
 		str.append(")\n\tAvg max score   : ");
 		str.append(DF.format((double)maxScoreSum / consistencyIterations));
 		str.append("\n\tAvg min score   : ");
 		str.append(DF.format((double)minScoreSum / consistencyIterations));
-	
+
 	}
-	
+
 	public String toString() {
-	
+
 		StringBuilder str = new StringBuilder();
 		toString(str);
 		return str.toString();
-		
+
 	}
-	
+
 	public static String asString() {
-		
+
 		StringBuilder str = new StringBuilder();
 
 		str.append("# consistency calls      : ");
 		str.append(consistencyCalls);
-		
+
 		str.append("\n# consistency iterations : ");
 		str.append(consistencyIterations);
 		str.append("\t(avg ");
 		str.append(DF.format((double)consistencyIterations / consistencyCalls));
 		str.append(")");
-		
+
 		if (NVARS.arcsExamined > 0) {
 			str.append("\nFor X-variables GAC-pruning (node with degree <= 2)\n");
 			NVARS.toString(str);
@@ -122,5 +124,5 @@ public class Statistics {
 		}
 		return str.toString();
 	}
-	
+
 }

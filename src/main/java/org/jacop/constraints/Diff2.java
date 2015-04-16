@@ -1,9 +1,9 @@
 /**
- *  Diff2.java 
+ *  Diff2.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,55 +32,55 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Diff2 constraint assures that any two rectangles from a vector of rectangles
  * does not overlap in at least one direction.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 3.1
  */
 
-public class Diff2 extends Diff {
+public class Diff2 extends Diff { private static Logger logger = LoggerFactory.getLogger(Diff2.class);
 
     static int IdNumber = 0;
-	
+
     Diff2Var EvalRects[];
 
     boolean exceptionListPresent = false;
 
     /**
-     * It specifies a list of pairs of rectangles which can overlap. 
+     * It specifies a list of pairs of rectangles which can overlap.
      */
     public int[] exclusiveList = new int[0];
-    
+
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"rectangles", "exclusiveList", "doProfile"};
 
 	/**
 	 * Conditional Diff2. The rectangles that are specified on the list
-	 * Exclusive list is specified contains pairs of rectangles 
+	 * Exclusive list is specified contains pairs of rectangles
 	 * that are excluded from checking that they must be non-overlapping.
 	 * The rectangles are numbered from 1, for example list [1, 3, 3, 4]
 	 * specifies that rectangles 1 and 3 as well as 3 and 4 can overlap each
 	 * other.
-	 * 
+	 *
 	 * @param rectangles a list of rectangles.
 	 * @param exclusiveList a list denoting the pair of rectangles, which can overlap
 	 * @param doProfile should profile be computed and used.
-	 * 
+	 *
 	 */
 	public Diff2(Rectangle[] rectangles,
-			     int[] exclusiveList, 
+			     int[] exclusiveList,
 			     boolean doProfile) {
 
 		super(rectangles, doProfile);
@@ -89,7 +89,7 @@ public class Diff2 extends Diff {
 
 	    this.exclusiveList = new int[exclusiveList.length];
 	    System.arraycopy(exclusiveList, 0, this.exclusiveList, 0, exclusiveList.length);
-	    
+
 	}
 	/**
 	 * It creates a diff2 constraint.
@@ -112,9 +112,9 @@ public class Diff2 extends Diff {
 	 * It creates a diff2 constraint.
 	 * @param rectangles list of rectangles with origins and lengths in both dimensions.
 	 */
-	
+
 	public Diff2(ArrayList<? extends ArrayList<? extends IntVar>> rectangles) {
-	
+
 		super(rectangles);
 
 		Diff.IdNumber--;
@@ -134,7 +134,7 @@ public class Diff2 extends Diff {
 		doProfile = profile;
 	}
 
-	
+
 	/**
 	 * It creates a diff2 constraint.
 	 * @param o1 list of variables denoting the origin in the first dimension.
@@ -161,12 +161,12 @@ public class Diff2 extends Diff {
 	 * @param l1 list of variables denoting the length in the first dimension.
 	 * @param l2 list of variables denoting the length in the second dimension.
 	 */
-	
-	public Diff2(IntVar[] o1, 
-				 IntVar[] o2, 
+
+	public Diff2(IntVar[] o1,
+				 IntVar[] o2,
 				 IntVar[] l1,
 				 IntVar[] l2) {
-		
+
 		super(o1, o2, l1, l2);
 
 		Diff.IdNumber--;
@@ -181,11 +181,11 @@ public class Diff2 extends Diff {
 	 * @param l1 list of variables denoting the length in the first dimension.
 	 * @param l2 list of variables denoting the length in the second dimension.
 	 * @param profile specifies if the profile should be computed.
-	 */	
-	public Diff2(IntVar[] o1, 
-				 IntVar[] o2, 
+	 */
+	public Diff2(IntVar[] o1,
+				 IntVar[] o2,
 				 IntVar[] l1,
-				 IntVar[] l2, 
+				 IntVar[] l2,
 				 boolean profile) {
 		this(o1, o2, l1, l2);
 		doProfile = profile;
@@ -197,7 +197,7 @@ public class Diff2 extends Diff {
 	 */
 
 	public Diff2(IntVar[][] rectangles) {
-		
+
 		super(rectangles);
 
 		Diff.IdNumber--;
@@ -222,7 +222,7 @@ public class Diff2 extends Diff {
 	 * The rectangles are numbered from 1, for example list [[1,3], [3,4]]
 	 * specifies that rectangles 1 and 3 as well as 3 and 4 can overlap each
 	 * other.
-	 * 
+	 *
 	 * @param rect  - list of rectangles, each rectangle represented by a list of variables.
 	 * @param exclusiveList - list of rectangles pairs which can overlap.
 	 */
@@ -232,17 +232,17 @@ public class Diff2 extends Diff {
 		super(rect);
 
 	    exceptionListPresent = true;
-	    
+
 	    ArrayList<Integer> list = new ArrayList<Integer>(exclusiveList.size() * 2);
-	    
+
 	    for (ArrayList<Integer> pair : exclusiveList)
-	    	for (Integer item : pair) 
+	    	for (Integer item : pair)
 	    		list.add(item);
-	    		    
+
 	    this.exclusiveList = new int[list.size()];
 	    for (int i = 0; i < list.size(); i++)
 	    	this.exclusiveList[i] = list.get(i);
-		
+
 
 	}
 
@@ -252,7 +252,7 @@ public class Diff2 extends Diff {
 	 * The rectangles are numbered from 1, for example list [[1,3], [3,4]]
 	 * specifies that rectangles 1 and 3 as well as 3 and 4 can overlap each
 	 * other.
-	 * 
+	 *
 	 * @param rect  - list of rectangles, each rectangle represented by a list of variables.
 	 * @param exclusive - list of rectangles pairs which can overlap.
 	 */
@@ -264,7 +264,7 @@ public class Diff2 extends Diff {
 	    exceptionListPresent = true;
 
 	    ArrayList<Integer> list = new ArrayList<Integer>(exclusive.size() * 2);
-	    
+
 	    for (ArrayList<Integer> pair : exclusive)
 	    	for (Integer item : pair)
 	    		list.add( item );
@@ -272,21 +272,21 @@ public class Diff2 extends Diff {
 	    this.exclusiveList = new int[list.size()];
 	    for (int i = 0; i < list.size(); i++)
 	    	this.exclusiveList[i] = list.get(i);
-	    
+
 	}
 
 	private Rectangle[] onList(int index, int[] exclusiveList) {
 
 		ArrayList<Rectangle> list = new ArrayList<Rectangle>();
-		
-		for (int i = 0; i < rectangles.length; i++) 
+
+		for (int i = 0; i < rectangles.length; i++)
 			if (notOverlapping(index + 1, i + 1, exclusiveList))
 				list.add(rectangles[i]);
 
 		return list.toArray(new Rectangle[list.size()]);
 	}
 
-	boolean notOverlapping(int i, 
+	boolean notOverlapping(int i,
 			       int j,
 			       int[] exclusiveList) {
 
@@ -307,25 +307,25 @@ public class Diff2 extends Diff {
 
 	@Override
 	public void impose(Store store) {
-	
+
 		super.impose(store);
-	
+
 		if (this.exclusiveList.length == 0) {
 			EvalRects = new Diff2Var[rectangles.length];
-	
+
 			for (int j = 0; j < EvalRects.length; j++)
 				EvalRects[j] = new Diff2Var(store, this.rectangles);
 		}
 		else {
-			
+
 			EvalRects = new Diff2Var[rectangles.length];
-			
-			for (int j = 0; j < EvalRects.length; j++) 
-				EvalRects[j] = new Diff2Var(store, onList(j, exclusiveList));			
+
+			for (int j = 0; j < EvalRects.length; j++)
+				EvalRects[j] = new Diff2Var(store, onList(j, exclusiveList));
 		}
-		
+
 	}
-	
+
 	boolean findRectangles(Rectangle r, int index,
 			ArrayList<IntRectangle> UsedRect,
 			ArrayList<Rectangle> ProfileCandidates,
@@ -496,12 +496,12 @@ public class Diff2 extends Diff {
 				availArea = availArea * (stopMax[i] - startMin[i]);
 				if (minLength[i] != 0)
 				    rectNumber *= ((stopMax[i] - startMin[i]) / minLength[i]);
-				else 
+				else
 				    checkRectNumber = false;
 			}
 
 			if (!exceptionListPresent)
-			    if (availArea < area) 
+			    if (availArea < area)
 			    	throw Store.failException;
 			    else
 			    	// check whether there is enough room for
@@ -511,7 +511,7 @@ public class Diff2 extends Diff {
 		}
 
 		return contains;
-	}		
+	}
 
 	@Override
 	void narrowRectangles(HashSet<IntVar> fdvQueue) {
@@ -566,7 +566,7 @@ public class Diff2 extends Diff {
 				}
 			}
 		}
-	}		
+	}
 
 
 	@Override
@@ -596,24 +596,24 @@ public class Diff2 extends Diff {
 		else
 			return  this.getClass().getSimpleName() + numberId;
 	}
-	
+
 	@Override
 	public String toString() {
-		
+
 		StringBuffer result = new StringBuffer( id() );
-		
+
 		result.append(" : diff2( ");
-		
+
 		for (int i = 0; i < rectangles.length - 1; i++) {
 			result.append(rectangles[i]);
 			result.append(", ");
-			
+
 		}
 		result.append(rectangles[rectangles.length - 1]);
 		result.append(")");
-		
+
 		return result.toString();
-		
+
 	}
 
 }

@@ -1,9 +1,9 @@
 /**
- *  HistoricHomes.java 
+ *  HistoricHomes.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,8 +31,7 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Element;
 import org.jacop.constraints.XeqC;
@@ -42,51 +41,52 @@ import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
- * It is a simple logic puzzle about houses. 
- * 
+ *
+ * It is a simple logic puzzle about houses.
+ *
  * @author Radoslaw Szymanek
  *
- * Each year the Glendale Women's Club sponsors a Historic Homes Tour in which 
- * five old houses are (with the owners' permission, of course) opened to the 
- * public. This year the five homes are on different streets (Azalea Drive, 
- * Crepe Myrtle Court, Jasmine Boulevard, Magnolia Street, and Oleander Road), 
- * and each was built in a different year (1860, 1870, 1890, 1900, and 1920). 
- * Can you give the order in which the tour visited the five homes (identifying 
+ * Each year the Glendale Women's Club sponsors a Historic Homes Tour in which
+ * five old houses are (with the owners' permission, of course) opened to the
+ * public. This year the five homes are on different streets (Azalea Drive,
+ * Crepe Myrtle Court, Jasmine Boulevard, Magnolia Street, and Oleander Road),
+ * and each was built in a different year (1860, 1870, 1890, 1900, and 1920).
+ * Can you give the order in which the tour visited the five homes (identifying
  * them by street) and match each with its year?
- * 
+ *
  * 1. The home on Jasmine is 20 years older than the one on Azalea.
  * 2. The third home on the tour was built in 1860.
  * 3. The tour visited the home on Magnolia sometime before the one built in 1890.
- * 4. The tour visited the home on Oleander (which wasn't the last of the five to 
- * be built) sometime before it visited the one on Jasmine, which in turn was 
+ * 4. The tour visited the home on Oleander (which wasn't the last of the five to
+ * be built) sometime before it visited the one on Jasmine, which in turn was
  * seen sometime before the one built in 1900.
  *
  * Determine: Order -- Street -- Year
  */
 
-
-public class HistoricHomes extends ExampleFD {
+public class HistoricHomes extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(HistoricHomes.class);
 
 	@Override
 	public void model() {
 
 		store = new Store();
 		vars = new ArrayList<IntVar>();
-		
-		System.out.println("Program to solve Historic Homes logic puzzle");
+
+		logger.info("Program to solve Historic Homes logic puzzle");
 
 		String streetName[] = { "street_Azalea_Drive",
 				"street_Crepe_Myrtle_Court", "street_Jasmine_Boulevard",
 				"street_Magnolia_Street", "street_Oleander_Road", };
 
-		int iAzalea_Drive = 0, /* iCrepe_Myrtle_Court = 1, */ iJasmine_Boulevard = 2, 
+		int iAzalea_Drive = 0, /* iCrepe_Myrtle_Court = 1, */ iJasmine_Boulevard = 2,
 			iMagnolia_Street = 3, iOleander_Road = 4;
 
 		String orderName[] = { "1st", "2nd", "3rd", "4th", "5th" };
-		
+
 		int i1st = 0, i2nd = 1, i3rd = 2, i4th = 3, i5th = 4;
 
 		IntVar order[] = new IntVar[5];
@@ -176,11 +176,11 @@ public class HistoricHomes extends ExampleFD {
 		vars.add(index1);
 		vars.add(index2);
 		vars.add(index3);
-		vars.add(index4);		
-		
+		vars.add(index4);
+
 	}
-	
-	
+
+
 	/**
 	 * It executes the program to solve this simple logic puzzle.
 	 * @param args
@@ -188,12 +188,12 @@ public class HistoricHomes extends ExampleFD {
 	public static void main(String args[]) {
 
 		HistoricHomes example = new HistoricHomes();
-		
+
 		example.model();
 
 		if (example.search())
-			System.out.println("Solution(s) found");
-		
-	}		
+			logger.info("Solution(s) found");
+
+	}
 
 }

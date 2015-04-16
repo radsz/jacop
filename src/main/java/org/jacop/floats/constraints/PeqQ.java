@@ -1,9 +1,9 @@
 /**
- *  PeqQ.java 
+ *  PeqQ.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,43 +31,41 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
+import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-
-import org.jacop.constraints.PrimitiveConstraint;
-
-import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Constraints P #= Q for P and Q floats
- * 
+ *
  * Domain consistency is used.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class PeqQ extends PrimitiveConstraint {
+public class PeqQ extends PrimitiveConstraint { private static Logger logger = LoggerFactory.getLogger(PeqQ.class);
 
 	static int idNumber = 1;
 
 	/**
-	 * It specifies a left hand variable in equality constraint. 
+	 * It specifies a left hand variable in equality constraint.
 	 */
 	public FloatVar p;
 
 	/**
-	 * It specifies a right hand variable in equality constraint. 
+	 * It specifies a right hand variable in equality constraint.
 	 */
 	public FloatVar q;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"p", "q"};
@@ -106,12 +104,12 @@ public class PeqQ extends PrimitiveConstraint {
 	public void consistency(Store store) {
 
 	    do {
-			
+
 		// domain consistency
 		p.domain.in(store.level, p, q.dom()); //min(), q.max());
-			
+
 		store.propagationHasOccurred = false;
-			
+
 		q.domain.in(store.level, q, p.dom()); //min(), p.max());
 
 	    } while (store.propagationHasOccurred);
@@ -165,7 +163,7 @@ public class PeqQ extends PrimitiveConstraint {
 				return possibleEvent;
 		}
 		return IntDomain.GROUND;
-		
+
 	}
 
 	@Override
@@ -181,8 +179,8 @@ public class PeqQ extends PrimitiveConstraint {
 
 		if (q.singleton())
 			p.domain.inComplement(store.level, p, q.value());
-		
-		
+
+
 		if (p.singleton())
 			q.domain.inComplement(store.level, q, p.value());
 
@@ -203,8 +201,8 @@ public class PeqQ extends PrimitiveConstraint {
 
 	@Override
 	public boolean satisfied() {
-	    return p.singleton() && q.singleton() && 
-		java.lang.Math.abs(p.min() - q.max()) <= FloatDomain.precision() && 
+	    return p.singleton() && q.singleton() &&
+		java.lang.Math.abs(p.min() - q.max()) <= FloatDomain.precision() &&
 		java.lang.Math.abs(p.max() - q.min()) <= FloatDomain.precision();
 	}
 

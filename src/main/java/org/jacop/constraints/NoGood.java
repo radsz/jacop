@@ -1,9 +1,9 @@
 /**
- *  NoGood.java 
+ *  NoGood.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,14 +31,13 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * NoGood constraints implements a constraint which disallows given combination
@@ -46,30 +45,30 @@ import org.jacop.core.Var;
  * only triggered only when all variables except one are grounded and equal to
  * disallow values. This allows efficient implementation based on watched
  * literals idea from SAT community.
- * 
+ *
  * Do not be fooled by watched literals, if you add thousands of no-goods then
- * traversing even 1/10 of them if they are watched by variable which has been 
- * grounded can slow down search considerably. 
- * 
- * NoGoods constraints are imposed at all levels once added. Do not use in 
+ * traversing even 1/10 of them if they are watched by variable which has been
+ * grounded can slow down search considerably.
+ *
+ * NoGoods constraints are imposed at all levels once added. Do not use in
  * subsearches, as it will not take into account the assignments performed in
  * master search.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  */
 
-public class NoGood extends PrimitiveConstraint {
+public class NoGood extends PrimitiveConstraint { private static Logger logger = LoggerFactory.getLogger(NoGood.class);
 
 	static int idNumber = 1;
 
 	/**
-	 * It specifies a list of variables in no-good constraint. 
+	 * It specifies a list of variables in no-good constraint.
 	 */
 	public IntVar listOfVars[];
 
 	/**
-	 * It specifies a list of values in no-good constraint. 
+	 * It specifies a list of values in no-good constraint.
 	 */
 	public int listOfValues[];
 
@@ -84,7 +83,7 @@ public class NoGood extends PrimitiveConstraint {
 	final static boolean debug = false;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"listOfVars", "listOfValues"};
@@ -95,32 +94,32 @@ public class NoGood extends PrimitiveConstraint {
 	 * @param listOfValues no-good values which all-together assignment to variables within constraint scope is a no-good.
 	 */
 	public NoGood(IntVar[] listOfVars, int[] listOfValues) {
-		
+
 		commonInitialization(listOfVars, listOfValues);
-		
+
 	}
-	
+
 	private void commonInitialization(IntVar[] listOfVars, int[] listOfValues) {
 
 		assert (listOfVars != null ) : "Variables list is null";
 		assert (listOfValues != null) : "Values list is null";
-		
+
 		assert (listOfVars.length == listOfValues.length) : "\nLength of two vectors different in NoGood";
 		for (int i = 0; i < listOfVars.length; i++)
 			assert (listOfVars[i] != null) : i + "-th element of the listOfVars is null";
-		
+
 		this.queueIndex = 0;
-		
+
 		this.numberId = idNumber++;
 		this.listOfVars = new IntVar[listOfVars.length];
 		this.listOfValues = new int[listOfValues.length];
 
 		System.arraycopy(listOfVars, 0, this.listOfVars, 0, listOfVars.length);
-		
+
 		numberArgs += listOfVars.length;
-				
+
 		System.arraycopy(listOfValues, 0, this.listOfValues, 0, listOfValues.length);
-		
+
 	}
 
 	/**
@@ -136,9 +135,9 @@ public class NoGood extends PrimitiveConstraint {
 		int[] intValues = new int[listOfValues.size()];
 		for (int i = 0; i < listOfValues.size(); i++)
 			intValues[i] = listOfValues.get(i);
-		
+
 		commonInitialization(listOfVars.toArray(new IntVar[listOfVars.size()]), intValues);
-		
+
 	}
 
 
@@ -157,7 +156,7 @@ public class NoGood extends PrimitiveConstraint {
 	public void consistency(Store store) {
 
 		if (debug)
-			System.out.println("Start " + this);
+			logger.info("Start " + this);
 
 		if (firstWatch == secondWatch) {
 			// Special case, when NoGood was one variable no-good
@@ -165,8 +164,7 @@ public class NoGood extends PrimitiveConstraint {
 			// watched.
 
 			if (debug)
-				System.out
-						.println("Special cases of noGood constraints have occured");
+				logger.info("Special cases of noGood constraints have occured");
 
 			if (listOfVars.length == 1) {
 
@@ -239,10 +237,10 @@ public class NoGood extends PrimitiveConstraint {
 
 				// store.in(secondWatch, Domain.domain.complement(secondValue));
 				if (debug)
-					System.out.println(secondWatch);
-				
+					logger.info(secondWatch.toString());
+
 				return;
-				
+
 			}
 		}
 
@@ -272,13 +270,13 @@ public class NoGood extends PrimitiveConstraint {
 
 				// store.in(firstWatch, Domain.domain.complement(firstValue));
 				if (debug)
-					System.out.println(firstWatch);
+					logger.info(firstWatch.toString());
 			}
 
 		}
 
 		if (debug)
-			System.out.println("End" + this);
+			logger.info("End" + this);
 	}
 
 	@Override
@@ -386,9 +384,9 @@ public class NoGood extends PrimitiveConstraint {
 
 	@Override
 	public String toString() {
-		
+
 		StringBuffer result = new StringBuffer( id() );
-		
+
 		result.append(" : noGood([");
 
 		for (int i = 0; i < listOfVars.length; i++) {
@@ -399,7 +397,7 @@ public class NoGood extends PrimitiveConstraint {
 				result.append(", ");
 		}
 		result.append("], [");
-		
+
 		for (int i = 0; i < listOfValues.length; i++) {
 			result.append(listOfValues[i]);
 			if (i < listOfValues.length - 1)
@@ -415,15 +413,15 @@ public class NoGood extends PrimitiveConstraint {
 		if (increaseWeight) {
 			for (Var v : listOfVars) v.weight++;
 		}
-	}	
-	
+	}
+
     @Override
 	public boolean notSatisfied() {
-		
+
 		boolean result = true;
 		for (int i = listOfVars.length - 1; i >= 0 && result; i--)
 				result &= listOfVars[i].singleton(listOfValues[i]);
-			
+
 		return result;
 	}
 
@@ -463,10 +461,10 @@ public class NoGood extends PrimitiveConstraint {
 
 	@Override
 	public void notConsistency(Store store) {
-		
+
 		for (int j = 0; j < listOfVars.length; j++)
 			listOfVars[j].domain.in(store.level, listOfVars[j], listOfValues[j], listOfValues[j]);
-				
-	}	
-	
+
+	}
+
 }

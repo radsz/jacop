@@ -1,9 +1,9 @@
 /**
- *  XexpYeqZ.java 
+ *  XexpYeqZ.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,23 +31,24 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Constraint X ^ Y #= Z
- * 
+ *
  * Boundary consistecny is used.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 3.1
  */
 
-public class XexpYeqZ extends Constraint {
+public class XexpYeqZ extends Constraint { private static Logger logger = LoggerFactory.getLogger(XexpYeqZ.class);
 
 	static int idNumber = 1;
 
@@ -60,14 +61,14 @@ public class XexpYeqZ extends Constraint {
 	 * It specifies the variable y in equation x^y = z.
 	 */
 	public IntVar y;
-	
+
 	/**
 	 * It specifies the variable z in equation x^y = z.
 	 */
 	public IntVar z;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"x", "y", "z"};
@@ -79,7 +80,7 @@ public class XexpYeqZ extends Constraint {
 	 * @param z variable z.
 	 */
 	public XexpYeqZ(IntVar x, IntVar y, IntVar z) {
-		
+
 		assert (x != null) : "Variable x is null";
 		assert (y != null) : "Variable y is null";
 		assert (z != null) : "Variable z is null";
@@ -87,14 +88,14 @@ public class XexpYeqZ extends Constraint {
 		assert (x.min() >= 0) : "Variable x has a domain which allows negative values";
 		assert (y.min() > 0) : "Variable y has a domain which allows negative values and zero";
 		assert (z.min() >= 0) : "Variable z has a domain which allows negative values";
-		
+
 		numberId = idNumber++;
 		numberArgs = 3;
-		
+
 		this.x = x;
 		this.y = y;
 		this.z = z;
-		
+
 	}
 
 	double aLog(double a, double x) {
@@ -109,7 +110,7 @@ public class XexpYeqZ extends Constraint {
 		variables.add(x);
 		variables.add(y);
 		variables.add(z);
-		
+
 		return variables;
 	}
 
@@ -117,9 +118,9 @@ public class XexpYeqZ extends Constraint {
 	public void consistency(Store store) {
 
 		double xMin, xMax, yMin, yMax, zMin, zMax;
-		
+
 		do {
-			
+
 			store.propagationHasOccurred = false;
 
 			// compute bounds for x
@@ -136,7 +137,7 @@ public class XexpYeqZ extends Constraint {
 				yMin = y.min();
 			if (x.min()==0 || z.max()==0)
 			    yMax = y.max();
-			else 
+			else
 			    if (x.min() != 1)
 				yMax = Math.min(aLog(x.min(), z.max()), y.max());
 			    else
@@ -157,7 +158,7 @@ public class XexpYeqZ extends Constraint {
 			   throw Store.failException;
 			else
 			    z.domain.in(store.level, z, (int) Math.floor(zMin), (int) Math.ceil(zMax) );
-			
+
 		} while (store.propagationHasOccurred);
 
 	}
@@ -211,6 +212,6 @@ public class XexpYeqZ extends Constraint {
 			y.weight++;
 			z.weight++;
 		}
-	}	
-	
+	}
+
 }

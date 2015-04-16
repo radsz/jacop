@@ -1,9 +1,9 @@
 /**
- *  ExtensionalSupportMDD.java 
+ *  ExtensionalSupportMDD.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,8 +32,7 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -42,26 +41,27 @@ import org.jacop.core.Var;
 import org.jacop.util.IndexDomainView;
 import org.jacop.util.MDD;
 import org.jacop.util.SparseSet;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Extensional constraint assures that one of the tuples is enforced in the
  * relation.
- * 
+ *
  * This implementation uses technique developed/improved by Roland Yap and his student.
  * Paper presented at CP2008. We would like to thank Roland for answering our detailed
  * questions about the implementation. It is a slightly improved version to what was
  * presented at the conference.
- * 
+ *
  * This constraint uses a lot of memory, despite using an MDD. However, if the constraint
  * is imposed multiple times (50+) its overall usage of memory maybe advantageous. Always
  * test against STR version.
- * 
+ *
  * @author Radoslaw Szymanek
  * @version 2.3
  */
 
-public class ExtensionalSupportMDD extends Constraint {
+public class ExtensionalSupportMDD extends Constraint { private static Logger logger = LoggerFactory.getLogger(ExtensionalSupportMDD.class);
 
 	/**
 	 * It specifies if the debugging information is printed.
@@ -75,7 +75,7 @@ public class ExtensionalSupportMDD extends Constraint {
 	SparseSet G_no;
 
 	/**
-	 * It specifies a multiple value decision diagram used by this constraint. 
+	 * It specifies a multiple value decision diagram used by this constraint.
 	 */
 	public MDD mdd;
 
@@ -88,7 +88,7 @@ public class ExtensionalSupportMDD extends Constraint {
 	IntVar[] vars;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"mdd"};
@@ -137,14 +137,14 @@ public class ExtensionalSupportMDD extends Constraint {
 		if (mdd.freePosition > store.sparseSetSize)
 			store.sparseSetSize = mdd.freePosition;
 
-	} 
+	}
 
 	/**
 	 * It constructs extensional support constraint. Please note
 	 * that parameters will be stored internally as references
-	 * until the impose of the constraint takes place. 
-	 * Changing parameters after constructing the constraint and 
-	 * before its imposition will change the constraint too. 
+	 * until the impose of the constraint takes place.
+	 * Changing parameters after constructing the constraint and
+	 * before its imposition will change the constraint too.
 	 *
 	 * @param vars the variables in the scope of the constraint.
 	 * @param table list of tuples which are allowed.
@@ -174,7 +174,7 @@ public class ExtensionalSupportMDD extends Constraint {
 
 		G_no.setSize(G_no_size.value());
 
-		//TODO initialize notSupportedIndexesYes to 0..domainLimits	
+		//TODO initialize notSupportedIndexesYes to 0..domainLimits
 		for (int i = 0; i < views.length; i++)
 			views[i].intializeSupportSweep();
 
@@ -215,7 +215,7 @@ public class ExtensionalSupportMDD extends Constraint {
 
 						// ith-value has a support
 						// returns true is new support was found
-						// it always checks the preliminary finish condition 
+						// it always checks the preliminary finish condition
 						// at least once if new support was found.
 						if (!views[level].setSupport(i) || !result) {
 
@@ -237,7 +237,7 @@ public class ExtensionalSupportMDD extends Constraint {
 					}
 		}
 
-		if (result) 
+		if (result)
 			G_yes.addMember(nodeId);
 		else
 			G_no.addMember(nodeId);

@@ -1,9 +1,9 @@
 /**
- *  SparseSet.java 
+ *  SparseSet.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -33,26 +33,29 @@ package org.jacop.util;
 
 /**
  * Sparse set representation of the set.
- *  
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  */
 
-public class SparseSet {
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-	//@todo Is it possible to change the functions slightly so dense[0] = -1; is 
-	// not really required to make it possible to add 0 at the first position. 
-	
+public class SparseSet { private static Logger logger = LoggerFactory.getLogger(SparseSet.class);
+
+	//@todo Is it possible to change the functions slightly so dense[0] = -1; is
+	// not really required to make it possible to add 0 at the first position.
+
 	/**
 	 * Sparse array used within SparseSet functionality.
 	 */
 	public int [] sparse;
-	
+
 	/**
 	 * Dense array used within SparseSet functionality.
 	 */
 	public int [] dense;
-	
+
 	/**
 	 * It specifies number of elements in the SparseSet.
 	 */
@@ -68,7 +71,7 @@ public class SparseSet {
 	    sparse = new int[size];
 	    dense = new int[size];
 	    members = 0;
-	    
+
 	    // Added so value 0 can be added first.
 	    // TODO, test if that is still necessary after fixing a rare bug with addition.
 	    dense[0] = -1;
@@ -80,10 +83,10 @@ public class SparseSet {
 	 * @return true if k belongs to the sparse set, false otherwise.
 	 */
 	public boolean isMember(int k) {
-	    
+
 	    int a = sparse[k];
 
-	    if (a < members && dense[a] == k) 
+	    if (a < members && dense[a] == k)
 	    	return true;
 	    else
 	    	return false;
@@ -96,7 +99,7 @@ public class SparseSet {
 	 * @return true if the value was not present before and was added to the set, false otherwise.
 	 */
 	public boolean addMember(int value) {
-	    
+
 	    int a = sparse[value];
 
 	    if (a >= members || dense[a] != value) {
@@ -105,7 +108,7 @@ public class SparseSet {
 	    	members++;
 	    	return true;
 	    }
-	    else 
+	    else
 	    	return false;
 
 	}
@@ -125,7 +128,7 @@ public class SparseSet {
 	public boolean isEmpty() {
 		return members == 0;
 	}
-	
+
 	/**
 	 * It removes all the elements by setting the number of members to zero.
 	 */
@@ -134,16 +137,16 @@ public class SparseSet {
 	    dense[0] = -1;
 	}
 
-	
+
 	public String toString() {
-	
+
 		StringBuffer result = new StringBuffer();
 		for (int i = 0; i < members; i++)
 			result.append(dense[i]).append(" ");
-		
+
 		return result.toString();
-		
+
 	}
-	
-	
+
+
 }

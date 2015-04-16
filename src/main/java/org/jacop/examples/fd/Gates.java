@@ -1,9 +1,9 @@
 /**
- *  Gates.java 
+ *  Gates.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,8 +31,7 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.ExtensionalSupportVA;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.Domain;
@@ -43,16 +42,18 @@ import org.jacop.search.IndomainMin;
 import org.jacop.search.MostConstrainedStatic;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
+ *
  * It specifies an adder using gates specified by extensional constraints.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  */
 
-public class Gates extends ExampleFD {
+public class Gates extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(Gates.class);
 
 	@Override
 	public void model() {
@@ -66,7 +67,7 @@ public class Gates extends ExampleFD {
 		BooleanVar sum = new BooleanVar(store, "sum");
 		BooleanVar carry = new BooleanVar(store, "carry");
 		vars.add(a); vars.add(b); vars.add(c); vars.add(sum); vars.add(carry);
-		
+
 		BooleanVar nca = new BooleanVar(store, "nca");
 
 		BooleanVar[] t = new BooleanVar[2];
@@ -82,8 +83,7 @@ public class Gates extends ExampleFD {
 		and(c, nca, t[1]);
 		and(a, b, t[0]);
 
-		System.out.println("\nBooleanVariable store size: " + store.size()
-				+ "\nNumber of constraints: " + store.numberConstraints());
+		logger.info("\nBooleanVariable store size: " + store.size() + "\nNumber of constraints: " + store.numberConstraints());
 
 	}
 
@@ -162,11 +162,11 @@ public class Gates extends ExampleFD {
 		example.model();
 
 		if ( example.searchSpecific() )
-			System.out.println("Solution found.");
+			logger.info("Solution found.");
 
 		T2 = System.currentTimeMillis();
 		T = T2 - T1;
-		System.out.println("\n\t*** Execution time = " + T + " ms");
+		logger.info("\n\t*** Execution time = " + T + " ms");
 	}
 
 
@@ -175,9 +175,9 @@ public class Gates extends ExampleFD {
 	 * @return true if there is a solution, false otherwise.
 	 */
 	public boolean searchSpecific() {
-		
+
 		SelectChoicePoint<IntVar> select = new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]),
-													new MostConstrainedStatic<IntVar>(), 
+													new MostConstrainedStatic<IntVar>(),
 													new IndomainMin<IntVar>());
 
 		search = new DepthFirstSearch<IntVar>();
@@ -188,26 +188,26 @@ public class Gates extends ExampleFD {
 		boolean searchResult = search.labeling(store, select);
 
 		if (searchResult) {
-			System.out.println("\nYes");
+			logger.info("\nYes");
 			Domain[][] solutions = new Domain[search.getSolutionListener()
 					.solutionsNo()][];
 			for (int i = 1; i <= solutions.length; i++)
 				solutions[i - 1] = search.getSolution(i);
 
-			System.out.println("\nAll solutions:\n");
+			logger.info("\nAll solutions:\n");
 			for (IntVar v : vars)
-				System.out.print(v.id() + "\t");
-			System.out.println("\n-------------------------------------");
+				logger.info(v.id() + "\t");
+			logger.info("\n-------------------------------------");
 			for (int j = 0; j < solutions.length; j++) {
 				for (int i = 0; i < solutions[0].length; i++)
-					System.out.print(solutions[j][i] + "\t");
-				System.out.println();
+					logger.info(solutions[j][i] + "\t");
+				logger.info("\n");
 			}
 		} else
-			System.out.println("\nNo");
-		
+			logger.info("\nNo");
+
 		return searchResult;
 
-	}	
-	
+	}
+
 }

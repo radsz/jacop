@@ -1,9 +1,9 @@
 /**
- *  DecomposedConstraint.java 
+ *  DecomposedConstraint.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,26 +31,27 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Standard unified interface/abstract class for constraints, which can only be decomposed. 
+ * Standard unified interface/abstract class for constraints, which can only be decomposed.
  * Defines how to construct a constraint out of other constraints.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  */
 
-public abstract class DecomposedConstraint {
-	
+public abstract class DecomposedConstraint {  Logger logger = LoggerFactory.getLogger(DecomposedConstraint.class);
+
 	/**
 	 * It specifies the queue (index), which is used to record that constraint
 	 * needs to be re-evaluated.
 	 *
-	 * Priorytet 0 - O(c), constant execution time, e.g. primitive constraints 
+	 * Priorytet 0 - O(c), constant execution time, e.g. primitive constraints
 	 * Priorytet 1 - O(n), linear execution time, e.g. Sum, SumWeight
 	 * Priorytet 2 - O(n^2) quadratic execution time, e.g. Cumulative Diff2
 	 * Priorytet 3 - plynomial execution time
@@ -73,26 +74,26 @@ public abstract class DecomposedConstraint {
 
 	public void imposeDecomposition(Store store, int queueIndex) {
 
-		assert ( queueIndex < store.queueNo ) 
+		assert ( queueIndex < store.queueNo )
 			: "Constraint queue number larger than permitted by store.";
 
 		this.queueIndex = queueIndex;
-		
+
 		imposeDecomposition(store);
-	
+
 	}
-	
+
 	/**
-	 * It returns an array list of constraint which are used to decompose this 
+	 * It returns an array list of constraint which are used to decompose this
 	 * constraint. It actually creates a decomposition (possibly also creating
 	 * variables), but it does not impose the constraint.
 	 * @param store the constraint store in which context the decomposition takes place.
-	 * 
+	 *
 	 * @return an array list of constraints used to decompose this constraint.
 	 */
 	public abstract ArrayList<Constraint> decompose(Store store);
-	
-	
+
+
 	/**
 	 * @return null if no auxiliary variables were created, otherwise a list with variables.
 	 */
@@ -101,7 +102,7 @@ public abstract class DecomposedConstraint {
 
     public org.jacop.floats.core.FloatVar derivative(Store store, org.jacop.floats.core.FloatVar f, java.util.Set<org.jacop.floats.core.FloatVar> vars, org.jacop.floats.core.FloatVar x) {
 
-	System.out.println ("!!! Derivative not implemented for constraint " + this);
+	logger.info ("!!! Derivative not implemented for constraint " + this);
 	System.exit(0);
 
 	return null;

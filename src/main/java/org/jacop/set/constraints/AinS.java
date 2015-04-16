@@ -1,9 +1,9 @@
 /**
- *  AinS.java 
+ *  AinS.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,52 +31,53 @@
 
 package org.jacop.set.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * It creates a constraint that makes sure that value of the variable A is included within 
- * a provided set. 
- * 
+ * It creates a constraint that makes sure that value of the variable A is included within
+ * a provided set.
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  */
 
-public class AinS extends PrimitiveConstraint {
+public class AinS extends PrimitiveConstraint { private static Logger logger = LoggerFactory.getLogger(AinS.class);
 
 	static int idNumber = 1;
 
 	/**
-	 * It specifies set variable a. 
+	 * It specifies set variable a.
 	 */
 	public SetVar a;
-	
+
 	/**
 	 * It specifies set which must contain the value of set variable A.
 	 */
 	public IntDomain set;
-	
+
 	/**
 	 * It specifies if the inclusion relation is strict.
 	 */
 	public boolean strict;
-	
+
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"a", "b", "strict"};
 
 	/**
 	 * It constructs a constraint that makes sure that value of set variable a is contained
-	 * within a provided set. 
-	 * 
+	 * within a provided set.
+	 *
 	 * @param a variable that is restricted to be included within a provided set.
 	 * @param set set that is restricted to contain the value of set variable a.
 	 */
@@ -85,8 +86,8 @@ public class AinS extends PrimitiveConstraint {
 	}
 	/**
 	 * It constructs a constraint that makes sure that value of set variable a is contained
-	 * within a provided set. 
-	 * 
+	 * within a provided set.
+	 *
 	 * @param a variable that is restricted to be included within a provided set.
 	 * @param set set that is restricted to contain the value of set variable a.
 	 */
@@ -97,7 +98,7 @@ public class AinS extends PrimitiveConstraint {
 
 		numberId = idNumber++;
 		numberArgs = 1;
-		
+
 		this.a = a;
 		this.set = set;
 		this.strict = strict;
@@ -119,21 +120,21 @@ public class AinS extends PrimitiveConstraint {
 	public void consistency(Store store) {
 
 		/**
-		 * Consistency of the constraint A in B. 
-		 * 
-		 * B can not be an empty set. 
-		 * 
-		 * T1. 
+		 * Consistency of the constraint A in B.
+		 *
+		 * B can not be an empty set.
+		 *
+		 * T1.
 		 * glbA = glbA
 		 * lubA = lubA /\ S
-		 * 
+		 *
 		 */
 
 		a.domain.inLUB(store.level, a, set);
-				
+
 		if (strict && set.getSize() - 1 == a.domain.glb().getSize())
 			a.domain.inLUBComplement(store.level, a, set.subtract(a.domain.glb()).value());
-		
+
 	}
 
 	@Override
@@ -145,7 +146,7 @@ public class AinS extends PrimitiveConstraint {
 			if (possibleEvent != null)
 				return possibleEvent;
 		}
-		return SetDomain.ANY;		
+		return SetDomain.ANY;
 	}
 
 
@@ -159,7 +160,7 @@ public class AinS extends PrimitiveConstraint {
 
 	@Override
 	public void impose(Store store) {
-		
+
 		a.putModelConstraint(this, getConsistencyPruningEvent(a));
 
 		store.addChanged(this);
@@ -173,9 +174,9 @@ public class AinS extends PrimitiveConstraint {
 
 	@Override
 	public boolean satisfied() {
-		
+
 		return a.domain.lub().lex(set) < 0 && a.singleton();
-		
+
 	}
 
 	@Override
@@ -216,7 +217,7 @@ public class AinS extends PrimitiveConstraint {
 
 	@Override
 	public int getNotConsistencyPruningEvent(Var var) {
-		
+
 		if (notConsistencyPruningEvents != null) {
 			Integer possibleEvent = notConsistencyPruningEvents.get(var);
 			if (possibleEvent != null)
@@ -231,13 +232,13 @@ public class AinS extends PrimitiveConstraint {
 	public void notConsistency(Store store) {
 
 		// TODO, test it properly.
-		
+
 		if (a.domain.lub().getSize() > set.getSize() + 1)
 			return;
-		
+
 		if (!set.contains(a.domain.glb()))
 			return;
-		
+
 		IntDomain result = a.domain.lub().subtract(set);
 
 		if (result.isEmpty())
@@ -250,17 +251,17 @@ public class AinS extends PrimitiveConstraint {
 			}
 			else
 				throw Store.failException;
-		
+
 		if (!strict && result.getSize() == 1 ) {
-			// to remain inconsistency the last value which can make this constraint 
+			// to remain inconsistency the last value which can make this constraint
 			// inconsistent must be added to GLB so it becomes notSatisfied.
 			a.domain.inGLB(store.level, a, result.value());
 		}
 
 		if (strict && result.getSize() == 1 && a.domain.lub().getSize() - 1 < set.getSize()) {
-			a.domain.inGLB(store.level, a, result.value());			
+			a.domain.inGLB(store.level, a, result.value());
 		}
-		
+
 	}
 
 
@@ -269,6 +270,6 @@ public class AinS extends PrimitiveConstraint {
 
 		return !set.contains(a.domain.glb()) || (strict && a.domain.glb().eq(set));
 
-	}	
+	}
 
 }

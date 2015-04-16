@@ -1,9 +1,9 @@
 /**
- *  Nonogram.java 
+ *  Nonogram.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,13 +31,9 @@
 
 package org.jacop.examples.fd.nonogram;
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.regex.Pattern;
-
+import java.io.*;
+import java.util.*;
+import java.util.regex.*;
 import org.jacop.constraints.ExtensionalSupportMDD;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.core.IntDomain;
@@ -52,23 +48,25 @@ import org.jacop.search.SelectChoicePoint;
 import org.jacop.util.fsm.FSM;
 import org.jacop.util.fsm.FSMState;
 import org.jacop.util.fsm.FSMTransition;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
+ *
  * It solves a nonogram example problem, sometimes also called Paint by Numbers.
- * 
- * 
+ *
+ *
  * @author Radoslaw Szymanek
- * 
+ *
  */
 
-public class Nonogram extends ExampleFD {
+public class Nonogram extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(Nonogram.class);
 
 	/**
 	 * The value that represents a black dot.
 	 */
 	public int black = 1;
-	
+
 	/**
 	 * The value that represents a white dot.
 	 */
@@ -81,8 +79,8 @@ public class Nonogram extends ExampleFD {
 
 	/**
 	 * It specifies if the slide based decomposition of the regular constraint
-	 * should be applied. This decomposition uses ternary extensional support 
-	 * constraints. It achieves GAC if FSM is deterministic. 
+	 * should be applied. This decomposition uses ternary extensional support
+	 * constraints. It achieves GAC if FSM is deterministic.
 	 */
 	public boolean slideDecomposition = false;
 
@@ -98,7 +96,7 @@ public class Nonogram extends ExampleFD {
 	public boolean extensionalMDD = false;
 
 	public void readFromFile(String filename) {
-		
+
 		String lines[] = new String[100];
 
 		int [] dimensions = new int[2];
@@ -113,7 +111,7 @@ public class Nonogram extends ExampleFD {
 
 			Pattern pat = Pattern.compile(" ");
 			String[] result = pat.split(str);
-			
+
 			int current = 0;
 			for (int j = 0; j < result.length; j++)
 				try {
@@ -122,20 +120,20 @@ public class Nonogram extends ExampleFD {
 				} catch (Exception ex) {
 
 				}
-					
+
 			lines = new String[dimensions[0] + dimensions[1]];
-			
+
 			int n = 0;
-			
+
 			while ((str = in.readLine()) != null && n < lines.length) {
 				lines[n] = str;
 				n++;
 			}
 			in.close();
 		} catch (FileNotFoundException e) {
-			System.err.println("I can not find file " + filename);
+			logger.error("I can not find file " + filename, e);
 		} catch (IOException e) {
-			System.err.println("Something is wrong with file" + filename);
+            logger.error("Something is wrong with file" + filename, e);
 		}
 
 		row_rules = new int[dimensions[1]][];
@@ -143,46 +141,46 @@ public class Nonogram extends ExampleFD {
 
 		// Transforms strings into ints
 		for (int i = 0; i < lines.length; i++) {
-			
+
 			Pattern pat = Pattern.compile(" ");
 			String[] result = pat.split(lines[i]);
 
 			int [] sequence = new int [result.length];
-			
+
 			int current = 0;
 			for (int j = 0; j < result.length; j++)
 				try {
 					sequence[current++] = Integer.valueOf(result[j]);
 				} catch (Exception ex) {}
-				
+
 			if (i < row_rules.length) row_rules[i] = sequence;
 			else
 				col_rules[i - row_rules.length] = sequence;
 		}
 
 	}
-	
-	
+
+
 	/**
 	 * It produces and FSM given a sequence representing a rule. e.g. [2, 3]
 	 * specifies that there are two black dots followed by three black dots.
-	 * 
+	 *
 	 * @param sequence
 	 * @return Finite State Machine used by Regular automaton to enforce proper sequence.
 	 */
 	public FSM createAutomaton(int [] sequence) {
-		
+
 		FSM result = new FSM();
-		
+
 		FSMState currentState = new FSMState();
-	
+
 		result.initState = currentState;
 		IntDomain blackEncountered = new IntervalDomain(black, black);
 		IntDomain whiteEncountered = new IntervalDomain(white, white);
-		
+
 		FSMTransition white = new FSMTransition(whiteEncountered, currentState);
 		currentState.addTransition(white);
-		
+
 		for (int i = 0; i < sequence.length; i++) {
 			if (sequence[i] == 0)
 				continue;
@@ -202,19 +200,19 @@ public class Nonogram extends ExampleFD {
 				result.allStates.add(currentState);
 				currentState = nextState;
 			}
-			
+
 			white = new FSMTransition(whiteEncountered, currentState);
 			currentState.addTransition(white);
-			
+
 		}
-		
+
 		result.allStates.add(currentState);
 		result.finalStates.add(currentState);
-		
+
 		return result;
 	}
-	
-	
+
+
 	@Override
 	public void model() {
 
@@ -226,17 +224,17 @@ public class Nonogram extends ExampleFD {
 		IntervalDomain values = new IntervalDomain();
 		values.unionAdapt(black, black);
 		values.unionAdapt(white, white);
-		
+
 		// Specifying the board with allowed values.
 		board = new IntVar[row_rules.length][col_rules.length];
-		
-		for (int i = 0; i < board.length; i++) 
+
+		for (int i = 0; i < board.length; i++)
 			for (int j = 0; j < board[0].length; j++) {
-				board[i][j] = new IntVar(store, "board[" + i + "][" + j + "]", 
+				board[i][j] = new IntVar(store, "board[" + i + "][" + j + "]",
 										   values.clone());
 			}
-		
-		// Zigzag based variable ordering. 
+
+		// Zigzag based variable ordering.
 		for (int m = 0; m < row_rules.length + col_rules.length - 1; m++) {
 			for (int j = 0; j <= m && j < col_rules.length; j++) {
 				int i = m - j;
@@ -244,89 +242,89 @@ public class Nonogram extends ExampleFD {
 					continue;
 				vars.add(board[i][j]);
 			}
-		}		
-		
-		System.out.println("Size " + vars.size());
-		
+		}
+
+		logger.info("Size " + vars.size());
+
 		// Making sure that rows respect the rules.
 		for (int i = 0; i < row_rules.length; i++) {
-			
+
 			FSM result = this.createAutomaton(row_rules[i]);
-			
+
 			if (slideDecomposition)
 				store.imposeDecomposition(new Regular(result, board[i]));
-			
+
 			if (regular)
 				store.impose(new Regular(result, board[i]));
-			
+
 			if (extensionalMDD)
 				store.impose(new ExtensionalSupportMDD(result.transformDirectlyIntoMDD(board[i])));
-				
-			
+
+
 		}
-		
+
 		// Making sure that columns respect the rules.
 		for (int i = 0; i < col_rules.length; i++) {
-					
+
 			FSM result = createAutomaton(col_rules[i]);
 			IntVar[] column = new IntVar[row_rules.length];
-			
+
 			for (int j = 0; j < column.length; j++)
 				column[j] = board[j][i];
-							
+
 			if (slideDecomposition)
 				store.imposeDecomposition(new Regular(result, column));
 
 			if (regular)
 				store.impose(new Regular(result, column));
-			
+
 			if (extensionalMDD)
 				store.impose(new ExtensionalSupportMDD(result.transformDirectlyIntoMDD(column)));
 
-		
+
 		}
-		
+
 	}
-			
-	
+
+
 	/**
-	 * It specifies simple search method based on most constrained static and lexigraphical 
+	 * It specifies simple search method based on most constrained static and lexigraphical
 	 * ordering of values. It searches for all solutions.
-	 * 
+	 *
 	 * @return true if there is a solution, false otherwise.
 	 */
 
 	public boolean searchAll() {
-		
+
 		long T1, T2;
 
-		// In case of nonograms, value ordering does not matter since we 
+		// In case of nonograms, value ordering does not matter since we
 		// a) search for all solutions
 		// b) all variables have binary domain.
 		SelectChoicePoint<IntVar> select = new InputOrderSelect<IntVar>(store, vars.toArray(new IntVar[1]), new IndomainMin<IntVar>());
 
 		search = new DepthFirstSearch<IntVar>();
-		
+
 		search.getSolutionListener().searchAll(true);
 		search.getSolutionListener().recordSolutions(false);
 		search.setAssignSolution(true);
-		
-		System.out.println("Search has begun ...");
-		
+
+		logger.info("Search has begun ...");
+
 		T1 = System.currentTimeMillis();
-		
+
 		boolean result = search.labeling(store, select);
 
 		T2 = System.currentTimeMillis();
 
 		if (result) {
-			System.out.println("Number of solutions " + search.getSolutionListener().solutionsNo());
+			logger.info("Number of solutions " + search.getSolutionListener().solutionsNo());
 			search.printAllSolutions();
-		} 
+		}
 		else
-			System.out.println("Failed to find any solution");
+			logger.info("Failed to find any solution");
 
-		System.out.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
+		logger.info("\n\t*** Execution time = " + (T2 - T1) + " ms");
 
 		return result;
 	}
@@ -339,11 +337,11 @@ public class Nonogram extends ExampleFD {
         for(int i = 0; i < matrix.length; i++) {
             for(int j = 0; j < matrix[i].length; j++) {
             	if ( matrix[i][j].value() == black )
-            		System.out.print("0");
+            		logger.info("0");
             	else
-            		System.out.print(" ");
+            		logger.info(" ");
             }
-            System.out.println();
+            logger.info("\n");
         }
 
     }
@@ -355,14 +353,14 @@ public class Nonogram extends ExampleFD {
 	public static void main(String args[]) {
 
 		Nonogram example = new Nonogram();
-		
+
 		example.model();
 		if (example.searchAll())
-			System.out.println("Solution(s) found");
-		
+			logger.info("Solution(s) found");
+
 		example.printMatrix(example.board);
-				
-	}		
+
+	}
 
 	/**
 	 * It executes the program which solves this simple problem.
@@ -371,35 +369,35 @@ public class Nonogram extends ExampleFD {
 	public static void test(String args[]) {
 
 		Nonogram example = new Nonogram();
-		
+
 		example.model();
 		if (example.searchAll())
-			System.out.println("Solution(s) found");
+			logger.info("Solution(s) found");
 		example.printMatrix(example.board);
-		
+
 		for (int i = 0; i <= 150; i++) {
-			
+
 			String no = String.valueOf(i);
 			while (no.length() < 3)
 				no = "0" + no;
-			
-			System.out.println("Problem file data" + no + ".nin");
+
+			logger.info("Problem file data" + no + ".nin");
 			example.readFromFile("ExamplesJaCoP/nonogramRepository/data" + no + ".nin");
 			example.model();
-		
+
 			if (example.searchAll())
-				System.out.println("Solution(s) found");
-		
+				logger.info("Solution(s) found");
+
 			example.printMatrix(example.board);
 		}
-		
-	}		
+
+	}
 
 	/**
 	 * It specifies a rule for each row.
 	 */
-	
-	public int[][] row_rules = { 
+
+	public int[][] row_rules = {
 		  {0,0,0,0,2,2,3},
 		  {0,0,4,1,1,1,4},
 		  {0,0,4,1,2,1,1},
@@ -426,12 +424,12 @@ public class Nonogram extends ExampleFD {
 		  {0,0,0,0,4,2,2},
 		  {0,0,0,0,0,2,1}
 	};
-	
+
 	/**
 	 * It specifies a rule for each column.
 	 */
-	
-	public int[][] col_rules = { 
+
+	public int[][] col_rules = {
 		   {0,0,1,1,2,2},
 		   {0,0,0,5,5,7},
 		   {0,0,5,2,2,9},
@@ -458,9 +456,9 @@ public class Nonogram extends ExampleFD {
 		   {0,0,0,4,2,1},
 		   {0,0,0,0,0,3}
 	};
-	
-	
-	
+
+
+
   /*
   public int[][]	row_rules = {
 	{2},
@@ -563,7 +561,7 @@ public class Nonogram extends ExampleFD {
 	{15,4,8,5,4,12,5,9,1},
 	{11,5,7,8,2,14,5,11,1},
 	{7,7,6,13,9,15,15}};
-	
+
 	public int[][]	col_rules = {
 	{2},
 	{4},
@@ -690,7 +688,7 @@ public class Nonogram extends ExampleFD {
 			  {2,1}
 			};
 
-	public int[][]	col_rules = 
+	public int[][]	col_rules =
 	 {
 	  {2},
 	  {1,2},
@@ -718,6 +716,6 @@ public class Nonogram extends ExampleFD {
 	/*
 	public int[][] col_rules = { {3}, {1 ,1}, {1,1}, {2}};
 	public int[][] row_rules = { {4}, {1,1}, {2}, {1}};
-    */	
-	
+    */
+
 }

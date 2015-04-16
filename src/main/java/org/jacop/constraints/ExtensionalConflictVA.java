@@ -1,9 +1,9 @@
 /**
- *  ExtensionalConflictVA.java 
+ *  ExtensionalConflictVA.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,33 +32,30 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.PriorityQueue;
-import java.util.regex.Pattern;
-
-import javax.xml.transform.sax.TransformerHandler;
-
+import java.util.*;
+import java.util.regex.*;
+import javax.xml.transform.sax.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
 
 /**
  * Extensional constraint assures that none of the tuples explicitly given is enforced in the
  * relation.
- * 
+ *
  * This implementation tries to balance the usage of memory versus time
  * efficiency.
- * 
+ *
  * @author Radoslaw Szymanek
  * @version 4.2
  */
 
-public class ExtensionalConflictVA extends Constraint {
+public class ExtensionalConflictVA extends Constraint { private static Logger logger = LoggerFactory.getLogger(ExtensionalConflictVA.class);
 
 	static final boolean debugAll = false;
 
@@ -98,7 +95,7 @@ public class ExtensionalConflictVA extends Constraint {
 	public IntVar[] list;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"list"};
@@ -106,8 +103,8 @@ public class ExtensionalConflictVA extends Constraint {
 	/**
 	 * Partial constructor which stores variables involved in a constraint but
 	 * does not get information about tuples yet. The tuples must set separately.
-	 * 
-	 * @param list 
+	 *
+	 * @param list
 	 */
 
 	public ExtensionalConflictVA(IntVar[] list) {
@@ -115,7 +112,7 @@ public class ExtensionalConflictVA extends Constraint {
 		this.list = new IntVar[list.length];
 		supports = new int[list.length][][];
 		tuple = new int[list.length];
-		
+
 		for (int i = 0; i < list.length; i++)
 			this.list[i] = list[i];
 
@@ -127,8 +124,8 @@ public class ExtensionalConflictVA extends Constraint {
 	 * tuples parameter will be reflected in the constraint behavior. Changes to
 	 * tuples should not performed under any circumstances. The tuples array is
 	 * not copied to save memory and time.
-	 * @param list 
-	 * @param tuples 
+	 * @param list
+	 * @param tuples
 	 */
 
 	public ExtensionalConflictVA(IntVar[] list, int[][] tuples) {
@@ -136,7 +133,7 @@ public class ExtensionalConflictVA extends Constraint {
 		this.list = new IntVar[list.length];
 		supports = new int[list.length][][];
 		tuple = new int[list.length];
-		
+
 		for (int i = 0; i < list.length; i++)
 			this.list[i] = list[i];
 
@@ -162,7 +159,7 @@ public class ExtensionalConflictVA extends Constraint {
 
 
 	int [] tuple;
-	
+
 	/**
 	 * It seeks support tuple for a given variable and its value.
 	 * @param varPosition variable for which the support is seeked.
@@ -172,15 +169,14 @@ public class ExtensionalConflictVA extends Constraint {
 	public int[] seekSupportVA(int varPosition, int value) {
 
 		if (debugAll)
-			System.out.println("Seeking support for " + list[varPosition]
-					+ " and value " + value);
+			logger.info("Seeking support for " + list[varPosition] + " and value " + value);
 
 		int[] t = tuple;
 		int pos = findPosition(value, values[varPosition]);
-		
+
 		if (pos == -1)
 			return setFirstValid(varPosition, value);
-		
+
 		try {
 			if (supports[varPosition][pos] != null)
 				System.arraycopy(supports[varPosition][pos], 0, t, 0, list.length);
@@ -189,42 +185,42 @@ public class ExtensionalConflictVA extends Constraint {
 		}
 		catch (Exception ex) {
 			t = setFirstValid(varPosition, value);
-		}	
-		
+		}
+
 		assert ( t != null) : " First valid tuple can not be null ";
-		
+
 		int invalidPosition = -1;
-		
+
 		int [][] tuplesVarValue = tuples[varPosition][pos];
 		int [] lastofsequenceVarValue = lastofsequence[varPosition][pos];
-		
+
 		while (true) {
-			// find if t is disallowed  
-			
+			// find if t is disallowed
+
 			int position = isDisallowed(varPosition, value, t);
 			if (position == -1) {
 				recordSupport(varPosition, value, t);
 				return t;
 			}
-			
-			// finds the last of sequence of disallowed tuples from the 
+
+			// finds the last of sequence of disallowed tuples from the
 			// convex.
-			
+
 			if (lastofsequenceVarValue[position] != position)
 				System.arraycopy(tuplesVarValue[lastofsequenceVarValue[position]], 0, t, 0, list.length);
-			
+
 			invalidPosition = seekInvalidPosition(t);
-			
+
 			if (invalidPosition == -1) {
 				int i = list.length - 1;
 				for (; i >= 0; i--) {
-					if (i != varPosition) 
+					if (i != varPosition)
 						if (t[i] == list[i].max())
 							t[i] = list[i].min();
 						else {
 							t[i] = list[i].domain.nextValue(t[i]);
 							break;
-						}		
+						}
 				}
 				if (i == -1)
 					return null;
@@ -255,11 +251,11 @@ public class ExtensionalConflictVA extends Constraint {
 	int [][][] lastofsequence;
 
 	int [][][] supports;
-	
+
 	private void recordSupport(int varPosition, int value, int[] t) {
-		
+
 		int pos = findPosition(value, values[varPosition]);
-		
+
 		int [][] supports4variable = supports[varPosition];
 
 		if (supports4variable == null) {
@@ -272,7 +268,7 @@ public class ExtensionalConflictVA extends Constraint {
 				supports4variable[pos] = new int [list.length];
 			System.arraycopy(t, 0, supports4variable[pos], 0, list.length);
 		}
-		
+
 	}
 
 	/**
@@ -305,15 +301,14 @@ public class ExtensionalConflictVA extends Constraint {
 	public int isDisallowed(int varPosition, int value, int[] t) {
 
 		if (debugAll)
-			System.out.println("variable" + list[varPosition] + " position "
-					+ varPosition + " value " + value);
+			logger.info("variable" + list[varPosition] + " position " + varPosition + " value " + value);
 
 		int[][] tuplesForGivenVariableValuePair = tuples[varPosition][findPosition(
 				value, values[varPosition])];
 
 		int left = 0;
 		int right = tuplesForGivenVariableValuePair.length - 1;
-		
+
 		int position = (left + right) >> 1;
 
 		while (!(left + 1 >= right)) {
@@ -331,24 +326,24 @@ public class ExtensionalConflictVA extends Constraint {
 		if (left != right) {
 			if (equal(t, tuplesForGivenVariableValuePair[left])) {
 				return left;
-			} 
-		
+			}
+
 			if (equal(t, tuplesForGivenVariableValuePair[right])) {
 				return right;
 			}
 		}
 		else {
-			
+
 			if (equal(t, tuplesForGivenVariableValuePair[left]))
 				return left;
-			
+
 		}
-		
+
 		return -1;
 	}
 
     /**
-     * It finds the position at which the tuple is invalid. The value is not in the domain 
+     * It finds the position at which the tuple is invalid. The value is not in the domain
      * of the corresponding variable.
      * @param t tuple being check for in-validity
      * @return the position in the tuple at which the corresponding variable does not contain the value used by tuple, -1 if no invalid position exists.
@@ -382,19 +377,19 @@ public class ExtensionalConflictVA extends Constraint {
 
 	@Override
 	public void removeLevel(int level) {
-		
+
 		// backtracking has occurred (removeLevel) therefore
 		// restart tuples can not be reused.
-		supports = new int[list.length][][];	
+		supports = new int[list.length][][];
 		variableQueue = new LinkedHashSet<Var>();
-		
+
 	}
 
 	@Override
 	public void consistency(Store store) {
 
 		if (debugAll)
-			System.out.println("Begin " + this);
+			logger.info("Begin " + this);
 
 		boolean pruned = true;
 
@@ -411,12 +406,11 @@ public class ExtensionalConflictVA extends Constraint {
 					int value = enumer.nextElement();
 
 					if (debugAll)
-						System.out.println("Seeking support for "
-								+ list[varPosition] + " and value " + value);
+						logger.info("Seeking support for " + list[varPosition] + " and value " + value);
 					int[] t = seekSupportVA(varPosition, value);
 
 					if (debugAll)
-						System.out.println("Found support?" + !(t == null));
+						logger.info("Found support?" + !(t == null));
 
 					if (t == null) {
 						list[varPosition].domain.inComplement(store.level,
@@ -430,7 +424,7 @@ public class ExtensionalConflictVA extends Constraint {
 		}
 
 		if (debugAll)
-			System.out.println("End " + this);
+			logger.info("End " + this);
 	}
 
 	protected int findPosition(int value, int[] values) {
@@ -441,17 +435,16 @@ public class ExtensionalConflictVA extends Constraint {
 		int position = (left + right) >> 1;
 
 		if (debugAll) {
-			System.out.println("Looking for " + value);
+			logger.info("Looking for " + value);
 			for (int v : values)
-				System.out.print("val " + v);
-			System.out.println("");
+				logger.info("val " + v);
+			logger.info("\n");
 		}
 
 		while (!(left + 1 >= right)) {
 
 			if (debugAll)
-				System.out.println("left " + left + " right " + right
-						+ " position " + position);
+				logger.info("left " + left + " right " + right + " position " + position);
 
 			if (values[position] > value) {
 				right = position;
@@ -487,7 +480,7 @@ public class ExtensionalConflictVA extends Constraint {
 
 	@Override
 	public void impose(Store store) {
-	
+
 		store.registerRemoveLevelListener(this);
 
 		for (int i = 0; i < list.length; i++) {
@@ -501,7 +494,7 @@ public class ExtensionalConflictVA extends Constraint {
 
 		if (debugAll) {
 			for (Var var : list)
-				System.out.println("Variable " + var);
+				logger.info("Variable " + var);
 		}
 
 		// TO DO, adjust (even simplify) all internal data structures
@@ -523,10 +516,10 @@ public class ExtensionalConflictVA extends Constraint {
 			int j = 0;
 
 			if (debugAll) {
-				System.out.print("conflict for analysis[");
+				logger.info("conflict for analysis[");
 				for (int val : t)
-					System.out.print(val + " ");
-				System.out.println("]");
+					logger.info(val + " ");
+				logger.info("]");
 			}
 
 			for (int val : t) {
@@ -534,7 +527,7 @@ public class ExtensionalConflictVA extends Constraint {
 				// if (debugAll) {
 				// System.out.print("Checking " + x[j]);
 				// System.out.print(" " + val);
-				// System.out.println(Domain.domain.contains(x[j].dom(), val));
+				// logger.info(Domain.domain.contains(x[j].dom(), val));
 				// }
 
 				if (!list[j].dom().contains(val)) {
@@ -551,10 +544,10 @@ public class ExtensionalConflictVA extends Constraint {
 
 			if (debugAll) {
 				if (!stillConflict[i]) {
-					System.out.print("Not support [");
+					logger.info("Not support [");
 					for (int val : t)
-						System.out.print(val + " ");
-					System.out.println("]");
+						logger.info(val + " ");
+					logger.info("]");
 				}
 			}
 
@@ -563,7 +556,7 @@ public class ExtensionalConflictVA extends Constraint {
 		}
 
 		if (debugAll) {
-			System.out.println("No. still conflicts " + noConflicts);
+			logger.info("No. still conflicts " + noConflicts);
 		}
 
 		int[][] temp4Shrinking = new int[noConflicts][];
@@ -578,10 +571,10 @@ public class ExtensionalConflictVA extends Constraint {
 				i++;
 
 				if (debugAll) {
-					System.out.print("Still support [");
+					logger.info("Still support [");
 					for (int val : t)
-						System.out.print(val + " ");
-					System.out.println("]");
+						logger.info(val + " ");
+					logger.info("]");
 				}
 
 			}
@@ -604,9 +597,9 @@ public class ExtensionalConflictVA extends Constraint {
 		this.values = new int[list.length][];
 
 		lastofsequence = new int[list.length][][];
-	
+
 		for (i = 0; i < list.length; i++) {
-			
+
 			HashMap<Integer, Integer> val = new HashMap<Integer, Integer>();
 
 			for (int[] t : tuplesFromConstructor) {
@@ -621,25 +614,25 @@ public class ExtensionalConflictVA extends Constraint {
 			}
 
 			if (debugAll)
-				System.out.println("values " + val.keySet());
+				logger.info("values " + val.keySet());
 
 			PriorityQueue<Integer> sortedVal = new PriorityQueue<Integer>(val
 					.keySet());
 
 			if (debugAll)
-				System.out.println("Sorted val size " + sortedVal.size());
+				logger.info("Sorted val size " + sortedVal.size());
 
 			values[i] = new int[sortedVal.size()];
 			supportCount[i] = new int[sortedVal.size()];
 			this.tuples[i] = new int[sortedVal.size()][][];
 
 			if (debugAll)
-				System.out.println("values length " + values[i].length);
+				logger.info("values length " + values[i].length);
 
 			for (int j = 0; j < values[i].length; j++) {
 
 				if (debugAll)
-					System.out.println("sortedVal " + sortedVal);
+					logger.info("sortedVal " + sortedVal);
 
 				values[i][j] = sortedVal.poll();
 				supportCount[i][j] = val.get(new Integer(values[i][j]));
@@ -662,10 +655,10 @@ public class ExtensionalConflictVA extends Constraint {
 				store.sortTuplesWithin(tuples[i][j]);
 
 			lastofsequence[i] = new int[tuples[i].length][];
-			
+
 			// compute lastOfSequence for each i,j and tuple.
 			// i - for each variable
-			for (int j = 0; j < tuples[i].length; j++) { // for each value 
+			for (int j = 0; j < tuples[i].length; j++) { // for each value
 				lastofsequence[i][j] = new int [tuples[i][j].length];
 				for (int l = 0; l < tuples[i][j].length; l++) // for each tuple
 						lastofsequence[i][j][l] = computeLastOfSequence(tuples[i][j], i, l);
@@ -678,13 +671,13 @@ public class ExtensionalConflictVA extends Constraint {
 		store.raiseLevelBeforeConsistency = true;
 
 	}
-	
+
 	private int computeLastOfSequence(int[][] is, int posVar, int l) {
-		
+
 		int[] t = tuple;
-		
+
 		System.arraycopy(is[l], 0, t, 0, list.length);
-		
+
 		while (l + 1 < is.length) {
 
 			for (int i = list.length - 1; i >= 0; i--)
@@ -695,17 +688,17 @@ public class ExtensionalConflictVA extends Constraint {
 						t[i] = list[i].domain.nextValue(t[i]);
 						break;
 					}
-			
+
 			if (!equal(is[l+1], t))
 				return l;
 			else {
 
-				System.arraycopy(is[++l], 0, t, 0, list.length);				
+				System.arraycopy(is[++l], 0, t, 0, list.length);
 
 			}
-				
+
 		}
-			
+
 		return l;
 	}
 
@@ -713,7 +706,7 @@ public class ExtensionalConflictVA extends Constraint {
 	public void queueVariable(int level, Var var) {
 
 		if (debugAll)
-			System.out.println("Var " + var + ((IntVar)var).recentDomainPruning());
+			logger.info("Var " + var + ((IntVar) var).recentDomainPruning());
 
 		variableQueue.add(var);
 	}
@@ -792,12 +785,12 @@ public class ExtensionalConflictVA extends Constraint {
 
 			for (int p1 = 0; p1 < subset.length; p1++) {
 				for (int p2 = 0; p2 < subset[p1].length; p2++) {
-					
+
 					tupleString.append(subset[p1][p2]);
-					
+
 					if (p2 != subset[p1].length - 1)
 						tupleString.append(" ");
-				
+
 				}
 
 				if (p1 != subset.length - 1)
@@ -813,59 +806,59 @@ public class ExtensionalConflictVA extends Constraint {
 
 	}
 
-	
+
 	/**
-	 * It writes the content of this object as the content of XML 
-	 * element so later it can be used to restore the object from 
+	 * It writes the content of this object as the content of XML
+	 * element so later it can be used to restore the object from
 	 * XML. It is done after restoration of the part of the object
-	 * specified in xmlAttributes. 
-	 *  
-	 * @param tf a place to write the content of the object. 
+	 * specified in xmlAttributes.
+	 *
+	 * @param tf a place to write the content of the object.
 	 * @throws SAXException
 	 */
 	public void toXML(TransformerHandler tf) throws SAXException {
-		
+
 		StringBuffer result = new StringBuffer("");
 
 		for (int[][] tuplesForGivenValue : tuples[0]) {
 			for (int[] tuple : tuplesForGivenValue) {
-				
+
 				result.delete(0, result.length());
-				
+
 				for (int i : tuple)
 					result.append( String.valueOf(i)).append(" ");
 				result.append("|");
-				
+
 				tf.characters(result.toString().toCharArray(), 0, result.length());
-				
+
 			}
 		}
-				
+
 	}
-	
-	
+
+
 	/**
-	 * 
-	 * It updates the specified constraint with the information 
-	 * stored in the string. 
-	 * 
+	 *
+	 * It updates the specified constraint with the information
+	 * stored in the string.
+	 *
 	 * @param object the constraint to be updated.
-	 * @param content the information used for update. 
+	 * @param content the information used for update.
 	 */
 	public static void fromXML(ExtensionalConflictVA object, String content) {
-		
+
 		Pattern pat = Pattern.compile("|");
 		String[] result = pat.split( content );
 
 		ArrayList<int[]> tuples = new ArrayList<int[]>(result.length);
-		
+
 		for (String element : result) {
-			
+
 			Pattern dotSplit = Pattern.compile(" ");
 			String[] oneElement = dotSplit.split( element );
 
 			int [] tuple = new int[object.list.length];
-			
+
 			int i = 0;
 			for (String number : oneElement) {
 				try {
@@ -875,14 +868,14 @@ public class ExtensionalConflictVA extends Constraint {
 				catch(NumberFormatException ex) {
 				};
 			}
-			
+
 			tuples.add(tuple);
 		}
-		
+
 		object.tuplesFromConstructor = tuples.toArray(new int[tuples.size()][]);
-				
+
 	}
-	
+
 	@Override
 	public void increaseWeight() {
 		if (increaseWeight) {

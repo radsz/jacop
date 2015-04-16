@@ -1,9 +1,9 @@
 /**
- *  SoftAlldifferent.java 
+ *  SoftAlldifferent.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,8 +31,7 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.netflow.NetworkBuilder;
 import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.core.BooleanVar;
@@ -42,25 +41,27 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
- * This class provides soft-alldifferent constraint by decomposing it 
- * either into a network flow constraint or a set of primitive constraints. 
+ *
+ * This class provides soft-alldifferent constraint by decomposing it
+ * either into a network flow constraint or a set of primitive constraints.
  *
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.2
- * 
+ *
  */
 
-public class SoftAlldifferent extends DecomposedConstraint {
+public class SoftAlldifferent extends DecomposedConstraint { private static Logger logger = LoggerFactory.getLogger(SoftAlldifferent.class);
 
 	public ArrayList<Constraint> decomposition;
-	
+
 	public final IntVar[] xVars;
-	
+
 	public final IntVar costVar;
-	
+
 	public final ViolationMeasure violationMeasure;
 
 	public SoftAlldifferent(IntVar[] xVars, IntVar costVar, ViolationMeasure violationMeasure) {
@@ -74,7 +75,7 @@ public class SoftAlldifferent extends DecomposedConstraint {
 		if (decomposition == null) {
 
 			decomposition = new ArrayList<Constraint>();
-			
+
 			if (violationMeasure == ViolationMeasure.DECOMPOSITION_BASED) {
 
 				int n = xVars.length;
@@ -86,7 +87,7 @@ public class SoftAlldifferent extends DecomposedConstraint {
 						decomposition.add(new Reified(new XeqY(xVars[i], xVars[j]), v));
 					}
 				}
-				decomposition.add(new Sum(costs, costVar));		
+				decomposition.add(new Sum(costs, costVar));
 
 			} else {
 				throw new UnsupportedOperationException("Unsupported violation measure " + violationMeasure);
@@ -97,7 +98,7 @@ public class SoftAlldifferent extends DecomposedConstraint {
 		else {
 
 			ArrayList<Constraint> result = new ArrayList<Constraint>();
-			
+
 			if (violationMeasure == ViolationMeasure.DECOMPOSITION_BASED) {
 
 				int n = xVars.length;
@@ -109,7 +110,7 @@ public class SoftAlldifferent extends DecomposedConstraint {
 						result.add(new Reified(new XeqY(xVars[i], xVars[j]), v));
 					}
 				}
-				result.add(new Sum(costs, costVar));		
+				result.add(new Sum(costs, costVar));
 
 			} else {
 				throw new UnsupportedOperationException("Unsupported violation measure " + violationMeasure);
@@ -118,7 +119,7 @@ public class SoftAlldifferent extends DecomposedConstraint {
 			return result;
 
 		}
-		
+
 		// Do we have to add the cost-vars to the list of auxilary variables
 		// auxilaryVariables.addAll(costs);
 	}
@@ -129,8 +130,8 @@ public class SoftAlldifferent extends DecomposedConstraint {
 		if (decomposition == null || decomposition.size() > 1) {
 
 			decomposition = new ArrayList<Constraint>();
-			
-			// compute union of all domains	
+
+			// compute union of all domains
 			IntDomain all = new IntervalDomain();
 			for (IntVar v : xVars)
 				all.addDom(v.domain);
@@ -152,14 +153,14 @@ public class SoftAlldifferent extends DecomposedConstraint {
 			//	soft.primitiveDecomposition(store);
 
 		}
-		
+
 		return decomposition;
 	}
 
 	private class SoftAlldiffBuilder extends NetworkBuilder {
 
 		private SoftAlldiffBuilder(IntDomain[] doms, ViolationMeasure vm) {
-			
+
 			super(costVar);
 
 			int n = xVars.length, m = doms.length;
@@ -180,20 +181,20 @@ public class SoftAlldifferent extends DecomposedConstraint {
 			} else {
 
 				throw new UnsupportedOperationException("Unknown violation measure : " + vm);
-			
+
 			}
 		}
 	}
 
 	@Override
 	public void imposeDecomposition(Store store) {
-		
+
 		if (decomposition == null)
 			decompose(store);
-		
+
 		for (Constraint c : decomposition)
 			store.impose(c);
-		
+
 	}
 
 }

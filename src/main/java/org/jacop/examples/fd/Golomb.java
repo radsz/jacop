@@ -1,9 +1,9 @@
 /**
- *  Golomb.java 
+ *  Golomb.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,8 +31,7 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XltY;
@@ -47,14 +46,16 @@ import org.jacop.search.InputOrderSelect;
 import org.jacop.search.PrintOutListener;
 import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
+ *
  * It models a Golomb ruler problem.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  *
- * 
+ *
  * Golomb ruler is a special sequence of natural numbers
  * an example is 0 1 4 6
  *
@@ -67,10 +68,10 @@ import org.jacop.search.SelectChoicePoint;
  * The presented ruler with 4 marks of length 6 is optimal
  */
 
-public class Golomb extends ExampleFD {
+public class Golomb extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(Golomb.class);
 
 	/**
-	 * It specifies the number of marks (number of natural numbers in 
+	 * It specifies the number of marks (number of natural numbers in
 	 * the sequence).
 	 */
 	public int noMarks = 10;
@@ -80,21 +81,20 @@ public class Golomb extends ExampleFD {
 	 */
 	public int bound = -1;
 
-	
+
 	/**
 	 * It contains all differences between all possible pairs of marks.
 	 */
 	public ArrayList<IntVar> subs = new ArrayList<IntVar>();
-	
+
 	@Override
 	public void model() {
 
-		System.out.println("Program to solve Golomb mark problem - length "
-				           + noMarks);
+		logger.info("Program to solve Golomb mark problem - length " + noMarks);
 
 		store = new Store();
 		vars = new ArrayList<IntVar>();
-		
+
 		IntVar numbers[] = new IntVar[noMarks];
 
 		for (int i = 0; i < numbers.length; i++) {
@@ -113,7 +113,7 @@ public class Golomb extends ExampleFD {
 
 		for (IntVar v : numbers)
 			vars.add(v);
-		
+
 		if (bound > -1)
 			store.impose(new XlteqC(numbers[noMarks - 1], bound));
 
@@ -155,29 +155,29 @@ public class Golomb extends ExampleFD {
 		store.impose(new Alldiff(subs), 1);
 
 		cost = numbers[numbers.length - 1];
-		
+
 	}
-	
+
 	/**
-	 * It specifies specific search for the optimal solution search procedure, which 
+	 * It specifies specific search for the optimal solution search procedure, which
 	 * printouts intermediate search results and shows how the search is progressing.
-	 * 
+	 *
 	 * @return true if the (optimal) solution is found, false if no solution found.
 	 */
 	public boolean searchOptimalInfo() {
-		
+
 		long T1, T2;
 		T1 = System.currentTimeMillis();
-		
-		SelectChoicePoint<IntVar> select = new InputOrderSelect<IntVar>(store, 
+
+		SelectChoicePoint<IntVar> select = new InputOrderSelect<IntVar>(store,
 														vars.toArray(new IntVar[1]),
 														new IndomainMin<IntVar>());
 
 		Search<IntVar> search = new DepthFirstSearch<IntVar>();
-		
+
 		PrintOutListener<IntVar> solutionListener = new PrintOutListener<IntVar>();
 		search.setSolutionListener(solutionListener);
-		
+
 		boolean result = search.labeling(store, select, cost);
 
 		if (result)
@@ -185,73 +185,73 @@ public class Golomb extends ExampleFD {
 
 		T2 = System.currentTimeMillis();
 
-		System.out.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
-		
+		logger.info("\n\t*** Execution time = " + (T2 - T1) + " ms");
+
 		return result;
-		
-	}	
-	
+
+	}
+
 	/**
-	 * It executes the program which computes the optimal Golomb ruler. 
-	 * 
+	 * It executes the program which computes the optimal Golomb ruler.
+	 *
 	 * @param args the first argument specifies the number of marks, the second argument specifies the upper bound of the optimal solution.
 	 */
 	public static void main(String args[]) {
-		
+
 		Golomb example = new Golomb();
-		
+
 		if (args.length != 0)
 			example.noMarks = new Integer(args[0]);
-		
+
 		if (args.length > 1)
 			example.bound = new Integer(args[1]);
-		
+
 		example.model();
 
 		if (example.searchOptimalInfo())
-			System.out.println("Solution(s) found");
-	
-		
-	}			
+			logger.info("Solution(s) found");
+
+
+	}
 
 
 	/**
-	 * It executes the program which first computes the optimal Golomb ruler. 
+	 * It executes the program which first computes the optimal Golomb ruler.
 	 * Afterwards, it computes all the optimal solutions but it does not use
 	 * previously established cost of the optimal solution.
-	 * 
+	 *
 	 * @param args the first argument specifies the number of marks, the second argument specifies the upper bound of the optimal solution.
 	 */
 	public static void test(String args[]) {
-		
+
 		Golomb example = new Golomb();
-		
+
 		if (args.length != 0)
 			example.noMarks = new Integer(args[0]);
-		
+
 		if (args.length > 1)
 			example.bound = new Integer(args[1]);
-		
+
 		example.model();
 
 		if (example.searchOptimalInfo())
-			System.out.println("Solution(s) found");
-	
-	
+			logger.info("Solution(s) found");
+
+
 		Golomb exampleAll = new Golomb();
-		
+
 		if (args.length != 0)
 			exampleAll.noMarks = new Integer(args[0]);
-		
+
 		if (args.length > 1)
 			exampleAll.bound = new Integer(args[1]);
-		
+
 		exampleAll.model();
 
 		if (exampleAll.searchAllOptimal())
-			System.out.println("Solution(s) found");
-		
-	}			
+			logger.info("Solution(s) found");
 
-	
+	}
+
+
 }

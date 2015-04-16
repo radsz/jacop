@@ -13,6 +13,8 @@ import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
 import org.jacop.search.TraceGenerator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The class Run is used to run test programs for JaCoP package.
@@ -21,7 +23,8 @@ import org.jacop.search.TraceGenerator;
  * @author Krzysztof Kuchcinski
  * @version 4.2
  */
-public class CPvizNetworkFlow{
+
+public class CPvizNetworkFlow{ private static Logger logger = LoggerFactory.getLogger(CPvizNetworkFlow.class);
     Store store;
     IntVar[] vars;
     IntVar COST;
@@ -49,7 +52,7 @@ public class CPvizNetworkFlow{
       Node D = net.addNode("D", 0);
       Node E = net.addNode("E", 0);
       Node F = net.addNode("F", 0);
-      
+
 
       Node source = net.addNode("source", 9);  // should ne 5+3+3=11 but it does not work...
 
@@ -93,12 +96,12 @@ public class CPvizNetworkFlow{
       IntVar cost = new IntVar(store, "cost", 0, 1000);
       net.setCostVariable(cost);
 
-      vars = x; 
+      vars = x;
       COST = cost;
 
       store.impose(new NetworkFlow(net));
 
-      System.out.println( "\nIntVar store size: "+ store.size()+
+      logger.info( "\nIntVar store size: "+ store.size()+
 			  "\nNumber of constraints: " + store.numberConstraints()
 			  );
 
@@ -125,36 +128,36 @@ public class CPvizNetworkFlow{
       label.setAssignSolution(true);
       label.setPrintInfo(true);
 
-      Result = label.labeling(store, select, cost); 
+      Result = label.labeling(store, select, cost);
 
 
       if (Result) {
-	  System.out.println("*** Yes");
-	  System.out.println (cost);
+	  logger.info("*** Yes");
+	  logger.info(cost.toString());
       }
       else
-	  System.out.println("*** No");
+	  logger.info("*** No");
 
       T2 = System.currentTimeMillis();
       T = T2 - T1;
-      System.out.println("\n\t*** Execution time = "+ T + " ms");
+      logger.info("\n\t*** Execution time = "+ T + " ms");
     }
 
-    public class NetListener<T extends Var> extends SimpleSolutionListener<T> {
+public class NetListener<T extends Var> extends SimpleSolutionListener<T> { private Logger logger = LoggerFactory.getLogger(NetListener.class);
 
 	public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
 
 	    boolean returnCode = super.executeAfterSolution(search, select);
 
-	    System.out.println ("Solution cost cost = " + COST.value());
+	    logger.info("Solution cost cost = " + COST.value());
 
-	    System.out.print ("[");
+	    logger.info ("[");
 
 	    for ( Var var : vars) {
-	    	System.out.print (var + " ");
+	    	logger.info(var + " ");
 	    }
-	    
-	    System.out.println ("]");
+
+	    logger.info ("]");
 
 	    return returnCode;
 	}

@@ -1,9 +1,9 @@
 /**
- *  Search.java 
+ *  Search.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,7 +32,6 @@
 package org.jacop.search;
 
 import org.jacop.core.Domain;
-import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 
@@ -41,7 +40,7 @@ import org.jacop.core.Var;
  * a large variety of search listeners. Of course, the search which implements
  * this interface will need to call appropriate functions of attached listeners
  * in the right place and act accordingly to the output of listeners.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  * @param <T> type of variables used in this search.
@@ -72,14 +71,14 @@ public interface Search<T extends Var> {
 	 */
 	public int getBacktracks();
 
-	
+
 	/**
-	 * It returns the cost variable. 
+	 * It returns the cost variable.
 	 * @return cost variable.
 	 */
 	public Var getCostVariable();
-	
-	
+
+
 	/**
 	 * It returns the value of the cost int variable for the best solution.
 	 * @return the cost value.
@@ -91,13 +90,13 @@ public interface Search<T extends Var> {
 	 * @return the cost value.
 	 */
 	public double getCostValueFloat();
-	
+
 	/**
 	 * It sets the optimization flag.
 	 * @param value true if the search should optimize, false otherwise.
 	 */
 	public void setOptimize(boolean value);
-	
+
 	/**
 	 * It returns number of decisions performed by the search.
 	 * @return the number of decisions.
@@ -124,7 +123,7 @@ public interface Search<T extends Var> {
 	public int getWrongDecisions();
 
 	/**
-	 * It returns the solution (an assignment of values to variables). 
+	 * It returns the solution (an assignment of values to variables).
 	 * @return an array constituting the assignments.
 	 */
 	public Domain[] getSolution();
@@ -132,7 +131,7 @@ public interface Search<T extends Var> {
 	/**
 	 * It returns the solution specified by the search. The first
 	 * solution has an index 1.
-	 * 
+	 *
 	 * @param no the solution we are interested in.
 	 * @return an array constituting the assignments.
 	 */
@@ -141,7 +140,7 @@ public interface Search<T extends Var> {
 	/**
 	 * It returns the order of variables used by functions returning a solution
 	 * in terms of the values.
-	 * 
+	 *
 	 * @return an array of variables as used by functions getSolution.
 	 */
 	public T[] getVariables();
@@ -155,10 +154,10 @@ public interface Search<T extends Var> {
 	boolean label(int firstVariable);
 
 	/**
-	 * It performs search, first by setting up the internal items/attributes of search, 
+	 * It performs search, first by setting up the internal items/attributes of search,
 	 * followed later by a call to labeling function with argument specifying the index
 	 * of the first not grounded variable.
-	 *  
+	 *
 	 * @return true if the solution was found.
 	 */
 	public boolean labeling();
@@ -172,9 +171,9 @@ public interface Search<T extends Var> {
 	public boolean labeling(Store store, SelectChoicePoint<T> select);
 
 	/**
-	 * It performs search using supplied choice point selection heuristic, 
+	 * It performs search using supplied choice point selection heuristic,
 	 * as well as costVariable as aim at finding an optimal solution.
-	 * 
+	 *
 	 * @param store constraint store which will be used by labeling.
 	 * @param select the selection choice point heuristic.
 	 * @param costVar variable to specify cost.
@@ -184,16 +183,16 @@ public interface Search<T extends Var> {
 
 	/**
 	 * It decides if a solution is assigned to store after search exits.
-	 * 
+	 *
 	 * @param value defines if solution is assigned.
-	 * 
+	 *
 	 */
 
 	public void setAssignSolution(boolean value);
 
 	/**
 	 * It turns on the backtrack out.
-	 * 
+	 *
 	 * @param out defines how many backtracks are performed before the search
 	 *            exits.
 	 */
@@ -201,14 +200,14 @@ public interface Search<T extends Var> {
 
 	/**
 	 * It turns on the decisions out.
-	 * 
+	 *
 	 * @param out defines how many decisions are made before the search exits.
 	 */
 	public void setDecisionsOut(long out);
 
 	/**
 	 * It turns on the nodes out.
-	 * 
+	 *
 	 * @param out
 	 *            defines how many nodes are visited before the search exits.
 	 */
@@ -216,7 +215,7 @@ public interface Search<T extends Var> {
 
 	/**
 	 * It decides if information about search is printed.
-	 * 
+	 *
 	 * @param value
 	 *            defines if info is printed to standard output.
 	 */
@@ -225,7 +224,7 @@ public interface Search<T extends Var> {
 
 	/**
 	 * It turns on the timeout.
-	 * 
+	 *
 	 * @param out
 	 *            defines how many seconds before the search exits.
 	 */
@@ -233,7 +232,7 @@ public interface Search<T extends Var> {
 
 	/**
 	 * It turns on the wrong decisions out.
-	 * 
+	 *
 	 * @param out
 	 *            defines how many wrong decisions are made before the search
 	 *            exits.
@@ -273,11 +272,11 @@ public interface Search<T extends Var> {
 	public TimeOutListener getTimeOutListener();
 
 	/**
-	 * It returns the root of the InitializationListener. 
-	 * @return the root of the InitializeListener. 
+	 * It returns the root of the InitializationListener.
+	 * @return the root of the InitializeListener.
 	 */
 	public InitializeListener getInitializeListener();
-	
+
 	/**
 	 * It returns the root of the SolutionListener.
 	 * @param listener the root of the SolutionListener.
@@ -303,20 +302,20 @@ public interface Search<T extends Var> {
 	public void setExitListener(ExitListener listener);
 
 	/**
-	 * It sets the root of the TimeOutListener. 
+	 * It sets the root of the TimeOutListener.
 	 * @param listener the new root.
 	 */
 	public void setTimeOutListener(TimeOutListener listener);
-	
+
 	/**
 	 * It sets the root of the InitializeListener.
 	 * @param listener the new root.
 	 */
 	public void setInitializeListener(InitializeListener listener);
-	
+
 	/**
-	 * It sets the select choice point object. 
-	 * @param select the choice point heuristic used by search. 
+	 * It sets the select choice point object.
+	 * @param select the choice point heuristic used by search.
 	 */
 	public void setSelectChoicePoint(SelectChoicePoint<T> select);
 
@@ -327,8 +326,8 @@ public interface Search<T extends Var> {
 	public void setStore(Store store);
 
 	/**
-	 * It sets the reference to the cost variable. It does not automatically mean 
-	 * that the search optimizes. 
+	 * It sets the reference to the cost variable. It does not automatically mean
+	 * that the search optimizes.
 	 * @param cost variable used as a cost metric.
 	 */
 	public void setCostVar(Var cost);
@@ -355,14 +354,14 @@ public interface Search<T extends Var> {
 	 */
 	public boolean assignSolution(int no);
 
-	
+
 	/**
 	 * It assigns the last solution.
 	 * @return true if the store is consistent after imposing the last solution.
 	 */
 	public boolean assignSolution();
 
-	
+
 	/**
 	 * It prints all solutions.
 	 */

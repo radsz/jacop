@@ -1,9 +1,9 @@
 /**
- *  IndomainMiddle.java 
+ *  IndomainMiddle.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -34,18 +34,19 @@ package org.jacop.search;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
-import org.jacop.core.ValueEnumeration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * IndomainMiddle - implements enumeration method based on the selection of the
  * middle value in the domain of FD variable and then right and left values.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  * @param <T> type of variable being used in search.
  */
 
-public class IndomainMiddle<T extends IntVar> implements Indomain<T> {
+public class IndomainMiddle<T extends IntVar> implements Indomain<T> { private static Logger logger = LoggerFactory.getLogger(IndomainMiddle.class);
 
 	/**
 	 * It creates Indomain heuristic which chooses the middle value.
@@ -88,11 +89,11 @@ public class IndomainMiddle<T extends IntVar> implements Indomain<T> {
 					;
 
 				if (iBefore > iAfter)
-					if (middle - domain.intervals[iAfter].max > domain.intervals[iBefore].min - middle) 
+					if (middle - domain.intervals[iAfter].max > domain.intervals[iBefore].min - middle)
 						return domain.intervals[iBefore].min;
 					else
 						return domain.intervals[iAfter].max;
-					
+
 				if (middle - domain.intervals[iBefore].max > domain.intervals[iAfter].min
 						- middle)
 					return domain.intervals[iAfter].min;
@@ -103,7 +104,7 @@ public class IndomainMiddle<T extends IntVar> implements Indomain<T> {
 				return middle;
 
 		} else {
-			
+
 		        IntDomain dom = var.dom();
 			int dMin = dom.min(), dMax = dom.max();
 
@@ -117,7 +118,7 @@ public class IndomainMiddle<T extends IntVar> implements Indomain<T> {
 			if (!dom.contains(middle)) {
 				int iBefore = 0;
 				int iAfter = dom.noIntervals() - 1;
-				
+
 				for (; iBefore < dom.noIntervals()
 						&& dom.getInterval(iBefore).max < middle; iBefore++)
 					;
@@ -126,22 +127,22 @@ public class IndomainMiddle<T extends IntVar> implements Indomain<T> {
 					;
 
 				if (iBefore > iAfter)
-					if (middle - dom.getInterval(iAfter).max > dom.getInterval(iBefore).min - middle) 
+					if (middle - dom.getInterval(iAfter).max > dom.getInterval(iBefore).min - middle)
 						return dom.getInterval(iBefore).min;
 					else
 						return dom.getInterval(iAfter).max;
 
-				if (middle - dom.getInterval(iBefore).max > dom.getInterval(iAfter).min 
+				if (middle - dom.getInterval(iBefore).max > dom.getInterval(iAfter).min
 						- middle)
 					return dom.getInterval(iAfter).min;
 				else
 					return dom.getInterval(iBefore).max;
-				
+
 			} else
 				return middle;
 
 		}
-		
+
 	}
 
 }

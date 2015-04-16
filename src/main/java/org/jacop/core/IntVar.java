@@ -1,9 +1,9 @@
 /**
- *  IntVar.java 
+ *  IntVar.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,18 +31,19 @@
 
 package org.jacop.core;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Constraint;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Defines a Finite Domain Variable (FDV) and related operations on it.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  */
 
-public class IntVar extends Var {
+public class IntVar extends Var { private static Logger logger = LoggerFactory.getLogger(IntVar.class);
 
 	/**
 	 * It stores pointer to a current domain, which has stamp equal to store
@@ -51,13 +52,13 @@ public class IntVar extends Var {
 	public IntDomain domain;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
-	 */		
+	 */
 	public static String[] xmlAttributes = {"store", "id", "domain"};
-	
+
 	/**
-	 * It creates a variable in a given store, with a given name and 
+	 * It creates a variable in a given store, with a given name and
 	 * a given domain.
 	 * @param store store in which the variable is created.
 	 * @param name the name for the variable being created.
@@ -66,7 +67,7 @@ public class IntVar extends Var {
 	public IntVar(Store store, String name, IntDomain dom) {
 
 		commonInitialization(store, name, dom);
-		
+
 	}
 
 	private void commonInitialization(Store store, String name, IntDomain dom) {
@@ -76,7 +77,7 @@ public class IntVar extends Var {
 		dom.modelConstraintsToEvaluate = new int[IntDomain.eventsInclusion.length];
 
 		assert (name.lastIndexOf(" ") == -1) : "Name can not contain space character";
-		
+
 		id = name;
 		domain = dom;
 		domain.stamp = 0;
@@ -86,7 +87,7 @@ public class IntVar extends Var {
 	}
 
 	/**
-	 * It creates a variable in a given store, with a given name and 
+	 * It creates a variable in a given store, with a given name and
 	 * a given domain.
 	 * @param store store in which the variable is created.
 	 * @param dom the domain of the variable being created.
@@ -113,7 +114,7 @@ public class IntVar extends Var {
 	}
 
 	/**
-	 * This constructor creates a variable with a domain between min..max, 
+	 * This constructor creates a variable with a domain between min..max,
 	 * automatically generated name, and empty attached constraint list.
 	 * @param store store in which the variable is created.
 	 * @param min the minimum value of the domain.
@@ -126,17 +127,17 @@ public class IntVar extends Var {
 	/**
 	 * This constructor creates a variable with an empty domain (standard
 	 * IntervalDomain domain), the specified name, and an empty attached
-	 * constraint list. 
-	 * 
+	 * constraint list.
+	 *
 	 * @param store store in which the variable is created.
 	 * @param name the name for the variable being created.
 	 */
 	public IntVar(Store store, String name) {
 		this(store, name, new IntervalDomain(5));
 	}
-	
+
 	/**
-	 * This constructor creates a variable in a given store, with 
+	 * This constructor creates a variable in a given store, with
 	 * the domain specified by min..max and with the given name.
 	 * @param store the store in which the variable is created.
 	 * @param name the name of the variable being created.
@@ -144,7 +145,7 @@ public class IntVar extends Var {
 	 * @param max the maximum value of the variables domain.
 	 */
 	public IntVar(Store store, String name, int min, int max) {
-		
+
 		if (max - min > 63)
 			commonInitialization(store, name, new IntervalDomain(min, max));
 		else
@@ -186,15 +187,15 @@ public class IntVar extends Var {
 	 */
 
 	public int value() {
-				
+
 		assert singleton() : "Request for a value of not grounded variable " + this;
 
 		// if (!singleton())
 		//	Thread.dumpStack();
-				
+
 		return domain.min();
 	}
-	
+
 	/**
 	 * It checks if the domain contains only one value equal to c.
 	 * @param val value to which we compare the singleton of the variable.
@@ -218,7 +219,7 @@ public class IntVar extends Var {
 	/**
 	 * This function returns current minimal value in the domain of the
 	 * variable.
-	 * @return the minimum value beloning to the domain. 
+	 * @return the minimum value beloning to the domain.
 	 */
 	public int min() {
 		return domain.min();
@@ -229,7 +230,7 @@ public class IntVar extends Var {
 	 * It is possible to set the domain of variable. It should be used with
 	 * care, only right after variable was created and before it is used in
 	 * constraints or search.
-	 * @param dom domain to which the current variable domain is set to. 
+	 * @param dom domain to which the current variable domain is set to.
 	 */
 
 	public void setDomain(IntDomain dom) {
@@ -240,7 +241,7 @@ public class IntVar extends Var {
 	 * It is possible to add the domain of variable. It should be used with
 	 * care, only right after variable was created and before it is used in
 	 * constraints or search.
-	 * @param dom the added domain. 
+	 * @param dom the added domain.
 	 */
 
 	public void addDom(IntDomain dom) {
@@ -296,16 +297,16 @@ public class IntVar extends Var {
 	public void putModelConstraint(Constraint c, int pruningEvent) {
 
 		// If variable is a singleton then it will not be put in the model.
-		// It will be put in the queue and evaluated only once in the queue. 
-		// If constraint is consistent for a singleton then it will remain 
+		// It will be put in the queue and evaluated only once in the queue.
+		// If constraint is consistent for a singleton then it will remain
 		// consistent from the point of view of this variable.
 		if (singleton())
 			return;
 
-		// if Event is NONE then constraint is not being attached, it will 
-		// be only evaluated once, as after imposition it is being put in the constraint 
+		// if Event is NONE then constraint is not being attached, it will
+		// be only evaluated once, as after imposition it is being put in the constraint
 		// queue.
-		
+
 		if (pruningEvent == Domain.NONE) {
 			return;
 		}
@@ -319,7 +320,7 @@ public class IntVar extends Var {
 	/**
 	 * It registers constraint with current variable, so always when this variable
 	 * is changed the constraint is reevaluated.
-	 * @param c the constraint which is added as a search constraint. 
+	 * @param c the constraint which is added as a search constraint.
 	 */
 
 	public void putSearchConstraint(Constraint c) {
@@ -346,10 +347,10 @@ public class IntVar extends Var {
 
 	/**
 	 * It detaches constraint from the current variable, so change in variable
-	 * will not cause constraint reevaluation. It is only removed from the 
-	 * current level onwards. Removing current level at later stage will 
-	 * automatically re-attached the constraint to the variable. 
-	 * 
+	 * will not cause constraint reevaluation. It is only removed from the
+	 * current level onwards. Removing current level at later stage will
+	 * automatically re-attached the constraint to the variable.
+	 *
 	 * @param c the constraint being detached from the variable.
 	 */
 
@@ -420,47 +421,47 @@ public class IntVar extends Var {
 
 	@Override
 	public String toString() {
-		
+
 		StringBuffer result = new StringBuffer(id);
-		
+
 		if (domain.singleton())
 			result.append(" = ");
 		else
 			result.append("::");
-			
+
 		result.append(domain);
 		return result.toString();
-		
+
 	}
 
 	/**
 	 * It returns the string representation of the variable using the full representation
-	 * of the domain. 
+	 * of the domain.
 	 * @return string representation.
 	 */
 	public String toStringFull() {
-		
+
 		StringBuffer result = new StringBuffer(id);
 		result.append(domain.toStringFull());
 		return result.toString();
-		
+
 	}
 
 	public void remove(int removedLevel) {
 		domain.removeLevel(removedLevel, this);
 	}
 
-	
+
 	/**
 	 * It informs the variable that its variable has changed according to the specified event.
 	 * @param event the type of the change (GROUND, BOUND, ANY).
 	 */
 	public void domainHasChanged(int event) {
-				
-		assert ((event == IntDomain.ANY && !singleton()) || 
+
+		assert ((event == IntDomain.ANY && !singleton()) ||
 				(event == IntDomain.BOUND && !singleton()) ||
 				(event == IntDomain.GROUND && singleton())) : "Wrong event generated";
-		
+
 		store.addChanged(this, event, Integer.MIN_VALUE);
 
 	}

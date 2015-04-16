@@ -1,9 +1,9 @@
 /**
- *  Binpacking.java 
+ *  Binpacking.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,11 +32,7 @@
 
 package org.jacop.constraints.binpacking;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashMap;
-
+import java.util.*;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -45,6 +41,8 @@ import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 import org.jacop.util.SimpleHashSet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Binpacking constraint implements bin packing problem. It ensures that
@@ -52,12 +50,12 @@ import org.jacop.util.SimpleHashSet;
  *
  * This implementation is based on paper "A Constraint for Bin Packing" by
  * Paul Shaw, CP 2004.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class Binpacking extends Constraint {
+public class Binpacking extends Constraint { private static Logger logger = LoggerFactory.getLogger(Binpacking.class);
 
 	static int idNumber = 1;
 
@@ -87,7 +85,7 @@ public class Binpacking extends Constraint {
 	HashMap<IntVar, Integer> binMap = new HashMap<IntVar, Integer>();
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"bin"};
@@ -130,7 +128,7 @@ public class Binpacking extends Constraint {
 		}
 
 		Arrays.sort(item, new WeightComparator<BinItem>());
-		for (int i = 0; i < item.length; i++) 
+		for (int i = 0; i < item.length; i++)
 			itemMap.put(item[i].bin, i);
 	}
 
@@ -145,8 +143,8 @@ public class Binpacking extends Constraint {
 			ArrayList<? extends IntVar> load,
 			int[] w) {
 
-		this(bin.toArray(new IntVar[bin.size()]), 
-				load.toArray(new IntVar[load.size()]), 
+		this(bin.toArray(new IntVar[bin.size()]),
+				load.toArray(new IntVar[load.size()]),
 				w);
 	}
 
@@ -169,7 +167,7 @@ public class Binpacking extends Constraint {
 
 		// Rule "Pack All" -- chcecked only first time
 		if (firstConsistencyCheck) {
-			for (int i = 0; i < item.length; i++) 
+			for (int i = 0; i < item.length; i++)
 				item[i].bin.domain.in(store.level, item[i].bin, minBinNumber, load.length - 1 + minBinNumber);
 
 			firstConsistencyCheck = false;
@@ -179,9 +177,9 @@ public class Binpacking extends Constraint {
 			store.propagationHasOccurred = false;
 
 			// we check bins that changed recently only
-			// it means: 
+			// it means:
 			//      - load[i] variables have changed,
-			//      - item variables have changed (we check both current domain and pruned values) 
+			//      - item variables have changed (we check both current domain and pruned values)
 			IntervalDomain d = new IntervalDomain();
 			while (binQueue.size() != 0 ) {
 				IntVar var = binQueue.removeFirst();
@@ -206,7 +204,7 @@ public class Binpacking extends Constraint {
 					int possible = 0;
 
 					for (BinItem itemEl : item) {
-						//  		    System.out.println (itemEl.bin + " prunned = "+itemEl.bin.dom().recentDomainPruning(store.level));
+						//  		    logger.info (itemEl.bin + " prunned = "+itemEl.bin.dom().recentDomainPruning(store.level));
 
 						if (itemEl.bin.dom().contains(i + minBinNumber)) {
 							possible += itemEl.weight;
@@ -217,24 +215,24 @@ public class Binpacking extends Constraint {
 						}
 					}
 
-					// 		    System.out.println ("load " + i + "  " +required +".."+possible);
+					// 		    logger.info ("load " + i + "  " +required +".."+possible);
 
 					// Rule "Load Maintenance"
 					load[i].domain.in(store.level, load[i], required, possible);
 
-					for (BinItem bi : candidates) 
-						if ( required + bi.weight > load[i].max()) 
+					for (BinItem bi : candidates)
+						if ( required + bi.weight > load[i].max())
 							bi.bin.domain.inComplement(store.level, bi.bin, i + minBinNumber);
-							else if (possible - bi.weight < load[i].min() ) 
+							else if (possible - bi.weight < load[i].min() )
 								bi.bin.domain.in(store.level, bi.bin, i + minBinNumber, i + minBinNumber);
 
 							// Rule 3.2 "Search Pruning"
 							int[] Cj = new int[candidates.size()];
 							int index=0;
-							for (BinItem bi : candidates) 
-								Cj[index++] = bi.weight; 
+							for (BinItem bi : candidates)
+								Cj[index++] = bi.weight;
 
-									if (no_sum(Cj, load[i].min() - required, load[i].max() - required)) 
+									if (no_sum(Cj, load[i].min() - required, load[i].max() - required))
 										throw Store.failException;
 
 									// Rule 3.3 "Tighteing Bounds on Bin Load"
@@ -255,9 +253,9 @@ public class Binpacking extends Constraint {
 										// 				CjMinusI[l++] = candidates.get(k).weight;
 										// 			}
 
-										if (no_sum(CjMinusI, load[i].min() - required - Cj[j], load[i].max() - required - Cj[j])) 
+										if (no_sum(CjMinusI, load[i].min() - required - Cj[j], load[i].max() - required - Cj[j]))
 											candidates.get(j).bin.domain.inComplement(store.level, candidates.get(j).bin, i+minBinNumber);
-										if (no_sum(CjMinusI, load[i].min() - required, load[i].max() - required)) 
+										if (no_sum(CjMinusI, load[i].min() - required, load[i].max() - required))
 											candidates.get(j).bin.domain.in(store.level, candidates.get(j).bin, i+minBinNumber, i+minBinNumber);
 									}
 				}
@@ -271,7 +269,7 @@ public class Binpacking extends Constraint {
 
 			// Rule "Load and Size Coherence"
 			for (int i = 0; i < load.length; i++)
-				load[i].domain.in(store.level, load[i], sizeAllItems - (allCapacityMax - load[i].max()), 
+				load[i].domain.in(store.level, load[i], sizeAllItems - (allCapacityMax - load[i].max()),
 						sizeAllItems - (allCapacityMin - load[i].min()));
 
 
@@ -338,7 +336,7 @@ public class Binpacking extends Constraint {
 			if (a[j] != 0) tmp.add(a[j--]);
 			else j--;
 
-		//   	System.out.println (tmp.size() + "  *** "+ tmp);
+		//   	logger.info (tmp.size() + "  *** "+ tmp);
 		int[] arr = new int[tmp.size()];
 		for (int k = 0; k < tmp.size(); k++)
 			arr[k] = tmp.get(k);
@@ -390,7 +388,7 @@ public class Binpacking extends Constraint {
 		if (itemMap.get(V) != null)
 			itemQueue.add((IntVar)V);
 		else
-			binQueue.add((IntVar)V);	    
+			binQueue.add((IntVar)V);
 	}
 
 	@Override
@@ -441,12 +439,12 @@ public class Binpacking extends Constraint {
 	@Override
 	public void increaseWeight() {
 		if (increaseWeight) {
-			for (BinItem v : item) 
+			for (BinItem v : item)
 				v.bin.weight++;
-					for (Var v : load) 
+					for (Var v : load)
 						v.weight++;
 		}
-	}	
+	}
 
 
 	boolean no_sum(int[] X, int alpha, int beta)  {
@@ -465,11 +463,11 @@ public class Binpacking extends Constraint {
 			sum_c += X[N - kPrime];
 			kPrime += 1;
 		}
-		// 	System.out.println("sum_c = " + sum_c + " k' = " + kPrime);
+		// 	logger.info("sum_c = " + sum_c + " k' = " + kPrime);
 
 		sum_b = X[N - kPrime];
 		while (sum_a < alpha && sum_b <= beta) {
-			// 	    System.out.println(sum_a +" < " +alpha + "  "+sum_b + " <= " + beta);
+			// 	    logger.info(sum_a +" < " +alpha + "  "+sum_b + " <= " + beta);
 			// k += 1;  // error in the original paper? moved after next instruction.
 			sum_a += X[k];
 			k += 1;  // error in the original paper?
@@ -484,8 +482,8 @@ public class Binpacking extends Constraint {
 				}
 			}
 		}
-		// 	System.out.println("k = "+k+" k' = "+kPrime);
-		// 	System.out.println("sum_a = "+sum_a+" sum_b = "+sum_b+" sum_c = "+sum_c) ;
+		// 	logger.info("k = "+k+" k' = "+kPrime);
+		// 	logger.info("sum_a = "+sum_a+" sum_b = "+sum_b+" sum_c = "+sum_c) ;
 
 		alphaP = sum_a + sum_c;
 		betaP = sum_b;

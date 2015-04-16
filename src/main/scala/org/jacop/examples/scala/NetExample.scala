@@ -1,6 +1,8 @@
 package org.jacop.examples.scala
 
 import org.jacop.scala._
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 /**
  * The class Run is used to run test programs for JaCoP package.
@@ -10,6 +12,8 @@ import org.jacop.scala._
  * @version 3.0
  */
 object NetExample extends App with jacop {
+
+  val logger = LoggerFactory.getLogger("NetExample")
 
   var vars: Array[IntVar] = null
   var COST: IntVar = null
@@ -23,7 +27,7 @@ object NetExample extends App with jacop {
 
   def simpleNet() {
     var T1: Long = 0
-    var T2: Long = 0 
+    var T2: Long = 0
     var T: Long = 0
     T1 = System.currentTimeMillis()
 
@@ -73,18 +77,18 @@ object NetExample extends App with jacop {
       vars = x
 
       numberSolutions(3)
-      val Result = minimize_seq(List(search(x.toList, input_order, indomain_min), 
-				 search(List(cost), input_order, indomain_min)), 
+      val Result = minimize_seq(List(search(x.toList, input_order, indomain_min),
+				 search(List(cost), input_order, indomain_min)),
 			    cost,
 			    printCost, printSol )
       statistics()
 
       if (Result) {
-	  System.out.println("*** Yes")
-	  System.out.println (cost)
+	  logger.info("*** Yes")
+	  logger.info(cost.toString)
       }
       else
-	  System.out.println("*** No")
+	  logger.info("*** No")
 
       T2 = System.currentTimeMillis()
       T = T2 - T1
@@ -95,7 +99,7 @@ object NetExample extends App with jacop {
 
     def transportationProblem() {
       var T1: Long = 0
-      var T2: Long = 0 
+      var T2: Long = 0
       var T: Long = 0
       T1 = System.currentTimeMillis()
 
@@ -108,7 +112,7 @@ object NetExample extends App with jacop {
       val D = node("D", 0)
       val E = node("E", 0)
       val F = node("F", 0)
-      
+
 
       val source = node("source", 9)  // should ne 5+3+3=11 but it does not work...
 
@@ -160,29 +164,29 @@ object NetExample extends App with jacop {
 
     vars = x
 
-      val Result = minimize_seq(List(search(x.toList, input_order, indomain_min), 
-				 search(List(cost), input_order, indomain_min)), 
+      val Result = minimize_seq(List(search(x.toList, input_order, indomain_min),
+				 search(List(cost), input_order, indomain_min)),
 			    cost,
 			    printCost, printSol )
 
       statistics()
 
       if (Result) {
-	  System.out.println("*** Yes")
-	  System.out.println (cost)
+	  logger.info("*** Yes")
+	  logger.info (cost.toString)
       }
       else
-	  System.out.println("*** No")
+	  logger.info("*** No")
 
       T2 = System.currentTimeMillis()
       T = T2 - T1
-      System.out.println("\n\t*** Execution time = "+ T + " ms")
+      logger.info("\n\t*** Execution time = "+ T + " ms")
     }
 
     def assignment() {
 
       var T1: Long = 0
-      var T2: Long = 0 
+      var T2: Long = 0
       var T: Long = 0
       T1 = System.currentTimeMillis()
 
@@ -239,23 +243,23 @@ object NetExample extends App with jacop {
       vars = x
 
       // numberSolutions(2)
-      val Result = minimize_seq(List(search(x.toList, input_order, indomain_min), 
-				 search(List(cost), input_order, indomain_min)), 
-			    cost, 
+      val Result = minimize_seq(List(search(x.toList, input_order, indomain_min),
+				 search(List(cost), input_order, indomain_min)),
+			    cost,
 			    printCost, printSol )
 
       statistics()
 
       if (Result) {
-	  System.out.println("*** Yes")
-	  System.out.println (cost)
+	  logger.info("*** Yes")
+	  logger.info (cost.toString)
       }
       else
-	  System.out.println("*** No")
+	  logger.info("*** No")
 
       T2 = System.currentTimeMillis()
       T = T2 - T1
-      System.out.println("\n\t*** Execution time = "+ T + " ms")
+      logger.info("\n\t*** Execution time = "+ T + " ms")
 
     }
 

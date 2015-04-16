@@ -1,9 +1,9 @@
 /**
- *  PplusCeqR.java 
+ *  PplusCeqR.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,49 +31,48 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
+import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-
-import org.jacop.constraints.PrimitiveConstraint;
-import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatIntervalDomain;
+import org.jacop.floats.core.FloatVar;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Constraint P + C #= R
- * 
+ *
  * Bound consistency is used.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class PplusCeqR extends PrimitiveConstraint {
+public class PplusCeqR extends PrimitiveConstraint { private static Logger logger = LoggerFactory.getLogger(PplusCeqR.class);
 
     static int idNumber = 1;
 
     /**
-     * It specifies variable p in constraint p+c=r. 
+     * It specifies variable p in constraint p+c=r.
      */
     public FloatVar p;
 
     /**
-     * It specifies constant c in constraint p+c=r. 
+     * It specifies constant c in constraint p+c=r.
      */
     double c;
 
     /**
-     * It specifies variable r in constraint p+c=r. 
+     * It specifies variable r in constraint p+c=r.
      */
     public FloatVar r;
 
-	
+
     /**
-     * It specifies the arguments required to be saved by an XML format as well as 
+     * It specifies the arguments required to be saved by an XML format as well as
      * the constructor being called to recreate an object from an XML format.
      */
     public static String[] xmlAttributes = {"p", "c", "r"};
@@ -84,7 +83,7 @@ public class PplusCeqR extends PrimitiveConstraint {
      * @param r variable r.
      */
     public PplusCeqR(FloatVar p, double c, FloatVar r) {
-		
+
 	assert (p != null) : "Variable p is null";
 	assert (r != null) : "Variable r is null";
 
@@ -104,12 +103,12 @@ public class PplusCeqR extends PrimitiveConstraint {
 	variables.add(p);
 	variables.add(r);
 	return variables;
-	
+
     }
 
     @Override
     public void consistency(Store store) {
-		
+
 	do {
 	    store.propagationHasOccurred = false;
 
@@ -120,7 +119,7 @@ public class PplusCeqR extends PrimitiveConstraint {
 	    r.domain.in(store.level, r, rDom.min(), rDom.max());
 
 	} while (store.propagationHasOccurred);
-		
+
     }
 
     @Override
@@ -182,9 +181,9 @@ public class PplusCeqR extends PrimitiveConstraint {
 
     @Override
     public void notConsistency(Store store) {
-	
+
 	do {
-			
+
 	    store.propagationHasOccurred = false;
 
 	    if (r.singleton() )
@@ -192,15 +191,15 @@ public class PplusCeqR extends PrimitiveConstraint {
 
 	    if (p.singleton())
 		r.domain.inComplement(store.level, r, p.min() + c);
-			
+
 	} while (store.propagationHasOccurred);
-		
+
     }
 
     @Override
     public boolean notSatisfied() {
 	FloatDomain pDom = p.dom(), rDom = r.dom();
-	return (pDom.max() + c < rDom.min() || 
+	return (pDom.max() + c < rDom.min() ||
 		pDom.min() + c > rDom.max());
     }
 
@@ -213,9 +212,9 @@ public class PplusCeqR extends PrimitiveConstraint {
     @Override
     public boolean satisfied() {
 
-	return (p.singleton() && r.singleton() 
+	return (p.singleton() && r.singleton()
 		&& r.value() - p.value() - c < FloatDomain.epsilon(r.value() - p.value() - c));
-		
+
     }
 
     @Override
@@ -231,21 +230,21 @@ public class PplusCeqR extends PrimitiveConstraint {
 	    r.weight++;
 	}
     }
-			
+
     public FloatVar derivative(Store store, FloatVar f, java.util.Set<FloatVar> vars, FloatVar x) {
 	if (f.equals(r)) {
 	    // f = p + c
-	    // f' = d(p) 
+	    // f' = d(p)
 	    FloatVar v = Derivative.getDerivative(store, p, vars, x);
 	    return v;
-		
+
 	}
 	else if (f.equals(p)) {
 	    // f = r - c
 	    // f' = d(r)
 	    FloatVar v = Derivative.getDerivative(store, r, vars, x);
 	    return v;
-		
+
 	}
 
 	return null;

@@ -1,9 +1,9 @@
 /**
- *  XmulYeqC.java 
+ *  XmulYeqC.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,24 +31,25 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Constraint X * Y #= C
- * 
+ *
  * Boundary consistency is used.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 3.1
  */
 
-public class XmulYeqC extends PrimitiveConstraint {
+public class XmulYeqC extends PrimitiveConstraint { private static Logger logger = LoggerFactory.getLogger(XmulYeqC.class);
 
 	static int IdNumber = 1;
 
@@ -73,7 +74,7 @@ public class XmulYeqC extends PrimitiveConstraint {
 	boolean xSquare = false;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"x", "y", "c"};
@@ -116,19 +117,19 @@ public class XmulYeqC extends PrimitiveConstraint {
 
 		if (xSquare)  // x^2 = c
 			do {
-				
+
 				store.propagationHasOccurred = false;
 
 				if ( c < 0 )
 			    	throw Store.failException;
 
 				double sqrtOfC = Math.sqrt( (double) c);
-				
+
 				if (Math.ceil(sqrtOfC) != Math.floor(sqrtOfC))
 			    	throw Store.failException;
 
 				int value = (int) sqrtOfC;
-				
+
 				IntDomain dom = new IntervalDomain(-value, -value);
 				dom.unionAdapt(value, value);
 
@@ -137,9 +138,9 @@ public class XmulYeqC extends PrimitiveConstraint {
 			} while (store.propagationHasOccurred);
 		else    // X*Y=C
 			do {
-				
+
 				store.propagationHasOccurred = false;
-				
+
 				// Bounds for X
  				IntervalDomain xBounds = IntDomain.divIntBounds(c, c, y.min(), y.max());
 
@@ -157,7 +158,7 @@ public class XmulYeqC extends PrimitiveConstraint {
 				    throw Store.failException;
 
 			} while(store.propagationHasOccurred);
-		
+
 	}
 
 	@Override
@@ -221,9 +222,9 @@ public class XmulYeqC extends PrimitiveConstraint {
 	public void notConsistency(Store store) {
 
 		do {
-			
+
 			store.propagationHasOccurred = false;
-		
+
 			if (x.singleton()) {
 				if (c % x.value() == 0)
 					y.domain.inComplement(store.level, y, c / x.value());
@@ -231,9 +232,9 @@ public class XmulYeqC extends PrimitiveConstraint {
 				if (c % y.value() == 0)
 					x.domain.inComplement(store.level, x, c / y.value());
 			}
-		
+
 		} while(store.propagationHasOccurred);
-		
+
 	}
 
 	@Override
@@ -273,6 +274,6 @@ public class XmulYeqC extends PrimitiveConstraint {
 			x.weight++;
 			y.weight++;
 		}
-	}	
+	}
 
 }

@@ -1,9 +1,9 @@
 /**
- *  FlatzincSolver.java 
+ *  FlatzincSolver.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,15 +31,13 @@
 
 package org.jacop.examples.flatzinc;
 
-import java.util.*;
-
-import org.jacop.core.*;
-import org.jacop.constraints.*;
-import org.jacop.constraints.netflow.*;
-import org.jacop.constraints.netflow.simplex.*;
-import org.jacop.search.*;
-import org.jacop.fz.*;
-
+import org.jacop.core.Store;
+import org.jacop.core.Var;
+import org.jacop.fz.FlatzincLoader;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.SelectChoicePoint;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The class Run is used to run test programs for JaCoP package.
@@ -48,7 +46,8 @@ import org.jacop.fz.*;
  * @author Krzysztof Kuchcinski
  * @version 4.2
  */
-public class FlatzincSolver {
+
+public class FlatzincSolver { private static Logger logger = LoggerFactory.getLogger(FlatzincSolver.class);
     Store store;
 
     public static void main (String args[]) {
@@ -70,18 +69,18 @@ public class FlatzincSolver {
 	    args = new String[2];
 	    args[0] = "-s"; args[1] = "wilkinson.fzn";
     }
-	FlatzincLoader fl = new FlatzincLoader(args); 
+	FlatzincLoader fl = new FlatzincLoader(args);
 	fl.load();
 
 	Store store = fl.getStore();
 
-	// System.out.println (store);
+	// logger.info (store);
 
-	// System.out.println("============================================");
-	// System.out.println(fl.getTables());
-	// System.out.println("============================================");
+	// logger.info("============================================");
+	// logger.info(fl.getTables());
+	// logger.info("============================================");
 
-	System.out.println( "\nIntVar store size: "+ store.size()+
+	logger.info( "\nIntVar store size: "+ store.size()+
 			    "\nNumber of constraints: " + store.numberConstraints()
 			    );
 
@@ -97,20 +96,20 @@ public class FlatzincSolver {
 
 	fl.getSolve().statistics(result);
 
-	// System.out.println(fl.getTables());
+	// logger.info(fl.getTables());
 
-	// System.out.println(fl.getSearch());
+	// logger.info(fl.getSearch());
 
-	// System.out.println("cost: " + fl.getCost());
+	// logger.info("cost: " + fl.getCost());
 
   	if ( result )
-  	    System.out.println("*** Yes");
-	else 
-	    System.out.println("*** No");
+  	    logger.info("*** Yes");
+	else
+	    logger.info("*** No");
 
 	T2 = System.currentTimeMillis();
 	T = T2 - T1;
-	System.out.println("\n\t*** Execution time = "+ T + " ms");
+	logger.info("\n\t*** Execution time = "+ T + " ms");
 
     }
 

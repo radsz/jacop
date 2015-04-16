@@ -1,9 +1,9 @@
 /**
- *  Eq.java 
+ *  Eq.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,27 +32,28 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.core.Domain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.util.SimpleHashSet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Constraint "constraint1" #<=> "constraint2"
- * 
- * 
+ *
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class Eq extends PrimitiveConstraint {
+public class Eq extends PrimitiveConstraint { private static Logger logger = LoggerFactory.getLogger(Eq.class);
 
 	static int counter = 1;
 
 	/**
-	 * It specifies the first constraint which status must be equivalent to the status of the second constraint. 
+	 * It specifies the first constraint which status must be equivalent to the status of the second constraint.
 	 */
 	public PrimitiveConstraint c1;
 
@@ -62,24 +63,24 @@ public class Eq extends PrimitiveConstraint {
 	public PrimitiveConstraint c2;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"c1", "c2"};
 
 	/**
 	 * It constructs equality constraint between two constraints.
-	 * @param c1 the first constraint 
+	 * @param c1 the first constraint
 	 * @param c2 the second constraint
 	 */
 	public Eq(PrimitiveConstraint c1, PrimitiveConstraint c2) {
 
 		assert (c1 != null) : "Constraint c1 is null";
 		assert (c2 != null) : "Constraint c1 is null";
-		
+
 		numberId = counter++;
 		numberArgs = (short) ( c1.numberArgs + c2.numberArgs );
-		
+
 		this.c1 = c1;
 		this.c2 = c2;
 	}
@@ -91,14 +92,14 @@ public class Eq extends PrimitiveConstraint {
 
 		variables.addAll(c1.arguments());
 		variables.addAll(c2.arguments());
-		
+
 		return variables;
 	}
 
 	@Override
 	public void consistency(Store store) {
 
-		// Does not need to loop due to propagation occuring.		
+		// Does not need to loop due to propagation occuring.
 		if (c2.satisfied())
 			c1.consistency(store);
 		else if (c2.notSatisfied())
@@ -108,7 +109,7 @@ public class Eq extends PrimitiveConstraint {
 			c2.consistency(store);
 		else if (c1.notSatisfied())
 			c2.notConsistency(store);
-		
+
 	}
 
 	@Override
@@ -159,12 +160,12 @@ public class Eq extends PrimitiveConstraint {
 				return Domain.NONE;
 			else
 				return eventAcross;
-			
+
 		}
 
 	@Override
 	public int getNotConsistencyPruningEvent(Var var) {
-		
+
 		// If notConsistency function mode
 			if (notConsistencyPruningEvents != null) {
 				Integer possibleEvent = notConsistencyPruningEvents.get(var);
@@ -244,12 +245,12 @@ public class Eq extends PrimitiveConstraint {
 			c1.notConsistency(store);
 		else if (c2.notSatisfied())
 			c1.consistency(store);
-		
+
 		if (c1.satisfied())
 			c2.notConsistency(store);
 		else if (c1.notSatisfied())
 			c2.consistency(store);
-		
+
 
 	}
 
@@ -289,5 +290,5 @@ public class Eq extends PrimitiveConstraint {
 			c2.increaseWeight();
 		}
 	}
-	
+
 }

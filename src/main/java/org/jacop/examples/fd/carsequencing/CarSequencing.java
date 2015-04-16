@@ -1,9 +1,9 @@
 /**
- *  CarSequencing.java 
+ *  CarSequencing.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,12 +31,9 @@
 
 package org.jacop.examples.fd.carsequencing;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.regex.Pattern;
-
+import java.io.*;
+import java.util.*;
+import java.util.regex.*;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.DecomposedConstraint;
@@ -51,16 +48,18 @@ import org.jacop.examples.fd.ExampleFD;
 import org.jacop.util.fsm.FSM;
 import org.jacop.util.fsm.FSMState;
 import org.jacop.util.fsm.FSMTransition;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
+ *
  * It is program to model and solve simple problems of car sequencing problem (CSPLIB-p1).
- * 
+ *
  * @author Radoslaw Szymanek
- * 
+ *
  */
 
-public class CarSequencing extends ExampleFD {
+public class CarSequencing extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(CarSequencing.class);
 
 	/**
 
@@ -69,7 +68,7 @@ public class CarSequencing extends ExampleFD {
 	 * First line: number of cars; number of options; number of classes.
 	 * Second line: for each option, the maximum number of cars with that option in a block.
 	 * Third line: for each option, the block size to which the maximum number refers.
-	 * Then for each class: index no.; no. of cars in this class; for each option, whether or not this class requires it (1 or 0). 
+	 * Then for each class: index no.; no. of cars in this class; for each option, whether or not this class requires it (1 or 0).
 
 	This is the example given in (Dincbas et al., ECAI88):
 
@@ -79,44 +78,44 @@ public class CarSequencing extends ExampleFD {
 	 * A simple car sequencing problem.
 	 */
 	public static String[] problem = {
-		"10 5 6", 
+		"10 5 6",
 		"1 2 1 2 1",
 		"2 3 3 5 5",
-		"0 1 1 0 1 1 0", 
+		"0 1 1 0 1 1 0",
 		"1 1 0 0 0 1 0",
-		"2 2 0 1 0 0 1", 
-		"3 2 0 1 0 1 0", 
-		"4 2 1 0 1 0 0", 
-		"5 2 1 1 0 0 0" 
+		"2 2 0 1 0 0 1",
+		"3 2 0 1 0 1 0",
+		"4 2 1 0 1 0 0",
+		"5 2 1 1 0 0 0"
 	};
 
-	
+
 	/** Not easy car sequencing problem.
 	100 5 22
 	1 2 1 2 1
 	2 3 3 5 5
-	0 6 1 0 0 1 0 
-	1 10 1 1 1 0 0 
-	2 2 1 1 0 0 1 
-	3 2 0 1 1 0 0 
-	4 8 0 0 0 1 0 
-	5 15 0 1 0 0 0 
-	6 1 0 1 1 1 0 
-	7 5 0 0 1 1 0 
-	8 2 1 0 1 1 0 
-	9 3 0 0 1 0 0 
-	10 2 1 0 1 0 0 
-	11 1 1 1 1 0 1 
-	12 8 0 1 0 1 0 
-	13 3 1 0 0 1 1 
-	14 10 1 0 0 0 0 
-	15 4 0 1 0 0 1 
-	16 4 0 0 0 0 1 
-	17 2 1 0 0 0 1 
-	18 4 1 1 0 0 0 
-	19 6 1 1 0 1 0 
-	20 1 1 0 1 0 1 
-	21 1 1 1 1 1 1 
+	0 6 1 0 0 1 0
+	1 10 1 1 1 0 0
+	2 2 1 1 0 0 1
+	3 2 0 1 1 0 0
+	4 8 0 0 0 1 0
+	5 15 0 1 0 0 0
+	6 1 0 1 1 1 0
+	7 5 0 0 1 1 0
+	8 2 1 0 1 1 0
+	9 3 0 0 1 0 0
+	10 2 1 0 1 0 0
+	11 1 1 1 1 0 1
+	12 8 0 1 0 1 0
+	13 3 1 0 0 1 1
+	14 10 1 0 0 0 0
+	15 4 0 1 0 0 1
+	16 4 0 0 0 0 1
+	17 2 1 0 0 0 1
+	18 4 1 1 0 0 0
+	19 6 1 1 0 1 0
+	20 1 1 0 1 0 1
+	21 1 1 1 1 1 1
 	*/
 
 	/**
@@ -132,7 +131,7 @@ public class CarSequencing extends ExampleFD {
 	3 	0 1 0 1 0
 	4 	1 0 1 0 0
 	2 	0 1 0 0 1
-	5 	1 1 0 0 0 
+	5 	1 1 0 0 0
 
 	*/
 
@@ -143,7 +142,7 @@ public class CarSequencing extends ExampleFD {
 	public int noCar;
 
 	/**
-	 * It specifies the no of options in the car sequencing problem. 
+	 * It specifies the no of options in the car sequencing problem.
 	 */
 	public int noOption;
 
@@ -155,7 +154,7 @@ public class CarSequencing extends ExampleFD {
 	/**
 	 * For a given sequence length then can be different maximum number of cars with a given option.
 	 */
-	public int[] maxNoOfCarsPerOption; 
+	public int[] maxNoOfCarsPerOption;
 
 	/**
 	 * The sequence length for which the maximum number restriction is specified.
@@ -168,15 +167,15 @@ public class CarSequencing extends ExampleFD {
 	public int[] noOfCarsPerClass;
 
 	/**
-	 * It specifies if the given class (the first dimension) requires 
-	 * given option (the second dimension). 
+	 * It specifies if the given class (the first dimension) requires
+	 * given option (the second dimension).
 	 */
 	public boolean required[][];
 
 	/**
 	 * It specifies if the slide based decomposition of the regular constraint
-	 * should be applied. This decomposition uses ternary extensional support 
-	 * constraints. It achieves GAC if FSM is deterministic. 
+	 * should be applied. This decomposition uses ternary extensional support
+	 * constraints. It achieves GAC if FSM is deterministic.
 	 */
 	public boolean slideDecomposition = false;
 
@@ -193,8 +192,8 @@ public class CarSequencing extends ExampleFD {
 
 	/**
 	 * It transforms string representation of the problem into an array of ints
-	 * representation. It stores the whole description in the internal attributes. 
-	 * 
+	 * representation. It stores the whole description in the internal attributes.
+	 *
 	 * @param description array of strings representing the problem.
 	 * @param example example in which the passed instance is stored.
 	 */
@@ -212,14 +211,14 @@ public class CarSequencing extends ExampleFD {
 		example.maxNoOfCarsPerOption = new int[example.noOption];
 
 		for (int i = 0; i < result.length; i++)
-			example.maxNoOfCarsPerOption[i] = Integer.valueOf(result[i]); 
+			example.maxNoOfCarsPerOption[i] = Integer.valueOf(result[i]);
 
 		result = pat.split(description[2]);
 
 		example.blockSizePerOption = new int[example.noOption];
 
 		for (int i = 0; i < result.length; i++)
-			example.blockSizePerOption[i] = Integer.valueOf(result[i]); 
+			example.blockSizePerOption[i] = Integer.valueOf(result[i]);
 
 		example.noOfCarsPerClass = new int[example.noClass];
 		example.required = new boolean[example.noClass][example.noOption];
@@ -237,14 +236,14 @@ public class CarSequencing extends ExampleFD {
 				if (Integer.valueOf(result[j]) == 1)
 					example.required[classNo][j-2] = true;
 
-		} 
+		}
 
 	}
 
 
 	/**
 	 * It creates a String representation of the problem being supplied.
-	 * 
+	 *
 	 * @param example example in which the passed instance is stored.
 	 * @return the string representation of the problem instance.
 	 */
@@ -285,7 +284,7 @@ public class CarSequencing extends ExampleFD {
 
 			result[i+3] = resultBuffer.toString();
 
-		}	
+		}
 
 		return result;
 
@@ -437,7 +436,7 @@ public class CarSequencing extends ExampleFD {
 			else
 				union = union.union( ((Regular) constraint).fsm );
 
-		System.out.println("Size +++++++++++ " + union.states.size());
+		logger.info("Size +++++++++++ " + union.states.size());
 
 		store.impose(new Regular(union, cars));
 
@@ -449,7 +448,7 @@ public class CarSequencing extends ExampleFD {
 
 			FSM counter = createFSM(noOfCarsPerClass[i], yes, no);
 
-			System.out.println( counter );
+			logger.info( counter );
 
 		//	store.impose(new Regular(counter, cars));
 
@@ -459,11 +458,11 @@ public class CarSequencing extends ExampleFD {
 				//union = union.concatenation( counter );
 				union = union.union( counter );
 
-			System.out.println("Union +++++++++++ " + union);
+			logger.info("Union +++++++++++ " + union);
 
 		}
 
-		System.out.println(union);
+		logger.info(union);
 
 		store.impose(new Regular(union, cars));
 
@@ -475,7 +474,7 @@ public class CarSequencing extends ExampleFD {
 	 * @param count The number of times a value from yes domain needs to be encountered.
 	 * @param yes the values which are counted.
 	 * @param no the values which are not counted.
-	 * 
+	 *
 	 * @return FSM for simple count constraint.
 	 */
 	public static FSM createFSM(int count, IntervalDomain yes, IntervalDomain no) {
@@ -517,8 +516,8 @@ public class CarSequencing extends ExampleFD {
 
 	/**
 	 * It reads the problem description from the file and returns string representation
-	 * of the problem. 
-	 * 
+	 * of the problem.
+	 *
 	 * @param file the file containing the problem description.
 	 * @return the problem description
 	 */
@@ -526,7 +525,7 @@ public class CarSequencing extends ExampleFD {
 
 		ArrayList<String> result = new ArrayList<String>();
 
-		System.out.println("readFile(" + file + ")");
+		logger.info("readFile(" + file + ")");
 
 		try {
 
@@ -549,7 +548,7 @@ public class CarSequencing extends ExampleFD {
 			inr.close();
 
 		} catch (IOException e) {
-			System.out.println(e);
+			logger.error("error", e);
 		}
 
 		return result.toArray(new String[result.size()]);
@@ -571,13 +570,13 @@ public class CarSequencing extends ExampleFD {
 		String[] description = toStringArray(example);
 
 		for (String line : description)
-			System.out.println(line);
+			logger.info(line);
 
 		example.searchAllAtOnce();
 
-	}	
+	}
 
-	
+
 	/**
 	 * It executes the program to solve car sequencing problem.
 	 * @param args
@@ -593,7 +592,7 @@ public class CarSequencing extends ExampleFD {
 		String[] description = toStringArray(example);
 
 		for (String line : description)
-			System.out.println(line);
+			logger.info(line);
 
 		example.searchAllAtOnce();
 
@@ -604,7 +603,7 @@ public class CarSequencing extends ExampleFD {
 
 		example.searchLDS(3);
 
-	}	
+	}
 
 
 }

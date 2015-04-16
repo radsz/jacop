@@ -1,9 +1,9 @@
 /**
- *  Optimize.java 
+ *  Optimize.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,31 +31,28 @@
 
 package org.jacop.floats.search;
 
+import org.jacop.constraints.Not;
+import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.search.Search;
+import org.jacop.floats.constraints.PlteqC;
+import org.jacop.floats.core.FloatInterval;
+import org.jacop.floats.core.FloatVar;
 import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSolutionListener;
-import org.jacop.constraints.PrimitiveConstraint;
-import org.jacop.constraints.Not;
-
-import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatInterval;
-import org.jacop.floats.search.SplitSelectFloat;
-import org.jacop.floats.constraints.PlteqC;
-import org.jacop.floats.constraints.PgtC;
-
-import java.lang.Double;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implements optimization for floating point varibales
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class Optimize  {
+public class Optimize  { private static Logger logger = LoggerFactory.getLogger(Optimize.class);
 
     Store store;
     DepthFirstSearch search;
@@ -82,7 +79,7 @@ public class Optimize  {
 
 	Var[] sVar = ((SplitSelectFloat)select).searchVariables;
 	variables = new Var[sVar.length];
-	for (int i = 0; i < sVar.length; i++) 
+	for (int i = 0; i < sVar.length; i++)
 	    variables[i] = sVar[i];
 
 	search.setSolutionListener(new ResultListener<Var>(variables));
@@ -102,9 +99,9 @@ public class Optimize  {
 	if (result)
 	    if (lastCost != null) {
 
-		if ( !( lastCost.min() >= cost.min() && lastCost.max() <= cost.max()) ) 
+		if ( !( lastCost.min() >= cost.min() && lastCost.max() <= cost.max()) )
 		    result = search.labeling(store, select);
-		else 
+		else
 		    printLastSolution();
 
 	    }
@@ -113,7 +110,7 @@ public class Optimize  {
 
 	PrimitiveConstraint choice = split.getChoiceConstraint(0);
 
-	if (choice == null) 
+	if (choice == null)
 	    return true;
 
 	double selValue = ((PlteqC)choice).c;
@@ -125,9 +122,9 @@ public class Optimize  {
 	if (result) {
 
 	    if (printInfo) {
-		    System.out.println ("% Current cost bounds: " + cost + "\n----------");
+		    logger.info("% Current cost bounds: " + cost + "\n----------");
 		    FloatInterval f = new FloatInterval(cost.min(), ((PlteqC)choice).c);
-		    System.out.println ("% Checking interval " + f);
+		    logger.info("% Checking interval " + f);
 	    }
 
 		store.impose(choice);
@@ -143,10 +140,10 @@ public class Optimize  {
 		else {
 
 		    if (printInfo) {
-			System.out.println("% No solution");
+			logger.info("% No solution");
 
 			FloatInterval f = new FloatInterval(org.jacop.floats.core.FloatDomain.next(((PlteqC)choice).c), cost.max());
-			System.out.println ("% Checking interval " + f);
+			logger.info("% Checking interval " + f);
 		    }
 
 		    store.impose(new Not(choice));
@@ -159,7 +156,7 @@ public class Optimize  {
 		}
 	}
 	else {
-	    // System.out.println ("Level = " + store.level + ", FAIL");
+	    // logger.info ("Level = " + store.level + ", FAIL");
 
 	    store.removeLevel(store.level);
 	    store.setLevel(store.level-1);
@@ -170,14 +167,14 @@ public class Optimize  {
 
     void printLastSolution() {
 
-	System.out.print("[");
+	logger.info("[");
 	for (int i = 0; i < lastVarValues.length; i++) {
-	    System.out.print(variables[i].id() + " = " + lastVarValues[i]);
+	    logger.info(variables[i].id() + " = " + lastVarValues[i]);
 	    if (i < lastVarValues.length - 1)
-		System.out.print(", ");
+		logger.info(", ");
 	}
-	System.out.println("]");
-	System.out.println ("% Solution with cost " + cost.id() + "::{" + lastCost + "}");
+	logger.info("]");
+	logger.info("% Solution with cost " + cost.id() + "::{" + lastCost + "}");
 
     }
 
@@ -189,7 +186,7 @@ public class Optimize  {
 	return lastVarValues;
     }
 
-    public class ResultListener<T extends Var> extends SimpleSolutionListener<T> {
+    public class ResultListener<T extends Var> extends SimpleSolutionListener<T> { private Logger logger = LoggerFactory.getLogger(ResultListener.class);
 
 	Var[] var;
 
@@ -203,8 +200,8 @@ public class Optimize  {
 
 	    costValue = cost.max();
 
-	    System.out.println (java.util.Arrays.asList(var));
-	    System.out.println ("% Found solution with cost " + cost);
+	    logger.info(java.util.Arrays.asList(var).toString());
+	    logger.info("% Found solution with cost " + cost);
 
 	    lastCost = new FloatInterval(cost.min(), cost.max());
 	    for (int i=0; i < variables.length; i++) {

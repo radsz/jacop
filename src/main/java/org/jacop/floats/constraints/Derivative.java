@@ -1,9 +1,9 @@
 /**
- *  Derivative.java 
+ *  Derivative.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,26 +32,23 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.Set;
-import java.util.HashSet;
-import java.util.HashMap;
-import java.util.Stack;
-import java.util.ArrayList;
-
+import java.util.*;
+import org.jacop.constraints.Constraint;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatVar;
-import org.jacop.constraints.Constraint;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Derivative for float constraints
- * 
+ *
  * The derivative of f with respect to x
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class Derivative {
+public class Derivative { private static Logger logger = LoggerFactory.getLogger(Derivative.class);
 
     public final static double MIN_FLOAT = -1e+150;
     public final static double MAX_FLOAT =  1e+150;
@@ -67,7 +64,7 @@ public class Derivative {
     // static FloatVar zero;
     // static FloatVar one;
 
-    public static void init(Store s) {	
+    public static void init(Store s) {
 	store = s;
 
 	// zero = new FloatVar(store, 0.0, 0.0);
@@ -80,7 +77,7 @@ public class Derivative {
 
     public final static FloatVar getDerivative(Store store, FloatVar f, Set<FloatVar> vars, FloatVar x) {
 
-	// System.out.println ("Var = " + f);
+	// logger.info ("Var = " + f);
 
 	ArrayList<Constraint> constraints = new ArrayList<Constraint>();
 
@@ -89,15 +86,15 @@ public class Derivative {
 	else if (vars.contains(f))
 	    return new FloatVar(store, 0.0, 0.0);
 	else
-	    for (int i = 0; i < f.dom().modelConstraints.length; i++) 
+	    for (int i = 0; i < f.dom().modelConstraints.length; i++)
 		if  (f.dom().modelConstraints[i] != null)
 		    for (int j = 0; j < f.dom().modelConstraints[i].length; j++) {
 			if (f.dom().modelConstraints[i][j] != null) {
 
 			    Constraint currentConstraint = f.dom().modelConstraints[i][j];
 			    if ( eval.search(currentConstraint) == -1 ) {
-				
-				// System.out.println ("["+i+"]["+j+"]" + f.dom().modelConstraints[i][j]);
+
+				// logger.info ("["+i+"]["+j+"]" + f.dom().modelConstraints[i][j]);
 
 				if ( ! derivateConstraints.contains(currentConstraint))
 				    constraints.add(currentConstraint);
@@ -111,7 +108,7 @@ public class Derivative {
 
 	    Constraint currentConstraint = constraints.get(0);
 
-	    // System.out.println ("Evaluate " + currentConstraint);
+	    // logger.info ("Evaluate " + currentConstraint);
 
 	    eval.push(currentConstraint);
 	    FloatVar v = currentConstraint.derivative(store, f, vars, x);
@@ -133,7 +130,7 @@ public class Derivative {
 		return v;
 	    }
 
-	    System.out.println ("!!! " + constraints.size() + " constraints define a function for variable " + f + "\n" + constraints);
+	    logger.info ("!!! " + constraints.size() + " constraints define a function for variable " + f + "\n" + constraints);
 	    System.exit(0);
 	    return null;
 	}
@@ -141,7 +138,7 @@ public class Derivative {
 
     final static void poseDerivativeConstraint(Constraint c) {
 
-	// System.out.println (c);
+	// logger.info (c);
 
 	store.impose(c);
 
@@ -152,7 +149,7 @@ public class Derivative {
 
 	// resolve based on definitions given by a programmer
 	Constraint c =  definitionConstraint.get(f);
-	
+
 	// if there is no definition use heuristic to resolve it
 	// basically we look for a constraint on a list of possibel constraints
 	// that has output equal variable defining the function
@@ -185,7 +182,7 @@ public class Derivative {
 		}
 		else if (cc instanceof LinearFloat) {
 		    if ( ((LinearFloat)cc).relationType == LinearFloat.eq) {
-			double[] ws = ((LinearFloat)cc).weights;		    
+			double[] ws = ((LinearFloat)cc).weights;
 			FloatVar[] ls = ((LinearFloat)cc).list;
 			for (int i=0; i<ls.length; i++) {
 			    if (f.equals(ls[i]) && ws[i] == -1.0)

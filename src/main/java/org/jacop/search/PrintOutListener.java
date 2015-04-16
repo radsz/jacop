@@ -1,9 +1,9 @@
 /**
- *  PrintOutListener.java 
+ *  PrintOutListener.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,15 +32,18 @@
 package org.jacop.search;
 
 /**
- * It is a simple example how it is possible to extend existing listeners to 
+ * It is a simple example how it is possible to extend existing listeners to
  * add your own functionality.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  */
-import org.jacop.core.Var;
 
-public class PrintOutListener<T extends Var> extends SimpleSolutionListener<T> implements SolutionListener<T> {
+import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class PrintOutListener<T extends Var> extends SimpleSolutionListener<T> implements SolutionListener<T> { private static Logger logger = LoggerFactory.getLogger(PrintOutListener.class);
 
 	/**
 	 * It is executed right after consistency of the current search node. The
@@ -51,12 +54,12 @@ public class PrintOutListener<T extends Var> extends SimpleSolutionListener<T> i
 	public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
 
 		boolean parent = super.executeAfterSolution(search, select);
-	
+
 		StringBuffer buf = new StringBuffer("\n");
 
 		if (search.getCostVariable() != null)
 			buf.append("Solution cost " + search.getCostVariable() + "\n");
-		
+
 		if (noSolutions > 1) {
 			buf.append("No of solutions : " + noSolutions);
 			buf.append("\nLast Solution : [");
@@ -64,10 +67,10 @@ public class PrintOutListener<T extends Var> extends SimpleSolutionListener<T> i
 			buf.append("\nSolution : [");
 
 		int solutionIndex = 0;
-		
+
 		if (recordSolutions)
 			solutionIndex = noSolutions - 1;
-		
+
 		if (vars != null)
 			for (int i = 0; i < vars.length; i++) {
 				buf.append(vars[i].id()).append("=").append(
@@ -78,10 +81,10 @@ public class PrintOutListener<T extends Var> extends SimpleSolutionListener<T> i
 
 		buf.append("]\n");
 
-		System.out.println(buf.toString());
-		
+		logger.info(buf.toString());
+
 		return parent;
-		
+
 	}
 
 

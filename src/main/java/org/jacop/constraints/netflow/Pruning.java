@@ -1,9 +1,9 @@
 /**
- *  Pruning.java 
+ *  Pruning.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,13 +31,7 @@
 
 package org.jacop.constraints.netflow;
 
-import static org.jacop.constraints.netflow.Assert.checkFlow;
-import static org.jacop.constraints.netflow.Assert.checkStructure;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.PriorityQueue;
-
+import java.util.*;
 import org.jacop.constraints.netflow.DomainStructure.Behavior;
 import org.jacop.constraints.netflow.simplex.Arc;
 import org.jacop.constraints.netflow.simplex.Node;
@@ -46,15 +40,19 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import static org.jacop.constraints.netflow.Assert.*;
 
 /**
- * 
+ *
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.2
- * 
+ *
  */
 
-public class Pruning extends Network {
+public class Pruning extends Network { private static Logger logger = LoggerFactory.getLogger(Pruning.class);
 
 	// whether to count success rates, etc..
 	private static final boolean DO_INSTRUMENTATION = false;
@@ -72,7 +70,7 @@ public class Pruning extends Network {
 	private static final int FAIL_SCORE = 2;
 
 	interface PruningStrategy {
-		
+
 		void init();
 
 		ArcCompanion next();
@@ -95,10 +93,10 @@ public class Pruning extends Network {
 	// + "  (" + z + ")";
 	// }
 
-	public class PercentStrategy implements PruningStrategy {
-	
+	public class PercentStrategy implements PruningStrategy { private Logger logger = LoggerFactory.getLogger(PercentStrategy.class);
+
 		ArrayList<ArcCompanion> seen = new ArrayList<ArcCompanion>();
-		
+
 		int i;
 		final double percentage;
 		int limit;
@@ -150,7 +148,7 @@ public class Pruning extends Network {
 	public Pruning(List<Node> nodes, List<Arc> arcs) {
 
 		super(nodes, arcs);
-		
+
 		this.queue = new PriorityQueue<ArcCompanion>();
 		this.strategy = new PercentStrategy(P_ATTEMPT_PRUNING, MIN_NUM_PRUNING);
 
@@ -164,7 +162,7 @@ public class Pruning extends Network {
 	}
 
 	private void xVarInMax(ArcCompanion companion, int maxFlow) {
-		
+
 		IntVar xVar = companion.xVar;
 		int sizeBefore;
 		if (DO_INSTRUMENTATION) {
@@ -185,7 +183,7 @@ public class Pruning extends Network {
 	}
 
 	private void xVarInMin(ArcCompanion companion, int minFlow) {
-		
+
 		IntVar xVar = companion.xVar;
 		int sizeBefore;
 		if (DO_INSTRUMENTATION) {
@@ -307,7 +305,7 @@ public class Pruning extends Network {
 					nVarIn(companion, flow, flow);
 				}
 			} else if (node.degree == 2) {
-				
+
 				Arc arc1 = node.adjacencyList[0];
 				Arc arc2 = node.adjacencyList[1];
 
@@ -318,7 +316,7 @@ public class Pruning extends Network {
 
 					boolean differentDir;
 					int shift = -companion1.flowOffset;
-					
+
 					if (arc1.head == node) {
 						differentDir = (arc2.head != node);
 						shift += node.balance;
@@ -326,7 +324,7 @@ public class Pruning extends Network {
 						differentDir = (arc2.head == node);
 						shift -= node.balance;
 					}
-					
+
 					if (differentDir) {
 						shift += companion2.flowOffset;
 					} else {
@@ -348,7 +346,7 @@ public class Pruning extends Network {
 									- xDom.leftElement(i)));
 
 						nVarInShift(companion2, yDomIn, 0);
-						
+
 						IntDomain yDom = xVar2.domain;
 						IntervalDomain xDomIn = new IntervalDomain(yDom.noIntervals() + 1);
 						for (int i = yDom.noIntervals() - 1; i >= 0; i--)
@@ -364,12 +362,12 @@ public class Pruning extends Network {
 	}
 
 	public void analyze(int costLimit) {
-		
+
 		ArcCompanion companion, prev = null;
 		strategy.init();
 
 		companion = strategy.next();
-		
+
 		if (DO_INSTRUMENTATION) {
 			if (companion != null) {
 				Statistics.XVARS.maxScoreSum += companion.pruningScore;
@@ -529,15 +527,15 @@ public class Pruning extends Network {
 		 * (flowAtMaxWeight != baseFlow || !arc.forward) { // if
 		 * (flowAtMaxWeight > baseFlow && arc.forward) { // int max = wVar.min()
 		 * + maxWeight; // wVar.domain.inMax(store.level, wVar, max); //
-		 * System.out.println("LOL"); // } if (flowAtMaxWeight > baseFlow &&
+		 * logger.info("LOL"); // } if (flowAtMaxWeight > baseFlow &&
 		 * !arc.forward) { int max = wVar.min() + maxWeight;
-		 * wVar.domain.inMax(store.level, wVar, max); System.out.println("LOL");
+		 * wVar.domain.inMax(store.level, wVar, max); logger.info("LOL");
 		 * } }
 		 */
 
 		arc.addFlow(flow);
 		// if (SHOW_ANALYSIS && getStoreLevel() >= 5)
-		// System.out.println("New flow " + arc);
+		// logger.info("New flow " + arc);
 
 		return flow;
 	}
@@ -552,7 +550,7 @@ public class Pruning extends Network {
 			if (companion.xVar != null) {
 				int maxFlow = companion.flowOffset + residual;
 
-				// System.out.println(level + ": " + companion.xVar
+				// logger.info(level + ": " + companion.xVar
 				// + " prune max to " + maxFlow);
 				// companion.xVar.domain.inMax(level, companion.xVar, maxFlow);
 				xVarInMax(companion, maxFlow);
@@ -574,7 +572,7 @@ public class Pruning extends Network {
 			if (companion.xVar != null) {
 				int minFlow = companion.flowOffset + capacity;
 
-				// System.out.println(level + ": " + companion.xVar
+				// logger.info(level + ": " + companion.xVar
 				// + " prune min to " + minFlow);
 				// companion.xVar.domain.inMin(level, companion.xVar, minFlow);
 				xVarInMin(companion, minFlow);

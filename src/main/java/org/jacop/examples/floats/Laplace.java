@@ -1,9 +1,9 @@
 /**
- *  Laplace.java 
+ *  Laplace.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,34 +32,34 @@
 package org.jacop.examples.floats;
 
 /**
- * 
- * 
+ *
+ *
  * From the CLP(R) laplace example:
- * 
+ *
  * Solves the Dirichlet problem for Laplace's equation using
- * Leibman's five-point finite-difference approximation. 
- * 
+ * Leibman's five-point finite-difference approximation.
+ *
  * Based on minizinc program written by Håkan Kjellerstrand
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * 
+ *
  */
 
 import org.jacop.core.Store;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.PrintOutListener;
-
-import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.constraints.LinearFloat;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.search.DepthFirstSearch;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class Laplace {
+public class Laplace { private static Logger logger = LoggerFactory.getLogger(Laplace.class);
 
     void laplace() {
 
-	System.out.println ("========= laplace =========");
-	System.out.println ("Solves the Dirichlet problem for Laplace's equation using\nLeibman's five-point finite-difference approximation");
+	logger.info("========= laplace =========");
+	logger.info("Solves the Dirichlet problem for Laplace's equation using\nLeibman's five-point finite-difference approximation");
 
 	Store store = new Store();
 
@@ -68,13 +68,13 @@ public class Laplace {
 	int r = 10;
 	int c = 10;
 
-	
-	double Z = 0.0; 
-	double M = 100.0; 
+
+	double Z = 0.0;
+	double M = 100.0;
 
 	FloatVar[][] x = new FloatVar[r+1][c+1];
 
-	for (int i = 0; i < r+1; i++) 
+	for (int i = 0; i < r+1; i++)
 	    for (int j = 0; j < c+1; j++)
 		if (i == 0)
 		    x[i][j] = new FloatVar(store, "r["+i+"]["+j+"]", Z, Z);
@@ -83,7 +83,7 @@ public class Laplace {
 		else
 		    x[i][j] = new FloatVar(store, "r["+i+"]["+j+"]", Z, M);
 
-	for (int i = 1; i < r; i++) 
+	for (int i = 1; i < r; i++)
 	    for (int j = 1; j < c; j++)
 		store.impose(new LinearFloat(store, new FloatVar[] {x[i][j], x[i-1][j], x[i][j-1], x[i+1][j], x[i][j+1]},
 					     new double[] {-4.0, 1.0, 1.0, 1.0, 1.0}, "==", 0.0));
@@ -91,7 +91,7 @@ public class Laplace {
 
 	FloatVar[] xs = new FloatVar[(r+1)*(c+1)];
 	int n = 0;
-	for (int i = 0; i < r+1; i++) 
+	for (int i = 0; i < r+1; i++)
 	    for (int j = 0; j < c+1; j++)
 		xs[n++] = x[i][j];
 
@@ -107,27 +107,27 @@ public class Laplace {
 
 	for (int i = 0; i < r+1; i++) {
 	    for (int j = 0; j < c+1; j++)
-		System.out.printf ("%.2f\t", x[i][j].value());
-	    System.out.println ();
+		logger.info(String.format("%.2f\t", x[i][j].value()));
+	    logger.info("");
 	}
 
-	System.out.println ();
-	System.out.println ("Precision = " + FloatDomain.precision());
+	logger.info("");
+	logger.info("Precision = " + FloatDomain.precision());
 
     }
-	
+
     /**
-     * It executes the program which computes warm distribution. 
-     * 
+     * It executes the program which computes warm distribution.
+     *
      * @param args no arguments
      */
     public static void main(String args[]) {
-		
+
 	Laplace example = new Laplace();
 
 	example.laplace();
 
-    }			
+    }
 
 
 }

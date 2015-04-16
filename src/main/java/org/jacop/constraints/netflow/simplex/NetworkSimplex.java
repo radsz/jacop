@@ -1,9 +1,9 @@
 /**
- *  NetworkSimplex.java 
+ *  NetworkSimplex.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,30 +31,22 @@
 
 package org.jacop.constraints.netflow.simplex;
 
-import static org.jacop.constraints.netflow.Assert.checkBeforeUpdate;
-import static org.jacop.constraints.netflow.Assert.checkFlow;
-import static org.jacop.constraints.netflow.Assert.checkInfeasibleNodes;
-import static org.jacop.constraints.netflow.Assert.checkOptimality;
-import static org.jacop.constraints.netflow.Assert.checkStructure;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-
+import java.util.*;
 import org.jacop.constraints.netflow.Pruning;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import static org.jacop.constraints.netflow.Assert.*;
 
 /**
  *
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.2
- * 
+ *
  */
 
-public class NetworkSimplex {
-	
+public class NetworkSimplex { private static Logger logger = LoggerFactory.getLogger(NetworkSimplex.class);
+
 	public static final boolean DEBUG = false;// true;
 	public static final boolean DEBUG_ALL = true & DEBUG;
 	public static final int LARGE_COST = 100000;// 1 << 29; // or 28 ?
@@ -62,7 +54,7 @@ public class NetworkSimplex {
 	public static final int TREE_ARC = -1;
 //	public static final int OTHER_ARC = -2;
 	public static final int DELETED_ARC = -3;
-	
+
 	// 'nodes' does NOT contain the root
 	// 'lower' is the list of arcs at their lower bound
 	// lower[*].sister is the list of arcs at their upper bound
@@ -73,17 +65,17 @@ public class NetworkSimplex {
 
 	// second 'return' value of augmentFlow method
 	public Arc blocking;
-	
+
 	protected final PivotRule pivotRule;
-	
-	// the set of nodes with non-zero balance 
+
+	// the set of nodes with non-zero balance
 	public final Set<Node> infeasibleNodes;
-	
+
 	// TODO convenience or overhead ?
 	public final List<Arc> allArcs;
 
 	public NetworkSimplex(List<Node> nodes, List<Arc> arcs) {
-		
+
 		this.allArcs = new ArrayList<Arc>(arcs);
 
 		this.nodes = nodes.toArray(new Node[nodes.size()]);
@@ -125,18 +117,18 @@ public class NetworkSimplex {
 			// arc.index = arc.sister.index = -1;
 			// allArcsForDebug.add(arc);
 			// }
-			
+
 			// register infeasible nodes
 			if (node.deltaBalance != 0) {
 				infeasibleNodes.add(node);
 			}
 		}
-		
+
 		root.thread = nextOnThread;
 		root.potential = 0;
 		root.depth = 0;
 		root.computePotentials();
-		
+
 		// Initialize adjacency counter
 		for (Arc arc : allArcs) {
 			incrementDegree(arc.head, arc);
@@ -146,25 +138,25 @@ public class NetworkSimplex {
 		assert (checkFlow(this));
 		assert (checkStructure(this));
 	}
-	
+
 	private void incrementDegree(Node node, Arc myArc) {
-//		System.out.println("INCR " + node.name);
-		
+//		logger.info("INCR " + node.name);
+
 		// TODO, CRUCIAL, BUG?, assert removed.
 		//	assert(node != root);
-		
+
 		if (node.degree < 2) {
 			node.adjacencyList[node.degree] = myArc.forward ? myArc : myArc.sister;
 		}
-	
+
 		node.degree++;
-	
+
 	}
-	
+
 	private void decrementDegree(Node node) {
-//		System.out.println("DECR " + node.name);
+//		logger.info("DECR " + node.name);
 		assert(node != root);
-		
+
 		node.degree--;
 		// build adjacency list
 		if (node.degree == 2) {
@@ -179,23 +171,23 @@ public class NetworkSimplex {
 		}
 		// update adjacency list
 		if (node.degree < 2) {
-//			System.out.println( node + "\n" + node.degree + ": " + Arrays.toString(node.adjacencyList) );
-			
-			Arc arc = node.adjacencyList[0]; 
+//			logger.info( node + "\n" + node.degree + ": " + Arrays.toString(node.adjacencyList) );
+
+			Arc arc = node.adjacencyList[0];
 			if (arc != null && arc.index == DELETED_ARC) {
 				node.adjacencyList[0] = node.adjacencyList[1];
 				node.adjacencyList[1] = null;
 			}
-			
-			arc = node.adjacencyList[1]; 
+
+			arc = node.adjacencyList[1];
 			if (arc != null && arc.index == DELETED_ARC)
 				node.adjacencyList[1] = null;
-			
+
 			assert(
 					(node.degree == 1 && ((node.adjacencyList[0] == null) ^ (node.adjacencyList[1] == null)))
 					||
 					(node.degree == 0 && ((node.adjacencyList[0] == null) && (node.adjacencyList[1] == null)))
-					
+
 					) : node + "\n" + node.degree + ": " + Arrays.toString(node.adjacencyList);
 		}
 	}
@@ -215,16 +207,16 @@ public class NetworkSimplex {
 			lower[index] = arc;
 			assert (arc.sister.capacity == 0);
 		}
-		
+
 		if (arc.companion != null) {
 			((Pruning)this).numActiveArcs++;
 		}
-		
+
 		incrementDegree(arc.head, arc);
 		incrementDegree(arc.tail(), arc);
-//		System.out.println(numArcs+"  Added : " + arc);
+//		logger.info(numArcs+"  Added : " + arc);
 	}
-	
+
 	public void addArcWithFlow(Arc arc) {
 		assert (arc.index == DELETED_ARC) : arc;
 		int index = numArcs++;
@@ -235,22 +227,22 @@ public class NetworkSimplex {
 		} else {
 			// arc at lower bound
 			lower[index] = arc;
-			
+
 			if (arc.sister.capacity > 0) {
 				primalStep(arc.sister);
 			}
 			assert (arc.sister.capacity == 0 || arc.index == TREE_ARC);
 		}
-		
+
 		if (arc.companion != null) {
 			((Pruning)this).numActiveArcs++;
 		}
-		
+
 		incrementDegree(arc.head, arc);
 		incrementDegree(arc.tail(), arc);
-//		System.out.println(numArcs+"  Added2 : " + arc);
+//		logger.info(numArcs+"  Added2 : " + arc);
 	}
-	
+
 	public void removeArc(Arc arc) {
 		// Remove arc from graph
 		int index = arc.index;
@@ -262,21 +254,21 @@ public class NetworkSimplex {
 		}
 		lower[numArcs] = null;
 		arc.index = arc.sister.index = DELETED_ARC;
-		
+
 		if (arc.companion != null) {
 			((Pruning)this).numActiveArcs--;
 		}
-		
+
 		decrementDegree(arc.head);
 		decrementDegree(arc.tail());
-//		System.out.println(numArcs+"  Removed : " + arc);
+//		logger.info(numArcs+"  Removed : " + arc);
 	}
-	
+
 	/****************************/
 	/** Primal Network Simplex **/
 
 	/**
-	 * 
+	 *
 	 * @param maxPivots
 	 * @return the number of pivots performed until optimality was reached, or
 	 *         -1 if the maximum number of pivots was reached.
@@ -335,16 +327,16 @@ public class NetworkSimplex {
 			pivots++;
 		}
 
-		// System.out.println("----");
+		// logger.info("----");
 		// print();
-		// System.out.println("*****");
+		// logger.info("*****");
 
 		// clear artificial arcs
 		boolean failure = false;
 		it = infeasibleNodes.iterator();
 		while (it.hasNext()) {
 			Node node = it.next();
-			
+
 			// Determine feasibility
 			Arc arc = node.artificial;
 			int delta = node.deltaBalance;
@@ -380,11 +372,11 @@ public class NetworkSimplex {
 
 		if (DEBUG) {
 			if (pivots == -1)
-				System.out.println("Abort after " + maxPivots + " iterations");
+				logger.info("Abort after " + maxPivots + " iterations");
 			else if (failure)
-				System.out.println("Failure after " + pivots + " iterations");
+				logger.info("Failure after " + pivots + " iterations");
 			else
-				System.out.println(pivots + " iterations (" + numArcs
+				logger.info(pivots + " iterations (" + numArcs
 						+ " arcs)");
 		}
 		if (failure && pivots != -1)
@@ -394,7 +386,7 @@ public class NetworkSimplex {
 
 	/**
 	 * Performs a primal pivot.
-	 * 
+	 *
 	 * @param entering
 	 *            a non-tree arc that violates optimality
 	 */
@@ -412,10 +404,10 @@ public class NetworkSimplex {
 		Arc leaving = this.blocking;
 
 		if (DEBUG_ALL) {
-			System.out.println("Entering: " + entering);
-			System.out.println("Leaving : " + leaving);
-			System.out.println("Delta   : " + delta);
-			System.out.println();
+			logger.info("Entering: " + entering);
+			logger.info("Leaving : " + leaving);
+			logger.info("Delta   : " + delta);
+			logger.info("\n");
 		}
 
 		// update tree
@@ -432,7 +424,7 @@ public class NetworkSimplex {
 	/**
 	 * Augments the flow between two nodes by the maximum amount along the
 	 * unique tree path that connects these nodes.
-	 * 
+	 *
 	 * @param from
 	 *            the source of the flow
 	 * @param to
@@ -481,10 +473,10 @@ public class NetworkSimplex {
 
 	/**
 	 * TODO prove (or disprove) correctness (and efficiency)
-	 * 
+	 *
 	 * Both arcs must form a cycle in the tree and point in the same direction
 	 * on that cycle.
-	 * 
+	 *
 	 * @param leaving
 	 *            the tree arc that leaves the tree
 	 * @param entering
@@ -504,8 +496,8 @@ public class NetworkSimplex {
 		Node newParent = entering.head;
 
 		if (DEBUG) {
-			System.out.println("leaving  = " + leaving);
-			System.out.println("entering = " + entering);
+			logger.info("leaving  = " + leaving);
+			logger.info("entering = " + entering);
 		}
 
 		assert (checkBeforeUpdate(leaving, entering));
@@ -537,12 +529,12 @@ public class NetworkSimplex {
 			lower[index] = leaving.sister;
 		} else {
 			// here: leaving.sister.capacity == 0;
-			
-//			System.out.println("Leaving  : " + leaving);
-//			System.out.println("Entering : " + entering);
-//			System.out.println(leaving == entering);
+
+//			logger.info("Leaving  : " + leaving);
+//			logger.info("Entering : " + entering);
+//			logger.info(leaving == entering);
 //			assert (leaving.sister.capacity == 0);
-			
+
 			lower[index] = leaving;
 		}
 		leaving.index = index;
@@ -556,16 +548,16 @@ public class NetworkSimplex {
 
 	/**
 	 * TODO prove (or disprove) correctness
-	 * 
+	 *
 	 * TODO can be 'inlined' in updateTree (but that would decrease readability)
-	 * 
+	 *
 	 * Changes the parent of a node and updates the thread data structure (This
 	 * operation invalidates the depth values in the subtree)
-	 * 
+	 *
 	 * Runs in O(T2) amortized time over all treeSwaps performed by an
 	 * updateTree operation where T2 is the size of the subtree that is being
 	 * reversed.
-	 * 
+	 *
 	 * @param a
 	 *            the old parent of a
 	 * @param b
@@ -595,11 +587,11 @@ public class NetworkSimplex {
 	 * Given an optimal flow that satisfies all feasibility constraints except
 	 * mass balance on two nodes, the parametric simplex algorithm tries to
 	 * achieve feasibility while keeping the solution optimal.
-	 * 
+	 *
 	 * TODO do more tests TODO test whether non-feasibility can actually be
 	 * detected due to the fact that we have 'artificial' arcs going to the
 	 * root.
-	 * 
+	 *
 	 * @param source
 	 * @param sink
 	 * @param balance
@@ -628,7 +620,7 @@ public class NetworkSimplex {
 			// stop when limit is reached
 			if (pivots >= maxPivots) {
 				if (DEBUG)
-					System.out.println("Abort after " + pivots + " iterations");
+					logger.info("Abort after " + pivots + " iterations");
 				return -1;
 			}
 
@@ -643,7 +635,7 @@ public class NetworkSimplex {
 			balance -= augmentFlow(source, sink, balance);
 		}
 		if (DEBUG)
-			System.out.println(pivots + " iterations");
+			logger.info(pivots + " iterations");
 		return pivots;
 	}
 
@@ -667,9 +659,9 @@ public class NetworkSimplex {
 			Arc arc = lower[i];
 //			if (arc.isInCut(forward)) {// && arc.capacity > 0) {
 			if (arc.capacity > 0 && arc.isInCut(forward)) {
-				
+
 				assert(arc.capacity > 0) : "" + arc;
-				
+
 				int reducedCost = arc.reducedCost();
 				if (minimumCost > reducedCost) {
 					minimumCost = reducedCost;
@@ -683,10 +675,10 @@ public class NetworkSimplex {
 		if (entering == null) {
 			return false; // infeasible
 		} else {
-//			System.out.println(".Leaving  : " + leaving);
-//			System.out.println(".Entering : " + entering);
-//			System.out.println(leaving.sister == entering);
-			
+//			logger.info(".Leaving  : " + leaving);
+//			logger.info(".Entering : " + entering);
+//			logger.info(leaving.sister == entering);
+
 			updateTree(leaving.sister, entering);
 			return true;
 		}
@@ -709,37 +701,37 @@ public class NetworkSimplex {
 			if (cost >= cutoff) {
 //				throw Store.failException;
 				return cutoff;
-			} 
+			}
 		}
 		return cost;
 	}
-	
+
 	/***********/
 	/** Debug **/
 
 	// displays the state of the spanning tree and the flow
 	public void print() {
-	
-		System.out.println("Nodes:");
+
+		logger.info("Nodes:");
 		for (Node n : nodes) {
-			System.out.println("\t" + n);
+			logger.info("\t" + n);
 		}
-		
-		System.out.println("Arcs:");
-		
+
+		logger.info("Arcs:");
+
 		for (Arc a : allArcs) {
-			System.out.println("\t" + a);
+			logger.info("\t" + a);
 		}
-		
-		System.out.println("Tree:");
-		
+
+		logger.info("Tree:");
+
 		for (Node i = root;; i = i.thread) {
-			System.out.println("\t" + i + "\t\t" + i.toParent);
+			logger.info("\t" + i + "\t\t" + i.toParent);
 			if (i.thread == root)
 				break;
 		}
-		
-		System.out.println("Flow");
+
+		logger.info("Flow");
 		int cost = 0;
 		for (Arc a : allArcs) {
 			if (!a.forward)
@@ -750,11 +742,11 @@ public class NetworkSimplex {
 				flow += a.companion.flowOffset;
 
 			if (flow > 0) {
-				System.out.println(flow + "\t" + a.toFlow());
+				logger.info(flow + "\t" + a.toFlow());
 				cost += flow * a.cost;
 			}
 		}
-		System.out.println("Cost: " + cost);
-		System.out.println();
+		logger.info("Cost: " + cost);
+		logger.info("\n");
 	}
 }

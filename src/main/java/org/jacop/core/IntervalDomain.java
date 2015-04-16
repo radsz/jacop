@@ -1,9 +1,9 @@
 /**
- *  IntervalDomain.java 
+ *  IntervalDomain.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,31 +31,28 @@
 
 package org.jacop.core;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.Random;
-import java.util.regex.Pattern;
-
-import javax.xml.transform.sax.TransformerHandler;
-
+import java.util.*;
+import java.util.regex.*;
+import javax.xml.transform.sax.*;
 import org.jacop.constraints.Constraint;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
 
 //TODO, test default function which use sparse (dense) representation. Default code if
 //domain is neither Interval nor Bound domain.
-
 /**
  * Defines interval of numbers which is part of FDV definition which consist of
  * one or several intervals.
- * 
- * 
+ *
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  */
 
-public class IntervalDomain extends IntDomain {
+public class IntervalDomain extends IntDomain { private static Logger logger = LoggerFactory.getLogger(IntervalDomain.class);
 
-	// FIXME, implement all already implemented functions from IntDomain	
+	// FIXME, implement all already implemented functions from IntDomain
 	// so it is more efficient, for example public int lex(IntDomain s).
 
 	/**
@@ -88,23 +85,23 @@ public class IntervalDomain extends IntDomain {
 	}
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {};
 
 	// TODO, Move all XML code to Aspect for XML.
 	/**
-	 * It writes the content of this object as the content of XML 
-	 * element so later it can be used to restore the object from 
+	 * It writes the content of this object as the content of XML
+	 * element so later it can be used to restore the object from
 	 * XML. It is done after restoration of the part of the object
-	 * specified in xmlAttributes. 
-	 *  
-	 * @param tf a place to write the content of the object. 
+	 * specified in xmlAttributes.
+	 *
+	 * @param tf a place to write the content of the object.
 	 * @throws SAXException
 	 */
 	public void toXML(TransformerHandler tf) throws SAXException {
-		
+
 		StringBuffer result = new StringBuffer("");
 
 		if (!singleton()) {
@@ -113,12 +110,12 @@ public class IntervalDomain extends IntDomain {
 				if (e + 1 < size)
 					result.append(", ");
 			}
-		} 
+		}
 		else
 			result.append(intervals[0]);
-	
+
 		tf.characters(result.toString().toCharArray(), 0, result.length());
-		
+
 	}
 
     public IntDomain previousDomain() {
@@ -126,12 +123,12 @@ public class IntervalDomain extends IntDomain {
     }
 
 	/**
-	 * 
-	 * It updates an object of type IntervalDomain with the information 
-	 * stored in the string. 
-	 * 
+	 *
+	 * It updates an object of type IntervalDomain with the information
+	 * stored in the string.
+	 *
 	 * @param object the object to be updated.
-	 * @param content the information used for update. 
+	 * @param content the information used for update.
 	 */
 	public static void fromXML(IntervalDomain object, String content) {
 		// TODO, Move all XML code to Aspect for XML.
@@ -139,7 +136,7 @@ public class IntervalDomain extends IntDomain {
 		String[] result = pat.split( content );
 
 		ArrayList<Interval> intervals = new ArrayList<Interval>(result.length);
-		
+
 		for (String element : result) {
 			Pattern dotSplit = Pattern.compile("\\.");
 			String[] oneElement = dotSplit.split( element );
@@ -157,14 +154,14 @@ public class IntervalDomain extends IntDomain {
 				}
 				catch(NumberFormatException ex) {};
 			}
-			
+
 			if (left != null && right != null)
 				intervals.add(new Interval(left, right));
 			else if (left != null)
 				intervals.add(new Interval(left, left));
-		
+
 		}
-		
+
 		object.intervals = intervals.toArray(new Interval[intervals.size()]);
 		object.size = intervals.size();
 
@@ -174,11 +171,11 @@ public class IntervalDomain extends IntDomain {
 		object.searchConstraintsCloned = false;
 
 		assert object.checkInvariants() == null : object.checkInvariants() ;
-		
-		//	System.out.println("Next content element" + element);
-		
+
+		//	logger.info("Next content element" + element);
+
 	}
-		
+
 	/**
 	 * An empty domain, so no constant creation of empty domains is required.
 	 */
@@ -188,7 +185,7 @@ public class IntervalDomain extends IntDomain {
 	/**
 	 * It creates an empty domain, with at least specified number of places in
 	 * an array list for intervals.
-	 * 
+	 *
 	 * @param size defines the initial size of an array storing the intervals.
 	 */
 
@@ -203,15 +200,15 @@ public class IntervalDomain extends IntDomain {
 
 	/**
 	 * It creates domain with all values between min and max.
-	 * 
+	 *
 	 * @param min defines the left bound of a domain.
 	 * @param max defines the right bound of a domain.
 	 */
 
 	public IntervalDomain(int min, int max) {
-		
+
 		assert (min <= max) : "Min value can not be greater than max value";
-		
+
 		intervals = new Interval[5];
 		searchConstraints = null;
 		searchConstraintsToEvaluate = 0;
@@ -231,7 +228,7 @@ public class IntervalDomain extends IntDomain {
 
 		// TODO, Move all check invariant code into Aspect CheckInvariants.
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		if (size == intervals.length) {
 			Interval[] oldIntervals = intervals;
 			intervals = new Interval[oldIntervals.length + 5];
@@ -239,9 +236,9 @@ public class IntervalDomain extends IntDomain {
 		}
 
 		intervals[size++] = i;
-		
+
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 	}
 
 	/**
@@ -267,11 +264,11 @@ public class IntervalDomain extends IntDomain {
 		}
 
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 	}
 
 	/**
-	 * It adds values as specified by the parameter to the domain. The 
+	 * It adds values as specified by the parameter to the domain. The
 	 * input parameter can not be an empty set.
 	 */
 
@@ -283,7 +280,7 @@ public class IntervalDomain extends IntDomain {
 			IntervalDomain d = (IntervalDomain) domain;
 
 			assert checkInvariants() == null : checkInvariants() ;
-			
+
 			if (size == 0) {
 				if (intervals == null || intervals.length < d.intervals.length)
 					intervals = new Interval[d.intervals.length];
@@ -295,65 +292,65 @@ public class IntervalDomain extends IntDomain {
 				for (int i = 0; i < d.size; i++)
 					// can not use function add(Interval)
 					unionAdapt(d.intervals[i].min, d.intervals[i].max);
-			
+
 			assert checkInvariants() == null : checkInvariants() ;
-			
+
 			return;
 		}
 
 		if (domain.domainID() == BoundDomainID) {
-			
+
 			assert checkInvariants() == null : checkInvariants() ;
-			
+
 			unionAdapt(domain.min(), domain.max());
-			
+
 			assert checkInvariants() == null : checkInvariants() ;
-			
+
 			return;
 		}
-	
+
 		if (domain.domainID() == SmallDenseDomainID) {
-			
+
 			// TODO CRUCIAL, create special code to handle SmallDenseDomain.
-			
+
 			this.addDom( ((SmallDenseDomain)domain).toIntervalDomain() );
-		
+
 			return;
 		}
-				
+
 		if (domain.isSparseRepresentation()) {
-			
+
 			ValueEnumeration enumer = domain.valueEnumeration();
-			
+
 			while (enumer.hasMoreElements()) {
-				
+
 				int next = enumer.nextElement();
-				
+
 				unionAdapt(next, next);
 			}
-			
+
 			return;
-							
+
 		}
 		else {
-			
+
 			IntervalEnumeration enumer = domain.intervalEnumeration();
-			
+
 			while (enumer.hasMoreElements()) {
-				
+
 				Interval next = enumer.nextElement();
-				
+
 				unionAdapt(next.min, next.max);
 			}
-			
+
 			return;
-			
-			
+
+
 		}
-				
+
 	}
 
-	
+
 	/**
 	 * It adds all values between min and max to the domain.
 	 */
@@ -362,25 +359,25 @@ public class IntervalDomain extends IntDomain {
 	public void unionAdapt(int min, int max) {
 
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		if (size == 0) {
 
 			intervals = new Interval[1];
 			intervals[size++] = new Interval(min, max);
 
 		} else {
-			
-			
+
+
 			int i = 0;
 			for (; i < size; i++) {
 				// i - position of the interval which touches with or intersects with min..max
-				if ((max + 1 >= intervals[i].min && max <= intervals[i].max+1) || 
+				if ((max + 1 >= intervals[i].min && max <= intervals[i].max+1) ||
 					(min + 1 >= intervals[i].min && min <= intervals[i].max+1) ||
 					(min <= intervals[i].min && intervals[i].max <= max ))
 					break;
 				if (max + 1 < intervals[i].min) {
 					// interval is inserted at position i
-					
+
 					if (size == intervals.length) {
 						// no empty intervals to fill in
 						Interval[] oldIntervals = intervals;
@@ -409,24 +406,24 @@ public class IntervalDomain extends IntDomain {
 			}
 
 			if (i == size) {
-				
+
 				if (size == intervals.length) {
 					// no empty intervals to fill in
 					Interval[] oldIntervals = intervals;
 					intervals = new Interval[intervals.length + 5];
 					System.arraycopy(oldIntervals, 0, intervals, 0, size);
 				}
-				
+
 				intervals[size] = new Interval(min, max);
 				size++;
-				
+
 				assert checkInvariants() == null : checkInvariants() ;
 				assert contains(min) : "The minimum was not added";
 				assert contains(max) : "The maximum was not added";
 
 				return;
 			}
-			
+
 			int newMin;
 			// interval(min, max) intersects with current domain
 			if (min < intervals[i].min) {
@@ -434,7 +431,7 @@ public class IntervalDomain extends IntDomain {
 			} else {
 				newMin = intervals[i].min;
 			}
-			
+
 			int target = i;
 			int newMax;
 
@@ -458,15 +455,15 @@ public class IntervalDomain extends IntDomain {
 
 			while (size > i + 1)
 				intervals[--size] = null;
-			
+
 		}
 
 		assert checkInvariants() == null : checkInvariants() ;
 		assert contains(min) : "The minimum was not added";
 		assert contains(max) : "The maximum was not added";
-	}	
-	
-	
+	}
+
+
 	/**
 	 * Checks if two domains intersect.
 	 */
@@ -476,11 +473,11 @@ public class IntervalDomain extends IntDomain {
 
 		if (domain.isEmpty())
 			return false;
-		
+
 		if (domain.domainID() == IntervalDomainID) {
 
 			assert checkInvariants() == null : checkInvariants() ;
-			
+
 			IntervalDomain intervalDomain = (IntervalDomain) domain;
 
 			int pointer1 = 0;
@@ -516,91 +513,91 @@ public class IntervalDomain extends IntDomain {
 			return false;
 
 		}
-		
+
 		if (domain.domainID() == BoundDomainID) {
-			
+
 			assert checkInvariants() == null : checkInvariants() ;
-			
+
 			if (max() < domain.min() || domain.max() < min())
 				return false;
-			
+
 			return true;
 		}
 
 		if (domain.domainID() == SmallDenseDomainID) {
-			
+
 			SmallDenseDomain input = (SmallDenseDomain) domain;
-		
+
 			if ( isEmpty() )
 			    return false;
 
 			if (input.min == min() || input.max() == max())
 				return true;
-			
+
 			if (input.max() < min() || max() < input.min())
 				return false;
 
 			if (input.getSize() <= 8) {
-				
+
 				ValueEnumeration enumer = input.valueEnumeration();
 
 				int i = 0;
 				while(enumer.hasMoreElements()) {
-					
+
 					int next = enumer.nextElement();
-					
+
 					while(i < size && intervals[i].max < next)
 						i++;
-					
+
 					if (i == size) {
 						assert (!isIntersecting( ((SmallDenseDomain)domain).toIntervalDomain() )) : "isIntersecting not properly implemented";
 						return false;
 					}
-					
+
 					if (next < intervals[i].min)
 						continue;
-					
+
 					assert (isIntersecting( ((SmallDenseDomain)domain).toIntervalDomain() ) )  : "isIntersecting not properly implemented";
-					
+
 					return true;
 
 				}
-				
+
 				assert (!isIntersecting( ((SmallDenseDomain)domain).toIntervalDomain() )) : "isIntersecting not properly implemented";
 
 				return false;
-				
+
 			}
 			else
 				return isIntersecting( ((SmallDenseDomain)domain).toIntervalDomain() );
-			
+
 		}
-		
+
 		if (domain.isSparseRepresentation()) {
-			
+
 			ValueEnumeration enumer = domain.valueEnumeration();
-			
+
 			while (enumer.hasMoreElements()) {
 				if (contains(enumer.nextElement()))
-					return true;				
+					return true;
 			}
 
 			return false;
-							
+
 		}
 		else {
-			
+
 			IntervalEnumeration enumer = domain.intervalEnumeration();
-			
+
 			while (enumer.hasMoreElements()) {
-				
+
 				Interval next = enumer.nextElement();
 				if (this.isIntersecting(next.min, next.max))
 					return true;
 			}
-			
+
 			return false;
-			
+
 		}
 
 	}
@@ -609,7 +606,7 @@ public class IntervalDomain extends IntDomain {
 	public boolean isIntersecting(int min, int max) {
 
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		int i = 0;
 		for (; i < size && intervals[i].max < min; i++)
 			;
@@ -639,7 +636,7 @@ public class IntervalDomain extends IntDomain {
 	public IntervalDomain cloneLight() {
 
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		IntervalDomain cloned = new IntervalDomain( this.intervals.length);
 
 		// FIXME, use empty constructor and use the line below.
@@ -660,7 +657,7 @@ public class IntervalDomain extends IntDomain {
 	public IntervalDomain clone() {
 
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		IntervalDomain cloned = new IntervalDomain();
 
 		cloned.intervals = new Interval[this.intervals.length];
@@ -691,7 +688,7 @@ public class IntervalDomain extends IntDomain {
 
 	@Override
 	public boolean contains(IntDomain domain) {
-		
+
 		assert checkInvariants() == null : checkInvariants() ;
 
 		// FIXME, check that FD(int) part does not assume to have different
@@ -701,16 +698,16 @@ public class IntervalDomain extends IntDomain {
 				return true;
 			return false;
 		}
-		
+
 		if (domain.isEmpty())
 			return true;
-		
+
         if (domain.domainID() == IntervalDomainID) {
 
                 IntervalDomain dom2 = (IntervalDomain) domain;
 
         		assert dom2.checkInvariants() == null : dom2.checkInvariants() ;
-        		
+
                 int max2 = dom2.size;
 
                 int i1 = 0;
@@ -749,40 +746,40 @@ public class IntervalDomain extends IntDomain {
                 }
 
         }
-		
+
         if (domain.domainID() == BoundDomainID) {
 
         	int i= 0;
         	int min = domain.min();
-        
+
         	for (; i < size && intervals[i].max < min; i++);
-        	
+
         	if (i == size)
         		return false;
-        	
+
         	if (intervals[i].min <= min && intervals[i].max >= domain.max())
         		return true;
-        		
+
         	return false;
-        	
+
         }
-        
+
         // TODO, CRUCIAL implement SmallDenseDomain case.
-        
+
 		if (domain.isSparseRepresentation()) {
-			
+
 			ValueEnumeration enumer = domain.valueEnumeration();
-			
+
 			while (enumer.hasMoreElements()) {
 				if (!contains(enumer.nextElement()))
-					return false;				
+					return false;
 			}
 
 			return true;
-							
+
 		}
 		else {
-								
+
 			   int max2 = domain.noIntervals();
 
                int i1 = 0;
@@ -793,7 +790,7 @@ public class IntervalDomain extends IntDomain {
 
                Interval interval1 = intervals[0];
                Interval interval2 = domain.getInterval(0);
-               
+
                while(true) {
 
                        while (interval2.min > interval1.max) {
@@ -818,11 +815,11 @@ public class IntervalDomain extends IntDomain {
 
                        interval2 = domain.getInterval(i2);
                }
-			
+
 		}
-        
-	}	
-	
+
+	}
+
 
 	/**
 	 * It creates a complement of a domain.
@@ -835,7 +832,7 @@ public class IntervalDomain extends IntDomain {
 			return new IntervalDomain(IntDomain.MinInt, IntDomain.MaxInt);
 
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		IntervalDomain result = new IntervalDomain(size + 1);
 		if (min() != IntDomain.MinInt)
 			result.unionAdapt(new Interval(IntDomain.MinInt, intervals[0].min - 1));
@@ -859,7 +856,7 @@ public class IntervalDomain extends IntDomain {
 	public boolean contains(int value) {
 
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		for (int m = 0; m < size; m++) {
 			Interval i = intervals[m];
 			if (i.max >= value)
@@ -873,14 +870,14 @@ public class IntervalDomain extends IntDomain {
 
 	/**
 	 * It gives next value in the domain from the given value (lexigraphical
-	 * ordering). The provided value does not have to belong to the domain. 
+	 * ordering). The provided value does not have to belong to the domain.
 	 * If no value can be found then returns the same value.
 	 */
 	@Override
 	public int nextValue(int value) {
 
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		for (int m = 0; m < size; m++) {
 			Interval i = intervals[m];
 			if (i.max > value)
@@ -902,7 +899,7 @@ public class IntervalDomain extends IntDomain {
 	// public IntDomain divide(int div) {
 
 	// 	assert checkInvariants() == null : checkInvariants() ;
-		
+
 	// 	IntervalDomain temp = new IntervalDomain(size);
 
 	// 	int newMin;
@@ -974,13 +971,13 @@ public class IntervalDomain extends IntDomain {
 	public boolean eq(IntDomain domain) {
 
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		if (domain.domainID() == IntervalDomainID) {
 
 			IntervalDomain intervalDomain = (IntervalDomain) domain;
 
 			assert intervalDomain.checkInvariants() == null : intervalDomain.checkInvariants() ;
-			
+
 			boolean equal = true;
 			int i = 0;
 
@@ -997,41 +994,41 @@ public class IntervalDomain extends IntDomain {
 		}
 
 		if (domain.domainID() == BoundDomainID) {
-			
+
 			if (size == 0 && domain.isEmpty())
 				return true;
-			
+
 			if (size != 1)
 				return false;
-			
+
 			if (intervals[0].min == domain.min() &&
 				intervals[0].max == domain.max())
 				return true;
-			
+
 			return false;
-			
+
 		}
 
 		if (domain.domainID() == SmallDenseDomainID) {
-			
-			// TODO CRUCIAL, create special code for SmallDenseDomain. 
-			
+
+			// TODO CRUCIAL, create special code for SmallDenseDomain.
+
 			return ((SmallDenseDomain)domain).eq(this);
-			
+
 		}
-		
+
 		// Uses default dense and sparse assumptions to compute the function as
 		// efficiently as possible.
-		
-		if (domain.isSparseRepresentation()) {	
-			
+
+		if (domain.isSparseRepresentation()) {
+
 			boolean equal = true;
 
 			if (this.getSize() == domain.getSize()) {
-				
+
 				ValueEnumeration enumer1 = domain.valueEnumeration();
 				ValueEnumeration enumer2 = this.valueEnumeration();
-				
+
 				while (equal && enumer1.hasMoreElements()) {
 					equal = ( enumer1.nextElement() == enumer2.nextElement() );
 				}
@@ -1039,10 +1036,10 @@ public class IntervalDomain extends IntDomain {
 				equal = false;
 
 			return equal;
-			
+
 		}
 		else {
-			
+
 			boolean equal = true;
 			int i = 0;
 
@@ -1055,9 +1052,9 @@ public class IntervalDomain extends IntDomain {
 				equal = false;
 
 			return equal;
-			
+
 		}
-		
+
 	}
 
 	/**
@@ -1067,7 +1064,7 @@ public class IntervalDomain extends IntDomain {
 	public int getSize() {
 
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		int n = 0;
 
 		for (int i = 0; i < size; i++)
@@ -1083,16 +1080,16 @@ public class IntervalDomain extends IntDomain {
 	public IntDomain intersect(IntDomain domain) {
 
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		if (domain.isEmpty())
 			return emptyDomain;
-		
+
 		if (domain.domainID() == IntervalDomainID) {
 
 			IntervalDomain input = (IntervalDomain) domain;
 
 			assert input.checkInvariants() == null : input.checkInvariants() ;
-			
+
 			IntervalDomain temp;
 
 			if (size > input.size)
@@ -1178,16 +1175,16 @@ public class IntervalDomain extends IntDomain {
 			}
 
 			assert temp.checkInvariants() == null : temp.checkInvariants() ;
-			
+
 			return temp;
 
 		}
 
 		if (domain.domainID() == BoundDomainID) {
-				
+
 			int min = domain.min();
 			int max = domain.max();
-			
+
 			IntervalDomain temp = new IntervalDomain(size);
 
 			int pointer1 = 0;
@@ -1196,7 +1193,7 @@ public class IntervalDomain extends IntDomain {
 				return emptyDomain;
 
 			Interval interval1 = intervals[pointer1];
-			
+
 			while (true) {
 				if (interval1.max < min) {
 					pointer1++;
@@ -1205,8 +1202,8 @@ public class IntervalDomain extends IntDomain {
 						continue;
 					} else
 						break;
-				} else 
-					if (max < interval1.min) 
+				} else
+					if (max < interval1.min)
 						break;
 					else
 				// interval1.max >= min
@@ -1250,46 +1247,46 @@ public class IntervalDomain extends IntDomain {
 
 			return temp;
 
-		}		
+		}
 
 		if (domain.domainID() == IntDomain.SmallDenseDomainID) {
 
 			// TODO, CRUCIAL implement proper SmallDenseDomain case.
-			
+
 			SmallDenseDomain input = (SmallDenseDomain) domain;
-			
+
 			IntDomain result = this.intersect( input.toIntervalDomain() );
-			
+
 			return result;
-			
+
 		}
-		
-		if (domain.isSparseRepresentation()) {	
-			
+
+		if (domain.isSparseRepresentation()) {
+
 			IntDomain temp = null;
-			
+
 			try {
 				temp = domain.getClass().newInstance();
 			}
 			catch(Exception ex) {
-				System.out.println(ex.getMessage());
+				logger.info("error", ex);
 			}
 
 			ValueEnumeration enumer = domain.valueEnumeration();
-			
+
 			while (enumer.hasMoreElements()) {
-				
+
 				int next = enumer.nextElement();
-				
+
 				if (this.contains(next))
 					temp.unionAdapt(next, next);
 			}
-			
+
 			return temp;
-			
+
 		}
 		else {
-			
+
 			// TODO, check correctness.
 			IntervalDomain temp = new IntervalDomain(size);
 
@@ -1370,12 +1367,12 @@ public class IntervalDomain extends IntDomain {
 					}
 
 				}
-			}			
-			
+			}
+
 			return temp;
-			
+
 		}
-		
+
 	}
 
 	/**
@@ -1386,7 +1383,7 @@ public class IntervalDomain extends IntDomain {
 	public IntDomain intersect(int min, int max) {
 
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		IntervalDomain temp = new IntervalDomain(size);
 
 		if (size == 0)
@@ -1450,7 +1447,7 @@ public class IntervalDomain extends IntDomain {
 
 		assert checkInvariants() == null : checkInvariants() ;
 		assert temp.checkInvariants() == null : temp.checkInvariants() ;
-		
+
 		return temp;
 
 	}
@@ -1459,7 +1456,7 @@ public class IntervalDomain extends IntDomain {
 	public IntDomain subtract(int value) {
 
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		IntervalDomain result = cloneLight();
 
 		int pointer1 = 0;
@@ -1534,7 +1531,7 @@ public class IntervalDomain extends IntDomain {
 	public int max() {
 
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		assert size != 0;
 
 		return intervals[size - 1].max;
@@ -1549,7 +1546,7 @@ public class IntervalDomain extends IntDomain {
 	public int min() {
 
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		assert size != 0;
 
 		return intervals[0].min;
@@ -1577,7 +1574,7 @@ public class IntervalDomain extends IntDomain {
 					temp.unionAdapt(new Interval(value, value));
 				}
 			}
-			
+
 			assert temp.checkInvariants() == null : temp.checkInvariants() ;
 			return temp;
 
@@ -1606,7 +1603,7 @@ public class IntervalDomain extends IntDomain {
 	public void removeInterval(int position) {
 
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		assert position < size;
 		assert position >= 0;
 
@@ -1618,7 +1615,7 @@ public class IntervalDomain extends IntDomain {
 		}
 
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 	}
 
 	/**
@@ -1629,7 +1626,7 @@ public class IntervalDomain extends IntDomain {
 	public void setDomain(IntDomain domain) {
 
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		if (domain.domainID() == IntervalDomainID) {
 
 			IntervalDomain intervalDomain = (IntervalDomain) domain;
@@ -1644,44 +1641,44 @@ public class IntervalDomain extends IntDomain {
 		}
 
 		if (domain.domainID() == BoundDomainID) {
-			
+
 			size = 1;
-			
+
 			intervals = new Interval[1];
 			intervals[0] = new Interval(domain.min(), domain.max());
-			
+
 			return;
 		}
-		
-		if (domain.isSparseRepresentation()) {	
-			
+
+		if (domain.isSparseRepresentation()) {
+
 			this.clear();
-			
+
 			ValueEnumeration enumer = domain.valueEnumeration();
-			
+
 			while (enumer.hasMoreElements()) {
-				
+
 				int next = enumer.nextElement();
-				
+
 				if (this.contains(next))
 					this.unionAdapt(next, next);
-			}			
-		
+			}
+
 			return;
-			
+
 		}
 		else {
 
 			this.clear();
-			
+
 			IntervalEnumeration enumer = domain.intervalEnumeration();
-			
-			while (enumer.hasMoreElements())				
+
+			while (enumer.hasMoreElements())
 				this.unionAdapt(enumer.nextElement());
-			
+
 			return;
 		}
-		
+
 	}
 
 	/**
@@ -1721,13 +1718,13 @@ public class IntervalDomain extends IntDomain {
 
 		if (isEmpty())
 			return IntDomain.emptyIntDomain;
-		
+
 	  	if (domain.domainID() == IntervalDomainID) {
 
 			IntervalDomain intervalDomain = (IntervalDomain) domain;
 
 			assert intervalDomain.checkInvariants() == null : intervalDomain.checkInvariants() ;
-			
+
 			if (intervalDomain.size == 0)
 				return cloneLight();
 
@@ -1740,7 +1737,7 @@ public class IntervalDomain extends IntDomain {
 
 			Interval currentDomain1 = intervals[i1];
 			Interval currentDomain2 = intervalDomain.intervals[i2];
-	         
+
 			boolean minIncluded = false;
 
 			int max2 = intervalDomain.size;
@@ -1881,11 +1878,11 @@ public class IntervalDomain extends IntDomain {
 
 			assert checkInvariants() == null : checkInvariants() ;
 			assert result.checkInvariants() == null : result.checkInvariants() ;
-			
+
 			return result;
 
 		}
-		
+
 		if (domain.domainID() == BoundDomainID) {
 
 			if (domain.isEmpty())
@@ -1898,10 +1895,10 @@ public class IntervalDomain extends IntDomain {
 			int i1 = 0;
 
 			Interval currentDomain1 = intervals[i1];
-			
+
 			int min = domain.min();
 			int max = domain.max();
-				        
+
 			while (true) {
 
 				if (currentDomain1.max < min) {
@@ -1930,7 +1927,7 @@ public class IntervalDomain extends IntDomain {
 
 						// interval (min, max) ends before interval of dom1 ends
 						result.unionAdapt(new Interval(max + 1, currentDomain1.max));
-						
+
 						i1++;
 						if (i1 == size)
 							break;
@@ -1942,20 +1939,20 @@ public class IntervalDomain extends IntDomain {
 				else {
 
 					result.unionAdapt(new Interval(currentDomain1.min, min - 1));
-					
+
 					if (currentDomain1.max > max) {
 
 						result.unionAdapt(new Interval(max + 1,
 									  currentDomain1.max));
 
 					}
-					
+
 					i1++;
 					if (i1 == size)
 						break;
 					currentDomain1 = intervals[i1];
 				}
-				
+
 			}
 
 			while (i1 < size) {
@@ -1965,31 +1962,31 @@ public class IntervalDomain extends IntDomain {
 
 			assert checkInvariants() == null : checkInvariants() ;
 			assert result.checkInvariants() == null : result.checkInvariants() ;
-			
+
 			return result;
 
-		}		
-				
-		if (domain.isSparseRepresentation()) {	
-			
+		}
+
+		if (domain.isSparseRepresentation()) {
+
 			IntDomain result = this.cloneLight();
-			
+
 			ValueEnumeration enumer = domain.valueEnumeration();
-			
+
 			while (enumer.hasMoreElements()) {
 
 				int next = enumer.nextElement();
 				result.subtractAdapt(next);
-				
+
 			}
 
 			// TODO, remove later, or move to other place, SmallDenseDomain section.
 			if (domain instanceof SmallDenseDomain) {
 				assert result.eq( this.subtract( ((SmallDenseDomain)domain).toIntervalDomain()) ) : "Subtract function is not working" + this + "d:" + domain + "r:" + result;
 			}
-			
+
 			return result;
-			
+
 		}
 		else {
 
@@ -2006,11 +2003,11 @@ public class IntervalDomain extends IntDomain {
 
 			Interval currentDomain1 = intervals[i1];
 			Interval currentDomain2 = domain.getInterval(i2);
-			
+
 			boolean minIncluded = false;
 
 			int max2 = domain.noIntervals();
-			
+
 			while (true) {
 
 				if (currentDomain1.max < currentDomain2.min) {
@@ -2147,7 +2144,7 @@ public class IntervalDomain extends IntDomain {
 
 			assert checkInvariants() == null : checkInvariants() ;
 			assert result.checkInvariants() == null : result.checkInvariants() ;
-			
+
 			return result;
 
 		}
@@ -2158,13 +2155,13 @@ public class IntervalDomain extends IntDomain {
 	 * It subtracts min..max from current domain and returns the result.
 	 */
 
-	
-	
+
+
 	@Override
 	public IntervalDomain subtract(int min, int max) {
 
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		assert (min <= max);
 
 		if (size == 0)
@@ -2176,7 +2173,7 @@ public class IntervalDomain extends IntDomain {
 		Interval currentInterval1 = intervals[i1];
 
 		IntervalDomain result = new IntervalDomain(intervals.length+1);
-		
+
 		while (true) {
 
 			if (currentInterval1.max < min) {
@@ -2242,7 +2239,7 @@ public class IntervalDomain extends IntDomain {
 
 					result.unionAdapt(currentInterval1.min, min - 1);
 					result.unionAdapt(max + 1, currentInterval1.max);
-					
+
 					i1++;
 					break;
 				}
@@ -2265,13 +2262,13 @@ public class IntervalDomain extends IntDomain {
 	public IntDomain union(IntDomain domain) {
 
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		if (domain.domainID() == IntervalDomainID) {
 
 			IntervalDomain intervalDomain = (IntervalDomain) domain;
 
 			assert intervalDomain.checkInvariants() == null : intervalDomain.checkInvariants() ;
-			
+
 			if (intervalDomain.size == 0) {
 
 				IntervalDomain result = cloneLight();
@@ -2388,7 +2385,7 @@ public class IntervalDomain extends IntDomain {
 					}
 					break;
 				}
-				
+
 				if (currentDomain1.max < currentDomain2.max) {
 					result.unionAdapt(new Interval(min, currentDomain1.max));
 					i1++;
@@ -2416,20 +2413,20 @@ public class IntervalDomain extends IntDomain {
 					result.unionAdapt(intervalDomain.intervals[i2]);
 
 			assert result.checkInvariants() == null : result.checkInvariants() ;
-			
+
 			return result;
 
 		}
 
-		
+
 		if (domain.domainID() == BoundDomainID) {
 
 			if (domain.isEmpty())
 				return cloneLight();
-			
+
 			int min = domain.min();
 			int max = domain.max();
-							
+
 			if (size == 0)
 				return new IntervalDomain(min, max);
 
@@ -2458,14 +2455,14 @@ public class IntervalDomain extends IntDomain {
 				}
 
 				// current interval is glued or intersects with (min..max).
-				
+
 				int tempMin;
 
 				if (currentInterval1.min < min)
 					tempMin = currentInterval1.min;
 				else
 					tempMin = min;
-				
+
 				if (currentInterval1.max > max) {
 					result.unionAdapt(new Interval(tempMin, currentInterval1.max));
 					i1++;
@@ -2482,15 +2479,15 @@ public class IntervalDomain extends IntDomain {
 						}
 						currentInterval1 = intervals[i1];
 					}
-				
+
 					// if current interval is glued or intersects with (min..max)
 					if (max + 1 >= currentInterval1.min) {
 						result.unionAdapt(new Interval(tempMin, currentInterval1.max));
 						i1++;
 					}
-					else 
+					else
 						result.unionAdapt(new Interval(tempMin, max));
-					
+
 					break;
 				}
 			}
@@ -2501,17 +2498,17 @@ public class IntervalDomain extends IntDomain {
 
 			assert checkInvariants() == null : checkInvariants() ;
 			assert result.checkInvariants() == null : result.checkInvariants() ;
-			return result;		
-		
+			return result;
+
 		}
 
-		if (domain.isSparseRepresentation()) {	
-			
+		if (domain.isSparseRepresentation()) {
+
 			IntervalDomain result = this.cloneLight();
-			
+
 			ValueEnumeration enumer = domain.valueEnumeration();
-			
-			while(enumer.hasMoreElements()) { 
+
+			while(enumer.hasMoreElements()) {
 				int next = enumer.nextElement();
 				result.unionAdapt(next, next);
 			}
@@ -2519,13 +2516,13 @@ public class IntervalDomain extends IntDomain {
 			if (domain instanceof SmallDenseDomain) {
 				assert (result.eq( this.union(((SmallDenseDomain) domain).toIntervalDomain()))) : "Basic union function not working properly " + this + "d: " + domain + "r:" + result;
 			}
-			
+
 			return result;
-			
+
 		}
 		else {
 			//TODO, work with dense domain
-			
+
 			if (domain.noIntervals() == 0)
 				return cloneLight();
 
@@ -2640,7 +2637,7 @@ public class IntervalDomain extends IntDomain {
 					}
 					break;
 				}
-				
+
 				if (currentDomain1.max < currentDomain2.max) {
 					result.unionAdapt(new Interval(min, currentDomain1.max));
 					i1++;
@@ -2667,14 +2664,14 @@ public class IntervalDomain extends IntDomain {
 
 			for (; i2 < domain.noIntervals(); i2++ )
 				result.unionAdapt(domain.getInterval(i2));
-				
+
 			assert result.checkInvariants() == null : result.checkInvariants() ;
-			
+
 			return result;
-			
-			
+
+
 		}
-		
+
 	}
 
 	/**
@@ -2687,7 +2684,7 @@ public class IntervalDomain extends IntDomain {
 			return new IntervalDomain(min, max);
 
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		IntervalDomain result = new IntervalDomain(size + 1);
 
 		int i1 = 0;
@@ -2715,14 +2712,14 @@ public class IntervalDomain extends IntDomain {
 			}
 
 			// current interval is glued or intersects with (min..max).
-			
+
 			int tempMin;
 
 			if (currentInterval1.min < min)
 				tempMin = currentInterval1.min;
 			else
 				tempMin = min;
-			
+
 			if (currentInterval1.max > max) {
 				result.unionAdapt(new Interval(tempMin, currentInterval1.max));
 				i1++;
@@ -2739,15 +2736,15 @@ public class IntervalDomain extends IntDomain {
 					}
 					currentInterval1 = intervals[i1];
 				}
-			
+
 				// if current interval is glued or intersects with (min..max)
 				if (max + 1 >= currentInterval1.min) {
 					result.unionAdapt(new Interval(tempMin, currentInterval1.max));
 					i1++;
 				}
-				else 
+				else
 					result.unionAdapt(new Interval(tempMin, max));
-				
+
 				break;
 			}
 		}
@@ -2758,8 +2755,8 @@ public class IntervalDomain extends IntDomain {
 
 		assert checkInvariants() == null : checkInvariants() ;
 		assert result.checkInvariants() == null : result.checkInvariants() ;
-		return result;		
-	
+		return result;
+
 	}
 
 
@@ -2768,7 +2765,7 @@ public class IntervalDomain extends IntDomain {
 	 */
 
 	//TODO, write Junit tests.
-	
+
 	@Override
 	public IntDomain union(int value) {
 
@@ -2776,7 +2773,7 @@ public class IntervalDomain extends IntDomain {
 			return new IntervalDomain(value, value);
 
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		IntervalDomain result = new IntervalDomain(size + 1);
 
 		int i1 = 0;
@@ -2816,7 +2813,7 @@ public class IntervalDomain extends IntDomain {
 				tempMax = intervals[i1+1].max;
 				i1++;
 			}
-			
+
 			result.unionAdapt(new Interval(tempMin, tempMax));
 			i1++;
 		}
@@ -2917,7 +2914,7 @@ public class IntervalDomain extends IntDomain {
 
 		return result.toString();
 	}
-	
+
 
 	/**
 	 * It updates the domain according to the minimum value and stamp value. It
@@ -2927,7 +2924,7 @@ public class IntervalDomain extends IntDomain {
 	public void inMin(int storeLevel, Var var, int min) {
 
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		if (min > intervals[size - 1].max)
 			throw failException;
 
@@ -2955,7 +2952,7 @@ public class IntervalDomain extends IntDomain {
 			size = i;
 
 			assert checkInvariants() == null : checkInvariants() ;
-			
+
 			if (singleton()) {
 				var.domainHasChanged(IntDomain.GROUND);
 				return;
@@ -2993,7 +2990,7 @@ public class IntervalDomain extends IntDomain {
 
 			assert checkInvariants() == null : checkInvariants() ;
 			assert result.checkInvariants() == null : result.checkInvariants() ;
-			
+
 			if (result.singleton()) {
 				var.domainHasChanged(IntDomain.GROUND);
 				return;
@@ -3014,7 +3011,7 @@ public class IntervalDomain extends IntDomain {
 	public void inMax(int storeLevel, Var var, int max) {
 
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		if (max < intervals[0].min)
 			throw failException;
 
@@ -3038,7 +3035,7 @@ public class IntervalDomain extends IntDomain {
 			size = pointer + 1;
 
 			assert checkInvariants() == null : checkInvariants() ;
-			
+
 			if (singleton()) {
 				var.domainHasChanged(IntDomain.GROUND);
 				return;
@@ -3075,7 +3072,7 @@ public class IntervalDomain extends IntDomain {
 
 			assert result.checkInvariants() == null : result.checkInvariants() ;
 			assert checkInvariants() == null : checkInvariants() ;
-			
+
 			if (result.singleton()) {
 				var.domainHasChanged(IntDomain.GROUND);
 				return;
@@ -3097,7 +3094,7 @@ public class IntervalDomain extends IntDomain {
 	public void in(int storeLevel, Var var, int min, int max) {
 
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		assert (min <= max) : "Min value greater than max value " + min + " > " + max;
 
 		if (max < intervals[0].min)
@@ -3173,7 +3170,7 @@ public class IntervalDomain extends IntDomain {
 
 		assert checkInvariants() == null : checkInvariants() ;
 		assert result.checkInvariants() == null : result.checkInvariants() ;
-		
+
 		if (result.singleton()) {
 			var.domainHasChanged(IntDomain.GROUND);
 			return;
@@ -3192,18 +3189,18 @@ public class IntervalDomain extends IntDomain {
 	@Override
 	public void in(int storeLevel, Var var, IntDomain domain) {
 
-		// System.out.println(var.domain + " " + domain);
+		// logger.info(var.domain + " " + domain);
 
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		assert this.stamp <= storeLevel;
-		
+
 		if (domain.domainID() == IntervalDomainID) {
 
 			IntervalDomain input = (IntervalDomain) domain;
 
 			assert input.checkInvariants() == null : input.checkInvariants() ;
-			
+
 			if (input.size == 0)
 				throw failException;
 
@@ -3343,7 +3340,7 @@ public class IntervalDomain extends IntDomain {
 
 			assert checkInvariants() == null : checkInvariants() ;
 			assert result.checkInvariants() == null : result.checkInvariants() ;
-			
+
 			if (result.singleton())
 				returnedEvent = IntDomain.GROUND;
 			else if (result.min() > min() || result.max() < max())
@@ -3378,31 +3375,31 @@ public class IntervalDomain extends IntDomain {
 			}
 
 			assert checkInvariants() == null : checkInvariants() ;
-			
+
 			var.domainHasChanged(returnedEvent);
 			return;
 
 		}
 
-		
+
 		if (domain.domainID() == BoundDomainID) {
 
 			if (domain.isEmpty())
 				throw failException;
-			
-			assert size != 0;
-			
-			in(storeLevel, var, domain.min(), domain.max());
-			
-			return;
-			
-		}		
 
-		// TODO, test special code for SmallDenseDomain. 
+			assert size != 0;
+
+			in(storeLevel, var, domain.min(), domain.max());
+
+			return;
+
+		}
+
+		// TODO, test special code for SmallDenseDomain.
 		if (domain.domainID() == SmallDenseDomainID) {
 
 			SmallDenseDomain input = (SmallDenseDomain)domain;
-			
+
 			SmallDenseDomain result = input.intersect(this, 0);
 
 			if (result.isEmpty())
@@ -3415,7 +3412,7 @@ public class IntervalDomain extends IntDomain {
 
 			assert checkInvariants() == null : checkInvariants() ;
 			assert result.checkInvariants() == null : result.checkInvariants() ;
-			
+
 			if (result.singleton())
 				returnedEvent = IntDomain.GROUND;
 			else if (result.min() > min() || result.max() < max())
@@ -3429,7 +3426,7 @@ public class IntervalDomain extends IntDomain {
 			((IntVar)var).domain = result;
 
 			assert (result.eq( this.intersect(input.toIntervalDomain()))) : "In function improperly implemented." + result + "d " + input;
-			
+
 			if (stamp == storeLevel) {
 
 				result.previousDomain = previousDomain;
@@ -3439,45 +3436,45 @@ public class IntervalDomain extends IntDomain {
 				assert stamp < storeLevel;
 
 				result.previousDomain = this;
-				
+
 			}
 
 			assert checkInvariants() == null : checkInvariants() ;
-			
+
 			var.domainHasChanged(returnedEvent);
 			return;
-			
+
 		}
-		
-		
-		if (domain.isSparseRepresentation()) {	
+
+
+		if (domain.isSparseRepresentation()) {
 
 			if (isSparseRepresentation()) {
-				
+
 				// Sparse domain was also used at the current level
-				
+
 				IntervalDomain result = new IntervalDomain();
-								
+
 				ValueEnumeration enumer = domain.valueEnumeration();
-				
+
 				while (enumer.hasMoreElements()) {
 					int next = enumer.nextElement();
 					if (this.contains(next))
 						result.unionAdapt(next, next);
-					
+
 				}
-				
+
 				if (result.isEmpty())
 					throw failException;
 
 				// ADDED BY KKU
-				if ( eq(result) ) 
+				if ( eq(result) )
 				    return;
 
 				int returnedEvent = IntDomain.ANY;
 
 				assert checkInvariants() == null : checkInvariants() ;
-				
+
 				if (result.singleton())
 					returnedEvent = IntDomain.GROUND;
 				else if (result.min() > min() || result.max() < max())
@@ -3512,15 +3509,15 @@ public class IntervalDomain extends IntDomain {
 				}
 
 				assert checkInvariants() == null : checkInvariants() ;
-				
+
 				var.domainHasChanged(returnedEvent);
-				return;							
-				
+				return;
+
 			}
 			else {
-				
+
 				// Dense domain is used to specify the domain.
-				
+
 				if (domain.getSize() == 0)
 					throw failException;
 
@@ -3531,7 +3528,7 @@ public class IntervalDomain extends IntDomain {
 
 //				Interval inputIntervals[] = input.intervals;
 				int inputSize = domain.noIntervals();
-				
+
 				// Chance for no event
 				while (pointer2 < inputSize
 						&& domain.getInterval(pointer2).max < intervals[pointer1].min)
@@ -3622,7 +3619,7 @@ public class IntervalDomain extends IntDomain {
 					// interval1Min > interval2Min
 					{
 						if (interval2Max <= interval1Max) {
-							
+
 							result.unionAdapt(new Interval(interval1Min, interval2Max));
 
 							if (interval2Max == interval1Max) {
@@ -3641,7 +3638,7 @@ public class IntervalDomain extends IntDomain {
 								continue;
 							} else
 								break;
-							
+
 						} else {
 							// interval1Max >= interval2Min
 							// interval2Max >= interval1Min
@@ -3655,7 +3652,7 @@ public class IntervalDomain extends IntDomain {
 								continue;
 							} else
 								break;
-						
+
 						}
 
 					}
@@ -3668,7 +3665,7 @@ public class IntervalDomain extends IntDomain {
 
 				assert checkInvariants() == null : checkInvariants() ;
 				assert result.checkInvariants() == null : result.checkInvariants() ;
-				
+
 				if (result.singleton())
 					returnedEvent = IntDomain.GROUND;
 				else if (result.min() > min() || result.max() < max())
@@ -3703,17 +3700,17 @@ public class IntervalDomain extends IntDomain {
 				}
 
 				assert checkInvariants() == null : checkInvariants() ;
-				
+
 				var.domainHasChanged(returnedEvent);
 				return;
-						
+
 			}
-			
+
 		}
 		else {
-				
-			// TODO, Repetition of the else clause of the if inside the if clause of this if. 
-			// Remove the code below (?) and remove the if statement leading to this else clause. 
+
+			// TODO, Repetition of the else clause of the if inside the if clause of this if.
+			// Remove the code below (?) and remove the if statement leading to this else clause.
 			if (domain.getSize() == 0)
 				throw failException;
 
@@ -3722,12 +3719,12 @@ public class IntervalDomain extends IntDomain {
 
 //			Interval domain.getInterval(] = input.intervals;
 			int inputSize = domain.noIntervals();
-				
+
 			// Chance for no event
 			while (pointer2 < inputSize
 					&& domain.getInterval(pointer2).max < intervals[pointer1].min)
 				pointer2++;
-			
+
 			if (pointer2 == inputSize)
 				throw failException;
 
@@ -3852,7 +3849,7 @@ public class IntervalDomain extends IntDomain {
 
 			assert checkInvariants() == null : checkInvariants() ;
 			assert result.checkInvariants() == null : result.checkInvariants() ;
-			
+
 			if (result.singleton())
 				returnedEvent = IntDomain.GROUND;
 			else if (result.min() > min() || result.max() < max())
@@ -3887,14 +3884,14 @@ public class IntervalDomain extends IntDomain {
 			}
 
 			assert checkInvariants() == null : checkInvariants() ;
-			
+
 			var.domainHasChanged(returnedEvent);
-			return;			
-			
-			
-			
+			return;
+
+
+
 		}
-		
+
 	}
 
 	/**
@@ -3909,7 +3906,7 @@ public class IntervalDomain extends IntDomain {
 	}
 
 	/**
-	 * It specifies the position of the interval which contains specified value. 
+	 * It specifies the position of the interval which contains specified value.
 	 * @param value value for which an interval containing it is searched.
 	 * @return the position of the interval containing the specified value.
 	 */
@@ -3943,8 +3940,8 @@ public class IntervalDomain extends IntDomain {
 	public void inComplement(int storeLevel, Var var, int complement) {
 
 		assert checkInvariants() == null : checkInvariants() ;
-		
-		//	System.out.println(var.domain + " " + complement);
+
+		//	logger.info(var.domain + " " + complement);
 
 		int counter = intervalNo(complement);
 
@@ -3961,7 +3958,7 @@ public class IntervalDomain extends IntDomain {
 							intervals[counter].max);
 
 					assert checkInvariants() == null : checkInvariants() ;
-					
+
 					if (singleton()) {
 						var.domainHasChanged(IntDomain.GROUND);
 						return;
@@ -3986,7 +3983,7 @@ public class IntervalDomain extends IntDomain {
 					size--;
 
 					assert checkInvariants() == null : checkInvariants() ;
-					
+
 					if (singleton()) {
 						var.domainHasChanged(IntDomain.GROUND);
 						return;
@@ -4016,7 +4013,7 @@ public class IntervalDomain extends IntDomain {
 						complement - 1);
 
 				assert checkInvariants() == null : checkInvariants() ;
-				
+
 				if (singleton()) {
 					var.domainHasChanged(IntDomain.GROUND);
 					return;
@@ -4052,10 +4049,10 @@ public class IntervalDomain extends IntDomain {
 			size++;
 
 			assert checkInvariants() == null : checkInvariants() ;
-			
+
 			var.domainHasChanged(IntDomain.ANY);
 			return;
-			
+
 		} else {
 
 			if (singleton(complement))
@@ -4089,7 +4086,7 @@ public class IntervalDomain extends IntDomain {
 
 					assert result.checkInvariants() == null : result.checkInvariants() ;
 					assert checkInvariants() == null : checkInvariants() ;
-					
+
 					if (result.singleton()) {
 						var.domainHasChanged(IntDomain.GROUND);
 						return;
@@ -4113,7 +4110,7 @@ public class IntervalDomain extends IntDomain {
 					result.size = size - 1;
 
 					assert result.checkInvariants() == null : result.checkInvariants() ;
-					
+
 					if (result.singleton()) {
 						var.domainHasChanged(IntDomain.GROUND);
 						return;
@@ -4144,7 +4141,7 @@ public class IntervalDomain extends IntDomain {
 
 				assert checkInvariants() == null : checkInvariants() ;
 				assert result.checkInvariants() == null : result.checkInvariants() ;
-				
+
 				if (result.singleton()) {
 					var.domainHasChanged(IntDomain.GROUND);
 					return;
@@ -4198,9 +4195,9 @@ public class IntervalDomain extends IntDomain {
 
 	@Override
 	public void inComplement(int storeLevel, Var var, int min, int max) {
-		
+
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		if (intervals[0].min > max || intervals[size - 1].max < min)
 			return;
 
@@ -4238,7 +4235,7 @@ public class IntervalDomain extends IntDomain {
 						size++;
 
 						assert checkInvariants() == null : checkInvariants() ;
-						
+
 						var.domainHasChanged(IntDomain.ANY);
 
 					} else {
@@ -4262,7 +4259,7 @@ public class IntervalDomain extends IntDomain {
 						size++;
 
 						assert checkInvariants() == null : checkInvariants() ;
-						
+
 						var.domainHasChanged(IntDomain.ANY);
 					}
 				} else {
@@ -4283,7 +4280,7 @@ public class IntervalDomain extends IntDomain {
 
 						for (int i = counter; i + noRemoved < size; i++)
 							intervals[i] = intervals[i + noRemoved];
-					
+
 					}
 
 					size -= noRemoved;
@@ -4313,7 +4310,7 @@ public class IntervalDomain extends IntDomain {
 							intervals[counter].max);
 
 					assert checkInvariants() == null : checkInvariants() ;
-					
+
 					if (singleton()) {
 						var.domainHasChanged(IntDomain.GROUND);
 						return;
@@ -4344,7 +4341,7 @@ public class IntervalDomain extends IntDomain {
 								intervals[counter].max);
 
 					assert checkInvariants() == null : checkInvariants() ;
-					
+
 					if (singleton()) {
 						var.domainHasChanged(IntDomain.GROUND);
 						return;
@@ -4398,7 +4395,7 @@ public class IntervalDomain extends IntDomain {
 
 					assert result.checkInvariants() == null : result.checkInvariants() ;
 					assert checkInvariants() == null : checkInvariants() ;
-					
+
 					var.domainHasChanged(IntDomain.ANY);
 
 				} else {
@@ -4418,12 +4415,12 @@ public class IntervalDomain extends IntDomain {
 
 					if (counter + noRemoved < size && intervals[counter+noRemoved].min <= max)
 						result.intervals[counter] = new Interval(max + 1, intervals[counter+noRemoved].max);
-					
+
 					result.size -= noRemoved;
 
 					assert checkInvariants() == null : checkInvariants() ;
 					assert result.checkInvariants() == null : result.checkInvariants() ;
-					
+
 					if (var.singleton())
 						var.domainHasChanged(IntDomain.GROUND);
 					else
@@ -4431,7 +4428,7 @@ public class IntervalDomain extends IntDomain {
 							var.domainHasChanged(IntDomain.BOUND);
 						else
 							var.domainHasChanged(IntDomain.ANY);
-					
+
 					return;
 				}
 
@@ -4448,7 +4445,7 @@ public class IntervalDomain extends IntDomain {
 
 					assert checkInvariants() == null : checkInvariants() ;
 					assert result.checkInvariants() == null : result.checkInvariants() ;
-					
+
 					if (result.singleton()) {
 						var.domainHasChanged(IntDomain.GROUND);
 						return;
@@ -4473,14 +4470,14 @@ public class IntervalDomain extends IntDomain {
 						result.intervals[i] = intervals[i + noRemoved];
 
 					result.size -= noRemoved;
-					
+
 			//		if (counter < size && intervals[counter].min <= max)
 			//			result.intervals[counter] = new Interval(max + 1,
 			//					intervals[counter].max);
 
 					if (counter + noRemoved < size && intervals[counter+noRemoved].min <= max)
 						result.intervals[counter] = new Interval(max + 1, intervals[counter+noRemoved].max);
-					
+
 					assert checkInvariants() == null : checkInvariants() ;
 					assert result.checkInvariants() == null : result.checkInvariants() ;
 
@@ -4525,7 +4522,7 @@ public class IntervalDomain extends IntDomain {
 			int inputSize = input.size;
 
 			Interval[] inputIntervals = input.intervals;
-			
+
 			// Chance for no event
 			// traverse within while loop until certain that change will occur
 
@@ -4659,7 +4656,7 @@ public class IntervalDomain extends IntDomain {
 
 			assert checkInvariants() == null : checkInvariants() ;
 			assert result.checkInvariants() == null : result.checkInvariants() ;
-			
+
 			int returnedEvent = IntDomain.ANY;
 
 			if (result.singleton()) {
@@ -4702,31 +4699,31 @@ public class IntervalDomain extends IntDomain {
 		}
 
 		if (domain.domainID() == BoundDomainID) {
-			
+
 			if (domain.isEmpty())
 				throw failException;
-			
+
 			in(storeLevel, var, domain.min()+shift, domain.max()+shift);
 			return;
-			
+
 		}
 
-		// TODO, Test SmallDenseDomain input. 
+		// TODO, Test SmallDenseDomain input.
 		if (domain.domainID() == SmallDenseDomainID) {
 
 			SmallDenseDomain input = (SmallDenseDomain)domain;
-			
+
 			SmallDenseDomain result = input.intersect(this, -shift);
 			result.shift(shift);
-			
+
 			if (result.isEmpty())
 				throw Store.failException;
-			
+
 			int returnedEvent = IntDomain.ANY;
 
 			assert checkInvariants() == null : checkInvariants() ;
 			assert result.checkInvariants() == null : result.checkInvariants() ;
-			
+
 			if (result.singleton())
 				returnedEvent = IntDomain.GROUND;
 			else if (result.min() > min() || result.max() < max())
@@ -4748,41 +4745,41 @@ public class IntervalDomain extends IntDomain {
 				assert stamp < storeLevel;
 
 				result.previousDomain = this;
-				
+
 			}
 
 			assert checkInvariants() == null : checkInvariants() ;
-			
+
 			var.domainHasChanged(returnedEvent);
 			return;
-			
+
 		}
-		
-		
-		if (domain.isSparseRepresentation()) {	
+
+
+		if (domain.isSparseRepresentation()) {
 
 			if (isSparseRepresentation()) {
-				
+
 				// Sparse domain was also used at the current level
-				
+
 				IntervalDomain result = new IntervalDomain();
-								
+
 				ValueEnumeration enumer = domain.valueEnumeration();
-				
+
 				while (enumer.hasMoreElements()) {
 					int next = enumer.nextElement() + shift;
 					if (this.contains(next))
 						result.unionAdapt(next, next);
-					
+
 				}
-				
+
 				if (result.isEmpty())
 					throw failException;
 
 				int returnedEvent = IntDomain.ANY;
 
 				assert checkInvariants() == null : checkInvariants() ;
-				
+
 				if (result.singleton())
 					returnedEvent = IntDomain.GROUND;
 				else if (result.min() > min() || result.max() < max())
@@ -4817,15 +4814,15 @@ public class IntervalDomain extends IntDomain {
 				}
 
 				assert checkInvariants() == null : checkInvariants() ;
-				
+
 				var.domainHasChanged(returnedEvent);
-				return;							
-				
+				return;
+
 			}
 			else {
-				
+
 				// Dense domain is used to specify the domain.
-				
+
 				if (domain.getSize() == 0)
 					throw failException;
 
@@ -4836,7 +4833,7 @@ public class IntervalDomain extends IntDomain {
 
 //				Interval inputIntervals[] = input.intervals;
 				int inputSize = domain.noIntervals();
-				
+
 				// Chance for no event
 				while (pointer2 < inputSize
 						&& domain.getInterval(pointer2).max+shift < intervals[pointer1].min)
@@ -4910,7 +4907,7 @@ public class IntervalDomain extends IntDomain {
 							} else
 								break;
 						} else {
-							result.unionAdapt(new Interval(domain.getInterval(pointer2).min+shift, 
+							result.unionAdapt(new Interval(domain.getInterval(pointer2).min+shift,
 													   domain.getInterval(pointer2).max+shift));
 							pointer2++;
 
@@ -4967,7 +4964,7 @@ public class IntervalDomain extends IntDomain {
 
 				assert checkInvariants() == null : checkInvariants() ;
 				assert result.checkInvariants() == null : result.checkInvariants() ;
-				
+
 				if (result.singleton())
 					returnedEvent = IntDomain.GROUND;
 				else if (result.min() > min() || result.max() < max())
@@ -5002,17 +4999,17 @@ public class IntervalDomain extends IntDomain {
 				}
 
 				assert checkInvariants() == null : checkInvariants() ;
-				
+
 				var.domainHasChanged(returnedEvent);
 				return;
-				
-				
+
+
 			}
-				
-			
+
+
 		}
 		else {
-					
+
 			if (domain.getSize() == 0)
 				throw failException;
 
@@ -5021,12 +5018,12 @@ public class IntervalDomain extends IntDomain {
 
 //			Interval domain.getInterval(] = input.intervals;
 			int inputSize = domain.noIntervals();
-				
+
 			// Chance for no event
 			while (pointer2 < inputSize
 					&& domain.getInterval(pointer2).max+shift < intervals[pointer1].min)
 				pointer2++;
-			
+
 			if (pointer2 == inputSize)
 				throw failException;
 
@@ -5095,7 +5092,7 @@ public class IntervalDomain extends IntDomain {
 						} else
 							break;
 					} else {
-						result.unionAdapt(new Interval(domain.getInterval(pointer2).min+shift, 
+						result.unionAdapt(new Interval(domain.getInterval(pointer2).min+shift,
 												   domain.getInterval(pointer2).max+shift));
 						pointer2++;
 
@@ -5152,7 +5149,7 @@ public class IntervalDomain extends IntDomain {
 
 			assert checkInvariants() == null : checkInvariants() ;
 			assert result.checkInvariants() == null : result.checkInvariants() ;
-			
+
 			if (result.singleton())
 				returnedEvent = IntDomain.GROUND;
 			else if (result.min() > min() || result.max() < max())
@@ -5187,14 +5184,14 @@ public class IntervalDomain extends IntDomain {
 			}
 
 			assert checkInvariants() == null : checkInvariants() ;
-			
+
 			var.domainHasChanged(returnedEvent);
-			return;			
-			
-			
-			
+			return;
+
+
+
 		}
-		
+
 	}
 
 	/**
@@ -5494,7 +5491,7 @@ public class IntervalDomain extends IntDomain {
 		assert (stamp == storeLevel);
 
 		assert (searchConstraints.get(position) == C) : "Position of the removed constraint not specified properly";
-		
+
 		if (position < searchConstraintsToEvaluate) {
 
 			searchConstraints.set(position, searchConstraints
@@ -5688,7 +5685,7 @@ public class IntervalDomain extends IntDomain {
 			else
 				break;
 		}
-	
+
 		if (domain.domainID() == IntervalDomainID)
 			return (domain.modelConstraintsToEvaluate[0]
 					+ domain.modelConstraintsToEvaluate[1] + domain.modelConstraintsToEvaluate[2]);
@@ -5699,58 +5696,58 @@ public class IntervalDomain extends IntDomain {
 
 	@Override
 	public int previousValue(int value) {
-		
+
 		for (int m = size - 1; m >= 0; m--) {
 
 			Interval i = intervals[m];
-			
+
 			// the max of previous interval is the seeked value.
 			if (i.min >= value)
 				continue;
-			
+
 			if (i.max >= value && i.min < value)
 				return value - 1;
-			
-			// the value is equal 
+
+			// the value is equal
 			if (i.max < value)
 				return i.max;
-				
+
 		}
 
-		return value;		
+		return value;
 
 	}
-	
-	
+
+
 	/**
-	 * It is a function to check if the object is in consistent state. 
+	 * It is a function to check if the object is in consistent state.
 	 * @return String describing the violated invariant, null if no invariant is violated.
 	 */
 	public String checkInvariants() {
-		
+
 		if (size == 0)
 			return null;
 
 		for (int i = 0; i < size; i++)
 			if (this.intervals[i] == null)
 				return "size of the domain is not set up properly";
-		
+
 		if (this.intervals[0].min > this.intervals[size-1].max)
 			return "Min value is larger than max value " + this;
-		
+
 		for (int i = 0; i < size; i++)
 			if (this.intervals[i].min > this.intervals[i].max )
-				return "One of the intervals not properly build. Min value is larger than max value " 
+				return "One of the intervals not properly build. Min value is larger than max value "
 				+ this;
-		
+
 		for (int i = 0; i < size - 1; i++)
 			if (this.intervals[i].max + 1 == this.intervals[i+1].min )
-				return "Two consequtive intervals should be merged. Improper representation" + 
+				return "Two consequtive intervals should be merged. Improper representation" +
 				this;
-		
+
 		//Fine, all invariants hold.
 		return null;
-		
+
 	}
 
 	@Override
@@ -5765,7 +5762,7 @@ public class IntervalDomain extends IntDomain {
 
 		if (counter == -1)
 			return;
-		
+
 		if (intervals[counter].min == value) {
 
 			if (intervals[counter].max != value) {
@@ -5776,7 +5773,7 @@ public class IntervalDomain extends IntDomain {
 				assert checkInvariants() == null : checkInvariants() ;
 
 				return;
-				
+
 			} else {
 				// if domain like this 1..3, 5, 7..10, and 5 being removed.
 
@@ -5802,7 +5799,7 @@ public class IntervalDomain extends IntDomain {
 					value - 1);
 
 			assert checkInvariants() == null : checkInvariants() ;
-			
+
 			return;
 		}
 
@@ -5826,10 +5823,10 @@ public class IntervalDomain extends IntDomain {
 		size++;
 
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		return;
-		
-	
+
+
 	}
 
 	@Override
@@ -5838,7 +5835,7 @@ public class IntervalDomain extends IntDomain {
 		int current = 0;
 		while (current < size && intervals[current].max < minValue)
 			current++;
-		
+
 		if (current == size)
 			return;
 
@@ -5846,7 +5843,7 @@ public class IntervalDomain extends IntDomain {
 
 			if (maxValue < intervals[current].min)
 				return;
-			
+
 			// removing will not create more intervals.
 			if (intervals[current].max > maxValue) {
 
@@ -5856,7 +5853,7 @@ public class IntervalDomain extends IntDomain {
 				assert checkInvariants() == null : checkInvariants() ;
 
 				return;
-				
+
 			} else {
 				// at least one complete interval is being removed.
 
@@ -5871,49 +5868,49 @@ public class IntervalDomain extends IntDomain {
 
 				if (maxValue >= intervals[maxCurrent].min)
 					intervals[maxCurrent] = new Interval(maxValue + 1, intervals[maxCurrent].max);
-				
+
 				int i = current;
 				for (; maxCurrent < size; i++, maxCurrent++) {
 					intervals[i] = intervals[maxCurrent];
 				}
-				
-				size = i;				
+
+				size = i;
 
 				return;
 			}
 		} else {
 
 			// minValue > intervals[current].min
-			
+
 			if (maxValue < intervals[current].max) {
 				// one additional interval is being created.
-			
+
 				if (intervals.length == size + 1) {
 					// not enough space to insert new interval.
 					Interval[] newIntervals = new Interval[intervals.length*2];
 					System.arraycopy(intervals, 0, newIntervals, 0, size);
 					intervals = newIntervals;
 				}
-				
+
 				for (int i = size; i > current; i--)
 					intervals[i] = intervals[i-1];
-				
+
 				intervals[current] = new Interval(intervals[current].min, minValue - 1);
 				intervals[current+1] = new Interval(maxValue + 1, intervals[current+1].max);
-				
+
 				size++;
 
 				return;
-				
+
 			}
 			else {
 				// minValue > intervals[current].min
 				// maxValue >= intervals[current].max
-				
+
 				// at least one complete interval is being removed.
 				intervals[current] = new Interval(intervals[current].min, minValue - 1);
 				current++;
-				
+
 				int maxCurrent = current;
 				while (maxCurrent < size && intervals[maxCurrent].max <= maxValue)
 					maxCurrent++;
@@ -5922,28 +5919,28 @@ public class IntervalDomain extends IntDomain {
 					size = current;
 					return;
 				}
-				
+
 				if (intervals[maxCurrent].min <= maxValue)
 					intervals[maxCurrent] = new Interval(maxValue + 1, intervals[maxCurrent].max);
-				
-				
+
+
 				int i = current;
 				for (; maxCurrent < size; i++, maxCurrent++) {
 					intervals[i] = intervals[maxCurrent];
 					intervals[maxCurrent] = null;
 				}
-				
+
 				size = i;
-				
+
 				return;
-				
+
 			}
-			
-		}		
-	
+
+		}
+
 	}
 
-	
+
 	@Override
 	public int intersectAdapt(IntDomain domain) {
 
@@ -5958,7 +5955,7 @@ public class IntervalDomain extends IntDomain {
 			IntervalDomain input = (IntervalDomain) domain;
 
 			assert input.checkInvariants() == null : input.checkInvariants() ;
-						
+
 			if (input.size == 0) {
 				size = 0;
 				return IntDomain.GROUND;
@@ -6102,7 +6099,7 @@ public class IntervalDomain extends IntDomain {
 
 			assert checkInvariants() == null : checkInvariants() ;
 			assert result.checkInvariants() == null : result.checkInvariants() ;
-			
+
 			if (result.singleton())
 				returnedEvent = IntDomain.GROUND;
 			else if (result.min() > min() || result.max() < max())
@@ -6123,34 +6120,34 @@ public class IntervalDomain extends IntDomain {
 
 
 			assert checkInvariants() == null : checkInvariants() ;
-			
+
 			return returnedEvent;
 	}
 
-		
+
 		if (domain.domainID() == SmallDenseDomainID) {
-		
+
 			SmallDenseDomain input = (SmallDenseDomain) domain;
 
 			// TODO, use contains.
 		//	if (input.contains(this))
 		//	if (input.eq(this))
-				
+
 			if (input.isEmpty()) {
 				size = 0;
 				return IntDomain.GROUND;
 			}
 
-			if (input.min == this.min() && input.max() == this.max() && 
+			if (input.min == this.min() && input.max() == this.max() &&
 				input.getSize() == this.getSize() && input.min + input.getSize() - 1 == input.max())
 				return IntDomain.NONE;
-			
+
 			IntervalDomain result = new IntervalDomain(this.size);
 
 			int current = input.min;
 			long bits = input.bits;
 			int position = 0;
-			
+
 			while (position < size && bits != 0) {
 
 				if (current < intervals[position].min) {
@@ -6168,23 +6165,23 @@ public class IntervalDomain extends IntDomain {
 				if (intervals[position].max < current) {
 					position++;
 					continue;
-				}				
-				
+				}
+
 				int min = current;
 				bits = bits << 1;
 				current++;
-				
+
 				while (bits < 0 && current <= intervals[position].max) {
 					bits = bits << 1;
 					current++;
 				}
-			
+
 				result.unionAdapt(min, current - 1);
-								
+
 			}
-			
+
 			assert (this.intersect( input.toIntervalDomain() ).eq(result)) : "Improper intersection " + this + "d: " + domain + "r: " + result;
-			
+
 			if (result.isEmpty()) {
 				size = 0;
 				return IntDomain.GROUND;
@@ -6192,12 +6189,12 @@ public class IntervalDomain extends IntDomain {
 
 			if (result.eq(this))
 				return IntDomain.NONE;
-			
+
 			int returnedEvent = IntDomain.ANY;
 
 			assert checkInvariants() == null : checkInvariants() ;
 			assert result.checkInvariants() == null : result.checkInvariants() ;
-			
+
 			if (result.singleton())
 				returnedEvent = IntDomain.GROUND;
 			else if (result.min() > min() || result.max() < max())
@@ -6218,9 +6215,9 @@ public class IntervalDomain extends IntDomain {
 
 
 			assert checkInvariants() == null : checkInvariants() ;
-			
+
 			return returnedEvent;
-		
+
 		}
 
 		assert false : "Not implemented for other domain type " + domain.getClass();
@@ -6232,9 +6229,9 @@ public class IntervalDomain extends IntDomain {
 	@Override
 	public int unionAdapt(IntDomain union) {
 
-		// FIXME, implement this in more specialized manner. 
+		// FIXME, implement this in more specialized manner.
 		IntDomain result = union(union);
-		
+
 		if (result.getSize() == getSize())
 			return Domain.NONE;
 		else {
@@ -6248,19 +6245,19 @@ public class IntervalDomain extends IntDomain {
 	public int intersectAdapt(int min, int max) {
 
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		assert (min <= max) : "Min value greater than max value " + min + " > " + max;
 
 		if (max < intervals[0].min) {
 			size = 0;
 			return IntDomain.GROUND;
 		}
-		
+
 		int currentMax = intervals[size - 1].max;
 		if (min > currentMax)  {
 			size = 0;
 			return IntDomain.GROUND;
-		}		
+		}
 
 		if (min <= intervals[0].min && max >= currentMax)
 			return Domain.NONE;
@@ -6275,7 +6272,7 @@ public class IntervalDomain extends IntDomain {
 		if (intervals[pointer].min > max) {
 			size = 0;
 			return IntDomain.GROUND;
-		}		
+		}
 
 		if (intervals[pointer].min >= min)
 			if (intervals[pointer].max <= max)
@@ -6303,7 +6300,7 @@ public class IntervalDomain extends IntDomain {
 		if (result.size <= intervals.length)
 			System.arraycopy(result.intervals, 0, intervals, 0,
 					result.size);
-		else {	
+		else {
 			intervals = new Interval[result.size];
 			System.arraycopy(result.intervals, 0, intervals, 0,
 					result.size);
@@ -6313,7 +6310,7 @@ public class IntervalDomain extends IntDomain {
 
 		assert checkInvariants() == null : checkInvariants() ;
 		assert result.checkInvariants() == null : result.checkInvariants() ;
-		
+
 		if (result.singleton()) {
 			return IntDomain.GROUND;
 		} else {
@@ -6324,18 +6321,18 @@ public class IntervalDomain extends IntDomain {
 
 	@Override
 	public int sizeOfIntersection(IntDomain domain) {
-		
+
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		if (domain.isEmpty())
 			return 0;
-		
+
 		if (domain.domainID() == IntervalDomainID) {
 
 			IntervalDomain input = (IntervalDomain) domain;
 
 			assert input.checkInvariants() == null : input.checkInvariants() ;
-			
+
 			int temp = 0;
 //			IntervalDomain temp;
 
@@ -6421,10 +6418,10 @@ public class IntervalDomain extends IntDomain {
 		}
 
 		if (domain.domainID() == BoundDomainID) {
-				
+
 			int min = domain.min();
 			int max = domain.max();
-			
+
 			int temp = 0;
 
 			int pointer1 = 0;
@@ -6433,7 +6430,7 @@ public class IntervalDomain extends IntDomain {
 				return 0;
 
 			Interval interval1 = intervals[pointer1];
-			
+
 			while (true) {
 				if (interval1.max < min) {
 					pointer1++;
@@ -6442,8 +6439,8 @@ public class IntervalDomain extends IntDomain {
 						continue;
 					} else
 						break;
-				} else 
-					if (max < interval1.min) 
+				} else
+					if (max < interval1.min)
 						break;
 					else
 				// interval1.max >= min
@@ -6453,7 +6450,7 @@ public class IntervalDomain extends IntDomain {
 					if (interval1.max <= max) {
 
 						temp += interval1.max - min + 1;
-						
+
 						pointer1++;
 						if (pointer1 < size) {
 							interval1 = intervals[pointer1];
@@ -6488,29 +6485,29 @@ public class IntervalDomain extends IntDomain {
 
 			return temp;
 
-		}		
+		}
 
-		if (domain.isSparseRepresentation()) {	
+		if (domain.isSparseRepresentation()) {
 
 			int temp = 0;
-			
+
 			ValueEnumeration enumer = domain.valueEnumeration();
-			
+
 			while (enumer.hasMoreElements()) {
-				
+
 				int next = enumer.nextElement();
-				
+
 				if (this.contains(next))
 					temp++;
 			}
-			
+
 			return temp;
-			
+
 		}
 		else {
-			
+
 			int temp = 0;
-			
+
 			int pointer1 = 0;
 			int pointer2 = 0;
 
@@ -6587,10 +6584,10 @@ public class IntervalDomain extends IntDomain {
 					}
 
 				}
-			}			
-			
+			}
+
 			return temp;
-			
+
 		}
 
 	}
@@ -6613,16 +6610,16 @@ public class IntervalDomain extends IntDomain {
 			else
 				throw new RuntimeException("The domain does not have an element as specified by the index " + index);
 		};
-		
+
 		return intervals[counter].min + index;
-		
+
 	}
 
 	private final static Random generator = new Random();
 
 	@Override
 	public int getRandomValue() {
-		
+
 		int min = min();
 		int size = max() - min();
 
@@ -6658,9 +6655,9 @@ public class IntervalDomain extends IntDomain {
 
 	@Override
 	public boolean contains(int min, int max) {
-		
+
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		for (int m = 0; m < size; m++) {
 			Interval i = intervals[m];
 			if (i.max >= max)
@@ -6671,5 +6668,5 @@ public class IntervalDomain extends IntDomain {
 		return false;
 
 	}
-	
+
 }

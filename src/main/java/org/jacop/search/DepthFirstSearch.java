@@ -1,9 +1,9 @@
 /**
- *  DepthFirstSearch.java 
+ *  DepthFirstSearch.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,7 +32,6 @@
 package org.jacop.search;
 
 import java.lang.reflect.Array;
-
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
@@ -44,29 +43,30 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.SwitchesPruningLogging;
 import org.jacop.core.Var;
-import org.jacop.set.core.SetDomain;
-import org.jacop.set.core.SetVar;
-
+import org.jacop.floats.constraints.PltC;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.constraints.PltC;
+import org.jacop.set.core.SetDomain;
+import org.jacop.set.core.SetVar;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implements Depth First Search with number of possible plugins (listeners) to
  * be attached to modify the search.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
- * @param <T> type of variables used in this search. 
+ * @param <T> type of variables used in this search.
  */
 
-public class DepthFirstSearch<T extends Var> implements Search<T> {
+public class DepthFirstSearch<T extends Var> implements Search<T> { private static Logger logger = LoggerFactory.getLogger(DepthFirstSearch.class);
 
     //@todo make debugAll be used in printing statements.
     static final boolean debugAll = true;
 
     /**
-     * If it is set to true then the optimizing search will 
+     * If it is set to true then the optimizing search will
      * quit the search if this action is indicated by the solution
      * listener.
      */
@@ -130,7 +130,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     public Var costVariable = null;
 
     boolean optimize = false;
-	
+
     /**
      * It stores number of nodes with decisions during search.
      */
@@ -186,7 +186,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
      */
 
     public InitializeListener initializeListener;
-		
+
     /**
      * It stores the maximum depth reached during search.
      */
@@ -311,7 +311,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
      * It specifies if for setVar based search the left branch should impose EinA constraint.
      */
     public boolean einAinleftTree = true;
-	
+
     /**
      * It sets the id of the store.
      * @param name the id of the store object.
@@ -431,9 +431,9 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 	    return vars;
 
 	assert (false) : "Fix it. Uncomment below.";
-		
+
 	return null;
-		
+
 	/*
 	  IdentityHashMap<T, Integer> position = heuristic.getVariablesMapping();
 
@@ -446,7 +446,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 	  }
 
 	  return vars;
-		
+
 	*/
     }
 
@@ -554,12 +554,12 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
 	// all search nodes begins here
 	nodes++;
-		
+
 	consistent = store.consistency();
-				
+
 	if (consistencyListener != null)
 	    consistent = consistencyListener.executeAfterConsistency(consistent);
-		
+
 	if (!consistent) {
 	    // Failed leaf of the search tree
 	    wrongDecisions++;
@@ -576,31 +576,31 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
 	    if (fdv != null) {
 
-		val = heuristic.getChoiceValue();				
+		val = heuristic.getChoiceValue();
 		assert (store.currentConstraint == null);
 
 		//		maybe a boolean flag, if search should work
 		//		C, not(C) versus not(C), C;
-				
+
 		/**
-		 * Possible changes to Search. Indomain returns int. 
-		 * for intVar it is an assignment. inValue(). 
+		 * Possible changes to Search. Indomain returns int.
+		 * for intVar it is an assignment. inValue().
 		 * for serVar this is EinA() constraint, inGLB(value)
-		 * add boolean flag reversedOrder = false; 
-		 * Only accepted for SetVar search. 
+		 * add boolean flag reversedOrder = false;
+		 * Only accepted for SetVar search.
 		 * Double check that firstVariable is ok with this
 		 * non grounding of values even in case of var,value pair.
 		 */
-				
+
 		if (fdv instanceof IntVar)
 		    ((IntDomain)fdv.dom()).inValue(store.level, (IntVar)fdv, val);
-				
+
 		if (fdv instanceof SetVar)
 		    if (einAinleftTree)
 			((SetDomain)fdv.dom()).inGLB(store.level, (SetVar)fdv, val);
 		    else
 			((SetDomain)fdv.dom()).inLUBComplement(store.level, (SetVar)fdv, val);
-				
+
 		decisions++;
 
 		depthExcludePaths++;
@@ -616,7 +616,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 		    // Solution already found so this is not a search node
 		    nodes--;
 		    // Execute subsearches if given.
-					
+
 		    if (childSearches != null) {
 
 			boolean childResult = false;
@@ -679,16 +679,16 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 			    }
 			    else if (costVariable instanceof FloatVar) {
 				double childCostValue = childSearches[currentChildSearch].getCostValueFloat();
-				if (childCostValue < costValueFloat) 
+				if (childCostValue < costValueFloat)
 				    costValueFloat = childCostValue;
 				cost = new PltC((FloatVar)costVariable, costValueFloat);
 				// cost = new org.jacop.floats.constraints.PlteqC((FloatVar)costVariable, FloatDomain.previous(costValueFloat)); //costValueFloat - FloatDomain.epsilon(costValueFloat));
 			    }
 
 			}
-						
+
 			boolean stopMasterSearch = false;
-						
+
 			if (childResult || childFoundSolution) {
 			    // Child search found solution, so there is a
 			    // solution
@@ -702,8 +702,8 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
 			store.removeLevel(depth);
 			store.setLevel(--depth);
-			fdv = null;						
-						
+			fdv = null;
+
 			if (!respectSolutionListenerAdvice && optimize) {
 
 			    return false;
@@ -727,22 +727,22 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 			}
 
 		    }
-					
+
 		    if (!respectSolutionListenerAdvice && optimize) {
 
 			solutionListener.executeAfterSolution(this, heuristic);
 
 			store.removeLevel(depth);
 			store.setLevel(--depth);
-					
+
 			return false;
 		    }
-					
+
 		    boolean returnCode = solutionListener.executeAfterSolution(this, heuristic);
-					
+
 		    store.removeLevel(depth);
 		    store.setLevel(--depth);
-					
+
 		    return returnCode;
 
 		} else {
@@ -760,7 +760,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 	    }
 
 	    // choice point imposed.
-			
+
 	    consistent = label(heuristic.getIndex());
 
 	    if (exitChildListener != null)
@@ -804,7 +804,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 		    store.setLevel(store.level);
 
 		    store.impose(new Not(choice));
-					
+
 		    consistent = label(firstVariable);
 
 		    if (exitChildListener != null)
@@ -815,13 +815,13 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
 		    store.removeLevel(depth);
 
-					
+
 		}
 		//				else if (!fdv.dom().singleton(val)) {
 		else if (!fdv.dom().singleton()) {
 
 		    assert (store.currentConstraint == null);
-						
+
 		    store.setLevel(store.level);
 
 		    if (fdv instanceof IntVar)
@@ -830,7 +830,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 		    if (fdv instanceof SetVar)
 			if (einAinleftTree)
 			    ((SetDomain)fdv.dom()).inLUBComplement(store.level, (SetVar)fdv, val);
-			else	
+			else
 			    ((SetDomain)fdv.dom()).inGLB(store.level, (SetVar)fdv, val);
 
 		    consistent = label(firstVariable);
@@ -904,33 +904,33 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
 	if (initializeListener != null)
 	    initializeListener.executedAtInitialize(store);
-		
+
 	// Iterative Solution listener sets it to zero so it can find the next batch, so it has to be executed
 	// after initialize listener.
 	int solutionNoBeforeSearch = solutionListener.solutionsNo();
-		
-	// If constraints employ only one time execution of the part of 
+
+	// If constraints employ only one time execution of the part of
 	// the consistency technique then the results of that part must be
 	// stored in one level above the level search starts from as this
-	// can be removed. 
+	// can be removed.
 	boolean result = store.consistency();
 	store.setLevel(store.level + 1);
 	depth = store.level;
-		
+
 	if (result)
 	    result = label(0);
 
 	store.removeLevel(store.level);
 	store.setLevel(store.level - 1);
-	depth--;			
-				
+	depth--;
+
 	if (exitListener != null)
 	    exitListener.executedAtExit(store, solutionListener.solutionsNo());
 
 	if (timeOutOccured) {
 
 	    if (printInfo)
-		System.out.println("Time-out " + tOut + "s");
+		logger.info("Time-out " + tOut + "s");
 
 	}
 
@@ -939,11 +939,11 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 	    if (printInfo) {
 		if (costVariable != null)
 		    if (costVariable instanceof IntVar)
-			System.out.println("Solution cost is " + costValue);
+			logger.info("Solution cost is " + costValue);
 		    else if (costVariable instanceof IntVar)
-			System.out.println("Solution cost is " + costVariable.dom());
-			
-		System.out.println(this);
+			logger.info("Solution cost is " + costVariable.dom());
+
+		logger.info(this.toString());
 	    }
 
 	    if (raisedLevel) {
@@ -957,13 +957,13 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
                 return result;
 
 	} else {
-			
+
 	    if (printInfo) {
-				
-		System.out.println("No solution found.");
-				
+
+		logger.info("No solution found.");
+
 		StringBuffer buf = new StringBuffer();
-				
+
 		buf.append("Depth First Search " + id + "\n");
 		buf.append("\n");
 		buf.append("Nodes : ").append(nodes).append("\n");
@@ -972,9 +972,9 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 		buf.append("Backtracks : ").append(numberBacktracks).append("\n");
 		buf.append("Max Depth : ").append(maxDepthExcludePaths).append("\n");
 
-		System.out.println( buf.toString() );
-				
-	    }			
+		logger.info(buf.toString());
+
+	    }
 
 	    if (raisedLevel) {
 		store.removeLevel(store.level);
@@ -1002,7 +1002,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
 	if (costVariable == null)
 	    optimize = false;
-		
+
 	// 		decisions = 0;
 	// 		numberBacktracks = 0;
 	// 		nodes = 0;
@@ -1012,21 +1012,21 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
 	if (initializeListener != null)
 	    initializeListener.executedAtInitialize(store);
-		
+
 	// Iterative Solution listener sets it to zero so it can find the next batch, so it has to be executed
 	// after initialize listener.
 	int solutionNoBeforeSearch = solutionListener.solutionsNo();
-		
+
 	boolean result = store.consistency();
 	store.setLevel(store.level + 1);
 	depth = store.level;
 
-	if (result) 
+	if (result)
 	    result = label(0);
 
 	store.removeLevel(store.level);
 	store.setLevel(store.level - 1);
-	depth--;			
+	depth--;
 
 	if (exitListener != null)
 	    exitListener.executedAtExit(store, solutionListener.solutionsNo() - solutionNoBeforeSearch);
@@ -1034,27 +1034,27 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 	if (timeOutOccured) {
 
 	    if (printInfo)
-		System.out.println("Time-out " + tOut + "s");
+		logger.info("Time-out " + tOut + "s");
 
 	}
 
 	if (solutionListener.solutionsNo() > solutionNoBeforeSearch) {
-			
+
 	    if (assignSolution)
 		assignSolution();
 
 	    if (printInfo)
-		System.out.println(this);
-			
+		logger.info(this.toString());
+
 	    return true;
 	} else {
 
 	    if (printInfo) {
-				
-		System.out.println("No solution found.");
-				
+
+		logger.info("No solution found.");
+
 		StringBuffer buf = new StringBuffer();
-				
+
 		buf.append("Depth First Search " + id + "\n");
 		buf.append("\n");
 		buf.append("Nodes : ").append(nodes).append("\n");
@@ -1063,9 +1063,9 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 		buf.append("Backtracks : ").append(numberBacktracks).append("\n");
 		buf.append("Max Depth : ").append(maxDepthExcludePaths).append("\n");
 
-		System.out.println( buf.toString() );
-				
-	    }			
+		logger.info(buf.toString());
+
+	    }
 	    return false;
 	}
 
@@ -1097,56 +1097,56 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
 	if (initializeListener != null)
 	    initializeListener.executedAtInitialize(store);
-		
+
 	// Iterative Solution listener sets it to zero so it can find the next batch, so it has to be executed
 	// after initialize listener.
 	int solutionNoBeforeSearch = solutionListener.solutionsNo();
-		
+
 	boolean result = store.consistency();
 	store.setLevel(store.level + 1);
 	depth = store.level;
-		
+
 	if (result)
 	    result = label(0);
 
 	store.removeLevel(store.level);
 	store.setLevel(store.level - 1);
-	depth--;		
-		
+	depth--;
+
 	if (exitListener != null)
 	    exitListener.executedAtExit(store, solutionListener.solutionsNo());
 
 	if (timeOutOccured) {
 
 	    if (printInfo)
-		System.out.println("Time-out " + tOut + "s");
+		logger.info("Time-out " + tOut + "s");
 
 	}
 
 	if (solutionListener.solutionsNo() > solutionNoBeforeSearch) {
-			
+
 	    if (assignSolution)
 		assignSolution();
 
 	    if (printInfo)
 		if (costVariable instanceof IntVar)
-		    System.out.println("Solution cost is " + costValue);
+		    logger.info("Solution cost is " + costValue);
 		else if (costVariable instanceof FloatVar)
-		    System.out.println("Solution cost is " + costVariable.dom());
+		    logger.info("Solution cost is " + costVariable.dom());
 
 	    if (printInfo)
-		System.out.println(this);
+		logger.info(this.toString());
 
 	    return true;
 
 	} else {
-			
+
 	    if (printInfo) {
-				
-		System.out.println("No solution found.");
-				
+
+		logger.info("No solution found.");
+
 		StringBuffer buf = new StringBuffer();
-				
+
 		buf.append("Depth First Search " + id + "\n");
 		buf.append("\n");
 		buf.append("Nodes : ").append(nodes).append("\n");
@@ -1155,8 +1155,8 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 		buf.append("Backtracks : ").append(numberBacktracks).append("\n");
 		buf.append("Max Depth : ").append(maxDepthExcludePaths).append("\n");
 
-		System.out.println( buf.toString() );
-				
+		logger.info(buf.toString());
+
 	    }
 	    return false;
 	}
@@ -1165,7 +1165,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
     /**
      * It decides if a solution is assigned to store after search exits.
-     * 
+     *
      * @param value defines if solution is assigned.
      */
 
@@ -1175,7 +1175,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
     /**
      * It turns on the backtrack out.
-     * 
+     *
      * @param out
      *            defines how many backtracks are performed before the search
      *            exits.
@@ -1188,7 +1188,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
     /**
      * It turns on the decisions out.
-     * 
+     *
      * @param out
      *            defines how many decisions are made before the search exits.
      */
@@ -1200,7 +1200,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
     /**
      * It turns on the nodes out.
-     * 
+     *
      * @param out
      *            defines how many nodes are visited before the search exits.
      */
@@ -1212,7 +1212,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
     /**
      * It decides if information about search is printed.
-     * 
+     *
      * @param value
      *            defines if info is printed to standard output.
      */
@@ -1223,7 +1223,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
     /**
      * It turns on the timeout.
-     * 
+     *
      * @param out
      *            defines how many seconds before the search exits.
      */
@@ -1236,7 +1236,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
     /**
      * It turns on the wrong decisions out.
-     * 
+     *
      * @param out
      *            defines how many wrong decisions are made before the search
      *            exits.
@@ -1285,13 +1285,13 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 	    return assignSolution( solutionListener.solutionsNo() - 1);
 	else
 	    return assignSolution( 0 );
-		
+
     }
 
     public boolean assignSolution(int no) {
 
 	boolean result;
-		
+
 	if (solutionListener.isRecordingSolutions())
 	    result = solutionListener.assignSolution(store, no);
 	else
@@ -1302,12 +1302,12 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
 	if (childSearches != null) {
 	    int match = -1;
-			
+
 	    currentChildSearch = 0;
 	    for (; currentChildSearch < childSearches.length
 		     && match == -1; currentChildSearch++)
 		match = childSearches[currentChildSearch].getSolutionListener().findSolutionMatchingParent(no);
-			
+
 	    if (match == -1)
 		return false;
 	    return childSearches[currentChildSearch-1].assignSolution(match);
@@ -1360,7 +1360,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     public void setInitializeListener(InitializeListener listener) {
 	initializeListener = listener;
     }
-	
+
     public void printAllSolutions() {
     	solutionListener.printAllSolutions();
     }
@@ -1380,5 +1380,5 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     public void setOptimize(boolean value) {
 	optimize = value;
     }
-	
+
 }

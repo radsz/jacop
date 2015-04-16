@@ -1,9 +1,9 @@
 /**
- *  CreditCalculator.java 
+ *  CreditCalculator.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -33,19 +33,21 @@ package org.jacop.search;
 
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Defines functionality of credit search. Plugin in this object into search to
  * change your depth first search into credit search. It has to be plugin as
  * ExitChildListener, TimeOutListener, and Consistency Listener.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  * @param <T> type of variable being used in the search.
  */
 
 public class CreditCalculator<T extends Var> implements ExitChildListener<T>, TimeOutListener,
-		ConsistencyListener {
+		ConsistencyListener { private static Logger logger = LoggerFactory.getLogger(CreditCalculator.class);
 
 	boolean timeOut = false;
 
@@ -63,28 +65,28 @@ public class CreditCalculator<T extends Var> implements ExitChildListener<T>, Ti
 
 	@Override
 	public String toString() {
-		
+
 		StringBuffer desc = new StringBuffer();
-		
+
 		desc.append("credit-right\n");
 		for (int i = 0; i < creditsRight.length; i++)
 			desc.append(String.valueOf(creditsRight[i])).append(" ");
-		
+
 		desc.append("\n");
-		
+
 		desc.append("credit-left\n");
 		for (int i = 0; i < creditsLeft.length; i++)
 			desc.append(String.valueOf(creditsLeft[i])).append(" ");
-		
+
 		desc.append("\n");
-		
+
 		desc.append("currentLevel ").append(String.valueOf(currentLevel)).append("\n");
 		desc.append("currentBacktracks ").append(String.valueOf(currentBacktracks)).append("\n");
 		desc.append("leftChild? ").append(String.valueOf(leftChild));
 		return desc.toString();
-		
+
 	}
-	
+
 	ConsistencyListener[] consistencyListeners;
 
 	ExitChildListener<T>[] exitChildListeners;
@@ -102,7 +104,7 @@ public class CreditCalculator<T extends Var> implements ExitChildListener<T>, Ti
 	 * than max depth with a maximumally number of backtracks performed in those
 	 * subtrees. This approach allows to limit detrimental effect of early
 	 * mistake which can not be proven easily by a backtrack search.
-	 * @param credit the number of credits given to a search. 
+	 * @param credit the number of credits given to a search.
 	 * @param backtracks the maximum number of allowed backtracks from the node which has no remaining credits.
 	 * @param maxDepth the maximum depth at which it is still alowed to distribute credits.
 	 */
@@ -121,21 +123,21 @@ public class CreditCalculator<T extends Var> implements ExitChildListener<T>, Ti
 
 	}
 
-	
+
 	 /** The constructor allows to specify number of credits. Credits of the
 	 * parent are divided equally among children. As soon a node has only one
 	 * credit, there is a restriction how many backtracks can be performed in
-	 * search in the left and right child altogether. This approach allows to 
-	 * limit detrimental effect of early mistake which can not be proven easily 
+	 * search in the left and right child altogether. This approach allows to
+	 * limit detrimental effect of early mistake which can not be proven easily
 	 * by a backtrack search.
-	 * @param credit the number of credits given to a search. 
+	 * @param credit the number of credits given to a search.
 	 * @param backtracks the maximum number of allowed backtracks from the node which has no remaining credits.
 	 */
 	public CreditCalculator(int credit, int backtracks) {
 
 		this.backtracks = backtracks;
 		currentBacktracks = backtracks;
-		
+
 		int no = 0;
 
 		int temp = credit;
@@ -162,18 +164,18 @@ public class CreditCalculator<T extends Var> implements ExitChildListener<T>, Ti
 		currentLevel++;
 
 		//TODO, if not consistent in left child then transfer credits to right child?
-		
+
 		if (!consistent && leftChild) {
 			currentLevel--;
 				if (currentLevel > 0 && currentLevel < creditsLeft.length) {
-				
-					//TODO, do we need that?	if (creditsLeft[currentLevel - 1] > 1)	
+
+					//TODO, do we need that?	if (creditsLeft[currentLevel - 1] > 1)
 					creditsRight[currentLevel] += creditsLeft[currentLevel];
 					creditsLeft[currentLevel] = 0;
-			
+
 				}
 		}
-		
+
 		if (consistent)
 			if (currentLevel > 0 && currentLevel < creditsLeft.length) {
 
@@ -257,7 +259,7 @@ public class CreditCalculator<T extends Var> implements ExitChildListener<T>, Ti
 	public boolean leftChild(T var, int value, boolean status) {
 
 		//TODO if credits are encountered in the node then backtracks should be set to zero. where?
-		
+
 		if (!status) {
 
 			if (currentLevel > 0 && currentLevel < creditsLeft.length) {
@@ -410,7 +412,7 @@ public class CreditCalculator<T extends Var> implements ExitChildListener<T>, Ti
 			if (currentLevel >= creditsLeft.length
 					|| creditsLeft[currentLevel] == 0)
 				currentBacktracks--;
-			
+
 		}
 
 		if (exitChildListeners != null)

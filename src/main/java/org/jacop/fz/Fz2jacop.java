@@ -1,9 +1,9 @@
 /**
- *  Fz2jacop.java 
+ *  Fz2jacop.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -33,28 +33,30 @@
 package org.jacop.fz;
 
 import org.jacop.core.FailException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
- * An executable to parse and execute the flatzinc file. 
- * 
+ *
+ * An executable to parse and execute the flatzinc file.
+ *
  * @author Krzysztof Kuchcinki
  *
  */
 
-public class Fz2jacop {
+public class Fz2jacop { private static Logger logger = LoggerFactory.getLogger(Fz2jacop.class);
 
     /**
-     * It parses the provided file and parsing parameters followed by problem solving. 
-     * 
-     * @param args parameters describing the flatzinc file containing the problem to be solved as well as options for problem solving. 
-     * 
+     * It parses the provided file and parsing parameters followed by problem solving.
+     *
+     * @param args parameters describing the flatzinc file containing the problem to be solved as well as options for problem solving.
+     *
      * TODO what are the conditions for different exceptions being thrown? Write little info below.
-     * 
+     *
      * @throws ParseException
      * @throws TokenMgrError
      */
-	
+
     public static void main(String[] args)  {
 
 	// org.jacop.core.SwitchesPruningLogging.traceVar =  false;
@@ -74,7 +76,7 @@ public class Fz2jacop {
 	Options opt = new Options(args);
 
 	if (opt.getVerbose())
-	    System.out.println("%% Flatzinc2JaCoP: compiling and executing " + args[args.length-1]);
+	    logger.info("%% Flatzinc2JaCoP: compiling and executing " + args[args.length - 1]);
 
 	Thread tread = java.lang.Thread.currentThread();
 	java.lang.management.ThreadMXBean b = java.lang.management.ManagementFactory.getThreadMXBean();
@@ -87,32 +89,32 @@ public class Fz2jacop {
 	if (opt.getStatistics())
 	    Runtime.getRuntime().addShutdownHook(t);
 
-	try {	    
+	try {
 
 	    parser.model();
 
 	} catch (FailException e) {
-            System.out.println("=====UNSATISFIABLE====="); // "*** Evaluation of model resulted in fail.");
+            logger.info("=====UNSATISFIABLE====="); // "*** Evaluation of model resulted in fail.");
 	} catch (ArithmeticException e) {
-	    System.err.println("%% Evaluation of model resulted in an overflow.");
+	    logger.error("%% Evaluation of model resulted in an overflow.");
 	} catch (ParseException e) {
-	    System.out.println("%% Parser exception "+ e);
+	    logger.info("%% Parser exception ", e);
 	} catch (TokenMgrError e) {
-	    System.out.println("%% Parser exception "+ e);
+	    logger.info("%% Parser exception " , e);
  	} catch (ArrayIndexOutOfBoundsException e) {
- 	    System.out.println("%% JaCoP internal error. Array out of bound exception "+ e);
+ 	    logger.info("%% JaCoP internal error. Array out of bound exception ",e);
 	    if (e.getStackTrace().length > 0)
-		System.out.println ("%%\t" + e.getStackTrace()[0]);
+		logger.info ("%%\t" ,e);
 	} catch (OutOfMemoryError e) {
-	    System.out.println("%% Out of memory error; consider option -Xmx... for JVM");
+	    logger.info("%% Out of memory error; consider option -Xmx... for JVM");
 	} catch (StackOverflowError e) {
-	    System.out.println("%% Stack overflow exception error; consider option -Xss... for JVM");
+	    logger.info("%% Stack overflow exception error; consider option -Xss... for JVM");
 	}
 
 	if (opt.getStatistics()) {
-	    Runtime.getRuntime().removeShutdownHook(t); 
-	
-	    System.out.println("\n%% Total CPU time : " + (b.getThreadCpuTime(tread.getId()) - startCPU)/(long)1e+6 + "ms");
+	    Runtime.getRuntime().removeShutdownHook(t);
+
+	    logger.info("\n%% Total CPU time : " + (b.getThreadCpuTime(tread.getId()) - startCPU) / (long) 1e+6 + "ms");
 	}
 
     }

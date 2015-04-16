@@ -1,9 +1,9 @@
 /**
- *  XplusYlteqZ.java 
+ *  XplusYlteqZ.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,43 +31,44 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Constraint X + Y =< Z
- * 
+ *
  * Bound consistency is used.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class XplusYlteqZ extends PrimitiveConstraint {
+public class XplusYlteqZ extends PrimitiveConstraint { private static Logger logger = LoggerFactory.getLogger(XplusYlteqZ.class);
 
 	static int counter = 1;
 
 	/**
-	 * It specifies variable x in constraint x + y <= z. 
+	 * It specifies variable x in constraint x + y <= z.
 	 */
 	public IntVar x;
 
 	/**
-	 * It specifies variable x in constraint x + y <= z. 
+	 * It specifies variable x in constraint x + y <= z.
 	 */
 	public IntVar y;
 
 	/**
-	 * It specifies variable x in constraint x + y <= z. 
+	 * It specifies variable x in constraint x + y <= z.
 	 */
 	public IntVar z;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"x", "y", "z"};
@@ -79,7 +80,7 @@ public class XplusYlteqZ extends PrimitiveConstraint {
 	 * @param z variable z.
 	 */
 	public XplusYlteqZ(IntVar x, IntVar y, IntVar z) {
-		
+
 		assert (x != null) : "Variable x is null";
 		assert (y != null) : "Variable y is null";
 		assert (z != null) : "Variable z is null";
@@ -169,13 +170,13 @@ public class XplusYlteqZ extends PrimitiveConstraint {
 
 	@Override
 	public void notConsistency(Store store) {
-	 
+
 		x.domain.inMin(store.level, x, z.min() - y.max() + 1);
-		
+
 		y.domain.inMin(store.level, y, z.min() - x.max() + 1);
-		
+
 		z.domain.inMax(store.level, z, x.max() + y.max() - 1);
-		
+
 
 	}
 
@@ -210,5 +211,5 @@ public class XplusYlteqZ extends PrimitiveConstraint {
 			z.weight++;
 		}
 	}
-	
+
 }

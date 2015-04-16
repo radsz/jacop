@@ -1,9 +1,9 @@
 /**
- *  SimpleArrayList.java 
+ *  SimpleArrayList.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,20 +31,20 @@
 
 package org.jacop.util;
 
-import java.util.AbstractList;
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Different implementation of an ArrayList data structures. This version is
  * tailored for JaCoP. Use with care, check when it uses == instead of equals().
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  * @param <V> the type which is being stored by this class.
  */
 
-public class SimpleArrayList<V> extends AbstractList<V>{
+public class SimpleArrayList<V> extends AbstractList<V>{ private static Logger logger = LoggerFactory.getLogger(SimpleArrayList.class);
 
 	/**
 	 * The array buffer into which the elements of the ArrayList are stored. The
@@ -54,7 +54,7 @@ public class SimpleArrayList<V> extends AbstractList<V>{
 
 	/**
 	 * The size of the ArrayList (the number of elements it contains).
-	 * 
+	 *
 	 */
 	private int size;
 
@@ -70,7 +70,7 @@ public class SimpleArrayList<V> extends AbstractList<V>{
 	 * the order they are returned by the collection's iterator. The
 	 * <tt>ArrayList</tt> instance has an initial capacity of 110% the size of
 	 * the specified collection.
-	 * 
+	 *
 	 * @param c
 	 *            the collection whose elements are to be placed into this list.
 	 * @throws NullPointerException
@@ -87,20 +87,20 @@ public class SimpleArrayList<V> extends AbstractList<V>{
 
 	/**
 	 * Constructs an empty list with the specified initial capacity.
-	 * 
+	 *
 	 * @param initialCapacity the initial capacity of the list.
 	 */
 	@SuppressWarnings("unchecked")
 	public SimpleArrayList(int initialCapacity) {
 		this.elementData = (V[]) new Object[initialCapacity];
 	}
-	
-	
-	
+
+
+
 	/**
 	 * AbstractList defines hashCode so that it depends on the objects included.
 	 * This makes it costly (linear in the number of elements).
-	 * 
+	 *
 	 * Taking the hash of elementData will make it faster
 	 * TODO make sure this is what we want
 	 */
@@ -108,11 +108,11 @@ public class SimpleArrayList<V> extends AbstractList<V>{
 	public int hashCode(){
 		return elementData.hashCode();
 	}
-	
+
 	/**
 	 * AbstractList defines equals so that it depends on the objects included.
 	 * This makes it costly (linear in the number of elements).
-	 * 
+	 *
 	 * Equality of references makes it faster
 	 * TODO make sure this is what we want
 	 */
@@ -126,7 +126,7 @@ public class SimpleArrayList<V> extends AbstractList<V>{
 
 	/**
 	 * Appends the specified element to the end of this list.
-	 * 
+	 *
 	 * @param o element to be appended to this list.
 	 */
 	public boolean add(V o) {
@@ -139,7 +139,7 @@ public class SimpleArrayList<V> extends AbstractList<V>{
 	 * Inserts the specified element at the specified position in this list.
 	 * Shifts the element currently at that position (if any) and any subsequent
 	 * elements to the right (adds one to their indices).
-	 * 
+	 *
 	 * @param index index at which the specified element is to be inserted.
 	 * @param element element to be inserted.
 	 */
@@ -158,7 +158,7 @@ public class SimpleArrayList<V> extends AbstractList<V>{
 	 * specified Collection is modified while the operation is in progress.
 	 * (This implies that the behavior of this call is undefined if the
 	 * specified Collection is this list, and this list is nonempty.)
-	 * 
+	 *
 	 * @param c the elements to be inserted into this list.
 	 * @return true if some elements has been added.
 	 */
@@ -181,10 +181,10 @@ public class SimpleArrayList<V> extends AbstractList<V>{
 		size = 0;
 
 	}
-	
+
 	/**
 	 * same as clear(), but references to objects are kept internally. This
-	 * allows the operation to be constant time, but implies that objects will 
+	 * allows the operation to be constant time, but implies that objects will
 	 * not be garbage collected until their references are overwritten to
 	 * store other objects.
 	 */
@@ -194,7 +194,7 @@ public class SimpleArrayList<V> extends AbstractList<V>{
 
 	/**
 	 * Returns <tt>true</tt> if this list contains the specified element.
-	 * 
+	 *
 	 * @param elem
 	 *            element whose presence in this list is to be tested.
 	 * @return <code>true</code> if the specified element is present;
@@ -208,7 +208,7 @@ public class SimpleArrayList<V> extends AbstractList<V>{
 	 * Increases the capacity of this <tt>ArrayList</tt> instance, if
 	 * necessary, to ensure that it can hold at least the number of elements
 	 * specified by the minimum capacity argument.
-	 * 
+	 *
 	 * @param minCapacity
 	 *            the desired minimum capacity.
 	 */
@@ -239,7 +239,7 @@ public class SimpleArrayList<V> extends AbstractList<V>{
 
 	/**
 	 * Returns the element at the specified position in this list.
-	 * 
+	 *
 	 * @param index index of element to return.
 	 * @return the element at the specified position in this list.
 	 */
@@ -247,17 +247,17 @@ public class SimpleArrayList<V> extends AbstractList<V>{
 
 		return elementData[index];
 	}
-	
+
 	/**
 	 * It removes and returns the last element in the list.
-	 * 
+	 *
 	 * @return the last element in the list.
 	 */
 	public V pop(){
 		size--;
 		return elementData[size];
 	}
-	
+
 	/**
 	 * It inserts the element at the end of the list
 	 * @param element the added element.
@@ -269,7 +269,7 @@ public class SimpleArrayList<V> extends AbstractList<V>{
 	/**
 	 * Searches for the first occurrence of the given argument, testing for
 	 * equality using the <tt>equals</tt> method.
-	 * 
+	 *
 	 * @param elem an object.
 	 * @return the index of the first occurrence of the argument in this list;
 	 *         returns value -1 if the object is not found.
@@ -290,7 +290,7 @@ public class SimpleArrayList<V> extends AbstractList<V>{
 	/**
 	 * Searches for the first occurrence of the given argument, testing for
 	 * equality using the == method.
-	 * 
+	 *
 	 * @param elem an object.
 	 * @param lastPosition last index to which it should check.
 	 * @return the index of the first occurrence of the argument in this list;
@@ -307,7 +307,7 @@ public class SimpleArrayList<V> extends AbstractList<V>{
 
 	/**
 	 * Tests if this list has no elements.
-	 * 
+	 *
 	 * @return true if this list has no elements; false otherwise.
 	 */
 	public boolean isEmpty() {
@@ -317,7 +317,7 @@ public class SimpleArrayList<V> extends AbstractList<V>{
 	/**
 	 * Returns the index of the last occurrence of the specified object in this
 	 * list.
-	 * 
+	 *
 	 * @param elem
 	 *            the desired element.
 	 * @return the index of the last occurrence of the specified object in this
@@ -339,7 +339,7 @@ public class SimpleArrayList<V> extends AbstractList<V>{
 	/**
 	 * Removes the element at the specified position in this list. Shifts any
 	 * subsequent elements to the left (subtracts one from their indices).
-	 * 
+	 *
 	 * @param index the index of the element to removed.
 	 * @return the element that was removed from the list.
 	 */
@@ -351,7 +351,7 @@ public class SimpleArrayList<V> extends AbstractList<V>{
 		if (numMoved > 0)
 			System.arraycopy(elementData, index + 1, elementData, index,
 					numMoved);
-		elementData[--size] = null; 
+		elementData[--size] = null;
 		return oldValue;
 	}
 
@@ -364,7 +364,7 @@ public class SimpleArrayList<V> extends AbstractList<V>{
 	 * the list contained the specified element (or equivalently, if the list
 	 * changed as a result of the call).
 	 * <p>
-	 * 
+	 *
 	 * @param o element to be removed from this list, if present.
 	 * @return true if the list contained the specified element.
 	 */
@@ -388,7 +388,7 @@ public class SimpleArrayList<V> extends AbstractList<V>{
 	/**
 	 * Replaces the element at the specified position in this list with the
 	 * specified element.
-	 * 
+	 *
 	 * @param index
 	 *            index of element to replace.
 	 * @param element
@@ -405,7 +405,7 @@ public class SimpleArrayList<V> extends AbstractList<V>{
 	/**
 	 * Replaces the element at the specified position in this list with the
 	 * specified element.
-	 * 
+	 *
 	 * @param index
 	 *            index of element to replace.
 	 * @param element
@@ -417,7 +417,7 @@ public class SimpleArrayList<V> extends AbstractList<V>{
 
 	/**
 	 * Returns the number of elements in this list.
-	 * 
+	 *
 	 * @return the number of elements in this list.
 	 */
 	public int size() {
@@ -427,7 +427,7 @@ public class SimpleArrayList<V> extends AbstractList<V>{
 	/**
 	 * Returns an array containing all of the elements in this list in the
 	 * correct order.
-	 * 
+	 *
 	 * @return an array containing all of the elements in this list in the
 	 *         correct order.
 	 */
@@ -444,14 +444,14 @@ public class SimpleArrayList<V> extends AbstractList<V>{
 	 * therein. Otherwise, a new array is allocated with the runtime type of the
 	 * specified array and the size of this list.
 	 * <p>
-	 * 
+	 *
 	 * If the list fits in the specified array with room to spare (i.e., the
 	 * array has more elements than the list), the element in the array
 	 * immediately following the end of the collection is set to <tt>null</tt>.
 	 * This is useful in determining the length of the list <i>only</i> if the
 	 * caller knows that the list does not contain any <tt>null</tt> elements.
 	 * @param <T> the type which is being stored by a SimpleArrayList.
-	 * 
+	 *
 	 * @param a
 	 *            the array into which the elements of the list are to be
 	 *            stored, if it is big enough; otherwise, a new array of the

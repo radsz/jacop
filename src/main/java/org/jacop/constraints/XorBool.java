@@ -1,10 +1,10 @@
 /**
  *  XorBool.java
- *   
+ *
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -16,7 +16,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,25 +32,26 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Constraint ( x_0 xor x_1 xor ... xor x_n ) <=> y
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class XorBool extends PrimitiveConstraint {
+public class XorBool extends PrimitiveConstraint { private static Logger logger = LoggerFactory.getLogger(XorBool.class);
 
 	/*
-	 * The logical XOR (exclusive OR) function gives True if an odd number of its arguments 
-	 * is True, and the rest are False. It gives False if an even number of its arguments is True, 
+	 * The logical XOR (exclusive OR) function gives True if an odd number of its arguments
+	 * is True, and the rest are False. It gives False if an even number of its arguments is True,
 	 * and the rest are False.
 	 *
 	 * For two arguments the truth table is
@@ -72,7 +73,7 @@ public class XorBool extends PrimitiveConstraint {
         public IntVar y;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
     public static String[] xmlAttributes = {"x", "y"};
@@ -99,8 +100,8 @@ public class XorBool extends PrimitiveConstraint {
 
 	/**
 	 * It checks invariants required by the constraint. Namely that
-	 * boolean variables have boolean domain. 
-	 * 
+	 * boolean variables have boolean domain.
+	 *
 	 * @return the string describing the violation of the invariant, null otherwise.
 	 */
 	public String checkInvariants() {
@@ -108,7 +109,7 @@ public class XorBool extends PrimitiveConstraint {
 	    for (IntVar e : x)
 		if (e.min() < 0 || e.max() > 1)
 		    return "Variable " + x + " does not have boolean domain";
-	
+
 		if (y.min() < 0 || y.max() > 1)
 			return "Variable " + y + " does not have boolean domain";
 
@@ -132,7 +133,7 @@ public class XorBool extends PrimitiveConstraint {
 	public void consistency(Store store) {
 
 	    do {
-		
+
 		store.propagationHasOccurred = false;
 
 		IntVar nonGround = null;
@@ -173,10 +174,10 @@ public class XorBool extends PrimitiveConstraint {
 
         @Override
 	public void notConsistency(Store store) {
-		
+
 	    do {
-			
-		store.propagationHasOccurred = false;			
+
+		store.propagationHasOccurred = false;
 
 		IntVar nonGround = null;
 
@@ -197,7 +198,7 @@ public class XorBool extends PrimitiveConstraint {
 		if (numberOnes + numberZeros == x.length)
 		    if (numberOnes % 2 == 1)
 			y.domain.in(store.level, y, 0, 0);
-		    else 
+		    else
 			y.domain.in(store.level, y, 1, 1);
 		else if (numberOnes + numberZeros == x.length - 1)
 		    if (y.min() == 1)
@@ -212,7 +213,7 @@ public class XorBool extends PrimitiveConstraint {
 			    nonGround.domain.in(store.level, nonGround, 1,1);
 
 		} while (store.propagationHasOccurred);
-		
+
 	}
 
 	@Override
@@ -335,7 +336,7 @@ public class XorBool extends PrimitiveConstraint {
 
 	@Override
 	public void increaseWeight() {
-	    if (increaseWeight) 
+	    if (increaseWeight)
 		for (IntVar e : x)
 		    e.weight++;
 	}

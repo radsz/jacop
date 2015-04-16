@@ -1,9 +1,9 @@
 /**
- *  PrintSchedule.java 
+ *  PrintSchedule.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,21 +31,20 @@
 
 package org.jacop.ui;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Prints the computed schedule
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class PrintSchedule {
+public class PrintSchedule { private static Logger logger = LoggerFactory.getLogger(PrintSchedule.class);
 
 	class TaskScheduleComparator<T> implements Comparator<T> {
 
@@ -54,7 +53,7 @@ public class PrintSchedule {
 
 		@SuppressWarnings("unchecked")
 		public int compare(T o1, T o2) {
-			return ((((ArrayList<IntVar>) o1).get(1)).min() * 1000 + 
+			return ((((ArrayList<IntVar>) o1).get(1)).min() * 1000 +
 					(((ArrayList<IntVar>) o1).get(3)).min())
 					- (( ((ArrayList<IntVar>) o2).get(1)).min() * 1000 +
 					  ( ((ArrayList<IntVar>) o2).get(3)).min());
@@ -108,9 +107,9 @@ public class PrintSchedule {
 	 * @param d duration time of the operations.
 	 * @param r resource usage of the operations.
 	 */
-	public PrintSchedule(ArrayList<String> name, 
+	public PrintSchedule(ArrayList<String> name,
 						ArrayList<? extends IntVar> t,
-						ArrayList<Integer> d, 
+						ArrayList<Integer> d,
 						ArrayList<? extends IntVar> r) {
 		n = name;
 		this.t = new IntVar[t.size()];
@@ -131,9 +130,9 @@ public class PrintSchedule {
 	 * @param d duration time of the operations.
 	 * @param r resource usage of the operations.
 	 */
-	public PrintSchedule(ArrayList<String> name, 
+	public PrintSchedule(ArrayList<String> name,
 						ArrayList<? extends IntVar> t,
-						int[] d, 
+						int[] d,
 						ArrayList<? extends IntVar> r) {
 		n = name;
 		this.t = new IntVar[t.size()];
@@ -153,7 +152,7 @@ public class PrintSchedule {
 	 * @param r resource usage of the operations.
 	 */
 
-	public PrintSchedule(ArrayList<String> name, 
+	public PrintSchedule(ArrayList<String> name,
 						 IntVar[] t, int[] d,
 						 IntVar[] r) {
 		n = name;
@@ -169,7 +168,7 @@ public class PrintSchedule {
 	 * @param d duration time of the operations.
 	 * @param r resource usage of the operations.
 	 */
-	public PrintSchedule(ArrayList<String> name, 
+	public PrintSchedule(ArrayList<String> name,
 						IntVar[] t, IntVar[] d,
 						IntVar[] r) {
 		n = name;
@@ -213,7 +212,7 @@ public class PrintSchedule {
 
 	@Override
 	public String toString() {
-		
+
 		StringBuffer result = new StringBuffer("\n");
 
 		ArrayList<?>[] TaskArr = new ArrayList[n.size()];
@@ -236,22 +235,22 @@ public class PrintSchedule {
 		int minR = findMinR();
 		int resSize = maxR - minR + 1;
 		int maxT = findMaxT();
-		
+
 		result.append("\t").append(minR);
-		
+
 		//s = s + "\t" + minR;
-		
+
 		for (int i = minR + 1; i <= maxR; i++)
 			result.append("\t\t").append(i);
-		
+
 		//	s = s + "\t\t" + i;
-		
+
 		result.append("\n");
-		
+
 		//s = s + "\n";
 
 		for (int i = 0; i <= maxT; i++) {
-			
+
 			result.append(i).append("\t");
 		//	s = s + i + "\t";
 			int j = 0;
@@ -276,22 +275,22 @@ public class PrintSchedule {
 
 			for (int r = 0; r < Line.size(); r++) {
 				int sp = result.length();
-				for (int ri = 0; ri < Line.get(r).size(); ri++) 
+				for (int ri = 0; ri < Line.get(r).size(); ri++)
 					result.append("[").append(TaskArr[Line.get(r).get(ri)].get(0)).append("]");
-				
+
 				if (Line.get(r).size() == 0)
 					result.append("-");
 			//		s = s + "-";
-					
+
 				result.append(tab(16 - result.length() + sp));
 			//	s = s + tab(16 - s.length() + sp);
 
 			}
-			
+
 			result.append("\n");
 			// s = s + "\n";
 		}
-		
+
 		return result.toString();
 	//	return s;
 	}

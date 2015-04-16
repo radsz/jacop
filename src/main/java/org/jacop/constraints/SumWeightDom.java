@@ -2,8 +2,8 @@
  *  SumWeightDom.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,18 +31,17 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
-import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
-import org.jacop.core.Var;
 import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.IntervalEnumeration;
+import org.jacop.core.Store;
+import org.jacop.core.TimeStamp;
+import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * SumWeightDom constraint implements the weighted summation over several
@@ -50,12 +49,12 @@ import org.jacop.core.IntervalEnumeration;
  * The weights are integers.
  *
  * The complexity of domain consistency is exponential in worst case. Use it carefully!
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 3.1
  */
 
-public class SumWeightDom extends Constraint {
+public class SumWeightDom extends Constraint { private static Logger logger = LoggerFactory.getLogger(SumWeightDom.class);
 
     static int counter = 1;
 
@@ -70,12 +69,12 @@ public class SumWeightDom extends Constraint {
     public int weights[];
 
     /**
-     * It specifies variable for the overall sum. 
+     * It specifies variable for the overall sum.
      */
     public int sum;
 
     /**
-     * It specifies variable queue of grounded varibales since last run. 
+     * It specifies variable queue of grounded varibales since last run.
      */
     LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
 
@@ -87,7 +86,7 @@ public class SumWeightDom extends Constraint {
     boolean backtrackHasOccured = false;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as 
+     * It specifies the arguments required to be saved by an XML format as well as
      * the constructor being called to recreate an object from an XML format.
      */
     public static String[] xmlAttributes = {"list", "weights", "sum"};
@@ -100,9 +99,9 @@ public class SumWeightDom extends Constraint {
     public SumWeightDom(IntVar[] list, int[] weights, int sum) {
 
 	commonInitialization(list, weights, sum);
-		
+
     }
-	
+
     /**
      * @param list array of variables to be summed up
      * @param weights variables' weights
@@ -110,7 +109,7 @@ public class SumWeightDom extends Constraint {
      */
     public SumWeightDom(IntVar[] list, int[] weights, IntVar sum) {
 
-	IntVar[] l = new IntVar[list.length + 1];	
+	IntVar[] l = new IntVar[list.length + 1];
 	System.arraycopy(list, 0, l, 0, list.length);
 	l[list.length] = sum;
 
@@ -119,11 +118,11 @@ public class SumWeightDom extends Constraint {
 	w[weights.length] = -1;
 
 	commonInitialization(l, w, 0);
-		
+
     }
-	
+
     private void commonInitialization(IntVar[] list, int[] weights, int sum) {
-		
+
 	queueIndex = 4;
 
 	assert ( list.length == weights.length ) : "\nLength of two vectors different in SumWeightDom";
@@ -139,7 +138,7 @@ public class SumWeightDom extends Constraint {
 	for (int i = 0; i < list.length; i++) {
 
 	    assert (list[i] != null) : i + "-th element of list in SumWeightDom constraint is null";
-			
+
 	    if (parameters.get(list[i]) != null) {
 		// variable ordered in the scope of the Sum Weight constraint.
 		Integer coeff = parameters.get(list[i]);
@@ -176,7 +175,7 @@ public class SumWeightDom extends Constraint {
 	int[] w = new int[weights.size()];
 	for (int i = 0; i < weights.size(); i++)
 	    w[i] = weights.get(i);
-		
+
 	commonInitialization(variables.toArray(new IntVar[variables.size()]),
 			     w,
 			     sum);
@@ -192,7 +191,7 @@ public class SumWeightDom extends Constraint {
     public SumWeightDom(ArrayList<? extends IntVar> variables,
                         ArrayList<Integer> weights, IntVar sum) {
 
-	IntVar[] l = new IntVar[variables.size() + 1];	
+	IntVar[] l = new IntVar[variables.size() + 1];
 	System.arraycopy(variables.toArray(new IntVar[variables.size()]), 0, l, 0, variables.size());
 	l[variables.size()] = sum;
 
@@ -200,7 +199,7 @@ public class SumWeightDom extends Constraint {
 	for (int i = 0; i < weights.size(); i++)
 	    w[i] = weights.get(i);
 	w[weights.size()] = -1;
-		
+
 	commonInitialization(l, w, 0);
 
     }
@@ -236,7 +235,7 @@ public class SumWeightDom extends Constraint {
     /**
      * The position for the next grounded variable.
      */
-    private TimeStamp<Integer> nextGroundedPosition;	
+    private TimeStamp<Integer> nextGroundedPosition;
 
     @Override
 	public void consistency(Store store) {
@@ -261,7 +260,7 @@ public class SumWeightDom extends Constraint {
 	}
 
 	do {
-			
+
 	    store.propagationHasOccurred = false;
 
 	    int pointer = nextGroundedPosition.value();
@@ -291,7 +290,7 @@ public class SumWeightDom extends Constraint {
 
 	    // check still not ground variables
 	    for (int i = pointer; i < list.length; i++) {
-			
+
 		if (weights[i] == 0)
 		    continue;
 
@@ -302,7 +301,7 @@ public class SumWeightDom extends Constraint {
 		int sGround = sumGrounded.value();
 		IntDomain vDom = new IntervalDomain(sum-sGround, sum-sGround);
 		for (int j=pointer1; j<list.length; j++)
-		    if (j != i) 
+		    if (j != i)
 			vDom = subtractDom(vDom, lArray[j]);
 
 		vDom = divDom(vDom, weights[i]);
@@ -310,9 +309,9 @@ public class SumWeightDom extends Constraint {
 		v.domain.in(store.level, v, vDom);
 
 	    }
-		
+
 	} while (store.propagationHasOccurred);
-		
+
     }
 
     @Override
@@ -363,7 +362,7 @@ public class SumWeightDom extends Constraint {
 
 	    int i = positionMaping.get(var);
 
-	    if (i < pointer) 
+	    if (i < pointer)
 		return;
 
 	    int value = ((IntVar)var).min();
@@ -462,9 +461,9 @@ public class SumWeightDom extends Constraint {
 
     IntDomain multiplyDom(IntDomain d, int c) {
 	IntDomain temp;
-	// System.out.println (d + " * " + c);
+	// logger.info (d + " * " + c);
 
-	if (c == 1) 
+	if (c == 1)
 	    return d;
 	else if ( c == -1) temp = invertDom(d);
 	else {
@@ -473,13 +472,13 @@ public class SumWeightDom extends Constraint {
 		Interval i = e1.nextElement();
 
 		IntervalDomain mulDom = new IntervalDomain();
-		if ( c > 0) 
+		if ( c > 0)
 		    for (int k=i.min(); k<=i.max(); k++) {
 		    	// mulDom.addDom(new IntervalDomain(k*c, k*c));
 		    	mulDom.unionAdapt(k*c, k*c);
 		    }
 		else // c < 0
-		    for (int k=i.max(); k>=i.min(); k--) {	
+		    for (int k=i.max(); k>=i.min(); k--) {
 			// mulDom.addDom(new IntervalDomain(k*c, k*c));
 			mulDom.unionAdapt(k*c, k*c);
 		    }
@@ -490,7 +489,7 @@ public class SumWeightDom extends Constraint {
 	    }
 	}
 
-	// System.out.println ("result* = " + temp);
+	// logger.info ("result* = " + temp);
 
 	return temp;
 
@@ -509,7 +508,7 @@ public class SumWeightDom extends Constraint {
 		temp.intervals[k++] = new Interval(-e.max(), -e.min());
 	    }
 	}
-	else 
+	else
 	    for (IntervalEnumeration e = d.intervalEnumeration(); e.hasMoreElements();) {
 		Interval i = e.nextElement();
 		temp.addDom(new IntervalDomain(-i.max(), -i.min()));
@@ -521,9 +520,9 @@ public class SumWeightDom extends Constraint {
     IntDomain divDom(IntDomain d, int c) {
 
 	IntDomain temp;
-	// System.out.println (d + " / " + c);
+	// logger.info (d + " / " + c);
 
-	if (c == 1) 
+	if (c == 1)
 	    return d;
 	else if ( c == -1) temp = invertDom(d);
 	else {
@@ -565,7 +564,7 @@ public class SumWeightDom extends Constraint {
 		    	}
 
 			/*
-			for (int k=iMax; k>=iMin; k--) {	
+			for (int k=iMax; k>=iMin; k--) {
 
 			    if (k % c == 0)
 				// divDom.addDom(new IntervalDomain(k/c, k/c));
@@ -580,7 +579,7 @@ public class SumWeightDom extends Constraint {
 	    }
 	}
 
-	// System.out.println ("result/ = " + temp);
+	// logger.info ("result/ = " + temp);
 
 	return temp;
     }
@@ -588,12 +587,12 @@ public class SumWeightDom extends Constraint {
     /*
     IntDomain plusDom(IntDomain d1, IntDomain d2) {
 	IntDomain temp;
-	// System.out.println (d1 + " + " + d2);
-	
+	// logger.info (d1 + " + " + d2);
+
 	temp = new IntervalDomain();
 
 	for (IntervalEnumeration e1 = d1.intervalEnumeration(); e1.hasMoreElements();) {
-	    Interval i1 = e1.nextElement(); 
+	    Interval i1 = e1.nextElement();
 	    int i1min = i1.min(), i1Max = i1.max();
 
 	    for (IntervalEnumeration e2 = d2.intervalEnumeration(); e2.hasMoreElements();) {
@@ -603,7 +602,7 @@ public class SumWeightDom extends Constraint {
 	    }
 	}
 
-	// System.out.println ("result+ = " + temp);
+	// logger.info ("result+ = " + temp);
 
 	return temp;
     }
@@ -618,7 +617,7 @@ public class SumWeightDom extends Constraint {
 	int d1Max = d1.max();
 
 	for (IntervalEnumeration e1 = d1.intervalEnumeration(); e1.hasMoreElements();) {
-	    Interval i1 = e1.nextElement(); 
+	    Interval i1 = e1.nextElement();
 	    int i1min = i1.min(), i1max = i1.max();
 
 		for (IntervalEnumeration e2 = d2.intervalEnumeration(); e2.hasMoreElements();) {
@@ -629,7 +628,7 @@ public class SumWeightDom extends Constraint {
 		}
 	}
 
-	// System.out.println ("result- = " + temp);
+	// logger.info ("result- = " + temp);
 
 	return temp;
 

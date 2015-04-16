@@ -1,9 +1,9 @@
 /**
- *  ExpPeqR.java 
+ *  ExpPeqR.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,43 +31,41 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
+import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-
-import org.jacop.constraints.Constraint;
-
-import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Constraints exp(P) #= Q for P and Q floats
- * 
+ *
  * Domain consistency is used.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class ExpPeqR extends Constraint {
+public class ExpPeqR extends Constraint { private static Logger logger = LoggerFactory.getLogger(ExpPeqR.class);
 
     static int idNumber = 1;
 
     /**
-     * It specifies a left hand variable in equality constraint. 
+     * It specifies a left hand variable in equality constraint.
      */
     public FloatVar p;
 
     /**
-     * It specifies a right hand variable in equality constraint. 
+     * It specifies a right hand variable in equality constraint.
      */
     public FloatVar q;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as 
+     * It specifies the arguments required to be saved by an XML format as well as
      * the constructor being called to recreate an object from an XML format.
      */
     public static String[] xmlAttributes = {"p", "q"};
@@ -117,7 +115,7 @@ public class ExpPeqR extends Constraint {
 	    }
 
 	    q.domain.in(store.level, q, qMin, qMax);
-			
+
 	    store.propagationHasOccurred = false;
 
 	    double pMin, pMax;
@@ -139,7 +137,7 @@ public class ExpPeqR extends Constraint {
     }
     @Override
     public boolean satisfied() {
-	return p.singleton() && q.singleton() && 
+	return p.singleton() && q.singleton() &&
 	    java.lang.Math.exp(p.min()) - q.max() <= FloatDomain.precision();
     }
 
@@ -190,7 +188,7 @@ public class ExpPeqR extends Constraint {
 	    FloatVar v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
 	    Derivative.poseDerivativeConstraint(new PmulQeqR(Derivative.getDerivative(store, p, vars, x), f, v));
 	    return v;
-		
+
 	}
 	else if (f.equals(p)) {
 	    // f = ln(q)

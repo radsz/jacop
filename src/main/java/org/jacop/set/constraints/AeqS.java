@@ -1,9 +1,9 @@
 /**
- *  AeqS.java 
+ *  AeqS.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,45 +31,46 @@
 
 package org.jacop.set.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * It creates an equality constraint to make sure that a set variable
- * is equal to a given set. 
- * 
+ * is equal to a given set.
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * 
+ *
  * @version 4.2
  */
 
-public class AeqS extends PrimitiveConstraint {
+public class AeqS extends PrimitiveConstraint { private static Logger logger = LoggerFactory.getLogger(AeqS.class);
 
 	static int idNumber = 1;
 
 	/**
-	 * It specifies set variable a, which must be equal to set variable b. 
+	 * It specifies set variable a, which must be equal to set variable b.
 	 */
 	public SetVar a;
-	
+
 	/**
 	 * It specifies the set which must be equal to set variable a.
 	 */
 	public IntDomain set;
 
 	/**
-	 * It specifies the size of b. 
+	 * It specifies the size of b.
 	 */
 	int sizeOfB;
-	
+
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"a", "set"};
@@ -77,20 +78,20 @@ public class AeqS extends PrimitiveConstraint {
 	/**
 	 * It constructs an AeqS constraint to restrict the domain of the variables.
 	 * @param a variable a that is forced to be equal to a specified set value.
-	 * @param set it specifies the set to which variable a must be equal to.  
+	 * @param set it specifies the set to which variable a must be equal to.
 	 */
 	public AeqS(SetVar a, IntDomain set) {
 
 		assert(a != null) : "Variable A is null";
 		assert(set != null) : "Set value is null";
-		
+
 		numberId = idNumber++;
 		numberArgs = 1;
-		
+
 		this.a = a;
 		this.set = set;
 		this.sizeOfB = set.getSize();
-		
+
 	}
 
 	@Override
@@ -106,16 +107,16 @@ public class AeqS extends PrimitiveConstraint {
 	public void consistency(Store store) {
 
 		/**
-		 * It computes the consistency of the constraint. 
-		 * 
-		 * If a set variables is to be equal to the set 
-		 * then it is enough to perform the following once. 
-		 * 
+		 * It computes the consistency of the constraint.
+		 *
+		 * If a set variables is to be equal to the set
+		 * then it is enough to perform the following once.
+		 *
 		 * glbA = s;
 		 * lubA = s;
-		 * 
+		 *
 		 */
-		
+
 		a.domain.inValue(store.level, a, set);
 
 	}
@@ -162,8 +163,8 @@ public class AeqS extends PrimitiveConstraint {
 
 	    if(a.singleton() && a.dom().glb().eq(set))
 	    	throw Store.failException;
-	
-	    if (sizeOfB == a.domain.glb().getSize() + 1 
+
+	    if (sizeOfB == a.domain.glb().getSize() + 1
 	    	&& sizeOfB == a.domain.lub().getSize()
 	    	&& set.contains(a.domain.glb())) {
 	    	int value = a.domain.lub().subtract(a.domain.glb()).value();
@@ -172,36 +173,36 @@ public class AeqS extends PrimitiveConstraint {
 	    	else
 	    		a.domain.inValue(store.level, a, a.domain.lub());
 	    }
-	    
+
 	}
 
 	@Override
 	public boolean notSatisfied() {
-		
+
 		if(!a.domain.lub().contains(set))
 			return true;
-		
+
 		if(a.singleton() && !(a.domain.glb().eq(set)))
 			return true;
-		
+
 		return false;
 	}
 
 	@Override
 	public void removeConstraint() {
-		
+
 		a.removeConstraint(this);
-		
+
 	}
 
 	@Override
 	public boolean satisfied() {
-		
+
 		if(a.domain.singleton(set))
 			return true;
-		
+
 		return false;
-		
+
 	}
 
 	@Override
@@ -237,6 +238,6 @@ public class AeqS extends PrimitiveConstraint {
 	public void increaseWeight() {
 		if (increaseWeight)
 			a.weight++;
-	}	
+	}
 
 }

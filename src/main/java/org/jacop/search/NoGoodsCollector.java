@@ -1,9 +1,9 @@
 /**
- *  NoGoodsCollector.java 
+ *  NoGoodsCollector.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,12 +31,13 @@
 
 package org.jacop.search;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.NoGood;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * NoGoodCollector collects no-goods from search when timeout has occurred. As
@@ -44,12 +45,12 @@ import org.jacop.core.Store;
  * no-goods collector will collect neccessary information to create no-goods
  * when finally exiting the search. The no-goods will be immmediately imposed
  * when collector is informed about exiting the search.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  */
 
-public class NoGoodsCollector<T extends IntVar> implements ExitChildListener<T>, TimeOutListener, ExitListener {
+public class NoGoodsCollector<T extends IntVar> implements ExitChildListener<T>, TimeOutListener, ExitListener { private static Logger logger = LoggerFactory.getLogger(NoGoodsCollector.class);
 
 	ArrayList<ArrayList<T>> noGoodsVariables;
 
@@ -197,13 +198,13 @@ public class NoGoodsCollector<T extends IntVar> implements ExitChildListener<T>,
 
 	@Override
 	public String toString() {
-		
+
 		if (noGoodsVariables != null ) {
 			StringBuffer sb = new StringBuffer(noGoodsVariables.toString());
 			sb.append(noGoodsValues.toString());
-			return sb.toString(); 
+			return sb.toString();
 		}
 		else return "[]";
-		
+
 	}
 }

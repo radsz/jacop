@@ -1,9 +1,9 @@
 /**
- *  SimpleHashSet.java 
+ *  SimpleHashSet.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,20 +31,22 @@
 
 package org.jacop.util;
 
-import java.util.Arrays;
+import java.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class provides very simple HashSet functionality. Designed specially for
  * maintaining pending constraints for evaluation. It's implementation was
  * partially based on standard hash set implementation as implemented in java
  * util class.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  * @param <E> Class being stored in SimpleHashSet.
  */
 
-public class SimpleHashSet<E> {
+public class SimpleHashSet<E> { private static Logger logger = LoggerFactory.getLogger(SimpleHashSet.class);
 
 	@SuppressWarnings("hiding")
 	class Entry<E> {
@@ -122,10 +124,10 @@ public class SimpleHashSet<E> {
 	 * function," which defends against poor quality hash functions. This is
 	 * critical because SimpleHashSet uses power-of two length hash tables.
 	 * <p>
-	 * 
+	 *
 	 * The shift distances in this function were chosen as the result of an
 	 * automated search over the entire four-dimensional search space.
-	 * 
+	 *
 	 * This hash code function implementation is original Sun function proposed
 	 * in util package.
 	 */
@@ -197,7 +199,7 @@ public class SimpleHashSet<E> {
 	/**
 	 * Constructs an empty <tt>HashSet</tt> with the specified initial
 	 * capacity and the default load factor (0.75).
-	 * 
+	 *
 	 * @param initialCapacity
 	 *            the initial capacity.
 	 * @throws IllegalArgumentException
@@ -210,7 +212,7 @@ public class SimpleHashSet<E> {
 	/**
 	 * Constructs an empty <tt>HashSet</tt> with the specified initial
 	 * capacity and load factor.
-	 * 
+	 *
 	 * @param initialCapacity
 	 *            The initial capacity.
 	 * @param loadFactor
@@ -242,7 +244,7 @@ public class SimpleHashSet<E> {
 
 	/**
 	 * Adds the specified element to this set.
-	 * 
+	 *
 	 * @param element
 	 *            element with which the specified value is to be associated.
 	 * @return <tt>true</tt> if object is inserted and <tt>false</tt> if
@@ -293,7 +295,7 @@ public class SimpleHashSet<E> {
 	//		tab[i] = null;
 
 		Arrays.fill(table, null);
-		
+
 		firstEntry = null;
 		lastEntry = null;
 
@@ -332,7 +334,7 @@ public class SimpleHashSet<E> {
 	/**
 	 * Returns the boolean value which specifies if given element is already in
 	 * this identity hash set.
-	 * 
+	 *
 	 * @param element
 	 *            the element whose existence in the hash set is to be checked.
 	 * @return the boolean value which specifies if given element exists in a
@@ -351,7 +353,7 @@ public class SimpleHashSet<E> {
 
 	/**
 	 * Returns <tt>true</tt> if this set contains no elements.
-	 * 
+	 *
 	 * @return <tt>true</tt> if this set contains no elements.
 	 */
 	public boolean isEmpty() {
@@ -361,7 +363,7 @@ public class SimpleHashSet<E> {
 	/**
 	 * Removes and returns an entry removed from the HashSet. Returns null if
 	 * the HashSet contains no entry.
-	 * @return the first entry which has been removed. 
+	 * @return the first entry which has been removed.
 	 */
 
 	@SuppressWarnings("unchecked")
@@ -392,11 +394,11 @@ public class SimpleHashSet<E> {
 	 * Rehashes the contents of this set into a new array with a larger
 	 * capacity. This method is called automatically when the number of elements
 	 * in this set reaches its threshold.
-	 * 
+	 *
 	 * If current capacity is MAXIMUM_CAPACITY, this method does not resize the
 	 * set, but sets threshold to Integer.MAX_VALUE. This has the effect of
 	 * preventing future calls.
-	 * 
+	 *
 	 * @param newCapacity
 	 *            the new capacity, MUST be a power of two; must be greater than
 	 *            current capacity unless current capacity is MAXIMUM_CAPACITY
@@ -420,7 +422,7 @@ public class SimpleHashSet<E> {
 
 	/**
 	 * Returns the number of elements in this set.
-	 * 
+	 *
 	 * @return the number of elements in this set.
 	 */
 	public int size() {

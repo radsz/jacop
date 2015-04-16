@@ -1,9 +1,9 @@
 /**
- *  Lex.java 
+ *  Lex.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2010 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,8 +31,7 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
@@ -41,16 +40,18 @@ import org.jacop.core.Store;
 import org.jacop.util.fsm.FSM;
 import org.jacop.util.fsm.FSMState;
 import org.jacop.util.fsm.FSMTransition;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
- * It constructs a Lex (lexicographical order) constraint. 
- * 
+ * It constructs a Lex (lexicographical order) constraint.
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class Lex extends DecomposedConstraint {
+public class Lex extends DecomposedConstraint { private static Logger logger = LoggerFactory.getLogger(Lex.class);
 
     /**
      * A two dimensional array containing arrays which have to be lexicographically ordered.
@@ -58,7 +59,7 @@ public class Lex extends DecomposedConstraint {
     public IntVar[][] x;
 
     /**
-     * It contains constraints of the lex constraint decomposition. 
+     * It contains constraints of the lex constraint decomposition.
      */
     ArrayList<Constraint> constraints;
 
@@ -68,41 +69,41 @@ public class Lex extends DecomposedConstraint {
     public final boolean lexLT;
 
     /**
-     * It creates a lexicographical order for vectors x[i], i.e. 
+     * It creates a lexicographical order for vectors x[i], i.e.
      * forall i, exists j : x[i][k] = x[i+1][k] for k < j and x[i][k] <= x[i+1][k]
      * for k >= j
      *
      * vectors x[i] does not need to be of the same size.
      * boolea lt defines if we require Lex_{<} (lt = false) or Lex_{=<} (lt = true)
      *
-     * @param x vector of vectors which assignment is constrained by Lex constraint. 
+     * @param x vector of vectors which assignment is constrained by Lex constraint.
      */
     public Lex(IntVar[][] x) {
 
 	this(x, false);
-		
+
     }
 
 
     public Lex(IntVar[][] x, boolean lt) {
-		
+
 	assert (x != null) : "x list is null.";
 	this.x = new IntVar[x.length][];
-		
+
 	lexLT = lt;
-		
+
 	for (int i = 0; i < x.length; i++) {
-			
+
 	    assert (x[i] != null) : i + "-th vector in x is null";
 	    this.x[i] = new IntVar[x[i].length];
-			
+
 	    for (int j = 0; j < x[i].length; j++) {
 		assert (x[i][j] != null) : j + "-th element of " + i + "-th vector in x is null";
 		this.x[i][j] = x[i][j];
 	    }
-			
+
 	}
-		
+
     }
 
 
@@ -112,7 +113,7 @@ public class Lex extends DecomposedConstraint {
 	if (constraints == null)
 	    decompose(store);
 
-	for (Constraint c : constraints) 
+	for (Constraint c : constraints)
 	    store.impose(c, queueIndex);
 
     }
@@ -144,11 +145,11 @@ public class Lex extends DecomposedConstraint {
 	    constraints = new ArrayList<Constraint>();
 	else
 	    return constraints;
-		
+
 	// first index represents compared vectors and the second variables within vectors
 	//		int numberStates = 0;
 	int numberVar = 0;
-		
+
 	BooleanVar[][] lt = new BooleanVar[x.length - 1][];
 	BooleanVar[][] eq = new BooleanVar[x.length - 1][];
 	FSMState[][][] state = new FSMState[x.length - 1][][];
@@ -183,7 +184,7 @@ public class Lex extends DecomposedConstraint {
 		    if ( j == 0) {
 			addState[i] = new FSMState[2*(sizeToCompare-j) - 1];
 
-			for (int k = 0; k < addState[i].length; k++) 
+			for (int k = 0; k < addState[i].length; k++)
 			    addState[i][k] = new FSMState();
 		    }
 		}
@@ -203,13 +204,13 @@ public class Lex extends DecomposedConstraint {
 		g.allStates.add(state[i][j][1]);
 	    }
 	}
-	for (int i = 0; i < addState.length; i++) 
+	for (int i = 0; i < addState.length; i++)
 	    for (int j = 0; j < addState[i].length; j++)
 		g.allStates.add(addState[i][j]);
 
 
 	g.initState = state[0][0][0];
-	FSMState terminate = new FSMState(); 
+	FSMState terminate = new FSMState();
 	g.allStates.add(terminate);
 	g.finalStates.add(terminate);
 
@@ -220,14 +221,14 @@ public class Lex extends DecomposedConstraint {
 		    // cannot go directly- must go through other states :(
 		    if ( addState[i].length !=0 ) {
 			if ( j == 0 ) {
-			    state[i][j][0].transitions.add(new FSMTransition(new IntervalDomain(1,1), addState[i][0])); 
+			    state[i][j][0].transitions.add(new FSMTransition(new IntervalDomain(1,1), addState[i][0]));
 
 			    for (int s = 1; s < addState[i].length; s++)
 				addState[i][s-1].transitions.add(new FSMTransition(new IntervalDomain(0,1), addState[i][s]));
 			    addState[i][addState[i].length-1].transitions.add(new FSMTransition(new IntervalDomain(0,1), state[i+1][0][0]));
 			}
-			else 
-			    state[i][j][0].transitions.add(new FSMTransition(new IntervalDomain(1,1), addState[i][2*j])); 
+			else
+			    state[i][j][0].transitions.add(new FSMTransition(new IntervalDomain(1,1), addState[i][2*j]));
 
 			state[i][j][0].transitions.add(new FSMTransition(new IntervalDomain(0,0), state[i][j][1]));
 		    }
@@ -240,7 +241,7 @@ public class Lex extends DecomposedConstraint {
 		if ( i != state.length - 1) {
 		    if ( j != state[i].length - 1 )
 			state[i][j][1].transitions.add(new FSMTransition(new IntervalDomain(1,1), state[i][j+1][0]));
-		    else 
+		    else
 			state[i][j][1].transitions.add(new FSMTransition(new IntervalDomain(1,1), state[i+1][0][0]));
 		}
 		else { // i == state.length
@@ -323,7 +324,7 @@ public class Lex extends DecomposedConstraint {
 		    if ( j == 0 ){
 			addState[i] = new FSMState[2*(sizeToCompare-j) - 2];
 
-			for (int k = 0; k < addState[i].length; k++) 
+			for (int k = 0; k < addState[i].length; k++)
 			    addState[i][k] = new FSMState();
 		    }
 		}
@@ -345,13 +346,13 @@ public class Lex extends DecomposedConstraint {
 		    g.allStates.add(state[i][j][1]);
 	    }
 	}
-	for (int i = 0; i < addState.length; i++) 
+	for (int i = 0; i < addState.length; i++)
 	    for (int j = 0; j < addState[i].length; j++)
 		g.allStates.add(addState[i][j]);
 
 
 	g.initState = state[0][0][0];
-	FSMState terminate = new FSMState(); 
+	FSMState terminate = new FSMState();
 	g.allStates.add(terminate);
 	g.finalStates.add(terminate);
 
@@ -362,7 +363,7 @@ public class Lex extends DecomposedConstraint {
 		    // cannot go directly - must go through other states :(
 		    if ( addState[i].length != 0 )
 			if ( j == 0 ) {
-			    state[i][j][0].transitions.add(new FSMTransition(new IntervalDomain(1,1), addState[i][0])); 
+			    state[i][j][0].transitions.add(new FSMTransition(new IntervalDomain(1,1), addState[i][0]));
 
 			    for (int s = 1; s < addState[i].length; s++)
 				addState[i][s-1].transitions.add(new FSMTransition(new IntervalDomain(0,1), addState[i][s]));
@@ -379,7 +380,7 @@ public class Lex extends DecomposedConstraint {
 		    if (j != state[i].length - 1)
 			state[i][j][0].transitions.add(new FSMTransition(new IntervalDomain(0,0), state[i][j][1]));
 		}
-		else { 
+		else {
 		    state[i][j][0].transitions.add(new FSMTransition(new IntervalDomain(1,1), terminate));
 		    if (j != state[i].length - 1)
 			state[i][j][0].transitions.add(new FSMTransition(new IntervalDomain(0,0), state[i][j][1]));

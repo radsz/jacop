@@ -1,9 +1,9 @@
 /**
- *  FloatDomain.java 
+ *  FloatDomain.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,25 +31,26 @@
 
 package org.jacop.floats.core;
 
-import org.jacop.core.Store;
 import org.jacop.core.Domain;
 import org.jacop.core.IntervalEnumeration;
-import org.jacop.core.Var;
-
+import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
+import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Defines an integer domain and related operations on it.
- * 
- * FloatDomain implementations can not assume that arguments to 
- * any function can not be empty domains. 
+ *
+ * FloatDomain implementations can not assume that arguments to
+ * any function can not be empty domains.
 
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public abstract class FloatDomain extends Domain {
+public abstract class FloatDomain extends Domain {  Logger logger = LoggerFactory.getLogger(FloatDomain.class);
 
     /**
      * It specifies the minimum element in the domain.
@@ -89,7 +90,7 @@ public abstract class FloatDomain extends Domain {
      * It specifies the method for printing a domain.
      * If true, we print each domain as an interval regardles of
      * the current precision of calculations.
-     * If true, the print-out prints singletons, defined by method 
+     * If true, the print-out prints singletons, defined by method
      * singleton() in FloatingInterval, as single values.
      */
     public static boolean intervalPrint = false;
@@ -114,7 +115,7 @@ public abstract class FloatDomain extends Domain {
 
     public static double epsilon(double f) {
 
-	return (precision() < java.lang.Math.ulp(f)) ? 
+	return (precision() < java.lang.Math.ulp(f)) ?
 	    java.lang.Math.ulp(f) : precision();
 
     }
@@ -140,63 +141,63 @@ public abstract class FloatDomain extends Domain {
 
     }
 
-    // returns previous (toward -inf) floating-point number before d 
+    // returns previous (toward -inf) floating-point number before d
     // supposed to be used by constraints
     public static double down(double d) {
 
 	if (outward)
-	    return downBit(d); //d - ulp(d);  // 
+	    return downBit(d); //d - ulp(d);  //
 	else
 	    return d;
     }
 
-    // returns next (toward inf) floating-point number after d 
+    // returns next (toward inf) floating-point number after d
     // supposed to be used by constraints
     public static double up(double d) {
 
 	if (outward)
-	    return upBit(d); //d + ulp(d); // 
+	    return upBit(d); //d + ulp(d); //
 	else
 	    return d;
     }
 
-    // returns previous (toward -inf) floating-point number before d 
+    // returns previous (toward -inf) floating-point number before d
     // supposed to be used by constraints
     public static double upBit(double x) {
 	double y;
 
 	if (Double.isInfinite(x) && x > 0)
-		return FloatDomain.MaxFloat; //Double.NaN;		
+		return FloatDomain.MaxFloat; //Double.NaN;
 
 	long xBits = Double.doubleToLongBits(x);
 	if (x > 0.0)
 	    y = Double.longBitsToDouble(xBits + 1);
-	else 
-	    if (x == 0.0) 
-		y = Double.longBitsToDouble(1); 
+	else
+	    if (x == 0.0)
+		y = Double.longBitsToDouble(1);
 	    else
 		y = Double.longBitsToDouble(xBits - 1);
 	return y;
     }
-    
-    // returns previous (toward -inf) floating-point number before d 
+
+    // returns previous (toward -inf) floating-point number before d
     // supposed to be used by constraints
     public static double downBit(double x) {
 
-	if (x == 0.0) 
+	if (x == 0.0)
 	    return -upBit(0.0);
-	else 
+	else
 	    return -upBit(-x);
     }
 
 
-    // returns previous (toward -inf) floating-point number before d 
+    // returns previous (toward -inf) floating-point number before d
     // supposed to be used by methods for domain computations
     public static double previous(double d) {
 	return downBit(d); //d - ulp(d);
     }
 
-    // returns next (toward inf) floating-point number after d 
+    // returns next (toward inf) floating-point number after d
     // supposed to be used by methods for domain computations
     public static double next(double d) {
 	return upBit(d); // d + ulp(d);
@@ -204,13 +205,13 @@ public abstract class FloatDomain extends Domain {
 
 
     /**
-     * It specifies the constant for GROUND event. It has to be smaller 
+     * It specifies the constant for GROUND event. It has to be smaller
      * than the constant for events BOUND and ANY.
      */
     public final static int GROUND = 0;
 
     /**
-     * It specifies the constant for BOUND event. It has to be smaller 
+     * It specifies the constant for BOUND event. It has to be smaller
      * than the constant for event ANY.
      */
     public final static int BOUND = 1;
@@ -230,10 +231,10 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It specifies for each event what other events are subsumed by this
-     * event. Possibly implement this by bit flags in int. 
+     * event. Possibly implement this by bit flags in int.
      */
-    public final static int[][] eventsInclusion = { {GROUND, BOUND, ANY}, // GROUND event 
-						    {BOUND, ANY}, // BOUND event 
+    public final static int[][] eventsInclusion = { {GROUND, BOUND, ANY}, // GROUND event
+						    {BOUND, ANY}, // BOUND event
 						    {ANY} }; // ANY event
 
     /**
@@ -252,7 +253,7 @@ public abstract class FloatDomain extends Domain {
     public static final int IntervalDomainID = 0;
 
     /**
-     * It specifies an empty integer domain. 
+     * It specifies an empty integer domain.
      */
     public static final FloatDomain emptyFloatDomain = new FloatIntervalDomain(0);
 
@@ -398,7 +399,7 @@ public abstract class FloatDomain extends Domain {
     }
 
 
-    public abstract boolean contains(double value);   
+    public abstract boolean contains(double value);
 
     /**
      * It gives next value in the domain from the given one (lexigraphical
@@ -466,7 +467,7 @@ public abstract class FloatDomain extends Domain {
     public abstract FloatDomain intersect(double min, double max);
 
     /**
-     * It intersects with the domain which is a complement of value. 
+     * It intersects with the domain which is a complement of value.
      * @param value the value for which the complement is computed
      * @return the domain which does not contain specified value.
      */
@@ -476,7 +477,7 @@ public abstract class FloatDomain extends Domain {
     }
 
     /**
-     * It removes value from the domain. It adapts current (this) domain. 
+     * It removes value from the domain. It adapts current (this) domain.
      * @param value the value for which the complement is computed
      */
 
@@ -597,7 +598,7 @@ public abstract class FloatDomain extends Domain {
 	    FloatIntervalEnumeration enumer = domain.floatIntervalEnumeration();
 	    while (enumer.hasMoreElements()) {
 		FloatInterval next = enumer.nextElement();
-		result.unionAdapt(next.min, next.max);					
+		result.unionAdapt(next.min, next.max);
 	    }
 	    return result;
 	    /*
@@ -629,8 +630,8 @@ public abstract class FloatDomain extends Domain {
     };
 
     /**
-     * It computes union of this domain and value. 
-     * 
+     * It computes union of this domain and value.
+     *
      * @param value it specifies the value which is being added.
      * @return domain which is a union of this one and the value.
      */
@@ -680,8 +681,8 @@ public abstract class FloatDomain extends Domain {
     public abstract void in(int storeLevel, Var var, double min, double max);
 
     /**
-     * It reduces domain to a single value. 
-     * 
+     * It reduces domain to a single value.
+     *
      * @param level level of the store at which the update occurs.
      * @param var variable for which this domain is used.
      * @param value the value according to which the domain is updated.
@@ -789,10 +790,10 @@ public abstract class FloatDomain extends Domain {
     public abstract FloatDomain previousDomain();
 
     /**
-     * It specifies if the other int domain is equal to this one. 
-     * 
-     * @param domain the domain which is compared to this domain. 
-     * 
+     * It specifies if the other int domain is equal to this one.
+     *
+     * @param domain the domain which is compared to this domain.
+     *
      * @return true if both domains contain the same elements, false otherwise.
      */
     public boolean eq(FloatDomain domain) {
@@ -826,9 +827,9 @@ public abstract class FloatDomain extends Domain {
     @Override
     public void in(int level, Var var, Domain domain) {
 	in(level, (FloatVar)var, (FloatDomain)domain);
-    }	
+    }
 
-    @Override 
+    @Override
     public boolean singleton(Domain value) {
 
 	if (getSize() > 1)
@@ -857,7 +858,7 @@ public abstract class FloatDomain extends Domain {
      */
 
     public int noConstraints() {
-	return searchConstraintsToEvaluate 
+	return searchConstraintsToEvaluate
 	    + modelConstraintsToEvaluate[GROUND]
 	    + modelConstraintsToEvaluate[BOUND]
 	    + modelConstraintsToEvaluate[ANY];
@@ -917,24 +918,24 @@ public abstract class FloatDomain extends Domain {
     // 	    counter++;
     // 	}
 
-    // 	return counter;		
+    // 	return counter;
     // }
 
 
     /**
-     * It computes an intersection with a given domain and stores it in this domain. 
-     * 
+     * It computes an intersection with a given domain and stores it in this domain.
+     *
      * @param intersect domain with which the intersection is being computed.
-     * @return type of event which has occurred due to the operation. 
+     * @return type of event which has occurred due to the operation.
      */
     public abstract int intersectAdapt(FloatDomain intersect);
 
     /**
      * It computes a union between this domain and the domain provided as a parameter. This
-     * domain is changed to reflect the result. 
-     * 
-     * @param union the domain with is used for the union operation with this domain. 
-     * @return it returns information about the pruning event which has occurred due to this operation. 
+     * domain is changed to reflect the result.
+     *
+     * @param union the domain with is used for the union operation with this domain.
+     * @return it returns information about the pruning event which has occurred due to this operation.
      */
     public int unionAdapt(FloatDomain union) {
 
@@ -950,40 +951,40 @@ public abstract class FloatDomain extends Domain {
     }
 
     /**
-     * It computes an intersection of this domain with an interval [min..max]. 
-     * It adapts this domain to the result of the intersection. 
-     * @param min the minimum value of the interval used in the intersection computation. 
-     * @param max the maximum value of the interval used in the intersection computation. 
-     * @return it returns information about the pruning event which has occurred due to this operation. 
+     * It computes an intersection of this domain with an interval [min..max].
+     * It adapts this domain to the result of the intersection.
+     * @param min the minimum value of the interval used in the intersection computation.
+     * @param max the maximum value of the interval used in the intersection computation.
+     * @return it returns information about the pruning event which has occurred due to this operation.
      */
     public abstract int intersectAdapt(int min, int max);
 
 
     /**
-     * It computes the size of the intersection between this domain and the domain 
-     * supplied as a parameter. 
-     * 
+     * It computes the size of the intersection between this domain and the domain
+     * supplied as a parameter.
+     *
      * @param domain the domain with which the intersection is computed.
      * @return the size of the intersection.
-     * 
+     *
      */
     public int sizeOfIntersection(FloatDomain domain) {
 	return intersect(domain).getSize();
     };
 
     /**
-     * It access the element at the specified position. 
-     * @param index the position of the element, indexing starts from 0. 
-     * @return the value at a given position in the domain. 
-     * 
+     * It access the element at the specified position.
+     * @param index the position of the element, indexing starts from 0.
+     * @return the value at a given position in the domain.
+     *
      */
     // public abstract int getElementAt(int index);
 
 
     /**
-     * It constructs and int array containing all elements in the domain. 
+     * It constructs and int array containing all elements in the domain.
      * The array will have size equal to the number of elements in the domain.
-     * 
+     *
      * @return the int array containing all elements in a domain.
      */
     public int[] toIntArray() {
@@ -1001,8 +1002,8 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It returns the value to which this domain is grounded. It assumes
-     * that a domain is a singleton domain. 
-     * 
+     * that a domain is a singleton domain.
+     *
      * @return the only value remaining in the domain.
      */
     public double value() {
@@ -1013,7 +1014,7 @@ public abstract class FloatDomain extends Domain {
 
     }
 
-    /* 
+    /*
      * Finds result interval for addition of {a..b} - {c..d}
      */
     public final static FloatIntervalDomain addBounds(double a, double b, double c, double d) {
@@ -1021,7 +1022,7 @@ public abstract class FloatDomain extends Domain {
 	double min = down(a + c);
 	double max = up(b + d);
 
-	if (d == 0.0) 
+	if (d == 0.0)
 	    max = b;
 	else if (c == 0.0)
 	    min = a;
@@ -1033,9 +1034,9 @@ public abstract class FloatDomain extends Domain {
 
 	return new FloatIntervalDomain(min, max);
     }
-	    
 
-    /* 
+
+    /*
      * Finds result interval for subtraction of {a..b} - {c..d}
      */
     public final static FloatIntervalDomain subBounds(double a, double b, double c, double d) {
@@ -1043,7 +1044,7 @@ public abstract class FloatDomain extends Domain {
 	double min = down(a - d);
 	double max = up(b - c);
 
-	if (d == 0.0) 
+	if (d == 0.0)
 	    min = a;
 	else if (c == 0.0)
 	    max = b;
@@ -1055,17 +1056,17 @@ public abstract class FloatDomain extends Domain {
 
 	return new FloatIntervalDomain(min, max);
     }
-	    
-    /* 
+
+    /*
      * Finds result interval for multiplication of {a..b} * {c..d}
      */
     public final static FloatIntervalDomain mulBounds(double a, double b, double c, double d) {
 
-	// System.out.println ("[" + a +".." +b +"] * [" + c + ".." + d + "]");
+	// logger.info ("[" + a +".." +b +"] * [" + c + ".." + d + "]");
 
-	if ( c == 1.0 && d == 1.0 ) 
+	if ( c == 1.0 && d == 1.0 )
 	    return new FloatIntervalDomain(a, b);
-	else if (c == -1.0 && d == -1.0 ) 
+	else if (c == -1.0 && d == -1.0 )
 	    return new FloatIntervalDomain(-b, -a);
 
 	boolean M_1 =  (a < 0 && b > 0);        // contains zero
@@ -1092,7 +1093,7 @@ public abstract class FloatDomain extends Domain {
 	    }
 	    else if (P0_2) { // P1 /\ P0
 		min = 0.0; //down(a*c);
-		max = up(b*d);		
+		max = up(b*d);
 		return new FloatIntervalDomain(min, max);
 	    }
 	    else if (M_2) { // P1 /\ M
@@ -1119,15 +1120,15 @@ public abstract class FloatDomain extends Domain {
 		min = 0.0;
 		max = up(b*d);
 		return new FloatIntervalDomain(min, max);
-	    } else if (N1_2 || N0_2) { //P0 /\ { N0 \/ N1 } 
+	    } else if (N1_2 || N0_2) { //P0 /\ { N0 \/ N1 }
 		min = down(b*c);
 		max = 0.0; //up(a*d);
 		return new FloatIntervalDomain(min, max);
-	    } else if (M_2) { // P0 /\ M 
+	    } else if (M_2) { // P0 /\ M
 		min = down(b*c);
 		max = up(b*d);
 		return new FloatIntervalDomain(min, max);
-	    } else {//if (Z_2) // P0 /\ Z 
+	    } else {//if (Z_2) // P0 /\ Z
 		return new FloatIntervalDomain(0.0, 0.0);
 	    }
 
@@ -1191,11 +1192,11 @@ public abstract class FloatDomain extends Domain {
 		max = up(a*c);
 		return new FloatIntervalDomain(min, max);
 	    }
-	    else if (M_2) {// N0 /\ M 
+	    else if (M_2) {// N0 /\ M
 		min = down(a*d);
 		max = up(a*c);
 		return new FloatIntervalDomain(min, max);
-	    } else {// N0 /\ Z 
+	    } else {// N0 /\ Z
 		return new FloatIntervalDomain(0.0, 0.0);
 	    }
 	else  { //  Z /\ {ALL}
@@ -1204,16 +1205,16 @@ public abstract class FloatDomain extends Domain {
 
     }
 
-    /* 
+    /*
      * Finds result interval for division of {a..b} / {c..d} for div and mod constraints
      */
     public final static FloatIntervalDomain divBounds (double a, double b, double c, double d) {
 
-	// System.out.println ("[" + a +".." +b +"] / [" + c + ".." + d + "]");
+	// logger.info ("[" + a +".." +b +"] / [" + c + ".." + d + "]");
 
-	if ( c == 1.0 && d == 1.0 ) 
+	if ( c == 1.0 && d == 1.0 )
 	    return new FloatIntervalDomain(a, b);
-	else if (c == -1.0 && d == -1.0 ) 
+	else if (c == -1.0 && d == -1.0 )
 	    return new FloatIntervalDomain(-b, -a);
 
 	boolean M_1 =  (a < 0 && b > 0);        // contains zero
@@ -1252,7 +1253,7 @@ public abstract class FloatDomain extends Domain {
 	    else if (N1_2) {// P1 /\ N1
 		min = down(b/d);
 		max = up(a/c);
-		return new FloatIntervalDomain(min, max); //.subtract(0.0);		
+		return new FloatIntervalDomain(min, max); //.subtract(0.0);
 	    }
 	    else if (N0_2) { // P1 /\ N0
 		max = up(a/c);
@@ -1286,7 +1287,7 @@ public abstract class FloatDomain extends Domain {
 		max = up(a/d);
 		return new FloatIntervalDomain(min, max);
 	    }
-	    else 
+	    else
 		return new FloatIntervalDomain(FloatDomain.MinFloat, FloatDomain.MaxFloat);
 
 	else if (N1_1)

@@ -1,9 +1,9 @@
 /**
- *  Tables.java 
+ *  Tables.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -30,28 +30,27 @@
  */
 package org.jacop.fz;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.floats.core.FloatVar;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
-
-import org.jacop.floats.core.FloatVar;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
- * This class contains information about all variables, including 
- * the variables which are used by search. 
- * 
+ *
+ * This class contains information about all variables, including
+ * the variables which are used by search.
+ *
  * @author Krzysztof Kuchcinski
  *
  */
-public class Tables {
+
+public class Tables { private static Logger logger = LoggerFactory.getLogger(Tables.class);
 
     Store store;
     IntVar zero, one;
@@ -60,7 +59,7 @@ public class Tables {
     HashMap<String, Integer> intTable = new HashMap<String, Integer>();
 
     HashMap<String, Double> floatTable = new HashMap<String, Double>();
-	
+
     HashMap<String, int[]> intArrayTable = new HashMap<String, int[]>(); // boolean are also stored here as 0/1 values
 
     HashMap<String, double[]> floatArrayTable = new HashMap<String, double[]>();
@@ -98,7 +97,7 @@ public class Tables {
     ArrayList<Var[]> defaultSearchSetArrays = new ArrayList<Var[]>();
 
     /**
-     * It constructs the storage object to store different objects, like int, array of ints, sets, ... . 
+     * It constructs the storage object to store different objects, like int, array of ints, sets, ... .
      */
     public Tables() {}
 
@@ -110,7 +109,7 @@ public class Tables {
 
     /**
      * It adds an int parameter.
-     * 
+     *
      * @param ident the identity of the added int parameter.
      * @param val the value of the parameter.
      */
@@ -119,7 +118,7 @@ public class Tables {
     }
     /**
      * It returns an int parameter of a given identity.
-     * 
+     *
      * @param ident the identify of the parameter.
      * @return the int value of the specified parameter.
      */
@@ -128,7 +127,7 @@ public class Tables {
 	if (iVal != null)
 	    return iVal.intValue();
 	else {
-	    System.err.println("Symbol \""+ident+ "\" does not have assigned value when refered; execution aborted");
+	    logger.error("Symbol \""+ident+ "\" does not have assigned value when refered; execution aborted");
 	    System.exit(0);
 	    return -1;
 	}
@@ -136,7 +135,7 @@ public class Tables {
 
     /**
      * It returns an Integer parameter of a given identity.
-     * 
+     *
      * @param ident the identify of the parameter.
      * @return the int value of the specified parameter.
      */
@@ -147,7 +146,7 @@ public class Tables {
 
     /**
      * It adds an float parameter.
-     * 
+     *
      * @param ident the identity of the added int parameter.
      * @param val the value of the parameter.
      */
@@ -156,7 +155,7 @@ public class Tables {
     }
     /**
      * It returns an float parameter of a given identity.
-     * 
+     *
      * @param ident the identify of the parameter.
      * @return the double value of the specified parameter.
      */
@@ -165,7 +164,7 @@ public class Tables {
 	if (dVal != null)
 	    return dVal.doubleValue();
 	else {
-	    System.err.println("Symbol \""+ident+ "\" does not have assigned value when refered; execution aborted");
+	    logger.error("Symbol \""+ident+ "\" does not have assigned value when refered; execution aborted");
 	    System.exit(0);
 	    return -1;
 	}
@@ -173,7 +172,7 @@ public class Tables {
 
     /**
      * It returns an Double parameter of a given identity.
-     * 
+     *
      * @param ident the identify of the parameter.
      * @return the Double value of the specified parameter.
      */
@@ -184,7 +183,7 @@ public class Tables {
 
     /**
      * It stores an int array.
-     * 
+     *
      * @param ident the identity of the stored array.
      * @param array the array being stored.
      */
@@ -193,10 +192,10 @@ public class Tables {
 	// assert ( intArrayTable.get(ident) == null ) : "The int array with identity " + ident + " already exists ";
 	intArrayTable.put(ident, array);
     }
-	
+
     /**
      * It obtains the int array of the given unique identity.
-     * 
+     *
      * @param ident the identity of the required array.
      * @return the int array with the specified identity.
      */
@@ -205,20 +204,20 @@ public class Tables {
     }
 
     /**
-     * It adds a set of the given identity. 
-     * 
-     * @param ident the identity of the set being added. 
+     * It adds a set of the given identity.
+     *
+     * @param ident the identity of the set being added.
      * @param val the set being added.
      */
     public void addSet(String ident, IntDomain val) {
 	setTable.put(ident, val);
     }
-	
+
     /**
      * It returns the set of the given identity.
-     * 
+     *
      * @param ident the identity of the searched set.
-     * 
+     *
      * @return the set of the given identity.
      */
     public IntDomain getSet(String ident) {
@@ -226,8 +225,8 @@ public class Tables {
     }
 
     /**
-     * It adds the set array to the storage. 
-     * 
+     * It adds the set array to the storage.
+     *
      * @param ident the identity of the added set array.
      * @param array the array being added.
      */
@@ -235,10 +234,10 @@ public class Tables {
 	setArrayTable.put(ident, array);
     }
     /**
-     * 
+     *
      * It returns the set array of the given id.
      * @param ident the unique id of the looked for set array.
-     * @return the set array of the given identity. 
+     * @return the set array of the given identity.
      */
     public IntDomain[] getSetArray(String ident) {
 	return setArrayTable.get(ident);
@@ -249,10 +248,10 @@ public class Tables {
 	// assert ( intArrayTable.get(ident) == null ) : "The int array with identity " + ident + " already exists ";
 	floatArrayTable.put(ident, array);
     }
-	
+
     /**
      * It obtains the int array of the given unique identity.
-     * 
+     *
      * @param ident the identity of the required array.
      * @return the int array with the specified identity.
      */
@@ -261,19 +260,19 @@ public class Tables {
     }
 
     /**
-     * It adds a variable with a given identity to the storage. 
-     * 
-     * @param ident the identity of the added variable. 
+     * It adds a variable with a given identity to the storage.
+     *
+     * @param ident the identity of the added variable.
      * @param var the variable being added.
      */
     public void addVariable(String ident, IntVar var) {
     	variableTable.put(ident, var);
     }
-	
-	
+
+
     /**
-     * It returns the variable of the given identity. 
-     * 
+     * It returns the variable of the given identity.
+     *
      * @param ident the identity of the returned variable.
      * @return the variable of the given identity.
      */
@@ -283,19 +282,19 @@ public class Tables {
 
 
     /**
-     * It adds a variable with a given identity to the storage. 
-     * 
-     * @param ident the identity of the added variable. 
+     * It adds a variable with a given identity to the storage.
+     *
+     * @param ident the identity of the added variable.
      * @param var the variable being added.
      */
     public void addFloatVariable(String ident, FloatVar var) {
     	variableFloatTable.put(ident, var);
     }
-	
-	
+
+
     /**
-     * It returns the variable of the given identity. 
-     * 
+     * It returns the variable of the given identity.
+     *
      * @param ident the identity of the returned variable.
      * @return the variable of the given identity.
      */
@@ -306,18 +305,18 @@ public class Tables {
 
     /**
      * It adds a variable array to the storage.
-     * 
+     *
      * @param ident the identity of the added variable array.
      * @param array the array of variables being added.
      */
     public void addVariableArray(String ident, IntVar[] array) {
     	variableArrayTable.put(ident, array);
     }
-	
-	
+
+
     /**
      * It returns the variable array of the given identity.
-     * 
+     *
      * @param ident the identity of the returned variable array.
      * @return the variable array of the given identity.
      */
@@ -343,18 +342,18 @@ public class Tables {
 
     /**
      * It adds a float variable array to the storage.
-     * 
+     *
      * @param ident the identity of the added variable array.
      * @param array the array of variables being added.
      */
     public void addVariableFloatArray(String ident, FloatVar[] array) {
     	variableFloatArrayTable.put(ident, array);
     }
-	
-	
+
+
     /**
      * It returns the float variable array of the given identity.
-     * 
+     *
      * @param ident the identity of the returned variable array.
      * @return the variable array of the given identity.
      */
@@ -372,18 +371,18 @@ public class Tables {
 
     /**
      * It adds the set variable of the given identity.
-     * 
+     *
      * @param ident the identity of the added set variable.
      * @param var the set variable being added.
      */
     public void addSetVariable(String ident, SetVar var) {
 	setVariableTable.put(ident, var);
     }
-	
-	
+
+
     /**
      * It returns the set variable of the given identity.
-     * 
+     *
      * @param ident the identity of the returned set variable.
      * @return the set variable of the given identity.
      */
@@ -393,19 +392,19 @@ public class Tables {
 
     /**
      * It stores the array of the set variables with the specified identity.
-     * 
+     *
      * @param ident the identity of the stored array of set variables.
      * @param array the array of set variables being added.
      */
     public void addSetVariableArray(String ident, SetVar[] array) {
     	setVariableArrayTable.put(ident, array);
     }
-	
-	
+
+
     /**
      * It returns the array of set variables of the given identity.
-     * 
-     * @param ident the identity of the returned array of set variables. 
+     *
+     * @param ident the identity of the returned array of set variables.
      * @return the array of set variables with the given identity.
      */
     public SetVar[] getSetVariableArray(String ident) {
@@ -426,25 +425,25 @@ public class Tables {
      * @param v the output variable being added.
      */
     public void addOutVar(Var v) { outputVariables.add(v); }
-	
-	
+
+
     /**
-     * It adds an output array annotation. 
-     * 
+     * It adds an output array annotation.
+     *
      * @param v the output array annotation being added.
      */
     public void addOutArray(OutputArrayAnnotation v) { outputArray.add(v); }
 
     /**
-     * It adds a search variable. 
-     * 
+     * It adds a search variable.
+     *
      * @param v the search variable being added.
      */
     public void addSearchVar(Var v) { defaultSearchVariables.add(v); }
-	
+
     /**
-     * It adds a search variable. 
-     * 
+     * It adds a search variable.
+     *
      * @param v the search variable being added.
      */
     public void addSearchFloatVar(Var v) { defaultSearchFloatVariables.add(v); }
@@ -462,12 +461,12 @@ public class Tables {
     public void addSearchFloatArray(Var[] v) { defaultSearchFloatArrays.add(v); }
 
     /**
-     * It adds a search set variable. 
-     * 
+     * It adds a search set variable.
+     *
      * @param v the set search variable being added.
      */
     public void addSearchSetVar(Var v) { defaultSearchSetVariables.add(v); }
-	
+
     /**
      * It adds an array of search set variables.
      * @param v
@@ -475,11 +474,11 @@ public class Tables {
     public void addSearchSetArray(Var[] v) { defaultSearchSetArrays.add(v); }
 
 
-    // StringBuilder to be used instead of normal string additions. 
-	
+    // StringBuilder to be used instead of normal string additions.
+
     @SuppressWarnings("unchecked")
 	public String toString() {
-		
+
 	HashMap[] dictionary = { intTable,   // 0
 				 intArrayTable,  // 1
 				 setTable,       // 2
@@ -493,7 +492,7 @@ public class Tables {
 				 variableFloatTable,     // 10
 				 variableFloatArrayTable  // 11
 	};
-		
+
 	int indexIntArray = 1;
 	int indexSetArray = 3;
 	int indexVariableArray = 5;
@@ -518,7 +517,7 @@ public class Tables {
 
 	String s = "";
 	for (int i=0; i<dictionary.length; i++) {
-	     
+
 	    // int array || float array
 	    if (i == indexIntArray) {
 		s+= tableNames[i]+"\n";
@@ -553,7 +552,7 @@ public class Tables {
 	    	}
 	    	s+="}\n";
 	    }
-	    // Set Array 
+	    // Set Array
 	    else if (i == indexSetArray) {
 		s+= tableNames[i]+"\n";
 		s +="{";

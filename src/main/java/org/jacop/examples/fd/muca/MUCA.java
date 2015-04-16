@@ -1,9 +1,9 @@
 /**
- *  MUCA.java 
+ *  MUCA.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,13 +31,8 @@
 
 package org.jacop.examples.fd.muca;
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.StringTokenizer;
-
+import java.io.*;
+import java.util.*;
 import org.jacop.constraints.Among;
 import org.jacop.constraints.ExtensionalSupportVA;
 import org.jacop.constraints.IfThen;
@@ -56,47 +51,49 @@ import org.jacop.search.MaxRegret;
 import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
- * It solves the Mixed Multi-Unit Combinatorial Auctions. 
- * 
+ *
+ * It solves the Mixed Multi-Unit Combinatorial Auctions.
+ *
  * @author Radoslaw Szymanek
  * @version 4.2
- * 
- * 
- * The idea originated from reading the following paper 
+ *
+ *
+ * The idea originated from reading the following paper
  * where the first attempt to use CP was presented.
- * 
+ *
  * Comparing Winner Determination Algorithms for Mixed
  * Multi-Unit Combinatorial Auctions by Brammert Ottens
  * Ulle Endriss
- * 
+ *
  */
 
-public class MUCA extends ExampleFD {
+public class MUCA extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(MUCA.class);
 
 	/**
-	 * ArrayList of bids issued by different bidders. 
-	 * Each bidder issues an ArrayList of xor bids. 
-	 * Each Xor bid is a list of transformations. 
+	 * ArrayList of bids issued by different bidders.
+	 * Each bidder issues an ArrayList of xor bids.
+	 * Each Xor bid is a list of transformations.
 	 */
 	public ArrayList<ArrayList<ArrayList<Transformation> >> bids;
 
 
 	/**
-	 * For each bidder and each xor bid there is an 
+	 * For each bidder and each xor bid there is an
 	 * integer representing a cost of the xor bid.
 	 */
 	public ArrayList<ArrayList<Integer>> costs;
 
-	
+
 	/**
 	 * It specifies the initial quantities of goods.
 	 */
 	public ArrayList<Integer> initialQuantity;
-	
-	
+
+
 	/**
 	 * It specifies the minimal quantities of items seeked to achieve.
 	 */
@@ -107,16 +104,16 @@ public class MUCA extends ExampleFD {
 	 */
 	public int noGoods = 7;
 
-	
+
 	/**
 	 * It specifies the minimal possible delta of goods for any transformation.
 	 */
 	public int minDelta = -10;
-	
+
 	/**
 	 * It specifies the maximal possible delta of goods for any transformation.
 	 */
-	
+
 	public int maxDelta = 10;
 
 	/**
@@ -129,42 +126,42 @@ public class MUCA extends ExampleFD {
 	 */
 	public int maxCost = 100000;
 
-	
+
 	/**
 	 * The maximal number of products.
 	 */
 	public int maxProducts = 100;
 
-	
+
 	/**
-	 * For each bidder it specifies variable representing 
+	 * For each bidder it specifies variable representing
 	 * the cost of the chosen xor bid.
 	 */
 	public ArrayList<IntVar> bidCosts;
 
-	
+
 	/**
 	 * It specifies the sequence of transitions used by an auctioneer.
 	 */
 	public IntVar transitions[];
 
-	
+
 	/**
 	 * It specifies the maximal number of transformations used by the auctioneer.
 	 */
 	public int maxNoTransformations;
 
-	
-	/**
-	 * For each transition and each good it specifies the 
-	 * delta change of that good before the transition takes place.
-	 */
-	public IntVar deltasI [][]; 
 
 	/**
-	 * For each transition and each good it specifies the 
+	 * For each transition and each good it specifies the
+	 * delta change of that good before the transition takes place.
+	 */
+	public IntVar deltasI [][];
+
+	/**
+	 * For each transition and each good it specifies the
 	 * delta change of that good after the transition takes place.
-	 */	
+	 */
 	public IntVar deltasO [][];
 
 	/**
@@ -903,8 +900,8 @@ public class MUCA extends ExampleFD {
 
 	/**
 	 * It executes the program which solve the supplied auction problem or
-	 * solves three problems available within the files. 
-	 * 
+	 * solves three problems available within the files.
+	 *
 	 * @param args the first argument specifies the name of the file containing the problem description.
 	 */
 	public static void main(String[] args) {
@@ -913,27 +910,27 @@ public class MUCA extends ExampleFD {
 
 		if (args.length > 0) {
 			problem.filename = args[0];
-		
+
 			problem.model();
 
 			problem.searchSpecial();
-		
+
 			return;
 		}
-		
+
 		problem.model();
 		problem.searchSpecial();
-		
+
 		problem = new MUCA();
 		problem.filename = "./ExamplesJaCoP/testset1.auct";
 		problem.model();
 		problem.searchSpecial();
-		
+
 		problem = new MUCA();
 		problem.filename = "./ExamplesJaCoP/testset2.auct";
 		problem.model();
 		problem.searchSpecial();
-		
+
 	}
 
 	@Override
@@ -1097,7 +1094,7 @@ public class MUCA extends ExampleFD {
 		for (int g = 0; g < noGoods; g++) {
 
 			IntVar weights [] = new IntVar[usedTransformation.length + 1];
-			weights[0] = new IntVar(store, String.valueOf(initialQuantity.get(g)) + "of-g" + g, 
+			weights[0] = new IntVar(store, String.valueOf(initialQuantity.get(g)) + "of-g" + g,
 					initialQuantity.get(g), initialQuantity.get(g));
 
 			for (ArrayList<ArrayList<Transformation>> bid : bids) {
@@ -1109,10 +1106,10 @@ public class MUCA extends ExampleFD {
 						int[][] tuples = new int[2][2];
 
 						if (t.getDelta(g) >= 0)
-							weights[t.id] = new IntVar(store, "delta_tid_" + t.id + "_g" + g, 
+							weights[t.id] = new IntVar(store, "delta_tid_" + t.id + "_g" + g,
 									0, t.getDelta(g));
 						else
-							weights[t.id] = new IntVar(store, "delta_t" + t.id + "_g" + g, 
+							weights[t.id] = new IntVar(store, "delta_t" + t.id + "_g" + g,
 									t.getDelta(g), 0);
 
 						tuples[0][0] = 0;
@@ -1121,7 +1118,7 @@ public class MUCA extends ExampleFD {
 						tuples[1][1] = t.getDelta(g);
 
 						IntVar[] vars = {usedTransformation[t.id - 1], weights[t.id]};
-						store.impose(new ExtensionalSupportVA(vars, tuples));                                  	  
+						store.impose(new ExtensionalSupportVA(vars, tuples));
 
 					}
 				}
@@ -1130,7 +1127,7 @@ public class MUCA extends ExampleFD {
 
 			store.impose(new Sum(weights, sum[g]));
 
-		}              
+		}
 
 		cost = new IntVar(store, "cost", minCost, maxCost);
 
@@ -1140,11 +1137,11 @@ public class MUCA extends ExampleFD {
 
 	/**
 	 * It executes special master-slave search. The master search
-	 * uses costs variables and maxregret criteria to choose an 
-	 * interesting bids. The second search (slave) looks for the 
+	 * uses costs variables and maxregret criteria to choose an
+	 * interesting bids. The second search (slave) looks for the
 	 * sequence of chosen transactions such as that all constraints
 	 * concerning goods quantity (deltas of transitions) are respected.
-	 * 
+	 *
 	 * @return true if there is a solution, false otherwise.
 	 */
 	public boolean searchSpecial() {
@@ -1155,26 +1152,26 @@ public class MUCA extends ExampleFD {
 
 		Search<IntVar> search2 = new DepthFirstSearch<IntVar>();
 		SelectChoicePoint<IntVar> select2 = new SimpleSelect<IntVar>(transitions, null,
-				new IndomainMin<IntVar>());       
+				new IndomainMin<IntVar>());
 
 		search1.addChildSearch(search2);
 		search2.setSelectChoicePoint(select2);
 
-		boolean result = search1.labeling(store, select1, cost);             
+		boolean result = search1.labeling(store, select1, cost);
 
-		System.out.print("\t");
+		logger.info("\t");
 
 		for (int i = 0; i < maxNoTransformations && transitions[i].value() != 0; i++)
-			System.out.print(transitions[i] + "\t");
-		System.out.println();
+			logger.info(transitions[i] + "\t");
+		logger.info("\n");
 
 		for (int g = 0; g < noGoods; g++) {
 
-			System.out.print(initialQuantity.get(g) + "\t");
+			logger.info(initialQuantity.get(g) + "\t");
 			for (int i = 0; i < maxNoTransformations && transitions[i].value() != 0; i++)
-				System.out.print( deltasI[i][g].value() + "," + deltasO[i][g].value() + "\t");
+				logger.info( deltasI[i][g].value() + "," + deltasO[i][g].value() + "\t");
 
-			System.out.println(sum[g].value() + ">=" + finalQuantity.get(g));
+			logger.info(sum[g].value() + ">=" + finalQuantity.get(g));
 
 		}
 
@@ -1311,7 +1308,7 @@ public class MUCA extends ExampleFD {
 					bids.add(new ArrayList<ArrayList<Transformation>>());
 					bids.get(bidCounter - 1).add(new ArrayList<Transformation>());
 				}
-				//System.out.println(bidCounter + " " + bid_xorCounter);
+				//logger.info(bidCounter + " " + bid_xorCounter);
 				if(Integer.valueOf(tk.nextToken()) > bid_xorCounter) {
 					bid_xorCounter++;
 					transformationCounter = 1;
@@ -1331,7 +1328,7 @@ public class MUCA extends ExampleFD {
 				goodsCounter = 0;
 				while(tk.hasMoreTokens()) {
 					goodsCounter++;
-					//System.out.println(goodsCounter);
+					//logger.info(goodsCounter);
 					if(goodsCounter <= noGoods) {
 						Id = Integer.valueOf(tk.nextToken()) - 1;
 						in = Integer.valueOf(tk.nextToken());
@@ -1355,12 +1352,12 @@ public class MUCA extends ExampleFD {
 
 					if(output[i] != 0 || input[i] != 0) {
 						//System.out.print(i + " " + input[i] + ":" + output[i] + " ");
-						//System.out.println(bidCounter + " " + bid_xorCounter + " " + transformationCounter + " " + i + " " + delta);
-						bids.get(bidCounter - 1).get(bid_xorCounter - 1).get(transformationCounter - 1).goodsIds.add(i);                                         
+						//logger.info(bidCounter + " " + bid_xorCounter + " " + transformationCounter + " " + i + " " + delta);
+						bids.get(bidCounter - 1).get(bid_xorCounter - 1).get(transformationCounter - 1).goodsIds.add(i);
 						bids.get(bidCounter - 1).get(bid_xorCounter - 1).get(transformationCounter - 1).delta.add(new Delta(input[i], output[i]));
 					}
 				}
-				System.out.print("\n");
+				logger.info("\n");
 
 				line = br.readLine();
 			}
@@ -1394,17 +1391,16 @@ public class MUCA extends ExampleFD {
 
 		}
 		catch(FileNotFoundException ex) {
-			System.err.println("You need to run this program in a directory that contains the required file.");
-			System.err.println(ex);
+			logger.error("You need to run this program in a directory that contains the required file.", ex);
 			System.exit(-1);
 		}
 		catch(IOException ex) {
-			System.err.println(ex);
+            logger.error("error", ex);
 		}
 
-		System.out.println(this.maxCost);
-		System.out.println(this.maxDelta);
-		System.out.println(this.minDelta);
+		logger.info(""+this.maxCost);
+		logger.info("" +this.maxDelta);
+		logger.info("" +this.minDelta);
 	}
 
 }

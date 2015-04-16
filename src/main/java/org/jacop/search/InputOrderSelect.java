@@ -1,9 +1,9 @@
 /**
- *  InputOrderSelect.java 
+ *  InputOrderSelect.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,24 +31,23 @@
 
 package org.jacop.search;
 
-import java.util.IdentityHashMap;
-import java.util.Iterator;
-import java.util.Map;
-
+import java.util.*;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * It is simple input order selector of variables.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
- * @param <T> type of variable being used in the search. 
+ * @param <T> type of variable being used in the search.
  */
 
-public class InputOrderSelect<T extends Var> implements SelectChoicePoint<T> {
+public class InputOrderSelect<T extends Var> implements SelectChoicePoint<T> { private static Logger logger = LoggerFactory.getLogger(InputOrderSelect.class);
 
 	static final boolean debugAll = false;
 
@@ -57,7 +56,7 @@ public class InputOrderSelect<T extends Var> implements SelectChoicePoint<T> {
 	Indomain<T> valueOrdering;
 
 	TimeStamp<Integer> currentIndex;
-	
+
 	/**
 	 * It stores the original positions of variables to be used for input order
 	 * tie-breaking.
@@ -71,7 +70,7 @@ public class InputOrderSelect<T extends Var> implements SelectChoicePoint<T> {
 	 * @param variables a list of variables which must be assigned a value by search.
 	 * @param indomain the indomain heuristic for assigning values to variables.
 	 */
-	public InputOrderSelect(Store store, 
+	public InputOrderSelect(Store store,
 							T[] variables,
 							Indomain<T> indomain) {
 
@@ -86,7 +85,7 @@ public class InputOrderSelect<T extends Var> implements SelectChoicePoint<T> {
 		}
 
 		this.searchVariables = (T[]) new Var[unique];
-		
+
 		for (Iterator<Map.Entry<T, Integer>> itr = position.entrySet()
 				.iterator(); itr.hasNext();) {
 			Map.Entry<T, Integer> e = itr.next();
@@ -113,13 +112,13 @@ public class InputOrderSelect<T extends Var> implements SelectChoicePoint<T> {
 		assert (index < searchVariables.length);
 
 		int finalIndex = searchVariables.length;
-		
+
 		for (int i = currentIndex.value(); i < finalIndex; i++)
 			if (!searchVariables[i].singleton()) {
 				currentIndex.update(i);
 				return searchVariables[i];
 			}
-		
+
 		return null;
 
 	}
@@ -134,7 +133,7 @@ public class InputOrderSelect<T extends Var> implements SelectChoicePoint<T> {
 		assert (currentIndex.value() >= 0);
 		assert (currentIndex.value() < searchVariables.length);
 		assert (searchVariables[currentIndex.value()].dom() != null);
-		
+
 		return valueOrdering.indomain(searchVariables[currentIndex.value()]);
 
 	}

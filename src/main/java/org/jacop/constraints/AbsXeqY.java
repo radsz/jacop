@@ -1,9 +1,9 @@
 /**
- *  AbsXeqY.java 
+ *  AbsXeqY.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,8 +31,7 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
@@ -41,17 +40,19 @@ import org.jacop.core.IntervalEnumeration;
 import org.jacop.core.SmallDenseDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Constraints |X| #= Y
- * 
+ *
  * Domain and bounds consistency can be used; third parameter of constructor controls this.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  */
 
-public class AbsXeqY extends PrimitiveConstraint {
+public class AbsXeqY extends PrimitiveConstraint { private static Logger logger = LoggerFactory.getLogger(AbsXeqY.class);
 
 	static int IdNumber = 1;
 
@@ -74,7 +75,7 @@ public class AbsXeqY extends PrimitiveConstraint {
 	public IntVar y;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"x", "y"};
@@ -127,7 +128,7 @@ public class AbsXeqY extends PrimitiveConstraint {
 
 	@Override
 	public void removeLevel(int level) {
-		if (level == firstConsistencyLevel) 
+		if (level == firstConsistencyLevel)
 			firstConsistencyCheck = true;
 	}
 
@@ -154,7 +155,7 @@ public class AbsXeqY extends PrimitiveConstraint {
 			store.propagationHasOccurred = false;
 
 			if (debugAll)
-				System.out.println("X " + x + " Y " + y);
+				logger.info("X " + x + " Y " + y);
 
 			IntervalDomain xDom;
 
@@ -171,7 +172,7 @@ public class AbsXeqY extends PrimitiveConstraint {
 					while (enumer.hasMoreElements()) {
 						Interval next = enumer.nextElement();
 						xDom.unionAdapt(next);
-					}					
+					}
 				}
 			}
 
@@ -209,7 +210,7 @@ public class AbsXeqY extends PrimitiveConstraint {
 			yDom.addDom(yDom1);
 
 			if (debugAll)
-				System.out.println("new Ydom " + yDom);
+				logger.info("new Ydom " + yDom);
 
 			// @todo, test more the change from yDom1 to yDom.
 			y.domain.in(store.level, y, yDom);
@@ -230,7 +231,7 @@ public class AbsXeqY extends PrimitiveConstraint {
 					while (enumer.hasMoreElements()) {
 						Interval next = enumer.nextElement();
 						yDom.unionAdapt(next);
-					}					
+					}
 				}
 			}
 
@@ -240,7 +241,7 @@ public class AbsXeqY extends PrimitiveConstraint {
 			xDom.addDom(yDom);
 
 			if (debugAll)
-				System.out.println("new Xdom " + xDom);
+				logger.info("new Xdom " + xDom);
 
 			x.domain.in(store.level, x, xDom);
 
@@ -270,7 +271,7 @@ public class AbsXeqY extends PrimitiveConstraint {
 
 		store.propagationHasOccurred = false;
 
-		y.domain.in(store.level, y, -x.max(), -x.min());			
+		y.domain.in(store.level, y, -x.max(), -x.min());
 	    }
 	    else { // x.min() < 0 && x.max() >= 0
 		// int xBound = Math.max(y.min(), y.max());
@@ -297,7 +298,7 @@ public class AbsXeqY extends PrimitiveConstraint {
 				if (possibleEvent != null)
 					return possibleEvent;
 			}
-			
+
 			if (domainConsistent)
 			    return IntDomain.ANY;
 			else

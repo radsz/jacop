@@ -1,9 +1,9 @@
 /**
- *  IntDomain.java 
+ *  IntDomain.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,23 +31,25 @@
 
 package org.jacop.core;
 
-import java.util.Random;
+import java.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Defines an integer domain and related operations on it.
- * 
- * IntDomain implementations can not assume that arguments to 
- * any function can not be empty domains. 
+ *
+ * IntDomain implementations can not assume that arguments to
+ * any function can not be empty domains.
 
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 3.1
  */
 
-public abstract class IntDomain extends Domain {
+public abstract class IntDomain extends Domain {  Logger logger = LoggerFactory.getLogger(IntDomain.class);
 
 	// FIXME, implement as much as possible in general (inefficient) manner, but
-	// it will allow new IntDomain to quickly be employed within a solver.	
+	// it will allow new IntDomain to quickly be employed within a solver.
 
 	/**
 	 * It specifies the minimum element in the domain.
@@ -57,16 +59,16 @@ public abstract class IntDomain extends Domain {
 	/**
 	 * It specifies the maximum element in the domain.
 	 */
-	public static final int MaxInt = 50000000;	
+	public static final int MaxInt = 50000000;
 
 	/**
-	 * It specifies the constant for GROUND event. It has to be smaller 
+	 * It specifies the constant for GROUND event. It has to be smaller
 	 * than the constant for events BOUND and ANY.
 	 */
 	public final static int GROUND = 0;
 
 	/**
-	 * It specifies the constant for BOUND event. It has to be smaller 
+	 * It specifies the constant for BOUND event. It has to be smaller
 	 * than the constant for event ANY.
 	 */
 	public final static int BOUND = 1;
@@ -79,10 +81,10 @@ public abstract class IntDomain extends Domain {
 
 	/**
 	 * It specifies for each event what other events are subsumed by this
-	 * event. Possibly implement this by bit flags in int. 
+	 * event. Possibly implement this by bit flags in int.
 	 */
-	public final static int[][] eventsInclusion = { {GROUND, BOUND, ANY}, // GROUND event 
-		{BOUND, ANY}, // BOUND event 
+	public final static int[][] eventsInclusion = { {GROUND, BOUND, ANY}, // GROUND event
+		{BOUND, ANY}, // BOUND event
 		{ANY} }; // ANY event
 
 	/**
@@ -113,7 +115,7 @@ public abstract class IntDomain extends Domain {
 	public static final int SmallDenseDomainID = 2;
 
 	/**
-	 * It specifies an empty integer domain. 
+	 * It specifies an empty integer domain.
 	 */
 	public static final IntDomain emptyIntDomain = new IntervalDomain(0);
 
@@ -310,7 +312,7 @@ public abstract class IntDomain extends Domain {
 	public abstract IntDomain intersect(int min, int max);
 
 	/**
-	 * It intersects with the domain which is a complement of value. 
+	 * It intersects with the domain which is a complement of value.
 	 * @param value the value for which the complement is computed
 	 * @return the domain which does not contain specified value.
 	 */
@@ -320,7 +322,7 @@ public abstract class IntDomain extends Domain {
 	}
 
 	/**
-	 * It removes value from the domain. It adapts current (this) domain. 
+	 * It removes value from the domain. It adapts current (this) domain.
 	 * @param value the value for which the complement is computed
 	 */
 
@@ -440,7 +442,7 @@ public abstract class IntDomain extends Domain {
 			IntervalEnumeration enumer = domain.intervalEnumeration();
 			while (enumer.hasMoreElements()) {
 				Interval next = enumer.nextElement();
-				result.unionAdapt(next.min, next.max);					
+				result.unionAdapt(next.min, next.max);
 			}
 			return result;
 		}
@@ -471,8 +473,8 @@ public abstract class IntDomain extends Domain {
 	};
 
 	/**
-	 * It computes union of this domain and value. 
-	 * 
+	 * It computes union of this domain and value.
+	 *
 	 * @param value it specifies the value which is being added.
 	 * @return domain which is a union of this one and the value.
 	 */
@@ -522,8 +524,8 @@ public abstract class IntDomain extends Domain {
 	public abstract void in(int storeLevel, Var var, int min, int max);
 
 	/**
-	 * It reduces domain to a single value. 
-	 * 
+	 * It reduces domain to a single value.
+	 *
 	 * @param level level of the store at which the update occurs.
 	 * @param var variable for which this domain is used.
 	 * @param value the value according to which the domain is updated.
@@ -631,10 +633,10 @@ public abstract class IntDomain extends Domain {
     public abstract IntDomain previousDomain();
 
 	/**
-	 * It specifies if the other int domain is equal to this one. 
-	 * 
-	 * @param domain the domain which is compared to this domain. 
-	 * 
+	 * It specifies if the other int domain is equal to this one.
+	 *
+	 * @param domain the domain which is compared to this domain.
+	 *
 	 * @return true if both domains contain the same elements, false otherwise.
 	 */
 	public boolean eq(IntDomain domain) {
@@ -668,9 +670,9 @@ public abstract class IntDomain extends Domain {
 	@Override
 	public void in(int level, Var var, Domain domain) {
 		in(level, (IntVar)var, (IntDomain)domain);
-	}	
+	}
 
-	@Override 
+	@Override
 	public boolean singleton(Domain value) {
 
 		if (getSize() > 1)
@@ -699,7 +701,7 @@ public abstract class IntDomain extends Domain {
 	 */
 
 	public int noConstraints() {
-		return searchConstraintsToEvaluate 
+		return searchConstraintsToEvaluate
 				+ modelConstraintsToEvaluate[GROUND]
 						+ modelConstraintsToEvaluate[BOUND]
 								+ modelConstraintsToEvaluate[ANY];
@@ -759,24 +761,24 @@ public abstract class IntDomain extends Domain {
 			counter++;
 		}
 
-		return counter;		
+		return counter;
 	}
 
 
 	/**
-	 * It computes an intersection with a given domain and stores it in this domain. 
-	 * 
+	 * It computes an intersection with a given domain and stores it in this domain.
+	 *
 	 * @param intersect domain with which the intersection is being computed.
-	 * @return type of event which has occurred due to the operation. 
+	 * @return type of event which has occurred due to the operation.
 	 */
 	public abstract int intersectAdapt(IntDomain intersect);
 
 	/**
 	 * It computes a union between this domain and the domain provided as a parameter. This
-	 * domain is changed to reflect the result. 
-	 * 
-	 * @param union the domain with is used for the union operation with this domain. 
-	 * @return it returns information about the pruning event which has occurred due to this operation. 
+	 * domain is changed to reflect the result.
+	 *
+	 * @param union the domain with is used for the union operation with this domain.
+	 * @return it returns information about the pruning event which has occurred due to this operation.
 	 */
 	public int unionAdapt(IntDomain union) {
 
@@ -792,39 +794,39 @@ public abstract class IntDomain extends Domain {
 	}
 
 	/**
-	 * It computes an intersection of this domain with an interval [min..max]. 
-	 * It adapts this domain to the result of the intersection. 
-	 * @param min the minimum value of the interval used in the intersection computation. 
-	 * @param max the maximum value of the interval used in the intersection computation. 
-	 * @return it returns information about the pruning event which has occurred due to this operation. 
+	 * It computes an intersection of this domain with an interval [min..max].
+	 * It adapts this domain to the result of the intersection.
+	 * @param min the minimum value of the interval used in the intersection computation.
+	 * @param max the maximum value of the interval used in the intersection computation.
+	 * @return it returns information about the pruning event which has occurred due to this operation.
 	 */
 	public abstract int intersectAdapt(int min, int max);
 
 
 	/**
-	 * It computes the size of the intersection between this domain and the domain 
-	 * supplied as a parameter. 
-	 * 
+	 * It computes the size of the intersection between this domain and the domain
+	 * supplied as a parameter.
+	 *
 	 * @param domain the domain with which the intersection is computed.
 	 * @return the size of the intersection.
-	 * 
+	 *
 	 */
 	public int sizeOfIntersection(IntDomain domain) {
 		return intersect(domain).getSize();
 	};
 
 	/**
-	 * It access the element at the specified position. 
-	 * @param index the position of the element, indexing starts from 0. 
-	 * @return the value at a given position in the domain. 
-	 * 
+	 * It access the element at the specified position.
+	 * @param index the position of the element, indexing starts from 0.
+	 * @return the value at a given position in the domain.
+	 *
 	 */
 	public abstract int getElementAt(int index);
 
 	/**
-	 * It constructs and int array containing all elements in the domain. 
+	 * It constructs and int array containing all elements in the domain.
 	 * The array will have size equal to the number of elements in the domain.
-	 * 
+	 *
 	 * @return the int array containing all elements in a domain.
 	 */
 	public int[] toIntArray() {
@@ -842,8 +844,8 @@ public abstract class IntDomain extends Domain {
 
 	/**
 	 * It returns the value to which this domain is grounded. It assumes
-	 * that a domain is a singleton domain. 
-	 * 
+	 * that a domain is a singleton domain.
+	 *
 	 * @return the only value remaining in the domain.
 	 */
 	public int value() {
@@ -858,25 +860,25 @@ public abstract class IntDomain extends Domain {
 
 	/**
 	 * It returns a random value from the domain.
-	 * 
-	 * @return random value. 
+	 *
+	 * @return random value.
 	 */
 	public int getRandomValue() {
 		return getElementAt(generator.nextInt(getSize()));
 	}
 
-	/* 
+	/*
 	 * Finds result interval for multiplication of {a..b} * {c..d}
 	 */
 	public final static IntervalDomain mulBounds(int a, int b, int c, int d) {
-		
+
 		int min = Math.min(Math.min(multiply(a,c),multiply(a,d)), Math.min(multiply(b,c),multiply(b,d)));
 		int max = Math.max(Math.max(multiply(a,c),multiply(a,d)), Math.max(multiply(b,c),multiply(b,d)));
-		
+
 		return new IntervalDomain(min, max);
 	}
 
-	/* 
+	/*
 	 * Finds result interval for division of {a..b} / {c..d} for div and mod constraints
 	 */
 	public final static IntervalDomain divBounds (int a, int b, int c, int d) {
@@ -897,7 +899,7 @@ public abstract class IntDomain extends Domain {
 		else if ( c < 0 && d > 0 && (a > 0 || b < 0)) { // case 3
 			max = Math.max(Math.abs(a), Math.abs(b));
 			min = -max;
-			result = new IntervalDomain(min, max);	    
+			result = new IntervalDomain(min, max);
 		}
 
 		else if (c == 0 && d != 0 && (a > 0 || b < 0)) // case 4 a
@@ -915,7 +917,7 @@ public abstract class IntDomain extends Domain {
 		return result;
 	}
 
-	/* 
+	/*
 	 * Finds result interval for division of {a..b} / {c..d} for mul constraints
 	 */
 	public final static IntervalDomain divIntBounds (int a, int b, int c, int d) {
@@ -935,7 +937,7 @@ public abstract class IntDomain extends Domain {
 		else if ( c < 0 && d > 0 && (a > 0 || b < 0)) { // case 3
 			max = Math.max(Math.abs(a), Math.abs(b));
 			min = -max;
-			result = new IntervalDomain(min, max);	    
+			result = new IntervalDomain(min, max);
 		}
 
 		else if (c == 0 && d != 0 && (a > 0 || b < 0)) // case 4 a
@@ -944,7 +946,7 @@ public abstract class IntDomain extends Domain {
 			result = divIntBounds(a, b, c, -1);
 
 		else { // if (c > 0 || d < 0) { // case 5
-			float ac = (float)a/c, ad = (float)a/d, 
+			float ac = (float)a/c, ad = (float)a/d,
 					bc = (float)b/c, bd = (float)b/d;
 			float low = Math.min(Math.min(ac, ad), Math.min(bc, bd));
 			float high = Math.max(Math.max(ac, ad), Math.max(bc, bd));
@@ -960,10 +962,10 @@ public abstract class IntDomain extends Domain {
 	public final static int multiply(int a, int b)  {
 
 	    long m = (long)a * (long)b;
-	    if (m < Integer.MIN_VALUE || m > Integer.MAX_VALUE) 
-		throw new ArithmeticException("Overflow occurred from int " + a + " * " + b);  
+	    if (m < Integer.MIN_VALUE || m > Integer.MAX_VALUE)
+		throw new ArithmeticException("Overflow occurred from int " + a + " * " + b);
 
-	    return a*b;  
+	    return a*b;
 	}
 
 }

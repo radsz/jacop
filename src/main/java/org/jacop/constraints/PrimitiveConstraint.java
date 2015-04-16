@@ -1,9 +1,9 @@
 /**
- *  PrimitiveConstraint.java 
+ *  PrimitiveConstraint.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,22 +31,23 @@
 
 package org.jacop.constraints;
 
-import java.util.Hashtable;
-
+import java.util.*;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Standard unified interface for all primitive constraints. In addition to
  * functions defined by interface Constraint it also defines function
  * notConsistency and notSatisfied. Only PrimitiveConstraints can be used as
  * arguments to constraints Not, And, Or, etc.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  */
 
-public abstract class PrimitiveConstraint extends Constraint {
+public abstract class PrimitiveConstraint extends Constraint {  Logger logger = LoggerFactory.getLogger(PrimitiveConstraint.class);
 
 	/**
 	 * It specifies the events which must occur for notConsistency()
@@ -57,18 +58,18 @@ public abstract class PrimitiveConstraint extends Constraint {
 	/**
 	 * It retrieves the pruning event which causes reevaluation of the
 	 * constraint notConsistency() function.
-	 * 
+	 *
 	 * @param var for which pruning event is retrieved
 	 * @return the int denoting the pruning event associated with given variable.
 	 */
 
 	public abstract int getNotConsistencyPruningEvent(Var var);
-	
+
 	/**
 	 * It retrieves the pruning event for which any composed constraint which
 	 * uses this constraint should be evaluated. This events are the ones which
 	 * can change satisfied status?
-	 * 
+	 *
 	 * @param var for which pruning event is retrieved
 	 * @param mode decides if pruning event for consistency or nonconsistency is required.
 	 * @return pruning event associated with the given variable for a given consistency mode.
@@ -97,19 +98,19 @@ public abstract class PrimitiveConstraint extends Constraint {
     public void include(Store store) {}
 
 	/**
-	 * It allows to specify customized events required to trigger execution 
+	 * It allows to specify customized events required to trigger execution
 	 * of notConsitency() method.
-	 * 
+	 *
 	 * @param var variable for which customized event is setup.
 	 * @param pruningEvent the type of the event being setup.
 	 */
 	public void setNotConsistencyPruningEvent(Var var, int pruningEvent) {
-	
+
 			if (notConsistencyPruningEvents == null)
 				notConsistencyPruningEvents = new Hashtable<Var, Integer>();
-			
+
 			notConsistencyPruningEvents.put(var, pruningEvent);
-			
+
 	}
 
 }

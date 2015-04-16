@@ -1,9 +1,9 @@
 /**
- *  DollarAndTicket.java 
+ *  DollarAndTicket.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,8 +31,7 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Element;
 import org.jacop.constraints.XgteqY;
@@ -41,13 +40,15 @@ import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
- * It solves a simple logic puzzle - Dollar and Ticket problem. 
- * 
+ *
+ * It solves a simple logic puzzle - Dollar and Ticket problem.
+ *
  * @author Wojciech Swietek, Maciej Trela, and Radoslaw Szymanek
- * 
+ *
  *
  * Every year the Soccer Club has a raffle to support the cost of playing
  * fields, equipment, and camps.  This year the top five sellers were
@@ -65,18 +66,18 @@ import org.jacop.core.Store;
  * 5. The girl on the Cheetahs sold exactly three times as many books as Diane.
  * 6. Greg isn't Borecki or Ott.
  * 7. Kevin isn't on the Bobcats.
- *  
+ *
  */
 
-public class DollarAndTicket extends ExampleFD {
+public class DollarAndTicket extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(DollarAndTicket.class);
 
 	@Override
 	public void model() {
 
 		store = new Store();
 		vars = new ArrayList<IntVar>();
-		
-		System.out.println("Program to solve DollarATicket Solve problem ");
+
+		logger.info("Program to solve DollarATicket Solve problem ");
 
 		String[] firstnames = { "Diane", "Jenny", "Maggie", "Greg", "Kevin" };
 
@@ -87,7 +88,7 @@ public class DollarAndTicket extends ExampleFD {
 
 		// Creating indexes for ease of referring.
 		int /* ivogel = 0, */ iborecki = 1, iott = 2, ipamos = 3, iruiz = 4;
-		
+
 		String[] teams = { "Bobcats", "Cheetahs", "Kickers", "Stars", "Wolves" };
 
 		// Creating indexes for ease of referring.
@@ -120,7 +121,7 @@ public class DollarAndTicket extends ExampleFD {
 			team[i].addDom(12, 12);
 			team[i].addDom(18, 18);
 			team[i].addDom(20, 20);
-			
+
 			vars.add(firstname[i]); vars.add(surname[i]); vars.add(team[i]);
 		}
 
@@ -162,7 +163,7 @@ public class DollarAndTicket extends ExampleFD {
 		IntVar girlFirstname[] = { firstname[0], firstname[1], firstname[2] };
 
 		vars.add(girlIndex);
-		
+
 		store.impose(new Element(girlIndex, girlFirstname, team[icheetahs]));
 		store.impose(new XmulCeqZ(firstname[idiane], 3, team[icheetahs]));
 
@@ -174,7 +175,7 @@ public class DollarAndTicket extends ExampleFD {
 		store.impose(new XneqY(firstname[ikevin], team[ibobcats]));
 
 	}
-		
+
 	/**
 	 * It executes the program to solve this simple puzzle.
 	 * @param args no argument is used.
@@ -182,12 +183,12 @@ public class DollarAndTicket extends ExampleFD {
 	public static void main(String args[]) {
 
 		DollarAndTicket example = new DollarAndTicket();
-		
+
 		example.model();
 
 		if (example.search())
-			System.out.println("Solution(s) found");
-		
+			logger.info("Solution(s) found");
+
 	}
-	
+
 }

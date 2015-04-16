@@ -1,9 +1,9 @@
 /**
- *  Alldifferent.java 
+ *  Alldifferent.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,50 +32,47 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Alldifferent constraint assures that all FDVs has differnet values. It uses
  * partial consistency technique.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class Alldifferent extends Constraint {
+public class Alldifferent extends Constraint { private static Logger logger = LoggerFactory.getLogger(Alldifferent.class);
 
 	static int idNumber = 1;
-	
+
 	/**
 	 * It specifies a list of variables which must take different values.
 	 */
 	public IntVar[] list;
-	
+
 	int stamp = 0;
 
 	LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
 
 	protected HashMap<IntVar, Integer> positionMapping;
-	
+
 	protected TimeStamp<Integer> grounded;
-	
+
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"list"};
-	
+
 	/**
 	 * It constructs the alldifferent constraint for the supplied variable.
 	 * @param list variables which are constrained to take different values.
@@ -83,11 +80,11 @@ public class Alldifferent extends Constraint {
 	public Alldifferent(IntVar[] list) {
 
 		assert (list != null) : "Variables list is null";
-		
+
 		this.numberId = idNumber++;
 		this.list = new IntVar[list.length];
 		this.numberArgs = (short) list.length;
-		
+
 		for (int i = 0; i < list.length; i++) {
 			assert (list[i] != null) : i + "-th element in the list is null";
 			this.list[i] = list[i];
@@ -123,7 +120,7 @@ public class Alldifferent extends Constraint {
 	public void consistency(Store store) {
 
 		do {
-			
+
 			store.propagationHasOccurred = false;
 
 			LinkedHashSet<IntVar> fdvs = variableQueue;
@@ -147,7 +144,7 @@ public class Alldifferent extends Constraint {
 							for (int i = groundPos; i < list.length; i++)
 								list[i].domain.inComplement(store.level, list[i], Q.min());
 					}
-					
+
 				}
 
 		} while (store.propagationHasOccurred);
@@ -167,14 +164,14 @@ public class Alldifferent extends Constraint {
 			}
 			return IntDomain.GROUND;
 	}
-	
+
 	@Override
 	public boolean satisfied() {
-		 
+
 		 for(int i = grounded.value(); i < list.length; i++)
 			 if (!list[i].singleton())
 				 return false;
-		
+
 		 HashSet<Integer> values = new HashSet<Integer>();
 
         for (IntVar aList : list)
@@ -182,28 +179,28 @@ public class Alldifferent extends Constraint {
                 return false;
 
         return true;
-		 
+
 	 }
 
 	 @SuppressWarnings("unused")
 	private boolean satisfiedFullCheck(Store S) {
-	 
+
 		 	int i = 0;
-	 
+
 		 	IntervalDomain result = new IntervalDomain();
-		 	
+
 		 	while (i < list.length - 1) {
-		 			
+
 		 		if (list[i].domain.isIntersecting(result))
 		 			return false;
-		 			
+
 		 		result.addDom(list[i].domain);
-		 			
+
 		 		i++;
 		 	}
-		 		
+
 		 	return true;
-		 	
+
 	 }
 
 	@Override
@@ -218,11 +215,11 @@ public class Alldifferent extends Constraint {
 			queueVariable(level, v);
 		}
 		grounded = new TimeStamp<Integer>(store, 0);
-		
+
 		store.addChanged(this);
 		store.countConstraint();
 	}
-        
+
 	@Override
 	public void queueVariable(int level, Var V) {
 		variableQueue.add((IntVar)V);
@@ -254,9 +251,9 @@ public class Alldifferent extends Constraint {
 
 	@Override
 	public String toString() {
-		
+
 		StringBuffer result = new StringBuffer( id() );
-		
+
 		result.append(" : alldifferent([");
 
 		for (int i = 0; i < list.length; i++) {
@@ -265,17 +262,17 @@ public class Alldifferent extends Constraint {
 				result.append(", ");
 		}
 		result.append("])");
-		
+
 		return result.toString();
-		
+
 	}
 
     @Override
 	public void increaseWeight() {
 		if (increaseWeight) {
-			for (Var v : list) 
+			for (Var v : list)
 				v.weight++;
 		}
-	}	
+	}
 
 }

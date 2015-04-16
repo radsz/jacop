@@ -1,9 +1,9 @@
 /**
- *  SimpleSelect.java 
+ *  SimpleSelect.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,22 +31,21 @@
 
 package org.jacop.search;
 
-import java.util.IdentityHashMap;
-import java.util.Iterator;
-import java.util.Map;
-
+import java.util.*;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * It is simple and customizable selector of decisions (constraints) which will
  * be enforced by search.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  */
 
-public class SimpleSelect<T extends Var> implements SelectChoicePoint<T> {
+public class SimpleSelect<T extends Var> implements SelectChoicePoint<T> { private static Logger logger = LoggerFactory.getLogger(SimpleSelect.class);
 
 	static final boolean debugAll = false;
 
@@ -126,14 +125,14 @@ public class SimpleSelect<T extends Var> implements SelectChoicePoint<T> {
 				.iterator(); itr.hasNext();) {
 			Map.Entry<T, Integer> e = itr.next();
 			searchVariables[e.getValue()] = e.getKey();
-		}		
-		
+		}
+
 		variableOrdering = varSelect;
 		tieBreakingComparator = tieBreakerVarSelect;
-		
+
 		if (tieBreakingComparator != null)
 			inputOrderTieBreaking = false;
-		
+
 		valueOrdering = indomain;
 
 	}
@@ -273,7 +272,7 @@ public class SimpleSelect<T extends Var> implements SelectChoicePoint<T> {
 		assert (currentIndex >= 0);
 		assert (currentIndex < searchVariables.length);
 		assert (searchVariables[currentIndex].dom() != null);
-		
+
 		return valueOrdering.indomain(searchVariables[currentIndex]);
 
 	}
@@ -314,7 +313,7 @@ public class SimpleSelect<T extends Var> implements SelectChoicePoint<T> {
 	 * be instantiated at this stage. The variable is positioned at search
 	 * position.
 	 * @param searchPosition position at which search store currently choosen variable.
-	 * @param variablePosition current position of the variable choosen by search. 
+	 * @param variablePosition current position of the variable choosen by search.
 	 * @return variable choosen to be a base of the choice point.
 	 */
 

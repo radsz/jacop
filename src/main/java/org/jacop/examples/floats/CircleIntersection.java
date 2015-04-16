@@ -1,9 +1,9 @@
 /**
- *  CircleIntersection.java 
+ *  CircleIntersection.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,7 +32,7 @@
 package org.jacop.examples.floats;
 
 /**
- * 
+ *
  * It models circle intersection for floating solver.
  *
  * The following equations are solved
@@ -43,25 +43,23 @@ package org.jacop.examples.floats;
  * Based on minizinc model circle_intersection.mzn by Håkan Kjellerstrand
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * 
+ *
  */
 
-import java.util.ArrayList;
-
 import org.jacop.core.Store;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.PrintOutListener;
-
-import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.constraints.LinearFloat;
+import org.jacop.floats.constraints.PmulQeqR;
 import org.jacop.floats.constraints.PplusCeqR;
 import org.jacop.floats.constraints.PplusQeqR;
-import org.jacop.floats.constraints.PmulQeqR;
-import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.SmallestDomainFloat;
+import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.PrintOutListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class CircleIntersection {
+public class CircleIntersection { private static Logger logger = LoggerFactory.getLogger(CircleIntersection.class);
 
     double MIN_FLOAT = -1e+150;
     double MAX_FLOAT =  1e+150;
@@ -71,7 +69,7 @@ public class CircleIntersection {
        long T1, T2, T;
 	T1 = System.currentTimeMillis();
 
-	System.out.println ("========= circle_intersection =========");
+	logger.info ("========= circle_intersection =========");
 
 	Store store = new Store();
 
@@ -98,15 +96,15 @@ public class CircleIntersection {
 	store.impose(new PmulQeqR(s2, s2, r2));
 	store.impose(new PplusQeqR(r1, r2,  new FloatVar(store, 4.0, 4.0)));
 
-	System.out.println( "\bVar store size: "+ store.size()+
+	logger.info( "\bVar store size: "+ store.size()+
   			    "\nNumber of constraints: " + store.numberConstraints()
 			    );
 
 	DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
 	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, new FloatVar[] {x, y}, new SmallestDomainFloat<FloatVar>());
 	label.setSolutionListener(new PrintOutListener<FloatVar>());
-	label.getSolutionListener().recordSolutions(true); 
-	label.getSolutionListener().searchAll(true); 
+	label.getSolutionListener().recordSolutions(true);
+	label.getSolutionListener().searchAll(true);
 	label.setAssignSolution(true);
 	// s.leftFirst = false;
 
@@ -115,24 +113,24 @@ public class CircleIntersection {
 
 	label.printAllSolutions();
 
-	System.out.println ("\nPrecision = " + FloatDomain.precision());
+	logger.info ("\nPrecision = " + FloatDomain.precision());
 
 	T2 = System.currentTimeMillis();
 	T = T2 - T1;
 
-	System.out.println("\n\t*** Execution time = "+ T + " ms");
+	logger.info("\n\t*** Execution time = "+ T + " ms");
     }
 
     /**
-     * It executes the program. 
-     * 
+     * It executes the program.
+     *
      * @param args no arguments
      */
     public static void main(String args[]) {
-		
+
 	CircleIntersection example = new CircleIntersection();
-		
+
 	example.circle_intersection();
 
-    }			
+    }
 }

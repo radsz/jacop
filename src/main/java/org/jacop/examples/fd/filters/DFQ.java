@@ -1,9 +1,9 @@
 /**
- *  DFQ.java 
+ *  DFQ.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,18 +31,21 @@
 
 package org.jacop.examples.fd.filters;
 
-import java.util.ArrayList;
+import java.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * It specifies DFQ filter benchmark.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
-public class DFQ extends Filter {
-	
+
+public class DFQ extends Filter { private static Logger logger = LoggerFactory.getLogger(DFQ.class);
+
 	/**
-	 * It creates a standard DFQ filter problem with addition 
+	 * It creates a standard DFQ filter problem with addition
 	 * delay equal 1 and multiplication delay equal 2.
 	 */
 	public DFQ() {
@@ -58,18 +61,18 @@ public class DFQ extends Filter {
 
 		this.addDel = addDel;
 		this.mulDel = mulDel;
-		
+
 		name = "DFQ";
-		
+
 		int dependencies[][] = { { 0, 5 }, { 1, 5 }, { 2, 6 }, { 3, 7 }, { 4, 8 },
 				{ 5, 9 }, { 6, 10 }, { 9, 10 } };
 
 		this.dependencies = dependencies;
-		
+
 		int ids[] = { mulId, mulId, mulId, mulId, addId, mulId, mulId,
 					  addId, addId, addId, addId };
 		this.ids = ids;
-		
+
 		int last[] = { 7, 8, 10 };
 		this.last = last;
 

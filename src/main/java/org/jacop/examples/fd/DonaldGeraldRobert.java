@@ -1,9 +1,9 @@
 /**
- *  DonaldGeraldRobert.java 
+ *  DonaldGeraldRobert.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,22 +31,23 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.SumWeight;
 import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-/** 
- * 
- * It specifies the logic puzzle (cryptogram) which need to satisfy the following 
- * equation that DONALD+GERALD=ROBERT. 
- * 
+/**
+ *
+ * It specifies the logic puzzle (cryptogram) which need to satisfy the following
+ * equation that DONALD+GERALD=ROBERT.
+ *
  * The solution is provided below.
- * 
+ *
  * Donald 		  526485
  * Gerald =====> +197485
  * Robert         723970
@@ -54,12 +55,12 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek
  */
 
-public class DonaldGeraldRobert extends ExampleFD {
+public class DonaldGeraldRobert extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(DonaldGeraldRobert.class);
 
 	@Override
 	public void model() {
 
-		System.out.println("Program to solve Donald+Gerald=Robert problem ");
+		logger.info("Program to solve Donald+Gerald=Robert problem ");
 
 		// Creating constraint store
 		store = new Store();
@@ -75,21 +76,21 @@ public class DonaldGeraldRobert extends ExampleFD {
 		IntVar r = new IntVar(store, "r", 0, 9);
 		IntVar b = new IntVar(store, "b", 0, 9);
 		IntVar t = new IntVar(store, "t", 0, 9);
-		
+
 		IntVar[] donald = {d, o, n, a, l, d};
 		IntVar[] gerald = {g, e, r, a, l, d};
 		IntVar[] robert = {r, o, b, e, r, t};
 
 		IntVar[] digits = {d, o, n, a, l, g, e, r, b, t};
-		
+
 		for (IntVar v : digits)
 			vars.add(v);
-		
+
 		// Imposing inequalities constraints between letters
 		store.impose(new Alldifferent(digits));
 
 		int[] weights = {100000, 10000, 1000, 100, 10, 1};
-		
+
 		IntVar donaldValue = new IntVar(store, "Donald", 0, 999999);
 		IntVar geraldValue = new IntVar(store, "Gerald", 0, 999999);
 		IntVar robertValue = new IntVar(store, "Robert", 0, 999999);
@@ -117,7 +118,7 @@ public class DonaldGeraldRobert extends ExampleFD {
 		store.impose(new XneqC(robert[0], 0));
 
 	}
-	
+
 	/**
 	 * It executes the program to solve cryptogram puzzle
 	 * DONALD+GERALD=ROBERT.
@@ -126,12 +127,12 @@ public class DonaldGeraldRobert extends ExampleFD {
 	public static void main(String args[]) {
 
 		DonaldGeraldRobert example = new DonaldGeraldRobert();
-		
+
 		example.model();
-		
+
 		if (example.searchSmallestDomain(false))
-			System.out.println("Solution(s) found");
-		
+			logger.info("Solution(s) found");
+
 	}
-	
+
 }

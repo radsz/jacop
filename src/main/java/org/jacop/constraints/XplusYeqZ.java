@@ -1,9 +1,9 @@
 /**
- *  XplusYeqZ.java 
+ *  XplusYeqZ.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,44 +31,45 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Constraint X + Y #= Z
- * 
+ *
  * Bound consistency is used.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class XplusYeqZ extends PrimitiveConstraint {
+public class XplusYeqZ extends PrimitiveConstraint { private static Logger logger = LoggerFactory.getLogger(XplusYeqZ.class);
 
 	static int idNumber = 1;
 
 	/**
-	 * It specifies variable x in constraint x+y=z. 
+	 * It specifies variable x in constraint x+y=z.
 	 */
 	public IntVar x;
 
 	/**
-	 * It specifies variable x in constraint x+y=z. 
+	 * It specifies variable x in constraint x+y=z.
 	 */
 	public IntVar y;
 
 	/**
-	 * It specifies variable x in constraint x+y=z. 
+	 * It specifies variable x in constraint x+y=z.
 	 */
 	public IntVar z;
 
-	
+
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"x", "y", "z"};
@@ -79,7 +80,7 @@ public class XplusYeqZ extends PrimitiveConstraint {
 	 * @param z variable z.
 	 */
 	public XplusYeqZ(IntVar x, IntVar y, IntVar z) {
-		
+
 		assert (x != null) : "Variable x is null";
 		assert (y != null) : "Variable y is null";
 		assert (z != null) : "Variable z is null";
@@ -103,14 +104,14 @@ public class XplusYeqZ extends PrimitiveConstraint {
 		variables.add(y);
 		variables.add(z);
 		return variables;
-	
+
 	}
 
 	@Override
 	public void consistency(Store store) {
-		
+
 		do {
-			
+
 			store.propagationHasOccurred = false;
 
 			if (x.singleton()) {
@@ -134,7 +135,7 @@ public class XplusYeqZ extends PrimitiveConstraint {
 			}
 
 		} while (store.propagationHasOccurred);
-		
+
 	}
 
     void checkForOverflow() {
@@ -211,9 +212,9 @@ public class XplusYeqZ extends PrimitiveConstraint {
 
 	@Override
 	public void notConsistency(Store store) {
-	
+
 		do {
-			
+
 			store.propagationHasOccurred = false;
 
 			if (z.singleton() && y.singleton())
@@ -224,15 +225,15 @@ public class XplusYeqZ extends PrimitiveConstraint {
 
 			if (x.singleton() && y.singleton())
 				z.domain.inComplement(store.level, z, x.min() + y.min());
-			
+
 		} while (store.propagationHasOccurred);
-		
+
 	}
 
 	@Override
 	public boolean notSatisfied() {
 		IntDomain xDom = x.dom(), yDom = y.dom(), zDom = z.dom();
-		return (xDom.max() + yDom.max() < zDom.min() || 
+		return (xDom.max() + yDom.max() < zDom.min() ||
 				xDom.min() + yDom.min() > zDom.max());
 	}
 
@@ -246,9 +247,9 @@ public class XplusYeqZ extends PrimitiveConstraint {
 	@Override
 	public boolean satisfied() {
 
-		return (x.singleton() && y.singleton() && z.singleton() 
+		return (x.singleton() && y.singleton() && z.singleton()
 				&& x.value() + y.value() == z.value());
-		
+
 	}
 
 	@Override
@@ -265,5 +266,5 @@ public class XplusYeqZ extends PrimitiveConstraint {
 			z.weight++;
 		}
 	}
-			
+
 }

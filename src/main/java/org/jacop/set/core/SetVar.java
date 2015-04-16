@@ -1,9 +1,9 @@
 /**
- *  SetVar.java 
+ *  SetVar.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,35 +31,36 @@
 
 package org.jacop.set.core;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.Domain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Defines a Finite Domain Variable (FDV) and related operations on it.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  */
 
-public class SetVar extends Var {
+public class SetVar extends Var { private static Logger logger = LoggerFactory.getLogger(SetVar.class);
 
 	/**
 	 * It specifies the current domain associated with this set variable.
 	 */
 	public SetDomain domain;
-	
+
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
-	 */		
+	 */
 	public static String[] xmlAttributes = {"store", "id", "domain"};
-	
+
 	/**
-	 * It creates a variable in a given store, with a given name and 
+	 * It creates a variable in a given store, with a given name and
 	 * a given domain.
 	 * @param store store in which the variable is created.
 	 * @param name the name for the variable being created.
@@ -72,7 +73,7 @@ public class SetVar extends Var {
 //		dom.modelConstraintsToEvaluate[0] = 0;
 //		dom.modelConstraintsToEvaluate[1] = 0;
 //		dom.modelConstraintsToEvaluate[2] = 0;
-		
+
 		assert (name.lastIndexOf(" ") == -1) : "Name can not contain space character";
 
 		id = name;
@@ -84,7 +85,7 @@ public class SetVar extends Var {
 
 
 	/**
-	 * It creates a variable in a given store, with a given name and 
+	 * It creates a variable in a given store, with a given name and
 	 * a given domain.
 	 * @param store store in which the variable is created.
 	 * @param dom the domain of the variable being created.
@@ -125,17 +126,17 @@ public class SetVar extends Var {
 	/**
 	 * This constructor creates a variable with an empty domain (standard
 	 * IntervalDomain domain), the specified name, and an empty attached
-	 * constraint list. 
-	 * 
+	 * constraint list.
+	 *
 	 * @param store store in which the variable is created.
 	 * @param name the name for the variable being created.
 	 */
 	public SetVar(Store store, String name) {
 		this(store, name, new BoundSetDomain());
 	}
-	
+
 	/**
-	 * This constructor creates a variable in a given store, with 
+	 * This constructor creates a variable in a given store, with
 	 * the domain specified by min..max and with the given name.
 	 * @param store the store in which the variable is created.
 	 * @param name the name of the variable being created.
@@ -176,7 +177,7 @@ public class SetVar extends Var {
 	 * It is possible to set the domain of variable. It should be used with
 	 * care, only right after variable was created and before it is used in
 	 * constraints or search.
-	 * @param dom domain to which the current variable domain is set to. 
+	 * @param dom domain to which the current variable domain is set to.
 	 */
 
 	public void setDomain(SetDomain dom) {
@@ -187,7 +188,7 @@ public class SetVar extends Var {
 	 * It is possible to add the domain of variable. It should be used with
 	 * care, only right after variable was created and before it is used in
 	 * constraints or search.
-	 * @param dom the added domain. 
+	 * @param dom the added domain.
 	 */
 
 	public void addDom(SetDomain dom) {
@@ -243,16 +244,16 @@ public class SetVar extends Var {
 	public void putModelConstraint(Constraint c, int pruningEvent) {
 
 		// If variable is a singleton then it will not be put in the model.
-		// It will be put in the queue and evaluated only once in the queue. 
-		// If constraint is consistent for a singleton then it will remain 
+		// It will be put in the queue and evaluated only once in the queue.
+		// If constraint is consistent for a singleton then it will remain
 		// consistent from the point of view of this variable.
 		if (singleton())
 			return;
 
-		// if Event is NONE then constraint is not being attached, it will 
-		// be only evaluated once, as after imposition it is being put in the constraint 
+		// if Event is NONE then constraint is not being attached, it will
+		// be only evaluated once, as after imposition it is being put in the constraint
 		// queue.
-		
+
 		if (pruningEvent == Domain.NONE) {
 			return;
 		}
@@ -266,7 +267,7 @@ public class SetVar extends Var {
 	/**
 	 * It registers constraint with current variable, so always when this variable
 	 * is changed the constraint is reevaluated.
-	 * @param c the constraint which is added as a search constraint. 
+	 * @param c the constraint which is added as a search constraint.
 	 */
 
 	public void putSearchConstraint(Constraint c) {
@@ -293,10 +294,10 @@ public class SetVar extends Var {
 
 	/**
 	 * It detaches constraint from the current variable, so change in variable
-	 * will not cause constraint reevaluation. It is only removed from the 
-	 * current level onwards. Removing current level at later stage will 
-	 * automatically re-attached the constraint to the variable. 
-	 * 
+	 * will not cause constraint reevaluation. It is only removed from the
+	 * current level onwards. Removing current level at later stage will
+	 * automatically re-attached the constraint to the variable.
+	 *
 	 * @param c the constraint being detached from the variable.
 	 */
 
@@ -367,50 +368,50 @@ public class SetVar extends Var {
 
 	@Override
 	public String toString() {
-		
+
 		StringBuffer result = new StringBuffer(id);
-		
+
 		if (domain.singleton())
 			result.append(" = ");
 		else
 			result.append("::");
-			
+
 		result.append(domain);
 		return result.toString();
-		
+
 	}
 
 	/**
 	 * It returns the string representation of the variable using the full representation
-	 * of the domain. 
+	 * of the domain.
 	 * @return string representation.
 	 */
 	public String toStringFull() {
-		
+
 		StringBuffer result = new StringBuffer(id);
 		result.append(domain.toStringFull());
 		return result.toString();
-		
+
 	}
 
 	public void remove(int removedLevel) {
 		domain.removeLevel(removedLevel, this);
-	}	
-	
-	
+	}
+
+
 	/**
 	 * It informs the variable that its variable has changed according to the specified event.
 	 * @param event the type of the change (GROUND, BOUND, ANY).
 	 */
 	public void domainHasChanged(int event) {
-				
-		assert ((event == SetDomain.LUB && !singleton())   || 
+
+		assert ((event == SetDomain.LUB && !singleton())   ||
 				(event == SetDomain.GLB && !singleton())   ||
 				(event == SetDomain.ANY && !singleton())   ||
 				(event == SetDomain.BOUND && !singleton()) ||
 				(event == SetDomain.CARDINALITY && !singleton()) ||
 				(event == SetDomain.GROUND && singleton())) : "Wrong event generated " + event + "? " + singleton();
-		
+
 		store.addChanged(this, event, Integer.MIN_VALUE);
 
 	}
@@ -418,5 +419,5 @@ public class SetVar extends Var {
 	public void putConstraint(Constraint c) {
 		putModelConstraint(c, SetDomain.ANY);
 	}
-	
+
 }

@@ -1,9 +1,9 @@
 /**
- *  TSP.java 
+ *  TSP.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -42,24 +42,26 @@ import org.jacop.search.MaxRegret;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleMatrixSelect;
 import org.jacop.search.SmallestDomain;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
- * It models Travelling Salesman Problem (TSP). 
- * 
+ *
+ * It models Travelling Salesman Problem (TSP).
+ *
  * @author Radoslaw Szymanek
  *
  */
 
-public class TSP extends ExampleFD {
+public class TSP extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(TSP.class);
 
 	IntVar[][] varsMatrix;
-	
+
 	@Override
 	public void model() {
 
 		int noCities = 10;
-		
+
 		// Specifies distance between any two cities
 		// 1000 - large value to remove possibility of self loop
 		int[][] distance = { { 1000, 85, 110, 94, 71, 76, 25, 56, 94, 67 },
@@ -72,12 +74,12 @@ public class TSP extends ExampleFD {
 				{ 56, 62, 87, 106, 24, 89, 30, 1000, 23, 20 },
 				{ 94, 70, 93, 124, 8, 108, 57, 23, 1000, 20 },
 				{ 67, 49, 73, 105, 13, 93, 46, 20, 20, 1000 } };
-	
-		
+
+
 		// Creating constraint store
 		store = new Store();
 		varsMatrix = new IntVar[noCities][2];
-		
+
 		// Denotes a city to go to from
 		// index city
 		IntVar[] cities = new IntVar[noCities];
@@ -123,41 +125,41 @@ public class TSP extends ExampleFD {
 		T1 = System.currentTimeMillis();
 
 		search = new DepthFirstSearch<IntVar>();
-		
+
 	   // pivot variable is at index 0.
        SelectChoicePoint<IntVar> select = new SimpleMatrixSelect<IntVar>(varsMatrix,
                                                    		  new MaxRegret<IntVar>(),
                                                    		  new SmallestDomain<IntVar>(),
                                                    		  new IndomainMin<IntVar>());
-       
+
        boolean result = search.labeling(store, select, cost);
 
 		T2 = System.currentTimeMillis();
 		T = T2 - T1;
 
 		if (result)
-			System.out.println("Variables : " + vars);
+			logger.info("Variables : " + vars);
 		else
-			System.out.println("Failed to find any solution");
+			logger.info("Failed to find any solution");
 
-		System.out.println("\n\t*** Execution time = " + T + " ms");
+		logger.info("\n\t*** Execution time = " + T + " ms");
 
 		return result;
 
    }
 	/**
-	 * It executes the program to solve this Travelling Salesman Problem. 
+	 * It executes the program to solve this Travelling Salesman Problem.
 	 * @param args no argument is used.
 	 */
 	public static void main(String args[]) {
 
 		TSP example = new TSP();
-		
+
 		example.model();
 
 		if ( example.searchMaxRegretForMatrixOptimal())
-			System.out.println("Solution(s) found");
+			logger.info("Solution(s) found");
 
-	}	
-	
+	}
+
 }

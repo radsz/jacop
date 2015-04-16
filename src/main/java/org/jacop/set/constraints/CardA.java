@@ -1,9 +1,9 @@
 /**
- *  CardA.java 
+ *  CardA.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,8 +31,7 @@
 
 package org.jacop.set.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntervalDomain;
@@ -40,15 +39,17 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The set cardinality constraint.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  */
 
-public class CardA extends Constraint {
+public class CardA extends Constraint { private static Logger logger = LoggerFactory.getLogger(CardA.class);
 
 	static int idNumber = 1;
 
@@ -63,7 +64,7 @@ public class CardA extends Constraint {
 	public IntDomain cardinality;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"a", "cardinality"};
@@ -71,21 +72,21 @@ public class CardA extends Constraint {
 	/**
 	 * It constructs a cardinality constraint to restrict the number of elements
 	 * in the set assigned to a set variable a.
-	 * 
+	 *
 	 * @param a variable that is restricted to have the cardinality c.
 	 * @param c the value specifying  cardinality of variable a.
 	 */
 	public CardA(SetVar a, int c) {
-		
+
 		this(a);
 		this.cardinality = new IntervalDomain(c, c);
-	
+
 	}
 
 	/**
-	 * It constructs a cardinality constraint to restrict the number of elements 
+	 * It constructs a cardinality constraint to restrict the number of elements
 	 * in the set assigned to set variable a.
-	 * 
+	 *
 	 * @param a variable that is restricted to have the cardinality c.
 	 * @param c domain for the cardinality variable.
 	 */
@@ -93,11 +94,11 @@ public class CardA extends Constraint {
 
 		this(a);
 		this.cardinality = c.cloneLight();
-		
+
 	}
 
 	/**
-	 * It constructs a cardinality constraint to restrict the number of elements 
+	 * It constructs a cardinality constraint to restrict the number of elements
 	 * in the set assigned to set variable a.
 	 *
 	 * @param a variable that is restricted to have the cardinality [min, max].
@@ -105,10 +106,10 @@ public class CardA extends Constraint {
 	 * @param max the maximum value possible for the cardinality of a.
 	 */
 	public CardA(SetVar a, int min, int max) {
-		
+
 		this(a);
 		this.cardinality = new IntervalDomain(min, max);
-	
+
 	}
 
 	CardA(SetVar a) {
@@ -117,7 +118,7 @@ public class CardA extends Constraint {
 		numberId = idNumber++;
 		numberArgs = 1;
 		this.a = a;
-		
+
 	}
 
 	@Override
@@ -133,32 +134,32 @@ public class CardA extends Constraint {
 	public void consistency(Store store) {
 
 		/**
-		 * It computes the consistency of the constraint. 
-		 * 
+		 * It computes the consistency of the constraint.
+		 *
 		 * #A in (min, max)
-		 * 
-		 * Cardinality of set variable A is within interval (min, max).  
-		 * 
+		 *
+		 * Cardinality of set variable A is within interval (min, max).
+		 *
 		 */
 
 		SetDomain aDom = a.domain;
-		
+
 		int min = Math.max(aDom.glb().getSize(), cardinality.min());
 		int max = Math.min(aDom.lub().getSize(), cardinality.max());
-		
+
 		if (min > max)
 	    	throw Store.failException;
 
 		/**
 		 * If #glbA is already equal to maximum allowed cardinality then set is specified by glbA.
 		 * if (#glbA == max) then A = glbA
-		 * If #lubA is already equal to minimum allowed cardinality then set is specified by lubA. 
+		 * If #lubA is already equal to minimum allowed cardinality then set is specified by lubA.
 		 * if (#lubA == min) then A = lubA
-		 * 
+		 *
 		 */
 
 		a.domain.inCardinality(store.level, a, min, max);
-		
+
 	}
 
 	@Override
@@ -170,9 +171,9 @@ public class CardA extends Constraint {
 			if (possibleEvent != null)
 				return possibleEvent;
 		}
-		
-		return SetDomain.ANY;		
-	
+
+		return SetDomain.ANY;
+
 	}
 
 
@@ -214,6 +215,6 @@ public class CardA extends Constraint {
 	public void increaseWeight() {
 		if (increaseWeight)
 			a.weight++;
-	}	
+	}
 
 }

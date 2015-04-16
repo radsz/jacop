@@ -31,27 +31,27 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.Hashtable;
-
+import java.util.*;
 import org.jacop.core.Store;
 import org.jacop.core.SwitchesPruningLogging;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Standard unified interface/abstract class for all constraints.
  *
  * Defines how to construct a constraint, impose, check satisfiability,
  * notSatisfiability, enforce consistency.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 3.1
  */
 
-public abstract class Constraint extends DecomposedConstraint {
+public abstract class Constraint extends DecomposedConstraint {  Logger logger = LoggerFactory.getLogger(Constraint.class);
 
 	public boolean trace = SwitchesPruningLogging.traceConstraint;
-	
+
 	/**
 	 * It specifies the number id for a given constraint. All constraints
 	 * within the same type have unique number ids.
@@ -59,7 +59,7 @@ public abstract class Constraint extends DecomposedConstraint {
 	public int numberId;
 
 	/**
-	 * It specifies the string id of the constraint. If it is null then 
+	 * It specifies the string id of the constraint. If it is null then
 	 * the string id is created from string associated for the constraint
 	 * type and the numberId of the constraint.
 	 */
@@ -102,7 +102,7 @@ public abstract class Constraint extends DecomposedConstraint {
 	/**
 	 * It retrieves the pruning event which causes reevaluation of the
 	 * constraint.
-	 * 
+	 *
 	 * @param var variable for which pruning event is retrieved
 	 * @return it returns the int code of the pruning event (GROUND, BOUND, ANY, NONE)
 	 */
@@ -214,9 +214,9 @@ public abstract class Constraint extends DecomposedConstraint {
 
 
 	/**
-	 * It allows to customize the event for a given variable which 
+	 * It allows to customize the event for a given variable which
 	 * causes the re-execution of the consistency method for a constraint.
-	 * 
+	 *
 	 * @param var variable for which the events are customized.
 	 * @param pruningEvent the event which must occur to trigger execution of the consistency method.
 	 */
@@ -238,11 +238,11 @@ public abstract class Constraint extends DecomposedConstraint {
 	}
 
 	/**
-	 * It specifies if the constraint allows domains of variables 
+	 * It specifies if the constraint allows domains of variables
 	 * in its scope only to shrink its domain with the progress
 	 * of search downwards.
-	 * 
-	 * @return true, by default by all constraints. 
+	 *
+	 * @return true, by default by all constraints.
 	 */
 	public boolean requiresMonotonicity() {
 		return true;
@@ -260,7 +260,7 @@ public abstract class Constraint extends DecomposedConstraint {
 	public int numberArgs;
 
 	/**
-	 * It specifies the event which must occur in order for the consistency function to 
+	 * It specifies the event which must occur in order for the consistency function to
 	 * be called.
 	 */
 	public Hashtable<Var, Integer> consistencyPruningEvents;
@@ -272,10 +272,10 @@ public abstract class Constraint extends DecomposedConstraint {
 	public boolean earlyTerminationOK = false;
 
 	/**
-	 * It specifies if the constraint consistency function requires consistency function 
+	 * It specifies if the constraint consistency function requires consistency function
 	 * executed in one atomic step. A constraint can specify that if any other pruning
 	 * events are initiated by outside entity then the constraint may not work correctly
-	 * if the execution is continued, but it will work well if consistency() function is 
+	 * if the execution is continued, but it will work well if consistency() function is
 	 * restarted.
 	 */
 	public boolean atomicExecution = true;
@@ -290,7 +290,7 @@ public abstract class Constraint extends DecomposedConstraint {
 	};
 
 	/**
-	 * It returns an array list of constraint which are used to decompose this 
+	 * It returns an array list of constraint which are used to decompose this
 	 * constraint. It actually creates a decomposition (possibly also creating
 	 * variables), but it does not impose the constraint.
 	 * @param store the constraint store in which context the decomposition takes place.
@@ -302,48 +302,48 @@ public abstract class Constraint extends DecomposedConstraint {
 	}
 
 	/**
-	 * It is executed after the constraint has failed. It allows to clean some 
-	 * data structures. 
+	 * It is executed after the constraint has failed. It allows to clean some
+	 * data structures.
 	 */
 	public void cleanAfterFailure() {
-	};	
+	};
 
 
     /**
-     * Methods that check for overflow/underflow 
+     * Methods that check for overflow/underflow
      */
 
-    int add(int a, int b) {  
-		
+    int add(int a, int b) {
+
 	long cc = (long)a + (long)b;
 
 	if ( cc < Integer.MIN_VALUE || cc > Integer.MAX_VALUE)
-	    throw new ArithmeticException("Overflow occurred from int " + a + " + " + b);  
-		
-	return a + b;  
-		
-    } 
-	
+	    throw new ArithmeticException("Overflow occurred from int " + a + " + " + b);
 
-    int subtract(int a, int b) {  
-		
+	return a + b;
+
+    }
+
+
+    int subtract(int a, int b) {
+
 	long cc = (long)a - (long)b;
-		
+
 	if ( cc < Integer.MIN_VALUE || cc > Integer.MAX_VALUE)
-	    throw new ArithmeticException("Overflow occurred from int " + a + " - " + b);  
-		
-	return a - b;  
-		
-    } 
+	    throw new ArithmeticException("Overflow occurred from int " + a + " - " + b);
+
+	return a - b;
+
+    }
 
 	int toInt(final float f) {
-		
+
 		if (f >= (float) Integer.MIN_VALUE && f <= (float) Integer.MAX_VALUE) {
 			return (int) f;
 		} else {
 			throw new ArithmeticException("Overflow occurred " + f);
 		}
-		
+
 	}
 
 }

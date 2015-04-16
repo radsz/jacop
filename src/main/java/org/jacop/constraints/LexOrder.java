@@ -1,9 +1,9 @@
 /**
- *  LexOrder.java 
+ *  LexOrder.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2010 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,21 +31,19 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.Hashtable;
-
-import org.jacop.core.Var;
-import org.jacop.core.IntVar;
+import java.util.*;
 import org.jacop.core.IntDomain;
-import org.jacop.core.IntervalDomain;
+import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-// import org.jacop.core.TimeStamp;
+import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+// import org.jacop.core.TimeStamp;
 /**
  *
- * It constructs a LexOrder (lexicographical order) constraint. 
- * 
+ * It constructs a LexOrder (lexicographical order) constraint.
+ *
  * The algorithm is based on paper
  *
  * "Propagation algorithms for lexicographic ordering constraints" by
@@ -56,7 +54,7 @@ import org.jacop.core.Store;
  * @version 4.2
  */
 
-public class LexOrder extends Constraint {
+public class LexOrder extends Constraint { private static Logger logger = LoggerFactory.getLogger(LexOrder.class);
 
     final static boolean debug = false;
 
@@ -80,8 +78,8 @@ public class LexOrder extends Constraint {
 
     private Store store;
 
-    // private TimeStamp<Integer> alpha;	
-    // private TimeStamp<Integer> beta;	
+    // private TimeStamp<Integer> alpha;
+    // private TimeStamp<Integer> beta;
     private int alpha;
     private int beta;
 
@@ -89,21 +87,21 @@ public class LexOrder extends Constraint {
     Hashtable<IntVar, Integer> varToIndex = new Hashtable<IntVar, Integer>();
 
     /**
-     * It creates a lexicographical order for vectors x and y, 
+     * It creates a lexicographical order for vectors x and y,
      *
      * vectors x and does not need to be of the same size.
      * boolea lt defines if we require strict order, Lex_{<} (lt = true) or Lex_{=<} (lt = false)
      *
-     * @param x vector of vectors which assignment is constrained by LexOrder constraint. 
+     * @param x vector of vectors which assignment is constrained by LexOrder constraint.
      */
     public LexOrder(IntVar[] x, IntVar[] y) {
 
 	this(x, y, true);
-		
+
     }
 
     public LexOrder(IntVar[] x, IntVar[] y, boolean lt) {
-		
+
 	assert (x != null) : "x list is null.";
 	assert (y != null) : "y list is null.";
 	assert ( x.length == y.length ) : "\nLength of two vectors different in LexOrder";
@@ -111,10 +109,10 @@ public class LexOrder extends Constraint {
 	queueIndex = 1;
 
 	lexLT = lt;
-		
+
         this.x = x;
         this.y = y;
-		
+
 	this.n = x.length;
 
     }
@@ -124,13 +122,13 @@ public class LexOrder extends Constraint {
 
 	ArrayList<Var> variables = new ArrayList<Var>(3);
 
-	for (int i = 0; i < x.length; i++) 
+	for (int i = 0; i < x.length; i++)
 	    variables.add(x[i]);
-	for (int i = 0; i < y.length; i++) 
+	for (int i = 0; i < y.length; i++)
 	    variables.add(y[i]);
 
 	return variables;
-	
+
     }
 
     @Override
@@ -192,7 +190,7 @@ public class LexOrder extends Constraint {
 
 	} while (store.propagationHasOccurred);
 
-	if (satisfied) 
+	if (satisfied)
 	    removeConstraint();
     }
 
@@ -201,11 +199,11 @@ public class LexOrder extends Constraint {
 
 	if (ground(x) && ground(y)) {
 
-	    for (int i = 0; i < x.length; i++) 
+	    for (int i = 0; i < x.length; i++)
 		if (x[i].value() < y[i].value())
 		    return true;
 		else if (x[i].value() > y[i].value())
-		    return false;	     
+		    return false;
 
 	    if (lexLT) // <
 		return false;
@@ -219,9 +217,9 @@ public class LexOrder extends Constraint {
     @Override
     public void removeConstraint() {
 
-	for (int i = 0; i < x.length; i++) 
+	for (int i = 0; i < x.length; i++)
 	    x[i].removeConstraint(this);
-	for (int i = 0; i < y.length; i++) 
+	for (int i = 0; i < y.length; i++)
 	    y[i].removeConstraint(this);
     }
 
@@ -230,9 +228,9 @@ public class LexOrder extends Constraint {
     public void increaseWeight() {
 	if (increaseWeight) {
 
-	    for (int i = 0; i < x.length; i++) 
+	    for (int i = 0; i < x.length; i++)
 		x[i].weight++;
-	    for (int i = 0; i < y.length; i++) 
+	    for (int i = 0; i < y.length; i++)
 		y[i].weight++;
 
 	}
@@ -269,9 +267,9 @@ public class LexOrder extends Constraint {
 	    if (i < x.length - 1)
 		result.append(", ");
 	}
-		
+
 	result.append("], [");
-		
+
 	for (int i = 0; i < y.length; i++) {
 	    result.append(y[i]);
 	    if (i < y.length - 1)
@@ -289,11 +287,11 @@ public class LexOrder extends Constraint {
 	satisfied = false;
         int a=0, b=0;
 
-        while (a < n && eqSingletons(x[a], y[a])) 
+        while (a < n && eqSingletons(x[a], y[a]))
             a++;
 
 	if (debug)
-	    System.out.println ("INIT entry: a = " + a);
+	    logger.info ("INIT entry: a = " + a);
 
         if (a == n) {
             if (! lexLT) {
@@ -304,7 +302,7 @@ public class LexOrder extends Constraint {
 		satisfied = true;
 		return; // satisfied already for le
 	    }
-            else 
+            else
                 throw Store.failException; // fail for lt;
 	}
 	else {
@@ -315,23 +313,23 @@ public class LexOrder extends Constraint {
                     if (b == -1)
                         b = i;
 		}
-		else 
+		else
                     b = -1;
 
                 i++;
             }
 
 	    if (! lexLT) {
-		if (i == n) 
+		if (i == n)
 		    b = n + 1; //IntDomain.MaxInt;
-		else if (b == -1) 
+		else if (b == -1)
 		    b = i;
 	    }
 	    else
 		if (b == -1)
 		    b = i;
 
-            if (a >= b) 
+            if (a >= b)
                 throw Store.failException; // fail
 
             // alpha.update(a);
@@ -343,7 +341,7 @@ public class LexOrder extends Constraint {
         }
 
 	if (debug)
-	    System.out.println ("INIT exit: a = " + a + ", b = " + b);
+	    logger.info ("INIT exit: a = " + a + ", b = " + b);
     }
 
     void reestablishGAC(int i) {
@@ -354,29 +352,29 @@ public class LexOrder extends Constraint {
         int b = beta;
 
 	if (debug) {
-	    System.out.println ("reestablishGAC entry for " + i + ", alpha = " + a + ", beta = " + b);
-	    System.out.println(this);
+        logger.info ("reestablishGAC entry for " + i + ", alpha = " + a + ", beta = " + b);
+	    logger.info(this.toString());
 	}
 
 	if ( a > b || satisfied)
 	    return;
 
-        if (i == a && (i + 1) == b) 
+        if (i == a && (i + 1) == b)
 	    forceLT(i);
 
         if (i == a && (i + 1) < b) {
             forceLE(i);
-            if (eqSingletons(x[i], y[i])) 
+            if (eqSingletons(x[i], y[i]))
                 updateAlpha();
         }
 
-        if (a < i && i < b) 
+        if (a < i && i < b)
             if ((i == (b - 1) && x[i].min() == y[i].max()) || x[i].min() > y[i].max())
                 updateBeta(i - 1);
 
 	if (debug) {
-	    System.out.println ("reestablishGAC exit for " + i + ", alpha = " + a + ", beta = " + b);
-	    System.out.println(this);
+        logger.info ("reestablishGAC exit for " + i + ", alpha = " + a + ", beta = " + b);
+        logger.info(this.toString());
 	}
     }
 
@@ -388,10 +386,10 @@ public class LexOrder extends Constraint {
 	int b = beta;
 
 	if (debug)
-	    System.out.println("updateAlpha entry: a = " + a + ", b = " + b);
+	    logger.info("updateAlpha entry: a = " + a + ", b = " + b);
 
-        if (a == n) 
-            if (lexLT) 
+        if (a == n)
+            if (lexLT)
                 throw Store.failException; // fail
             else {
 		// alpha.update(a);
@@ -400,7 +398,7 @@ public class LexOrder extends Constraint {
 		return;
 	    }
 
-        if (a == b) 
+        if (a == b)
             throw Store.failException; // fail
 
         if (! eqSingletons(x[a], y[a])) {
@@ -415,7 +413,7 @@ public class LexOrder extends Constraint {
         }
 
 	if (debug)
-	    System.out.println("updateAlfa exit: a = " + a + ", b = " + b);
+	    logger.info("updateAlfa exit: a = " + a + ", b = " + b);
     }
 
     public void updateBeta(int i) {
@@ -428,20 +426,20 @@ public class LexOrder extends Constraint {
 	beta = b;
 
 	if (debug)
-	    System.out.println("updateBeta entry: a = " + a + ", b = " + b);
+	    logger.info("updateBeta entry: a = " + a + ", b = " + b);
 
-        if ( a == b) 
+        if ( a == b)
 	    throw Store.failException; // fail
 
         if (x[i].min() < y[i].max()) {
-            if (i == a) 
+            if (i == a)
                 forceLT(i);
-        } 
+        }
 	else // if (x[i].min() == y[i].max()) // ???
             updateBeta(i - 1);
 
 	if (debug)
-	    System.out.println("updateBeta exit: a = " + a + ", b = " + b);
+	    logger.info("updateBeta exit: a = " + a + ", b = " + b);
     }
 
     private boolean eqSingletons(IntVar x, IntVar y) {

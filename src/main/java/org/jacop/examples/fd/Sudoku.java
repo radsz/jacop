@@ -1,9 +1,9 @@
 /**
- *  Sudoku.java 
+ *  Sudoku.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -33,39 +33,40 @@ package org.jacop.examples.fd;
 
 /**
  *
- * A simple model to solve Sudoku problem. 
+ * A simple model to solve Sudoku problem.
  *
  */
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.XneqY;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *  @author Radoslaw Szymanek
  *  @version 4.2
  */
 
-public class Sudoku extends ExampleFD {
+public class Sudoku extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(Sudoku.class);
 
 	IntVar[][] elements;
-	
+
 	@Override
 	public void model() {
 
 		// >0 - known element
 		// 0 - unknown element
 		int[][] description = { { 0, 1, 0, 4, 2, 0, 0, 0, 5 },
-							    { 0, 0, 2, 0, 7, 1, 0, 3, 9 }, 
+							    { 0, 0, 2, 0, 7, 1, 0, 3, 9 },
 							    { 0, 0, 0, 0, 0, 0, 0, 4, 0 },
-							    { 2, 0, 7, 1, 0, 0, 0, 0, 6 }, 
+							    { 2, 0, 7, 1, 0, 0, 0, 0, 6 },
 							    { 0, 0, 0, 0, 4, 0, 0, 0, 0 },
-							    { 6, 0, 0, 0, 0, 7, 4, 0, 3 }, 
+							    { 6, 0, 0, 0, 0, 7, 4, 0, 3 },
 							    { 0, 7, 0, 0, 0, 0, 0, 0, 0 },
-							    { 1, 2, 0, 7, 3, 0, 5, 0, 0 }, 
+							    { 1, 2, 0, 7, 3, 0, 5, 0, 0 },
 							    { 3, 0, 0, 0, 8, 2, 0, 7, 0 } };
 
 		// No of rows and columns in a box.
@@ -74,7 +75,7 @@ public class Sudoku extends ExampleFD {
 
 		store = new Store();
 		vars = new ArrayList<IntVar>();
-		
+
 		elements = new IntVar[noRows * noColumns][noRows * noColumns];
 
 		// Creating variables.
@@ -117,20 +118,20 @@ public class Sudoku extends ExampleFD {
 	}
 
 	/**
-	 * It specifies the model using mostly primitive constraints. 
+	 * It specifies the model using mostly primitive constraints.
 	 */
 	public void modelBasic() {
 
 		// >0 - known element
 		// 0 - unknown element
 		int[][] description = { { 0, 1, 0, 4, 2, 0, 0, 0, 5 },
-							    { 0, 0, 2, 0, 7, 1, 0, 3, 9 }, 
+							    { 0, 0, 2, 0, 7, 1, 0, 3, 9 },
 							    { 0, 0, 0, 0, 0, 0, 0, 4, 0 },
-							    { 2, 0, 7, 1, 0, 0, 0, 0, 6 }, 
+							    { 2, 0, 7, 1, 0, 0, 0, 0, 6 },
 							    { 0, 0, 0, 0, 4, 0, 0, 0, 0 },
-							    { 6, 0, 0, 0, 0, 7, 4, 0, 3 }, 
+							    { 6, 0, 0, 0, 0, 7, 4, 0, 3 },
 							    { 0, 7, 0, 0, 0, 0, 0, 0, 0 },
-							    { 1, 2, 0, 7, 3, 0, 5, 0, 0 }, 
+							    { 1, 2, 0, 7, 3, 0, 5, 0, 0 },
 							    { 3, 0, 0, 0, 8, 2, 0, 7, 0 } };
 
 		// No of rows and columns in a box.
@@ -139,7 +140,7 @@ public class Sudoku extends ExampleFD {
 
 		store = new Store();
 		vars = new ArrayList<IntVar>();
-		
+
 		elements = new IntVar[noRows * noColumns][noRows * noColumns];
 
 		// Creating variables.
@@ -179,58 +180,58 @@ public class Sudoku extends ExampleFD {
 						store.impose(new XneqY(block.get(k), block.get(m)));
 
 			}
-		
+
 	}
-	
-	
-    
+
+
+
 	/**
-	 * It specifies the main executable function creating a model for 
-	 * a particular Sudoku. 
-	 * 
-	 * @param args not used. 
+	 * It specifies the main executable function creating a model for
+	 * a particular Sudoku.
+	 *
+	 * @param args not used.
 	 */
 	public static void main(String args[]) {
 
 		Sudoku example = new Sudoku();
-		
+
 		example.model();
 
 		if (example.searchSmallestDomain(false))
-			System.out.println("Solution(s) found");
-		
-		ExampleFD.printMatrix(example.elements, example.elements.length, example.elements[0].length);
-		
-		example = new Sudoku();
-		
-	}		
+			logger.info("Solution(s) found");
 
-	
+		ExampleFD.printMatrix(example.elements, example.elements.length, example.elements[0].length);
+
+		example = new Sudoku();
+
+	}
+
+
 	/**
-	 * It specifies the testing function creating a model for a particular Sudoku. 
-	 * 
-	 * @param args not used. 
+	 * It specifies the testing function creating a model for a particular Sudoku.
+	 *
+	 * @param args not used.
 	 */
 	public static void test(String args[]) {
 
 		Sudoku example = new Sudoku();
-		
+
 		example.model();
 
 		if (example.searchSmallestDomain(false))
-			System.out.println("Solution(s) found");
-		
+			logger.info("Solution(s) found");
+
 		ExampleFD.printMatrix(example.elements, example.elements.length, example.elements[0].length);
-		
+
 		example = new Sudoku();
-		
+
 		example.modelBasic();
 
 		if (example.searchSmallestDomain(false))
-			System.out.println("Solution(s) found");
+			logger.info("Solution(s) found");
 
 		ExampleFD.printMatrix(example.elements, example.elements.length, example.elements[0].length);
 
-	}		
+	}
 
 }

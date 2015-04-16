@@ -1,10 +1,10 @@
 /**
  *  IfThenBool.java
- *   
+ *
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -16,7 +16,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,22 +32,23 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Constraint ( X => Y ) <=> Z.
- * 
- * 
+ *
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class IfThenBool extends PrimitiveConstraint {
+public class IfThenBool extends PrimitiveConstraint { private static Logger logger = LoggerFactory.getLogger(IfThenBool.class);
 
 	/*
 	 * X | Y | Z
@@ -56,7 +57,7 @@ public class IfThenBool extends PrimitiveConstraint {
 	 * 1   0   0
 	 * 1   1   1
 	 */
-	
+
 	static int counter = 1;
 
 	/**
@@ -74,9 +75,9 @@ public class IfThenBool extends PrimitiveConstraint {
 	 */
 	public IntVar z;
 
-	
+
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"x", "y", "z"};
@@ -98,15 +99,15 @@ public class IfThenBool extends PrimitiveConstraint {
 		this.x = x;
 		this.y = y;
 		this.z = z;
-		
+
 		assert ( checkInvariants() == null) : checkInvariants();
 
 	}
 
 	/**
 	 * It checks invariants required by the constraint. Namely that
-	 * boolean variables have boolean domain. 
-	 * 
+	 * boolean variables have boolean domain.
+	 *
 	 * @return the string describing the violation of the invariant, null otherwise.
 	 */
 	public String checkInvariants() {
@@ -143,10 +144,10 @@ public class IfThenBool extends PrimitiveConstraint {
 		}
 
 		if (x.max() == 0) {
-			z.domain.in(store.level, z, 1, 1);				
+			z.domain.in(store.level, z, 1, 1);
 		} else if (x.min() == 1) {
 			z.domain.in(store.level, z, y.domain);
-			y.domain.in(store.level, y, z.domain);				
+			y.domain.in(store.level, y, z.domain);
 		}
 
 		if (y.max() == 0) {
@@ -155,8 +156,8 @@ public class IfThenBool extends PrimitiveConstraint {
 			if (z.singleton())
 				x.domain.inComplement(store.level, x, z.value() );
 		} else if (y.min() == 1) {
-			z.domain.in(store.level, z, 1, 1);								
-		}			
+			z.domain.in(store.level, z, 1, 1);
+		}
 
 	}
 
@@ -223,11 +224,11 @@ public class IfThenBool extends PrimitiveConstraint {
 		do {
 
 			store.propagationHasOccurred = false;
-			
+
 			if (x.singleton()) {
 
 				if (x.max() == 0) {
-					z.domain.in(store.level, z, 0, 0);				
+					z.domain.in(store.level, z, 0, 0);
 				}
 
 				if (x.min() == 1) {
@@ -242,11 +243,11 @@ public class IfThenBool extends PrimitiveConstraint {
 
 				if (y.max() == 0) {
 					z.domain.in(store.level, z, x.domain);
-					x.domain.in(store.level, x, z.domain);				
+					x.domain.in(store.level, x, z.domain);
 				}
 
 				if (y.min() == 1) {
-					z.domain.in(store.level, z, 0, 0);								
+					z.domain.in(store.level, z, 0, 0);
 				}
 			}
 

@@ -1,9 +1,9 @@
 /**
- *  GeostExample.java 
+ *  GeostExample.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,8 +31,7 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.geost.DBox;
 import org.jacop.constraints.geost.ExternalConstraint;
@@ -44,16 +43,18 @@ import org.jacop.constraints.geost.Shape;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * It specifies an example where squares of the given size must be placed within
- * a square of a given size. 
+ * a square of a given size.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class GeostExample extends ExampleFD {
+public class GeostExample extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(GeostExample.class);
 
 	// Store store;
 	ArrayList<Var> vars;
@@ -65,7 +66,7 @@ public class GeostExample extends ExampleFD {
 	/**
 	 * It specifies and runs a very simple Geost example. It is just
 	 * to present how Geost constraint can be created and imposed to store.
-	 * 
+	 *
 	 * @param args no parameters read.
 	 */
 	public static void main(String args[]) {
@@ -83,7 +84,7 @@ public class GeostExample extends ExampleFD {
 
 		ArrayList<Shape> shapes = new ArrayList<Shape>();
 		ArrayList<GeostObject> objects = new ArrayList<GeostObject>();
-		ArrayList<ExternalConstraint> constraints = new ArrayList<ExternalConstraint>(); 
+		ArrayList<ExternalConstraint> constraints = new ArrayList<ExternalConstraint>();
 
 		// Object O1- shapes 1, 2, 3 and 4
 		ArrayList<DBox> shape1 = new ArrayList<DBox>();
@@ -196,7 +197,7 @@ public class GeostExample extends ExampleFD {
 
 		boolean result = store.consistency();
 
-		//      System.out.println(shapes+"\n"+objects);
+		//      logger.info(shapes+"\n"+objects);
 
 		//      Search label = new DepthFirstSearch();
 
@@ -206,15 +207,15 @@ public class GeostExample extends ExampleFD {
 		//      Result = label.labeling(store, select);
 
 		if (result) {
-			System.out.println("*** Yes");
-			System.out.println(store);
+			logger.info("*** Yes");
+			logger.info(store.toString());
 		}
 		else
-			System.out.println("*** No");
+			logger.info("*** No");
 
 		T2 = System.currentTimeMillis();
 		T = T2 - T1;
-		System.out.println("\n\t*** Execution time = "+ T + " ms");
+		logger.info("\n\t*** Execution time = "+ T + " ms");
 
 		return result;
 	}

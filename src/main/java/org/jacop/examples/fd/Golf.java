@@ -1,9 +1,9 @@
 /**
- *  Golf.java 
+ *  Golf.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,8 +31,7 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.And;
 import org.jacop.constraints.Element;
@@ -46,32 +45,34 @@ import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
- * A simple logic puzzle about golf players. 
- * 
+ *
+ * A simple logic puzzle about golf players.
+ *
  * @author Mariusz Czarnojan, Krystian Burka, and Radoslaw Szymanek
  *
  * "A Round of Golf"
 
  * When the Sunny Hills Country Club golf course isn't in use by club members,
- * of course, it's open to the club's employees. 
- * Recently, Jack and three other workers at the golf course got together on their day 
- * off to play a round of eighteen holes of golf. 
- * Afterward, all four, including Mr. Green, went to the clubhouse to total their scorecards. 
+ * of course, it's open to the club's employees.
+ * Recently, Jack and three other workers at the golf course got together on their day
+ * off to play a round of eighteen holes of golf.
+ * Afterward, all four, including Mr. Green, went to the clubhouse to total their scorecards.
  * Each man works at a different job (one is a short-order cook), and each shot a different score
  * in the game. No one scored below 70 or above 85 strokes.
- * From the clues below, can you discover each man's full name, job and golf score? 
- * 
+ * From the clues below, can you discover each man's full name, job and golf score?
+ *
  * 1. Bill, who is not the maintenance man, plays golf often and had the lowest score of the foursome.
  * 2. Mr. Clubb, who isn't Paul, hit several balls into the woods and scored ten strokes
  *    more than the pro-shop clerk.
- * 3. In some order, Frank and the caddy scored four and seven more strokes than Mr. Sands. 
+ * 3. In some order, Frank and the caddy scored four and seven more strokes than Mr. Sands.
  * 4. Mr. Carter thought his score of 78 was one of his better games, even though Frank's score
  *    was lower.
  * 5. None of the four scored exactly 81 strokes.
- * 
+ *
  * Solution
  * Bill Sands Cook 71
  * Jack Clubb Maint 85
@@ -79,16 +80,15 @@ import org.jacop.core.Store;
  * Frank Green Clerk 75
  */
 
-
-public class Golf extends ExampleFD {
+public class Golf extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(Golf.class);
 
 	@Override
 	public void model() {
 
 		store = new Store();
 		vars = new ArrayList<IntVar>();
-		
-		System.out.println("Program to solve Golf problem ");
+
+		logger.info("Program to solve Golf problem ");
 
 		// First names of golf players.
 		String[] FNNames = { "Bill", "Paul", "Frank", "Jack" };
@@ -99,7 +99,7 @@ public class Golf extends ExampleFD {
 		String[] LNNames = { "Clubb", "Carter", "Sands", "Green" };
 		// Creation of indexes for ease of referring.
 		int /* iGreen = 0, */ iClubb = 1, iCarter = 2, iSands = 3;
-		
+
 		// Jobs of the golf players.
 		String[] JobsNames = { "Maint", "Caddy", "Clerk", "Cook" };
 		// Creation of indexes for ease of referring.
@@ -126,7 +126,7 @@ public class Golf extends ExampleFD {
 			Jobs[i] = new IntVar(store, JobsNames[i]);
 			Jobs[i].addDom(70, 80);
 			Jobs[i].addDom(82, 85);
-			
+
 			vars.add(FN[i]); vars.add(LN[i]); vars.add(Jobs[i]);
 		}
 
@@ -198,12 +198,12 @@ public class Golf extends ExampleFD {
 	public static void main(String args[]) {
 
 		Golf example = new Golf();
-		
+
 		example.model();
 
 		if (example.search())
-			System.out.println("Solution(s) found");
-		
-	}		
-	
+			logger.info("Solution(s) found");
+
+	}
+
 }

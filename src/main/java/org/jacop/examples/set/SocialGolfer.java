@@ -1,9 +1,9 @@
 /**
- *  SocialGolfer.java 
+ *  SocialGolfer.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,8 +31,7 @@
 
 package org.jacop.examples.set;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.SumWeight;
 import org.jacop.constraints.XlteqY;
 import org.jacop.core.IntVar;
@@ -53,6 +52,8 @@ import org.jacop.set.core.SetVar;
 import org.jacop.set.search.IndomainSetMin;
 import org.jacop.set.search.MaxGlbCard;
 import org.jacop.set.search.MinLubCard;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * It is a Social Golfer example based on set variables.
@@ -61,10 +62,10 @@ import org.jacop.set.search.MinLubCard;
  * @version 4.2
  */
 
-public class SocialGolfer extends ExampleSet {
+public class SocialGolfer extends ExampleSet { private static Logger logger = LoggerFactory.getLogger(SocialGolfer.class);
 
 	// 2, 7, 4
-	
+
 	int weeks = 3;
 
 	int groups = 2;
@@ -74,9 +75,9 @@ public class SocialGolfer extends ExampleSet {
 	SetVar[][] golferGroup;
 
 	/**
-	 * 
+	 *
 	 * It runs a number of social golfer problems.
-	 * 
+	 *
 	 * @param args
 	 */
 	public static void main (String args[]) {
@@ -86,77 +87,77 @@ public class SocialGolfer extends ExampleSet {
 		example.setup(3, 2, 2);
 		example.model();
 		example.search();
-		
+
 		// Solved
 		example.setup(2,5,4); // weeks - groups - players in each group
 		example.model();
 		example.search();
-		
+
 		example.setup(2,6,4); // weeks - groups - players in each group
 		example.model();
 		example.search();
-		
+
 		example.setup(2,7,4); // weeks - groups - players in each group
 		example.model();
 		example.search();
-		
+
 		example.setup(3,5,4); // weeks - groups - players in each group
 		example.model();
 		example.search();
-		
+
 		example.setup(3,6,4); // weeks - groups - players in each group
 		example.model();
 		example.search();
-		
+
 		example.setup(3,7,4); // weeks - groups - players in each group
 		example.model();
 		example.search();
-		
+
 		example.setup(4,5,4); // weeks - groups - players in each group
 		example.model();
 		example.search();
-		
+
 		example.setup(4,6,5); // weeks - groups - players in each group
 		example.model();
 		example.search();
-		
+
 		example.setup(4,7,4); // weeks - groups - players in each group
 		example.model();
 		example.search();
-		
+
 		example.setup(4,9,4); // weeks - groups - players in each group
 		example.model();
 		example.search();
-		
+
 		example.setup(5,5,3); // weeks - groups - players in each group
 		example.model();
 		example.search();
-		
+
 		example.setup(5,7,4); // weeks - groups - players in each group
 		example.model();
 		example.search();
-		
+
 		example.setup(5,8,3); // weeks - groups - players in each group
 		example.model();
 		example.search();
-		
+
 		example.setup(6,6,3); // weeks - groups - players in each group
 		example.model();
 		example.search();
-		
+
 		example.setup(5,3,2); // weeks - groups - players in each group
 		example.model();
 		example.search();
-		
+
 		example.setup(4,3,3); // weeks - groups - players in each group
 		example.model();
 		example.search();
-		
+
 	}
 
 	/**
-	 * It sets the parameters for the model creation function. 
-	 * 
+	 * It sets the parameters for the model creation function.
+	 *
 	 * @param weeks
 	 * @param groups
 	 * @param players
@@ -172,20 +173,20 @@ public class SocialGolfer extends ExampleSet {
 	public  void model() {
 
 		int N = groups * players;
-		
+
 		int[] weights = new int[players];
-		
+
 		int base = Math.max(10, players + 1); //at least players + 1
-		
+
 		weights[players - 1] = 1;
-		
+
 		for (int i = players - 2; i >= 0; i --)
 			weights[i] = weights[i+1]*base;
 
-		System.out.println("Social golfer problem " + weeks + "-" + groups + "-" + players);
+		logger.info("Social golfer problem " + weeks + "-" + groups + "-" + players);
 
 		store = new Store();
-		
+
 		golferGroup = new SetVar[weeks][groups];
 
 		vars = new ArrayList<SetVar>();
@@ -197,14 +198,14 @@ public class SocialGolfer extends ExampleSet {
 				store.impose(new CardA(golferGroup[i][j], players));
 			}
 
-		for (int i=0; i<weeks; i++) 
-			for (int j=0; j<groups; j++) 
+		for (int i=0; i<weeks; i++)
+			for (int j=0; j<groups; j++)
 				for (int k=j+1; k<groups; k++) {
 					store.impose(new AdisjointB(golferGroup[i][j], golferGroup[i][k]));
 				}
 
 		for (int i=0; i<weeks; i++) {
-			
+
 			SetVar t = golferGroup[i][0];
 
 			for (int j = 1; j < groups; j++) {
@@ -212,15 +213,15 @@ public class SocialGolfer extends ExampleSet {
 				store.impose(new AunionBeqC(t, golferGroup[i][j], r));
 				t = r;
 			}
-			
+
 			// store.impose(new AinB(new SetVar(store, new BoundSetDomain(new IntervalDomain(1,N), new IntervalDomain(1,N))), t));
 			store.impose(new AeqS(t, new IntervalDomain(1, N)));
-			
+
 		}
 
 		for (int i=0; i<weeks; i++)
-			for (int j=i+1; j<weeks; j++) 
-				if (i != j) 
+			for (int j=i+1; j<weeks; j++)
+				if (i != j)
 					for (int k=0; k<groups; k++)
 						for (int l=0; l<groups; l++) {
 							SetVar result = new SetVar(store, "res"+i+"-"+j+"-"+k+"-"+l, new BoundSetDomain(1,N));
@@ -237,12 +238,12 @@ public class SocialGolfer extends ExampleSet {
 			store.impose(new Match(golferGroup[i][0], var[i]));
 			store.impose(new SumWeight(var[i], weights, v[i]));
 		}
-		
+
 		for (int i=0; i<weeks-1; i++)
 			store.impose(new XlteqY(v[i], v[i+1]));
 
-		
-		
+
+
 	}
 
 	public boolean search() {
@@ -254,11 +255,11 @@ public class SocialGolfer extends ExampleSet {
 		long startUser = b.getThreadUserTime(tread.getId());
 
 		boolean result = store.consistency();
-		System.out.println("*** consistency = " + result);
+		logger.info("*** consistency = " + result);
 
 		Search<SetVar> label = new DepthFirstSearch<SetVar>();
 
-		SelectChoicePoint<SetVar> select = new SimpleSelect<SetVar>(vars.toArray(new SetVar[vars.size()]), 
+		SelectChoicePoint<SetVar> select = new SimpleSelect<SetVar>(vars.toArray(new SetVar[vars.size()]),
 				new MinLubCard<SetVar>(),
 				new MaxGlbCard<SetVar>(),
 				new IndomainSetMin<SetVar>());
@@ -270,19 +271,19 @@ public class SocialGolfer extends ExampleSet {
 		result = label.labeling(store, select);
 
 		if (result) {
-			System.out.println("*** Yes");
+			logger.info("*** Yes");
 			for (int i=0; i<weeks; i++) {
 				for (int j=0; j<groups; j++) {
-					System.out.print(golferGroup[i][j].dom()+" ");
+					logger.info(golferGroup[i][j].dom()+" ");
 				}
-				System.out.println();
+				logger.info("\n");
 			}
 		}
 		else
-			System.out.println("*** No");
+			logger.info("*** No");
 
-		System.out.println( "ThreadCpuTime = " + (b.getThreadCpuTime(tread.getId()) - startCPU)/(long)1e+6 + "ms");
-		System.out.println( "ThreadUserTime = " + (b.getThreadUserTime(tread.getId()) - startUser)/(long)1e+6 + "ms" );
+		logger.info( "ThreadCpuTime = " + (b.getThreadCpuTime(tread.getId()) - startCPU)/(long)1e+6 + "ms");
+		logger.info( "ThreadUserTime = " + (b.getThreadUserTime(tread.getId()) - startUser)/(long)1e+6 + "ms" );
 
 		return result;
 	}

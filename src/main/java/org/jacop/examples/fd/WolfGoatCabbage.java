@@ -1,9 +1,9 @@
 /**
- *  WolfGoatCabbage.java 
+ *  WolfGoatCabbage.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,9 +31,7 @@
 
 package org.jacop.examples.fd;
 
-
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.ExtensionalSupportVA;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.Sum;
@@ -41,37 +39,39 @@ import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XneqY;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
- * A simple logic problem of transporting wolf, goat, and cabbage over the river.  
+ *
+ * A simple logic problem of transporting wolf, goat, and cabbage over the river.
  *
  * @author Radoslaw Szymanek
- * 
- * We need to transfer the cabbage, the goat and the wolf from one bank of the river to 
+ *
+ * We need to transfer the cabbage, the goat and the wolf from one bank of the river to
  * the other bank. But there is only one seat available on his boat !
- * 
- * Furthermore, if the goat and the cabbage stay together as we are leaving on a boat, 
- * the goat will eat the cabbage. And if the wolf and the goat stay together as we are leaving, 
+ *
+ * Furthermore, if the goat and the cabbage stay together as we are leaving on a boat,
+ * the goat will eat the cabbage. And if the wolf and the goat stay together as we are leaving,
  * the wolf will eat the goat !
  */
 
-public class WolfGoatCabbage extends ExampleFD {
+public class WolfGoatCabbage extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(WolfGoatCabbage.class);
 
 	/**
 	 * It specifies number of moves allowed (one move is from one river bank to the other)
 	 */
 	public int numberInnerMoves = 1;
-	
+
 	@Override
 	public void model() {
-	
-		System.out.println("Creating model for solution with " + numberInnerMoves
+
+		logger.info("Creating model for solution with " + numberInnerMoves
 				+ " intermediate steps");
 		// Creating constraint store
 		store = new Store();
 		vars = new ArrayList<IntVar>();
-		
+
 		IntVar left = new IntVar(store, "left", 0, 0);
 		IntVar right = new IntVar(store, "right", 2, 2);
 
@@ -91,7 +91,7 @@ public class WolfGoatCabbage extends ExampleFD {
 			vars.add(wolf[i]);
 			vars.add(goat[i]);
 			vars.add(cabbage[i]);
-			
+
 		}
 
 		// {0, 1, 0}, any item was on left bank and end up on boat so boat
@@ -154,35 +154,35 @@ public class WolfGoatCabbage extends ExampleFD {
 		}
 
 	}
-	
+
 	/**
-	 * It executes a program which finds the optimal trip 
+	 * It executes a program which finds the optimal trip
 	 * and load of the boat between the river banks so all
 	 * parties survive.
-	 * 
+	 *
 	 * @param args no argument is used.
 	 */
 	public static void main(String args[]) {
 
 		int numberInnerMoves = 1;
 		boolean result = false;
-		
+
 		while (numberInnerMoves < 20 && !result) {
 
 			WolfGoatCabbage example = new WolfGoatCabbage();
 			example.numberInnerMoves = numberInnerMoves;
-			
+
 			example.model();
-			
+
 			if (!example.searchMostConstrainedStatic())
-				System.out.println("No Solution(s) found for " + example.numberInnerMoves + " innermoves");
+				logger.info("No Solution(s) found for " + example.numberInnerMoves + " innermoves");
 			else
 				result = true;
-				
+
 			numberInnerMoves++;
 		}
-		
-		
-	}		
-	
+
+
+	}
+
 }

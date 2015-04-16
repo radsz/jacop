@@ -1,9 +1,9 @@
 /**
- *  ProAndCon.java 
+ *  ProAndCon.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,8 +32,7 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.Sum;
@@ -47,9 +46,11 @@ import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
+ *
  * It solves a simple logic puzzle about voting city council.
  *
  * @author Romam Gawelek, Marcin Kazmierczak, Radoslaw Szymanek
@@ -60,22 +61,22 @@ import org.jacop.core.Store;
  * Issue: April, 1998
  * Page: 12
  * Stars: 2
- * At the last meeting of the local city council, each member 
- * (Mr. Akerman, Ms. Baird, Mr. Chatham, Ms. Duval, and Mr. Etting) 
- * had to vote on five motions, number 1 to 5 in the clues below. 
+ * At the last meeting of the local city council, each member
+ * (Mr. Akerman, Ms. Baird, Mr. Chatham, Ms. Duval, and Mr. Etting)
+ * had to vote on five motions, number 1 to 5 in the clues below.
  * Can you discover how each one voted on each motion?
- * 
- * 
- * Note: a motion may have received zero or one yes vote, even though 
- * in real life it's unlikely that both the maker and seconder of 
- * the motion would change their minds before the motion came up for a vote. 
- * Each member voted either yes or no on each motion; no one abstained 
+ *
+ *
+ * Note: a motion may have received zero or one yes vote, even though
+ * in real life it's unlikely that both the maker and seconder of
+ * the motion would change their minds before the motion came up for a vote.
+ * Each member voted either yes or no on each motion; no one abstained
  * from voting on any motion.
- * 
+ *
  * Voting Chart
  * (view with non-proportional fonts)
  *
- *               1     2     3     4     5  
+ *               1     2     3     4     5
  * Mr. Akerman
  * Ms. Baird
  * Mr. Chatham
@@ -92,17 +93,17 @@ import org.jacop.core.Store;
  * 8. Motion 3 received twice as many yes votes as motion 4 did.
  *
  * Determine: fill in the chart (Yes/No) for each motion
- * 
+ *
  */
 
-public class ProAndCon extends ExampleFD {
+public class ProAndCon extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(ProAndCon.class);
 
 	@Override
 	public void model() {
 
 		store = new Store();
 		vars = new ArrayList<IntVar>();
-		
+
 		String surname[] = { "Mr._Akerman", "Ms._Baird", "Mr._Chatham",
 				"Ms._Duval", "Mr._Etting" };
 
@@ -119,7 +120,7 @@ public class ProAndCon extends ExampleFD {
 			// Each motion (group of votes) has no of yes votes associated.
 			sum4Group[i] = new IntVar(store, "Sum4Group[" + (i + 1) + "]", 0, 5);
 			vars.add(sum4Group[i]);
-			
+
 			// 0 - vote no , 1 - vote yes
 			for (int j = 0; j < 5; j++) {
 				vote[i][j] = new IntVar(store, surname[i] + "_Group[" + (j + 1)
@@ -170,7 +171,7 @@ public class ProAndCon extends ExampleFD {
 		IntVar noVotes = new IntVar(store, "25", 25, 25);
 
 		vars.add(noYesVotes); vars.add(noNoVotes); vars.add(noVotes);
-		
+
 		// We constraint number of yes votes.
 		store.impose(new Sum(sum4Group, noYesVotes));
 		// To connect no of yes votes with no of no votes.
@@ -249,7 +250,7 @@ public class ProAndCon extends ExampleFD {
 		store.impose(new XmulCeqZ(sum4Group[iMotion4], 2, sum4Group[iMotion3]));
 
 	}
-		
+
 	/**
 	 * It executes the program which solves this logic puzzle.
 	 * @param args
@@ -257,13 +258,13 @@ public class ProAndCon extends ExampleFD {
 	public static void main(String args[]) {
 
 		ProAndCon example = new ProAndCon();
-		
+
 		example.model();
 
 		if (example.search())
-			System.out.println("Solution(s) found");
-		
-	}		
-	
-	
+			logger.info("Solution(s) found");
+
+	}
+
+
 }

@@ -1,9 +1,9 @@
 /**
- *  LinearFloat.java 
+ *  LinearFloat.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,23 +31,23 @@
 
 package org.jacop.floats.constraints;
 
-
+import java.util.*;
+import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.floats.constraints.linear.Linear;
 import org.jacop.floats.core.FloatVar;
-import org.jacop.core.Store;
-
-import java.util.ArrayList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * LinearFloat constraint implements the weighted summation over several
  * Variable's . It provides the weighted sum from all Variable's on the list.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class LinearFloat extends Linear {
+public class LinearFloat extends Linear { private static Logger logger = LoggerFactory.getLogger(LinearFloat.class);
 
     /**
      * @param list
@@ -60,7 +60,7 @@ public class LinearFloat extends Linear {
     }
 
     /**
-     * It constructs the constraint LinearFloat. 
+     * It constructs the constraint LinearFloat.
      * @param variables variables which are being multiplied by weights.
      * @param weights weight for each variable.
      * @param sum variable containing the sum of weighted variables.
@@ -78,14 +78,14 @@ public class LinearFloat extends Linear {
 
     public FloatVar derivative(Store store, FloatVar f, java.util.Set<FloatVar> vars, FloatVar x) {
 
-	// System.out.println ("FloatLinear of " + f + " on " + x);
+	// logger.info ("FloatLinear of " + f + " on " + x);
 
 	int fIndex = 0;
 	while (list[fIndex] != f)
 	    fIndex++;
 
 	if (fIndex == list.length) {
-	    System.out.println ("Wrong variable in derivative of " + this);
+	    logger.info ("Wrong variable in derivative of " + this);
 	    System.exit(0);
 	}
 
@@ -98,7 +98,7 @@ public class LinearFloat extends Linear {
 	    if ( i != fIndex) {
 		df[i] = Derivative.getDerivative(store, list[i], vars, x);
 
-		// System.out.println ("derivate of " + list[i] + " = " + df[i]);
+		// logger.info ("derivate of " + list[i] + " = " + df[i]);
 
 		ww[i] = weights[i]/(-weights[fIndex]);
 	    }
@@ -112,7 +112,7 @@ public class LinearFloat extends Linear {
 	org.jacop.constraints.Constraint c = new LinearFloat(store, df, ww, "==", 0.0);
 	Derivative.poseDerivativeConstraint(c);
 
-	// System.out.println ("Derivative of " + f + " over " + x + " is " + c);
+	// logger.info ("Derivative of " + f + " over " + x + " is " + c);
 
 	return v;
    }

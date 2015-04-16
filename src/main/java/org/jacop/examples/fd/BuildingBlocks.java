@@ -1,9 +1,9 @@
 /**
- *  BuildingBlocks.java 
+ *  BuildingBlocks.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,17 +31,18 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Cumulative;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
+ *
  * It solves a simple logic puzzle about blocks.
- * 
+ *
  * @author Krzysztof "Vrbl" Wrobel and Radoslaw Szymanek
  *
  * Each of four alphabet blocks has a single letter of the alphabet on
@@ -50,14 +51,14 @@ import org.jacop.core.Store;
  * all of the words listed below.  Can you figure out how the letters are
  * arranged on the four blocks?
  *
- * BAKE ONYX ECHO OVAL 
+ * BAKE ONYX ECHO OVAL
  *
- * GIRD SMUG JUMP TORN 
+ * GIRD SMUG JUMP TORN
  *
- * LUCK VINY LUSH WRAP 
+ * LUCK VINY LUSH WRAP
  */
 
-public class BuildingBlocks extends ExampleFD {
+public class BuildingBlocks extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(BuildingBlocks.class);
 
 	@Override
 	public void model() {
@@ -65,7 +66,7 @@ public class BuildingBlocks extends ExampleFD {
 		vars = new ArrayList<IntVar>();
 		store = new Store();
 
-		System.out.println("Building Blocks");
+		logger.info("Building Blocks");
 
 		IntVar A = new IntVar(store, "A", 1, 4);
 		IntVar B = new IntVar(store, "B", 1, 4);
@@ -153,7 +154,7 @@ public class BuildingBlocks extends ExampleFD {
 		// Limit, all blocks can accommodate 6 letters.
 
 	}
-		
+
 	/**
 	 * It executes the program to solve this logic puzzle.
 	 * @param args
@@ -161,11 +162,11 @@ public class BuildingBlocks extends ExampleFD {
 	public static void main(String args[]) {
 
 		BuildingBlocks example = new BuildingBlocks();
-		
+
 		example.model();
 
 		if (example.searchSmallestDomain(false))
-			System.out.println("Solution(s) found");
-	}	
-	
+			logger.info("Solution(s) found");
+	}
+
 }

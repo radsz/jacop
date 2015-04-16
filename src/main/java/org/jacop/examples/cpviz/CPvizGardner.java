@@ -18,6 +18,8 @@ import org.jacop.set.constraints.CardA;
 import org.jacop.set.constraints.CardAeqX;
 import org.jacop.set.core.SetVar;
 import org.jacop.set.search.IndomainSetMin;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The class Run is used to run test programs for JaCoP package.
@@ -26,7 +28,8 @@ import org.jacop.set.search.IndomainSetMin;
  * @author Krzysztof Kuchcinski
  * @version 1.0
  */
-public class CPvizGardner {
+
+public class CPvizGardner { private static Logger logger = LoggerFactory.getLogger(CPvizGardner.class);
     Store store;
 
     public static void main (String args[]) {
@@ -52,7 +55,7 @@ public class CPvizGardner {
 
  	Thread tread = java.lang.Thread.currentThread();
 	java.lang.management.ThreadMXBean b = java.lang.management.ManagementFactory.getThreadMXBean();
-	
+
 	long startCPU = b.getThreadCpuTime(tread.getId());
 	long startUser = b.getThreadUserTime(tread.getId());
 
@@ -60,7 +63,7 @@ public class CPvizGardner {
 	int num_persons_per_meeting = 3;
 	int persons = 15;
 
-	System.out.println("Gardner dinner problem ");
+	logger.info("Gardner dinner problem ");
 	store = new Store();
 
 	SetVar[] days = new SetVar[35];
@@ -78,23 +81,22 @@ public class CPvizGardner {
 
   	for (int i=0; i<days.length-1; i++)
   	    for (int j=i+1; j<days.length; j++) {
-		SetVar intersect = new SetVar(store, ""+i+j, 1, persons); 
+		SetVar intersect = new SetVar(store, ""+i+j, 1, persons);
 		    store.impose(new AintersectBeqC(days[i], days[j], intersect));
 		    IntVar card = new BooleanVar(store); //IntVar(store, 0, 1);
 		    store.impose(new CardAeqX(intersect, card));
 		}
 
 
-      System.out.println( "\nVariable store size: "+ store.size()+
-			  "\nNumber of constraints: " + store.numberConstraints()
-			  );
+      logger.info("\nVariable store size: " + store.size() +
+                          "\nNumber of constraints: " + store.numberConstraints());
 
       boolean Result = store.consistency();
-      System.out.println("*** consistency = " + Result);
+      logger.info("*** consistency = " + Result);
 
       Search<SetVar> label = new DepthFirstSearch<SetVar>();
 
-      SelectChoicePoint<SetVar> varSelect = new SimpleSelect<SetVar>(days, 
+      SelectChoicePoint<SetVar> varSelect = new SimpleSelect<SetVar>(days,
 						     null,
 						     new IndomainSetMin<SetVar>());
 
@@ -112,20 +114,20 @@ public class CPvizGardner {
       Result = label.labeling(store, select);
 
       if (Result) {
-	  System.out.println("*** Yes");
+	  logger.info("*** Yes");
 	  for (int i=0; i<days.length; i++) {
-	      System.out.println(days[i]);
+	      logger.info(days[i].toString());
 	  }
       }
       else
-	  System.out.println("*** No");
+	  logger.info("*** No");
 
 //       T2 = System.currentTimeMillis();
 //       T = T2 - T1;
-//       System.out.println("\n\t*** Execution time = "+ T + " ms");
+//       logger.info("\n\t*** Execution time = "+ T + " ms");
 
-	System.out.println( "ThreadCpuTime = " + (b.getThreadCpuTime(tread.getId()) - startCPU)/(long)1e+6 + "ms");
-	System.out.println( "ThreadUserTime = " + (b.getThreadUserTime(tread.getId()) - startUser)/(long)1e+6 + "ms" );
+	logger.info("ThreadCpuTime = " + (b.getThreadCpuTime(tread.getId()) - startCPU) / (long) 1e+6 + "ms");
+	logger.info("ThreadUserTime = " + (b.getThreadUserTime(tread.getId()) - startUser) / (long) 1e+6 + "ms");
 
 // 	System.out.printf("CPU time = %5.3fs%n", (float)(((float)b.getThreadCpuTime(tread.getId()) - startCPU)/1e+9));
     }

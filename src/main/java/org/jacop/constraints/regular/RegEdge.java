@@ -1,9 +1,9 @@
 /**
- *  RegEdge.java 
+ *  RegEdge.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2008 Polina Maakeva and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -33,17 +33,19 @@
 package org.jacop.constraints.regular;
 
 import org.jacop.core.TimeStamp;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
+ *
  * The class responsible for connecting two states in regular automaton
- * of Regular constraint. 
- * 
+ * of Regular constraint.
+ *
  * @author Polina Makeeva and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class RegEdge {
+public class RegEdge { private static Logger logger = LoggerFactory.getLogger(RegEdge.class);
 
 	/**
 	 * The origin state.
@@ -67,7 +69,7 @@ public class RegEdge {
 
 	/**
 	 * It checks if the edge is between active states.
-	 * 
+	 *
 	 * @param activeLevels specifies last active states.
 	 * @return true if both origin and destination state are active.
 	 */
@@ -77,8 +79,8 @@ public class RegEdge {
 	    	return true;
 
 		return false;
-	    
 
-	}		
-	
-}		
+
+	}
+
+}

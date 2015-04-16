@@ -1,9 +1,9 @@
 /**
- *  BlueberryMuffins.java 
+ *  BlueberryMuffins.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,8 +31,7 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.And;
 import org.jacop.constraints.Element;
@@ -43,13 +42,15 @@ import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
+ *
  * It solves a simple logic puzzle about blueberry muffins.
- * 
+ *
  * @author Radoslaw Szymanek
- * 
+ *
  *  Logic Puzzle: Blueberry Muffins
  *
  * Description :
@@ -80,8 +81,7 @@ import org.jacop.core.Store;
  * Mark Ellis zookeeper 4 muffins
  */
 
-
-public class BlueberryMuffins extends ExampleFD {
+public class BlueberryMuffins extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(BlueberryMuffins.class);
 
 	@Override
 	public void model() {
@@ -90,8 +90,8 @@ public class BlueberryMuffins extends ExampleFD {
 
 		store = new Store();
 		vars = new ArrayList<IntVar>();
-		
-		System.out.println("Program to solve Blueberry Muffins ");
+
+		logger.info("Program to solve Blueberry Muffins ");
 
 		// String arrays with peoples' names.
 
@@ -108,7 +108,7 @@ public class BlueberryMuffins extends ExampleFD {
 		// Constant indexes to ease referring to profession variables.
 
 		int /* izookeeper = 0, */ idogcatcher = 1, iflautist = 2, isecretary = 3;
-		
+
 		// String arrays with firstname.
 
 		String[] firstnames = { "Lynn", "Calla", "Bill", "Mark" };
@@ -198,8 +198,8 @@ public class BlueberryMuffins extends ExampleFD {
 		store.impose(new XneqY(person[icalla], last[iingham]));
 
 	}
-	
-	
+
+
 	/**
 	 * It executes the program solving this puzzle.
 	 * @param args no arguments are read.
@@ -207,12 +207,12 @@ public class BlueberryMuffins extends ExampleFD {
 	public static void main(String args[]) {
 
 		BlueberryMuffins example = new BlueberryMuffins();
-		
+
 		example.model();
 
 		if (example.search())
-			System.out.println("Solution(s) found");
-		
-	}	
-	
+			logger.info("Solution(s) found");
+
+	}
+
 }

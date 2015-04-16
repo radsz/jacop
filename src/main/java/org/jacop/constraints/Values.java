@@ -1,9 +1,9 @@
 /**
- *  Values.java 
+ *  Values.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,40 +31,35 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Stack;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Constraint Values counts number of different values on a list of Variables.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * 
+ *
  * @version 4.2
  */
 
-public class Values extends Constraint {
+public class Values extends Constraint { private static Logger logger = LoggerFactory.getLogger(Values.class);
 
 	static int counter = 1;
 
 	/**
-	 * It specifies a list of variables which are counted. 
+	 * It specifies a list of variables which are counted.
 	 */
 	IntVar[] list;
 
 	/**
-	 * It specifies the counter of different values among variables on a given list. 
+	 * It specifies the counter of different values among variables on a given list.
 	 */
 	IntVar count;
 
@@ -73,16 +68,16 @@ public class Values extends Constraint {
 	static final boolean debug = false;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"list", "count"};
 
 	/**
 	 * It constructs Values constraint.
-	 * 
+	 *
 	 * @param list list of variables for which different values are being counted.
-	 * @param count specifies the number of different values in the list. 
+	 * @param count specifies the number of different values in the list.
 	 */
 	public Values(IntVar[] list, IntVar count) {
 
@@ -99,7 +94,7 @@ public class Values extends Constraint {
 
 		for (int i = 0; i < list.length; i++) {
 
-			assert (list[i] != null) : i + "-th element of list is null";			
+			assert (list[i] != null) : i + "-th element of list is null";
 			this.list[i] = list[i];
 
 		}
@@ -108,9 +103,9 @@ public class Values extends Constraint {
 
 	/**
 	 * It constructs Values constraint.
-	 * 
+	 *
 	 * @param list list of variables for which different values are being counted.
-	 * @param count specifies the number of different values in the list. 
+	 * @param count specifies the number of different values in the list.
 	 */
 	public Values(ArrayList<? extends IntVar> list, IntVar count) {
 
@@ -131,13 +126,13 @@ public class Values extends Constraint {
 	public void consistency(Store store) {
 
 		do {
-			
+
 			store.propagationHasOccurred = false;
 
 			Arrays.sort(list, minFDV);
 
 			if (debug)
-				System.out.println("Sorted : \n" + this);
+				logger.info("Sorted : \n" + this);
 
 			int minNumberDifferent = 1, minimumMax = list[0].max();
 
@@ -165,7 +160,7 @@ public class Values extends Constraint {
 				HashSet<Integer> nodeConnections = new HashSet<Integer>();
 				for (ValueEnumeration e = v.dom().valueEnumeration(); e.hasMoreElements();)
 					nodeConnections.add(e.nextElement());
-				
+
 				graph.add(nodeConnections);
 			}
 
@@ -173,17 +168,17 @@ public class Values extends Constraint {
 			int maxNumberDifferent = bipartiteGraphMatching(graph);
 
 			if (debug)
-				System.out.println("Minimum number of different values = "
+				logger.info("Minimum number of different values = "
 						+ minNumberDifferent);
 			if (debug)
-				System.out.println("Maximum number of different values = "
+				logger.info("Maximum number of different values = "
 						+ maxNumberDifferent);
 
 			count.domain.in(store.level, count, minNumberDifferent,
 					maxNumberDifferent);
 
 			if (debug)
-				System.out.println("Number singleton values = "
+				logger.info("Number singleton values = "
 						+ numberSingleton + " Values = " + singletonValues);
 
 			if (count.max() == singletonValues.getSize() && numberSingleton < list.length) {
@@ -191,19 +186,19 @@ public class Values extends Constraint {
 					if (!v.singleton())
 						v.domain.in(store.level, v, singletonValues);
 			} else {
-				
+
 				int diffMin = count.min() - singletonValues.getSize();
 				int diffSingleton = list.length - numberSingleton;
-				
+
 				if (diffMin == diffSingleton)
 					for (IntVar v : list)
 						if (!v.singleton())
 							v.domain.in(store.level, v, singletonValues.complement());
-				
+
 			}
-			
+
 		} while (store.propagationHasOccurred);
-		
+
 	}
 
 	@Override
@@ -346,11 +341,11 @@ public class Values extends Constraint {
 					int first = (Integer) nextNode.next();
 
 					if (debug)
-						System.out.println("PUSH " + first);
+						logger.info("PUSH " + first);
 					// remove edge (TOP, FIRST) from G
 
-					if (debug) 
-						System.out.println("Checking edge (" + top + ", " + first + ")");
+					if (debug)
+						logger.info("Checking edge (" + top + ", " + first + ")");
 
 					g[top].remove(first);
 					if (first == sink)
@@ -358,15 +353,15 @@ public class Values extends Constraint {
 							int v = stack.pop();
 							u = stack.pop();
 							int vKey = valuesKeyMap.get(v - 1 - uLength);
-							if (debug) 
-								System.out.println("("+u+", "+v+")" + "("+ (int)(u-1) + ", " + vKey + ")");
+							if (debug)
+								logger.info("("+u+", "+v+")" + "("+ (int)(u-1) + ", " + vKey + ")");
 							matching.remove(u - 1);
 							matching.put(u - 1, vKey);
 							reverseMatching.remove(vKey);
 							reverseMatching.put(vKey, u - 1);
 							done = false;
 							if (debug)
-								System.out.println("Improved matching " + matching);
+								logger.info("Improved matching " + matching);
 						}
 					else if (b[first] == 0) {
 						b[first] = 1;
@@ -380,12 +375,12 @@ public class Values extends Constraint {
 
 		if (debug) {
 
-			System.out.println("Final graph G");
+			logger.info("Final graph G");
 
 			for (HashSet<Integer> s : g)
-				System.out.println(u++ + ":" + s);
+				logger.info(u++ + ":" + s);
 
-			System.out.println("Final matching (u, v): " + matching);
+			logger.info("Final matching (u, v): " + matching);
 		}
 
 		return matching.size();

@@ -1,9 +1,9 @@
 /**
- *  FIR.java 
+ *  FIR.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,20 +31,22 @@
 
 package org.jacop.examples.fd.filters;
 
-import java.util.ArrayList;
+import java.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * FIR benchmark (16-point FIR filter).
- * 
+ *
  * Source: Ramesh Karri, Karin Hogstedt and Alex Orailoglu "Computer-Aided
  * Design of Fault-Tolerant VLSI Design Systems" IEEE Design & Test, Fall 1996
  * (Vol. 13, No. 3), pp. 88-96
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class FIR extends Filter {
+public class FIR extends Filter { private static Logger logger = LoggerFactory.getLogger(FIR.class);
 
 	/**
 	 * It constructs a simple FIR filter.
@@ -53,18 +55,18 @@ public class FIR extends Filter {
 		this(1, 2);
 	}
 
-	
+
 	/**
 	 * It constructs a FIR filter with the specified delay
 	 * for the addition and multiplication operation.
-	 * 
+	 *
 	 * @param addDel the delay of the addition operation.
 	 * @param mulDel the delay of the multiplication operation.
 	 */
 	public FIR(int addDel, int mulDel) {
 		this.addDel = addDel;
 		this.mulDel = mulDel;
-		
+
 		name = "FIR";
 
 		int dependencies[][] = { { 0, 1 }, { 1, 2 }, { 2, 3 }, { 3, 4 }, { 4, 5 },
@@ -72,15 +74,15 @@ public class FIR extends Filter {
 				{ 12, 3 }, { 13, 14 }, { 14, 4 }, { 15, 16 }, { 16, 5 },
 				{ 17, 18 }, { 18, 6 }, { 19, 20 }, { 20, 7 }, { 21, 22 }, { 22, 8 } };
 		this.dependencies = dependencies;
-		
+
 		int ids[] = { addId, mulId, addId, addId, addId, addId, addId, addId,
 				addId, addId, mulId, addId, mulId, addId, mulId, addId, mulId,
 				addId, mulId, addId, mulId, addId, mulId };
 		this.ids = ids;
-		
+
 		int last[] = { 8 };
 		this.last = last;
-		
+
 	}
 
 	@Override

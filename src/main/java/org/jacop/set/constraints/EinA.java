@@ -1,9 +1,9 @@
 /**
- *  EinA.java 
+ *  EinA.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,24 +31,25 @@
 
 package org.jacop.set.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
- * It constructs a constraint which makes sure that a given element is 
+ *
+ * It constructs a constraint which makes sure that a given element is
  * in the domain of the set variable.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  */
 
-public class EinA extends PrimitiveConstraint {
+public class EinA extends PrimitiveConstraint { private static Logger logger = LoggerFactory.getLogger(EinA.class);
 
 	static int idNumber = 1;
 
@@ -68,7 +69,7 @@ public class EinA extends PrimitiveConstraint {
 	public boolean strict = false;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"element", "a", "strict"};
@@ -83,7 +84,7 @@ public class EinA extends PrimitiveConstraint {
 
 		this(element, a);
 		this.strict = strict;
-		
+
 	}
 
 	/**
@@ -97,10 +98,10 @@ public class EinA extends PrimitiveConstraint {
 
 		numberId = idNumber++;
 		numberArgs = 1;
-		
+
 		this.a = a;
 		this.element = element;
-		
+
 	}
 
 	@Override
@@ -119,7 +120,7 @@ public class EinA extends PrimitiveConstraint {
 
 		if (strict)
 			a.domain.inCardinality(store.level, a, 2, Integer.MAX_VALUE);
-		
+
 	}
 
 	@Override
@@ -131,9 +132,9 @@ public class EinA extends PrimitiveConstraint {
 			if (possibleEvent != null)
 				return possibleEvent;
 		}
-		
-		return SetDomain.GLB;		
-		
+
+		return SetDomain.GLB;
+
 	}
 
 	@Override
@@ -173,9 +174,9 @@ public class EinA extends PrimitiveConstraint {
 
 	@Override
 	public boolean notSatisfied() {
-		
+
 		return !a.domain.lub().contains(element);
-				
+
 	}
 
 	@Override
@@ -185,9 +186,9 @@ public class EinA extends PrimitiveConstraint {
 
 	@Override
 	public boolean satisfied() {
-		
+
 		return a.domain.glb().contains(element);
-		
+
 	}
 
 	@Override
@@ -223,6 +224,6 @@ public class EinA extends PrimitiveConstraint {
 	public void increaseWeight() {
 		if (increaseWeight)
 			a.weight++;
-	}	
+	}
 
 }

@@ -1,9 +1,9 @@
 /**
- *  BreakingNews.java 
+ *  BreakingNews.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,8 +31,7 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.And;
 import org.jacop.constraints.Or;
@@ -41,13 +40,15 @@ import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XneqY;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
+ *
  * It solves a simple logic puzzle about reporters breaking news stories.
- * 
+ *
  * @author Marcin Chrapek, Miroslaw Klos, and Radoslaw Szymanek
- * 
+ *
  * Logic Puzzle : Breaking News.
  *
  * The Daily Galaxy sent its four best reporters (Corey, Jimmy, Lois,
@@ -75,26 +76,26 @@ import org.jacop.core.Store;
  *
  */
 
-public class BreakingNews extends ExampleFD {
+public class BreakingNews extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(BreakingNews.class);
 
 	@Override
 	public void model() {
 
 		store = new Store();
 		vars = new ArrayList<IntVar>();
-		
-		System.out.println("Program to solve Breaking News ");
+
+		logger.info("Program to solve Breaking News ");
 
 		// String arrays with reporters names.
 		String[] ReporterName = { "Corey", "Jimmy", "Lous", "Perry" };
 
 		// Constant indexes to ease referring to variables denoting reporters.
 		int /* iPerry = 0, */ iCorey = 1, iJimmy = 2, iLous = 3;
-		
+
 		// String arrays with locations names.
 		String[] LocationName = { "Bayonne", "NewHope", "PortCharles",
 				"SouthAmboy" };
-		
+
 		// Constant indexes to ease referring to variables denoting locations.
 		int iBayonne = 0, iNewHope = 1, iPortCharles = 2, iSouthAmboy = 3;
 
@@ -158,7 +159,7 @@ public class BreakingNews extends ExampleFD {
 		store.impose(new Or(orConstraint));
 
 	}
-		
+
 	/**
 	 * It executes the program to solve this logic puzzle.
 	 * @param args no arguments are read.
@@ -166,11 +167,11 @@ public class BreakingNews extends ExampleFD {
 	public static void main(String args[]) {
 
 		BreakingNews example = new BreakingNews();
-		
+
 		example.model();
 
 		if (example.search())
-			System.out.println("Solution(s) found");
-	}	
-	
+			logger.info("Solution(s) found");
+	}
+
 }

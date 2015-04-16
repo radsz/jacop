@@ -1,9 +1,9 @@
 /**
- *  Steiner.java 
+ *  Steiner.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,8 +31,7 @@
 
 package org.jacop.examples.set;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.Sum;
 import org.jacop.core.IntVar;
@@ -50,6 +49,8 @@ import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
 import org.jacop.set.search.IndomainSetMax;
 import org.jacop.set.search.MaxCardDiff;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * It models and solves Steiner problem.
@@ -58,7 +59,7 @@ import org.jacop.set.search.MaxCardDiff;
  * @version 4.2
  */
 
-public class Steiner extends ExampleSet {
+public class Steiner extends ExampleSet { private static Logger logger = LoggerFactory.getLogger(Steiner.class);
 
 	/**
 	 * It specifies the length of the problem.
@@ -80,12 +81,12 @@ public class Steiner extends ExampleSet {
 		example.search();
 
 	}
-	
+
 	public void model () {
 
 		int t = n * (n - 1 ) / 6;
 
-		System.out.println("Steiner problem with n = "+ n +" and T = " + t);
+		logger.info("Steiner problem with n = "+ n +" and T = " + t);
 
 		int r = n % 6;
 
@@ -111,7 +112,7 @@ public class Steiner extends ExampleSet {
 
 			for (int i = 0; i < s.length - 1; i++)
 				store.impose(new Lex(s[i], s[i+1]));
-			
+
 			// implied constraints to get better pruning
 			for (int i=1; i<=n; i++) {
 				IntVar[] b = new IntVar[t];
@@ -122,7 +123,7 @@ public class Steiner extends ExampleSet {
 				IntVar sum = new IntVar(store, "sum_"+i, (n-1)/2, (n-1)/2);
 				store.impose(new Sum(b, sum));
 			}
-			
+
 		}
 
 	}
@@ -140,8 +141,8 @@ public class Steiner extends ExampleSet {
 
 			Search<SetVar> label = new DepthFirstSearch<SetVar>();
 
-			SelectChoicePoint<SetVar> select = new SimpleSelect<SetVar>(vars.toArray(new SetVar[vars.size()]), 
-					new MaxCardDiff<SetVar>(), 
+			SelectChoicePoint<SetVar> select = new SimpleSelect<SetVar>(vars.toArray(new SetVar[vars.size()]),
+					new MaxCardDiff<SetVar>(),
 					new IndomainSetMax<SetVar>());
 
 			label.getSolutionListener().searchAll(true);
@@ -150,22 +151,22 @@ public class Steiner extends ExampleSet {
 			result = label.labeling(store, select);
 
 			if (result) {
-				System.out.println("*** Yes");
+				logger.info("*** Yes");
 				label.getSolutionListener().printAllSolutions();
 			}
 			else
-				System.out.println("*** No");
+				logger.info("*** No");
 
 			T2 = System.currentTimeMillis();
 			T = T2 - T1;
-			System.out.println("\n\t*** Execution time = "+ T + " ms");
+			logger.info("\n\t*** Execution time = "+ T + " ms");
 			return result;
 		}
 		else {
-			System.out.println("Problem has no solution");
+			logger.info("Problem has no solution");
 			return false;
 		}
-		
+
 	}
 
 }

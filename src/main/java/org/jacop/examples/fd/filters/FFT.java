@@ -1,9 +1,9 @@
 /**
- *  FFT.java 
+ *  FFT.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,21 +31,23 @@
 
 package org.jacop.examples.fd.filters;
 
-import java.util.ArrayList;
+import java.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * It specifies FFT benchmark.
- * 
+ *
  * Source: Naotaka Ohsawa, Masanori Hariyama and Michitaka Kameyama
  * "High-Performance Field Programmable VLSI Processor Based on a Direct
  * Allocation of a Control/Data Flow Graph" IEEE Computer Society Annual
  * Symposium on VLSI p. 0095
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class FFT extends Filter {
+public class FFT extends Filter { private static Logger logger = LoggerFactory.getLogger(FFT.class);
 
 	/**
 	 * It constructs a simple FFT filter.
@@ -54,29 +56,29 @@ public class FFT extends Filter {
 		this(1, 2);
 	}
 
-	
+
 	/**
 	 * It constructs a FFT filter with the specified delay
 	 * for the addition and multiplication operation.
-	 * 
+	 *
 	 * @param addDel the delay of the addition operation.
 	 * @param mulDel the delay of the multiplication operation.
 	 */
 	public FFT(int addDel, int mulDel) {
-		
+
 		this.addDel = addDel;
 		this.mulDel = mulDel;
-		
+
 		name = "FFT";
 
 		int dependencies[][] = { { 0, 4 }, { 1, 4 }, { 2, 5 }, { 3, 5 }, { 4, 6 },
 				{ 4, 7 }, { 5, 8 }, { 5, 9 } };
 		this.dependencies = dependencies;
-		
+
 		int ids[] = { mulId, mulId, mulId, mulId, addId, addId, addId, addId,
 				addId, addId };
 		this.ids = ids;
-		
+
 		int last[] = { 6, 7, 8, 9 };
 		this.last = last;
 	}

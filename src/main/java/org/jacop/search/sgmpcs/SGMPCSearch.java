@@ -1,9 +1,9 @@
 /**
- *  SGMPCSearch.java 
+ *  SGMPCSearch.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,31 +31,17 @@
 
 package org.jacop.search.sgmpcs;
 
-import java.util.HashMap;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.Random;
-
-import java.lang.Math;
-
-import org.jacop.core.Store;
-import org.jacop.core.Var;
-import org.jacop.core.IntVar;
-import org.jacop.core.Domain;
-import org.jacop.core.IntDomain;
-
+import java.util.*;
 import org.jacop.constraints.XltC;
-
-import org.jacop.search.Search;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
 import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMin;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
-import org.jacop.search.IndomainRandom;
-import org.jacop.search.IndomainMin;
-import org.jacop.search.IndomainDefaultValue;
-import org.jacop.search.SmallestMax;
-import org.jacop.search.SmallestMin;
-import org.jacop.search.SimpleSolutionListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * SGMPCSearch - implements Solution-Guided Multi-Point Constructive
@@ -68,11 +54,11 @@ import org.jacop.search.SimpleSolutionListener;
  * Beck, Journal of Artificial Intelligence Research 29 (2007) 49–77.
  *
  * @author Krzysztof Kuchcinski
- * 
+ *
  * @version 4.2
  */
 
-public class SGMPCSearch {
+public class SGMPCSearch { private static Logger logger = LoggerFactory.getLogger(SGMPCSearch.class);
 
     public Store store;
 
@@ -119,7 +105,7 @@ public class SGMPCSearch {
     public final int poly = 2;
     int strategy = poly;
 
-    // elite solutions 
+    // elite solutions
     // at position 0 is cost and values of variables start at positions 1
     public int[][] elite;
 
@@ -134,7 +120,7 @@ public class SGMPCSearch {
 
 
     // time-out value in miliseconds (default 10 second)
-    long timeOut=10000; 
+    long timeOut=10000;
 
     ImproveSolution<IntVar> search;
 
@@ -144,7 +130,7 @@ public class SGMPCSearch {
 
 	this.store = store;
 	this.vars = vars;
-	this.cost = cost;       
+	this.cost = cost;
 
 	search = new SimpleImprovementSearch<IntVar>(store, vars, cost);
     }
@@ -168,8 +154,8 @@ public class SGMPCSearch {
 
 	int bestCostSolution = bestCostSolution();
 	if (trace)
-	    System.out.println("%% Best Cost elite solution is " + bestCostSolution + " with cost " + 
-			       elite[bestCostSolution][costPosition]);
+	    logger.info("%% Best Cost elite solution is " + bestCostSolution + " with cost " +
+                            elite[bestCostSolution][costPosition]);
 
 	improveSolution();
 
@@ -183,21 +169,21 @@ public class SGMPCSearch {
 
 	if (elite == null) {
 	    elite = new int[e][];
-	    for (int i = 0; i < e; i++) 
+	    for (int i = 0; i < e; i++)
 		elite[i] = new int[vars.length+1];
 	}
 	else
 	    return;
 
 	costPosition = vars.length;
-	for (int i = 0; i < vars.length; i++) 
+	for (int i = 0; i < vars.length; i++)
 	    if (vars[i] == cost)
 		costPosition = i;
 
 	IntVar[] v;
 	if (costPosition == vars.length) {
 	    v = new IntVar[vars.length+1];
-	    for (int i = 0; i < vars.length; i++) 
+	    for (int i = 0; i < vars.length; i++)
 		v[i] = vars[i];
 	    v[vars.length] = cost;
 	}
@@ -207,7 +193,7 @@ public class SGMPCSearch {
 	DepthFirstSearch<IntVar> label = new DepthFirstSearch<IntVar>();
 	SelectChoicePoint<IntVar> select = new SimpleSelect<IntVar>(v, null,
 								    new IndomainMin<IntVar>());
-	label.getSolutionListener().searchAll(true); 
+	label.getSolutionListener().searchAll(true);
 	label.getSolutionListener().recordSolutions(true);
 	label.getSolutionListener().setSolutionLimit(eInit);
 	label.setAssignSolution(false);
@@ -216,41 +202,41 @@ public class SGMPCSearch {
 	label.labeling(store, select);
 
 	int[][] solutionPool = new int[label.getSolutionListener().solutionsNo()][];
-	for (int i=0; i<label.getSolutionListener().solutionsNo(); i++){ 
+	for (int i=0; i<label.getSolutionListener().solutionsNo(); i++){
 	    solutionPool[i] = new int[v.length];
-	    for (int j=0; j<label.getSolution(i+1).length; j++) 
+	    for (int j=0; j<label.getSolution(i+1).length; j++)
 		solutionPool[i][j] = ((IntDomain)label.getSolution(i+1)[j]).value();
 	}
 
 	if (trace) {
-	    System.out.println("%% Initial pool of solutions");
+	    logger.info("%% Initial pool of solutions");
 
-	    for (int i=0; i<solutionPool.length; i++){ 
-		System.out.print("%% Solution " + (int)(i+1) + ": "); 
-		for (int j=0; j<v.length; j++) 
-		    System.out.print(solutionPool[i][j] + " ");
-		System.out.println(); 
+	    for (int i=0; i<solutionPool.length; i++){
+		logger.info("%% Solution " + (int)(i+1) + ": ");
+		for (int j=0; j<v.length; j++)
+		    logger.info(solutionPool[i][j] + " ");
+		logger.info("\n");
 	    }
 	}
 
 	Arrays.sort(solutionPool, new SolutionComparator(costPosition));
 
 	elite = new int[e][];
-	for (int i=0; i<e; i++){ 
+	for (int i=0; i<e; i++){
 	    elite[i] = new int[solutionPool[i].length];
-	    for (int j=0; j<elite[i].length; j++) 
+	    for (int j=0; j<elite[i].length; j++)
 		elite[i][j] = solutionPool[i][j];
 	}
-	
+
 
 	if (trace) {
-	    System.out.println("%% Selected best " + e + " solutions");
-	    
+	    logger.info("%% Selected best " + e + " solutions");
+
 	    for (int i=0; i<e; i++){
-		System.out.print("%% Solution " + (int)(i+1) + ": "); 
-		for (int j=0; j<v.length; j++) 
-		    System.out.print(elite[i][j] + " ");
-		System.out.println(); 
+		logger.info("%% Solution " + (int)(i+1) + ": ");
+		for (int j=0; j<v.length; j++)
+		    logger.info(elite[i][j] + " ");
+		logger.info("\n");
 	    }
 	}
     }
@@ -261,7 +247,7 @@ public class SGMPCSearch {
      * solution-guided multi-point constructive search
      */
     boolean improveSolution() {
-    
+
 	Random rand = new Random();
 	Random randomSolution = new Random();
 
@@ -274,7 +260,7 @@ public class SGMPCSearch {
 	    long currentTime = System.currentTimeMillis();
 	    long restTimeOut = (timeOut - (currentTime - searchStartTime))/1000;
 	    if (restTimeOut <= 0)
-		break; 
+		break;
 
 	    search.setTimeOut( restTimeOut );
 
@@ -291,12 +277,12 @@ public class SGMPCSearch {
 		}
 		else {
 		    if (printInfo)
-		    	System.out.println("%% Fails "+ search.getNumberFails() + "(" + search.getFailLimit() + ")");
+		    	logger.info("%% Fails " + search.getNumberFails() + "(" + search.getFailLimit() + ")");
 
 		    solution = search.getSolution();
 
 		    if (printInfo) {
-			System.out.println("%% Solution starting from empty " );
+			logger.info("%% Solution starting from empty ");
 			printSolution(solution);
 		    }
 
@@ -309,7 +295,7 @@ public class SGMPCSearch {
 
 		    searchCost = search.getCurrentCost();
 		    updateFailLimit(false);
-		}	
+		}
 	    } else {
 
 		// select random solution from e elite solutions
@@ -324,19 +310,19 @@ public class SGMPCSearch {
 		else {
 
 		    if (printInfo)
-		    	System.out.println("%% Fails "+ search.getNumberFails() + "(" + search.getFailLimit() + ")");
+		    	logger.info("%% Fails " + search.getNumberFails() + "(" + search.getFailLimit() + ")");
 
 		    solution = search.getSolution();
 
 		    if (printInfo) {
-			System.out.println("%% Solution starting from reference with cost " + elite[n][costPosition]);
+			logger.info("%% Solution starting from reference with cost " + elite[n][costPosition]);
 			printSolution(solution);
 		    }
 
 		    numberConsecutiveFails = 0;
 
 		    replaceEliteSolution(n, solution, search.getCurrentCost());
-			
+
 		    searchCost = search.getCurrentCost();
 		    updateFailLimit(false);
 		}
@@ -353,12 +339,12 @@ public class SGMPCSearch {
 	long currentTime = System.currentTimeMillis();
 
 	// terminate after time-out or when optimal
-	termination = (currentTime - searchStartTime > timeOut) || 
+	termination = (currentTime - searchStartTime > timeOut) ||
 	    (numberConsecutiveFails > 0 && search.getNumberFails() < search.getFailLimit());
 
 	if (printInfo && termination) {
-	    System.out.println("%% Termination search fails "+ search.getNumberFails() + 
-			       "(" + search.getFailLimit() + ")");
+	    logger.info("%% Termination search fails " + search.getNumberFails() +
+                            "(" + search.getFailLimit() + ")");
 
 	    if (solution == null) {
 
@@ -387,7 +373,7 @@ public class SGMPCSearch {
 	    else
 		l = 32;
 
-	} 
+	}
 	// Luby
 	else {
 	    l = getLuby(lubyIndex);
@@ -412,14 +398,14 @@ public class SGMPCSearch {
 	}
     }
 
-    /* 
+    /*
      * Finds a solution with minimal cost
      */
     int bestCostSolution() {
 	 int currentCost = IntDomain.MaxInt;
 	 int solution = -1;
 
-	 for (int i = 0; i < elite.length; i++) 
+	 for (int i = 0; i < elite.length; i++)
 	     if (currentCost > elite[i][costPosition]) {
 		 currentCost = elite[i][costPosition];
 		 solution = i;
@@ -428,14 +414,14 @@ public class SGMPCSearch {
 	 return solution;
      }
 
-    /* 
+    /*
      * Finds a solution with maximal cost
      */
     int worstCostSolution() {
 	 int currentCost = IntDomain.MinInt;
 	 int solution = -1;
 
-	 for (int i = 0; i < elite.length; i++) 
+	 for (int i = 0; i < elite.length; i++)
 	     if (currentCost < elite[i][costPosition]) {
 		 currentCost = elite[i][costPosition];
 		 solution = i;
@@ -446,21 +432,21 @@ public class SGMPCSearch {
 
     public void setEliteSolutions(int[][] solutions) {
 	if (solutions.length != e) {
-	    System.out.println("Number of initial siolutions not correct; it is " + solutions.length + "and should be " + e);
+	    logger.info("Number of initial siolutions not correct; it is " + solutions.length + "and should be " + e);
 	    return;
 	}
 
 	elite = new int[e][];
-	for (int i=0; i<e; i++){ 
+	for (int i=0; i<e; i++){
 	    elite[i] = new int[solutions[i].length];
-	    for (int j=0; j<elite[i].length; j++) 
+	    for (int j=0; j<elite[i].length; j++)
 		elite[i][j] = solutions[i][j];
 	}
     }
 
     void replaceEliteSolution(int n, int[] solution, int searchCost) {
 
-	for (int i = 0; i < elite[n].length-1; i++) 
+	for (int i = 0; i < elite[n].length-1; i++)
 	    elite[n][i] = solution[i];
 	elite[n][costPosition] = searchCost;
 
@@ -483,7 +469,7 @@ public class SGMPCSearch {
 	if (strategy == poly || strategy == luby)
 	    this.strategy = strategy;
 	else {
-	    System.out.println("Wrong fail strategy limit; assumed poly");
+	    logger.info("Wrong fail strategy limit; assumed poly");
 
 	    this.strategy = poly;
 	}
@@ -496,10 +482,10 @@ public class SGMPCSearch {
     public void printSolution(int[] solution) {
 
 	    for (int i = 0; i < solution.length; i++) {
-		System.out.print(solution[i] + " ");
+		logger.info(solution[i] + " ");
 
 	    }
-	    System.out.println();
+	    logger.info("\n");
     }
 
 
@@ -511,7 +497,7 @@ public class SGMPCSearch {
 	return searchCost;
     }
 
-    public class SolutionComparator implements Comparator<int[]> {
+    public class SolutionComparator implements Comparator<int[]> { private Logger logger = LoggerFactory.getLogger(SolutionComparator.class);
 
 	int p;
 

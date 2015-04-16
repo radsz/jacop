@@ -1,15 +1,17 @@
 package org.jacop.examples.scala
 
 import org.jacop.scala._
-
+import org.slf4j.LoggerFactory
 object BIBD extends jacop {
 
+  val logger = LoggerFactory.getLogger("BIBD")
+
   /**
-   * It specifies number of rows in the incidence matrix. 
+   * It specifies number of rows in the incidence matrix.
    */
   var v = 7
   /**
-   * It specifies number of columns in the incidence matrix. 
+   * It specifies number of columns in the incidence matrix.
    */
   var b = 7
   /**
@@ -17,7 +19,7 @@ object BIBD extends jacop {
    */
   var r = 3
   /**
-   * It specifies number of ones in each column. 
+   * It specifies number of ones in each column.
    */
   var k = 3
   /**
@@ -36,9 +38,9 @@ object BIBD extends jacop {
  	lambda = args(4).toInt
       }
       catch {
- 	case ex: Exception => println("Program parameters if provided must specify v, b, r, k, and lambda")
+ 	case ex: Exception => logger.error("Program parameters if provided must specify v, b, r, k, and lambda", ex)
       }
-    }	
+    }
     model()
   }
 
@@ -51,22 +53,22 @@ object BIBD extends jacop {
       sum(x(i).toList) #= r // (new IntVar(0,0)/:x(i)) (_ + _)  #= r
 
     // sum on columns
-    for (j <- 0 until b) 
+    for (j <- 0 until b)
       sum( List.tabulate(v)( i => x(i)(j)) ) #= k
 
     for ( i <- 0 to v)
-      for ( j <- i+1 until v) 
+      for ( j <- i+1 until v)
  	sum( List.tabulate(b)( m => x(i)(m) /\ x(j)(m)) ) #= lambda
 
      val result = satisfy( search(x.flatMap(_.toList), first_fail, indomain_min) )
 
-    if (result) 
+    if (result)
       for (i <- 0 until v) {
 	for (j <- 0 until b)
 	  print(""+x(i)(j).value+" ")
 	println()
       }
-    else println("No solution")	
+    else println("No solution")
 
-  }	
+  }
 }

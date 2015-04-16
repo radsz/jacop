@@ -1,9 +1,9 @@
 /**
- *  DeBruijn.java 
+ *  DeBruijn.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Hakan Kjellerstrand and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,23 +31,24 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Min;
 import org.jacop.constraints.SumWeight;
 import org.jacop.constraints.XeqY;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
- * A program solving problem of finding de Bruijn sequences. 
- * 
+ *
+ * A program solving problem of finding de Bruijn sequences.
+ *
  * @author Hakan Kjellerstrand (hakank@bonetmail.com) and Radoslaw Szymanek
- * 
+ *
  * It finds both "normal" and "arbitrary" de Bruijn sequences.
- * 
+ *
  * This is a port from my MiniZinc model
  *    http://www.hakank.org/minizinc/debruijn_binary.mzn
  *
@@ -61,7 +62,7 @@ import org.jacop.core.Store;
  *  http://www.hakank.org/comb/debruijn.cgi
  *  http://www.hakank.org/comb/deBruijnApplet.html (as Java applet)
  *
- * 
+ *
  * - "Arbitrary" de Bruijn sequences
  *   Program "de Bruijn arbitrary sequences"
  *   http://www.hakank.org/comb/debruijn_arb.cgi
@@ -72,14 +73,14 @@ import org.jacop.core.Store;
  *
  */
 
-public class DeBruijn extends ExampleFD {
+public class DeBruijn extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(DeBruijn.class);
 
     // These parameters may be set by the user:
-    //  - base 
-    //  - n 
+    //  - base
+    //  - n
     //  - m
-    public int base = 4;  // the base to use. Also known as k. 
-    public int n = 5;     // number of bits representing the numbers 
+    public int base = 4;  // the base to use. Also known as k.
+    public int n = 5;     // number of bits representing the numbers
     public int m = 1024;     // length of the sequence, defaults to m = base^n
 
     // The constraint variables
@@ -90,7 +91,7 @@ public class DeBruijn extends ExampleFD {
     //
     // the model
     //
-    
+
 	@Override
     public void model() {
 
@@ -99,20 +100,20 @@ public class DeBruijn extends ExampleFD {
         int pow_base_n = pow(base, n); // base^n, the range of integers
         if (m > 0) {
             if (m > pow_base_n) {
-                System.out.println("m must be <= base^n (" + m + ")");
+                logger.info("m must be <= base^n (" + m + ")");
                 System.exit(1);
             }
         }
 
-        System.out.println("Using base: " + base + " n: " + n + " m: " + m);
+        logger.info("Using base: " + base + " n: " + n + " m: " + m);
 
         // decimal representation, ranges from 0..base^n-1
         x = new IntVar[m];
         for(int i = 0; i < m; i++)
             x[i] = new IntVar(store, "x_" + i, 0, pow_base_n-1);
-        
+
         //
-        // convert between decimal number in x[i] and "base-ary" numbers 
+        // convert between decimal number in x[i] and "base-ary" numbers
         // in binary[i][0..n-1].
         //
         // (This corresponds to the predicate toNum in the MiniZinc model)
@@ -123,7 +124,7 @@ public class DeBruijn extends ExampleFD {
         int w = 1;
         for(int i = 0; i < n; i++) {
             weights[n-i-1] = w;
-            w *= base;            
+            w *= base;
         }
 
         // connect binary <-> x
@@ -158,7 +159,7 @@ public class DeBruijn extends ExampleFD {
             vars.add(bin_code[i]);
             store.impose(new XeqY(bin_code[i], binary[i][0]));
         }
-        
+
         // All values in x should be different
         store.impose(new Alldifferent(x));
 
@@ -177,7 +178,7 @@ public class DeBruijn extends ExampleFD {
     public static void main(String args[]) {
 
         int base = 2;
-        int n = 4;        
+        int n = 4;
         int m = 9;
 
         if (args.length == 3) {
@@ -192,45 +193,45 @@ public class DeBruijn extends ExampleFD {
         debruijn.base = base;
         debruijn.n = n;
         debruijn.m = m;
-        
+
         debruijn.model();
-        
+
         boolean result = debruijn.searchAllAtOnce();
 
         if (result) {
 
             // prints then de Bruijn sequences
-            System.out.print("de Bruijn sequence:");            
+            logger.info("de Bruijn sequence:");
 
-            System.out.print("decimal values: ");
+            logger.info("decimal values: ");
             for(int i = 0; i < m; i++) {
-                System.out.print(debruijn.x[i].value() + " ");
+                logger.info(debruijn.x[i].value() + " ");
             }
-            System.out.println();
-            
-            System.out.println("\nbinary:");
+            logger.info("\n");
+
+            logger.info("\nbinary:");
 
             for(int i = 0; i < m; i++) {
                 for(int j = 0; j < n; j++) {
-                    System.out.print(debruijn.binary[i][j].value() + " ");
+                    logger.info(debruijn.binary[i][j].value() + " ");
                 }
-                System.out.println(" : " + debruijn.x[i].value());
+                logger.info(" : " + debruijn.x[i].value());
             }
-            
+
         } else {
-            System.out.println("No solutions.");
+            logger.info("No solutions.");
         }// end if result
 
     } // end main
-    
-    
+
+
     // integer power method
     static int pow( int x, int y) {
-        int z = x; 
+        int z = x;
         for( int i = 1; i < y; i++ ) z *= x;
         return z;
     } // end pow
 
 } // end class
 
- 
+

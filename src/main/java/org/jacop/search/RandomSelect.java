@@ -1,9 +1,9 @@
 /**
- *  RandomSelect.java 
+ *  RandomSelect.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,23 +31,21 @@
 
 package org.jacop.search;
 
-import java.util.IdentityHashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Random;
-
+import java.util.*;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * It is simple and customizable selector of decisions (constraints) which will
  * be enforced by search.
- * 
- * @author  Krzysztof Kuchcinski and Radoslaw Szymanek
+ *
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
+public class RandomSelect<T extends Var> implements SelectChoicePoint<T> { private static Logger logger = LoggerFactory.getLogger(RandomSelect.class);
 
     static final boolean debugAll = false;
 
@@ -107,11 +105,11 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
 	assert (index < searchVariables.length);
 
 	if (debugAll) {
-	    System.out.println ("index = " + index);
+	    logger.info ("index = " + index);
 
-	    for (int i = 0; i < searchVariables.length; i++) 
-		System.out.print (searchVariables[i] + " ");
-	    System.out.println();
+	    for (int i = 0; i < searchVariables.length; i++)
+		logger.info (searchVariables[i] + " ");
+	    logger.info("\n");
 	}
 
 	int finalIndex = searchVariables.length;
@@ -132,7 +130,7 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
 	    currentIndex = index;
 
 	    if (debugAll)
-		System.out.println ("selected " + currentVariable);
+		logger.info ("selected " + currentVariable);
 
 	    return currentVariable;
 	}
@@ -148,7 +146,7 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
 	assert (currentIndex >= 0);
 	assert (currentIndex < searchVariables.length);
 	assert (searchVariables[currentIndex].dom() != null);
-		
+
 	return valueOrdering.indomain(searchVariables[currentIndex]);
 
     }
@@ -189,7 +187,7 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
      * be instantiated at this stage. The variable is positioned at search
      * position.
      * @param searchPosition position at which search store currently choosen variable.
-     * @param variablePosition current position of the variable choosen by search. 
+     * @param variablePosition current position of the variable choosen by search.
      * @return variable choosen to be a base of the choice point.
      */
 

@@ -1,9 +1,9 @@
 /**
- *  Linear.java 
+ *  Linear.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,33 +31,28 @@
 
 package org.jacop.floats.constraints.linear;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-
-import org.jacop.core.IntDomain;
+import java.util.*;
 import org.jacop.constraints.PrimitiveConstraint;
-import org.jacop.constraints.Constraint;
-import org.jacop.floats.constraints.PmulCeqR;
-import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.core.FloatInterval;
-import org.jacop.floats.core.FloatIntervalDomain;
-import org.jacop.floats.core.FloatVar;
+import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.floats.constraints.linear.BoundsVarValue;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatInterval;
+import org.jacop.floats.core.FloatVar;
 import org.jacop.util.SimpleHashSet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Linear constraint implements the weighted summation over several
  * Variable's . It provides the weighted sum from all Variable's on the list.
  * The weights must be positive integers.
- * 
+ *
  * @author Krzysztof Kuchcinski
  * @version 4.2
  */
 
-public class Linear extends PrimitiveConstraint {
+public class Linear extends PrimitiveConstraint { private static Logger logger = LoggerFactory.getLogger(Linear.class);
     Store store;
     static int counter = 1;
 
@@ -69,11 +64,11 @@ public class Linear extends PrimitiveConstraint {
     /**
      * Defines negated relations
      */
-    final static byte[] negRel= {ne, //eq=0, 
-				 ge, //lt=1, 
-				 gt, //le=2, 
-				 eq, //ne=3, 
-				 le, //gt=4, 
+    final static byte[] negRel= {ne, //eq=0,
+				 ge, //lt=1,
+				 gt, //le=2,
+				 eq, //ne=3,
+				 le, //gt=4,
 				 lt  //ge=5;
     };
 
@@ -94,7 +89,7 @@ public class Linear extends PrimitiveConstraint {
     public double weights[];
 
     /**
-     * It specifies variable for the overall sum. 
+     * It specifies variable for the overall sum.
      */
     public double sum;
 
@@ -110,7 +105,7 @@ public class Linear extends PrimitiveConstraint {
     VariableNode[] sortedVarNodes;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as 
+     * It specifies the arguments required to be saved by an XML format as well as
      * the constructor being called to recreate an object from an XML format.
      */
     public static String[] xmlAttributes = {"list", "weights", "sum"};
@@ -125,7 +120,7 @@ public class Linear extends PrimitiveConstraint {
 	this.relationType = relation(rel);
 	commonInitialization(store, list, weights, sum);
     }
-	
+
     private void commonInitialization(Store store, FloatVar[] list, double[] weights, double sum) {
 	this.store=store;
 	queueIndex = 1;
@@ -143,10 +138,10 @@ public class Linear extends PrimitiveConstraint {
 	for (int i = 0; i < list.length; i++) {
 
 	    assert (list[i] != null) : i + "-th element of list in Linear constraint is null";
-			
+
 	    if (weights[i] != 0) {
 		// This causes problem for several examples...
-		if (list[i].singleton()) 
+		if (list[i].singleton())
 		    this.sum -= (list[i].value() * weights[i]);
 		else
 		    if (parameters.get(list[i]) != null) {
@@ -179,11 +174,11 @@ public class Linear extends PrimitiveConstraint {
 	    this.weights[0] = 1;
 	    this.list[1] = new FloatVar(store, 0,0);
 	    this.weights[1] = 1;
-	    
+
 	}
 
 	if ( this.list.length == 1) {
-	    // System.out.println("% Warrning: List of length 1 in LinearFloat(["+this.list[0].id()+"], ["+this.weights[0] +"], "+rel2String()+", " + this.sum+")");
+	    // logger.info("% Warrning: List of length 1 in LinearFloat(["+this.list[0].id()+"], ["+this.weights[0] +"], "+rel2String()+", " + this.sum+")");
 
 	    FloatVar v = this.list[0];
 	    double w = this.weights[0];
@@ -212,14 +207,14 @@ public class Linear extends PrimitiveConstraint {
 
 	java.util.Arrays.sort(leafNodes, new VarWeightComparator<VariableNode>());
 	sortedVarNodes = leafNodes;
-	// System.out.println (java.util.Arrays.asList(leafNodes));
+	// logger.info (java.util.Arrays.asList(leafNodes));
 
 
 	RootBNode root = buildBinaryTree(leafNodes);
 	linearTree = new BTree(root);
 
-	// System.out.println(this);
-	// System.out.println (linearTree);
+	// logger.info(this);
+	// logger.info (linearTree);
 
 	checkForOverflow();
 
@@ -228,15 +223,15 @@ public class Linear extends PrimitiveConstraint {
     RootBNode buildBinaryTree(BinaryNode[] nodes) {
 
 	BinaryNode[] nextLevelNodes = new BinaryNode[nodes.length/2 + nodes.length % 2];
-	// System.out.println ("next level length = " + nextLevelNodes.length);
+	// logger.info ("next level length = " + nextLevelNodes.length);
 
 	if (nodes.length > 1) {
 	    for (int i=0; i<nodes.length-1; i += 2) {
 		BinaryNode parent;
 
-		if (nodes.length == 2) 
+		if (nodes.length == 2)
 		    parent = new RootBNode(store, FloatDomain.MinFloat, FloatDomain.MaxFloat);
-		else 
+		else
 		    parent = new BNode(store, FloatDomain.MinFloat, FloatDomain.MaxFloat);
 
 		parent.left = nodes[i];
@@ -269,7 +264,7 @@ public class Linear extends PrimitiveConstraint {
 
 
     /**
-     * It constructs the constraint Linear. 
+     * It constructs the constraint Linear.
      * @param variables variables which are being multiplied by weights.
      * @param weights weight for each variable.
      * @param sum variable containing the sum of weighted variables.
@@ -309,7 +304,7 @@ public class Linear extends PrimitiveConstraint {
 	pruneRelation(store);
 
 	if (relationType != eq)
-	    if (satisfied()) 
+	    if (satisfied())
 		removeConstraint();
 
     }
@@ -323,9 +318,9 @@ public class Linear extends PrimitiveConstraint {
 	pruneRelation(store);
 
 	if (negRel[relationType] != eq)
-	    if (notSatisfied()) 
+	    if (notSatisfied())
 		removeConstraint();
-		
+
     }
 
     private void pruneRelation(Store store) {
@@ -338,7 +333,7 @@ public class Linear extends PrimitiveConstraint {
 
 	    n.propagateAndPrune();
 
-	}   
+	}
 
     }
 
@@ -401,11 +396,11 @@ public class Linear extends PrimitiveConstraint {
 		return possibleEvent;
 	}
 	return IntDomain.BOUND;
-		
+
     }
 
     @Override
-    public void impose(Store store) {	
+    public void impose(Store store) {
 
 	reified = false;
 
@@ -434,7 +429,7 @@ public class Linear extends PrimitiveConstraint {
     @Override
 	public boolean satisfied() {
 
-	if (reified) 
+	if (reified)
 	    propagate(variableQueue);
 
 	return entailed(relationType);
@@ -454,29 +449,29 @@ public class Linear extends PrimitiveConstraint {
 	BoundsVarValue b = (BoundsVarValue)linearTree.root.bound.value();
 
 	switch (rel) {
-	case eq : 
+	case eq :
 	    FloatInterval rootInterval = new FloatInterval(b.lb, b.ub);
 
 	    if (rootInterval.singleton() && b.lb <= sum && sum <= b.ub)
 		return true;
 	    break;
-	case lt : 
+	case lt :
 	    if (b.ub < sum)
 		return true;
 	    break;
-	case le : 
+	case le :
 	    if (b.ub <= sum)
 		return true;
 	    break;
-	case ne : 
+	case ne :
 	    if (b.lb > sum || b.ub < sum)
 		return true;
 	    break;
-	case gt : 
+	case gt :
 	    if (b.lb > sum)
 		return true;
 	    break;
-	case ge : 
+	case ge :
 	    if (b.lb >= sum)
 		return true;
 	    break;
@@ -510,9 +505,9 @@ public class Linear extends PrimitiveConstraint {
     }
 
     public byte relation(String r) {
-	if (r.equals("==")) 
+	if (r.equals("=="))
 	    return eq;
-	else if (r.equals("=")) 
+	else if (r.equals("="))
 	    return eq;
 	else if (r.equals("<"))
 	    return lt;
@@ -529,7 +524,7 @@ public class Linear extends PrimitiveConstraint {
 	else if (r.equals("=>"))
 	    return ge;
 	else {
-	    System.err.println ("Wrong relation symbol in Linear constraint " + r + "; assumed ==");
+	    logger.error ("Wrong relation symbol in Linear constraint " + r + "; assumed ==");
 	    return eq;
 	}
     }
@@ -577,7 +572,7 @@ public class Linear extends PrimitiveConstraint {
     // uncomment registration in commonInitialization
     @Override
     public void removeLevelLate(int level) {
-	// System.out.println ("Backtrack, queue = " + variableQueue);
+	// logger.info ("Backtrack, queue = " + variableQueue);
 
 	// variableQueue.clear();
 
@@ -611,7 +606,7 @@ public class Linear extends PrimitiveConstraint {
 		diff_o2 = o2.max() - o2.min();
 	    else
 		diff_o2 = (o2.max() - o2.min()) * ((VarWeightNode)o2).weight;
-	    
+
 	    return (int)(diff_o2 - diff_o1);
 	}
     }

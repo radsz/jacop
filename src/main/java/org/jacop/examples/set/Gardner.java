@@ -1,9 +1,9 @@
 /**
- *  Gardner.java 
+ *  Gardner.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,8 +31,7 @@
 
 package org.jacop.examples.set;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Not;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -47,15 +46,17 @@ import org.jacop.set.constraints.CardAeqX;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
 import org.jacop.set.search.IndomainSetMin;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * It specifies a simple Gardner problem which use set functionality from JaCoP. 
+ * It specifies a simple Gardner problem which use set functionality from JaCoP.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class Gardner extends ExampleSet {
+public class Gardner extends ExampleSet { private static Logger logger = LoggerFactory.getLogger(Gardner.class);
 
 	/**
 	 * It executes the program which solves this gardner problem.
@@ -76,17 +77,17 @@ public class Gardner extends ExampleSet {
 		int num_persons_per_meeting = 3;
 		int persons = 15;
 
-		System.out.println("Gardner dinner problem ");
+		logger.info("Gardner dinner problem ");
 		store = new Store();
 
 		SetVar[] days = new SetVar[num_days];
-		
+
 		for (int i = 0; i < days.length; i++)
 			days[i] = new SetVar(store, "days[" + i + "]", new BoundSetDomain(1, persons));
 
 	    vars = new ArrayList<SetVar>();
-	    
-	    for(SetVar d: days) 
+
+	    for(SetVar d: days)
 	    	vars.add(d);
 
 		// all_different(days)
@@ -100,19 +101,19 @@ public class Gardner extends ExampleSet {
 
 		for (int i = 0; i < days.length - 1; i++)
 			for (int j = i + 1; j < days.length; j++) {
-				SetVar intersect = new SetVar(store, "intersect" + i + "-" + j, 
+				SetVar intersect = new SetVar(store, "intersect" + i + "-" + j,
 												  new BoundSetDomain(1, persons));
 				store.impose(new AintersectBeqC(days[i], days[j], intersect));
 				IntVar card = new IntVar(store, 0, 1);
 				store.impose(new CardAeqX(intersect, card));
 			}
 
-		System.out.println( "\nVariable store size: "+ store.size()+
+		logger.info( "\nVariable store size: "+ store.size()+
 				"\nNumber of constraints: " + store.numberConstraints()
 		);
 
 	}
-	
+
 	public boolean search() {
 
 		Thread tread = java.lang.Thread.currentThread();
@@ -122,11 +123,11 @@ public class Gardner extends ExampleSet {
 		long startUser = b.getThreadUserTime(tread.getId());
 
 		boolean result = store.consistency();
-		System.out.println("*** consistency = " + result);
+		logger.info("*** consistency = " + result);
 
 		Search<SetVar> label = new DepthFirstSearch<SetVar>();
 
-		SelectChoicePoint<SetVar> select = new SimpleSelect<SetVar>(vars.toArray(new SetVar[vars.size()]), 
+		SelectChoicePoint<SetVar> select = new SimpleSelect<SetVar>(vars.toArray(new SetVar[vars.size()]),
 				null,
 				new IndomainSetMin<SetVar>());
 
@@ -137,18 +138,18 @@ public class Gardner extends ExampleSet {
 		result = label.labeling(store, select);
 
 		if (result) {
-			System.out.println("*** Yes");
+			logger.info("*** Yes");
 			for (int i=0; i< vars.size(); i++) {
-				System.out.println(vars.get(i));
+				logger.info(vars.get(i).toString());
 			}
 		}
 		else
-			System.out.println("*** No");
+			logger.info("*** No");
 
 
-		System.out.println( "ThreadCpuTime = " + (b.getThreadCpuTime(tread.getId()) - startCPU)/(long)1e+6 + "ms");
-		System.out.println( "ThreadUserTime = " + (b.getThreadUserTime(tread.getId()) - startUser)/(long)1e+6 + "ms" );
-		
+		logger.info( "ThreadCpuTime = " + (b.getThreadCpuTime(tread.getId()) - startCPU)/(long)1e+6 + "ms");
+		logger.info( "ThreadUserTime = " + (b.getThreadUserTime(tread.getId()) - startUser)/(long)1e+6 + "ms" );
+
 		return result;
 
 	}

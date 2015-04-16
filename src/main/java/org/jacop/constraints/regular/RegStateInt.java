@@ -1,9 +1,9 @@
 /**
- *  RegStateInt.java 
+ *  RegStateInt.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2008 Polina Maakeva and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,25 +32,27 @@
 
 package org.jacop.constraints.regular;
 
-import java.util.HashMap;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.TimeStamp;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * It is an implementation of the Regular state which uses a separate successor for each 
- * value. Different values using different entries in the successor array can lead to the 
- * same successor. 
- * 
+ * It is an implementation of the Regular state which uses a separate successor for each
+ * value. Different values using different entries in the successor array can lead to the
+ * same successor.
+ *
  * @author Polina Makeeva and Radoslaw Szymanek
  * @version 4.2
  */
-public class RegStateInt extends RegState {
+
+public class RegStateInt extends RegState { private static Logger logger = LoggerFactory.getLogger(RegStateInt.class);
 
     private int[] toSucDom;
-    
+
     /**
      * It constructs an integer based representation of the state.
      * @param level level of the state (position of the associated variable).
@@ -59,20 +61,20 @@ public class RegStateInt extends RegState {
      * @param posInArray the position within the array of states.
      */
     public RegStateInt(int level, int id, int sucNumber, int posInArray) {
-    	
+
     	this.id = id;
-    	this.level = level;	
+    	this.level = level;
     	this.successors = new RegState[sucNumber];
     	this.toSucDom = new int[sucNumber];
     	this.outDegree = 0;
     	this.inDegree = 0;
     	this.pos = posInArray;
-    
+
     }
-    
+
     @Override
-	public void addTransitions(RegState suc, IntervalDomain val) {			
-	
+	public void addTransitions(RegState suc, IntervalDomain val) {
+
     	for (int h = 0; h < val.size ; h++) {
     		Interval inv = (val).intervals[h];
     		//for each interval of val
@@ -80,115 +82,115 @@ public class RegStateInt extends RegState {
     			//For each value of the interval
     			for (int v = inv.min(); v <= inv.max(); v++)
     				addTransition(suc, v);
-    	}						
+    	}
     }
-    
+
 
     @Override
 	public void addTransition(RegState suc, Integer val) {
-	
-    	if (outDegree < this.successors.length) {				
-    
+
+    	if (outDegree < this.successors.length) {
+
     		this.successors[outDegree] = suc;
     		this.toSucDom[outDegree] = val;
     		this.outDegree++;
-	    
+
     		suc.inDegree++;
     		return;
     	}
-		
+
     	assert false : "no place in q_" + this.level + this.id + " for successor q_" + suc.level + suc.id;
-	
+
     }
 
     @Override
 	public boolean isActive(TimeStamp<Integer>[] activeLevels) {
-	
+
     	return (pos <  activeLevels[level].value());
-	
+
     }
 
-	
+
     @Override
 	public void removeTransition(int pos) {
-	
+
     	if (pos < outDegree) {
-    		
-    		if (debugAll) 
-    			System.out.println("remove the SUC arc q_"+level+"%"+id + " -> " + "q_"+this.successors[pos].level+"%"+this.successors[pos].id);
-			    		
+
+    		if (debugAll)
+    			logger.info("remove the SUC arc q_"+level+"%"+id + " -> " + "q_"+this.successors[pos].level+"%"+this.successors[pos].id);
+
     		// must be first, before swap.
-    		successors[pos].inDegree--;	
-    		
+    		successors[pos].inDegree--;
+
     		// must be before other operation which use outDegree
     		outDegree--;
-    		
+
     		RegState tmp = successors[outDegree];
     		successors[outDegree] = successors[pos];
     		successors[pos] = tmp;
-	    
+
     		int tmpD = toSucDom[outDegree];
     		toSucDom[outDegree] = toSucDom[pos];
     		toSucDom[pos] = tmpD;
-	    
+
     		return;
-	    
+
     	}
-    	
+
     	assert false : "State q_"+level+id+": Successors on position " + pos + " is already removed";
-    	
+
     }
-		    
+
     @Override
 	public boolean intersects(IntDomain dom, int successorNo) {
-	
+
     	return dom.isIntersecting(toSucDom[successorNo], toSucDom[successorNo]);
-	
+
     }
 
     @Override
 	public void setSupports(HashMap<Integer, RegEdge> hashMap, int i) {
-		
+
     	if (hashMap.get(toSucDom[i]) == null)
     		hashMap.put(toSucDom[i], new RegEdge(this, successors[i]));
-		
+
     }
-	
-	
+
+
     @Override
 	public boolean updateSupport(RegEdge edge, int v) {
-	
+
     	for (int suc = 0; suc < outDegree; suc++) {
     		if (toSucDom[suc] == v) {
-    			edge.org = this; 
+    			edge.org = this;
     			edge.dest = successors[suc];
     			return true;
     		}
-    	}		
-	
+    	}
+
     	return false;
-	
+
     }
 
     @Override
 	public void add(IntDomain varDom, int successorNo) {
-	
+
     	varDom.unionAdapt(toSucDom[successorNo], toSucDom[successorNo]);
-	
+
     }
 
     @Override
 	public String sucDomToString(int successorNo) {
-	
+
     	return "" + toSucDom[successorNo];
-    	
+
     }
-    
+
     @Override
 	public String toString() {
-    	
+
     	return "id " + id + " level " + level + " inDegree " + inDegree + " outDegree" + outDegree + " position " + pos + " id " + id;
-    	
+
     }
 }
 

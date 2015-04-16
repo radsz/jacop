@@ -1,9 +1,9 @@
 /**
- *  EqBool.java 
+ *  EqBool.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,47 +31,48 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * If all x's are equal to each other then result variable is equal 1. Otherwise, result variable 
+ * If all x's are equal to each other then result variable is equal 1. Otherwise, result variable
  * is equal to zero. It restricts the domains of all variables to be either 0 or 1.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class EqBool extends PrimitiveConstraint {
+public class EqBool extends PrimitiveConstraint { private static Logger logger = LoggerFactory.getLogger(EqBool.class);
 
 	static int counter = 1;
 
 	/**
-	 * It specifies x variables in the constraint. 
+	 * It specifies x variables in the constraint.
 	 */
 	public IntVar [] list;
 
 	/**
-	 * It specifies variable result in the constraint. 
+	 * It specifies variable result in the constraint.
 	 */
 	public IntVar result;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"list", "result"};
 
 	/**
-	 * It constructs eqBool. 
-	 * 
+	 * It constructs eqBool.
+	 *
 	 * @param list list of x's which must all be equal to the same value to make result equal 1.
-	 * @param result variable which is equal 0 if x's contain different values. 
+	 * @param result variable which is equal 0 if x's contain different values.
 	 */
 	public EqBool(IntVar [] list, IntVar result) {
 
@@ -94,10 +95,10 @@ public class EqBool extends PrimitiveConstraint {
 	}
 
 	/**
-	 * It constructs eqBool. 
-	 * 
+	 * It constructs eqBool.
+	 *
 	 * @param list list of variables which must all be equal to the same value to make result equal 1.
-	 * @param result variable which is equal 0 if variables from list contain different values. 
+	 * @param result variable which is equal 0 if variables from list contain different values.
 	 */
 	public EqBool(ArrayList<? extends IntVar> list, IntVar result) {
 
@@ -109,7 +110,7 @@ public class EqBool extends PrimitiveConstraint {
 			assert (list.get(i) != null) : i + "-th element in the list is null";
 			this.list[i] = list.get(i);
 		}
-		
+
 		this.list = new IntVar[list.size()];
 
 		for (int i = 0; i < this.list.length; i++)
@@ -123,8 +124,8 @@ public class EqBool extends PrimitiveConstraint {
 
 	/**
 	 * It checks invariants required by the constraint. Namely that
-	 * boolean variables have boolean domain. 
-	 * 
+	 * boolean variables have boolean domain.
+	 *
 	 * @return the string describing the violation of the invariant, null otherwise.
 	 */
 	public String checkInvariants() {
@@ -242,7 +243,7 @@ public class EqBool extends PrimitiveConstraint {
 		if (x0 > 0 && x1 > 0)
 			result.domain.in(store.level, result, 0, 0);
 
-		if (x0 == list.length || x1 == list.length) 
+		if (x0 == list.length || x1 == list.length)
 			result.domain.in(store.level, result, 1, 1);
 
 	}
@@ -253,7 +254,7 @@ public class EqBool extends PrimitiveConstraint {
 		do {
 
 			store.propagationHasOccurred = false;
-			
+
 			int x1 = 0, x0 = 0, index_01 = 0;
 
 			for (int i = 0; i < list.length; i++) {
@@ -286,7 +287,7 @@ public class EqBool extends PrimitiveConstraint {
 			if (x0 > 0 && x1 > 0)
 				result.domain.in(store.level, result, 1, 1);
 
-			if (x0 == list.length || x1 == list.length) 
+			if (x0 == list.length || x1 == list.length)
 				result.domain.in(store.level, result, 0, 0);
 
 		} while (store.propagationHasOccurred);
@@ -318,7 +319,7 @@ public class EqBool extends PrimitiveConstraint {
 
 				for (int i = 0; i < list.length - 1; i++)
 					if (!list[i].singleton() || !list[i+1].singleton() || list[i].value() != list[i+1].value())
-						return false;					
+						return false;
 
 				return true;
 			}

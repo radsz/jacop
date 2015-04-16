@@ -1,9 +1,9 @@
 /**
- *  DisjointConditional.java 
+ *  DisjointConditional.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,18 +32,15 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.TreeSet;
-import java.util.Vector;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * DisjointConditional constraint assures that any two rectangles from a vector
@@ -52,12 +49,12 @@ import org.jacop.core.Var;
  * and rectj are integers representing given rectangles positions on the list of
  * rectangles (starting from 1) and C is FDV 0..1. When C=1 then rectnagles must
  * not overlap otherwise the overlaping is not checked.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 2.0
  */
 
-public class DisjointConditional extends Diff {
+public class DisjointConditional extends Diff { private static Logger logger = LoggerFactory.getLogger(DisjointConditional.class);
 
 	static final boolean trace = false, traceNarr = false;
 
@@ -71,27 +68,27 @@ public class DisjointConditional extends Diff {
 	public ExclusiveList exclusionList = new ExclusiveList();
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"rectangles", "exclusionList", "doProfile"};
 
 	/**
-	 * It specifies a diff constraint. 
+	 * It specifies a diff constraint.
 	 * @param rectangles list of rectangles which can not overlap in at least one dimension.
 	 * @param exclusionList it is a list of exclusive items. Each item consists of two ints and a variable.
 	 * @param doProfile should the constraint compute and use the profile functionality.
-	 * 
+	 *
 	 */
 	public DisjointConditional(Rectangle[] rectangles,
 			   				   ExclusiveList exclusionList,
 			   				   boolean doProfile) {
-		
+
 		super(rectangles, doProfile);
-		
+
 		this.exclusionList = new ExclusiveList();
 		this.exclusionList.addAll(exclusionList);
-		
+
 	}
 	/**
 	 * It creates Disjoint conditional constraint.
@@ -102,7 +99,7 @@ public class DisjointConditional extends Diff {
 	public DisjointConditional(ArrayList<ArrayList<? extends IntVar>> rectangles,
 							   ArrayList<ArrayList<Integer>> exceptionIndices,
 							   ArrayList<? extends IntVar> exceptionCondition) {
-		
+
 		super(rectangles);
 
 		for (int i = 0; i < exceptionIndices.size(); i++) {
@@ -111,14 +108,14 @@ public class DisjointConditional extends Diff {
 			IntVar condition = exceptionCondition.get(i);
 			exclusionList.add(new ExclusiveItem(item1, item2, condition));
 		}
-		
+
 
 	}
 
 	/**
 	 * It creates Disjoint conditional constraint.
 	 * @param rectangles the rectangles within a constraint.
-	 * @param exceptionIndices it specifies a list of pairs, where each pair specifies two rectangles which conditionally overlap. 
+	 * @param exceptionIndices it specifies a list of pairs, where each pair specifies two rectangles which conditionally overlap.
 	 * @param exceptionCondition a variable specifying if a corresponding pair is nonoverlapping.
 	 * @param profile it specifies if the profiles are used and computed within the constraint.
 	 */
@@ -126,72 +123,72 @@ public class DisjointConditional extends Diff {
 							   ArrayList<ArrayList<Integer>> exceptionIndices,
 							   ArrayList<? extends IntVar> exceptionCondition,
 							   boolean profile) {
-		
+
 		this(rectangles, exceptionIndices, exceptionCondition);
 		doProfile = profile;
 	}
 
 	/**
-	 * It constructs a disjoint conditional constraint. 
+	 * It constructs a disjoint conditional constraint.
 	 * @param o1 variables specifying the origin in the first dimension.
 	 * @param o2 variables specifying the origin in the second dimension.
 	 * @param l1 variables specifying the length in the first dimension.
 	 * @param l2 variables specifying the length in the second dimension.
-	 * @param exceptionIndices it specifies a list of pairs, where each pair specifies two rectangles which conditionally overlap. 
+	 * @param exceptionIndices it specifies a list of pairs, where each pair specifies two rectangles which conditionally overlap.
 	 * @param exceptionCondition a variable specifying if a corresponding pair is nonoverlapping.
 	 */
 	public DisjointConditional(ArrayList<? extends IntVar> o1,
-							   ArrayList<? extends IntVar> o2, 
+							   ArrayList<? extends IntVar> o2,
 							   ArrayList<? extends IntVar> l1,
-							   ArrayList<? extends IntVar> l2, 
+							   ArrayList<? extends IntVar> l2,
 							   ArrayList<ArrayList<Integer>> exceptionIndices,
 							   ArrayList<? extends IntVar> exceptionCondition) {
-		
-		this(o1.toArray(new IntVar[o1.size()]), 
-			 o2.toArray(new IntVar[o2.size()]), 
-			 l1.toArray(new IntVar[l1.size()]), 
-			 l2.toArray(new IntVar[l2.size()]), 
-			 exceptionIndices, 
+
+		this(o1.toArray(new IntVar[o1.size()]),
+			 o2.toArray(new IntVar[o2.size()]),
+			 l1.toArray(new IntVar[l1.size()]),
+			 l2.toArray(new IntVar[l2.size()]),
+			 exceptionIndices,
 			 exceptionCondition);
 
 	}
 
 	/**
-	 * It constructs a disjoint conditional constraint. 
+	 * It constructs a disjoint conditional constraint.
 	 * @param o1 variables specifying the origin in the first dimension.
 	 * @param o2 variables specifying the origin in the second dimension.
 	 * @param l1 variables specifying the length in the first dimension.
 	 * @param l2 variables specifying the length in the second dimension.
-	 * @param exceptionIndices it specifies a list of pairs, where each pair specifies two rectangles which conditionally overlap. 
+	 * @param exceptionIndices it specifies a list of pairs, where each pair specifies two rectangles which conditionally overlap.
 	 * @param exceptionCondition a variable specifying if a corresponding pair is nonoverlapping.
 	 * @param profile it specifies if the profiles are being computed and used within a constraint.
 	 */
 	public DisjointConditional(ArrayList<? extends IntVar> o1,
-							   ArrayList<? extends IntVar> o2, 
+							   ArrayList<? extends IntVar> o2,
 							   ArrayList<? extends IntVar> l1,
-							   ArrayList<? extends IntVar> l2, 
+							   ArrayList<? extends IntVar> l2,
 							   ArrayList<ArrayList<Integer>> exceptionIndices,
 							   ArrayList<? extends IntVar> exceptionCondition,
 							   boolean profile) {
-		
+
 		this(o1, o2, l1, l2, exceptionIndices, exceptionCondition);
 		doProfile = profile;
-		
+
 	}
 
 	/**
-	 * It constructs a disjoint conditional constraint. 
+	 * It constructs a disjoint conditional constraint.
 	 * @param o1 variables specifying the origin in the first dimension.
 	 * @param o2 variables specifying the origin in the second dimension.
 	 * @param l1 variables specifying the length in the first dimension.
 	 * @param l2 variables specifying the length in the second dimension.
-	 * @param exceptionIndices it specifies a list of pairs, where each pair specifies two rectangles which conditionally overlap. 
+	 * @param exceptionIndices it specifies a list of pairs, where each pair specifies two rectangles which conditionally overlap.
 	 * @param exceptionCondition a variable specifying if a corresponding pair is nonoverlapping.
 	 */
 	public DisjointConditional(IntVar[] o1,
 							   IntVar[] o2,
-							   IntVar[] l1, 
-							   IntVar[] l2, 
+							   IntVar[] l1,
+							   IntVar[] l2,
 							   ArrayList<ArrayList<Integer>> exceptionIndices,
 							   ArrayList<? extends IntVar> exceptionCondition) {
 
@@ -207,13 +204,13 @@ public class DisjointConditional extends Diff {
 	}
 
 	/**
-	 * It constructs a disjoint conditional constraint. 
+	 * It constructs a disjoint conditional constraint.
 	 * @param o1 variables specifying the origin in the first dimension.
 	 * @param o2 variables specifying the origin in the second dimension.
 	 * @param l1 variables specifying the length in the first dimension.
 	 * @param l2 variables specifying the length in the second dimension.
-	 * @param exceptionIndices 
-	 * @param exceptionCondition 
+	 * @param exceptionIndices
+	 * @param exceptionCondition
 	 * @param profile it specifies if the profiles are being used and computed within that constraint.
 	 */
 	public DisjointConditional(IntVar[] o1,
@@ -230,13 +227,13 @@ public class DisjointConditional extends Diff {
 	/**
 	 * It creates Disjoint conditional constraint.
 	 * @param rectangles the rectangles within a constraint.
-	 * @param exceptionIndices 
-	 * @param exceptionCondition 
+	 * @param exceptionIndices
+	 * @param exceptionCondition
 	 */
 	public DisjointConditional(IntVar[][] rectangles,
 							   ArrayList<ArrayList<Integer>> exceptionIndices,
 							   ArrayList<? extends IntVar> exceptionCondition) {
-		
+
 		super(rectangles);
 
 		for (int i = 0; i < exceptionIndices.size(); i++) {
@@ -251,21 +248,21 @@ public class DisjointConditional extends Diff {
 	/**
 	 * It creates Disjoint conditional constraint.
 	 * @param rectangles the rectangles within a constraint.
-	 * @param exceptionIndices 
-	 * @param exceptionCondition 
+	 * @param exceptionIndices
+	 * @param exceptionCondition
 	 * @param profile it specifies if the profiles are being computed and used within that constraint.
 	 */
 	public DisjointConditional(IntVar[][] rectangles,
 							   ArrayList<ArrayList<Integer>> exceptionIndices,
 							   ArrayList<? extends IntVar> exceptionCondition,
 							   boolean profile) {
-		
+
 		this(rectangles, exceptionIndices, exceptionCondition);
 		doProfile = profile;
 	}
 
 
-	
+
 	boolean checkRect(RectangleWithCondition r) {
 		return (r.condition() == null) ? true
 				: ((r.condition().min() == 1) ? true : false);
@@ -277,7 +274,7 @@ public class DisjointConditional extends Diff {
 		ArrayList<? extends Var> el = condVariables[j];
 		int i = 0;
 		while (!changed && i < el.size()) {
-			// System.out.println("checking "+ j + (Variable)el.get(i));
+			// logger.info("checking "+ j + (Variable)el.get(i));
 			changed = fdvQueue.contains(el.get(i));
 			i++;
 		}
@@ -298,7 +295,7 @@ public class DisjointConditional extends Diff {
 			ProfileItem p = barrier.get(k);
 			int hinderStart = p.min;
 			int hinderStop = p.max;
-			// System.out.println(hinder);
+			// logger.info(hinder);
 			if (hinderStart - currentJposition >= durJ)
 				excludedState = false;
 			currentJposition = hinderStop;
@@ -466,9 +463,9 @@ public class DisjointConditional extends Diff {
 				rectNumber = Long.MAX_VALUE;
 
 			if (availArea < area) {
-				// System.out.println("Fail area: "+ availArea+" < "+area+" at
+				// logger.info("Fail area: "+ availArea+" < "+area+" at
 				// level "+currentStore.level);
-				// System.out.println(r);
+				// logger.info(r);
 				// for (int ind=0; ind<OverlappingRects.size(); ind++)
 				// if (((Rectangle)OverlappingRects.get(ind)).length[0].min() >
 				// 0 &&
@@ -476,13 +473,13 @@ public class DisjointConditional extends Diff {
 				// if (!
 				// onExList(((RectangleWithCondition)OverlappingRects.get(ind)).index)
 				// )
-				// System.out.println(OverlappingRects.get(ind));
+				// logger.info(OverlappingRects.get(ind));
 		    	throw Store.failException;
 			} else
 			// check whether there is enough room for
 			// all minimal rectangles
 			if (rectNumber < (totalNumberOfRectangles + 1)) {
-				// System.out.println("Fail number at level
+				// logger.info("Fail number at level
 				// "+currentStore.level);
 		    	throw Store.failException;
 			}
@@ -596,7 +593,7 @@ public class DisjointConditional extends Diff {
 						// for (Interval rI : r.origin[i].dom()) {
 						if (s >= rOriginDom.leftElement(m)
 								&& s <= rOriginDom.rightElement(m)) {
-							// System.out.println("Checking rectangles in
+							// logger.info("Checking rectangles in
 							// dimension "+i+
 							// " starting at time interval "+ s + ".."
 							// +(int)(s+r.length(i).min()-1)+
@@ -617,8 +614,7 @@ public class DisjointConditional extends Diff {
 									Update.unionAdapt(exclude.max, IntDomain.MaxInt);
 
 									if (traceNarr)
-										System.out
-												.print("7. Obligatory rectangles Narrow "
+										logger.info("7. Obligatory rectangles Narrow "
 														+ ConsideredRect
 														+ "\n"
 														+ r
@@ -635,8 +631,7 @@ public class DisjointConditional extends Diff {
 											r.origin[i], Update);
 
 									if (traceNarr)
-										System.out
-												.println(" -->" + r.origin[i]);
+										logger.info(" -->" + r.origin[i]);
 								}
 							}
 						}
@@ -667,7 +662,7 @@ public class DisjointConditional extends Diff {
 				// Comparator<Object> c = new DimIMinComparator<Object>(i);
 				// Arrays.sort(rects, c);
 
-				// System.out.println("Considered rectangles : " +
+				// logger.info("Considered rectangles : " +
 				// ConsideredRectDur);
 
 				Profile barrier = new Profile();
@@ -686,7 +681,7 @@ public class DisjointConditional extends Diff {
 					}
 					n++;
 				}
-				// System.out.println(barrier+ "-->> "+lengthOK
+				// logger.info(barrier+ "-->> "+lengthOK
 				// + ", new max length = " + newMaxLength);
 				if (!lengthOK) {
 					// update length in dimension j
@@ -694,8 +689,7 @@ public class DisjointConditional extends Diff {
 
 					if (maxLength < r.length[i].max()) {
 						if (traceNarr)
-							System.out
-									.println("9. Obligatory rectangles Narrow "
+							logger.info("9. Obligatory rectangles Narrow "
 											+ r.length[i] + " in " + IntDomain.MinInt
 											+ ".." + maxLength);
 						r.length[i].domain.inMax(currentStore.level,
@@ -711,8 +705,8 @@ public class DisjointConditional extends Diff {
 			Vector<RectangleWithCondition> ProfileCandidates) {
 
 		if (trace) {
-			System.out.println("Narrowing " + r);
-			System.out.println(ProfileCandidates);
+			logger.info("Narrowing " + r);
+			logger.info(ProfileCandidates.toString());
 		}
 
 		for (int i = 0; i < r.dim; i++) {
@@ -779,7 +773,7 @@ public class DisjointConditional extends Diff {
 		int j = 0;
 		while (excludedState && j < r.dim) {
 			if (i != j) {
-				// System.out.println(r.toStringFull()+"\n"+ConsideredRect );
+				// logger.info(r.toStringFull()+"\n"+ConsideredRect );
 				IntDomain rOriginJdom = r.origin[j].dom();
 				IntDomain rLengthJdom = r.length[j].dom();
 				int minJ = rOriginJdom.min();
@@ -788,7 +782,7 @@ public class DisjointConditional extends Diff {
 
 				barrier.clear();
 				for (IntRectangle hinder : ConsideredRect) {
-					// System.out.println(hinder.origin[j] + ".."
+					// logger.info(hinder.origin[j] + ".."
 					// + (int)(hinder.origin[j]
 					// + hinder.length[j]));
 					int hinderJ = hinder.origin[j];
@@ -796,16 +790,16 @@ public class DisjointConditional extends Diff {
 							.addToProfile(hinderJ, hinderJ + hinder.length[j],
 									1);
 				}
-				// System.out.println("Barrier : " + barrier);
+				// logger.info("Barrier : " + barrier);
 
 				int currentJposition = minJ;
-				// System.out.println(maxJ+", "+durJ+", "+currentJposition);
+				// logger.info(maxJ+", "+durJ+", "+currentJposition);
 				int k = 0, barrierSize = barrier.size();
 				while (k < barrierSize && excludedState) {
 					ProfileItem p = barrier.get(k);
 					int hinderStart = p.min;
 					int hinderStop = p.max;
-					// System.out.println("Hinder =
+					// logger.info("Hinder =
 					// "+hinderStart+".."+hinderStop);
 					if (hinderStart - currentJposition >= durJ)
 						excludedState = false;
@@ -817,7 +811,7 @@ public class DisjointConditional extends Diff {
 			}
 			j++;
 		}
-		// System.out.println("2. "+excludedState );
+		// logger.info("2. "+excludedState );
 		return excludedState;
 	}
 
@@ -828,7 +822,7 @@ public class DisjointConditional extends Diff {
 		int dur = Duration.min();
 		for (ProfileItem p : Profile) {
 			if (trace)
-				System.out.println("Comparing [" + _min + " " + _max
+				logger.info("Comparing [" + _min + " " + _max
 						+ "] with profile item " + p);
 			if (intervalOverlap(_min, _max + dur, p.min, p.max)) {
 				if (limit - p.value < Resources.min()) {
@@ -842,7 +836,7 @@ public class DisjointConditional extends Diff {
 						Update.unionAdapt(p.max, IntDomain.MaxInt);
 
 						if (traceNarr)
-							System.out.print("6. Profile Narrowed " + Start
+							logger.info("6. Profile Narrowed " + Start
 									+ " \\ " + Update + "; duration="
 									+ Duration + "; resources=" + Resources
 									+ ", limit=" + limit + "\n" + Profile
@@ -851,7 +845,7 @@ public class DisjointConditional extends Diff {
 						Start.domain.in(store.level, Start, Update);
 
 						if (traceNarr)
-							System.out.println(" => " + Start);
+							logger.info(" => " + Start);
 					}
 				} else {
 					IntDomain StartDom = Start.dom();
@@ -862,13 +856,13 @@ public class DisjointConditional extends Diff {
 						IntervalDomain Update = new IntervalDomain(0, updateMax);
 						if (updateMax < Resources.max()) {
 							if (traceNarr)
-								System.out.println("8. Profile Narrowed "
+								logger.info("8. Profile Narrowed "
 										+ Resources + " in " + Update);
 
 							Resources.domain.in(store.level, Resources, Update);
 
 							if (traceNarr)
-								System.out.println(" => " + Resources);
+								logger.info(" => " + Resources);
 						}
 					}
 				}
@@ -886,7 +880,7 @@ public class DisjointConditional extends Diff {
 		int limit = rOriginJdom.max() + resUse.max() - rOriginJdom.min();
 
 		if (trace)
-			System.out.println("Start time = " + s + ", resource use = "
+			logger.info("Start time = " + s + ", resource use = "
 					+ resUse);
 
 		IntDomain d = s.dom();
@@ -912,9 +906,9 @@ public class DisjointConditional extends Diff {
 
 				if (Profile.size() != 0) {
 					if (trace) {
-						System.out.println(" *** " + r + "\n"
+						logger.info(" *** " + r + "\n"
 								+ ProfileCandidates);
-						System.out.println("Profile in dimension " + i
+						logger.info("Profile in dimension " + i
 								+ " and " + j + "\n" + Profile);
 					}
 
@@ -948,11 +942,11 @@ public class DisjointConditional extends Diff {
 
 	@Override
 	public String toString() {
-		
+
 		StringBuffer result = new StringBuffer( id() );
-		
+
 		result.append(" : disjointConditional( ");
-		
+
 		int i = 0;
 		for (Rectangle rectangle : rectangles) {
 			result.append(rectangle);
@@ -960,11 +954,11 @@ public class DisjointConditional extends Diff {
 				result.append(", ");
 			i++;
 		}
-	
+
 		result.append(", ").append(exclusionList).append(")");
-		
+
 		return result.toString();
-		
+
 	}
 
 }

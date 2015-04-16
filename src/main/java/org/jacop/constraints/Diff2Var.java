@@ -1,9 +1,9 @@
 /**
- *  Diff2Var.java 
+ *  Diff2Var.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -38,7 +38,7 @@ import org.jacop.core.Store;
 /**
  * Defines a Variable for Diff2 constraints and related operations on it. It
  * keeps current recatngles for evaluation ([[R2, R3], [R1, R3], ...]
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
@@ -90,7 +90,7 @@ class Diff2Var implements MutableVar {
 
 	@Override
 	public String toString() {
-		
+
 		StringBuffer result = new StringBuffer();
 		result.append( "Diff2Var[").append( index ).append("] = [");
 		result.append( value ).append( "]" );
@@ -102,7 +102,7 @@ class Diff2Var implements MutableVar {
 			// System.out.print("1. Level: "+store.level()+", IN "+VarValue+",
 			// New " + val);
 			value.setValue(((Diff2VarValue) val).Rects);
-			// System.out.println(", OUT "+ VarValue);
+			// logger.info(", OUT "+ VarValue);
 		} else if (value.stamp < store.level) {
 			// System.out.print("2. Level: "+store.level()+", IN "+this+", New "
 			// + val);
@@ -111,7 +111,7 @@ class Diff2Var implements MutableVar {
 			val.setPrevious(value);
 			value = (Diff2VarValue) val;
 
-			// System.out.println("\n=> OUT "+ this+ "\nOLD "+ value().next());
+			// logger.info("\n=> OUT "+ this+ "\nOLD "+ value().next());
 		}
 	}
 

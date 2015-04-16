@@ -2,8 +2,11 @@
 /* JavaCCOptions:MULTI=true,NODE_USES_PARSER=false,VISITOR=false,TRACK_TOKENS=false,NODE_PREFIX=AST,NODE_EXTENDS=,NODE_FACTORY=,SUPPORT_CLASS_VISIBILITY_PUBLIC=true */
 package org.jacop.fz;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public
-class ASTFloatTiExprTail extends SimpleNode {
+class ASTFloatTiExprTail extends SimpleNode { private static Logger logger = LoggerFactory.getLogger(ASTFloatTiExprTail.class);
   public ASTFloatTiExprTail(int id) {
     super(id);
   }

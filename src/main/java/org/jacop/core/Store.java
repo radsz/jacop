@@ -1,9 +1,9 @@
 /**
- *  Store.java 
+ *  Store.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *  Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,39 +31,38 @@
 
 package org.jacop.core;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-
+import java.util.*;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.util.SimpleHashSet;
 import org.jacop.util.SparseSet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * It is an abstract class to describe all necessary functions of any store.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  */
 
-public class Store {
+public class Store { private static Logger logger = LoggerFactory.getLogger(Store.class);
 
 	/**
 	 * It creates a logger for this class. It seeks properties in the file
 	 * log4j.properties. It needs to be placed in the classpath. In eclipse
 	 * project it should be in a build directory.
 	 */
-	
-	// @todo implement logging through log4j. 
-	// private static final org.apache.log4j.Logger log = Logger.getLogger(Store.class);	
+
+	// @todo implement logging through log4j.
+	// private static final org.apache.log4j.Logger log = Logger.getLogger(Store.class);
 
 	/**
 	 * It specifies an empty domain. It is often used by any function which
 	 * requires to return empty domain. It saves effort creation empty domain
 	 * each time it is required.
 	 */
-	
+
 	// public static final IntDomain emptyDomain = new IntervalDomain(0);
 
 	/**
@@ -71,7 +70,7 @@ public class Store {
 	 */
 
 	public final static FailException failException = new FailException();
-		
+
 	/**
 	 * It specifies if some debugging information is printed.
 	 */
@@ -118,7 +117,7 @@ public class Store {
 	 * It contains all auxilary variables created by decomposable constraints. They
 	 * have to be grounded by search for a solution to be valid.
 	 */
-	
+
 	public ArrayList<Var> auxilaryVariables = new ArrayList<Var>();
 
 	/**
@@ -126,7 +125,7 @@ public class Store {
 	 */
 	public Constraint currentConstraint = null;
 
-	
+
 	/**
 	 * It stores constraint that has recently failed during store.consistency() execution.
 	 */
@@ -170,15 +169,15 @@ public class Store {
 	 * variable will setup this variable to true. Usefull variable to discover
 	 * the idempodence of the consistency propagator.
 	 */
-	
+
 //	public boolean newPropagation = false;
-	
+
 	public boolean propagationHasOccurred = false;
 
 	/**
 	 * It stores the number of constraints which were imposed to the store.
 	 */
-	
+
 	protected int numberOfConstraints = 0;
 
 	/**
@@ -216,14 +215,14 @@ public class Store {
 
 	protected boolean removeConstraints = false;
 
-	
+
 	/**
 	 * It specifies if the weight of variables which are in the scope of the failure
 	 * constraint should be increased.
 	 */
-	
+
 	public boolean variableWeightManagement = false;
-	
+
 	/**
 	 * It switches on/off debuging of remove level facilities.
 	 */
@@ -274,7 +273,7 @@ public class Store {
 	 * be watching it.
 	 * @param C constraint for which all watches are removed.
 	 */
-	
+
 	public void deregisterWatchedLiteralConstraint(Constraint C) {
 
 		for (Var v : C.arguments()) {
@@ -284,26 +283,26 @@ public class Store {
 		}
 
 	}
-	
+
 	/**
-	 * It returns number of watches which are used to watch constraints. 
-	 * 
+	 * It returns number of watches which are used to watch constraints.
+	 *
 	 * @return returns the number of watches attached to variables.
 	 */
 	public int countWatches() {
-		
+
 		if (watchedConstraints == null)
 			return 0;
-		
+
 		int count = 0;
-		
+
 		for (Var v : watchedConstraints.keySet())
 			count += watchedConstraints.get(v).size();
-		
+
 		return count;
-		
+
 	}
-	
+
 	/**
 	 * It register variable to watch given constraint. This function is called
 	 * either by impose function of a constraint or by consistency function of a
@@ -315,7 +314,7 @@ public class Store {
 	public void registerWatchedLiteralConstraint(Var v, Constraint C) {
 
 		HashSet<Constraint> forVariable = watchedConstraints.get(v);
-		
+
 		if (forVariable != null)
 			forVariable.add(C);
 		else {
@@ -323,17 +322,17 @@ public class Store {
 			forVariable.add(C);
 			watchedConstraints.put(v, forVariable);
 		}
-		
+
 	}
-	
+
 	/**
 	 * It removes all watches to constraints, therefore
 	 * constraints are no longer watched, no longer part of the model.
 	 */
 	public void clearWatchedConstraint() {
-	
+
 		watchedConstraints.clear();
-		
+
 	}
 
 	/**
@@ -346,22 +345,22 @@ public class Store {
 	 */
 
 	public Var[] vars;
-	
+
 	/**
-	 * It allows to manage information about changed variables in 
-	 * efficient/specialized/tailored manner. 
-	 * 
+	 * It allows to manage information about changed variables in
+	 * efficient/specialized/tailored manner.
+	 *
 	 */
 	public BacktrackableManager trailManager;
-	
+
 	/**
 	 * It specifies the default constructor of the store.
 	 */
-	
+
 	public Store() {
 
 		this(100);
-		
+
 	}
 
 	/**
@@ -369,12 +368,12 @@ public class Store {
 	 * the initial size of the Variable list.
 	 * @param size specifies the initial number of variables.
 	 */
-	
+
 	@SuppressWarnings("unchecked")
 	public Store(int size) {
 
 		vars = new Var[size];
-				
+
 		changed = new SimpleHashSet[queueNo];
 
 		for (int i = 0; i < queueNo; i++)
@@ -382,7 +381,7 @@ public class Store {
 
 		//trailManager = new SimpleBacktrackableManager(vars, 0);
 		trailManager = new IntervalBasedBacktrackableManager(vars, this.size, 10, Math.max( size / 10, 4 ));
-		
+
 	}
 
 	/**
@@ -393,14 +392,14 @@ public class Store {
 	 */
 
 	public void addChanged(Constraint c) {
-		
+
 		propagationHasOccurred = true;
 
 		if (c.queueIndex < currentQueue)
 			currentQueue = c.queueIndex;
 
 		changed[c.queueIndex].add(c);
-		
+
 	}
 
 
@@ -415,21 +414,21 @@ public class Store {
 	 */
 
 	public void addChanged(Var var, int pruningEvent, int info) {
-		
+
 		propagationHasOccurred = true;
 
 		// It records V as being changed so backtracking later on can be invoked for this variable.
 		recordChange(var);
 
 		Domain vDom = var.dom();
-		
+
 		Constraint[] addedConstraints = null;
 		Constraint c;
 
-		// FIXME, BUG. it should not assume that events are from IntDomain. 
+		// FIXME, BUG. it should not assume that events are from IntDomain.
 		// Who and when should add constraints to the queue?
 		// TEST, now.
-		
+
 		for (int j : vDom.getEventsInclusion(pruningEvent)) {
 
 			addedConstraints = vDom.modelConstraints[j];
@@ -443,7 +442,7 @@ public class Store {
 				if (currentConstraint != c) {
 					addChanged(c);
 				}
-				
+
 			}
 
 		}
@@ -477,8 +476,8 @@ public class Store {
 					}
 				}
 		}
-		
-		
+
+
 	}
 
 	/**
@@ -495,7 +494,7 @@ public class Store {
 
 	/**
 	 * This function computes the consistency function. It evaluates all
-	 * constraints which are in the changed queue. 
+	 * constraints which are in the changed queue.
 	 * @return returns true if all constraints which were in changed queue are consistent, false otherwise.
 	 */
 
@@ -505,12 +504,12 @@ public class Store {
 			raiseLevelBeforeConsistency = false;
 			setLevel(level + 1);
 		}
-		
+
 		if (this.sparseSetSize > 0 && this.sparseSet == null)
 			sparseSet = new SparseSet(sparseSetSize);
 
 		try {
-			
+
 			while (currentQueue < queueNo) {
 				// Selects changed constraints from changed queue
 				// and evaluates them
@@ -518,16 +517,16 @@ public class Store {
 					while (!changed[currentQueue].isEmpty()) {
 
 						currentConstraint = getFirstChanged();
-						
+
 						currentConstraint.consistency(this);
 
 						if (removeConstraints && currentConstraint.satisfied()) {
 
 							currentConstraint.removeConstraint();
 						}
-					
+
 					}
-								
+
 				currentQueue++;
 			}
 
@@ -546,15 +545,15 @@ public class Store {
 			currentConstraint = null;
 
 			return false;
-			
+
 		}
 
 		currentConstraint = null;
 		return true;
 
 	}
-	
-	
+
+
 	/**
 	 * This function is called when a counter of constraints should be
 	 * increased. It is most probable that this function will called from the
@@ -595,53 +594,53 @@ public class Store {
 	}
 
 	/**
-	 * It may be used for faster retrieval of variables given their id. However, 
+	 * It may be used for faster retrieval of variables given their id. However,
 	 * by default this variable is not created to reduce memory consumption. If
-	 * it exists then it will be used by functions looking for a variable given the name. 
+	 * it exists then it will be used by functions looking for a variable given the name.
 	 */
-	
+
 	public HashMap<String, Var> variablesHashMap = new HashMap<String, Var>();
-		
+
 	/**
 	 * This function looks for a variable with given id. It will first
-	 * check the existence of a hashmap variablesHashMap to get the 
+	 * check the existence of a hashmap variablesHashMap to get the
 	 * variable from the hashmap in constant time. Only if the variable
 	 * was not found or hashmap object was not created a linear algorithm
-	 * scanning through the whole list of variables will be employed. 
+	 * scanning through the whole list of variables will be employed.
 	 * @param id unique identifier of the variable.
 	 * @return reference to a variable with the given id.
 	 */
-	
+
 	public Var findVariable(String id) {
-		
+
 		if (variablesHashMap != null) {
-			
+
 			Var key = variablesHashMap.get(id);
-			
+
 			if (key != null)
 				return key;
 
 		}
-		
+
 		for (Var v : vars)
 			if (v != null && id.equals(v.id()))
 				return v;
-			
-		return null;	
-		
+
+		return null;
+
 	}
-	
+
 	/**
 	 * It loads CSP from XML file, which uses an extended version of XCSP 2.0.
-	 * @param path path pointing at a file 
-	 * @param filename 
+	 * @param path path pointing at a file
+	 * @param filename
 	 */
 
 
 	/**
-	 * If a constraint is checked for satisfiability and it is satisfied then 
+	 * If a constraint is checked for satisfiability and it is satisfied then
 	 * it will not be attached to a variable anymore.
-	 * @return true if constraints are checked for satisfiability. 
+	 * @return true if constraints are checked for satisfiability.
 	 */
 	public boolean getCheckSatisfiability() {
 		return removeConstraints;
@@ -678,7 +677,7 @@ public class Store {
 	public Constraint getFirstChanged() {
 
 		return changed[currentQueue].removeFirst();
-		
+
 	}
 
 	/**
@@ -710,7 +709,7 @@ public class Store {
 		c.impose(this);
 
 	}
-	
+
 	/**
 	 * This function imposes a constraint to a store. The constraint is
 	 * scheduled for evaluation for the next store consistency call. Therefore,
@@ -738,7 +737,7 @@ public class Store {
 	public void imposeWithConsistency(Constraint c) throws FailException {
 
 		c.impose(this);
-		
+
 		if (!consistency()) {
 			throw Store.failException;
 		}
@@ -756,11 +755,11 @@ public class Store {
 	public void imposeDecomposition(DecomposedConstraint c) {
 
 		c.imposeDecomposition(this);
-		
+
 	}
 
 	/**
-	 * This function imposes a constraint decomposition to a store. The decomposition 
+	 * This function imposes a constraint decomposition to a store. The decomposition
 	 * constraints are scheduled for evaluation for the next store consistency call. Therefore,
 	 * the constraints are added to queue of changed constraints.
 	 * @param c constraint to be added to specified queue.
@@ -770,7 +769,7 @@ public class Store {
 	public void imposeDecomposition(DecomposedConstraint c, int queueIndex) {
 
 		assert (queueIndex < queueNo) : "Constraint queue number larger than permitted by store.";
-		
+
 		c.imposeDecomposition(this, queueIndex);
 	}
 
@@ -785,20 +784,20 @@ public class Store {
 	public void imposeDecompositionWithConsistency(DecomposedConstraint c) {
 
 		c.imposeDecomposition(this);
-		
+
 		if ( !consistency() ) {
 			throw Store.failException;
 		}
 
 
 	}
-	
-	
-	
+
+
+
 	/**
 	 * This function checks if all variables within a store are grounded. It is
 	 * advised to make sure that after search all variables are grounded.
-	 * 
+	 *
 	 * @return true if all variables are singletons, false otherwise.
 	 */
 	public boolean isGround() {
@@ -823,7 +822,7 @@ public class Store {
 	 */
 
 	public void print() {
-		System.out.println(toString());
+		logger.info(toString());
 	}
 
 	/**
@@ -864,9 +863,9 @@ public class Store {
 	public int putVariable(Var var) {
 
 		Var previousVar = variablesHashMap.put(var.id(), var);
-		
+
 		assert (previousVar == null) : "Two variables have the same id " + previousVar + " " + var;
-			
+
 		if (var.index != -1) {
 			if (vars[var.index] == var) {
 				throw new IllegalArgumentException( "\nSetting Variable: Variable already exists: " + var.id());
@@ -877,7 +876,7 @@ public class Store {
 		// return default index specifying that this variable is not stored within vars array.
 		if (var instanceof BooleanVar)
 			return -1;
-		
+
 		if (size < vars.length) {
 
 			vars[size] = var;
@@ -898,7 +897,7 @@ public class Store {
 		}
 
 		trailManager.setSize(size);
-		
+
 		return size - 1;
 	}
 
@@ -926,9 +925,9 @@ public class Store {
 
 	}
 
-	
-	
-	
+
+
+
 	/**
 	 * Any change of finite domain variable must also be recorded, so intervals
 	 * denoting changed variables can be updated.
@@ -936,28 +935,28 @@ public class Store {
 	 */
 
 	public void recordChange(Var recordedVariable) {
-                           
-		// Boolean variables or other variables with index -1 are 
+
+		// Boolean variables or other variables with index -1 are
 		// stored each time they change in the special 1D array.
 		if (recordedVariable.index == -1) {
 			recordBooleanChange((BooleanVar) recordedVariable);
 			return;
 		}
-		
+
 		assert (trailManager.getLevel() == level) : "An attempt to remeber a changed item at the level which have not been set properly by calling function setLevel()";
-		
-	//	assert (!trailManager.trailContainsAllChanges 
+
+	//	assert (!trailManager.trailContainsAllChanges
 	//			|| trailManager.levelInfo.get(trailManager.levelInfo.size() - 1) == level) : "An error. Trail should be containing all changes but it is not available";
 
 		trailManager.addChanged(recordedVariable.index);
-		
+
 	}
 
 	/**
 	 * Any constraint in general may need information what variables have changed
 	 * since the last time a consistency was called. This function is called
-	 * just *before* removeLevel method is executed for variables, mutable variables, 
-	 * and timestamps. 
+	 * just *before* removeLevel method is executed for variables, mutable variables,
+	 * and timestamps.
 	 * @param C constraint which is no longer interested in listening to remove level events.
 	 * @return true if constraint C was watching remove level events.
 	 */
@@ -970,12 +969,12 @@ public class Store {
 		return false;
 	}
 
-	
+
 	/**
 	 * Any constraint in general may need information what variables have changed
 	 * since the last time a consistency was called. This function is called
-	 * just *after* removeLevel method is executed for variables, mutable variables, 
-	 * and timestamps. 
+	 * just *after* removeLevel method is executed for variables, mutable variables,
+	 * and timestamps.
 	 * @param C constraint which is no longer interested in listening to remove level events.
 	 * @return true if constraint C was watching remove level events.
 	 */
@@ -986,8 +985,8 @@ public class Store {
 			return removeLevelLateListeners.add(C);
 		}
 		return false;
-	}	
-	
+	}
+
 	/**
 	 * This important function removes all changes which has been recorded to
 	 * any variable at given level. Before backtracking to earlier level all
@@ -1042,15 +1041,15 @@ public class Store {
 
 		// TODO, added functionality.
 		trailManager.removeLevel(rLevel);
-		
+
 		for (int i = mutableVariables.size() - 1; i >= 0; i--)
 			mutableVariables.get(i).removeLevel(rLevel);
 
 		for (Constraint C : removeLevelLateListeners)
 			C.removeLevelLate(rLevel);
-		
+
 		assert checkInvariants() == null : checkInvariants();
-		
+
 	}
 
 	/**
@@ -1064,7 +1063,7 @@ public class Store {
 
 	/**
 	 * This function sets the long description of the store.
-	 * @param description  
+	 * @param description
 	 */
 	public void setDescription(String description) {
 		this.description = description;
@@ -1073,7 +1072,7 @@ public class Store {
 	/**
 	 * This function sets the id of the store. This id is used when saving to
 	 * XML file.
-	 * @param id store id. 
+	 * @param id store id.
 	 */
 	public void setID(String id) {
 		this.id = id;
@@ -1094,7 +1093,7 @@ public class Store {
 
 		if (level == levelSetTo)
 			return;
-				
+
 		if (removeDebug) {
 
 			if (level > levelSetTo && level > 0) {
@@ -1109,7 +1108,7 @@ public class Store {
 		}
 
 		if (removeDebug)
-			System.out.println("Store level changes from " + level + " to " + levelSetTo);
+			logger.info("Store level changes from " + level + " to " + levelSetTo);
 
 		level = levelSetTo;
 	}
@@ -1136,14 +1135,14 @@ public class Store {
 	 * It throws an exception after printing trace information if tracing is
 	 * switched on.
 	 * @param X variable causing the failure exception.
-	 * 
+	 *
 	 * @throws FailException is always thrown.
 	 */
 
 	public void throwFailException(Var X) {
 
 		throw failException;
-		
+
 	}
 
 	/**
@@ -1203,7 +1202,7 @@ public class Store {
 	 */
 
 	public void trim() {
-		System.out.println("Trim method not yet implemented");
+		logger.info("Trim method not yet implemented");
 	}
 
 	/**
@@ -1247,12 +1246,12 @@ public class Store {
 	int tupleNumber = 0;
 
 	/**
-	 * It is used by Extensional MDD constraints. It is to represent G_yes. 
+	 * It is used by Extensional MDD constraints. It is to represent G_yes.
 	 */
 	public SparseSet sparseSet;
-	
+
 	/**
-	 * It is used by Extensional MDD constraints. It is to represent the size of G_yes. 
+	 * It is used by Extensional MDD constraints. It is to represent the size of G_yes.
 	 */
 	public int sparseSetSize = 0;
 
@@ -1398,7 +1397,7 @@ public class Store {
 	/**
 	 * @param ts tuples to be sorted.
 	 * @return sorted tuples.
-	 * 
+	 *
 	 */
 	public int[][] sortTuples(int[][] ts) {
 
@@ -1473,17 +1472,17 @@ public class Store {
 
 		return true;
 	}
-	
+
 	/**
 	 * It checks invariants to see if the execution went smoothly.
 	 * @return description of the violated invariant, null otherwise.
 	 */
 	public String checkInvariants() {
-		
-		for (int i = 0; i < size; i++)			
-			if ( vars[i].level() > level ) 
+
+		for (int i = 0; i < size; i++)
+			if ( vars[i].level() > level )
 				return "Removal of old values was done properly " + vars[i];
-			
+
 		return null;
 	}
 

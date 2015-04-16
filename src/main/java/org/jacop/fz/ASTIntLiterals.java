@@ -2,10 +2,12 @@
 /* JavaCCOptions:MULTI=true,NODE_USES_PARSER=true,VISITOR=false,TRACK_TOKENS=false,NODE_PREFIX=AST,NODE_EXTENDS=,NODE_FACTORY=,SUPPORT_CLASS_VISIBILITY_PUBLIC=true */
 package org.jacop.fz;
 
-import java.util.ArrayList;
+import java.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public
-class ASTIntLiterals extends SimpleNode {
+class ASTIntLiterals extends SimpleNode { private static Logger logger = LoggerFactory.getLogger(ASTIntLiterals.class);
   public ASTIntLiterals(int id) {
     super(id);
   }

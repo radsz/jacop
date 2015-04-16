@@ -1,9 +1,9 @@
 /**
- *  In.java 
+ *  In.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,24 +31,25 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Constraints X to belong to a specified domain. 
- * 
+ * Constraints X to belong to a specified domain.
+ *
  * Domain consistency is used.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class In extends PrimitiveConstraint {
+public class In extends PrimitiveConstraint { private static Logger logger = LoggerFactory.getLogger(In.class);
 
 	static int IdNumber = 1;
 
@@ -61,14 +62,14 @@ public class In extends PrimitiveConstraint {
 	 * It specifies domain d which restricts the possible value of the specified variable.
 	 */
 	public IntDomain dom;
-	
+
 	/**
 	 * It specifies all the values which can not be taken by a variable.
 	 */
 	private IntDomain DomComplement;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"x", "dom"};
@@ -79,17 +80,17 @@ public class In extends PrimitiveConstraint {
 	 * @param dom the domain to which the variables domain is restricted.
 	 */
 	public In(IntVar x, IntDomain dom) {
-	
+
 		assert (x != null) : "Variable x is null";
 		assert (dom != null) : "Domain dom is null";
-		
+
 		numberId = IdNumber++;
 		numberArgs = 1;
-		
+
 		this.x = x;
 		this.dom = dom;
 		this.DomComplement = dom.complement();
-		
+
 	}
 
 	@Override
@@ -105,7 +106,7 @@ public class In extends PrimitiveConstraint {
 	@Override
 	public void consistency(Store store) {
 		x.domain.in(store.level, x, dom);
-		
+
 		removeConstraint();
 	}
 
@@ -118,9 +119,9 @@ public class In extends PrimitiveConstraint {
 				if (possibleEvent != null)
 					return possibleEvent;
 			}
-			return Domain.NONE;		
+			return Domain.NONE;
 		}
-	
+
 	@Override
 	public int getNotConsistencyPruningEvent(Var var) {
 
@@ -162,7 +163,7 @@ public class In extends PrimitiveConstraint {
 
 	@Override
 	public boolean satisfied() {
-	    return x.singleton() && 
+	    return x.singleton() &&
 		dom.contains(x.domain);
 	}
 
@@ -220,6 +221,6 @@ public class In extends PrimitiveConstraint {
 		if (increaseWeight) {
 			x.weight++;
 		}
-	}	
-	
+	}
+
 }

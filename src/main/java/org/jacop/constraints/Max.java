@@ -1,9 +1,9 @@
 /**
- *  Max.java 
+ *  Max.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,24 +31,25 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Max constraint implements the Maximum/2 constraint. It provides the maximum
- * variable from all variables on the list. 
- * 
+ * variable from all variables on the list.
+ *
  * max(list) = max.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class Max extends Constraint {
+public class Max extends Constraint { private static Logger logger = LoggerFactory.getLogger(Max.class);
 
 	static int counter = 1;
 
@@ -58,16 +59,16 @@ public class Max extends Constraint {
 	public IntVar list[];
 
 	/**
-	 * It specifies variable max which stores the maximum value present in the list. 
+	 * It specifies variable max which stores the maximum value present in the list.
 	 */
 	public IntVar max;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"list", "max"};
-	
+
 	/**
 	 * It constructs max constraint.
 	 * @param max variable denoting the maximum value
@@ -83,7 +84,7 @@ public class Max extends Constraint {
 		this.numberArgs = (short) (list.length + 1);
 		this.max = max;
 		this.list = new IntVar[list.length];
-		
+
 		for (int i = 0; i < list.length; i++) {
 			assert (list[i] != null) : i + "-th variable in the list is null";
 			this.list[i] = list[i];
@@ -98,7 +99,7 @@ public class Max extends Constraint {
 	public Max(ArrayList<? extends IntVar> variables, IntVar max) {
 
 		this(variables.toArray(new IntVar[variables.size()]), max);
-		
+
 	}
 
 
@@ -115,30 +116,30 @@ public class Max extends Constraint {
 
 	@Override
 	public void consistency(Store store) {
-		
+
 		IntVar var;
 		IntDomain vDom;
 
 		do {
 
 			store.propagationHasOccurred = false;
-			
+
 			// @todo, optimize, if there is no change on min.min() then
 			// the below inMin does not have to be executed.
 
 			int minValue = IntDomain.MinInt;
 			int maxValue = IntDomain.MinInt;
-		
+
 			int maxMax = max.max();
 			for (int i = 0; i < list.length; i++) {
-				
+
 				var = list[i];
 
 				var.domain.inMax(store.level, var, maxMax);
 
 				vDom = var.dom();
 				int VdomMin = vDom.min(), VdomMax = vDom.max();
-			
+
 				minValue = (minValue > VdomMin) ? minValue : VdomMin;
 				maxValue = (maxValue > VdomMax) ? maxValue : VdomMax;
 
@@ -151,14 +152,14 @@ public class Max extends Constraint {
 				var = list[i];
 				if (minValue > var.max())
 				    n++;
-				else 
+				else
 				    pos = i;
 			}
-			if (n == list.length-1)  // one variable on the list is maximal; its is min > max of all other variables 
+			if (n == list.length-1)  // one variable on the list is maximal; its is min > max of all other variables
 			    list[pos].domain.in(store.level, list[pos], max.dom());
 
 		} while (store.propagationHasOccurred);
-		
+
 	}
 
 	@Override
@@ -212,16 +213,16 @@ public class Max extends Constraint {
 
 	@Override
 	public String toString() {
-		
+
 		StringBuffer result = new StringBuffer( id() );
-		
+
 		result.append(" : max(  [ ");
 		for (int i = 0; i < list.length; i++) {
 			result.append( list[i] );
 			if (i < list.length - 1)
 				result.append(", ");
 		}
-		
+
 		result.append("], ").append(this.max);
 		result.append(")");
 

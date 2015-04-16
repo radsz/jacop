@@ -1,9 +1,9 @@
 /**
- *  SimpleSolutionListener.java 
+ *  SimpleSolutionListener.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *  Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,9 +31,7 @@
 
 package org.jacop.search;
 
-import java.util.IdentityHashMap;
-import java.util.Iterator;
-
+import java.util.*;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.XeqC;
 import org.jacop.core.Domain;
@@ -41,19 +39,21 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.set.core.SetVar;
 import org.jacop.floats.core.FloatVar;
+import org.jacop.set.core.SetVar;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * It defines a simple solution listener which should be used if some basic
  * functionality of search when a solution is encountered are required.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
- * @param <T> type of variable being used in search. 
+ * @param <T> type of variable being used in search.
  */
 
-public class SimpleSolutionListener<T extends Var> implements SolutionListener<T> {
+public class SimpleSolutionListener<T extends Var> implements SolutionListener<T> { private static Logger logger = LoggerFactory.getLogger(SimpleSolutionListener.class);
 
 	/**
 	 * It specifies if the debugging information should be printed.
@@ -64,13 +64,13 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 	 * It is executed right after consistency of the current search node. The
 	 * return code specifies if the search should continue or exit.
 	 */
-	
+
 	// TODO, change one solution only to limit of solutions.
-	
+
 	public T[] vars = null;
 
 	boolean alwaysUpdateToMostRecentSolution = true;
-	
+
 	/**
 	 * It specifies the number of solutions we want to find.
 	 */
@@ -101,7 +101,7 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 	 * It contains children of the solution listener.
 	 */
 	public SolutionListener<T>[] childrenSolutionListeners;
-	
+
 	/**
 	 * It returns null if no solution was recorded, or the variables for which
 	 * the solution(s) was recorded.
@@ -112,18 +112,18 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 	}
 
 	public boolean solutionLimitReached() {
-		
+
 		return solutionLimit == noSolutions;
-	
+
 	}
-	
+
 	public void setSolutionLimit(int limit) {
-		
+
 		solutionLimit = limit;
-		
+
 	}
-	
-	
+
+
 	public void setParentSolutionListener(SolutionListener<? extends Var> parent) {
 
 		parentSolutionListener = parent;
@@ -143,7 +143,7 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 
 		assert (no <= noSolutions);
 		assert (recordSolutions);
-		
+
 		return solutions[no - 1];
 
 	}
@@ -172,19 +172,19 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 	 * It searches for all solutions, but they do not have to be recorded as
 	 * this is decided by another parameter.
 	 */
-	
+
 	public void searchAll(boolean status) {
-		
+
 		if (status)
 			solutionLimit = Integer.MAX_VALUE;
 		else
 			solutionLimit = 1;
-		
+
 	}
 
 	/**
-	 * It records a solution. It uses the current value of the search variables (they must be 
-	 * all grounded) as well as the current number of the solution in master search (if there is one). 
+	 * It records a solution. It uses the current value of the search variables (they must be
+	 * all grounded) as well as the current number of the solution in master search (if there is one).
 	 */
 	public void recordSolution() {
 
@@ -210,10 +210,10 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 					throw new RuntimeException("Variable is not grounded in the solution");
 				currentSolution[i] = vars[i].dom();
 			}
-			
+
 			solutions[noSolutions] = currentSolution;
 
-			//TODO connection between parent and child search depending if 
+			//TODO connection between parent and child search depending if
 			// they are recording solutions.
 			if (parentSolutionListener != null)
 					parentSolutionNo[noSolutions] = parentSolutionListener
@@ -224,12 +224,12 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 		} else {
 
 			for (int i = 0; i < vars.length; i++) {
-			    if (!vars[i].singleton()) 
+			    if (!vars[i].singleton())
 					throw new RuntimeException("Variable is not grounded in the solution");
 				solutions[0][i] = vars[i].dom();
 			}
-			
-			//TODO connection between parent and child search depending if 
+
+			//TODO connection between parent and child search depending if
 			// they are recording solutions.
 			if (parentSolutionListener != null)
 					parentSolutionNo[0] = parentSolutionListener.solutionsNo();
@@ -246,7 +246,7 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 			IdentityHashMap<T, Integer> position = select.getVariablesMapping();
 
 	//		vars = (T[]) new Var[position.size()];
-			
+
 			for (Iterator<T> itr = position.keySet().iterator(); itr
 					.hasNext();) {
 				T current = itr.next();
@@ -254,9 +254,9 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 					if (current instanceof IntVar)
 						vars = (T[]) new IntVar[position.size()];
 					if (current instanceof SetVar)
-						vars = (T[]) new SetVar[position.size()];	 
+						vars = (T[]) new SetVar[position.size()];
 					if (current instanceof FloatVar)
-						vars = (T[]) new FloatVar[position.size()];	 
+						vars = (T[]) new FloatVar[position.size()];
 				}
 				vars[position.get(current)] = current;
 			}
@@ -267,24 +267,24 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 		}
 
 		recordSolution();
-				
+
 		if (childrenSolutionListeners != null) {
 			boolean code = false;
 			for (int i = 0; i < childrenSolutionListeners.length; i++)
 				code |= childrenSolutionListeners[i].executeAfterSolution(search, select);
 			return code && (solutionLimit <= noSolutions);
 		}
-		
+
 		return solutionLimit <= noSolutions;
 
 	}
 
 	/**
 	 * It assigns the last found solution to the store. If the function returns false
-	 * that means that for some reason the solution which was supposed to be a solution is not. 
+	 * that means that for some reason the solution which was supposed to be a solution is not.
 	 * It can be caused by a number of issues, starting with wrongly implemented plugins, wrongly
-	 * implemented consistency or satisfied function of the constraint. 
-	 * 
+	 * implemented consistency or satisfied function of the constraint.
+	 *
 	 * @param store the store in the context of which the search took place.
 	 * @return true if the store is consistent after assigning a solution, false otherwise.
 	 */
@@ -299,11 +299,11 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 
 		if (number == noSolutions - 1 && !recordSolutions)
 			number = 0;
-		
+
 		assert (number < noSolutions) : "Smaller number of solutions were found.";
 		assert (recordSolutions || number == 0) : "The solutions were not stored.";
 		assert (solutions.length > number) : "The solution of the given number was not stored.";
-		
+
 		if (vars != null) {
 
 			assert ( store.currentConstraint == null);
@@ -331,10 +331,10 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 			buf.append("\nSolution : [");
 
 		int solutionIndex = 0;
-		
+
 		if (recordSolutions)
 			solutionIndex = noSolutions - 1;
-		
+
 		if (vars != null)
 			for (int i = 0; i < vars.length; i++) {
 				buf.append(vars[i].id()).append("=").append(
@@ -371,10 +371,10 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 			int no = 0;
 
 			for (int i = 0; i < vars.length; i++) {
-				
+
 				if (vars[i] instanceof IntVar)
 					result[no] = new XeqC((IntVar)vars[i], ((IntDomain)solutions[i][number]).min() );
-								
+
 				no++;
 			}
 
@@ -388,14 +388,14 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 	public int findSolutionMatchingParent(int parentNo) {
 
 		if (!isRecordingSolutions()) {
-			
+
 			if (parentSolutionNo[0] == parentNo)
 				return 0;
 			else
 				return -1;
-			
+
 		}
-		
+
 		int left = 0;
 		int right = noSolutions - 1;
 
@@ -404,8 +404,7 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 		while (!(left + 1 >= right)) {
 
 			if (debug)
-				System.out.println("left " + left + " right " + right + " middle "
-								   + middle);
+				logger.info("left " + left + " right " + right + " middle " + middle);
 
 			middle = (left + right) >> 1;
 
@@ -444,52 +443,52 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 		return recordSolutions;
 	}
 
-	
+
     public void printAllSolutions() {
 
     	if (recordSolutions) {
-    		System.out.println("\nAll solutions: \n");
-    		System.out.println("Number of Solutions: " + noSolutions);
+    		logger.info("\nAll solutions: \n");
+    		logger.info("Number of Solutions: " + noSolutions);
                 for(int i = 0; i < solutions[0].length; i++) {
-    				System.out.print(vars[i].id() + " ");
+    				logger.info(vars[i].id() + " ");
     			}
-                System.out.println();
+                logger.info("\n");
     		for(int s = 0; s < noSolutions; s++) {
     			for(int i = 0; i < solutions[0].length; i++) {
-    				System.out.print(solutions[s][i] + " ");
+    				logger.info(solutions[s][i] + " ");
     			}
-    			System.out.println();
+    			logger.info("\n");
     		}
     	}
     	else {
-    		
+
     		if (noSolutions > 0) {
-    			System.out.println("\nLast recorded solution: \n");
-    			System.out.println("Number of Solutions: " + noSolutions);
-    		
+    			logger.info("\nLast recorded solution: \n");
+    			logger.info("Number of Solutions: " + noSolutions);
+
                         for(int i = 0; i < solutions[0].length; i++) {
-    				System.out.print(vars[i].id() + " ");
+    				logger.info(vars[i].id() + " ");
     			}
-                        System.out.println();
+                        logger.info("\n");
     			for(int i = 0; i < solutions[0].length; i++) {
-    				System.out.print(solutions[0][i] + " ");
+    				logger.info(solutions[0][i] + " ");
     			}
-    			System.out.println();
+    			logger.info("\n");
     		}
     		else {
-    			System.out.println("\nNo solution found. \n");    			
+    			logger.info("\nNo solution found. \n");
     		}
     	}
 
     }
 
 	public int getParentSolution(int childSolutionNo) {
-		
+
 		if (parentSolutionNo == null || parentSolutionNo.length < childSolutionNo)
 			return -1;
-		
+
 		return parentSolutionNo[childSolutionNo - 1];
-		
+
 	}
-	
+
 }
