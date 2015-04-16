@@ -32,7 +32,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 
 import org.jacop.core.IntVar;
 import org.jacop.core.IntDomain;
@@ -60,7 +60,7 @@ public class LinearInt extends PrimitiveConstraint {
 
     Store store;
     
-    static int counter = 1;
+    static int idNumber = 1;
 
     boolean reified = true;
 
@@ -164,8 +164,9 @@ public class LinearInt extends PrimitiveConstraint {
 
 	this.store = store;
 	this.b = sum;
-
-	HashMap<IntVar, Integer> parameters = new HashMap<IntVar, Integer>();
+	numberId = idNumber++;
+	
+	LinkedHashMap<IntVar, Integer> parameters = new LinkedHashMap<IntVar, Integer>();
 
 	for (int i = 0; i < list.length; i++) {
 

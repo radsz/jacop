@@ -91,6 +91,9 @@ public class Constraints implements ParserTreeConstants {
     // defines_var
     IntVar definedVar = null;
 
+    // ============ Options ==============
+    Options opt;
+    
     ArrayList<IntVar[]> parameterListForAlldistincts = new ArrayList<IntVar[]>();
     ArrayList<Constraint> delayedConstraints = new ArrayList<Constraint>();
 
@@ -150,7 +153,9 @@ public class Constraints implements ParserTreeConstants {
 // 	}
 //     }
 
-    void generateConstraints(SimpleNode constraintWithAnnotations, Tables table) throws FailException {
+    void generateConstraints(SimpleNode constraintWithAnnotations, Tables table, Options opt) throws FailException {
+
+	this.opt = opt;
 
 // 	if (!storeLevelIncreased) {
 // 	    System.out.println("1. Level="+store.level);
@@ -1017,7 +1022,7 @@ public class Constraints implements ParserTreeConstants {
 
 		    pose(new Circuit(v));
 
-		    if ( domainConsistency )  // we add additional implied constraint if domain consistency is required
+		    if ( domainConsistency && ! opt.getBoundConsistency())  // we add additional implied constraint if domain consistency is required
 			parameterListForAlldistincts.add(v);
 
 		}
@@ -1250,7 +1255,7 @@ public class Constraints implements ParserTreeConstants {
 		    // we do not not pose Assignment directly because of possible inconsistency with its 
 		    // intiallization; we collect all constraints and pose them at the end when all other constraints are posed
 
-		    if ( domainConsistency )  // we add additional implied constraint if domain consistency is required
+		    if ( domainConsistency && !opt.getBoundConsistency())  // we add additional implied constraint if domain consistency is required
 			parameterListForAlldistincts.add(f);
 
 		    delayedConstraints.add(new Assignment(f, invf, index_f, index_invf));
@@ -2500,7 +2505,7 @@ public class Constraints implements ParserTreeConstants {
 		    else
 			pose(new XplusYeqC(p2[0], p2[1], -p3));
 		}
-		else if (domainConsistency && (maxDomain(p2) <= 4 || p2.length <= 2) ) { // heuristic rule to select domain consistency since 
+		else if (domainConsistency && !opt.getBoundConsistency() && (maxDomain(p2) <= 4 || p2.length <= 2) ) { // heuristic rule to select domain consistency since 
 		                                                                         // its complexity is O(d^n), d <= 4 or n <= 2 ;)
 		    // We do not impose linear constraint with domain consistency if 
 		    // the cases are covered by four cases above.
@@ -2993,7 +2998,10 @@ public class Constraints implements ParserTreeConstants {
 	for (int i=0; i < listLength; i++) 
 	    newP2[i] = p2[p1.min() - 1 + i];
 
-	pose(new Element(p1, newP2, p3, p1.min() - 1));
+	if (opt.getBoundConsistency())
+	    pose(new ElementIntegerFast(p1, newP2, p3, p1.min() - 1));
+	else
+	    pose(new Element(p1, newP2, p3, p1.min() - 1));
 
 	// pose(new Element(p1, p2, p3));
     }

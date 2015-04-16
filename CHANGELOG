@@ -30,7 +30,14 @@ Version 4.2.1
    from paper "Bounds Consistency Techniques for Long Linear
    Constraints" by Warwick Harvey and Joachim Schimpf.
 
-10.Bug fixes.
+10. Fixing performance bug in IntervalBasedBacktrackableManager.
+    Unnecessary call to checkRemoveInvariant outside assert statement.
+
+11. Adding option --bound (-b) to flatzinc parser that enforces use of bounds
+    consistency for constraints (instead of domain, even for constraints
+    annotated with "::domain").
+
+11. Bug fixes.
 	
 Version 4.2
 ===========

@@ -63,6 +63,8 @@ public class Options {
     boolean precisionDefined = false;
     double precision;
 
+    boolean boundConsistency = false;
+
     boolean runSearch = true;
 
 	/**
@@ -95,6 +97,9 @@ public class Options {
 						"    -s, --statistics\n"+
 						"    -n <value>, --num-solutions <value>\n"+
 						"        <value> - limit on solution number.\n"+
+						"    -b, --bound - use bounds consistency whenever possible;\n" +
+						"        override annotation \":: domain\" and select constraints\n"+
+						"        implementing bounds consistency (default false).\n"+
 						"    -i, --interval print intervals instead of values for floating variables\n"+
 						"    -p <value>, --precision <value> defines precision for floating operations\n"+
 						"        overrides precision definition in search annotation."
@@ -146,9 +151,13 @@ public class Options {
 					}
 					i++;
 				}
+				else if (args[i].equals("-b") || args[i].equals("--bound")) {
+				    boundConsistency = true;
+				    i++;
+				}
 				else {
-					System.out.println("fz2jacop: not recognized option "+ args[i]);
-					i++;
+				    System.out.println("fz2jacop: not recognized option "+ args[i]);
+				    i++;
 				}
 			}	    
 
@@ -247,6 +256,14 @@ public class Options {
 
 
 	/**
+	 * It defines whether to use bound consistency
+	 * @return true if bound consistency prefered, false otherwise (defult). 
+	 */
+	public boolean getBoundConsistency() {
+		return boundConsistency;
+	}
+
+       /**
 	 * It returns precision defined in  the command line
 	 * @return precision. 
 	 */

@@ -60,7 +60,7 @@ public class SumInt extends PrimitiveConstraint {
 
     Store store;
     
-    static int counter = 1;
+    static int idNumber = 1;
 
     boolean reified = true;
 
@@ -150,7 +150,7 @@ public class SumInt extends PrimitiveConstraint {
 	this.store = store;
 	this.sum = sum;
 	this.x = list;
-
+	numberId = idNumber++;
 
 	this.l = x.length;
 	this.I = new int[l];
