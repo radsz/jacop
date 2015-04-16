@@ -83,13 +83,13 @@ public class RunExample { private static Logger logger = LoggerFactory.getLogger
 
             // verify that the main method is static
             if((mainMethod.getModifiers() & Modifier.STATIC) == 0){
-                System.err.println("examplesloader: main method in target class is not static");
+                logger.error("examplesloader: main method in target class is not static");
                 System.exit(-1);
             }
 
             // verify that the main method returns a void
             if(mainMethod.getReturnType() != void.class){
-                System.err.println("examplesloader: target class main must return void");
+                logger.error("examplesloader: target class main must return void");
                 System.exit(-1);
             }
 
@@ -104,25 +104,24 @@ public class RunExample { private static Logger logger = LoggerFactory.getLogger
             mainMethod.invoke(null, actualArgs);
         }
         catch(ClassNotFoundException e){
-            System.err.println("exampleloader: can't find class \"" +
-                               e.getMessage() +
-                               "\" when loading target class \"" +
-                               args[0]
-                               +"\"");
+            logger.error("exampleloader: can't find class \"" +
+                                 e.getMessage() +
+                                 "\" when loading target class \"" +
+                                 args[0] + "\"", e);
             System.exit(-1);
         }
         catch(NoSuchMethodException e){
-            System.err.println("exampleloader: no main(String[]) method found in class " + args[0]);
+            logger.error("exampleloader: no main(String[]) method found in class " + args[0], e);
             //e.printStackTrace();
             System.exit(-1);
         }
         catch(IllegalAccessException e){
-            System.err.println("exampleloader: error calling main method in class " + args[0]);
+            logger.error("exampleloader: error calling main method in class " + args[0], e);
             //e.printStackTrace();
             System.exit(-1);
         }
         catch(InvocationTargetException e){
-            System.err.println("exampleloader: error calling main method in class " + args[0]);
+            logger.error("exampleloader: error calling main method in class " + args[0], e);
             //e.printStackTrace();
             System.exit(-1);
         }

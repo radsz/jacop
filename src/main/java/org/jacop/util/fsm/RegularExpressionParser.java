@@ -192,7 +192,7 @@ public class RegularExpressionParser { private static Logger logger = LoggerFact
 			String msg = "found " + tokenName(token) + " when expecting "
 					+ tokenName(t);
 
-			System.err.println("Syntax error: " + msg);
+			logger.error("Syntax error: " + msg);
 
 		}
 

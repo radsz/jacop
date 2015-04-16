@@ -507,7 +507,7 @@ public class MineSweeper extends ExampleFD { private static Logger logger = Logg
             inr.close();
 
         } catch (IOException e) {
-            logger.info(e.toString());
+            logger.error("error", e);
         }
 
         return problem;

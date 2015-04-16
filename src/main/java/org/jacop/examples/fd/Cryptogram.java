@@ -113,10 +113,10 @@ public class Cryptogram extends ExampleFD { private static Logger logger = Logge
 					}
 				in.close();
 			} catch (FileNotFoundException e) {
-				System.err.println("File " + filename + " could not be found");
+                logger.error("File " + filename + " could not be found", e);
 			} catch (IOException e) {
-				System.err.println("Something is wrong with the file"
-						+ filename);
+                logger.error("Something is wrong with the file"
+						+ filename, e);
 			}
 		} else {
 

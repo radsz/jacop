@@ -428,7 +428,7 @@ public class Constraints implements ParserTreeConstants { private static Logger 
 		    // pose(new IfThen(new PltQ(v1,v2), new PeqQ(v2,v3)));
 		}
 		else {
-		    System.err.println("%% ERROR: JaCoP does not implement this constraints on floats");
+		    logger.error("%% ERROR: JaCoP does not implement this constraints on floats");
 		    System.exit(0);
 		}
 
@@ -679,7 +679,7 @@ public class Constraints implements ParserTreeConstants { private static Logger 
 			generateIntElementConstraint(node);
 		    }
 		    else
-			System.err.println("%% ERROR: Not expected constraint : "+p);
+			logger.error("%% ERROR: Not expected constraint : "+p);
 		}
 		else if (p.startsWith("var_bool_element", 6) ) {
 		    // array_var_bool_element
@@ -913,7 +913,7 @@ public class Constraints implements ParserTreeConstants { private static Logger 
 		else if (p.startsWith("lt", 4)) {
 
 		    if (p.startsWith("_reif", 6)) {
-			System.err.println("%% set_lt_reif with list of set variables is not avaible in org.jacop.set");
+			logger.error("%% set_lt_reif with list of set variables is not avaible in org.jacop.set");
 			System.exit(0);
 		    }
 
@@ -925,7 +925,7 @@ public class Constraints implements ParserTreeConstants { private static Logger 
 		else if (p.startsWith("gt", 4)) {
 
 		    if (p.startsWith("_reif", 6)) {
-			System.err.println("%% set_gt_reif with list of set variables is not avaible in org.jacop.set");
+			logger.error("%% set_gt_reif with list of set variables is not avaible in org.jacop.set");
 			System.exit(0);
 		    }
 
@@ -937,7 +937,7 @@ public class Constraints implements ParserTreeConstants { private static Logger 
 		else if (p.startsWith("le", 4)) {
 
 		    if (p.startsWith("_reif", 6)) {
-			System.err.println("%% set_le_reif with list of set variables is not avaible in org.jacop.set");
+			logger.error("%% set_le_reif with list of set variables is not avaible in org.jacop.set");
 			System.exit(0);
 		    }
 
@@ -950,7 +950,7 @@ public class Constraints implements ParserTreeConstants { private static Logger 
 		else if (p.startsWith("ge", 4))  {
 
 		    if (p.startsWith("_reif", 6)) {
-			System.err.println("%% set_ge_reif with list of set variables is not avaible in org.jacop.set");
+			logger.error("%% set_ge_reif with list of set variables is not avaible in org.jacop.set");
 			System.exit(0);
 		    }
 
@@ -1200,7 +1200,7 @@ public class Constraints implements ParserTreeConstants { private static Logger 
 
 		    for (int i=0; i<x.length; i++) {
 			if (index_min>x[i].max() || index_max<x[i].min()) {
-			    System.err.println("%% ERROR: gcc domain error in variable " + x[i]);
+			    logger.error("%% ERROR: gcc domain error in variable " + x[i]);
 			    System.exit(0);
 			}
 			if (index_min>x[i].min() && index_min<x[i].max())
@@ -1628,10 +1628,10 @@ public class Constraints implements ParserTreeConstants { private static Logger 
    		    pose( new Geost(objects, constraints, shapes) );
 		}
 		else
-		    System.err.println("%% ERROR: Constraint "+p+" not supported.");
+		    logger.error("%% ERROR: Constraint "+p+" not supported.");
 	    // >>========== JaCoP constraints ==================
 	    else
-		System.err.println("%% ERROR: Constraint "+p+" not supported.");
+		logger.error("%% ERROR: Constraint "+p+" not supported.");
 	}
     }
 
@@ -2612,7 +2612,7 @@ public class Constraints implements ParserTreeConstants { private static Logger 
 	    // 	pose(new Reified(new XgteqC(t, p3), p4));
 	    // 	break;
 	    default:
-		System.err.println("%% ERROR: Constraint "+p+" not supported.");
+		logger.error("%% ERROR: Constraint "+p+" not supported.");
 		System.exit(0);
 	    }
 	}
@@ -2881,7 +2881,7 @@ public class Constraints implements ParserTreeConstants { private static Logger 
 	    // 	}
 	    // 	break;
 		default:
-		    System.err.println("%% ERROR: Constraint "+p+" not supported.");
+		    logger.error("%% ERROR: Constraint "+p+" not supported.");
 		    System.exit(0);
 	    }
 	}
@@ -2923,7 +2923,7 @@ public class Constraints implements ParserTreeConstants { private static Logger 
 		pose(new Reified(new LinearFloat(store,p2, p1, "<=", p3), p4));
 		break;
 	    default:
-		System.err.println("%% ERROR: Constraint "+p+" not supported.");
+		logger.error("%% ERROR: Constraint "+p+" not supported.");
 		System.exit(0);
 	    }
 	}
@@ -2960,7 +2960,7 @@ public class Constraints implements ParserTreeConstants { private static Logger 
 		pose(new LinearFloat(store, p2, p1, "<=", p3));
 		break;
 		default:
-		    System.err.println("%% ERROR: Constraint "+p+" not supported.");
+		    logger.error("%% ERROR: Constraint "+p+" not supported.");
 		    System.exit(0);
 	    }
 	}
@@ -3125,7 +3125,7 @@ public class Constraints implements ParserTreeConstants { private static Logger 
 
 	for (int i=0; i < p2.length; i++)
 	    if (p2[i] == null) {
-	    System.err.println("%% var_set_element with list of set variables is not avaible in org.jacop.set");
+	    logger.error("%% var_set_element with list of set variables is not avaible in org.jacop.set");
 	    System.exit(0);
 	}
 
@@ -3142,7 +3142,7 @@ public class Constraints implements ParserTreeConstants { private static Logger 
 
 	    for (int i=0; i < p2.length; i++)
 		if (p2[i] == null) {
-		    System.err.println("%% var_set_element with list of set variables is not avaible in org.jacop.set");
+		    logger.error("%% var_set_element with list of set variables is not avaible in org.jacop.set");
 		    System.exit(0);
 		}
 
@@ -3150,7 +3150,7 @@ public class Constraints implements ParserTreeConstants { private static Logger 
 
 	}
 	else {
-	    System.err.println("%% var_set_element with list of set variables is not avaible in org.jacop.set");
+	    logger.error("%% var_set_element with list of set variables is not avaible in org.jacop.set");
 	    System.exit(0);
 	}
     }
@@ -3195,7 +3195,7 @@ public class Constraints implements ParserTreeConstants { private static Logger 
 		return intTable[node.getInt()];
 	}
 	else {
-	    System.err.println("getInt: Wrong parameter " + node);
+	    logger.error("getInt: Wrong parameter " + node);
 	    System.exit(0);
 	    return 0;
 	}
@@ -3218,7 +3218,7 @@ public class Constraints implements ParserTreeConstants { private static Logger 
 		return floatTable[node.getInt()];
 	}
 	else {
-	    System.err.println("getFloat: Wrong parameter " + node);
+	    logger.error("getFloat: Wrong parameter " + node);
 	    System.exit(0);
 	    return 0;
 	}
@@ -3237,12 +3237,12 @@ public class Constraints implements ParserTreeConstants { private static Logger 
 	    case 3: // array acces
 		return dictionary.getIntArray(((ASTScalarFlatExpr)child).getIdent())[((ASTScalarFlatExpr)child).getInt()];
 	    default: // string & float;
-		System.err.println("Not supported scalar in parameter; compilation aborted.");
+		logger.error("Not supported scalar in parameter; compilation aborted.");
 		System.exit(0);
 	    }
 	}
 	else {
-	    System.err.println("Not supported parameter assignment; compilation aborted.");
+	    logger.error("Not supported parameter assignment; compilation aborted.");
 	    System.exit(0);
 	}
 	return -1;
@@ -3279,7 +3279,7 @@ public class Constraints implements ParserTreeConstants { private static Logger 
 		}
 	    }
 	    else {
-		System.err.println("Wrong set array.");
+		logger.error("Wrong set array.");
 		System.exit(0);
 	    }
 	}
@@ -3308,7 +3308,7 @@ public class Constraints implements ParserTreeConstants { private static Logger 
 		}
 		return s;
 	    default:
-		System.err.println("Set type not supported; compilation aborted.");
+		logger.error("Set type not supported; compilation aborted.");
 		System.exit(0);
 	    }
 	}
@@ -3316,7 +3316,7 @@ public class Constraints implements ParserTreeConstants { private static Logger 
 	    switch ( ((ASTScalarFlatExpr)child).getType() ) {
 	    case 0: // int
 	    case 1: // bool
-		System.err.println("Set initialization fault; compilation aborted.");
+		logger.error("Set initialization fault; compilation aborted.");
 		System.exit(0);
 		break;
 	    case 2: // ident
@@ -3325,7 +3325,7 @@ public class Constraints implements ParserTreeConstants { private static Logger 
 		return dictionary.getSetArray(((ASTScalarFlatExpr)child).getIdent())[((ASTScalarFlatExpr)child).getInt()];
 	    case 4: // string
 	    case 5: // float
-		System.err.println("Set initialization fault; compilation aborted.");
+		logger.error("Set initialization fault; compilation aborted.");
 		System.exit(0);
 		break;
 	    }
@@ -3352,13 +3352,13 @@ public class Constraints implements ParserTreeConstants { private static Logger 
 	    if (((ASTScalarFlatExpr)node).getType() == 2) // ident
 		return dictionary.getIntArray(((ASTScalarFlatExpr)node).getIdent());
 	    else {
-		System.err.println("Wrong type of int array; compilation aborted.");
+		logger.error("Wrong type of int array; compilation aborted.");
 		System.exit(0);
 		return new int[] {};
 	    }
 	}
 	else {
-	    System.err.println("Wrong type of int array; compilation aborted.");
+	    logger.error("Wrong type of int array; compilation aborted.");
 	    System.exit(0);
 	    return new int[] {};
 	}
@@ -3382,13 +3382,13 @@ public class Constraints implements ParserTreeConstants { private static Logger 
 	    if (((ASTScalarFlatExpr)node).getType() == 2) // ident
 		return dictionary.getFloatArray(((ASTScalarFlatExpr)node).getIdent());
 	    else {
-		System.err.println("Wrong type of int array; compilation aborted.");
+		logger.error("Wrong type of int array; compilation aborted.");
 		System.exit(0);
 		return new double[] {};
 	    }
 	}
 	else {
-	    System.err.println("Wrong type of int array; compilation aborted.");
+	    logger.error("Wrong type of int array; compilation aborted.");
 	    System.exit(0);
 	    return new double[] {};
 	}
@@ -3426,7 +3426,7 @@ public class Constraints implements ParserTreeConstants { private static Logger 
 		return dictionary.getVariableArray(node.getIdent())[node.getInt()];
 	}
 	else {
-	    System.err.println("Wrong parameter " + node);
+	    logger.error("Wrong parameter " + node);
 	    System.exit(0);
 	    return new IntVar(store);
 	}
@@ -3459,7 +3459,7 @@ public class Constraints implements ParserTreeConstants { private static Logger 
 		return dictionary.getVariableFloatArray(node.getIdent())[node.getInt()];
 	}
 	else {
-	    System.err.println("getFloatVariable: Wrong parameter " + node);
+	    logger.error("getFloatVariable: Wrong parameter " + node);
 	    System.exit(0);
 	    return new FloatVar(store);
 	}
@@ -3490,13 +3490,13 @@ public class Constraints implements ParserTreeConstants { private static Logger 
 	    else if (((ASTScalarFlatExpr)child).getType() == 3) // array access
 		return dictionary.getSetVariableArray(((ASTScalarFlatExpr)child).getIdent())[((ASTScalarFlatExpr)child).getInt()];
 	    else {
-		System.err.println("Wrong parameter in set " + child);
+		logger.error("Wrong parameter in set " + child);
 		System.exit(0);
 		return new SetVar(store);
 	    }
 	}
 	else {
-	    System.err.println("Wrong parameter in set " + child);
+	    logger.error("Wrong parameter in set " + child);
 	    System.exit(0);
 	    return new SetVar(store);
 	}
@@ -3529,7 +3529,7 @@ public class Constraints implements ParserTreeConstants { private static Logger 
 			return aa;
 		    }
 		    else {
-			System.err.println("Cannot find array " +((ASTScalarFlatExpr)node).getIdent() +
+			logger.error("Cannot find array " +((ASTScalarFlatExpr)node).getIdent() +
 					   "; compilation aborted.");
 			System.exit(0);
 			return new IntVar[] {};
@@ -3537,13 +3537,13 @@ public class Constraints implements ParserTreeConstants { private static Logger 
 		}
 	    }
 	    else {
-		System.err.println("Wrong type of Variable array; compilation aborted.");
+		logger.error("Wrong type of Variable array; compilation aborted.");
 		System.exit(0);
 		return new IntVar[] {};
 	    }
 	}
 	else {
-	    System.err.println("Wrong type of Variable array; compilation aborted.");
+	    logger.error("Wrong type of Variable array; compilation aborted.");
 	    System.exit(0);
 	    return new IntVar[] {};
 	}
@@ -3575,7 +3575,7 @@ public class Constraints implements ParserTreeConstants { private static Logger 
 			return aa;
 		    }
 		    else {
-			System.err.println("Cannot find array " +((ASTScalarFlatExpr)node).getIdent() +
+			logger.error("Cannot find array " +((ASTScalarFlatExpr)node).getIdent() +
 					   "; compilation aborted.");
 			System.exit(0);
 			return new FloatVar[] {};
@@ -3583,13 +3583,13 @@ public class Constraints implements ParserTreeConstants { private static Logger 
 		}
 	    }
 	    else {
-		System.err.println("Wrong type of Variable array; compilation aborted.");
+		logger.error("Wrong type of Variable array; compilation aborted.");
 		System.exit(0);
 		return new FloatVar[] {};
 	    }
 	}
 	else {
-	    System.err.println("Wrong type of Variable array; compilation aborted.");
+	    logger.error("Wrong type of Variable array; compilation aborted.");
 	    System.exit(0);
 	    return new FloatVar[] {};
 	}
@@ -3626,7 +3626,7 @@ public class Constraints implements ParserTreeConstants { private static Logger 
 	if (e != null)
 	    return dictionary.getVariable( e.getIdent());
 	else{
-	    System.err.println("Wrong variable identified in \"defines_var\" annotation" + node);
+	    logger.error("Wrong variable identified in \"defines_var\" annotation" + node);
 	    System.exit(0);
 	    return new IntVar(store);
 	}

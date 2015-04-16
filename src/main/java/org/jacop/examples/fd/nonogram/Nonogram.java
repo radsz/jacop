@@ -131,9 +131,9 @@ public class Nonogram extends ExampleFD { private static Logger logger = LoggerF
 			}
 			in.close();
 		} catch (FileNotFoundException e) {
-			System.err.println("I can not find file " + filename);
+			logger.error("I can not find file " + filename, e);
 		} catch (IOException e) {
-			System.err.println("Something is wrong with file" + filename);
+            logger.error("Something is wrong with file" + filename, e);
 		}
 
 		row_rules = new int[dimensions[1]][];

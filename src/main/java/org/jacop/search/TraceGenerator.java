@@ -539,7 +539,7 @@ public class TraceGenerator<T extends Var>
 			hdVis.endDocument();
 
 		} catch (SAXException e) {
-			e.printStackTrace();
+			logger.error("error", e);
 		}
 
 	}
@@ -554,8 +554,8 @@ public class TraceGenerator<T extends Var>
 		try {
 			printWriter = new PrintWriter(new FileOutputStream(treeFilename));
 		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-			printWriter = new PrintWriter( new StringWriter() );
+            logger.error("error", e);
+            printWriter = new PrintWriter( new StringWriter() );
 		}
 
 		StreamResult streamResult = new StreamResult(printWriter);
@@ -593,10 +593,10 @@ public class TraceGenerator<T extends Var>
 
 		} catch (TransformerConfigurationException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error("error", e);
 		} catch (SAXException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error("error", e);
 		}
 	}
 
@@ -608,7 +608,7 @@ public class TraceGenerator<T extends Var>
 		try {
 			printWriter = new PrintWriter(new FileOutputStream(visFilename));
 		} catch (FileNotFoundException e) {
-			e.printStackTrace();
+			logger.error("error", e);
 			printWriter = new PrintWriter( new StringWriter() );
 		}
 
@@ -666,10 +666,10 @@ public class TraceGenerator<T extends Var>
 
 		} catch (TransformerConfigurationException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error("error", e);
 		} catch (SAXException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error("error", e);
 		}
 	}
 
@@ -709,9 +709,8 @@ public class TraceGenerator<T extends Var>
 			hdTree.endElement("", "", "succ");
 
 		} catch (SAXException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+            logger.error("error", e);
+        }
 	}
 
 	void generateTryNode(int searchNodeId, int parentNode, String name, int size, int value) {
@@ -726,9 +725,8 @@ public class TraceGenerator<T extends Var>
 			hdTree.endElement("", "", "try");
 
 		} catch (SAXException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+            logger.error("error", e);
+        }
 	}
 
 	void generateFailNode(int searchNodeId, int parentNode, String name, int size, int value) {
@@ -743,9 +741,8 @@ public class TraceGenerator<T extends Var>
 			hdTree.endElement("", "", "fail");
 
 		} catch (SAXException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+            logger.error("error", e);
+        }
 	}
 
 	void generateTrycNode(int searchNodeId, int parentNode, String name, int size, Domain dom) {
@@ -764,9 +761,8 @@ public class TraceGenerator<T extends Var>
 			hdTree.endElement("", "", "tryc");
 
 		} catch (SAXException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+            logger.error("error", e);
+        }
 	}
 
 	void generateFailcNode(int searchNodeId, int parentNode, String name, int size, Domain dom) {
@@ -784,9 +780,8 @@ public class TraceGenerator<T extends Var>
 			hdTree.endElement("", "", "failc");
 
 		} catch (SAXException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+            logger.error("error", e);
+        }
 
 	}
 
@@ -801,9 +796,8 @@ public class TraceGenerator<T extends Var>
 			hdTree.endElement("", "", "tryc");
 
 		} catch (SAXException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+            logger.error("error", e);
+        }
 	}
 
 	void generateFailcNode(int searchNodeId, int parentNode, PrimitiveConstraint c) {
@@ -817,9 +811,8 @@ public class TraceGenerator<T extends Var>
 			hdTree.endElement("", "", "failc");
 
 		} catch (SAXException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+            logger.error("error", e);
+        }
 
 	}
 
@@ -897,9 +890,8 @@ public class TraceGenerator<T extends Var>
 			visualisationNodeId++;
 
 		} catch (SAXException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+            logger.error("error", e);
+        }
 	}
 
 	String intDomainToString(IntDomain domain) {

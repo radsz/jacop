@@ -193,7 +193,7 @@ public class Solve implements ParserTreeConstants { private static Logger logger
 		run_sequence_search(solveKind, kind, si);
 	    }
 	    else {
-		System.err.println("Not recognized structure of solve statement \""+search_type+"\"; compilation aborted");
+		logger.error("Not recognized structure of solve statement \""+search_type+"\"; compilation aborted");
 		System.exit(0);
 	    }
 	}
@@ -210,7 +210,7 @@ public class Solve implements ParserTreeConstants { private static Logger logger
 	}
 	else
 	    {
-	    System.err.println("Not recognized structure of solve statement; compilation aborted");
+	    logger.error("Not recognized structure of solve statement; compilation aborted");
 	    System.exit(0);
 	}
     }
@@ -297,7 +297,7 @@ public class Solve implements ParserTreeConstants { private static Logger logger
 		    label.setTimeOut(to);
 	    }
 	    else {
-		System.err.println("Not recognized or supported search type \""+si.type()+"\"; compilation aborted");
+		logger.error("Not recognized or supported search type \""+si.type()+"\"; compilation aborted");
 		System.exit(0);
 	    }
 	}
@@ -492,7 +492,7 @@ public class Solve implements ParserTreeConstants { private static Logger logger
 		break;
 	    }
 	else {
-	    System.err.println("Not recognized or supported "+si.exploration()+" search explorarion strategy ; compilation aborted");
+	    logger.error("Not recognized or supported "+si.exploration()+" search explorarion strategy ; compilation aborted");
 	    System.exit(0);
 	}
 
@@ -1029,7 +1029,7 @@ public class Solve implements ParserTreeConstants { private static Logger logger
 		break;
 	    }
 	else {
-	    System.err.println("Not recognized or supported "+si.exploration()+
+	    logger.error("Not recognized or supported "+si.exploration()+
 			       " search explorarion strategy ; compilation aborted");
 	    System.exit(0);
 	}
@@ -1186,7 +1186,7 @@ public class Solve implements ParserTreeConstants { private static Logger logger
 	    list_seq_searches.add(label);
 	}
 	else {
-	    System.err.println("Not recognized or supported search type \""+si.type()+"\"; compilation aborted");
+	    logger.error("Not recognized or supported search type \""+si.type()+"\"; compilation aborted");
 	    System.exit(0);
 	}
 
@@ -1282,7 +1282,7 @@ public class Solve implements ParserTreeConstants { private static Logger logger
 	else if (k.equals("maximize")) // 2 = maximize
 	    return 2;
 	else {
-	    System.err.println("Not supported search kind; compilation aborted");
+	    logger.error("Not supported search kind; compilation aborted");
 	    System.exit(0);
 	    return -1;
 	}
@@ -1299,7 +1299,7 @@ public class Solve implements ParserTreeConstants { private static Logger logger
 		return null;
 	}
 	else {
-	    System.err.println("Wrong cost function specification " + node);
+	    logger.error("Wrong cost function specification " + node);
 	    System.exit(0);
 	    return new IntVar(store);
 	}
@@ -1311,7 +1311,7 @@ public class Solve implements ParserTreeConstants { private static Logger logger
 	else if (node.getType() == 1) // array access
 	    return dictionary.getVariableFloatArray(node.getIdent())[node.getIndex()];
 	else {
-	    System.err.println("Wrong cost function specification " + node);
+	    logger.error("Wrong cost function specification " + node);
 	    System.exit(0);
 	    return new FloatVar(store);
 	}

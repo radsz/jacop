@@ -141,7 +141,7 @@ public class BIBD extends ExampleFD { private static Logger logger = LoggerFacto
 				example.lambda = new Integer(args[4]);
 			}
 			catch(Exception ex) {
-				logger.info("Program parameters if provided must specify v, b, r, k, and lambda");
+				logger.info("Program parameters if provided must specify v, b, r, k, and lambda", ex);
 			}
 		}
 

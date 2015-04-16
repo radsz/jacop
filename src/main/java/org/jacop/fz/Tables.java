@@ -127,7 +127,7 @@ public class Tables { private static Logger logger = LoggerFactory.getLogger(Tab
 	if (iVal != null)
 	    return iVal.intValue();
 	else {
-	    System.err.println("Symbol \""+ident+ "\" does not have assigned value when refered; execution aborted");
+	    logger.error("Symbol \""+ident+ "\" does not have assigned value when refered; execution aborted");
 	    System.exit(0);
 	    return -1;
 	}
@@ -164,7 +164,7 @@ public class Tables { private static Logger logger = LoggerFactory.getLogger(Tab
 	if (dVal != null)
 	    return dVal.doubleValue();
 	else {
-	    System.err.println("Symbol \""+ident+ "\" does not have assigned value when refered; execution aborted");
+	    logger.error("Symbol \""+ident+ "\" does not have assigned value when refered; execution aborted");
 	    System.exit(0);
 	    return -1;
 	}

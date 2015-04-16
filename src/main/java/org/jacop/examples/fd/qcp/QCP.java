@@ -95,11 +95,10 @@ public class QCP extends ExampleFD { private static Logger logger = LoggerFactor
 			}
 			in.close();
 		} catch (FileNotFoundException e) {
-			System.err.println("You need to run this program in a directory that contains the required file.");
-			System.err.println("I can not find file " + filename);
+            logger.error("You need to run this program in a directory that contains the required file. " + "I can not find file " + filename, e);
 			System.exit(-1);
 		} catch (IOException e) {
-			System.err.println("Something is wrong with file" + filename);
+            logger.error("Something is wrong with file" + filename, e);
 		}
 
 		n = n - 1;

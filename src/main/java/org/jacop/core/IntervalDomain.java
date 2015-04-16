@@ -1269,7 +1269,7 @@ public class IntervalDomain extends IntDomain { private static Logger logger = L
 				temp = domain.getClass().newInstance();
 			}
 			catch(Exception ex) {
-				logger.info(ex.getMessage());
+				logger.info("error", ex);
 			}
 
 			ValueEnumeration enumer = domain.valueEnumeration();

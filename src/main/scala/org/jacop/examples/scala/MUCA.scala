@@ -1,10 +1,9 @@
 package org.jacop.examples.scala
 
-import java.io.BufferedReader
-import java.io.FileNotFoundException
-import java.io.FileReader
-import java.io.IOException
+import java.io.{BufferedReader, FileNotFoundException, FileReader, IOException}
 import java.util.StringTokenizer
+
+import org.slf4j.LoggerFactory
 
 
 /**
@@ -24,11 +23,13 @@ import java.util.StringTokenizer
  *
  */
 
-import scala.collection.mutable.ArrayBuffer
 import org.jacop.scala._
+
+import scala.collection.mutable.ArrayBuffer
 
 object MUCA  extends jacop {
 
+  val logger = LoggerFactory.getLogger("MUCA")
   /**
    * ArrayBuffer of bids issued by different bidders.
    * Each bidder issues an ArrayBuffer of xor bids.
@@ -543,11 +544,10 @@ object MUCA  extends jacop {
     }
     catch {
       case ex : FileNotFoundException =>
-        System.err.println("You need to run this program in a directory that contains the required file.")
-        System.err.println(ex)
+        logger.error("You need to run this program in a directory that contains the required file.", ex)
         System.exit(-1)
       case ex : IOException  =>
-        System.err.println(ex)
+        logger.error("error", ex)
     }
 
 //     println(this.maxCost);

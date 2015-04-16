@@ -96,15 +96,15 @@ public class Fz2jacop { private static Logger logger = LoggerFactory.getLogger(F
 	} catch (FailException e) {
             logger.info("=====UNSATISFIABLE====="); // "*** Evaluation of model resulted in fail.");
 	} catch (ArithmeticException e) {
-	    System.err.println("%% Evaluation of model resulted in an overflow.");
+	    logger.error("%% Evaluation of model resulted in an overflow.");
 	} catch (ParseException e) {
-	    logger.info("%% Parser exception " + e);
+	    logger.info("%% Parser exception ", e);
 	} catch (TokenMgrError e) {
-	    logger.info("%% Parser exception " + e);
+	    logger.info("%% Parser exception " , e);
  	} catch (ArrayIndexOutOfBoundsException e) {
- 	    logger.info("%% JaCoP internal error. Array out of bound exception " + e);
+ 	    logger.info("%% JaCoP internal error. Array out of bound exception ",e);
 	    if (e.getStackTrace().length > 0)
-		logger.info ("%%\t" + e.getStackTrace()[0]);
+		logger.info ("%%\t" ,e);
 	} catch (OutOfMemoryError e) {
 	    logger.info("%% Out of memory error; consider option -Xmx... for JVM");
 	} catch (StackOverflowError e) {

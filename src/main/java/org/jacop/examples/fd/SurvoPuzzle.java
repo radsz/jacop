@@ -285,7 +285,7 @@ public class SurvoPuzzle extends ExampleFD { private static Logger logger = Logg
 
 
         } catch (IOException e) {
-            logger.info(e.toString());
+            logger.error("error", e);
         }
 
     } // end readFile

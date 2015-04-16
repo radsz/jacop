@@ -524,7 +524,7 @@ public class Linear extends PrimitiveConstraint { private static Logger logger =
 	else if (r.equals("=>"))
 	    return ge;
 	else {
-	    System.err.println ("Wrong relation symbol in Linear constraint " + r + "; assumed ==");
+	    logger.error ("Wrong relation symbol in Linear constraint " + r + "; assumed ==");
 	    return eq;
 	}
     }

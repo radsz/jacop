@@ -1,13 +1,12 @@
 package org.jacop.examples.scala
 
-import java.io.BufferedReader
-import java.io.FileNotFoundException
-import java.io.FileReader
-import java.io.IOException
+import java.io.{BufferedReader, FileNotFoundException, FileReader, IOException}
 import java.util.regex.Pattern
 
-import scala.collection.mutable.ArrayBuffer
 import org.jacop.scala._
+import org.slf4j.LoggerFactory
+
+import scala.collection.mutable.ArrayBuffer
 
 /**
  *
@@ -19,6 +18,8 @@ import org.jacop.scala._
  */
 
 object Nonogram extends jacop {
+
+  val logger = LoggerFactory.getLogger("Nonogram")
 
   /**
    * The value that represents a black dot.
@@ -92,9 +93,9 @@ object Nonogram extends jacop {
       }
       in.close()
     } catch {
-      case e : FileNotFoundException => System.err.println("I can not find file " + filename)
+      case e : FileNotFoundException => logger.error("I can not find file " + filename, e)
       case e : IOException => {
-	System.err.println("Something is wrong with file" + filename)
+	logger.error("Something is wrong with file" + filename, e)
       }
 
       row_rules = new Array[Array[Int]](dimensions(1))

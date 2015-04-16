@@ -76,7 +76,7 @@ public class XMLSaveSupport { private static Logger logger = LoggerFactory.getLo
 		try {
 			printWriter = new PrintWriter(new FileOutputStream(filename));
 		} catch (FileNotFoundException e) {
-			e.printStackTrace();
+			logger.error("error", e);
 			printWriter = new PrintWriter( new StringWriter() );
 		}
 
@@ -134,13 +134,13 @@ public class XMLSaveSupport { private static Logger logger = LoggerFactory.getLo
 
 		} catch (TransformerConfigurationException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error("error", e);
 		} catch (SAXException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error("error", e);
 		} catch (ClassNotFoundException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error("error", e);
 		}
 
 
@@ -447,7 +447,7 @@ public class XMLSaveSupport { private static Logger logger = LoggerFactory.getLo
 
 		}
 		catch (Throwable e) {
-			System.err.println(e);
+			logger.error("error", e);
 		}
 	}
 

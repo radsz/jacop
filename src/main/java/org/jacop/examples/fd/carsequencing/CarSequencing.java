@@ -548,7 +548,7 @@ public class CarSequencing extends ExampleFD { private static Logger logger = Lo
 			inr.close();
 
 		} catch (IOException e) {
-			logger.info(e.toString());
+			logger.error("error", e);
 		}
 
 		return result.toArray(new String[result.size()]);

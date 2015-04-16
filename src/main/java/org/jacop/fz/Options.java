@@ -143,7 +143,7 @@ public class Options { private static Logger logger = LoggerFactory.getLogger(Op
 					    FloatDomain.setPrecision(precision);
 					else {
 					    precision = FloatDomain.precision();
-					    System.err.println("%% Precisison parameter not correct; using default precision " + precision);
+					    logger.error("%% Precisison parameter not correct; using default precision " + precision);
 					}
 					i++;
 				}
@@ -165,7 +165,7 @@ public class Options { private static Logger logger = LoggerFactory.getLogger(Op
 	    try {
 		file = new java.io.FileInputStream(fileName);
 	    } catch (java.io.FileNotFoundException e) {
-		logger.info("Flatzinc2JaCoP Parser Version 0.1:  File " + fileName + " not found.");
+		logger.info("Flatzinc2JaCoP Parser Version 0.1:  File " + fileName + " not found.", e);
 		System.exit(0);
 	    }
 

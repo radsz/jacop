@@ -270,7 +270,7 @@ public class Network extends NetworkSimplex implements MutableNetwork { private 
 		Arc arc = companion.arc;
 
 		if (SHOW_CHANGES) {
-			System.err.println("Before restore: " + companion.arc + ", time = "
+			logger.error("Before restore: " + companion.arc + ", time = "
 					+ modifiedSize.stamp());
 		}
 
@@ -280,7 +280,7 @@ public class Network extends NetworkSimplex implements MutableNetwork { private 
 		companion.restore(this);
 
 		if (SHOW_CHANGES) {
-			System.err.println("After restore: " + companion.arc);
+			logger.error("After restore: " + companion.arc);
 		}
 
 		// at upper bound

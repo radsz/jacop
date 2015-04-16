@@ -1391,12 +1391,11 @@ public class MUCA extends ExampleFD { private static Logger logger = LoggerFacto
 
 		}
 		catch(FileNotFoundException ex) {
-			System.err.println("You need to run this program in a directory that contains the required file.");
-			System.err.println(ex);
+			logger.error("You need to run this program in a directory that contains the required file.", ex);
 			System.exit(-1);
 		}
 		catch(IOException ex) {
-			System.err.println(ex);
+            logger.error("error", ex);
 		}
 
 		logger.info(""+this.maxCost);

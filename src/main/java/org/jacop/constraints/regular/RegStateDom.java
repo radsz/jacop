@@ -100,7 +100,7 @@ public class RegStateDom extends RegState { private static Logger logger = Logge
     	}
 
     	if (debugAll)
-    		System.err.println("State q_"+level+id+": Successors on position " + pos + " is already removed");
+    		logger.error("State q_"+level+id+": Successors on position " + pos + " is already removed");
 
     	assert false;
 

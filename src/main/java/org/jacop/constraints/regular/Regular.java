@@ -1343,11 +1343,11 @@ public class Regular extends Constraint { private static Logger logger = LoggerF
 			fs.flush();
 			fs.close();
 		} catch (FileNotFoundException e) {
-			e.printStackTrace();
+			logger.error("error", e);
 		} catch (NumberFormatException e) {
-			e.printStackTrace();
+			logger.error("error", e);
 		} catch (IOException e) {
-			e.printStackTrace();
+			logger.error("error", e);
 		}
 	}
 
@@ -1374,11 +1374,11 @@ public class Regular extends Constraint { private static Logger logger = LoggerF
 			fs.flush();
 			fs.close();
 		} catch (FileNotFoundException e) {
-			e.printStackTrace();
+			logger.error("error", e);
 		} catch (NumberFormatException e) {
-			e.printStackTrace();
+			logger.error("error", e);
 		} catch (IOException e) {
-			e.printStackTrace();
+			logger.error("error", e);
 		}
 	}
 

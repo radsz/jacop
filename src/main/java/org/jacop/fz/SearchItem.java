@@ -147,7 +147,7 @@ public class SearchItem implements ParserTreeConstants { private static Logger l
 		    }
 		}
 		explore = "complete";
-		System.err.println("Warning: not recognized search exploration type; use \"complete\"");
+		logger.error("Warning: not recognized search exploration type; use \"complete\"");
 	    }
 	    else if  (expr4.getIdent().equals("lds")) {
 		explore = "lds";
@@ -161,10 +161,10 @@ public class SearchItem implements ParserTreeConstants { private static Logger l
 		    }
 		}
 		explore = "complete";
-		System.err.println("Warning: not recognized search exploration type; use \"complete\"");
+		logger.error("Warning: not recognized search exploration type; use \"complete\"");
 	    }
 	    else {
-		System.err.println("Error: not recognized search exploration type; execution aborted");
+		logger.error("Error: not recognized search exploration type; execution aborted");
 		System.exit(0);
 	    }
 	}
@@ -185,7 +185,7 @@ public class SearchItem implements ParserTreeConstants { private static Logger l
 	    else if  (expr4.getIdent().equals("credit")) {
 		// 		explore = expr4.getIdent();
 		explore = "complete";
-		System.err.println("Warning: not recognized search exploration type; use \"complete\"");
+		logger.error("Warning: not recognized search exploration type; use \"complete\"");
 		// 		System.exit(0);
 	    }
 	    else if  (expr4.getIdent().equals("lds")){
@@ -200,10 +200,10 @@ public class SearchItem implements ParserTreeConstants { private static Logger l
 		    }
 		}
 		explore = "complete";
-		System.err.println("Warning: not recognized search exploration type; use \"complete\"");
+		logger.error("Warning: not recognized search exploration type; use \"complete\"");
 	    }
 	    else {
-		System.err.println("Error: not recognized search exploration type; execution aborted");
+		logger.error("Error: not recognized search exploration type; execution aborted");
 		System.exit(0);
 	    }
 	}
@@ -248,7 +248,7 @@ public class SearchItem implements ParserTreeConstants { private static Logger l
 		    }
 		}
 		explore = "complete";
-		System.err.println("Warning: not recognized search exploration type; use \"complete\"");
+		logger.error("Warning: not recognized search exploration type; use \"complete\"");
 	    }
 	    else if  (expr4.getIdent().equals("lds")) {
 		explore = "lds";
@@ -262,10 +262,10 @@ public class SearchItem implements ParserTreeConstants { private static Logger l
 		    }
 		}
 		explore = "complete";
-		System.err.println("Warning: not recognized search exploration type; use \"complete\"");
+		logger.error("Warning: not recognized search exploration type; use \"complete\"");
 	    }
 	    else {
-		System.err.println("Error: not recognized search exploration type; execution aborted");
+		logger.error("Error: not recognized search exploration type; execution aborted");
 		System.exit(0);
 	    }
 
@@ -302,7 +302,7 @@ public class SearchItem implements ParserTreeConstants { private static Logger l
 	else if (search_type.equals("set_search"))
 	    return getSetSelect();
 	else {
-	    System.err.println("Error: not recognized search type \""+ search_type+"\";");
+	    logger.error("Error: not recognized search type \""+ search_type+"\";");
 	    System.exit(0);
 	    return null;
 	}
@@ -366,7 +366,7 @@ public class SearchItem implements ParserTreeConstants { private static Logger l
 	    }
 	}
 	else {
-	    System.err.println("Wrong parameters for float_search. Only indomain_split or indomain_reverse_split are allowed.");
+	    logger.error("Wrong parameters for float_search. Only indomain_split or indomain_reverse_split are allowed.");
 	    System.exit(0);
 	    return null;
 	}
@@ -399,7 +399,7 @@ public class SearchItem implements ParserTreeConstants { private static Logger l
 // 	else if (indomain.equals("indomain_random"))
 // 	    return new IndomainSetRandom();
 	else
-	    System.err.println("Warning: Not implemented indomain method \""+
+	    logger.error("Warning: Not implemented indomain method \""+
 			       indomain +"\"; used indomain_min");
 	return new IndomainSetMin<SetVar>();
     }
@@ -420,7 +420,7 @@ public class SearchItem implements ParserTreeConstants { private static Logger l
 	else if (indomain.equals("indomain_random"))
 	    return new IndomainRandom();
 	else
-	    System.err.println("Warning: Not implemented indomain method \""+
+	    logger.error("Warning: Not implemented indomain method \""+
 			       indomain +"\"; used indomain_min");
 	return new IndomainMin();
     }
@@ -461,7 +461,7 @@ public class SearchItem implements ParserTreeConstants { private static Logger l
 	    return new WeightedDegree();
 	}
 	else
-	    System.err.println("Warning: Not implemented variable selection heuristic \""+
+	    logger.error("Warning: Not implemented variable selection heuristic \""+
 			       var_selection_heuristic +"\"; used input_order");
 
 	return null; // input_order
@@ -502,7 +502,7 @@ public class SearchItem implements ParserTreeConstants { private static Logger l
 	//     return new WeightedDegree();
 	// }
 	else
-	    System.err.println("Warning: Not implemented variable selection heuristic \""+
+	    logger.error("Warning: Not implemented variable selection heuristic \""+
 			       var_selection_heuristic +"\"; used input_order");
 
 	return null; // input_order
@@ -536,7 +536,7 @@ public class SearchItem implements ParserTreeConstants { private static Logger l
 	// 	else if (var_selection_heuristic.equals("max_regret"))
 	// 	    return new MaxRegret();
 	else
-	    System.err.println("Warning: Not implemented variable selection heuristic \""+
+	    logger.error("Warning: Not implemented variable selection heuristic \""+
 			       var_selection_heuristic +"\"; used input_order");
 
 	return null; // input_order
@@ -558,7 +558,7 @@ public class SearchItem implements ParserTreeConstants { private static Logger l
 		return dictionary.getVariableArray(node.getIdent())[node.getInt()];
 	}
 	else {
-	    System.err.println("Wrong parameter " + node);
+	    logger.error("Wrong parameter " + node);
 	    System.exit(0);
 	    return new IntVar(store);
 	}
@@ -580,7 +580,7 @@ public class SearchItem implements ParserTreeConstants { private static Logger l
 		return dictionary.getVariableFloatArray(node.getIdent())[node.getInt()];
 	}
 	else {
-	    System.err.println("Wrong parameter " + node);
+	    logger.error("Wrong parameter " + node);
 	    System.exit(0);
 	    return new FloatVar(store);
 	}
@@ -601,13 +601,13 @@ public class SearchItem implements ParserTreeConstants { private static Logger l
 	    if (((ASTScalarFlatExpr)node).getType() == 2) // ident
 		return dictionary.getVariableArray(((ASTScalarFlatExpr)node).getIdent());
 	    else {
-		System.err.println("Wrong type of Variable array; compilation aborted.");
+		logger.error("Wrong type of Variable array; compilation aborted.");
 		System.exit(0);
 		return new IntVar[] {};
 	    }
 	}
 	else {
-	    System.err.println("Wrong type of Variable array; compilation aborted.");
+	    logger.error("Wrong type of Variable array; compilation aborted.");
 	    System.exit(0);
 	    return new IntVar[] {};
 	}
@@ -628,13 +628,13 @@ public class SearchItem implements ParserTreeConstants { private static Logger l
 	    if (((ASTScalarFlatExpr)node).getType() == 2) // ident
 		return dictionary.getVariableFloatArray(((ASTScalarFlatExpr)node).getIdent());
 	    else {
-		System.err.println("Wrong type of Variable array; compilation aborted.");
+		logger.error("Wrong type of Variable array; compilation aborted.");
 		System.exit(0);
 		return new FloatVar[] {};
 	    }
 	}
 	else {
-	    System.err.println("Wrong type of Variable array; compilation aborted.");
+	    logger.error("Wrong type of Variable array; compilation aborted.");
 	    System.exit(0);
 	    return new FloatVar[] {};
 	}
@@ -647,7 +647,7 @@ public class SearchItem implements ParserTreeConstants { private static Logger l
 	else if (node.getType() == 3) // array access
 	    return dictionary.getSetVariableArray(node.getIdent())[node.getInt()];
 	else {
-	    System.err.println("Wrong parameter on list of search set varibales" + node);
+	    logger.error("Wrong parameter on list of search set varibales" + node);
 	    System.exit(0);
 	    // FIXME, why not return null?
 	    return new SetVar(store);
@@ -669,13 +669,13 @@ public class SearchItem implements ParserTreeConstants { private static Logger l
 	    if (((ASTScalarFlatExpr)node).getType() == 2) // ident
 		return dictionary.getSetVariableArray(((ASTScalarFlatExpr)node).getIdent());
 	    else {
-		System.err.println("Wrong type of Variable array; compilation aborted.");
+		logger.error("Wrong type of Variable array; compilation aborted.");
 		System.exit(0);
 		return new SetVar[] {};
 	    }
 	}
 	else {
-	    System.err.println("Wrong type of Variable array; compilation aborted.");
+	    logger.error("Wrong type of Variable array; compilation aborted.");
 	    System.exit(0);
 	    return new SetVar[] {};
 	}

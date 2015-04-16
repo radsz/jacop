@@ -138,7 +138,7 @@ public class NetworkFlow extends Constraint { private static Logger logger = Log
 
 		if (costVariable == null) {
 			costVariable = new IntVar(store, "Cost", 0, 0);
-			System.err.println("WARNING: No cost variable was set, using zero cost.");
+			logger.error("WARNING: No cost variable was set, using zero cost.");
 		}
 
 		network.initialize(store);

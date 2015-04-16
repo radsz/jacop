@@ -327,7 +327,7 @@ public class CrossWord extends ExampleFD { private static Logger logger = Logger
 
     		}
     		catch (IOException e) {
-    			logger.info(e.toString());
+    			logger.error("error", e);
     		}
 
     		logger.info("There are " + wordCount + " words of size " + wordSize);
