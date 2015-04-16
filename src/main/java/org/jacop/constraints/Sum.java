@@ -1,9 +1,9 @@
 /**
- *  Sum.java 
+ *  Sum.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,23 +31,24 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Sum constraint implements the summation over several Variable's . It provides
  * the sum from all Variable's on the list.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  */
 
-public class Sum extends Constraint {
+public class Sum extends Constraint { private static Logger logger = LoggerFactory.getLogger(Sum.class);
 
 	static int counter = 1;
 
@@ -57,7 +58,7 @@ public class Sum extends Constraint {
 	public IntVar list[];
 
 	/**
-	 * It specifies variable sum to store the overall sum of the variables being summed up. 
+	 * It specifies variable sum to store the overall sum of the variables being summed up.
 	 */
 	public IntVar sum;
 
@@ -65,14 +66,14 @@ public class Sum extends Constraint {
 	 * The sum of grounded variables.
 	 */
 	private TimeStamp<Integer> sumGrounded;
-	
+
 	/**
 	 * The position for the next grounded variable.
 	 */
-	private TimeStamp<Integer> nextGroundedPosition;	
+	private TimeStamp<Integer> nextGroundedPosition;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"list", "sum"};
@@ -83,21 +84,21 @@ public class Sum extends Constraint {
 	 * @param sum
 	 */
 	public Sum(IntVar[] list, IntVar sum) {
-		
+
 		assert (list != null) : "List of variables is null";
 		assert (sum != null) : "Sum variable is null";
-		
+
 		for (int i = 0; i < list.length; i++)
 			assert (list[i] != null) : i + "-th element in list is null";
-			
+
 		queueIndex = 1;
 		numberId = counter++;
-		
+
 		this.sum = sum;
 		this.list = new IntVar[list.length];
-		
+
 		System.arraycopy(list, 0, this.list, 0, list.length);
-		numberArgs += list.length;		
+		numberArgs += list.length;
 
 		checkForOverflow();
 	}
@@ -111,7 +112,7 @@ public class Sum extends Constraint {
 	public Sum(ArrayList<? extends IntVar> list, IntVar sum) {
 
 		this(list.toArray(new IntVar[list.size()]), sum);
-		
+
 	}
 
 
@@ -130,45 +131,45 @@ public class Sum extends Constraint {
 
 	@Override
 	public void consistency(Store store) {
-		
+
 
 		do {
 
 			store.propagationHasOccurred = false;
-			
+
 			int pointer = nextGroundedPosition.value();
 
 			int lMin = sumGrounded.value();
 			int lMax = lMin;
-			
+
 			int sumJustGrounded = 0;
 
 			for (int i = pointer; i < list.length; i++) {
 				IntDomain currentDomain = list[i].domain;
-				
+
 				if (currentDomain.singleton()) {
-					
+
 					if (pointer < i) {
 						IntVar grounded = list[i];
 						list[i] = list[pointer];
 						list[pointer] = grounded;
 					}
-				
+
 					pointer++;
 					sumJustGrounded += currentDomain.min();
 					continue;
 				}
-				
+
 				lMin += currentDomain.min();
 				lMax += currentDomain.max();
 			}
 
 			nextGroundedPosition.update(pointer);
 			sumGrounded.update( sumGrounded.value() + sumJustGrounded );
-			
+
 			lMin += sumJustGrounded;
 			lMax += sumJustGrounded;
-			
+
 			boolean needAdaptMin = false;
 			boolean needAdaptMax = false;
 
@@ -181,7 +182,7 @@ public class Sum extends Constraint {
 			sum.domain.in(store.level, sum, lMin, lMax);
 
 			store.propagationHasOccurred = false;
-			
+
 			int min = sum.min() - lMax;
 			int max = sum.max() - lMin;
 
@@ -204,7 +205,7 @@ public class Sum extends Constraint {
 				}
 
 		} while (store.propagationHasOccurred);
-		
+
 	}
 
 
@@ -226,13 +227,13 @@ public class Sum extends Constraint {
 
 		sumGrounded = new TimeStamp<Integer>(store, 0);
 		nextGroundedPosition = new TimeStamp<Integer>(store, 0);
-		
+
 		sum.putModelConstraint(this, getConsistencyPruningEvent(sum));
-		
+
 		for (int i = 0; i < list.length; i++) {
 			list[i].putModelConstraint(this, getConsistencyPruningEvent(list[i]));
 		}
-		
+
 		store.addChanged(this);
 		store.countConstraint();
 	}
@@ -247,9 +248,9 @@ public class Sum extends Constraint {
 	@Override
 	public boolean satisfied() {
 		boolean sat = sum.singleton();
-		
+
 		int i = list.length - 1, sumAll = 0;
-		
+
 		while (sat && i >= 0) {
 			sat = list[i].singleton();
 			i--;
@@ -278,7 +279,7 @@ public class Sum extends Constraint {
 
 	@Override
 	public String toString() {
-		
+
 		StringBuffer result = new StringBuffer( id() );
 		result.append(" : sum( [");
 
@@ -288,13 +289,13 @@ public class Sum extends Constraint {
 				result.append(", ");
 		}
 		result.append("], ").append(sum).append(" )");
-		
+
 		return result.toString();
 	}
-		
+
 	@Override
 	public Constraint getGuideConstraint() {
-	
+
 		IntVar proposedVariable = (IntVar)getGuideVariable();
 		if (proposedVariable != null)
 			return new XeqC(proposedVariable, guideValue);
@@ -304,15 +305,15 @@ public class Sum extends Constraint {
 
 	@Override
 	public int getGuideValue() {
-		return guideValue; 
+		return guideValue;
 	}
 
 	int guideValue = 0;
-	
-	
+
+
 	@Override
 	public Var getGuideVariable() {
-		
+
 		int regret = 1;
 		Var proposedVariable = null;
 
@@ -324,7 +325,7 @@ public class Sum extends Constraint {
 				continue;
 
 			int currentRegret = listDom.nextValue(listDom.min()) - listDom.min();
-			
+
 			if (currentRegret > regret) {
 				regret = currentRegret;
 				proposedVariable = v;
@@ -332,17 +333,17 @@ public class Sum extends Constraint {
 			}
 
 			currentRegret = listDom.max() - listDom.previousValue(listDom.max());
-			
+
 			if (currentRegret > regret) {
 				regret = currentRegret;
 				proposedVariable = v;
 				guideValue = listDom.max();
 			}
-			
+
 		}
 
 		return proposedVariable;
-		
+
 	}
 
 
@@ -357,5 +358,5 @@ public class Sum extends Constraint {
 			for (Var v : list) v.weight++;
 		}
 	}
-	
+
 }

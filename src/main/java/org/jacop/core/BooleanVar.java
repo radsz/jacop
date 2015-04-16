@@ -1,9 +1,9 @@
 /**
- *  BooleanVariable.java 
+ *  BooleanVariable.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,18 +31,19 @@
 
 package org.jacop.core;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Constraint;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Defines a variable and related operations on it.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  */
 
-public class BooleanVar extends IntVar {
+public class BooleanVar extends IntVar { private static Logger logger = LoggerFactory.getLogger(BooleanVar.class);
 
 	/**
 	 * No parameter, explicit, empty constructor for subclasses.
@@ -62,13 +63,13 @@ public class BooleanVar extends IntVar {
 	}
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
-	 */		
+	 */
 	public static String[] xmlAttributes = {"store", "id", "min", "max"};
 
 	/**
-	 * Boolean variable constructor. 
+	 * Boolean variable constructor.
 	 * @param store It specifies the store in which boolean variable should be created.
 	 * @param name It specifies the id of the variable.
 	 */
@@ -78,10 +79,10 @@ public class BooleanVar extends IntVar {
 	}
 
 	/**
-	 * Boolean variable constructor. 
+	 * Boolean variable constructor.
 	 * @param store It specifies the store in which boolean variable should be created.
 	 * @param name It specifies the id of the variable.
-	 * @param min it specifies the minimum value, which must be greater or equal 0.  
+	 * @param min it specifies the minimum value, which must be greater or equal 0.
 	 * @param max it specifies the maximum value, which must be smaller or equal 1.
 	 */
 	public BooleanVar(Store store, String name, int min, int max) {
@@ -89,8 +90,8 @@ public class BooleanVar extends IntVar {
 	}
 
 	/**
-	 * It creates a Boolean variable. 
-	 * 
+	 * It creates a Boolean variable.
+	 *
 	 * @param store It specifies the store in which boolean variable should be created.
 	 * @param dom It specifies the domain of the boolean variable.
 	 */
@@ -99,8 +100,8 @@ public class BooleanVar extends IntVar {
 	}
 
 	/**
-	 * It creates a Boolean variable. 
-	 * 
+	 * It creates a Boolean variable.
+	 *
 	 * @param store the store in which the variable is being created.
 	 * @param name the name of the created variable.
 	 * @param dom the domain specifying the domain of the variable.
@@ -121,7 +122,7 @@ public class BooleanVar extends IntVar {
 		domain = dom;
 		domain.stamp = 0;
 		this.store = store;
-		// the return code is ignored as the variable is not stored within store.vars; 
+		// the return code is ignored as the variable is not stored within store.vars;
 		store.putVariable(this);
 
 		if (store.pointer4GroundedBooleanVariables == null) {
@@ -140,7 +141,7 @@ public class BooleanVar extends IntVar {
 	 * makes it ground.
 	 * @param constraint - constraint being attached to a variable.
 	 * @param pruningEvent - Only NONE and GROUND events are considered. By default GROUND event is used.
-	 * 
+	 *
 	 */
 	@Override
 	public void putModelConstraint(Constraint constraint, int pruningEvent) {
@@ -161,7 +162,7 @@ public class BooleanVar extends IntVar {
 	/**
 	 * It registers constraint with current variable, so anytime this variable
 	 * is changed the constraint is reevaluated.
-	 * @param constraint It specifies the constraint which is being added. 
+	 * @param constraint It specifies the constraint which is being added.
 	 */
 	@Override
 	public void putSearchConstraint(Constraint constraint) {
@@ -229,19 +230,19 @@ public class BooleanVar extends IntVar {
 
 	/**
 	 * @return it returns the string description of the boolean variable.
-	 * 
+	 *
 	 */
 	@Override
 	public String toString() {
 		if (domain.singleton())
 			return id + "=" + domain;
 		else
-			return id + "::" + domain;		
+			return id + "::" + domain;
 	}
 
 	/**
-	 * @return It returns elaborate string description of the boolean variable and all the components of its domain. 
-	 * 
+	 * @return It returns elaborate string description of the boolean variable and all the components of its domain.
+	 *
 	 */
 	@Override
 	public String toStringFull() {
@@ -252,13 +253,13 @@ public class BooleanVar extends IntVar {
 	 * It is possible to add the domain of variable. It should be used with
 	 * care, only right after variable was created and before it is used in
 	 * constraints or search.
-	 * @param dom the added domain. 
+	 * @param dom the added domain.
 	 */
 
 	public void addDom(Domain dom) {
-		
+
 		domain.addDom((IntDomain)dom);
-		
+
 	}
 
 	/**
@@ -343,11 +344,11 @@ public class BooleanVar extends IntVar {
 	 * @param event the type of the change (GROUND, BOUND, ANY).
 	 */
 	public void domainHasChanged(int event) {
-				
-		assert ((event == IntDomain.ANY && !singleton()) || 
+
+		assert ((event == IntDomain.ANY && !singleton()) ||
 				(event == IntDomain.BOUND && !singleton()) ||
 				(event == IntDomain.GROUND && singleton())) : "Wrong event generated";
-		
+
 		store.addChanged(this, event, Integer.MIN_VALUE);
 
 	}
@@ -355,5 +356,5 @@ public class BooleanVar extends IntVar {
 	public void putConstraint(Constraint c) {
 		putModelConstraint(c, IntDomain.ANY);
 	}
-	
+
 }

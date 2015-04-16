@@ -1,9 +1,9 @@
 /**
- *  DCT.java 
+ *  DCT.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,42 +31,44 @@
 
 package org.jacop.examples.fd.filters;
 
-import java.util.ArrayList;
+import java.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * It specifies DCT benchmark.
- * 
+ *
  * Source:
- * 
+ *
  * Nestor, J.A.; Krishnamoorthy, G.; "SALSA: a new approach to scheduling with
  * timing constraints" IEEE Transactions on Computer-Aided Design of Integrated
  * Circuits and Systems, Volume 12, Issue 8, Aug. 1993 Page(s):1107 - 1122
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class DCT extends Filter {
+public class DCT extends Filter { private static Logger logger = LoggerFactory.getLogger(DCT.class);
 
 	/**
-	 * It constructs a DCT filter problem with default delays for 
+	 * It constructs a DCT filter problem with default delays for
 	 */
 	public DCT() {
 		this(1, 2);
 	}
 
 	/**
-	 * It constructs a DCT filter with specific delays for 
+	 * It constructs a DCT filter with specific delays for
 	 * addition and multiplication operation.
-	 * 
+	 *
 	 * @param addDel delay of the addition operation.
 	 * @param mulDel delay of the multiplication operation.
 	 */
 	public DCT(int addDel, int mulDel) {
-		
+
 		this.addDel = addDel;
 		this.mulDel = mulDel;
-		
+
 		name = "DCT";
 
 		int dependencies[][] = { { 0, 8 }, { 0, 16 }, { 0, 17 }, { 1, 8 },
@@ -84,7 +86,7 @@ public class DCT extends Filter {
 				{ 38, 43 }, { 39, 43 } };
 
 		this.dependencies = dependencies;
-		
+
 		int ids[] = { addId, addId, addId, addId, addId, addId, addId, addId,
 				addId, addId, addId, addId, addId, addId, addId, addId, mulId,
 				mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId,
@@ -93,7 +95,7 @@ public class DCT extends Filter {
 				addId, addId, addId, addId };
 
 		this.ids = ids;
-		
+
 		int last[] = { 40, 41, 42, 43, 44, 45, 46, 47 };
 		this.last = last;
 	}

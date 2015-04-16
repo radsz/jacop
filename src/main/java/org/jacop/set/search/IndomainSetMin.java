@@ -1,9 +1,9 @@
 /**
- *  IndomainMinLUB.java 
+ *  IndomainMinLUB.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -33,17 +33,19 @@ package org.jacop.set.search;
 
 import org.jacop.search.Indomain;
 import org.jacop.set.core.SetVar;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * IndomainMin - implements enumeration method based on the selection of the
  * minimal value in the domain of variable
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  * @param <T> type of variable being used in search.
  */
 
-public class IndomainSetMin<T extends SetVar> implements Indomain<T> {
+public class IndomainSetMin<T extends SetVar> implements Indomain<T> { private static Logger logger = LoggerFactory.getLogger(IndomainSetMin.class);
 
 	/**
 	 * It creates Indomain heuristic, which will choose the minimal value
@@ -51,11 +53,11 @@ public class IndomainSetMin<T extends SetVar> implements Indomain<T> {
 	 */
 	public IndomainSetMin() {
 	}
-	
+
 	public int indomain(T var) {
-	
+
 		return var.domain.lub().subtract(var.domain.glb()).min();
-	
+
 	}
 
 }

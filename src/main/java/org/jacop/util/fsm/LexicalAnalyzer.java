@@ -1,9 +1,9 @@
 /**
- *  LexicalAnalyzer.java 
+ *  LexicalAnalyzer.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2008 Polina Maakeva and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,9 +31,7 @@
 
 package org.jacop.util.fsm;
 
-import java.io.IOException;
-import java.io.StreamTokenizer;
-import java.io.StringReader;
+import java.io.*;
 
 /**
  * @author Polina Maakeva and Radoslaw Szymanek
@@ -41,7 +39,7 @@ import java.io.StringReader;
  */
 
 class LexicalAnalyzer {
-	
+
     private StreamTokenizer input;
 
     // constants to identify the type of the last recognized token.
@@ -55,16 +53,16 @@ class LexicalAnalyzer {
     static final int RIGHT_PAREN = 7;
     static final int STAR = 8;
     static final int EOF = 9;
-    
+
     static final int Operator = 10;
     static final int Beginning = 11;
-    
+
     /**
      * Constructor creating a Lexical Analyzer.
      * @param in the StringReader providing the characters which are being analyzed.
      */
     LexicalAnalyzer(StringReader in) {
-    	
+
     	input = new StreamTokenizer(in);
         input.resetSyntax();
         input.eolIsSignificant(false);
@@ -75,8 +73,8 @@ class LexicalAnalyzer {
         input.ordinaryChar('(');
         input.ordinaryChar(')');
         input.quoteChar('"');
-    } 
-    
+    }
+
     /**
      * Return the string recognized as word token or the body of a
      * quoted string.
@@ -84,16 +82,16 @@ class LexicalAnalyzer {
     String getString() {
         return input.sval;
     }
-    
+
     /**
      * Return the type of the next token.  For word and quoted string
      * tokens, the string that the token represents can be fetched by
      * calling the getString method.
      */
     int nextToken() {
-    
+
     	int token;
-        
+
     	try {
             switch (input.nextToken()) {
               case StreamTokenizer.TT_EOF:
@@ -124,7 +122,7 @@ class LexicalAnalyzer {
         } catch (IOException e) {
             // Treat an IOException as an end of file
             token = EOF;
-        } 
+        }
         return token;
-    } 
-} 
+    }
+}

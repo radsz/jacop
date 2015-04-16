@@ -1,9 +1,9 @@
 /**
- *  PgteqQ.java 
+ *  PgteqQ.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,27 +31,25 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
+import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-
-import org.jacop.constraints.PrimitiveConstraint;
-
-import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Constraints P >= Q for floats
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class PgteqQ extends PrimitiveConstraint {
+public class PgteqQ extends PrimitiveConstraint { private static Logger logger = LoggerFactory.getLogger(PgteqQ.class);
 
 	static int idNumber = 1;
 
@@ -66,7 +64,7 @@ public class PgteqQ extends PrimitiveConstraint {
 	public FloatVar q;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"p", "q"};
@@ -77,16 +75,16 @@ public class PgteqQ extends PrimitiveConstraint {
 	 * @param q variable q.
 	 */
 	public PgteqQ(FloatVar p, FloatVar q) {
-		
+
 		assert (p != null) : "Variable p is null";
 		assert (q != null) : "Variable q is null";
 
 		numberId = idNumber++;
 		numberArgs = 1;
-		
+
 		this.p = p;
 		this.q = q;
-	
+
 	}
 
 	@Override
@@ -104,7 +102,7 @@ public class PgteqQ extends PrimitiveConstraint {
 
 	    p.domain.inMin(store.level, p, q.min());
 	    q.domain.inMax(store.level, q, p.max());
-	
+
 	}
 
 	@Override
@@ -158,7 +156,7 @@ public class PgteqQ extends PrimitiveConstraint {
 			return Domain.NONE;
 		}
 
-	
+
 	@Override
 	public int getNotConsistencyPruningEvent(Var var) {
 
@@ -195,5 +193,5 @@ public class PgteqQ extends PrimitiveConstraint {
 			q.weight++;
 		}
 	}
-	
+
 }

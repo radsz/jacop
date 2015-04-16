@@ -1,9 +1,9 @@
 /**
- *  Queens.java 
+ *  Queens.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,8 +31,7 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.Element;
 import org.jacop.constraints.Sum;
@@ -40,16 +39,19 @@ import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
- * It models the queens problem in different ways as well as applies 
+ *
+ * It models the queens problem in different ways as well as applies
  * different search methods.
- * 
+ *
  * @author Radoslaw Szymanek
  *
  */
-public class Queens extends ExampleFD {
+
+public class Queens extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(Queens.class);
 
 	// Place n queens on a chessboard of size nxn
 	// so none queen checks another queen
@@ -69,8 +71,8 @@ public class Queens extends ExampleFD {
 	/**
 	 * It specifies the size of chessboard to be used in the model.
 	 */
-	public int numberQ = 550;	
-	
+	public int numberQ = 550;
+
 	/**
 	 * This model uses only primitive constraints.
 	 */
@@ -124,17 +126,17 @@ public class Queens extends ExampleFD {
 			}
 
 	}
-	
-	
+
+
 	/**
 	 * This model uses dual model to solve Queens problems.
 	 */
 	public void modelChanneling() {
-		
+
 		// Creating constraint store
 		store = new Store();
 		vars = new ArrayList<IntVar>();
-		
+
 		// Global model
 
 		IntVar queens[] = new IntVar[numberQ];
@@ -143,7 +145,7 @@ public class Queens extends ExampleFD {
 			queens[i] = new IntVar(store, "Q" + (i + 1), 1, numberQ);
 			vars.add(queens[i]);
 		}
-		
+
 		store.impose(new Alldiff(queens));
 
 		IntVar[] diagonalUp = new IntVar[queens.length];
@@ -175,7 +177,7 @@ public class Queens extends ExampleFD {
 			queensRows[i] = new IntVar(store, "Qrows" + (i + 1), 1, numberQ);
 			vars.add(queensRows[i]);
 		}
-		
+
 		for (int i = 0; i < numberQ; i++)
 			values[i] = new IntVar(store, "val-" + (i + 1), i + 1, i + 1);
 
@@ -183,9 +185,9 @@ public class Queens extends ExampleFD {
 			store.impose(new Element(queensRows[i], queens, values[i]));
 
 	}
-	
 
-	
+
+
 	/**
 	 * It uses a model based on fields to model Queens problem (rather inefficient model).
 	 */
@@ -194,7 +196,7 @@ public class Queens extends ExampleFD {
 		// Creating constraint store
 		store = new Store();
 		vars = new ArrayList<IntVar>();
-		
+
 		IntVar one = new IntVar(store, "one", 1, 1);
 
 		IntVar fields[] = new IntVar[numberQ * numberQ];
@@ -205,7 +207,7 @@ public class Queens extends ExampleFD {
 						+ (j + 1), 0, 1);
 			vars.add(fields[i * numberQ + j]);
 			}
-		
+
 		IntVar row[] = new IntVar[numberQ];
 		IntVar firstRowPosition = new IntVar(store, "firstRowPosition", 0, numberQ);
 
@@ -297,14 +299,14 @@ public class Queens extends ExampleFD {
 		store.impose(new Sum(fields, queenNo));
 
 	}
-	
+
 	@Override
 	public void model() {
 
 		// Creating constraint store
 		store = new Store();
 		vars = new ArrayList<IntVar>();
-		
+
 		// I-th queen variable represents the placement
 		// of a queen in i-th column
 		// There are n columns so there are n variables
@@ -350,45 +352,45 @@ public class Queens extends ExampleFD {
 		store.impose(new Alldiff(diagonalDown));
 
 	}
-		
+
 	/**
 	 * It executes different models and search methods to solve Queens problem.
 	 * @param args first argument specifies the size of the chessboard.
 	 */
 	public static void main(String args[]) {
-		
+
 		Queens example = new Queens();
 
 		// It is possible to supply the program
 		// with the chessboard size
 		if (args.length != 0)
 			example.numberQ = new Integer(args[0]);
-		
-		example.model();
-		
-		if (example.searchSmallestMiddle())
-			System.out.println("Solution(s) found");		
-		
-	}	
 
-	
+		example.model();
+
+		if (example.searchSmallestMiddle())
+			logger.info("Solution(s) found");
+
+	}
+
+
 	/**
 	 * It executes different models and search methods to solve Queens problem.
 	 * @param args first argument specifies the size of the chessboard.
 	 */
 	public static void test(String args[]) {
-		
+
 		Queens example = new Queens();
 
 		// It is possible to supply the program
 		// with the chessboard size
 		if (args.length != 0)
 			example.numberQ = new Integer(args[0]);
-		
+
 		example.model();
-		
+
 		if (example.searchSmallestMiddle())
-			System.out.println("Solution(s) found");		
+			logger.info("Solution(s) found");
 
 		example = new Queens();
 
@@ -396,37 +398,37 @@ public class Queens extends ExampleFD {
 		// with the chessboard size
 		if (args.length != 0)
 			example.numberQ = new Integer(args[0]);
-		
+
 		example.modelBasic();
 
 		if (example.searchLDS(3))
-			System.out.println("Solution(s) found");
-		
+			logger.info("Solution(s) found");
+
 		example = new Queens();
 
 		// It is possible to supply the program
 		// with the chessboard size
 		if (args.length != 0)
 			example.numberQ = new Integer(args[0]);
-		
+
 		example.modelChanneling();
 
 		if (example.searchSmallestMiddle())
-			System.out.println("Solution(s) found");		
-		
-		
+			logger.info("Solution(s) found");
+
+
 		example = new Queens();
 
 		// It is possible to supply the program
 		// with the chessboard size
 		if (args.length != 0)
 			example.numberQ = new Integer(args[0]);
-		
+
 		example.modelFields();
 
 		if (example.search())
-			System.out.println("Solution(s) found");	
-		
-	}	
+			logger.info("Solution(s) found");
+
+	}
 
 }

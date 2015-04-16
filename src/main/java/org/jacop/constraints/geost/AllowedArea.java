@@ -1,9 +1,9 @@
 /**
- *  AllowedArea.java 
+ *  AllowedArea.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -30,12 +30,11 @@
  */
 package org.jacop.constraints.geost;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
@@ -43,50 +42,51 @@ import org.jacop.core.Var;
  * Constraint that represents a domain in which objects need to be contained
  *
  */
-public class AllowedArea extends InternalConstraint {
+
+public class AllowedArea extends InternalConstraint { private static Logger logger = LoggerFactory.getLogger(AllowedArea.class);
 
 	// TODO, What is the reason for using it? What are the limitation of using this solution?
 	private static final int half_max = ( Integer.MAX_VALUE - 1 ) / 2;
-		
+
 	final Geost geost;
-	
+
 	final int[] origin, length;
-	
+
 	/**
 	 * It constructs an internal Geost constraint that restricts an object
 	 * to be within an allowed area.
-	 * 
+	 *
 	 * @param geost the geost constraint for which the internal constraint is being created.
 	 * @param origin it specifies the origin of the area in which objects have to be placed.
 	 * @param length it specifies the length of the area in each dimension in which the objects have to be placed.
 	 */
 	public AllowedArea(Geost geost, int[] origin, int[] length) {
-		
+
 		this.geost = geost;
 		this.origin = origin;
 		this.length = length;
-			
+
 		assert (checkInvariants() == null) : checkInvariants();
-		
+
 	}
 
-	
+
 	/**
 	 * It checks that this constraint has consistent data structures.
-	 * 
+	 *
 	 * @return a string describing the consistency problem with data structures, null if no problem encountered.
 	 */
-	
+
 	public String checkInvariants(){
-	
+
 		if(this.origin.length != this.length.length){
 			return "dimension mismatch between origin and length array.";
 		}
-		
+
 		for(int i = 0; i < length.length; i++)
 			if(length[i] < 0)
 				return "negative length on dimension " + i;
-		
+
 		return null;
 	}
 
@@ -97,38 +97,38 @@ public class AllowedArea extends InternalConstraint {
 	}
 
 	@Override
-	public DBox isFeasible(Geost.SweepDirection min, 
+	public DBox isFeasible(Geost.SweepDirection min,
 						   LexicographicalOrder order,
-						   GeostObject o, 
-						   int currentShape, 
+						   GeostObject o,
+						   int currentShape,
 						   int[] c) {
-		
+
 		/*
-		 * TODO improve this implementation, which is slightly inefficient when c will 
+		 * TODO improve this implementation, which is slightly inefficient when c will
 		 * need to move next to the allowed area during a sweep. Indeed, this
 		 * will cause (at least) 2 steps to be used, but a box could be created
 		 * to skip it all in a single step.
 		 * This is possible because the sweep direction is provided by the order parameter
-		 * 
+		 *
 		 * current:
-		 * 
-		 *               |       
-		 *    ------     ------       
-		 *    |    |     |    | 
-		 *    |    |   x |    | 
-		 * - -------     ------ 
+		 *
+		 *               |
+		 *    ------     ------
+		 *    |    |     |    |
+		 *    |    |   x |    |
+		 * - -------     ------
 		 *  x |          |
-		 *  
+		 *
 		 *  better:
-		 *  
-		 *    |      
-		 *    ------        
-		 *    |    |  
-		 *    |    |  
-		 *    ------  
-		 *  x | 
+		 *
+		 *    |
+		 *    ------
+		 *    |    |
+		 *    |    |
+		 *    ------
+		 *  x |
 		 */
-		
+
 		/* we can use the bounding box in this case, since the allowed area
 		 * is a non complex box
 		 */
@@ -141,15 +141,15 @@ public class AllowedArea extends InternalConstraint {
 		int inCount = 0;
 
 		for(int i = 0; i < dimension; i++) {
-			if(c[i] + constrainedBox.origin[i] < origin[i]){ 
+			if(c[i] + constrainedBox.origin[i] < origin[i]){
 				//beginning of other box is before beginning of area
 				//point is before area, outbox covers all up to the area limit
-				outbox.origin[i] = - half_max +  origin[i] - constrainedBox.origin[i]; 
+				outbox.origin[i] = - half_max +  origin[i] - constrainedBox.origin[i];
 				/*
 				* this +1 is needed because of the definition of an outbox: the lexicographcally smallest
 				* point of the outbox is not feasible (but the largest is)
 				*/
-				
+
 				outbox.length[i] = half_max;
 			} else if(c[i] + constrainedBox.length[i] + constrainedBox.origin[i] <= origin[i] + length[i] ){
 				//point is inside area
@@ -166,7 +166,7 @@ public class AllowedArea extends InternalConstraint {
 				outbox.length[i] = half_max;
 			}
 		}
-		
+
 		//the allowed area is the same at any time, thus the box covers the whole space in that dimension
 		outbox.origin[dimension] = - half_max;
 		outbox.length[dimension] = Integer.MAX_VALUE;
@@ -178,16 +178,16 @@ public class AllowedArea extends InternalConstraint {
 			//point is outside for some of the domains, return the generated box
 			return outbox;
 		}
-		
+
 	}
 
 	@Override
 	public int[] AbsInfeasible(Geost.SweepDirection minlex) {
-		
+
 		//the point is at either extremum of the space, depending on the minlex parameter
 		//avoid allocating space
 		DBox dataBox = DBox.getAllocatedInstance(origin.length+1);
-		
+
 		switch (minlex){
 		case PRUNEMAX:
 			Arrays.fill(dataBox.origin, IntDomain.MaxInt);
@@ -196,7 +196,7 @@ public class AllowedArea extends InternalConstraint {
 			Arrays.fill(dataBox.origin, IntDomain.MinInt);
 			break;
 		}
-		
+
 		return dataBox.origin;
 	}
 
@@ -207,12 +207,12 @@ public class AllowedArea extends InternalConstraint {
 
 	@Override
 	public String toString(){
-		
+
 		StringBuffer result = new StringBuffer();
-		
+
 		result.append("AllowedArea(").append( Arrays.toString(origin) );
 		result.append(", ").append( Arrays.toString(length) ).append( ")" );
-		
+
 		return result.toString();
 	}
 
@@ -220,11 +220,11 @@ public class AllowedArea extends InternalConstraint {
 	public boolean isStatic() {
 		return true;
 	}
-	
+
 	@Override
 	public boolean isSingleUse() {
 		return true;
 	}
-	
-	
+
+
 }

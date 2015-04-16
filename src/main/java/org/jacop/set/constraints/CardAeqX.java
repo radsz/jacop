@@ -1,9 +1,9 @@
 /**
- *  CardAeqX.java 
+ *  CardAeqX.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,8 +31,7 @@
 
 package org.jacop.set.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -40,15 +39,17 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The set cardinality constraint.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 3.1
  */
 
-public class CardAeqX extends Constraint {
+public class CardAeqX extends Constraint { private static Logger logger = LoggerFactory.getLogger(CardAeqX.class);
 
 	static int idNumber = 1;
 
@@ -63,20 +64,20 @@ public class CardAeqX extends Constraint {
 	public IntVar cardinality;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"a", "cardinality"};
 
 	/**
-	 * It constructs a cardinality constraint to restrict the number of elements 
+	 * It constructs a cardinality constraint to restrict the number of elements
 	 * in the set assigned to set variable a.
 	 *
 	 * @param a variable that is restricted to have the cardinality c.
 	 * @param cardinality the variable specifying the possible values for cardinality of set variable a.
 	 */
 	public CardAeqX(SetVar a, IntVar cardinality) {
-		
+
 		assert (a != null) : "Variable a is null";
 		assert (cardinality != null) : "Cardinality value is null";
 
@@ -84,7 +85,7 @@ public class CardAeqX extends Constraint {
 		this.numberArgs = 1;
 		this.a = a;
 		this.cardinality = cardinality;
-		
+
 	}
 
 	@Override
@@ -102,20 +103,20 @@ public class CardAeqX extends Constraint {
 	public void consistency(Store store) {
 
 		/**
-		 * It computes the consistency of the constraint. 
-		 * 
+		 * It computes the consistency of the constraint.
+		 *
 		 * #A = B
-		 * 
-		 * Cardinality of set variable A is equal to int variable B. 
-		 * 
+		 *
+		 * Cardinality of set variable A is equal to int variable B.
+		 *
 		 * B.in(#glbA, #lubA).
-		 * 
+		 *
 		 * If #glbA is already equal to maximum allowed cardinality then set is specified by glbA.
 		 * if (#glbA == B.max()) then A = glbA
-		 * If #lubA is already equal to minimum allowed cardinality then set is specified by lubA. 
+		 * If #lubA is already equal to minimum allowed cardinality then set is specified by lubA.
 		 * if (#lubA == B.min()) then A = lubA
-		 * 
-		 * 
+		 *
+		 *
 		 */
 
 		SetDomain aDom = a.domain;
@@ -124,18 +125,18 @@ public class CardAeqX extends Constraint {
 		//T12
 		int min = Math.max(aDom.glb().getSize(), card.min());
 		int max = Math.min(aDom.lub().getSize(), card.max());
-		
+
 		if (min > max)
 	    	throw Store.failException;
 
-		cardinality.domain.in(store.level, cardinality, min, max); 
+		cardinality.domain.in(store.level, cardinality, min, max);
 
 		//T13 else //T14
 		if(aDom.glb().getSize() == card.max())
 			a.domain.inLUB(store.level, a, aDom.glb());
 		else if(aDom.lub().getSize() == card.min())
 			a.domain.inGLB(store.level, a, aDom.lub());
-		
+
 	}
 
 	@Override
@@ -147,27 +148,27 @@ public class CardAeqX extends Constraint {
 			if (possibleEvent != null)
 				return possibleEvent;
 		}
-		
+
 		if (var == cardinality)
 			return IntDomain.ANY;
-		else	
-			return SetDomain.ANY;		
+		else
+			return SetDomain.ANY;
 	}
 
 
 	@Override
 	public String id() {
-		
+
 		if (id != null)
 			return id;
 		else
 			return this.getClass().getSimpleName() + numberId;
-		
+
 	}
 
 	@Override
 	public void impose(Store store) {
-		
+
 		a.putModelConstraint(this,getConsistencyPruningEvent(a));
 		cardinality.putModelConstraint(this,getConsistencyPruningEvent(cardinality));
 
@@ -199,6 +200,6 @@ public class CardAeqX extends Constraint {
 			a.weight++;
 			cardinality.weight++;
 		}
-	}	
+	}
 
 }

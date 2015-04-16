@@ -1,9 +1,9 @@
 /**
- *  WhoKilledAgatha.java 
+ *  WhoKilledAgatha.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,8 +31,7 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Eq;
 import org.jacop.constraints.IfThen;
 import org.jacop.constraints.Sum;
@@ -47,43 +46,45 @@ import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.SmallestDomain;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
-*
-*   Who killed agatha? (The Dreadsbury Mansion Murder Mystery).
+ *
+ *   Who killed agatha? (The Dreadsbury Mansion Murder Mystery).
 
-*   This is a standard benchmark for theorem proving.  
-*   http://www.lsv.ens-cachan.fr/~goubault/H1.dist/H1.1/Doc/h1003.html
-*   """ 
-*   Someone in Dreadsbury Mansion killed Aunt Agatha. 
-*   Agatha, the butler, and Charles live in Dreadsbury Mansion, and 
-*   are the only ones to live there. A killer always hates, and is no 
-*   richer than his victim. Charles hates noone that Agatha hates. Agatha 
-*   hates everybody except the butler. The butler hates everyone not richer 
-*   than Aunt Agatha. The butler hates everyone whom Agatha hates. 
-*   Noone hates everyone. Who killed Agatha? 
-*   """
+ *   This is a standard benchmark for theorem proving.
+ *   http://www.lsv.ens-cachan.fr/~goubault/H1.dist/H1.1/Doc/h1003.html
+ *   """
+ *   Someone in Dreadsbury Mansion killed Aunt Agatha.
+ *   Agatha, the butler, and Charles live in Dreadsbury Mansion, and
+ *   are the only ones to live there. A killer always hates, and is no
+ *   richer than his victim. Charles hates noone that Agatha hates. Agatha
+ *   hates everybody except the butler. The butler hates everyone not richer
+ *   than Aunt Agatha. The butler hates everyone whom Agatha hates.
+ *   Noone hates everyone. Who killed Agatha?
+ *   """
 
-*   Originally from 
-*   F. J. Pelletier: Seventy-five problems for testing automatic theorem provers. Journal of Automated Reasoning, 2: 191â€“216, 1986.
+ *   Originally from
+ *   F. J. Pelletier: Seventy-five problems for testing automatic theorem provers. Journal of Automated Reasoning, 2: 191â€“216, 1986.
 
-*   Compare with the following models:
-*   - MiniZinc: http://www.hakank.org/minizinc/who_killed_agatha.mzn
-*   - Comet: http://www.hakank.org/comet/who_killed_agatha.mzn
-*   - Gecode: http://www.hakank.org/gecode/who_killed_agatha.cpp
+ *   Compare with the following models:
+ *   - MiniZinc: http://www.hakank.org/minizinc/who_killed_agatha.mzn
+ *   - Comet: http://www.hakank.org/comet/who_killed_agatha.mzn
+ *   - Gecode: http://www.hakank.org/gecode/who_killed_agatha.cpp
 
-* 
-* This Choco model was created by Hakan Kjellerstrand (hakank@bonetmail.com)
-* Also, see my Choco page: http://www.hakank.org/choco/ 
+ *
+ * This Choco model was created by Hakan Kjellerstrand (hakank@bonetmail.com)
+ * Also, see my Choco page: http://www.hakank.org/choco/
 
-*
-* This JaCoP model was created by Hakan Kjellerstrand (hakank@bonetmail.com)
-* http://www.hakank.org/JaCoP/ .
-*
-*	@author Hakan Kjellerstrand and Radoslaw Szymanek
-*/
+ *
+ * This JaCoP model was created by Hakan Kjellerstrand (hakank@bonetmail.com)
+ * http://www.hakank.org/JaCoP/ .
+ *
+ *        @author Hakan Kjellerstrand and Radoslaw Szymanek
+ */
 
-public class WhoKilledAgatha extends ExampleFD {
+public class WhoKilledAgatha extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(WhoKilledAgatha.class);
 
     public void model() {
 
@@ -109,8 +110,8 @@ public class WhoKilledAgatha extends ExampleFD {
         vars = new ArrayList<IntVar>();
 
         // """
-        // Agatha, the butler, and Charles live in Dreadsbury Mansion, and 
-        // are the only ones to live there. 
+        // Agatha, the butler, and Charles live in Dreadsbury Mansion, and
+        // are the only ones to live there.
         // """
 
         // "A killer always hates, and is no richer than his victim."
@@ -129,15 +130,15 @@ public class WhoKilledAgatha extends ExampleFD {
                                     )
                          );
         }
-        
-        
-        // define the concept of richer: 
+
+
+        // define the concept of richer:
         //   a) no one is richer than him-/herself
         for(int i = 0; i < n; i++) {
             store.impose(new XeqC(richer[i][i], 0));
         }
-        
-        // (contd...) 
+
+        // (contd...)
         //   b) if i is richer than j then j is not richer than i
         for(int i = 0; i < n; i++) {
             for(int j = 0; j < n; j++) {
@@ -154,15 +155,15 @@ public class WhoKilledAgatha extends ExampleFD {
             }
         }
 
-       
+
         // "Agatha hates everybody except the butler. "
         store.impose(new XeqC(hates[agatha][charles], 1));
         store.impose(new XeqC(hates[agatha][agatha], 1));
         store.impose(new XeqC(hates[agatha][butler], 0));
 
 
-  
-        // "Charles hates no one that Agatha hates." 
+
+        // "Charles hates no one that Agatha hates."
         for(int i = 0; i < n; i++) {
             // MiniZinc: hates[agatha, i] = 1 -> hates[charles, i] = 0
             store.impose(new IfThen(
@@ -172,7 +173,7 @@ public class WhoKilledAgatha extends ExampleFD {
                          );
         }
 
-        
+
         // "The butler hates everyone not richer than Aunt Agatha. "
         for(int i = 0; i < n; i++) {
             // MiniZinc: richer[i, agatha] = 0 -> hates[butler, i] = 1
@@ -182,8 +183,8 @@ public class WhoKilledAgatha extends ExampleFD {
                                      )
                           );
         }
-        
-        // "The butler hates everyone whom Agatha hates." 
+
+        // "The butler hates everyone whom Agatha hates."
         for(int i = 0; i < n; i++) {
             // MiniZinc: hates[agatha, i] = 1 -> hates[butler, i] = 1
              store.impose(new IfThen(
@@ -223,14 +224,14 @@ public class WhoKilledAgatha extends ExampleFD {
             vars.add(a_sum);
 
         }
-        
+
 
     }
-    
+
     @Override
     public boolean search() {
-    	
-        SelectChoicePoint<IntVar> select = 
+
+        SelectChoicePoint<IntVar> select =
             new SimpleSelect<IntVar> (vars.toArray(new IntVar[1]),
                               new SmallestDomain<IntVar>(),
                               new IndomainMin<IntVar> ()
@@ -248,34 +249,34 @@ public class WhoKilledAgatha extends ExampleFD {
 
             int numSolutions = label.getSolutionListener().solutionsNo();
 
-            System.out.println("Number of Solutions: " + numSolutions);
+            logger.info("Number of Solutions: " + numSolutions);
 
             for(int s = 1; s <= numSolutions; s++) {
                 Domain [] res = label.getSolutionListener().getSolution(s);
                 int len = res.length;
 
-                System.out.println("the_killer: " + res[0]);
+                logger.info("the_killer: " + res[0]);
 
                 // print the result
                 for(int i = 0; i < len; i++) {
-                    System.out.print(res[i] + " ");
+                    logger.info(res[i] + " ");
                 }
-                System.out.println();
+                logger.info("\n");
 
             }
 
 
         }  else {
 
-            System.out.println("No solution.");
-            
-        } 
+            logger.info("No solution.");
+
+        }
 
         return result;
-    } 
+    }
 
     /**
-     * It runs the program which solves the logic puzzle "Who killed Agatha". 
+     * It runs the program which solves the logic puzzle "Who killed Agatha".
      * @param args
      */
     public static void main(String args[]) {
@@ -284,9 +285,9 @@ public class WhoKilledAgatha extends ExampleFD {
         example.model();
 
 		if (example.search())
-			System.out.println("Solution(s) found");
+			logger.info("Solution(s) found");
 
     } // end main
 
 } // end class
- 
+

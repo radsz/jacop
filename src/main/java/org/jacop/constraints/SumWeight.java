@@ -1,9 +1,9 @@
 /**
- *  SumWeight.java 
+ *  SumWeight.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,25 +31,25 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * SumWeight constraint implements the weighted summation over several
  * variables . It provides the weighted sum from all variables on the list.
  * The weights are integers.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 3.1
  */
 
-public class SumWeight extends Constraint {
+public class SumWeight extends Constraint { private static Logger logger = LoggerFactory.getLogger(SumWeight.class);
 
 	static int counter = 1;
 
@@ -64,12 +64,12 @@ public class SumWeight extends Constraint {
 	public int weights[];
 
 	/**
-	 * It specifies variable for the overall sum. 
+	 * It specifies variable for the overall sum.
 	 */
 	public IntVar sum;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"list", "weights", "sum"};
@@ -82,11 +82,11 @@ public class SumWeight extends Constraint {
 	public SumWeight(IntVar[] list, int[] weights, IntVar sum) {
 
 		commonInitialization(list, weights, sum);
-		
+
 	}
-	
+
 	private void commonInitialization(IntVar[] list, int[] weights, IntVar sum) {
-		
+
 		queueIndex = 1;
 
 		assert ( list.length == weights.length ) : "\nLength of two vectors different in SumWeight";
@@ -102,7 +102,7 @@ public class SumWeight extends Constraint {
 		for (int i = 0; i < list.length; i++) {
 
 			assert (list[i] != null) : i + "-th element of list in SumWeighted constraint is null";
-			
+
 			if (parameters.get(list[i]) != null) {
 				// variable ordered in the scope of the Sum Weight constraint.
 				Integer coeff = parameters.get(list[i]);
@@ -131,7 +131,7 @@ public class SumWeight extends Constraint {
 	}
 
 	/**
-	 * It constructs the constraint SumWeight. 
+	 * It constructs the constraint SumWeight.
 	 * @param variables variables which are being multiplied by weights.
 	 * @param weights weight for each variable.
 	 * @param sum variable containing the sum of weighted variables.
@@ -142,7 +142,7 @@ public class SumWeight extends Constraint {
 		int[] w = new int[weights.size()];
 		for (int i = 0; i < weights.size(); i++)
 			w[i] = weights.get(i);
-		
+
 		commonInitialization(variables.toArray(new IntVar[variables.size()]),
 							 w,
 							 sum);
@@ -180,7 +180,7 @@ public class SumWeight extends Constraint {
 	/**
 	 * The position for the next grounded variable.
 	 */
-	private TimeStamp<Integer> nextGroundedPosition;	
+	private TimeStamp<Integer> nextGroundedPosition;
 
 	@Override
 	public void consistency(Store store) {
@@ -204,7 +204,7 @@ public class SumWeight extends Constraint {
 				int mul2 = currentDomain.max() * weights[i];
 				// int mul1 = IntDomain.multiply(currentDomain.min(), weights[i]);
 				// int mul2 = IntDomain.multiply(currentDomain.max(), weights[i]);
-				
+
 				if (mul1 <= mul2) {
 				    lMin += mul1;
 				    // lMin = add(lMin, mul1);
@@ -229,7 +229,7 @@ public class SumWeight extends Constraint {
 		}
 
 		do {
-			
+
 			sum.domain.in(store.level, sum, lMin, lMax);
 
 			store.propagationHasOccurred = false;
@@ -261,15 +261,15 @@ public class SumWeight extends Constraint {
 					divMax = toInt( Math.round( Math.floor( d1 ) ) );
 				}
 
-				if (divMin > divMax) 
+				if (divMin > divMax)
 			    	throw Store.failException;
 
 				v.domain.in(store.level, v, divMin, divMax);
 
 			}
-			
+
 		} while (store.propagationHasOccurred);
-		
+
 	}
 
 	@Override

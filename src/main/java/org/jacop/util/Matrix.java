@@ -1,9 +1,9 @@
 /**
- *  Matrix.java 
+ *  Matrix.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,20 +31,20 @@
 
 package org.jacop.util;
 
-import java.lang.ArithmeticException;
-
-import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.core.FloatIntervalDomain;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Matrix and operations on matrices.
- *  
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class Matrix {
+public class Matrix { private static Logger logger = LoggerFactory.getLogger(Matrix.class);
 
     double[][] A;
 
@@ -58,7 +58,7 @@ public class Matrix {
 
     public double determinant(double[][] M) {
 
-	// System.out.println ("========");
+	// logger.info ("========");
 	// print (M);
 
 	if (! isSquare(M))
@@ -81,10 +81,10 @@ public class Matrix {
 	double[][] t = new double[m.length][m[0].length];
 
 	for (int i = 0; i < m.length; i++) {
-	    for (int j = 0; j < m[i].length; j++) 
+	    for (int j = 0; j < m[i].length; j++)
 		t[i][j] = sign(i) * sign(j) * determinant(subMatrix(m, i, j));
 	}
-    
+
 	return t;
     }
 
@@ -92,12 +92,12 @@ public class Matrix {
     public double[][] transpose(double[][] m) {
 
 	double[][] t = new double[m[0].length][m.length];
-	for (int i = 0; i < m.length;i++) 
-	    for (int j = 0; j < m[i].length; j++) 
+	for (int i = 0; i < m.length;i++)
+	    for (int j = 0; j < m[i].length; j++)
 		t[j][i] = m[i][j];
 
 	return t;
-    } 
+    }
 
     public double[][] inverse() {
 	return inverse(A);
@@ -113,15 +113,15 @@ public class Matrix {
     public double[][] mult(double[][] b){ //A[m][n] * b[n][p]
 
 	if(A.length == 0) return new double[0][0];
-	if(A[0].length != b.length) 
+	if(A[0].length != b.length)
 	    return null; //invalid dims
- 
+
 	int n = A[0].length;
 	int m = A.length;
 	int p = b[0].length;
- 
+
 	double[][] result = new double[m][p];
- 
+
 	for(int i = 0; i < m; i++){
 	    for(int j = 0; j < p; j++){
 		for(int k = 0; k < n; k++){
@@ -136,15 +136,15 @@ public class Matrix {
     public double[] mult(double[] b){ //A[m][n] * b[n]
 
 	if(A.length == 0) return new double[0];
-	if(A[0].length != b.length) 
+	if(A[0].length != b.length)
 	    return null; //invalid dims
- 
+
 	int n = A[0].length;
 	int m = A.length;
 	int p = b.length;
- 
+
 	double[] result = new double[m];
- 
+
 	for(int i = 0; i < m; i++){
 	    for(int j = 0; j < p; j++){
 		    result[i] += A[i][j] * b[j];
@@ -156,16 +156,16 @@ public class Matrix {
     public static FloatIntervalDomain[][] mult(FloatInterval[][] F, double[][] b){ //F[m][n] * b[n][p]
 
 	if(F.length == 0) return new FloatIntervalDomain[0][0];
-	if(F[0].length != b.length) 
+	if(F[0].length != b.length)
 	    return null; // incorrect sizes
- 
+
 	int n = F[0].length;
 	int m = F.length;
 	int p = b[0].length;
- 
+
 	FloatIntervalDomain[][] result = new FloatIntervalDomain[m][p];
-	for (int i = 0; i < result.length; i++) 
-	    for (int j = 0; j < result[i].length; j++) 
+	for (int i = 0; i < result.length; i++)
+	    for (int j = 0; j < result[i].length; j++)
 		result[i][j] = new FloatIntervalDomain(0.0, 0.0);
 
 	for(int i = 0; i < m; i++)
@@ -181,12 +181,12 @@ public class Matrix {
     double[][] multiplyByConstant(double[][] m, double c) {
 
 	double[][] t = new double[m[0].length][m.length];
-	for (int i = 0; i < m.length;i++) 
-	    for (int j = 0; j < m[i].length; j++) 
+	for (int i = 0; i < m.length;i++)
+	    for (int j = 0; j < m[i].length; j++)
 		t[i][j] = m[i][j] * c;
 
 	return t;
-	
+
     }
 
     double[][] subMatrix(double[][] s, int r, int c) {
@@ -198,7 +198,7 @@ public class Matrix {
 	    int l=0;
 	    if (i != r) {
 		for (int j = 0; j < s[i].length; j++) {
-		    if (j != c) 
+		    if (j != c)
 			subMatrix[k][l++] = s[i][j];
 		}
 		k++;
@@ -220,7 +220,7 @@ public class Matrix {
 	boolean square = true;
 
 	int n = M.length;
-	for (int i = 0; i < M.length; i++) 
+	for (int i = 0; i < M.length; i++)
 	    if (M[i].length != n)
 		square = false;
 
@@ -229,9 +229,9 @@ public class Matrix {
 
     void print(double[][] M) {
 	for (int i = 0; i < M.length; i++) {
-	    for (int j = 0; j < M[i].length; j++) 
-		System.out.print (M[i][j] + " ");
-	    System.out.println ();
+	    for (int j = 0; j < M[i].length; j++)
+		logger.info (M[i][j] + " ");
+	    logger.info("");
 	}
     }
 }

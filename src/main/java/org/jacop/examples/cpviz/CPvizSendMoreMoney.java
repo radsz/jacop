@@ -2,30 +2,26 @@ package org.jacop.examples.cpviz;
 
 
 // The import below is required since some utilities are used
-import java.util.ArrayList;
 
+import java.util.*;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.SumWeight;
-import org.jacop.constraints.Sum;
 import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.IntVar;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMin;
 import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
-
 import org.jacop.search.TraceGenerator;
-import org.jacop.search.ConsistencyListener;
-import org.jacop.search.ExitChildListener;
-import org.jacop.search.ExitListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class CPvizSendMoreMoney {
+public class CPvizSendMoreMoney { private static Logger logger = LoggerFactory.getLogger(CPvizSendMoreMoney.class);
 
     Store store = new Store();
     ArrayList<IntVar> vars;
@@ -38,19 +34,19 @@ public class CPvizSendMoreMoney {
 	// SEND 9567
 	// +MORE =======> +1085
 	// MONEY 10652
-	
+
 	/*
-	 * This creates a standard model using simple basic constraints. 
+	 * This creates a standard model using simple basic constraints.
 	 */
-	
+
 	public void model() {
-		
+
 		vars = new ArrayList<IntVar>();
 		store = new Store();
 
 		// Creating an array for IntVars
 		IntVar letters[] = new IntVar[8];
-		
+
 		// Creating IntVar (finite domain variables)
 		// with indexes for accessing
 		int iS = 0, iE = 1, iN = 2, iD = 3;
@@ -66,7 +62,7 @@ public class CPvizSendMoreMoney {
 
 		for (IntVar x : letters)
 			vars.add(x);
-		
+
 		// Imposing inequalities constraints between letters
 		// This nested loop imposes inequality constraint
 		// for all pairs of letters
@@ -86,7 +82,7 @@ public class CPvizSendMoreMoney {
 		// both letters can not be equal to zero
 		store.impose(new XneqC(letters[iS], 0));
 		store.impose(new XneqC(letters[iM], 0));
-					
+
 
 		// 1000*S + 91*E - 90*N + D - 9000*M - 900*O + 10*R = Y
 		IntVar s1 = new IntVar(store, 0, 9000);
@@ -115,22 +111,22 @@ public class CPvizSendMoreMoney {
 		store.impose(new XplusYeqZ(t5, letters[iD], letters[iY]));
 
   		store.consistency();
-//   		System.out.println(vars);
+//   		logger.info(vars);
 // 	}
-	
+
 // 	/**
 // 	 * This creates a standard search, which looks for a single solution.
 // 	 */
-	
+
 // 	public boolean search() {
-		
+
 		SelectChoicePoint<IntVar> varSelect = new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]), null,
 				new IndomainMin<IntVar>());
-		
+
 		search = new DepthFirstSearch<IntVar>();
 
 		// Trace --->
-	
+
  		TraceGenerator<IntVar> select = new TraceGenerator<IntVar>(search, varSelect);
 
 // 		TraceGenerator<IntVar> select = new TraceGenerator<IntVar>(varSelect, true);
@@ -141,36 +137,36 @@ public class CPvizSendMoreMoney {
 //		search.setExitListener((ExitListener)select);
 		// <---
 
-		boolean result = search.labeling(store, select);		
-		
+		boolean result = search.labeling(store, select);
+
 // 		return result;
-		
+
 	}
-	
+
 	public static void main(String args[]) {
 
 // 		SendMoreMoney exampleBasic = new SendMoreMoney();
-		
+
 // 		exampleBasic.model();
 
 // 		if (exampleBasic.search())
-// 			System.out.println("Solution found");
+// 			logger.info("Solution found");
 
 		CPvizSendMoreMoney exampleGlobal = new CPvizSendMoreMoney();
-		
+
 		exampleGlobal.modelGlobal();
-		
+
 // 		if (exampleGlobal.search())
-// 			System.out.println();
-		
+// 			logger.info();
+
 	}
-	
+
 	/*
 	 * This creates a model which uses global constraints to provide consize modeling.
 	 */
-	
+
 	public void modelGlobal() {
-		
+
 		vars = new ArrayList<IntVar>();
 		store = new Store();
 
@@ -192,7 +188,7 @@ public class CPvizSendMoreMoney {
 
 		for (IntVar v : digits)
 			vars.add(v);
-		
+
 		// Imposing inequalities constraints between letters
 		// Only one global constraint
 		store.impose(new Alldifferent(digits));
@@ -224,13 +220,13 @@ public class CPvizSendMoreMoney {
 		// and M is the first digit of MORE or MONEY
 		// both letters can not be equal to zero
 		store.impose(new XneqC(s, 0));
-		store.impose(new XneqC(m, 0));		
-		
+		store.impose(new XneqC(m, 0));
+
      		store.consistency();
 
 		SelectChoicePoint<IntVar> varSelect = new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]), null,
 				new IndomainMin<IntVar>());
-		
+
 		search = new DepthFirstSearch<IntVar>();
 
 		// Trace --->
@@ -243,9 +239,9 @@ public class CPvizSendMoreMoney {
 //		search.setExitListener((ExitListener)select);
 		// <---
 
-		boolean result = search.labeling(store, select);		
-		
+		boolean result = search.labeling(store, select);
+
 // 		return result;
-		
+
 	}
 }

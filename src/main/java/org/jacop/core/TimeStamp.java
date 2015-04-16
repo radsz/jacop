@@ -1,9 +1,9 @@
 /**
- *  TimeStamp.java 
+ *  TimeStamp.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -39,16 +39,19 @@ package org.jacop.core;
  * appropriate for objects which do not share data across store levels. If you
  * have objects which share data across store levels than you need to make your
  * own implementation of mutable variable using MutableVar interface.
- * 
+ *
  * It will (it has to) store the same object at different levels as users of the
  * timestamp may ask for the level at which the timestamp was recently updated.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
- * @param <T> a class being stored at different time stamps. 
+ * @param <T> a class being stored at different time stamps.
  */
 
-public class TimeStamp<T> {
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class TimeStamp<T> { private static Logger logger = LoggerFactory.getLogger(TimeStamp.class);
 
 	final static boolean debug = false;
 
@@ -113,7 +116,7 @@ public class TimeStamp<T> {
 	}
 
 	/**
-	 * @return the previous value according to the stamp. 
+	 * @return the previous value according to the stamp.
 	 */
 	final public T previousValue() {
 		if (pointer4Last > 0)
@@ -126,13 +129,13 @@ public class TimeStamp<T> {
 	 * The function removes the level specified by the stamp. It assumes that
 	 * it removes all the levels from the most recent until the level (inclusive)
 	 * specified by the parameter.
-	 * 
-	 * @param level the number of the level. 
+	 *
+	 * @param level the number of the level.
 	 */
 	public void removeLevel(int level) {
 
 		while (pointer4Last >= 0 && stamps[pointer4Last] >= level) {
-			
+
 			// Not necessary, makes it possible to immediately collect garbage.
 			// More memory friendly at the expense of the additional
 			// instruction.
@@ -143,7 +146,7 @@ public class TimeStamp<T> {
 	}
 
 	/**
-	 * It returns the value of the most recent stamp used within that timestamp. 
+	 * It returns the value of the most recent stamp used within that timestamp.
 	 * @return the stamp value.
 	 */
 	public final int stamp() {
@@ -173,24 +176,24 @@ public class TimeStamp<T> {
 
 		if (stamps[pointer4Last] == store.level) {
 			if (debug)
-				System.out.print("1. Level: " + store.level + ", In " + this
+				logger.info("1. Level: " + store.level + ", In " + this
 						+ ",  New value " + val + "replaces old");
 
 			values[pointer4Last] = val;
 		} else if (stamps[pointer4Last] < store.level) {
 			if (debug)
-				System.out.print("2. Level: " + store.level + ", IN " + this
+				logger.info("2. Level: " + store.level + ", IN " + this
 						+ ",  New value" + val);
 
 			addLast(val, store.level);
 		}
-		
+
 	}
 
 	/**
 	 * It returns the most recent value of the timestamp.
-	 * 
-	 * @return the most recent value of the timestamp. 
+	 *
+	 * @return the most recent value of the timestamp.
 	 */
 	final public T value() {
 		return values[pointer4Last];

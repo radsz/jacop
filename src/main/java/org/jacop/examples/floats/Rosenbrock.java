@@ -1,9 +1,9 @@
 /**
- *  Rosenbrock.java 
+ *  Rosenbrock.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,12 +32,12 @@
 package org.jacop.examples.floats;
 
 /**
- * 
- * It models rosenbrock for floating solver based on minizinc model 
+ *
+ * It models rosenbrock for floating solver based on minizinc model
  * by Håkan Kjellerstrand
  *
  * Rosenbrock function (a nonlinear standard problem).
- * 
+ *
  * This is problem 3.1 from
  * http://www.cs.cas.cz/ics/reports/v798-00.ps
  *
@@ -49,29 +49,22 @@ package org.jacop.examples.floats;
  * It has a global minimum at (x,y) = (1,1) where f(x,y) = 0.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * 
+ *
  */
 
-import java.util.ArrayList;
-
 import org.jacop.core.Store;
-import org.jacop.core.Var;
-import org.jacop.search.Search;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.PrintOutListener;
-import org.jacop.search.SimpleSolutionListener;
-import org.jacop.search.SelectChoicePoint;
-
-import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.constraints.LinearFloat;
-import org.jacop.floats.constraints.PplusQeqR;
 import org.jacop.floats.constraints.PmulQeqR;
-import org.jacop.floats.search.SplitSelectFloat;
-import org.jacop.floats.search.SmallestDomainFloat;
+import org.jacop.floats.constraints.PplusQeqR;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.Optimize;
+import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.search.DepthFirstSearch;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class Rosenbrock {
+public class Rosenbrock { private static Logger logger = LoggerFactory.getLogger(Rosenbrock.class);
 
     double MIN_FLOAT = -1e+150;
     double MAX_FLOAT =  1e+150;
@@ -81,7 +74,7 @@ public class Rosenbrock {
        long T1, T2, T;
 	T1 = System.currentTimeMillis();
 
-	System.out.println ("========= rosenbrock =========");
+	logger.info ("========= rosenbrock =========");
 
 	Store store = new Store();
 
@@ -107,7 +100,7 @@ public class Rosenbrock {
 	store.impose(new PmulQeqR(t2, t2, t4));     // (1 - x1)*(1 -x1)
 	store.impose(new LinearFloat(store, new FloatVar[] {z, t3, t4}, new double[] {-1.0, 100.0, 1.0}, "==", 0.0));
 
-	System.out.println( "\bFloatVar store size: "+ store.size()+
+	logger.info( "\bFloatVar store size: "+ store.size()+
   			    "\nNumber of constraints: " + store.numberConstraints()
 			    );
 	/*
@@ -127,24 +120,24 @@ public class Rosenbrock {
 	Optimize min = new Optimize(store, label, s, z);
 	boolean result = min.minimize();
 
-	System.out.println ("\nPrecision = " + FloatDomain.precision());
+	logger.info ("\nPrecision = " + FloatDomain.precision());
 
 	T2 = System.currentTimeMillis();
 	T = T2 - T1;
 
-	System.out.println("\n\t*** Execution time = "+ T + " ms");
+	logger.info("\n\t*** Execution time = "+ T + " ms");
 
     }
     /**
-     * It executes the program. 
-     * 
+     * It executes the program.
+     *
      * @param args no arguments
      */
     public static void main(String args[]) {
-		
+
 	Rosenbrock example = new Rosenbrock();
-		
+
 	example.rosenbrock();
 
-    }			
+    }
 }

@@ -1,9 +1,9 @@
 /**
- *  RunExample.java 
+ *  RunExample.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -35,44 +35,44 @@ package org.jacop.examples;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-
 import org.jacop.fz.Fz2jacop;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * This class executes the provided example. It also allows to specify 
+ * This class executes the provided example. It also allows to specify
  * the arguments for the executed example.
- * 
+ *
  * @author Radoslaw Szymanek
  * @version 4.2
  *
  */
 
-public class RunExample {
+public class RunExample { private static Logger logger = LoggerFactory.getLogger(RunExample.class);
 
 	/**
 	 * It executes the example as specified by the first argument. The remaining arguments
 	 * will be forwarded to the executed example.
-	 * 
+	 *
 	 * @param args name of the example and its arguments.
 	 */
 	public static void main(String[] args) {
-		
+
 		if (args.length == 0) {
-			
-			System.out.println("You can run java JaCoP examples with java command and Scala JaCoP examples with scala command");
-			System.out.println("Please specify as the first argument the name of the example");
-			System.out.println("All remaining arguments will be passed to the example.");
-			System.out.println("The name of the example is either the class name from org.jacop.examples" + 
-								" or name of .fzn file.");
+
+			logger.info("You can run java JaCoP examples with java command and Scala JaCoP examples with scala command");
+			logger.info("Please specify as the first argument the name of the example");
+			logger.info("All remaining arguments will be passed to the example.");
+			logger.info("The name of the example is either the class name from org.jacop.examples" + " or name of .fzn file.");
 		    System.exit(-1);
-            
+
 		}
-		
+
 		if (args[args.length - 1].endsWith(".fzn")) {
 
 			Fz2jacop.main(args);
 			return;
-			
+
 		}
 		else
         try {
@@ -86,13 +86,13 @@ public class RunExample {
                 System.err.println("examplesloader: main method in target class is not static");
                 System.exit(-1);
             }
-            
+
             // verify that the main method returns a void
             if(mainMethod.getReturnType() != void.class){
                 System.err.println("examplesloader: target class main must return void");
                 System.exit(-1);
             }
-            
+
             // we need to make a copy of our args, with the first two (which were
             // intended for the examplesloader) stripped off
             String [] processedArgs = new String[args.length-1];
@@ -104,9 +104,9 @@ public class RunExample {
             mainMethod.invoke(null, actualArgs);
         }
         catch(ClassNotFoundException e){
-            System.err.println("exampleloader: can't find class \"" + 
+            System.err.println("exampleloader: can't find class \"" +
                                e.getMessage() +
-                               "\" when loading target class \"" + 
+                               "\" when loading target class \"" +
                                args[0]
                                +"\"");
             System.exit(-1);
@@ -126,7 +126,7 @@ public class RunExample {
             //e.printStackTrace();
             System.exit(-1);
         }
-        
+
 	}
-        
+
 }

@@ -3,7 +3,8 @@ package org.jacop.examples.scala
 import org.jacop.core._
 import org.jacop.constraints._
 import org.jacop.search._
-
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 /*
  * Created by IntelliJ IDEA.
  * User: kris
@@ -12,7 +13,7 @@ import org.jacop.search._
  */
 
 object GraphColoringJ extends App {
-
+  val logger = LoggerFactory.getLogger("GraphColoringJ")
   val store = new Store()
   val size = 4
   val v = Array.tabulate(size)(i => new IntVar(store, "v"+i, 1, size))
@@ -27,8 +28,8 @@ object GraphColoringJ extends App {
   val select = new InputOrderSelect[IntVar](store, v, new IndomainMin[IntVar]())
   val result = search.labeling(store, select)
   if ( result )
-    System.out.println("Solution: " + v(0)+", "+v(1) +", "+ v(2) +", "+v(3))
+    logger.info("Solution: " + v(0)+", "+v(1) +", "+ v(2) +", "+v(3))
   else
-    System.out.println("*** No")
+    logger.info("*** No")
 
 }

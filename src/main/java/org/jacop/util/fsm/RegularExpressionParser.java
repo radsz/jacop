@@ -1,9 +1,9 @@
 /**
- *  RegularExpressionParser.java 
+ *  RegularExpressionParser.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2008 Polina Maakeva and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,50 +31,51 @@
 
 package org.jacop.util.fsm;
 
-import java.io.StringReader;
-import java.util.ArrayList;
-
+import java.io.*;
+import java.util.*;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntervalDomain;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Instances of this class parse the word combination little language.
- * 
+ *
  * @author Polina Makeeva and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class RegularExpressionParser {
+public class RegularExpressionParser { private static Logger logger = LoggerFactory.getLogger(RegularExpressionParser.class);
 
 	private LexicalAnalyzer lexer; // lexical analyzer that parser uses
-	
+
 	private int token;
 
 	/**
 	 * It constructs a parser of the regular expression.
 	 * @param input string reader containing the regular expression.
-	 * @throws SyntaxException if first token is neither word or left parenthesis. 
+	 * @throws SyntaxException if first token is neither word or left parenthesis.
 	 */
 	public RegularExpressionParser(StringReader input) throws SyntaxException {
-		
+
 		lexer = new LexicalAnalyzer(input);
-		
+
 		lexer.nextToken();
-		
+
 		if (token != LexicalAnalyzer.WORD
 				&& token != LexicalAnalyzer.LEFT_PAREN) {
 			// print error message and throw SyntaxException
 			expect(LexicalAnalyzer.Beginning);
-		} 
+		}
 	}
 
 	/**
 	 * This method parses an expression that it reads from a given input stream.
 	 * @param parseOneNext if parsing should parse only one item.
-	 * 
+	 *
 	 * @return An expression that is the root of the parse tree produced by the parser.
-	 * @throws SyntaxException 
+	 * @throws SyntaxException
 	 */
 	public Expression parse(boolean parseOneNext) throws SyntaxException {
 
@@ -174,31 +175,31 @@ public class RegularExpressionParser {
 		}
 
 		if (Regular.debugAll)
-			System.out.println("Succesful parsing of " + c);
+			logger.info("Succesful parsing of " + c);
 
 		return c;
 	}
 
 	/**
 	 * Complain if the current token is not the specified kind of token.
-	 * 
+	 *
 	 * @param t The type of token that is expected.
 	 */
 	private void expect(int t) throws SyntaxException {
 
 		if (token != t) {
-			
+
 			String msg = "found " + tokenName(token) + " when expecting "
 					+ tokenName(t);
-			
-			System.err.println("Syntax error: " + msg);
-		
-		} 
 
-	} 
-	
+			System.err.println("Syntax error: " + msg);
+
+		}
+
+	}
+
 	private String tokenName(int t) {
-	
+
 		switch (t) {
 		case LexicalAnalyzer.WORD:
 			return "word";
@@ -214,15 +215,15 @@ public class RegularExpressionParser {
 			return "operator . or *";
 		default:
 			return "???";
-		} 
+		}
 
-	} 
-	
+	}
+
 	/**
 	 * Constant denoting an expression.
 	 */
 	public static final int Expression = 0;
-	
+
 	/**
 	 * The constant denoting simple literal.
 	 */
@@ -240,15 +241,15 @@ public class RegularExpressionParser {
 	 */
 	public static final int Sum = 4;
 
-	
+
 	/**
 	 * SyntaxException raised if not regular expression is being parsed.
 	 *
 	 */
-	public class SyntaxException extends Exception {
+	public class SyntaxException extends Exception { private Logger logger = LoggerFactory.getLogger(SyntaxException.class);
 
 		/**
-		 * 
+		 *
 		 */
 		private static final long serialVersionUID = 5532774111743285222L;
 
@@ -268,11 +269,11 @@ public class RegularExpressionParser {
 	}
 
 	/**
-	 * It creates an abstract class expression which specifies basic methods of 
+	 * It creates an abstract class expression which specifies basic methods of
 	 * the expression.
 	 *
 	 */
-	public abstract class Expression {
+	public abstract class Expression {  Logger logger = LoggerFactory.getLogger(Expression.class);
 
 		/**
 		 * If the given string contains the words that this Expression object
@@ -282,8 +283,8 @@ public class RegularExpressionParser {
 		 * all the words in the string satisfy the Expression. If the given
 		 * string does not contain the words that this Expression object
 		 * requires, then this method returns null.
-		 * 
-		 * @param set
+		 *
+		 * param set
 		 *            The string that this method will search for the words it
 		 *            requires.
 		 */
@@ -300,7 +301,7 @@ public class RegularExpressionParser {
 
 		/**
 		 * It creates Finite State Machine from the expression.
-		 * @return Finite State Machine corresponding 
+		 * @return Finite State Machine corresponding
 		 */
 		public abstract FSM parseToFSM();
 
@@ -374,12 +375,12 @@ public class RegularExpressionParser {
 		public String toString() {
 
 			StringBuffer result = new StringBuffer("(");
-			
+
 			for (Expression e : this.disj)
 				result.append(e.toString()).append("+");
-			result.deleteCharAt(result.length() - 1);			
+			result.deleteCharAt(result.length() - 1);
 			result.append(")");
-			
+
 			return result.toString();
 
 		}
@@ -443,15 +444,15 @@ public class RegularExpressionParser {
 	/**
 	 * It specifies a simple literal.
 	 */
-	
-	public class Literal extends Expression {
+
+	public class Literal extends Expression { private Logger logger = LoggerFactory.getLogger(Literal.class);
 
 		/**
 		 * String denoting the literal.
 		 */
 		public String lit;
 
-		
+
 		/**
 		 * It constructs a literal.
 		 * @param lit string representation of the literal.

@@ -1,9 +1,9 @@
 /**
- *  BasicLogicPascal.java 
+ *  BasicLogicPascal.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,21 +31,22 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.SumWeight;
 import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
+ *
  * It solves an arithmetic puzzle BASIC+LOGIC=PASCAL.
- * 
+ *
  * @author Radoslaw Szymanek
- * 
+ *
  * 	Find for the equation on the left
  *	what digits are represented by the letters
  *	different letters represent different digits
@@ -55,7 +56,8 @@ import org.jacop.core.Store;
  * PASCAL 		   10652
  *
  */
-public class BasicLogicPascal extends ExampleFD {
+
+public class BasicLogicPascal extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(BasicLogicPascal.class);
 
 
 	@Override
@@ -64,7 +66,7 @@ public class BasicLogicPascal extends ExampleFD {
 		// Creating constraint store
 		store = new Store();
 		vars = new ArrayList<IntVar>();
-		
+
 		// Creating FDV (finite domain variables)
 		IntVar b = new IntVar(store, "B", 0, 9);
 		IntVar a = new IntVar(store, "A", 0, 9);
@@ -83,7 +85,7 @@ public class BasicLogicPascal extends ExampleFD {
 		IntVar pascal[] = { p, a, s, c, a, l };
 
 		for (IntVar v : digits) vars.add(v);
-		
+
  		// Imposing inequalities constraints between letters
 		// Only one global constraint
 		store.impose(new Alldifferent(digits));
@@ -111,9 +113,9 @@ public class BasicLogicPascal extends ExampleFD {
 		store.impose(new XneqC(basic[0], 0));
 		store.impose(new XneqC(logic[0], 0));
 		store.impose(new XneqC(pascal[0], 0));
-		
+
 	}
-	
+
 	/**
 	 * It executes the program to solve this puzzle.
 	 * @param args no arguments are read.
@@ -121,13 +123,13 @@ public class BasicLogicPascal extends ExampleFD {
 	public static void main(String args[]) {
 
 		BasicLogicPascal example = new BasicLogicPascal();
-		
+
 		example.model();
 
 		if (example.searchMostConstrainedStatic())
-			System.out.println("Solution(s) found");
-		
-	}	
-	
-	
+			logger.info("Solution(s) found");
+
+	}
+
+
 }

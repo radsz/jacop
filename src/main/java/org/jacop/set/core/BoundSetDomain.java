@@ -1,9 +1,9 @@
 /**
- *  BoundSetDomain.java 
+ *  BoundSetDomain.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -38,19 +38,21 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.SmallDenseDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Defines a set interval determined by a least upper bound(lub) and a 
+ * Defines a set interval determined by a least upper bound(lub) and a
  * greatest lower bound(glb). The domain consist of zero, one or several sets.
- * 
- * 
- * @author Radoslaw Szymanek, Krzysztof Kuchcinski and Robert Åkemalm 
+ *
+ *
+ * @author Radoslaw Szymanek, Krzysztof Kuchcinski and Robert Åkemalm
  * @version 4.2
  */
 
-public class BoundSetDomain extends SetDomain {
+public class BoundSetDomain extends SetDomain { private static Logger logger = LoggerFactory.getLogger(BoundSetDomain.class);
 
-	// FIXME do not use emptySet to assign to lub, glb. 
+	// FIXME do not use emptySet to assign to lub, glb.
 	/**
 	 * The greatest lower bound of the domain.
 	 */
@@ -64,22 +66,22 @@ public class BoundSetDomain extends SetDomain {
 	public IntDomain lub;
 
 	/**
-	 * The cardinality of the set. 
+	 * The cardinality of the set.
 	 */
 
 	public IntDomain cardinality;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"glb", "lub", "cardinality"};
 
-	/** 
-	 * 
+	/**
+	 *
 	 * Creates BoundSetDomain object. It requires glb to be a subset of lub.
-	 * 
-	 * @param glb it specifies the left bound of the SetDomain (inclusive).  
+	 *
+	 * @param glb it specifies the left bound of the SetDomain (inclusive).
 	 * @param lub it specifies the right bound of the setDomain (inclusive).
 	 * @param cardinality it specifies the allowed cardinality of the assigned set.
 	 */
@@ -101,7 +103,7 @@ public class BoundSetDomain extends SetDomain {
 
 
 	/** Creates a new instance of SetDomain. It requires glb to be a subset of lub.
-	 * @param glb it specifies the left bound of the SetDomain (inclusive).  
+	 * @param glb it specifies the left bound of the SetDomain (inclusive).
 	 * @param lub it specifies the right bound of the setDomain (inclusive).
 	 */
 	public BoundSetDomain(IntDomain glb, IntDomain lub) {
@@ -112,10 +114,10 @@ public class BoundSetDomain extends SetDomain {
 		this.glb = glb.cloneLight();
 		this.lub = lub.cloneLight();
 		this.cardinality = new IntervalDomain(glb.getSize(), lub.getSize());
-		
+
 		// TODO, test the replacement of intervaldomain when possible by SmallDenseDomain.
 		//this.cardinality = new SmallDenseDomain(glb.getSize(), lub.getSize());
-		
+
 		searchConstraints = null;
 		searchConstraintsToEvaluate = 0;
 		previousDomain = null;
@@ -131,7 +133,7 @@ public class BoundSetDomain extends SetDomain {
 
 		this.glb = new IntervalDomain(0);
 		this.lub = new IntervalDomain(0);
-		
+
 		searchConstraints = null;
 		searchConstraintsToEvaluate = 0;
 		previousDomain = null;
@@ -139,8 +141,8 @@ public class BoundSetDomain extends SetDomain {
 
 	}
 
-	/** 
-	 * 
+	/**
+	 *
 	 * It creates a new instance of SetDomain with glb empty and lub={e1..e2}
 	 * @param e1 the minimum element of lub.
 	 * @param e2 the maximum element of lub.
@@ -153,9 +155,9 @@ public class BoundSetDomain extends SetDomain {
 		}
 		else {
 			this.glb = new SmallDenseDomain();
-			this.lub = new SmallDenseDomain(e1, e2);			
+			this.lub = new SmallDenseDomain(e1, e2);
 		}
-		
+
 		this.cardinality = new IntervalDomain(0, e2 - e1 + 1);
 
 		searchConstraints = null;
@@ -163,12 +165,12 @@ public class BoundSetDomain extends SetDomain {
 		previousDomain = null;
 		searchConstraintsCloned = false;
 
-	} 
+	}
 
 	/**
-	 * Adds a set of value to the possible values used within this set domain. It changes the cardinality 
-	 * too to avoid cardinality constraining the domain. 
-	 * 
+	 * Adds a set of value to the possible values used within this set domain. It changes the cardinality
+	 * too to avoid cardinality constraining the domain.
+	 *
 	 */
 	public void addDom(IntDomain set) {
 
@@ -189,7 +191,7 @@ public class BoundSetDomain extends SetDomain {
 
 		lub = lub.union(domain.lub());
 		glb = glb.intersect(domain.glb());
-		this.cardinality = new IntervalDomain(glb.getSize(), lub.getSize());			
+		this.cardinality = new IntervalDomain(glb.getSize(), lub.getSize());
 
 	}
 
@@ -203,7 +205,7 @@ public class BoundSetDomain extends SetDomain {
 	}
 
 	/**
-	 * Returns the cardinality of the setDomain as [glb.card(), lub.card()] 
+	 * Returns the cardinality of the setDomain as [glb.card(), lub.card()]
 	 * @return The cardinality of the setDomain given as a boundDomain.
 	 */
 	public IntDomain card(){
@@ -226,7 +228,7 @@ public class BoundSetDomain extends SetDomain {
 	@Override
 	public SetDomain clone() {
 
-		BoundSetDomain cloned = new BoundSetDomain(glb.cloneLight(), lub.cloneLight()); 
+		BoundSetDomain cloned = new BoundSetDomain(glb.cloneLight(), lub.cloneLight());
 		cloned.stamp = stamp;
 		cloned.previousDomain = previousDomain;
 
@@ -238,18 +240,18 @@ public class BoundSetDomain extends SetDomain {
 
 		cloned.searchConstraintsCloned = searchConstraintsCloned;
 
-		return cloned;	
+		return cloned;
 	}
 
 	/**
 	 * It clones the domain object, only data responsible for encoding domain
 	 * values is cloned. All other fields must be set separately.
-	 * @return return a clone of the domain. It aims at getting domain of the proper class type. 
+	 * @return return a clone of the domain. It aims at getting domain of the proper class type.
 	 */
 	public SetDomain cloneLight() {
 		// FIXME, why no glb and lub cloning is safe?
-		return new BoundSetDomain(glb, lub); 
-		// 		return new SetDomain(glb.cloneLight(), lub.cloneLight()); 
+		return new BoundSetDomain(glb, lub);
+		// 		return new SetDomain(glb.cloneLight(), lub.cloneLight());
 	}
 
 	/**
@@ -259,7 +261,7 @@ public class BoundSetDomain extends SetDomain {
 	public SetDomain complement() {
 		// FIXME, is it right?
 		// FIXME, it is not possible to express the complement of the set interval using just one set, right?
-		return new BoundSetDomain(this.lub.complement(),this.glb.complement());		
+		return new BoundSetDomain(this.lub.complement(),this.glb.complement());
 	}
 
 	/**
@@ -271,7 +273,7 @@ public class BoundSetDomain extends SetDomain {
 
 		if(this.lub.contains(set))
 			return true;
-		
+
 		return false;
 	}
 
@@ -304,7 +306,7 @@ public class BoundSetDomain extends SetDomain {
 	/**
 	 * It checks if the domain is equal to the supplied domain.
 	 * @param domain against which the equivalence test is performed.
-	 * @return true if suppled domain has the same elements as this domain. 
+	 * @return true if suppled domain has the same elements as this domain.
 	 */
 	public boolean eq(SetDomain domain) {
 		if(domain.glb().eq(this.glb) && domain.lub().eq(this.lub))
@@ -333,7 +335,7 @@ public class BoundSetDomain extends SetDomain {
 	 *
 	 * @param storeLevel the level of the store at which the change occurrs.
 	 * @param var the set variable for which the domain may change.
-	 * @param inGLB the greatest lower bound of the domain. 
+	 * @param inGLB the greatest lower bound of the domain.
 	 * @param inLUB the least upper bound of the domain.
 	 */
 	public void in(int storeLevel, SetVar var, IntDomain inGLB, IntDomain inLUB) {
@@ -347,7 +349,7 @@ public class BoundSetDomain extends SetDomain {
 		if (glb.contains(inGLB) && inLUB.contains(lub)){
 			// New domain is the same or "larger" than the old one; do nothing,
 			// do not re-evaluate constrained assigned to this variable
-			return; 
+			return;
 		}
 
 		if (stamp == storeLevel) {
@@ -363,19 +365,19 @@ public class BoundSetDomain extends SetDomain {
 			}
 			else {
 				int eventCardinality = cardinality.intersectAdapt(glb.getSize(), lub.getSize());
-				
+
 				if (cardinality.isEmpty())
 					throw Store.failException;
-				
+
 				if (eventCardinality != Domain.NONE) {
-					
+
 					if (cardinality.min() == lub.getSize()) {
 						glb = lub;
 						cardinality.intersectAdapt(lub.getSize(), lub.getSize());
 						var.domainHasChanged(IntDomain.GROUND);
 						return;
 					}
-					
+
 					if (cardinality.max() == glb.getSize()) {
 						lub = glb;
 						cardinality.intersectAdapt(glb.getSize(), glb.getSize());
@@ -384,10 +386,10 @@ public class BoundSetDomain extends SetDomain {
 					}
 
 				}
-				
+
 				if (eventGLB != Domain.NONE && eventLUB != Domain.NONE)
 					var.domainHasChanged(SetDomain.ANY);
-				else 
+				else
 					if (eventGLB != Domain.NONE)
 						var.domainHasChanged(SetDomain.GLB);
 					else if (eventLUB != Domain.NONE)
@@ -408,15 +410,15 @@ public class BoundSetDomain extends SetDomain {
 
 			IntDomain resultCardinality = cardinality.intersect(glb.getSize(), lub.getSize());
 			if (resultCardinality.isEmpty())
-				throw Store.failException;			
+				throw Store.failException;
 
 			if (!resultCardinality.eq(cardinality)) {
-				
+
 				if (cardinality.min() == lub.getSize()) {
 					resultGLB = lub;
 					resultCardinality.intersectAdapt(lub.getSize(), lub.getSize());
 				}
-				
+
 				if (cardinality.max() == glb.getSize()) {
 					resultLUB = glb;
 					resultCardinality.intersectAdapt(glb.getSize(), glb.getSize());
@@ -451,7 +453,7 @@ public class BoundSetDomain extends SetDomain {
 				return;
 			}
 
-		}	
+		}
 	}
 
 
@@ -485,7 +487,7 @@ public class BoundSetDomain extends SetDomain {
 		if( lub_i.isEmpty() )
 			return emptyDomain;
 
-		IntDomain glb_i = glb.intersect( domain.glb() ); 
+		IntDomain glb_i = glb.intersect( domain.glb() );
 
 		return new BoundSetDomain(glb_i,lub_i);
 	}
@@ -506,7 +508,7 @@ public class BoundSetDomain extends SetDomain {
 		if(lubResult.isEmpty())
 			return emptyDomain;
 
-		IntDomain glbResult = glb.intersect(domain); 
+		IntDomain glbResult = glb.intersect(domain);
 
 		return new BoundSetDomain(glbResult, lubResult);
 	}
@@ -583,15 +585,15 @@ public class BoundSetDomain extends SetDomain {
 	}
 
 	/**
-	 * It sets the domain to the the set {min..max}. It grounds it. 
-	 * FIXME should it be grounded? 
+	 * It sets the domain to the the set {min..max}. It grounds it.
+	 * FIXME should it be grounded?
 	 */
 	public void setDomain(int min, int max) {
 
 		assert (min <= max);
 		// FIXME, BUG?
 		this.lub = new IntervalDomain(min, max);
-		this.glb = new IntervalDomain();	
+		this.glb = new IntervalDomain();
 
 		// FIXME, remove after checking.
 		throw new RuntimeException("check that the caller of this function is using it as intended.");
@@ -610,7 +612,7 @@ public class BoundSetDomain extends SetDomain {
 	/**
 	 * It returns true if given domain has only one set-element and this set-element only contains c.
 	 * @return true if the domain contains only one set-element and this set-element only contains c.
-	 */	
+	 */
 	public boolean singleton(IntDomain set) {
 
 		return lub.eq(set) && glb.eq(set);
@@ -626,7 +628,7 @@ public class BoundSetDomain extends SetDomain {
 
 		assert domain.checkInvariants() == null : domain.checkInvariants() ;
 
-		IntDomain glbResult = glb.subtract( domain.lub() );	
+		IntDomain glbResult = glb.subtract( domain.lub() );
 		IntDomain lubResult = lub.subtract( domain.glb() );
 
 		return new BoundSetDomain(glbResult, lubResult);
@@ -638,7 +640,7 @@ public class BoundSetDomain extends SetDomain {
 	 * @param min the left bound of the set.
 	 * @param max the right bound of the set.
 	 * @return the domain after removing the int elements specified by the set.
-	 * 
+	 *
 	 */
 	public SetDomain subtract(int min, int max) {
 
@@ -662,7 +664,7 @@ public class BoundSetDomain extends SetDomain {
 		domain.glb().subtract(value);
 
 		return domain;
-	}	
+	}
 
 	/**
         * It returns string description of the domain.
@@ -678,25 +680,25 @@ public class BoundSetDomain extends SetDomain {
                    else
                        return glb.toString();
                else {
-            	   
+
                    StringBuffer result = new StringBuffer("{");
-                   
+
                    if (glb.singleton())
                 	   result.append("{").append( glb.toString() ).append("}");
                    else
                 	   result.append( glb.toString() );
 
                    result.append("..");
-                   
+
                    if (lub.singleton())
                 	   result.append("{").append( lub.toString() ).append("}");
                    else
                 	   result.append( lub.toString() );
 
                    result.append("}[card=").append( cardinality ).append("]");
-                   
+
                    return result.toString();
-                   
+
                }
        }
 
@@ -711,9 +713,9 @@ public class BoundSetDomain extends SetDomain {
 
 		IntDomain glbResult = glb.intersect(domain.glb());
 		IntDomain lubResult = lub.union(domain.lub());
-		
+
 		return new BoundSetDomain(glbResult, lubResult);
-		
+
 	}
 
 	/**
@@ -725,19 +727,19 @@ public class BoundSetDomain extends SetDomain {
 
 	public SetDomain union(int min, int max) {
 
-		// FIXME, why not max >= min? 
+		// FIXME, why not max >= min?
 		assert max > min : "min value is larger than max value";
-		
+
 		IntDomain glbResult = glb.union(min, max);
 		IntDomain lubResult = lub.union(min, max);
-		
+
 		return new BoundSetDomain(glbResult, lubResult);
-		
+
 	}
 
 	/**
-	 * It computes union of this domain and value. 
-	 * 
+	 * It computes union of this domain and value.
+	 *
 	 * @param value it specifies the value which is being added.
 	 * @return domain which is a union of this one and the value.
 	 */
@@ -745,9 +747,9 @@ public class BoundSetDomain extends SetDomain {
 
 		IntDomain glbResult = glb.union(value);
 		IntDomain lubResult = lub.union(value);
-	
+
 		return new BoundSetDomain(glbResult, lubResult);
-	
+
 	}
 
 	/**
@@ -756,16 +758,16 @@ public class BoundSetDomain extends SetDomain {
 	 */
 	@Override
 	public ValueEnumeration valueEnumeration() {
-		
+
 		return new SetDomainValueEnumeration(this);
-	
+
 	}
 
 	/**
-	 * @return It returns the information about the first invariant which does not hold or null otherwise. 
+	 * @return It returns the information about the first invariant which does not hold or null otherwise.
 	 */
 	public String checkInvariants() {
-	
+
 		if(!lub.contains(glb))
 			return "Greatest lower bound is larger than least upper bound ";
 
@@ -804,7 +806,7 @@ public class BoundSetDomain extends SetDomain {
 			if (singleton())
 				var.domainHasChanged(SetDomain.GROUND);
 			else
-				var.domainHasChanged(SetDomain.GLB);		
+				var.domainHasChanged(SetDomain.GLB);
 
 		} else {
 
@@ -838,7 +840,7 @@ public class BoundSetDomain extends SetDomain {
 			if (result.singleton())
 				var.domainHasChanged(SetDomain.GROUND);
 			else
-				var.domainHasChanged(SetDomain.GLB);		
+				var.domainHasChanged(SetDomain.GLB);
 
 		}
 
@@ -874,9 +876,9 @@ public class BoundSetDomain extends SetDomain {
 			}
 
 			if (singleton())
-				var.domainHasChanged(SetDomain.GROUND);		
+				var.domainHasChanged(SetDomain.GROUND);
 			else
-				var.domainHasChanged(SetDomain.LUB);		
+				var.domainHasChanged(SetDomain.LUB);
 
 
 		} else {
@@ -910,11 +912,11 @@ public class BoundSetDomain extends SetDomain {
 			var.domain = result;
 
 			if (result.singleton())
-				var.domainHasChanged(SetDomain.GROUND);		
+				var.domainHasChanged(SetDomain.GROUND);
 			else
-				var.domainHasChanged(SetDomain.LUB);		
+				var.domainHasChanged(SetDomain.LUB);
 
-		}		
+		}
 
 	}
 
@@ -943,7 +945,7 @@ public class BoundSetDomain extends SetDomain {
 
 			assert stamp < level;
 
-			// FIXME, allow specification of the sets in parts, so no unnecessary copying occur. 
+			// FIXME, allow specification of the sets in parts, so no unnecessary copying occur.
 			BoundSetDomain result = new BoundSetDomain(set, set);
 			result.cardinality = new IntervalDomain(set.getSize(), set.getSize());
 
@@ -957,9 +959,9 @@ public class BoundSetDomain extends SetDomain {
 
 		}
 
-		var.domainHasChanged(SetDomain.GROUND);		
+		var.domainHasChanged(SetDomain.GROUND);
 
-	}	
+	}
 
 	@Override
 	public boolean singleton(Domain value) {
@@ -990,14 +992,14 @@ public class BoundSetDomain extends SetDomain {
 
 		if (intersect.contains(lub))
 			return;
-		
+
 		if (!intersect.contains(glb))
 			throw Store.failException;
 
 		if (stamp == level) {
 
 			int event;
-			
+
 //			if (intersect.domainID() == IntDomain.SmallDenseDomainID && lub.domainID() == IntDomain.IntervalDomainID) {
 //				IntDomain replacement = intersect.cloneLight();
 //				event = replacement.intersectAdapt(lub);
@@ -1035,7 +1037,7 @@ public class BoundSetDomain extends SetDomain {
 			IntDomain resultLUB = lub.intersect(intersect);
 
 			// This check was generalized and moved to the beginning of the function.
-			// TODO, Check that early exit is ok. For some reason it is NOT ok, 
+			// TODO, Check that early exit is ok. For some reason it is NOT ok,
 			// most likely a pruning bug in some other code in respect to cardinality part.
 			// Cardinality part most likey fixed, some of the constraints maybe is missing
 			// propagation and only forced call of consistency function below recovers
@@ -1047,10 +1049,10 @@ public class BoundSetDomain extends SetDomain {
 			if (resultCardinality.isEmpty())
 				throw Store.failException;
 
-			// TODO, remove as early exit is moved higher. 
+			// TODO, remove as early exit is moved higher.
 			//if (resultCardinality.min() < resultLUB.getSize() && resultLUB.eq(lub))
 			//	return;
-			
+
 			BoundSetDomain result = new BoundSetDomain();
 
 			if (resultCardinality.min() == resultLUB.getSize()) {
@@ -1080,14 +1082,14 @@ public class BoundSetDomain extends SetDomain {
 
 	}
 
-	
+
 	/**
-	 * It assigns a set variable to lub of its current domain. 
-	 * 
+	 * It assigns a set variable to lub of its current domain.
+	 *
 	 * @param level level of the store at which the change takes place.
-	 * 
-	 * @param var variable for which the domain is changing. 
-	 * 
+	 *
+	 * @param var variable for which the domain is changing.
+	 *
 	 */
 	public void inValueLUB(int level, SetVar var) {
 
@@ -1095,7 +1097,7 @@ public class BoundSetDomain extends SetDomain {
 			return;
 
 		if (!cardinality.contains(lub.getSize()))
-			throw Store.failException;		
+			throw Store.failException;
 
 		if (stamp == level) {
 
@@ -1106,7 +1108,7 @@ public class BoundSetDomain extends SetDomain {
 
 			assert stamp < level;
 
-			// FIXME, allow specification of the sets in parts, so no unnecessary copying occur. 
+			// FIXME, allow specification of the sets in parts, so no unnecessary copying occur.
 			BoundSetDomain result = new BoundSetDomain();
 			result.lub = lub.cloneLight();
 			result.glb = result.lub;
@@ -1123,7 +1125,7 @@ public class BoundSetDomain extends SetDomain {
 
 		}
 
-		var.domainHasChanged(SetDomain.GROUND);		
+		var.domainHasChanged(SetDomain.GROUND);
 
 	}
 
@@ -1135,10 +1137,10 @@ public class BoundSetDomain extends SetDomain {
 
 		if (!lub.contains(intersect))
 			throw Store.failException;
-		
+
 		if (stamp == level) {
 
-			int event = glb.unionAdapt(intersect);			
+			int event = glb.unionAdapt(intersect);
 
 			if (event == Domain.NONE)
 				return;
@@ -1207,12 +1209,12 @@ public class BoundSetDomain extends SetDomain {
 	}
 
 	/**
-	 * It assigns a set variable to glb of its current domain. 
-	 * 
+	 * It assigns a set variable to glb of its current domain.
+	 *
 	 * @param level level of the store at which the change takes place.
-	 * 
-	 * @param var variable for which the domain is changing. 
-	 * 
+	 *
+	 * @param var variable for which the domain is changing.
+	 *
 	 */
 	public void inValueGLB(int level, SetVar var) {
 
@@ -1220,7 +1222,7 @@ public class BoundSetDomain extends SetDomain {
 			return;
 
 		if (!cardinality.contains(glb.getSize()))
-			throw Store.failException;		
+			throw Store.failException;
 
 		if (stamp == level) {
 
@@ -1246,13 +1248,13 @@ public class BoundSetDomain extends SetDomain {
 
 		}
 
-		var.domainHasChanged(SetDomain.GROUND);		
+		var.domainHasChanged(SetDomain.GROUND);
 
 	}
 
 	@Override
 	public void addDom(Interval i) {
-		
+
 		this.lub = this.lub.union( i.min, i.max );
 		this.cardinality = new IntervalDomain(glb.getSize(), lub.getSize());
 
@@ -1278,7 +1280,7 @@ public class BoundSetDomain extends SetDomain {
 				this.inValue(level, var, glb);
 				return;
 			}
-			
+
 			if (cardinality.min() == lub.getSize()) {
 				this.inValue(level, var, lub);
 				return;

@@ -1,9 +1,9 @@
 /**
- *  IfThenElse.java 
+ *  IfThenElse.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,35 +31,36 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.core.Domain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Constraint if constraint1 then constraint2 else constraint3
- *  * 
+ *  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class IfThenElse extends PrimitiveConstraint {
+public class IfThenElse extends PrimitiveConstraint { private static Logger logger = LoggerFactory.getLogger(IfThenElse.class);
 
 	static int counter = 1;
 
 	/**
-	 * It specifies constraint condC in the IfThenElse constraint. 
+	 * It specifies constraint condC in the IfThenElse constraint.
 	 */
 	public PrimitiveConstraint condC;
 
 	/**
-	 * It specifies constraint condC in the IfThenElse constraint. 
+	 * It specifies constraint condC in the IfThenElse constraint.
 	 */
 	public PrimitiveConstraint thenC;
 
 	/**
-	 * It specifies constraint elseC in the IfThenElse constraint. 
+	 * It specifies constraint elseC in the IfThenElse constraint.
 	 */
 	public PrimitiveConstraint elseC;
 
@@ -70,7 +71,7 @@ public class IfThenElse extends PrimitiveConstraint {
 	Store store;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"condC", "thenC", "elseC"};
@@ -82,7 +83,7 @@ public class IfThenElse extends PrimitiveConstraint {
 	 * @param elseC the condition which must be true if the constraint condition is not true.
 	 */
 	// Constructors
-	public IfThenElse(PrimitiveConstraint condC, 
+	public IfThenElse(PrimitiveConstraint condC,
 					  PrimitiveConstraint thenC,
 					  PrimitiveConstraint elseC) {
 
@@ -92,7 +93,7 @@ public class IfThenElse extends PrimitiveConstraint {
 
 		numberId = counter++;
 		numberArgs = (short) (condC.numberArgs + thenC.numberArgs + elseC.numberArgs);
-		
+
 		this.condC = condC;
 		this.thenC = thenC;
 		this.elseC = elseC;
@@ -137,13 +138,13 @@ public class IfThenElse extends PrimitiveConstraint {
 		}
 
 		// if (imposed) {
-			
+
 		// 	if (thenC.notSatisfied())
 		// 		condC.notConsistency(store);
 
 		// 	if (elseC.notSatisfied())
 		// 		condC.consistency(store);
-			
+
 		// }
 
 	}
@@ -239,7 +240,7 @@ public class IfThenElse extends PrimitiveConstraint {
 				if (possibleEvent != null)
 					return possibleEvent;
 			}
-			
+
 			int eventAcross = -1;
 
 			if (condC.arguments().contains(var)) {
@@ -282,10 +283,10 @@ public class IfThenElse extends PrimitiveConstraint {
 				return Domain.NONE;
 			else
 				return eventAcross;
-			
-			
+
+
 		}
-		
+
 	@Override
 	public int getNotConsistencyPruningEvent(Var var) {
 
@@ -416,9 +417,9 @@ public class IfThenElse extends PrimitiveConstraint {
 		StringBuffer result = new StringBuffer( id() );
 		result.append(" : IfThenElse(").append( condC ).append( ", " );
 		result.append(thenC).append( ", " ).append( elseC ).append( " )" );
-		
+
 		return result.toString();
-		
+
 	}
 
     @Override

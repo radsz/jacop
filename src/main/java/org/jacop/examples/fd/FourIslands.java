@@ -1,9 +1,9 @@
 /**
- *  FourIslands.java 
+ *  FourIslands.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,8 +31,7 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Element;
 import org.jacop.constraints.XeqC;
@@ -40,6 +39,8 @@ import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -73,7 +74,7 @@ import org.jacop.core.Store;
  *
  * 3. The island with the resort hotel is due east of the one that exports durian fruit.
  *
- * 4. Skern and the island with the jai alai stadium are connected by a north-south bridge. 
+ * 4. Skern and the island with the jai alai stadium are connected by a north-south bridge.
  *
  * 5. Rayou and the island that exports bananas are connected by an east-west bridge.
  *
@@ -89,15 +90,15 @@ import org.jacop.core.Store;
  *
  */
 
-public class FourIslands extends ExampleFD {
+public class FourIslands extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(FourIslands.class);
 
 	@Override
 	public void model() {
 
 		store = new Store();
 		vars = new ArrayList<IntVar>();
-		
-		System.out.println("Program to solve Four Islands problem ");
+
+		logger.info("Program to solve Four Islands problem ");
 
 		// names of islands
 		String[] islandNames = { "Pwana", "Quero", "Rayou", "Skern" };
@@ -129,7 +130,7 @@ public class FourIslands extends ExampleFD {
 			export[i] = new IntVar(store, exportNames[i], 0, 3);
 			attraction[i] = new IntVar(store, attractionNames[i], 0, 3);
 			location[i] = new IntVar(store, locationNames[i], 0, 3);
-			vars.add(island[i]); vars.add(export[i]); 
+			vars.add(island[i]); vars.add(export[i]);
 			vars.add(attraction[i]); vars.add(location[i]);
 		}
 
@@ -214,9 +215,9 @@ public class FourIslands extends ExampleFD {
 
 		store.impose(new Element(iI, aIceIsland, attraction[iIceSkating]));
 		store.impose(new Element(iI, aStadionIsland, attraction[iJaiAlai]));
-		
+
 	}
-	
+
 	/**
 	 * It executes a program to solve this simple logic puzzle.
 	 * @param args no argument is used.
@@ -224,13 +225,13 @@ public class FourIslands extends ExampleFD {
 	public static void main(String args[]) {
 
 		FourIslands example = new FourIslands();
-		
+
 		example.model();
 
 		if (example.search())
-			System.out.println("Solution(s) found");
-		
-	}	
-	
-	
+			logger.info("Solution(s) found");
+
+	}
+
+
 }

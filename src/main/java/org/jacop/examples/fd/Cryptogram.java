@@ -1,9 +1,9 @@
 /**
- *  Cryptogram.java 
+ *  Cryptogram.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,14 +31,9 @@
 
 package org.jacop.examples.fd;
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.regex.Pattern;
-
+import java.io.*;
+import java.util.*;
+import java.util.regex.*;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Sum;
 import org.jacop.constraints.SumWeight;
@@ -46,14 +41,16 @@ import org.jacop.constraints.XneqC;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Cryptogram. It solves any cryptogram puzzle of the form like SEND+MORE=MONEY.
  *
- * @author  Radoslaw Szymanek
+ * @author Radoslaw Szymanek
  */
 
-public class Cryptogram extends ExampleFD {
+public class Cryptogram extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(Cryptogram.class);
 
 	/**
 	 * It specifies how many lines of expressions can be inputed in one
@@ -91,7 +88,7 @@ public class Cryptogram extends ExampleFD {
 	@Override
 	public void model() {
 
-		
+
 
 		if (filename != null) {
 
@@ -122,9 +119,9 @@ public class Cryptogram extends ExampleFD {
 						+ filename);
 			}
 		} else {
-			
+
 			if (lines == null) {
-				// Standard use case if no file is supplied		
+				// Standard use case if no file is supplied
 				// lines[0] = "SEND+MORE=MONEY";
 				// lines[0] = "BASIC+LOGIC=PASCAL";
 				// lines[0] = "CRACK+HACK=ERROR";
@@ -142,13 +139,13 @@ public class Cryptogram extends ExampleFD {
 				// lines[0] =  "IS+THIS=HERE";
 				lines[0] = "HERE+SHE=COMES";
 				noLines = 1;
-				
+
 			}
 
-			System.out.println("No input file was supplied, using lines : ");
+			logger.info("No input file was supplied, using lines : ");
 			for (int i = 0; i < noLines; i++)
-				System.out.println( lines[0] );
-			
+				logger.info(lines[0]);
+
 		}
 
 		/* Creating constraint store */
@@ -187,10 +184,10 @@ public class Cryptogram extends ExampleFD {
 				}
 
 		if (letters.size() > base) {
-			System.out.println("Expressions contain more than letters than base of the number system used ");
-			System.out.println("Base " + base);
-			System.out.println("Letters " + letters);
-			System.out.println("There can not be any solution");
+			logger.info("Expressions contain more than letters than base of the number system used ");
+			logger.info("Base " + base);
+			logger.info("Letters " + letters);
+			logger.info("There can not be any solution");
 		}
 
 		store.impose(new Alldistinct(vars.toArray(new IntVar[0])));
@@ -245,8 +242,8 @@ public class Cryptogram extends ExampleFD {
 		example.model();
 
 		if (example.searchMostConstrainedStatic())
-			System.out.println("\nSolution(s) found");
-	}			
+			logger.info("\nSolution(s) found");
+	}
 
 
 }

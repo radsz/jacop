@@ -1,9 +1,9 @@
 /**
- *  AR.java 
+ *  AR.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,66 +31,68 @@
 
 package org.jacop.examples.fd.filters;
 
-import java.util.ArrayList;
+import java.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * It specifies AR benchmark.
- * 
+ *
  * Source:
- * 
+ *
  * Rajiv Jain, Alice C. Parker "Experience with the ADAM Synthesis System" 26th
  * ACM/IEEE Design Automation Conference, 1989. and Rajiv Jain, Alice C. Parker,
  * Nohbyung Park, "Predicting Sysem-Level Area and Dealy for Pipelined and
  * Nonpipelined Designs" IEEE Trans. on CAD, vol. 11, no. 8, August 1992.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class AR extends Filter {
-	
+public class AR extends Filter { private static Logger logger = LoggerFactory.getLogger(AR.class);
+
 	/**
 	 * It creates a default AR filter with defaul delays for the operations.
 	 */
 	public AR() {
 		this(1, 2);
 	}
-	
+
 	/**
 	 * It possible to specify the delay of the addition and multiplication.
 	 * @param addDel the delay of the addition operation.
 	 * @param mulDel the delay of the multiplication operation.
 	 */
 	public AR(int addDel, int mulDel) {
-		
+
 		this.addDel = addDel;
 		this.mulDel = mulDel;
 		name = "AR";
-		
+
 		int dependencies[][] = { { 0, 8 }, { 1, 8 }, { 2, 9 }, { 3, 9 }, { 4, 10 },
 				{ 5, 10 }, { 6, 11 }, { 7, 11 }, { 8, 26 }, { 9, 27 }, { 10, 12 },
 				{ 11, 13 }, { 12, 15 }, { 12, 16 }, { 13, 14 }, { 13, 17 },
 				{ 14, 18 }, { 15, 18 }, { 16, 19 }, { 17, 19 }, { 18, 21 },
 				{ 18, 22 }, { 19, 20 }, { 19, 23 }, { 20, 24 }, { 21, 24 },
 				{ 22, 25 }, { 23, 25 }, { 24, 26 }, { 25, 27 } };
-		
+
 		this.dependencies = dependencies;
 
 		int ids[] = { mulId, mulId, mulId, mulId, mulId, mulId, mulId,
 				mulId, addId, addId, addId, addId, addId, addId, mulId, mulId,
 				mulId, mulId, addId, addId, mulId, mulId, mulId, mulId, addId,
 				addId, addId, addId };
-		
+
 		this.ids = ids;
-		
+
 		int last[] = { 12, 13, 26, 27 };
 		this.last = last;
-	
+
 	}
 
 	@Override
 	public ArrayList<String> names() {
-	
+
 		ArrayList<String> names = new ArrayList<String>(11);
 
 		names.add("*1");

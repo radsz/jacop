@@ -1,9 +1,9 @@
 /**
- *  ArchFriends.java 
+ *  ArchFriends.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,8 +31,7 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.XeqC;
@@ -40,13 +39,15 @@ import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
+ *
  * It is a simple logic puzzle about shoe purchases.
- * 
+ *
  * @author Adam Plonka, Piotr Ogrodzki, and Radoslaw Szymanek
- * 
+ *
  * Logic Puzzle
 
  * Title       : Arch Friends
@@ -56,7 +57,7 @@ import org.jacop.core.Store;
  * Page        : 7
  * Stars       : 1
 
- * Description : 
+ * Description :
 
  * Harriet, upon returning from the mall, is happily describing her
  * four shoe purchases to her friend Aurora. Aurora just loves the four
@@ -68,14 +69,14 @@ import org.jacop.core.Store;
  * where she bought each?
  */
 
-public class ArchFriends extends ExampleFD {
+public class ArchFriends extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(ArchFriends.class);
 	@Override
 	public void model() {
 
 		vars = new ArrayList<IntVar>();
 		store = new Store();
 
-		System.out.println("Program to solve ArchFriends problem ");
+		logger.info("Program to solve ArchFriends problem ");
 
 		// Declaration of constants (names, variables' indexes
 
@@ -105,8 +106,8 @@ public class ArchFriends extends ExampleFD {
 
 		for (IntVar v : shoe) vars.add(v);
 		for (IntVar v : shop) vars.add(v);
-		
-		
+
+
 		// Each shoe, shop have to have a unique identifier.
 		store.impose(new Alldifferent(shoe));
 		store.impose(new Alldifferent(shop));
@@ -140,12 +141,12 @@ public class ArchFriends extends ExampleFD {
 	public static void main(String args[]) {
 
 		ArchFriends example = new ArchFriends();
-		
+
 		example.model();
 
 		if (example.searchAllAtOnce())
-			System.out.println("Solution(s) found");
-		
+			logger.info("Solution(s) found");
+
 	}
 
 }

@@ -1,9 +1,9 @@
 /**
- *  SmallDenseDomain.java 
+ *  SmallDenseDomain.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,47 +31,47 @@
 
 package org.jacop.core;
 
-import java.util.ArrayList;
-import java.util.Random;
-
+import java.util.*;
 import org.jacop.constraints.Constraint;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Defines small dense domain based on bits within a long number. 
- * 
+ * Defines small dense domain based on bits within a long number.
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  */
 
-public class SmallDenseDomain extends IntDomain {
+public class SmallDenseDomain extends IntDomain { private static Logger logger = LoggerFactory.getLogger(SmallDenseDomain.class);
 
 
 	/**
-	 * It is an empty domain returned by default when empty domain becomes a result of 
+	 * It is an empty domain returned by default when empty domain becomes a result of
 	 * any function.
 	 */
 	public static final SmallDenseDomain emptyDomain = new SmallDenseDomain(1, 0L);
-	
+
 	/**
-	 * The minimal value present in this domain encoding. The 
+	 * The minimal value present in this domain encoding. The
 	 * domain can only encode small domains within a range [min .. min + 63].
 	 */
 	public int min;
-	
+
 	/**
-	 * It stores information about presence of the elements in the domain. If 
+	 * It stores information about presence of the elements in the domain. If
 	 * the least significant bit is set then min + 63 is present. The most
 	 * significant bit is always set as this domain maintains invariant that
-	 * minimum value always belongs to the domain. 
+	 * minimum value always belongs to the domain.
 	 */
 	public long bits;
 
 	private boolean singleton;
-	
+
 	private int size;
-	
+
 	private int max;
-	
+
 	/**
 	 * It specifies the previous domain which was used by this domain. The old
 	 * domain is stored here and can be easily restored if necessary.
@@ -79,28 +79,28 @@ public class SmallDenseDomain extends IntDomain {
 
 	public IntDomain previousDomain;
 
-	
+
 	/**
-	 * It creates an empty domain. 
+	 * It creates an empty domain.
 	 */
 	public SmallDenseDomain() {
-		
+
 		bits = 0;
 		size = 0;
 		singleton = false;
 		min = Integer.MAX_VALUE;
 		max = Integer.MIN_VALUE;
-				
+
 	}
 
 	/**
-	 * It creates a domain of type small dense. 
-	 * 
-	 * @param min the minimum value present in this domain. 
+	 * It creates a domain of type small dense.
+	 *
+	 * @param min the minimum value present in this domain.
 	 * @param bits the bits representing presence of any value from the range [ min .. min + 63].
 	 */
 	public SmallDenseDomain(int min, long bits) {
-		
+
 		if (bits != 0) {
 
 			this.min = min;
@@ -121,7 +121,7 @@ public class SmallDenseDomain extends IntDomain {
 
 		}
 		else {
-			
+
 			bits = 0;
 			size = 0;
 			singleton = false;
@@ -129,7 +129,7 @@ public class SmallDenseDomain extends IntDomain {
 			max = Integer.MIN_VALUE;
 
 		}
-				
+
 	}
 
 	/**
@@ -138,7 +138,7 @@ public class SmallDenseDomain extends IntDomain {
 	 * @param max
 	 */
 	public SmallDenseDomain(int min, int max) {
-		
+
 		if (min <= max) {
 
 			this.min = min;
@@ -156,21 +156,21 @@ public class SmallDenseDomain extends IntDomain {
 
 		}
 		else {
-			
+
 			bits = 0;
 			size = 0;
 			singleton = false;
 			min = Integer.MAX_VALUE;
 			max = Integer.MIN_VALUE;
-			
+
 		}
-		
+
 	}
 
-	
+
 	@Override
 	public void addDom(IntDomain domain) {
-		
+
 		super.addDom(domain);
 
 	}
@@ -179,23 +179,23 @@ public class SmallDenseDomain extends IntDomain {
 	public IntDomain complement() {
 
 		IntDomain intervalBasedRepresentation = this.toIntervalDomain();
-		
+
 		return intervalBasedRepresentation.complement();
 
 		/*
-		 
-		// it should not assume that complement is restricted to the range given by small dense domain. 
-	
+
+		// it should not assume that complement is restricted to the range given by small dense domain.
+
 		long result = -1;
-		
+
 		result = result ^ bits;
-		
+
 		if (result == 0)
 			return emptyIntDomain;
 		else
 			return new SmallDenseDomain(min, result);
 		*/
-		
+
 	}
 
     public IntDomain previousDomain() {
@@ -207,15 +207,15 @@ public class SmallDenseDomain extends IntDomain {
 
 		if (domain.isEmpty())
 			return true;
-		
+
 		if (isEmpty())
 			return false;
-		
+
 		if (domain.min() < this.min || domain.max() > this.max)
 			return false;
-				
+
 		if (domain.domainID() == IntDomain.SmallDenseDomainID) {
-			
+
 			SmallDenseDomain input = (SmallDenseDomain) domain;
 
 			// no problem with shift modulo 64 as it is always lower than 64.
@@ -225,45 +225,45 @@ public class SmallDenseDomain extends IntDomain {
 				return false;
 			else
 				return true;
-			
+
 		}
-		
+
 		if (size < domain.getSize())
 			return false;
-		
-		
-		/* TODO implement special code, 
+
+
+		/* TODO implement special code,
 		if (domain.domainID() == IntDomain.IntervalDomainID) {
 
 			IntervalDomain input = (IntervalDomain) domain;
 
 			assert false;
-			
+
 		}
 		*/
 
 		boolean result = super.contains(domain);
-		
+
 		assert ( result == this.toIntervalDomain().contains(domain)) : "Improper implementation of function contains " + this + "d" + domain;
 
 		return result;
-		
+
 	}
 
 	@Override
 	public boolean contains(int value) {
-		
+
 		// TODO, CHECK.
 		if ( value >= min && value <= min + 63 && ( bits & TWO_N_ARRAY[63 - ( value - min )] ) != 0)
 			return true;
 		else
 			return false;
-		
+
 	}
 
 	@Override
 	public boolean eq(IntDomain domain) {
-		
+
 		if (this.isEmpty()) {
 			if (domain.isEmpty())
 				return true;
@@ -272,16 +272,16 @@ public class SmallDenseDomain extends IntDomain {
 		}
 		else if (domain.isEmpty())
 			return false;
-		
+
 		if (domain.domainID() == IntDomain.SmallDenseDomainID) {
 
 			SmallDenseDomain input = (SmallDenseDomain) domain;
-			
+
 			if (input.min == this.min && input.bits == this.bits)
 				return true;
 			else
 				return false;
-			
+
 		}
 
 		if (domain.domainID() == IntDomain.IntervalDomainID) {
@@ -292,22 +292,22 @@ public class SmallDenseDomain extends IntDomain {
 				assert super.eq(domain) == false;
 				return false;
 			}
-			
+
 			for (int i = input.size - 1; i > 0; i--)
 				if (isIntersecting(input.intervals[i-1].max + 1, input.intervals[i].min - 1)) {
 					assert super.eq(domain) == false;
 					return false;
 				}
-			
+
 			assert ( super.eq(domain) ) : "Incorrect implementation for IntervalDomain and SmallDenseDomain.";
-			
+
 			return true;
-				
+
 		}
-		
+
 		assert checkInvariants() == null : checkInvariants() ;
 
-		// TODO, implement special code, check the super implementation. 
+		// TODO, implement special code, check the super implementation.
 		return super.eq(domain);
 
 	}
@@ -319,10 +319,10 @@ public class SmallDenseDomain extends IntDomain {
 
 		if (index >= getSize())
 			throw new IllegalArgumentException("The domain has less elements then index.");
-		
+
 		long result = bits;
 		int value = min;
-		
+
 		while (index > 0) {
 			if (result < 0) {
 				index--;
@@ -335,20 +335,20 @@ public class SmallDenseDomain extends IntDomain {
 			result = result << 1;
 			value++;
 		}
-		
+
 		return value;
-		
+
 	}
 
 	@Override
 	public Interval getInterval(int position) {
-		
+
 		int no = 0;
 		int shift = 0;
 		long result = bits;
 		boolean inInterval = false;
 		int begin = Integer.MIN_VALUE;
-		
+
 		while (result != 0) {
 			if (!inInterval && result < 0) {
 				inInterval = true;
@@ -385,19 +385,19 @@ public class SmallDenseDomain extends IntDomain {
 	public int getSize() {
 
 		assert (size == getSize(bits)) : "size cache was not updated before correctly";
-		
+
 		return size;
-		
+
 	}
 
 
 	/**
-	 * It computes the number of 1's in the binary representation of the number given in the field input. 
-	 * 
+	 * It computes the number of 1's in the binary representation of the number given in the field input.
+	 *
 	 * @param input the 64bits for which calculation of number of 1's takes place.
-	 * 
+	 *
 	 * @return the number of 1's.
-	 * 
+	 *
 	 */
 	public int getSize(long input) {
 
@@ -407,18 +407,18 @@ public class SmallDenseDomain extends IntDomain {
 		xDown = (xDown + (xDown >>> 4)) & 0x0f0f0f0f;
 		xDown = xDown + (xDown >>> 8);
 		xDown = xDown + (xDown >>> 16);
-		
+
 		long xUp = input >>> 32;
 		xUp = xUp - ((xUp >>> 1) & 0x55555555);
 		xUp = (xUp & 0x33333333) + ((xUp >>> 2) & 0x33333333);
 		xUp = (xUp + (xUp >>> 4)) & 0x0f0f0f0f;
 		xUp = xUp + (xUp >>> 8);
 		xUp = xUp + (xUp >>> 16);
-		
+
 		return ((int) xDown & 0x0000003f) + ((int) xUp & 0x0000003f);
 
 	}
-	
+
 	/**
 	 * It updates the domain to have values only within the interval min..max.
 	 * The type of update is decided by the value of stamp. It informs the
@@ -428,7 +428,7 @@ public class SmallDenseDomain extends IntDomain {
 	public void in(int storeLevel, Var var, int min, int max) {
 
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		assert (min <= max) : "Min value greater than max value " + min + " > " + max;
 
 		if (max < this.min)
@@ -444,59 +444,59 @@ public class SmallDenseDomain extends IntDomain {
             return;
 
 		long bitsResult = bits;
-		
-//		System.out.println( "Starting with " + new SmallDenseDomain(min, bitsResult));
+
+//		logger.info( "Starting with " + new SmallDenseDomain(min, bitsResult));
 		if (this.max - max > 0) {
 
 			int thisMax = this.min + 63;
 
 			bitsResult = bitsResult >>> (thisMax - max);
-//			System.out.println( new SmallDenseDomain(min, bitsResult));
-			
+//			logger.info( new SmallDenseDomain(min, bitsResult));
+
 			if (min - this.min > 0) {
 				bitsResult = bitsResult << ( min - this.min + thisMax - max );
-//				System.out.println( new SmallDenseDomain(min, bitsResult));
+//				logger.info( new SmallDenseDomain(min, bitsResult));
 
 				bitsResult = bitsResult >>> ( min - this.min );
-//				System.out.println( new SmallDenseDomain(min, bitsResult));			
+//				logger.info( new SmallDenseDomain(min, bitsResult));
 			}
 			else {
 				bitsResult = bitsResult << ( thisMax - max );
-//				System.out.println( new SmallDenseDomain(min, bitsResult));
+//				logger.info( new SmallDenseDomain(min, bitsResult));
 			}
-			
+
 
 		}
 		else {
 
 			if (min - this.min > 0) {
 				bitsResult = bitsResult << ( min - this.min );
-//				System.out.println( new SmallDenseDomain(min, bitsResult));
+//				logger.info( new SmallDenseDomain(min, bitsResult));
 
 				bitsResult = bitsResult >>> ( min - this.min );
-//				System.out.println( new SmallDenseDomain(min, bitsResult));			
+//				logger.info( new SmallDenseDomain(min, bitsResult));
 			}
 			else {
 				// nothing to prune, it should not be here as this condition is discovered earlier.
 				return;
 			}
-			
+
 		}
-		
+
 		int newSize = getSize( bitsResult );
 
 		if (newSize == 0)
 			throw failException;
-			
+
 //		assert (newSize <= size) : "Incorrect in operation";
-		
+
 //		if (newSize == size)
 //			return;
 
 		assert (newSize < size) : "Incorrect in operation";
-		
-		// Pruning has occurred. 
-		
+
+		// Pruning has occurred.
+
 		if (stamp == storeLevel) {
 
 			bits = bitsResult;
@@ -506,7 +506,7 @@ public class SmallDenseDomain extends IntDomain {
 
 			int previousMin = min;
 			int previousMax = max;
-			
+
 			// 1. Find new min.
 			if (this.min < min) {
 				bits = bits << ( min - this.min );
@@ -514,16 +514,16 @@ public class SmallDenseDomain extends IntDomain {
 				adaptMin();
 			}
 
-			// 2. Find new max. 
+			// 2. Find new max.
 			if (this.max > max) {
 				this.max = previousValue(max + 1);
 			}
 
 			assert (max <= previousMax) : "Domain update incorrect.";
 			assert (min >= previousMin) : "Domain update incorrect.";
-			
+
 			assert checkInvariants() == null : checkInvariants() ;
-			
+
 			if (singleton) {
 				var.domainHasChanged(IntDomain.GROUND);
 				return;
@@ -551,7 +551,7 @@ public class SmallDenseDomain extends IntDomain {
 			if (newSize == 1)
 				result.singleton = true;
 
-			// 2. Find new max. 
+			// 2. Find new max.
 			if (this.max > max) {
 				result.max = result.previousValue(max + 1);
 			}
@@ -578,13 +578,13 @@ public class SmallDenseDomain extends IntDomain {
 				return;
 			}
 
-		}	
-		
+		}
+
 	}
-	
+
 
 	private void adaptMin() {
-		
+
 		assert (bits != 0) : "Empty domain, min can not be adapted.";
 
 		while ( (bits & first8) == 0 ) {
@@ -596,28 +596,28 @@ public class SmallDenseDomain extends IntDomain {
 			min++;
 			bits = bits << 1;
 		}
-		
+
 	}
 
 	public void in(int storeLevel, Var var, long domain) {
-				
+
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		long bitsResult = bits & domain;
-		
+
 		if (bitsResult == bits)
 			return;
-		
+
 		int newSize = getSize( bitsResult );
 
 		if (newSize == 0)
 			throw failException;
-			
-		// Pruning has occurred. 
+
+		// Pruning has occurred.
 
 		int previousMin = min;
 		int previousMax = max;
-		
+
 		if (stamp == storeLevel) {
 
 			bits = bitsResult;
@@ -630,21 +630,21 @@ public class SmallDenseDomain extends IntDomain {
 
 			assert (max <= previousMax) : "Domain update incorrect.";
 			assert (min >= previousMin) : "Domain update incorrect.";
-			
+
 			assert checkInvariants() == null : checkInvariants() ;
-			
+
 			if (singleton) {
 				var.domainHasChanged(IntDomain.GROUND);
 				return;
 			} else {
-				
+
 				if (previousMin != min || previousMax != max) {
 					var.domainHasChanged(IntDomain.BOUND);
 					return;
 				}
 				else {
 					var.domainHasChanged(IntDomain.ANY);
-					return;					
+					return;
 				}
 			}
 
@@ -673,37 +673,37 @@ public class SmallDenseDomain extends IntDomain {
 				var.domainHasChanged(IntDomain.GROUND);
 				return;
 			} else {
-				
+
 				if (previousMin != result.min || previousMax != result.max) {
 					var.domainHasChanged(IntDomain.BOUND);
 					return;
 				}
 				else {
 					var.domainHasChanged(IntDomain.ANY);
-					return;					
+					return;
 				}
 
 			}
 
-		}	
+		}
 
 	}
 
-	
+
 	@Override
 	public void in(int storeLevel, Var var, IntDomain domain) {
-		
+
 		if (domain.singleton()) {
 			in(storeLevel, var, domain.value(), domain.value());
 			return;
 		}
-		
+
 		if (domain.domainID() == IntDomain.SmallDenseDomainID) {
-			
+
 			SmallDenseDomain input = (SmallDenseDomain) domain;
-			
+
 			long inBits;
-			
+
 			if (min <= input.min) {
 				int shift = input.min - min;
 				if (shift < 64)
@@ -724,21 +724,21 @@ public class SmallDenseDomain extends IntDomain {
 		}
 
 		if (domain.domainID() == IntDomain.IntervalDomainID) {
-			
+
 			IntervalDomain input = (IntervalDomain) domain;
-				
+
 			int i = 0;
-			
+
 			for (; i < input.size; i++) {
 				if (input.intervals[i].max < this.min)
 					continue;
-				else 
+				else
 					break;
 			}
 
 			if ( i == input.size )
 				throw Store.failException;
-			
+
 			Interval first = input.intervals[i];
 			int length = Math.min(first.max, this.max) - Math.max(this.min, first.min);
 
@@ -747,9 +747,9 @@ public class SmallDenseDomain extends IntDomain {
 
 			if (length < 0)
 				throw Store.failException;
-			
-			long inBits = SEQ_ARRAY[length];			
-			
+
+			long inBits = SEQ_ARRAY[length];
+
 			i++;
 
 			Interval next = null;
@@ -759,7 +759,7 @@ public class SmallDenseDomain extends IntDomain {
 					break;
 				inBits = inBits << (next.max - input.intervals[i-1].max);
 				inBits = inBits | SEQ_ARRAY[next.max - next.min];
-				
+
 			}
 
 			inBits = inBits << Math.max(this.max - ( input.intervals[i-1].max ), 0);
@@ -768,31 +768,31 @@ public class SmallDenseDomain extends IntDomain {
 			if (i < input.size && next.min <= this.max) {
 
 				inBits = inBits | SEQ_ARRAY[this.max - ( next.min ) ];
-				
+
 			}
 
 			inBits = inBits << ( this.min + 63 - this.max );
-			
+
 			//if (inBits == 0)
-			//	System.out.println(this + "domain " + domain + " shift " + shift);
-			
+			//	logger.info(this + "domain " + domain + " shift " + shift);
+
 			//temp = new SmallDenseDomain(this.min, inBits);
 			//inBits = inBits << (this.min + 63 - this.max - Math.max(first.min + shift - this.min, 0));
-			//System.out.println(this + "domain " + domain + " shift " + shift + " transformed " + temp);
+			//logger.info(this + "domain " + domain + " shift " + shift + " transformed " + temp);
 
 			in(storeLevel, var, inBits);
-						
+
 			assert (domain.complement().isIntersecting((IntDomain)var.dom()) == false) : "Error either in in or isIntersecting.";
-			
+
 			return;
-			
+
 		}
 
 		assert ( domain.max() - domain.min() + 1 == domain.getSize() ) : "Loosing propagation" + domain;
 
-		// TODO, improve, it does not take yet holes in the domain. 
+		// TODO, improve, it does not take yet holes in the domain.
 		in(storeLevel, var, domain.min(), domain.max());
-	
+
 	}
 
 	@Override
@@ -814,14 +814,14 @@ public class SmallDenseDomain extends IntDomain {
 
 		if (newSize == 0)
 			throw failException;
-			
+
 		assert (newSize <= size) : "Incorrect in operation";
-		
+
 		if (newSize == size)
 			return;
 
-		// Pruning has occurred. 
-		
+		// Pruning has occurred.
+
 		if (stamp == storeLevel) {
 
 			boolean boundEvent = false;
@@ -829,16 +829,16 @@ public class SmallDenseDomain extends IntDomain {
 			size = newSize;
 			if (newSize == 1)
 				singleton = true;
-			
+
 			// TODO, remove asserts which require a local variable to speedup non asserts execution.
 			int previousMin = min;
 			int previousMax = max;
-			
+
 			if (this.min == complement) {
 				boundEvent = true;
 				adaptMin();
 			}
-			// 2. Find new max. 
+			// 2. Find new max.
 			if (this.max == complement) {
 				this.max = previousValue( complement );
 				boundEvent = true;
@@ -848,7 +848,7 @@ public class SmallDenseDomain extends IntDomain {
 			assert (min >= previousMin) : "Domain update incorrect.";
 
 			assert checkInvariants() == null : checkInvariants() ;
-			
+
 			if (singleton) {
 				var.domainHasChanged(IntDomain.GROUND);
 				return;
@@ -906,14 +906,14 @@ public class SmallDenseDomain extends IntDomain {
 			} else {
 				if (boundEvent)
 					var.domainHasChanged(IntDomain.BOUND);
-				else 
+				else
 					var.domainHasChanged(IntDomain.ANY);
 
 				return;
 			}
 
-		}			
-		
+		}
+
 	}
 
 	@Override
@@ -923,16 +923,16 @@ public class SmallDenseDomain extends IntDomain {
 
 		if (maxComplement < min)
 			return;
-		
+
 		if (minComplement > max)
 			return;
-		
+
 		if (minComplement < min)
 			minComplement = min;
-		
+
 		if (maxComplement > max)
 			maxComplement = max;
-		
+
 		long bitsResult = bits & ~( SEQ_ARRAY[maxComplement - minComplement] << ( min + 63 - maxComplement ) );
 
         if (bitsResult == bits)
@@ -942,14 +942,14 @@ public class SmallDenseDomain extends IntDomain {
 
 		if (newSize == 0)
 			throw failException;
-			
+
 		assert (newSize <= size) : "Incorrect in operation";
-		
+
 		if (newSize == size)
 			return;
 
-		// Pruning has occurred. 
-		
+		// Pruning has occurred.
+
 		if (stamp == storeLevel) {
 
 			boolean boundEvent = false;
@@ -957,16 +957,16 @@ public class SmallDenseDomain extends IntDomain {
 			size = newSize;
 			if (newSize == 1)
 				singleton = true;
-			
+
 			// TODO, remove asserts which require a local variable to speedup non asserts execution.
 			int previousMin = min;
 			int previousMax = max;
-			
+
 			if (this.min == minComplement) {
 				boundEvent = true;
 				adaptMin();
 			}
-			// 2. Find new max. 
+			// 2. Find new max.
 			if (this.max == maxComplement) {
 				this.max = previousValue( maxComplement );
 				boundEvent = true;
@@ -976,7 +976,7 @@ public class SmallDenseDomain extends IntDomain {
 			assert (min >= previousMin) : "Domain update incorrect.";
 
 			assert checkInvariants() == null : checkInvariants() ;
-			
+
 			if (singleton) {
 				var.domainHasChanged(IntDomain.GROUND);
 				return;
@@ -1034,13 +1034,13 @@ public class SmallDenseDomain extends IntDomain {
 			} else {
 				if (boundEvent)
 					var.domainHasChanged(IntDomain.BOUND);
-				else 
+				else
 					var.domainHasChanged(IntDomain.ANY);
 
 				return;
 			}
 
-		}			
+		}
 
 	}
 
@@ -1068,13 +1068,13 @@ public class SmallDenseDomain extends IntDomain {
 
 	@Override
 	public void inShift(int storeLevel, Var var, IntDomain domain, int shift) {
-				
+
 		if (domain.domainID() == IntDomain.SmallDenseDomainID) {
-			
+
 			SmallDenseDomain input = (SmallDenseDomain) domain;
-			
+
 			long inBits;
-			
+
 			if (min <= input.min + shift) {
 				int internalShift = input.min + shift - min;
 				if (internalShift < 64)
@@ -1097,23 +1097,23 @@ public class SmallDenseDomain extends IntDomain {
 		// TODO, create proper assert check for this case.
 
 		if (domain.domainID() == IntDomain.IntervalDomainID) {
-			
+
 			IntervalDomain input = (IntervalDomain) domain;
-				
+
 			long inBits = 0;
-			
+
 			int i = 0;
-			
+
 			for (; i < input.size; i++) {
 				if (input.intervals[i].max + shift < this.min)
 					continue;
-				else 
+				else
 					break;
 			}
 
 			if ( i == input.size )
 				throw Store.failException;
-			
+
 			Interval first = input.intervals[i];
 			int length = Math.min(first.max + shift, this.max) - Math.max(this.min, first.min + shift);
 
@@ -1122,9 +1122,9 @@ public class SmallDenseDomain extends IntDomain {
 
 			if (length < 0)
 				throw Store.failException;
-			
-			inBits = inBits | SEQ_ARRAY[length];			
-			
+
+			inBits = inBits | SEQ_ARRAY[length];
+
 			i++;
 
 			Interval next = null;
@@ -1134,7 +1134,7 @@ public class SmallDenseDomain extends IntDomain {
 					break;
 				inBits = inBits << (next.max - input.intervals[i-1].max);
 				inBits = inBits | SEQ_ARRAY[next.max - next.min];
-				
+
 			}
 
 			inBits = inBits << Math.max(this.max - ( input.intervals[i-1].max + shift ), 0);
@@ -1143,54 +1143,54 @@ public class SmallDenseDomain extends IntDomain {
 			if (i < input.size && next.min + shift <= this.max) {
 
 				inBits = inBits | SEQ_ARRAY[this.max - ( next.min + shift ) ];
-				
+
 			}
 
 			inBits = inBits << ( this.min + 63 - this.max );
-			
+
 			//if (inBits == 0)
-			//	System.out.println(this + "domain " + domain + " shift " + shift);
-			
+			//	logger.info(this + "domain " + domain + " shift " + shift);
+
 			//temp = new SmallDenseDomain(this.min, inBits);
 			//inBits = inBits << (this.min + 63 - this.max - Math.max(first.min + shift - this.min, 0));
-			//System.out.println(this + "domain " + domain + " shift " + shift + " transformed " + temp);
+			//logger.info(this + "domain " + domain + " shift " + shift + " transformed " + temp);
 
 			in(storeLevel, var, inBits);
 			return;
-			
+
 		}
-		
-		
+
+
 		assert ( domain.max() - domain.min() + 1 == domain.getSize() ) : "Loosing propagation" + domain;
 
-		// TODO, improve, it does not take yet holes in the domain. 
+		// TODO, improve, it does not take yet holes in the domain.
 		in(storeLevel, var, domain.min() + shift, domain.max() + shift);
 
 	}
 
 	public SmallDenseDomain intersect(IntervalDomain input, int shift) {
-				
-		// System.out.println("Domain " + this + " intersecting with " + input);
-		
-		// TODO, check all return empty domains to make sure that they are not being used 
+
+		// logger.info("Domain " + this + " intersecting with " + input);
+
+		// TODO, check all return empty domains to make sure that they are not being used
 		// as normal domains (constraints).
 		if (isEmpty())
 			return SmallDenseDomain.emptyDomain;
-		
+
 		long inBits = 0;
-		
+
 		int i = 0;
-		
+
 		for (; i < input.size; i++) {
 			if (input.intervals[i].max + shift < this.min)
 				continue;
-			else 
+			else
 				break;
 		}
 
 		if ( i == input.size )
 			return SmallDenseDomain.emptyDomain;
-		
+
 		Interval first = input.intervals[i];
 		int length = Math.min(first.max + shift, this.max) - Math.max(this.min, first.min + shift);
 
@@ -1199,9 +1199,9 @@ public class SmallDenseDomain extends IntDomain {
 
 		if (length < 0)
 			return SmallDenseDomain.emptyDomain;
-		
-		inBits = inBits | SEQ_ARRAY[length];			
-		
+
+		inBits = inBits | SEQ_ARRAY[length];
+
 		i++;
 
 		Interval next = null;
@@ -1211,7 +1211,7 @@ public class SmallDenseDomain extends IntDomain {
 				break;
 			inBits = inBits << (next.max - input.intervals[i-1].max);
 			inBits = inBits | SEQ_ARRAY[next.max - next.min];
-			
+
 		}
 
 		inBits = inBits << Math.max(this.max - ( input.intervals[i-1].max + shift ), 0);
@@ -1220,35 +1220,35 @@ public class SmallDenseDomain extends IntDomain {
 		if (i < input.size && next.min + shift <= this.max) {
 
 			inBits = inBits | SEQ_ARRAY[this.max - ( next.min + shift ) ];
-			
+
 		}
 
 		inBits = inBits << ( this.min + 63 - this.max );
-		
+
 		inBits = inBits & bits;
 		//if (inBits == 0)
-		//	System.out.println(this + "domain " + domain + " shift " + shift);
-		
+		//	logger.info(this + "domain " + domain + " shift " + shift);
+
 		//temp = new SmallDenseDomain(this.min, inBits);
 		//inBits = inBits << (this.min + 63 - this.max - Math.max(first.min + shift - this.min, 0));
-		//System.out.println(this + "domain " + domain + " shift " + shift + " transformed " + temp);
+		//logger.info(this + "domain " + domain + " shift " + shift + " transformed " + temp);
 
 		return new SmallDenseDomain(this.min, inBits);
-		
+
 	}
-	
+
 	@Override
 	public IntDomain intersect(IntDomain domain) {
 
 		if (domain.domainID() == IntDomain.SmallDenseDomainID) {
-			
+
 			SmallDenseDomain input = (SmallDenseDomain) domain;
 
 			if (input.bits == 0)
 				return IntDomain.emptyIntDomain;
-			
+
 			long inBits;
-			
+
 			if (min <= input.min) {
 				int shift = input.min - min;
 				if (shift < 64)
@@ -1267,35 +1267,35 @@ public class SmallDenseDomain extends IntDomain {
 			SmallDenseDomain result = new SmallDenseDomain(min, inBits & bits);
 
 			assert result.checkInvariants() == null : result.checkInvariants() ;
-			
+
 			return result;
 
 		}
 
 		if (domain.domainID() == IntDomain.IntervalDomainID) {
-			
+
 			IntervalDomain input = (IntervalDomain) domain;
-			
+
 			SmallDenseDomain result = intersect(input, 0);
-			
+
 			assert result.checkInvariants() == null : result.checkInvariants() ;
 
 			return result;
-			
+
 		}
 
 		if (domain.domainID() == IntDomain.BoundDomainID) {
-			
+
 		    IntervalDomain input = new IntervalDomain( domain.min(), domain.max());
-			
+
 			SmallDenseDomain result = intersect(input, 0);
-			
+
 			assert result.checkInvariants() == null : result.checkInvariants() ;
 
 			return result;
-			
+
 		}
-		
+
 		assert false : "Not implemented for class " + domain.getClass();
 
 		return null;
@@ -1303,9 +1303,9 @@ public class SmallDenseDomain extends IntDomain {
 
 	@Override
 	public IntDomain intersect(int min, int max) {
-		
+
 		IntDomain result = this.cloneLight();
-		
+
 		result.intersectAdapt(min, max);
 
 		return result;
@@ -1313,13 +1313,13 @@ public class SmallDenseDomain extends IntDomain {
 
 	@Override
 	public int intersectAdapt(IntDomain domain) {
-		
+
 		// TODO, do a bit more testing, although code has been derived from in function.
-		
-	//	System.out.println("i>" + this  + "(" + domain + ")");
-		
+
+	//	logger.info("i>" + this  + "(" + domain + ")");
+
 		if (domain.domainID() == IntDomain.SmallDenseDomainID) {
-			
+
 			SmallDenseDomain input = (SmallDenseDomain) domain;
 
 			long inBits;
@@ -1353,7 +1353,7 @@ public class SmallDenseDomain extends IntDomain {
 				return IntDomain.GROUND;
 			}
 
-			// Pruning has occurred. 
+			// Pruning has occurred.
 
 			int previousMin = min;
 			int previousMax = max;
@@ -1371,8 +1371,8 @@ public class SmallDenseDomain extends IntDomain {
 
 			assert checkInvariants() == null : checkInvariants() ;
 
-		//	System.out.println("i<" + this );
-			
+		//	logger.info("i<" + this );
+
 			if (singleton) {
 				return IntDomain.GROUND;
 			} else {
@@ -1381,16 +1381,16 @@ public class SmallDenseDomain extends IntDomain {
 					return IntDomain.BOUND;
 				}
 				else {
-					return IntDomain.ANY;					
+					return IntDomain.ANY;
 				}
 			}
 
 		}
 
 		if (domain.domainID() == IntDomain.IntervalDomainID) {
-			
+
 			IntervalDomain input = (IntervalDomain) domain;
-			
+
 			SmallDenseDomain result = this.intersect(input, 0);
 
 			assert ( result.eq( this.toIntervalDomain().intersect(input) )) : "Intersection not properly computed." + this + "i" + input + "r" + result;
@@ -1401,7 +1401,7 @@ public class SmallDenseDomain extends IntDomain {
 			int previousMax = max;
 
 			setDomain(result);
-			
+
 			if (isEmpty())
 				return IntDomain.GROUND;
 
@@ -1413,10 +1413,10 @@ public class SmallDenseDomain extends IntDomain {
 					return IntDomain.BOUND;
 				}
 				else {
-					return IntDomain.ANY;					
+					return IntDomain.ANY;
 				}
 			}
-			
+
 		}
 
 		if (domain.domainID() == IntDomain.BoundDomainID) {
@@ -1440,7 +1440,7 @@ public class SmallDenseDomain extends IntDomain {
 					return IntDomain.BOUND;
 				}
 				else {
-					return IntDomain.ANY;					
+					return IntDomain.ANY;
 				}
 			}
 
@@ -1449,34 +1449,34 @@ public class SmallDenseDomain extends IntDomain {
 		// TODO, used by in functions of BoundSetDomain.
 		assert false : "Not implemented for class " + domain.getClass();
 		return -1;
-		
+
 	}
 
 	@Override
 	public int intersectAdapt(int min, int max) {
 
 		// TODO, test, recent code.
-		
+
 		if (isEmpty())
 			return IntDomain.NONE;
 
 		if (min <= this.min && max >= this.max)
 			return IntDomain.NONE;
-		
+
 		if (this.max < min || this.min > max) {
 			clear();
 			return IntDomain.GROUND;
 		}
-			
+
 		assert checkInvariants() == null : checkInvariants() ;
 
 		min = Math.max(min, this.min);
 		max = Math.min(max, this.max);
-		
+
 		long result = SEQ_ARRAY[max - min] << ( 63 - ( max - min) );
 
 		bits = ( bits << min - this.min) & result;
-		
+
 		this.min = min;
 		this.max = max;
 		this.size = getSize(bits);
@@ -1484,19 +1484,19 @@ public class SmallDenseDomain extends IntDomain {
 			this.singleton = true;
 		else
 			this.singleton = false;
-		
+
 		assert checkInvariants() == null : checkInvariants() ;
 
 		if (!singleton)
 			return IntDomain.BOUND;
 		else
 			return IntDomain.GROUND;
-		
+
 	}
 
 	@Override
 	public IntervalEnumeration intervalEnumeration() {
-		
+
 		return new SmallDenseDomainIntervalEnumeration(this);
 
 	}
@@ -1506,13 +1506,13 @@ public class SmallDenseDomain extends IntDomain {
 
 		if (domain.isEmpty() || isEmpty())
 			return false;
-		
+
 		if (domain.domainID() == IntDomain.SmallDenseDomainID) {
-			
+
 			SmallDenseDomain input = (SmallDenseDomain) domain;
-			
+
 			long inBits;
-			
+
 			if (min <= input.min) {
 				int shift = input.min - min;
 				if (shift < 64)
@@ -1529,7 +1529,7 @@ public class SmallDenseDomain extends IntDomain {
 			}
 
 			inBits = inBits & bits;
-			
+
 			if (inBits != 0) {
 				assert (super.isIntersecting(domain)) : "isIntersecting not properly implemented";
 				return true;
@@ -1541,97 +1541,97 @@ public class SmallDenseDomain extends IntDomain {
 		}
 
 		boolean result = super.isIntersecting(domain);
-						
+
 		assert (result == this.toIntervalDomain().isIntersecting(domain)) : "isIntersecting not properly implemented." + this + "d" + domain + "result " + result;
 
 		return result;
-		
+
 	}
 
 	@Override
 	public boolean isIntersecting(int min, int max) {
 
 		assert (min <= max) : "Illegal arguments min is greater than max";
-		
+
 		// TODO, test.
-		
+
 		if (this.max < min || this.min > max)
 			return false;
-		
+
 		long result = bits;
-		
+
 		int shiftLeft = min - this.min;
-		
+
 		if (shiftLeft > 0)
 			result = result << shiftLeft;
-		
+
 		if (result < 0)
 			return true;
-		
+
 		if (shiftLeft > 0) {
 			result = result >>>  shiftLeft;
 		    result = result >>> Math.max(0, 63 + this.min - max);
 		}
-		else 
+		else
 			result = result >>> Math.max(0, 63 + this.min - max);
-					
+
 		if ( result != 0 )
 			return true;
 		else
 			return false;
-		
+
 		// Used in AbsXeqY, Regular.
 	}
 
 	@Override
 	public int leftElement(int intervalNo) {
-		
+
 		return super.leftElement(intervalNo);
 
 	}
 
 	@Override
 	public int max() {
-		
+
 		assert ( bits != 0 ) : "max function called for an empty domain";
-		
+
 		return max;
-		
+
 	}
 
 	@Override
 	public int min() {
-		
+
 		assert ( (bits & TWO_N_ARRAY[63]) != 0) : "Inconsistent field min when compared to bits." + this;
-		
+
 		return min;
-		
+
 	}
 
 	long first8 = 255L << 56;
-	
+
 	@Override
 	public int nextValue(int value) {
 
 		assert ( checkInvariants() == null ) : checkInvariants();
 
 		long temp = bits;
-		
+
 		if (value < min)
 			return min;
-		
+
 		int shift = value - this.min + 1;
-		
+
 		if (shift < 64)
 			temp = temp << shift;
-		else 
+		else
 			temp = 0;
 
 		if (temp == 0)
 			return value;
 
 		while (true) {
-			
+
 			long sequence8 = temp & first8;
 
 			if (sequence8 == 0) {
@@ -1648,9 +1648,9 @@ public class SmallDenseDomain extends IntDomain {
 						shift++;
 					}
 				}
-				
+
 				assert false : "It should not be here.";
-					
+
 			}
 		}
 
@@ -1658,11 +1658,11 @@ public class SmallDenseDomain extends IntDomain {
 
 	@Override
 	public int noIntervals() {
-		
+
 		int no = 0;
 		long result = bits;
 		boolean inInterval = false;
-		
+
 		while (result != 0) {
 			if (!inInterval && result < 0) {
 				inInterval = true;
@@ -1679,7 +1679,7 @@ public class SmallDenseDomain extends IntDomain {
 			if (!inInterval && result > 0) {
 				result = result << 1;
 			}
-				
+
 		}
 
 		return no;
@@ -1687,12 +1687,12 @@ public class SmallDenseDomain extends IntDomain {
 
 	@Override
 	public int previousValue(int value) {
-		
+
 		assert ( checkInvariants() == null ) : checkInvariants();
-		
+
 		long temp = bits;
 		int shift = this.min + 63 - Math.min( max, value - 1);
-		
+
 		if ( shift < 64 )
 			temp = temp >>> shift;
 		else
@@ -1702,7 +1702,7 @@ public class SmallDenseDomain extends IntDomain {
 			return value;
 
 		while (true) {
-			
+
 			long sequence8 = temp & 255;
 
 			if (sequence8 == 0) {
@@ -1719,20 +1719,20 @@ public class SmallDenseDomain extends IntDomain {
 						shift++;
 					}
 				}
-				
+
 				assert false : "It should not be here.";
-					
+
 			}
 		}
 
-		
+
 	}
 
 	@Override
 	public IntDomain recentDomainPruning(int storeLevel) {
-		
+
 		// TODO, CHECK.
-		
+
 		if (previousDomain == null)
 			return IntervalDomain.emptyDomain;
 
@@ -1743,7 +1743,7 @@ public class SmallDenseDomain extends IntDomain {
 		while (previous.stamp > storeLevel) {
 			if (previous.domainID() == SmallDenseDomainID)
 				previous = ((SmallDenseDomain)previous).previousDomain;
-			else 
+			else
 				if (previous.domainID() == IntervalDomainID)
 					previous = ((IntervalDomain)previous).previousDomain;
 		}
@@ -1755,18 +1755,18 @@ public class SmallDenseDomain extends IntDomain {
 			long current = this.bits >>> (this.min - _previous.min);
 
 			return new SmallDenseDomain(_previous.min, result ^ current);
-			
+
 		}
 
 		return previous.subtract(this);
-					
+
 	}
 
 	@Override
 	public int rightElement(int intervalNo) {
 
 		return super.rightElement(intervalNo);
-		
+
 	}
 
 	@Override
@@ -1778,12 +1778,12 @@ public class SmallDenseDomain extends IntDomain {
 			clear();
 			return;
 		}
-			
+
 		if (domain.max() - domain.min() > 63)
-			throw new IllegalArgumentException("The resulting domain can not be handled properly by " + this.getClass());			
-			
+			throw new IllegalArgumentException("The resulting domain can not be handled properly by " + this.getClass());
+
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		if (domain.domainID() == SmallDenseDomainID) {
 
 			SmallDenseDomain smallDomain = (SmallDenseDomain) domain;
@@ -1793,36 +1793,36 @@ public class SmallDenseDomain extends IntDomain {
 			this.max = smallDomain.max;
 			this.size = smallDomain.size;
 			this.singleton = smallDomain.singleton;
-			
+
 			return;
 		}
-		
-		if (domain.isSparseRepresentation()) {	
-			
+
+		if (domain.isSparseRepresentation()) {
+
 			this.clear();
-			
+
 			ValueEnumeration enumer = domain.valueEnumeration();
-			
+
 			while (enumer.hasMoreElements()) {
-				
+
 				int next = enumer.nextElement();
-				
+
 				if (this.contains(next))
 					this.unionAdapt(next, next);
-			}			
-		
+			}
+
 			return;
-			
+
 		}
 		else {
 
 			this.clear();
-			
+
 			IntervalEnumeration enumer = domain.intervalEnumeration();
-			
-			while (enumer.hasMoreElements())				
+
+			while (enumer.hasMoreElements())
 				this.unionAdapt(enumer.nextElement());
-			
+
 			return;
 		}
 
@@ -1851,43 +1851,43 @@ public class SmallDenseDomain extends IntDomain {
 
 		// TODO, check asserts.
 		// It is used by Lex in set package.
-		
+
 		assert checkInvariants() == null : checkInvariants() ;
 
 		return size == 1 && c == min;
-		
+
 	}
 
 	@Override
 	public int sizeOfIntersection(IntDomain domain) {
-		
+
 		return super.sizeOfIntersection(domain);
 
 	}
 
 	@Override
 	public IntDomain subtract(int value) {
-		
+
 		assert checkInvariants() == null : checkInvariants() ;
 
 		// Used in set package, BoundSetDomain.
 		IntDomain result = subtract(value, value);
-		
+
 		assert result.checkInvariants() == null : result.checkInvariants() ;
 
 		return result;
-		
+
 	}
 
 	@Override
 	public IntDomain subtract(IntDomain domain) {
-		
+
 		if (domain.domainID() == IntDomain.SmallDenseDomainID) {
-			
+
 			SmallDenseDomain input = (SmallDenseDomain) domain;
-			
+
 			long negBits;
-			
+
 			if (input.min >= this.min) {
 				int shift = input.min - this.min;
 				if (shift < 64)
@@ -1895,56 +1895,56 @@ public class SmallDenseDomain extends IntDomain {
 				else
 					negBits = 0;
 			}
-			else {	
+			else {
 				int shift = this.min - input.min;
 				if (shift < 64)
 					negBits = input.bits << shift;
 				else
 					negBits = 0;
 			}
-			
+
 			long result = this.bits & ( ~negBits );
-			
+
 			if (result != 0)
 				return new SmallDenseDomain(this.min, result);
 			else
 				return SmallDenseDomain.emptyIntDomain;
-			
+
 		}
-			
+
 		// assert false;
-		
-		// TODO CRUCIAL implement special function for IntervalDomain. 
-		
+
+		// TODO CRUCIAL implement special function for IntervalDomain.
+
 		IntDomain result = super.subtract(domain);
-		
+
 		assert ( result.eq( this.toIntervalDomain().subtract(domain))) : "Subtraction not properly implemented " + this + "d " + domain + "res" + result;
 
 		assert result.checkInvariants() == null : result.checkInvariants() ;
-		
+
 		return result;
 
 	}
 
 	@Override
 	public void subtractAdapt(int min, int max) {
-		
-	//	System.out.println("s>" + this  + "(" + min + ", " + max + ")");
-		
+
+	//	logger.info("s>" + this  + "(" + min + ", " + max + ")");
+
 		assert checkInvariants() == null : checkInvariants() ;
 
 		if (min > this.max || max < this.min)
 			return;
-		
+
 		min = Math.max(min, this.min);
 		max = Math.min(max, this.max);
-		
+
 		// TODO, Test properly.	SETADD
-		
+
 		bits = bits & ~( SEQ_ARRAY[max - min] << ( 63 - ( max - min ) - (min - this.min) ) );
 
 		if (bits == 0) {
-			// it became empty. 
+			// it became empty.
 			size = 0;
 			singleton = false;
 			min = Integer.MAX_VALUE;
@@ -1965,45 +1965,45 @@ public class SmallDenseDomain extends IntDomain {
 				// min <= this.min
 				// max < this.max
 				adaptMin();
-				
+
 			}
-			
+
 		}
 		else {
 			// min > this.min
-			
+
 			if (max >= this.max) {
-			
+
 				this.max = previousValue(min);
-				
+
 			}
 			else {
 				// min > this.min
 				// max < this.max
 				// no changes to min and max
-			}			
+			}
 		}
 
-		
+
 	}
 
-	
-	
+
+
 	@Override
 	public IntDomain subtract(int min, int max) {
-		
-	//	System.out.println("s>" + this  + "(" + min + ", " + max + ")");
-		
+
+	//	logger.info("s>" + this  + "(" + min + ", " + max + ")");
+
 		assert checkInvariants() == null : checkInvariants() ;
 
 		if (min > this.max || max < this.min)
 			return this.cloneLight();
-		
+
 		min = Math.max(min, this.min);
 		max = Math.min(max, this.max);
-		
+
 		// TODO, Test properly.	SETADD
-		
+
 		long result = this.bits & ~( SEQ_ARRAY[max - min] << ( 63 - ( max - min ) - (min - this.min) ) );
 
 		if (result == 0)
@@ -2011,11 +2011,11 @@ public class SmallDenseDomain extends IntDomain {
 		else {
 			SmallDenseDomain returnObj = new SmallDenseDomain(this.min, result);
 			assert returnObj.checkInvariants() == null : returnObj.checkInvariants() ;
-			
-	//		System.out.println("s<" + returnObj  );
+
+	//		logger.info("s<" + returnObj  );
 			return returnObj;
 		}
-		
+
 	}
 
 	@Override
@@ -2024,35 +2024,35 @@ public class SmallDenseDomain extends IntDomain {
 		assert checkInvariants() == null : checkInvariants() ;
 
 		// TODO test, SETADD.
-		
+
 		if ( !contains(value) )
 			return;
-		
-	//	System.out.println("s>" + this  + "(" + value + ")");
-		
+
+	//	logger.info("s>" + this  + "(" + value + ")");
+
 		if (singleton) {
 			clear();
 			return;
 		}
-		
+
 		bits = bits & ~TWO_N_ARRAY[ min - value + 63 ];
 
 		size--;
-		
+
 		if (size == 1)
 			singleton = true;
 
 		if (value == min)
 			adaptMin();
-		
-		if (value == max)
-			max = previousValue(value);		
 
-	//	System.out.println("s<" + this);
-		
+		if (value == max)
+			max = previousValue(value);
+
+	//	logger.info("s<" + this);
+
 		assert checkInvariants() == null : checkInvariants() ;
-		
-		
+
+
 
 	}
 
@@ -2060,9 +2060,9 @@ public class SmallDenseDomain extends IntDomain {
 	public IntDomain union(IntDomain domain) {
 
 		// TODO, test it.
-		
+
 		if (domain.domainID() == IntDomain.SmallDenseDomainID) {
-			
+
 			SmallDenseDomain input = (SmallDenseDomain) domain;
 
 			int newMax = Math.max(this.max, input.max);
@@ -2070,46 +2070,46 @@ public class SmallDenseDomain extends IntDomain {
 			if (this.min <= input.min) {
 
 				assert (this.min + 63 >= newMax) : "Union of two SmallDenseDomain does not fit in SmallDenseDomain";
-				
+
 				long bitsResult = this.bits | ( input.bits >>> (input.min - this.min) );
 
 				return new SmallDenseDomain(this.min, bitsResult);
-				
+
 			}
 			else {
 
 				assert (input.min + 63 >= newMax) : "Union of two SmallDenseDomain does not fit in SmallDenseDomain";
-				
+
 				long bitsResult = input.bits | ( this.bits >>> (this.min - input.min) );
 
 				return new SmallDenseDomain(input.min, bitsResult);
 
 			}
-			
+
 		}
 
 		// assert false;
-		
+
 		// TODO, take care in a nice fashion (no exception) if smalldensedomain can not handle the result of union.
 		IntDomain result = super.union(domain);
-		
+
 		assert (result.eq( this.toIntervalDomain().union(domain))) : "Union not properly implemented " + this + "d" + domain + "res" + result;
-		
+
 		assert result.checkInvariants() == null : result.checkInvariants() ;
 
 		return result;
-		
+
 	}
 
 	@Override
 	public IntDomain union(int min, int max) {
-		
+
 		IntDomain result = this.cloneLight();
 
 		result.unionAdapt(min, max);
-		
+
 		return result;
-		
+
 	}
 
 	@Override
@@ -2120,12 +2120,12 @@ public class SmallDenseDomain extends IntDomain {
 		assert result.checkInvariants() == null : result.checkInvariants() ;
 
 		return result;
-		
+
 	}
 
 	@Override
 	public void unionAdapt(Interval i) {
-		
+
 		unionAdapt(i.min, i.max);
 
 	}
@@ -2133,16 +2133,16 @@ public class SmallDenseDomain extends IntDomain {
 	@Override
 	public void unionAdapt(int min, int max) {
 
-	//	System.out.println("u>" + this  + "(" + min + ", " + max + ")");
-		
+	//	logger.info("u>" + this  + "(" + min + ", " + max + ")");
+
 		assert checkInvariants() == null : checkInvariants() ;
 
 		// TODO, Test properly. SETADD.
-		
+
 		long result = SEQ_ARRAY[max - min] << ( 63 - ( max - min) );
 
 		if (isEmpty()) {
-			
+
 			this.bits = result;
 			this.min = min;
 			this.max = max;
@@ -2151,21 +2151,21 @@ public class SmallDenseDomain extends IntDomain {
 				this.singleton = true;
 			else
 				this.singleton = false;
-			
+
 			assert checkInvariants() == null : checkInvariants() ;
 
 			return;
-			
+
 		}
 
 		int newMax = Math.max(this.max, max);
 		int newMin = Math.min(this.min, min);
-		
+
 		if (newMax - newMin > 63)
 			throw new IllegalArgumentException("The resulting domain can not be handled properly by " + this.getClass());
-		
+
 		result = result >>> Math.max( min - newMin, 0) | ( bits >>> Math.max( this.min - newMin, 0) );
-		
+
 		this.bits = result;
 		this.min = newMin;
 		this.max = newMax;
@@ -2174,10 +2174,10 @@ public class SmallDenseDomain extends IntDomain {
 			this.singleton = true;
 		else
 			this.singleton = false;
-		
+
 		assert checkInvariants() == null : checkInvariants() ;
 
-	//	System.out.println("u<" + this);
+	//	logger.info("u<" + this);
 
 	}
 
@@ -2185,12 +2185,12 @@ public class SmallDenseDomain extends IntDomain {
 	public void unionAdapt(int value) {
 
 		unionAdapt(value, value);
-		
+
 	}
 
 	@Override
 	public ValueEnumeration valueEnumeration() {
-		
+
 		// TODO, CHECK.
 		return new SmallDenseDomainValueEnumeration(this);
 
@@ -2198,32 +2198,32 @@ public class SmallDenseDomain extends IntDomain {
 
 	@Override
 	public String checkInvariants() {
-		
+
 		assert (singleton || getSize(bits) != 1) : "Singleton value was not recognized";
 
-		if (bits != 0) 
+		if (bits != 0)
 			min();
-		
+
 		return null;
 
 	}
 
 	@Override
 	public void clear() {
-		
+
 		bits = 0;
 		size = 0;
 		singleton = false;
 		min = Integer.MAX_VALUE;
 		max = Integer.MIN_VALUE;
-		
+
 	}
 
 	@Override
 	public Domain clone() {
-		
+
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		SmallDenseDomain cloned = new SmallDenseDomain(min, bits);
 
 		cloned.stamp = stamp;
@@ -2243,36 +2243,36 @@ public class SmallDenseDomain extends IntDomain {
 
 	@Override
 	public int domainID() {
-		
+
 		return SmallDenseDomainID;
 
 	}
 
 	@Override
 	public boolean isEmpty() {
-		
+
 		// TODO, CHECK.
 		if (bits == 0)
 			return true;
 		else
 			return false;
-		
+
 	}
 
 	@Override
 	public boolean isNumeric() {
 
 		return true;
-		
+
 	}
 
 	@Override
 	public boolean isSparseRepresentation() {
-		
-		// TODO, adapt the answer depending on the particular instance 
+
+		// TODO, adapt the answer depending on the particular instance
 		// (e.g. it should return false for dense domains).
 		return true;
-	
+
 	}
 
 
@@ -2285,15 +2285,15 @@ public class SmallDenseDomain extends IntDomain {
 	public SmallDenseDomain cloneLight() {
 
 		assert checkInvariants() == null : checkInvariants() ;
-		
+
 		SmallDenseDomain cloned = new SmallDenseDomain( this.min, this.bits );
 
 		return cloned;
-		
+
 	}
 
 	// TODO, put putModelConstraint inside IntDomain to reduce coding.
-	
+
 	/**
 	 * It adds a constraint to a domain, it should only be called by
 	 * putConstraint function of Variable object. putConstraint function from
@@ -2396,7 +2396,7 @@ public class SmallDenseDomain extends IntDomain {
 
 	@Override
 	public void putSearchConstraint(int storeLevel, Var var, Constraint C) {
-		
+
 		if (!searchConstraints.contains(C)) {
 
 			if (stamp < storeLevel) {
@@ -2448,7 +2448,7 @@ public class SmallDenseDomain extends IntDomain {
 
 	@Override
 	public void removeLevel(int level, Var var) {
-		
+
 		assert (this.stamp <= level);
 
 		if (this.stamp == level) {
@@ -2462,7 +2462,7 @@ public class SmallDenseDomain extends IntDomain {
 
 	@Override
 	public void removeModelConstraint(int storeLevel, Var var, Constraint c) {
-		
+
 		if (stamp < storeLevel) {
 
 			SmallDenseDomain result = this.cloneLight();
@@ -2608,7 +2608,7 @@ public class SmallDenseDomain extends IntDomain {
 	@Override
 	public void removeSearchConstraint(int storeLevel, Var var, int position,
 			Constraint C) {
-		
+
 		if (stamp < storeLevel) {
 
 			SmallDenseDomain result = this.cloneLight();
@@ -2628,7 +2628,7 @@ public class SmallDenseDomain extends IntDomain {
 		assert (stamp == storeLevel);
 
 		assert (searchConstraints.get(position) == C) : "Position of the removed constraint not specified properly";
-		
+
 		if (position < searchConstraintsToEvaluate) {
 
 			searchConstraints.set(position, searchConstraints
@@ -2650,7 +2650,7 @@ public class SmallDenseDomain extends IntDomain {
 
 	@Override
 	public int sizeConstraintsOriginal() {
-		
+
 		IntDomain domain = this;
 
 		while (domain.domainID() == SmallDenseDomainID) {
@@ -2662,7 +2662,7 @@ public class SmallDenseDomain extends IntDomain {
 			else
 				break;
 		}
-	
+
 		if (domain.domainID() == SmallDenseDomainID)
 			return (domain.modelConstraintsToEvaluate[0]
 					+ domain.modelConstraintsToEvaluate[1] + domain.modelConstraintsToEvaluate[2]);
@@ -2671,7 +2671,7 @@ public class SmallDenseDomain extends IntDomain {
 
 	}
 
-	
+
 	private static final long[] TWO_N_ARRAY = new long[] { 0x1L, 0x2L, 0x4L,
 		                    0x8L, 0x10L, 0x20L, 0x40L, 0x80L, 0x100L, 0x200L, 0x400L, 0x800L,
 		                    0x1000L, 0x2000L, 0x4000L, 0x8000L, 0x10000L, 0x20000L, 0x40000L,
@@ -2691,22 +2691,22 @@ public class SmallDenseDomain extends IntDomain {
 	private static final long[] SEQ_ARRAY = new long[64];
 
 	static {
-	
+
 		SEQ_ARRAY[0] = 1L;
-		
+
 		for (int i = 1; i < 64; i++)
 			SEQ_ARRAY[i] = ( SEQ_ARRAY[i-1] << 1 ) + 1;
-		
+
 	}
-	
-	
-	
+
+
+
 	@Override
 	public String toString() {
 
 		/*
 		StringBuilder sb = new StringBuilder(66);
-		
+
 		sb.append('{').append(min).append(", ");
 
 		for (int j = 63; j >= 0; j--)
@@ -2714,42 +2714,42 @@ public class SmallDenseDomain extends IntDomain {
 				sb.append("1");
 			else
 				sb.append("0");
-		
+
 		sb.append(", ").append(max).append('}');
-		
+
 		return sb.toString();
 		*/
-		
+
 		/*
 		StringBuilder sb = new StringBuilder(66);
-		
+
 		sb.append("{ ");
-		
+
 		for (int j = 63; j >= 0; j--)
 			if (((bits & (TWO_N_ARRAY[j])) != 0))
 				sb.append(String.valueOf( min + 63 - j)).append(" ");
-		
+
 		sb.append('}');
-		
+
 		return sb.toString();
 		*/
-		
+
 		return this.toIntervalDomain().toString();
-		
+
 	}
 
 
 	@Override
 	public String toStringConstraints() {
-		
-		// TODO, implement properly. 
+
+		// TODO, implement properly.
 		return toString();
 
 	}
 
 	@Override
 	public String toStringFull() {
-		
+
 		// TODO, implement properly.
 		return toString();
 
@@ -2759,7 +2759,7 @@ public class SmallDenseDomain extends IntDomain {
 
 	@Override
 	public int getRandomValue() {
-		
+
 		int number = generator.nextInt(size);
 		int pos = 0;
 		long temp = bits;
@@ -2785,7 +2785,7 @@ public class SmallDenseDomain extends IntDomain {
 		// TODO, test more.
 		if (min < this.min)
 			return false;
-		
+
 		if (max > this.max)
 			return false;
 
@@ -2794,41 +2794,41 @@ public class SmallDenseDomain extends IntDomain {
 		result = result << min - this.min;
 		result = result >>> (min - this.min );
 		result = result >>> ( this.min + 63 - max );
-		
+
 		// SmallDenseDomain temp = new SmallDenseDomain(this.min, result);
-		
+
 		if (max - min + 1 != this.getSize(result))
 			return false;
 
-	//	System.out.println( this + " contains " + " min " + min + " max " + max );
+	//	logger.info( this + " contains " + " min " + min + " max " + max );
 
 		return true;
 	}
-	
+
 	/**
-	 * It shifts the domain. 
-	 * 
+	 * It shifts the domain.
+	 *
 	 * @param shift how much should the domain be shifted.
 	 */
 	public void shift(int shift) {
-		
+
 		min += shift;
 		max += shift;
-				
+
 	}
 
 	public IntervalDomain toIntervalDomain() {
-	
+
 		int noIntervals = this.noIntervals();
 		IntervalDomain result = new IntervalDomain(noIntervals);
-		
+
 		for (int i = 0; i < noIntervals; i++)
 			result.intervals[i] = this.getInterval(i);
-		
+
 		result.size = noIntervals;
-		
+
 		return result;
 	}
-	
-	
+
+
 }

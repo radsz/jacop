@@ -1,9 +1,9 @@
 /**
- *  MDD.java 
+ *  MDD.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,24 +31,23 @@
 
 package org.jacop.util;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Map.Entry;
-import java.util.TreeMap;
-
+import java.util.*;
+import java.util.Map.*;
 import org.jacop.core.IntVar;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Defines an MDD as used in the following paper. 
- * 
+ * Defines an MDD as used in the following paper.
+ *
  * K.C. Cheng and R.H. Yap, "Maintaining generalized arc consistency
  * on ad-hoc n-ary constraints.", CP 2008.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  */
 
-public class MDD {
+public class MDD { private static Logger logger = LoggerFactory.getLogger(MDD.class);
 
 	/**
 	 * It specifies an identifier which denotes a terminal node.
@@ -56,7 +55,7 @@ public class MDD {
 	public static final int TERMINAL = -1;
 
 	/**
-	 * It specifies an identifier which denotes lack of the edge 
+	 * It specifies an identifier which denotes lack of the edge
 	 * for a given value (in the context of the current level (variable)
 	 * of an MDD.
 	 */
@@ -78,7 +77,7 @@ public class MDD {
 
 	/**
 	 * For each node at given index i-th it specifies all possible
-	 * outgoing edges. If there was no edge for a value of the 
+	 * outgoing edges. If there was no edge for a value of the
 	 * variable associated to the current node then the entry corresponding
 	 * to that value is set to NOEDGE. If a given path specifies an allowed tuple
 	 * than it is terminated with a terminal node.
@@ -87,7 +86,7 @@ public class MDD {
 	public int diagram[];
 
 	/**
-	 * It creates index domain views so operations based on indexes of values can 
+	 * It creates index domain views so operations based on indexes of values can
 	 * be performed efficiently.
 	 */
 	public IndexDomainView[] views;
@@ -104,22 +103,22 @@ public class MDD {
 	public static int startSize = 1000;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"vars", "diagram", "domainLimits"};
-	
-	
+
+
 	/**
 	 * It creates an MDD. Please note that diagram argument
-	 * which is potentially a very large array and can be 
-	 * used across many constraints is not copied by the 
-	 * constructor but used directly. 
-	 * 
+	 * which is potentially a very large array and can be
+	 * used across many constraints is not copied by the
+	 * constructor but used directly.
+	 *
 	 * @param vars variables involved in this multiple-value decision diagram.
 	 * @param diagram an int array representation of the diagram.
 	 * @param domainLimits the limits on the number of values imposed on each variable.
-	 *  
+	 *
 	 */
 	public MDD(IntVar [] vars, int[] diagram, int[] domainLimits) {
 
@@ -147,9 +146,9 @@ public class MDD {
 	 *
 	 * It creates and MDD representation given the list of variables
 	 * and (dis)allowed tuples. Minimum domain limits allows artificially
-	 * increase the size of the variable domain to make reuse of the same 
+	 * increase the size of the variable domain to make reuse of the same
 	 * mdd across multiple constraints possible.
-	 * @param vars variables and their order used in the MDD. 
+	 * @param vars variables and their order used in the MDD.
 	 * @param minimumDomainLimits it specifies the minimal number of values used for each of the variables.
 	 * @param table it specifies the allowed tuples which are being converted into an MDD.
 	 */
@@ -160,7 +159,7 @@ public class MDD {
 		// tuples based on indexes of these values in variables
 		// domains.
 
-		// it needs to transform table into Trie, which later will 
+		// it needs to transform table into Trie, which later will
 		// be transformed into MDD representation. Trie is stored in
 		// diagram array.
 
@@ -194,9 +193,9 @@ public class MDD {
 	 *
 	 * It creates and MDD representation given the list of variables
 	 * and (dis)allowed tuples. Minimum domain limits allows artificially
-	 * increase the size of the variable domain to make reuse of the same 
+	 * increase the size of the variable domain to make reuse of the same
 	 * mdd across multiple constraints possible.
-	 * @param vars variables and their order used in the MDD. 
+	 * @param vars variables and their order used in the MDD.
 	 * @param table it specifies the allowed tuples which are being converted into an MDD.
 	 */
 
@@ -206,7 +205,7 @@ public class MDD {
 		// tuples based on indexes of these values in variables
 		// domains.
 
-		// it needs to transform table into Trie, which later will 
+		// it needs to transform table into Trie, which later will
 		// be transformed into MDD representation. Trie is stored in
 		// diagram array.
 
@@ -245,7 +244,7 @@ public class MDD {
 	 * If possible it will return an MDD which reuse an array representation
 	 * of the current MDD. It returns null if one of the variables supplied
 	 * has a larger domain then assumed by respective variable from this MDD.
-	 * In order to make reuse possible first create MDD for largest size variables. 
+	 * In order to make reuse possible first create MDD for largest size variables.
 	 * @param vars array of new variables for which this MDD is being reused for.
 	 * @return an MDD with parts of it reused for new variables.
 	 */
@@ -291,8 +290,8 @@ public class MDD {
 	 * It creates and MDD representation given the list of variables.
 	 * The domain limits are set to be equal to the size of the variables domains.
 	 * The tuples are being added separately one by one.
-	 * 
-	 * @param vars variables and their order used in the MDD. 
+	 *
+	 * @param vars variables and their order used in the MDD.
 	 */
 
 	public MDD(IntVar [] vars) {
@@ -301,7 +300,7 @@ public class MDD {
 		// tuples based on indexes of these values in variables
 		// domains.
 
-		// it needs to transform table into Trie, which later will 
+		// it needs to transform table into Trie, which later will
 		// be transformed into MDD representation. Trie is stored in
 		// diagram array.
 
@@ -324,13 +323,13 @@ public class MDD {
 
 		// Adding tuples and MDD reduction must be performed separetely.
 
-	}    
+	}
 
 	/**
-	 * It allows to add one by one tuple before the reduction of the initial MDD takes place. 
-	 * 
+	 * It allows to add one by one tuple before the reduction of the initial MDD takes place.
+	 *
 	 * @param tuple an allowed tuple being added to MDD.
-	 * 
+	 *
 	 */
 	public void addTuple(int[] tuple) {
 
@@ -352,7 +351,7 @@ public class MDD {
 				if (varNo == tuple.length)
 					diagram[ nodePosition ] = TERMINAL;
 				else {
-					diagram[ nodePosition ] = freePosition;	
+					diagram[ nodePosition ] = freePosition;
 					freePosition += domainLimits[varNo];
 					nodePosition = diagram[ nodePosition ];
 				}
@@ -364,11 +363,11 @@ public class MDD {
 
 		}
 
-	}   
+	}
 
 	/**
-	 * It makes sure that diagram uses an array of at least given size. 
-	 * 
+	 * It makes sure that diagram uses an array of at least given size.
+	 *
 	 * @param size the size the array must be at least of.
 	 */
 	public void ensureSize ( int size ) {
@@ -390,9 +389,9 @@ public class MDD {
 	}
 
 	/*
-	 * This function encodes table constraint in the form of a table 
+	 * This function encodes table constraint in the form of a table
 	 * into an mtree represented using a table
-	 * 
+	 *
 	 */
 
 	private void shrink() {
@@ -423,8 +422,8 @@ public class MDD {
 				Entry<Integer, Integer> firstEntry = reducedNodes.pollFirstEntry();
 				range[shiftPosition] = firstEntry.getKey();
 
-				System.arraycopy(diagram, range[shiftPosition-1]+previousShift, 
-						shrankDiagram, positionInShrankDiagram, 
+				System.arraycopy(diagram, range[shiftPosition-1]+previousShift,
+						shrankDiagram, positionInShrankDiagram,
 						range[shiftPosition]-range[shiftPosition-1]-previousShift);
 				positionInShrankDiagram += range[shiftPosition]-range[shiftPosition-1]-previousShift;
 
@@ -436,8 +435,8 @@ public class MDD {
 			}
 
 			if (positionInShrankDiagram < shrankDiagram.length)
-				System.arraycopy(diagram, range[shiftPosition-1]+previousShift, 
-						shrankDiagram, positionInShrankDiagram, 
+				System.arraycopy(diagram, range[shiftPosition-1]+previousShift,
+						shrankDiagram, positionInShrankDiagram,
 						shrankDiagram.length - positionInShrankDiagram);
 
 			for (int i = 0; i < shrankDiagram.length; i++) {
@@ -457,13 +456,13 @@ public class MDD {
 	private void mtree(int[][] table) {
 
 		int[] positions = new int [ table[0].length ];
-		
+
 		for (int [] tuple : table) {
 
 			int nodePosition = 0;
-			
+
 			assert (tuple.length == positions.length) : "Tuples have different length.";
-			
+
 			boolean badTuple = false;
 			for (int i = 0; i < tuple.length; i++) {
 				positions[i] = 	findPosition(tuple[i], views[i].indexToValue);
@@ -474,14 +473,14 @@ public class MDD {
 			}
 
 			if (badTuple)
-				continue;			
-				
+				continue;
+
 			for (int i = 0; i < tuple.length; i++) {
-			
+
 				assert ( positions[i] != -1) : "value specified by tuple " + Arrays.asList(tuple) + "for variable no. " + i + "is already outside its initial domain.";
-				
+
 				nodePosition += positions[i];
-				
+
 				ensureSize ( nodePosition + 1);
 
 				// it works with i+1 not i value.
@@ -490,7 +489,7 @@ public class MDD {
 					if (i+1 == tuple.length)
 						diagram[ nodePosition ] = TERMINAL;
 					else {
-						diagram[ nodePosition ] = freePosition;	
+						diagram[ nodePosition ] = freePosition;
 						freePosition += domainLimits[i+1];
 						nodePosition = diagram[ nodePosition ];
 					}
@@ -520,17 +519,16 @@ public class MDD {
 		int position = (left + right) >> 1;
 
 			if (debugAll) {
-				System.out.println("Looking for " + value);
+				logger.info("Looking for " + value);
 				for (int v : values)
-					System.out.print("val " + v);
-				System.out.println("");
+					logger.info("val " + v);
+				logger.info("\n");
 			}
 
 			while (!(left + 1 >= right)) {
 
 				if (debugAll)
-					System.out.println("left " + left + " right " + right
-							+ " position " + position);
+					logger.info("left " + left + " right " + right + " position " + position);
 
 				if (values[position] > value) {
 					right = position;
@@ -560,17 +558,16 @@ public class MDD {
 		int position = (left + right) >> 1;
 
 		if (debugAll) {
-			System.out.println("Looking for " + value);
+			logger.info("Looking for " + value);
 			for (int v : values)
-				System.out.print("val " + v);
-			System.out.println("");
+				logger.info("val " + v);
+			logger.info("\n");
 		}
 
 		while (!(left + 1 >= right)) {
 
 			if (debugAll)
-				System.out.println("left " + left + " right " + right
-						+ " position " + position);
+				logger.info("left " + left + " right " + right + " position " + position);
 
 			if (values[position] > value) {
 				right = position;
@@ -631,15 +628,15 @@ public class MDD {
 
 	private int reduce(int node, int level) {
 
-		// Recursive function which going back from bottom to top 
-		// discovers equal nodes and only keeps one in the representation. 
-		// This technique allows to reduce MDD cheaply. 
+		// Recursive function which going back from bottom to top
+		// discovers equal nodes and only keeps one in the representation.
+		// This technique allows to reduce MDD cheaply.
 
 
 		// The first key ingredient is to find if there is already a node with the
-		// same children. 
+		// same children.
 
-		// The same children means 
+		// The same children means
 		// a) nodes must be at the same level
 		// b) nodes must have the same number of kids.
 		// c) kids must be the same.
@@ -647,7 +644,7 @@ public class MDD {
 		// a third index - kid with a given number. A linear scan through all values of
 		// a third index.
 
-		// The second ingredient is to remove dead nodes from the middle of an array. 
+		// The second ingredient is to remove dead nodes from the middle of an array.
 
 		/**
 		   Pseudo-code reduce
@@ -667,7 +664,7 @@ public class MDD {
 					nodeChildren[k] = reduce(diagram[node+k], level+1);
 					diagram[node+k] = nodeChildren[k];
 					numberOfChildren++;
-				}	
+				}
 		}
 
 		if (same[level][numberOfChildren] != null)
@@ -690,7 +687,7 @@ public class MDD {
 
 		}
 
-		id[level][numberOfChildren].add(node);   
+		id[level][numberOfChildren].add(node);
 		same[level][numberOfChildren].add(nodeChildren);
 
 		return node;
@@ -703,7 +700,7 @@ public class MDD {
 	      children++;
 	    }
 
-	    traverse same[level][c] and compare nodes in 
+	    traverse same[level][c] and compare nodes in
 	    this list with current node.
 
 	    if there is a node X equal then reuse it
@@ -744,8 +741,8 @@ public class MDD {
 	}
 
 	/**
-	 * @return true only if all variables are grounded and the 
-	 * values assigned to variables are allowed by a MDD.	 
+	 * @return true only if all variables are grounded and the
+	 * values assigned to variables are allowed by a MDD.
 	 */
 	public boolean checkIfAllowed() {
 

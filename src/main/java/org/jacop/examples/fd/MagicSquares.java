@@ -1,9 +1,9 @@
 /**
- *  MagicSquares.java 
+ *  MagicSquares.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,8 +31,7 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Assignment;
@@ -42,24 +41,26 @@ import org.jacop.constraints.XltY;
 import org.jacop.core.BoundDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
+ *
  * It solves a Magic squares problem.
- * 
+ *
  * @author Radoslaw Szymanek
  *
  * MagicSquare problem consists of filling the square of size n with
  * numbers from 1 to n^2 in such a way that all rows, all columns, and
- * main diagonals are equal to the same number K. K can be computed to 
+ * main diagonals are equal to the same number K. K can be computed to
  * be equal to (n * (n^2 + 1)) / 2.
- *  
+ *
  */
 
-public class MagicSquares extends ExampleFD {
+public class MagicSquares extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(MagicSquares.class);
 
 	/**
-	 * It specifies the number 
+	 * It specifies the number
 	 */
 	public int number = 4;
 
@@ -138,7 +139,7 @@ public class MagicSquares extends ExampleFD {
 		// Creating constraint store
 		store = new Store();
 		vars = new ArrayList<IntVar>();
-		
+
 		IntVar squares[] = new IntVar[number * number];
 
 		IntVar k = new IntVar(store, "K", (number * (number * number + 1)) / 2,
@@ -148,7 +149,7 @@ public class MagicSquares extends ExampleFD {
 			for (int j = 0; j < number; j++)
 				squares[i * number + j] = new IntVar(store, "S" + (i + 1) + ","
 						+ (j + 1), new BoundDomain(1, number * number));
-				
+
 		// Imposing inequalities constraints between squares
 		store.impose(new Alldiff(squares));
 
@@ -191,11 +192,11 @@ public class MagicSquares extends ExampleFD {
 		for (IntVar v : squares)
 			vars.add(v);
 
-	}	
-	
-	
+	}
+
+
 	/**
-	 * It creates the model with specification of what constraint can 
+	 * It creates the model with specification of what constraint can
 	 * help in guiding shaving.
 	 */
 	public void model4Shaving() {
@@ -355,7 +356,7 @@ public class MagicSquares extends ExampleFD {
 	/**
 	 * It executes the program which solves the MagicSquare problem using many different
 	 * model and searches.
-	 * 
+	 *
 	 * @param args the first argument allows to specify the size of magic square.
 	 */
 	public static void test(String args[]) {
@@ -364,46 +365,46 @@ public class MagicSquares extends ExampleFD {
 
 		if (args.length != 0)
 			example.number = new Integer(args[0]);
-		
+
 		example.model();
 
 		if (example.searchMiddle())
-			System.out.println("Solution(s) found");
+			logger.info("Solution(s) found");
 
 		MagicSquares exampleDual = new MagicSquares();
 
 		if (args.length != 0)
 			exampleDual.number = new Integer(args[0]);
-		
+
 		exampleDual.modelDual();
 
 		if (exampleDual.creditSearch(64, 5000, 10))
-			System.out.println("Solution(s) found");
+			logger.info("Solution(s) found");
 
 		MagicSquares exampleShave = new MagicSquares();
 
 		if (args.length != 0)
 			exampleShave.number = new Integer(args[0]);
-		
+
 		exampleShave.model4Shaving();
 
 		if (exampleShave.shavingSearch(exampleShave.guidingShaving, true))
-			System.out.println("Solution(s) found");
-		
+			logger.info("Solution(s) found");
+
 		MagicSquares exampleBound = new MagicSquares();
 		exampleBound.number = 5;
 		exampleBound.modelBound();
 
 		if (exampleBound.search())
-			System.out.println("Solution(s) found");		
-		
+			logger.info("Solution(s) found");
+
 	}
 
-	
-	
+
+
 	/**
 	 * It executes the program which solves the MagicSquare problem.
-	 * 
+	 *
 	 * @param args the first argument allows to specify the size of magic square.
 	 */
 	public static void main(String args[]) {
@@ -412,22 +413,22 @@ public class MagicSquares extends ExampleFD {
 
 		if (args.length != 0)
 			example.number = new Integer(args[0]);
-		
+
 		example.model();
 
 		if (example.searchMiddle())
-			System.out.println("Solution(s) found");
+			logger.info("Solution(s) found");
 
 		MagicSquares exampleDual = new MagicSquares();
 
 		if (args.length != 0)
 			exampleDual.number = new Integer(args[0]);
-		
+
 		exampleDual.modelDual();
 
 		if (exampleDual.creditSearch(64, 5000, 10))
-			System.out.println("Solution(s) found");
-		
+			logger.info("Solution(s) found");
+
 	}
 
 

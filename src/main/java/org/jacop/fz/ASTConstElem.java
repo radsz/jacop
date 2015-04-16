@@ -2,8 +2,11 @@
 /* JavaCCOptions:MULTI=true,NODE_USES_PARSER=true,VISITOR=false,TRACK_TOKENS=false,NODE_PREFIX=AST,NODE_EXTENDS=,NODE_FACTORY=,SUPPORT_CLASS_VISIBILITY_PUBLIC=true */
 package org.jacop.fz;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public
-class ASTConstElem extends SimpleNode {
+class ASTConstElem extends SimpleNode { private static Logger logger = LoggerFactory.getLogger(ASTConstElem.class);
   public ASTConstElem(int id) {
     super(id);
   }

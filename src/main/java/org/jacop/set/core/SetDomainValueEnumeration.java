@@ -1,9 +1,9 @@
 /**
- *  SetDomainValueEnumeration.java 
+ *  SetDomainValueEnumeration.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -33,15 +33,17 @@ package org.jacop.set.core;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.ValueEnumeration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Defines a methods for enumerating values contained in the SetDomain.
- * 
+ *
  * @author Robert Åkemalm
  * @version 4.2
  */
 
-public class SetDomainValueEnumeration extends ValueEnumeration {
+public class SetDomainValueEnumeration extends ValueEnumeration { private static Logger logger = LoggerFactory.getLogger(SetDomainValueEnumeration.class);
 
 	IntDomain current;
 	IntDomain min;
@@ -81,7 +83,7 @@ public class SetDomainValueEnumeration extends ValueEnumeration {
 	}
 
 	/**
-	 * Returns the next element in the SetDomain. 
+	 * Returns the next element in the SetDomain.
 	 * @return the next element in the SetDomain.
 	 */
 
@@ -117,16 +119,16 @@ public class SetDomainValueEnumeration extends ValueEnumeration {
 	 * level 1 : {1}, {2}, {3}
 	 * level 2 : {1,2}, {1,3}, {2,3}
 	 * level 3 : {1,2,3}
-	 * So getPascal(2,2) returns the Set {1,3} 
-	 * 
+	 * So getPascal(2,2) returns the Set {1,3}
+	 *
 	 * occLevel = The level in Pascal's triangle that describes how many times the first
 	 * 			value occurs.
-	 * 
+	 *
 	 * occPos = the position in Pascal's triangle on row occLevel that describes how many
 	 * 			times the first value occurs
-	 * 
+	 *
 	 *  occ = the number of times the first value occurs.
-	 *  
+	 *
 	 * @param level = Number of element from the ground set(lub\glb) that should be added
 	 * @param place = The position in this level for the wanted element
 	 * @return domain that specifies Pascal triangle element at positions (level, place)
@@ -173,7 +175,7 @@ public class SetDomainValueEnumeration extends ValueEnumeration {
 	}
 
 	/**
-	 * Returns the value of a specific element in Pascal's triangle. 
+	 * Returns the value of a specific element in Pascal's triangle.
 	 * @param level The level in Pascal's triangle.
 	 * @param place The position in this level of Pascal's triangle.
 	 * @return The element on this position in Pascal's triangle.

@@ -1,9 +1,9 @@
 /**
- *  ObstacleObject.java 
+ *  ObstacleObject.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -30,25 +30,26 @@
  */
 package org.jacop.constraints.geost;
 
-import java.util.Arrays;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.util.SimpleArrayList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
  *
  * This version of the ObstacleObject internal constraint allows the use
  * of multiple d-boxes per shape.
- * 
+ *
  * TODO, describe how it works and what is the idea behind this implementation?
- * 
+ *
  */
 
-public class ObstacleObject extends ObstacleObjectFrame {
+public class ObstacleObject extends ObstacleObjectFrame { private static Logger logger = LoggerFactory.getLogger(ObstacleObject.class);
 
 	/**
-	 * It shifts boxes of the given shape as required by the frame. It recomputed 
+	 * It shifts boxes of the given shape as required by the frame. It recomputed
 	 * always when frame is updated. It allows for faster execution in between frame updates.
 	 */
 	final SimpleArrayList<DBox> preshiftedElems;
@@ -57,22 +58,22 @@ public class ObstacleObject extends ObstacleObjectFrame {
 	final int[] upperAbsInsfeasible;
 
 	/**
-	 * It is a boolean switch which steers this constraint behavior. 
-	 * It is set to true as soon as frame is not empty. 
+	 * It is a boolean switch which steers this constraint behavior.
+	 * It is set to true as soon as frame is not empty.
 	 */
 	boolean frameExists;
 
 	/**
-	 * It stores the information about the shape, so it does not always have to look for its value inside 
+	 * It stores the information about the shape, so it does not always have to look for its value inside
 	 * the domain of shape variable.
 	 */
 	int shapeId;
 
 	/**
-	 * It constructs an internal constraint to constraint the objects not to overlap with this 
-	 * obstacle object. 
-	 * 
-	 * @param geost the constraint for which this internal constraint has been created. 
+	 * It constructs an internal constraint to constraint the objects not to overlap with this
+	 * obstacle object.
+	 *
+	 * @param geost the constraint for which this internal constraint has been created.
 	 * @param obstacle the obstacle object which is responsible for this constraint.
 	 * @param selectedDimensions the dimensions on which the constraint is applicable.
 	 */
@@ -105,12 +106,12 @@ public class ObstacleObject extends ObstacleObjectFrame {
 		int previous = 0;
 		for(int i = 0; i < selectedDimensions.length; i++) {
 			if(i != 0)
-				if(selectedDimensions[i] <= previous) 
+				if(selectedDimensions[i] <= previous)
 					return "selected dimensions " + Arrays.toString(selectedDimensions) + " are not sorted or not unique";
 
 			previous = selectedDimensions[i];
 
-			if(!( selectedDimensions[i] >= 0 && selectedDimensions[i] <= obstacle.dimension) ) 
+			if(!( selectedDimensions[i] >= 0 && selectedDimensions[i] <= obstacle.dimension) )
 				return "incorrect dimension: " + selectedDimensions[i];
 		}
 
@@ -120,7 +121,7 @@ public class ObstacleObject extends ObstacleObjectFrame {
 	@Override
 	public int[] AbsInfeasible(Geost.SweepDirection minlex) {
 
-		//TODO implement, 
+		//TODO implement,
 
 		if(frameExists)
 			return super.AbsInfeasible(minlex);
@@ -128,7 +129,7 @@ public class ObstacleObject extends ObstacleObjectFrame {
 
 			if(minlex == Geost.SweepDirection.PRUNEMAX)
 				return upperAbsInsfeasible;
-			else 
+			else
 				return lowerAbsInsfeasible;
 
 		}
@@ -149,10 +150,10 @@ public class ObstacleObject extends ObstacleObjectFrame {
 
 
 	@Override
-	public DBox isFeasible(Geost.SweepDirection min, 
+	public DBox isFeasible(Geost.SweepDirection min,
 						   LexicographicalOrder order,
-						   GeostObject o, 
-						   int currentShape, 
+						   GeostObject o,
+						   int currentShape,
 						   int[] c) {
 
 
@@ -165,7 +166,7 @@ public class ObstacleObject extends ObstacleObjectFrame {
 		//an object can overlap with itself
 		if(o == obstacle) return null;
 
-		if(!timeOnlyCheck(min, order, o, currentShape, c)) 
+		if(!timeOnlyCheck(min, order, o, currentShape, c))
 			return null;
 
 		//intermediate check: use bounding boxes to skip test quickly
@@ -183,7 +184,7 @@ public class ObstacleObject extends ObstacleObjectFrame {
 				//shift origin
 				outDimOrigin = obstacleBB.origin[i] + obstacle.coords[i].max() - otherBB.origin[i] - otherBB.length[i] + 1;
 
-				final int max = obstacleBB.origin[i] + obstacleBB.length[i] 
+				final int max = obstacleBB.origin[i] + obstacleBB.length[i]
 				                + obstacle.coords[i].min() - otherBB.origin[i];
 
 				outDimLength = max - outDimOrigin;
@@ -196,10 +197,10 @@ public class ObstacleObject extends ObstacleObjectFrame {
 				outDimOrigin = IntDomain.MinInt;
 				outDimLength = IntDomain.MaxInt-IntDomain.MinInt;
 			}
-			
+
 			if(c[i] < outDimOrigin || c[i] >= outDimOrigin+outDimLength)
 				return null;
-			
+
 		}
 
 
@@ -228,7 +229,7 @@ public class ObstacleObject extends ObstacleObjectFrame {
 				//and update whenever the object gets updated
 
 				for(int i = 0;  i< obstacle.dimension; i++)
-					if(selectedDimIndex < selectedDimensions.length 
+					if(selectedDimIndex < selectedDimensions.length
 					   && selectedDimensions[selectedDimIndex] == i) {
 
 						//the dimension is relevant

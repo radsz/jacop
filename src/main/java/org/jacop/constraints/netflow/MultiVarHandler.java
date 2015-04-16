@@ -1,9 +1,9 @@
 /**
- *  MultiVarHandler.java 
+ *  MultiVarHandler.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,57 +32,55 @@
 
 package org.jacop.constraints.netflow;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
+ *
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.2
- * 
+ *
  */
 
-public class MultiVarHandler implements VarHandler {
+public class MultiVarHandler implements VarHandler { private static Logger logger = LoggerFactory.getLogger(MultiVarHandler.class);
 
 	private final IntVar variable;
 	private final ArrayList<VarHandler> handlers;
-	
-	
+
+
 	public MultiVarHandler(IntVar variable, VarHandler ... handlers) {
 		this.variable = variable;
 		this.handlers = new ArrayList<VarHandler>(Arrays.asList(handlers));
 	}
-	
+
 	public void add(VarHandler handler) {
 		assert(handler.listVariables().contains(variable));
 		handlers.add(handler);
 	}
-	
-	
+
+
 	public int getPruningEvent(Var variable) {
 		assert(this.variable == variable);
 		int max = IntDomain.GROUND;
 		for (VarHandler handler : handlers) {
 			int event = handler.getPruningEvent(variable);
 			if (max < event) {
-				max = event;				
+				max = event;
 			}
 		}
 		return max;
 	}
 
-	
+
 	public List<IntVar> listVariables() {
 		return Collections.singletonList(variable);
 	}
 
-	
+
 	public void processEvent(IntVar variable, MutableNetwork network) {
 		assert(this.variable == variable);
 		for (VarHandler handler : handlers)

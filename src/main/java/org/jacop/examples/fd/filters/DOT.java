@@ -1,9 +1,9 @@
 /**
- *  DOT.java 
+ *  DOT.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,23 +31,25 @@
 
 package org.jacop.examples.fd.filters;
 
-import java.util.ArrayList;
+import java.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * It specifies DOT benchmark.
- * 
+ *
  * Source:
- * 
+ *
  * Raghunathan, A. and Jha, N. K. "An Iterative Improvement Algorithm for Low
  * Power Data Path Synthesis" ICCAD 1995
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class DOT extends Filter {
+public class DOT extends Filter { private static Logger logger = LoggerFactory.getLogger(DOT.class);
 
-	
+
 	/**
 	 * It constructs a simple DOT filter.
 	 */
@@ -55,30 +57,30 @@ public class DOT extends Filter {
 		this(1, 2);
 	}
 
-	
+
 	/**
 	 * It constructs a DOT filter with the specified delay
 	 * for the addition and multiplication operation.
-	 * 
+	 *
 	 * @param addDel the delay of the addition operation.
 	 * @param mulDel the delay of the multiplication operation.
 	 */
 	public DOT(int addDel, int mulDel) {
-		
+
 		this.addDel = addDel;
-		
+
 		this.mulDel = mulDel;
-		
+
 		name = "DOT";
 
 		int dependencies[][] = { { 0, 6 }, { 1, 6 }, { 2, 7 }, { 3, 7 }, { 4, 8 },
 				{ 5, 8 }, { 6, 9 }, { 7, 9 }, { 9, 10 }, { 8, 10 } };
 		this.dependencies = dependencies;
-		
+
 		int ids[] = { mulId, mulId, mulId, mulId, mulId, mulId, addId, addId,
 				addId, addId, addId };
 		this.ids = ids;
-		
+
 		int last[] = { 10 };
 		this.last = last;
 	}

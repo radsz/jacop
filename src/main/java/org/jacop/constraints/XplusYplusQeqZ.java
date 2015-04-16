@@ -1,9 +1,9 @@
 /**
- *  XplusYplusQeqZ.java 
+ *  XplusYplusQeqZ.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,52 +31,53 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Constraint X + Y + Q = Z
- * 
+ *
  * Bound consistency is used.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class XplusYplusQeqZ extends PrimitiveConstraint {
+public class XplusYplusQeqZ extends PrimitiveConstraint { private static Logger logger = LoggerFactory.getLogger(XplusYplusQeqZ.class);
 
 	static int counter = 1;
 
 	/**
-	 * It specifies variable x in constraint x + y + q = z. 
+	 * It specifies variable x in constraint x + y + q = z.
 	 */
 	public IntVar x;
 
 	/**
-	 * It specifies variable y in constraint x + y + q = z. 
+	 * It specifies variable y in constraint x + y + q = z.
 	 */
 	public IntVar y;
 
 	/**
-	 * It specifies variable q in constraint x + y + q = z. 
+	 * It specifies variable q in constraint x + y + q = z.
 	 */
 	public IntVar q;
 
 	/**
-	 * It specifies variable z in constraint x + y + q = z. 
+	 * It specifies variable z in constraint x + y + q = z.
 	 */
 	public IntVar z;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"x", "y", "q", "z"};
-	
+
 	/**
 	 * It constructs X+Y+Q=Z constraint.
 	 * @param x variable x.
@@ -85,7 +86,7 @@ public class XplusYplusQeqZ extends PrimitiveConstraint {
 	 * @param z variable z.
 	 */
 	public XplusYplusQeqZ(IntVar x, IntVar y, IntVar q, IntVar z) {
-		
+
 		assert (x != null) : "Variable x is null";
 		assert (y != null) : "Variable y is null";
 		assert (q != null) : "Variable q is null";
@@ -93,7 +94,7 @@ public class XplusYplusQeqZ extends PrimitiveConstraint {
 
 		numberId = counter++;
 		numberArgs = 4;
-		
+
 		this.x = x;
 		this.y = y;
 		this.q = q;
@@ -114,11 +115,11 @@ public class XplusYplusQeqZ extends PrimitiveConstraint {
 
 	@Override
 	public void consistency(Store store) {
-		
+
 		do {
-			
+
 			store.propagationHasOccurred = false;
-			
+
 			x.domain.in(store.level, x, z.min() - y.max() - q.max(), z.max()
 					- y.min() - q.min());
 			y.domain.in(store.level, y, z.min() - x.max() - q.max(), z.max()
@@ -127,9 +128,9 @@ public class XplusYplusQeqZ extends PrimitiveConstraint {
 					- x.min() - y.min());
 			z.domain.in(store.level, z, x.min() + y.min() + q.min(), x.max()
 					+ y.max() + q.max());
-			
+
 		} while (store.propagationHasOccurred);
-		
+
 	}
 
 	@Override
@@ -194,9 +195,9 @@ public class XplusYplusQeqZ extends PrimitiveConstraint {
 	public void notConsistency(Store store) {
 
 		do {
-			
+
 			store.propagationHasOccurred = false;
-			
+
 			if (z.singleton() && y.singleton() && q.singleton())
 				x.domain.inComplement(store.level, x, z.min() - y.min() - q.min());
 
@@ -208,9 +209,9 @@ public class XplusYplusQeqZ extends PrimitiveConstraint {
 
 			if (x.singleton() && y.singleton() && q.singleton())
 				z.domain.inComplement(store.level, z, x.min() + y.min() + q.min());
-			
+
 		} while (store.propagationHasOccurred);
-		
+
 	}
 
 	@Override
@@ -239,7 +240,7 @@ public class XplusYplusQeqZ extends PrimitiveConstraint {
 		return id() + " : XplusYplusQeqZ(" + x + ", " + y + ", " + ", " + q
 				+ ", " + z + " )";
 	}
-	
+
 	@Override
 	public void increaseWeight() {
 		if (increaseWeight) {
@@ -248,5 +249,5 @@ public class XplusYplusQeqZ extends PrimitiveConstraint {
 			q.weight++;
 		}
 	}
-	
+
 }

@@ -1,9 +1,9 @@
 /**
- *  Flowers.java 
+ *  Flowers.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,8 +31,7 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.And;
 import org.jacop.constraints.Element;
@@ -44,20 +43,22 @@ import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
+ *
  * It is quite complex logic puzzle about flowers.
- * 
+ *
  * @author Tomasz Szwed, Wojciech Krupa, and Radoslaw Szymanek
  *
- * Each of four women in our office was delighted to receive a floral delivery at her desk this month. Each of the 
- * women (Emma, Kristin, Lynn, and Toni) received flowers from her husband (Doug, Justin, Shane, or Theo) for a 
- * different special occasion. Each bouquet consisted of a different type of flower, and each was delivered 
- * during the first four weeks of February. From the following clues, can you match each woman with her husband 
- * and determine the date on which each woman received flowers, the occasion for the flowers, and the type of 
+ * Each of four women in our office was delighted to receive a floral delivery at her desk this month. Each of the
+ * women (Emma, Kristin, Lynn, and Toni) received flowers from her husband (Doug, Justin, Shane, or Theo) for a
+ * different special occasion. Each bouquet consisted of a different type of flower, and each was delivered
+ * during the first four weeks of February. From the following clues, can you match each woman with her husband
+ * and determine the date on which each woman received flowers, the occasion for the flowers, and the type of
  * flowers in each bouquet?
- * 
+ *
  *
  * Calendar for February
  *
@@ -69,14 +70,14 @@ import org.jacop.core.Store;
  *
  * 1. No two women received flowers on the same day of the week, and no two received flowers during the same week.
  *
- * 2. The woman who received flowers for Valentine's Day had them delivered on either Friday the 11th or 
+ * 2. The woman who received flowers for Valentine's Day had them delivered on either Friday the 11th or
  * Monday the 14th.
  *
  * 3. Emma received flowers one day later in the week than the woman who received flowers to celebrate a promotion.
  *
  * 4. Lynn received flowers either the week before or the week after the woman who received violets.
  *
- * 5. Justin's wife received flowers on either Monday the 7th (in which case she is the one who received white roses) 
+ * 5. Justin's wife received flowers on either Monday the 7th (in which case she is the one who received white roses)
  * or on Thursday the 24th (in which case she is the woman who received flowers to celebrate her birthday).
  *
  * 6. Theo's wife didn't receive flowers exactly eight days before the woman who received chrysanthemums.
@@ -85,7 +86,7 @@ import org.jacop.core.Store;
  *
  * 8. One woman received either chrysanthemums or white roses for her wedding anniversary.
  *
- * 9. Kristin received flowers on either Tuesday the 1st (in which case she is 
+ * 9. Kristin received flowers on either Tuesday the 1st (in which case she is
  * the one who received daisies) or Friday the 18th (in which case she received them from Doug).
  *
  * 10. Shane's wife received flowers during the second week of the month.
@@ -94,13 +95,12 @@ import org.jacop.core.Store;
  *
  */
 
+public class Flowers extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(Flowers.class);
 
-public class Flowers extends ExampleFD {
-		
 	@Override
 	public void model() {
 
-		System.out.println("Program to solve Flower logic puzzle");
+		logger.info("Program to solve Flower logic puzzle");
 
 		store = new Store();
 		vars = new ArrayList<IntVar>();
@@ -302,11 +302,11 @@ public class Flowers extends ExampleFD {
 		for (IntVar v : flowerT)
 			vars.add(v);
 		for (IntVar v : flowerD)
-			vars.add(v);		
-		
+			vars.add(v);
+
 	}
 
-	
+
 	/**
 	 * It executes the program which solves this logic puzzle.
 	 * @param args no argument is used.
@@ -314,12 +314,12 @@ public class Flowers extends ExampleFD {
 	public static void main(String args[]) {
 
 		Flowers example = new Flowers();
-		
+
 		example.model();
 
 		if (example.search())
-			System.out.println("Solution(s) found");
-		
-	}		
-	
+			logger.info("Solution(s) found");
+
+	}
+
 }

@@ -1,9 +1,9 @@
 /**
- *  SinPeqR.java 
+ *  SinPeqR.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,35 +31,29 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.ArrayList;
-import java.lang.Math;
-
+import java.util.*;
+import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Interval;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.IntervalEnumeration;
-import org.jacop.core.SmallDenseDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-
-import org.jacop.constraints.Constraint;
-import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.floats.core.FloatInterval;
+import org.jacop.floats.core.FloatIntervalDomain;
+import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.InternalException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Constraints sin(P) = R
- * 
+ *
  * Bounds consistency can be used; third parameter of constructor controls this.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class SinPeqR extends Constraint {
+public class SinPeqR extends Constraint { private static Logger logger = LoggerFactory.getLogger(SinPeqR.class);
 
     static int IdNumber = 1;
 
@@ -78,7 +72,7 @@ public class SinPeqR extends Constraint {
     public FloatVar q;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as 
+     * It specifies the arguments required to be saved by an XML format as well as
      * the constructor being called to recreate an object from an XML format.
      */
     public static String[] xmlAttributes = {"p", "q"};
@@ -114,7 +108,7 @@ public class SinPeqR extends Constraint {
 
     @Override
     public void removeLevel(int level) {
-	if (level == firstConsistencyLevel) 
+	if (level == firstConsistencyLevel)
 	    firstConsistencyCheck = true;
     }
 
@@ -133,7 +127,7 @@ public class SinPeqR extends Constraint {
 
     void boundConsistency(Store store) {
 
-	// System.out.println ("1. SinPeqR("+p+", "+q+")");
+	// logger.info ("1. SinPeqR("+p+", "+q+")");
 
 	if (p.max() - p.min() >= 2*FloatDomain.PI)
 	    return;
@@ -154,96 +148,96 @@ public class SinPeqR extends Constraint {
 		min = normP.min();
 		max = normP.max();
 
-		// System.out.println ("Not-normalized " + p);
-		// System.out.println ("Normalized interval within -2*PI..2*PI interval = " + min + ".." + max);
+		// logger.info ("Not-normalized " + p);
+		// logger.info ("Normalized interval within -2*PI..2*PI interval = " + min + ".." + max);
 	    }
 
 	    int intervalForMin = intervalNo(min);
 	    int intervalForMax = intervalNo(max);
 
-	    // System.out.println ("min in interval " + intervalForMin + ", max in interval " + intervalForMax);
+	    // logger.info ("min in interval " + intervalForMin + ", max in interval " + intervalForMax);
 
 	    double qMin=-1.0, qMax=1.0;
 	    switch (intervalForMin) {
 
-	    case 1: 
+	    case 1:
 		switch (intervalForMax) {
-		case 1: 
+		case 1:
 		    qMin = Math.sin(min);
 		    qMax = Math.sin(max);
 		    qMin = FloatDomain.down(qMin);
 		    qMax = FloatDomain.up(qMax);
 		    break;
-		case 2: 
+		case 2:
 		    qMin = Math.min(Math.sin(min), Math.sin(max));
 		    qMax = 1.0;
 		    qMin = FloatDomain.down(qMin);
 		    break;
-		case 3: 
-		case 4: 
-		case 5: 
+		case 3:
+		case 4:
+		case 5:
 		    qMin = -1.0;
-		    qMax =  1.0;		    
+		    qMax =  1.0;
 		    break;
-		default: 
+		default:
 		    throw new InternalException("Selected impossible case in sin, cos, asin or acos constraint");
 		};
 		break;
 
-	    case 2: 
+	    case 2:
 		switch (intervalForMax) {
-		case 2: 
+		case 2:
 		    qMin = Math.sin(max);
 		    qMax = Math.sin(min);
 		    qMin = FloatDomain.down(qMin);
 		    qMax = FloatDomain.up(qMax);
 		    break;
-		case 3: 
+		case 3:
 		    qMin = -1.0;
 		    qMax = Math.max(Math.sin(min), Math.sin(max));
 		    qMax = FloatDomain.up(qMax);
 		    break;
-		case 4: 
-		case 5: 
+		case 4:
+		case 5:
 		    qMin = -1.0;
-		    qMax =  1.0;		    
+		    qMax =  1.0;
 		break;
-		default: 
+		default:
 		    throw new InternalException("Selected impossible case in sin, cos, asin or acos constraint");
 		};
 		break;
 
-	    case 3: 
+	    case 3:
 		switch (intervalForMax) {
-		case 3: 
+		case 3:
 		    qMin = Math.sin(min);
 		    qMax = Math.sin(max);
 		    qMin = FloatDomain.down(qMin);
 		    qMax = FloatDomain.up(qMax);
 		    break;
-		case 4: 
+		case 4:
 		    qMin = Math.min(Math.sin(min), Math.sin(max));
-		    qMax = 1.0; 
+		    qMax = 1.0;
 		    qMin = FloatDomain.down(qMin);
 		    break;
-		case 5: 
+		case 5:
 		    qMin = -1.0;
-		    qMax =  1.0;		    
+		    qMax =  1.0;
 		    break;
-		default: 
+		default:
 		    throw new InternalException("Selected impossible case in sin, cos, asin or acos constraint");
 		};
 		break;
 
-	    case 4: 
+	    case 4:
 		switch (intervalForMax) {
-		case 4: 
+		case 4:
 		    qMin = Math.sin(max);
 		    qMax = Math.sin(min);
 		    qMin = FloatDomain.down(qMin);
 		    qMax = FloatDomain.up(qMax);
 		    break;
-		case 5: 
+		case 5:
 		    qMin = -1.0;
 		    qMax = Math.max(Math.sin(min), Math.sin(max));
 		    qMax = FloatDomain.up(qMax);
@@ -253,33 +247,33 @@ public class SinPeqR extends Constraint {
 		}
 		break;
 
-	    case 5: 
+	    case 5:
 		switch (intervalForMax) {
-		case 5: 
+		case 5:
 		    qMin = Math.sin(min);
 		    qMax = Math.sin(max);
 		    qMin = FloatDomain.down(qMin);
 		    qMax = FloatDomain.up(qMax);
 		    break;
-		default: 
+		default:
 		    throw new InternalException("Selected impossible case in sin, cos, asin or acos constraint");
 		};
 		break;
-	    default: 
+	    default:
 		throw new InternalException("Selected impossible case in sin, cos, asin or acos constraint");
 	    };
 
-	    // System.out.println (q + " in " + qMin + ".." + qMax);
+	    // logger.info (q + " in " + qMin + ".." + qMax);
 
 	    q.domain.in(store.level, q, qMin, qMax);
 
-	    // System.out.println ("q after in " + q);
+	    // logger.info ("q after in " + q);
 	    // p update
 	    double pMin = Math.asin(qMin);  // range -PI/2..PI/2
 	    double pMax = Math.asin(qMax);  // range -PI/2..PI/2
 
-	    // System.out.println ("asin result " + p + " in " + pMin +".." + pMax + " copied to  n times -PI/2 .. PI/2");
-	    
+	    // logger.info ("asin result " + p + " in " + pMin +".." + pMax + " copied to  n times -PI/2 .. PI/2");
+
 	    pMin = FloatDomain.down(pMin);
 	    pMax = FloatDomain.up(pMax);
 	    if (java.lang.Double.isNaN(pMin))
@@ -294,15 +288,15 @@ public class SinPeqR extends Constraint {
 	    high = FloatDomain.up(pMax + 2*k*FloatDomain.PI);
 	    FloatIntervalDomain pDom = new FloatIntervalDomain(low, high);
 
-	    // System.out.println ("2. " + p + " in " + pDom  + " low..high = " + low+".."+high + ", k = " + k);
+	    // logger.info ("2. " + p + " in " + pDom  + " low..high = " + low+".."+high + ", k = " + k);
 
 	    p.domain.in(store.level, p, pDom); //.min(), pDom.max());
 
-	    // System.out.println ("p after in " + p);
+	    // logger.info ("p after in " + p);
 
 	} while (store.propagationHasOccurred);
 
-	// System.out.println ("2. SinPeqR("+p+", "+q+")");
+	// logger.info ("2. SinPeqR("+p+", "+q+")");
 
     }
 
@@ -349,7 +343,7 @@ public class SinPeqR extends Constraint {
 	    return 4;
 	if (d >= 1.5*FloatDomain.PI && d <= 2.0*FloatDomain.PI)
 	    return 5;
-	else 
+	else
 	    return 0;  // should not return this
     }
 
@@ -387,7 +381,7 @@ public class SinPeqR extends Constraint {
 
 	if (p.singleton() && q.singleton()) {
 	    double sinMin = Math.sin(p.min()), sinMax = Math.sin(p.max());
-	    
+
 	    FloatInterval minDiff = (sinMin <  q.min()) ?  new FloatInterval(sinMin, q.min()) : new FloatInterval(q.min(), sinMin);
 	    FloatInterval maxDiff = (sinMax <  q.max()) ?  new FloatInterval(sinMax, q.max()) : new FloatInterval(q.max(), sinMax);
 
@@ -440,7 +434,7 @@ public class SinPeqR extends Constraint {
 	    Derivative.poseDerivativeConstraint(new SqrtPeqR(v2, v3));
 	    Derivative.poseDerivativeConstraint(new PdivQeqR(new FloatVar(store, 1.0, 1.0), v3, v4));
 	    Derivative.poseDerivativeConstraint(new PmulQeqR(Derivative.getDerivative(store, q, vars, x), v4, v));
-	    return v;		
+	    return v;
 	}
 
 	return null;

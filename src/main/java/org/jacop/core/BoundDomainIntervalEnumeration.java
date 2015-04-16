@@ -1,9 +1,9 @@
 /**
- *  BoundDomainIntervalEnumeration.java 
+ *  BoundDomainIntervalEnumeration.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -34,22 +34,25 @@ package org.jacop.core;
 
 /**
  * Defines a methods for enumerating intervals contained in the BoundDomain. It
- * implements the interface IntervalEnumeration. It always returns only one 
+ * implements the interface IntervalEnumeration. It always returns only one
  * interval as BoundDomain by definition is specified by one interval.
- * 
- * 
+ *
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class BoundDomainIntervalEnumeration extends IntervalEnumeration {
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class BoundDomainIntervalEnumeration extends IntervalEnumeration { private static Logger logger = LoggerFactory.getLogger(BoundDomainIntervalEnumeration.class);
 
 	Interval i;
 
 	boolean done = false;
-	
+
 	/**
-	 * It creates an enumeration of intervals for BoundDomain. 
+	 * It creates an enumeration of intervals for BoundDomain.
 	 * @param min the left bound of the BoundDomain.
 	 * @param max the right bound of the BoundDomain.
 	 */

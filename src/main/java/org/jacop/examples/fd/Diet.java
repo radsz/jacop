@@ -1,9 +1,9 @@
 /**
- *  Diet.java 
+ *  Diet.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2008 Hakan Kjellerstrand and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,35 +31,36 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.SumWeight;
 import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
  * It specifies a simple diet problem.
- * 
- * Problem from http://www.mcs.vuw.ac.nz/courses/OPRE251/2006T1/Labs/lab09.pdf
- * 
- *  My diet requires that all the food I eat come from one of the four .basic 
- *  food groups. (chocolate cake, ice cream, soft drink, and cheesecake). 
- *  Each (large) slice of chocolate cake costs 50c, 
- *  each scoop of chocolate ice cream costs 20c, 
- *  each bottle of cola costs 30c, 
- *  and each piece of pineapple cheesecake costs 80c. 
  *
- *  Each day, I must ingest at least 500 calories, 
- *  6 oz of chocolate, 
- *  10 oz of sugar, 
+ * Problem from http://www.mcs.vuw.ac.nz/courses/OPRE251/2006T1/Labs/lab09.pdf
+ *
+ *  My diet requires that all the food I eat come from one of the four .basic
+ *  food groups. (chocolate cake, ice cream, soft drink, and cheesecake).
+ *  Each (large) slice of chocolate cake costs 50c,
+ *  each scoop of chocolate ice cream costs 20c,
+ *  each bottle of cola costs 30c,
+ *  and each piece of pineapple cheesecake costs 80c.
+ *
+ *  Each day, I must ingest at least 500 calories,
+ *  6 oz of chocolate,
+ *  10 oz of sugar,
  *  and 8 oz of fat.
- *  The nutritional content per unit of each food is shown in the table below. 
- * 
- *  Formulate a linear programming model that can be used to satisfy my daily 
+ *  The nutritional content per unit of each food is shown in the table below.
+ *
+ *  Formulate a linear programming model that can be used to satisfy my daily
  *  nutritional requirement at minimum cost.
 
  *  Type of                        Calories   Chocolate    Sugar    Fat
@@ -69,14 +70,14 @@ import org.jacop.core.Store;
  *  Cola (1 bottle)                150           0            4      1
  *  Pineapple cheesecake (1 piece) 500           0            4      5
  *
- * """  
+ * """
  *
  * Compare with my MiniZinc model:
  * http://www.hakank.org/minizinc/diet1.mzn
  *
  */
 
-public class Diet extends ExampleFD {
+public class Diet extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(Diet.class);
 
     public IntVar[] x;
 
@@ -124,11 +125,11 @@ public class Diet extends ExampleFD {
         store.impose( new SumWeight(x, price, cost) );
 
         vars = new ArrayList<IntVar>();
-        for(IntVar v : x) 
+        for(IntVar v : x)
             vars.add(v);
 
 
-    } 
+    }
 
 
     /**
@@ -160,20 +161,20 @@ public class Diet extends ExampleFD {
        }
 
        vars = new ArrayList<IntVar>();
-       for(IntVar v : x) 
+       for(IntVar v : x)
            vars.add(v);
 
-   } 
+   }
 
 	public static void printLastSolution(Diet diet) {
 
-		System.out.println("Cost: " + diet.cost.value());
+		logger.info("Cost: " + diet.cost.value());
         for(int i = 0; i < diet.m; i++) {
-            System.out.println(diet.food[i] + ": " + diet.x[i].value());
+            logger.info(diet.food[i] + ": " + diet.x[i].value());
         }
-		
+
 	}
-    
+
     /**
      * It executes the program optimizing the diet.
      * @param args no argument is used.
@@ -183,47 +184,47 @@ public class Diet extends ExampleFD {
       Diet diet = new Diet();
       diet.model();
 
-	  System.out.println("Searching for optimal using sum weight constraints");
+	  logger.info("Searching for optimal using sum weight constraints");
       if (diet.searchOptimal()) {
           printLastSolution(diet);
       }  else {
-          System.out.println("No solution.");
+          logger.info("No solution.");
       }
 
-      
+
       diet = new Diet();
       diet.modelKnapsack();
 
-	  System.out.println("Searching for optimal using knapsack constraints");
+	  logger.info("Searching for optimal using knapsack constraints");
       if (diet.searchOptimal()) {
     	  printLastSolution(diet);
       }  else {
-          System.out.println("No solution.");
+          logger.info("No solution.");
       }
 
       diet = new Diet();
       diet.model();
 
-	  System.out.println("Searching for all solutions using sum weight constraints");
+	  logger.info("Searching for all solutions using sum weight constraints");
 
       if (diet.searchAllAtOnce()) {
     	  printLastSolution(diet);
       }  else {
-          System.out.println("No solution.");
+          logger.info("No solution.");
       }
 
-      
+
       diet = new Diet();
       diet.modelKnapsack();
 
-	  System.out.println("Searching for all solutions using knapsack constraints");
+	  logger.info("Searching for all solutions using knapsack constraints");
       if (diet.searchAllAtOnce()) {
     	  printLastSolution(diet);
       }  else {
-          System.out.println("No solution.");
+          logger.info("No solution.");
       }
 
-      
-    } 
+
+    }
 
 }

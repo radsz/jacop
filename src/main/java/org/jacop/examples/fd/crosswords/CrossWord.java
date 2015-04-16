@@ -1,9 +1,9 @@
 /**
- *  Store.java 
+ *  Store.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,12 +31,8 @@
 
 package org.jacop.examples.fd.crosswords;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-
+import java.io.*;
+import java.util.*;
 import org.jacop.constraints.ExtensionalSupportMDD;
 import org.jacop.constraints.XeqC;
 import org.jacop.core.IntVar;
@@ -51,18 +47,21 @@ import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
 import org.jacop.search.SmallestDomain;
 import org.jacop.util.MDD;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
-*
-* It is an example of the power of ExtensionalSupportMDD constraint which can be used
-* to efficiently model and solve CrossWord puzzles. 
-*
-* @author : Radoslaw Szymanek
-* 
-* This program uses problem instances and dictionary obtained from Hadrien Cambazard.
-* 
-*/
-public class CrossWord extends ExampleFD {
+ *
+ * It is an example of the power of ExtensionalSupportMDD constraint which can be used
+ * to efficiently model and solve CrossWord puzzles.
+ *
+ * @author : Radoslaw Szymanek
+ *
+ * This program uses problem instances and dictionary obtained from Hadrien Cambazard.
+ *
+ */
+
+public class CrossWord extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(CrossWord.class);
 
     int r = 5;          // number of rows
     int c = 5;          // number of column
@@ -71,16 +70,16 @@ public class CrossWord extends ExampleFD {
     // * - black wall
     // letter - letter which must be in crossword
     // _ - unknown letter, any letter is accepted.
-    
+
     IntVar[][] x;      // the solution
     IntVar blank;
-    
+
     String defaultDictionary = "./words";
 
     HashMap<String, Integer> mapping = new HashMap<String, Integer>();
     HashMap<Integer, String> mappingReverse = new HashMap<Integer, String>();
 
-    
+
   	HashMap<Integer, MDD> mdds = new HashMap<Integer, MDD>();
 
     char[][] crosswordTemplate = {{'*', '_', '_', '_', '_'},
@@ -99,7 +98,7 @@ public class CrossWord extends ExampleFD {
 
         store = new Store();
 
-        mapping.put("q", 1); 
+        mapping.put("q", 1);
         mapping.put("w", 2);
         mapping.put("e", 3);
         mapping.put("r", 4);
@@ -126,8 +125,8 @@ public class CrossWord extends ExampleFD {
         mapping.put("n", 25);
         mapping.put("m", 26);
 
-        
-        mappingReverse.put(1,"q"); 
+
+        mappingReverse.put(1,"q");
         mappingReverse.put(2,"w");
         mappingReverse.put(3,"e");
         mappingReverse.put(4,"r");
@@ -165,12 +164,12 @@ public class CrossWord extends ExampleFD {
            	x[i] = new IntVar[crosswordTemplate[i].length];
 
         readDictionaryFromFile(defaultDictionary, wordSizes);
-        
-        
+
+
         //
         // initiate structures and variables
         //
-        
+
         for(int i = 0; i < r; i++) {
             for(int j = 0; j < c; j++) {
                 if (crosswordTemplate[i][j] != '*') {
@@ -181,9 +180,9 @@ public class CrossWord extends ExampleFD {
                 }
             }
         }
-        
+
         for (int i = 0; i < r; i++) {
-        	
+
         	ArrayList<Var> word = new ArrayList<Var>();
 
             for(int j = 0; j < c; j++) {
@@ -193,24 +192,24 @@ public class CrossWord extends ExampleFD {
             			MDD mdd4word = mdds.get(word.size()).reuse(word.toArray(new IntVar[0]));
             			store.impose(new ExtensionalSupportMDD(mdd4word));
             		}
-            		// System.out.println(word);
+            		// logger.info(word);
             		word.clear();
             	}
             	else
             		word.add(x[i][j]);
-            	
+
             }
 
         	if (word.size() > 0) {
         		if (wordSizes.contains(word.size())) {
             		MDD mdd4word = mdds.get(word.size()).reuse(word.toArray(new IntVar[0]));
         			store.impose(new ExtensionalSupportMDD(mdd4word));
-            		// System.out.println(word);
+            		// logger.info(word);
         		}
-        		// System.out.println(word);
-        		word.clear();		
+        		// logger.info(word);
+        		word.clear();
         	}
-        	
+
         }
 
         for(int j = 0; j < c; j++) {
@@ -223,7 +222,7 @@ public class CrossWord extends ExampleFD {
             		if (wordSizes.contains(word.size())) {
             			MDD mdd4word = mdds.get(word.size()).reuse(word.toArray(new IntVar[0]));
             			store.impose(new ExtensionalSupportMDD(mdd4word));
-            			// System.out.println(word);
+            			// logger.info(word);
             		}
             		word.clear();
             	}
@@ -236,20 +235,20 @@ public class CrossWord extends ExampleFD {
         		if (wordSizes.contains(word.size())) {
         			MDD mdd4word = mdds.get(word.size()).reuse(word.toArray(new IntVar[0]));
         			store.impose(new ExtensionalSupportMDD(mdd4word));
-        			// System.out.println(word);
+        			// logger.info(word);
         		}
-        		word.clear();		
+        		word.clear();
         	}
 
         }
 
         vars = new ArrayList<IntVar>();
 
-        for(int i = 0; i < r; i++) 
+        for(int i = 0; i < r; i++)
             for(int j = 0; j < c; j++)
                 if (x[i][j] != null)
             	    vars.add(x[i][j]);
-                    
+
     }
 
 
@@ -259,26 +258,26 @@ public class CrossWord extends ExampleFD {
      */
     public void printSolution(char[][] crossWordTemplate) {
 
-    	System.out.println();
+    	logger.info("\n");
         for(int i = 0; i < r; i++) {
             for(int j = 0; j < c; j++) {
                 if (crossWordTemplate[i][j] != '*')
-                    System.out.print(mappingReverse.get(x[i][j].value() ) + " ");
+                    logger.info(mappingReverse.get(x[i][j].value() ) + " ");
                 else
-                    System.out.print("* ");
+                    logger.info("* ");
             }
-            System.out.println();
+            logger.info("\n");
         }
 
-    } 
-    
+    }
+
     /**
-     * It reads a dictionary. For every word length specified 
-     * it reads a dictionary and creates an MDD representation 
+     * It reads a dictionary. For every word length specified
+     * it reads a dictionary and creates an MDD representation
      * of it for use by an extensional constraint.
-     * 
+     *
      * @param file filename containing dictionary
-     * @param wordSizes  
+     * @param wordSizes
      */
     public void readDictionaryFromFile(String file, ArrayList<Integer> wordSizes) {
 
@@ -292,18 +291,18 @@ public class CrossWord extends ExampleFD {
 
 			int[] tupleForGivenWord = new int[wordSize];
     		MDD resultForWordSize = new MDD(list);
-    		
+
     		try {
 
     			BufferedReader inr = new BufferedReader(new FileReader(file));
     			String str;
  //   			int lineCount = 0;
 
-    			
+
     			while ((str = inr.readLine()) != null && str.length() > 0) {
-                
+
     				str = str.trim();
-                
+
     				// ignore comments
     				// starting with either # or %
     				if(str.startsWith("#") || str.startsWith("%")) {
@@ -312,14 +311,14 @@ public class CrossWord extends ExampleFD {
 
     				if (str.length() != wordSize)
     					continue;
-    				
+
     				for (int i = 0; i < wordSize; i++) {
     					tupleForGivenWord[i] = mapping.get(str.substring(i, i+1));
     				}
 
     				wordCount++;
     				resultForWordSize.addTuple(tupleForGivenWord);
-    				
+
  //   				lineCount++;
 
     			} // end while
@@ -328,62 +327,62 @@ public class CrossWord extends ExampleFD {
 
     		}
     		catch (IOException e) {
-    			System.out.println(e);
+    			logger.info(e.toString());
     		}
-        
-    		System.out.println("There are " + wordCount + " words of size " + wordSize);
+
+    		logger.info("There are " + wordCount + " words of size " + wordSize);
     		resultForWordSize.reduce();
     		mdds.put(wordSize, resultForWordSize);
     	}
-    
+
     }
-    	
-    
+
+
 	/**
-	 * It searches for all solutions. It does not record them and prints 
+	 * It searches for all solutions. It does not record them and prints
 	 * every tenth of them.
-	 * 
+	 *
 	 * @return true if any solution was found, false otherwise.
 	 */
 	public boolean searchAllAtOnceNoRecord() {
-		
+
 		long T1, T2;
-		T1 = System.currentTimeMillis();		
-		
+		T1 = System.currentTimeMillis();
+
 		SelectChoicePoint<IntVar> select = new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]),
 				new SmallestDomain<IntVar>(), new IndomainMin<IntVar>());
 
 		Search<IntVar> search = new DepthFirstSearch<IntVar>();
 		search.setSolutionListener(new PrintListener<IntVar>(crosswordTemplate));
-		
+
 		search.getSolutionListener().searchAll(true);
 		search.getSolutionListener().recordSolutions(false);
 		search.setAssignSolution(true);
-		
+
 		boolean result = search.labeling(store, select);
 
 		T2 = System.currentTimeMillis();
 
 		if (result) {
-			System.out.println("Number of solutions " + search.getSolutionListener().solutionsNo());
+			logger.info("Number of solutions " + search.getSolutionListener().solutionsNo());
 			search.printAllSolutions();
-		} 
+		}
 		else
-			System.out.println("Failed to find any solution");
+			logger.info("Failed to find any solution");
 
-		System.out.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
+		logger.info("\n\t*** Execution time = " + (T2 - T1) + " ms");
 
 		return result;
-	}	    
-    
-	
-	
+	}
+
+
+
     /**
      *  It executes the program to create a model and solve
-     *  crossword problem. 
-     *  
+     *  crossword problem.
+     *
      *  @todo Add additional parameter which allows to specify the crossword.
-     *  
+     *
      *  @param args no arguments used.
      *
      */
@@ -392,28 +391,28 @@ public class CrossWord extends ExampleFD {
         String filename = "";
         if (args.length == 1) {
             filename = args[0];
-            System.out.println("Using file " + filename);
+            logger.info("Using file " + filename);
         }
 
         CrossWord m = new CrossWord();
-        
+
         m.model();
-        
+
 		long T1, T2;
 		T1 = System.currentTimeMillis();
-		
+
         m.searchAllAtOnceNoRecord();
 
         T2 = System.currentTimeMillis();
 
-		System.out.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
-        
+		logger.info("\n\t*** Execution time = " + (T2 - T1) + " ms");
+
     } // end main
 
 	/**
 	 * It is a simple print listener to print every tenth solution encountered.
 	 */
-	public class PrintListener<T extends Var> extends SimpleSolutionListener<T> {
+	public class PrintListener<T extends Var> extends SimpleSolutionListener<T> { private Logger logger = LoggerFactory.getLogger(PrintListener.class);
 
         char [][] crossWordTemplate;
         public PrintListener(char[][] crosswordTemplate) {
@@ -424,17 +423,17 @@ public class CrossWord extends ExampleFD {
 		public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
 
 			boolean returnCode = super.executeAfterSolution(search, select);
-			
+
 			if (noSolutions % 10 == 0) {
-				System.out.println("Solution # " + noSolutions);
+				logger.info("Solution # " + noSolutions);
 				printSolution(crossWordTemplate);
 			}
-			
+
 			return returnCode;
 		}
 
-		
+
 	}
-	
+
 } // end class
 

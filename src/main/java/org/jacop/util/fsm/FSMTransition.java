@@ -1,9 +1,9 @@
 /**
- *  FSMTransition.java 
+ *  FSMTransition.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,29 +31,30 @@
 
 package org.jacop.util.fsm;
 
-import java.util.HashSet;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author Radoslaw Szymanek
  * @version 4.2
  */
 
-public class FSMTransition {
+public class FSMTransition { private static Logger logger = LoggerFactory.getLogger(FSMTransition.class);
 
 	/**
-	 * It specifies the domain associated with the transition. 
+	 * It specifies the domain associated with the transition.
 	 */
 	public IntDomain domain;
-	
+
 	/**
 	 * It specifies the successor state we arrive to after taking the transition.
 	 */
 	public FSMState successor;
-	
+
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"domain", "successor"};
@@ -63,50 +64,50 @@ public class FSMTransition {
 	 * @param domain the domain which triggers the transition.
 	 * @param state the successor state reached by a transition.
 	 */
-	public FSMTransition(IntDomain domain, FSMState state) {	
+	public FSMTransition(IntDomain domain, FSMState state) {
 		this.domain = domain;
 		this.successor = state;
 	}
-	
-	
+
+
 	/**
 	 * It performs a clone of a transition with copying the attributes too.
 	 * @param states a list of states which have been already copied.
 	 * @return the transition clone.
 	 */
 	public FSMTransition deepClone(HashSet<FSMState> states) {
-				
+
 		return new FSMTransition(domain, successor.deepClone(states));
-	
+
 	}
 
 	@Override
 	public int hashCode() {
 		return successor.id;
-	}	
-	
+	}
+
 	@Override
 	public boolean equals(Object o) {
 
 		if (o == null)
 			return false;
-		
+
 		if (o == this)
 			return true;
-		
+
 		FSMTransition compareTo = (FSMTransition) o;
-		
+
 		if (compareTo.successor.equals(successor) &&
 			compareTo.domain.eq(domain))
 			return true;
-		
+
 		return false;
-		
+
 	}
 
 	@Override
 	public String toString() {
 		return successor.toString() + "@" + domain.toString();
 	}
-	
+
 }

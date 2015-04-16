@@ -1,9 +1,9 @@
 /**
- *  IndomainDefaultValue.java 
+ *  IndomainDefaultValue.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,11 +31,11 @@
 
 package org.jacop.search;
 
-import java.util.HashMap;
-import java.lang.Number;
-
-import org.jacop.core.Var;
+import java.util.*;
 import org.jacop.core.IntVar;
+import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * IndomainDefaultValue - implements enumeration method based on the
@@ -46,13 +46,13 @@ import org.jacop.core.IntVar;
  *
  * This method works only for IntVar.
  *
- * @author Krzysztof Kuchcinski 
- * 
+ * @author Krzysztof Kuchcinski
+ *
  * @version 4.2
  * @param <T> type of variable being used in the search.
  */
 
-public class IndomainDefaultValue<T extends Var> implements Indomain<T> {
+public class IndomainDefaultValue<T extends Var> implements Indomain<T> { private static Logger logger = LoggerFactory.getLogger(IndomainDefaultValue.class);
 
 	/**
 	 * It defines the default indomain if there is no mapping provided.
@@ -85,8 +85,8 @@ public class IndomainDefaultValue<T extends Var> implements Indomain<T> {
 	public int indomain(T v) {
 	    if (defValue.containsKey(v)) {
 		int value = defValue.get(v);
-		
-		if (((IntVar)v).dom().contains(value)) 
+
+		if (((IntVar)v).dom().contains(value))
 		    return value;
 	    }
 

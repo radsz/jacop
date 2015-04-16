@@ -1,9 +1,9 @@
 /**
- *  MinCostFlow.java 
+ *  MinCostFlow.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,7 +32,7 @@
 package org.jacop.examples.floats;
 
 /**
- * 
+ *
  * It models min-cost flow for floating solver.
  *
  * Minimum Cost Flow problem.
@@ -41,7 +41,7 @@ package org.jacop.examples.floats;
  * and not violating the capacities of the arcs.
  *
  * Testdata available at:
- * http://elib.zib.de/pub/Packages/mp-testdata/mincost/ 
+ * http://elib.zib.de/pub/Packages/mp-testdata/mincost/
  *
  * Based on minizinc model
  * min_cost_flow.mzn
@@ -49,37 +49,29 @@ package org.jacop.examples.floats;
  * Wed Jun 14
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * 
+ *
  */
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
-import org.jacop.search.Search;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.PrintOutListener;
-import org.jacop.search.SimpleSolutionListener;
-import org.jacop.search.SelectChoicePoint;
-
-import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.constraints.PplusCeqR;
-import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.SmallestDomainFloat;
-import org.jacop.floats.search.LargestDomainFloat;
-import org.jacop.floats.search.LargestMaxFloat;
-import org.jacop.floats.search.Optimize; 
+import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.search.DepthFirstSearch;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class MinCostFlow {
+public class MinCostFlow { private static Logger logger = LoggerFactory.getLogger(MinCostFlow.class);
 
     double MIN_FLOAT = -1e+150;
     double MAX_FLOAT =  1e+150;
 
     void min_cost_flow() {
 
-	System.out.println ("========= min_cost_flow =========");
+	logger.info ("========= min_cost_flow =========");
 
 	Store store = new Store();
 
@@ -111,14 +103,14 @@ public class MinCostFlow {
 
 	FloatVar[] X = new FloatVar[m];
 
-	for (int i = 0; i < m; i++) 
+	for (int i = 0; i < m; i++)
 	    X[i] = new FloatVar(store, "X["+i+"]", capacity_lb[i], capacity[i]);
 
 	for (int i = 0; i < n; i++) {
 
 	    ArrayList<FloatVar> outFlow = new ArrayList<FloatVar>();
 	    ArrayList<Double> outFlowWeights = new ArrayList<Double>();
-	    for (int j = 0; j < m; j++) 
+	    for (int j = 0; j < m; j++)
 		if (arcs[j][1] == i+1) {
 		    outFlow.add(X[j]);
 		    outFlowWeights.add(1.0);
@@ -126,7 +118,7 @@ public class MinCostFlow {
 
 	    ArrayList<FloatVar> inFlow = new ArrayList<FloatVar>();
 	    ArrayList<Double> inFlowWeights = new ArrayList<Double>();
-	    for (int j = 0; j < m; j++) 
+	    for (int j = 0; j < m; j++)
 		if (arcs[j][0] == i+1) {
 		    inFlow.add(X[j]);
 		    inFlowWeights.add(1.0);
@@ -164,7 +156,7 @@ public class MinCostFlow {
 	label.setTimeOut(1);
 	// label.setSolutionListener(new PrintOutListener<FloatVar>());
 
-	label.labeling(store, s, cost); 
+	label.labeling(store, s, cost);
 
 	/*
 	DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
@@ -176,30 +168,30 @@ public class MinCostFlow {
 	opt.minimize();
 	*/
 
-	System.out.println (cost);
+	logger.info (cost.toString());
 	// System.out.printf ("cost = %.2f\n", cost.value());
 
-	for (int i = 0; i < X.length; i++) 
-	    System.out.printf ("%.2f, ", X[i].value());
-	System.out.println ();
+	for (int i = 0; i < X.length; i++)
+	    logger.info(String.format("%.2f, ", X[i].value()));
+	logger.info("");
 	// for (int i = 0; i < X.length; i++) {
 	//     // System.out.printf ("%.0f, ", (double)(X[i].min() * costs[i]));
-	//     System.out.println ("X["+i+"] = "+ X[i].min()+".."+X[i].max() + " * " + costs[i] + " result =" +
+	//     logger.info ("X["+i+"] = "+ X[i].min()+".."+X[i].max() + " * " + costs[i] + " result =" +
 	// 			(double)(X[i].min() * costs[i]) + ".."+(double)(X[i].max() * costs[i]));
 	// }
 
-	System.out.println ("\nPrecision = " + FloatDomain.precision());
+	logger.info ("\nPrecision = " + FloatDomain.precision());
 
     }
     /**
-     * It executes the program. 
-     * 
+     * It executes the program.
+     *
      * @param args no arguments
      */
     public static void main(String args[]) {
-		
+
 	MinCostFlow example = new MinCostFlow();
-		
+
 	example.min_cost_flow();
 
     }

@@ -1,9 +1,9 @@
 /**
- *  VarWeightNode.java 
+ *  VarWeightNode.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -33,20 +33,19 @@ package org.jacop.floats.constraints.linear;
 
 /**
  * Binary Node of the tree representing linear constraint.
- * 
+ *
  * @author Krzysztof Kuchcinski
  * @version 4.2
  */
 
-import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.constraints.linear.BoundsVar;
-import org.jacop.floats.constraints.linear.BoundsVarValue;
-import org.jacop.floats.constraints.linear.Linear;
+import org.jacop.floats.core.FloatIntervalDomain;
+import org.jacop.floats.core.FloatVar;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class VarWeightNode extends VariableNode {
+public class VarWeightNode extends VariableNode { private static Logger logger = LoggerFactory.getLogger(VarWeightNode.class);
 
     double weight;
 
@@ -79,7 +78,7 @@ public class VarWeightNode extends VariableNode {
 	double node_min = min();
 	double node_max = max();
 
-	if (min > node_min) 
+	if (min > node_min)
 	    if (max < node_max) {
 
 		updateBounds(min, max, lb, ub);
@@ -88,8 +87,8 @@ public class VarWeightNode extends VariableNode {
 
 	    }
 	    else {
-		
-		if (min > node_max) 
+
+		if (min > node_max)
 		    throw Store.failException;
 
 		updateBounds(min, node_max, lb, ub);
@@ -100,7 +99,7 @@ public class VarWeightNode extends VariableNode {
 	else
 	    if (max < node_max) {
 
-		if (node_min > max) 
+		if (node_min > max)
 		    throw Store.failException;
 
 		updateBounds(node_min, max, lb, ub);
@@ -123,13 +122,13 @@ public class VarWeightNode extends VariableNode {
 	double node_min = min();
 	double node_max = max();
 
-	if (min > node_min) 
+	if (min > node_min)
 	    if (max < node_max) {
 
 		updateBounds(min, max, lb, ub);
 
 		parent.propagateAndPrune();
-		
+
 	    }
 	    else {
 		if (min > node_max)

@@ -1,9 +1,9 @@
 /**
- *  SelectChoicePoint.java 
+ *  SelectChoicePoint.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,8 +31,7 @@
 
 package org.jacop.search;
 
-import java.util.IdentityHashMap;
-
+import java.util.*;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Var;
 
@@ -41,7 +40,7 @@ import org.jacop.core.Var;
  * decision to be taken. The search decision called choice point will be first
  * enforced and later upon backtrack a negation of that search decision will be
  * enforced.
- * 
+ *
  * @author Radoslaw Szymanek and Radoslaw Szymanek
  * @version 4.2
  * @param <T> type of the variable for which choice point is being created.
@@ -92,7 +91,7 @@ public interface SelectChoicePoint<T extends Var> {
 	 * It returns the current index. Supplying this value in the next invocation
 	 * of select will make search for next variable faster without compromising
 	 * efficiency.
-	 * @return internal position of the last variable chosen to be the base of the choice point. 
+	 * @return internal position of the last variable chosen to be the base of the choice point.
 	 */
 
 	public int getIndex();

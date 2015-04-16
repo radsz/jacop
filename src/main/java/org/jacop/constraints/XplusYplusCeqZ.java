@@ -1,9 +1,9 @@
 /**
- *  XplusYplusCeqZ.java 
+ *  XplusYplusCeqZ.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,54 +31,55 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Constraints X + Y + C #= Z.
- * 
+ *
  * Bound consistency is used.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class XplusYplusCeqZ extends PrimitiveConstraint {
+public class XplusYplusCeqZ extends PrimitiveConstraint { private static Logger logger = LoggerFactory.getLogger(XplusYplusCeqZ.class);
 
 	static int counter = 1;
 
 	/**
-	 * It specifies variable x in constraint x + y + c = z. 
+	 * It specifies variable x in constraint x + y + c = z.
 	 */
 	IntVar x;
 
 	/**
-	 * It specifies variable x in constraint x + y + c = z. 
+	 * It specifies variable x in constraint x + y + c = z.
 	 */
 	IntVar y;
 
 	/**
-	 * It specifies variable x in constraint x + y + c = z. 
+	 * It specifies variable x in constraint x + y + c = z.
 	 */
 	int c;
 
 	/**
-	 * It specifies variable x in constraint x + y + c = z. 
+	 * It specifies variable x in constraint x + y + c = z.
 	 */
 	IntVar z;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"x", "y", "c", "z"};
 
 	/**
-	 * It constructs constraint X+Y+C=Z. 
+	 * It constructs constraint X+Y+C=Z.
 	 * @param x variable X.
 	 * @param y variable Y.
 	 * @param c constant C.
@@ -92,7 +93,7 @@ public class XplusYplusCeqZ extends PrimitiveConstraint {
 
 		numberId = counter++;
 		numberArgs = 3;
-		
+
 		this.x = x;
 		this.y = y;
 		this.c = c;
@@ -112,12 +113,12 @@ public class XplusYplusCeqZ extends PrimitiveConstraint {
 
 	@Override
 	public void consistency(Store store) {
-		
+
 
 		do {
-			
+
 			store.propagationHasOccurred = false;
-			
+
 			x.domain.in(store.level, x, z.min() - y.max() - c, z.max()
 					- y.min() - c);
 
@@ -128,7 +129,7 @@ public class XplusYplusCeqZ extends PrimitiveConstraint {
 					+ y.max() + c);
 
 		} while (store.propagationHasOccurred);
-		
+
 	}
 
 	@Override
@@ -190,11 +191,11 @@ public class XplusYplusCeqZ extends PrimitiveConstraint {
 
 	@Override
 	public void notConsistency(Store store) {
-		
+
 		do {
-			
+
 			store.propagationHasOccurred = false;
-		
+
 			if (z.singleton() && y.singleton())
 				x.domain.inComplement(store.level, x, z.min() - y.min() - c);
 
@@ -203,14 +204,14 @@ public class XplusYplusCeqZ extends PrimitiveConstraint {
 
 			if (x.singleton() && y.singleton())
 				z.domain.inComplement(store.level, z, x.min() + y.min() + c);
-		
+
 		} while (store.propagationHasOccurred);
-		
+
 	}
 
 	@Override
 	public boolean notSatisfied() {
-		return (x.max() + y.max() + c < z.min() 
+		return (x.max() + y.max() + c < z.min()
 				|| x.min() + y.min() + c > z.max());
 	}
 
@@ -242,5 +243,5 @@ public class XplusYplusCeqZ extends PrimitiveConstraint {
 			z.weight++;
 		}
 	}
-	
+
 }

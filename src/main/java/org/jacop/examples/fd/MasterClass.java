@@ -1,9 +1,9 @@
 /**
- *  MasterClass.java 
+ *  MasterClass.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,8 +31,7 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Or;
 import org.jacop.constraints.XeqC;
@@ -41,54 +40,56 @@ import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
-*
-* It solves a logic puzzle about singing women.
-*
-* @author Zbigniew Danielczyk, Mariusz Jedrzejko, and Radoslaw Szymanek
-*
-* The great mezzo-soprano Flora Nebbiacorno has retired from the
-* international opera stage, but she still teaches master classes
-* regularly.  At a recent class, her five students were one soprano,
-* one mezzo-soprano, two tenors, and one bass.  (The first two voice
-* types are women's, and the last two are men's).  Their first names
-* are Chris, J.P., Lee, Pat, and Val -- any of which could belong to a
-* man or a woman - - and their last names are Kingsley, Robinson,
-* Robinson (the two are unrelated but have the same last name), Ulrich,
-* and Walker. Can you find the order in which these five sang for the
-* class, identifying each by full name and voice type?
-*
-* 1. The first and second students were, in some order, Pat and the bass.
-*
-* 2. The second and third students included at least one tenor.
-*
-* 3. Kingsley and the fifth student (who isn't named Robinson) were, in
-* some order, a mezzo-soprano and a tenor.
-* 
-* 4. Neither the third student, whose name is Robinson, nor Walker has
-* the first name of Chris.
-* 
-* 5. Ulrich is not the bass or the mezzo-soprano.
-*
-* 6. Neither Lee or Val (who wasn't third) is a tenor.
-*
-* 7. J.P. wasn't third, and Chris wasn't fifth.
-*
-* 8. The bass isn't named Robinson.
-*
-* Determine: Order -- First name -- Last name -- Voice
-*/
+ *
+ * It solves a logic puzzle about singing women.
+ *
+ * @author Zbigniew Danielczyk, Mariusz Jedrzejko, and Radoslaw Szymanek
+ *
+ * The great mezzo-soprano Flora Nebbiacorno has retired from the
+ * international opera stage, but she still teaches master classes
+ * regularly.  At a recent class, her five students were one soprano,
+ * one mezzo-soprano, two tenors, and one bass.  (The first two voice
+ * types are women's, and the last two are men's).  Their first names
+ * are Chris, J.P., Lee, Pat, and Val -- any of which could belong to a
+ * man or a woman - - and their last names are Kingsley, Robinson,
+ * Robinson (the two are unrelated but have the same last name), Ulrich,
+ * and Walker. Can you find the order in which these five sang for the
+ * class, identifying each by full name and voice type?
+ *
+ * 1. The first and second students were, in some order, Pat and the bass.
+ *
+ * 2. The second and third students included at least one tenor.
+ *
+ * 3. Kingsley and the fifth student (who isn't named Robinson) were, in
+ * some order, a mezzo-soprano and a tenor.
+ *
+ * 4. Neither the third student, whose name is Robinson, nor Walker has
+ * the first name of Chris.
+ *
+ * 5. Ulrich is not the bass or the mezzo-soprano.
+ *
+ * 6. Neither Lee or Val (who wasn't third) is a tenor.
+ *
+ * 7. J.P. wasn't third, and Chris wasn't fifth.
+ *
+ * 8. The bass isn't named Robinson.
+ *
+ * Determine: Order -- First name -- Last name -- Voice
+ */
 
-public class MasterClass extends ExampleFD {
+public class MasterClass extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(MasterClass.class);
 
 	@Override
 	public void model() {
 
 		store = new Store();
 		vars = new ArrayList<IntVar>();
-		
-		System.out.println("Solution to problem Master Class");
+
+		logger.info("Solution to problem Master Class");
 
 		// voice names
 		String[] glos = { "mezzosoprano", "soprano", "bass", "tenor_1", "tenor_2" };
@@ -142,7 +143,7 @@ public class MasterClass extends ExampleFD {
 		// Or constraint is used to deal with 2 tenors in the problem
 		// description.
 		// Possible to use since "at least one tenor".
-		store.impose(new Or(new Or(new XeqC(zglos[itenor1], 2), 
+		store.impose(new Or(new Or(new XeqC(zglos[itenor1], 2),
 								   new XeqC(zglos[itenor1], 3)),
 							new Or(new XeqC(zglos[itenor2], 2),
 								   new XeqC(zglos[itenor2], 3))));
@@ -155,11 +156,11 @@ public class MasterClass extends ExampleFD {
 		store.impose(new XneqC(znazwisko[iRobinson2], 5));
 		store.impose(new XneqC(znazwisko[iKinsley], 5));
 
-		store.impose(new Or(new Or(new XeqY(znazwisko[iKinsley], zglos[itenor1]), 
-								   new XeqY(znazwisko[iKinsley], zglos[itenor2])), 
+		store.impose(new Or(new Or(new XeqY(znazwisko[iKinsley], zglos[itenor1]),
+								   new XeqY(znazwisko[iKinsley], zglos[itenor2])),
 							new XeqY(znazwisko[iKinsley], zglos[isopran])));
 
-		store.impose(new Or(new Or(new XeqC(zglos[itenor1], 5), 
+		store.impose(new Or(new Or(new XeqC(zglos[itenor1], 5),
 								   new XeqC(zglos[itenor2], 5)),
 						    new XeqC(zglos[isopran], 5)));
 
@@ -170,7 +171,7 @@ public class MasterClass extends ExampleFD {
 		store.impose(new XneqY(znazwisko[iRobinson1], zimie[iChris]));
 		store.impose(new XneqY(znazwisko[iRobinson2], zimie[iChris]));
 
-		store.impose(new Or(new XeqC(znazwisko[iRobinson1], 3), 
+		store.impose(new Or(new XeqC(znazwisko[iRobinson1], 3),
 							new XeqC(znazwisko[iRobinson2], 3)));
 
 		// 5. Ulrich is not the bass or the mezzo-soprano.
@@ -207,12 +208,12 @@ public class MasterClass extends ExampleFD {
 	public static void main(String args[]) {
 
 		MasterClass example = new MasterClass();
-		
+
 		example.model();
 
 		if (example.search())
-			System.out.println("Solution(s) found");
-		
-	}	
-	
+			logger.info("Solution(s) found");
+
+	}
+
 }

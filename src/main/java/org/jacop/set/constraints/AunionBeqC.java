@@ -1,9 +1,9 @@
 /**
- *  AunionBeqC.java 
+ *  AunionBeqC.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,46 +31,47 @@
 
 package org.jacop.set.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * It creates a constraint that makes sure that A union B is equal to C. 
- * A \/ B = C. 
- * 
+ * It creates a constraint that makes sure that A union B is equal to C.
+ * A \/ B = C.
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * 
+ *
  * @version 4.2
  */
 
-public class AunionBeqC extends Constraint {
+public class AunionBeqC extends Constraint { private static Logger logger = LoggerFactory.getLogger(AunionBeqC.class);
 
 	static int idNumber = 1;
 
 	/**
-	 * It specifies set variable a. 
+	 * It specifies set variable a.
 	 */
 	public SetVar a;
 
 	/**
-	 * It specifies set variable b. 
+	 * It specifies set variable b.
 	 */
 	public SetVar b;
-	
+
 	/**
-	 * It specifies set variable c. 
+	 * It specifies set variable c.
 	 */
 	public SetVar c;
 
 	/**
-	 * It specifies if the constrain attempts to perform expensive and yet 
-	 * unlikely propagation due to cardinality information. 
+	 * It specifies if the constrain attempts to perform expensive and yet
+	 * unlikely propagation due to cardinality information.
 	 */
 	public boolean performCardinalityReasoning = false;
 
@@ -81,19 +82,19 @@ public class AunionBeqC extends Constraint {
 	private boolean cHasChanged = true;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"a", "b", "c"};
 
 	/**
 	 * It constructs an AunionBeqC constraint to restrict the domain of the variables A, B and C.
-	 * 
-	 * @param a 
-	 * @param b 
+	 *
+	 * @param a
+	 * @param b
 	 * @param c variable that is restricted to be the union of a and b.
 	 */
-	
+
 	public AunionBeqC(SetVar a, SetVar b, SetVar c) {
 
 		assert (a != null) : "Variable a is null";
@@ -102,7 +103,7 @@ public class AunionBeqC extends Constraint {
 
 		numberId = idNumber++;
 		numberArgs = 3;
-		
+
 		this.a = a;
 		this.b = b;
 		this.c = c;
@@ -125,7 +126,7 @@ public class AunionBeqC extends Constraint {
 	public void consistency(Store store) {
 
 		do {
-			
+
 			store.propagationHasOccurred = false;
 
 			boolean aHasChanged = this.aHasChanged;
@@ -141,17 +142,17 @@ public class AunionBeqC extends Constraint {
 			SetDomain cDom = c.dom();
 
 			/**
-			 * It computes the consistency of the constraint. 
-			 * 
+			 * It computes the consistency of the constraint.
+			 *
 			 * A /\ B = C
-			 * 
+			 *
 			 * The list of rules to use.
-			 * 
+			 *
 			 * T5.
-			 * 
+			 *
 			 * glbA = glbA \/ ( glbC \ lubB )
 			 * lubA = lubA /\ lubC
-			 * 
+			 *
 			 * glbB = glbB \/ ( glbC \ lubA )
 			 * lubB = lubB /\ lubC
 			 */
@@ -177,9 +178,9 @@ public class AunionBeqC extends Constraint {
 				b.domain.inLUB(store.level, b, cDom.lub());
 
 			/**
-			 * 
+			 *
 			 * T6.
-			 * 
+			 *
 			 * glbC = glbC \/ glbA \/ glbB
 			 * lubC = lubC /\ ( lubA \/ lubB )
 			 */
@@ -191,28 +192,28 @@ public class AunionBeqC extends Constraint {
 			if (aHasChanged || bHasChanged)
 				c.domain.inLUB(store.level, c, aDom.lub().union(bDom.lub()));
 
-			/** 
-			 * For all sets, A, B, C apply the rules as specified for A below. 
-			 * 
+			/**
+			 * For all sets, A, B, C apply the rules as specified for A below.
+			 *
 			 * #A.in(#glbA, #lubA).
-			 * 
+			 *
 			 * If #glb is already equal to maximum allowed cardinality then set is specified by glb.
 			 * if (#glbA == #A.max()) then A = glbA
-			 * If #lub is already equal to minimum allowed cardinality then set is specified by lub. 
+			 * If #lub is already equal to minimum allowed cardinality then set is specified by lub.
 			 * if (#lubA == #A.min()) then A = lubA
 			 */
 
 			if (performCardinalityReasoning) {
 				/** Cardinality reasoning
-				 * 
-				 * For C) 
-				 * 
-				 * (4) + (8) - elements already in union 
-				 * 
-				 * max ( #A.min - (4), #B.min() - (8) ) - the minimum number of elements which have to be added to A or B which will end up in the union. 
+				 *
+				 * For C)
+				 *
+				 * (4) + (8) - elements already in union
+				 *
+				 * max ( #A.min - (4), #B.min() - (8) ) - the minimum number of elements which have to be added to A or B which will end up in the union.
 				 * #A.min - (4) + #B.min() - (8) - (2+5+6+7) - the elements which have to be added minus what can be added at the same time to both sets.
-				 * (4+5+6) + (6+7+8) - 6 - this is already taken care of as it does not contain other cardinalities only set operations. 
-				 *  
+				 * (4+5+6) + (6+7+8) - 6 - this is already taken care of as it does not contain other cardinalities only set operations.
+				 *
 				 * #C.inMin( max ( #A.min - (4), #B.min() - (8) ) )
 				 * #C.inMin( #A.min - (4) + #B.min() - (8) - (2+5+6+7) )
 				 */
@@ -231,13 +232,13 @@ public class AunionBeqC extends Constraint {
 
 				/** Cardinality reasoning
 				 * for A)
-				 * 
-				 * #C.min() - (2, 3, 7, 8) - elements required by C which can not be contributed by B without contributing to A. 
-				 * 
+				 *
+				 * #C.min() - (2, 3, 7, 8) - elements required by C which can not be contributed by B without contributing to A.
+				 *
 				 * #A.inMin( #C.min() - (2, 3, 7, 8) )
-				 * 
+				 *
 				 * #C.max() - (8)
-				 * 
+				 *
 				 * #A.inMax( #C.max() - (8) );
 				 *
 				 */
@@ -249,15 +250,15 @@ public class AunionBeqC extends Constraint {
 
 				/** Cardinality reasoning
 				 * for B)
-				 * 
-				 * #C.min() - (4) - (1) - elements required by C which can not be contributed by A without contributing to B. 
-				 * 
+				 *
+				 * #C.min() - (4) - (1) - elements required by C which can not be contributed by A without contributing to B.
+				 *
 				 * #B.inMin( #C.min() - (4) - (1) )
-				 * 
+				 *
 				 * #C.max() - (4)
-				 * 
+				 *
 				 * #B.inMax( #C.max() - (4) );
-				 * 
+				 *
 				 */
 
 				int sizeOf_1_2_4_5 = a.domain.lub().subtract(b.domain.glb()).getSize();
@@ -266,12 +267,12 @@ public class AunionBeqC extends Constraint {
 						c.domain.card().max() - sizeOf_4);
 
 
-				// FIXME, implement the cardinality based reasoning. 
+				// FIXME, implement the cardinality based reasoning.
 
 			}
 
 		} while (store.propagationHasOccurred);
-		
+
 	}
 
 	@Override
@@ -283,7 +284,7 @@ public class AunionBeqC extends Constraint {
 			if (possibleEvent != null)
 				return possibleEvent;
 		}
-		return SetDomain.ANY;		
+		return SetDomain.ANY;
 	}
 
 	@Override
@@ -328,11 +329,11 @@ public class AunionBeqC extends Constraint {
 			b.weight++;
 			c.weight++;
 		}
-	}	
+	}
 
 	@Override
 	public void queueVariable(int level, Var variable) {
-		
+
 		if (variable == a) {
 			aHasChanged = true;
 			return;
@@ -347,6 +348,6 @@ public class AunionBeqC extends Constraint {
 			cHasChanged = true;
 			return;
 		}
-		
+
 	}
 }

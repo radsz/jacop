@@ -1,9 +1,9 @@
 /**
- *  Min.java 
+ *  Min.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,30 +31,30 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.ArrayList;
-
-import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.core.FloatVar;
-
+import java.util.*;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Min constraint implements the minimum/2 constraint. It provides the minimum
  * varable from all FD varaibles on the list.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class Min extends Constraint {
+public class Min extends Constraint { private static Logger logger = LoggerFactory.getLogger(Min.class);
 
 	static int IdNumber = 1;
 
 	/**
-	 * It specifies a list of variables among which the minimum value is being searched for. 
+	 * It specifies a list of variables among which the minimum value is being searched for.
 	 */
 	public FloatVar list[];
 
@@ -64,7 +64,7 @@ public class Min extends Constraint {
 	public FloatVar min;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"list", "min"};
@@ -89,7 +89,7 @@ public class Min extends Constraint {
 			this.list[i] = list[i];
 		}
 	}
-	
+
 	/**
 	 * It constructs min constraint.
 	 * @param min variable denoting the minimal value
@@ -98,7 +98,7 @@ public class Min extends Constraint {
 	public Min(ArrayList<? extends FloatVar> list, FloatVar min) {
 
 		this(list.toArray(new FloatVar[list.size()]), min);
-		
+
 	}
 
 	@Override
@@ -120,15 +120,15 @@ public class Min extends Constraint {
 
 		//@todo keep one variable with the smallest value as watched variable
 		// only check for other support if that smallest value is no longer part
-		// of the variable domain. 
-		
+		// of the variable domain.
+
 		do {
-			
+
 			store.propagationHasOccurred = false;
-		
+
 			// @todo, optimize, if there is no change on min.min() then
 			// the below inMin does not have to be executed.
-			
+
 			double minValue = FloatDomain.MaxFloat;
 			double maxValue = FloatDomain.MaxFloat;
 
@@ -153,14 +153,14 @@ public class Min extends Constraint {
 
 				if (maxValue < var.min())
 				    n++;
-				else 
+				else
 				    pos = i;
 			}
 			if (n == list.length-1) // one variable on the list is minimal; its is max < min of all other variables
 			    list[pos].domain.in(store.level, list[pos], min.dom());
 
 		} while (store.propagationHasOccurred);
-		
+
 	}
 
 	@Override
@@ -196,17 +196,17 @@ public class Min extends Constraint {
 			list[i].removeConstraint(this);
 		}
 	}
-	
+
 	@Override
 	public boolean satisfied() {
-		
+
 		if ( ! min.singleton() )
 			return false;
-		
+
 		double minValue = min.max();
 		int i = 0;
 		boolean eq = false;
-		
+
 		while (i < list.length) {
 			if (list[i].min() < minValue)
 				return false;
@@ -214,26 +214,26 @@ public class Min extends Constraint {
 				eq = true;
 			i++;
 		}
-		
+
 		return eq;
 	}
 
 	@Override
 	public String toString() {
 		StringBuffer result = new StringBuffer( id() );
-		
+
 		result.append(" : min( [ ");
 		for (int i = 0; i < list.length; i++) {
 			result.append( list[i] );
 			if (i < list.length - 1)
 				result.append(", ");
 		}
-		
+
 		result.append("], ").append(this.min);
 		result.append(")");
-		
+
 		return result.toString();
-	
+
 	}
 
     @Override
@@ -243,5 +243,5 @@ public class Min extends Constraint {
 			for (Var v : list) v.weight++;
 		}
 	}
-	
+
 }

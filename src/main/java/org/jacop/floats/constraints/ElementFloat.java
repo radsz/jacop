@@ -1,9 +1,9 @@
 /**
- *  ElementFloat.java 
+ *  ElementFloat.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,10 +32,7 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Hashtable;
-
+import java.util.*;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -43,36 +40,36 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
-
-import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.core.FloatIntervalDomain;
-import org.jacop.floats.core.FloatIntervalEnumeration; 
-
+import org.jacop.floats.core.FloatIntervalEnumeration;
+import org.jacop.floats.core.FloatVar;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * ElementFloat constraint defines a relation 
+ * ElementFloat constraint defines a relation
  * list[index - indexOffset] = value.
- * 
+ *
  * The first element of the list corresponds to index - indexOffset = 1.
  * By default indexOffset is equal 0 so first value within a list corresponds to index equal 1.
- * 
- * If index has a domain from 0 to list.length-1 then indexOffset has to be equal -1 to 
+ *
+ * If index has a domain from 0 to list.length-1 then indexOffset has to be equal -1 to
  * make addressing of list array starting from 1.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 3.1
  */
 
-public class ElementFloat extends Constraint {
+public class ElementFloat extends Constraint { private static Logger logger = LoggerFactory.getLogger(ElementFloat.class);
 
     static int idNumber = 1;
 
     boolean firstConsistencyCheck = true;
     int firstConsistencyLevel;
 
-	
+
     /**
      * It specifies variable index within an element constraint list[index-indexOffset] = value.
      */
@@ -90,13 +87,13 @@ public class ElementFloat extends Constraint {
 
     /**
      * It specifies list of variables within an element constraint list[index-indexOffset] = value.
-     * The list is addressed by positive integers (>=1) if indexOffset is equal to 0. 
+     * The list is addressed by positive integers (>=1) if indexOffset is equal to 0.
      */
     public double list[];
 
     /**
-     * It specifies for each value what are the possible values of the index variable (it 
-     * takes into account indexOffset. 
+     * It specifies for each value what are the possible values of the index variable (it
+     * takes into account indexOffset.
      */
     Hashtable<Double, IntDomain> mappingValuesToIndex = new Hashtable<Double, IntDomain>();
 
@@ -105,29 +102,29 @@ public class ElementFloat extends Constraint {
 
     /**
      * It holds information about the positions within list array that are equal. It allows
-     * to safely skip duplicates when enumerating index domain. 
+     * to safely skip duplicates when enumerating index domain.
      */
     ArrayList<IntDomain> duplicates;
-	
+
     /**
-     * It specifies the arguments required to be saved by an XML format as well as 
+     * It specifies the arguments required to be saved by an XML format as well as
      * the constructor being called to recreate an object from an XML format.
-     */	
+     */
     public static String[] xmlAttributes = {"index", "list", "value", "indexOffset"};
 
     /**
-     * It constructs an element constraint. 
-     * 
+     * It constructs an element constraint.
+     *
      * @param index variable index
      * @param list list of integers from which an index-th element is taken
      * @param value a value of the index-th element from list
-     * @param indexOffset shift applied to index variable. 
+     * @param indexOffset shift applied to index variable.
      */
     public ElementFloat(IntVar index, double[] list, FloatVar value, int indexOffset) {
 
 	this.indexOffset = indexOffset;
 	commonInitialization(index, list, value);
-		
+
     }
 
     private void commonInitialization(IntVar index, double[] list, FloatVar value) {
@@ -137,19 +134,19 @@ public class ElementFloat extends Constraint {
 	assert (index != null) : "Argument index is null";
 	assert (list != null) : "Argument list is null";
 	assert (value != null) : "Argument value is null";
-				
+
 	this.numberId = idNumber++;
 	this.index = index;
 	this.value = value;
 	this.numberArgs = (short) (numberArgs + 2);
 	this.list = new double[list.length];
 	this.queueIndex = 1;
-		
+
 	for (int i = 0; i < list.length; i++) {
-						
+
 	    Double listElement = list[i];
 	    this.list[i] = list[i];
-			
+
 	    IntDomain oldFD = mappingValuesToIndex.get(listElement);
 	    if (oldFD == null) {
 		mappingValuesToIndex.put(listElement, new IntervalDomain(i + 1 + indexOffset, i + 1 + indexOffset));
@@ -157,47 +154,47 @@ public class ElementFloat extends Constraint {
 	    else
 		((IntervalDomain)oldFD).addLastElement(i + 1 + indexOffset);
 	    //     			    oldFD.unionAdapt(i + 1 + indexOffset, i + 1 + indexOffset);
-			
+
 	}
 
     }
-	
+
     /**
      * It constructs an element constraint with default indexOffset equal 0.
-     * 
+     *
      * @param index index variable.
-     * @param list list containing variables which one pointed out by index variable is made equal to value variable.  
-     * @param value a value variable equal to the specified element from the list. 
+     * @param list list containing variables which one pointed out by index variable is made equal to value variable.
+     * @param value a value variable equal to the specified element from the list.
      */
     public ElementFloat(IntVar index, ArrayList<Double> list, FloatVar value) {
 
 	this(index, list, value, 0);
-		
+
     }
 
     /**
-     * It constructs an element constraint. 
-     * 
+     * It constructs an element constraint.
+     *
      * @param index variable index
      * @param list list of integers from which an index-th element is taken
      * @param value a value of the index-th element from list
-     * @param indexOffset shift applied to index variable. 
+     * @param indexOffset shift applied to index variable.
      */
     public ElementFloat(IntVar index, ArrayList<Double> list, FloatVar value, int indexOffset) {
-		
+
 	this.indexOffset = indexOffset;
-		
+
 	double [] listOfInts = new double[list.size()];
 	for (int i = 0; i < list.size(); i++)
 	    listOfInts[i] = list.get(i);
-		
+
 	commonInitialization(index, listOfInts, value);
-		
+
     }
 
     /**
-     * It constructs an element constraint with indexOffset by default set to 0.  
-     * 
+     * It constructs an element constraint with indexOffset by default set to 0.
+     *
      * @param index variable index
      * @param list list of integers from which an index-th element is taken
      * @param value a value of the index-th element from list
@@ -206,7 +203,7 @@ public class ElementFloat extends Constraint {
     public ElementFloat(IntVar index, double[] list, FloatVar value) {
 
 	this(index, list, value, 0);
-		
+
     }
 
 
@@ -217,9 +214,9 @@ public class ElementFloat extends Constraint {
 
 	variables.add(index);
 	variables.add(value);
-		
+
 	return variables;
-		
+
     }
 
     @Override
@@ -239,9 +236,9 @@ public class ElementFloat extends Constraint {
 
 	}
 
-		
+
 	boolean copyOfValueHasChanged = valueHasChanged;
-		
+
 	if (indexHasChanged) {
 
 	    indexHasChanged = false;
@@ -255,7 +252,7 @@ public class ElementFloat extends Constraint {
 		    indexDom = indexDom.subtract(duplicate);
 		}
 	    }
-			
+
 	    // values of index for duplicated values within list are already taken care of above.
 	    for (ValueEnumeration e = indexDom.valueEnumeration(); e.hasMoreElements();) {
 		double valueOfElement = list[e.nextElement() - 1 - indexOffset];
@@ -264,7 +261,7 @@ public class ElementFloat extends Constraint {
 
 	    value.domain.in(store.level, value, domValue);
 	    valueHasChanged = false;
-			
+
 	}
 
 	// the if statement above can change value variable but those changes can be ignored.
@@ -285,9 +282,9 @@ public class ElementFloat extends Constraint {
 
 	    index.domain.in(store.level, index, domIndex);
 	    indexHasChanged = false;
-			
+
 	}
-		
+
     }
 
     @Override
@@ -310,31 +307,31 @@ public class ElementFloat extends Constraint {
 
 	store.addChanged(this);
 	store.countConstraint();
-		
+
 	duplicates = new ArrayList<IntDomain>();
-		
+
 	HashMap<Double, IntDomain> map = new HashMap<Double, IntDomain>();
-		
+
 	for (int pos = 0; pos < list.length; pos++) {
-		
+
 	    double el = list[pos];
 	    IntDomain indexes = map.get(el);
 	    if (indexes == null) {
 		indexes = new IntervalDomain(pos + 1 + indexOffset, pos + 1 + indexOffset);
 		map.put(el, indexes);
 	    }
-	    else 
+	    else
 		indexes.unionAdapt(pos + 1 + indexOffset);
 	}
-		
+
 	for (IntDomain duplicate: map.values()) {
 	    if ( duplicate.getSize() > 20 )
 		duplicates.add(duplicate);
 	}
-		
+
 	valueHasChanged = true;
 	indexHasChanged = true;
-		
+
     }
 
     @Override
@@ -355,7 +352,7 @@ public class ElementFloat extends Constraint {
     public boolean satisfied() {
 
 	if (value.singleton()) {
-		
+
 	    double v = value.min();
 
             IntDomain duplicate = null;
@@ -368,43 +365,43 @@ public class ElementFloat extends Constraint {
             }
 
 	    if (duplicate == null) {
-				
+
 		if (!index.singleton())
 		    return false;
-		else 
+		else
 		    if (list[index.value() - 1 - indexOffset] == v)
 			return true;
-			
+
 	    }
 	    else {
-			
+
 		if (duplicate.contains(index.domain) && list[index.min() - 1 - indexOffset] == v)
 		    return true;
-			
+
 	    }
-			
+
 	    return false;
-		
+
 	}
 	else
 	    return false;
-		
+
     }
 
     @Override
     public String toString() {
-		
+
 	StringBuffer result = new StringBuffer( id() );
-		
+
 	result.append(" : elementFloat").append("( ").append(index).append(", [");
-		
+
 	for (int i = 0; i < list.length; i++) {
 	    result.append( list[i] );
-			
+
 	    if (i < list.length - 1)
 		result.append(", ");
 	}
-		
+
 	result.append("], ").append(value).append(", " + indexOffset + " )");
 
 	return result.toString();

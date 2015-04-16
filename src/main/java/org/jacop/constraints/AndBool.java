@@ -1,9 +1,9 @@
 /**
- *  AndBool.java 
+ *  AndBool.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,24 +31,25 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 import org.jacop.core.TimeStamp;
+import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * If all x's are equal 1 then result variable is equal 1 too. Otherwise, result variable 
+ * If all x's are equal 1 then result variable is equal 1 too. Otherwise, result variable
  * is equal to zero. It restricts the domain of all x as well as result to be between 0 and 1.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class AndBool extends PrimitiveConstraint {
+public class AndBool extends PrimitiveConstraint { private static Logger logger = LoggerFactory.getLogger(AndBool.class);
 
 	static int counter = 1;
 
@@ -56,14 +57,14 @@ public class AndBool extends PrimitiveConstraint {
 	 * It specifies a list of variables which all must be equal to 1 to set result variable to 1.
 	 */
 	public IntVar [] list;
-	
+
 	/**
 	 * It specifies variable result, storing the result of and function performed a list of variables.
 	 */
 	public IntVar result;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"list", "result"};
@@ -74,19 +75,19 @@ public class AndBool extends PrimitiveConstraint {
     private TimeStamp<Integer> position;
 
 	/**
-	 * It constructs AndBool. 
-	 * 
+	 * It constructs AndBool.
+	 *
 	 * @param list list of x's which must all be equal 1 to make result equal 1.
-	 * @param result variable which is equal 0 if any of x is equal to zero. 
+	 * @param result variable which is equal 0 if any of x is equal to zero.
 	 */
 	public AndBool(IntVar [] list, IntVar result) {
-		
+
 		assert ( list != null ) : "List variable is null";
 		assert ( result != null ) : "Result variable is null";
-		
+
 		this.numberId = counter++;
 		this.numberArgs = (short)(list.length + 1);
-		
+
 		this.list = new IntVar[list.length];
 		for (int i = 0; i < list.length; i++) {
 			assert (list[i] != null) : i + "-th element in the list is null";
@@ -94,27 +95,27 @@ public class AndBool extends PrimitiveConstraint {
 		}
 
 		this.result = result;
-		
+
 		assert ( checkInvariants() == null) : checkInvariants();
 
 	}
 
 	/**
-	 * It constructs AndBool. 
-	 * 
+	 * It constructs AndBool.
+	 *
 	 * @param list list of x's which must all be equal 1 to make result equal 1.
-	 * @param result variable which is equal 0 if any of x is equal to zero. 
+	 * @param result variable which is equal 0 if any of x is equal to zero.
 	 */
 	public AndBool(ArrayList<IntVar> list, IntVar result) {
 
 		this(list.toArray(new IntVar[list.size()]), result);
-		
+
 	}
 
 	/**
 	 * It checks invariants required by the constraint. Namely that
-	 * boolean variables have boolean domain. 
-	 * 
+	 * boolean variables have boolean domain.
+	 *
 	 * @return the string describing the violation of the invariant, null otherwise.
 	 */
 	public String checkInvariants() {
@@ -122,7 +123,7 @@ public class AndBool extends PrimitiveConstraint {
 		for (IntVar var : list)
 			if (var.min() < 0 || var.max() > 1)
 				return "Variable " + var + " does not have boolean domain";
-		
+
 		return null;
 	}
 
@@ -226,7 +227,7 @@ public class AndBool extends PrimitiveConstraint {
 			    position.update(start);
 		    }
 		    else
-			if (list[i].max() == 0) { 
+			if (list[i].max() == 0) {
 			    result.domain.in(store.level, result, 0, 0);
 			    removeConstraint();
 			    return;
@@ -272,7 +273,7 @@ public class AndBool extends PrimitiveConstraint {
 			    position.update(start);
 		    }
 		    else
-			if (list[i].max() == 0) { 
+			if (list[i].max() == 0) {
 			    result.domain.in(store.level, result, 1, 1);
 			    return;
 			}
@@ -295,7 +296,7 @@ public class AndBool extends PrimitiveConstraint {
 
 		if (result.min() == 1) {
 			for (int i = start; i<list.length; i++)
-				if (list[i].min() != 1) 
+				if (list[i].min() != 1)
 				    return false;
 				else {
 				    swap(start, i);
@@ -305,7 +306,7 @@ public class AndBool extends PrimitiveConstraint {
 			return true;
 		} else if (result.max() == 0) {
 			for (int i = start; i<list.length; i++)
-				if (list[i].max() == 0) 
+				if (list[i].max() == 0)
 				    return true;
 				else if (list[i].min() == 1) {
 				    swap(start, i);
@@ -344,7 +345,7 @@ public class AndBool extends PrimitiveConstraint {
 
 				for (int i = start; i < list.length; i++)
 					if (list[i].max() == 0)
-						return true;					
+						return true;
 				else if (list[i].min() == 1) {
 				    swap(start, i);
 				    start++;

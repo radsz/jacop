@@ -1,9 +1,9 @@
 /**
- *  BabySitting.java 
+ *  BabySitting.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,21 +31,22 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
+ *
  * It is a simple logic puzzle about babysitting.
- * 
+ *
  * @author Radoslaw Szymanek
- * 
+ *
  * Each weekday, Bonnie takes care of five of the neighbors'
  * children. The children's names are Keith, Libby, Margo, Nora, and
  * Otto; last names are Fell, Grant, Hall, Ivey, and Jule. Each is a
@@ -60,26 +61,26 @@ import org.jacop.core.Store;
  * Determine: First name - Last name - Age
 
 
- * Given solution : 
+ * Given solution :
 
  * Keith Fell, five years old
  * Libby Jule, six years old
  * Margo Hall, two years old
  * Nora Grant, three years old
- * Otto Ivey, four years old 
+ * Otto Ivey, four years old
  *
  *
  */
 
-public class BabySitting extends ExampleFD {
-	
+public class BabySitting extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(BabySitting.class);
+
 	@Override
-	public void model() {		
+	public void model() {
 
 		vars = new ArrayList<IntVar>();
 		store = new Store();
 
-		System.out.println("Program to solve Babysitting problem ");
+		logger.info("Program to solve Babysitting problem ");
 
 		// arrays with surnames
 		String[] surnameNames = { "Fell", "Grant", "Hall", "Ivey", "Jule" };
@@ -102,7 +103,7 @@ public class BabySitting extends ExampleFD {
 			vars.add(surname[i]); vars.add(name[i]);
 		}
 
-		
+
 		// Each person has to have a different surname and different name.
 		store.impose(new Alldifferent(surname));
 		store.impose(new Alldifferent(name));
@@ -122,7 +123,7 @@ public class BabySitting extends ExampleFD {
 		store.impose(new XmulCeqZ(surname[ihall], 2, name[iotto]));
 
 	}
-	
+
 
 	/**
 	 * It runs the program solving this puzzle.
@@ -131,12 +132,12 @@ public class BabySitting extends ExampleFD {
 	public static void main(String args[]) {
 
 		BabySitting example = new BabySitting();
-		
+
 		example.model();
 
 		if (example.search())
-			System.out.println("Solution(s) found");
-		
+			logger.info("Solution(s) found");
+
 	}
-	
+
 }

@@ -1,9 +1,9 @@
 /**
- *  ElementVariable.java 
+ *  ElementVariable.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,34 +32,31 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.Random;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * ElementVariable constraint defines a relation 
+ * ElementVariable constraint defines a relation
  * list[index - indexOffset] = value.
- * 
+ *
  * The first element of the list corresponds to index - indexOffset = 1.
  * By default indexOffset is equal 0 so first value within a list corresponds to index equal 1.
- * 
- * If index has a domain from 0 to list.length-1 then indexOffset has to be equal -1 to 
+ *
+ * If index has a domain from 0 to list.length-1 then indexOffset has to be equal -1 to
  * make addressing of list array starting from 1.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class ElementVariable extends Constraint {
+public class ElementVariable extends Constraint { private static Logger logger = LoggerFactory.getLogger(ElementVariable.class);
 
 	static int idNumber = 1;
 
@@ -83,7 +80,7 @@ public class ElementVariable extends Constraint {
 
 	/**
 	 * It specifies list of variables within an element constraint list[index - indexOffset] = value.
-	 * The list is addressed by positive integers (>=1) if indexOffset is equal to 0. 
+	 * The list is addressed by positive integers (>=1) if indexOffset is equal to 0.
 	 */
 	public IntVar list[];
 
@@ -96,20 +93,20 @@ public class ElementVariable extends Constraint {
 	HashMap<IntVar, Integer> mapping = new HashMap<IntVar, Integer>();
 
 	HashMap<IntVar, ArrayList<Integer> > duplicates = new HashMap<IntVar, ArrayList<Integer> >();
-	
+
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
-	 */		
+	 */
 	public static String[] xmlAttributes = {"index", "list", "value", "indexOffset"};
 
 	/**
-	 * It constructs an element constraint. 
-	 * 
+	 * It constructs an element constraint.
+	 *
 	 * @param index variable index
 	 * @param list list of variables from which an index-th element is taken
 	 * @param value a value of the index-th element from list
-	 * @param indexOffset shift applied to index variable. 
+	 * @param indexOffset shift applied to index variable.
 	 */
 	public ElementVariable(IntVar index, IntVar[] list, IntVar value, int indexOffset) {
 
@@ -137,8 +134,8 @@ public class ElementVariable extends Constraint {
 	}
 
 	/**
-	 * It constructs an element constraint. 
-	 * 
+	 * It constructs an element constraint.
+	 *
 	 * @param index variable index
 	 * @param list list of variables from which an index-th element is taken
 	 * @param value a value of the index-th element from list
@@ -150,12 +147,12 @@ public class ElementVariable extends Constraint {
 	}
 
 	/**
-	 * It constructs an element constraint. 
-	 * 
+	 * It constructs an element constraint.
+	 *
 	 * @param index variable index
 	 * @param list list of variables from which an index-th element is taken
 	 * @param value a value of the index-th element from list
-	 * @param indexOffset shift applied to index variable. 
+	 * @param indexOffset shift applied to index variable.
 	 */
 	public ElementVariable(IntVar index, ArrayList<? extends IntVar> list, IntVar value, int indexOffset) {
 
@@ -164,8 +161,8 @@ public class ElementVariable extends Constraint {
 	}
 
 	/**
-	 * It constructs an element constraint. 
-	 * 
+	 * It constructs an element constraint.
+	 *
 	 * @param index variable index
 	 * @param list list of variables from which an index-th element is taken
 	 * @param value a value of the index-th element from list
@@ -200,7 +197,7 @@ public class ElementVariable extends Constraint {
 		variableQueue.clear();
 	}
 
-	// For each variable from the list it specifies the values it supports 
+	// For each variable from the list it specifies the values it supports
 	IntDomain[] supports;
 
 	private boolean valueHasChanged;
@@ -211,7 +208,7 @@ public class ElementVariable extends Constraint {
 	public void consistency(Store store) {
 
 		if (index.singleton()) {
-			// index is singleton. 
+			// index is singleton.
 
 			int position = index.value() - 1 - indexOffset;
 			value.domain.in(store.level, value, list[ position ].domain);
@@ -219,7 +216,7 @@ public class ElementVariable extends Constraint {
 
 		}
 		else {
-			// index is not singleton. 	
+			// index is not singleton.
 
 
 		    if (firstConsistencyCheck) {
@@ -237,7 +234,7 @@ public class ElementVariable extends Constraint {
 			firstConsistencyLevel = store.level;
 			valueHasChanged = true;
 			indexHasChanged = true;
-			for (IntVar var : list) 
+			for (IntVar var : list)
 			    variableQueue.add(var);
 
 			supports = new IntDomain[list.length];
@@ -266,7 +263,7 @@ public class ElementVariable extends Constraint {
 		    value.domain.in(store.level, value, valMin, valMax);
 		    // value.domain.in(store.level, value, valDomain);
 
-		    // Consequtive execution of the consistency function. 
+		    // Consequtive execution of the consistency function.
 
 		    if (valueHasChanged) {
 
@@ -310,7 +307,7 @@ public class ElementVariable extends Constraint {
 
 				Iterator<IntVar> itr = variableQueue.iterator();
 
-				// TODO, what if one variable occurs multiple times in list? Only one 
+				// TODO, what if one variable occurs multiple times in list? Only one
 				// occurence in the list can be active, the other ones have to be ignored.
 
 				while (itr.hasNext()) {
@@ -320,7 +317,7 @@ public class ElementVariable extends Constraint {
 
 					// reason about possible changes to value variable.
 					if (!supports[position].isEmpty()) {
-						// changed variable supports some values in Value variable. 
+						// changed variable supports some values in Value variable.
 						IntDomain lostSupports = supports[position].subtract(changedVar.domain);
 						lostSupports.intersectAdapt(value.domain);
 						if (!lostSupports.isEmpty()) {
@@ -355,14 +352,14 @@ public class ElementVariable extends Constraint {
 					// reason about possible changes to index variable.
 					if (!changedVar.domain.isIntersecting(value.domain)) {
 
-						index.domain.inComplement(store.level, index, position + 1 + indexOffset);	
+						index.domain.inComplement(store.level, index, position + 1 + indexOffset);
 						list[position].removeConstraint(this);
 
 						ArrayList<Integer> array = duplicates.get(changedVar);
 						if (array != null)
 							for (int additionalPosition : array)
 								index.domain.inComplement(store.level, index, additionalPosition + 1 + indexOffset);
-						
+
 					}
 				}
 
@@ -400,7 +397,7 @@ public class ElementVariable extends Constraint {
 		for (int i = 0; i < list.length; i++) {
 			list[i].putModelConstraint(this, getConsistencyPruningEvent(list[i]));
 			Integer oldInteger = mapping.put(list[i], i);
-			if (oldInteger != null) { 
+			if (oldInteger != null) {
 				ArrayList<Integer> array = duplicates.get(list[i]);
 				if (array != null)
 					array.add(i);
@@ -411,7 +408,7 @@ public class ElementVariable extends Constraint {
 				}
 			}
 		}
-		
+
 		store.addChanged(this);
 		store.countConstraint();
 	}

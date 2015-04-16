@@ -1,9 +1,9 @@
 /**
- *  Asserts.java 
+ *  Asserts.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,25 +31,24 @@
 
 package org.jacop.constraints.netflow;
 
-import java.util.ArrayList;
-import java.util.List;
-
+import java.util.*;
 import org.jacop.constraints.netflow.simplex.Arc;
 import org.jacop.constraints.netflow.simplex.NetworkSimplex;
 import org.jacop.constraints.netflow.simplex.Node;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
+ *
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.2
- * 
+ *
  */
 
-public class Assert {
+public class Assert { private static Logger logger = LoggerFactory.getLogger(Assert.class);
 
 	public static boolean checkFlow(NetworkSimplex g) {
-		
+
 		List<Arc> allArcsForDebug = allArcsForDebug(g);
 		int sum = 0;
 		for (Node n : g.nodes)
@@ -61,11 +60,11 @@ public class Assert {
 		for (Node n : g.nodes) {
 			int del_out = 0, del_in = 0;
 			int out = 0, in = 0;
-			
+
 			for (Arc a : allArcsForDebug) {
 				if (!a.forward)
 					a = a.sister;
-				
+
 				if (a.companion != null) {
 					// lower capacity
 					if (a.head == n)
@@ -73,7 +72,7 @@ public class Assert {
 					else if (a.tail() == n)
 						del_out += a.companion.flowOffset;
 				}
-				
+
 				if (a.index == -3) {
 					// deleted arc
 					if (a.head == n)
@@ -89,13 +88,13 @@ public class Assert {
 						out += a.sister.capacity;
 					else continue;
 				}
-//				System.out.println("  " + a);
+//				logger.info("  " + a);
 			}
-			
+
 			assert ( n.balance == out - in ) : "Balance on node\n" + "out = " + out + ", in = " + in
 					+ ", balance = " + n.balance + "\n" + n + "\n";
 
-			assert (n.initialBalance - n.balance -n.deltaBalance == del_out - del_in) : 
+			assert (n.initialBalance - n.balance -n.deltaBalance == del_out - del_in) :
 				"Balance on deleted node\n" + "out = " + del_out
 					+ ", in = " + del_in + ", balance = " + n.balance
 					+ ", delta = " + n.deltaBalance
@@ -116,7 +115,7 @@ public class Assert {
 				if (a.tail() == g.root)
 					out += a.sister.capacity;
 			}
-			
+
 			assert(0 == out - in) : "Balance on node (root)\n" + "in = " + out + ", out = "
 					+ in + ", balance = " + 0 + "\n" + g.root + "\n";
 		}
@@ -155,7 +154,7 @@ public class Assert {
 
 				Node j = arc.head;
 				Node i = arc.sister.head;
-				
+
 				if (i.toParent == arc) {
 					assert(j == i.parent) : "\ni = " + i + "\nj = " + j + "\nij = " + arc + "\n";
 				} else {
@@ -198,7 +197,7 @@ public class Assert {
 		assert(N - 1 == tree.size());
 		assert(N - 1 == allArcsForDebug.size() - g.lower.length);
 		assert(((Network)g).costOffset == del_cost);
-		
+
 		for (int i = 0; i < g.numArcs; i++) {
 			Arc arc = g.lower[i];
 			assert(arc.sister.capacity == 0);
@@ -222,10 +221,10 @@ public class Assert {
 			boolean b2 = tree.contains(i.toParent.sister);
 			assert(b1 ^ b2) : "\ni = " + i + "\np = " + p + "\n";
 		}
-		
+
 		assert(N == x);
 
-		
+
 		for (Node node : g.nodes) {
 			List<Arc> adjArcs = new ArrayList<Arc>();
 			int count = -1;
@@ -250,7 +249,7 @@ public class Assert {
 				assert(/*node.toString() + "\n" +adjArcs.toString() + "\n" + Arrays.toString(node.adjacencyList) + "\n", */count == count2);
 			}
 		}
-		
+
 		return true;
 	}
 
@@ -260,7 +259,7 @@ public class Assert {
 			if (arc.index == -3)
 				continue;
 
-			// System.out.println("@@ " + arc);
+			// logger.info("@@ " + arc);
 			int reduced = arc.reducedCost();
 
 			if (arc.capacity > 0 && reduced < 0)
@@ -268,7 +267,7 @@ public class Assert {
 			if (arc.sister.capacity > 0 && reduced > 0)
 				s += "\n" + arc;
 		}
-		// System.out.println(s);
+		// logger.info(s);
 		if (!s.isEmpty())
 			assert (false) : "non-optimal arcs:" + s;
 
@@ -276,7 +275,7 @@ public class Assert {
 	}
 
 	public static boolean checkInfeasibleNodes(NetworkSimplex g) {
-		
+
 		for (Node node : g.nodes) {
 			if (node.deltaBalance == 0) {
 				assert(!g.infeasibleNodes.contains(node)) : "" + node;
@@ -284,10 +283,10 @@ public class Assert {
 				assert(g.infeasibleNodes.contains(node)) : "" + node;
 			}
 		}
-		
+
 		return true;
 	}
-	
+
 	public static void forceAsserts() {
 
 		boolean asserts = false;
@@ -297,7 +296,7 @@ public class Assert {
 
 	}
 
-	
+
 	public static List<Arc> allArcsForDebug(NetworkSimplex g) {
 		List<Arc> arcs = new ArrayList<Arc>(g.allArcs);
 		for (Node node : g.nodes)

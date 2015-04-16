@@ -1,11 +1,11 @@
 package org.jacop.examples.cpviz;
 
 /**
- *  Newspaper.java 
+ *  Newspaper.java
  *  This file is part of org.jacop.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -17,7 +17,7 @@ package org.jacop.examples.cpviz;
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,8 +31,7 @@ package org.jacop.examples.cpviz;
  *
  */
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Cumulative;
 import org.jacop.constraints.In;
 import org.jacop.constraints.XplusYlteqZ;
@@ -46,20 +45,22 @@ import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.SmallestMax;
 import org.jacop.search.TraceGenerator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
+ *
  * It is a simple newspaper reading job-shop like scheduling problem.
- * 
+ *
  * @author Radoslaw Szymanek
  *
- * There are four students: Algy, Bertie, Charlie and Digby, who share a flat. 
- * Four newspapers are delivered to the house: the Financial Times, the Guardian, 
- * the Daily Express and the Sun. Each of the students reads all of the newspapers, 
- * in particular order and for a specified amount of time (see below). 
- * 
- * Question: Given that Algy gets up at 8:30, Bertie and Charlie at 8:45 
- * and Digby at 9:30, what is the earliest that they can all set off for college? 
+ * There are four students: Algy, Bertie, Charlie and Digby, who share a flat.
+ * Four newspapers are delivered to the house: the Financial Times, the Guardian,
+ * the Daily Express and the Sun. Each of the students reads all of the newspapers,
+ * in particular order and for a specified amount of time (see below).
+ *
+ * Question: Given that Algy gets up at 8:30, Bertie and Charlie at 8:45
+ * and Digby at 9:30, what is the earliest that they can all set off for college?
  *
  *			Algy 		Bertie		Charlie		Digby
  * Guardian		30		75		15		1
@@ -71,9 +72,9 @@ import org.jacop.search.TraceGenerator;
  * Bertie order - Guardian, Express, FT, Sun
  * Charlie order - Express, Guardian, FT, Sun
  * Digby order - Sun, FT, Guardian, Express
- */		
+ */
 
-public class CPvizNewspaper {
+public class CPvizNewspaper { private static Logger logger = LoggerFactory.getLogger(CPvizNewspaper.class);
 
     static ArrayList<Var> vars;
     static Store store;
@@ -84,7 +85,7 @@ public class CPvizNewspaper {
 		// Creating constraint store
 		store = new Store();
 		vars = new ArrayList<Var>();
-		
+
 		// algy[0], bertie[0], charlie[0], digby[0]
 		// - when a person starts reading guardian
 		IntVar[] algy = new IntVar[4];
@@ -120,24 +121,24 @@ public class CPvizNewspaper {
 		durations[3] = sun;
 
 		for (int i = 0; i < 4; i++) {
-			
+
 			// Variables can be enforced to have proper initial domains
 			// in four different ways.
-			
-			// The first one if possible to use is by providing minimal and maximal 
+
+			// The first one if possible to use is by providing minimal and maximal
 			// values within the constructor of the variable.
 			algy[i] = new IntVar(store, "algy[" + i + "]", 0, 250);
-			
+
 			// bertie[i] = new Variable(store, "bertie[" + i + "]", 15, 250);
 			bertie[i] = new IntVar(store, "bertie[" + i + "]", 0, 250);
 			// Bertie wakes up 15 minutes after Algy
 			// The second one is by imposing In constraint after initially creating
 			// a variable with too large domain.
 			store.impose(new In(bertie[i], new IntervalDomain(15, 250)));
-			
+
 			// Charlie wakes up 15 minutes after Algy
-			// The third is to create a domain before creating a variable 
-			// and using it. Please use clone() function, so one domain 
+			// The third is to create a domain before creating a variable
+			// and using it. Please use clone() function, so one domain
 			// object is not used in multiple variables.
 			IntervalDomain dom = new IntervalDomain();
 			dom.unionAdapt(15, 250);
@@ -145,10 +146,10 @@ public class CPvizNewspaper {
 
 			// Digby wakes up 60 minutes after Algy
 			// digby[i] = new Variable(store, "digby[" + i + "]", 60, 250);
-			// The fourth way which is the slight variation of the third is 
-			// by creating it directly in the constructor of the variable. 
+			// The fourth way which is the slight variation of the third is
+			// by creating it directly in the constructor of the variable.
 			digby[i] = new IntVar(store, "digby[" + i + "]", new IntervalDomain(60, 250));
-			
+
 			vars.add(algy[i]); vars.add(bertie[i]); vars.add(charlie[i]); vars.add(digby[i]);
 		}
 
@@ -236,14 +237,14 @@ public class CPvizNewspaper {
 
 		cost = makespan;
 		vars.add(makespan);
-		
-// 	}	
-	
+
+// 	}
+
 // 	public static boolean label() {
-		
+
 	    SelectChoicePoint<IntVar> varSelect = new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]), new SmallestMax<IntVar>(),
 				new IndomainMin<IntVar>());
-		
+
 		DepthFirstSearch<IntVar> search = new DepthFirstSearch<IntVar>();
 
 		// Trace --->
@@ -262,26 +263,26 @@ public class CPvizNewspaper {
 //		search.setExitListener((ExitListener)select);
 		// <---
 
-		boolean result = search.labeling(store, select, cost);		
-		
-		
+		boolean result = search.labeling(store, select, cost);
+
+
 	}
 
 
 	/**
 	 * It executes the program which solves this newspaper problem.
-	 * 
+	 *
 	 * @param args no argument is used.
 	 */
 	public static void main(String args[]) {
 
 		CPvizNewspaper example = new CPvizNewspaper();
-		
+
 		example.model();
 
 // 		if ( label() )
-// 		    System.out.println("Solution(s) found");
-		
-	}	
-	
+// 		    logger.info("Solution(s) found");
+
+	}
+
 }

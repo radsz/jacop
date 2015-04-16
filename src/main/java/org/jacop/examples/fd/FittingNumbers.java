@@ -1,9 +1,9 @@
 /**
- *  FittingNumbers.java 
+ *  FittingNumbers.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,36 +31,37 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.SumWeight;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
- * It is program to solve problem of fitting numbers to made them equal to zero. 
- * 
+ *
+ * It is program to solve problem of fitting numbers to made them equal to zero.
+ *
  * @author Radoslaw Szymanek
- * 
- * Find how many copies of each numbers to take that its sum is equal to one of the specified domain. 
+ *
+ * Find how many copies of each numbers to take that its sum is equal to one of the specified domain.
  * 520, 247, 2626, 2119, 520, 2054, 1976, 1209, 1118, 1287, 1040, 741, 390, 2691, 2717, -1000
- * 
+ *
  */
 
-public class FittingNumbers extends ExampleFD {
+public class FittingNumbers extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(FittingNumbers.class);
 
 	int[] elements =   {520, 247, 2626, 2119, 2054, 1976, 1209, 1118, 1287, 741, 2691, 2717};
 
 	int [] sum = {13000};
-	
+
 	@Override
 	public void model() {
 
 		store = new Store();
 		vars = new ArrayList<IntVar>();
-		
+
 		IntVar[] counters = new IntVar[elements.length];
 
 		IntervalDomain sumDomain = new IntervalDomain();
@@ -75,12 +76,12 @@ public class FittingNumbers extends ExampleFD {
 			counters[i] = new IntVar(store, "counter" + i, 0, sum.max() / elements[i] );
 			vars.add(counters[i]);
 		}
-		
+
 		store.impose(new SumWeight(counters, elements, sum));
-		
-		System.out.println(store);
+
+		logger.info(store.toString());
 	}
-		
+
 
 	/**
 	 * It executes the program to solve simple Kakro puzzle.
@@ -89,14 +90,14 @@ public class FittingNumbers extends ExampleFD {
 	public static void main(String args[]) {
 
 		FittingNumbers example = new FittingNumbers();
-		
+
 		example.model();
 
 		if (example.searchAllAtOnce()) {
-			System.out.println("Solution(s) found");			
+			logger.info("Solution(s) found");
 		}
-		
-	}	
-	
-	
+
+	}
+
+
 }

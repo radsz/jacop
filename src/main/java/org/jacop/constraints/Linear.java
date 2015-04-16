@@ -1,9 +1,9 @@
 /**
- *  Linear.java 
+ *  Linear.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,25 +31,25 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Linear constraint implements the weighted summation over several
  * variables . It provides the weighted sum from all variables on the list.
  * The weights are integers.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 3.1
  */
 
-public class Linear extends PrimitiveConstraint {
+public class Linear extends PrimitiveConstraint { private static Logger logger = LoggerFactory.getLogger(Linear.class);
     Store store;
 	static int counter = 1;
 
@@ -61,11 +61,11 @@ public class Linear extends PrimitiveConstraint {
     /**
      * Defines negated relations
      */
-    final static byte[] negRel= {ne, //eq=0, 
-				 ge, //lt=1, 
-				 gt, //le=2, 
-				 eq, //ne=3, 
-				 le, //gt=4, 
+    final static byte[] negRel= {ne, //eq=0,
+				 ge, //lt=1,
+				 gt, //le=2,
+				 eq, //ne=3,
+				 le, //gt=4,
 				 lt  //ge=5;
     };
 
@@ -86,7 +86,7 @@ public class Linear extends PrimitiveConstraint {
 	public int weights[];
 
 	/**
-	 * It specifies variable for the overall sum. 
+	 * It specifies variable for the overall sum.
 	 */
 	public int sum;
 
@@ -110,12 +110,12 @@ public class Linear extends PrimitiveConstraint {
 	/**
 	 * The position for the next grounded variable.
 	 */
-	private TimeStamp<Integer> nextGroundedPosition;	
+	private TimeStamp<Integer> nextGroundedPosition;
 
     boolean reified = true;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"list", "weights", "sum"};
@@ -131,7 +131,7 @@ public class Linear extends PrimitiveConstraint {
 	this.relationType = relation(rel);
 
 	}
-	
+
     private void commonInitialization(Store store, IntVar[] list, int[] weights, int sum) {
 	this.store=store;
 		queueIndex = 1;
@@ -149,9 +149,9 @@ public class Linear extends PrimitiveConstraint {
 		for (int i = 0; i < list.length; i++) {
 
 		    assert (list[i] != null) : i + "-th element of list in Linear constraint is null";
-			
+
 		    if (weights[i] != 0) {
-			if (list[i].singleton()) 
+			if (list[i].singleton())
 			    this.sum -= list[i].value() * weights[i];
 			else
 			    if (parameters.get(list[i]) != null) {
@@ -199,7 +199,7 @@ public class Linear extends PrimitiveConstraint {
 			positionMaping.put(this.list[j], j);
 			queueVariable(store.level, this.list[j]);
 
-			
+
 		}
 
 		checkForOverflow();
@@ -207,7 +207,7 @@ public class Linear extends PrimitiveConstraint {
 	}
 
 	/**
-	 * It constructs the constraint Linear. 
+	 * It constructs the constraint Linear.
 	 * @param variables variables which are being multiplied by weights.
 	 * @param weights weight for each variable.
 	 * @param sum variable containing the sum of weighted variables.
@@ -218,7 +218,7 @@ public class Linear extends PrimitiveConstraint {
 		int[] w = new int[weights.size()];
 		for (int i = 0; i < weights.size(); i++)
 			w[i] = weights.get(i);
-		
+
 		commonInitialization(store, variables.toArray(new IntVar[variables.size()]),
 							 w,
 							 sum);
@@ -262,9 +262,9 @@ public class Linear extends PrimitiveConstraint {
 	    pruneRelation(store, negRel[relationType]);
 
 	    if (negRel[relationType] != eq)
-	    	if (notSatisfied()) 
+	    	if (notSatisfied())
 	    	    removeConstraint();
-		
+
 	}
 
     private void pruneRelation(Store store, byte rel) {
@@ -296,7 +296,7 @@ public class Linear extends PrimitiveConstraint {
 		int divMin, divMax;
 
 		switch (rel) {
-		case eq : //============================================= 
+		case eq : //=============================================
 		    if ((lMaxArray[i] > max + lMinArray[i]) || (lMinArray[i] < min + lMaxArray[i])) {
 
 			d1 = ((float)(min + lMaxArray[i]) / weights[i]);
@@ -311,7 +311,7 @@ public class Linear extends PrimitiveConstraint {
 			    divMax = (int)( Math.round( Math.floor( d1 ) ) );
 			}
 
-			if (divMin > divMax) 
+			if (divMin > divMax)
 			    throw Store.failException;
 
 			v.domain.in(store.level, v, divMin, divMax);
@@ -325,7 +325,7 @@ public class Linear extends PrimitiveConstraint {
 			d2 = ((float)(max + lMinArray[i]) / weights[i]);
 
 			if (weights[i] < 0) {
-			    if (d1 <= d2) 
+			    if (d1 <= d2)
 				divMin = (int)( Math.round( Math.floor ( d1 ) ) );
 			    else
 				divMin = (int)( Math.round( Math.floor( d2 ) ) );
@@ -333,9 +333,9 @@ public class Linear extends PrimitiveConstraint {
 			    v.domain.inMin(store.level, v, divMin + 1);
 			}
 			else {
-			    if (d1 <= d2) 
+			    if (d1 <= d2)
 				divMax = (int)( Math.round( Math.ceil( d2 ) ) );
-			    else 
+			    else
 				divMax = (int)( Math.round( Math.ceil( d1 ) ) );
 
 			    v.domain.inMax(store.level, v, divMax - 1);
@@ -350,7 +350,7 @@ public class Linear extends PrimitiveConstraint {
 			d2 = ((float)(max + lMinArray[i]) / weights[i]);
 
 			if (weights[i] < 0) {
-			    if (d1 <= d2) 
+			    if (d1 <= d2)
 				divMin = (int)( Math.round( Math.ceil ( d1 ) ) );
 			    else
 				divMin = (int)( Math.round( Math.ceil ( d2 ) ) );
@@ -381,7 +381,7 @@ public class Linear extends PrimitiveConstraint {
 			divMax = (int)( Math.round( Math.floor( d1 ) ) );
 		    }
 
-		    if ( divMin == divMax) 
+		    if ( divMin == divMax)
 			v.domain.inComplement(store.level, v, divMin);
 		    break;
 		case gt : //=============================================
@@ -393,7 +393,7 @@ public class Linear extends PrimitiveConstraint {
 			d2 = ((float)(max + lMinArray[i]) / weights[i]);
 
 			if (weights[i] < 0) {
-			    if (d1 <= d2) 
+			    if (d1 <= d2)
 				divMax = (int)( Math.round( Math.ceil( d2 ) ) );
 			    else
 				divMax = (int)( Math.round( Math.ceil( d1 ) ) );
@@ -492,7 +492,7 @@ public class Linear extends PrimitiveConstraint {
 				return possibleEvent;
 		}
 		return IntDomain.BOUND;
-		
+
 	}
 
 	@Override
@@ -599,13 +599,13 @@ public class Linear extends PrimitiveConstraint {
 		/*
 		if (!reified) {
 		    if (backtrackHasOccured) {
-		    
+
 			backtrackHasOccured = false;
 
 			recomputeBounds();
 		    }
-		    
-		    if (entailed(negRel[relationType])) 
+
+		    if (entailed(negRel[relationType]))
 		    	throw Store.failException;
 		}
 		*/
@@ -646,29 +646,29 @@ public class Linear extends PrimitiveConstraint {
     }
 
     private boolean entailed(byte rel) {
-	    
+
 	switch (rel) {
-	case eq : 
+	case eq :
 	    if (lMin == lMax && lMin == sum)
 		return true;
 	    break;
-	case lt : 
+	case lt :
 	    if (lMax < sum)
 		return true;
 	    break;
-	case le : 
+	case le :
 	    if (lMax <= sum)
 		return true;
 	    break;
-	case ne : 
+	case ne :
 	    if (lMin > sum || lMax < sum)
 		return true;
 	    break;
-	case gt : 
+	case gt :
 	    if (lMin > sum)
 		return true;
 	    break;
-	case ge : 
+	case ge :
 	    if (lMin >= sum)
 		return true;
 	    break;
@@ -692,7 +692,7 @@ public class Linear extends PrimitiveConstraint {
 
 	    int mul1 = currentDomain.min() * weights[i];
 	    int mul2 = currentDomain.max() * weights[i];
-				
+
 	    if (mul1 <= mul2) {
 		lMin += mul1;
 		lMinArray[i] = mul1;
@@ -730,9 +730,9 @@ public class Linear extends PrimitiveConstraint {
     }
 
     public byte relation(String r) {
-	if (r.equals("==")) 
+	if (r.equals("=="))
 	    return eq;
-	else if (r.equals("=")) 
+	else if (r.equals("="))
 	    return eq;
 	else if (r.equals("<"))
 	    return lt;

@@ -1,9 +1,9 @@
 /**
- *  StonesOfHeaven.java 
+ *  StonesOfHeaven.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,20 +31,21 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XneqY;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
- * It solves a simple logic puzzle about artifacts. 
- * 
+ *
+ * It solves a simple logic puzzle about artifacts.
+ *
  * @author Janusz Kociolek, Sebastian Czypek, and Radoslaw Szymanek
- * 
+ *
  * Title: Stones of Heaven
  * Author: Jo Mason
  * Publication: Dell Logic Puzzles
@@ -72,7 +73,7 @@ import org.jacop.core.Store;
  * wasn't the dragon), the one from the Ching dynasty (which didn't go
  * to the buyer from Japan), and the light green object (which wasn't
  * the horse).
- * 
+ *
  * 4. The American decided against both the grasshopper and the piece
  * from the Sung dynasty, neither of which she felt would match her
  * home decor.
@@ -85,15 +86,15 @@ import org.jacop.core.Store;
  *
  */
 
-public class StonesOfHeaven extends ExampleFD {
+public class StonesOfHeaven extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(StonesOfHeaven.class);
 
 	@Override
 	public void model() {
-		
+
 		store = new Store();
 		vars = new ArrayList<IntVar>();
-		
-		System.out.println("Solution for problem Stones of Heaven");
+
+		logger.info("Solution for problem Stones of Heaven");
 
 		String[] ColorNames = { "red", "light green", "white", "dark green" };
 		int /* ired = 0, */ iLgreen = 1, iwhite = 2, iDgreen = 3;
@@ -159,7 +160,7 @@ public class StonesOfHeaven extends ExampleFD {
 		store.impose(new XneqY(Country[iusa], Dynasty[iSung]));
 
 		store.impose(new XneqY(Item[igrasshopper], Dynasty[iSung]));
-	
+
 	}
 
 	/**
@@ -169,12 +170,12 @@ public class StonesOfHeaven extends ExampleFD {
 	public static void main(String args[]) {
 
 		StonesOfHeaven example = new StonesOfHeaven();
-		
+
 		example.model();
 
 		if (example.search())
-			System.out.println("Solution(s) found");
-		
-	}		
-		
+			logger.info("Solution(s) found");
+
+	}
+
 }

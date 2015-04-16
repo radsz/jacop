@@ -1,9 +1,9 @@
 /**
- *  And.java 
+ *  And.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,23 +31,23 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.Hashtable;
-
+import java.util.*;
 import org.jacop.core.Domain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.util.SimpleHashSet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Constraint c1 /\ c2 ... /\ cn
- * 
- * 
+ *
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class And extends PrimitiveConstraint {
+public class And extends PrimitiveConstraint { private static Logger logger = LoggerFactory.getLogger(And.class);
 
 	static int IdNumber = 1;
 
@@ -59,27 +59,27 @@ public class And extends PrimitiveConstraint {
 	public PrimitiveConstraint listOfC[];
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"listOfC"};
 
 	/**
-	 * It constructs an And constraint based on primitive constraints. The 
+	 * It constructs an And constraint based on primitive constraints. The
 	 * constraint is satisfied if all constraints are satisfied.
 	 * @param listOfC arraylist of constraints
 	 */
 	public And(ArrayList<PrimitiveConstraint> listOfC) {
-		
+
 		assert (listOfC != null) : "List of constraints is empty";
-		
+
 		this.queueIndex = 1;
 		numberId = IdNumber++;
-		
+
 		this.listOfC = new PrimitiveConstraint[listOfC.size()];
-		
+
 		int i = 0;
-		
+
 		for (PrimitiveConstraint cc : listOfC) {
 			assert (cc != null) : (i+1) + "-th element of constraint list is insolvent";
 			numberArgs += cc.numberArgs();
@@ -93,14 +93,14 @@ public class And extends PrimitiveConstraint {
 	 * @param c2 the second primitive constraint
 	 */
 	public And(PrimitiveConstraint c1, PrimitiveConstraint c2) {
-		
+
 		numberId = IdNumber++;
-		
+
 		this.listOfC = new PrimitiveConstraint[2];
-		
+
 		numberArgs += c1.numberArgs();
 		this.listOfC[0] = c1;
-		
+
 		numberArgs += c2.numberArgs();
 		this.listOfC[1] = c2;
 	}
@@ -110,7 +110,7 @@ public class And extends PrimitiveConstraint {
 	 * @param c an array of primitive constraints constituting the And constraint.
 	 */
 	public And(PrimitiveConstraint[] c) {
-		
+
 		this.queueIndex = 1;
 		this.numberId = IdNumber++;
 		this.listOfC = new PrimitiveConstraint[c.length];
@@ -133,23 +133,23 @@ public class And extends PrimitiveConstraint {
 	}
 
 	boolean propagation;
-	
+
 	@Override
 	public void consistency(Store store) {
 
 		propagation = true;
 
 		do {
-			
-			// Variable propagation can be set to true again if queueVariable function is being called. 
+
+			// Variable propagation can be set to true again if queueVariable function is being called.
 			propagation = false;
-			
+
 			for (Constraint cc : listOfC)
 				cc.consistency(store);
-			
+
 		}
 		while (propagation);
-		
+
 	}
 
 	@Override
@@ -186,7 +186,7 @@ public class And extends PrimitiveConstraint {
 				return eventAcross;
 
 		}
-	
+
 	@Override
 	public int getNotConsistencyPruningEvent(Var var) {
 
@@ -308,11 +308,11 @@ public class And extends PrimitiveConstraint {
 
 	@Override
 	public String toString() {
-		
+
 		StringBuffer result = new StringBuffer( id() );
-		
+
 		result.append(" : And(");
-		
+
 		for (int i = 0; i < listOfC.length; i++) {
 			result.append( listOfC[i] );
 			if (i == listOfC.length - 1)

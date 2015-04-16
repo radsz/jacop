@@ -1,9 +1,9 @@
 /**
- *  XinA.java 
+ *  XinA.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,8 +31,7 @@
 
 package org.jacop.set.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -40,17 +39,19 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * It creates a constraint that makes sure that the value assigned to integer variable x is
  * included in the set assigned to the set variable a.
- * 
- * @author Radoslaw Szymanek and Krzysztof Kuchcinski. 
- * 
+ *
+ * @author Radoslaw Szymanek and Krzysztof Kuchcinski.
+ *
  * @version 4.2
  */
 
-public class XinA extends PrimitiveConstraint {
+public class XinA extends PrimitiveConstraint { private static Logger logger = LoggerFactory.getLogger(XinA.class);
 
 	static int idNumber = 1;
 
@@ -58,7 +59,7 @@ public class XinA extends PrimitiveConstraint {
 	 * It specifies variable a.
 	 */
 	public IntVar x;
-	
+
 	/**
 	 * It specifies variable b.
 	 */
@@ -72,7 +73,7 @@ public class XinA extends PrimitiveConstraint {
 	public boolean strict = false;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"x", "a", "strict"};
@@ -84,10 +85,10 @@ public class XinA extends PrimitiveConstraint {
 	 * @param strict it specifies if the inclusion relation is strict.
 	 */
 	public XinA(IntVar x, SetVar a, boolean strict) {
-		
+
 		this(x, a);
 		this.strict = strict;
-		
+
 	}
 
 	/**
@@ -96,16 +97,16 @@ public class XinA extends PrimitiveConstraint {
 	 * @param a variable that is restricted to contain x.
 	 */
 	public XinA(IntVar x, SetVar a) {
-		
+
 		assert(a != null) : "Variable a is null";
 		assert(x != null) : "Variable x is null";
 
 		this.numberId = idNumber++;
 		this.numberArgs = 2;
-		
+
 		this.x = x;
 		this.a = a;
-		
+
 	}
 
 	@Override
@@ -126,18 +127,18 @@ public class XinA extends PrimitiveConstraint {
 				x.domain.in(store.level, x, a.domain.lub());
 
 			if (strict)
-				a.domain.inCardinality(store.level, a, 2, Integer.MAX_VALUE);				
+				a.domain.inCardinality(store.level, a, 2, Integer.MAX_VALUE);
 			else
 				a.domain.inCardinality(store.level, a, 1, Integer.MAX_VALUE);
-			
+
 			// if(x.singleton())
 			// 	a.domain.inGLB(store.level, a, x.value());
-			
+
 			if (!x.domain.isIntersecting(a.domain.lub()))
 				throw Store.failException;
 
 			// aHasChanged = false;
-			
+
 	}
 
 	@Override
@@ -149,11 +150,11 @@ public class XinA extends PrimitiveConstraint {
 			if (possibleEvent != null)
 				return possibleEvent;
 		}
-		
+
 		if (var == x)
 			return IntDomain.ANY;
 		else
-			return SetDomain.ANY;		
+			return SetDomain.ANY;
 	}
 
 	@Override
@@ -165,11 +166,11 @@ public class XinA extends PrimitiveConstraint {
 			if (possibleEvent != null)
 				return possibleEvent;
 		}
-		
+
 		if (var == x)
 			return IntDomain.GROUND;
 		else
-			return SetDomain.GLB;		
+			return SetDomain.GLB;
 
 	}
 
@@ -183,13 +184,13 @@ public class XinA extends PrimitiveConstraint {
 
 	@Override
 	public void impose(Store store) {
-		
+
 		x.putModelConstraint(this, getConsistencyPruningEvent(x));
 		a.putModelConstraint(this, getConsistencyPruningEvent(a));
 
 		store.addChanged(this);
 		store.countConstraint();
-		
+
 	}
 
 	@Override
@@ -197,14 +198,14 @@ public class XinA extends PrimitiveConstraint {
 
 		// if (x.singleton())
 		// 	a.domain.inLUBComplement(store.level, a, x.value());
-		
+
 		IntDomain xDom = x.domain.subtract(a.domain.glb());
-		
+
 		if (xDom.getSize() == 0)
 			throw Store.failException;
-		
+
 		x.domain.in(store.level, x, xDom);
-		
+
 	}
 
 	@Override
@@ -225,7 +226,7 @@ public class XinA extends PrimitiveConstraint {
 	public boolean satisfied() {
 
 		return a.domain.glb().contains(x.domain);
-		
+
 	}
 
 	@Override
@@ -238,11 +239,11 @@ public class XinA extends PrimitiveConstraint {
 				if (possibleEvent != null)
 					return possibleEvent;
 			}
-			
+
 			if (var == x)
 				return IntDomain.ANY;
 			else
-				return SetDomain.GLB;		
+				return SetDomain.GLB;
 
 		}
 		// If notConsistency function mode
@@ -252,11 +253,11 @@ public class XinA extends PrimitiveConstraint {
 				if (possibleEvent != null)
 					return possibleEvent;
 			}
-			
+
 			if (var == x)
 				return IntDomain.GROUND;
 			else
-				return SetDomain.GLB;		
+				return SetDomain.GLB;
 
 		}
 	}
@@ -273,16 +274,16 @@ public class XinA extends PrimitiveConstraint {
 			x.weight++;
 			a.weight++;
 		}
-	}	
+	}
 
-	
+
 	@Override
 	public void queueVariable(int level, Var variable) {
-		
+
 		// if (variable == a) {
 		// 	aHasChanged  = true;
 		// 	return;
 		// }
-		
+
 	}
 }

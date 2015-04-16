@@ -1,9 +1,9 @@
 /**
- *  Domain.java 
+ *  Domain.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,18 +31,19 @@
 
 package org.jacop.core;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Constraint;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Defines a Domain and related operations on it.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  */
 
-public abstract class Domain {
+public abstract class Domain {  Logger logger = LoggerFactory.getLogger(Domain.class);
 
 	/**
 	 * It specifies the constant responsible of conveying a message that
@@ -50,15 +51,15 @@ public abstract class Domain {
 	 * which has occurred within the domain.
 	 */
 	public final static int NOINFO = Integer.MIN_VALUE;
-	
+
 	/**
 	 * It specifies the constant for NONE event, if event is NONE then
 	 * the constraint is not attached to a variable. Useful for constraints
-	 * which are always satisfied or not satisfied after the first 
+	 * which are always satisfied or not satisfied after the first
 	 * consistency function execution.
 	 */
 	public final static int NONE = -1;
-	
+
 	/**
 	 * An exception used if failure encountered in functions in();
 	 */
@@ -78,7 +79,7 @@ public abstract class Domain {
 	 */
 
 	public int[] modelConstraintsToEvaluate;
-		
+
 	/**
 	 * It specifies constraints which are attached to current domain.
 	 */
@@ -118,7 +119,7 @@ public abstract class Domain {
 	/**
 	 * It clones the domain object, only data responsible for encoding domain
 	 * values is cloned. All other fields must be set separately.
-	 * @return return a clone of the domain. It aims at getting domain of the proper class type. 
+	 * @return return a clone of the domain. It aims at getting domain of the proper class type.
 	 */
 
 	public abstract Domain cloneLight();
@@ -126,9 +127,9 @@ public abstract class Domain {
 	/**
 	 * It clones the domain object.
 	 */
-	
+
 	public abstract Domain clone();
-	
+
 	/**
 	 * It returns value enumeration of the domain values.
 	 * @return valueEnumeration which can be used to enumerate one by one value from this domain.
@@ -153,7 +154,7 @@ public abstract class Domain {
 	/**
 	 * It removes a constraint from a domain, it should only be called by
 	 * removeConstraint function of Variable object. It is called for example in a
-	 * situation when a constraint is satisfied. 
+	 * situation when a constraint is satisfied.
 	 * @param storeLevel specifies the current level of the store, from which it should be removed.
 	 * @param var specifies variable for which the constraint is being removed.
 	 * @param c the constraint which is being removed.
@@ -180,7 +181,7 @@ public abstract class Domain {
 
 	/**
 	 * It sets the stamp of the domain.
-	 * 
+	 *
 	 * @param stamp defines the time stamp of the domain.
 	 */
 
@@ -194,7 +195,7 @@ public abstract class Domain {
 	 */
 	public abstract boolean singleton();
 
-	
+
 	/**
 	 * It returns true if given domain has only one element.
 	 * @param value value represented as domain object to which the domain must be equal to.
@@ -318,12 +319,12 @@ public abstract class Domain {
 	/**
 	 * It returns all constraints which are associated with variable, even the
 	 * ones which are already satisfied.
-	 * @return the number of constraint attached to this domain. 
+	 * @return the number of constraint attached to this domain.
 	 */
 
 	public int sizeConstraints() {
-		return (modelConstraintsToEvaluate[0] + 
-				modelConstraintsToEvaluate[1] + 
+		return (modelConstraintsToEvaluate[0] +
+				modelConstraintsToEvaluate[1] +
 				modelConstraintsToEvaluate[2]);
 	}
 
@@ -332,12 +333,12 @@ public abstract class Domain {
 	 * ones which are already satisfied.
 	 * @return the number of constraints attached to the original domain of the variable associated with this domain.
 	 */
-	public abstract int sizeConstraintsOriginal();	
-	
+	public abstract int sizeConstraintsOriginal();
+
 	/**
 	 * It returns all the constraints attached currently to the domain.
 	 * It should not be used extensively.
-	 * 
+	 *
 	 * @return an array of constraints currently attached to the domain.
 	 */
 	public ArrayList<Constraint> constraints() {
@@ -355,33 +356,33 @@ public abstract class Domain {
 			}
 
 		return result;
-		
+
 	}
 
-	
+
 	/**
-	 * It enforces that this domain is included within the specified domain. 
-	 * 
+	 * It enforces that this domain is included within the specified domain.
+	 *
 	 * @param level store level at which this inclusion is enforced.
 	 * @param var variable which is informed of the change if any occurs.
-	 * @param domain the domain which restricts this domain. 
+	 * @param domain the domain which restricts this domain.
 	 */
 	public abstract void in(int level, Var var, Domain domain);
 
-	
+
 	/**
-	 * It assigns a variable to a value represented by a domain. 
-	 * 
+	 * It assigns a variable to a value represented by a domain.
+	 *
 	 * @param level store level at which this assignment occurs.
 	 * @param var variable which is being assigned.
-	 * @param singleton the value being used in the assignment. 
+	 * @param singleton the value being used in the assignment.
 	 */
 	// public abstract void inValue(int level, Var var, Domain singleton);
 
 	/**
 	 * It checks if the domain is equal to the supplied domain.
 	 * @param domain against which the equivalence test is performed.
-	 * @return true if suppled domain has the same elements as this domain. 
+	 * @return true if suppled domain has the same elements as this domain.
 	 */
 
 	// public abstract boolean eq(Domain domain);
@@ -396,9 +397,9 @@ public abstract class Domain {
 
 
 	/**
-	 * It checks if the domain has correct state. 
-	 * @return null if everything is ok, otherwise a string describing the problem. 
-	 * 
+	 * It checks if the domain has correct state.
+	 * @return null if everything is ok, otherwise a string describing the problem.
+	 *
 	 */
 	public abstract String checkInvariants();
 

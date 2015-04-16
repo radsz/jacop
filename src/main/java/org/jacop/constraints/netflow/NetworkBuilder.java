@@ -1,9 +1,9 @@
 /**
- *  NetworkBuilder.java 
+ *  NetworkBuilder.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,9 +31,7 @@
 
 package org.jacop.constraints.netflow;
 
-import java.util.ArrayList;
-import java.util.List;
-
+import java.util.*;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Eq;
 import org.jacop.constraints.In;
@@ -50,27 +48,28 @@ import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A builder class for the network flow constraints. Models should use or
  * inherit from this class to build a network.
- * 
+ *
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.2
- * 
+ *
  */
 
-
-public class NetworkBuilder {
+public class NetworkBuilder { private static Logger logger = LoggerFactory.getLogger(NetworkBuilder.class);
 
 	private int nextNodeName = 1;
 
 	public IntVar costVariable;
-	
+
 	public final List<Node> nodeList = new ArrayList<Node>();
-	
+
 	public final List<Arc> arcList = new ArrayList<Arc>();
-	
+
 	public final List<VarHandler> handlerList = new ArrayList<VarHandler>();
 
 	public NetworkBuilder() {
@@ -126,7 +125,7 @@ public class NetworkBuilder {
 
 		if (arc.companion == null)
 			arc.companion = new ArcCompanion(arc, 0);
-		
+
 		arc.companion.xVar = xVar;
 		handlerList.add(arc.companion);
 
@@ -141,7 +140,7 @@ public class NetworkBuilder {
 
 		if (arc.companion == null)
 			arc.companion = new ArcCompanion(arc, 0);
-		
+
 		arc.companion.wVar = wVar;
 		handlerList.add(arc.companion);
 
@@ -174,19 +173,19 @@ public class NetworkBuilder {
 	 * for each domain, respectively.
 	 */
 	public Node[][] valueGraph(IntVar[] vars, IntDomain[] domains) {
-		
+
 		int n = vars.length, m = domains.length;
 
 		Node[] v = new Node[n], d = new Node[m];
 
 		for (int i = 0; i < n; i++)
 			v[i] = addNode(vars[i].id, 1);
-		
+
 		for (int i = 0; i < m; i++)
 			d[i] = addNode(domains[i].toString(), 0);
 
 		for (int i = 0; i < n; i++) {
-		
+
 			IntVar var = vars[i];
 
 			List<Arc> arcs = new ArrayList<Arc>();
@@ -210,12 +209,12 @@ public class NetworkBuilder {
 	public ArrayList<IntVar> listVariables() {
 
 		ArrayList<IntVar> list = new ArrayList<IntVar>();
-	
+
 		for (VarHandler handler : handlerList)
 			list.addAll(handler.listVariables());
 
 		return list;
-	
+
 	}
 
 	/* build network */
@@ -223,9 +222,9 @@ public class NetworkBuilder {
 	public NetworkFlow build() {
 		return new NetworkFlow(this);
 	}
-	
+
 	/**
-	 * Generally speaking, especially in case of multiple arcs between 
+	 * Generally speaking, especially in case of multiple arcs between
 	 * two nodes and structure constraints imposed on arcs makes it hard
 	 * to decompose network flow constraint into primitive ones. Since, the
 	 * decomposition introduces new variables and removal of artificial
@@ -235,19 +234,19 @@ public class NetworkBuilder {
 	 * @param store
 	 */
 	public ArrayList<Constraint> primitiveDecomposition(Store store) {
-		
+
 		ArrayList<Constraint> result = new ArrayList<Constraint>();
-		
+
 		//@TODO, fix it? Check the remark above.
 		for (Node node : nodeList) {
 			ArrayList<IntVar> in = new ArrayList<IntVar>();
 			ArrayList<IntVar> out = new ArrayList<IntVar>();
-			
+
 			for (Arc arc : arcList) {
-			
-				// This code replaces, the one below to handle 
+
+				// This code replaces, the one below to handle
 				if (arc.head == node || arc.tail() == node) {
-					
+
 					if (arc.getCompanion() == null)
 					// the above condition is satisfied sometimes.
 						arc.companion = new ArcCompanion(arc, 0);
@@ -264,16 +263,16 @@ public class NetworkBuilder {
 			//	if (arc.head == node) in.add(arc.getCompanion().xVar);
 			//	if (arc.tail() == node) out.add(arc.getCompanion().xVar);
 			}
-			
+
 			if (node.balance != 0) {
 				IntVar balance = new IntVar(store, node.balance, node.balance);
 				in.add(balance);
 			}
-			
+
 			// added.
 			if (in.size() == 0 || out.size() == 0)
 				continue;
-			
+
 			if (in.size() == 1) {
 				sumC(result, store, out, in.iterator().next());
 			} else if (out.size() == 1) {
@@ -286,35 +285,35 @@ public class NetworkBuilder {
 		}
 
 		for (VarHandler handler : handlerList) {
-			
+
 			if (handler instanceof DomainStructure) {
 				DomainStructure structure = (DomainStructure)handler;
-				
+
 				for (int i = 0; i < structure.arcs.length; i++) {
-				
+
 					Arc arc = structure.arcs[i];
 					IntDomain dom = structure.domains[i];
-					
+
 					if (structure.behavior != Behavior.PRUNE_ACTIVE) {
-						result.add(new Eq(new Not(new In(structure.variable, dom)), 
-											new XeqC(arc.getCompanion().xVar, 
+						result.add(new Eq(new Not(new In(structure.variable, dom)),
+											new XeqC(arc.getCompanion().xVar,
 													 arc.getCompanion().flowOffset)));
 					}
 
 					if (structure.behavior != Behavior.PRUNE_INACTIVE) {
 						int maxFlow = arc.getCompanion().flowOffset + arc.capacity + arc.sister.capacity;
 						result.add(new Eq(new In(structure.variable, dom), new XeqC(arc.getCompanion().xVar, maxFlow)));
-					
+
 					}
-				
+
 				}
 
 			}
 		}
-		
+
 		ArrayList<IntVar> vars = new ArrayList<IntVar>();
 		ArrayList<Integer> weights = new ArrayList<Integer>();
-		
+
 		boolean simpleSum = true;
 		for (Arc arc : arcList) {
 			if (arc.getCompanion().wVar != null) {
@@ -326,29 +325,29 @@ public class NetworkBuilder {
 				vars.add(arc.getCompanion().xVar);
 				weights.add(1);
 			} else if (arc.cost != 0) {
-				
+
 				simpleSum = false;
 				vars.add(arc.getCompanion().xVar);
 				weights.add(arc.cost);
-				
+
 			}
 		}
-		
+
 		// @TODO, SumWeight could be used instead of Sum and auxiliary variables weight above.
 		if (simpleSum)
 			sumC(result, store, vars, costVariable);
 		else
 			result.add(new SumWeight(vars, weights, costVariable));
-		
+
 		return result;
-		
+
 	}
-	
+
 	private void sumC(ArrayList<Constraint> list, Store store, ArrayList<IntVar> vars, IntVar result) {
-		
-		if (result == null) 
+
+		if (result == null)
 			throw new AssertionError();
-		
+
 		if (vars.size() == 0) {
 			list.add(new XeqY(result, new IntVar(store, 0, 0)));
 		} else if (vars.size() == 1) {
@@ -356,7 +355,7 @@ public class NetworkBuilder {
 		} else {
 			list.add(new Sum(vars, result));
 		}
-	
+
 	}
 
 }

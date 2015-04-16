@@ -1,9 +1,9 @@
 /**
- *  Markov.java 
+ *  Markov.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,31 +32,26 @@
 package org.jacop.examples.floats;
 
 /**
- * 
+ *
  * From Hamdy Taha "Operations Research" (8th edition), page 649ff.
  * Fertilizer example.
  *
  * Based on minizinc model by Håkan Kjellerstrand.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * 
+ *
  */
 
-import java.util.ArrayList;
-
 import org.jacop.core.Store;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.PrintOutListener;
-
-import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.constraints.LinearFloat;
-import org.jacop.floats.constraints.PplusQeqR;
-import org.jacop.floats.constraints.PmulQeqR;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.SplitSelectFloat;
-import org.jacop.floats.search.SmallestDomainFloat;
+import org.jacop.search.DepthFirstSearch;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class Markov {
+public class Markov { private static Logger logger = LoggerFactory.getLogger(Markov.class);
 
     double MIN_FLOAT = -1e+150;
     double MAX_FLOAT =  1e+150;
@@ -66,7 +61,7 @@ public class Markov {
        long T1, T2, T;
 	T1 = System.currentTimeMillis();
 
-	System.out.println ("========= markov_chains_taha =========");
+	logger.info ("========= markov_chains_taha =========");
 
 	Store store = new Store();
 
@@ -76,11 +71,11 @@ public class Markov {
 	double [] cost = {100.0, 125.0, 160.0};
 
 	FloatVar[] mean_first_return_time = new FloatVar[3];
-	for (int i = 0; i < 3; i++) 
+	for (int i = 0; i < 3; i++)
 	    mean_first_return_time[i] = new FloatVar(store, "mean_first_return_time["+i+"]", 0.0, 1.0);
 
 	FloatVar[] p = new FloatVar[3];
-	for (int i = 0; i < 3; i++) 
+	for (int i = 0; i < 3; i++)
 	    p[i] = new FloatVar(store, "p["+i+"]", 0.0, 1.0);
 
 	FloatVar tot_cost = new FloatVar(store, "tot_cost", 0.0, 385.0);
@@ -94,13 +89,13 @@ public class Markov {
 
 
 	FloatVar[] vars = new FloatVar[7];
-	for (int i = 0; i < 3; i++) 
+	for (int i = 0; i < 3; i++)
 	    vars[i] = p[i];
-	for (int i = 0; i < 3; i++) 
+	for (int i = 0; i < 3; i++)
 	    vars[i+3] = mean_first_return_time[i];
 	vars[6] = tot_cost;
 
-	System.out.println( "\bVar store size: "+ store.size()+
+	logger.info( "\bVar store size: "+ store.size()+
   			    "\nNumber of constraints: " + store.numberConstraints()
 			    );
 
@@ -108,38 +103,38 @@ public class Markov {
 	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, vars, null); //new SmallestDomainFloat<FloatVar>());
 	label.setAssignSolution(true);
 	// label.setSolutionListener(new PrintOutListener<FloatVar>());
-	label.getSolutionListener().recordSolutions(true); 
-	// label.getSolutionListener().searchAll(true); 
+	label.getSolutionListener().recordSolutions(true);
+	// label.getSolutionListener().searchAll(true);
 	//s.leftFirst = false;
 
 	boolean result = label.labeling(store, s, tot_cost);
 
 
 	if (result)
-	    System.out.println (tot_cost);
+	    logger.info (tot_cost.toString());
 	else
-	    System.out.println ("NO SOLUTION");
+	    logger.info ("NO SOLUTION");
 
-	System.out.println ("\nPrecision = " + FloatDomain.precision());
+	logger.info ("\nPrecision = " + FloatDomain.precision());
 
 	T2 = System.currentTimeMillis();
 	T = T2 - T1;
 
-	System.out.println("\n\t*** Execution time = "+ T + " ms");
+	logger.info("\n\t*** Execution time = "+ T + " ms");
 
 
     }
 
     /**
-     * It executes the program. 
-     * 
+     * It executes the program.
+     *
      * @param args no arguments
      */
     public static void main(String args[]) {
-		
+
 	Markov example = new Markov();
-		
+
 	example.markov_chains_taha();
 
-    }			
+    }
 }

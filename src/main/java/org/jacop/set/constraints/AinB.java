@@ -1,9 +1,9 @@
 /**
- *  AinB.java 
+ *  AinB.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,33 +31,34 @@
 
 package org.jacop.set.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * It creates a constraint that makes sure that the set value of set variable A is included
  * in the set value of set variable B.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  */
 
-public class AinB extends PrimitiveConstraint {
+public class AinB extends PrimitiveConstraint { private static Logger logger = LoggerFactory.getLogger(AinB.class);
 
 	// FIXME, check consistency and other methods like satisfied, notConsistency, notSatisfied.
-	
+
 	static int idNumber = 1;
 
 	/**
 	 * It specifies variable a.
 	 */
 	public SetVar a;
-	
+
 	/**
 	 * It specifies variable b.
 	 */
@@ -71,31 +72,31 @@ public class AinB extends PrimitiveConstraint {
 	// private boolean aHasChanged = true;
 
 	// private boolean bHasChanged = true;
-	
+
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"a", "b", "strict"};
 
 	/**
 	 * It constructs an AinB constraint to restrict the domain of the variables A and B.
-	 * By default this inclusion relation does not have to be strict. 
-	 * 
+	 * By default this inclusion relation does not have to be strict.
+	 *
 	 * @param a variable a that is restricted to be a subset of b.
 	 * @param b variable that is restricted to contain a.
 	 */
 	public AinB(SetVar a, SetVar b) {
-	
+
 		assert (a != null) : "Variable a is null";
 		assert (b != null) : "Variable b is null";
 
 		this.numberId = idNumber++;
 		this.numberArgs = 2;
-		
+
 		this.a = a;
 		this.b = b;
-		
+
 	}
 
 	/**
@@ -103,13 +104,13 @@ public class AinB extends PrimitiveConstraint {
 	 *
 	 * @param a variable a that is restricted to be a subset of variable b.
 	 * @param b variable that is restricted to contain variable a.
-	 * @param strict it specifies if the inclusion relation is strict. 
+	 * @param strict it specifies if the inclusion relation is strict.
 	 */
 	public AinB(SetVar a, SetVar b, boolean strict) {
-		
+
 		this(a, b);
 		this.strict = strict;
-	
+
 	}
 
 	@Override
@@ -126,30 +127,30 @@ public class AinB extends PrimitiveConstraint {
 	@Override
 	public void consistency(Store store) {
 
-		// FIXME, take into account strict relation. 
-		
+		// FIXME, take into account strict relation.
+
 		/**
-		 * Consistency of the constraint A in B. 
-		 * 
-		 * B can not be an empty set. 
-		 * 
-		 * T1. 
+		 * Consistency of the constraint A in B.
+		 *
+		 * B can not be an empty set.
+		 *
+		 * T1.
 		 * glbA = glbA
 		 * lubA = lubA /\ lubB
-		 * 
+		 *
 		 * T2
 		 * glbB = glbB \/ glbA
 		 * lubB = lubB
-		 * 
+		 *
 		 */
-		
+
 		if (strict)
 			if(b.domain.isEmpty())
 		    	throw Store.failException;
 
 		// if (bHasChanged)
 			a.domain.inLUB(store.level, a, b.domain.lub() );
-		
+
 		// if (aHasChanged)
 			b.domain.inGLB(store.level, b, a.domain.glb() );
 
@@ -159,13 +160,13 @@ public class AinB extends PrimitiveConstraint {
 			a.domain.inCardinality(store.level, a, Integer.MIN_VALUE, b.domain.card().max());
 
 		if (strict)
-			b.domain.inCardinality(store.level, b, a.domain.card().min() + 1, Integer.MAX_VALUE);		
-		else	
+			b.domain.inCardinality(store.level, b, a.domain.card().min() + 1, Integer.MAX_VALUE);
+		else
 			b.domain.inCardinality(store.level, b, a.domain.card().min(), Integer.MAX_VALUE);
-		
+
 		// aHasChanged = false;
 		// bHasChanged = false;
-		
+
 	}
 
 	@Override
@@ -177,7 +178,7 @@ public class AinB extends PrimitiveConstraint {
 			if (possibleEvent != null)
 				return possibleEvent;
 		}
-		return SetDomain.ANY;		
+		return SetDomain.ANY;
 	}
 
 	@Override
@@ -274,11 +275,11 @@ public class AinB extends PrimitiveConstraint {
 			a.weight++;
 			b.weight++;
 		}
-	}	
+	}
 
 	@Override
 	public void queueVariable(int level, Var variable) {
-		
+
 		// if (variable == a) {
 		// 	aHasChanged = true;
 		// 	return;
@@ -288,6 +289,6 @@ public class AinB extends PrimitiveConstraint {
 		// 	bHasChanged = true;
 		// 	return;
 		// }
-		
+
 	}
 }

@@ -10,12 +10,12 @@ import scala.collection.mutable.ArrayBuffer
 import org.jacop.scala._
 
 /**
- * 
+ *
  * It solves a nonogram example problem, sometimes also called Paint by Numbers.
- * 
- * 
+ *
+ *
  * @author Radoslaw Szymanek; rewriting to Scala Krzysztof Kuchcinski
- * 
+ *
  */
 
 object Nonogram extends jacop {
@@ -24,7 +24,7 @@ object Nonogram extends jacop {
    * The value that represents a black dot.
    */
   val black = 1
-	
+
   /**
    * The value that represents a white dot.
    */
@@ -37,8 +37,8 @@ object Nonogram extends jacop {
 
   /**
    * It specifies if the slide based decomposition of the regular constraint
-   * should be applied. This decomposition uses ternary extensional support 
-   * constraints. It achieves GAC if FSM is deterministic. 
+   * should be applied. This decomposition uses ternary extensional support
+   * constraints. It achieves GAC if FSM is deterministic.
    */
   val slideDecomposition = false
 
@@ -54,21 +54,21 @@ object Nonogram extends jacop {
   val extensionalMDD = false
 
   def readFromFile(filename: String) {
-		
+
     var lines = new Array[String](100)
 
     val dimensions = new Array[Int](2)
 
     /* read from file args[0] or qcp.txt */
     try {
-      
+
       val in = new BufferedReader(new FileReader(filename))
 
       var str = in.readLine()
 
       val pat = Pattern.compile(" ")
       val result = pat.split(str)
-			
+
       var current = 0
 
       for (j <- 0 until result.length)
@@ -81,10 +81,10 @@ object Nonogram extends jacop {
 	}
 
       lines = new Array[String](dimensions(0) + dimensions(1))
-			
+
       var n = 0
 
-      str = in.readLine()	
+      str = in.readLine()
       while (str != null && n < lines.length) {
 	lines(n) = str
 	n += 1
@@ -96,18 +96,18 @@ object Nonogram extends jacop {
       case e : IOException => {
 	System.err.println("Something is wrong with file" + filename)
       }
- 
-      row_rules = new Array[Array[Int]](dimensions(1)) 
+
+      row_rules = new Array[Array[Int]](dimensions(1))
       col_rules = new Array[Array[Int]](dimensions(0))
 
       // Transforms strings into ints
       for (i <- 0 until lines.length) {
-			
+
 	val pat = Pattern.compile(" ")
 	val result = pat.split(lines(i))
 
 	val sequence = new Array[Int](result.length)
-			
+
 	var current = 0
 	for (j <- 0 until result.length)
 	  try {
@@ -120,15 +120,15 @@ object Nonogram extends jacop {
 	else
 	  col_rules(i - row_rules.length) = sequence
       }
-      
+
     }
   }
-	
+
 
   /**
    * It produces and FSM given a sequence representing a rule. e.g. [2, 3]
    * specifies that there are two black dots followed by three black dots.
-   * 
+   *
    * @param sequence - input parameter
    * @return Finite State Machine used by Regular automaton to enforce proper sequence.
    */
@@ -140,7 +140,7 @@ object Nonogram extends jacop {
     result.init(currentState)
 
     currentState -> (white, currentState)
-		
+
     for (i <- 0 until sequence.length) {
       if (sequence(i) != 0) {
 	for (j <- 0 until sequence(i)) {
@@ -156,7 +156,7 @@ object Nonogram extends jacop {
 	  result += nextState
 	  currentState -> (white, nextState)
 	  currentState = nextState
-	}  
+	}
 	currentState -> (white, currentState)
       }
     }
@@ -176,33 +176,33 @@ object Nonogram extends jacop {
 
     var values : IntSet = new IntSet
     values = values + white + black
- 
+
     // Specifying the board with allowed values.
-    board = Array.tabulate(row_rules.length, col_rules.length)( (i, j) => 
+    board = Array.tabulate(row_rules.length, col_rules.length)( (i, j) =>
                        new IntVar("board[" + i + "][" + j + "]", values))
 
-    // Zigzag based variable ordering. 
+    // Zigzag based variable ordering.
     for (m <- 0 until row_rules.length + col_rules.length - 1) {
       for (j <- 0 until m if j < col_rules.length) {
 	val i = m - j
    	if (i < row_rules.length)
    	  vars :+= board(i)(j)
       }
-    }		
-		
+    }
+
     println("Size " + vars.length)
-		
+
     // Making sure that rows respect the rules.
     for (i <- 0 until row_rules.length) {
-			
+
       val result = createAutomaton(row_rules(i))
-			
+
       if (slideDecomposition)
   	getModel.imposeDecomposition(new Regular(result, board(i).asInstanceOf[Array[org.jacop.core.IntVar]]))
-      
+
       if (regularConstr)
 	regular(result, board(i).toList)
-			
+
       if (extensionalMDD)
  	getModel.impose(new ExtensionalSupportMDD(result.transformDirectlyIntoMDD(board(i).asInstanceOf[Array[org.jacop.core.IntVar]])))
 
@@ -210,10 +210,10 @@ object Nonogram extends jacop {
 
     // Making sure that columns respect the rules.
     for (i <- 0 until col_rules.length) {
-					
+
       val result = createAutomaton(col_rules(i))
       val column = Array.tabulate(row_rules.length)( j => board(j)(i))
-							
+
       if (slideDecomposition)
  	getModel.imposeDecomposition(new Regular(result, column.asInstanceOf[Array[org.jacop.core.IntVar]]))
 
@@ -222,13 +222,13 @@ object Nonogram extends jacop {
 
       if (extensionalMDD)
  	getModel.impose(new ExtensionalSupportMDD(result.transformDirectlyIntoMDD(column.asInstanceOf[Array[org.jacop.core.IntVar]])))
-	
+
     }
 
     satisfy( search(vars.toList, input_order, indomain_min) )
 
   }
-			
+
   /**
    * It prints a matrix of variables. All variables must be grounded.
    * @param matrix matrix containing the grounded variables.
@@ -257,23 +257,23 @@ object Nonogram extends jacop {
 
 /*
     for (i <- 0 until 150) {
-			
+
       var no = ""+i
       while (no.length() < 3)
       no = "0" + no;
-      
-      System.out.println("Problem file data" + no + ".nin");
+
+      logger.info("Problem file data" + no + ".nin");
       readFromFile("/Users/kris/research/JaCoP-3.1/ExamplesJaCoP/nonogramRepository/data" + no + ".nin");
-      model();				
+      model();
     }
 */
-  } 
+  }
 
   /**
    * It specifies a rule for each row.
    */
 
-  var row_rules = Array( 
+  var row_rules = Array(
 		  Array(0,0,0,0,2,2,3),
 		  Array(0,0,4,1,1,1,4),
 		  Array(0,0,4,1,2,1,1),
@@ -300,12 +300,12 @@ object Nonogram extends jacop {
 		  Array(0,0,0,0,4,2,2),
 		  Array(0,0,0,0,0,2,1)
 	)
-	
+
   /**
    * It specifies a rule for each column.
    */
-	 
-  var col_rules = Array( 
+
+  var col_rules = Array(
 		   Array(0,0,1,1,2,2),
 		   Array(0,0,0,5,5,7),
 		   Array(0,0,5,2,2,9),
@@ -334,8 +334,8 @@ object Nonogram extends jacop {
 	)
 
 
-	
-/*  
+
+/*
   var row_rules = Array(
 	Array(2),
 	Array(2),
@@ -437,7 +437,7 @@ object Nonogram extends jacop {
 	Array(15,4,8,5,4,12,5,9,1),
 	Array(11,5,7,8,2,14,5,11,1),
 	Array(7,7,6,13,9,15,15));
-	
+
   var col_rules = Array(
 	Array(2),
 	Array(4),
@@ -564,7 +564,7 @@ object Nonogram extends jacop {
 			  Array(2,1)
 			);
 
-  var col_rules = 
+  var col_rules =
 	 Array(
 	  Array(2),
 	  Array(1,2),
@@ -592,6 +592,6 @@ object Nonogram extends jacop {
 	/*
 	public int[][] col_rules = Array( Array(3), Array(1 ,1), Array(1,1), Array(2));
 	public int[][] row_rules = Array( Array(4), Array(1,1), Array(2), Array(1));
-    */	
-	
+    */
+
 }

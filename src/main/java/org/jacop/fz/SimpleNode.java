@@ -2,8 +2,12 @@
 /* JavaCCOptions:MULTI=true,NODE_USES_PARSER=true,VISITOR=false,TRACK_TOKENS=false,NODE_PREFIX=AST,NODE_EXTENDS=,NODE_FACTORY=,SUPPORT_CLASS_VISIBILITY_PUBLIC=true */
 package org.jacop.fz;
 
+import org.apache.commons.jexl.parser.ParserTreeConstants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public
-class SimpleNode implements Node {
+class SimpleNode implements Node { private static Logger logger = LoggerFactory.getLogger(SimpleNode.class);
 
   protected Node parent;
   protected Node[] children;
@@ -64,7 +68,7 @@ class SimpleNode implements Node {
      out its children. */
 
   public void dump(String prefix) {
-    System.out.println(toString(prefix));
+    logger.info(toString(prefix));
     if (children != null) {
       for (int i = 0; i < children.length; ++i) {
         SimpleNode n = (SimpleNode)children[i];

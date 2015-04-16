@@ -1,9 +1,9 @@
 /**
- *  IfThen.java 
+ *  IfThen.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,30 +32,31 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.core.Domain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Constraint if constraint1 then constraint2
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class IfThen extends PrimitiveConstraint {
+public class IfThen extends PrimitiveConstraint { private static Logger logger = LoggerFactory.getLogger(IfThen.class);
 
 	static int counter = 1;
 
 	/**
-	 * It specifies constraint condC in the IfThen constraint. 
+	 * It specifies constraint condC in the IfThen constraint.
 	 */
 	public PrimitiveConstraint condC;
 
 	/**
-	 * It specifies constraint condC in the IfThen constraint. 
+	 * It specifies constraint condC in the IfThen constraint.
 	 */
 	public PrimitiveConstraint thenC;
 
@@ -64,7 +65,7 @@ public class IfThen extends PrimitiveConstraint {
 	Store store;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"condC", "thenC"};
@@ -75,7 +76,7 @@ public class IfThen extends PrimitiveConstraint {
 	 * @param thenC the constraint which must hold if the condition holds.
 	 */
 	public IfThen(PrimitiveConstraint condC, PrimitiveConstraint thenC) {
-		
+
 		assert (condC != null) : "Constraint cond is null";
 		assert (thenC != null) : "Constraint then is null";
 
@@ -164,20 +165,20 @@ public class IfThen extends PrimitiveConstraint {
 			return Domain.NONE;
 		else
 			return eventAcross;
-		
+
 	}
 
 	@Override
 	public int getNotConsistencyPruningEvent(Var var) {
-		
-		
+
+
 		// If notConsistency function mode
 			if (notConsistencyPruningEvents != null) {
 				Integer possibleEvent = notConsistencyPruningEvents.get(var);
 				if (possibleEvent != null)
 					return possibleEvent;
 			}
-		
+
 		int eventAcross = -1;
 
 		if (condC.arguments().contains(var)) {
@@ -323,11 +324,11 @@ public class IfThen extends PrimitiveConstraint {
 	public String toString() {
 
 		StringBuffer result = new StringBuffer( id() );
-		
+
 		result.append(" : IfThen(\n").append( condC ).append( ", \n").append(thenC).append(" )\n");
-		
+
 		return result.toString();
-		
+
 	}
 
     @Override
@@ -336,6 +337,6 @@ public class IfThen extends PrimitiveConstraint {
 			condC.increaseWeight();
 			thenC.increaseWeight();
 		}
-	}	
+	}
 
 }

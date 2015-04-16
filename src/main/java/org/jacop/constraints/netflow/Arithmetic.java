@@ -1,9 +1,9 @@
 /**
- *  Arithmetic.java 
+ *  Arithmetic.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,27 +31,24 @@
 
 package org.jacop.constraints.netflow;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
+import java.util.*;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.SumWeight;
 import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
+ *
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.2
- * 
+ *
  */
 
-public class Arithmetic extends DecomposedConstraint {
+public class Arithmetic extends DecomposedConstraint { private static Logger logger = LoggerFactory.getLogger(Arithmetic.class);
 
 	public static final IntVar NULL_VAR = new IntVar(){
 		@Override
@@ -65,7 +62,7 @@ public class Arithmetic extends DecomposedConstraint {
 	private Map<IntVar, Integer> map;
 
 	ArrayList<Constraint> decomposition;
-	
+
 	public Arithmetic() {
 		this.eqns = new ArrayList<int[]>();
 		this.vars = new ArrayList<IntVar>();
@@ -176,7 +173,7 @@ public class Arithmetic extends DecomposedConstraint {
 			return result;
 
 		}
-		
+
 	}
 
 	private boolean optimize(final int[] sum) {
@@ -221,7 +218,7 @@ public class Arithmetic extends DecomposedConstraint {
 	private class ArithmeticBuilder extends NetworkBuilder {
 
 		private ArithmeticBuilder(Store store, int[] sum) {
-			
+
 			super(new IntVar(store, "Zero-cost", 0, 0));
 
 			// copy equations
@@ -236,7 +233,7 @@ public class Arithmetic extends DecomposedConstraint {
 			Node root = addNode("source/sink", -sum[0]);
 			Node[] nodes = new Node[eqns.length];
 			flip(sum);
-			
+
 			for (int i = 0; i < nodes.length; i++)
 				nodes[i] = addNode("Equation " + (i + 1), -eqns[i][0]);
 
@@ -298,34 +295,34 @@ public class Arithmetic extends DecomposedConstraint {
 
 	@Override
 	public ArrayList<Constraint> decompose(Store store) {
-	
+
 		if (decomposition == null || decomposition.size() > 1) {
-			
+
 			decomposition = new ArrayList<Constraint>();
 			int[] sum = new int[vars.size()];
 			for (int[] eqn : eqns)
 				for (int i = 0; i < eqn.length; i++)
 					sum[i] += eqn[i];
 
-			//		System.out.println(vars);
-			//		System.out.println("sum   = " + Arrays.toString(sum));
+			//		logger.info(vars);
+			//		logger.info("sum   = " + Arrays.toString(sum));
 			//		for (int i = 0; i < eqns.size(); i++)
-			//			System.out.println("eqn[" + i +"] = "+Arrays.toString(eqns.get(i)));
+			//			logger.info("eqn[" + i +"] = "+Arrays.toString(eqns.get(i)));
 
-			// System.out.println("Before: w = " + weight(sum) + "   " + Arrays.toString(sum));
+			// logger.info("Before: w = " + weight(sum) + "   " + Arrays.toString(sum));
 
 			for (int it = 0; optimize(sum); it++)
 				if (it > 2 * eqns.size())
 					throw new AssertionError(it + " iterations");
 
-			// System.out.println("After: w = " + weight(sum) + "   " + Arrays.toString(sum));
-			
+			// logger.info("After: w = " + weight(sum) + "   " + Arrays.toString(sum));
+
 			decomposition.add( new ArithmeticBuilder(store, sum).build() );
 
 		}
 
 		return decomposition;
-		
+
 	}
 
 	@Override
@@ -333,9 +330,9 @@ public class Arithmetic extends DecomposedConstraint {
 
 		if (decomposition == null)
 			decompose(store);
-		
+
 		for (Constraint c : decomposition)
 			store.impose(c);
-				
+
 	}
 }

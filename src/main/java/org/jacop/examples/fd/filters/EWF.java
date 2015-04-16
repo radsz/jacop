@@ -1,9 +1,9 @@
 /**
- *  EWF.java 
+ *  EWF.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,20 +31,22 @@
 
 package org.jacop.examples.fd.filters;
 
-import java.util.ArrayList;
+import java.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * It specifies EWF benchmark.
- * 
+ *
  * Source:
- * 
+ *
  * @see "Michel, P. and Lauther U. and Duzy, P., The Synthesis Approach to Digital System Design, Kluwer Academic Publisher, 1992"
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class EWF extends Filter {
+public class EWF extends Filter { private static Logger logger = LoggerFactory.getLogger(EWF.class);
 
 	/**
 	 * It constructs a simple EWF filter.
@@ -53,19 +55,19 @@ public class EWF extends Filter {
 		this(1, 2);
 	}
 
-	
+
 	/**
 	 * It constructs a EWF filter with the specified delay
 	 * for the addition and multiplication operation.
-	 * 
+	 *
 	 * @param addDel the delay of the addition operation.
 	 * @param mulDel the delay of the multiplication operation.
 	 */
 	public EWF(int addDel, int mulDel) {
-		
+
 		this.addDel = addDel;
 		this.mulDel = mulDel;
-		
+
 		name = "EWF";
 
 		int dependencies[][] = { { 0, 2 }, { 0, 15 }, { 0, 17 }, { 1, 4 },
@@ -79,16 +81,16 @@ public class EWF extends Filter {
 				{ 25, 30 }, { 26, 31 }, { 27, 29 }, { 30, 32 }, { 31, 33 } };
 
 		this.dependencies = dependencies;
-		
+
 		int ids[] = { addId, addId, addId, addId, addId, mulId, mulId, addId,
 				addId, addId, addId, addId, mulId, addId, mulId, addId, addId,
 				addId, addId, addId, addId, mulId, addId, addId, mulId, mulId,
 				mulId, addId, addId, addId, addId, addId, addId, addId };
 		this.ids = ids;
-		
+
 		int last[] = { 13, 24, 28, 29, 30, 31, 32, 33 };
 		this.last = last;
-		
+
 	}
 
 	@Override

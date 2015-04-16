@@ -1,64 +1,54 @@
 package org.jacop.core;
 
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import java.io.*;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerConfigurationException;
-import javax.xml.transform.sax.SAXTransformerFactory;
-import javax.xml.transform.sax.TransformerHandler;
-import javax.xml.transform.stream.StreamResult;
-
+import java.util.*;
+import javax.xml.transform.*;
+import javax.xml.transform.sax.*;
+import javax.xml.transform.stream.*;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.geost.GeostObject;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.util.fsm.FSMState;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.AttributesImpl;
 
 /**
- * 
+ *
  * @author Radoslaw Szymanek
- * 
- * 1. Make sure all saved attributes are public. 
- * 2. Make sure order between xmlAttributes and one constructor is the same. 
- * 3. Make sure that id, or numberId is set properly after running constructor. 
+ *
+ * 1. Make sure all saved attributes are public.
+ * 2. Make sure order between xmlAttributes and one constructor is the same.
+ * 3. Make sure that id, or numberId is set properly after running constructor.
  * 4. Make sure that all constraints/variables have attribute numberId;
- * 5. Make sure that all objects have attribute id. 
+ * 5. Make sure that all objects have attribute id.
  * 6. Remove old code for getting XML functionality.
- * 7. Make sure that the ids are proper (unique, and do not contain unusual characters like space). 
- * I. More complex objects to XML need to use special functions to save and load XML. 
+ * 7. Make sure that the ids are proper (unique, and do not contain unusual characters like space).
+ * I. More complex objects to XML need to use special functions to save and load XML.
  * Ia. void toXML(TransformerHandler) to save to XML the object which implements the function.  It compleemnts xmlAttributes.
- * Ib. DefaultHandler getXMLReader(), returns an object capable of returning the proper object from reading XML.  
+ * Ib. DefaultHandler getXMLReader(), returns an object capable of returning the proper object from reading XML.
  * 9. For variables it is checked if Store argument must be added to constructor. Only as the first one.
- * 10. Save constraints, variables, search definition. 
+ * 10. Save constraints, variables, search definition.
  */
 
-public class XMLSaveSupport {
+public class XMLSaveSupport { private static Logger logger = LoggerFactory.getLogger(XMLSaveSupport.class);
 
 	private static final String toXMLfunction = "toXML";
 
 	private static final String elementXMLName = "el";
 
 	private static final String arrayXMLName = "array";
-	
+
 	public XMLSaveSupport() {
-				
+
 		repositorySet.put(FSMState.class, new HashSet<Object>());
 		repositorySet.put(GeostObject.class, new HashSet<Object>());
-		
+
 		HashSet<Class> regularClear = new HashSet<Class>();
 		regularClear.add(FSMState.class);
 		repositoryClear.put(Regular.class, regularClear);
@@ -77,7 +67,7 @@ public class XMLSaveSupport {
 	private static char[] space = " ".toCharArray();
 
 	public static void save(Store store, String filename) {
-		
+
 		PrintWriter printWriter;
 
 		if (filename == null)
@@ -89,7 +79,7 @@ public class XMLSaveSupport {
 			e.printStackTrace();
 			printWriter = new PrintWriter( new StringWriter() );
 		}
-		
+
 		StreamResult streamResult = new StreamResult(printWriter);
 		SAXTransformerFactory tf = (SAXTransformerFactory) SAXTransformerFactory.newInstance();
 
@@ -98,12 +88,12 @@ public class XMLSaveSupport {
 			classVariable = Class.forName("JaCoP.core.Var");
 
 			TransformerHandler hd = tf.newTransformerHandler();
-			
+
 			Transformer serializer = hd.getTransformer();
 			serializer.setOutputProperty(OutputKeys.ENCODING, "ISO-8859-1");
 			serializer.setOutputProperty(OutputKeys.INDENT, "yes");
 			serializer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
-			
+
 			hd.setResult(streamResult);
 
 			hd.startDocument();
@@ -111,33 +101,33 @@ public class XMLSaveSupport {
 			AttributesImpl atts = new AttributesImpl();
 			hd.startElement("", "", "instance", atts);
 
-			// TODO, what about boolean variables? 
+			// TODO, what about boolean variables?
 			HashMap<String, Constraint> constraints = new HashMap<String, Constraint>();
 
-			Object[] sortedNames = store.variablesHashMap.keySet().toArray(); 
+			Object[] sortedNames = store.variablesHashMap.keySet().toArray();
 			Arrays.sort(sortedNames);
-			
+
 			for (Object name : sortedNames) {
 				Var var = store.variablesHashMap.get(name);
 				if (var != null) {
 					save(hd, var, null);
 					for (int i = 0; i < var.dom().modelConstraintsToEvaluate.length; i++)
 						for (int j = 0; j < var.dom().modelConstraintsToEvaluate[i]; j++) {
-							Constraint olderConstraint = constraints.put( var.dom().modelConstraints[i][j].id(), 
+							Constraint olderConstraint = constraints.put( var.dom().modelConstraints[i][j].id(),
 											 							  var.dom().modelConstraints[i][j] );
-							assert (olderConstraint == null || olderConstraint == var.dom().modelConstraints[i][j]) : 
+							assert (olderConstraint == null || olderConstraint == var.dom().modelConstraints[i][j]) :
 								"Constraint id(s) are not unique.";
-							
+
 						}
 				}
 			}
 
 			sortedNames = constraints.keySet().toArray();
 			Arrays.sort(sortedNames);
-			
+
 			for (Object name : sortedNames)
 				save(hd, constraints.get(name), null);
-			
+
 			hd.endElement("", "", "instance");
 
 			hd.endDocument();
@@ -151,36 +141,36 @@ public class XMLSaveSupport {
 		} catch (ClassNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} 
+		}
 
-		
+
 	}
-	
-	// Invariants - assumptions 
-	// Only one load xml function. 
+
+	// Invariants - assumptions
+	// Only one load xml function.
 	public static void save(TransformerHandler handler, Object a, AttributesImpl nestedAtts) {
 
 		try {
 
 			Class<?> c = a.getClass();
-			
+
 			String elementName = elementXMLName;
-			
+
 			if (a instanceof Constraint)
 				elementName = "constraint";
-			
+
 			if (a instanceof Var)
 				elementName = "variable";
-			
+
 			if (a instanceof IntDomain)
 				elementName = "domain";
-	
+
 			if (repositoryClear.get(c) != null) {
 				for (Class<?> classToClear : repositoryClear.get(c)) {
 					repositorySet.get(classToClear).clear();
 				}
 			}
-			
+
 			boolean saveOnlyReference = false;
 
 			if (repositorySet.get(c) != null) {
@@ -190,16 +180,16 @@ public class XMLSaveSupport {
 					repositorySet.get(c).add(a);
 				}
 			}
-			
+
 		//	assert (elementName != null);
 
 			AttributesImpl atts;
-			
-			if (nestedAtts == null) 
+
+			if (nestedAtts == null)
 				atts = new AttributesImpl();
 			else
 				atts = new AttributesImpl( nestedAtts );
-			
+
 			// class attribute
 			// atts.addAttribute("", "", "class", "CDATA", c.getCanonicalName());
 			atts.addAttribute("", "", "class", "CDATA", c.getSimpleName());
@@ -214,7 +204,7 @@ public class XMLSaveSupport {
 					idFound = true;
 				}
 				else {
-					// Id is based on number. 
+					// Id is based on number.
 					Integer no = (Integer) c.getField("numberId").get(a);
 					atts.addAttribute("", "", "no", "CDATA", no.toString() );
 					idFound = true;
@@ -222,15 +212,15 @@ public class XMLSaveSupport {
 			}
 			catch(NoSuchFieldException ex) {
 				// Saving an element withouth id.
-			}			
-			
+			}
+
 			if (!idFound) {
 
 				// id attribute
 				try {
 					Object objectId = c.getField("no").get(a);
 					if (objectId != null) {
-						// Id is based on number. 
+						// Id is based on number.
 						Integer no = (Integer) c.getField("no").get(a);
 						atts.addAttribute("", "", "no", "CDATA", no.toString() );
 						idFound = true;
@@ -239,16 +229,16 @@ public class XMLSaveSupport {
 				catch(NoSuchFieldException ex) {
 					// Saving an element withouth id.
 					assert (saveOnlyReference == false) : "Required to save only reference but no unique id provided";
-				}			
-				
+				}
+
 			}
-			
+
 			if (saveOnlyReference) {
 				handler.startElement("", "", elementName, atts);
 				handler.endElement("", "", elementName);
 				return;
 			}
-				
+
 		//	assert (objectId != null) : "Object " + a + " does not have a id.";
 
 			String[] names;
@@ -261,12 +251,12 @@ public class XMLSaveSupport {
 			}
 			catch(NullPointerException ex) {
 				names = new String[0];
-			//	assert (false) : "No xmlAttributes defined.";				
+			//	assert (false) : "No xmlAttributes defined.";
 			}
-			
+
 			// for (String xmlAttribute : names)
-			//	System.out.println(xmlAttribute);
-			
+			//	logger.info(xmlAttribute);
+
 			Class<?>[] types;
 			boolean[] handled = new boolean[names.length];
 			Constructor constructorForXML = null;
@@ -280,9 +270,9 @@ public class XMLSaveSupport {
 					types[i] = c.getMethod(names[i], null).getReturnType();
 				}
 			}
-			
+
 			constructorForXML = c.getConstructor(types);
-			
+
 			if (constructorForXML != null) {
 				Object [] argumentsFromXML = new Object[types.length];
 
@@ -290,7 +280,7 @@ public class XMLSaveSupport {
 
 					if (names[i].equals("id"))
 						continue;
-					
+
 					Object ithArgument = null;
 
 					try {
@@ -311,14 +301,14 @@ public class XMLSaveSupport {
 
 					if (ithArgument == null) {
 
-						try { 
+						try {
 							Field ithField = c.getField(names[i]);
 							if (ithField != null)
 								ithArgument = ithField.get(a);
 						}
 						catch(NoSuchFieldException ex) {
-							assert (false) : "xmlAttributes mismatch at " + i + "-th element. No attribute " + names[i] 
-							                                                                                         + " found. " + " No function " + functionName + "() found." 
+							assert (false) : "xmlAttributes mismatch at " + i + "-th element. No attribute " + names[i]
+							                                                                                         + " found. " + " No function " + functionName + "() found."
 							                                                                                         + "No function " + names[i] + "() found.";
 						};
 
@@ -327,19 +317,19 @@ public class XMLSaveSupport {
 					argumentsFromXML[i] = ithArgument;
 
 					// if (! ithArgument.getClass().equals(Store.class))
-					//	System.out.println( ithArgument );
+					//	logger.info( ithArgument );
 
 				}
 
 				for (int i = 0; i < types.length; i++) {
-					
+
 					if (argumentsFromXML[i] == null)
 						continue;
-					
+
 					// Adding to attributes of the element.
-					// if variable 
+					// if variable
 					if (classVariable.isAssignableFrom(types[i])) {
-						
+
 						handled[i] = true;
 
 						String variableId = null;
@@ -354,9 +344,9 @@ public class XMLSaveSupport {
 						atts.addAttribute("", "", names[i], "CDATA", variableId);
 					}
 
-					
+
 					if (types[i].isPrimitive() ) {
-						
+
 						handled[i] = true;
 
 						Object value = null;
@@ -379,22 +369,22 @@ public class XMLSaveSupport {
 
 						if (value == null) {
 
-							try { 
+							try {
 								Field ithField = c.getField(names[i]);
 								if (ithField != null)
 									value = ithField.get(a);
 							}
 							catch(NoSuchFieldException ex) {
-								assert (false) : "xmlAttributes mismatch at " + i + "-th element. No attribute " + names[i] 
-								                                                     + " found. " + " No function " + functionName + "() found." 
+								assert (false) : "xmlAttributes mismatch at " + i + "-th element. No attribute " + names[i]
+								                                                     + " found. " + " No function " + functionName + "() found."
 								                                                     + "No function " + names[i] + "() found.";
 							};
 
 						}
 
 						atts.addAttribute("", "", names[i], "CDATA", value.toString() );
-					}					
-					
+					}
+
 				}
 
 				handler.startElement("", "", elementName, atts);
@@ -409,8 +399,8 @@ public class XMLSaveSupport {
 
 					if (handled[i])
 						continue;
-					
-					// array of something. 
+
+					// array of something.
 					// if (types[i].isArray() || types[i].equals(Collection.class)) {
 					if (types[i].isArray() || Collection.class.isAssignableFrom(types[i])) {
 
@@ -420,7 +410,7 @@ public class XMLSaveSupport {
 						arrayAtts.addAttribute("", "", "id", "CDATA", names[i]);
 						if (types[i].isArray())
 							arrayAtts.addAttribute("", "", "size", "CDATA", String.valueOf( Array.getLength( argumentsFromXML[i]) ));
-						else 
+						else
 							arrayAtts.addAttribute("", "", "size", "CDATA", String.valueOf( ((Collection)argumentsFromXML[i]).size() ) );
 
 						handler.startElement("", "", arrayXMLName, arrayAtts);
@@ -436,19 +426,19 @@ public class XMLSaveSupport {
 						handler.startElement("", "", elementXMLName, internalAtts);
 						save(handler, argumentsFromXML[i], null);
 						handler.endElement("", "", elementXMLName);
-						
+
 					}
 
-					
+
 				}
-				
-				// Search for toXML(TransformerHandler) if it exists then execute it. 
-				
+
+				// Search for toXML(TransformerHandler) if it exists then execute it.
+
 				try {
 					c.getMethod(toXMLfunction, TransformerHandler.class).invoke(a, handler);
 				}
 				catch(NoSuchMethodException ex) {};
-				
+
 				handler.endElement("", "", elementName);
 
 
@@ -461,14 +451,14 @@ public class XMLSaveSupport {
 		}
 	}
 
-	private static String id(Object object) throws IllegalArgumentException, 
-													SecurityException, 
-													IllegalAccessException, 
-													NoSuchFieldException, 
+	private static String id(Object object) throws IllegalArgumentException,
+													SecurityException,
+													IllegalAccessException,
+													NoSuchFieldException,
 													InvocationTargetException {
 
 		Class c = object.getClass();
-		
+
 		String id = null;
 		try {
 			id = (String) c.getMethod("id", null).invoke(object, null);
@@ -479,7 +469,7 @@ public class XMLSaveSupport {
 			id = (String) c.getDeclaredField("id").get(object);
 
 		return id;
-		
+
 	}
 
 	private static void saveArray(TransformerHandler handler, Object object) throws IllegalArgumentException, SecurityException, IllegalAccessException, NoSuchFieldException, InvocationTargetException, SAXException {
@@ -542,11 +532,11 @@ public class XMLSaveSupport {
 
 			}
 
-				
+
 		}
-		
+
 	}
-	
-	
+
+
 }
 

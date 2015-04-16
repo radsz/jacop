@@ -1,9 +1,9 @@
 /**
- *  FIR16.java 
+ *  FIR16.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,20 +31,22 @@
 
 package org.jacop.examples.fd.filters;
 
-import java.util.ArrayList;
+import java.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * FIR benchmark (16-point FIR filter)
- * 
+ *
  * Source: Kaijie Wu and Ramesh Karri, "Algorithm-Level Recomputing with Shifted
  * Operands -- A Register Transfer Level Concurrent Error Detection Technique"
  * IEEE Trans. on CAD, vol. 25, no. 3, March 2006.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class FIR16 extends Filter {
+public class FIR16 extends Filter { private static Logger logger = LoggerFactory.getLogger(FIR16.class);
 
 	/**
 	 * It constructs a simple FIR16 filter.
@@ -53,11 +55,11 @@ public class FIR16 extends Filter {
 		this(1, 2);
 	}
 
-	
+
 	/**
 	 * It constructs a FIR16 filter with the specified delay
 	 * for the addition and multiplication operation.
-	 * 
+	 *
 	 * @param addDel the delay of the addition operation.
 	 * @param mulDel the delay of the multiplication operation.
 	 */
@@ -65,7 +67,7 @@ public class FIR16 extends Filter {
 	public FIR16(int addDel, int mulDel) {
 		this.addDel = addDel;
 		this.mulDel = mulDel;
-		
+
 		name = "FIR16";
 
 		int dependencies[][] = { { 0, 17 }, { 1, 17 }, { 2, 18 }, { 3, 19 },
@@ -76,13 +78,13 @@ public class FIR16 extends Filter {
 				{ 25, 26 }, { 26, 27 }, { 27, 28 }, { 28, 29 }, { 29, 30 },
 				{ 30, 31 }, { 31, 32 } };
 		this.dependencies = dependencies;
-		
+
 		int ids[] = { mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId,
 				mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId,
 				addId, addId, addId, addId, addId, addId, addId, addId, addId,
 				addId, addId, addId, addId, addId, addId, addId };
 		this.ids = ids;
-		
+
 		int last[] = { 32 };
 		this.last = last;
 	}

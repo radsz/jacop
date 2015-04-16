@@ -1,9 +1,9 @@
 /**
- *  NetworkFlow.java 
+ *  NetworkFlow.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,34 +31,29 @@
 
 package org.jacop.constraints.netflow;
 
-import static org.jacop.constraints.netflow.Assert.checkFlow;
-import static org.jacop.constraints.netflow.Assert.checkStructure;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
+import java.util.*;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.netflow.simplex.Arc;
 import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import static org.jacop.constraints.netflow.Assert.*;
 
 /**
- * 
+ *
  * The network flow constraint. Use the NetworkBuilder to create a network and
  * instantiate the network.
- * 
+ *
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.2
- * 
+ *
  */
 
-public class NetworkFlow extends Constraint {
+public class NetworkFlow extends Constraint { private static Logger logger = LoggerFactory.getLogger(NetworkFlow.class);
 
 	private static final int QUEUE_INDEX = 2;
 	private static final boolean DO_INSTRUMENTATION = false;
@@ -89,15 +84,15 @@ public class NetworkFlow extends Constraint {
 	public boolean disableQueueVariable;
 
 	public int previousLevel = -1;
-	
+
 	/********************/
 	/** Initialization **/
 
-	private NetworkFlow(List<Node> nodes, 
+	private NetworkFlow(List<Node> nodes,
 								  List<Arc> arcs,
-								  List<VarHandler> flowVariables, 
+								  List<VarHandler> flowVariables,
 								  IntVar costVariable) {
-		
+
 		this.network = new Pruning(nodes, arcs);
 		this.map = new HashMap<IntVar, VarHandler>();
 		this.queue = new HashSet<IntVar>();
@@ -123,9 +118,9 @@ public class NetworkFlow extends Constraint {
 	}
 
 	public NetworkFlow(NetworkBuilder builder) {
-		
+
 		this(builder.nodeList, builder.arcList, builder.handlerList, builder.costVariable);
-	
+
 	}
 
 	@Override
@@ -167,9 +162,9 @@ public class NetworkFlow extends Constraint {
 		// DomainStructure structure = map.get(variable);
 
 		if (!disableQueueVariable) {
-//			System.out.println("\tQueue var : " + variable);
+//			logger.info("\tQueue var : " + variable);
 			if (variable == costVariable) {
-				// System.out.println("** Cost var queued, abort");
+				// logger.info("** Cost var queued, abort");
 				return;
 			}
 			queue.add((IntVar)variable);
@@ -178,7 +173,7 @@ public class NetworkFlow extends Constraint {
 			// System.err.println("Can this actually happen ... " + variable);
 		}
 	}
-	
+
 	private void updateGraph() {
 		// update graph
 		network.increaseLevel();
@@ -197,31 +192,31 @@ public class NetworkFlow extends Constraint {
 
 	@Override
 	public void consistency(Store store) {
-		
+
 		if (SHOW_LEVEL) {
-			System.out.println();
-			System.out.println("--------- Level " + store.level);
-			System.out.println();
+			logger.info("\n");
+			logger.info("--------- Level " + store.level);
+			logger.info("\n");
 		}
 
 		if (DO_INSTRUMENTATION) {Statistics.consistencyCalls++;}
 		updateGraph();
-		
+
 		boolean first = true; //(previousLevel != store.level);
-		//System.out.println(store.level + "   (" + first + ")");
+		//logger.info(store.level + "   (" + first + ")");
 		previousLevel = store.level;
-		
+
 		int iteration = 0;
 		while (network.needsUpdate(costVariable.max()) || (first && iteration == 0)) {
-		
+
 			if (DO_INSTRUMENTATION) {Statistics.consistencyIterations++;}
-			//System.out.println(iteration);
-			
+			//logger.info(iteration);
+
 			iteration++;
 			if (SHOW_LEVEL) {
-				System.out.println("--------- => Iteration " + iteration);
+				logger.info("--------- => Iteration " + iteration);
 			}
-			
+
 			// recompute flow
 			int result = network.networkSimplex(9999999);
 			// network.print();
@@ -243,17 +238,17 @@ public class NetworkFlow extends Constraint {
 
 			// perform domain pruning
 			int costLimit = costVariable.max() - costVariable.min();
-			
+
 			network.pruneNodesWithSmallDegree();
 			network.analyze(costLimit);
-			
+
 			assert (checkFlow(network));
 			assert (checkStructure(network));
-			
+
 			updateGraph();
 		}
 
-		
+
 		// compute cost and throw failure on overflow
 		int cost = (int) network.cost(costVariable.max() + 1);
 		if (cost > costVariable.max()) {
@@ -274,13 +269,13 @@ public class NetworkFlow extends Constraint {
 	public void removeLevelLate(int level) {
 
 		if (SHOW_LEVEL) {
-			System.out.println();
-			System.out.println("######### Level " + level);
-			System.out.println();
+			logger.info("\n");
+			logger.info("######### Level " + level);
+			logger.info("\n");
 		}
 
 		network.backtrack();
-	
+
 	}
 
 	@Override

@@ -1,9 +1,9 @@
 /**
- *  FlatzincSGMPCS.java 
+ *  FlatzincSGMPCS.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,16 +31,12 @@
 
 package org.jacop.examples.flatzinc;
 
-import java.util.*;
-
-import org.jacop.core.*;
-import org.jacop.constraints.*;
-import org.jacop.constraints.netflow.*;
-import org.jacop.constraints.netflow.simplex.*;
-import org.jacop.search.*;
-import org.jacop.search.sgmpcs.*;
-import org.jacop.fz.*;
-
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.fz.FlatzincLoader;
+import org.jacop.search.sgmpcs.SGMPCSearch;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The class Run is used to run test programs for JaCoP package.
@@ -49,7 +45,8 @@ import org.jacop.fz.*;
  * @author Krzysztof Kuchcinski
  * @version 4.2
  */
-public class FlatzincSGMPCS {
+
+public class FlatzincSGMPCS { private static Logger logger = LoggerFactory.getLogger(FlatzincSGMPCS.class);
     Store store;
 
     public static void main (String args[]) {
@@ -71,29 +68,29 @@ public class FlatzincSGMPCS {
 	    args = new String[2];
 	    args[0] = "-s"; args[1] = "jobshop.fzn";
     }
-	FlatzincLoader fl = new FlatzincLoader(args); 
+	FlatzincLoader fl = new FlatzincLoader(args);
 	fl.load();
 
 	Store store = fl.getStore();
 
-	// System.out.println (store);
+	// logger.info (store);
 
-	// System.out.println("============================================");
-	// System.out.println(fl.getTables());
-	// System.out.println("============================================");
+	// logger.info("============================================");
+	// logger.info(fl.getTables());
+	// logger.info("============================================");
 
-	System.out.println( "\nIntVar store size: "+ store.size()+
+	logger.info( "\nIntVar store size: "+ store.size()+
 			    "\nNumber of constraints: " + store.numberConstraints()
 			    );
 
 	if ( fl.getSearch().type() == null || (! fl.getSearch().type().equals("int_search")) ) {
-	    System.out.println("The problem is not of type int_search and cannot be handled by this method");
+	    logger.info("The problem is not of type int_search and cannot be handled by this method");
 
-	    System.exit(0);	    
+	    System.exit(0);
 	}
 
 	if (fl.getSolve().getSolveKind() != 1) {
-	    System.out.println("The problem is not minimization problem and cannot be handled by this method");
+	    logger.info("The problem is not minimization problem and cannot be handled by this method");
 
 	    System.exit(0);
 	}
@@ -107,7 +104,7 @@ public class FlatzincSGMPCS {
 
  	SGMPCSearch label = new SGMPCSearch(store, vars, cost);
 	label.setFailStrategy(label.luby);  // luby or poly
-	label.setProbability(0.25);         // limit for probability of selecting search from empty 
+	label.setProbability(0.25);         // limit for probability of selecting search from empty
 	label.setEliteSize(4);              // size of the set of reference solutions
 	label.setTimeOut(timeOut);          // time-out in seconds
 	label.setInitialSolutionsSize(10);  // size of the random initial solutions
@@ -119,18 +116,18 @@ public class FlatzincSGMPCS {
 	if (Result) {
 	    int[] sol = label.lastSolution();
 	    if (sol != null) {
-		System.out.println("\n%%% Last found solution with cost " + label.lastCost());
+		logger.info("\n%%% Last found solution with cost " + label.lastCost());
 		for (int i = 0; i < sol.length; i++) {
-		    System.out.print(sol[i] + " ");	    
+		    logger.info(sol[i] + " ");
 		}
 	    }
 	    else
-		System.out.println("\n%%% No solution found with this method");
+		logger.info("\n%%% No solution found with this method");
 	}
 
 	T2 = System.currentTimeMillis();
 	T = T2 - T1;
-	System.out.println("\n\t*** Execution time = "+ T + " ms");
+	logger.info("\n\t*** Execution time = "+ T + " ms");
 
     }
 

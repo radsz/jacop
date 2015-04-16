@@ -1,9 +1,9 @@
 /**
- *  SiblingUproar.java 
+ *  SiblingUproar.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,20 +31,21 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Element;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XneqY;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
- * It is quite complex logic puzzle about siblings. 
- * 
- * @author Krzysztof "Vrbl" Wrobel, Wioletta "Vuka" Kruzolek, and Radoslaw Szymanek 
+ *
+ * It is quite complex logic puzzle about siblings.
+ *
+ * @author Krzysztof "Vrbl" Wrobel, Wioletta "Vuka" Kruzolek, and Radoslaw Szymanek
  *
  * This is quite difficult logic puzzle to be modeled and solved by CP.
  *
@@ -57,13 +58,13 @@ import org.jacop.core.Store;
  * different way (knocked over chess game, let gerbil out of cage, hung
  * up on friend, removed light bulbs, and hid violin).
  *
- * After a few futile minutes of trying to sort out blame, 
- * Mrs. Wheatley called a halt to the arguments by declaring everyone 
- * equally guilty and giving each a different chore around the house 
- * as that evening's punishment (cleaning the attic, basement, or garage, 
- * or washing the Venetian blinds or windows).  Can you discover, for 
- * each child, the sibling he or she was initially angry at, the reason 
- * for the anger, the retaliatory measure he or she took, and the chore 
+ * After a few futile minutes of trying to sort out blame,
+ * Mrs. Wheatley called a halt to the arguments by declaring everyone
+ * equally guilty and giving each a different chore around the house
+ * as that evening's punishment (cleaning the attic, basement, or garage,
+ * or washing the Venetian blinds or windows).  Can you discover, for
+ * each child, the sibling he or she was initially angry at, the reason
+ * for the anger, the retaliatory measure he or she took, and the chore
  * meted out to each child?
  *
  * 1. No one was originally angry at the sibling who was angry at him or
@@ -76,33 +77,33 @@ import org.jacop.core.Store;
  *
  * 3. The five siblings are: Paula, the person who was angry at Paula,
  * the person who was angry because a sibling was hogging the television,
- * the child who was told to straighten the attic, and a child to didn't 
+ * the child who was told to straighten the attic, and a child to didn't
  * remove a sibling's light bulbs or hide a sibling's violin.
- * 
- * 4. The child who was angry at Stuart was punished by being told to wash 
+ *
+ * 4. The child who was angry at Stuart was punished by being told to wash
  * the Venetian blinds.
- * 
- * 5. Russell was punished by being sent to clean out a section of the garage. 
- * 
+ *
+ * 5. Russell was punished by being sent to clean out a section of the garage.
+ *
  * 6. The child who let the dog in a sibling's room didn't retaliate against another sibling by knocking over a chess game that he or she was playing.
- * 
+ *
  * 7. The child who was hogging the television was angry at a sibling who wasn't punished by being told to straighten up the attic or wash the windows.
- * 
+ *
  * 8. In retaliation, one person hid the violin belonging to the person who was angry at Paula.
- * 
+ *
  * 9. Bryan and the person who was punished by being told to wash the
  * windows are, in same order, the child who was angry at the sibling
- * who didn't return the rollerblades and the one who retaliated against 
+ * who didn't return the rollerblades and the one who retaliated against
  * a sibling by knocking over a chess game in progress.
- * 
- * 10. Stuart and the person who was angry at Nina are, in some order, the child 
+ *
+ * 10. Stuart and the person who was angry at Nina are, in some order, the child
  * who was angry at the person who finished the best cereal in the house and the one who retaliated against a sibling by hanging up on his or her best friend.
- * 
+ *
  * Determine: Sibling - Angry at - Reason - Retaliation - Chore
- * 
+ *
  */
 
-public class SiblingUproar extends ExampleFD {
+public class SiblingUproar extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(SiblingUproar.class);
 
 	@Override
 	public void model() {
@@ -111,19 +112,19 @@ public class SiblingUproar extends ExampleFD {
 		vars = new ArrayList<IntVar>();
 		store = new Store();
 
-		System.out.println("Problem name: Sibling Uproar ");
+		logger.info("Problem name: Sibling Uproar ");
 
 		// Specification of children names
 		String[] childrenNames = { "Brian", "Russell", "Stuart", "Nina",
 				"Paula" };
-		
+
 		// Creation of indexes for ease of referring
 		int iBrian = 0, iRussell = 1, iStuart = 2, iNina = 3, iPaula = 4;
 
 		// Specification of being angry at someone.
 		String[] angryatNames = { "angryAtBrian", "angryAtRussell",
 				"angryAtStuart", "angryAtNina", "angryAtPaula" };
-		
+
 		// Creation of indexes for ease of referring
 		int jBrian = 0, jRussell = 1, jStuart = 2, jNina = 3, jPaula = 4;
 
@@ -140,7 +141,7 @@ public class SiblingUproar extends ExampleFD {
 				"removed_light_bulbs", "hid_violin" };
 
 		// Creation of indexes for ease of referring
-		int iknocked_over_chess_game = 0, /* ilet_gerbil_out_of_cage = 1, */ 
+		int iknocked_over_chess_game = 0, /* ilet_gerbil_out_of_cage = 1, */
 			ihung_up_on_friend = 2, iremoved_light_bulbs = 3, ihid_violin = 4;
 
 		// Specification of different punishment.
@@ -165,7 +166,7 @@ public class SiblingUproar extends ExampleFD {
 			reason[i] = new IntVar(store, reasonNames[i], 1, 5);
 			way[i] = new IntVar(store, wayNames[i], 1, 5);
 			chore[i] = new IntVar(store, choreNames[i], 1, 5);
-			vars.add(children[i]); vars.add(angryat[i]); vars.add(reason[i]); 
+			vars.add(children[i]); vars.add(angryat[i]); vars.add(reason[i]);
 			vars.add(way[i]); vars.add(chore[i]);
 		}
 
@@ -208,13 +209,13 @@ public class SiblingUproar extends ExampleFD {
 		IntVar xs[] = { x1, x2, x3, x4, x5 };
 		// The same relation as for angry at and children.
 		store.impose(new Alldifferent(xs));
-		
+
 		for (IntVar v : xs)
 			vars.add(v);
 		IntVar ys[] = { y1, y2, y3, y4, y5 };
 		for (IntVar v : ys)
 			vars.add(v);
-		
+
 		// 1. No one was originally angry at the sibling who was angry at him or
 		// her.
 		// Bryan is not angry at somebody who is angry at Bryan.
@@ -325,7 +326,7 @@ public class SiblingUproar extends ExampleFD {
 		vars.add(kto);
 
 	}
-	
+
 	/**
 	 * It executes the program to solve this logic puzzle.
 	 * @param args no argument is used.
@@ -333,12 +334,12 @@ public class SiblingUproar extends ExampleFD {
 	public static void main(String args[]) {
 
 		SiblingUproar example = new SiblingUproar();
-		
+
 		example.model();
 
 		if (example.search())
-			System.out.println("Solution(s) found");
-		
-	}	
+			logger.info("Solution(s) found");
+
+	}
 
 }

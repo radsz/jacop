@@ -1,9 +1,9 @@
 /**
- *  Alldiff.java 
+ *  Alldiff.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,18 +31,14 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.Var;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Alldiff constraint assures that all FDVs has different values. It uses bounds
@@ -51,16 +47,16 @@ import org.jacop.core.Var;
  * of the Fifteenth National Conference on Artificial Intelligence (AAAI '98),
  * 1998. It implements the method with time complexity O(n^2). Before using
  * bounds consistency it calls consistency method from Alldifferent constraint.
- * 
+ *
  * It extends basic functionality of Alldifferent constraint.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class Alldiff extends Alldifferent {
+public class Alldiff extends Alldifferent { private static Logger logger = LoggerFactory.getLogger(Alldiff.class);
 
-	// it stores the store locally so all the private functions which 
+	// it stores the store locally so all the private functions which
 	// are part of the consistency function can throw failure exception
 	// without passing store argument every time their function is called.
 	Store store;
@@ -71,10 +67,10 @@ public class Alldiff extends Alldifferent {
 
 	Comparator<IntVar> minVariable = new VariableminComparator<IntVar>();
 
-	protected IntVar[] listAlldiff;	
+	protected IntVar[] listAlldiff;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"list"};
@@ -87,13 +83,13 @@ public class Alldiff extends Alldifferent {
 
 		super(variables);
 		Alldifferent.idNumber--;
-		
+
 	        this.queueIndex = 2;
 
 		this.numberId = idNumber++;
 		this.numberArgs = (short) variables.length;
 		listAlldiff = new IntVar[variables.length];
-		
+
 		for (int i = 0; i < variables.length; i++)
 			listAlldiff[i] = variables[i];
 
@@ -102,7 +98,7 @@ public class Alldiff extends Alldifferent {
 		u = new int[variables.length];
 	}
 
-	
+
 	/**
 	 * It constructs the alldiff constraint for the supplied variable.
 	 * @param variables variables which are constrained to take different values.
@@ -125,35 +121,35 @@ public class Alldiff extends Alldifferent {
 
 	@Override
 	public void impose(Store store) {
-		
+
 		this.store = store;
 
 		int level = store.level;
 
 		int pos = 0;
 		positionMapping = new HashMap<IntVar, Integer>();
-		
+
 		for (IntVar v : listAlldiff) {
 			positionMapping.put(v, pos++);
 			v.putModelConstraint(this, getConsistencyPruningEvent(v));
 			queueVariable(level, v);
 		}
 		grounded = new TimeStamp<Integer>(store, 0);
-		
+
 		store.addChanged(this);
 		store.countConstraint();
 	}
 
 	@Override
 	public void consistency(Store store) {
-		
-		if (store.currentQueue == queueIndex) {	
-		
+
+		if (store.currentQueue == queueIndex) {
+
 			while (!variableQueue.isEmpty()) {
-				
+
 				LinkedHashSet<IntVar> fdvs = variableQueue;
 				variableQueue = new LinkedHashSet<IntVar>();
-			
+
 				for (IntVar Q : fdvs)
 					if (Q.singleton()) {
 						int qPos = positionMapping.get(Q);
@@ -171,7 +167,7 @@ public class Alldiff extends Alldifferent {
 							grounded.update(++groundPos);
 							for (int i = groundPos; i < list.length; i++)
 								list[i].domain.inComplement(store.level, list[i], Q.min());
-						}					
+						}
 					}
 			}
 
@@ -188,7 +184,7 @@ public class Alldiff extends Alldifferent {
 	}
 
 	void minPass() {
-		
+
 		Arrays.sort(listAlldiff, minVariable);
 
 		for (int i = 0; i < listAlldiff.length; i++) {
@@ -201,7 +197,7 @@ public class Alldiff extends Alldifferent {
 	}
 
 	void maxPass() {
-		
+
 		Arrays.sort(listAlldiff, maxVariable);
 
 		for (int i = 0; i < listAlldiff.length; i++) {
@@ -275,18 +271,18 @@ public class Alldiff extends Alldifferent {
 
 	@Override
 	public String toString() {
-		
+
 		StringBuffer result = new StringBuffer( id() );
 		result.append(" : alldiff([");
-		
+
 		for (int i = 0; i < listAlldiff.length; i++) {
 			result.append(listAlldiff[i]);
 			if (i < listAlldiff.length - 1)
 				result.append(", ");
 		}
-		
+
 		result.append("])");
-		
+
 		return result.toString();
 
 	}
@@ -310,6 +306,6 @@ public class Alldiff extends Alldifferent {
 			return (o2.min() - o1.min());
 		}
 	}
-	
+
 }
 

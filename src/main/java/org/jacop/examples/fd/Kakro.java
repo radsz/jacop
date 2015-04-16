@@ -1,9 +1,9 @@
 /**
- *  Kakro.java 
+ *  Kakro.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,25 +31,26 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.Sum;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
- * It is program to solve Kakro puzzles. 
- * 
+ *
+ * It is program to solve Kakro puzzles.
+ *
  * @author Radoslaw Szymanek
- * 
+ *
  * This is a program which uses Constraint Programming to find the solution to a
- * simple Kakro puzzle. For a moment the problem representation does not allow 
+ * simple Kakro puzzle. For a moment the problem representation does not allow
  * to model the problems with fields which are both origins of the row and column word.
  */
 
-public class Kakro extends ExampleFD {
+public class Kakro extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(Kakro.class);
 
 	public IntVar[][] elements;
 
@@ -61,15 +62,15 @@ public class Kakro extends ExampleFD {
 	// <0 - wall with column sum
 	// 1 - field
 	// 0 - clean wall.
-	int[][] rowDescription = { { 0,  0,  0,  0 }, 
+	int[][] rowDescription = { { 0,  0,  0,  0 },
 							   { 3,  1,  1,  0 },
-							   { 6,  1,  1,  1 }, 
+							   { 6,  1,  1,  1 },
 							   { 0,  5,  1,  1 } };
 
-	
-	int[][] columnDescription = { { 0, -4, -7,  0 }, 
+
+	int[][] columnDescription = { { 0, -4, -7,  0 },
 								  { 0,  1,  1, -3 },
-								  { 0,  1,  1,  1 }, 
+								  { 0,  1,  1,  1 },
 								  { 0,  0,  1,  1 } };
 
 	@Override
@@ -77,11 +78,11 @@ public class Kakro extends ExampleFD {
 
 		store = new Store();
 		vars = new ArrayList<IntVar>();
-		
+
 		elements = new IntVar[noRows][noColumns];
 
 		IntVar zero = new IntVar(store, "0", 0, 0);
-		
+
 		// Creating variables.
 		for (int i = 0; i < noRows; i++)
 			for (int j = 0; j < noColumns; j++)
@@ -90,7 +91,7 @@ public class Kakro extends ExampleFD {
 					elements[i][j] = new IntVar(store, "f" + i + "-" + j, 1, 9);
 					vars.add(elements[i][j]);
 				}
-				else 
+				else
 					elements[i][j] = zero;
 
 		// Creating constraints for rows.
@@ -126,7 +127,7 @@ public class Kakro extends ExampleFD {
 				}
 
 	}
-		
+
 
 	/**
 	 * It executes the program to solve simple Kakro puzzle.
@@ -135,17 +136,17 @@ public class Kakro extends ExampleFD {
 	public static void main(String args[]) {
 
 		Kakro example = new Kakro();
-		
+
 		example.model();
 
 		if (example.search()) {
-			System.out.println("Solution(s) found");
-		
+			logger.info("Solution(s) found");
+
 			ExampleFD.printMatrix(example.elements, example.noRows, example.noColumns);
-			
+
 		}
-		
-	}	
-	
-	
+
+	}
+
+
 }

@@ -1,9 +1,9 @@
 /**
- *  CalendarMen.java 
+ *  CalendarMen.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,8 +31,7 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.And;
 import org.jacop.constraints.Element;
@@ -48,13 +47,15 @@ import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-/** 
- * 
- * It solves a simple logic puzzle about sport calendar. 
- * 
+/**
+ *
+ * It solves a simple logic puzzle about sport calendar.
+ *
  * @author Michal Tonderski, Szymon Sieklucki, and Radoslaw Szymanek
- * 
+ *
  * Title: Calendar Men
  * Author of a logic puzzle: Alex Knight
  * Publication: Dell Logic Puzzles
@@ -62,21 +63,21 @@ import org.jacop.core.Store;
  * Page: 52
  * Stars: 5
  *
- * To raise some money for college sports programs, students 
- * at a local junior college produced and sold an "Athlete of 
- * the Month" calendar. Each month of the year featured a 
- * photograph of a different man (first names are Antonio, 
- * Brett, Cliff, Dabney, Ed, Francisco, Griff, Harry, Ivor, 
- * John, Karl, and Lorenzo; last names are Moross, Nelsen, 
+ * To raise some money for college sports programs, students
+ * at a local junior college produced and sold an "Athlete of
+ * the Month" calendar. Each month of the year featured a
+ * photograph of a different man (first names are Antonio,
+ * Brett, Cliff, Dabney, Ed, Francisco, Griff, Harry, Ivor,
+ * John, Karl, and Lorenzo; last names are Moross, Nelsen,
  * O'Rourke, Paulos, Quarello, Reede, Sheldon, Taylor, Uhler,
  * Vickers, Wang and Xiao) engaged in a different sport
- * (archery, badminton, croquet, football, golf, hockey, 
- * lacrosse, pole vaulting, rowing, squash, tennis, and 
+ * (archery, badminton, croquet, football, golf, hockey,
+ * lacrosse, pole vaulting, rowing, squash, tennis, and
  * volleyball). Can you find the full name
  * and sport of each month's athlete?
  */
 
-public class CalendarMen extends ExampleFD {
+public class CalendarMen extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(CalendarMen.class);
 
 	@Override
 	public void model() {
@@ -84,7 +85,7 @@ public class CalendarMen extends ExampleFD {
 		store = new Store();
 		vars = new ArrayList<IntVar>();
 
-		System.out.println("This program solves logic puzzle Calendar Men");
+		logger.info("This program solves logic puzzle Calendar Men");
 
 		// Firstnames of people involved
 
@@ -93,8 +94,8 @@ public class CalendarMen extends ExampleFD {
 				"Lorenzo" };
 
 		// indexes for people involved for ease of referring later.
-		int iAntonio = 0, iBrett = 1, /* iCliff = 2, */ iDabney = 3, iEd = 4, 
-			iFrancisco = 5, iGriff = 6, iHarry = 7, iIvor = 8, iJohn = 9, 
+		int iAntonio = 0, iBrett = 1, /* iCliff = 2, */ iDabney = 3, iEd = 4,
+			iFrancisco = 5, iGriff = 6, iHarry = 7, iIvor = 8, iJohn = 9,
 			iKarl = 10, iLorenzo = 11;
 
 		// Lastnames of people involved
@@ -104,8 +105,8 @@ public class CalendarMen extends ExampleFD {
 				"Wang", "Xiao" };
 
 		// indexes for people involved for ease of referring later.
-		int iMoross = 0, iNelsen = 1, iO_Rourke = 2, iPaulos = 3, iQuarello = 4, 
-			iReede = 5, iSheldon = 6, iTaylor = 7, iUhler = 8, /* iVickers = 9, */ 
+		int iMoross = 0, iNelsen = 1, iO_Rourke = 2, iPaulos = 3, iQuarello = 4,
+			iReede = 5, iSheldon = 6, iTaylor = 7, iUhler = 8, /* iVickers = 9, */
 			iWang = 10, iXiao = 11;
 
 		// Names of sports
@@ -115,8 +116,8 @@ public class CalendarMen extends ExampleFD {
 				"tennis", "volleyball" };
 
 		// indexes for sports involved for ease of referring later.
-		int iarchery = 0, ibadminton = 1, icroquet = 2, ifootball = 3, igolf = 4, 
-			ihockey = 5, ilacrosse = 6, ivaulting = 7, irowing = 8, isquash = 9, 
+		int iarchery = 0, ibadminton = 1, icroquet = 2, ifootball = 3, igolf = 4,
+			ihockey = 5, ilacrosse = 6, ivaulting = 7, irowing = 8, isquash = 9,
 			itennis = 10, ivolleyball = 11;
 
 		// Three sets of variables, the same values at different sets denote
@@ -206,7 +207,7 @@ public class CalendarMen extends ExampleFD {
 		// after the squash player.
 
 		// even auxilary variable is defined and used.
-		IntVar even = new IntVar(store, "even"); 
+		IntVar even = new IntVar(store, "even");
 		even.addDom(2, 2);
 		even.addDom(4, 4);
 		even.addDom(6, 6);
@@ -214,7 +215,7 @@ public class CalendarMen extends ExampleFD {
 		even.addDom(10, 10);
 
 		vars.add(even);
-		
+
 		store.impose(new XplusYeqZ(sport[isquash], even, first[iLorenzo]));
 
 		// 4. Ivor, O'Rourke, and the tennis player were
@@ -398,32 +399,32 @@ public class CalendarMen extends ExampleFD {
 		store.impose(new XgtY(sport[ivaulting], sport[igolf]));
 
 	}
-			
+
 	/**
-	 * It creates a model of this logic puzzle using mostly 
+	 * It creates a model of this logic puzzle using mostly
 	 * primitive constraints.
 	 */
 	public void modelBasic() {
 
 		store = new Store();
 		vars = new ArrayList<IntVar>();
-		
-		System.out.println("This program solves logic puzzle Calendar Men");
+
+		logger.info("This program solves logic puzzle Calendar Men");
 
 		String[] firstnameID = { "Antonio", "Brett", "Cliff", "Dabney", "Ed",
 				"Francisco", "Griff", "Harry", "Ivor", "John", "Karl",
 		"Lorentzo" };
 
-		int iAntonio = 0, iBrett = 1, /* iCliff = 2, */ iDabney = 3, iEd = 4, 
-			iFrancisco = 5, iGriff = 6, iHarry = 7, iIvor = 8, iJohn = 9, 
+		int iAntonio = 0, iBrett = 1, /* iCliff = 2, */ iDabney = 3, iEd = 4,
+			iFrancisco = 5, iGriff = 6, iHarry = 7, iIvor = 8, iJohn = 9,
 			iKarl = 10, iLorentzo = 11;
 
 		String[] surnameID = { "Moross", "Nelsen", "ORourke", "Paulos",
 				"Quarello", "Reede", "Sheldon", "Taylor", "Uhler", "Vickers",
 				"Wang", "Xiao" };
 
-		int iMoross = 0, iNelsen = 1, iORourke = 2, iPaulos = 3, iQuarello = 4, 
-			iReede = 5, iSheldon = 6, iTaylor = 7, iUhler = 8, /* iVickers = 9, */ 
+		int iMoross = 0, iNelsen = 1, iORourke = 2, iPaulos = 3, iQuarello = 4,
+			iReede = 5, iSheldon = 6, iTaylor = 7, iUhler = 8, /* iVickers = 9, */
 			iWang = 10, iXiao = 11;
 
 		String[] sportID = { "archery", "badmington", "croquet", "football",
@@ -431,7 +432,7 @@ public class CalendarMen extends ExampleFD {
 				"squash", "tennis", "volleyball" };
 
 		int iarchery = 0, ibadmington = 1, icroquet = 2, ifootball = 3, igolf = 4,
-			ihockey = 5, ilacrosse = 6, ip_vauliting = 7, irowing = 8, isquash = 9, 
+			ihockey = 5, ilacrosse = 6, ip_vauliting = 7, irowing = 8, isquash = 9,
 			itennis = 10, ivolleyball = 11;
 
 		IntVar firstname[] = new IntVar[12];
@@ -706,17 +707,17 @@ public class CalendarMen extends ExampleFD {
 		example.model();
 
 		if (example.searchSmallestDomain(false))
-			System.out.println("Solution(s) found");
+			logger.info("Solution(s) found");
 
 		CalendarMen exampleBasic = new CalendarMen();
 
 		exampleBasic.modelBasic();
 
 		if (exampleBasic.searchSmallestDomain(false))
-			System.out.println("Solution(s) found");
+			logger.info("Solution(s) found");
 
 
-	}			
+	}
 
 	/**
 	 * It executes the program solving this puzzle using the best approach.
@@ -729,9 +730,9 @@ public class CalendarMen extends ExampleFD {
 		example.model();
 
 		if (example.searchSmallestDomain(false))
-			System.out.println("Solution(s) found");
+			logger.info("Solution(s) found");
 
-	}			
+	}
 
-		
+
 }

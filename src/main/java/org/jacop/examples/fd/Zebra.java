@@ -1,9 +1,9 @@
 /**
- *  Zebra.java 
+ *  Zebra.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,8 +31,7 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Eq;
 import org.jacop.constraints.Not;
@@ -44,18 +43,20 @@ import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
+ *
  * It models and solves Zebra logic puzzle.
- * 
+ *
  * @author Radoslaw Szymanek
- * 
+ *
  * It was given at The German Institute of Logical Thinking in Berlin, 1981. And 98% FAILED.
  *
  * Conditions
  *
- * 1. The Englishman lives in the red house. 
+ * 1. The Englishman lives in the red house.
  * 2. The Spaniard owns a dog.
  * 3. The Japanese is a painter.
  * 4. The Italian drinks tea.
@@ -70,21 +71,21 @@ import org.jacop.core.Store;
  * 13. The fox is in a house next to that of the doctor.
  * 14. The horse is in a house next to that of the diplomat.
  * Q. Who owns a Zebra, and who drinks water?
- * 
- * They sometimes smoke different brands of cigarettes too, 
- * but that's apparently no longer politically correct, so they all quit. 
+ *
+ * They sometimes smoke different brands of cigarettes too,
+ * but that's apparently no longer politically correct, so they all quit.
  */
 
-public class Zebra extends ExampleFD {
+public class Zebra extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(Zebra.class);
 
-	
+
 	@Override
 	public void model() {
 
 		store = new Store();
 		vars = new ArrayList<IntVar>();
-		
-		System.out.println("Program to solve Zebra problem ");
+
+		logger.info("Program to solve Zebra problem ");
 
 		String[] colorNames = { "red", "green", "white", "yellow", "blue" };
 		int ired = 0, igreen = 1, iwhite = 2, iyellow = 3, iblue = 4;
@@ -184,23 +185,23 @@ public class Zebra extends ExampleFD {
 		vars.add(distance3);
 
 	}
-	
-	
+
+
 	/**
 	 * It executes the program to solve this simple logic puzzle.
-	 * 
+	 *
 	 * @param args no argument is used.
 	 */
 	public static void main(String args[]) {
 
 		Zebra example = new Zebra();
-		
+
 		example.model();
 
 		if (example.searchMostConstrainedStatic())
-			System.out.println("Solution(s) found");
-		
-	}			
-	
-	
+			logger.info("Solution(s) found");
+
+	}
+
+
 }

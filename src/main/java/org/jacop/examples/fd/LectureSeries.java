@@ -1,9 +1,9 @@
 /**
- *  LectureSeries.java 
+ *  LectureSeries.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,8 +31,7 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Distance;
 import org.jacop.constraints.Element;
@@ -42,59 +41,61 @@ import org.jacop.constraints.XltY;
 import org.jacop.constraints.XneqY;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
-*
-* It is a simple logic puzzle about lectures.
-*
-* @author Grzegorz Moskwa, Marcin Nowak, and Radoslaw Szymanek
-* 
-* Last week at school was made varied by a series of lectures, one each
-* day (Monday through Friday), in the auditorium.  None of the lectures
-* was particularly interesting (on choosing a college, physical
-* hygiene, modern art, nutrition, and study habits), but the students
-* figured that anything that got them out of fourth period was
-* okay. The lecturers were two women named Alice and Bernadette, and
-* three men named Charles, Duane, and Eddie; last names were Felicidad,
-* Garber, Haller, Itakura, and Jeffreys.  Can you find each day's
-* lecturer and subject?
-* 
-* 1. Alice lectured on Monday.
-*
-* 2. Charles's lecture on physical hygiene wasn't given on Friday.
-*
-* 3. Dietician Jeffreys gave the lecture on nutrition.
-*
-* 4. A man gave the lecture on modern art.
-*
-* 5. Ms. Itakura (*5a) and the lecturer on proper study habits spoke on 
-* consecutive days, in one order or the other.(*5b)
-*
-* 6. Haller gave a lecture sometime after Eddie did.
-*
-* 7. Duane Felicidad (*7a) gave his lecture sometime before the modern 
-* art lecture(*7b)
-*
-*
-* Answer:
-*
-* Monday, Alice Itakura, choosing a college
-* Tuesday, Duane Felicidad, study habits
-* Wednesday, Eddie Garber, modern art
-* Thursday, Charles Haller, physical hygiene
-* Friday, Bernadette Jeffreys, nutrition
-*
-*/
+ *
+ * It is a simple logic puzzle about lectures.
+ *
+ * @author Grzegorz Moskwa, Marcin Nowak, and Radoslaw Szymanek
+ *
+ * Last week at school was made varied by a series of lectures, one each
+ * day (Monday through Friday), in the auditorium.  None of the lectures
+ * was particularly interesting (on choosing a college, physical
+ * hygiene, modern art, nutrition, and study habits), but the students
+ * figured that anything that got them out of fourth period was
+ * okay. The lecturers were two women named Alice and Bernadette, and
+ * three men named Charles, Duane, and Eddie; last names were Felicidad,
+ * Garber, Haller, Itakura, and Jeffreys.  Can you find each day's
+ * lecturer and subject?
+ *
+ * 1. Alice lectured on Monday.
+ *
+ * 2. Charles's lecture on physical hygiene wasn't given on Friday.
+ *
+ * 3. Dietician Jeffreys gave the lecture on nutrition.
+ *
+ * 4. A man gave the lecture on modern art.
+ *
+ * 5. Ms. Itakura (*5a) and the lecturer on proper study habits spoke on
+ * consecutive days, in one order or the other.(*5b)
+ *
+ * 6. Haller gave a lecture sometime after Eddie did.
+ *
+ * 7. Duane Felicidad (*7a) gave his lecture sometime before the modern
+ * art lecture(*7b)
+ *
+ *
+ * Answer:
+ *
+ * Monday, Alice Itakura, choosing a college
+ * Tuesday, Duane Felicidad, study habits
+ * Wednesday, Eddie Garber, modern art
+ * Thursday, Charles Haller, physical hygiene
+ * Friday, Bernadette Jeffreys, nutrition
+ *
+ */
 
-public class LectureSeries extends ExampleFD {
+public class LectureSeries extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(LectureSeries.class);
 
 	@Override
 	public void model() {
 
 		store = new Store();
 		vars = new ArrayList<IntVar>();
-		
-		System.out.println("Program to solve Lecture Series ");
+
+		logger.info("Program to solve Lecture Series ");
 
 		String[] firstNames = { "Alice", "Bernadette", "Charles", "Duane",
 				"Eddie" };
@@ -208,7 +209,7 @@ public class LectureSeries extends ExampleFD {
 		store.impose(new XneqY(last[iItakura], first[iDuane]));
 
 	}
-	
+
 	/**
 	 * It executes the program which solves this simple logic puzzle.
 	 * @param args no arguments is used.
@@ -216,13 +217,13 @@ public class LectureSeries extends ExampleFD {
 	public static void main(String args[]) {
 
 		LectureSeries example = new LectureSeries();
-		
+
 		example.model();
 
 		if (example.search())
-			System.out.println("Solution(s) found");
-		
-	}	
-	
-	
+			logger.info("Solution(s) found");
+
+	}
+
+
 }

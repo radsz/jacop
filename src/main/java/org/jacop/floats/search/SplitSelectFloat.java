@@ -1,9 +1,9 @@
 /**
- *  SplitSelectFloat.java 
+ *  SplitSelectFloat.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -33,34 +33,32 @@
 package org.jacop.floats.search;
 
 import org.jacop.constraints.PrimitiveConstraint;
-
+import org.jacop.core.Store;
+import org.jacop.core.TimeStamp;
+import org.jacop.core.Var;
 import org.jacop.floats.constraints.PeqC;
 import org.jacop.floats.constraints.PgtC;
 import org.jacop.floats.constraints.PltC;
 import org.jacop.floats.constraints.PlteqC;
 import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatDomain;
-
-import org.jacop.core.Var;
-import org.jacop.core.Store;
-
-import org.jacop.search.SimpleSelect;
 import org.jacop.search.ComparatorVariable;
-// import org.jacop.search.Indomain;
-import org.jacop.core.TimeStamp;
+import org.jacop.search.SimpleSelect;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+// import org.jacop.search.Indomain;
 /**
  * It is simple and customizable selector of decisions (constraints) which will
- * be enforced by search. However, it does not use P=c as a search decision 
- * but rather P <= c (potentially splitting the domain), unless c is equal to 
+ * be enforced by search. However, it does not use P=c as a search decision
+ * but rather P <= c (potentially splitting the domain), unless c is equal to
  * the maximal value in the domain of P then the constraint P < c is used.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  * @param <T> type of variable being used in the search.
  */
 
-public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
+public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> { private static Logger logger = LoggerFactory.getLogger(SplitSelectFloat.class);
 
 
     /**
@@ -68,11 +66,11 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
      */
 
 	/**
-	 * It specifies if the left branch (values smaller or equal to the value selected) 
+	 * It specifies if the left branch (values smaller or equal to the value selected)
 	 * are first considered.
 	 */
 	public boolean leftFirst = true;
-	
+
 	public boolean roundRobin = true;
 
 	TimeStamp<Integer> currentIndex;
@@ -82,7 +80,7 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
 	 * @param variables variables upon which the choice points are created.
 	 * @param varSelect the variable comparator to choose the variable.
 	 */
-	public SplitSelectFloat(Store store, T[] variables, 
+	public SplitSelectFloat(Store store, T[] variables,
 				ComparatorVariable<T> varSelect) {
 
 	    super(variables, varSelect, null);
@@ -97,10 +95,10 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
 	 * @param varSelect the main variable comparator.
 	 * @param tieBreakerVarSelect secondary variable comparator employed if the first one gives the same metric.
 	 */
-	public SplitSelectFloat(Store store, T[] variables, 
+	public SplitSelectFloat(Store store, T[] variables,
 				ComparatorVariable<T> varSelect,
 				ComparatorVariable<T> tieBreakerVarSelect) {
-				// , 
+				// ,
 				// 	   Indomain<T> indomain) {
 
 	    super(variables, varSelect, tieBreakerVarSelect, null);
@@ -108,15 +106,15 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
 	    currentIndex = new TimeStamp<Integer>(store, 0);
 
 	}
-	
-	@Override 
+
+	@Override
 	public T getChoiceVariable(int index) {
 		return null;
 	}
-	
+
 	@Override
 	public PrimitiveConstraint getChoiceConstraint(int index) {
-			    
+
 	    T var = super.getChoiceVariable(index);
 
 	    if (variableOrdering == null && roundRobin)
@@ -126,19 +124,19 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
 
 	    if (var == null)
 		return null;
-		
+
 	    assert (index >= 0);
 	    // assert (index < searchVar.length);
 	    // assert (searchVar[index].dom() != null);
 
 	    double value = (((FloatVar)var).min() + ((FloatVar)var).max()) / 2.0;
 
-	    // System.out.println (var + ", value = " + value);
+	    // logger.info (var + ", value = " + value);
 
 	    if (leftFirst)
 		if ( ((FloatVar)var).max() > value )
 		    return new PlteqC((FloatVar)var, value);
-		else 
+		else
 		    return new PltC((FloatVar)var, value);
 	    else
 		if ( ((FloatVar)var).max() > value)
@@ -146,7 +144,7 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
 		else
 		    return new PeqC((FloatVar)var, value);
 	}
-	
+
 
 	T roundRobinVarSelection(int index) {
 
@@ -173,5 +171,5 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
 
 		return null;
 	}
-	
+
 }

@@ -1,9 +1,9 @@
 /**
- *  FloatIntervalDomain.java 
+ *  FloatIntervalDomain.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,37 +31,32 @@
 
 package org.jacop.floats.core;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.Random;
-import java.util.regex.Pattern;
-
-import org.jacop.core.Var;
-import org.jacop.core.IntDomain;
-
-import org.jacop.core.ValueEnumeration;
-import org.jacop.core.IntervalEnumeration;
-
-import javax.xml.transform.sax.TransformerHandler;
-
+import java.util.*;
+import java.util.regex.*;
+import javax.xml.transform.sax.*;
 import org.jacop.constraints.Constraint;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntervalEnumeration;
+import org.jacop.core.ValueEnumeration;
+import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
 
 //TODO, test default function which use sparse (dense) representation. Default code if
 //domain is neither Interval nor Bound domain.
-
 /**
  * Defines interval of numbers which is part of FDV definition which consist of
  * one or several intervals.
- * 
- * 
+ *
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  */
 
-public class FloatIntervalDomain extends FloatDomain {
+public class FloatIntervalDomain extends FloatDomain { private static Logger logger = LoggerFactory.getLogger(FloatIntervalDomain.class);
 
-    // FIXME, implement all already implemented functions from IntDomain	
+    // FIXME, implement all already implemented functions from IntDomain
     // so it is more efficient, for example public int lex(IntDomain s).
 
     /**
@@ -94,23 +89,23 @@ public class FloatIntervalDomain extends FloatDomain {
     }
 
     /**
-	* It specifies the arguments required to be saved by an XML format as well as 
+	* It specifies the arguments required to be saved by an XML format as well as
 	* the constructor being called to recreate an object from an XML format.
 	*/
     public static String[] xmlAttributes = {};
 
     // TODO, Move all XML code to Aspect for XML.
     /**
-     * It writes the content of this object as the content of XML 
-     * element so later it can be used to restore the object from 
+     * It writes the content of this object as the content of XML
+     * element so later it can be used to restore the object from
      * XML. It is done after restoration of the part of the object
-     * specified in xmlAttributes. 
-     *  
-     * @param tf a place to write the content of the object. 
+     * specified in xmlAttributes.
+     *
+     * @param tf a place to write the content of the object.
      * @throws SAXException
      */
     public void toXML(TransformerHandler tf) throws SAXException {
-		
+
 	StringBuffer result = new StringBuffer("");
 
 	if (!singleton()) {
@@ -119,12 +114,12 @@ public class FloatIntervalDomain extends FloatDomain {
 		if (e + 1 < size)
 		    result.append(", ");
 	    }
-	} 
+	}
 	else
 	    result.append(intervals[0]);
-	
+
 	tf.characters(result.toString().toCharArray(), 0, result.length());
-		
+
     }
 
     /**
@@ -140,12 +135,12 @@ public class FloatIntervalDomain extends FloatDomain {
     }
 
     /**
-     * 
-     * It updates an object of type FloatIntervalDomain with the information 
-     * stored in the string. 
-     * 
+     *
+     * It updates an object of type FloatIntervalDomain with the information
+     * stored in the string.
+     *
      * @param object the object to be updated.
-     * @param content the information used for update. 
+     * @param content the information used for update.
      */
     public static void fromXML(FloatIntervalDomain object, String content) {
 	// TODO, Move all XML code to Aspect for XML.
@@ -153,7 +148,7 @@ public class FloatIntervalDomain extends FloatDomain {
 	String[] result = pat.split( content );
 
 	ArrayList<FloatInterval> intervals = new ArrayList<FloatInterval>(result.length);
-		
+
 	for (String element : result) {
 	    Pattern dotSplit = Pattern.compile("\\.");
 	    String[] oneElement = dotSplit.split( element );
@@ -171,14 +166,14 @@ public class FloatIntervalDomain extends FloatDomain {
 		}
 		catch(NumberFormatException ex) {};
 	    }
-			
+
 	    if (left != null && right != null)
 		intervals.add(new FloatInterval(left, right));
 	    else if (left != null)
 		intervals.add(new FloatInterval(left, left));
-		
+
 	}
-		
+
 	object.intervals = intervals.toArray(new FloatInterval[intervals.size()]);
 	object.size = intervals.size();
 
@@ -188,11 +183,11 @@ public class FloatIntervalDomain extends FloatDomain {
 	object.searchConstraintsCloned = false;
 
 	assert object.checkInvariants() == null : object.checkInvariants() ;
-		
-	//	System.out.println("Next content element" + element);
-		
+
+	//	logger.info("Next content element" + element);
+
     }
-		
+
     /**
      * An empty domain, so no constant creation of empty domains is required.
      */
@@ -202,7 +197,7 @@ public class FloatIntervalDomain extends FloatDomain {
     /**
      * It creates an empty domain, with at least specified number of places in
      * an array list for intervals.
-     * 
+     *
      * @param size defines the initial size of an array storing the intervals.
      */
 
@@ -217,20 +212,20 @@ public class FloatIntervalDomain extends FloatDomain {
 
     /**
      * It creates domain with all values between min and max.
-     * 
+     *
      * @param min defines the left bound of a domain.
      * @param max defines the right bound of a domain.
      */
 
     public FloatIntervalDomain(double min, double max) {
-		
-	if (Double.isNaN(min)) 
+
+	if (Double.isNaN(min))
 	    min = FloatDomain.MinFloat;
-	if (Double.isNaN(max)) 
+	if (Double.isNaN(max))
 	    max = FloatDomain.MaxFloat;
 
 	assert (min <= max) : "Min value "+min+" can not be greater than max value " + max;
-		
+
 	intervals = new FloatInterval[5];
 	searchConstraints = null;
 	searchConstraintsToEvaluate = 0;
@@ -250,7 +245,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 	// TODO, Move all check invariant code into Aspect CheckInvariants.
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
 	if (size == intervals.length) {
 	    FloatInterval[] oldIntervals = intervals;
 	    intervals = new FloatInterval[oldIntervals.length + 5];
@@ -258,9 +253,9 @@ public class FloatIntervalDomain extends FloatDomain {
 	}
 
 	intervals[size++] = i;
-		
+
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
     }
 
     /**
@@ -286,11 +281,11 @@ public class FloatIntervalDomain extends FloatDomain {
 	}
 
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
     }
 
     /**
-     * It adds values as specified by the parameter to the domain. The 
+     * It adds values as specified by the parameter to the domain. The
      * input parameter can not be an empty set.
      */
 
@@ -301,7 +296,7 @@ public class FloatIntervalDomain extends FloatDomain {
 	FloatIntervalDomain d = (FloatIntervalDomain) domain;
 
 	assert checkInvariants() == null : checkInvariants() ;
-			
+
 	if (size == 0) {
 	    if (intervals == null || intervals.length < d.intervals.length)
 		intervals = new FloatInterval[d.intervals.length];
@@ -313,13 +308,13 @@ public class FloatIntervalDomain extends FloatDomain {
 	    for (int i = 0; i < d.size; i++)
 		// can not use function add(Interval)
 		unionAdapt(d.intervals[i].min, d.intervals[i].max);
-			
+
 	assert checkInvariants() == null : checkInvariants() ;
-			
+
 	return;
     }
 
-	
+
     /**
      * It adds all values between min and max to the domain.
      */
@@ -328,26 +323,26 @@ public class FloatIntervalDomain extends FloatDomain {
     public void unionAdapt(double min, double max) {
 
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
 	if (size == 0) {
 
 	    intervals = new FloatInterval[1];
 	    intervals[size++] = new FloatInterval(min, max);
 
 	} else {
-			
-			
+
+
 	    int i = 0;
 	    for (; i < size; i++) {
 		// i - position of the interval which touches with or intersects with min..max
 
-		if ((next(max) >= intervals[i].min && max <= next(intervals[i].max)) || 
+		if ((next(max) >= intervals[i].min && max <= next(intervals[i].max)) ||
 		    (next(min) >= intervals[i].min && min <= next(intervals[i].max)) ||
 		    (min <= intervals[i].min && intervals[i].max <= max ))
 		    break;
 		if (next(max) < intervals[i].min) {
 		    // interval is inserted at position i
-					
+
 		    if (size == intervals.length) {
 			// no empty intervals to fill in
 			FloatInterval[] oldIntervals = intervals;
@@ -376,24 +371,24 @@ public class FloatIntervalDomain extends FloatDomain {
 	    }
 
 	    if (i == size) {
-				
+
 		if (size == intervals.length) {
 		    // no empty intervals to fill in
 		    FloatInterval[] oldIntervals = intervals;
 		    intervals = new FloatInterval[intervals.length + 5];
 		    System.arraycopy(oldIntervals, 0, intervals, 0, size);
 		}
-				
+
 		intervals[size] = new FloatInterval(min, max);
 		size++;
-				
+
 		assert checkInvariants() == null : checkInvariants() ;
 		assert contains(min) : "The minimum was not added";
 		assert contains(max) : "The maximum was not added";
 
 		return;
 	    }
-			
+
 	    double newMin;
 	    // interval(min, max) intersects with current domain
 	    if (min < intervals[i].min) {
@@ -401,7 +396,7 @@ public class FloatIntervalDomain extends FloatDomain {
 	    } else {
 		newMin = intervals[i].min;
 	    }
-			
+
 	    int target = i;
 	    double newMax;
 
@@ -425,15 +420,15 @@ public class FloatIntervalDomain extends FloatDomain {
 
 	    while (size > i + 1)
 		intervals[--size] = null;
-			
+
 	}
 
 	assert checkInvariants() == null : checkInvariants() ;
 	assert contains(min) : "The minimum was not added";
 	assert contains(max) : "The maximum was not added";
-    }	
-	
-	
+    }
+
+
     /**
      * Checks if two domains intersect.
      */
@@ -445,7 +440,7 @@ public class FloatIntervalDomain extends FloatDomain {
 	    return false;
 
 	assert checkInvariants() == null : checkInvariants() ;
-			
+
 	FloatIntervalDomain intervalDomain = (FloatIntervalDomain) domain;
 
 	int pointer1 = 0;
@@ -485,7 +480,7 @@ public class FloatIntervalDomain extends FloatDomain {
     public boolean isIntersecting(double min, double max) {
 
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
 	int i = 0;
 	for (; i < size && intervals[i].max < min; i++)
 	    ;
@@ -515,7 +510,7 @@ public class FloatIntervalDomain extends FloatDomain {
     public FloatIntervalDomain cloneLight() {
 
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
 	FloatIntervalDomain cloned = new FloatIntervalDomain( this.intervals.length);
 
 	// FIXME, use empty constructor and use the line below.
@@ -536,7 +531,7 @@ public class FloatIntervalDomain extends FloatDomain {
     public FloatIntervalDomain clone() {
 
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
 	FloatIntervalDomain cloned = new FloatIntervalDomain();
 
 	cloned.intervals = new FloatInterval[this.intervals.length];
@@ -567,7 +562,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
     @Override
     public boolean contains(FloatDomain domain) {
-		
+
 	assert checkInvariants() == null : checkInvariants() ;
 
 	// FIXME, check that FD(int) part does not assume to have different
@@ -577,14 +572,14 @@ public class FloatIntervalDomain extends FloatDomain {
 		return true;
 	    return false;
 	}
-		
+
 	if (domain.isEmpty())
 	    return true;
 
 	FloatIntervalDomain dom2 = (FloatIntervalDomain) domain;
 
 	assert dom2.checkInvariants() == null : dom2.checkInvariants() ;
-        		
+
 	int max2 = dom2.size;
 
 	int i1 = 0;
@@ -621,8 +616,8 @@ public class FloatIntervalDomain extends FloatDomain {
 	    interval2 = dom2.intervals[i2];
 
 	}
-    }	
-	
+    }
+
 
     /**
      * It creates a complement of a domain.
@@ -635,7 +630,7 @@ public class FloatIntervalDomain extends FloatDomain {
 	    return new FloatIntervalDomain(FloatDomain.MinFloat, FloatDomain.MaxFloat);
 
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
 	FloatIntervalDomain result = new FloatIntervalDomain(size + 1);
 
 	if (min() != FloatDomain.MinFloat)
@@ -662,7 +657,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
     public boolean contains(double value) {
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
 	for (int m = 0; m < size; m++) {
 	    FloatInterval i = intervals[m];
 	    if (i.max >= value)
@@ -677,7 +672,7 @@ public class FloatIntervalDomain extends FloatDomain {
     public double nextValue(double value) {
 
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
 	for (int m = 0; m < size; m++) {
 	    FloatInterval i = intervals[m];
 	    if (i.max > value)
@@ -697,7 +692,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
     @Override
     public ValueEnumeration valueEnumeration() {
-	System.out.println ("This does not exist for floats :(");
+	logger.info ("This does not exist for floats :(");
 	System.exit(0);
 
 	return new org.jacop.core.IntervalDomainValueEnumeration(new org.jacop.core.IntervalDomain());  // only need for correct compilation
@@ -708,7 +703,7 @@ public class FloatIntervalDomain extends FloatDomain {
      */
     @Override
     public IntervalEnumeration intervalEnumeration() {
-	System.out.println ("This does not exist for floats :(");
+	logger.info ("This does not exist for floats :(");
 	System.exit(0);
 
 	return new org.jacop.core.IntervalDomainIntervalEnumeration(new org.jacop.core.IntervalDomain());  // only need for correct compilation
@@ -731,11 +726,11 @@ public class FloatIntervalDomain extends FloatDomain {
     public boolean eq(FloatDomain domain) {
 
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
 	FloatIntervalDomain intervalDomain = (FloatIntervalDomain) domain;
 
 	assert intervalDomain.checkInvariants() == null : intervalDomain.checkInvariants() ;
-			
+
 	boolean equal = true;
 	int i = 0;
 
@@ -757,11 +752,11 @@ public class FloatIntervalDomain extends FloatDomain {
     @Override
     public int getSize() {
 
-	System.out.println ("getSize() has no meanning for floats. Not implemented.");
+	logger.info ("getSize() has no meanning for floats. Not implemented.");
 	System.exit(0);
 
 	// assert checkInvariants() == null : checkInvariants() ;
-		
+
 	// int n = 0;
 
 	// for (int i = 0; i < size; i++)
@@ -776,7 +771,7 @@ public class FloatIntervalDomain extends FloatDomain {
     public double getSizeFloat() {
 
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
 	double n = 0;
 
 	for (int i = 0; i < size; i++)
@@ -792,14 +787,14 @@ public class FloatIntervalDomain extends FloatDomain {
     public FloatDomain intersect(FloatDomain domain) {
 
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
 	if (domain.isEmpty())
 	    return emptyDomain;
-		
+
 	FloatIntervalDomain input = (FloatIntervalDomain) domain;
 
 	assert input.checkInvariants() == null : input.checkInvariants() ;
-			
+
 	FloatIntervalDomain temp;
 
 	if (size > input.size)
@@ -885,7 +880,7 @@ public class FloatIntervalDomain extends FloatDomain {
 	}
 
 	assert temp.checkInvariants() == null : temp.checkInvariants() ;
-			
+
 	return temp;
 
     }
@@ -898,7 +893,7 @@ public class FloatIntervalDomain extends FloatDomain {
     public FloatDomain intersect(double min, double max) {
 
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
 	FloatIntervalDomain temp = new FloatIntervalDomain(size);
 
 	if (size == 0)
@@ -962,7 +957,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 	assert checkInvariants() == null : checkInvariants() ;
 	assert temp.checkInvariants() == null : temp.checkInvariants() ;
-		
+
 	return temp;
 
     }
@@ -971,7 +966,7 @@ public class FloatIntervalDomain extends FloatDomain {
     public FloatDomain subtract(double value) {
 
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
 	FloatIntervalDomain result = cloneLight();
 
 	int pointer1 = 0;
@@ -1045,7 +1040,7 @@ public class FloatIntervalDomain extends FloatDomain {
     public double max() {
 
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
 	assert size != 0;
 
 	return intervals[size - 1].max;
@@ -1060,7 +1055,7 @@ public class FloatIntervalDomain extends FloatDomain {
     public double min() {
 
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
 	assert size != 0;
 
 	return intervals[0].min;
@@ -1088,7 +1083,7 @@ public class FloatIntervalDomain extends FloatDomain {
       temp.unionAdapt(new FloatInterval(value, value));
       }
       }
-			
+
       assert temp.checkInvariants() == null : temp.checkInvariants() ;
       return temp;
 
@@ -1117,7 +1112,7 @@ public class FloatIntervalDomain extends FloatDomain {
     public void removeInterval(int position) {
 
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
 	assert position < size;
 	assert position >= 0;
 
@@ -1129,7 +1124,7 @@ public class FloatIntervalDomain extends FloatDomain {
 	}
 
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
     }
 
     /**
@@ -1140,11 +1135,11 @@ public class FloatIntervalDomain extends FloatDomain {
     public void setDomain(FloatDomain domain) {
 
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
 	FloatIntervalDomain intervalDomain = (FloatIntervalDomain) domain;
 
 	size = intervalDomain.size;
-		
+
 	intervals = new FloatInterval[intervalDomain.intervals.length];
 	System.arraycopy(intervalDomain.intervals, 0, intervals, 0, size);
 
@@ -1189,11 +1184,11 @@ public class FloatIntervalDomain extends FloatDomain {
 
 	if (isEmpty())
 	    return FloatDomain.emptyFloatDomain;
-		
+
 	FloatIntervalDomain intervalDomain = (FloatIntervalDomain) domain;
 
 	assert intervalDomain.checkInvariants() == null : intervalDomain.checkInvariants() ;
-			
+
 	if (intervalDomain.size == 0)
 	    return cloneLight();
 
@@ -1206,7 +1201,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 	FloatInterval currentDomain1 = intervals[i1];
 	FloatInterval currentDomain2 = intervalDomain.intervals[i2];
-	         
+
 	boolean minIncluded = false;
 
 	int max2 = intervalDomain.size;
@@ -1266,7 +1261,7 @@ public class FloatIntervalDomain extends FloatDomain {
 			    break;
 		    } else {
 
-			result.unionAdapt(new FloatInterval(next(oldMax), 
+			result.unionAdapt(new FloatInterval(next(oldMax),
 							    // currentDomain2.min - 1));
 							    previous(currentDomain2.min)));
 			minIncluded = true;
@@ -1343,7 +1338,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 	assert checkInvariants() == null : checkInvariants() ;
 	assert result.checkInvariants() == null : result.checkInvariants() ;
-			
+
 	return result;
 
     }
@@ -1355,7 +1350,7 @@ public class FloatIntervalDomain extends FloatDomain {
     public FloatIntervalDomain subtract(double min, double max) {
 
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
 	assert (min <= max);
 
 	if (size == 0)
@@ -1367,7 +1362,7 @@ public class FloatIntervalDomain extends FloatDomain {
 	FloatInterval currentInterval1 = intervals[i1];
 
 	FloatIntervalDomain result = new FloatIntervalDomain(intervals.length+1);
-		
+
 	while (true) {
 
 	    if (currentInterval1.max < min) {
@@ -1433,7 +1428,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 		    result.unionAdapt(currentInterval1.min, previous(min));
 		    result.unionAdapt(next(max), currentInterval1.max);
-					
+
 		    i1++;
 		    break;
 		}
@@ -1456,11 +1451,11 @@ public class FloatIntervalDomain extends FloatDomain {
     public FloatDomain union(FloatDomain domain) {
 
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
 	FloatIntervalDomain intervalDomain = (FloatIntervalDomain) domain;
 
 	assert intervalDomain.checkInvariants() == null : intervalDomain.checkInvariants() ;
-			
+
 	if (intervalDomain.size == 0) {
 
 	    FloatIntervalDomain result = cloneLight();
@@ -1576,7 +1571,7 @@ public class FloatIntervalDomain extends FloatDomain {
 		}
 		break;
 	    }
-				
+
 	    if (currentDomain1.max < currentDomain2.max) {
 		result.unionAdapt(new FloatInterval(min, currentDomain1.max));
 		i1++;
@@ -1604,7 +1599,7 @@ public class FloatIntervalDomain extends FloatDomain {
 		result.unionAdapt(intervalDomain.intervals[i2]);
 
 	assert result.checkInvariants() == null : result.checkInvariants() ;
-			
+
 	return result;
 
     }
@@ -1619,7 +1614,7 @@ public class FloatIntervalDomain extends FloatDomain {
 	    return new FloatIntervalDomain(min, max);
 
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
 	FloatIntervalDomain result = new FloatIntervalDomain(size + 1);
 
 	int i1 = 0;
@@ -1647,14 +1642,14 @@ public class FloatIntervalDomain extends FloatDomain {
 	    }
 
 	    // current interval is glued or intersects with (min..max).
-			
+
 	    double tempMin;
 
 	    if (currentInterval1.min < min)
 		tempMin = currentInterval1.min;
 	    else
 		tempMin = min;
-			
+
 	    if (currentInterval1.max > max) {
 		result.unionAdapt(new FloatInterval(tempMin, currentInterval1.max));
 		i1++;
@@ -1671,15 +1666,15 @@ public class FloatIntervalDomain extends FloatDomain {
 		    }
 		    currentInterval1 = intervals[i1];
 		}
-			
+
 		// if current interval is glued or intersects with (min..max)
 		if (next(max) >= currentInterval1.min) {
 		    result.unionAdapt(new FloatInterval(tempMin, currentInterval1.max));
 		    i1++;
 		}
-		else 
+		else
 		    result.unionAdapt(new FloatInterval(tempMin, max));
-				
+
 		break;
 	    }
 	}
@@ -1690,8 +1685,8 @@ public class FloatIntervalDomain extends FloatDomain {
 
 	assert checkInvariants() == null : checkInvariants() ;
 	assert result.checkInvariants() == null : result.checkInvariants() ;
-	return result;		
-	
+	return result;
+
     }
 
 
@@ -1706,7 +1701,7 @@ public class FloatIntervalDomain extends FloatDomain {
 	    return new FloatIntervalDomain(value, value);
 
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
 	FloatIntervalDomain result = new FloatIntervalDomain(size + 1);
 
 	int i1 = 0;
@@ -1746,7 +1741,7 @@ public class FloatIntervalDomain extends FloatDomain {
 		tempMax = intervals[i1+1].max;
 		i1++;
 	    }
-			
+
 	    result.unionAdapt(new FloatInterval(tempMin, tempMax));
 	    i1++;
 	}
@@ -1847,7 +1842,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 	return result.toString();
     }
-	
+
 
     /**
      * It updates the domain according to the minimum value and stamp value. It
@@ -1855,10 +1850,10 @@ public class FloatIntervalDomain extends FloatDomain {
      */
     @Override
     public void inMin(int storeLevel, Var var, double min) {
-	// System.out.println (var + " inMin " + min);
+	// logger.info (var + " inMin " + min);
 
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
 	if (min > intervals[size - 1].max)
 	    throw failException;
 
@@ -1886,7 +1881,7 @@ public class FloatIntervalDomain extends FloatDomain {
 	    size = i;
 
 	    assert checkInvariants() == null : checkInvariants() ;
-			
+
 	    if (singleton()) {
 		var.domainHasChanged(IntDomain.GROUND);
 		return;
@@ -1924,7 +1919,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 	    assert checkInvariants() == null : checkInvariants() ;
 	    assert result.checkInvariants() == null : result.checkInvariants() ;
-			
+
 	    if (result.singleton()) {
 		var.domainHasChanged(IntDomain.GROUND);
 		return;
@@ -1943,10 +1938,10 @@ public class FloatIntervalDomain extends FloatDomain {
 
     @Override
     public void inMax(int storeLevel, Var var, double max) {
-	// System.out.println (var + " inMax " + max);
+	// logger.info (var + " inMax " + max);
 
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
 	if (max < intervals[0].min)
 	    throw failException;
 
@@ -1970,7 +1965,7 @@ public class FloatIntervalDomain extends FloatDomain {
 	    size = pointer + 1;
 
 	    assert checkInvariants() == null : checkInvariants() ;
-			
+
 	    if (singleton()) {
 		var.domainHasChanged(IntDomain.GROUND);
 		return;
@@ -2007,7 +2002,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 	    assert result.checkInvariants() == null : result.checkInvariants() ;
 	    assert checkInvariants() == null : checkInvariants() ;
-			
+
 	    if (result.singleton()) {
 		var.domainHasChanged(IntDomain.GROUND);
 		return;
@@ -2027,10 +2022,10 @@ public class FloatIntervalDomain extends FloatDomain {
      */
     @Override
     public void in(int storeLevel, Var var, double min, double max) {
-	// System.out.println (var + " in " + min+".."+max);
+	// logger.info (var + " in " + min+".."+max);
 
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
 	assert (min <= max ) : "Min value greater than max value " + min + " > " + max;
 
 	if ( max < intervals[0].min)
@@ -2128,13 +2123,13 @@ public class FloatIntervalDomain extends FloatDomain {
     public void in(int storeLevel, Var var, FloatDomain domain) {
 
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
 	assert this.stamp <= storeLevel;
-		
+
 	FloatIntervalDomain input = (FloatIntervalDomain) domain;
 
 	assert input.checkInvariants() == null : input.checkInvariants() ;
-			
+
 	if (input.size == 0)
 	    throw failException;
 
@@ -2274,7 +2269,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 	assert checkInvariants() == null : checkInvariants() ;
 	assert result.checkInvariants() == null : result.checkInvariants() ;
-			
+
 	if (result.singleton())
 	    returnedEvent = IntDomain.GROUND;
 	else if (result.min() > min() || result.max() < max())
@@ -2309,7 +2304,7 @@ public class FloatIntervalDomain extends FloatDomain {
 	}
 
 	assert checkInvariants() == null : checkInvariants() ;
-			
+
 	var.domainHasChanged(returnedEvent);
 	return;
 
@@ -2327,7 +2322,7 @@ public class FloatIntervalDomain extends FloatDomain {
     }
 
     /**
-     * It specifies the position of the interval which contains specified value. 
+     * It specifies the position of the interval which contains specified value.
      * @param value value for which an interval containing it is searched.
      * @return the position of the interval containing the specified value.
      */
@@ -2361,7 +2356,7 @@ public class FloatIntervalDomain extends FloatDomain {
     public void inComplement(int storeLevel, Var var, double complement) {
 
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
 	int counter = intervalNo(complement);
 
 	if (counter == -1)
@@ -2376,7 +2371,7 @@ public class FloatIntervalDomain extends FloatDomain {
 		    intervals[counter] = new FloatInterval(next(complement), intervals[counter].max);
 
 		    assert checkInvariants() == null : checkInvariants() ;
-					
+
 		    if (singleton()) {
 			var.domainHasChanged(IntDomain.GROUND);
 			return;
@@ -2401,7 +2396,7 @@ public class FloatIntervalDomain extends FloatDomain {
 		    size--;
 
 		    assert checkInvariants() == null : checkInvariants() ;
-					
+
 		    if (singleton()) {
 			var.domainHasChanged(IntDomain.GROUND);
 			return;
@@ -2430,7 +2425,7 @@ public class FloatIntervalDomain extends FloatDomain {
 		intervals[counter] = new FloatInterval(intervals[counter].min, previous(complement));
 
 		assert checkInvariants() == null : checkInvariants() ;
-				
+
 		if (singleton()) {
 		    var.domainHasChanged(IntDomain.GROUND);
 		    return;
@@ -2467,10 +2462,10 @@ public class FloatIntervalDomain extends FloatDomain {
 	    size++;
 
 	    assert checkInvariants() == null : checkInvariants() ;
-			
+
 	    var.domainHasChanged(IntDomain.ANY);
 	    return;
-			
+
 	} else {
 
 	    if (singleton(complement))
@@ -2503,7 +2498,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 		    assert result.checkInvariants() == null : result.checkInvariants() ;
 		    assert checkInvariants() == null : checkInvariants() ;
-					
+
 		    if (result.singleton()) {
 			var.domainHasChanged(IntDomain.GROUND);
 			return;
@@ -2527,7 +2522,7 @@ public class FloatIntervalDomain extends FloatDomain {
 		    result.size = size - 1;
 
 		    assert result.checkInvariants() == null : result.checkInvariants() ;
-					
+
 		    if (result.singleton()) {
 			var.domainHasChanged(IntDomain.GROUND);
 			return;
@@ -2557,7 +2552,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 		assert checkInvariants() == null : checkInvariants() ;
 		assert result.checkInvariants() == null : result.checkInvariants() ;
-				
+
 		if (result.singleton()) {
 		    var.domainHasChanged(IntDomain.GROUND);
 		    return;
@@ -2612,7 +2607,7 @@ public class FloatIntervalDomain extends FloatDomain {
     public void inComplement(int storeLevel, Var var, double min, double max) {
 
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
 	if (intervals[0].min > max || intervals[size - 1].max < min)
 	    return;
 
@@ -2648,7 +2643,7 @@ public class FloatIntervalDomain extends FloatDomain {
 			size++;
 
 			assert checkInvariants() == null : checkInvariants() ;
-						
+
 			var.domainHasChanged(IntDomain.ANY);
 
 		    } else {
@@ -2670,7 +2665,7 @@ public class FloatIntervalDomain extends FloatDomain {
 			size++;
 
 			assert checkInvariants() == null : checkInvariants() ;
-						
+
 			var.domainHasChanged(IntDomain.ANY);
 		    }
 		} else {
@@ -2690,7 +2685,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 			for (int i = counter; i + noRemoved < size; i++)
 			    intervals[i] = intervals[i + noRemoved];
-					
+
 		    }
 
 		    size -= noRemoved;
@@ -2718,7 +2713,7 @@ public class FloatIntervalDomain extends FloatDomain {
 		    intervals[counter] = new FloatInterval(next(max), intervals[counter].max);
 
 		    assert checkInvariants() == null : checkInvariants() ;
-					
+
 		    if (singleton()) {
 			var.domainHasChanged(IntDomain.GROUND);
 			return;
@@ -2748,7 +2743,7 @@ public class FloatIntervalDomain extends FloatDomain {
 			intervals[counter] = new FloatInterval(next(max), intervals[counter].max);
 
 		    assert checkInvariants() == null : checkInvariants() ;
-					
+
 		    if (singleton()) {
 			var.domainHasChanged(IntDomain.GROUND);
 			return;
@@ -2800,7 +2795,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 		    assert result.checkInvariants() == null : result.checkInvariants() ;
 		    assert checkInvariants() == null : checkInvariants() ;
-					
+
 		    var.domainHasChanged(IntDomain.ANY);
 
 		} else {
@@ -2819,12 +2814,12 @@ public class FloatIntervalDomain extends FloatDomain {
 
 		    if (counter + noRemoved < size && intervals[counter+noRemoved].min <= max)
 			result.intervals[counter] = new FloatInterval(next(max), intervals[counter+noRemoved].max);
-					
+
 		    result.size -= noRemoved;
 
 		    assert checkInvariants() == null : checkInvariants() ;
 		    assert result.checkInvariants() == null : result.checkInvariants() ;
-					
+
 		    if (var.singleton())
 			var.domainHasChanged(IntDomain.GROUND);
 		    else
@@ -2832,7 +2827,7 @@ public class FloatIntervalDomain extends FloatDomain {
 			    var.domainHasChanged(IntDomain.BOUND);
 			else
 			    var.domainHasChanged(IntDomain.ANY);
-					
+
 		    return;
 		}
 
@@ -2848,7 +2843,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 		    assert checkInvariants() == null : checkInvariants() ;
 		    assert result.checkInvariants() == null : result.checkInvariants() ;
-					
+
 		    if (result.singleton()) {
 			var.domainHasChanged(IntDomain.GROUND);
 			return;
@@ -2873,14 +2868,14 @@ public class FloatIntervalDomain extends FloatDomain {
 			result.intervals[i] = intervals[i + noRemoved];
 
 		    result.size -= noRemoved;
-					
+
 		    //		if (counter < size && intervals[counter].min <= max)
 		    //			result.intervals[counter] = new Interval(max + 1,
 		    //					intervals[counter].max);
 
 		    if (counter + noRemoved < size && intervals[counter+noRemoved].min <= max)
 			result.intervals[counter] = new FloatInterval(next(max), intervals[counter+noRemoved].max);
-					
+
 		    assert checkInvariants() == null : checkInvariants() ;
 		    assert result.checkInvariants() == null : result.checkInvariants() ;
 
@@ -2923,7 +2918,7 @@ public class FloatIntervalDomain extends FloatDomain {
 	int inputSize = input.size;
 
 	FloatInterval[] inputIntervals = input.intervals;
-			
+
 	// Chance for no event
 	// traverse within while loop until certain that change will occur
 
@@ -3057,7 +3052,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 	assert checkInvariants() == null : checkInvariants() ;
 	assert result.checkInvariants() == null : result.checkInvariants() ;
-			
+
 	int returnedEvent = IntDomain.ANY;
 
 	if (result.singleton()) {
@@ -3396,7 +3391,7 @@ public class FloatIntervalDomain extends FloatDomain {
 	assert (stamp == storeLevel);
 
 	assert (searchConstraints.get(position) == C) : "Position of the removed constraint not specified properly";
-		
+
 	if (position < searchConstraintsToEvaluate) {
 
 	    searchConstraints.set(position, searchConstraints
@@ -3590,41 +3585,41 @@ public class FloatIntervalDomain extends FloatDomain {
 	    else
 		break;
 	}
-	
+
 	return (domain.modelConstraintsToEvaluate[0]
 		+ domain.modelConstraintsToEvaluate[1] + domain.modelConstraintsToEvaluate[2]);
     }
 
 
     /**
-     * It is a function to check if the object is in consistent state. 
+     * It is a function to check if the object is in consistent state.
      * @return String describing the violated invariant, null if no invariant is violated.
      */
     public String checkInvariants() {
-		
+
 	if (size == 0)
 	    return null;
 
 	for (int i = 0; i < size; i++)
 	    if (this.intervals[i] == null)
 		return "size of the domain is not set up properly";
-		
+
 	if (this.intervals[0].min > this.intervals[size-1].max)
 	    return "Min value is larger than max value " + this;
-		
+
 	for (int i = 0; i < size; i++)
 	    if (this.intervals[i].min > this.intervals[i].max )
-		return "One of the intervals not properly build. Min value is larger than max value " 
+		return "One of the intervals not properly build. Min value is larger than max value "
 		    + this;
-		
+
 	for (int i = 0; i < size - 1; i++)
 	    if (next(this.intervals[i].max) == this.intervals[i+1].min )
-		return "Two consequtive intervals should be merged. Improper representation" + 
+		return "Two consequtive intervals should be merged. Improper representation" +
 		    this;
-		
+
 	//Fine, all invariants hold.
 	return null;
-		
+
     }
 
     @Override
@@ -3639,7 +3634,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 	if (counter == -1)
 	    return;
-		
+
 	if (intervals[counter].min == value) {
 
 	    if (intervals[counter].max != value) {
@@ -3649,7 +3644,7 @@ public class FloatIntervalDomain extends FloatDomain {
 		assert checkInvariants() == null : checkInvariants() ;
 
 		return;
-				
+
 	    } else {
 		// if domain like this 1..3, 5, 7..10, and 5 being removed.
 
@@ -3674,7 +3669,7 @@ public class FloatIntervalDomain extends FloatDomain {
 	    intervals[counter] = new FloatInterval(intervals[counter].min, previous(value));
 
 	    assert checkInvariants() == null : checkInvariants() ;
-			
+
 	    return;
 	}
 
@@ -3698,10 +3693,10 @@ public class FloatIntervalDomain extends FloatDomain {
 	size++;
 
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
 	return;
-		
-	
+
+
     }
 
     @Override
@@ -3710,7 +3705,7 @@ public class FloatIntervalDomain extends FloatDomain {
 	int current = 0;
 	while (current < size && intervals[current].max < minValue)
 	    current++;
-		
+
 	if (current == size)
 	    return;
 
@@ -3718,7 +3713,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 	    if (maxValue < intervals[current].min)
 		return;
-			
+
 	    // removing will not create more intervals.
 	    if (intervals[current].max > maxValue) {
 
@@ -3727,7 +3722,7 @@ public class FloatIntervalDomain extends FloatDomain {
 		assert checkInvariants() == null : checkInvariants() ;
 
 		return;
-				
+
 	    } else {
 		// at least one complete interval is being removed.
 
@@ -3742,49 +3737,49 @@ public class FloatIntervalDomain extends FloatDomain {
 
 		if (maxValue >= intervals[maxCurrent].min)
 		    intervals[maxCurrent] = new FloatInterval(next(maxValue), intervals[maxCurrent].max);
-				
+
 		int i = current;
 		for (; maxCurrent < size; i++, maxCurrent++) {
 		    intervals[i] = intervals[maxCurrent];
 		}
-				
-		size = i;				
+
+		size = i;
 
 		return;
 	    }
 	} else {
 
 	    // minValue > intervals[current].min
-			
+
 	    if (maxValue < intervals[current].max) {
 		// one additional interval is being created.
-			
+
 		if (intervals.length == size + 1) {
 		    // not enough space to insert new interval.
 		    FloatInterval[] newIntervals = new FloatInterval[intervals.length*2];
 		    System.arraycopy(intervals, 0, newIntervals, 0, size);
 		    intervals = newIntervals;
 		}
-				
+
 		for (int i = size; i > current; i--)
 		    intervals[i] = intervals[i-1];
-				
+
 		intervals[current] = new FloatInterval(intervals[current].min, previous(minValue));
 		intervals[current+1] = new FloatInterval(next(maxValue), intervals[current+1].max);
-				
+
 		size++;
 
 		return;
-				
+
 	    }
 	    else {
 		// minValue > intervals[current].min
 		// maxValue >= intervals[current].max
-				
+
 		// at least one complete interval is being removed.
 		intervals[current] = new FloatInterval(intervals[current].min, previous(minValue));
 		current++;
-				
+
 		int maxCurrent = current;
 		while (maxCurrent < size && intervals[maxCurrent].max <= maxValue)
 		    maxCurrent++;
@@ -3793,28 +3788,28 @@ public class FloatIntervalDomain extends FloatDomain {
 		    size = current;
 		    return;
 		}
-				
+
 		if (intervals[maxCurrent].min <= maxValue)
 		    intervals[maxCurrent] = new FloatInterval(next(maxValue), intervals[maxCurrent].max);
-				
-				
+
+
 		int i = current;
 		for (; maxCurrent < size; i++, maxCurrent++) {
 		    intervals[i] = intervals[maxCurrent];
 		    intervals[maxCurrent] = null;
 		}
-				
+
 		size = i;
-				
+
 		return;
-				
+
 	    }
-			
-	}		
-	
+
+	}
+
     }
 
-	
+
     @Override
     public int intersectAdapt(FloatDomain domain) {
 
@@ -3829,7 +3824,7 @@ public class FloatIntervalDomain extends FloatDomain {
 	FloatIntervalDomain input = (FloatIntervalDomain) domain;
 
 	assert input.checkInvariants() == null : input.checkInvariants() ;
-						
+
 	if (input.size == 0) {
 	    size = 0;
 	    return IntDomain.GROUND;
@@ -3972,7 +3967,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 	assert checkInvariants() == null : checkInvariants() ;
 	assert result.checkInvariants() == null : result.checkInvariants() ;
-			
+
 	if (result.singleton())
 	    returnedEvent = IntDomain.GROUND;
 	else if (result.min() > min() || result.max() < max())
@@ -3993,16 +3988,16 @@ public class FloatIntervalDomain extends FloatDomain {
 
 
 	assert checkInvariants() == null : checkInvariants() ;
-			
+
 	return returnedEvent;
     }
 
     @Override
     public int unionAdapt(FloatDomain union) {
 
-	// FIXME, implement this in more specialized manner. 
+	// FIXME, implement this in more specialized manner.
 	FloatDomain result = union(union);
-		
+
 	if (((FloatIntervalDomain)result).getSizeFloat() == getSizeFloat())
 	    return IntDomain.NONE;
 	else {
@@ -4016,19 +4011,19 @@ public class FloatIntervalDomain extends FloatDomain {
     public int intersectAdapt(int min, int max) {
 
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
 	assert (min <= max) : "Min value greater than max value " + min + " > " + max;
 
 	if (max < intervals[0].min) {
 	    size = 0;
 	    return IntDomain.GROUND;
 	}
-		
+
 	double currentMax = intervals[size - 1].max;
 	if (min > currentMax)  {
 	    size = 0;
 	    return IntDomain.GROUND;
-	}		
+	}
 
 	if (min <= intervals[0].min && max >= currentMax)
 	    return IntDomain.NONE;
@@ -4043,7 +4038,7 @@ public class FloatIntervalDomain extends FloatDomain {
 	if (intervals[pointer].min > max) {
 	    size = 0;
 	    return IntDomain.GROUND;
-	}		
+	}
 
 	if (intervals[pointer].min >= min)
 	    if (intervals[pointer].max <= max)
@@ -4071,7 +4066,7 @@ public class FloatIntervalDomain extends FloatDomain {
 	if (result.size <= intervals.length)
 	    System.arraycopy(result.intervals, 0, intervals, 0,
 			     result.size);
-	else {	
+	else {
 	    intervals = new FloatInterval[result.size];
 	    System.arraycopy(result.intervals, 0, intervals, 0,
 			     result.size);
@@ -4081,7 +4076,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 	assert checkInvariants() == null : checkInvariants() ;
 	assert result.checkInvariants() == null : result.checkInvariants() ;
-		
+
 	if (result.singleton()) {
 	    return IntDomain.GROUND;
 	} else {
@@ -4092,17 +4087,17 @@ public class FloatIntervalDomain extends FloatDomain {
 
     @Override
     public int sizeOfIntersection(FloatDomain domain) {
-		
+
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
 	if (domain.isEmpty())
 	    return 0;
-		
+
 
 	FloatIntervalDomain input = (FloatIntervalDomain) domain;
 
 	assert input.checkInvariants() == null : input.checkInvariants() ;
-			
+
 	int temp = 0;
 	//			FloatIntervalDomain temp;
 
@@ -4190,9 +4185,9 @@ public class FloatIntervalDomain extends FloatDomain {
 
     @Override
     public boolean contains(double min, double max) {
-		
+
 	assert checkInvariants() == null : checkInvariants() ;
-		
+
 	for (int m = 0; m < size; m++) {
 	    FloatInterval i = intervals[m];
 	    if (i.max >= max)

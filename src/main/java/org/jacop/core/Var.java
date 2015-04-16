@@ -1,9 +1,9 @@
 /**
- *  Variable.java 
+ *  Variable.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,17 +32,19 @@
 package org.jacop.core;
 
 import org.jacop.constraints.Constraint;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Defines a variable and related operations on it.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  */
 
-public abstract class Var implements Backtrackable {
+public abstract class Var implements Backtrackable {  Logger logger = LoggerFactory.getLogger(Var.class);
 
-	
+
 	public boolean trace = SwitchesPruningLogging.traceVar;
 
 	/**
@@ -56,17 +58,17 @@ public abstract class Var implements Backtrackable {
 	public String id;
 
 	/**
-	 * It specifies the index at which it is stored in Store. 
+	 * It specifies the index at which it is stored in Store.
 	 */
-	
+
 	public int index = -1;
 
 	/**
 	 * It specifies the current weight of the variable.
 	 */
-	
+
 	public int weight = 1;
-	
+
 	/**
 	 * Each variable is created in a store. This attribute represents the store
 	 * in which this variable was created.
@@ -106,26 +108,26 @@ public abstract class Var implements Backtrackable {
 	 */
 
 	public abstract void putModelConstraint(Constraint c, int pruningEvent);
-	
+
 	/**
 	 * It registers constraint with current variable, so always when this variable
 	 * is changed the constraint is reevaluated.
-	 * @param c the constraint which is added as a search constraint. 
+	 * @param c the constraint which is added as a search constraint.
 	 */
 
 	public abstract void putSearchConstraint(Constraint c);
-		
+
 	/**
 	 * It detaches constraint from the current variable, so change in variable
-	 * will not cause constraint reevaluation. It is only removed from the 
-	 * current level onwards. Removing current level at later stage will 
-	 * automatically re-attached the constraint to the variable. 
-	 * 
+	 * will not cause constraint reevaluation. It is only removed from the
+	 * current level onwards. Removing current level at later stage will
+	 * automatically re-attached the constraint to the variable.
+	 *
 	 * @param c the constraint being detached from the variable.
 	 */
 
 	public abstract void removeConstraint(Constraint c);
-	
+
 	/**
 	 * It checks if the domain contains only one value.
 	 * @return true if the variable domain is a singleton, false otherwise.
@@ -163,10 +165,10 @@ public abstract class Var implements Backtrackable {
 	 */
 
 	public abstract int level();
-	
+
 	/**
 	 * It returns the string representation of the variable using the full representation
-	 * of the domain. 
+	 * of the domain.
 	 * @return string representation.
 	 */
 	public abstract String toStringFull();
@@ -195,7 +197,7 @@ public abstract class Var implements Backtrackable {
 
 	/**
 	 * This function returns the index of variable in store array.
-	 * @return the index of the variable. 
+	 * @return the index of the variable.
 	 */
 	public int index() {
 		return index;

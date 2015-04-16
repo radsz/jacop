@@ -1,9 +1,9 @@
 /**
- *  LDS.java 
+ *  LDS.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -33,17 +33,19 @@ package org.jacop.search;
 
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Defines functionality of limited discrepancy search. Plugin in this object to
  * search to change your depth first search into limited discrepancy search.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  * @param <T> type of variable being used in the search.
  */
 
-public class LDS<T extends Var> implements ExitChildListener<T> {
+public class LDS<T extends Var> implements ExitChildListener<T> { private static Logger logger = LoggerFactory.getLogger(LDS.class);
 
 	boolean timeOut = false;
 
@@ -129,8 +131,8 @@ public class LDS<T extends Var> implements ExitChildListener<T> {
 	 * choice point. The parameter status specifies the return code from the
 	 * child. The return parameter of this function specifies if the search
 	 * should continue undisturbed or exit the current search node with false.
-	 * If the continuing to the right child will exceed the number of allowed 
-	 * discrepancies then this function will return false so the right child 
+	 * If the continuing to the right child will exceed the number of allowed
+	 * discrepancies then this function will return false so the right child
 	 * will not be explored.
 	 */
 

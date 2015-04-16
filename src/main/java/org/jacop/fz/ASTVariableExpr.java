@@ -2,8 +2,11 @@
 /* JavaCCOptions:MULTI=true,NODE_USES_PARSER=true,VISITOR=false,TRACK_TOKENS=false,NODE_PREFIX=AST,NODE_EXTENDS=,NODE_FACTORY=,SUPPORT_CLASS_VISIBILITY_PUBLIC=true */
 package org.jacop.fz;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public
-class ASTVariableExpr extends SimpleNode {
+class ASTVariableExpr extends SimpleNode { private static Logger logger = LoggerFactory.getLogger(ASTVariableExpr.class);
   public ASTVariableExpr(int id) {
     super(id);
   }

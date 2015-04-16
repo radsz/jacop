@@ -2,8 +2,11 @@
 /* JavaCCOptions:MULTI=true,NODE_USES_PARSER=true,VISITOR=false,TRACK_TOKENS=false,NODE_PREFIX=AST,NODE_EXTENDS=,NODE_FACTORY=,SUPPORT_CLASS_VISIBILITY_PUBLIC=true */
 package org.jacop.fz;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public
-class ASTIntFlatExpr extends SimpleNode {
+class ASTIntFlatExpr extends SimpleNode { private static Logger logger = LoggerFactory.getLogger(ASTIntFlatExpr.class);
   public ASTIntFlatExpr(int id) {
     super(id);
   }
@@ -19,7 +22,7 @@ class ASTIntFlatExpr extends SimpleNode {
 //   	if (i <= JaCoP.core.Constants.MaxInt && i >= JaCoP.core.Constants.MinInt)
 	    value = i;
 //   	else {
-//   	    System.err.println("Error: Too large or too small integer " + i + 
+//   	    System.err.println("Error: Too large or too small integer " + i +
 //   			       "; execution aborted");
 //  	    System.exit(0);
 //   	}

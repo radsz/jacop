@@ -1,9 +1,9 @@
 /**
- *  Diff.java 
+ *  Diff.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,12 +32,7 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.TreeSet;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
@@ -45,24 +40,26 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.IntervalEnumeration;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Diff constraint assures that any two rectangles from a vector of rectangles
  * does not overlap in at least one direction. It is a simple implementation which
  * does not use sophisticated techniques for efficient backtracking.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 3.1
  */
 
-public class Diff extends Constraint {
+public class Diff extends Constraint { private static Logger logger = LoggerFactory.getLogger(Diff.class);
 
 	static int IdNumber = 1;
 
 	static final boolean trace = false, traceNarr = false;
 
 	Store currentStore = null;
-	
+
 
 	int minPosition = 0;
 	int stamp = 0;
@@ -74,7 +71,7 @@ public class Diff extends Constraint {
 	HashSet<IntVar> variableQueue = new HashSet<IntVar>();
 
 	/**
-	 * It specifies the list of rectangles which are of interest for this diff constraint. 
+	 * It specifies the list of rectangles which are of interest for this diff constraint.
 	 */
 	public Rectangle rectangles[];
 
@@ -84,13 +81,13 @@ public class Diff extends Constraint {
 	public boolean doProfile = true;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"rectangles", "doProfile"};
 
 	/**
-	 * It specifies a diff constraint. 
+	 * It specifies a diff constraint.
 	 * @param rectangles list of rectangles which can not overlap in at least one dimension.
 	 * @param doProfile should the constraint compute and use the profile functionality.
 	 */
@@ -103,17 +100,17 @@ public class Diff extends Constraint {
 
 		this.rectangles = new Rectangle[rectangles.length];
 		this.doProfile = doProfile;
-		
+
 		for (int i = 0; i < rectangles.length; i++) {
 			assert (rectangles[i] != null) : i + "-th rectangle in the list is null";
 			assert (rectangles[i].dim != 2) : "The rectangle has to have exactly two dimensions";
 			this.rectangles[i] = new Rectangle( rectangles[i] );
 		}
-		
+
 	}
 
 	/**
-	 * It specifies a diff constraint. 
+	 * It specifies a diff constraint.
 	 * @param rectangles list of rectangles which can not overlap in at least one dimension.
 	 */
 	public Diff(IntVar[][] rectangles) {
@@ -122,7 +119,7 @@ public class Diff extends Constraint {
 
 		queueIndex = 2;
 		IntVar[] R;
-		
+
 		numberId = IdNumber++;
 		int size = rectangles[0].length;
 		this.rectangles = new Rectangle[rectangles.length];
@@ -146,7 +143,7 @@ public class Diff extends Constraint {
 		}
 	}
 
-	
+
 	/**
 	 * It constructs a diff constraint.
 	 * @param o1 list of variables denoting origin of the rectangle in the first dimension.
@@ -155,9 +152,9 @@ public class Diff extends Constraint {
 	 * @param l2 list of variables denoting length of the rectangle in the second dimension.
 	 * @param profile it specifies if the profile should be computed and used.
 	 */
-	public Diff(IntVar[] o1, 
+	public Diff(IntVar[] o1,
 				IntVar[] o2,
-				IntVar[] l1, 
+				IntVar[] l1,
 				IntVar[] l2,
 				boolean profile) {
 		this(o1, o2, l1, l2);
@@ -172,9 +169,9 @@ public class Diff extends Constraint {
 	 * @param length2 list of variables denoting length of the rectangle in the second dimension.
 	 */
 
-	public Diff(IntVar[] origin1, 
+	public Diff(IntVar[] origin1,
 				IntVar[] origin2,
-				IntVar[] length1, 
+				IntVar[] length1,
 				IntVar[] length2) {
 
 		assert (origin1 != null) : "o1 list is null";
@@ -183,37 +180,37 @@ public class Diff extends Constraint {
 		assert (length2 != null) : "l2 list is null";
 
 		this.queueIndex = 2;
-		
+
 		this.numberId = IdNumber++;
 
 		int size = origin1.length;
 		if (size == origin1.length && size == origin2.length && size == length1.length
 				&& size == length2.length) {
-			
+
 			this.rectangles = new Rectangle[size];
-			
+
 			for (int i = 0; i < size; i++) {
 				IntVar[] R = { origin1[i], origin2[i], length1[i], length2[i] };
 				Rectangle rect = new Rectangle(R);
 				this.rectangles[i] = rect;
 				this.numberArgs = (short) (numberArgs + 4);
 			}
-			
+
 		} else {
 			String s = "\nNot equal sizes of Variable vectors in Diff";
 			throw new IllegalArgumentException(s);
 		}
 	}
-	
+
 	/**
-	 * It specifies a diffn constraint. 
+	 * It specifies a diffn constraint.
 	 * @param rectangles list of rectangles which can not overlap in at least one dimension.
 	 */
 	public Diff(ArrayList<? extends ArrayList<? extends IntVar>> rectangles) {
 
 		queueIndex = 2;
 		numberId = IdNumber++;
-		
+
 		int size = (rectangles.get(0)).size();
 		this.rectangles = new Rectangle[rectangles.size()];
 
@@ -237,19 +234,19 @@ public class Diff extends Constraint {
 	}
 
 	/**
-	 * It specifies a diff constraint. 
+	 * It specifies a diff constraint.
 	 * @param profile specifies is the profiles are used.
 	 * @param rectangles list of rectangles which can not overlap in at least one dimension.
 	 */
 	public Diff(ArrayList<? extends ArrayList<? extends IntVar>> rectangles,
 				boolean profile) {
-		
+
 		this(rectangles);
 		doProfile = profile;
-	
+
 	}
 
-	
+
 	/**
 	 * It constructs a diff constraint.
 	 * @param o1 list of variables denoting origin of the rectangle in the first dimension.
@@ -262,11 +259,11 @@ public class Diff extends Constraint {
 				ArrayList<? extends IntVar> l1,
 				ArrayList<? extends IntVar> l2) {
 
-		this(o1.toArray(new IntVar[o1.size()]), 
-			 o2.toArray(new IntVar[o2.size()]), 
-			 l1.toArray(new IntVar[l1.size()]), 
+		this(o1.toArray(new IntVar[o1.size()]),
+			 o2.toArray(new IntVar[o2.size()]),
+			 l1.toArray(new IntVar[l1.size()]),
 			 l2.toArray(new IntVar[l2.size()]));
-		
+
 	}
 
 	/**
@@ -278,7 +275,7 @@ public class Diff extends Constraint {
 	 * @param profile it specifies if the profile should be computed and used.
 	 */
 	public Diff(ArrayList<? extends IntVar> o1,
-				ArrayList<? extends IntVar> o2, 
+				ArrayList<? extends IntVar> o2,
 				ArrayList<? extends IntVar> l1,
 				ArrayList<? extends IntVar> l2,
 				boolean profile) {
@@ -287,7 +284,7 @@ public class Diff extends Constraint {
 	}
 
 	/**
-	 * It specifies a diff constraint. 
+	 * It specifies a diff constraint.
 	 * @param profile specifies is the profiles are used.
 	 * @param rectangles list of rectangles which can not overlap in at least one dimension.
 	 */
@@ -323,14 +320,14 @@ public class Diff extends Constraint {
 		do {
 
 			store.propagationHasOccurred = false;
-			
+
 			HashSet<IntVar> fdvs = variableQueue;
 			variableQueue = new HashSet<IntVar>();
-			// System.out.println(fdvs);
+			// logger.info(fdvs);
 			narrowRectangles(fdvs);
-			
+
 		} while (store.propagationHasOccurred);
-		
+
 	}
 
 	boolean containsChangedVariable(Rectangle r, HashSet<IntVar> fdvQueue) {
@@ -344,7 +341,7 @@ public class Diff extends Constraint {
 		}
 		return contains;
 	}
-	
+
 	boolean findRectangles(Rectangle r, ArrayList<IntRectangle> UsedRect,
 			ArrayList<Rectangle> ProfileCandidates, HashSet<IntVar> fdvQueue) {
 
@@ -486,7 +483,7 @@ public class Diff extends Constraint {
 					// end for
 					commonArea += partialCommonArea;
 				}
-				if (commonArea + r.minArea() > (r_max[0]-r_min[0])*(r_max[1]-r_min[1])) 
+				if (commonArea + r.minArea() > (r_max[0]-r_min[0])*(r_max[1]-r_min[1]))
 					throw Store.failException;
 
 			}
@@ -512,7 +509,7 @@ public class Diff extends Constraint {
 				availArea *= (stopMax[i] - startMin[i]);
 				if (minLength[i] != 0)
 				    rectNumber *= ((stopMax[i] - startMin[i]) / minLength[i]);
-				else 
+				else
 				    checkRectNumber = false;
 			}
 
@@ -527,8 +524,8 @@ public class Diff extends Constraint {
 		}
 
 		return contains;
-	}	
-		
+	}
+
 	@Override
 	public int getConsistencyPruningEvent(Var var) {
 
@@ -586,7 +583,7 @@ public class Diff extends Constraint {
 			ArrayList<IntRectangle> ConsideredRect) {
 
 		if (notFit(i, r, ConsideredRect, start)) {
-			// System.out.println("New start = " + start + ".." + (int)(start +
+			// logger.info("New start = " + start + ".." + (int)(start +
 			// minPosition));
 			return new Pair(start, start + minPosition);
 		} else
@@ -643,12 +640,12 @@ public class Diff extends Constraint {
 				// System.out.print(rect+" ");
 				starts.add(rect);
 			}
-			// System.out.println();
+			// logger.info();
 
 			ArrayList<IntRectangle> ConsideredRect = new ArrayList<IntRectangle>();
 			for (IntRectangle ir : starts) {
 				s = ir.origin[i];
-				// System.out.println("*** start = " + s);
+				// logger.info("*** start = " + s);
 
 				ConsideredRect.clear();
 
@@ -668,7 +665,7 @@ public class Diff extends Constraint {
 
 					IntDomain rIdom = r.origin[i].dom();
 					if (s >= rIdom.min() && s <= rIdom.max()) {
-						// System.out.println("Checking rectangles in dimension
+						// logger.info("Checking rectangles in dimension
 						// "+i+
 						// " starting at time interval "+ s + ".."
 						// +(int)(s+r.length(i).min()-1)+
@@ -682,18 +679,18 @@ public class Diff extends Constraint {
 									exclude.Min - r.length[i].min());
 							Update.unionAdapt(exclude.Max, IntDomain.MaxInt);
 
-							if (traceNarr) 
-								System.out.print("7. Obligatory rectangles Narrow "
+							if (traceNarr)
+								logger.info("7. Obligatory rectangles Narrow "
 												+ r.origin[i] + " in " + Update);
 
 							r.origin[i].domain.in(currentStore.level, r.origin[i], Update);
 
 							if (traceNarr)
-								System.out.println(" -->" + r.origin[i]);
+								logger.info(" -->" + r.origin[i]);
 
 							computeNewMaxDuration(r.origin[i], r.length[i].min(), exclude.Min, exclude.Max);
 
-							//System.out.println ("7. length = "+   durMax);
+							//logger.info ("7. length = "+   durMax);
 						}
 					}
 				}
@@ -702,14 +699,14 @@ public class Diff extends Constraint {
 			// Update rectangles length in direction i
 			// sort rectangles on increasing origin i
 			if (trace)
-			    System.out.println ("10. length = " + durMax);
+			    logger.info ("10. length = " + durMax);
 
 			int lengthLimit = 0;
 			for (int l : durMax)
 			    if (lengthLimit < l) lengthLimit = l;
 
 			if (traceNarr)
-			    System.out.println("10. Duration " + r.length[i] + " <-- 0.." + lengthLimit);
+			    logger.info("10. Duration " + r.length[i] + " <-- 0.." + lengthLimit);
 
 			r.length[i].domain.in(currentStore.level, r.length[i], 0, lengthLimit);
 
@@ -719,10 +716,10 @@ public class Diff extends Constraint {
 
     void computeNewMaxDuration(IntVar start, int durMin, int excludeMin, int excludeMax) {
 
-	// System.out.println ("+++ "+start + " exclude ["+ excludeMin + "," +excludeMax+ "]");
+	// logger.info ("+++ "+start + " exclude ["+ excludeMin + "," +excludeMax+ "]");
 
 	int dMax = IntDomain.MaxInt;
-	
+
 	for (IntervalEnumeration ie = start.dom().intervalEnumeration(); ie.hasMoreElements();) {
 	    Interval i = ie.nextElement();
 
@@ -739,7 +736,7 @@ public class Diff extends Constraint {
 	}
 
 	if (trace)
-	    System.out.println ("+++ "+durMax);
+	    logger.info ("+++ "+durMax);
 
     }
 
@@ -748,8 +745,8 @@ public class Diff extends Constraint {
 			ArrayList<Rectangle> ProfileCandidates) {
 
 		if (trace) {
-			System.out.println("Narrowing " + r);
-			System.out.println(UsedRect);
+			logger.info("Narrowing " + r);
+			logger.info(UsedRect.toString());
 		}
 
 		for (int i = 0; i < r.dim; i++) {
@@ -785,7 +782,7 @@ public class Diff extends Constraint {
 					!(settled && maxLevel < currentStore.level)) {
 				// and are not fixed already
 
-				// System.out.println(r+", "+ containsChangedVariable(r,
+				// logger.info(r+", "+ containsChangedVariable(r,
 				// fdvQueue));
 				needToNarrow = needToNarrow
 						|| containsChangedVariable(r, fdvQueue);
@@ -811,7 +808,7 @@ public class Diff extends Constraint {
 		boolean excludedState = true;
 		while (excludedState && j < r.dim) {
 			if (i != j) {
-				// System.out.println(r.toStringFull()+"\n"+ConsideredRect );
+				// logger.info(r.toStringFull()+"\n"+ConsideredRect );
 				IntDomain rOriginJdom = r.origin[j].dom();
 				IntDomain rLengthJdom = r.length[j].dom();
 				int minJ = rOriginJdom.min();
@@ -819,12 +816,12 @@ public class Diff extends Constraint {
 				int durJ = rLengthJdom.min();
 
 				int currentJposition = minJ;
-				// System.out.println("max position for r=" + maxJ+
+				// logger.info("max position for r=" + maxJ+
 				// ", min duration of r=" + durJ+", start position=" +
 				// currentJposition);
 				barrier.clear();
 				for (IntRectangle hinder : ConsideredRect) {
-					// System.out.println("["+ hinder.origin[j] + ".."
+					// logger.info("["+ hinder.origin[j] + ".."
 					// + (int)(hinder.origin[j]
 					// + hinder.length[j]) +"), "
 					// + (int)(hinder.origin[i] + hinder.length[i] -
@@ -837,7 +834,7 @@ public class Diff extends Constraint {
 					if (minimalAfter > hinderValue)
 						minimalAfter = hinderValue;
 				}
-				// System.out.println("Barrier : " + barrier);
+				// logger.info("Barrier : " + barrier);
 
 				int k = 0, barrierSize = barrier.size();
 				while (k < barrierSize && excludedState) {
@@ -848,9 +845,9 @@ public class Diff extends Constraint {
 						excludedState = false;
 					currentJposition = hinderStop;
 					k++;
-					// System.out.println("Hinder = " + hinderStart + ".." +
+					// logger.info("Hinder = " + hinderStart + ".." +
 					// hinderStop);
-					// System.out.println("*** Excluded = " + excludedState);
+					// logger.info("*** Excluded = " + excludedState);
 				}
 				if (excludedState && maxJ - currentJposition >= durJ)
 					excludedState = false;
@@ -873,11 +870,11 @@ public class Diff extends Constraint {
 					}
 					// for (ProfileItem p : barrier) System.out.print(p + " ");
 					for (Interval v : toAdd) {
-						// System.out.println("\n*** adding " + v);
+						// logger.info("\n*** adding " + v);
 						barrier.addToProfile(v.min, v.max, minimalAfter);
 					}
 					// for (ProfileItem p : barrier) System.out.print(p + " ");
-					// System.out.println("minimalAfter = " + minimalAfter);
+					// logger.info("minimalAfter = " + minimalAfter);
 
 					int minSizeAfterBarier = IntDomain.MaxInt;
 					for (int m = 0; m < barrier.size(); m++) {
@@ -896,14 +893,14 @@ public class Diff extends Constraint {
 
 					// System.out.print("==> [");
 					// for (ProfileItem p : barrier) System.out.print(p + " ");
-					// System.out.println("], minSizeAfterBarrier = " +
+					// logger.info("], minSizeAfterBarrier = " +
 					// minSizeAfterBarier);
 				}
 			}
 			j++;
 		}
 
-		// System.out.println("2. " + excludedState + ", minPosition = " +
+		// logger.info("2. " + excludedState + ", minPosition = " +
 		// minPosition);
 		return excludedState;
 	}
@@ -916,7 +913,7 @@ public class Diff extends Constraint {
 		int iMax = i_max + dur;
 		for (ProfileItem p : Profile) {
 			if (trace)
-				System.out.println("Comparing " + "[" + iMin + ", " + i_max
+				logger.info("Comparing " + "[" + iMin + ", " + i_max
 						+ "]" + " with profile item " + p);
 
 			if (intervalOverlap(iMin, iMax, p.min, p.max)) {
@@ -932,22 +929,22 @@ public class Diff extends Constraint {
 						Update.unionAdapt(p.max, IntDomain.MaxInt);
 
 						if (traceNarr)
-							System.out.print("6. Profile Narrowed " + Start
+							logger.info("6. Profile Narrowed " + Start
 									+ " \\ " + Update);
 
 						Start.domain.in(store.level, Start, Update);
 
 						if (traceNarr)
-							System.out.println(" => " + Start);
+							logger.info(" => " + Start);
 
 						computeNewMaxDuration(Start, dur, p.min, p.max);
 
 						int lengthLimit = 0;
 						for (int l : durMax)
 						    if (lengthLimit < l) lengthLimit = l;
-						
+
 						if (traceNarr)
-						    System.out.println("6b. Length " + Duration + " <-- 0.." + lengthLimit);
+						    logger.info("6b. Length " + Duration + " <-- 0.." + lengthLimit);
 
 						Duration.domain.in(currentStore.level, Duration, 0, lengthLimit);
 
@@ -962,13 +959,13 @@ public class Diff extends Constraint {
 							IntervalDomain Update = new IntervalDomain(0, updateMax);
 
 							if (traceNarr)
-								System.out.println("8. Profile Narrowed "
+								logger.info("8. Profile Narrowed "
 										+ Resources + " in " + Update);
 
 							Resources.domain.in(store.level, Resources, Update);
 
 							if (traceNarr)
-								System.out.println(" => " + Resources);
+								logger.info(" => " + Resources);
 
 						}
 					}
@@ -986,7 +983,7 @@ public class Diff extends Constraint {
 		int limit = rOriginJdom.max() + resUse.max() - rOriginJdom.min();
 
 		if (trace)
-			System.out.println("Start time = " + s + ", resource use = "
+			logger.info("Start time = " + s + ", resource use = "
 					+ resUse);
 
 		IntDomain sDom = s.dom();
@@ -1013,8 +1010,8 @@ public class Diff extends Constraint {
 
 				if (Profile.size() != 0) {
 					if (trace) {
-						System.out.println(r + "\n" + ProfileCandidates);
-						System.out.println("Profile in dimension " + i
+						logger.info(r + "\n" + ProfileCandidates);
+						logger.info("Profile in dimension " + i
 								+ " and " + j + "\n" + Profile);
 					}
 
@@ -1069,9 +1066,9 @@ public class Diff extends Constraint {
 
 	@Override
 	public String toString() {
-		
+
 		StringBuffer result = new StringBuffer( id() );
-		
+
 		result.append(" : diff (");
 
 		int i = 0;
@@ -1088,7 +1085,7 @@ public class Diff extends Constraint {
 	@Override
 	public void increaseWeight() {
 		if (increaseWeight) {
-			for (Rectangle r : rectangles) { 
+			for (Rectangle r : rectangles) {
 				for (Var v : r.length) v.weight++;
 				for (Var v : r.origin) v.weight++;
 			}
@@ -1122,7 +1119,7 @@ public class Diff extends Constraint {
 			Max = i2;
 		}
 	}
-	
+
 }
 
 

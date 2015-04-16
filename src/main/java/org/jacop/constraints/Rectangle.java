@@ -1,9 +1,9 @@
 /**
- *  Rectangle.java 
+ *  Rectangle.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,20 +31,21 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Defines a rectangle used in the diffn constraint.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class Rectangle {
+public class Rectangle { private static Logger logger = LoggerFactory.getLogger(Rectangle.class);
 
 	int dim;
 
@@ -54,25 +55,25 @@ public class Rectangle {
 	public IntVar[] length;
 
 	/**
-	 * It specifies the origin of the rectangle in each dimension. 
+	 * It specifies the origin of the rectangle in each dimension.
 	 */
 	public IntVar[] origin;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"length", "origin"};
 
 	/**
 	 * It constructs a rectangle.
-	 * 
-	 * @param length the length of the rectangle in each dimension. 
+	 *
+	 * @param length the length of the rectangle in each dimension.
 	 * @param origin the origin of the rectangle in each dimension.
 	 */
 	public Rectangle(IntVar[] length, IntVar[] origin) {
 		dim = length.length;
-		
+
 		origin = new IntVar[dim];
 		length = new IntVar[dim];
 		for (int i = 0; i < dim; i++) {
@@ -83,9 +84,9 @@ public class Rectangle {
 
 	/**
 	 * It constructs a rectangle.
-	 * 
+	 *
 	 * @param list it specifies for each dimension (one after the other) its origin and length.
-	 *  
+	 *
 	 */
 	public Rectangle(IntVar[] list) {
 		dim = list.length / 2;
@@ -99,9 +100,9 @@ public class Rectangle {
 
 	/**
 	 * It constructs a rectangle.
-	 * 
+	 *
 	 * @param list it specifies for each dimension (one after the other) its origin and length.
-	 *  
+	 *
 	 */
 	public Rectangle(ArrayList<? extends IntVar> list) {
 		this(list.toArray(new IntVar[list.size()]));
@@ -110,28 +111,28 @@ public class Rectangle {
 	/**
 	 * It constructs a rectangle.
 	 * @param rect the rectangle based on which a new rectangle is created.
-	 * 
+	 *
 	 */
 	public Rectangle(Rectangle rect) {
-		
+
 		this.dim = rect.dim;
 		this.length = new IntVar[this.dim];
 		this.origin = new IntVar[this.dim];
-	
+
 		System.arraycopy(rect.length, 0, this.length, 0, rect.length.length);
 		System.arraycopy(rect.origin, 0, this.origin, 0, rect.origin.length);
 
 	}
-	
+
 	int dim() {
 		return dim;
 	}
 
-	
+
 	/**
-	 * It returns true if this rectangle overlaps with a given rectangle. 
-	 * 
-	 * @param r the rectangle for which the overlapping is being checked. 
+	 * It returns true if this rectangle overlaps with a given rectangle.
+	 *
+	 * @param r the rectangle for which the overlapping is being checked.
 	 * @return true if rectangles overlap, false otherwise.
 	 */
 	public boolean domOverlap(Rectangle r) {
@@ -159,11 +160,11 @@ public class Rectangle {
 		return length[i];
 	}
 
-	
+
 	/**
 	 * It computes the maximum level of any variable constituting the rectangle.
-	 * 
-	 * @return the maximum level. 
+	 *
+	 * @return the maximum level.
 	 */
 	public int maxLevel() {
 		int level = 0;
@@ -187,10 +188,10 @@ public class Rectangle {
 		return area;
 	}
 
-	
+
 	/**
 	 * It checks if a minimum length in any dimension of the rectangle can be equal 0.
-	 * 
+	 *
 	 * @return true if in any dimension the rectangle has minimum possible length equal 0, false otherwise.
 	 */
 	public boolean minLengthEq0() {
@@ -204,7 +205,7 @@ public class Rectangle {
 		return use;
 	}
 
-	
+
 	public boolean minUse(int selDimension, IntRectangle u) {
 		boolean use = true;
 		int start, stop;
@@ -253,10 +254,10 @@ public class Rectangle {
 		return origin[i];
 	}
 
-	
+
 	/**
-	 * It checks whether the rectangle is completely fixed. 
-	 * 
+	 * It checks whether the rectangle is completely fixed.
+	 *
 	 * @return true if all variables constituting rectangle are grounded, false otherwise.
 	 */
 	public boolean settled() {

@@ -1,9 +1,9 @@
 /**
- *  Assignment.java 
+ *  Assignment.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,67 +31,66 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Assignment constraint implements facility to improve channeling constraints
  * between dual viewpoints of permutation models.
- * It enforces the relationship x[d[i]-shiftX]=i+shiftD and d[x[i]-shiftD]=i+shiftX. 
- * 
+ * It enforces the relationship x[d[i]-shiftX]=i+shiftD and d[x[i]-shiftD]=i+shiftX.
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * 
+ *
  * @version 4.2
  */
 
-public class Assignment extends Constraint {
+public class Assignment extends Constraint { private static Logger logger = LoggerFactory.getLogger(Assignment.class);
 
 	static int counter = 1;
 
 	/**
-	 * It specifies a list of variables d. 
+	 * It specifies a list of variables d.
 	 */
 	public IntVar d[];
 	/**
 	 * It specifies a shift applied to variables d.
 	 */
 	public int shiftD = 0;
-	
+
 	HashMap<IntVar, Integer> ds;
-	
+
 	/**
-	 * It specifies a list of variables x. 
+	 * It specifies a list of variables x.
 	 */
-	public IntVar x[];	
+	public IntVar x[];
 	/**
 	 * It specifies a shift applied to variables x.
 	 */
 	public int shiftX = 0;
-	
+
 	HashMap<IntVar, Integer> xs;
-	
+
 
 	LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
 	boolean firstConsistencyCheck = true;
 	int firstConsistencyLevel;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"x", "d", "shiftX", "shiftD"};
 
 	/**
 	 * It enforces the relationship x[d[i]-shiftX]=i+shiftD and
-	 * d[x[i]-shiftD]=i+shiftX. 
+	 * d[x[i]-shiftD]=i+shiftX.
 	 * @param xs array of variables x
 	 * @param ds array of variables d
 	 * @param shiftX a shift of indexes in X array.
@@ -110,7 +109,7 @@ public class Assignment extends Constraint {
 		this.d = new IntVar[ds.length];
 		for (int i = 0; i < ds.length; i++)
 			this.d[i] = ds[i];
-	
+
 		this.queueIndex = 1;
 
 		this.xs = new HashMap<IntVar, Integer>(xs.length * 2);
@@ -127,15 +126,15 @@ public class Assignment extends Constraint {
 
 	/**
 	 * It enforces the relationship x[d[i]-shiftX]=i+shiftD and
-	 * d[x[i]-shiftD]=i+shiftX. 
+	 * d[x[i]-shiftD]=i+shiftX.
 	 * @param xs arraylist of variables x
 	 * @param ds arraylist of variables d
-	 * @param shiftX 
-	 * @param shiftD 
+	 * @param shiftX
+	 * @param shiftD
 	 */
 	public Assignment(ArrayList<? extends IntVar> xs,
-			ArrayList<? extends IntVar> ds, 
-			int shiftX, 
+			ArrayList<? extends IntVar> ds,
+			int shiftX,
 			int shiftD) {
 
 		this(xs.toArray(new IntVar[xs.size()]), ds.toArray(new IntVar[ds.size()]), shiftX, shiftD);
@@ -158,13 +157,13 @@ public class Assignment extends Constraint {
 
 	/**
 	 * It enforces the relationship x[d[i]-min]=i+min and
-	 * d[x[i]-min]=i+min. 
+	 * d[x[i]-min]=i+min.
 	 * @param xs arraylist of variables x
 	 * @param ds arraylist of variables d
 	 * @param min shift
 	 */
 	public Assignment(ArrayList<? extends Var> xs,
-			ArrayList<? extends Var> ds, 
+			ArrayList<? extends Var> ds,
 			int min) {
 
 		this(xs.toArray(new IntVar[xs.size()]), ds.toArray(new IntVar[ds.size()]), min, min);
@@ -186,7 +185,7 @@ public class Assignment extends Constraint {
 
 	/**
 	 * It enforces the relationship x[d[i]-min]=i+min and
-	 * d[x[i]-min]=i+min. 
+	 * d[x[i]-min]=i+min.
 	 * @param xs array of variables x
 	 * @param ds array of variables d
 	 * @param min shift

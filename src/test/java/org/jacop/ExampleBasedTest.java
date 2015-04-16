@@ -38,7 +38,7 @@ import org.jacop.examples.fd.MasterClass;
 import org.jacop.examples.fd.carsequencing.CarSequencing;
 import org.junit.Test;
 
-public class ExampleBasedTest {
+import org.slf4j.Logger; import org.slf4j.LoggerFactory;public class ExampleBasedTest { private static Logger logger = LoggerFactory.getLogger(ExampleBasedTest.class);
 
 
 	@Test
@@ -60,7 +60,7 @@ public class ExampleBasedTest {
 		example.model();
 
 		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 1);		
+		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 1);
 
 	}
 
@@ -72,7 +72,7 @@ public class ExampleBasedTest {
 		example.model();
 
 		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 1);		
+		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 1);
 
 	}
 
@@ -90,7 +90,7 @@ public class ExampleBasedTest {
 		example.model();
 
 		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 151200);		
+		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 151200);
 
 	}
 
@@ -103,7 +103,7 @@ public class ExampleBasedTest {
 		example.model();
 
 		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 24);	
+		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 24);
 
 	}
 
@@ -116,7 +116,7 @@ public class ExampleBasedTest {
 		example.model();
 
 		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 480);	
+		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 480);
 	}
 
 	@Test
@@ -127,7 +127,7 @@ public class ExampleBasedTest {
 		example.model();
 
 		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 24);	
+		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 24);
 	}
 
 
@@ -146,7 +146,7 @@ public class ExampleBasedTest {
 
 		Assert.assertEquals(exampleBasic.searchAllAtOnce(), true);
 
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 
+		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(),
 							exampleBasic.search.getSolutionListener().solutionsNo() );
 
 	}
@@ -164,10 +164,10 @@ public class ExampleBasedTest {
 		String[] description = CarSequencing.toStringArray(example);
 
 		for (String line : description)
-			System.out.println(line);
+			logger.info(line);
 
 		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 6);	
+		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 6);
 	}
 
 	@Test
@@ -178,16 +178,16 @@ public class ExampleBasedTest {
 		example.model();
 
 		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 2);	
+		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 2);
 
 	}
 
 	@Test
 	public void testCryptogram() {
 
-		String lines[][] = { {"CRACK", "HACK", "ERROR"}, {"PEAR", "APPLE", "GRAPE"}, {"CRACKS", "TRACKS", "RACKET"}, 
-				{"TRIED", "RIDE", "STEER"}, {"DEEMED", "SENSE", "SYSTEM"}, {"DOWN", "WWW", "ERROR"}, 
-				{"BARREL", "BROOMS", "SHOVELS"}, {"LYNNE", "LOOKS", "SLEEPY"}, {"STARS", "RATE", "TREAT"}, 
+		String lines[][] = { {"CRACK", "HACK", "ERROR"}, {"PEAR", "APPLE", "GRAPE"}, {"CRACKS", "TRACKS", "RACKET"},
+				{"TRIED", "RIDE", "STEER"}, {"DEEMED", "SENSE", "SYSTEM"}, {"DOWN", "WWW", "ERROR"},
+				{"BARREL", "BROOMS", "SHOVELS"}, {"LYNNE", "LOOKS", "SLEEPY"}, {"STARS", "RATE", "TREAT"},
 				{"DAYS", "TOO", "SHORT"}, {"BASE", "BALL", "GAMES"}, {"MEMO", "FROM", "HOMER"}, {"IS", "THIS", "HERE"}};
 
 		int noSol[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
@@ -202,7 +202,7 @@ public class ExampleBasedTest {
 
 			Assert.assertEquals(exampleLeft.searchAllAtOnce(), true);
 
-			Assert.assertEquals(exampleLeft.search.getSolutionListener().solutionsNo(), noSol[i]);	
+			Assert.assertEquals(exampleLeft.search.getSolutionListener().solutionsNo(), noSol[i]);
 
 		}
 
@@ -222,24 +222,24 @@ public class ExampleBasedTest {
 		Assert.assertEquals(example.searchAllAtOnce(), true);
 
 		// prints then de Bruijn sequences
-		System.out.print("de Bruijn sequence:");            
+		logger.info("de Bruijn sequence:");
 
-		System.out.print("decimal values: ");
+		logger.info("decimal values: ");
 		for(int i = 0; i < example.m; i++) {
-			System.out.print(example.x[i].value() + " ");
+			logger.info(example.x[i].value() + " ");
 		}
-		System.out.println();
+		logger.info("\n");
 
-		System.out.println("\nbinary:");
+		logger.info("\nbinary:");
 
 		for(int i = 0; i < example.m; i++) {
 			for(int j = 0; j < example.n; j++) {
-				System.out.print(example.binary[i][j].value() + " ");
+				logger.info(example.binary[i][j].value() + " ");
 			}
-			System.out.println(" : " + example.x[i].value());
+			logger.info(" : " + example.x[i].value());
 		}
 
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 14);	
+		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 14);
 
 	}
 
@@ -249,18 +249,18 @@ public class ExampleBasedTest {
 
 		  Diet exampleSumWeight = new Diet();
 	      exampleSumWeight.model();
-		  System.out.println("Searching for all solutions using sum weight constraints");
+		  logger.info("Searching for all solutions using sum weight constraints");
 		  Assert.assertEquals(exampleSumWeight.searchAllAtOnce(), true);
 	      Diet.printLastSolution(exampleSumWeight);
 
 	      Diet exampleKnapsack = new Diet();
 	      exampleKnapsack.modelKnapsack();
-		  System.out.println("Searching for all solutions using knapsack constraints");
+		  logger.info("Searching for all solutions using knapsack constraints");
 		  Assert.assertEquals(exampleKnapsack.searchAllAtOnce(), true);
 		  Diet.printLastSolution(exampleKnapsack);
 
-		  Assert.assertEquals(exampleSumWeight.search.getSolutionListener().solutionsNo(), 
-				  			  exampleKnapsack.search.getSolutionListener().solutionsNo() );	
+		  Assert.assertEquals(exampleSumWeight.search.getSolutionListener().solutionsNo(),
+				  			  exampleKnapsack.search.getSolutionListener().solutionsNo() );
 	}
 
 
@@ -272,7 +272,7 @@ public class ExampleBasedTest {
 		example.model();
 
 		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 36);	
+		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 36);
 	}
 
 
@@ -284,7 +284,7 @@ public class ExampleBasedTest {
 		example.model();
 
 		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 1);	
+		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 1);
 
 	}
 
@@ -296,7 +296,7 @@ public class ExampleBasedTest {
 		example.model();
 
 		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 6);	
+		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 6);
 	}
 
 	@Test
@@ -307,7 +307,7 @@ public class ExampleBasedTest {
 		example.model();
 
 		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 6967);	
+		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 6967);
 	}
 
 
@@ -319,7 +319,7 @@ public class ExampleBasedTest {
 		example.model();
 
 		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 1);	
+		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 1);
 	}
 
 	@Test
@@ -329,7 +329,7 @@ public class ExampleBasedTest {
 		example.model();
 
 		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 1);	
+		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 1);
 	}
 
 	@Test
@@ -339,7 +339,7 @@ public class ExampleBasedTest {
 		example.model();
 
 		Assert.assertEquals(example.searchSpecific(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 36);	
+		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 36);
 
 	}
 
@@ -351,7 +351,7 @@ public class ExampleBasedTest {
 		example.model();
 
 		Assert.assertEquals(example.searchSpecific(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 8);	
+		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 8);
 
 	}
 
@@ -362,7 +362,7 @@ public class ExampleBasedTest {
 		example.model();
 
 		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 1);	
+		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 1);
 	}
 
 	@Test
@@ -380,7 +380,7 @@ public class ExampleBasedTest {
 		example.model();
 
 		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 1);	
+		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 1);
 
 	}
 
@@ -391,7 +391,7 @@ public class ExampleBasedTest {
 		example.model();
 
 		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 1);	
+		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 1);
 	}
 
 
@@ -404,10 +404,10 @@ public class ExampleBasedTest {
 		example.model();
 
 		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 1);	
+		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 1);
 
 	}
-	
+
 
 	@Test
 	public void testKnapsack() {
@@ -417,7 +417,7 @@ public class ExampleBasedTest {
 		example.model();
 
 		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 18);	
+		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 18);
 	}
 
 	@Test
@@ -429,43 +429,43 @@ public class ExampleBasedTest {
 		example.model();
 
 		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 10);	
+		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 10);
 	}
 
-	
+
 	@Test
 	public void testLectureSeries() {
 
 		LectureSeries example = new LectureSeries();
-		
+
 		example.model();
 
 		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 120);	
+		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 120);
 	}
-	
+
 	@Test
 	public void testMagicSquares() {
 
 		MagicSquares example = new MagicSquares();
-		
+
 		example.model();
 
 		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 1760);	
+		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 1760);
 	}
 
 	@Test
 	public void testMasterClass() {
-		
+
 		MasterClass example = new MasterClass();
 		example.model();
 
 		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 12);	
+		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 12);
 	}
 
-	
+
 	/*
 
 
@@ -476,7 +476,7 @@ public class ExampleBasedTest {
 		example.model();
 
 		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 151200);	
+		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 151200);
 	}
 
 	@Test
@@ -485,7 +485,7 @@ public class ExampleBasedTest {
 		example.model();
 
 		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 151200);	
+		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 151200);
 	}
 	 */
 }

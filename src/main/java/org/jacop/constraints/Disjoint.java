@@ -1,9 +1,9 @@
 /**
- *  Disjoint.java 
+ *  Disjoint.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,29 +32,29 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Disjoint constraint assures that any two rectangles from a vector of
  * rectangles does not overlap in at least one direction.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class Disjoint extends Diff {
+public class Disjoint extends Diff { private static Logger logger = LoggerFactory.getLogger(Disjoint.class);
 
 	static int idNumber = 0;
-	
+
 	Diff2Var evalRects[];
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"rectangles", "doProfile"};
@@ -63,15 +63,15 @@ public class Disjoint extends Diff {
 	 *
 	 * @param rectangles a list of rectangles.
 	 * @param doProfile should profile be computed and used.
-	 * 
+	 *
 	 */
 	public Disjoint(Rectangle[] rectangles,
 			        boolean doProfile) {
 
 		super(rectangles, doProfile);
-	    
+
 	}
-	
+
 	/**
 	 * It creates a diff2 constraint.
 	 * @param o1 list of variables denoting the origin in the first dimension.
@@ -93,13 +93,13 @@ public class Disjoint extends Diff {
 	 * It creates a diff2 constraint.
 	 * @param rectangles list of rectangles with origins and lengths in both dimensions.
 	 */
-	
+
 	public Disjoint(ArrayList<? extends ArrayList<? extends IntVar>> rectangles) {
-	
+
 		super(rectangles);
-	
+
 	}
-	
+
 	/**
 	 * It creates a diff2 constraint.
 	 * @param rectangles list of rectangles with origins and lengths in both dimensions.
@@ -112,7 +112,7 @@ public class Disjoint extends Diff {
 		doProfile = profile;
 	}
 
-	
+
 	/**
 	 * It creates a diff2 constraint.
 	 * @param o1 list of variables denoting the origin in the first dimension.
@@ -139,12 +139,12 @@ public class Disjoint extends Diff {
 	 * @param l1 list of variables denoting the length in the first dimension.
 	 * @param l2 list of variables denoting the length in the second dimension.
 	 */
-	
-	public Disjoint(IntVar[] o1, 
-			IntVar[] o2, 
+
+	public Disjoint(IntVar[] o1,
+			IntVar[] o2,
 			IntVar[] l1,
 			IntVar[] l2) {
-		
+
 		super(o1, o2, l1, l2);
 
 		Diff.IdNumber--;
@@ -159,11 +159,11 @@ public class Disjoint extends Diff {
 	 * @param l1 list of variables denoting the length in the first dimension.
 	 * @param l2 list of variables denoting the length in the second dimension.
 	 * @param profile specifies if the profile should be computed.
-	 */	
-	public Disjoint( IntVar[] o1, 
-					 IntVar[] o2, 
+	 */
+	public Disjoint( IntVar[] o1,
+					 IntVar[] o2,
 					 IntVar[] l1,
-					 IntVar[] l2, 
+					 IntVar[] l2,
 				 boolean profile) {
 		this(o1, o2, l1, l2);
 		doProfile = profile;
@@ -184,14 +184,14 @@ public class Disjoint extends Diff {
 	}
 
 	public void impose(Store store) {
-		
+
 		super.impose(store);
-		
+
 		evalRects = new Diff2Var[rectangles.length];
-		
+
 		for (int j = 0; j < evalRects.length; j++)
 			evalRects[j] = new Diff2Var(store, rectangles);
-		
+
 	}
 	/**
 	 * It creates a diff2 constraint.
@@ -201,8 +201,8 @@ public class Disjoint extends Diff {
 
 	public Disjoint(IntVar[][] rectangles, boolean profile) {
 		super(rectangles, profile);
-	}	
-	
+	}
+
 	@Override
 	public boolean satisfied() {
 		boolean sat = true;
@@ -282,9 +282,9 @@ public class Disjoint extends Diff {
 	boolean findRectangles(Rectangle r, int index,
 			ArrayList<IntRectangle> UsedRect,
 			ArrayList<Rectangle> ProfileCandidates,
-			ArrayList<Rectangle> OverlappingRects, 
+			ArrayList<Rectangle> OverlappingRects,
 			HashSet<IntVar> fdvQueue) {
-		
+
 		Rectangle s;
 		boolean contains = false, checkArea = false;
 
@@ -445,9 +445,9 @@ public class Disjoint extends Diff {
 
 				if (Profile.size() != 0) {
 					if (trace) {
-						System.out.println(" *** " + r + "\n"
+						logger.info(" *** " + r + "\n"
 								+ ProfileCandidates);
-						System.out.println("Profile in dimension " + i
+						logger.info("Profile in dimension " + i
 								+ " and " + j + "\n" + Profile);
 					}
 
@@ -457,22 +457,22 @@ public class Disjoint extends Diff {
 			}
 		}
 	}
-	
+
 	@Override
 	public String toString() {
 
 		StringBuffer result = new StringBuffer( id() );
-		
+
 		result.append(" : disjoint( ");
-		
+
 		for (int i = 0; i < rectangles.length - 1; i++) {
 			result.append(rectangles[i]);
 			result.append(", ");
-			
+
 		}
 		result.append(rectangles[rectangles.length - 1]);
 		result.append(")");
-		
+
 		return result.toString();
 
 	}

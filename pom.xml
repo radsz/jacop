@@ -4,7 +4,7 @@
 
     <groupId>org</groupId>
     <artifactId>jacop</artifactId>
-    <version>4.2.0</version>
+    <version>4.2.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>jacop</name>
@@ -21,7 +21,7 @@
 	</roles>
 	<organization>cs.lth.se</organization>
 	<timezone>+1</timezone>
-      </developer>         
+      </developer>
       <developer>
 	<id>radek</id>
 	<name>Radoslaw Szymanek</name>
@@ -31,14 +31,14 @@
 	</roles>
 	<organization>osolpro.eu</organization>
 	<timezone>+1</timezone>
-      </developer>         
+      </developer>
     </developers>
 
     <scm>
       <connection>scm:svn:http://sourceforge.net/projects/jacop-solver/</connection>
       <developerConnection>scm:svn:http://sourceforge.net/projects/jacop-solver/</developerConnection>
       <url>http://sourceforge.net/projects/jacop-solver/</url>
-    </scm> 
+    </scm>
 
 
     <properties>

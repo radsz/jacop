@@ -1,9 +1,9 @@
 /**
- *  DomainStructure.java 
+ *  DomainStructure.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,72 +32,72 @@
 
 package org.jacop.constraints.netflow;
 
-import static org.jacop.constraints.netflow.simplex.NetworkSimplex.DELETED_ARC;
-
-import java.util.Arrays;
-import java.util.List;
-
+import java.util.*;
 import org.jacop.constraints.netflow.simplex.Arc;
 import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import static org.jacop.constraints.netflow.simplex.NetworkSimplex.DELETED_ARC;
 
 /**
  * A domain based structure variable.
- * 
+ *
  * Arcs can be associated to sub-domains of the structure variable. The state of
  * the arc is said to be active if the variable takes a value from its
  * sub-domain and it is inactive otherwise.
- * 
+ *
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.2
- * 
+ *
  */
 
-public class DomainStructure implements VarHandler {
+public class DomainStructure implements VarHandler { private static Logger logger = LoggerFactory.getLogger(DomainStructure.class);
 
 	public enum Behavior {
 		PRUNE_ACTIVE, PRUNE_INACTIVE, PRUNE_BOTH
 	}
 
 	public final IntVar variable;
-	
+
 	public final Arc[] arcs;
-	
+
 	public final IntDomain[] domains;
-	
+
 	// public final int[] supports;
 	public final Behavior behavior;
-	
+
 	public int notGrounded;
 
 	/**
 	 * Creates an S-variable
-	 * 
+	 *
 	 * @param variable
 	 * @param domList
 	 * @param arcList
 	 */
 	public DomainStructure(IntVar variable, List<Domain> domList, List<Arc> arcList) {
-		
-		this(variable, 
-			 domList.toArray(new IntDomain[domList.size()]), 
+
+		this(variable,
+			 domList.toArray(new IntDomain[domList.size()]),
 			 arcList.toArray(new Arc[arcList.size()]));
-	
+
 	}
 
 	public DomainStructure(IntVar variable, IntDomain[] domains, Arc[] arcs) {
-		
+
 		this(variable, domains, arcs, Behavior.PRUNE_BOTH);
 
 	}
 
-	public DomainStructure(IntVar variable, 
-						   IntDomain[] domains, 
-						   Arc[] arcs, 
+	public DomainStructure(IntVar variable,
+						   IntDomain[] domains,
+						   Arc[] arcs,
 						   Behavior behavior) {
-	
+
 		if (domains.length != arcs.length)
 			throw new IllegalArgumentException("#domains != #arcs");
 
@@ -124,11 +124,11 @@ public class DomainStructure implements VarHandler {
 
 	// updates the network after the structure variable changed
 	public void processEvent(IntVar variable, MutableNetwork network) {
-		
+
 		IntDomain vardom = variable.domain;
 		int size = vardom.getSize();
 
-		// System.out.println("Event " + variable + " is " + vardom);
+		// logger.info("Event " + variable + " is " + vardom);
 
 		for (int id = notGrounded - 1; id >= 0; id--) {
 
@@ -163,7 +163,7 @@ public class DomainStructure implements VarHandler {
 	}
 
 	private void groundArc(int arcID, boolean active, MutableNetwork network) {
-		
+
 		assert (arcID < notGrounded);
 
 		// prune domain of x variable
@@ -174,7 +174,7 @@ public class DomainStructure implements VarHandler {
 
 		// active arc - ground flow at upper bound
 		if (active) {
-			
+
 			int maxFlow = companion.flowOffset + arc.capacity
 					+ arc.sister.capacity;
 
@@ -182,11 +182,11 @@ public class DomainStructure implements VarHandler {
 				int level = network.getStoreLevel();
 				xVar.domain.in(level, xVar, maxFlow, maxFlow);
 			}
-		
+
 			// TODO else here ? if queueVar performs update
 
 			companion.setFlow(maxFlow);
-		
+
 			if (arc.index >= 0) {
 				// TODO this isn't nice
 				((Network) network).lower[arc.index] = arc.sister;
@@ -242,7 +242,7 @@ public class DomainStructure implements VarHandler {
 		notGrounded++;
 	}
 
-	
+
 	public List<IntVar> listVariables() {
 		return Arrays.asList(variable);
 	}
@@ -251,7 +251,7 @@ public class DomainStructure implements VarHandler {
 		return (arcID >= notGrounded);
 	}
 
-	
+
 	public int getPruningEvent(Var var) {
 		return IntDomain.ANY; // for S-variables
 	}

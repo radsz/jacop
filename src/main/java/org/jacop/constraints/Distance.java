@@ -1,9 +1,9 @@
 /**
- *  Distance.java 
+ *  Distance.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,25 +32,25 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.Hashtable;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Constraint |X - Y| #= Z
- * 
- * 
+ *
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  */
 
-public class Distance extends PrimitiveConstraint {
+public class Distance extends PrimitiveConstraint { private static Logger logger = LoggerFactory.getLogger(Distance.class);
 
 	static int idNumber = 1;
 
@@ -64,20 +64,20 @@ public class Distance extends PrimitiveConstraint {
 	 * It specifes variable x in constraint |x-y|=z.
 	 */
 	public IntVar x;
-	
+
 	/**
 	 * It specifes variable y in constraint |x-y|=z.
 	 */
 	public IntVar y;
-	
+
 	/**
 	 * It specifes variable z in constraint |x-y|=z.
 	 */
 	public IntVar z;
 
-	
+
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"x", "y", "z"};
@@ -88,14 +88,14 @@ public class Distance extends PrimitiveConstraint {
 	 * @param z
 	 */
 	public Distance(IntVar x, IntVar y, IntVar z) {
-		
+
 		numberId = idNumber++;
 		numberArgs = 3;
-		
+
 		this.x = x;
 		this.y = y;
 		this.z = z;
-	
+
 	}
 
 	@Override
@@ -108,7 +108,7 @@ public class Distance extends PrimitiveConstraint {
 		variables.add(z);
 
 		return variables;
-	
+
 	}
 
 	@Override
@@ -127,7 +127,7 @@ public class Distance extends PrimitiveConstraint {
 		}
 
 		do {
-			
+
 			store.propagationHasOccurred = false;
 
 			if (x.singleton()) {
@@ -215,7 +215,7 @@ public class Distance extends PrimitiveConstraint {
 					// If X changes Z then only if Z changes X we execute
 					// consistency again.
 					store.propagationHasOccurred = false;
-					
+
 					// Y.singleton()
 					// |X - Y| = Z
 
@@ -261,7 +261,7 @@ public class Distance extends PrimitiveConstraint {
 						// If X changes Y then only if Y changes X we execute
 						// consistency again.
 						store.propagationHasOccurred = false;
-						
+
 						IntDomain yDom = y.dom();
 						int ySize = yDom.noIntervals();
 
@@ -277,14 +277,14 @@ public class Distance extends PrimitiveConstraint {
 
 						tempPlusC.addDom(tempMinusC);
 						x.domain.in(store.level, x, tempPlusC);
-						
+
 					} else {
 						// None is singleton
 
 						// Y - X = Z
 						IntervalDomain Xdom1 = new IntervalDomain(y.min()
 								- z.max(), y.max() - z.min());
-						
+
 						// X - Y = Z
 						Xdom1.unionAdapt(y.min() + z.min(), y.max() + z.max());
 
@@ -380,8 +380,8 @@ public class Distance extends PrimitiveConstraint {
 			}
 			return IntDomain.ANY;
 	}
-		
-		
+
+
 	@Override
 	public int getNotConsistencyPruningEvent(Var var) {
 
@@ -421,7 +421,7 @@ public class Distance extends PrimitiveConstraint {
 
 					y.domain.inComplement(store.level, y, x.value() - z.value());
 					y.domain.inComplement(store.level, y, x.value() + z.value());
-					
+
 				} else if (y.singleton()) {
 
 					z.domain.inComplement(store.level, z, x.value() - y.value());

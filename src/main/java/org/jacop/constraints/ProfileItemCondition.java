@@ -1,9 +1,9 @@
 /**
- *  ProfileItemCondition.java 
+ *  ProfileItemCondition.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,13 +32,12 @@
 
 package org.jacop.constraints;
 
-import java.util.Iterator;
-import java.util.LinkedList;
+import java.util.*;
 
 /**
  * Defines a basic structure used to update profile DisjointConditional when
  * some rectangles can share the same place.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
@@ -74,15 +73,15 @@ class ProfileItemCondition extends ProfileItem {
 
 		for (int i = 0; i < exList.size(); i++) {
 			ExclusiveItem exI = exList.get(i);
-		 
+
 			for (Iterator<int[]> e = rectangles.listIterator(0); e.hasNext();) {
 				int[] el = e.next();
-		 
+
 				if (exI.i2 == el[0] && exI.cond.min() == 0)
 					rectHight += el[1];
 			}
 		}
-		 
+
 		return rectHight;
 	}
 
@@ -197,18 +196,18 @@ class ProfileItemCondition extends ProfileItem {
 
 	@Override
 	public String toString() {
-		
+
 		StringBuffer result = new StringBuffer("{[");
 		result.append(min).append("..").append(max).append(") = ").append(value).append(", [");
-		
+
 		for (Iterator<int[]> e = rectangles.listIterator(0); e.hasNext();) {
 			int[] el = e.next();
 			result.append("[").append(el[0]).append(", ").append(el[1]).append("], ");
 		}
 		result.append("]");
-		
+
 		return result.toString();
 
 	}
-	
+
 }

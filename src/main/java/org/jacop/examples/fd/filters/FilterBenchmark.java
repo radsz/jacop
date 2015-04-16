@@ -1,9 +1,9 @@
 /**
- *  FilterBenchmark.java 
+ *  FilterBenchmark.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,8 +31,7 @@
 
 package org.jacop.examples.fd.filters;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Cumulative;
 import org.jacop.constraints.Diff2;
 import org.jacop.constraints.Max;
@@ -57,15 +56,17 @@ import org.jacop.search.SmallestDomain;
 import org.jacop.search.SmallestMax;
 import org.jacop.search.SmallestMin;
 import org.jacop.ui.PrintSchedule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This is a set of filter scheduling examples, commonly used in High-Level Synthesis.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class FilterBenchmark {
+public class FilterBenchmark { private static Logger logger = LoggerFactory.getLogger(FilterBenchmark.class);
 
 	static ArrayList<IntVar> Tc, Ts, Rs;
 
@@ -76,12 +77,12 @@ public class FilterBenchmark {
 	static IntVar cost;
 
 	/**
-	 * It executes the program for number of filters, 
+	 * It executes the program for number of filters,
 	 * number of resources (adders, multipliers) and
 	 * number of different synthesis techniques (
-	 * algorithmic pipelining, multiplier pipelining, 
+	 * algorithmic pipelining, multiplier pipelining,
 	 * chaining, no special techniques).
-	 * 
+	 *
 	 * @param args
 	 */
 	public static void main(String args[]) {
@@ -99,13 +100,13 @@ public class FilterBenchmark {
 
 		T2 = System.currentTimeMillis();
 		T = T2 - T1;
-		System.out.println("\n\t*** Execution time = " + T + " ms");
+		logger.info("\n\t*** Execution time = " + T + " ms");
 
 	}
 
 	/**
 	 * It solves available filters for different scenario
-	 * consisting of different number of resources. 
+	 * consisting of different number of resources.
 	 */
 	public static void schedule() {
 
@@ -161,12 +162,12 @@ public class FilterBenchmark {
 
 	}
 
-	
+
 	/**
 	 * It solves available filters for different scenario
 	 * consisting of different number of resources. It
 	 * performs pipelining of multiplier operations.
-	 * 
+	 *
 	 */
 	public static void pipeMulSchedule() {
 
@@ -217,7 +218,7 @@ public class FilterBenchmark {
 	 * It solves available filters for different scenario
 	 * consisting of different number of resources. It
 	 * performs chaining of operations.
-	 * 
+	 *
 	 */
 	public static void chainingSchedule() {
 
@@ -274,7 +275,7 @@ public class FilterBenchmark {
 	 * It solves available filters for different scenario
 	 * consisting of different number of resources. It
 	 * performs algorithmic pipelining.
-	 * 
+	 *
 	 */
 	public static void pipelineSchedule() {
 
@@ -333,23 +334,23 @@ public class FilterBenchmark {
 
 	/**
 	 * It optimizes scheduling of filter operations.
-	 * 
+	 *
 	 * @param store the constraint store in which the constraints are imposed.
 	 * @param filter the filter being scheduled.
 	 * @param addNum number of adders available.
 	 * @param mulNum number of multipliers available.
 	 */
-	public static void experiment1(Store store, 
-								   Filter filter, 
+	public static void experiment1(Store store,
+								   Filter filter,
 								   int addNum,
 								   int mulNum) {
 		boolean result;
 
-		System.out.println("\n\nTest of scheduling for " + filter.name()
+		logger.info("\n\nTest of scheduling for " + filter.name()
 				+ " example"); // without cumulative constraint");
-		System.out.println("with " + addNum + " adders and " + mulNum
+		logger.info("with " + addNum + " adders and " + mulNum
 				+ " multipliers");
-		System.out.println("add duration " + filter.addDel()
+		logger.info("add duration " + filter.addDel()
 				+ " and mul duration " + filter.mulDel());
 
 		ArrayList<ArrayList<IntVar>> TR = makeConstraints(store, filter, addNum,
@@ -366,12 +367,12 @@ public class FilterBenchmark {
 				new SmallestMin<IntVar>(), new MostConstrainedStatic<IntVar>(),
 				new IndomainMin<IntVar>(), 0);
 
-		System.out.println("\nVariable store size: " + store.size()
+		logger.info("\nVariable store size: " + store.size()
 				+ "\nNumber of constraints: " + store.numberConstraints());
 
 		result = store.consistency();
 
-		System.out.println("1. Constraints consistent = " + result);
+		logger.info("1. Constraints consistent = " + result);
 
 		long T1, T2, T;
 		T1 = System.currentTimeMillis();
@@ -382,38 +383,38 @@ public class FilterBenchmark {
 
 		T2 = System.currentTimeMillis();
 		T = T2 - T1;
-		System.out.println("\n\t*** Execution time = " + T + " ms");
+		logger.info("\n\t*** Execution time = " + T + " ms");
 
 		if (result) {
-			System.out.println("\n*** Yes");
+			logger.info("\n*** Yes");
 			PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
-			System.out.println(Sch);
+			logger.info(Sch.toString());
 		} else
-			System.out.println("*** No");
+			logger.info("*** No");
 	}
 
 	/**
 	 * It optimizes scheduling of filter operation in fashion allowing
 	 * chaining of operations within one clock cycle.
-	 * 
+	 *
 	 * @param store the constraint store in which the constraints are imposed.
 	 * @param filter the filter being scheduled.
 	 * @param addNum number of adders available.
 	 * @param mulNum number of multipliers available.
 	 * @param clock number of time units within a clock.
 	 */
-	public static void experiment1C(Store store, 
-								    Filter filter, 
+	public static void experiment1C(Store store,
+								    Filter filter,
 								    int addNum,
-								    int mulNum, 
+								    int mulNum,
 								    int clock) {
 		boolean result;
 
-		System.out.println("\n\nTest of scheduling for " + filter.name()
+		logger.info("\n\nTest of scheduling for " + filter.name()
 				+ " example");
-		System.out.println("with " + addNum + " adders and " + mulNum
+		logger.info("with " + addNum + " adders and " + mulNum
 				+ " multipliers;\nclock length: " + clock);
-		System.out.println("add duration " + filter.addDel()
+		logger.info("add duration " + filter.addDel()
 				+ " and mul duration " + filter.mulDel());
 
 		ArrayList<ArrayList<IntVar>> TR = makeConstraintsChain(store, filter,
@@ -430,12 +431,12 @@ public class FilterBenchmark {
 				new SmallestMin<IntVar>(), new MostConstrainedStatic<IntVar>(),
 				new IndomainMin<IntVar>(), 0);
 
-		System.out.println("\nVariable store size: " + store.size()
+		logger.info("\nVariable store size: " + store.size()
 				+ "\nNumber of constraints: " + store.numberConstraints());
 
 		result = store.consistency();
 
-		System.out.println("2. Constraints consistent = " + result);
+		logger.info("2. Constraints consistent = " + result);
 
 		long T1, T2, T;
 		T1 = System.currentTimeMillis();
@@ -446,15 +447,15 @@ public class FilterBenchmark {
 
 		T2 = System.currentTimeMillis();
 		T = T2 - T1;
-		System.out.println("\n\t*** Execution time = " + T + " ms");
+		logger.info("\n\t*** Execution time = " + T + " ms");
 
 		if (result) {
-			System.out.println("\n*** Yes");
-			System.out.println("Schedule length: " + div(cost.min(), clock));
+			logger.info("\n*** Yes");
+			logger.info("Schedule length: " + div(cost.min(), clock));
 			PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
-			System.out.println(Sch);
+			logger.info(Sch.toString());
 		} else
-			System.out.println("*** No");
+			logger.info("*** No");
 	}
 
 	private static int div(int A, int B) {
@@ -468,24 +469,24 @@ public class FilterBenchmark {
 	/**
 	 * It optimizes scheduling of filter operations in a fashion allowing
 	 * pipelining of multiplication operations.
-	 * 
+	 *
 	 * @param store the constraint store in which the constraints are imposed.
 	 * @param filter the filter being scheduled.
 	 * @param addNum number of adders available.
 	 * @param mulNum number of multipliers available.
 	 */
-	public static void experiment1PM(Store store, 
-									 Filter filter, 
+	public static void experiment1PM(Store store,
+									 Filter filter,
 									 int addNum,
 									 int mulNum) {
 		boolean result;
 
-		System.out.println("\n\nTest of scheduling for " + filter.name()
+		logger.info("\n\nTest of scheduling for " + filter.name()
 				+ " example with pipeline multiplier"); // without cumulative
 														// constraint");
-		System.out.println("with " + addNum + " adders and " + mulNum
+		logger.info("with " + addNum + " adders and " + mulNum
 				+ " multipliers");
-		System.out.println("add duration " + filter.addDel()
+		logger.info("add duration " + filter.addDel()
 				+ " and mul duration " + filter.mulDel());
 
 		ArrayList<ArrayList<IntVar>> TR = makeConstraintsPipeMultiplier(store,
@@ -502,12 +503,12 @@ public class FilterBenchmark {
 				new SmallestMax<IntVar>(), new MostConstrainedStatic<IntVar>(),
 				new IndomainMin<IntVar>(), 0);
 
-		System.out.println("\nVariable store size: " + store.size()
+		logger.info("\nVariable store size: " + store.size()
 				+ "\nNumber of constraints: " + store.numberConstraints());
 
 		result = store.consistency();
 
-		System.out.println("3. Constraints consistent = " + result);
+		logger.info("3. Constraints consistent = " + result);
 
 		long T1, T2, T;
 		T1 = System.currentTimeMillis();
@@ -518,38 +519,38 @@ public class FilterBenchmark {
 
 		T2 = System.currentTimeMillis();
 		T = T2 - T1;
-		System.out.println("\n\t*** Execution time = " + T + " ms");
+		logger.info("\n\t*** Execution time = " + T + " ms");
 
 		if (result) {
-			System.out.println("\n*** Yes");
+			logger.info("\n*** Yes");
 			PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
-			System.out.println(Sch);
+			logger.info(Sch.toString());
 		} else
-			System.out.println("*** No");
+			logger.info("*** No");
 	}
 
 	/**
 	 * It optimizes scheduling of filter operation in fashion allowing
 	 * pipelining of multiplication operations.
-	 * 
+	 *
 	 * @param store the constraint store in which the constraints are imposed.
 	 * @param filter the filter being scheduled.
 	 * @param addNum number of adders available.
 	 * @param mulNum number of multipliers available.
 	 */
-	public static void experiment2PM(Store store, 
-									 Filter filter, 
+	public static void experiment2PM(Store store,
+									 Filter filter,
 									 int addNum,
 									 int mulNum) {
 
 		boolean result;
 
-		System.out.println("\n\nTest of scheduling for " + filter.name()
+		logger.info("\n\nTest of scheduling for " + filter.name()
 				+ " example with pipeline multiplier"); // without cumulative
 														// constraint");
-		System.out.println("with " + addNum + " adders and " + mulNum
+		logger.info("with " + addNum + " adders and " + mulNum
 				+ " multipliers");
-		System.out.println("add duration " + filter.addDel()
+		logger.info("add duration " + filter.addDel()
 				+ " and mul duration " + filter.mulDel());
 
 		makeConstraintsPipeMultiplier(store, filter, addNum, mulNum);
@@ -568,12 +569,12 @@ public class FilterBenchmark {
 		SelectChoicePoint<IntVar> selectIO = new SimpleSelect<IntVar>(varsRs, null, null,
 				new IndomainMin<IntVar>());
 
-		System.out.println("\nVariable store size: " + store.size()
+		logger.info("\nVariable store size: " + store.size()
 				+ "\nNumber of constraints: " + store.numberConstraints());
 
 		result = store.consistency();
 
-		System.out.println("4. Constraints consistent = " + result);
+		logger.info("4. Constraints consistent = " + result);
 
 		long T1, T2, T;
 		T1 = System.currentTimeMillis();
@@ -589,40 +590,40 @@ public class FilterBenchmark {
 
 		T2 = System.currentTimeMillis();
 		T = T2 - T1;
-		System.out.println("\n\t*** Execution time = " + T + " ms");
+		logger.info("\n\t*** Execution time = " + T + " ms");
 
 		if (result) {
-			System.out.println("\n*** Yes");
+			logger.info("\n*** Yes");
 			PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
-			System.out.println(Sch);
+			logger.info(Sch.toString());
 		} else
-			System.out.println("*** No");
+			logger.info("*** No");
 	}
 
-	
 
-	
+
+
 	/**
-	 * It optimizes scheduling of filter operations. It performs algorithmic 
-	 * pipelining. 
-	 * 
+	 * It optimizes scheduling of filter operations. It performs algorithmic
+	 * pipelining.
+	 *
 	 * @param store the constraint store in which the constraints are imposed.
 	 * @param filter the filter being scheduled.
 	 * @param addNum number of adders available.
 	 * @param mulNum number of multipliers available.
 	 */
-	public static void experiment1P(Store store, 
-									Filter filter, 
+	public static void experiment1P(Store store,
+									Filter filter,
 									int addNum,
 									int mulNum) {
-		
+
 		boolean result;
 
-		System.out.println("\n\nTest of pipeline scheduling for "
+		logger.info("\n\nTest of pipeline scheduling for "
 				+ filter.name() + " example without cumulative constraint");
-		System.out.println("with " + addNum + " adders and " + mulNum
+		logger.info("with " + addNum + " adders and " + mulNum
 				+ " multipliers");
-		System.out.println("add duration " + filter.addDel()
+		logger.info("add duration " + filter.addDel()
 				+ " and mul duration " + filter.mulDel());
 
 		ArrayList<ArrayList<IntVar>> TR = makeConstraintsPipeline(store, filter,
@@ -635,7 +636,7 @@ public class FilterBenchmark {
 		int rMul = (filter.noMul() * filter.mulDel()) % mulNum;
 		int mulLB = (rMul == 0) ? tMul : tMul + 1;
 		int pipeLB = (addLB > mulLB) ? addLB : mulLB;
-		System.out.println("Lower bound = " + pipeLB);
+		logger.info("Lower bound = " + pipeLB);
 
 		ArrayList<IntVar> cc = new ArrayList<IntVar>();
 		cc.add(new IntVar(store, 10000, 10000));
@@ -666,19 +667,19 @@ public class FilterBenchmark {
 			search.setExitChildListener(credit);
 		else
 			search.getExitChildListener().setChildrenListeners(credit);
-		
+
 		if (search.getTimeOutListener() == null)
 			search.setTimeOutListener(credit);
 		else
 			search.getTimeOutListener().setChildrenListeners(credit);
 
-		System.out.println("\nVariable store size: " + store.size()
+		logger.info("\nVariable store size: " + store.size()
 				+ "\nNumber of constraints: " + store.numberConstraints());
 
 		store.impose(new XgteqC(cost, pipeLB));
 		result = store.consistency();
 
-		System.out.println("6. Constraints consistent = " + result);
+		logger.info("6. Constraints consistent = " + result);
 
 		long T1, T2, T;
 		T1 = System.currentTimeMillis();
@@ -687,37 +688,37 @@ public class FilterBenchmark {
 
 		T2 = System.currentTimeMillis();
 		T = T2 - T1;
-		System.out.println("\n\t*** Execution time = " + T + " ms");
+		logger.info("\n\t*** Execution time = " + T + " ms");
 
 		if (result) {
-			System.out.println("\n*** Yes");
+			logger.info("\n*** Yes");
 			PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
-			System.out.println(Sch);
+			logger.info(Sch.toString());
 		} else
-			System.out.println("*** No");
+			logger.info("*** No");
 	}
 
 	/**
 	 * It optimizes scheduling of filter operations. It performs
 	 * algorithmic pipelining three times.
-	 * 
+	 *
 	 * @param store the constraint store in which the constraints are imposed.
 	 * @param filter the filter being scheduled.
 	 * @param addNum number of adders available.
 	 * @param mulNum number of multipliers available.
 	 */
-	public static void experiment2P(Store store, 
-									Filter filter, 
+	public static void experiment2P(Store store,
+									Filter filter,
 									int addNum,
 									int mulNum) {
-		
+
 		boolean result;
 
-		System.out.println("\n\nTest of pipeline scheduling for "
+		logger.info("\n\nTest of pipeline scheduling for "
 				+ filter.name() + " example without cumulative constraint");
-		System.out.println("with " + addNum + " adders and " + mulNum
+		logger.info("with " + addNum + " adders and " + mulNum
 				+ " multipliers");
-		System.out.println("add duration " + filter.addDel()
+		logger.info("add duration " + filter.addDel()
 				+ " and mul duration " + filter.mulDel());
 
 		ArrayList<ArrayList<IntVar>> TR = makeConstraintsPipeline(store, filter,
@@ -730,7 +731,7 @@ public class FilterBenchmark {
 		int rMul = (filter.noMul() * filter.mulDel()) % mulNum;
 		int mulLB = (rMul == 0) ? tMul : tMul + 1;
 		int pipeLB = (addLB > mulLB) ? addLB : mulLB;
-		System.out.println("Lower bound = " + pipeLB);
+		logger.info("Lower bound = " + pipeLB);
 
 		IntVar[] varsTs = new IntVar[Ts.size()];
 		for (int j = 0; j < varsTs.length; j++)
@@ -758,14 +759,14 @@ public class FilterBenchmark {
 		search.getExitChildListener().setChildrenListeners(credit);
 		search.getTimeOutListener().setChildrenListeners(credit);
 
-		System.out.println("\nVariable store size: " + store.size()
+		logger.info("\nVariable store size: " + store.size()
 				+ "\nNumber of constraints: " + store.numberConstraints());
 
 		store.impose(new XgteqC(cost, pipeLB));
 
 		result = store.consistency();
 
-		System.out.println("7. Constraints consistent = " + result);
+		logger.info("7. Constraints consistent = " + result);
 
 		result = search.labeling(store, selectMC, cost);
 
@@ -775,33 +776,33 @@ public class FilterBenchmark {
 		}
 
 		if (result) {
-			System.out.println("\n*** Yes");
+			logger.info("\n*** Yes");
 			PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
-			System.out.println(Sch);
+			logger.info(Sch.toString());
 		} else
-			System.out.println("*** No");
+			logger.info("*** No");
 	}
 
 	/**
 	 * It optimizes scheduling of filter operations.
-	 * 
+	 *
 	 * @param store the constraint store in which the constraints are imposed.
 	 * @param filter the filter being scheduled.
 	 * @param addNum number of adders available.
 	 * @param mulNum number of multipliers available.
 	 */
-	public static void experiment2(Store store, 
-								   Filter filter, 
+	public static void experiment2(Store store,
+								   Filter filter,
 								   int addNum,
 								   int mulNum) {
-		
+
 		boolean result;
 
-		System.out.println("\n\nTest of scheduling for " + filter.name()
+		logger.info("\n\nTest of scheduling for " + filter.name()
 				+ " example"); // without cumulative constraint");
-		System.out.println("with " + addNum + " adders and " + mulNum
+		logger.info("with " + addNum + " adders and " + mulNum
 				+ " multipliers");
-		System.out.println("add duration " + filter.addDel()
+		logger.info("add duration " + filter.addDel()
 				+ " and mul duration " + filter.mulDel());
 
 		makeConstraints(store, filter, addNum, mulNum);
@@ -820,18 +821,18 @@ public class FilterBenchmark {
 		SelectChoicePoint<IntVar> selectIO = new SimpleSelect<IntVar>(varsRs, null, null,
 				new IndomainMin<IntVar>());
 
-		System.out.println("\nVariable store size: " + store.size()
+		logger.info("\nVariable store size: " + store.size()
 				+ "\nNumber of constraints: " + store.numberConstraints());
 
 		result = store.consistency();
 
-		System.out.println("8. Constraints consistent = " + result);
+		logger.info("8. Constraints consistent = " + result);
 
 		long T1, T2, T;
 		T1 = System.currentTimeMillis();
 
 		Search<IntVar> search = new DepthFirstSearch<IntVar>();
-	
+
 		result = search.labeling(store, selectMC, cost);
 
 		if (result) {
@@ -841,39 +842,39 @@ public class FilterBenchmark {
 
 		T2 = System.currentTimeMillis();
 		T = T2 - T1;
-		System.out.println("\n\t*** Execution time = " + T + " ms");
+		logger.info("\n\t*** Execution time = " + T + " ms");
 
 		if (result) {
-			System.out.println("\n*** Yes");
+			logger.info("\n*** Yes");
 			PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
-			System.out.println(Sch);
+			logger.info(Sch.toString());
 		} else
-			System.out.println("*** No");
+			logger.info("*** No");
 	}
 
 	/**
 	 * It optimizes scheduling of filter operation in fashion allowing
 	 * chaining of operations within one clock cycle.
-	 * 
+	 *
 	 * @param store the constraint store in which the constraints are imposed.
 	 * @param filter the filter being scheduled.
 	 * @param addNum number of adders available.
 	 * @param mulNum number of multipliers available.
 	 * @param clock number of time units within a clock.
 	 */
-	public static void experiment2C(Store store, 
-									Filter filter, 
+	public static void experiment2C(Store store,
+									Filter filter,
 									int addNum,
-									int mulNum, 
+									int mulNum,
 									int clock) {
 
 		boolean result;
 
-		System.out.println("\n\nTest of scheduling for " + filter.name()
+		logger.info("\n\nTest of scheduling for " + filter.name()
 				+ " example");// without cumulative constraint");
-		System.out.println("with " + addNum + " adders and " + mulNum
+		logger.info("with " + addNum + " adders and " + mulNum
 				+ " multipliers;\nclock length: " + clock);
-		System.out.println("add duration " + filter.addDel()
+		logger.info("add duration " + filter.addDel()
 				+ " and mul duration " + filter.mulDel());
 
 		makeConstraintsChain(store, filter, addNum, mulNum, clock);
@@ -892,12 +893,12 @@ public class FilterBenchmark {
 		SelectChoicePoint<IntVar> selectIO = new SimpleSelect<IntVar>(varsRs, null, null,
 				new IndomainMin<IntVar>());
 
-		System.out.println("\nVariable store size: " + store.size()
+		logger.info("\nVariable store size: " + store.size()
 				+ "\nNumber of constraints: " + store.numberConstraints());
 
 		result = store.consistency();
 
-		System.out.println("10. Constraints consistent = " + result);
+		logger.info("10. Constraints consistent = " + result);
 
 		long T1, T2, T;
 		T1 = System.currentTimeMillis();
@@ -913,20 +914,20 @@ public class FilterBenchmark {
 
 		T2 = System.currentTimeMillis();
 		T = T2 - T1;
-		System.out.println("\n\t*** Execution time = " + T + " ms");
+		logger.info("\n\t*** Execution time = " + T + " ms");
 
 		if (result) {
-			System.out.println("\n*** Yes");
-			System.out.println("Schedule length: " + div(cost.min(), clock));
+			logger.info("\n*** Yes");
+			logger.info("Schedule length: " + div(cost.min(), clock));
 			PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
-			System.out.println(Sch);
+			logger.info(Sch.toString());
 		} else
-			System.out.println("*** No");
+			logger.info("*** No");
 	}
 
 	/**
 	 * It creates constraint model for scheduling of filter operations.
-	 * 
+	 *
 	 * @param store the constraint store in which the constraints are imposed.
 	 * @param filter the filter being scheduled.
 	 * @param addNum number of adders available.
@@ -934,15 +935,15 @@ public class FilterBenchmark {
 	 * @return start time and resource assignment variables describing the scheduling problem.
 	 */
 	public static ArrayList<ArrayList<IntVar>> makeConstraints(Store store,
-																 Filter filter, 
-																 int addNum, 
+																 Filter filter,
+																 int addNum,
 																 int mulNum) {
-		
+
 		final int addMin = 1;
 		final int addMax = addMin + addNum - 1;
 		final int mulMin = addMax + 1;
 		final int mulMax = mulMin + mulNum - 1;
-		
+
 		String nameT = "T";
 		String nameR = "R";
 
@@ -1006,7 +1007,7 @@ public class FilterBenchmark {
 			store.impose(new XplusCeqZ(T[lastOp[i]], D[lastOp[i]], end));
 			endOp.add(end);
 		}
-		
+
 		cost = new IntVar(store, 0, 100);
 		store.impose(new Max(endOp, cost));
 
@@ -1036,31 +1037,31 @@ public class FilterBenchmark {
 	/**
 	 * It creates constraint model for scheduling of filter operation in fashion allowing
 	 * pipelining of multiplication operations.
-	 * 
+	 *
 	 * @param store the constraint store in which the constraints are imposed.
 	 * @param filter the filter being scheduled.
 	 * @param addNum number of adders available.
 	 * @param mulNum number of multipliers available.
 	 * @return start time and resource assignment variables describing the scheduling problem.
 	 */
-	public static ArrayList<ArrayList<IntVar>> 
-				makeConstraintsPipeMultiplier(Store store, 
-											  Filter filter, 
-											  int addNum, 
+	public static ArrayList<ArrayList<IntVar>>
+				makeConstraintsPipeMultiplier(Store store,
+											  Filter filter,
+											  int addNum,
 											  int mulNum) {
-		
+
 		final int addMin = 1;
 		final int addMax = addMin + addNum - 1;
 		final int mulMin = addMax + 1;
 		final int mulMax = mulMin + mulNum - 1;
-		
+
 		String nameT = "T";
 		String nameR = "R";
 
 		int[][] dependencies = filter.dependencies();
 		int[] delays = filter.delays();
 		int[] lastOp = filter.lastOp();
-		
+
 		IntVar addDelay = new IntVar(store, filter.addDel(), filter.addDel());
 		IntVar mulDelay = new IntVar(store, 1, 1); // since pipelined multiplier
 		// the effective delay is 1; filter.mulDel(), filter.mulDel());
@@ -1119,7 +1120,7 @@ public class FilterBenchmark {
 			store.impose(new XplusCeqZ(T[lastOp[i]], D[lastOp[i]], end));
 			endOp.add(end);
 		}
-		
+
 		cost = new IntVar(store, 0, 100);
 		store.impose(new Max(endOp, cost));
 
@@ -1142,15 +1143,15 @@ public class FilterBenchmark {
 			Ds.add(v);
 
 		Ns = filter.names();
-		
+
 		return makeLabelingList(T, R);
 	}
 
-	
+
 	/**
 	 * It creates constraint model for scheduling of filter operation in fashion allowing
 	 * chaining of operations within one clock cycle.
-	 * 
+	 *
 	 * @param store the constraint store in which the constraints are imposed.
 	 * @param filter the filter being scheduled.
 	 * @param addNum number of adders available.
@@ -1158,25 +1159,25 @@ public class FilterBenchmark {
 	 * @param clk number of time units within a clock.
 	 * @return start time and resource assignment variables describing the scheduling problem.
 	 */
-	public static ArrayList<ArrayList<IntVar>> 
+	public static ArrayList<ArrayList<IntVar>>
 						makeConstraintsChain(Store store,
-											 Filter filter, 
-											 int addNum, 
-											 int mulNum, 
+											 Filter filter,
+											 int addNum,
+											 int mulNum,
 											 int clk) {
-		
+
 		final int addMin = 1;
 		final int addMax = addMin + addNum - 1;
 		final int mulMin = addMax + 1;
 		final int mulMax = mulMin + mulNum - 1;
-		
+
 		String nameT = "T";
 		String nameR = "R";
 
 		int[][] dependencies = filter.dependencies();
 		int[] delays = filter.delays();
 		int[] lastOp = filter.lastOp();
-		
+
 		IntVar addDelay = new IntVar(store, filter.addDel(), filter.addDel());
 		IntVar mulDelay = new IntVar(store, filter.mulDel(), filter.mulDel());
 		IntVar one = new IntVar(store, 1, 1);
@@ -1250,7 +1251,7 @@ public class FilterBenchmark {
 			store.impose(new XplusCeqZ(T[lastOp[i]], D[lastOp[i]], end));
 			endOp.add(end);
 		}
-		
+
 		cost = new IntVar(store, 0, 1000);
 		store.impose(new Max(endOp, cost));
 
@@ -1282,28 +1283,28 @@ public class FilterBenchmark {
 		return makeLabelingList(T, R);
 	}
 
-	
+
 	/**
-	 * It creates a model for optimization of scheduling of operations of a given filter. 
+	 * It creates a model for optimization of scheduling of operations of a given filter.
 	 * The pipelined model assumes that the filter is unrolled three times.
-	 * 
+	 *
 	 * @param store constraint store in which the constraints are imposed.
 	 * @param filter filter for which pipelined execution is optimized.
 	 * @param addNum number of available adders
 	 * @param mulNum number of available multipliers.
 	 * @return variables corresponding to start time and resource assignment of the filter operations.
 	 */
-	public static ArrayList<ArrayList<IntVar>> 
-				makeConstraintsPipeline(Store store, 
-										Filter filter, 
-										int addNum, 
+	public static ArrayList<ArrayList<IntVar>>
+				makeConstraintsPipeline(Store store,
+										Filter filter,
+										int addNum,
 										int mulNum) {
-		
+
 		final int addMin = 1;
 		final int addMax = addMin + addNum - 1;
 		final int mulMin = addMax + 1;
 		final int mulMax = mulMin + mulNum - 1;
-		
+
 		String nameT = "T";
 		String nameR = "R";
 
@@ -1443,19 +1444,19 @@ public class FilterBenchmark {
 		return makeLabelingList(T, R);
 	}
 
-	
+
 	/**
 	 * It creates an array of arrays using two arrays.
-	 * 
+	 *
 	 * @param T an array of variables corresponding to start time of an operation.
 	 * @param R an array of variables corresponding to resource of an operation.
 	 * @return an array of arrays, each array containing one starttime and one resource assignment variable.
 	 */
-	public static ArrayList<ArrayList<IntVar>> makeLabelingList(IntVar[] T, 
+	public static ArrayList<ArrayList<IntVar>> makeLabelingList(IntVar[] T,
 																  IntVar[] R) {
-		
+
 		ArrayList<ArrayList<IntVar>> list = new ArrayList<ArrayList<IntVar>>();
-		
+
 		for (int i = 0; i < T.length; i++) {
 			ArrayList<IntVar> TR = new ArrayList<IntVar>();
 			TR.add(T[i]);

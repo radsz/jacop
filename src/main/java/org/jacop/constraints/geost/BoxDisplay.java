@@ -1,10 +1,10 @@
 /**
  *  BoxDisplay.java
- *   
+ *
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -16,7 +16,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,27 +32,25 @@
 
 package org.jacop.constraints.geost;
 
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Graphics;
-import java.awt.Image;
-
-import javax.swing.JFrame;
-
+import java.awt.*;
+import javax.swing.*;
 import org.jacop.core.IntVar;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
- * 
- * It specifies  a simple functionality to graphically represent 2D geost. It was 
+ *
+ * It specifies  a simple functionality to graphically represent 2D geost. It was
  * mostly used during development phase but it may be still useful if user is interested
- * in visualizing Geost constraint. 
- * 
+ * in visualizing Geost constraint.
+ *
  */
-public class BoxDisplay extends JFrame {
+
+public class BoxDisplay extends JFrame { private static Logger logger = LoggerFactory.getLogger(BoxDisplay.class);
 
 	/**
-	 * It specifies the serial UID. 
+	 * It specifies the serial UID.
 	 */
 	private static final long serialVersionUID = -1620053778620352318L;
 
@@ -60,12 +58,12 @@ public class BoxDisplay extends JFrame {
 	 * It specifies the number of pixels per unit of length.
 	 */
 	public int pixelsPerUnit = 5;
-	
+
 	/**
 	 * It defines the shift in x dimension for drawing.
 	 */
 	public int xCellsShift = 0;
-	
+
 	/**
 	 * It defines the shift in x dimension for drawing.
 	 */
@@ -73,16 +71,16 @@ public class BoxDisplay extends JFrame {
 
 	private Image bufferImage = null;
 	private Image displayImgae = null; // page flipping
-	
+
 	/**
 	 * It constructs a display to visualize Geost objects/constraint.
-	 * 
+	 *
 	 * @param pixelsPerUnit number of pixels on our first mission.
 	 */
 	public BoxDisplay(int pixelsPerUnit) {
-		
+
 		super();
-		
+
 		this.pixelsPerUnit = pixelsPerUnit;
 		this.setSize(new Dimension(800,600));
 
@@ -92,43 +90,43 @@ public class BoxDisplay extends JFrame {
 		int height = getHeight();
 		bufferImage = createImage(width, height);
 		displayImgae = createImage(width, height);
-		
+
 	}
-	
-	
+
+
 	/**
-	 * It creates a display to visualize 2D geost constraint. 
-	 *  
-	 * @param pixelsPerUnit number of pixels per unit of object length. 
-	 * @param title 
+	 * It creates a display to visualize 2D geost constraint.
+	 *
+	 * @param pixelsPerUnit number of pixels per unit of object length.
+	 * @param title
 	 * @param geost geost constraint to visualize
 	 */
 	public void displayState(int pixelsPerUnit, String title, Geost geost){
-		
+
 		BoxDisplay display = new BoxDisplay(pixelsPerUnit, title);
 		Color color = Color.black;
-		
+
 		for(GeostObject o : geost.objects) {
 			display2DGeostObject(geost, o, color);
 			color = color.brighter();
 		}
-		
+
 		display.flip();
-	
+
 	}
-	
+
 	/**
-	 * It displays the state of the geost constraint. 
-	 * 
+	 * It displays the state of the geost constraint.
+	 *
 	 * @param domainWidth
 	 * @param groundedOnly only grounded objects should be displayed.
 	 * @param withFrames should frames describing non-overlapping constraint be displayed too?
 	 * @param geost geost constraint being displayed.
 	 */
 	public void displayState(int domainWidth, boolean groundedOnly, boolean withFrames, Geost geost){
-		
+
 		Color color = Color.black;
-	
+
 		if(withFrames){
 			for(InternalConstraint c : geost.internalConstraints){
 				if(c instanceof ObstacleObjectFrame){
@@ -139,7 +137,7 @@ public class BoxDisplay extends JFrame {
 				}
 			}
 		}
-		
+
 		for(GeostObject o : geost.objects){
 			if(!groundedOnly || o.isGrounded()){
 				color = new Color(o.hashCode());
@@ -164,19 +162,19 @@ public class BoxDisplay extends JFrame {
 
 	/*
 	public static final void displayPool(BoxDisplay display, Color color){
-		
+
 		for(int i = 0; i<DBox.freeBoxes.size(); i++){
 			SimpleArrayList<DBox> boxes = DBox.freeBoxes.get(i);
 			for(int j = 0; j<boxes.size(); j++){
 				display.display2DBox(boxes.get(j), color);
 			}
 		}
-		
+
 	}
 	*/
-	
+
 	/**
-	 * It constructs a window given the parameters like pixels per unit shape, 
+	 * It constructs a window given the parameters like pixels per unit shape,
 	 * and name of the window.
 	 * @param pixelsPerUnit number of pixels per unit length.
 	 * @param name window name.
@@ -192,37 +190,37 @@ public class BoxDisplay extends JFrame {
 		int height = getHeight();
 		bufferImage = createImage(width, height);
 		displayImgae = createImage(width, height);
-		
+
 		setDefaultCloseOperation(EXIT_ON_CLOSE);
 	}
-	
-	
+
+
 	/**
 	 * It displays a given dbox in a black color.
-	 *  
+	 *
 	 * @param b dbox to be displayed.
 	 */
 	public void display2DBox(DBox b){
 		display2DBox(b, Color.BLACK);
 	}
-	
+
 	/**
-	 * It displays a given dbox using a given color. 
+	 * It displays a given dbox using a given color.
 	 * @param b dbox to be displayed.
 	 * @param color color to be used to draw dbox.
 	 */
 	public void display2DBox(DBox b, Color color){
 		display2DBox(b, color, false);
 	}
-	
-	
+
+
 	/**
 	 * It draws dboxes given color. If n-dimensional box supplied
-	 * then its 2D projection will be drawn only if it cuts the plane. 
-	 * 
+	 * then its 2D projection will be drawn only if it cuts the plane.
+	 *
 	 * @param b dbox to be displayed.
-	 * @param color color to be used. 
-	 * @param fill should the object be filled. 
+	 * @param color color to be used.
+	 * @param fill should the object be filled.
 	 */
 	public void display2DBox(DBox b, Color color, boolean fill){
 		//a box that has dimension more than 2 should only be drawn if it cuts the plane
@@ -239,11 +237,11 @@ public class BoxDisplay extends JFrame {
 			int height = this.getContentPane().getHeight() -10;
 			g.setColor(color);
 			if(fill){
-				g.fillRect(10+(xCellsShift + b.origin[0])*pixelsPerUnit, height-(yCellsShift + b.origin[1]+b.length[1])*pixelsPerUnit, 
+				g.fillRect(10+(xCellsShift + b.origin[0])*pixelsPerUnit, height-(yCellsShift + b.origin[1]+b.length[1])*pixelsPerUnit,
 						(b.length[0] > 0) ? b.length[0]*pixelsPerUnit-1 : 1,
 								(b.length[1] > 0) ? b.length[1]*pixelsPerUnit-1 : 1);
 			} else {
-				g.drawRect(10+(xCellsShift + b.origin[0])*pixelsPerUnit, height-(yCellsShift + b.origin[1]+b.length[1])*pixelsPerUnit, 
+				g.drawRect(10+(xCellsShift + b.origin[0])*pixelsPerUnit, height-(yCellsShift + b.origin[1]+b.length[1])*pixelsPerUnit,
 						(b.length[0] > 0) ? b.length[0]*pixelsPerUnit-1 : 1,
 								(b.length[1] > 0) ? b.length[1]*pixelsPerUnit-1 : 1);
 			}
@@ -251,16 +249,16 @@ public class BoxDisplay extends JFrame {
 			repaint();
 		}
 	}
-	
-	
-	
+
+
+
 	/**
-	 * It draws the grid. 
-	 * 
+	 * It draws the grid.
+	 *
 	 * @param color the color in which the grid should be drawn.
 	 */
 	public void drawGrid(Color color){
-		
+
 		Graphics g = bufferImage.getGraphics();
 		g.setColor(color);
 		int height = this.getContentPane().getHeight() -10;
@@ -276,18 +274,18 @@ public class BoxDisplay extends JFrame {
 			j+= pixelsPerUnit;
 		}
 	}
-	
+
 	/**
-	 * It displays a 2D geost object. 
-	 * 
-	 * @param geost Geost constraint containting information about object shapes. 
-	 * @param o geost object to be drawn. 
+	 * It displays a 2D geost object.
+	 *
+	 * @param geost Geost constraint containting information about object shapes.
+	 * @param o geost object to be drawn.
 	 * @param c color in which the remaining units should be painted with.
 	 */
 	public void display2DGeostObject(Geost geost, GeostObject o, Color c){
 		Shape shape = geost.getShape(o.shapeID.min());
 		DBox area = DBox.newBox(o.dimension);
-		
+
 		for(DBox piece : shape.boxes){
 			for(int i = 0; i<o.dimension; i++){
 				IntVar coordVar = o.coords[i];
@@ -297,7 +295,7 @@ public class BoxDisplay extends JFrame {
 			}
 			display2DBox(area, c, true);
 		}
-		
+
 		//draw bounding box
 		final boolean draw_bounding_box = false;
 		if(draw_bounding_box){
@@ -311,19 +309,19 @@ public class BoxDisplay extends JFrame {
 		display2DBox(area, outColor, false);
 		}
 	}
-	
+
 	/**
-	 * It displays 3D geost by slicing 3rd dimension at given point and displaying the resulting slice. 
-	 * 
+	 * It displays 3D geost by slicing 3rd dimension at given point and displaying the resulting slice.
+	 *
 	 * @param geost Geost constraint containing information about shapes.
 	 * @param o object to be displayed.
-	 * @param c color the object should be painted with. 
+	 * @param c color the object should be painted with.
 	 * @param sliceHeight the slice position in the third dimension.
 	 */
 	public void display3DGeostObjectSlice(Geost geost, GeostObject o, Color c, int sliceHeight){
 		Shape shape = geost.getShape(o.shapeID.min());
 		DBox area = DBox.newBox(2);
-		
+
 		for(DBox piece : shape.boxes){
 			if(piece.length.length < 3 || piece.origin[2] <= sliceHeight && piece.origin[2]+piece.length[2] > sliceHeight){
 			for(int i = 0; i<2; i++){
@@ -348,10 +346,10 @@ public class BoxDisplay extends JFrame {
 		display2DBox(area, outColor, false);
 		}
 	}
-	
+
 	/**
-	 * It displays a 2D point given its coordinates and color. 
-	 * 
+	 * It displays a 2D point given its coordinates and color.
+	 *
 	 * @param point point coordinates.
 	 * @param color color the point should be painted with.
 	 */
@@ -363,10 +361,10 @@ public class BoxDisplay extends JFrame {
 
 		repaint();
 	}
-	
+
 	/**
 	 * It displays 2D Geost object given its shape.
-	 * 
+	 *
 	 * @param o geost object to be displayed.
 	 * @param s the shape of the object to be displayed.
 	 */
@@ -378,30 +376,30 @@ public class BoxDisplay extends JFrame {
 		int oy = o.coords[1].min()*pixelsPerUnit;
 		g.setColor(Color.BLUE);
 		g.drawRect(10+ox+bb.origin[0]*pixelsPerUnit, height-oy-(bb.origin[1]+bb.length[1])*pixelsPerUnit, bb.length[0]*pixelsPerUnit, bb.length[1]*pixelsPerUnit);
-		
+
 		//draw domain
 		g.setColor(Color.GREEN);
 		int dw =  (o.coords[0].max()-o.coords[0].min())*pixelsPerUnit;
 		int dh = (o.coords[1].max()-o.coords[1].min())*pixelsPerUnit;
 		g.drawRect(10+ox, height-dh-oy,dw, dh);
 		g.fillRect(10+ox, height-oy-pixelsPerUnit/2, pixelsPerUnit/2, pixelsPerUnit/2);
-		
+
 		for(DBox b: s.components()){
 			display2DBox(b, Color.black);
 		}
-		
+
 		repaint();
 	}
-	
+
 	/**
-	 * Clear the paint area so drawing can start on fresh canvas. 
+	 * Clear the paint area so drawing can start on fresh canvas.
 	 */
 	public void eraseAll(){
 
 		Graphics g = bufferImage.getGraphics();
 		g.clearRect(0, 0, getWidth(), getHeight());
 	}
-	
+
 	/**paints all objects, repaint only if requested to*/
 	public void paint(Graphics g) {
 		super.paint(g);
@@ -413,7 +411,7 @@ public class BoxDisplay extends JFrame {
 		super.update(g);
 		g.drawImage(displayImgae, 0, 0, null);
 	}
-	
+
 	/**
 	 * flips images, making previous operations visible
 	 */

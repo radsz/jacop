@@ -1,9 +1,9 @@
 /**
- *  BIBD.java 
+ *  BIBD.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,30 +31,31 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.AndBool;
 import org.jacop.constraints.Sum;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
- * It models and solves Balanced Incomplete Block Design (BIBD) problem (CSPLIB-P28). 
- * 
+ *
+ * It models and solves Balanced Incomplete Block Design (BIBD) problem (CSPLIB-P28).
+ *
  * @author Radoslaw Szymanek
  * @version 4.2
  */
 
-public class BIBD extends ExampleFD {
+public class BIBD extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(BIBD.class);
 
 	/**
-	 * It specifies number of rows in the incidence matrix. 
+	 * It specifies number of rows in the incidence matrix.
 	 */
 	public int v = 7;
 	/**
-	 * It specifies number of columns in the incidence matrix. 
+	 * It specifies number of columns in the incidence matrix.
 	 */
 	public int b = 7;
 	/**
@@ -62,7 +63,7 @@ public class BIBD extends ExampleFD {
 	 */
 	public int r = 3;
 	/**
-	 * It specifies number of ones in each column. 
+	 * It specifies number of ones in each column.
 	 */
 	public int k = 3;
 	/**
@@ -71,13 +72,13 @@ public class BIBD extends ExampleFD {
 	public int lambda = 1;
 
 	IntVar[][] x;
-	
+
 	@Override
 	public void model() {
 
 		store = new Store();
 		vars = new ArrayList<IntVar>();
-		
+
 		// Get problem size n from second program argument.
 		x = new IntVar[v][b];
 
@@ -90,7 +91,7 @@ public class BIBD extends ExampleFD {
 		IntVar rVar = new IntVar(store, "r", r, r);
 		IntVar kVar = new IntVar(store, "k", k, k);
 		IntVar lambdaVar = new IntVar(store, "lambda", lambda, lambda);
-		
+
 		for (int i = 0; i < v; i++) {
 			store.impose(new Sum(x[i], rVar), 1);
 		}
@@ -101,10 +102,10 @@ public class BIBD extends ExampleFD {
 				column[i] = x[i][j];
 			store.impose(new Sum(column, kVar), 1);
 		}
-		
+
 		for (int i = 0; i - 1 < v; i++)
 			for (int j = i + 1; j < v; j++) {
-				
+
 				ArrayList<IntVar> result = new ArrayList<IntVar>();
 
 				for (int m = 0; m < b; m++) {
@@ -113,18 +114,18 @@ public class BIBD extends ExampleFD {
 					store.impose(new AndBool(array, product), 0);
 					result.add(product);
 				}
-				
+
 				store.impose(new Sum(result, lambdaVar), 1);
 			}
-		
+
 	}
 
-	
+
 	/**
 	 * It executes the program to solve the Langford problem.
-	 * It is possible to specify two parameters. If no 
+	 * It is possible to specify two parameters. If no
 	 * parameter is used then default values for n and m are used.
-	 * 
+	 *
 	 * @param args the first parameter denotes n, the second parameter denotes m.
 	 */
 	public static void main(String args[]) {
@@ -140,19 +141,19 @@ public class BIBD extends ExampleFD {
 				example.lambda = new Integer(args[4]);
 			}
 			catch(Exception ex) {
-				System.out.println("Program parameters if provided must specify v, b, r, k, and lambda");
+				logger.info("Program parameters if provided must specify v, b, r, k, and lambda");
 			}
-		}	
-		
+		}
+
 		example.model();
 
 		if (example.searchAllAtOnce()) {
-			System.out.println("Solution(s) found");
-		
+			logger.info("Solution(s) found");
+
 			ExampleFD.printMatrix(example.x, example.v, example.b);
 
 		}
-	}	
-		
-	
+	}
+
+
 }

@@ -1,9 +1,9 @@
 /**
- *  IndomainList.java 
+ *  IndomainList.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,17 +32,19 @@
 package org.jacop.search;
 
 import org.jacop.core.IntVar;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * IndomainHierarchical - implements enumeration method based on the selection
  * of the preferred indomain for each variable. The initial idea of having such
  * functionality was proposed by Ben Weiner.
- * 
+ *
  * @author Radoslaw Szymanek
  * @version 4.2
  */
 
-public class IndomainList<T extends IntVar> implements Indomain<T> {
+public class IndomainList<T extends IntVar> implements Indomain<T> { private static Logger logger = LoggerFactory.getLogger(IndomainList.class);
 
 	private Indomain<T> defIndomain;
 
@@ -70,7 +72,7 @@ public class IndomainList<T extends IntVar> implements Indomain<T> {
 	 */
 	public int indomain(T var) throws RuntimeException {
 
-		// FIXME, there is no better way than just creating a BoundDomain object? 
+		// FIXME, there is no better way than just creating a BoundDomain object?
 		for (int next : order)
 			if (var.dom().contains(next))
 				return next;

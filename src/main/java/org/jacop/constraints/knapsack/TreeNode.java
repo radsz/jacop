@@ -1,9 +1,9 @@
 /**
- *  TreeNode.java 
+ *  TreeNode.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Radoslaw Szymanek and Wadeck Follonier
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -33,57 +33,60 @@ package org.jacop.constraints.knapsack;
 
 /**
  * It contains information required by an internal node of the item tree.
- * 
+ *
  * @author Radoslaw Szymanek and Wadeck Follonier
  *
  */
 
-public class TreeNode {
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class TreeNode { private static Logger logger = LoggerFactory.getLogger(TreeNode.class);
 
 	/**
 	 * It specifies the maximal weight of an item in the subtree rooted at this node.
-	 * The consistency algorithm will know that it can skip the entire subtree if the 
+	 * The consistency algorithm will know that it can skip the entire subtree if the
 	 * weight is not sufficiently large.
 	 */
 	private int wMax;
-	
+
 	/**
 	 * It specifies the sum of the weight of all items in the subtree rooted at this node.
 	 */
 	private int wSum;
-	
+
 	/**
 	 * It specifies the sum of the profit of all items in the subtree rooted at this node.
 	 */
 	private int pSum;
-	
+
 	/**
 	 * It specifies the parent of this node. If it is equal to null then this node
 	 * is the root of the whole item tree.
 	 */
 	public TreeNode parent;
-	
+
 	/**
 	 * It specifies the left child. It can not be equal to null.
 	 */
 	public final TreeNode left;
-	
+
 	/**
 	 * It specifies the right child. It can not be equal to null.
 	 */
 	public final TreeNode right;
 
-	
+
 	/**
 	 * It specifies the left neighbor.
 	 */
 	public TreeNode leftNeighbor;
-	
+
 	/**
-	 * It specifies the right neighbor. 
+	 * It specifies the right neighbor.
 	 */
 	public TreeNode rightNeighbor;
-	
+
 	/**
 	 * The constructor used by tree leaves.
 	 */
@@ -114,7 +117,7 @@ public class TreeNode {
 	public void setLeftNeighbor(TreeNode leftNeighbor) {
 		this.leftNeighbor = leftNeighbor;
 	}
-	
+
 
 	/**
 	 * It sets the right neighbor of this tree node.
@@ -133,7 +136,7 @@ public class TreeNode {
 
 	/**
 	 * It does not recompute the maximum of weights.
-	 * 
+	 *
 	 * @return The previously computed maximum weight of its children
 	 */
 	public int getWMax() {
@@ -141,8 +144,8 @@ public class TreeNode {
 	}
 
 	/**
-	 * It does not recompute sum of weights. 
-	 * 
+	 * It does not recompute sum of weights.
+	 *
 	 * @return The previously computed sum of weights of its children
 	 */
 	public int getWSum() {
@@ -161,14 +164,14 @@ public class TreeNode {
 
 	@Override
 	public String toString() {
-		
+
 		StringBuffer result = new StringBuffer();
-		
+
 		result.append("[wmax: ").append(wMax).append(", wsum: ").append(wSum);
 		result.append(", psum: ").append(pSum).append(";");
 		result.append(left.toString()).append("^").append(right.toString());
 		result.append("]");
-		
+
 		return result.toString();
 	}
 
@@ -176,16 +179,16 @@ public class TreeNode {
 	 * This function is used to recompute the attributes of all nodes
 	 * on the way to root from this node. It assumes that left and right
 	 * subtree have a correct values for their attributes.
-	 * 
-	 * @param tree only added to be in agreement with the function template 
-	 * for leaf which need information about tree it belongs to. 
+	 *
+	 * @param tree only added to be in agreement with the function template
+	 * for leaf which need information about tree it belongs to.
 	 */
 	public void recomputeUp(Tree tree) {
-		
+
 		pSum = left.getPSum() + right.getPSum();
 		wMax = Math.max(left.getWMax(), right.getWMax());
 		wSum = left.getWSum() + right.getWSum();
-		
+
 		// recursion until we reach the root node.
 		if (parent != null)
 			parent.recomputeUp(tree);
@@ -194,35 +197,35 @@ public class TreeNode {
 	/**
 	 * This function recomputes the attributes of this node after
 	 * recomputing the left and right subtree.
-	 * 
+	 *
 	 * @param tree It is required by leaves so tree atributes like alreadyUsedCapacity are properly updated.
 	 */
 	public void recomputeDown(Tree tree) {
-		
+
 		left.recomputeDown(tree);
 		right.recomputeDown(tree);
-		
+
 		pSum = left.getPSum() + right.getPSum();
 		wSum = left.getWSum() + right.getWSum();
 		wMax = Math.max(left.getWMax(), right.getWMax());
-		
+
 	}
-	
+
 	/**
 	 * It generates description of the node only.
 	 * @return the description containing values of all node internal attributes.
 	 */
 	public String nodeToString() {
-		
+
 	StringBuffer result = new StringBuffer();
-		
+
 		result.append("[wmax: ").append(wMax).append(", wsum: ").append(wSum);
 		result.append(", psum: ").append(pSum).append(";");
 		result.append("]");
-		
+
 		return result.toString();
-		
+
 	}
-	
-	
+
+
 }

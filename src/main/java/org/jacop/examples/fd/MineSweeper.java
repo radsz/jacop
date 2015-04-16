@@ -1,9 +1,9 @@
 /**
- *  MineSweeper.java 
+ *  MineSweeper.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Hakan Kjellerstrand and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,11 +31,8 @@
 
 package org.jacop.examples.fd;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
-import java.util.ArrayList;
-
+import java.io.*;
+import java.util.*;
 import org.jacop.constraints.Sum;
 import org.jacop.constraints.XeqC;
 import org.jacop.core.BooleanVar;
@@ -46,49 +43,51 @@ import org.jacop.search.IndomainMin;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleMatrixSelect;
 import org.jacop.search.SmallestDomain;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
-*
-* It models and solves Minesweeper problem.
-*
-* @author Hakan Kjellerstrand (hakank@bonetmail.com) and Radoslaw Szymanek
-* 
-* This is a port of Hakan's MiniZinc model
-* http://www.hakank.org/minizinc/minesweeper.mzn
-* 
-* which is commented in the (swedish) blog post
-* "Fler constraint programming-modeller i MiniZinc, t.ex. Minesweeper och Game of Life"
-* http://www.hakank.org/webblogg/archives/001231.html
-*
-* See also
-*  
-* The first 10 examples are from gecode/examples/minesweeper.cc
-* http://www.gecode.org/gecode-doc-latest/minesweeper_8cc-source.html
-*
-* http://www.janko.at/Raetsel/Minesweeper/index.htm
-*
-* http://en.wikipedia.org/wiki/Minesweeper_(computer_game)
-* 
-* Ian Stewart on Minesweeper: http://www.claymath.org/Popular_Lectures/Minesweeper/
-*
-* Richard Kaye's Minesweeper Pages:
-* http://web.mat.bham.ac.uk/R.W.Kaye/minesw/minesw.htm
-*
-* Some Minesweeper Configurations:
-* http://web.mat.bham.ac.uk/R.W.Kaye/minesw/minesw.pdf
-*
-*
-*/
+ *
+ * It models and solves Minesweeper problem.
+ *
+ * @author Hakan Kjellerstrand (hakank@bonetmail.com) and Radoslaw Szymanek
+ *
+ * This is a port of Hakan's MiniZinc model
+ * http://www.hakank.org/minizinc/minesweeper.mzn
+ *
+ * which is commented in the (swedish) blog post
+ * "Fler constraint programming-modeller i MiniZinc, t.ex. Minesweeper och Game of Life"
+ * http://www.hakank.org/webblogg/archives/001231.html
+ *
+ * See also
+ *
+ * The first 10 examples are from gecode/examples/minesweeper.cc
+ * http://www.gecode.org/gecode-doc-latest/minesweeper_8cc-source.html
+ *
+ * http://www.janko.at/Raetsel/Minesweeper/index.htm
+ *
+ * http://en.wikipedia.org/wiki/Minesweeper_(computer_game)
+ *
+ * Ian Stewart on Minesweeper: http://www.claymath.org/Popular_Lectures/Minesweeper/
+ *
+ * Richard Kaye's Minesweeper Pages:
+ * http://web.mat.bham.ac.uk/R.W.Kaye/minesw/minesw.htm
+ *
+ * Some Minesweeper Configurations:
+ * http://web.mat.bham.ac.uk/R.W.Kaye/minesw/minesw.pdf
+ *
+ *
+ */
 
-public class MineSweeper extends ExampleFD {
+public class MineSweeper extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(MineSweeper.class);
 
     int r;        // number of rows
     int c;        // number of cols
-    
+
     /**
      * It represents the unknown value in the problem matrix.
      */
-    public static int X = -1; 
+    public static int X = -1;
 
     IntVar[][] game;    // The FDV version of the problem matrix.
     IntVar[][] mines;   // solution matrix: 0..1 where 1 means mine.
@@ -138,7 +137,7 @@ public class MineSweeper extends ExampleFD {
                     store.impose(new XeqC(mines[i][j], 0));
 
                     // Sum the number of neighbours: same as game[i][j].
-                    // 
+                    //
                     // Note: Maybe this could be modelled more elegant
                     // instead of using an ArrayList.
                     ArrayList<IntVar> lst = new ArrayList<IntVar>();
@@ -148,7 +147,7 @@ public class MineSweeper extends ExampleFD {
                                 i+a < r && j+b < c) {
                                 lst.add(mines[i+a][j+b]);
                             }
-                        }                        
+                        }
                     }
                     store.impose(new Sum(lst, game[i][j]));
 
@@ -171,59 +170,59 @@ public class MineSweeper extends ExampleFD {
 
         // Note: This uses the SimpleMatrixSelect since
         // mines is a matrix.
-        SelectChoicePoint<IntVar> select = 
+        SelectChoicePoint<IntVar> select =
             new SimpleMatrixSelect<IntVar> (mines,
                               new SmallestDomain<IntVar>(),
                               new IndomainMin<IntVar> ()
                               );
-        
-        
+
+
         search = new DepthFirstSearch<IntVar> ();
         search.getSolutionListener().searchAll(true);
-        search.getSolutionListener().recordSolutions(recordSolutions);        
-        
+        search.getSolutionListener().recordSolutions(recordSolutions);
+
         boolean result = search.labeling(store, select);
-        
+
         int numSolutions = search.getSolutionListener().solutionsNo();
-        
+
         if (result) {
 
             if (numSolutions <= 100) {
                 search.printAllSolutions();
             } else {
-                System.out.println("Too many solutions to print...");
+                logger.info("Too many solutions to print...");
             }
 
             if (numSolutions > 1)
-            	System.out.println("\nThe last solution:");
+            	logger.info("\nThe last solution:");
             else
-            	System.out.println("\nThe solution:");
-            
+            	logger.info("\nThe solution:");
+
             for(int i = 0; i < r; i++) {
                 for(int j = 0; j < c; j++) {
-                    System.out.print(mines[i][j].value() + " ");
+                    logger.info(mines[i][j].value() + " ");
                 }
-                System.out.println();
+                logger.info("\n");
             }
 
-            System.out.println("numSolutions: " + numSolutions);
+            logger.info("numSolutions: " + numSolutions);
 
         } else {
 
-            System.out.println("No solutions.");
+            logger.info("No solutions.");
 
         } // end if result
 
 
     } // end search
 
-    
 
-    
+
+
     /**
      * It transforms string representation of the problem into an array of ints
      * representation.
-     * 
+     *
      * @param description array of strings representing the problem.
      * @return two dimensional array of ints representing the problem.
      */
@@ -231,12 +230,12 @@ public class MineSweeper extends ExampleFD {
 
         int r = description.length;
         int c = description[0].trim().length();
-    	
+
         int[][] problem = new int[r][c]; // The problem matrix
-        
+
         for (int i = 0; i < description.length; i++ ) {
-        
-        	String str = description[i];        	
+
+        	String str = description[i];
         	str = str.trim();
 
         	// the problem matrix
@@ -244,18 +243,18 @@ public class MineSweeper extends ExampleFD {
               String s = str.substring(j, j+1);
               if (s.equals("."))
             	  problem[i][j] = X;
-              else 
+              else
             	  problem[i][j] = Integer.parseInt(s);
 
             } // end for
-            
+
         } // end for
-    	
+
         return problem;
-        
+
     }
 
-    
+
     /**
      * One of the possible MineSweeper problems.
      */
@@ -279,7 +278,7 @@ public class MineSweeper extends ExampleFD {
            "1...2..3",
            ".2.22.3.",
     	   "1.1..1.1"};
-    
+
     /**
      * One of the possible MineSweeper problems.
      */
@@ -294,7 +293,7 @@ public class MineSweeper extends ExampleFD {
     		".3...32..3",
     		"..3.33....",
            	".2.2...22."};
-    
+
     /**
      * One of the possible MineSweeper problems.
      */
@@ -307,7 +306,7 @@ public class MineSweeper extends ExampleFD {
            "..5..4..",
            "2...5.4.",
            ".3.3...2"};
-    
+
     /**
      * One of the possible MineSweeper problems.
      */
@@ -322,7 +321,7 @@ public class MineSweeper extends ExampleFD {
            ".5.2...3.1",
            ".3.1..3...",
            ".2...12..0"};
-    
+
     /**
      * One of the possible MineSweeper problems.
      */
@@ -337,7 +336,7 @@ public class MineSweeper extends ExampleFD {
            "2..33.6...",
            "36...3..4.",
            "...4.2.21."};
-    
+
     /**
      * One of the possible MineSweeper problems.
      */
@@ -350,7 +349,7 @@ public class MineSweeper extends ExampleFD {
            "3...5..4",
            "2..5....",
            "..2..34."};
-    
+
     /**
      * One of the possible MineSweeper problems.
      */
@@ -364,7 +363,7 @@ public class MineSweeper extends ExampleFD {
            "123...133",
           "...322...",
            ".2.....3."};
-    
+
     /**
      * One of the possible MineSweeper problems.
      */
@@ -376,7 +375,7 @@ public class MineSweeper extends ExampleFD {
            ".1...3.",
           ".12234.",
            "......."};
-    
+
     /**
      * One of the possible MineSweeper problems.
      */
@@ -405,7 +404,7 @@ public class MineSweeper extends ExampleFD {
           "...2..3..",
           ".4.....6.",
           "2...1...2",
-        };   
+        };
 
     /**
      * One of the possible MineSweeper problems.
@@ -421,15 +420,15 @@ public class MineSweeper extends ExampleFD {
 		"00001110000",
 		"...01.10...",
 		"...01.10...",
-		"...0...0..."};    
-    
-    
+		"...0...0..."};
+
+
     /**
      * The collection of MineSweeper problems.
      */
-    public static String[][] problems = {problem1, problem2, problem3, problem4, problem5, 
+    public static String[][] problems = {problem1, problem2, problem3, problem4, problem5,
     									problem6, problem7, problem8, problem9, problem10};
-    
+
 
     /**
     *
@@ -442,9 +441,9 @@ public class MineSweeper extends ExampleFD {
     *  <
     *    row number of neighbours lines...
     *  >
-    * 
+    *
     * 0..8 means number of neighbours, "." mean unknown (may be a mine)
-    * 
+    *
     * Example (from minesweeper0.txt)
     * # Problem from Gecode/examples/minesweeper.cc  problem 0
     * 6
@@ -465,10 +464,10 @@ public class MineSweeper extends ExampleFD {
         int[][] problem = null; // The problem matrix
         int r = 0;
         int c = 0;
-        
-        System.out.println("readFile(" + file + ")");
+
+        logger.info("readFile(" + file + ")");
         int lineCount = 0;
-        
+
         try {
 
             BufferedReader inr = new BufferedReader(new FileReader(file));
@@ -482,7 +481,7 @@ public class MineSweeper extends ExampleFD {
                     continue;
                 }
 
-                System.out.println(str);
+                logger.info(str);
                 if (lineCount == 0) {
                     r = Integer.parseInt(str); // number of rows
                 } else if (lineCount == 1) {
@@ -508,19 +507,19 @@ public class MineSweeper extends ExampleFD {
             inr.close();
 
         } catch (IOException e) {
-            System.out.println(e);
+            logger.info(e.toString());
         }
 
         return problem;
-        
+
     } // end readFile
 
 
     /**
-     * 
+     *
      * It executes the program to solve any MineSweeper problem.
      * It is possible to supply the filename containing the problem specification.
-     * 
+     *
      * @param args the filename containing the problem description.
      *
      */
@@ -528,42 +527,42 @@ public class MineSweeper extends ExampleFD {
 
     	long T1, T2, T;
 		T1 = System.currentTimeMillis();
-        
+
         MineSweeper minesweeper = new MineSweeper();
-        
+
 		for (int i = 0; i < problems.length; i++) {
-			
+
 			T1 = System.currentTimeMillis();
-        	
+
 			minesweeper.problem = MineSweeper.readFromArray( problems[i] );
-			
+
 	        minesweeper.model();
-	        
+
 	        minesweeper.searchSpecific( true );
-	        
+
 	        T2 = System.currentTimeMillis();
 			T = T2 - T1;
-			System.out.println("\n\t*** Execution time = " + T + " ms");
-			
+			logger.info("\n\t*** Execution time = " + T + " ms");
+
 		}
 
         if (args.length > 0)
         	minesweeper.problem = MineSweeper.readFile(args[0]);
-        
+
         if (minesweeper.problem == null)
         	minesweeper.problem = MineSweeper.readFromArray(MineSweeper.problem_kaye_splitter);
-        	        	
+
         minesweeper.model( );
         minesweeper.searchSpecific(false);
-        
+
         minesweeper.problem = MineSweeper.readFromArray(MineSweeper.problemTest);
         minesweeper.model( );
         minesweeper.searchSpecific( true );
 
         T2 = System.currentTimeMillis();
 		T = T2 - T1;
-		System.out.println("\n\t*** Execution time = " + T + " ms");
-		        
+		logger.info("\n\t*** Execution time = " + T + " ms");
+
     } // end main
 
 } // end class

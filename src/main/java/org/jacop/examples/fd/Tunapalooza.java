@@ -1,9 +1,9 @@
 /**
- *  Tunapalooza.java 
+ *  Tunapalooza.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,8 +31,7 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.And;
 import org.jacop.constraints.Or;
@@ -44,14 +43,16 @@ import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
- * It solves a simple logic puzzle about music concert. 
- * 
+ *
+ * It solves a simple logic puzzle about music concert.
+ *
  * @author Lesniak Kamil, Harezlak Roman, Radoslaw Szymanek
  * @version 4.2
- * 
+ *
  * Tim and Keri have a full day ahead for themselves as they plan to see
  * and hear everything at Tunapalooza '98, the annual save-the-tuna
  * benefit concert in their hometown. To cover the most ground, they
@@ -62,9 +63,9 @@ import org.jacop.core.Store;
  * each band name with the type of music they play (country, grunge,
  * reggae, or speed metal) and Tim and Kerri's prearranged meeting spot
  * while they play?
- * 
- * 1. Korrupt isn't a country or grunge music band. 
- * 
+ *
+ * 1. Korrupt isn't a country or grunge music band.
+ *
  * 2. Tim and Kerri won't meet at the carnival games during Ellyfish's performance.
  *
  * 3. The pair won't meet at the T-shirt vendor during the reggae band's show.
@@ -74,24 +75,24 @@ import org.jacop.core.Store;
  * b) Tim and Kerri won't meet at the information booth during a performance by Retread Ed and the Flat Tires.
  * c) The two friends won't meet at the T-shirt vendor while Yellow Reef is playing.
  *
- * 5. The country and speed metal acts are, in some order, Retread Ed and the Flat Tires 
+ * 5. The country and speed metal acts are, in some order, Retread Ed and the Flat Tires
  * and the act during which Tim and Kerri will meet at the mosh pit.
  *
- * 6. The reggae band is neither Korrupt nor the act during which Tim and 
+ * 6. The reggae band is neither Korrupt nor the act during which Tim and
  * Kerri will meet at the information booth.
  *
  * Determine: Band name -- Music type -- Meeting place
  *
- * Given solution : 
+ * Given solution :
  *
  * 1 Ellyfish, grunge,  vendor
  * 2 Korrupt,  metal,   mosh
- * 3 Retread,  country, information 
+ * 3 Retread,  country, information
  * 4 Yellow ,  reggae,  carnival
- * 
+ *
  */
 
-public class Tunapalooza extends ExampleFD {
+public class Tunapalooza extends ExampleFD { private static Logger logger = LoggerFactory.getLogger(Tunapalooza.class);
 
 	@Override
 	public void model() {
@@ -99,7 +100,7 @@ public class Tunapalooza extends ExampleFD {
 		// Creating constraint store
 		store = new Store();
 		vars = new ArrayList<IntVar>();
-		
+
 		// names
 		int Ellyfish = 1, Korrupt = 2, Retread = 3, Yellow = 4;
 
@@ -122,7 +123,7 @@ public class Tunapalooza extends ExampleFD {
 			vars.add(v);
 		for (IntVar v : places)
 			vars.add(v);
-		
+
 		// All types and places have to be associated with different band.
 		store.impose(new Alldifferent(types));
 		store.impose(new Alldifferent(places));
@@ -163,7 +164,7 @@ public class Tunapalooza extends ExampleFD {
 
 		for (IntVar v : sum)
 			vars.add(v);
-		
+
 		// 5. The country and speed metal acts are, in some order, Retread Ed
 		// and the Flat Tires
 		// and the act during which Tim and Kerri will meet at the mosh pit.
@@ -181,7 +182,7 @@ public class Tunapalooza extends ExampleFD {
 		store.imposeWithConsistency(new XneqY(reggae, information));
 
 	}
-		
+
 	/**
 	 * It executes the program to solve this simple logic puzzle.
 	 * @param args no arguments are used.
@@ -189,12 +190,12 @@ public class Tunapalooza extends ExampleFD {
 	public static void main(String args[]) {
 
 		Tunapalooza example = new Tunapalooza();
-		
+
 		example.model();
 
 		if (example.searchMostConstrainedStatic())
-			System.out.println("Solution(s) found");
-		
-	}		
-	
+			logger.info("Solution(s) found");
+
+	}
+
 }

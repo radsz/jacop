@@ -1,9 +1,9 @@
 /**
- *  SinA.java 
+ *  SinA.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,52 +31,53 @@
 
 package org.jacop.set.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * It creates an inclusion set constraint to make sure that provided set is 
+ * It creates an inclusion set constraint to make sure that provided set is
  * included in a set variable a.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  */
 
-public class SinA extends PrimitiveConstraint {
+public class SinA extends PrimitiveConstraint { private static Logger logger = LoggerFactory.getLogger(SinA.class);
 
 	static int idNumber = 1;
 
 	/**
-	 * It specifies the set s which must be in variable a. 
+	 * It specifies the set s which must be in variable a.
 	 */
-	public IntDomain set;	
+	public IntDomain set;
 
 	/**
 	 * It specifies variable a within which it must contains set s.
 	 */
 	public SetVar a;
-	
+
 	/**
 	 * It specifies if the inclusion relation is strict.
 	 */
 	public boolean strict;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"s", "a", "strict"};
 
 	/**
 	 * It creates a set inclusion constraint.
-	 * 
-	 * @param a variable which value must include a provided set. 
+	 *
+	 * @param a variable which value must include a provided set.
 	 * @param set a set that must be included within a provided set variable a.
 	 * @param strict it specifies if the inclusion relation is strict.
 	 */
@@ -87,23 +88,23 @@ public class SinA extends PrimitiveConstraint {
 
 		numberId = idNumber++;
 		numberArgs = 1;
-		
+
 		this.a = a;
 		this.set = set;
 		this.strict = strict;
-		
+
 	}
 
 	/**
 	 * It creates a set inclusion constraint. It is not strict by default.
-	 * 
-	 * @param a variable which value must include a provided set. 
+	 *
+	 * @param a variable which value must include a provided set.
 	 * @param set a set that must be included within a provided set variable a.
 	 */
 	public SinA(IntDomain set, SetVar a) {
 
 		this(set, a, false);
-		
+
 	}
 
 	@Override
@@ -118,22 +119,22 @@ public class SinA extends PrimitiveConstraint {
 
 	@Override
 	public void consistency(Store store) {
-		
+
 		/**
-		 * This consistency enforces the following rules. 
-		 * 
-		 * if (s not in lubA) then fail. 
-		 *  
+		 * This consistency enforces the following rules.
+		 *
+		 * if (s not in lubA) then fail.
+		 *
 		 * glbA = glbA \/ S
-		 * 
-		 * 
+		 *
+		 *
 		 */
-				
+
 		a.domain.inGLB(store.level, a, set);
-		
+
 		if (strict)
 			a.domain.inCardinality(store.level, a, set.getSize() + 1, Integer.MAX_VALUE);
-		
+
 	}
 
 	@Override
@@ -145,7 +146,7 @@ public class SinA extends PrimitiveConstraint {
 			if (possibleEvent != null)
 				return possibleEvent;
 		}
-		return SetDomain.ANY;		
+		return SetDomain.ANY;
 	}
 
 
@@ -223,15 +224,15 @@ public class SinA extends PrimitiveConstraint {
 
 	@Override
 	public void notConsistency(Store store) {
-		
+
 		// TODO, test it properly.
 
 		if (set.getSize() > a.domain.lub().getSize() + 1)
 			return;
-		
+
 		if (!a.domain.lub().contains(set))
 			return;
-		
+
 		IntDomain result = set.subtract( a.domain.glb() );
 
 		if (result.isEmpty())
@@ -253,15 +254,15 @@ public class SinA extends PrimitiveConstraint {
 		}
 
 		if (strict && result.getSize() == 1 && set.getSize() - 1 < a.domain.glb().getSize() ) {
-			a.domain.inLUBComplement(store.level, a, result.value());			
+			a.domain.inLUBComplement(store.level, a, result.value());
 		}
 
-		
+
 	}
 
 	@Override
 	public boolean notSatisfied() {
 		return !a.domain.lub().contains(set) || (strict && set.eq(a.domain.lub()));
-	}	
+	}
 
 }

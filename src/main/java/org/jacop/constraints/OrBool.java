@@ -1,9 +1,9 @@
 /**
- *  OrBool.java 
+ *  OrBool.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,26 +31,27 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 import org.jacop.core.TimeStamp;
+import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * If at least one variable from the list is equal 1 then result variable is equal 1 too. 
- * Otherwise, result variable is equal to zero. 
+ * If at least one variable from the list is equal 1 then result variable is equal 1 too.
+ * Otherwise, result variable is equal to zero.
  * It restricts the domain of all x as well as result to be between 0 and 1.
- * 
- * 
+ *
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class OrBool extends PrimitiveConstraint {
+public class OrBool extends PrimitiveConstraint { private static Logger logger = LoggerFactory.getLogger(OrBool.class);
 
 	static int counter = 1;
 
@@ -58,14 +59,14 @@ public class OrBool extends PrimitiveConstraint {
 	 * It specifies a list of variables among which one must be equal to 1 to set result variable to 1.
 	 */
 	public IntVar [] list;
-	
+
 	/**
 	 * It specifies variable result, storing the result of or function performed a list of variables.
 	 */
 	public IntVar result;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"list", "result"};
@@ -76,19 +77,19 @@ public class OrBool extends PrimitiveConstraint {
     private TimeStamp<Integer> position;
 
 	/**
-	 * It constructs orBool. 
-	 * 
+	 * It constructs orBool.
+	 *
 	 * @param list list of x's which one of them must be equal 1 to make result equal 1.
-	 * @param result variable which is equal 0 if none of x is equal to zero. 
+	 * @param result variable which is equal 0 if none of x is equal to zero.
 	 */
 	public OrBool(IntVar [] list, IntVar result) {
 
 		assert ( list != null ) : "List variable is null";
 		assert ( result != null ) : "Result variable is null";
-		
+
 		this.numberId = counter++;
 		this.numberArgs = (short)(list.length + 1);
-		
+
 		this.list = new IntVar[list.length];
 		for (int i = 0; i < list.length; i++) {
 			assert (list[i] != null) : i + "-th element in the list is null";
@@ -101,21 +102,21 @@ public class OrBool extends PrimitiveConstraint {
 	}
 
 	/**
-	 * It constructs orBool. 
-	 * 
+	 * It constructs orBool.
+	 *
 	 * @param list list of x's which one of them must be equal 1 to make result equal 1.
-	 * @param result variable which is equal 0 if none of x is equal to zero. 
+	 * @param result variable which is equal 0 if none of x is equal to zero.
 	 */
 	public OrBool(ArrayList<? extends IntVar> list, IntVar result) {
-	
+
 		this(list.toArray(new IntVar[list.size()]), result);
-		
+
 	}
 
 	/**
 	 * It checks invariants required by the constraint. Namely that
-	 * boolean variables have boolean domain. 
-	 * 
+	 * boolean variables have boolean domain.
+	 *
 	 * @return the string describing the violation of the invariant, null otherwise.
 	 */
 	public String checkInvariants() {
@@ -123,7 +124,7 @@ public class OrBool extends PrimitiveConstraint {
 		for (IntVar var : list)
 			if (var.min() < 0 || var.max() > 1)
 				return "Variable " + var + " does not have boolean domain";
-		
+
 		return null;
 	}
 
@@ -227,13 +228,13 @@ public class OrBool extends PrimitiveConstraint {
 				    }
 			}
 
-			if (start == list.length) 
+			if (start == list.length)
 				result.domain.in(store.level, result, 0, 0);
 
 			// for case >, then the in() will fail as the constraint should.
 			if (result.min() == 1 && start >= list.length - 1)
 				list[index_01].domain.in(store.level, list[index_01], 1, 1);
-				
+
 			if (result.max() == 0 && start < list.length)
 				for (int i = start; i < list.length; i++)
 					list[i].domain.in(store.level, list[i], 0, 0);
@@ -253,7 +254,7 @@ public class OrBool extends PrimitiveConstraint {
 		do {
 
 			store.propagationHasOccurred = false;
-			
+
 	                int start = position.value();
 			int index_01 = list.length-1;
 
@@ -272,19 +273,19 @@ public class OrBool extends PrimitiveConstraint {
 					// 	index_01 = i;
 			}
 
-			if (start == list.length) 
+			if (start == list.length)
 				result.domain.in(store.level, result, 1, 1);
 
 			// for case >, then the in() will fail as the constraint should.
 			if (result.min() == 1 && start < list.length)
 				for (int i = 0; i < list.length; i++)
 					list[i].domain.in(store.level, list[i], 0, 0);
-				
+
 			if (result.max() == 0 && start >= list.length - 1)
 				list[index_01].domain.in(store.level, list[index_01], 1, 1);
 
 		} while (store.propagationHasOccurred);
-		
+
 	}
 
 	@Override
@@ -300,14 +301,14 @@ public class OrBool extends PrimitiveConstraint {
 				else {
 				    swap(start, i);
 				    start++;
-				    position.update(start);	
+				    position.update(start);
 				}
-			
+
 			return true;
 
 		}
 		else {
-			
+
 			if (result.min() == 1) {
 
 				for (int i = start; i < list.length; i++)
@@ -324,7 +325,7 @@ public class OrBool extends PrimitiveConstraint {
 
 		return false;
 
-		
+
 	}
 
 	@Override
@@ -335,7 +336,7 @@ public class OrBool extends PrimitiveConstraint {
 		int x1 = 0, x0 = start;
 
 		for (int i = start; i < list.length; i++) {
-			if (list[i].min() == 1) 
+			if (list[i].min() == 1)
 			    x1++;
 			else if (list[i].max() == 0) {
 			    x0++;

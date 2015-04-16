@@ -1,9 +1,9 @@
 /**
- *  IntervalGaussSeidel.java 
+ *  IntervalGaussSeidel.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,25 +31,24 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.Arrays;
-
+import java.util.*;
 import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.floats.core.FloatInterval;
-
+import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.util.Matrix;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * IntervalGaussSeidel implements Gauss-Seidel method for solving a
  * system of linear equations Ax = b with interval matrix A of
  * coefficients.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class IntervalGaussSeidel {
+public class IntervalGaussSeidel { private static Logger logger = LoggerFactory.getLogger(IntervalGaussSeidel.class);
 
     final static boolean debug = false;
 
@@ -67,7 +66,7 @@ public class IntervalGaussSeidel {
     }
 
     double minAbs(FloatInterval v) {
-	
+
 	if (v.min() <= 0 && v.max() >= 0)
 	    return 0;
 
@@ -99,18 +98,18 @@ public class IntervalGaussSeidel {
 
     	    A = tempA;
     	    b = tempb;
-      
+
     	    return true;
     	}
 
     	for (int i = 0; i < A.length; i++) {
-    	    if (done[i]) 
+    	    if (done[i])
     		continue;
 
 	    double sumMax = 0;
-      
+
 	    for (int j = 0; j < A.length; j++)
-		if (j != currentRow) 
+		if (j != currentRow)
 		    sumMax += maxAbs(A[i][j]);
 
 	    if ( minAbs(A[i][currentRow]) > sumMax) { // interval version of diagonal dominance
@@ -130,7 +129,7 @@ public class IntervalGaussSeidel {
     public FloatInterval[]  solve() {
 	int N = 0;
 	FloatInterval[] previousX = new FloatInterval[x.length];
-	for (int i = 0; i < x.length; i++) 
+	for (int i = 0; i < x.length; i++)
 	    x[i] = new FloatInterval(0.0, 0.0);
 
 	boolean[] d = new boolean[A.length];
@@ -139,7 +138,7 @@ public class IntervalGaussSeidel {
 	boolean dominant = restructure(0, d, r);
 
 	if (!dominant) {
- 
+
 	    // try to precondition to make it non-dominant
 	    // current method for computing preconditioner is far too slow
 	    // and need to be improved.
@@ -156,19 +155,19 @@ public class IntervalGaussSeidel {
 	}
 
 	if (debug) {
-	    System.out.println ("dominant = " + dominant + " ===================================");
+	    logger.info("dominant = " + dominant + " ===================================");
 	    for (int i = 0; i < A.length; i++) {
 		for (int j = 0; j < A[i].length; j++) {
 		    if (A[i][j].min <= 0 && A[i][j].max() >= 0)
-			System.out.print ("0 ");
+			logger.info("0 ");
 		    else if (A[i][j].min() > 0)
-			System.out.print ("+ ");
+			logger.info("+ ");
 		    else if (A[i][j].min() < 0)
-			System.out.print ("- ");
+			logger.info("- ");
 		    else
-			System.out.print ("? ");
+			logger.info("? ");
 		}
-		System.out.println ();
+		logger.info("");
 	    }
 	}
 
@@ -189,19 +188,19 @@ public class IntervalGaussSeidel {
 	    }
 
 	    if (debug) {
-		System.out.print("iteration " + N + ": {");
+		logger.info("iteration " + N + ": {");
 		for (int i = 0; i < x.length; i++) {
 		    if (i == x.length - 1)
-			System.out.print(x[i]);
+			logger.info(x[i].toString());
 		    else
-			System.out.print(x[i] + ", ");
+                logger.info(x[i] + ", ");
 		}
-		System.out.println("}");
+		logger.info("}");
 	    }
 
 	    if (N == 0) {
 		N++;
-		for (int i = 0; i < x.length; i++) 
+		for (int i = 0; i < x.length; i++)
 		    previousX[i] = (FloatInterval)x[i].clone();
 
 		continue;
@@ -213,14 +212,14 @@ public class IntervalGaussSeidel {
 	    }
 
 	    boolean converged = true;
-	    for (int i = 0; i < x.length; i++) 
+	    for (int i = 0; i < x.length; i++)
 		if ( ! x[i].eq(previousX[i]))
 		    converged = false;
 
-	    if (converged) 
+	    if (converged)
 		break;
-			 
-	    for (int i = 0; i < x.length; i++) 
+
+	    for (int i = 0; i < x.length; i++)
 		previousX[i] = (FloatInterval)x[i].clone();
 
 	}
@@ -231,12 +230,12 @@ public class IntervalGaussSeidel {
     void precondition(FloatInterval[][] AA, double[] bb) {
 
 	if (debug)
-	    System.out.println ("Before preconditioning\n"+this);
+	    logger.info("Before preconditioning\n"+this);
 
 	double[][] midPoint = new double[AA.length][AA[0].length];
 
-	for (int i = 0; i < midPoint.length; i++) 
-	    for (int j = 0; j < midPoint[i].length; j++) 
+	for (int i = 0; i < midPoint.length; i++)
+	    for (int j = 0; j < midPoint[i].length; j++)
 		midPoint[i][j] = (AA[i][j].min() + AA[i][j].max())/2;
 
 	Matrix m = new Matrix(midPoint);
@@ -244,7 +243,7 @@ public class IntervalGaussSeidel {
 	double[][] inv = m.inverse();
 
 	FloatInterval[][] F = new FloatInterval[AA.length][A[0].length];
-	for (int i = 0; i < F.length; i++) 
+	for (int i = 0; i < F.length; i++)
 	    for (int j = 0; j < F[0].length; j++)
 		F[i][j] = new FloatInterval(AA[i][j].min(), AA[i][j].max());
 
@@ -253,13 +252,13 @@ public class IntervalGaussSeidel {
 	double[] newB = comp.mult(bb);
 
 	A = new FloatInterval[newA.length][newA[0].length];
-	for (int i = 0; i < newA.length; i++) 
+	for (int i = 0; i < newA.length; i++)
 	    for (int j = 0; j < newA[i].length; j++)
 		A[i][j] = new FloatInterval(newA[i][j].min(), newA[i][j].max());
 	b = newB;
 
 	if (debug)
-	    System.out.println ("After preconditioning\n"+this);
+	    logger.info("After preconditioning\n"+this);
 
     }
 
@@ -275,5 +274,5 @@ public class IntervalGaussSeidel {
 
 	return s;
     }
-    
+
 }

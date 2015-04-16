@@ -1,9 +1,9 @@
 /**
- *  SimpleMatrixSelect.java 
+ *  SimpleMatrixSelect.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,40 +31,40 @@
 
 package org.jacop.search;
 
-import java.util.ArrayList;
-import java.util.IdentityHashMap;
-
+import java.util.*;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * SimpleMatrixSelect selects first a row in the matrix based on metric of the 
+ * SimpleMatrixSelect selects first a row in the matrix based on metric of the
  * variable at pivotPosition. As soon as a row is choosen, variables starting
- * from the beginning of the row which are not assigned yet are selected.  
+ * from the beginning of the row which are not assigned yet are selected.
  * The row selection is done with the help of variable comparators. Two comparators
  * can be employed main and tiebreaking one. If two are not sufficient to differentiate
- * two rows than the lexigraphical ordering is used. 
- * 
+ * two rows than the lexigraphical ordering is used.
+ *
  * Default values: pivotPosition = 0,
  * mainComparator = InputOrder, tieBreakingComparator = InputOrder.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  * @param <T> type of variable being used in the Search.
  */
 
-public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
+public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> { private static Logger logger = LoggerFactory.getLogger(SimpleMatrixSelect.class);
 
 	///@todo implement subListSize functionality or remove it from the description.
 	static final boolean debugAll = false;
 
 	/**
-	 * It decides if input order tiebreaking is used. If input tiebreaking 
+	 * It decides if input order tiebreaking is used. If input tiebreaking
 	 * is not used than the current arrangement of row, variables within rows
-	 * decides on the priority. The arrangement of the rows, variables within 
+	 * decides on the priority. The arrangement of the rows, variables within
 	 * rows depends on the search history. Setting it to false makes the
-	 * final tiebreaking a mixture of input-order/search history influenced 
-	 * tie breaking. It is faster to compute tiebreaking and it may give 
+	 * final tiebreaking a mixture of input-order/search history influenced
+	 * tie breaking. It is faster to compute tiebreaking and it may give
 	 * interesting search history based tiebreaking.
 	 */
 	public boolean inputOrderTieBreaking = true;
@@ -117,7 +117,7 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
 	 * @param indomain variable ordering value to be used to determine value for a given variable.
 	 */
 	public SimpleMatrixSelect(T[][] vars,
-							  ComparatorVariable<T> mainComparator, 
+							  ComparatorVariable<T> mainComparator,
 							  Indomain<T> indomain) {
 		this(vars, mainComparator, null, indomain, 0);
 	}
@@ -134,10 +134,10 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
 			ComparatorVariable<T> tieBreakingComparator, Indomain<T> indomain) {
 		this(vars, mainComparator, tieBreakingComparator, indomain, 0);
 	}
-	
+
 	/**
 	 * This constructor allows to specify all parameters for the selection mechanism. Specifying
-	 * mainComparator or tieBreaking to value null do not use that functionality of the selection 
+	 * mainComparator or tieBreaking to value null do not use that functionality of the selection
 	 * mechanims.
 	 * @param vars variables from which the base of the choice point is choosen.
 	 * @param mainComparator the main variable comparator used to compare variables.
@@ -148,12 +148,12 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
 
 	public SimpleMatrixSelect(T[][] vars,
 			ComparatorVariable<T> mainComparator,
-			ComparatorVariable<T> tieBreakingComparator, 
+			ComparatorVariable<T> tieBreakingComparator,
 			Indomain<T> indomain,
 			int pivotPosition) {
 
 		assert (pivotPosition >= 0) : "Pivot position must be equal or greater 0";
-		
+
 		this.mainComparator = mainComparator;
 		this.tieBreakingComparator = tieBreakingComparator;
 		this.pivotPosition = pivotPosition;
@@ -188,11 +188,11 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
 	 */
 
 	//@todo is this specialtiebreaking (lexdynamic actually employed)?
-			
+
 	public T getChoiceVariable(int firstVariable) {
 
 		assert (searchVariables.size() > firstVariable) : "The position of the first entity to check is larger than the array size";
-		
+
 		int finalIndex = searchVariables.size();
 
 		/// Input order if no main comparator.
@@ -201,7 +201,7 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
 			while (firstVariable < finalIndex) {
 
 				ArrayList<T> row = searchVariables.get(firstVariable);
-				
+
 				for (int i = 0; i < row.size(); i++)
 					if (!row.get(i).singleton()) {
 						primaryIndex = firstVariable;
@@ -220,32 +220,32 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
 
 		// make sure that firstVariable points at row which contains not only singletons.
 		if (currentVariable.singleton()) {
-			
+
 			while (firstVariable < finalIndex) {
-				
+
 				ArrayList<T> row = searchVariables.get(firstVariable);
-				
+
 				boolean allGrounded = true;
-				
+
 				for (int i = row.size() - 1; i >= 0 && allGrounded; i--)
 					if (!row.get(i).singleton())
 						allGrounded = false;
-				
+
 				if (allGrounded) {
-					
+
 					firstVariable++;
-					
+
 					if (firstVariable == finalIndex) {
 						return null;
 					}
-					
+
 					currentVariable = searchVariables.get(firstVariable).get(
 							pivotPosition);
-					
+
 					if (!currentVariable.singleton()) {
 						break;
 					}
-					
+
 				} else {
 					// row does not consists of singletons only, pivotVariable is a singleton.
 					break;
@@ -266,15 +266,15 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
 
 			// if later some singletons rows are encountered they are moved to the left (firstVariable position).
 			if (v.singleton()) {
-				
+
 				ArrayList<T> row = searchVariables.get(currentPosition);
-				
+
 				boolean allGrounded = true;
-				
+
 				for (int i = row.size() - 1; i >= 0 && allGrounded; i--)
 					if (!row.get(i).singleton())
 						allGrounded = false;
-						
+
 				if (allGrounded) {
 					// switch rows.
 					searchVariables.set(currentPosition, searchVariables
@@ -285,20 +285,20 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
 					firstVariable++;
 					// work with next row, that one was composed of singletons only.
 					continue;
-				} 
+				}
 			}
 
 			// row contains not only singletons, even is variable at pivot position is a singleton.
-			
+
 			comparison = mainComparator.compare(optimalMetric, v);
 
 			if (comparison < 0) {
 				optimalPosition = currentPosition;
 				optimalMetric = mainComparator.metric(v);
 			} else {
-				
+
 				if (comparison == 0)
-					
+
 					if (tieBreakingComparator != null) {
 
 						int comp = tieBreakingComparator.compare(
@@ -361,7 +361,7 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
 				secondaryIndex = i;
 				break;
 			}
-		
+
 		return searchVariables.get(primaryIndex).get(secondaryIndex);
 
 	}
@@ -429,7 +429,7 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
 	}
 
 	/**
-	 * It chooses input order tiebreaking if the supplied comparators 
+	 * It chooses input order tiebreaking if the supplied comparators
 	 * can not distinguish between matrix rows.
 	 */
 	public void setInputOrderTieBreaking() {

@@ -1,9 +1,9 @@
 /**
- *  AdiffBeqC.java 
+ *  AdiffBeqC.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,47 +31,48 @@
 
 package org.jacop.set.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * It creates a constraints that subtracts from set variable A the 
- * elements from of the set variable B and assigns the result to set 
- * variable C. 
- * 
- * A \ B = C. 
- * 
+ * It creates a constraints that subtracts from set variable A the
+ * elements from of the set variable B and assigns the result to set
+ * variable C.
+ *
+ * A \ B = C.
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  */
 
-public class AdiffBeqC extends Constraint {
+public class AdiffBeqC extends Constraint { private static Logger logger = LoggerFactory.getLogger(AdiffBeqC.class);
 
 	static int idNumber = 1;
 
 	/**
-	 * It specifies set variable a. 
+	 * It specifies set variable a.
 	 */
 	public SetVar a;
 
 	/**
-	 * It specifies set variable b. 
+	 * It specifies set variable b.
 	 */
 	public SetVar b;
 
 	/**
-	 * It specifies set variable c. 
+	 * It specifies set variable c.
 	 */
 	public SetVar c;
 
 	/**
-	 * It specifies if the constrain attempts to perform expensive and yet 
-	 * unlikely propagation due to cardinality information. 
+	 * It specifies if the constrain attempts to perform expensive and yet
+	 * unlikely propagation due to cardinality information.
 	 */
 	public boolean performCardinalityReasoning = false;
 
@@ -80,15 +81,15 @@ public class AdiffBeqC extends Constraint {
 	private boolean cHasChanged = true;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"a", "b", "c"};
 
 	/**
 	 * It constructs an AdiffBeqC constraint to restrict the domain of the variables A, B and C.
-	 * 
-	 * @param a set variable a 
+	 *
+	 * @param a set variable a
 	 * @param b set variable b
 	 * @param c set variable that is restricted to be the set difference of a and b.
 	 */
@@ -123,7 +124,7 @@ public class AdiffBeqC extends Constraint {
 	public void consistency(Store store) {
 
 		do {
-			
+
 			store.propagationHasOccurred = false;
 
 			boolean aHasChanged = this.aHasChanged;
@@ -135,16 +136,16 @@ public class AdiffBeqC extends Constraint {
 			this.cHasChanged = false;
 
 			/**
-			 * It computes the consistency of the constraint. 
-			 * 
+			 * It computes the consistency of the constraint.
+			 *
 			 * A \ B = C
-			 * 
+			 *
 			 * The list of rules to use.
 			 */
 
 
 			/** T9 rule.
-			 * 
+			 *
 			 * glbA = glbA \/ glbC
 			 * lubA = lubA \ [ lubA \ [ lubC \/ lubB ] ]
 			 */
@@ -156,7 +157,7 @@ public class AdiffBeqC extends Constraint {
 				a.domain.inLUB(store.level, a, b.domain.lub().union(c.domain.lub()));
 
 			/** T10 rule.
-			 * 
+			 *
 			 * glbB = glbB
 			 * lubB = lubB \ glbC
 			 */
@@ -166,7 +167,7 @@ public class AdiffBeqC extends Constraint {
 
 			/** T11
 			 * glbC = glbC \/ [ glbA \ lubB ]
-			 * lubC = lubC /\ [ lubA \ glbB ] 
+			 * lubC = lubC /\ [ lubA \ glbB ]
 			 */
 
 			if (aHasChanged || bHasChanged) {
@@ -174,35 +175,35 @@ public class AdiffBeqC extends Constraint {
 				c.domain.inLUB(store.level, c, a.domain.lub().subtract(b.domain.glb()));
 			}
 
-			// FIXME, TODO, implement cardinality based reasoning. 
-			/** For all sets, A, B, C apply the rules as specified for A below. 
-			 * 
+			// FIXME, TODO, implement cardinality based reasoning.
+			/** For all sets, A, B, C apply the rules as specified for A below.
+			 *
 			 * lA = min(#glbA, #A.min())
 			 * rA = max(#lubA, #A.max())
-			 * 
+			 *
 			 * #A.in(#glbA, #lubA).
-			 * 
+			 *
 			 * If #glb is already equal to maximum allowed cardinality then set is specified by glb.
 			 * if (#glbA == #A.max()) then A = glbA
-			 * If #lub is already equal to minimum allowed cardinality then set is specified by lub. 
+			 * If #lub is already equal to minimum allowed cardinality then set is specified by lub.
 			 * if (#lubA == #A.min()) then A = lubA
 			 *
 			 */
 
 			if (performCardinalityReasoning) {
 
-				/** Cardinality reasoning. 
-				 * 
+				/** Cardinality reasoning.
+				 *
 				 *  For C)
-				 *  
+				 *
 				 *  (2+5+6+7) - lubA /\ lubB - how many elements can be removed by B
-				 *  (4) - glbA \ lubB - how many elements have to be in C. 
-				 *  
+				 *  (4) - glbA \ lubB - how many elements have to be in C.
+				 *
 				 *  #C.inMin( (4) + max( #A.min() - (4) - min( (2+5+6+7), #B.max() - (8) ) , 0)  );
-				 *  
-				 *  A.min - (4) - How many must be added. 
-				 *  min( (2+7), B.max-8) how many can be added to B so they can cause removals from A.  
-				 *  C.inMin( (4) + max(0, (A.min - (4)) - min ( 2+7, B.max - (8))) 
+				 *
+				 *  A.min - (4) - How many must be added.
+				 *  min( (2+7), B.max-8) how many can be added to B so they can cause removals from A.
+				 *  C.inMin( (4) + max(0, (A.min - (4)) - min ( 2+7, B.max - (8)))
 				 */
 
 				// TODO, check the code below, so that is can fire and propagate properly.
@@ -228,17 +229,17 @@ public class AdiffBeqC extends Constraint {
 				}
 
 
-				/** Cardinality reasoning. 
-				 * 
+				/** Cardinality reasoning.
+				 *
 				 *  For C)
-				 *  
-				 *  (1+2+4+5) - lubA \ glbB - how many elements can be placed in C. 
-				 *  (6) - glbA /\ glbB - how many elements used in A are not placed in C. 
-				 *  max( #B.min()-(8+3+7), 0) - how many elements in B are also in (1+2+4+5). 
-				 *  
+				 *
+				 *  (1+2+4+5) - lubA \ glbB - how many elements can be placed in C.
+				 *  (6) - glbA /\ glbB - how many elements used in A are not placed in C.
+				 *  max( #B.min()-(8+3+7), 0) - how many elements in B are also in (1+2+4+5).
+				 *
 				 *  #C.inMax( min ( #A.max() - (6), (1+2+4+5) - max( #B.min()-(3+6+7+8), 0) ,  ) );
-				 *  
-				 *  
+				 *
+				 *
 				 */
 
 				int sizeOf6 = a.domain.glb().intersect(b.domain.glb()).getSize();
@@ -263,15 +264,15 @@ public class AdiffBeqC extends Constraint {
 					c.domain.inCardinality(store.level, c, Integer.MIN_VALUE, minRight);
 
 
-				/** Cardinality reasoning. 
-				 * For B) 
-				 * 
-				 * (1+2+4+5) - how many elements can be placed in C. 
-				 * (4+5) - minimum required contribution of A into C. 
+				/** Cardinality reasoning.
+				 * For B)
+				 *
+				 * (1+2+4+5) - how many elements can be placed in C.
+				 * (4+5) - minimum required contribution of A into C.
 				 * max( 0, (4+5)-#C.max()) - how many elements in required contribution are more than what is allowed by #C.
-				 * #A.min()-(6+7) - minimum number of elements that must be put in A and are not taken care of by glbB. 
-				 * max( 0, #A.min() - (6-7) - #C.max() ) - how many elements needs still to be taken out by B.  
-				 * 
+				 * #A.min()-(6+7) - minimum number of elements that must be put in A and are not taken care of by glbB.
+				 * max( 0, #A.min() - (6-7) - #C.max() ) - how many elements needs still to be taken out by B.
+				 *
 				 * #B.inMin( max ( (6+7+8)+max(0, (4+5)-#C.max()), (6+7+8) + max( 0, #A.min() - (6-7) - #C.max() ) );
 				 * #B.inMin( (6+7+8) + max(0, 5-(#C.max()-4), #A.min() - (6-7) - #C.max() )
 				 */
@@ -285,29 +286,29 @@ public class AdiffBeqC extends Constraint {
 				b.domain.inCardinality(store.level, c, b.domain.glb().getSize() + minLeft, Integer.MAX_VALUE);
 
 				/** Cardinality reasoning.
-				 * #C.min()-(1+4) - number of elements required from lubB to get minimum size C. 
-				 * lubB - (#C.min() - (1+4)) - remaining elements after removing those required for C. 
-				 * 
+				 * #C.min()-(1+4) - number of elements required from lubB to get minimum size C.
+				 * lubB - (#C.min() - (1+4)) - remaining elements after removing those required for C.
+				 *
 				 * #B.inMax( lubB - ( C.min()-(1+4) ) );
 				 */
 
 				int sizeOf1_4 = a.domain.lub().subtract(b.domain.lub()).getSize();
-				int min = c.domain.card().min() - sizeOf1_4; 
+				int min = c.domain.card().min() - sizeOf1_4;
 
 				if (min > 0)
 					b.domain.inCardinality(store.level, b, Integer.MIN_VALUE, b.domain.lub().getSize() - min);
 
-				/** Cardinality reasoning. 
-				 * 
-				 * For A) 
-				 * 
-				 * #C.min() - requirement from C. 
+				/** Cardinality reasoning.
+				 *
+				 * For A)
+				 *
+				 * #C.min() - requirement from C.
 				 * (6)      - elements from A not contributing to C but contributing to #A
-				 * #B.min() - (2+3+7+8) - number of elements that B must eventually put in area (5) thus reducing current contribution of A. 
-				 * 
-				 * 
+				 * #B.min() - (2+3+7+8) - number of elements that B must eventually put in area (5) thus reducing current contribution of A.
+				 *
+				 *
 				 * #A.inMin( max( #C.min() + (6) + max(0, B.min()-(2+3+7+8)) , ?? ) );
-				 * 
+				 *
 				 */
 
 				min = c.domain.card().min() + b.domain.glb().intersect(a.domain.glb()).getSize();
@@ -317,14 +318,14 @@ public class AdiffBeqC extends Constraint {
 
 				a.domain.inCardinality(store.level, a, min, Integer.MAX_VALUE);
 
-				/** Cardinality reasoning. 
-				 * 
+				/** Cardinality reasoning.
+				 *
 				 * #A.inMax ( #C.max() + min (#B.max()-(8), (2+5+6+7) ) ) ;
 				 * Triggering conditions :
 				 * glbA, lubA, glbB, lubB, glbC, lubC
-				 * 
+				 *
 				 * #A.BOUND, #B.BOUND, #C.BOUND.
-				 * 
+				 *
 				 */
 
 			}
@@ -342,7 +343,7 @@ public class AdiffBeqC extends Constraint {
 			if (possibleEvent != null)
 				return possibleEvent;
 		}
-		return SetDomain.ANY;		
+		return SetDomain.ANY;
 	}
 
 
@@ -372,9 +373,9 @@ public class AdiffBeqC extends Constraint {
 
 	@Override
 	public boolean satisfied() {
-		return (a.singleton() 
-				&& b.singleton() 
-				&& c.singleton() 
+		return (a.singleton()
+				&& b.singleton()
+				&& c.singleton()
 				&& a.domain.subtract(b.domain).eq(c.domain));
 	}
 
@@ -390,7 +391,7 @@ public class AdiffBeqC extends Constraint {
 			b.weight++;
 			c.weight++;
 		}
-	}	
+	}
 
 	@Override
 	public void queueVariable(int level, Var variable) {
@@ -398,7 +399,7 @@ public class AdiffBeqC extends Constraint {
 		if (variable == a) {
 			aHasChanged = true;
 			return;
-		} 
+		}
 		else if (variable == b) {
 			bHasChanged = true;
 			return;

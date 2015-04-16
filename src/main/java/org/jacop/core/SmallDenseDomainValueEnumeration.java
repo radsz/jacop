@@ -1,9 +1,9 @@
 /**
- *  SmallDenseDomainValueEnumeration.java 
+ *  SmallDenseDomainValueEnumeration.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -33,12 +33,15 @@ package org.jacop.core;
 
 /**
  * Defines a methods for enumerating values contain in the domain.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  */
 
-public class SmallDenseDomainValueEnumeration extends ValueEnumeration {
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class SmallDenseDomainValueEnumeration extends ValueEnumeration { private static Logger logger = LoggerFactory.getLogger(SmallDenseDomainValueEnumeration.class);
 
 	int current;
 
@@ -50,11 +53,11 @@ public class SmallDenseDomainValueEnumeration extends ValueEnumeration {
 	 * @param dom domain for which value enumeration is created.
 	 */
 	public SmallDenseDomainValueEnumeration(SmallDenseDomain dom) {
-		
+
 		domain = dom;
 		current = dom.min;
 		bits = dom.bits;
-		
+
 	}
 
 	@Override
@@ -67,17 +70,17 @@ public class SmallDenseDomainValueEnumeration extends ValueEnumeration {
 
 		if (bits == 0)
 			throw new IllegalStateException("No more elements");
-		
+
 		while (bits > 0) {
 			current++;
 			bits = bits << 1;
 		}
 
 		int next = current;
-		
+
 		current++;
 		bits = bits << 1;
-		
+
 		return next;
 	}
 
@@ -90,8 +93,8 @@ public class SmallDenseDomainValueEnumeration extends ValueEnumeration {
 			// no more elements.
 			return;
 		}
-		
+
 		bits = domain.bits << (current - domain.min);
 	}
-	
+
 }

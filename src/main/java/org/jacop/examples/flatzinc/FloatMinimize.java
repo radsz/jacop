@@ -1,9 +1,9 @@
 /**
- *  FloatMinimize.java 
+ *  FloatMinimize.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -32,14 +32,16 @@
 package org.jacop.examples.flatzinc;
 
 import java.util.*;
-
-import org.jacop.core.*;
-import org.jacop.constraints.*;
-import org.jacop.search.*;
-import org.jacop.fz.*;
-
-import org.jacop.floats.search.*;
-import org.jacop.floats.core.*;
+import org.jacop.core.Store;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatInterval;
+import org.jacop.floats.core.FloatVar;
+import org.jacop.floats.search.Optimize;
+import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.fz.FlatzincLoader;
+import org.jacop.search.DepthFirstSearch;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The class Run is used to run test programs for JaCoP package.
@@ -48,7 +50,8 @@ import org.jacop.floats.core.*;
  * @author Krzysztof Kuchcinski
  * @version 4.2
  */
-public class FloatMinimize {
+
+public class FloatMinimize { private static Logger logger = LoggerFactory.getLogger(FloatMinimize.class);
     Store store;
 
     public static void main (String args[]) {
@@ -73,53 +76,53 @@ public class FloatMinimize {
 
 	FloatDomain.setPrecision(1E-4);
 
-	FlatzincLoader fl = new FlatzincLoader(args); 
+	FlatzincLoader fl = new FlatzincLoader(args);
 	fl.load();
 
 	Store store = fl.getStore();
 
-	// System.out.println (store);
+	// logger.info (store);
 
-	System.out.println( "\nVar store size: "+ store.size()+
+	logger.info( "\nVar store size: "+ store.size()+
 			    "\nNumber of constraints: " + store.numberConstraints()
 			    );
 
 
 	if ( fl.getSearch().type() == null || (! fl.getSearch().type().equals("float_search")) ) {
-	    System.out.println("The problem is not of type float_search and cannot be handled by this method");
+	    logger.info("The problem is not of type float_search and cannot be handled by this method");
 
-	    System.exit(0);	    
+	    System.exit(0);
 	}
 	if (fl.getSolve().getSolveKind() != 1) {
-	    System.out.println("The problem is not minimization problem and cannot be handled by this method");
+	    logger.info("The problem is not minimization problem and cannot be handled by this method");
 
 	    System.exit(0);
 	}
 
 	FloatVar[] vars = (FloatVar[])fl.getSearch().vars();
 
-	System.out.println("Decision variables: " + Arrays.asList(vars) + "\n");
+	logger.info("Decision variables: " + Arrays.asList(vars) + "\n");
 
 	DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
 	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, vars, fl.getSearch().getFloatVarSelect());
-	
+
 	Optimize min = new Optimize(store, label, s, (FloatVar)fl.getCost());
 	boolean result = min.minimize();
 
   	if ( result ) {
-	    System.out.println("Final cost = " + min.getFinalCost());
-	    System.out.println("Variables: ");
+	    logger.info("Final cost = " + min.getFinalCost());
+	    logger.info("Variables: ");
 	    FloatInterval[] values = min.getFinalVarValues();
-	    for (int i = 0; i < vars.length; i++) 
-		System.out.println(vars[i].id() + " = " + values[i]);
-  	    System.out.println("Yes");
+	    for (int i = 0; i < vars.length; i++)
+		logger.info(vars[i].id() + " = " + values[i]);
+  	    logger.info("Yes");
 	}
-	else 
-	    System.out.println("*** No");
+	else
+	    logger.info("*** No");
 
 	T2 = System.currentTimeMillis();
 	T = T2 - T1;
-	System.out.println("\n\t*** Execution time = "+ T + " ms");
+	logger.info("\n\t*** Execution time = "+ T + " ms");
 
     }
 

@@ -1,9 +1,9 @@
 /**
- *  SearchItem.java 
+ *  SearchItem.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -30,13 +30,16 @@
  */
 package org.jacop.fz;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-
+import java.util.*;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
+import org.jacop.floats.search.LargestDomainFloat;
+import org.jacop.floats.search.LargestMaxFloat;
+import org.jacop.floats.search.SmallestDomainFloat;
+import org.jacop.floats.search.SmallestMinFloat;
+import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.search.ComparatorVariable;
 import org.jacop.search.Indomain;
 import org.jacop.search.IndomainMax;
@@ -54,28 +57,25 @@ import org.jacop.search.SmallestDomain;
 import org.jacop.search.SmallestMin;
 import org.jacop.search.SplitSelect;
 import org.jacop.search.WeightedDegree;
-import org.jacop.floats.search.SmallestDomainFloat;
-import org.jacop.floats.search.LargestDomainFloat;
-import org.jacop.floats.search.SmallestMinFloat;
-import org.jacop.floats.search.LargestMaxFloat;
-import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.set.core.SetVar;
 import org.jacop.set.search.IndomainSetMax;
 import org.jacop.set.search.IndomainSetMin;
 import org.jacop.set.search.MaxCardDiff;
+import org.jacop.set.search.MaxLubCard;
 import org.jacop.set.search.MinCardDiff;
 import org.jacop.set.search.MinGlbCard;
-import org.jacop.set.search.MaxLubCard;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 
- * The part of the parser responsible for parsing search part of the flatzinc specification. 
- * 
+ *
+ * The part of the parser responsible for parsing search part of the flatzinc specification.
+ *
  * @author Krzysztof Kuchcinski
  *
  */
-public class SearchItem implements ParserTreeConstants {
+
+public class SearchItem implements ParserTreeConstants { private static Logger logger = LoggerFactory.getLogger(SearchItem.class);
 
     Tables dictionary;
     Store store;
@@ -93,9 +93,9 @@ public class SearchItem implements ParserTreeConstants {
 
     /**
      * It constructs search part parsing object based on dictionaries
-     * provided as well as store object within which the search will take place. 
-     * 
-     * @param store the finite domain store within which the search will take place. 
+     * provided as well as store object within which the search will take place.
+     *
+     * @param store the finite domain store within which the search will take place.
      * @param table the holder of all the objects present in the flatzinc file.
      */
     public SearchItem(Store store, Tables table) {
@@ -139,7 +139,7 @@ public class SearchItem implements ParserTreeConstants {
 				ASTAnnExpr bv = (ASTAnnExpr)bbs.jjtGetChild(0);
 				if (bv.jjtGetNumChildren() == 1) {
 				    bbsValue = ((ASTScalarFlatExpr)bv.jjtGetChild(0)).getInt();
-				    //  				    System.out.println("Credit("+creditValue+", "+bbsValue+")");
+				    //  				    logger.info("Credit("+creditValue+", "+bbsValue+")");
 				    return;
 				}
 			    }
@@ -240,7 +240,7 @@ public class SearchItem implements ParserTreeConstants {
 				ASTAnnExpr bv = (ASTAnnExpr)bbs.jjtGetChild(0);
 				if (bv.jjtGetNumChildren() == 1) {
 				    bbsValue = ((ASTScalarFlatExpr)bv.jjtGetChild(0)).getInt();
-				    //  				    System.out.println("Credit("+creditValue+", "+bbsValue+")");
+				    //  				    logger.info("Credit("+creditValue+", "+bbsValue+")");
 				    return;
 				}
 			    }
@@ -284,7 +284,7 @@ public class SearchItem implements ParserTreeConstants {
     }
 
     void searchParametersForSeveralAnnotations(SimpleNode node, int n) {
-	
+
 //  	node.dump("");
 
 	int count = node.jjtGetNumChildren();
@@ -379,7 +379,7 @@ public class SearchItem implements ParserTreeConstants {
 	SetVar[] searchVars = new SetVar[search_variables.length];
 	for (int i = 0; i < search_variables.length; i++)
 		searchVars[i] = (SetVar) search_variables[i];
-	
+
 	if (tieBreaking == null)
 	    return new SimpleSelect<SetVar>((SetVar[])searchVars, var_sel, indom);
 	else
@@ -390,42 +390,42 @@ public class SearchItem implements ParserTreeConstants {
 
 	if (indomain == null)
 	    return new IndomainSetMin<SetVar>();
-	else if (indomain.equals("indomain_min")) 
+	else if (indomain.equals("indomain_min"))
 	    return new IndomainSetMin<SetVar>();
-	else if (indomain.equals("indomain_max")) 
+	else if (indomain.equals("indomain_max"))
 	    return new IndomainSetMax();
-// 	else if (indomain.equals("indomain_middle")) 
+// 	else if (indomain.equals("indomain_middle"))
 // 	    return new IndomainSetMiddle();
-// 	else if (indomain.equals("indomain_random")) 
+// 	else if (indomain.equals("indomain_random"))
 // 	    return new IndomainSetRandom();
-	else 
-	    System.err.println("Warning: Not implemented indomain method \""+ 
+	else
+	    System.err.println("Warning: Not implemented indomain method \""+
 			       indomain +"\"; used indomain_min");
 	return new IndomainSetMin<SetVar>();
     }
 
-    
-    
+
+
     Indomain getIndomain(String indomain) {
 	if (indomain == null)
 	    return new IndomainMin();
-	else if (indomain.equals("indomain_min")) 
+	else if (indomain.equals("indomain_min"))
 	    return new IndomainMin();
-	else if (indomain.equals("indomain_max")) 
+	else if (indomain.equals("indomain_max"))
 	    return new IndomainMax();
-	else if (indomain.equals("indomain_middle")) 
+	else if (indomain.equals("indomain_middle"))
 	    return new IndomainMiddle();
-	else if (indomain.equals("indomain_median")) 
+	else if (indomain.equals("indomain_median"))
 	    return new IndomainMedian();
-	else if (indomain.equals("indomain_random")) 
+	else if (indomain.equals("indomain_random"))
 	    return new IndomainRandom();
 	else
-	    System.err.println("Warning: Not implemented indomain method \""+ 
+	    System.err.println("Warning: Not implemented indomain method \""+
 			       indomain +"\"; used indomain_min");
 	return new IndomainMin();
     }
 
-    
+
     public ComparatorVariable getVarSelect() {
 
 	tieBreaking = null;
@@ -433,7 +433,7 @@ public class SearchItem implements ParserTreeConstants {
 	    return null;
 	else if (var_selection_heuristic.equals("input_order"))
 	    return null;
-	else if (var_selection_heuristic.equals("first_fail")) 
+	else if (var_selection_heuristic.equals("first_fail"))
  	    return new SmallestDomain();
 	else if (var_selection_heuristic.equals("anti_first_fail")) {
 	    // does not follow flatzinc definition but may give better results ;)
@@ -448,7 +448,7 @@ public class SearchItem implements ParserTreeConstants {
 	    return new MostConstrainedStatic();
 	else if (var_selection_heuristic.equals("smallest")) {
 	    // does not follow flatzinc definition but may give better results ;)
- 	    // tieBreaking = new MostConstrainedStatic(); 
+ 	    // tieBreaking = new MostConstrainedStatic();
 	    //tieBreaking = new SmallestDomain();
 	    return new SmallestMin();
 	}
@@ -460,7 +460,7 @@ public class SearchItem implements ParserTreeConstants {
 	    store.variableWeightManagement = true;
 	    return new WeightedDegree();
 	}
-	else 
+	else
 	    System.err.println("Warning: Not implemented variable selection heuristic \""+
 			       var_selection_heuristic +"\"; used input_order");
 
@@ -474,7 +474,7 @@ public class SearchItem implements ParserTreeConstants {
 	    return null;
 	else if (var_selection_heuristic.equals("input_order"))
 	    return null;
-	else if (var_selection_heuristic.equals("first_fail")) 
+	else if (var_selection_heuristic.equals("first_fail"))
  	    return new SmallestDomainFloat();
 	else if (var_selection_heuristic.equals("anti_first_fail")) {
 	    // does not follow flatzinc definition but may give better results ;)
@@ -489,7 +489,7 @@ public class SearchItem implements ParserTreeConstants {
 	    return new MostConstrainedStatic();
 	else if (var_selection_heuristic.equals("smallest")) {
 	    // does not follow flatzinc definition but may give better results ;)
- 	    // tieBreaking = new MostConstrainedStatic(); 
+ 	    // tieBreaking = new MostConstrainedStatic();
 	    //tieBreaking = new SmallestDomain();
 	    return new SmallestMinFloat();
 	}
@@ -501,7 +501,7 @@ public class SearchItem implements ParserTreeConstants {
 	//     store.variableWeightManagement = true;
 	//     return new WeightedDegree();
 	// }
-	else 
+	else
 	    System.err.println("Warning: Not implemented variable selection heuristic \""+
 			       var_selection_heuristic +"\"; used input_order");
 
@@ -535,7 +535,7 @@ public class SearchItem implements ParserTreeConstants {
 	    return new MaxLubCard();
 	// 	else if (var_selection_heuristic.equals("max_regret"))
 	// 	    return new MaxRegret();
-	else 
+	else
 	    System.err.println("Warning: Not implemented variable selection heuristic \""+
 			       var_selection_heuristic +"\"; used input_order");
 
@@ -550,7 +550,7 @@ public class SearchItem implements ParserTreeConstants {
 	else if (node.getType() == 3) {// array access
 	    if (node.getInt() > dictionary.getVariableArray(node.getIdent()).length ||
 		node.getInt() < 0) {
-		System.out.println("Index out of bound for " + node.getIdent() + "["+node.getInt()+"]");
+		logger.info("Index out of bound for " + node.getIdent() + "[" + node.getInt() + "]");
 		System.exit(0);
 		return new IntVar(store);
 	    }
@@ -572,7 +572,7 @@ public class SearchItem implements ParserTreeConstants {
 	else if (node.getType() == 3) {// array access
 	    if (node.getInt() > dictionary.getVariableFloatArray(node.getIdent()).length ||
 		node.getInt() < 0) {
-		System.out.println("Index out of bound for " + node.getIdent() + "["+node.getInt()+"]");
+		logger.info("Index out of bound for " + node.getIdent() + "[" + node.getInt() + "]");
 		System.exit(0);
 		return new FloatVar(store);
 	    }
@@ -601,13 +601,13 @@ public class SearchItem implements ParserTreeConstants {
 	    if (((ASTScalarFlatExpr)node).getType() == 2) // ident
 		return dictionary.getVariableArray(((ASTScalarFlatExpr)node).getIdent());
 	    else {
-		System.err.println("Wrong type of Variable array; compilation aborted."); 
+		System.err.println("Wrong type of Variable array; compilation aborted.");
 		System.exit(0);
 		return new IntVar[] {};
 	    }
 	}
 	else {
-	    System.err.println("Wrong type of Variable array; compilation aborted."); 
+	    System.err.println("Wrong type of Variable array; compilation aborted.");
 	    System.exit(0);
 	    return new IntVar[] {};
 	}
@@ -628,13 +628,13 @@ public class SearchItem implements ParserTreeConstants {
 	    if (((ASTScalarFlatExpr)node).getType() == 2) // ident
 		return dictionary.getVariableFloatArray(((ASTScalarFlatExpr)node).getIdent());
 	    else {
-		System.err.println("Wrong type of Variable array; compilation aborted."); 
+		System.err.println("Wrong type of Variable array; compilation aborted.");
 		System.exit(0);
 		return new FloatVar[] {};
 	    }
 	}
 	else {
-	    System.err.println("Wrong type of Variable array; compilation aborted."); 
+	    System.err.println("Wrong type of Variable array; compilation aborted.");
 	    System.exit(0);
 	    return new FloatVar[] {};
 	}
@@ -669,13 +669,13 @@ public class SearchItem implements ParserTreeConstants {
 	    if (((ASTScalarFlatExpr)node).getType() == 2) // ident
 		return dictionary.getSetVariableArray(((ASTScalarFlatExpr)node).getIdent());
 	    else {
-		System.err.println("Wrong type of Variable array; compilation aborted."); 
+		System.err.println("Wrong type of Variable array; compilation aborted.");
 		System.exit(0);
 		return new SetVar[] {};
 	    }
 	}
 	else {
-	    System.err.println("Wrong type of Variable array; compilation aborted."); 
+	    System.err.println("Wrong type of Variable array; compilation aborted.");
 	    System.exit(0);
 	    return new SetVar[] {};
 	}
@@ -721,7 +721,7 @@ public class SearchItem implements ParserTreeConstants {
 	    s = search_type + ", ";
 	    if (search_variables == null)
 		s += "[]";
-	    else 
+	    else
 		s += Arrays.asList(search_variables);
 	    s += ", "+explore + ", " + var_selection_heuristic+", "+indomain;
 	    if (floatSearch)

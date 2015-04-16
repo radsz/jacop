@@ -1,9 +1,9 @@
 /**
- *  Subcircuit.java 
+ *  Subcircuit.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,28 +31,26 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.Hashtable;
-import java.util.LinkedHashSet;
-import java.util.Stack;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Subcircuit constraint assures that all variables build a 
- * subcircuit. Value of every variable x[i] points to the next variable in 
- * the subcircuit. If a variable does not belong to a subcircuit it has value of 
+ * Subcircuit constraint assures that all variables build a
+ * subcircuit. Value of every variable x[i] points to the next variable in
+ * the subcircuit. If a variable does not belong to a subcircuit it has value of
  * its position, i.e., x[i] = i.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class Subcircuit extends Alldiff {
+public class Subcircuit extends Alldiff { private static Logger logger = LoggerFactory.getLogger(Subcircuit.class);
 
     Store store;
 
@@ -65,13 +63,13 @@ public class Subcircuit extends Alldiff {
     int[] val;
 
     static int IdNumber = 0;
-	
+
     Hashtable<Var, Integer> valueIndex = new Hashtable<Var, Integer>();
 
     int firstConsistencyLevel;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as 
+     * It specifies the arguments required to be saved by an XML format as well as
      * the constructor being called to recreate an object from an XML format.
      */
     public static String[] xmlAttributes = {"list"};
@@ -108,7 +106,7 @@ public class Subcircuit extends Alldiff {
 	public void consistency(Store store) {
 
 	if (firstConsistencyCheck) {
-	    for (int i = 0; i < list.length; i++) 
+	    for (int i = 0; i < list.length; i++)
 		list[i].domain.in(store.level, list[i], 1, list.length);
 
 	    firstConsistencyCheck = false;
@@ -116,18 +114,18 @@ public class Subcircuit extends Alldiff {
 	}
 
 	do {
-			
+
 	    store.propagationHasOccurred = false;
-			
+
 	    LinkedHashSet<IntVar> fdvs = variableQueue;
 	    variableQueue = new LinkedHashSet<IntVar>();
-			
+
 	    alldifferent(store, fdvs);
 
 	} while (store.propagationHasOccurred);
 
 	sccsBasedPruning(store); // strongly connected components
-		
+
     }
 
     void alldifferent(Store store, LinkedHashSet<IntVar> fdvs) {
@@ -135,13 +133,13 @@ public class Subcircuit extends Alldiff {
 	for (IntVar changedVar : fdvs) {
 	    if (changedVar.singleton()) {
 		for (IntVar var : list)
-		    if (var != changedVar) 
+		    if (var != changedVar)
 			var.domain.inComplement(store.level, var, changedVar.min());
 	    }
-	}	
-		
-    }	
-	
+	}
+
+    }
+
     @Override
 	public int getConsistencyPruningEvent(Var var) {
 
@@ -167,10 +165,10 @@ public class Subcircuit extends Alldiff {
 
     @Override
 	public boolean satisfied() {
-		
+
 	if (grounded.value() != list.length)
 	    return false;
-		
+
 	boolean sat = super.satisfied(); // alldifferent
 
 	if (sat) {
@@ -182,17 +180,17 @@ public class Subcircuit extends Alldiff {
 
     @Override
 	public String toString() {
-		
+
 	StringBuffer result = new StringBuffer( id() );
 	result.append(" : subcircuit([");
-		
+
 	for (int i = 0; i < list.length; i++) {
 	    result.append(list[i]);
 	    if (i < list.length - 1)
 		result.append(", ");
 	}
 	result.append("])");
-		
+
 	return result.toString();
     }
 
@@ -212,7 +210,7 @@ public class Subcircuit extends Alldiff {
 
     void sccsBasedPruning(Store store) {
 
-	// System.out.println ("========= SCCS =========");
+	// logger.info ("========= SCCS =========");
 
 	int maxCycle = 0;
 
@@ -237,16 +235,16 @@ public class Subcircuit extends Alldiff {
 		maxCycle = (sccLength > maxCycle) ? sccLength : maxCycle;
 		//sccList.add(cycleVar);
 
-		// System.out.println (cycleVar + " cycle length = " + sccLength);
+		// logger.info (cycleVar + " cycle length = " + sccLength);
 
-		if (sccLength == 1) 
-		    // the scc is of size one => it must be self-cycle		
+		if (sccLength == 1)
+		    // the scc is of size one => it must be self-cycle
 		    list[i].domain.in(store.level, list[i], i+1, i+1);
 
 		else if (sccLength == numberGround && numberGround < list.length) {
 		    // subcircuit alrerady found => all others must be self-cycles
 		    for (int j=0; j<list.length; j++) {
-			if ( !cycleVar.contains(list[j]) ) 
+			if ( !cycleVar.contains(list[j]) )
 			    list[j].domain.in(store.level, list[j], j+1, j+1);
 		    }
 		}
@@ -254,11 +252,11 @@ public class Subcircuit extends Alldiff {
 	}
 
 	int possibleSelfCycles = 0;
-	for (int j=0; j<list.length; j++) 
+	for (int j=0; j<list.length; j++)
 	    if (list[j].domain.contains(j+1))
 		possibleSelfCycles++;
 
-	if (sccLength != 1 && list.length - possibleSelfCycles > maxCycle) 
+	if (sccLength != 1 && list.length - possibleSelfCycles > maxCycle)
 	    // maximal cycle is smaller than possible; that is all nodes minus **possible** self-cycles
 	    throw Store.failException;
 
@@ -280,7 +278,7 @@ public class Subcircuit extends Alldiff {
 	cycleNodes.unionAdapt(valueIndex.get(c)+1, valueIndex.get(c)+1);
 	}
 
-	if (numberGround + 1 == scc.size()) 
+	if (numberGround + 1 == scc.size())
 	nonGround.domain.in(store.level, nonGround, cycleNodes);
 	}
 	*/
@@ -290,7 +288,7 @@ public class Subcircuit extends Alldiff {
 
     int sccs(Store store) {
 
-	// System.out.println ("========= SCCS =========");
+	// logger.info ("========= SCCS =========");
 
 	int totalNodes = 0;
 
@@ -312,7 +310,7 @@ public class Subcircuit extends Alldiff {
 
 		totalNodes += sccLength;
 
-		// System.out.println (cycleVar + " cycle length = " + sccLength);
+		// logger.info (cycleVar + " cycle length = " + sccLength);
 
 	    }
 	}
@@ -362,10 +360,10 @@ public class Subcircuit extends Alldiff {
 		sccLength++;
 	    } while ( n != k);
 
-	    // System.out.println ("cycleVar = " + cycleVar + ", ground = " + numberGround);
+	    // logger.info ("cycleVar = " + cycleVar + ", ground = " + numberGround);
 
 	}
 	return min;
     }
-	
+
 }

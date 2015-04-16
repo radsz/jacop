@@ -1,9 +1,9 @@
 /**
- *  Shaving.java 
+ *  Shaving.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,52 +31,50 @@
 
 package org.jacop.search;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-
+import java.util.*;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.XneqC;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Defines functionality of shaving. Plugin in this object to search to
  * change your depth first search to a search with shaving capabilities.
- * 
+ *
  * Shaving
- * 
+ *
  * Each search level stores the variable value pairs which were shaved at a
  * given level.
- * 
+ *
  * Shaving speculation.
- * 
+ *
  * The right child is using all the shavable pairs from the subtree rooted at
  * the sibling of the current search node. If shaving fails then it is recorded
  * in non shavable.
- * 
+ *
  * Not-shavable speculation
- * 
+ *
  * Every time a variable value pair is being schedule for shavability check then
  * it is checked if that pair was not already checked for shavability before
  * with a negative results. If so, then check is not performed but also entry in
  * not-shavable is removed.
- * 
+ *
  * If variable value pair proofs to be not shavable then this variable value pair
  * is recorded into Not-shavable speculation.
- * 
+ *
  * Quick shave - upon exiting any subtree the variable value pair which was
  * choosen at the root of that subtree is recorded as shavable variable value
  * pair.
- * 
- * 
+ *
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2
  */
 
-public class Shaving<T extends IntVar> implements ExitChildListener<T>, ConsistencyListener {
+public class Shaving<T extends IntVar> implements ExitChildListener<T>, ConsistencyListener { private static Logger logger = LoggerFactory.getLogger(Shaving.class);
 
 	/**
 	 * It contains list of constraints which suggest shaving explorations.
@@ -125,7 +123,7 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
 
 	private ConsistencyListener[] consistencyListeners;
 
-	
+
 	/**
 	 * It specifies if the quickShave approach should be also used. Quickshave uses
 	 * variable-value pairs which lead to wrong decisions as shaving values higher
@@ -136,21 +134,21 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
 	private boolean leftChildWrongDecision = false;
 
 	private int depth = 0;
-	
+
 	ArrayList<HashMap<IntVar, LinkedHashSet<Integer> >> shavable = new ArrayList<HashMap<IntVar, LinkedHashSet<Integer> >> ();
 
-	HashMap<IntVar, LinkedHashSet<Integer>> notShavable = new HashMap<IntVar, LinkedHashSet<Integer>>();	
-	
+	HashMap<IntVar, LinkedHashSet<Integer>> notShavable = new HashMap<IntVar, LinkedHashSet<Integer>>();
+
 	/**
 	 * It stores number of successful shaving attempts.
 	 */
 	public int successes = 0;
-	
+
 	/**
 	 * It stores number of failed shaving attempts.
 	 */
 	public int failures = 0;
-	
+
 	public boolean leftChild(IntVar var, int value, boolean status) {
 
 		leftChild = false;
@@ -161,7 +159,7 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
 	}
 
 	public boolean leftChild(PrimitiveConstraint choice, boolean status) {
-		
+
 		leftChild = false;
 		leftChildWrongDecision = true;
 		depth--;
@@ -169,24 +167,24 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
 	}
 
 	public void rightChild(IntVar var, int value, boolean status) {
-		
+
 		leftChild = false;
 
 		if (!status) {
-			
+
 			if (quickShave && leftChildWrongDecision) {
-				
+
 				int position = shavable.size() - 1;
-				
+
 				if (position > depth )
 					position = depth - 1;
-				
+
 				if (position < 0)
 					position = 0;
-					
+
 				HashMap<IntVar, LinkedHashSet<Integer>> current = shavable.get(position);
 				LinkedHashSet<Integer> shaveVarList = current.get(var);
-				
+
 				if (shaveVarList == null) {
 					shaveVarList = new LinkedHashSet<Integer>();
 					current.put(var, shaveVarList);
@@ -194,7 +192,7 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
 				shaveVarList.add(value);
 			}
 		}
-		
+
 		depth--;
 		leftChildWrongDecision = false;
 	}
@@ -235,34 +233,34 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
 
 		// Speculate based on neighbours
 		HashMap<IntVar, LinkedHashSet<Integer>> shavableCurrent = new HashMap<IntVar, LinkedHashSet<Integer>>();
-	
+
 		int last = shavable.size();
 		int current = depth;
-		
+
 		while (last > current) {
-		
+
 			HashMap<IntVar, LinkedHashSet<Integer>> shavableNeighbour = shavable.get(current);
-			
+
 			for (IntVar shaveVar : shavableNeighbour.keySet()) {
 				LinkedHashSet<Integer> list = shavableNeighbour.get(shaveVar);
-				
+
 				for (Integer shaveVal : list) {
 
-					if (!shaveVar.domain.contains(shaveVal) || 
+					if (!shaveVar.domain.contains(shaveVal) ||
 						shaveVar.singleton())
 						continue;
-					
+
 					boolean shavablePair = checkIfShavable(shaveVar, shaveVal);
-					
+
 					if (shavablePair) {
-					
+
 						LinkedHashSet<Integer> shaveVarList = shavableCurrent.get(shaveVar);
 						if (shaveVarList == null) {
 							shaveVarList = new LinkedHashSet<Integer>();
 							shavableCurrent.put(shaveVar, shaveVarList);
 						}
 						shaveVarList.add(shaveVal);
-				
+
 						store.impose(new XneqC(shaveVar, shaveVal));
 						boolean result = store.consistency();
 
@@ -292,10 +290,10 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
 
 		while (shavable.size() != 0 && shavable.size() != depth)
 			shavable.remove(shavable.size() - 1);
-		
+
 		depth++;
-		shavable.add(shavableCurrent);	
-	
+		shavable.add(shavableCurrent);
+
 		if (!leftChildShaving || leftChild)
 			for (Constraint g : shavingConstraints) {
 
@@ -326,15 +324,15 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
 				boolean shavablePair = checkIfShavable(shaveVar, shaveVal);
 
 				if (shavablePair) {
-					
+
 					LinkedHashSet<Integer> shaveVarList = shavableCurrent.get(shaveVar);
-					
+
 					if (shaveVarList == null) {
 						shaveVarList = new LinkedHashSet<Integer>();
 						shavableCurrent.put(shaveVar, shaveVarList);
 					}
 					shaveVarList.add(shaveVal);
-			
+
 					store.impose(new XneqC(shaveVar, shaveVal));
 					boolean result = store.consistency();
 
@@ -362,7 +360,7 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
 
 	boolean checkIfShavable(IntVar var, Integer val) {
 
-		assert var.domain.contains(val) && !var.domain.singleton(): "var " + var + "val " + val + 
+		assert var.domain.contains(val) && !var.domain.singleton(): "var " + var + "val " + val +
 		" should not be checked for shavability";
 
 		int depth = store.level;
@@ -381,7 +379,7 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
 			successes++;
 		else
 			failures++;
-		
+
 		return shavable;
 
 	}

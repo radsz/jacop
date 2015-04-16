@@ -1,9 +1,9 @@
 /**
- *  Element.java 
+ *  Element.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,23 +31,24 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Element constraint implements the element/4 constraint (both with integer
- * list and variables list). It defines a following relation 
+ * list and variables list). It defines a following relation
  * variables[index  + shift] = value. The default shift value is equal to zero.
  * The first index in the variables list is equal to 1.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */
 
-public class Element extends Constraint {
+public class Element extends Constraint { private static Logger logger = LoggerFactory.getLogger(Element.class);
 
 	Constraint c = null;
 
@@ -114,8 +115,8 @@ public class Element extends Constraint {
 	 * @param value value variable.
 	 * @param shift shift by which the index value is moved to the left.
 	 */
-	public Element(IntVar index, 
-				   IntVar[] variables, 
+	public Element(IntVar index,
+				   IntVar[] variables,
 				   IntVar value,
 				   int shift) {
 		queueIndex = 1;

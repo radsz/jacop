@@ -1,9 +1,9 @@
 /**
- *  XmodYeqZ.java 
+ *  XmodYeqZ.java
  *  This file is part of JaCoP.
  *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
+ *  JaCoP is a Java Constraint Programming solver.
+ *
  *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU Affero General Public License for more details.
- *  
+ *
  *  Notwithstanding any other provision of this License, the copyright
  *  owners of this work supplement the terms of this License with terms
  *  prohibiting misrepresentation of the origin of this work and requiring
@@ -31,42 +31,43 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-
+import java.util.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Constraint X mod Y = Z
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 3.1
  */
 
-public class XmodYeqZ extends Constraint {
+public class XmodYeqZ extends Constraint { private static Logger logger = LoggerFactory.getLogger(XmodYeqZ.class);
 
 	static int counter = 1;
 
 	/**
-	 * It specifies variable x in constraint x mod y = z. 
+	 * It specifies variable x in constraint x mod y = z.
 	 */
 	public IntVar x;
 
 	/**
-	 * It specifies variable y in constraint x mod y = z. 
+	 * It specifies variable y in constraint x mod y = z.
 	 */
 	public IntVar y;
 
 	/**
-	 * It specifies variable z in constraint x mod y = z. 
+	 * It specifies variable z in constraint x mod y = z.
 	 */
 	public IntVar z;
 
 	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
+	 * It specifies the arguments required to be saved by an XML format as well as
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"x", "y", "z"};
@@ -114,7 +115,7 @@ public class XmodYeqZ extends Constraint {
 
 			y.domain.inComplement(store.level, y, 0);
 
-			// Compute bounds for reminder 
+			// Compute bounds for reminder
 
 			int reminderMin, reminderMax;
 
@@ -125,7 +126,7 @@ public class XmodYeqZ extends Constraint {
 			else if (x.max() < 0) {
 				reminderMax = 0;
 				reminderMin = - Math.max(Math.abs(y.min()), Math.abs(y.max())) + 1;
-			} 
+			}
 			else {
 				reminderMin = Math.min(Math.min(y.min(),-y.min()), Math.min(y.max(),-y.max())) + 1;
 				reminderMax = Math.max(Math.max(y.min(),-y.min()), Math.max(y.max(),-y.max())) - 1;
@@ -134,7 +135,7 @@ public class XmodYeqZ extends Constraint {
 			z.domain.in(store.level, z, reminderMin, reminderMax);
 
 			// Bounds for result
-			int oldResultMin = resultMin, oldResultMax = resultMax; 
+			int oldResultMin = resultMin, oldResultMax = resultMax;
 
 			IntervalDomain result = IntDomain.divBounds(x.min(), x.max(), y.min(), y.max());
 
@@ -227,7 +228,7 @@ public class XmodYeqZ extends Constraint {
 					result = null;
 			}
 		}
-		else 
+		else
 			result = null;
 		return result;
 	}
