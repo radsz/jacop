@@ -2505,7 +2505,7 @@ public class Constraints implements ParserTreeConstants {
 		    else
 			pose(new XplusYeqC(p2[0], p2[1], -p3));
 		}
-		else if (domainConsistency && !opt.getBoundConsistency() && (maxDomain(p2) <= 4 || p2.length <= 2) ) { // heuristic rule to select domain consistency since 
+		else if (domainConsistency && !opt.getBoundConsistency()){// && (maxDomain(p2) <= 4 || p2.length <= 2) ) { // heuristic rule to select domain consistency since 
 		                                                                         // its complexity is O(d^n), d <= 4 or n <= 2 ;)
 		    // We do not impose linear constraint with domain consistency if 
 		    // the cases are covered by four cases above.

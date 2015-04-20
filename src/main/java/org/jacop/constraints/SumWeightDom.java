@@ -139,7 +139,10 @@ public class SumWeightDom extends Constraint {
 	for (int i = 0; i < list.length; i++) {
 
 	    assert (list[i] != null) : i + "-th element of list in SumWeightDom constraint is null";
-			
+
+	    if (weights[i] == 0)
+		continue;
+	    
 	    if (parameters.get(list[i]) != null) {
 		// variable ordered in the scope of the Sum Weight constraint.
 		Integer coeff = parameters.get(list[i]);
@@ -274,9 +277,6 @@ public class SumWeightDom extends Constraint {
 
 		int i = positionMaping.get(q);
 
-		if (weights[i] == 0)
-		    continue;
-
 		int valGround = sum - sumGrounded.value() + q.min()*weights[i];
 		IntDomain vDom = new IntervalDomain(valGround, valGround);
 
@@ -292,12 +292,9 @@ public class SumWeightDom extends Constraint {
 	    // check still not ground variables
 	    for (int i = pointer; i < list.length; i++) {
 			
-		if (weights[i] == 0)
-		    continue;
-
 		IntVar v = list[i];
 
-		int pointer1 = nextGroundedPosition.value();
+		int pointer1 = nextGroundedPosition.value(); 
 
 		int sGround = sumGrounded.value();
 		IntDomain vDom = new IntervalDomain(sum-sGround, sum-sGround);
@@ -552,8 +549,12 @@ public class SumWeightDom extends Constraint {
 		ranges.add(new Interval(-i.max(), -i.min()));
 	    }
 
+	    int k=0;
+	    ((IntervalDomain)temp).intervals = new Interval[ranges.size()];
 	    for (int i = ranges.size() - 1 ; i >= 0; i--) 
-		temp.unionAdapt(ranges.get(i));
+		// temp.unionAdapt(ranges.get(i));
+		((IntervalDomain)temp).intervals[k++] = ranges.get(i);
+	    ((IntervalDomain)temp).size = k;
 	}
 	return temp;
     }
@@ -619,29 +620,29 @@ public class SumWeightDom extends Constraint {
     	return temp;
     }
 
-    /*
-      IntDomain plusDom(IntDomain d1, IntDomain d2) {
-      IntDomain temp;
-      // System.out.println (d1 + " + " + d2);
+
+    // IntDomain plusDom(IntDomain d1, IntDomain d2) {
+    // 	IntDomain temp;
+    // 	// System.out.println (d1 + " + " + d2);
 	
-      temp = new IntervalDomain();
+    // 	temp = new IntervalDomain();
 
-      for (IntervalEnumeration e1 = d1.intervalEnumeration(); e1.hasMoreElements();) {
-      Interval i1 = e1.nextElement(); 
-      int i1min = i1.min(), i1Max = i1.max();
+    // 	for (IntervalEnumeration e1 = d1.intervalEnumeration(); e1.hasMoreElements();) {
+    // 	    Interval i1 = e1.nextElement(); 
+    // 	    int i1min = i1.min(), i1Max = i1.max();
 
-      for (IntervalEnumeration e2 = d2.intervalEnumeration(); e2.hasMoreElements();) {
-      Interval i2 = e2.nextElement();
-      // temp.addDom(new IntervalDomain(i1min+i2.min(), i1Max+i2.max()));
-      temp.unionAdapt(i1min+i2.min(), i1Max+i2.max());
-      }
-      }
+    // 	    for (IntervalEnumeration e2 = d2.intervalEnumeration(); e2.hasMoreElements();) {
+    // 		Interval i2 = e2.nextElement();
+    // 		// temp.addDom(new IntervalDomain(i1min+i2.min(), i1Max+i2.max()));
+    // 		temp.unionAdapt(i1min+i2.min(), i1Max+i2.max());
+    // 	    }
+    // 	}
 
-      // System.out.println ("result+ = " + temp);
+    // 	// System.out.println ("result+ = " + temp);
 
-      return temp;
-      }
-    */
+    // 	return temp;
+    // }
+
 
     IntDomain subtractDom(IntDomain d1, IntDomain d2) {
 
@@ -652,11 +653,15 @@ public class SumWeightDom extends Constraint {
 
 		// singleton and interval domain
 		int d1Value = d1.value();
-		int n = ((IntervalDomain)d2).size;
+		int n = ((IntervalDomain)d2).intervals.length;
+		int k=0;
+		((IntervalDomain)temp).intervals = new Interval[n];
 		for (int i = n-1; i >= 0; i--) {
 		    Interval e = ((IntervalDomain)d2).intervals[i];
-		    temp.unionAdapt(new Interval(d1Value - e.max(), d1Value - e.min()));
+		    // temp.unionAdapt(new Interval(d1Value - e.max(), d1Value - e.min()));
+		    ((IntervalDomain)temp).intervals[k++] = new Interval(d1Value - e.max(), d1Value - e.min());
 		}
+		((IntervalDomain)temp).size = k;
 	    }
 	    else {
 
@@ -669,8 +674,12 @@ public class SumWeightDom extends Constraint {
 		    ranges.add(new Interval(d1Value - i2.max(), d1Value - i2.min()));
 		}
 
+		int k=0;
+		((IntervalDomain)temp).intervals = new Interval[ranges.size()];
 		for (int i = ranges.size() - 1 ; i >= 0; i--) 
-		    temp.unionAdapt(ranges.get(i));
+		    // temp.unionAdapt(ranges.get(i));
+		    ((IntervalDomain)temp).intervals[k++] = ranges.get(i);
+		((IntervalDomain)temp).size = k;
 	    }
 	}
 	else {
