@@ -2510,7 +2510,7 @@ public class Constraints implements ParserTreeConstants {
 		    // We do not impose linear constraint with domain consistency if 
 		    // the cases are covered by four cases above.
 
-		    pose(new SumWeightDom(p2, p1, p3));
+		    pose(new LinearIntDom(store, p2, p1, "==", p3)); //SumWeightDom(p2, p1, p3));
 		}
 		else if ((p3 == 0 && p1.length == 3)
 			 && ((p1[0] == -1 && p1[1] == -1 && p1[2] == 1) || (p1[0] == 1 && p1[1] == 1 && p1[2] == -1)))

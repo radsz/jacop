@@ -415,7 +415,7 @@ public class LinearInt extends PrimitiveConstraint {
 	store.countConstraint();
     }
 
-    private void computeInit() {
+    void computeInit() {
         int f = 0, e = 0;
         int min, max;
 	int i = 0;
@@ -439,7 +439,7 @@ public class LinearInt extends PrimitiveConstraint {
         sumMax = e;
     }
 
-    private void pruneLtEq() {
+    void pruneLtEq() {
 
         if (sumMin > b)
             throw store.failException;
@@ -472,7 +472,7 @@ public class LinearInt extends PrimitiveConstraint {
         }
     }
 
-    private void pruneGtEq() {
+    void pruneGtEq() {
 
         if (sumMax < b) 
             throw store.failException;
@@ -571,7 +571,7 @@ public class LinearInt extends PrimitiveConstraint {
         }
     }
 
-    private void pruneNeq() {
+    void pruneNeq() {
 
         if (sumMin == sumMax && b == sumMin) 
             throw store.failException;

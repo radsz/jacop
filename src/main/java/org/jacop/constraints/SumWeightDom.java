@@ -79,7 +79,19 @@ public class SumWeightDom extends Constraint {
      */
     LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
 
+    /**
+     * Current minimal value of the expression
+     */
+    int lMin;
 
+    /**
+     * Current maximal value of the expression
+     */
+    int lMax;
+
+    /**
+     * Current domains of varibales
+     */
     IntDomain[] lArray;
 
     HashMap<Var, Integer> positionMaping;
@@ -250,6 +262,9 @@ public class SumWeightDom extends Constraint {
 
 	    int pointer = nextGroundedPosition.value();
 
+	    lMin = sumGrounded.value();
+	    lMax = lMin;
+
 	    // update lArray domains after backtrack
 	    for (int i = pointer; i < list.length; i++) {
 
@@ -258,6 +273,9 @@ public class SumWeightDom extends Constraint {
 		assert (!currentDomain.singleton()) : "Singletons should not occur in this part of the array";
 
 		lArray[i] = multiplyDom(currentDomain, weights[i]);
+
+		lMin += lArray[i].min();
+		lMax += lArray[i].max();
 
 	    }
 
@@ -275,18 +293,19 @@ public class SumWeightDom extends Constraint {
 	    // check recently grounded variables
 	    for (IntVar q : fdvs) {
 
-		int i = positionMaping.get(q);
+	    	int i = positionMaping.get(q);
 
-		int valGround = sum - sumGrounded.value() + q.min()*weights[i];
-		IntDomain vDom = new IntervalDomain(valGround, valGround);
+	    	int valGround = sum - sumGrounded.value() + q.min()*weights[i];
+	    	IntDomain vDom = new IntervalDomain(valGround, valGround);
 
-		for (int j=pointer; j<list.length; j++)
-		    vDom = subtractDom(vDom, lArray[j]);
+	    	for (int j=pointer; j<list.length; j++) 
+	    	    vDom = subtractDom(vDom, lArray[j]);
+		
+	    	vDom = divDom(vDom, weights[i]);
+		// if (!vDom.contains(q.value()))
+		//     System.out.println(q+" in "+vDom);
 
-		vDom = divDom(vDom, weights[i]);
-
-		q.domain.in(store.level, q, vDom);
-
+	    	q.domain.in(store.level, q, vDom);
 	    }
 
 	    // check still not ground variables
@@ -301,7 +320,7 @@ public class SumWeightDom extends Constraint {
 		for (int j=pointer1; j<list.length; j++)
 		    if (j != i) 
 			vDom = subtractDom(vDom, lArray[j]);
-
+		
 		vDom = divDom(vDom, weights[i]);
 
 		v.domain.in(store.level, v, vDom);
@@ -337,6 +356,21 @@ public class SumWeightDom extends Constraint {
 	    V.putModelConstraint(this, getConsistencyPruningEvent(V));
 
 	lArray = new IntDomain[list.length];
+	for (int i = 0; i < lArray.length; i++) {
+	    int min, max;
+	    if (weights[i] > 0) {
+		min = list[i].min()*weights[i];
+		max = list[i].max()*weights[i];
+	    }
+	    else {
+		min = list[i].max()*weights[i];
+		max = list[i].min()*weights[i];
+	    }
+	    lArray[i] = new IntervalDomain(min, max);
+
+	    lMin += min;
+	    lMax += max;
+	}
 
 	for (int i = 0; i < list.length; i++) {
 
@@ -391,6 +425,8 @@ public class SumWeightDom extends Constraint {
 
 	    sumGrounded.update( sumGrounded.value() + sumJustGrounded );
 
+	    lMin += sumJustGrounded - lArray[pointer].min();
+	    lMax += sumJustGrounded - lArray[pointer].max();
 	    lArray[pointer] = new IntervalDomain(sumJustGrounded, sumJustGrounded);
 
 	    variableQueue.add((IntVar)var);
@@ -404,8 +440,11 @@ public class SumWeightDom extends Constraint {
 
 	    int i = positionMaping.get(var);
 
+	    IntDomain old = lArray[i];
 	    lArray[i] = multiplyDom(((IntVar)var).dom(), weights[i]);
 
+	    lMin += lArray[i].min() - old.min();
+	    lMax += lArray[i].max() - old.max();
 	}
 
     }
@@ -653,25 +692,40 @@ public class SumWeightDom extends Constraint {
 
 		// singleton and interval domain
 		int d1Value = d1.value();
-		int n = ((IntervalDomain)d2).intervals.length;
+		int sumMin = sum - lMax + d2.max();
+		int sumMax = sum - lMin + d2.min();
+
+		int n = ((IntervalDomain)d2).size;
 		int k=0;
 		((IntervalDomain)temp).intervals = new Interval[n];
 		for (int i = n-1; i >= 0; i--) {
 		    Interval e = ((IntervalDomain)d2).intervals[i];
-		    // temp.unionAdapt(new Interval(d1Value - e.max(), d1Value - e.min()));
-		    ((IntervalDomain)temp).intervals[k++] = new Interval(d1Value - e.max(), d1Value - e.min());
+		    int eMin = e.min();
+		    int eMax = e.max();
+
+		    if (!(eMin > sumMax || eMax < sumMin)) 
+			((IntervalDomain)temp).intervals[k++] = new Interval(d1Value - eMax, d1Value - eMin);
 		}
 		((IntervalDomain)temp).size = k;
+
+		// System.out.println("Result = " + temp);
+
 	    }
 	    else {
-
 		// singleton and NOT interval domain
 		ArrayList<Interval> ranges = new ArrayList<Interval>();
 	
 		int d1Value = d1.value();
+		int sumMin = sum - lMax + d2.max();
+		int sumMax = sum - lMin + d2.min();
+
 		for (IntervalEnumeration e2 = d2.intervalEnumeration(); e2.hasMoreElements();) {
 		    Interval i2 = e2.nextElement();
-		    ranges.add(new Interval(d1Value - i2.max(), d1Value - i2.min()));
+		    int eMin = i2.min();
+		    int eMax = i2.max();
+
+		    if (!(eMin > sumMax || eMax < sumMin)) 
+			ranges.add(new Interval(d1Value - i2.max(), d1Value - i2.min()));
 		}
 
 		int k=0;
@@ -682,28 +736,78 @@ public class SumWeightDom extends Constraint {
 		((IntervalDomain)temp).size = k;
 	    }
 	}
-	else {
+	else // first domain not singleton
+	    if (d2.domainID() == IntDomain.IntervalDomainID) {
 
-	    // First domain not singleton
-	    ArrayList<Interval> ranges = new ArrayList<Interval>();
+		// First domain not singleton
+		// ArrayList<Interval> ranges = new ArrayList<Interval>();
 
-	    for (IntervalEnumeration e1 = d1.intervalEnumeration(); e1.hasMoreElements();) {
+		int sumMin = sum - lMax + d2.max();
+		int sumMax = sum - lMin + d2.min();
 
-		Interval i1 = e1.nextElement(); 
-		int i1min = i1.min(), i1max = i1.max();
+		for (IntervalEnumeration e1 = d1.intervalEnumeration(); e1.hasMoreElements();) {
 
-		for (IntervalEnumeration e2 = d2.intervalEnumeration(); e2.hasMoreElements();) {
-		    Interval i2 = e2.nextElement();
-		    ranges.add(new Interval(i1min - i2.max(), i1max - i2.min()));
+		    Interval i1 = e1.nextElement(); 
+		    int i1min = i1.min(), i1max = i1.max();
+
+		    int n = ((IntervalDomain)d2).intervals.length;
+		    for (int i = n-1; i >= 0; i--) {
+			Interval e = ((IntervalDomain)d2).intervals[i];
+			int eMin = e.min();
+			int eMax = e.max();
+
+			if (!(eMin > sumMax || eMax < sumMin)) 
+			    if (temp.getSize() > 0 && temp.max() <= i1min - eMax)
+				temp.unionAdapt(new Interval(i1min - eMax, i1max - eMin));
+			    else
+				temp.unionAdapt(i1min - eMax, i1max - eMin);  // need to check correctness of union
+		                                      //and not only add intervals at the end
+		                                      // as in above cases
+			// ranges.add(new Interval(i1min - eMax, i1max - eMin));
+		    }
 		}
+
+		// for (int i = ranges.size() - 1 ; i >= 0; i--) {
+		//     Interval e = ranges.get(i);
+		//     int eMin = e.min();
+		//     int eMax = e.max();
+
+		//     if (temp.getSize() > 0 && temp.max() <= eMin)
+		//      	temp.unionAdapt(e);
+		//     else
+		// 	temp.unionAdapt(eMin, eMax);  // need to check correctness of union
+		//                                       //and not only add intervals at the end
+		//                                       // as in above cases
+		// }
+	    }
+	    else { // First domain not singleton and not IntervalDomain
+
+		ArrayList<Interval> ranges = new ArrayList<Interval>();
+
+		int sumMin = sum - lMax + d2.max();
+		int sumMax = sum - lMin + d2.min();
+
+		for (IntervalEnumeration e1 = d1.intervalEnumeration(); e1.hasMoreElements();) {
+
+		    Interval i1 = e1.nextElement(); 
+		    int i1min = i1.min(), i1max = i1.max();
+
+		    for (IntervalEnumeration e2 = d2.intervalEnumeration(); e2.hasMoreElements();) {
+			Interval i2 = e2.nextElement();
+			int eMin = i2.min();
+			int eMax = i2.max();
+
+			if (!(eMin > sumMax || eMax < sumMin)) 
+			    ranges.add(new Interval(i1min - eMax, i1max - eMin));
+		    }
+		}
+
+		for (int i = ranges.size() - 1 ; i >= 0; i--) 
+		    temp.unionAdapt(ranges.get(i).min(), ranges.get(i).max());  // need to check correctness of union
+		//and not only add intervals at the end
+		// as in above cases
 	    }
 
-	    for (int i = ranges.size() - 1 ; i >= 0; i--) 
-	    	temp.unionAdapt(ranges.get(i).min(), ranges.get(i).max());  // need to check correctness of union
-	                                                                    //and not only add intervals at the end
-	                                                                    // as in above cases
-
-	}
 	// System.out.println ("result- = " + temp);
 
 	return temp;
