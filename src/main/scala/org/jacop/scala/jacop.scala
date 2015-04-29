@@ -424,6 +424,19 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(get
     c
   }
 
+
+/**
+ * Defines equation constraint between an IntVar and FloatVar.
+ *
+ * @param that a second parameter for equation constraint.
+ * @return the defined constraint.
+ */
+  def #=(that: org.jacop.floats.core.FloatVar) = { 
+    val c = new org.jacop.floats.constraints.XeqP(this, that)
+    getModel.constr += c
+    c
+  }
+
 /**
  * Defines equation constraint between IntVar and a integer constant.
  *
@@ -882,6 +895,18 @@ class FloatVar(name: String, min: Double, max: Double) extends org.jacop.floats.
   }
 
 /**
+ * Defines equation constraint between an IntVar and FloatVar.
+ *
+ * @param that a second parameter for equation constraint.
+ * @return the defined constraint.
+ */
+  def #=(that: org.jacop.core.IntVar) = { 
+    val c = new org.jacop.floats.constraints.XeqP(that, this)
+    getModel.constr += c
+    c
+  }
+
+/**
  * Defines equation constraint between FlaotVar and a double constant.
  *
  * @param that a second parameter for equation constraint.
@@ -1304,6 +1329,19 @@ class BoolVar(name: String, min1: Int, max1: Int) extends org.jacop.core.Boolean
     getModel.constr += c
     c
   }
+
+/**
+ * Defines equation constraint between an IntVar and FloatVar.
+ *
+ * @param that a second parameter for equation constraint.
+ * @return the defined constraint.
+ */
+  def #=(that: org.jacop.floats.core.FloatVar) = { 
+    val c = new org.jacop.floats.constraints.XeqP(this, that)
+    getModel.constr += c
+    c
+  }
+
 
 /**
  * Defines equation constraint a BoolVar and a integer value.
