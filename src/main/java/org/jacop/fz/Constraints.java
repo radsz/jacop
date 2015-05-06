@@ -2268,7 +2268,7 @@ public class Constraints implements ParserTreeConstants {
 			v1.domain.inComplement(store.level, v1, i2);
 			break;
 		    case lt :
-			v1.domain.in(store.level, v1, VariablesParameters.MIN_FLOAT, i2-1);
+			v1.domain.in(store.level, v1, VariablesParameters.MIN_FLOAT, FloatDomain.previous(i2));
 			break;
 		    case le :
 			v1.domain.in(store.level, v1, VariablesParameters.MIN_FLOAT, i2);

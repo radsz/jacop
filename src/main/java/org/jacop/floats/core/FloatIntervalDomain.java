@@ -265,7 +265,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
 	assert checkInvariants() == null : checkInvariants() ;
 
-	if (next(intervals[size-1].max()) >= i)
+	if (next(intervals[size-1].max()) == i)
 	    intervals[size-1] = new FloatInterval(intervals[size-1].min(),i);
 	else {
 	    if (size == intervals.length) {
@@ -650,7 +650,7 @@ public class FloatIntervalDomain extends FloatDomain {
      */
     @Override
     public boolean contains(int value) {
-	return contains((float)value);
+	return contains((double)value);
     }
 
     public boolean contains(double value) {
