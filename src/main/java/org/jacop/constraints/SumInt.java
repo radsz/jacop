@@ -428,7 +428,7 @@ public class SumInt extends PrimitiveConstraint {
             if (I[i] >= sMax - sumXmin) {
                 min = x[i].min();
                 max = min + I[i];
-                if (pruneMax(x[i], sMax - sumXmin + min)) {
+                if (pruneMax(x[i], sMax - sumXmin + min - 1)) {
                     int newMax = x[i].max();
                     sumXmax -= max - newMax;
                     I[i] = newMax - min;
@@ -448,7 +448,7 @@ public class SumInt extends PrimitiveConstraint {
             if (I[i] >= -(sMin - sumXmax)) {
                 max = x[i].max();
                 min = max - I[i];
-                if (pruneMin(x[i], sMin - sumXmax + max)) {
+                if (pruneMin(x[i], sMin - sumXmax + max + 1)) {
                     int nmin = x[i].min();
                     sumXmin += nmin - min;
                     I[i] = max - nmin;

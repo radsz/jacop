@@ -2415,6 +2415,14 @@ public class Constraints implements ParserTreeConstants {
 		else if (p1.length == 2 && p1[0] == -1 && p1[1] == -1) {
 		    pose(new Reified(new Not(new XplusYeqC(p2[0], p2[1], -p3)), p4));
 		} 
+		else if (allWeightsOne(p1)) {
+		    t = new IntVar(store, p3, p3);
+		    pose(new Reified(new SumInt(store, p2, "!=", t), p4));
+		}
+		else if (allWeightsMinusOne(p1)) {
+		    t = new IntVar(store, -p3, -p3);
+		    pose(new Reified(new SumInt(store, p2, "!=", t), p4));		    
+		}
 		else 
 		    pose(new Reified(new LinearInt(store, p2, p1, "!=", p3), p4));
 		break;
@@ -2439,6 +2447,10 @@ public class Constraints implements ParserTreeConstants {
 		else if (allWeightsOne(p1)) {
 		    t = new IntVar(store, p3, p3);
 		    pose(new Reified(new SumInt(store, p2, "<=", t), p4));
+		}
+		else if (allWeightsMinusOne(p1)) {
+		    t = new IntVar(store, -p3, -p3);
+		    pose(new Reified(new SumInt(store, p2, ">=", t), p4));		    
 		}
 		else {
 		    pose(new Reified(new LinearInt(store,p2, p1, "<=", p3), p4));
@@ -2678,14 +2690,14 @@ public class Constraints implements ParserTreeConstants {
 		else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1)
 		    pose(new XplusClteqZ(p2[1], -p3, p2[0]) );
 
-		// else if (allWeightsOne(p1)) {
-		//     t = new IntVar(store, IntDomain.MinInt, p3);
-		//     pose(new Sum(p2, t));		    
-		// }
-		// else if (allWeightsMinusOne(p1)) {
-		//     t = new IntVar(store, -p3, IntDomain.MaxInt);
-		//     pose(new Sum(p2, t));		    
-		// }
+		else if (allWeightsOne(p1)) {
+		    t = new IntVar(store, p3, p3);
+		    pose(new SumInt(store, p2, "<=", t));		    
+		}
+		else if (allWeightsMinusOne(p1)) {
+		    t = new IntVar(store, -p3, -p3);
+		    pose(new SumInt(store, p2, ">=", t));		    
+		}
 		// else if (sumPossible(p1, p3) > -1) {
 		//     int pos = sumPossible(p1, p3);
 		//     IntVar[] vect = new IntVar[p1.length-1];
@@ -2697,6 +2709,7 @@ public class Constraints implements ParserTreeConstants {
 		//     pose(new XlteqY(le, p2[pos]));
 		//     pose(new Sum(vect, le));
 		// }
+
 		else {
 		    int posLe = sumLePossible(p1, p3);
 		    int posGe = sumGePossible(p1, p3);

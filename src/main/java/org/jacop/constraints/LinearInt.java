@@ -517,7 +517,7 @@ public class LinearInt extends PrimitiveConstraint {
             if (I[i] >= b - sumMin) {
                 min = x[i].min() * a[i];
                 max = min + I[i];
-                if (pruneMax(x[i], divRoundDown(b - sumMin + min, a[i]))) {
+                if (pruneMax(x[i], divRoundUp(b - sumMin + min, a[i]) - 1)) {
                     int newMax = x[i].max() * a[i];
                     sumMax -= max - newMax;
                     I[i] = newMax - min;
@@ -529,7 +529,7 @@ public class LinearInt extends PrimitiveConstraint {
             if (I[i] >= b - sumMax) {
                 min = x[i].max() * a[i];
                 max = min + I[i];
-                if (pruneMin(x[i], divRoundUp(-(b - sumMin + min), -a[i]))) {
+                if (pruneMin(x[i], divRoundDown(-(b - sumMin + min), -a[i]) + 1)) {
                     int newMax = x[i].min() * a[i];
                     sumMax -= max - newMax;
                     I[i] = newMax - min;
@@ -550,7 +550,8 @@ public class LinearInt extends PrimitiveConstraint {
             if (I[i] >= -(b - sumMax)) {
                 max = x[i].max() * a[i];
                 min = max - I[i];
-                if (pruneMin(x[i], divRoundUp(b - sumMax + max, a[i]))) {
+
+		if (pruneMin(x[i], divRoundDown(b - sumMax + max, a[i]) + 1)) {
                     int nmin = x[i].min() * a[i];
                     sumMin += nmin - min;
                     I[i] = max - nmin;
@@ -562,7 +563,8 @@ public class LinearInt extends PrimitiveConstraint {
             if (I[i] >= - (b - sumMax)) {
                 max = x[i].min() * a[i];
                 min = max - I[i];
-                if (pruneMax(x[i], divRoundDown(-(b - sumMax + max), -a[i]))) {
+
+                if (pruneMax(x[i], divRoundUp(-(b - sumMax + max), -a[i]) - 1)) {
                     int newMin = x[i].max() * a[i];
                     sumMin += newMin - min;
                     I[i] = max - newMin;
@@ -785,6 +787,14 @@ public class LinearInt extends PrimitiveConstraint {
             return a / b;
     }
 
+    // private int divFloor(int s, int a) {
+    // 	return (int)( Math.floor ( (float)s / a ) );
+    // }
+
+    // private int divCeil(int s, int a) {
+    // 	return (int)(  Math.ceil( (float)s / a ) );
+    // }
+    
     public byte relation(String r) {
 	if (r.equals("==")) 
 	    return eq;
