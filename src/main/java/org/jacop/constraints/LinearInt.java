@@ -249,43 +249,49 @@ public class LinearInt extends PrimitiveConstraint {
 		pruneLtEq();
 		pruneGtEq();
 
-		if (sumMax <= b && sumMin >= b) 
-		    removeConstraint();
+		if (!reified)
+		    if (sumMax <= b && sumMin >= b) 
+			removeConstraint();
 
 		break;
 
 	    case le:
 		pruneLtEq();
 
-		if (sumMax <= b) 
-		    removeConstraint();
+		if (!reified)
+		    if (sumMax <= b) 
+			removeConstraint();
 		break;
 
 	    case lt:
 		pruneLt();
 
-		if (sumMax < b) 
-		    removeConstraint();
+		if (!reified)
+		    if (sumMax < b) 
+			removeConstraint();
 		break;
 	    case ne:
 		pruneNeq();
 
-		if (sumMin == sumMax && sumMin != b)
-		    removeConstraint();
+		if (!reified)
+		    if (sumMin == sumMax && sumMin != b)
+			removeConstraint();
 		break;
 	    case gt:
 
 		pruneGt();
 
-		if (sumMin > b)
-		    removeConstraint();		
+		if (!reified)
+		    if (sumMin > b)
+			removeConstraint();		
 		break;
 	    case ge:
 
 		pruneGtEq();
 
-		if (sumMin >= b)
-		    removeConstraint();
+		if (!reified)
+		    if (sumMin >= b)
+			removeConstraint();
 
 		break;
 	    }
@@ -308,43 +314,49 @@ public class LinearInt extends PrimitiveConstraint {
 		pruneLtEq();
 		pruneGtEq();
 		
-		if (sumMax <= b && sumMin >= b) 
-		    removeConstraint();
+		if (!reified)
+		    if (sumMax <= b && sumMin >= b) 
+			removeConstraint();
 
 		break;
 
 	    case le:
 		pruneLtEq();
 
-		if (sumMax <= b) 
-		    removeConstraint();
+		if (!reified)
+		    if (sumMax <= b) 
+			removeConstraint();
 		break;
 
 	    case lt:
 		pruneLt();
 
-		if (sumMax < b) 
-		    removeConstraint();
+		if (!reified)
+		    if (sumMax < b) 
+			removeConstraint();
 		break;
 	    case ne:
 		pruneNeq();
 
-		if (sumMin > b || sumMax < b)
-		    removeConstraint();
+		if (!reified)
+		    if (sumMin > b || sumMax < b)
+			removeConstraint();
 		break;
 	    case gt:
 
 		pruneGt();
 
-		if (sumMin > b)
-		    removeConstraint();		
+		if (!reified)
+		    if (sumMin > b)
+			removeConstraint();		
 		break;
 	    case ge:
 
 		pruneGtEq();
 
-		if (sumMin >= b)
-		    removeConstraint();
+		if (!reified)
+		    if (sumMin >= b)
+			removeConstraint();
 
 		break;
 	    }

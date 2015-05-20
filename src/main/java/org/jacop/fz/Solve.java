@@ -1298,14 +1298,30 @@ public class Solve implements ParserTreeConstants {
     }
 
     IntVar getCost(ASTSolveExpr node) {
-	if (node.getType() == 0) // ident
-	    return dictionary.getVariable(node.getIdent());
+
+	if (node.getType() == 0) {// ident
+	    IntVar cost = dictionary.getVariable(node.getIdent());
+	    if (cost != null)
+		return cost;
+	    else { // cost is constant ?
+		Integer costInt = dictionary.checkInt(node.getIdent());
+		if (costInt != null)
+		    return new IntVar(store, costInt, costInt);
+		else
+		    return null;
+	    }
+	}
 	else if (node.getType() == 1) { // array access
 	    IntVar[] a = dictionary.getVariableArray(node.getIdent());
 	    if ( a != null)
 		return a[node.getIndex()];
-	    else
-		return null;
+	    else { // cost is constant ?
+		int[] costInt = dictionary.getIntArray(node.getIdent());
+		if (costInt != null)
+		    return new IntVar(store, costInt[node.getIndex()], costInt[node.getIndex()]);
+		else
+		    return null;
+	    }
 	}
 	else {
 	    System.err.println("Wrong cost function specification " + node);
@@ -1315,10 +1331,30 @@ public class Solve implements ParserTreeConstants {
     }
 
     FloatVar getCostFloat(ASTSolveExpr node) {
-	if (node.getType() == 0) // ident
-	    return dictionary.getFloatVariable(node.getIdent());
-	else if (node.getType() == 1) // array access
-	    return dictionary.getVariableFloatArray(node.getIdent())[node.getIndex()];
+	if (node.getType() == 0) { // ident
+	    FloatVar cost = dictionary.getFloatVariable(node.getIdent());
+	    if (cost != null)
+		return cost;
+	    else { // cost is constant ?
+		Double costFloat = dictionary.checkFloat(node.getIdent());
+		if (costFloat != null)
+		    return new FloatVar(store, costFloat, costFloat);
+		else
+		    return null;
+	    }
+	}
+	else if (node.getType() == 1) { // array access
+	    FloatVar[] a = dictionary.getVariableFloatArray(node.getIdent());
+	    if (a != null)
+		return a[node.getIndex()];
+	    else { // cost is constant ?
+		double[] costFloat = dictionary.getFloatArray(node.getIdent());
+		if (costFloat != null)
+		    return new FloatVar(store, costFloat[node.getIndex()], costFloat[node.getIndex()]);
+		else
+		    return null;
+	    }
+	}
 	else {
 	    System.err.println("Wrong cost function specification " + node);
 	    System.exit(0);
