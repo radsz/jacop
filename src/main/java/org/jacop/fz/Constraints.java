@@ -761,8 +761,27 @@ public class Constraints implements ParserTreeConstants {
 		    if (a1.length == 0 && a2.length == 0 )
 			return;
 
-		    PrimitiveConstraint c = new BoolClause(a1, a2);
-		    
+		    ArrayList<IntVar> a1reduced = new ArrayList<IntVar>();
+		    for (int i = 0; i < a1.length; i++) 
+			if (a1[i].max() != 0)
+			    a1reduced.add(a1[i]);
+		    ArrayList<IntVar> a2reduced = new ArrayList<IntVar>();
+		    for (int i = 0; i < a2.length; i++) 
+			if (a2[i].min() != 1)
+			    a2reduced.add(a2[i]);
+		    if (a1reduced.size() == 0 && a2reduced.size() == 0 )
+			throw store.failException;
+
+		    PrimitiveConstraint c;
+		    if (a1reduced.size() == 0)
+			c = new AndBool(a2reduced, zero);
+		    else if (a2reduced.size() == 0)
+			c = new OrBool(a1reduced, one);
+		    else if (a1reduced.size() == 1 && a2reduced.size() == 1)
+			c = new XlteqY(a2reduced.get(0), a1reduced.get(0));
+		    else
+			c = new BoolClause(a1reduced, a2reduced);
+
 		    // bool_clause_reif/3 defined in redefinitions-2.0.
 		    if (p.startsWith("_reif", 11)) {
 			IntVar v3 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
