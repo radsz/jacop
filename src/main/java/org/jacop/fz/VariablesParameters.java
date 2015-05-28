@@ -176,8 +176,9 @@ public class VariablesParameters implements ParserTreeConstants {
 
 		if ( constant_int(node, initChild) ) {
 		    initVal = getScalarFlatExpr(node, initChild);
-		    XeqC c = new XeqC(varInt, initVal);
-		    store.impose(c);
+		    varInt.domain.in(store.level, varInt, initVal, initVal);
+		    // XeqC c = new XeqC(varInt, initVal);
+		    // store.impose(c);
 // 		    System.out.println(c);
 		}
 		else {
@@ -210,8 +211,9 @@ public class VariablesParameters implements ParserTreeConstants {
 
 		if ( constant_int(node, initChild) ) {
 		    initVal = getScalarFlatExpr(node, initChild);
-		    XeqC c = new XeqC(varInt, initVal);
-		    store.impose(c);
+		    varInt.domain.in(store.level, varInt, initVal, initVal);
+		    // XeqC c = new XeqC(varInt, initVal);
+		    // store.impose(c);
 // 		    System.out.println(c);
 		}
 		else {
@@ -241,8 +243,9 @@ public class VariablesParameters implements ParserTreeConstants {
 
 		if ( constant_int(node, initChild) ) {
 		    initVal = getScalarFlatExpr(node, initChild);
-		    XeqC c = new XeqC(varInt, initVal);
-		    store.impose(c);
+		    varInt.domain.in(store.level, varInt, initVal, initVal);
+		    // XeqC c = new XeqC(varInt, initVal);
+		    // store.impose(c);
 // 		    System.out.println(c);
 		}
 		else {
