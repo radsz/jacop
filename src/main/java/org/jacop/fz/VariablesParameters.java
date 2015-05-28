@@ -269,8 +269,9 @@ public class VariablesParameters implements ParserTreeConstants {
 
 		if ( constant_int(node, initChild) ) {
 		    initVal = getScalarFlatExpr(node, initChild);
-		    XeqC c = new XeqC(boolVar, initVal);
-		    store.impose(c);
+		    boolVar.domain.in(store.level, boolVar, initVal, initVal);
+		    // XeqC c = new XeqC(boolVar, initVal);
+		    // store.impose(c);
 // 		    System.out.println(c);
 		}
 		else {

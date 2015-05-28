@@ -108,7 +108,7 @@ public class BoolClause extends PrimitiveConstraint {
 	
 	assert ( checkInvariants() == null) : checkInvariants();
 
-	if (lx > 2 || ly > 2)
+	if (lx + ly > 4)
 	    queueIndex = 1;
 	else
 	    queueIndex = 0;
@@ -277,6 +277,8 @@ public class BoolClause extends PrimitiveConstraint {
 	else if (startX == lx && startY == ly - 1) 
 	    y[ly-1].domain.in(store.level, y[ly-1], 0, 0);
 	    
+	if (lx - startX + ly + startY < 5)
+	    queueIndex = 0;
     }
 
     private void swap(IntVar[] p, int i, int j) {

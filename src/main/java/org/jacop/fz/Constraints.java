@@ -579,9 +579,6 @@ public class Constraints implements ParserTreeConstants {
 			IntVar v = getVariable(p2);
 
 			pose(new AndBool(a1, v));
-			// IntVar t1 = new IntVar(store, 0, a1.length);
-			// pose(new Sum(a1, t1));
-			// pose(new Reified(new XeqC(t1, a1.length), v));
 		    }
 		    else if (p.startsWith("or", 11)) {
 			//   			node.dump("");
@@ -591,10 +588,10 @@ public class Constraints implements ParserTreeConstants {
 			IntVar[] a1 = getVarArray(p1);
 			IntVar v = getVariable(p2);
 
+			// if (v.min() == 1)
+			//     pose(new BoolClause(a1, new IntVar[] {}));
+			// else
 			pose(new OrBool(a1, v));
-			// IntVar t1 = new IntVar(store, 0, a1.length);
-			// pose(new Sum(a1, t1));
-			// pose(new Reified(new XgtC(t1, 0), v));
 		    }
 		    else if (p.startsWith("xor", 11)) {
 
@@ -774,11 +771,11 @@ public class Constraints implements ParserTreeConstants {
 
 		    PrimitiveConstraint c;
 		    if (a1reduced.size() == 0)
-			c = new AndBool(a2reduced, zero);
+		    	c = new AndBool(a2reduced, zero);
 		    else if (a2reduced.size() == 0)
-			c = new OrBool(a1reduced, one);
+		    	c = new OrBool(a1reduced, one);
 		    else if (a1reduced.size() == 1 && a2reduced.size() == 1)
-			c = new XlteqY(a2reduced.get(0), a1reduced.get(0));
+		    	c = new XlteqY(a2reduced.get(0), a1reduced.get(0));
 		    else
 			c = new BoolClause(a1reduced, a2reduced);
 
