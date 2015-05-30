@@ -69,6 +69,8 @@ import org.jacop.constraints.netflow.NetworkFlow;
 import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.constraints.geost.*;
 
+import org.jacop.satwrapper.SatTranslation;
+
 /**
  * 
  * The part of the parser responsible for parsing constraints. 
@@ -93,11 +95,15 @@ public class Constraints implements ParserTreeConstants {
 
     // ============ Options ==============
     Options opt;
-    
+
     ArrayList<IntVar[]> parameterListForAlldistincts = new ArrayList<IntVar[]>();
     ArrayList<Constraint> delayedConstraints = new ArrayList<Constraint>();
 
-//     boolean storeLevelIncreased=false;
+    // ============ SAT solver interface ==============
+
+    SatTranslation sat;
+
+    //     boolean storeLevelIncreased=false;
 
     final static boolean debug = false;
 
@@ -107,6 +113,11 @@ public class Constraints implements ParserTreeConstants {
      */
     public Constraints(Store store) {
 	this.store = store;
+
+	sat = new SatTranslation(store);
+	// impose SAT-solver
+	sat.impose();
+
 // 	this.zero = new Variable(store, "zero", 0,0);
 // 	this.one = new Variable(store, "one", 1,1);
     }
@@ -573,25 +584,24 @@ public class Constraints implements ParserTreeConstants {
 		    if (p.startsWith("and", 11)) {
 			//  			node.dump("");
 
-			SimpleNode p1 = (SimpleNode)node.jjtGetChild(0);
-			ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
-			IntVar[] a1 = getVarArray(p1);
-			IntVar v = getVariable(p2);
+			IntVar[] a1 = getVarArray((SimpleNode)node.jjtGetChild(0));
+			IntVar v = getVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
 
-			pose(new AndBool(a1, v));
+			if (opt.useSat())
+			    sat.generate_and(a1, v);
+			else
+			    pose(new AndBool(a1, v));
 		    }
 		    else if (p.startsWith("or", 11)) {
 			//   			node.dump("");
 
-			SimpleNode p1 = (SimpleNode)node.jjtGetChild(0);
-			ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
-			IntVar[] a1 = getVarArray(p1);
-			IntVar v = getVariable(p2);
+			IntVar[] a1 = getVarArray((SimpleNode)node.jjtGetChild(0));
+			IntVar v = getVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
 
-			// if (v.min() == 1)
-			//     pose(new BoolClause(a1, new IntVar[] {}));
-			// else
-			pose(new OrBool(a1, v));
+			if (opt.useSat())
+			    sat.generate_or(a1, v);
+			else
+			    pose(new OrBool(a1, v));
 		    }
 		    else if (p.startsWith("xor", 11)) {
 
@@ -651,38 +661,94 @@ public class Constraints implements ParserTreeConstants {
 		// 1 <- 1 <-> 1
 		if (p.startsWith("left_imp", 5)) {
 
-		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
-		    ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
-		    ASTScalarFlatExpr p3 = (ASTScalarFlatExpr)node.jjtGetChild(2);
+		    IntVar v1 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
+		    IntVar v2 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
+		    IntVar v3 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
 
-		    IntVar v1 = getVariable(p1);
-		    IntVar v2 = getVariable(p2);
-		    IntVar v3 = getVariable(p3);
-
-		    pose(new IfThenBool(v2, v1, v3));
-		    //  		    pose(new Reified(new Not(new And(new XeqC(v1, 0), new XeqC(v2, 1))), v3));
-		    // 					pose(new Reified(new Or(new XneqC(v1, 0), new XneqC(v2, 1)), v3));
-
-		    // 		    pose(new ExtensionalSupportMDD(new Variable[] {v1, v2, v3}, 
-		    // 						   new int[][] {{0,0,1}, {0,1,0}, {1,0,1},{1,1,1}}));
+		    if (opt.useSat())
+			sat.generate_implication_reif(v2, v1, v3);
+		    else
+			pose(new IfThenBool(v2, v1, v3));
 		} 
 		else if ( operation != -1) {
 		    // bool_eq*, bool_ne*, bool_lt*, bool_gt*, bool_le*, and bool_ge*
-		    int_comparison(operation, node, 7);
+		    if (opt.useSat()) {
+			if  (p.startsWith("eq_reif", 5) ) {
+
+			    IntVar v1 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
+			    IntVar v2 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
+			    IntVar v3 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
+			
+			    sat.generate_eq_reif(v1, v2, v3);
+			}
+			else if  (p.startsWith("ne_reif", 5) ) {
+
+			    IntVar v1 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
+			    IntVar v2 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
+			    IntVar v3 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
+			
+			    sat.generate_neq_reif(v1, v2, v3);
+			}
+			else if  (p.startsWith("le_reif", 5) ) {
+
+			    IntVar a = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
+			    IntVar b = getVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
+			    IntVar c = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
+
+			    sat.generate_le_reif(a, b, c);
+			}
+			else if  (p.startsWith("lt_reif", 5) ) {
+
+			    IntVar a = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
+			    IntVar b = getVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
+			    IntVar c = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
+
+			    sat.generate_lt_reif(a, b, c);
+			}
+			else if  (p.startsWith("eq", 5) ) {
+
+			    IntVar a = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
+			    IntVar b = getVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
+
+			    sat.generate_eq(a, b);
+			}
+			else if  (p.startsWith("ne", 5) ) {
+
+			    IntVar a = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
+			    IntVar b = getVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
+
+			    sat.generate_not(a, b);
+			}
+			else if  (p.startsWith("le", 5) ) {
+
+			    IntVar a = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
+			    IntVar b = getVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
+
+			    sat.generate_le(a, b);
+			}
+			else if  (p.startsWith("lt", 5) ) {
+
+			    IntVar a = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
+			    IntVar b = getVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
+
+			    sat.generate_lt(a, b);
+			}
+		    }
+		    else {
+			int_comparison(operation, node, 7);
+		    }
 		}
 		// bool_or
 		else if (p.startsWith("or", 5)) {
 
-		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
-		    ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
-		    ASTScalarFlatExpr p3 = (ASTScalarFlatExpr)node.jjtGetChild(2);
+		    IntVar v1 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
+		    IntVar v2 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
+		    IntVar v3 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
 
-		    IntVar v1 = getVariable(p1);
-		    IntVar v2 = getVariable(p2);
-		    IntVar v3 = getVariable(p3);
-
-		    pose(new OrBool(new IntVar[] {v1, v2}, v3));
-		    // pose(new Reified(new XplusYgtC(v1, v2, 0), v3));
+		    if (opt.useSat())
+			sat.generate_or(new IntVar[] {v1, v2}, v3);
+		    else
+			pose(new OrBool(new IntVar[] {v1, v2}, v3));
 		}
 		// bool_and
 		else if (p.startsWith("and", 5)) {
@@ -695,8 +761,10 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar v2 = getVariable(p2);
 		    IntVar v3 = getVariable(p3);
 
- 		    pose(new AndBool(new IntVar[] {v1, v2}, v3));
- 		    // pose(new Reified(new XplusYeqC(v1, v2, 2), v3));
+		    if (opt.useSat())
+			sat.generate_and(new IntVar[] {v1, v2}, v3);
+		    else
+			pose(new AndBool(new IntVar[] {v1, v2}, v3));
 		}
 		// bool_xor
 		else if (p.startsWith("xor", 5)) {
@@ -709,8 +777,10 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar v2 = getVariable(p2);
 		    IntVar v3 = getVariable(p3);
 
-		    pose(new XorBool(new IntVar[] {v1, v2}, v3));
-		    // 					pose(new Reified(new XneqY(v1, v2), v3));
+		    if (opt.useSat())
+			sat.generate_neq_reif(v1, v2, v3);
+		    else
+			pose(new XorBool(new IntVar[] {v1, v2}, v3));
 		}
 		// bool_not
 		else if (p.startsWith("not", 5)) {
@@ -721,8 +791,10 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar v1 = getVariable(p1);
 		    IntVar v2 = getVariable(p2);
 
- 		    pose(new XneqY(v1, v2));
-// 		    pose(new XplusYeqC(v1, v2, 1));
+		    if (opt.useSat())
+			sat.generate_not(v1, v2);
+		    else
+			pose(new XneqY(v1, v2));
 		}
 		// bool_right_imp
 		// a -> b <-> r
@@ -741,12 +813,10 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar v2 = getVariable(p2);
 		    IntVar v3 = getVariable(p3);
 
-		    pose(new IfThenBool(v1, v2, v3));
-		    //  		    pose(new Reified(new Not(new And(new XeqC(v1, 1), new XeqC(v2, 0))), v3));
-		    // 					pose(new Reified(new Or(new XneqC(v1, 1), new XneqC(v2, 0)), v3));
-
-		    //  		    pose(new ExtensionalSupportMDD(new Variable[] {v1, v2, v3}, 
-		    //  						   new int[][] {{0,0,1}, {0,1,1}, {1,0,0},{1,1,1}}));
+		    if (opt.useSat())
+			sat.generate_implication_reif(v1, v2, v3);
+		    else
+			pose(new IfThenBool(v1, v2, v3));
 		}
 		// bool_clause([x1,..., xm], [y1,..., yn]) ===>
 		// x1 \/ ... \/ xm \/ not y1 \/ ... \/ not yn
@@ -758,33 +828,43 @@ public class Constraints implements ParserTreeConstants {
 		    if (a1.length == 0 && a2.length == 0 )
 			return;
 
-		    ArrayList<IntVar> a1reduced = new ArrayList<IntVar>();
-		    for (int i = 0; i < a1.length; i++) 
-			if (a1[i].max() != 0)
-			    a1reduced.add(a1[i]);
-		    ArrayList<IntVar> a2reduced = new ArrayList<IntVar>();
-		    for (int i = 0; i < a2.length; i++) 
-			if (a2[i].min() != 1)
-			    a2reduced.add(a2[i]);
-		    if (a1reduced.size() == 0 && a2reduced.size() == 0 )
-			throw store.failException;
+		    if (opt.useSat()) {
+			if (p.startsWith("_reif", 11)) { // reified
+			    IntVar r = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
+			    sat.generate_clause_reif(a1, a2, r);
+			}
+			else
+			    sat.generate_clause(a1, a2);
+		    }
+		    else { // not SAT generation, use CP constraints
+			ArrayList<IntVar> a1reduced = new ArrayList<IntVar>();
+			for (int i = 0; i < a1.length; i++) 
+			    if (a1[i].max() != 0)
+				a1reduced.add(a1[i]);
+			ArrayList<IntVar> a2reduced = new ArrayList<IntVar>();
+			for (int i = 0; i < a2.length; i++) 
+			    if (a2[i].min() != 1)
+				a2reduced.add(a2[i]);
+			if (a1reduced.size() == 0 && a2reduced.size() == 0 )
+			    throw store.failException;
 
-		    PrimitiveConstraint c;
-		    if (a1reduced.size() == 0)
-		    	c = new AndBool(a2reduced, zero);
-		    else if (a2reduced.size() == 0)
-		    	c = new OrBool(a1reduced, one);
-		    else if (a1reduced.size() == 1 && a2reduced.size() == 1)
-		    	c = new XlteqY(a2reduced.get(0), a1reduced.get(0));
-		    else
-			c = new BoolClause(a1reduced, a2reduced);
+			PrimitiveConstraint c;
+			if (a1reduced.size() == 0)
+			    c = new AndBool(a2reduced, zero);
+			else if (a2reduced.size() == 0)
+			    c = new OrBool(a1reduced, one);
+			else if (a1reduced.size() == 1 && a2reduced.size() == 1)
+			    c = new XlteqY(a2reduced.get(0), a1reduced.get(0));
+			else
+			    c = new BoolClause(a1reduced, a2reduced);
 
 		    // bool_clause_reif/3 defined in redefinitions-2.0.
-		    if (p.startsWith("_reif", 11)) {
-			IntVar v3 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
-			pose(new Reified(c, v3));		    }
-		    else
-			pose(c);
+			if (p.startsWith("_reif", 11)) {
+			    IntVar r = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
+			    pose(new Reified(c, r));		    }
+			else
+			    pose(c);
+		    }
 		}
 		// bool_lin_* (eq, ne, lt, gt, le, ge)
 		else if (p.startsWith("lin_", 5)) {
@@ -3598,6 +3678,7 @@ public class Constraints implements ParserTreeConstants {
  		System.out.println(c);
 	}
 	poseAlldistinctConstraints();
+
     }
 
     void poseAlldistinctConstraints() {

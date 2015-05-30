@@ -142,11 +142,9 @@ public class In extends PrimitiveConstraint {
 
 	@Override
 	public void notConsistency(Store store) {
-	    // wrong it only does not need to be included in dom
-	    // x.domain.in(store.level, x, DomComplement);
 
-	    if (dom.contains(x.domain))
-		throw Store.failException;
+	    x.domain.in(store.level, x, DomComplement);
+
 	}
 
 	@Override
@@ -162,7 +160,7 @@ public class In extends PrimitiveConstraint {
 
 	@Override
 	public boolean satisfied() {
-	    return x.singleton() && 
+	    return //x.singleton() && 
 		dom.contains(x.domain);
 	}
 

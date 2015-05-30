@@ -60,6 +60,8 @@ import org.jacop.floats.core.FloatDomain;
 import org.jacop.set.core.SetVar;
 import org.jacop.set.search.IndomainSetMin;
 
+import org.jacop.satwrapper.SatTranslation;
+
 /**
  * 
  * The parser part responsible for parsing the solve part of the flatzinc file,
@@ -121,13 +123,16 @@ public class Solve implements ParserTreeConstants {
 
     int solveKind=-1;
 
+    SatTranslation sat;
+    
     /**
      * It creates a parser for the solve part of the flatzinc file. 
      * 
      * @param store the constraint store within which context the search will take place.
      */
-    public Solve(Store store) {
+    public Solve(Store store, SatTranslation sat)  {
 	this.store = store;
+	this.sat = sat;
     }
 
     /**
@@ -145,7 +150,7 @@ public class Solve implements ParserTreeConstants {
 
 	if (opt.getVerbose())
 	    System.out.println("%% Model constraints defined.\n%% Variables = "+store.size() + ", Bool variables = "+NumberBoolVariables +
-			       ", Constraints = "+initNumberConstraints);
+			       ", Constraints = "+initNumberConstraints + ", SAT clauses = " + sat.numberClauses());
 
 	dictionary = table;
 	options = opt;

@@ -67,6 +67,8 @@ public class Options {
 
     boolean runSearch = true;
 
+    boolean use_sat = false;
+	
 	/**
 	 * It constructs an Options object and parses all the parameters/options provided 
 	 * to flatzinc to jacop parser.
@@ -100,6 +102,7 @@ public class Options {
 						"    -b, --bound - use bounds consistency whenever possible;\n" +
 						"        override annotation \":: domain\" and select constraints\n"+
 						"        implementing bounds consistency (default false).\n"+
+						"    -sat use SAT solver for boolean constraints.\n" +
 						"    -i, --interval print intervals instead of values for floating variables\n"+
 						"    -p <value>, --precision <value> defines precision for floating operations\n"+
 						"        overrides precision definition in search annotation."
@@ -124,6 +127,10 @@ public class Options {
 				}
 				else if (args[i].equals("-s") || args[i].equals("--statistics")) {
 					statistics = true;
+					i++;
+				}
+				else if (args[i].equals("-sat")) {
+					use_sat = true;
 					i++;
 				}
 				else if (args[i].equals("-n") || args[i].equals("--num-solutions")) {
@@ -277,7 +284,14 @@ public class Options {
 	public boolean precision() {
 		return precisionDefined;
 	}
-	
+
+    	/**
+	 * It defines precision. 
+	 */
+	public boolean useSat() {
+		return use_sat;
+	}
+
 }
 
 
