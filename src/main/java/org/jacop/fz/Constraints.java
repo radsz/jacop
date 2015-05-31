@@ -2468,7 +2468,13 @@ public class Constraints implements ParserTreeConstants {
 	    IntVar t;
 	    switch (operation) {
 	    case eq :
-		if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
+		if (p1.length == 1) {
+		    if (p1[0] == 1)
+			pose(new Reified(new XeqC(p2[0], p3), p4));
+		    else
+			pose(new Reified(new XmulCeqZ(p2[0], p1[0], new IntVar(store, p3,p3)), p4));
+		}
+		else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
 		    pose(new Reified(new XplusCeqZ(p2[1], p3, p2[0]), p4));
 		}
 		else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
