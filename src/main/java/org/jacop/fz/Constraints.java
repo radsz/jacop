@@ -1093,6 +1093,10 @@ public class Constraints implements ParserTreeConstants {
 		ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
 		ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
 
+		// if (opt.useSat()) // it can be moved to SAT solver but it is slow in the current implementation
+		//     sat.generate_eq(getVariable(p1), getVariable(p2));
+		// else
+
 		pose(new XeqY(getVariable(p1), getVariable(p2)));
 	    }
 	    // ========== JaCoP constraints ==================>>

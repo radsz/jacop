@@ -1,4 +1,4 @@
-Version 4.2.1
+Version 4.3
 ===========
 1. Implementation of constraints ArgMin and ArgMax as well connection to
    flatzinc constraints arg_min_int and arg_max_int.
@@ -26,9 +26,9 @@ Version 4.2.1
    ElementIntegerFast and ElementVariableFast that implement a
    straightforward pruning method.
 
-9. A new primitive constraints SumInt that implement pruning methods
-   from paper "Bounds Consistency Techniques for Long Linear
-   Constraints" by Warwick Harvey and Joachim Schimpf.
+9. New primitive constraints LinearInt and SumInt that implement
+   pruning methods from paper "Bounds Consistency Techniques for Long
+   Linear Constraints" by Warwick Harvey and Joachim Schimpf.
 
 10. Fixing performance bug in IntervalBasedBacktrackableManager.
     Unnecessary call to checkRemoveInvariant outside assert statement.
@@ -37,7 +37,12 @@ Version 4.2.1
     consistency for constraints (instead of domain, even for constraints
     annotated with "::domain").
 
-11. Bug fixes.
+12. Adding SAT solver to JaCoP and connecting it to flatzinc
+    interpreter. The use of SAT solver in flatzinc is controlled by
+    option -sat. If the option is specified the SAT solver is used for
+    all bool_* constraints, otherwise CP constraints are used.
+
+13. Bug fixes.
 	
 Version 4.2
 ===========

@@ -47,6 +47,9 @@ import org.jacop.jasat.utils.Utils;
  * we need the absolute value of literals in some places, and i do not know
  * a trivial bitwise operation that gives that... But if there is one, of course
  * it is worth replacing Math.abs()!
+ *
+ * Kris:
+ * Replacing Math.abs() by direct code "(l < 0) ? -l : l" in program statements; not in assertions ;)
  */
 /**
  * 
@@ -288,7 +291,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
             // iterate on all literals but the first (which is the unit literal, otherWatch)
             for (int j = 2; j < clause.length; ++j) {
                 int lit = clause[j];
-                int value = trail.values[Math.abs(lit)];
+                int value = trail.values[(lit < 0) ? -lit : lit];
                 if (value == 0 || value == lit) {
                     /*
                      * case c1)  a watch! burn! we have found another watch and
@@ -368,7 +371,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
          */
         for (int i = 0; i < clause.length && numFoundWatch < 2; ++i) {
             int literal = clause[i];
-            int value = trail.values[Math.abs(literal)];
+            int value = trail.values[(literal < 0) ? -literal : literal];
 
             if (value == 0 || value == literal) {
                 if (numFoundWatch == 1) {
@@ -383,7 +386,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
                 // falsified literal. Maybe it is interesting because of its level
                 assert value == -literal;
                 assert highestLevel >= secondHighestLevel;
-                int level = trail.getLevel(Math.abs(literal));
+                int level = trail.getLevel((literal < 0) ? -literal : literal);
                 if (level >= highestLevel) {
                     // shift current, highest and second highest literals
                     secondHighestLevel = highestLevel;
@@ -416,7 +419,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
                 assert watch2pos == -1;
                 putAt0And1(clause, watch1pos, highestPos);
                 // trigger propagation of the first literal if not already fixed literal satisfying the clause.
-                if (trail.values[Math.abs(clause[0])] == 0);
+                if (trail.values[(clause[0] < 0) ? -clause[0] : clause[0]] == 0);
                 core.triggerPropagateEvent(clause[0], clauseId);
                 break;
             /*

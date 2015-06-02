@@ -416,7 +416,15 @@ public final class SatWrapper extends Constraint
 	 */
 	@Override
 	public void queueVariable(int level, Var var) {
-		/*
+
+	    /* KK: Do not queue variable when this constraint (wrapper) executes
+	     *     its consistency method
+	     */
+	    if (store.currentConstraint != null)
+		if (store.currentConstraint.equals(this))
+		    return;
+
+	        /*
 		 * update ranges for this variable (assert some literals).
 		 * those operations must not be executed here (we must avoid
 		 * failure), but rather be scheduled for being executed at next call to

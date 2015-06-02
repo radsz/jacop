@@ -193,12 +193,12 @@ public final class BinaryClausesDatabase extends AbstractClausesDatabase {
 
 		// get literals, values, and check for satisfied clause
 		int literal0 = clauses[offset];
-		int value0 = core.trail.values[Math.abs(literal0)];
+		int value0 = core.trail.values[(literal0 < 0) ? -literal0 : literal0];
 		if (value0 == literal0)
 			return ClauseState.SATISFIED_CLAUSE;
 		
 		int literal1 = clauses[offset + 1];
-		int value1 = core.trail.values[Math.abs(literal1)];
+		int value1 = core.trail.values[(literal1 < 0) ? -literal1 : literal1];
 		if (value1 == literal1)
 			return ClauseState.SATISFIED_CLAUSE;
 

@@ -41,7 +41,7 @@ import org.jacop.core.Store;
  * SatTranslation defines SAT clauses for typical logical constraints
  *
  * @author Krzysztof Kuchcinski
- * @version 4.2.1
+ * @version 4.3
  */
 public class SatTranslation {
 
@@ -100,6 +100,9 @@ public class SatTranslation {
 	clauses.addModelClause(clause);
 
 	numberClauses++;
+
+	// System.out.print(clauseToString(clause));
+
     }
 
     public void generate_clause_reif(IntVar[] a, IntVar[] b, IntVar r) {
@@ -240,6 +243,14 @@ public class SatTranslation {
     }
 
 
+    public void generate_implication(IntVar a, IntVar b) {
+	// a => b
+	// ===========
+	// -a \/ b
+
+	generate_clause(new IntVar[] {b}, new IntVar[] {a});
+    }
+
     public void generate_implication_reif(IntVar a, IntVar b, IntVar c) {
 	// (a => b) <=> c
 	// ===========
@@ -263,5 +274,17 @@ public class SatTranslation {
 
     public long numberClauses() {
 	return numberClauses;
+    }
+
+
+    String clauseToString(int[] clause) {
+
+	String buffer = new String();
+
+	for (int i = 0; i < clause.length; i++) {
+	    buffer += clause[i] + " ";
+	}
+	buffer += "\n";
+	return buffer;
     }
 }

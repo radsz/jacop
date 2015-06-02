@@ -72,7 +72,7 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
 
 		// get the current watched clauses for the variable
 		assert literal != 0;
-		int var = Math.abs(literal);
+		int var = (literal < 0) ? -literal : literal;
 		
 		// The variable associated with the literal is not watching any clauses.
 		if (watchLists.length <= var || watchLists[var] == null)
@@ -91,7 +91,7 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
 			int[] clause = clauses[clauseIndex];
 
 			// is the literal the first or second watch ?
-			int myWatchPos = (Math.abs(cache[0]) == var ? 0 : 1);
+			int myWatchPos = (( (cache[0] < 0 ) ? -cache[0] : cache[0]) == var ? 0 : 1);
 
 			// get watches, and perform some checks
 			int otherWatch = cache[1 - myWatchPos];
@@ -270,7 +270,7 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
 	 * is the literal at position @param literalPos satisfied in current trail ?
 	 */
 	private final boolean isSatisfied(int literal) {
-		return trail.values[ Math.abs(literal) ] == literal;
+	    return trail.values[ (literal < 0) ? -literal : literal ] == literal;
 	}
 
 	
@@ -279,7 +279,7 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
 	 */
 	private final boolean isActiveOrSatisfied(int literal) {
 
-		int value = trail.values[ Math.abs(literal) ];
+	    int value = trail.values[ (literal < 0) ? -literal : literal ];
 		return value == 0 || value == literal;
 		
 	}
@@ -289,7 +289,7 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
 	 */
 	private final boolean isActive(int literal) {
 
-		return trail.values[ Math.abs(literal) ] == 0;
+	    return trail.values[ (literal < 0) ? -literal : literal] == 0;
 		
 	}
 
