@@ -45,14 +45,14 @@ import org.jacop.core.Store;
  */
 public class SatTranslation {
 
-    final boolean debug = false;
+    public boolean debug = false;
 
     SatWrapper clauses;
 
     Store store;
 
     long numberClauses;
-    
+
     public SatTranslation(Store store) {
 	this.store = store;
 	clauses = new SatWrapper();

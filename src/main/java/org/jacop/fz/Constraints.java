@@ -115,6 +115,8 @@ public class Constraints implements ParserTreeConstants {
 	this.store = store;
 
 	sat = new SatTranslation(store);
+	sat.debug = debug;
+
 	// impose SAT-solver
 	sat.impose();
 
