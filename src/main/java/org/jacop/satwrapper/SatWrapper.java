@@ -634,7 +634,7 @@ public final class SatWrapper extends Constraint
 		assert range != null;
 
 		if (value < range.min || value > range.max) {
-		    System.out.println("Value for " + variable + " is out of bounds for value " + value);
+		    //System.out.println("Value for " + variable + " is out of bounds for value " + value);
 		    return 0;
 		}
 		return range.cpValueToBoolVar(value, isEquality);
