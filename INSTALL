@@ -1,4 +1,4 @@
-JaCoP v. 4.2- Installation Guide
+JaCoP v. 4.3- Installation Guide
 
 The easiest way to make jar file for JaCoP is to use maven. First, install maven on your computer and then write 
 
@@ -26,7 +26,7 @@ To use JaCoP with maven you can just include it as a dependency in your `pom.xml
     <dependency>
         <groupId>org.jacop</groupId>
         <artifactId>jacop</artifactId>
-        <version>4.2.0</version>
+        <version>4.3.0</version>
     </dependency>
 
 In order for maven to find JaCoP you need add the folloing repository to your `pom.xml` aswell

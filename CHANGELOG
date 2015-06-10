@@ -42,7 +42,10 @@ Version 4.3
     option -sat. If the option is specified the SAT solver is used for
     all bool_* constraints, otherwise CP constraints are used.
 
-13. Bug fixes.
+13. Improving performance of Max and Min constraints. Specially for
+    large lists of varibales.
+
+14. Bug fixes.
 	
 Version 4.2
 ===========

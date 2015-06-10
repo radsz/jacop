@@ -37,6 +37,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.core.TimeStamp;
 
 /**
  * Max constraint implements the Maximum/2 constraint. It provides the maximum
@@ -67,7 +68,12 @@ public class Max extends Constraint {
 	 */
         int l;
 
-       /**
+        /**
+	 * Defines first position of the variable that needs to be considered
+	 */
+        private TimeStamp<Integer> position;
+
+        /**
 	 * It specifies the arguments required to be saved by an XML format as well as 
 	 * the constructor being called to recreate an object from an XML format.
 	 */
@@ -83,7 +89,6 @@ public class Max extends Constraint {
 		assert ( list != null ) : "List variable is null";
 		assert ( max != null ) : "Min variable is null";
 
-		this.queueIndex = 1;
 		this.numberId = counter++;
 		this.l = list.length;
 		this.numberArgs = (short) (l + 1);
@@ -94,6 +99,12 @@ public class Max extends Constraint {
 			assert (list[i] != null) : i + "-th variable in the list is null";
 			this.list[i] = list[i];
 		}
+
+		if (list.length > 1000)  // rule of thumb
+		    this.queueIndex = 2;
+		else
+		    this.queueIndex = 1;
+
 	}
 
 	/**
@@ -122,6 +133,7 @@ public class Max extends Constraint {
 	@Override
 	public void consistency(Store store) {
 		
+	        int start = position.value();
 		IntVar var;
 		IntDomain vDom;
 
@@ -129,39 +141,37 @@ public class Max extends Constraint {
 
 			store.propagationHasOccurred = false;
 			
-			// @todo, optimize, if there is no change on min.min() then
-			// the below inMin does not have to be executed.
-
 			int minValue = IntDomain.MinInt;
 			int maxValue = IntDomain.MinInt;
 		
 			int maxMax = max.max();
-			for (int i = 0; i < l; i++) {
+			int minMax = max.min();
+			for (int i = start; i < l; i++) {
 				
 				var = list[i];
 
-				var.domain.inMax(store.level, var, maxMax);
-
 				vDom = var.dom();
-				int VdomMin = vDom.min(), VdomMax = vDom.max();
-			
-				minValue = (minValue > VdomMin) ? minValue : VdomMin;
-				maxValue = (maxValue > VdomMax) ? maxValue : VdomMax;
+				int varMin = vDom.min(), varMax = vDom.max();
 
+				if(varMax < minMax) {
+				    swap(start, i);
+				    start++;
+				}
+				else if (varMax > maxMax)
+					var.domain.inMax(store.level, var, maxMax);
+
+				minValue = (minValue > varMin) ? minValue : varMin;
+				maxValue = (maxValue > varMax) ? maxValue : varMax;
 			}
+
+			position.update(start);
 
 			max.domain.in(store.level, max, minValue, maxValue);
 
-			int n=0, pos=-1;
-			for (int i = 0; i < l; i++) {
-				var = list[i];
-				if (minValue > var.max())
-				    n++;
-				else 
-				    pos = i;
-			}
-			if (n == list.length-1) { // one variable on the list is maximal; its is min > max of all other variables 
-			    list[pos].domain.in(store.level, list[pos], max.dom());
+			if (start == l) // all variables have their max value lower than min value of max variable
+			    throw store.failException;
+			if (start == list.length-1) { // one variable on the list is maximal; its is min > max of all other variables 
+			    list[start].domain.in(store.level, list[start], max.dom());
 
 			    if (max.singleton())
 				removeConstraint();
@@ -170,6 +180,14 @@ public class Max extends Constraint {
 		} while (store.propagationHasOccurred);
 		
 	}
+
+    private void swap(int i, int j) {
+	if ( i != j) {
+	    IntVar tmp = list[i];
+	    list[i] = list[j];
+	    list[j] = tmp;
+	}
+    }
 
 	@Override
 	public int getConsistencyPruningEvent(Var var) {
@@ -186,6 +204,8 @@ public class Max extends Constraint {
 	// registers the constraint in the constraint store
 	@Override
 	public void impose(Store store) {
+
+	        position = new TimeStamp<Integer>(store, 0);
 
 		max.putModelConstraint(this, getConsistencyPruningEvent(max));
 
