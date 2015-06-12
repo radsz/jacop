@@ -610,7 +610,10 @@ public class Constraints implements ParserTreeConstants {
 			SimpleNode p1 = (SimpleNode)node.jjtGetChild(0);
 			IntVar[] a1 = getVarArray(p1);
 
-			pose(new XorBool(a1, one));
+			if (opt.useSat())
+			    sat.generate_xor(a1, one);
+			else
+			    pose(new XorBool(a1, one));
 
 		    }
 		    else if (p.startsWith("element", 11)) {

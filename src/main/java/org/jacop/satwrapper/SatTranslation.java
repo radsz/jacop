@@ -34,6 +34,7 @@ package org.jacop.satwrapper;
 import java.util.ArrayList;
  
 import org.jacop.core.IntVar;
+import org.jacop.core.BooleanVar;
 import org.jacop.core.Store;
 
 
@@ -143,23 +144,60 @@ public class SatTranslation {
 	    generate_clause(new IntVar[] {a[i]}, new IntVar[] {c});
 
     }
-    
+
+    /**
+     *  To represent XOR function in CNF one needs to have 2^{n-1} clauses, 
+     *  where n is the size of your XOR function :(
+     * Our method cuts list to 3 or 2 element parts, generates XOR for them
+     * and composesd them back to the original XOR.
+     * Further improvements possible, if using 4-7 decompositions.
+     */
     public void generate_xor(IntVar[] a, IntVar c) {
 
-	// for all i: ai \/_{for all j!=i}: -aj \/ -c
-	// for all i: -ai \/_{for all j!=i}: aj \/ c
-	int k = 0;
-	IntVar[] as = new IntVar[a.length];
-	for (int i = 0; i < a.length; i++) {
-	    for (int j = 0; j < a.length; j++)
-		if (i != j) 
-		    as[k++] = a[i];
-	    as[a.length] = c;
-	    generate_clause(new IntVar[] {a[i]}, as);
-	    generate_clause(as, new IntVar[] {a[i]});
+	if (a.length == 3) {
+	    generate_xor(a[0], a[1], a[2], c); 
+	    return;
+	}
+	else if (a.length == 2) {
+	    generate_xor(a[0], a[1], c); 
+	    return;
+	}
+	else if (a.length == 1) {
+	    // this case should not normally happen;
+	    // the only case if the user specified this case
+	    generate_eq(a[0], c);
+	    return;
+	}
+	else { // must be a.length > 3
+	    IntVar[] as = new IntVar[a.length-2];
+	    BooleanVar t = new BooleanVar(store);
+	    for (int i = 3; i < a.length; i++) {
+		as[i-3] = a[i];
+	    }
+	    as[as.length-1] = t;
+	    generate_xor(a[0], a[1], a[2], t); 
+	    generate_xor(as, c);
 	}
     }
-     
+
+    public void generate_xor(IntVar a, IntVar b, IntVar c) {
+	// (a xor b) <=> c
+	generate_neq_reif(a, b, c);
+    }
+
+    public void generate_xor(IntVar a, IntVar b, IntVar c, IntVar d) {
+	// (a xor b xor c) <=> d
+	generate_clause(new IntVar[] {a}, new IntVar[] {b, c, d});
+	generate_clause(new IntVar[] {b}, new IntVar[] {a, c, d});
+	generate_clause(new IntVar[] {c}, new IntVar[] {a, b, d});
+	generate_clause(new IntVar[] {d}, new IntVar[] {a, b, c});
+
+	generate_clause(new IntVar[] {b, c, d}, new IntVar[] {a});
+	generate_clause(new IntVar[] {a, c, d}, new IntVar[] {b});
+	generate_clause(new IntVar[] {a, b, d}, new IntVar[] {c});
+	generate_clause(new IntVar[] {a, b, c}, new IntVar[] {d});
+    }    
+
     public void generate_eq(IntVar a, IntVar b) {
 	// a = b
 	// ===========
