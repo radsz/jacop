@@ -44,7 +44,7 @@ import org.jacop.core.Var;
 /**
  * 
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.3
  * 
  */
 

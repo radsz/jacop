@@ -44,7 +44,7 @@ import org.jacop.util.SimpleHashSet;
  * 
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.3
  */
 
 public class Eq extends PrimitiveConstraint {

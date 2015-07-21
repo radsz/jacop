@@ -47,7 +47,7 @@ import org.jacop.floats.core.FloatInterval;
  * non-linear equations.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.3
  */
 
 public class EquationSystem extends Constraint {

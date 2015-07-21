@@ -49,7 +49,7 @@ import org.jacop.floats.core.FloatVar;
  * functionality of search when a solution is encountered are required.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.2
+ * @version 4.3
  * @param <T> type of variable being used in search. 
  */
 

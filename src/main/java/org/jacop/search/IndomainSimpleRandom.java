@@ -40,7 +40,7 @@ import org.jacop.core.IntVar;
  * intervals
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.2
+ * @version 4.3
  * @param <T> type of variable being used in the search. 
  */
 

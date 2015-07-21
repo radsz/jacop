@@ -62,7 +62,7 @@ import org.jacop.ui.PrintSchedule;
  * This is a set of filter scheduling examples, commonly used in High-Level Synthesis.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.3
  */
 
 public class FilterBenchmark {

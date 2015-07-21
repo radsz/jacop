@@ -53,7 +53,7 @@ import org.jacop.core.Var;
  * also provides a hook for S-variables of any
  * 
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.3
  * 
  */
 

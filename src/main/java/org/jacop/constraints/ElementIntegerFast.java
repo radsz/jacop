@@ -57,7 +57,7 @@ import org.jacop.core.TimeStamp;
  * make addressing of list array starting from 1.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.3
  */
 
 public class ElementIntegerFast extends Constraint {

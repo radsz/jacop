@@ -46,7 +46,7 @@ import org.jacop.set.core.SetVar;
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * 
- * @version 4.2
+ * @version 4.3
  */
 
 public class AunionBeqC extends Constraint {

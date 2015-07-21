@@ -53,7 +53,7 @@ import org.jacop.core.Var;
  * by Warwick Harvey and Joachim Schimpf
  *
  * @author Krzysztof Kuchcinski
- * @version 4.2
+ * @version 4.3
  */
 
 public class SumInt extends PrimitiveConstraint {

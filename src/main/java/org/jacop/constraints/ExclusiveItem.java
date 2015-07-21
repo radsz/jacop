@@ -38,7 +38,7 @@ import org.jacop.core.IntVar;
  * DisjointConditional
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.3
  */
 
 class ExclusiveItem {

@@ -47,7 +47,7 @@ import org.jacop.core.Var;
  * 
  * 
  * @author Radoslaw Szymanek, Krzysztof Kuchcinski and Robert Åkemalm 
- * @version 4.2
+ * @version 4.3
  */
 
 public abstract class SetDomain extends Domain {

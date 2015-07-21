@@ -45,7 +45,7 @@ import org.jacop.core.Var;
  * Domain consistency is used.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.3
  */
 
 public class In extends PrimitiveConstraint {

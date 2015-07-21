@@ -40,7 +40,7 @@ import org.jacop.core.TimeStamp;
  * of Regular constraint. 
  * 
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.3
  */
 
 public class RegEdge {

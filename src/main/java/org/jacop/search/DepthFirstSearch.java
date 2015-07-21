@@ -56,7 +56,7 @@ import org.jacop.floats.constraints.PltC;
  * be attached to modify the search.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.2
+ * @version 4.3
  * @param <T> type of variables used in this search. 
  */
 

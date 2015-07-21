@@ -43,7 +43,7 @@ import org.jacop.fz.Fz2jacop;
  * the arguments for the executed example.
  * 
  * @author Radoslaw Szymanek
- * @version 4.2
+ * @version 4.3
  *
  */
 

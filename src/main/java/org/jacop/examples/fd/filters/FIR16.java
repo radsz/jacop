@@ -41,7 +41,7 @@ import java.util.ArrayList;
  * IEEE Trans. on CAD, vol. 25, no. 3, March 2006.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.3
  */
 
 public class FIR16 extends Filter {
