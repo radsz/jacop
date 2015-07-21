@@ -69,6 +69,8 @@ import org.jacop.constraints.netflow.NetworkFlow;
 import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.constraints.geost.*;
 
+import org.jacop.satwrapper.SatTranslation;
+
 /**
  * 
  * The part of the parser responsible for parsing constraints. 
@@ -91,10 +93,17 @@ public class Constraints implements ParserTreeConstants {
     // defines_var
     IntVar definedVar = null;
 
+    // ============ Options ==============
+    Options opt;
+
     ArrayList<IntVar[]> parameterListForAlldistincts = new ArrayList<IntVar[]>();
     ArrayList<Constraint> delayedConstraints = new ArrayList<Constraint>();
 
-//     boolean storeLevelIncreased=false;
+    // ============ SAT solver interface ==============
+
+    SatTranslation sat;
+
+    //     boolean storeLevelIncreased=false;
 
     final static boolean debug = false;
 
@@ -104,6 +113,13 @@ public class Constraints implements ParserTreeConstants {
      */
     public Constraints(Store store) {
 	this.store = store;
+
+	sat = new SatTranslation(store);
+	sat.debug = debug;
+
+	// impose SAT-solver
+	sat.impose();
+
 // 	this.zero = new Variable(store, "zero", 0,0);
 // 	this.one = new Variable(store, "one", 1,1);
     }
@@ -150,7 +166,9 @@ public class Constraints implements ParserTreeConstants {
 // 	}
 //     }
 
-    void generateConstraints(SimpleNode constraintWithAnnotations, Tables table) throws FailException {
+    void generateConstraints(SimpleNode constraintWithAnnotations, Tables table, Options opt) throws FailException {
+
+	this.opt = opt;
 
 // 	if (!storeLevelIncreased) {
 // 	    System.out.println("1. Level="+store.level);
@@ -336,7 +354,7 @@ public class Constraints implements ParserTreeConstants {
 		    pose(new org.jacop.floats.constraints.Max(new FloatVar[] {v1, v2}, v3));
 
 		    // 1.
-		    pose(new IfThenElse(new PltQ(v2,v1), new PeqQ(v1,v3), new PeqQ(v2,v3)));
+		    // pose(new IfThenElse(new PltQ(v2,v1), new PeqQ(v1,v3), new PeqQ(v2,v3)));
 		    // 2.
 		    // pose(new IfThen(new PltQ(v2,v1), new PeqQ(v1,v3)));
 		    // pose(new IfThen(new PltQ(v1,v2), new PeqQ(v2,v3)));
@@ -547,6 +565,17 @@ public class Constraints implements ParserTreeConstants {
 			pose(new AbsXeqY(v1, v2, true));
 
 		}
+		else if (p.startsWith("pow", 4)) {
+		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
+		    ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
+		    ASTScalarFlatExpr p3 = (ASTScalarFlatExpr)node.jjtGetChild(2);
+
+		    IntVar v1 = getVariable(p1);
+		    IntVar v2 = getVariable(p2);
+		    IntVar v3 = getVariable(p3);
+
+		    pose(new XexpYeqZ(v1, v2, v3));
+		}
 		else
 		    System.out.println("TODO: "+p);
 	    }
@@ -557,35 +586,34 @@ public class Constraints implements ParserTreeConstants {
 		    if (p.startsWith("and", 11)) {
 			//  			node.dump("");
 
-			SimpleNode p1 = (SimpleNode)node.jjtGetChild(0);
-			ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
-			IntVar[] a1 = getVarArray(p1);
-			IntVar v = getVariable(p2);
+			IntVar[] a1 = getVarArray((SimpleNode)node.jjtGetChild(0));
+			IntVar v = getVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
 
-			pose(new AndBool(a1, v));
-			// IntVar t1 = new IntVar(store, 0, a1.length);
-			// pose(new Sum(a1, t1));
-			// pose(new Reified(new XeqC(t1, a1.length), v));
+			if (opt.useSat())
+			    sat.generate_and(a1, v);
+			else
+			    pose(new AndBool(a1, v));
 		    }
 		    else if (p.startsWith("or", 11)) {
 			//   			node.dump("");
 
-			SimpleNode p1 = (SimpleNode)node.jjtGetChild(0);
-			ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
-			IntVar[] a1 = getVarArray(p1);
-			IntVar v = getVariable(p2);
+			IntVar[] a1 = getVarArray((SimpleNode)node.jjtGetChild(0));
+			IntVar v = getVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
 
-			pose(new OrBool(a1, v));
-			// IntVar t1 = new IntVar(store, 0, a1.length);
-			// pose(new Sum(a1, t1));
-			// pose(new Reified(new XgtC(t1, 0), v));
+			if (opt.useSat())
+			    sat.generate_or(a1, v);
+			else
+			    pose(new OrBool(a1, v));
 		    }
 		    else if (p.startsWith("xor", 11)) {
 
 			SimpleNode p1 = (SimpleNode)node.jjtGetChild(0);
 			IntVar[] a1 = getVarArray(p1);
 
-			pose(new XorBool(a1, one));
+			if (opt.useSat())
+			    sat.generate_xor(a1, one);
+			else
+			    pose(new XorBool(a1, one));
 
 		    }
 		    else if (p.startsWith("element", 11)) {
@@ -638,38 +666,94 @@ public class Constraints implements ParserTreeConstants {
 		// 1 <- 1 <-> 1
 		if (p.startsWith("left_imp", 5)) {
 
-		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
-		    ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
-		    ASTScalarFlatExpr p3 = (ASTScalarFlatExpr)node.jjtGetChild(2);
+		    IntVar v1 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
+		    IntVar v2 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
+		    IntVar v3 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
 
-		    IntVar v1 = getVariable(p1);
-		    IntVar v2 = getVariable(p2);
-		    IntVar v3 = getVariable(p3);
-
-		    pose(new IfThenBool(v2, v1, v3));
-		    //  		    pose(new Reified(new Not(new And(new XeqC(v1, 0), new XeqC(v2, 1))), v3));
-		    // 					pose(new Reified(new Or(new XneqC(v1, 0), new XneqC(v2, 1)), v3));
-
-		    // 		    pose(new ExtensionalSupportMDD(new Variable[] {v1, v2, v3}, 
-		    // 						   new int[][] {{0,0,1}, {0,1,0}, {1,0,1},{1,1,1}}));
+		    if (opt.useSat())
+			sat.generate_implication_reif(v2, v1, v3);
+		    else
+			pose(new IfThenBool(v2, v1, v3));
 		} 
 		else if ( operation != -1) {
 		    // bool_eq*, bool_ne*, bool_lt*, bool_gt*, bool_le*, and bool_ge*
-		    int_comparison(operation, node, 7);
+		    if (opt.useSat()) {
+			if  (p.startsWith("eq_reif", 5) ) {
+
+			    IntVar v1 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
+			    IntVar v2 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
+			    IntVar v3 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
+			
+			    sat.generate_eq_reif(v1, v2, v3);
+			}
+			else if  (p.startsWith("ne_reif", 5) ) {
+
+			    IntVar v1 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
+			    IntVar v2 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
+			    IntVar v3 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
+			
+			    sat.generate_neq_reif(v1, v2, v3);
+			}
+			else if  (p.startsWith("le_reif", 5) ) {
+
+			    IntVar a = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
+			    IntVar b = getVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
+			    IntVar c = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
+
+			    sat.generate_le_reif(a, b, c);
+			}
+			else if  (p.startsWith("lt_reif", 5) ) {
+
+			    IntVar a = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
+			    IntVar b = getVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
+			    IntVar c = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
+
+			    sat.generate_lt_reif(a, b, c);
+			}
+			else if  (p.startsWith("eq", 5) ) {
+
+			    IntVar a = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
+			    IntVar b = getVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
+
+			    sat.generate_eq(a, b);
+			}
+			else if  (p.startsWith("ne", 5) ) {
+
+			    IntVar a = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
+			    IntVar b = getVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
+
+			    sat.generate_not(a, b);
+			}
+			else if  (p.startsWith("le", 5) ) {
+
+			    IntVar a = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
+			    IntVar b = getVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
+
+			    sat.generate_le(a, b);
+			}
+			else if  (p.startsWith("lt", 5) ) {
+
+			    IntVar a = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
+			    IntVar b = getVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
+
+			    sat.generate_lt(a, b);
+			}
+		    }
+		    else {
+			int_comparison(operation, node, 7);
+		    }
 		}
 		// bool_or
 		else if (p.startsWith("or", 5)) {
 
-		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
-		    ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
-		    ASTScalarFlatExpr p3 = (ASTScalarFlatExpr)node.jjtGetChild(2);
+		    IntVar v1 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
+		    IntVar v2 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
+		    IntVar v3 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
 
-		    IntVar v1 = getVariable(p1);
-		    IntVar v2 = getVariable(p2);
-		    IntVar v3 = getVariable(p3);
-
-		    pose(new OrBool(new IntVar[] {v1, v2}, v3));
-		    // pose(new Reified(new XplusYgtC(v1, v2, 0), v3));
+		    if (opt.useSat())
+			sat.generate_or(new IntVar[] {v1, v2}, v3);
+		    else
+			pose(new OrBool(new IntVar[] {v1, v2}, v3));
 		}
 		// bool_and
 		else if (p.startsWith("and", 5)) {
@@ -682,8 +766,10 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar v2 = getVariable(p2);
 		    IntVar v3 = getVariable(p3);
 
- 		    pose(new AndBool(new IntVar[] {v1, v2}, v3));
- 		    // pose(new Reified(new XplusYeqC(v1, v2, 2), v3));
+		    if (opt.useSat())
+			sat.generate_and(new IntVar[] {v1, v2}, v3);
+		    else
+			pose(new AndBool(new IntVar[] {v1, v2}, v3));
 		}
 		// bool_xor
 		else if (p.startsWith("xor", 5)) {
@@ -696,8 +782,10 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar v2 = getVariable(p2);
 		    IntVar v3 = getVariable(p3);
 
-		    pose(new XorBool(new IntVar[] {v1, v2}, v3));
-		    // 					pose(new Reified(new XneqY(v1, v2), v3));
+		    if (opt.useSat())
+			sat.generate_neq_reif(v1, v2, v3);
+		    else
+			pose(new XorBool(new IntVar[] {v1, v2}, v3));
 		}
 		// bool_not
 		else if (p.startsWith("not", 5)) {
@@ -708,8 +796,10 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar v1 = getVariable(p1);
 		    IntVar v2 = getVariable(p2);
 
- 		    pose(new XneqY(v1, v2));
-// 		    pose(new XplusYeqC(v1, v2, 1));
+		    if (opt.useSat())
+			sat.generate_not(v1, v2);
+		    else
+			pose(new XneqY(v1, v2));
 		}
 		// bool_right_imp
 		// a -> b <-> r
@@ -728,56 +818,58 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar v2 = getVariable(p2);
 		    IntVar v3 = getVariable(p3);
 
-		    pose(new IfThenBool(v1, v2, v3));
-		    //  		    pose(new Reified(new Not(new And(new XeqC(v1, 1), new XeqC(v2, 0))), v3));
-		    // 					pose(new Reified(new Or(new XneqC(v1, 1), new XneqC(v2, 0)), v3));
-
-		    //  		    pose(new ExtensionalSupportMDD(new Variable[] {v1, v2, v3}, 
-		    //  						   new int[][] {{0,0,1}, {0,1,1}, {1,0,0},{1,1,1}}));
+		    if (opt.useSat())
+			sat.generate_implication_reif(v1, v2, v3);
+		    else
+			pose(new IfThenBool(v1, v2, v3));
 		}
-		// bool_clause[_reified]+
-		// bool_clause([x1,..., xm], [y1,..., yn], true) ===>
-		// ===> array_bool_or([x1,..., xm, not y1,..., not yn], true)
+		// bool_clause([x1,..., xm], [y1,..., yn]) ===>
+		// x1 \/ ... \/ xm \/ not y1 \/ ... \/ not yn
 		else if (p.startsWith("clause", 5)) {
 
 		    IntVar[] a1 = getVarArray((SimpleNode)node.jjtGetChild(0));
 		    IntVar[] a2 = getVarArray((SimpleNode)node.jjtGetChild(1));
 
-		    if (a1.length ==0 && a2.length ==0 )
+		    if (a1.length == 0 && a2.length == 0 )
 			return;
 
-		    BooleanVar t3;
-		    if (a1.length ==0 ) {
-			BoundDomain d = new BoundDomain(0,0);
-			t3 = new BooleanVar(store, "", d);
+		    if (opt.useSat()) {
+			if (p.startsWith("_reif", 11)) { // reified
+			    IntVar r = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
+			    sat.generate_clause_reif(a1, a2, r);
+			}
+			else
+			    sat.generate_clause(a1, a2);
 		    }
-		    else {
-  			t3 = new BooleanVar(store);
-  			pose(new OrBool(a1, t3));
-		    }
+		    else { // not SAT generation, use CP constraints
+			ArrayList<IntVar> a1reduced = new ArrayList<IntVar>();
+			for (int i = 0; i < a1.length; i++) 
+			    if (a1[i].max() != 0)
+				a1reduced.add(a1[i]);
+			ArrayList<IntVar> a2reduced = new ArrayList<IntVar>();
+			for (int i = 0; i < a2.length; i++) 
+			    if (a2[i].min() != 1)
+				a2reduced.add(a2[i]);
+			if (a1reduced.size() == 0 && a2reduced.size() == 0 )
+			    throw store.failException;
 
-		    BooleanVar t4;
-		    if (a2.length ==0 ) {
-			BoundDomain d = new BoundDomain(0,0);
-			t4 = new BooleanVar(store, "", d);
-		    }
-		    else {
-			// de Morgan law not y1 \/ not y2 ...\/ not yn = not(y1 /\ y2 .../\ yn)
-			BooleanVar t2 = new BooleanVar(store);
-			t4 = new BooleanVar(store);
-			pose(new AndBool(a2, t2)); // and
-			pose(new XneqY(t2,t4));  // not
-		    }
+			PrimitiveConstraint c;
+			if (a1reduced.size() == 0)
+			    c = new AndBool(a2reduced, zero);
+			else if (a2reduced.size() == 0)
+			    c = new OrBool(a1reduced, one);
+			else if (a1reduced.size() == 1 && a2reduced.size() == 1)
+			    c = new XlteqY(a2reduced.get(0), a1reduced.get(0));
+			else
+			    c = new BoolClause(a1reduced, a2reduced);
 
-		    if (p.startsWith("_reif", 11)) {
-			IntVar v3 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
-			pose(new Reified(new XplusYgtC(t3, t4, 0), v3));
-			//  			pose(new Reified(new Or(new XgtC(t3, 0), new XgtC(t4, 0)), v3));
+		    // bool_clause_reif/3 defined in redefinitions-2.0.
+			if (p.startsWith("_reif", 11)) {
+			    IntVar r = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
+			    pose(new Reified(c, r));		    }
+			else
+			    pose(c);
 		    }
-		    else
-			pose(new XplusYgtC(t3, t4, 0));
-		    // 			pose(new Or(new XgtC(t3, 0), new XgtC(t4, 0)));
-
 		}
 		// bool_lin_* (eq, ne, lt, gt, le, ge)
 		else if (p.startsWith("lin_", 5)) {
@@ -1006,6 +1098,10 @@ public class Constraints implements ParserTreeConstants {
 		ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
 		ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
 
+		// if (opt.useSat()) // it can be moved to SAT solver but it is slow in the current implementation
+		//     sat.generate_eq(getVariable(p1), getVariable(p2));
+		// else
+
 		pose(new XeqY(getVariable(p1), getVariable(p2)));
 	    }
 	    // ========== JaCoP constraints ==================>>
@@ -1031,7 +1127,7 @@ public class Constraints implements ParserTreeConstants {
 
 		    pose(new Circuit(v));
 
-		    if ( domainConsistency )  // we add additional implied constraint if domain consistency is required
+		    if ( domainConsistency && ! opt.getBoundConsistency())  // we add additional implied constraint if domain consistency is required
 			parameterListForAlldistincts.add(v);
 
 		}
@@ -1171,6 +1267,14 @@ public class Constraints implements ParserTreeConstants {
 
 		    pose( new GCC(x, counter));
 		}
+		else if (p.startsWith("diff2_strict", 6)) {
+		    IntVar[] x = getVarArray((SimpleNode)node.jjtGetChild(0));
+		    IntVar[] y = getVarArray((SimpleNode)node.jjtGetChild(1));
+		    IntVar[] lx = getVarArray((SimpleNode)node.jjtGetChild(2));
+		    IntVar[] ly = getVarArray((SimpleNode)node.jjtGetChild(3));
+
+		    pose(new Disjoint(x, y, lx, ly));
+		}
 		else if (p.startsWith("diff2", 6)) {
 		    IntVar[] v = getVarArray((SimpleNode)node.jjtGetChild(0));
 
@@ -1204,11 +1308,25 @@ public class Constraints implements ParserTreeConstants {
 
 		    pose(new Values(x, n));
 		}
+ 		else if (p.startsWith("minimum_arg_int", 6)) {
+		    IntVar[] x = getVarArray((SimpleNode)node.jjtGetChild(0));
+		    IntVar index = getVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
+
+		    pose(new org.jacop.constraints.ArgMin(x, index));
+
+		}
 		else if (p.startsWith("minimum", 6)) {
 		    IntVar n = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
 		    IntVar[] x = getVarArray((SimpleNode)node.jjtGetChild(1));
 
 		    pose(new org.jacop.constraints.Min(x, n));
+		}
+ 		else if (p.startsWith("maximum_arg_int", 6)) {
+		    IntVar[] x = getVarArray((SimpleNode)node.jjtGetChild(0));
+		    IntVar index = getVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
+
+		    pose(new org.jacop.constraints.ArgMax(x, index));
+
 		}
 		else if (p.startsWith("maximum", 6)) {
 		    IntVar n = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
@@ -1242,7 +1360,7 @@ public class Constraints implements ParserTreeConstants {
 		    // we do not not pose Assignment directly because of possible inconsistency with its 
 		    // intiallization; we collect all constraints and pose them at the end when all other constraints are posed
 
-		    if ( domainConsistency )  // we add additional implied constraint if domain consistency is required
+		    if ( domainConsistency && !opt.getBoundConsistency())  // we add additional implied constraint if domain consistency is required
 			parameterListForAlldistincts.add(f);
 
 		    delayedConstraints.add(new Assignment(f, invf, index_f, index_invf));
@@ -1392,11 +1510,12 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar[] x = getVarArray((SimpleNode)node.jjtGetChild(0));
 		    IntVar[] y = getVarArray((SimpleNode)node.jjtGetChild(1));
 
-		    // DecomposedConstraint c = new org.jacop.constraints.Lex(new IntVar[][] {x, y}, true);
-		    // store.imposeDecomposition(c);
+		    // System.out.println ("lex_less_int: x.length = " + x.length +  " y.length = " + y.length);
 
-		    Constraint c = new LexOrder(x, y, true);
-		    store.impose(c);
+		    pose(new LexOrder(x, y, true));
+
+		    // 	DecomposedConstraint c = new org.jacop.constraints.Lex(new IntVar[][] {x, y}, true);
+		    // 	store.imposeDecomposition(c);
 
 		}
 		else if (p.startsWith("lex_lesseq_int", 6) || p.startsWith("lex_lesseq_bool", 6)) {
@@ -1405,12 +1524,11 @@ public class Constraints implements ParserTreeConstants {
 
 		    // System.out.println ("lex_lesseq_int: x.length = " + x.length +  " y.length = " + y.length);
 
-		    // DecomposedConstraint c = new org.jacop.constraints.Lex(new IntVar[][] {x, y});
-		    // store.imposeDecomposition(c);
+		    pose(new LexOrder(x, y, false));
 
-		    Constraint c = new LexOrder(x, y, false);
-		    store.impose(c);
-
+		    // 	DecomposedConstraint c = new org.jacop.constraints.Lex(new IntVar[][] {x, y});
+		    // 	store.imposeDecomposition(c);
+		    
 		}
  		else if (p.startsWith("bin_packing", 6)) {
 		    IntVar[] bin = getVarArray((SimpleNode)node.jjtGetChild(0));
@@ -2255,7 +2373,7 @@ public class Constraints implements ParserTreeConstants {
 			v1.domain.inComplement(store.level, v1, i2);
 			break;
 		    case lt :
-			v1.domain.in(store.level, v1, VariablesParameters.MIN_FLOAT, i2-1);
+			v1.domain.in(store.level, v1, VariablesParameters.MIN_FLOAT, FloatDomain.previous(i2));
 			break;
 		    case le :
 			v1.domain.in(store.level, v1, VariablesParameters.MIN_FLOAT, i2);
@@ -2302,97 +2420,6 @@ public class Constraints implements ParserTreeConstants {
 	}
     }
 
-//     void int_comparison(int operation, SimpleNode node, int reifStart) throws FailException {
-
-// 	//   	 node.dump("");
-
-// 	ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
-// 	ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
-
-// 	PrimitiveConstraint c = null;
-
-// 	if (p2.getType() == 0) { // var rel int
-// 	    int i2 = getInt(p2);
-// 	    IntVar v1 = getVariable(p1);
-// 	    switch (operation) {
-// 	    case eq :
-// 		c = new XeqC(v1, i2);
-// 		break;
-// 	    case ne :
-// 		c = new XneqC(v1, i2);
-// 		break;
-// 	    case lt :
-// 		c = new XltC(v1, i2);
-// 		break;
-// 	    case gt :
-// 		c = new XgtC(v1, i2);
-// 		break;
-// 	    case le :
-//  		c = new XlteqC(v1, i2);
-// 		break;
-// 	    case ge :
-// 		c = new XgteqC(v1, i2);
-// 		break;
-// 	    }
-// 	} else if (p1.getType() == 0) { // int rel var
-// 	    int i1 = getInt(p1);
-// 	    IntVar v2 = getVariable(p2);
-// 	    switch (operation) {
-// 	    case eq :
-// 		c = new XeqC(v2, i1);
-// 		break;
-// 	    case ne :
-// 		c = new XneqC(v2, i1);
-// 		break;
-// 	    case lt :
-// 		c = new XgtC(v2, i1);
-// 		break;
-// 	    case gt :
-// 		c = new XltC(v2, i1);
-// 		break;
-// 	    case le :
-//  		c = new XgteqC(v2, i1);
-// 		break;
-// 	    case ge :
-// 		c = new XlteqC(v2, i1);
-// 		break;
-// 	    }
-// 	}
-// 	else { // var rel var
-// 	    IntVar v1 = getVariable(p1);
-// 	    IntVar v2 = getVariable(p2);
-// 	    switch (operation) {
-// 	    case eq :
-// 		c = new XeqY(v1, v2);
-// 		break;
-// 	    case ne :
-// 		c = new XneqY(v1, v2);
-// 		break;
-// 	    case lt :
-// 		c = new XltY(v1, v2);
-// 		break;
-// 	    case gt :
-// 		c = new XgtY(v1, v2);
-// 		break;
-// 	    case le :
-// 		c = new XlteqY(v1, v2);
-// 		break;
-// 	    case ge :
-// 		c = new XgteqY(v1, v2);
-// 		break;
-// 	    }
-// 	}
-// 	if (p.startsWith("_reif", reifStart)) {
-// 	    ASTScalarFlatExpr p3 = (ASTScalarFlatExpr)node.jjtGetChild(2);
-// 	    IntVar v3 = getVariable(p3);
-// 	    Constraint cr = new Reified(c, v3);
-// 	    pose(cr);
-// 	}
-// 	else {
-// 	    pose(c);
-// 	}
-//     }
-
     void int_lin_relation(int operation, SimpleNode node) throws FailException {
 	// int_lin_*[_reif] (* = eq | ne | lt | gt | le | ge)
 
@@ -2434,8 +2461,13 @@ public class Constraints implements ParserTreeConstants {
 	    if (p1[i] >= IntDomain.MaxInt || p1[i] <= IntDomain.MinInt) {
 		int min = p2[i].domain.multiply(p1[i], p2[i].min());
 		int max = p2[i].domain.multiply(p1[i], p2[i].max());
-		if (min >= IntDomain.MaxInt || min <= IntDomain.MinInt || max >= IntDomain.MaxInt || max <= IntDomain.MinInt)
-		    throw new ArithmeticException("Too high or low value for domain assignment");
+		if (min >= IntDomain.MaxInt || min <= IntDomain.MinInt || max >= IntDomain.MaxInt || max <= IntDomain.MinInt) {
+		    ArrayList<Integer> l = new ArrayList<Integer>();
+		    for (int j = 0; j < p1.length; j++) 
+			l.add(p1[j]);
+		    throw new ArithmeticException("Too high or low value for domain assignment int_lin_eq(" + l +
+						  ", " + java.util.Arrays.asList(p2) + ", " + p3 + ")");
+		}
 	    }
 
 
@@ -2445,7 +2477,13 @@ public class Constraints implements ParserTreeConstants {
 	    IntVar t;
 	    switch (operation) {
 	    case eq :
-		if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
+		if (p1.length == 1) {
+		    if (p1[0] == 1)
+			pose(new Reified(new XeqC(p2[0], p3), p4));
+		    else
+			pose(new Reified(new XmulCeqZ(p2[0], p1[0], new IntVar(store, p3,p3)), p4));
+		}
+		else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
 		    pose(new Reified(new XplusCeqZ(p2[1], p3, p2[0]), p4));
 		}
 		else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
@@ -2458,13 +2496,18 @@ public class Constraints implements ParserTreeConstants {
 		    pose(new Reified(new XplusYeqC(p2[0], p2[1], -p3), p4));
 		} 
 		else {
-		    // t = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
-		    // if (allWeightsOne(p1))
-		    // 	pose(new Sum(p2, t));
-		    // else
-		    // 	pose(new SumWeight(p2, p1, t));
-		    // pose(new Reified(new XeqC(t, p3), p4));
-		    pose(new Reified(new Linear(store, p2, p1, "==", p3), p4));
+		    int pos = sumPossible(p1, p3);
+		    if (pos > -1) {
+			IntVar[] vect = new IntVar[p1.length-1];
+			int n = 0;
+			for (int i=0; i<p2.length; i++)
+			    if (i != pos)
+				vect[n++] = p2[i];
+			pose(new Reified(new SumInt(store, vect, "==", p2[pos]), p4));
+		    }
+		    else {
+			pose(new Reified(new LinearInt(store, p2, p1, "==", p3), p4));
+		    }
 		}
 		break;
 	    case ne :
@@ -2483,14 +2526,19 @@ public class Constraints implements ParserTreeConstants {
 		else if (p1.length == 2 && p1[0] == -1 && p1[1] == -1) {
 		    pose(new Reified(new Not(new XplusYeqC(p2[0], p2[1], -p3)), p4));
 		} 
+		else if (allWeightsOne(p1)) {
+		    t = new IntVar(store, p3, p3);
+		    pose(new Reified(new SumInt(store, p2, "!=", t), p4));
+		}
+		else if (allWeightsMinusOne(p1)) {
+		    t = new IntVar(store, -p3, -p3);
+		    pose(new Reified(new SumInt(store, p2, "!=", t), p4));		    
+		}
 		else 
-		    pose(new Reified(new Linear(store, p2, p1, "!=", p3), p4));
+		    pose(new Reified(new LinearInt(store, p2, p1, "!=", p3), p4));
 		break;
 	    case lt :
-		// t = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
-		// pose(new SumWeight(p2, p1, t));
-		// pose(new Reified(new XltC(t, p3), p4));
-		pose(new Reified(new Linear(store, p2, p1, "<", p3), p4));
+		pose(new Reified(new LinearInt(store, p2, p1, "<", p3), p4));
 		break;
 		// gt not present in the newest flatzinc version
 	    // case gt :
@@ -2508,15 +2556,15 @@ public class Constraints implements ParserTreeConstants {
 		else if (p1.length == 1 && p1[0] == -1) 
 		    pose(new Reified(new org.jacop.constraints.XgteqC(p2[0], -p3), p4));
 		else if (allWeightsOne(p1)) {
-		    t = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
-		    pose(new Sum(p2, t));
-		    pose(new Reified(new XlteqC(t, p3), p4));
+		    t = new IntVar(store, p3, p3);
+		    pose(new Reified(new SumInt(store, p2, "<=", t), p4));
+		}
+		else if (allWeightsMinusOne(p1)) {
+		    t = new IntVar(store, -p3, -p3);
+		    pose(new Reified(new SumInt(store, p2, ">=", t), p4));		    
 		}
 		else {
-		    // t = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
-		    // pose(new SumWeight(p2, p1, t));
-		    // pose(new Reified(new XlteqC(t, p3), p4));
-		    pose(new Reified(new Linear(store,p2, p1, "<=", p3), p4));
+		    pose(new Reified(new LinearInt(store,p2, p1, "<=", p3), p4));
 		}
 		break;
 		// ge not present in the newest flatzinc version
@@ -2580,17 +2628,25 @@ public class Constraints implements ParserTreeConstants {
 		    else
 			pose(new XplusYeqC(p2[0], p2[1], -p3));
 		}
-		else if (domainConsistency && (maxDomain(p2) <= 4 || p2.length <= 2) ) { // heuristic rule to select domain consistency since 
+		else if (domainConsistency && !opt.getBoundConsistency()){// && (maxDomain(p2) <= 4 || p2.length <= 2) ) { // heuristic rule to select domain consistency since 
 		                                                                         // its complexity is O(d^n), d <= 4 or n <= 2 ;)
 		    // We do not impose linear constraint with domain consistency if 
 		    // the cases are covered by four cases above.
 
-		    pose(new SumWeightDom(p2, p1, p3));
+		    pose(new LinearIntDom(store, p2, p1, "==", p3)); //SumWeightDom(p2, p1, p3));
 		}
-		else if ( (p3 == 0 && p1.length == 3) && 
-		     ((p1[0] == -1 && p1[1] == -1 && p1[2] == 1) || (p1[0] == 1 && p1[1] == 1 && p1[2] == -1)) )
-		    pose(new XplusYeqZ(p2[0], p2[1], p2[2]));
-		    // pose(new Linear(store, p2, p1, "==", p3));
+		else if ((p3 == 0 && p1.length == 3)
+			 && ((p1[0] == -1 && p1[1] == -1 && p1[2] == 1) || (p1[0] == 1 && p1[1] == 1 && p1[2] == -1)))
+			pose(new XplusYeqZ(p2[0], p2[1], p2[2]));
+		else if ((p3 == 0 && p1.length == 3)
+			     && ((p1[0] == 1 && p1[1] == -1 && p1[2] == -1) || (p1[0] == -1 && p1[1] == 1 && p1[2] == 1))) {
+		    if (paramZero(p2[1]))
+			pose(new XeqY(p2[2], p2[0]));
+		    else if (paramZero(p2[2]))
+			pose(new XeqY(p2[1], p2[0]));
+		    else
+			pose(new XplusYeqZ(p2[1], p2[2], p2[0]));    
+		}
 		else {
 		    // IntVar v;
 		    // if (p3==0) 
@@ -2599,14 +2655,15 @@ public class Constraints implements ParserTreeConstants {
 		    // 	v = one;
 		    // else 
 		    // 	v = new IntVar(store, p3, p3);
-		    if (sumPossible(p1, p3) > -1) {
-			int pos = sumPossible(p1, p3);
+		    int pos = sumPossible(p1, p3);
+		    if (pos > -1) {
 			IntVar[] vect = new IntVar[p1.length-1];
 			int n = 0;
 			for (int i=0; i<p2.length; i++)
 			    if (i != pos)
 				vect[n++] = p2[i];
-			pose(new Sum(vect, p2[pos]));
+			pose(new SumInt(store, vect, "==", p2[pos]));
+			// pose(new Sum(vect, p2[pos]));
 		    }
 		    else if (allWeightsOne(p1)) {
 			IntVar v;
@@ -2616,7 +2673,8 @@ public class Constraints implements ParserTreeConstants {
 			    v = one;
 			else
 			    v = new IntVar(store, p3, p3);
-			pose(new Sum(p2, v));
+			pose(new SumInt(store, p2, "==", v));
+			// pose(new Sum(p2, v));
 		    }
 		    else if (allWeightsMinusOne(p1)) {
 			IntVar v;
@@ -2624,51 +2682,11 @@ public class Constraints implements ParserTreeConstants {
 			    v = zero;
 			else
 			    v = new IntVar(store, -p3, -p3);
-			pose(new Sum(p2, v));
+			// pose(new SumInt(p2, v));
+			pose(new SumInt(store, p2, "==", v));
 		    }
-		    // else if (p3 == 0) 
-		    // 	if (sumPossible1(p1)) { // case when weights are [1, -1, ..., -1] or [-1, 1, ..., 1]
- 		    // 	    IntVar[] vars = new IntVar[p2.length-1];
- 		    // 	    for (int i=1; i<p2.length; i++)
- 		    // 		vars[i-1] = p2[i];
- 		    // 	    pose(new Sum(vars, p2[0]));
-		    // 	}
-		    // 	else if (sumPossible2(p1)) { // case when weights are [-1, ..., -1, 1] or [1, ..., 1, -1]
-		    // 	    IntVar[] vars = new IntVar[p2.length-1];
-		    // 	    for (int i=0; i<p2.length-1; i++)
-		    // 		vars[i] = p2[i];
-		    // 	    pose(new Sum(vars, p2[p2.length-1]));
-		    // 	}
-		    // 	else {
-		    // 	    // pose(new SumWeight(p2, p1, v));
-		    // 	    pose(new Linear(store, p2, p1, "==", p3));
-		    // 	}
 		    else {
-			/*
- 			ArrayList<IntVar> multipliedByOne = new ArrayList<IntVar>();
-			ArrayList<IntVar> others = new ArrayList<IntVar>();
-			ArrayList<Integer> othersWeights = new ArrayList<Integer>();
-			if (p1.length > 100) {
-			    for (int i = 0; i < p1.length; i++) 
-				if (p1[i] == 1)
-				    multipliedByOne.add(p2[i]);
-				else {
-				    others.add(p2[i]);
-				    othersWeights.add(p1[i]);
-				}
-			    if (multipliedByOne.size() > 0) {
-				IntVar tmp1 = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
-				IntVar tmp2 = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
-				pose(new Sum(multipliedByOne, tmp1));
-				pose(new SumWeight(others, othersWeights, tmp2));
-				pose(new XplusYeqC(tmp1, tmp2, p3));
-				return;
-			    }
-			}
-			*/
-
-			// pose(new SumWeight(p2, p1, v));
-			pose(new Linear(store, p2, p1, "==", p3));
+			pose(new LinearInt(store, p2, p1, "==", p3));
 		    }
 		}
 		break;
@@ -2683,11 +2701,18 @@ public class Constraints implements ParserTreeConstants {
  		if (p1.length == 2 && p3 == 0 && ( (p1[0] == 1 && p1[1] == -1) || (p1[0] == -1 && p1[1] == 1) ))
 			pose(new XneqY(p2[0], p2[1]));
 		else {
-		    // IntervalDomain dne = new IntervalDomain(IntDomain.MinInt, p3-1);
-		    // dne.unionAdapt(p3+1, IntDomain.MaxInt);
-		    // t = new IntVar(store, "", dne);
-		    // pose(new SumWeight(p2, p1, t));
-		    pose(new Linear(store, p2, p1, "!=", p3));
+		    int pos = sumPossible(p1, p3);
+		    if (pos > -1) {
+			IntVar[] vect = new IntVar[p1.length-1];
+			int n = 0;
+			for (int i=0; i<p2.length; i++)
+			    if (i != pos)
+				vect[n++] = p2[i];
+			pose(new SumInt(store, vect, "!=", p2[pos]));
+		    }
+		    else {
+			pose(new LinearInt(store, p2, p1, "!=", p3));
+		    }
 		}
 		break;
 	    case lt :
@@ -2703,9 +2728,28 @@ public class Constraints implements ParserTreeConstants {
  		else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1 && p3 == 0)
 		    pose(new XltY(p2[1], p2[0]));
 		else {
-		    //t = new IntVar(store, IntDomain.MinInt, p3-1);
-		    //pose(new SumWeight(p2, p1, t));
-		    pose(new Linear(store, p2, p1, "<", p3));
+		    int posLe = sumLePossible(p1, p3);
+		    int posGe = sumGePossible(p1, p3);
+		    if (posLe > -1) {
+			IntVar[] vect = new IntVar[p1.length-1];
+			int n = 0;
+			for (int i=0; i<p2.length; i++)
+			    if (i != posLe)
+				vect[n++] = p2[i];
+			pose(new SumInt(store, vect, "<", p2[posLe]));
+		    }
+		    else if (posGe > -1) {
+			IntVar[] vect = new IntVar[p1.length-1];
+			int n = 0;
+			for (int i=0; i<p2.length; i++)
+			    if (i != posGe)
+				vect[n++] = p2[i];
+			pose(new SumInt(store, vect, ">", p2[posGe]));
+		    }
+		    else {
+		    // pose(new Linear(store, p2, p1, "<", p3));
+		    pose(new LinearInt(store, p2, p1, "<", p3));
+		    }
 		}
 		break;
 	    // gt not present in the newest flatzinc version
@@ -2757,14 +2801,14 @@ public class Constraints implements ParserTreeConstants {
 		else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1)
 		    pose(new XplusClteqZ(p2[1], -p3, p2[0]) );
 
-		// else if (allWeightsOne(p1)) {
-		//     t = new IntVar(store, IntDomain.MinInt, p3);
-		//     pose(new Sum(p2, t));		    
-		// }
-		// else if (allWeightsMinusOne(p1)) {
-		//     t = new IntVar(store, -p3, IntDomain.MaxInt);
-		//     pose(new Sum(p2, t));		    
-		// }
+		else if (allWeightsOne(p1)) {
+		    t = new IntVar(store, p3, p3);
+		    pose(new SumInt(store, p2, "<=", t));		    
+		}
+		else if (allWeightsMinusOne(p1)) {
+		    t = new IntVar(store, -p3, -p3);
+		    pose(new SumInt(store, p2, ">=", t));		    
+		}
 		// else if (sumPossible(p1, p3) > -1) {
 		//     int pos = sumPossible(p1, p3);
 		//     IntVar[] vect = new IntVar[p1.length-1];
@@ -2778,9 +2822,27 @@ public class Constraints implements ParserTreeConstants {
 		// }
 
 		else {
-		    // t = new IntVar(store, IntDomain.MinInt, p3);
-		    // pose(new SumWeight(p2, p1, t));
-		    pose(new Linear(store, p2, p1, "<=", p3));
+		    int posLe = sumLePossible(p1, p3);
+		    int posGe = sumGePossible(p1, p3);
+		    if (posLe > -1) {
+			IntVar[] vect = new IntVar[p1.length-1];
+			int n = 0;
+			for (int i=0; i<p2.length; i++)
+			    if (i != posLe)
+				vect[n++] = p2[i];
+			pose(new SumInt(store, vect, "<=", p2[posLe]));
+		    }
+		    else if (posGe > -1) {
+			IntVar[] vect = new IntVar[p1.length-1];
+			int n = 0;
+			for (int i=0; i<p2.length; i++)
+			    if (i != posGe)
+				vect[n++] = p2[i];
+			pose(new SumInt(store, vect, ">=", p2[posGe]));
+		    }
+		    else {
+			pose(new LinearInt(store, p2, p1, "<=", p3));
+		    }
 		}
 		break;
 		// ge not present in the newest flatzinc version
@@ -2799,6 +2861,10 @@ public class Constraints implements ParserTreeConstants {
 		    System.exit(0);
 	    }
 	}
+    }
+
+    boolean paramZero(IntVar v) {
+	return v.singleton() && v.value() == 0;
     }
 
     int maxDomain(IntVar[] vs) {
@@ -2868,10 +2934,20 @@ public class Constraints implements ParserTreeConstants {
 		pose(new LinearFloat(store, p2, p1, "!=", p3));
 		break;
 	    case lt :
-		pose(new LinearFloat(store, p2, p1, "<", p3));
+		if (p1.length == 2 && p1[0] == 1 && p1[1] == -1 && p3 == 0)
+		    pose(new PltQ(p2[0], p2[1]));
+		else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1 && p3 == 0)
+		    pose(new PltQ(p2[1], p2[0]));
+		else
+		    pose(new LinearFloat(store, p2, p1, "<", p3));
 		break;
 	    case le :
-		pose(new LinearFloat(store, p2, p1, "<=", p3));
+		if (p1.length == 2 && p1[0] == 1 && p1[1] == -1 && p3 == 0)
+		    pose(new PlteqQ(p2[0], p2[1]));
+		else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1 && p3 == 0)
+		    pose(new PlteqQ(p2[1], p2[0]));
+		else
+		    pose(new LinearFloat(store, p2, p1, "<=", p3));
 		break;
 		default:
 		    System.err.println("%% ERROR: Constraint "+p+" not supported.");
@@ -2925,6 +3001,54 @@ public class Constraints implements ParserTreeConstants {
 		return lastOnePosition;
 	    else if (minusOne == 1 && one == ws.length - 1)
 		return lastMinusOnePosition;
+	    else
+		return -1;
+	}
+	else
+	    return -1;
+    }
+
+    int sumLePossible(int[] ws, int result) {
+	if (result == 0) {
+	    int one = 0, minusOne = 0;
+	    int lastOnePosition = -1, lastMinusOnePosition = -1;
+	    //boolean sum = true;
+	    for (int i=0; i<ws.length; i++)
+		if (ws[i] == 1) {
+		    one++;
+		    lastOnePosition = i;
+		}
+		else if (ws[i] == -1) {
+		    minusOne++;
+		    lastMinusOnePosition = i;
+		}
+
+	    if (minusOne == 1 && one == ws.length - 1)
+		return lastMinusOnePosition;
+	    else
+		return -1;
+	}
+	else
+	    return -1;
+    }
+
+    int sumGePossible(int[] ws, int result) {
+	if (result == 0) {
+	    int one = 0, minusOne = 0;
+	    int lastOnePosition = -1, lastMinusOnePosition = -1;
+	    //boolean sum = true;
+	    for (int i=0; i<ws.length; i++)
+		if (ws[i] == 1) {
+		    one++;
+		    lastOnePosition = i;
+		}
+		else if (ws[i] == -1) {
+		    minusOne++;
+		    lastMinusOnePosition = i;
+		}
+
+	    if (one == 1 && minusOne == ws.length - 1)
+		return lastOnePosition;
 	    else
 		return -1;
 	}
@@ -2998,8 +3122,10 @@ public class Constraints implements ParserTreeConstants {
 	for (int i=0; i < listLength; i++) 
 	    newP2[i] = p2[p1.min() - 1 + i];
 
-	pose(new Element(p1, newP2, p3, p1.min() - 1));
-
+	if (opt.getBoundConsistency())
+	    pose(new ElementIntegerFast(p1, newP2, p3, p1.min() - 1));
+	else
+	    pose(new Element(p1, newP2, p3, p1.min() - 1));
 
 	// pose(new Element(p1, p2, p3));
     }
@@ -3027,7 +3153,7 @@ public class Constraints implements ParserTreeConstants {
 // 	else {
 	IntVar[] p2var = getVarArray((SimpleNode)node.jjtGetChild(1));
 
-	pose(new Element(p1, p2var, p3));
+	pose(new ElementVariableFast(p1, p2var, p3));
 
 // 	}
     }
@@ -3210,7 +3336,10 @@ public class Constraints implements ParserTreeConstants {
 		if (grand_child_1.getId() == JJTINTFLATEXPR && grand_child_2.getId() == JJTINTFLATEXPR) {
 		    int i1 = ((ASTIntFlatExpr)grand_child_1).getInt();
 		    int i2 = ((ASTIntFlatExpr)grand_child_2).getInt();
-		    return new IntervalDomain(i1, i2);
+		    if (i1 > i2)
+			return new IntervalDomain();
+		    else
+			return new IntervalDomain(i1, i2);
 		}
 	    case 1: // list
 		IntDomain s= new IntervalDomain();
@@ -3564,6 +3693,7 @@ public class Constraints implements ParserTreeConstants {
  		System.out.println(c);
 	}
 	poseAlldistinctConstraints();
+
     }
 
     void poseAlldistinctConstraints() {

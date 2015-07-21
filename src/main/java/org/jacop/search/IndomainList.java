@@ -39,7 +39,7 @@ import org.jacop.core.IntVar;
  * functionality was proposed by Ben Weiner.
  * 
  * @author Radoslaw Szymanek
- * @version 4.2
+ * @version 4.3
  */
 
 public class IndomainList<T extends IntVar> implements Indomain<T> {

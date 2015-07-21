@@ -47,7 +47,7 @@ import org.jacop.set.core.SetVar;
  * onto a list of integer variables. 
  * 
  * @author Radoslaw Szymanek, Krzysztof Kuchcinski, and Robert Åkemalm
- * @version 4.2
+ * @version 4.3
  */
 
 public class Match extends Constraint {

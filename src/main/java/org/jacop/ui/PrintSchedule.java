@@ -42,7 +42,7 @@ import org.jacop.core.IntVar;
  * Prints the computed schedule
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.3
  */
 
 public class PrintSchedule {

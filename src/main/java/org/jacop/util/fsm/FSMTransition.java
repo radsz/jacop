@@ -37,7 +37,7 @@ import org.jacop.core.IntDomain;
 
 /**
  * @author Radoslaw Szymanek
- * @version 4.2
+ * @version 4.3
  */
 
 public class FSMTransition {

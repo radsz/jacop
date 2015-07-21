@@ -60,6 +60,8 @@ import org.jacop.floats.core.FloatDomain;
 import org.jacop.set.core.SetVar;
 import org.jacop.set.search.IndomainSetMin;
 
+import org.jacop.satwrapper.SatTranslation;
+
 /**
  * 
  * The parser part responsible for parsing the solve part of the flatzinc file,
@@ -121,13 +123,16 @@ public class Solve implements ParserTreeConstants {
 
     int solveKind=-1;
 
+    SatTranslation sat;
+    
     /**
      * It creates a parser for the solve part of the flatzinc file. 
      * 
      * @param store the constraint store within which context the search will take place.
      */
-    public Solve(Store store) {
+    public Solve(Store store, SatTranslation sat)  {
 	this.store = store;
+	this.sat = sat;
     }
 
     /**
@@ -145,7 +150,7 @@ public class Solve implements ParserTreeConstants {
 
 	if (opt.getVerbose())
 	    System.out.println("%% Model constraints defined.\n%% Variables = "+store.size() + ", Bool variables = "+NumberBoolVariables +
-			       ", Constraints = "+initNumberConstraints);
+			       ", Constraints = "+initNumberConstraints + ", SAT clauses = " + sat.numberClauses());
 
 	dictionary = table;
 	options = opt;
@@ -409,9 +414,9 @@ public class Solve implements ParserTreeConstants {
 		    java.util.LinkedHashSet<Search<? extends Var>> ns = 
 			new java.util.LinkedHashSet<Search<? extends Var>>();
 			for (Search s1 : l) {
-			    Search<? extends Var>[] child = ((DepthFirstSearch)s1).childSearches;
+			    Search<? extends Var>[] child = (Search<? extends Var>[])((DepthFirstSearch)s1).childSearches;
 			    if (child != null)
-				for (Search s : child) {
+				for (Search<? extends Var> s : child) {
 				    ns.add(s);	
 
 				    s.getSolutionListener().searchAll(true); 
@@ -600,6 +605,7 @@ public class Solve implements ParserTreeConstants {
 			   "\n%% Model constraints : "+initNumberConstraints+
 			   "\n\n%% Search CPU time : " + (searchTimeMeter.getThreadCpuTime(tread.getId()) - startCPU)/(long)1e+6 + "ms"+
 			   "\n%% Search nodes : "+nodes+
+			   "\n%% Propagations : "+store.numberConsistencyCalls+
 			   "\n%% Search decisions : "+decisions+
 			   "\n%% Wrong search decisions : "+wrong+
 			   "\n%% Search backtracks : "+backtracks+
@@ -610,6 +616,7 @@ public class Solve implements ParserTreeConstants {
 
     }
 
+    @SuppressWarnings("unchecked")
     DepthFirstSearch<Var>[] setSubSearchForAll(DepthFirstSearch<Var> label, Options opt) {
 
 	DepthFirstSearch<Var>[] intAndSetSearch = new DepthFirstSearch[4];
@@ -836,6 +843,7 @@ public class Solve implements ParserTreeConstants {
 				   "\n%% Model constraints : "+initNumberConstraints+
 				   "\n\n%% Search CPU time : " + "0ms"+
 				   "\n%% Search nodes : 0"+
+				   "\n%% Propagations : "+store.numberConsistencyCalls+
 				   "\n%% Search decisions : 0"+
 				   "\n%% Wrong search decisions : 0"+
 				   "\n%% Search backtracks : 0"+
@@ -1100,6 +1108,7 @@ public class Solve implements ParserTreeConstants {
 			   "\n%% Model constraints : "+initNumberConstraints+
 			   "\n\n%% Search CPU time : " + (searchTimeMeter.getThreadCpuTime(tread.getId()) - startCPU)/(long)1e+6 + "ms"+
 			   "\n%% Search nodes : "+nodes+
+			   "\n%% Propagations : "+store.numberConsistencyCalls+
 			   "\n%% Search decisions : "+decisions+
 			   "\n%% Wrong search decisions : "+wrong+
 			   "\n%% Search backtracks : "+backtracks+
@@ -1195,18 +1204,21 @@ public class Solve implements ParserTreeConstants {
 	return label;
     }
 
+    @SuppressWarnings("unchecked")
     DepthFirstSearch<Var> int_search(SearchItem si) {
 
         variable_selection = si.getIntSelect();
         return new DepthFirstSearch<Var>();
     }
 
+    @SuppressWarnings("unchecked")
     DepthFirstSearch<Var> set_search(SearchItem si) {
 
         variable_selection = si.getSetSelect();
         return new DepthFirstSearch<Var>();
     }
 
+    @SuppressWarnings("unchecked")
     DepthFirstSearch<Var> float_search(SearchItem si) {
 
         variable_selection = si.getFloatSelect();
@@ -1291,14 +1303,30 @@ public class Solve implements ParserTreeConstants {
     }
 
     IntVar getCost(ASTSolveExpr node) {
-	if (node.getType() == 0) // ident
-	    return dictionary.getVariable(node.getIdent());
+
+	if (node.getType() == 0) {// ident
+	    IntVar cost = dictionary.getVariable(node.getIdent());
+	    if (cost != null)
+		return cost;
+	    else { // cost is constant ?
+		Integer costInt = dictionary.checkInt(node.getIdent());
+		if (costInt != null)
+		    return new IntVar(store, costInt, costInt);
+		else
+		    return null;
+	    }
+	}
 	else if (node.getType() == 1) { // array access
 	    IntVar[] a = dictionary.getVariableArray(node.getIdent());
 	    if ( a != null)
 		return a[node.getIndex()];
-	    else
-		return null;
+	    else { // cost is constant ?
+		int[] costInt = dictionary.getIntArray(node.getIdent());
+		if (costInt != null)
+		    return new IntVar(store, costInt[node.getIndex()], costInt[node.getIndex()]);
+		else
+		    return null;
+	    }
 	}
 	else {
 	    System.err.println("Wrong cost function specification " + node);
@@ -1308,10 +1336,30 @@ public class Solve implements ParserTreeConstants {
     }
 
     FloatVar getCostFloat(ASTSolveExpr node) {
-	if (node.getType() == 0) // ident
-	    return dictionary.getFloatVariable(node.getIdent());
-	else if (node.getType() == 1) // array access
-	    return dictionary.getVariableFloatArray(node.getIdent())[node.getIndex()];
+	if (node.getType() == 0) { // ident
+	    FloatVar cost = dictionary.getFloatVariable(node.getIdent());
+	    if (cost != null)
+		return cost;
+	    else { // cost is constant ?
+		Double costFloat = dictionary.checkFloat(node.getIdent());
+		if (costFloat != null)
+		    return new FloatVar(store, costFloat, costFloat);
+		else
+		    return null;
+	    }
+	}
+	else if (node.getType() == 1) { // array access
+	    FloatVar[] a = dictionary.getVariableFloatArray(node.getIdent());
+	    if (a != null)
+		return a[node.getIndex()];
+	    else { // cost is constant ?
+		double[] costFloat = dictionary.getFloatArray(node.getIdent());
+		if (costFloat != null)
+		    return new FloatVar(store, costFloat[node.getIndex()], costFloat[node.getIndex()]);
+		else
+		    return null;
+	    }
+	}
 	else {
 	    System.err.println("Wrong cost function specification " + node);
 	    System.exit(0);
@@ -1389,7 +1437,8 @@ public class Solve implements ParserTreeConstants {
 	NumberBoolVariables = n;
     }
 
-    void printSearch(Search label) {
+    @SuppressWarnings("unchecked")
+    void printSearch(Search<? extends Var> label) {
 
 	int N = 1;
 	System.out.println (N++ + ". " + label);

@@ -38,7 +38,7 @@ package org.jacop.floats.core;
  * 
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.3
  */
 
 public class FloatIntervalDomainIntervalEnumeration extends FloatIntervalEnumeration {

@@ -48,7 +48,7 @@ import org.jacop.floats.core.FloatDomain;
  * Constraint P #> C
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.3
  */
 
 public class PgtC extends PrimitiveConstraint {
@@ -112,7 +112,7 @@ public class PgtC extends PrimitiveConstraint {
 				if (possibleEvent != null)
 					return possibleEvent;
 			}
-			return IntDomain.BOUND;
+			return FloatDomain.BOUND;
 		}
 		// If notConsistency function mode
 		else {
@@ -121,7 +121,7 @@ public class PgtC extends PrimitiveConstraint {
 				if (possibleEvent != null)
 					return possibleEvent;
 			}
-			return IntDomain.BOUND;
+			return FloatDomain.BOUND;
 		}
 	}
 
@@ -134,7 +134,7 @@ public class PgtC extends PrimitiveConstraint {
 				if (possibleEvent != null)
 					return possibleEvent;
 			}
-			return Domain.NONE;
+			return FloatDomain.NONE;
 		}
 	
 	@Override
@@ -146,7 +146,7 @@ public class PgtC extends PrimitiveConstraint {
 				if (possibleEvent != null)
 					return possibleEvent;
 			}
-			return Domain.NONE;
+			return FloatDomain.NONE;
 	}
 
 	@Override

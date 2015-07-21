@@ -31,6 +31,7 @@
 
 package org.jacop.floats.core;
 
+import org.jacop.constraints.Constraint;
 import org.jacop.core.Store;
 import org.jacop.core.Domain;
 import org.jacop.core.IntervalEnumeration;
@@ -46,7 +47,7 @@ import org.jacop.core.ValueEnumeration;
 
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.3
  */
 
 public abstract class FloatDomain extends Domain {
@@ -202,6 +203,13 @@ public abstract class FloatDomain extends Domain {
 	return upBit(d); // d + ulp(d);
     }
 
+
+    /**
+     * It specifies the previous domain which was used by this domain. The old
+     * domain is stored here and can be easily restored if necessary.
+     */
+
+    public FloatDomain previousDomain;
 
     /**
      * It specifies the constant for GROUND event. It has to be smaller 
@@ -979,6 +987,251 @@ public abstract class FloatDomain extends Domain {
      */
     // public abstract int getElementAt(int index);
 
+
+    /**
+     * It adds a constraint to a domain, it should only be called by
+     * putConstraint function of Variable object. putConstraint function from
+     * Variable must make a copy of a vector of constraints if vector was not
+     * cloned.
+     */
+
+    @Override
+    public void putModelConstraint(int storeLevel, Var var, Constraint C,
+				   int pruningEvent) {
+
+	if (stamp < storeLevel) {
+
+	    FloatDomain result = this.cloneLight();
+
+	    result.modelConstraints = modelConstraints;
+	    result.searchConstraints = searchConstraints;
+	    result.stamp = storeLevel;
+	    result.previousDomain = this;
+	    result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
+	    result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+	    ((FloatVar)var).domain = result;
+
+	    result.putModelConstraint(storeLevel, var, C, pruningEvent);
+	    return;
+	}
+
+	Constraint[] pruningEventConstraints = modelConstraints[pruningEvent];
+
+	if (pruningEventConstraints != null) {
+
+	    boolean alreadyImposed = false;
+
+	    if (modelConstraintsToEvaluate[pruningEvent] > 0)
+		for (int i = pruningEventConstraints.length - 1; i >= 0; i--)
+		    if (pruningEventConstraints[i] == C)
+			alreadyImposed = true;
+
+	    int pruningConstraintsToEvaluate = modelConstraintsToEvaluate[pruningEvent];
+
+	    if (!alreadyImposed) {
+		Constraint[] newPruningEventConstraints = new Constraint[pruningConstraintsToEvaluate + 1];
+
+		System.arraycopy(pruningEventConstraints, 0,
+				 newPruningEventConstraints, 0,
+				 pruningConstraintsToEvaluate);
+		newPruningEventConstraints[pruningConstraintsToEvaluate] = C;
+
+		Constraint[][] newModelConstraints = new Constraint[3][];
+
+		newModelConstraints[0] = modelConstraints[0];
+		newModelConstraints[1] = modelConstraints[1];
+		newModelConstraints[2] = modelConstraints[2];
+
+		newModelConstraints[pruningEvent] = newPruningEventConstraints;
+
+		modelConstraints = newModelConstraints;
+
+		int[] newModelConstraintsToEvaluate = new int[3];
+
+		newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
+		newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
+		newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
+
+		newModelConstraintsToEvaluate[pruningEvent]++;
+
+		modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
+
+	    }
+
+	} else {
+
+	    Constraint[] newPruningEventConstraints = new Constraint[1];
+
+	    newPruningEventConstraints[0] = C;
+
+	    Constraint[][] newModelConstraints = new Constraint[3][];
+
+	    newModelConstraints[0] = modelConstraints[0];
+	    newModelConstraints[1] = modelConstraints[1];
+	    newModelConstraints[2] = modelConstraints[2];
+
+	    newModelConstraints[pruningEvent] = newPruningEventConstraints;
+
+	    modelConstraints = newModelConstraints;
+
+	    int[] newModelConstraintsToEvaluate = new int[3];
+
+	    newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
+	    newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
+	    newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
+
+	    newModelConstraintsToEvaluate[pruningEvent] = 1;
+
+	    modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
+
+	}
+
+    }
+
+    @Override
+    public void removeModelConstraint(int storeLevel, Var var, Constraint C) {
+
+	if (stamp < storeLevel) {
+
+	    FloatDomain result = this.cloneLight();
+
+	    result.modelConstraints = modelConstraints;
+	    result.searchConstraints = searchConstraints;
+	    result.stamp = storeLevel;
+	    result.previousDomain = this;
+	    result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
+	    result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+	    ((FloatVar)var).domain = result;
+
+	    result.removeModelConstraint(storeLevel, var, C);
+	    return;
+	}
+
+	int pruningEvent = FloatDomain.GROUND;
+
+	Constraint[] pruningEventConstraints = modelConstraints[pruningEvent];
+
+	if (pruningEventConstraints != null) {
+
+	    boolean isImposed = false;
+
+	    int i;
+
+	    for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--)
+		if (pruningEventConstraints[i] == C) {
+		    isImposed = true;
+		    break;
+		}
+
+	    if (isImposed) {
+
+		if (i != modelConstraintsToEvaluate[pruningEvent] - 1) {
+
+		    modelConstraints[pruningEvent][i] = modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
+
+		    modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = C;
+		}
+
+		int[] newModelConstraintsToEvaluate = new int[3];
+
+		newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
+		newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
+		newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
+
+		newModelConstraintsToEvaluate[pruningEvent]--;
+
+		modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
+
+		return;
+
+	    }
+
+	}
+
+	pruningEvent = FloatDomain.BOUND;
+
+	pruningEventConstraints = modelConstraints[pruningEvent];
+
+	if (pruningEventConstraints != null) {
+
+	    boolean isImposed = false;
+
+	    int i;
+
+	    for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--)
+		if (pruningEventConstraints[i] == C) {
+		    isImposed = true;
+		    break;
+		}
+
+	    if (isImposed) {
+
+		if (i != modelConstraintsToEvaluate[pruningEvent] - 1) {
+
+		    modelConstraints[pruningEvent][i] = modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
+
+		    modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = C;
+		}
+
+		int[] newModelConstraintsToEvaluate = new int[3];
+
+		newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
+		newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
+		newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
+
+		newModelConstraintsToEvaluate[pruningEvent]--;
+
+		modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
+
+		return;
+
+	    }
+
+	}
+
+	pruningEvent = FloatDomain.ANY;
+
+	pruningEventConstraints = modelConstraints[pruningEvent];
+
+	if (pruningEventConstraints != null) {
+
+	    boolean isImposed = false;
+
+	    int i;
+
+	    for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--)
+		if (pruningEventConstraints[i] == C) {
+		    isImposed = true;
+		    break;
+		}
+
+	    // int pruningConstraintsToEvaluate =
+	    // modelConstraintsToEvaluate[pruningEvent];
+
+	    if (isImposed) {
+
+		if (i != modelConstraintsToEvaluate[pruningEvent] - 1) {
+
+		    modelConstraints[pruningEvent][i] = modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
+
+		    modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = C;
+		}
+
+		int[] newModelConstraintsToEvaluate = new int[3];
+
+		newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
+		newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
+		newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
+
+		newModelConstraintsToEvaluate[pruningEvent]--;
+
+		modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
+
+	    }
+
+	}
+
+    }
 
     /**
      * It constructs and int array containing all elements in the domain. 

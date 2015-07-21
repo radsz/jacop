@@ -44,7 +44,7 @@ import org.jacop.set.core.SetVar;
  * in the set value of set variable B.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.2
+ * @version 4.3
  */
 
 public class AinB extends PrimitiveConstraint {
@@ -212,15 +212,20 @@ public class AinB extends PrimitiveConstraint {
 	@Override
 	public void notConsistency(Store store) {
 
-			if( b.domain.glb().contains( a.domain.lub()))
-		    	throw Store.failException;
+	    if( b.domain.glb().contains( a.domain.lub()))
+		throw Store.failException;
 
+	    
 	}
 
 	@Override
 	public boolean notSatisfied() {
 
-	    return ((SetDomain) b.dom()).lub().intersect(((SetDomain) a.dom()).lub()).isEmpty();  //(!((SetDomain) b.dom()).lub().contains(((SetDomain) a.dom()).lub()) );
+	    if(a.singleton() && b.singleton() 
+	       && !a.domain.subtract(b.domain).isEmpty())
+		return true;
+	    else
+		return false;
 
 	}
 
@@ -234,8 +239,13 @@ public class AinB extends PrimitiveConstraint {
 	@Override
 	public boolean satisfied() {
 
-			return ((SetDomain) b.dom()).glb().contains(((SetDomain) a.dom()).lub());
+	    if(a.singleton() && b.singleton() 
+	       && b.domain.contains(a.domain))
+		return true;
+	    else
+		return false;
 
+	    // return ((SetDomain) b.dom()).glb().contains(((SetDomain) a.dom()).lub());
 
 	}
 
@@ -278,16 +288,5 @@ public class AinB extends PrimitiveConstraint {
 
 	@Override
 	public void queueVariable(int level, Var variable) {
-		
-		// if (variable == a) {
-		// 	aHasChanged = true;
-		// 	return;
-		// }
-
-		// if (variable == b) {
-		// 	bHasChanged = true;
-		// 	return;
-		// }
-		
 	}
 }

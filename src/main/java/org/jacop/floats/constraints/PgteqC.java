@@ -48,7 +48,7 @@ import org.jacop.floats.core.FloatDomain;
  * Constraints P #>= C for floats
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.3
  */
 
 public class PgteqC extends PrimitiveConstraint {
@@ -114,7 +114,7 @@ public class PgteqC extends PrimitiveConstraint {
 				if (possibleEvent != null)
 					return possibleEvent;
 			}
-			return IntDomain.BOUND;
+			return FloatDomain.BOUND;
 		}
 		// If notConsistency function mode
 		else {
@@ -123,7 +123,7 @@ public class PgteqC extends PrimitiveConstraint {
 				if (possibleEvent != null)
 					return possibleEvent;
 			}
-			return IntDomain.BOUND;
+			return FloatDomain.BOUND;
 		}
 	}
 
@@ -136,7 +136,7 @@ public class PgteqC extends PrimitiveConstraint {
 				if (possibleEvent != null)
 					return possibleEvent;
 			}
-			return Domain.NONE;
+			return FloatDomain.NONE;
 		}
 
 	
@@ -149,7 +149,7 @@ public class PgteqC extends PrimitiveConstraint {
 				if (possibleEvent != null)
 					return possibleEvent;
 			}
-			return Domain.NONE;
+			return FloatDomain.NONE;
 	}
 
 	@Override

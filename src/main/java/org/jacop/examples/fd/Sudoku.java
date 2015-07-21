@@ -46,7 +46,7 @@ import org.jacop.core.Store;
 
 /**
  *  @author Radoslaw Szymanek
- *  @version 4.2
+ *  @version 4.3
  */
 
 public class Sudoku extends ExampleFD {

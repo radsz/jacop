@@ -44,7 +44,7 @@ import org.jacop.set.core.SetVar;
  * do not contain any common element.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.2
+ * @version 4.3
  */
 
 public class AdisjointB extends Constraint {

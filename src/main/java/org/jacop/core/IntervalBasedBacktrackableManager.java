@@ -423,8 +423,8 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
 
 		assert (removedLevel >= currentLevel) : "It is only possible to remove the most recent not removed level";
 
-		if ( checkRemoveInvariant(removedLevel) != null)
-			System.out.println(" " + removeCount);
+		// if ( checkRemoveInvariant(removedLevel) != null)
+		// 	System.out.println(" " + removeCount);
 
 		assert (checkRemoveInvariant(removedLevel) == null ) : checkRemoveInvariant(removedLevel);
 	}

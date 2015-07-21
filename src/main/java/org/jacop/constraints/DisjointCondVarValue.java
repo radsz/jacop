@@ -32,7 +32,7 @@
 
 package org.jacop.constraints;
 
-import java.util.Vector;
+import java.util.ArrayList;
 
 import org.jacop.core.MutableVarValue;
 
@@ -40,7 +40,7 @@ import org.jacop.core.MutableVarValue;
  * Defines a current value of the Diff2Var and related operations on it.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.3
  */
 
 class DisjointCondVarValue implements MutableVarValue {
@@ -84,7 +84,7 @@ class DisjointCondVarValue implements MutableVarValue {
 		Rects = R;
 	}
 
-	void setValue(Vector<RectangleWithCondition> VR) {
+	void setValue(ArrayList<RectangleWithCondition> VR) {
 		Rects = new RectangleWithCondition[VR.size()];
 		for (int i = 0; i < Rects.length; i++)
 			Rects[i] = VR.get(i);

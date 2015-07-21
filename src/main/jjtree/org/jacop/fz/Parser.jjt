@@ -57,7 +57,7 @@ public class Parser {
     Tables dict = new Tables(store);
     VariablesParameters cg = new VariablesParameters();
     Constraints cc = new Constraints(store);
-    Solve solver = new Solve(store);
+    Solve solver = new Solve(store, cc.sat);
     Options options;
 
     void setOptions(Options opt) {
@@ -355,7 +355,7 @@ void constraint_item() #Constraint:
 {
     <CONSTRAINT> constraint_elem() annotations()
  	{  	// jjtThis.dump(""); 
-	        cc.generateConstraints(jjtThis, dict);
+	    cc.generateConstraints(jjtThis, dict, options);
 	        jjtThis.removeChildren();
         }
 }

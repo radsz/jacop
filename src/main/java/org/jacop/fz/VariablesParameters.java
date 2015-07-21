@@ -58,7 +58,7 @@ import org.jacop.floats.constraints.PeqQ;
  * generateParameters(...) below.
  * 
  * @author Krzysztof Kuchcinski
- * @version 4.2
+ * @version 4.3
  *
  */
 public class VariablesParameters implements ParserTreeConstants {
@@ -66,7 +66,8 @@ public class VariablesParameters implements ParserTreeConstants {
     final static boolean interval = false; // selection of interval or dense, if possible, domain for variables
 
     final static double MIN_FLOAT = -1e150, MAX_FLOAT = 1e150;
-    final static int MIN_INT = Integer.MIN_VALUE, MAX_INT = Integer.MAX_VALUE;
+    // final static int MIN_INT = Integer.MIN_VALUE, MAX_INT = Integer.MAX_VALUE;
+    final static int MIN_INT = IntDomain.MinInt, MAX_INT = IntDomain.MaxInt;
 
     Tables dictionary;
     int lowInterval, highInterval;
@@ -175,8 +176,9 @@ public class VariablesParameters implements ParserTreeConstants {
 
 		if ( constant_int(node, initChild) ) {
 		    initVal = getScalarFlatExpr(node, initChild);
-		    XeqC c = new XeqC(varInt, initVal);
-		    store.impose(c);
+		    varInt.domain.in(store.level, varInt, initVal, initVal);
+		    // XeqC c = new XeqC(varInt, initVal);
+		    // store.impose(c);
 // 		    System.out.println(c);
 		}
 		else {
@@ -196,6 +198,9 @@ public class VariablesParameters implements ParserTreeConstants {
 	    if (lowInterval > highInterval)
 		throw Store.failException;		
 
+	    if (lowInterval < MIN_INT || highInterval > MAX_INT)
+		throw new ArithmeticException("Bounds for " + ident + ": "+ lowInterval +".."+ highInterval + " are too low/high");  
+		
 	    if (interval)
 		varInt = new IntVar(store, ident, new IntervalDomain(lowInterval, highInterval));
 	    else
@@ -206,8 +211,9 @@ public class VariablesParameters implements ParserTreeConstants {
 
 		if ( constant_int(node, initChild) ) {
 		    initVal = getScalarFlatExpr(node, initChild);
-		    XeqC c = new XeqC(varInt, initVal);
-		    store.impose(c);
+		    varInt.domain.in(store.level, varInt, initVal, initVal);
+		    // XeqC c = new XeqC(varInt, initVal);
+		    // store.impose(c);
 // 		    System.out.println(c);
 		}
 		else {
@@ -224,15 +230,22 @@ public class VariablesParameters implements ParserTreeConstants {
 	case 2: // int list
 	    ident = ((ASTVarDeclItem)node).getIdent();
 	    varInt = new IntVar(store, ident);
-	    for (Integer e : intList)
-		((IntVar)varInt).addDom(e.intValue(), e.intValue());
+	    for (Integer e : intList) {
+		int element = e.intValue();
+
+		if (element < MIN_INT || element > MAX_INT)
+		    throw new ArithmeticException("Domain value for " + ident + " is too high/low ("+ element + ")");  
+		
+		((IntVar)varInt).addDom(element, element);
+	    }
 	    table.addVariable(ident, varInt);
 	    if (initChild < ((ASTVarDeclItem)node).jjtGetNumChildren()) {
 
 		if ( constant_int(node, initChild) ) {
 		    initVal = getScalarFlatExpr(node, initChild);
-		    XeqC c = new XeqC(varInt, initVal);
-		    store.impose(c);
+		    varInt.domain.in(store.level, varInt, initVal, initVal);
+		    // XeqC c = new XeqC(varInt, initVal);
+		    // store.impose(c);
 // 		    System.out.println(c);
 		}
 		else {
@@ -259,8 +272,9 @@ public class VariablesParameters implements ParserTreeConstants {
 
 		if ( constant_int(node, initChild) ) {
 		    initVal = getScalarFlatExpr(node, initChild);
-		    XeqC c = new XeqC(boolVar, initVal);
-		    store.impose(c);
+		    boolVar.domain.in(store.level, boolVar, initVal, initVal);
+		    // XeqC c = new XeqC(boolVar, initVal);
+		    // store.impose(c);
 // 		    System.out.println(c);
 		}
 		else {
@@ -304,8 +318,13 @@ public class VariablesParameters implements ParserTreeConstants {
 	    break;
 	case 5: // set interval
 	    ident = ((ASTVarDeclItem)node).getIdent();
-	    varSet = new SetVar(store, ident, new BoundSetDomain(new IntervalDomain(),
+
+	    if (lowInterval > highInterval)
+		varSet = new SetVar(store, ident, new BoundSetDomain());
+	    else
+		varSet = new SetVar(store, ident, new BoundSetDomain(new IntervalDomain(),
 								 new IntervalDomain(lowInterval, highInterval)));
+
 	    table.addSetVariable(ident, (SetVar) varSet);
 	    if (initChild < ((ASTVarDeclItem)node).jjtGetNumChildren()) {
 
@@ -668,7 +687,10 @@ public class VariablesParameters implements ParserTreeConstants {
 	    else { // no init values
 		varArraySet = new SetVar[size];
 		for (int i=0; i<size; i++)
-		    varArraySet[i] = new SetVar(store, ident+"["+i+"]", new BoundSetDomain(new IntervalDomain(),
+		    if (lowInterval > highInterval)
+			varArraySet[i] = new SetVar(store, ident+"["+i+"]", new BoundSetDomain());
+		    else
+			varArraySet[i] = new SetVar(store, ident+"["+i+"]", new BoundSetDomain(new IntervalDomain(),
 											   new IntervalDomain(lowInterval, highInterval)));
 		table.addSearchSetArray(varArraySet);
 	    }
@@ -1329,7 +1351,10 @@ public class VariablesParameters implements ParserTreeConstants {
 		if (grand_child_1.getId() == JJTINTFLATEXPR && grand_child_2.getId() == JJTINTFLATEXPR) {
 		    int i1 = ((ASTIntFlatExpr)grand_child_1).getInt();
 		    int i2 = ((ASTIntFlatExpr)grand_child_2).getInt();
-		    return new IntervalDomain(i1, i2);
+		    if (i1 > i2)
+			return new IntervalDomain();
+		    else
+			return new IntervalDomain(i1, i2);
 		}
 	    case 1: // list
 		IntDomain s= new IntervalDomain();

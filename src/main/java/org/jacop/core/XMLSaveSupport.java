@@ -158,6 +158,7 @@ public class XMLSaveSupport {
 	
 	// Invariants - assumptions 
 	// Only one load xml function. 
+    @SuppressWarnings("unchecked")
 	public static void save(TransformerHandler handler, Object a, AttributesImpl nestedAtts) {
 
 		try {

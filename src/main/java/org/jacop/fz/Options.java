@@ -63,8 +63,12 @@ public class Options {
     boolean precisionDefined = false;
     double precision;
 
+    boolean boundConsistency = false;
+
     boolean runSearch = true;
 
+    boolean use_sat = false;
+	
 	/**
 	 * It constructs an Options object and parses all the parameters/options provided 
 	 * to flatzinc to jacop parser.
@@ -95,6 +99,10 @@ public class Options {
 						"    -s, --statistics\n"+
 						"    -n <value>, --num-solutions <value>\n"+
 						"        <value> - limit on solution number.\n"+
+						"    -b, --bound - use bounds consistency whenever possible;\n" +
+						"        override annotation \":: domain\" and select constraints\n"+
+						"        implementing bounds consistency (default false).\n"+
+						"    -sat use SAT solver for boolean constraints.\n" +
 						"    -i, --interval print intervals instead of values for floating variables\n"+
 						"    -p <value>, --precision <value> defines precision for floating operations\n"+
 						"        overrides precision definition in search annotation."
@@ -119,6 +127,10 @@ public class Options {
 				}
 				else if (args[i].equals("-s") || args[i].equals("--statistics")) {
 					statistics = true;
+					i++;
+				}
+				else if (args[i].equals("-sat")) {
+					use_sat = true;
 					i++;
 				}
 				else if (args[i].equals("-n") || args[i].equals("--num-solutions")) {
@@ -146,9 +158,13 @@ public class Options {
 					}
 					i++;
 				}
+				else if (args[i].equals("-b") || args[i].equals("--bound")) {
+				    boundConsistency = true;
+				    i++;
+				}
 				else {
-					System.out.println("fz2jacop: not recognized option "+ args[i]);
-					i++;
+				    System.out.println("fz2jacop: not recognized option "+ args[i]);
+				    i++;
 				}
 			}	    
 
@@ -247,6 +263,14 @@ public class Options {
 
 
 	/**
+	 * It defines whether to use bound consistency
+	 * @return true if bound consistency prefered, false otherwise (defult). 
+	 */
+	public boolean getBoundConsistency() {
+		return boundConsistency;
+	}
+
+       /**
 	 * It returns precision defined in  the command line
 	 * @return precision. 
 	 */
@@ -260,7 +284,14 @@ public class Options {
 	public boolean precision() {
 		return precisionDefined;
 	}
-	
+
+    	/**
+	 * It defines precision. 
+	 */
+	public boolean useSat() {
+		return use_sat;
+	}
+
 }
 
 

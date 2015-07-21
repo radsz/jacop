@@ -53,7 +53,7 @@ import org.jacop.core.Store;
  * Artificial Intelligence 170 (2006) 803–834.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.3
  */
 
 public class LexOrder extends Constraint {
@@ -69,7 +69,7 @@ public class LexOrder extends Constraint {
     /**
      * Is Lex enforcing "<" relationship?
      */
-    public final boolean lexLT;
+    public boolean lexLT;
 
     /**
      * size of the longest vector
@@ -91,8 +91,8 @@ public class LexOrder extends Constraint {
     /**
      * It creates a lexicographical order for vectors x and y, 
      *
-     * vectors x and does not need to be of the same size.
-     * boolea lt defines if we require strict order, Lex_{<} (lt = true) or Lex_{=<} (lt = false)
+     * vectors x and y does not need to be of the same size.
+     * boolean lt defines if we require strict order, Lex_{<} (lt = true) or Lex_{=<} (lt = false)
      *
      * @param x vector of vectors which assignment is constrained by LexOrder constraint. 
      */
@@ -106,7 +106,6 @@ public class LexOrder extends Constraint {
 		
 	assert (x != null) : "x list is null.";
 	assert (y != null) : "y list is null.";
-	assert ( x.length == y.length ) : "\nLength of two vectors different in LexOrder";
 
 	queueIndex = 1;
 
@@ -115,7 +114,12 @@ public class LexOrder extends Constraint {
         this.x = x;
         this.y = y;
 		
-	this.n = x.length;
+	if (x.length < y.length) {
+	    lexLT = false;
+	    this.n = x.length;
+	}
+	else
+	    this.n = y.length;
 
     }
 
@@ -145,11 +149,11 @@ public class LexOrder extends Constraint {
 
 	store.registerRemoveLevelLateListener(this);
 
-	for (int i = 0; i < x.length; i++) {
+	for (int i = 0; i < n; i++) {
 	    varToIndex.put(x[i], i);
 	    x[i].putModelConstraint(this, getConsistencyPruningEvent(x[i]));
 	}
-	for (int i = 0; i < y.length; i++) {
+	for (int i = 0; i < n; i++) {
 	    varToIndex.put(y[i], i);
 	    y[i].putModelConstraint(this, getConsistencyPruningEvent(y[i]));
 	}
@@ -192,6 +196,7 @@ public class LexOrder extends Constraint {
 
 	} while (store.propagationHasOccurred);
 
+	// if (satisfied()) 
 	if (satisfied) 
 	    removeConstraint();
     }
@@ -199,19 +204,23 @@ public class LexOrder extends Constraint {
     @Override
     public boolean satisfied() {
 
-	if (ground(x) && ground(y)) {
-
-	    for (int i = 0; i < x.length; i++) 
-		if (x[i].value() < y[i].value())
+	    for (int i = 0; i < n; i++) 
+		if (x[i].max() < y[i].min())
 		    return true;
-		else if (x[i].value() > y[i].value())
-		    return false;	     
-
-	    if (lexLT) // <
-		return false;
-	    else // <=
-		return true;
-	}
+		else
+		    if (x[i].max() > y[i].min())
+			return false;
+		    else
+			if (eqSingletons(x[i], y[i])) 
+			    if (lexLT) // <
+				return false;
+			    else // <=
+				if (i == n-1)
+				    return true;
+				else
+				    continue;
+			else
+			    return false;
 
 	return false;
     }
@@ -219,9 +228,9 @@ public class LexOrder extends Constraint {
     @Override
     public void removeConstraint() {
 
-	for (int i = 0; i < x.length; i++) 
+	for (int i = 0; i < n; i++) 
 	    x[i].removeConstraint(this);
-	for (int i = 0; i < y.length; i++) 
+	for (int i = 0; i < n; i++) 
 	    y[i].removeConstraint(this);
     }
 
@@ -230,9 +239,9 @@ public class LexOrder extends Constraint {
     public void increaseWeight() {
 	if (increaseWeight) {
 
-	    for (int i = 0; i < x.length; i++) 
+	    for (int i = 0; i < n; i++) 
 		x[i].weight++;
-	    for (int i = 0; i < y.length; i++) 
+	    for (int i = 0; i < n; i++) 
 		y[i].weight++;
 
 	}
@@ -462,16 +471,16 @@ public class LexOrder extends Constraint {
 
     }
 
-    private boolean ground(IntVar[] v) {
-	boolean single = true;
+    // private boolean ground(IntVar[] v) {
+    // 	boolean single = true;
 
-	int i = 0;
-	while (single && i < v.length) {
-	    single = v[i].singleton();
-	    i++;
-	}
+    // 	int i = 0;
+    // 	while (single && i < v.length) {
+    // 	    single = v[i].singleton();
+    // 	    i++;
+    // 	}
 
-	return single;
-    }
+    // 	return single;
+    // }
 
 }

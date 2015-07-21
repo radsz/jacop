@@ -39,7 +39,7 @@ import org.jacop.constraints.Constraint;
  * Defines a Domain and related operations on it.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.2
+ * @version 4.3
  */
 
 public abstract class Domain {

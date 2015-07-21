@@ -48,7 +48,7 @@ import org.jacop.floats.core.FloatDomain;
  * Constraint P < Q for floats
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.3
  */
 
 public class PltQ extends PrimitiveConstraint {
@@ -74,7 +74,7 @@ public class PltQ extends PrimitiveConstraint {
 	/**
 	 * It constructs constraint P < C.
 	 * @param p variable p.
-	 * @param c constant c.
+	 * @param q constant q.
 	 */
 	public PltQ(FloatVar p, FloatVar q) {
 		
@@ -132,7 +132,7 @@ public class PltQ extends PrimitiveConstraint {
 				if (possibleEvent != null)
 					return possibleEvent;
 			}
-			return IntDomain.BOUND;
+			return FloatDomain.BOUND;
 		}
 		// If notConsistency function mode
 		else {
@@ -141,7 +141,7 @@ public class PltQ extends PrimitiveConstraint {
 				if (possibleEvent != null)
 					return possibleEvent;
 			}
-			return IntDomain.BOUND;
+			return FloatDomain.BOUND;
 		}
 	}
 
@@ -154,7 +154,7 @@ public class PltQ extends PrimitiveConstraint {
 				if (possibleEvent != null)
 					return possibleEvent;
 			}
-			return Domain.NONE;
+			return FloatDomain.BOUND;
 		}
 
 	@Override
@@ -166,7 +166,7 @@ public class PltQ extends PrimitiveConstraint {
 				if (possibleEvent != null)
 					return possibleEvent;
 			}
-			return Domain.NONE;
+			return FloatDomain.BOUND;
 			
 	}
 

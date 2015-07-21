@@ -45,7 +45,7 @@ import org.jacop.set.core.SetVar;
  * a provided set. 
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.2
+ * @version 4.3
  */
 
 public class AinS extends PrimitiveConstraint {
