@@ -49,7 +49,7 @@ import org.jacop.core.Var;
  * its position, i.e., x[i] = i.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.3
  */
 
 public class Subcircuit extends Alldiff {

@@ -55,7 +55,7 @@ import org.jacop.core.TimeStamp;
  * The weights must be positive integers.
  * 
  * @author Krzysztof Kuchcinski
- * @version 4.2
+ * @version 4.3
  */
 
 public class Linear extends PrimitiveConstraint {

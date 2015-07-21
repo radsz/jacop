@@ -39,7 +39,7 @@ import org.jacop.core.ValueEnumeration;
  * Defines a MaxRegret comparator for Variables.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.3
  * @param <T> variable of type IntVar.
  */
 

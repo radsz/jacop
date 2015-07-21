@@ -40,7 +40,7 @@ import org.jacop.core.Store;
  * keeps current next node and previous node for the circuit
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.3
  */
 
 class CircuitVar implements MutableVar {

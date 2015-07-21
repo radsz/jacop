@@ -50,7 +50,7 @@ import org.jacop.floats.core.FloatIntervalDomain;
  * Boundary consistency is used.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.3
  */
 
 public class PmulCeqR extends Constraint {

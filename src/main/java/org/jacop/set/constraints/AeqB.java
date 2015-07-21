@@ -44,7 +44,7 @@ import org.jacop.set.core.SetVar;
  * have the same value. 
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.2
+ * @version 4.3
  */
 
 public class AeqB extends PrimitiveConstraint {

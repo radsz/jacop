@@ -55,7 +55,7 @@ import org.jacop.core.Var;
  * It extends basic functionality of Alldifferent constraint.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.3
  */
 
 public class Alldiff extends Alldifferent {

@@ -37,7 +37,7 @@ package org.jacop.constraints.netflow.simplex;
  * might be large.
  *
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.3
  * 
  */
 

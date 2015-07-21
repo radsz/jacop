@@ -40,7 +40,7 @@ import java.util.Arrays;
  * util class.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.2
+ * @version 4.3
  * @param <E> Class being stored in SimpleHashSet.
  */
 

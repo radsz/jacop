@@ -39,7 +39,7 @@ import org.jacop.core.IntVar;
  * Defines a rectangle used in the diffn constraint.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.3
  */
 
 class RectangleWithCondition extends Rectangle {

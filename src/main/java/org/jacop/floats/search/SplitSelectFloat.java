@@ -56,7 +56,7 @@ import org.jacop.core.TimeStamp;
  * the maximal value in the domain of P then the constraint P < c is used.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.3
  * @param <T> type of variable being used in the search.
  */
 

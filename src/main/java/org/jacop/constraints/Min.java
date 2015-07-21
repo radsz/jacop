@@ -44,7 +44,7 @@ import org.jacop.core.TimeStamp;
  * varable from all FD varaibles on the list.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.3
  */
 
 public class Min extends Constraint {

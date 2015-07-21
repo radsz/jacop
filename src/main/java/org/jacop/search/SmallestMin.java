@@ -38,7 +38,7 @@ import org.jacop.core.IntVar;
  * which have smaller minimal value in their domain.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.3
  * @param <T> type of variable being used in the search.
  */
 
