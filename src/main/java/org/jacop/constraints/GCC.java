@@ -295,8 +295,10 @@ public class GCC extends Constraint {
 			
 			while (k < stamp.value()) {
 				if (x[k].singleton()){
+				    if (stamp.value() > 0) {
 					stamp.update(stamp.value() - 1);
 					putToTheEnd(x, k);
+				    }
 				} else {
 					// no incrementation if there is a modification in the
 					// xNodes table. The variable in the i position is no more
@@ -331,12 +333,14 @@ public class GCC extends Constraint {
 					if (xNodesHash.get(var) <= stamp.value()) {
 						if (debug)
 							System.out.println(" in xVariableToChange: " + var);
-						stamp.update(stamp.value() - 1);
-						putToTheEnd(x, xNodesHash.get(var));
+						if (stamp.value() > 0) {
+						    stamp.update(stamp.value() - 1);
+						    putToTheEnd(x, xNodesHash.get(var));
+						}
 					}
 				}
 			}
-			
+
 			assert checkXorder() : "Inconsistent X variable order: " + Arrays.toString(this.x);
 
 			if (debug) {
