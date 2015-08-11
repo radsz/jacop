@@ -3,6 +3,10 @@
   that \p j is the successor of \p i.
 */
 predicate circuit(array[int] of var int: x) =
-    jacop_circuit(x);
+  if min(index_set(x)) = 1 then
+    jacop_circuit(x)
+  else
+    jacop_circuit([x[i] - min(index_set(x)) + 1 | i in index_set(x)])
+  endif;
 
 predicate jacop_circuit(array[int] of var int: x)
