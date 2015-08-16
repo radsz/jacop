@@ -409,7 +409,9 @@ public class Distance extends PrimitiveConstraint {
 
 		do {
 
-			if (x.singleton()) {
+		    store.propagationHasOccurred = false;
+
+		    if (x.singleton()) {
 
 				if (z.singleton()) {
 
