@@ -43,6 +43,10 @@ import java.util.ArrayList;
  * LinearFloat constraint implements the weighted summation over several
  * Variable's . It provides the weighted sum from all Variable's on the list.
  * 
+ * This version works as argument to Reified and Xor constraints.  For
+ * other constraints And, Or, Not, Eq, IfThen, IfThenElse it does not
+ * work currently.
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
  */

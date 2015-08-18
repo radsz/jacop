@@ -45,11 +45,17 @@ import org.jacop.core.Var;
  * variables . It provides the weighted sum from all variables on the list.
  * The weights are integers.
  * 
+ * This version works as argument for Reified and Xor constraints.
+ * For other constraints (And, Or, Not, Eq, IfThen, IfThenElse) use LinearInt.
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 3.1
  */
 
-public class Linear extends PrimitiveConstraint {
+/**
+ * @deprecated  As of release 4.3.1 replaced by LinearInt constraint.
+ */
+@Deprecated public class Linear extends PrimitiveConstraint {
     Store store;
 	static int counter = 1;
 
