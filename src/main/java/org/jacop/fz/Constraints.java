@@ -1000,7 +1000,13 @@ public class Constraints implements ParserTreeConstants {
 			IntDomain d = getSetLiteral(node, 1);
 			IntVar v1 = getVariable(p1);
 			if (p.startsWith("_reif", 6)) 
-			    c = new org.jacop.constraints.In(v1, d);
+			    // if (opt.useSat()) {  // it can be moved to SAT solver but it is slow in the current implementation
+			    // 	IntVar v3 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
+			    // 	sat.generate_inSet_reif(v1, d, v3);
+			    // 	return;
+			    // }
+			    // else
+				c = new org.jacop.constraints.In(v1, d);
 			else { 
 			    v1.domain.in(store.level, v1, d);
 			    return;
@@ -1749,7 +1755,12 @@ public class Constraints implements ParserTreeConstants {
 			return;
 		    }
 		    else
-			c = new XeqC(v1, i2);
+			// if (opt.useSat()) {  // it can be moved to SAT solver but it is slow in the current implementation
+			//     sat.generate_eqC_reif(v1, i2, v3);
+			//     return;
+			// }
+			// else
+			    c = new XeqC(v1, i2);
 		    break;
 
 		case ne :
@@ -1769,7 +1780,12 @@ public class Constraints implements ParserTreeConstants {
 			return;
 		    }
 		    else
-			c = new XneqC(v1, i2);
+			// if (opt.useSat()) {  // it can be moved to SAT solver but it is slow in the current implementation
+			//     sat.generate_neC_reif(v1, i2, v3);
+			//     return;
+			// }
+			// else
+			    c = new XneqC(v1, i2);
 		    break;
 		case lt :
 		    if (v1.max() < i2) {

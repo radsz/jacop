@@ -301,6 +301,86 @@ public class SatTranslation {
 	generate_clause(new IntVar[] {c}, new IntVar[] {b});
     }
 
+    public void generate_eqC_reif(IntVar x, int c, IntVar b) {
+	// Assumes that both x and b are not ground and
+	// c is still in the domain of x
+	// (x = c) <=> b
+	// ===========
+	// ( -(x = c)) \/ b=1) /\ ( (x = c) \/ - b=1)
+
+	clauses.register(x);
+	clauses.register(b);
+
+	int xLiteral = clauses.cpVarToBoolVar(x, c, true);
+	int bLiteral = clauses.cpVarToBoolVar(b, 1, true);
+
+	int[] clause = new int[2];
+	clause[0] = - xLiteral; 
+	clause[1] = bLiteral; 
+	clauses.addModelClause(clause);
+
+	clause = new int[2];
+	clause[0] = xLiteral; 
+	clause[1] = - bLiteral; 
+	clauses.addModelClause(clause);
+
+    }
+    
+    public void generate_neC_reif(IntVar x, int c, IntVar b) {
+	// Assumes that both x and b are not ground and
+	// c is still in the domain of x
+	// (x = c) <=> b
+	// ===========
+	// ( -(x = c)) \/ b=0) /\ ( (x = c) \/ - b=0)
+	
+	clauses.register(x);
+	clauses.register(b);
+
+	int xLiteral = clauses.cpVarToBoolVar(x, c, true);
+	int bLiteral = clauses.cpVarToBoolVar(b, 0, true);
+
+	int[] clause = new int[2];
+	clause[0] = - xLiteral; 
+	clause[1] = bLiteral; 
+	clauses.addModelClause(clause);
+
+	clause = new int[2];
+	clause[0] = xLiteral; 
+	clause[1] = - bLiteral; 
+	clauses.addModelClause(clause);
+
+    }
+
+    public void generate_inSet_reif(IntVar x, org.jacop.core.IntDomain d, IntVar b) {
+	// x = d1 \/ d = d2 \/ ... \/ x = dn <=> b
+	// ===========
+	// (x = d1 \/ d = d2 \/ ... \/ x = dn \/ -b) /\
+	// (-(x =d1) \/ b) /\ ( -(x = d2) \/ b) /\ ... /\ ( -(x = dn) \/ b)
+
+	clauses.register(x);
+	clauses.register(b);
+
+	int n = d.getSize();
+	int[] xLiterals = new int[n];
+	org.jacop.core.ValueEnumeration values = d.valueEnumeration();
+	int j=0;
+	while (values.hasMoreElements())
+	    xLiterals[j] = clauses.cpVarToBoolVar(x, values.nextElement(), true);
+	int bLiteral = clauses.cpVarToBoolVar(b, 1, true);
+
+	int[] clause = new int[n+1];
+	for (int i = 0; i < n; i++) 
+	    clause[i] = xLiterals[i];
+	clause[n-1] = - bLiteral; 
+	clauses.addModelClause(clause);
+
+	for (int i = 0; i < n; i++) {
+	    clause = new int[2];
+	    clause[0] = - xLiterals[i]; 
+	    clause[1] = bLiteral; 
+	    clauses.addModelClause(clause);
+	}
+    }
 
     public void impose() {
 
