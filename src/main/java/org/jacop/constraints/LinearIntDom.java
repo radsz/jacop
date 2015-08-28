@@ -103,6 +103,15 @@ public class LinearIntDom extends LinearInt {
 
     @Override
     public void consistency(Store store) {
+	propagate(relationType);
+    }
+
+    @Override
+    public void notConsistency(Store store) {
+	propagate(negRel[relationType]);
+    }
+
+    public void propagate(int rel) {
 
 	computeInit();
 
@@ -110,18 +119,18 @@ public class LinearIntDom extends LinearInt {
 
 	    store.propagationHasOccurred = false;
 
-	    switch (relationType) {
+	    switch (rel) {
 	    case eq:
 
 		if (domainSize() < limitDomainPruning)
 		    pruneEq(); // domain consistency
 		else {
 		    // bound consistency
-		    pruneLtEq();
-		    pruneGtEq();
+		    pruneLtEq(b);
+		    pruneGtEq(b);
 		}
 
-		if (sumMax <= b && sumMin >= b) 
+		if (!reified && sumMax <= b && sumMin >= b) 
 		    removeConstraint();
 
 		break;
@@ -132,48 +141,8 @@ public class LinearIntDom extends LinearInt {
 		else
 		    super.pruneNeq();
 
-	    	if (sumMin == sumMax && sumMin != b)
-	    	    removeConstraint();
-	    	break;
-	    default:
-		System.out.println("Not implemented relation in LinearIntDom; implemented == and != only.");
-		break;
-	    }
-
-	} while (store.propagationHasOccurred);
-    }
-
-    @Override
-    public void notConsistency(Store store) {
-
-	computeInit();
-
-	do {
-
-	    store.propagationHasOccurred = false;
-
-	    switch (negRel[relationType]) {
-	    case eq:
-		if (domainSize() < limitDomainPruning)
-		    pruneEq();
-		else {
-		    pruneLtEq();
-		    pruneGtEq();
-		}
-
-		if (sumMax <= b && sumMin >= b) 
-		    removeConstraint();
-
-		break;
-
-	    case ne:
-
-		if (domainSize() < limitDomainPruning)
-		    pruneNeq();
-		else
-		    super.pruneNeq();
-
-	    	if (sumMin > b || sumMax < b)
+	    	// if (!reified && sumMin == sumMax && sumMin != b)
+	    	if (!reified && (sumMin > b || sumMax < b))
 	    	    removeConstraint();
 	    	break;
 	    default:

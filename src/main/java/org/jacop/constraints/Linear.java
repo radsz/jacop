@@ -375,20 +375,16 @@ import org.jacop.core.Var;
 		    break;
 		case ne : //=============================================
 
-		    d1 = ((float)(min + lMaxArray[i]) / weights[i]);
-		    d2 = ((float)(max + lMinArray[i]) / weights[i]);
+		    int rem1 = (min + lMaxArray[i]) % weights[i];
+		    int rem2 = (max + lMinArray[i]) % weights[i];
+		    if (rem1 != 0 || rem2 != 0)
+			break;
 
-		    if (d1 <= d2) {
-			divMin = (int)( Math.round( Math.ceil ( d1 ) ) );
-			divMax = (int)( Math.round( Math.floor( d2 ) ) );
-		    }
-		    else {
-			divMin = (int)( Math.round( Math.ceil ( d2 ) ) );
-			divMax = (int)( Math.round( Math.floor( d1 ) ) );
-		    }
+		    divMin = (min + lMaxArray[i]) / weights[i];
+		    divMax = (max + lMinArray[i]) / weights[i];
 
-		    if ( divMin == divMax) 
-			v.domain.inComplement(store.level, v, divMin);
+		    if (divMin == divMax) 
+			v.domain.inComplement(store.level, v,divMin);
 		    break;
 		case gt : //=============================================
 

@@ -180,6 +180,15 @@ public class SumInt extends PrimitiveConstraint {
 
     @Override
     public void consistency(Store store) {
+	propagate(relationType);
+    }
+
+    @Override
+    public void notConsistency(Store store) {
+	propagate(negRel[relationType]);
+    }
+
+    public void propagate(int rel) {
 
 	computeInit();
 
@@ -187,11 +196,11 @@ public class SumInt extends PrimitiveConstraint {
 
 	    store.propagationHasOccurred = false;
 
-	    switch (relationType) {
+	    switch (rel) {
 	    case eq:
 
-		pruneLtEq();
-		pruneGtEq();
+		pruneLtEq(0);
+		pruneGtEq(0);
 
 		if (sumXmax == sumXmin && sum.singleton() && sum.value() == sumXmin) 
 		    removeConstraint();
@@ -199,14 +208,14 @@ public class SumInt extends PrimitiveConstraint {
 		break;
 
 	    case le:
-		pruneLtEq();
+		pruneLtEq(0);
 
 		if (sumXmax <= sum.min()) 
 		    removeConstraint();
 		break;
 
 	    case lt:
-		pruneLt();
+		pruneLtEq(1);
 
 		if (sumXmax < sum.min()) 
 		    removeConstraint();
@@ -219,73 +228,14 @@ public class SumInt extends PrimitiveConstraint {
 		break;
 	    case gt:
 
-		pruneGt();
+		pruneGtEq(1);
 
 		if (sumXmin > sum.max())
 		    removeConstraint();		
 		break;
 	    case ge:
 
-		pruneGtEq();
-
-		if (sumXmin >= sum.max())
-		    removeConstraint();
-
-		break;
-	    }
-
-	} while (store.propagationHasOccurred);
-    }
-
-    @Override
-    public void notConsistency(Store store) {
-		
-	computeInit();
-
-	do {
-
-	    store.propagationHasOccurred = false;
-
-	    switch (negRel[relationType]) {
-	    case eq:
-
-		pruneLtEq();
-		pruneGtEq();
-
-		if (sumXmax == sumXmin && sum.singleton() && sumXmin == sum.value()) 
-		    removeConstraint();
-
-		break;
-
-	    case le:
-		pruneLtEq();
-
-		if (sumXmax <= sum.min()) 
-		    removeConstraint();
-		break;
-
-	    case lt:
-		pruneLt();
-
-		if (sumXmax < sum.min()) 
-		    removeConstraint();
-		break;
-	    case ne:
-		pruneNeq();
-
-		if (sumXmin == sumXmax && sum.singleton() && sumXmin == sum.value())
-		    removeConstraint();
-		break;
-	    case gt:
-
-		pruneGt();
-
-		if (sumXmin > sum.max())
-		    removeConstraint();		
-		break;
-	    case ge:
-
-		pruneGtEq();
+		pruneGtEq(0);
 
 		if (sumXmin >= sum.max())
 		    removeConstraint();
@@ -377,9 +327,9 @@ public class SumInt extends PrimitiveConstraint {
         sumXmax = e;
     }
 
-    private void pruneLtEq() {
+    private void pruneLtEq(int b) {
 
-	sum.domain.inMin(store.level, sum, sumXmin);
+	sum.domain.inMin(store.level, sum, sumXmin + b);
 
         int min, max;
 	int sMax = sum.max();
@@ -388,7 +338,7 @@ public class SumInt extends PrimitiveConstraint {
             if (I[i] > (sMax - sumXmin)) {
                 min = x[i].min();
                 max = min + I[i];
-                if (pruneMax(x[i], sMax - sumXmin + min)) {
+                if (pruneMax(x[i], sMax - sumXmin + min - b)) {
                     int newMax = x[i].max();
                     sumXmax -= max - newMax;
                     I[i] = newMax - min;
@@ -397,9 +347,9 @@ public class SumInt extends PrimitiveConstraint {
         }
     }
 
-    private void pruneGtEq() {
+    private void pruneGtEq(int b) {
 
-	sum.domain.inMax(store.level, sum, sumXmax);
+	sum.domain.inMax(store.level, sum, sumXmax - b);
 
         int min, max;
 	int sMin = sum.min();
@@ -408,50 +358,10 @@ public class SumInt extends PrimitiveConstraint {
             if (I[i] > -(sMin - sumXmax)) {
                 max = x[i].max();
                 min = max - I[i];
-                if (pruneMin(x[i], (sMin - sumXmax + max))) {
+                if (pruneMin(x[i], (sMin - sumXmax + max + b))) {
                     int newMin = x[i].min();
                     sumXmin += newMin - min;
                     I[i] = max - newMin;
-                }
-            }
-        }
-    }
-
-    private void pruneLt() {
-
-	sum.domain.inMin(store.level, sum, sumXmin + 1);
-	
-        int min, max;
-	int sMax = sum.max();
-	
-        for (int i = 0; i < l; i++) {
-            if (I[i] >= sMax - sumXmin) {
-                min = x[i].min();
-                max = min + I[i];
-                if (pruneMax(x[i], sMax - sumXmin + min - 1)) {
-                    int newMax = x[i].max();
-                    sumXmax -= max - newMax;
-                    I[i] = newMax - min;
-                }
-            }
-        }
-    }
-
-    private void pruneGt() {
-
-	sum.domain.inMax(store.level, sum, sumXmax - 1);
-
-        int min, max;
-	int sMin = sum.min();
-	
-        for (int i = 0; i < l; i++) {
-            if (I[i] >= -(sMin - sumXmax)) {
-                max = x[i].max();
-                min = max - I[i];
-                if (pruneMin(x[i], sMin - sumXmax + max + 1)) {
-                    int nmin = x[i].min();
-                    sumXmin += nmin - min;
-                    I[i] = max - nmin;
                 }
             }
         }
@@ -535,7 +445,7 @@ public class SumInt extends PrimitiveConstraint {
         return sMin > sum.max() || sMax < sum.min();
     }
 
-    public boolean satisfiedLtEq() {
+    public boolean satisfiedLtEq(int b) {
 
 	int sMax = 0;
 	
@@ -543,21 +453,10 @@ public class SumInt extends PrimitiveConstraint {
             sMax += x[i].max();
         }
 
-        return  sMax <= sum.min();
+        return  sMax <= sum.min() - b;
     }
 
-    public boolean satisfiedLt() {
-
-	int sMax = 0;
-	
-        for (int i = 0; i < l; i++) {
-            sMax += x[i].max();
-        }
-
-        return  sMax < sum.min();
-    }
-
-    public boolean satisfiedGtEq() {
+    public boolean satisfiedGtEq(int b) {
 
 	int sMin = 0;
 	
@@ -565,18 +464,7 @@ public class SumInt extends PrimitiveConstraint {
             sMin += x[i].min();
         }
 
-        return  sMin >= sum.max();
-    }
-
-    public boolean satisfiedGt() {
-
-	int sMin = 0;
-	
-        for (int i = 0; i < l; i++) {
-            sMin += x[i].min();
-        }
-
-        return  sMin > sum.max();
+        return  sMin >= sum.max() + b;
     }
 
     @Override
@@ -606,15 +494,15 @@ public class SumInt extends PrimitiveConstraint {
 	case eq:
 	    return satisfiedEq();
 	case le:
-	    return satisfiedLtEq();
+	    return satisfiedLtEq(0);
 	case lt:
-	    return satisfiedLt();
+	    return satisfiedLtEq(1);
 	case ne:
 	    return satisfiedNeq();
 	case gt:
-	    return satisfiedGt();
+	    return satisfiedGtEq(1);
 	case ge:
-	    return satisfiedGtEq();
+	    return satisfiedGtEq(0);
 	}
 
 	return false;
