@@ -202,43 +202,49 @@ public class SumInt extends PrimitiveConstraint {
 		pruneLtEq(0);
 		pruneGtEq(0);
 
-		if (sumXmax == sumXmin && sum.singleton() && sum.value() == sumXmin) 
-		    removeConstraint();
+		// if (sumXmax == sumXmin && sum.singleton() && sum.value() == sumXmin) 
+		//     removeConstraint();
 
 		break;
 
 	    case le:
 		pruneLtEq(0);
 
-		if (sumXmax <= sum.min()) 
-		    removeConstraint();
+		if (!reified)
+		    if (sumXmax <= sum.min()) 
+			removeConstraint();
 		break;
 
 	    case lt:
 		pruneLtEq(1);
 
-		if (sumXmax < sum.min()) 
-		    removeConstraint();
+		if (!reified)
+		    if (sumXmax < sum.min()) 
+			removeConstraint();
 		break;
 	    case ne:
 		pruneNeq();
 
-		if (sumXmin == sumXmax && sum.singleton() && sumXmin != sum.value())
-		    removeConstraint();
+		if (!reified)
+		    // if (sumXmin == sumXmax && sum.singleton() && sumXmin != sum.value())
+		    if (sumXmin > sum.max() || sumXmax < sum.min())
+			removeConstraint();
 		break;
 	    case gt:
 
 		pruneGtEq(1);
 
-		if (sumXmin > sum.max())
-		    removeConstraint();		
+		if (!reified)
+		    if (sumXmin > sum.max())
+			removeConstraint();		
 		break;
 	    case ge:
 
 		pruneGtEq(0);
 
-		if (sumXmin >= sum.max())
-		    removeConstraint();
+		if (!reified)
+		    if (sumXmin >= sum.max())
+			removeConstraint();
 
 		break;
 	    }
@@ -316,8 +322,9 @@ public class SumInt extends PrimitiveConstraint {
         int min, max;
 
         for (int i = 0; i < l; i++) {
-            min = x[i].min();
-            max = x[i].max();
+	    IntDomain xd = x[i].dom();
+            min = xd.min();
+            max = xd.max();
             f += min;
             e += max;
             I[i] = (max - min);
@@ -430,7 +437,7 @@ public class SumInt extends PrimitiveConstraint {
             sMax += x[i].max();
 	}
 
-	return sMin == sMax && sMin == sum.min() && sMin == sum.max();
+	return sMax <= sum.min() && sMin >= sum.max(); //sMin == sMax && sMin == sum.min() && sMin == sum.max();
     }
 
     public boolean satisfiedNeq() {

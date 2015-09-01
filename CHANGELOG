@@ -1,3 +1,16 @@
+Version 4.3.1
+===========
+1. New circuit and subcircuit constraint definitions in minizinc that
+   accept arbitrary indexes (not always starting from 1).
+
+2. Xor of Linear constraint corrected. Linear is depracated and
+   LinearInt should be used instead.
+
+3. Correcting a bug in GCC.
+
+4. Improvements and corrections in Linear, LinearInt, SumInt,
+   LinearIntDom and LinearFloat.
+
 Version 4.3
 ===========
 1. Implementation of constraints ArgMin and ArgMax as well connection to

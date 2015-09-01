@@ -257,9 +257,9 @@ public class LinearInt extends PrimitiveConstraint {
 		pruneLtEq(b);
 		pruneGtEq(b);
 
-		if (!reified)
-		    if (sumMax <= b && sumMin >= b) 
-			removeConstraint();
+		// if (!reified)
+		//     if (sumMax <= b && sumMin >= b) 
+		// 	removeConstraint();
 
 		break;
 
@@ -282,7 +282,8 @@ public class LinearInt extends PrimitiveConstraint {
 		pruneNeq();
 
 		if (!reified)
-		    if (sumMin == sumMax && (sumMin > b || sumMax < b))
+		    // if (sumMin == sumMax && (sumMin > b || sumMax < b))
+		    if (sumMin > b || sumMax < b)
 			removeConstraint();
 		break;
 	    case gt:
@@ -376,16 +377,18 @@ public class LinearInt extends PrimitiveConstraint {
 	int i = 0;
 	// positive weights
         for (; i < pos; i++) {
-            min = x[i].min() * a[i];
-            max = x[i].max() * a[i];
+	    IntDomain xd = x[i].dom();
+            min = xd.min() * a[i];
+            max = xd.max() * a[i];
             f += min;
             e += max;
             I[i] = (max - min);
         }
 	// negative weights
         for (; i < l; i++) { 
-            min = x[i].max() * a[i];
-            max = x[i].min() * a[i];
+	    IntDomain xd = x[i].dom();
+            min = xd.max() * a[i];
+            max = xd.min() * a[i];
             f += min;
             e += max;
             I[i] = (max - min);

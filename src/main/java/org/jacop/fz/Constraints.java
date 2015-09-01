@@ -859,7 +859,10 @@ public class Constraints implements ParserTreeConstants {
 			else if (a2reduced.size() == 0)
 			    c = new OrBool(a1reduced, one);
 			else if (a1reduced.size() == 1 && a2reduced.size() == 1)
-			    c = new XlteqY(a2reduced.get(0), a1reduced.get(0));
+			    if (a1reduced.get(0).min() == 1)
+				return;
+			    else
+				c = new XlteqY(a2reduced.get(0), a1reduced.get(0));
 			else
 			    c = new BoolClause(a1reduced, a2reduced);
 
