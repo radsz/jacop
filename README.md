@@ -43,5 +43,4 @@ us to perform extensive testing with the help of other solvers as we can compare
 JaCoP is an ongoing activity. We are working on it in our free time. The most recent addition is Scala based DSL so
 it is easier to create your own constraint programs even in more intuitive manner.
 
-Currently, our focus is on providing a simple Java API for JaCoP as well as integrate it well with industrial quality
-technologies like OSGi and Spring.
+JaCoP is also available from maven repository. For details, please check INSTALL file.
