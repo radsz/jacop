@@ -1122,13 +1122,12 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar[] r = getVarArray((SimpleNode)node.jjtGetChild(2));
 		    IntVar b = getVariable((ASTScalarFlatExpr)node.jjtGetChild(3));
 
-		    // if (b.min() == b.max())
-		    // 	b = new IntVar(store, 0, b.max());
-
-		    // if (boundsConsistency) 
-		    //  	pose(new Cumulative(s, d, r, b, true, false, false));
-		    // else 
-		    pose(new Cumulative(s, d, r, b, true, true, false));
+		    if (s.length > 200)
+			// for large number of taks (>200)
+			// edge-finding is not used
+			pose(new Cumulative(s, d, r, b, false, true, false));
+		    else
+			pose(new Cumulative(s, d, r, b, true, true, false));
 
 		}
 		else if (p.startsWith("circuit", 6)) {
