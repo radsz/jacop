@@ -115,11 +115,11 @@ public class XmulYeqZ extends Constraint {
 		if (xSquare)  // X^2 = Z
 			do {
 				
-				store.propagationHasOccurred = false;
-
 				// Bounds for Z
 				IntervalDomain zBounds = IntDomain.mulBounds(x.min(), x.max(), x.min(), x.max());
 				z.domain.in(store.level, z, zBounds);
+
+				store.propagationHasOccurred = false;
 
 				// Bounds for X
 
@@ -137,13 +137,13 @@ public class XmulYeqZ extends Constraint {
 			} while(store.propagationHasOccurred);
 		else    // X*Y=Z
 			do {
-				
-				store.propagationHasOccurred = false;
 
 				// Bounds for X
  				IntervalDomain xBounds = IntDomain.divIntBounds(z.min(), z.max(), y.min(), y.max());
 
   				x.domain.in(store.level, x, xBounds);
+				
+				store.propagationHasOccurred = false;
 
 				// Bounds for Y
  				IntervalDomain yBounds = IntDomain.divIntBounds(z.min(), z.max(), x.min(), x.max());
