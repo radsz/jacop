@@ -652,6 +652,10 @@ public class VariablesParameters implements ParserTreeConstants {
 	    varArrayInt = null;
 	    if (initChild < ((ASTVarDeclItem)node).jjtGetNumChildren()) {
 		varArrayInt = getScalarFlatExpr_ArrayVar(store, node, initChild);
+		if (! var_introduced)
+		    for (int i=0; i<varArrayInt.length; i++)
+			if ( ! ground(varArrayInt[i]) )
+			    table.addSearchVar(varArrayInt[i]);
 	    }
 	    else { // no init values
 		varArrayInt = new IntVar[size];
@@ -673,6 +677,10 @@ public class VariablesParameters implements ParserTreeConstants {
 	    if (initChild < ((ASTVarDeclItem)node).jjtGetNumChildren()) {
 		// array initialization
 		varArraySet = getSetFlatExpr_ArrayVar(store, node, initChild);
+		if (! var_introduced)
+		    for (int i=0; i<varArraySet.length; i++)
+			if ( ! ground(varArraySet[i]) )
+			    table.addSearchSetVar(varArraySet[i]);
 	    }
 	    else { // no init values
 		varArraySet = new SetVar[size];
@@ -694,6 +702,10 @@ public class VariablesParameters implements ParserTreeConstants {
 	    if (initChild < ((ASTVarDeclItem)node).jjtGetNumChildren()) {
 		// array initialization
 		varArraySet = getSetFlatExpr_ArrayVar(store, node, initChild);
+		if (! var_introduced)
+		    for (int i=0; i<varArraySet.length; i++)
+			if ( ! ground(varArraySet[i]) )
+			    table.addSearchSetVar(varArraySet[i]);
 	    }
 	    else { // no init values
 		varArraySet = new SetVar[size];
@@ -718,6 +730,10 @@ public class VariablesParameters implements ParserTreeConstants {
 	    if (initChild < ((ASTVarDeclItem)node).jjtGetNumChildren()) {
 		// array initialization
 		varArraySet = getSetFlatExpr_ArrayVar(store, node, initChild);
+		if (! var_introduced)
+		    for (int i=0; i<varArraySet.length; i++)
+			if ( ! ground(varArraySet[i]) )
+			    table.addSearchSetVar(varArraySet[i]);
 	    }
 	    else { // no init values
 		varArraySet = new SetVar[size];
@@ -742,6 +758,10 @@ public class VariablesParameters implements ParserTreeConstants {
 	    if (initChild < ((ASTVarDeclItem)node).jjtGetNumChildren()) {
 		// array initialization
 		varArraySet = getSetFlatExpr_ArrayVar(store, node, initChild);
+		if (! var_introduced)
+		    for (int i=0; i<varArraySet.length; i++)
+			if ( ! ground(varArraySet[i]) )
+			    table.addSearchSetVar(varArraySet[i]);
 	    }
 	    else { // no init values
 		varArraySet = new SetVar[size];
