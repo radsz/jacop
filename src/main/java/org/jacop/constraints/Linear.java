@@ -55,7 +55,7 @@ import org.jacop.core.Var;
 /**
  * @deprecated  As of release 4.3.1 replaced by LinearInt constraint.
  */
-@Deprecated public class Linear extends PrimitiveConstraint {
+@Deprecated public class Linear extends Constraint {
     Store store;
 	static int counter = 1;
 
@@ -262,16 +262,16 @@ import org.jacop.core.Var;
 	    	    removeConstraint();
 	}
 
-	@Override
-	public void notConsistency(Store store) {
+	// @Override
+	// public void notConsistency(Store store) {
 
-	    pruneRelation(store, negRel[relationType]);
+	//     pruneRelation(store, negRel[relationType]);
 
-	    if (negRel[relationType] != eq)
-	    	if (notSatisfied()) 
-	    	    removeConstraint();
+	//     if (negRel[relationType] != eq)
+	//     	if (notSatisfied()) 
+	//     	    removeConstraint();
 		
-	}
+	// }
 
     private void pruneRelation(Store store, byte rel) {
 
@@ -459,43 +459,43 @@ import org.jacop.core.Var;
 		return IntDomain.BOUND;
 	}
 
-	@Override
-	public int getNestedPruningEvent(Var var, boolean mode) {
+	// @Override
+	// public int getNestedPruningEvent(Var var, boolean mode) {
 
-		// If consistency function mode
-		if (mode) {
-			if (consistencyPruningEvents != null) {
-				Integer possibleEvent = consistencyPruningEvents.get(var);
-				if (possibleEvent != null)
-					return possibleEvent;
-			}
-			return IntDomain.BOUND;
-		}
+	// 	// If consistency function mode
+	// 	if (mode) {
+	// 		if (consistencyPruningEvents != null) {
+	// 			Integer possibleEvent = consistencyPruningEvents.get(var);
+	// 			if (possibleEvent != null)
+	// 				return possibleEvent;
+	// 		}
+	// 		return IntDomain.BOUND;
+	// 	}
 
-		// If notConsistency function mode
-		else {
-			if (notConsistencyPruningEvents != null) {
-				Integer possibleEvent = notConsistencyPruningEvents.get(var);
-				if (possibleEvent != null)
-					return possibleEvent;
-			}
-			return IntDomain.BOUND;
-		}
+	// 	// If notConsistency function mode
+	// 	else {
+	// 		if (notConsistencyPruningEvents != null) {
+	// 			Integer possibleEvent = notConsistencyPruningEvents.get(var);
+	// 			if (possibleEvent != null)
+	// 				return possibleEvent;
+	// 		}
+	// 		return IntDomain.BOUND;
+	// 	}
 
-	}
+	// }
 
-	@Override
-	public int getNotConsistencyPruningEvent(Var var) {
+	// @Override
+	// public int getNotConsistencyPruningEvent(Var var) {
 
-		// If notConsistency function mode
-		if (notConsistencyPruningEvents != null) {
-			Integer possibleEvent = notConsistencyPruningEvents.get(var);
-			if (possibleEvent != null)
-				return possibleEvent;
-		}
-		return IntDomain.BOUND;
+	// 	// If notConsistency function mode
+	// 	if (notConsistencyPruningEvents != null) {
+	// 		Integer possibleEvent = notConsistencyPruningEvents.get(var);
+	// 		if (possibleEvent != null)
+	// 			return possibleEvent;
+	// 	}
+	// 	return IntDomain.BOUND;
 		
-	}
+	// }
 
 	@Override
 	public void impose(Store store) {
@@ -633,19 +633,19 @@ import org.jacop.core.Var;
 
     }
 
-    @Override
-    public boolean notSatisfied() {
+    // @Override
+    // public boolean notSatisfied() {
 
-	if (reified && backtrackHasOccured) {
+    // 	if (reified && backtrackHasOccured) {
 
-	    backtrackHasOccured = false;
+    // 	    backtrackHasOccured = false;
 
-	    recomputeBounds();
-	}
+    // 	    recomputeBounds();
+    // 	}
 
-	return entailed(negRel[relationType]);
+    // 	return entailed(negRel[relationType]);
 
-    }
+    // }
 
     private boolean entailed(byte rel) {
 	    
