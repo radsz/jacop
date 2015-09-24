@@ -1,5 +1,5 @@
 /**
- *  Solve.java 
+ *  DefaultSearchVars.java 
  *  This file is part of JaCoP.
  *
  *  JaCoP is a Java Constraint Programming solver. 
