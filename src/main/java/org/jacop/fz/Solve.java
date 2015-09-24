@@ -633,7 +633,9 @@ public class Solve implements ParserTreeConstants {
 	Var[] bool_search_variables = searchVars.getBoolVars();
 	FloatVar[] float_search_variables = searchVars.getFloatVars();
 
-	// if there are no output variables collect GUESSED SEARCH VARIABLES 
+	// if there are no output variables collect GUESSED SEARCH
+	// VARIABLES override selection if option
+	// "complementarySearch" or no search is defined is defined.
 	if ( (int_search_variables.length == 0 && bool_search_variables.length == 0 &&
 	      set_search_variables.length == 0 && float_search_variables.length == 0) ||
 	     options.complementarySearch() ) {
@@ -645,7 +647,6 @@ public class Solve implements ParserTreeConstants {
 	    bool_search_variables = searchVars.getBoolVars();
 	    float_search_variables = searchVars.getFloatVars();
 	}
-
 	
 	if (opt.getVerbose()) {
 	   System.out.println(searchVars);
@@ -658,7 +659,7 @@ public class Solve implements ParserTreeConstants {
 	    // add search containing int variables to be sure that they get a value
  	    SelectChoicePoint<Var> intSelect = new SimpleSelect<Var>(int_search_variables, 
    								     null,
-//    								     new JaCoP.search.MostConstrainedStatic<Var>(), 
+//    								     new org.jacop.search.MostConstrainedStatic<Var>(), 
 								     new IndomainMin());
 	    if (variable_selection == null)
 		variable_selection = intSelect;
@@ -676,15 +677,6 @@ public class Solve implements ParserTreeConstants {
 		    intSearch.setOptimize( true);
 		}
 	    }
-	    // else
-	    // 	intSearch.setSolutionListener(new EmptyListener<Var>());
-
-	    // if (searchAll) {
-  	    // 	intSearch.getSolutionListener().searchAll(true); 
-	    // 	intSearch.getSolutionListener().recordSolutions(false);
-	    // }	    
-	    // if (options.getNumberSolutions() > 0)
-	    // 	intSearch.getSolutionListener().setSolutionLimit(options.getNumberSolutions());
 
 	    // time-out option
 	    int to = options.getTimeOut();
@@ -699,7 +691,7 @@ public class Solve implements ParserTreeConstants {
 	    // add search containing boolean variables to be sure that they get a value
 	    SelectChoicePoint<Var> boolSelect = new SimpleSelect<Var>(bool_search_variables, 
 								      null,
-// 								      new JaCoP.search.MostConstrainedStatic<Var>(), 
+// 								      new org.jacop.search.MostConstrainedStatic<Var>(), 
 								      new IndomainMin());
 	    if (variable_selection == null)
 		variable_selection = boolSelect;
@@ -731,7 +723,7 @@ public class Solve implements ParserTreeConstants {
 	    DepthFirstSearch<Var> setSearch = new DepthFirstSearch<Var>();
 	    SelectChoicePoint<Var> setSelect = new SimpleSelect<Var>(set_search_variables, 
 								     null,
-// 								     new JaCoP.search.MostConstrainedStatic<Var>(), 
+// 								     new org.jacop.search.MostConstrainedStatic<Var>(), 
 								     new IndomainSetMin());
 	    if (variable_selection == null)
 		variable_selection = setSelect;
