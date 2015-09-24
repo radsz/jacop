@@ -725,7 +725,7 @@ public class SearchItem implements ParserTreeConstants {
 	    if (search_variables == null)
 		s += "[]";
 	    else 
-		s += Arrays.asList(search_variables);
+		s += "array1d(1.."+ search_variables.length + ", " + Arrays.asList(search_variables);
 	    s += ", "+explore + ", " + var_selection_heuristic+", "+indomain;
 	    if (floatSearch)
 		s += ", " + precision;

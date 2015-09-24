@@ -68,7 +68,9 @@ public class Options {
     boolean runSearch = true;
 
     boolean use_sat = false;
-	
+
+    boolean complementary_search = false;
+    
 	/**
 	 * It constructs an Options object and parses all the parameters/options provided 
 	 * to flatzinc to jacop parser.
@@ -103,6 +105,9 @@ public class Options {
 						"        override annotation \":: domain\" and select constraints\n"+
 						"        implementing bounds consistency (default false).\n"+
 						"    -sat use SAT solver for boolean constraints.\n" +
+						"    -cs, --complementary-search - try to gather all model, non-introduced\n" +
+						"         variables to define the final or default search, instead of using\n" +
+						"         output variables only.\n" +
 						"    -i, --interval print intervals instead of values for floating variables\n"+
 						"    -p <value>, --precision <value> defines precision for floating operations\n"+
 						"        overrides precision definition in search annotation."
@@ -160,6 +165,10 @@ public class Options {
 				}
 				else if (args[i].equals("-b") || args[i].equals("--bound")) {
 				    boundConsistency = true;
+				    i++;
+				}
+				else if (args[i].equals("-cs") || args[i].equals("--complementary-search")) {
+				    complementary_search = true;
 				    i++;
 				}
 				else {
@@ -292,6 +301,13 @@ public class Options {
 		return use_sat;
 	}
 
+    	/**
+	 * It defines wheter additional search should use output variables only (false, default). 
+	 * or should try to collect all non introduced variables (true).
+	 */
+        public boolean complementarySearch() {
+	    return complementary_search;
+	}
 }
 
 

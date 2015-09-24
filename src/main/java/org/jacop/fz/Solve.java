@@ -621,83 +621,35 @@ public class Solve implements ParserTreeConstants {
 
 	DepthFirstSearch<Var>[] intAndSetSearch = new DepthFirstSearch[4];
 
-	Var[] int_search_variables = null,
-	    set_search_variables = null,
-	    bool_search_variables = null;
-	FloatVar[] float_search_variables = null;
-
-	// collect integer & bool variables for search
-	int int_varSize = 0, bool_varSize=0;
-	for (int i=0; i<dictionary.defaultSearchVariables.size(); i++)
-	    if (dictionary.defaultSearchVariables.get(i) instanceof org.jacop.core.BooleanVar)
-		bool_varSize++;
-	    else
-		int_varSize++;
-
-	for (int i=0; i<dictionary.defaultSearchArrays.size(); i++)
-	    if (dictionary.defaultSearchArrays.get(i).length != 0)
-		if (dictionary.defaultSearchArrays.get(i)[0]  instanceof org.jacop.core.BooleanVar)
-		    bool_varSize += dictionary.defaultSearchArrays.get(i).length;
-		else
-		    int_varSize += dictionary.defaultSearchArrays.get(i).length;
-
-
-	int_search_variables = new IntVar[int_varSize];
-	bool_search_variables = new IntVar[bool_varSize];
-
-	int bool_n=0, int_n=0;
-	for (int i=0; i<dictionary.defaultSearchArrays.size(); i++)
-	    for (int j=0; j<dictionary.defaultSearchArrays.get(i).length; j++) {
-		Var v = dictionary.defaultSearchArrays.get(i)[j];
- 		if (v  instanceof org.jacop.core.BooleanVar) 
- 		    bool_search_variables[bool_n++] = v;
-		else
- 		    int_search_variables[int_n++] = v;
-	    }
-	for (int i=0; i<dictionary.defaultSearchVariables.size(); i++) {
-	    Var v = dictionary.defaultSearchVariables.get(i);
-	    if (v  instanceof org.jacop.core.BooleanVar) 
-		bool_search_variables[bool_n++] = v;
-	    else
-		int_search_variables[int_n++] = v;
+	DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
+	
+	if (! options.complementarySearch() && label != null) {
+	    // ==== Collect ALL OUTPUT variables ====
+	    searchVars.outputVars();
 	}
- 	java.util.Arrays.sort(int_search_variables, new DomainSizeComparator<Var>());
 
-	// collect set variables for search
-	int n=0;
-	int varSize = dictionary.defaultSearchSetVariables.size();
-	for (int i=0; i<dictionary.defaultSearchSetArrays.size(); i++)
-	    varSize += dictionary.defaultSearchSetArrays.get(i).length;
+	Var[] int_search_variables = searchVars.getIntVars();
+	Var[] set_search_variables = searchVars.getSetVars();
+	Var[] bool_search_variables = searchVars.getBoolVars();
+	FloatVar[] float_search_variables = searchVars.getFloatVars();
 
-	set_search_variables = new SetVar[varSize];
-	for (int i=0; i<dictionary.defaultSearchSetArrays.size(); i++)
-	    for (int j=0; j<dictionary.defaultSearchSetArrays.get(i).length; j++)
-		set_search_variables[n++] = dictionary.defaultSearchSetArrays.get(i)[j];
-	for (int i=0; i<dictionary.defaultSearchSetVariables.size(); i++)
-	    set_search_variables[n++] = dictionary.defaultSearchSetVariables.get(i);
-	// =====
+	// if there are no output variables collect GUESSED SEARCH VARIABLES 
+	if ( (int_search_variables.length == 0 && bool_search_variables.length == 0 &&
+	      set_search_variables.length == 0 && float_search_variables.length == 0) ||
+	     options.complementarySearch() ) {
 
+	    searchVars.defaultVars();
 
-	// collect float variables for search
-	n=0;
-	varSize = dictionary.defaultSearchFloatVariables.size();
-	for (int i=0; i<dictionary.defaultSearchFloatArrays.size(); i++)
-	    varSize += dictionary.defaultSearchFloatArrays.get(i).length;
+	    int_search_variables = searchVars.getIntVars();
+	    set_search_variables = searchVars.getSetVars();
+	    bool_search_variables = searchVars.getBoolVars();
+	    float_search_variables = searchVars.getFloatVars();
+	}
 
-	float_search_variables = new FloatVar[varSize];
-	for (int i=0; i<dictionary.defaultSearchFloatArrays.size(); i++)
-	    for (int j=0; j<dictionary.defaultSearchFloatArrays.get(i).length; j++)
-		float_search_variables[n++] = (FloatVar)dictionary.defaultSearchFloatArrays.get(i)[j];
-	for (int i=0; i<dictionary.defaultSearchFloatVariables.size(); i++)
-	    float_search_variables[n++] = (FloatVar)dictionary.defaultSearchFloatVariables.get(i);
-	// =====
-
+	
 	if (opt.getVerbose()) {
-	    System.out.println ("%% default int search variables = " + java.util.Arrays.asList(int_search_variables));
-	    System.out.println ("%% default boolean search variables = " + java.util.Arrays.asList(bool_search_variables));
-	    System.out.println ("%% default set search variables = " + java.util.Arrays.asList(set_search_variables));
-	    System.out.println ("%% default float search variables = " + java.util.Arrays.asList(float_search_variables));
-// 	System.out.println ("cost = " + costVariable);
+	   System.out.println(searchVars);
+	   // System.out.println ("cost = " + costVariable);
 	}
 
 	DepthFirstSearch<Var> lastSearch = label;
