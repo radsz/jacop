@@ -437,7 +437,8 @@ public class Assignment extends Constraint {
 			if (i < d.length - 1)
 				result.append(", ");
 		}
-		result.append("])");
+		result.append("], ");
+		result.append(shiftX + ", " + shiftD + ")");
 
 		return result.toString();
 	}

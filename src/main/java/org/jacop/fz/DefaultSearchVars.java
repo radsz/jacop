@@ -240,22 +240,22 @@ public class DefaultSearchVars {
 	buf.append("%% default int search variables = array1d(1..");
 	buf.append(int_search_variables.length);
 	buf.append(Arrays.asList(int_search_variables));
-	buf.append(")");
+	buf.append(")\n");
 		   
 	buf.append("%% default boolean search variables = array1d(1..");
 	buf.append(bool_search_variables.length);
 	buf.append(Arrays.asList(bool_search_variables));
-	buf.append(")");
+	buf.append(")\n");
 		   
 	buf.append("%% default set search variables = array1d(1..");
 	buf.append(set_search_variables.length);
 	buf.append(Arrays.asList(set_search_variables));
-	buf.append(")");
+	buf.append(")\n");
 		   
 	buf.append("%% default float search variables = array1d(1..");
 	buf.append(float_search_variables.length);
 	buf.append(Arrays.asList(float_search_variables));
-	buf.append(")");
+	buf.append(")\n");
 		   
 	return buf.toString();
     }
