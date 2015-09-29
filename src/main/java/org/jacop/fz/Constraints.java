@@ -1155,7 +1155,7 @@ public class Constraints implements ParserTreeConstants {
 			// intiallization; we collect all vectors and pose it at the end when all constraints are posed
 			// pose(new Alldistinct(v));
 
-			if (boundsConsistency) {
+			if (boundsConsistency || opt.getBoundConsistency()) {
 			    pose(new Alldiff(v));
   			    // System.out.println("Alldiff imposed");
 			}
