@@ -253,7 +253,7 @@ public class AndBool extends PrimitiveConstraint {
 	    if (start == l - 1)
 		list[index_01].domain.in(store.level, list[index_01], 0, 0);
 
-	if (l < 3)
+	if ((l-start) < 3)
 	    queueIndex = 0;
     }
 

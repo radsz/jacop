@@ -32,7 +32,7 @@ package org.jacop.fz;
 
 import java.util.Comparator;
 import java.util.Arrays;
-import java.util.ArrayList;
+import java.util.LinkedHashSet;
 
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
@@ -78,10 +78,10 @@ public class DefaultSearchVars {
 
 	// ==== Collect ALL OUTPUT variables ====
 
-	ArrayList<Var> int_vars = new ArrayList<Var>();
-	ArrayList<Var> bool_vars = new ArrayList<Var>();
-	ArrayList<Var> set_vars = new ArrayList<Var>();
-	ArrayList<Var> float_vars = new ArrayList<Var>();	
+	LinkedHashSet<Var> int_vars = new LinkedHashSet<Var>();
+	LinkedHashSet<Var> bool_vars = new LinkedHashSet<Var>();
+	LinkedHashSet<Var> set_vars = new LinkedHashSet<Var>();
+	LinkedHashSet<Var> float_vars = new LinkedHashSet<Var>();	
 
 	// collect output arrays
 	for (int i=0; i<dictionary.outputArray.size(); i++)
@@ -129,8 +129,8 @@ public class DefaultSearchVars {
      */
     void defaultVars() {
 
-	ArrayList<Var> int_vars = new ArrayList<Var>();
-	ArrayList<Var> bool_vars = new ArrayList<Var>();
+	LinkedHashSet<Var> int_vars = new LinkedHashSet<Var>();
+	LinkedHashSet<Var> bool_vars = new LinkedHashSet<Var>();
 
 	for (int i=0; i<dictionary.defaultSearchArrays.size(); i++)
 	    for (Var v : dictionary.defaultSearchArrays.get(i)) {
@@ -150,7 +150,7 @@ public class DefaultSearchVars {
 
 	java.util.Arrays.sort(int_search_variables, new DomainSizeComparator<Var>());
 
-	ArrayList<Var> set_vars = new ArrayList<Var>();
+	LinkedHashSet<Var> set_vars = new LinkedHashSet<Var>();
 	for (int i=0; i<dictionary.defaultSearchSetArrays.size(); i++)
 	    for (Var v : dictionary.defaultSearchSetArrays.get(i))
 		 set_vars.add(v);
@@ -159,8 +159,9 @@ public class DefaultSearchVars {
 
 	set_search_variables = set_vars.toArray(new SetVar[set_vars.size()]);
 
-	ArrayList<FloatVar> float_vars = new ArrayList<FloatVar>();
-	for (int i=0; i<dictionary.defaultSearchFloatArrays.size(); i++)
+	LinkedHashSet<FloatVar> float_vars = new LinkedHashSet<FloatVar>();
+
+    for (int i=0; i<dictionary.defaultSearchFloatArrays.size(); i++)
 	    for (Var v : dictionary.defaultSearchFloatArrays.get(i))
 		 float_vars.add((FloatVar)v);
 	for (Var v : dictionary.defaultSearchFloatVariables)

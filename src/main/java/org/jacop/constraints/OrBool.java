@@ -247,7 +247,7 @@ public class OrBool extends PrimitiveConstraint {
 	    for (int i = start; i < l; i++)
 		list[i].domain.in(store.level, list[i], 0, 0);
 
-	if (l < 3)
+	if ((l-start) < 3)
 	    queueIndex = 0;
 
     }
