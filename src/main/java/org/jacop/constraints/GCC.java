@@ -330,7 +330,7 @@ public class GCC extends Constraint {
 				// if v is singleton and is an X variable
 				if (var.singleton() && xNodesHash.containsKey(var)) {
 					// if 
-					if (xNodesHash.get(var) <= stamp.value()) {
+				    if (xNodesHash.get(var) < stamp.value()) { // changing '<=' to '<' (KK)
 						if (debug)
 							System.out.println(" in xVariableToChange: " + var);
 						if (stamp.value() > 0) {
