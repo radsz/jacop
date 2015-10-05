@@ -40,13 +40,11 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 
 /**
- * SumInt constraint implements the weighted summation over several
- * variables . 
+ * SumInt constraint implements the summation over several variables.
  *
  * sum(i in 1..N)(xi) = sum
  *
- * It provides the weighted sum from all variables on the list.
- * The weights are integers.
+ * It provides the sum from all variables on the list.
  *
  * This implementaiton is based on 
  * "Bounds Consistency Techniques for Long Linear Constraints"
@@ -337,6 +335,7 @@ public class SumInt extends PrimitiveConstraint {
     private void pruneLtEq(int b) {
 
 	sum.domain.inMin(store.level, sum, sumXmin + b);
+	store.propagationHasOccurred = false;
 
         int min, max;
 	int sMax = sum.max();
@@ -357,6 +356,7 @@ public class SumInt extends PrimitiveConstraint {
     private void pruneGtEq(int b) {
 
 	sum.domain.inMax(store.level, sum, sumXmax - b);
+	store.propagationHasOccurred = false;
 
         int min, max;
 	int sMin = sum.min();
@@ -378,6 +378,7 @@ public class SumInt extends PrimitiveConstraint {
 
         if (sumXmin == sumXmax) 
 	    sum.domain.inComplement(store.level, sum, sumXmin);
+	store.propagationHasOccurred = false;
 
         int min, max;
 

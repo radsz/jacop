@@ -2465,10 +2465,10 @@ public class Constraints implements ParserTreeConstants {
 		    throw store.failException;
 	    }
 
-	    Constraint c = new SumWeight(p2, p1, par3);
-	    // System.out.println (c);
-
-	    pose(c);
+	    if (allWeightsOne(p1))
+		pose(new SumBool(store, p2, par3));
+	    else
+		pose(new SumWeight(p2, p1, par3));
 	    return;
 	}
 
@@ -2680,8 +2680,11 @@ public class Constraints implements ParserTreeConstants {
 			for (int i=0; i<p2.length; i++)
 			    if (i != pos)
 				vect[n++] = p2[i];
-			pose(new SumInt(store, vect, "==", p2[pos]));
-			// pose(new Sum(vect, p2[pos]));
+
+			if (boolSum(vect))
+			    pose(new SumBool(store, vect, p2[pos]));
+			else
+			    pose(new SumInt(store, vect, "==", p2[pos]));
 		    }
 		    else if (allWeightsOne(p1)) {
 			IntVar v;
@@ -2691,8 +2694,10 @@ public class Constraints implements ParserTreeConstants {
 			    v = one;
 			else
 			    v = new IntVar(store, p3, p3);
-			pose(new SumInt(store, p2, "==", v));
-			// pose(new Sum(p2, v));
+			if (boolSum(p2))
+			    pose(new SumBool(store, p2, v));
+			else
+			    pose(new SumInt(store, p2, "==", v));
 		    }
 		    else if (allWeightsMinusOne(p1)) {
 			IntVar v;
@@ -2700,8 +2705,10 @@ public class Constraints implements ParserTreeConstants {
 			    v = zero;
 			else
 			    v = new IntVar(store, -p3, -p3);
-			// pose(new SumInt(p2, v));
-			pose(new SumInt(store, p2, "==", v));
+			if (boolSum(p2))
+			    pose(new SumBool(store, p2, v));
+			else
+			    pose(new SumInt(store, p2, "==", v));
 		    }
 		    else {
 			pose(new LinearInt(store, p2, p1, "==", p3));
@@ -2881,6 +2888,13 @@ public class Constraints implements ParserTreeConstants {
 	}
     }
 
+    boolean boolSum(IntVar[] vs) {
+	for (IntVar v : vs) 
+	    if (v.min() < 0 || v.max() > 1)
+		return false;
+	return true;
+    }
+    
     boolean paramZero(IntVar v) {
 	return v.singleton() && v.value() == 0;
     }

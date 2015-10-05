@@ -200,7 +200,7 @@ public class VariablesParameters implements ParserTreeConstants {
 
 	    if (lowInterval < MIN_INT || highInterval > MAX_INT)
 		throw new ArithmeticException("Bounds for " + ident + ": "+ lowInterval +".."+ highInterval + " are too low/high");  
-		
+
 	    if (interval)
 		varInt = new IntVar(store, ident, new IntervalDomain(lowInterval, highInterval));
 	    else
