@@ -32,12 +32,12 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 
 import org.jacop.core.IntVar;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.core.TimeStamp;
 
 /**
  * SumBool constraint implements the summation over several
@@ -72,6 +72,8 @@ public class SumBool extends Constraint {
      */
     int l;
 
+    private TimeStamp<GroundParameters> grounded;
+    
     /**
      * It specifies the arguments required to be saved by an XML format as well as 
      * the constructor being called to recreate an object from an XML format.
@@ -142,30 +144,49 @@ public class SumBool extends Constraint {
 
     @Override
     public void consistency(Store store) {
-        int min=0, max=0;
+	GroundParameters gp = grounded.value();
+	int strt = gp.start;
+	int gSum = gp.sum;
+	int min = gSum;
+	int max = gSum;
 
-        for (int i = 0; i < l; i++) {
+        for (int i = strt; i < l; i++) {
 	    IntDomain xd = x[i].dom();
-            min += xd.min();
-            max += xd.max();
+	    int lb = xd.min();
+	    int ub = xd.max();
+            min += lb;
+            max += ub;
+
+	    if (lb == ub) {
+	    	swap(strt, i);
+	    	strt++;
+		gSum += lb;
+	    }
 	}
-	
+	grounded.update(new GroundParameters(strt, gSum));
+
 	sum.domain.in(store.level, sum, min, max);
 
         if (sum.singleton() && min != max) {
 	    int sumValue = sum.value();
             if (sumValue == min) 
-                for (IntVar v : x) 
-                    if (! v.singleton()) 
-                        v.domain.in(store.level, v, 0, 0);
+		for (int i = strt; i < l; i++)
+		    x[i].domain.in(store.level, x[i], 0, 0);
 
             if (sumValue == max) 
-                for (IntVar v : x) 
-                    if (! v.singleton()) 
-                        v.domain.in(store.level, v, 1, 1);
+		for (int i = strt; i < l; i++) 
+		    x[i].domain.in(store.level, x[i], 1, 1);
 	}
     }
     
+    private void swap(int i, int j) {
+	if ( i != j) {
+	    IntVar tmp = x[i];
+	    x[i] = x[j];
+	    x[j] = tmp;
+	}
+    }
+
     @Override
     public int getConsistencyPruningEvent(Var var) {
 
@@ -184,6 +205,8 @@ public class SumBool extends Constraint {
 	if (x == null)
 	    return;
 
+	grounded = new TimeStamp<GroundParameters>(store, new GroundParameters());
+	
 	for (Var V : x)
 	    V.putModelConstraint(this, getConsistencyPruningEvent(V));
 
@@ -252,5 +275,20 @@ public class SumBool extends Constraint {
 	    for (Var v : x) v.weight++;
 	}
 	sum.weight++;
+    }
+
+    private class GroundParameters {
+
+	int start = 0;
+	int sum = 0;
+
+    	GroundParameters() {
+	}
+
+    	GroundParameters(int p, int s) {
+	    start = p;
+	    sum = s;
+	}
+	    
     }
 }
