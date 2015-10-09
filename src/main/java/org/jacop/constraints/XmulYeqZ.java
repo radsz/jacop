@@ -96,6 +96,8 @@ public class XmulYeqZ extends Constraint {
 		this.x = x;
 		this.y = y;
 		this.z = z;
+
+		checkForOverflow();
 	}
 
 	@Override
@@ -201,7 +203,15 @@ public class XmulYeqZ extends Constraint {
 		return id() + " : XmulYeqZ(" + x + ", " + y + ", " + z + " )";
 	}
 
+        private void checkForOverflow() {
 
+	    int n = IntDomain.multiply(x.min(), y.min());
+	    n = IntDomain.multiply(x.min(), y.max());
+	    n = IntDomain.multiply(x.max(), y.min());
+	    n = IntDomain.multiply(x.max(), y.max());
+
+	}
+	
 	@Override
 	public void increaseWeight() {
 		if (increaseWeight) {

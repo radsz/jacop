@@ -91,6 +91,8 @@ public class XdivYeqZ extends Constraint {
 		this.y = y;
 		this.z = z;
 
+		checkForOverflow();
+
 	}
 
 	@Override
@@ -212,6 +214,15 @@ public class XdivYeqZ extends Constraint {
 		}
 	}
 
+        private void checkForOverflow() {
+
+	    int n = IntDomain.multiply(z.min(), y.min());
+	    n = IntDomain.multiply(z.min(), y.max());
+	    n = IntDomain.multiply(z.max(), y.min());
+	    n = IntDomain.multiply(z.max(), y.max());
+
+	}
+	
     int div(int a, int b) {
 	return (int)Math.floor((float)a / (float)b);
     }

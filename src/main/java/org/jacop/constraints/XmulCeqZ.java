@@ -91,6 +91,8 @@ public class XmulCeqZ extends PrimitiveConstraint {
 		this.x = x;
 		this.c = c;
 		this.z = z;
+
+		checkForOverflow();
 	}
 
 	@Override
@@ -242,6 +244,13 @@ public class XmulCeqZ extends PrimitiveConstraint {
 		return id() + " : XmulCeqZ(" + x + ", " + c + ", " + z + " )";
 	}
 
+        private void checkForOverflow() {
+
+	    int n = IntDomain.multiply(x.min(), c);
+	    n = IntDomain.multiply(x.max(), c);
+
+	}
+	
 	@Override
 	public void increaseWeight() {
 		if (increaseWeight) {

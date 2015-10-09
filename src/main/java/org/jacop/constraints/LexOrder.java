@@ -32,14 +32,14 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.Hashtable;
+import java.util.HashMap;
 
 import org.jacop.core.Var;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.util.SimpleHashSet;
 // import org.jacop.core.TimeStamp;
 
 /**
@@ -85,8 +85,8 @@ public class LexOrder extends Constraint {
     private int alpha;
     private int beta;
 
-    LinkedHashSet<Integer> indexQueue = new LinkedHashSet<Integer>();
-    Hashtable<IntVar, Integer> varToIndex = new Hashtable<IntVar, Integer>();
+    SimpleHashSet<Integer> indexQueue = new SimpleHashSet<Integer>();
+    HashMap<IntVar, Integer> varToIndex = new HashMap<IntVar, Integer>();
 
     /**
      * It creates a lexicographical order for vectors x and y, 
@@ -184,10 +184,11 @@ public class LexOrder extends Constraint {
 
 	    store.propagationHasOccurred = false;
 
-	    LinkedHashSet<Integer> index = indexQueue;
-	    indexQueue = new LinkedHashSet<Integer>();
+	    SimpleHashSet<Integer> index = indexQueue;
+	    indexQueue = new SimpleHashSet<Integer>();
 
-	    for (int i : index) {
+	    while (!index.isEmpty()) {
+		int i = index.removeFirst();
 
 		// if ( !( i >= beta.value() || satisfied) )
 		if ( !( i >= beta || satisfied) )

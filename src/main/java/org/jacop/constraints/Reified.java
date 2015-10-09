@@ -126,11 +126,11 @@ public class Reified extends Constraint {
 
 	    if (c.satisfied()) {
 		b.domain.in(store.level, b, 1, 1);
-		removeConstraint();
+		removeSatConstraint();
 	    }
 	    else if (c.notSatisfied()) {
 		b.domain.in(store.level, b, 0, 0);
-		removeConstraint();
+		removeSatConstraint();
 	    }
 	    else if (b.max() == 0) // C must be false
 		c.notConsistency(store);
@@ -200,10 +200,21 @@ public class Reified extends Constraint {
 	@Override
 	public void removeConstraint() {
 
-		b.removeConstraint(this);
+	    b.removeConstraint(this);
 
-		for (Var V : c.arguments())
-			V.removeConstraint(this);
+	    for (Var v : c.arguments())
+		v.removeConstraint(this);
+
+	}
+
+	private void removeSatConstraint() {
+
+	    // b must be gound here and it is not needed to remove
+	    // this constraint from b
+	    // b.removeConstraint(this);
+
+	    for (Var v : c.arguments())
+		v.removeConstraint(this);
 
 	}
 

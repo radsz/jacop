@@ -58,6 +58,16 @@ public class SumBool extends Constraint {
     static int idNumber = 1;
 
     /**
+     * Defines relations
+     */
+    final static byte eq=0, le=1, lt=2, ne=3, gt=4, ge=5;
+
+    /**
+     * It specifies what relations is used by this constraint
+     */
+    public byte relationType;
+
+    /**
      * It specifies a list of variables being summed.
      */
     IntVar x[];
@@ -85,10 +95,10 @@ public class SumBool extends Constraint {
      * @param weights
      * @param sum
      */
-    public SumBool(Store store, IntVar[] list, IntVar sum) {
+    public SumBool(Store store, IntVar[] list, String rel, IntVar sum) {
 
 	commonInitialization(store, list, sum);
-	
+	this.relationType = relation(rel);
 
     }
 	
@@ -99,9 +109,10 @@ public class SumBool extends Constraint {
      * @param sum variable containing the sum of weighted variables.
      */
     public SumBool(Store store, ArrayList<? extends IntVar> variables,
-			IntVar sum) {
+			String rel, IntVar sum) {
 
-		commonInitialization(store, variables.toArray(new IntVar[variables.size()]), sum);
+	commonInitialization(store, variables.toArray(new IntVar[variables.size()]), sum);
+	this.relationType = relation(rel);
     }
 
 
@@ -163,20 +174,90 @@ public class SumBool extends Constraint {
 		gSum += lb;
 	    }
 	}
-	grounded.update(new GroundParameters(strt, gSum));
 
-	sum.domain.in(store.level, sum, min, max);
+	switch (relationType) {
+	case eq: 
 
-        if (sum.singleton() && min != max) {
-	    int sumValue = sum.value();
-            if (sumValue == min) 
-		for (int i = strt; i < l; i++)
-		    x[i].domain.in(store.level, x[i], 0, 0);
+	    sum.domain.in(store.level, sum, min, max);
 
-            if (sumValue == max) 
-		for (int i = strt; i < l; i++) 
-		    x[i].domain.in(store.level, x[i], 1, 1);
+	    if (sum.singleton() && min != max) {
+		int sumValue = sum.value();
+		if (sumValue == min) 
+		    for (int i = strt; i < l; i++)
+			x[i].domain.in(store.level, x[i], 0, 0);
+
+		if (sumValue == max) 
+		    for (int i = strt; i < l; i++) 
+			x[i].domain.in(store.level, x[i], 1, 1);
+	    }
+	    break;
+	case le:	 
+
+	    sum.domain.inMin(store.level, sum, min);
+
+	    if (max <= sum.min()) 
+		removeConstraint();
+
+	    if (sum.singleton() && min != max) {
+		int sumValue = sum.value();
+		if (sumValue == min) 
+		    for (int i = strt; i < l; i++)
+			x[i].domain.in(store.level, x[i], 0, 0);
+	    }
+	    break;
+	case lt:
+
+	    sum.domain.inMin(store.level, sum, min + 1);
+
+	    if (max < sum.min()) 
+		removeConstraint();
+
+	    if (sum.singleton() && min != max) {
+		int sumValue = sum.value();
+		if (sumValue - 1 == min) 
+		    for (int i = strt; i < l; i++)
+			x[i].domain.in(store.level, x[i], 0, 0);
+
+	    }
+	    break;
+	case ne:
+
+	    if (min == max ) 
+		sum.domain.inComplement(store.level, sum, min);
+
+	    break;
+	case gt:
+
+	    sum.domain.inMax(store.level, sum, max - 1);
+
+	    if (min > sum.max()) 
+		removeConstraint();
+
+	    if (sum.singleton() && min != max) {
+		int sumValue = sum.value();
+
+		if (sumValue + 1 == max) 
+		    for (int i = strt; i < l; i++) 
+			x[i].domain.in(store.level, x[i], 1, 1);
+	    }
+	    break;
+	case ge:
+
+	    sum.domain.inMax(store.level, sum, max);
+
+	    if (min >= sum.max()) 
+		removeConstraint();
+
+	    if (sum.singleton() && min != max) {
+		int sumValue = sum.value();
+
+		if (sumValue == max) 
+		    for (int i = strt; i < l; i++) 
+			x[i].domain.in(store.level, x[i], 1, 1);
+	    }
+	    break;
 	}
+	grounded.update(new GroundParameters(strt, gSum));
     }
     
     private void swap(int i, int j) {
@@ -238,6 +319,44 @@ public class SumBool extends Constraint {
 
     }
 
+    public byte relation(String r) {
+	if (r.equals("==")) 
+	    return eq;
+	else if (r.equals("=")) 
+	    return eq;
+	else if (r.equals("<"))
+	    return lt;
+	else if (r.equals("<="))
+	    return le;
+	else if (r.equals("=<"))
+	    return le;
+	else if (r.equals("!="))
+	    return ne;
+	else if (r.equals(">"))
+	    return gt;
+	else if (r.equals(">="))
+	    return ge;
+	else if (r.equals("=>"))
+	    return ge;
+	else {
+	    System.err.println ("Wrong relation symbol in SumInt constraint " + r + "; assumed ==");
+	    return eq;
+	}
+    }
+
+    public String rel2String() {
+	switch (relationType) {
+	case eq : return "==";
+	case lt : return "<";
+	case le : return "<=";
+	case ne : return "!=";
+	case gt : return ">";
+	case ge : return ">=";
+	}
+
+	return "?";
+    }
+
     void checkForOverflow() {
 
 	int sMin=0, sMax=0;
@@ -263,7 +382,7 @@ public class SumBool extends Constraint {
 	}
 	result.append("], ");
 	
-	result.append(sum).append( " )" );
+	result.append(rel2String()).append(", ").append(sum).append( " )" );
 
 	return result.toString();
 

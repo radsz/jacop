@@ -33,18 +33,13 @@ package org.jacop.constraints;
 
 import java.util.ArrayList;
 
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.core.TimeStamp;
 
 /**
- * If at least one variable from the list is equal 1 then result variable is equal 1 too. 
- * Otherwise, result variable is equal to zero. 
- * It restricts the domain of all x as well as result to be between 0 and 1.
- * 
+ * OrBool constraint implements logic and operation on its arguments
+ * and returns result.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.2
@@ -52,382 +47,113 @@ import org.jacop.core.TimeStamp;
 
 public class OrBool extends PrimitiveConstraint {
 
-    static int counter = 1;
+    PrimitiveConstraint c = null;
 
     /**
-     * It specifies a list of variables among which one must be equal to 1 to set result variable to 1.
+     * It constructs and constraint on variables.
+     * @param a parameters variable.
+     * @param result variable.
      */
-    public IntVar [] list;
-	
-    /**
-     * It specifies variable result, storing the result of or function performed a list of variables.
-     */
-    public IntVar result;
-
-    /**
-     * It specifies the length of the list of variables.
-     */
-    final int l;
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as 
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"list", "result"};
-
-    /*
-     * Defines first position of the variable that is not ground to 0
-     */
-    private TimeStamp<Integer> position;
-
-    /**
-     * It constructs orBool. 
-     * 
-     * @param list list of x's which one of them must be equal 1 to make result equal 1.
-     * @param result variable which is equal 0 if none of x is equal to zero. 
-     */
-    public OrBool(IntVar [] list, IntVar result) {
-
-	assert ( list != null ) : "List variable is null";
-	assert ( result != null ) : "Result variable is null";
-		
-	this.numberId = counter++;
-	this.l = list.length;
-	this.numberArgs = (short)(l + 1);
-		
-	this.list = new IntVar[l];
-	for (int i = 0; i < l; i++) {
-	    assert (list[i] != null) : i + "-th element in the list is null";
-	    this.list[i] = list[i];
-	}
-
-	this.result = result;
-	assert ( checkInvariants() == null) : checkInvariants();
-
-	if (l > 2)
-	    queueIndex = 1;
+    public OrBool(IntVar[] a, IntVar result) {
+	if (a.length == 2)
+	    c = new OrBoolSimple(a[0], a[1], result);
 	else
-	    queueIndex = 0;
+	    c = new OrBoolVector(a, result);
     }
 
     /**
-     * It constructs orBool. 
-     * 
-     * @param list list of x's which one of them must be equal 1 to make result equal 1.
-     * @param result variable which is equal 0 if none of x is equal to zero. 
+     * It constructs and constraint on variables.
+     * @param a parameters variable.
+     * @param result variable.
      */
-    public OrBool(ArrayList<? extends IntVar> list, IntVar result) {
-	
-	this(list.toArray(new IntVar[list.size()]), result);
-		
+    public OrBool(ArrayList<IntVar> a, IntVar result) {
+
+	if (a.size() == 2)
+	    c = new OrBoolSimple(a.get(0), a.get(1), result);
+	else
+	    c = new OrBoolVector(a.toArray(new IntVar[a.size()]), result);
     }
 
     /**
-     * It checks invariants required by the constraint. Namely that
-     * boolean variables have boolean domain. 
-     * 
-     * @return the string describing the violation of the invariant, null otherwise.
+     * It constructs and constraint on variables.
+     * @param a parameters variable.
+     * @param result variable.
      */
-    public String checkInvariants() {
-
-	for (IntVar var : list)
-	    if (var.min() < 0 || var.max() > 1)
-		return "Variable " + var + " does not have boolean domain";
-		
-	return null;
+    public OrBool(IntVar a, IntVar b, IntVar result) {
+	c = new OrBoolSimple(a, b, result);
     }
 
     @Override
     public ArrayList<Var> arguments() {
 
-	ArrayList<Var> variables = new ArrayList<Var>(l + 1);
-
-	variables.add(result);
-	for (int i = 0; i < l; i++)
-	    variables.add(list[i]);
-	return variables;
+	return c.arguments();
     }
 
     @Override
-    public int getConsistencyPruningEvent(Var var) {
-
-	// If consistency function mode
-	if (consistencyPruningEvents != null) {
-	    Integer possibleEvent = consistencyPruningEvents.get(var);
-	    if (possibleEvent != null)
-		return possibleEvent;
-	}
-	return IntDomain.BOUND;
-    }
-
-    @Override
-    public int getNotConsistencyPruningEvent(Var var) {
-
-	// If notConsistency function mode
-	if (notConsistencyPruningEvents != null) {
-	    Integer possibleEvent = notConsistencyPruningEvents.get(var);
-	    if (possibleEvent != null)
-		return possibleEvent;
-	}
-	return IntDomain.GROUND;
-    }
-
-    @Override
-    public int getNestedPruningEvent(Var var, boolean mode) {
-
-	// If consistency function mode
-	if (mode) {
-	    if (consistencyPruningEvents != null) {
-		Integer possibleEvent = consistencyPruningEvents.get(var);
-		if (possibleEvent != null)
-		    return possibleEvent;
-	    }
-	    return IntDomain.ANY;
-	}
-	// If notConsistency function mode
-	else {
-	    if (notConsistencyPruningEvents != null) {
-		Integer possibleEvent = notConsistencyPruningEvents.get(var);
-		if (possibleEvent != null)
-		    return possibleEvent;
-	    }
-	    return IntDomain.GROUND;
-	}
-    }
-
-    // registers the constraint in the constraint store
-    @Override
-    public void impose(Store store) {
-
-	result.putModelConstraint(this, getConsistencyPruningEvent(result));
-
-	position = new TimeStamp<Integer>(store, 0);
-
-	for (Var V : list)
-	    V.putModelConstraint(this, getConsistencyPruningEvent(V));
-
-	store.addChanged(this);
-	store.countConstraint();
-
-    }
-
-    @Override
-    public void include(Store store) {
-
-	position = new TimeStamp<Integer>(store, 0);
-
-    }
-
     public void consistency(Store store) {
-
-	int start = position.value();
-	int index_01 = l-1;
-
-	for (int i = start; i < l; i++) {
-	    if (list[i].min() == 1) {
-		result.domain.in(store.level, result, 1, 1);
-		removeConstraint();
-		return;
-	    }
-	    else
-		if (list[i].max() == 0) {
-		    swap(start, i);
-		    start++;
-		    position.update(start);
-		}
-	}
-
-	if (start == l) 
-	    result.domain.in(store.level, result, 0, 0);
-
-	// for case >, then the in() will fail as the constraint should.
-	if (result.min() == 1 && start >= l - 1)
-	    list[index_01].domain.in(store.level, list[index_01], 1, 1);
-				
-	if (result.max() == 0 && start < l)
-	    for (int i = start; i < l; i++)
-		list[i].domain.in(store.level, list[i], 0, 0);
-
-	if ((l-start) < 3)
-	    queueIndex = 0;
-
-    }
-
-    private void swap(int i, int j) {
-	if ( i != j) {
-	    IntVar tmp = list[i];
-	    list[i] = list[j];
-	    list[j] = tmp;
-	}
+	c.consistency(store);
     }
 
     @Override
     public void notConsistency(Store store) {
-
-	do {
-
-	    store.propagationHasOccurred = false;
-			
-	    int start = position.value();
-	    int index_01 = l-1;
-
-	    for (int i = start; i < l; i++) {
-		if (list[i].min() == 1) {
-		    result.domain.in(store.level, result, 0, 0);
-		    return;
-		}
-		else
-		    if (list[i].max() == 0) {
-			swap(start, i);
-			start++;
-			position.update(start);
-		    }
-		// else
-		// 	index_01 = i;
-	    }
-
-	    if (start == l) 
-		result.domain.in(store.level, result, 1, 1);
-
-	    // for case >, then the in() will fail as the constraint should.
-	    if (result.min() == 1 && start < l)
-		for (int i = 0; i < l; i++)
-		    list[i].domain.in(store.level, list[i], 0, 0);
-				
-	    if (result.max() == 0 && start >= l - 1)
-		list[index_01].domain.in(store.level, list[index_01], 1, 1);
-
-	} while (store.propagationHasOccurred);
-		
-	if (l < 3)
-	    queueIndex = 0;
+	c.consistency(store);
     }
 
     @Override
-    public boolean satisfied() {
+    public int getConsistencyPruningEvent(Var var) {
+	return c.getConsistencyPruningEvent(var);
 
-	int start = position.value();
-
-	if (result.max() == 0) {
-
-	    for (int i = start; i < l; i++)
-		if (list[i].max() != 0)
-		    return false;
-		else {
-		    swap(start, i);
-		    start++;
-		    position.update(start);	
-		}
-			
-	    return true;
-
-	}
-	else {
-			
-	    if (result.min() == 1) {
-
-		for (int i = start; i < l; i++)
-		    if (list[i].min() == 1)
-			return true;
-		    else if (list[i].max() == 0) {
-			swap(start, i);
-			start++;
-			position.update(start);
-		    }
-
-	    }
-	}
-
-	return false;
-		
     }
 
     @Override
-    public boolean notSatisfied() {
+    public int getNestedPruningEvent(Var var, boolean mode) {
+	return c.getNestedPruningEvent(var, mode);
+    }
 
-	int start = position.value();
+    @Override
+    public int getNotConsistencyPruningEvent(Var var) {
+	return c.getNotConsistencyPruningEvent(var);
+    }
 
-	int x1 = 0, x0 = start;
+   
+    @Override
+    public String id() {
+	return c.id();
+    }
 
-	for (int i = start; i < l; i++) {
-	    if (list[i].min() == 1) 
-		x1++;
-	    else if (list[i].max() == 0) {
-		x0++;
-		swap(start, i);
-		start++;
-		position.update(start);
-	    }
-	}
+    @Override
+    public void impose(Store store) {
+	c.impose(store);
+    }
 
-	return (x0 == l && result.min() == 1) || (x1 != 0 && result.max() == 0);
-
+    @Override
+    public void queueVariable(int level, Var V) {
+	c.queueVariable(level, V);
     }
 
     @Override
     public void removeConstraint() {
-	result.removeConstraint(this);
-	for (int i = 0; i < l; i++) {
-	    list[i].removeConstraint(this);
-	}
+	c.removeConstraint();
+    }
+
+    @Override
+    public boolean satisfied() {
+	return c.satisfied();
+    }
+
+    @Override
+    public boolean notSatisfied() {
+	return c.satisfied();
     }
 
     @Override
     public String toString() {
-
-	StringBuffer resultString = new StringBuffer( id() );
-
-	resultString.append(" : orBool([ ");
-	for (int i = 0; i < l; i++) {
-	    resultString.append( list[i] );
-	    if (i < l - 1)
-		resultString.append(", ");
-	}
-	resultString.append("], ");
-	resultString.append(result);
-	resultString.append(")");
-	return resultString.toString();
-    }
-
-    ArrayList<Constraint> constraints;
-
-    @Override
-    public ArrayList<Constraint> decompose(Store store) {
-
-	constraints = new ArrayList<Constraint>();
-
-	PrimitiveConstraint [] orConstraints = new PrimitiveConstraint[l];
-
-	IntervalDomain booleanDom = new IntervalDomain(0, 1);
-
-	for (int i = 0; i < orConstraints.length; i++) {
-	    orConstraints[0] = new XeqC(list[i], 1);
-	    constraints.add(new In(list[i], booleanDom));
-	}
-
-	constraints.add( new In(result, booleanDom));
-
-	constraints.add( new Eq(new Or(orConstraints), new XeqC(result, 1)) );
-
-	return constraints;
-    }
-
-    @Override
-    public void imposeDecomposition(Store store) {
-
-	if (constraints == null)
-	    decompose(store);
-
-	for (Constraint c : constraints)
-	    store.impose(c, queueIndex);
-
+	return c.toString();
     }
 
     @Override
     public void increaseWeight() {
-	if (increaseWeight) {
-	    result.weight++;
-	    for (Var v : list) v.weight++;
-	}
+	c.increaseWeight();
     }
 
 }

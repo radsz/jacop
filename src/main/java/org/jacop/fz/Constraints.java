@@ -438,11 +438,16 @@ public class Constraints implements ParserTreeConstants {
 		    else if (p3.getType() == 0) {// p3 int
 			pose(new XmulYeqC(getVariable(p1), getVariable(p2), getInt(p3)));
 		    }
-		    else
-			pose(new XmulYeqZ(getVariable(p1), getVariable(p2), getVariable(p3)));
+		    else {
+			IntVar v1 = getVariable(p1), v2 = getVariable(p2), v3 = getVariable(p3);
+			if (v1.min() >= 0 && v1.max() <= 1 && v2.min() >= 0 && v2.max() <= 1 && v3.min() >= 0 && v3.max() <= 1) 
+			    pose(new AndBoolSimple(v1, v2, v3));
+			else
+			    pose(new XmulYeqZ(v1, v2, v3));
+		    }
 		}
 		else if (p.startsWith("div", 4)) {
-		    // p1/p2 = p3 <=> p2 * p3 = p1
+		    // p1/p2 = p3
 		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
 		    ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
 		    ASTScalarFlatExpr p3 = (ASTScalarFlatExpr)node.jjtGetChild(2);
@@ -453,23 +458,6 @@ public class Constraints implements ParserTreeConstants {
 
 		    pose(new XdivYeqZ(v1, v2, v3));
 
-// 		    Variable r = new Variable(store, IntDomain.MinInt, IntDomain.MaxInt);
-//  		    Variable t = new Variable(store, IntDomain.MinInt, IntDomain.MaxInt);
-
-// 		    pose(new XplusYeqZ(r, t, v1));
-
-// 		    // follows new flatzinc standard; reminder has the same sign as the first argument
-//  		    Variable absV2 = new Variable(store, 0, IntDomain.MaxInt);
-//  		    Variable minusAbsV2 = new Variable(store, IntDomain.MinInt, 0);
-// 		    pose(new AbsXeqY(v2, absV2));
-// 		    pose(new XplusYeqC(minusAbsV2, absV2, 0));
-//  		    pose(new IfThen(new XgtC(v1, 0), new And(new XltY(r, absV2), new XgteqC(r, 0))));
-//   		    pose(new IfThen(new XltC(v1, 0), new And(new XgtY(r, minusAbsV2), new XlteqC(r, 0))));
-
-// 		    // pose(new Eq(new XgtC(v2, 0), new And(new XltY(r, v2), new XgteqC(r, 0))));
-// 		    // pose(new Eq(new XltC(v2, 0), new And(new XgtY(r, v2), new XlteqC(r, 0))));
-
-// 		    pose(new XmulYeqZ(v2, v3, t));
 		}
 		else if (p.startsWith("mod", 4)) {
 		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
@@ -482,22 +470,6 @@ public class Constraints implements ParserTreeConstants {
 
 		    pose(new XmodYeqZ(v1, v2, v3));
 
-// 		    Variable t1 = new Variable(store, IntDomain.MinInt, IntDomain.MaxInt);
-// 		    Variable t2 = new Variable(store, IntDomain.MinInt, IntDomain.MaxInt);
-
-// 		    pose(new XplusYeqZ(t2, v3, v1)); 
-// 		    // follows new flatzinc standard; reminder has the same sign as the first argument
-//  		    Variable absV2 = new Variable(store, 0, IntDomain.MaxInt);
-//  		    Variable minusAbsV2 = new Variable(store, IntDomain.MinInt, 0);
-// 		    pose(new AbsXeqY(v2, absV2));
-// 		    pose(new XplusYeqC(minusAbsV2, absV2, 0));
-//  		    pose(new IfThen(new XgtC(v1, 0), new And(new XltY(v3, absV2), new XgteqC(v3, 0))));
-//  		    pose(new IfThen(new XltC(v1, 0), new And(new XgtY(v3, minusAbsV2), new XlteqC(v3, 0))));
-
-//   		    // pose(new Eq(new XgtC(v2, 0), new And(new XltY(v3, v2), new XgteqC(v3, 0))));
-//   		    // pose(new Eq(new XltC(v2, 0), new And(new XgtY(v3, v2), new XlteqC(v3, 0))));
-
-// 		    pose(new XmulYeqZ(t1, v2, t2));
 		}
 		else if (p.startsWith("min", 4)) {
 		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
@@ -753,7 +725,7 @@ public class Constraints implements ParserTreeConstants {
 		    if (opt.useSat())
 			sat.generate_or(new IntVar[] {v1, v2}, v3);
 		    else
-			pose(new OrBool(new IntVar[] {v1, v2}, v3));
+			pose(new OrBoolSimple(v1, v2, v3));
 		}
 		// bool_and
 		else if (p.startsWith("and", 5)) {
@@ -769,7 +741,7 @@ public class Constraints implements ParserTreeConstants {
 		    if (opt.useSat())
 			sat.generate_and(new IntVar[] {v1, v2}, v3);
 		    else
-			pose(new AndBool(new IntVar[] {v1, v2}, v3));
+			pose(new AndBoolSimple(v1, v2, v3));
 		}
 		// bool_xor
 		else if (p.startsWith("xor", 5)) {
@@ -2466,7 +2438,7 @@ public class Constraints implements ParserTreeConstants {
 	    }
 
 	    if (allWeightsOne(p1))
-		pose(new SumBool(store, p2, par3));
+		pose(new SumBool(store, p2, "==", par3));
 	    else
 		pose(new SumWeight(p2, p1, par3));
 	    return;
@@ -2682,7 +2654,7 @@ public class Constraints implements ParserTreeConstants {
 				vect[n++] = p2[i];
 
 			if (boolSum(vect))
-			    pose(new SumBool(store, vect, p2[pos]));
+			    pose(new SumBool(store, vect, "==", p2[pos]));
 			else
 			    pose(new SumInt(store, vect, "==", p2[pos]));
 		    }
@@ -2695,7 +2667,7 @@ public class Constraints implements ParserTreeConstants {
 			else
 			    v = new IntVar(store, p3, p3);
 			if (boolSum(p2))
-			    pose(new SumBool(store, p2, v));
+			    pose(new SumBool(store, p2, "==", v));
 			else
 			    pose(new SumInt(store, p2, "==", v));
 		    }
@@ -2706,7 +2678,7 @@ public class Constraints implements ParserTreeConstants {
 			else
 			    v = new IntVar(store, -p3, -p3);
 			if (boolSum(p2))
-			    pose(new SumBool(store, p2, v));
+			    pose(new SumBool(store, p2, "==", v));
 			else
 			    pose(new SumInt(store, p2, "==", v));
 		    }
@@ -2733,7 +2705,10 @@ public class Constraints implements ParserTreeConstants {
 			for (int i=0; i<p2.length; i++)
 			    if (i != pos)
 				vect[n++] = p2[i];
-			pose(new SumInt(store, vect, "!=", p2[pos]));
+			if (boolSum(vect))
+			    pose(new SumBool(store, vect, "!=", p2[pos]));
+			else
+			    pose(new SumInt(store, vect, "!=", p2[pos]));
 		    }
 		    else {
 			pose(new LinearInt(store, p2, p1, "!=", p3));
@@ -2761,7 +2736,10 @@ public class Constraints implements ParserTreeConstants {
 			for (int i=0; i<p2.length; i++)
 			    if (i != posLe)
 				vect[n++] = p2[i];
-			pose(new SumInt(store, vect, "<", p2[posLe]));
+			if (boolSum(vect))
+			    pose(new SumBool(store, vect, "<", p2[posLe]));
+			else
+			    pose(new SumInt(store, vect, "<", p2[posLe]));
 		    }
 		    else if (posGe > -1) {
 			IntVar[] vect = new IntVar[p1.length-1];
@@ -2769,7 +2747,10 @@ public class Constraints implements ParserTreeConstants {
 			for (int i=0; i<p2.length; i++)
 			    if (i != posGe)
 				vect[n++] = p2[i];
-			pose(new SumInt(store, vect, ">", p2[posGe]));
+			if (boolSum(vect))
+			    pose(new SumBool(store, vect, ">", p2[posGe]));
+			else
+			    pose(new SumInt(store, vect, ">", p2[posGe]));
 		    }
 		    else {
 		    // pose(new Linear(store, p2, p1, "<", p3));
@@ -2828,11 +2809,17 @@ public class Constraints implements ParserTreeConstants {
 
 		else if (allWeightsOne(p1)) {
 		    t = new IntVar(store, p3, p3);
-		    pose(new SumInt(store, p2, "<=", t));		    
+		    if (boolSum(p2))
+		    	pose(new SumBool(store, p2, "<=", t));		    
+		    else
+			pose(new SumInt(store, p2, "<=", t));		    
 		}
 		else if (allWeightsMinusOne(p1)) {
 		    t = new IntVar(store, -p3, -p3);
-		    pose(new SumInt(store, p2, ">=", t));		    
+		    if (boolSum(p2))
+			pose(new SumBool(store, p2, ">=", t));
+		    else
+			pose(new SumInt(store, p2, ">=", t));		    
 		}
 		// else if (sumPossible(p1, p3) > -1) {
 		//     int pos = sumPossible(p1, p3);
@@ -2855,7 +2842,10 @@ public class Constraints implements ParserTreeConstants {
 			for (int i=0; i<p2.length; i++)
 			    if (i != posLe)
 				vect[n++] = p2[i];
-			pose(new SumInt(store, vect, "<=", p2[posLe]));
+			if (boolSum(vect))
+			    pose(new SumBool(store, vect, "<=", p2[posLe]));
+			else
+			    pose(new SumInt(store, vect, "<=", p2[posLe]));
 		    }
 		    else if (posGe > -1) {
 			IntVar[] vect = new IntVar[p1.length-1];
@@ -2863,7 +2853,10 @@ public class Constraints implements ParserTreeConstants {
 			for (int i=0; i<p2.length; i++)
 			    if (i != posGe)
 				vect[n++] = p2[i];
-			pose(new SumInt(store, vect, ">=", p2[posGe]));
+			if (boolSum(vect))
+			    pose(new SumBool(store, vect, ">=", p2[posGe]));
+			else
+			    pose(new SumInt(store, vect, ">=", p2[posGe]));
 		    }
 		    else {
 			pose(new LinearInt(store, p2, p1, "<=", p3));
