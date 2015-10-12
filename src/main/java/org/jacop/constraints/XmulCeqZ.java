@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
+import org.jacop.core.Interval;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.core.FailException;
@@ -114,14 +115,14 @@ public class XmulCeqZ extends PrimitiveConstraint {
 		    store.propagationHasOccurred = false;
 				
 		    // Bounds for X
-		    IntervalDomain xBounds = IntDomain.divIntBounds(z.min(), z.max(), c, c);
+		    Interval xBounds = IntDomain.divIntBounds(z.min(), z.max(), c, c);
 
-		    x.domain.in(store.level, x, xBounds);
+		    x.domain.in(store.level, x, xBounds.min(), xBounds.max());
 
 		    // Bounds for Z
-		    IntervalDomain zBounds = IntDomain.mulBounds(x.min(), x.max(), c, c);
+		    Interval zBounds = IntDomain.mulBounds(x.min(), x.max(), c, c);
 
-		    z.domain.in(store.level, z, zBounds);
+		    z.domain.in(store.level, z, zBounds.min(), zBounds.max());
 				
 		} while (store.propagationHasOccurred);
 	    else
@@ -138,7 +139,7 @@ public class XmulCeqZ extends PrimitiveConstraint {
 		    z.domain.inComplement(store.level, z, x.value()*c);
 
 		if ( z.singleton() ) {
-		    IntervalDomain xBounds;
+		    Interval xBounds;
 
 		    try {
 			xBounds = IntDomain.divIntBounds(z.min(), z.max(), c, c);
@@ -147,7 +148,7 @@ public class XmulCeqZ extends PrimitiveConstraint {
 			return;
 		    }
 
-		    x.domain.inComplement(store.level, x, xBounds.value());
+		    x.domain.inComplement(store.level, x, xBounds.min());
 		}
 
 	    }
@@ -165,7 +166,8 @@ public class XmulCeqZ extends PrimitiveConstraint {
 	@Override
 	public boolean notSatisfied() {
 
-	    return ! z.domain.isIntersecting(IntDomain.mulBounds(x.min(), x.max(), c, c));
+	    Interval r = IntDomain.mulBounds(x.min(), x.max(), c, c);
+		return ! z.domain.isIntersecting(r.min(), r.max());
 
 	    // IntDomain Xdom = x.dom();
 	    // IntDomain Zdom = z.dom();

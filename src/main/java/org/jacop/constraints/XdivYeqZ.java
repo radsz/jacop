@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
+import org.jacop.core.Interval;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 
@@ -133,17 +134,17 @@ public class XdivYeqZ extends Constraint {
 			}
 
 			// Bounds for Z
-			IntervalDomain zBounds = IntDomain.divBounds(x.min(), x.max(), y.min(), y.max());
+			Interval zBounds = IntDomain.divBounds(x.min(), x.max(), y.min(), y.max());
 
-			z.domain.in(store.level, z, zBounds);
+			z.domain.in(store.level, z, zBounds.min(), zBounds.max());
 
 			// Bounds for Y
-			IntervalDomain yBounds = IntDomain.divBounds(x.min()-reminderMax, x.max()-reminderMin, z.min(), z.max());
+			Interval yBounds = IntDomain.divBounds(x.min()-reminderMax, x.max()-reminderMin, z.min(), z.max());
 
- 			y.domain.in(store.level, y, yBounds);
+ 			y.domain.in(store.level, y, yBounds.min(), yBounds.max());
 
 			// Bounds for X
-			IntervalDomain xBounds = IntDomain.mulBounds(z.min(), z.max(), y.min(), y.max());
+			Interval xBounds = IntDomain.mulBounds(z.min(), z.max(), y.min(), y.max());
 			int xMin = xBounds.min();
 			int xMax = xBounds.max();
 
