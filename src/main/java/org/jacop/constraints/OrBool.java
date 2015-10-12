@@ -147,6 +147,11 @@ public class OrBool extends PrimitiveConstraint {
     }
 
     @Override
+    public void include(Store store) {
+	c.include(store);
+    }
+
+    @Override
     public String toString() {
 	return c.toString();
     }

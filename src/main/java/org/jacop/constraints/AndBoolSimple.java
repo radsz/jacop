@@ -124,8 +124,10 @@ public class AndBoolSimple extends AndBoolVector {
     }
 
     public void consistency(Store store) {
-	if (a.max() == 0 || b.max() == 0)
+	if (a.max() == 0 || b.max() == 0) {
 	    result.domain.in(store.level, result, 0,0);
+	    removeConstraint();
+	}
 	else if (a.min() == 1 && b.min() == 1)
 	    result.domain.in(store.level, result, 1,1);
 	else if (result.min() == 1) {
@@ -141,8 +143,10 @@ public class AndBoolSimple extends AndBoolVector {
     @Override
     public void notConsistency(Store store) {
 	// result = not a OR not b
-	if (a.max() == 0 || b.max() == 0)
+	if (a.max() == 0 || b.max() == 0) {
 	    result.domain.in(store.level, result, 1,1);
+	    removeConstraint();
+	}
 	else if (a.min() == 1 && b.min() == 1)
 	    result.domain.in(store.level, result, 0,0);
 	else if (result.max() == 0) {

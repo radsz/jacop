@@ -128,6 +128,11 @@ public class AndBool extends PrimitiveConstraint {
     }
 
     @Override
+    public void include(Store store) {
+	c.include(store);
+    }
+
+    @Override
     public void queueVariable(int level, Var V) {
 	c.queueVariable(level, V);
     }

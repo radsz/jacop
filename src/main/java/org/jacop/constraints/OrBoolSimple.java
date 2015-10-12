@@ -126,8 +126,10 @@ public class OrBoolSimple extends OrBoolVector {
 	// a OR b = result
 	if (a.max() == 0 && b.max() == 0)
 	    result.domain.in(store.level, result, 0,0);
-	else if (a.min() == 1 || b.min() == 1)
+	else if (a.min() == 1 || b.min() == 1) {
 	    result.domain.in(store.level, result, 1,1);
+	    removeConstraint();
+	}
 	else if (result.max() == 0) {
 	    a.domain.in(store.level, a, 0,0);
 	    b.domain.in(store.level, b, 0,0);
@@ -141,8 +143,10 @@ public class OrBoolSimple extends OrBoolVector {
     @Override
     public void notConsistency(Store store) {
 	// not(a OR b) = not a and not b = result
-	if (a.min() == 1 || b.min() == 1)
+	if (a.min() == 1 || b.min() == 1) {
 	    result.domain.in(store.level, result, 0,0);
+	    removeConstraint();
+	}
 	else if (a.max() == 0 && b.max() == 0)
 	    result.domain.in(store.level, result, 1,1);
 	else if (result.min() == 1) {
