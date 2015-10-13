@@ -160,7 +160,9 @@ public class XmulYeqZ extends Constraint {
 
 
 			} while (store.propagationHasOccurred);
-		
+
+		if (x.singleton(0) || y.singleton(0))
+		    removeConstraint();
 	}
 
 	@Override
