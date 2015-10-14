@@ -2695,7 +2695,11 @@ public class Constraints implements ParserTreeConstants {
 		    else
 			throw store.failException;
 
- 		if (p1.length == 2 && p3 == 0 && ( (p1[0] == 1 && p1[1] == -1) || (p1[0] == -1 && p1[1] == 1) ))
+		if (p1.length == 1 && p1[0] == 1)
+		    p2[0].domain.inComplement(store.level, p2[0], p3);
+		else if (p1.length == 1 && p1[0] == -1)
+		    p2[0].domain.inComplement(store.level, p2[0], -p3);
+ 		else if (p1.length == 2 && p3 == 0 && ( (p1[0] == 1 && p1[1] == -1) || (p1[0] == -1 && p1[1] == 1) ))
 			pose(new XneqY(p2[0], p2[1]));
 		else {
 		    int pos = sumPossible(p1, p3);
