@@ -82,8 +82,6 @@ public class SumBool extends Constraint {
      */
     int l;
 
-    private TimeStamp<GroundParameters> grounded;
-    
     /**
      * It specifies the arguments required to be saved by an XML format as well as 
      * the constructor being called to recreate an object from an XML format.
@@ -155,24 +153,13 @@ public class SumBool extends Constraint {
 
     @Override
     public void consistency(Store store) {
-	GroundParameters gp = grounded.value();
-	int strt = gp.start;
-	int gSum = gp.sum;
-	int min = gSum;
-	int max = gSum;
+	int min = 0;
+	int max = 0;
 
-        for (int i = strt; i < l; i++) {
+        for (int i = 0; i < l; i++) {
 	    IntDomain xd = x[i].dom();
-	    int lb = xd.min();
-	    int ub = xd.max();
-            min += lb;
-            max += ub;
-
-	    if (lb == ub) {
-	    	swap(strt, i);
-	    	strt++;
-		gSum += lb;
-	    }
+	    min += xd.min();
+	    max += xd.max();
 	}
 
 	switch (relationType) {
@@ -183,12 +170,14 @@ public class SumBool extends Constraint {
 	    if (sum.singleton() && min != max) {
 		int sumValue = sum.value();
 		if (sumValue == min) 
-		    for (int i = strt; i < l; i++)
-			x[i].domain.in(store.level, x[i], 0, 0);
+		    for (int i = 0; i < l; i++)
+			if (! x[i].singleton())
+			    x[i].domain.in(store.level, x[i], 0, 0);
 
 		if (sumValue == max) 
-		    for (int i = strt; i < l; i++) 
-			x[i].domain.in(store.level, x[i], 1, 1);
+		    for (int i = 0; i < l; i++) 
+			if (! x[i].singleton())
+			    x[i].domain.in(store.level, x[i], 1, 1);
 	    }
 	    break;
 	case le:	 
@@ -201,8 +190,9 @@ public class SumBool extends Constraint {
 	    if (sum.singleton() && min != max) {
 		int sumValue = sum.value();
 		if (sumValue == min) 
-		    for (int i = strt; i < l; i++)
-			x[i].domain.in(store.level, x[i], 0, 0);
+		    for (int i = 0; i < l; i++)
+			if (! x[i].singleton())
+			    x[i].domain.in(store.level, x[i], 0, 0);
 	    }
 	    break;
 	case lt:
@@ -215,8 +205,9 @@ public class SumBool extends Constraint {
 	    if (sum.singleton() && min != max) {
 		int sumValue = sum.value();
 		if (sumValue - 1 == min) 
-		    for (int i = strt; i < l; i++)
-			x[i].domain.in(store.level, x[i], 0, 0);
+		    for (int i = 0; i < l; i++)
+			if (! x[i].singleton())
+			    x[i].domain.in(store.level, x[i], 0, 0);
 
 	    }
 	    break;
@@ -237,8 +228,9 @@ public class SumBool extends Constraint {
 		int sumValue = sum.value();
 
 		if (sumValue + 1 == max) 
-		    for (int i = strt; i < l; i++) 
-			x[i].domain.in(store.level, x[i], 1, 1);
+		    for (int i = 0; i < l; i++) 
+			if (! x[i].singleton())
+			    x[i].domain.in(store.level, x[i], 1, 1);
 	    }
 	    break;
 	case ge:
@@ -252,21 +244,14 @@ public class SumBool extends Constraint {
 		int sumValue = sum.value();
 
 		if (sumValue == max) 
-		    for (int i = strt; i < l; i++) 
-			x[i].domain.in(store.level, x[i], 1, 1);
+		    for (int i = 0; i < l; i++) 
+			if (! x[i].singleton())
+			    x[i].domain.in(store.level, x[i], 1, 1);
 	    }
 	    break;
 	}
-	grounded.update(new GroundParameters(strt, gSum));
     }
     
-    private void swap(int i, int j) {
-	if ( i != j) {
-	    IntVar tmp = x[i];
-	    x[i] = x[j];
-	    x[j] = tmp;
-	}
-    }
 
     @Override
     public int getConsistencyPruningEvent(Var var) {
@@ -286,8 +271,6 @@ public class SumBool extends Constraint {
 	if (x == null)
 	    return;
 
-	grounded = new TimeStamp<GroundParameters>(store, new GroundParameters());
-	
 	for (Var V : x)
 	    V.putModelConstraint(this, getConsistencyPruningEvent(V));
 
