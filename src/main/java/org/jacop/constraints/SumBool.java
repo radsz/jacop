@@ -51,16 +51,29 @@ import org.jacop.core.TimeStamp;
  * @version 4.3
  */
 
-public class SumBool extends Constraint {
+public class SumBool extends PrimitiveConstraint {
 
     Store store;
     
     static int idNumber = 1;
 
+    boolean reified = true;
+
     /**
      * Defines relations
      */
     final static byte eq=0, le=1, lt=2, ne=3, gt=4, ge=5;
+
+    /**
+     * Defines negated relations
+     */
+    final static byte[] negRel= {ne, //eq=0, 
+				 gt, //le=1, 
+				 ge, //lt=2, 
+				 eq, //ne=3, 
+				 le, //gt=4, 
+				 lt  //ge=5;
+    };
 
     /**
      * It specifies what relations is used by this constraint
@@ -153,6 +166,16 @@ public class SumBool extends Constraint {
 
     @Override
     public void consistency(Store store) {
+	prune(relationType);
+    }
+    
+    @Override
+    public void notConsistency(Store store) {
+	prune(negRel[relationType]);
+    }
+
+    private void prune(byte rel) {
+
 	int min = 0;
 	int max = 0;
 
@@ -162,7 +185,7 @@ public class SumBool extends Constraint {
 	    max += xd.max();
 	}
 
-	switch (relationType) {
+	switch (rel) {
 	case eq: 
 
 	    sum.domain.in(store.level, sum, min, max);
@@ -184,8 +207,9 @@ public class SumBool extends Constraint {
 
 	    sum.domain.inMin(store.level, sum, min);
 
-	    if (max <= sum.min()) 
-		removeConstraint();
+	    if (!reified)
+		if (max <= sum.min()) 
+		    removeConstraint();
 
 	    if (sum.singleton() && min != max) {
 		int sumValue = sum.value();
@@ -199,8 +223,9 @@ public class SumBool extends Constraint {
 
 	    sum.domain.inMin(store.level, sum, min + 1);
 
-	    if (max < sum.min()) 
-		removeConstraint();
+	    if (!reified)
+		if (max < sum.min()) 
+		    removeConstraint();
 
 	    if (sum.singleton() && min != max) {
 		int sumValue = sum.value();
@@ -221,8 +246,9 @@ public class SumBool extends Constraint {
 
 	    sum.domain.inMax(store.level, sum, max - 1);
 
-	    if (min > sum.max()) 
-		removeConstraint();
+	    if (!reified)
+		if (min > sum.max()) 
+		    removeConstraint();
 
 	    if (sum.singleton() && min != max) {
 		int sumValue = sum.value();
@@ -237,8 +263,9 @@ public class SumBool extends Constraint {
 
 	    sum.domain.inMax(store.level, sum, max);
 
-	    if (min >= sum.max()) 
-		removeConstraint();
+	    if (!reified)
+		if (min >= sum.max()) 
+		    removeConstraint();
 
 	    if (sum.singleton() && min != max) {
 		int sumValue = sum.value();
@@ -251,7 +278,6 @@ public class SumBool extends Constraint {
 	    break;
 	}
     }
-    
 
     @Override
     public int getConsistencyPruningEvent(Var var) {
@@ -266,10 +292,48 @@ public class SumBool extends Constraint {
     }
     
     @Override
+    public int getNestedPruningEvent(Var var, boolean mode) {
+
+	// If consistency function mode
+	if (mode) {
+	    if (consistencyPruningEvents != null) {
+		Integer possibleEvent = consistencyPruningEvents.get(var);
+		if (possibleEvent != null)
+		    return possibleEvent;
+	    }
+	    return IntDomain.BOUND;
+	}
+
+	// If notConsistency function mode
+	else {
+	    if (notConsistencyPruningEvents != null) {
+		Integer possibleEvent = notConsistencyPruningEvents.get(var);
+		if (possibleEvent != null)
+		    return possibleEvent;
+	    }
+	    return IntDomain.BOUND;
+	}
+    }
+
+    @Override
+    public int getNotConsistencyPruningEvent(Var var) {
+
+	// If notConsistency function mode
+	if (notConsistencyPruningEvents != null) {
+	    Integer possibleEvent = notConsistencyPruningEvents.get(var);
+	    if (possibleEvent != null)
+		return possibleEvent;
+	}
+	return IntDomain.BOUND;	
+    }
+
+    @Override
     public void impose(Store store) {
 
 	if (x == null)
 	    return;
+
+	reified = false;
 
 	for (Var V : x)
 	    V.putModelConstraint(this, getConsistencyPruningEvent(V));
@@ -290,6 +354,19 @@ public class SumBool extends Constraint {
     @Override
     public boolean satisfied() {
 
+	return entailed(relationType);
+
+    }
+
+    @Override
+    public boolean notSatisfied() {
+
+	return entailed(negRel[relationType]);
+
+    }
+
+    private boolean entailed(byte rel) {
+
         int min=0, max=0;
 
         for (int i = 0; i < l; i++) {
@@ -298,18 +375,19 @@ public class SumBool extends Constraint {
             max += xd.max();
 	}
 
-	switch (relationType) {
+	switch (rel) {
 	case eq: return sum.singleton(min) && min == max;
 	case lt : return max < sum.min();
-	case le : return max =< sum.min();
+	case le : return max <= sum.min();
 	case ne : return sum.singleton() && min == max && sum.min() != min;
 	case gt : return min < sum.max();
 	case ge : return min >= sum.max();
 	}
-	    
+
+	return false;
 
     }
-
+    
     public byte relation(String r) {
 	if (r.equals("==")) 
 	    return eq;

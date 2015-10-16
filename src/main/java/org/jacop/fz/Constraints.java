@@ -2493,7 +2493,10 @@ public class Constraints implements ParserTreeConstants {
 			for (int i=0; i<p2.length; i++)
 			    if (i != pos)
 				vect[n++] = p2[i];
-			pose(new Reified(new SumInt(store, vect, "==", p2[pos]), p4));
+			if (boolSum(vect))
+			    pose(new Reified(new SumBool(store, vect, "==", p2[pos]), p4));
+			else
+			    pose(new Reified(new SumInt(store, vect, "==", p2[pos]), p4));
 		    }
 		    else {
 			pose(new Reified(new LinearInt(store, p2, p1, "==", p3), p4));
@@ -2521,11 +2524,17 @@ public class Constraints implements ParserTreeConstants {
 		} 
 		else if (allWeightsOne(p1)) {
 		    t = new IntVar(store, p3, p3);
-		    pose(new Reified(new SumInt(store, p2, "!=", t), p4));
+		    if (boolSum(p2))
+			pose(new Reified(new SumBool(store, p2, "!=", t), p4));
+		    else
+			pose(new Reified(new SumInt(store, p2, "!=", t), p4));
 		}
 		else if (allWeightsMinusOne(p1)) {
 		    t = new IntVar(store, -p3, -p3);
-		    pose(new Reified(new SumInt(store, p2, "!=", t), p4));		    
+		    if (boolSum(p2))
+			pose(new Reified(new SumBool(store, p2, "!=", t), p4));
+		    else
+			pose(new Reified(new SumInt(store, p2, "!=", t), p4));		    
 		}
 		else 
 		    pose(new Reified(new LinearInt(store, p2, p1, "!=", p3), p4));
@@ -2550,11 +2559,17 @@ public class Constraints implements ParserTreeConstants {
 		    pose(new Reified(new org.jacop.constraints.XgteqC(p2[0], -p3), p4));
 		else if (allWeightsOne(p1)) {
 		    t = new IntVar(store, p3, p3);
-		    pose(new Reified(new SumInt(store, p2, "<=", t), p4));
+		    if (boolSum(p2))
+			pose(new Reified(new SumBool(store, p2, "<=", t), p4));
+		    else
+			pose(new Reified(new SumInt(store, p2, "<=", t), p4));
 		}
 		else if (allWeightsMinusOne(p1)) {
 		    t = new IntVar(store, -p3, -p3);
-		    pose(new Reified(new SumInt(store, p2, ">=", t), p4));		    
+		    if (boolSum(p2))
+			pose(new Reified(new SumBool(store, p2, ">=", t), p4));
+		    else
+			pose(new Reified(new SumInt(store, p2, ">=", t), p4));		    
 		}
 		else {
 		    pose(new Reified(new LinearInt(store,p2, p1, "<=", p3), p4));
