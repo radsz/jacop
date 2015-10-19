@@ -604,12 +604,12 @@ public class VariablesParameters implements ParserTreeConstants {
 	    else { // no init values
 		varArrayInt = new IntVar[size];
 
-		for (int i=0; i<size; i++)
+		for (int i=0; i<size; i++) 
 		    if (interval)
 			varArrayInt[i] = new IntVar(store, ident+"["+ i +"]", new IntervalDomain(lowInterval, highInterval));
 		    else
 			varArrayInt[i] = new IntVar(store, ident+"["+ i +"]", lowInterval, highInterval);
-
+	
 		if (! var_introduced)
 		    table.addSearchArray(varArrayInt);
 	    }
@@ -1197,9 +1197,11 @@ public class VariablesParameters implements ParserTreeConstants {
 	if (child.getId() == JJTSCALARFLATEXPR) {
 	    switch ( ((ASTScalarFlatExpr)child).getType() ) {
 	    case 0: // int
-		return new IntVar(store, ((ASTScalarFlatExpr)child).getInt(), ((ASTScalarFlatExpr)child).getInt());
+		int val = ((ASTScalarFlatExpr)child).getInt();
+		return dictionary.getConstant(val); // new IntVar(store, val, val);
 	    case 1: // bool
-		BoundDomain d = new BoundDomain(((ASTScalarFlatExpr)child).getInt(), ((ASTScalarFlatExpr)child).getInt());
+		val = ((ASTScalarFlatExpr)child).getInt();
+		BoundDomain d = new BoundDomain(val, val);
 		BooleanVar bb = new BooleanVar(store, d);
 		//numberBooleanVariables++; // not really a variable; constant
 		return bb;
@@ -1210,7 +1212,7 @@ public class VariablesParameters implements ParserTreeConstants {
 		else {
 		    Integer n = dictionary.getInt(((ASTScalarFlatExpr)child).getIdent());
 		    if (n != null)
-			return new IntVar(store, n.intValue(), n.intValue());
+			return dictionary.getConstant(n.intValue()); // new IntVar(store, n.intValue(), n.intValue());
 		    else break;
 		}
 	    case 3: // array acces
@@ -1220,7 +1222,7 @@ public class VariablesParameters implements ParserTreeConstants {
 		else {
 		    Integer an = dictionary.getIntArray(((ASTScalarFlatExpr)child).getIdent())[((ASTScalarFlatExpr)child).getInt()];
 		    if (an != null)
-			return new IntVar(store, an.intValue(), an.intValue());
+			return dictionary.getConstant(an.intValue()); // new IntVar(store, an.intValue(), an.intValue());
 		    else break;
 		}
 	    default: // string & float;

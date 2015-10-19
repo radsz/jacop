@@ -125,8 +125,11 @@ public class Binpacking extends Constraint {
 			assert (load[i] != null) : i + "-th element in load list is null";
 			this.load[i] = load[i];
 
-			binMap.put(this.load[i], i);
-
+			Integer varPosition = binMap.put(this.load[i], i);
+			if (varPosition != null) {
+			    System.err.println("ERROR: Constraint " + toString() + " must have different variables on the list");
+			    System.exit(0);
+			}
 		}
 
 		Arrays.sort(item, new WeightComparator<BinItem>());

@@ -31,6 +31,7 @@
 package org.jacop.fz;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 
 import org.jacop.constraints.*;
 import org.jacop.constraints.knapsack.Knapsack;
@@ -83,7 +84,7 @@ public class Constraints implements ParserTreeConstants {
     Tables dictionary;
     Store store;
     String p;
-    IntVar zero, one;
+    // IntVar zero, one;
     final static int eq=0, ne=1, lt=2, gt=3, le=4, ge=5;
     boolean intPresent = true;
     boolean floatPresent = true;
@@ -186,8 +187,8 @@ public class Constraints implements ParserTreeConstants {
 	definedVar = null;
 
 	dictionary = table;
- 	this.zero = table.zero; 
-	this.one = table.one; 
+ 	// this.zero = table.zero; 
+	// this.one = table.one; 
 
 	int numberChildren = constraintWithAnnotations.jjtGetNumChildren();
 // 	System.out.println ("numberChildren = "+numberChildren);
@@ -583,9 +584,9 @@ public class Constraints implements ParserTreeConstants {
 			IntVar[] a1 = getVarArray(p1);
 
 			if (opt.useSat())
-			    sat.generate_xor(a1, one);
+			    sat.generate_xor(a1, dictionary.getConstant(1)); // one);
 			else
-			    pose(new XorBool(a1, one));
+			    pose(new XorBool(a1, dictionary.getConstant(1))); // one));
 
 		    }
 		    else if (p.startsWith("element", 11)) {
@@ -827,9 +828,9 @@ public class Constraints implements ParserTreeConstants {
 
 			PrimitiveConstraint c;
 			if (a1reduced.size() == 0)
-			    c = new AndBool(a2reduced, zero);
+			    c = new AndBool(a2reduced, dictionary.getConstant(0)); // zero);
 			else if (a2reduced.size() == 0)
-			    c = new OrBool(a1reduced, one);
+			    c = new OrBool(a1reduced, dictionary.getConstant(1)); // one);
 			else if (a1reduced.size() == 1 && a2reduced.size() == 1)
 			    if (a1reduced.get(0).min() == 1)
 				return;
@@ -1159,7 +1160,39 @@ public class Constraints implements ParserTreeConstants {
 		    // we do not not pose AmongVar directly because of possible inconsistency with its 
 		    // intiallization; we collect all constraints and pose them at the end when all other constraints are posed
 
-		    delayedConstraints.add(new AmongVar(x, s, v));
+		    // ---- KK, 2015-10-17
+		    // among must not have duplicated variables there
+		    // could be constants that have the same value and
+		    // are duplicated.
+		    IntVar[] xx = new IntVar[x.length];
+		    HashSet<IntVar> varSet = new HashSet<IntVar>();
+		    for (int i = 0; i < x.length; i++) {
+			if (varSet.contains(x[i]) && x[i].singleton())
+			    xx[i] = new IntVar(store, x[i].min(), x[i].max());
+			else {
+			    xx[i] = x[i];
+			    varSet.add(x[i]);
+			}
+		    }
+		    IntVar[] ss = new IntVar[s.length];
+		    varSet = new HashSet<IntVar>();
+		    for (int i = 0; i < s.length; i++) {
+			if (varSet.contains(s[i]) && s[i].singleton())
+			    ss[i] = new IntVar(store, s[i].min(), s[i].max());
+			else {
+			    ss[i] = s[i];
+			    varSet.add(s[i]);
+			}
+		    }
+		    IntVar vv;
+		    if (varSet.contains(v) && v.singleton())
+			vv = new IntVar(store, v.min(), v.max());
+		    else
+			vv = v;
+		    //----
+
+
+		    delayedConstraints.add(new AmongVar(xx, ss, vv));
 // 		    pose(new AmongVar(x, s, v));
 		}
 		else if (p.startsWith("among", 6)) {
@@ -1167,9 +1200,26 @@ public class Constraints implements ParserTreeConstants {
 		    IntDomain s = getSetLiteral(node, 1);
 		    IntVar v = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
 
-		    // if (s.singleton()) 
-		    // pose(new Count(x, v, s.value()));
-		    // else {
+		    // ---- KK, 2015-10-17
+		    // among must not have duplicated variables. In x vecor
+		    // could be constants that have the same value and
+		    // are duplicated.
+		    IntVar[] xx = new IntVar[x.length];
+		    HashSet<IntVar> varSet = new HashSet<IntVar>();
+		    for (int i = 0; i < x.length; i++) {
+			if (varSet.contains(x[i]) && x[i].singleton())
+			    xx[i] = new IntVar(store, x[i].min(), x[i].max());
+			else {
+			    xx[i] = x[i];
+			    varSet.add(x[i]);
+			}
+		    }
+		    IntVar vv;
+		    if (varSet.contains(v) && v.singleton())
+			vv = new IntVar(store, v.min(), v.max());
+		    else
+			vv = v;
+		    //----
 
 		    IntervalDomain setImpl = new IntervalDomain();
 		    for (ValueEnumeration e = s.valueEnumeration(); e.hasMoreElements();) {
@@ -1178,7 +1228,7 @@ public class Constraints implements ParserTreeConstants {
 			setImpl.unionAdapt(new IntervalDomain(val, val));
 		    }
 
-		    pose(new Among(x, setImpl, v));
+		    pose(new Among(xx, setImpl, vv));
 
 		    // }
 		}
@@ -1357,6 +1407,26 @@ public class Constraints implements ParserTreeConstants {
 		    IntDomain F = getSetLiteral(node, 5);
 		    int minIndex = getInt((ASTScalarFlatExpr)node.jjtGetChild(6));
 
+		    /* it seems that it is does not needed since mapping in Regular
+		       is only used to queue variables and identify them; constant variables 
+		       will never be queued
+
+		    // regular must not have duplicated variables. In x vecor
+		    // could be constants that have the same value and
+		    // are duplicated.
+		    IntVar[] xx = new IntVar[x.length];
+		    HashSet<IntVar> varSet = new HashSet<IntVar>();
+		    for (int i = 0; i < x.length; i++) {
+			if (varSet.contains(x[i]) && x[i].singleton())
+			    xx[i] = new IntVar(store, x[i].min(), x[i].max());
+			else {
+			    xx[i] = x[i];
+			    varSet.add(xx[i]);
+			}
+		    }
+		    //----
+		    */
+
 		    // Build DFA
 		    FSM dfa = new FSM();
 		    FSMState[] s = new FSMState[Q]; 
@@ -1491,7 +1561,6 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar[] y = getVarArray((SimpleNode)node.jjtGetChild(1));
 
 		    // System.out.println ("lex_less_int: x.length = " + x.length +  " y.length = " + y.length);
-
 		    pose(new LexOrder(x, y, true));
 
 		    // 	DecomposedConstraint c = new org.jacop.constraints.Lex(new IntVar[][] {x, y}, true);
@@ -1515,7 +1584,22 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar[] capacity = getVarArray((SimpleNode)node.jjtGetChild(1));
 		    int[] w = getIntArray((SimpleNode)node.jjtGetChild(2));
 
-   		    pose( new org.jacop.constraints.binpacking.Binpacking(bin, capacity, w) );
+		    // ---- KK, 2015-10-18
+		    // bin_packing must not have duplicated variables. on x vecor
+		    // could be constants that have the same value and
+		    // are duplicated.
+		    IntVar[] binx = new IntVar[bin.length];
+		    HashSet<IntVar> varSet = new HashSet<IntVar>();
+		    for (int i = 0; i < bin.length; i++) {
+			if (varSet.contains(bin[i]) && bin[i].singleton())
+			    binx[i] = new IntVar(store, bin[i].min(), bin[i].max());
+			else {
+			    binx[i] = bin[i];
+			    varSet.add(bin[i]);
+			}
+		    }
+		    
+   		    pose( new org.jacop.constraints.binpacking.Binpacking(binx, capacity, w) );
 //   		    Constraint binPack = new org.jacop.constraints.binpacking.Binpacking(bin, capacity, w);
 //   		    delayedConstraints.add(binPack);
 		}
@@ -1674,16 +1758,16 @@ public class Constraints implements ParserTreeConstants {
 	PrimitiveConstraint c = null;
 	if (p2.getType() == 0) { // p2 int
 	    IntVar v1 = getVariable(p1);
-	    c = new XplusCeqZ(v1, p2.getInt(), zero);
+	    c = new XplusCeqZ(v1, p2.getInt(), dictionary.getConstant(0)); // zero);
 	}
 	else if (p1.getType() == 0) { // p1 int
 	    IntVar v2 = getVariable(p2);
-	    c = new XplusCeqZ(v2, p1.getInt(), zero);
+	    c = new XplusCeqZ(v2, p1.getInt(), dictionary.getConstant(0)); // zero);
 	}
 	else {
 	    IntVar v1 = getVariable(p1);
 	    IntVar v2 = getVariable(p2);
-	    c = new XplusYeqZ(v1, v2, zero);
+	    c = new XplusYeqZ(v1, v2, dictionary.getConstant(0)); // zero);
 	}
 	pose(c);
     }
@@ -2471,7 +2555,8 @@ public class Constraints implements ParserTreeConstants {
 		    if (p1[0] == 1)
 			pose(new Reified(new XeqC(p2[0], p3), p4));
 		    else
-			pose(new Reified(new XmulCeqZ(p2[0], p1[0], new IntVar(store, p3,p3)), p4));
+			// pose(new Reified(new XmulCeqZ(p2[0], p1[0], new IntVar(store, p3,p3)), p4));
+			pose(new Reified(new XmulCeqZ(p2[0], p1[0], dictionary.getConstant(p3)), p4));
 		}
 		else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
 		    pose(new Reified(new XplusCeqZ(p2[1], p3, p2[0]), p4));
@@ -2523,14 +2608,14 @@ public class Constraints implements ParserTreeConstants {
 		    pose(new Reified(new Not(new XplusYeqC(p2[0], p2[1], -p3)), p4));
 		} 
 		else if (allWeightsOne(p1)) {
-		    t = new IntVar(store, p3, p3);
+		    t = dictionary.getConstant(p3); // new IntVar(store, p3, p3);
 		    if (boolSum(p2))
 			pose(new Reified(new SumBool(store, p2, "!=", t), p4));
 		    else
 			pose(new Reified(new SumInt(store, p2, "!=", t), p4));
 		}
 		else if (allWeightsMinusOne(p1)) {
-		    t = new IntVar(store, -p3, -p3);
+		    t = dictionary.getConstant(-p3); // new IntVar(store, -p3, -p3);
 		    if (boolSum(p2))
 			pose(new Reified(new SumBool(store, p2, "!=", t), p4));
 		    else
@@ -2558,14 +2643,14 @@ public class Constraints implements ParserTreeConstants {
 		else if (p1.length == 1 && p1[0] == -1) 
 		    pose(new Reified(new org.jacop.constraints.XgteqC(p2[0], -p3), p4));
 		else if (allWeightsOne(p1)) {
-		    t = new IntVar(store, p3, p3);
+		    t = dictionary.getConstant(p3); //new IntVar(store, p3, p3);
 		    if (boolSum(p2))
 			pose(new Reified(new SumBool(store, p2, "<=", t), p4));
 		    else
 			pose(new Reified(new SumInt(store, p2, "<=", t), p4));
 		}
 		else if (allWeightsMinusOne(p1)) {
-		    t = new IntVar(store, -p3, -p3);
+		    t = dictionary.getConstant(-p3); //new IntVar(store, -p3, -p3);
 		    if (boolSum(p2))
 			pose(new Reified(new SumBool(store, p2, ">=", t), p4));
 		    else
@@ -2612,7 +2697,7 @@ public class Constraints implements ParserTreeConstants {
 			throw store.failException;
 
 		if (p1.length == 1) {
-		    pose(new XmulCeqZ(p2[0], p1[0], new IntVar(store, p3, p3)));
+		    pose(new XmulCeqZ(p2[0], p1[0], dictionary.getConstant(p3))); // new IntVar(store, p3, p3)));
 		}
 		else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
 		    if (p3 != 0)
@@ -2677,24 +2762,25 @@ public class Constraints implements ParserTreeConstants {
 			    pose(new SumInt(store, vect, "==", p2[pos]));
 		    }
 		    else if (allWeightsOne(p1)) {
-			IntVar v;
-			if (p3==0) 
-			    v = zero;
-			else if (p3 == 1) 
-			    v = one;
-			else
-			    v = new IntVar(store, p3, p3);
+			IntVar v = dictionary.getConstant(p3);
+			// if (p3==0) 
+			//     v = dictionary.getConstant(0); // zero;
+			// else if (p3 == 1) 
+			//     v = dictionary.getConstant(1); // one;
+			// else
+			    // v = new IntVar(store, p3, p3);
 			if (boolSum(p2))
 			    pose(new SumBool(store, p2, "==", v));
 			else
 			    pose(new SumInt(store, p2, "==", v));
 		    }
 		    else if (allWeightsMinusOne(p1)) {
-			IntVar v;
-			if (p3==0) 
-			    v = zero;
-			else
-			    v = new IntVar(store, -p3, -p3);
+			IntVar v = dictionary.getConstant(-p3);
+			
+			// if (p3==0) 
+			//     v = zero;
+			// else
+			//     v = new IntVar(store, -p3, -p3);
 			if (boolSum(p2))
 			    pose(new SumBool(store, p2, "==", v));
 			else
@@ -2830,14 +2916,14 @@ public class Constraints implements ParserTreeConstants {
 		    pose(new XplusClteqZ(p2[1], -p3, p2[0]) );
 
 		else if (allWeightsOne(p1)) {
-		    t = new IntVar(store, p3, p3);
+		    t = dictionary.getConstant(p3); //new IntVar(store, p3, p3);
 		    if (boolSum(p2))
 		    	pose(new SumBool(store, p2, "<=", t));		    
 		    else
 			pose(new SumInt(store, p2, "<=", t));		    
 		}
 		else if (allWeightsMinusOne(p1)) {
-		    t = new IntVar(store, -p3, -p3);
+		    t = dictionary.getConstant(-p3); //new IntVar(store, -p3, -p3);
 		    if (boolSum(p2))
 			pose(new SumBool(store, p2, ">=", t));
 		    else
@@ -3485,25 +3571,27 @@ public class Constraints implements ParserTreeConstants {
     }
 
     IntVar getVariable(ASTScalarFlatExpr node) {
-
 	if (node.getType() == 0) {// int
 	    int val = node.getInt();
-	    if (val == 0) return zero;
-	    else if (val == 1) return one;
-	    else return new IntVar(store, val, val);
+	    return dictionary.getConstant(val);
+	    // if (val == 0) return zero;
+	    // else if (val == 1) return one;
+	    // else return new IntVar(store, val, val);
 	}
 	if (node.getType() == 1) {// bool
 	    int val = node.getInt();
-	    if (val == 0) return zero;
-	    else if (val == 1) return one;
-	    return new IntVar(store, val, val);
+	    return dictionary.getConstant(val);
+	    // if (val == 0) return zero;
+	    // else if (val == 1) return one;
+	    // return new IntVar(store, val, val);
 	}
 	else if (node.getType() == 2) { // ident
 	    IntVar int_boolVar = dictionary.getVariable(node.getIdent());
 	    if (int_boolVar == null) {
 		int bInt = dictionary.getInt(node.getIdent());
-		return new IntVar(store, bInt, bInt);
-	    }	    return int_boolVar;
+		return dictionary.getConstant(bInt); // new IntVar(store, bInt, bInt);
+	    }
+	    return int_boolVar;
 	}
 	else if (node.getType() == 3) {// array access
 	    if (node.getInt() >= dictionary.getVariableArray(node.getIdent()).length ||
@@ -3512,8 +3600,9 @@ public class Constraints implements ParserTreeConstants {
 		System.exit(0);
 		return new IntVar(store);
 	    }
-	    else
+	    else {
 		return dictionary.getVariableArray(node.getIdent())[node.getInt()];
+	    }
 	}
 	else {
 	    System.err.println("Wrong parameter " + node);
@@ -3614,8 +3703,7 @@ public class Constraints implements ParserTreeConstants {
 		    if (ia != null) {
 			IntVar[] aa = new IntVar[ia.length];
 			for (int i=0; i<ia.length; i++)
-			    aa[i] = new IntVar(store, ia[i], ia[i]);
-			    // aa[i] = new IntVar(store, new IntervalDomain(ia[i], ia[i]));
+			    aa[i] = dictionary.getConstant(ia[i]); // new IntVar(store, ia[i], ia[i]);
 			return aa;
 		    }
 		    else {

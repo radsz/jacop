@@ -1088,7 +1088,11 @@ public class Regular extends Constraint {
 				
 		for (int i = list.length - 1; i >= 0; i--) {
 			list[i].putConstraint(this);
-			mapping.put(list[i], i);
+			Integer varPosition = mapping.put(list[i], i);
+			if (!list[i].singleton() && varPosition != null) {
+			    System.err.println("ERROR: Constraint " + toString() + " must have different variables on the list");
+			    System.exit(0);
+			}
 		}
 
 		store.addChanged(this);

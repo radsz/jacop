@@ -150,11 +150,19 @@ public class LexOrder extends Constraint {
 	store.registerRemoveLevelLateListener(this);
 
 	for (int i = 0; i < n; i++) {
-	    varToIndex.put(x[i], i);
+	    Integer varPosition = varToIndex.put(x[i], i);
+	    if (!x[i].singleton() && varPosition != null) {
+		System.err.println("ERROR: Constraint " + toString() + " must have different non ground variables on the list");
+		System.exit(0);
+	    }
 	    x[i].putModelConstraint(this, getConsistencyPruningEvent(x[i]));
 	}
 	for (int i = 0; i < n; i++) {
-	    varToIndex.put(y[i], i);
+	    Integer varPosition = varToIndex.put(y[i], i);
+	    if (!x[i].singleton() && varPosition != null) {
+		System.err.println("ERROR: Constraint " + toString() + " must have different non ground variables on the list");
+		System.exit(0);
+	    }
 	    y[i].putModelConstraint(this, getConsistencyPruningEvent(y[i]));
 	}
 
@@ -287,6 +295,10 @@ public class LexOrder extends Constraint {
 	    if (i < y.length - 1)
 		result.append(", ");
 	}
+	if (lexLT)
+	    result.append("], <");
+	else
+	    result.append("], <=");
 
 	result.append(");");
 

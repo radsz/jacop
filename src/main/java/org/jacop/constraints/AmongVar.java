@@ -1120,18 +1120,34 @@ public class AmongVar extends Constraint {
 		
 		for (i = 0; i < listOfX.length; i++) {
 			x = listOfX[i];
-			x.putConstraint(this);
-			xIndex.put(x, i);
-			if (x.singleton()) gx++;
+
+			Integer varPosition = xIndex.put(x, i);
+			if (varPosition == null) {
+			    x.putConstraint(this);
+			    // xIndex.put(x, i);
+			    if (x.singleton()) gx++;
+			}
+			else {
+			    System.err.println("ERROR: Constraint " + toString() + " must have different variables on the list");
+			    System.exit(0);
+		    }
 		}
 		
 		yIndex = new HashMap<IntVar, Integer>();
 		
 		for (i = 0; i < listOfY.length; i++) {
 			y = listOfY[i];
-			y.putConstraint(this);
-			variableQueueY.add(i);
-			yIndex.put(y, i);
+
+			Integer varPosition = yIndex.put(y, i);
+			if (varPosition == null) {
+			    y.putConstraint(this);
+			    variableQueueY.add(i);
+			    // yIndex.put(y, i);
+			}
+			else {
+			    System.err.println("ERROR: Constraint " + toString() + " must have different variables on the list");
+			    System.exit(0);
+		    }
 		}
 		
 		n.putConstraint(this);

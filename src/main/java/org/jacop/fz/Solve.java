@@ -149,8 +149,9 @@ public class Solve implements ParserTreeConstants {
 	initNumberConstraints = store.numberConstraints();
 
 	if (opt.getVerbose())
-	    System.out.println("%% Model constraints defined.\n%% Variables = "+store.size() + ", Bool variables = "+NumberBoolVariables +
-			       ", Constraints = "+initNumberConstraints + ", SAT clauses = " + sat.numberClauses());
+	    System.out.println("%% Model constraints defined.\n%% Variables = "+store.size() + " and  Bool variables = "+
+			       NumberBoolVariables + " of that constant variables = " + table.constantTable.size() + 
+			       "\n%% Constraints = "+initNumberConstraints + ", SAT clauses = " + sat.numberClauses());
 
 	dictionary = table;
 	options = opt;

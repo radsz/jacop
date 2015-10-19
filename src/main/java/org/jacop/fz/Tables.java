@@ -54,7 +54,9 @@ import org.jacop.floats.core.FloatVar;
 public class Tables {
 
     Store store;
-    IntVar zero, one;
+    // IntVar zero, one;
+
+    HashMap<Integer, IntVar> constantTable = new HashMap<Integer, IntVar>();
 
     // intTable keeps both int & bool (0=false, 1=true) parameters
     HashMap<String, Integer> intTable = new HashMap<String, Integer>();
@@ -104,8 +106,19 @@ public class Tables {
 
     public Tables(Store s) {
 	this.store = s;
-	this.zero = new IntVar(store, "zero", 0,0);
-	this.one = new IntVar(store, "one", 1,1);
+	// this.zero = new IntVar(store, "zero", 0,0);
+	// this.one = new IntVar(store, "one", 1,1);
+    }
+
+    public IntVar getConstant(int c) {
+	IntVar v = constantTable.get(c);
+
+	if (v == null) {
+	    v = new IntVar(store, c, c);
+	    constantTable.put(c, v);
+	}
+
+	return v;
     }
 
     /**
@@ -328,10 +341,11 @@ public class Tables {
 	    if (intA != null) {
 		a = new IntVar[intA.length];
 		for (int i =0; i<intA.length; i++) {
-		    if (intA[i] == 0) a[i] = zero;
-		    else if (intA[i] == 1) a[i] = one;
-		    else
-			a[i] = new IntVar(store, intA[i], intA[i]);
+		    a[i] = getConstant(intA[i]); 
+		    // if (intA[i] == 0) a[i] = zero;
+		    // else if (intA[i] == 1) a[i] = one;
+		    // else
+		    // 	a[i] = new IntVar(store, intA[i], intA[i]);
 		}
 	    }
 	    else

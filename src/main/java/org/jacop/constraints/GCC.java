@@ -503,9 +503,18 @@ public class GCC extends Constraint {
 		
 		// first I will put all the xNodes in a hashTable to be able to use
 		// it with the queueVariable function
-		for (int i = 0; i < xSize; i++) 
-			xNodesHash.put(x[i], i);
-
+		// KK, 2015-10-18
+		// only non ground variables need to be added
+		// no duplicates allowed
+		for (int i = 0; i < xSize; i++)
+		    if (!x[i].singleton()) {
+			Integer varPosition = xNodesHash.put(x[i], i);
+			if (varPosition != null) {
+			    System.err.println("ERROR: Constraint " + toString() + " must have different non ground variables on the list");
+			    System.exit(0);
+			}
+		    }
+		
 		// here I will put normalization
 		IntervalDomain d = new IntervalDomain();
 
