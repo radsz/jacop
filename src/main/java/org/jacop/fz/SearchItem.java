@@ -721,7 +721,7 @@ public class SearchItem implements ParserTreeConstants {
 	if (search_type == null)
 	    s += "defult_search\n";
 	else if (search_seq.size() == 0) {
-	    s = search_type + ", ";
+	    s += search_type + "(";
 	    if (search_variables == null)
 		s += "[]";
 	    else 
@@ -731,8 +731,11 @@ public class SearchItem implements ParserTreeConstants {
 		s += ", " + precision;
 	}
 	else {
-	    for (SearchItem se : search_seq)
-		s += se +"\n";
+	    for (int i=0; i < search_seq.size(); i++) //SearchItem se : search_seq)
+		if (i == search_seq.size()-1)
+		    s += search_seq.get(i) + ")";
+		else
+		    s += search_seq.get(i) + "), ";
 	}
 	return s;
     }

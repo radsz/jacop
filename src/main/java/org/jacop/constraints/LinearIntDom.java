@@ -166,6 +166,9 @@ public class LinearIntDom extends LinearInt {
     
     void pruneEq() {
 
+	if (sumMin > b || sumMax < b)
+	    throw store.failException;
+
 	// System.out.println("check " + this);
 	assignments = new int[l];
 	support = new IntervalDomain[l];
@@ -174,7 +177,7 @@ public class LinearIntDom extends LinearInt {
 
 	findSupport(0, 0);
 
-	// System.out.println("valid assignments: " + java.util.Arrays.asList(support));
+	// System.out.println("Variables: "+java.util.Arrays.asList(x)+" have valid assignments: " + java.util.Arrays.asList(support));
 	int f = 0, e = 0;
 	for (int i = 0; i < pos; i++) {
 	    x[i].domain.in(store.level, x[i], support[i]);
@@ -242,12 +245,13 @@ public class LinearIntDom extends LinearInt {
 
 		// store assignments
 		for (int i = 0; i < l; i++) {
+		    int a = assignments[i];
 		    if (support[i].getSize() == 0)
-			support[i] = new IntervalDomain(assignments[i], assignments[i]);
-		    else if (support[i].max() < assignments[i])
-			support[i].addLastElement(assignments[i]);
-		    else if (support[i].max() > assignments[i])
-			support[i].unionAdapt(assignments[i], assignments[i]);
+			support[i] = new IntervalDomain(a, a);
+		    else if (support[i].max() < a)
+			support[i].addLastElement(a);
+		    else if (support[i].max() > a)
+			support[i].unionAdapt(a, a);
 		}
 	    }
 	    return;
@@ -269,13 +273,7 @@ public class LinearIntDom extends LinearInt {
 		int eMin = e.min();
 		int eMax = e.max();
 
-		// if (eMax*w  < lb)
-		//     continue; // value too low
-		// else if (eMin*w > ub) // value too large
-		//     break;
-		
-		for (int j = eMin; j <= eMax; j++) {
-		    int element = j;
+		for (int element = eMin; element <= eMax; element++) {
 		
 		    int elementValue = element*w;
 		    if (elementValue  < lb) 
@@ -331,12 +329,13 @@ public class LinearIntDom extends LinearInt {
 
 		// store assignments
 		for (int i = 0; i < l; i++) {
+		    int a = assignments[i];
 		    if (support[i].getSize() == 0)
-			support[i] = new IntervalDomain(assignments[i], assignments[i]);
-		    else if (support[i].max() < assignments[i])
-			support[i].addLastElement(assignments[i]);
-		    else if (support[i].max() > assignments[i])
-			support[i].unionAdapt(assignments[i], assignments[i]);
+			support[i] = new IntervalDomain(a, a);
+		    else if (support[i].max() < a)
+			support[i].addLastElement(a);
+		    else if (support[i].max() > a)
+			support[i].unionAdapt(a, a);
 		}
 	    }
 	    return;
@@ -357,14 +356,8 @@ public class LinearIntDom extends LinearInt {
 		Interval e = ((IntervalDomain)currentDom).intervals[k];
 		int eMin = e.min();
 		int eMax = e.max();
-
-		// if (eMin*w  < lb)
-		//     break; // value too low
-		// else if (eMax*w > ub) // value too large
-		//     continue;
 			
-		for (int j = eMin; j <= eMax; j++) {
-		    int element = j;
+		for (int element = eMin; element <= eMax; element++) {
 		
 		    int elementValue = element*w;
 		    if (elementValue  < lb) 
