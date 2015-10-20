@@ -124,6 +124,8 @@ public class Solve implements ParserTreeConstants {
     int solveKind=-1;
 
     SatTranslation sat;
+
+    StringBuffer lastSolution = null;
     
     /**
      * It creates a parser for the solve part of the flatzinc file. 
@@ -504,6 +506,9 @@ public class Solve implements ParserTreeConstants {
 	    System.exit(0);
 	}
 
+	if (! options.getAll() && lastSolution != null)
+	    System.out.print(lastSolution.toString());
+	
 	printStatisticsForSingleSearch(false, Result);
 
     }
@@ -779,9 +784,11 @@ public class Solve implements ParserTreeConstants {
 	    set_search_variables.length == 0 &&
 	    float_search_variables.length == 0) {
 
+	    
 	    printSolution();
+	    System.out.print(lastSolution.toString());
 
-	    System.out.println("----------");
+	    // System.out.println("----------");
 
 	    if (options.getStatistics())
 		System.out.println("\n%% Model variables : "+ (store.size()+ NumberBoolVariables) +
@@ -989,6 +996,9 @@ public class Solve implements ParserTreeConstants {
 	    System.exit(0);
 	}
 
+	if (! options.getAll() && lastSolution != null)
+	    System.out.print(lastSolution.toString());
+	
 	printStatisticsForSeqSearch(false, Result);
     
     }
@@ -1185,7 +1195,8 @@ public class Solve implements ParserTreeConstants {
 	// T = System.currentTimeMillis();
 	// System.out.println("% Search time since last solution : " + (T - TOld)/1000 + " s");
 	// TOld = T;
-
+	StringBuffer printBuffer = new StringBuffer();
+	
 	if (dictionary.outputVariables.size() > 0)
 	    for (int i=0; i<dictionary.outputVariables.size(); i++) {
 		Var v = dictionary.outputVariables.get(i);
@@ -1203,7 +1214,8 @@ public class Solve implements ParserTreeConstants {
 			}
 		    else
 			boolVar += "false..true";
-		    System.out.println(boolVar+";");
+
+		    printBuffer.append(boolVar).append(";\n");
 		}
 		else if (v instanceof SetVar) {
 		    // print set variables
@@ -1221,16 +1233,26 @@ public class Solve implements ParserTreeConstants {
 		    }
 		    else
 			setVar += v.dom().toString();
-		    System.out.println(setVar+";");
+
+		    printBuffer.append(setVar).append(";\n");
 		}
 		else
-		    System.out.println(v+";");
+
+		    printBuffer.append(v).append(";\n");
 	    }
 
 	for (int i=0; i<dictionary.outputArray.size(); i++) {
 	    OutputArrayAnnotation a = dictionary.outputArray.get(i);
-	    System.out.println(a);
+
+	    printBuffer.append(a).append("\n");
 	}
+
+	printBuffer.append("----------\n");
+	
+	if (options.getAll())
+	    System.out.print(printBuffer.toString());
+	else // store the print-out
+	    lastSolution = printBuffer;
     }
 
     int getKind(String k) {
@@ -1439,7 +1461,7 @@ public class Solve implements ParserTreeConstants {
 	    FinalNumberSolutions++;
 
 	    printSolution();
-	    System.out.println("----------");
+	    // System.out.println("----------");
 
 	    return returnCode;
 	}
