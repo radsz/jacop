@@ -242,6 +242,9 @@ implements SolverComponent,
 	/**
 	 * It gets a unique id from a clause index, relative to a database,
 	 * and a database index.
+	 * @param clauseIndex clause index 
+	 * @param databaseIndex database index
+	 * @return unique id from a clause index
 	 */
 	public final int indexesToUniqueId(int clauseIndex, int databaseIndex) {
 		assert databaseIndex < currentIndex;

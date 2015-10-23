@@ -73,7 +73,7 @@ public class ArgMin extends Constraint {
     public int indexOffset;
 
     /**
-     * tirbreak == true --> select element with the lowest index if exist several 
+     * tirbreak == true {@literal -->} select element with the lowest index if exist several 
      */
     public boolean tiebreak = true;
 
@@ -119,6 +119,8 @@ public class ArgMin extends Constraint {
      * It constructs max constraint.
      * @param minIndex variable denoting the index of minimum value
      * @param variables the array of variables for which the minimum value is imposed.
+     * @param indexOffset the offset for the index that is computed from 1 by default (if needed from 0, use -1 for this parameter)
+     * @param tiebreak defines if tie breaking sgould be used (returning the least index if several maximum elements
      */
     public ArgMin(ArrayList<? extends IntVar> variables, IntVar minIndex, int indexOffset, boolean tiebreak) {
 	this(variables, minIndex);

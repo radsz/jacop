@@ -75,9 +75,9 @@ public class SumWeight extends Constraint {
 	public static String[] xmlAttributes = {"list", "weights", "sum"};
 
 	/**
-	 * @param list
-	 * @param weights
-	 * @param sum
+	 * @param list the list of varibales
+	 * @param weights the list of weights
+	 * @param sum the resulting sum
 	 */
 	public SumWeight(IntVar[] list, int[] weights, IntVar sum) {
 

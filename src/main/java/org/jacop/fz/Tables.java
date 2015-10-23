@@ -484,7 +484,7 @@ public class Tables {
 	
     /**
      * It adds an array of search set variables.
-     * @param v
+     * @param v array of set variables being  added
      */
     public void addSearchSetArray(Var[] v) { defaultSearchSetArrays.add(v); }
 

@@ -51,7 +51,7 @@ import org.jacop.core.Store;
  *	different letters represent different digits
  *
  *	BASIC 			9567
- * +LOGIC =======> +1085
+ * +LOGIC{@literal =======>} +1085
  * PASCAL 		   10652
  *
  */

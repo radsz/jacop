@@ -151,6 +151,8 @@ public class SatTranslation {
      * Our method cuts list to 3 or 2 element parts, generates XOR for them
      * and composesd them back to the original XOR.
      * Further improvements possible, if using 4-7 decompositions.
+     * @param a parameters to be xor'ed
+     * @param c result
      */
     public void generate_xor(IntVar[] a, IntVar c) {
 

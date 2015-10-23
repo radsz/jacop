@@ -84,7 +84,7 @@ public class FittingNumbers extends ExampleFD {
 
 	/**
 	 * It executes the program to solve simple Kakro puzzle.
-	 * @param args
+	 * @param args commans arguments (none)
 	 */
 	public static void main(String args[]) {
 

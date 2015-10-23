@@ -247,7 +247,7 @@ setup to run configuration. -->
 					</archive>
 				</configuration>
 			</plugin>
-
+			
 			<!-- Plugin for generating javadoc jar -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -255,7 +255,21 @@ setup to run configuration. -->
 				<version>2.10.3</version>
 				<!--If using less than 1.8 Java to build then this parameter has to be commented out.-->
 				<configuration>
-					<additionalparam>-Xdoclint:none</additionalparam>
+				  <!---
+				      <additionalparam>-Xdoclint:none</additionalparam>
+				  -->				  
+				  <!--
+				  <sourceFileExcludes>
+				    <exclude>**/target/generated-sources/org/jacop/fz/Node.java</exclude>
+				    <exclude>**/ParseException.java</exclude>
+				    <exclude>**/Parser.java</exclude>
+				    <exclude>**/ParserTokenManager.java</exclude>
+				    <exclude>**/Token.java</exclude>
+				    <exclude>**/TokenMgrError.java</exclude>
+				    <exclude>**/SimpleCharStream.java</exclude>
+				    <exclude>**/ASTSolveItem.java</exclude>
+				  </sourceFileExcludes>
+				      -->
 				</configuration>
 				<executions>
 					<execution>

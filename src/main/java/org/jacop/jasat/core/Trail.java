@@ -108,8 +108,8 @@ public final class Trail implements SolverComponent {
 
 
 	/**
-	 * Sets a literal, that is, a variable signed with its value (> 0 for true,
-	 * < 0 for false). This must be used only for asserted values,
+	 * Sets a literal, that is, a variable signed with its value ({@literal >} 0 for true,
+	 * {@literal <} 0 for false). This must be used only for asserted values,
 	 * not the ones propagated from unit clauses.
 	 * @param literal	the literal
 	 * @param level 	the current level
@@ -226,7 +226,7 @@ public final class Trail implements SolverComponent {
 
 	/**
 	 * It returns the index of the clause that caused this variable to be set
-	 * @param literal	the literal. Must be set.
+	 * @param var	the literal. Must be set.
 	 * @return	an index if there was an explanation, 0 otherwise
 	 */
 	public int getExplanation(int var) {
@@ -271,6 +271,8 @@ public final class Trail implements SolverComponent {
 
 	/**
 	 * returns the number of currently set variables
+	 *
+	 * @return the number of currently set variables
 	 */
 	public int size() {
 		return assertionStack.size();
@@ -297,7 +299,6 @@ public final class Trail implements SolverComponent {
 	/**
 	 * to be called before any use of the trail
 	 * @param core	the Solver instance
-	 * @param size		the initial size of trail
 	 */
 	public void initialize(Core core) {
 

@@ -439,9 +439,9 @@ public class MineSweeper extends ExampleFD {
     *  % a comment which also is ignored
     *  number of rows
     *  number of columns
-    *  <
+    *  {@literal <}
     *    row number of neighbours lines...
-    *  >
+    *  {@literal >}
     * 
     * 0..8 means number of neighbours, "." mean unknown (may be a mine)
     * 

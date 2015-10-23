@@ -280,7 +280,7 @@ public class Options {
 	}
 
        /**
-	 * It returns precision defined in  the command line
+	 * It returns precision defined in the command line
 	 * @return precision. 
 	 */
 	public double getPrecision() {
@@ -288,14 +288,16 @@ public class Options {
 	}
 
 	/**
-	 * It defines precision. 
+	 * It informs whether precision is defined. 
+	 * @return true if precision for floating point solver is defined
 	 */
 	public boolean precision() {
 		return precisionDefined;
 	}
 
     	/**
-	 * It defines precision. 
+	 * It defines whether sat is used. 
+	 * @return true sat is used, false oterwise
 	 */
 	public boolean useSat() {
 		return use_sat;
@@ -304,6 +306,8 @@ public class Options {
     	/**
 	 * It defines wheter additional search should use output variables only (false, default). 
 	 * or should try to collect all non introduced variables (true).
+	 * @return additional search should use output variables only (false, default). 
+	 * or should try to collect all non introduced variables (true)
 	 */
         public boolean complementarySearch() {
 	    return complementary_search;

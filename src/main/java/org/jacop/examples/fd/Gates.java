@@ -151,7 +151,7 @@ public class Gates extends ExampleFD {
 
 	/**
 	 * It executes a program to solve gates problems.
-	 * @param args
+	 * @param args parameters (none)
 	 */
 	public static void main(String args[]) {
 

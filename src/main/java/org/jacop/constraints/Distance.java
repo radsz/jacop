@@ -83,9 +83,10 @@ public class Distance extends PrimitiveConstraint {
 	public static String[] xmlAttributes = {"x", "y", "z"};
 
 	/**
-	 * @param x
-	 * @param y
-	 * @param z
+	 * Distance between x and y |x-y| = z
+	 * @param x first parameter
+	 * @param y second parameter
+	 * @param z result
 	 */
 	public Distance(IntVar x, IntVar y, IntVar z) {
 		

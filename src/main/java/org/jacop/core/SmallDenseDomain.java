@@ -126,8 +126,8 @@ public class SmallDenseDomain extends IntDomain {
 
 	/**
 	 * It creates a domain with values between min and max inclusive.
-	 * @param min
-	 * @param max
+	 * @param min min element in the domain
+	 * @param max max element in the domain
 	 */
 	public SmallDenseDomain(int min, int max) {
 		

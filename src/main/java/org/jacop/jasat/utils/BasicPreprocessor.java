@@ -26,6 +26,7 @@ public class BasicPreprocessor {
 	/**
 	 * add a clause (just parsed from a file, e.g.) to the solver, after
 	 * processing
+	 * @param clause clause to be added
 	 */
 	public void addModelClause(IntVec clause) {
 		

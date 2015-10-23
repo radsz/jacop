@@ -1071,7 +1071,7 @@ public class Store {
 
 	/**
 	 * This function sets the long description of the store.
-	 * @param description  
+	 * @param description  description of the store
 	 */
 	public void setDescription(String description) {
 		this.description = description;

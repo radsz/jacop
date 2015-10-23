@@ -126,7 +126,7 @@ public class GeostObject {
 	 * @param shapeID the variable specifying the shape finite domain variable.
 	 * @param start it determines the start time of the geost object in terms of time.
 	 * @param duration finite domain variable specifying the duration of the geost object in terms of time.
-	 * @param end 
+	 * @param end finite domain variable specifying the end of the geost object in terms of time.
 	 */
 	public GeostObject(int no, IntVar[] coords, IntVar shapeID, IntVar start,
 						IntVar duration, IntVar end) {
@@ -231,7 +231,7 @@ public class GeostObject {
 				
 		/**
 		 * It evaluates part of the constraint that ensures that start + duration = end
-		 * @param store
+		 * @param store current store
 		 * @return true if some variable was changed, false otherwise
 		 */
 		public boolean consistencyStartPlusDurationEqEnd(Store store) {
@@ -274,7 +274,7 @@ public class GeostObject {
 		}
 		
 		/**
-		 * It applies constraint enforcing that duration > 0
+		 * It applies constraint enforcing that duration {@literal >} 0
 		 * 
 		 * @param store constraint store in which the geost constraint is imposed at.
 		 * @return true if a variable was updated, false otherwise

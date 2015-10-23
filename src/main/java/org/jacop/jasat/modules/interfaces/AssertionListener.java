@@ -47,6 +47,7 @@ public interface AssertionListener extends SolverComponent {
 	 * Called when a variable is set
 	 * @param literal	the literal that is set
 	 * propagation, false otherwise
+	 * @param level	the search level
 	 */
 	public void onAssertion(int literal, int level);
 

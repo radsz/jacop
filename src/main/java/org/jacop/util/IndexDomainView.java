@@ -156,7 +156,7 @@ public class IndexDomainView {
 	/**
 	 * It removes all values for which no support was found since the initialization of 
 	 * the support sweep.
-	 * @param store
+	 * @param store current store
 	 */
 	public void removeUnSupportedValues(Store store) {
 		

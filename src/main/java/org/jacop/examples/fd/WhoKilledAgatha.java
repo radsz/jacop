@@ -276,7 +276,7 @@ public class WhoKilledAgatha extends ExampleFD {
 
     /**
      * It runs the program which solves the logic puzzle "Who killed Agatha". 
-     * @param args
+     * @param args parameters (none)
      */
     public static void main(String args[]) {
 

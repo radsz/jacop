@@ -52,7 +52,7 @@ public interface InitializeListener {
 
 	/**
 	 * It sets the children listeners of this initialize listener.
-	 * @param children
+	 * @param children children listeners being set
 	 */
 	public void setChildrenListeners(InitializeListener[] children);
 

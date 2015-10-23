@@ -83,7 +83,7 @@ public class ElementIntegerFast extends Constraint {
 
     /**
      * It specifies list of variables within an element constraint list[index - indexOffset] = value.
-     * The list is addressed by positive integers (>=1) if indexOffset is equal to 0. 
+     * The list is addressed by positive integers ({@code >=1}) if indexOffset is equal to 0. 
      */
     public int list[];
 	
@@ -201,123 +201,123 @@ public class ElementIntegerFast extends Constraint {
 	    index.domain.in(store.level, index, 1 + this.indexOffset, list.length + this.indexOffset);
 	    firstConsistencyCheck = false;
 	}
-	else
-	    do {
 
-		store.propagationHasOccurred = false;
+	do {
 
-		short sort = order.value();
+	    store.propagationHasOccurred = false;
 
-		if (sort == ascending || sort == descending) {
-		    int minIndex = index.min();
-		    int maxIndex = index.max();
+	    short sort = order.value();
 
-		    if (sort == ascending)
-			value.domain.in(store.level, value, list[minIndex - 1 - indexOffset], list[maxIndex - 1 - indexOffset]);
-		    else
-			value.domain.in(store.level, value, list[maxIndex - 1 - indexOffset], list[minIndex - 1 - indexOffset]);
+	    if (sort == ascending || sort == descending) {
+		int minIndex = index.min();
+		int maxIndex = index.max();
 
-		    IntervalDomain indexDom = new IntervalDomain(5); // create with size 5 ;)			
-		    for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements();) {
-			int position = e.nextElement() - 1 - indexOffset;
-			int val = list[position];
+		if (sort == ascending)
+		    value.domain.in(store.level, value, list[minIndex - 1 - indexOffset], list[maxIndex - 1 - indexOffset]);
+		else
+		    value.domain.in(store.level, value, list[maxIndex - 1 - indexOffset], list[minIndex - 1 - indexOffset]);
+
+		IntervalDomain indexDom = new IntervalDomain(5); // create with size 5 ;)			
+		for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements();) {
+		    int position = e.nextElement() - 1 - indexOffset;
+		    int val = list[position];
 		    
-			if (disjoint(value, val))
-			    if (indexDom.size == 0)
-				indexDom.unionAdapt(position + 1 + indexOffset);
-			    else
-			    	// indexes are in ascending order and can be added at the end if the last element
-			    	// plus 1 is not equal a new value. In such case the max must be changed.
-				indexDom.addLastElement(position + 1 + indexOffset);
+		    if (disjoint(value, val))
+			if (indexDom.size == 0)
+			    indexDom.unionAdapt(position + 1 + indexOffset);
 			else
-			    if (val == list[maxIndex - 1 - indexOffset])
-				break;
-		    }
-
-		    index.domain.in(store.level, index, indexDom.complement());
-
+			    // indexes are in ascending order and can be added at the end if the last element
+			    // plus 1 is not equal a new value. In such case the max must be changed.
+			    indexDom.addLastElement(position + 1 + indexOffset);
+		    else
+			if (val == list[maxIndex - 1 - indexOffset])
+			    break;
 		}
-		else if (sort == detect) {
-		
-		    IntDomain vals = new IntervalDomain(5);
-	    
-		    int min = IntDomain.MaxInt;
-		    int max = IntDomain.MinInt;
-		    IntervalDomain indexDom = new IntervalDomain(5); // create with size 5 ;)
-		    boolean asc = true, desc = true;
-		    int previous = list[index.min() - 1 - indexOffset];
 
-		    for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements();) {
-			int position = e.nextElement() - 1 - indexOffset;
-			int val = list[position];
+		index.domain.in(store.level, index, indexDom.complement());
+
+	    }
+	    else if (sort == detect) {
+		
+		IntDomain vals = new IntervalDomain(5);
+	    
+		int min = IntDomain.MaxInt;
+		int max = IntDomain.MinInt;
+		IntervalDomain indexDom = new IntervalDomain(5); // create with size 5 ;)
+		boolean asc = true, desc = true;
+		int previous = list[index.min() - 1 - indexOffset];
+
+		for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements();) {
+		    int position = e.nextElement() - 1 - indexOffset;
+		    int val = list[position];
 		    
-			if (disjoint(value, val))
-			    if (indexDom.size == 0)
-				indexDom.unionAdapt(position + 1 + indexOffset);
-			    else
-			    	// indexes are in ascending order and can be added at the end if the last element
-			    	// plus 1 is not equal a new value. In such case the max must be changed.
-				indexDom.addLastElement(position + 1 + indexOffset);
-			else {
-			    min = Math.min(min, val);
-			    max = Math.max(max, val);
-			}
-
-			if (val > previous) 
-			    desc = false;
-			if (val < previous) 
-			    asc = false;
-
-			previous = val;
+		    if (disjoint(value, val))
+			if (indexDom.size == 0)
+			    indexDom.unionAdapt(position + 1 + indexOffset);
+			else
+			    // indexes are in ascending order and can be added at the end if the last element
+			    // plus 1 is not equal a new value. In such case the max must be changed.
+			    indexDom.addLastElement(position + 1 + indexOffset);
+		    else {
+			min = Math.min(min, val);
+			max = Math.max(max, val);
 		    }
-		    if (desc) 
-			order.update(descending);
-		    if (asc)
-			order.update(ascending);
-		
-		    index.domain.in(store.level, index, indexDom.complement());
-		    value.domain.in(store.level, value, min, max);
 
-		    if (index.singleton()) {
-			int position = index.value() - 1 - indexOffset;
-			value.domain.in(store.level, value, list[position], list[position]);
-			removeConstraint();
-		    }
+		    if (val > previous) 
+			desc = false;
+		    if (val < previous) 
+			asc = false;
+
+		    previous = val;
 		}
-		else {// sort == none
+		if (desc) 
+		    order.update(descending);
+		if (asc)
+		    order.update(ascending);
+		
+		index.domain.in(store.level, index, indexDom.complement());
+		value.domain.in(store.level, value, min, max);
 
-		    IntDomain vals = new IntervalDomain(5);
+		if (index.singleton()) {
+		    int position = index.value() - 1 - indexOffset;
+		    value.domain.in(store.level, value, list[position], list[position]);
+		    removeConstraint();
+		}
+	    }
+	    else {// sort == none
+
+		IntDomain vals = new IntervalDomain(5);
 	    
-		    int min = IntDomain.MaxInt;
-		    int max = IntDomain.MinInt;
-		    IntervalDomain indexDom = new IntervalDomain(5); // create with size 5 ;)
-		    for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements();) {
-			int position = e.nextElement() - 1 - indexOffset;
-			int val = list[position];
+		int min = IntDomain.MaxInt;
+		int max = IntDomain.MinInt;
+		IntervalDomain indexDom = new IntervalDomain(5); // create with size 5 ;)
+		for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements();) {
+		    int position = e.nextElement() - 1 - indexOffset;
+		    int val = list[position];
 
-			if (disjoint(value, val))
-			    if (indexDom.size == 0)
-				indexDom.unionAdapt(position + 1 + indexOffset);
-			    else
-			    	// indexes are in ascending order and can be added at the end if the last element
-			    	// plus 1 is not equal a new value. In such case the max must be changed.
-				indexDom.addLastElement(position + 1 + indexOffset);
-			else {
-			    min = Math.min(min, val);
-			    max = Math.max(max, val);
-			}
-		    }
-		
-		    index.domain.in(store.level, index, indexDom.complement());
-		    value.domain.in(store.level, value, min, max);
-
-		    if (index.singleton()) {
-			int position = index.value() - 1 - indexOffset;
-			value.domain.in(store.level, value, list[position], list[position]);
-			removeConstraint();
+		    if (disjoint(value, val))
+			if (indexDom.size == 0)
+			    indexDom.unionAdapt(position + 1 + indexOffset);
+			else
+			    // indexes are in ascending order and can be added at the end if the last element
+			    // plus 1 is not equal a new value. In such case the max must be changed.
+			    indexDom.addLastElement(position + 1 + indexOffset);
+		    else {
+			min = Math.min(min, val);
+			max = Math.max(max, val);
 		    }
 		}
-	    } while (store.propagationHasOccurred);
+		
+		index.domain.in(store.level, index, indexDom.complement());
+		value.domain.in(store.level, value, min, max);
+
+		if (index.singleton()) {
+		    int position = index.value() - 1 - indexOffset;
+		    value.domain.in(store.level, value, list[position], list[position]);
+		    removeConstraint();
+		}
+	    }
+	} while (store.propagationHasOccurred);
     }
 
     boolean disjoint(IntVar v1, int v2) {

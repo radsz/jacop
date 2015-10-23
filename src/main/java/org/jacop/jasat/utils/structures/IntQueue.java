@@ -61,6 +61,8 @@ public final class IntQueue implements Iterable<Integer> {
 
 	/**
 	 * takes the first element, removes it from the FIFO and returns it
+	 *
+	 * @return the first element from the FIFO queue
 	 */
 	public int pop() {
 		assert start != stop;

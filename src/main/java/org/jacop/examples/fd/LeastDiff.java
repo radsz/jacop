@@ -117,7 +117,7 @@ public class LeastDiff extends ExampleFD {
     
     /**
      * It executes the program which solves this simple optimization problem.
-     * @param args
+     * @param args parameters (none)
      */
     public static void main(String args[]) {
 

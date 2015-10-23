@@ -72,6 +72,8 @@ public final class IntVec implements Iterable<Integer> {
 	
 	/**
 	 * number of elements
+	 *
+	 * @return number of elements in the vector
 	 */
 	public int size() {
 		return numElem;

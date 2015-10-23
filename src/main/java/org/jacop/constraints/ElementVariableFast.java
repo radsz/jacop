@@ -82,7 +82,7 @@ public class ElementVariableFast extends Constraint {
 
     /**
      * It specifies list of variables within an element constraint list[index - indexOffset] = value.
-     * The list is addressed by positive integers (>=1) if indexOffset is equal to 0. 
+     * The list is addressed by positive integers ({@code >=1}) if indexOffset is equal to 0. 
      */
     public IntVar list[];
 	
@@ -187,36 +187,37 @@ public class ElementVariableFast extends Constraint {
 	    index.domain.in(store.level, index, 1 + this.indexOffset, list.length + this.indexOffset);
 	    firstConsistencyCheck = false;
 	}
-	else {
 
-	    int min = IntDomain.MaxInt;
-	    int max = IntDomain.MinInt;
-	    IntervalDomain indexDom = new IntervalDomain(5); // create with size 5 ;)
-	    for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements();) {
-		int position = e.nextElement() - 1 - indexOffset;
+	int min = IntDomain.MaxInt;
+	int max = IntDomain.MinInt;
+	IntervalDomain indexDom = new IntervalDomain(5); // create with size 5 ;)
+	for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements();) {
+	    int position = e.nextElement() - 1 - indexOffset;
 		    
-		if (disjoint(value, list[position]))
+	    if (disjoint(value, list[position]))
+		if (indexDom.size == 0)
 		    indexDom.unionAdapt(position + 1 + indexOffset);
-		else {
-		    min = Math.min(min, list[position].min());
-		    max = Math.max(max, list[position].max());
-		}
+		else
+		    indexDom.addLastElement(position + 1 + indexOffset);
+	    else {
+		min = Math.min(min, list[position].min());
+		max = Math.max(max, list[position].max());
 	    }
+	}
 		
-	    index.domain.in(store.level, index, indexDom.complement());
-	    value.domain.in(store.level, value, min, max);
+	index.domain.in(store.level, index, indexDom.complement());
+	value.domain.in(store.level, value, min, max);
 
-	    if (index.singleton()) {
-		int position = index.value() - 1 - indexOffset;
-		value.domain.in(store.level, value, list[position].domain);
-		list[ position].domain.in(store.level, list[position], value.domain);
+	if (index.singleton()) {
+	    int position = index.value() - 1 - indexOffset;
+	    value.domain.in(store.level, value, list[position].domain);
+	    list[ position].domain.in(store.level, list[position], value.domain);
 
-	    }
-	    if (value.singleton() && index.singleton()) {
-		IntVar v = list[index.value() - 1 - indexOffset];
-		v.domain.in(store.level, v, value.value(), value.value());
-		removeConstraint();
-	    }
+	}
+	if (value.singleton() && index.singleton()) {
+	    IntVar v = list[index.value() - 1 - indexOffset];
+	    v.domain.in(store.level, v, value.value(), value.value());
+	    removeConstraint();
 	}
     }
 

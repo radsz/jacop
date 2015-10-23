@@ -363,7 +363,7 @@ public class KnapsackExample extends ExampleFD {
 	 * If no arguments is provided or improper number of them the program will use
 	 * internal instance of the knapsack problem.
 	 * 
-	 * @param args
+	 * @param args the capacity of the knapsack, 4 strings denoting the item (weight, profit, maximumQuantity, name), the number of strings total must be equal to 1+4*noOfItems.
 	 */
 	public static void main(String args[]) {
 

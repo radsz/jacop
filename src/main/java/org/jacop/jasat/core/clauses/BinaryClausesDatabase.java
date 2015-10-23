@@ -58,7 +58,7 @@ public final class BinaryClausesDatabase extends AbstractClausesDatabase {
 
 	/**
 	 * 
-	 * @TODO Efficiency, 
+	 * TODO Efficiency, 
 	 * 
 	 * Watches require a very large array, but there maybe not so many 
 	 * binary clauses. Maybe a hashmap, connecting variable and list of 

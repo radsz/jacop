@@ -187,6 +187,8 @@ public class Config extends Properties {
 
 	/**
 	 * static access to the default config
+	 *
+	 * @return default config
 	 */
 	public static Config defaultConfig() {
 		return new Config();

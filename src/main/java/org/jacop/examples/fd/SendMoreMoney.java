@@ -56,7 +56,7 @@ import org.jacop.search.SmallestDomain;
  *    different letters represent different digits
 
  *  SEND           9567
- * +MORE =======> +1085
+ * +MORE ======={@literal >}+1085
  * MONEY          10652
  * 
  * @author Radoslaw Szymanek

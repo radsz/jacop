@@ -52,7 +52,7 @@ import org.jacop.search.SmallestDomain;
   *
   * @author Hakan Kjellerstrand (hakank@bonetmail.com) and Radoslaw Szymanek
   *
-  * Problem from Marriott & Stuckey: 'Programming with constraints', page 112f
+  * Problem from Marriott {@literal &} Stuckey: 'Programming with constraints', page 112f
   *
   * Feature: testing cumulative.
   *
@@ -131,7 +131,7 @@ public class FurnitureMoving extends ExampleFD {
 
 	/**
 	 * It executes the program which solves this logic puzzle.
-	 * @param args
+	 * @param args command arguments (none)
 	 */
 	public static void main(String args[]) {
 
@@ -151,6 +151,8 @@ public class FurnitureMoving extends ExampleFD {
 	
     /**
      * It specifies search for that logic puzzle. 
+     *
+     * @return true when solution is found false otherwise
      */
     public boolean searchSpecific() {
 

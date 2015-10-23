@@ -61,7 +61,7 @@ public class SparseSet {
 	/**
 	 * It creates a SparseSet with given upper limit on the value
 	 * of the biggest element in the set.
-	 * @param size
+	 * @param size the upper limit for the SparseSet
 	 */
 	public SparseSet(int size) {
 

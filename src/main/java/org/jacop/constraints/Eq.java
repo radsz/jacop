@@ -40,7 +40,7 @@ import org.jacop.core.Var;
 import org.jacop.util.SimpleHashSet;
 
 /**
- * Constraint "constraint1" #<=> "constraint2"
+ * Constraint "constraint1"{@literal #<=>} "constraint2"
  * 
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek

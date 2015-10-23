@@ -77,7 +77,8 @@ public class AndBool extends PrimitiveConstraint {
 
     /**
      * It constructs and constraint on variables.
-     * @param a parameters variable.
+     * @param a parameter variable.
+     * @param b parameter variable.
      * @param result variable.
      */
     public AndBool(IntVar a, IntVar b, IntVar result) {

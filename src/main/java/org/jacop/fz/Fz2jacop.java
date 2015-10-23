@@ -51,8 +51,6 @@ public class Fz2jacop {
      * 
      * TODO what are the conditions for different exceptions being thrown? Write little info below.
      * 
-     * @throws ParseException
-     * @throws TokenMgrError
      */
 	
     public static void main(String[] args)  {

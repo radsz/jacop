@@ -131,6 +131,7 @@ public class Solve implements ParserTreeConstants {
      * It creates a parser for the solve part of the flatzinc file. 
      * 
      * @param store the constraint store within which context the search will take place.
+     * @param sat sat translation used
      */
     public Solve(Store store, SatTranslation sat)  {
 	this.store = store;
@@ -506,9 +507,9 @@ public class Solve implements ParserTreeConstants {
 	    System.exit(0);
 	}
 
-	if (! options.getAll() && lastSolution != null)
+	if (! options.getAll() && lastSolution != null) 
 	    System.out.print(lastSolution.toString());
-	
+
 	printStatisticsForSingleSearch(false, Result);
 
     }
@@ -607,7 +608,7 @@ public class Solve implements ParserTreeConstants {
             }
         }
 
-	System.out.println("\n%% Model variables : "+ (store.size()+NumberBoolVariables)+
+	System.out.println("%% Model variables : "+ (store.size()+NumberBoolVariables)+
 			   "\n%% Model constraints : "+initNumberConstraints+
 			   "\n\n%% Search CPU time : " + (searchTimeMeter.getThreadCpuTime(tread.getId()) - startCPU)/(long)1e+6 + "ms"+
 			   "\n%% Search nodes : "+nodes+
@@ -786,12 +787,12 @@ public class Solve implements ParserTreeConstants {
 
 	    
 	    printSolution();
-	    System.out.print(lastSolution.toString());
 
-	    // System.out.println("----------");
+	    if (lastSolution != null)
+		System.out.print(lastSolution.toString());
 
 	    if (options.getStatistics())
-		System.out.println("\n%% Model variables : "+ (store.size()+ NumberBoolVariables) +
+		System.out.println("%% Model variables : "+ (store.size()+ NumberBoolVariables) +
 				   "\n%% Model constraints : "+initNumberConstraints+
 				   "\n\n%% Search CPU time : " + "0ms"+
 				   "\n%% Search nodes : 0"+
@@ -1059,7 +1060,7 @@ public class Solve implements ParserTreeConstants {
             solutions = label.getSolutionListener().solutionsNo();
         }
 
-	System.out.println("\n%% Model variables : "+ (store.size()+ NumberBoolVariables) +
+	System.out.println("%% Model variables : "+ (store.size()+ NumberBoolVariables) +
 			   "\n%% Model constraints : "+initNumberConstraints+
 			   "\n\n%% Search CPU time : " + (searchTimeMeter.getThreadCpuTime(tread.getId()) - startCPU)/(long)1e+6 + "ms"+
 			   "\n%% Search nodes : "+nodes+

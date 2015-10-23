@@ -102,9 +102,10 @@ public class SumBool extends PrimitiveConstraint {
     public static String[] xmlAttributes = {"list", "sum"};
 
     /**
-     * @param list
-     * @param weights
-     * @param sum
+     * @param store current store
+     * @param list variables which are being multiplied by weights.
+     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum variable containing the sum of weighted variables.
      */
     public SumBool(Store store, IntVar[] list, String rel, IntVar sum) {
 
@@ -115,8 +116,9 @@ public class SumBool extends PrimitiveConstraint {
 	
     /**
      * It constructs the constraint SumBool. 
+     * @param store current store
      * @param variables variables which are being multiplied by weights.
-     * @param weights weight for each variable.
+     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
      * @param sum variable containing the sum of weighted variables.
      */
     public SumBool(Store store, ArrayList<? extends IntVar> variables,

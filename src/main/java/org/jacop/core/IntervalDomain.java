@@ -94,7 +94,7 @@ public class IntervalDomain extends IntDomain {
 	 * specified in xmlAttributes. 
 	 *  
 	 * @param tf a place to write the content of the object. 
-	 * @throws SAXException
+	 * @throws SAXException exception from package org.xml.sax
 	 */
 	public void toXML(TransformerHandler tf) throws SAXException {
 		
@@ -240,8 +240,8 @@ public class IntervalDomain extends IntDomain {
 	/**
 	 * It adds a value to the domain. It adds at the end without
 	 * checks for the correctness of domain representation.
+	 * @param i the element to be added as the lase element of the domain
 	 */
-
 	public void addLastElement(int i) {
 
 		assert checkInvariants() == null : checkInvariants() ;

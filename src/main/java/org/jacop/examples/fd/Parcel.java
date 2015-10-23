@@ -137,7 +137,7 @@ public class Parcel extends ExampleFD {
 
 	/**
 	 * It executes the program to solve the parcel shipment problem.
-	 * @param args
+	 * @param args no parameters
 	 */
 	public static void main(String args[]) {
 

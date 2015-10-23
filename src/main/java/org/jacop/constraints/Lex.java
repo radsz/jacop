@@ -69,11 +69,11 @@ public class Lex extends DecomposedConstraint {
 
     /**
      * It creates a lexicographical order for vectors x[i], i.e. 
-     * forall i, exists j : x[i][k] = x[i+1][k] for k < j and x[i][k] <= x[i+1][k]
-     * for k >= j
+     * forall i, exists j : x[i][k] = x[i+1][k] for k {@literal <} j and x[i][k] {@literal <=} x[i+1][k]
+     * for k {@literal >=} j
      *
      * vectors x[i] does not need to be of the same size.
-     * boolea lt defines if we require Lex_{<} (lt = false) or Lex_{=<} (lt = true)
+     * boolea lt defines if we require Lex_{{@literal <}} (lt = false) or Lex_{{@literal =<}} (lt = true)
      *
      * @param x vector of vectors which assignment is constrained by Lex constraint. 
      */

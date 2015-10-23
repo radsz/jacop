@@ -67,7 +67,7 @@ public class LexOrder extends Constraint {
     public IntVar[] y;
 
     /**
-     * Is Lex enforcing "<" relationship?
+     * Is Lex enforcing "{@literal <}" relationship?
      */
     public boolean lexLT;
 
@@ -92,9 +92,10 @@ public class LexOrder extends Constraint {
      * It creates a lexicographical order for vectors x and y, 
      *
      * vectors x and y does not need to be of the same size.
-     * boolean lt defines if we require strict order, Lex_{<} (lt = true) or Lex_{=<} (lt = false)
+     * boolean lt defines if we require strict order, Lex_{{@literal <}} (lt = true) or Lex_{{@literal =<}} (lt = false)
      *
-     * @param x vector of vectors which assignment is constrained by LexOrder constraint. 
+     * @param x first vector constrained by LexOrder constraint. 
+     * @param y second vector constrained by LexOrder constraint. 
      */
     public LexOrder(IntVar[] x, IntVar[] y) {
 

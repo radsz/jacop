@@ -98,9 +98,10 @@ public class Element extends Constraint {
 	}
 
 	/**
-	 * @param index
-	 * @param variables
-	 * @param value
+	 * It constructs element constraint based on variables. The default shift value is equal 0.
+	 * @param index index variable.
+	 * @param variables list of integers.
+	 * @param value variable to which index variable is equal to.
 	 */
 	public Element(IntVar index, IntVar[] variables, IntVar value) {
 		queueIndex = 1;

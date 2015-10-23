@@ -64,7 +64,7 @@ public class Profile extends ArrayList<ProfileItem> {
 
 	/**
 	 * It constructs the profile of a given type (e.g. for cumulative). 
-	 * @param type
+	 * @param type type of the profile (cumul=0, diffn=1)
 	 */
 	public Profile(short type) {
 		this.type = type;

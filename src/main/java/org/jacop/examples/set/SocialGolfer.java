@@ -77,7 +77,7 @@ public class SocialGolfer extends ExampleSet {
 	 * 
 	 * It runs a number of social golfer problems.
 	 * 
-	 * @param args
+	 * @param args parameters (none)
 	 */
 	public static void main (String args[]) {
 
@@ -157,9 +157,9 @@ public class SocialGolfer extends ExampleSet {
 	/**
 	 * It sets the parameters for the model creation function. 
 	 * 
-	 * @param weeks
-	 * @param groups
-	 * @param players
+	 * @param weeks how many weeks to play
+	 * @param groups how many groups will play
+	 * @param players how many players will play
 	 */
 	public void setup(int weeks, int groups, int players) {
 

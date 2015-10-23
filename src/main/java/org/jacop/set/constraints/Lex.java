@@ -48,10 +48,10 @@ import org.jacop.set.core.SetVar;
  * set variables is being constrained to be lexicographically ordered.
  * 
  * For example, 
- * {} <lex {1}
- * {1, 2} <lex {1, 2, 3}
- * {1, 3} <lex {2}
- * {1} < {2}
+ * {}{@literal <}lex {1}
+ * {1, 2}{@literal <}lex {1, 2, 3}
+ * {1, 3}{@literal <}lex {2}
+ * {1}{@literal <} {2}
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2

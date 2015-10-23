@@ -284,7 +284,7 @@ public class AmongVar extends Constraint {
 	 * 1) If there are not enough of y to cover future domain then fail
 	 * 2) 
 	 * 
-	 * @param store
+	 * @param store a constraint store in which context all prunings are executed.
 	 */
 	public void consistencyWhen_LB0_EQ_UB0(Store store) {
 		

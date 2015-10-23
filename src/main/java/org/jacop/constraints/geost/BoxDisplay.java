@@ -100,7 +100,7 @@ public class BoxDisplay extends JFrame {
 	 * It creates a display to visualize 2D geost constraint. 
 	 *  
 	 * @param pixelsPerUnit number of pixels per unit of object length. 
-	 * @param title 
+	 * @param title the title of the display
 	 * @param geost geost constraint to visualize
 	 */
 	public void displayState(int pixelsPerUnit, String title, Geost geost){
@@ -120,7 +120,7 @@ public class BoxDisplay extends JFrame {
 	/**
 	 * It displays the state of the geost constraint. 
 	 * 
-	 * @param domainWidth
+	 * @param domainWidth the width of the domain
 	 * @param groundedOnly only grounded objects should be displayed.
 	 * @param withFrames should frames describing non-overlapping constraint be displayed too?
 	 * @param geost geost constraint being displayed.

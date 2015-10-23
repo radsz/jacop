@@ -97,7 +97,7 @@ import org.xml.sax.helpers.AttributesImpl;
  * check that getChoiceConstraint returns false. 
  * 
  * Can CPviz handle search for Set variables handle correctly 100%? 
- * If not maybe we should just make TraceGenerator<T extends IntVar>?
+ * If not maybe we should just make {@code TraceGenerator<T extends IntVar>}?
  * 
  * 
  * FilterDom should not use string representation of the domain just

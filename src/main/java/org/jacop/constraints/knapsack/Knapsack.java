@@ -262,7 +262,7 @@ public class Knapsack extends Constraint {
 	 * @param weights the list of weights, each for the corresponding item no.
 	 * @param quantity finite domain variable specifying allowed values for the vars.
 	 * @param knapsackCapacity finite domain variable specifying the capacity limit of the knapsack.
-	 * @param knapsackProfit 
+	 * @param knapsackProfit finite domain variable defining the profit 
 	 */
 	public Knapsack(int[] profits, 
 				    int[] weights, 

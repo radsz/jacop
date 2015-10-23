@@ -130,7 +130,7 @@ public class Kakro extends ExampleFD {
 
 	/**
 	 * It executes the program to solve simple Kakro puzzle.
-	 * @param args
+	 * @param args no parameters
 	 */
 	public static void main(String args[]) {
 

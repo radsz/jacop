@@ -45,7 +45,7 @@ import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatDomain;
 
 /**
- * Constraint P > Q for floats
+ * Constraint P {@literal >} Q for floats
  * 
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -74,7 +74,7 @@ public class PgtQ extends PrimitiveConstraint {
 	public static String[] xmlAttributes = {"p", "q"};
 
 	/**
-	 * It constructs constraint P <= Q.
+	 * It constructs constraint P {@literal <=} Q.
 	 * @param p variable p.
 	 * @param q constant q.
 	 */

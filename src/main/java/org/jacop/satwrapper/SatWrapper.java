@@ -137,6 +137,7 @@ public final class SatWrapper extends Constraint
 	/**
 	 * registers the variable so that we can use it in SAT solver
 	 * @param variable	the CP IntVar variable
+	 * @param translate indicate whether to use == or {@literal <=}
 	 */
 	public void register(IntVar variable, boolean translate) {
 
@@ -500,6 +501,8 @@ public final class SatWrapper extends Constraint
 
 	/**
 	 * (for debug) show what a literal means
+	 * @param literal literal for showing its meaning
+	 * @return literal meaning
 	 */
 	public String showLiteralMeaning(int literal) {
 		if (! isVarLiteral(literal))
@@ -619,11 +622,11 @@ public final class SatWrapper extends Constraint
 
 	/**
 	 * given a CP variable and a value, retrieve the associated boolean literal
-	 * for either 'variable = value' or either 'variable <= value'
+	 * for either 'variable = value' or either 'variable {@literal <=} value'
 	 * @param variable	the CP variable
 	 * @param value			a value in the range of this variable
 	 * @param isEquality	a boolean, true if we want the literal that stands for
-	 * 'x=d', false for 'x<=d'
+	 * 'x=d', false for 'x{@literal <=}d'
 	 * @return the corresponding literal, or 0 if it is out of bounds
 	 */
 	public final int
@@ -655,7 +658,7 @@ public final class SatWrapper extends Constraint
 	/**
 	 * get the IntVar back from a literal
 	 * @param literal	the literal
-	 * @return
+	 * @return IntVar represented by the literal
 	 */
 	public final IntVar boolVarToCpVar(int literal) {
 		assert isVarLiteral(literal);
@@ -667,6 +670,8 @@ public final class SatWrapper extends Constraint
 
 	/**
 	 * transform a literal 'x=v' into a value 'v' for some CP variable
+	 * @param literal literal to be transformed to value it represents
+	 * @return the value represented by this literal
 	 */
 	public final int boolVarToCpValue(int literal) {
 		assert isVarLiteral(literal);
@@ -678,10 +683,10 @@ public final class SatWrapper extends Constraint
 	}
 
 	/**
-	 * checks if the boolean variable represents an assertion 'x=v' or 'x<=v'
+	 * checks if the boolean variable represents an assertion 'x=v' or 'x{@literal <=}v'
 	 * @param literal	the boolean literal
 	 * @return	true if the literal represents a proposition 'x=v', false if
-	 * it represents 'x<=v'
+	 * it represents 'x{@literal <=}v'
 	 */
 	public final boolean isEqualityBoolVar(int literal) {
 		assert isVarLiteral(literal);
@@ -694,7 +699,7 @@ public final class SatWrapper extends Constraint
 	/**
 	 * checks if this literal corresponds to some CP variable
 	 * @param literal	the literal
-	 * @return true if this literal stands for some 'x=v' or 'x<=v' proposition
+	 * @return true if this literal stands for some 'x=v' or 'x{@literal <=}v' proposition
 	 */
 	public final boolean isVarLiteral(int literal) {
 		/*
@@ -712,6 +717,7 @@ public final class SatWrapper extends Constraint
 	 * @param o			the object that logs something (use <code>this</code>)
 	 * @param format	the format string (the message, if no formatting)
 	 * @param args		the arguments to fill in the format
+	 * @return always true
 	 */
 	public boolean log(Object o, String format, Object... args) {
 		if (verbosity  >= 1) {

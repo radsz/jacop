@@ -72,7 +72,8 @@ public class OrBoolSimple extends OrBoolVector {
     /**
      * It constructs orBool. 
      * 
-     * @param a and b which one of them must be equal 1 to make result equal 1.
+     * @param a a parameter
+     * @param b b parameter
      * @param result variable which is equal 0 if none of x is equal to zero. 
      */
     public OrBoolSimple(IntVar a, IntVar b, IntVar result) {

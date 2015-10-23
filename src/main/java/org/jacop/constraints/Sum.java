@@ -79,8 +79,8 @@ public class Sum extends Constraint {
 
 	/**
 	 * It constructs sum constraint which sums all variables and makes it equal to variable sum.
-	 * @param list
-	 * @param sum
+	 * @param list list of variables to be added
+	 * @param sum the resulting sum
 	 */
 	public Sum(IntVar[] list, IntVar sum) {
 		

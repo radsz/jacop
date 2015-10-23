@@ -71,7 +71,8 @@ public class AndBoolSimple extends AndBoolVector {
     /**
      * It constructs AndBoolSimple. 
      * 
-     * @param a and b which must be equal 1 to make result equal 1.
+     * @param a parameter to predicate.
+     * @param b parameter to predicate.
      * @param result variable which is equal 0 if any of x is equal to zero. 
      */
     public AndBoolSimple(IntVar a, IntVar b, IntVar result) {

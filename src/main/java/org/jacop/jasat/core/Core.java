@@ -231,7 +231,7 @@ public final class Core implements SolverComponent {
 	/**
 	 * decides a single step of search by setting the value of a variable
 	 * @param literal the literal to set true
-	 * @param currentLevel 	the current search level
+	 * @param newLevel 	the current search level
 	 */
 	public void assertLiteral(int literal, int newLevel) {
 		assert newLevel > this.currentLevel;
@@ -628,6 +628,7 @@ public final class Core implements SolverComponent {
 	/**
 	 * get the time associated with given mark, or 0 if none
 	 * @param s	the mark
+	 * @return the time associated with given mark, or 0 if none
 	 */
 	public final long getTime(String s) {
 		if (timeMap.containsKey(s))
@@ -649,6 +650,9 @@ public final class Core implements SolverComponent {
 
 	/**
 	 * logs important messages in comments
+	 *
+	 * @param s the message
+	 * @param args the arguments for the message
 	 */
 	public final void logc(String s, Object... args) {
 		if (verbosity > 0) {
@@ -660,6 +664,10 @@ public final class Core implements SolverComponent {
 
 	/**
 	 * logs less important messages, in comments
+	 *
+	 * @param level verbosity level
+	 * @param s the message
+	 * @param args the arguments for the message
 	 */
 	public final void logc(int level, String s, Object... args) {
 		if (verbosity >= level) {
@@ -738,6 +746,8 @@ public final class Core implements SolverComponent {
 	/**
 	 * creates the solver, which in turn creates all inner components and
 	 * connect them together.
+	 *
+	 * @param config configuration for the solver
 	 */
 	public Core(Config config) {
 		// set the config

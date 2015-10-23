@@ -202,7 +202,9 @@ public class NetworkSimplex {
 
 	/******************/
 	/** Graph update **/
-
+    /**
+     * @param arc the network arc being added
+     */
 	protected void addArc(Arc arc) {
 		assert (arc.index == DELETED_ARC) : arc;
 		int index = numArcs++;
@@ -277,7 +279,7 @@ public class NetworkSimplex {
 
 	/**
 	 * 
-	 * @param maxPivots
+	 * @param maxPivots max value of the pivot
 	 * @return the number of pivots performed until optimality was reached, or
 	 *         -1 if the maximum number of pivots was reached.
 	 */
@@ -600,9 +602,9 @@ public class NetworkSimplex {
 	 * detected due to the fact that we have 'artificial' arcs going to the
 	 * root.
 	 * 
-	 * @param source
-	 * @param sink
-	 * @param balance
+	 * @param source source node
+	 * @param sink sink node
+	 * @param balance difference between in flow and out flow
 	 *            the flow to send from the source to the sink
 	 * @param maxPivots
 	 *            limits the number of dual pivots

@@ -2741,13 +2741,6 @@ public class Constraints implements ParserTreeConstants {
 			pose(new XplusYeqZ(p2[1], p2[2], p2[0]));    
 		}
 		else {
-		    // IntVar v;
-		    // if (p3==0) 
-		    // 	v = zero;
-		    // else if (p3 == 1) 
-		    // 	v = one;
-		    // else 
-		    // 	v = new IntVar(store, p3, p3);
 		    int pos = sumPossible(p1, p3);
 		    if (pos > -1) {
 			IntVar[] vect = new IntVar[p1.length-1];
@@ -2759,16 +2752,13 @@ public class Constraints implements ParserTreeConstants {
 			if (boolSum(vect))
 			    pose(new SumBool(store, vect, "==", p2[pos]));
 			else
-			    pose(new SumInt(store, vect, "==", p2[pos]));
+			    if (vect.length == 2)
+			    	pose(new XplusYeqZ(vect[0], vect[1], p2[pos]));
+			    else
+				pose(new SumInt(store, vect, "==", p2[pos]));
 		    }
 		    else if (allWeightsOne(p1)) {
 			IntVar v = dictionary.getConstant(p3);
-			// if (p3==0) 
-			//     v = dictionary.getConstant(0); // zero;
-			// else if (p3 == 1) 
-			//     v = dictionary.getConstant(1); // one;
-			// else
-			    // v = new IntVar(store, p3, p3);
 			if (boolSum(p2))
 			    pose(new SumBool(store, p2, "==", v));
 			else
@@ -2776,11 +2766,6 @@ public class Constraints implements ParserTreeConstants {
 		    }
 		    else if (allWeightsMinusOne(p1)) {
 			IntVar v = dictionary.getConstant(-p3);
-			
-			// if (p3==0) 
-			//     v = zero;
-			// else
-			//     v = new IntVar(store, -p3, -p3);
 			if (boolSum(p2))
 			    pose(new SumBool(store, p2, "==", v));
 			else

@@ -51,8 +51,8 @@ public class OrBool extends PrimitiveConstraint {
 
     /**
      * It constructs and constraint on variables.
-     * @param a parameters variable.
-     * @param result variable.
+     * @param a parameters
+     * @param result result variable.
      */
     public OrBool(IntVar[] a, IntVar result) {
 	if (a.length == 2)
@@ -63,8 +63,8 @@ public class OrBool extends PrimitiveConstraint {
 
     /**
      * It constructs and constraint on variables.
-     * @param a parameters variable.
-     * @param result variable.
+     * @param a parameters
+     * @param result result variable.
      */
     public OrBool(ArrayList<IntVar> a, IntVar result) {
 
@@ -76,8 +76,9 @@ public class OrBool extends PrimitiveConstraint {
 
     /**
      * It constructs and constraint on variables.
-     * @param a parameters variable.
-     * @param result variable.
+     * @param a a parameter
+     * @param b b parameter
+     * @param result result variable.
      */
     public OrBool(IntVar a, IntVar b, IntVar result) {
 	c = new OrBoolSimple(a, b, result);

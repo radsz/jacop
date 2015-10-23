@@ -48,7 +48,7 @@ import org.jacop.core.Store;
  * The solution is provided below.
  * 
  * Donald 		  526485
- * Gerald =====> +197485
+ * Gerald{@literal =====>} +197485
  * Robert         723970
  *
  * @author Radoslaw Szymanek

@@ -77,9 +77,12 @@ public class LinearIntDom extends LinearInt {
     double limitDomainPruning = 1e+7;
 
     /**
-     * @param list
-     * @param weights
-     * @param sum
+     * It constructs the constraint LinearIntDom. 
+     * @param store current store
+     * @param list variables which are being multiplied by weights.
+     * @param weights weight for each variable.
+     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum variable containing the sum of weighted variables.
      */
     public LinearIntDom(Store store, IntVar[] list, int[] weights, String rel, int sum) {
 
@@ -89,8 +92,10 @@ public class LinearIntDom extends LinearInt {
 	
     /**
      * It constructs the constraint LinearIntDom. 
+     * @param store current store
      * @param variables variables which are being multiplied by weights.
      * @param weights weight for each variable.
+     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
      * @param sum variable containing the sum of weighted variables.
      */
     public LinearIntDom(Store store, ArrayList<? extends IntVar> variables,

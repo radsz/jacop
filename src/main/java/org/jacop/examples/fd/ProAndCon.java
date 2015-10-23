@@ -252,7 +252,7 @@ public class ProAndCon extends ExampleFD {
 		
 	/**
 	 * It executes the program which solves this logic puzzle.
-	 * @param args
+	 * @param args command arguments (none here)
 	 */
 	public static void main(String args[]) {
 

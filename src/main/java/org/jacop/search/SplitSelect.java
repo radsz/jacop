@@ -42,8 +42,8 @@ import org.jacop.core.IntVar;
 /**
  * It is simple and customizable selector of decisions (constraints) which will
  * be enforced by search. However, it does not use X=c as a search decision 
- * but rather X <= c (potentially splitting the domain), unless c is equal to 
- * the maximal value in the domain of X then the constraint X < c is used.
+ * but rather X {@literal <=} c (potentially splitting the domain), unless c is equal to 
+ * the maximal value in the domain of X then the constraint X {@literal <} c is used.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.2

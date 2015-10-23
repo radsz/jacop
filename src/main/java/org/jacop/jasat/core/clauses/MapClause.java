@@ -109,7 +109,7 @@ public final class MapClause implements Iterable<Integer> {
 	 * literal is added. If variable exists as the opposite literal then the opposite
 	 * literal is removed and nothing is added. 
 	 * 
-	 * @param literal
+	 * @param literal the literal to be added 
 	 */
 	public void partialResolveWith(int literal) {
 
@@ -143,7 +143,7 @@ public final class MapClause implements Iterable<Integer> {
 
 	/**
 	 * Predicate which is true iff the variable or its opposite is present
-	 * @param var	a variable (> 0)
+	 * @param var	a variable ({@literal >} 0)
 	 * @return	true if the literal or its opposite is in the clause
 	 */
 	public boolean containsVariable(int var) {
@@ -154,6 +154,7 @@ public final class MapClause implements Iterable<Integer> {
 	}
 
 	/**
+	 * @param trail the trail to check
 	 * @return true if all literals of the clause are false in the trail
 	 */
 	public boolean isUnsatisfiableIn(Trail trail) {
@@ -173,6 +174,7 @@ public final class MapClause implements Iterable<Integer> {
 
 	/**
 	 * @param literal	the only satisfiable literal in the clause
+	 * @param trail the trail for the literal
 	 * @return true if the clause is unit with only @param literal not set
 	 */
 	public boolean isUnitIn(int literal, Trail trail) {
@@ -216,7 +218,7 @@ public final class MapClause implements Iterable<Integer> {
 
 	/**
 	 * returns the number of literals in the clause
-	 * @return
+	 * @return the number of literals in the clause
 	 */
 	public int size() {
 		return literals.size();
@@ -225,6 +227,7 @@ public final class MapClause implements Iterable<Integer> {
 	/**
 	 * converts the clause to an int[] suitable for the efficient clauses pool
 	 * implementations. The clause must not be empty.
+	 * @param pool the pool for clause implementation
 	 * @return	an equivalent clause
 	 */
 	public int[] toIntArray(MemoryPool pool) {
@@ -252,6 +255,7 @@ public final class MapClause implements Iterable<Integer> {
 	/**
 	 * true iff the clause is trivial (contains a literal and its opposite).
 	 * Now, by construction, a MapClause cannot be trivial
+	 * @return true iff the clause is trivial
 	 */
 	@Deprecated
 	public boolean isTrivial() {
@@ -304,6 +308,9 @@ public final class MapClause implements Iterable<Integer> {
 
 	/**
 	 * same as previous
+	 * @param clause clause the literals to add
+	 * @return	true if the resulting SetClause is trivial (tautology), false
+	 * otherwise
 	 */
 	public final boolean addAll(int[] clause) {
 		boolean answer = false;

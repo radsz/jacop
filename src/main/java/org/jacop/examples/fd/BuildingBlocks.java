@@ -156,7 +156,7 @@ public class BuildingBlocks extends ExampleFD {
 		
 	/**
 	 * It executes the program to solve this logic puzzle.
-	 * @param args
+	 * @param args args for the program (none)
 	 */
 	public static void main(String args[]) {
 
