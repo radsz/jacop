@@ -505,7 +505,8 @@ public class Tables {
 				 floatArrayTable,        // 8
 				 floatTable,             // 9
 				 variableFloatTable,     // 10
-				 variableFloatArrayTable  // 11
+				 variableFloatArrayTable,  // 11
+				 constantTable   //12
 	};
 		
 	int indexIntArray = 1;
@@ -515,6 +516,7 @@ public class Tables {
 	int indexFloatArray = 8;
 	int indexFloat = 9;
 	int indexFloatVariableArray = 11;
+	int indexConstantTable = 12;
 
 	String[] tableNames = {"int",   // 0
 			       "int arrays",  // 1
@@ -527,12 +529,13 @@ public class Tables {
 			       "float arrays",        // 8
 			       "float",             // 9
 			       "FloatVar",     // 10
-			       "FloatVar arrays"  // 11
+			       "FloatVar arrays",  // 11
+			       "Constant table" //12
 };
 
 	String s = "";
 	for (int i=0; i<dictionary.length; i++) {
-	     
+
 	    // int array || float array
 	    if (i == indexIntArray) {
 		s+= tableNames[i]+"\n";
@@ -593,35 +596,19 @@ public class Tables {
 	    	}
 	    	s+="}\n";
 	    }
-	    // // Float Variable Array
-	    // else if (i == indexFloatVariableArray) {
-	    // 	s+= tableNames[i]+"\n"; //"FloatVar arrays\n";
-	    // 	s +="{";
-	    // 	java.util.Set<String> keys = dictionary[i].keySet();
-	    // 	for (String k : keys) {
-	    // 	    Var[] a = (Var[])dictionary[i].get(k);
-	    // 	    s += k+"=";
-	    // 	    s += Arrays.asList(a);
-	    // 	    s += ", ";
-	    // 	}
-	    // 	s+="}\n";
-	    // }
-	    // // Set Variables Array
-	    // else if (i == indexSetVariableArray) {
-	    // 	s+= tableNames[i]+"\n"; //"Set var arrays\n";
-	    // 	s +="{";
-	    // 	java.util.Set<String> keys = dictionary[i].keySet();
-	    // 	for (String k : keys) {
-	    // 	    Var[] a = (Var[])dictionary[i].get(k);
-	    // 	    s += k+"=";
-	    // 	    s += Arrays.asList(a);
-	    // 	    s += ", ";
-	    // 	}
-	    // 	s+="}\n";
-	    // }
-	    // others
+	    else if (i == indexConstantTable) {
+	    	s+= tableNames[i]+"\n";
+	    	s +="{";
+	    	java.util.Set<Integer> keys = dictionary[i].keySet();
+	    	for (Integer k : keys) {
+	    	    Var a = (Var)dictionary[i].get(k);
+	    	    s += a;
+	    	    s += ", ";
+	    	}
+	    	s+="}\n";
+	    }
 	    else {
-		s+= tableNames[i]+"\n";
+		s += tableNames[i]+"\n";
 		s += dictionary[i] + "\n";
 	    }
 	}
