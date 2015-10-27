@@ -86,7 +86,8 @@ public class LexOrder extends Constraint {
     private int beta;
 
     SimpleHashSet<Integer> indexQueue = new SimpleHashSet<Integer>();
-    HashMap<IntVar, Integer> varToIndex = new HashMap<IntVar, Integer>();
+    HashMap<IntVar, Integer> varXToIndex = new HashMap<IntVar, Integer>();
+    HashMap<IntVar, Integer> varYToIndex = new HashMap<IntVar, Integer>();
 
     /**
      * It creates a lexicographical order for vectors x and y, 
@@ -148,24 +149,22 @@ public class LexOrder extends Constraint {
 	alpha = 0;
 	beta = 0;
 
-	store.registerRemoveLevelLateListener(this);
-
 	for (int i = 0; i < n; i++) {
-	    Integer varPosition = varToIndex.put(x[i], i);
+	    Integer varPosition = varXToIndex.put(x[i], i);
 	    if (!x[i].singleton() && varPosition != null) {
-		System.err.println("ERROR: Constraint " + toString() + " must have different non ground variables on the list");
-		System.exit(0);
+		throw new java.lang.RuntimeException("ERROR: Constraint " + toString() + " must have different non ground variables on the list; variable " + x[i]);
 	    }
 	    x[i].putModelConstraint(this, getConsistencyPruningEvent(x[i]));
 	}
 	for (int i = 0; i < n; i++) {
-	    Integer varPosition = varToIndex.put(y[i], i);
+	    Integer varPosition = varYToIndex.put(y[i], i);
 	    if (!x[i].singleton() && varPosition != null) {
-		System.err.println("ERROR: Constraint " + toString() + " must have different non ground variables on the list");
-		System.exit(0);
+		throw new java.lang.RuntimeException("ERROR: Constraint " + toString() + " must have different non ground variables on the list; variable " + y[i]);
 	    }
 	    y[i].putModelConstraint(this, getConsistencyPruningEvent(y[i]));
 	}
+
+	store.registerRemoveLevelLateListener(this);
 
 	store.addChanged(this);
 	store.countConstraint();
@@ -260,7 +259,10 @@ public class LexOrder extends Constraint {
     @Override
     public void queueVariable(int level, Var var) {
 
-	int i = varToIndex.get(var);
+	Integer iVal = varXToIndex.get(var);
+	if (iVal == null)
+	    iVal = varYToIndex.get(var);
+	int i = iVal.intValue();
 
 	indexQueue.add(i);
 
