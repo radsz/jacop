@@ -1105,7 +1105,7 @@ public class Constraints implements ParserTreeConstants {
 		}
 		else if (p.startsWith("circuit", 6)) {
 		    IntVar[] v = getVarArray((SimpleNode)node.jjtGetChild(0));
-
+			
 		    pose(new Circuit(v));
 
 		    if ( domainConsistency && ! opt.getBoundConsistency())  // we add additional implied constraint if domain consistency is required
@@ -2650,9 +2650,9 @@ public class Constraints implements ParserTreeConstants {
 		else if (allWeightsOne(p1)) {
 		    t = dictionary.getConstant(p3); //new IntVar(store, p3, p3);
 		    if (boolSum(p2))
-			pose(new Reified(new SumBool(store, p2, "<=", t), p4));
+		    	pose(new Reified(new SumBool(store, p2, "<=", t), p4));
 		    else
-			pose(new Reified(new SumInt(store, p2, "<=", t), p4));
+		    	pose(new Reified(new SumInt(store, p2, "<=", t), p4));
 		}
 		else if (allWeightsMinusOne(p1)) {
 		    t = dictionary.getConstant(-p3); //new IntVar(store, -p3, -p3);

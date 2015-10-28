@@ -803,7 +803,8 @@ public class Solve implements ParserTreeConstants {
 				   "\n%% Max search depth : 0"+
 				   "\n%% Number solutions : 1"
 				   );
-	    System.exit(0);
+
+	    throw new TrivialSolution();
 	}
 
 	return intAndSetSearch;

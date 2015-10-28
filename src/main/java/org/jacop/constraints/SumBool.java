@@ -378,11 +378,11 @@ public class SumBool extends PrimitiveConstraint {
 	}
 
 	switch (rel) {
-	case eq: return sum.singleton(min) && min == max;
+	case eq : return sum.singleton(min) && min == max;
 	case lt : return max < sum.min();
 	case le : return max <= sum.min();
 	case ne : return sum.singleton() && min == max && sum.min() != min;
-	case gt : return min < sum.max();
+	case gt : return min > sum.max();
 	case ge : return min >= sum.max();
 	}
 

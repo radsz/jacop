@@ -444,7 +444,7 @@ public class SearchItem implements ParserTreeConstants {
 	    return new LargestDomain();
 	}
 	else if (var_selection_heuristic.equals("most_constrained")) {
-	    //tieBreaking = new MostConstrainedStatic();
+	    tieBreaking = new MostConstrainedStatic();
 	    return new SmallestDomain();
 	}
 	else if (var_selection_heuristic.equals("occurrence"))
