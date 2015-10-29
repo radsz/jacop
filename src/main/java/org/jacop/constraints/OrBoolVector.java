@@ -263,9 +263,9 @@ public class OrBoolVector extends PrimitiveConstraint {
     @Override
     public void notConsistency(Store store) {
 
-	do {
+	// do {
 
-	    store.propagationHasOccurred = false;
+	//     store.propagationHasOccurred = false;
 			
 	    int start = position.value();
 	    int index_01 = l-1;
@@ -281,8 +281,6 @@ public class OrBoolVector extends PrimitiveConstraint {
 			start++;
 			position.update(start);
 		    }
-		// else
-		// 	index_01 = i;
 	    }
 
 	    if (start == l) 
@@ -296,9 +294,9 @@ public class OrBoolVector extends PrimitiveConstraint {
 	    if (result.max() == 0 && start >= l - 1)
 		list[index_01].domain.in(store.level, list[index_01], 1, 1);
 
-	} while (store.propagationHasOccurred);
+	// } while (store.propagationHasOccurred);
 		
-	if (l < 3)
+	if ((l-start) < 3)
 	    queueIndex = 0;
     }
 
