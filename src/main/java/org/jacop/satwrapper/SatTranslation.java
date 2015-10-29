@@ -303,6 +303,20 @@ public class SatTranslation {
 	generate_clause(new IntVar[] {c}, new IntVar[] {b});
     }
 
+    public void generate_allZero_reif(IntVar[] as, IntVar c) {
+	// allZero(a) <=> c
+	// - (a[0] \/ .. \/ a[n]) <=> c
+	// ===========
+	// /\_i (-a[i] \/ -c) /\ (a[0] \/ .. a[n] \/ c)
+	IntVar[] v = new IntVar[as.length+1];
+	for (int i=0; i<as.length; i++) {
+	    v[i] = as[i];
+	    generate_clause(new IntVar[] {}, new IntVar[] {as[i], c});
+	}
+	v[as.length] = c;
+	generate_clause(v, new IntVar[] {});
+    }
+
     public void generate_eqC_reif(IntVar x, int c, IntVar b) {
 	// Assumes that both x and b are not ground and
 	// c is still in the domain of x

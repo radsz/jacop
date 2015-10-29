@@ -380,7 +380,6 @@ public class Solve implements ParserTreeConstants {
 	}
 	last_search = list_seq_searches.get(list_seq_searches.size()-1);
 
-
 	// LDS & Credit heuristic search
 	if (si.exploration().equals("lds")) 
 	    lds_search(label, si.ldsValue);

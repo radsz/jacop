@@ -186,7 +186,8 @@ public class Reified extends Constraint {
 		while (!variables.isEmpty()) {
 			Var V = variables.removeFirst();
 			V.putModelConstraint(this, getConsistencyPruningEvent(V));
-			queueVariable(store.level, V);
+			if (needQueueVariable)
+			    queueVariable(store.level, V);
 		}
 
 		c.include(store);
@@ -214,7 +215,8 @@ public class Reified extends Constraint {
 	    // b.removeConstraint(this);
 
 	    for (Var v : c.arguments())
-		v.removeConstraint(this);
+		if (! v.singleton())
+		    v.removeConstraint(this);
 
 	}
 

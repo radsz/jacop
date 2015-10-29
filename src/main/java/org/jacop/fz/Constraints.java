@@ -2650,7 +2650,14 @@ public class Constraints implements ParserTreeConstants {
 		else if (allWeightsOne(p1)) {
 		    t = dictionary.getConstant(p3); //new IntVar(store, p3, p3);
 		    if (boolSum(p2))
-		    	pose(new Reified(new SumBool(store, p2, "<=", t), p4));
+			if (p3 == 0) 
+			    // all p2's zero <=> p4
+			    if (opt.useSat())
+				sat.generate_allZero_reif(p2, p4);
+			    else
+				pose(new Not(new OrBoolVector(p2, p4)));
+			else
+			    pose(new Reified(new SumBool(store, p2, "<=", t), p4));
 		    else
 		    	pose(new Reified(new SumInt(store, p2, "<=", t), p4));
 		}

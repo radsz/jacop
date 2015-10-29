@@ -54,6 +54,7 @@ import org.jacop.search.SmallestDomain;
 import org.jacop.search.SmallestMin;
 import org.jacop.search.SplitSelect;
 import org.jacop.search.WeightedDegree;
+import org.jacop.search.InputOrderSelect;
 import org.jacop.floats.search.SmallestDomainFloat;
 import org.jacop.floats.search.LargestDomainFloat;
 import org.jacop.floats.search.SmallestMinFloat;
@@ -333,6 +334,10 @@ public class SearchItem implements ParserTreeConstants {
 		return sel;
 	    }
 	}
+	else if (var_selection_heuristic.equals("input_order")) {
+	    Indomain indom = getIndomain(indomain);
+	    return new InputOrderSelect(store, search_variables, indom);
+	}
 	else {
 	    Indomain indom = getIndomain(indomain);
 	    if (tieBreaking == null)
@@ -547,7 +552,7 @@ public class SearchItem implements ParserTreeConstants {
 
     IntVar getVariable(ASTScalarFlatExpr node) {
 	if (node.getType() == 0) //int
-	    return new IntVar(store, node.getInt(), node.getInt());
+	    return dictionary.getConstant(node.getInt()); //new IntVar(store, node.getInt(), node.getInt());
 	else if (node.getType() == 2) // ident
 	    return dictionary.getVariable(node.getIdent());
 	else if (node.getType() == 3) {// array access
