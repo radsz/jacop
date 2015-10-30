@@ -232,9 +232,9 @@ public class OrBoolVector extends PrimitiveConstraint {
 		if (list[i].max() == 0) {
 		    swap(start, i);
 		    start++;
-		    position.update(start);
 		}
 	}
+	position.update(start);
 
 	if (start == l) 
 	    result.domain.in(store.level, result, 0, 0);
@@ -279,9 +279,9 @@ public class OrBoolVector extends PrimitiveConstraint {
 		    if (list[i].max() == 0) {
 			swap(start, i);
 			start++;
-			position.update(start);
 		    }
 	    }
+	    position.update(start);
 
 	    if (start == l) 
 		result.domain.in(store.level, result, 1, 1);
@@ -313,8 +313,8 @@ public class OrBoolVector extends PrimitiveConstraint {
 		else {
 		    swap(start, i);
 		    start++;
-		    position.update(start);	
 		}
+	    position.update(start);	
 			
 	    return true;
 
@@ -329,10 +329,9 @@ public class OrBoolVector extends PrimitiveConstraint {
 		    else if (list[i].max() == 0) {
 			swap(start, i);
 			start++;
-			position.update(start);
 		    }
-
 	    }
+	    position.update(start);
 	}
 
 	return false;
@@ -353,9 +352,9 @@ public class OrBoolVector extends PrimitiveConstraint {
 		x0++;
 		swap(start, i);
 		start++;
-		position.update(start);
 	    }
 	}
+	position.update(start);
 
 	return (x0 == l && result.min() == 1) || (x1 != 0 && result.max() == 0);
 

@@ -234,7 +234,6 @@ public class AndBoolVector extends PrimitiveConstraint {
 	    if (list[i].min() == 1) {
 		swap(start, i);
 		start++;
-		position.update(start);
 	    }
 	    else
 		if (list[i].max() == 0) { 
@@ -243,6 +242,7 @@ public class AndBoolVector extends PrimitiveConstraint {
 		    return;
 		}
 	}
+	position.update(start);
 
 	if (start == l) {
 	    result.domain.in(store.level, result, 1, 1);
@@ -282,7 +282,6 @@ public class AndBoolVector extends PrimitiveConstraint {
 	    if (list[i].min() == 1) {
 		swap(start, i);
 		start++;
-		position.update(start);
 	    }
 	    else
 		if (list[i].max() == 0) { 
@@ -290,6 +289,7 @@ public class AndBoolVector extends PrimitiveConstraint {
 		    return;
 		}
 	}
+	position.update(start);
 
 	if (start == l) {
 	    result.domain.in(store.level, result, 0, 0);
