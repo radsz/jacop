@@ -175,8 +175,7 @@ public class LinearInt extends PrimitiveConstraint {
 	for (int i = 0; i < list.length; i++) {
 
 	    assert (list[i] != null) : i + "-th element of list in Propagations constraint is null";
-			
-	    if (weights[i] != 0) {
+	    	    if (weights[i] != 0) {
 		if (list[i].singleton()) 
 		    this.b -= list[i].value() * weights[i];
 		else
@@ -191,9 +190,13 @@ public class LinearInt extends PrimitiveConstraint {
 
 	    }
 	}
+	int size=0;
+	for (IntVar e : parameters.keySet())
+	    if (parameters.get(e) != 0)
+		size++;
 
-	this.x = new IntVar[parameters.size()];
-	this.a = new int[parameters.size()];
+	this.x = new IntVar[size];//parameters.size()];
+	this.a = new int[size];//parameters.size()];
 
 	int i = 0;
 	for (IntVar var : parameters.keySet()) {
@@ -213,6 +216,11 @@ public class LinearInt extends PrimitiveConstraint {
 		    i++;
 	    }
 	}
+	// for (IntVar var : parameters.keySet()) {
+	//     int coeff = parameters.get(var);
+	//     if (coeff == 0) 
+	// 	System.out.println("%% " + id() + " : " + var);;
+	// }
 
 	this.l = x.length;
 	this.I = new int[l];

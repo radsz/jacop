@@ -32,6 +32,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -90,17 +91,22 @@ public class AndBoolVector extends PrimitiveConstraint {
 	assert ( result != null ) : "Result variable is null";
 		
 	this.numberId = counter++;
-	this.l = list.length;
+
+	HashSet<IntVar> varSet = new HashSet<IntVar>();
+	for (IntVar var : list) {
+	    assert (var != null) : "element in the list is null";
+	    varSet.add(var);
+	}
+	this.l = varSet.size();
 	this.numberArgs = (short)(l + 1);
-		
+
 	this.list = new IntVar[l];
-	for (int i = 0; i < l; i++) {
-	    assert (list[i] != null) : i + "-th element in the list is null";
-	    this.list[i] = list[i];
+	int i = 0;
+	for (IntVar v : varSet) {
+	    this.list[i++] = v;
 	}
 
-	this.result = result;
-		
+	this.result = result;		
 	assert ( checkInvariants() == null) : checkInvariants();
 
 	if (l > 2)
