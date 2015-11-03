@@ -33,6 +33,7 @@ package org.jacop.fz;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -99,6 +100,10 @@ public class Tables {
 
     ArrayList<Var[]> defaultSearchSetArrays = new ArrayList<Var[]>();
 
+    // HashMap<IntVar, HashSet<IntVar>> boolAliasTable = new HashMap<IntVar, HashSet<IntVar>>();
+    // HashMap<IntVar, HashSet<IntVar>> intAliasTable = new HashMap<IntVar, HashSet<IntVar>>();
+    HashMap<IntVar, IntVar> aliasTable = new HashMap<IntVar, IntVar>();
+    
     /**
      * It constructs the storage object to store different objects, like int, array of ints, sets, ... . 
      */
@@ -106,8 +111,6 @@ public class Tables {
 
     public Tables(Store s) {
 	this.store = s;
-	// this.zero = new IntVar(store, "zero", 0,0);
-	// this.one = new IntVar(store, "one", 1,1);
     }
 
     public IntVar getConstant(int c) {
@@ -120,6 +123,58 @@ public class Tables {
 
 	return v;
     }
+
+    public void addAlias(IntVar b, IntVar v) {
+    	IntVar x = aliasTable.get(v);
+    	if (x == null)
+	    aliasTable.put(v, b);
+	else
+	    System.err.println("%% Double int var alias for bool var");
+
+    	// System.out.println(v + " is alias of " + b);
+    }
+
+    IntVar getAlias(IntVar b) {
+	IntVar v = aliasTable.get(b);
+	if ( v == null)
+	    return b;
+	else
+	    return v;
+    }
+
+    // public void addBoolAlias(IntVar b, IntVar v) {
+    // 	HashSet<IntVar> x = boolAliasTable.get(b);
+    // 	if (x == null)
+    // 	    x = new HashSet<IntVar>();
+    // 	x.add(v);
+    // 	boolAliasTable.put(b, x);
+    // 	// System.out.println(b + " == " + x);
+    // }
+
+    // HashSet<IntVar> getBoolAlias(IntVar b) {
+    // 	HashSet<IntVar> x = boolAliasTable.get(b);
+    // 	if (x == null)
+    // 	    return new HashSet<IntVar>();
+    // 	else
+    // 	    return x;
+    // }
+
+    // public void addIntAlias(IntVar v, IntVar b) {
+    // 	HashSet<IntVar> x = intAliasTable.get(v);
+    // 	if (x == null)
+    // 	    x = new HashSet<IntVar>();
+    // 	x.add(b);
+    // 	intAliasTable.put(v, x);
+    // 	// System.out.println(v + " == " + b);
+    // }
+
+    // HashSet<IntVar> getIntAlias(IntVar v) {
+    // 	HashSet<IntVar> x = intAliasTable.get(v);
+    // 	if (x == null)
+    // 	    return new HashSet<IntVar>();
+    // 	else
+    // 	    return x;
+    // }
 
     /**
      * It adds an int parameter.
@@ -291,7 +346,7 @@ public class Tables {
      * @return the variable of the given identity.
      */
     public IntVar getVariable(String ident) {
-	return variableTable.get(ident);
+	return getAlias(variableTable.get(ident));
     }
 
 
@@ -342,15 +397,15 @@ public class Tables {
 		a = new IntVar[intA.length];
 		for (int i =0; i<intA.length; i++) {
 		    a[i] = getConstant(intA[i]); 
-		    // if (intA[i] == 0) a[i] = zero;
-		    // else if (intA[i] == 1) a[i] = one;
-		    // else
-		    // 	a[i] = new IntVar(store, intA[i], intA[i]);
 		}
 	    }
 	    else
 		return null;
 	}
+	else
+	    for (int i = 0; i < a.length; i++) 
+		a[i] = getAlias(a[i]);
+	
 	return a;
     }
 
@@ -440,7 +495,22 @@ public class Tables {
      * @param v the output variable being added.
      */
     public void addOutVar(Var v) { outputVariables.add(v); }
-	
+
+    /**
+     * It checks whether a variable is output variable.
+     * @param v the variable to be checked.
+     * @return true if variable is output, false otherwise
+     */
+    public boolean isOutput(Var v) {
+	if (outputVariables.contains(v))
+	    return true;
+	else
+	    for (OutputArrayAnnotation oa :  outputArray)
+		if (oa.contains(v))
+		    return true;
+
+	return false;
+    }
 	
     /**
      * It adds an output array annotation. 
@@ -506,7 +576,8 @@ public class Tables {
 				 floatTable,             // 9
 				 variableFloatTable,     // 10
 				 variableFloatArrayTable,  // 11
-				 constantTable   //12
+				 constantTable,   //12
+				 aliasTable // 13
 	};
 		
 	int indexIntArray = 1;
@@ -517,6 +588,7 @@ public class Tables {
 	int indexFloat = 9;
 	int indexFloatVariableArray = 11;
 	int indexConstantTable = 12;
+	int indexAliasTable = 13;
 
 	String[] tableNames = {"int",   // 0
 			       "int arrays",  // 1
@@ -530,7 +602,8 @@ public class Tables {
 			       "float",             // 9
 			       "FloatVar",     // 10
 			       "FloatVar arrays",  // 11
-			       "Constant table" //12
+			       "Constant table", //12
+			       "Alias table" // 13
 };
 
 	String s = "";
@@ -608,7 +681,7 @@ public class Tables {
 	    	s+="}\n";
 	    }
 	    else {
-		s += tableNames[i]+"\n";
+		s += tableNames[i]+" (" + dictionary[i].size()+ ")\n";
 		s += dictionary[i] + "\n";
 	    }
 	}

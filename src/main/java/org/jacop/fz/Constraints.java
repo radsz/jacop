@@ -32,6 +32,7 @@ package org.jacop.fz;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Set;
 
 import org.jacop.constraints.*;
 import org.jacop.constraints.knapsack.Knapsack;
@@ -106,7 +107,7 @@ public class Constraints implements ParserTreeConstants {
 
     //     boolean storeLevelIncreased=false;
 
-    final static boolean debug = false;
+    static boolean debug = false;
 
     /**
      * It creates an object to parse the constraint part of the flatzinc file.
@@ -165,11 +166,33 @@ public class Constraints implements ParserTreeConstants {
 // 		}		
 // 	    }
 // 	}
-//     }
-
-    void generateConstraints(SimpleNode constraintWithAnnotations, Tables table, Options opt) throws FailException {
-
+//     
+//}
+    void generateAllConstraints(SimpleNode astTree, Tables table, Options opt) {
+	
 	this.opt = opt;
+	this.dictionary = table;
+	this.debug = opt.debug();
+
+	int n = astTree.jjtGetNumChildren();
+	
+	for (int i=0; i< n; i++) {
+	    SimpleNode node = (SimpleNode)astTree.jjtGetChild(i);
+	    // go for ConstraintItems
+	    if (node.getId() == JJTCONSTRAINTITEMS) {
+	    
+		int k = node.jjtGetNumChildren();
+		for (int j = 0; j < k; j++) {
+		    generateConstraint((SimpleNode)node.jjtGetChild(j));
+		}
+	    }
+	}
+
+	poseDelayedConstraints();
+	
+    }
+
+    void generateConstraint(SimpleNode constraintWithAnnotations) throws FailException {
 
 // 	if (!storeLevelIncreased) {
 // 	    System.out.println("1. Level="+store.level);
@@ -186,18 +209,12 @@ public class Constraints implements ParserTreeConstants {
  	domainConsistency = false;
 	definedVar = null;
 
-	dictionary = table;
- 	// this.zero = table.zero; 
-	// this.one = table.one; 
-
 	int numberChildren = constraintWithAnnotations.jjtGetNumChildren();
 // 	System.out.println ("numberChildren = "+numberChildren);
 	if (numberChildren > 1 )
 	    parseAnnotations(constraintWithAnnotations);
 
 	SimpleNode node = (SimpleNode)constraintWithAnnotations.jjtGetChild(0);
-
-//  	node.dump("=> ");
 
 	// Predicates
 	if (node.getId() == JJTCONSTELEM) {
@@ -800,9 +817,9 @@ public class Constraints implements ParserTreeConstants {
 		// x1 \/ ... \/ xm \/ not y1 \/ ... \/ not yn
 		else if (p.startsWith("clause", 5)) {
 
-		    IntVar[] a1 = getVarArray((SimpleNode)node.jjtGetChild(0));
-		    IntVar[] a2 = getVarArray((SimpleNode)node.jjtGetChild(1));
-
+		    IntVar[] a1 = unique(getVarArray((SimpleNode)node.jjtGetChild(0)));
+		    IntVar[] a2 = unique(getVarArray((SimpleNode)node.jjtGetChild(1)));
+		    
 		    if (a1.length == 0 && a2.length == 0 )
 			return;
 
@@ -836,9 +853,9 @@ public class Constraints implements ParserTreeConstants {
 				return;
 			    else
 				c = new XlteqY(a2reduced.get(0), a1reduced.get(0));
-			else
+			else {
 			    c = new BoolClause(a1reduced, a2reduced);
-
+			}
 		    // bool_clause_reif/3 defined in redefinitions-2.0.
 			if (p.startsWith("_reif", 11)) {
 			    IntVar r = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
@@ -1077,6 +1094,10 @@ public class Constraints implements ParserTreeConstants {
 	    else if (p.equals("bool2int") || p.equals("int2bool") ) {
 		// 		node.dump("");
 
+		//nothing to generate here; already alias variables take care of this
+		// need only add equality if p2 is output var
+
+		/*
 		ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
 		ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
 
@@ -1085,6 +1106,7 @@ public class Constraints implements ParserTreeConstants {
 		// else
 
 		pose(new XeqY(getVariable(p1), getVariable(p2)));
+		*/
 	    }
 	    // ========== JaCoP constraints ==================>>
 	    else if (p.startsWith("jacop_"))
@@ -1375,10 +1397,54 @@ public class Constraints implements ParserTreeConstants {
 			for (int j=0; j<size; j++)
 			    t[i][j] = tbl[size*i+j];
 
-		    // we do not not pose ExtensionalSupportMDD directly because of possible inconsistency with its 
-		    // intiallization; we collect all constraints and pose them at the end when all other constraints are posed
+		    int[] vu = uniqueIndex(v);
+		    if (vu.length != v.length) { // non unique variables
 
-		    delayedConstraints.add(new ExtensionalSupportMDD(v, t));
+			// for (int i=0; i<t.length; i++) {
+			//     for (int j=0; j<t[i].length; j++) {
+			// 	System.out.print(t[i][j] + " ");
+			//     }
+			//     System.out.println();
+			// }
+
+			// System.out.println("v = " + java.util.Arrays.asList(v));
+			// System.out.print("unique index set [");
+			// for (int i = 0; i < vu.length; i++) {
+			//     System.out.print(vu[i]+", ");
+			// }
+			// System.out.println("]");
+
+			int[][] tt = new int[t.length][vu.length];
+			for (int i=0; i<tt.length; i++)
+			    for (int j=0; j<vu.length; j++)
+				tt[i][j] = t[i][vu[j]];
+
+			// for (int i=0; i<tt.length; i++) {
+			//     for (int j=0; j<tt[i].length; j++) {
+			// 	System.out.print(tt[i][j] + " ");
+			//     }
+			//     System.out.println();
+			// }
+			
+			IntVar[] uniqueVar = unique(v);
+			if (uniqueVar.length == 1) {
+			    IntervalDomain d = new IntervalDomain();
+			    for (int i = 0; i < tt.length; i++) 
+				d.addDom(new IntervalDomain(tt[i][0], tt[i][0]));
+			    uniqueVar[0].domain.in(store.level, uniqueVar[0], d);
+			    if (debug)
+				System.out.println(uniqueVar[0] + " in " + d);
+
+			}
+			else
+			    delayedConstraints.add(new ExtensionalSupportMDD(uniqueVar, tt));
+
+		    }
+		    else
+			// we do not not pose ExtensionalSupportMDD directly because of possible inconsistency with its 
+			// intiallization; we collect all constraints and pose them at the end when all other constraints are posed
+
+			delayedConstraints.add(new ExtensionalSupportMDD(v, t));
  		    //pose(new ExtensionalSupportMDD(v, t));
 		}
 		else if (p.startsWith("assignment", 6)) {
@@ -1818,11 +1884,11 @@ public class Constraints implements ParserTreeConstants {
 			return;
 		    }
 		    else
-			// if (opt.useSat()) {  // it can be moved to SAT solver but it is slow in the current implementation
-			//     sat.generate_eqC_reif(v1, i2, v3);
-			//     return;
-			// }
-			// else
+			if (opt.useSat()) {  // it can be moved to SAT solver but it is slow in the current implementation
+			    sat.generate_eqC_reif(v1, i2, v3);
+			    return;
+			}
+			else
 			    c = new XeqC(v1, i2);
 		    break;
 
@@ -1843,11 +1909,11 @@ public class Constraints implements ParserTreeConstants {
 			return;
 		    }
 		    else
-			// if (opt.useSat()) {  // it can be moved to SAT solver but it is slow in the current implementation
-			//     sat.generate_neC_reif(v1, i2, v3);
-			//     return;
-			// }
-			// else
+			if (opt.useSat()) {  // it can be moved to SAT solver but it is slow in the current implementation
+			    sat.generate_neC_reif(v1, i2, v3);
+			    return;
+			}
+			else
 			    c = new XneqC(v1, i2);
 		    break;
 		case lt :
@@ -2653,7 +2719,7 @@ public class Constraints implements ParserTreeConstants {
 			if (p3 == 0) 
 			    // all p2's zero <=> p4
 			    if (opt.useSat())
-				sat.generate_allZero_reif(p2, p4);
+				sat.generate_allZero_reif(unique(p2), p4);
 			    else
 				pose(new Not(new OrBoolVector(p2, p4)));
 			else
@@ -3819,6 +3885,10 @@ public class Constraints implements ParserTreeConstants {
     }
 
     void poseDelayedConstraints() {
+	// generate channeling constraints for aliases
+	// variables that are output variables
+	aliasConstraints();
+	
 	for (Constraint c : delayedConstraints) {
 	    store.impose(c);
   	    if (debug)
@@ -3836,6 +3906,19 @@ public class Constraints implements ParserTreeConstants {
  	}
     }
 
+    void aliasConstraints() {
+
+	Set<IntVar> vs = dictionary.aliasTable.keySet();
+
+	for (IntVar v : vs) {
+	    IntVar b = dictionary.aliasTable.get(v);
+
+	    // give values to output vars
+	    if (dictionary.isOutput(v))
+		pose(new XeqY(v, b));
+	}
+    }
+
     void pose(Constraint c) throws FailException {
 
 	store.imposeWithConsistency(c);	
@@ -3843,4 +3926,75 @@ public class Constraints implements ParserTreeConstants {
 	if (debug)
 	    System.out.println(c);
     }
+
+    void generateAlias(SimpleNode constraintWithAnnotations, Tables table, Options opt) {
+
+	dictionary = table;
+
+	int numberChildren = constraintWithAnnotations.jjtGetNumChildren();
+
+	if (numberChildren > 1 )
+	    parseAnnotations(constraintWithAnnotations);
+
+	SimpleNode node = (SimpleNode)constraintWithAnnotations.jjtGetChild(0);
+
+//  	node.dump("=> ");
+
+	if (node.getId() == JJTCONSTELEM) {
+
+	    p = ((ASTConstElem)node).getName();
+
+	    if (p.startsWith("bool2int")  || p.startsWith("int2bool")) {
+
+		ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
+		ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
+		IntVar v1 = getVariable(p1),
+		    v2 = getVariable(p2);
+		table.addAlias(v1, v2);
+		
+		if (v1.singleton() || v2.singleton()) {
+		    v1.domain.in(store.level, v1, v2.domain);
+		    v2.domain.in(store.level, v2, v1.domain);
+		}
+
+		if (debug)
+		    System.out.println("Alias: " + v1 + " == " + v2);
+	    }
+	}
+    }
+
+    IntVar[] unique(IntVar[] vs) {
+
+    	HashSet<IntVar> varSet = new HashSet<IntVar>();
+	for (IntVar v : vs) 
+	    varSet.add(v);
+
+	int l = varSet.size();
+	IntVar[] rs = new IntVar[l];
+
+	int i = 0;
+	for (IntVar v : varSet) {
+	    rs[i++] = v;
+	}
+
+	return rs;
+    }
+
+    int[] uniqueIndex(IntVar[] vs) {
+
+	ArrayList<Integer> il = new ArrayList<Integer>();
+    	HashSet<IntVar> varSet = new HashSet<IntVar>();
+	for (int i=0; i<vs.length; i++) {
+	    boolean r = varSet.add(vs[i]);
+	    if (r)
+		il.add(i);
+	}
+	int[] x = new int[il.size()];
+	for (int i = 0; i < x.length; i++) 
+	    x[i] = il.get(i);
+
+	return x;
+    }
+
 }
+    

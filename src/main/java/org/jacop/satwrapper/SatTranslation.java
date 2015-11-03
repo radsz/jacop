@@ -339,13 +339,14 @@ public class SatTranslation {
 	clause[0] = xLiteral; 
 	clause[1] = - bLiteral; 
 	clauses.addModelClause(clause);
-
+	
+	numberClauses += 2;
     }
     
     public void generate_neC_reif(IntVar x, int c, IntVar b) {
 	// Assumes that both x and b are not ground and
 	// c is still in the domain of x
-	// (x = c) <=> b
+	// (x != c) <=> b
 	// ===========
 	// ( -(x = c)) \/ b=0) /\ ( (x = c) \/ - b=0)
 	
@@ -365,6 +366,7 @@ public class SatTranslation {
 	clause[1] = - bLiteral; 
 	clauses.addModelClause(clause);
 
+	numberClauses += 2;
     }
 
     public void generate_inSet_reif(IntVar x, org.jacop.core.IntDomain d, IntVar b) {
@@ -390,11 +392,15 @@ public class SatTranslation {
 	clause[n-1] = - bLiteral; 
 	clauses.addModelClause(clause);
 
+	numberClauses++;
+
 	for (int i = 0; i < n; i++) {
 	    clause = new int[2];
 	    clause[0] = - xLiterals[i]; 
 	    clause[1] = bLiteral; 
 	    clauses.addModelClause(clause);
+
+	    numberClauses++;
 	}
     }
 

@@ -125,7 +125,7 @@ public class Solve implements ParserTreeConstants {
 
     SatTranslation sat;
 
-    StringBuffer lastSolution = null;
+    public StringBuffer lastSolution = null;
     
     /**
      * It creates a parser for the solve part of the flatzinc file. 
@@ -137,7 +137,21 @@ public class Solve implements ParserTreeConstants {
 	this.store = store;
 	this.sat = sat;
     }
+    
+    public void solveModel(SimpleNode astTree, Tables table, Options opt) {
 
+	int n = astTree.jjtGetNumChildren();
+	
+	for (int i=0; i< n; i++) {
+	    SimpleNode node = (SimpleNode)astTree.jjtGetChild(i);
+
+	    if (node.getId() == JJTMODELEND) {
+		// int k = node.jjtGetNumChildren();
+		search((ASTSolveItem)node.jjtGetChild(0), table, opt);
+	    }
+	}
+    }
+    
     /**
      * It parses the solve part. 
      * 

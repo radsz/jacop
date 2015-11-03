@@ -70,6 +70,8 @@ public class Options {
     boolean use_sat = false;
 
     boolean complementary_search = false;
+
+    boolean debug = false;
     
 	/**
 	 * It constructs an Options object and parses all the parameters/options provided 
@@ -169,6 +171,10 @@ public class Options {
 				}
 				else if (args[i].equals("-cs") || args[i].equals("--complementary-search")) {
 				    complementary_search = true;
+				    i++;
+				}
+				else if (args[i].equals("-debug") ) {
+				    debug = true;
 				    i++;
 				}
 				else {
@@ -297,10 +303,18 @@ public class Options {
 
     	/**
 	 * It defines whether sat is used. 
-	 * @return true sat is used, false oterwise
+	 * @return true sat is used, false otherwise
 	 */
 	public boolean useSat() {
 		return use_sat;
+	}
+
+    	/**
+	 * It defines whether to use debug information print-out. 
+	 * @return true if debugging information is printed, false otherwise
+	 */
+	public boolean debug() {
+		return debug;
 	}
 
     	/**

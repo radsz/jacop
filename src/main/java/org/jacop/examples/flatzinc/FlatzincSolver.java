@@ -95,6 +95,9 @@ public class FlatzincSolver {
 	else
 	    result = label.labeling(fl.getStore(), select);
 
+	if (! fl.getOptions().getAll() && fl.getSolve().lastSolution != null)
+	    System.out.print(fl.getSolve().lastSolution);
+
 	fl.getSolve().statistics(result);
 
 	// System.out.println(fl.getTables());
