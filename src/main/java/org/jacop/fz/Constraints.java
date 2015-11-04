@@ -819,7 +819,11 @@ public class Constraints implements ParserTreeConstants {
 
 		    IntVar[] a1 = unique(getVarArray((SimpleNode)node.jjtGetChild(0)));
 		    IntVar[] a2 = unique(getVarArray((SimpleNode)node.jjtGetChild(1)));
-		    
+		    for (IntVar v1 : a1)
+			for (IntVar v2 : a2)
+			    if (v1.equals(v2))
+				return; // already satisfied since a variable is both negated and not negated
+
 		    if (a1.length == 0 && a2.length == 0 )
 			return;
 

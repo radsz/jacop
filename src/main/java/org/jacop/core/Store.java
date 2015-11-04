@@ -34,6 +34,7 @@ package org.jacop.core;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Set;
 
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
@@ -1176,12 +1177,29 @@ public class Store {
 		    result.append(var.value()).append("\n");
 		}
 
+		for (Constraint c : getConstraints()) 
+		result.append("*** Constraint:\n").append(c+"\n" );
+
 		result.append("\n*** Constraints for evaluation:\n{").append( toStringChangedEl() )
 		    .append(" }");
 
 		return result.toString();
 
 	}
+
+    public HashSet<Constraint> getConstraints() {
+
+	HashSet<Constraint> constraints = new HashSet<Constraint>();
+
+	Set<String> ids = variablesHashMap.keySet();
+	for (String s :  ids) {
+	    Domain d = variablesHashMap.get(s).dom();
+	    ArrayList<Constraint> c = d.constraints();
+	    constraints.addAll(c);
+	}
+	
+	return constraints;
+    }
 
 	/**
 	 * This function returns a string representation of the constraints pending
