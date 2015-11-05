@@ -113,8 +113,9 @@ public class Constraints implements ParserTreeConstants {
      * It creates an object to parse the constraint part of the flatzinc file.
      * @param store the constraint store in which the constraints are being created.
      */
-    public Constraints(Store store) {
+    public Constraints(Store store, Tables dict) {
 	this.store = store;
+	this.dictionary = dict;
 
 	sat = new SatTranslation(store);
 	sat.debug = debug;
@@ -168,12 +169,11 @@ public class Constraints implements ParserTreeConstants {
 // 	}
 //     
 //}
-    void generateAllConstraints(SimpleNode astTree, Tables table, Options opt) {
+    void generateAllConstraints(SimpleNode astTree, Options opt) {
 	
-	this.opt = opt;
-	this.dictionary = table;
 	this.debug = opt.debug();
-
+	this.opt = opt;
+	
 	int n = astTree.jjtGetNumChildren();
 	
 	for (int i=0; i< n; i++) {
@@ -3931,14 +3931,12 @@ public class Constraints implements ParserTreeConstants {
 	    System.out.println(c);
     }
 
-    void generateAlias(SimpleNode constraintWithAnnotations, Tables table, Options opt) {
+    void generateAlias(SimpleNode constraintWithAnnotations) {
 
-	dictionary = table;
+	// int numberChildren = constraintWithAnnotations.jjtGetNumChildren();
 
-	int numberChildren = constraintWithAnnotations.jjtGetNumChildren();
-
-	if (numberChildren > 1 )
-	    parseAnnotations(constraintWithAnnotations);
+	// if (numberChildren > 1 )
+	//     parseAnnotations(constraintWithAnnotations);
 
 	SimpleNode node = (SimpleNode)constraintWithAnnotations.jjtGetChild(0);
 
@@ -3954,7 +3952,7 @@ public class Constraints implements ParserTreeConstants {
 		ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
 		IntVar v1 = getVariable(p1),
 		    v2 = getVariable(p2);
-		table.addAlias(v1, v2);
+		dictionary.addAlias(v1, v2);
 		
 		if (v1.singleton() || v2.singleton()) {
 		    v1.domain.in(store.level, v1, v2.domain);

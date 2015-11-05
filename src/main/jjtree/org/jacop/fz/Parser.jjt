@@ -56,7 +56,7 @@ public class Parser {
     Store store = new Store();
     Tables dict = new Tables(store);
     VariablesParameters cg = new VariablesParameters();
-    Constraints cc = new Constraints(store);
+    Constraints cc = new Constraints(store, dict);
     Solve solver = new Solve(store, cc.sat);
     Options options;
 
@@ -205,7 +205,7 @@ void model() #model:
 	    // 	System.out.println(dict);
 	    
 	    // generate constraints
-	    cc.generateAllConstraints(jjtThis, dict, options);
+	    cc.generateAllConstraints(jjtThis, options);
 	    // search
 	    solver.solveModel(jjtThis, dict, options);
 	}
@@ -364,7 +364,7 @@ void constraint_item() #Constraint:
 {
     <CONSTRAINT> constraint_elem() annotations()
  	{  	// jjtThis.dump(""); 
-	    cc.generateAlias(jjtThis, dict, options);
+	    cc.generateAlias(jjtThis);
 	    // jjtThis.removeChildren();
         }
 }
