@@ -240,9 +240,14 @@ public class SumBool extends PrimitiveConstraint {
 	    break;
 	case ne:
 
-	    if (min == max ) 
+	    if (min == max )
 		sum.domain.inComplement(store.level, sum, min);
 
+	    int sumMin = sum.min() - max, sumMax = sum.max() - min;
+	    if (sumMax - sumMin == 1)
+		for (int i = 0; i < l; i++) 		
+		    if (!x[i].singleton())
+			x[i].domain.inComplement(store.level, x[i], sumMin + x[i].max());
 	    break;
 	case gt:
 

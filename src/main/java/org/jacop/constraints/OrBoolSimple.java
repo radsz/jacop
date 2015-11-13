@@ -135,10 +135,11 @@ public class OrBoolSimple extends OrBoolVector {
 	    a.domain.in(store.level, a, 0,0);
 	    b.domain.in(store.level, b, 0,0);
 	}
-	else if (result.min() == 1 && a.max() == 0)
-	    b.domain.in(store.level, b, 1,1);
-	else if (result.min() == 1 && b.max() == 0)
-	    a.domain.in(store.level, a, 1,1);
+	else if (result.min() == 1)
+	    if (a.max() == 0)
+		b.domain.in(store.level, b, 1,1);
+	    else if (b.max() == 0)
+		a.domain.in(store.level, a, 1,1);
     }
 
     @Override
@@ -154,10 +155,11 @@ public class OrBoolSimple extends OrBoolVector {
 	    a.domain.in(store.level, a, 0,0);
 	    b.domain.in(store.level, b, 0,0);
 	}
-	else if (result.max() == 0 && a.max() == 0)
-	    b.domain.in(store.level, b, 1,1);
-	else if (result.max() == 0 && b.max() == 0)
-	    a.domain.in(store.level, a, 1,1);	
+	else if (result.max() == 0)
+	    if (a.max() == 0)
+		b.domain.in(store.level, b, 1,1);
+	    else if (b.max() == 0)
+		a.domain.in(store.level, a, 1,1);	
     }
 
     @Override
