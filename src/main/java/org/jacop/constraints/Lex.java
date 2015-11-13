@@ -52,6 +52,8 @@ import org.jacop.util.fsm.FSMTransition;
 
 public class Lex extends DecomposedConstraint {
 
+    static int idNumber = 1;
+
     /**
      * A two dimensional array containing arrays which have to be lexicographically ordered.
      */
@@ -89,6 +91,8 @@ public class Lex extends DecomposedConstraint {
 	assert (x != null) : "x list is null.";
 	this.x = new IntVar[x.length][];
 		
+	idNumber += 1;
+
 	lexLT = lt;
 		
 	for (int i = 0; i < x.length; i++) {
@@ -414,7 +418,7 @@ public class Lex extends DecomposedConstraint {
 
 	BooleanVar[] b = new BooleanVar[sizeToCompare+1];
 	for (int i=0; i < b.length; i++)
-	    b[i] = new BooleanVar(store, "_b["+i+"]");
+	    b[i] = new BooleanVar(store, "_b"+idNumber+"["+i+"]");
 
 	constraints.add(new XeqC(b[0], 1));
 
