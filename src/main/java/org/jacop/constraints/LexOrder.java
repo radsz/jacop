@@ -86,8 +86,8 @@ public class LexOrder extends Constraint {
     private int beta;
 
     SimpleHashSet<Integer> indexQueue = new SimpleHashSet<Integer>();
-    HashMap<IntVar, Integer> varXToIndex = new HashMap<IntVar, Integer>();
-    HashMap<IntVar, Integer> varYToIndex = new HashMap<IntVar, Integer>();
+    HashMap<IntVar, ArrayList<Integer>> varXToIndex = new HashMap<IntVar, ArrayList<Integer>>();
+    HashMap<IntVar, ArrayList<Integer>> varYToIndex = new HashMap<IntVar, ArrayList<Integer>>();
 
     /**
      * It creates a lexicographical order for vectors x and y, 
@@ -150,19 +150,33 @@ public class LexOrder extends Constraint {
 	beta = 0;
 
 	for (int i = 0; i < n; i++) {
-	    Integer varPosition = varXToIndex.put(x[i], i);
-	    if (!x[i].singleton() && varPosition != null) {
-		throw new java.lang.RuntimeException("ERROR: Constraint " + toString() + " must have different non ground variables on the list; variable " + x[i]);
+	    ArrayList<Integer> varPositions = varXToIndex.get(x[i]);
+	    if (varPositions == null) {
+		ArrayList<Integer> p = new ArrayList<Integer>();
+		p.add(i);
+		varXToIndex.put(x[i], p);
+	    }
+	    else {
+		varPositions.add(i);
+		varXToIndex.put(x[i], varPositions);
 	    }
 	    x[i].putModelConstraint(this, getConsistencyPruningEvent(x[i]));
 	}
+
 	for (int i = 0; i < n; i++) {
-	    Integer varPosition = varYToIndex.put(y[i], i);
-	    if (!x[i].singleton() && varPosition != null) {
-		throw new java.lang.RuntimeException("ERROR: Constraint " + toString() + " must have different non ground variables on the list; variable " + y[i]);
+	    ArrayList<Integer> varPositions = varYToIndex.get(y[i]);
+	    if (varPositions == null) {
+		ArrayList<Integer> p = new ArrayList<Integer>();
+		p.add(i);
+		varYToIndex.put(y[i], p);
+	    }
+	    else {
+		varPositions.add(i);
+		varXToIndex.put(y[i], varPositions);
 	    }
 	    y[i].putModelConstraint(this, getConsistencyPruningEvent(y[i]));
 	}
+	// System.out.println("varXToIndex = " + varXToIndex + "\nvarYToIndex = " + varYToIndex);
 
 	store.registerRemoveLevelLateListener(this);
 
@@ -259,13 +273,16 @@ public class LexOrder extends Constraint {
     @Override
     public void queueVariable(int level, Var var) {
 
-	Integer iVal = varXToIndex.get(var);
-	if (iVal == null)
-	    iVal = varYToIndex.get(var);
-	int i = iVal.intValue();
+	ArrayList<Integer> iValX = varXToIndex.get(var);
+	ArrayList<Integer> iValY = varYToIndex.get(var);
 
-	indexQueue.add(i);
-
+	if (iValX != null)
+	    for (int i : iValX)
+		indexQueue.add(i);
+	if (iValY != null)
+	    for (int i : iValY)
+		indexQueue.add(i);
+	
     }
 
     @Override

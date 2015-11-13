@@ -446,7 +446,7 @@ public class Lex extends DecomposedConstraint {
 
 	BooleanVar[] b = new BooleanVar[sizeToCompare];
 	for (int i=0; i < b.length; i++)
-	    b[i] = new BooleanVar(store, "_b["+i+"]");
+	    b[i] = new BooleanVar(store, "_b"+idNumber+"["+i+"]");
 
 	constraints.add(new XeqC(b[0], 1));
 
