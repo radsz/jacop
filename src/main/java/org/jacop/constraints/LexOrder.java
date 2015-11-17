@@ -58,6 +58,8 @@ import org.jacop.util.SimpleHashSet;
 
 public class LexOrder extends Constraint {
 
+    static int idNumber = 1;
+
     final static boolean debug = false;
 
     /**
@@ -86,8 +88,8 @@ public class LexOrder extends Constraint {
     private int beta;
 
     SimpleHashSet<Integer> indexQueue = new SimpleHashSet<Integer>();
-    HashMap<IntVar, ArrayList<Integer>> varXToIndex = new HashMap<IntVar, ArrayList<Integer>>();
-    HashMap<IntVar, ArrayList<Integer>> varYToIndex = new HashMap<IntVar, ArrayList<Integer>>();
+    HashMap<IntVar, int[]> varXToIndex = new HashMap<IntVar, int[]>();
+    HashMap<IntVar, int[]> varYToIndex = new HashMap<IntVar, int[]>();
 
     /**
      * It creates a lexicographical order for vectors x and y, 
@@ -101,6 +103,8 @@ public class LexOrder extends Constraint {
     public LexOrder(IntVar[] x, IntVar[] y) {
 
 	this(x, y, true);
+
+	numberId = idNumber++;
 		
     }
 
@@ -109,7 +113,8 @@ public class LexOrder extends Constraint {
 	assert (x != null) : "x list is null.";
 	assert (y != null) : "y list is null.";
 
-	queueIndex = 1;
+	queueIndex = 2;
+	numberId = idNumber++;
 
 	lexLT = lt;
 		
@@ -143,40 +148,43 @@ public class LexOrder extends Constraint {
     public void impose(Store store) {
 
 	this.store = store;
-
+	
 	// alpha = new TimeStamp<Integer>(store, 0);
 	// beta = new TimeStamp<Integer>(store, 0);
 	alpha = 0;
 	beta = 0;
 
 	for (int i = 0; i < n; i++) {
-	    ArrayList<Integer> varPositions = varXToIndex.get(x[i]);
+	    int[] varPositions = varXToIndex.get(x[i]);
 	    if (varPositions == null) {
-		ArrayList<Integer> p = new ArrayList<Integer>();
-		p.add(i);
+		int[] p = new int[1];
+		p[0] = i;
 		varXToIndex.put(x[i], p);
 	    }
 	    else {
-		varPositions.add(i);
+		int[] newPos = new int[varPositions.length+1];
+		System.arraycopy(varPositions, 0, newPos, 0, varPositions.length);
+		newPos[varPositions.length] = i;
 		varXToIndex.put(x[i], varPositions);
 	    }
 	    x[i].putModelConstraint(this, getConsistencyPruningEvent(x[i]));
 	}
 
 	for (int i = 0; i < n; i++) {
-	    ArrayList<Integer> varPositions = varYToIndex.get(y[i]);
+	    int[] varPositions = varYToIndex.get(y[i]);
 	    if (varPositions == null) {
-		ArrayList<Integer> p = new ArrayList<Integer>();
-		p.add(i);
+		int[] p = new int[1];
+		p[0] = i;
 		varYToIndex.put(y[i], p);
 	    }
 	    else {
-		varPositions.add(i);
-		varXToIndex.put(y[i], varPositions);
+		int[] newPos = new int[varPositions.length+1];
+		System.arraycopy(varPositions, 0, newPos, 0, varPositions.length);
+		newPos[varPositions.length] = i;
+		varYToIndex.put(y[i], varPositions);
 	    }
 	    y[i].putModelConstraint(this, getConsistencyPruningEvent(y[i]));
 	}
-	// System.out.println("varXToIndex = " + varXToIndex + "\nvarYToIndex = " + varYToIndex);
 
 	store.registerRemoveLevelLateListener(this);
 
@@ -273,8 +281,8 @@ public class LexOrder extends Constraint {
     @Override
     public void queueVariable(int level, Var var) {
 
-	ArrayList<Integer> iValX = varXToIndex.get(var);
-	ArrayList<Integer> iValY = varYToIndex.get(var);
+	int[] iValX = varXToIndex.get(var);
+	int[] iValY = varYToIndex.get(var);
 
 	if (iValX != null)
 	    for (int i : iValX)

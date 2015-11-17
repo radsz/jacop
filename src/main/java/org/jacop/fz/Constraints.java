@@ -1877,11 +1877,11 @@ public class Constraints implements ParserTreeConstants {
 			return;
 		    }
 		    else
-			if (opt.useSat()) {  // it can be moved to SAT solver but it is slow in the current implementation
-			    sat.generate_eqC_reif(v1, i2, v3);
-			    return;
-			}
-			else
+			// if (opt.useSat()) {  // it can be moved to SAT solver but it is slow in the current implementation
+			//     sat.generate_eqC_reif(v1, i2, v3);
+			//     return;
+			// }
+			// else
 			    c = new XeqC(v1, i2);
 		    break;
 
@@ -1902,11 +1902,11 @@ public class Constraints implements ParserTreeConstants {
 			return;
 		    }
 		    else
-			if (opt.useSat()) {  // it can be moved to SAT solver but it is slow in the current implementation
-			    sat.generate_neC_reif(v1, i2, v3);
-			    return;
-			}
-			else
+			// if (opt.useSat()) {  // it can be moved to SAT solver but it is slow in the current implementation
+			//     sat.generate_neC_reif(v1, i2, v3);
+			//     return;
+			// }
+			// else
 			    c = new XneqC(v1, i2);
 		    break;
 		case lt :
@@ -2031,7 +2031,12 @@ public class Constraints implements ParserTreeConstants {
 		    	return;
 		    }
 		    else
-			c = new XgteqC(v2, i1);
+			// if (opt.useSat()) {  // it can be moved to SAT solver but it is slow in the current implementation
+			//     sat.generate_geC_reif(v2, i1, v3);
+			//     return;
+			// }
+			// else
+			    c = new XgteqC(v2, i1);
 		    break;
 		case ge :
 		    if (i1 > v2.max()) {
@@ -2672,18 +2677,32 @@ public class Constraints implements ParserTreeConstants {
 		    pose(new Reified(new Not(new XplusYeqC(p2[0], p2[1], -p3)), p4));
 		} 
 		else if (allWeightsOne(p1)) {
-		    t = dictionary.getConstant(p3); // new IntVar(store, p3, p3);
-		    if (boolSum(p2))
-			pose(new Reified(new SumBool(store, p2, "!=", t), p4));
-		    else
-			pose(new Reified(new SumInt(store, p2, "!=", t), p4));
+		    if (p1.length == 1)
+			if (p2[0].domain.isIntersecting(p3,p3))
+			    pose(new Reified(new XneqC(p2[0], p3), p4));
+			else
+			    p4.domain.in(store.level, p4, 1,1);
+		    else {
+			t = dictionary.getConstant(p3); // new IntVar(store, p3, p3);
+			if (boolSum(p2))
+			    pose(new Reified(new SumBool(store, p2, "!=", t), p4));
+			else
+			    pose(new Reified(new SumInt(store, p2, "!=", t), p4));
+		    }
 		}
 		else if (allWeightsMinusOne(p1)) {
-		    t = dictionary.getConstant(-p3); // new IntVar(store, -p3, -p3);
-		    if (boolSum(p2))
-			pose(new Reified(new SumBool(store, p2, "!=", t), p4));
-		    else
-			pose(new Reified(new SumInt(store, p2, "!=", t), p4));		    
+		    if (p1.length == 1) 
+			if (p2[0].domain.isIntersecting(-p3,-p3))
+			    pose(new Reified(new XneqC(p2[0], -p3), p4));
+			else
+			    p4.domain.in(store.level, p4, 1,1);
+		    else {
+			t = dictionary.getConstant(-p3); // new IntVar(store, -p3, -p3);
+			if (boolSum(p2))
+			    pose(new Reified(new SumBool(store, p2, "!=", t), p4));
+			else
+			    pose(new Reified(new SumInt(store, p2, "!=", t), p4));
+		    }
 		}
 		else 
 		    pose(new Reified(new LinearInt(store, p2, p1, "!=", p3), p4));

@@ -127,17 +127,27 @@ public class SatTranslation {
 	// (a1 \/ a2 \/ ... \/ an \/ -c)
 	// /\
 	// for all i: (-ai \/ c)
+	for (int i = 0; i < a.length; i++) 
+	    if (a[i].min() == 1) {
+		c.domain.in(store.level, c, 1,1);
+		return;
+	    }
+
 	generate_clause(a, new IntVar[] {c});
 	for (int i = 0; i < a.length; i++) 
 	    generate_clause(new IntVar[] {c}, new IntVar[] {a[i]});
     }
-
 
     public void generate_and(IntVar[] a, IntVar c) {
 
 	// -a1 \/ -a2 \/ ... \/ c
 	// /\
 	// for all i: ai \/ -c
+	for (int i = 0; i < a.length; i++) 
+	    if (a[i].max() == 0) {
+		c.domain.in(store.level, c, 0,0);
+		return;
+	    }
 
 	generate_clause(new IntVar[] {c}, a);
 	for (int i = 0; i < a.length; i++) 
@@ -308,6 +318,14 @@ public class SatTranslation {
 	// - (a[0] \/ .. \/ a[n]) <=> c
 	// ===========
 	// /\_i (-a[i] \/ -c) /\ (a[0] \/ .. a[n] \/ c)
+
+	// if any as[i] == 1 => c == 0
+	for (int i=0; i<as.length; i++) 
+	    if (as[i].min() == 1) {
+		c.domain.in(store.level, c, 0, 0);
+		return;
+	    }
+	
 	IntVar[] v = new IntVar[as.length+1];
 	for (int i=0; i<as.length; i++) {
 	    v[i] = as[i];
@@ -317,13 +335,18 @@ public class SatTranslation {
 	generate_clause(v, new IntVar[] {});
     }
 
+    /* 
+    // Not efficient with SimpleCpVarDomain bridge implementation; needs LazyCpVarDomain (not yet implemented)
     public void generate_eqC_reif(IntVar x, int c, IntVar b) {
 	// Assumes that both x and b are not ground and
 	// c is still in the domain of x
 	// (x = c) <=> b
 	// ===========
 	// ( -(x = c)) \/ b=1) /\ ( (x = c) \/ - b=1)
+	System.out.println("generate_eqC_reif("+x+", "+c+", "+b+")");
 
+	// clauses.register(x,false);
+	// clauses.register(b,false);
 	clauses.register(x);
 	clauses.register(b);
 
@@ -342,7 +365,7 @@ public class SatTranslation {
 	
 	numberClauses += 2;
     }
-    
+
     public void generate_neC_reif(IntVar x, int c, IntVar b) {
 	// Assumes that both x and b are not ground and
 	// c is still in the domain of x
@@ -363,6 +386,36 @@ public class SatTranslation {
 
 	clause = new int[2];
 	clause[0] = xLiteral; 
+	clause[1] = - bLiteral; 
+	clauses.addModelClause(clause);
+
+	numberClauses += 2;
+    }
+
+    // inefficient propagation for large domains by SimpleCpVarDomain
+    // and LazyCpVarDomain is not yet implemented
+    public void generate_geC_reif(IntVar x, int c, IntVar b) {
+	// Assumes that both x and b are not ground and
+	// c is still in the domain of x
+	// (x >= c) <=> b
+	// ===========
+	// (x >= c) => b \/ (x >= c) <= b
+	// ( -(x >= c)) \/ b=1) /\ ( (x >= c) \/ - b=1)
+	// ( (x <= c-1) \/ b=1) /\ ( - (x <= c-1) \/ - b=1)
+	
+	clauses.register(x);
+	clauses.register(b);
+
+	int xLiteral = clauses.cpVarToBoolVar(x, c-1, false);
+	int bLiteral = clauses.cpVarToBoolVar(b, 1, true);
+
+	int[] clause = new int[2];
+	clause[0] = xLiteral; 
+	clause[1] = bLiteral; 
+	clauses.addModelClause(clause);
+
+	clause = new int[2];
+	clause[0] = - xLiteral; 
 	clause[1] = - bLiteral; 
 	clauses.addModelClause(clause);
 
@@ -403,6 +456,7 @@ public class SatTranslation {
 	    numberClauses++;
 	}
     }
+    */
 
     public void impose() {
 
