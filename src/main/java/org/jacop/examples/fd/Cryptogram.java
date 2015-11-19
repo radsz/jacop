@@ -40,8 +40,8 @@ import java.util.HashMap;
 import java.util.regex.Pattern;
 
 import org.jacop.constraints.Alldistinct;
-import org.jacop.constraints.Sum;
-import org.jacop.constraints.SumWeight;
+import org.jacop.constraints.SumInt;
+import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XneqC;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -221,15 +221,23 @@ public class Cryptogram extends ExampleFD {
 							currentChar));
 				}
 
-				store.impose(new SumWeight(lettersWithinCurrentWord,
-						createWeights(currentWord.length(), base),
-						fdv4words[j]));
+				int n = lettersWithinCurrentWord.length;
+				IntVar[] vs = new IntVar[n+1];
+				int[] ws = new int[n+1];
+				System.arraycopy(lettersWithinCurrentWord, 0, vs, 0, n);
+				System.arraycopy(createWeights(currentWord.length(), base), 0, ws, 0, n);
+				vs[n] = fdv4words[j];
+				ws[n] = -1;
+				store.impose(new LinearInt(store, vs, ws, "==", 0));
+				// store.impose(new SumWeight(lettersWithinCurrentWord,
+				// 		createWeights(currentWord.length(), base),
+				// 		fdv4words[j]));
 
 				store.impose(new XneqC(lettersWithinCurrentWord[0], 0));
 
 			}
 
-			store.impose(new Sum(terms, fdv4words[noWords - 1]));
+			store.impose(new SumInt(store, terms, "==", fdv4words[noWords - 1]));
 		}
 
 	}

@@ -12,6 +12,7 @@ object Powell extends App with jacop {
 
   // constraint
   x(0) + 10.0*x(1) #= 0.0
+  //sum(x, Array[Double](1, 10, 0, 0)) #= 0
 
   scala.math.sqrt(5.0)*(x(2) - x(3)) #= 0.0
 

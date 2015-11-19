@@ -34,7 +34,7 @@ package org.jacop.examples.fd;
 import java.util.ArrayList;
 
 import org.jacop.constraints.Alldifferent;
-import org.jacop.constraints.SumWeight;
+import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XgtY;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.core.IntVar;
@@ -95,8 +95,25 @@ public class LeastDiff extends ExampleFD {
         IntVar value_fghij = new IntVar(store, "v_fghij", 0, 99999);
         
         // Constraints for getting value for words
-        store.impose(new SumWeight (abcde, weights5, value_abcde));
-        store.impose(new SumWeight (fghij, weights5, value_fghij));
+	int n = abcde.length;
+	IntVar[] vs = new IntVar[n + 1];
+	int[] ws = new int[n + 1];
+	for (int ii = 0; ii < n; ii++) {
+	    vs[ii] = abcde[ii];
+	    ws[ii] = weights5[ii];
+	}
+	vs[n] = value_abcde;
+	ws[n] = -1;
+	store.impose(new LinearInt(store, vs, ws, "==", 0));
+        // store.impose(new SumWeight (abcde, weights5, value_abcde));
+	n = fghij.length;
+	IntVar[] qs = new IntVar[n + 1];
+	for (int ii = 0; ii < n; ii++) {
+	    qs[ii] = fghij[ii];
+	}
+	qs[n] = value_fghij;
+	store.impose(new LinearInt(store, qs, ws, "==", 0));
+        // store.impose(new SumWeight (fghij, weights5, value_fghij));
         
         // abcde > fghij
         store.impose(new XgtY (value_abcde, value_fghij));

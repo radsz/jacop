@@ -47,7 +47,10 @@ import org.jacop.core.Var;
  * @version 4.2
  */
 
-public class Sum extends Constraint {
+/**
+ * @deprecated  As of release 4.3.1 replaced by SumInt constraint.
+ */
+@Deprecated public class Sum extends Constraint {
 
 	static int counter = 1;
 

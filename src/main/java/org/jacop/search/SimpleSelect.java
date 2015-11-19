@@ -46,6 +46,7 @@ import org.jacop.core.Var;
  * @version 4.2
  */
 
+@SuppressWarnings("unchecked")
 public class SimpleSelect<T extends Var> implements SelectChoicePoint<T> {
 
 	static final boolean debugAll = false;

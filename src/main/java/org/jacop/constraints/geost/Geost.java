@@ -476,7 +476,7 @@ public class Geost extends Constraint {
 	 * @param shapes the list of different shapes used by the objects in scope of the geost. 
 	 * 
 	 */
-	@SuppressWarnings("all")
+	@SuppressWarnings("unchecked")
 	public Geost(GeostObject[] objects, 
 				 ExternalConstraint[] constraints, 
 				 Shape[] shapes) {

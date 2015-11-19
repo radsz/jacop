@@ -34,7 +34,7 @@ package org.jacop.examples.fd;
 import java.util.ArrayList;
 
 import org.jacop.constraints.Cumulative;
-import org.jacop.constraints.Sum;
+import org.jacop.constraints.SumInt;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XplusYeqZ;
@@ -85,7 +85,7 @@ public class FurnitureMoving extends ExampleFD {
 		starts = new IntVar[4];
 		starts[0] = Sp;		starts[1] = Sc;		starts[2] = Sb;		starts[3] = St;
 		
-		store.impose(new Sum(starts, sumStartTimes));
+		store.impose(new SumInt(store, starts, "==", sumStartTimes));
 
 		IntVar[] durations     = new IntVar[4];
 		IntVar[] resources     = new IntVar[4];

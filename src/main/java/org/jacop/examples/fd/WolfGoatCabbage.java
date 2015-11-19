@@ -36,7 +36,7 @@ import java.util.ArrayList;
 
 import org.jacop.constraints.ExtensionalSupportVA;
 import org.jacop.constraints.Reified;
-import org.jacop.constraints.Sum;
+import org.jacop.constraints.SumInt;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XneqY;
 import org.jacop.core.IntVar;
@@ -146,7 +146,7 @@ public class WolfGoatCabbage extends ExampleFD {
 
 			IntVar numberOnBoat = new IntVar(store, "numberOnBoatInMove" + i, 0,
 					1);
-			store.impose(new Sum(b, numberOnBoat));
+			store.impose(new SumInt(store, b, "==", numberOnBoat));
 
 			store.impose(new XneqY(wolf[i], goat[i]));
 			store.impose(new XneqY(goat[i], cabbage[i]));

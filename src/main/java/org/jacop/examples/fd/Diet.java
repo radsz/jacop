@@ -33,7 +33,7 @@ package org.jacop.examples.fd;
 
 import java.util.ArrayList;
 
-import org.jacop.constraints.SumWeight;
+import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.core.IntDomain;
@@ -115,13 +115,31 @@ public class Diet extends ExampleFD {
         IntVar[] sums = new IntVar[n];
         for(int i = 0; i < n; i++) {
             sums[i] = new IntVar(store, "sums_" + i, 0, IntDomain.MaxInt);
-            store.impose(new SumWeight(x, matrix[i], sums[i]));
+
+	    int n = x.length;
+	    IntVar[] xs = new IntVar[n+1];
+	    int[] ms = new int[n+1];
+	    System.arraycopy(x, 0, xs, 0, n);
+	    System.arraycopy(matrix[i], 0, ms, 0, n);
+	    xs[n] = sums[i];
+	    ms[n] = -1;
+	    store.impose(new LinearInt(store, xs, ms, "==", 0));
+            // store.impose(new SumWeight(x, matrix[i], sums[i]));
             store.impose(new XgteqC(sums[i], limits[i]));
         }
 
         // Cost to minimize: x * price
         cost = new IntVar(store, "cost", 0, 120);
-        store.impose( new SumWeight(x, price, cost) );
+	
+	int n = x.length;
+	IntVar[] xs = new IntVar[n+1];
+	int[] ms = new int[n+1];
+	System.arraycopy(x, 0, xs, 0, n);
+	System.arraycopy(price, 0, ms, 0, n);
+	xs[n] = cost;
+	ms[n] = -1;
+	store.impose(new LinearInt(store, xs, ms, "==", 0));
+        // store.impose( new SumWeight(x, price, cost) );
 
         vars = new ArrayList<IntVar>();
         for(IntVar v : x) 
@@ -155,7 +173,15 @@ public class Diet extends ExampleFD {
         	   store.impose(new Knapsack(matrix[i], price, x, cost, minReq));
            else {
         	   // this category has some items with zero profit, violates knapsack conditions so it is not used.
-               store.impose(new SumWeight(x, matrix[i], minReq));
+	       int n = x.length;
+	       IntVar[] xs = new IntVar[n+1];
+	       int[] ms = new int[n+1];
+	       System.arraycopy(x, 0, xs, 0, n);
+	       System.arraycopy(matrix[i], 0, ms, 0, n);
+	       xs[n] = minReq;
+	       ms[n] = -1;
+	       store.impose(new LinearInt(store, xs, ms, "==", 0));
+               // store.impose(new SumWeight(x, matrix[i], minReq));
            }
        }
 

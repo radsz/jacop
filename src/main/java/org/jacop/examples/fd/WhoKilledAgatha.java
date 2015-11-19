@@ -35,7 +35,7 @@ import java.util.ArrayList;
 
 import org.jacop.constraints.Eq;
 import org.jacop.constraints.IfThen;
-import org.jacop.constraints.Sum;
+import org.jacop.constraints.SumInt;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XlteqC;
 import org.jacop.core.Domain;
@@ -218,7 +218,7 @@ public class WhoKilledAgatha extends ExampleFD {
                 a[j] = hates[i][j];
             }
             IntVar a_sum = new IntVar(store, "a_sum"+i, 0, n);
-            store.impose(new Sum(a, a_sum));
+            store.impose(new SumInt(store, a, "==", a_sum));
             store.impose(new XlteqC(a_sum, 2));
             vars.add(a_sum);
 

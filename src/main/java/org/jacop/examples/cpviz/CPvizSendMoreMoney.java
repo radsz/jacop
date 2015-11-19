@@ -5,8 +5,7 @@ package org.jacop.examples.cpviz;
 import java.util.ArrayList;
 
 import org.jacop.constraints.Alldifferent;
-import org.jacop.constraints.SumWeight;
-import org.jacop.constraints.Sum;
+import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
@@ -184,11 +183,15 @@ public class CPvizSendMoreMoney {
 		IntVar r = new IntVar(store, "R", 0, 9);
 		IntVar y = new IntVar(store, "Y", 0, 9);
 
+		IntVar valueSEND = new IntVar(store, "v(SEND)", 0, 9999);
+		IntVar valueMORE = new IntVar(store, "v(MORE)", 0, 9999);
+		IntVar valueMONEY = new IntVar(store, "v(MONEY)", 0, 99999);
+
 		// Creating arrays for IntVars
 		IntVar digits[] = { s, e, n, d, m, o, r, y };
-		IntVar send[] = { s, e, n, d };
-		IntVar more[] = { m, o, r, e };
-		IntVar money[] = { m, o, n, e, y };
+		IntVar send[] = { s, e, n, d, valueSEND };
+		IntVar more[] = { m, o, r, e, valueMORE };
+		IntVar money[] = { m, o, n, e, y, valueMONEY };
 
 		for (IntVar v : digits)
 			vars.add(v);
@@ -197,20 +200,19 @@ public class CPvizSendMoreMoney {
 		// Only one global constraint
 		store.impose(new Alldifferent(digits));
 
-		int[] weights5 = { 10000, 1000, 100, 10, 1 };
-		int[] weights4 = { 1000, 100, 10, 1 };
-
-		IntVar valueSEND = new IntVar(store, "v(SEND)", 0, 9999);
-		IntVar valueMORE = new IntVar(store, "v(MORE)", 0, 9999);
-		IntVar valueMONEY = new IntVar(store, "v(MONEY)", 0, 99999);
+		int[] weights5 = { 10000, 1000, 100, 10, 1, -1 };
+		int[] weights4 = { 1000, 100, 10, 1, -1 };
 
 		// Constraints for getting value for words
 		// SEND = 1000 * S + 100 * E + N * 10 + D * 1
 		// MORE = 1000 * M + 100 * O + R * 10 + E * 1
 		// MONEY = 10000 * M + 1000 * O + 100 * N + E * 10 + Y * 1
- 		store.impose(new SumWeight(send, weights4, valueSEND));
- 		store.impose(new SumWeight(more, weights4, valueMORE));
- 		store.impose(new SumWeight(money, weights5, valueMONEY));
+		store.impose(new LinearInt(store, send, weights4, "==", 0));
+ 		// store.impose(new SumWeight(send, weights4, valueSEND));
+ 		// store.impose(new SumWeight(more, weights4, valueMORE));
+		store.impose(new LinearInt(store, more, weights4, "==", 0));
+ 		// store.impose(new SumWeight(money, weights5, valueMONEY));
+		store.impose(new LinearInt(store, money, weights5, "==", 0));
 
 		// Main equation of the problem SEND + MORE = MONEY
      		store.impose(new XplusYeqZ(valueSEND, valueMORE, valueMONEY));

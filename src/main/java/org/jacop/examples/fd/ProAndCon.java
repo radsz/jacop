@@ -36,8 +36,8 @@ import java.util.ArrayList;
 
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Reified;
-import org.jacop.constraints.Sum;
-import org.jacop.constraints.SumWeight;
+import org.jacop.constraints.SumInt;
+import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XlteqC;
@@ -133,27 +133,27 @@ public class ProAndCon extends ExampleFD {
 		ArrayList<IntVar> votesMotion1 = new ArrayList<IntVar>();
 		for (int i = 0; i < 5; i++)
 			votesMotion1.add(vote[i][iMotion1]);
-		store.impose(new Sum(votesMotion1, sum4Group[iMotion1]));
+		store.impose(new SumInt(store, votesMotion1, "==", sum4Group[iMotion1]));
 
 		ArrayList<IntVar> votesMotion2 = new ArrayList<IntVar>();
 		for (int i = 0; i < 5; i++)
 			votesMotion2.add(vote[i][iMotion2]);
-		store.impose(new Sum(votesMotion2, sum4Group[iMotion2]));
+		store.impose(new SumInt(store, votesMotion2, "==", sum4Group[iMotion2]));
 
 		ArrayList<IntVar> votesMotion3 = new ArrayList<IntVar>();
 		for (int i = 0; i < 5; i++)
 			votesMotion3.add(vote[i][iMotion3]);
-		store.impose(new Sum(votesMotion3, sum4Group[iMotion3]));
+		store.impose(new SumInt(store, votesMotion3, "==", sum4Group[iMotion3]));
 
 		ArrayList<IntVar> votesMotion4 = new ArrayList<IntVar>();
 		for (int i = 0; i < 5; i++)
 			votesMotion4.add(vote[i][iMotion4]);
-		store.impose(new Sum(votesMotion4, sum4Group[iMotion4]));
+		store.impose(new SumInt(store, votesMotion4, "==", sum4Group[iMotion4]));
 
 		ArrayList<IntVar> votesMotion5 = new ArrayList<IntVar>();
 		for (int i = 0; i < 5; i++)
 			votesMotion5.add(vote[i][iMotion5]);
-		store.impose(new Sum(votesMotion5, sum4Group[iMotion5]));
+		store.impose(new SumInt(store, votesMotion5, "==", sum4Group[iMotion5]));
 
 		// Clues enconding
 
@@ -172,7 +172,7 @@ public class ProAndCon extends ExampleFD {
 		vars.add(noYesVotes); vars.add(noNoVotes); vars.add(noVotes);
 		
 		// We constraint number of yes votes.
-		store.impose(new Sum(sum4Group, noYesVotes));
+		store.impose(new SumInt(store, sum4Group, "==", noYesVotes));
 		// To connect no of yes votes with no of no votes.
 		store.impose(new XplusYeqZ(noYesVotes, noNoVotes, noVotes));
 
@@ -192,16 +192,38 @@ public class ProAndCon extends ExampleFD {
 			weightedVotes[i] = new IntVar(store, "weightedVotes4" + surname[i], 1,
 					32);
 
-		store.impose(new SumWeight(vote[iAkerman], weights,
-				weightedVotes[iAkerman]));
-		store.impose(new SumWeight(vote[iBaird], weights,
-						weightedVotes[iBaird]));
-		store.impose(new SumWeight(vote[iChatham], weights,
-				weightedVotes[iChatham]));
-		store.impose(new SumWeight(vote[iDuval], weights,
-						weightedVotes[iDuval]));
-		store.impose(new SumWeight(vote[iEtting], weights,
-				weightedVotes[iEtting]));
+		int n = weights.length;
+		IntVar[] vs = new IntVar[n+1];
+		int[] ws = new int[n+1];
+		System.arraycopy(vote[iAkerman], 0, vs, 0, n);
+		System.arraycopy(weights, 0, ws, 0, n);
+		vs[n] = weightedVotes[iAkerman];
+		ws[n] = -1;
+		store.impose(new LinearInt(store, vs, ws, "==", 0));
+		// store.impose(new SumWeight(vote[iAkerman], weights,
+		// 		weightedVotes[iAkerman]));
+		System.arraycopy(vote[iAkerman], 0, vs, 0, n);
+		System.arraycopy(weights, 0, ws, 0, n);
+		vs[n] = weightedVotes[iAkerman];
+		ws[n] = -1;
+		store.impose(new LinearInt(store, vs, ws, "==", 0));
+		// store.impose(new SumWeight(vote[iBaird], weights,
+		// 				weightedVotes[iBaird]));
+		System.arraycopy(vote[iChatham], 0, vs, 0, n);
+		vs[n] = weightedVotes[iChatham];
+		store.impose(new LinearInt(store, vs, ws, "==", 0));
+		// store.impose(new SumWeight(vote[iChatham], weights,
+		// 		weightedVotes[iChatham]));
+		System.arraycopy(vote[iDuval], 0, vs, 0, n);
+		vs[n] = weightedVotes[iDuval];
+		store.impose(new LinearInt(store, vs, ws, "==", 0));
+		// store.impose(new SumWeight(vote[iDuval], weights,
+		// 				weightedVotes[iDuval]));
+		System.arraycopy(vote[iEtting], 0, vs, 0, n);
+		vs[n] = weightedVotes[iEtting];
+		store.impose(new LinearInt(store, vs, ws, "==", 0));
+		// store.impose(new SumWeight(vote[iEtting], weights,
+		// 		weightedVotes[iEtting]));
 
 		// All weightes votes must be different.
 		store.impose(new Alldifferent(weightedVotes));
@@ -222,14 +244,14 @@ public class ProAndCon extends ExampleFD {
 		// There are 5 votes for each person, this means that no of yes votes is
 		// at most 2.
 		IntVar sumOfReified = new IntVar(store, "noAgreeBairdAndDuval", 1, 5);
-		store.impose(new Sum(reified, sumOfReified));
+		store.impose(new SumInt(store, reified, "==", sumOfReified));
 		store.impose(new XlteqC(sumOfReified, 2));
 
 		// 5. Mr. Chatham never made two yes votes on consecutive motions.
 
 		// implied constraint, the sum must be smaller than 4.
 		IntVar sumChatham = new IntVar(store, "sumChatham", 0, 3);
-		store.impose(new Sum(vote[iChatham], sumChatham));
+		store.impose(new SumInt(store, vote[iChatham], "==", sumChatham));
 
 		// We take each pair and make sure they are not two yes votes
 		IntVar two = new IntVar(store, "2", 2, 2);

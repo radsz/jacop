@@ -49,7 +49,10 @@ import org.jacop.core.Var;
  * @version 3.1
  */
 
-public class SumWeight extends Constraint {
+/**
+ * @deprecated  As of release 4.3.1 replaced by LinearInt constraint.
+ */
+@Deprecated public class SumWeight extends Constraint {
 
 	static int counter = 1;
 

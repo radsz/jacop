@@ -530,6 +530,7 @@ public class TraceGenerator<T extends Var>
 	// =================================================================
 	// Metods for tracing using ExitListener
 
+    @SuppressWarnings("unchecked")
 	public void setChildrenListeners(ExitChildListener<T> child) {
 		exitChildListeners = new ExitChildListener[1];
 		exitChildListeners[0] = child;

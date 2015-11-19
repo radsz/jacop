@@ -46,6 +46,7 @@ import org.xml.sax.helpers.AttributesImpl;
  * 10. Save constraints, variables, search definition. 
  */
 
+@SuppressWarnings("unchecked")
 public class XMLSaveSupport {
 
 	private static final String toXMLfunction = "toXML";

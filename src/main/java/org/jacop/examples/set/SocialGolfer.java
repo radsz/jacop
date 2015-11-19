@@ -33,7 +33,7 @@ package org.jacop.examples.set;
 
 import java.util.ArrayList;
 
-import org.jacop.constraints.SumWeight;
+import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XlteqY;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -235,7 +235,16 @@ public class SocialGolfer extends ExampleSet {
 			for (int j=0; j<players; j++)
 				var[i][j] = new IntVar(store, "var"+i+"-"+j, 1, N);
 			store.impose(new Match(golferGroup[i][0], var[i]));
-			store.impose(new SumWeight(var[i], weights, v[i]));
+
+			int n = var[i].length;
+			IntVar[] vs = new IntVar[n+1];
+			int[] ws = new int[n+1];
+			System.arraycopy(var[i], 0, vs, 0, n);
+			System.arraycopy(weights, 0, ws, 0, n);
+			vs[n] = v[i];
+			ws[n] = -1;
+			store.impose(new LinearInt(store, vs, ws, "==", 0));
+			// store.impose(new SumWeight(var[i], weights, v[i]));
 		}
 		
 		for (int i=0; i<weeks-1; i++)

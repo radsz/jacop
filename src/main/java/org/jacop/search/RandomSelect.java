@@ -71,6 +71,7 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
      * @param variables variables upon which the choice points are created.
      * @param indomain the value heuristic to choose a value for a given variable.
      */
+    @SuppressWarnings("unchecked")
     public RandomSelect(T[] variables, Indomain<T> indomain) {
 
 	position = new IdentityHashMap<T, Integer>();

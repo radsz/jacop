@@ -197,7 +197,8 @@ public class LDS<T extends Var> implements ExitChildListener<T> {
 		exitChildListeners = children;
 	}
 
-	public void setChildrenListeners(ExitChildListener<T> child) {
+    @SuppressWarnings("unchecked")
+    public void setChildrenListeners(ExitChildListener<T> child) {
 		exitChildListeners = new ExitChildListener[1];
 		exitChildListeners[0] = child;
 	}

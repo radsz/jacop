@@ -35,7 +35,7 @@ import java.util.ArrayList;
 
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Element;
-import org.jacop.constraints.Sum;
+import org.jacop.constraints.SumInt;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
@@ -123,13 +123,13 @@ public class Parcel extends ExampleFD {
 			for (int j = 0; j <= i; j++)
 				tripLoads[j] = loads[j];
 			IntVar partialLoad = new IntVar(store, "partialLoad[0-" + i + "]", 0, 15);
-			store.impose(new Sum(tripLoads, partialLoad));
+			store.impose(new SumInt(store, tripLoads, "==", partialLoad));
 		}
 
 		cost = new IntVar(store, "Cost", 0, 100000);
 
 		// Computes the travel cost.
-		store.impose(new Sum(costs, cost));
+		store.impose(new SumInt(store, costs, "==", cost));
 
 		vars.add(cost);
 

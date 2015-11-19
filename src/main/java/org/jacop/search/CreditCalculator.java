@@ -464,6 +464,7 @@ public class CreditCalculator<T extends Var> implements ExitChildListener<T>, Ti
 		consistencyListeners[0] = child;
 	}
 
+	@SuppressWarnings("unchecked")
 	public void setChildrenListeners(ExitChildListener<T> child) {
 		exitChildListeners = new ExitChildListener[1];
 		exitChildListeners[0] = child;

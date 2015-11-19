@@ -88,7 +88,7 @@ public class ArgMax extends Constraint {
      * @param maxIndex variable denoting the index of the maximum value
      * @param list the array of variables for which the index of the maximum value is imposed.
      * @param indexOffset the offset for the index that is computed from 1 by default (if needed from 0, use -1 for this parameter)
-     * @param tiebreak defines if tie breaking sgould be used (returning the least index if several maximum elements
+     * @param tiebreak defines if tie breaking should be used (returning the least index if several maximum elements
      */
     public ArgMax(IntVar[] list, IntVar maxIndex, int indexOffset, boolean tiebreak) {
 
