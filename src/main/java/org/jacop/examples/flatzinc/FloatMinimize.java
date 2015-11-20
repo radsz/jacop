@@ -61,7 +61,6 @@ public class FloatMinimize {
 
     FloatMinimize() {}
 
-    @SuppressWarnings("unchecked")
     void ex(String[] args) {
 
 	long T1, T2, T;
@@ -102,9 +101,9 @@ public class FloatMinimize {
 	System.out.println("Decision variables: " + Arrays.asList(vars) + "\n");
 
 	DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
-	SplitSelectFloat s = new SplitSelectFloat(store, vars, fl.getSearch().getFloatVarSelect());
+	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, vars, fl.getSearch().getFloatVarSelect());
 	
-	Optimize min = new Optimize(store, label, s, (FloatVar)fl.getCost());
+	Optimize<FloatVar> min = new Optimize<FloatVar>(store, label, s, (FloatVar)fl.getCost());
 	boolean result = min.minimize();
 
   	if ( result ) {

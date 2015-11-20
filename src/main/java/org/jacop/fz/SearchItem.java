@@ -475,7 +475,7 @@ public class SearchItem implements ParserTreeConstants {
 	return null; // input_order
     }
 
-    public ComparatorVariable getFloatVarSelect() {
+    public ComparatorVariable<FloatVar> getFloatVarSelect() {
 
 	tieBreaking = null;
 	if (var_selection_heuristic == null)
@@ -483,26 +483,26 @@ public class SearchItem implements ParserTreeConstants {
 	else if (var_selection_heuristic.equals("input_order"))
 	    return null;
 	else if (var_selection_heuristic.equals("first_fail")) 
- 	    return new SmallestDomainFloat();
+ 	    return new SmallestDomainFloat<FloatVar>();
 	else if (var_selection_heuristic.equals("anti_first_fail")) {
 	    // does not follow flatzinc definition but may give better results ;)
 	    //tieBreaking = new MostConstrainedStatic();
-	    return new LargestDomainFloat();
+	    return new LargestDomainFloat<FloatVar>();
 	}
 	// else if (var_selection_heuristic.equals("most_constrained")) {
 	//     //tieBreaking = new MostConstrainedStatic();
 	//     return new SmallestDomainFloat();
 	// }
 	else if (var_selection_heuristic.equals("occurrence"))
-	    return new MostConstrainedStatic();
+	    return new MostConstrainedStatic<FloatVar>();
 	else if (var_selection_heuristic.equals("smallest")) {
 	    // does not follow flatzinc definition but may give better results ;)
  	    // tieBreaking = new MostConstrainedStatic(); 
 	    //tieBreaking = new SmallestDomain();
-	    return new SmallestMinFloat();
+	    return new SmallestMinFloat<FloatVar>();
 	}
 	else if (var_selection_heuristic.equals("largest"))
-	    return new LargestMaxFloat();
+	    return new LargestMaxFloat<FloatVar>();
 	// else if (var_selection_heuristic.equals("max_regret"))
 	//     return new MaxRegret();
 	// else if (var_selection_heuristic.equals("weighted_degree")) {
