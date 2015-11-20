@@ -143,10 +143,32 @@ setup to run configuration. -->
 					<artifactId>maven-surefire-report-plugin</artifactId>
 					<version>2.18.1</version>
 				</plugin>
+
+				<plugin>
+				  <groupId>org.apache.maven.plugins</groupId>
+				  <artifactId>maven-compiler-plugin</artifactId>
+				  <version>3.3</version>
+				</plugin>
+
 			</plugins>
 		</pluginManagement>
 
 		<plugins>
+
+		  <!-- Java plugin -->
+		  <plugin>
+		    <groupId>org.apache.maven.plugins</groupId>
+		    <artifactId>maven-compiler-plugin</artifactId>
+		    <version>3.3</version>
+		    <configuration>
+		      <source>1.7</source>
+		      <target>1.7</target>
+		      <compilerArgument>-Xlint:all</compilerArgument>
+		      <!-- <showWarnings>true</showWarnings>
+			   <showDeprecation>true</showDeprecation>  -->
+		    </configuration>
+		  </plugin>
+ 
 			<!-- Scala plugin -->
 			<plugin>
 				<groupId>org.scala-tools</groupId>

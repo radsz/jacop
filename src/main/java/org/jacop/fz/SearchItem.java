@@ -414,27 +414,27 @@ public class SearchItem implements ParserTreeConstants {
 
     
     
-    Indomain getIndomain(String indomain) {
+    Indomain<IntVar> getIndomain(String indomain) {
 	if (indomain == null)
-	    return new IndomainMin();
+	    return new IndomainMin<IntVar>();
 	else if (indomain.equals("indomain_min")) 
-	    return new IndomainMin();
+	    return new IndomainMin<IntVar>();
 	else if (indomain.equals("indomain_max")) 
-	    return new IndomainMax();
+	    return new IndomainMax<IntVar>();
 	else if (indomain.equals("indomain_middle")) 
-	    return new IndomainMiddle();
+	    return new IndomainMiddle<IntVar>();
 	else if (indomain.equals("indomain_median")) 
-	    return new IndomainMedian();
+	    return new IndomainMedian<IntVar>();
 	else if (indomain.equals("indomain_random")) 
-	    return new IndomainRandom();
+	    return new IndomainRandom<IntVar>();
 	else
 	    System.err.println("Warning: Not implemented indomain method \""+ 
 			       indomain +"\"; used indomain_min");
-	return new IndomainMin();
+	return new IndomainMin<IntVar>();
     }
 
     
-    public ComparatorVariable getVarSelect() {
+    public ComparatorVariable<IntVar> getVarSelect() {
 
 	tieBreaking = null;
 	if (var_selection_heuristic == null)
@@ -442,31 +442,31 @@ public class SearchItem implements ParserTreeConstants {
 	else if (var_selection_heuristic.equals("input_order"))
 	    return null;
 	else if (var_selection_heuristic.equals("first_fail")) 
- 	    return new SmallestDomain();
+ 	    return new SmallestDomain<IntVar>();
 	else if (var_selection_heuristic.equals("anti_first_fail")) {
 	    // does not follow flatzinc definition but may give better results ;)
 	    //tieBreaking = new MostConstrainedStatic();
-	    return new LargestDomain();
+	    return new LargestDomain<IntVar>();
 	}
 	else if (var_selection_heuristic.equals("most_constrained")) {
-	    tieBreaking = new MostConstrainedStatic();
-	    return new SmallestDomain();
+	    tieBreaking = new MostConstrainedStatic<IntVar>();
+	    return new SmallestDomain<IntVar>();
 	}
 	else if (var_selection_heuristic.equals("occurrence"))
-	    return new MostConstrainedStatic();
+	    return new MostConstrainedStatic<IntVar>();
 	else if (var_selection_heuristic.equals("smallest")) {
 	    // does not follow flatzinc definition but may give better results ;)
  	    // tieBreaking = new MostConstrainedStatic(); 
 	    //tieBreaking = new SmallestDomain();
-	    return new SmallestMin();
+	    return new SmallestMin<IntVar>();
 	}
 	else if (var_selection_heuristic.equals("largest"))
-	    return new LargestMax();
+	    return new LargestMax<IntVar>();
 	else if (var_selection_heuristic.equals("max_regret"))
-	    return new MaxRegret();
+	    return new MaxRegret<IntVar>();
 	else if (var_selection_heuristic.equals("weighted_degree")) {
 	    store.variableWeightManagement = true;
-	    return new WeightedDegree();
+	    return new WeightedDegree<IntVar>();
 	}
 	else 
 	    System.err.println("Warning: Not implemented variable selection heuristic \""+
@@ -516,7 +516,7 @@ public class SearchItem implements ParserTreeConstants {
 	return null; // input_order
     }
 
-    ComparatorVariable getsetVarSelect() {
+    ComparatorVariable<SetVar> getsetVarSelect() {
 
 	tieBreaking = null;
 	if (var_selection_heuristic == null)
@@ -524,23 +524,23 @@ public class SearchItem implements ParserTreeConstants {
 	else if (var_selection_heuristic.equals("input_order"))
 	    return null;
 	else if (var_selection_heuristic.equals("first_fail"))
-	    return new MinCardDiff();
+	    return new MinCardDiff<SetVar>();
 	else if (var_selection_heuristic.equals("smallest"))
-	    return new MinGlbCard();
+	    return new MinGlbCard<SetVar>();
 	else if (var_selection_heuristic.equals("occurrence"))
-	    return new MostConstrainedStatic();
+	    return new MostConstrainedStatic<SetVar>();
 	else if (var_selection_heuristic.equals("anti_first_fail"))
-	    return new MaxCardDiff();
+	    return new MaxCardDiff<SetVar>();
 	else if (var_selection_heuristic.equals("weighted_degree")) {
 	    store.variableWeightManagement = true;
-	    return new WeightedDegree();
+	    return new WeightedDegree<SetVar>();
 	}
 	//  	else if (var_selection_heuristic.equals("most_constrained")) {
 	// 	    tieBreaking = new MostConstrainedStatic();
 	//  	    return new SmallestDomain();
 	// 	}
 	else if (var_selection_heuristic.equals("largest"))
-	    return new MaxLubCard();
+	    return new MaxLubCard<SetVar>();
 	// 	else if (var_selection_heuristic.equals("max_regret"))
 	// 	    return new MaxRegret();
 	else 

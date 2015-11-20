@@ -106,10 +106,10 @@ public class XplusCeqZ extends PrimitiveConstraint {
 				
 		do {
 			
-			store.propagationHasOccurred = false;
-	
 			x.domain.inShift(store.level, x, z.domain, -c);
 
+			store.propagationHasOccurred = false;
+	
 			z.domain.inShift(store.level, z, x.domain, c);
 
 		} while (store.propagationHasOccurred);
