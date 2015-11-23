@@ -632,6 +632,8 @@ public class Solve implements ParserTreeConstants {
 			   "\n%% Max search depth : "+depth+
 			   "\n%% Number solutions : "+ solutions 
 			   );
+	// System.out.println("\n%% " + store.failConstraintsStatistics);
+	// System.out.println("\n%% " + store.failConstraintsIdStatistics);
 	}
 
     }
@@ -1086,7 +1088,8 @@ public class Solve implements ParserTreeConstants {
 			   "\n%% Number solutions : "+ solutions 
 			   );
 	}
-
+	// System.out.println("\n%% " + store.failConstraintsStatistics);
+	// System.out.println("\n%% " + store.failConstraintsIdStatistics);
     }
 
     boolean anyTimeOutOccured(ArrayList<Search<Var>> list_seq_searches) {
