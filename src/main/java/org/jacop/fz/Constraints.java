@@ -1362,7 +1362,14 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar n = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
 		    IntVar[] x = getVarArray((SimpleNode)node.jjtGetChild(1));
 
-		    pose(new Values(x, n));
+		    if (p.startsWith("_reif", 12)) {
+			IntVar b = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
+			IntVar tmp = new IntVar(store, 1, x.length);
+			pose(new Values(x, tmp));
+			pose(new Reified(new XeqY(tmp, n), b));
+		    }
+		    else
+			pose(new Values(x, n));
 		}
  		else if (p.startsWith("minimum_arg_int", 6)) {
 		    IntVar[] x = getVarArray((SimpleNode)node.jjtGetChild(0));
