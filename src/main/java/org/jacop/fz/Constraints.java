@@ -850,8 +850,9 @@ public class Constraints implements ParserTreeConstants {
 			PrimitiveConstraint c;
 			if (a1reduced.size() == 0)
 			    c = new AndBool(a2reduced, dictionary.getConstant(0)); // zero);
-			else if (a2reduced.size() == 0)
+			else if (a2reduced.size() == 0) {
 			    c = new OrBool(a1reduced, dictionary.getConstant(1)); // one);
+			}
 			else if (a1reduced.size() == 1 && a2reduced.size() == 1)
 			    if (a1reduced.get(0).min() == 1)
 				return;
@@ -1324,6 +1325,7 @@ public class Constraints implements ParserTreeConstants {
 		    pose( new GCC(x, counter));
 		}
 		else if (p.startsWith("diff2_strict", 6)) {
+		    
 		    IntVar[] x = getVarArray((SimpleNode)node.jjtGetChild(0));
 		    IntVar[] y = getVarArray((SimpleNode)node.jjtGetChild(1));
 		    IntVar[] lx = getVarArray((SimpleNode)node.jjtGetChild(2));
@@ -1362,13 +1364,14 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar n = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
 		    IntVar[] x = getVarArray((SimpleNode)node.jjtGetChild(1));
 
-		    if (p.startsWith("_reif", 12)) {
-			IntVar b = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
-			IntVar tmp = new IntVar(store, 1, x.length);
-			pose(new Values(x, tmp));
-			pose(new Reified(new XeqY(tmp, n), b));
-		    }
-		    else
+		    // reification is defined in nvalue.mzn as decomposition
+		    // if (p.startsWith("_reif", 12)) {
+		    // 	IntVar b = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
+		    // 	IntVar tmp = new IntVar(store, 1, x.length);
+		    // 	pose(new Values(x, tmp));
+		    // 	pose(new Reified(new XeqY(tmp, n), b));
+		    // }
+		    // else
 			pose(new Values(x, n));
 		}
  		else if (p.startsWith("minimum_arg_int", 6)) {
@@ -1654,6 +1657,7 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar[] bin = getVarArray((SimpleNode)node.jjtGetChild(0));
 		    IntVar[] capacity = getVarArray((SimpleNode)node.jjtGetChild(1));
 		    int[] w = getIntArray((SimpleNode)node.jjtGetChild(2));
+		    int min_bin = getInt((ASTScalarFlatExpr)node.jjtGetChild(3));
 
 		    // ---- KK, 2015-10-18
 		    // bin_packing must not have duplicated variables. on x vecor
@@ -1662,17 +1666,17 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar[] binx = new IntVar[bin.length];
 		    HashSet<IntVar> varSet = new HashSet<IntVar>();
 		    for (int i = 0; i < bin.length; i++) {
-			if (varSet.contains(bin[i]) && bin[i].singleton())
-			    binx[i] = new IntVar(store, bin[i].min(), bin[i].max());
-			else {
-			    binx[i] = bin[i];
-			    varSet.add(bin[i]);
-			}
+		    	if (varSet.contains(bin[i]) && bin[i].singleton())
+		    	    binx[i] = new IntVar(store, bin[i].min(), bin[i].max());
+		    	else {
+		    	    binx[i] = bin[i];
+		    	    varSet.add(bin[i]);
+		    	}
 		    }
 		    
-   		    pose( new org.jacop.constraints.binpacking.Binpacking(binx, capacity, w) );
-//   		    Constraint binPack = new org.jacop.constraints.binpacking.Binpacking(bin, capacity, w);
-//   		    delayedConstraints.add(binPack);
+   		    //pose( new org.jacop.constraints.binpacking.Binpacking(binx, capacity, w) );
+   		    Constraint binPack = new org.jacop.constraints.binpacking.Binpacking(binx, capacity, w, min_bin);
+   		    delayedConstraints.add(binPack);
 		}
 		else if (p.startsWith("float_maximum", 6)) {
 		    FloatVar p2 = getFloatVariable((ASTScalarFlatExpr)node.jjtGetChild(1));

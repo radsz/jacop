@@ -8,3 +8,6 @@ predicate all_distinct(array[int] of var int: x) =
 
 
 predicate jacop_alldistinct(array[int] of var int: x);
+
+predicate jacop_alldistinct_reif(array[int] of var int: x, var bool: n) =
+    abort("Reified all_distinct/1 is not supported.");

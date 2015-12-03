@@ -29,3 +29,8 @@ predicate knapsack(array[int] of int: w, array[int] of int:p,
 
 predicate jacop_knapsack(array[int] of int:w, array[int] of int:p, 
          var int: W, var int: P, array[int] of var int:x);
+
+predicate jacop_knapsack_reif(array[int] of int:w, array[int] of int:p, 
+         var int: W, var int: P, array[int] of var int:x, var bool: b) =
+    abort("Reified knapsack/5 is not supported.");
+

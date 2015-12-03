@@ -31,4 +31,9 @@ predicate lex_lt_int(array[int] of var int: x,
                      array[int] of var int: y) =
           lex_less(x, y);
 
+predicate jacop_lex_less_int_reif(array[int] of var int: x,
+                             array[int] of var int: y, var bool: b) =
+    abort("Reified lex_less/2 is not supported.");
+
+
 %-----------------------------------------------------------------------------%

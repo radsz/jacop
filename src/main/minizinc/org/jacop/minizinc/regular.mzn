@@ -33,3 +33,7 @@ predicate regular(array[int] of var int: x, int: Q, int: S,
 
 predicate jacop_regular(array[int] of var int: x, int: Q, int: S,
                         array[int, int] of int: d, int: q0, set of int: F, int: min_index);
+
+predicate jacop_regular_reif(array[int] of var int: x, int: Q, int: S,
+                        array[int, int] of int: d, int: q0, set of int: F, int: min_index, var bool: b) =
+    abort("Reified regular/6 is not supported.");

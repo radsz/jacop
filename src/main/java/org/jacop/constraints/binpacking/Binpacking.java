@@ -135,6 +135,7 @@ public class Binpacking extends Constraint {
 		Arrays.sort(item, new WeightComparator<BinItem>());
 		for (int i = 0; i < item.length; i++) 
 			itemMap.put(item[i].bin, i);
+
 	}
 
 	/**
@@ -153,6 +154,35 @@ public class Binpacking extends Constraint {
 				w);
 	}
 
+	/**
+	 * It constructs the binpacking constraint for the supplied variable.
+	 * @param bin which are constrained to define bin for item i.
+	 * @param load which are constrained to define load for bin i.
+	 * @param w which define size ofitem i.
+	 * @param minBin minimal index of a bin; ovewrite the value provided by minimal index of variable bin 
+	 */
+         public Binpacking(IntVar[] bin, IntVar[] load, int[] w, int minBin) {
+	     this(bin, load, w);
+	     minBinNumber = minBin;
+	 }
+    
+	/**
+	 * It constructs the binpacking constraint for the supplied variable.
+	 * @param bin which are constrained to define bin for item i.
+	 * @param load which are constrained to define load for bin i.
+	 * @param w which define size ofitem i.
+	 * @param minBin minimal index of a bin; ovewrite the value provided by minimal index of variable bin 
+	 */
+         public Binpacking(ArrayList<? extends IntVar> bin,
+			ArrayList<? extends IntVar> load,
+			int[] w, int minBin) {
+
+		this(bin.toArray(new IntVar[bin.size()]), 
+				load.toArray(new IntVar[load.size()]), 
+				w);
+		minBinNumber = minBin;
+	 }
+    
 	@Override
 	public ArrayList<Var> arguments() {
 
@@ -174,7 +204,7 @@ public class Binpacking extends Constraint {
 		if (firstConsistencyCheck) {
 			for (int i = 0; i < item.length; i++) 
 				item[i].bin.domain.in(store.level, item[i].bin, minBinNumber, load.length - 1 + minBinNumber);
-
+			
 			firstConsistencyCheck = false;
 		}
 
