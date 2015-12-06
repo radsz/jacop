@@ -11,6 +11,6 @@ predicate table_bool(array[int] of var bool: x, array[int, int] of bool: t) =
 
 predicate jacop_table_bool(array[int] of var bool: x, array[int, int] of bool: t);
 
-predicate table_bool_reif(array[int] of var bool: x, array[int, int] of bool: t,
-      var bool: b) = 
-   abort("Reified table/2 for Booleans is not supported.");
+% predicate table_bool_reif(array[int] of var bool: x, array[int, int] of bool: t,
+%       var bool: b) = 
+%    abort("Reified table/2 for Booleans is not supported.");

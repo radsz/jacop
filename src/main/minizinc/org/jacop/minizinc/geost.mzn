@@ -120,16 +120,16 @@ predicate jacop_geost(
     array[int    ] of var int    : kind
 );
 
-predicate jacop_geost_reif(
-                      int        : k           ,
-    array[int,int] of int        : rect_size   ,
-    array[int,int] of int        : rect_offset ,
-    array[int    ] of set of int : shape       , 
-    array[int,int] of var int    : x           ,
-    array[int    ] of var int    : kind        ,
-    var bool                     : b
-) =
-    abort("Reified geost/6 is not supported.");
+% predicate jacop_geost_reif(
+%                       int        : k           ,
+%     array[int,int] of int        : rect_size   ,
+%     array[int,int] of int        : rect_offset ,
+%     array[int    ] of set of int : shape       , 
+%     array[int,int] of var int    : x           ,
+%     array[int    ] of var int    : kind        ,
+%     var bool                     : b
+% ) =
+%     abort("Reified geost/6 is not supported.");
 
 
 
@@ -169,18 +169,18 @@ predicate jacop_geost_bb(
 
 );
 
-predicate jacop_geost_bb_reif(
-                      int        : k           ,
-    array[int,int] of int        : rect_size   ,
-    array[int,int] of int        : rect_offset ,
-    array[int    ] of set of int : shape       , 
-    array[int,int] of var int    : x           ,
-    array[int    ] of var int    : kind        ,
-    array[int    ] of int    : l               ,
-    array[int    ] of int    : u               ,
-    var bool                     : b
-) =
-    abort("Reified geost_bb/8 is not supported.");
+% predicate jacop_geost_bb_reif(
+%                       int        : k           ,
+%     array[int,int] of int        : rect_size   ,
+%     array[int,int] of int        : rect_offset ,
+%     array[int    ] of set of int : shape       , 
+%     array[int,int] of var int    : x           ,
+%     array[int    ] of var int    : kind        ,
+%     array[int    ] of int    : l               ,
+%     array[int    ] of int    : u               ,
+%     var bool                     : b
+% ) =
+%     abort("Reified geost_bb/8 is not supported.");
 
 
 predicate geost_nonoverlap_k(

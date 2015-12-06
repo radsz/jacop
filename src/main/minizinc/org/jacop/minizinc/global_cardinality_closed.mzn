@@ -21,10 +21,10 @@ predicate jacop_global_cardinality_closed(array[int] of var int: x,
                                           array[int] of var int: counts);
 
 
-predicate jacop_global_cardinality_closed_reif(array[int] of var int: x,
-                                          array[int] of int: cover,
-                                          array[int] of var int: counts, var bool: b) =
-    abort("Reified global_cardinality_closed/3 is not supported.");
+% predicate jacop_global_cardinality_closed_reif(array[int] of var int: x,
+%                                           array[int] of int: cover,
+%                                           array[int] of var int: counts, var bool: b) =
+%     abort("Reified global_cardinality_closed/3 is not supported.");
 
 %-----------------------------------------------------------------------------%
 %-----------------------------------------------------------------------------%

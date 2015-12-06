@@ -15,8 +15,8 @@ predicate subcircuit(array[int] of var int: x) =
 predicate jacop_subcircuit(array[int] of var int: x);
 
 
-predicate subcircuit_reif(array[int] of var int: x, var bool: b) = 
-    abort("Reified subcircuit/1 is not supported.");
+% predicate subcircuit_reif(array[int] of var int: x, var bool: b) = 
+%     abort("Reified subcircuit/1 is not supported.");
 
 %-----------------------------------------------------------------------------%
 %-----------------------------------------------------------------------------%

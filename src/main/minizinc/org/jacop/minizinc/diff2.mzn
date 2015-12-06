@@ -25,10 +25,10 @@ predicate jacop_diff2(array[int,int] of var int: r);
 predicate jacop_list_diff2(array[int] of var int: x, array[int] of var int: y,
 	                   array[int] of var int: lx, array[int] of var int: ly);
 
-predicate jacop_list_diff2_reif(array[int] of var int: x, array[int] of var int: y,
-	        array[int] of var int: lx, array[int] of var int: ly, var bool: b) =
-    abort("Reified diff2/4 is not supported.");
+% predicate jacop_list_diff2_reif(array[int] of var int: x, array[int] of var int: y,
+% 	        array[int] of var int: lx, array[int] of var int: ly, var bool: b) =
+%     abort("Reified diff2/4 is not supported.");
 
-predicate jacop_diff2_reif(array[int,int] of var int: r, var bool: b) =
-    abort("Reified diff2/1 is not supported.");
+% predicate jacop_diff2_reif(array[int,int] of var int: r, var bool: b) =
+%     abort("Reified diff2/1 is not supported.");
 

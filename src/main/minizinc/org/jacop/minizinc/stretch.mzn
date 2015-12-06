@@ -13,6 +13,6 @@ predicate stretch(array[int] of int: values, array[int] of int: min_v, array[int
 predicate jacop_stretch(array[int] of int: values, array[int] of int: min_v, array[int] of int: max_v, 
 	          array[int] of var int: x);
 
-predicate jacop_stretch_reif(array[int] of int: values, array[int] of int: min_v, array[int] of int: max_v, 
-	          array[int] of var int: x, var bool: b) =
-    abort("Reified stretch/4 is not supported.");
+% predicate jacop_stretch_reif(array[int] of int: values, array[int] of int: min_v, array[int] of int: max_v, 
+% 	          array[int] of var int: x, var bool: b) =
+%     abort("Reified stretch/4 is not supported.");

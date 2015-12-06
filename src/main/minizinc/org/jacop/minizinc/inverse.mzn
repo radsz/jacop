@@ -17,10 +17,10 @@ predicate jacop_assignment(array[int] of var int: f,
                            array[int] of var int: invf,
 			   int: index_f, int: index_invf);
 
-predicate jacop_assignment_reif(array[int] of var int: f,
-                           array[int] of var int: invf,
-			   int: index_f, int: index_invf, var bool: b) =
-    abort("Reified inverse/2 is not supported.");
+% predicate jacop_assignment_reif(array[int] of var int: f,
+%                            array[int] of var int: invf,
+% 			   int: index_f, int: index_invf, var bool: b) =
+%     abort("Reified inverse/2 is not supported.");
 
 
 /** @group globals.channeling

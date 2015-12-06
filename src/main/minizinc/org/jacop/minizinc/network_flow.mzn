@@ -62,8 +62,8 @@ predicate jacop_networkflow(array[int, int] of int: arc,
 	  	            array[int] of var int: flow, array[int] of var int: weight,
 	  	            array[int] of int: balance, var int: cost);
 
-predicate jacop_networkflow_reif(array[int, int] of int: arc, 
-	  	            array[int] of var int: flow, array[int] of var int: weight,
-	  	            array[int] of int: balance, var int: cost, var bool: b) =
-    abort("Reified networkflow/3 and networkflow_cost/5 are not supported.");
+% predicate jacop_networkflow_reif(array[int, int] of int: arc, 
+% 	  	            array[int] of var int: flow, array[int] of var int: weight,
+% 	  	            array[int] of int: balance, var int: cost, var bool: b) =
+%     abort("Reified networkflow/3 and networkflow_cost/5 are not supported.");
 

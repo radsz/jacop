@@ -460,6 +460,8 @@ public class Constraints implements ParserTreeConstants {
 			IntVar v1 = getVariable(p1), v2 = getVariable(p2), v3 = getVariable(p3);
 			if (v1.min() >= 0 && v1.max() <= 1 && v2.min() >= 0 && v2.max() <= 1 && v3.min() >= 0 && v3.max() <= 1) 
 			    pose(new AndBoolSimple(v1, v2, v3));
+			else if ( (v1.singleton() && v1.value() == 0) || (v2.singleton() && v2.value() == 0))
+			    v3.domain.in(store.level, v3, 0,0);
 			else
 			    pose(new XmulYeqZ(v1, v2, v3));
 		    }
@@ -817,12 +819,20 @@ public class Constraints implements ParserTreeConstants {
 		// x1 \/ ... \/ xm \/ not y1 \/ ... \/ not yn
 		else if (p.startsWith("clause", 5)) {
 
+		    boolean reified = p.startsWith("_reif", 11);
+
 		    IntVar[] a1 = unique(getVarArray((SimpleNode)node.jjtGetChild(0)));
 		    IntVar[] a2 = unique(getVarArray((SimpleNode)node.jjtGetChild(1)));
 		    for (IntVar v1 : a1)
 			for (IntVar v2 : a2)
 			    if (v1.equals(v2))
-				return; // already satisfied since a variable is both negated and not negated
+				if (reified) {
+				    IntVar r = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
+				    r.domain.in(store.level, r, 1, 1);
+				    return;
+				}
+				else
+				    return; // already satisfied since a variable is both negated and not negated
 
 		    if (a1.length == 0 && a2.length == 0 )
 			return;
@@ -838,33 +848,49 @@ public class Constraints implements ParserTreeConstants {
 		    else { // not SAT generation, use CP constraints
 			ArrayList<IntVar> a1reduced = new ArrayList<IntVar>();
 			for (int i = 0; i < a1.length; i++) 
-			    if (a1[i].max() != 0)
+			    if (a1[i].min() == 1)
+				if (reified) {
+				    IntVar r = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
+				    r.domain.in(store.level, r, 1, 1);
+				    return;
+				}
+				else 
+				    return; // already satisfied since a variable is both negated and not negated
+			    else if (a1[i].max() != 0)
 				a1reduced.add(a1[i]);
-			ArrayList<IntVar> a2reduced = new ArrayList<IntVar>();
+
+ 			ArrayList<IntVar> a2reduced = new ArrayList<IntVar>();
 			for (int i = 0; i < a2.length; i++) 
-			    if (a2[i].min() != 1)
+			    if (a2[i].max() == 0)
+				if (reified) {
+				    IntVar r = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
+				    r.domain.in(store.level, r, 1, 1);
+				    return;
+				}
+				else
+				    return; // already satisfied since a variable is both negated and not negated
+			    else if (a2[i].min() != 1)
 				a2reduced.add(a2[i]);
+
 			if (a1reduced.size() == 0 && a2reduced.size() == 0 )
 			    throw store.failException;
 
 			PrimitiveConstraint c;
 			if (a1reduced.size() == 0)
-			    c = new AndBool(a2reduced, dictionary.getConstant(0)); // zero);
+			    c = new AndBool(a2reduced, dictionary.getConstant(0));
 			else if (a2reduced.size() == 0) {
-			    c = new OrBool(a1reduced, dictionary.getConstant(1)); // one);
+			    c = new OrBool(a1reduced, dictionary.getConstant(1));
 			}
 			else if (a1reduced.size() == 1 && a2reduced.size() == 1)
-			    if (a1reduced.get(0).min() == 1)
-				return;
-			    else
-				c = new XlteqY(a2reduced.get(0), a1reduced.get(0));
-			else {
+			    c = new XlteqY(a2reduced.get(0), a1reduced.get(0));
+			else 
 			    c = new BoolClause(a1reduced, a2reduced);
-			}
+
 		    // bool_clause_reif/3 defined in redefinitions-2.0.
-			if (p.startsWith("_reif", 11)) {
+			if (reified) {
 			    IntVar r = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
-			    pose(new Reified(c, r));		    }
+			    pose(new Reified(c, r));
+			}
 			else
 			    pose(c);
 		    }
@@ -1114,6 +1140,11 @@ public class Constraints implements ParserTreeConstants {
 		*/
 	    }
 	    // ========== JaCoP constraints ==================>>
+	    // check for reified (pattern "jacop_\S+_reif"; in Java "jacop_\\S+_reif")
+	    else if (p.matches("jacop_\\S+_reif")) {
+		System.out.println("Refications for " + p + " not supported");
+		System.exit(0);
+	    }
 	    else if (p.startsWith("jacop_"))
 		if (p.startsWith("cumulative", 6)) {
 
@@ -2634,6 +2665,19 @@ public class Constraints implements ParserTreeConstants {
 		}
 	    }
 
+	// If a linear term contains only constants and can be evaluated 
+	// check if satisfied and do not generate constraint
+
+	boolean p2Fixed = allConstants(p2);
+	int s=0;
+	if (p2Fixed) {
+	    int el=0;
+	    while (el < p2.length) {
+		s += p2[el].min()*p1[el];
+		el++;
+	    }
+	}
+
 
 	if (p.startsWith("_reif", 10)) { // reified
 	    IntVar p4 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(3));
@@ -2641,6 +2685,15 @@ public class Constraints implements ParserTreeConstants {
 	    IntVar t;
 	    switch (operation) {
 	    case eq :
+
+		if (p2Fixed) {
+		    if (s == p3)
+			p4.domain.in(store.level, p4, 1, 1);
+		    else
+			p4.domain.in(store.level, p4, 0, 0);
+		    return;
+		}
+		
 		if (p1.length == 1) {
 		    if (p1[0] == 1)
 			pose(new Reified(new XeqC(p2[0], p3), p4));
@@ -2783,19 +2836,6 @@ public class Constraints implements ParserTreeConstants {
 	    }
 	}
 	else { // non reified
-
-	    // If a linear term contains only constants and can be evaluated 
-	    // check if satisfied and do not generate constraint
-
-	    boolean p2Fixed = allConstants(p2);
-	    int s=0;
-	    if (p2Fixed) {
-		int el=0;
-		while (el < p2.length) {
-		    s += p2[el].min()*p1[el];
-		    el++;
-		}
-	    }
 
 	    IntVar t;
 	    switch (operation) {

@@ -21,7 +21,7 @@ predicate jacop_cumulative(array[int] of var int: s,
                      array[int] of var int: d,
                      array[int] of var int: r, var int: b);
 
-predicate jacop_cumulative_reif(array[int] of var int: s,
-                     array[int] of var int: d,
-                     array[int] of var int: r, var int: b, var bool: b_reif) =
-    abort("Reified cumulative/4 is not supported.");
+% predicate jacop_cumulative_reif(array[int] of var int: s,
+%                      array[int] of var int: d,
+%                      array[int] of var int: r, var int: b, var bool: b_reif) =
+%     abort("Reified cumulative/4 is not supported.");

@@ -24,6 +24,6 @@ predicate diffn(array[int] of var int: x,
 predicate jacop_diff2_strict(array[int] of var int: x, array[int] of var int: y,
 	        	     array[int] of var int: lx, array[int] of var int: ly);
 
-predicate jacop_diff2_strict_reif(array[int] of var int: x, array[int] of var int: y,
-	        	     array[int] of var int: lx, array[int] of var int: ly, var bool: b) = 
-    abort("Reified diffn/1 is not supported.");
+% predicate jacop_diff2_strict_reif(array[int] of var int: x, array[int] of var int: y,
+%  	        	     array[int] of var int: lx, array[int] of var int: ly, var bool: b) = 
+%     abort("Reified diffn/1 is not supported.");
