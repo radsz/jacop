@@ -309,15 +309,6 @@ public class SumWeightedSet extends Constraint {
 			return IntDomain.ANY;
 	}
 
-
-	@Override
-	public String id() {
-		if (id != null)
-			return id;
-		else
-			return this.getClass().getSimpleName() + numberId;
-	}
-
 	@Override
 	public void impose(Store store) {
 		totalWeight.putModelConstraint(this, getConsistencyPruningEvent(totalWeight));

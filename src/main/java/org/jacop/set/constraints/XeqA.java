@@ -166,14 +166,6 @@ public class XeqA extends PrimitiveConstraint {
 	}
 
 	@Override
-	public String id() {
-		if (id != null)
-			return id;
-		else
-			return this.getClass().getSimpleName() + numberId;
-	}
-
-	@Override
 	public void impose(Store store) {
 		
 		x.putModelConstraint(this, getConsistencyPruningEvent(x));

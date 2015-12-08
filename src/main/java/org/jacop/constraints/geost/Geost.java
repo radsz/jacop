@@ -1638,16 +1638,6 @@ public class Geost extends Constraint {
 	}
 
 	@Override
-	public String id() {
-		
-		if (id != null)
-			return id;
-		else
-			return this.getClass().getSimpleName() + numberId;
-	
-	}
-
-	@Override
 	public void impose(Store store) {
 		
 		this.store = store;

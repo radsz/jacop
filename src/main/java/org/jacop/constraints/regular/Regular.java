@@ -1165,15 +1165,6 @@ public class Regular extends Constraint {
 	}
 
 	@Override
-	public String id() {
-		if (id != null)
-			return id;
-		else
-			return this.getClass().getSimpleName() + numberId;
-	}
-
-
-	@Override
 	public void removeConstraint() {
 		for (Var var : list)
 			var.removeConstraint(this);

@@ -874,14 +874,6 @@ public class Knapsack extends Constraint {
 	}
 
 	@Override
-	public String id() {
-		if (id != null)
-			return id;
-		else
-			return  this.getClass().getSimpleName() + numberId;
-	}
-
-	@Override
 	public void removeConstraint() {
 		for (TreeLeaf leaf : leaves)
 			leaf.getVariable().removeConstraint(this);

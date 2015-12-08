@@ -63,7 +63,7 @@ public abstract class Constraint extends DecomposedConstraint {
 	 * the string id is created from string associated for the constraint
 	 * type and the numberId of the constraint.
 	 */
-	public String id;
+	protected String id;
 
 	/**
 	 * It returns the variables in a scope of the constraint.
