@@ -359,7 +359,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(get
  */
   def div(that: org.jacop.core.IntVar) = {
     val bounds = IntDomain.divBounds(this.min(), this.max(), that.min(), that.max())
-    val result = new IntVar()
+    val result = new IntVar(bounds.min(), bounds.max())
     val c = new XdivYeqZ(this, that, result)
     getModel.constr += c
     result
