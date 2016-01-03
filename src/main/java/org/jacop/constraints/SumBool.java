@@ -134,7 +134,8 @@ public class SumBool extends PrimitiveConstraint {
 
 	this.store = store;
 	this.sum = sum;
-	this.x = list;
+	x = new IntVar[list.length];
+	System.arraycopy(list, 0, x, 0, list.length);
 	numberId = idNumber++;
 
 	for (IntVar v : list) 

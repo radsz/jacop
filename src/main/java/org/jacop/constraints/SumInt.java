@@ -149,7 +149,8 @@ public class SumInt extends PrimitiveConstraint {
 
 	this.store = store;
 	this.sum = sum;
-	this.x = list;
+	x = new IntVar[list.length];
+	System.arraycopy(list, 0, x, 0, list.length);
 	numberId = idNumber++;
 
 	this.l = x.length;
@@ -587,6 +588,65 @@ public class SumInt extends PrimitiveConstraint {
 
     }
 
+		
+	@Override
+	public Constraint getGuideConstraint() {
+	
+		IntVar proposedVariable = (IntVar)getGuideVariable();
+		if (proposedVariable != null)
+			return new XeqC(proposedVariable, guideValue);
+		else
+			return null;
+	}
+
+	@Override
+	public int getGuideValue() {
+		return guideValue; 
+	}
+
+	int guideValue = 0;
+	
+	
+	@Override
+	public Var getGuideVariable() {
+		
+		int regret = 1;
+		Var proposedVariable = null;
+
+		for (IntVar v : x) {
+
+			IntDomain listDom = v.dom();
+
+			if (v.singleton())
+				continue;
+
+			int currentRegret = listDom.nextValue(listDom.min()) - listDom.min();
+			
+			if (currentRegret > regret) {
+				regret = currentRegret;
+				proposedVariable = v;
+				guideValue = listDom.min();
+			}
+
+			currentRegret = listDom.max() - listDom.previousValue(listDom.max());
+			
+			if (currentRegret > regret) {
+				regret = currentRegret;
+				proposedVariable = v;
+				guideValue = listDom.max();
+			}
+			
+		}
+
+		return proposedVariable;
+		
+	}
+
+
+	@Override
+	public void supplyGuideFeedback(boolean feedback) {
+	}
+    
     @Override
     public void increaseWeight() {
 	if (increaseWeight) {
