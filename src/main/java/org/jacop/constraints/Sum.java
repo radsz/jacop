@@ -44,7 +44,7 @@ import org.jacop.core.Var;
  * the sum from all Variable's on the list.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.3
+ * @version 4.4
  */
 
 /**

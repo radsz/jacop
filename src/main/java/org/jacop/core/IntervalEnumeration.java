@@ -40,7 +40,7 @@ import java.util.Enumeration;
  * 
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  */
 
 public abstract class IntervalEnumeration implements Enumeration<Interval>{

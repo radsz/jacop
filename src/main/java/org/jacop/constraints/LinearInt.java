@@ -53,7 +53,7 @@ import org.jacop.core.Var;
  * by Warwick Harvey and Joachim Schimpf
  *
  * @author Krzysztof Kuchcinski
- * @version 4.3
+ * @version 4.4
  */
 
 public class LinearInt extends PrimitiveConstraint {

@@ -54,7 +54,7 @@ import org.jacop.core.Var;
  * make addressing of list array starting from 1.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.3
+ * @version 4.4
  */
 
 public class ElementInteger extends Constraint {

@@ -53,7 +53,7 @@ import org.jacop.util.SimpleHashSet;
  * Artificial Intelligence 170 (2006) 803–834.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  */
 
 public class LexOrder extends Constraint {

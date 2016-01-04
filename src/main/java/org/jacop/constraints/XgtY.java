@@ -42,7 +42,7 @@ import org.jacop.core.Var;
  * Constraint X {@literal >} Y
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  */
 
 public class XgtY extends PrimitiveConstraint {

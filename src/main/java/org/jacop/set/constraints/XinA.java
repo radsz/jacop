@@ -47,7 +47,7 @@ import org.jacop.set.core.SetVar;
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski. 
  * 
- * @version 4.3
+ * @version 4.4
  */
 
 public class XinA extends PrimitiveConstraint {

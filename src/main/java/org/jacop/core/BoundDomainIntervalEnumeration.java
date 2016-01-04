@@ -39,7 +39,7 @@ package org.jacop.core;
  * 
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  */
 
 public class BoundDomainIntervalEnumeration extends IntervalEnumeration {

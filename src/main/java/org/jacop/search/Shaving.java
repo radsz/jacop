@@ -73,7 +73,7 @@ import org.jacop.core.Store;
  * 
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.3
+ * @version 4.4
  */
 
 @SuppressWarnings("unchecked")

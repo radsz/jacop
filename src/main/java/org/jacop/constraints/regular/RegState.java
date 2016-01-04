@@ -43,7 +43,7 @@ import org.jacop.core.TimeStamp;
  * within Regular constraint. 
  * 
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  */
 
 public abstract class RegState {

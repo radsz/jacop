@@ -42,7 +42,7 @@ import org.jacop.core.Store;
  * SatTranslation defines SAT clauses for typical logical constraints
  *
  * @author Krzysztof Kuchcinski
- * @version 4.3
+ * @version 4.4
  */
 public class SatTranslation {
 

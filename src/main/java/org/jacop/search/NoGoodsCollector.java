@@ -46,7 +46,7 @@ import org.jacop.core.Store;
  * when collector is informed about exiting the search.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.3
+ * @version 4.4
  */
 
 public class NoGoodsCollector<T extends IntVar> implements ExitChildListener<T>, TimeOutListener, ExitListener {

@@ -45,7 +45,7 @@ import org.jacop.core.TimeStamp;
  * same successor. 
  * 
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  */
 public class RegStateInt extends RegState {
 

@@ -43,7 +43,7 @@ import org.jacop.core.Var;
  * be enforced by search.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.3
+ * @version 4.4
  */
 
 @SuppressWarnings("unchecked")

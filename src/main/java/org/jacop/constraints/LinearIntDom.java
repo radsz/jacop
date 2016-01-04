@@ -53,7 +53,7 @@ import org.jacop.core.Var;
  *
  *
  * @author Krzysztof Kuchcinski
- * @version 4.3
+ * @version 4.4
  */
 
 public class LinearIntDom extends LinearInt {

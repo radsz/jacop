@@ -48,7 +48,7 @@ import org.jacop.core.TimeStamp;
  * It provides the sum from all variables on the list.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.3
+ * @version 4.4
  */
 
 public class SumBool extends PrimitiveConstraint {

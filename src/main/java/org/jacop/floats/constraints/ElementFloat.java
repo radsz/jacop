@@ -62,7 +62,7 @@ import org.jacop.floats.core.FloatIntervalEnumeration;
  * make addressing of list array starting from 1.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  */
 
 public class ElementFloat extends Constraint {

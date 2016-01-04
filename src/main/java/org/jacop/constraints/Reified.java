@@ -45,7 +45,7 @@ import org.jacop.util.SimpleHashSet;
  * 
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  */
 
 public class Reified extends Constraint {

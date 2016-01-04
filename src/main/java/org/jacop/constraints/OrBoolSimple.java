@@ -46,7 +46,7 @@ import org.jacop.core.Var;
  * 
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  */
 
 public class OrBoolSimple extends OrBoolVector {

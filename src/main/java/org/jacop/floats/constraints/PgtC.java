@@ -48,7 +48,7 @@ import org.jacop.floats.core.FloatDomain;
  * Constraint P {@literal >} C
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  */
 
 public class PgtC extends PrimitiveConstraint {

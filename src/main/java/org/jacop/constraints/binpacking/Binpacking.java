@@ -54,7 +54,7 @@ import org.jacop.util.SimpleHashSet;
  * Paul Shaw, CP 2004.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  */
 
 public class Binpacking extends Constraint {

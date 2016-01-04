@@ -49,7 +49,7 @@ import org.jacop.constraints.netflow.Pruning;
 /**
  *
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  * 
  */
 

@@ -38,7 +38,7 @@ package org.jacop.constraints;
  * value.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  */
 
 class CumulativeProfiles {

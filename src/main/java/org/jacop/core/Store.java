@@ -45,7 +45,7 @@ import org.jacop.util.SparseSet;
  * It is an abstract class to describe all necessary functions of any store.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.3
+ * @version 4.4
  */
 
 public class Store {

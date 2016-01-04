@@ -48,7 +48,7 @@ import org.jacop.core.Var;
  * Domain and bounds consistency can be used; third parameter of constructor controls this.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.3
+ * @version 4.4
  */
 
 public class AbsXeqY extends PrimitiveConstraint {

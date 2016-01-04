@@ -35,7 +35,7 @@ package org.jacop.floats.constraints.linear;
  * Binary Node of the tree representing linear constraint.
  * 
  * @author Krzysztof Kuchcinski
- * @version 4.3
+ * @version 4.4
  */
 
 import org.jacop.floats.core.FloatVar;

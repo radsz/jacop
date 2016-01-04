@@ -55,7 +55,7 @@ import org.xml.sax.SAXException;
  * efficiency.
  * 
  * @author Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  */
 
 public class ExtensionalConflictVA extends Constraint {

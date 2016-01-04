@@ -35,7 +35,7 @@ package org.jacop.core;
  * Defines a methods for enumerating values contain in the domain.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.3
+ * @version 4.4
  */
 
 public class SmallDenseDomainValueEnumeration extends ValueEnumeration {

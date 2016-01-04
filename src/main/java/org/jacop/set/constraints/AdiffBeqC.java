@@ -47,7 +47,7 @@ import org.jacop.set.core.SetVar;
  * A \ B = C. 
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.3
+ * @version 4.4
  */
 
 public class AdiffBeqC extends Constraint {
