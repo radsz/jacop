@@ -49,7 +49,7 @@ import org.jacop.core.ValueEnumeration;
  * either into a network flow constraint or a set of primitive constraints. 
  *
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  * 
  */
 
@@ -86,7 +86,7 @@ public class SoftAlldifferent extends DecomposedConstraint {
 						decomposition.add(new Reified(new XeqY(xVars[i], xVars[j]), v));
 					}
 				}
-				decomposition.add(new Sum(costs, costVar));		
+				decomposition.add(new SumInt(store, costs, "==", costVar));		
 
 			} else {
 				throw new UnsupportedOperationException("Unsupported violation measure " + violationMeasure);
@@ -109,7 +109,7 @@ public class SoftAlldifferent extends DecomposedConstraint {
 						result.add(new Reified(new XeqY(xVars[i], xVars[j]), v));
 					}
 				}
-				result.add(new Sum(costs, costVar));		
+				result.add(new SumInt(store, costs, "==", costVar));		
 
 			} else {
 				throw new UnsupportedOperationException("Unsupported violation measure " + violationMeasure);

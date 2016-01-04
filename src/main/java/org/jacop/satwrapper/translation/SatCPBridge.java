@@ -11,11 +11,10 @@ import org.jacop.satwrapper.WrapperComponent;
 
 /**
  * interface representing the domain of a CP variable as a range. It is used
- * to provide literals to represent assertions like 'X = v' or 'X <= v' where X
+ * to provide literals to represent assertions like 'X = v' or 'X{@literal <=} v' where X
  * is the CP variable and v a value from its domain
  * @author simon
  * 
- * @param E the type of the JaCoP variable represented
  */
 public abstract class SatCPBridge implements WrapperComponent {
 
@@ -66,10 +65,10 @@ public abstract class SatCPBridge implements WrapperComponent {
 
 	/**
 	 * return the literal that represents the assertion 'var = value'.
-	 * For the proposition 'var <= value', set the isEquality flag to false
+	 * For the proposition 'var{@literal <=} value', set the isEquality flag to false
 	 * @param value	the value for the variable this range represents
-	 * @param isEquality true if we want the literal for 'x=d' kind of
-	 * propositions, false for 'x<=d'
+	 * @param isEquality true if we want the literal for '{@code x=d}' kind of
+	 * propositions, false for '{@code x<=d}'
 	 * @return	the literal corresponding to 'var = this value'. If the value
 	 * is out of the domain of the variable, returns 0.
 	 */
@@ -78,14 +77,14 @@ public abstract class SatCPBridge implements WrapperComponent {
 	/**
 	 * return the value corresponding to given literal (variable)
 	 * @param literal	the literal standing for 'var = value'
-	 * @return the value such that 'var = value' (or 'var <= value')
+	 * @return the value such that 'var = value' (or 'var{@literal <=} value')
 	 */
 	public abstract int boolVarToCpValue(int literal);
 
 
 	/**
 	 * checks if the literal stands for a 'x=d' proposition, or a
-	 * 'x<=d' proposition
+	 * 'x{@literal <=}d' proposition
 	 * @param literal	the literal (among literals from this range)
 	 * @return	true if the literal stands for 'x=d', false otherwise
 	 */
@@ -96,7 +95,7 @@ public abstract class SatCPBridge implements WrapperComponent {
 	 * this object manages
 	 * @param literal	a literal
 	 * @return true if there is a 'd' such that literal stands for 'x=d'
-	 * or 'x<=d'
+	 * or 'x{@literal <=}d'
 	 */
 	public final boolean isInThisRange(int literal) {
 		return wrapper.boolVarToCpVar(literal) == variable;
@@ -106,7 +105,6 @@ public abstract class SatCPBridge implements WrapperComponent {
 	 * does all propagation required, in a way specific to this range. This part
 	 * may not be used, if the variable is not bound to a DomainClausesDatabase.
 	 * This will be called only if <code>this.isTranslated()</code> is false.
-	 * @param db			the database to add propagated literals to
 	 * @param literal		the literal that has been asserted
 	 */
 	public abstract void propagate(int literal);

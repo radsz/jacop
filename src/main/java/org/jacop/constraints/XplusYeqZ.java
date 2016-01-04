@@ -39,12 +39,12 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 
 /**
- * Constraint X + Y #= Z
+ * Constraint X + Y = Z
  * 
  * Bound consistency is used.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  */
 
 public class XplusYeqZ extends PrimitiveConstraint {

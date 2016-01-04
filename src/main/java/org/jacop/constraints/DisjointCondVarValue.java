@@ -40,7 +40,7 @@ import org.jacop.core.MutableVarValue;
  * Defines a current value of the Diff2Var and related operations on it.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  */
 
 class DisjointCondVarValue implements MutableVarValue {

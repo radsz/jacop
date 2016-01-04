@@ -41,7 +41,7 @@ import org.jacop.satwrapper.translation.SatCPBridge;
  * Defines a Finite Domain Variable (FDV) and related operations on it.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.3
+ * @version 4.4
  */
 
 public class IntVar extends Var {

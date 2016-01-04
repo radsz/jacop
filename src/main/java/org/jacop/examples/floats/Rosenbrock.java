@@ -124,7 +124,7 @@ public class Rosenbrock {
 	DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
 	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, new FloatVar[] {x1, x2}, null);
 
-	Optimize min = new Optimize(store, label, s, z);
+	Optimize<FloatVar> min = new Optimize<FloatVar>(store, label, s, z);
 	boolean result = min.minimize();
 
 	System.out.println ("\nPrecision = " + FloatDomain.precision());

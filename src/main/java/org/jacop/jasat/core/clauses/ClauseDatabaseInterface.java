@@ -51,6 +51,7 @@ public interface ClauseDatabaseInterface {
 	 * the solver will get in the conflict state.
 	 * 
 	 * @param clause	the clause to add
+	 * @param isModelClause defined if the clause is model clause
 	 * @return	the unique ID referring to the clause
 	 */
 	public int addClause(int[] clause, boolean isModelClause);
@@ -66,6 +67,7 @@ public interface ClauseDatabaseInterface {
 
 	/**
 	 * It removes the clause which unique ID is @param clauseId.
+	 * @param clauseId clause id
 	 */
 	public void removeClause(int clauseId);
 
@@ -83,16 +85,15 @@ public interface ClauseDatabaseInterface {
 	 * It returns the clause obtained by resolution between clauseIndex and clause.
 	 * It will also modify in place the given SetClause (avoid allocating).
 	 * 
-	 * @param clauseId	the unique id of the clause
+	 * @param clauseIndex	the unique id of the clause
 	 * @param clause	an explanation clause that is modified by resolution
 	 * @return the clause obtained by resolution
-	 * @throws TrivialClause if the clause becomes trivial because of resolution
 	 */
 	public MapClause resolutionWith(int clauseIndex, MapClause clause);
 
 	/**
 	 * Do everything needed to return to the given level.
-	 * @param level	the level to return to. Must be < solver.getCurrentLevel().
+	 * @param level	the level to return to. Must be {@literal <} solver.getCurrentLevel().
 	 */
 	public void backjump(int level);
 
@@ -107,6 +108,7 @@ public interface ClauseDatabaseInterface {
          * writer.
          * 
          * @param output the output writer to which all the clauses will be written to.
+	 * @throws java.io.IOException execption from java.io package
          */
         public void toCNF(BufferedWriter output) throws java.io.IOException;
 

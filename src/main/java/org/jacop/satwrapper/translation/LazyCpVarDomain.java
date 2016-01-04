@@ -85,8 +85,7 @@ public final class LazyCpVarDomain<E extends IntVar> extends SatCPBridge {
 
 	/**
 	 * creates the var list
-	 * @param var	the variable this list represents
-	 * @param firstVar
+	 * @param variable	the variable this list represents
 	 */
 	public LazyCpVarDomain(IntVar variable) {
 		super(variable);

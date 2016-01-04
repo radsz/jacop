@@ -194,6 +194,7 @@ public final class CnfParser
 	 * creates an instance of the parser for some input stream
 	 * @param pool		the memory pool to use
 	 * @param stream	the stream from which to read clauses
+	 * @throws ParseException excpetion when parsing fails
 	 */
 	public CnfParser(MemoryPool pool, InputStream stream) throws ParseException {
 		this.pool = pool;

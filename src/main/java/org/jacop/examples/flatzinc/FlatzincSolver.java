@@ -46,7 +46,7 @@ import org.jacop.fz.*;
  * It is used for test purpose only.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.3
+ * @version 4.4
  */
 public class FlatzincSolver {
     Store store;
@@ -94,6 +94,9 @@ public class FlatzincSolver {
 	    result = label.labeling(fl.getStore(), select, cost);
 	else
 	    result = label.labeling(fl.getStore(), select);
+
+	if (! fl.getOptions().getAll() && fl.getSolve().lastSolution != null)
+	    System.out.print(fl.getSolve().lastSolution);
 
 	fl.getSolve().statistics(result);
 

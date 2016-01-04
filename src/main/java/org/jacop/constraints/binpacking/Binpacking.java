@@ -54,7 +54,7 @@ import org.jacop.util.SimpleHashSet;
  * Paul Shaw, CP 2004.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  */
 
 public class Binpacking extends Constraint {
@@ -125,13 +125,17 @@ public class Binpacking extends Constraint {
 			assert (load[i] != null) : i + "-th element in load list is null";
 			this.load[i] = load[i];
 
-			binMap.put(this.load[i], i);
-
+			Integer varPosition = binMap.put(this.load[i], i);
+			if (varPosition != null) {
+			    System.err.println("ERROR: Constraint " + toString() + " must have different variables on the list");
+			    System.exit(0);
+			}
 		}
 
 		Arrays.sort(item, new WeightComparator<BinItem>());
 		for (int i = 0; i < item.length; i++) 
 			itemMap.put(item[i].bin, i);
+
 	}
 
 	/**
@@ -150,6 +154,35 @@ public class Binpacking extends Constraint {
 				w);
 	}
 
+	/**
+	 * It constructs the binpacking constraint for the supplied variable.
+	 * @param bin which are constrained to define bin for item i.
+	 * @param load which are constrained to define load for bin i.
+	 * @param w which define size ofitem i.
+	 * @param minBin minimal index of a bin; ovewrite the value provided by minimal index of variable bin 
+	 */
+         public Binpacking(IntVar[] bin, IntVar[] load, int[] w, int minBin) {
+	     this(bin, load, w);
+	     minBinNumber = minBin;
+	 }
+    
+	/**
+	 * It constructs the binpacking constraint for the supplied variable.
+	 * @param bin which are constrained to define bin for item i.
+	 * @param load which are constrained to define load for bin i.
+	 * @param w which define size ofitem i.
+	 * @param minBin minimal index of a bin; ovewrite the value provided by minimal index of variable bin 
+	 */
+         public Binpacking(ArrayList<? extends IntVar> bin,
+			ArrayList<? extends IntVar> load,
+			int[] w, int minBin) {
+
+		this(bin.toArray(new IntVar[bin.size()]), 
+				load.toArray(new IntVar[load.size()]), 
+				w);
+		minBinNumber = minBin;
+	 }
+    
 	@Override
 	public ArrayList<Var> arguments() {
 
@@ -171,7 +204,7 @@ public class Binpacking extends Constraint {
 		if (firstConsistencyCheck) {
 			for (int i = 0; i < item.length; i++) 
 				item[i].bin.domain.in(store.level, item[i].bin, minBinNumber, load.length - 1 + minBinNumber);
-
+			
 			firstConsistencyCheck = false;
 		}
 

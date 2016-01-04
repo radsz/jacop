@@ -34,7 +34,7 @@ package org.jacop.examples.set;
 import java.util.ArrayList;
 
 import org.jacop.constraints.Reified;
-import org.jacop.constraints.Sum;
+import org.jacop.constraints.SumInt;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -55,7 +55,7 @@ import org.jacop.set.search.MaxCardDiff;
  * It models and solves Steiner problem.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  */
 
 public class Steiner extends ExampleSet {
@@ -69,7 +69,7 @@ public class Steiner extends ExampleSet {
 
 	/**
 	 * It executes the program which solves this Steiner problem.
-	 * @param args
+	 * @param args prameters (none)
 	 */
 	public static void main(String args[]) {
 
@@ -120,7 +120,7 @@ public class Steiner extends ExampleSet {
 					store.impose( new Reified(new EinA(i, s[j]), b[j]));
 				}
 				IntVar sum = new IntVar(store, "sum_"+i, (n-1)/2, (n-1)/2);
-				store.impose(new Sum(b, sum));
+				store.impose(new SumInt(store, b, "==", sum));
 			}
 			
 		}

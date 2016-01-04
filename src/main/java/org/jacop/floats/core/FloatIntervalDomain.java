@@ -56,7 +56,7 @@ import org.xml.sax.SAXException;
  * 
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.3
+ * @version 4.4
  */
 
 public class FloatIntervalDomain extends FloatDomain {
@@ -100,7 +100,7 @@ public class FloatIntervalDomain extends FloatDomain {
      * specified in xmlAttributes. 
      *  
      * @param tf a place to write the content of the object. 
-     * @throws SAXException
+     * @throws SAXException exception from org.xml.sax
      */
     public void toXML(TransformerHandler tf) throws SAXException {
 		
@@ -259,8 +259,9 @@ public class FloatIntervalDomain extends FloatDomain {
     /**
      * It adds a value to the domain. It adds at the end without
      * checks for the correctness of domain representation.
+     *
+     * @param i value to be added
      */
-
     public void addLastElement(double i) {
 
 	assert checkInvariants() == null : checkInvariants() ;

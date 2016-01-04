@@ -12,7 +12,7 @@ predicate count(array[int] of var int: x, int: y, var int: c) =
 %-----------------------------------------------------------------------------%
 % Reified version of count.
 %-----------------------------------------------------------------------------%
-predicate count_reif(array[int] of var int: x, int: y, var int: c, var bool: b) =
+predicate jacop_count_reif(array[int] of var int: x, int: y, var int: c, var bool: b) =
 	  let { 
           int: l = min(index_set(x)),
           int: u = max(index_set(x)),
@@ -28,4 +28,3 @@ predicate count_reif(array[int] of var int: x, int: y, var int: c, var bool: b) 
 
 %-----------------------------------------------------------------------------%
 %-----------------------------------------------------------------------------%
-

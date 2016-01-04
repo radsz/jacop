@@ -8,8 +8,8 @@ import org.jacop.satwrapper.SatWrapper;
 
 /**
  * A simple representation for small domains, not lazy. It allocates boolean
- * variables to stand for propositions '[x=v]' and '[x<=v]' for each value v of
- * the domain of x (even '[x<=max]', which is a tautology, for simplicity)
+ * variables to stand for propositions '[x=v]' and '[x{@literal <=}v]' for each value v of
+ * the domain of x (even '[x{@literal <=}max]', which is a tautology, for simplicity)
  * @author simon
  *
  */

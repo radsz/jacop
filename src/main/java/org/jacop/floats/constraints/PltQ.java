@@ -45,10 +45,10 @@ import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatDomain;
 
 /**
- * Constraint P < Q for floats
+ * Constraint P {@literal <} Q for floats
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  */
 
 public class PltQ extends PrimitiveConstraint {
@@ -72,7 +72,7 @@ public class PltQ extends PrimitiveConstraint {
 	public static String[] xmlAttributes = {"p", "q"};
 	
 	/**
-	 * It constructs constraint P < C.
+	 * It constructs constraint P {@literal <} C.
 	 * @param p variable p.
 	 * @param q constant q.
 	 */

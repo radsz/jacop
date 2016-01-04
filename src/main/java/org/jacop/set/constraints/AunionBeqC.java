@@ -46,7 +46,7 @@ import org.jacop.set.core.SetVar;
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * 
- * @version 4.3
+ * @version 4.4
  */
 
 public class AunionBeqC extends Constraint {
@@ -89,8 +89,8 @@ public class AunionBeqC extends Constraint {
 	/**
 	 * It constructs an AunionBeqC constraint to restrict the domain of the variables A, B and C.
 	 * 
-	 * @param a 
-	 * @param b 
+	 * @param a variable representing the first parameter 
+	 * @param b variable representing the second parameter
 	 * @param c variable that is restricted to be the union of a and b.
 	 */
 	
@@ -284,14 +284,6 @@ public class AunionBeqC extends Constraint {
 				return possibleEvent;
 		}
 		return SetDomain.ANY;		
-	}
-
-	@Override
-	public String id() {
-		if (id != null)
-			return id;
-		else
-			return this.getClass().getSimpleName() + numberId;
 	}
 
 	@Override

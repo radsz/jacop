@@ -43,7 +43,7 @@ import org.jacop.core.Var;
  * in the right place and act accordingly to the output of listeners.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.3
+ * @version 4.4
  * @param <T> type of variables used in this search.
  */
 

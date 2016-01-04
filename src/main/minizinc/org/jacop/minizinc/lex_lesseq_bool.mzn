@@ -32,4 +32,8 @@ predicate lex_leq_bool(array[int] of var bool: x,
                        array[int] of var bool: y) =
           lex_lesseq(x, y);
 
+% predicate jacop_lex_lesseq_bool_reif(array[int] of var bool: x,
+%                              array[int] of var bool: y, var bool: b) =
+%     abort("Reified lex_lesseq/2 is not supported.");
+
 %-----------------------------------------------------------------------------%

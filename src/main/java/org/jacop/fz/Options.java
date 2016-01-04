@@ -68,7 +68,11 @@ public class Options {
     boolean runSearch = true;
 
     boolean use_sat = false;
-	
+
+    boolean complementary_search = false;
+
+    boolean debug = false;
+    
 	/**
 	 * It constructs an Options object and parses all the parameters/options provided 
 	 * to flatzinc to jacop parser.
@@ -103,6 +107,9 @@ public class Options {
 						"        override annotation \":: domain\" and select constraints\n"+
 						"        implementing bounds consistency (default false).\n"+
 						"    -sat use SAT solver for boolean constraints.\n" +
+						"    -cs, --complementary-search - try to gather all model, non-introduced\n" +
+						"         variables to define the final or default search, instead of using\n" +
+						"         output variables only.\n" +
 						"    -i, --interval print intervals instead of values for floating variables\n"+
 						"    -p <value>, --precision <value> defines precision for floating operations\n"+
 						"        overrides precision definition in search annotation."
@@ -160,6 +167,14 @@ public class Options {
 				}
 				else if (args[i].equals("-b") || args[i].equals("--bound")) {
 				    boundConsistency = true;
+				    i++;
+				}
+				else if (args[i].equals("-cs") || args[i].equals("--complementary-search")) {
+				    complementary_search = true;
+				    i++;
+				}
+				else if (args[i].equals("-debug") ) {
+				    debug = true;
 				    i++;
 				}
 				else {
@@ -271,7 +286,7 @@ public class Options {
 	}
 
        /**
-	 * It returns precision defined in  the command line
+	 * It returns precision defined in the command line
 	 * @return precision. 
 	 */
 	public double getPrecision() {
@@ -279,19 +294,38 @@ public class Options {
 	}
 
 	/**
-	 * It defines precision. 
+	 * It informs whether precision is defined. 
+	 * @return true if precision for floating point solver is defined
 	 */
 	public boolean precision() {
 		return precisionDefined;
 	}
 
     	/**
-	 * It defines precision. 
+	 * It defines whether sat is used. 
+	 * @return true sat is used, false otherwise
 	 */
 	public boolean useSat() {
 		return use_sat;
 	}
 
+    	/**
+	 * It defines whether to use debug information print-out. 
+	 * @return true if debugging information is printed, false otherwise
+	 */
+	public boolean debug() {
+		return debug;
+	}
+
+    	/**
+	 * It defines wheter additional search should use output variables only (false, default). 
+	 * or should try to collect all non introduced variables (true).
+	 * @return additional search should use output variables only (false, default). 
+	 * or should try to collect all non introduced variables (true)
+	 */
+        public boolean complementarySearch() {
+	    return complementary_search;
+	}
 }
 
 

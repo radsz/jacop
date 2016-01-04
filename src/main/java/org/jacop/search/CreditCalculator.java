@@ -40,7 +40,7 @@ import org.jacop.core.Var;
  * ExitChildListener, TimeOutListener, and Consistency Listener.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.3
+ * @version 4.4
  * @param <T> type of variable being used in the search.
  */
 
@@ -464,6 +464,7 @@ public class CreditCalculator<T extends Var> implements ExitChildListener<T>, Ti
 		consistencyListeners[0] = child;
 	}
 
+	@SuppressWarnings("unchecked")
 	public void setChildrenListeners(ExitChildListener<T> child) {
 		exitChildListeners = new ExitChildListener[1];
 		exitChildListeners[0] = child;

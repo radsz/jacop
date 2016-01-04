@@ -44,7 +44,7 @@ import org.jacop.set.core.SetVar;
  * in the set value of set variable B.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.3
+ * @version 4.4
  */
 
 public class AinB extends PrimitiveConstraint {
@@ -192,13 +192,6 @@ public class AinB extends PrimitiveConstraint {
 		return SetDomain.ANY;
 	}
 
-	@Override
-	public String id() {
-		if (id != null)
-			return id;
-		else
-			return this.getClass().getSimpleName() + numberId;
-	}
 
 	@Override
 	public void impose(Store store) {

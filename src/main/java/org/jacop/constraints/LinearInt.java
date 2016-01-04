@@ -53,7 +53,7 @@ import org.jacop.core.Var;
  * by Warwick Harvey and Joachim Schimpf
  *
  * @author Krzysztof Kuchcinski
- * @version 4.3
+ * @version 4.4
  */
 
 public class LinearInt extends PrimitiveConstraint {
@@ -128,9 +128,11 @@ public class LinearInt extends PrimitiveConstraint {
     public static String[] xmlAttributes = {"list", "weights", "sum"};
 
     /**
-     * @param list
-     * @param weights
-     * @param sum
+     * @param store current store
+     * @param list variables which are being multiplied by weights.
+     * @param weights weight for each variable.
+     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum variable containing the sum of weighted variables.
      */
     public LinearInt(Store store, IntVar[] list, int[] weights, String rel, int sum) {
 
@@ -142,8 +144,10 @@ public class LinearInt extends PrimitiveConstraint {
 	
     /**
      * It constructs the constraint LinearInt. 
+     * @param store current store
      * @param variables variables which are being multiplied by weights.
      * @param weights weight for each variable.
+     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
      * @param sum variable containing the sum of weighted variables.
      */
     public LinearInt(Store store, ArrayList<? extends IntVar> variables,
@@ -171,8 +175,7 @@ public class LinearInt extends PrimitiveConstraint {
 	for (int i = 0; i < list.length; i++) {
 
 	    assert (list[i] != null) : i + "-th element of list in Propagations constraint is null";
-			
-	    if (weights[i] != 0) {
+	    	    if (weights[i] != 0) {
 		if (list[i].singleton()) 
 		    this.b -= list[i].value() * weights[i];
 		else
@@ -187,9 +190,13 @@ public class LinearInt extends PrimitiveConstraint {
 
 	    }
 	}
+	int size=0;
+	for (IntVar e : parameters.keySet())
+	    if (parameters.get(e) != 0)
+		size++;
 
-	this.x = new IntVar[parameters.size()];
-	this.a = new int[parameters.size()];
+	this.x = new IntVar[size];//parameters.size()];
+	this.a = new int[size];//parameters.size()];
 
 	int i = 0;
 	for (IntVar var : parameters.keySet()) {
@@ -209,6 +216,11 @@ public class LinearInt extends PrimitiveConstraint {
 		    i++;
 	    }
 	}
+	// for (IntVar var : parameters.keySet()) {
+	//     int coeff = parameters.get(var);
+	//     if (coeff == 0) 
+	// 	System.out.println("%% " + id() + " : " + var);;
+	// }
 
 	this.l = x.length;
 	this.I = new int[l];
@@ -233,95 +245,38 @@ public class LinearInt extends PrimitiveConstraint {
 	return variables;
     }
 
-
     @Override
     public void consistency(Store store) {
-
-	computeInit();
-
-	do {
-
-	    store.propagationHasOccurred = false;
-
-	    switch (relationType) {
-	    case eq:
-
-		pruneLtEq();
-		pruneGtEq();
-
-		if (!reified)
-		    if (sumMax <= b && sumMin >= b) 
-			removeConstraint();
-
-		break;
-
-	    case le:
-		pruneLtEq();
-
-		if (!reified)
-		    if (sumMax <= b) 
-			removeConstraint();
-		break;
-
-	    case lt:
-		pruneLt();
-
-		if (!reified)
-		    if (sumMax < b) 
-			removeConstraint();
-		break;
-	    case ne:
-		pruneNeq();
-
-		if (!reified)
-		    if (sumMin == sumMax && sumMin != b)
-			removeConstraint();
-		break;
-	    case gt:
-
-		pruneGt();
-
-		if (!reified)
-		    if (sumMin > b)
-			removeConstraint();		
-		break;
-	    case ge:
-
-		pruneGtEq();
-
-		if (!reified)
-		    if (sumMin >= b)
-			removeConstraint();
-
-		break;
-	    }
-
-	} while (store.propagationHasOccurred);
+	propagate(relationType);
     }
 
     @Override
     public void notConsistency(Store store) {
-		
+	propagate(negRel[relationType]);
+    }
+    
+    public void propagate(int rel) {
+
 	computeInit();
 
 	do {
 
 	    store.propagationHasOccurred = false;
 
-	    switch (negRel[relationType]) {
+	    switch (rel) {
 	    case eq:
 
-		pruneLtEq();
-		pruneGtEq();
-		
-		if (!reified)
-		    if (sumMax <= b && sumMin >= b) 
-			removeConstraint();
+		pruneLtEq(b);
+		pruneGtEq(b);
+
+		// if (!reified)
+		//     if (sumMax <= b && sumMin >= b) 
+		// 	removeConstraint();
 
 		break;
 
 	    case le:
-		pruneLtEq();
+		pruneLtEq(b);
 
 		if (!reified)
 		    if (sumMax <= b) 
@@ -329,7 +284,7 @@ public class LinearInt extends PrimitiveConstraint {
 		break;
 
 	    case lt:
-		pruneLt();
+		pruneLtEq(b-1);
 
 		if (!reified)
 		    if (sumMax < b) 
@@ -339,12 +294,13 @@ public class LinearInt extends PrimitiveConstraint {
 		pruneNeq();
 
 		if (!reified)
+		    // if (sumMin == sumMax && (sumMin > b || sumMax < b))
 		    if (sumMin > b || sumMax < b)
 			removeConstraint();
 		break;
 	    case gt:
 
-		pruneGt();
+		pruneGtEq(b+1);
 
 		if (!reified)
 		    if (sumMin > b)
@@ -352,7 +308,7 @@ public class LinearInt extends PrimitiveConstraint {
 		break;
 	    case ge:
 
-		pruneGtEq();
+		pruneGtEq(b);
 
 		if (!reified)
 		    if (sumMin >= b)
@@ -433,16 +389,18 @@ public class LinearInt extends PrimitiveConstraint {
 	int i = 0;
 	// positive weights
         for (; i < pos; i++) {
-            min = x[i].min() * a[i];
-            max = x[i].max() * a[i];
+	    IntDomain xd = x[i].dom();
+            min = xd.min() * a[i];
+            max = xd.max() * a[i];
             f += min;
             e += max;
             I[i] = (max - min);
         }
 	// negative weights
         for (; i < l; i++) { 
-            min = x[i].max() * a[i];
-            max = x[i].min() * a[i];
+	    IntDomain xd = x[i].dom();
+            min = xd.max() * a[i];
+            max = xd.min() * a[i];
             f += min;
             e += max;
             I[i] = (max - min);
@@ -451,7 +409,8 @@ public class LinearInt extends PrimitiveConstraint {
         sumMax = e;
     }
 
-    void pruneLtEq() {
+
+    void pruneLtEq(int b) {
 
         if (sumMin > b)
             throw store.failException;
@@ -472,7 +431,7 @@ public class LinearInt extends PrimitiveConstraint {
         }
         // negative weights
         for (; i < l; i++) {
-            if (I[i] > b - sumMax) {
+            if (I[i] > b - sumMin) {
                 min = x[i].max() * a[i];
                 max = min + I[i];
                 if (pruneMin(x[i], divRoundUp(-(b - sumMin + min), -a[i]))) {
@@ -484,7 +443,7 @@ public class LinearInt extends PrimitiveConstraint {
         }
     }
 
-    void pruneGtEq() {
+    void pruneGtEq(int b) {
 
         if (sumMax < b) 
             throw store.failException;
@@ -509,74 +468,6 @@ public class LinearInt extends PrimitiveConstraint {
                 max = x[i].min() * a[i];
                 min = max - I[i];
                 if (pruneMax(x[i], divRoundDown(-(b - sumMax + max), -a[i]))) {
-                    int newMin = x[i].max() * a[i];
-                    sumMin += newMin - min;
-                    I[i] = max - newMin;
-                }
-            }
-        }
-    }
-
-    private void pruneLt() {
-
-        if (sumMin >= b)
-            throw store.failException;
-
-        int min, max;
-	int i = 0;
-        // positive weights
-        for (; i < pos; i++) {
-            if (I[i] >= b - sumMin) {
-                min = x[i].min() * a[i];
-                max = min + I[i];
-                if (pruneMax(x[i], divRoundUp(b - sumMin + min, a[i]) - 1)) {
-                    int newMax = x[i].max() * a[i];
-                    sumMax -= max - newMax;
-                    I[i] = newMax - min;
-                }
-            }
-        }
-        // negative weights
-        for (; i < l; i++) {
-            if (I[i] >= b - sumMax) {
-                min = x[i].max() * a[i];
-                max = min + I[i];
-                if (pruneMin(x[i], divRoundDown(-(b - sumMin + min), -a[i]) + 1)) {
-                    int newMax = x[i].min() * a[i];
-                    sumMax -= max - newMax;
-                    I[i] = newMax - min;
-                }
-            }
-        }
-    }
-
-    private void pruneGt() {
-
-        if (sumMax <= b) 
-            throw store.failException;
-
-        int min, max;
-	int i = 0;
-        // positive weights
-        for (; i < pos; i++) {
-            if (I[i] >= -(b - sumMax)) {
-                max = x[i].max() * a[i];
-                min = max - I[i];
-
-		if (pruneMin(x[i], divRoundDown(b - sumMax + max, a[i]) + 1)) {
-                    int nmin = x[i].min() * a[i];
-                    sumMin += nmin - min;
-                    I[i] = max - nmin;
-                }
-            }
-        }
-        // negative weights
-        for (; i < l; i++) {
-            if (I[i] >= - (b - sumMax)) {
-                max = x[i].min() * a[i];
-                min = max - I[i];
-
-                if (pruneMax(x[i], divRoundUp(-(b - sumMax + max), -a[i]) - 1)) {
                     int newMin = x[i].max() * a[i];
                     sumMin += newMin - min;
                     I[i] = max - newMin;
@@ -610,7 +501,7 @@ public class LinearInt extends PrimitiveConstraint {
 	    min = x[i].max() * a[i];
 	    max = min + I[i];
 
-	    if (pruneNe(x[i], -(b - sumMin + min), -(b - sumMax + max), a[i])) {
+	    if (pruneNe(x[i], b - sumMin + min, b - sumMax + max, a[i])) {
 		int newMin = x[i].max() * a[i];
 		int newMax = x[i].min() * a[i];
 		sumMin += newMin - min;
@@ -640,20 +531,19 @@ public class LinearInt extends PrimitiveConstraint {
 
     private boolean pruneNe(IntVar x, int min, int max, int a) {
 
-	if (min == max) {
-	    int low = divRoundUp(min, a);
-	    int high = divRoundDown(max, a);
-	    if (low == high) {
-		boolean boundsChanged = false;
-		if (low == x.min() || high == x.max())
-		    boundsChanged = true;
+	if (min == max && min % a == 0) {
 
-		x.domain.inComplement(store.level, x, low);
+	    int d = min/a;
 
-		return boundsChanged;
-	    }
+	    boolean boundsChanged = false;
+	
+	    if (d == x.min() || d == x.max()) 
+		boundsChanged = true;
+
+	    x.domain.inComplement(store.level, x, d);
+
+	    return boundsChanged;
 	}
-
 	return false;
     }
 
@@ -689,7 +579,7 @@ public class LinearInt extends PrimitiveConstraint {
         return sMin > b || sMax < b;
     }
 
-    public boolean satisfiedLtEq() {
+    public boolean satisfiedLtEq(int b) {
 
 	int sMax = 0;
 	int i = 0;
@@ -703,21 +593,7 @@ public class LinearInt extends PrimitiveConstraint {
         return  sMax <= b;
     }
 
-    public boolean satisfiedLt() {
-
-	int sMax = 0;
-	int i = 0;
-        for (; i < pos; i++) {
-            sMax += x[i].max() * a[i];
-        }
-        for (; i < l; i++) {
-            sMax += x[i].min() * a[i];
-        }
-
-        return  sMax < b;
-    }
-
-    public boolean satisfiedGtEq() {
+    public boolean satisfiedGtEq(int b) {
 
 	int sMin = 0;
 	int i = 0;
@@ -729,20 +605,6 @@ public class LinearInt extends PrimitiveConstraint {
         }
 
         return  sMin >= b;
-    }
-
-    public boolean satisfiedGt() {
-
-	int sMin = 0;
-	int i = 0;
-        for (; i < pos; i++) {
-            sMin += x[i].min() * a[i];
-        }
-        for (; i < l; i++) {
-            sMin += x[i].max() * a[i];
-        }
-
-        return  sMin > b;
     }
 
     @Override
@@ -771,15 +633,15 @@ public class LinearInt extends PrimitiveConstraint {
 	case eq:
 	    return satisfiedEq();
 	case le:
-	    return satisfiedLtEq();
+	    return satisfiedLtEq(b);
 	case lt:
-	    return satisfiedLt();
+	    return satisfiedLtEq(b-1);
 	case ne:
 	    return satisfiedNeq();
 	case gt:
-	    return satisfiedGt();
+	    return satisfiedGtEq(b+1);
 	case ge:
-	    return satisfiedGtEq();
+	    return satisfiedGtEq(b);
 	}
 
 	return false;

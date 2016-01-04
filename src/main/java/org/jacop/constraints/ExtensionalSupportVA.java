@@ -55,7 +55,7 @@ import org.xml.sax.SAXException;
  * efficiency.
  * 
  * @author Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  */
 
 public class ExtensionalSupportVA extends Constraint {
@@ -238,7 +238,7 @@ public class ExtensionalSupportVA extends Constraint {
 	 * Partial constructor which stores variables involved in a constraint but
 	 * does not get information about tuples yet. The tuples must set separately.
 	 * 
-	 * @param list 
+	 * @param list list of variables for the constraint
 	 */
 
 	public ExtensionalSupportVA(IntVar[] list) {
@@ -716,7 +716,7 @@ public class ExtensionalSupportVA extends Constraint {
 	 * specified in xmlAttributes. 
 	 *  
 	 * @param tf a place to write the content of the object. 
-	 * @throws SAXException
+	 * @throws SAXException exception from org.xml.sax
 	 */
 	public void toXML(TransformerHandler tf) throws SAXException {
 		

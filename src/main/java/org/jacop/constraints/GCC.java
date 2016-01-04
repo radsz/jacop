@@ -58,7 +58,7 @@ import org.jacop.core.Var;
 * 
 * @author Jocelyne Lotfi and Radoslaw Szymanek.
 * 
-* @version 4.3
+* @version 4.4
 */
 
 public class GCC extends Constraint {
@@ -295,8 +295,10 @@ public class GCC extends Constraint {
 			
 			while (k < stamp.value()) {
 				if (x[k].singleton()){
+				    if (stamp.value() > 0) {
 					stamp.update(stamp.value() - 1);
 					putToTheEnd(x, k);
+				    }
 				} else {
 					// no incrementation if there is a modification in the
 					// xNodes table. The variable in the i position is no more
@@ -328,15 +330,17 @@ public class GCC extends Constraint {
 				// if v is singleton and is an X variable
 				if (var.singleton() && xNodesHash.containsKey(var)) {
 					// if 
-					if (xNodesHash.get(var) <= stamp.value()) {
+				    if (xNodesHash.get(var) < stamp.value()) { // changing '<=' to '<' (KK)
 						if (debug)
 							System.out.println(" in xVariableToChange: " + var);
-						stamp.update(stamp.value() - 1);
-						putToTheEnd(x, xNodesHash.get(var));
+						if (stamp.value() > 0) {
+						    stamp.update(stamp.value() - 1);
+						    putToTheEnd(x, xNodesHash.get(var));
+						}
 					}
 				}
 			}
-			
+
 			assert checkXorder() : "Inconsistent X variable order: " + Arrays.toString(this.x);
 
 			if (debug) {
@@ -485,23 +489,24 @@ public class GCC extends Constraint {
 	}
 
 	@Override
-	public String id() {
-		if (id != null)
-			return id;
-		else
-			return this.getClass().getSimpleName() + numberId;
-	}
-
-	@Override
 	public void impose(Store store) {
 
 		stamp = new TimeStamp<Integer>(store, xSize);
 		
 		// first I will put all the xNodes in a hashTable to be able to use
 		// it with the queueVariable function
-		for (int i = 0; i < xSize; i++) 
-			xNodesHash.put(x[i], i);
-
+		// KK, 2015-10-18
+		// only non ground variables need to be added
+		// no duplicates allowed
+		for (int i = 0; i < xSize; i++)
+		    if (!x[i].singleton()) {
+			Integer varPosition = xNodesHash.put(x[i], i);
+			if (varPosition != null) {
+			    System.err.println("ERROR: Constraint " + toString() + " must have different non ground variables on the list");
+			    System.exit(0);
+			}
+		    }
+		
 		// here I will put normalization
 		IntervalDomain d = new IntervalDomain();
 

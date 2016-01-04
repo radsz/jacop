@@ -49,7 +49,7 @@ import org.jacop.floats.core.FloatVar;
  * functionality of search when a solution is encountered are required.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.3
+ * @version 4.4
  * @param <T> type of variable being used in search. 
  */
 
@@ -390,10 +390,10 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 
 		if (!isRecordingSolutions()) {
 			
-			if (parentSolutionNo[0] == parentNo)
-				return 0;
-			else
-				return -1;
+		    // if (parentSolutionNo[0] == parentNo)
+			return 0;
+		    // else
+		    // 	return -1;
 			
 		}
 		

@@ -62,7 +62,7 @@ import org.jacop.floats.core.FloatIntervalEnumeration;
  * make addressing of list array starting from 1.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  */
 
 public class ElementFloat extends Constraint {
@@ -90,7 +90,7 @@ public class ElementFloat extends Constraint {
 
     /**
      * It specifies list of variables within an element constraint list[index-indexOffset] = value.
-     * The list is addressed by positive integers (>=1) if indexOffset is equal to 0. 
+     * The list is addressed by positive integers ({@literal >=1}) if indexOffset is equal to 0. 
      */
     public double list[];
 

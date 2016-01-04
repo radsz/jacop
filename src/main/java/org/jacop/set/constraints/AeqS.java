@@ -46,7 +46,7 @@ import org.jacop.set.core.SetVar;
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * 
- * @version 4.3
+ * @version 4.4
  */
 
 public class AeqS extends PrimitiveConstraint {
@@ -140,14 +140,6 @@ public class AeqS extends PrimitiveConstraint {
 				return possibleEvent;
 		}
 		return SetDomain.GROUND;
-	}
-
-	@Override
-	public String id() {
-		if (id != null)
-			return id;
-		else
-			return this.getClass().getSimpleName() + numberId;
 	}
 
 	@Override

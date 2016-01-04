@@ -39,7 +39,7 @@ package org.jacop.search;
  * listeners working together in any fashion.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.3
+ * @version 4.4
  */
 
 public interface ConsistencyListener {

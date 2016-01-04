@@ -43,7 +43,7 @@ import org.jacop.constraints.Constraint;
  * 
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.3
+ * @version 4.4
  */
 
 public class BoundDomain extends IntDomain {
@@ -98,7 +98,7 @@ public class BoundDomain extends IntDomain {
 
 
 	/**
-	 * @param i  
+	 * @param i  interval for union operation
 	 * 
 	 */
 	@Override

@@ -39,7 +39,7 @@ import org.jacop.core.Var;
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * 
- * @version 4.3
+ * @version 4.4
  * @param <T> type of variable being compared.
  * 
  */

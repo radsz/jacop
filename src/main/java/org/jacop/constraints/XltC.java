@@ -40,10 +40,10 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 
 /**
- * Constraint X #< C
+ * Constraint X {@literal <} C
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  */
 
 public class XltC extends PrimitiveConstraint {
@@ -67,7 +67,7 @@ public class XltC extends PrimitiveConstraint {
 	public static String[] xmlAttributes = {"x", "c"};
 	
 	/**
-	 * It constructs constraint X < C.
+	 * It constructs constraint X {@literal <} C.
 	 * @param x variable x.
 	 * @param c constant c.
 	 */

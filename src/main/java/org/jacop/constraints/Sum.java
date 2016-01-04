@@ -44,10 +44,13 @@ import org.jacop.core.Var;
  * the sum from all Variable's on the list.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.3
+ * @version 4.4
  */
 
-public class Sum extends Constraint {
+/**
+ * @deprecated  As of release 4.3.1 replaced by SumInt constraint.
+ */
+@Deprecated public class Sum extends Constraint {
 
 	static int counter = 1;
 
@@ -79,8 +82,8 @@ public class Sum extends Constraint {
 
 	/**
 	 * It constructs sum constraint which sums all variables and makes it equal to variable sum.
-	 * @param list
-	 * @param sum
+	 * @param list list of variables to be added
+	 * @param sum the resulting sum
 	 */
 	public Sum(IntVar[] list, IntVar sum) {
 		

@@ -154,7 +154,7 @@ public class SixHumpCamelFunction {
 	DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
 	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, new FloatVar[] {x1, x2}, null); //new LargestDomainFloat<FloatVar>());
 
-	Optimize min = new Optimize(store, label, s, f);
+	Optimize<FloatVar> min = new Optimize<FloatVar>(store, label, s, f);
 	boolean result = min.minimize();
 
 	if (!result)

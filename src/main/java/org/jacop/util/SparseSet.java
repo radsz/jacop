@@ -35,7 +35,7 @@ package org.jacop.util;
  * Sparse set representation of the set.
  *  
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.3
+ * @version 4.4
  */
 
 public class SparseSet {
@@ -61,7 +61,7 @@ public class SparseSet {
 	/**
 	 * It creates a SparseSet with given upper limit on the value
 	 * of the biggest element in the set.
-	 * @param size
+	 * @param size the upper limit for the SparseSet
 	 */
 	public SparseSet(int size) {
 

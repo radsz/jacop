@@ -476,7 +476,7 @@ public class Geost extends Constraint {
 	 * @param shapes the list of different shapes used by the objects in scope of the geost. 
 	 * 
 	 */
-	@SuppressWarnings("all")
+	@SuppressWarnings("unchecked")
 	public Geost(GeostObject[] objects, 
 				 ExternalConstraint[] constraints, 
 				 Shape[] shapes) {
@@ -794,6 +794,7 @@ public class Geost extends Constraint {
 	 * If any data structure is updated here, make sure that it is done carefully enough.
 	 * @param store the store
 	 * @param o the object to prune
+	 * @param currentShape the shape of the object
 	 * @param d the current most significant dimension
 	 * @param limit stop pruning if going beyond this value
 	 * @return the bound found if there is one, and Constants.MaxInt if there is no feasible placement.
@@ -905,6 +906,7 @@ public class Geost extends Constraint {
 	 * @param store the store
 	 * @param o the object to prune
 	 * @param d the current most significant dimension
+	 * @param currentShape the shape of the object
 	 * @param limit stop pruning if going beyond this value
 	 * @return the bound found if there is one, and Constants.MinInt if there is no feasible placement.
 	 */
@@ -1492,7 +1494,7 @@ public class Geost extends Constraint {
 	/**
 	 * It does the processing needed given the set of variables that was updated 
 	 * between two consecutive calls to the consistency function.
-	 * @param variables
+	 * @param variables variables in the queue
 	 */
 	protected void flushQueue(Collection<Var> variables){
 		
@@ -1633,16 +1635,6 @@ public class Geost extends Constraint {
 
 		return IntDomain.BOUND;
 		
-	}
-
-	@Override
-	public String id() {
-		
-		if (id != null)
-			return id;
-		else
-			return this.getClass().getSimpleName() + numberId;
-	
 	}
 
 	@Override

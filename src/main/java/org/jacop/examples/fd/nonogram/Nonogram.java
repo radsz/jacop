@@ -167,7 +167,7 @@ public class Nonogram extends ExampleFD {
 	 * It produces and FSM given a sequence representing a rule. e.g. [2, 3]
 	 * specifies that there are two black dots followed by three black dots.
 	 * 
-	 * @param sequence
+	 * @param sequence a sequence representing a rule. e.g. [2, 3]
 	 * @return Finite State Machine used by Regular automaton to enforce proper sequence.
 	 */
 	public FSM createAutomaton(int [] sequence) {

@@ -48,7 +48,7 @@ import org.jacop.core.TimeStamp;
  * It restricts the domain of all x as well as result to be between 0 and 1.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  */
 
 public class BoolClause extends PrimitiveConstraint {
@@ -300,7 +300,7 @@ public class BoolClause extends PrimitiveConstraint {
 
 	for (int i = 0; i < lx; i++)
 	    x[i].domain.in(store.level, x[i], 0, 0);
-	for (int i = 0; i < lx; i++)
+	for (int i = 0; i < ly; i++)
 	    y[i].domain.in(store.level, y[i], 1, 1);
 
 	removeConstraint();

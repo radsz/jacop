@@ -44,7 +44,7 @@ package org.jacop.core;
  * timestamp may ask for the level at which the timestamp was recently updated.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.3
+ * @version 4.4
  * @param <T> a class being stored at different time stamps. 
  */
 
@@ -85,7 +85,7 @@ public class TimeStamp<T> {
 
 	/**
 	 * Specify  least number of different values to be used by Timestamp.
-	 * @param minCapacity
+	 * @param minCapacity capacity that will be ensured
 	 */
 	@SuppressWarnings("unchecked")
 	public void ensureCapacity(int minCapacity) {

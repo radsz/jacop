@@ -84,7 +84,7 @@ public class DBox {
 	 * 
 	 * It has to be called at least once before using newBox() and dispatchBox().
 	 * 
-	 * @param dimension 
+	 * @param dimension the number of dimensions
 	 */
 	public static final void supportDimension(int dimension) {
 		
@@ -183,7 +183,7 @@ public class DBox {
 	/**
 	 * It returns an instance of DBox of the corresponding dimension,
 	 * using a previously allocated one if possible
-	 * @param dimension
+	 * @param dimension the number of dimensions
 	 * 
 	 * @return it returns a preallocated DBox of a given dimensions.
 	 */
@@ -469,7 +469,7 @@ public class DBox {
 	
 	/**
 	 * computes the bounding box of the given collection of boxes
-	 * @param boxes
+	 * @param boxes collection of boxes
 	 * @return a temporary DBox that represents the bounding box of the given boxes.
 	 * 	       clone it if you need to reuse it.
 	 */

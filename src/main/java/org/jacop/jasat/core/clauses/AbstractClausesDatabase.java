@@ -153,6 +153,8 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
 	}
 
 	/**
+	 * @param literal the literal to check
+	 * @param clauseIndex the clause id for checking
 	 * @return true if the literal watches the clause, false otherwise
 	 */
 	protected final boolean doesWatch(int literal, int clauseIndex) {
@@ -199,7 +201,7 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
 	}
 
 	/**
-	 * adds a watch (var => clause), ie make var watch clause
+	 * adds a watch (var {@literal =>} clause), ie make var watch clause
 	 * @param literal		the watching literal
 	 * @param clauseIndex	the index of clause to watch. Not a unique ID.
 	 */
@@ -281,7 +283,8 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
 
 	/**
 	 * prints the content of the database in a nice way, each line being
-	 * prefixed with @param prefix
+	 * prefixed with 
+	 * @param prefix prefix for printed line
 	 * @return	a String representation of the database
 	 */
 	public String toString(String prefix) {

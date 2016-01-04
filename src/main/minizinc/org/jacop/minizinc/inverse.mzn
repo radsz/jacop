@@ -17,11 +17,9 @@ predicate jacop_assignment(array[int] of var int: f,
                            array[int] of var int: invf,
 			   int: index_f, int: index_invf);
 
-/** @group globals.channeling
-  Given a function \a f represented as an array, return the inverse function.
-*/
-function array[int] of var int: inverse(array[int] of var int: f) =
-    let {
-      array[lb_array(f)..ub_array(f)] of var index_set(f): invf;
-      constraint inverse(f,invf);
-    } in f;
+% predicate jacop_assignment_reif(array[int] of var int: f,
+%                            array[int] of var int: invf,
+% 			   int: index_f, int: index_invf, var bool: b) =
+%     abort("Reified inverse/2 is not supported.");
+
+

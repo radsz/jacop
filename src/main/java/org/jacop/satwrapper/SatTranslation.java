@@ -42,7 +42,7 @@ import org.jacop.core.Store;
  * SatTranslation defines SAT clauses for typical logical constraints
  *
  * @author Krzysztof Kuchcinski
- * @version 4.3
+ * @version 4.4
  */
 public class SatTranslation {
 
@@ -127,17 +127,27 @@ public class SatTranslation {
 	// (a1 \/ a2 \/ ... \/ an \/ -c)
 	// /\
 	// for all i: (-ai \/ c)
+	for (int i = 0; i < a.length; i++) 
+	    if (a[i].min() == 1) {
+		c.domain.in(store.level, c, 1,1);
+		return;
+	    }
+
 	generate_clause(a, new IntVar[] {c});
 	for (int i = 0; i < a.length; i++) 
 	    generate_clause(new IntVar[] {c}, new IntVar[] {a[i]});
     }
-
 
     public void generate_and(IntVar[] a, IntVar c) {
 
 	// -a1 \/ -a2 \/ ... \/ c
 	// /\
 	// for all i: ai \/ -c
+	for (int i = 0; i < a.length; i++) 
+	    if (a[i].max() == 0) {
+		c.domain.in(store.level, c, 0,0);
+		return;
+	    }
 
 	generate_clause(new IntVar[] {c}, a);
 	for (int i = 0; i < a.length; i++) 
@@ -151,6 +161,8 @@ public class SatTranslation {
      * Our method cuts list to 3 or 2 element parts, generates XOR for them
      * and composesd them back to the original XOR.
      * Further improvements possible, if using 4-7 decompositions.
+     * @param a parameters to be xor'ed
+     * @param c result
      */
     public void generate_xor(IntVar[] a, IntVar c) {
 
@@ -301,6 +313,150 @@ public class SatTranslation {
 	generate_clause(new IntVar[] {c}, new IntVar[] {b});
     }
 
+    public void generate_allZero_reif(IntVar[] as, IntVar c) {
+	// allZero(a) <=> c
+	// - (a[0] \/ .. \/ a[n]) <=> c
+	// ===========
+	// /\_i (-a[i] \/ -c) /\ (a[0] \/ .. a[n] \/ c)
+
+	// if any as[i] == 1 => c == 0
+	for (int i=0; i<as.length; i++) 
+	    if (as[i].min() == 1) {
+		c.domain.in(store.level, c, 0, 0);
+		return;
+	    }
+	
+	IntVar[] v = new IntVar[as.length+1];
+	for (int i=0; i<as.length; i++) {
+	    v[i] = as[i];
+	    generate_clause(new IntVar[] {}, new IntVar[] {as[i], c});
+	}
+	v[as.length] = c;
+	generate_clause(v, new IntVar[] {});
+    }
+
+    /* 
+    // Not efficient with SimpleCpVarDomain bridge implementation; needs LazyCpVarDomain (not yet implemented)
+    public void generate_eqC_reif(IntVar x, int c, IntVar b) {
+	// Assumes that both x and b are not ground and
+	// c is still in the domain of x
+	// (x = c) <=> b
+	// ===========
+	// ( -(x = c)) \/ b=1) /\ ( (x = c) \/ - b=1)
+	System.out.println("generate_eqC_reif("+x+", "+c+", "+b+")");
+
+	// clauses.register(x,false);
+	// clauses.register(b,false);
+	clauses.register(x);
+	clauses.register(b);
+
+	int xLiteral = clauses.cpVarToBoolVar(x, c, true);
+	int bLiteral = clauses.cpVarToBoolVar(b, 1, true);
+
+	int[] clause = new int[2];
+	clause[0] = - xLiteral; 
+	clause[1] = bLiteral; 
+	clauses.addModelClause(clause);
+
+	clause = new int[2];
+	clause[0] = xLiteral; 
+	clause[1] = - bLiteral; 
+	clauses.addModelClause(clause);
+	
+	numberClauses += 2;
+    }
+
+    public void generate_neC_reif(IntVar x, int c, IntVar b) {
+	// Assumes that both x and b are not ground and
+	// c is still in the domain of x
+	// (x != c) <=> b
+	// ===========
+	// ( -(x = c)) \/ b=0) /\ ( (x = c) \/ - b=0)
+	
+	clauses.register(x);
+	clauses.register(b);
+
+	int xLiteral = clauses.cpVarToBoolVar(x, c, true);
+	int bLiteral = clauses.cpVarToBoolVar(b, 0, true);
+
+	int[] clause = new int[2];
+	clause[0] = - xLiteral; 
+	clause[1] = bLiteral; 
+	clauses.addModelClause(clause);
+
+	clause = new int[2];
+	clause[0] = xLiteral; 
+	clause[1] = - bLiteral; 
+	clauses.addModelClause(clause);
+
+	numberClauses += 2;
+    }
+
+    // inefficient propagation for large domains by SimpleCpVarDomain
+    // and LazyCpVarDomain is not yet implemented
+    public void generate_geC_reif(IntVar x, int c, IntVar b) {
+	// Assumes that both x and b are not ground and
+	// c is still in the domain of x
+	// (x >= c) <=> b
+	// ===========
+	// (x >= c) => b \/ (x >= c) <= b
+	// ( -(x >= c)) \/ b=1) /\ ( (x >= c) \/ - b=1)
+	// ( (x <= c-1) \/ b=1) /\ ( - (x <= c-1) \/ - b=1)
+	
+	clauses.register(x);
+	clauses.register(b);
+
+	int xLiteral = clauses.cpVarToBoolVar(x, c-1, false);
+	int bLiteral = clauses.cpVarToBoolVar(b, 1, true);
+
+	int[] clause = new int[2];
+	clause[0] = xLiteral; 
+	clause[1] = bLiteral; 
+	clauses.addModelClause(clause);
+
+	clause = new int[2];
+	clause[0] = - xLiteral; 
+	clause[1] = - bLiteral; 
+	clauses.addModelClause(clause);
+
+	numberClauses += 2;
+    }
+
+    public void generate_inSet_reif(IntVar x, org.jacop.core.IntDomain d, IntVar b) {
+	// x = d1 \/ d = d2 \/ ... \/ x = dn <=> b
+	// ===========
+	// (x = d1 \/ d = d2 \/ ... \/ x = dn \/ -b) /\
+	// (-(x =d1) \/ b) /\ ( -(x = d2) \/ b) /\ ... /\ ( -(x = dn) \/ b)
+
+	clauses.register(x);
+	clauses.register(b);
+
+	int n = d.getSize();
+	int[] xLiterals = new int[n];
+	org.jacop.core.ValueEnumeration values = d.valueEnumeration();
+	int j=0;
+	while (values.hasMoreElements())
+	    xLiterals[j] = clauses.cpVarToBoolVar(x, values.nextElement(), true);
+	int bLiteral = clauses.cpVarToBoolVar(b, 1, true);
+
+	int[] clause = new int[n+1];
+	for (int i = 0; i < n; i++) 
+	    clause[i] = xLiterals[i];
+	clause[n-1] = - bLiteral; 
+	clauses.addModelClause(clause);
+
+	numberClauses++;
+
+	for (int i = 0; i < n; i++) {
+	    clause = new int[2];
+	    clause[0] = - xLiterals[i]; 
+	    clause[1] = bLiteral; 
+	    clauses.addModelClause(clause);
+
+	    numberClauses++;
+	}
+    }
+    */
 
     public void impose() {
 

@@ -41,7 +41,7 @@ import org.jacop.core.Var;
  * Constraint if constraint1 then constraint2 else constraint3
  *  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  */
 
 public class IfThenElse extends PrimitiveConstraint {

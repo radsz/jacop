@@ -40,20 +40,18 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 
 /**
- * SumInt constraint implements the weighted summation over several
- * variables . 
+ * SumInt constraint implements the summation over several variables.
  *
  * sum(i in 1..N)(xi) = sum
  *
- * It provides the weighted sum from all variables on the list.
- * The weights are integers.
+ * It provides the sum from all variables on the list.
  *
  * This implementaiton is based on 
  * "Bounds Consistency Techniques for Long Linear Constraints"
  * by Warwick Harvey and Joachim Schimpf
  *
  * @author Krzysztof Kuchcinski
- * @version 4.3
+ * @version 4.4
  */
 
 public class SumInt extends PrimitiveConstraint {
@@ -118,9 +116,10 @@ public class SumInt extends PrimitiveConstraint {
     public static String[] xmlAttributes = {"list", "sum"};
 
     /**
-     * @param list
-     * @param weights
-     * @param sum
+     * @param store current store
+     * @param list variables which are being multiplied by weights.
+     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum variable containing the sum of weighted variables.
      */
     public SumInt(Store store, IntVar[] list, String rel, IntVar sum) {
 
@@ -132,8 +131,9 @@ public class SumInt extends PrimitiveConstraint {
 	
     /**
      * It constructs the constraint SumInt. 
+     * @param store current store
      * @param variables variables which are being multiplied by weights.
-     * @param weights weight for each variable.
+     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
      * @param sum variable containing the sum of weighted variables.
      */
     public SumInt(Store store, ArrayList<? extends IntVar> variables,
@@ -149,7 +149,8 @@ public class SumInt extends PrimitiveConstraint {
 
 	this.store = store;
 	this.sum = sum;
-	this.x = list;
+	x = new IntVar[list.length];
+	System.arraycopy(list, 0, x, 0, list.length);
 	numberId = idNumber++;
 
 	this.l = x.length;
@@ -180,115 +181,71 @@ public class SumInt extends PrimitiveConstraint {
 
     @Override
     public void consistency(Store store) {
-
-	computeInit();
-
-	do {
-
-	    store.propagationHasOccurred = false;
-
-	    switch (relationType) {
-	    case eq:
-
-		pruneLtEq();
-		pruneGtEq();
-
-		if (sumXmax == sumXmin && sum.singleton() && sum.value() == sumXmin) 
-		    removeConstraint();
-
-		break;
-
-	    case le:
-		pruneLtEq();
-
-		if (sumXmax <= sum.min()) 
-		    removeConstraint();
-		break;
-
-	    case lt:
-		pruneLt();
-
-		if (sumXmax < sum.min()) 
-		    removeConstraint();
-		break;
-	    case ne:
-		pruneNeq();
-
-		if (sumXmin == sumXmax && sum.singleton() && sumXmin != sum.value())
-		    removeConstraint();
-		break;
-	    case gt:
-
-		pruneGt();
-
-		if (sumXmin > sum.max())
-		    removeConstraint();		
-		break;
-	    case ge:
-
-		pruneGtEq();
-
-		if (sumXmin >= sum.max())
-		    removeConstraint();
-
-		break;
-	    }
-
-	} while (store.propagationHasOccurred);
+	propagate(relationType);
     }
 
     @Override
     public void notConsistency(Store store) {
-		
+	propagate(negRel[relationType]);
+    }
+
+    public void propagate(int rel) {
+
 	computeInit();
 
 	do {
 
 	    store.propagationHasOccurred = false;
 
-	    switch (negRel[relationType]) {
+	    switch (rel) {
 	    case eq:
 
-		pruneLtEq();
-		pruneGtEq();
+		pruneLtEq(0);
+		pruneGtEq(0);
 
-		if (sumXmax == sumXmin && sum.singleton() && sumXmin == sum.value()) 
-		    removeConstraint();
+		// if (sumXmax == sumXmin && sum.singleton() && sum.value() == sumXmin) 
+		//     removeConstraint();
 
 		break;
 
 	    case le:
-		pruneLtEq();
+		pruneLtEq(0);
 
-		if (sumXmax <= sum.min()) 
-		    removeConstraint();
+		if (!reified)
+		    if (sumXmax <= sum.min()) 
+			removeConstraint();
 		break;
 
 	    case lt:
-		pruneLt();
+		pruneLtEq(1);
 
-		if (sumXmax < sum.min()) 
-		    removeConstraint();
+		if (!reified)
+		    if (sumXmax < sum.min()) 
+			removeConstraint();
 		break;
 	    case ne:
 		pruneNeq();
 
-		if (sumXmin == sumXmax && sum.singleton() && sumXmin == sum.value())
-		    removeConstraint();
+		if (!reified)
+		    // if (sumXmin == sumXmax && sum.singleton() && sumXmin != sum.value())
+		    if (sumXmin > sum.max() || sumXmax < sum.min())
+			removeConstraint();
 		break;
 	    case gt:
 
-		pruneGt();
+		pruneGtEq(1);
 
-		if (sumXmin > sum.max())
-		    removeConstraint();		
+		if (!reified)
+		    if (sumXmin > sum.max())
+			removeConstraint();		
 		break;
 	    case ge:
 
-		pruneGtEq();
+		pruneGtEq(0);
 
-		if (sumXmin >= sum.max())
-		    removeConstraint();
+		if (!reified)
+		    if (sumXmin >= sum.max())
+			removeConstraint();
 
 		break;
 	    }
@@ -366,8 +323,9 @@ public class SumInt extends PrimitiveConstraint {
         int min, max;
 
         for (int i = 0; i < l; i++) {
-            min = x[i].min();
-            max = x[i].max();
+	    IntDomain xd = x[i].dom();
+            min = xd.min();
+            max = xd.max();
             f += min;
             e += max;
             I[i] = (max - min);
@@ -377,18 +335,19 @@ public class SumInt extends PrimitiveConstraint {
         sumXmax = e;
     }
 
-    private void pruneLtEq() {
+    private void pruneLtEq(int b) {
 
-	sum.domain.inMin(store.level, sum, sumXmin);
+	sum.domain.inMin(store.level, sum, sumXmin + b);
+	store.propagationHasOccurred = false;
 
         int min, max;
 	int sMax = sum.max();
 
         for (int i = 0; i < l; i++) {
-            if (I[i] > (sMax - sumXmin)) {
+            if (I[i] > (sMax - sumXmin - b)) {
                 min = x[i].min();
                 max = min + I[i];
-                if (pruneMax(x[i], sMax - sumXmin + min)) {
+                if (pruneMax(x[i], sMax - sumXmin + min - b)) {
                     int newMax = x[i].max();
                     sumXmax -= max - newMax;
                     I[i] = newMax - min;
@@ -397,61 +356,22 @@ public class SumInt extends PrimitiveConstraint {
         }
     }
 
-    private void pruneGtEq() {
+    private void pruneGtEq(int b) {
 
-	sum.domain.inMax(store.level, sum, sumXmax);
+	sum.domain.inMax(store.level, sum, sumXmax - b);
+	store.propagationHasOccurred = false;
 
         int min, max;
 	int sMin = sum.min();
 	
         for (int i = 0; i < l; i++) {
-            if (I[i] > -(sMin - sumXmax)) {
+            if (I[i] > -(sMin - sumXmax + b)) {
                 max = x[i].max();
                 min = max - I[i];
-                if (pruneMin(x[i], (sMin - sumXmax + max))) {
+                if (pruneMin(x[i], (sMin - sumXmax + max + b))) {
                     int newMin = x[i].min();
                     sumXmin += newMin - min;
                     I[i] = max - newMin;
-                }
-            }
-        }
-    }
-
-    private void pruneLt() {
-
-	sum.domain.inMin(store.level, sum, sumXmin + 1);
-	
-        int min, max;
-	int sMax = sum.max();
-	
-        for (int i = 0; i < l; i++) {
-            if (I[i] >= sMax - sumXmin) {
-                min = x[i].min();
-                max = min + I[i];
-                if (pruneMax(x[i], sMax - sumXmin + min - 1)) {
-                    int newMax = x[i].max();
-                    sumXmax -= max - newMax;
-                    I[i] = newMax - min;
-                }
-            }
-        }
-    }
-
-    private void pruneGt() {
-
-	sum.domain.inMax(store.level, sum, sumXmax - 1);
-
-        int min, max;
-	int sMin = sum.min();
-	
-        for (int i = 0; i < l; i++) {
-            if (I[i] >= -(sMin - sumXmax)) {
-                max = x[i].max();
-                min = max - I[i];
-                if (pruneMin(x[i], sMin - sumXmax + max + 1)) {
-                    int nmin = x[i].min();
-                    sumXmin += nmin - min;
-                    I[i] = max - nmin;
                 }
             }
         }
@@ -461,6 +381,7 @@ public class SumInt extends PrimitiveConstraint {
 
         if (sumXmin == sumXmax) 
 	    sum.domain.inComplement(store.level, sum, sumXmin);
+	store.propagationHasOccurred = false;
 
         int min, max;
 
@@ -520,7 +441,7 @@ public class SumInt extends PrimitiveConstraint {
             sMax += x[i].max();
 	}
 
-	return sMin == sMax && sMin == sum.min() && sMin == sum.max();
+	return sMax <= sum.min() && sMin >= sum.max(); //sMin == sMax && sMin == sum.min() && sMin == sum.max();
     }
 
     public boolean satisfiedNeq() {
@@ -535,7 +456,7 @@ public class SumInt extends PrimitiveConstraint {
         return sMin > sum.max() || sMax < sum.min();
     }
 
-    public boolean satisfiedLtEq() {
+    public boolean satisfiedLtEq(int b) {
 
 	int sMax = 0;
 	
@@ -543,21 +464,10 @@ public class SumInt extends PrimitiveConstraint {
             sMax += x[i].max();
         }
 
-        return  sMax <= sum.min();
+        return  sMax <= sum.min() - b;
     }
 
-    public boolean satisfiedLt() {
-
-	int sMax = 0;
-	
-        for (int i = 0; i < l; i++) {
-            sMax += x[i].max();
-        }
-
-        return  sMax < sum.min();
-    }
-
-    public boolean satisfiedGtEq() {
+    public boolean satisfiedGtEq(int b) {
 
 	int sMin = 0;
 	
@@ -565,18 +475,7 @@ public class SumInt extends PrimitiveConstraint {
             sMin += x[i].min();
         }
 
-        return  sMin >= sum.max();
-    }
-
-    public boolean satisfiedGt() {
-
-	int sMin = 0;
-	
-        for (int i = 0; i < l; i++) {
-            sMin += x[i].min();
-        }
-
-        return  sMin > sum.max();
+        return  sMin >= sum.max() + b;
     }
 
     @Override
@@ -606,15 +505,15 @@ public class SumInt extends PrimitiveConstraint {
 	case eq:
 	    return satisfiedEq();
 	case le:
-	    return satisfiedLtEq();
+	    return satisfiedLtEq(0);
 	case lt:
-	    return satisfiedLt();
+	    return satisfiedLtEq(1);
 	case ne:
 	    return satisfiedNeq();
 	case gt:
-	    return satisfiedGt();
+	    return satisfiedGtEq(1);
 	case ge:
-	    return satisfiedGtEq();
+	    return satisfiedGtEq(0);
 	}
 
 	return false;
@@ -689,6 +588,65 @@ public class SumInt extends PrimitiveConstraint {
 
     }
 
+		
+	@Override
+	public Constraint getGuideConstraint() {
+	
+		IntVar proposedVariable = (IntVar)getGuideVariable();
+		if (proposedVariable != null)
+			return new XeqC(proposedVariable, guideValue);
+		else
+			return null;
+	}
+
+	@Override
+	public int getGuideValue() {
+		return guideValue; 
+	}
+
+	int guideValue = 0;
+	
+	
+	@Override
+	public Var getGuideVariable() {
+		
+		int regret = 1;
+		Var proposedVariable = null;
+
+		for (IntVar v : x) {
+
+			IntDomain listDom = v.dom();
+
+			if (v.singleton())
+				continue;
+
+			int currentRegret = listDom.nextValue(listDom.min()) - listDom.min();
+			
+			if (currentRegret > regret) {
+				regret = currentRegret;
+				proposedVariable = v;
+				guideValue = listDom.min();
+			}
+
+			currentRegret = listDom.max() - listDom.previousValue(listDom.max());
+			
+			if (currentRegret > regret) {
+				regret = currentRegret;
+				proposedVariable = v;
+				guideValue = listDom.max();
+			}
+			
+		}
+
+		return proposedVariable;
+		
+	}
+
+
+	@Override
+	public void supplyGuideFeedback(boolean feedback) {
+	}
+    
     @Override
     public void increaseWeight() {
 	if (increaseWeight) {

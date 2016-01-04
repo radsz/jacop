@@ -51,7 +51,7 @@ import org.jacop.floats.constraints.Derivative;
  * Bound consistency is used.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  */
 
 public class PplusQeqR extends PrimitiveConstraint {

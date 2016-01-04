@@ -47,7 +47,7 @@ import org.jacop.core.ValueEnumeration;
 
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  */
 
 public abstract class FloatDomain extends Domain {
@@ -81,6 +81,8 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It defines rounding method
+     *
+     * @param out defines rounding method true = outward, false = no rounding outward
      */
     public static void setOutward(boolean out) {
 	outward = out;

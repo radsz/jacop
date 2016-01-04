@@ -38,7 +38,7 @@ import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Max;
 import org.jacop.constraints.Min;
 import org.jacop.constraints.Reified;
-import org.jacop.constraints.Sum;
+import org.jacop.constraints.SumInt;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XgtY;
 import org.jacop.constraints.XltY;
@@ -188,7 +188,7 @@ public class NonTransitiveDice extends ExampleFD {
 				for (int m = 0; m < noSides; m++)
 					matrix[j * noSides + m] = wins[i][j][m];
 
-			store.impose(new Sum(matrix, winningSum[i]));
+			store.impose(new SumInt(store, matrix, "==", winningSum[i]));
 		}
 
 		IntVar minimumWinning = new IntVar(store, "MinDominance", 0, noSides * noSides);

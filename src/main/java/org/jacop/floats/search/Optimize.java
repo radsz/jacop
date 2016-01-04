@@ -52,16 +52,16 @@ import java.lang.Double;
  * Implements optimization for floating point varibales
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  */
 
-public class Optimize  {
+public class Optimize<T extends Var>  {
 
     Store store;
-    DepthFirstSearch search;
+    DepthFirstSearch<T> search;
     FloatVar cost;
     SplitSelectFloat<FloatVar> split;
-    SelectChoicePoint select;
+    SelectChoicePoint<T> select;
     Var[] variables;
     double costValue = Double.NaN;
 
@@ -70,7 +70,7 @@ public class Optimize  {
     FloatInterval lastCost;
     FloatInterval[] lastVarValues;
 
-    public Optimize(Store store, DepthFirstSearch search, SelectChoicePoint select, FloatVar cost) {
+    public Optimize(Store store, DepthFirstSearch<T> search, SelectChoicePoint<T> select, FloatVar cost) {
 
 	this.store = store;
 	this.search = search;
@@ -85,7 +85,7 @@ public class Optimize  {
 	for (int i = 0; i < sVar.length; i++) 
 	    variables[i] = sVar[i];
 
-	search.setSolutionListener(new ResultListener<Var>(variables));
+	search.setSolutionListener(new ResultListener<T>(variables));
 
 	split = new SplitSelectFloat<FloatVar>(store, new FloatVar[] {cost}, null);
 

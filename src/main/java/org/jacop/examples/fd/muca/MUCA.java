@@ -41,7 +41,7 @@ import java.util.StringTokenizer;
 import org.jacop.constraints.Among;
 import org.jacop.constraints.ExtensionalSupportVA;
 import org.jacop.constraints.IfThen;
-import org.jacop.constraints.Sum;
+import org.jacop.constraints.SumInt;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.XplusYgtC;
@@ -62,7 +62,7 @@ import org.jacop.search.SimpleSelect;
  * It solves the Mixed Multi-Unit Combinatorial Auctions. 
  * 
  * @author Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  * 
  * 
  * The idea originated from reading the following paper 
@@ -1012,7 +1012,7 @@ public class MUCA extends ExampleFD {
 				n.addDom(0, 0);
 				n.addDom(bid_xor.size(), bid_xor.size());
 
-				store.impose(new Sum(xorUsedTransformation, n));
+				store.impose(new SumInt(store, xorUsedTransformation, "==", n));
 
 				usedXorBids.add(n);
 
@@ -1128,13 +1128,13 @@ public class MUCA extends ExampleFD {
 
 			}
 
-			store.impose(new Sum(weights, sum[g]));
+			store.impose(new SumInt(store, weights, "==", sum[g]));
 
 		}              
 
 		cost = new IntVar(store, "cost", minCost, maxCost);
 
-		store.impose(new Sum(bidCosts, cost));
+		store.impose(new SumInt(store, bidCosts, "==", cost));
 
 	}
 

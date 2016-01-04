@@ -38,7 +38,7 @@ import org.jacop.constraints.netflow.ArcCompanion;
  * A directed, residual arc in the graph.
  *
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  * 
  */
 
@@ -165,8 +165,8 @@ public final class Arc {
 	/**
 	 * Initializes an artificial arc
 	 * 
-	 * @param newCost
-	 * @param newCapacity
+	 * @param newCost new cost for the arc
+	 * @param newCapacity new capacity for the arc
 	 */
 	public void set(int newCost, int newCapacity) {
 		

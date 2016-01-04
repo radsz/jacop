@@ -51,7 +51,7 @@ import org.jacop.core.Var;
  * sub-domain and it is inactive otherwise.
  * 
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  * 
  */
 
@@ -75,9 +75,9 @@ public class DomainStructure implements VarHandler {
 	/**
 	 * Creates an S-variable
 	 * 
-	 * @param variable
-	 * @param domList
-	 * @param arcList
+	 * @param variable variable to create for
+	 * @param domList list of domains
+	 * @param arcList list of arcs
 	 */
 	public DomainStructure(IntVar variable, List<Domain> domList, List<Arc> arcList) {
 		

@@ -40,7 +40,7 @@ import java.util.Iterator;
  * current value.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  */
 
 public class Profile extends ArrayList<ProfileItem> {
@@ -64,7 +64,7 @@ public class Profile extends ArrayList<ProfileItem> {
 
 	/**
 	 * It constructs the profile of a given type (e.g. for cumulative). 
-	 * @param type
+	 * @param type type of the profile (cumul=0, diffn=1)
 	 */
 	public Profile(short type) {
 		this.type = type;

@@ -45,10 +45,10 @@ import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatDomain;
 
 /**
- * Constraint P #> C
+ * Constraint P {@literal >} C
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  */
 
 public class PgtC extends PrimitiveConstraint {
@@ -72,7 +72,7 @@ public class PgtC extends PrimitiveConstraint {
 	public static String[] xmlAttributes = {"p", "c"};
 
 	/**
-	 * It constructs constraint P > C.
+	 * It constructs constraint P {@literal >} C.
 	 * @param p variable p.
 	 * @param c constant c.
 	 */

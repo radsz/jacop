@@ -39,7 +39,7 @@ import org.jacop.core.Var;
  * search to change your depth first search into limited discrepancy search.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.3
+ * @version 4.4
  * @param <T> type of variable being used in the search.
  */
 
@@ -197,7 +197,8 @@ public class LDS<T extends Var> implements ExitChildListener<T> {
 		exitChildListeners = children;
 	}
 
-	public void setChildrenListeners(ExitChildListener<T> child) {
+    @SuppressWarnings("unchecked")
+    public void setChildrenListeners(ExitChildListener<T> child) {
 		exitChildListeners = new ExitChildListener[1];
 		exitChildListeners[0] = child;
 	}

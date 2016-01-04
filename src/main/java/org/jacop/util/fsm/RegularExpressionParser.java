@@ -42,7 +42,7 @@ import org.jacop.core.IntervalDomain;
  * Instances of this class parse the word combination little language.
  * 
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  */
 
 public class RegularExpressionParser {
@@ -74,7 +74,7 @@ public class RegularExpressionParser {
 	 * @param parseOneNext if parsing should parse only one item.
 	 * 
 	 * @return An expression that is the root of the parse tree produced by the parser.
-	 * @throws SyntaxException 
+	 * @throws SyntaxException execption rised when syntax is not followed
 	 */
 	public Expression parse(boolean parseOneNext) throws SyntaxException {
 
@@ -260,7 +260,7 @@ public class RegularExpressionParser {
 
 		/**
 		 * The constructor to create an syntax exception with a given message.
-		 * @param msg
+		 * @param msg message for the syntax exception
 		 */
 		public SyntaxException(final String msg) {
 			super(msg);
@@ -283,12 +283,12 @@ public class RegularExpressionParser {
 		 * string does not contain the words that this Expression object
 		 * requires, then this method returns null.
 		 * 
-		 * @param set
-		 *            The string that this method will search for the words it
-		 *            requires.
 		 */
 
-		abstract int getType();
+	    /**
+	     * @return type
+	     */
+	    abstract int getType();
 
 		/**
 		 * It specifies if the expression is simple.

@@ -42,7 +42,7 @@ import java.util.ArrayList;
  * Symposium on VLSI p. 0095
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  */
 
 public class FFT extends Filter {

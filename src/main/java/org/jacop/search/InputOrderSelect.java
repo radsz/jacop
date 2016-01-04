@@ -44,7 +44,7 @@ import org.jacop.core.Var;
  * It is simple input order selector of variables.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.3
+ * @version 4.4
  * @param <T> type of variable being used in the search. 
  */
 
@@ -71,6 +71,7 @@ public class InputOrderSelect<T extends Var> implements SelectChoicePoint<T> {
 	 * @param variables a list of variables which must be assigned a value by search.
 	 * @param indomain the indomain heuristic for assigning values to variables.
 	 */
+	@SuppressWarnings("unchecked")
 	public InputOrderSelect(Store store, 
 							T[] variables,
 							Indomain<T> indomain) {

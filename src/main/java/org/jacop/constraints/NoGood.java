@@ -56,7 +56,7 @@ import org.jacop.core.Var;
  * master search.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.3
+ * @version 4.4
  */
 
 public class NoGood extends PrimitiveConstraint {

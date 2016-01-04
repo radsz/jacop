@@ -53,7 +53,7 @@ import org.jacop.core.Var;
  *
  *
  * @author Krzysztof Kuchcinski
- * @version 4.3
+ * @version 4.4
  */
 
 public class LinearIntDom extends LinearInt {
@@ -77,9 +77,12 @@ public class LinearIntDom extends LinearInt {
     double limitDomainPruning = 1e+7;
 
     /**
-     * @param list
-     * @param weights
-     * @param sum
+     * It constructs the constraint LinearIntDom. 
+     * @param store current store
+     * @param list variables which are being multiplied by weights.
+     * @param weights weight for each variable.
+     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum variable containing the sum of weighted variables.
      */
     public LinearIntDom(Store store, IntVar[] list, int[] weights, String rel, int sum) {
 
@@ -89,8 +92,10 @@ public class LinearIntDom extends LinearInt {
 	
     /**
      * It constructs the constraint LinearIntDom. 
+     * @param store current store
      * @param variables variables which are being multiplied by weights.
      * @param weights weight for each variable.
+     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
      * @param sum variable containing the sum of weighted variables.
      */
     public LinearIntDom(Store store, ArrayList<? extends IntVar> variables,
@@ -103,6 +108,15 @@ public class LinearIntDom extends LinearInt {
 
     @Override
     public void consistency(Store store) {
+	propagate(relationType);
+    }
+
+    @Override
+    public void notConsistency(Store store) {
+	propagate(negRel[relationType]);
+    }
+
+    public void propagate(int rel) {
 
 	computeInit();
 
@@ -110,18 +124,18 @@ public class LinearIntDom extends LinearInt {
 
 	    store.propagationHasOccurred = false;
 
-	    switch (relationType) {
+	    switch (rel) {
 	    case eq:
 
 		if (domainSize() < limitDomainPruning)
 		    pruneEq(); // domain consistency
 		else {
 		    // bound consistency
-		    pruneLtEq();
-		    pruneGtEq();
+		    pruneLtEq(b);
+		    pruneGtEq(b);
 		}
 
-		if (sumMax <= b && sumMin >= b) 
+		if (!reified && sumMax <= b && sumMin >= b) 
 		    removeConstraint();
 
 		break;
@@ -132,48 +146,8 @@ public class LinearIntDom extends LinearInt {
 		else
 		    super.pruneNeq();
 
-	    	if (sumMin == sumMax && sumMin != b)
-	    	    removeConstraint();
-	    	break;
-	    default:
-		System.out.println("Not implemented relation in LinearIntDom; implemented == and != only.");
-		break;
-	    }
-
-	} while (store.propagationHasOccurred);
-    }
-
-    @Override
-    public void notConsistency(Store store) {
-
-	computeInit();
-
-	do {
-
-	    store.propagationHasOccurred = false;
-
-	    switch (negRel[relationType]) {
-	    case eq:
-		if (domainSize() < limitDomainPruning)
-		    pruneEq();
-		else {
-		    pruneLtEq();
-		    pruneGtEq();
-		}
-
-		if (sumMax <= b && sumMin >= b) 
-		    removeConstraint();
-
-		break;
-
-	    case ne:
-
-		if (domainSize() < limitDomainPruning)
-		    pruneNeq();
-		else
-		    super.pruneNeq();
-
-	    	if (sumMin > b || sumMax < b)
+	    	// if (!reified && sumMin == sumMax && sumMin != b)
+	    	if (!reified && (sumMin > b || sumMax < b))
 	    	    removeConstraint();
 	    	break;
 	    default:
@@ -197,6 +171,9 @@ public class LinearIntDom extends LinearInt {
     
     void pruneEq() {
 
+	if (sumMin > b || sumMax < b)
+	    throw store.failException;
+
 	// System.out.println("check " + this);
 	assignments = new int[l];
 	support = new IntervalDomain[l];
@@ -205,7 +182,7 @@ public class LinearIntDom extends LinearInt {
 
 	findSupport(0, 0);
 
-	// System.out.println("valid assignments: " + java.util.Arrays.asList(support));
+	// System.out.println("Variables: "+java.util.Arrays.asList(x)+" have valid assignments: " + java.util.Arrays.asList(support));
 	int f = 0, e = 0;
 	for (int i = 0; i < pos; i++) {
 	    x[i].domain.in(store.level, x[i], support[i]);
@@ -273,12 +250,13 @@ public class LinearIntDom extends LinearInt {
 
 		// store assignments
 		for (int i = 0; i < l; i++) {
+		    int a = assignments[i];
 		    if (support[i].getSize() == 0)
-			support[i] = new IntervalDomain(assignments[i], assignments[i]);
-		    else if (support[i].max() < assignments[i])
-			support[i].addLastElement(assignments[i]);
-		    else if (support[i].max() > assignments[i])
-			support[i].unionAdapt(assignments[i], assignments[i]);
+			support[i] = new IntervalDomain(a, a);
+		    else if (support[i].max() < a)
+			support[i].addLastElement(a);
+		    else if (support[i].max() > a)
+			support[i].unionAdapt(a, a);
 		}
 	    }
 	    return;
@@ -300,13 +278,7 @@ public class LinearIntDom extends LinearInt {
 		int eMin = e.min();
 		int eMax = e.max();
 
-		// if (eMax*w  < lb)
-		//     continue; // value too low
-		// else if (eMin*w > ub) // value too large
-		//     break;
-		
-		for (int j = eMin; j <= eMax; j++) {
-		    int element = j;
+		for (int element = eMin; element <= eMax; element++) {
 		
 		    int elementValue = element*w;
 		    if (elementValue  < lb) 
@@ -362,12 +334,13 @@ public class LinearIntDom extends LinearInt {
 
 		// store assignments
 		for (int i = 0; i < l; i++) {
+		    int a = assignments[i];
 		    if (support[i].getSize() == 0)
-			support[i] = new IntervalDomain(assignments[i], assignments[i]);
-		    else if (support[i].max() < assignments[i])
-			support[i].addLastElement(assignments[i]);
-		    else if (support[i].max() > assignments[i])
-			support[i].unionAdapt(assignments[i], assignments[i]);
+			support[i] = new IntervalDomain(a, a);
+		    else if (support[i].max() < a)
+			support[i].addLastElement(a);
+		    else if (support[i].max() > a)
+			support[i].unionAdapt(a, a);
 		}
 	    }
 	    return;
@@ -388,14 +361,8 @@ public class LinearIntDom extends LinearInt {
 		Interval e = ((IntervalDomain)currentDom).intervals[k];
 		int eMin = e.min();
 		int eMax = e.max();
-
-		// if (eMin*w  < lb)
-		//     break; // value too low
-		// else if (eMax*w > ub) // value too large
-		//     continue;
 			
-		for (int j = eMin; j <= eMax; j++) {
-		    int element = j;
+		for (int element = eMin; element <= eMax; element++) {
 		
 		    int elementValue = element*w;
 		    if (elementValue  < lb) 

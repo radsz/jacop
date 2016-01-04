@@ -39,10 +39,10 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 
 /**
- * Constraint X #> Y
+ * Constraint X {@literal >} Y
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  */
 
 public class XgtY extends PrimitiveConstraint {
@@ -66,7 +66,7 @@ public class XgtY extends PrimitiveConstraint {
 	public static String[] xmlAttributes = {"x", "y"};
 
 	/**
-	 * It constructs a constraint X > Y.
+	 * It constructs a constraint X {@literal >} Y.
 	 * @param x variable x.
 	 * @param y variable y.
 	 */

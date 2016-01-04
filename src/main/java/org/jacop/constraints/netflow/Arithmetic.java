@@ -39,7 +39,7 @@ import java.util.Map;
 
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
-import org.jacop.constraints.SumWeight;
+import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -47,7 +47,7 @@ import org.jacop.core.Store;
 /**
  * 
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  * 
  */
 
@@ -137,7 +137,7 @@ public class Arithmetic extends DecomposedConstraint {
 
 			decomposition = new ArrayList<Constraint>();
 
-			final IntVar ZERO = new IntVar(store, "Zero", 0, 0);
+			// final IntVar ZERO = new IntVar(store, "Zero", 0, 0);
 
 			for (int[] eqn : eqns) {
 				ArrayList<IntVar> variables = new ArrayList<IntVar>();
@@ -149,7 +149,9 @@ public class Arithmetic extends DecomposedConstraint {
 						weights.add(eqn[i]);
 					}
 
-				decomposition.add(new SumWeight(variables, weights, ZERO));
+				
+				decomposition.add(new LinearInt(store, variables, weights, "==", 0));
+				// decomposition.add(new SumWeight(variables, weights, ZERO));
 			}
 
 			return decomposition;
@@ -158,7 +160,7 @@ public class Arithmetic extends DecomposedConstraint {
 
 			ArrayList<Constraint> result = new ArrayList<Constraint>();
 
-			final IntVar ZERO = new IntVar(store, "Zero", 0, 0);
+			// final IntVar ZERO = new IntVar(store, "Zero", 0, 0);
 
 			for (int[] eqn : eqns) {
 				ArrayList<IntVar> variables = new ArrayList<IntVar>();
@@ -170,7 +172,8 @@ public class Arithmetic extends DecomposedConstraint {
 						weights.add(eqn[i]);
 					}
 
-				result.add(new SumWeight(variables, weights, ZERO));
+				result.add(new LinearInt(store, variables, weights, "==", 0));
+				// result.add(new SumWeight(variables, weights, ZERO));
 			}
 
 			return result;

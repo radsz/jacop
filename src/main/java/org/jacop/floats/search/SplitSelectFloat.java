@@ -52,11 +52,11 @@ import org.jacop.core.TimeStamp;
 /**
  * It is simple and customizable selector of decisions (constraints) which will
  * be enforced by search. However, it does not use P=c as a search decision 
- * but rather P <= c (potentially splitting the domain), unless c is equal to 
- * the maximal value in the domain of P then the constraint P < c is used.
+ * but rather P {@literal <=} c (potentially splitting the domain), unless c is equal to 
+ * the maximal value in the domain of P then the constraint P {@literal <} c is used.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  * @param <T> type of variable being used in the search.
  */
 
@@ -79,6 +79,7 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
 
 	/**
 	 * The constructor to create a simple choice select mechanism.
+	 * @param store current store
 	 * @param variables variables upon which the choice points are created.
 	 * @param varSelect the variable comparator to choose the variable.
 	 */
@@ -93,6 +94,7 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
 
 	/**
 	 * It constructs a simple selection mechanism for choice points.
+	 * @param store current store
 	 * @param variables variables used as basis of the choice point.
 	 * @param varSelect the main variable comparator.
 	 * @param tieBreakerVarSelect secondary variable comparator employed if the first one gives the same metric.

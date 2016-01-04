@@ -50,7 +50,7 @@ public final class Utils {
 	 * resize for int[][]
 	 * @param array		the array to resize
 	 * @param newSize	the size of the array we want
-	 * @return			a new array which first elements are the same
+	 * @return		a new array which first elements are the same
 	 * as the ones in array
 	 */
 	public final static int[][] resize(int[][] array, int newSize) {
@@ -61,7 +61,11 @@ public final class Utils {
 	
 	/**
 	 * the same, but with the number of elements to copy from old list
+	 * @param array array to be extended
+	 * @param newSize new size for the array
 	 * @param size 	the number of elements to copy from the old
+	 * @return a new array which first elements are the same
+	 * as the ones in array
 	 */
 	public final static int[][] resize(int[][] array, int newSize, int size) {
 		assert size < newSize;
@@ -117,7 +121,7 @@ public final class Utils {
 	/**
 	 * get the "absolute value" of the int (the variable that corresponds to
 	 * the literal)
-	 * literal -> variable
+	 * literal {@literal ->} variable
 	 * @param i	the literal
 	 * @return	the variable
 	 */
@@ -128,7 +132,7 @@ public final class Utils {
 	/**
 	 * given a positive var, returns the literal that represents the negation
 	 * of the variable
-	 * variable -> literal
+	 * variable {@literal ->} literal
 	 * @param i	the variable
 	 * @return	the negated variable
 	 */

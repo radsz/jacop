@@ -36,7 +36,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import org.jacop.constraints.Sum;
+import org.jacop.constraints.SumInt;
 import org.jacop.constraints.XeqC;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
@@ -150,7 +150,7 @@ public class MineSweeper extends ExampleFD {
                             }
                         }                        
                     }
-                    store.impose(new Sum(lst, game[i][j]));
+                    store.impose(new SumInt(store, lst, "==", game[i][j]));
 
                 } // end if problem[i][j] > X
 
@@ -439,9 +439,9 @@ public class MineSweeper extends ExampleFD {
     *  % a comment which also is ignored
     *  number of rows
     *  number of columns
-    *  <
+    *  {@literal <}
     *    row number of neighbours lines...
-    *  >
+    *  {@literal >}
     * 
     * 0..8 means number of neighbours, "." mean unknown (may be a mine)
     * 

@@ -37,7 +37,7 @@ import org.jacop.core.Var;
  * Defines a MostConstraintStatic comparator for Variables.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  * @param <T> type of variable being compared.
  */
 

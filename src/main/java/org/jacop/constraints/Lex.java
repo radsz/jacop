@@ -47,10 +47,12 @@ import org.jacop.util.fsm.FSMTransition;
  * It constructs a Lex (lexicographical order) constraint. 
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.3
+ * @version 4.4
  */
 
 public class Lex extends DecomposedConstraint {
+
+    static int idNumber = 1;
 
     /**
      * A two dimensional array containing arrays which have to be lexicographically ordered.
@@ -69,11 +71,11 @@ public class Lex extends DecomposedConstraint {
 
     /**
      * It creates a lexicographical order for vectors x[i], i.e. 
-     * forall i, exists j : x[i][k] = x[i+1][k] for k < j and x[i][k] <= x[i+1][k]
-     * for k >= j
+     * forall i, exists j : x[i][k] = x[i+1][k] for k {@literal <} j and x[i][k] {@literal <=} x[i+1][k]
+     * for k {@literal >=} j
      *
      * vectors x[i] does not need to be of the same size.
-     * boolea lt defines if we require Lex_{<} (lt = false) or Lex_{=<} (lt = true)
+     * boolea lt defines if we require Lex_{{@literal <}} (lt = false) or Lex_{{@literal =<}} (lt = true)
      *
      * @param x vector of vectors which assignment is constrained by Lex constraint. 
      */
@@ -89,6 +91,8 @@ public class Lex extends DecomposedConstraint {
 	assert (x != null) : "x list is null.";
 	this.x = new IntVar[x.length][];
 		
+	idNumber += 1;
+
 	lexLT = lt;
 		
 	for (int i = 0; i < x.length; i++) {
@@ -414,7 +418,7 @@ public class Lex extends DecomposedConstraint {
 
 	BooleanVar[] b = new BooleanVar[sizeToCompare+1];
 	for (int i=0; i < b.length; i++)
-	    b[i] = new BooleanVar(store, "_b["+i+"]");
+	    b[i] = new BooleanVar(store, "_b"+idNumber+"["+i+"]");
 
 	constraints.add(new XeqC(b[0], 1));
 
@@ -442,7 +446,7 @@ public class Lex extends DecomposedConstraint {
 
 	BooleanVar[] b = new BooleanVar[sizeToCompare];
 	for (int i=0; i < b.length; i++)
-	    b[i] = new BooleanVar(store, "_b["+i+"]");
+	    b[i] = new BooleanVar(store, "_b"+idNumber+"["+i+"]");
 
 	constraints.add(new XeqC(b[0], 1));
 

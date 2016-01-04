@@ -45,7 +45,7 @@ import org.jacop.core.ValueEnumeration;
  * 
  * 
  * @author Radoslaw Szymanek, Krzysztof Kuchcinski and Robert Åkemalm 
- * @version 4.3
+ * @version 4.4
  */
 
 public class BoundSetDomain extends SetDomain {
