@@ -98,7 +98,7 @@ public class BoundDomain extends IntDomain {
 
 
 	/**
-	 * @param i  
+	 * @param i  interval for union operation
 	 * 
 	 */
 	@Override

@@ -1,3 +1,34 @@
+Version 4.3.1
+===========
+
+1. New selection for search variables in minizinc. Only output
+   variables are selected by default.
+
+2. Adding additional pass to the flatzinc compiler. bool2int does not
+   generate the equality constraints on both variables. Only the first
+   variable is used in the model and the second one as the alias for
+   the first one. Decreases the number of generated constraints.
+
+3. Sum and SumWeight are deprecated and SumInt, SumBool or LinearInt
+   should be used instead.
+
+4. New circuit and subcircuit constraint definitions in minizinc that
+   accept arbitrary indexes (not always starting from 1).
+
+5. New constraint SumBool.
+
+6. Correcting a bug in OrBool constraint.
+
+7. Xor of Linear constraint corrected. Linear is deprecated and
+   LinearInt should be used instead.
+
+8. Correcting a bug in GCC.
+
+9. Improvements and corrections in Linear, LinearInt, SumInt,
+   LinearIntDom and LinearFloat.
+
+10. Bug fixes and improvements.
+
 Version 4.3
 ===========
 1. Implementation of constraints ArgMin and ArgMax as well connection to

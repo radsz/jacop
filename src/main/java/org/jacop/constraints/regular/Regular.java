@@ -665,7 +665,7 @@ public class Regular extends Constraint {
 	
 	/**
 	 *  Forward part deletes the outgoing edges of the damaged state and watch whether 
-	 *  the successors are still active (in-degree > 0 ), otherwise we collect it and 
+	 *  the successors are still active (in-degree {@literal >} 0 ), otherwise we collect it and 
 	 *  continue the loop.
 	 *  
 	 * TODO return value is not used.
@@ -1088,7 +1088,11 @@ public class Regular extends Constraint {
 				
 		for (int i = list.length - 1; i >= 0; i--) {
 			list[i].putConstraint(this);
-			mapping.put(list[i], i);
+			Integer varPosition = mapping.put(list[i], i);
+			if (!list[i].singleton() && varPosition != null) {
+			    System.err.println("ERROR: Constraint " + toString() + " must have different variables on the list");
+			    System.exit(0);
+			}
 		}
 
 		store.addChanged(this);
@@ -1159,15 +1163,6 @@ public class Regular extends Constraint {
 			}
 			return IntDomain.ANY;
 	}
-
-	@Override
-	public String id() {
-		if (id != null)
-			return id;
-		else
-			return this.getClass().getSimpleName() + numberId;
-	}
-
 
 	@Override
 	public void removeConstraint() {
@@ -1340,7 +1335,7 @@ public class Regular extends Constraint {
 
 	/**
 	 * It saves the constraint latex description into file.
-	 * @param desc
+	 * @param desc description of the constraint 
 	 */
 	public void saveLatexToFile(String desc) {
 		String fileName = this.latexFile + (calls++)+".tex";
@@ -1363,7 +1358,7 @@ public class Regular extends Constraint {
 
 	/**
 	 * It sets the filename for the file which is used to save latex descriptions.
-	 * @param filename
+	 * @param filename the name of the file
 	 */
 	public void setLatexBaseFileName(String filename) {
 		this.latexFile = filename;

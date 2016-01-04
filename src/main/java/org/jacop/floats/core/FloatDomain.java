@@ -81,6 +81,8 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It defines rounding method
+     *
+     * @param out defines rounding method true = outward, false = no rounding outward
      */
     public static void setOutward(boolean out) {
 	outward = out;

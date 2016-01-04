@@ -26,7 +26,7 @@ public final class DomainTranslator implements WrapperComponent {
 	 * those clauses to the wrapper queue.
 	 * @param variable	the variable to translate
 	 * 
-	 * @see Propagation via Lazy Clause Generation,
+	 * see Propagation via Lazy Clause Generation,
 	 * Olga Ohrimenko1 , Peter J. Stuckey , and Michael Codish
 	 * 
 	 */

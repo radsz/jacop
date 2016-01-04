@@ -164,7 +164,7 @@ public class StonesOfHeaven extends ExampleFD {
 
 	/**
 	 * It executes a simple program to solve this logic puzzle.
-	 * @param args
+	 * @param args command arguments (none here)
 	 */
 	public static void main(String args[]) {
 

@@ -73,7 +73,7 @@ public class ArgMax extends Constraint {
     public int indexOffset;
 
     /**
-     * tirbreak == true --> select element with the lowest index if exist several 
+     * tirbreak == true {@literal -->} select element with the lowest index if exist several 
      */
     public boolean tiebreak = true;
 
@@ -88,7 +88,7 @@ public class ArgMax extends Constraint {
      * @param maxIndex variable denoting the index of the maximum value
      * @param list the array of variables for which the index of the maximum value is imposed.
      * @param indexOffset the offset for the index that is computed from 1 by default (if needed from 0, use -1 for this parameter)
-     * @param tiebreak defines if tie breaking sgould be used (returning the least index if several maximum elements
+     * @param tiebreak defines if tie breaking should be used (returning the least index if several maximum elements
      */
     public ArgMax(IntVar[] list, IntVar maxIndex, int indexOffset, boolean tiebreak) {
 
@@ -119,6 +119,8 @@ public class ArgMax extends Constraint {
      * It constructs max constraint.
      * @param maxIndex variable denoting index of the maximum value
      * @param variables the array of variables for which the maximum value is imposed.
+     * @param indexOffset the offset for the index that is computed from 1 by default (if needed from 0, use -1 for this parameter)
+     * @param tiebreak defines if tie breaking sgould be used (returning the least index if several maximum elements
      */
     public ArgMax(ArrayList<? extends IntVar> variables, IntVar maxIndex, int indexOffset, boolean tiebreak) {
 	this(variables, maxIndex);

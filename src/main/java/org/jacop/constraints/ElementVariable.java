@@ -83,7 +83,7 @@ public class ElementVariable extends Constraint {
 
 	/**
 	 * It specifies list of variables within an element constraint list[index - indexOffset] = value.
-	 * The list is addressed by positive integers (>=1) if indexOffset is equal to 0. 
+	 * The list is addressed by positive integers ({@code >=1}) if indexOffset is equal to 0. 
 	 */
 	public IntVar list[];
 

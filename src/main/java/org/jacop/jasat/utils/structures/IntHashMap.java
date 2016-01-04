@@ -57,6 +57,7 @@ public final class IntHashMap<E> {
 	/**
 	 * get the value associated with key, or null otherwise
 	 * @param key	the key
+	 * @return the value associated with key, or null otherwise
 	 */
 	public E get(int key) {
 		
@@ -334,6 +335,8 @@ public final class IntHashMap<E> {
 
 	/**
 	 * iterates over all entries in the map
+	 *
+	 * @return iterator for enumeration of elements in this map
 	 */
 	public Iterable<Map.Entry<Integer,E>> entrySet() {
 		return new Iterable<Map.Entry<Integer,E>>() {

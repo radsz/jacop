@@ -558,7 +558,7 @@ public class CarSequencing extends ExampleFD {
 
 	/**
 	 * It executes the program to solve car sequencing problem.
-	 * @param args
+	 * @param args parameters (none)
 	 */
 	public static void main(String args[]) {
 
@@ -580,7 +580,7 @@ public class CarSequencing extends ExampleFD {
 	
 	/**
 	 * It executes the program to solve car sequencing problem.
-	 * @param args
+	 * @param args parameters (none)
 	 */
 	public static void test(String args[]) {
 

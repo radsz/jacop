@@ -35,7 +35,7 @@ import java.util.ArrayList;
 
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.Element;
-import org.jacop.constraints.Sum;
+import org.jacop.constraints.SumInt;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.core.IntVar;
@@ -213,7 +213,7 @@ public class Queens extends ExampleFD {
 			for (int j = 0; j < numberQ; j++)
 				row[j] = fields[i * numberQ + j];
 			IntVar rowSum = new IntVar(store, "row" + (i + 1), 1, 1);
-			store.impose(new Sum(row, rowSum));
+			store.impose(new SumInt(store, row, "==", rowSum));
 			if (i == 0) {
 				store.impose(new Element(firstRowPosition, row, one));
 			}
@@ -227,7 +227,7 @@ public class Queens extends ExampleFD {
 			for (int i = 0; i < numberQ; i++)
 				column[i] = fields[i * numberQ + j];
 			IntVar columnSum = new IntVar(store, "column" + (j + 1), 1, 1);
-			store.impose(new Sum(column, columnSum));
+			store.impose(new SumInt(store, column, "==", columnSum));
 			if (j == 0) {
 				store.impose(new Element(firstColumnPosition, column, one));
 			}
@@ -249,7 +249,7 @@ public class Queens extends ExampleFD {
 			IntVar diagonalSum = new IntVar(store, "diagonal-west-south-F" + (i + 1)
 					+ "," + 1, 0, 1);
 			diagonalSums[indexSum++] = diagonalSum;
-			store.impose(new Sum(diagonal, diagonalSum));
+			store.impose(new SumInt(store, diagonal, "==", diagonalSum));
 		}
 
 		for (int i = numberQ - 1; i > 0; i--) {
@@ -260,7 +260,7 @@ public class Queens extends ExampleFD {
 			IntVar diagonalSum = new IntVar(store, "diagonal-west-north-F" + (i + 1)
 					+ "," + 1, 0, 1);
 			diagonalSums[indexSum++] = diagonalSum;
-			store.impose(new Sum(diagonal, diagonalSum));
+			store.impose(new SumInt(store, diagonal, "==", diagonalSum));
 		}
 
 		for (int j = 1; j < numberQ - 1; j++) {
@@ -272,7 +272,7 @@ public class Queens extends ExampleFD {
 			IntVar diagonalSum = new IntVar(store, "diagonal-west-south-F" + (1)
 					+ "," + (j + 1), 0, 1);
 			diagonalSums[indexSum++] = diagonalSum;
-			store.impose(new Sum(diagonal, diagonalSum));
+			store.impose(new SumInt(store, diagonal, "==", diagonalSum));
 		}
 
 		for (int j = 1; j < numberQ - 1; j++) {
@@ -284,17 +284,17 @@ public class Queens extends ExampleFD {
 			IntVar diagonalSum = new IntVar(store, "diagonal-west-north-F"
 					+ (numberQ) + "," + (j + 1), 0, 1);
 			diagonalSums[indexSum++] = diagonalSum;
-			store.impose(new Sum(diagonal, diagonalSum));
+			store.impose(new SumInt(store, diagonal, "==", diagonalSum));
 		}
 
 		IntVar numberOfDiagonals = new IntVar(store, "takenDiagonals",
 				2 * numberQ - 1, 2 * numberQ);
 
-		store.impose(new Sum(diagonalSums, numberOfDiagonals));
+		store.impose(new SumInt(store, diagonalSums, "==", numberOfDiagonals));
 
 		IntVar queenNo = new IntVar(store, "noQ", numberQ, numberQ);
 
-		store.impose(new Sum(fields, queenNo));
+		store.impose(new SumInt(store, fields, "==", queenNo));
 
 	}
 	

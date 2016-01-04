@@ -38,7 +38,7 @@ import org.jacop.constraints.Diff2;
 import org.jacop.constraints.Or;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
-import org.jacop.constraints.Sum;
+import org.jacop.constraints.SumInt;
 import org.jacop.constraints.XgtC;
 import org.jacop.constraints.XgteqY;
 import org.jacop.constraints.XlteqC;
@@ -456,7 +456,7 @@ public class PerfectSquare extends ExampleFD {
 				sumList.add(s);
 			}
 			
-			store.impose(new Sum(sumList, limit));
+			store.impose(new SumInt(store, sumList, "==", limit));
 		
 		}
 
@@ -471,7 +471,7 @@ public class PerfectSquare extends ExampleFD {
 				store.impose(new XmulCeqZ(b, squares[problemNo][1][j], s));
 				sumList.add(s);
 			}
-			store.impose(new Sum(sumList, limit));
+			store.impose(new SumInt(store, sumList, "==", limit));
 		}
 
 		System.out.println("Number of variables: " + store.size());

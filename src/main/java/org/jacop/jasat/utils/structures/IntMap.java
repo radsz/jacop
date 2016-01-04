@@ -73,6 +73,8 @@ public final class IntMap<E> {
 	
 	/**
 	 * predicate to check if the map is empty
+	 *
+	 * @return true if the map is empty, false otherwise
 	 */
 	public boolean isEmpty() {
 		return map.isEmpty();

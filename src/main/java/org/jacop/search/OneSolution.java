@@ -64,7 +64,7 @@ public class OneSolution<T extends Var>  extends SimpleSolutionListener<T> imple
 
     /**
      * It sets the children listeners of this initialize listener.
-     * @param children
+     * @param children children listeners
      */
     public void setChildrenListeners(InitializeListener[] children) {
 

@@ -255,7 +255,7 @@ public class CrossWord extends ExampleFD {
 
     /**
      * It prints a variable crosswordTemplate.
-     * @param crossWordTemplate
+     * @param crossWordTemplate the template
      */
     public void printSolution(char[][] crossWordTemplate) {
 
@@ -278,7 +278,7 @@ public class CrossWord extends ExampleFD {
      * of it for use by an extensional constraint.
      * 
      * @param file filename containing dictionary
-     * @param wordSizes  
+     * @param wordSizes  size of the words
      */
     public void readDictionaryFromFile(String file, ArrayList<Integer> wordSizes) {
 

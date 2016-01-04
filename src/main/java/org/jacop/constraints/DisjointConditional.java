@@ -211,8 +211,8 @@ public class DisjointConditional extends Diff {
 	 * @param o2 variables specifying the origin in the second dimension.
 	 * @param l1 variables specifying the length in the first dimension.
 	 * @param l2 variables specifying the length in the second dimension.
-	 * @param exceptionIndices 
-	 * @param exceptionCondition 
+	 * @param exceptionIndices list of rectangles that may not be considered
+	 * @param exceptionCondition conditions for rectangles that may not be considered
 	 * @param profile it specifies if the profiles are being used and computed within that constraint.
 	 */
 	public DisjointConditional(IntVar[] o1,
@@ -229,8 +229,8 @@ public class DisjointConditional extends Diff {
 	/**
 	 * It creates Disjoint conditional constraint.
 	 * @param rectangles the rectangles within a constraint.
-	 * @param exceptionIndices 
-	 * @param exceptionCondition 
+	 * @param exceptionIndices list of rectangles that may not be considered
+	 * @param exceptionCondition conditions for rectangles that may not be considered
 	 */
 	public DisjointConditional(IntVar[][] rectangles,
 							   ArrayList<ArrayList<Integer>> exceptionIndices,
@@ -250,8 +250,8 @@ public class DisjointConditional extends Diff {
 	/**
 	 * It creates Disjoint conditional constraint.
 	 * @param rectangles the rectangles within a constraint.
-	 * @param exceptionIndices 
-	 * @param exceptionCondition 
+	 * @param exceptionIndices list of rectangles that may not be considered
+	 * @param exceptionCondition conditions for rectangles that may not be considered
 	 * @param profile it specifies if the profiles are being computed and used within that constraint.
 	 */
 	public DisjointConditional(IntVar[][] rectangles,

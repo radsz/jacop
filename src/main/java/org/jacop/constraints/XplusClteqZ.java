@@ -39,7 +39,7 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 
 /**
- * Constraints X + C #<= Z.
+ * Constraints X + C{@literal <=} Z.
  * 
  * Boundary consistency is used.
  * 
@@ -52,17 +52,17 @@ public class XplusClteqZ extends PrimitiveConstraint {
 	static int idNumber = 1;
 
 	/**
-	 * It specifies variable x in constraint x+c<=z. 
+	 * It specifies variable x in constraint x+c{@literal <=}z. 
 	 */
 	public IntVar x;
 
 	/**
-	 * It specifies constant c in constraint x+c<=z. 
+	 * It specifies constant c in constraint x+c{@literal <=} z. 
 	 */
 	public int c;
 
 	/**
-	 * It specifies variable z in constraint x+c<=z. 
+	 * It specifies variable z in constraint x+c{@literal <=} z. 
 	 */
 	public IntVar z;
 
@@ -73,7 +73,7 @@ public class XplusClteqZ extends PrimitiveConstraint {
 	public static String[] xmlAttributes = {"x", "c", "z"};
 
 	/**
-	 * It constructs constraint X+C<=Z.
+	 * It constructs constraint X+C{@literal <=} Z.
 	 * @param x variable x.
 	 * @param c constant c.
 	 * @param z variable z.

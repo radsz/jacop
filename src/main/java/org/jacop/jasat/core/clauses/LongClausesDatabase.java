@@ -250,7 +250,8 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
 	
 	
 	/**
-	 * be sure that the database can contain @param numberOfClauses clauses
+	 * be sure that the database can contain numberOfClauses clauses
+	 * @param size the size of the database to be ensured
 	 */
 	public void ensureSize(int size) {
 		

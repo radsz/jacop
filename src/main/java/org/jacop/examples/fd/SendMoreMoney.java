@@ -34,7 +34,7 @@ package org.jacop.examples.fd;
 import java.util.ArrayList;
 
 import org.jacop.constraints.Alldiff;
-import org.jacop.constraints.SumWeight;
+import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
@@ -56,7 +56,7 @@ import org.jacop.search.SmallestDomain;
  *    different letters represent different digits
 
  *  SEND           9567
- * +MORE =======> +1085
+ * +MORE ======={@literal >}+1085
  * MONEY          10652
  * 
  * @author Radoslaw Szymanek
@@ -433,11 +433,19 @@ public class SendMoreMoney extends ExampleFD {
 		IntVar r = new IntVar(store, "R", 0, 9);
 		IntVar y = new IntVar(store, "Y", 0, 9);
 
+		/**
+		 * We create auxilary variables in order to make it easier to express some of the
+		 * constraints. Each auxilary variable holds a value for a given word.
+		 */
+		IntVar valueSEND = new IntVar(store, "v(SEND)", 0, 9999);
+		IntVar valueMORE = new IntVar(store, "v(MORE)", 0, 9999);
+		IntVar valueMONEY = new IntVar(store, "v(MONEY)", 0, 99999);
+
 		// Creating arrays for FDVs
 		IntVar digits[] = { s, e, n, d, m, o, r, y };
-		IntVar send[] = { s, e, n, d };
-		IntVar more[] = { m, o, r, e };
-		IntVar money[] = { m, o, n, e, y };
+		IntVar send[] = { s, e, n, d, valueSEND };
+		IntVar more[] = { m, o, r, e, valueMORE };
+		IntVar money[] = { m, o, n, e, y, valueMONEY };
 
 		for (IntVar v : digits)
 			vars.add(v);
@@ -488,16 +496,8 @@ public class SendMoreMoney extends ExampleFD {
 		 * the constraint.
 		 */
 		
-		int[] weights5 = { 10000, 1000, 100, 10, 1 };
-		int[] weights4 = { 1000, 100, 10, 1 };
-
-		/**
-		 * We create auxilary variables in order to make it easier to express some of the
-		 * constraints. Each auxilary variable holds a value for a given word.
-		 */
-		IntVar valueSEND = new IntVar(store, "v(SEND)", 0, 9999);
-		IntVar valueMORE = new IntVar(store, "v(MORE)", 0, 9999);
-		IntVar valueMONEY = new IntVar(store, "v(MONEY)", 0, 99999);
+		int[] weights5 = { 10000, 1000, 100, 10, 1, -1 };
+		int[] weights4 = { 1000, 100, 10, 1, -1 };
 
 		/**
 		 * Constraints for getting value for words
@@ -505,9 +505,12 @@ public class SendMoreMoney extends ExampleFD {
 		 * MORE = 1000 * M + 100 * O + R * 10 + E * 1
 		 * MONEY = 10000 * M + 1000 * O + 100 * N + E * 10 + Y * 1
 		 */
-		store.impose(new SumWeight(send, weights4, valueSEND));
-		store.impose(new SumWeight(more, weights4, valueMORE));
-		store.impose(new SumWeight(money, weights5, valueMONEY));
+		store.impose(new LinearInt(store, send, weights4, "==", 0));
+		// store.impose(new SumWeight(send, weights4, valueSEND));
+		store.impose(new LinearInt(store, more, weights4, "==", 0));
+		// store.impose(new SumWeight(more, weights4, valueMORE));
+		store.impose(new LinearInt(store, money, weights5, "==", 0));
+		// store.impose(new SumWeight(money, weights5, valueMONEY));
 
 		/**
 		 * The auxilary variables allow us to express the main constraint
@@ -521,9 +524,10 @@ public class SendMoreMoney extends ExampleFD {
 		 * It removes 2 wrong decisions.
 		 */
 		
-		int [] weightsImplied = {1000, 91, 10, 1, -9000, -900, -90}; 
-		IntVar [] varsImplied = {s, e, r, d, m, o, n};
-		store.impose(new SumWeight(varsImplied, weightsImplied, y));
+		int [] weightsImplied = {1000, 91, 10, 1, -9000, -900, -90, -1}; 
+		IntVar [] varsImplied = {s, e, r, d, m, o, n, y};
+		store.impose(new LinearInt(store, varsImplied, weightsImplied, "==", 0));
+		// store.impose(new SumWeight(varsImplied, weightsImplied, y));
 		
 		/**
 		 * The two constraints below were not explicit in the problem description. However, 

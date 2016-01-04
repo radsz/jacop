@@ -281,7 +281,7 @@ public class IntTrie<N extends IntTrie.Node<N>> {
 		
 		/**
 		 * allocate a new value of type E
-		 * @return
+		 * @return the value of type E
 		 */
 		public abstract E getNew();
 	}

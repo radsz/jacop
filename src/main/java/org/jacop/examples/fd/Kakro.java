@@ -34,7 +34,7 @@ package org.jacop.examples.fd;
 import java.util.ArrayList;
 
 import org.jacop.constraints.Alldiff;
-import org.jacop.constraints.Sum;
+import org.jacop.constraints.SumInt;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
@@ -105,7 +105,7 @@ public class Kakro extends ExampleFD {
 					for (int m = j + 1; m < noColumns && rowDescription[i][m] == 1; m++)
 						row.add(elements[i][m]);
 
-					store.impose(new Sum(row, sum));
+					store.impose(new SumInt(store, row, "==", sum));
 					store.impose(new Alldiff(row));
 				}
 
@@ -121,7 +121,7 @@ public class Kakro extends ExampleFD {
 					for (int m = i + 1; m < noRows && columnDescription[m][j] == 1; m++)
 						column.add(elements[m][j]);
 
-					store.impose(new Sum(column, sum));
+					store.impose(new SumInt(store, column, "==", sum));
 					store.impose(new Alldiff(column));
 				}
 
@@ -130,7 +130,7 @@ public class Kakro extends ExampleFD {
 
 	/**
 	 * It executes the program to solve simple Kakro puzzle.
-	 * @param args
+	 * @param args no parameters
 	 */
 	public static void main(String args[]) {
 

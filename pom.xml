@@ -143,10 +143,32 @@ setup to run configuration. -->
 					<artifactId>maven-surefire-report-plugin</artifactId>
 					<version>2.18.1</version>
 				</plugin>
+
+				<plugin>
+				  <groupId>org.apache.maven.plugins</groupId>
+				  <artifactId>maven-compiler-plugin</artifactId>
+				  <version>3.3</version>
+				</plugin>
+
 			</plugins>
 		</pluginManagement>
 
 		<plugins>
+
+		  <!-- Java plugin -->
+		  <plugin>
+		    <groupId>org.apache.maven.plugins</groupId>
+		    <artifactId>maven-compiler-plugin</artifactId>
+		    <version>3.3</version>
+		    <configuration>
+		      <source>1.7</source>
+		      <target>1.7</target>
+		      <compilerArgument>-Xlint:all</compilerArgument>
+		      <!-- <showWarnings>true</showWarnings>
+			   <showDeprecation>true</showDeprecation>  -->
+		    </configuration>
+		  </plugin>
+ 
 			<!-- Scala plugin -->
 			<plugin>
 				<groupId>org.scala-tools</groupId>
@@ -247,7 +269,7 @@ setup to run configuration. -->
 					</archive>
 				</configuration>
 			</plugin>
-
+			
 			<!-- Plugin for generating javadoc jar -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -255,7 +277,21 @@ setup to run configuration. -->
 				<version>2.10.3</version>
 				<!--If using less than 1.8 Java to build then this parameter has to be commented out.-->
 				<configuration>
-					<additionalparam>-Xdoclint:none</additionalparam>
+				  <!---
+				      <additionalparam>-Xdoclint:none</additionalparam>
+				  -->				  
+				  <!--
+				  <sourceFileExcludes>
+				    <exclude>**/target/generated-sources/org/jacop/fz/Node.java</exclude>
+				    <exclude>**/ParseException.java</exclude>
+				    <exclude>**/Parser.java</exclude>
+				    <exclude>**/ParserTokenManager.java</exclude>
+				    <exclude>**/Token.java</exclude>
+				    <exclude>**/TokenMgrError.java</exclude>
+				    <exclude>**/SimpleCharStream.java</exclude>
+				    <exclude>**/ASTSolveItem.java</exclude>
+				  </sourceFileExcludes>
+				      -->
 				</configuration>
 				<executions>
 					<execution>

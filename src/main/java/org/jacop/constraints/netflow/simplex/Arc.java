@@ -165,8 +165,8 @@ public final class Arc {
 	/**
 	 * Initializes an artificial arc
 	 * 
-	 * @param newCost
-	 * @param newCapacity
+	 * @param newCost new cost for the arc
+	 * @param newCapacity new capacity for the arc
 	 */
 	public void set(int newCost, int newCapacity) {
 		

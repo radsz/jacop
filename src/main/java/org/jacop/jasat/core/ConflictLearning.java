@@ -55,6 +55,7 @@ public final class ConflictLearning implements SolverComponent {
 	 * It computes to which level we should backjump to solve the conflict
 	 * explained by @param explanationClause
 	 * 
+	 * @param explanationClause  used for backjumping computation
 	 * @return	a level
 	 */
 	public int getLevelToBackjump(MapClause explanationClause) {

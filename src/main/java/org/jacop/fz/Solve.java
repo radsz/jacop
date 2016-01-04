@@ -124,17 +124,34 @@ public class Solve implements ParserTreeConstants {
     int solveKind=-1;
 
     SatTranslation sat;
+
+    public StringBuffer lastSolution = null;
     
     /**
      * It creates a parser for the solve part of the flatzinc file. 
      * 
      * @param store the constraint store within which context the search will take place.
+     * @param sat sat translation used
      */
     public Solve(Store store, SatTranslation sat)  {
 	this.store = store;
 	this.sat = sat;
     }
+    
+    public void solveModel(SimpleNode astTree, Tables table, Options opt) {
 
+	int n = astTree.jjtGetNumChildren();
+	
+	for (int i=0; i< n; i++) {
+	    SimpleNode node = (SimpleNode)astTree.jjtGetChild(i);
+
+	    if (node.getId() == JJTMODELEND) {
+		// int k = node.jjtGetNumChildren();
+		search((ASTSolveItem)node.jjtGetChild(0), table, opt);
+	    }
+	}
+    }
+    
     /**
      * It parses the solve part. 
      * 
@@ -149,8 +166,9 @@ public class Solve implements ParserTreeConstants {
 	initNumberConstraints = store.numberConstraints();
 
 	if (opt.getVerbose())
-	    System.out.println("%% Model constraints defined.\n%% Variables = "+store.size() + ", Bool variables = "+NumberBoolVariables +
-			       ", Constraints = "+initNumberConstraints + ", SAT clauses = " + sat.numberClauses());
+	    System.out.println("%% Model constraints defined.\n%% Variables = "+store.size() + " and  Bool variables = "+
+			       NumberBoolVariables + " of that constant variables = " + table.constantTable.size() + 
+			       "\n%% Constraints = "+initNumberConstraints + ", SAT clauses = " + sat.numberClauses());
 
 	dictionary = table;
 	options = opt;
@@ -376,7 +394,6 @@ public class Solve implements ParserTreeConstants {
 	}
 	last_search = list_seq_searches.get(list_seq_searches.size()-1);
 
-
 	// LDS & Credit heuristic search
 	if (si.exploration().equals("lds")) 
 	    lds_search(label, si.ldsValue);
@@ -503,6 +520,9 @@ public class Solve implements ParserTreeConstants {
 	    System.exit(0);
 	}
 
+	if (! options.getAll() && lastSolution != null) 
+	    System.out.print(lastSolution.toString());
+
 	printStatisticsForSingleSearch(false, Result);
 
     }
@@ -601,7 +621,7 @@ public class Solve implements ParserTreeConstants {
             }
         }
 
-	System.out.println("\n%% Model variables : "+ (store.size()+NumberBoolVariables)+
+	System.out.println("%% Model variables : "+ (store.size()+NumberBoolVariables)+
 			   "\n%% Model constraints : "+initNumberConstraints+
 			   "\n\n%% Search CPU time : " + (searchTimeMeter.getThreadCpuTime(tread.getId()) - startCPU)/(long)1e+6 + "ms"+
 			   "\n%% Search nodes : "+nodes+
@@ -612,6 +632,8 @@ public class Solve implements ParserTreeConstants {
 			   "\n%% Max search depth : "+depth+
 			   "\n%% Number solutions : "+ solutions 
 			   );
+	// System.out.println("\n%% " + store.failConstraintsStatistics);
+	// System.out.println("\n%% " + store.failConstraintsIdStatistics);
 	}
 
     }
@@ -621,83 +643,36 @@ public class Solve implements ParserTreeConstants {
 
 	DepthFirstSearch<Var>[] intAndSetSearch = new DepthFirstSearch[4];
 
-	Var[] int_search_variables = null,
-	    set_search_variables = null,
-	    bool_search_variables = null;
-	FloatVar[] float_search_variables = null;
-
-	// collect integer & bool variables for search
-	int int_varSize = 0, bool_varSize=0;
-	for (int i=0; i<dictionary.defaultSearchVariables.size(); i++)
-	    if (dictionary.defaultSearchVariables.get(i) instanceof org.jacop.core.BooleanVar)
-		bool_varSize++;
-	    else
-		int_varSize++;
-
-	for (int i=0; i<dictionary.defaultSearchArrays.size(); i++)
-	    if (dictionary.defaultSearchArrays.get(i).length != 0)
-		if (dictionary.defaultSearchArrays.get(i)[0]  instanceof org.jacop.core.BooleanVar)
-		    bool_varSize += dictionary.defaultSearchArrays.get(i).length;
-		else
-		    int_varSize += dictionary.defaultSearchArrays.get(i).length;
-
-
-	int_search_variables = new IntVar[int_varSize];
-	bool_search_variables = new IntVar[bool_varSize];
-
-	int bool_n=0, int_n=0;
-	for (int i=0; i<dictionary.defaultSearchArrays.size(); i++)
-	    for (int j=0; j<dictionary.defaultSearchArrays.get(i).length; j++) {
-		Var v = dictionary.defaultSearchArrays.get(i)[j];
- 		if (v  instanceof org.jacop.core.BooleanVar) 
- 		    bool_search_variables[bool_n++] = v;
-		else
- 		    int_search_variables[int_n++] = v;
-	    }
-	for (int i=0; i<dictionary.defaultSearchVariables.size(); i++) {
-	    Var v = dictionary.defaultSearchVariables.get(i);
-	    if (v  instanceof org.jacop.core.BooleanVar) 
-		bool_search_variables[bool_n++] = v;
-	    else
-		int_search_variables[int_n++] = v;
+	DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
+	
+	if (! options.complementarySearch() && label != null) {
+	    // ==== Collect ALL OUTPUT variables ====
+	    searchVars.outputVars();
 	}
- 	java.util.Arrays.sort(int_search_variables, new DomainSizeComparator<Var>());
 
-	// collect set variables for search
-	int n=0;
-	int varSize = dictionary.defaultSearchSetVariables.size();
-	for (int i=0; i<dictionary.defaultSearchSetArrays.size(); i++)
-	    varSize += dictionary.defaultSearchSetArrays.get(i).length;
+	Var[] int_search_variables = searchVars.getIntVars();
+	Var[] set_search_variables = searchVars.getSetVars();
+	Var[] bool_search_variables = searchVars.getBoolVars();
+	FloatVar[] float_search_variables = searchVars.getFloatVars();
 
-	set_search_variables = new SetVar[varSize];
-	for (int i=0; i<dictionary.defaultSearchSetArrays.size(); i++)
-	    for (int j=0; j<dictionary.defaultSearchSetArrays.get(i).length; j++)
-		set_search_variables[n++] = dictionary.defaultSearchSetArrays.get(i)[j];
-	for (int i=0; i<dictionary.defaultSearchSetVariables.size(); i++)
-	    set_search_variables[n++] = dictionary.defaultSearchSetVariables.get(i);
-	// =====
+	// if there are no output variables collect GUESSED SEARCH
+	// VARIABLES override selection if option
+	// "complementarySearch" or no search is defined is defined.
+	if ( (int_search_variables.length == 0 && bool_search_variables.length == 0 &&
+	      set_search_variables.length == 0 && float_search_variables.length == 0) ||
+	     options.complementarySearch() ) {
 
+	    searchVars.defaultVars();
 
-	// collect float variables for search
-	n=0;
-	varSize = dictionary.defaultSearchFloatVariables.size();
-	for (int i=0; i<dictionary.defaultSearchFloatArrays.size(); i++)
-	    varSize += dictionary.defaultSearchFloatArrays.get(i).length;
-
-	float_search_variables = new FloatVar[varSize];
-	for (int i=0; i<dictionary.defaultSearchFloatArrays.size(); i++)
-	    for (int j=0; j<dictionary.defaultSearchFloatArrays.get(i).length; j++)
-		float_search_variables[n++] = (FloatVar)dictionary.defaultSearchFloatArrays.get(i)[j];
-	for (int i=0; i<dictionary.defaultSearchFloatVariables.size(); i++)
-	    float_search_variables[n++] = (FloatVar)dictionary.defaultSearchFloatVariables.get(i);
-	// =====
-
+	    int_search_variables = searchVars.getIntVars();
+	    set_search_variables = searchVars.getSetVars();
+	    bool_search_variables = searchVars.getBoolVars();
+	    float_search_variables = searchVars.getFloatVars();
+	}
+	
 	if (opt.getVerbose()) {
-	    System.out.println ("%% default int search variables = " + java.util.Arrays.asList(int_search_variables));
-	    System.out.println ("%% default boolean search variables = " + java.util.Arrays.asList(bool_search_variables));
-	    System.out.println ("%% default set search variables = " + java.util.Arrays.asList(set_search_variables));
-	    System.out.println ("%% default float search variables = " + java.util.Arrays.asList(float_search_variables));
-// 	System.out.println ("cost = " + costVariable);
+	   System.out.println(searchVars);
+	   // System.out.println ("cost = " + costVariable);
 	}
 
 	DepthFirstSearch<Var> lastSearch = label;
@@ -706,7 +681,7 @@ public class Solve implements ParserTreeConstants {
 	    // add search containing int variables to be sure that they get a value
  	    SelectChoicePoint<Var> intSelect = new SimpleSelect<Var>(int_search_variables, 
    								     null,
-//    								     new JaCoP.search.MostConstrainedStatic<Var>(), 
+//    								     new org.jacop.search.MostConstrainedStatic<Var>(), 
 								     new IndomainMin());
 	    if (variable_selection == null)
 		variable_selection = intSelect;
@@ -724,15 +699,6 @@ public class Solve implements ParserTreeConstants {
 		    intSearch.setOptimize( true);
 		}
 	    }
-	    // else
-	    // 	intSearch.setSolutionListener(new EmptyListener<Var>());
-
-	    // if (searchAll) {
-  	    // 	intSearch.getSolutionListener().searchAll(true); 
-	    // 	intSearch.getSolutionListener().recordSolutions(false);
-	    // }	    
-	    // if (options.getNumberSolutions() > 0)
-	    // 	intSearch.getSolutionListener().setSolutionLimit(options.getNumberSolutions());
 
 	    // time-out option
 	    int to = options.getTimeOut();
@@ -747,7 +713,7 @@ public class Solve implements ParserTreeConstants {
 	    // add search containing boolean variables to be sure that they get a value
 	    SelectChoicePoint<Var> boolSelect = new SimpleSelect<Var>(bool_search_variables, 
 								      null,
-// 								      new JaCoP.search.MostConstrainedStatic<Var>(), 
+// 								      new org.jacop.search.MostConstrainedStatic<Var>(), 
 								      new IndomainMin());
 	    if (variable_selection == null)
 		variable_selection = boolSelect;
@@ -779,7 +745,7 @@ public class Solve implements ParserTreeConstants {
 	    DepthFirstSearch<Var> setSearch = new DepthFirstSearch<Var>();
 	    SelectChoicePoint<Var> setSelect = new SimpleSelect<Var>(set_search_variables, 
 								     null,
-// 								     new JaCoP.search.MostConstrainedStatic<Var>(), 
+// 								     new org.jacop.search.MostConstrainedStatic<Var>(), 
 								     new IndomainSetMin());
 	    if (variable_selection == null)
 		variable_selection = setSelect;
@@ -834,12 +800,14 @@ public class Solve implements ParserTreeConstants {
 	    set_search_variables.length == 0 &&
 	    float_search_variables.length == 0) {
 
+	    
 	    printSolution();
 
-	    System.out.println("----------");
+	    if (lastSolution != null)
+		System.out.print(lastSolution.toString());
 
 	    if (options.getStatistics())
-		System.out.println("\n%% Model variables : "+ (store.size()+ NumberBoolVariables) +
+		System.out.println("%% Model variables : "+ (store.size()+ NumberBoolVariables) +
 				   "\n%% Model constraints : "+initNumberConstraints+
 				   "\n\n%% Search CPU time : " + "0ms"+
 				   "\n%% Search nodes : 0"+
@@ -850,7 +818,8 @@ public class Solve implements ParserTreeConstants {
 				   "\n%% Max search depth : 0"+
 				   "\n%% Number solutions : 1"
 				   );
-	    System.exit(0);
+
+	    throw new TrivialSolution();
 	}
 
 	return intAndSetSearch;
@@ -1044,6 +1013,9 @@ public class Solve implements ParserTreeConstants {
 	    System.exit(0);
 	}
 
+	if (! options.getAll() && lastSolution != null)
+	    System.out.print(lastSolution.toString());
+	
 	printStatisticsForSeqSearch(false, Result);
     
     }
@@ -1104,7 +1076,7 @@ public class Solve implements ParserTreeConstants {
             solutions = label.getSolutionListener().solutionsNo();
         }
 
-	System.out.println("\n%% Model variables : "+ (store.size()+ NumberBoolVariables) +
+	System.out.println("%% Model variables : "+ (store.size()+ NumberBoolVariables) +
 			   "\n%% Model constraints : "+initNumberConstraints+
 			   "\n\n%% Search CPU time : " + (searchTimeMeter.getThreadCpuTime(tread.getId()) - startCPU)/(long)1e+6 + "ms"+
 			   "\n%% Search nodes : "+nodes+
@@ -1116,7 +1088,8 @@ public class Solve implements ParserTreeConstants {
 			   "\n%% Number solutions : "+ solutions 
 			   );
 	}
-
+	// System.out.println("\n%% " + store.failConstraintsStatistics);
+	// System.out.println("\n%% " + store.failConstraintsIdStatistics);
     }
 
     boolean anyTimeOutOccured(ArrayList<Search<Var>> list_seq_searches) {
@@ -1240,7 +1213,8 @@ public class Solve implements ParserTreeConstants {
 	// T = System.currentTimeMillis();
 	// System.out.println("% Search time since last solution : " + (T - TOld)/1000 + " s");
 	// TOld = T;
-
+	StringBuffer printBuffer = new StringBuffer();
+	
 	if (dictionary.outputVariables.size() > 0)
 	    for (int i=0; i<dictionary.outputVariables.size(); i++) {
 		Var v = dictionary.outputVariables.get(i);
@@ -1258,7 +1232,8 @@ public class Solve implements ParserTreeConstants {
 			}
 		    else
 			boolVar += "false..true";
-		    System.out.println(boolVar+";");
+
+		    printBuffer.append(boolVar).append(";\n");
 		}
 		else if (v instanceof SetVar) {
 		    // print set variables
@@ -1276,16 +1251,26 @@ public class Solve implements ParserTreeConstants {
 		    }
 		    else
 			setVar += v.dom().toString();
-		    System.out.println(setVar+";");
+
+		    printBuffer.append(setVar).append(";\n");
 		}
 		else
-		    System.out.println(v+";");
+
+		    printBuffer.append(v).append(";\n");
 	    }
 
 	for (int i=0; i<dictionary.outputArray.size(); i++) {
 	    OutputArrayAnnotation a = dictionary.outputArray.get(i);
-	    System.out.println(a);
+
+	    printBuffer.append(a).append("\n");
 	}
+
+	printBuffer.append("----------\n");
+	
+	if (options.getAll())
+	    System.out.print(printBuffer.toString());
+	else // store the print-out
+	    lastSolution = printBuffer;
     }
 
     int getKind(String k) {
@@ -1494,7 +1479,7 @@ public class Solve implements ParserTreeConstants {
 	    FinalNumberSolutions++;
 
 	    printSolution();
-	    System.out.println("----------");
+	    // System.out.println("----------");
 
 	    return returnCode;
 	}

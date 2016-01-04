@@ -300,7 +300,7 @@ public class BoolClause extends PrimitiveConstraint {
 
 	for (int i = 0; i < lx; i++)
 	    x[i].domain.in(store.level, x[i], 0, 0);
-	for (int i = 0; i < lx; i++)
+	for (int i = 0; i < ly; i++)
 	    y[i].domain.in(store.level, y[i], 1, 1);
 
 	removeConstraint();

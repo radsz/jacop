@@ -214,7 +214,7 @@ public final class StatModule
 
 	/**
 	 * Create a StatModule. It can schedule
-	 * @param threaded
+	 * @param threaded true if threaded
 	 */
 	public StatModule(boolean threaded) {
 		this.threaded = threaded;

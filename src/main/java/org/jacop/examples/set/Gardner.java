@@ -59,7 +59,7 @@ public class Gardner extends ExampleSet {
 
 	/**
 	 * It executes the program which solves this gardner problem.
-	 * @param args
+	 * @param args parameters (none)
 	 */
 	public static void main(String args[]) {
 

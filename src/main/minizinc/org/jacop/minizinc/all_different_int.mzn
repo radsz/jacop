@@ -8,3 +8,6 @@ predicate all_different_int(array[int] of var int: x) =
 
 
 predicate jacop_alldiff(array[int] of var int: x);
+
+% predicate jacop_alldiff_reif(array[int] of var int: x, var bool: n) =
+%     abort("Reified all_different/1 is not supported.");

@@ -71,6 +71,7 @@ public class InputOrderSelect<T extends Var> implements SelectChoicePoint<T> {
 	 * @param variables a list of variables which must be assigned a value by search.
 	 * @param indomain the indomain heuristic for assigning values to variables.
 	 */
+	@SuppressWarnings("unchecked")
 	public InputOrderSelect(Store store, 
 							T[] variables,
 							Indomain<T> indomain) {

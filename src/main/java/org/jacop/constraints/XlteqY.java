@@ -39,7 +39,7 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 
 /**
- * Constraint X #<= Y
+ * Constraint X {@literal <=} Y
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.3
@@ -50,12 +50,12 @@ public class XlteqY extends PrimitiveConstraint {
 	static int idNumber = 1;
 
 	/**
-	 * It specifies variable x in the constraint x <= y.
+	 * It specifies variable x in the constraint x {@literal <=} y.
 	 */
 	public IntVar x;
 	
 	/**
-	 * It specifies variable y in the constraint x <= y.
+	 * It specifies variable y in the constraint x {@literal <=} y.
 	 */
 	public IntVar y;
 
@@ -66,7 +66,7 @@ public class XlteqY extends PrimitiveConstraint {
 	public static String[] xmlAttributes = {"x", "y"};
 
 	/**
-	 * It constructs the constraint X <= Y.
+	 * It constructs the constraint X {@literal <=} Y.
 	 * @param x variable x.
 	 * @param y variable y.
 	 */

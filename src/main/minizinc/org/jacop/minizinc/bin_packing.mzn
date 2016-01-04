@@ -19,7 +19,10 @@ predicate bin_packing(int: c,
 	   array[cap_index] of var 0..c: cap
 	 }
 	 in 
-	   jacop_bin_packing(bin, cap, w)
+	   jacop_bin_packing(bin, cap, w, lb_array(bin))
     ));
 
-predicate jacop_bin_packing(array[int] of var int: bin, array[int] of var int: cap, array[int] of int: w);
+predicate jacop_bin_packing(array[int] of var int: bin, array[int] of var int: cap, array[int] of int: w, int: min_bin);
+
+% predicate jacop_bin_packing_reif(array[int] of var int: bin, array[int] of var int: cap, array[int] of int: w, int: min_bin, var bool: b) =
+%     abort("Reified bin_packing/3 is not supported.");

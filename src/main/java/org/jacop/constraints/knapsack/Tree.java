@@ -122,7 +122,7 @@ public class Tree {
 
 	/**
 	 * It creates a tree by making a shallow copy.
-	 * @param tree
+	 * @param tree tree to be constructed
 	 */
 	public Tree(Tree tree) {
 		this.root = tree.root;

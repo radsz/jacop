@@ -107,7 +107,7 @@ public class ExtensionalConflictVA extends Constraint {
 	 * Partial constructor which stores variables involved in a constraint but
 	 * does not get information about tuples yet. The tuples must set separately.
 	 * 
-	 * @param list 
+	 * @param list list of variables for constraint 
 	 */
 
 	public ExtensionalConflictVA(IntVar[] list) {
@@ -127,8 +127,8 @@ public class ExtensionalConflictVA extends Constraint {
 	 * tuples parameter will be reflected in the constraint behavior. Changes to
 	 * tuples should not performed under any circumstances. The tuples array is
 	 * not copied to save memory and time.
-	 * @param list 
-	 * @param tuples 
+	 * @param list list of variables for the conflict constraint
+	 * @param tuples list of forbidden tuples 
 	 */
 
 	public ExtensionalConflictVA(IntVar[] list, int[][] tuples) {
@@ -821,7 +821,7 @@ public class ExtensionalConflictVA extends Constraint {
 	 * specified in xmlAttributes. 
 	 *  
 	 * @param tf a place to write the content of the object. 
-	 * @throws SAXException
+	 * @throws SAXException exception from org.xml.sax package
 	 */
 	public void toXML(TransformerHandler tf) throws SAXException {
 		

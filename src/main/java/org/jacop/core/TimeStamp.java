@@ -85,7 +85,7 @@ public class TimeStamp<T> {
 
 	/**
 	 * Specify  least number of different values to be used by Timestamp.
-	 * @param minCapacity
+	 * @param minCapacity capacity that will be ensured
 	 */
 	@SuppressWarnings("unchecked")
 	public void ensureCapacity(int minCapacity) {

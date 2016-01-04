@@ -18,7 +18,7 @@ public final class IntPriorityQueue {
 
 	/**
 	 * the priority of i is now the old priority (or 0) + the amount. The
-	 * priority stays >= 0.
+	 * priority stays {@literal >=} 0.
 	 * @param i			the int of which we want to modify the priority
 	 * @param amount	the amount by which we modify the priority
 	 * @return	the new priority of i
@@ -30,6 +30,8 @@ public final class IntPriorityQueue {
 	
 	/**
 	 * equivalent to addPriority(i, 1)
+	 * @param i			the int of which we want to modify the priority
+	 * @return	the new priority of i
 	 */
 	public int percolateUp(int i) {
 		// TODO
@@ -38,6 +40,8 @@ public final class IntPriorityQueue {
 	
 	/**
 	 * equivalent to addPriority(i, -1);
+	 * @param i			the int of which we want to modify the priority
+	 * @return	the new priority of i
 	 */
 	public int percolateDown(int i) {
 		// TODO
@@ -77,6 +81,8 @@ public final class IntPriorityQueue {
 	
 	/**
 	 * access the element with highest priority, or 0 if it is empty
+	 *
+	 * @return the element with highest priority, or 0 if it is empty
 	 */
 	public int getTop() {
 		// TODO
@@ -85,6 +91,8 @@ public final class IntPriorityQueue {
 	
 	/**
 	 * checks if the priority queue is empty
+	 *
+	 * @return true if the priority queue is empty and false otherwise
 	 */
 	public boolean isEmpty() {
 		return root == null;

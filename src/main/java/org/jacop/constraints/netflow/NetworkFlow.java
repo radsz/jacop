@@ -160,7 +160,7 @@ public class NetworkFlow extends Constraint {
 	}
 
 	/***************************/
-	/** Search & Backtracking **/
+	/** Search {@literal &} Backtracking **/
 
 	@Override
 	public void queueVariable(int level, Var variable) {

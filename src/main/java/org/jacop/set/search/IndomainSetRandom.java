@@ -59,7 +59,7 @@ public class IndomainSetRandom<T extends SetVar> implements Indomain<T> {
 	/**
 	 * It creates random indomain heuristic according to the provided random 
 	 * generator.
-	 * @param seed
+	 * @param seed seed for random number genrator
 	 */
 	public IndomainSetRandom(Random seed) {
 		this.seed = seed;

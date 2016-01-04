@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
+import org.jacop.core.Interval;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 
@@ -96,6 +97,8 @@ public class XmulYeqZ extends Constraint {
 		this.x = x;
 		this.y = y;
 		this.z = z;
+
+		checkForOverflow();
 	}
 
 	@Override
@@ -115,11 +118,11 @@ public class XmulYeqZ extends Constraint {
 		if (xSquare)  // X^2 = Z
 			do {
 				
-				store.propagationHasOccurred = false;
-
 				// Bounds for Z
-				IntervalDomain zBounds = IntDomain.mulBounds(x.min(), x.max(), x.min(), x.max());
-				z.domain.in(store.level, z, zBounds);
+				Interval zBounds = IntDomain.mulBounds(x.min(), x.max(), x.min(), x.max());
+				z.domain.in(store.level, z, zBounds.min(), zBounds.max());
+
+				store.propagationHasOccurred = false;
 
 				// Bounds for X
 
@@ -137,27 +140,29 @@ public class XmulYeqZ extends Constraint {
 			} while(store.propagationHasOccurred);
 		else    // X*Y=Z
 			do {
+
+				// Bounds for X
+ 				Interval xBounds = IntDomain.divIntBounds(z.min(), z.max(), y.min(), y.max());
+
+  				x.domain.in(store.level, x, xBounds.min(), xBounds.max());
 				
 				store.propagationHasOccurred = false;
 
-				// Bounds for X
- 				IntervalDomain xBounds = IntDomain.divIntBounds(z.min(), z.max(), y.min(), y.max());
-
-  				x.domain.in(store.level, x, xBounds);
-
 				// Bounds for Y
- 				IntervalDomain yBounds = IntDomain.divIntBounds(z.min(), z.max(), x.min(), x.max());
+ 				Interval yBounds = IntDomain.divIntBounds(z.min(), z.max(), x.min(), x.max());
 
-  				y.domain.in(store.level, y, yBounds);
+  				y.domain.in(store.level, y, yBounds.min(), yBounds.max());
 
 				// Bounds for Z
-				IntervalDomain zBounds = IntDomain.mulBounds(x.min(), x.max(), y.min(), y.max());
+				Interval zBounds = IntDomain.mulBounds(x.min(), x.max(), y.min(), y.max());
 
-				z.domain.in(store.level, z, zBounds);
+				z.domain.in(store.level, z, zBounds.min(), zBounds.max());
 
 
 			} while (store.propagationHasOccurred);
-		
+
+		if (x.singleton(0) || y.singleton(0))
+		    removeConstraint();
 	}
 
 	@Override
@@ -201,7 +206,15 @@ public class XmulYeqZ extends Constraint {
 		return id() + " : XmulYeqZ(" + x + ", " + y + ", " + z + " )";
 	}
 
+        private void checkForOverflow() {
 
+	    int n = IntDomain.multiply(x.min(), y.min());
+	    n = IntDomain.multiply(x.min(), y.max());
+	    n = IntDomain.multiply(x.max(), y.min());
+	    n = IntDomain.multiply(x.max(), y.max());
+
+	}
+	
 	@Override
 	public void increaseWeight() {
 		if (increaseWeight) {

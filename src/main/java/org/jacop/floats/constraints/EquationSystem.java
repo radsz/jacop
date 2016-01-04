@@ -72,7 +72,8 @@ public class EquationSystem extends Constraint {
 
     /**
      * It constructs the constraint EquationSystem. 
-     * @param f  a variable that defines an eqation 
+     * @param store current store
+     * @param f a variable that defines an eqation
      * @param x  variables of eqation system
      */
     public EquationSystem(Store store, FloatVar[] f, FloatVar[] x) {

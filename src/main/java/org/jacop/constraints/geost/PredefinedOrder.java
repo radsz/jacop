@@ -70,7 +70,7 @@ public class PredefinedOrder implements LexicographicalOrder {
 	 * the dimension ordering and the most significant dimension. 
 	 * 
 	 * @param ordering how dimensions are stored within each compared point.
-	 * @param mostSignificantDimension
+	 * @param mostSignificantDimension the most significant dimension
 	 */
 	public PredefinedOrder(int[] ordering, int mostSignificantDimension) {
 		

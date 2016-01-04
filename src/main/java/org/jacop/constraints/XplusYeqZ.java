@@ -39,7 +39,7 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 
 /**
- * Constraint X + Y #= Z
+ * Constraint X + Y = Z
  * 
  * Bound consistency is used.
  * 

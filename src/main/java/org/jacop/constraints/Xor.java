@@ -62,6 +62,10 @@ public class Xor extends PrimitiveConstraint {
 	 */
 	public IntVar b;
 
+    boolean needQueueVariable = false;
+     
+    boolean needRemoveLevelLate = false;
+
 	/**
 	 * It specifies the arguments required to be saved by an XML format as well as 
 	 * the constructor being called to recreate an object from an XML format.
@@ -88,6 +92,20 @@ public class Xor extends PrimitiveConstraint {
 		this.c = c;
 		this.b = b;
 
+        try {
+            c.getClass().getDeclaredMethod("queueVariable", int.class, Var.class);
+            needQueueVariable = true;
+        } catch (NoSuchMethodException e) {
+            needQueueVariable = false;
+        }
+
+
+        try {
+            c.getClass().getDeclaredMethod("removeLevelLate", int.class);
+            needRemoveLevelLate = true;
+        } catch (NoSuchMethodException e) {
+            needRemoveLevelLate = false;
+        }
 	}
 
 	@Override
@@ -208,6 +226,7 @@ public class Xor extends PrimitiveConstraint {
 		while (!variables.isEmpty()) {
 			Var V = variables.removeFirst();
 			V.putModelConstraint(this, getConsistencyPruningEvent(V));
+			queueVariable(store.level, V);
 		}
 
 		c.include(store);
@@ -267,7 +286,21 @@ public class Xor extends PrimitiveConstraint {
 		|| (bDom.max() == 0 && c.notSatisfied());
 	}
 
-	@Override
+    @Override
+    public void queueVariable(int level, Var variable) {
+
+	if (needQueueVariable)
+	    if (!variable.equals(b))
+		c.queueVariable(level, variable);
+
+    }
+
+    public void removeLevelLate(int level) {
+	if (needRemoveLevelLate)
+	    c.removeLevelLate(level);
+    }
+
+    @Override
 	public void increaseWeight() {
 		if (increaseWeight) {
 			b.weight++;

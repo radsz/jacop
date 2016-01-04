@@ -149,7 +149,7 @@ public class SGMPCSearch {
 	search = new SimpleImprovementSearch<IntVar>(store, vars, cost);
     }
 
-    public SGMPCSearch(Store store, IntVar[] vars, IntVar cost, ImproveSolution search) {
+    public SGMPCSearch(Store store, IntVar[] vars, IntVar cost, ImproveSolution<IntVar> search) {
 
     	this.store = store;
     	this.vars = vars;

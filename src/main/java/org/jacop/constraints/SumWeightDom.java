@@ -55,7 +55,10 @@ import org.jacop.core.IntervalEnumeration;
  * @version 3.1
  */
 
-public class SumWeightDom extends Constraint {
+/**
+ * @deprecated  As of release 4.3.1 replaced by LinearIntDom constraint.
+ */
+@Deprecated public class SumWeightDom extends Constraint {
 
     static int counter = 1;
 

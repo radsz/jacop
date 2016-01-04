@@ -117,10 +117,10 @@ public final class FloatInterval {
      */
     public boolean singleton() {
 
-	// double large = (Math.abs(max) >= Math.abs(min)) ? max : min;  
-	double small = (Math.abs(max) >= Math.abs(min)) ? min : max;  
+	double large = (Math.abs(max) >= Math.abs(min)) ? max : min;  
+	// double small = (Math.abs(max) >= Math.abs(min)) ? min : max;  
 
-	return (max-min) <= FloatDomain.epsilon(small);
+	return (max-min) <= FloatDomain.epsilon(large);
 
     }
 

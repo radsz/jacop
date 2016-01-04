@@ -82,7 +82,7 @@ public class FilterBenchmark {
 	 * algorithmic pipelining, multiplier pipelining, 
 	 * chaining, no special techniques).
 	 * 
-	 * @param args
+	 * @param args parameters (none)
 	 */
 	public static void main(String args[]) {
 

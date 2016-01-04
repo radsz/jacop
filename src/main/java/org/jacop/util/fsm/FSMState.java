@@ -60,7 +60,7 @@ public class FSMState {
 	 * It constructs a FSM state.
 	 * 
 	 * @param transitions it specifies transition 
-	 * @param id
+	 * @param id state id
 	 */
 	public FSMState(HashSet<FSMTransition> transitions, int id) {
 		this.transitions = transitions;

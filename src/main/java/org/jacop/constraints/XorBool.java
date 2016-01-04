@@ -40,7 +40,7 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 
 /**
- * Constraint ( x_0 xor x_1 xor ... xor x_n ) <=> y
+ * Constraint ( x_0 xor x_1 xor ... xor x_n ){@literal <=>} y
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.3
@@ -79,7 +79,7 @@ public class XorBool extends PrimitiveConstraint {
 	 */
     public static String[] xmlAttributes = {"x", "y"};
 
-	/** It constructs constraint (x_0 xor x_1 xor ... xor x_n ) <=> y.
+	/** It constructs constraint (x_0 xor x_1 xor ... xor x_n ) {@literal <=>} y.
 	 * @param x variables x.
 	 * @param y variable y.
 	 */

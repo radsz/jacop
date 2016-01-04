@@ -130,8 +130,8 @@ public class Assignment extends Constraint {
 	 * d[x[i]-shiftD]=i+shiftX. 
 	 * @param xs arraylist of variables x
 	 * @param ds arraylist of variables d
-	 * @param shiftX 
-	 * @param shiftD 
+	 * @param shiftX shift for parameter xs
+	 * @param shiftD shift for parameter ds
 	 */
 	public Assignment(ArrayList<? extends IntVar> xs,
 			ArrayList<? extends IntVar> ds, 
@@ -437,7 +437,8 @@ public class Assignment extends Constraint {
 			if (i < d.length - 1)
 				result.append(", ");
 		}
-		result.append("])");
+		result.append("], ");
+		result.append(shiftX + ", " + shiftD + ")");
 
 		return result.toString();
 	}

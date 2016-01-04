@@ -37,7 +37,7 @@ import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.And;
 import org.jacop.constraints.Or;
 import org.jacop.constraints.Reified;
-import org.jacop.constraints.Sum;
+import org.jacop.constraints.SumInt;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XneqC;
@@ -159,7 +159,7 @@ public class Tunapalooza extends ExampleFD {
 
 		IntVar two = new IntVar(store, "2", 2, 2);
 		IntVar sum[] = { statement1, statement2, statement3 };
-		store.impose(new Sum(sum, two));
+		store.impose(new SumInt(store, sum, "==", two));
 
 		for (IntVar v : sum)
 			vars.add(v);

@@ -1268,27 +1268,27 @@ public abstract class IntDomain extends Domain {
 	/* 
 	 * Finds result interval for multiplication of {a..b} * {c..d}
 	 */
-	public final static IntervalDomain mulBounds(int a, int b, int c, int d) {
+	public final static Interval mulBounds(int a, int b, int c, int d) {
 		
 		int min = Math.min(Math.min(multiply(a,c),multiply(a,d)), Math.min(multiply(b,c),multiply(b,d)));
 		int max = Math.max(Math.max(multiply(a,c),multiply(a,d)), Math.max(multiply(b,c),multiply(b,d)));
 		
-		return new IntervalDomain(min, max);
+		return new Interval(min, max);
 	}
 
 	/* 
 	 * Finds result interval for division of {a..b} / {c..d} for div and mod constraints
 	 */
-	public final static IntervalDomain divBounds (int a, int b, int c, int d) {
+	public final static Interval divBounds (int a, int b, int c, int d) {
 
 		int min=0, max=0;
 
-		IntervalDomain result = null;
+		Interval result = null;
 
 		if (a <= 0 && b >= 0 && c <= 0 && d >= 0) { // case 1
 			min = IntDomain.MinInt;
 			max = IntDomain.MaxInt;
-			result = new IntervalDomain(min, max);
+			result = new Interval(min, max);
 		}
 
 		else if (c == 0 && d == 0 && (a > 0 || b < 0)) // case 2
@@ -1297,7 +1297,7 @@ public abstract class IntDomain extends Domain {
 		else if ( c < 0 && d > 0 && (a > 0 || b < 0)) { // case 3
 			max = Math.max(Math.abs(a), Math.abs(b));
 			min = -max;
-			result = new IntervalDomain(min, max);	    
+			result = new Interval(min, max);	    
 		}
 
 		else if (c == 0 && d != 0 && (a > 0 || b < 0)) // case 4 a
@@ -1309,7 +1309,7 @@ public abstract class IntDomain extends Domain {
 			int ac = a/c, ad = a/d, bc = b/c, bd =b/d;
 			min = Math.min(Math.min(ac, ad), Math.min(bc, bd));
 			max = Math.max(Math.max(ac, ad), Math.max(bc, bd));
-			result = new IntervalDomain(min, max);
+			result = new Interval(min, max);
 		}
 
 		return result;
@@ -1318,15 +1318,15 @@ public abstract class IntDomain extends Domain {
 	/* 
 	 * Finds result interval for division of {a..b} / {c..d} for mul constraints
 	 */
-	public final static IntervalDomain divIntBounds (int a, int b, int c, int d) {
+	public final static Interval divIntBounds (int a, int b, int c, int d) {
 		int min=0, max=0;
 
-		IntervalDomain result=null;
+		Interval result=null;
 
 		if (a <= 0 && b >= 0 && c <= 0 && d >= 0) { // case 1
 			min = IntDomain.MinInt;
 			max = IntDomain.MaxInt;
-			result = new IntervalDomain(min, max);
+			result = new Interval(min, max);
 		}
 
 		else if (c == 0 && d == 0 && (a > 0 || b < 0)) // case 2
@@ -1335,7 +1335,7 @@ public abstract class IntDomain extends Domain {
 		else if ( c < 0 && d > 0 && (a > 0 || b < 0)) { // case 3
 			max = Math.max(Math.abs(a), Math.abs(b));
 			min = -max;
-			result = new IntervalDomain(min, max);	    
+			result = new Interval(min, max);	    
 		}
 
 		else if (c == 0 && d != 0 && (a > 0 || b < 0)) // case 4 a
@@ -1351,7 +1351,7 @@ public abstract class IntDomain extends Domain {
 			min = (int)Math.round( Math.ceil( low ) );
 			max = (int)Math.round( Math.floor( high ));
 			if (min > max) throw Store.failException;
-			result = new IntervalDomain(min, max);
+			result = new Interval(min, max);
 		}
 
 		return result;

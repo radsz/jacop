@@ -25,7 +25,7 @@ predicate bin_packing_capa(array[int] of int: c,
 	 }
 	 in 
 	    forall (i in index_set(c) ) ( cap[i] <= c[i]) /\
-	    jacop_bin_packing(bin, cap, w)
+	    jacop_bin_packing(bin, cap, w, lb_array(bin))
     )));
 
 %-----------------------------------------------------------------------------%

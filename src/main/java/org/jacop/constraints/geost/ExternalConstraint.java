@@ -100,7 +100,7 @@ public interface ExternalConstraint {
 	 * Handler method called by the Geost kernel when the domain of the object changes.
 	 * Use this method to make changes to the state of the constraint (and of its relative internal
 	 * constraints) if needed.
-	 * @param o
+	 * @param o the object
 	 */
 	public void onObjectUpdate(GeostObject o);
 	

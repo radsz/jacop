@@ -89,7 +89,7 @@ public final class Node {
 	 * 
 	 * @param that
 	 *            another node
-	 * @return the least common ancestor of this & that
+	 * @return the least common ancestor of this {@literal &} that
 	 */
 	public Node lca(Node that) {
 		Node i = this;

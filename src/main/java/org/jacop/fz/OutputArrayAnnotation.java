@@ -86,6 +86,14 @@ public class OutputArrayAnnotation {
 	return indexes.get(i);
     }
 
+    boolean contains(Var x) {
+
+	for (Var v : array) 
+	    if (x.equals(v))
+		return true;
+	return false;
+    }
+
     public String toString() {
 
 	StringBuilder s = new StringBuilder(id + " = array"+indexes.size() + "d(");

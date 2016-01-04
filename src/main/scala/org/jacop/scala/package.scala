@@ -104,45 +104,65 @@ package object scala {
   }
 
 /**
-* Wrapper for [[org.jacop.constraints.Sum]].
+* Wrapper for [[org.jacop.constraints.SumInt]] and [[org.jacop.constraints.SumBool]].
 *
 * @param res array of variables to be summed up. 
 * @param result summation result. 
 */
   def sum[T <: org.jacop.core.IntVar](res: List[T], result: IntVar)(implicit m: ClassTag[T])  {
-     val c = new Sum(res.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], result)
+    val c = if (boolSum(res) ) new SumBool(impModel, res.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], "==", result)
+	    else new SumInt(impModel, res.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], "==", result)
      if (trace) println(c)
      impModel.impose( c )
    }
 
 /**
-* Wrapper for [[org.jacop.constraints.Sum]].
+* Wrapper for [[org.jacop.constraints.Sum]] and [[org.jacop.constraints.SumBool]].
 *
 * @param res array of variables to be summed up. 
 * @return summation result. 
 */
   def sum[T <: org.jacop.core.IntVar](res: List[T])(implicit m: ClassTag[T]) : IntVar = {
     val result = new IntVar()
-    val c = new Sum(res.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], result)
+    val c = if (boolSum(res) ) new SumBool(impModel, res.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], "==", result)
+	    else new SumInt(impModel, res.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], "==", result)
     impModel.constr += c
     result
   }
 
+  def boolSum[T <: org.jacop.core.IntVar](vs: List[T]) : Boolean = {
+    for (v <- vs) 
+      if (v.min() < 0 || v.max() > 1)
+	return false
+    return true
+  }
+
+
 /**
-* Wrapper for [[org.jacop.constraints.SumWeight]].
+* Wrapper for [[org.jacop.constraints.LinearInt]].
 *
 * @param res array of variables to be summed up. 
 * @param w array of weights. 
 * @param result summation result. 
 */
   def weightedSum[T <: org.jacop.core.IntVar](res: List[T], w: Array[Int], result: IntVar)(implicit m: ClassTag[T]) {
-    val c = new SumWeight(res.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], w, result)
+    val vect = new Array[org.jacop.core.IntVar](res.length + 1)
+    val weight = new Array[Int](res.length + 1)
+
+    for ( i <- 0 to (res.length - 1)) {
+      vect(i) = res(i).asInstanceOf[org.jacop.core.IntVar]
+      weight(i) = 1
+    }
+    vect(res.length) = result.asInstanceOf[org.jacop.core.IntVar]
+    weight(res.length) = -1
+
+    val c = new LinearInt(impModel, vect.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], weight, "==", 0)
     if (trace) println(c)
     impModel.impose( c )
   }
 
 /**
-* Wrapper for [[org.jacop.constraints.SumWeight]].
+* Wrapper for [[org.jacop.constraints.LinearInt]].
 *
 * @param res array of variables to be summed up. 
 * @param w array of weights. 
@@ -150,27 +170,47 @@ package object scala {
 */
   def sum[T <: org.jacop.core.IntVar](res: List[T], w: Array[Int])(implicit m: ClassTag[T]) : IntVar = {
     val result = new IntVar()
-    val c = new SumWeight(res.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], w, result)
+    val vect = new Array[org.jacop.core.IntVar](res.length + 1)
+    val weight = new Array[Int](res.length + 1)
+
+    for ( i <- 0 to (res.length - 1)) {
+      vect(i) = res(i).asInstanceOf[org.jacop.core.IntVar]
+      weight(i) = 1
+    }
+    vect(res.length) = result.asInstanceOf[org.jacop.core.IntVar]
+    weight(res.length) = -1
+
+    val c = new LinearInt(impModel, vect.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], weight, "==", 0)
     if (trace) println(c)
     impModel.impose( c )
     result
   }
 
 /**
-* Wrapper for [[org.jacop.constraints.SumWeightDom]].
+* Wrapper for [[org.jacop.constraints.LinearIntDom]].
 *
 * @param res array of variables to be summed up (domain consistency used). 
 * @param w array of weights. 
 * @param result summation result. 
 */
-  def weightedSumDom[T <: org.jacop.core.IntVar](res: List[T], w: Array[Int], result: IntVar)(implicit m: ClassTag[T]) {
-    val c = new SumWeightDom(res.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], w, result)
+  def sumDom[T <: org.jacop.core.IntVar](res: List[T], w: Array[Int], result: IntVar)(implicit m: ClassTag[T]) {
+    val vect = new Array[org.jacop.core.IntVar](res.length + 1)
+    val weight = new Array[Int](res.length + 1)
+
+    for ( i <- 0 to (res.length - 1)) {
+      vect(i) = res(i).asInstanceOf[org.jacop.core.IntVar]
+      weight(i) = 1
+    }
+    vect(res.length) = result.asInstanceOf[org.jacop.core.IntVar]
+    weight(res.length) = -1
+
+    val c = new LinearIntDom(impModel, vect.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], weight, "==", 0)
     if (trace) println(c)
     impModel.impose( c )
   }
 
 /**
-* Wrapper for [[org.jacop.constraints.SumWeightDom]].
+* Wrapper for [[org.jacop.constraints.LinearIntDom]].
 *
 * @param res array of variables to be summed up. 
 * @param w array of weights. 
@@ -178,7 +218,17 @@ package object scala {
 */
   def sumDom[T <: org.jacop.core.IntVar](res: List[T], w: Array[Int])(implicit m: ClassTag[T]) : IntVar = {
     val result = new IntVar()
-    val c = new SumWeightDom(res.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], w, result)
+    val vect = new Array[org.jacop.core.IntVar](res.length + 1)
+    val weight = new Array[Int](res.length + 1)
+
+    for ( i <- 0 to (res.length - 1)) {
+      vect(i) = res(i).asInstanceOf[org.jacop.core.IntVar]
+      weight(i) = 1
+    }
+    vect(res.length) = result.asInstanceOf[org.jacop.core.IntVar]
+    weight(res.length) = -1
+
+    val c = new LinearIntDom(impModel, vect.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], weight, "==", 0)
     if (trace) println(c)
     impModel.impose( c )
     result
@@ -446,6 +496,17 @@ package object scala {
   }
 
 /**
+* Wrapper for [[org.jacop.constraints.Subcircuit]].
+*
+* @param n array of varibales, which domains define next nodes in the graph.
+*/
+  def subcircuit(n: Array[IntVar])  {
+    val c = new Subcircuit(n.asInstanceOf[Array[org.jacop.core.IntVar]])
+    if (trace) println(c)
+    impModel.impose( c )
+  }
+
+/**
 * Wrapper for [[org.jacop.constraints.Assignment]].
 *
 * @param x array of varibales. 
@@ -490,7 +551,7 @@ package object scala {
 * @param tuples array of tuples allowed to be assigned to variables.
 */
   def table[T <: org.jacop.core.IntVar](list: List[T], tuples: Array[Array[Int]])(implicit m: ClassTag[T]) {
-    val c = new ExtensionalSupportVA(list.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], tuples)
+    val c = new ExtensionalSupportMDD(list.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], tuples)
     if (trace) println(c)
     impModel.impose( c )
   }
@@ -536,6 +597,47 @@ package object scala {
     impModel.impose( c )
   }
 
+/**
+* Wrapper for [[org.jacop.constraints.BoolClause]].
+*
+* @param x list of positive variables. 
+* @param y list of negative variables.
+*/
+  def clause(x: Array[IntVar], y: Array[IntVar]) {
+    val c = new BoolClause(x.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], y.toArray.asInstanceOf[Array[org.jacop.core.IntVar]])
+    if (trace) println(c)
+    impModel.impose( c )    
+  }
+
+/**
+* Wrapper for [[org.jacop.constraints.ArgMin]].
+*
+* @param  x list of variables. 
+* @return index of minimal value on list x.
+*/
+  def arg_min(x: Array[IntVar]) : IntVar = {
+    val minIndex = new IntVar(1, x.length)
+    val c = new ArgMin(x.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], minIndex)
+    if (trace) println(c)
+    impModel.impose( c )    
+    minIndex
+  }
+
+/**
+* Wrapper for [[org.jacop.constraints.ArgMax]].
+*
+* @param  x list of variables. 
+* @return index of maximal value on list x.
+*/
+  def arg_max(x: Array[IntVar]) : IntVar = {
+    val maxIndex = new IntVar(1, x.length)
+    val c = new ArgMax(x.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], maxIndex)
+    if (trace) println(c)
+    impModel.impose( c )
+    maxIndex
+  }
+
+
   // ================== Decompose constraints
 
 /**
@@ -566,6 +668,17 @@ package object scala {
     if (trace) println(c)
     impModel.imposeDecomposition( c )
 }
+
+/**
+* Wrapper for [[org.jacop.constraints.LexOrder]].
+*
+* @param x array of vectors of varibales to be lexicographically ordered.
+*/
+  def lex(x: Array[IntVar], y: Array[IntVar]) {
+    val c = new LexOrder(x.asInstanceOf[Array[org.jacop.core.IntVar]], y.asInstanceOf[Array[org.jacop.core.IntVar]])
+    if (trace) println(c)
+    impModel.impose(c)
+  }
 
 /**
 * Wrapper for [[org.jacop.constraints.Lex]].
@@ -620,7 +733,6 @@ package object scala {
   }
 
   // ================== Logical operations on constraints
-
 
 /**
 * Wrapper for [[org.jacop.constraints.Or]].
@@ -910,7 +1022,7 @@ package object scala {
 * @param res array of variables to be summed up. 
 * @return summation result. 
 */
- def linear[T <: org.jacop.floats.core.FloatVar](res: List[T], weight: Array[Double])(implicit m: Manifest[T]) : FloatVar = {
+ def sum[T <: org.jacop.floats.core.FloatVar](res: List[T], weight: Array[Double])(implicit m: Manifest[T]) : FloatVar = {
    val result = new FloatVar()
    val vect = new Array[org.jacop.floats.core.FloatVar](res.length + 1)
    val w = new Array[Double](res.length + 1)

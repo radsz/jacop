@@ -273,9 +273,15 @@ public class AbsXeqY extends PrimitiveConstraint {
 		y.domain.in(store.level, y, -x.max(), -x.min());			
 	    }
 	    else { // x.min() < 0 && x.max() >= 0
-		// int xBound = Math.max(y.min(), y.max());
-		int xBound = y.max();   // y is always >= 0
-		x.domain.in(store.level, x, -xBound, xBound);
+		IntervalDomain xBound;
+		if (y.min() == 0)
+		    xBound =  new IntervalDomain(-y.max(), y.max());
+		else {
+		    xBound = new IntervalDomain(-y.max(), -y.min());
+		    xBound.unionAdapt(new Interval(y.min(), y.max()));
+		}
+
+		x.domain.in(store.level, x, xBound);
 
 		store.propagationHasOccurred = false;
 

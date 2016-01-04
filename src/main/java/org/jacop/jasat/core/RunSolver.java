@@ -217,7 +217,7 @@ public final class RunSolver {
 			try {
 				int i = Integer.parseInt(arg);
 				e.verbosity = i;
-			} catch (Exception _) {
+			} catch (Exception ex) {
 				e.verbosity = 1;
 				return e;
 			}

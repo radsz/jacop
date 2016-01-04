@@ -33,7 +33,7 @@ package org.jacop.examples.fd;
 
 import java.util.ArrayList;
 
-import org.jacop.constraints.SumWeight;
+import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XgteqY;
 import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XplusYeqC;
@@ -187,8 +187,27 @@ public class KnapsackExample extends ExampleFD {
 		IntVar profit = new IntVar(store, "Profit", 0, 1000000);
 		IntVar weight = new IntVar(store, "Weight", 0, 1000000);
 
-		store.impose(new SumWeight(quantity, weights, weight));
-		store.impose(new SumWeight(quantity, profits, profit));
+		int n = quantity.length;
+		IntVar[] qs = new IntVar[n + 1];
+		int[] ws = new int[n + 1];
+		for (int i = 0; i < n; i++) {
+		    qs[i] = quantity[i];
+		    ws[i] = weights[i];
+		}
+		qs[n] = weight;
+		ws[n] = -1;
+		store.impose(new LinearInt(store, qs, ws, "==", 0));
+		// store.impose(new SumWeight(quantity, weights, weight));
+		IntVar[] qps = new IntVar[n + 1];
+		int[] ps = new int[n + 1];
+		for (int i = 0; i < n; i++) {
+		    qps[i] = quantity[i];
+		    ps[i] = profits[i];
+		}
+		qps[n] = profit;
+		ps[n] = -1;
+		store.impose(new LinearInt(store, qps, ps, "==", 0));
+		// store.impose(new SumWeight(quantity, profits, profit));
 		
 		store.impose(new XlteqC(weight, volume));
 
@@ -252,12 +271,31 @@ public class KnapsackExample extends ExampleFD {
 		IntVar profit = new IntVar(store, "Profit", 0, 1000000);
 		IntVar weight = new IntVar(store, "Weight", 0, 1000000);
 
-		store.impose(new SumWeight(quantity, weights, weight));
+		int n = quantity.length;
+		IntVar[] qs = new IntVar[n + 1];
+		int[] ws = new int[n + 1];
+		for (int i = 0; i < n; i++) {
+		    qs[i] = quantity[i];
+		    ws[i] = weights[i];
+		}
+		qs[n] = weight;
+		ws[n] = -1;
+		store.impose(new LinearInt(store, qs, ws, "==", 0));
+		// store.impose(new SumWeight(quantity, weights, weight));
 		
 		store.impose(new Knapsack(profits, weights, quantity,
 				  weight, profit));
 
-		store.impose(new SumWeight(quantity, profits, profit));
+		IntVar[] qps = new IntVar[n + 1];
+		int[] ps = new int[n + 1];
+		for (int i = 0; i < n; i++) {
+		    qps[i] = quantity[i];
+		    ps[i] = profits[i];
+		}
+		qps[n] = profit;
+		ps[n] = -1;
+		store.impose(new LinearInt(store, qps, ps, "==", 0));
+		// store.impose(new SumWeight(quantity, profits, profit));
 
 		store.impose(new XlteqC(weight, volume));
 
@@ -331,8 +369,27 @@ public class KnapsackExample extends ExampleFD {
 		IntVar profit = new IntVar(store, "Profit", 0, 1000000);
 		IntVar weight = new IntVar(store, "Weight", 0, 1000000);
 
-		store.impose(new SumWeight(quantity, weights, weight));
-		store.impose(new SumWeight(quantity, profits, profit));
+		int n = quantity.length;
+		IntVar[] qs = new IntVar[n + 1];
+		int[] ws = new int[n + 1];
+		for (int i = 0; i < n; i++) {
+		    qs[i] = quantity[i];
+		    ws[i] = weights[i];
+		}
+		qs[n] = weight;
+		ws[n] = -1;
+		store.impose(new LinearInt(store, qs, ws, "==", 0));
+		// store.impose(new SumWeight(quantity, weights, weight));
+		IntVar[] qps = new IntVar[n + 1];
+		int[] ps = new int[n + 1];
+		for (int i = 0; i < n; i++) {
+		    qps[i] = quantity[i];
+		    ps[i] = profits[i];
+		}
+		qps[n] = profit;
+		ps[n] = -1;
+		store.impose(new LinearInt(store, qps, ps, "==", 0));
+		// store.impose(new SumWeight(quantity, profits, profit));
 
 		store.impose(new XlteqC(weight, volume));
 		
@@ -363,7 +420,7 @@ public class KnapsackExample extends ExampleFD {
 	 * If no arguments is provided or improper number of them the program will use
 	 * internal instance of the knapsack problem.
 	 * 
-	 * @param args
+	 * @param args the capacity of the knapsack, 4 strings denoting the item (weight, profit, maximumQuantity, name), the number of strings total must be equal to 1+4*noOfItems.
 	 */
 	public static void main(String args[]) {
 

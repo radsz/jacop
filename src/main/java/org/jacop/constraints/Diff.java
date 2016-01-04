@@ -545,14 +545,6 @@ public class Diff extends Constraint {
 		return rectangles;
 	}
 
-	@Override
-	public String id() {
-		if (id != null)
-			return id;
-		else
-			return  this.getClass().getSimpleName() + numberId;
-	}
-
 	// registers the constraint in the constraint store
 	@Override
 	public void impose(Store store) {
