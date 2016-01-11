@@ -228,9 +228,9 @@ public class Binpacking extends Constraint {
 			}
 
 			ArrayList<BinItem> candidates;
-			//   	    for (int i = 0; i < load.length; i++) {  // replaced with needed bins to check
+			// for (int i = 0; i < load.length; i++) {  // replaced with needed bins to check
 			for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements();) {
-				int i = e.nextElement() - minBinNumber;
+			        int i = e.nextElement() - minBinNumber;
 
 				if ( i >= 0 && i < load.length) { // check if bin no. is in the limits; might not be there since it is FDV specified in by a user
 
@@ -256,8 +256,8 @@ public class Binpacking extends Constraint {
 					load[i].domain.in(store.level, load[i], required, possible);
 
 					for (BinItem bi : candidates) 
-						if ( required + bi.weight > load[i].max()) 
-							bi.bin.domain.inComplement(store.level, bi.bin, i + minBinNumber);
+					                if ( required + bi.weight > load[i].max()) 
+							        bi.bin.domain.inComplement(store.level, bi.bin, i + minBinNumber);
 							else if (possible - bi.weight < load[i].min() ) 
 								bi.bin.domain.in(store.level, bi.bin, i + minBinNumber, i + minBinNumber);
 
@@ -346,37 +346,33 @@ public class Binpacking extends Constraint {
 	int getNumberBins(BinItem[] item) {
 		int min = IntDomain.MaxInt, max = 0;
 		for (int i = 0; i < item.length; i++) {
-			max = (max > item[i].bin.max()) ? max : item[i].bin.max();
-			min = (min < item[i].bin.min()) ? min : item[i].bin.min();
+		    IntVar bin = item[i].bin;
+		    max = (max > bin.max()) ? max : bin.max();
+		    min = (min < bin.min()) ? min : bin.min();
 		}
 		return max - min + 1;
 	}
 
 
 	int[] merge(ArrayList<Integer> u, int[] a) {
-		ArrayList<Integer> tmp = new ArrayList<Integer>(a.length+u.size());
-
-		int i=0, j=a.length-1;
+	    int[] tmp = new int[a.length+u.size()];
+		
+	    int i=0, j=a.length-1, k=0;
 
 		while (i < u.size() && j >= 0) {
 			if (a[j] > u.get(i) || i >= u.size())
-				if (a[j] != 0) tmp.add(a[j--]);
+			    if (a[j] != 0) tmp[k++] = a[j--];
 				else j--;
 			else
-				tmp.add(u.get(i++));
+			    tmp[k++] = u.get(i++);
 		}
 		while (i < u.size())
-			tmp.add(u.get(i++));
+		    tmp[k++] = u.get(i++);
 		while (j >= 0)
-			if (a[j] != 0) tmp.add(a[j--]);
+		    if (a[j] != 0) tmp[k++] = a[j--];
 			else j--;
 
-		//   	System.out.println (tmp.size() + "  *** "+ tmp);
-		int[] arr = new int[tmp.size()];
-		for (int k = 0; k < tmp.size(); k++)
-			arr[k] = tmp.get(k);
-
-		return arr;
+		return tmp;
 	}
 
 	@Override
