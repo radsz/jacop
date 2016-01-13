@@ -214,7 +214,7 @@ public class Binpacking extends Constraint {
 			// we check bins that changed recently only
 			// it means: 
 			//      - load[i] variables have changed,
-			//      - item variables have changed (we check both current domain and pruned values) 
+			//      - item[i] variables have changed (we check both current domain and pruned values) 
 			IntervalDomain d = new IntervalDomain();
 			while (binQueue.size() != 0 ) {
 				IntVar var = binQueue.removeFirst();
@@ -256,43 +256,43 @@ public class Binpacking extends Constraint {
 					load[i].domain.in(store.level, load[i], required, possible);
 
 					for (BinItem bi : candidates) 
-					                if ( required + bi.weight > load[i].max()) 
-							        bi.bin.domain.inComplement(store.level, bi.bin, i + minBinNumber);
-							else if (possible - bi.weight < load[i].min() ) 
-								bi.bin.domain.in(store.level, bi.bin, i + minBinNumber, i + minBinNumber);
+					    if ( required + bi.weight > load[i].max() ) 
+						bi.bin.domain.inComplement(store.level, bi.bin, i + minBinNumber);
+					    else if (possible - bi.weight < load[i].min() ) 
+						bi.bin.domain.in(store.level, bi.bin, i + minBinNumber, i + minBinNumber);
 
-							// Rule 3.2 "Search Pruning"
-							int[] Cj = new int[candidates.size()];
-							int index=0;
-							for (BinItem bi : candidates) 
-								Cj[index++] = bi.weight; 
+					// Rule 3.2 "Search Pruning"
+					int[] Cj = new int[candidates.size()];
+					int index=0;
+					for (BinItem bi : candidates) 
+					    Cj[index++] = bi.weight;
 
-									if (no_sum(Cj, load[i].min() - required, load[i].max() - required)) 
-										throw Store.failException;
+					if (no_sum(Cj, load[i].min() - required, load[i].max() - required)) 
+					    throw Store.failException;
 
-									// Rule 3.3 "Tighteing Bounds on Bin Load"
-									if (no_sum(Cj, load[i].min() - required, load[i].min() - required))
-										load[i].domain.inMin(store.level, load[i], required + betaP);
+					// Rule 3.3 "Tighteing Bounds on Bin Load"
+					if (no_sum(Cj, load[i].min() - required, load[i].min() - required))
+					    load[i].domain.inMin(store.level, load[i], required + betaP);
 
-									if (no_sum(Cj, load[i].max() - required, load[i].max() - required))
-										load[i].domain.inMax(store.level, load[i], required + alphaP);
+					if (no_sum(Cj, load[i].max() - required, load[i].max() - required))
+					    load[i].domain.inMax(store.level, load[i], required + alphaP);
 
-									// Rule 3.4 "Elimination and Commitment of Items"
-									for (int j = 0; j < candidates.size(); j++) {
-										int[] CjMinusI = new int[candidates.size() - 1];
-										System.arraycopy(Cj, 0, CjMinusI, 0, j);
-										System.arraycopy(Cj, j+1, CjMinusI, j, (Cj.length - j - 1));
+					// Rule 3.4 "Elimination and Commitment of Items"
+					for (int j = 0; j < candidates.size(); j++) {
+					    int[] CjMinusI = new int[candidates.size() - 1];
+					    System.arraycopy(Cj, 0, CjMinusI, 0, j);
+					    System.arraycopy(Cj, j+1, CjMinusI, j, (Cj.length - j - 1));
 
-										// 			for (int k = 0; k < candidates.size(); k++) {
-										// 			    if ( k != j)
-										// 				CjMinusI[l++] = candidates.get(k).weight;
-										// 			}
+					    // 			for (int k = 0; k < candidates.size(); k++) {
+					    // 			    if ( k != j)
+					    // 				CjMinusI[l++] = candidates.get(k).weight;
+					    // 			}
 
-										if (no_sum(CjMinusI, load[i].min() - required - Cj[j], load[i].max() - required - Cj[j])) 
-											candidates.get(j).bin.domain.inComplement(store.level, candidates.get(j).bin, i+minBinNumber);
-										if (no_sum(CjMinusI, load[i].min() - required, load[i].max() - required)) 
-											candidates.get(j).bin.domain.in(store.level, candidates.get(j).bin, i+minBinNumber, i+minBinNumber);
-									}
+					    if (no_sum(CjMinusI, load[i].min() - required - Cj[j], load[i].max() - required - Cj[j])) 
+						candidates.get(j).bin.domain.inComplement(store.level, candidates.get(j).bin, i+minBinNumber);
+					    if (no_sum(CjMinusI, load[i].min() - required, load[i].max() - required)) 
+						candidates.get(j).bin.domain.in(store.level, candidates.get(j).bin, i+minBinNumber, i+minBinNumber);
+					}
 				}
 			}
 
@@ -306,7 +306,6 @@ public class Binpacking extends Constraint {
 			for (int i = 0; i < load.length; i++)
 				load[i].domain.in(store.level, load[i], sizeAllItems - (allCapacityMax - load[i].max()), 
 						sizeAllItems - (allCapacityMin - load[i].min()));
-
 
 		} while (store.propagationHasOccurred);
 
@@ -337,7 +336,7 @@ public class Binpacking extends Constraint {
 				Arrays.sort(a);  // sort array a in ascending order
 
 				int[] z = merge(unpacked, a);
-
+				
 				// if number of possible bins is lower than lower bound then fail
 				if (getNumberBins(item) < lbBins(z, maxCapacity))
 					throw Store.failException;
@@ -347,8 +346,9 @@ public class Binpacking extends Constraint {
 		int min = IntDomain.MaxInt, max = 0;
 		for (int i = 0; i < item.length; i++) {
 		    IntVar bin = item[i].bin;
-		    max = (max > bin.max()) ? max : bin.max();
-		    min = (min < bin.min()) ? min : bin.min();
+		    int bmin = bin.min(), bmax = bin.max();
+		    max = (max > bmax) ? max : bmax;
+		    min = (min < bmin) ? min : bmin;
 		}
 		return max - min + 1;
 	}
