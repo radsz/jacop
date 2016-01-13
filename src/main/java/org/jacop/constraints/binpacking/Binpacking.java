@@ -123,7 +123,7 @@ public class Binpacking extends Constraint {
 	    this.numberId = idNumber++;
 	    this.item = new BinItem[itemPar.size()];
 	    this.numberArgs = (short) itemPar.size() + load.length;
-	    this.queueIndex = 1;
+	    this.queueIndex = 2;
 
 	    minBinNumber = bin[0].min();
 	    Set<IntVar> bs = itemPar.keySet();
