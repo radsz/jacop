@@ -36,6 +36,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Set;
 
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
@@ -100,41 +102,57 @@ public class Binpacking extends Constraint {
 	 */
 	public Binpacking(IntVar[] bin, IntVar[] load, int[] w) {
 
-		assert (bin != null) : "Variables bin is null";
-		assert (load != null) : "Variables load is null";
-		assert (w != null) : "Integer array w is null";
-		assert (bin.length == w.length) : "Lists in bin packing constraints have different sizes";
+	    assert (bin != null) : "Variables bin is null";
+	    assert (load != null) : "Variables load is null";
+	    assert (w != null) : "Integer array w is null";
+	    assert (bin.length == w.length) : "Lists in bin packing constraints have different sizes";
 
-		this.numberId = idNumber++;
-		this.item = new BinItem[bin.length];
-		this.numberArgs = (short) bin.length + load.length;
-		this.queueIndex = 1;
+	    LinkedHashMap<IntVar, Integer> itemPar = new LinkedHashMap<IntVar, Integer>();
+	    for (int i = 0; i < bin.length; i++) {
+		assert (bin[i] != null) : i + "-th element in bin list is null";
 
-		minBinNumber = bin[0].min();
-		for (int i = 0; i < bin.length; i++) {
-			assert (bin[i] != null) : i + "-th element in bin list is null";
-			item[i] = new BinItem(bin[i], w[i]);
-
-			sizeAllItems += w[i];
-
-			if (minBinNumber > item[i].bin.min()) minBinNumber = item[i].bin.min();
+		if (itemPar.get(bin[i]) != null) {
+		    Integer s = itemPar.get(bin[i]);
+		    Integer ns = s + w[i];
+		    itemPar.put(bin[i], ns);
 		}
+		else
+		    itemPar.put(bin[i], w[i]);
+	    }
+	    
+	    this.numberId = idNumber++;
+	    this.item = new BinItem[itemPar.size()];
+	    this.numberArgs = (short) itemPar.size() + load.length;
+	    this.queueIndex = 1;
 
-		this.load = new IntVar[load.length];
-		for (int i = 0; i < load.length; i++) {
-			assert (load[i] != null) : i + "-th element in load list is null";
-			this.load[i] = load[i];
+	    minBinNumber = bin[0].min();
+	    Set<IntVar> bs = itemPar.keySet();
+	    int j=0;
+	    for (IntVar b : bs) {
+		int ws = itemPar.get(b);
+		item[j] = new BinItem(b, ws);
 
-			Integer varPosition = binMap.put(this.load[i], i);
-			if (varPosition != null) {
-			    System.err.println("ERROR: Constraint " + toString() + " must have different variables on the list");
-			    System.exit(0);
-			}
+		sizeAllItems += ws;
+
+		if (minBinNumber > b.min()) minBinNumber = b.min();
+		j++;
+	    }
+
+	    this.load = new IntVar[load.length];
+	    for (int i = 0; i < load.length; i++) {
+		assert (load[i] != null) : i + "-th element in load list is null";
+		this.load[i] = load[i];
+
+		Integer varPosition = binMap.put(this.load[i], i);
+		if (varPosition != null) {
+		    System.err.println("ERROR: Constraint " + toString() + " must have different variables on the list");
+		    System.exit(0);
 		}
+	    }
 
-		Arrays.sort(item, new WeightComparator<BinItem>());
-		for (int i = 0; i < item.length; i++) 
-			itemMap.put(item[i].bin, i);
+	    Arrays.sort(item, new WeightComparator<BinItem>());
+	    for (int i = 0; i < item.length; i++) 
+		itemMap.put(item[i].bin, i);
 
 	}
 
