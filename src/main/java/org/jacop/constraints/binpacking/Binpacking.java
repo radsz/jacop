@@ -110,14 +110,16 @@ public class Binpacking extends Constraint {
 	    LinkedHashMap<IntVar, Integer> itemPar = new LinkedHashMap<IntVar, Integer>();
 	    for (int i = 0; i < bin.length; i++) {
 		assert (bin[i] != null) : i + "-th element in bin list is null";
+		assert (w[i] >= 0) : i + "-th weight for item is not >=0";
 
-		if (itemPar.get(bin[i]) != null) {
-		    Integer s = itemPar.get(bin[i]);
-		    Integer ns = s + w[i];
-		    itemPar.put(bin[i], ns);
-		}
-		else
-		    itemPar.put(bin[i], w[i]);
+		if (w[i] != 0)
+		    if (itemPar.get(bin[i]) != null) {
+			Integer s = itemPar.get(bin[i]);
+			Integer ns = s + w[i];
+			itemPar.put(bin[i], ns);
+		    }
+		    else
+			itemPar.put(bin[i], w[i]);
 	    }
 	    
 	    this.numberId = idNumber++;
@@ -377,20 +379,20 @@ public class Binpacking extends Constraint {
 		
 	    int i=0, j=a.length-1, k=0;
 
-		while (i < u.size() && j >= 0) {
-			if (a[j] > u.get(i) || i >= u.size())
-			    if (a[j] != 0) tmp[k++] = a[j--];
-				else j--;
-			else
-			    tmp[k++] = u.get(i++);
-		}
-		while (i < u.size())
-		    tmp[k++] = u.get(i++);
-		while (j >= 0)
+	    while (i < u.size() && j >= 0) {
+		if (a[j] > u.get(i) || i >= u.size())
 		    if (a[j] != 0) tmp[k++] = a[j--];
-			else j--;
+		    else j--;
+		else
+		    tmp[k++] = u.get(i++);
+	    }
+	    while (i < u.size())
+		tmp[k++] = u.get(i++);
+	    while (j >= 0)
+		if (a[j] != 0) tmp[k++] = a[j--];
+		else j--;
 
-		return tmp;
+	    return tmp;
 	}
 
 	@Override
@@ -541,10 +543,10 @@ public class Binpacking extends Constraint {
 	}
 
 	int sum (int[] x) {
-		int summa=0;
-		for (int v : x)
-			summa += v;
-				return summa;
+	    int summa=0;
+	    for (int v : x)
+		summa += v;
+	    return summa;
 	}
 
 	int lbBins(int[] X, int C) {
