@@ -34,6 +34,8 @@ package org.jacop.constraints.knapsack;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Set;
 
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
@@ -276,14 +278,29 @@ public class Knapsack extends Constraint {
 		assert (knapsackCapacity != null) : "Capacity parameter is equal to null";
 		assert (knapsackProfit != null) : "Profit parameter is equal to null";
 
-        numberId = idNumber++;
+	        numberId = idNumber++;
 		queueIndex = 1;
 		
 		/* We start to create an array of items */
-		items = new KnapsackItem[profits.length];
+		/* KKU- 2016/01/14, duplicated items are collected into a single item */
+		LinkedHashMap<IntVar, KnapsackItem> itemPar = new LinkedHashMap<IntVar, KnapsackItem>();
+		for (int i = 0; i < quantity.length; i++) {
+		    if (itemPar.get(quantity[i]) != null) {
+			KnapsackItem ki = itemPar.get(quantity[i]);
+			Integer nw = ki.getWeight() + weights[i];
+			Integer np = ki.getProfit() + profits[i];
+			itemPar.put(quantity[i], new KnapsackItem(quantity[i], nw, np));
+		    }
+		    else
+			itemPar.put(quantity[i], new KnapsackItem(quantity[i], weights[i], profits[i]));
+		}
+
+	        items = new KnapsackItem[profits.length];
 		
-		for (int i = 0; i < items.length; i++)
-			items[i] = new KnapsackItem(quantity[i], weights[i], profits[i]);
+		Set<IntVar> qs = itemPar.keySet();
+		int i=0;
+		for (IntVar q : qs) 
+		    items[i++] = itemPar.get(q); 
 		
 		this.knapsackCapacity = knapsackCapacity;
 		this.knapsackProfit = knapsackProfit;		

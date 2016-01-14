@@ -247,73 +247,77 @@ public class Binpacking extends Constraint {
 				d.addDom(var.dom().recentDomainPruning(store.level));
 			}
 
-			ArrayList<BinItem> candidates;
+			BinItem[] candidates;
+			int candidatesLength = 0;
 			// for (int i = 0; i < load.length; i++) {  // replaced with needed bins to check
 			for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements();) {
-			        int i = e.nextElement() - minBinNumber;
+			    int i = e.nextElement() - minBinNumber;
 
-				if ( i >= 0 && i < load.length) { // check if bin no. is in the limits; might not be there since it is FDV specified in by a user
+			    if ( i >= 0 && i < load.length) { // check if bin no. is in the limits; might not be there since it is FDV specified in by a user
 
-					candidates = new ArrayList<BinItem>();
-					int required = 0;
-					int possible = 0;
+				candidates = new BinItem[item.length];
+				candidatesLength = 0;
 
-					for (BinItem itemEl : item) {
-						//  		    System.out.println (itemEl.bin + " prunned = "+itemEl.bin.dom().recentDomainPruning(store.level));
+				int required = 0;
+				int possible = 0;
 
-						if (itemEl.bin.dom().contains(i + minBinNumber)) {
-							possible += itemEl.weight;
-							if (itemEl.bin.singleton())
-								required += itemEl.weight;
-							else // not singleton
-								candidates.add(itemEl);
-						}
-					}
+				for (BinItem itemEl : item) {
+				    //  		    System.out.println (itemEl.bin + " prunned = "+itemEl.bin.dom().recentDomainPruning(store.level));
 
-					// 		    System.out.println ("load " + i + "  " +required +".."+possible);
-
-					// Rule "Load Maintenance"
-					load[i].domain.in(store.level, load[i], required, possible);
-
-					for (BinItem bi : candidates) 
-					    if ( required + bi.weight > load[i].max() ) 
-						bi.bin.domain.inComplement(store.level, bi.bin, i + minBinNumber);
-					    else if (possible - bi.weight < load[i].min() ) 
-						bi.bin.domain.in(store.level, bi.bin, i + minBinNumber, i + minBinNumber);
-
-					// Rule 3.2 "Search Pruning"
-					int[] Cj = new int[candidates.size()];
-					int index=0;
-					for (BinItem bi : candidates) 
-					    Cj[index++] = bi.weight;
-
-					if (no_sum(Cj, load[i].min() - required, load[i].max() - required)) 
-					    throw Store.failException;
-
-					// Rule 3.3 "Tighteing Bounds on Bin Load"
-					if (no_sum(Cj, load[i].min() - required, load[i].min() - required))
-					    load[i].domain.inMin(store.level, load[i], required + betaP);
-
-					if (no_sum(Cj, load[i].max() - required, load[i].max() - required))
-					    load[i].domain.inMax(store.level, load[i], required + alphaP);
-
-					// Rule 3.4 "Elimination and Commitment of Items"
-					for (int j = 0; j < candidates.size(); j++) {
-					    int[] CjMinusI = new int[candidates.size() - 1];
-					    System.arraycopy(Cj, 0, CjMinusI, 0, j);
-					    System.arraycopy(Cj, j+1, CjMinusI, j, (Cj.length - j - 1));
-
-					    // 			for (int k = 0; k < candidates.size(); k++) {
-					    // 			    if ( k != j)
-					    // 				CjMinusI[l++] = candidates.get(k).weight;
-					    // 			}
-
-					    if (no_sum(CjMinusI, load[i].min() - required - Cj[j], load[i].max() - required - Cj[j])) 
-						candidates.get(j).bin.domain.inComplement(store.level, candidates.get(j).bin, i+minBinNumber);
-					    if (no_sum(CjMinusI, load[i].min() - required, load[i].max() - required)) 
-						candidates.get(j).bin.domain.in(store.level, candidates.get(j).bin, i+minBinNumber, i+minBinNumber);
-					}
+				    if (itemEl.bin.dom().contains(i + minBinNumber)) {
+					possible += itemEl.weight;
+					if (itemEl.bin.singleton())
+					    required += itemEl.weight;
+					else // not singleton
+					    candidates[candidatesLength++] = itemEl;
+				    }
 				}
+
+				// 		    System.out.println ("load " + i + "  " +required +".."+possible);
+
+				// Rule "Load Maintenance"
+				load[i].domain.in(store.level, load[i], required, possible);
+
+				for (int l = 0; l < candidatesLength; l++) {
+				    BinItem bi = candidates[l];
+				    if ( required + bi.weight > load[i].max() ) 
+					bi.bin.domain.inComplement(store.level, bi.bin, i + minBinNumber);
+				    else if (possible - bi.weight < load[i].min() ) 
+					bi.bin.domain.in(store.level, bi.bin, i + minBinNumber, i + minBinNumber);
+				}
+					
+				// Rule 3.2 "Search Pruning"
+				int[] Cj = new int[candidatesLength];
+				for (int l = 0; l < candidatesLength; l++) 
+				    Cj[l] = candidates[l].weight;
+
+				if (no_sum(Cj, load[i].min() - required, load[i].max() - required)) 
+				    throw Store.failException;
+
+				// Rule 3.3 "Tighteing Bounds on Bin Load"
+				if (no_sum(Cj, load[i].min() - required, load[i].min() - required))
+				    load[i].domain.inMin(store.level, load[i], required + betaP);
+
+				if (no_sum(Cj, load[i].max() - required, load[i].max() - required))
+				    load[i].domain.inMax(store.level, load[i], required + alphaP);
+
+				// Rule 3.4 "Elimination and Commitment of Items"
+				for (int j = 0; j < candidatesLength; j++) {
+				    int[] CjMinusI = new int[candidatesLength - 1];
+				    System.arraycopy(Cj, 0, CjMinusI, 0, j);
+				    System.arraycopy(Cj, j+1, CjMinusI, j, (Cj.length - j - 1));
+
+				    // 			for (int k = 0; k < candidates.size(); k++) {
+				    // 			    if ( k != j)
+				    // 				CjMinusI[l++] = candidates.get(k).weight;
+				    // 			}
+
+				    if (no_sum(CjMinusI, load[i].min() - required - Cj[j], load[i].max() - required - Cj[j])) 
+					candidates[j].bin.domain.inComplement(store.level, candidates[j].bin, i+minBinNumber);
+				    if (no_sum(CjMinusI, load[i].min() - required, load[i].max() - required)) 
+					candidates[j].bin.domain.in(store.level, candidates[j].bin, i+minBinNumber, i+minBinNumber);
+				}
+			    }
 			}
 
 			int allCapacityMin = 0, allCapacityMax = 0;
@@ -331,7 +335,9 @@ public class Binpacking extends Constraint {
 
 
 		// Lower bound pruning
-		ArrayList<Integer> unpacked = new ArrayList<Integer>();
+		// ArrayList<Integer> unpacked = new ArrayList<Integer>();
+		int[] unpacked = new int[item.length];
+		int unpackedLength=0;
 		int[] a = new int[load.length];
 		Arrays.fill(a, 0);
 
@@ -341,7 +347,7 @@ public class Binpacking extends Constraint {
 				a[p] += itemI.weight;
 			}
 			else
-				unpacked.add(itemI.weight);
+			    unpacked[unpackedLength++] = itemI.weight;
 		}
 
 		int maxCapacity = 0;
@@ -355,7 +361,7 @@ public class Binpacking extends Constraint {
 
 				Arrays.sort(a);  // sort array a in ascending order
 
-				int[] z = merge(unpacked, a);
+				int[] z = merge(unpacked, unpackedLength, a);
 				
 				// if number of possible bins is lower than lower bound then fail
 				if (getNumberBins(item) < lbBins(z, maxCapacity))
@@ -374,20 +380,20 @@ public class Binpacking extends Constraint {
 	}
 
 
-	int[] merge(ArrayList<Integer> u, int[] a) {
-	    int[] tmp = new int[a.length+u.size()];
+    int[] merge(int[] u, int uLength, int[] a) {
+	    int[] tmp = new int[a.length+uLength];
 		
 	    int i=0, j=a.length-1, k=0;
 
-	    while (i < u.size() && j >= 0) {
-		if (a[j] > u.get(i) || i >= u.size())
+	    while (i < uLength && j >= 0) {
+		if (a[j] > u[i] || i >= uLength)
 		    if (a[j] != 0) tmp[k++] = a[j--];
 		    else j--;
 		else
-		    tmp[k++] = u.get(i++);
+		    tmp[k++] = u[i++];
 	    }
-	    while (i < u.size())
-		tmp[k++] = u.get(i++);
+	    while (i < uLength)
+		tmp[k++] = u[i++];
 	    while (j >= 0)
 		if (a[j] != 0) tmp[k++] = a[j--];
 		else j--;
