@@ -106,7 +106,7 @@ public class Diff extends Constraint {
 		
 		for (int i = 0; i < rectangles.length; i++) {
 			assert (rectangles[i] != null) : i + "-th rectangle in the list is null";
-			assert (rectangles[i].dim != 2) : "The rectangle has to have exactly two dimensions";
+			assert (rectangles[i].dim == 2) : "The rectangle has to have exactly two dimensions";
 			this.rectangles[i] = new Rectangle( rectangles[i] );
 		}
 		
