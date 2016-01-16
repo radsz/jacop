@@ -33,7 +33,7 @@ package org.jacop.examples.fd;
 
 import java.util.ArrayList;
 
-import org.jacop.constraints.SumWeight;
+import org.jacop.constraints.LinearInt;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
@@ -76,7 +76,15 @@ public class FittingNumbers extends ExampleFD {
 			vars.add(counters[i]);
 		}
 		
-		store.impose(new SumWeight(counters, elements, sum));
+		int n = counters.length;
+		IntVar[] vs = new IntVar[n+1];
+		int[] ws = new int[n+1];
+		System.arraycopy(counters, 0, vs, 0, n);
+		System.arraycopy(elements, 0, ws, 0, n);
+		vs[n] = sum;
+		ws[n] = -1;
+		store.impose(new LinearInt(store, vs, ws, "==", 0));
+		// store.impose(new SumWeight(counters, elements, sum));
 		
 		System.out.println(store);
 	}
@@ -84,7 +92,7 @@ public class FittingNumbers extends ExampleFD {
 
 	/**
 	 * It executes the program to solve simple Kakro puzzle.
-	 * @param args
+	 * @param args commans arguments (none)
 	 */
 	public static void main(String args[]) {
 

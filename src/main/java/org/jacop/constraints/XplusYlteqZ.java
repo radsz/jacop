@@ -39,12 +39,12 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 
 /**
- * Constraint X + Y =< Z
+ * Constraint X + Y{@literal =<} Z
  * 
  * Bound consistency is used.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.4
  */
 
 public class XplusYlteqZ extends PrimitiveConstraint {
@@ -52,17 +52,17 @@ public class XplusYlteqZ extends PrimitiveConstraint {
 	static int counter = 1;
 
 	/**
-	 * It specifies variable x in constraint x + y <= z. 
+	 * It specifies variable x in constraint x + y{@literal <=} z. 
 	 */
 	public IntVar x;
 
 	/**
-	 * It specifies variable x in constraint x + y <= z. 
+	 * It specifies variable x in constraint x + y{@literal <=} z. 
 	 */
 	public IntVar y;
 
 	/**
-	 * It specifies variable x in constraint x + y <= z. 
+	 * It specifies variable x in constraint x + y{@literal <=} z. 
 	 */
 	public IntVar z;
 
@@ -73,7 +73,7 @@ public class XplusYlteqZ extends PrimitiveConstraint {
 	public static String[] xmlAttributes = {"x", "y", "z"};
 
 	/**
-	 * It constructs X + Y <= Z constraint.
+	 * It constructs X + Y{@literal <=} Z constraint.
 	 * @param x variable x.
 	 * @param y variable y.
 	 * @param z variable z.

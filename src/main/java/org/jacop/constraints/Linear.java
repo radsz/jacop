@@ -45,11 +45,17 @@ import org.jacop.core.Var;
  * variables . It provides the weighted sum from all variables on the list.
  * The weights are integers.
  * 
+ * This version works as argument for Reified and Xor constraints.
+ * For other constraints (And, Or, Not, Eq, IfThen, IfThenElse) use LinearInt.
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 3.1
  */
 
-public class Linear extends PrimitiveConstraint {
+/**
+ * @deprecated  As of release 4.3.1 replaced by LinearInt constraint.
+ */
+@Deprecated public class Linear extends Constraint {
     Store store;
 	static int counter = 1;
 
@@ -121,9 +127,12 @@ public class Linear extends PrimitiveConstraint {
 	public static String[] xmlAttributes = {"list", "weights", "sum"};
 
 	/**
-	 * @param list
-	 * @param weights
-	 * @param sum
+	 * It constructs the constraint Linear. 
+	 * @param store current store
+	 * @param list variables which are being multiplied by weights.
+	 * @param weights weight for each variable.
+	 * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+	 * @param sum variable containing the sum of weighted variables.
 	 */
     public Linear(Store store, IntVar[] list, int[] weights, String rel, int sum) {
 
@@ -208,8 +217,10 @@ public class Linear extends PrimitiveConstraint {
 
 	/**
 	 * It constructs the constraint Linear. 
+	 * @param store current store
 	 * @param variables variables which are being multiplied by weights.
 	 * @param weights weight for each variable.
+	 * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
 	 * @param sum variable containing the sum of weighted variables.
 	 */
     public Linear(Store store, ArrayList<? extends IntVar> variables,
@@ -256,16 +267,16 @@ public class Linear extends PrimitiveConstraint {
 	    	    removeConstraint();
 	}
 
-	@Override
-	public void notConsistency(Store store) {
+	// @Override
+	// public void notConsistency(Store store) {
 
-	    pruneRelation(store, negRel[relationType]);
+	//     pruneRelation(store, negRel[relationType]);
 
-	    if (negRel[relationType] != eq)
-	    	if (notSatisfied()) 
-	    	    removeConstraint();
+	//     if (negRel[relationType] != eq)
+	//     	if (notSatisfied()) 
+	//     	    removeConstraint();
 		
-	}
+	// }
 
     private void pruneRelation(Store store, byte rel) {
 
@@ -369,20 +380,16 @@ public class Linear extends PrimitiveConstraint {
 		    break;
 		case ne : //=============================================
 
-		    d1 = ((float)(min + lMaxArray[i]) / weights[i]);
-		    d2 = ((float)(max + lMinArray[i]) / weights[i]);
+		    int rem1 = (min + lMaxArray[i]) % weights[i];
+		    int rem2 = (max + lMinArray[i]) % weights[i];
+		    if (rem1 != 0 || rem2 != 0)
+			break;
 
-		    if (d1 <= d2) {
-			divMin = (int)( Math.round( Math.ceil ( d1 ) ) );
-			divMax = (int)( Math.round( Math.floor( d2 ) ) );
-		    }
-		    else {
-			divMin = (int)( Math.round( Math.ceil ( d2 ) ) );
-			divMax = (int)( Math.round( Math.floor( d1 ) ) );
-		    }
+		    divMin = (min + lMaxArray[i]) / weights[i];
+		    divMax = (max + lMinArray[i]) / weights[i];
 
-		    if ( divMin == divMax) 
-			v.domain.inComplement(store.level, v, divMin);
+		    if (divMin == divMax) 
+			v.domain.inComplement(store.level, v,divMin);
 		    break;
 		case gt : //=============================================
 
@@ -457,43 +464,43 @@ public class Linear extends PrimitiveConstraint {
 		return IntDomain.BOUND;
 	}
 
-	@Override
-	public int getNestedPruningEvent(Var var, boolean mode) {
+	// @Override
+	// public int getNestedPruningEvent(Var var, boolean mode) {
 
-		// If consistency function mode
-		if (mode) {
-			if (consistencyPruningEvents != null) {
-				Integer possibleEvent = consistencyPruningEvents.get(var);
-				if (possibleEvent != null)
-					return possibleEvent;
-			}
-			return IntDomain.BOUND;
-		}
+	// 	// If consistency function mode
+	// 	if (mode) {
+	// 		if (consistencyPruningEvents != null) {
+	// 			Integer possibleEvent = consistencyPruningEvents.get(var);
+	// 			if (possibleEvent != null)
+	// 				return possibleEvent;
+	// 		}
+	// 		return IntDomain.BOUND;
+	// 	}
 
-		// If notConsistency function mode
-		else {
-			if (notConsistencyPruningEvents != null) {
-				Integer possibleEvent = notConsistencyPruningEvents.get(var);
-				if (possibleEvent != null)
-					return possibleEvent;
-			}
-			return IntDomain.BOUND;
-		}
+	// 	// If notConsistency function mode
+	// 	else {
+	// 		if (notConsistencyPruningEvents != null) {
+	// 			Integer possibleEvent = notConsistencyPruningEvents.get(var);
+	// 			if (possibleEvent != null)
+	// 				return possibleEvent;
+	// 		}
+	// 		return IntDomain.BOUND;
+	// 	}
 
-	}
+	// }
 
-	@Override
-	public int getNotConsistencyPruningEvent(Var var) {
+	// @Override
+	// public int getNotConsistencyPruningEvent(Var var) {
 
-		// If notConsistency function mode
-		if (notConsistencyPruningEvents != null) {
-			Integer possibleEvent = notConsistencyPruningEvents.get(var);
-			if (possibleEvent != null)
-				return possibleEvent;
-		}
-		return IntDomain.BOUND;
+	// 	// If notConsistency function mode
+	// 	if (notConsistencyPruningEvents != null) {
+	// 		Integer possibleEvent = notConsistencyPruningEvents.get(var);
+	// 		if (possibleEvent != null)
+	// 			return possibleEvent;
+	// 	}
+	// 	return IntDomain.BOUND;
 		
-	}
+	// }
 
 	@Override
 	public void impose(Store store) {
@@ -631,19 +638,19 @@ public class Linear extends PrimitiveConstraint {
 
     }
 
-    @Override
-    public boolean notSatisfied() {
+    // @Override
+    // public boolean notSatisfied() {
 
-	if (reified && backtrackHasOccured) {
+    // 	if (reified && backtrackHasOccured) {
 
-	    backtrackHasOccured = false;
+    // 	    backtrackHasOccured = false;
 
-	    recomputeBounds();
-	}
+    // 	    recomputeBounds();
+    // 	}
 
-	return entailed(negRel[relationType]);
+    // 	return entailed(negRel[relationType]);
 
-    }
+    // }
 
     private boolean entailed(byte rel) {
 	    

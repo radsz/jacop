@@ -47,7 +47,7 @@ import org.jacop.floats.core.FloatInterval;
  * non-linear equations.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.4
  */
 
 public class EquationSystem extends Constraint {
@@ -72,7 +72,8 @@ public class EquationSystem extends Constraint {
 
     /**
      * It constructs the constraint EquationSystem. 
-     * @param f  a variable that defines an eqation 
+     * @param store current store
+     * @param f a variable that defines an eqation
      * @param x  variables of eqation system
      */
     public EquationSystem(Store store, FloatVar[] f, FloatVar[] x) {

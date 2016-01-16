@@ -39,7 +39,7 @@ import java.util.Iterator;
  * disjointConditonal/2
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.4
  */
 
 class ProfileConditional extends ArrayList<ProfileItemCondition> {

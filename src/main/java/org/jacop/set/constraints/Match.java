@@ -47,7 +47,7 @@ import org.jacop.set.core.SetVar;
  * onto a list of integer variables. 
  * 
  * @author Radoslaw Szymanek, Krzysztof Kuchcinski, and Robert Åkemalm
- * @version 4.2
+ * @version 4.4
  */
 
 public class Match extends Constraint {
@@ -219,14 +219,6 @@ public class Match extends Constraint {
 			return SetDomain.ANY;
 		else
 			return IntDomain.ANY;
-	}
-
-	@Override
-	public String id() {
-		if (id != null)
-			return id;
-		else
-			return this.getClass().getSimpleName() + numberId;
 	}
 
 	@Override

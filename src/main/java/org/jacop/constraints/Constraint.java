@@ -59,13 +59,6 @@ public abstract class Constraint extends DecomposedConstraint {
 	public int numberId;
 
 	/**
-	 * It specifies the string id of the constraint. If it is null then 
-	 * the string id is created from string associated for the constraint
-	 * type and the numberId of the constraint.
-	 */
-	public String id;
-
-	/**
 	 * It returns the variables in a scope of the constraint.
 	 * @return variables in a scope of the constraint.
 	 */
@@ -114,10 +107,7 @@ public abstract class Constraint extends DecomposedConstraint {
 	 * @return string id of the constraint.
 	 */
 	public String id() {
-		if (id != null)
-			return id;
-		else
-			return this.getClass().getSimpleName() + numberId;
+	    return this.getClass().getSimpleName() + numberId;
 	}
 
 	/**

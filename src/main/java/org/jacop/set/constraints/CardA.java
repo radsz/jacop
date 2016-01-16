@@ -45,7 +45,7 @@ import org.jacop.set.core.SetVar;
  * The set cardinality constraint.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.2
+ * @version 4.4
  */
 
 public class CardA extends Constraint {
@@ -175,14 +175,6 @@ public class CardA extends Constraint {
 	
 	}
 
-
-	@Override
-	public String id() {
-		if (id != null)
-			return id;
-		else
-			return this.getClass().getSimpleName() + numberId;
-	}
 
 	@Override
 	public void impose(Store store) {

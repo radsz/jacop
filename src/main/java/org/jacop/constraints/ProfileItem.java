@@ -38,7 +38,7 @@ package org.jacop.constraints;
  * belongs to it nad b does not) and the value.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.4
  */
 
 public class ProfileItem {
@@ -246,7 +246,7 @@ public class ProfileItem {
 
 	/**
 	 * It sets the ending point of the profile item. 
-	 * @param b
+	 * @param b the ending point of the profile item
 	 */
 	public void setMax(int b) {
 		max = b;
@@ -254,7 +254,7 @@ public class ProfileItem {
 
 	/**
 	 * It sets the starting point of the profile item.
-	 * @param a
+	 * @param a the starting point of the profile item.
 	 */
 	public void setMin(int a) {
 		min = a;
@@ -262,7 +262,7 @@ public class ProfileItem {
 
 	/**
 	 * It sets the amount by which this profile item is contributing towards the profile.
-	 * @param val
+	 * @param val amount by which this profile item is contributing towards the profile
 	 */
 	public void setValue(int val) {
 		value = val;

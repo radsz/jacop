@@ -19,8 +19,18 @@ predicate knapsack(array[int] of int: w, array[int] of int:p,
 		"weights must be non-negative",
 	assert(lb_array(p) >= 0,
 		"profits must be non-negative",
-	 jacop_knapsack(w,p,W,P,x)
+	let {
+	   var 0..ub(P): profit,
+	} in 
+	    jacop_knapsack([w[i] | i in index_set(w) where w[i] > 0], [p[i] | i in index_set(p) where w[i] > 0], W, profit, [x[i] | i in index_set(x) where w[i] > 0])
+	    /\
+	    P = profit + sum( i in index_set(p) where w[i]=0) (p[i]*x[i]) 
 	)));
 
 predicate jacop_knapsack(array[int] of int:w, array[int] of int:p, 
          var int: W, var int: P, array[int] of var int:x);
+
+% predicate jacop_knapsack_reif(array[int] of int:w, array[int] of int:p, 
+%          var int: W, var int: P, array[int] of var int:x, var bool: b) =
+%     abort("Reified knapsack/5 is not supported.");
+

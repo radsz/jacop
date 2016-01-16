@@ -39,7 +39,7 @@ import org.jacop.core.IntVar;
  * Defines a list of exclusive items.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.4
  */
 
 class ExclusiveList extends ArrayList<ExclusiveItem> {

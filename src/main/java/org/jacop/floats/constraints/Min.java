@@ -46,7 +46,7 @@ import org.jacop.core.Var;
  * varable from all FD varaibles on the list.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.4
  */
 
 public class Min extends Constraint {

@@ -40,10 +40,10 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 
 /**
- * Constraint ( x_0 xor x_1 xor ... xor x_n ) <=> y
+ * Constraint ( x_0 xor x_1 xor ... xor x_n ){@literal <=>} y
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.4
  */
 
 public class XorBool extends PrimitiveConstraint {
@@ -71,13 +71,15 @@ public class XorBool extends PrimitiveConstraint {
 
         public IntVar y;
 
-	/**
+        final int l;
+
+        /**
 	 * It specifies the arguments required to be saved by an XML format as well as 
 	 * the constructor being called to recreate an object from an XML format.
 	 */
     public static String[] xmlAttributes = {"x", "y"};
 
-	/** It constructs constraint (x_0 xor x_1 xor ... xor x_n ) <=> y.
+	/** It constructs constraint (x_0 xor x_1 xor ... xor x_n ) {@literal <=>} y.
 	 * @param x variables x.
 	 * @param y variable y.
 	 */
@@ -88,13 +90,18 @@ public class XorBool extends PrimitiveConstraint {
 
 	        queueIndex = 0;
 		numberId = idNumber++;
-		numberArgs = x.length + 1;
+		this.l = x.length;
+		numberArgs = l + 1;
 
 		this.x = x;
 		this.y = y;
 
 		assert ( checkInvariants() == null) : checkInvariants();
 
+		if (l > 2)
+		    queueIndex = 1;
+		else
+		    queueIndex = 0;
 	}
 
 	/**
@@ -151,12 +158,12 @@ public class XorBool extends PrimitiveConstraint {
 		    else if (e.min() != 1)
 			nonGround = e;
 
-		if (numberOnes + numberZeros == x.length)
+		if (numberOnes + numberZeros == l)
 		    if (numberOnes % 2 == 1)
 			y.domain.in(store.level, y, 1, 1);
 		    else
 			y.domain.in(store.level, y, 0, 0);
-		else if (numberOnes + numberZeros == x.length - 1)
+		else if (numberOnes + numberZeros == l - 1)
 		    if (y.min() == 1)
 			if (numberOnes % 2 == 1)
 			    nonGround.domain.in(store.level, nonGround, 0,0);
@@ -194,12 +201,12 @@ public class XorBool extends PrimitiveConstraint {
 		    else if (e.min() != 1)
 			nonGround = e;
 
-		if (numberOnes + numberZeros == x.length)
+		if (numberOnes + numberZeros == l)
 		    if (numberOnes % 2 == 1)
 			y.domain.in(store.level, y, 0, 0);
 		    else 
 			y.domain.in(store.level, y, 1, 1);
-		else if (numberOnes + numberZeros == x.length - 1)
+		else if (numberOnes + numberZeros == l - 1)
 		    if (y.min() == 1)
 			if (numberOnes % 2 == 1)
 			    nonGround.domain.in(store.level, nonGround, 1,1);

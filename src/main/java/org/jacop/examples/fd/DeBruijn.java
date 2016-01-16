@@ -35,7 +35,7 @@ import java.util.ArrayList;
 
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Min;
-import org.jacop.constraints.SumWeight;
+import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XeqY;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -132,7 +132,16 @@ public class DeBruijn extends ExampleFD {
             for(int j = 0; j < n; j++) {
                 binary[i][j] = new IntVar(store, "binary_" + i + "_" + j, 0, base-1);
             }
-            store.impose(new SumWeight (binary[i], weights, x[i]));
+
+	    int n = weights.length;
+	    IntVar[] vs = new IntVar[n+1];
+	    int[] ws = new int[n+1];
+	    System.arraycopy(binary[i], 0, vs, 0, n);
+	    System.arraycopy(weights, 0, ws, 0, n);
+	    vs[n] = x[i];
+	    ws[n] = -1;
+	    store.impose(new LinearInt(store, vs, ws, "==", 0));
+            // store.impose(new SumWeight (binary[i], weights, x[i]));
         }
 
         //

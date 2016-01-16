@@ -46,7 +46,7 @@ import org.jacop.floats.core.*;
  * It is used for test purpose only.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.2
+ * @version 4.4
  */
 public class FloatMinimize {
     Store store;
@@ -103,7 +103,7 @@ public class FloatMinimize {
 	DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
 	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, vars, fl.getSearch().getFloatVarSelect());
 	
-	Optimize min = new Optimize(store, label, s, (FloatVar)fl.getCost());
+	Optimize<FloatVar> min = new Optimize<FloatVar>(store, label, s, (FloatVar)fl.getCost());
 	boolean result = min.minimize();
 
   	if ( result ) {

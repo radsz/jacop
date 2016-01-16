@@ -47,7 +47,7 @@ import org.jacop.core.Var;
  * 
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.2
+ * @version 4.4
  */
 
 public class Distance extends PrimitiveConstraint {
@@ -83,9 +83,10 @@ public class Distance extends PrimitiveConstraint {
 	public static String[] xmlAttributes = {"x", "y", "z"};
 
 	/**
-	 * @param x
-	 * @param y
-	 * @param z
+	 * Distance between x and y |x-y| = z
+	 * @param x first parameter
+	 * @param y second parameter
+	 * @param z result
 	 */
 	public Distance(IntVar x, IntVar y, IntVar z) {
 		
@@ -409,7 +410,9 @@ public class Distance extends PrimitiveConstraint {
 
 		do {
 
-			if (x.singleton()) {
+		    store.propagationHasOccurred = false;
+
+		    if (x.singleton()) {
 
 				if (z.singleton()) {
 

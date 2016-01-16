@@ -39,7 +39,7 @@ import org.jacop.constraints.Constraint;
  * Defines a variable and related operations on it.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.2
+ * @version 4.4
  */
 
 public class BooleanVar extends IntVar {

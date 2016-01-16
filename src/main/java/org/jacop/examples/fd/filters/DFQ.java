@@ -37,7 +37,7 @@ import java.util.ArrayList;
  * It specifies DFQ filter benchmark.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.4
  */
 public class DFQ extends Filter {
 	

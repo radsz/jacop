@@ -40,7 +40,7 @@ import org.jacop.set.core.SetVar;
  * difference in cardinality between the greatest lower bound  and the least upper bound has the priority.
  * 
  * @author Krzysztof Kuchcinski and Robert Åkemalm 
- * @version 4.2
+ * @version 4.4
  * @param <T> type of variable being used in search.
  */
 

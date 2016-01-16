@@ -54,7 +54,7 @@ import org.jacop.core.Var;
  * instantiate the network.
  * 
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.4
  * 
  */
 
@@ -160,7 +160,7 @@ public class NetworkFlow extends Constraint {
 	}
 
 	/***************************/
-	/** Search & Backtracking **/
+	/** Search {@literal &} Backtracking **/
 
 	@Override
 	public void queueVariable(int level, Var variable) {

@@ -40,7 +40,7 @@ import org.jacop.util.SparseSet;
  * store level. 
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.2
+ * @version 4.4
  */
 
 public class SimpleBacktrackableManager implements BacktrackableManager {

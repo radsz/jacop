@@ -35,7 +35,7 @@ import java.util.HashSet;
 
 /**
  * @author Radoslaw Szymanek
- * @version 4.2
+ * @version 4.4
  */
 
 public class FSMState {	
@@ -60,7 +60,7 @@ public class FSMState {
 	 * It constructs a FSM state.
 	 * 
 	 * @param transitions it specifies transition 
-	 * @param id
+	 * @param id state id
 	 */
 	public FSMState(HashSet<FSMTransition> transitions, int id) {
 		this.transitions = transitions;

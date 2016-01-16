@@ -56,7 +56,7 @@ import org.xml.sax.SAXException;
  * available, which helped to create our own version of this algorithm.
  * 
  * @author Radoslaw Szymanek
- * @version 4.2
+ * @version 4.4
  */
 
 
@@ -751,7 +751,7 @@ public class ExtensionalSupportSTR extends Constraint {
 	 * specified in xmlAttributes. 
 	 *  
 	 * @param tf a place to write the content of the object. 
-	 * @throws SAXException
+	 * @throws SAXException exception from org.xml.sax package
 	 */
 	public void toXML(TransformerHandler tf) throws SAXException {
 		

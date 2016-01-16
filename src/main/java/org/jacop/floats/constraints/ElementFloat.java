@@ -61,8 +61,8 @@ import org.jacop.floats.core.FloatIntervalEnumeration;
  * If index has a domain from 0 to list.length-1 then indexOffset has to be equal -1 to 
  * make addressing of list array starting from 1.
  * 
- * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 3.1
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 4.4
  */
 
 public class ElementFloat extends Constraint {
@@ -90,7 +90,7 @@ public class ElementFloat extends Constraint {
 
     /**
      * It specifies list of variables within an element constraint list[index-indexOffset] = value.
-     * The list is addressed by positive integers (>=1) if indexOffset is equal to 0. 
+     * The list is addressed by positive integers ({@literal >=1}) if indexOffset is equal to 0. 
      */
     public double list[];
 
@@ -108,6 +108,7 @@ public class ElementFloat extends Constraint {
      * to safely skip duplicates when enumerating index domain. 
      */
     ArrayList<IntDomain> duplicates;
+    IntDomain duplicatesIndexes;
 	
     /**
      * It specifies the arguments required to be saved by an XML format as well as 
@@ -250,11 +251,13 @@ public class ElementFloat extends Constraint {
 
 	    for (IntDomain duplicate : duplicates) {
 		if (indexDom.isIntersecting(duplicate)) {
-		    domValue.unionAdapt(list[duplicate.min() - 1 - indexOffset]);
-
-		    indexDom = indexDom.subtract(duplicate);
+		    if (domValue.getSize() == 0)
+			domValue.unionAdapt(list[duplicate.min() - 1 - indexOffset]);
+		    else
+			((FloatIntervalDomain)domValue).addLastElement(list[duplicate.min() - 1 - indexOffset]);
 		}
 	    }
+	    indexDom = indexDom.subtract(duplicatesIndexes);
 			
 	    // values of index for duplicated values within list are already taken care of above.
 	    for (ValueEnumeration e = indexDom.valueEnumeration(); e.hasMoreElements();) {
@@ -271,23 +274,36 @@ public class ElementFloat extends Constraint {
 	if (copyOfValueHasChanged) {
 
 	    valueHasChanged = false;
-	    FloatDomain valDom = value.dom();
-	    IntervalDomain domIndex = new IntervalDomain(5);
 
-	    // for (ValueEnumeration e = valDom.valueEnumeration(); e.hasMoreElements();) {
-	    // 	IntDomain i = mappingValuesToIndex.get(e.nextElement());
-	    for (FloatIntervalEnumeration e = valDom.floatIntervalEnumeration(); e.hasMoreElements();) {
-		FloatInterval fi = e.nextElement();
-		for (int i = 0; i<list.length; i++)
-		    if (list[i] >= fi.min() && list[i] <= fi.max())
-			domIndex.addDom(new IntervalDomain(i + 1 + indexOffset, i + 1 + indexOffset));
+	    IntervalDomain indexDom = new IntervalDomain(5);
+	    for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements();) {
+		int position = e.nextElement() - 1 - indexOffset;
+		double val = list[position];
+		    
+		if (disjoint(value.domain, val))
+		    if (indexDom.size == 0)
+			indexDom.unionAdapt(position + 1 + indexOffset);
+		    else
+		    // 	// indexes are in ascending order and can be added at the end if the last element
+		    // 	// plus 1 is not equal a new value. In such case the max must be changed.
+		    	indexDom.addLastElement(position + 1 + indexOffset);
 	    }
 
-	    index.domain.in(store.level, index, domIndex);
+	    index.domain.in(store.level, index, indexDom.complement());
 	    indexHasChanged = false;
-			
+
 	}
 		
+    }
+
+    boolean disjoint(FloatDomain v1, double v2) {
+	if (v1.min() > v2 || v2 > v1.max()) 
+	    return true;
+	else
+	    if (! v1.contains(v2))
+		return true;
+	    else
+		return false;
     }
 
     @Override
@@ -327,9 +343,13 @@ public class ElementFloat extends Constraint {
 		indexes.unionAdapt(pos + 1 + indexOffset);
 	}
 		
+	duplicatesIndexes = new IntervalDomain();
 	for (IntDomain duplicate: map.values()) {
-	    if ( duplicate.getSize() > 20 )
+	    if ( duplicate.getSize() > 10 ) {
 		duplicates.add(duplicate);
+
+		duplicatesIndexes.unionAdapt(duplicate);
+	    }
 	}
 		
 	valueHasChanged = true;

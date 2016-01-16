@@ -54,6 +54,7 @@ import org.jacop.search.SmallestDomain;
 import org.jacop.search.SmallestMin;
 import org.jacop.search.SplitSelect;
 import org.jacop.search.WeightedDegree;
+import org.jacop.search.InputOrderSelect;
 import org.jacop.floats.search.SmallestDomainFloat;
 import org.jacop.floats.search.LargestDomainFloat;
 import org.jacop.floats.search.SmallestMinFloat;
@@ -308,6 +309,7 @@ public class SearchItem implements ParserTreeConstants {
 	}
     }
 
+    @SuppressWarnings("unchecked")
     SelectChoicePoint getIntSelect() {
 	ComparatorVariable<IntVar> var_sel = getVarSelect();
 	IntVar[] searchVars = new IntVar[search_variables.length];
@@ -332,6 +334,10 @@ public class SearchItem implements ParserTreeConstants {
 		return sel;
 	    }
 	}
+	else if (var_selection_heuristic.equals("input_order")) {
+	    Indomain indom = getIndomain(indomain);
+	    return new InputOrderSelect(store, search_variables, indom);
+	}
 	else {
 	    Indomain indom = getIndomain(indomain);
 	    if (tieBreaking == null)
@@ -341,6 +347,7 @@ public class SearchItem implements ParserTreeConstants {
 	}
     }
 
+    @SuppressWarnings("unchecked")
     SelectChoicePoint getFloatSelect() {
 	ComparatorVariable<FloatVar> var_sel = getFloatVarSelect();
 	FloatVar[] searchVars = new FloatVar[search_variables.length];
@@ -373,6 +380,7 @@ public class SearchItem implements ParserTreeConstants {
     }
 
 
+    @SuppressWarnings("unchecked")
     SelectChoicePoint getSetSelect() {
 	ComparatorVariable<SetVar> var_sel = getsetVarSelect();
 	Indomain<SetVar> indom = getIndomain4Set(indomain);
@@ -393,7 +401,7 @@ public class SearchItem implements ParserTreeConstants {
 	else if (indomain.equals("indomain_min")) 
 	    return new IndomainSetMin<SetVar>();
 	else if (indomain.equals("indomain_max")) 
-	    return new IndomainSetMax();
+	    return new IndomainSetMax<SetVar>();
 // 	else if (indomain.equals("indomain_middle")) 
 // 	    return new IndomainSetMiddle();
 // 	else if (indomain.equals("indomain_random")) 
@@ -406,27 +414,27 @@ public class SearchItem implements ParserTreeConstants {
 
     
     
-    Indomain getIndomain(String indomain) {
+    Indomain<IntVar> getIndomain(String indomain) {
 	if (indomain == null)
-	    return new IndomainMin();
+	    return new IndomainMin<IntVar>();
 	else if (indomain.equals("indomain_min")) 
-	    return new IndomainMin();
+	    return new IndomainMin<IntVar>();
 	else if (indomain.equals("indomain_max")) 
-	    return new IndomainMax();
+	    return new IndomainMax<IntVar>();
 	else if (indomain.equals("indomain_middle")) 
-	    return new IndomainMiddle();
+	    return new IndomainMiddle<IntVar>();
 	else if (indomain.equals("indomain_median")) 
-	    return new IndomainMedian();
+	    return new IndomainMedian<IntVar>();
 	else if (indomain.equals("indomain_random")) 
-	    return new IndomainRandom();
+	    return new IndomainRandom<IntVar>();
 	else
 	    System.err.println("Warning: Not implemented indomain method \""+ 
 			       indomain +"\"; used indomain_min");
-	return new IndomainMin();
+	return new IndomainMin<IntVar>();
     }
 
     
-    public ComparatorVariable getVarSelect() {
+    public ComparatorVariable<IntVar> getVarSelect() {
 
 	tieBreaking = null;
 	if (var_selection_heuristic == null)
@@ -434,31 +442,31 @@ public class SearchItem implements ParserTreeConstants {
 	else if (var_selection_heuristic.equals("input_order"))
 	    return null;
 	else if (var_selection_heuristic.equals("first_fail")) 
- 	    return new SmallestDomain();
+ 	    return new SmallestDomain<IntVar>();
 	else if (var_selection_heuristic.equals("anti_first_fail")) {
 	    // does not follow flatzinc definition but may give better results ;)
 	    //tieBreaking = new MostConstrainedStatic();
-	    return new LargestDomain();
+	    return new LargestDomain<IntVar>();
 	}
 	else if (var_selection_heuristic.equals("most_constrained")) {
-	    //tieBreaking = new MostConstrainedStatic();
-	    return new SmallestDomain();
+	    tieBreaking = new MostConstrainedStatic<IntVar>();
+	    return new SmallestDomain<IntVar>();
 	}
 	else if (var_selection_heuristic.equals("occurrence"))
-	    return new MostConstrainedStatic();
+	    return new MostConstrainedStatic<IntVar>();
 	else if (var_selection_heuristic.equals("smallest")) {
 	    // does not follow flatzinc definition but may give better results ;)
  	    // tieBreaking = new MostConstrainedStatic(); 
 	    //tieBreaking = new SmallestDomain();
-	    return new SmallestMin();
+	    return new SmallestMin<IntVar>();
 	}
 	else if (var_selection_heuristic.equals("largest"))
-	    return new LargestMax();
+	    return new LargestMax<IntVar>();
 	else if (var_selection_heuristic.equals("max_regret"))
-	    return new MaxRegret();
+	    return new MaxRegret<IntVar>();
 	else if (var_selection_heuristic.equals("weighted_degree")) {
 	    store.variableWeightManagement = true;
-	    return new WeightedDegree();
+	    return new WeightedDegree<IntVar>();
 	}
 	else 
 	    System.err.println("Warning: Not implemented variable selection heuristic \""+
@@ -467,7 +475,7 @@ public class SearchItem implements ParserTreeConstants {
 	return null; // input_order
     }
 
-    public ComparatorVariable getFloatVarSelect() {
+    public ComparatorVariable<FloatVar> getFloatVarSelect() {
 
 	tieBreaking = null;
 	if (var_selection_heuristic == null)
@@ -475,26 +483,26 @@ public class SearchItem implements ParserTreeConstants {
 	else if (var_selection_heuristic.equals("input_order"))
 	    return null;
 	else if (var_selection_heuristic.equals("first_fail")) 
- 	    return new SmallestDomainFloat();
+ 	    return new SmallestDomainFloat<FloatVar>();
 	else if (var_selection_heuristic.equals("anti_first_fail")) {
 	    // does not follow flatzinc definition but may give better results ;)
 	    //tieBreaking = new MostConstrainedStatic();
-	    return new LargestDomainFloat();
+	    return new LargestDomainFloat<FloatVar>();
 	}
 	// else if (var_selection_heuristic.equals("most_constrained")) {
 	//     //tieBreaking = new MostConstrainedStatic();
 	//     return new SmallestDomainFloat();
 	// }
 	else if (var_selection_heuristic.equals("occurrence"))
-	    return new MostConstrainedStatic();
+	    return new MostConstrainedStatic<FloatVar>();
 	else if (var_selection_heuristic.equals("smallest")) {
 	    // does not follow flatzinc definition but may give better results ;)
  	    // tieBreaking = new MostConstrainedStatic(); 
 	    //tieBreaking = new SmallestDomain();
-	    return new SmallestMinFloat();
+	    return new SmallestMinFloat<FloatVar>();
 	}
 	else if (var_selection_heuristic.equals("largest"))
-	    return new LargestMaxFloat();
+	    return new LargestMaxFloat<FloatVar>();
 	// else if (var_selection_heuristic.equals("max_regret"))
 	//     return new MaxRegret();
 	// else if (var_selection_heuristic.equals("weighted_degree")) {
@@ -508,7 +516,7 @@ public class SearchItem implements ParserTreeConstants {
 	return null; // input_order
     }
 
-    ComparatorVariable getsetVarSelect() {
+    ComparatorVariable<SetVar> getsetVarSelect() {
 
 	tieBreaking = null;
 	if (var_selection_heuristic == null)
@@ -516,23 +524,23 @@ public class SearchItem implements ParserTreeConstants {
 	else if (var_selection_heuristic.equals("input_order"))
 	    return null;
 	else if (var_selection_heuristic.equals("first_fail"))
-	    return new MinCardDiff();
+	    return new MinCardDiff<SetVar>();
 	else if (var_selection_heuristic.equals("smallest"))
-	    return new MinGlbCard();
+	    return new MinGlbCard<SetVar>();
 	else if (var_selection_heuristic.equals("occurrence"))
-	    return new MostConstrainedStatic();
+	    return new MostConstrainedStatic<SetVar>();
 	else if (var_selection_heuristic.equals("anti_first_fail"))
-	    return new MaxCardDiff();
+	    return new MaxCardDiff<SetVar>();
 	else if (var_selection_heuristic.equals("weighted_degree")) {
 	    store.variableWeightManagement = true;
-	    return new WeightedDegree();
+	    return new WeightedDegree<SetVar>();
 	}
 	//  	else if (var_selection_heuristic.equals("most_constrained")) {
 	// 	    tieBreaking = new MostConstrainedStatic();
 	//  	    return new SmallestDomain();
 	// 	}
 	else if (var_selection_heuristic.equals("largest"))
-	    return new MaxLubCard();
+	    return new MaxLubCard<SetVar>();
 	// 	else if (var_selection_heuristic.equals("max_regret"))
 	// 	    return new MaxRegret();
 	else 
@@ -544,7 +552,7 @@ public class SearchItem implements ParserTreeConstants {
 
     IntVar getVariable(ASTScalarFlatExpr node) {
 	if (node.getType() == 0) //int
-	    return new IntVar(store, node.getInt(), node.getInt());
+	    return dictionary.getConstant(node.getInt()); //new IntVar(store, node.getInt(), node.getInt());
 	else if (node.getType() == 2) // ident
 	    return dictionary.getVariable(node.getIdent());
 	else if (node.getType() == 3) {// array access
@@ -718,18 +726,21 @@ public class SearchItem implements ParserTreeConstants {
 	if (search_type == null)
 	    s += "defult_search\n";
 	else if (search_seq.size() == 0) {
-	    s = search_type + ", ";
+	    s += search_type + "(";
 	    if (search_variables == null)
 		s += "[]";
 	    else 
-		s += Arrays.asList(search_variables);
+		s += "array1d(1.."+ search_variables.length + ", " + Arrays.asList(search_variables);
 	    s += ", "+explore + ", " + var_selection_heuristic+", "+indomain;
 	    if (floatSearch)
 		s += ", " + precision;
 	}
 	else {
-	    for (SearchItem se : search_seq)
-		s += se +"\n";
+	    for (int i=0; i < search_seq.size(); i++) //SearchItem se : search_seq)
+		if (i == search_seq.size()-1)
+		    s += search_seq.get(i) + ")";
+		else
+		    s += search_seq.get(i) + "), ";
 	}
 	return s;
     }

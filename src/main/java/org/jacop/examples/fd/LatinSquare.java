@@ -92,7 +92,7 @@ public class LatinSquare extends ExampleFD {
 
 	/**
 	 * It executes the program to solve the LatinSquare problem.
-	 * @param args
+	 * @param args size of the problem
 	 */
 	public static void main(String args[]) {
 

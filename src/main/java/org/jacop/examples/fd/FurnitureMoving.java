@@ -34,7 +34,7 @@ package org.jacop.examples.fd;
 import java.util.ArrayList;
 
 import org.jacop.constraints.Cumulative;
-import org.jacop.constraints.Sum;
+import org.jacop.constraints.SumInt;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XplusYeqZ;
@@ -52,7 +52,7 @@ import org.jacop.search.SmallestDomain;
   *
   * @author Hakan Kjellerstrand (hakank@bonetmail.com) and Radoslaw Szymanek
   *
-  * Problem from Marriott & Stuckey: 'Programming with constraints', page 112f
+  * Problem from Marriott {@literal &} Stuckey: 'Programming with constraints', page 112f
   *
   * Feature: testing cumulative.
   *
@@ -85,7 +85,7 @@ public class FurnitureMoving extends ExampleFD {
 		starts = new IntVar[4];
 		starts[0] = Sp;		starts[1] = Sc;		starts[2] = Sb;		starts[3] = St;
 		
-		store.impose(new Sum(starts, sumStartTimes));
+		store.impose(new SumInt(store, starts, "==", sumStartTimes));
 
 		IntVar[] durations     = new IntVar[4];
 		IntVar[] resources     = new IntVar[4];
@@ -131,7 +131,7 @@ public class FurnitureMoving extends ExampleFD {
 
 	/**
 	 * It executes the program which solves this logic puzzle.
-	 * @param args
+	 * @param args command arguments (none)
 	 */
 	public static void main(String args[]) {
 
@@ -151,6 +151,8 @@ public class FurnitureMoving extends ExampleFD {
 	
     /**
      * It specifies search for that logic puzzle. 
+     *
+     * @return true when solution is found false otherwise
      */
     public boolean searchSpecific() {
 

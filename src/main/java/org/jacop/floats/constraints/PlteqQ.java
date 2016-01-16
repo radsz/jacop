@@ -45,11 +45,11 @@ import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatDomain;
 
 /**
- * Constraint P <= Q for floats
+ * Constraint P {@literal <=} Q for floats
  * 
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.4
  */
 
 public class PlteqQ extends PrimitiveConstraint {
@@ -74,7 +74,7 @@ public class PlteqQ extends PrimitiveConstraint {
 	public static String[] xmlAttributes = {"p", "q"};
 
 	/**
-	 * It constructs constraint P <= Q.
+	 * It constructs constraint P {@literal <=} Q.
 	 * @param p variable p.
 	 * @param q constant q.
 	 */
@@ -137,7 +137,7 @@ public class PlteqQ extends PrimitiveConstraint {
 				if (possibleEvent != null)
 					return possibleEvent;
 			}
-			return IntDomain.BOUND;
+			return FloatDomain.BOUND;
 		}
 		// If notConsistency function mode
 		else {
@@ -146,7 +146,7 @@ public class PlteqQ extends PrimitiveConstraint {
 				if (possibleEvent != null)
 					return possibleEvent;
 			}
-			return IntDomain.BOUND;
+			return FloatDomain.BOUND;
 		}
 	}
 
@@ -159,7 +159,7 @@ public class PlteqQ extends PrimitiveConstraint {
 				if (possibleEvent != null)
 					return possibleEvent;
 			}
-			return Domain.NONE;
+			return FloatDomain.BOUND;
 		}
 
 	@Override
@@ -171,7 +171,7 @@ public class PlteqQ extends PrimitiveConstraint {
 				if (possibleEvent != null)
 					return possibleEvent;
 			}
-			return Domain.NONE;
+			return FloatDomain.BOUND;
 	}
 
 	@Override

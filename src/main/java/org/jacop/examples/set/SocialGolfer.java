@@ -33,7 +33,7 @@ package org.jacop.examples.set;
 
 import java.util.ArrayList;
 
-import org.jacop.constraints.SumWeight;
+import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XlteqY;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -58,7 +58,7 @@ import org.jacop.set.search.MinLubCard;
  * It is a Social Golfer example based on set variables.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.2
+ * @version 4.4
  */
 
 public class SocialGolfer extends ExampleSet {
@@ -77,7 +77,7 @@ public class SocialGolfer extends ExampleSet {
 	 * 
 	 * It runs a number of social golfer problems.
 	 * 
-	 * @param args
+	 * @param args parameters (none)
 	 */
 	public static void main (String args[]) {
 
@@ -157,9 +157,9 @@ public class SocialGolfer extends ExampleSet {
 	/**
 	 * It sets the parameters for the model creation function. 
 	 * 
-	 * @param weeks
-	 * @param groups
-	 * @param players
+	 * @param weeks how many weeks to play
+	 * @param groups how many groups will play
+	 * @param players how many players will play
 	 */
 	public void setup(int weeks, int groups, int players) {
 
@@ -235,7 +235,16 @@ public class SocialGolfer extends ExampleSet {
 			for (int j=0; j<players; j++)
 				var[i][j] = new IntVar(store, "var"+i+"-"+j, 1, N);
 			store.impose(new Match(golferGroup[i][0], var[i]));
-			store.impose(new SumWeight(var[i], weights, v[i]));
+
+			int n = var[i].length;
+			IntVar[] vs = new IntVar[n+1];
+			int[] ws = new int[n+1];
+			System.arraycopy(var[i], 0, vs, 0, n);
+			System.arraycopy(weights, 0, ws, 0, n);
+			vs[n] = v[i];
+			ws[n] = -1;
+			store.impose(new LinearInt(store, vs, ws, "==", 0));
+			// store.impose(new SumWeight(var[i], weights, v[i]));
 		}
 		
 		for (int i=0; i<weeks-1; i++)

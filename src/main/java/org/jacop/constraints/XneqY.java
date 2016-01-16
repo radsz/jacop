@@ -44,7 +44,7 @@ import org.jacop.core.Var;
  * Domain consistency is used.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.4
  */
 
 public class XneqY extends PrimitiveConstraint {

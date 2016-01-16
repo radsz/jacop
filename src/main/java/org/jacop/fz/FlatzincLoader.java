@@ -59,8 +59,6 @@ public class FlatzincLoader {
      * 
      * TODO what are the conditions for different exceptions being thrown? Write little info below.
      * 
-     * @throws ParseException
-     * @throws TokenMgrError
      */
 	
 

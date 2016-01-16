@@ -37,7 +37,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import org.jacop.constraints.Alldiff;
-import org.jacop.constraints.Sum;
+import org.jacop.constraints.SumInt;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.core.IntVar;
@@ -146,7 +146,7 @@ public class SurvoPuzzle extends ExampleFD {
         //
         for(int i = 0; i < r; i++) {
             IntVar r_sum = new IntVar(store, "r_" + i, 1, r*c*r*c);
-            store.impose(new Sum(x[i], r_sum));
+            store.impose(new SumInt(store, x[i], "==", r_sum));
             store.impose(new XeqC(r_sum, rowsums[i]));
         }
 
@@ -160,7 +160,7 @@ public class SurvoPuzzle extends ExampleFD {
                 cols.add(x[i][j]);
             }
             IntVar c_sum = new IntVar(store, "c_" + j, 1, r*c*r*c);
-            store.impose(new Sum(cols, c_sum));
+            store.impose(new SumInt(store, cols, "==", c_sum));
             store.impose(new XeqC(c_sum, colsums[j]));
         }
 

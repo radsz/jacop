@@ -41,7 +41,7 @@ import org.jacop.core.ValueEnumeration;
  * middle value in the domain of FD variable and then right and left values.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.4
  * @param <T> type of variable being used in search.
  */
 

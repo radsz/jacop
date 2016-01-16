@@ -49,7 +49,7 @@ import org.jacop.set.core.SetVar;
  * The sum must be equal to the specified sum variable. 
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.2
+ * @version 4.4
  */
 
 public class SumWeightedSet extends Constraint {
@@ -307,15 +307,6 @@ public class SumWeightedSet extends Constraint {
 			return SetDomain.ANY;
 		else
 			return IntDomain.ANY;
-	}
-
-
-	@Override
-	public String id() {
-		if (id != null)
-			return id;
-		else
-			return this.getClass().getSimpleName() + numberId;
 	}
 
 	@Override

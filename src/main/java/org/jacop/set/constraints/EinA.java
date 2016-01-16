@@ -45,7 +45,7 @@ import org.jacop.set.core.SetVar;
  * in the domain of the set variable.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.2
+ * @version 4.4
  */
 
 public class EinA extends PrimitiveConstraint {
@@ -146,14 +146,6 @@ public class EinA extends PrimitiveConstraint {
 				return possibleEvent;
 		}
 		return SetDomain.ANY;
-	}
-
-	@Override
-	public String id() {
-		if (id != null)
-			return id;
-		else
-			return this.getClass().getSimpleName() + numberId;
 	}
 
 	@Override

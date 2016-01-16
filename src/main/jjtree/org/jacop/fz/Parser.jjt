@@ -56,8 +56,8 @@ public class Parser {
     Store store = new Store();
     Tables dict = new Tables(store);
     VariablesParameters cg = new VariablesParameters();
-    Constraints cc = new Constraints(store);
-    Solve solver = new Solve(store);
+    Constraints cc = new Constraints(store, dict);
+    Solve solver = new Solve(store, cc.sat);
     Options options;
 
     void setOptions(Options opt) {
@@ -199,7 +199,16 @@ void model() #model:
     constraint_items()
     model_end()
     <EOF>
-// {jjtThis.dump("");}
+	{//jjtThis.dump("");
+	    // print debug information
+	    // if (options.debug())
+	    // 	System.out.println(dict);
+	    
+	    // generate constraints
+	    cc.generateAllConstraints(jjtThis, options);
+	    // search
+	    solver.solveModel(jjtThis, dict, options);
+	}
 }
 
 // pred_decl_items : pred_decl_items pred_decl_item ';'
@@ -220,7 +229,7 @@ void var_decl_items() #VarDeclItems:
 {
     ( var_decl_item() <SC> )*
  	{   //jjtThis.dump("");
-	    jjtThis.removeChildren();
+	    // jjtThis.removeChildren();
 	    solver.setNumberBoolVariables(cg.numberBooleanVariables);
 	}
 //             	{ System.out.println(dict); }
@@ -235,9 +244,9 @@ void constraint_items() #ConstraintItems:
     ( constraint_item() <SC> )*
  	{  //jjtThis.dump("");
 
-	    cc.poseDelayedConstraints();
+	    // cc.poseDelayedConstraints();
 
-	    jjtThis.removeChildren();
+	    // jjtThis.removeChildren();
 	}
 }
  
@@ -281,20 +290,20 @@ void var_decl_item() #VarDeclItem:
  	{ 
 	    jjtThis.setKind(0); jjtThis.setId(t.image); 
 	    cg.generateVariables(jjtThis, dict, store);
-	    jjtThis.removeChildren();
+	    // jjtThis.removeChildren();
 	}
 
    | non_array_ti_expr_tail() <COLON> t=ident_anns() <ASGN> non_array_flat_expr() 
 	 { jjtThis.setKind(1); 
 	   jjtThis.setId(t.image);
 	   cg.generateParameters(jjtThis, dict);
-	   jjtThis.removeChildren();
+	   // jjtThis.removeChildren();
 	 }
 
    | <ARRAY> <LBOX> t1=<INT_LITERAL> <DOTDOT> t2=<INT_LITERAL> <RBOX> <OF> array_decl_tail(jjtThis)
 	  {   jjtThis.setIndexes(Integer.parseInt(t1.image), Integer.parseInt(t2.image)); 
 	      cg.generateArray(jjtThis, dict, store);
-	      jjtThis.removeChildren();
+	      // jjtThis.removeChildren();
 	  }
 }
 
@@ -355,8 +364,8 @@ void constraint_item() #Constraint:
 {
     <CONSTRAINT> constraint_elem() annotations()
  	{  	// jjtThis.dump(""); 
-	        cc.generateConstraints(jjtThis, dict);
-	        jjtThis.removeChildren();
+	    cc.generateAlias(jjtThis);
+	    // jjtThis.removeChildren();
         }
 }
 
@@ -391,7 +400,7 @@ void solve_item() #SolveItem:
 {
     <SOLVE> annotations() solve_kind()
 	{
-	    solver.search(jjtThis, dict, options);
+	    // solver.search(jjtThis, dict, options);
 	}
 }
 

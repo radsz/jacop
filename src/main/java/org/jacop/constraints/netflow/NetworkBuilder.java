@@ -38,8 +38,8 @@ import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Eq;
 import org.jacop.constraints.In;
 import org.jacop.constraints.Not;
-import org.jacop.constraints.Sum;
-import org.jacop.constraints.SumWeight;
+import org.jacop.constraints.SumInt;
+import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XmulYeqZ;
@@ -56,7 +56,7 @@ import org.jacop.core.Store;
  * inherit from this class to build a network.
  * 
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.4
  * 
  */
 
@@ -172,6 +172,11 @@ public class NetworkBuilder {
 	/**
 	 * Returns two arrays containing the nodes for each variable and the nodes
 	 * for each domain, respectively.
+	 *
+	 * @param vars varibales for nodes
+	 * @param domains nodes for each variable
+	 * @return two arrays containing the nodes for each variable and the nodes
+	 * for each domain, respectively
 	 */
 	public Node[][] valueGraph(IntVar[] vars, IntDomain[] domains) {
 		
@@ -232,7 +237,8 @@ public class NetworkBuilder {
 	 * solutions is not practically achievable in all cases it is possible
 	 * that decomposition will have more solutions due to the fact that
 	 * decomposition may use more expensive arcs to transfer the flow.
-	 * @param store
+	 * @param store current store
+	 * @return decomposed network using primitive constraints
 	 */
 	public ArrayList<Constraint> primitiveDecomposition(Store store) {
 		
@@ -337,9 +343,19 @@ public class NetworkBuilder {
 		// @TODO, SumWeight could be used instead of Sum and auxiliary variables weight above.
 		if (simpleSum)
 			sumC(result, store, vars, costVariable);
-		else
-			result.add(new SumWeight(vars, weights, costVariable));
-		
+		else {
+		    int n = vars.size();
+		    IntVar[] vs = new IntVar[n + 1];
+		    int[] ws = new int[n + 1];
+		    for (int i = 0; i < n; i++) {
+			vs[i] = vars.get(i);
+			ws[i] = weights.get(i);
+		    }
+		    vs[n] = costVariable;
+		    ws[n] = -1;
+		    result.add(new LinearInt(store, vs, ws, "==", 0));
+		    // result.add(new SumWeight(vars, weights, costVariable)); deprecated
+		}
 		return result;
 		
 	}
@@ -354,7 +370,8 @@ public class NetworkBuilder {
 		} else if (vars.size() == 1) {
 			list.add(new XeqY(result, vars.iterator().next()));
 		} else {
-			list.add(new Sum(vars, result));
+		    list.add(new SumInt(store, vars, "==", result));
+		    // list.add(new Sum(vars, result)); deprecated
 		}
 	
 	}

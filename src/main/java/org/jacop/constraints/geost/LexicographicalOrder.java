@@ -42,8 +42,8 @@ public interface LexicographicalOrder {
 	/**
 	 * It compares two k-dimensional points.
 	 * 
-	 * @param p1
-	 * @param p2
+	 * @param p1 point 1
+	 * @param p2 point 2
 	 * @return comparison result: a negative value if p1 is smaller than p2,
 	 * 0 if p1 is equal to p2, and a positive value if p1 is larger than p2.
 	 */
@@ -52,7 +52,7 @@ public interface LexicographicalOrder {
 	/**
 	 * It provides the precedence level of the given dimension. 0 is the most significant.
 	 * 
-	 * @param dimension
+	 * @param dimension the given dimension
 	 * @return integer value of the precedence level.
 	 */
 	public int precedenceOf(int dimension);
@@ -60,7 +60,7 @@ public interface LexicographicalOrder {
 	/**
 	 * It provides the dimension corresponding to the given precedence level
 	 * 
-	 * @param precedenceLevel
+	 * @param precedenceLevel the given precedence level
 	 * @return an integer value of the dimension.
 	 */
 	public int dimensionAt(int precedenceLevel);

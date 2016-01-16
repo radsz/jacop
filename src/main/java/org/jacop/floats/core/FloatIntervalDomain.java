@@ -56,7 +56,7 @@ import org.xml.sax.SAXException;
  * 
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.2
+ * @version 4.4
  */
 
 public class FloatIntervalDomain extends FloatDomain {
@@ -69,13 +69,6 @@ public class FloatIntervalDomain extends FloatDomain {
      */
 
     public FloatInterval intervals[];
-
-    /**
-     * It specifies the previous domain which was used by this domain. The old
-     * domain is stored here and can be easily restored if necessary.
-     */
-
-    public FloatIntervalDomain previousDomain;
 
     /**
      * It specifies number of intervals needed to encode the domain.
@@ -107,7 +100,7 @@ public class FloatIntervalDomain extends FloatDomain {
      * specified in xmlAttributes. 
      *  
      * @param tf a place to write the content of the object. 
-     * @throws SAXException
+     * @throws SAXException exception from org.xml.sax
      */
     public void toXML(TransformerHandler tf) throws SAXException {
 		
@@ -266,13 +259,14 @@ public class FloatIntervalDomain extends FloatDomain {
     /**
      * It adds a value to the domain. It adds at the end without
      * checks for the correctness of domain representation.
+     *
+     * @param i value to be added
      */
-
     public void addLastElement(double i) {
 
 	assert checkInvariants() == null : checkInvariants() ;
 
-	if (next(intervals[size-1].max()) >= i)
+	if (next(intervals[size-1].max()) == i)
 	    intervals[size-1] = new FloatInterval(intervals[size-1].min(),i);
 	else {
 	    if (size == intervals.length) {
@@ -657,7 +651,7 @@ public class FloatIntervalDomain extends FloatDomain {
      */
     @Override
     public boolean contains(int value) {
-	return contains((float)value);
+	return contains((double)value);
     }
 
     public boolean contains(double value) {
@@ -3171,106 +3165,6 @@ public class FloatIntervalDomain extends FloatDomain {
      */
 
     @Override
-    public void putModelConstraint(int storeLevel, Var var, Constraint C,
-				   int pruningEvent) {
-
-	if (stamp < storeLevel) {
-
-	    FloatIntervalDomain result = this.cloneLight();
-
-	    result.modelConstraints = modelConstraints;
-	    result.searchConstraints = searchConstraints;
-	    result.stamp = storeLevel;
-	    result.previousDomain = this;
-	    result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-	    result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-	    ((FloatVar)var).domain = result;
-
-	    result.putModelConstraint(storeLevel, var, C, pruningEvent);
-	    return;
-	}
-
-	Constraint[] pruningEventConstraints = modelConstraints[pruningEvent];
-
-	if (pruningEventConstraints != null) {
-
-	    boolean alreadyImposed = false;
-
-	    if (modelConstraintsToEvaluate[pruningEvent] > 0)
-		for (int i = pruningEventConstraints.length - 1; i >= 0; i--)
-		    if (pruningEventConstraints[i] == C)
-			alreadyImposed = true;
-
-	    int pruningConstraintsToEvaluate = modelConstraintsToEvaluate[pruningEvent];
-
-	    if (!alreadyImposed) {
-		Constraint[] newPruningEventConstraints = new Constraint[pruningConstraintsToEvaluate + 1];
-
-		System.arraycopy(pruningEventConstraints, 0,
-				 newPruningEventConstraints, 0,
-				 pruningConstraintsToEvaluate);
-		newPruningEventConstraints[pruningConstraintsToEvaluate] = C;
-
-		Constraint[][] newModelConstraints = new Constraint[3][];
-
-		newModelConstraints[0] = modelConstraints[0];
-		newModelConstraints[1] = modelConstraints[1];
-		newModelConstraints[2] = modelConstraints[2];
-
-		newModelConstraints[pruningEvent] = newPruningEventConstraints;
-
-		modelConstraints = newModelConstraints;
-
-		int[] newModelConstraintsToEvaluate = new int[3];
-
-		newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
-		newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
-		newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
-
-		newModelConstraintsToEvaluate[pruningEvent]++;
-
-		modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
-
-	    }
-
-	} else {
-
-	    Constraint[] newPruningEventConstraints = new Constraint[1];
-
-	    newPruningEventConstraints[0] = C;
-
-	    Constraint[][] newModelConstraints = new Constraint[3][];
-
-	    newModelConstraints[0] = modelConstraints[0];
-	    newModelConstraints[1] = modelConstraints[1];
-	    newModelConstraints[2] = modelConstraints[2];
-
-	    newModelConstraints[pruningEvent] = newPruningEventConstraints;
-
-	    modelConstraints = newModelConstraints;
-
-	    int[] newModelConstraintsToEvaluate = new int[3];
-
-	    newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
-	    newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
-	    newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
-
-	    newModelConstraintsToEvaluate[pruningEvent] = 1;
-
-	    modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
-
-	}
-
-    }
-
-    /**
-     * It adds a constraint to a domain, it should only be called by
-     * putConstraint function of Variable object. putConstraint function from
-     * Variable must make a copy of a vector of constraints if vector was not
-     * cloned.
-     */
-
-    @Override
     public void putSearchConstraint(int storeLevel, Var var, Constraint C) {
 
 	if (!searchConstraints.contains(C)) {
@@ -3412,151 +3306,6 @@ public class FloatIntervalDomain extends FloatDomain {
      * It removes a constraint from a domain, it should only be called by
      * removeConstraint function of Variable object.
      */
-
-    @Override
-    public void removeModelConstraint(int storeLevel, Var var, Constraint C) {
-
-	if (stamp < storeLevel) {
-
-	    FloatIntervalDomain result = this.cloneLight();
-
-	    result.modelConstraints = modelConstraints;
-	    result.searchConstraints = searchConstraints;
-	    result.stamp = storeLevel;
-	    result.previousDomain = this;
-	    result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-	    result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-	    ((FloatVar)var).domain = result;
-
-	    result.removeModelConstraint(storeLevel, var, C);
-	    return;
-	}
-
-	int pruningEvent = IntDomain.GROUND;
-
-	Constraint[] pruningEventConstraints = modelConstraints[pruningEvent];
-
-	if (pruningEventConstraints != null) {
-
-	    boolean isImposed = false;
-
-	    int i;
-
-	    for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--)
-		if (pruningEventConstraints[i] == C) {
-		    isImposed = true;
-		    break;
-		}
-
-	    if (isImposed) {
-
-		if (i != modelConstraintsToEvaluate[pruningEvent] - 1) {
-
-		    modelConstraints[pruningEvent][i] = modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
-
-		    modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = C;
-		}
-
-		int[] newModelConstraintsToEvaluate = new int[3];
-
-		newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
-		newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
-		newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
-
-		newModelConstraintsToEvaluate[pruningEvent]--;
-
-		modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
-
-		return;
-
-	    }
-
-	}
-
-	pruningEvent = IntDomain.BOUND;
-
-	pruningEventConstraints = modelConstraints[pruningEvent];
-
-	if (pruningEventConstraints != null) {
-
-	    boolean isImposed = false;
-
-	    int i;
-
-	    for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--)
-		if (pruningEventConstraints[i] == C) {
-		    isImposed = true;
-		    break;
-		}
-
-	    if (isImposed) {
-
-		if (i != modelConstraintsToEvaluate[pruningEvent] - 1) {
-
-		    modelConstraints[pruningEvent][i] = modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
-
-		    modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = C;
-		}
-
-		int[] newModelConstraintsToEvaluate = new int[3];
-
-		newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
-		newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
-		newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
-
-		newModelConstraintsToEvaluate[pruningEvent]--;
-
-		modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
-
-		return;
-
-	    }
-
-	}
-
-	pruningEvent = IntDomain.ANY;
-
-	pruningEventConstraints = modelConstraints[pruningEvent];
-
-	if (pruningEventConstraints != null) {
-
-	    boolean isImposed = false;
-
-	    int i;
-
-	    for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--)
-		if (pruningEventConstraints[i] == C) {
-		    isImposed = true;
-		    break;
-		}
-
-	    // int pruningConstraintsToEvaluate =
-	    // modelConstraintsToEvaluate[pruningEvent];
-
-	    if (isImposed) {
-
-		if (i != modelConstraintsToEvaluate[pruningEvent] - 1) {
-
-		    modelConstraints[pruningEvent][i] = modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
-
-		    modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = C;
-		}
-
-		int[] newModelConstraintsToEvaluate = new int[3];
-
-		newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
-		newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
-		newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
-
-		newModelConstraintsToEvaluate[pruningEvent]--;
-
-		modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
-
-	    }
-
-	}
-
-    }
 
     @Override
     public FloatDomain recentDomainPruning(int storeLevel) {

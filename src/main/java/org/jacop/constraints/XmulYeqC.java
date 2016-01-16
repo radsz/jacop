@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
+import org.jacop.core.Interval;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 
@@ -141,17 +142,17 @@ public class XmulYeqC extends PrimitiveConstraint {
 				store.propagationHasOccurred = false;
 				
 				// Bounds for X
- 				IntervalDomain xBounds = IntDomain.divIntBounds(c, c, y.min(), y.max());
+ 				Interval xBounds = IntDomain.divIntBounds(c, c, y.min(), y.max());
 
-  				x.domain.in(store.level, x, xBounds);
+  				x.domain.in(store.level, x, xBounds.min(), xBounds.max());
 
 				// Bounds for Y
- 				IntervalDomain yBounds = IntDomain.divIntBounds(c, c, x.min(), x.max());
+ 				Interval yBounds = IntDomain.divIntBounds(c, c, x.min(), x.max());
 
-  				y.domain.in(store.level, y, yBounds);
+  				y.domain.in(store.level, y, yBounds.min(), yBounds.max());
 
 				// check bounds, if C is covered.
-				IntervalDomain cBounds = IntDomain.mulBounds(x.min(), x.max(), y.min(), y.max());
+				Interval cBounds = IntDomain.mulBounds(x.min(), x.max(), y.min(), y.max());
 
 				if ( c < cBounds.min() || c > cBounds.max()  )
 				    throw Store.failException;

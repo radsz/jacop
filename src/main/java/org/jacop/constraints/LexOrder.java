@@ -32,14 +32,14 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.Hashtable;
+import java.util.HashMap;
 
 import org.jacop.core.Var;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.util.SimpleHashSet;
 // import org.jacop.core.TimeStamp;
 
 /**
@@ -53,10 +53,12 @@ import org.jacop.core.Store;
  * Artificial Intelligence 170 (2006) 803–834.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.4
  */
 
 public class LexOrder extends Constraint {
+
+    static int idNumber = 1;
 
     final static boolean debug = false;
 
@@ -67,9 +69,9 @@ public class LexOrder extends Constraint {
     public IntVar[] y;
 
     /**
-     * Is Lex enforcing "<" relationship?
+     * Is Lex enforcing "{@literal <}" relationship?
      */
-    public final boolean lexLT;
+    public boolean lexLT;
 
     /**
      * size of the longest vector
@@ -85,20 +87,24 @@ public class LexOrder extends Constraint {
     private int alpha;
     private int beta;
 
-    LinkedHashSet<Integer> indexQueue = new LinkedHashSet<Integer>();
-    Hashtable<IntVar, Integer> varToIndex = new Hashtable<IntVar, Integer>();
+    SimpleHashSet<Integer> indexQueue = new SimpleHashSet<Integer>();
+    HashMap<IntVar, int[]> varXToIndex = new HashMap<IntVar, int[]>();
+    HashMap<IntVar, int[]> varYToIndex = new HashMap<IntVar, int[]>();
 
     /**
      * It creates a lexicographical order for vectors x and y, 
      *
-     * vectors x and does not need to be of the same size.
-     * boolea lt defines if we require strict order, Lex_{<} (lt = true) or Lex_{=<} (lt = false)
+     * vectors x and y does not need to be of the same size.
+     * boolean lt defines if we require strict order, Lex_{{@literal <}} (lt = true) or Lex_{{@literal =<}} (lt = false)
      *
-     * @param x vector of vectors which assignment is constrained by LexOrder constraint. 
+     * @param x first vector constrained by LexOrder constraint. 
+     * @param y second vector constrained by LexOrder constraint. 
      */
     public LexOrder(IntVar[] x, IntVar[] y) {
 
 	this(x, y, true);
+
+	numberId = idNumber++;
 		
     }
 
@@ -106,16 +112,21 @@ public class LexOrder extends Constraint {
 		
 	assert (x != null) : "x list is null.";
 	assert (y != null) : "y list is null.";
-	assert ( x.length == y.length ) : "\nLength of two vectors different in LexOrder";
 
-	queueIndex = 1;
+	queueIndex = 2;
+	numberId = idNumber++;
 
 	lexLT = lt;
 		
         this.x = x;
         this.y = y;
 		
-	this.n = x.length;
+	if (x.length < y.length) {
+	    lexLT = false;
+	    this.n = x.length;
+	}
+	else
+	    this.n = y.length;
 
     }
 
@@ -137,22 +148,45 @@ public class LexOrder extends Constraint {
     public void impose(Store store) {
 
 	this.store = store;
-
+	
 	// alpha = new TimeStamp<Integer>(store, 0);
 	// beta = new TimeStamp<Integer>(store, 0);
 	alpha = 0;
 	beta = 0;
 
-	store.registerRemoveLevelLateListener(this);
-
-	for (int i = 0; i < x.length; i++) {
-	    varToIndex.put(x[i], i);
+	for (int i = 0; i < n; i++) {
+	    int[] varPositions = varXToIndex.get(x[i]);
+	    if (varPositions == null) {
+		int[] p = new int[1];
+		p[0] = i;
+		varXToIndex.put(x[i], p);
+	    }
+	    else {
+		int[] newPos = new int[varPositions.length+1];
+		System.arraycopy(varPositions, 0, newPos, 0, varPositions.length);
+		newPos[varPositions.length] = i;
+		varXToIndex.put(x[i], varPositions);
+	    }
 	    x[i].putModelConstraint(this, getConsistencyPruningEvent(x[i]));
 	}
-	for (int i = 0; i < y.length; i++) {
-	    varToIndex.put(y[i], i);
+
+	for (int i = 0; i < n; i++) {
+	    int[] varPositions = varYToIndex.get(y[i]);
+	    if (varPositions == null) {
+		int[] p = new int[1];
+		p[0] = i;
+		varYToIndex.put(y[i], p);
+	    }
+	    else {
+		int[] newPos = new int[varPositions.length+1];
+		System.arraycopy(varPositions, 0, newPos, 0, varPositions.length);
+		newPos[varPositions.length] = i;
+		varYToIndex.put(y[i], varPositions);
+	    }
 	    y[i].putModelConstraint(this, getConsistencyPruningEvent(y[i]));
 	}
+
+	store.registerRemoveLevelLateListener(this);
 
 	store.addChanged(this);
 	store.countConstraint();
@@ -180,10 +214,11 @@ public class LexOrder extends Constraint {
 
 	    store.propagationHasOccurred = false;
 
-	    LinkedHashSet<Integer> index = indexQueue;
-	    indexQueue = new LinkedHashSet<Integer>();
+	    SimpleHashSet<Integer> index = indexQueue;
+	    indexQueue = new SimpleHashSet<Integer>();
 
-	    for (int i : index) {
+	    while (!index.isEmpty()) {
+		int i = index.removeFirst();
 
 		// if ( !( i >= beta.value() || satisfied) )
 		if ( !( i >= beta || satisfied) )
@@ -192,6 +227,7 @@ public class LexOrder extends Constraint {
 
 	} while (store.propagationHasOccurred);
 
+	// if (satisfied()) 
 	if (satisfied) 
 	    removeConstraint();
     }
@@ -199,19 +235,23 @@ public class LexOrder extends Constraint {
     @Override
     public boolean satisfied() {
 
-	if (ground(x) && ground(y)) {
-
-	    for (int i = 0; i < x.length; i++) 
-		if (x[i].value() < y[i].value())
+	    for (int i = 0; i < n; i++) 
+		if (x[i].max() < y[i].min())
 		    return true;
-		else if (x[i].value() > y[i].value())
-		    return false;	     
-
-	    if (lexLT) // <
-		return false;
-	    else // <=
-		return true;
-	}
+		else
+		    if (x[i].max() > y[i].min())
+			return false;
+		    else
+			if (eqSingletons(x[i], y[i])) 
+			    if (lexLT) // <
+				return false;
+			    else // <=
+				if (i == n-1)
+				    return true;
+				else
+				    continue;
+			else
+			    return false;
 
 	return false;
     }
@@ -219,9 +259,9 @@ public class LexOrder extends Constraint {
     @Override
     public void removeConstraint() {
 
-	for (int i = 0; i < x.length; i++) 
+	for (int i = 0; i < n; i++) 
 	    x[i].removeConstraint(this);
-	for (int i = 0; i < y.length; i++) 
+	for (int i = 0; i < n; i++) 
 	    y[i].removeConstraint(this);
     }
 
@@ -230,9 +270,9 @@ public class LexOrder extends Constraint {
     public void increaseWeight() {
 	if (increaseWeight) {
 
-	    for (int i = 0; i < x.length; i++) 
+	    for (int i = 0; i < n; i++) 
 		x[i].weight++;
-	    for (int i = 0; i < y.length; i++) 
+	    for (int i = 0; i < n; i++) 
 		y[i].weight++;
 
 	}
@@ -241,10 +281,16 @@ public class LexOrder extends Constraint {
     @Override
     public void queueVariable(int level, Var var) {
 
-	int i = varToIndex.get(var);
+	int[] iValX = varXToIndex.get(var);
+	int[] iValY = varYToIndex.get(var);
 
-	indexQueue.add(i);
-
+	if (iValX != null)
+	    for (int i : iValX)
+		indexQueue.add(i);
+	if (iValY != null)
+	    for (int i : iValY)
+		indexQueue.add(i);
+	
     }
 
     @Override
@@ -277,6 +323,10 @@ public class LexOrder extends Constraint {
 	    if (i < y.length - 1)
 		result.append(", ");
 	}
+	if (lexLT)
+	    result.append("], <");
+	else
+	    result.append("], <=");
 
 	result.append(");");
 
@@ -462,16 +512,16 @@ public class LexOrder extends Constraint {
 
     }
 
-    private boolean ground(IntVar[] v) {
-	boolean single = true;
+    // private boolean ground(IntVar[] v) {
+    // 	boolean single = true;
 
-	int i = 0;
-	while (single && i < v.length) {
-	    single = v[i].singleton();
-	    i++;
-	}
+    // 	int i = 0;
+    // 	while (single && i < v.length) {
+    // 	    single = v[i].singleton();
+    // 	    i++;
+    // 	}
 
-	return single;
-    }
+    // 	return single;
+    // }
 
 }

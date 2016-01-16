@@ -56,7 +56,7 @@ import org.jacop.floats.constraints.PltC;
  * be attached to modify the search.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.2
+ * @version 4.4
  * @param <T> type of variables used in this search. 
  */
 
@@ -349,6 +349,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
     }
 
+    @SuppressWarnings("unchecked")
     public void addChildSearch(Search<? extends Var> child) {
 
 	if (childSearches == null) {
@@ -868,7 +869,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     public void setCostVar(Var cost) {
 
 	costVariable = cost;
-
+	optimize = true;
     }
 
     /**
@@ -1071,6 +1072,26 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
     }
 
+    // KKU, 2015-12-17: might be used to set cost variable and
+    // optimization = true for all sub-searches does not do it
+    // automatically since it might not be the intention (we might
+    // want to find only a single solution in the sub-search). This is
+    // why it is not added to labeling with costVar.
+    void setOptimizationForChildSearches(DepthFirstSearch s, Var costVar) {
+
+	// set cost and optimization for child searches
+	if (s != null) {
+	    DepthFirstSearch[] childs = (DepthFirstSearch[])s.childSearches;
+	    while (childs != null) {
+		for (DepthFirstSearch child : childs) {
+		    child.setCostVar(costVar);
+		    child.setOptimize( true);
+		    setOptimizationForChildSearches(s, costVar);
+		}
+	    }
+	}
+    }
+    
     public boolean labeling(Store store, SelectChoicePoint<T> select, Var costVar) {
 
 	this.store = store;
@@ -1085,6 +1106,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 	costVariable = costVar;
 	optimize = true;
 	cost = null;
+
 	// 		timeOutOccured = false;
 	// 		timeOut = System.currentTimeMillis() + tOut * 1000;
 

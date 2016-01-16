@@ -38,7 +38,7 @@ import org.jacop.core.Store;
  * the labeling procedure.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.2
+ * @version 4.4
  */
 
 public interface InitializeListener {
@@ -52,7 +52,7 @@ public interface InitializeListener {
 
 	/**
 	 * It sets the children listeners of this initialize listener.
-	 * @param children
+	 * @param children children listeners being set
 	 */
 	public void setChildrenListeners(InitializeListener[] children);
 

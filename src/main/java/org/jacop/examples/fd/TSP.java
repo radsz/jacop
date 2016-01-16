@@ -33,7 +33,7 @@ package org.jacop.examples.fd;
 
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Element;
-import org.jacop.constraints.Sum;
+import org.jacop.constraints.SumInt;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.search.DepthFirstSearch;
@@ -107,7 +107,7 @@ public class TSP extends ExampleFD {
 
 		// Computes overall cost of traveling
 		// simply sum of all costs
-		store.impose(new Sum(costs, cost));
+		store.impose(new SumInt(store, costs, "==", cost));
 
 	}
 

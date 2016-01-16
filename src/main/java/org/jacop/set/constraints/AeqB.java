@@ -44,7 +44,7 @@ import org.jacop.set.core.SetVar;
  * have the same value. 
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.2
+ * @version 4.4
  */
 
 public class AeqB extends PrimitiveConstraint {
@@ -150,14 +150,6 @@ public class AeqB extends PrimitiveConstraint {
 				return possibleEvent;
 		}
 		return SetDomain.GROUND;
-	}
-
-	@Override
-	public String id() {
-		if (id != null)
-			return id;
-		else
-			return this.getClass().getSimpleName() + numberId;
 	}
 
 	@Override

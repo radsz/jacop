@@ -38,7 +38,7 @@ import org.jacop.core.Var;
  * domain has the priority.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.4
  * @param <T> it specifies the class of the variable being used in this variable selection method.
  */
 

@@ -37,7 +37,7 @@ package org.jacop.core;
  * on debugging information.
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.2
+ * @version 4.4
  */
 
 public final class SwitchesPruningLogging {

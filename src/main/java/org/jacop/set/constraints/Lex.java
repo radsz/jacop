@@ -48,13 +48,13 @@ import org.jacop.set.core.SetVar;
  * set variables is being constrained to be lexicographically ordered.
  * 
  * For example, 
- * {} <lex {1}
- * {1, 2} <lex {1, 2, 3}
- * {1, 3} <lex {2}
- * {1} < {2}
+ * {}{@literal <}lex {1}
+ * {1, 2}{@literal <}lex {1, 2, 3}
+ * {1, 3}{@literal <}lex {2}
+ * {1}{@literal <} {2}
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.2
+ * @version 4.4
  */
 
 public class Lex extends Constraint {
@@ -564,14 +564,6 @@ public class Lex extends Constraint {
 		return SetDomain.ANY;		
 	}
 
-
-	@Override
-	public String id() {
-		if (id != null)
-			return id;
-		else
-			return this.getClass().getSimpleName() + numberId;
-	}
 
 	@Override
 	public void impose(Store store) {

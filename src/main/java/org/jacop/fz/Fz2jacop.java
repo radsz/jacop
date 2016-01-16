@@ -51,8 +51,6 @@ public class Fz2jacop {
      * 
      * TODO what are the conditions for different exceptions being thrown? Write little info below.
      * 
-     * @throws ParseException
-     * @throws TokenMgrError
      */
 	
     public static void main(String[] args)  {
@@ -95,6 +93,8 @@ public class Fz2jacop {
             System.out.println("=====UNSATISFIABLE====="); // "*** Evaluation of model resulted in fail.");
 	} catch (ArithmeticException e) {
 	    System.err.println("%% Evaluation of model resulted in an overflow.");
+	    if (e.getStackTrace().length > 0)
+		System.out.println ("%%\t" + e.toString());
 	} catch (ParseException e) {
 	    System.out.println("%% Parser exception "+ e);
 	} catch (TokenMgrError e) {
@@ -107,6 +107,10 @@ public class Fz2jacop {
 	    System.out.println("%% Out of memory error; consider option -Xmx... for JVM");
 	} catch (StackOverflowError e) {
 	    System.out.println("%% Stack overflow exception error; consider option -Xss... for JVM");
+	} catch (TrivialSolution e) {
+	    // do nothing
+	    Runtime.getRuntime().removeShutdownHook(t);
+	    return;
 	}
 
 	if (opt.getStatistics()) {

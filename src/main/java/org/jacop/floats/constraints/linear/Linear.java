@@ -47,6 +47,7 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.floats.constraints.linear.BoundsVarValue;
 import org.jacop.util.SimpleHashSet;
+import org.jacop.core.TimeStamp;
 
 /**
  * Linear constraint implements the weighted summation over several
@@ -54,7 +55,7 @@ import org.jacop.util.SimpleHashSet;
  * The weights must be positive integers.
  * 
  * @author Krzysztof Kuchcinski
- * @version 4.2
+ * @version 4.4
  */
 
 public class Linear extends PrimitiveConstraint {
@@ -109,6 +110,8 @@ public class Linear extends PrimitiveConstraint {
 
     VariableNode[] sortedVarNodes;
 
+    TimeStamp<Boolean> noSat;
+
     /**
      * It specifies the arguments required to be saved by an XML format as well as 
      * the constructor being called to recreate an object from an XML format.
@@ -116,9 +119,11 @@ public class Linear extends PrimitiveConstraint {
     public static String[] xmlAttributes = {"list", "weights", "sum"};
 
     /**
-     * @param list
-     * @param weights
-     * @param sum
+     * @param store current store
+     * @param list variables which are being multiplied by weights.
+     * @param weights weight for each variable.
+     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum variable containing the sum of weighted variables.
      */
     public Linear(Store store, FloatVar[] list, double[] weights, String rel, double sum) {
 
@@ -137,6 +142,8 @@ public class Linear extends PrimitiveConstraint {
 	numberId = counter++;
 
 	this.sum = sum;
+
+	noSat = new TimeStamp<Boolean>(store, false);
 
 	HashMap<FloatVar, Double> parameters = new HashMap<FloatVar, Double>();
 
@@ -270,8 +277,10 @@ public class Linear extends PrimitiveConstraint {
 
     /**
      * It constructs the constraint Linear. 
+     * @param store current store
      * @param variables variables which are being multiplied by weights.
      * @param weights weight for each variable.
+     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}"
      * @param sum variable containing the sum of weighted variables.
      */
     public Linear(Store store, ArrayList<? extends FloatVar> variables,
@@ -434,8 +443,22 @@ public class Linear extends PrimitiveConstraint {
     @Override
 	public boolean satisfied() {
 
-	if (reified) 
-	    propagate(variableQueue);
+	if (reified) {
+
+	    // check whether constraint has been already diagnosed as not satisfied at this level
+	    if (noSat.stamp() < store.level)
+		noSat.update(false);
+	    else if (noSat.stamp() == store.level && noSat.value() == true)
+		return false;
+	    // ==========
+
+	    try{
+		propagate(variableQueue);
+	    } catch (org.jacop.core.FailException e) {
+		noSat.update(true);
+		return false;
+	    }
+	}
 
 	return entailed(relationType);
     }
@@ -443,8 +466,22 @@ public class Linear extends PrimitiveConstraint {
     @Override
 	public boolean notSatisfied() {
 
-	if (reified)
-	    propagate(variableQueue);
+	if (reified) {
+
+	    // check whether constraint has been already diagnosed as not satisfied at this level
+	    if (noSat.stamp() < store.level)
+		noSat.update(false);
+	    else if (noSat.stamp() == store.level && noSat.value() == true)
+		return true;
+	    // ==========
+
+	    try{
+		propagate(variableQueue);
+	    } catch (org.jacop.core.FailException e) {
+		noSat.update(true);
+		return true;
+	    }
+	}
 
 	return entailed(negRel[relationType]);
     }

@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
+import org.jacop.core.Interval;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 
@@ -136,7 +137,7 @@ public class XmodYeqZ extends Constraint {
 			// Bounds for result
 			int oldResultMin = resultMin, oldResultMax = resultMax; 
 
-			IntervalDomain result = IntDomain.divBounds(x.min(), x.max(), y.min(), y.max());
+			Interval result = IntDomain.divBounds(x.min(), x.max(), y.min(), y.max());
 
 			resultMin = result.min();
 			resultMax = result.max();
@@ -145,12 +146,12 @@ public class XmodYeqZ extends Constraint {
 			    store.propagationHasOccurred = true;
 
 			// Bounds for Y
-			IntervalDomain yBounds = IntDomain.divBounds(x.min()-reminderMax, x.max()-reminderMin, resultMin, resultMax);
+			Interval yBounds = IntDomain.divBounds(x.min()-reminderMax, x.max()-reminderMin, resultMin, resultMax);
 
- 			y.domain.in(store.level, y, yBounds);
+ 			y.domain.in(store.level, y, yBounds.min(), yBounds.max());
 
 			// Bounds for Z and reminder
-			IntervalDomain reminder = IntDomain.mulBounds(resultMin, resultMax, y.min(), y.max());
+			Interval reminder = IntDomain.mulBounds(resultMin, resultMax, y.min(), y.max());
  			int zMin = reminder.min(), zMax = reminder.max();
 
  			reminderMin = x.min() - zMax;

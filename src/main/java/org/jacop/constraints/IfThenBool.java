@@ -40,11 +40,11 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 
 /**
- * Constraint ( X => Y ) <=> Z.
+ * Constraint ( X {@literal =>} Y ) {@literal <=>} Z.
  * 
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.4
  */
 
 public class IfThenBool extends PrimitiveConstraint {
@@ -60,17 +60,17 @@ public class IfThenBool extends PrimitiveConstraint {
 	static int counter = 1;
 
 	/**
-	 * It specifies variable x in constraint ( X => Y ) <=> Z.
+	 * It specifies variable x in constraint ( X {@literal =>} Y ) {@literal <=>} Z.
 	 */
 	public IntVar x;
 
 	/**
-	 * It specifies variable y in constraint ( X => Y ) <=> Z.
+	 * It specifies variable y in constraint ( X {@literal =>} Y ) {@literal <=>} Z.
 	 */
 	public IntVar y;
 
 	/**
-	 * It specifies variable z in constraint ( X => Y ) <=> Z.
+	 * It specifies variable z in constraint ( X {@literal =>} Y ) {@literal <=>} Z.
 	 */
 	public IntVar z;
 
@@ -81,7 +81,7 @@ public class IfThenBool extends PrimitiveConstraint {
 	 */
 	public static String[] xmlAttributes = {"x", "y", "z"};
 
-	/** It constructs constraint ( X => Y ) <=> Z.
+	/** It constructs constraint ( X {@literal =>} Y ) {@literal <=>} Z.
 	 * @param x variable x.
 	 * @param y variable y.
 	 * @param z variable z.

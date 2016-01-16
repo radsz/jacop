@@ -59,7 +59,7 @@ import org.jacop.search.sgmpcs.SGMPCSCalculator;
  * enforced.
  * 
  * @author krzysztof Kuchcinski
- * @version 4.2
+ * @version 4.4
  * @param <T> type of the variable for which choice point is being created.
  */
 

@@ -32,7 +32,7 @@
 
 package org.jacop.constraints;
 
-import java.util.Vector;
+import java.util.ArrayList;
 
 import org.jacop.core.MutableVar;
 import org.jacop.core.MutableVarValue;
@@ -43,7 +43,7 @@ import org.jacop.core.Store;
  * keeps current recatngles for evaluation ([[R2, R3], [R1, R3], ...]
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.4
  */
 
 class DisjointCondVar implements MutableVar {
@@ -67,7 +67,7 @@ class DisjointCondVar implements MutableVar {
 		store = S;
 	}
 
-	DisjointCondVar(Store S, Vector<RectangleWithCondition> R) {
+	DisjointCondVar(Store S, ArrayList<RectangleWithCondition> R) {
 		value = new DisjointCondVarValue();
 		value.setValue(R);
 		index = S.putMutableVar(this);

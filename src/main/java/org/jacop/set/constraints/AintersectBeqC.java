@@ -45,7 +45,7 @@ import org.jacop.set.core.SetVar;
  * is equal to C. A /\ B = C. 
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.2
+ * @version 4.4
  */
 
 public class AintersectBeqC extends Constraint {
@@ -301,14 +301,6 @@ public class AintersectBeqC extends Constraint {
 				return possibleEvent;
 		}
 		return SetDomain.ANY;		
-	}
-
-	@Override
-	public String id() {
-		if (id != null)
-			return id;
-		else
-			return this.getClass().getSimpleName() + numberId;
 	}
 
 	@Override

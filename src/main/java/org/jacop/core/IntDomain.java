@@ -32,6 +32,9 @@
 package org.jacop.core;
 
 import java.util.Random;
+import java.util.ArrayList;
+
+import org.jacop.constraints.Constraint;
 
 /**
  * Defines an integer domain and related operations on it.
@@ -270,6 +273,13 @@ public abstract class IntDomain extends Domain {
 	 */
 
 	public abstract int previousValue(int value);
+
+	/**
+	 * It specifies the previous domain which was used by this domain. The old
+	 * domain is stored here and can be easily restored if necessary.
+	 */
+
+	public IntDomain previousDomain;
 
 	/**
 	 * It returns value enumeration of the domain values.
@@ -705,6 +715,396 @@ public abstract class IntDomain extends Domain {
 								+ modelConstraintsToEvaluate[ANY];
 	}
 
+	/**
+	 * It adds a constraint to a domain, it should only be called by
+	 * putConstraint function of Variable object. putConstraint function from
+	 * Variable must make a copy of a vector of constraints if vector was not
+	 * cloned.
+	 */
+
+	@Override
+	public void putModelConstraint(int storeLevel, Var var, Constraint C,
+			int pruningEvent) {
+
+		if (stamp < storeLevel) {
+
+			IntDomain result = this.cloneLight();
+
+			result.modelConstraints = modelConstraints;
+			result.searchConstraints = searchConstraints;
+			result.stamp = storeLevel;
+			result.previousDomain = this;
+			result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
+			result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+			((IntVar)var).domain = result;
+
+			result.putModelConstraint(storeLevel, var, C, pruningEvent);
+			return;
+		}
+
+		Constraint[] pruningEventConstraints = modelConstraints[pruningEvent];
+
+		if (pruningEventConstraints != null) {
+
+			boolean alreadyImposed = false;
+
+			if (modelConstraintsToEvaluate[pruningEvent] > 0)
+				for (int i = pruningEventConstraints.length - 1; i >= 0; i--)
+					if (pruningEventConstraints[i] == C)
+						alreadyImposed = true;
+
+			int pruningConstraintsToEvaluate = modelConstraintsToEvaluate[pruningEvent];
+
+			if (!alreadyImposed) {
+				Constraint[] newPruningEventConstraints = new Constraint[pruningConstraintsToEvaluate + 1];
+
+				System.arraycopy(pruningEventConstraints, 0,
+						newPruningEventConstraints, 0,
+						pruningConstraintsToEvaluate);
+				newPruningEventConstraints[pruningConstraintsToEvaluate] = C;
+
+				Constraint[][] newModelConstraints = new Constraint[3][];
+
+				newModelConstraints[0] = modelConstraints[0];
+				newModelConstraints[1] = modelConstraints[1];
+				newModelConstraints[2] = modelConstraints[2];
+
+				newModelConstraints[pruningEvent] = newPruningEventConstraints;
+
+				modelConstraints = newModelConstraints;
+
+				int[] newModelConstraintsToEvaluate = new int[3];
+
+				newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
+				newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
+				newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
+
+				newModelConstraintsToEvaluate[pruningEvent]++;
+
+				modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
+
+			}
+
+		} else {
+
+			Constraint[] newPruningEventConstraints = new Constraint[1];
+
+			newPruningEventConstraints[0] = C;
+
+			Constraint[][] newModelConstraints = new Constraint[3][];
+
+			newModelConstraints[0] = modelConstraints[0];
+			newModelConstraints[1] = modelConstraints[1];
+			newModelConstraints[2] = modelConstraints[2];
+
+			newModelConstraints[pruningEvent] = newPruningEventConstraints;
+
+			modelConstraints = newModelConstraints;
+
+			int[] newModelConstraintsToEvaluate = new int[3];
+
+			newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
+			newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
+			newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
+
+			newModelConstraintsToEvaluate[pruningEvent] = 1;
+
+			modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
+
+		}
+
+	}
+
+	@Override
+	public void removeModelConstraint(int storeLevel, Var var, Constraint C) {
+
+		if (stamp < storeLevel) {
+
+			IntDomain result = this.cloneLight();
+
+			result.modelConstraints = modelConstraints;
+			result.searchConstraints = searchConstraints;
+			result.stamp = storeLevel;
+			result.previousDomain = this;
+			result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
+			result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+			((IntVar)var).domain = result;
+
+			result.removeModelConstraint(storeLevel, var, C);
+			return;
+		}
+
+		int pruningEvent = IntDomain.GROUND;
+
+		Constraint[] pruningEventConstraints = modelConstraints[pruningEvent];
+
+		if (pruningEventConstraints != null) {
+
+			boolean isImposed = false;
+
+			int i;
+
+			for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--)
+				if (pruningEventConstraints[i] == C) {
+					isImposed = true;
+					break;
+				}
+
+			if (isImposed) {
+
+				if (i != modelConstraintsToEvaluate[pruningEvent] - 1) {
+
+					modelConstraints[pruningEvent][i] = modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
+
+					modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = C;
+				}
+
+				int[] newModelConstraintsToEvaluate = new int[3];
+
+				newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
+				newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
+				newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
+
+				newModelConstraintsToEvaluate[pruningEvent]--;
+
+				modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
+
+				return;
+
+			}
+
+		}
+
+		pruningEvent = IntDomain.BOUND;
+
+		pruningEventConstraints = modelConstraints[pruningEvent];
+
+		if (pruningEventConstraints != null) {
+
+			boolean isImposed = false;
+
+			int i;
+
+			for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--)
+				if (pruningEventConstraints[i] == C) {
+					isImposed = true;
+					break;
+				}
+
+			if (isImposed) {
+
+				if (i != modelConstraintsToEvaluate[pruningEvent] - 1) {
+
+					modelConstraints[pruningEvent][i] = modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
+
+					modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = C;
+				}
+
+				int[] newModelConstraintsToEvaluate = new int[3];
+
+				newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
+				newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
+				newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
+
+				newModelConstraintsToEvaluate[pruningEvent]--;
+
+				modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
+
+				return;
+
+			}
+
+		}
+
+		pruningEvent = IntDomain.ANY;
+
+		pruningEventConstraints = modelConstraints[pruningEvent];
+
+		if (pruningEventConstraints != null) {
+
+			boolean isImposed = false;
+
+			int i;
+
+			for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--)
+				if (pruningEventConstraints[i] == C) {
+					isImposed = true;
+					break;
+				}
+
+			// int pruningConstraintsToEvaluate =
+			// modelConstraintsToEvaluate[pruningEvent];
+
+			if (isImposed) {
+
+				if (i != modelConstraintsToEvaluate[pruningEvent] - 1) {
+
+					modelConstraints[pruningEvent][i] = modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
+
+					modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = C;
+				}
+
+				int[] newModelConstraintsToEvaluate = new int[3];
+
+				newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
+				newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
+				newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
+
+				newModelConstraintsToEvaluate[pruningEvent]--;
+
+				modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
+
+			}
+
+		}
+
+	}
+
+	/**
+	 * It adds a constraint to a domain, it should only be called by
+	 * putConstraint function of Variable object. putConstraint function from
+	 * Variable must make a copy of a vector of constraints if vector was not
+	 * cloned.
+	 */
+
+	@Override
+	public void putSearchConstraint(int storeLevel, Var var, Constraint C) {
+
+		if (!searchConstraints.contains(C)) {
+
+			if (stamp < storeLevel) {
+
+				IntDomain result = this.cloneLight();
+
+				result.modelConstraints = modelConstraints;
+
+				result.searchConstraints = new ArrayList<Constraint>(
+						searchConstraints.subList(0,
+								searchConstraintsToEvaluate));
+				result.searchConstraintsCloned = true;
+				result.stamp = storeLevel;
+				result.previousDomain = this;
+				result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
+				result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+				((IntVar)var).domain = result;
+
+				result.putSearchConstraint(storeLevel, var, C);
+				return;
+			}
+
+			if (searchConstraints.size() == searchConstraintsToEvaluate) {
+				searchConstraints.add(C);
+				searchConstraintsToEvaluate++;
+			} else {
+				// Exchange the first satisfied constraint with just added
+				// constraint
+				// Order of satisfied constraints is not preserved
+
+				if (searchConstraintsCloned) {
+					Constraint firstSatisfied = searchConstraints
+							.get(searchConstraintsToEvaluate);
+					searchConstraints.set(searchConstraintsToEvaluate, C);
+					searchConstraints.add(firstSatisfied);
+					searchConstraintsToEvaluate++;
+				} else {
+					searchConstraints = new ArrayList<Constraint>(
+							searchConstraints.subList(0,
+									searchConstraintsToEvaluate));
+					searchConstraintsCloned = true;
+					searchConstraints.add(C);
+					searchConstraintsToEvaluate++;
+				}
+			}
+		}
+	}
+
+	/**
+	 * It removes a constraint from a domain, it should only be called by
+	 * removeConstraint function of Variable object.
+	 * @param storeLevel the current level of the store.
+	 * @param var the variable for which the constraint is being removed.
+	 * @param C the constraint being removed.
+	 */
+
+	public void removeSearchConstraint(int storeLevel, Var var,
+			Constraint C) {
+
+		if (stamp < storeLevel) {
+
+			IntDomain result = this.cloneLight();
+
+			result.modelConstraints = modelConstraints;
+			result.searchConstraints = searchConstraints;
+			result.stamp = storeLevel;
+			result.previousDomain = this;
+			result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
+			result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+			((IntVar)var).domain = result;
+
+			result.removeSearchConstraint(storeLevel, var, C);
+			return;
+		}
+
+		assert (stamp == storeLevel);
+
+		int i = 0;
+
+		// TODO , improve by using interval find function.
+
+		while (i < searchConstraintsToEvaluate) {
+			if (searchConstraints.get(i) == C) {
+
+				searchConstraints.set(i, searchConstraints
+						.get(searchConstraintsToEvaluate - 1));
+				searchConstraints.set(searchConstraintsToEvaluate - 1, C);
+				searchConstraintsToEvaluate--;
+
+				break;
+			}
+			i++;
+		}
+	}
+
+	/**
+	 * It removes a constraint from a domain, it should only be called by
+	 * removeConstraint function of Variable object.
+	 */
+
+	@Override
+	public void removeSearchConstraint(int storeLevel, Var var,
+			int position, Constraint C) {
+
+		if (stamp < storeLevel) {
+
+			IntDomain result = this.cloneLight();
+
+			result.modelConstraints = modelConstraints;
+			result.searchConstraints = searchConstraints;
+			result.stamp = storeLevel;
+			result.previousDomain = this;
+			result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
+			result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+			((IntVar)var).domain = result;
+
+			result.removeSearchConstraint(storeLevel, var, position, C);
+			return;
+		}
+
+		assert (stamp == storeLevel);
+
+		assert (searchConstraints.get(position) == C) : "Position of the removed constraint not specified properly";
+		
+		if (position < searchConstraintsToEvaluate) {
+
+			searchConstraints.set(position, searchConstraints
+					.get(searchConstraintsToEvaluate - 1));
+			searchConstraints.set(searchConstraintsToEvaluate - 1, C);
+			searchConstraintsToEvaluate--;
+
+		}
+
+	}
+
 	public abstract IntDomain cloneLight();
 
 	/**
@@ -868,27 +1268,27 @@ public abstract class IntDomain extends Domain {
 	/* 
 	 * Finds result interval for multiplication of {a..b} * {c..d}
 	 */
-	public final static IntervalDomain mulBounds(int a, int b, int c, int d) {
+	public final static Interval mulBounds(int a, int b, int c, int d) {
 		
 		int min = Math.min(Math.min(multiply(a,c),multiply(a,d)), Math.min(multiply(b,c),multiply(b,d)));
 		int max = Math.max(Math.max(multiply(a,c),multiply(a,d)), Math.max(multiply(b,c),multiply(b,d)));
 		
-		return new IntervalDomain(min, max);
+		return new Interval(min, max);
 	}
 
 	/* 
 	 * Finds result interval for division of {a..b} / {c..d} for div and mod constraints
 	 */
-	public final static IntervalDomain divBounds (int a, int b, int c, int d) {
+	public final static Interval divBounds (int a, int b, int c, int d) {
 
 		int min=0, max=0;
 
-		IntervalDomain result = null;
+		Interval result = null;
 
 		if (a <= 0 && b >= 0 && c <= 0 && d >= 0) { // case 1
 			min = IntDomain.MinInt;
 			max = IntDomain.MaxInt;
-			result = new IntervalDomain(min, max);
+			result = new Interval(min, max);
 		}
 
 		else if (c == 0 && d == 0 && (a > 0 || b < 0)) // case 2
@@ -897,7 +1297,7 @@ public abstract class IntDomain extends Domain {
 		else if ( c < 0 && d > 0 && (a > 0 || b < 0)) { // case 3
 			max = Math.max(Math.abs(a), Math.abs(b));
 			min = -max;
-			result = new IntervalDomain(min, max);	    
+			result = new Interval(min, max);	    
 		}
 
 		else if (c == 0 && d != 0 && (a > 0 || b < 0)) // case 4 a
@@ -909,7 +1309,7 @@ public abstract class IntDomain extends Domain {
 			int ac = a/c, ad = a/d, bc = b/c, bd =b/d;
 			min = Math.min(Math.min(ac, ad), Math.min(bc, bd));
 			max = Math.max(Math.max(ac, ad), Math.max(bc, bd));
-			result = new IntervalDomain(min, max);
+			result = new Interval(min, max);
 		}
 
 		return result;
@@ -918,15 +1318,15 @@ public abstract class IntDomain extends Domain {
 	/* 
 	 * Finds result interval for division of {a..b} / {c..d} for mul constraints
 	 */
-	public final static IntervalDomain divIntBounds (int a, int b, int c, int d) {
+	public final static Interval divIntBounds (int a, int b, int c, int d) {
 		int min=0, max=0;
 
-		IntervalDomain result=null;
+		Interval result=null;
 
 		if (a <= 0 && b >= 0 && c <= 0 && d >= 0) { // case 1
 			min = IntDomain.MinInt;
 			max = IntDomain.MaxInt;
-			result = new IntervalDomain(min, max);
+			result = new Interval(min, max);
 		}
 
 		else if (c == 0 && d == 0 && (a > 0 || b < 0)) // case 2
@@ -935,7 +1335,7 @@ public abstract class IntDomain extends Domain {
 		else if ( c < 0 && d > 0 && (a > 0 || b < 0)) { // case 3
 			max = Math.max(Math.abs(a), Math.abs(b));
 			min = -max;
-			result = new IntervalDomain(min, max);	    
+			result = new Interval(min, max);	    
 		}
 
 		else if (c == 0 && d != 0 && (a > 0 || b < 0)) // case 4 a
@@ -951,7 +1351,7 @@ public abstract class IntDomain extends Domain {
 			min = (int)Math.round( Math.ceil( low ) );
 			max = (int)Math.round( Math.floor( high ));
 			if (min > max) throw Store.failException;
-			result = new IntervalDomain(min, max);
+			result = new Interval(min, max);
 		}
 
 		return result;

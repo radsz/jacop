@@ -39,10 +39,10 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 
 /**
- * Constraint X + Y + Q > C
+ * Constraint X + Y + Q {@literal >} C
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.4
  */
 
 public class XplusYplusQgtC extends PrimitiveConstraint {
@@ -50,17 +50,17 @@ public class XplusYplusQgtC extends PrimitiveConstraint {
 	static int counter = 1;
 
 	/**
-	 * It specifies variable x in constraint x+y+q > c.
+	 * It specifies variable x in constraint x+y+q {@literal >} c.
 	 */
 	public IntVar x;
 
 	/**
-	 * It specifies variable y in constraint x+y+q > c.
+	 * It specifies variable y in constraint x+y+q {@literal >} c.
 	 */
 	public IntVar y;
 
 	/**
-	 * It specifies variable q in constraint x+y+q > c.
+	 * It specifies variable q in constraint x+y+q {@literal >} c.
 	 */
 	public IntVar q;
 
@@ -76,7 +76,7 @@ public class XplusYplusQgtC extends PrimitiveConstraint {
 	public static String[] xmlAttributes = {"x", "y", "q", "c"};
 
 	/**
-	 * It creates X+Y+Q>=C constraint.
+	 * It creates X+Y+Q{@literal >=} C constraint.
 	 * @param x variable x.
 	 * @param y variable y.
 	 * @param q variable q.

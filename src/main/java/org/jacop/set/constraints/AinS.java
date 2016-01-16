@@ -45,7 +45,7 @@ import org.jacop.set.core.SetVar;
  * a provided set. 
  * 
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.2
+ * @version 4.4
  */
 
 public class AinS extends PrimitiveConstraint {
@@ -89,6 +89,7 @@ public class AinS extends PrimitiveConstraint {
 	 * 
 	 * @param a variable that is restricted to be included within a provided set.
 	 * @param set set that is restricted to contain the value of set variable a.
+	 * @param strict strict inclusion (true)
 	 */
 	public AinS(SetVar a, IntDomain set, boolean strict) {
 
@@ -148,14 +149,6 @@ public class AinS extends PrimitiveConstraint {
 		return SetDomain.ANY;		
 	}
 
-
-	@Override
-	public String id() {
-		if (id != null)
-			return id;
-		else
-			return this.getClass().getSimpleName() + numberId;
-	}
 
 	@Override
 	public void impose(Store store) {

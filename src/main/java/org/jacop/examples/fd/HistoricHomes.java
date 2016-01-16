@@ -183,7 +183,7 @@ public class HistoricHomes extends ExampleFD {
 	
 	/**
 	 * It executes the program to solve this simple logic puzzle.
-	 * @param args
+	 * @param args parameters (none)
 	 */
 	public static void main(String args[]) {
 

@@ -42,7 +42,7 @@ import org.jacop.set.core.SetVar;
  * maximal value in the domain of variable
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.4
  * @param <T> type of variable being used in search.
  */
 
@@ -59,7 +59,7 @@ public class IndomainSetRandom<T extends SetVar> implements Indomain<T> {
 	/**
 	 * It creates random indomain heuristic according to the provided random 
 	 * generator.
-	 * @param seed
+	 * @param seed seed for random number genrator
 	 */
 	public IndomainSetRandom(Random seed) {
 		this.seed = seed;

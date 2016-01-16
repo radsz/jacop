@@ -41,11 +41,11 @@ import org.jacop.core.Var;
 import org.jacop.util.SimpleHashSet;
 
 /**
- * Reified constraints "constraint" #<=> B
+ * Reified constraints "constraint" {@literal <=>} B
  * 
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.4
  */
 
 public class Reified extends Constraint {
@@ -66,7 +66,7 @@ public class Reified extends Constraint {
     boolean needQueueVariable = false;
      
     boolean needRemoveLevelLate = false;
-
+    
 	/**
 	 * It specifies the arguments required to be saved by an XML format as well as 
 	 * the constructor being called to recreate an object from an XML format.
@@ -124,14 +124,18 @@ public class Reified extends Constraint {
 	@Override
 	public void consistency(Store store) {
 
-	    if (b.max() == 0) // C must be false
-			c.notConsistency(store);
-		else if (b.min() == 1) // C must be true
-			c.consistency(store);
-		else if (c.satisfied()) 
-			b.domain.in(store.level, b, 1, 1);
-		else if (c.notSatisfied())
-			b.domain.in(store.level, b, 0, 0);
+	    if (c.satisfied()) {
+		b.domain.in(store.level, b, 1, 1);
+		removeSatConstraint();
+	    }
+	    else if (c.notSatisfied()) {
+		b.domain.in(store.level, b, 0, 0);
+		removeSatConstraint();
+	    }
+	    else if (b.max() == 0) // C must be false
+		c.notConsistency(store);
+	    else if (b.min() == 1) // C must be true
+		c.consistency(store);
 		
 	}
 
@@ -182,7 +186,8 @@ public class Reified extends Constraint {
 		while (!variables.isEmpty()) {
 			Var V = variables.removeFirst();
 			V.putModelConstraint(this, getConsistencyPruningEvent(V));
-			queueVariable(store.level, V);
+			if (needQueueVariable)
+			    queueVariable(store.level, V);
 		}
 
 		c.include(store);
@@ -196,10 +201,22 @@ public class Reified extends Constraint {
 	@Override
 	public void removeConstraint() {
 
-		b.removeConstraint(this);
+	    b.removeConstraint(this);
 
-		for (Var V : c.arguments())
-			V.removeConstraint(this);
+	    for (Var v : c.arguments())
+		v.removeConstraint(this);
+
+	}
+
+	private void removeSatConstraint() {
+
+	    // b must be gound here and it is not needed to remove
+	    // this constraint from b
+	    // b.removeConstraint(this);
+
+	    for (Var v : c.arguments())
+		if (! v.singleton())
+		    v.removeConstraint(this);
 
 	}
 

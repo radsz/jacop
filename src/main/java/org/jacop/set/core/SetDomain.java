@@ -47,7 +47,7 @@ import org.jacop.core.Var;
  * 
  * 
  * @author Radoslaw Szymanek, Krzysztof Kuchcinski and Robert Åkemalm 
- * @version 4.2
+ * @version 4.4
  */
 
 public abstract class SetDomain extends Domain {
@@ -543,7 +543,7 @@ public abstract class SetDomain extends Domain {
 			return;
 		}
 
-		int pruningEvent = IntDomain.GROUND;
+		int pruningEvent = SetDomain.GROUND;
 
 		Constraint[] pruningEventConstraints = modelConstraints[pruningEvent];
 
@@ -571,11 +571,10 @@ public abstract class SetDomain extends Domain {
 					modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = C;
 				}
 
-				int[] newModelConstraintsToEvaluate = new int[3];
-
-				newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
-				newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
-				newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
+				int[] newModelConstraintsToEvaluate = new int[modelConstraintsToEvaluate.length];
+				for (int k = 0; k < modelConstraintsToEvaluate.length; k++) {
+				    newModelConstraintsToEvaluate[k] = modelConstraintsToEvaluate[k];
+				}
 
 				newModelConstraintsToEvaluate[pruningEvent]--;
 
@@ -587,7 +586,7 @@ public abstract class SetDomain extends Domain {
 
 		}
 
-		pruningEvent = IntDomain.BOUND;
+		pruningEvent = SetDomain.BOUND;
 
 		pruningEventConstraints = modelConstraints[pruningEvent];
 
@@ -612,11 +611,10 @@ public abstract class SetDomain extends Domain {
 					modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = C;
 				}
 
-				int[] newModelConstraintsToEvaluate = new int[3];
-
-				newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
-				newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
-				newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
+				int[] newModelConstraintsToEvaluate = new int[modelConstraintsToEvaluate.length];
+				for (int k = 0; k < modelConstraintsToEvaluate.length; k++) {
+				    newModelConstraintsToEvaluate[k] = modelConstraintsToEvaluate[k];
+				}
 
 				newModelConstraintsToEvaluate[pruningEvent]--;
 
@@ -628,14 +626,14 @@ public abstract class SetDomain extends Domain {
 
 		}
 
-		pruningEvent = IntDomain.ANY;
+		pruningEvent = SetDomain.ANY;
 
 		pruningEventConstraints = modelConstraints[pruningEvent];
 
 		if (pruningEventConstraints != null) {
 
 			boolean isImposed = false;
-
+			
 			int i;
 
 			for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--)
@@ -656,11 +654,10 @@ public abstract class SetDomain extends Domain {
 					modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = C;
 				}
 
-				int[] newModelConstraintsToEvaluate = new int[3];
-
-				newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
-				newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
-				newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
+				int[] newModelConstraintsToEvaluate = new int[modelConstraintsToEvaluate.length];
+				for (int k = 0; k < modelConstraintsToEvaluate.length; k++) {
+				    newModelConstraintsToEvaluate[k] = modelConstraintsToEvaluate[k];
+				}
 
 				newModelConstraintsToEvaluate[pruningEvent]--;
 

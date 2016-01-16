@@ -35,7 +35,7 @@ package org.jacop.core;
  * Standard mutable variable's value definition
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.4
  */
 
 public interface MutableVarValue {

@@ -53,7 +53,7 @@ import org.jacop.core.Var;
  * backtracking) to improve the constraint further. 
  * 
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.4
  */
 
 public class Among extends Constraint {
@@ -221,16 +221,25 @@ public class Among extends Constraint {
 			System.out.println("lbS = " + currentLB);
 			System.out.println("ubS = " + currentUB);
 			System.out.println(" domain of N " + n.domain + " is in [ "
-					+ Math.max(n.min(), currentLB) + ", "
-					+ Math.min(n.max(), currentUB) + " ]");
+					+ currentLB + ", "
+					+ currentUB + " ]");
 		}
 		// ----------------------------------------------------------
 		
-		if (Math.max(n.min(), currentLB) > Math.min(n.max(), currentUB))
-			throw Store.failException;
+		// Changed KK, 2015-10-17;
+		// Not needed, in method will fail in such case
+		// if (Math.max(n.min(), currentLB) > Math.min(n.max(), currentUB))
+		// 	throw Store.failException;
+		if (currentLB > currentUB)
+		    throw Store.failException;
 		
-		n.domain.in(store.level, n, Math.max(n.min(), currentLB), Math.min(n.max(),
-				currentUB));
+		// n.domain.in(store.level, n, Math.max(n.min(), currentLB), Math.min(n.max(),
+		// 		currentUB));
+
+		// Changed KK, 2015-10-17;
+		// Math.max is not needed since method in is doing
+		// intersection between new domain and original domain
+		n.domain.in(store.level, n, currentLB, currentUB);
 
 		// Just in case LB or UB have changed.
 		upperBorder.update(currentUB);
@@ -310,10 +319,16 @@ public class Among extends Constraint {
 		int pos = 0;
 		position = new HashMap<IntVar, Integer>();
 		for (IntVar var : list) {
-			position.put(var, pos);
+		    Integer varPosition = position.put(var, pos);
+		    if (varPosition == null) {
 			var.putConstraint(this);
 			queueVariable(level, var);
 			pos++;
+		    }
+		    else {
+			System.err.println("ERROR: Constraint " + toString() + " must have different variables on the list");
+			System.exit(0);
+		    }
 		}
 		n.putConstraint(this);
 		
@@ -352,13 +367,15 @@ public class Among extends Constraint {
 		
 		StringBuffer result = new StringBuffer( id () );
 		
-		result.append(" Among(");
+		result.append(": Among([");
 		
 		for(IntVar var : this.list)
-			result.append("variable").append(var.id).append(" : ").append(var.domain).append(" ");
+			// result.append("variable").append(var.id).append(" : ").append(var.domain).append(" ");
+		    result.append(var).append(" ");
 
-		result.append(")\n Kset : ").append(this.kSet).append("\n");
-		result.append("variable ").append(n.id).append(" : ").append(n.domain).append(")\n");
+		result.append("], ").append(this.kSet).append(", ");
+		// result.append("variable ").append(n.id).append(" : ").append(n.domain).append(")\n");
+		result.append(n).append(")\n");
 		
 		return result.toString();
 	}

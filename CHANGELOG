@@ -1,3 +1,83 @@
+Version 4.4
+===========
+
+1. New selection for search variables in minizinc. Only output
+   variables are selected by default.
+
+2. Adding additional pass to the flatzinc compiler. bool2int does not
+   generate the equality constraints on both variables. Only the first
+   variable is used in the model and the second one as the alias for
+   the first one. Decreases the number of generated constraints.
+
+3. Sum and SumWeight are deprecated and SumInt, SumBool or LinearInt
+   should be used instead.
+
+4. New circuit and subcircuit constraint definitions in minizinc that
+   accept arbitrary indexes (not always starting from 1).
+
+5. New constraint SumBool.
+
+6. Correcting a bug in OrBool constraint.
+
+7. Xor of Linear constraint corrected. Linear is deprecated and
+   LinearInt should be used instead.
+
+8. Correcting a bug in GCC.
+
+9. Improvements and corrections in Linear, LinearInt, SumInt,
+   LinearIntDom and LinearFloat.
+
+10. Bug fixes and improvements.
+
+Version 4.3
+===========
+1. Implementation of constraints ArgMin and ArgMax as well connection to
+   flatzinc constraints arg_min_int and arg_max_int.
+
+2. Correcting implementation of Diff2 and Disjoint. Currently Diff2
+   implements non-strict version of diffn constraint (minizinc constraint
+   diffn_nonstrict) that makes it possible to pack zero-width rectangles
+   anywhere. Disjoint implements a strict version of diffn constraint
+   (minizinc diffn constraint). It requires that zero-width rectangles
+   does not overlap with any other rectangle.
+	
+3. Implementation of primitive constraint BoolClause implementing flatzinc
+   constraint bool_clause.
+	
+4. Sets of integer with bounds 1..0 are treated by flatzinc parser as
+   empty sets. This implements a way minizinc 2.0 represents empty sets.
+
+5. Adding int_pow build-in predicate to flatzinc interpreter.
+
+6. LexOrder global constraints accepts vectors of different sizes.
+
+7. Performance improvement for SumWeightDom.
+
+8. Performance improvement for ElementInteger and two new constraints
+   ElementIntegerFast and ElementVariableFast that implement a
+   straightforward pruning method.
+
+9. New primitive constraints LinearInt and SumInt that implement
+   pruning methods from paper "Bounds Consistency Techniques for Long
+   Linear Constraints" by Warwick Harvey and Joachim Schimpf.
+
+10. Fixing performance bug in IntervalBasedBacktrackableManager.
+    Unnecessary call to checkRemoveInvariant outside assert statement.
+
+11. Adding option --bound (-b) to flatzinc parser that enforces use of bounds
+    consistency for constraints (instead of domain, even for constraints
+    annotated with "::domain").
+
+12. Adding SAT solver to JaCoP and connecting it to flatzinc
+    interpreter. The use of SAT solver in flatzinc is controlled by
+    option -sat. If the option is specified the SAT solver is used for
+    all bool_* constraints, otherwise CP constraints are used.
+
+13. Improving performance of Max and Min constraints. Specially for
+    large lists of varibales.
+
+14. Bug fixes.
+	
 Version 4.2
 ===========
 1. Support for minizinc 2.0
