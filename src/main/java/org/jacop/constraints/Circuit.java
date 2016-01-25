@@ -252,7 +252,7 @@ public class Circuit extends Alldiff {
 		idd = 0;
 
 		sccLength = 0;
-		visit(0, store);
+		visit(0);
 
 	}
 
@@ -300,7 +300,7 @@ public class Circuit extends Alldiff {
 				.value()).next, i + 1));
 	}
 
-	int visit(int k, Store store) {
+    int visit(int k) {
 
 		int m, min = 0, t;
 		idd++;
@@ -311,7 +311,7 @@ public class Circuit extends Alldiff {
 				.hasMoreElements();) {
 			t = e.nextElement() - 1;
 			if (val[t] == 0)
-				m = visit(t, store);
+			    m = visit(t);
 			else
 				m = val[t];
 			if (m < min)
