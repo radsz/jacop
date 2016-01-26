@@ -140,7 +140,7 @@ public class Solve implements ParserTreeConstants {
     
     public void solveModel(SimpleNode astTree, Tables table, Options opt) {
 
-	int n = astTree.jjtGetNumChildren();
+ 	int n = astTree.jjtGetNumChildren();
 	
 	for (int i=0; i< n; i++) {
 	    SimpleNode node = (SimpleNode)astTree.jjtGetChild(i);
@@ -165,10 +165,15 @@ public class Solve implements ParserTreeConstants {
 
 	initNumberConstraints = store.numberConstraints();
 
-	if (opt.getVerbose())
+        //Get runtime system
+        Runtime runtime = Runtime.getRuntime();
+        long modelMem = (runtime.totalMemory() - runtime.freeMemory()) / (1024*1024);
+
+        if (opt.getVerbose())
 	    System.out.println("%% Model constraints defined.\n%% Variables = "+store.size() + " and  Bool variables = "+
 			       NumberBoolVariables + " of that constant variables = " + table.constantTable.size() + 
-			       "\n%% Constraints = "+initNumberConstraints + ", SAT clauses = " + sat.numberClauses());
+			       "\n%% Constraints = "+initNumberConstraints + ", SAT clauses = " + sat.numberClauses() +
+			       "\n%% Memory used by the model = " + modelMem + "[MB]");
 
 	dictionary = table;
 	options = opt;
