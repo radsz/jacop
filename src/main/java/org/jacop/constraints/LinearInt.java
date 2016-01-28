@@ -132,23 +132,42 @@ public class LinearInt extends PrimitiveConstraint {
      * @param list variables which are being multiplied by weights.
      * @param weights weight for each variable.
      * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum variable containing the sum of weighted variables.
+     * @param sum the sum of weighted variables.
      */
     public LinearInt(Store store, IntVar[] list, int[] weights, String rel, int sum) {
 
 	commonInitialization(store, list, weights, sum);
 	this.relationType = relation(rel);
-	
 
     }
 	
+    /**
+     * @param store current store
+     * @param list variables which are being multiplied by weights.
+     * @param weights weight for each variable.
+     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum the sum of weighted variables.
+     */
+    public LinearInt(Store store, IntVar[] list, int[] weights, String rel, IntVar sum) {
+
+	IntVar[] vars = new IntVar[list.length + 1];
+	System.arraycopy(list, 0, vars, 0, list.length);
+	vars[list.length] = sum;
+	int[] ws = new int[weights.length + 1];
+	System.arraycopy(weights, 0, ws, 0, weights.length);
+	ws[list.length] = -1;
+	
+	commonInitialization(store, vars, ws, 0);
+	this.relationType = relation(rel);
+    }
+
     /**
      * It constructs the constraint LinearInt. 
      * @param store current store
      * @param variables variables which are being multiplied by weights.
      * @param weights weight for each variable.
      * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum variable containing the sum of weighted variables.
+     * @param sum the sum of weighted variables.
      */
     public LinearInt(Store store, ArrayList<? extends IntVar> variables,
 			ArrayList<Integer> weights, String rel, int sum) {
