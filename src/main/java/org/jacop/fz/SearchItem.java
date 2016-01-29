@@ -52,6 +52,7 @@ import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.SmallestDomain;
 import org.jacop.search.SmallestMin;
+import org.jacop.search.SmallestMax;
 import org.jacop.search.SplitSelect;
 import org.jacop.search.WeightedDegree;
 import org.jacop.search.InputOrderSelect;
@@ -467,6 +468,21 @@ public class SearchItem implements ParserTreeConstants {
 	else if (var_selection_heuristic.equals("weighted_degree")) {
 	    store.variableWeightManagement = true;
 	    return new WeightedDegree<IntVar>();
+	}
+	else if (var_selection_heuristic.equals("smallest_max")) {
+	    // does not follow flatzinc standard (JaCoP specific) ;)
+	    tieBreaking = new SmallestDomain();
+	    return new SmallestMax<IntVar>();
+	}
+	else if (var_selection_heuristic.equals("smallest_most_constrained")) {
+	    // does not follow flatzinc standard (JaCoP specific) ;)
+ 	    tieBreaking = new MostConstrainedStatic(); 
+	    return new SmallestMin<IntVar>();
+	}
+	else if (var_selection_heuristic.equals("smallest_first_fail")) {
+	    // does not follow flatzinc standard (JaCoP specific) ;)
+	    tieBreaking = new SmallestDomain();
+	    return new SmallestMin<IntVar>();
 	}
 	else 
 	    System.err.println("Warning: Not implemented variable selection heuristic \""+

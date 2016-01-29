@@ -2635,16 +2635,7 @@ public class Constraints implements ParserTreeConstants {
 	    if (allWeightsOne(p1))
 		pose(new SumBool(store, p2, "==", par3));
 	    else {
-		int n = p1.length;
-		IntVar[] vs = new IntVar[n+1];
-		int[] ws = new int[n+1];
-		System.arraycopy(p2, 0, vs, 0, n);
-		System.arraycopy(p1, 0, ws, 0, n);
-		vs[n] = par3;
-		ws[n] = -1;
-		store.impose(new LinearInt(store, vs, ws, "==", 0));
-
-		// pose(new SumWeight(p2, p1, par3));
+		store.impose(new LinearInt(store, p2, p1, "==", par3));
 	    }
 	    return;
 	}
