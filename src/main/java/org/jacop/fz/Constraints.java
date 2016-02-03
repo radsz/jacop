@@ -1201,6 +1201,17 @@ public class Constraints implements ParserTreeConstants {
 			//			System.out.println("Alldiff imposed");
 		    }
 		}
+		else if (p.startsWith("softalldiff", 6)) { // just really a synonym for all different, isn't it ? 
+		    IntVar[] x = getVarArray((SimpleNode)node.jjtGetChild(0));
+		    IntVar s = getVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
+		    int useDecomp = getInt((ASTScalarFlatExpr)node.jjtGetChild(2));
+		    // 0 if false, 1 if true
+		    ViolationMeasure usedMeasure = (useDecomp == 0) ? ViolationMeasure.VARIABLE_BASED : ViolationMeasure.DECOMPOSITION_BASED ;
+		    
+		   	poseDC(new SoftAlldifferent(x, s, usedMeasure));
+			//			System.out.println("Alldiff imposed");
+		 
+		}
 		else if (p.startsWith("alldistinct", 6)) {
 		    IntVar[] v = getVarArray((SimpleNode)node.jjtGetChild(0));
 		    // we do not not pose Alldistinct directly because of possible inconsistency with its 
@@ -3992,6 +4003,14 @@ public class Constraints implements ParserTreeConstants {
 	}
     }
 
+    void poseDC(DecomposedConstraint c) throws FailException {
+
+    	store.imposeDecompositionWithConsistency(c);
+    	
+    	if (debug)
+    	    System.out.println(c);
+    }
+    
     void pose(Constraint c) throws FailException {
 
 	store.imposeWithConsistency(c);	
