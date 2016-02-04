@@ -3407,17 +3407,26 @@ public class Constraints implements ParserTreeConstants {
 	IntVar p1 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));	    
 	IntVar p3 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
 
-// 	int[] p2 = getIntArray((SimpleNode)node.jjtGetChild(1));
-// 	if (p2 != null)
-// 	    pose(new Element(p1, p2, p3));
-// 	else {
+
 	IntVar[] p2var = getVarArray((SimpleNode)node.jjtGetChild(1));
+	if (allSingleton(p2var)) {
+	    int[] p2int = new int[p2var.length];
+	    for (int i = 0; i < p2int.length; i++) 
+		p2int[i] = p2var[i].value();
+	    pose(new Element(p1, p2int, p3));
+	}
+	else
+	    pose(new ElementVariableFast(p1, p2var, p3));
 
-	pose(new ElementVariableFast(p1, p2var, p3));
-
-// 	}
     }
 
+    boolean allSingleton(IntVar[] vs) {
+	for (IntVar v : vs) 
+	    if (!v.singleton())
+		return false;
+	return true;
+    }
+    
     void generateSetElementConstraint(SimpleNode node) throws FailException {
 	IntVar p1 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
 	IntDomain[] p2 = getSetArray((SimpleNode)node.jjtGetChild(1));
