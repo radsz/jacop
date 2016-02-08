@@ -1842,11 +1842,15 @@ public class Constraints implements ParserTreeConstants {
 
    		    pose( new Geost(objects, constraints, shapes) );
 		}
-		else
+		else {
 		    System.err.println("%% ERROR: Constraint "+p+" not supported.");
+		    System.exit(0);
+		}
 	    // >>========== JaCoP constraints ==================
-	    else
+	    else {
 		System.err.println("%% ERROR: Constraint "+p+" not supported.");
+		System.exit(0);
+	    }
 	}
     }
 
