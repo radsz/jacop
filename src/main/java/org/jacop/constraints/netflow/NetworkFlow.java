@@ -120,6 +120,12 @@ public class NetworkFlow extends Constraint {
 		this.queueIndex = QUEUE_INDEX;
 		this.numberId = nextID++;
 		this.numberArgs = (short) map.size();
+
+		// for (VarHandler vh : flowVariables)
+		//     System.out.println("{flow/cost | structure} var = " + vh.listVariables());
+		// for (Arc arc : arcs) 
+		//     System.out.println(arc);
+
 	}
 
 	public NetworkFlow(NetworkBuilder builder) {
@@ -263,6 +269,20 @@ public class NetworkFlow extends Constraint {
 		if (cost > costVariable.min()) {
 			costVariable.domain.inMin(store.level, costVariable, cost);
 		}
+
+		// KKU, 2016-02-08, max value of cost variable is equal min
+		// if all constraint variables are ground.
+		// It is difficult to compute the better upper bound since we have three types of variables
+		// flow, cost weight and structure. Specially structure variables are difficult since
+		// they "dynamically" make arcs active/inactive.
+		boolean allVarsGround = true;
+		for (IntVar v : map.keySet()) 
+		    if (!v.singleton()) {
+			allVarsGround = false;
+			break;
+		    }
+		if (allVarsGround)
+		    costVariable.domain.inMax(store.level, costVariable, cost);
 	}
 
 	@Override

@@ -89,8 +89,13 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
 		String str = "[offset = " + flowOffset;
 		if (xVar != null) str += ", xVar = " + xVar.id;
 		if (wVar != null) str += ", wVar = " + wVar.id;
-		if (structure != null) str += ", sVar = " + structure.variable.id;
-		return str + "]";
+		if (structure != null) {
+		    str += ", sVar = " + structure.variable.id;
+		    str += ", domain = {";
+		    for (IntDomain d : structure.domains)
+			str += d + " ";
+		}
+		return str + "}]";
 	}
 	
 	/**

@@ -183,17 +183,36 @@ public class SoftAlldifferent extends DecomposedConstraint {
 			
 			}
 		}
+
 	}
 
 	@Override
 	public void imposeDecomposition(Store store) {
-		
+
 		if (decomposition == null)
 			decompose(store);
 		
 		for (Constraint c : decomposition)
 			store.impose(c);
 		
+	}
+
+    	@Override
+	public String toString() {
+	    
+	    StringBuffer result = new StringBuffer( );
+		
+	    result.append(" : SoftAlldifferent([");
+
+	    for (int i = 0; i < xVars.length; i++) {
+		result.append(xVars[i]);
+		if (i < xVars.length - 1)
+		    result.append(", ");
+	    }
+	    result.append("], " + costVar + ", " + violationMeasure + ")");
+	    
+	    return result.toString();
+
 	}
 
 }
