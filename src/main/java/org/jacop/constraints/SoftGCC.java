@@ -656,4 +656,59 @@ public class SoftGCC extends DecomposedConstraint {
 		
 	}
 
+    	@Override
+	public String toString() {
+	    
+	    StringBuffer result = new StringBuffer( );
+		
+	    result.append(" : SoftGCC([");
+
+	    for (int i = 0; i < xVars.length; i++) {
+		result.append(xVars[i]);
+		if (i < xVars.length - 1)
+		    result.append(", ");
+	    }
+	    result.append("], [");
+
+	    for (int i = 0; i < countedValue.length; i++) {
+		result.append(countedValue[i]);
+		if (i < countedValue.length - 1)
+		    result.append(", ");
+	    }
+	    result.append("], [");
+
+	    if ( hardCounters == null)
+		for (int i = 0; i < hardLowerBound.length; i++) {
+		    result.append(hardLowerBound[i] +".." + hardUpperBound);
+		    if (i < hardLowerBound.length - 1)
+			result.append(", ");
+		}
+	    else
+		for (int i = 0; i < hardCounters.length; i++) {
+		    result.append(hardCounters[i]);
+		    if (i < hardCounters.length - 1)
+			result.append(", ");
+		}
+	    result.append("], [");
+
+	    if ( softCounters == null)
+		for (int i = 0; i < softLowerBound.length; i++) {
+		    result.append(softLowerBound[i] +".." + softUpperBound);
+		    if (i < softLowerBound.length - 1)
+			result.append(", ");
+		}
+	    else
+		for (int i = 0; i < softCounters.length; i++) {
+		    result.append(softCounters[i]);
+		    if (i < softCounters.length - 1)
+			result.append(", ");
+		}
+	    result.append("], ");
+
+	    result.append(costVar + ", " + violationMeasure + ")");
+	    
+	    return result.toString();
+
+	}
+
 }

@@ -1212,6 +1212,18 @@ public class Constraints implements ParserTreeConstants {
 		    poseDC(sa);
 		 
 		}
+		else if (p.startsWith("softgcc", 6)) { 
+		    IntVar[] x = getVarArray((SimpleNode)node.jjtGetChild(0));
+		    int[] values = getIntArray((SimpleNode)node.jjtGetChild(1));
+		    IntVar[] hard_counters = getVarArray((SimpleNode)node.jjtGetChild(2));
+		    IntVar[] soft_counters = getVarArray((SimpleNode)node.jjtGetChild(3));
+		    IntVar cost = getVariable((ASTScalarFlatExpr)node.jjtGetChild(4));
+
+		    SoftGCC sgcc = new SoftGCC(x, hard_counters, values, soft_counters, cost, ViolationMeasure.VALUE_BASED);
+		    //sgcc.primitiveDecomposition(store);
+		    poseDC(sgcc);
+		 
+		}
 		else if (p.startsWith("alldistinct", 6)) {
 		    IntVar[] v = getVarArray((SimpleNode)node.jjtGetChild(0));
 		    // we do not not pose Alldistinct directly because of possible inconsistency with its 
