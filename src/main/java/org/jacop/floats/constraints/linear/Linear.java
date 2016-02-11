@@ -638,7 +638,7 @@ public class Linear extends PrimitiveConstraint {
 
 	public int compare(T o1, T o2) {
 	    double diff_o1 = 0, diff_o2 = 0;
-
+	    
 	    if (o1 instanceof VarNode)
 		diff_o1 = o1.max() - o1.min();
 	    else
@@ -648,8 +648,8 @@ public class Linear extends PrimitiveConstraint {
 		diff_o2 = o2.max() - o2.min();
 	    else
 		diff_o2 = (o2.max() - o2.min()) * ((VarWeightNode)o2).weight;
-	    
-	    return (int)(diff_o2 - diff_o1);
+
+	    return (diff_o2 - diff_o1 > 0) ? 1 : -1; //(int)(diff_o2 - diff_o1);
 	}
     }
 
