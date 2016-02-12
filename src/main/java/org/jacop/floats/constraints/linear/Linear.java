@@ -649,7 +649,12 @@ public class Linear extends PrimitiveConstraint {
 	    else
 		diff_o2 = (o2.max() - o2.min()) * ((VarWeightNode)o2).weight;
 
-	    return (diff_o2 - diff_o1 > 0) ? 1 : -1; //(int)(diff_o2 - diff_o1);
+	    // it sometimes violates compare contract (bcause of rounding)
+	    // "The implementor must ensure that
+	    // sgn(compare(x, y)) == -sgn(compare(y, x)) for all x and y.”
+	    // return (int)(diff_o2 - diff_o1);
+
+	    return (diff_o2 == diff_o1) ? 0 : (diff_o2 > diff_o1) ? 1 : -1; 
 	}
     }
 
