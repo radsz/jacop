@@ -1,3 +1,21 @@
+Version 4.4.1
+=============
+
+1. Performance improvements and identification of the same items in
+   Binpacking constraint.
+
+2. New constructor for LinearInt that makes it easier to define it.
+
+3. New JaCoP specific variable selection options in flatzinc.
+
+4. Adding soft_all_different_int and soft_global_cardinality_int to flatzinc.
+
+5. Printing BooleanVar when store is printed.
+
+6. Bug fixes:
+   - Changing comparator method in LinearFloat that
+     IllegalArgumentException is not reported.
+
 Version 4.4
 ===========
 
