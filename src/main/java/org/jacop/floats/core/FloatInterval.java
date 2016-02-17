@@ -141,10 +141,11 @@ public final class FloatInterval {
 
 	java.util.Locale locale = new java.util.Locale("ENGLISH", "GERMANY");
 	long p = new Double(Math.ceil(Math.log10(1/FloatDomain.precision()))).longValue();
-	String form = (Math.abs(min) >= 1.0E+7d || 
-		       Math.abs(max) >= 1.0E+7 || 
-		       (Math.abs(min) <= 1.0E-3 && min != 0) || 
-		       (Math.abs(max) <= 1.0E-3 && max != 0)) ? "%."+p+"e" : "%."+p+"f";
+	String form = "%s";
+	    //(Math.abs(min) >= 1.0E+7d || 
+	    //Math.abs(max) >= 1.0E+7 || 
+	    //(Math.abs(min) <= 1.0E-3 && min != 0) || 
+	    //(Math.abs(max) <= 1.0E-3 && max != 0)) ? "%."+p+"e" : "%."+p+"f";
 
 	String result;
 
