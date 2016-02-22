@@ -34,9 +34,12 @@ package org.jacop.search;
 import org.jacop.core.IntVar;
 
 /**
- * IndomainHierarchical - implements enumeration method based on the selection
- * of the preferred indomain for each variable. The initial idea of having such
- * functionality was proposed by Ben Weiner.
+ * IndomainList - implements enumeration method based on the selection
+ * of the preferred values for each variable. The preferred values are
+ * specified as an ordered list of values. The values will be selected
+ * in the order specified by this list. If the non of the values from
+ * the list is present in the current domain a default indomain method
+ * will be used.
  * 
  * @author Radoslaw Szymanek
  * @version 4.4
