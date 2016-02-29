@@ -123,13 +123,35 @@ public class Linear extends PrimitiveConstraint {
      * @param list variables which are being multiplied by weights.
      * @param weights weight for each variable.
      * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum variable containing the sum of weighted variables.
+     * @param sum the sum of weighted variables.
      */
     public Linear(Store store, FloatVar[] list, double[] weights, String rel, double sum) {
 
 	this.relationType = relation(rel);
 	commonInitialization(store, list, weights, sum);
     }
+
+
+    /**
+     * @param store current store
+     * @param list variables which are being multiplied by weights.
+     * @param weights weight for each variable.
+     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum variable containing the sum of weighted variables.
+     */
+    public Linear(Store store, FloatVar[] list, double[] weights, String rel, FloatVar sum) {
+
+    	FloatVar[] vars = new FloatVar[list.length + 1];
+	System.arraycopy(list, 0, vars, 0, list.length);
+	vars[list.length] = sum;
+	double[] ws = new double[weights.length + 1];
+	System.arraycopy(weights, 0, ws, 0, weights.length);
+	ws[list.length] = -1;
+	
+	this.relationType = relation(rel);
+	commonInitialization(store, vars, ws, 0);
+    }
+
 	
     private void commonInitialization(Store store, FloatVar[] list, double[] weights, double sum) {
 	this.store=store;

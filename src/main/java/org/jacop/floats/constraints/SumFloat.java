@@ -1,5 +1,5 @@
 /**
- *  LinearFloat.java 
+ *  SumFloat.java 
  *  This file is part of JaCoP.
  *
  *  JaCoP is a Java Constraint Programming solver. 
@@ -40,7 +40,7 @@ import org.jacop.core.Store;
 import java.util.ArrayList;
 
 /**
- * LinearFloat constraint implements the weighted summation over several
+ * SumFloat constraint implements the weighted summation over several
  * Variable's . It provides the weighted sum from all Variable's on the list.
  * 
  * This version works as argument to Reified and Xor constraints.  For
@@ -51,90 +51,38 @@ import java.util.ArrayList;
  * @version 4.4
  */
 
-public class LinearFloat extends Linear {
+public class SumFloat extends LinearFloat {
+
 
     /**
      * @param store current store
      * @param list variables which are being multiplied by weights.
-     * @param weights weight for each variable.
-     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum the sum of weighted variables.
-     */
-    public LinearFloat(Store store, FloatVar[] list, double[] weights, String rel, double sum) {
-
-	super(store, list, weights, rel, sum);
-    }
-
-    /**
-     * @param store current store
-     * @param list variables which are being multiplied by weights.
-     * @param weights weight for each variable.
      * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
      * @param sum variable containing the sum of weighted variables.
      */
-    public LinearFloat(Store store, FloatVar[] list, double[] weights, String rel, FloatVar sum) {
+    public SumFloat(Store store, FloatVar[] list, String rel, FloatVar sum) {
 	
-	super(store, list, weights, rel, sum);
+	super(store, list, getFilledArray(list.length), rel, sum);
     }
 
 
     /**
-     * It constructs the constraint LinearFloat. 
+     * It constructs the constraint SumFloat. 
      * @param store current store
      * @param variables variables which are being multiplied by weights.
      * @param weights weight for each variable.
      * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}"
      * @param sum variable containing the sum of weighted variables.
      */
-    public LinearFloat(Store store, ArrayList<? extends FloatVar> variables,
-		       ArrayList<Double> weights, String rel, double sum) {
+    public SumFloat(Store store, ArrayList<? extends FloatVar> variables,
+    		       ArrayList<Double> weights, String rel, FloatVar sum) {
 
-	super(store, variables, weights, rel, sum);
+	this(store, (FloatVar[])variables.toArray(), rel, sum);
     }
 
-    @Override
-    public void queueVariable(int level, Var var) {
-	super.queueVariable(level, var);
+    private static double[] getFilledArray(int n) {
+        double[] a = new double[n];
+        java.util.Arrays.fill(a, 1);
+        return a;
     }
-
-    public FloatVar derivative(Store store, FloatVar f, java.util.Set<FloatVar> vars, FloatVar x) {
-
-	// System.out.println ("FloatLinear of " + f + " on " + x);
-
-	int fIndex = 0;
-	while (list[fIndex] != f)
-	    fIndex++;
-
-	if (fIndex == list.length) {
-	    System.out.println ("Wrong variable in derivative of " + this);
-	    System.exit(0);
-	}
-
-	double w = weights[fIndex];
-	FloatVar[] df = new FloatVar[list.length];
-	double[] ww = new double[list.length];
-	FloatVar v = null;
-
-	for (int i = 0; i < list.length; i++) {
-	    if ( i != fIndex) {
-		df[i] = Derivative.getDerivative(store, list[i], vars, x);
-
-		// System.out.println ("derivate of " + list[i] + " = " + df[i]);
-
-		ww[i] = weights[i]/(-weights[fIndex]);
-	    }
-	    else {
-		v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
-		df[i] = v;
-		ww[i] = -1.0;
-	    }
-	}
-
-	org.jacop.constraints.Constraint c = new LinearFloat(store, df, ww, "==", 0.0);
-	Derivative.poseDerivativeConstraint(c);
-
-	// System.out.println ("Derivative of " + f + " over " + x + " is " + c);
-
-	return v;
-   }
 }
