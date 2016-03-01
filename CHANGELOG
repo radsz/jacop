@@ -4,15 +4,19 @@ Version 4.4.1
 1. Performance improvements and identification of the same items in
    Binpacking constraint.
 
-2. New constructor for LinearInt that makes it easier to define it.
+2. New constructor for LinearInt that makes it easier to define
+   it. Makes it possible to specify result as IntVar.
 
-3. New JaCoP specific variable selection options in flatzinc.
+3. New constraint SumFloat and new constructor for LinearFloat. Makes
+   it possible to specify result as FloatVar.
 
-4. Adding soft_all_different_int and soft_global_cardinality_int to flatzinc.
+4. New JaCoP specific variable selection options in flatzinc.
 
-5. Printing BooleanVar when store is printed.
+5. Adding soft_all_different_int and soft_global_cardinality_int to flatzinc.
 
-6. Bug fixes:
+6. Printing BooleanVar when store is printed.
+
+7. Bug fixes:
    - Changing comparator method in LinearFloat that
      IllegalArgumentException is not reported.
 
