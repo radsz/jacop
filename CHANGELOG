@@ -16,7 +16,10 @@ Version 4.4.1
 
 6. Printing BooleanVar when store is printed.
 
-7. Bug fixes:
+7. Adding possibility to Scala wrapper to define element constraint
+   on a list of BoolVar as array access.
+
+8. Bug fixes:
    - Changing comparator method in LinearFloat that
      IllegalArgumentException is not reported.
 

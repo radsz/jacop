@@ -48,6 +48,10 @@ package object scala {
     def apply(index: IntVar) : IntVar = intVarAt(index, peer)
   }
 
+  implicit class BoolVarSeq(val peer: Array[BoolVar]) extends AnyVal {
+    def apply(index: IntVar) : BoolVar = boolVarAt(index, peer)
+  }
+
   implicit class IntSeq(val peer: Array[Int]) extends AnyVal {
     def apply(index: IntVar) : IntVar = intAt(index, peer)
   }
@@ -421,6 +425,14 @@ package object scala {
 
   def intVarAt(index: IntVar, xs: Array[IntVar], offset: Int = 0) : IntVar = {
     val result  = new IntVar()
+    val c       = new Element(index, xs.asInstanceOf[Array[org.jacop.core.IntVar]], result, offset)
+    if (trace) println(c)
+    impModel.impose(c)
+    result
+  }
+
+  def boolVarAt(index: IntVar, xs: Array[BoolVar], offset: Int = 0) : BoolVar = {
+    val result  = new BoolVar()
     val c       = new Element(index, xs.asInstanceOf[Array[org.jacop.core.IntVar]], result, offset)
     if (trace) println(c)
     impModel.impose(c)
