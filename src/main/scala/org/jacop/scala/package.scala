@@ -67,8 +67,16 @@ package object scala {
 */
   // =============== Precision for floating point solver ===============
 
+/**
+* Sets precision for floating point solver
+*
+* @param p precision
+*/
   def setPrecision(p: Double) = FloatDomain.setPrecision(p)
 
+/**
+* Get precision for floating point solver
+*/
   def precision() = FloatDomain.precision()
 
   // =============== Global constraints ===============
@@ -155,7 +163,7 @@ package object scala {
 
     for ( i <- 0 to (res.length - 1)) {
       vect(i) = res(i).asInstanceOf[org.jacop.core.IntVar]
-      weight(i) = 1
+      weight(i) = w(i)
     }
     vect(res.length) = result.asInstanceOf[org.jacop.core.IntVar]
     weight(res.length) = -1
@@ -179,7 +187,7 @@ package object scala {
 
     for ( i <- 0 to (res.length - 1)) {
       vect(i) = res(i).asInstanceOf[org.jacop.core.IntVar]
-      weight(i) = 1
+      weight(i) = w(i)
     }
     vect(res.length) = result.asInstanceOf[org.jacop.core.IntVar]
     weight(res.length) = -1
@@ -203,7 +211,7 @@ package object scala {
 
     for ( i <- 0 to (res.length - 1)) {
       vect(i) = res(i).asInstanceOf[org.jacop.core.IntVar]
-      weight(i) = 1
+      weight(i) = w(i)
     }
     vect(res.length) = result.asInstanceOf[org.jacop.core.IntVar]
     weight(res.length) = -1
@@ -227,7 +235,7 @@ package object scala {
 
     for ( i <- 0 to (res.length - 1)) {
       vect(i) = res(i).asInstanceOf[org.jacop.core.IntVar]
-      weight(i) = 1
+      weight(i) = w(i)
     }
     vect(res.length) = result.asInstanceOf[org.jacop.core.IntVar]
     weight(res.length) = -1
@@ -1483,6 +1491,7 @@ package object scala {
       }
     println("\nSearch statistics:\n=================="+
 	    "\nSearch nodes : "+nodes+
+	    "\nPropagations : " + getModel.numberConsistencyCalls+
 	    "\nSearch decisions : "+decisions+
 	    "\nWrong search decisions : "+wrong+
 	    "\nSearch backtracks : "+backtracks+
@@ -1536,6 +1545,13 @@ package object scala {
 * @return related variable selection method.
 */
   def smallest_min[T <: org.jacop.core.IntVar] : ComparatorVariable[T] = new SmallestMin[T]
+
+/**
+* Wrapper for [[org.jacop.search.SmallestMax]].
+*
+* @return related variable selection method.
+*/
+  def smallest_max[T <: org.jacop.core.IntVar] : ComparatorVariable[T] = new SmallestMax[T]
 
 /**
 * Wrapper for [[org.jacop.search.LargestDomain]].
