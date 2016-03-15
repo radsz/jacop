@@ -48,7 +48,7 @@ import org.jacop.util.SimpleHashSet;
  * @version 4.4
  */
 
-public class Reified extends Constraint {
+public class Reified extends PrimitiveConstraint {
 
 	static int counter = 1;
 
@@ -136,15 +136,73 @@ public class Reified extends Constraint {
 		c.notConsistency(store);
 	    else if (b.min() == 1) // C must be true
 		c.consistency(store);
-		
 	}
 
+	@Override
+	public void notConsistency(Store store) {
+
+	    if (c.satisfied()) {
+		b.domain.in(store.level, b, 0, 0);
+		removeSatConstraint();
+	    }
+	    else if (c.notSatisfied()) {
+		b.domain.in(store.level, b, 1, 1);
+		removeSatConstraint();
+	    }
+	    else if (b.max() == 0) // C must be true
+		c.consistency(store);
+	    else if (b.min() == 1) // C must be false
+		c.notConsistency(store);		
+	}
+
+	@Override
+	public int getNestedPruningEvent(Var var, boolean mode) {
+
+		return getConsistencyPruningEvent(var);
+
+	}
+
+    
 	@Override
 	public int getConsistencyPruningEvent(Var var) {
 
 		// If consistency function mode
 		if (consistencyPruningEvents != null) {
 			Integer possibleEvent = consistencyPruningEvents.get(var);
+			if (possibleEvent != null)
+				return possibleEvent;
+		}
+		if (var == b)
+			return IntDomain.GROUND;
+		else {
+
+			int eventAcross = -1;
+
+			if (c.arguments().contains(var)) {
+				int event = c.getNestedPruningEvent(var, true);
+				if (event > eventAcross)
+					eventAcross = event;
+			}
+
+			if (c.arguments().contains(var)) {
+				int event = c.getNestedPruningEvent(var, false);
+				if (event > eventAcross)
+					eventAcross = event;
+			}
+
+			if (eventAcross == -1)
+				return Domain.NONE;
+			else
+				return eventAcross;				
+		}
+	}
+
+	@Override
+	public int getNotConsistencyPruningEvent(Var var) {
+
+		// If notConsistency function mode
+		if (notConsistencyPruningEvents != null) {
+			Integer possibleEvent = notConsistencyPruningEvents.get(var);
 			if (possibleEvent != null)
 				return possibleEvent;
 		}
@@ -225,6 +283,13 @@ public class Reified extends Constraint {
 		IntDomain Bdom = b.dom();
 		return (Bdom.min() == 1 && c.satisfied())
 		|| (Bdom.max() == 0 && c.notSatisfied());
+	}
+
+	@Override
+	public boolean notSatisfied() {
+		IntDomain Bdom = b.dom();
+		return (Bdom.max() == 0 && c.satisfied())
+		|| (Bdom.min() == 1 && c.notSatisfied());
 	}
 
 	@Override

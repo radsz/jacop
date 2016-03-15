@@ -132,7 +132,6 @@ public class Xor extends PrimitiveConstraint {
 			b.domain.in(store.level, b, 0, 0);
 		else if (c.notSatisfied())
 			b.domain.in(store.level, b, 1, 1);
-
 	}
 
 	@Override
@@ -253,8 +252,8 @@ public class Xor extends PrimitiveConstraint {
 	@Override
 	public boolean satisfied() {
 		IntDomain Bdom = b.dom();
-		return (Bdom.min() == 0 && c.satisfied())
-		|| (Bdom.max() == 1 && c.notSatisfied());
+		return (Bdom.max() == 0 && c.satisfied())
+		|| (Bdom.min() == 1 && c.notSatisfied());
 	}
 
 	@Override
