@@ -344,6 +344,22 @@ public class Constraints implements ParserTreeConstants {
 
 		    pose(new LnPeqR(getFloatVariable(p1), getFloatVariable(p2)));
 		}
+		else if (p.startsWith("log10", 6)) {
+		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
+		    ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
+
+		    FloatVar tmp = new FloatVar(store, -1e150, 1e150);
+		    pose(new LnPeqR(getFloatVariable(p1), tmp));
+		    pose(new PdivCeqR(tmp, java.lang.Math.log(10), getFloatVariable(p2)));
+		}
+		else if (p.startsWith("log2", 6)) {
+		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
+		    ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
+
+		    FloatVar tmp = new FloatVar(store, -1e150, 1e150);
+		    pose(new LnPeqR(getFloatVariable(p1), tmp));
+		    pose(new PdivCeqR(tmp, java.lang.Math.log(2), getFloatVariable(p2)));
+		}
 		else if (p.startsWith("min", 6)) {
 		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
 		    ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);

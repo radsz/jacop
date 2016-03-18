@@ -105,27 +105,7 @@ public class ExpPeqR extends Constraint {
     public void consistency(Store store) {
 
 	do {
-	    double qMin, qMax;
-	    if (p.min() == p.max() && p.min() == 0.0) {
-		qMin = 1.0;
-		qMax = 1.0;
-	    }
-	    else {
-		qMin = java.lang.Math.exp(p.min());
-		if (Double.isNaN(qMin) || Double.isInfinite(qMin) )
-		    throw new InternalException("Floating-point overflow in constraint " + this);
-		qMin = FloatDomain.down(qMin);
-
-		qMax = java.lang.Math.exp(p.max());
-		if (Double.isNaN(qMax) || Double.isInfinite(qMax) )
-		    throw new InternalException("Floating-point overflow in constraint " + this);
-		qMax = FloatDomain.up(qMax);
-	    }
-
-	    q.domain.in(store.level, q, qMin, qMax);
 			
-	    store.propagationHasOccurred = false;
-
 	    double pMin, pMax;
 	    if (q.min() == 1.0 && q.max() == 1.0) {
 		pMin = 0.0;
@@ -150,6 +130,27 @@ public class ExpPeqR extends Constraint {
 	    }
 
 	    p.domain.in(store.level, p, pMin, pMax);
+
+	    store.propagationHasOccurred = false;
+
+	    double qMin, qMax;
+	    if (p.min() == p.max() && p.min() == 0.0) {
+		qMin = 1.0;
+		qMax = 1.0;
+	    }
+	    else {
+		qMin = java.lang.Math.exp(p.min());
+		if (Double.isNaN(qMin) || Double.isInfinite(qMin) )
+		    throw new InternalException("Floating-point overflow in constraint " + this);
+		qMin = FloatDomain.down(qMin);
+
+		qMax = java.lang.Math.exp(p.max());
+		if (Double.isNaN(qMax) || Double.isInfinite(qMax) )
+		    throw new InternalException("Floating-point overflow in constraint " + this);
+		qMax = FloatDomain.up(qMax);
+	    }
+
+	    q.domain.in(store.level, q, qMin, qMax);
 
 	} while (store.propagationHasOccurred);
 
