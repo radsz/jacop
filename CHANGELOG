@@ -4,8 +4,8 @@ Version 4.4.1
 1. Performance improvements and identification of the same items in
    Binpacking constraint.
 
-2. New constructor for LinearInt that makes it easier to define
-   it. Makes it possible to specify result as IntVar.
+2. New constructor for LinearInt and LInearIntDom that makes it easier
+   to define it. Makes it possible to specify result as IntVar.
 
 3. New constraint SumFloat and new constructor for LinearFloat. Makes
    it possible to specify result as FloatVar.
@@ -19,7 +19,10 @@ Version 4.4.1
 7. Adding possibility to Scala wrapper to define element constraint
    on a list of BoolVar as array access.
 
-8. Bug fixes:
+8. Adding floating-point constraints log2 and log10 to flatzinc to
+   JaCoP compiler.
+
+9. Bug fixes:
    - Changing comparator method in LinearFloat that
      IllegalArgumentException is not reported.
 

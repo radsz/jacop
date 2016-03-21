@@ -82,9 +82,23 @@ public class LinearIntDom extends LinearInt {
      * @param list variables which are being multiplied by weights.
      * @param weights weight for each variable.
      * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum variable containing the sum of weighted variables.
+     * @param sum the sum of weighted variables.
      */
     public LinearIntDom(Store store, IntVar[] list, int[] weights, String rel, int sum) {
+
+	super(store, list, weights, rel, sum);
+	queueIndex = 4;
+    }
+	
+    /**
+     * It constructs the constraint LinearIntDom. 
+     * @param store current store
+     * @param list variables which are being multiplied by weights.
+     * @param weights weight for each variable.
+     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum variable containing the sum of weighted variables.
+     */
+    public LinearIntDom(Store store, IntVar[] list, int[] weights, String rel, IntVar sum) {
 
 	super(store, list, weights, rel, sum);
 	queueIndex = 4;
@@ -103,8 +117,6 @@ public class LinearIntDom extends LinearInt {
 	super(store, variables, weights, rel, sum);
 	queueIndex = 4;
     }
-
-
 
     @Override
     public void consistency(Store store) {
