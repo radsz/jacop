@@ -39,10 +39,14 @@ public class QueueForward {
             }
         }
 
-        for (Var var : variables) {
-            if (forwardMap.get(var).isEmpty())
-                forwardMap.remove(var);
-        }
+	for (Var var : variables) {
+	    List<Constraint> c =  forwardMap.get(var);
+
+	    if (c == null)
+		forwardMap.remove(var);
+	    else if (c.isEmpty())
+		forwardMap.remove(var);
+	}
 
         isEmpty = forwardMap.isEmpty();
 
