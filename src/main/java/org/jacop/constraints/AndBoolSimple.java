@@ -156,9 +156,9 @@ public class AndBoolSimple extends AndBoolVector {
 	    b.domain.in(store.level, b, 1,1);
 	}
 	else if (result.min() == 1)
-	    if (a.max() == 1)
+	    if (a.min() == 1)
 		b.domain.in(store.level, b, 0,0);
-	    else if (b.max() == 1)
+	    else if (b.min() == 1)
 		a.domain.in(store.level, a, 0,0);
     }
 
@@ -169,7 +169,7 @@ public class AndBoolSimple extends AndBoolVector {
 
     @Override
     public boolean notSatisfied() {
-	return (result.min() == 1 && (a.max() == 0 || b.max() == 0) || (result.max() == 0 && a.min() == 1 && b.min() == 1));
+	return ((result.min() == 1 && (a.max() == 0 || b.max() == 0)) || (result.max() == 0 && a.min() == 1 && b.min() == 1));
     }
 
     @Override
