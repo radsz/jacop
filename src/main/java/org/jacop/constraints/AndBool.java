@@ -98,7 +98,7 @@ public class AndBool extends PrimitiveConstraint {
 
     @Override
     public void notConsistency(Store store) {
-	c.consistency(store);
+	c.notConsistency(store);
     }
 
     @Override
