@@ -244,10 +244,6 @@ public class XmulYeqC extends PrimitiveConstraint {
 	}
 
 	@Override
-	public void queueVariable(int level, Var V) {
-	}
-
-	@Override
 	public void removeConstraint() {
 		x.removeConstraint(this);
 		y.removeConstraint(this);

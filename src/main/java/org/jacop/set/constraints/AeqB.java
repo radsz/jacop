@@ -61,8 +61,8 @@ public class AeqB extends PrimitiveConstraint {
 	 */
 	public SetVar b;
 
-	private boolean aHasChanged = true;
-	private boolean bHasChanged = true;
+	// private boolean aHasChanged = true;
+	// private boolean bHasChanged = true;
 
 	/**
 	 * It specifies the arguments required to be saved by an XML format as well as 
@@ -125,8 +125,8 @@ public class AeqB extends PrimitiveConstraint {
 		a.domain.inCardinality(store.level, a, b.domain.card().min(), b.domain.card().max());
 		b.domain.inCardinality(store.level, b, a.domain.card().min(), a.domain.card().max());
 	
-		aHasChanged = false;
-		bHasChanged = false;
+		// aHasChanged = false;
+		// bHasChanged = false;
 		
 	}
 
@@ -239,18 +239,18 @@ public class AeqB extends PrimitiveConstraint {
 		}
 	}	
 
-	@Override
-	public void queueVariable(int level, Var variable) {
+	// @Override
+	// public void queueVariable(int level, Var variable) {
 		
-		if (variable == a) {
-			aHasChanged = true;
-			return;
-		}
+	// 	if (variable == a) {
+	// 		aHasChanged = true;
+	// 		return;
+	// 	}
 
-		if (variable == b) {
-			bHasChanged = true;
-			return;
-		}
+	// 	if (variable == b) {
+	// 		bHasChanged = true;
+	// 		return;
+	// 	}
 		
-	}
+	// }
 }

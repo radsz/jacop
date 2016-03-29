@@ -257,19 +257,19 @@ public class XeqA extends PrimitiveConstraint {
 	}	
 	
 	
-	@Override
-	public void queueVariable(int level, Var variable) {
+	// @Override
+	// public void queueVariable(int level, Var variable) {
 		
-		// if (variable == a) {
-		// 	aHasChanged = true;
-		// 	return;
-		// }
+	// 	// if (variable == a) {
+	// 	// 	aHasChanged = true;
+	// 	// 	return;
+	// 	// }
 
-		// if (variable == x) {
-		// 	xHasChanged = true;
-		// 	return;
-		// }
+	// 	// if (variable == x) {
+	// 	// 	xHasChanged = true;
+	// 	// 	return;
+	// 	// }
 		
-	}
+	// }
 
 }

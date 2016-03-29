@@ -279,7 +279,7 @@ public class AinB extends PrimitiveConstraint {
 		}
 	}	
 
-	@Override
-	public void queueVariable(int level, Var variable) {
-	}
+	// @Override
+	// public void queueVariable(int level, Var variable) {
+	// }
 }

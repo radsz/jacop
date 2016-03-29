@@ -97,7 +97,7 @@ public class OrBool extends PrimitiveConstraint {
 
     @Override
     public void notConsistency(Store store) {
-	c.consistency(store);
+	c.notConsistency(store);
     }
 
     @Override
@@ -128,11 +128,6 @@ public class OrBool extends PrimitiveConstraint {
     }
 
     @Override
-    public void queueVariable(int level, Var V) {
-	c.queueVariable(level, V);
-    }
-
-    @Override
     public void removeConstraint() {
 	c.removeConstraint();
     }
@@ -144,7 +139,7 @@ public class OrBool extends PrimitiveConstraint {
 
     @Override
     public boolean notSatisfied() {
-	return c.satisfied();
+	return c.notSatisfied();
     }
 
     @Override

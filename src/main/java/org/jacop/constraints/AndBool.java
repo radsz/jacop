@@ -134,11 +134,6 @@ public class AndBool extends PrimitiveConstraint {
     }
 
     @Override
-    public void queueVariable(int level, Var V) {
-	c.queueVariable(level, V);
-    }
-
-    @Override
     public void removeConstraint() {
 	c.removeConstraint();
     }
@@ -150,7 +145,7 @@ public class AndBool extends PrimitiveConstraint {
 
     @Override
     public boolean notSatisfied() {
-	return c.satisfied();
+	return c.notSatisfied();
     }
 
     @Override
