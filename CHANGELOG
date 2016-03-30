@@ -10,9 +10,12 @@ Version 4.4.1
 3. New constraint SumFloat and new constructor for LinearFloat. Makes
    it possible to specify result as FloatVar.
 
-4. New JaCoP specific variable selection options in flatzinc.
+4. New JaCoP specific variable selection options in flatzinc
+   (smallest_max, smallest_most_constrained, smallest_first_fail). It
+   requires to include jacop.mzn in minizinc program.
 
-5. Adding soft_all_different_int and soft_global_cardinality_int to flatzinc.
+5. Adding soft_all_different_int and soft_global_cardinality_int to
+   flatzinc. It requires to include jacop.mzn in minizinc program.
 
 6. Printing BooleanVar when store is printed.
 
@@ -25,6 +28,7 @@ Version 4.4.1
 9. Bug fixes:
    - Changing comparator method in LinearFloat that
      IllegalArgumentException is not reported.
+   - Correcting bugs in AndBool, OrBool and AndBoolSimple.
 
 Version 4.4
 ===========
