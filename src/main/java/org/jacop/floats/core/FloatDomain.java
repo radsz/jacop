@@ -1278,12 +1278,12 @@ public abstract class FloatDomain extends Domain {
 
 	if (d == 0.0) 
 	    max = b;
-	else if (c == 0.0)
+	if (c == 0.0)
 	    min = a;
 
 	if ( a == 0.0)
 	    min = c;
-	else if (b == 0.0)
+	if (b == 0.0)
 	    max = d;
 
 	return new FloatIntervalDomain(min, max);
@@ -1300,12 +1300,12 @@ public abstract class FloatDomain extends Domain {
 
 	if (d == 0.0) 
 	    min = a;
-	else if (c == 0.0)
+	if (c == 0.0)
 	    max = b;
 
 	if ( a == 0.0)
 	    min = -d;
-	else if (b == 0.0)
+	if (b == 0.0)
 	    max = -c;
 
 	return new FloatIntervalDomain(min, max);
