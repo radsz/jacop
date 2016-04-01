@@ -38,6 +38,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.util.QueueForward;
 import org.jacop.util.SimpleHashSet;
 
 /**
@@ -62,9 +63,8 @@ public class Reified extends PrimitiveConstraint {
 	 */
 	public IntVar b;
 
+	final public QueueForward queueForward;
 
-    boolean needQueueVariable = false;
-     
     boolean needRemoveLevelLate = false;
     
 	/**
@@ -93,19 +93,13 @@ public class Reified extends PrimitiveConstraint {
 		this.b = b;
 
         try {
-            c.getClass().getDeclaredMethod("queueVariable", int.class, Var.class);
-            needQueueVariable = true;
-        } catch (NoSuchMethodException e) {
-            needQueueVariable = false;
-        }
-
-
-        try {
             c.getClass().getDeclaredMethod("removeLevelLate", int.class);
             needRemoveLevelLate = true;
         } catch (NoSuchMethodException e) {
             needRemoveLevelLate = false;
         }
+
+		queueForward = new QueueForward(c, arguments());
 
     }
 
@@ -244,8 +238,7 @@ public class Reified extends PrimitiveConstraint {
 		while (!variables.isEmpty()) {
 			Var V = variables.removeFirst();
 			V.putModelConstraint(this, getConsistencyPruningEvent(V));
-			if (needQueueVariable)
-			    queueVariable(store.level, V);
+		    queueVariable(store.level, V);
 		}
 
 		c.include(store);
@@ -309,9 +302,7 @@ public class Reified extends PrimitiveConstraint {
     @Override
     public void queueVariable(int level, Var variable) {
 
-	if (needQueueVariable)
-	    if (!variable.equals(b))
-		c.queueVariable(level, variable);
+		queueForward.queueForward(level, variable);
 
     }
 

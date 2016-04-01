@@ -38,6 +38,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.util.QueueForward;
 import org.jacop.util.SimpleHashSet;
 
 /**
@@ -62,7 +63,7 @@ public class Xor extends PrimitiveConstraint {
 	 */
 	public IntVar b;
 
-    boolean needQueueVariable = false;
+	final public QueueForward queueForward;
      
     boolean needRemoveLevelLate = false;
 
@@ -93,19 +94,13 @@ public class Xor extends PrimitiveConstraint {
 		this.b = b;
 
         try {
-            c.getClass().getDeclaredMethod("queueVariable", int.class, Var.class);
-            needQueueVariable = true;
-        } catch (NoSuchMethodException e) {
-            needQueueVariable = false;
-        }
-
-
-        try {
             c.getClass().getDeclaredMethod("removeLevelLate", int.class);
             needRemoveLevelLate = true;
         } catch (NoSuchMethodException e) {
             needRemoveLevelLate = false;
         }
+
+		queueForward = new QueueForward(c, arguments());
 	}
 
 	@Override
@@ -288,9 +283,7 @@ public class Xor extends PrimitiveConstraint {
     @Override
     public void queueVariable(int level, Var variable) {
 
-	if (needQueueVariable)
-	    if (!variable.equals(b))
-		c.queueVariable(level, variable);
+		queueForward.queueForward(level, variable);
 
     }
 
