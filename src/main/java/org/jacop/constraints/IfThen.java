@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import org.jacop.core.Domain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.util.QueueForward;
 
 /**
  * Constraint if constraint1 then constraint2
@@ -63,6 +64,8 @@ public class IfThen extends PrimitiveConstraint {
 
 	Store store;
 
+	final public QueueForward queueForward;
+
 	/**
 	 * It specifies the arguments required to be saved by an XML format as well as 
 	 * the constructor being called to recreate an object from an XML format.
@@ -84,6 +87,8 @@ public class IfThen extends PrimitiveConstraint {
 
 		this.condC = condC;
 		this.thenC = thenC;
+
+        queueForward = new QueueForward(new PrimitiveConstraint[] {condC, thenC}, arguments());
 	}
 
 	@Override
@@ -329,6 +334,13 @@ public class IfThen extends PrimitiveConstraint {
 		return result.toString();
 		
 	}
+
+    @Override
+    public void queueVariable(int level, Var variable) {
+
+        queueForward.queueForward(level, variable);
+
+    }
 
     @Override
 	public void increaseWeight() {

@@ -37,6 +37,7 @@ import java.util.Hashtable;
 import org.jacop.core.Domain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.util.QueueForward;
 import org.jacop.util.SimpleHashSet;
 
 /**
@@ -64,6 +65,9 @@ public class And extends PrimitiveConstraint {
 	 */
 	public static String[] xmlAttributes = {"listOfC"};
 
+
+	final public QueueForward<PrimitiveConstraint> queueForward;
+
 	/**
 	 * It constructs an And constraint based on primitive constraints. The 
 	 * constraint is satisfied if all constraints are satisfied.
@@ -85,6 +89,8 @@ public class And extends PrimitiveConstraint {
 			numberArgs += cc.numberArgs();
 			this.listOfC[i++] = cc;
 		}
+
+		queueForward = new QueueForward<PrimitiveConstraint>(listOfC, arguments());
 	}
 
 	/**
@@ -103,6 +109,8 @@ public class And extends PrimitiveConstraint {
 		
 		numberArgs += c2.numberArgs();
 		this.listOfC[1] = c2;
+
+		queueForward = new QueueForward<PrimitiveConstraint>(listOfC, arguments());
 	}
 
 	/**
@@ -118,6 +126,7 @@ public class And extends PrimitiveConstraint {
 			this.numberArgs += c[i].numberArgs();
 			this.listOfC[i] = c[i];
 		}
+		queueForward = new QueueForward<PrimitiveConstraint>(listOfC, arguments());
 	}
 
 	@Override
@@ -269,8 +278,11 @@ public class And extends PrimitiveConstraint {
 	}
 
 	@Override
-	public void queueVariable(int level, Var V) {
+	public void queueVariable(int level, Var variable) {
+
 		propagation = true;
+		queueForward.queueForward(level, variable);
+
 	}
 
 	@Override

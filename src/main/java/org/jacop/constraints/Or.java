@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import org.jacop.core.Domain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.util.QueueForward;
 import org.jacop.util.SimpleHashSet;
 
 /**
@@ -66,6 +67,9 @@ public class Or extends PrimitiveConstraint {
 	 */
 	public static String[] xmlAttributes = {"listOfC"};
 
+
+	final public QueueForward<PrimitiveConstraint> queueForward;
+
 	/**
 	 * It constructs Or constraint.
 	 * @param listOfC list of primitive constraints which at least one of them has to be satisfied.
@@ -84,7 +88,8 @@ public class Or extends PrimitiveConstraint {
 			this.numberArgs += listOfC[i].numberArgs();
 			this.listOfC[i] = listOfC[i];
 		}
-		
+
+		queueForward = new QueueForward<PrimitiveConstraint>(listOfC, arguments());
 	}
 
 	/**
@@ -111,6 +116,7 @@ public class Or extends PrimitiveConstraint {
 		this.listOfC[0] = c1;
 		this.numberArgs += c2.numberArgs();
 		this.listOfC[1] = c2;
+		this.queueForward = new QueueForward<PrimitiveConstraint>(this.listOfC, arguments());
 
 	}
 
@@ -249,8 +255,11 @@ public class Or extends PrimitiveConstraint {
 	}
 
 	@Override
-	public void queueVariable(int level, Var V) {
-		propagation = true;
+	public void queueVariable(int level, Var var) {
+
+        propagation = true;
+        queueForward.queueForward(level, var);
+
 	}
 
 	@Override

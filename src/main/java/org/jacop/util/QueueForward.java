@@ -13,19 +13,19 @@ import java.util.*;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.4
  */
-public class QueueForward {
+public class QueueForward<T extends Constraint> {
 
-    final public HashMap<Var, List<Constraint>> forwardMap;
+    final public HashMap<Var, List<T>> forwardMap;
 
     final public boolean isEmpty;
 
-    public QueueForward(Constraint[] constraints, Var[] variables) {
+    public QueueForward(Collection<T> constraints, Collection<Var> variables) {
 
         forwardMap = new HashMap<>();
 
         for (Var var : variables) {
-            forwardMap.put(var, new ArrayList<Constraint>());
-            for (Constraint constraint : constraints) {
+            forwardMap.put(var, new ArrayList<T>());
+            for (T constraint : constraints) {
 
                 if (constraint.arguments().contains(var)) {
 
@@ -39,32 +39,39 @@ public class QueueForward {
             }
         }
 
-	for (Var var : variables) {
-	    List<Constraint> c =  forwardMap.get(var);
+        for (Var var : variables) {
 
-	    if (c == null)
-		forwardMap.remove(var);
-	    else if (c.isEmpty())
-		forwardMap.remove(var);
-	}
+            List<T> varConstraints = forwardMap.get(var);
+
+            if (varConstraints == null)
+                continue;
+
+            if (varConstraints.isEmpty())
+                forwardMap.remove(var);
+
+        }
 
         isEmpty = forwardMap.isEmpty();
 
     }
 
-    public QueueForward(Collection<Constraint> constraints, Collection<Var> variables) {
-        this(constraints.toArray(new Constraint[constraints.size()]), variables.toArray(new Var[variables.size()]));
+    public QueueForward(T[] constraints, Var[] vars) {
+        this(Arrays.asList(constraints), Arrays.asList(vars));
     }
 
-    public QueueForward(Constraint constraint, Collection<Var> vars) {
+    public QueueForward(T[] constraints, Collection<Var> vars) {
+        this(Arrays.asList(constraints), vars);
+    }
+
+    public QueueForward(T constraint, Collection<Var> vars) {
         this(Arrays.asList(constraint), vars);
     }
 
-    public QueueForward(Collection<Constraint> constraints, Var var) {
+    public QueueForward(Collection<T> constraints, Var var) {
         this(constraints, Arrays.asList(var));
     }
 
-    public QueueForward(Constraint constraint, Var var) {
+    public QueueForward(T constraint, Var var) {
         this(Arrays.asList(constraint), Arrays.asList(var));
     }
 
@@ -77,7 +84,7 @@ public class QueueForward {
         if (isEmpty)
             return;
 
-        List<Constraint> constraints = forwardMap.get(variable);
+        List<T> constraints = forwardMap.get(variable);
 
         if (constraints == null)
             return;

@@ -35,6 +35,7 @@ import java.util.ArrayList;
 
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.util.QueueForward;
 import org.jacop.util.SimpleHashSet;
 
 /**
@@ -60,6 +61,9 @@ public class Not extends PrimitiveConstraint {
 	 */
 	public static String[] xmlAttributes = {"c"};
 
+
+	final public QueueForward queueForward;
+
 	/**
 	 * It constructs not constraint.
 	 * @param c primitive constraint which is being negated.
@@ -68,6 +72,7 @@ public class Not extends PrimitiveConstraint {
 		numberId = IdNumber++;
 		this.c = c;
 		numberArgs += c.numberArgs();
+		this.queueForward = new QueueForward(c, arguments());
 	}
 
 	@Override
@@ -172,5 +177,12 @@ public class Not extends PrimitiveConstraint {
 			c.increaseWeight();
 		}
 	}
+
+    @Override
+    public void queueVariable(int level, Var variable) {
+
+        queueForward.queueForward(level, variable);
+
+    }
 
 }
