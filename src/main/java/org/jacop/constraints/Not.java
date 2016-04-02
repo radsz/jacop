@@ -62,7 +62,7 @@ public class Not extends PrimitiveConstraint {
 	public static String[] xmlAttributes = {"c"};
 
 
-	final public QueueForward queueForward;
+	final public QueueForward<PrimitiveConstraint> queueForward;
 
 	/**
 	 * It constructs not constraint.
@@ -72,7 +72,7 @@ public class Not extends PrimitiveConstraint {
 		numberId = IdNumber++;
 		this.c = c;
 		numberArgs += c.numberArgs();
-		this.queueForward = new QueueForward(c, arguments());
+		this.queueForward = new QueueForward<PrimitiveConstraint>(c, arguments());
 	}
 
 	@Override

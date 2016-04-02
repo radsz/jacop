@@ -64,7 +64,7 @@ public class IfThen extends PrimitiveConstraint {
 
 	Store store;
 
-	final public QueueForward queueForward;
+	final public QueueForward<PrimitiveConstraint> queueForward;
 
 	/**
 	 * It specifies the arguments required to be saved by an XML format as well as 
@@ -88,7 +88,7 @@ public class IfThen extends PrimitiveConstraint {
 		this.condC = condC;
 		this.thenC = thenC;
 
-        queueForward = new QueueForward(new PrimitiveConstraint[] {condC, thenC}, arguments());
+        queueForward = new QueueForward<PrimitiveConstraint>(new PrimitiveConstraint[] {condC, thenC}, arguments());
 	}
 
 	@Override

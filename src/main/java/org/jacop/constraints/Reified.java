@@ -63,7 +63,7 @@ public class Reified extends PrimitiveConstraint {
 	 */
 	public IntVar b;
 
-	final public QueueForward queueForward;
+	final public QueueForward<PrimitiveConstraint> queueForward;
 
     boolean needRemoveLevelLate = false;
     
@@ -99,7 +99,7 @@ public class Reified extends PrimitiveConstraint {
             needRemoveLevelLate = false;
         }
 
-		queueForward = new QueueForward(c, arguments());
+		queueForward = new QueueForward<PrimitiveConstraint>(c, arguments());
 
     }
 

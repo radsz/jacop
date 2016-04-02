@@ -63,7 +63,7 @@ public class Xor extends PrimitiveConstraint {
 	 */
 	public IntVar b;
 
-	final public QueueForward queueForward;
+	final public QueueForward<PrimitiveConstraint> queueForward;
      
     boolean needRemoveLevelLate = false;
 
@@ -100,7 +100,7 @@ public class Xor extends PrimitiveConstraint {
             needRemoveLevelLate = false;
         }
 
-		queueForward = new QueueForward(c, arguments());
+		queueForward = new QueueForward<PrimitiveConstraint>(c, arguments());
 	}
 
 	@Override
