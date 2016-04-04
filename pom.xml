@@ -275,14 +275,17 @@ setup to run configuration. -->
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-javadoc-plugin</artifactId>
 				<version>2.10.3</version>
-				<!--If using less than 1.8 Java to build then this parameter has to be commented out.-->
+
 				<configuration>
-				  <!---
+				  <!--- Possible solution to not print any warrnings for Java 1.8
 				      <additionalparam>-Xdoclint:none</additionalparam>
 				  -->				  
-				  <!--
+
 				  <sourceFileExcludes>
-				    <exclude>**/target/generated-sources/org/jacop/fz/Node.java</exclude>
+				    <sourcepath>${basedir}/src/main/java:${basedir}/target/generated-sources/jjtree:${basedir}/target/generated-sources/javacc</sourcepath>
+
+				    <exclude>**/Node.java</exclude>
+				    <exclude>**/SimpleNode.java</exclude>
 				    <exclude>**/ParseException.java</exclude>
 				    <exclude>**/Parser.java</exclude>
 				    <exclude>**/ParserTokenManager.java</exclude>
@@ -291,7 +294,6 @@ setup to run configuration. -->
 				    <exclude>**/SimpleCharStream.java</exclude>
 				    <exclude>**/ASTSolveItem.java</exclude>
 				  </sourceFileExcludes>
-				      -->
 				</configuration>
 				<executions>
 					<execution>

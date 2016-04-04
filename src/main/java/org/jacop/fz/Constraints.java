@@ -112,6 +112,7 @@ public class Constraints implements ParserTreeConstants {
     /**
      * It creates an object to parse the constraint part of the flatzinc file.
      * @param store the constraint store in which the constraints are being created.
+     * @param dict the current dictionary (tables of all variables and constants)
      */
     public Constraints(Store store, Tables dict) {
 	this.store = store;
