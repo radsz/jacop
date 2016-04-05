@@ -1,9 +1,38 @@
+/**
+ *  ExampleBasedTest.java
+ *  This file is part of JaCoP.
+ *
+ *  JaCoP is a Java Constraint Programming solver.
+ *
+ *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU Affero General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU Affero General Public License for more details.
+ *
+ *  Notwithstanding any other provision of this License, the copyright
+ *  owners of this work supplement the terms of this License with terms
+ *  prohibiting misrepresentation of the origin of this work and requiring
+ *  that modified versions of this work be marked in reasonable ways as
+ *  different from the original version. This supplement of the license
+ *  terms is in accordance with Section 7 of GNU Affero General Public
+ *  License version 3.
+ *
+ *  You should have received a copy of the GNU Affero General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
 package org.jacop;
 
 import static org.junit.Assert.*;
-import junit.framework.Assert;
 
-import org.jacop.constraints.XeqC;
 import org.jacop.examples.fd.ArchFriends;
 import org.jacop.examples.fd.BIBD;
 import org.jacop.examples.fd.BabySitting;
@@ -18,7 +47,6 @@ import org.jacop.examples.fd.DeBruijn;
 import org.jacop.examples.fd.Diet;
 import org.jacop.examples.fd.DollarAndTicket;
 import org.jacop.examples.fd.DonaldGeraldRobert;
-import org.jacop.examples.fd.ExampleFD;
 import org.jacop.examples.fd.Exodus;
 import org.jacop.examples.fd.FittingNumbers;
 import org.jacop.examples.fd.Flowers;
@@ -31,13 +59,20 @@ import org.jacop.examples.fd.HistoricHomes;
 import org.jacop.examples.fd.Kakro;
 import org.jacop.examples.fd.KnapsackExample;
 import org.jacop.examples.fd.Langford;
-import org.jacop.examples.fd.LeastDiff;
 import org.jacop.examples.fd.LectureSeries;
 import org.jacop.examples.fd.MagicSquares;
 import org.jacop.examples.fd.MasterClass;
 import org.jacop.examples.fd.carsequencing.CarSequencing;
 import org.junit.Test;
 
+
+/**
+ *
+ * It is performing testing based on the examples present in the library.
+ *
+ * @author Radoslaw Szymanek and Krzysztof Kuchcinski
+ * @version 4.4
+ */
 public class ExampleBasedTest {
 
 
@@ -47,8 +82,8 @@ public class ExampleBasedTest {
 		ArchFriends example = new ArchFriends();
 		example.model();
 
-		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 1);
+		assertEquals(true, example.searchAllAtOnce());
+		assertEquals(1, example.search.getSolutionListener().solutionsNo());
 
 	}
 
@@ -59,8 +94,8 @@ public class ExampleBasedTest {
 
 		example.model();
 
-		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 1);		
+		assertEquals(true, example.searchAllAtOnce());
+		assertEquals(1, example.search.getSolutionListener().solutionsNo());
 
 	}
 
@@ -71,8 +106,8 @@ public class ExampleBasedTest {
 
 		example.model();
 
-		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 1);		
+		assertEquals(true, example.searchAllAtOnce());
+		assertEquals(1, example.search.getSolutionListener().solutionsNo());
 
 	}
 
@@ -89,8 +124,8 @@ public class ExampleBasedTest {
 
 		example.model();
 
-		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 151200);		
+		assertEquals(true, example.searchAllAtOnce());
+		assertEquals(151200, example.search.getSolutionListener().solutionsNo());
 
 	}
 
@@ -102,8 +137,8 @@ public class ExampleBasedTest {
 
 		example.model();
 
-		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 24);	
+		assertEquals(true, example.searchAllAtOnce());
+		assertEquals(24, example.search.getSolutionListener().solutionsNo());
 
 	}
 
@@ -115,8 +150,8 @@ public class ExampleBasedTest {
 
 		example.model();
 
-		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 480);	
+		assertEquals(true, example.searchAllAtOnce());
+		assertEquals(480, example.search.getSolutionListener().solutionsNo());
 	}
 
 	@Test
@@ -126,33 +161,39 @@ public class ExampleBasedTest {
 
 		example.model();
 
-		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 24);	
+		assertEquals(true, example.searchAllAtOnce());
+		assertEquals(24, example.search.getSolutionListener().solutionsNo());
 	}
 
 
 	@Test
-	public void testCalendarMen() {
-
-		CalendarMen example = new CalendarMen();
-
-		example.model();
-
-		Assert.assertEquals(example.searchAllAtOnce(), true);
+	public void testCalendarMenBasicModel() {
 
 		CalendarMen exampleBasic = new CalendarMen();
 
 		exampleBasic.modelBasic();
 
-		Assert.assertEquals(exampleBasic.searchAllAtOnce(), true);
-
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 
-							exampleBasic.search.getSolutionListener().solutionsNo() );
+		assertEquals(true, exampleBasic.searchAllAtOnce());
+		assertEquals(1,	exampleBasic.search.getSolutionListener().solutionsNo() );
 
 	}
 
+    @Test
+    public void testCalendarMen() {
 
-	@Test
+        CalendarMen example = new CalendarMen();
+
+        example.model();
+
+        assertEquals(true, example.searchAllAtOnce());
+
+        assertEquals(1, example.search.getSolutionListener().solutionsNo());
+
+    }
+
+
+
+    @Test
 	public void testCarSequencing() {
 
 		CarSequencing example = new CarSequencing();
@@ -166,8 +207,8 @@ public class ExampleBasedTest {
 		for (String line : description)
 			System.out.println(line);
 
-		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 6);	
+		assertEquals(true, example.searchAllAtOnce());
+		assertEquals(6, example.search.getSolutionListener().solutionsNo());
 	}
 
 	@Test
@@ -177,8 +218,8 @@ public class ExampleBasedTest {
 
 		example.model();
 
-		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 2);	
+		assertEquals(true, example.searchAllAtOnce());
+		assertEquals(2, example.search.getSolutionListener().solutionsNo());
 
 	}
 
@@ -200,14 +241,13 @@ public class ExampleBasedTest {
 
 			exampleLeft.model();
 
-			Assert.assertEquals(exampleLeft.searchAllAtOnce(), true);
+			assertEquals(true, exampleLeft.searchAllAtOnce());
 
-			Assert.assertEquals(exampleLeft.search.getSolutionListener().solutionsNo(), noSol[i]);	
+			assertEquals(noSol[i], exampleLeft.search.getSolutionListener().solutionsNo());
 
 		}
 
 	}
-
 
 	@Test
 	public void testDebruijnSequence() {
@@ -219,7 +259,7 @@ public class ExampleBasedTest {
 
 		example.model();
 
-		Assert.assertEquals(example.searchAllAtOnce(), true);
+		assertEquals(true, example.searchAllAtOnce());
 
 		// prints then de Bruijn sequences
 		System.out.print("de Bruijn sequence:");            
@@ -239,29 +279,44 @@ public class ExampleBasedTest {
 			System.out.println(" : " + example.x[i].value());
 		}
 
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 14);	
+		assertEquals(14, example.search.getSolutionListener().solutionsNo());
 
 	}
 
 
 	@Test
-	public void testDiet() {
+	public void testDietSumWeight() {
 
-		  Diet exampleSumWeight = new Diet();
-	      exampleSumWeight.model();
-		  System.out.println("Searching for all solutions using sum weight constraints");
-		  Assert.assertEquals(exampleSumWeight.searchAllAtOnce(), true);
-	      Diet.printLastSolution(exampleSumWeight);
+        System.out.println("Searching for all solutions using sum weight constraints");
 
-	      Diet exampleKnapsack = new Diet();
-	      exampleKnapsack.modelKnapsack();
-		  System.out.println("Searching for all solutions using knapsack constraints");
-		  Assert.assertEquals(exampleKnapsack.searchAllAtOnce(), true);
-		  Diet.printLastSolution(exampleKnapsack);
+        Diet exampleSumWeight = new Diet();
 
-		  Assert.assertEquals(exampleSumWeight.search.getSolutionListener().solutionsNo(), 
-				  			  exampleKnapsack.search.getSolutionListener().solutionsNo() );	
+        exampleSumWeight.model();
+
+        assertEquals(exampleSumWeight.searchAllAtOnce(), true);
+
+        Diet.printLastSolution(exampleSumWeight);
+
+        assertEquals(6, exampleSumWeight.search.getSolutionListener().solutionsNo());
+
 	}
+
+
+    @Test
+    public void testDiet() {
+
+        System.out.println("Searching for all solutions using knapsack constraints");
+        Diet exampleKnapsack = new Diet();
+
+        exampleKnapsack.modelKnapsack();
+
+        assertEquals(exampleKnapsack.searchAllAtOnce(), true);
+
+        Diet.printLastSolution(exampleKnapsack);
+
+        assertEquals(6, exampleKnapsack.search.getSolutionListener().solutionsNo() );
+    }
+
 
 
 	@Test
@@ -271,8 +326,8 @@ public class ExampleBasedTest {
 
 		example.model();
 
-		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 36);	
+		assertEquals(true, example.searchAllAtOnce());
+		assertEquals(36, example.search.getSolutionListener().solutionsNo());
 	}
 
 
@@ -283,8 +338,8 @@ public class ExampleBasedTest {
 
 		example.model();
 
-		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 1);	
+		assertEquals(true, example.searchAllAtOnce());
+		assertEquals(1, example.search.getSolutionListener().solutionsNo());
 
 	}
 
@@ -295,8 +350,8 @@ public class ExampleBasedTest {
 
 		example.model();
 
-		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 6);	
+		assertEquals(true, example.searchAllAtOnce());
+		assertEquals(6, example.search.getSolutionListener().solutionsNo());
 	}
 
 	@Test
@@ -306,8 +361,8 @@ public class ExampleBasedTest {
 
 		example.model();
 
-		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 6967);	
+		assertEquals(true, example.searchAllAtOnce());
+		assertEquals(6967, example.search.getSolutionListener().solutionsNo());
 	}
 
 
@@ -318,8 +373,8 @@ public class ExampleBasedTest {
 		Flowers example = new Flowers();
 		example.model();
 
-		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 1);	
+		assertEquals(true, example.searchAllAtOnce());
+		assertEquals(1, example.search.getSolutionListener().solutionsNo());
 	}
 
 	@Test
@@ -328,8 +383,8 @@ public class ExampleBasedTest {
 		FourIslands example = new FourIslands();
 		example.model();
 
-		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 1);	
+		assertEquals(true, example.searchAllAtOnce());
+		assertEquals(1, example.search.getSolutionListener().solutionsNo());
 	}
 
 	@Test
@@ -338,8 +393,8 @@ public class ExampleBasedTest {
 		FurnitureMoving example = new FurnitureMoving();
 		example.model();
 
-		Assert.assertEquals(example.searchSpecific(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 36);	
+		assertEquals(true, example.searchSpecific());
+		assertEquals(36, example.search.getSolutionListener().solutionsNo());
 
 	}
 
@@ -350,8 +405,8 @@ public class ExampleBasedTest {
 		Gates example = new Gates();
 		example.model();
 
-		Assert.assertEquals(example.searchSpecific(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 8);	
+		assertEquals(true, example.searchSpecific());
+		assertEquals(8, example.search.getSolutionListener().solutionsNo());
 
 	}
 
@@ -361,8 +416,8 @@ public class ExampleBasedTest {
 		Golf example = new Golf();
 		example.model();
 
-		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 1);	
+		assertEquals(true, example.searchAllAtOnce());
+		assertEquals(1, example.search.getSolutionListener().solutionsNo());
 	}
 
 	@Test
@@ -371,7 +426,7 @@ public class ExampleBasedTest {
 		Golomb example = new Golomb();
 		example.model();
 
-		Assert.assertEquals(example.searchOptimalInfo(), true);
+		assertEquals(true, example.searchOptimalInfo());
 
 		int optimalCost = example.cost.value();
 
@@ -379,8 +434,8 @@ public class ExampleBasedTest {
 		example.bound = optimalCost;
 		example.model();
 
-		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 1);	
+		assertEquals(true, example.searchAllAtOnce());
+		assertEquals(1, example.search.getSolutionListener().solutionsNo());
 
 	}
 
@@ -390,8 +445,8 @@ public class ExampleBasedTest {
 		HistoricHomes example = new HistoricHomes();
 		example.model();
 
-		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 1);	
+		assertEquals(true, example.searchAllAtOnce());
+		assertEquals(1, example.search.getSolutionListener().solutionsNo());
 	}
 
 
@@ -403,8 +458,8 @@ public class ExampleBasedTest {
 
 		example.model();
 
-		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 1);	
+		assertEquals(true, example.searchAllAtOnce());
+		assertEquals(1, example.search.getSolutionListener().solutionsNo());
 
 	}
 	
@@ -416,8 +471,8 @@ public class ExampleBasedTest {
 
 		example.model();
 
-		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 18);	
+		assertEquals(true, example.searchAllAtOnce());
+		assertEquals(18, example.search.getSolutionListener().solutionsNo());
 	}
 
 	@Test
@@ -428,8 +483,8 @@ public class ExampleBasedTest {
 		example.m = 10;
 		example.model();
 
-		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 10);	
+		assertEquals(true, example.searchAllAtOnce());
+		assertEquals(10, example.search.getSolutionListener().solutionsNo());
 	}
 
 	
@@ -440,8 +495,8 @@ public class ExampleBasedTest {
 		
 		example.model();
 
-		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 120);	
+		assertEquals(true, example.searchAllAtOnce());
+		assertEquals(120, example.search.getSolutionListener().solutionsNo());
 	}
 	
 	@Test
@@ -451,8 +506,8 @@ public class ExampleBasedTest {
 		
 		example.model();
 
-		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 1760);	
+		assertEquals(true, example.searchAllAtOnce());
+		assertEquals(1760, example.search.getSolutionListener().solutionsNo());
 	}
 
 	@Test
@@ -461,31 +516,8 @@ public class ExampleBasedTest {
 		MasterClass example = new MasterClass();
 		example.model();
 
-		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 12);	
+		assertEquals(true, example.searchAllAtOnce());
+		assertEquals(12, example.search.getSolutionListener().solutionsNo());
 	}
 
-	
-	/*
-
-
-
-	@Test
-	public void test() {
-
-		example.model();
-
-		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 151200);	
-	}
-
-	@Test
-	public void test() {
-
-		example.model();
-
-		Assert.assertEquals(example.searchAllAtOnce(), true);
-		Assert.assertEquals(example.search.getSolutionListener().solutionsNo(), 151200);	
-	}
-	 */
 }
