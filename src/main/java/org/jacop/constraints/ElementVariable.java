@@ -368,6 +368,14 @@ public class ElementVariable extends Constraint {
 
 			}
 
+			if (indexHasChanged)
+			    if (index.singleton()) {
+				// index is singleton. 
+
+				int position = index.value() - 1 - indexOffset;
+				value.domain.in(store.level, value, list[ position ].domain);
+				list[ position ].domain.in(store.level, list[position], value.domain);
+			    }
 
 			indexHasChanged = false;
 			valueHasChanged = false;
