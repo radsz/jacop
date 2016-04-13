@@ -54,6 +54,7 @@ import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
 import org.jacop.search.InitializeListener;
+import org.jacop.search.FailConstraintsStatistics;
 import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.floats.core.FloatDomain;
 
@@ -126,7 +127,8 @@ public class Solve implements ParserTreeConstants {
     SatTranslation sat;
 
     public StringBuffer lastSolution = null;
-    
+
+    FailConstraintsStatistics failStatistics; 
     /**
      * It creates a parser for the solve part of the flatzinc file. 
      * 
@@ -136,6 +138,7 @@ public class Solve implements ParserTreeConstants {
     public Solve(Store store, SatTranslation sat)  {
 	this.store = store;
 	this.sat = sat;
+
     }
     
     public void solveModel(SimpleNode astTree, Tables table, Options opt) {
@@ -161,7 +164,10 @@ public class Solve implements ParserTreeConstants {
      */
     public void search(ASTSolveItem node, Tables table, Options opt) {
 
-// 	System.out.println(table);
+	if (opt.debug())
+	    failStatistics = new FailConstraintsStatistics(store);
+
+	// 	System.out.println(table);
 
 	initNumberConstraints = store.numberConstraints();
 
@@ -637,8 +643,10 @@ public class Solve implements ParserTreeConstants {
 			   "\n%% Max search depth : "+depth+
 			   "\n%% Number solutions : "+ solutions 
 			   );
-	// System.out.println("\n%% " + store.failConstraintsStatistics);
-	// System.out.println("\n%% " + store.failConstraintsIdStatistics);
+
+
+	if (options.debug())
+	    System.out.print(failStatistics);
 	}
 
     }
@@ -647,7 +655,7 @@ public class Solve implements ParserTreeConstants {
     DepthFirstSearch<Var>[] setSubSearchForAll(DepthFirstSearch<Var> label, Options opt) {
 
 	DepthFirstSearch<Var>[] intAndSetSearch = new DepthFirstSearch[4];
-
+	
 	DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
 	
 	if (! options.complementarySearch() && label != null) {
@@ -682,6 +690,10 @@ public class Solve implements ParserTreeConstants {
 
 	DepthFirstSearch<Var> lastSearch = label;
 	DepthFirstSearch<Var> intSearch = new DepthFirstSearch<Var>();
+
+	if (opt.debug())
+	    intSearch.setConsistencyListener(failStatistics);
+
  	if (int_search_variables.length != 0) {
 	    // add search containing int variables to be sure that they get a value
  	    SelectChoicePoint<Var> intSelect = new SimpleSelect<Var>(int_search_variables, 
@@ -714,6 +726,10 @@ public class Solve implements ParserTreeConstants {
 	}
 
 	DepthFirstSearch<Var> boolSearch = new DepthFirstSearch<Var>();
+
+	if (opt.debug())
+	    boolSearch.setConsistencyListener(failStatistics);
+
  	if (bool_search_variables.length != 0) {
 	    // add search containing boolean variables to be sure that they get a value
 	    SelectChoicePoint<Var> boolSelect = new SimpleSelect<Var>(bool_search_variables, 
@@ -748,6 +764,10 @@ public class Solve implements ParserTreeConstants {
 	if (set_search_variables.length != 0) {
 	    // add set search containing all variables to be sure that they get a value
 	    DepthFirstSearch<Var> setSearch = new DepthFirstSearch<Var>();
+
+	    if (opt.debug())
+		setSearch.setConsistencyListener(failStatistics);
+
 	    SelectChoicePoint<Var> setSelect = new SimpleSelect<Var>(set_search_variables, 
 								     null,
 // 								     new org.jacop.search.MostConstrainedStatic<Var>(), 
@@ -777,6 +797,10 @@ public class Solve implements ParserTreeConstants {
 	if (float_search_variables.length != 0) {
 	    // add float search containing all variables to be sure that they get a value
 	    DepthFirstSearch<Var> floatSearch = new DepthFirstSearch<Var>();
+
+	    if (opt.debug())
+		floatSearch.setConsistencyListener(failStatistics);
+
 	    SelectChoicePoint<Var> floatSelect = new SplitSelectFloat<Var>(store, float_search_variables, null);
 
 	    if (variable_selection == null)
@@ -1093,8 +1117,9 @@ public class Solve implements ParserTreeConstants {
 			   "\n%% Number solutions : "+ solutions 
 			   );
 	}
-	// System.out.println("\n%% " + store.failConstraintsStatistics);
-	// System.out.println("\n%% " + store.failConstraintsIdStatistics);
+
+	if (options.debug())
+	    System.out.print(failStatistics);
     }
 
     boolean anyTimeOutOccured(ArrayList<Search<Var>> list_seq_searches) {
@@ -1186,14 +1211,24 @@ public class Solve implements ParserTreeConstants {
     DepthFirstSearch<Var> int_search(SearchItem si) {
 
         variable_selection = si.getIntSelect();
-        return new DepthFirstSearch<Var>();
+        DepthFirstSearch label = new DepthFirstSearch<Var>();
+
+	if (options.debug())
+	    label.setConsistencyListener(failStatistics);
+
+	return label;
     }
 
     @SuppressWarnings("unchecked")
     DepthFirstSearch<Var> set_search(SearchItem si) {
 
         variable_selection = si.getSetSelect();
-        return new DepthFirstSearch<Var>();
+        DepthFirstSearch label =  new DepthFirstSearch<Var>();
+
+	if (options.debug())
+	    label.setConsistencyListener(failStatistics);
+
+	return label;
     }
 
     @SuppressWarnings("unchecked")
@@ -1202,6 +1237,9 @@ public class Solve implements ParserTreeConstants {
         variable_selection = si.getFloatSelect();
 
 	DepthFirstSearch<Var> label = new DepthFirstSearch<Var>();
+
+	if (options.debug())
+	    label.setConsistencyListener(failStatistics);
 
 	if (options.precision())
 	    label.setInitializeListener(new PrecisionSetting(options.getPrecision()));
