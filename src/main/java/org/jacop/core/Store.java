@@ -49,10 +49,6 @@ import org.jacop.util.SparseSet;
  */
 
 public class Store {
-
-    // data structures to collect fail constraint statistics
-    // public HashMap<Class, Integer> failConstraintsStatistics = new HashMap<Class, Integer>();
-    // public HashMap<String, Integer> failConstraintsIdStatistics = new HashMap<String, Integer>();
     
 	/**
 	 * It creates a logger for this class. It seeks properties in the file
@@ -547,8 +543,6 @@ public class Store {
 
 			if (currentConstraint != null) {
 
-			    // collectFailStatistics(currentConstraint);
-
 			    currentConstraint.cleanAfterFailure();
 
 				if (variableWeightManagement)
@@ -567,27 +561,6 @@ public class Store {
 		return true;
 
 	}
-    /*
-    void collectFailStatistics(Constraint currentConstraint) {
-	
-	//======== add fail constraints classes to list of fails
-	Integer n = failConstraintsStatistics.get(currentConstraint.getClass());
-	if (n != null ) {
-	    failConstraintsStatistics.put(currentConstraint.getClass(), ++n);
-	}
-	else
-	    failConstraintsStatistics.put(currentConstraint.getClass(), 1);
-
-	//======== add fail constraints id's to list of fails
-	Integer k = failConstraintsIdStatistics.get(currentConstraint.id());
-	if (k != null ) {
-	    failConstraintsIdStatistics.put(currentConstraint.id(), ++k);
-	}
-	else
-	    failConstraintsIdStatistics.put(currentConstraint.id(), 1);
-	//========
-    }
-    */
 	
 	/**
 	 * This function is called when a counter of constraints should be
