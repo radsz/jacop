@@ -122,14 +122,21 @@ public class XmodYeqZ extends Constraint {
 			if (x.min() >= 0) {
 				reminderMin = 0;
 				reminderMax = Math.max(Math.abs(y.min()), Math.abs(y.max()))  - 1;
+
+				reminderMax = Math.min(reminderMax, x.max());
 			}
 			else if (x.max() < 0) {
 				reminderMax = 0;
 				reminderMin = - Math.max(Math.abs(y.min()), Math.abs(y.max())) + 1;
-			} 
+
+				reminderMin = Math.max(reminderMin, x.min());
+			}
 			else {
 				reminderMin = Math.min(Math.min(y.min(),-y.min()), Math.min(y.max(),-y.max())) + 1;
 				reminderMax = Math.max(Math.max(y.min(),-y.min()), Math.max(y.max(),-y.max())) - 1;
+
+				reminderMin = Math.max(reminderMin, x.min());
+				reminderMax = Math.min(reminderMax, x.max());
 			}
 
 			z.domain.in(store.level, z, reminderMin, reminderMax);
