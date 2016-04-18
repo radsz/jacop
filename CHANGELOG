@@ -25,7 +25,12 @@ Version 4.4.1
 8. Adding floating-point constraints log2 and log10 to flatzinc to
    JaCoP compiler.
 
-9. Bug fixes:
+9. Two new classes for debugging and statistics
+   gathering. VariableTrace prints out variables prunings during
+   search. FailConstraintsStatistics gather number of fails for each
+   constraints and class of constraints.
+
+10. Bug fixes:
    - Changing comparator method in LinearFloat that
      IllegalArgumentException is not reported.
    - Correcting bugs in AndBool, OrBool and AndBoolSimple.
