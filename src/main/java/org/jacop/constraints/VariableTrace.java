@@ -134,7 +134,7 @@ public class VariableTrace extends Constraint {
   @Override
   public void removeLevelLate(int level) {
 
-    System.out.print("Backtrack level: " + level + ", vars: ");
+    System.out.print("Restore level: " + level + ", vars: ");
 
     for (Var v : vars) {
       System.out.print(v + " ");
