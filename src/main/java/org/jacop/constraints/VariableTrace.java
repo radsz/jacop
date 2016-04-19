@@ -100,7 +100,9 @@ public class VariableTrace extends Constraint {
   public void impose(Store store) {
 
     this.store = store;
-    
+
+    store.registerRemoveLevelLateListener(this);
+
     for (Var v : vars) {
       v.putModelConstraint(this, getConsistencyPruningEvent(v));
       // we do not want to print initial values
@@ -127,6 +129,17 @@ public class VariableTrace extends Constraint {
 
     System.out.println("Var: "+ var + ", level: " + level + ", constraint: "+ store.currentConstraint);
 
+  }
+
+  @Override
+  public void removeLevelLate(int level) {
+
+    System.out.print("Backtrack level: " + level + ", vars: ");
+
+    for (Var v : vars) {
+      System.out.print(v + " ");
+    }
+    System.out.println();
   }
 
   public void removeConstraint() {
