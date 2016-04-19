@@ -112,7 +112,7 @@ public class FailConstraintsStatistics<T extends Var>  implements ConsistencyLis
 	c.append("*** Failed constraints ***\n");
 	for (String constraint : failConstraintsIdStatistics.keySet())
 	    c.append(constraint + "\t" +  failConstraintsIdStatistics.get(constraint) + "\n");
-	c.append("*** Fails not coused by constraints " + otherFails + "\n");
+	c.append("*** Fails not caused by constraints " + otherFails + "\n");
 
 	return c.toString();
 

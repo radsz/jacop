@@ -125,7 +125,7 @@ public class VariableTrace extends Constraint {
 
   public void queueVariable(int level, Var var) {
 
-    System.out.println("Variable "+ var + " changed on level " + level + " by constraint "+ store.currentConstraint);
+    System.out.println("Var: "+ var + ", level: " + level + ", constraint: "+ store.currentConstraint);
 
   }
 

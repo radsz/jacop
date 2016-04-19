@@ -34,6 +34,9 @@ Version 4.4.1
    - Changing comparator method in LinearFloat that
      IllegalArgumentException is not reported.
    - Correcting bugs in AndBool, OrBool and AndBoolSimple.
+   - Correcting a bug when a constraint needs information of changed
+     variables and is a parameter to other constraint, for example
+     Reified, Xor.
 
 Version 4.4
 ===========
