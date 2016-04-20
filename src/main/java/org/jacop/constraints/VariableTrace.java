@@ -65,7 +65,7 @@ public class VariableTrace extends Constraint {
 
   /**
    * It constructs trace daemon for variables vs
-   * @param v variables to be traced
+   * @param vs variables to be traced
    */
   public VariableTrace(Var[] vs) {
     numberId = idNumber++;
@@ -78,7 +78,7 @@ public class VariableTrace extends Constraint {
 
   /**
    * It constructs trace daemon for variables vs
-   * @param v variables to be traced
+   * @param vs variables to be traced
    */
   public VariableTrace(ArrayList<Var> vs) {
     numberId = idNumber++;
