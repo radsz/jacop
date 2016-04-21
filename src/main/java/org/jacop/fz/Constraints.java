@@ -1451,7 +1451,7 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar[] x = getVarArray((SimpleNode)node.jjtGetChild(0));
 		    IntVar index = getVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
 
-		    pose(new org.jacop.constraints.ArgMin(x, index));
+		    pose(new ArgMin(x, index));
 
 		}
 		else if (p.startsWith("minimum", 6)) {
@@ -1464,7 +1464,7 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar[] x = getVarArray((SimpleNode)node.jjtGetChild(0));
 		    IntVar index = getVariable((ASTScalarFlatExpr)node.jjtGetChild(1));
 
-		    pose(new org.jacop.constraints.ArgMax(x, index));
+		    pose(new ArgMax(x, index));
 
 		}
 		else if (p.startsWith("maximum", 6)) {
