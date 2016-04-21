@@ -36,6 +36,13 @@ import org.jacop.core.Store;
 import org.jacop.constraints.Constraint;
 
 import java.util.HashMap;
+import java.util.Map;
+import java.util.Comparator;
+import java.util.List;
+import java.util.LinkedList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map.Entry;
 
 
 /**
@@ -50,7 +57,7 @@ import java.util.HashMap;
 public class FailConstraintsStatistics<T extends Var>  implements ConsistencyListener {
 
     // data structures to collect fail constraint statistics
-    public HashMap<Class, Integer> failConstraintsStatistics = new HashMap<Class, Integer>();
+    public HashMap<String, Integer> failConstraintsStatistics = new HashMap<String, Integer>();
     public HashMap<String, Integer> failConstraintsIdStatistics = new HashMap<String, Integer>();
     public long otherFails;
     
@@ -85,12 +92,12 @@ public class FailConstraintsStatistics<T extends Var>  implements ConsistencyLis
     void collectFailStatistics(Constraint currentConstraint) {
 
 	//======== add fail constraints classes to list of fails
-	Integer n = failConstraintsStatistics.get(currentConstraint.getClass());
+      Integer n = failConstraintsStatistics.get(currentConstraint.getClass().getSimpleName());
 	if (n != null ) {
-	    failConstraintsStatistics.put(currentConstraint.getClass(), ++n);
+	  failConstraintsStatistics.put(currentConstraint.getClass().getSimpleName(), ++n);
 	}
 	else
-	    failConstraintsStatistics.put(currentConstraint.getClass(), 1);
+	  failConstraintsStatistics.put(currentConstraint.getClass().getSimpleName(), 1);
 
 	//======== add fail constraints id's to list of fails
 	Integer k = failConstraintsIdStatistics.get(currentConstraint.id());
@@ -107,14 +114,32 @@ public class FailConstraintsStatistics<T extends Var>  implements ConsistencyLis
 	StringBuffer c = new StringBuffer();
 
 	c.append("*** Failed classes of constraints ***\n");
-	for (Class cls : failConstraintsStatistics.keySet())
+	for (String cls : sortByValues(failConstraintsStatistics).keySet())
 	    c.append(cls.toString() + "\t" + failConstraintsStatistics.get(cls) + "\n");
 	c.append("*** Failed constraints ***\n");
-	for (String constraint : failConstraintsIdStatistics.keySet())
+	for (String constraint : sortByValues(failConstraintsIdStatistics).keySet())
 	    c.append(constraint + "\t" +  failConstraintsIdStatistics.get(constraint) + "\n");
 	c.append("*** Fails not caused by constraints " + otherFails + "\n");
 
 	return c.toString();
 
     }
+
+  private static HashMap<String, Integer> sortByValues(HashMap<String, Integer> map) { 
+    List<Entry<String, Integer>> list = new LinkedList<Entry<String, Integer>>(map.entrySet());
+
+    // Comparator
+    Collections.sort(list, new Comparator<Entry<String, Integer>>() {
+  	public int compare(Entry<String, Integer> o1, Entry<String, Integer> o2) {
+  	  return o2.getValue().compareTo(o1.getValue());
+  	}
+      });
+
+    HashMap<String,Integer> sortedHashMap = new LinkedHashMap<String,Integer>(map.size());
+    for (Entry<String,Integer> entry : list) {
+      sortedHashMap.put(entry.getKey(), entry.getValue());
+    } 
+    return sortedHashMap;
+  }
+
 }
