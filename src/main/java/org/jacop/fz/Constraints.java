@@ -523,7 +523,8 @@ public class Constraints implements ParserTreeConstants {
 		    if (v1 == v2)
 		    	pose(new XeqY(v1, v3));
 		    else
-		    	pose(new org.jacop.constraints.Min(new IntVar[] {v1, v2}, v3));
+		    	pose(new MinSimple(v1, v2, v3));
+		    	// pose(new Min(new IntVar[] {v1, v2}, v3));
 
 		}
 		else if (p.startsWith("max", 4)) {
@@ -558,7 +559,8 @@ public class Constraints implements ParserTreeConstants {
 		    else if (v1 == v2)
 		    	pose(new XeqY(v1, v3));
 		    else
-		    	pose(new org.jacop.constraints.Max(new IntVar[] {v1, v2}, v3));
+		    	pose(new MaxSimple(v1, v2, v3));
+		    	// pose(new Max(new IntVar[] {v1, v2}, v3));
 
 		}
 		else if (p.startsWith("abs", 4)) {
