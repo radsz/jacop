@@ -114,32 +114,28 @@ public class FailConstraintsStatistics<T extends Var>  implements ConsistencyLis
 	StringBuffer c = new StringBuffer();
 
 	c.append("*** Failed classes of constraints ***\n");
-	for (String cls : sortByValues(failConstraintsStatistics).keySet())
-	    c.append(cls.toString() + "\t" + failConstraintsStatistics.get(cls) + "\n");
+	for (Entry<String,Integer> cls : sortByValues(failConstraintsStatistics))
+	  c.append(cls.getKey() + "\t" + cls.getValue() + "\n");
 	c.append("*** Failed constraints ***\n");
-	for (String constraint : sortByValues(failConstraintsIdStatistics).keySet())
-	    c.append(constraint + "\t" +  failConstraintsIdStatistics.get(constraint) + "\n");
+	for (Entry<String,Integer>  constraint : sortByValues(failConstraintsIdStatistics))
+	  c.append(constraint.getKey() + "\t" +  constraint.getValue() + "\n");
 	c.append("*** Fails not caused by constraints " + otherFails + "\n");
 
 	return c.toString();
 
     }
 
-  private static HashMap<String, Integer> sortByValues(HashMap<String, Integer> map) { 
+  private static List<Entry<String, Integer>> sortByValues(HashMap<String, Integer> map) { 
     List<Entry<String, Integer>> list = new LinkedList<Entry<String, Integer>>(map.entrySet());
 
-    // Comparator
+    // Sorting
     Collections.sort(list, new Comparator<Entry<String, Integer>>() {
   	public int compare(Entry<String, Integer> o1, Entry<String, Integer> o2) {
   	  return o2.getValue().compareTo(o1.getValue());
   	}
       });
 
-    HashMap<String,Integer> sortedHashMap = new LinkedHashMap<String,Integer>(map.size());
-    for (Entry<String,Integer> entry : list) {
-      sortedHashMap.put(entry.getKey(), entry.getValue());
-    } 
-    return sortedHashMap;
+    return list;
   }
 
 }
