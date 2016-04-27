@@ -139,11 +139,7 @@ public class Count extends Constraint {
 
 	@Override
 	public void consistency(Store store) {
-		
-		do {
-
-			store.propagationHasOccurred = false;
-			
+					
 			int numberEq = 0, numberMayBe = 0;
 			for (IntVar v : list) {
 				if (v.domain.contains(value))
@@ -153,21 +149,27 @@ public class Count extends Constraint {
 						numberMayBe++;
 			}
 
-			counter.domain.in(store.level, counter, numberEq, numberEq
-					+ numberMayBe);
-
-			if (numberMayBe == counter.min() - numberEq)
+			if (numberMayBe == counter.min() - numberEq) {
 				for (IntVar v : list) {
 					if (!v.singleton() && v.domain.contains(value))
 						v.domain.in(store.level, v, value, value);
 				}
-			else if (numberEq == counter.max())
+
+				numberEq += numberMayBe;
+				numberMayBe = 0;
+
+			}
+			else if (numberEq == counter.max()) {
 				for (IntVar v : list)
 					if (!v.singleton() && v.domain.contains(value))
 						v.domain.inComplement(store.level, v, value);
-		
-		} while (store.propagationHasOccurred);
-		
+
+
+				numberMayBe = 0;
+			}
+
+			counter.domain.in(store.level, counter, numberEq, numberEq + numberMayBe);
+
 	}
 
 	@Override
