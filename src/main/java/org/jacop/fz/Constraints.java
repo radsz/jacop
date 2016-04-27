@@ -613,8 +613,12 @@ public class Constraints implements ParserTreeConstants {
 
 			if (opt.useSat())
 			    sat.generate_or(a1, v);
-			else
+			else {
+			  if (v.singleton(1))
+			    pose(new SumBool(store, a1, ">=", v));
+			  else
 			    pose(new OrBool(a1, v));
+			}
 		    }
 		    else if (p.startsWith("xor", 11)) {
 
