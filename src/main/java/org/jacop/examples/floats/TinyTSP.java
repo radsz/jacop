@@ -56,7 +56,9 @@ import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.constraints.ElementFloat;
-// import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.floats.search.SmallestDomainFloat;
+import org.jacop.floats.search.MaxRegretFloat;
 
 public class TinyTSP {
 
@@ -106,7 +108,7 @@ public class TinyTSP {
 			    );
 
 	// DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
-	// SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(var, new SmallestDomainFloat<FloatVar>());
+	// SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, var, new MaxRegretFloat<FloatVar>());
 	DepthFirstSearch<IntVar> label = new DepthFirstSearch<IntVar>();
 	SelectChoicePoint<IntVar> s = new SimpleSelect<IntVar>(visit, 
 						  new SmallestDomain<IntVar>(), 
@@ -114,7 +116,7 @@ public class TinyTSP {
 	label.setAssignSolution(true);
 	// s.leftFirst = false;
 
-	label.setSolutionListener(new PrintOutListener<IntVar>());
+	// label.setSolutionListener(new PrintOutListener<IntVar>());
 
 	label.labeling(store, s, route);
 
