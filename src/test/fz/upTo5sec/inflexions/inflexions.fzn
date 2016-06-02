@@ -1,0 +1,2 @@
+array [1..8] of var int: x:: output_array([1..8]) = [1,1,4,8,8,2,7,1];
+solve :: int_search(x,first_fail,indomain_min,complete) satisfy;

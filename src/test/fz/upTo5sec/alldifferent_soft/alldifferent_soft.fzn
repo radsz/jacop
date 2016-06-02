@@ -1,0 +1,9 @@
+var 0..5: a:: output_var:: is_defined_var;
+var bool: X_INTRODUCED_41 ::var_is_introduced :: is_defined_var;
+var 0..1: X_INTRODUCED_42 ::var_is_introduced :: is_defined_var;
+var 4..4: b:: output_var = 4;
+array [1..6] of var int: x:: output_array([1..6]) = [5,1,9,1,5,5];
+constraint int_lin_eq([1,-1],[a,X_INTRODUCED_42],3):: defines_var(a);
+constraint int_lt_reif(0,0,X_INTRODUCED_41):: defines_var(X_INTRODUCED_41);
+constraint bool2int(X_INTRODUCED_41,X_INTRODUCED_42):: defines_var(X_INTRODUCED_42);
+solve  satisfy;

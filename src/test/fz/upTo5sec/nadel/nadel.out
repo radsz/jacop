@@ -1,0 +1,7 @@
+recreation = 3;
+apartments = 5;
+houses = 6;
+cemetery = 1;
+dump = 8;
+broken = array1d(1..13, [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0]);
+----------

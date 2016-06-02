@@ -1,0 +1,11 @@
+Baker = 1;
+Dyer = 0;
+Farmer = 2;
+Glover = 3;
+Hosier = 4;
+baker = 3;
+dyer = 2;
+farmer = 1;
+glover = 4;
+hosier = 0;
+----------

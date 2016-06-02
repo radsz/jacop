@@ -1,0 +1,18 @@
+array [1..2] of int: X_INTRODUCED_6 = [1,-1];
+var 1..4: X_INTRODUCED_0;
+var 1..4: X_INTRODUCED_1;
+var 1..4: X_INTRODUCED_2;
+var 1..4: X_INTRODUCED_3;
+var 1..4: X_INTRODUCED_4;
+var 1..4: X_INTRODUCED_5;
+array [1..6] of var int: country:: output_array([1..6]) = [X_INTRODUCED_0,X_INTRODUCED_1,X_INTRODUCED_2,X_INTRODUCED_3,X_INTRODUCED_4,X_INTRODUCED_5];
+constraint int_lin_ne(X_INTRODUCED_6,[X_INTRODUCED_0,X_INTRODUCED_2],0);
+constraint int_lin_ne(X_INTRODUCED_6,[X_INTRODUCED_0,X_INTRODUCED_3],0);
+constraint int_lin_ne(X_INTRODUCED_6,[X_INTRODUCED_0,X_INTRODUCED_4],0);
+constraint int_lin_ne(X_INTRODUCED_6,[X_INTRODUCED_0,X_INTRODUCED_5],0);
+constraint int_lin_ne(X_INTRODUCED_6,[X_INTRODUCED_1,X_INTRODUCED_3],0);
+constraint int_lin_ne(X_INTRODUCED_6,[X_INTRODUCED_2,X_INTRODUCED_3],0);
+constraint int_lin_ne(X_INTRODUCED_6,[X_INTRODUCED_2,X_INTRODUCED_4],0);
+constraint int_lin_ne(X_INTRODUCED_6,[X_INTRODUCED_3,X_INTRODUCED_4],0);
+constraint int_lin_ne(X_INTRODUCED_6,[X_INTRODUCED_3,X_INTRODUCED_5],0);
+solve  satisfy;

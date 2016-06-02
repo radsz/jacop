@@ -1,0 +1,7 @@
+array [1..2] of int: X_INTRODUCED_2 = [-1,-1];
+array [1..2] of int: X_INTRODUCED_8 = [2,-1];
+var 0..40: me:: output_var;
+var 0..40: him:: output_var;
+constraint int_lin_eq(X_INTRODUCED_2,[me,him],-30);
+constraint int_lin_eq(X_INTRODUCED_8,[me,him],6);
+solve  satisfy;

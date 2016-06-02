@@ -1,0 +1,8 @@
+array [1..3] of int: X_INTRODUCED_0 = [1,1,1];
+array [1..3] of int: X_INTRODUCED_2 = [4,6,1];
+var 1..100: Grandparents:: output_var;
+var 1..100: Parents:: output_var;
+var 1..100: Children:: output_var;
+constraint int_lin_eq(X_INTRODUCED_0,[Parents,Grandparents,Children],20);
+constraint int_lin_eq(X_INTRODUCED_2,[Parents,Grandparents,Children],40);
+solve  satisfy;

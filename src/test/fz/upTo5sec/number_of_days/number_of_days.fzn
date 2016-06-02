@@ -1,0 +1,12 @@
+array [1..6] of int: X_INTRODUCED_26 = [1,-1000,-1200,-2500,-3100,-4000];
+var 0..1: X_INTRODUCED_0;
+var 0..1: X_INTRODUCED_1;
+var 0..1: X_INTRODUCED_2;
+var 0..1: X_INTRODUCED_3;
+var 0..1: X_INTRODUCED_4;
+var 13..13: days:: output_var;
+var 0..11800: total_cost:: output_var:: is_defined_var;
+array [1..5] of var int: x:: output_array([1..5]) = [X_INTRODUCED_0,X_INTRODUCED_1,X_INTRODUCED_2,X_INTRODUCED_3,X_INTRODUCED_4];
+constraint int_lin_eq([-1,-2,-3,-4,-7],[X_INTRODUCED_0,X_INTRODUCED_1,X_INTRODUCED_2,X_INTRODUCED_3,X_INTRODUCED_4],-13);
+constraint int_lin_eq(X_INTRODUCED_26,[total_cost,X_INTRODUCED_0,X_INTRODUCED_1,X_INTRODUCED_2,X_INTRODUCED_3,X_INTRODUCED_4],0):: defines_var(total_cost);
+solve  minimize total_cost;

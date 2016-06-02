@@ -1,0 +1,16 @@
+var {50,100,200}: W:: output_var;
+var 2..5: L:: output_var;
+var 0.1591549430918953..3.978873577297384: V:: output_var:: is_defined_var;
+var 50.0..200.0: X_INTRODUCED_0 ::var_is_introduced ;
+var 0.5..2.0: X_INTRODUCED_2 ::var_is_introduced :: is_defined_var;
+var 4..25: X_INTRODUCED_3 ::var_is_introduced :: is_defined_var;
+var 4.0..25.0: X_INTRODUCED_4 ::var_is_introduced ;
+var 0.3183098861837907..1.989436788648692: X_INTRODUCED_6 ::var_is_introduced :: is_defined_var;
+constraint int2float(W,X_INTRODUCED_0);
+constraint int2float(X_INTRODUCED_3,X_INTRODUCED_4);
+constraint float_le(2.0,V);
+constraint float_times(X_INTRODUCED_2,X_INTRODUCED_6,V):: defines_var(V);
+constraint float_lin_eq([0.01,-1.0],[X_INTRODUCED_0,X_INTRODUCED_2],0.0):: defines_var(X_INTRODUCED_2);
+constraint int_times(L,L,X_INTRODUCED_3):: defines_var(X_INTRODUCED_3);
+constraint float_lin_eq([0.07957747154594767,-1.0],[X_INTRODUCED_4,X_INTRODUCED_6],0.0):: defines_var(X_INTRODUCED_6);
+solve :: float_search([V],0.01,input_order,indomain_split,complete) minimize V;

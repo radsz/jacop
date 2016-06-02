@@ -1,0 +1,4 @@
+var 3..3: ind:: output_var;
+var 2..2: threshold:: output_var;
+var 9..9: val:: output_var;
+solve  satisfy;

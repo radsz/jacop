@@ -1,0 +1,18 @@
+array [1..3] of int: X_INTRODUCED_1 = [1,1,1];
+array [1..2] of int: X_INTRODUCED_8 = [1,-1];
+var 0..500: a:: output_var;
+var 0..500: b:: output_var;
+var 0..500: c:: output_var;
+var 0..250000: X_INTRODUCED_3 ::var_is_introduced :: is_defined_var;
+var 0..250000: X_INTRODUCED_4 ::var_is_introduced :: is_defined_var;
+var 0..500000: X_INTRODUCED_6 ::var_is_introduced :: is_defined_var;
+var 0..250000: X_INTRODUCED_7 ::var_is_introduced :: is_defined_var;
+constraint int_lin_eq(X_INTRODUCED_1,[b,a,c],1000);
+constraint int_eq(X_INTRODUCED_6,X_INTRODUCED_7);
+constraint int_lin_le(X_INTRODUCED_8,[b,c],-1);
+constraint int_lin_le(X_INTRODUCED_8,[a,b],-1);
+constraint int_times(b,b,X_INTRODUCED_3):: defines_var(X_INTRODUCED_3);
+constraint int_times(a,a,X_INTRODUCED_4):: defines_var(X_INTRODUCED_4);
+constraint int_lin_eq([1,1,-1],[X_INTRODUCED_4,X_INTRODUCED_3,X_INTRODUCED_6],0):: defines_var(X_INTRODUCED_6);
+constraint int_times(c,c,X_INTRODUCED_7):: defines_var(X_INTRODUCED_7);
+solve  satisfy;

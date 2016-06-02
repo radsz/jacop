@@ -1,0 +1,5 @@
+origin = array1d(1..4, [1, 2, 7, 4]);
+duration = array1d(1..4, [3, 0, 2, 1]);
+used = array1d(1..4, [1, 0, 1, 1]);
+end_time = array1d(1..4, [4, 0, 9, 5]);
+----------

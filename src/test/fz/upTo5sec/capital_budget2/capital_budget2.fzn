@@ -1,0 +1,10 @@
+array [1..4] of int: X_INTRODUCED_21 = [5,7,4,3];
+var 0..1: X_INTRODUCED_0;
+var 0..1: X_INTRODUCED_1;
+var 0..1: X_INTRODUCED_2;
+var 0..1: X_INTRODUCED_3;
+var 0..58: z:: is_defined_var;
+array [1..4] of var int: x:: output_array([1..4]) = [X_INTRODUCED_0,X_INTRODUCED_1,X_INTRODUCED_2,X_INTRODUCED_3];
+constraint int_lin_le(X_INTRODUCED_21,[X_INTRODUCED_0,X_INTRODUCED_1,X_INTRODUCED_2,X_INTRODUCED_3],14);
+constraint int_lin_eq([16,22,12,8,-1],[X_INTRODUCED_0,X_INTRODUCED_1,X_INTRODUCED_2,X_INTRODUCED_3,z],0):: defines_var(z);
+solve  maximize z;

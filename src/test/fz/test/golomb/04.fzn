@@ -1,0 +1,18 @@
+predicate jacop_alldiff(array [int] of var int: x);
+array [1..2] of int: X_INTRODUCED_4 = [1,-1];
+var 1..16: X_INTRODUCED_1;
+var 0..16: X_INTRODUCED_2;
+var 0..16: X_INTRODUCED_3;
+var 0..16: X_INTRODUCED_8 ::var_is_introduced :: is_defined_var;
+var 0..16: X_INTRODUCED_9 ::var_is_introduced :: is_defined_var;
+var 0..16: X_INTRODUCED_10 ::var_is_introduced :: is_defined_var;
+array [1..4] of var int: mark:: output_array([1..4]) = [0,X_INTRODUCED_1,X_INTRODUCED_2,X_INTRODUCED_3];
+array [1..6] of var int: differences = [X_INTRODUCED_1,X_INTRODUCED_2,X_INTRODUCED_3,X_INTRODUCED_8,X_INTRODUCED_9,X_INTRODUCED_10];
+constraint int_lin_le(X_INTRODUCED_4,[X_INTRODUCED_1,X_INTRODUCED_2],-1);
+constraint int_lin_le(X_INTRODUCED_4,[X_INTRODUCED_2,X_INTRODUCED_3],-1);
+constraint jacop_alldiff(differences);
+constraint int_lin_le([1,-1,1],[X_INTRODUCED_1,X_INTRODUCED_3,X_INTRODUCED_2],-1);
+constraint int_lin_eq([1,-1,-1],[X_INTRODUCED_2,X_INTRODUCED_1,X_INTRODUCED_8],0):: defines_var(X_INTRODUCED_8);
+constraint int_lin_eq([1,-1,-1],[X_INTRODUCED_3,X_INTRODUCED_1,X_INTRODUCED_9],0):: defines_var(X_INTRODUCED_9);
+constraint int_lin_eq([1,-1,-1],[X_INTRODUCED_3,X_INTRODUCED_2,X_INTRODUCED_10],0):: defines_var(X_INTRODUCED_10);
+solve :: int_search(mark,input_order,indomain,complete) minimize X_INTRODUCED_3;

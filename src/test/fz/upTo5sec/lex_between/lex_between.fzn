@@ -1,0 +1,2 @@
+array [1..4] of var int: vector:: output_array([1..4]) = [5,2,6,2];
+solve  satisfy;

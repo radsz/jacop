@@ -1,0 +1,18 @@
+array [1..4] of int: X_INTRODUCED_3 = [1,1,1,1];
+array [1..2] of int: X_INTRODUCED_5 = [1,-1];
+var 1..711: A:: output_var;
+var 1..711: B:: output_var;
+var 1..711: C:: output_var;
+var 1..711: D:: output_var;
+var 1..505521: T1:: is_defined_var;
+var 1..505521: T2:: is_defined_var;
+var int: X_INTRODUCED_0 ::var_is_introduced :: is_defined_var;
+constraint int_eq(X_INTRODUCED_0,711000000);
+constraint int_lin_eq(X_INTRODUCED_3,[C,B,A,D],711);
+constraint int_lin_le(X_INTRODUCED_5,[C,D],0);
+constraint int_lin_le(X_INTRODUCED_5,[B,C],0);
+constraint int_lin_le(X_INTRODUCED_5,[A,B],0);
+constraint int_times(A,B,T1):: defines_var(T1);
+constraint int_times(C,D,T2):: defines_var(T2);
+constraint int_times(T1,T2,X_INTRODUCED_0):: defines_var(X_INTRODUCED_0);
+solve :: int_search([A,B,C,D,T1,T2],first_fail,indomain_min,complete) satisfy;

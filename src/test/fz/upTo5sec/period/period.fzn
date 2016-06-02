@@ -1,0 +1,6 @@
+var 1..8: X_INTRODUCED_3;
+var 1..8: X_INTRODUCED_4;
+var 1..8: X_INTRODUCED_5;
+array [1..8] of var int: x:: output_array([1..8]) = [X_INTRODUCED_3,X_INTRODUCED_4,X_INTRODUCED_5,X_INTRODUCED_3,X_INTRODUCED_4,X_INTRODUCED_5,X_INTRODUCED_3,X_INTRODUCED_4];
+array [1..3] of var int: the_period:: output_array([1..3]) = [X_INTRODUCED_3,X_INTRODUCED_4,X_INTRODUCED_5];
+solve  satisfy;

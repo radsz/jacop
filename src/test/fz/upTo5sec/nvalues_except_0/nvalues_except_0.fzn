@@ -1,0 +1,17 @@
+var 3..3: limitx:: is_defined_var:: output_var;
+var set of 0..6: X_INTRODUCED_6 ::var_is_introduced ;
+var bool: X_INTRODUCED_21 ::var_is_introduced :: is_defined_var;
+var bool: X_INTRODUCED_22 ::var_is_introduced :: is_defined_var;
+var bool: X_INTRODUCED_26 ::var_is_introduced :: is_defined_var;
+var bool: X_INTRODUCED_27 ::var_is_introduced :: is_defined_var;
+var bool: X_INTRODUCED_28 ::var_is_introduced :: is_defined_var;
+array [1..6] of var int: variables:: output_array([1..6]) = [4,5,5,4,0,1];
+constraint bool_eq(X_INTRODUCED_26,X_INTRODUCED_28);
+constraint array_bool_or([X_INTRODUCED_21,X_INTRODUCED_22],true);
+constraint bool_clause([],[X_INTRODUCED_21,X_INTRODUCED_22]);
+constraint set_card(X_INTRODUCED_6,limitx):: defines_var(limitx);
+constraint int_ne_reif(0,0,X_INTRODUCED_21):: defines_var(X_INTRODUCED_21);
+constraint array_bool_and([X_INTRODUCED_22],X_INTRODUCED_26):: defines_var(X_INTRODUCED_26);
+constraint set_in_reif(0,X_INTRODUCED_6,X_INTRODUCED_27):: defines_var(X_INTRODUCED_27);
+constraint bool_eq_reif(X_INTRODUCED_27,false,X_INTRODUCED_28):: defines_var(X_INTRODUCED_28);
+solve  satisfy;

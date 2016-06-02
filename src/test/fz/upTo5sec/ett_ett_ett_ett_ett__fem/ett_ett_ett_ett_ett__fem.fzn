@@ -1,0 +1,14 @@
+array [1..2] of int: X_INTRODUCED_1 = [1,-1];
+array [1..4] of int: X_INTRODUCED_6 = [55,490,-100,-1];
+var 1..9: E:: output_var;
+var 0..9: T:: output_var;
+var 1..9: F:: output_var;
+var 0..9: M:: output_var;
+constraint int_lin_ne(X_INTRODUCED_1,[E,T],0);
+constraint int_lin_ne(X_INTRODUCED_1,[E,F],0);
+constraint int_lin_ne(X_INTRODUCED_1,[E,M],0);
+constraint int_lin_ne(X_INTRODUCED_1,[T,F],0);
+constraint int_lin_ne(X_INTRODUCED_1,[T,M],0);
+constraint int_lin_ne(X_INTRODUCED_1,[F,M],0);
+constraint int_lin_eq(X_INTRODUCED_6,[T,E,F,M],0);
+solve  satisfy;

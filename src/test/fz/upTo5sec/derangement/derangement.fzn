@@ -1,0 +1,2 @@
+array [1..5] of var int: x:: output_array([1..5]) = [2,1,5,3,4];
+solve  satisfy;

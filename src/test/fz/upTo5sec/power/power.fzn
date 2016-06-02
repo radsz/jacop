@@ -1,0 +1,10 @@
+var 3..3: n:: output_var;
+var int: num:: is_defined_var:: output_var;
+var int: X_INTRODUCED_6 ::var_is_introduced :: is_defined_var;
+var int: X_INTRODUCED_7 ::var_is_introduced :: is_defined_var;
+var int: X_INTRODUCED_8 ::var_is_introduced :: is_defined_var;
+constraint int_times(X_INTRODUCED_8,n,num):: defines_var(num);
+constraint int_times(1,3,X_INTRODUCED_6):: defines_var(X_INTRODUCED_6);
+constraint int_times(X_INTRODUCED_6,3,X_INTRODUCED_7):: defines_var(X_INTRODUCED_7);
+constraint int_times(X_INTRODUCED_7,3,X_INTRODUCED_8):: defines_var(X_INTRODUCED_8);
+solve  satisfy;

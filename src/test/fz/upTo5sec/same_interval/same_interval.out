@@ -1,0 +1,4 @@
+size_interval = 3;
+variables1 = array1d(1..6, [1, 7, 6, 0, 1, 7]);
+variables2 = array1d(1..6, [8, 8, 8, 0, 1, 2]);
+----------

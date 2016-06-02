@@ -1,0 +1,9 @@
+guard = 1;
+clerk = 4;
+police_officer = 3;
+teacher = 1;
+actor = 4;
+boxer = 2;
+chef = 2;
+nurse = 3;
+----------

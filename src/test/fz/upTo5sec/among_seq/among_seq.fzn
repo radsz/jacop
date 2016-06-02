@@ -1,0 +1,9 @@
+var 1..1: low:: output_var;
+var 2..2: up:: output_var;
+var 0..0: X_INTRODUCED_21 ::var_is_introduced :: is_defined_var;
+var 0..0: X_INTRODUCED_32 ::var_is_introduced :: is_defined_var;
+array [1..7] of var int: x:: output_array([1..7]) = [9,2,4,5,5,7,2];
+array [1..5] of var int: y:: output_array([1..5]) = [0,2,4,6,8];
+constraint bool2int(false,X_INTRODUCED_21):: defines_var(X_INTRODUCED_21);
+constraint bool2int(false,X_INTRODUCED_32):: defines_var(X_INTRODUCED_32);
+solve  satisfy;

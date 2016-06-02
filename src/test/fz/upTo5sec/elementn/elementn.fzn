@@ -1,0 +1,7 @@
+var 3..3: t_index:: output_var;
+var 2..2: X_INTRODUCED_7 ::var_is_introduced ;
+var 9..9: X_INTRODUCED_11 ::var_is_introduced ;
+var 2..4: X_INTRODUCED_9 ::var_is_introduced  = 4;
+array [1..4] of var int: elements:: output_array([1..4]) = [6,9,2,9];
+array [1..2] of var int: entries:: output_array([1..2]) = [2,9];
+solve  satisfy;

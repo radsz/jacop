@@ -1,0 +1,10 @@
+var 1..1: X_INTRODUCED_19 ::var_is_introduced ;
+var 9..9: X_INTRODUCED_21 ::var_is_introduced ;
+var 1..1: X_INTRODUCED_23 ::var_is_introduced ;
+var 5..5: X_INTRODUCED_25 ::var_is_introduced ;
+var 2..2: X_INTRODUCED_27 ::var_is_introduced ;
+var 1..1: X_INTRODUCED_29 ::var_is_introduced ;
+array [1..6] of var int: from:: output_array([1..6]) = [1,9,1,5,2,1];
+array [1..6] of var int: permutation:: output_array([1..6]) = [6,1,3,5,4,2];
+array [1..6] of var int: to:: output_array([1..6]) = [9,1,1,2,5,1];
+solve  satisfy;

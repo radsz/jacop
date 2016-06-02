@@ -1,0 +1,9 @@
+array [1..2] of float: X_INTRODUCED_4 = [1.0,1.0];
+var -100000000.0..100000000.0: X_INTRODUCED_0;
+var -100000000.0..100000000.0: X_INTRODUCED_1:: is_defined_var;
+var -1e+16..1e+16: X_INTRODUCED_3 ::var_is_introduced :: is_defined_var;
+array [1..2] of var float: x:: output_array([1..2]) = [X_INTRODUCED_0,X_INTRODUCED_1];
+constraint float_lin_eq(X_INTRODUCED_4,[X_INTRODUCED_1,X_INTRODUCED_3],1.0);
+constraint float_times(X_INTRODUCED_0,X_INTRODUCED_0,X_INTRODUCED_1):: defines_var(X_INTRODUCED_1);
+constraint float_times(X_INTRODUCED_1,X_INTRODUCED_1,X_INTRODUCED_3):: defines_var(X_INTRODUCED_3);
+solve :: float_search(x,1e-14,input_order,indomain_split,complete) satisfy;

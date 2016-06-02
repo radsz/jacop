@@ -1,0 +1,10 @@
+array [1..3] of int: X_INTRODUCED_0 = [1,1,1];
+array [1..3] of int: X_INTRODUCED_4 = [1,1,-1];
+array [1..2] of int: X_INTRODUCED_7 = [1,-2];
+var 0..36: john:: output_var:: is_defined_var;
+var 0..36: jim:: output_var;
+var 0..36: jerry:: output_var:: is_defined_var;
+constraint int_lin_eq(X_INTRODUCED_0,[jim,john,jerry],36);
+constraint int_lin_eq(X_INTRODUCED_4,[john,jim,jerry],0):: defines_var(jerry);
+constraint int_lin_eq(X_INTRODUCED_7,[john,jim],0):: defines_var(john);
+solve  satisfy;

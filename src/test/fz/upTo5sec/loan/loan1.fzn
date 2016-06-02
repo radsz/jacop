@@ -1,0 +1,9 @@
+array [1..2] of float: X_INTRODUCED_4 = [1.0,-1.04];
+var 780.0..780.0: B1;
+var 551.2..551.2: B2:: is_defined_var;
+var 313.248..313.248: B3:: is_defined_var;
+var 65.77792000000005..65.77792000000005: B4:: output_var:: is_defined_var;
+constraint float_lin_eq(X_INTRODUCED_4,[B2,B1],-260.0):: defines_var(B2);
+constraint float_lin_eq(X_INTRODUCED_4,[B3,B2],-260.0):: defines_var(B3);
+constraint float_lin_eq(X_INTRODUCED_4,[B4,B3],-260.0):: defines_var(B4);
+solve  satisfy;

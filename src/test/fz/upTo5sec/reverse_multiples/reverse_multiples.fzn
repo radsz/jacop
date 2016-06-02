@@ -1,0 +1,14 @@
+array [1..5] of int: X_INTRODUCED_15 = [1,-1000,-100,-10,-1];
+var 0..9: X_INTRODUCED_4;
+var 0..9: X_INTRODUCED_5;
+var 0..9: X_INTRODUCED_6;
+var 0..9: X_INTRODUCED_7;
+var 2000..9999: num1:: output_var:: is_defined_var;
+var 1000..9999: num2:: output_var:: is_defined_var;
+var 2..10: m:: output_var;
+array [1..4] of var int: a1:: output_array([1..4]) = [X_INTRODUCED_7,X_INTRODUCED_6,X_INTRODUCED_5,X_INTRODUCED_4];
+array [1..4] of var int: a2:: output_array([1..4]) = [X_INTRODUCED_4,X_INTRODUCED_5,X_INTRODUCED_6,X_INTRODUCED_7];
+constraint int_lin_eq(X_INTRODUCED_15,[num2,X_INTRODUCED_4,X_INTRODUCED_5,X_INTRODUCED_6,X_INTRODUCED_7],0):: defines_var(num2);
+constraint int_lin_eq(X_INTRODUCED_15,[num1,X_INTRODUCED_7,X_INTRODUCED_6,X_INTRODUCED_5,X_INTRODUCED_4],0):: defines_var(num1);
+constraint int_times(num2,m,num1):: defines_var(num1);
+solve  satisfy;

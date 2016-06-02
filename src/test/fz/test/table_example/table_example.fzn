@@ -1,0 +1,10 @@
+predicate jacop_table_int(array [int] of var int: x,array [int,int] of int: t);
+array [1..15] of int: X_INTRODUCED_1 = [1,2003,1,5,12000,2,2009,6,3,8000,3,2014,4,4,10000];
+var 1..5: model:: output_var;
+var 1900..2100: year:: output_var;
+var 1..6: color:: output_var;
+var 1..7: doors:: output_var;
+var int: cost:: output_var;
+array [1..5] of var int: X_INTRODUCED_0 ::var_is_introduced  = [model,year,color,doors,cost];
+constraint jacop_table_int(X_INTRODUCED_0,X_INTRODUCED_1);
+solve  satisfy;

@@ -1,0 +1,4 @@
+t_index = 3;
+elements = array1d(1..4, [6, 9, 2, 9]);
+entries = array1d(1..2, [2, 9]);
+----------

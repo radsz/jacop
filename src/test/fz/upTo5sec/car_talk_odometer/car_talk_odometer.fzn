@@ -1,0 +1,17 @@
+array [1..2] of int: X_INTRODUCED_14 = [-1,1];
+array [1..4] of int: X_INTRODUCED_26 = [1,-100001,-10010,-1100];
+var 0..9: X_INTRODUCED_3;
+var 0..9: X_INTRODUCED_4;
+var 0..9: X_INTRODUCED_5;
+var 0..9: X_INTRODUCED_9;
+var 0..9: X_INTRODUCED_10;
+var 0..9: X_INTRODUCED_11;
+var 100000..999999: start:: output_var:: is_defined_var;
+var 100000..999999: end:: output_var:: is_defined_var;
+var -899999..899999: z:: is_defined_var;
+array [1..12] of var int: X_INTRODUCED_13 ::var_is_introduced  = [X_INTRODUCED_5,X_INTRODUCED_4,X_INTRODUCED_3,X_INTRODUCED_3,X_INTRODUCED_4,X_INTRODUCED_5,X_INTRODUCED_11,X_INTRODUCED_10,X_INTRODUCED_9,X_INTRODUCED_9,X_INTRODUCED_10,X_INTRODUCED_11];
+constraint int_lin_le(X_INTRODUCED_14,[end,start],-1);
+constraint int_lin_eq(X_INTRODUCED_26,[end,X_INTRODUCED_11,X_INTRODUCED_10,X_INTRODUCED_9],0):: defines_var(end);
+constraint int_lin_eq(X_INTRODUCED_26,[start,X_INTRODUCED_5,X_INTRODUCED_4,X_INTRODUCED_3],0):: defines_var(start);
+constraint int_lin_eq([1,-1,-1],[end,start,z],0):: defines_var(z);
+solve :: int_search(X_INTRODUCED_13,first_fail,indomain_min,complete) minimize z;

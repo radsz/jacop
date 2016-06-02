@@ -1,0 +1,4 @@
+var 3..3: size_interval:: output_var;
+array [1..6] of var int: variables1:: output_array([1..6]) = [1,7,6,0,1,7];
+array [1..6] of var int: variables2:: output_array([1..6]) = [8,8,8,0,1,2];
+solve  satisfy;

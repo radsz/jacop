@@ -1,0 +1,4 @@
+cents = 80;
+amount = array1d(1..5, [3, 4, 3, 4, 4]);
+amount_gcc = array1d(3..4, [2, 3]);
+----------

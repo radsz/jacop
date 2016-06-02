@@ -1,0 +1,4 @@
+var 0..0: z:: output_var;
+array [1..5] of var int: x:: output_array([1..5]) = [0,1,0,0,1];
+array [1..5] of var int: y:: output_array([1..5]) = [0,0,0,1,0];
+solve  satisfy;

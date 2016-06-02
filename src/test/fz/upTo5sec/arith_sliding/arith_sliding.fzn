@@ -1,0 +1,3 @@
+var 4..4: z:: output_var;
+array [1..7] of var int: x:: output_array([1..7]) = [0,0,1,2,0,0,-3];
+solve  satisfy;

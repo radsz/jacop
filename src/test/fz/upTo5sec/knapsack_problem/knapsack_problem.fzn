@@ -1,0 +1,17 @@
+array [1..3] of float: X_INTRODUCED_12 = [0.3,0.2,2.0];
+array [1..3] of float: X_INTRODUCED_20 = [0.025,0.015,0.002];
+var 0..1: X_INTRODUCED_0;
+var 0..1: X_INTRODUCED_1;
+var 0..1: X_INTRODUCED_2;
+var float: z:: is_defined_var;
+var float: X_INTRODUCED_3 ::var_is_introduced ;
+var float: X_INTRODUCED_6 ::var_is_introduced ;
+var float: X_INTRODUCED_9 ::var_is_introduced ;
+array [1..3] of var int: x:: output_array([1..3]) = [X_INTRODUCED_0,X_INTRODUCED_1,X_INTRODUCED_2];
+constraint int2float(X_INTRODUCED_0,X_INTRODUCED_3);
+constraint int2float(X_INTRODUCED_1,X_INTRODUCED_6);
+constraint int2float(X_INTRODUCED_2,X_INTRODUCED_9);
+constraint float_lin_le(X_INTRODUCED_12,[X_INTRODUCED_3,X_INTRODUCED_6,X_INTRODUCED_9],25.0);
+constraint float_lin_le(X_INTRODUCED_20,[X_INTRODUCED_3,X_INTRODUCED_6,X_INTRODUCED_9],0.25);
+constraint float_lin_eq([3000.0,1800.0,2500.0,-1.0],[X_INTRODUCED_3,X_INTRODUCED_6,X_INTRODUCED_9,z],0.0):: defines_var(z);
+solve  maximize z;

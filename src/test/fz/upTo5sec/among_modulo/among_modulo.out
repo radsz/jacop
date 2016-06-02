@@ -1,0 +1,5 @@
+nvar = 3;
+remainder = 0;
+quotient = 2;
+x = array1d(1..5, [4, 5, 8, 4, 1]);
+----------

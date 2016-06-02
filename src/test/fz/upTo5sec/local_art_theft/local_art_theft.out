@@ -1,0 +1,3 @@
+b = array1d(1..6, [false, false, true, false, false, false]);
+counts = array1d(1..6, [3, 2, 3, 2, 2, 2]);
+----------

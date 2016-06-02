@@ -1,0 +1,9 @@
+var bool: O1:: is_defined_var:: output_var;
+var bool: X_INTRODUCED_0 ::var_is_introduced :: is_defined_var;
+var bool: I1:: output_var = true;
+var bool: I2:: output_var = true;
+var bool: I3:: output_var = false;
+var bool: O2:: output_var = true;
+constraint bool_xor(X_INTRODUCED_0,false,O1):: defines_var(O1);
+constraint bool_xor(true,true,X_INTRODUCED_0):: defines_var(X_INTRODUCED_0);
+solve  satisfy;

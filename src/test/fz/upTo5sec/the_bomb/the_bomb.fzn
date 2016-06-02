@@ -1,0 +1,9 @@
+array [1..7] of var bool: x:: output_array([1..7]) = [false,false,false,false,false,false,false];
+constraint bool_xor(false,false,true);
+constraint bool_xor(false,false,true);
+constraint bool_xor(false,false,true);
+constraint bool_xor(false,false,true);
+constraint bool_xor(false,false,true);
+constraint bool_xor(false,false,true);
+constraint bool_xor(false,false,true);
+solve  satisfy;

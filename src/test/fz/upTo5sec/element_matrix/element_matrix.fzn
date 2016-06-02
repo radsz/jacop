@@ -1,0 +1,4 @@
+var 1..1: index_i:: output_var;
+var 3..3: index_j:: output_var;
+var 7..7: value:: output_var;
+solve  satisfy;

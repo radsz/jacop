@@ -1,0 +1,16 @@
+array [1..3] of int: X_INTRODUCED_10 = [1,1,1];
+var 0..2: X_INTRODUCED_0;
+var 0..2: X_INTRODUCED_1;
+var 0..2: X_INTRODUCED_2;
+var 0..2: X_INTRODUCED_3;
+var 0..2: X_INTRODUCED_4;
+var 0..2: X_INTRODUCED_5;
+var 0..2: X_INTRODUCED_6;
+var 0..2: X_INTRODUCED_7;
+var 0..2: X_INTRODUCED_8;
+var 1..3: X_INTRODUCED_15 ::var_is_introduced :: is_defined_var;
+array [1..9] of var int: x:: output_array([0..2,0..2]) = [X_INTRODUCED_0,X_INTRODUCED_1,X_INTRODUCED_2,X_INTRODUCED_3,X_INTRODUCED_4,X_INTRODUCED_5,X_INTRODUCED_6,X_INTRODUCED_7,X_INTRODUCED_8];
+constraint int_lin_le(X_INTRODUCED_10,[X_INTRODUCED_0,X_INTRODUCED_4,X_INTRODUCED_8],1);
+constraint array_var_int_element(X_INTRODUCED_15,[X_INTRODUCED_1,X_INTRODUCED_4,X_INTRODUCED_7],2);
+constraint int_lin_eq([1,-1],[X_INTRODUCED_4,X_INTRODUCED_15],-1):: domain:: defines_var(X_INTRODUCED_15);
+solve  satisfy;

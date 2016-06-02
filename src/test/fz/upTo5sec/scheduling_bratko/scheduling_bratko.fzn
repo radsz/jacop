@@ -1,0 +1,12 @@
+array [1..2] of int: X_INTRODUCED_2 = [1,-1];
+var 0..10: Ta:: output_var;
+var 0..10: Tb:: output_var;
+var 0..10: Tc:: output_var;
+var 0..10: Td:: output_var;
+var 0..10: Tf:: output_var;
+constraint int_lin_le(X_INTRODUCED_2,[Td,Tf],-4);
+constraint int_lin_le(X_INTRODUCED_2,[Tc,Tf],-5);
+constraint int_lin_le(X_INTRODUCED_2,[Tb,Td],-3);
+constraint int_lin_le(X_INTRODUCED_2,[Ta,Tc],-2);
+constraint int_lin_le(X_INTRODUCED_2,[Ta,Tb],-2);
+solve  minimize Tf;

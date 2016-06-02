@@ -1,0 +1,12 @@
+array [1..2] of int: X_INTRODUCED_7 = [-1,-1];
+var 0..25: X_INTRODUCED_0:: is_defined_var;
+var 0..25: X_INTRODUCED_1:: is_defined_var;
+var int: X_INTRODUCED_2 ::var_is_introduced ;
+var int: X_INTRODUCED_4 ::var_is_introduced ;
+array [1..2] of var int: a:: output_array([1..2]) = [X_INTRODUCED_0,X_INTRODUCED_1];
+constraint int_lin_le(X_INTRODUCED_7,[X_INTRODUCED_2,X_INTRODUCED_4],-9);
+constraint int_le(0,X_INTRODUCED_2);
+constraint int_le(0,X_INTRODUCED_4);
+constraint int_times(X_INTRODUCED_2,X_INTRODUCED_2,X_INTRODUCED_0):: defines_var(X_INTRODUCED_0);
+constraint int_times(X_INTRODUCED_4,X_INTRODUCED_4,X_INTRODUCED_1):: defines_var(X_INTRODUCED_1);
+solve  satisfy;

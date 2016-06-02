@@ -1,0 +1,10 @@
+array [1..3] of int: X_INTRODUCED_0 = [1,1,1];
+array [1..2] of int: X_INTRODUCED_6 = [7,-6];
+array [1..2] of int: X_INTRODUCED_11 = [3,-4];
+var 0..1000: mary:: output_var;
+var 0..1000: nellie:: output_var;
+var 0..1000: susie:: output_var;
+constraint int_lin_eq(X_INTRODUCED_0,[nellie,mary,susie],770);
+constraint int_lin_eq(X_INTRODUCED_6,[mary,susie],0);
+constraint int_lin_eq(X_INTRODUCED_11,[mary,nellie],0);
+solve  satisfy;

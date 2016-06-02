@@ -1,0 +1,7 @@
+var 0..1: X_INTRODUCED_0;
+var 0..1: X_INTRODUCED_3;
+var 1..4: z:: is_defined_var;
+array [1..4] of var int: x:: output_array([1..4]) = [X_INTRODUCED_0,1,1,X_INTRODUCED_3];
+constraint int_lin_le([-1,-1],[X_INTRODUCED_0,X_INTRODUCED_3],1);
+constraint int_lin_eq([1,1,-1],[X_INTRODUCED_0,X_INTRODUCED_3,z],-2):: defines_var(z);
+solve  minimize z;

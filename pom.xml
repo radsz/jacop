@@ -316,8 +316,33 @@ setup to run configuration. -->
 				<artifactId>maven-site-plugin</artifactId>
 				<version>3.4</version>
 			</plugin>
-		</plugins>
-	</build>
+
+
+			<plugin>
+
+			<groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <version>0.7.7.201606060606</version>
+
+			<executions>
+				<execution>
+					<id>default-prepare-agent</id>
+					<goals>
+						<goal>prepare-agent</goal>
+					</goals>
+				</execution>
+				<execution>
+					<id>default-report</id>
+					<phase>prepare-package</phase>
+					<goals>
+						<goal>report</goal>
+					</goals>
+				</execution>
+
+			</executions>
+        </plugin>
+        </plugins>
+    </build>
 
 	<reporting>
 		<plugins>
@@ -354,6 +379,9 @@ setup to run configuration. -->
 				<artifactId>maven-surefire-report-plugin</artifactId>
 				<version>2.18.1</version>
 			</plugin>
+
+
+
         </plugins>
     </reporting>
 

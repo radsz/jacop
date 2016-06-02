@@ -1,0 +1,17 @@
+array [1..4] of int: X_INTRODUCED_5 = [10,1,-20,-2];
+array [1..4] of int: X_INTRODUCED_10 = [10,1,-30,-3];
+array [1..2] of int: X_INTRODUCED_12 = [1,-1];
+var 0..9: a:: output_var;
+var 0..9: b:: output_var;
+var 0..9: c:: output_var;
+var 0..9: d:: output_var;
+array [1..4] of var int: x = [a,b,c,d];
+constraint int_lin_eq(X_INTRODUCED_5,[d,a,b,c],0);
+constraint int_lin_eq(X_INTRODUCED_10,[c,d,a,b],0);
+constraint int_lin_ne(X_INTRODUCED_12,[a,b],0);
+constraint int_lin_ne(X_INTRODUCED_12,[a,c],0);
+constraint int_lin_ne(X_INTRODUCED_12,[a,d],0);
+constraint int_lin_ne(X_INTRODUCED_12,[b,c],0);
+constraint int_lin_ne(X_INTRODUCED_12,[b,d],0);
+constraint int_lin_ne(X_INTRODUCED_12,[c,d],0);
+solve :: int_search(x,first_fail,indomain_min,complete) satisfy;

@@ -1,0 +1,16 @@
+array [1..3] of int: X_INTRODUCED_6 = [1,-1,-1];
+array [1..2] of int: X_INTRODUCED_7 = [1,-1];
+var 0..5: a:: output_var:: is_defined_var;
+var 0..5: b:: output_var;
+var bool: X_INTRODUCED_0 ::var_is_introduced :: is_defined_var;
+var 0..4: X_INTRODUCED_1 ::var_is_introduced ;
+var 0..5: X_INTRODUCED_2 ::var_is_introduced ;
+var 0..25: X_INTRODUCED_3 ::var_is_introduced :: is_defined_var;
+var bool: X_INTRODUCED_8 ::var_is_introduced :: is_defined_var;
+constraint int_lin_eq(X_INTRODUCED_6,[a,X_INTRODUCED_3,X_INTRODUCED_1],0):: defines_var(a);
+constraint int_lin_le(X_INTRODUCED_7,[X_INTRODUCED_1,b],-1);
+constraint bool_clause([X_INTRODUCED_8],[X_INTRODUCED_0]);
+constraint int_ne_reif(b,0,X_INTRODUCED_0):: defines_var(X_INTRODUCED_0);
+constraint int_times(b,X_INTRODUCED_2,X_INTRODUCED_3):: defines_var(X_INTRODUCED_3);
+constraint int_ne_reif(X_INTRODUCED_2,1,X_INTRODUCED_8):: defines_var(X_INTRODUCED_8);
+solve  satisfy;

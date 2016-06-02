@@ -1,0 +1,3 @@
+v = true;
+vars = array1d(1..2, [false, false]);
+----------

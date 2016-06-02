@@ -1,0 +1,2 @@
+array [1..10] of var int: rotated:: output_array([1..10]) = [14,15,16,26,1,2,3,11,12,13];
+solve  satisfy;

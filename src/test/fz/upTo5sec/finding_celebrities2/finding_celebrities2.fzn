@@ -1,0 +1,18 @@
+var set of 1..5: celebrities:: output_var;
+var 1..5: num_celebrities:: is_defined_var;
+var bool: X_INTRODUCED_8 ::var_is_introduced :: is_defined_var;
+var bool: X_INTRODUCED_9 ::var_is_introduced :: is_defined_var;
+var bool: X_INTRODUCED_10 ::var_is_introduced :: is_defined_var;
+var bool: X_INTRODUCED_0 ::var_is_introduced :: is_defined_var = false;
+var bool: X_INTRODUCED_4 ::var_is_introduced :: is_defined_var = false;
+var bool: X_INTRODUCED_6 ::var_is_introduced :: is_defined_var = false;
+constraint bool_clause([X_INTRODUCED_9],[X_INTRODUCED_8]);
+constraint bool_clause([X_INTRODUCED_9],[X_INTRODUCED_10]);
+constraint set_card(celebrities,num_celebrities):: defines_var(num_celebrities);
+constraint set_in_reif(1,celebrities,X_INTRODUCED_0):: defines_var(X_INTRODUCED_0);
+constraint set_in_reif(2,celebrities,X_INTRODUCED_4):: defines_var(X_INTRODUCED_4);
+constraint set_in_reif(3,celebrities,X_INTRODUCED_6):: defines_var(X_INTRODUCED_6);
+constraint set_in_reif(4,celebrities,X_INTRODUCED_8):: defines_var(X_INTRODUCED_8);
+constraint int_eq_reif(num_celebrities,2,X_INTRODUCED_9):: defines_var(X_INTRODUCED_9);
+constraint set_in_reif(5,celebrities,X_INTRODUCED_10):: defines_var(X_INTRODUCED_10);
+solve :: set_search([celebrities],first_fail,indomain_min,complete) satisfy;
