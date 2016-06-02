@@ -307,10 +307,10 @@ public class SendMoreMoney extends ExampleFD {
 		 * constraints were not able to reason more.
 		 */
 		
-		/*
+
 			store.consistency();
 			store.print();
-		*/
+
 		
 		 /** In the context of the SEND+MORE=MONEY problem, the search could decide 
 		   * to assign first value 2 to variable E, followed by another trial 
@@ -376,11 +376,12 @@ public class SendMoreMoney extends ExampleFD {
 
 		SendMoreMoney exampleGlobal = new SendMoreMoney();
 		
-		exampleGlobal.model();
+		/*exampleGlobal.model();
 		
 		if (exampleGlobal.search())
 			System.out.println("Solution found.");
-		
+		*/
+
 	}
 	
 	/**

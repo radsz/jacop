@@ -117,7 +117,7 @@ public class Options {
 				System.exit(0);
 			}
 			else { // input file
-			    fileName = args[0];
+				fileName = args[0];
 			}
 		}
 		else { // args.length > 1

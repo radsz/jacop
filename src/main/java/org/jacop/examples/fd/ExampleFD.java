@@ -73,6 +73,8 @@ public abstract class ExampleFD {
 	 * It specifies the cost function, null if no cost function is used.
 	 */
 	public IntVar cost;
+
+
 	
 	/**
 	 * It specifies the constraint store responsible for holding information 
