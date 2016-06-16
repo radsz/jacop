@@ -394,8 +394,26 @@ public class Constraints implements ParserTreeConstants {
 		    // pose(new IfThen(new PltQ(v2,v1), new PeqQ(v1,v3)));
 		    // pose(new IfThen(new PltQ(v1,v2), new PeqQ(v2,v3)));
 		}
+		else if (p.startsWith("pow", 6)) {
+		    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr)node.jjtGetChild(0);
+		    ASTScalarFlatExpr p2 = (ASTScalarFlatExpr)node.jjtGetChild(1);
+		    ASTScalarFlatExpr p3 = (ASTScalarFlatExpr)node.jjtGetChild(2);
+
+		    FloatVar v1 = getFloatVariable(p1);
+		    FloatVar v2 = getFloatVariable(p2);
+		    FloatVar v3 = getFloatVariable(p3);
+
+		    if (v1.min() < 0)
+		      System.err.println("%% WARNING: constraint float_pow is not defined for negative numbers as first argument (decomposition x^y = exp(y*ln(x))); " + v1 +" has minimal value negative (will be pruned).");
+
+		    FloatVar tmp1 = new FloatVar(store, 0, 1e150);
+		    FloatVar tmp2 = new FloatVar(store, -1e150, 1e150);
+		    pose(new LnPeqR(v1, tmp1));
+		    pose(new PmulQeqR(tmp1, v2, tmp2));
+		    pose(new ExpPeqR(tmp2, v3));
+		}
 		else {
-		    System.err.println("%% ERROR: JaCoP does not implement this constraints on floats");
+		    System.err.println("%% ERROR: JaCoP does not implement this constraints on floats "+p);
 		    System.exit(0);
 		}
 
