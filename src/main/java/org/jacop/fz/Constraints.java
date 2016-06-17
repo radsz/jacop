@@ -410,7 +410,7 @@ public class Constraints implements ParserTreeConstants {
 			double exponent = v2.min();
 			
 			FloatVar tmp0 = new FloatVar(store, 0, 1e150);
-			FloatVar tmp1 = new FloatVar(store, 0, 1e150);
+			FloatVar tmp1 = new FloatVar(store, -1e150, 1e150);
 			FloatVar tmp2 = new FloatVar(store, -1e150, 1e150);
 			FloatVar tmp3 = new FloatVar(store, -1e150, 1e150);
 			pose(new AbsPeqR(v1, tmp0));
@@ -432,7 +432,7 @@ public class Constraints implements ParserTreeConstants {
 		      else
 			System.err.println("%% WARNING: constraint float_pow is not defined for negative numbers as first argument (decomposition x^y = exp(y*ln(x))); " + v1 +" has minimal value negative (will be pruned).");
 
-		    FloatVar tmp1 = new FloatVar(store, 0, 1e150);
+		    FloatVar tmp1 = new FloatVar(store, -1e150, 1e150);
 		    FloatVar tmp2 = new FloatVar(store, -1e150, 1e150);
 		    pose(new LnPeqR(v1, tmp1));
 		    pose(new PmulQeqR(tmp1, v2, tmp2));
