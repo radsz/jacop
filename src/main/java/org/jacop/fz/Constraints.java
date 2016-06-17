@@ -404,7 +404,33 @@ public class Constraints implements ParserTreeConstants {
 		    FloatVar v3 = getFloatVariable(p3);
 
 		    if (v1.min() < 0)
-		      System.err.println("%% WARNING: constraint float_pow is not defined for negative numbers as first argument (decomposition x^y = exp(y*ln(x))); " + v1 +" has minimal value negative (will be pruned).");
+		      if (v2.min() == v2.max() && Math.ceil(v2.max()) == v2.max()) {
+			// case for integer exponent
+			
+			double exponent = v2.min();
+			
+			FloatVar tmp0 = new FloatVar(store, 0, 1e150);
+			FloatVar tmp1 = new FloatVar(store, 0, 1e150);
+			FloatVar tmp2 = new FloatVar(store, -1e150, 1e150);
+			FloatVar tmp3 = new FloatVar(store, -1e150, 1e150);
+			pose(new AbsPeqR(v1, tmp0));
+			pose(new LnPeqR(tmp0, tmp1));
+			pose(new PmulQeqR(tmp1, v2, tmp2));
+			pose(new ExpPeqR(tmp2, tmp3));
+
+			if (exponent % 2 == 0)
+			  // even
+			  pose(new PeqQ(tmp3, v3));
+			else
+			  // odd
+			  pose(new IfThenElse(new PltC(v1, 0),
+			  		      new PplusQeqR(tmp3, v3, new FloatVar(store, 0,0)),
+			  		      new PeqQ(tmp3, v3)));
+
+			return;
+		      }
+		      else
+			System.err.println("%% WARNING: constraint float_pow is not defined for negative numbers as first argument (decomposition x^y = exp(y*ln(x))); " + v1 +" has minimal value negative (will be pruned).");
 
 		    FloatVar tmp1 = new FloatVar(store, 0, 1e150);
 		    FloatVar tmp2 = new FloatVar(store, -1e150, 1e150);
