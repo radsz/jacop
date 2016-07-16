@@ -100,7 +100,8 @@ public class OutputArrayAnnotation {
 
 	for (int i=0; i<indexes.size(); i++) 
 	    if (indexes.get(i).getSize() == 0)
-		s.append(indexes.get(i)).append(",");
+		// s.append(indexes.get(i)).append(",");
+		s.append(", ");
 	    else
 		s.append(indexes.get(i).min()).append("..").append(indexes.get(i).max()).append(", ");
 
