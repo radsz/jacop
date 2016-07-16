@@ -890,18 +890,24 @@ public class Constraints implements ParserTreeConstants {
 
 		    IntVar[] a1 = unique(getVarArray((SimpleNode)node.jjtGetChild(0)));
 		    IntVar[] a2 = unique(getVarArray((SimpleNode)node.jjtGetChild(1)));
-		    for (IntVar v1 : a1)
-			for (IntVar v2 : a2)
-			    if (v1.equals(v2))
-				if (reified) {
-				    IntVar r = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
-				    r.domain.in(store.level, r, 1, 1);
-				    return;
-				}
-				else
-				    return; // already satisfied since a variable is both negated and not negated
+		    // for (IntVar v1 : a1)
+		    // 	for (IntVar v2 : a2)
+		    // 	    if (v1.equals(v2))
+		    // 		if (reified) {
+		    // 		    IntVar r = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
+		    // 		    r.domain.in(store.level, r, 1, 1);
+		    // 		    return;
+		    // 		}
+		    // 		else
+		    // 		    return; // already satisfied since a variable is both negated and not negated
 
 		    if (a1.length == 0 && a2.length == 0 )
+		      if (reified) {
+			IntVar r = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
+			r.domain.in(store.level, r, 1, 1);
+			return;			
+		      }
+		      else
 			return;
 
 		    if (opt.useSat()) {
@@ -940,6 +946,12 @@ public class Constraints implements ParserTreeConstants {
 				a2reduced.add(a2[i]);
 
 			if (a1reduced.size() == 0 && a2reduced.size() == 0 )
+			  if (reified) {
+			    IntVar r = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
+			    r.domain.in(store.level, r, 0, 0);
+			    return;			    
+			  }
+			  else
 			    throw store.failException;
 
 			PrimitiveConstraint c;
