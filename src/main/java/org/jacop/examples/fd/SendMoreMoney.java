@@ -443,9 +443,9 @@ public class SendMoreMoney extends ExampleFD {
 
 		// Creating arrays for FDVs
 		IntVar digits[] = { s, e, n, d, m, o, r, y };
-		IntVar send[] = { s, e, n, d, valueSEND };
-		IntVar more[] = { m, o, r, e, valueMORE };
-		IntVar money[] = { m, o, n, e, y, valueMONEY };
+		IntVar send[] = { s, e, n, d };
+		IntVar more[] = { m, o, r, e };
+		IntVar money[] = { m, o, n, e, y };
 
 		for (IntVar v : digits)
 			vars.add(v);
@@ -496,8 +496,8 @@ public class SendMoreMoney extends ExampleFD {
 		 * the constraint.
 		 */
 		
-		int[] weights5 = { 10000, 1000, 100, 10, 1, -1 };
-		int[] weights4 = { 1000, 100, 10, 1, -1 };
+		int[] weights5 = { 10000, 1000, 100, 10, 1 };
+		int[] weights4 = { 1000, 100, 10, 1 };
 
 		/**
 		 * Constraints for getting value for words
@@ -505,11 +505,11 @@ public class SendMoreMoney extends ExampleFD {
 		 * MORE = 1000 * M + 100 * O + R * 10 + E * 1
 		 * MONEY = 10000 * M + 1000 * O + 100 * N + E * 10 + Y * 1
 		 */
-		store.impose(new LinearInt(store, send, weights4, "==", 0));
+		store.impose(new LinearInt(store, send, weights4, "==", valueSEND));
 		// store.impose(new SumWeight(send, weights4, valueSEND));
-		store.impose(new LinearInt(store, more, weights4, "==", 0));
-		// store.impose(new SumWeight(more, weights4, valueMORE));
-		store.impose(new LinearInt(store, money, weights5, "==", 0));
+		store.impose(new LinearInt(store, more, weights4, "==", valueMORE));
+		// store.impose(new SumWeight(more, weights4, wvalueMORE));
+		store.impose(new LinearInt(store, money, weights5, "==", valueMONEY));
 		// store.impose(new SumWeight(money, weights5, valueMONEY));
 
 		/**
@@ -524,9 +524,9 @@ public class SendMoreMoney extends ExampleFD {
 		 * It removes 2 wrong decisions.
 		 */
 		
-		int [] weightsImplied = {1000, 91, 10, 1, -9000, -900, -90, -1}; 
-		IntVar [] varsImplied = {s, e, r, d, m, o, n, y};
-		store.impose(new LinearInt(store, varsImplied, weightsImplied, "==", 0));
+		int [] weightsImplied = {1000, 91, 10, 1, -9000, -900, -90}; 
+		IntVar [] varsImplied = {s, e, r, d, m, o, n};
+		store.impose(new LinearInt(store, varsImplied, weightsImplied, "==", y));
 		// store.impose(new SumWeight(varsImplied, weightsImplied, y));
 		
 		/**

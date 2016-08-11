@@ -187,26 +187,9 @@ public class KnapsackExample extends ExampleFD {
 		IntVar profit = new IntVar(store, "Profit", 0, 1000000);
 		IntVar weight = new IntVar(store, "Weight", 0, 1000000);
 
-		int n = quantity.length;
-		IntVar[] qs = new IntVar[n + 1];
-		int[] ws = new int[n + 1];
-		for (int i = 0; i < n; i++) {
-		    qs[i] = quantity[i];
-		    ws[i] = weights[i];
-		}
-		qs[n] = weight;
-		ws[n] = -1;
-		store.impose(new LinearInt(store, qs, ws, "==", 0));
+		store.impose(new LinearInt(store, quantity, weights, "==", weight));
 		// store.impose(new SumWeight(quantity, weights, weight));
-		IntVar[] qps = new IntVar[n + 1];
-		int[] ps = new int[n + 1];
-		for (int i = 0; i < n; i++) {
-		    qps[i] = quantity[i];
-		    ps[i] = profits[i];
-		}
-		qps[n] = profit;
-		ps[n] = -1;
-		store.impose(new LinearInt(store, qps, ps, "==", 0));
+		store.impose(new LinearInt(store, quantity, profits, "==", profit));
 		// store.impose(new SumWeight(quantity, profits, profit));
 		
 		store.impose(new XlteqC(weight, volume));
@@ -271,30 +254,13 @@ public class KnapsackExample extends ExampleFD {
 		IntVar profit = new IntVar(store, "Profit", 0, 1000000);
 		IntVar weight = new IntVar(store, "Weight", 0, 1000000);
 
-		int n = quantity.length;
-		IntVar[] qs = new IntVar[n + 1];
-		int[] ws = new int[n + 1];
-		for (int i = 0; i < n; i++) {
-		    qs[i] = quantity[i];
-		    ws[i] = weights[i];
-		}
-		qs[n] = weight;
-		ws[n] = -1;
-		store.impose(new LinearInt(store, qs, ws, "==", 0));
+		store.impose(new LinearInt(store, quantity, weights, "==", weight));
 		// store.impose(new SumWeight(quantity, weights, weight));
 		
 		store.impose(new Knapsack(profits, weights, quantity,
 				  weight, profit));
 
-		IntVar[] qps = new IntVar[n + 1];
-		int[] ps = new int[n + 1];
-		for (int i = 0; i < n; i++) {
-		    qps[i] = quantity[i];
-		    ps[i] = profits[i];
-		}
-		qps[n] = profit;
-		ps[n] = -1;
-		store.impose(new LinearInt(store, qps, ps, "==", 0));
+		store.impose(new LinearInt(store, quantity, profits, "==", profit));
 		// store.impose(new SumWeight(quantity, profits, profit));
 
 		store.impose(new XlteqC(weight, volume));
@@ -369,26 +335,9 @@ public class KnapsackExample extends ExampleFD {
 		IntVar profit = new IntVar(store, "Profit", 0, 1000000);
 		IntVar weight = new IntVar(store, "Weight", 0, 1000000);
 
-		int n = quantity.length;
-		IntVar[] qs = new IntVar[n + 1];
-		int[] ws = new int[n + 1];
-		for (int i = 0; i < n; i++) {
-		    qs[i] = quantity[i];
-		    ws[i] = weights[i];
-		}
-		qs[n] = weight;
-		ws[n] = -1;
-		store.impose(new LinearInt(store, qs, ws, "==", 0));
+		store.impose(new LinearInt(store, quantity, weights, "==", weight));
 		// store.impose(new SumWeight(quantity, weights, weight));
-		IntVar[] qps = new IntVar[n + 1];
-		int[] ps = new int[n + 1];
-		for (int i = 0; i < n; i++) {
-		    qps[i] = quantity[i];
-		    ps[i] = profits[i];
-		}
-		qps[n] = profit;
-		ps[n] = -1;
-		store.impose(new LinearInt(store, qps, ps, "==", 0));
+		store.impose(new LinearInt(store, quantity, profits, "==", profit));
 		// store.impose(new SumWeight(quantity, profits, profit));
 
 		store.impose(new XlteqC(weight, volume));

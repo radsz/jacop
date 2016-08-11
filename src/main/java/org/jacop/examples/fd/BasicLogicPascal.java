@@ -82,9 +82,9 @@ public class BasicLogicPascal extends ExampleFD {
 
 		// Creating arrays for FDVs
 		IntVar digits[] = { b, a, s, i, l, o, g, c, p };
-		IntVar basic[] = { b, a, s, i, c, valueBASIC };
-		IntVar logic[] = { l, o, g, i, c, valueLOGIC };
-		IntVar pascal[] = { p, a, s, c, a, l, valuePASCAL };
+		IntVar basic[] = { b, a, s, i, c };
+		IntVar logic[] = { l, o, g, i, c };
+		IntVar pascal[] = { p, a, s, c, a, l };
 
 		for (IntVar v : digits) vars.add(v);
 		
@@ -92,18 +92,18 @@ public class BasicLogicPascal extends ExampleFD {
 		// Only one global constraint
 		store.impose(new Alldifferent(digits));
 
-		int[] weights5 = { 10000, 1000, 100, 10, 1, -1 };
-		int[] weights6 = { 100000, 10000, 1000, 100, 10, 1, -1 };
+		int[] weights5 = { 10000, 1000, 100, 10, 1 };
+		int[] weights6 = { 100000, 10000, 1000, 100, 10, 1 };
 
 		// Constraints for getting value for words
 		// BASIC = 10000 * B + 1000 * A + 100 * S + I * 10 + C * 1
 		// LOGIC = 10000 * L + 1000 * O + 100 * G + I * 10 + C * 1
 		// PASCAL = 100000 * P + 10000 * A + 1000 * S + 100 * C + 10 * A + L * 1
-		store.impose(new LinearInt(store, basic, weights5, "==", 0));
+		store.impose(new LinearInt(store, basic, weights5, "==", valueBASIC));
 		// store.impose(new SumWeight(basic, weights5, valueBASIC));
-		store.impose(new LinearInt(store, logic, weights5, "==", 0));
+		store.impose(new LinearInt(store, logic, weights5, "==", valueLOGIC));
 		// store.impose(new SumWeight(logic, weights5, valueLOGIC));
-		store.impose(new LinearInt(store, pascal, weights6, "==", 0));
+		store.impose(new LinearInt(store, pascal, weights6, "==", valuePASCAL));
 		// store.impose(new SumWeight(pascal, weights6, valuePASCAL));
 
 		// Main equation of the problem BASIC+ LOGIC = PASCAL

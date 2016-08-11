@@ -133,14 +133,7 @@ public class DeBruijn extends ExampleFD {
                 binary[i][j] = new IntVar(store, "binary_" + i + "_" + j, 0, base-1);
             }
 
-	    int n = weights.length;
-	    IntVar[] vs = new IntVar[n+1];
-	    int[] ws = new int[n+1];
-	    System.arraycopy(binary[i], 0, vs, 0, n);
-	    System.arraycopy(weights, 0, ws, 0, n);
-	    vs[n] = x[i];
-	    ws[n] = -1;
-	    store.impose(new LinearInt(store, vs, ws, "==", 0));
+	    store.impose(new LinearInt(store, binary[i], weights, "==", x[i]));
             // store.impose(new SumWeight (binary[i], weights, x[i]));
         }
 

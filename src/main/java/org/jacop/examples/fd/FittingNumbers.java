@@ -76,14 +76,7 @@ public class FittingNumbers extends ExampleFD {
 			vars.add(counters[i]);
 		}
 		
-		int n = counters.length;
-		IntVar[] vs = new IntVar[n+1];
-		int[] ws = new int[n+1];
-		System.arraycopy(counters, 0, vs, 0, n);
-		System.arraycopy(elements, 0, ws, 0, n);
-		vs[n] = sum;
-		ws[n] = -1;
-		store.impose(new LinearInt(store, vs, ws, "==", 0));
+		store.impose(new LinearInt(store, counters, elements, "==", sum));
 		// store.impose(new SumWeight(counters, elements, sum));
 		
 		System.out.println(store);

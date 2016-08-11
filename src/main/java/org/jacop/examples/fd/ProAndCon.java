@@ -192,36 +192,19 @@ public class ProAndCon extends ExampleFD {
 			weightedVotes[i] = new IntVar(store, "weightedVotes4" + surname[i], 1,
 					32);
 
-		int n = weights.length;
-		IntVar[] vs = new IntVar[n+1];
-		int[] ws = new int[n+1];
-		System.arraycopy(vote[iAkerman], 0, vs, 0, n);
-		System.arraycopy(weights, 0, ws, 0, n);
-		vs[n] = weightedVotes[iAkerman];
-		ws[n] = -1;
-		store.impose(new LinearInt(store, vs, ws, "==", 0));
+		store.impose(new LinearInt(store, vote[iAkerman], weights, "==", weightedVotes[iAkerman]));
 		// store.impose(new SumWeight(vote[iAkerman], weights,
 		// 		weightedVotes[iAkerman]));
-		System.arraycopy(vote[iAkerman], 0, vs, 0, n);
-		System.arraycopy(weights, 0, ws, 0, n);
-		vs[n] = weightedVotes[iAkerman];
-		ws[n] = -1;
-		store.impose(new LinearInt(store, vs, ws, "==", 0));
+		store.impose(new LinearInt(store, vote[iBaird], weights, "==", weightedVotes[iBaird]));
 		// store.impose(new SumWeight(vote[iBaird], weights,
 		// 				weightedVotes[iBaird]));
-		System.arraycopy(vote[iChatham], 0, vs, 0, n);
-		vs[n] = weightedVotes[iChatham];
-		store.impose(new LinearInt(store, vs, ws, "==", 0));
+		store.impose(new LinearInt(store, vote[iChatham], weights, "==", weightedVotes[iChatham]));
 		// store.impose(new SumWeight(vote[iChatham], weights,
 		// 		weightedVotes[iChatham]));
-		System.arraycopy(vote[iDuval], 0, vs, 0, n);
-		vs[n] = weightedVotes[iDuval];
-		store.impose(new LinearInt(store, vs, ws, "==", 0));
+		store.impose(new LinearInt(store, vote[iDuval], weights, "==", weightedVotes[iDuval]));
 		// store.impose(new SumWeight(vote[iDuval], weights,
 		// 				weightedVotes[iDuval]));
-		System.arraycopy(vote[iEtting], 0, vs, 0, n);
-		vs[n] = weightedVotes[iEtting];
-		store.impose(new LinearInt(store, vs, ws, "==", 0));
+		store.impose(new LinearInt(store, vote[iEtting], weights, "==", weightedVotes[iEtting]));
 		// store.impose(new SumWeight(vote[iEtting], weights,
 		// 		weightedVotes[iEtting]));
 

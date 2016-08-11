@@ -123,7 +123,7 @@ public class Cryptogram extends ExampleFD {
 			}
 		} else {
 			
-			if (lines == null) {
+		  if (lines != null) {
 				// Standard use case if no file is supplied		
 				// lines[0] = "SEND+MORE=MONEY";
 				// lines[0] = "BASIC+LOGIC=PASCAL";
@@ -143,7 +143,7 @@ public class Cryptogram extends ExampleFD {
 				lines[0] = "HERE+SHE=COMES";
 				noLines = 1;
 				
-			}
+		  }
 
 			System.out.println("No input file was supplied, using lines : ");
 			for (int i = 0; i < noLines; i++)
@@ -221,17 +221,10 @@ public class Cryptogram extends ExampleFD {
 							currentChar));
 				}
 
-				int n = lettersWithinCurrentWord.length;
-				IntVar[] vs = new IntVar[n+1];
-				int[] ws = new int[n+1];
-				System.arraycopy(lettersWithinCurrentWord, 0, vs, 0, n);
-				System.arraycopy(createWeights(currentWord.length(), base), 0, ws, 0, n);
-				vs[n] = fdv4words[j];
-				ws[n] = -1;
-				store.impose(new LinearInt(store, vs, ws, "==", 0));
+				store.impose(new LinearInt(store, lettersWithinCurrentWord, createWeights(currentWord.length(), base), "==", fdv4words[j]));
 				// store.impose(new SumWeight(lettersWithinCurrentWord,
 				// 		createWeights(currentWord.length(), base),
-				// 		fdv4words[j]));
+				//  		fdv4words[j]));
 
 				store.impose(new XneqC(lettersWithinCurrentWord[0], 0));
 

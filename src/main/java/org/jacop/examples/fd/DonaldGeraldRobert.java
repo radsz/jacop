@@ -94,23 +94,11 @@ public class DonaldGeraldRobert extends ExampleFD {
 		IntVar geraldValue = new IntVar(store, "Gerald", 0, 999999);
 		IntVar robertValue = new IntVar(store, "Robert", 0, 999999);
 
-		// Constraints for getting value for words
-		int[] ws = {100000, 10000, 1000, 100, 10, 1, -1};
-		
-		IntVar[] donaldN = new IntVar[donald.length+1];
-		System.arraycopy(donald, 0, donaldN, 0, donald.length);
-		donaldN[donald.length] = donaldValue;
-		store.impose(new LinearInt(store, donaldN, ws, "==", 0));
+		store.impose(new LinearInt(store, donald, weights, "==", donaldValue));
 		// store.impose(new SumWeight(donald, weights, donaldValue));
-		IntVar[] geraldN = new IntVar[gerald.length+1];
-		System.arraycopy(gerald, 0, geraldN, 0, gerald.length);
-		geraldN[gerald.length] = geraldValue;
-		store.impose(new LinearInt(store, geraldN, ws, "==", 0));
+		store.impose(new LinearInt(store, gerald, weights, "==", geraldValue));
 		// store.impose(new SumWeight(gerald, weights, geraldValue));
-		IntVar[] robertN = new IntVar[robert.length+1];
-		System.arraycopy(robert, 0, robertN, 0, robert.length);
-		robertN[robert.length] = robertValue;
-		store.impose(new LinearInt(store, robertN, ws, "==", 0));
+		store.impose(new LinearInt(store, robert, weights, "==", robertValue));
 		// store.impose(new SumWeight(robert, weights, robertValue));
 
 		// Equation
