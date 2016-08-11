@@ -37,6 +37,8 @@ Version 4.4.1
    - Correcting a bug when a constraint needs information of changed
      variables and is a parameter to other constraint, for example
      Reified, Xor.
+   - Bug fix when reified BoolClause is generated in falzinc. The case
+     when BoolClause fails and reified variable is false.
 
 Version 4.4
 ===========
