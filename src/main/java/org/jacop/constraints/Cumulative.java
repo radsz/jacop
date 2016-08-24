@@ -1031,9 +1031,9 @@ public class Cumulative extends Constraint {
 		int sEST = s.EST(); // sLCT = s.LCT();
 		int completionS = IntDomain.MinInt, newStartl = IntDomain.MinInt, startl = sEST;
 		long a = 0, slack, maxuse = limit.max() - s.res.min();
-		boolean notBeforeS;
 
-		if (S.size() > 0) {
+		if (S.size() > 1) {
+		  
 			if (debug)
 				System.out.println("Not first " + s + " in " + S);
 			for (Task t : S) {
@@ -1047,15 +1047,17 @@ public class Cumulative extends Constraint {
 			}
 			slack = (completionS - sEST) * limit.max() - a - s.areaMin();
 			// System.out.println("slack = "+ slack);
-			notBeforeS = (slack < 0);
-			if (debug)
+			if (debug) {
+			        boolean notBeforeS = (slack < 0);
 				System.out.println("s(l)= " + sEST + ",  c(S')= " + completionS
 						+ ",  a(S)= " + a + ",  notBeforeS= " + notBeforeS);
-
+			}
+			
 			// Upadate LB for task s
-
+			
 			int j = 0;
-			ArrayList<Task> Tasks = new ArrayList<Task>();
+			Task[] Tasks = new Task[S.size()-1];
+			int tasksLength = 0;
 			while (slack < 0 && j < S.size()) {
 				Task t = S.get(j);
 				// if ( ! t.equals(s) ) {
@@ -1067,23 +1069,19 @@ public class Cumulative extends Constraint {
 					if (t.res.min() <= maxuse || sEST >= t.ECT()) {
 						slack += t.areaMin();
 					} else {
-						Tasks.add(t);
+					        Tasks[tasksLength++] = t;
 					}
 				}
 				j++;
 			}
 
-			// System.out.println("slack after = " + slack +
-			// "Tasks = " + Tasks );
-			if (slack < 0 && Tasks.size() != 0) {
-				Task[] TaskArr = new Task[Tasks.size()];
-				TaskArr = Tasks.toArray(TaskArr);
-				Arrays.sort(TaskArr, new TaskAscECTComparator<Task>());
-
+			// System.out.println("slack after = " + slack + "Tasks = " + Tasks );
+			if (slack < 0 && tasksLength != 0) {
+			        Arrays.sort(Tasks, 0, tasksLength-1, new TaskAscECTComparator<Task>());
 				j = 0;
 				int limitMin = limit.min();
-				while (slack < 0 && j < TaskArr.length) {
-					Task t = (Task) TaskArr[j];
+				while (slack < 0 && j < tasksLength) {
+					Task t = (Task) Tasks[j];
 					j++;
 					newStartl = t.ECT();
 					slack = slack - (newStartl - startl) * limitMin
@@ -1095,7 +1093,6 @@ public class Cumulative extends Constraint {
 				    if (debugNarr)
 						System.out.println(">>> Cumulative EF <<< 4. Narrowed "
 								+ s.start + " in " + startl + ".." + IntDomain.MaxInt);
-					// store.in(s.start, newStartl, IntDomain.MaxInt);
 
 					s.start.domain.inMin(store.level, s.start, newStartl);
 
@@ -1118,9 +1115,9 @@ public class Cumulative extends Constraint {
 
 		int startS = IntDomain.MaxInt, newCompl = IntDomain.MaxInt, newStartl = IntDomain.MinInt;
 		long a = 0, slack, maxuse = limit.max() - s.res.min();
-		boolean notLastInS;
 
-		if (S.size() > 0) {
+		if (S.size() > 1) {
+
 			if (debug)
 				System.out.println("Not last " + s + " in " + S);
 			for (Task t : S) {
@@ -1132,16 +1129,18 @@ public class Cumulative extends Constraint {
 				}
 			}
 			slack = (sLCT - startS) * limit.max() - a - s.areaMin();
-			notLastInS = (slack < 0);
 
-			if (debug)
+			if (debug) {
+			        boolean notLastInS = (slack < 0);
 				System.out.println("s(S')= " + startS + ",  c(l)= " + sLCT
 						+ ",  a(S)= " + a + ",  notLastInS= " + notLastInS);
-
+			}
+			
 			// Upadate UB for task s
 
 			int j = 0;
-			ArrayList<Task> Tasks = new ArrayList<Task>();
+			Task[] Tasks = new Task[S.size()-1];
+			int tasksLength = 0;
 			while (slack < 0 && j < S.size()) {
 				Task t = S.get(j);
 				if (t != s) {
@@ -1149,21 +1148,19 @@ public class Cumulative extends Constraint {
 					if (t.res.min() <= maxuse || sLCT <= t.LST()) {
 						slack += t.areaMin();
 					} else {
-						Tasks.add(t);
+					  Tasks[tasksLength++] = t;
 					}
 				}
 				j++;
 			}
 
-			if (slack < 0 && Tasks.size() != 0) {
-				Task[] TaskArr = new Task[Tasks.size()];
-				TaskArr = Tasks.toArray(TaskArr);
-				Arrays.sort(TaskArr, new TaskDescLSTComparator<Task>());
+			if (slack < 0 && tasksLength != 0) {
+			        Arrays.sort(Tasks, 0, tasksLength-1, new TaskDescLSTComparator<Task>());
 
 				j = 0;
 				int limitMin = limit.min();
-				while (slack < 0 && j < TaskArr.length) {
-					Task t = (Task) TaskArr[j];
+				while (slack < 0 && j < tasksLength) {
+					Task t = (Task) Tasks[j];
 					j++;
 					newCompl = t.LST();
 					slack = slack - (compl - newCompl) * limitMin + t.areaMin();
