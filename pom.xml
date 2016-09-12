@@ -45,7 +45,7 @@
 				<role>Core developer</role>
 			</roles>
 			<organization>osolpro</organization>
-			<organizationUrl>osolpro.eu</organizationUrl>
+			<organizationUrl>osolpro.com</organizationUrl>
 			<timezone>+1</timezone>
 		</developer>
 	</developers>
@@ -242,7 +242,7 @@ setup to run configuration. -->
 					<execution>
 						<id>attach-sources</id>
 						<goals>
-							<goal>jar</goal>
+							<goal>jar-no-fork</goal>
 						</goals>
 					</execution>
 				</executions>
