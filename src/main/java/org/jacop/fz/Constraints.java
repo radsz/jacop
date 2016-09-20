@@ -1232,12 +1232,17 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar[] r = getVarArray((SimpleNode)node.jjtGetChild(2));
 		    IntVar b = getVariable((ASTScalarFlatExpr)node.jjtGetChild(3));
 
-		    if (s.length > 200)
-			// for large number of taks (>200)
-			// edge-finding is not used
-			pose(new Cumulative(s, d, r, b, false, true, false));
+		    if (b.max() == 1)
+		      pose(new org.jacop.constraints.cumulative.CumulativeUnary(s, d, r, b, true, false));
 		    else
-			pose(new Cumulative(s, d, r, b, true, true, false));
+		      pose(new org.jacop.constraints.cumulative.Cumulative(s, d, r, b, true, false));
+		    
+		    // if (s.length > 200)
+		    // 	// for large number of taks (>200)
+		    // 	// edge-finding is not used
+		    // 	pose(new Cumulative(s, d, r, b, false, true, false));
+		    // else
+		    // 	pose(new Cumulative(s, d, r, b, true, true, false));
 
 		}
 		else if (p.startsWith("circuit", 6)) {
@@ -3054,6 +3059,9 @@ public class Constraints implements ParserTreeConstants {
 			    pose(new SumInt(store, vect, "!=", p2[pos]));
 		    }
 		    else {
+		      if (boolSum(p2) && allWeightsOne(p1))
+			pose(new SumBool(store, p2, "!=", dictionary.getConstant(p3)));
+		      else
 			pose(new LinearInt(store, p2, p1, "!=", p3));
 		    }
 		}

@@ -303,7 +303,7 @@ public abstract class Constraint extends DecomposedConstraint {
      * Methods that check for overflow/underflow 
      */
 
-    int add(int a, int b) {  
+    public int add(int a, int b) {  
 		
 	long cc = (long)a + (long)b;
 
@@ -314,8 +314,7 @@ public abstract class Constraint extends DecomposedConstraint {
 		
     } 
 	
-
-    int subtract(int a, int b) {  
+    public int subtract(int a, int b) {  
 		
 	long cc = (long)a - (long)b;
 		
@@ -326,6 +325,17 @@ public abstract class Constraint extends DecomposedConstraint {
 		
     } 
 
+    public int mul(int a, int b) {  
+		
+	long cc = (long)a * (long)b;
+
+	if ( cc < Integer.MIN_VALUE || cc > Integer.MAX_VALUE)
+	    throw new ArithmeticException("Overflow occurred from int " + a + " * " + b);  
+		
+	return a * b;  
+		
+    }
+  
 	int toInt(final float f) {
 		
 		if (f >= (float) Integer.MIN_VALUE && f <= (float) Integer.MAX_VALUE) {
