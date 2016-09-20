@@ -338,7 +338,6 @@ public class SumInt extends PrimitiveConstraint {
     private void pruneLtEq(int b) {
 
 	sum.domain.inMin(store.level, sum, sumXmin + b);
-	store.propagationHasOccurred = false;
 
         int min, max;
 	int sMax = sum.max();
@@ -359,7 +358,6 @@ public class SumInt extends PrimitiveConstraint {
     private void pruneGtEq(int b) {
 
 	sum.domain.inMax(store.level, sum, sumXmax - b);
-	store.propagationHasOccurred = false;
 
         int min, max;
 	int sMin = sum.min();
@@ -400,7 +398,7 @@ public class SumInt extends PrimitiveConstraint {
     }
 
     private boolean pruneMin(IntVar x, int min) {
-	if (min > x.min()) {
+      if (min > x.min()) {
 	    x.domain.inMin(store.level, x, min);
 	    return true;
 	}
@@ -409,9 +407,9 @@ public class SumInt extends PrimitiveConstraint {
     }
 
     private boolean pruneMax(IntVar x, int max) {
-	if (max < x.max()) {
-	    x.domain.inMax(store.level, x, max);
-	    return true;
+      if (max < x.max()) {
+	  x.domain.inMax(store.level, x, max);
+	  return true;
 	}
 	else
 	    return false;

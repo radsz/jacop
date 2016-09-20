@@ -30,7 +30,18 @@ Version 4.4.1
    search. FailConstraintsStatistics gather number of fails for each
    constraints and class of constraints.
 
-10. Bug fixes:
+10. New cumulative constraints. CumulativeBasic does time-tabling
+    propagation, Cumulative does time-tabling and edge finding
+    propagation, and CumulativeUnary is a specialized version of unary
+    resources and does in addition to two previous propagations
+    not-first-not-last, dependency and overload propagations. All
+    propagations, except time-tabling, are done on binary trees and
+    have the following complexities, where n is the number of tasks
+    and k is the number of distinct resource values for tasks. Edge
+    finding O(k*n*logn), not-first-not-last, dependency and overload
+    O(n*logn).
+
+11. Bug fixes:
    - Changing comparator method in LinearFloat that
      IllegalArgumentException is not reported.
    - Correcting bugs in AndBool, OrBool and AndBoolSimple.
@@ -39,6 +50,8 @@ Version 4.4.1
      Reified, Xor.
    - Bug fix when reified BoolClause is generated in falzinc. The case
      when BoolClause fails and reified variable is false.
+   - Bug fix in SumInt that stopped the propagator from computing a
+     fix-point in some situations.
 
 Version 4.4
 ===========

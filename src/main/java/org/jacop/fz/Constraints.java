@@ -2790,99 +2790,100 @@ public class Constraints implements ParserTreeConstants {
 	    switch (operation) {
 	    case eq :
 
-		if (p2Fixed) {
-		    if (s == p3)
-			p4.domain.in(store.level, p4, 1, 1);
-		    else
-			p4.domain.in(store.level, p4, 0, 0);
-		    return;
-		}
+		// if (p2Fixed) {
+		//     if (s == p3)
+		// 	p4.domain.in(store.level, p4, 1, 1);
+		//     else
+		// 	p4.domain.in(store.level, p4, 0, 0);
+		//     return;
+		// }
 		
-		if (p1.length == 1) {
-		    if (p1[0] == 1)
-			pose(new Reified(new XeqC(p2[0], p3), p4));
-		    else
-			// pose(new Reified(new XmulCeqZ(p2[0], p1[0], new IntVar(store, p3,p3)), p4));
-			pose(new Reified(new XmulCeqZ(p2[0], p1[0], dictionary.getConstant(p3)), p4));
-		}
-		else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
-		    pose(new Reified(new XplusCeqZ(p2[1], p3, p2[0]), p4));
-		}
-		else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
-		    pose(new Reified(new XplusCeqZ(p2[0], p3, p2[1]), p4));
-		} 
-		else if (p1.length == 2 && p1[0] == 1 && p1[1] == 1) {
-		    pose(new Reified(new XplusYeqC(p2[0], p2[1], p3), p4));
-		} 
-		else if (p1.length == 2 && p1[0] == -1 && p1[1] == -1) {
-		    pose(new Reified(new XplusYeqC(p2[0], p2[1], -p3), p4));
-		} 
-		else {
-		    int pos = sumPossible(p1, p3);
-		    if (pos > -1) {
-			IntVar[] vect = new IntVar[p1.length-1];
-			int n = 0;
-			for (int i=0; i<p2.length; i++)
-			    if (i != pos)
-				vect[n++] = p2[i];
-			if (boolSum(vect))
-			    pose(new Reified(new SumBool(store, vect, "==", p2[pos]), p4));
-			else
-			    pose(new Reified(new SumInt(store, vect, "==", p2[pos]), p4));
-		    }
-		    else {
+		// if (p1.length == 1) {
+		//     if (p1[0] == 1)
+		// 	pose(new Reified(new XeqC(p2[0], p3), p4));
+		//     else
+		// 	// pose(new Reified(new XmulCeqZ(p2[0], p1[0], new IntVar(store, p3,p3)), p4));
+		// 	pose(new Reified(new XmulCeqZ(p2[0], p1[0], dictionary.getConstant(p3)), p4));
+		// }
+		// else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
+		//     pose(new Reified(new XplusCeqZ(p2[1], p3, p2[0]), p4));
+		// }
+		// else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
+		//     pose(new Reified(new XplusCeqZ(p2[0], p3, p2[1]), p4));
+		// } 
+		// else if (p1.length == 2 && p1[0] == 1 && p1[1] == 1) {
+		//     pose(new Reified(new XplusYeqC(p2[0], p2[1], p3), p4));
+		// } 
+		// else if (p1.length == 2 && p1[0] == -1 && p1[1] == -1) {
+		//     pose(new Reified(new XplusYeqC(p2[0], p2[1], -p3), p4));
+		// } 
+		// else {
+		//     int pos = sumPossible(p1, p3);
+		//     if (pos > -1) {
+		// 	IntVar[] vect = new IntVar[p1.length-1];
+		// 	int n = 0;
+		// 	for (int i=0; i<p2.length; i++)
+		// 	    if (i != pos)
+		// 		vect[n++] = p2[i];
+		// 	if (boolSum(vect))
+		// 	    pose(new Reified(new SumBool(store, vect, "==", p2[pos]), p4));
+		// 	else
+		// 	    pose(new Reified(new SumInt(store, vect, "==", p2[pos]), p4));
+		//     }
+		//     else
+		      {
 			pose(new Reified(new LinearInt(store, p2, p1, "==", p3), p4));
 		    }
-		}
+		// }
 		break;
 	    case ne :
-		if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
-		    if (p3 == 0)
-			pose(new Reified(new XneqY(p2[0], p2[1]), p4));
-		    else
-			pose(new Reified(new Not(new XplusCeqZ(p2[1], p3, p2[0])), p4));
-		}
-		else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
-		    if (p3 == 0)
-			pose(new Reified(new XneqY(p2[0], p2[1]), p4));
-		    else
-			pose(new Reified(new Not(new XplusCeqZ(p2[0], p3, p2[1])), p4));
-		} 
-		else if (p1.length == 2 && p1[0] == 1 && p1[1] == 1) {
-			pose(new Reified(new Not(new XplusYeqC(p2[0], p2[1], p3)), p4));
-		} 
-		else if (p1.length == 2 && p1[0] == -1 && p1[1] == -1) {
-		    pose(new Reified(new Not(new XplusYeqC(p2[0], p2[1], -p3)), p4));
-		} 
-		else if (allWeightsOne(p1)) {
-		    if (p1.length == 1)
-			if (p2[0].domain.isIntersecting(p3,p3))
-			    pose(new Reified(new XneqC(p2[0], p3), p4));
-			else
-			    p4.domain.in(store.level, p4, 1,1);
-		    else {
-			t = dictionary.getConstant(p3); // new IntVar(store, p3, p3);
-			if (boolSum(p2))
-			    pose(new Reified(new SumBool(store, p2, "!=", t), p4));
-			else
-			    pose(new Reified(new SumInt(store, p2, "!=", t), p4));
-		    }
-		}
-		else if (allWeightsMinusOne(p1)) {
-		    if (p1.length == 1) 
-			if (p2[0].domain.isIntersecting(-p3,-p3))
-			    pose(new Reified(new XneqC(p2[0], -p3), p4));
-			else
-			    p4.domain.in(store.level, p4, 1,1);
-		    else {
-			t = dictionary.getConstant(-p3); // new IntVar(store, -p3, -p3);
-			if (boolSum(p2))
-			    pose(new Reified(new SumBool(store, p2, "!=", t), p4));
-			else
-			    pose(new Reified(new SumInt(store, p2, "!=", t), p4));
-		    }
-		}
-		else 
+		// if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
+		//     if (p3 == 0)
+		// 	pose(new Reified(new XneqY(p2[0], p2[1]), p4));
+		//     else
+		// 	pose(new Reified(new Not(new XplusCeqZ(p2[1], p3, p2[0])), p4));
+		// }
+		// else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
+		//     if (p3 == 0)
+		// 	pose(new Reified(new XneqY(p2[0], p2[1]), p4));
+		//     else
+		// 	pose(new Reified(new Not(new XplusCeqZ(p2[0], p3, p2[1])), p4));
+		// } 
+		// else if (p1.length == 2 && p1[0] == 1 && p1[1] == 1) {
+		// 	pose(new Reified(new Not(new XplusYeqC(p2[0], p2[1], p3)), p4));
+		// } 
+		// else if (p1.length == 2 && p1[0] == -1 && p1[1] == -1) {
+		//     pose(new Reified(new Not(new XplusYeqC(p2[0], p2[1], -p3)), p4));
+		// } 
+		// else if (allWeightsOne(p1)) {
+		//     if (p1.length == 1)
+		// 	if (p2[0].domain.isIntersecting(p3,p3))
+		// 	    pose(new Reified(new XneqC(p2[0], p3), p4));
+		// 	else
+		// 	    p4.domain.in(store.level, p4, 1,1);
+		//     else {
+		// 	t = dictionary.getConstant(p3); // new IntVar(store, p3, p3);
+		// 	if (boolSum(p2))
+		// 	    pose(new Reified(new SumBool(store, p2, "!=", t), p4));
+		// 	else
+		// 	    pose(new Reified(new SumInt(store, p2, "!=", t), p4));
+		//     }
+		// }
+		// else if (allWeightsMinusOne(p1)) {
+		//     if (p1.length == 1) 
+		// 	if (p2[0].domain.isIntersecting(-p3,-p3))
+		// 	    pose(new Reified(new XneqC(p2[0], -p3), p4));
+		// 	else
+		// 	    p4.domain.in(store.level, p4, 1,1);
+		//     else {
+		// 	t = dictionary.getConstant(-p3); // new IntVar(store, -p3, -p3);
+		// 	if (boolSum(p2))
+		// 	    pose(new Reified(new SumBool(store, p2, "!=", t), p4));
+		// 	else
+		// 	    pose(new Reified(new SumInt(store, p2, "!=", t), p4));
+		//     }
+		// }
+		// else 
 		    pose(new Reified(new LinearInt(store, p2, p1, "!=", p3), p4));
 		break;
 	    case lt :
@@ -2895,36 +2896,37 @@ public class Constraints implements ParserTreeConstants {
 	    // 	pose(new Reified(new XgtC(t, p3), p4));
 	    // 	break;
 	    case le :
-		if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) 
-		    pose(new Reified(new org.jacop.constraints.XplusClteqZ(p2[0], -p3, p2[1]), p4));
-		else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) 
-		    pose(new Reified(new org.jacop.constraints.XplusClteqZ(p2[1], -p3, p2[0]), p4));
-		else if (p1.length == 1 && p1[0] == 1) 
-		    pose(new Reified(new org.jacop.constraints.XlteqC(p2[0], p3), p4));
-		else if (p1.length == 1 && p1[0] == -1) 
-		    pose(new Reified(new org.jacop.constraints.XgteqC(p2[0], -p3), p4));
-		else if (allWeightsOne(p1)) {
-		    t = dictionary.getConstant(p3); //new IntVar(store, p3, p3);
-		    if (boolSum(p2))
-			if (p3 == 0) 
-			    // all p2's zero <=> p4
-			    if (opt.useSat())
-				sat.generate_allZero_reif(unique(p2), p4);
-			    else
-				pose(new Not(new OrBoolVector(p2, p4)));
-			else
-			    pose(new Reified(new SumBool(store, p2, "<=", t), p4));
-		    else
-		    	pose(new Reified(new SumInt(store, p2, "<=", t), p4));
-		}
-		else if (allWeightsMinusOne(p1)) {
-		    t = dictionary.getConstant(-p3); //new IntVar(store, -p3, -p3);
-		    if (boolSum(p2))
-			pose(new Reified(new SumBool(store, p2, ">=", t), p4));
-		    else
-			pose(new Reified(new SumInt(store, p2, ">=", t), p4));		    
-		}
-		else {
+		// if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) 
+		//     pose(new Reified(new org.jacop.constraints.XplusClteqZ(p2[0], -p3, p2[1]), p4));
+		// else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) 
+		//     pose(new Reified(new org.jacop.constraints.XplusClteqZ(p2[1], -p3, p2[0]), p4));
+		// else if (p1.length == 1 && p1[0] == 1) 
+		//     pose(new Reified(new org.jacop.constraints.XlteqC(p2[0], p3), p4));
+		// else if (p1.length == 1 && p1[0] == -1) 
+		//     pose(new Reified(new org.jacop.constraints.XgteqC(p2[0], -p3), p4));
+		// else if (allWeightsOne(p1)) {
+		//     t = dictionary.getConstant(p3); //new IntVar(store, p3, p3);
+		//     if (boolSum(p2))
+		// 	if (p3 == 0) 
+		// 	    // all p2's zero <=> p4
+		// 	    if (opt.useSat())
+		// 		sat.generate_allZero_reif(unique(p2), p4);
+		// 	    else
+		// 		pose(new Not(new OrBoolVector(p2, p4)));
+		// 	else
+		// 	    pose(new Reified(new SumBool(store, p2, "<=", t), p4));
+		//     else
+		//     	pose(new Reified(new SumInt(store, p2, "<=", t), p4));
+		// }
+		// else if (allWeightsMinusOne(p1)) {
+		//     t = dictionary.getConstant(-p3); //new IntVar(store, -p3, -p3);
+		//     if (boolSum(p2))
+		// 	pose(new Reified(new SumBool(store, p2, ">=", t), p4));
+		//     else
+		// 	pose(new Reified(new SumInt(store, p2, ">=", t), p4));		    
+		// }
+		// else
+		  {
 		    pose(new Reified(new LinearInt(store,p2, p1, "<=", p3), p4));
 		}
 		break;
@@ -2998,35 +3000,36 @@ public class Constraints implements ParserTreeConstants {
 		else {
 		    int pos = sumPossible(p1, p3);
 		    if (pos > -1) {
-			IntVar[] vect = new IntVar[p1.length-1];
-			int n = 0;
-			for (int i=0; i<p2.length; i++)
-			    if (i != pos)
-				vect[n++] = p2[i];
+		    	IntVar[] vect = new IntVar[p1.length-1];
+		    	int n = 0;
+		    	for (int i=0; i<p2.length; i++)
+		    	    if (i != pos)
+		    		vect[n++] = p2[i];
 
-			if (boolSum(vect))
-			    pose(new SumBool(store, vect, "==", p2[pos]));
-			else
-			    if (vect.length == 2)
-			    	pose(new XplusYeqZ(vect[0], vect[1], p2[pos]));
-			    else
-				pose(new SumInt(store, vect, "==", p2[pos]));
-		    }
-		    else if (allWeightsOne(p1)) {
-			IntVar v = dictionary.getConstant(p3);
-			if (boolSum(p2))
-			    pose(new SumBool(store, p2, "==", v));
-			else
-			    pose(new SumInt(store, p2, "==", v));
+		    	if (boolSum(vect))
+		    	    pose(new SumBool(store, vect, "==", p2[pos]));
+		    	else
+		    	    if (vect.length == 2)
+		    	    	pose(new XplusYeqZ(vect[0], vect[1], p2[pos]));
+		    	    else
+			pose(new SumInt(store, vect, "==", p2[pos]));
+		    } else
+		      if (allWeightsOne(p1)) {
+		    	IntVar v = dictionary.getConstant(p3);
+		    	if (boolSum(p2))
+		    	    pose(new SumBool(store, p2, "==", v));
+		    	else
+		    	    pose(new SumInt(store, p2, "==", v));
 		    }
 		    else if (allWeightsMinusOne(p1)) {
-			IntVar v = dictionary.getConstant(-p3);
-			if (boolSum(p2))
-			    pose(new SumBool(store, p2, "==", v));
-			else
-			    pose(new SumInt(store, p2, "==", v));
+		    	IntVar v = dictionary.getConstant(-p3);
+		    	if (boolSum(p2))
+		    	    pose(new SumBool(store, p2, "==", v));
+		    	else
+		    	    pose(new SumInt(store, p2, "==", v));
 		    }
-		    else {
+		    else
+		      {
 			pose(new LinearInt(store, p2, p1, "==", p3));
 		    }
 		}
