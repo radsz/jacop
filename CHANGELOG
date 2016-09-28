@@ -34,7 +34,7 @@ Version 4.4.1
     propagation, Cumulative does time-tabling and edge finding
     propagation, and CumulativeUnary is a specialized version of unary
     resources and does in addition to two previous propagations
-    not-first-not-last, dtectable and overload propagations. All
+    not-first-not-last, detectable and overload propagations. All
     propagations, except time-tabling, are done on binary trees and
     have the following complexities, where n is the number of tasks
     and k is the number of distinct resource values for tasks. Edge

@@ -1,5 +1,5 @@
 /**
- *  TaskNormalView.java 
+ *  TreeNode.java 
  *  This file is part of JaCoP.
  *
  *  JaCoP is a Java Constraint Programming solver. 
@@ -29,66 +29,23 @@
  *
  */
 
+
 package org.jacop.constraints.cumulative;
 
-import org.jacop.core.IntVar;
-
 /**
- * Represents tasks for cumulative constraint
+ * Implements TreeNode for Tree.
  * 
  * @author Krzysztof Kuchcinski
  * @version 4.5
  */
 
-class TaskNormalView extends TaskView {
+class TreeNode {
 
-  TaskNormalView(Task t) {
-    super(t);
-  }
+  TaskView task = null;
+  // index in the tree
+  int index;
 
-  // last complition time
-  int lct() {
-    return start.max() + dur.max();
-  }
-  
-  // erliest complition time
-  int ect() {
-    return start.min() + dur.min();
-  }
-  
-  // erliest start time
-  int est() {
-    return start.min();
+  TreeNode() {
   }
 
-  // last start time
-  int lst() {
-    return start.max();
-  }
-
-  // envelope
-  int env(int C) {
-    return C * est() + e();
-  }
-
-  void updateEdgeFind(int est) {
-    if (est > start.min())
-      start.domain.inMin(store.level, start, est);
-  }
-  
-  void updateNotFirstNotLast(int lct) {
-    int max = lct - dur.max();
-    if (max < start.max())
-      start.domain.inMax(store.level, start, max);
-  }
-
-  void updateDetectable(int est) {
-    if (est > start.min())
-      start.domain.inMin(store.level, start, est);    
-  }
-  
-  // @Override
-  // public String toString() {
-  //   return "[" + super.toString() + ", normal view: est = " + est() + ", lct =  " + lct() + ", ect = " + ect() + ", lst = " + lst() + ", treeIndex = " + treeIndex + "]";
-  // }
 }

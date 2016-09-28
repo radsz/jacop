@@ -49,11 +49,20 @@ import java.io.IOException;
 /*
  * Defines the basic data structure for cumulative constraint's edge-finding algorithm.
  */
-class Tree {
+abstract class Tree {
   
   // binary tree structure; number of nodes
   int treeSize;
+  // number of leaves (tasks)
+  int n;
   
+  abstract void clearNode(int i);
+  
+  void clearTree() {
+    for (int i = 0; i < treeSize; i++) 
+      clearNode(i);
+  }
+
   int root() {
     return 0;
   }
@@ -90,6 +99,10 @@ class Tree {
     return ! isLeft(i);
   }
 
+  int leafIndex(int i) {
+    return i - (treeSize - n);
+  }
+  
   boolean notExist(int i) {
     return i < 0 || i >= treeSize;
   }
@@ -103,6 +116,5 @@ class Tree {
       return Integer.MIN_VALUE;
     else
       return x + y;
-  }
-
+  }  
 }

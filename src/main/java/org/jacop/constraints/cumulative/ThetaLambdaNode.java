@@ -39,11 +39,7 @@ package org.jacop.constraints.cumulative;
  * @version 4.5
  */
 
-class ThetaLambdaNode {
-
-  TaskView task = null;
-  // index in the tree
-  int index;
+class ThetaLambdaNode extends TreeNode{
   
   // Theta parameters
   int e;
@@ -55,9 +51,6 @@ class ThetaLambdaNode {
   int envLambda;
   int responsibleELambda;
   int responsibleEnvLambda;
-
-  // others
-  // int base_envC;
 
   ThetaLambdaNode() {
   }

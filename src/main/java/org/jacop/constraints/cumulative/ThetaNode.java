@@ -39,19 +39,24 @@ package org.jacop.constraints.cumulative;
  * @version 4.5
  */
 
-class ThetaNode {
-
-  TaskView task = null;
-  // index in the tree
-  int index;
+class ThetaNode extends TreeNode {
   
   // Theta parameters
   int ect;  // erliest complition time
   int p;    // processing time /duration)
 
+  // values of ect and p that are stored here all the time, even when node is not enabled
+  int ectT;
+  int pT;
+  
   ThetaNode() {
   }
 
+  void assignValues() {
+    ect = ectT;
+    p = pT;
+  }
+  
   public String toString() {
     String taskNo = task != null ? "\ntask = " + task.index : "";
     return "node: " + index + taskNo +

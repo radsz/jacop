@@ -646,8 +646,12 @@ public class Constraints implements ParserTreeConstants {
 
 			if (opt.useSat())
 			    sat.generate_and(a1, v);
+			else if (allVarOne(a1))
+			  v.domain.in(store.level, v, 1, 1);
+			else if (atLeastOneVarZero(a1))
+			  v.domain.in(store.level, v, 0, 0);
 			else
-			    pose(new AndBool(a1, v));
+			  pose(new AndBool(a1, v));
 		    }
 		    else if (p.startsWith("or", 11)) {
 			//   			node.dump("");
@@ -660,6 +664,10 @@ public class Constraints implements ParserTreeConstants {
 			else {
 			  if (v.singleton(1))
 			    pose(new SumBool(store, a1, ">=", v));
+			  else if (allVarZero(a1))
+			    v.domain.in(store.level, v, 0, 0);
+			  else if (atLeastOneVarOne(a1))
+			    v.domain.in(store.level, v, 1, 1);
 			  else
 			    pose(new OrBool(a1, v));
 			}
@@ -1232,18 +1240,32 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar[] r = getVarArray((SimpleNode)node.jjtGetChild(2));
 		    IntVar b = getVariable((ASTScalarFlatExpr)node.jjtGetChild(3));
 
-		    if (b.max() == 1)
-		      pose(new org.jacop.constraints.cumulative.CumulativeUnary(s, d, r, b, true, false));
-		    else
-		      pose(new org.jacop.constraints.cumulative.Cumulative(s, d, r, b, true, false));
-		    
-		    // if (s.length > 200)
-		    // 	// for large number of taks (>200)
-		    // 	// edge-finding is not used
-		    // 	pose(new Cumulative(s, d, r, b, false, true, false));
-		    // else
-		    // 	pose(new Cumulative(s, d, r, b, true, true, false));
-
+		    if (s.length == 1)
+		      pose(new XlteqY(r[0], b));
+		    else if (b.max() == 1)
+		      pose(new org.jacop.constraints.cumulative.CumulativeUnary(s, d, r, b, true));
+		    else { // possible to use CumulativeUnary (it is used with profile propagator; option true)
+		      int min     = Math.min(r[0].min(), r[1].min());
+		      int nextMin = Math.max(r[0].min(), r[1].min());
+		      for (int i = 2; i < r.length; i++) {
+		    	if (r[i].min() < min) {
+		    	  nextMin = min;
+		    	  min = r[i].min();
+		    	}
+		    	else if (r[i].min() < nextMin) {
+		    	  nextMin = r[i].min();
+		    	}
+		      }		      
+		      boolean unaryPossible = (min > b.max()/2) || (nextMin > b.max()/2 && min + nextMin > b.max());
+		      if (unaryPossible) {
+		    	pose(new org.jacop.constraints.cumulative.CumulativeUnary(s, d, r, b, true));
+			// these constraints are not needed if we run with profile-based propagator
+		    	// for (int i = 0; i < r.length; i++) 
+		    	//   pose(new XlteqY(r[i], b));
+		      }
+		      else
+			pose(new org.jacop.constraints.cumulative.Cumulative(s, d, r, b));
+		    }
 		}
 		else if (p.startsWith("circuit", 6)) {
 		    IntVar[] v = getVarArray((SimpleNode)node.jjtGetChild(0));
@@ -2016,7 +2038,7 @@ public class Constraints implements ParserTreeConstants {
 		switch (operation) {
 
 		case eq :
-		    if (v1.min() > i2 || v1.max() < i2) {
+		    if (!v1.domain.contains(i2)) {
 		    	v3.domain.in(store.level, v3, 0, 0);
 			return;
 		    }
@@ -2120,7 +2142,7 @@ public class Constraints implements ParserTreeConstants {
 		switch (operation) {
 
 		case eq :
-		    if (v2.min() > i1 || v2.max() < i1) {
+		    if (!v2.domain.contains(i1)) { //v2.min() > i1 || v2.max() < i1) {
 		    	v3.domain.in(store.level, v3, 0, 0);
 			return;
 		    }
@@ -2790,100 +2812,112 @@ public class Constraints implements ParserTreeConstants {
 	    switch (operation) {
 	    case eq :
 
-		// if (p2Fixed) {
-		//     if (s == p3)
-		// 	p4.domain.in(store.level, p4, 1, 1);
-		//     else
-		// 	p4.domain.in(store.level, p4, 0, 0);
-		//     return;
-		// }
+		if (p2Fixed) {
+		    if (s == p3)
+			p4.domain.in(store.level, p4, 1, 1);
+		    else
+			p4.domain.in(store.level, p4, 0, 0);
+		    return;
+		}
 		
-		// if (p1.length == 1) {
-		//     if (p1[0] == 1)
-		// 	pose(new Reified(new XeqC(p2[0], p3), p4));
-		//     else
-		// 	// pose(new Reified(new XmulCeqZ(p2[0], p1[0], new IntVar(store, p3,p3)), p4));
-		// 	pose(new Reified(new XmulCeqZ(p2[0], p1[0], dictionary.getConstant(p3)), p4));
-		// }
-		// else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
-		//     pose(new Reified(new XplusCeqZ(p2[1], p3, p2[0]), p4));
-		// }
-		// else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
-		//     pose(new Reified(new XplusCeqZ(p2[0], p3, p2[1]), p4));
-		// } 
-		// else if (p1.length == 2 && p1[0] == 1 && p1[1] == 1) {
-		//     pose(new Reified(new XplusYeqC(p2[0], p2[1], p3), p4));
-		// } 
-		// else if (p1.length == 2 && p1[0] == -1 && p1[1] == -1) {
-		//     pose(new Reified(new XplusYeqC(p2[0], p2[1], -p3), p4));
-		// } 
-		// else {
-		//     int pos = sumPossible(p1, p3);
-		//     if (pos > -1) {
-		// 	IntVar[] vect = new IntVar[p1.length-1];
-		// 	int n = 0;
-		// 	for (int i=0; i<p2.length; i++)
-		// 	    if (i != pos)
-		// 		vect[n++] = p2[i];
-		// 	if (boolSum(vect))
-		// 	    pose(new Reified(new SumBool(store, vect, "==", p2[pos]), p4));
-		// 	else
-		// 	    pose(new Reified(new SumInt(store, vect, "==", p2[pos]), p4));
-		//     }
-		//     else
-		      {
+		if (p1.length == 1) {
+		    if (p1[0] == 1)
+			pose(new Reified(new XeqC(p2[0], p3), p4));
+		    else
+			// pose(new Reified(new XmulCeqZ(p2[0], p1[0], new IntVar(store, p3,p3)), p4));
+			pose(new Reified(new XmulCeqZ(p2[0], p1[0], dictionary.getConstant(p3)), p4));
+		}
+		else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
+		    pose(new Reified(new XplusCeqZ(p2[1], p3, p2[0]), p4));
+		}
+		else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
+		    pose(new Reified(new XplusCeqZ(p2[0], p3, p2[1]), p4));
+		} 
+		else if (p1.length == 2 && p1[0] == 1 && p1[1] == 1) {
+		    pose(new Reified(new XplusYeqC(p2[0], p2[1], p3), p4));
+		} 
+		else if (p1.length == 2 && p1[0] == -1 && p1[1] == -1) {
+		    pose(new Reified(new XplusYeqC(p2[0], p2[1], -p3), p4));
+		} 
+		else {
+		    int pos = sumPossible(p1, p3);
+		    if (pos > -1) {
+			IntVar[] vect = new IntVar[p1.length-1];
+			int n = 0;
+			for (int i=0; i<p2.length; i++)
+			    if (i != pos)
+				vect[n++] = p2[i];
+			if (boolSum(vect))
+			    pose(new Reified(new SumBool(store, vect, "==", p2[pos]), p4));
+			else
+			    pose(new Reified(new SumInt(store, vect, "==", p2[pos]), p4));
+		    } else
+		      if (allWeightsOne(p1)) {
+		    	IntVar v = dictionary.getConstant(p3);
+		    	if (boolSum(p2))
+			  pose(new Reified(new SumBool(store, p2, "==", v), p4));
+		    	else
+			  pose(new Reified(new SumInt(store, p2, "==", v), p4));
+		    }
+		    else if (allWeightsMinusOne(p1)) {
+		    	IntVar v = dictionary.getConstant(-p3);
+		    	if (boolSum(p2))
+			  pose(new Reified(new SumBool(store, p2, "==", v), p4));
+		    	else
+			  pose(new Reified(new SumInt(store, p2, "==", v), p4));
+		    } else {
 			pose(new Reified(new LinearInt(store, p2, p1, "==", p3), p4));
 		    }
-		// }
+		}
 		break;
 	    case ne :
-		// if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
-		//     if (p3 == 0)
-		// 	pose(new Reified(new XneqY(p2[0], p2[1]), p4));
-		//     else
-		// 	pose(new Reified(new Not(new XplusCeqZ(p2[1], p3, p2[0])), p4));
-		// }
-		// else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
-		//     if (p3 == 0)
-		// 	pose(new Reified(new XneqY(p2[0], p2[1]), p4));
-		//     else
-		// 	pose(new Reified(new Not(new XplusCeqZ(p2[0], p3, p2[1])), p4));
-		// } 
-		// else if (p1.length == 2 && p1[0] == 1 && p1[1] == 1) {
-		// 	pose(new Reified(new Not(new XplusYeqC(p2[0], p2[1], p3)), p4));
-		// } 
-		// else if (p1.length == 2 && p1[0] == -1 && p1[1] == -1) {
-		//     pose(new Reified(new Not(new XplusYeqC(p2[0], p2[1], -p3)), p4));
-		// } 
-		// else if (allWeightsOne(p1)) {
-		//     if (p1.length == 1)
-		// 	if (p2[0].domain.isIntersecting(p3,p3))
-		// 	    pose(new Reified(new XneqC(p2[0], p3), p4));
-		// 	else
-		// 	    p4.domain.in(store.level, p4, 1,1);
-		//     else {
-		// 	t = dictionary.getConstant(p3); // new IntVar(store, p3, p3);
-		// 	if (boolSum(p2))
-		// 	    pose(new Reified(new SumBool(store, p2, "!=", t), p4));
-		// 	else
-		// 	    pose(new Reified(new SumInt(store, p2, "!=", t), p4));
-		//     }
-		// }
-		// else if (allWeightsMinusOne(p1)) {
-		//     if (p1.length == 1) 
-		// 	if (p2[0].domain.isIntersecting(-p3,-p3))
-		// 	    pose(new Reified(new XneqC(p2[0], -p3), p4));
-		// 	else
-		// 	    p4.domain.in(store.level, p4, 1,1);
-		//     else {
-		// 	t = dictionary.getConstant(-p3); // new IntVar(store, -p3, -p3);
-		// 	if (boolSum(p2))
-		// 	    pose(new Reified(new SumBool(store, p2, "!=", t), p4));
-		// 	else
-		// 	    pose(new Reified(new SumInt(store, p2, "!=", t), p4));
-		//     }
-		// }
-		// else 
+		if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
+		    if (p3 == 0)
+			pose(new Reified(new XneqY(p2[0], p2[1]), p4));
+		    else
+			pose(new Reified(new Not(new XplusCeqZ(p2[1], p3, p2[0])), p4));
+		}
+		else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
+		    if (p3 == 0)
+			pose(new Reified(new XneqY(p2[0], p2[1]), p4));
+		    else
+			pose(new Reified(new Not(new XplusCeqZ(p2[0], p3, p2[1])), p4));
+		} 
+		else if (p1.length == 2 && p1[0] == 1 && p1[1] == 1) {
+			pose(new Reified(new Not(new XplusYeqC(p2[0], p2[1], p3)), p4));
+		} 
+		else if (p1.length == 2 && p1[0] == -1 && p1[1] == -1) {
+		    pose(new Reified(new Not(new XplusYeqC(p2[0], p2[1], -p3)), p4));
+		} 
+		else if (allWeightsOne(p1)) {
+		    if (p1.length == 1)
+			if (p2[0].domain.isIntersecting(p3,p3))
+			    pose(new Reified(new XneqC(p2[0], p3), p4));
+			else
+			    p4.domain.in(store.level, p4, 1,1);
+		    else {
+			t = dictionary.getConstant(p3); // new IntVar(store, p3, p3);
+			if (boolSum(p2))
+			    pose(new Reified(new SumBool(store, p2, "!=", t), p4));
+			else
+			    pose(new Reified(new SumInt(store, p2, "!=", t), p4));
+		    }
+		}
+		else if (allWeightsMinusOne(p1)) {
+		    if (p1.length == 1) 
+			if (p2[0].domain.isIntersecting(-p3,-p3))
+			    pose(new Reified(new XneqC(p2[0], -p3), p4));
+			else
+			    p4.domain.in(store.level, p4, 1,1);
+		    else {
+			t = dictionary.getConstant(-p3); // new IntVar(store, -p3, -p3);
+			if (boolSum(p2))
+			    pose(new Reified(new SumBool(store, p2, "!=", t), p4));
+			else
+			    pose(new Reified(new SumInt(store, p2, "!=", t), p4));
+		    }
+		}
+		else 
 		    pose(new Reified(new LinearInt(store, p2, p1, "!=", p3), p4));
 		break;
 	    case lt :
@@ -2896,36 +2930,36 @@ public class Constraints implements ParserTreeConstants {
 	    // 	pose(new Reified(new XgtC(t, p3), p4));
 	    // 	break;
 	    case le :
-		// if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) 
-		//     pose(new Reified(new org.jacop.constraints.XplusClteqZ(p2[0], -p3, p2[1]), p4));
-		// else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) 
-		//     pose(new Reified(new org.jacop.constraints.XplusClteqZ(p2[1], -p3, p2[0]), p4));
-		// else if (p1.length == 1 && p1[0] == 1) 
-		//     pose(new Reified(new org.jacop.constraints.XlteqC(p2[0], p3), p4));
-		// else if (p1.length == 1 && p1[0] == -1) 
-		//     pose(new Reified(new org.jacop.constraints.XgteqC(p2[0], -p3), p4));
-		// else if (allWeightsOne(p1)) {
-		//     t = dictionary.getConstant(p3); //new IntVar(store, p3, p3);
-		//     if (boolSum(p2))
-		// 	if (p3 == 0) 
-		// 	    // all p2's zero <=> p4
-		// 	    if (opt.useSat())
-		// 		sat.generate_allZero_reif(unique(p2), p4);
-		// 	    else
-		// 		pose(new Not(new OrBoolVector(p2, p4)));
-		// 	else
-		// 	    pose(new Reified(new SumBool(store, p2, "<=", t), p4));
-		//     else
-		//     	pose(new Reified(new SumInt(store, p2, "<=", t), p4));
-		// }
-		// else if (allWeightsMinusOne(p1)) {
-		//     t = dictionary.getConstant(-p3); //new IntVar(store, -p3, -p3);
-		//     if (boolSum(p2))
-		// 	pose(new Reified(new SumBool(store, p2, ">=", t), p4));
-		//     else
-		// 	pose(new Reified(new SumInt(store, p2, ">=", t), p4));		    
-		// }
-		// else
+		if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) 
+		    pose(new Reified(new org.jacop.constraints.XplusClteqZ(p2[0], -p3, p2[1]), p4));
+		else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) 
+		    pose(new Reified(new org.jacop.constraints.XplusClteqZ(p2[1], -p3, p2[0]), p4));
+		else if (p1.length == 1 && p1[0] == 1) 
+		    pose(new Reified(new org.jacop.constraints.XlteqC(p2[0], p3), p4));
+		else if (p1.length == 1 && p1[0] == -1) 
+		    pose(new Reified(new org.jacop.constraints.XgteqC(p2[0], -p3), p4));
+		else if (allWeightsOne(p1)) {
+		    t = dictionary.getConstant(p3); //new IntVar(store, p3, p3);
+		    if (boolSum(p2))
+			if (p3 == 0) 
+			    // all p2's zero <=> p4
+			    if (opt.useSat())
+				sat.generate_allZero_reif(unique(p2), p4);
+			    else
+				pose(new Not(new OrBoolVector(p2, p4)));
+			else
+			    pose(new Reified(new SumBool(store, p2, "<=", t), p4));
+		    else
+		    	pose(new Reified(new SumInt(store, p2, "<=", t), p4));
+		}
+		else if (allWeightsMinusOne(p1)) {
+		    t = dictionary.getConstant(-p3); //new IntVar(store, -p3, -p3);
+		    if (boolSum(p2))
+			pose(new Reified(new SumBool(store, p2, ">=", t), p4));
+		    else
+			pose(new Reified(new SumInt(store, p2, ">=", t), p4));		    
+		}
+		else
 		  {
 		    pose(new Reified(new LinearInt(store,p2, p1, "<=", p3), p4));
 		}
@@ -3028,8 +3062,7 @@ public class Constraints implements ParserTreeConstants {
 		    	else
 		    	    pose(new SumInt(store, p2, "==", v));
 		    }
-		    else
-		      {
+		    else {
 			pose(new LinearInt(store, p2, p1, "==", p3));
 		    }
 		}
@@ -3349,6 +3382,35 @@ public class Constraints implements ParserTreeConstants {
     	    if (w[i] != -1)
     		return false;
     	return true;
+    }
+
+    boolean allVarOne(IntVar[] w) {
+	for (int i = 0; i < w.length; i++)
+	  if (w[i].min() != 1)
+		return false;
+	return true;
+    }
+
+    boolean allVarZero(IntVar[] w) {
+    	//boolean allOne=true;
+    	for (int i=0; i<w.length; i++)
+	  if (w[i].max() != 0)
+    		return false;
+    	return true;
+    }
+
+  boolean atLeastOneVarOne(IntVar[] w) {
+	for (int i = 0; i < w.length; i++)
+	  if (w[i].min() == 1)
+		return true;
+	return false;
+    }
+
+  boolean atLeastOneVarZero(IntVar[] w) {
+	for (int i = 0; i < w.length; i++)
+	  if (w[i].max() == 0)
+		return true;
+	return false;
     }
 
     /*

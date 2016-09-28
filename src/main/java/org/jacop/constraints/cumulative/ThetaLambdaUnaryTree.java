@@ -1,5 +1,5 @@
 /**
- *  ThetaLambdaTree.java 
+ *  ThetaLambdaUnaryTree.java 
  *  This file is part of JaCoP.
  *
  *  JaCoP is a Java Constraint Programming solver. 
@@ -39,7 +39,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 
 /**
- * Implements ThetaLambdaTree and operations on this tree for Cumulative constraint
+ * Implements ThetaLambdaUnaryTree and operations on this tree for Cumulative constraint
  * 
  * @author Krzysztof Kuchcinski
  * @version 4.5
@@ -49,25 +49,22 @@ import java.io.IOException;
 /*
  * Defines the basic data structure for cumulative constraint's edge-finding algorithm.
  */
-class ThetaLambdaTree extends Tree {
+class ThetaLambdaUnaryTree extends ThetaTree {
 
   // array that keeps all nodes of the balanced binary tree and organizes the tree structure
-  ThetaLambdaNode[] tree;
-  // capacity
-  IntVar C;
+  ThetaLambdaUnaryNode[] tree;
   // list of ordered tasks
   TaskView[] orderedTasks;
 
-  ThetaLambdaNode empty = new ThetaLambdaNode();
+  ThetaLambdaUnaryNode empty = new ThetaLambdaUnaryNode();
   
-  public ThetaLambdaTree(IntVar capacity) {
-    C = capacity;
+  public ThetaLambdaUnaryTree() {
   }
-
+  
   public void buildTree(TaskView[] task) {
     n = task.length;    
     treeSize = (int)Math.pow(2 , Math.round(Math.ceil(Math.log(n) / Math.log(2)))) + n - 1;
-    tree = new ThetaLambdaNode[treeSize];
+    tree = new ThetaLambdaUnaryNode[treeSize];
 
     orderedTasks = task;
 
@@ -76,16 +73,16 @@ class ThetaLambdaTree extends Tree {
     for (int i = treeSize - n - 1; i >= 0; i--) 
       computeNodeVals(i);
   }
-
+  
   void computeLeaveVals(int i) {
-    tree[i] = new ThetaLambdaNode();
+    tree[i] = new ThetaLambdaUnaryNode();
     tree[i].index = i;
 
     addToThetaInit(i);
-    tree[i].envLambda = Integer.MIN_VALUE;
-    tree[i].eLambda = Integer.MIN_VALUE;
-    tree[i].responsibleELambda = i;
-    tree[i].responsibleEnvLambda = i;
+    tree[i].ectLambda = Integer.MIN_VALUE;
+    tree[i].pLambda = Integer.MIN_VALUE;
+    tree[i].responsiblePLambda = i;
+    tree[i].responsibleEctLambda = i;
   }
 
   void addToThetaInit(int i) {
@@ -93,8 +90,8 @@ class ThetaLambdaTree extends Tree {
     tree[i].task = orderedTasks[t];
     orderedTasks[t].treeIndex = i;
 
-    tree[i].e = orderedTasks[t].e();
-    tree[i].env = tree[i].task.env(C.max());
+    tree[i].p = orderedTasks[t].dur.min();
+    tree[i].ect = tree[i].task.ect();
   }
 
   void computeNodeVals(int i) {
@@ -108,111 +105,76 @@ class ThetaLambdaTree extends Tree {
       tree[i] = tree[left(i)];
     }
     else {
-      tree[i] = new ThetaLambdaNode();
+      tree[i] = new ThetaLambdaUnaryNode();
       tree[i].index = i;
 
-      ThetaLambdaNode node = tree[i];
-      ThetaLambdaNode l = tree[left(i)];
-      ThetaLambdaNode r = tree[right(i)];
+      ThetaLambdaUnaryNode node = tree[i];
+      ThetaLambdaUnaryNode l = tree[left(i)];
+      ThetaLambdaUnaryNode r = tree[right(i)];
       
-      node.e = plus(l.e, r.e);
-      node.env = Math.max(plus(l.env, r.e), r.env);
-      node.envC = Math.max(plus(l.envC, r.e), r.envC);
+      node.p = plus(l.p, r.p);
+      node.ect = Math.max(plus(l.ect, r.p), r.ect);
 
-      if (plus(l.eLambda, r.e) > plus(l.e, r.eLambda)) {
-	node.eLambda = plus(l.eLambda, r.e);
-	node.responsibleELambda = l.responsibleELambda;	 
+      if (plus(l.pLambda, r.p) > plus(l.p, r.pLambda)) {
+      	node.pLambda = plus(l.pLambda, r.p);
+      	node.responsiblePLambda = l.responsiblePLambda;	 
       }
       else {
-	node.eLambda = plus(l.e, r.eLambda);
-	node.responsibleELambda = r.responsibleELambda;
+      	node.pLambda = plus(l.p, r.pLambda);
+      	node.responsiblePLambda = r.responsiblePLambda;
       }
       
-      if (plus(l.envLambda, r.e) > plus(l.env, r.eLambda)) {
-	if (plus(l.envLambda, r.e) > r.envLambda) {
-	  node.envLambda = plus(l.envLambda, r.e);
-	  node.responsibleEnvLambda = l.responsibleEnvLambda;
-	}
-	else {
-	  node.envLambda = r.envLambda;
-	  node.responsibleEnvLambda = r.responsibleEnvLambda;
-	}
+      if (plus(l.ectLambda, r.p) > plus(l.ect, r.pLambda)) {
+      	if (plus(l.ectLambda, r.p) > r.ectLambda) {
+      	  node.ectLambda = plus(l.ectLambda, r.p);
+      	  node.responsibleEctLambda = l.responsibleEctLambda;
+      	}
+      	else {
+      	  node.ectLambda = r.ectLambda;
+      	  node.responsibleEctLambda = r.responsibleEctLambda;
+      	}
       }
       else {
-	if (plus(l.env, r.eLambda) > r.envLambda) {
-	  node.envLambda = plus(l.env, r.eLambda);
-	  node.responsibleEnvLambda = r.responsibleELambda;
-	}
-	else {
-	  node.envLambda = r.envLambda;
-	  node.responsibleEnvLambda = r.responsibleEnvLambda;
-	}
+      	if (plus(l.ect, r.pLambda) > r.ectLambda) {
+      	  node.ectLambda = plus(l.ect, r.pLambda);
+      	  node.responsibleEctLambda = r.responsiblePLambda;
+      	}
+      	else {
+      	  node.ectLambda = r.ectLambda;
+      	  node.responsibleEctLambda = r.responsibleEctLambda;
+      	}
       }
     }
   }
 
-  void computeThetaNode(int i) {
-
-    if (notExist(left(i))) {
-      return;
-    }
-    else if (notExist(right(i))) {
-      return;
-    }
-    else {
-
-      ThetaLambdaNode node = tree[i];
-      ThetaLambdaNode l = tree[left(i)];
-      ThetaLambdaNode r = tree[right(i)];
-      
-      node.e = plus(l.e, r.e);
-      node.env = Math.max(plus(l.env, r.e), r.env);
-      node.envC = Math.max(plus(l.envC, r.e), r.envC);
-    }
+  int ect() {
+    return tree[0].ect;
+  }
+  
+  int ectLambda() {
+    return tree[0].ectLambda;
   }
   
   void clearNode(int i) {
-    tree[i].e = 0;
-    tree[i].env = Integer.MIN_VALUE;
-    tree[i].envC = Integer.MIN_VALUE;
-    tree[i].eLambda = Integer.MIN_VALUE;
-    tree[i].envLambda = Integer.MIN_VALUE;
-  }
-
-  void updateThetaTree(int i) {
-    while (exist(i)) {
-      computeThetaNode(i);
-      i = parent(i);
-    }
-  }
-  
-  void enableNode(int i, int ci) {
-    tree[i].e = tree[i].task.e();
-    tree[i].env = tree[i].task.env(C.max());    
-    tree[i].envC = (C.max() - ci) * tree[i].task.est() + tree[i].task.e();
-
-    updateThetaTree(parent(i));
-  }
-
-  void disableNode(int i) {
-    clearNode(i);
-    updateThetaTree(parent(i));    
+    tree[i].p = 0;
+    tree[i].ect = Integer.MIN_VALUE;
+    tree[i].pLambda = Integer.MIN_VALUE;
+    tree[i].ectLambda = Integer.MIN_VALUE;
   }
 
   void moveToLambda(int i) {
-    ThetaLambdaNode node = tree[i];
-    node.eLambda = node.e;
-    node.envLambda = node.env;
-    node.e = 0;
-    node.env = Integer.MIN_VALUE;
-    node.envC = Integer.MIN_VALUE;
+    ThetaLambdaUnaryNode node = tree[i];
+    node.pLambda = node.p;
+    node.ectLambda = node.ect;
+    node.p = 0;
+    node.ect = Integer.MIN_VALUE;
     updateTree(parent(i));
   }
 
   void removeFromLambda(int i) {
-    ThetaLambdaNode node = tree[i];
-    node.eLambda = Integer.MIN_VALUE;
-    node.envLambda = Integer.MIN_VALUE;
+    ThetaLambdaUnaryNode node = tree[i];
+    node.pLambda = Integer.MIN_VALUE;
+    node.ectLambda = Integer.MIN_VALUE;
     updateTree(parent(i));
   }
 
@@ -223,67 +185,20 @@ class ThetaLambdaTree extends Tree {
     }
   }
 
-  int calcEnvlc(int bound , int c) {
-
-    int v = root();
-    int e = 0;
-    int maxEnvC = (C.max() - c) * bound;
-
-    while ( !isLeaf(v)) {
-      if (plus(tree[right(v)].envC, e) > maxEnvC) {
-	v = right(v);
-      }
-      else {
-	e += tree[right(v)].e;
-	v = left(v);
-      }
-    }
-    // Cut
-    // v is the rightmost node in the alpha subtree
-    
-    // System.out.println("---------> Cut at node " + v + ", est = " + tree[v].task.start.min());
-
-    int e_alpha = tree[v].e;
-    int env_alpha = tree[v].env;
-    int e_beta = 0;
-
-    while ( !isRoot(v)) {
-      if (isLeft(v)) {
-	e_beta = plus(tree[siblingRight(v)].e, e_beta);
-      }
-      else { // isRight(v)
-	env_alpha = Math.max(plus(tree[siblingLeft(v)].env, e_alpha) , env_alpha);
-	e_alpha = plus(tree[siblingLeft(v)].e, e_alpha);
-      }
-      v = parent(v);      
-    }
-    // System.out.println("e_beta = " + e_beta + ", env_alpha = " + env_alpha);
-    
-    return plus(e_beta, env_alpha);
-  }
-  
-  IntVar getCapacity() {
-    return C;
-  }
-
-  void setCapacity(IntVar capacity) {
-    C = capacity;
-  }
-
-  ThetaLambdaNode leaf(int i) {
+  ThetaLambdaUnaryNode leaf(int i) {
     return tree[leafIndex(i)];
   }
 
   boolean isLeaf(int i) {
-    int l = tree[i].index; // must use this since we make tree balanced and copy nodes up in the tree sometimes
+    int l = tree[i].index;
     return l >= treeSize - n && l < treeSize;
   }
   
-  ThetaLambdaNode rootNode() {
+  ThetaLambdaUnaryNode rootNode() {
     return tree[root()];
   }
 
-  ThetaLambdaNode get(int i) {
+  ThetaLambdaUnaryNode get(int i) {
     return tree[i];
   }
 
@@ -304,7 +219,7 @@ class ThetaLambdaTree extends Tree {
     
     StringBuffer result = new StringBuffer();
     
-    result.append ("digraph ThetaLambdaTree"+name);
+    result.append ("digraph ThetaLambdaUnaryTree"+name);
     result.append (" {");
     result.append ("graph [  fontsize = 12,");
     result.append ("size = \"5,5\" ];\n");
@@ -315,7 +230,7 @@ class ThetaLambdaTree extends Tree {
     
     result.append(treeToGraph(root()));
 
-    result.append("label =\"\n\nThetaLambdaTree"+name+"\n\"");
+    result.append("label =\"\n\nThetaLambdaUnaryTree"+name+"\n\"");
     
     result.append ("}");
     
@@ -348,7 +263,7 @@ class ThetaLambdaTree extends Tree {
     
     StringBuffer result = new StringBuffer();
 
-    result.append("ThetaLambdaTree\n");
+    result.append("ThetaLambdaUnaryTree\n");
     for (int i = 0; i < treeSize; i++) 
       result.append("Node "+i+"\n============\n"+tree[i]+"\n============\n");
 

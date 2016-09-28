@@ -77,7 +77,6 @@ public class Cumulative extends CumulativeBasic {
    * @param resources variables denoting resource usage of the tasks.
    * @param limit the overall limit of resources which has to be used.
    * @param doEdgeFinding true if edge finding algorithm should be used.
-   * @param doProfile specifies if the profiles should be computed in order to reduce limit variable.
    */
   public Cumulative(IntVar[] starts,
 		    IntVar[] durations,
@@ -91,40 +90,16 @@ public class Cumulative extends CumulativeBasic {
       taskReversed[i] = new TaskReversedView(new Task(starts[i], durations[i], resources[i]));
 
     for (int i = 0; i < starts.length; i++) {
-      taskNormal[i].index = i;
       taskReversed[i].index = i;
     }
     
     // check for possible overflows
-    for (Task t : taskNormal) {
-      mul((t.start.max()+t.dur.max()), limit.max());
-    }
+    if (limit != null)
+      for (Task t : taskNormal) {
+	mul((t.start.max()+t.dur.max()), limit.max());
+      }
   }
 
-  public Cumulative(IntVar[] starts,
-		    IntVar[] durations,
-		    IntVar[] resources,
-		    IntVar limit,
-		    boolean doProfile,
-		    boolean setLimit) {
-    
-    this(starts, durations, resources, limit);
-    super.doProfile = doProfile;
-    super.setLimit = setLimit;
-  }
-
-  
-  public Cumulative(IntVar[] starts,
-		    IntVar[] durations,
-		    IntVar[] resources,
-		    IntVar limit,
-		    boolean doProfile) {
-    
-    this(starts, durations, resources, limit);
-    super.doProfile = doProfile;
-  }
-
-  
   /**
    * It creates a cumulative constraint.
    * @param starts variables denoting starts of the tasks.
@@ -162,7 +137,8 @@ public class Cumulative extends CumulativeBasic {
 
       profileProp();
       
-      edgeFind();
+      if (store.propagationHasOccurred == false)
+	edgeFind();
       
     } while (store.propagationHasOccurred);
   }
@@ -204,7 +180,6 @@ public class Cumulative extends CumulativeBasic {
   void edgeFind() {
 
     edgeFind(taskNormal);
-    store.propagationHasOccurred = false;
     edgeFind(taskReversed);
 
   }
@@ -388,19 +363,6 @@ public class Cumulative extends CumulativeBasic {
     return IntDomain.BOUND;
   }
   
-  String intArrayToString(int[] a) {
-    StringBuffer result = new StringBuffer("[");
-
-    for (int i = 0; i < a.length; i++) {
-      if ( i != 0)
-    	result.append(", ");
-      result.append(a[i]);
-    }
-    result.append("]");
-
-    return result.toString();
-  }
-
   class TaskIncESTComparator<T extends TaskView> implements Comparator<T> {
 
     TaskIncESTComparator() {

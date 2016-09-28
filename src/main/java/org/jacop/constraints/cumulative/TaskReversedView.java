@@ -75,8 +75,6 @@ class TaskReversedView extends TaskView {
   
   void updateNotFirstNotLast(int lct) {
     int min = - lct;
-    // System.out.println("update min to "+min + " for " + start);
-
     if (min > start.min())
       start.domain.inMin(store.level, start, min);
   }

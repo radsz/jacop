@@ -1,5 +1,5 @@
 /**
- *  IntTask.java 
+ *  ThetaLambdaUnaryNode.java 
  *  This file is part of JaCoP.
  *
  *  JaCoP is a Java Constraint Programming solver. 
@@ -29,38 +29,34 @@
  *
  */
 
+
 package org.jacop.constraints.cumulative;
 
 /**
- * Represents tasks with integer start, duration and resource valurs for
- * cumulative constraint
+ * Implements ThetaLambdaUnaryNode for ThetaLambdaUnaryTree.
  * 
- * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @author Krzysztof Kuchcinski
+ * @version 4.5
  */
 
-class IntTask {
+class ThetaLambdaUnaryNode extends ThetaNode{
+  
+  // Lambda parameters
+  int pLambda;
+  int ectLambda;
+  int responsiblePLambda;
+  int responsibleEctLambda;
 
-	int start = 0, stop = 0;
+  ThetaLambdaUnaryNode() {
+  }
 
-	IntTask() {
-	}
-
-	IntTask(int Start, int Stop) {
-		start = Start;
-		stop = Stop;
-	}
-
-	int start() {
-		return start;
-	}
-
-	int stop() {
-		return stop;
-	}
-
-	@Override
-	public String toString() {
-		return "[" + start + ", " + stop + "]";
-	}
+  public String toString() {
+    String taskNo = task != null ? "\ntask = " + task.index : "";
+    return "node: " + index + taskNo +
+      "\np = "+p+"\nect = "+ect+
+      "\npLambda = "+pLambda+
+      "\nectLambda = "+ectLambda+
+      "\nresponsiblePLambda = "+responsiblePLambda+
+      "\nresponsibleEctLambda = "+responsibleEctLambda;
+  }
 }
