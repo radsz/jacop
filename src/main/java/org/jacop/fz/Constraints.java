@@ -1244,6 +1244,8 @@ public class Constraints implements ParserTreeConstants {
 		  return;		    
 		else if (s.length == 1)
 		  pose(new XlteqY(r[0], b));
+		else if (b.max() == 1)  // cumulative unary
+		  pose(new org.jacop.constraints.cumulative.CumulativeUnary(s, d, r, b, true));		  
 		else { // possible to use CumulativeUnary (it is used with profile propagator; option true)
 		  int min     = Math.min(r[0].min(), r[1].min());
 		  int nextMin = Math.max(r[0].min(), r[1].min());

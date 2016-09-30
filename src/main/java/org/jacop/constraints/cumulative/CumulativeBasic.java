@@ -260,7 +260,7 @@ public class CumulativeBasic extends Constraint {
 
     StringBuffer result = new StringBuffer( id() );
 
-    result.append(" : cumulative([ ");
+    result.append(" : cumulativeBasic([ ");
     for (int i = 0; i < taskNormal.length - 1; i++)
       result.append(taskNormal[i]).append(", ");
 

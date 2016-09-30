@@ -363,6 +363,23 @@ public class Cumulative extends CumulativeBasic {
     return IntDomain.BOUND;
   }
   
+  @Override
+  public String toString() {
+
+    StringBuffer result = new StringBuffer( id() );
+
+    result.append(" : cumulative([ ");
+    for (int i = 0; i < taskNormal.length - 1; i++)
+      result.append(taskNormal[i]).append(", ");
+
+    result.append(taskNormal[taskNormal.length - 1]);
+
+    result.append(" ]").append(", limit = ").append(limit).append(" )");
+
+    return result.toString();
+
+  }
+
   class TaskIncESTComparator<T extends TaskView> implements Comparator<T> {
 
     TaskIncESTComparator() {

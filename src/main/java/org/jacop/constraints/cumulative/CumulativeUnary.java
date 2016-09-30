@@ -349,6 +349,23 @@ public class CumulativeUnary extends Cumulative {
   }
 
   
+  @Override
+  public String toString() {
+
+    StringBuffer result = new StringBuffer( id() );
+
+    result.append(" : cumulativeUnary([ ");
+    for (int i = 0; i < taskNormal.length - 1; i++)
+      result.append(taskNormal[i]).append(", ");
+
+    result.append(taskNormal[taskNormal.length - 1]);
+
+    result.append(" ]").append(", limit = ").append(limit).append(" )");
+
+    return result.toString();
+
+  }
+
   class TaskIncLCTComparator<T extends TaskView> implements Comparator<T> {
 
     TaskIncLCTComparator() {
