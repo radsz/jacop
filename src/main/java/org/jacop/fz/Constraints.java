@@ -1233,41 +1233,49 @@ public class Constraints implements ParserTreeConstants {
 		System.exit(0);
 	    }
 	    else if (p.startsWith("jacop_"))
-		if (p.startsWith("cumulative", 6)) {
+	      if (p.startsWith("cumulative", 6)) {
 
-		    IntVar[] s = getVarArray((SimpleNode)node.jjtGetChild(0));
-		    IntVar[] d = getVarArray((SimpleNode)node.jjtGetChild(1));
-		    IntVar[] r = getVarArray((SimpleNode)node.jjtGetChild(2));
-		    IntVar b = getVariable((ASTScalarFlatExpr)node.jjtGetChild(3));
-
-		    if (s.length == 1)
-		      pose(new XlteqY(r[0], b));
-		    else if (b.max() == 1)
-		      pose(new org.jacop.constraints.cumulative.CumulativeUnary(s, d, r, b, true));
-		    else { // possible to use CumulativeUnary (it is used with profile propagator; option true)
-		      int min     = Math.min(r[0].min(), r[1].min());
-		      int nextMin = Math.max(r[0].min(), r[1].min());
-		      for (int i = 2; i < r.length; i++) {
-		    	if (r[i].min() < min) {
-		    	  nextMin = min;
-		    	  min = r[i].min();
-		    	}
-		    	else if (r[i].min() < nextMin) {
-		    	  nextMin = r[i].min();
-		    	}
-		      }		      
-		      boolean unaryPossible = (min > b.max()/2) || (nextMin > b.max()/2 && min + nextMin > b.max());
-		      if (unaryPossible) {
-		    	pose(new org.jacop.constraints.cumulative.CumulativeUnary(s, d, r, b, true));
-			// these constraints are not needed if we run with profile-based propagator
-		    	// for (int i = 0; i < r.length; i++) 
-		    	//   pose(new XlteqY(r[i], b));
-		      }
-		      else
-			pose(new org.jacop.constraints.cumulative.Cumulative(s, d, r, b));
+		IntVar[] s = getVarArray((SimpleNode)node.jjtGetChild(0));
+		IntVar[] d = getVarArray((SimpleNode)node.jjtGetChild(1));
+		IntVar[] r = getVarArray((SimpleNode)node.jjtGetChild(2));
+		IntVar b = getVariable((ASTScalarFlatExpr)node.jjtGetChild(3));
+		    
+		if (s.length == 0)
+		  return;		    
+		else if (s.length == 1)
+		  pose(new XlteqY(r[0], b));
+		else { // possible to use CumulativeUnary (it is used with profile propagator; option true)
+		  int min     = Math.min(r[0].min(), r[1].min());
+		  int nextMin = Math.max(r[0].min(), r[1].min());
+		  for (int i = 2; i < r.length; i++) {
+		    if (r[i].min() < min) {
+		      nextMin = min;
+		      min = r[i].min();
 		    }
+		    else if (r[i].min() < nextMin) {
+		      nextMin = r[i].min();
+		    }
+		  }		      
+		  boolean unaryPossible = (min > b.max()/2) || (nextMin > b.max()/2 && min + nextMin > b.max());
+		  if (unaryPossible) {
+		    if (allVarOne(d)) {
+		      // parameterListForAlldistincts.add(s);
+		      pose(new Alldiff(s));
+		      if (!b.singleton())
+			for (int i = 0; i < r.length; i++) 
+			  pose(new XlteqY(r[i], b));
+		    }
+		    else
+		      pose(new org.jacop.constraints.cumulative.CumulativeUnary(s, d, r, b, true));
+		    // these constraints are not needed if we run with profile-based propagator
+		    // for (int i = 0; i < r.length; i++) 
+		    //   pose(new XlteqY(r[i], b));
+		  }
+		  else
+		    pose(new org.jacop.constraints.cumulative.Cumulative(s, d, r, b));
 		}
-		else if (p.startsWith("circuit", 6)) {
+	      }
+	      else if (p.startsWith("circuit", 6)) {
 		    IntVar[] v = getVarArray((SimpleNode)node.jjtGetChild(0));
 			
 		    pose(new Circuit(v));
