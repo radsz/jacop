@@ -1526,7 +1526,15 @@ public class Constraints implements ParserTreeConstants {
 		    int y = getInt((ASTScalarFlatExpr)node.jjtGetChild(1));
 		    IntVar c = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
 
-		    pose(new Count(x, c, y));
+		    ArrayList<IntVar> xs = new ArrayList<IntVar>();
+		    for (IntVar v : x) {
+		      if (y >= v.min() && y <= v.max())
+			xs.add(v);			  
+		    }
+		    if (xs.size() == 0)
+		      return;
+		    else
+		      pose(new Count(xs, c, y));
 
 		    // pose(new Among(x, new IntervalDomain(y,y), c));
 		}
@@ -1534,15 +1542,8 @@ public class Constraints implements ParserTreeConstants {
 		    IntVar n = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
 		    IntVar[] x = getVarArray((SimpleNode)node.jjtGetChild(1));
 
-		    // reification is defined in nvalue.mzn as decomposition
-		    // if (p.startsWith("_reif", 12)) {
-		    // 	IntVar b = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
-		    // 	IntVar tmp = new IntVar(store, 1, x.length);
-		    // 	pose(new Values(x, tmp));
-		    // 	pose(new Reified(new XeqY(tmp, n), b));
-		    // }
-		    // else
-			pose(new Values(x, n));
+		    pose(new Values(x, n));
+		      
 		}
  		else if (p.startsWith("minimum_arg_int", 6)) {
 		    IntVar[] x = getVarArray((SimpleNode)node.jjtGetChild(0));
@@ -3090,7 +3091,10 @@ public class Constraints implements ParserTreeConstants {
 		else if (p1.length == 1 && p1[0] == -1)
 		    p2[0].domain.inComplement(store.level, p2[0], -p3);
  		else if (p1.length == 2 && p3 == 0 && ( (p1[0] == 1 && p1[1] == -1) || (p1[0] == -1 && p1[1] == 1) ))
-			pose(new XneqY(p2[0], p2[1]));
+		  if (p2[0].max() < p2[1].min() || p2[0].min() > p2[1].max())
+		    return;
+		  else
+		    pose(new XneqY(p2[0], p2[1]));
 		else {
 		    int pos = sumPossible(p1, p3);
 		    if (pos > -1) {
@@ -3564,7 +3568,11 @@ public class Constraints implements ParserTreeConstants {
 	    return;
 	}
 	*/
-
+	poseElementInteger(p1, p2, p3);
+    }
+  
+  void poseElementInteger(IntVar p1, int[] p2, IntVar p3) {
+    
 	p1.domain.in(store.level, p1, 1, IntDomain.MaxInt);
 
 	int newP2Length = p1.max() - p1.min() + 1;
@@ -3581,34 +3589,29 @@ public class Constraints implements ParserTreeConstants {
 	// pose(new Element(p1, p2, p3));
     }
 
-    /*
-    boolean listEqualIndex(int[] p) {
-	int n = 1;
-	for (int i = 0; i < p.length; i++) {
-	    if (p[i] == n++)
-		continue;
-	    else
-		return false;
-	}
-	return true;
-    }
-    */
-
     void generateVarElementConstraint(SimpleNode node) throws FailException {
 	IntVar p1 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));	    
 	IntVar p3 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
-
 
 	IntVar[] p2var = getVarArray((SimpleNode)node.jjtGetChild(1));
 	if (allSingleton(p2var)) {
 	    int[] p2int = new int[p2var.length];
 	    for (int i = 0; i < p2int.length; i++) 
 		p2int[i] = p2var[i].value();
-	    pose(new Element(p1, p2int, p3));
-	}
-	else
-	    pose(new ElementVariableFast(p1, p2var, p3));
 
+	    poseElementInteger(p1, p2int, p3);
+	    // pose(new Element(p1, p2int, p3));
+	}
+	else {
+	  p1.domain.in(store.level, p1, 1, IntDomain.MaxInt);
+
+	  int newP2Length = p1.max() - p1.min() + 1;
+	  int listLength = (p2var.length < newP2Length) ? p2var.length : newP2Length;
+	  IntVar[] newP2 = new IntVar[listLength];
+	  for (int i=0; i < listLength; i++) 
+	    newP2[i] = p2var[p1.min() - 1 + i];
+	  pose(new ElementVariableFast(p1, newP2, p3, p1.min() - 1));
+	}
     }
 
     boolean allSingleton(IntVar[] vs) {

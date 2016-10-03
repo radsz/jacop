@@ -294,7 +294,7 @@ public class ElementVariableFast extends Constraint {
 		result.append(", ");
 	}
 
-	result.append("], ").append(value).append(" )");
+	result.append("], ").append(value).append(", ").append(indexOffset).append(" )");
 
 	return result.toString();
 

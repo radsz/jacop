@@ -77,7 +77,7 @@ public class CumulativeUnary extends Cumulative {
 			 IntVar limit) {
 
     super(starts, durations, resources, limit);
-    queueIndex = 1;
+    queueIndex = 2;
   }
   
   /**

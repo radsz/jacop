@@ -46,6 +46,8 @@ import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 
+import org.jacop.util.BipartiteGraphMatching;
+
 /**
  * Constraint Values counts number of different values on a list of Variables.
  * 
@@ -89,7 +91,7 @@ public class Values extends Constraint {
 		assert (list != null) : "List argument is null";
 		assert (count != null) : "count argument is null";
 
-		this.queueIndex = 1;
+		this.queueIndex = 2;
 
 		numberId = counter++;
 		numberArgs = (short) (list.length + 1);
@@ -128,9 +130,10 @@ public class Values extends Constraint {
 	}
 
 	@Override
+	@SuppressWarnings("unchecked")
 	public void consistency(Store store) {
 
-		do {
+	  do {
 			
 			store.propagationHasOccurred = false;
 
@@ -141,12 +144,17 @@ public class Values extends Constraint {
 
 			int minNumberDifferent = 1, minimumMax = list[0].max();
 
-			ArrayList<HashSet<Integer>> graph = new ArrayList<HashSet<Integer>>();
+			int[][] adj = new   int[list.length+1][];
+			adj[0] = new int[0];
+			HashMap<Integer, Integer> valueMap = new HashMap<Integer, Integer>();
+			int valueIndex = 0;
+
 			int numberSingleton = 0;
 			IntDomain singletonValues = new IntervalDomain();
 
-			for (IntVar v : list) {
-
+			for (int i = 0; i < list.length; i++) {
+			        IntVar v = list[i];
+			  
 				// compute information for pruning list of Variables
 				if (v.singleton()) {
 					numberSingleton++;
@@ -161,16 +169,26 @@ public class Values extends Constraint {
 				if (v.max() < minimumMax)
 					minimumMax = v.max();
 
-				// build bi-partite graph for computing maximal value for count
-				HashSet<Integer> nodeConnections = new HashSet<Integer>();
-				for (ValueEnumeration e = v.dom().valueEnumeration(); e.hasMoreElements();)
-					nodeConnections.add(e.nextElement());
+				adj[i+1] =  new int[v.dom().getSize()];
+				int j=0;
+				for (ValueEnumeration e = v.dom().valueEnumeration(); e.hasMoreElements();) {
+				        int el = e.nextElement();
+					Integer elIndex = valueMap.get(el);
+					if (elIndex == null) {
+					  valueMap.put(el, valueIndex);
+					  adj[i+1][j] = valueIndex+1;
+					  valueIndex++;
+					}
+					else {
+					  adj[i+1][j] = elIndex+1;
+					}
+					j++;
+				}
 				
-				graph.add(nodeConnections);
 			}
-
 			// compute maximal value for count
-			int maxNumberDifferent = bipartiteGraphMatching(graph);
+			BipartiteGraphMatching matcher = new BipartiteGraphMatching(adj, list.length, valueMap.size());
+			int maxNumberDifferent = matcher.hopcroftKarp();
 
 			if (debug)
 				System.out.println("Minimum number of different values = "
@@ -199,10 +217,9 @@ public class Values extends Constraint {
 					for (IntVar v : list)
 						if (!v.singleton())
 							v.domain.in(store.level, v, singletonValues.complement());
-				
 			}
 			
-		} while (store.propagationHasOccurred);
+	  } while (store.propagationHasOccurred);
 		
 	}
 
@@ -252,145 +269,6 @@ public class Values extends Constraint {
 		result.append( "], " ).append( count ).append( " )" );
 		return result.toString();
 	}
-
-	@SuppressWarnings("unchecked")
-	int bipartiteGraphMatching(ArrayList<HashSet<Integer>> graph) {
-
-		int u = 0;
-
-		HashMap<Integer, Integer> matching = new HashMap<Integer, Integer>();
-		HashMap<Integer, Integer> reverseMatching = new HashMap<Integer, Integer>();
-
-		// Gready matching that creates initial matching
-		u = 0;
-		for (HashSet<Integer> s : graph) {
-			for (Integer v : s) {
-				if (!matching.containsValue(v)) {
-					matching.put(u, v);
-					reverseMatching.put(v, u);
-					break;
-				}
-			}
-			u++;
-		}
-
-		HashSet<Integer> values = new HashSet<Integer>();
-		for (HashSet<Integer> s : graph)
-			for (Integer v : s)
-				values.add(v);
-
-		u = 0;
-		HashMap<Integer, Integer> valuesMap = new HashMap<Integer, Integer>();
-		HashMap<Integer, Integer> valuesKeyMap = new HashMap<Integer, Integer>();
-		for (Integer v : values) {
-			valuesMap.put(v, u);
-			valuesKeyMap.put(u, v);
-			u++;
-		}
-
-		int uLength = graph.size();
-		int vLength = values.size();
-		int sink = 1 + uLength + vLength;
-
-		HashSet<Integer>[] g = (HashSet<Integer>[]) new HashSet[1 + uLength + vLength];
-		boolean done = false;
-		byte[] b = new byte[g.length];
-		Stack<Integer> stack = new Stack<Integer>();
-
-		while (!done) {
-
-			// Create G
-			HashSet<Integer> nextNodesForSource = new HashSet<Integer>();
-			u = 0;
-			for (HashSet<Integer> hg : graph) {
-				HashSet<Integer> next = new HashSet<Integer>();
-				for (Integer v : hg)
-					if (matching.containsKey(u)) {
-						if (matching.get(u) != v)
-							next.add(valuesMap.get(v) + uLength + 1);
-					} else {
-						next.add(valuesMap.get(v) + uLength + 1);
-						nextNodesForSource.add(u + 1);
-					}
-
-				g[u + 1] = next;
-				u++;
-			}
-			g[0] = nextNodesForSource;
-
-			for (Integer v : values) {
-				u = 1 + uLength + valuesMap.get(v);
-				HashSet<Integer> next = new HashSet<Integer>();
-				if (!reverseMatching.containsKey(v)) {
-					next.add(sink);
-					g[u] = next;
-				} else {
-					next.add(reverseMatching.get(v) + 1);
-					g[u] = next;
-				}
-			}
-
-			for (int i = 0; i < b.length; i++)
-				b[i] = 0;
-
-			done = true;
-
-			// Alternating paths
-			stack.push(0);
-			while (!stack.empty()) {
-				int top = stack.peek();
-				while (g[top].size() > 0) {
-
-					Iterator<Integer> nextNode = g[top].iterator();
-
-					int first = (Integer) nextNode.next();
-
-					if (debug)
-						System.out.println("PUSH " + first);
-					// remove edge (TOP, FIRST) from G
-
-					if (debug) 
-						System.out.println("Checking edge (" + top + ", " + first + ")");
-
-					g[top].remove(first);
-					if (first == sink)
-						while (stack.size() >= 2) {
-							int v = stack.pop();
-							u = stack.pop();
-							int vKey = valuesKeyMap.get(v - 1 - uLength);
-							if (debug) 
-								System.out.println("("+u+", "+v+")" + "("+ (int)(u-1) + ", " + vKey + ")");
-							matching.remove(u - 1);
-							matching.put(u - 1, vKey);
-							reverseMatching.remove(vKey);
-							reverseMatching.put(vKey, u - 1);
-							done = false;
-							if (debug)
-								System.out.println("Improved matching " + matching);
-						}
-					else if (b[first] == 0) {
-						b[first] = 1;
-						stack.push(first);
-						top = first;
-					}
-				}
-				stack.pop();
-			}
-		}
-
-		if (debug) {
-
-			System.out.println("Final graph G");
-
-			for (HashSet<Integer> s : g)
-				System.out.println(u++ + ":" + s);
-
-			System.out.println("Final matching (u, v): " + matching);
-		}
-
-		return matching.size();
-	}
-
 
 	@Override
 	public int getConsistencyPruningEvent(Var var) {
