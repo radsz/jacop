@@ -171,7 +171,7 @@ public class MinSimple extends Constraint {
 		
     StringBuffer result = new StringBuffer( id() );
 		
-    result.append(" : minSimple(" + x1 + ", " + x1 + ", " + min + ")");
+    result.append(" : minSimple(" + x1 + ", " + x2 + ", " + min + ")");
 
     return result.toString();
   }
