@@ -171,7 +171,7 @@ public class MaxSimple extends Constraint {
 		
     StringBuffer result = new StringBuffer( id() );
 		
-    result.append(" : maxSimple(" + x1 + ", " + x1 + ", " + max + ")");
+    result.append(" : maxSimple(" + x1 + ", " + x2 + ", " + max + ")");
 
     return result.toString();
   }
