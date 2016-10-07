@@ -160,10 +160,18 @@ class OperationConstraints extends Support implements ParserTreeConstants {
     ASTScalarFlatExpr p3 = (ASTScalarFlatExpr)node.jjtGetChild(2);
 
     if (p1.getType() == 0) {// p1 int
-      pose(new XmulCeqZ(getVariable(p2), getInt(p1), getVariable(p3)));
+      int c = getInt(p1);
+      if (c == 1)
+	pose(new XeqY(getVariable(p2), getVariable(p3)));
+      else
+	pose(new XmulCeqZ(getVariable(p2), c, getVariable(p3)));
     }
     else if (p2.getType() == 0) {// p2 int
-      pose(new XmulCeqZ(getVariable(p1), getInt(p2), getVariable(p3)));
+      int c = getInt(p2);
+      if (c == 1)
+	pose(new XeqY(getVariable(p1), getVariable(p3)));
+      else
+	pose(new XmulCeqZ(getVariable(p1), getInt(p2), getVariable(p3)));
     }
     else if (p3.getType() == 0) {// p3 int
       pose(new XmulYeqC(getVariable(p1), getVariable(p2), getInt(p3)));
