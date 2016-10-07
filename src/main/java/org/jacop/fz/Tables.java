@@ -102,7 +102,7 @@ public class Tables {
 
     // HashMap<IntVar, HashSet<IntVar>> boolAliasTable = new HashMap<IntVar, HashSet<IntVar>>();
     // HashMap<IntVar, HashSet<IntVar>> intAliasTable = new HashMap<IntVar, HashSet<IntVar>>();
-    HashMap<IntVar, IntVar> aliasTable = new HashMap<IntVar, IntVar>();
+    public static HashMap<IntVar, IntVar> aliasTable = new HashMap<IntVar, IntVar>();
     
     /**
      * It constructs the storage object to store different objects, like int, array of ints, sets, ... . 

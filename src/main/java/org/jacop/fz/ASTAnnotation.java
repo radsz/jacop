@@ -17,7 +17,7 @@ class ASTAnnotation extends SimpleNode {
     void setId(String id) {
 	ID = id;
     }
-    String getAnnId() {
+    public String getAnnId() {
 	return ID;
     }
 

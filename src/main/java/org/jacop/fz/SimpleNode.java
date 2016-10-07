@@ -75,14 +75,14 @@ class SimpleNode implements Node {
     }
   }
 
-    int getId() {
-	return id;
-    }
+  public int getId() {
+    return id;
+  }
 
-    // remove all nodes KK
-    void removeChildren() {
-	children = null;
-    }
+  // remove all nodes KK
+  void removeChildren() {
+    children = null;
+  }
 }
 
 /* JavaCC - OriginalChecksum=437df12e360880d1ad7d1ba139165523 (do not edit this line) */

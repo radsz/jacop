@@ -63,15 +63,15 @@ public class Options {
     boolean precisionDefined = false;
     double precision;
 
-    boolean boundConsistency = false;
+    static boolean boundConsistency = false;
 
     boolean runSearch = true;
 
-    boolean use_sat = false;
+    static boolean use_sat = false;
 
     boolean complementary_search = false;
 
-    boolean debug = false;
+    static boolean debug = false;
     
 	/**
 	 * It constructs an Options object and parses all the parameters/options provided 
@@ -281,7 +281,7 @@ public class Options {
 	 * It defines whether to use bound consistency
 	 * @return true if bound consistency prefered, false otherwise (defult). 
 	 */
-	public boolean getBoundConsistency() {
+	public static boolean getBoundConsistency() {
 		return boundConsistency;
 	}
 
@@ -305,7 +305,7 @@ public class Options {
 	 * It defines whether sat is used. 
 	 * @return true sat is used, false otherwise
 	 */
-	public boolean useSat() {
+	public static boolean useSat() {
 		return use_sat;
 	}
 
@@ -313,7 +313,7 @@ public class Options {
 	 * It defines whether to use debug information print-out. 
 	 * @return true if debugging information is printed, false otherwise
 	 */
-	public boolean debug() {
+	public static boolean debug() {
 		return debug;
 	}
 
