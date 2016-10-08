@@ -115,7 +115,7 @@ public class Constraints implements ParserTreeConstants {
 
   static boolean debug = false;
 
-  org.jacop.fz.constraints.ConstraintFncs cf = new org.jacop.fz.constraints.ConstraintFncs();
+  final static org.jacop.fz.constraints.ConstraintFncs cf = new org.jacop.fz.constraints.ConstraintFncs();
   
   /**
    * It creates an object to parse the constraint part of the flatzinc file.
@@ -184,7 +184,7 @@ public class Constraints implements ParserTreeConstants {
       try {
 	      
 	java.lang.reflect.Method method = cf.getClass().getMethod(p, SimpleNode.class);
-	method.invoke(cf, node);
+	method.invoke(null, node);
 
       } catch (NoSuchMethodException e) {
 	System.out.println("%% JaCoP flatzinc back-end: constraint " + p + " is not supported.");
