@@ -489,7 +489,23 @@ package object scala {
   }
 
 /**
-* Wrapper for [[org.jacop.constraints.Cumulative]].
+* Wrapper for [[org.jacop.constraints.cumulative.CumulativeBasic]].
+*
+* @param t array of start times of tasks.
+* @param d array of duration of tasks.
+* @param r array of number of resources of tasks.
+* @param limit limit on number of resources used in a schedule.
+*/
+  def cumulative_basic(t: Array[IntVar], d: Array[IntVar], r: Array[IntVar], limit: IntVar)  {
+    val c = new org.jacop.constraints.cumulative.CumulativeBasic(t.asInstanceOf[Array[org.jacop.core.IntVar]],
+			   d.asInstanceOf[Array[org.jacop.core.IntVar]],
+			   r.asInstanceOf[Array[org.jacop.core.IntVar]], limit)
+    if (trace) println(c)
+    impModel.impose( c )
+  }
+
+/**
+* Wrapper for [[org.jacop.constraints.cumulative.Cumulative]].
 *
 * @param t array of start times of tasks.
 * @param d array of duration of tasks.
@@ -497,7 +513,23 @@ package object scala {
 * @param limit limit on number of resources used in a schedule.
 */
   def cumulative(t: Array[IntVar], d: Array[IntVar], r: Array[IntVar], limit: IntVar)  {
-    val c = new Cumulative(t.asInstanceOf[Array[org.jacop.core.IntVar]],
+    val c = new org.jacop.constraints.cumulative.Cumulative(t.asInstanceOf[Array[org.jacop.core.IntVar]],
+			   d.asInstanceOf[Array[org.jacop.core.IntVar]],
+			   r.asInstanceOf[Array[org.jacop.core.IntVar]], limit)
+    if (trace) println(c)
+    impModel.impose( c )
+  }
+
+/**
+* Wrapper for [[org.jacop.constraints.cumulative.CumulativeUnary]].
+*
+* @param t array of start times of tasks.
+* @param d array of duration of tasks.
+* @param r array of number of resources of tasks.
+* @param limit limit on number of resources used in a schedule.
+*/
+  def cumulative_unary(t: Array[IntVar], d: Array[IntVar], r: Array[IntVar], limit: IntVar)  {
+    val c = new org.jacop.constraints.cumulative.CumulativeUnary(t.asInstanceOf[Array[org.jacop.core.IntVar]],
 			   d.asInstanceOf[Array[org.jacop.core.IntVar]],
 			   r.asInstanceOf[Array[org.jacop.core.IntVar]], limit)
     if (trace) println(c)
