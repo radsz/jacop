@@ -58,7 +58,7 @@ import java.util.LinkedHashSet;
  *
  * Joseph Scott, "Filtering Algorithms for Discrete Cumulative Resources", MSc thesis, Uppsala
  * University, Department of Information Technology, 2010, no IT 10 048,
- * <http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-132172>,
+ * @see <a href="http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-132172">http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-132172</a>
  * 
  * @author Krzysztof Kuchcinski
  * @version 4.5
@@ -76,7 +76,6 @@ public class Cumulative extends CumulativeBasic {
    * @param durations variables denoting durations of the tasks.
    * @param resources variables denoting resource usage of the tasks.
    * @param limit the overall limit of resources which has to be used.
-   * @param doEdgeFinding true if edge finding algorithm should be used.
    */
   public Cumulative(IntVar[] starts,
 		    IntVar[] durations,
