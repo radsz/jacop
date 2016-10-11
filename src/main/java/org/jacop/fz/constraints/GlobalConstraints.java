@@ -110,11 +110,27 @@ class GlobalConstraints extends Support implements ParserTreeConstants {
   }
 
   static void gen_jacop_cumulative(SimpleNode node) {
-    IntVar[] s = getVarArray((SimpleNode)node.jjtGetChild(0));
-    IntVar[] d = getVarArray((SimpleNode)node.jjtGetChild(1));
-    IntVar[] r = getVarArray((SimpleNode)node.jjtGetChild(2));
+    IntVar[] str = getVarArray((SimpleNode)node.jjtGetChild(0));
+    IntVar[] dur = getVarArray((SimpleNode)node.jjtGetChild(1));
+    IntVar[] res = getVarArray((SimpleNode)node.jjtGetChild(2));
     IntVar b = getVariable((ASTScalarFlatExpr)node.jjtGetChild(3));
-		    
+
+    // Filter non-existing tasks
+    ArrayList<IntVar> start = new ArrayList<IntVar>();
+    ArrayList<IntVar> duration = new ArrayList<IntVar>();
+    ArrayList<IntVar> resource = new ArrayList<IntVar>();
+    for (int i = 0; i < str.length; i++) {
+      if (!res[i].singleton(0) && !dur[i].singleton(0)) {
+	start.add(str[i]);
+	duration.add(dur[i]);
+	resource.add(res[i]);
+      }
+    }
+
+    IntVar[] s = start.toArray(new IntVar[start.size()]);
+    IntVar[] d = duration.toArray(new IntVar[duration.size()]);
+    IntVar[] r = resource.toArray(new IntVar[resource.size()]);
+    
     if (s.length == 0)
       return;		    
     else if (s.length == 1)

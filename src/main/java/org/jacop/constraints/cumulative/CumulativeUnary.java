@@ -139,10 +139,10 @@ public class CumulativeUnary extends Cumulative {
   @Override
   public void consistency(Store store) {
     
-    TaskView[] tn = nonZeros(taskNormal);
+    TaskView[] tn = filterZeroTasks(taskNormal);
     if (tn == null)
       return;
-    TaskView[] tr = nonZeros(taskReversed);
+    TaskView[] tr = filterZeroTasks(taskReversed);
 
     do {
 
@@ -158,20 +158,6 @@ public class CumulativeUnary extends Cumulative {
       edgeFind(tn, tr);
       
     } while (store.propagationHasOccurred);
-  }
-
-  TaskView[] nonZeros(TaskView[] ts) {
-     
-    ArrayList<TaskView> nonZeroTasks = new ArrayList<TaskView>();
-    for (int i = 0; i < ts.length; i++) 
-      if (ts[i].res.min() != 0)
-	nonZeroTasks.add(ts[i]);
-    int l = nonZeroTasks.size();
-    if (l == 0)
-      return null;
-    TaskView[] t = new TaskView[l];
-    System.arraycopy(nonZeroTasks.toArray(new TaskView[l]), 0, t, 0, l);
-    return t;
   }
   
   void overload(TaskView[] ts) {
@@ -197,12 +183,12 @@ public class CumulativeUnary extends Cumulative {
 
   void notFirstNotLast(TaskView[] tn, TaskView[] tr) {
 
-    notFirstNotLastPhase(tn, taskNormal);
-    notFirstNotLastPhase(tr, taskReversed);
+    notFirstNotLastPhase(tn);
+    notFirstNotLastPhase(tr);
 
   }
   
-  void notFirstNotLastPhase(TaskView[] tc, TaskView[] ts) {
+  void notFirstNotLastPhase(TaskView[] tc) {
 
     TaskView[] t = new TaskView[tc.length];
     System.arraycopy(tc, 0, t, 0, tc.length);
@@ -221,10 +207,10 @@ public class CumulativeUnary extends Cumulative {
     System.arraycopy(t, 0, q, 0, t.length);
     Arrays.sort(q, new TaskIncLSTComparator<TaskView>());
     
-    notLast(tree, t, q, ts);
+    notLast(tree, t, q, tc);
   }
 
-  void notLast(ThetaTree tree, TaskView[] t, TaskView[] q, TaskView[] to) {
+  void notLast(ThetaTree tree, TaskView[] t, TaskView[] q, TaskView[] tc) {
 
     int n = t.length;    
     int[] updateLCT = new int[n];
@@ -240,7 +226,7 @@ public class CumulativeUnary extends Cumulative {
         if (tree.ect(t[i].treeIndex) > t[i].lst())
 	  updateLCT[i] = Math.min(q[indexQ-1].lst(), updateLCT[i]);
 
-	j = to[q[indexQ].index].treeIndex;
+	j = tc[q[indexQ].index].treeIndex;
 	tree.enableNode(j);
 	indexQ++;
       }
@@ -258,12 +244,12 @@ public class CumulativeUnary extends Cumulative {
 
 
   void detectable(TaskView[] tn, TaskView[] tr) {
-    detectablePhase(tn, taskNormal);
-    detectablePhase(tr, taskReversed);
+    detectablePhase(tn);
+    detectablePhase(tr);
   }
   
 
-  void detectablePhase(TaskView[] tc, TaskView[] ts) {
+  void detectablePhase(TaskView[] tc) {
 
     TaskView[] t = new TaskView[tc.length];
     System.arraycopy(tc, 0, t, 0, tc.length);
@@ -282,7 +268,7 @@ public class CumulativeUnary extends Cumulative {
     System.arraycopy(t, 0, q, 0, t.length);
     Arrays.sort(q, new TaskIncLSTComparator<TaskView>());
     
-    detectable(tree, t, q, ts);
+    detectable(tree, t, q, tc);
 
   }
 
@@ -311,12 +297,12 @@ public class CumulativeUnary extends Cumulative {
 
   void edgeFind(TaskView[] tn, TaskView[] tr) {
 
-    edgeFindPhase(tn, taskNormal);
-    edgeFindPhase(tr, taskReversed);
+    edgeFindPhase(tn);
+    edgeFindPhase(tr);
 
   }
 
-  void edgeFindPhase(TaskView[] tc, TaskView[] tn) {
+  void edgeFindPhase(TaskView[] tc) {
 
     // tasks sorted in non-decreasing order of est
     TaskView[] estList = new TaskView[tc.length];
@@ -342,7 +328,7 @@ public class CumulativeUnary extends Cumulative {
       
       while (tree.ectLambda() > t.lct()) {	
         int j = tree.rootNode().responsibleEctLambda;
-    	tn[tree.get(j).task.index].updateEdgeFind(tree.ect());
+    	tc[tree.get(j).task.index].updateEdgeFind(tree.ect());
         tree.removeFromLambda(j);
       }
     }

@@ -1,4 +1,4 @@
-Version 4.4.1
+Version 4.5
 =============
 
 1. Performance improvements and identification of the same items in
@@ -41,7 +41,14 @@ Version 4.4.1
     finding O(k*n*logn), not-first-not-last, detectable and overload
     O(n*logn).
 
-11. Bug fixes:
+11. Calls to new cumulative constraints in Scala wrapper.
+
+12. New method for constraint generation for flatzinc.
+
+13. Correcting definitions of bin_packing and bin_packing_capa in JaCoP
+    flatzinc library.
+
+14. Bug fixes:
    - Changing comparator method in LinearFloat that
      IllegalArgumentException is not reported.
    - Correcting bugs in AndBool, OrBool and AndBoolSimple.

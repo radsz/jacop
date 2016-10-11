@@ -187,8 +187,8 @@ public class Cumulative extends CumulativeBasic {
   void edgeFind(TaskView[] tn) {
 
     // tasks sorted in non-decreasing order of est
-    TaskView[] estList = new TaskView[taskNormal.length];
-    System.arraycopy(tn, 0, estList, 0, estList.length);
+    TaskView[] estList = filterZeroTasks(tn); // new TaskView[taskNormal.length];
+    // System.arraycopy(tn, 0, estList, 0, estList.length);
 
     Arrays.sort(estList, new TaskIncESTComparator<TaskView>());
 
@@ -196,7 +196,7 @@ public class Cumulative extends CumulativeBasic {
     tree.buildTree(estList);
 
     // tasks sorted in non-increasing order of lct
-    TaskView[] lctList = new TaskView[taskNormal.length];
+    TaskView[] lctList = new TaskView[estList.length];
     System.arraycopy(estList, 0, lctList, 0, estList.length);
     Arrays.sort(lctList, new TaskDecLCTComparator<TaskView>());    
 
@@ -250,9 +250,7 @@ public class Cumulative extends CumulativeBasic {
     int n = t.length;
     Set<Integer> capacities = new LinkedHashSet<Integer>();
     for (int i = 0; i < n; i++) {
-      int capacity = t[i].res.min();
-      if (capacity != 0)
-	capacities.add(capacity);
+      capacities.add(t[i].res.min());
     }
 
     // System.out.println("capacities = " + capacities);
@@ -330,6 +328,25 @@ public class Cumulative extends CumulativeBasic {
 	break outer;
     }
   }
+
+  TaskView[] filterZeroTasks(TaskView[] ts) {
+     
+    ArrayList<TaskView> nonZeroTasks = new ArrayList<TaskView>();
+    int k = 0;
+    for (int i = 0; i < ts.length; i++) 
+      if (ts[i].res.min() != 0 && ts[i].dur.min() != 0) {
+	nonZeroTasks.add(ts[i]);
+	ts[i].index = k++;
+      }
+    int l = nonZeroTasks.size();
+    if (l == 0)
+      return null;
+    TaskView[] t = new TaskView[l];
+    System.arraycopy(nonZeroTasks.toArray(new TaskView[l]), 0, t, 0, l);
+    return t;
+  }
+  
+
   
   @Override
   public boolean satisfied() {

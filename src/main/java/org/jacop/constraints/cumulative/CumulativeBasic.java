@@ -118,8 +118,7 @@ public class CumulativeBasic extends Constraint {
 	if ( durations[i].min() >= 0 && resources[i].min() >= 0) {
 	  taskNormal[i] = new TaskNormalView( new Task(starts[i], durations[i], resources[i]) );
 	  taskNormal[i].index = i;
-	} else throw new IllegalArgumentException("\nDurations and resources must be >= 0 in cumulative");
-			
+	} else throw new IllegalArgumentException("\nDurations and resources must be >= 0 in cumulative");			
       }
 			
       if (limit.min() >= 0) {
