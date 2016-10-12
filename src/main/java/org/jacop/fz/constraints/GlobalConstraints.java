@@ -52,6 +52,7 @@ import org.jacop.set.constraints.AdisjointB;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.Alldiff;
+import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.binpacking.Binpacking;
@@ -152,7 +153,6 @@ class GlobalConstraints extends Support implements ParserTreeConstants {
       boolean unaryPossible = (min > b.max()/2) || (nextMin > b.max()/2 && min + nextMin > b.max());
       if (unaryPossible) {
 	if (allVarOne(d)) {
-	  // parameterListForAlldistincts.add(s);
 	  pose(new Alldiff(s));
 	  if (!b.singleton())
 	    for (int i = 0; i < r.length; i++) 
@@ -164,8 +164,11 @@ class GlobalConstraints extends Support implements ParserTreeConstants {
 	// for (int i = 0; i < r.length; i++) 
 	//   pose(new XlteqY(r[i], b));
       }
-      else 
-	pose(new Cumulative(s, d, r, b));
+      else
+	if (allVarGround(d) && allVarGround(r)) 
+	  pose(new Cumulative(s, d, r, b));
+	else 
+	  pose(new CumulativeBasic(s, d, r, b));
     }
   }
 
