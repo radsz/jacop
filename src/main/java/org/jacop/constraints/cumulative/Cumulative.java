@@ -188,6 +188,8 @@ public class Cumulative extends CumulativeBasic {
     // tasks sorted in non-decreasing order of est
     TaskView[] estList = filterZeroTasks(tn); // new TaskView[taskNormal.length];
     // System.arraycopy(tn, 0, estList, 0, estList.length);
+    if (estList == null)
+      return;
 
     Arrays.sort(estList, new TaskIncESTComparator<TaskView>());
 
