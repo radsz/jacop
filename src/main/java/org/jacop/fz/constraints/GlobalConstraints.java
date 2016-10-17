@@ -131,7 +131,7 @@ class GlobalConstraints extends Support implements ParserTreeConstants {
     IntVar[] s = start.toArray(new IntVar[start.size()]);
     IntVar[] d = duration.toArray(new IntVar[duration.size()]);
     IntVar[] r = resource.toArray(new IntVar[resource.size()]);
-    
+
     if (s.length == 0)
       return;		    
     else if (s.length == 1)
@@ -142,33 +142,33 @@ class GlobalConstraints extends Support implements ParserTreeConstants {
       int min     = Math.min(r[0].min(), r[1].min());
       int nextMin = Math.max(r[0].min(), r[1].min());
       for (int i = 2; i < r.length; i++) {
-	if (r[i].min() < min) {
-	  nextMin = min;
-	  min = r[i].min();
-	}
-	else if (r[i].min() < nextMin) {
-	  nextMin = r[i].min();
-	}
+    	if (r[i].min() < min) {
+    	  nextMin = min;
+    	  min = r[i].min();
+    	}
+    	else if (r[i].min() < nextMin) {
+    	  nextMin = r[i].min();
+    	}
       }		      
       boolean unaryPossible = (min > b.max()/2) || (nextMin > b.max()/2 && min + nextMin > b.max());
       if (unaryPossible) {
-	if (allVarOne(d)) {
-	  pose(new Alldiff(s));
-	  if (!b.singleton())
-	    for (int i = 0; i < r.length; i++) 
-	      pose(new XlteqY(r[i], b));
-	}
-	else // possible to use CumulativeUnary (it is used with profile propagator; option true)
-	  pose(new org.jacop.constraints.cumulative.CumulativeUnary(s, d, r, b, true));
-	// these constraints are not needed if we run with profile-based propagator
-	// for (int i = 0; i < r.length; i++) 
-	//   pose(new XlteqY(r[i], b));
+    	if (allVarOne(d)) {
+    	  pose(new Alldiff(s));
+    	  if (!b.singleton())
+    	    for (int i = 0; i < r.length; i++) 
+    	      pose(new XlteqY(r[i], b));
+    	}
+    	else // possible to use CumulativeUnary (it is used with profile propagator; option true)
+    	  pose(new org.jacop.constraints.cumulative.CumulativeUnary(s, d, r, b, true));
+    	// these constraints are not needed if we run with profile-based propagator
+    	// for (int i = 0; i < r.length; i++) 
+    	//   pose(new XlteqY(r[i], b));
       }
       else
-	if (allVarGround(d) && allVarGround(r)) 
-	  pose(new Cumulative(s, d, r, b));
-	else 
-	  pose(new CumulativeBasic(s, d, r, b));
+    	if (allVarGround(d) && allVarGround(r)) 
+    	  pose(new Cumulative(s, d, r, b));
+    	else 
+    	  pose(new CumulativeBasic(s, d, r, b));
     }
   }
 

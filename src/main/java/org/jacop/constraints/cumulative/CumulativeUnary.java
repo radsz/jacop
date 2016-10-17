@@ -139,23 +139,25 @@ public class CumulativeUnary extends Cumulative {
   @Override
   public void consistency(Store store) {
     
-    TaskView[] tn = filterZeroTasks(taskNormal);
-    if (tn == null)
-      return;
-    TaskView[] tr = filterZeroTasks(taskReversed);
-
     do {
 
       store.propagationHasOccurred = false;
 
       if (doProfile)
 	profileProp();
-      else
-	overload(tn);
 
-      detectable(tn, tr);
-      notFirstNotLast(tn, tr);
-      edgeFind(tn, tr);
+      if (store.propagationHasOccurred == false) {
+	TaskView[] tn = filterZeroTasks(taskNormal);
+	if (tn == null)
+	  return;
+	TaskView[] tr = filterZeroTasks(taskReversed);
+
+	if (!doProfile)
+	  overload(tn);
+	detectable(tn, tr);
+	notFirstNotLast(tn, tr);
+	edgeFind(tn, tr);
+      }
       
     } while (store.propagationHasOccurred);
   }
