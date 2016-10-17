@@ -42,8 +42,6 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.core.IntDomain;
-import java.util.Set;
-import java.util.LinkedHashSet;
 
 /**
  * CumulativeUnary implements the scheduling constraint for unary resources using
