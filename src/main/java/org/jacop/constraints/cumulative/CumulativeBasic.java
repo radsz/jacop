@@ -390,7 +390,7 @@ public class CumulativeBasic extends Constraint {
 	      profileValue -= t.res.min();
 
 	    // ========= Pruning start variable
-	    if (t.res.min() > 0)
+	    if (t.res.min() > 0 && t.dur.min() > 0)
 	      if (startExcluded[ti] == Integer.MAX_VALUE) {
 		if (limitMax - profileValue < t.res.min())
 		  startExcluded[ti] = e.date() - t.dur.min() + 1;
@@ -398,7 +398,7 @@ public class CumulativeBasic extends Constraint {
 	      else //startExcluded[ti] != Integer.MAX_VALUE
 		if (limitMax - profileValue >= t.res.min()) {
 		  // end of excluded interval
-		  if (startExcluded[ti] <=  e.date() - 1 && !(startExcluded[ti] > t.start.max() || e.date() - 1 < t.start.min())) {
+		  if (!(startExcluded[ti] > t.start.max() || e.date() - 1 < t.start.min())) {
 
 		    if (debugNarr)
 		      System.out.print(">>> CumulativeBasic Profile 1. Narrowed " + t.start + " \\ "
@@ -445,7 +445,7 @@ public class CumulativeBasic extends Constraint {
 	  profileValue -= t.res.min();
 
 	// ========= for start pruning
-	if (t.res.min() > 0)
+	if (t.res.min() > 0 && t.dur.min() > 0)
 	  if (limitMax - profileValue < t.res.min()) {
 	    startExcluded[ti] = e.date();	   
 	  }
@@ -468,7 +468,7 @@ public class CumulativeBasic extends Constraint {
 	  profileValue -= t.res.min();	
 
 	// ========= pruning start variable
-	if (t.res.min() > 0)
+	if (t.res.min() > 0 && t.dur.min() > 0)
 	  if (startExcluded[ti] != Integer.MAX_VALUE) {
 	    if (limitMax - profileValue < t.res.min()) {
 	      // no room for task when it finishes
