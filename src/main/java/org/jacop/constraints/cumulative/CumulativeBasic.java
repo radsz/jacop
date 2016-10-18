@@ -326,10 +326,11 @@ public class CumulativeBasic extends Constraint {
       // from start to end
       int min = t.est();
       int max = t.lct();
-      if (! (min > maxProfile || max < minProfile) ) {
-    	es[j++] = new Event(pruneStart, t, min, t.res.min());
-    	es[j++] = new Event(pruneEnd, t, max, t.res.min());
-      }
+      if (t.dur.max() > 0 && t.res.max() > 0)
+	if (! (min > maxProfile || max < minProfile) ) {
+	  es[j++] = new Event(pruneStart, t, min, t.res.min());
+	  es[j++] = new Event(pruneEnd, t, max, t.res.min());
+	}
     }
 
     int N = j;

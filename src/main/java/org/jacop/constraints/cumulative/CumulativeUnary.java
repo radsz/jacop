@@ -61,6 +61,12 @@ public class CumulativeUnary extends Cumulative {
   static final boolean debug = false;
 
   boolean doProfile = false;
+
+  /**
+   * Local copies of tasks in normal and reserved views
+   */
+  TaskView[] tvn;
+  TaskView[] tvr;
   
   /**
    * It creates a cumulative constraint.
@@ -76,6 +82,17 @@ public class CumulativeUnary extends Cumulative {
 
     super(starts, durations, resources, limit);
     queueIndex = 2;
+
+    tvn = new TaskNormalView[starts.length];
+    tvr = super.taskReversed;
+    for (int i = 0; i < starts.length; i++) {				
+      if ( durations[i].min() >= 0 && resources[i].min() >= 0) {
+	tvn[i] = new TaskNormalView( new Task(starts[i], durations[i], resources[i]) );
+	tvn[i].index = i;
+	// tvr[i] = new TaskReversedView( new Task(starts[i], durations[i], resources[i]) );
+	// tvr[i].index = i;
+      } else throw new IllegalArgumentException("\nDurations and resources must be >= 0 in cumulative");			
+    }
   }
   
   /**
@@ -92,7 +109,7 @@ public class CumulativeUnary extends Cumulative {
 			 IntVar limit,
 			 boolean doProfile) {
 
-    super(starts, durations, resources, limit);
+    this(starts, durations, resources, limit);
     this.doProfile = doProfile;
   }
   
@@ -136,6 +153,11 @@ public class CumulativeUnary extends Cumulative {
 
   @Override
   public void consistency(Store store) {
+
+    TaskView[] tn = filterZeroTasks(tvn);
+    if (tn == null)
+      return;
+    TaskView[] tr = filterZeroTasks(tvr);
     
     do {
 
@@ -145,10 +167,6 @@ public class CumulativeUnary extends Cumulative {
 	profileProp();
 
       if (store.propagationHasOccurred == false) {
-	TaskView[] tn = filterZeroTasks(taskNormal);
-	if (tn == null)
-	  return;
-	TaskView[] tr = filterZeroTasks(taskReversed);
 
 	if (!doProfile)
 	  overload(tn);
