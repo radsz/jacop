@@ -1,0 +1,7 @@
+array [1..9] of int: X_INTRODUCED_32 = [1,-1,-1,-1,-1,-1,-1,-1,-1];
+var 1..0: X_INTRODUCED_21:: is_defined_var;
+var 1..0: X_INTRODUCED_24:: is_defined_var;
+var 6..6: cost:: output_var;
+array [1..20] of var int: a:: output_array([0..3,0..4]) = [0,0,0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0,0,0];
+constraint bool_eq(false,true);
+solve  maximize cost;
