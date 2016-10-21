@@ -328,8 +328,8 @@ public class CumulativeBasic extends Constraint {
       int max = t.lct();
       if (t.dur.max() > 0 && t.res.max() > 0)
 	if (! (min > maxProfile || max < minProfile) ) {
-	  es[j++] = new Event(pruneStart, t, min, t.res.min());
-	  es[j++] = new Event(pruneEnd, t, max, t.res.min());
+	  es[j++] = new Event(pruneStart, t, min, t.res.max());
+	  es[j++] = new Event(pruneEnd, t, max, -t.res.max());
 	}
     }
 
@@ -344,9 +344,10 @@ public class CumulativeBasic extends Constraint {
     
     BitSet tasksToPrune = new BitSet(taskNormal.length);
     boolean[] inProfile = new boolean[taskNormal.length];
-    
-    int curProfile = 0;
 
+    // current value of the profile for mandatory parts
+    int curProfile = 0;
+    
     // used for start variable pruning
     int[] startExcluded = new int[taskNormal.length];
     Arrays.fill(startExcluded, Integer.MAX_VALUE);
@@ -356,6 +357,10 @@ public class CumulativeBasic extends Constraint {
     Arrays.fill(resourceAllowedRegionStart, Integer.MIN_VALUE);
     int[] resourceUB = new int[taskNormal.length];
     Arrays.fill(resourceUB, Integer.MIN_VALUE);
+
+    // used for duration variable pruning
+    int[] maxDuration = new int[taskNormal.length];
+    Arrays.fill(maxDuration, Integer.MAX_VALUE);
     
     for (int i = 0; i < N; i++) {
 
@@ -372,13 +377,10 @@ public class CumulativeBasic extends Constraint {
 	inProfile[e.task().index] = (e.value() > 0);
 	    
 	if (ne == null || (ne.type() != profile || e.date < ne.date())) { // check the tasks for pruning only at the end of all profile events
-
+	  
 	  if (debug)
 	    System.out.println("Profile at "+e.date()+": "+curProfile);
 	    
-	  // if (curProfile > limitMax) // do not need the next one will fail in this case anyway
-	  //   throw store.failException;
-
 	  // prune limit variable
 	  if (curProfile > limit.min()) 
 	    limit.domain.inMin(store.level, limit, curProfile);
@@ -387,18 +389,33 @@ public class CumulativeBasic extends Constraint {
 	    TaskView t = taskNormal[ti];
 	    
 	    int profileValue = curProfile;
-	    if (inProfile[ti])
+	    if (inProfile[ti]) {
 	      profileValue -= t.res.min();
+
+	      // // prune resource max value
+	      // if (limit.max() - profileValue < t.res.max())
+	      // 	t.res.domain.inMax(store.level, t.res, limit.max() - profileValue);
+	    }
+
+	    // // prune resource max value
+	    // if (t.start.min() <= e.data() && e.data() < t.start.max() + t.res.min())
+	    //   t.res.domain.inMax(store.level, t.res, limit.max() - profileValue);
 
 	    // ========= Pruning start variable
 	    if (t.res.min() > 0 && t.dur.min() > 0)
 	      if (startExcluded[ti] == Integer.MAX_VALUE) {
-		if (limitMax - profileValue < t.res.min())
+		if (limitMax - profileValue < t.res.min()) {
 		  startExcluded[ti] = e.date() - t.dur.min() + 1;
+		  maxDuration[ti] = Math.min(e.date() - t.start.min(), maxDuration[ti]);
+		}
 	      }
 	      else //startExcluded[ti] != Integer.MAX_VALUE
 		if (limitMax - profileValue >= t.res.min()) {
 		  // end of excluded interval
+
+		  if (e.date() <= t.start.max())
+		      maxDuration[ti] = Integer.MAX_VALUE;
+		      
 		  if (!(startExcluded[ti] > t.start.max() || e.date() - 1 < t.start.min())) {
 
 		    if (debugNarr)
@@ -411,20 +428,38 @@ public class CumulativeBasic extends Constraint {
 		      System.out.println(" => " + t.start);
 		  }
 		  startExcluded[ti] = Integer.MAX_VALUE;
+		  maxDuration[ti] = Integer.MAX_VALUE;
 		}
+
+	    // =========== Pruning duration
+	    if (e.date() > t.start.max() && maxDuration[ti] < t.dur.max()) {
+	      if (debugNarr)
+		System.out.print(">>> CumulativeBasic Profile 4. Narrowed "+t.dur+ " in 0.."+ maxDuration[ti]);
+
+	      t.dur.domain.inMax(store.level, t.dur, maxDuration[ti]);
+
+	      if (debugNarr)
+		System.out.println(" => " + t.dur);
+
+	      maxDuration[ti] = Integer.MAX_VALUE;
+	    }
 	      
 	    // =========== Pruning resource variable
 	    if (resourceUB[ti] < t.res.max()) {
 	      if (resourceAllowedRegionStart[ti] == Integer.MIN_VALUE) {
-		if (limitMax - profileValue >= t.res.max()) 
+		if (limitMax - profileValue >= t.res.max()) {
 		  // starting allowed region
-		  resourceAllowedRegionStart[ti] = e.date();
+		  if (e.date() <= t.start.max())  // <==
+		    resourceAllowedRegionStart[ti] = e.date();
+		}
 		else  // limit.max() - profileValue < t.res.max()
-		  resourceUB[ti] = (resourceUB[ti] > limitMax - profileValue) ? resourceUB[ti] : limitMax - profileValue;
+		  if (e.date() <= t.start.max() + t.dur.min()) // <==
+		    resourceUB[ti] = (resourceUB[ti] > limitMax - profileValue) ? resourceUB[ti] : limitMax - profileValue;
 	      }
 	      else // already in allowed region
-		if (e.date() - resourceAllowedRegionStart[ti] >= t.dur.min()) 
+		if (e.date() - resourceAllowedRegionStart[ti] >= t.dur.min()) {
 		  resourceUB[ti] = t.res.max();
+		}
 		else // possibly too short region
 		  if (limitMax - profileValue < t.res.max()) {
 		    resourceAllowedRegionStart[ti] = Integer.MIN_VALUE;
@@ -441,7 +476,7 @@ public class CumulativeBasic extends Constraint {
 	int profileValue = curProfile;
 	TaskView t = e.task();
 	int ti = t.index;
-	  
+
 	if (inProfile[ti])
 	  profileValue -= t.res.min();
 
@@ -484,6 +519,17 @@ public class CumulativeBasic extends Constraint {
 
 		if (debugNarr)
 		  System.out.println(" => " + t.start);
+
+		// prune duration
+		if (maxDuration[ti] < t.dur.max()) {
+		  if (debugNarr)
+		    System.out.print(">>> CumulativeBasic Profile 5. Narrowed "+t.dur+ " in 0.."+ maxDuration[ti]);
+
+		  t.dur.domain.inMax(store.level, t.dur, maxDuration[ti]);
+
+		  if (debugNarr)
+		    System.out.println(" => " + t.dur);
+		}
 	      }
 	    }
 	  }
@@ -491,7 +537,7 @@ public class CumulativeBasic extends Constraint {
 
 	// ========== pruning resource variable
 	if (resourceUB[ti] < t.res.max() && resourceAllowedRegionStart[ti] != Integer.MIN_VALUE &&
-	    e.date() - resourceAllowedRegionStart[ti] >= t.dur.min()) 
+	    e.date() - resourceAllowedRegionStart[ti] >= t.dur.max()) // <== min -> max
 	  resourceUB[ti] = t.res.max();
 
 	if (t.res.max() > resourceUB[ti]) {
