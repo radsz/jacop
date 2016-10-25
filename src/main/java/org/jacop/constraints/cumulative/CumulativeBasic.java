@@ -181,7 +181,7 @@ public class CumulativeBasic extends Constraint {
 
   void profileProp() {
 
-    sweepPruning();    
+    sweepPruning();
     updateTasksRes(store);				
 
   }
@@ -397,9 +397,6 @@ public class CumulativeBasic extends Constraint {
 		if (limitMax - profileValue >= t.res.min()) {
 		  // end of excluded interval
 		  
-		  if (e.date() <= t.start.max())
-		      maxDuration[ti] = Integer.MAX_VALUE;
-		  
 		  if (!(startExcluded[ti] > t.start.max() || e.date() - 1 < t.start.min())) { // remove from inside interval as well
 		  // if ((startExcluded[ti] <= t.start.min() && e.date() - 1 >= t.start.min()) || // bounds only
 		  //     (startExcluded[ti] <= t.start.max() && e.date() - 1 >= t.start.max())) {
@@ -474,21 +471,20 @@ public class CumulativeBasic extends Constraint {
 	// ========= pruning start variable
 	if (t.res.min() > 0 && t.dur.min() > 0)
 	  if (startExcluded[ti] != Integer.MAX_VALUE) {
-	    if (limitMax - profileValue < t.res.min()) {
-	      // no room for task when it finishes
+	    // task ends and we remove forbidden area
+	    int m = (limitMax - profileValue >= t.res.min()) ? 1 : 0;
 
-	      if (!(startExcluded[ti] > t.start.max() || e.date() < t.start.min())) {
-		if (debugNarr) {
-		  System.out.print(">>> CumulativeBasic Profile 2. Narrowed " + t.start + " \\ "
-				   + new IntervalDomain(startExcluded[ti], e.date()));
-		}
-	    
-		t.start.domain.inComplement(store.level, t.start, startExcluded[ti], e.date());
-
-		if (debugNarr)
-		  System.out.println(" => " + t.start);
-		
+	    if (!(startExcluded[ti] > t.start.max() || e.date() < t.start.min())) {
+	      if (debugNarr) {
+		System.out.print(">>> CumulativeBasic Profile 2. Narrowed " + t.start + " \\ "
+				 + new IntervalDomain(startExcluded[ti], (int)(e.date()-m)));
 	      }
+	    
+	      t.start.domain.inComplement(store.level, t.start, startExcluded[ti], e.date()-m);
+
+	      if (debugNarr)
+		System.out.println(" => " + t.start);
+		
 	    }
 	  }
 	
