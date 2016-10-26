@@ -311,7 +311,7 @@ public class CumulativeBasic extends Constraint {
 
       // mandatory task parts to create profile
       int min = t.lst(), max = t.ect();
-      if (min < max && t.res.min() > 0 && t.dur.min() > 0) {
+      if (min < max && t.res.min() > 0) { // && t.dur.min() > 0) {
 	es[j++] = new Event(profile, t, min,   t.res.min());
 	es[j++] = new Event(profile, t, max, - t.res.min());
 	minProfile = (min < minProfile) ? min : minProfile;
@@ -373,7 +373,7 @@ public class CumulativeBasic extends Constraint {
 	curProfile += e.value();
 	inProfile[e.task().index] = (e.value() > 0);
 
-	if (ne == null || (ne.type() != profile || e.date < ne.date())) { // check the tasks for pruning only at the end of all profile events
+	if (ne == null || ne.type() != profile || e.date < ne.date()) { // check the tasks for pruning only at the end of all profile events
 
 	  if (debug)
 	    System.out.println("Profile at "+e.date()+": "+curProfile);
@@ -407,14 +407,13 @@ public class CumulativeBasic extends Constraint {
 				       + new IntervalDomain(startExcluded[ti], (int)(e.date()-1)));
 
 		    t.start.domain.inComplement(store.level, t.start, startExcluded[ti], e.date() - 1);
-	      
+		    
 		    if (debugNarr)
 		      System.out.println(" => " + t.start);
 
 		  }
 		  startExcluded[ti] = Integer.MAX_VALUE;
 		}
-
 
 	    // ========= for duration pruning
 	    if (e.date() <= t.start.max())
@@ -449,6 +448,9 @@ public class CumulativeBasic extends Constraint {
 	    startExcluded[ti] = e.date();	   
 	  }
 
+	// ========= for duration pruning
+	startAtEnd[ti] = true;
+
 	// ========= resource pruning
 	if (t.lst() <= e.date() && e.date() < t.ect() && limit.max() - profileValue < t.res.max()) 
 	  t.res.domain.inMax(store.level, t.res, limit.max() - profileValue);
@@ -472,7 +474,7 @@ public class CumulativeBasic extends Constraint {
 	    if (!(startExcluded[ti] > t.start.max() || e.date() < t.start.min())) {
 	      if (debugNarr) 
 		System.out.print(">>> CumulativeBasic Profile 2. Narrowed " + t.start + " \\ "
-				 + new IntervalDomain(startExcluded[ti], (int)(e.date())));
+				 + new IntervalDomain(startExcluded[ti], e.date()));
 	    
 	      t.start.domain.inComplement(store.level, t.start, startExcluded[ti], e.date());
 
@@ -500,7 +502,15 @@ public class CumulativeBasic extends Constraint {
 	if (startAtEnd[ti])
 	  maxDuration = Math.max(maxDuration, lastBarier[ti] - lastInterval.min());
 
-	t.dur.domain.inMax(store.level, t.dur, maxDuration);
+	if (maxDuration < t.dur.max()) {
+	  if (debugNarr) 
+	    System.out.print(">>> CumulativeBasic Profile 3. Narrowed " + t.dur + " in 0.."+ maxDuration);
+
+	  t.dur.domain.inMax(store.level, t.dur, maxDuration);
+	
+	  if (debugNarr)
+	    System.out.println(" => " + t.dur);
+	}
 	
 	tasksToPrune.set(ti, false);
 	break;
