@@ -151,7 +151,10 @@ public class XexpYeqZ extends Constraint {
 			else
 			    x.domain.in(store.level, x, (int) Math.floor(xMin), (int) Math.ceil(xMax) );
 
-			y.domain.in(store.level, y, (int) Math.floor(yMin), (int) Math.ceil(yMax) );
+			if ((int) Math.floor(yMin) > (int) Math.ceil(yMax))
+				throw Store.failException;
+			else
+				y.domain.in(store.level, y, (int) Math.floor(yMin), (int) Math.ceil(yMax) );
 
 			if ((int) Math.floor(zMin) > (int) Math.ceil(zMax))
 			   throw Store.failException;

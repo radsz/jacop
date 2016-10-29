@@ -261,8 +261,12 @@ public class ExtensionalSupportMDD extends Constraint {
 	public ArrayList<Var> arguments() {
 		ArrayList<Var> result = new ArrayList<Var>();
 
-		for (Var v : mdd.vars)
-			result.add(v);
+		if (mdd.vars != null)
+			for (Var v : mdd.vars)
+				result.add(v);
+		else
+			for (Var v : vars)
+				result.add(v);
 
 		return result;
 	}
@@ -294,10 +298,18 @@ public class ExtensionalSupportMDD extends Constraint {
 
 		result.append(" : extensionalSupportMDD( ");
 
-		for (int i = 0; i < mdd.vars.length; i++)
-			result.append( mdd.vars[i] ).append(" ");
+		IntVar[] vars = mdd.vars;
+		// The condition below is true, if toString is called before impose.
+		if (vars == null)
+			vars = this.vars;
 
-		result.append(")").append("size = ").append( mdd.freePosition).append(")\n");
+		for (int i = 0; i < vars.length; i++)
+			result.append( vars[i] ).append(" ");
+
+		if (mdd.vars != null)
+			result.append(")").append("size = ").append( mdd.freePosition );
+
+		result.append(")\n");
 
 		return result.toString();
 	}
