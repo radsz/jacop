@@ -29,6 +29,8 @@ public class MinizincBasedTestUpTo5Seconds {
 
     private static Fz2jacop fz2jacop;
     private static final String relativePath = "src/test/fz/";
+    private static final String timeCategory = "upTo5sec/";
+    private static final String listFileName = "list.txt";
     private static final boolean printInfo = true;
 
     @BeforeClass
@@ -43,7 +45,7 @@ public class MinizincBasedTestUpTo5Seconds {
     @Parameterized.Parameters
     public static Collection<String> parametricTest() throws IOException {
 
-        FileReader file = new FileReader("src/test/fz/upTo5sec/list.txt");
+        FileReader file = new FileReader(relativePath + timeCategory + listFileName);
         BufferedReader br = new BufferedReader(file);
         String line = "";
         List<String> list = new ArrayList<String>();
@@ -60,9 +62,9 @@ public class MinizincBasedTestUpTo5Seconds {
         List<String> expectedResult = new ArrayList<>();
         List<String> result = new ArrayList<>();
 
-        System.out.println("Test file: " + "upTo5sec/" + testFilename);
-        expectedResult = expected("upTo5sec/" + testFilename + ".out");
-        result = result("upTo5sec/" + testFilename + ".fzn");
+        System.out.println("Test file: " + timeCategory + testFilename);
+        expectedResult = expected(timeCategory + testFilename + ".out");
+        result = result(timeCategory + testFilename + ".fzn");
 
         for (int i = 0, j = 0; i < result.size() || j < expectedResult.size();) {
             if (i < result.size() && result.get(i).trim().isEmpty() )
@@ -70,11 +72,11 @@ public class MinizincBasedTestUpTo5Seconds {
             if (j < expectedResult.size() && expectedResult.get(j).trim().isEmpty() )
                 { j++; continue;}
             if (result.size() == i)
-                fail("\n" + "File path: " + "upTo5sec/" + testFilename + ".out " + " gave as a result less textlines that was expected. Expected line " + (j+1) + " not found.");
+                fail("\n" + "File path: " + timeCategory + testFilename + ".out " + " gave as a result less textlines that was expected. Expected line " + (j+1) + " not found.");
             if (expectedResult.size() == j)
-                fail("\n" + "File path: " + "upTo5sec/" + testFilename + ".out " + " gave as a result more textlines that was expected. Actual line " + (i + 1) + "not found in expected result");
+                fail("\n" + "File path: " + timeCategory + testFilename + ".out " + " gave as a result more textlines that was expected. Actual line " + (i + 1) + "not found in expected result");
 
-            assertEquals("\n" + "File path: " + "upTo5sec/" + testFilename + ".out " + "\nError line number (expected, actual): (" + (j + 1) + "," + (i + 1) + ")\n",
+            assertEquals("\n" + "File path: " + timeCategory + testFilename + ".out " + "\nError line number (expected, actual): (" + (j + 1) + "," + (i + 1) + ")\n",
                     expectedResult.get(j).trim(), result.get(i).trim());
             i++; j++;
         }
