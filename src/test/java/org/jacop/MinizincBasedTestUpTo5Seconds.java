@@ -16,6 +16,7 @@ import java.util.Collection;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 /**
  * @author Mariusz Świerkot
@@ -23,7 +24,9 @@ import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
 public class MinizincBasedTestUpTo5Seconds {
-    private List<String> inputString;
+
+    private String testFilename;
+
     private static Fz2jacop fz2jacop;
     private static final String relativePath = "src/test/fz/";
     private static final boolean printInfo = true;
@@ -33,18 +36,12 @@ public class MinizincBasedTestUpTo5Seconds {
         fz2jacop = new Fz2jacop();
     }
 
-
-    public MinizincBasedTestUpTo5Seconds(List<String> inputString) {
-
-        this.inputString = new ArrayList<String>();
-        for(int i=0; i<inputString.size(); i++) {
-            this.inputString.add(inputString.get(i));
-
-        }
+    public MinizincBasedTestUpTo5Seconds(String testFilename) {
+        this.testFilename = testFilename;
     }
 
     @Parameterized.Parameters
-    public static Collection parametricTest() throws IOException {
+    public static Collection<String> parametricTest() throws IOException {
 
         FileReader file = new FileReader("src/test/fz/upTo5sec/list.txt");
         BufferedReader br = new BufferedReader(file);
@@ -55,32 +52,36 @@ public class MinizincBasedTestUpTo5Seconds {
             list.add(i, line);
             i++;
         }
-
-        return Arrays.asList(new Object[][]{
-                {list}
-        });
+        return list;
     }
 
-
-
-    @Test(timeout=5400000)
+    @Test(timeout=15000)
     public void testMinizinc() throws IOException {
         List<String> expectedResult = new ArrayList<>();
         List<String> result = new ArrayList<>();
 
-        for(int i= 0; i < this.inputString.size(); i++) {
-            expectedResult = expected("upTo5sec/" + this.inputString.get(i) + ".out");
-            result = result("upTo5sec/" + this.inputString.get(i) + ".fzn");
-        }
+        System.out.println("Test file: " + "upTo5sec/" + testFilename);
+        expectedResult = expected("upTo5sec/" + testFilename + ".out");
+        result = result("upTo5sec/" + testFilename + ".fzn");
 
-        for (int i = 0; i < result.size(); i++) {
-            assertEquals("\n" + "File path: " + "upTo5sec/" +this.inputString.get(i) + ".out " + "\nError line number: " + (i + 1) + "\n",
-                    expectedResult.get(i), result.get(i));
+        for (int i = 0, j = 0; i < result.size() || j < expectedResult.size();) {
+            if (i < result.size() && result.get(i).trim().isEmpty() )
+                { i++; continue;}
+            if (j < expectedResult.size() && expectedResult.get(j).trim().isEmpty() )
+                { j++; continue;}
+            if (result.size() == i)
+                fail("\n" + "File path: " + "upTo5sec/" + testFilename + ".out " + " gave as a result less textlines that was expected. Expected line " + (j+1) + " not found.");
+            if (expectedResult.size() == j)
+                fail("\n" + "File path: " + "upTo5sec/" + testFilename + ".out " + " gave as a result more textlines that was expected. Actual line " + (i + 1) + "not found in expected result");
+
+            assertEquals("\n" + "File path: " + "upTo5sec/" + testFilename + ".out " + "\nError line number (expected, actual): (" + (j + 1) + "," + (i + 1) + ")\n",
+                    expectedResult.get(j).trim(), result.get(i).trim());
+            i++; j++;
         }
     }
 
-
     public static List<String> result(String filename) {
+
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         PrintStream old = System.out;
         System.setOut(new PrintStream(baos));
