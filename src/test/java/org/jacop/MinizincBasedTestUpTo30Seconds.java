@@ -69,12 +69,12 @@ public class MinizincBasedTestUpTo30Seconds {
         List<String> result = new ArrayList<>();
 
         for(int i= 0; i < this.inputString.size(); i++) {
-            expectedResult = expected(this.inputString.get(i) + ".out");
-            result = result(this.inputString.get(i) + ".fzn");
+            expectedResult = expected("upTo30sec/" + this.inputString.get(i) + ".out");
+            result = result("upTo30sec/" + this.inputString.get(i) + ".fzn");
         }
 
         for (int i = 0; i < result.size(); i++) {
-            assertEquals("\n" + "File path: " + this.inputString.get(i) + ".out " + "\nError line number: " + (i + 1) + "\n",
+            assertEquals("\n" + "File path: " + "upTo30sec/"+ this.inputString.get(i) + ".out " + "\nError line number: " + (i + 1) + "\n",
                     expectedResult.get(i), result.get(i));
         }
     }
