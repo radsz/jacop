@@ -1,0 +1,15 @@
+costasArray/CostasArrayTestN16
+cvrp/simple2
+fastfood/ff61
+fastfood/ff59
+fastfood/ff60
+fastfood/ff62
+gap/gap
+grid-colouring/10_5
+M12b/M12b
+monorail/monorail3
+or_seating/or_seating
+scene_allocation/scene_allocation
+state_name_puzzle/state_name_puzzle
+still-life-wastage/10
+tpp/tpp_6_3_20_1

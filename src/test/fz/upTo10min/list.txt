@@ -1,0 +1,12 @@
+autoref/autoref
+bacp/bacp-10
+coins_problem/coins_problem
+costasArray/CostasArrayTestN17
+dudeney_bishop_placement1/dudeney_bishop_placement1
+multi-knapsack/mknap2-2
+nmseq/207
+p1f/17
+portfolio_optimization2/portfolio_optimization2
+radiation/i6-11
+radiation/i6-21
+rcpsp-wet/j30_27_5-wet
