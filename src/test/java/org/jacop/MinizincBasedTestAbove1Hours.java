@@ -57,7 +57,7 @@ public class MinizincBasedTestAbove1Hours{
         return list;
     }
 
-    @Test(timeout=15000)
+    @Test
     public void testMinizinc() throws IOException {
         List<String> expectedResult = new ArrayList<>();
         List<String> result = new ArrayList<>();
@@ -74,7 +74,7 @@ public class MinizincBasedTestAbove1Hours{
             if (result.size() == i)
                 fail("\n" + "File path: " + timeCategory + testFilename + ".out " + " gave as a result less textlines that was expected. Expected line " + (j+1) + " not found.");
             if (expectedResult.size() == j)
-                fail("\n" + "File path: " + timeCategory + testFilename + ".out " + " gave as a result more textlines that was expected. Actual line " + (i + 1) + "not found in expected result");
+                fail("\n" + "File path: " + timeCategory + testFilename + ".out " + " gave as a result more textlines that was expected. Actual line " + (i + 1) + " not found in expected result");
 
             assertEquals("\n" + "File path: " + timeCategory + testFilename + ".out " + "\nError line number (expected, actual): (" + (j + 1) + "," + (i + 1) + ")\n",
                     expectedResult.get(j).trim(), result.get(i).trim());

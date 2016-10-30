@@ -57,7 +57,7 @@ public class MinizincBasedTestUpTo30Seconds{
         return list;
     }
 
-    @Test(timeout=15000)
+    @Test(timeout=90000)
     public void testMinizinc() throws IOException {
         List<String> expectedResult = new ArrayList<>();
         List<String> result = new ArrayList<>();

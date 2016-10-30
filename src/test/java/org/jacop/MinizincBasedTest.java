@@ -6867,7 +6867,7 @@ public class MinizincBasedTest {
         List<String> result = result(this.inputString + ".fzn");
 
         for(int i=0; i<result.size(); i++) {
-            assertEquals("\n" + "File path: " + inputString + ".out " +"\nError line number: " + (i+1) + "\n",
+            assertEquals(System.getProperty("line.separator") + "File path: " + inputString + ".out " + System.getProperty("line.separator") +"Error line number: " + (i+1) + System.getProperty("line.separator"),
                          expectedResult.get(i), result.get(i));
         }
 
@@ -6887,7 +6887,7 @@ public class MinizincBasedTest {
 
         String result = baos.toString();
         if(printInfo) {
-            System.out.println(filename+"\n" + result);
+            System.out.println(filename + System.getProperty("line.separator") + result);
         }
 
         return Arrays.asList(result.split("\n"));
