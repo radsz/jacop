@@ -23,20 +23,19 @@ import static org.junit.Assert.fail;
  */
 
 @RunWith(Parameterized.class)
-public class MinizincBasedTestUpTo5Seconds {
+public class MinizincBasedTestUpTo5Seconds extends MinizincBasedTestsHelper{
 
-    private String testFilename;
+//    private String testFilename;
+//    private static Fz2jacop fz2jacop;
+//    private static final String relativePath = "src/test/fz/";
+//    private static final String timeCategory = "upTo5sec/";
+//    private static final String listFileName = "list.txt";
+//    private static final boolean printInfo = true;
 
-    private static Fz2jacop fz2jacop;
-    private static final String relativePath = "src/test/fz/";
-    private static final String timeCategory = "upTo5sec/";
-    private static final String listFileName = "list.txt";
-    private static final boolean printInfo = true;
-
-    @BeforeClass
-    public static void initialize() {
-        fz2jacop = new Fz2jacop();
-    }
+//    @BeforeClass
+//    public static void initialize() {
+//        fz2jacop = new Fz2jacop();
+//    }
 
     public MinizincBasedTestUpTo5Seconds(String testFilename) {
         this.testFilename = testFilename;
@@ -82,7 +81,7 @@ public class MinizincBasedTestUpTo5Seconds {
         }
     }
 
-    public static List<String> result(String filename) {
+    /*public static List<String> result(String filename) {
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         PrintStream old = System.out;
@@ -108,6 +107,6 @@ public class MinizincBasedTestUpTo5Seconds {
         String filePath = new File(relativePath + filename ).getAbsolutePath();
         return Files.readAllLines(Paths.get(filePath), StandardCharsets.UTF_8);
     }
-
+*/
 
 }
