@@ -161,8 +161,8 @@ public class SmallDenseDomainTest {
 
     }
 
-        @Test
-        public void testIsIntersecting() throws Exception {
+    @Test
+    public void testIsIntersecting() throws Exception {
 
         System.out.println("IsIntersecting function test");
         IntDomain testedDomain  = (IntDomain) prepareMethod.invoke(this, new Object[]{new int[]{0,6,8,10,12,14,16,18,20,22,24,26}});
@@ -171,24 +171,43 @@ public class SmallDenseDomainTest {
 
         }
 
-         @Test
-        public void testSubtract() throws Exception {
-             System.out.println("Subtract function test");
+    @Test
+    public void testSubtract() throws Exception {
+
+        System.out.println("Subtract function test");
         IntDomain testedDomain = (IntDomain) prepareMethod.invoke(this, new Object[]{new int[]{0,6,8,10,12,14,16,18,20,22,24,26}});
-        IntDomain testSmallDomain = (IntDomain)prepareMethod.invoke(this, new Object[]{new int[]{0,0,4,6,8,10,12,14,16,18,20,22,24,26}});
-             assertEquals(testSmallDomain.toString(), testedDomain.subtract(1,3).toString());
+        IntDomain goldenResultDomain = (IntDomain)prepareMethod.invoke(this, new Object[]{new int[]{0,0,4,6,8,10,12,14,16,18,20,22,24,26}});
+             assertEquals(goldenResultDomain.toString(), testedDomain.subtract(1,3).toString());
 
-        testSmallDomain = (IntDomain)prepareMethod.invoke(this, new Object[]{new int[]{1,6,8,10,12,14,16,18,20,22,24,26}});
-             assertEquals(testSmallDomain.toString(), testedDomain.subtract(0,0).toString());
+        goldenResultDomain = (IntDomain)prepareMethod.invoke(this, new Object[]{new int[]{1,6,8,10,12,14,16,18,20,22,24,26}});
+             assertEquals(goldenResultDomain.toString(), testedDomain.subtract(0,0).toString());
 
-             testSmallDomain = (IntDomain)prepareMethod.invoke(this, new Object[]{new int[]{0,0}});
-             assertEquals(testSmallDomain.toString(), testedDomain.subtract(1,26).toString());
+             goldenResultDomain = (IntDomain)prepareMethod.invoke(this, new Object[]{new int[]{0,0}});
+             assertEquals(goldenResultDomain.toString(), testedDomain.subtract(1,26).toString());
 
-             testSmallDomain = (IntDomain)prepareMethod.invoke(this, new Object[]{new int[]{0,6}});
-             assertEquals(testSmallDomain.toString(), testedDomain.subtract(8,26).toString());
-
+             goldenResultDomain = (IntDomain)prepareMethod.invoke(this, new Object[]{new int[]{0,6}});
+             assertEquals(goldenResultDomain.toString(), testedDomain.subtract(8,26).toString());
 
          }
+
+    @Test
+    public void testNextValue() throws Exception {
+
+        System.out.println("NextValue function test");
+
+        IntDomain goldenResultDomain = (IntDomain) prepareMethod.invoke(this, new Object[]{new int[]{1,3, 5,7, 12,18}});
+        assertEquals(5, goldenResultDomain.nextValue(3));
+    }
+
+    @Test
+    public void testPreviousValue() throws Exception {
+
+        System.out.println("previousValue function test");
+
+        IntDomain goldenResultDomain = (IntDomain) prepareMethod.invoke(this, new Object[]{new int[]{1,3, 5,7, 12,18}});
+        assertEquals(1, goldenResultDomain.previousValue(2));
+    }
+
 
 
     public IntDomain createDomain(Interval... intervals)
@@ -234,7 +253,7 @@ public class SmallDenseDomainTest {
         }
 
 
-//        System.out.println("prepareIntervalDomain " + domain);
+
 
 
         return domain;
