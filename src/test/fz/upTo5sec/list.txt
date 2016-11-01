@@ -941,6 +941,7 @@ shift/shift
 shopping/shopping
 shopping_basket/shopping_basket
 shopping_basket2/shopping_basket2
+shortest_path/02
 shortest_path/01
 shortest_path/00
 shortest_path1/shortest_path1
@@ -1010,6 +1011,11 @@ sudoku_pi_2010/sudoku_pi_2010
 sudoku_pi_2011/sudoku_pi_2011
 sudoku_pi_day_2015/sudoku_pi_day_2015
 sudoku_pi_with_comments/sudoku_pi_with_comments
+sugiyama2-mznchallenge2010/g3_7_7_7
+sugiyama2-mznchallenge2010/g5_7_7_7_7_2
+sugiyama2-mznchallenge2010/g4_7_7_7_3
+sugiyama2-mznchallenge2010/g5_7_7_7_7_3
+sugiyama2-mznchallenge2010/g4_7_7_7_7
 sultans_children/sultans_children
 sumbrero/sumbrero
 sum_ctr/sum_ctr
@@ -1035,6 +1041,9 @@ temporal_reasoning/temporal_reasoning
 tennis_problem/tennis_problem
 tennis_tournament/tennis_tournament
 ten_statements/ten_statements
+tents/tents_3
+tents/tents_2
+tents/tents_1
 the_bomb/the_bomb
 the_family_puzzle/the_family_puzzle
 the_interns/the_interns
