@@ -12,11 +12,9 @@ mapping/mesh2x2_mp3
 mceverywhere/mceverywhere
 nmseq/176
 open_stacks/wbo_10_20_1
-prize-collecting/30-5-6-2
 prize-collecting/28-4-7-1
 prize-collecting/30-5-6-8
 rcpsp-wet/j30_44_8-wet
-scheduling_speakers_optimize3/scheduling_speakers_optimize3
 touching_numbers/touching_numbers
 tpp/tpp_7_3_20_1
 tsptw/tsptw

@@ -1,7 +1,8 @@
 1d_rubiks_cube2/1d_rubiks_cube2
-all_interval/all_interval
+amaze/2012-04-20
 building_a_house/building_a_house
 costasArray/CostasArrayTestN18
+doublechannel/channel1
 dudeney_bishop_placement2/dudeney_bishop_placement2
 elevator_8_4/elevator_8_4
 enigma_1631/enigma_1631
@@ -23,8 +24,10 @@ hidato_table/hidato_table
 is/jZ9pQqRxJ2
 kqueens/kqueens
 mapping/mesh3x3_2
+multi-knapsack/mknap2-1
 open_stacks/problem_30_15_1
 optimal_picking_elements_from_each_list/optimal_picking_elements_from_each_list
+or_matching_orig/or_matching_orig
 p1f/15
 radiation/i7-9
 rot13_2/rot13_2
