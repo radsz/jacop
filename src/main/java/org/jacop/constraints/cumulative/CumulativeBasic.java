@@ -479,14 +479,10 @@ public class CumulativeBasic extends Constraint {
 
 	    if (!(startExcluded[ti] > t.start.max() || e.date() < t.start.min())) {
 	      if (debugNarr) 
-		System.out.print(">>> CumulativeBasic Profile 2. Narrowed " + t.start + " \\ "
-				 + new IntervalDomain(startExcluded[ti], e.date()));
+		System.out.print(">>> CumulativeBasic Profile 2. Narrowed " + t.start + " inMax "
+				 + (int)(startExcluded[ti]-1));
 	      
-	      IntervalDomain update = new IntervalDomain(IntDomain.MinInt,
-							 startExcluded[ti] - 1);
-	      update.unionAdapt(e.date(), IntDomain.MaxInt);
-	      t.start.domain.in(store.level, t.start, update);
-	      // t.start.domain.inComplement(store.level, t.start, startExcluded[ti], e.date());
+	      t.start.domain.inMax(store.level, t.start, startExcluded[ti]-1);
 
 	      if (debugNarr)
 		System.out.println(" => " + t.start);
