@@ -184,7 +184,7 @@ object SocialGolfer extends jacop {
       val startCPU = b.getThreadCpuTime(tread.getId())
       val startUser = b.getThreadUserTime(tread.getId())
 
-      val result = satisfy( search(vars, min_lub_card, indomain_min_set),  printSolution)
+      val result = satisfy( search(vars, min_lub_card, indomain_min_set),  printSolution())
 
 	if (result) {
 	  println("*** Yes")
@@ -205,7 +205,7 @@ object SocialGolfer extends jacop {
 
     }
 
-  def printSolution() = {
+  def printSolution() = () => {
     for (i <- 0 until weeks) {
       for (j <- 0 until groups) {
 	print(golferGroup(i)(j).dom()+" ")
