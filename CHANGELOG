@@ -4,33 +4,36 @@ Version 4.5
 1. Performance improvements and identification of the same items in
    Binpacking constraint.
 
-2. New constructor for LinearInt and LInearIntDom that makes it easier
+2. Correcting definitions of bin_packing and bin_packing_capa in JaCoP
+    flatzinc library.
+
+3. New constructor for LinearInt and LInearIntDom that makes it easier
    to define it. Makes it possible to specify result as IntVar.
 
-3. New constraint SumFloat and new constructor for LinearFloat. Makes
+4. New constraint SumFloat and new constructor for LinearFloat. Makes
    it possible to specify result as FloatVar.
 
-4. New JaCoP specific variable selection options in flatzinc
+5. New JaCoP specific variable selection options in flatzinc
    (smallest_max, smallest_most_constrained, smallest_first_fail). It
    requires to include jacop.mzn in minizinc program.
 
-5. Adding soft_all_different_int and soft_global_cardinality_int to
+6. Adding soft_all_different_int and soft_global_cardinality_int to
    flatzinc. It requires to include jacop.mzn in minizinc program.
 
-6. Printing BooleanVar when store is printed.
+7. Printing BooleanVar when store is printed.
 
-7. Adding possibility to Scala wrapper to define element constraint
+8. Adding possibility to Scala wrapper to define element constraint
    on a list of BoolVar as array access.
 
-8. Adding floating-point constraints log2 and log10 to flatzinc to
+9. Adding floating-point constraints log2 and log10 to flatzinc to
    JaCoP compiler.
 
-9. Two new classes for debugging and statistics
+10. Two new classes for debugging and statistics
    gathering. VariableTrace prints out variables prunings during
    search. FailConstraintsStatistics gather number of fails for each
    constraints and class of constraints.
 
-10. New cumulative constraints. CumulativeBasic does time-tabling
+11. New cumulative constraints. CumulativeBasic does time-tabling
     propagation, Cumulative does time-tabling and edge finding
     propagation, and CumulativeUnary is a specialized version of unary
     resources and does in addition to two previous propagations
@@ -41,14 +44,15 @@ Version 4.5
     finding O(k*n*logn), not-first-not-last, detectable and overload
     O(n*logn).
 
-11. Calls to new cumulative constraints in Scala wrapper.
+12. Calls to new cumulative constraints in Scala wrapper.
 
-12. New method for constraint generation for flatzinc.
+13. New method for constraint generation for flatzinc.
 
-13. Correcting definitions of bin_packing and bin_packing_capa in JaCoP
-    flatzinc library.
+14. Making JaCoP compatible with Scala 2.12.
 
-14. Bug fixes:
+15. Improvement in pruning for MinSimple and MaxSimple.
+
+16. Bug fixes:
    - Changing comparator method in LinearFloat that
      IllegalArgumentException is not reported.
    - Correcting bugs in AndBool, OrBool and AndBoolSimple.
