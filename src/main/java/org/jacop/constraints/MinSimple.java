@@ -120,6 +120,11 @@ public class MinSimple extends Constraint {
 
       min.domain.in(store.level, min, minValue, maxValue);
 
+      if (x1.min() > min.max())
+	x2.domain.in(store.level, x2, min.dom());
+      if (x2.min() > min.max())
+	x1.domain.in(store.level, x1, min.dom());
+
     } while (store.propagationHasOccurred);
 		
   }
