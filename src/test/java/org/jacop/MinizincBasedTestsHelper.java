@@ -23,14 +23,17 @@ public class MinizincBasedTestsHelper {
     protected String testFilename;
     protected static Fz2jacop fz2jacop;
     protected static final String relativePath = "src/test/fz/";
-    protected static final String timeCategory = "upTo5sec/";
+    protected static String timeCategory;
     protected static final String listFileName = "list.txt";
     protected static final boolean printInfo = true;
+
+
 
     @BeforeClass
     public static void initialize() {
         fz2jacop = new Fz2jacop();
     }
+
 
 
     protected static List<String> result(String filename) {
@@ -60,7 +63,8 @@ public class MinizincBasedTestsHelper {
         return Files.readAllLines(Paths.get(filePath), StandardCharsets.UTF_8);
     }
 
-    protected static Collection<String> fileReader() throws IOException {
+    protected static Collection<String> fileReader(String timeCategory) throws IOException {
+        System.out.println("timeCategory" + timeCategory);
         FileReader file = new FileReader(relativePath + timeCategory + listFileName);
         BufferedReader br = new BufferedReader(file);
         String line = "";
@@ -73,7 +77,7 @@ public class MinizincBasedTestsHelper {
         return list;
     }
 
-    protected void testExecution() throws IOException {
+    protected void testExecution(String timeCategory) throws IOException {
         List<String> expectedResult = new ArrayList<>();
         List<String> result = new ArrayList<>();
 

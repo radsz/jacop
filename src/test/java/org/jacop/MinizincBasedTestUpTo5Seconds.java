@@ -24,27 +24,27 @@ import static org.junit.Assert.fail;
 
 @RunWith(Parameterized.class)
 public class MinizincBasedTestUpTo5Seconds extends MinizincBasedTestsHelper{
+    protected static final String timeCategory = "upTo5sec/";
 
     public MinizincBasedTestUpTo5Seconds(String testFilename) {
+
         this.testFilename = testFilename;
+
     }
+
 
     @Parameterized.Parameters
     public static Collection<String> parametricTest() throws IOException {
 
-        return fileReader();
+        return fileReader(timeCategory);
     }
 
     @Test(timeout=15000)
     public void testMinizinc() throws IOException {
-        testExecution();
+
+        testExecution(timeCategory);
     }
 
-    public static List<String> expected(String filename) throws IOException {
-
-        String filePath = new File(relativePath + filename ).getAbsolutePath();
-        return Files.readAllLines(Paths.get(filePath), StandardCharsets.UTF_8);
-    }
 
 
 }
