@@ -77,11 +77,26 @@ class OperationConstraints extends Support implements ParserTreeConstants {
     IntVar v2 = getVariable(p2);
     IntVar v3 = getVariable(p3);
 
-    if (v1 == v2)
+    if (  v1.singleton() && v2.singleton() ) {
+      int min = java.lang.Math.min(v1.value(), v2.value());
+      v3.domain.in(store.level, v3, min, min);
+    }
+    else if (v1.singleton() && v1.value() <= v2.min() ) {
+      int min = v1.value();
+      v3.domain.in(store.level, v3, min, min);
+    }
+    else if (v2.singleton() && v2.value() <= v1.min() ) {
+      int min = v2.value();
+      v3.domain.in(store.level, v3, min, min);
+    } 
+    else if (v1.min() >= v2.max() )
+      pose(new XeqY(v2, v3));
+    else if (v2.min() >= v1.max() )
+      pose(new XeqY(v1, v3));
+    else if (v1 == v2)
       pose(new XeqY(v1, v3));
     else
       pose(new MinSimple(v1, v2, v3));
-    // pose(new Min(new IntVar[] {v1, v2}, v3));
   }
 
   static void gen_int_max(SimpleNode node) {
@@ -92,7 +107,6 @@ class OperationConstraints extends Support implements ParserTreeConstants {
     IntVar v1 = getVariable(p1);
     IntVar v2 = getVariable(p2);
     IntVar v3 = getVariable(p3);
-
 
     if (  v1.singleton() && v2.singleton() ) {
       int max = java.lang.Math.max(v1.value(), v2.value());
@@ -114,7 +128,6 @@ class OperationConstraints extends Support implements ParserTreeConstants {
       pose(new XeqY(v1, v3));
     else
       pose(new MaxSimple(v1, v2, v3));
-    // pose(new Max(new IntVar[] {v1, v2}, v3));
   }
 
   static void gen_int_mod(SimpleNode node) {
