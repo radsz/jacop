@@ -276,10 +276,16 @@ class LinearConstraints extends Support implements ParserTreeConstants {
       // 	pose(new Reified(new XgtC(t, p3), p4));
       // 	break;
     case le :
-      if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) 
-	pose(new Reified(new org.jacop.constraints.XplusClteqZ(p2[0], -p3, p2[1]), p4));
-      else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) 
-	pose(new Reified(new org.jacop.constraints.XplusClteqZ(p2[1], -p3, p2[0]), p4));
+      if (p1.length == 2 && p1[0] == 1 && p1[1] == -1)
+	if (p3 == 0)
+	  pose(new Reified(new org.jacop.constraints.XlteqY(p2[0], p2[1]), p4));
+	else
+	  pose(new Reified(new org.jacop.constraints.XplusClteqZ(p2[0], -p3, p2[1]), p4));
+      else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1)
+	if (p3 == 0)
+	  pose(new Reified(new org.jacop.constraints.XlteqY(p2[1], p2[0]), p4));
+	else
+	  pose(new Reified(new org.jacop.constraints.XplusClteqZ(p2[1], -p3, p2[0]), p4));
       else if (p1.length == 1 && p1[0] == 1) 
 	pose(new Reified(new org.jacop.constraints.XlteqC(p2[0], p3), p4));
       else if (p1.length == 1 && p1[0] == -1) 
@@ -570,10 +576,16 @@ class LinearConstraints extends Support implements ParserTreeConstants {
 	pose(new XlteqY(p2[0], p2[1]));
       else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1 && p3 == 0)
 	pose(new XlteqY(p2[1], p2[0]));
-      else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) 
-	pose(new XplusClteqZ(p2[0], -p3, p2[1]) );
+      else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1)
+	if (p3 == 0)
+	  pose(new XlteqY(p2[0], p2[1]) );
+	else
+	  pose(new XplusClteqZ(p2[0], -p3, p2[1]) );
       else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1)
-	pose(new XplusClteqZ(p2[1], -p3, p2[0]) );
+	if (p3 == 0)
+	  pose(new XlteqY(p2[1], p2[0]) );
+	else
+	  pose(new XplusClteqZ(p2[1], -p3, p2[0]) );
 
       else if (allWeightsOne(p1)) {
 	t = dictionary.getConstant(p3); //new IntVar(store, p3, p3);
