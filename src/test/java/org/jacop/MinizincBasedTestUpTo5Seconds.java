@@ -32,7 +32,6 @@ public class MinizincBasedTestUpTo5Seconds extends MinizincBasedTestsHelper{
 
     }
 
-
     @Parameterized.Parameters
     public static Collection<String> parametricTest() throws IOException {
 
