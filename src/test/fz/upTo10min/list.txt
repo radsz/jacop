@@ -7,7 +7,7 @@ multi-knapsack/mknap2-2
 nmseq/207
 p1f/17
 portfolio_optimization2/portfolio_optimization2
-radiation/i6-11
 radiation/i6-21
+radiation/i6-11
 rcpsp-wet/j30_27_5-wet
 steiner-triples/09

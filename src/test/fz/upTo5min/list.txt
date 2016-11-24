@@ -1,5 +1,5 @@
-amaze/2012-03-19
 amaze/2012-03-15
+amaze/2012-03-19
 arbitrage_loops/arbitrage_loops5
 dqueens/dqueens
 equal_sized_groups/equal_sized_groups
@@ -16,6 +16,10 @@ prize-collecting/28-4-7-1
 prize-collecting/30-5-6-8
 rcpsp-wet/j30_44_8-wet
 road-cons/road_9
+ship-schedule.mip/4ShipsUnconst
+ship-schedule.mip/4ShipsMixedUnconst
+ship-schedule.mip/4ShipsMixed
+ship-schedule.mip/4Ships
 touching_numbers/touching_numbers
 tpp/tpp_7_3_20_1
 tsptw/tsptw
