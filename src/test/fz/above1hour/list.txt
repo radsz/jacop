@@ -14,4 +14,5 @@ costasArray/CostasArrayTestN20
 costasArray/CostasArrayTestN19
 kraftwerk_ticket_problem/kraftwerk_ticket_problem
 nmseq/393
+ship-schedule.mip/5ShipsUnconst
 tdtsp/inst_10_42_10
