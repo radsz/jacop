@@ -824,10 +824,12 @@ public class Diff extends Constraint {
 					int hinderJ = hinder.origin[j];
 					int hinderValue = hinder.origin[i] + hinder.length[i]
 							- barierPosition;
-					barrier.addToProfile(hinderJ, hinderJ + hinder.length[j],
-							hinderValue);
-					if (minimalAfter > hinderValue)
-						minimalAfter = hinderValue;
+					if (hinderValue > 0) {
+					 barrier.addToProfile(hinderJ, hinderJ + hinder.length[j],
+					 		hinderValue);
+					 if (minimalAfter > hinderValue)
+					 	minimalAfter = hinderValue;
+					}
 				}
 				// System.out.println("Barrier : " + barrier);
 
