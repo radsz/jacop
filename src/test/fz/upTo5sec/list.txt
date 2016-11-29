@@ -755,6 +755,7 @@ OandX/OandX
 office_blocked/office_blocked
 office_blocked2/office_blocked2
 olympic/olympic
+on-call-rostering/4s-10d
 one_off_digit/one_off_digit
 onroad/onroad
 open_alldifferent/open_alldifferent

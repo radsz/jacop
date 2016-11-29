@@ -11,6 +11,7 @@ mapping/mesh2x2_mp3
 mapping/mesh2x2_mpeg
 mceverywhere/mceverywhere
 nmseq/176
+on-call-rostering/4s-23d
 open_stacks/wbo_10_20_1
 prize-collecting/28-4-7-1
 prize-collecting/30-5-6-8
