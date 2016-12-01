@@ -961,6 +961,7 @@ skyscraper/skyscraper
 sliding_sum_me/sliding_sum_me
 sliding_time_window/sliding_time_window
 sliding_time_window_from_start/sliding_time_window_from_start
+smelt/smelt_2
 smuggler_knapsack/smuggler_knapsack
 smullyan_knights_knaves/smullyan_knights_knaves
 smullyan_knights_knaves_normals/smullyan_knights_knaves_normals

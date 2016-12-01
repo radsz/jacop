@@ -1723,10 +1723,10 @@ public class MinizincBasedTest {
                 {"test/still_life2/still_life_9"},
 
                 //smelt
-                {"test/smelt/smelt_2"},
-                {"test/smelt/smelt_3"},
-                {"test/smelt/smelt_4"},
-                {"test/smelt/smelt_5"},
+                {"upTo5sec/smelt/smelt_2"},
+                //timeout{"test/smelt/smelt_3"},
+                {"above1hour/smelt/smelt_4"},
+                //timeout{"test/smelt/smelt_5"},
                 {"test/smelt/smelt_11"},
 
                 //rectangle-packing

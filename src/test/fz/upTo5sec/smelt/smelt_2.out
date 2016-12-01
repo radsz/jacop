@@ -1,0 +1,6 @@
+makespan = 69;
+s = array1d(1..20, [9, 46, 34, 38, 59, 38, 15, 49, 24, 0, 10, 47, 35, 39, 60, 39, 16, 50, 25, 1]);
+l = array1d(1..20, [1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1]);
+followed = array1d(1..13, [true, true, true, true, true, true, true, true, true, true, true, true, true]);
+----------
+==========
