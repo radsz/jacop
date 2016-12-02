@@ -45,6 +45,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.jacop.util.TupleUtils;
 import org.xml.sax.SAXException;
 
 /**
@@ -659,7 +660,7 @@ public class ExtensionalConflictVA extends Constraint {
 
 			// @todo, check & improve sorting functionality (possibly reuse existing sorting functionality).
 			for (int j = 0; j < tuples[i].length; j++)
-				store.sortTuplesWithin(tuples[i][j]);
+				TupleUtils.sortTuplesWithin(tuples[i][j]);
 
 			lastofsequence[i] = new int[tuples[i].length][];
 			

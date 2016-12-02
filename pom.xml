@@ -73,7 +73,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<maven.compiler.source>1.7</maven.compiler.source>
 		<maven.compiler.target>1.7</maven.compiler.target>
-		<aspectj.version>1.8.6</aspectj.version>
+		<aspectj.version>1.8.9</aspectj.version>
 	</properties>
 
     <!-- In order to see logging output,
@@ -88,7 +88,7 @@ setup to run configuration. -->
 					<plugin>
 						<groupId>org.codehaus.mojo</groupId>
 						<artifactId>aspectj-maven-plugin</artifactId>
-						<version>1.7</version>
+						<version>1.9</version>
 						<executions>
 							<execution>
 								<goals>
@@ -309,6 +309,15 @@ setup to run configuration. -->
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
 				<version>2.18.1</version>
+				<configuration>
+					<excludes>
+						<exclude>**/MinizincBasedTest.java</exclude>
+						<exclude>**/MinizincBasedTestAbove1Hours.java</exclude>
+						<exclude>**/MinizincBasedTestUpTo1Hours.java</exclude>
+						<exclude>**/MinizincBasedTestUpTo10Minutes.java</exclude>
+						<exclude>**/MinizincBasedTestUpTo5Minutes.java</exclude>
+					</excludes>
+				</configuration>
 			</plugin>
 
 			<plugin>

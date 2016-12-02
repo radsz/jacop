@@ -45,6 +45,7 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.jacop.util.TupleUtils;
 import org.xml.sax.SAXException;
 
 /**
@@ -593,7 +594,7 @@ public class ExtensionalSupportVA extends Constraint {
 
 			// TODO, check sorting functionality.
 			for (int j = 0; j < tuples[i].length; j++)
-				store.sortTuplesWithin(tuples[i][j]);
+				TupleUtils.sortTuplesWithin(tuples[i][j]);
 
 		}
 
