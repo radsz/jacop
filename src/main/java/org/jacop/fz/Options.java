@@ -31,8 +31,9 @@
 
 package org.jacop.fz;
 
-import java.io.FileInputStream;
 import org.jacop.floats.core.FloatDomain;
+
+import java.io.FileInputStream;
 
 /**
  * 
@@ -117,7 +118,7 @@ public class Options {
 				System.exit(0);
 			}
 			else { // input file
-				fileName = args[0];
+			    fileName = args[0];
 			}
 		}
 		else { // args.length > 1
@@ -193,7 +194,7 @@ public class Options {
 	 */
 	public FileInputStream getFile() {
 	    try {
-		file = new java.io.FileInputStream(fileName);
+		file = new FileInputStream(fileName);
 	    } catch (java.io.FileNotFoundException e) {
 		System.out.println("Flatzinc2JaCoP Parser Version 0.1:  File " + fileName + " not found.");
 		System.exit(0);

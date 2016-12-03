@@ -31,21 +31,12 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
-import org.jacop.constraints.Alldiff;
-import org.jacop.constraints.LinearInt;
-import org.jacop.constraints.XmulCeqZ;
-import org.jacop.constraints.XneqC;
-import org.jacop.constraints.XneqY;
-import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.IndomainMin;
-import org.jacop.search.SelectChoicePoint;
-import org.jacop.search.SimpleSelect;
-import org.jacop.search.SmallestDomain;
+import org.jacop.search.*;
+
+import java.util.ArrayList;
 
 /**
  * 
@@ -307,10 +298,10 @@ public class SendMoreMoney extends ExampleFD {
 		 * constraints were not able to reason more.
 		 */
 		
-
+		/*
 			store.consistency();
 			store.print();
-
+		*/
 		
 		 /** In the context of the SEND+MORE=MONEY problem, the search could decide 
 		   * to assign first value 2 to variable E, followed by another trial 
@@ -376,12 +367,11 @@ public class SendMoreMoney extends ExampleFD {
 
 		SendMoreMoney exampleGlobal = new SendMoreMoney();
 		
-		/*exampleGlobal.model();
+		exampleGlobal.model();
 		
 		if (exampleGlobal.search())
 			System.out.println("Solution found.");
-		*/
-
+		
 	}
 	
 	/**
@@ -526,7 +516,7 @@ public class SendMoreMoney extends ExampleFD {
 		 */
 		
 		int [] weightsImplied = {1000, 91, 10, 1, -9000, -900, -90}; 
-		IntVar [] varsImplied = {s, e, r, d, m, o, n};
+		IntVar[] varsImplied = {s, e, r, d, m, o, n};
 		store.impose(new LinearInt(store, varsImplied, weightsImplied, "==", y));
 		// store.impose(new SumWeight(varsImplied, weightsImplied, y));
 		
@@ -539,7 +529,7 @@ public class SendMoreMoney extends ExampleFD {
 		 * both letters can not be equal to zero
 		 */
 		store.impose(new XneqC(s, 0));
-		store.impose(new XneqC(m, 0));		
+		store.impose(new XneqC(m, 0));
 		
 		/**
 		 * We have very concise model of the problem. It contains only 28 lines of code. 
