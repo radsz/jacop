@@ -31,29 +31,13 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.search.CreditCalculator;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.IndomainMedian;
-import org.jacop.search.IndomainMiddle;
-import org.jacop.search.IndomainMin;
-import org.jacop.search.IndomainSimpleRandom;
-import org.jacop.search.LDS;
-import org.jacop.search.MaxRegret;
-import org.jacop.search.MostConstrainedStatic;
-import org.jacop.search.NoGoodsCollector;
-import org.jacop.search.Search;
-import org.jacop.search.SelectChoicePoint;
-import org.jacop.search.Shaving;
-import org.jacop.search.SimpleSelect;
-import org.jacop.search.SmallestDomain;
-import org.jacop.search.SmallestMin;
-import org.jacop.search.WeightedDegree;
+import org.jacop.search.*;
+
+import java.util.ArrayList;
 
 /**
  * It is an abstract class to describe all necessary functions of any store.
@@ -73,8 +57,6 @@ public abstract class ExampleFD {
 	 * It specifies the cost function, null if no cost function is used.
 	 */
 	public IntVar cost;
-
-
 	
 	/**
 	 * It specifies the constraint store responsible for holding information 
@@ -85,7 +67,7 @@ public abstract class ExampleFD {
 	/**
 	 * It specifies the search procedure used by a given example.
 	 */
-	public Search<IntVar> search;	
+	public Search<IntVar> search;
 	
 	/**
 	 * It specifies a standard way of modeling the problem.
@@ -241,7 +223,7 @@ public abstract class ExampleFD {
 		long T1, T2;
 		T1 = System.currentTimeMillis();
 		
-		SelectChoicePoint<IntVar> select = new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]), 
+		SelectChoicePoint<IntVar> select = new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]),
 							    new WeightedDegree<IntVar>(),
 							    new SmallestDomain<IntVar>(),
 							    new IndomainMin<IntVar>());
@@ -346,7 +328,7 @@ public abstract class ExampleFD {
 
 		search = new DepthFirstSearch<IntVar>();
 
-		SelectChoicePoint<IntVar> select = new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]), 
+		SelectChoicePoint<IntVar> select = new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]),
 													null, new IndomainMiddle<IntVar>());
 
 		boolean result = search.labeling(store, select);
@@ -521,7 +503,7 @@ public abstract class ExampleFD {
     */
    public boolean searchWithMaxRegret() {
 
-       SelectChoicePoint<IntVar> select = new SimpleSelect<IntVar> (vars.toArray(new IntVar[0]),
+       SelectChoicePoint<IntVar> select = new SimpleSelect<IntVar>(vars.toArray(new IntVar[0]),
                                                    	new MaxRegret<IntVar>(),
                                                    	new SmallestDomain<IntVar>(),
                                                     new IndomainMiddle<IntVar>());
@@ -697,7 +679,7 @@ public abstract class ExampleFD {
 	 * 
 	 * @return true if the solution exists, false otherwise.
 	 */
-	public boolean searchMasterSlave(ArrayList<Var> masterVars, 
+	public boolean searchMasterSlave(ArrayList<Var> masterVars,
 									 ArrayList<Var> slaveVars) {
 
 		long T1 = System.currentTimeMillis();
