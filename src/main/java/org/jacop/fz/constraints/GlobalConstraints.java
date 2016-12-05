@@ -392,7 +392,8 @@ class GlobalConstraints extends Support implements ParserTreeConstants {
     IntVar[] lx = getVarArray((SimpleNode)node.jjtGetChild(2));
     IntVar[] ly = getVarArray((SimpleNode)node.jjtGetChild(3));
 
-    pose(new Disjoint(x, y, lx, ly));
+    // pose(new Disjoint(x, y, lx, ly));
+    pose(new org.jacop.constraints.diffn.Diffn(x, y, lx, ly, true));
   }
   
   static void gen_jacop_diff2(SimpleNode node) {
@@ -403,7 +404,8 @@ class GlobalConstraints extends Support implements ParserTreeConstants {
       for (int j=0; j<4; j++)
 	r[i][j] = v[4*i+j];
 
-    pose(new Diff2(r));
+    // pose(new Diff2(r));
+    pose(new org.jacop.constraints.diffn.Diffn(r, false));
   }
   
   static void gen_jacop_list_diff2(SimpleNode node) {
@@ -412,7 +414,8 @@ class GlobalConstraints extends Support implements ParserTreeConstants {
     IntVar[] lx = getVarArray((SimpleNode)node.jjtGetChild(2));
     IntVar[] ly = getVarArray((SimpleNode)node.jjtGetChild(3));
 
-    pose(new Diff2(x, y, lx, ly));
+    // pose(new Diff2(x, y, lx, ly));
+    pose(new org.jacop.constraints.diffn.Diffn(x, y, lx, ly, false));
   }
   
   static void gen_jacop_count(SimpleNode node) {
