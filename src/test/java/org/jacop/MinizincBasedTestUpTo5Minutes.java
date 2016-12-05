@@ -38,7 +38,7 @@ public class MinizincBasedTestUpTo5Minutes extends MinizincBasedTestsHelper{
         return fileReader(timeCategory);
     }
 
-    @Test(timeout=60000)
+    @Test(timeout=600000)
     public void testMinizinc() throws IOException {
 
         testExecution(timeCategory);
