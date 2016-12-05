@@ -391,6 +391,49 @@ public class SmallDenseDomainTest {
         verify(var).domainHasChanged(IntDomain.ANY);
     }
 
+    @Test
+    public void testinterval17() throws InvocationTargetException, IllegalAccessException {
+        intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[]{new int[]{1,2,4,10}});
+        intervalDomain.setStamp(100);
+        intervalDomain.inComplement(100, var ,10);
+
+        verify(var).domainHasChanged(IntDomain.BOUND);
+
+    }
+
+
+    @Test
+    public void testinterval18() throws InvocationTargetException, IllegalAccessException {
+
+        intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[]{new int[]{1, 3, 5, 5}});
+        intervalDomain.setStamp(100);
+        intervalDomain.inComplement(100, var, 5);
+
+        verify(var).domainHasChanged(IntDomain.BOUND);
+
+    }
+
+    @Test
+    public void testinterval19() throws InvocationTargetException, IllegalAccessException {
+
+        intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[]{new int[]{1, 3, 5, 7}});
+        intervalDomain.inComplement(100, var, 7);
+
+        verify(var).domainHasChanged(IntDomain.BOUND);
+
+    }
+
+    @Test
+    public void testinterval20() throws InvocationTargetException, IllegalAccessException {
+        intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[]{new int[]{1,2}});
+        intervalDomain.setStamp(100);
+        intervalDomain.inComplement(100, var ,2);
+        verify(var).domainHasChanged(IntDomain.GROUND);
+
+    }
+
+
+
     public IntDomain createDomain(Interval... intervals)
     {
         IntDomain result = new IntervalDomain();
@@ -402,6 +445,7 @@ public class SmallDenseDomainTest {
 
         return result;
     }
+
 
     public IntDomain  prepareSmallDenseDomain(int[] intervalList){
         IntDomain domain;
