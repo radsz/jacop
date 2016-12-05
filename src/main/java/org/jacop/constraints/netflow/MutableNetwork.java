@@ -50,7 +50,7 @@ public interface MutableNetwork {
 	 * @param arc
 	 *            The arc to be removed
 	 */
-	public abstract void remove(Arc arc);
+  void remove(Arc arc);
 
 	/**
 	 * Tells the network that an arc has been modified. The network will then
@@ -59,14 +59,14 @@ public interface MutableNetwork {
 	 * @param companion
 	 *            The arc that was modified
 	 */
-	public abstract void modified(ArcCompanion companion);
+  void modified(ArcCompanion companion);
 
 	/**
 	 * Retrieves the current store level for domain pruning.
 	 * 
 	 * @return the store level
 	 */
-	 public abstract int getStoreLevel();
+  int getStoreLevel();
 
 	/**
 	 * Changes the cost offset by some value.
@@ -74,6 +74,6 @@ public interface MutableNetwork {
 	 * @param delta
 	 *            the change in cost
 	 */
-	public abstract void changeCostOffset(long delta);
+  void changeCostOffset(long delta);
 
 }

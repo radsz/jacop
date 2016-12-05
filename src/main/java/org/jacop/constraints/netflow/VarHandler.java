@@ -51,7 +51,7 @@ public interface VarHandler {
 	/**
 	 * @return the list of variables handled by this handler
 	 */
-	public abstract List<IntVar> listVariables();
+  List<IntVar> listVariables();
 
 	/**
 	 * Retrieves the consistency pruning event of a handler variable that causes
@@ -61,7 +61,7 @@ public interface VarHandler {
 	 * @param variable a handler variable
 	 * @return the pruning event which causes reevaluation of the handler
 	 */
-	public abstract int getPruningEvent(Var variable);
+  int getPruningEvent(Var variable);
 
 	/**
 	 * Informs the handler that one of its variable has changed and asks the
@@ -70,6 +70,6 @@ public interface VarHandler {
 	 * @param variable the variable that changed
 	 * @param network the network
 	 */
-	public abstract void processEvent(IntVar variable, MutableNetwork network);
+  void processEvent(IntVar variable, MutableNetwork network);
 
 }

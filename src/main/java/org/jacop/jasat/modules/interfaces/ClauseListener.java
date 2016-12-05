@@ -46,12 +46,12 @@ public interface ClauseListener extends SolverComponent {
 	 * @param clauseId	the clause's unique Id
 	 * @param isModelClause is this clause a model clause ?
 	 */
-	public void onClauseAdd(int[] clause, int clauseId, boolean isModelClause);
+  void onClauseAdd(int[] clause, int clauseId, boolean isModelClause);
 
 	/**
 	 * called when the clause with unique Id @param clauseId is removed
 	 * @param clauseId	the id
 	 */
-	public void onClauseRemoval(int clauseId);
+  void onClauseRemoval(int clauseId);
 
 }

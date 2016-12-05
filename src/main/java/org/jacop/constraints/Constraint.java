@@ -277,9 +277,9 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
 	@Override
 	public void imposeDecomposition(Store store) {
 		throw new UnsupportedOperationException();
-	};
+	}
 
-	/**
+    /**
 	 * It returns an array list of constraint which are used to decompose this 
 	 * constraint. It actually creates a decomposition (possibly also creating
 	 * variables), but it does not impose the constraint.
@@ -296,10 +296,10 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
 	 * data structures. 
 	 */
 	public void cleanAfterFailure() {
-	};	
+	}
 
 
-  /**
+    /**
    * Methods that checks for overflow/underflow for addition
    * @param a first addend
    * @param b second addend

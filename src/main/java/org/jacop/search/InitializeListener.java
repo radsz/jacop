@@ -48,19 +48,19 @@ public interface InitializeListener {
 	 * @param store store in which context the search is performed.
 	 */
 
-	public void executedAtInitialize(Store store);
+  void executedAtInitialize(Store store);
 
 	/**
 	 * It sets the children listeners of this initialize listener.
 	 * @param children children listeners being set
 	 */
-	public void setChildrenListeners(InitializeListener[] children);
+  void setChildrenListeners(InitializeListener[] children);
 
 	
 	/**
 	 * It sets one child listener for this initialize listener.
 	 * @param child the child of this initialize listener.
 	 */
-	public void setChildrenListeners(InitializeListener child);
+  void setChildrenListeners(InitializeListener child);
 
 }

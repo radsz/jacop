@@ -55,7 +55,7 @@ public interface ExitChildListener<T extends Var> {
 	 * exit the current node with false
 	 */
 
-	public boolean leftChild(T var, int value, boolean status);
+  boolean leftChild(T var, int value, boolean status);
 
 	/**
 	 * It is executed after exiting the left child. 
@@ -66,7 +66,7 @@ public interface ExitChildListener<T extends Var> {
 	 * exit the current node with false
 	 */
 
-	public boolean leftChild(PrimitiveConstraint choice, boolean status);
+  boolean leftChild(PrimitiveConstraint choice, boolean status);
 
 	/**
 	 * It is executed after exiting the right child. 
@@ -76,7 +76,7 @@ public interface ExitChildListener<T extends Var> {
 	 * @param status true if the solution was found in the child subtree, false otherwise.
 	 * exit the current node with false
 	 */
-	public void rightChild(T var, int value, boolean status);
+  void rightChild(T var, int value, boolean status);
 
 	/**
 	 * It is executed after exiting the right child. 
@@ -86,19 +86,19 @@ public interface ExitChildListener<T extends Var> {
 	 * exit the current node with false
 	 */
 
-	public void rightChild(PrimitiveConstraint choice, boolean status);
+  void rightChild(PrimitiveConstraint choice, boolean status);
 
 	/**
 	 * It sets the children listeners for the current listener.
 	 * @param children array containing children listeners.
 	 */
-	public void setChildrenListeners(ExitChildListener<T>[] children);
+  void setChildrenListeners(ExitChildListener<T>[] children);
 
 	
 	/**
 	 * It adds one child listener.
 	 * @param child added child listener.
 	 */
-	public void setChildrenListeners(ExitChildListener<T> child);
+  void setChildrenListeners(ExitChildListener<T> child);
 
 }

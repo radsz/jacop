@@ -60,7 +60,7 @@ public interface SelectChoicePoint<T extends Var> {
 	 * @return variable based on which the choice needs to be created.
 	 */
 
-	public T getChoiceVariable(int index);
+  T getChoiceVariable(int index);
 
 	/**
 	 * It returns a value which is the base of the next choice point. Only if
@@ -68,7 +68,7 @@ public interface SelectChoicePoint<T extends Var> {
 	 * @return value used in the choice point (value).
 	 */
 
-	public int getChoiceValue();
+  int getChoiceValue();
 
 	/**
 	 * It returns the constraint which is the base of the choice point. If the
@@ -78,7 +78,7 @@ public interface SelectChoicePoint<T extends Var> {
 	 * @return primitive constraint which is a base of a choice point.
 	 */
 
-	public PrimitiveConstraint getChoiceConstraint(int index);
+  PrimitiveConstraint getChoiceConstraint(int index);
 
 	/**
 	 * It specifies the position of variables as given when variables of this
@@ -86,7 +86,7 @@ public interface SelectChoicePoint<T extends Var> {
 	 * @return mapping of variables to the positions in the variables array.
 	 */
 
-	public IdentityHashMap<T, Integer> getVariablesMapping();
+  IdentityHashMap<T, Integer> getVariablesMapping();
 
 	/**
 	 * It returns the current index. Supplying this value in the next invocation
@@ -95,6 +95,6 @@ public interface SelectChoicePoint<T extends Var> {
 	 * @return internal position of the last variable chosen to be the base of the choice point. 
 	 */
 
-	public int getIndex();
+  int getIndex();
 
 }

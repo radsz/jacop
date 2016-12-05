@@ -49,7 +49,7 @@ public interface AssertionListener extends SolverComponent {
 	 * propagation, false otherwise
 	 * @param level	the search level
 	 */
-	public void onAssertion(int literal, int level);
+  void onAssertion(int literal, int level);
 
 
 }

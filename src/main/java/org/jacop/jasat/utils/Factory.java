@@ -12,7 +12,7 @@ public interface Factory<E> {
 	 * method to call to get a new instance of the type E
 	 * @return	a new instance of E
 	 */
-	public E newInstance();
+  E newInstance();
 	
 	
 }

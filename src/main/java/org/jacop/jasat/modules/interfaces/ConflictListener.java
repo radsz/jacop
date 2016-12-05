@@ -49,6 +49,6 @@ public interface ConflictListener extends SolverComponent {
 	 * @param conflictclause	the conflict (unsatisfiable) clause
 	 * @param level	the level at which the conflict occurred
 	 */
-	public void onConflict(MapClause conflictclause, int level);
+  void onConflict(MapClause conflictclause, int level);
 
 }

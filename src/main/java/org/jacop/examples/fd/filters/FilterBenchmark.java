@@ -222,8 +222,7 @@ public class FilterBenchmark {
 	public static void chainingSchedule() {
 
 		int dfqEx[][] = { { 1, 1, 3 }, { 1, 2, 3 }, { 2, 2, 3 } };
-		;
-		for (int i = 0; i < dfqEx.length; i++) {
+      for (int i = 0; i < dfqEx.length; i++) {
 			int a = dfqEx[i][0], m = dfqEx[i][1], s = dfqEx[i][2];
 			Store store = new Store();
 			DFQ dfq = new DFQ();
@@ -281,8 +280,7 @@ public class FilterBenchmark {
 		// **************** Pipeline schedules
 
 		int dfqEx[][] = { { 1, 3 }, { 2, 3 } };
-		;
-		for (int i = 0; i < dfqEx.length; i++) {
+      for (int i = 0; i < dfqEx.length; i++) {
 			int a = dfqEx[i][0], m = dfqEx[i][1];
 			Store store = new Store();
 			DFQ dfqP = new DFQ();

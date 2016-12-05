@@ -148,8 +148,8 @@ public class IntervalDomain extends IntDomain {
 					else
 						right = value;
 				}
-				catch(NumberFormatException ex) {};
-			}
+				catch(NumberFormatException ex) {}
+      }
 			
 			if (left != null && right != null)
 				intervals.add(new Interval(left, right));
@@ -6169,9 +6169,9 @@ public class IntervalDomain extends IntDomain {
 				currentRange = intervals[counter].max - intervals[counter].min;
 			else
 				throw new RuntimeException("The domain does not have an element as specified by the index " + index);
-		};
-		
-		return intervals[counter].min + index;
+		}
+
+      return intervals[counter].min + index;
 		
 	}
 

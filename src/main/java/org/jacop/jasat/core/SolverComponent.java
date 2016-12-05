@@ -46,6 +46,6 @@ public interface SolverComponent {
 	 * 
 	 * @param core core component to initialize
 	 */
-	public void initialize(Core core);
+  void initialize(Core core);
 
 }

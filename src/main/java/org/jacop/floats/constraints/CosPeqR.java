@@ -184,8 +184,8 @@ public class CosPeqR extends Constraint {
 		    break;
 		default: 
 		    throw new InternalException("Selected impossible case in sin, cos, asin or acos constraint");
-		};
-		break;
+		}
+          break;
 
 	    case 2: 
 		switch (intervalForMax) {
@@ -206,8 +206,8 @@ public class CosPeqR extends Constraint {
 		break;
 		default: 
 		    throw new InternalException("Selected impossible case in sin, cos, asin or acos constraint");
-		};
-		break;
+		}
+          break;
 
 	    case 3: 
 
@@ -225,8 +225,8 @@ public class CosPeqR extends Constraint {
 		    break;
 		default: 
 		    throw new InternalException("Selected impossible case in sin, cos, asin or acos constraint");
-		};
-		break;
+		}
+          break;
 
 	    case 4: 
 		switch (intervalForMax) {
@@ -244,9 +244,9 @@ public class CosPeqR extends Constraint {
 
 	    default: 
 		throw new InternalException("Selected impossible case in sin, cos, asin or acos constraint");
-	    };
+	    }
 
-	    // System.out.println (q + " in " + qMin + ".." + qMax);
+      // System.out.println (q + " in " + qMin + ".." + qMax);
 
 	    q.domain.in(store.level, q, qMin, qMax);
 

@@ -44,25 +44,25 @@ public interface MutableVar {
 	 * It returns the earlier value of variable comparing to the current one.
 	 * @return previous value of a mutable variable.
 	 */
-	public MutableVarValue previous();
+  MutableVarValue previous();
 
 	/**
 	 * It removes given level from mutable variable.
 	 * @param removeLevel it specifies the level which is being removed.
 	 */
-	public void removeLevel(int removeLevel);
+  void removeLevel(int removeLevel);
 
 	/**
 	 * It replace the current representation of the value with a new
 	 * representation. It ignores the store level.
 	 * @param o value to which a mutable variable is set.
 	 */
-	public void setCurrent(MutableVarValue o);
+  void setCurrent(MutableVarValue o);
 
 	/**
 	 * It returns string representation of Mutable variable.
 	 */
-	public String toString();
+  String toString();
 
 	/**
 	 * It updates the value of a mutable variable based on value given as a
@@ -70,11 +70,11 @@ public interface MutableVar {
 	 * value.
 	 * @param value it specifies the new value of a mutable variable.
 	 */
-	public void update(MutableVarValue value);
+  void update(MutableVarValue value);
 
 	/**
 	 * It returns current value of MutableVariable.
 	 * @return current value of the mutable variable.
 	 */
-	public MutableVarValue value();
+  MutableVarValue value();
 }

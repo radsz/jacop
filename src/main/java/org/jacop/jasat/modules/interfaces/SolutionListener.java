@@ -46,6 +46,6 @@ public interface SolutionListener extends SolverComponent {
 	 * @param satisfiable	true when the solution is Satisfiable, false if
 	 * it is Unsatisfiable.
 	 */
-	public void onSolution(boolean satisfiable);
+  void onSolution(boolean satisfiable);
 
 }

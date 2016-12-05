@@ -147,9 +147,9 @@ public abstract class IntDomain extends Domain {
 				unionAdapt(enumer.nextElement());
 		}
 
-	};
+	}
 
-	/**
+    /**
 	 * It adds all values between min and max to the domain.
 	 * @param min the left bound of the interval being added.
 	 * @param max the right bound of the interval being added.
@@ -382,10 +382,10 @@ public abstract class IntDomain extends Domain {
 
 	public boolean singleton(int c) {
 		return min() == c && getSize() == 1;
-	};
+	}
 
 
-	/**
+    /**
 	 * It subtracts domain from current domain and returns the result.
 	 * @param domain the domain which is subtracted from this domain.
 	 * @return the result of the subtraction.
@@ -478,9 +478,9 @@ public abstract class IntDomain extends Domain {
 		result.unionAdapt(min, max);
 		return result;
 
-	};
+	}
 
-	/**
+    /**
 	 * It computes union of this domain and value. 
 	 * 
 	 * @param value it specifies the value which is being added.
@@ -503,9 +503,9 @@ public abstract class IntDomain extends Domain {
 
 		in(storeLevel, var, min, max());
 
-	};
+	}
 
-	/**
+    /**
 	 * It updates the domain according to the maximum value and stamp value. It
 	 * informs the variable of a change if it occurred.
 	 * @param storeLevel level of the store at which the update occurs.
@@ -517,9 +517,9 @@ public abstract class IntDomain extends Domain {
 
 		in(storeLevel, var, min(), max);
 
-	};
+	}
 
-	/**
+    /**
 	 * It updates the domain to have values only within the interval min..max.
 	 * The type of update is decided by the value of stamp. It informs the
 	 * variable of a change if it occurred.
@@ -555,9 +555,9 @@ public abstract class IntDomain extends Domain {
 
 		inShift(storeLevel, var, domain, 0);
 
-	};
+	}
 
-	/**
+    /**
 	 * It updates the domain to not contain the value complement. It informs the
 	 * variable of a change if it occurred.
 	 * @param storeLevel level of the store at which the update occurs.
@@ -614,9 +614,9 @@ public abstract class IntDomain extends Domain {
 
 	public int leftElement(int intervalNo) {
 		return getInterval(intervalNo).min;
-	};
+	}
 
-	/**
+    /**
 	 * It returns the right most element of the given interval.
 	 * @param intervalNo the interval number.
 	 * @return the right bound of the specified interval.
@@ -624,9 +624,9 @@ public abstract class IntDomain extends Domain {
 
 	public int rightElement(int intervalNo)  {
 		return getInterval(intervalNo).max;
-	};
+	}
 
-	/**
+    /**
 	 * It returns the values which have been removed at current store level.
 	 * @param currentStoreLevel the current store level.
 	 * @return emptyDomain if domain did not change at current level, or the set of values which have been removed at current level.
@@ -1211,9 +1211,9 @@ public abstract class IntDomain extends Domain {
 	 */
 	public int sizeOfIntersection(IntDomain domain) {
 		return intersect(domain).getSize();
-	};
+	}
 
-	/**
+    /**
 	 * It access the element at the specified position. 
 	 * @param index the position of the element, indexing starts from 0. 
 	 * @return the value at a given position in the domain. 

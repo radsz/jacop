@@ -47,6 +47,6 @@ public interface PropagateListener extends SolverComponent {
 	 * @param clauseId 	the unique ID of the unit clause
 	 * @param literal 	the literal propagated
 	 */
-	public void onPropagate(int literal, int clauseId);
+  void onPropagate(int literal, int clauseId);
 
 }

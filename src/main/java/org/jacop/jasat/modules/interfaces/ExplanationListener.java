@@ -45,6 +45,6 @@ public interface ExplanationListener extends SolverComponent {
 	 * called when the conflict clause is explained
 	 * @param explanation		the explanation clause
 	 */
-	public void onExplain(MapClause explanation);
+  void onExplain(MapClause explanation);
 
 }

@@ -46,20 +46,20 @@ import org.jacop.core.Var;
 
 public interface ImproveSolution<T extends Var> {
 
-    public boolean searchFromEmptySolution(int failLimit);
+    boolean searchFromEmptySolution(int failLimit);
 
-    public boolean searchFromEliteSolution(int[] solution, int failLimit);
+    boolean searchFromEliteSolution(int[] solution, int failLimit);
 
-    public int getCurrentCost();
+    int getCurrentCost();
 
-    public int[] getSolution();
+    int[] getSolution();
 
-    public int getNumberFails();
+    int getNumberFails();
 
-    public int getFailLimit();
+    int getFailLimit();
 
-    public void setPrintInfo(boolean p);
+    void setPrintInfo(boolean p);
 
-    public void setTimeOut(long timeOut);
+    void setTimeOut(long timeOut);
 
 }

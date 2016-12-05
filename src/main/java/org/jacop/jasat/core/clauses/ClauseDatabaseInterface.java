@@ -54,7 +54,7 @@ public interface ClauseDatabaseInterface {
 	 * @param isModelClause defined if the clause is model clause
 	 * @return	the unique ID referring to the clause
 	 */
-	public int addClause(int[] clause, boolean isModelClause);
+  int addClause(int[] clause, boolean isModelClause);
 
 
 	/**
@@ -63,13 +63,13 @@ public interface ClauseDatabaseInterface {
 	 * 
 	 * @param literal	the literal that is set
 	 */
-	public void assertLiteral(int literal);
+  void assertLiteral(int literal);
 
 	/**
 	 * It removes the clause which unique ID is @param clauseId.
 	 * @param clauseId clause id
 	 */
-	public void removeClause(int clauseId);
+  void removeClause(int clauseId);
 
 
 	/**
@@ -78,7 +78,7 @@ public interface ClauseDatabaseInterface {
 	 * @param clauseId	the unique Id of the clause
 	 * @return	true iff removal of clauses is possible
 	 */
-	public boolean canRemove(int clauseId);
+  boolean canRemove(int clauseId);
 
 
 	/**
@@ -89,19 +89,19 @@ public interface ClauseDatabaseInterface {
 	 * @param clause	an explanation clause that is modified by resolution
 	 * @return the clause obtained by resolution
 	 */
-	public MapClause resolutionWith(int clauseIndex, MapClause clause);
+  MapClause resolutionWith(int clauseIndex, MapClause clause);
 
 	/**
 	 * Do everything needed to return to the given level.
 	 * @param level	the level to return to. Must be {@literal <} solver.getCurrentLevel().
 	 */
-	public void backjump(int level);
+  void backjump(int level);
 
 	/**
 	 * size of the database
 	 * @return	the number of clauses in the database
 	 */
-	public int size();
+  int size();
         
         /**
          * It writes the clauses of the databases in cnf format to the specified
@@ -110,6 +110,6 @@ public interface ClauseDatabaseInterface {
          * @param output the output writer to which all the clauses will be written to.
 	 * @throws java.io.IOException execption from java.io package
          */
-        public void toCNF(BufferedWriter output) throws java.io.IOException;
+        void toCNF(BufferedWriter output) throws java.io.IOException;
 
 }

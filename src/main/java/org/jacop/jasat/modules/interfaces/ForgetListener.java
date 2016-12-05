@@ -49,6 +49,6 @@ public interface ForgetListener extends SolverComponent {
 	/**
 	 * called when the solver's forget() method is applied.
 	 */
-	public void onForget();
+  void onForget();
 
 }

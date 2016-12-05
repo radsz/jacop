@@ -48,18 +48,18 @@ public interface TimeOutListener {
 	 * @param solutionsNo number of solutions found before the timeout occurred.
 	 */
 
-	public void executedAtTimeOut(int solutionsNo);
+  void executedAtTimeOut(int solutionsNo);
 
 	/**
 	 * It sets children listeners for this timeout listener.
 	 * @param children list of children listeners.
 	 */
-	public void setChildrenListeners(TimeOutListener[] children);
+  void setChildrenListeners(TimeOutListener[] children);
 
 	/**
 	 * It sets child listener for this timeout listener.
 	 * @param child child listener for this timeout listener.
 	 */
-	public void setChildrenListeners(TimeOutListener child);
+  void setChildrenListeners(TimeOutListener child);
 
 }

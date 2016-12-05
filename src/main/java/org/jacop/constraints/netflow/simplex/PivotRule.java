@@ -43,8 +43,8 @@ public interface PivotRule {
 
 	// returns an arc that violates the optimality conditions or
 	// null, if the current solution is optimal)
-	public abstract Arc next();
+  Arc next();
 	
-	public abstract void reset();
+	void reset();
 	
 }

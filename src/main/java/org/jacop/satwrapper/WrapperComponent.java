@@ -11,6 +11,6 @@ public interface WrapperComponent {
 	 * connect the component to the wrapper
 	 * @param wrapper	the wrapper
 	 */
-	public void initialize(SatWrapper wrapper);
+  void initialize(SatWrapper wrapper);
 	
 }

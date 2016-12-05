@@ -49,18 +49,18 @@ public interface ExitListener {
 	 * @param solutionsNo the number of solutions found.
 	 */
 
-	public void executedAtExit(Store store, int solutionsNo);
+  void executedAtExit(Store store, int solutionsNo);
 
 	/**
 	 * It sets the children of this exit listener.
 	 * @param children an array containing the children.
 	 */
-	public void setChildrenListeners(ExitListener[] children);
+  void setChildrenListeners(ExitListener[] children);
 
 	/**
 	 * It sets one child listener.
 	 * @param child the only child listener used by this listener.
 	 */
-	public void setChildrenListeners(ExitListener child);
+  void setChildrenListeners(ExitListener child);
 
 }

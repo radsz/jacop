@@ -308,7 +308,7 @@ public abstract class FloatDomain extends Domain {
 	}
 	    */
 
-    };
+    }
 
     /**
      * It adds all values between min and max to the domain.
@@ -551,7 +551,7 @@ public abstract class FloatDomain extends Domain {
 
     public boolean singleton(double c) {
 	return min() == c && getSize() == 1;
-    };
+    }
 
 
     /**
@@ -649,7 +649,7 @@ public abstract class FloatDomain extends Domain {
 	result.unionAdapt(min, max);
 	return result;
 
-    };
+    }
 
     /**
      * It computes union of this domain and value. 
@@ -674,7 +674,7 @@ public abstract class FloatDomain extends Domain {
 
 	in(storeLevel, var, min, max());
 
-    };
+    }
 
     /**
      * It updates the domain according to the maximum value and stamp value. It
@@ -688,7 +688,7 @@ public abstract class FloatDomain extends Domain {
 
 	in(storeLevel, var, min(), max);
 
-    };
+    }
 
     /**
      * It updates the domain to have values only within the interval min..max.
@@ -726,7 +726,7 @@ public abstract class FloatDomain extends Domain {
 
 	inShift(storeLevel, var, domain, 0);
 
-    };
+    }
 
     /**
      * It updates the domain to not contain the value complement. It informs the
@@ -785,7 +785,7 @@ public abstract class FloatDomain extends Domain {
 
     public double leftElement(int intervalNo) {
 	return getInterval(intervalNo).min;
-    };
+    }
 
     /**
      * It returns the right most element of the given interval.
@@ -795,7 +795,7 @@ public abstract class FloatDomain extends Domain {
 
     public double rightElement(int intervalNo)  {
 	return getInterval(intervalNo).max;
-    };
+    }
 
     /**
      * It returns the values which have been removed at current store level.
@@ -992,7 +992,7 @@ public abstract class FloatDomain extends Domain {
      */
     public int sizeOfIntersection(FloatDomain domain) {
 	return intersect(domain).getSize();
-    };
+    }
 
     /**
      * It access the element at the specified position. 

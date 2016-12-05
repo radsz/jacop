@@ -237,9 +237,8 @@ public class SendMoreMoney extends ExampleFD {
 		// MONEY = 10000 * M + 1000 * O + N * 100 + E * 10 + Y * 1
 		IntVar numbersMONEY[] = new IntVar[5];
 		IntVar valueMONEY = new IntVar(store, "MONEY", 0, 99999);
-		;
 
-		// Creates FDV for each position in MONEY with
+      // Creates FDV for each position in MONEY with
 		// appropriate domain, they all start with zero
 		// since a letter could be zero and the position
 		// value is also zero

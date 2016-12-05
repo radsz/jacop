@@ -298,18 +298,18 @@ public class XMLSaveSupport {
 					try {
 						ithArgument = c.getMethod(names[i], null).invoke(a, null);
 					}
-					catch(NoSuchMethodException ex) {};
+					catch(NoSuchMethodException ex) {}
 
-					String functionName = "get" + names[i].substring(0, 1).toUpperCase() + names[i].substring(1);
+            String functionName = "get" + names[i].substring(0, 1).toUpperCase() + names[i].substring(1);
 
 					if (ithArgument == null) {
 
 						try {
 							ithArgument = c.getMethod(functionName, null).invoke(a, null);
 						}
-						catch(NoSuchMethodException ex) {};
+						catch(NoSuchMethodException ex) {}
 
-					}
+          }
 
 					if (ithArgument == null) {
 
@@ -322,9 +322,9 @@ public class XMLSaveSupport {
 							assert (false) : "xmlAttributes mismatch at " + i + "-th element. No attribute " + names[i] 
 							                                                                                         + " found. " + " No function " + functionName + "() found." 
 							                                                                                         + "No function " + names[i] + "() found.";
-						};
+						}
 
-					}
+          }
 
 					argumentsFromXML[i] = ithArgument;
 
@@ -348,9 +348,9 @@ public class XMLSaveSupport {
 						try {
 							variableId = (String) classVariable.getMethod("id", null).invoke(argumentsFromXML[i], null);
 						}
-						catch(NoSuchMethodException ex) {};
+						catch(NoSuchMethodException ex) {}
 
-						if (variableId == null)
+              if (variableId == null)
 							variableId = (String) c.getDeclaredField("id").get(argumentsFromXML[i]);
 
 						atts.addAttribute("", "", names[i], "CDATA", variableId);
@@ -366,18 +366,18 @@ public class XMLSaveSupport {
 						try {
 							value = c.getMethod(names[i], null).invoke(a, null);
 						}
-						catch(NoSuchMethodException ex) {};
+						catch(NoSuchMethodException ex) {}
 
-						String functionName = "get" + names[i].substring(0, 1).toUpperCase() + names[i].substring(1);
+              String functionName = "get" + names[i].substring(0, 1).toUpperCase() + names[i].substring(1);
 
 						if (value == null) {
 
 							try {
 								value = c.getMethod(functionName, null).invoke(a, null);
 							}
-							catch(NoSuchMethodException ex) {};
+							catch(NoSuchMethodException ex) {}
 
-						}
+            }
 
 						if (value == null) {
 
@@ -390,9 +390,9 @@ public class XMLSaveSupport {
 								assert (false) : "xmlAttributes mismatch at " + i + "-th element. No attribute " + names[i] 
 								                                                     + " found. " + " No function " + functionName + "() found." 
 								                                                     + "No function " + names[i] + "() found.";
-							};
+							}
 
-						}
+            }
 
 						atts.addAttribute("", "", names[i], "CDATA", value.toString() );
 					}					
@@ -449,9 +449,9 @@ public class XMLSaveSupport {
 				try {
 					c.getMethod(toXMLfunction, TransformerHandler.class).invoke(a, handler);
 				}
-				catch(NoSuchMethodException ex) {};
-				
-				handler.endElement("", "", elementName);
+				catch(NoSuchMethodException ex) {}
+
+          handler.endElement("", "", elementName);
 
 
 			}
@@ -475,9 +475,9 @@ public class XMLSaveSupport {
 		try {
 			id = (String) c.getMethod("id", null).invoke(object, null);
 		}
-		catch(NoSuchMethodException ex) {};
+		catch(NoSuchMethodException ex) {}
 
-		if (id == null)
+      if (id == null)
 			id = (String) c.getDeclaredField("id").get(object);
 
 		return id;

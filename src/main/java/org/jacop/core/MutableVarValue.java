@@ -45,36 +45,36 @@ public interface MutableVarValue {
 	 * to earlier value, and current value of variable.
 	 * @return clone of the mutable variable value.
 	 */
-	public Object clone();
+  Object clone();
 
 	/**
 	 * It returns the earlier value of mutable variable.
 	 * @return earlier value of mutable variable.
 	 */
-	public MutableVarValue previous();
+  MutableVarValue previous();
 
 	/**
 	 * It replaces the earlier value of a mutable variable with value passed as
 	 * parameter.
 	 * @param o the previous value for this mutable variable.
 	 */
-	public void setPrevious(MutableVarValue o);
+  void setPrevious(MutableVarValue o);
 
 	/**
 	 * It sets the stamp of value of mutable variable.
 	 * @param stamp the new stamp of value of mutable variable
 	 */
-	public void setStamp(int stamp);
+  void setStamp(int stamp);
 
 	/**
 	 * It returns the stamp value of value of mutable variable.
 	 * @return the current stamp of value of mutable variable.
 	 */
-	public int stamp();
+  int stamp();
 
 	/**
 	 * It returns string representation of the current value of mutable
 	 * variable.
 	 */
-	public String toString();
+  String toString();
 }

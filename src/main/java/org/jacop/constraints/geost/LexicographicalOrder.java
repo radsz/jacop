@@ -47,7 +47,7 @@ public interface LexicographicalOrder {
 	 * @return comparison result: a negative value if p1 is smaller than p2,
 	 * 0 if p1 is equal to p2, and a positive value if p1 is larger than p2.
 	 */
-	public int compare(int[] p1, int[] p2);
+  int compare(int[] p1, int[] p2);
 	
 	/**
 	 * It provides the precedence level of the given dimension. 0 is the most significant.
@@ -55,7 +55,7 @@ public interface LexicographicalOrder {
 	 * @param dimension the given dimension
 	 * @return integer value of the precedence level.
 	 */
-	public int precedenceOf(int dimension);
+  int precedenceOf(int dimension);
 	
 	/**
 	 * It provides the dimension corresponding to the given precedence level
@@ -63,7 +63,7 @@ public interface LexicographicalOrder {
 	 * @param precedenceLevel the given precedence level
 	 * @return an integer value of the dimension.
 	 */
-	public int dimensionAt(int precedenceLevel);
+  int dimensionAt(int precedenceLevel);
 
 	/**
 	 * It shifts the lexicographical order so that the most significant dimension
@@ -71,14 +71,14 @@ public interface LexicographicalOrder {
 	 * 
 	 * @param d the dimension to be considered most significant
 	 */
-	public void setMostSignificantDimension(int d);
+  void setMostSignificantDimension(int d);
 
 	/**
 	 * This is equivalent to the call precedenceOf(0).
 	 * 
 	 * @return the most significant dimension
 	 */
-	public int getMostSignificantDimension();
+  int getMostSignificantDimension();
 	
 	
 	/**
@@ -87,6 +87,6 @@ public interface LexicographicalOrder {
 	 * 
 	 * @return the ordering of dimensions without a shift.
 	 */
-	public int[] masterOrdering();
+  int[] masterOrdering();
 	
 }

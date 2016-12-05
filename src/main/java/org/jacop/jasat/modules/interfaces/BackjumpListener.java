@@ -50,7 +50,7 @@ public interface BackjumpListener extends SolverComponent {
 	 * @param oldLevel 	the level at which the solver was before backtracking
 	 * @param newLevel	the level to which the solver backtracks
 	 */
-	public void onBackjump(int oldLevel, int newLevel);
+  void onBackjump(int oldLevel, int newLevel);
 
 
 
@@ -61,6 +61,6 @@ public interface BackjumpListener extends SolverComponent {
 	 * put themselves in Core.restartModules.
 	 * @param oldLevel the level at which the solver was before restarting
 	 */
-	public void onRestart(int oldLevel);
+  void onRestart(int oldLevel);
 
 }

@@ -44,11 +44,11 @@ public interface StartStopListener extends SolverComponent {
 	/**
 	 * called when the solver starts search. It will be called only once.
 	 */
-	public void onStart();
+  void onStart();
 
 	/**
 	 * called when the solver stop search, for any reason
 	 */
-	public void onStop();
+  void onStop();
 
 }

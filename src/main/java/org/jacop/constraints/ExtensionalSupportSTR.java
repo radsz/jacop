@@ -797,8 +797,8 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
 					tuple[i++] = value;
 				}
 				catch(NumberFormatException ex) {
-				};
-			}
+				}
+      }
 			
 			tuples.add(tuple);
 		}

@@ -126,15 +126,15 @@ public final class SwitchesPruningLogging {
 	
 	
 	public final static void log(boolean isEnabled, Class fromClass, String pattern, Object[] args) {
-	};
+	}
 
-	public final static void log(boolean isEnabled, Class fromClass, String pattern, Object arg1) {
-	};
+    public final static void log(boolean isEnabled, Class fromClass, String pattern, Object arg1) {
+	}
 
-	public final static void log(boolean isEnabled, Class fromClass, String pattern, Object arg1, Object arg2) {
-	};
+    public final static void log(boolean isEnabled, Class fromClass, String pattern, Object arg1, Object arg2) {
+	}
 
-	private SwitchesPruningLogging() {
+    private SwitchesPruningLogging() {
 	}
 	
 }
