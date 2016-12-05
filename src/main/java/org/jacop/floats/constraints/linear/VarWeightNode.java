@@ -44,7 +44,6 @@ import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.constraints.linear.BoundsVar;
 import org.jacop.floats.constraints.linear.BoundsVarValue;
-import org.jacop.floats.constraints.linear.Linear;
 
 public class VarWeightNode extends VariableNode {
 

@@ -36,11 +36,6 @@ import java.lang.Math;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Interval;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.IntervalEnumeration;
-import org.jacop.core.SmallDenseDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 
@@ -49,7 +44,6 @@ import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.floats.core.FloatInterval;
-import org.jacop.floats.core.InternalException;
 
 /**
  * Constraints sin(P) = R

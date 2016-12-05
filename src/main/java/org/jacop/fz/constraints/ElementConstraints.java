@@ -33,8 +33,6 @@ package org.jacop.fz.constraints;
 import org.jacop.core.Store;
 import org.jacop.core.IntVar;
 
-import org.jacop.constraints.AndBool;
-
 import org.jacop.satwrapper.SatTranslation;
 
 import org.jacop.fz.*;

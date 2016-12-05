@@ -31,11 +31,7 @@
 
 package org.jacop.floats.constraints.linear;
 
-import java.util.ArrayList;
-
 import org.jacop.core.MutableVarValue;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntervalDomain;
 
 /**
  * Defines a current bounds for the Linear constraint.

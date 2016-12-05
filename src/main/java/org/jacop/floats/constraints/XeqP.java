@@ -42,7 +42,6 @@ import org.jacop.core.Var;
 import org.jacop.constraints.Constraint;
 
 import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatDomain;
 
 /**
  * Constraints X #= P for X and P floats

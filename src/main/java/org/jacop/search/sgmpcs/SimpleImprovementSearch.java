@@ -34,7 +34,6 @@ package org.jacop.search.sgmpcs;
 import java.util.HashMap;
 
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 import org.jacop.core.IntVar;
 import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
@@ -44,10 +43,8 @@ import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.RandomSelect;
-import org.jacop.search.SmallestMax;
 import org.jacop.search.SmallestMin;
 import org.jacop.search.IndomainMin;
-import org.jacop.search.IndomainRandom;
 import org.jacop.search.IndomainDefaultValue;
 import org.jacop.search.SimpleSolutionListener;
 import org.jacop.search.sgmpcs.SGMPCSCalculator;

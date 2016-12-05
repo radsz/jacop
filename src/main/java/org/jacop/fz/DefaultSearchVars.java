@@ -41,8 +41,7 @@ import org.jacop.set.core.SetVar;
 import org.jacop.floats.core.FloatVar;
 
 import org.jacop.fz.Tables;
-import org.jacop.fz.Options;
-    
+
 /**
  * 
  * The class gathers variables and array variables for default or

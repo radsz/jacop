@@ -36,7 +36,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
 import org.jacop.core.Interval;
 import org.jacop.core.Store;
 import org.jacop.core.Var;

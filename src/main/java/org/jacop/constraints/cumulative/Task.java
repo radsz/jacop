@@ -33,8 +33,6 @@ package org.jacop.constraints.cumulative;
 
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntervalDomain;
 
 /**
  * Represents tasks for cumulative constraint

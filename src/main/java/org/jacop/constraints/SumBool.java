@@ -38,7 +38,6 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.core.TimeStamp;
 
 /**
  * SumBool constraint implements the summation over several

@@ -31,22 +31,7 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.ArrayList;
-
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Interval;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.IntervalEnumeration;
-import org.jacop.core.SmallDenseDomain;
-import org.jacop.core.Store;
-import org.jacop.core.Var;
-
-import org.jacop.constraints.Constraint;
 import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.core.FloatIntervalDomain;
-import org.jacop.floats.core.InternalException;
 
 /**
  * Constraints asin(P) = R

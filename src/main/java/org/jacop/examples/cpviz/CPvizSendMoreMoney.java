@@ -10,7 +10,6 @@ import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusYeqZ;
-import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.IntVar;
 import org.jacop.search.DepthFirstSearch;
@@ -20,9 +19,6 @@ import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
 
 import org.jacop.search.TraceGenerator;
-import org.jacop.search.ConsistencyListener;
-import org.jacop.search.ExitChildListener;
-import org.jacop.search.ExitListener;
 
 public class CPvizSendMoreMoney {
 

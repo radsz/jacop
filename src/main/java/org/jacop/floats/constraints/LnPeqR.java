@@ -31,8 +31,6 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.ArrayList;
-
 import org.jacop.floats.core.FloatVar;
 
 /**

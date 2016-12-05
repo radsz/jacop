@@ -33,7 +33,6 @@ package org.jacop.floats.core;
 
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.Random;
 import java.util.regex.Pattern;
 
 import org.jacop.core.Var;

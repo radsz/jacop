@@ -41,10 +41,8 @@ import org.jacop.constraints.Constraint;
 import org.jacop.core.*;
 
 import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatIntervalDomain;
-import org.jacop.floats.core.FloatIntervalEnumeration; 
 
 
 /**

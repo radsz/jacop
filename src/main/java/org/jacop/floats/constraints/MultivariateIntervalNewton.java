@@ -39,7 +39,6 @@ import java.util.ArrayList;
 import java.util.Stack;
 
 import org.jacop.core.Store;
-import org.jacop.util.SimpleHashSet;
 
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatIntervalDomain;

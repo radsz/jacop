@@ -36,7 +36,6 @@ import org.jacop.core.BooleanVar;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Var;
 import org.jacop.set.core.SetVar;
-import org.jacop.set.core.SetDomain;
 import org.jacop.core.ValueEnumeration;
 
 /**

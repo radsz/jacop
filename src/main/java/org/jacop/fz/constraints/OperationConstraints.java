@@ -34,7 +34,6 @@ import org.jacop.fz.*;
 
 import org.jacop.core.Store;
 import org.jacop.core.IntVar;
-import org.jacop.core.IntDomain;
 
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusCeqZ;
@@ -53,7 +52,6 @@ import org.jacop.constraints.XexpYeqZ;
 import org.jacop.floats.constraints.XeqP;
 
 import org.jacop.satwrapper.SatTranslation;
-import org.jacop.core.FailException;
 
 /**
  * 

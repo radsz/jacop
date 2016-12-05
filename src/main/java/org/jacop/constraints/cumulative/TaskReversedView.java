@@ -31,8 +31,6 @@
 
 package org.jacop.constraints.cumulative;
 
-import org.jacop.core.IntVar;
-
 /**
  * Represents tasks for cumulative constraint
  * 

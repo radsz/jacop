@@ -39,7 +39,6 @@ import org.jacop.floats.constraints.PgtC;
 import org.jacop.floats.constraints.PltC;
 import org.jacop.floats.constraints.PlteqC;
 import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatDomain;
 
 import org.jacop.core.Var;
 import org.jacop.core.Store;

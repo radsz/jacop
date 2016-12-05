@@ -32,7 +32,6 @@
 package org.jacop.search;
 
 import org.jacop.core.Domain;
-import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 

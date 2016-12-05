@@ -31,7 +31,6 @@
 
 package org.jacop.search.sgmpcs;
 
-import java.util.HashMap;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Random;
@@ -39,23 +38,15 @@ import java.util.Random;
 import java.lang.Math;
 
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 import org.jacop.core.IntVar;
-import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 
 import org.jacop.constraints.XltC;
 
-import org.jacop.search.Search;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
-import org.jacop.search.IndomainRandom;
 import org.jacop.search.IndomainMin;
-import org.jacop.search.IndomainDefaultValue;
-import org.jacop.search.SmallestMax;
-import org.jacop.search.SmallestMin;
-import org.jacop.search.SimpleSolutionListener;
 
 /**
  * SGMPCSearch - implements Solution-Guided Multi-Point Constructive

@@ -47,7 +47,6 @@ import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.constraints.TanPeqR;
 import org.jacop.floats.constraints.PplusQeqR;
 import org.jacop.floats.search.SplitSelectFloat;
-import org.jacop.floats.search.SmallestDomainFloat;
 
 public class TanExample {
 

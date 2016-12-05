@@ -71,8 +71,6 @@ import org.jacop.constraints.Values;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.ArgMin;
 import org.jacop.constraints.ArgMax;
-import org.jacop.constraints.Min;
-import org.jacop.constraints.Max;
 import org.jacop.constraints.ExtensionalSupportMDD;
 import org.jacop.constraints.Assignment;
 import org.jacop.util.fsm.FSMTransition;

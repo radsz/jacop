@@ -38,12 +38,8 @@ package org.jacop.floats.constraints.linear;
  * @version 4.4
  */
 
-import org.jacop.core.IntDomain;
-import org.jacop.core.Interval;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.constraints.linear.BoundsVar;
-import org.jacop.floats.constraints.linear.BoundsVarValue;
 
 public class RootBNode extends BNode {
 

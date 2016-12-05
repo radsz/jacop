@@ -32,7 +32,6 @@
 package org.jacop.search;
 
 import java.util.HashMap;
-import java.lang.Number;
 
 import org.jacop.core.Var;
 import org.jacop.core.IntVar;

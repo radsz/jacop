@@ -31,10 +31,7 @@
 
 package org.jacop.core;
 
-import java.util.ArrayList;
 import java.util.Random;
-
-import org.jacop.constraints.Constraint;
 
 /**
  * Defines small dense domain based on bits within a long number. 

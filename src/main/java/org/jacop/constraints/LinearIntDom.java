@@ -32,7 +32,6 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntVar;

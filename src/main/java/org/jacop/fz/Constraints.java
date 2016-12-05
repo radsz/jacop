@@ -31,8 +31,6 @@
 package org.jacop.fz;
 
 import java.util.ArrayList;
-import java.util.function.*;
-
 import org.jacop.constraints.Constraint;
 import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
@@ -40,7 +38,6 @@ import org.jacop.core.Store;
 
 import org.jacop.satwrapper.SatTranslation;
 
-import org.jacop.fz.constraints.ConstraintFncs;
 import org.jacop.fz.constraints.Support;
 
 /**

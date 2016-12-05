@@ -33,7 +33,6 @@ package org.jacop.fz;
 import java.util.ArrayList;
 import java.util.HashSet;
 
-import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.BoundDomain;
@@ -49,7 +48,6 @@ import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
 import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.constraints.PeqC;
 import org.jacop.floats.constraints.PeqQ;
 
 /**

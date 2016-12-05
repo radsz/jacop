@@ -47,7 +47,6 @@ package org.jacop.examples.floats;
 
 import org.jacop.core.Store;
 import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.PrintOutListener;
 
 import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatDomain;

@@ -31,13 +31,7 @@
 
 package org.jacop.examples.flatzinc;
 
-import java.util.*;
-
 import org.jacop.core.*;
-import org.jacop.constraints.*;
-import org.jacop.constraints.netflow.*;
-import org.jacop.constraints.netflow.simplex.*;
-import org.jacop.search.*;
 import org.jacop.search.sgmpcs.*;
 import org.jacop.fz.*;
 

@@ -30,8 +30,6 @@
  */
 package org.jacop.fz.constraints;
 
-import java.util.ArrayList;
-
 import org.jacop.core.Store;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntDomain;

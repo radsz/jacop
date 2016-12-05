@@ -35,7 +35,6 @@ package org.jacop.constraints.cumulative;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.TreeSet;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;

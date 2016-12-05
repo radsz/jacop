@@ -35,13 +35,9 @@ package org.jacop.constraints.cumulative;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.lang.Integer;
 
-import org.jacop.constraints.Constraint;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
-import org.jacop.core.IntDomain;
 
 /**
  * CumulativeUnary implements the scheduling constraint for unary resources using

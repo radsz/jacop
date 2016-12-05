@@ -37,7 +37,6 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.lang.Integer;
 
-import org.jacop.constraints.Constraint;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;

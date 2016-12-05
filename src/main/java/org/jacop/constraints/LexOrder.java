@@ -30,13 +30,12 @@
 
 package org.jacop.constraints;
 
+import org.jacop.core.*;
+import org.jacop.util.SimpleHashSet;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.jacop.core.*;
-import org.jacop.util.SimpleHashSet;
-// import org.jacop.core.TimeStamp;
 
 
 /**

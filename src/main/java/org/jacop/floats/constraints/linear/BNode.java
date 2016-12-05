@@ -39,7 +39,6 @@ package org.jacop.floats.constraints.linear;
  */
 
 import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.core.FloatInterval;
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.linear.BoundsVar;
 import org.jacop.floats.constraints.linear.BoundsVarValue;

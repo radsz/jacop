@@ -30,19 +30,14 @@
  */
 package org.jacop.fz.constraints;
 
-import java.util.ArrayList;
-
 import org.jacop.core.Store;
 import org.jacop.core.IntVar;
-import org.jacop.core.IntDomain;
 
 import org.jacop.fz.*;
 
-import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SumBool;
 import org.jacop.constraints.SumInt;
-import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
 import org.jacop.constraints.XlteqY;

@@ -40,8 +40,6 @@ package org.jacop.examples.floats;
  * 
  */
 
-import java.util.ArrayList;
-
 import org.jacop.core.Store;
 import org.jacop.core.IntVar;
 import org.jacop.search.DepthFirstSearch;
@@ -49,16 +47,12 @@ import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.SmallestDomain;
 import org.jacop.search.IndomainMin;
-import org.jacop.search.PrintOutListener;
 import org.jacop.constraints.Circuit;
 
 import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.constraints.ElementFloat;
-import org.jacop.floats.search.SplitSelectFloat;
-import org.jacop.floats.search.SmallestDomainFloat;
-import org.jacop.floats.search.MaxRegretFloat;
 
 public class TinyTSP {
 

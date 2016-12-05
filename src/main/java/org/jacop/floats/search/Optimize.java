@@ -44,7 +44,6 @@ import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.floats.constraints.PlteqC;
-import org.jacop.floats.constraints.PgtC;
 
 import java.lang.Double;
 

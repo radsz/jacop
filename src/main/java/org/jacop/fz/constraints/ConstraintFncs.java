@@ -30,9 +30,6 @@
  */
 package org.jacop.fz.constraints;
 
-import java.util.*;
-import java.util.function.*;
-
 import org.jacop.fz.*;
 
 public final class ConstraintFncs {

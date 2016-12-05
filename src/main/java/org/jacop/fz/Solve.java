@@ -34,8 +34,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 
 import org.jacop.constraints.Constraint;
-import org.jacop.constraints.XgtC;
-import org.jacop.constraints.XltC;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntDomain;

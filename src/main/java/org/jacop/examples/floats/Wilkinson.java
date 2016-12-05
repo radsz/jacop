@@ -41,8 +41,6 @@ package org.jacop.examples.floats;
  * 
  */
 
-import java.util.ArrayList;
-
 import org.jacop.core.Store;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.PrintOutListener;
