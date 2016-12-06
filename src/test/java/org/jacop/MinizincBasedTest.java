@@ -932,8 +932,8 @@ public class MinizincBasedTest {
                //IndexOutOfBoundsException {"test/stable_roommates/sri6"},
 
                 //stable_roommates_func
-                {"upTo5sec/stable_roommates_func/sm6_func"},
-                {"upTo30sec/stable_roommates_func/sri6_func"},
+//                {"upTo5sec/stable_roommates_func/sm6_func"},
+//                {"upTo30sec/stable_roommates_func/sri6_func"},
 
                 //submultisetsum
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/submultisetsum/submultisetsum"},
@@ -1604,8 +1604,8 @@ public class MinizincBasedTest {
                 //timeout{"test/prop_stress/1000"},
 
                 //on-call-rostering
-                 {"upTo5sec/on-call-rostering/4s-10d"},
-                 {"upTo5min/on-call-rostering/4s-23d"},
+//                 {"upTo5sec/on-call-rostering/4s-10d"},
+//                 {"upTo5min/on-call-rostering/4s-23d"},
                  //timeout{"test/on-call-rostering/10s-50d"},
                  //timeout{"test/on-call-rostering/10s-150d"},
                  //timeout{"test/on-call-rostering/20s-200d"},
@@ -1672,16 +1672,16 @@ public class MinizincBasedTest {
                 //timeout{"test/ship-schedule.mip/8ShipsUnconst"},
 
                 //still_life
-                {"upTo5sec/still_life/2x3"},
-                {"upTo5sec/still_life/2x4"},
-                {"upTo5sec/still_life/3x3"},
-                {"upTo5sec/still_life/3x8"},
-                {"upTo5sec/still_life/4x4"},
-                {"upTo5sec/still_life/5x5"},
-                {"upTo5sec/still_life/6x6"},
-                {"upTo5sec/still_life/7x7"},
-                {"upTo5sec/still_life/8x8"},
-                {"upTo1hour/still_life/9x9"},
+//                {"upTo5sec/still_life/2x3"},
+//                {"upTo5sec/still_life/2x4"},
+//                {"upTo5sec/still_life/3x3"},
+//                {"upTo5sec/still_life/3x8"},
+//                {"upTo5sec/still_life/4x4"},
+//                {"upTo5sec/still_life/5x5"},
+//                {"upTo5sec/still_life/6x6"},
+//                {"upTo5sec/still_life/7x7"},
+//                {"upTo5sec/still_life/8x8"},
+//                {"upTo1hour/still_life/9x9"},
 
                 //still_life_free
                 {"upTo5sec/still_life_free/2x3"},
@@ -1692,7 +1692,7 @@ public class MinizincBasedTest {
                 {"upTo5sec/still_life_free/5x5"},
                 {"upTo5sec/still_life_free/6x6"},
                 {"upTo5min/still_life_free/7x7"},
-                {"above1hour/still_life_free/8x8"},
+                //{"above1hour/still_life_free/8x8"},
                 //timeout{"test/still_life_free/9x9"},
 
                 //still_life_full_border
@@ -1723,9 +1723,9 @@ public class MinizincBasedTest {
                 {"test/still_life2/still_life_9"},
 
                 //smelt
-                {"upTo5sec/smelt/smelt_2"},
+                //{"upTo5sec/smelt/smelt_2"},
                 //timeout{"test/smelt/smelt_3"},
-                {"above1hour/smelt/smelt_4"},
+                //{"above1hour/smelt/smelt_4"},
                 //timeout{"test/smelt/smelt_5"},
                 {"test/smelt/smelt_11"},
 
