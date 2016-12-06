@@ -125,6 +125,9 @@ public class Cumulative extends CumulativeBasic {
     for (Task t : taskNormal) {
       t.store = store;
     }
+    for (Task t : taskReversed) {
+      t.store = store;
+    }
   }
 
   @Override

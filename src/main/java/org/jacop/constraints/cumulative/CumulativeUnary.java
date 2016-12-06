@@ -84,13 +84,12 @@ public class CumulativeUnary extends Cumulative {
     queueIndex = 2;
 
     tvn = new TaskNormalView[starts.length];
+    // tvr = new TaskNormalView[starts.length];
     tvr = super.taskReversed;
     for (int i = 0; i < starts.length; i++) {				
       if ( durations[i].min() >= 0 && resources[i].min() >= 0) {
 	tvn[i] = new TaskNormalView( new Task(starts[i], durations[i], resources[i]) );
 	tvn[i].index = i;
-	// tvr[i] = new TaskReversedView( new Task(starts[i], durations[i], resources[i]) );
-	// tvr[i].index = i;
       } else throw new IllegalArgumentException("\nDurations and resources must be >= 0 in cumulative");			
     }
   }
@@ -149,6 +148,18 @@ public class CumulativeUnary extends Cumulative {
 	 durations.toArray(new IntVar[durations.size()]), 
 	 resources.toArray(new IntVar[resources.size()]),
 	 limit, doProfile);
+  }
+
+  @Override
+  public void impose(Store store) {
+
+    super.impose(store);
+    for (Task t : tvn) {
+      t.store = store;
+    }
+    for (Task t : tvr) {
+      t.store = store;
+    }
   }
 
   @Override
