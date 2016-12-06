@@ -196,15 +196,16 @@ public class Diffn extends Nooverlap {
 	    
   	    if (s.origin(i).min() <= r_min) {
   	      if (s.origin(i).max() + s.length(i).min() <= r_max) {
-  		int distance1 = s.origin(i).min() + s.length(i).min() - r_min;
+  		int distance1 = s.ect(i) - r_min; //s.origin(i).min() + s.length(i).min() - r_min;
   		sLengthMin = (distance1 > 0 ) ? distance1 : 0;
   	      }
   	      else {
   		// s.origin(i).max() + slength(i).min()> r_max)
   		int rmax = r.origin(i).max() + r.length(i).min();
 
-  		int distance1 = s.origin(i).min() + s.length(i).min() - r_min;
-  		int distance2 = s.length(i).min() - (s.origin(i).max() + s.length(i).min() - rmax);
+  		int distance1 = s.ect(i) - r_min; //s.origin(i).min() + s.length(i).min() - r_min;
+  		// int distance2 = s.length(i).min() - (s.origin(i).max() + s.length(i).min() - rmax);
+  		int distance2 = - s.origin(i).max() + rmax;
   		if (distance1 > rmax - r_min) distance1 = rmax - r_min;
   		if (distance2 > rmax - r_min) distance2 = rmax - r_min;
   		if (distance1 < distance2)
@@ -220,7 +221,8 @@ public class Diffn extends Nooverlap {
   	    }
   	    else // s.origin(i).min() > r_min
   	      if (s.origin(i).max() + s.length(i).min() > r_max) {
-  		int distance2 = s.length(i).min() - (s.origin(i).max() +s.length(i).min() - (r.origin[i].max() + r.length[i].min()));
+  		// int distance2 = s.length(i).min() - (s.origin(i).max() +s.length(i).min() - (r.origin[i].max() + r.length[i].min()));
+  		int distance2 = - s.origin(i).max() + r.origin[i].max() + r.length[i].min();
   		if (distance2 > 0) {
   		  if (distance2 < s.length(i).min())
   		    sLengthMin = distance2;

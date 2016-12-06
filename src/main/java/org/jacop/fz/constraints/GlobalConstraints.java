@@ -56,6 +56,7 @@ import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.binpacking.Binpacking;
+import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SoftAlldifferent;
@@ -393,7 +394,7 @@ class GlobalConstraints extends Support implements ParserTreeConstants {
     IntVar[] ly = getVarArray((SimpleNode)node.jjtGetChild(3));
 
     // pose(new Disjoint(x, y, lx, ly));
-    pose(new org.jacop.constraints.diffn.Diffn(x, y, lx, ly, true));
+    pose(new Diffn(x, y, lx, ly, true));
   }
   
   static void gen_jacop_diff2(SimpleNode node) {
@@ -405,7 +406,7 @@ class GlobalConstraints extends Support implements ParserTreeConstants {
 	r[i][j] = v[4*i+j];
 
     // pose(new Diff2(r));
-    pose(new org.jacop.constraints.diffn.Diffn(r, false));
+    pose(new Diffn(r, false));
   }
   
   static void gen_jacop_list_diff2(SimpleNode node) {
@@ -415,7 +416,7 @@ class GlobalConstraints extends Support implements ParserTreeConstants {
     IntVar[] ly = getVarArray((SimpleNode)node.jjtGetChild(3));
 
     // pose(new Diff2(x, y, lx, ly));
-    pose(new org.jacop.constraints.diffn.Diffn(x, y, lx, ly, false));
+    pose(new Diffn(x, y, lx, ly, false));
   }
   
   static void gen_jacop_count(SimpleNode node) {
