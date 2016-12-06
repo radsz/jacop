@@ -290,7 +290,6 @@ public class Diffn extends Nooverlap {
 	  int oMin = rr.lst(oDim), oMax = rr.ect(oDim);
 	  if (oMin < oMax) {
 	    Interval block = new Interval(oMin, oMax);
-	    int lMin = rr.length(oDim).min();
 	    es[j++] = new Event(profileAdd, rr, min,   0, block);
 	    es[j++] = new Event(profileSubtract, rr, max, 0, block);
 	  }
@@ -380,7 +379,7 @@ public class Diffn extends Nooverlap {
 	    boolean blocking = blocking(sweepLine, r.origin(oDim).min(), r.origin(oDim).max()+r.length(oDim).min(), r.length(oDim).min());
 	    
 	    // ========= Pruning start variable
-	    if (r.length(oDim).min() > 0 && r.length(dim).min() > 0)
+	    if (r.exists()) //(r.length(oDim).min() > 0 && r.length(dim).min() > 0)
 	      if (startExcluded == Integer.MAX_VALUE) {
 	    	if (limit - profileValue < r.length(oDim).min() || blocking) {
 	    	  startExcluded = e.date() - r.length(dim).min() + 1;
@@ -440,7 +439,7 @@ public class Diffn extends Nooverlap {
 	  profileValue -= rr.length(oDim).min();
 
 	// ========= for start pruning
-	if (rr.length(oDim).min() > 0 && rr.length(dim).min() > 0)
+	if (rr.exists()) //(rr.length(oDim).min() > 0 && rr.length(dim).min() > 0)
 	  if (limit - profileValue < rr.length(oDim).min()
 	      || blocking(sweepLine, rr.origin(oDim).min(), rr.origin(oDim).max()+rr.length(oDim).min(), rr.length(oDim).min())) {
 	    startExcluded = e.date();
@@ -466,7 +465,7 @@ public class Diffn extends Nooverlap {
 	  profileValue -= rr.length(oDim).min();	
 
 	// ========= pruning start variable
-	if (rr.length(oDim).min() > 0 && rr.length(dim).min() > 0)
+	if (rr.exists()) //(rr.length(oDim).min() > 0 && rr.length(dim).min() > 0)
 	  if (startExcluded != Integer.MAX_VALUE) {
 	    // task ends and we remove forbidden area
 
@@ -530,15 +529,16 @@ public class Diffn extends Nooverlap {
     if (e.type() == profileAdd) {// add
       Interval previous = new Interval(IntDomain.MinInt, IntDomain.MinInt);
       for (int i = 0; i < sweepLine.size(); i++) {
-    	if ( (eBlock.max() > sweepLine.get(i).min() && eBlock.max() <= sweepLine.get(i).max())
-    	     || (eBlock.min() >= sweepLine.get(i).min() && eBlock.min() < sweepLine.get(i).max())) {
+	Interval sweepLineElement = sweepLine.get(i);
+    	if ( (eBlock.max() > sweepLineElement.min() && eBlock.max() <= sweepLineElement.max())
+    	     || (eBlock.min() >= sweepLineElement.min() && eBlock.min() < sweepLineElement.max())) {
     	  throw Store.failException; // overlap
 	}
-    	if (eBlock.max() <= sweepLine.get(i).min() && eBlock.min() >= previous.max()) {
+    	if (eBlock.max() <= sweepLineElement.min() && eBlock.min() >= previous.max()) {
     	  sweepLine.add(i, eBlock);
     	  return;
     	}
-    	previous = sweepLine.get(i);
+    	previous = sweepLineElement;
       }
 
       // add at the end
@@ -547,7 +547,8 @@ public class Diffn extends Nooverlap {
     }
     else // e.type() == profileSubtract; remove
       for (int i = 0; i < sweepLine.size(); i++) {
-    	if (sweepLine.get(i).min() == eBlock.min() && sweepLine.get(i).max() == e.block.max()) {
+	Interval sweepLineElement = sweepLine.get(i);
+    	if (sweepLineElement.min() == eBlock.min() && sweepLineElement.max() == e.block.max()) {
     	  sweepLine.remove(i);
 	  return;
 	}
@@ -561,17 +562,18 @@ public class Diffn extends Nooverlap {
 
     int s = start;    
     for (int i = 0; i < sweepLine.size(); i++) {
-      if (sweepLine.get(i).min() <= s) {
-    	s = Math.min(sweepLine.get(i).max(), end);
+      Interval sweepLineElement = sweepLine.get(i);
+      if (sweepLineElement.min() <= s) {
+    	s = Math.min(sweepLineElement.max(), end);
     	continue;
       }
-      if (sweepLine.get(i).min() - s >= length) {
+      if (sweepLineElement.min() - s >= length) {
 	return false;
       }
-      if (sweepLine.get(i).max() >= end) {
+      if (sweepLineElement.max() >= end) {
     	return true;
       }
-      s = Math.min(sweepLine.get(i).max(), end);
+      s = Math.min(sweepLineElement.max(), end);
     }
     if (end - s >= length) {
       return false;

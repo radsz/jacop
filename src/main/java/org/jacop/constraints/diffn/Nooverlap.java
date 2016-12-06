@@ -290,6 +290,11 @@ public class Nooverlap extends Constraint {
       
       BitSet os = overlapping[j].value();
       BitSet o = (BitSet)os.clone();
+      if (r.instantiatedBefore(store)) {
+	o.clear();
+	overlapping[j].update(o);
+	continue;
+      }
       for (int i = o.nextSetBit(0); i >= 0; i = o.nextSetBit(i+1)) {
       	if (! r.possibleOverlap(rectangle[i])) {
       	  o.set(i, false);

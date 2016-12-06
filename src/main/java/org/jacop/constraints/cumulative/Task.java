@@ -45,7 +45,7 @@ import org.jacop.core.IntervalDomain;
 
 class Task {
 
-  static Store store;
+  Store store;
   int index;
   IntVar start, dur, res;
   int treeIndex;

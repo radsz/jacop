@@ -31,48 +31,12 @@
 package org.jacop.fz;
 
 import java.util.ArrayList;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.function.*;
 
-import org.jacop.constraints.*;
-import org.jacop.constraints.knapsack.Knapsack;
-import org.jacop.constraints.regular.Regular;
-import org.jacop.core.BooleanVar;
-import org.jacop.core.BoundDomain;
+import org.jacop.constraints.Constraint;
 import org.jacop.core.FailException;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
-import org.jacop.core.Interval;
-import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
-import org.jacop.core.ValueEnumeration;
-import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.constraints.*;
-
-import org.jacop.set.constraints.AdiffBeqC;
-import org.jacop.set.constraints.AinB;
-import org.jacop.set.constraints.AintersectBeqC;
-import org.jacop.set.constraints.AunionBeqC;
-import org.jacop.set.constraints.CardAeqX;
-import org.jacop.set.constraints.EinA;
-import org.jacop.set.constraints.ElementSet;
-import org.jacop.set.constraints.Lex;
-import org.jacop.set.constraints.XinA;
-import org.jacop.set.constraints.AdisjointB;
-import org.jacop.set.core.BoundSetDomain;
-import org.jacop.set.core.SetVar;
-import org.jacop.util.fsm.FSM;
-import org.jacop.util.fsm.FSMState;
-import org.jacop.util.fsm.FSMTransition;
-import org.jacop.constraints.netflow.NetworkBuilder;
-import org.jacop.constraints.netflow.NetworkFlow;
-import org.jacop.constraints.netflow.simplex.Node;
-import org.jacop.constraints.geost.*;
 
 import org.jacop.satwrapper.SatTranslation;
 

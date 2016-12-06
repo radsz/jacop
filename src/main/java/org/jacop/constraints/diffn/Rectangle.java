@@ -154,6 +154,14 @@ public class Rectangle {
       length[0].singleton() && length[1].singleton();
   }
 
+  boolean instantiatedBefore(org.jacop.core.Store store) {
+    int level = store.level;
+    return origin[0].singleton() && origin[1].singleton() &&
+      origin[0].domain.stamp < level && origin[1].domain.stamp < level &&
+      length[0].singleton() && length[1].singleton() &&
+      length[0].domain.stamp < level && length[1].domain.stamp < level;
+  }
+  
   boolean exists() {
     return length[0].min() > 0 && length[1].min() > 0;
   }
