@@ -14,6 +14,7 @@ p1f/12
 prize-collecting/32-4-8-2
 prize-collecting/32-4-8-5
 radiation/i9-11
+rcpsp/00
 scheduling_with_assignments/scheduling_with_assignments14
 ship-schedlule.cp/7ShipsUnconst
 ship-schedule.mip/5ShipsMixed
