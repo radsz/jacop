@@ -550,7 +550,7 @@ public class Diffn extends Nooverlap {
     else // e.type() == profileSubtract; remove
       for (int i = 0; i < sweepLine.size(); i++) {
 	Interval sweepLineElement = sweepLine.get(i);
-    	if (sweepLineElement.min() == eBlock.min() && sweepLineElement.max() == e.block.max()) {
+    	if (sweepLineElement.min() == eBlock.min() && sweepLineElement.max() == eBlock.max()) {
     	  sweepLine.remove(i);
 	  return;
 	}
@@ -563,8 +563,8 @@ public class Diffn extends Nooverlap {
       return false;
 
     int s = start;    
-    for (int i = 0; i < sweepLine.size(); i++) {
-      Interval sweepLineElement = sweepLine.get(i);
+    for (Interval sweepLineElement : sweepLine) {
+
       if (sweepLineElement.min() <= s) {
     	s = Math.min(sweepLineElement.max(), end);
     	continue;
