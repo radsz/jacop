@@ -44,15 +44,21 @@ Version 4.5
     finding O(k*n*logn), not-first-not-last, detectable and overload
     O(n*logn).
 
-12. Calls to new cumulative constraints in Scala wrapper.
+12. New, more efficient implementation of Diffn constraint. Added
+    Nooveralp constraint implementing basic non-overlapping
+    conditions for rectangles and DiffnDecomposed implemented as three
+    constraints: Nooverlap and two CumulativeBasic constraints in
+    direction X and Y.
 
-13. New method for constraint generation for flatzinc.
+13. Calls to new cumulative and diffn constraints in Scala wrapper.
 
-14. Making JaCoP compatible with Scala 2.12.
+14. New method for constraint generation for flatzinc.
 
-15. Improvement in pruning for MinSimple and MaxSimple.
+15. Making JaCoP compatible with Scala 2.12.
 
-16. Bug fixes:
+16. Improvement in pruning for MinSimple and MaxSimple.
+
+17. Bug fixes:
    - Changing comparator method in LinearFloat that
      IllegalArgumentException is not reported.
    - Correcting bugs in AndBool, OrBool and AndBoolSimple.

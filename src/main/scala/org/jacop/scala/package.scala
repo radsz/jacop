@@ -9,6 +9,7 @@ import org.jacop.constraints.knapsack._
 import org.jacop.constraints.regular._
 import org.jacop.constraints.binpacking._
 import org.jacop.constraints.netflow._
+import org.jacop.constraints.diffn._
 import org.jacop.search._
 //import org.jacop.set.core._
 import org.jacop.set.constraints._
@@ -485,7 +486,33 @@ package object scala {
   def diff2(rectangles: Array[Array[IntVar]])  {
     val c = new Diff(rectangles.asInstanceOf[Array[Array[org.jacop.core.IntVar]]])
     if (trace) println(c)
-    impModel.impose( new Diff(rectangles.asInstanceOf[Array[Array[org.jacop.core.IntVar]]]) )
+    impModel.impose( c )
+  }
+
+/**
+* Wrapper for [[org.jacop.constraints.diffn.Diffn]].
+*
+* @param x coordinate X of rectangle. 
+* @param y coordinate Y of rectangle. 
+* @param lx length in derection X of rectangle. 
+* @param ly length in derection Y of rectangle. 
+*/
+  def diffn(x: Array[IntVar], y: Array[IntVar], lx: Array[IntVar], ly: Array[IntVar])  {
+    val c = new Diffn(x.asInstanceOf[Array[org.jacop.core.IntVar]], y.asInstanceOf[Array[org.jacop.core.IntVar]],
+		     lx.asInstanceOf[Array[org.jacop.core.IntVar]], ly.asInstanceOf[Array[org.jacop.core.IntVar]])
+    if (trace) println(c)
+    impModel.impose(c)
+  }
+
+/**
+* Wrapper for [[org.jacop.constraints.diffn.Diffn]].
+*
+* @param rectangles array of four element vectors representing rectnagles [x, y, lx, ly]
+*/
+  def diffn(rectangles: Array[Array[IntVar]])  {
+    val c = new Diffn(rectangles.asInstanceOf[Array[Array[org.jacop.core.IntVar]]])
+    if (trace) println(c)
+    impModel.impose( c )
   }
 
 /**
