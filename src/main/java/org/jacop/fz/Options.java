@@ -63,6 +63,8 @@ public class Options {
     boolean precisionDefined = false;
     double precision;
 
+    double format;
+
     static boolean boundConsistency = false;
 
     boolean runSearch = true;
@@ -112,7 +114,9 @@ public class Options {
 						"         output variables only.\n" +
 						"    -i, --interval print intervals instead of values for floating variables\n"+
 						"    -p <value>, --precision <value> defines precision for floating operations\n"+
-						"        overrides precision definition in search annotation."
+						"        overrides precision definition in search annotation.\n"+
+						"    -f <value>, --format <value> defines format (number digits after decimal point)\n"+
+						"        for floating variables.\n"
 				);
 				System.exit(0);
 			}
@@ -162,6 +166,16 @@ public class Options {
 					else {
 					    precision = FloatDomain.precision();
 					    System.err.println("%% Precisison parameter not correct; using default precision " + precision);
+					}
+					i++;
+				}
+				else if (args[i].equals("-f") || args[i].equals("-format")) {
+					format = Double.parseDouble(args[++i]);
+					if (format >= 0)
+					    FloatDomain.setFormat(format);
+					else {
+					    format = Double.MAX_VALUE;
+					    System.err.println("%% Format parameter not correct;");
 					}
 					i++;
 				}
