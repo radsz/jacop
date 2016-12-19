@@ -4447,7 +4447,8 @@ public class IntervalDomain extends IntDomain {
 						var.domainHasChanged(IntDomain.GROUND);
 						return;
 					}
-					if (counter == 0)
+
+					if (max() < min || max < min())
 						var.domainHasChanged(IntDomain.BOUND);
 					else
 						var.domainHasChanged(IntDomain.ANY);

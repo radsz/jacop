@@ -71,7 +71,7 @@ public class DiffnDecomposed extends DecomposedConstraint {
   
   /**
    * It specifies a diff constraint. 
-   * @param rectangles list of rectangles which can not overlap in at least one dimension.
+   * @param rectangle list of rectangles which can not overlap in at least one dimension.
    */
   public DiffnDecomposed(IntVar[][] rectangle) {
     
@@ -138,7 +138,7 @@ public class DiffnDecomposed extends DecomposedConstraint {
 	
   /**
    * It specifies a diffn constraint. 
-   * @param rectangles list of rectangles which can not overlap in at least one dimension.
+   * @param rectangle list of rectangles which can not overlap in at least one dimension.
    */
   public DiffnDecomposed(ArrayList<? extends ArrayList<? extends IntVar>> rectangle) {
 
