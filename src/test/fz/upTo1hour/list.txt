@@ -16,7 +16,6 @@ prize-collecting/32-4-8-5
 radiation/i9-11
 rcpsp/00
 scheduling_with_assignments/scheduling_with_assignments14
-ship-schedlule.cp/7ShipsUnconst
 ship-schedule.mip/5ShipsMixed
 still_life/9x9
 tdtsp/inst_10_24_10

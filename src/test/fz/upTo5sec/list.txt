@@ -941,6 +941,7 @@ set_partition/set_partition
 set_partition_stackoverflow/set_partition_stackoverflow
 set_puzzle/set_puzzle
 shift/shift
+ship-schedlule.cp/7ShipsUnconst
 ship-schedule.mip/3ShipsUnconst
 ship-schedule.mip/3Ships
 shopping/shopping
