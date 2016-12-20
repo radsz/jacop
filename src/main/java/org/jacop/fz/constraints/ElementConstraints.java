@@ -81,6 +81,10 @@ class ElementConstraints extends Support implements ParserTreeConstants {
     generateFloatElementConstraint(node);
   }
 
+  static void gen_array_var_float_element(SimpleNode node) {
+    generateVarFloatElementConstraint(node);
+  }
+
   static void generateIntElementConstraint(SimpleNode node) throws FailException {
 
 	IntVar p1 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
@@ -155,7 +159,7 @@ class ElementConstraints extends Support implements ParserTreeConstants {
 
 	    for (int i=0; i < p2.length; i++)
 		if (p2[i] == null) {
-		    System.err.println("%% var_set_element with list of set variables is not avaible in org.jacop.set");
+		    System.err.println("%% var_set_element with list of set variables is not available in org.jacop.set");
 		    System.exit(0);
 		}
 	    
@@ -163,7 +167,7 @@ class ElementConstraints extends Support implements ParserTreeConstants {
 
 	}
 	else {
-	    System.err.println("%% var_set_element with list of set variables is not avaible in org.jacop.set");
+	    System.err.println("%% var_set_element with list of set variables is not available in org.jacop.set");
 	    System.exit(0);
 	}
     }
@@ -175,6 +179,31 @@ class ElementConstraints extends Support implements ParserTreeConstants {
 	double[] p2 = getFloatArray((SimpleNode)node.jjtGetChild(1));
 	FloatVar p3 = getFloatVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
 
+	poseElementFloat(p1, p2, p3);
+
+    }
+  
+    static void generateVarFloatElementConstraint(SimpleNode node) throws FailException {
+
+	IntVar p1 = getVariable((ASTScalarFlatExpr)node.jjtGetChild(0));
+	FloatVar[] p2 = getFloatVarArray((SimpleNode)node.jjtGetChild(1));
+	FloatVar p3 = getFloatVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
+
+	if (allFloatSingleton(p2)) {
+	    double[] p2double = new double[p2.length];
+	    for (int i = 0; i < p2.length; i++) 
+		p2double[i] = p2[i].value();
+
+	    poseElementFloat(p1, p2double, p3);
+	}
+	else {
+	    System.err.println("%% array_var_float_element with list of variables is not available in org.jacop.floats");
+	    System.exit(0);	  
+	}	
+    }
+  
+  static void poseElementFloat(IntVar p1, double[] p2, FloatVar p3) {
+    
 	p1.domain.in(store.level, p1, 1, IntDomain.MaxInt);
 
 	int newP2Length = p1.max() - p1.min() + 1;
@@ -193,5 +222,12 @@ class ElementConstraints extends Support implements ParserTreeConstants {
 		return false;
 	return true;
     }
-    
+
+  static boolean allFloatSingleton(FloatVar[] vs) {
+	for (FloatVar v : vs) 
+	  if (v.min() != v.max())
+		return false;
+	return true;
+    }
+
 }

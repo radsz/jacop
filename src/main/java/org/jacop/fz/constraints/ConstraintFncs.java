@@ -106,6 +106,7 @@ public final class ConstraintFncs {
   public static void array_set_element(SimpleNode n) {ElementConstraints.gen_array_set_element(n);}
   public static void array_var_set_element(SimpleNode n) {ElementConstraints.gen_array_var_set_element(n);}
   public static void array_float_element(SimpleNode n) {ElementConstraints.gen_array_float_element(n);}
+  public static void array_var_float_element(SimpleNode n) {ElementConstraints.gen_array_var_float_element(n);}
   
   // Global constraints
   public static void jacop_cumulative(SimpleNode n) {GlobalConstraints.gen_jacop_cumulative(n);}
