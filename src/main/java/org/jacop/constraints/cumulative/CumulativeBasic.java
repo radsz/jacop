@@ -406,12 +406,14 @@ public class CumulativeBasic extends Constraint {
 		      System.out.print(">>> CumulativeBasic Profile 1. Narrowed " + t.start + " \\ "
 				       + new IntervalDomain(startExcluded[ti], (int)(e.date()-1)));
 		    
+/*
 		    IntervalDomain update = new IntervalDomain(IntDomain.MinInt, startExcluded[ti] - 1);
 		    update.unionAdapt(e.date(), IntDomain.MaxInt);
 		    t.start.domain.in(store.level, t.start, update);
+*/
 
 		    // ERROR DOES NOT WORK CORRECTLY IN ALL CASES!!! USE method in()
-		    // t.start.domain.inComplement(store.level, t.start, startExcluded[ti], e.date() - 1);
+		    t.start.domain.inComplement(store.level, t.start, startExcluded[ti], e.date() - 1);
 		    
 		    if (debugNarr)
 		      System.out.println(" => " + t.start);

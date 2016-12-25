@@ -887,54 +887,6 @@ public class IntervalDomain extends IntDomain {
 
 	}
 
-	/**
-	 * It divides the domain. E.g. (5..9, 11..13) / 3 = 2..4.
-	 * @param div divider.
-	 * @return domain after division.
-	 */
-	// public IntDomain divide(int div) {
-
-	// 	assert checkInvariants() == null : checkInvariants() ;
-		
-	// 	IntervalDomain temp = new IntervalDomain(size);
-
-	// 	int newMin;
-	// 	int newMax;
-
-	// 	boolean current = false;
-	// 	int currentMin = -1;
-	// 	int currentMax = -1;
-
-	// 	for (int m = 0; m < size; m++) {
-
-	// 		Interval I1 = intervals[m];
-
-	// 		newMin = div(I1.min, div);
-	// 		newMax = I1.max / div;
-
-	// 		if (current != false && currentMax + 1 == newMin) {
-	// 			currentMax = newMax;
-	// 			continue;
-	// 		}
-
-	// 		if (newMin <= newMax) {
-
-	// 			if (current) {
-	// 				temp.unionAdapt(currentMin, currentMax);
-	// 			}
-
-	// 			current = true;
-
-	// 			currentMin = newMin;
-	// 			currentMax = newMax;
-	// 		}
-	// 	}
-
-	// 	assert temp.checkInvariants() == null : temp.checkInvariants() ;
-	// 	return temp;
-
-	// }
-
 	private int div(int A, int B) {
 		int Div, Rem;
 
@@ -4290,7 +4242,7 @@ public class IntervalDomain extends IntDomain {
 					if (var.singleton())
 						var.domainHasChanged(IntDomain.GROUND);
 					else
-						if (max() > max)
+						if (max() < min)
 							var.domainHasChanged(IntDomain.BOUND);
 						else
 							var.domainHasChanged(IntDomain.ANY);
@@ -4311,7 +4263,7 @@ public class IntervalDomain extends IntDomain {
 						var.domainHasChanged(IntDomain.GROUND);
 						return;
 					}
-					if (counter == 0)
+					if (max() < min || max < min())
 						var.domainHasChanged(IntDomain.BOUND);
 					else
 						var.domainHasChanged(IntDomain.ANY);
@@ -4421,7 +4373,7 @@ public class IntervalDomain extends IntDomain {
 					if (var.singleton())
 						var.domainHasChanged(IntDomain.GROUND);
 					else
-						if (max() > max)
+						if (result.max() < min)
 							var.domainHasChanged(IntDomain.BOUND);
 						else
 							var.domainHasChanged(IntDomain.ANY);
@@ -4448,7 +4400,7 @@ public class IntervalDomain extends IntDomain {
 						return;
 					}
 
-					if (max() < min || max < min())
+					if (result.max() < min || max < result.min())
 						var.domainHasChanged(IntDomain.BOUND);
 					else
 						var.domainHasChanged(IntDomain.ANY);
@@ -4482,7 +4434,7 @@ public class IntervalDomain extends IntDomain {
 					if (var.singleton())
 						var.domainHasChanged(IntDomain.GROUND);
 					else
-						if (max() >= max || min <= min())
+						if (result.max() < min || max < result.min())
 							var.domainHasChanged(IntDomain.BOUND);
 						else
 							var.domainHasChanged(IntDomain.ANY);
