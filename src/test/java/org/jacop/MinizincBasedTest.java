@@ -46,7 +46,7 @@ public class MinizincBasedTest {
 
 
         return Arrays.asList(new Object[][]{
-/*
+
                 //%%	java.lang.ArithmeticException: Overflow occurred from int 50000000 * 50000000
 
                 //%%	java.lang.ArithmeticException: Overflow occurred from int 50000000 * 50000000
@@ -65,7 +65,7 @@ public class MinizincBasedTest {
 
 
 
-                //timeout{"test/bacp/bacp-11"},
+
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0
                 // {"test/bacp/bacp-12"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0
@@ -105,200 +105,33 @@ public class MinizincBasedTest {
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0
                 // {"test/black-hole/0"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0
-                //timeout{"test/black-hole/1"},
-                {"test/black-hole/2"},
+
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/black-hole/3"},
-                //timeout{"test/black-hole/4"},
+
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/black-hole/5"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/black-hole/6"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/black-hole/7"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/black-hole/8"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/black-hole/9"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/black-hole/10"},
-                //timeout{"test/black-hole/11"},
+
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/black-hole/12"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/black-hole/13"},
-                //timeout{"test/black-hole/14"},
 
-               {"test/black-hole/15"},
-
-                {"test/black-hole/16"},
-                {"test/black-hole/17"},
-                {"test/black-hole/18"},
-                {"test/black-hole/19"},
-                {"test/black-hole/20"},
-
-                //bus_scheduling
-                {"test/bus_scheduling/c1"},
-                {"test/bus_scheduling/c1a"},
-                {"test/bus_scheduling/c2"},
-                {"test/bus_scheduling/r1"},
-                {"test/bus_scheduling/r1a"},
-                {"test/bus_scheduling/r2"},
-                {"test/bus_scheduling/r3"},
-                {"test/bus_scheduling/r4"},
-                {"test/bus_scheduling/r5"},
-                {"test/bus_scheduling/r5a"},
-                {"test/bus_scheduling/t2"},
-
-                //cargo
-                {"test/cargo/challenge04_1s_626"},
-                {"test/cargo/challenge05_1s_954"},
-                {"test/cargo/challenge07_1s_133"},
-                {"test/cargo/challenge08_222f_3475"},
-                {"test/cargo/challenge10_15966f_2060"},
-
+               //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0
+                //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0
+                //java.lang.IndexOutOfBoundsException: {"test/black-hole/19"},
 
                 //carpet-cutting
-                {"test/carpet-cutting/mzn_rnd_test.01"},
-                {"test/carpet-cutting/mzn_rnd_test.02"},
-                {"test/carpet-cutting/mzn_rnd_test.03"},
-                {"test/carpet-cutting/mzn_rnd_test.04"},
-                {"test/carpet-cutting/mzn_rnd_test.05"},
-                {"test/carpet-cutting/mzn_rnd_test.06"},
-                {"test/carpet-cutting/mzn_rnd_test.07"},
-                {"test/carpet-cutting/mzn_rnd_test.08"},
-                {"test/carpet-cutting/mzn_rnd_test.09"},
-                {"test/carpet-cutting/mzn_rnd_test.10"},
-                {"test/carpet-cutting/mzn_rnd_test.11"},
-                {"test/carpet-cutting/mzn_rnd_test.12"},
-                {"test/carpet-cutting/mzn_rnd_test.13"},
-                {"test/carpet-cutting/mzn_rnd_test.14"},
-                {"test/carpet-cutting/mzn_rnd_test.15"},
-                {"test/carpet-cutting/mzn_rnd_test.16"},
-                {"test/carpet-cutting/mzn_rnd_test.17"},
-                {"test/carpet-cutting/mzn_rnd_test.18"},
-                {"test/carpet-cutting/mzn_rnd_test.19"},
-                {"test/carpet-cutting/mzn_rnd_test.20"},
+                //java.lang.AssertionError: Min value can not be greater than max value{"test/carpet-cutting/mzn_rnd_test.01"},
+                //java.lang.AssertionError: Min value can not be greater than max value{"test/carpet-cutting/mzn_rnd_test.02"},
 
+                //java.lang.AssertionError: Min value can not be greater than max value{"test/carpet-cutting/mzn_rnd_test.11"},
+                //java.lang.AssertionError: Min value can not be greater than max value{"test/carpet-cutting/mzn_rnd_test.12"},
 
-//                //cutstock
-//                {"test/cutstock/small_test0"},
-//                {"test/cutstock/type01_TEST1"},
-//                {"test/cutstock/type01_TEST2"},
-//                {"test/cutstock/type01_TEST3"},
-//                {"test/cutstock/type01_TEST4"},
-//                {"test/cutstock/type01_TEST5"},
-//                {"test/cutstock/type01_TEST6"},
-//                {"test/cutstock/type01_TEST7"},
-//                {"test/cutstock/type01_TEST8"},
-//                {"test/cutstock/type01_TEST10"},
-//                {"test/cutstock/type02_TEST1"},
-//                {"test/cutstock/type02_TEST2"},
-//                {"test/cutstock/type02_TEST3"},
-//                {"test/cutstock/type02_TEST4"},
-//                {"test/cutstock/type02_TEST5"},
-//                {"test/cutstock/type02_TEST6"},
-//                {"test/cutstock/type02_TEST7"},
-//                {"test/cutstock/type02_TEST8"},
-//                {"test/cutstock/type02_TEST9"},
-//                {"test/cutstock/type02_TEST10"},
-//                {"test/cutstock/type03_TEST1"},
-//                {"test/cutstock/type03_TEST2"},
-//                {"test/cutstock/type03_TEST3"},
-//                {"test/cutstock/type03_TEST4"},
-//                {"test/cutstock/type03_TEST5"},
-//                {"test/cutstock/type03_TEST6"},
-//                {"test/cutstock/type03_TEST7"},
-//                {"test/cutstock/type03_TEST8"},
-//                {"test/cutstock/type03_TEST9"},
-//                {"test/cutstock/type03_TEST10"},
-//                {"test/cutstock/type04_TEST1"},
-//                {"test/cutstock/type04_TEST2"},
-//                {"test/cutstock/type04_TEST3"},
-//                {"test/cutstock/type04_TEST4"},
-//                {"test/cutstock/type04_TEST5"},
-//                {"test/cutstock/type04_TEST6"},
-//                {"test/cutstock/type04_TEST7"},
-//                {"test/cutstock/type04_TEST8"},
-//                {"test/cutstock/type04_TEST9"},
-//                {"test/cutstock/type04_TEST10"},
-//                {"test/cutstock/type07_TEST1"},
-//                {"test/cutstock/type07_TEST2"},
-//                {"test/cutstock/type07_TEST3"},
-//                {"test/cutstock/type07_TEST4"},
-//                {"test/cutstock/type07_TEST5"},
-//                {"test/cutstock/type07_TEST7"},
-//                {"test/cutstock/type07_TEST8"},
-//                {"test/cutstock/type07_TEST9"},
-//                {"test/cutstock/type07_TEST10"},
-//                {"test/cutstock/type08_TEST1"},
-//                {"test/cutstock/type08_TEST2"},
-//                {"test/cutstock/type08_TEST3"},
-//                {"test/cutstock/type08_TEST4"},
-//                {"test/cutstock/type08_TEST5"},
-//                {"test/cutstock/type08_TEST6"},
-//                {"test/cutstock/type08_TEST7"},
-//                {"test/cutstock/type08_TEST8"},
-//                {"test/cutstock/type08_TEST9"},
-//                {"test/cutstock/type08_TEST10"},
-//                {"test/cutstock/type09_TEST1"},
-//                {"test/cutstock/type09_TEST2"},
-//                {"test/cutstock/type09_TEST3"},
-//                {"test/cutstock/type09_TEST4"},
-//                {"test/cutstock/type09_TEST5"},
-//                {"test/cutstock/type09_TEST6"},
-//                {"test/cutstock/type09_TEST7"},
-//                {"test/cutstock/type09_TEST8"},
-//                {"test/cutstock/type09_TEST9"},
-//                {"test/cutstock/type09_TEST10"},
-//                {"test/cutstock/type10_TEST1"},
-//                {"test/cutstock/type10_TEST2"},
-//                {"test/cutstock/type10_TEST3"},
-//                {"test/cutstock/type10_TEST4"},
-//                {"test/cutstock/type10_TEST5"},
-//                {"test/cutstock/type10_TEST6"},
-//                {"test/cutstock/type10_TEST7"},
-//                {"test/cutstock/type10_TEST8"},
-//                {"test/cutstock/type10_TEST9"},
-//                {"test/cutstock/type10_TEST10"},
-//                {"test/cutstock/type13_TEST1"},
-//                {"test/cutstock/type13_TEST2"},
-//                {"test/cutstock/type13_TEST3"},
-//                {"test/cutstock/type13_TEST4"},
-//                {"test/cutstock/type13_TEST5"},
-//                {"test/cutstock/type13_TEST6"},
-//                {"test/cutstock/type13_TEST7"},
-//                {"test/cutstock/type13_TEST8"},
-//                {"test/cutstock/type13_TEST9"},
-//                {"test/cutstock/type13_TEST10"},
-//                {"test/cutstock/type14_TEST1"},
-//                {"test/cutstock/type14_TEST2"},
-//                {"test/cutstock/type14_TEST3"},
-//                {"test/cutstock/type14_TEST4"},
-//                {"test/cutstock/type14_TEST5"},
-//                {"test/cutstock/type14_TEST6"},
-//                {"test/cutstock/type14_TEST7"},
-//                {"test/cutstock/type14_TEST8"},
-//                {"test/cutstock/type14_TEST9"},
-//                {"test/cutstock/type14_TEST10"},
-//                {"test/cutstock/type15_TEST1"},
-//                {"test/cutstock/type15_TEST2"},
-//                {"test/cutstock/type15_TEST3"},
-//                {"test/cutstock/type15_TEST4"},
-//                {"test/cutstock/type15_TEST5"},
-//                {"test/cutstock/type15_TEST6"},
-//                {"test/cutstock/type15_TEST7"},
-//                {"test/cutstock/type15_TEST8"},
-//                {"test/cutstock/type15_TEST9"},
-//                {"test/cutstock/type15_TEST10"},
-//                {"test/cutstock/type16_TEST1"},
-//                {"test/cutstock/type16_TEST2"},
-//                {"test/cutstock/type16_TEST3"},
-//                {"test/cutstock/type16_TEST4"},
-//                {"test/cutstock/type16_TEST5"},
-//                {"test/cutstock/type16_TEST6"},
-//                {"test/cutstock/type16_TEST7"},
-//                {"test/cutstock/type16_TEST8"},
 
                 //cutstock
-                {"test/cutstock/small_test0"},
-                //timeout{"test/cutstock/type01_TEST1"},
-                //timeout{"test/cutstock/type01_TEST2"},
-                {"test/cutstock/type01_TEST3"},
-                {"test/cutstock/type01_TEST4"},
-                {"test/cutstock/type01_TEST5"},
-                {"test/cutstock/type01_TEST6"},
+                //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/cutstock/small_test0"},
                 {"test/cutstock/type01_TEST7"},
                 {"test/cutstock/type01_TEST8"},
                 {"test/cutstock/type01_TEST10"},
@@ -521,7 +354,7 @@ public class MinizincBasedTest {
                  {"test/nonogram/non_med_4"},
 
 
-                {}
+
 
 
                 //golomb
@@ -775,7 +608,7 @@ public class MinizincBasedTest {
                 {"test/pattern_set_mining_k1/ionosphere"},
                 {"test/pattern_set_mining_k1/kr-vs-kp"},
                 {"test/pattern_set_mining_k1/mushroom"},
-                {"test/pattern_set_mining_k1/pattern_set_mining_k1.mzn
+                {"test/pattern_set_mining_k1/pattern_set_mining_k1.mzn"},
                 {"test/pattern_set_mining_k1/segment"},
                 {"test/pattern_set_mining_k1/sonar"},
                 {"test/pattern_set_mining_k1/splice-1"},
@@ -891,7 +724,7 @@ public class MinizincBasedTest {
                  {"test/oocsp_racks/oocsp_racks_030_f7_cc"},
                  {"test/oocsp_racks/oocsp_racks_030_mii8"},
                  {"test/oocsp_racks/oocsp_racks_100_r1"},
-*/
+
                 //prize-collecting
 //                {"upTo5min/prize-collecting/28-4-7-1"},
 //                {"upTo5min/prize-collecting/30-5-6-2"},
@@ -902,9 +735,7 @@ public class MinizincBasedTest {
                 //rcpsp-wet
 //                {"upTo10min/rcpsp-wet/j30_27_5-wet"},
 //                {"upTo5min/rcpsp-wet/j30_44_8-wet"},
-//              //Timeout{"test/rcpsp-wet/j60_36_8-wet"},
-                //Timeout{"test/rcpsp-wet/j90_10_10-wet"},
-                //Timeout{"test/rcpsp-wet/j90_19_7-wet"},
+
 
                 //solbat
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0 {"test/solbat/sb_13_13_5_1"},
@@ -1035,13 +866,6 @@ public class MinizincBasedTest {
                 //%% Stack overflow exception error; consider option -Xss... for JVM{"test/wwtpp-random/ex09800_2600_100"},
                 //%% Stack overflow exception error; consider option -Xss... for JVM{"test/wwtpp-random/ex09900_2600_100"},
                 //%% Stack overflow exception error; consider option -Xss... for JVM{"test/wwtpp-random/ex10000_2600_100"},
-                //timeout{"test/wwtpp-random/ex10100_2600_100"},
-                //timeout{"test/wwtpp-random/ex10200_2600_100"},
-                //timeout{"test/wwtpp-random/ex10300_2600_100"},
-                //timeout{"test/wwtpp-random/ex10400_2600_100"},
-                //timeout{"test/wwtpp-random/ex10500_2600_100"},
-                //timeout{"test/wwtpp-random/ex10600_2600_100"},
-                //timeout{"test/wwtpp-random/ex10700_2600_100"},
                 //%% Stack overflow exception error; consider option -Xss... for JVM{"test/wwtpp-random/ex10800_2600_100"},
                 ////%% Stack overflow exception error; consider option -Xss... for JVM{"test/wwtpp-random/ex10900_2600_100"},
                 ////%% Stack overflow exception error; consider option -Xss... for JVM{"test/wwtpp-random/ex11000"},
@@ -1368,7 +1192,7 @@ public class MinizincBasedTest {
 
                 //traveling-tppv
 
-                //timeout{"test/traveling-tppv/circ14bnonbal"},
+
 
                 //trucking
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0
@@ -1377,19 +1201,8 @@ public class MinizincBasedTest {
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0 {"test/trucking/03"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0 {"test/trucking/04"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0 {"test/trucking/05"},
-                //timeout {"test/trucking/06"},
-                //timeout {"test/trucking/07"},
-                //timeout {"test/trucking/08"},
-                //timeout {"test/trucking/09"},
-                //timeout {"test/trucking/10"},
-                //timeout {"test/trucking/11"},
-                //timeout {"test/trucking/12"},
-                //timeout {"test/trucking/13"},
-                //timeout {"test/trucking/14"},
-                //timeout {"test/trucking/15"},
 
-                //table_seating
-                //timeout{"test/table_seating/table_seating"},
+
 
                 //shortest_path
                 {"upTo5sec/shortest_path/00"},
@@ -1401,7 +1214,6 @@ public class MinizincBasedTest {
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/shortest_path/06"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/shortest_path/07"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/shortest_path/08"},
-                //timeout{"test/shortest_path/09"},
 
 
                 //talent_scheduling
@@ -1424,11 +1236,6 @@ public class MinizincBasedTest {
                 //template_design
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/template_design/catfood_2"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/template_design/catfood_3"},
-                //timeout{"test/template_design/herbs_2"},
-                //timeout{"test/template_design/herbs_3"},
-                //timeout{"test/template_design/magazine_inserts_2"},
-                //timeout{"test/template_design/magazine_inserts_3"},
-                //timeout{"test/template_design/magazine_inserts_4"},
 
                 //tents
                 {"upTo5sec/tents/tents_1"},
@@ -1450,10 +1257,7 @@ public class MinizincBasedTest {
 //                {"upTo5sec/sugiyama2-mznchallenge2010/g5_7_7_7_7_3"},
 
                 //train
-                //timeout{"test/train/instance.1"},
-                //timeout{"test/train/instance.2"},
-                //timeout{"test/train/instance.3"},
-                //timeout{"test/train/instance.4"},
+
 //                {"test/train/instance.5"},
 //                {"test/train/instance.6"},
 //                {"test/train/instance.7"},
@@ -1470,13 +1274,10 @@ public class MinizincBasedTest {
                 {"upTo5sec/steiner-triples/03"},
                 {"upTo5sec/steiner-triples/07"},
                 //{"upTo10min/steiner-triples/09"},
-                //timeout{"test/steiner-triples/13"},
-                //timeout{"test/steiner-triples/15"},
-                //timeout{"test/steiner-triples/19"},
+
 
                 //trucking_hl
-                //timeout{"test/trucking_hl/trucking_hl_1"},
-                //timeout{"test/trucking_hl/trucking_hl_2"},
+
                 //Warning: Not implemented indomain method "indomain"; used indomain_min{"test/trucking_hl/trucking_hl_3"},
                 //Warning: Not implemented indomain method "indomain"; used indomain_min{"test/trucking_hl/trucking_hl_4"},
                 //Warning: Not implemented indomain method "indomain"; used indomain_min{"test/trucking_hl/trucking_hl_5"},
@@ -1575,21 +1376,6 @@ public class MinizincBasedTest {
                 //openshop
                 //Warning: Not implemented indomain method "indomain"; used indomain_min{"test/openshop/gp10-4"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0 {"test/openshop/j7per10-1"},
-                //timeout{"test/openshop/j8per0-2"},
-                //timeout{"test/openshop/tai20-4"},
-                //timeout{"test/openshop/tai20-6"},
-
-                //spot5
-                //timeout  {"test/spot5/5"},
-                //timeout{"test/spot5/28"},
-                //timeout{"test/spot5/29"},
-                //timeout{"test/spot5/42"},
-                //timeout{"test/spot5/54"},
-                //timeout{"test/spot5/412"},
-                //timeout{"test/spot5/414"},
-                //timeout{"test/spot5/503"},
-                //timeout{"test/spot5/1401"},
-                //timeout{"test/spot5/1502"},
 
                 //prop_stress
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/prop_stress/0100"},
@@ -1597,18 +1383,12 @@ public class MinizincBasedTest {
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/prop_stress/0300"},
                 //=====UNSATISFIABLE====={"test/prop_stress/0400"},
                 //=====UNSATISFIABLE====={"test/prop_stress/0500"},
-                //timeout{"test/prop_stress/0600"},
-                //timeout{"test/prop_stress/0700"},
-                //timeout{"test/prop_stress/0800"},
-                //timeout{"test/prop_stress/0900"},
-                //timeout{"test/prop_stress/1000"},
+
 
                 //on-call-rostering
 //                 {"upTo5sec/on-call-rostering/4s-10d"},
 //                 {"upTo5min/on-call-rostering/4s-23d"},
-                 //timeout{"test/on-call-rostering/10s-50d"},
-                 //timeout{"test/on-call-rostering/10s-150d"},
-                 //timeout{"test/on-call-rostering/20s-200d"},
+
 
                 //pentominoes
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/pentominoes/01"},
@@ -1640,9 +1420,8 @@ public class MinizincBasedTest {
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/ship-schedule.cp/7ShipsMixed"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/ship-schedule.cp/7ShipsMixedUnconst"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/ship-schedule.cp/7ShipsUnconst"},
-                //Timeout {"test/ship-schedule.cp/8Ships"},
-                 //timeeout{"test/ship-schedule.cp/8ShipsMixed"},
-                 //timeout{"test/ship-schedule.cp/8ShipsMixedUnconstr"},
+
+
                  //{"upTo1hour/ship-schedule.cp/8ShipsUnconst"},
 
                 //ship-schedule.mip
@@ -1654,22 +1433,14 @@ public class MinizincBasedTest {
 //                {"upTo5min/ship-schedule.mip/4ShipsMixed"},
 //                {"upTo5min/ship-schedule.mip/4ShipsMixedUnconst"},
 //                {"upTo5min/ship-schedule.mip/4ShipsUnconst"},
-                //timeout{"test/ship-schedule.mip/5Ships"},
+
                 //{"upTo1hour/ship-schedule.mip/5ShipsMixed"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/ship-schedule.mip/5ShipsMixedUnconst"},
                 //{"above1hour/ship-schedule.mip/5ShipsUnconst"},
-                //timeout{"test/ship-schedule.mip/6Ships"},
+
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0 {"test/ship-schedule.mip/6ShipsMixed"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0 {"test/ship-schedule.mip/6ShipsMixedUnconst"},
-                //timeout{"test/ship-schedule.mip/6ShipsUnconst"},
-                //timeout{"test/ship-schedule.mip/7Ships"},
-                //timeout{"test/ship-schedule.mip/7ShipsMixed"},
-                //timeout{"test/ship-schedule.mip/7ShipsMixedUnconst"},
-                //timeout{"test/ship-schedule.mip/7ShipsUnconst"},
-                //timeout{"test/ship-schedule.mip/8Ships"},
-                //timeout{"test/ship-schedule.mip/8ShipsMixed"},
-                //timeout{"test/ship-schedule.mip/8ShipsMixedUnconstr"},
-                //timeout{"test/ship-schedule.mip/8ShipsUnconst"},
+
 
                 //still_life
 //                {"upTo5sec/still_life/2x3"},
@@ -1693,7 +1464,7 @@ public class MinizincBasedTest {
                 {"upTo5sec/still_life_free/6x6"},
                 {"upTo5min/still_life_free/7x7"},
                 //{"above1hour/still_life_free/8x8"},
-                //timeout{"test/still_life_free/9x9"},
+
 
                 //still_life_full_border
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/still_life_free/3x8"},
@@ -1724,17 +1495,12 @@ public class MinizincBasedTest {
 
                 //smelt
                 //{"upTo5sec/smelt/smelt_2"},
-                //timeout{"test/smelt/smelt_3"},
                 //{"above1hour/smelt/smelt_4"},
-                //timeout{"test/smelt/smelt_5"},
-                //timeout{"test/smelt/smelt_11"},
 
                 //rectangle-packing
                //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0 {"test/rectangle-packing/data_mznc2014/rpp18_true"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/rectangle-packing/data_mznc2014/rpp21_false"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/rectangle-packing/data_mznc2014/rpp22_false"},
-                //timeout{"test/rectangle-packing/data_mznc2014/rpp23_false"},
-                //timeout{"test/rectangle-packing/data_mznc2014/rpp26_false"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/rectangle-packing/data_square/rpp03_false"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/rectangle-packing/data_square/rpp03_true"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/rectangle-packing/data_square/rpp04_false"},
@@ -1772,27 +1538,9 @@ public class MinizincBasedTest {
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/rectangle-packing/data_square/rpp20_true"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/rectangle-packing/data_square/rpp21_false"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/rectangle-packing/data_square/rpp21_true"},
-                //timeout{"test/rectangle-packing/data_square/rpp22_false"},
-                //timeout{"test/rectangle-packing/data_square/rpp22_true"},
-                //timeout{"test/rectangle-packing/data_square/rpp23_false"},
-                //timeout{"test/rectangle-packing/data_square/rpp23_true"},
-                //timeout{"test/rectangle-packing/data_square/rpp24_false"},
-                //timeout{"test/rectangle-packing/data_square/rpp24_true"},
-                //timeout{"test/rectangle-packing/data_square/rpp25_false"},
-                //timeout{"test/rectangle-packing/data_square/rpp25_true"},
-                //timeout{"test/rectangle-packing/data_square/rpp26_false"},
-                //timeout{"test/rectangle-packing/data_square/rpp26_true"},
-                //timeout{"test/rectangle-packing/data_square/rpp27_false"},
-                //timeout{"test/rectangle-packing/data_square/rpp27_true"},
-                //timeout{"test/rectangle-packing/data_square/rpp28_false"},
-                //timeout{"test/rectangle-packing/data_square/rpp28_true"},
-                //timeout{"test/rectangle-packing/data_square/rpp29_false"},
-                //timeout{"test/rectangle-packing/data_square/rpp29_true"},
-                //timeout{"test/rectangle-packing/data_square/rpp30_false"},
-                //timeout{"test/rectangle-packing/data_square/rpp30_true"},
 
                 //rectangle-packing-mznc2014
-                //timeout{"test/rectangle-packing-mznc2014/data_square/rpp03_false"},
+
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/rectangle-packing-mznc2014/data_square/rpp03_true"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/rectangle-packing-mznc2014/data_square/rpp04_false"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/rectangle-packing-mznc2014/data_square/rpp04_true"},
@@ -1833,17 +1581,10 @@ public class MinizincBasedTest {
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/rectangle-packing-mznc2014/data_square/rpp22_false"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/rectangle-packing-mznc2014/data_square/rpp22_true"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/rectangle-packing-mznc2014/data_square/rpp23_false"},
-                //timeout{"test/rectangle-packing-mznc2014/data_square/rpp23_true"},
+
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/rectangle-packing-mznc2014/data_square/rpp24_false"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/rectangle-packing-mznc2014/data_square/rpp24_true"},
-                //timeout{"test/rectangle-packing-mznc2014/data_square/rpp25_false"},
-                //timeout{"test/rectangle-packing-mznc2014/data_square/rpp25_true"},
-                //timeout{"test/rectangle-packing-mznc2014/data_square/rpp26_false"},
-                //timeout{"test/rectangle-packing-mznc2014/data_square/rpp26_true"},
-                //timeout{"test/rectangle-packing-mznc2014/data_square/rpp27_false"},
-                //timeout{"test/rectangle-packing-mznc2014/data_square/rpp27_true"},
-                //timeout{"test/rectangle-packing-mznc2014/data_square/rpp28_false"},
-                //timeout{"test/rectangle-packing-mznc2014/data_square/rpp28_true"},
+
 //                {"test/rectangle-packing-mznc2014/data_square/rpp29_false"},
 //                {"test/rectangle-packing-mznc2014/data_square/rpp29_true"},
 //                {"test/rectangle-packing-mznc2014/data_square/rpp30_false"},
@@ -1910,56 +1651,22 @@ public class MinizincBasedTest {
                 {"upTo5sec/queens/004"},
                 {"upTo5sec/queens/008"},
                 {"upTo5sec/queens/020"},
-                //timeout{"upTo5sec/queens/050"},
-                //timeout{"test/queens/100"},
-                //timeout{"test/queens/200"},
-                //timeout{"test/queens/400"},
+
 
                 //rcpsp
                 //{"upTo1hour/rcpsp/00"},
-                //timeout{"test/rcpsp/01"},
+
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/rcpsp/02"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/rcpsp/03"},
-                //timeout{"test/rcpsp/04"},
-                //timeout{"test/rcpsp/05"},
+
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/rcpsp/06"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/rcpsp/07"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/rcpsp/08"},
-                //timeout{"test/rcpsp/09"},
-                //timeout{"test/rcpsp/data_at/st103_1"},
-                //timeout{"test/rcpsp/data_at/st103_2"},
-                //timeout{"test/rcpsp/data_at/st103_3"},
-                //timeout{"test/rcpsp/data_at/st103_4"},
-                //timeout{"test/rcpsp/data_at/st103_5"},
-                //timeout{"test/rcpsp/data_at/st103_6"},
-                //timeout{"test/rcpsp/data_at/st103_7"},
-                //timeout{"test/rcpsp/data_at/st103_8"},
+
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/rcpsp/data_at/st103_9"},
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/rcpsp/data_at/st103_10"},
-                //timeout{"test/rcpsp/data_at/st103_11"},
-                //timeout{"test/rcpsp/data_at/st103_12"},
-                //timeout{"test/rcpsp/data_at/st103_13"},
-                //timeout{"test/rcpsp/data_at/st103_14"},
-                //timeout{"test/rcpsp/data_at/st103_15"},
-                //timeout{"test/rcpsp/data_at/st103_16"},
-                //timeout{"test/rcpsp/data_at/st103_17"},
-                //timeout{"test/rcpsp/data_at/st103_18"},
-                //timeout{"test/rcpsp/data_at/st103_19"},
-                //timeout{"test/rcpsp/data_at/st103_20"},
-                //timeout{"test/rcpsp/data_at/st103_21"},
-                //timeout{"test/rcpsp/data_at/st103_22"},
-                //timeout{"test/rcpsp/data_at/st103_23"},
-                //timeout{"test/rcpsp/data_at/st103_24"},
-                //timeout{"test/rcpsp/data_at/st103_25"},
-                //timeout{"test/rcpsp/data_at/st103_26"},
-                //timeout{"test/rcpsp/data_at/st103_27"},
-                //timeout{"test/rcpsp/data_at/st103_28"},
-                //timeout{"test/rcpsp/data_at/st103_29"},
-                //timeout{"test/rcpsp/data_at/st103_30"},
-                //timeout{"test/rcpsp/data_at/st103_31"},
+
                 //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0{"test/rcpsp/data_at/st103_32"},
-                //timeout{"test/rcpsp/data_at/st103_33"},
-                //timeout{"test/rcpsp/data_at/st103_34"},
                 {"test/rcpsp/data_at/st103_35"},
                 {"test/rcpsp/data_at/st103_36"},
                 {"test/rcpsp/data_at/st103_37"},
@@ -3395,7 +3102,7 @@ public class MinizincBasedTest {
                 {"test/rcpsp/data_psplib/J60/J60_34_9"},
                 {"test/rcpsp/data_psplib/J60/J60_34_10"},
                 /*
-               //timeout{"above1hour/amaze/2012-04-27"},
+
                //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0
                //{"above1hour/amaze/2012-04-30"},
                //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0
@@ -3417,7 +3124,7 @@ public class MinizincBasedTest {
                //{"above1hour/amaze/2012-06-27"},
                //java.lang.IndexOutOfBoundsException: Index: 0, Size: 0
                //{"above1hour/amaze/2012-06-28"},
-               //timeout{"above1hour/amaze/2012-06-29"},
+
 
                //largescheduling
                //%% Stack overflow exception error;
