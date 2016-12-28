@@ -42,18 +42,23 @@ public class MinizincBasedTestsHelper {
         PrintStream old = System.out;
         System.setOut(new PrintStream(baos));
 
+        try {
+            fz2jacop.main(new String[] {relativePath + filename});
+        }
+        finally {
 
-        fz2jacop.main(new String[]{relativePath + filename });
+            System.out.flush();
+            System.setOut(old);
 
-        System.out.flush();
-        System.setOut(old);
+            String result = baos.toString();
+            if(printInfo) {
+                System.out.println(filename+"\n" + result);
+            }
 
-        String result = baos.toString();
-        if(printInfo) {
-            System.out.println(filename+"\n" + result);
+            return Arrays.asList(result.split("\n"));
+
         }
 
-        return Arrays.asList(result.split("\n"));
     }
 
 
@@ -78,12 +83,14 @@ public class MinizincBasedTestsHelper {
     }
 
     protected void testExecution(String timeCategory) throws IOException {
-        List<String> expectedResult = new ArrayList<>();
-        List<String> result = new ArrayList<>();
 
         System.out.println("Test file: " + timeCategory + testFilename);
-        expectedResult = expected(timeCategory + testFilename + ".out");
-        result = result(timeCategory + testFilename + ".fzn");
+
+        List<String> expectedResult = expected(timeCategory + testFilename + ".out");
+        List<String> result = result(timeCategory + testFilename + ".fzn");
+
+        if (result.size() == 0)
+            fail("\n" + "File path: " + timeCategory + testFilename + ".fzn " + " gave no output to compare against.");
 
         for (int i = 0, j = 0; i < result.size() || j < expectedResult.size();) {
             if (i < result.size() && result.get(i).trim().isEmpty() )
