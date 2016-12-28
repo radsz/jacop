@@ -999,6 +999,7 @@ still_life_free/3x3
 still_life_free/3x8
 still_life_free/4x4
 still_life_free/5x5
+still_life_free/6x6
 still_life2/still_life_5
 still_life2/still_life_6
 still_life2/still_life_7
@@ -1021,15 +1022,18 @@ subsequence_sum/subsequence_sum
 subset_plus_2/subset_plus_2
 subsets_100/subsets_100
 successive_number_problem/successive_number_problem
+sudoku_25x25_250/sudoku_25x25_250
 sudoku_gcc/sudoku_gcc
 sudoku_ip/sudoku_ip
 sudoku_multi/sudoku_multi
 sudoku_multi2/sudoku_multi2
 sudoku_pi/sudoku_pi
 sudoku_pi_2008/sudoku_pi_2008
+sudoku_pi_2010/sudoku_pi_2010
 sudoku_pi_2011/sudoku_pi_2011
 sudoku_pi_day_2015/sudoku_pi_day_2015
 sudoku_pi_with_comments/sudoku_pi_with_comments
+sugiyama2-mznchallenge2010/g3_7_7_7
 sultans_children/sultans_children
 sum_ctr/sum_ctr
 sum_first_and_last/sum_first_and_last
