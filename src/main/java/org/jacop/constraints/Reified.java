@@ -32,6 +32,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
@@ -51,7 +52,7 @@ import org.jacop.util.SimpleHashSet;
 
 public class Reified extends PrimitiveConstraint {
 
-	static int counter = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It specifies constraint c which status is being checked.
@@ -86,7 +87,7 @@ public class Reified extends PrimitiveConstraint {
 		if (b.min() > 1 || b.max() < 0)
 			throw new IllegalArgumentException("\nVariable variable in reified constraint nust have domain 0..1");
 
-		numberId = counter++;
+		numberId = idNumber.incrementAndGet();
 		numberArgs = (short) (1 + c.numberArgs);
 		
 		this.c = c;

@@ -32,6 +32,7 @@
 package org.jacop.set.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntDomain;
@@ -52,7 +53,7 @@ import org.jacop.set.core.SetVar;
 
 public class XinA extends PrimitiveConstraint {
 
-	static int idNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It specifies variable a.
@@ -100,7 +101,7 @@ public class XinA extends PrimitiveConstraint {
 		assert(a != null) : "Variable a is null";
 		assert(x != null) : "Variable x is null";
 
-		this.numberId = idNumber++;
+		this.numberId = idNumber.incrementAndGet();
 		this.numberArgs = 2;
 		
 		this.x = x;

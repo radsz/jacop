@@ -33,6 +33,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -68,7 +69,7 @@ public class ExtensionalSupportMDD extends Constraint {
 	 */
 	public static final boolean debugAll = false;
 
-	static int IdNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	TimeStamp<Integer> G_no_size;
 
@@ -106,7 +107,28 @@ public class ExtensionalSupportMDD extends Constraint {
 
 		G_no = new SparseSet(diagram.freePosition);
 
-		numberId = IdNumber++;
+		numberId = idNumber.incrementAndGet();
+
+	}
+
+	/**
+	 * It constructs extensional support constraint. Please note
+	 * that parameters will be stored internally as references
+	 * until the impose of the constraint takes place.
+	 * Changing parameters after constructing the constraint and
+	 * before its imposition will change the constraint too.
+	 *
+	 * @param vars the variables in the scope of the constraint.
+	 * @param table list of tuples which are allowed.
+	 */
+	public ExtensionalSupportMDD(IntVar [] vars, int [][] table) {
+
+		queueIndex = 1;
+
+		this.table = table;
+		this.vars = vars;
+
+		numberId = idNumber.incrementAndGet();
 
 	}
 
@@ -137,30 +159,7 @@ public class ExtensionalSupportMDD extends Constraint {
 		if (mdd.freePosition > store.sparseSetSize)
 			store.sparseSetSize = mdd.freePosition;
 
-	} 
-
-	/**
-	 * It constructs extensional support constraint. Please note
-	 * that parameters will be stored internally as references
-	 * until the impose of the constraint takes place. 
-	 * Changing parameters after constructing the constraint and 
-	 * before its imposition will change the constraint too. 
-	 *
-	 * @param vars the variables in the scope of the constraint.
-	 * @param table list of tuples which are allowed.
-	 */
-	public ExtensionalSupportMDD(IntVar [] vars, int [][] table) {
-
-		queueIndex = 1;
-
-		this.table = table;
-		this.vars = vars;
-
-		numberId = IdNumber++;
-
 	}
-
-
 
 	// data structures to support for a given variable
 	// signaling what value index is supported.

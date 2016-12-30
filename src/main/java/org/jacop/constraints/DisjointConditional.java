@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -57,6 +58,8 @@ import org.jacop.core.Var;
  */
 
 public class DisjointConditional extends Diff {
+
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	static final boolean trace = false, traceNarr = false;
 
@@ -85,12 +88,24 @@ public class DisjointConditional extends Diff {
 	public DisjointConditional(Rectangle[] rectangles,
 			   				   ExclusiveList exclusionList,
 			   				   boolean doProfile) {
-		
-		super(rectangles, doProfile);
+
+		assert (rectangles != null) : "Rectangles list is null";
+
+		this.queueIndex = 2;
+
+		this.rectangles = new Rectangle[rectangles.length];
+		this.doProfile = doProfile;
+
+		for (int i = 0; i < rectangles.length; i++) {
+			assert (rectangles[i] != null) : i + "-th rectangle in the list is null";
+			assert (rectangles[i].dim != 2) : "The rectangle has to have exactly two dimensions";
+			this.rectangles[i] = new Rectangle( rectangles[i] );
+		}
 		
 		this.exclusionList = new ExclusiveList();
 		this.exclusionList.addAll(exclusionList);
-		
+
+		this.numberId = idNumber.incrementAndGet();
 	}
 	/**
 	 * It creates Disjoint conditional constraint.
@@ -101,16 +116,38 @@ public class DisjointConditional extends Diff {
 	public DisjointConditional(ArrayList<ArrayList<? extends IntVar>> rectangles,
 							   ArrayList<ArrayList<Integer>> exceptionIndices,
 							   ArrayList<? extends IntVar> exceptionCondition) {
-		
-		super(rectangles);
 
-		for (int i = 0; i < exceptionIndices.size(); i++) {
+		queueIndex = 2;
+
+		int size = (rectangles.get(0)).size();
+		this.rectangles = new Rectangle[rectangles.size()];
+
+		int i = 0;
+
+		for (ArrayList<? extends IntVar> R : rectangles)
+			if (R.size() == size) {
+				Rectangle rect = new Rectangle(R);
+				this.rectangles[i] = rect;
+				i++;
+				numberArgs = (short) (numberArgs + size);
+			} else {
+				String s = "\nNot equal sizes of rectangle vectors in Diff";
+				throw new IllegalArgumentException(s);
+			}
+		// }
+		if (size / 2 != 2) {
+			String s = "\nRectangles of size > 2 not currently supported by Diff";
+			throw new IllegalArgumentException(s);
+		}
+
+		for (i = 0; i < exceptionIndices.size(); i++) {
 			int item1 = exceptionIndices.get(i).get(0);
 			int item2 = exceptionIndices.get(i).get(1);
 			IntVar condition = exceptionCondition.get(i);
 			exclusionList.add(new ExclusiveItem(item1, item2, condition));
 		}
-		
+
+		numberId = idNumber.incrementAndGet();
 
 	}
 
@@ -180,21 +217,45 @@ public class DisjointConditional extends Diff {
 
 	/**
 	 * It constructs a disjoint conditional constraint. 
-	 * @param o1 variables specifying the origin in the first dimension.
-	 * @param o2 variables specifying the origin in the second dimension.
-	 * @param l1 variables specifying the length in the first dimension.
-	 * @param l2 variables specifying the length in the second dimension.
+	 * @param origin1 variables specifying the origin in the first dimension.
+	 * @param origin2 variables specifying the origin in the second dimension.
+	 * @param length1 variables specifying the length in the first dimension.
+	 * @param length2 variables specifying the length in the second dimension.
 	 * @param exceptionIndices it specifies a list of pairs, where each pair specifies two rectangles which conditionally overlap. 
 	 * @param exceptionCondition a variable specifying if a corresponding pair is nonoverlapping.
 	 */
-	public DisjointConditional(IntVar[] o1,
-							   IntVar[] o2,
-							   IntVar[] l1, 
-							   IntVar[] l2, 
+	public DisjointConditional(IntVar[] origin1,
+							   IntVar[] origin2,
+							   IntVar[] length1,
+							   IntVar[] length2,
 							   ArrayList<ArrayList<Integer>> exceptionIndices,
 							   ArrayList<? extends IntVar> exceptionCondition) {
 
-		super(o1, o2, l1, l2);
+		assert (origin1 != null) : "o1 list is null";
+		assert (origin2 != null) : "o2 list is null";
+		assert (length1 != null) : "l1 list is null";
+		assert (length2 != null) : "l2 list is null";
+
+		this.queueIndex = 2;
+
+		int size = origin1.length;
+		if (size == origin1.length && size == origin2.length && size == length1.length
+			&& size == length2.length) {
+
+			this.rectangles = new Rectangle[size];
+
+			for (int i = 0; i < size; i++) {
+				IntVar[] R = { origin1[i], origin2[i], length1[i], length2[i] };
+				Rectangle rect = new Rectangle(R);
+				this.rectangles[i] = rect;
+				this.numberArgs = (short) (numberArgs + 4);
+			}
+
+		} else {
+			String s = "\nNot equal sizes of Variable vectors in Diff";
+			throw new IllegalArgumentException(s);
+		}
+
 
 		for (int i = 0; i < exceptionIndices.size(); i++) {
 			int item1 = exceptionIndices.get(i).get(0);
@@ -202,6 +263,8 @@ public class DisjointConditional extends Diff {
 			IntVar condition = exceptionCondition.get(i);
 			exclusionList.add(new ExclusiveItem(item1, item2, condition));
 		}
+
+		this.numberId = idNumber.incrementAndGet();
 
 	}
 
@@ -235,8 +298,32 @@ public class DisjointConditional extends Diff {
 	public DisjointConditional(IntVar[][] rectangles,
 							   ArrayList<ArrayList<Integer>> exceptionIndices,
 							   ArrayList<? extends IntVar> exceptionCondition) {
-		
-		super(rectangles);
+
+		assert (rectangles != null) : "Rectangles list is null";
+
+		queueIndex = 2;
+		IntVar[] R;
+
+		int size = rectangles[0].length;
+		this.rectangles = new Rectangle[rectangles.length];
+
+		for (int i = 0; i < rectangles.length; i++) {
+			assert (rectangles[i] != null) : i + "-th list within rectangles list is null";
+			R = rectangles[i];
+			if (R.length == size) {
+				Rectangle rect = new Rectangle(R);
+				this.rectangles[i] = rect;
+				numberArgs = (short) (numberArgs + size);
+			} else {
+				String s = "\nNot equal sizes of rectangle vectors in Diff";
+				throw new IllegalArgumentException(s);
+			}
+		}
+		if (size / 2 != 2) {
+			String s = "\nRectangles of size > 2 not currently supported by Diff";
+			throw new IllegalArgumentException(s);
+
+		}
 
 		for (int i = 0; i < exceptionIndices.size(); i++) {
 			int item1 = exceptionIndices.get(i).get(0);
@@ -245,6 +332,7 @@ public class DisjointConditional extends Diff {
 			exclusionList.add(new ExclusiveItem(item1, item2, condition));
 		}
 
+		numberId = idNumber.incrementAndGet();
 	}
 
 	/**

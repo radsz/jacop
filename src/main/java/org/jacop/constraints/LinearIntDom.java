@@ -33,6 +33,7 @@ package org.jacop.constraints;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntVar;
 import org.jacop.core.IntDomain;
@@ -58,7 +59,7 @@ import org.jacop.core.Var;
 
 public class LinearIntDom extends LinearInt {
 
-    static int idNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * Defines support (valid values) for each variable
@@ -86,8 +87,10 @@ public class LinearIntDom extends LinearInt {
      */
     public LinearIntDom(Store store, IntVar[] list, int[] weights, String rel, int sum) {
 
-	super(store, list, weights, rel, sum);
-	queueIndex = 4;
+			commonInitialization(store, list, weights, sum);
+			this.relationType = relation(rel);
+			numberId = idNumber.incrementAndGet();
+			queueIndex = 4;
     }
 	
     /**
@@ -100,8 +103,18 @@ public class LinearIntDom extends LinearInt {
      */
     public LinearIntDom(Store store, IntVar[] list, int[] weights, String rel, IntVar sum) {
 
-	super(store, list, weights, rel, sum);
-	queueIndex = 4;
+			queueIndex = 4;
+			IntVar[] vars = new IntVar[list.length + 1];
+			System.arraycopy(list, 0, vars, 0, list.length);
+			vars[list.length] = sum;
+			int[] ws = new int[weights.length + 1];
+			System.arraycopy(weights, 0, ws, 0, weights.length);
+			ws[list.length] = -1;
+
+			commonInitialization(store, vars, ws, 0);
+			this.relationType = relation(rel);
+			numberId = idNumber.incrementAndGet();
+
     }
 	
     /**
@@ -114,8 +127,15 @@ public class LinearIntDom extends LinearInt {
      */
     public LinearIntDom(Store store, ArrayList<? extends IntVar> variables,
 			ArrayList<Integer> weights, String rel, int sum) {
-	super(store, variables, weights, rel, sum);
-	queueIndex = 4;
+			int[] w = new int[weights.size()];
+			for (int i = 0; i < weights.size(); i++)
+				w[i] = weights.get(i);
+
+			commonInitialization(store, variables.toArray(new IntVar[variables.size()]), w, sum);
+			numberId = idNumber.incrementAndGet();
+			this.relationType = relation(rel);
+
+			queueIndex = 4;
     }
 
     @Override

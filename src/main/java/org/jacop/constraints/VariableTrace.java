@@ -37,6 +37,7 @@ import org.jacop.core.Store;
 import org.jacop.core.IntDomain;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * VariableTrace is a daemon that prints information on variables whenever they are changed.
@@ -46,8 +47,8 @@ import java.util.ArrayList;
  */
 
 public class VariableTrace extends Constraint {
-  
-  static int idNumber = 1;
+
+  static AtomicInteger idNumber = new AtomicInteger(0);
 	
   Var[] vars;
   Store store;
@@ -57,7 +58,7 @@ public class VariableTrace extends Constraint {
    * @param v variable to be traced
    */
   public VariableTrace(Var v) {
-    numberId = idNumber++;
+    numberId = idNumber.incrementAndGet();
     
     vars = new Var[1];
     vars[0] = v;
@@ -68,7 +69,7 @@ public class VariableTrace extends Constraint {
    * @param vs variables to be traced
    */
   public VariableTrace(Var[] vs) {
-    numberId = idNumber++;
+    numberId = idNumber.incrementAndGet();
     
     vars = new Var[vs.length];
     for (int i = 0; i < vs.length; i++) {
@@ -81,7 +82,7 @@ public class VariableTrace extends Constraint {
    * @param vs variables to be traced
    */
   public VariableTrace(ArrayList<Var> vs) {
-    numberId = idNumber++;
+    numberId = idNumber.incrementAndGet();
     
     vars = new Var[vs.size()];
     for (int i = 0; i < vs.size(); i++) {

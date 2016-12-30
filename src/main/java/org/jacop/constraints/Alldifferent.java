@@ -37,6 +37,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -55,7 +56,7 @@ import org.jacop.core.Var;
 
 public class Alldifferent extends Constraint {
 
-	static int idNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 	
 	/**
 	 * It specifies a list of variables which must take different values.
@@ -75,7 +76,8 @@ public class Alldifferent extends Constraint {
 	 * the constructor being called to recreate an object from an XML format.
 	 */
 	public static String[] xmlAttributes = {"list"};
-	
+
+	protected Alldifferent() {}
 	/**
 	 * It constructs the alldifferent constraint for the supplied variable.
 	 * @param list variables which are constrained to take different values.
@@ -84,7 +86,7 @@ public class Alldifferent extends Constraint {
 
 		assert (list != null) : "Variables list is null";
 		
-		this.numberId = idNumber++;
+		this.numberId = idNumber.incrementAndGet();
 		this.list = new IntVar[list.length];
 		this.numberArgs = (short) list.length;
 		
@@ -102,7 +104,7 @@ public class Alldifferent extends Constraint {
 
 	public Alldifferent(ArrayList<? extends IntVar> variables) {
 
-		numberId = idNumber++;
+		numberId = idNumber.incrementAndGet();
 		list = new IntVar[variables.size()];
 		list = variables.toArray(list);
 

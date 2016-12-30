@@ -32,6 +32,7 @@
 package org.jacop.floats.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
@@ -51,7 +52,7 @@ import org.jacop.core.Var;
 
 public class Min extends Constraint {
 
-	static int IdNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It specifies a list of variables among which the minimum value is being searched for. 
@@ -80,7 +81,7 @@ public class Min extends Constraint {
 		assert ( min != null ) : "Min variable is null";
 
 		this.queueIndex = 1;
-		this.numberId = IdNumber++;
+		this.numberId = idNumber.incrementAndGet();
 		this.numberArgs = (short) (list.length + 1) ;
 		this.min = min;
 		this.list = new FloatVar[list.length];

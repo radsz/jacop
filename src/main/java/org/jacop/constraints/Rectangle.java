@@ -284,4 +284,71 @@ public class Rectangle {
 		return S;
 	}
 
-}
+	public static Rectangle[] toArrayOf2DRectangles(ArrayList<? extends ArrayList<? extends IntVar>> rectangles) {
+
+		Rectangle[] result = new Rectangle[rectangles.size()];
+
+		for (int i = 0; i < rectangles.size(); i++)
+			if (rectangles.get(i).size() == 4) {
+				result[i] = new Rectangle(rectangles.get(i));
+			} else {
+				String s = "\nInput list of index " + i + " is not representing a 2D rectangle since this list size is " + rectangles.get(i).size() + " instead of 4.";
+				throw new IllegalArgumentException(s);
+			}
+
+			return result;
+
+	}
+
+	public static Rectangle[] toArrayOf2DRectangles(IntVar[] origin1, IntVar[] origin2, IntVar[] length1, IntVar[] length2) {
+
+		assert (origin1 != null) : "o1 list is null";
+		assert (origin2 != null) : "o2 list is null";
+		assert (length1 != null) : "l1 list is null";
+		assert (length2 != null) : "l2 list is null";
+
+		int size = origin1.length;
+
+		if (size == origin1.length && size == origin2.length && size == length1.length && size == length2.length) {
+
+			Rectangle[] result = new Rectangle[size];
+
+			for (int i = 0; i < size; i++) {
+				result[i] = new Rectangle(new IntVar[] {origin1[i], origin2[i], length1[i], length2[i]});
+			}
+
+			return result;
+
+		} else {
+
+			String s = "\nNot equal sizes of arrays to construct an array of Rectangles.";
+			throw new IllegalArgumentException(s);
+		}
+
+	}
+
+	public static Rectangle[] toArrayOf2DRectangles(IntVar[][] rectangles) {
+
+		assert (rectangles != null) : "Rectangles list is null";
+
+		Rectangle[] result = new Rectangle[rectangles.length];
+
+		for (int i = 0; i < rectangles.length; i++) {
+
+			assert (rectangles[i] != null) : i + "-th list within rectangles list is null";
+
+			if (rectangles[i].length == 4) {
+				result[i] = new Rectangle(rectangles[i]);
+			} else {
+				String s =
+					"\n Rectangle of index " + i + " is not a 2D rectangle as a list representing this rectangle is of size " + rectangles[i].length + "instead of size 4.";
+				throw new IllegalArgumentException(s);
+			}
+		}
+
+		return result;
+
+	}
+
+
+	}

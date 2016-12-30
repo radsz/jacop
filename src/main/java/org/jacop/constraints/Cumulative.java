@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -54,7 +55,7 @@ import org.jacop.core.Var;
 
 public class Cumulative extends Constraint {
 
-	static int idNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	static final boolean debug = false, debugNarr = false;
 
@@ -142,7 +143,7 @@ public class Cumulative extends Constraint {
 		
 		this.numberArgs = (short) (numberArgs * 3 + 1);
 		this.queueIndex = 2;
-		this.numberId = idNumber++;
+		this.numberId = idNumber.incrementAndGet();
 
 		if (starts.length == durations.length && durations.length == resources.length) {
 			

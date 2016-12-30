@@ -32,6 +32,7 @@
 package org.jacop.set.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.Constraint;
 import org.jacop.core.Store;
@@ -49,7 +50,7 @@ import org.jacop.set.core.SetVar;
 
 public class AdisjointB extends Constraint {
 
-	static int IdNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It specifies set variable a.
@@ -87,7 +88,7 @@ public class AdisjointB extends Constraint {
 		assert (a != null) : "Variable a is null";
 		assert (b != null) : "Variable b is null";
 
-		numberId = IdNumber++;
+		numberId = idNumber.incrementAndGet();
 		numberArgs = 1;
 		
 		this.a = a;

@@ -32,6 +32,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -52,7 +53,7 @@ import org.jacop.core.Var;
  */
 @Deprecated public class Sum extends Constraint {
 
-	static int counter = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It specifies the variables to be summed.
@@ -94,7 +95,7 @@ import org.jacop.core.Var;
 			assert (list[i] != null) : i + "-th element in list is null";
 			
 		queueIndex = 1;
-		numberId = counter++;
+		numberId = idNumber.incrementAndGet();
 		
 		this.sum = sum;
 		this.list = new IntVar[list.length];

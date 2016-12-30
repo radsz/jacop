@@ -32,6 +32,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -49,7 +50,7 @@ import org.jacop.core.Var;
 
 public class XexpYeqZ extends Constraint {
 
-	static int idNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It specifies the variable x in equation x^y = z.
@@ -88,7 +89,7 @@ public class XexpYeqZ extends Constraint {
 		assert (y.min() > 0) : "Variable y has a domain which allows negative values and zero";
 		assert (z.min() >= 0) : "Variable z has a domain which allows negative values";
 		
-		numberId = idNumber++;
+		numberId = idNumber.incrementAndGet();
 		numberArgs = 3;
 		
 		this.x = x;

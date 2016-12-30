@@ -37,6 +37,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -57,7 +58,7 @@ import org.jacop.core.Var;
 
 public class Diff extends Constraint {
 
-	static int IdNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	static final boolean trace = false, traceNarr = false;
 
@@ -89,6 +90,7 @@ public class Diff extends Constraint {
 	 */
 	public static String[] xmlAttributes = {"rectangles", "doProfile"};
 
+	protected Diff() {}
 	/**
 	 * It specifies a diff constraint. 
 	 * @param rectangles list of rectangles which can not overlap in at least one dimension.
@@ -99,7 +101,7 @@ public class Diff extends Constraint {
 		assert (rectangles != null) : "Rectangles list is null";
 
 		this.queueIndex = 2;
-		this.numberId = IdNumber++;
+		this.numberId = idNumber.incrementAndGet();
 
 		this.rectangles = new Rectangle[rectangles.length];
 		this.doProfile = doProfile;
@@ -121,29 +123,10 @@ public class Diff extends Constraint {
 		assert (rectangles != null) : "Rectangles list is null";
 
 		queueIndex = 2;
-		IntVar[] R;
-		
-		numberId = IdNumber++;
-		int size = rectangles[0].length;
-		this.rectangles = new Rectangle[rectangles.length];
+		this.rectangles = Rectangle.toArrayOf2DRectangles(rectangles);
+		numberArgs += this.rectangles.length * 4;
+		numberId = idNumber.incrementAndGet();
 
-		for (int i = 0; i < rectangles.length; i++) {
-			assert (rectangles[i] != null) : i + "-th list within rectangles list is null";
-			R = rectangles[i];
-			if (R.length == size) {
-				Rectangle rect = new Rectangle(R);
-				this.rectangles[i] = rect;
-				numberArgs = (short) (numberArgs + size);
-			} else {
-				String s = "\nNot equal sizes of rectangle vectors in Diff";
-				throw new IllegalArgumentException(s);
-			}
-		}
-		if (size / 2 != 2) {
-			String s = "\nRectangles of size > 2 not currently supported by Diff";
-			throw new IllegalArgumentException(s);
-
-		}
 	}
 
 	
@@ -182,27 +165,11 @@ public class Diff extends Constraint {
 		assert (length1 != null) : "l1 list is null";
 		assert (length2 != null) : "l2 list is null";
 
-		this.queueIndex = 2;
-		
-		this.numberId = IdNumber++;
+		queueIndex = 2;
+		this.rectangles = Rectangle.toArrayOf2DRectangles(origin1, origin2, length1, length2);
+		numberArgs += this.rectangles.length * 4;
+		numberId = idNumber.incrementAndGet();
 
-		int size = origin1.length;
-		if (size == origin1.length && size == origin2.length && size == length1.length
-				&& size == length2.length) {
-			
-			this.rectangles = new Rectangle[size];
-			
-			for (int i = 0; i < size; i++) {
-				IntVar[] R = { origin1[i], origin2[i], length1[i], length2[i] };
-				Rectangle rect = new Rectangle(R);
-				this.rectangles[i] = rect;
-				this.numberArgs = (short) (numberArgs + 4);
-			}
-			
-		} else {
-			String s = "\nNot equal sizes of Variable vectors in Diff";
-			throw new IllegalArgumentException(s);
-		}
 	}
 	
 	/**
@@ -212,28 +179,10 @@ public class Diff extends Constraint {
 	public Diff(ArrayList<? extends ArrayList<? extends IntVar>> rectangles) {
 
 		queueIndex = 2;
-		numberId = IdNumber++;
-		
-		int size = (rectangles.get(0)).size();
-		this.rectangles = new Rectangle[rectangles.size()];
+		this.rectangles = Rectangle.toArrayOf2DRectangles(rectangles);
+		numberArgs += this.rectangles.length * 4;
+		numberId = idNumber.incrementAndGet();
 
-		int i = 0;
-
-		for (ArrayList<? extends IntVar> R : rectangles)
-			if (R.size() == size) {
-				Rectangle rect = new Rectangle(R);
-				this.rectangles[i] = rect;
-				i++;
-				numberArgs = (short) (numberArgs + size);
-			} else {
-				String s = "\nNot equal sizes of rectangle vectors in Diff";
-				throw new IllegalArgumentException(s);
-			}
-		// }
-		if (size / 2 != 2) {
-			String s = "\nRectangles of size > 2 not currently supported by Diff";
-			throw new IllegalArgumentException(s);
-		}
 	}
 
 	/**

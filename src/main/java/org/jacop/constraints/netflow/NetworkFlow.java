@@ -40,6 +40,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.netflow.simplex.Arc;
@@ -70,7 +71,7 @@ public class NetworkFlow extends Constraint {
 	}
 
 	/** Instance counter */
-	private static int nextID = 0;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/** The network */
 //	public final Network network;
@@ -118,7 +119,7 @@ public class NetworkFlow extends Constraint {
 
 		// fields in superclass
 		this.queueIndex = QUEUE_INDEX;
-		this.numberId = nextID++;
+		this.numberId = idNumber.incrementAndGet();
 		this.numberArgs = (short) map.size();
 
 		// for (VarHandler vh : flowVariables)

@@ -33,6 +33,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -56,8 +57,8 @@ public class IfThenBool extends PrimitiveConstraint {
 	 * 1   0   0
 	 * 1   1   1
 	 */
-	
-	static int counter = 1;
+
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It specifies variable x in constraint ( X {@literal =>} Y ) {@literal <=>} Z.
@@ -92,7 +93,7 @@ public class IfThenBool extends PrimitiveConstraint {
 		assert (y != null) : "Variable y is null";
 		assert (z != null) : "Variable z is null";
 
-		numberId = counter++;
+		numberId = idNumber.incrementAndGet();
 		numberArgs = 3;
 
 		this.x = x;

@@ -32,6 +32,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.BoundDomain;
@@ -52,7 +53,7 @@ import org.jacop.core.Var;
 
 public class ArgMin extends Constraint {
 
-    static int counter = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
     boolean firstConsistencyCheck = true;
 
@@ -103,7 +104,7 @@ public class ArgMin extends Constraint {
 	assert ( minIndex != null ) : "MaxIndex variable is null";
 
 	this.queueIndex = 1;
-	this.numberId = counter++;
+	this.numberId = idNumber.incrementAndGet();
 	this.numberArgs = (short) (list.length + 1);
 	this.indexOffset = 0;
 	this.minIndex = minIndex;

@@ -32,6 +32,7 @@
 package org.jacop.set.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
@@ -51,7 +52,7 @@ import org.jacop.set.core.SetVar;
 
 public class AunionBeqC extends Constraint {
 
-	static int idNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It specifies set variable a. 
@@ -100,7 +101,7 @@ public class AunionBeqC extends Constraint {
 		assert (b != null) : "Variable b is null";
 		assert (c != null) : "Variable c is null";
 
-		numberId = idNumber++;
+		numberId = idNumber.incrementAndGet();
 		numberArgs = 3;
 		
 		this.a = a;

@@ -36,6 +36,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -60,6 +61,8 @@ import org.jacop.core.Var;
 
 public class Alldiff extends Alldifferent {
 
+	static AtomicInteger idNumber = new AtomicInteger(0);
+
 	// it stores the store locally so all the private functions which 
 	// are part of the consistency function can throw failure exception
 	// without passing store argument every time their function is called.
@@ -79,18 +82,26 @@ public class Alldiff extends Alldifferent {
 	 */
 	public static String[] xmlAttributes = {"list"};
 
+	protected Alldiff() {}
 	/**
 	 * It constructs the alldiff constraint for the supplied variable.
 	 * @param variables variables which are constrained to take different values.
 	 */
 	public Alldiff(IntVar[] variables) {
 
-		super(variables);
-		Alldifferent.idNumber--;
-		
-	        this.queueIndex = 2;
+		assert (variables != null) : "Variables list is null";
 
-		this.numberId = idNumber++;
+		this.numberId = idNumber.incrementAndGet();
+		this.list = new IntVar[variables.length];
+		this.numberArgs = (short) variables.length;
+
+		for (int i = 0; i < variables.length; i++) {
+			assert (variables[i] != null) : i + "-th element in the list is null";
+			this.list[i] = variables[i];
+		}
+
+		this.queueIndex = 2;
+
 		this.numberArgs = (short) variables.length;
 		listAlldiff = new IntVar[variables.length];
 		

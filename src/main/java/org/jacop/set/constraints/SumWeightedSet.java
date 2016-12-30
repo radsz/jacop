@@ -33,6 +33,7 @@ package org.jacop.set.constraints;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
@@ -54,7 +55,7 @@ import org.jacop.set.core.SetVar;
 
 public class SumWeightedSet extends Constraint {
 
-	static int idNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * A set variable a whose elements contribute with their weight to the sum. 
@@ -109,7 +110,7 @@ public class SumWeightedSet extends Constraint {
 		assert (a != null) : "Variable a is null";
 		assert (totalWeight != null) : "Variable totalWeight is null";
 		
-		this.numberId = idNumber++;
+		this.numberId = idNumber.incrementAndGet();
 		this.numberArgs = 2;
 		
 		this.totalWeight = totalWeight;

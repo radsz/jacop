@@ -33,6 +33,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -62,7 +63,7 @@ public class XorBool extends PrimitiveConstraint {
 	 * 1   1   0
 	 */
 
-	static int idNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It specifies variables x for the constraint.
@@ -89,7 +90,7 @@ public class XorBool extends PrimitiveConstraint {
 		assert (y != null) : "Variable y is null";
 
 	        queueIndex = 0;
-		numberId = idNumber++;
+		numberId = idNumber.incrementAndGet();
 		this.l = x.length;
 		numberArgs = l + 1;
 

@@ -39,6 +39,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.Constraint;
 import org.jacop.core.Domain;
@@ -184,7 +185,7 @@ public class Geost extends Constraint {
 	/**
 	 * It specifies the unique number used to differentiate geost constraints.
 	 */
-	static int IdNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It indicates whether we are currently running the consistency function or not.
@@ -493,7 +494,7 @@ public class Geost extends Constraint {
 		this.objects = objects.clone();
 		this.externalConstraints = constraints.clone();
 
-		this.numberId = IdNumber++;
+		this.numberId = idNumber.incrementAndGet();
 		this.variableQueue = new LinkedHashSet<Var>();
 		
 		//objectQueue = new LinkedHashSet<GeostObject>( objects.size() );

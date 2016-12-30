@@ -38,6 +38,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Stack;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -58,7 +59,7 @@ import org.jacop.util.BipartiteGraphMatching;
 
 public class Values extends Constraint {
 
-	static int counter = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It specifies a list of variables which are counted. 
@@ -66,7 +67,7 @@ public class Values extends Constraint {
 	IntVar[] list;
 
 	/**
-	 * It specifies the counter of different values among variables on a given list. 
+	 * It specifies the idNumber of different values among variables on a given list.
 	 */
 	IntVar count;
 
@@ -93,7 +94,7 @@ public class Values extends Constraint {
 
 		this.queueIndex = 2;
 
-		numberId = counter++;
+		numberId = idNumber.incrementAndGet();
 		numberArgs = (short) (list.length + 1);
 
 		this.count = count;
@@ -284,8 +285,6 @@ public class Values extends Constraint {
 		return IntDomain.GROUND;
 	}
 
-
-
 	@Override
 	public void increaseWeight() {
 		if (increaseWeight) {
@@ -294,15 +293,17 @@ public class Values extends Constraint {
 				v.weight++;
 		}
 	}
-}
 
-class FDVminimumComparator<T extends IntVar> implements Comparator<T> {
+	class FDVminimumComparator<T extends IntVar> implements Comparator<T> {
 
-	FDVminimumComparator() {
+		FDVminimumComparator() {
+		}
+
+		public int compare(T o1, T o2) {
+			return (o1.min() - o2.min());
+		}
+
 	}
 
-	public int compare(T o1, T o2) {
-		return (o1.min() - o2.min());
-	}
-
 }
+

@@ -33,6 +33,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -52,7 +53,7 @@ import org.jacop.core.Var;
 
 public class XmulYeqZ extends Constraint {
 
-	static int counter = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It specifies variable x in constraint x * y = z. 
@@ -89,7 +90,7 @@ public class XmulYeqZ extends Constraint {
 		assert (y != null) : "Variable y is null";
 		assert (z != null) : "Variable z is null";
 
-		numberId = counter++;
+		numberId = idNumber.incrementAndGet();
 		numberArgs = 3;
 
 		xSquare = (x == y);

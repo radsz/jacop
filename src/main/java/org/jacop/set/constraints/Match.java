@@ -32,6 +32,7 @@
 package org.jacop.set.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
@@ -52,7 +53,7 @@ import org.jacop.set.core.SetVar;
 
 public class Match extends Constraint {
 
-	static int idNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It specifies a set variable whose values are being matched against integer variables
@@ -86,7 +87,7 @@ public class Match extends Constraint {
 		for (int i = 0; i < list.length; i++)
 			assert (list[i] != null) : i + "-th element of the list is null.";
 
-		this.numberId = idNumber++;
+		this.numberId = idNumber.incrementAndGet();
 		this.numberArgs = list.length + 1;
 		this.a = a;
 		this.list = new IntVar[list.length]; 

@@ -32,6 +32,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -49,7 +50,7 @@ import org.jacop.core.Var;
 
 public class EqBool extends PrimitiveConstraint {
 
-	static int counter = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It specifies x variables in the constraint. 
@@ -78,7 +79,7 @@ public class EqBool extends PrimitiveConstraint {
 		assert (list != null) : "List of x's is null";
 		assert (result != null) : "Result variable is null";
 
-		numberId = counter++;
+		numberId = idNumber.incrementAndGet();
 		numberArgs = (short)(list.length + 1);
 
 		this.list = new IntVar[list.length];
@@ -101,7 +102,7 @@ public class EqBool extends PrimitiveConstraint {
 	 */
 	public EqBool(ArrayList<? extends IntVar> list, IntVar result) {
 
-		numberId = counter++;
+		numberId = idNumber.incrementAndGet();
 		numberArgs = (short)(list.size()+1);
 
 		this.list = new IntVar[list.size()];

@@ -33,6 +33,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Domain;
 import org.jacop.core.Store;
@@ -49,7 +50,7 @@ import org.jacop.util.SimpleHashSet;
 
 public class Eq extends PrimitiveConstraint {
 
-	static int counter = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It specifies the first constraint which status must be equivalent to the status of the second constraint. 
@@ -77,7 +78,7 @@ public class Eq extends PrimitiveConstraint {
 		assert (c1 != null) : "Constraint c1 is null";
 		assert (c2 != null) : "Constraint c1 is null";
 		
-		numberId = counter++;
+		numberId = idNumber.incrementAndGet();
 		numberArgs = (short) ( c1.numberArgs + c2.numberArgs );
 		
 		this.c1 = c1;

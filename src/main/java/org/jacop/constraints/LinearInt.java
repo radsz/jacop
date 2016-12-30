@@ -1,43 +1,44 @@
 /**
- *  LinearInt.java 
- *  This file is part of JaCoP.
- *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
- *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU Affero General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU Affero General Public License for more details.
- *  
- *  Notwithstanding any other provision of this License, the copyright
- *  owners of this work supplement the terms of this License with terms
- *  prohibiting misrepresentation of the origin of this work and requiring
- *  that modified versions of this work be marked in reasonable ways as
- *  different from the original version. This supplement of the license
- *  terms is in accordance with Section 7 of GNU Affero General Public
- *  License version 3.
- *
- *  You should have received a copy of the GNU Affero General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
+ * LinearInt.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.jacop.constraints;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntVar;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.floats.constraints.linear.*;
 
 /**
  * LinearInt constraint implements the weighted summation over several
@@ -59,25 +60,25 @@ import org.jacop.core.Var;
 public class LinearInt extends PrimitiveConstraint {
 
     Store store;
-    
-    static int idNumber = 1;
+
+    static AtomicInteger idNumber = new AtomicInteger(0);
 
     boolean reified = true;
 
     /**
      * Defines relations
      */
-    final static byte eq=0, le=1, lt=2, ne=3, gt=4, ge=5;
+    final static byte eq = 0, le = 1, lt = 2, ne = 3, gt = 4, ge = 5;
 
     /**
      * Defines negated relations
      */
-    final static byte[] negRel= {ne, //eq=0, 
-				 gt, //le=1, 
-				 ge, //lt=2, 
-				 eq, //ne=3, 
-				 le, //gt=4, 
-				 lt  //ge=5;
+    final static byte[] negRel = {ne, //eq=0,
+        gt, //le=1,
+        ge, //lt=2,
+        eq, //ne=3,
+        le, //gt=4,
+        lt  //ge=5;
     };
 
     /**
@@ -105,7 +106,7 @@ public class LinearInt extends PrimitiveConstraint {
      * It specifies the index of the last positive coefficient. 
      */
     int pos;
-    
+
     /**
      * It specifies the number of varibales/coefficients. 
      */
@@ -115,7 +116,7 @@ public class LinearInt extends PrimitiveConstraint {
      * It specifies "variability" of each variable
      */
     int[] I;
-    
+
     /**
      * It specifies sum of lower bounds (min values) and sum of upper bounds (max values)
      */
@@ -127,6 +128,9 @@ public class LinearInt extends PrimitiveConstraint {
      */
     public static String[] xmlAttributes = {"list", "weights", "sum"};
 
+
+    protected LinearInt() {}
+
     /**
      * @param store current store
      * @param list variables which are being multiplied by weights.
@@ -136,11 +140,12 @@ public class LinearInt extends PrimitiveConstraint {
      */
     public LinearInt(Store store, IntVar[] list, int[] weights, String rel, int sum) {
 
-	commonInitialization(store, list, weights, sum);
-	this.relationType = relation(rel);
+        commonInitialization(store, list, weights, sum);
+        this.relationType = relation(rel);
+        numberId = idNumber.incrementAndGet();
 
     }
-	
+
     /**
      * @param store current store
      * @param list variables which are being multiplied by weights.
@@ -150,15 +155,16 @@ public class LinearInt extends PrimitiveConstraint {
      */
     public LinearInt(Store store, IntVar[] list, int[] weights, String rel, IntVar sum) {
 
-	IntVar[] vars = new IntVar[list.length + 1];
-	System.arraycopy(list, 0, vars, 0, list.length);
-	vars[list.length] = sum;
-	int[] ws = new int[weights.length + 1];
-	System.arraycopy(weights, 0, ws, 0, weights.length);
-	ws[list.length] = -1;
-	
-	commonInitialization(store, vars, ws, 0);
-	this.relationType = relation(rel);
+        IntVar[] vars = new IntVar[list.length + 1];
+        System.arraycopy(list, 0, vars, 0, list.length);
+        vars[list.length] = sum;
+        int[] ws = new int[weights.length + 1];
+        System.arraycopy(weights, 0, ws, 0, weights.length);
+        ws[list.length] = -1;
+
+        commonInitialization(store, vars, ws, 0);
+        this.relationType = relation(rel);
+        numberId = idNumber.incrementAndGet();
     }
 
     /**
@@ -169,255 +175,246 @@ public class LinearInt extends PrimitiveConstraint {
      * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
      * @param sum the sum of weighted variables.
      */
-    public LinearInt(Store store, ArrayList<? extends IntVar> variables,
-			ArrayList<Integer> weights, String rel, int sum) {
+    public LinearInt(Store store, ArrayList<? extends IntVar> variables, ArrayList<Integer> weights, String rel,
+        int sum) {
 
-		int[] w = new int[weights.size()];
-		for (int i = 0; i < weights.size(); i++)
-			w[i] = weights.get(i);
+        int[] w = new int[weights.size()];
+        for (int i = 0; i < weights.size(); i++)
+            w[i] = weights.get(i);
 
-		commonInitialization(store, variables.toArray(new IntVar[variables.size()]), w, sum);
-		this.relationType = relation(rel);
+        commonInitialization(store, variables.toArray(new IntVar[variables.size()]), w, sum);
+        numberId = idNumber.incrementAndGet();
+        this.relationType = relation(rel);
     }
 
 
-    private void commonInitialization(Store store, IntVar[] list, int[] weights, int sum) {
+    protected void commonInitialization(Store store, IntVar[] list, int[] weights, int sum) {
 
-	assert ( list.length == weights.length ) : "\nLength of two vectors different in Propagations";
+        assert (list.length == weights.length) : "\nLength of two vectors different in Propagations";
 
-	this.store = store;
-	this.b = sum;
-	numberId = idNumber++;
-	
-	LinkedHashMap<IntVar, Integer> parameters = new LinkedHashMap<IntVar, Integer>();
+        this.store = store;
+        this.b = sum;
 
-	for (int i = 0; i < list.length; i++) {
+        LinkedHashMap<IntVar, Integer> parameters = new LinkedHashMap<IntVar, Integer>();
 
-	    assert (list[i] != null) : i + "-th element of list in Propagations constraint is null";
-	    	    if (weights[i] != 0) {
-		if (list[i].singleton()) 
-		    this.b -= list[i].value() * weights[i];
-		else
-		    if (parameters.get(list[i]) != null) {
-			// variable ordered in the scope of the Propagations constraint.
-			Integer coeff = parameters.get(list[i]);
-			Integer sumOfCoeff = coeff + weights[i];
-			parameters.put(list[i], sumOfCoeff);
-		    }
-		    else
-			parameters.put(list[i], weights[i]);
+        for (int i = 0; i < list.length; i++) {
 
-	    }
-	}
-	int size=0;
-	for (IntVar e : parameters.keySet())
-	    if (parameters.get(e) != 0)
-		size++;
+            assert (list[i] != null) : i + "-th element of list in Propagations constraint is null";
+            if (weights[i] != 0) {
+                if (list[i].singleton())
+                    this.b -= list[i].value() * weights[i];
+                else if (parameters.get(list[i]) != null) {
+                    // variable ordered in the scope of the Propagations constraint.
+                    Integer coeff = parameters.get(list[i]);
+                    Integer sumOfCoeff = coeff + weights[i];
+                    parameters.put(list[i], sumOfCoeff);
+                } else
+                    parameters.put(list[i], weights[i]);
 
-	this.x = new IntVar[size];//parameters.size()];
-	this.a = new int[size];//parameters.size()];
+            }
+        }
+        int size = 0;
+        for (IntVar e : parameters.keySet())
+            if (parameters.get(e) != 0)
+                size++;
 
-	int i = 0;
-	for (IntVar var : parameters.keySet()) {
-	    int coeff = parameters.get(var);
-	    if (coeff > 0) {
-		    this.x[i] = var;
-		    this.a[i] = coeff;
-		    i++;
-	    }
-	}
-	pos = i;
-	for (IntVar var : parameters.keySet()) {
-	    int coeff = parameters.get(var);
-	    if (coeff < 0) {
-		    this.x[i] = var;
-		    this.a[i] = coeff;
-		    i++;
-	    }
-	}
-	// for (IntVar var : parameters.keySet()) {
-	//     int coeff = parameters.get(var);
-	//     if (coeff == 0) 
-	// 	System.out.println("%% " + id() + " : " + var);;
-	// }
+        this.x = new IntVar[size];//parameters.size()];
+        this.a = new int[size];//parameters.size()];
 
-	this.l = x.length;
-	this.I = new int[l];
-	    
-	checkForOverflow();
+        int i = 0;
+        for (IntVar var : parameters.keySet()) {
+            int coeff = parameters.get(var);
+            if (coeff > 0) {
+                this.x[i] = var;
+                this.a[i] = coeff;
+                i++;
+            }
+        }
+        pos = i;
+        for (IntVar var : parameters.keySet()) {
+            int coeff = parameters.get(var);
+            if (coeff < 0) {
+                this.x[i] = var;
+                this.a[i] = coeff;
+                i++;
+            }
+        }
+        // for (IntVar var : parameters.keySet()) {
+        //     int coeff = parameters.get(var);
+        //     if (coeff == 0)
+        // 	System.out.println("%% " + id() + " : " + var);;
+        // }
 
-	if (l <= 3)
-	    queueIndex = 0;
-	else
-	    queueIndex = 1;
+        this.l = x.length;
+        this.I = new int[l];
+
+        checkForOverflow();
+
+        if (l <= 3)
+            queueIndex = 0;
+        else
+            queueIndex = 1;
 
     }
 
-    @Override
-    public ArrayList<Var> arguments() {
+    @Override public ArrayList<Var> arguments() {
 
-	ArrayList<Var> variables = new ArrayList<Var>(x.length);
+        ArrayList<Var> variables = new ArrayList<Var>(x.length);
 
-	for (Var v : x)
-	    variables.add(v);
+        for (Var v : x)
+            variables.add(v);
 
-	return variables;
+        return variables;
     }
 
-    @Override
-    public void consistency(Store store) {
-	propagate(relationType);
+    @Override public void consistency(Store store) {
+        propagate(relationType);
     }
 
-    @Override
-    public void notConsistency(Store store) {
-	propagate(negRel[relationType]);
+    @Override public void notConsistency(Store store) {
+        propagate(negRel[relationType]);
     }
-    
+
     public void propagate(int rel) {
 
-	computeInit();
+        computeInit();
 
-	do {
+        do {
 
-	    store.propagationHasOccurred = false;
+            store.propagationHasOccurred = false;
 
-	    switch (rel) {
-	    case eq:
+            switch (rel) {
+                case eq:
 
-		pruneLtEq(b);
-		pruneGtEq(b);
+                    pruneLtEq(b);
+                    pruneGtEq(b);
 
-		// if (!reified)
-		//     if (sumMax <= b && sumMin >= b) 
-		// 	removeConstraint();
+                    // if (!reified)
+                    //     if (sumMax <= b && sumMin >= b)
+                    // 	removeConstraint();
 
-		break;
+                    break;
 
-	    case le:
-		pruneLtEq(b);
+                case le:
+                    pruneLtEq(b);
 
-		if (!reified)
-		    if (sumMax <= b) 
-			removeConstraint();
-		break;
+                    if (!reified)
+                        if (sumMax <= b)
+                            removeConstraint();
+                    break;
 
-	    case lt:
-		pruneLtEq(b-1);
+                case lt:
+                    pruneLtEq(b - 1);
 
-		if (!reified)
-		    if (sumMax < b) 
-			removeConstraint();
-		break;
-	    case ne:
-		pruneNeq();
+                    if (!reified)
+                        if (sumMax < b)
+                            removeConstraint();
+                    break;
+                case ne:
+                    pruneNeq();
 
-		if (!reified)
-		    // if (sumMin == sumMax && (sumMin > b || sumMax < b))
-		    if (sumMin > b || sumMax < b)
-			removeConstraint();
-		break;
-	    case gt:
+                    if (!reified)
+                        // if (sumMin == sumMax && (sumMin > b || sumMax < b))
+                        if (sumMin > b || sumMax < b)
+                            removeConstraint();
+                    break;
+                case gt:
 
-		pruneGtEq(b+1);
+                    pruneGtEq(b + 1);
 
-		if (!reified)
-		    if (sumMin > b)
-			removeConstraint();		
-		break;
-	    case ge:
+                    if (!reified)
+                        if (sumMin > b)
+                            removeConstraint();
+                    break;
+                case ge:
 
-		pruneGtEq(b);
+                    pruneGtEq(b);
 
-		if (!reified)
-		    if (sumMin >= b)
-			removeConstraint();
+                    if (!reified)
+                        if (sumMin >= b)
+                            removeConstraint();
 
-		break;
-	    }
+                    break;
+            }
 
-	} while (store.propagationHasOccurred);
+        } while (store.propagationHasOccurred);
     }
 
-    @Override
-    public int getConsistencyPruningEvent(Var var) {
+    @Override public int getConsistencyPruningEvent(Var var) {
 
-	// If consistency function mode
-	if (consistencyPruningEvents != null) {
-	    Integer possibleEvent = consistencyPruningEvents.get(var);
-	    if (possibleEvent != null)
-		return possibleEvent;
-	}
-	return IntDomain.BOUND;
+        // If consistency function mode
+        if (consistencyPruningEvents != null) {
+            Integer possibleEvent = consistencyPruningEvents.get(var);
+            if (possibleEvent != null)
+                return possibleEvent;
+        }
+        return IntDomain.BOUND;
     }
 
-    @Override
-    public int getNestedPruningEvent(Var var, boolean mode) {
+    @Override public int getNestedPruningEvent(Var var, boolean mode) {
 
-	// If consistency function mode
-	if (mode) {
-	    if (consistencyPruningEvents != null) {
-		Integer possibleEvent = consistencyPruningEvents.get(var);
-		if (possibleEvent != null)
-		    return possibleEvent;
-	    }
-	    return IntDomain.BOUND;
-	}
+        // If consistency function mode
+        if (mode) {
+            if (consistencyPruningEvents != null) {
+                Integer possibleEvent = consistencyPruningEvents.get(var);
+                if (possibleEvent != null)
+                    return possibleEvent;
+            }
+            return IntDomain.BOUND;
+        }
 
-	// If notConsistency function mode
-	else {
-	    if (notConsistencyPruningEvents != null) {
-		Integer possibleEvent = notConsistencyPruningEvents.get(var);
-		if (possibleEvent != null)
-		    return possibleEvent;
-	    }
-	    return IntDomain.BOUND;
-	}
+        // If notConsistency function mode
+        else {
+            if (notConsistencyPruningEvents != null) {
+                Integer possibleEvent = notConsistencyPruningEvents.get(var);
+                if (possibleEvent != null)
+                    return possibleEvent;
+            }
+            return IntDomain.BOUND;
+        }
     }
 
-    @Override
-    public int getNotConsistencyPruningEvent(Var var) {
+    @Override public int getNotConsistencyPruningEvent(Var var) {
 
-	// If notConsistency function mode
-	if (notConsistencyPruningEvents != null) {
-	    Integer possibleEvent = notConsistencyPruningEvents.get(var);
-	    if (possibleEvent != null)
-		return possibleEvent;
-	}
-	return IntDomain.BOUND;	
+        // If notConsistency function mode
+        if (notConsistencyPruningEvents != null) {
+            Integer possibleEvent = notConsistencyPruningEvents.get(var);
+            if (possibleEvent != null)
+                return possibleEvent;
+        }
+        return IntDomain.BOUND;
     }
 
-    @Override
-    public void impose(Store store) {
+    @Override public void impose(Store store) {
 
-	if (x == null || x.length == 0)
-	    return;
+        if (x == null || x.length == 0)
+	          return;
 
-	reified = false;
+        reified = false;
 
-	for (Var V : x)
-	    V.putModelConstraint(this, getConsistencyPruningEvent(V));
+        for (Var V : x)
+            V.putModelConstraint(this, getConsistencyPruningEvent(V));
 
-	store.addChanged(this);
-	store.countConstraint();
+        store.addChanged(this);
+        store.countConstraint();
     }
 
     void computeInit() {
         int f = 0, e = 0;
         int min, max;
-	int i = 0;
-	// positive weights
+        int i = 0;
+        // positive weights
         for (; i < pos; i++) {
-	    IntDomain xd = x[i].dom();
+            IntDomain xd = x[i].dom();
             min = xd.min() * a[i];
             max = xd.max() * a[i];
             f += min;
             e += max;
             I[i] = (max - min);
         }
-	// negative weights
-        for (; i < l; i++) { 
-	    IntDomain xd = x[i].dom();
+        // negative weights
+        for (; i < l; i++) {
+            IntDomain xd = x[i].dom();
             min = xd.max() * a[i];
             max = xd.min() * a[i];
             f += min;
@@ -433,9 +430,9 @@ public class LinearInt extends PrimitiveConstraint {
 
         if (sumMin > b)
             throw store.failException;
-	
+
         int min, max;
-	int i = 0;
+        int i = 0;
         // positive weights
         for (; i < pos; i++) {
             if (I[i] > b - sumMin) {
@@ -464,11 +461,11 @@ public class LinearInt extends PrimitiveConstraint {
 
     void pruneGtEq(int b) {
 
-        if (sumMax < b) 
+        if (sumMax < b)
             throw store.failException;
 
         int min, max;
-	int i = 0;
+        int i = 0;
         // positive weights
         for (; i < pos; i++) {
             if (I[i] > -(b - sumMax)) {
@@ -483,7 +480,7 @@ public class LinearInt extends PrimitiveConstraint {
         }
         // negative weights
         for (; i < l; i++) {
-            if (I[i] > - (b - sumMax)) {
+            if (I[i] > -(b - sumMax)) {
                 max = x[i].min() * a[i];
                 min = max - I[i];
                 if (pruneMax(x[i], divRoundDown(-(b - sumMax + max), -a[i]))) {
@@ -497,79 +494,77 @@ public class LinearInt extends PrimitiveConstraint {
 
     void pruneNeq() {
 
-        if (sumMin == sumMax && b == sumMin) 
+        if (sumMin == sumMax && b == sumMin)
             throw store.failException;
 
         int min, max;
-	int i = 0;
+        int i = 0;
         // positive weights
         for (; i < pos; i++) {
-	    min = x[i].min() * a[i];
-	    max = min + I[i];
+            min = x[i].min() * a[i];
+            max = min + I[i];
 
-	    if (pruneNe(x[i], b - sumMax + max, b - sumMin + min, a[i])) {
-		int newMin = x[i].min() * a[i];
-		int newMax = x[i].max() * a[i];
-		sumMin += newMin - min;
-		sumMax += newMax - max;
-		I[i] = newMax - newMin;
-	    }
+            if (pruneNe(x[i], b - sumMax + max, b - sumMin + min, a[i])) {
+                int newMin = x[i].min() * a[i];
+                int newMax = x[i].max() * a[i];
+                sumMin += newMin - min;
+                sumMax += newMax - max;
+                I[i] = newMax - newMin;
+            }
         }
         // negative weights
         for (; i < l; i++) {
-	    min = x[i].max() * a[i];
-	    max = min + I[i];
+            min = x[i].max() * a[i];
+            max = min + I[i];
 
-	    if (pruneNe(x[i], b - sumMin + min, b - sumMax + max, a[i])) {
-		int newMin = x[i].max() * a[i];
-		int newMax = x[i].min() * a[i];
-		sumMin += newMin - min;
-		sumMax += newMax - max;
-		I[i] = newMax - newMin;
-	    }
-	}
+            if (pruneNe(x[i], b - sumMin + min, b - sumMax + max, a[i])) {
+                int newMin = x[i].max() * a[i];
+                int newMax = x[i].min() * a[i];
+                sumMin += newMin - min;
+                sumMax += newMax - max;
+                I[i] = newMax - newMin;
+            }
+        }
     }
 
     private boolean pruneMin(IntVar x, int min) {
-	if (min > x.min()) {
-	    x.domain.inMin(store.level, x, min);
-	    return true;
-	}
-	else
-	    return false;
+        if (min > x.min()) {
+            x.domain.inMin(store.level, x, min);
+            return true;
+        } else
+            return false;
     }
 
     private boolean pruneMax(IntVar x, int max) {
-	if (max < x.max()) {
-	    x.domain.inMax(store.level, x, max);
-	    return true;
-	}
-	else
-	    return false;
+        if (max < x.max()) {
+            x.domain.inMax(store.level, x, max);
+            return true;
+        } else
+            return false;
     }
 
     private boolean pruneNe(IntVar x, int min, int max, int a) {
 
-	if (min == max && min % a == 0) {
+        if (min == max && min % a == 0) {
 
-	    int d = min/a;
+            int d = min / a;
 
-	    boolean boundsChanged = false;
-	
-	    if (d == x.min() || d == x.max()) 
-		boundsChanged = true;
+            boolean boundsChanged = false;
 
-	    x.domain.inComplement(store.level, x, d);
+            if (d == x.min() || d == x.max())
+                boundsChanged = true;
 
-	    return boundsChanged;
-	}
-	return false;
+            x.domain.inComplement(store.level, x, d);
+
+            return boundsChanged;
+        }
+        return false;
     }
 
     public boolean satisfiedEq() {
 
         int sMin = 0, sMax = 0;
-	int i = 0;
+        int i = 0;
         for (; i < pos; i++) {
             sMin += x[i].min() * a[i];
             sMax += x[i].max() * a[i];
@@ -585,7 +580,7 @@ public class LinearInt extends PrimitiveConstraint {
     public boolean satisfiedNeq() {
 
         int sMax = 0, sMin = 0;
-	int i = 0;
+        int i = 0;
         for (; i < pos; i++) {
             sMin += x[i].min() * a[i];
             sMax += x[i].max() * a[i];
@@ -600,8 +595,8 @@ public class LinearInt extends PrimitiveConstraint {
 
     public boolean satisfiedLtEq(int b) {
 
-	int sMax = 0;
-	int i = 0;
+        int sMax = 0;
+        int i = 0;
         for (; i < pos; i++) {
             sMax += x[i].max() * a[i];
         }
@@ -609,13 +604,13 @@ public class LinearInt extends PrimitiveConstraint {
             sMax += x[i].min() * a[i];
         }
 
-        return  sMax <= b;
+        return sMax <= b;
     }
 
     public boolean satisfiedGtEq(int b) {
 
-	int sMin = 0;
-	int i = 0;
+        int sMin = 0;
+        int i = 0;
         for (; i < pos; i++) {
             sMin += x[i].min() * a[i];
         }
@@ -623,58 +618,55 @@ public class LinearInt extends PrimitiveConstraint {
             sMin += x[i].max() * a[i];
         }
 
-        return  sMin >= b;
+        return sMin >= b;
     }
 
-    @Override
-    public void removeConstraint() {
-	for (Var v : x)
-	    v.removeConstraint(this);
+    @Override public void removeConstraint() {
+        for (Var v : x)
+            v.removeConstraint(this);
     }
 
-    @Override
-    public boolean satisfied() {
+    @Override public boolean satisfied() {
 
-	return entailed(relationType);
+        return entailed(relationType);
 
     }
 
-    @Override
-    public boolean notSatisfied() {
+    @Override public boolean notSatisfied() {
 
-	return entailed(negRel[relationType]);
+        return entailed(negRel[relationType]);
 
     }
 
     private boolean entailed(int rel) {
 
-	switch (rel) {
-	case eq:
-	    return satisfiedEq();
-	case le:
-	    return satisfiedLtEq(b);
-	case lt:
-	    return satisfiedLtEq(b-1);
-	case ne:
-	    return satisfiedNeq();
-	case gt:
-	    return satisfiedGtEq(b+1);
-	case ge:
-	    return satisfiedGtEq(b);
-	}
+        switch (rel) {
+            case eq:
+                return satisfiedEq();
+            case le:
+                return satisfiedLtEq(b);
+            case lt:
+                return satisfiedLtEq(b - 1);
+            case ne:
+                return satisfiedNeq();
+            case gt:
+                return satisfiedGtEq(b + 1);
+            case ge:
+                return satisfiedGtEq(b);
+        }
 
-	return false;
+        return false;
     }
 
     private int divRoundDown(int a, int b) {
-        if (a >= 0) 
+        if (a >= 0)
             return a / b;
         else // a < 0
             return (a - b + 1) / b;
     }
 
     private int divRoundUp(int a, int b) {
-        if (a >= 0) 
+        if (a >= 0)
             return (a + b - 1) / b;
         else // a < 0
             return a / b;
@@ -687,92 +679,96 @@ public class LinearInt extends PrimitiveConstraint {
     // private int divCeil(int s, int a) {
     // 	return (int)(  Math.ceil( (float)s / a ) );
     // }
-    
+
     public byte relation(String r) {
-	if (r.equals("==")) 
-	    return eq;
-	else if (r.equals("=")) 
-	    return eq;
-	else if (r.equals("<"))
-	    return lt;
-	else if (r.equals("<="))
-	    return le;
-	else if (r.equals("=<"))
-	    return le;
-	else if (r.equals("!="))
-	    return ne;
-	else if (r.equals(">"))
-	    return gt;
-	else if (r.equals(">="))
-	    return ge;
-	else if (r.equals("=>"))
-	    return ge;
-	else {
-	    System.err.println ("Wrong relation symbol in LinearInt constraint " + r + "; assumed ==");
-	    return eq;
-	}
+        if (r.equals("=="))
+            return eq;
+        else if (r.equals("="))
+            return eq;
+        else if (r.equals("<"))
+            return lt;
+        else if (r.equals("<="))
+            return le;
+        else if (r.equals("=<"))
+            return le;
+        else if (r.equals("!="))
+            return ne;
+        else if (r.equals(">"))
+            return gt;
+        else if (r.equals(">="))
+            return ge;
+        else if (r.equals("=>"))
+            return ge;
+        else {
+            System.err.println("Wrong relation symbol in LinearInt constraint " + r + "; assumed ==");
+            return eq;
+        }
     }
 
     public String rel2String() {
-	switch (relationType) {
-	case eq : return "==";
-	case lt : return "<";
-	case le : return "<=";
-	case ne : return "!=";
-	case gt : return ">";
-	case ge : return ">=";
-	}
+        switch (relationType) {
+            case eq:
+                return "==";
+            case lt:
+                return "<";
+            case le:
+                return "<=";
+            case ne:
+                return "!=";
+            case gt:
+                return ">";
+            case ge:
+                return ">=";
+        }
 
-	return "?";
+        return "?";
     }
 
     void checkForOverflow() {
 
-	int sMin=0, sMax=0;
-	for (int i=0; i<x.length; i++) {
-	    int n1 = IntDomain.multiply(x[i].min(), a[i]);
-	    int n2 = IntDomain.multiply(x[i].max(), a[i]);
+        int sMin = 0, sMax = 0;
+        for (int i = 0; i < x.length; i++) {
+            int n1 = IntDomain.multiply(x[i].min(), a[i]);
+            int n2 = IntDomain.multiply(x[i].max(), a[i]);
 
-	    if (n1 <= n2) {
-		sMin = add(sMin, n1);
-		sMax = add(sMax, n2);
-	    }
-	    else {
-		sMin = add(sMin, n2);
-		sMax = add(sMax, n1);
-	    }
-	}
+            if (n1 <= n2) {
+                sMin = add(sMin, n1);
+                sMax = add(sMax, n2);
+            } else {
+                sMin = add(sMin, n2);
+                sMax = add(sMax, n1);
+            }
+        }
     }
 
-    @Override
-    public String toString() {
+    @Override public String toString() {
 
-	StringBuffer result = new StringBuffer( id() );
-	result.append(" : LinearInt( [ ");
+        StringBuffer result = new StringBuffer(id());
+        result.append(" : LinearInt( [ ");
 
-	for (int i = 0; i < x.length; i++) {
-	    result.append(x[i]);
-	    if (i < x.length - 1)
-		result.append(", ");
-	}
-	result.append("], [");
+        for (int i = 0; i < x.length; i++) {
+            result.append(x[i]);
+            if (i < x.length - 1)
+                result.append(", ");
+        }
+        result.append("], [");
 
-	for (int i = 0; i < a.length; i++) {
-	    result.append( a[i] );
-	    if (i < a.length - 1)
-		result.append( ", " );
-	}
+        for (int i = 0; i < a.length; i++) {
+            result.append(a[i]);
+            if (i < a.length - 1)
+                result.append(", ");
+        }
 
-	result.append( "], ").append(rel2String()).append(", ").append(b).append( " )" );
+        result.append("], ").append(rel2String()).append(", ").append(b).append(" )");
 
-	return result.toString();
+        return result.toString();
 
     }
 
-    @Override
-    public void increaseWeight() {
-	if (increaseWeight) {
-	    for (Var v : x) v.weight++;
-	}
+    @Override public void increaseWeight() {
+        if (increaseWeight) {
+            for (Var v : x)
+                v.weight++;
+        }
     }
 }

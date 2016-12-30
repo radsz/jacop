@@ -34,6 +34,7 @@ package org.jacop.constraints;
 
 import java.util.ArrayList;
 import java.util.Hashtable;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -52,7 +53,7 @@ import org.jacop.core.Var;
 
 public class Distance extends PrimitiveConstraint {
 
-	static int idNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	boolean firstConsistencyCheck = false;
 
@@ -90,7 +91,7 @@ public class Distance extends PrimitiveConstraint {
 	 */
 	public Distance(IntVar x, IntVar y, IntVar z) {
 		
-		numberId = idNumber++;
+		numberId = idNumber.incrementAndGet();
 		numberArgs = 3;
 		
 		this.x = x;

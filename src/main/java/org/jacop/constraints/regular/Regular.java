@@ -43,6 +43,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ExtensionalSupportSTR;
@@ -227,8 +228,8 @@ public class Regular extends Constraint {
 	LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
 	
 	HashMap<IntVar, Integer> mapping = new HashMap<IntVar, Integer>();
-	
-	static int idNumber = 1;
+
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 
 	/**
@@ -305,7 +306,7 @@ public class Regular extends Constraint {
 			this.list[i] = list[i];
 		}
 		this.fsm = fsm;		
-		numberId = idNumber++;
+		numberId = idNumber.incrementAndGet();
 		leftPosition = 0;
 		rightPosition = list.length - 1;
 		touchedStates = new RegState[fsm.allStates.size() * list.length];
@@ -321,7 +322,6 @@ public class Regular extends Constraint {
 	 *  
 	 * 
 	 * @param dfa
-	 * @param S
 	 */
 	
 	private void initializeARRAY(FSM dfa) {

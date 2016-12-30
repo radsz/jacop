@@ -33,6 +33,7 @@ package org.jacop.constraints;
 
 import java.util.ArrayList;
 import java.util.Hashtable;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Domain;
 import org.jacop.core.Store;
@@ -50,7 +51,7 @@ import org.jacop.util.SimpleHashSet;
 
 public class And extends PrimitiveConstraint {
 
-	static int IdNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	Hashtable<Var, Integer> pruningEvents;
 
@@ -78,7 +79,7 @@ public class And extends PrimitiveConstraint {
 		assert (listOfC != null) : "List of constraints is empty";
 		
 		this.queueIndex = 1;
-		numberId = IdNumber++;
+		numberId = idNumber.incrementAndGet();
 		
 		this.listOfC = new PrimitiveConstraint[listOfC.size()];
 		
@@ -100,7 +101,7 @@ public class And extends PrimitiveConstraint {
 	 */
 	public And(PrimitiveConstraint c1, PrimitiveConstraint c2) {
 		
-		numberId = IdNumber++;
+		numberId = idNumber.incrementAndGet();
 		
 		this.listOfC = new PrimitiveConstraint[2];
 		
@@ -120,7 +121,7 @@ public class And extends PrimitiveConstraint {
 	public And(PrimitiveConstraint[] c) {
 		
 		this.queueIndex = 1;
-		this.numberId = IdNumber++;
+		this.numberId = idNumber.incrementAndGet();
 		this.listOfC = new PrimitiveConstraint[c.length];
 		for (int i = 0; i < c.length; i++) {
 			this.numberArgs += c[i].numberArgs();

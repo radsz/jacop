@@ -32,6 +32,7 @@
 package org.jacop.floats.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Var;
 import org.jacop.core.Store;
@@ -52,7 +53,7 @@ import org.jacop.floats.core.FloatDomain;
 
 public class CosPeqR_decomposed extends Constraint {
 
-    static int IdNumber = 1;
+    static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It contains variable p.
@@ -79,7 +80,7 @@ public class CosPeqR_decomposed extends Constraint {
 	assert (p != null) : "Variable p is null";
 	assert (q != null) : "Variable q is null";
 
-	numberId = IdNumber++;
+	numberId = idNumber.incrementAndGet();
 	numberArgs = 2;
 
 	this.p = p;

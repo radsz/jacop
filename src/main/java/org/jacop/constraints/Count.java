@@ -33,6 +33,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -42,7 +43,7 @@ import org.jacop.core.Var;
 /**
  * Count constraint implements the counting over number of occurrences of 
  * a given value in a list of variables. The number of occurrences is 
- * specified by variable counter.
+ * specified by variable idNumber.
  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.4
@@ -50,10 +51,10 @@ import org.jacop.core.Var;
 
 public class Count extends Constraint {
 
-	static int idNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
-	 * It specifies variable counter to count the number of occurences of the specified value in a list. 
+	 * It specifies variable idNumber to count the number of occurences of the specified value in a list.
 	 */
 	public IntVar counter;
 
@@ -71,7 +72,7 @@ public class Count extends Constraint {
 	 * It specifies the arguments required to be saved by an XML format as well as 
 	 * the constructor being called to recreate an object from an XML format.
 	 */
-	public static String[] xmlAttributes = {"list", "counter", "value"};
+	public static String[] xmlAttributes = {"list", "idNumber", "value"};
 
 	/**
 	 * It constructs a Count constraint. 
@@ -86,7 +87,7 @@ public class Count extends Constraint {
 
 		this.numberArgs = (short) (list.length + 1);
 		this.queueIndex = 1;
-		this.numberId = idNumber++;
+		this.numberId = idNumber.incrementAndGet();
 		
 		this.value = value;
 		this.counter = counter;

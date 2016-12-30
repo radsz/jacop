@@ -32,11 +32,10 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
-import org.jacop.core.BooleanVar;
-import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.core.TimeStamp;
@@ -53,7 +52,7 @@ import org.jacop.core.TimeStamp;
 
 public class BoolClause extends PrimitiveConstraint {
 
-    static int counter = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies lists of variables for the constraint.
@@ -89,7 +88,7 @@ public class BoolClause extends PrimitiveConstraint {
 	assert ( x != null ) : "List variable is null";
 	assert ( y != null ) : "Result variable is null";
 		
-	this.numberId = counter++;
+	this.numberId = idNumber.incrementAndGet();
 	this.lx = x.length;
 	this.ly = y.length;
 	this.numberArgs = (short)(lx + ly);

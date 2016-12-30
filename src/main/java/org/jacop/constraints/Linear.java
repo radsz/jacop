@@ -33,6 +33,7 @@ package org.jacop.constraints;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -57,7 +58,8 @@ import org.jacop.core.Var;
  */
 @Deprecated public class Linear extends Constraint {
     Store store;
-	static int counter = 1;
+
+    static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * Defines relations
@@ -149,7 +151,7 @@ import org.jacop.core.Var;
 
 		numberArgs = (short) (list.length + 1);
 
-		numberId = counter++;
+		numberId = idNumber.incrementAndGet();
 
 		this.sum = sum;
 

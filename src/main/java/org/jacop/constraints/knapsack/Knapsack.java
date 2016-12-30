@@ -36,6 +36,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
@@ -68,7 +69,7 @@ import org.jacop.core.Var;
 
 public class Knapsack extends Constraint {
 
-    static int idNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It specifies if any debugging information should be printed.
@@ -239,7 +240,7 @@ public class Knapsack extends Constraint {
 		assert (knapsackProfit != null) : "Profit parameter is equal to null";
 		assert (items != null) : "Items list is null";
 
-        numberId = idNumber++;
+		numberId = idNumber.incrementAndGet();
 
 		queueIndex = 1;
 		
@@ -278,7 +279,7 @@ public class Knapsack extends Constraint {
 		assert (knapsackCapacity != null) : "Capacity parameter is equal to null";
 		assert (knapsackProfit != null) : "Profit parameter is equal to null";
 
-	        numberId = idNumber++;
+		numberId = idNumber.incrementAndGet();
 		queueIndex = 1;
 		
 		/* We start to create an array of items */

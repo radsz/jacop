@@ -34,6 +34,7 @@ package org.jacop.constraints;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.LinkedHashSet;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -65,7 +66,7 @@ public class Circuit extends Alldiff {
 
 	int[] val;
 
-	static int IdNumber = 0;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 	
 	Hashtable<Var, Integer> valueIndex = new Hashtable<Var, Integer>();
 
@@ -83,10 +84,28 @@ public class Circuit extends Alldiff {
 	 */
 	public Circuit(IntVar[] list) {
 
-		super(list);
+		assert (list != null) : "Variables list is null";
 
-		Alldiff.idNumber--;
-		numberId = IdNumber++;
+		this.numberId = idNumber.incrementAndGet();
+		this.list = new IntVar[list.length];
+		this.numberArgs = (short) list.length;
+
+		for (int i = 0; i < list.length; i++) {
+			assert (list[i] != null) : i + "-th element in the list is null";
+			this.list[i] = list[i];
+		}
+
+		this.queueIndex = 2;
+
+		this.numberArgs = (short) list.length;
+		listAlldiff = new IntVar[list.length];
+
+		for (int i = 0; i < list.length; i++)
+			listAlldiff[i] = list[i];
+
+		min = new int[list.length];
+		max = new int[list.length];
+		u = new int[list.length];
 
 		int i = 0;
 		for (Var v : list)

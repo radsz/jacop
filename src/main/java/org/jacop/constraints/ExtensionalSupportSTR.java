@@ -34,6 +34,7 @@ package org.jacop.constraints;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
 import javax.xml.transform.sax.TransformerHandler;
@@ -76,8 +77,8 @@ public class ExtensionalSupportSTR extends Constraint {
 	 * 
 	 */
 	public int[][] tuples;
-	
-	static int idNumber = 1;
+
+	static AtomicInteger idNumber = new AtomicInteger(0);
 	
 	static final boolean debugAll = false;
 	
@@ -220,7 +221,7 @@ public class ExtensionalSupportSTR extends Constraint {
 		
 		this.tuples = tuples;
 
-		numberId = idNumber++;
+		numberId = idNumber.incrementAndGet();
 		
 		this.reinsertBefore = reinsertBefore;
 		this.residuesBefore = residuesBefore;

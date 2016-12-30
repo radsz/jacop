@@ -36,6 +36,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.LinkedHashSet;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -76,7 +77,7 @@ public class AmongVar extends Constraint {
 	/**
 	 * Number of Among constraints created.
 	 */
-	public static int counter  = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 		
 	//All variables attributes
 	private HashMap<IntVar, Integer> xIndex;
@@ -129,7 +130,7 @@ public class AmongVar extends Constraint {
 	
 		this.queueIndex = 1;
 		
-		numberId = counter ++;
+		numberId = idNumber.incrementAndGet();
 		this.numberArgs = (short) ( listOfX.length + listOfY.length + 1);
 				
 		this.listOfX = new IntVar[listOfX.length];

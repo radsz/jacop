@@ -35,6 +35,7 @@ package org.jacop.floats.constraints;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
@@ -67,7 +68,7 @@ import org.jacop.floats.core.FloatIntervalEnumeration;
 
 public class ElementFloat extends Constraint {
 
-    static int idNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
     boolean firstConsistencyCheck = true;
     int firstConsistencyLevel;
@@ -139,7 +140,7 @@ public class ElementFloat extends Constraint {
 	assert (list != null) : "Argument list is null";
 	assert (value != null) : "Argument value is null";
 				
-	this.numberId = idNumber++;
+	this.numberId = idNumber.incrementAndGet();
 	this.index = index;
 	this.value = value;
 	this.numberArgs = (short) (numberArgs + 2);

@@ -32,6 +32,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -48,7 +49,7 @@ import org.jacop.util.SimpleHashSet;
 
 public class Not extends PrimitiveConstraint {
 
-	static int IdNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It specifies the constraint which negation is being created.
@@ -69,7 +70,7 @@ public class Not extends PrimitiveConstraint {
 	 * @param c primitive constraint which is being negated.
 	 */
 	public Not(PrimitiveConstraint c) {
-		numberId = IdNumber++;
+		numberId = idNumber.incrementAndGet();
 		this.c = c;
 		numberArgs += c.numberArgs();
 		this.queueForward = new QueueForward<PrimitiveConstraint>(c, arguments());

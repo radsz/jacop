@@ -32,6 +32,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
@@ -49,7 +50,7 @@ import org.jacop.core.Var;
 
 public class XlteqC extends PrimitiveConstraint {
 
-	static int idNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It specifies variable x which must be smaller or equal to a given constant.
@@ -76,7 +77,7 @@ public class XlteqC extends PrimitiveConstraint {
 		
 		assert (x != null) : "Variable x is null";
 
-		numberId = idNumber++;
+		numberId = idNumber.incrementAndGet();
 		numberArgs = 1;
 
 		this.x = x;

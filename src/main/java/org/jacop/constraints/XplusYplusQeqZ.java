@@ -32,6 +32,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -49,7 +50,7 @@ import org.jacop.core.Var;
 
 public class XplusYplusQeqZ extends PrimitiveConstraint {
 
-	static int counter = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It specifies variable x in constraint x + y + q = z. 
@@ -91,7 +92,7 @@ public class XplusYplusQeqZ extends PrimitiveConstraint {
 		assert (q != null) : "Variable q is null";
 		assert (z != null) : "Variable z is null";
 
-		numberId = counter++;
+		numberId = idNumber.incrementAndGet();
 		numberArgs = 4;
 		
 		this.x = x;

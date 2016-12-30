@@ -38,6 +38,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
@@ -61,7 +62,7 @@ import org.jacop.util.SimpleHashSet;
 
 public class Binpacking extends Constraint {
 
-	static int idNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It keeps together a list of variables which define bin for item i and
@@ -122,7 +123,7 @@ public class Binpacking extends Constraint {
 			itemPar.put(bin[i], w[i]);
 	    }
 	    
-	    this.numberId = idNumber++;
+	    this.numberId = idNumber.incrementAndGet();
 	    this.item = new BinItem[itemPar.size()];
 	    this.numberArgs = (short) itemPar.size() + load.length;
 	    this.queueIndex = 2;

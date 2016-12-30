@@ -33,6 +33,7 @@ package org.jacop.constraints;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -54,7 +55,7 @@ import org.jacop.core.Var;
  */
 @Deprecated public class SumWeight extends Constraint {
 
-	static int counter = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It specifies a list of variables being summed.
@@ -96,7 +97,7 @@ import org.jacop.core.Var;
 
 		numberArgs = (short) (list.length + 1);
 
-		numberId = counter++;
+		numberId = idNumber.incrementAndGet();
 
 		this.sum = sum;
 

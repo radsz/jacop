@@ -32,6 +32,7 @@
 package org.jacop.set.core;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.Constraint;
 import org.jacop.core.Domain;
@@ -90,7 +91,7 @@ public class SetVar extends Var {
 	 * @param dom the domain of the variable being created.
 	 */
 	public SetVar(Store store, SetDomain dom) {
-		this(store, store.getVariableIdPrefix() + idNumber++, dom);
+		this(store, store.getVariableIdPrefix() + idNumber.incrementAndGet(), dom);
 	}
 
 	/**
@@ -106,7 +107,7 @@ public class SetVar extends Var {
 	 * @param store store in which the variable is created.
 	 */
 	public SetVar(Store store) {
-		this(store, store.getVariableIdPrefix() + idNumber++,
+		this(store, store.getVariableIdPrefix() + idNumber.incrementAndGet(),
 				new BoundSetDomain() );
 	}
 
@@ -118,7 +119,7 @@ public class SetVar extends Var {
 	 * @param max the maximum value of the domain.
 	 */
 	public SetVar(Store store, int min, int max) {
-		this(store, store.getVariableIdPrefix() + idNumber++,
+		this(store, store.getVariableIdPrefix() + idNumber.incrementAndGet(),
 				new BoundSetDomain(min, max));
 	}
 

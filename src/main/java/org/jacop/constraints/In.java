@@ -32,6 +32,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
@@ -50,7 +51,7 @@ import org.jacop.core.Var;
 
 public class In extends PrimitiveConstraint {
 
-	static int IdNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It specifies variable x whose domain must lie within a specified domain.
@@ -83,7 +84,7 @@ public class In extends PrimitiveConstraint {
 		assert (x != null) : "Variable x is null";
 		assert (dom != null) : "Domain dom is null";
 		
-		numberId = IdNumber++;
+		numberId = idNumber.incrementAndGet();
 		numberArgs = 1;
 		
 		this.x = x;

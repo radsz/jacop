@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.PriorityQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
 import javax.xml.transform.sax.TransformerHandler;
@@ -197,7 +198,7 @@ public class ExtensionalSupportVA extends Constraint {
 	/**
 	 * It specifies the id of the constraint.
 	 */
-	public static int idNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	boolean firstConsistencyCheck = true;
 
@@ -249,7 +250,7 @@ public class ExtensionalSupportVA extends Constraint {
 		for (int i = 0; i < list.length; i++)
 			this.list[i] = list[i];
 
-		this.numberId = idNumber++;
+		this.numberId = idNumber.incrementAndGet();
 	}
 
 	/**
@@ -285,7 +286,7 @@ public class ExtensionalSupportVA extends Constraint {
 
 		tuplesFromConstructor = tuples;
 
-		numberId = idNumber++;
+		numberId = idNumber.incrementAndGet();
 	}
 
 	@Override

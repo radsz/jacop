@@ -32,6 +32,7 @@
 package org.jacop.set.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.Constraint;
 import org.jacop.core.Store;
@@ -52,7 +53,7 @@ import org.jacop.set.core.SetVar;
 
 public class AdiffBeqC extends Constraint {
 
-	static int idNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It specifies set variable a. 
@@ -98,7 +99,7 @@ public class AdiffBeqC extends Constraint {
 		assert (b != null) : "Variable b is null";
 		assert (c != null) : "Variable c is null";
 
-		this.numberId = idNumber++;
+		this.numberId = idNumber.incrementAndGet();
 		this.numberArgs = 3;
 
 		this.a = a;

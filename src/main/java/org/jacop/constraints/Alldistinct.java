@@ -38,6 +38,7 @@ import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -74,7 +75,7 @@ public class Alldistinct extends Constraint {
 
 	static final boolean debugPruning = false;
 
-	static int idNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	boolean backtrackOccured = true;
 
@@ -196,7 +197,7 @@ public class Alldistinct extends Constraint {
 
 		queueIndex = 2;
 
-		numberId = idNumber++;
+		numberId = idNumber.incrementAndGet();
 
 		this.list = new IntVar[list.length];
 
@@ -1315,7 +1316,7 @@ public class Alldistinct extends Constraint {
 
 		Integer matched;
 
-		// i counter has to be from zero since free paths can go from matched
+		// i idNumber has to be from zero since free paths can go from matched
 		// edges
 		for (int i = 0; i <= lastPosition; i++) {
 

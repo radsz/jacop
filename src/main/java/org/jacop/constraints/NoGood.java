@@ -34,6 +34,7 @@ package org.jacop.constraints;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -61,7 +62,7 @@ import org.jacop.core.Var;
 
 public class NoGood extends PrimitiveConstraint {
 
-	static int idNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It specifies a list of variables in no-good constraint. 
@@ -111,7 +112,7 @@ public class NoGood extends PrimitiveConstraint {
 		
 		this.queueIndex = 0;
 		
-		this.numberId = idNumber++;
+		this.numberId = idNumber.incrementAndGet();
 		this.listOfVars = new IntVar[listOfVars.length];
 		this.listOfValues = new int[listOfValues.length];
 

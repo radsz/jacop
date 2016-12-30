@@ -57,7 +57,7 @@ public class BooleanVar extends IntVar {
 	 * @param store It specifies the store in which boolean variable should be created.
 	 */
 	public BooleanVar(final Store store) {
-		this(store, store.getVariableIdPrefix() + idNumber++,
+		this(store, store.getVariableIdPrefix() + idNumber.incrementAndGet(),
 				new BoundDomain(0, 1));
 	}
 
@@ -95,7 +95,7 @@ public class BooleanVar extends IntVar {
 	 * @param dom It specifies the domain of the boolean variable.
 	 */
 	public BooleanVar(Store store, BoundDomain dom) {
-		this(store, store.getVariableIdPrefix() + idNumber++, dom);
+		this(store, store.getVariableIdPrefix() + idNumber.incrementAndGet(), dom);
 	}
 
 	/**

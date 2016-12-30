@@ -99,7 +99,7 @@ public class IntVar extends Var {
 	 * @param dom the domain of the variable being created.
 	 */
 	public IntVar(Store store, IntDomain dom) {
-		this(store, store.getVariableIdPrefix() + idNumber++, dom);
+		this(store, store.getVariableIdPrefix() + idNumber.incrementAndGet(), dom);
 	}
 
 	/**
@@ -115,7 +115,7 @@ public class IntVar extends Var {
 	 * @param store store in which the variable is created.
 	 */
 	public IntVar(Store store) {
-		this(store, store.getVariableIdPrefix() + idNumber++,
+		this(store, store.getVariableIdPrefix() + idNumber.incrementAndGet(),
 				new IntervalDomain(5));
 	}
 
@@ -127,7 +127,7 @@ public class IntVar extends Var {
 	 * @param max the maximum value of the domain.
 	 */
 	public IntVar(Store store, int min, int max) {
-		this(store, store.getVariableIdPrefix() + idNumber++, min, max);
+		this(store, store.getVariableIdPrefix() + idNumber.incrementAndGet(), min, max);
 	}
 
 	/**

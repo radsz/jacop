@@ -32,6 +32,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Domain;
 import org.jacop.core.Store;
@@ -47,7 +48,7 @@ import org.jacop.util.QueueForward;
 
 public class IfThenElse extends PrimitiveConstraint {
 
-	static int counter = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It specifies constraint condC in the IfThenElse constraint. 
@@ -93,7 +94,7 @@ public class IfThenElse extends PrimitiveConstraint {
 		assert (thenC != null) : "Constraint then is null";
 		assert (elseC != null) : "Constraint elseC is null";
 
-		numberId = counter++;
+		numberId = idNumber.incrementAndGet();
 		numberArgs = (short) (condC.numberArgs + thenC.numberArgs + elseC.numberArgs);
 		
 		this.condC = condC;

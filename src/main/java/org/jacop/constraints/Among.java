@@ -34,6 +34,7 @@ package org.jacop.constraints;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -60,7 +61,7 @@ public class Among extends Constraint {
 	
 	static final boolean debugAll = false;
 
-	static int counter = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It specifies the list of variables whose values are checked.
@@ -73,7 +74,7 @@ public class Among extends Constraint {
 	public IntervalDomain kSet;
 
 	/**
-	 * It is a counter variable.
+	 * It is a idNumber variable.
 	 */
 	public IntVar n;
 
@@ -111,7 +112,7 @@ public class Among extends Constraint {
 		
 		this.queueIndex = 1;
 		
-		numberId = counter++;
+		numberId = idNumber.incrementAndGet();
 
 		this.list = new IntVar[list.length];
 		for (int i = 0; i < list.length; i++) {

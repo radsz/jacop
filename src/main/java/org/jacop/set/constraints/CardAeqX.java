@@ -32,6 +32,7 @@
 package org.jacop.set.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
@@ -50,7 +51,7 @@ import org.jacop.set.core.SetVar;
 
 public class CardAeqX extends Constraint {
 
-	static int idNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It specifies set variable a which is being restricted.
@@ -80,7 +81,7 @@ public class CardAeqX extends Constraint {
 		assert (a != null) : "Variable a is null";
 		assert (cardinality != null) : "Cardinality value is null";
 
-		this.numberId = idNumber++;
+		this.numberId = idNumber.incrementAndGet();
 		this.numberArgs = 1;
 		this.a = a;
 		this.cardinality = cardinality;

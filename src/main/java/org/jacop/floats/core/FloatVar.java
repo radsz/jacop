@@ -96,7 +96,7 @@ public class FloatVar extends Var {
 	 * @param dom the domain of the variable being created.
 	 */
 	public FloatVar(Store store, FloatDomain dom) {
-		this(store, store.getVariableIdPrefix() + idNumber++, dom);
+		this(store, store.getVariableIdPrefix() + idNumber.incrementAndGet(), dom);
 	}
 
 	/**
@@ -112,7 +112,7 @@ public class FloatVar extends Var {
 	 * @param store store in which the variable is created.
 	 */
 	public FloatVar(Store store) {
-		this(store, store.getVariableIdPrefix() + idNumber++,
+		this(store, store.getVariableIdPrefix() + idNumber.incrementAndGet(),
 				new FloatIntervalDomain(5));
 	}
 
@@ -124,7 +124,7 @@ public class FloatVar extends Var {
 	 * @param max the maximum value of the domain.
 	 */
 	public FloatVar(Store store, double min, double max) {
-		this(store, store.getVariableIdPrefix() + idNumber++, min, max);
+		this(store, store.getVariableIdPrefix() + idNumber.incrementAndGet(), min, max);
 	}
 
 	/**

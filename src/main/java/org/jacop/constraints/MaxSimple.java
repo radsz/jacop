@@ -32,12 +32,12 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.core.TimeStamp;
 
 /**
  * MaxSimple constraint implements the Maximum/2 constraint. It provides the maximum
@@ -51,7 +51,7 @@ import org.jacop.core.TimeStamp;
 
 public class MaxSimple extends Constraint {
 
-  static int counter = 1;
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
   /**
    * It specifies a variables between which a maximum value is being searched for.
@@ -81,7 +81,7 @@ public class MaxSimple extends Constraint {
     assert ( x2 != null ) : "Second variable is null";
     assert ( max != null ) : "Min variable is null";
 
-    this.numberId = counter++;
+    this.numberId = idNumber.incrementAndGet();
     this.numberArgs = (short) (3);
     this.max = max;
     this.x1 = x1;

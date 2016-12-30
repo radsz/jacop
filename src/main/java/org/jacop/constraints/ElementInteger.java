@@ -34,6 +34,7 @@ package org.jacop.constraints;
 
 import java.util.ArrayList;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.Interval;
@@ -59,7 +60,7 @@ import org.jacop.core.Var;
 
 public class ElementInteger extends Constraint {
 
-	static int idNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	boolean firstConsistencyCheck = true;
 	int firstConsistencyLevel;
@@ -152,7 +153,7 @@ public class ElementInteger extends Constraint {
 		assert (list != null) : "Argument list is null";
 		assert (value != null) : "Argument value is null";
 				
-		this.numberId = idNumber++;
+		this.numberId = idNumber.incrementAndGet();
 		this.index = index;
 		this.value = value;
 		this.numberArgs = (short) (numberArgs + 2);

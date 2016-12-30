@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.LinkedHashSet;
 import java.util.Stack;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -54,6 +55,8 @@ import org.jacop.core.Var;
 
 public class Subcircuit extends Alldiff {
 
+	static AtomicInteger idNumber = new AtomicInteger(0);
+
     Store store;
 
     boolean firstConsistencyCheck = true;
@@ -63,8 +66,6 @@ public class Subcircuit extends Alldiff {
     int sccLength = 0;
 
     int[] val;
-
-    static int IdNumber = 0;
 	
     Hashtable<Var, Integer> valueIndex = new Hashtable<Var, Integer>();
 
@@ -82,16 +83,36 @@ public class Subcircuit extends Alldiff {
      */
     public Subcircuit(IntVar[] list) {
 
-	super(list);
+			assert (list != null) : "Variables list is null";
 
-	Alldiff.idNumber--;
-	numberId = IdNumber++;
+			this.numberId = idNumber.incrementAndGet();
+			this.list = new IntVar[list.length];
+			this.numberArgs = (short) list.length;
 
-	int i = 0;
-	for (Var v : list)
-	    valueIndex.put(v, i++);
+			for (int i = 0; i < list.length; i++) {
+				assert (list[i] != null) : i + "-th element in the list is null";
+				this.list[i] = list[i];
+			}
 
-	val = new int[list.length];
+			this.queueIndex = 2;
+
+			this.numberArgs = (short) list.length;
+			listAlldiff = new IntVar[list.length];
+
+			for (int i = 0; i < list.length; i++)
+				listAlldiff[i] = list[i];
+
+			min = new int[list.length];
+			max = new int[list.length];
+			u = new int[list.length];
+
+			numberId = idNumber.incrementAndGet();
+
+			int i = 0;
+			for (Var v : list)
+	    	valueIndex.put(v, i++);
+
+			val = new int[list.length];
     }
 
     /**

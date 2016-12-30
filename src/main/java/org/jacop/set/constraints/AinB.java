@@ -32,6 +32,7 @@
 package org.jacop.set.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Store;
@@ -50,8 +51,8 @@ import org.jacop.set.core.SetVar;
 public class AinB extends PrimitiveConstraint {
 
 	// FIXME, check consistency and other methods like satisfied, notConsistency, notSatisfied.
-	
-	static int idNumber = 1;
+
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It specifies variable a.
@@ -90,7 +91,7 @@ public class AinB extends PrimitiveConstraint {
 		assert (a != null) : "Variable a is null";
 		assert (b != null) : "Variable b is null";
 
-		this.numberId = idNumber++;
+		this.numberId = idNumber.incrementAndGet();
 		this.numberArgs = 2;
 		
 		this.a = a;

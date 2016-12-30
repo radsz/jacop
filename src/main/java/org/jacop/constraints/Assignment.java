@@ -34,6 +34,7 @@ package org.jacop.constraints;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -54,7 +55,7 @@ import org.jacop.core.Var;
 
 public class Assignment extends Constraint {
 
-	static int counter = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It specifies a list of variables d. 
@@ -99,7 +100,7 @@ public class Assignment extends Constraint {
 	 */
 	public Assignment(IntVar[] xs, IntVar[] ds, int shiftX, int shiftD) {
 
-		numberId = counter++;
+		numberId = idNumber.incrementAndGet();
 
 		this.shiftX = shiftX;
 		this.shiftD = shiftD;

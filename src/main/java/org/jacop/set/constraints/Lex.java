@@ -32,6 +32,7 @@
 package org.jacop.set.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
@@ -59,7 +60,7 @@ import org.jacop.set.core.SetVar;
 
 public class Lex extends Constraint {
 
-	static int idNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It specifies a list on which element a lex relationship holds for every 
@@ -104,7 +105,7 @@ public class Lex extends Constraint {
 		assert (a != null) : "Variable a is null";
 		assert (b != null) : "Variable b is null";
 
-		numberId = idNumber++;
+		numberId = idNumber.incrementAndGet();
 		numberArgs = 2;
 
 		this.a = a;

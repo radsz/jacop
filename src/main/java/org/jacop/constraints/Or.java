@@ -32,6 +32,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Domain;
 import org.jacop.core.Store;
@@ -49,7 +50,7 @@ import org.jacop.util.SimpleHashSet;
 
 public class Or extends PrimitiveConstraint {
 
-	static int IdNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It specifies a list of constraints from which one constraint must be satisfied.
@@ -79,7 +80,7 @@ public class Or extends PrimitiveConstraint {
 		assert (listOfC != null) : "List of constraints is null";
 		
 		this.queueIndex = 1;
-		this.numberId = IdNumber++;
+		this.numberId = idNumber.incrementAndGet();
 		this.listOfC = new PrimitiveConstraint[listOfC.length];
 		
 		for (int i = 0; i < listOfC.length; i++) {
@@ -110,7 +111,7 @@ public class Or extends PrimitiveConstraint {
 	public Or(PrimitiveConstraint c1, PrimitiveConstraint c2) {
 		
 		this.queueIndex = 1;
-		this.numberId = IdNumber++;
+		this.numberId = idNumber.incrementAndGet();
 		this.listOfC = new PrimitiveConstraint[2];
 		this.numberArgs += c1.numberArgs();
 		this.listOfC[0] = c1;

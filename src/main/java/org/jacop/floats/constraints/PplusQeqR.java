@@ -32,6 +32,7 @@
 package org.jacop.floats.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -56,7 +57,7 @@ import org.jacop.floats.constraints.Derivative;
 
 public class PplusQeqR extends PrimitiveConstraint {
 
-    static int idNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies variable p in constraint p+q=r. 
@@ -91,7 +92,7 @@ public class PplusQeqR extends PrimitiveConstraint {
 	assert (q != null) : "Variable q is null";
 	assert (r != null) : "Variable r is null";
 
-	numberId = idNumber++;
+	numberId = idNumber.incrementAndGet();
 	numberArgs = 3;
 
 	this.p = p;

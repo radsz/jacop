@@ -33,6 +33,8 @@ package org.jacop.core;
 
 import org.jacop.constraints.Constraint;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * Defines a variable and related operations on it.
  * 
@@ -48,7 +50,7 @@ public abstract class Var implements Backtrackable {
 	/**
 	 * It is a counter to indicate number of created variables.
 	 */
-	public static int idNumber = 0;
+	public static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * Id string of the variable.

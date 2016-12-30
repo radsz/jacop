@@ -32,6 +32,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -49,7 +50,7 @@ import org.jacop.core.TimeStamp;
 
 public class Min extends Constraint {
 
-	static int IdNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It specifies a list of variables among which the minimum value is being searched for. 
@@ -87,7 +88,6 @@ public class Min extends Constraint {
 		assert ( list != null ) : "List variable is null";
 		assert ( min != null ) : "Min variable is null";
 
-		this.numberId = IdNumber++;
 		this.l = list.length;
 		this.numberArgs = (short) (l + 1) ;
 		this.min = min;
@@ -102,6 +102,8 @@ public class Min extends Constraint {
 		    this.queueIndex = 2;
 		else
 		    this.queueIndex = 1;
+
+		this.numberId = idNumber.incrementAndGet();
 	}
 	
 	/**

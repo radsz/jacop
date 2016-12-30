@@ -32,6 +32,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -51,7 +52,7 @@ import org.jacop.core.TimeStamp;
 
 public class Max extends Constraint {
 
-	static int counter = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It specifies a list of variables among which a maximum value is being searched for.
@@ -89,7 +90,6 @@ public class Max extends Constraint {
 		assert ( list != null ) : "List variable is null";
 		assert ( max != null ) : "Min variable is null";
 
-		this.numberId = counter++;
 		this.l = list.length;
 		this.numberArgs = (short) (l + 1);
 		this.max = max;
@@ -104,6 +104,8 @@ public class Max extends Constraint {
 		    this.queueIndex = 2;
 		else
 		    this.queueIndex = 1;
+
+		this.numberId = idNumber.incrementAndGet();
 
 	}
 

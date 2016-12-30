@@ -38,6 +38,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.PriorityQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.BoundDomain;
 import org.jacop.core.IntDomain;
@@ -87,7 +88,7 @@ public class GCC extends Constraint {
 	
 	boolean firstConsistencyCheck = true;
 
-	static int idNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 	
 	/**
 	 * The array which stores the first computed matching, which may not take into account
@@ -162,7 +163,7 @@ public class GCC extends Constraint {
 	public GCC(IntVar[] x, IntVar[] counters) {
 
 		this.queueIndex = 1;
-		numberId = idNumber++;
+		numberId = idNumber.incrementAndGet();
 
 		counters = removeZeroCounters(x, counters);
 		

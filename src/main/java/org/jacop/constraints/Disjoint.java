@@ -34,6 +34,7 @@ package org.jacop.constraints;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -51,7 +52,7 @@ import org.jacop.core.Store;
 
 public class Disjoint extends Diff {
 
-	static int idNumber = 0;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 	
 	Diff2Var evalRects[];
 
@@ -70,8 +71,20 @@ public class Disjoint extends Diff {
 	public Disjoint(Rectangle[] rectangles,
 			        boolean doProfile) {
 
-		super(rectangles, doProfile);
-	    
+		assert (rectangles != null) : "Rectangles list is null";
+
+		this.queueIndex = 2;
+
+		this.rectangles = new Rectangle[rectangles.length];
+		this.doProfile = doProfile;
+
+		for (int i = 0; i < rectangles.length; i++) {
+			assert (rectangles[i] != null) : i + "-th rectangle in the list is null";
+			assert (rectangles[i].dim != 2) : "The rectangle has to have exactly two dimensions";
+			this.rectangles[i] = new Rectangle( rectangles[i] );
+		}
+
+		this.numberId = idNumber.incrementAndGet();
 	}
 	
 	/**
@@ -97,9 +110,12 @@ public class Disjoint extends Diff {
 	 */
 	
 	public Disjoint(ArrayList<? extends ArrayList<? extends IntVar>> rectangles) {
-	
-		super(rectangles);
-	
+
+		queueIndex = 2;
+		this.rectangles = Rectangle.toArrayOf2DRectangles(rectangles);
+		numberArgs += this.rectangles.length * 4;
+		numberId = idNumber.incrementAndGet();
+
 	}
 	
 	/**
@@ -127,30 +143,35 @@ public class Disjoint extends Diff {
 				 ArrayList<? extends IntVar> l1,
 				 ArrayList<? extends IntVar> l2) {
 
-		super(o1, o2, l1, l2);
-
-		Diff.IdNumber--;
-		numberId = idNumber++;
+		this(o1.toArray(new IntVar[o1.size()]),
+			o2.toArray(new IntVar[o2.size()]),
+			l1.toArray(new IntVar[l1.size()]),
+			l2.toArray(new IntVar[l2.size()]));
 
 	}
 
 	/**
 	 * It creates a diff2 constraint.
-	 * @param o1 list of variables denoting the origin in the first dimension.
-	 * @param o2 list of variables denoting the origin in the second dimension.
-	 * @param l1 list of variables denoting the length in the first dimension.
-	 * @param l2 list of variables denoting the length in the second dimension.
+	 * @param origin1 list of variables denoting the origin in the first dimension.
+	 * @param origin2 list of variables denoting the origin in the second dimension.
+	 * @param length1 list of variables denoting the length in the first dimension.
+	 * @param length2 list of variables denoting the length in the second dimension.
 	 */
 	
-	public Disjoint(IntVar[] o1, 
-			IntVar[] o2, 
-			IntVar[] l1,
-			IntVar[] l2) {
-		
-		super(o1, o2, l1, l2);
+	public Disjoint(IntVar[] origin1,
+			IntVar[] origin2,
+			IntVar[] length1,
+			IntVar[] length2) {
 
-		Diff.IdNumber--;
-		numberId = idNumber++;
+		assert (origin1 != null) : "o1 list is null";
+		assert (origin2 != null) : "o2 list is null";
+		assert (length1 != null) : "l1 list is null";
+		assert (length2 != null) : "l2 list is null";
+
+		queueIndex = 2;
+		this.rectangles = Rectangle.toArrayOf2DRectangles(origin1, origin2, length1, length2);
+		numberArgs += this.rectangles.length * 4;
+		numberId = idNumber.incrementAndGet();
 
 	}
 
@@ -178,10 +199,12 @@ public class Disjoint extends Diff {
 
 	public Disjoint(IntVar[][] rectangles) {
 
-		super(rectangles);
+		assert (rectangles != null) : "Rectangles list is null";
 
-		Diff.IdNumber--;
-		numberId = idNumber++;
+		queueIndex = 2;
+		this.rectangles = Rectangle.toArrayOf2DRectangles(rectangles);
+		numberArgs += this.rectangles.length * 4;
+		numberId = idNumber.incrementAndGet();
 
 	}
 
@@ -192,7 +215,8 @@ public class Disjoint extends Diff {
 	 */
 
 	public Disjoint(IntVar[][] rectangles, boolean profile) {
-		super(rectangles, profile);
+		this(rectangles);
+		doProfile = profile;
 	}	
 	
 	public void impose(Store store) {

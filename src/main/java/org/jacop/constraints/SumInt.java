@@ -33,6 +33,7 @@ package org.jacop.constraints;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntVar;
 import org.jacop.core.IntDomain;
@@ -57,8 +58,8 @@ import org.jacop.core.Var;
 public class SumInt extends PrimitiveConstraint {
 
     Store store;
-    
-    static int idNumber = 1;
+
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
     boolean reified = true;
 
@@ -151,7 +152,7 @@ public class SumInt extends PrimitiveConstraint {
 	this.sum = sum;
 	x = new IntVar[list.length];
 	System.arraycopy(list, 0, x, 0, list.length);
-	numberId = idNumber++;
+	numberId = idNumber.incrementAndGet();
 
 	this.l = x.length;
 	this.I = new int[l];

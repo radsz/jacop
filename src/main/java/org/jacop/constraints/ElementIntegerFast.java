@@ -37,6 +37,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -62,7 +63,7 @@ import org.jacop.core.TimeStamp;
 
 public class ElementIntegerFast extends Constraint {
 
-    static int idNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
     boolean firstConsistencyCheck = true;
 
@@ -122,7 +123,7 @@ public class ElementIntegerFast extends Constraint {
 	assert (index != null) : "Variable index is null";
 	assert (value != null) : "Variable value is null";
 
-	this.numberId = idNumber++;
+	this.numberId = idNumber.incrementAndGet();
 	this.index = index;
 	this.value = value;
 	this.numberArgs = (short) (numberArgs + 2);

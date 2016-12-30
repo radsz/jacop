@@ -32,6 +32,7 @@
 package org.jacop.set.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
@@ -56,7 +57,7 @@ import org.jacop.set.core.SetVar;
 
 public class ElementSet extends Constraint {
 
-	static int idNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It specifies what element from the list of sets is equal to set variable value. 
@@ -103,7 +104,7 @@ public class ElementSet extends Constraint {
 		for (int i = 0; i < list.length; i++)
 			assert (list[i] != null) : i + "-th element of the list is null.";
 			
-		numberId = idNumber++;
+		numberId = idNumber.incrementAndGet();
 		numberArgs = 2;
 		this.index = index;
 		this.value = value;

@@ -32,6 +32,7 @@
 package org.jacop.floats.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -54,7 +55,7 @@ import org.jacop.floats.core.FloatDomain;
 
 public class PeqQ extends PrimitiveConstraint {
 
-	static int idNumber = 1;
+	static AtomicInteger idNumber = new AtomicInteger(0);
 
 	/**
 	 * It specifies a left hand variable in equality constraint. 
@@ -82,7 +83,7 @@ public class PeqQ extends PrimitiveConstraint {
 		assert (p != null) : "Variable p is null";
 		assert (q != null) : "Variable q is null";
 
-		numberId = idNumber++;
+		numberId = idNumber.incrementAndGet();
 		numberArgs = 2;
 
 		this.queueIndex = 0;
