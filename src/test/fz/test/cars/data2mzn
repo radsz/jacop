@@ -1,0 +1,72 @@
+#!/usr/bin/gawk -f
+# ft=awk ts=4 sw=4 et tw=0
+
+$2 == "Problem" {
+	$1 = ""
+	problem_description = $0
+	problem_name = $3
+	gsub(/[^[:alnum:]]/, "_", problem_name)
+	ofile = "cars_" problem_name ".mzn"
+
+	print "" > ofile
+	print "% " problem_description > ofile
+	print "include \"cars.mzn.model\";" > ofile
+
+	while((getline > 0) && (NF > 0) && ($1 ~ /^#/)) { /* noop */ }
+
+	n_cars = $1
+	n_options = $2
+	n_classes = $3
+
+	print "n_cars = " n_cars ";" > ofile
+	print "n_options = " n_options ";" > ofile
+	print "n_classes = " n_classes ";" > ofile
+
+	while((getline > 0) && (NF > 0) && ($1 ~ /^#/)) { /* noop */ }
+
+	printf("option_max_per_block = [") > ofile
+	for (i = 1; i <= n_options; i++) {
+		printf("%s%d", (i > 1 ? ", " : ""), $i) > ofile
+	}
+	printf("];\n") > ofile
+
+	while((getline > 0) && (NF > 0) && ($1 ~ /^#/)) { /* noop */ }
+
+	printf("option_block_size = [") > ofile
+	for (i = 1; i <= n_options; i++) {
+		printf("%s%d", (i > 1 ? ", " : ""), $i) > ofile
+	}
+	printf("];\n") > ofile
+
+	for (i = 1; i <= n_classes; i++) {
+
+		while((getline > 0) && (NF > 0) && ($1 ~ /^#/)) { /* noop */ }
+
+		c_i_c[i] = $2
+
+		for (j = 1; j <= n_options; j++) {
+			c_o_n[i, j] = $(2 + j)
+		}
+
+	}
+
+	printf("cars_in_class = [") > ofile
+	for (i = 1; i <= n_classes; i++) {
+		printf("%s%d", (i > 1 ? ", " : ""), c_i_c[i]) > ofile
+	}
+	printf("];\n") > ofile
+
+	printf("class_option_need = [") > ofile
+	for (i = 1; i <= n_classes; i++) {
+
+		printf("\n    ") > ofile
+
+		for (j = 1; j <= n_options; j++) {
+			printf("%d%s", \
+				c_o_n[i, j], \
+				(i == n_classes && j == n_options) ? "" : ", " \
+			) > ofile
+		}
+	}
+	printf("\n];\n") > ofile
+}

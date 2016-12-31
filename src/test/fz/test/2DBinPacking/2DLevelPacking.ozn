@@ -1,0 +1,3 @@
+output (["Objective = "]++[show(sum([z[k,k] | k in 1..N, ]))])++["\n"];
+int: N = 100;
+array [1..N,1..N] of int: z;
