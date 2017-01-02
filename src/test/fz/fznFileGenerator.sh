@@ -38,7 +38,7 @@ readarray -t arr3 < <(find $z -name \*.fzn)
           start=$(date +%s )
 	    out=$(java -cp ../../../../jacop-*.jar org.jacop.fz.Fz2jacop $k)
 	  stop=$(date +%s )
-    echo $out
+    echo "$out"
 	timesec=$(($stop-$start))
 
 		result=$out
@@ -65,20 +65,20 @@ readarray -t arr3 < <(find $z -name \*.fzn)
 		            mkdir -p upTo5sec/${st%/*}
 			fi
 
-			echo $out > upTo5sec/${st%.*}.out
+			echo "$out" > upTo5sec/${st%.*}.out
   			#mv ${k%%/*}/${st%/*}/${st%.*}.fzn upTo5sec/${st%.*}.fzn
 			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo5sec/${st%.*}.fzn
 		fi
 
 	   if [ $timesec -gt 15 ] && [ $timesec -lt 80 ]  ;then
-		   echo "wejście"
+
 			st=${k#*/*/}
 
 			if [ ! -d "upTo30sec/${st%/*}" ]; then
 		            mkdir -p upTo30sec/${st%/*}
 			fi
 
-			echo $out > upTo30sec/${st%.*}.out
+			echo "$out" > upTo30sec/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo30sec/${st%.*}.fzn
 		fi
 
@@ -90,7 +90,7 @@ readarray -t arr3 < <(find $z -name \*.fzn)
 		            mkdir -p upTo1min/${st%/*}
 			fi
 
-			echo $out > upTo1min/${st%.*}.out
+			echo "$out" > upTo1min/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo1min/${st%.*}.fzn
 		fi
 
@@ -103,7 +103,7 @@ readarray -t arr3 < <(find $z -name \*.fzn)
 		            mkdir -p upTo5min/${st%/*}
 			fi
 
-			echo $out > upTo5min/${st%.*}.out
+			echo "$out" > upTo5min/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo5min/${st%.*}.fzn
 		fi
 
@@ -115,7 +115,7 @@ readarray -t arr3 < <(find $z -name \*.fzn)
 		            mkdir -p upTo10min/${st%/*}
 			fi
 
-			echo $out > upTo10min/${st%.*}.out
+			echo "$out" > upTo10min/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo10min/${st%.*}.fzn
 		fi
 
@@ -127,7 +127,7 @@ readarray -t arr3 < <(find $z -name \*.fzn)
 		            mkdir -p upTo1hour/${st%/*}
 			fi
 
-			echo $out > upTo1hour/${st%.*}.out
+			echo "$out" > upTo1hour/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo1hour/${st%.*}.fzn
 		fi
 
@@ -139,7 +139,7 @@ readarray -t arr3 < <(find $z -name \*.fzn)
 		            mkdir -p above1hour/${st%/*}
 			fi
 
-			echo $out > above1hour/${st%.*}.out
+			echo "$out" > above1hour/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn above1hour/${st%.*}.fzn
 		fi
 
