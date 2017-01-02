@@ -1,5 +1,0 @@
-output ["bin  = ",show(bin),"\n","item = ",show(item),"\n"];
-set of int: Bins = 1..80;
-set of int: Items = 1..80;
-array [Bins] of int: bin;
-array [Bins,Items] of int: item;

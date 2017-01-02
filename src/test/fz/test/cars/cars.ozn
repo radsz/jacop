@@ -1,5 +1,0 @@
-output ["step_class = ",show(step_class),"\n","step_option_used = ",show(step_option_used),"\n"];
-set of int: steps = 1..200;
-set of int: options = 1..5;
-array [steps] of int: step_class;
-array [steps,options] of int: step_option_used;

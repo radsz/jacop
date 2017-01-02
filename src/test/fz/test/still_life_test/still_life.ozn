@@ -1,0 +1,5 @@
+output ((["cost = ",show(cost),";\na = [|\n"]++[show(a[i,j])++if j==m then if i==n then "|];\n" else "|\n" endif else "," endif | i in 1..n, j in 1..m, ])++["\n\n%     "])++[if fix(a[i,j])==1 then "X" else " " endif++if j==m then "\n%     " else "" endif | i in 1..n, j in 1..m, ];
+int: n = 3;
+int: m = 8;
+int: cost;
+array [-1..n+2,-1..m+2] of int: a;
