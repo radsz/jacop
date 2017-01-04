@@ -1,3 +1,4 @@
+predicate jacop_alldiff(array [int] of var int: x);
 array [1..2] of int: X_INTRODUCED_13 = [1,-1];
 array [1..6] of int: X_INTRODUCED_25 = [1,2,5,10,25,50];
 var 0..99: X_INTRODUCED_0;
@@ -1295,5 +1296,6 @@ constraint int_lin_le(X_INTRODUCED_13,[X_INTRODUCED_1291,X_INTRODUCED_3],0);
 constraint int_lin_le(X_INTRODUCED_13,[X_INTRODUCED_1292,X_INTRODUCED_4],0);
 constraint int_lin_le(X_INTRODUCED_13,[X_INTRODUCED_1293,X_INTRODUCED_5],0);
 constraint int_lin_eq(X_INTRODUCED_25,[X_INTRODUCED_1288,X_INTRODUCED_1289,X_INTRODUCED_1290,X_INTRODUCED_1291,X_INTRODUCED_1292,X_INTRODUCED_1293],99);
+constraint jacop_alldiff(X_INTRODUCED_25);
 constraint int_lin_eq([1,1,1,1,1,1,-1],[X_INTRODUCED_0,X_INTRODUCED_1,X_INTRODUCED_2,X_INTRODUCED_3,X_INTRODUCED_4,X_INTRODUCED_5,num_coins],0):: defines_var(num_coins);
 solve :: int_search(x,first_fail,indomain_min,complete) minimize num_coins;
