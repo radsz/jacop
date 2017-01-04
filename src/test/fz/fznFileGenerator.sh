@@ -187,6 +187,5 @@ then
 fi
 done
 
-done
-
     timeCategory
+done
