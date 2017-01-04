@@ -178,7 +178,7 @@ for j in ${arr2[@]}; do # j contains a relative path to dzn file.
     path=${j%.*}
 	filename=${path##*/}
 
- if [[ -z $(find upTo5sec/$iii upTo30sec/$iii upTo1min/$iii upTo5min/$iii upTo1hour/$iii above1hour/$iii flakyTests/$iii -name $iii.fzn 2>/dev/null )  ||  -z $(find upTo5sec/$iii upTo30sec/$iii upTo1min/$iii upTo5min/$iii upTo1hour/$iii above1hour/$iii flakyTests/$iii -name $iii.out 2>/dev/null) ]]
+ if [[ -z $(find upTo5sec/$iii upTo30sec/$iii upTo1min/$iii upTo5min/$iii upTo1hour/$iii above1hour/$iii flakyTests/$iii -name $filename.fzn 2>/dev/null )  ||  -z $(find upTo5sec/$iii upTo30sec/$iii upTo1min/$iii upTo5min/$iii upTo1hour/$iii above1hour/$iii flakyTests/$iii -name $filename.out 2>/dev/null ) ]]
 then
     # Generating fzn files and moving to the temporary directory
     mzn2fzn -G jacop $i -d $j
