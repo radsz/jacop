@@ -1,44 +1,22 @@
 #!/bin/bash
-readarray -t arr < <(find test -name \*.mzn );
+#author: Mariusz Swierkot
+function timeCategory(){
 
-for i in ${arr[@]}; do
-
-z=${i%/*}
-ii=${i##*/}
-iii=${ii%.*}
-
-if [ ! -d "$z/$iii" ]; then
-	mkdir $z/$iii
-
-fi
-
-
-if [[ -z $(find $z -name \*.dzn) ]]
-then
-
-mzn2fzn -G jacop $i
-for file in $z/*.fzn; do mv "$file" $z/$iii/"${file/*.fzn/$iii.fzn}"; done
-
-fi
-
-readarray -t arr2 < <(find $z -name \*.dzn)
-for j in ${arr2[@]}; do
-    mzn2fzn -G jacop $i -d $j
-	path=${j%.*}
-	filename=${path##*/}
-
-	for file in $z/*.fzn; do mv "$file" $z/$iii/"${file/*.fzn/$filename.fzn}"; done
-done
-
-done
-echo "-------------------------------------------------"
 readarray -t arr3 < <(find $z -name \*.fzn)
 	for k in ${arr3[@]};do
 
-          start=$(date +%s )
+        ii=${k##*/}
+        iii=${ii%.*}
+        echo "Time category" $iii
+        basename $(dirname $k)
+
+        #if [[ -z $(find upTo5sec/`basename $(dirname $k)` flakyTests/`basename $(dirname $k)` -name $iii.out 2>/dev/null ) ]]
+        #then
+        start=$(date +%s )
 	    out=$(java -cp ../../../../jacop-*.jar org.jacop.fz.Fz2jacop $k)
-	  stop=$(date +%s )
-    echo "$out"
+	    stop=$(date +%s )
+
+        echo "$out"
 	timesec=$(($stop-$start))
 
 		result=$out
@@ -49,7 +27,7 @@ readarray -t arr3 < <(find $z -name \*.fzn)
 	while [ $? == 0 -a $i != 4 ];
 	   do
 		out=$(java -cp ../../../../jacop-*.jar org.jacop.fz.Fz2jacop $k)
-		diff <(echo $result) <(echo $out)
+		   diff <(echo $result) <(echo $out)
 		let i++
 		count=$i
 
@@ -68,6 +46,7 @@ readarray -t arr3 < <(find $z -name \*.fzn)
 			echo "$out" > upTo5sec/${st%.*}.out
   			#mv ${k%%/*}/${st%/*}/${st%.*}.fzn upTo5sec/${st%.*}.fzn
 			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo5sec/${st%.*}.fzn
+
 		fi
 
 	   if [ $timesec -gt 15 ] && [ $timesec -lt 80 ]  ;then
@@ -143,30 +122,64 @@ readarray -t arr3 < <(find $z -name \*.fzn)
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn above1hour/${st%.*}.fzn
 		fi
 
-
+        else
+            echo "pojedynczy plik"
 
 
 	fi
+#fi
+done
+
+}
+
+
+#main
+readarray -t arr < <(find test -name \*.mzn );
+
+for i in ${arr[@]}; do
+
+z=${i%/*}
+ii=${i##*/}
+iii=${ii%.*}
+
+if [ ! -d "$z/$iii" ]; then
+	mkdir $z/$iii
+
+fi
+
+
+if [[ -z $(find $z -name \*.dzn) ]]
+then
+
+
+
+ if [[ -z $(find upTo5sec/$iii upTo30sec/$iii upTo1min/$iii upTo5min/$iii upTo1hour/$iii above1hour/$iii flakyTests/$iii -name $iii.fzn 2>/dev/null ) || -z $(find upTo5sec/$iii upTo30sec/$iii upTo1min/$iii upTo5min/$iii upTo1hour/$iii above1hour/$iii flakyTests/$iii -name $iii.out 2>/dev/null) ]]
+        then
+        mzn2fzn -G jacop $i
+for file in $z/*.fzn; do mv "$file" $z/$iii/"${file/*.fzn/$iii.fzn}"; done
+
+
+        timeCategory
+
+fi
+fi
+
+readarray -t arr2 < <(find $z -name \*.dzn)
+for j in ${arr2[@]}; do
+
+    path=${j%.*}
+	filename=${path##*/}
+
+ if [[ -z $(find upTo5sec/$iii flakyTests/$iii -name $filename.fzn 2>/dev/null )  ||  -z $(find upTo5sec/$iii flakyTests/$iii -name $filename.out 2>/dev/null ) ]]
+then
+    mzn2fzn -G jacop $i -d $j
+	for file in $z/*.fzn; do mv "$file" $z/$iii/"${file/*.fzn/$filename.fzn}"; done
+
+fi
+done
 
 done
 
+echo "-------------------------------------------------"
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    timeCategory
