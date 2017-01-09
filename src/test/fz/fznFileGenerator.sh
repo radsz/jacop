@@ -187,8 +187,7 @@ for j in ${arr2[@]}; do # j contains a relative path to dzn file.
  then
     # Generating fzn files and moving to the temporary directory
     mzn2fzn -G jacop $i -d $j
-	for file in $z/*.fzn; do mv "$file" $z/$iii/"${file/*.fzn/$filename.fzn}"; done
-
+	for file in $z/*.fzn; do mv "$file" $z/${z#*/}/"${file/*.fzn/$filename.fzn}"; done
  fi
 done
 
