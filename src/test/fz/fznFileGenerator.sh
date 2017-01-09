@@ -27,15 +27,16 @@ readarray -t arr3 < <(find $z -name \*.fzn)
 
     	i=0
         count=0
-	        while [ $diffresult == 0 -a $i != 1 ];
+	        while [ $diffresult == 0 -a $i != 4 ];
 	        do
 	    	  out=$(java -cp ../../../../jacop-*.jar org.jacop.fz.Fz2jacop $k) # Program Fz2jacop generate test result
 		      diff <(echo $result) <(echo $out) # diff compare results test to find the difference between two results test
+		      diffresult=$?
 		      let i++
 		      count=$i
             done
 
-	if [ $count -eq 1 ];	then
+	if [ $count -eq 4 ];	then
 
 	    if [ $timesec -lt 15 ];then
 
