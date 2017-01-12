@@ -13,9 +13,15 @@ readarray -t arr3 < <(find $z -name \*.fzn)
         ii=${k##*/} # fzn filename with extension
         iii=${ii%.*} # fzn filename without extension
 
+        echo "Computing first result for $k"
         start=$(date +%s ) # start time in seconds
-    	   out=$(java -cp ../../../../jacop-*.jar org.jacop.fz.Fz2jacop $k) # Program Fz2jacop generate test result
+        # First timeout is set to 3600 seconds
+    	   out=$(java -cp ../../../../jacop-*.jar org.jacop.fz.Fz2jacop -t 3600 $k) # Program Fz2jacop generate test result
         stop=$(date +%s )  # end time in seconds
+
+        # TODO, if out contains text below then the timeout occurred and the test should be automatically categorized to above 1hour test
+        # =====UNKNOWN=====
+        # %% =====TIME-OUT=====
 
         echo "$out"
 	    timesec=$(($stop-$start))
@@ -29,7 +35,9 @@ readarray -t arr3 < <(find $z -name \*.fzn)
         count=0
 	        while [ $diffresult == 0 -a $i != 4 ];
 	        do
-	    	  out=$(java -cp ../../../../jacop-*.jar org.jacop.fz.Fz2jacop $k) # Program Fz2jacop generate test result
+	          echo "Computing again result for $k"
+	          # Second timeout is set to 7200 seconds to avoid situation of the timeout when the first one did not timeout.
+	    	  out=$(java -cp ../../../../jacop-*.jar org.jacop.fz.Fz2jacop -t 7200 $k) # Program Fz2jacop generate test result
 		      diff <(echo $result) <(echo $out) # diff compare results test to find the difference between two results test
 		      diffresult=$?
 		      let i++
@@ -40,6 +48,7 @@ readarray -t arr3 < <(find $z -name \*.fzn)
 
 	    if [ $timesec -lt 15 ];then
 
+            echo "Problem $k was classified in time category upTo5sec"
 			st=${k#*/*/}
 
 			if [ ! -d "upTo5sec/${st%/*}" ]; then
@@ -53,6 +62,7 @@ readarray -t arr3 < <(find $z -name \*.fzn)
 
 	    if [ $timesec -gt 15 ] && [ $timesec -lt 80 ]  ;then
 
+            echo "Problem $k was classified in time category upTo30sec"
 			st=${k#*/*/}
 
 			if [ ! -d "upTo30sec/${st%/*}" ]; then
@@ -65,6 +75,7 @@ readarray -t arr3 < <(find $z -name \*.fzn)
 
         if [ $timesec -gt 80 ] && [ $timesec -le 120 ];then
 
+            echo "Problem $k was classified in time category upTo1min"
 			st=${k#*/*/}
 
 			if [ ! -d "upTo1min/${st%/*}" ]; then
@@ -78,6 +89,7 @@ readarray -t arr3 < <(find $z -name \*.fzn)
 
         if [ $timesec -ge 120 ] && [ $timesec -le 600 ];then
 
+            echo "Problem $k was classified in time category upTo5min"
 			st=${k#*/*/}
 
 			if [ ! -d "upTo5min/${st%/*}" ]; then
@@ -90,6 +102,7 @@ readarray -t arr3 < <(find $z -name \*.fzn)
 
         if [ $timesec -ge 600 ] && [ $timesec -le 1200 ];then
 
+            echo "Problem $k was classified in time category upTo10min"
 			st=${k#*/*/}
 
 			if [ ! -d "upTo10min/${st%/*}" ]; then
@@ -102,6 +115,7 @@ readarray -t arr3 < <(find $z -name \*.fzn)
 
         if [ $timesec -ge 1200 ] && [ $timesec -le 5400 ];then
 
+            echo "Problem $k was classified in time category upTo1hour"
 			st=${k#*/*/}
 
 			if [ ! -d "upTo1hour/${st%/*}" ]; then
@@ -114,6 +128,7 @@ readarray -t arr3 < <(find $z -name \*.fzn)
 
 	    if [ $timesec -ge 5400 ] && [ $timesec -le 7200 ];then
 
+            echo "Problem $k was classified in time category above1hour"
 			st=${k#*/*/}
 
 			if [ ! -d "above1hour/${st%/*}" ]; then
@@ -125,7 +140,7 @@ readarray -t arr3 < <(find $z -name \*.fzn)
 	fi
 
     else {
-            echo "Flaky test"
+            echo "Problem $k was classified as flaky test"
             st=${k#*/*/}
 
 			if [ ! -d "flakyTests/${st%/*}" ]; then
@@ -168,7 +183,7 @@ then
    if [[ -z $(find upTo5sec/$iii upTo30sec/$iii upTo1min/$iii upTo5min/$iii upTo10min/$iii upTo1hour/$iii above1hour/$iii flakyTests/$iii -name $iii.fzn 2>/dev/null ) || -z $(find upTo5sec/$iii upTo30sec/$iii upTo1min/$iii upTo5min/$iii upTo10min/$iii upTo1hour/$iii above1hour/$iii flakyTests/$iii -name $iii.out 2>/dev/null) ]]
         then
         # Generating fzn files and moving to the temporary directory
-
+        echo "Generatig fzn file for $i"
         mzn2fzn -G jacop $i
         for file in $z/*.fzn; do mv "$file" $z/${z#*/}/"${file/*.fzn/$iii.fzn}"; done
 
@@ -186,6 +201,7 @@ for j in ${arr2[@]}; do # j contains a relative path to dzn file.
  if [[ -z $(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $filename.fzn 2>/dev/null )  ||  -z $(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $filename.out 2>/dev/null ) ]]
  then
     # Generating fzn files and moving to the temporary directory
+    echo "Generatig fzn file for $i and data file $j"
     mzn2fzn -G jacop $i -d $j
 	for file in $z/*.fzn; do mv "$file" $z/${z#*/}/"${file/*.fzn/$filename.fzn}"; done
  fi
