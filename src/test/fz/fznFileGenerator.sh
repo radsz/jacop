@@ -139,18 +139,18 @@ readarray -t arr3 < <(find $z -name \*.fzn)
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn above1hour/${st%.*}.fzn
 	fi
 
-#    else {
-#            echo "Problem $k was classified as flaky test"
-#            st=${k#*/*/}
-#
-#			if [ ! -d "flakyTests/${st%/*}" ]; then
-#		            mkdir -p flakyTests/${st%/*}
-#			fi
-#
-#			echo "$out" > flakyTests/${st%.*}.out
-#  			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn flakyTests/${st%.*}.fzn
-#         }
-#
+    else {
+            echo "Problem $k was classified as flaky test"
+            st=${k#*/*/}
+
+			if [ ! -d "flakyTests/${st%/*}" ]; then
+		            mkdir -p flakyTests/${st%/*}
+			fi
+
+			echo "$out" > flakyTests/${st%.*}.out
+  			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn flakyTests/${st%.*}.fzn
+         }
+
 	fi
 
 done
