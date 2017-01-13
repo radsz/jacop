@@ -5,7 +5,7 @@
 # Second run command mvn package to create a jar file for jacop inside target directory. Copy this jar one level higher than jacop git repository.
 # Third execute this script in the directory where this script resides.
 
-function timeCategory(){
+function timeCategory( ) {
 
 readarray -t arr3 < <(find $z -name \*.fzn)
 	for k in ${arr3[@]};do # i contains a relative path to a found mzn file.
@@ -126,7 +126,7 @@ readarray -t arr3 < <(find $z -name \*.fzn)
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo1hour/${st%.*}.fzn
 		fi
 
-	    if [ $timesec -ge 5400 ] && [ $timesec -le 7200 ];then
+	    if [ $timesec -ge 5400 ];then
 
             echo "Problem $k was classified in time category above1hour"
 			st=${k#*/*/}
@@ -139,20 +139,20 @@ readarray -t arr3 < <(find $z -name \*.fzn)
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn above1hour/${st%.*}.fzn
 	fi
 
-    else {
-            echo "Problem $k was classified as flaky test"
-            st=${k#*/*/}
-
-			if [ ! -d "flakyTests/${st%/*}" ]; then
-		            mkdir -p flakyTests/${st%/*}
-			fi
-
-			echo "$out" > flakyTests/${st%.*}.out
-  			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn flakyTests/${st%.*}.fzn
-         }
-
+#    else {
+#            echo "Problem $k was classified as flaky test"
+#            st=${k#*/*/}
+#
+#			if [ ! -d "flakyTests/${st%/*}" ]; then
+#		            mkdir -p flakyTests/${st%/*}
+#			fi
+#
+#			echo "$out" > flakyTests/${st%.*}.out
+#  			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn flakyTests/${st%.*}.fzn
+#         }
+#
 	fi
-#fi
+
 done
 
 }
@@ -160,23 +160,36 @@ done
 
 #main
 echo "Start test: "
-readarray -t arr2 < <( find test -name \*.fzn );
 
-for j in ${arr2[@]}; do # j contains a relative path to dzn file.
-echo $j
-z=${j%/*}
-ww=${z#*/}
-filename=${j##*/}
+readarray -t arr3 < <(find test -maxdepth 2 -name \*.fzn);
 
-if [ ! -d "$z/$ww" ]; then
+for i in ${arr3[@]}; do
 
-	mkdir $z/$ww
-fi
-    for file in $j; do mv "$file" $z/$ww/"${file/*.fzn/$filename}"; done
+    z=${i%/*} # directory that contains mzn filename
+    if [ ! -d "$z/${z#*/}" ]; then
+	   mkdir "$z/${z#*/}"
+
+    fi
+
+     path=${i%.*}
+     filename=${path##*/}
+
+	 for file in "$z/$filename.fzn"; do mv "$file" "$z/${z#*/}/${file/*.fzn/$filename.fzn}"; done
 
 done
-    timeCategory
 
+if [ -z $z ]; then
+
+    readarray -t arr3 < <(find test -maxdepth 3 -name \*.fzn);
+    for i in ${arr3[@]}; do
+        z=${i%/*}
+    done
+    if [ ! -z $z ]; then
+        timeCategory
+    fi
+else
+    timeCategory
+fi
 
 
 readarray -t arr < <(find test -name \*.mzn );
@@ -186,27 +199,35 @@ for i in ${arr[@]}; do
 z=${i%/*} # directory that contains mzn filename
 ii=${i##*/} # mzn filename with extension
 iii=${ii%.*} # mzn filename without extension
-
 # Creating a temporary directory in the same directory as mzn file has resided using the mzn file without extension as the name.
 
 if [ ! -d "$z/${z#*/}" ]; then
 	mkdir $z/${z#*/}
-
 fi
-
 
 if [[ -z $(find $z -name \*.dzn) ]]
 then
 
-
    if [[ -z $(find upTo5sec/$iii upTo30sec/$iii upTo1min/$iii upTo5min/$iii upTo10min/$iii upTo1hour/$iii above1hour/$iii flakyTests/$iii -name $iii.fzn 2>/dev/null ) || -z $(find upTo5sec/$iii upTo30sec/$iii upTo1min/$iii upTo5min/$iii upTo10min/$iii upTo1hour/$iii above1hour/$iii flakyTests/$iii -name $iii.out 2>/dev/null) ]]
-        then
+   then
         # Generating fzn files and moving to the temporary directory
         echo "Generatig fzn file for $i"
         mzn2fzn -G jacop $i
         for file in $z/*.fzn; do mv "$file" $z/${z#*/}/"${file/*.fzn/$iii.fzn}"; done
 
+if [ -z $z ]; then
+
+    readarray -t arr3 < <(find test -maxdepth 3 -name \*.fzn);
+    for i in ${arr3[@]}; do
+    z=${i%/*}
+    done
+    if [ ! -z $z ]; then
         timeCategory
+    fi
+else
+    timeCategory
+fi
+
 
    fi
 fi
@@ -217,14 +238,27 @@ for j in ${arr2[@]}; do # j contains a relative path to dzn file.
     path=${j%.*}
 	filename=${path##*/}
 
- if [[ -z $(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $filename.fzn 2>/dev/null )  ||  -z $(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $filename.out 2>/dev/null ) ]]
- then
-    # Generating fzn files and moving to the temporary directory
-    echo "Generatig fzn file for $i and data file $j"
-    mzn2fzn -G jacop $i -d $j
-	for file in $z/*.fzn; do mv "$file" $z/${z#*/}/"${file/*.fzn/$filename.fzn}"; done
- fi
+  if [[ -z $(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $filename.fzn 2>/dev/null )  ||  -z $(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $filename.out 2>/dev/null )  ]]
+  then
+     # Generating fzn files and moving to the temporary directory
+     echo "Generatig fzn file for $i and data file $j"
+     mzn2fzn -G jacop $i -d $j
+	 for file in $z/*.fzn; do mv "$file" $z/${z#*/}/"${file/*.fzn/$filename.fzn}"; done
+  fi
 done
 
-      timeCategory
+if [ -z $z ]; then
+
+    readarray -t arr3 < <(find test -maxdepth 3 -name \*.fzn);
+    for i in ${arr3[@]}; do
+    z=${i%/*}
+    done
+    if [ ! -z $z ]; then
+        timeCategory
+    fi
+else
+    timeCategory
+fi
+
+
 done
