@@ -583,7 +583,7 @@ public class SmallDenseDomainTest {
         intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[]{new int[]{1, 2, 4, 10}});
         intervalDomain.inComplement(100, var ,1,9);
 
-        verify(var).domainHasChanged(IntDomain.BOUND);
+        verify(var).domainHasChanged(IntDomain.GROUND);
     }
 
     @Test
@@ -619,7 +619,7 @@ public class SmallDenseDomainTest {
         intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[]{new int[]{10, 20}});
         intervalDomain.setStamp(100);
         intervalDomain.inComplement(100, var ,11,41);
-        verify(var).domainHasChanged(IntDomain.ANY);
+        verify(var).domainHasChanged(IntDomain.GROUND);
     }
 
     @Test
