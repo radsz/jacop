@@ -45,7 +45,7 @@
 				<role>Core developer</role>
 			</roles>
 			<organization>osolpro</organization>
-			<organizationUrl>osolpro.eu</organizationUrl>
+			<organizationUrl>osolpro.com</organizationUrl>
 			<timezone>+1</timezone>
 		</developer>
 	</developers>
@@ -73,7 +73,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<maven.compiler.source>1.7</maven.compiler.source>
 		<maven.compiler.target>1.7</maven.compiler.target>
-		<aspectj.version>1.8.6</aspectj.version>
+		<aspectj.version>1.8.9</aspectj.version>
 	</properties>
 
     <!-- In order to see logging output,
@@ -176,7 +176,7 @@ setup to run configuration. -->
 					<plugin>
 						<groupId>org.codehaus.mojo</groupId>
 						<artifactId>aspectj-maven-plugin</artifactId>
-						<version>1.7</version>
+						<version>1.9</version>
 						<executions>
 							<execution>
 								<goals>
@@ -330,7 +330,7 @@ setup to run configuration. -->
 					<execution>
 						<id>attach-sources</id>
 						<goals>
-							<goal>jar</goal>
+							<goal>jar-no-fork</goal>
 						</goals>
 					</execution>
 				</executions>
@@ -398,12 +398,7 @@ setup to run configuration. -->
 				<artifactId>maven-surefire-plugin</artifactId>
 				<version>2.18.1</version>
 				<configuration>
-					<includes>
-					</includes>
 					<excludes>
-						<exclude>**/MinizincBasedTestUpTo5Seconds.java</exclude>
-						<exclude>**/MinizincBasedTestUpTo30Seconds.java</exclude>
-						<exclude>**/MinizincBasedTestUpTo1Minutes.java</exclude>
 						<exclude>**/MinizincBasedTest.java</exclude>
 						<exclude>**/MinizincBasedTestAbove1Hours.java</exclude>
 						<exclude>**/MinizincBasedTestUpTo1Hours.java</exclude>
@@ -499,12 +494,12 @@ setup to run configuration. -->
 		<dependency>
 			<groupId>org.scala-lang</groupId>
 			<artifactId>scala-library</artifactId>
-			<version>2.11.0</version>
+			<version>2.12.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.scala-lang</groupId>
 			<artifactId>scala-compiler</artifactId>
-			<version>2.11.0</version>
+			<version>2.12.0</version>
 		</dependency>
 		
 		<!--  -->

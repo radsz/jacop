@@ -133,7 +133,6 @@ binary_sudoku/binary_sudoku
 binary_tree/binary_tree
 binero/binero
 bipartite/bipartite
-birthday_paradox/birthday_paradox
 birthdays_2010/birthdays_2010
 bit_vector1/bit_vector1
 blending_problem/blending_problem
@@ -483,7 +482,6 @@ greatest_combination/greatest_combination
 grid_puzzle/grid_puzzle
 grid-colouring/4_8
 grime_puzzle/grime_puzzle
-grocery2/grocery2
 guards_and_apples/guards_and_apples
 guards_and_apples2/guards_and_apples2
 gunport_problem2/gunport_problem2
@@ -590,7 +588,6 @@ lights/lights
 lights_out/lights_out
 limerick_primes/limerick_primes
 limerick_primes2/limerick_primes2
-loan/loan1
 local_art_theft/local_art_theft
 local_art_theft1/local_art_theft1
 locker/locker
@@ -682,8 +679,6 @@ minimum_weight_alldifferent/minimum_weight_alldifferent
 minsum/minsum
 mislabeled_boxes/mislabeled_boxes
 misp/misp
-missing_solution/missing_solution
-missingsolution/missingsolution
 monkey_coconuts/monkey_coconuts
 monks_and_doors/monks_and_doors
 monorail/monorail1
@@ -1003,7 +998,6 @@ still_life_free/6x6
 still_life2/still_life_5
 still_life2/still_life_6
 still_life2/still_life_7
-stretch_circuit/stretch_circuit
 stretch_path/stretch_path
 strictly_decreasing/strictly_decreasing
 strimko/strimko_002
@@ -1062,7 +1056,6 @@ tennis_tournament/tennis_tournament
 tents/tents_1
 tents/tents_2
 tents/tents_3
-the_bomb/the_bomb
 the_family_puzzle/the_family_puzzle
 the_interns/the_interns
 thick_as_thieves/thick_as_thieves

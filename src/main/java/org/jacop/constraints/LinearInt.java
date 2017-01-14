@@ -390,7 +390,7 @@ public class LinearInt extends PrimitiveConstraint {
     @Override
     public void impose(Store store) {
 
-	if (x == null)
+	if (x == null || x.length == 0)
 	    return;
 
 	reified = false;

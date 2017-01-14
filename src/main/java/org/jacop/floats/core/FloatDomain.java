@@ -102,6 +102,19 @@ public abstract class FloatDomain extends Domain {
     }
 
     /**
+     * It specifies the precision format for floating point print-out
+     */
+  static double format = Double.MAX_VALUE;
+  
+    public static double format() {
+	return format;
+    }
+
+    public static void  setFormat(double f) {
+	format = f;
+    }
+
+    /**
      * It specifies the precision for floating point operations, among others
      * decide when two numbers are equal and when a interval is singleton.
      */

@@ -43,6 +43,7 @@ import org.jacop.fz.Fz2jacop;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.PrintOutListener;
 import org.jacop.search.Search;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -57,6 +58,9 @@ import static org.junit.Assert.assertEquals;
  * @version 4.4
  */
 public class QueueForwardTest {
+
+    //   String nl = System.lineSeparator();
+    String nl = "\n";
 
     @Test
     public void testQueueForwardNot() {
@@ -136,7 +140,7 @@ public class QueueForwardTest {
 
         IntVar one = new IntVar(store, "one", 1, 1);
 
-        store.impose(new Reified(new Not(new LinearFloat(store, v, new double[] {1,-1}, "!=", 0)), one));
+        store.impose(new Reified(new Not(new LinearFloat(store, v, new double[] {1, -1}, "!=", 0)), one));
 
         // search for solutions and print results
         Search<FloatVar> label = new DepthFirstSearch<FloatVar>();
@@ -145,11 +149,10 @@ public class QueueForwardTest {
 
         boolean result = label.labeling(store, select);
 
-        if ( result ) {
+        if (result) {
             System.out.println("Solutions: ");
             label.printAllSolutions();
-        }
-        else
+        } else
             System.out.println("*** No");
 
         assertEquals(false, result);
@@ -163,6 +166,18 @@ public class QueueForwardTest {
 
         // Just checking if does not throw an exception.
         fz2jacop.main(new String[] { "src/test/fz/queueForwardTest.fzn" } );
+
+    }
+
+
+    @Test
+    @Ignore
+    public void testBoundEventCorrection() {
+
+        Fz2jacop fz2jacop = new Fz2jacop();
+
+        // Just checking if does not throw an exception.
+        fz2jacop.main(new String[] { "-n 69", "-s", "-a", "-v", "src/test/fz/cc_base.fzn" } );
 
 
     }

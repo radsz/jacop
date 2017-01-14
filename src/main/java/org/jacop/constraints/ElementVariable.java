@@ -143,7 +143,7 @@ public class ElementVariable extends Constraint {
 	 * @param list list of variables from which an index-th element is taken
 	 * @param value a value of the index-th element from list
 	 */
-	ElementVariable(IntVar index, ArrayList<? extends IntVar> list, IntVar value) {
+	public ElementVariable(IntVar index, ArrayList<? extends IntVar> list, IntVar value) {
 
 		this(index, list.toArray(new IntVar[list.size()]), value, 0);
 
@@ -170,7 +170,7 @@ public class ElementVariable extends Constraint {
 	 * @param list list of variables from which an index-th element is taken
 	 * @param value a value of the index-th element from list
 	 */
-	ElementVariable(IntVar index, IntVar[] list, IntVar value) {
+	public ElementVariable(IntVar index, IntVar[] list, IntVar value) {
 
 		this(index, list, value, 0);
 

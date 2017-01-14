@@ -9,6 +9,7 @@ import org.jacop.constraints.knapsack._
 import org.jacop.constraints.regular._
 import org.jacop.constraints.binpacking._
 import org.jacop.constraints.netflow._
+import org.jacop.constraints.diffn._
 import org.jacop.search._
 //import org.jacop.set.core._
 import org.jacop.set.constraints._
@@ -485,11 +486,53 @@ package object scala {
   def diff2(rectangles: Array[Array[IntVar]])  {
     val c = new Diff(rectangles.asInstanceOf[Array[Array[org.jacop.core.IntVar]]])
     if (trace) println(c)
-    impModel.impose( new Diff(rectangles.asInstanceOf[Array[Array[org.jacop.core.IntVar]]]) )
+    impModel.impose( c )
   }
 
 /**
-* Wrapper for [[org.jacop.constraints.Cumulative]].
+* Wrapper for [[org.jacop.constraints.diffn.Diffn]].
+*
+* @param x coordinate X of rectangle. 
+* @param y coordinate Y of rectangle. 
+* @param lx length in derection X of rectangle. 
+* @param ly length in derection Y of rectangle. 
+*/
+  def diffn(x: Array[IntVar], y: Array[IntVar], lx: Array[IntVar], ly: Array[IntVar])  {
+    val c = new Diffn(x.asInstanceOf[Array[org.jacop.core.IntVar]], y.asInstanceOf[Array[org.jacop.core.IntVar]],
+		     lx.asInstanceOf[Array[org.jacop.core.IntVar]], ly.asInstanceOf[Array[org.jacop.core.IntVar]])
+    if (trace) println(c)
+    impModel.impose(c)
+  }
+
+/**
+* Wrapper for [[org.jacop.constraints.diffn.Diffn]].
+*
+* @param rectangles array of four element vectors representing rectnagles [x, y, lx, ly]
+*/
+  def diffn(rectangles: Array[Array[IntVar]])  {
+    val c = new Diffn(rectangles.asInstanceOf[Array[Array[org.jacop.core.IntVar]]])
+    if (trace) println(c)
+    impModel.impose( c )
+  }
+
+/**
+* Wrapper for [[org.jacop.constraints.cumulative.CumulativeBasic]].
+*
+* @param t array of start times of tasks.
+* @param d array of duration of tasks.
+* @param r array of number of resources of tasks.
+* @param limit limit on number of resources used in a schedule.
+*/
+  def cumulative_basic(t: Array[IntVar], d: Array[IntVar], r: Array[IntVar], limit: IntVar)  {
+    val c = new org.jacop.constraints.cumulative.CumulativeBasic(t.asInstanceOf[Array[org.jacop.core.IntVar]],
+			   d.asInstanceOf[Array[org.jacop.core.IntVar]],
+			   r.asInstanceOf[Array[org.jacop.core.IntVar]], limit)
+    if (trace) println(c)
+    impModel.impose( c )
+  }
+
+/**
+* Wrapper for [[org.jacop.constraints.cumulative.Cumulative]].
 *
 * @param t array of start times of tasks.
 * @param d array of duration of tasks.
@@ -497,7 +540,23 @@ package object scala {
 * @param limit limit on number of resources used in a schedule.
 */
   def cumulative(t: Array[IntVar], d: Array[IntVar], r: Array[IntVar], limit: IntVar)  {
-    val c = new Cumulative(t.asInstanceOf[Array[org.jacop.core.IntVar]],
+    val c = new org.jacop.constraints.cumulative.Cumulative(t.asInstanceOf[Array[org.jacop.core.IntVar]],
+			   d.asInstanceOf[Array[org.jacop.core.IntVar]],
+			   r.asInstanceOf[Array[org.jacop.core.IntVar]], limit)
+    if (trace) println(c)
+    impModel.impose( c )
+  }
+
+/**
+* Wrapper for [[org.jacop.constraints.cumulative.CumulativeUnary]].
+*
+* @param t array of start times of tasks.
+* @param d array of duration of tasks.
+* @param r array of number of resources of tasks.
+* @param limit limit on number of resources used in a schedule.
+*/
+  def cumulative_unary(t: Array[IntVar], d: Array[IntVar], r: Array[IntVar], limit: IntVar)  {
+    val c = new org.jacop.constraints.cumulative.CumulativeUnary(t.asInstanceOf[Array[org.jacop.core.IntVar]],
 			   d.asInstanceOf[Array[org.jacop.core.IntVar]],
 			   r.asInstanceOf[Array[org.jacop.core.IntVar]], limit)
     if (trace) println(c)

@@ -166,6 +166,9 @@ public class Count extends Constraint {
 
 
 				numberMayBe = 0;
+				
+				counter.domain.in(store.level, counter, numberEq, numberEq);
+				removeConstraint();
 			}
 
 			counter.domain.in(store.level, counter, numberEq, numberEq + numberMayBe);

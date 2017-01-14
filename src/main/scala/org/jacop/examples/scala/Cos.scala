@@ -10,10 +10,10 @@ object Cos extends App with jacop {
 
   x #= cos(x)
 
-  val result = satisfyAll(search_float(List(x), input_order), printValue) 
+  val result = satisfyAll(search_float(List(x), input_order), printValue()) 
   statistics
 
-  def printValue() {
+  def printValue() = () => {
     println("Value when cos(x)=x is " + x.value + ", precision = " + precision)
   }
 }

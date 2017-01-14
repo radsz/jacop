@@ -76,7 +76,7 @@ object NetExample extends App with jacop {
       val Result = minimize_seq(List(search(x.toList, input_order, indomain_min), 
 				 search(List(cost), input_order, indomain_min)), 
 			    cost,
-			    printCost, printSol )
+			    printCost(), printSol() )
       statistics()
 
       if (Result) {
@@ -163,7 +163,7 @@ object NetExample extends App with jacop {
       val Result = minimize_seq(List(search(x.toList, input_order, indomain_min), 
 				 search(List(cost), input_order, indomain_min)), 
 			    cost,
-			    printCost, printSol )
+			    printCost(), printSol() )
 
       statistics()
 
@@ -242,7 +242,7 @@ object NetExample extends App with jacop {
       val Result = minimize_seq(List(search(x.toList, input_order, indomain_min), 
 				 search(List(cost), input_order, indomain_min)), 
 			    cost, 
-			    printCost, printSol )
+			    printCost(), printSol() )
 
       statistics()
 
@@ -259,11 +259,11 @@ object NetExample extends App with jacop {
 
     }
 
-  def printCost() : Unit = {
+  def printCost() = () => {
     println(COST)
   }
 
-  def printSol() : Unit = {
+  def printSol() = () => {
     println(vars.toList)
   }
 }

@@ -63,15 +63,17 @@ public class Options {
     boolean precisionDefined = false;
     double precision;
 
-    boolean boundConsistency = false;
+    double format;
+
+    static boolean boundConsistency = false;
 
     boolean runSearch = true;
 
-    boolean use_sat = false;
+    static boolean use_sat = false;
 
     boolean complementary_search = false;
 
-    boolean debug = false;
+    static boolean debug = false;
     
 	/**
 	 * It constructs an Options object and parses all the parameters/options provided 
@@ -112,7 +114,9 @@ public class Options {
 						"         output variables only.\n" +
 						"    -i, --interval print intervals instead of values for floating variables\n"+
 						"    -p <value>, --precision <value> defines precision for floating operations\n"+
-						"        overrides precision definition in search annotation."
+						"        overrides precision definition in search annotation.\n"+
+						"    -f <value>, --format <value> defines format (number digits after decimal point)\n"+
+						"        for floating variables.\n"
 				);
 				System.exit(0);
 			}
@@ -162,6 +166,16 @@ public class Options {
 					else {
 					    precision = FloatDomain.precision();
 					    System.err.println("%% Precisison parameter not correct; using default precision " + precision);
+					}
+					i++;
+				}
+				else if (args[i].equals("-f") || args[i].equals("-format")) {
+					format = Double.parseDouble(args[++i]);
+					if (format >= 0)
+					    FloatDomain.setFormat(format);
+					else {
+					    format = Double.MAX_VALUE;
+					    System.err.println("%% Format parameter not correct;");
 					}
 					i++;
 				}
@@ -281,7 +295,7 @@ public class Options {
 	 * It defines whether to use bound consistency
 	 * @return true if bound consistency prefered, false otherwise (defult). 
 	 */
-	public boolean getBoundConsistency() {
+	public static boolean getBoundConsistency() {
 		return boundConsistency;
 	}
 
@@ -305,7 +319,7 @@ public class Options {
 	 * It defines whether sat is used. 
 	 * @return true sat is used, false otherwise
 	 */
-	public boolean useSat() {
+	public static boolean useSat() {
 		return use_sat;
 	}
 
@@ -313,7 +327,7 @@ public class Options {
 	 * It defines whether to use debug information print-out. 
 	 * @return true if debugging information is printed, false otherwise
 	 */
-	public boolean debug() {
+	public static boolean debug() {
 		return debug;
 	}
 

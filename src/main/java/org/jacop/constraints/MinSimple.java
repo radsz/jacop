@@ -120,6 +120,11 @@ public class MinSimple extends Constraint {
 
       min.domain.in(store.level, min, minValue, maxValue);
 
+      if (x1.min() > min.max())
+	x2.domain.in(store.level, x2, min.dom());
+      if (x2.min() > min.max())
+	x1.domain.in(store.level, x1, min.dom());
+
     } while (store.propagationHasOccurred);
 		
   }
@@ -171,7 +176,7 @@ public class MinSimple extends Constraint {
 		
     StringBuffer result = new StringBuffer( id() );
 		
-    result.append(" : minSimple(" + x1 + ", " + x1 + ", " + min + ")");
+    result.append(" : minSimple(" + x1 + ", " + x2 + ", " + min + ")");
 
     return result.toString();
   }

@@ -21,7 +21,7 @@ object GraphColoringS extends App with jacop{
   v(1) #\= v(3)
   v(2) #\= v(3)
 
-  val result = satisfy(search(v, input_order, indomain_min), printSol)
+  val result = satisfy(search(v, input_order, indomain_min), printSol())
   statistics()
 
   if ( result )
@@ -29,7 +29,7 @@ object GraphColoringS extends App with jacop{
   else
     println("*** No")
 
-  def printSol () : Unit = {
+  def printSol () = () => {
         println("Solution: " + v.toList)
   }
 

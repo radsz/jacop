@@ -15,7 +15,7 @@ predicate bin_packing_load(array[int] of var int: load,
         "bin_packing_load: the bin and weight arrays must have identical index sets",
     assert(lb_array(w) >= 0,
         "bin_packing_load: the weights must be non-negative",
-         jacop_bin_packing(bin, load, w, lb_array(bin))
+         jacop_bin_packing(bin, load, w, min(index_set(load))) %% lb_array(bin))
     ));
 
 %-----------------------------------------------------------------------------%
