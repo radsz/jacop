@@ -6,7 +6,6 @@
 # Third execute this script in the directory where this script resides.
 
 function timeCategory( ) {
-
 readarray -t arr3 < <(find $z -name \*.fzn)
 	for k in ${arr3[@]};do # i contains a relative path to a found mzn file.
 
@@ -160,36 +159,57 @@ done
 
 #main
 echo "Start test: "
-
+counter=0
+counter2=0
 readarray -t arr3 < <(find test -maxdepth 2 -name \*.fzn);
 
 for i in ${arr3[@]}; do
 
+    let counter2++
     z=${i%/*} # directory that contains mzn filename
-    if [ ! -d "$z/${z#*/}" ]; then
-	   mkdir "$z/${z#*/}"
+        if [ ! -d "$z/${z#*/}" ]; then
+	        mkdir "$z/${z#*/}"
 
-    fi
+        fi
 
-     path=${i%.*}
-     filename=${path##*/}
+    path=${i%.*}
+    filename=${path##*/}
 
-	 for file in "$z/$filename.fzn"; do mv "$file" "$z/${z#*/}/${file/*.fzn/$filename.fzn}"; done
+	for file in "$z/$filename.fzn"; do mv "$file" "$z/${z#*/}/${file/*.fzn/$filename.fzn}"; done
 
 done
+
+    if [ -z ${arr3[0]} ]; then
+     let counter2++
+    fi
+
+
+while [ $counter -lt $counter2 ]
+do
 
 if [ -z $z ]; then
 
     readarray -t arr3 < <(find test -maxdepth 3 -name \*.fzn);
+    if [ -z ${arr3[0]} ]; then
+
+    let counter2--
+    fi
     for i in ${arr3[@]}; do
-        z=${i%/*}
+       z=${i%/*}
+       let counter2++
+
     done
+
     if [ ! -z $z ]; then
+        let counter++
         timeCategory
     fi
 else
+    let counter++
     timeCategory
+    z=""
 fi
+done
 
 
 readarray -t arr < <(find test -name \*.mzn );
@@ -215,19 +235,19 @@ then
         mzn2fzn -G jacop $i
         for file in $z/*.fzn; do mv "$file" $z/${z#*/}/"${file/*.fzn/$iii.fzn}"; done
 
-if [ -z $z ]; then
-
-    readarray -t arr3 < <(find test -maxdepth 3 -name \*.fzn);
-    for i in ${arr3[@]}; do
-    z=${i%/*}
-    done
-    if [ ! -z $z ]; then
+#if [ -z $z ]; then
+#
+#    readarray -t arr3 < <(find test -maxdepth 3 -name \*.fzn);
+#    for i in ${arr3[@]}; do
+#    z=${i%/*}
+#    done
+#    if [ ! -z $z ]; then
+#        timeCategory
+#    fi
+#else
+#    timeCategory
+#fi
         timeCategory
-    fi
-else
-    timeCategory
-fi
-
 
    fi
 fi
@@ -247,18 +267,18 @@ for j in ${arr2[@]}; do # j contains a relative path to dzn file.
   fi
 done
 
-if [ -z $z ]; then
-
-    readarray -t arr3 < <(find test -maxdepth 3 -name \*.fzn);
-    for i in ${arr3[@]}; do
-    z=${i%/*}
-    done
-    if [ ! -z $z ]; then
-        timeCategory
-    fi
-else
-    timeCategory
-fi
-
+#if [ -z $z ]; then
+#
+#    readarray -t arr3 < <(find test -maxdepth 3 -name \*.fzn);
+#    for i in ${arr3[@]}; do
+#    z=${i%/*}
+#    done
+#    if [ ! -z $z ]; then
+#        timeCategory
+#    fi
+#else
+#    timeCategory
+#fi
+  timeCategory
 
 done
