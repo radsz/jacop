@@ -156,9 +156,21 @@ done
 
 }
 
-
 #main
 echo "Start test: "
+readarray -t arr4 < <(find test -maxdepth 2 -name \*.fzn);
+for i in ${arr4[@]}; do
+      readarray -t arr5 < <(find upTo5sec upTo30sec upTo1min upTo5min upTo10min upTo1hour above1hour flakyTests  -name \*.fzn);
+
+        for j in ${arr5[@]}; do
+
+            if [ "${i##*/}" == "${j##*/}" ]; then
+            echo "I found file fzn" "${i##*/}"
+            rm $i
+        fi
+        done
+done
+
 counter=0
 counter2=0
 readarray -t arr3 < <(find test -maxdepth 2 -name \*.fzn);
@@ -235,18 +247,6 @@ then
         mzn2fzn -G jacop $i
         for file in $z/*.fzn; do mv "$file" $z/${z#*/}/"${file/*.fzn/$iii.fzn}"; done
 
-#if [ -z $z ]; then
-#
-#    readarray -t arr3 < <(find test -maxdepth 3 -name \*.fzn);
-#    for i in ${arr3[@]}; do
-#    z=${i%/*}
-#    done
-#    if [ ! -z $z ]; then
-#        timeCategory
-#    fi
-#else
-#    timeCategory
-#fi
         timeCategory
 
    fi
@@ -267,18 +267,6 @@ for j in ${arr2[@]}; do # j contains a relative path to dzn file.
   fi
 done
 
-#if [ -z $z ]; then
-#
-#    readarray -t arr3 < <(find test -maxdepth 3 -name \*.fzn);
-#    for i in ${arr3[@]}; do
-#    z=${i%/*}
-#    done
-#    if [ ! -z $z ]; then
-#        timeCategory
-#    fi
-#else
-#    timeCategory
-#fi
   timeCategory
 
 done
