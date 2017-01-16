@@ -32,6 +32,16 @@ readarray -t arr3 < <(find $z -name \*.fzn)
 
     	i=0
         count=0
+
+        if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
+          echo "Out result" ${out#*%}
+            diffresult=1
+            count=4
+            timesec=6000
+            out="=====UNKNOWN===== `echo -e "\n%% =====TIME-OUT====="`"
+
+        fi
+
 	        while [ $diffresult == 0 -a $i != 4 ];
 	        do
 	          echo "Computing again result for $k"
@@ -165,7 +175,6 @@ for i in ${arr4[@]}; do
         for j in ${arr5[@]}; do
 
             if [ "${i##*/}" == "${j##*/}" ]; then
-            echo "I found file fzn" "${i##*/}"
             rm $i
         fi
         done
