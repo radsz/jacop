@@ -5,6 +5,17 @@
 # Second run command mvn package to create a jar file for jacop inside target directory. Copy this jar one level higher than jacop git repository.
 # Third execute this script in the directory where this script resides.
 
+function diffDifference(){
+
+    if [ $diffresult -ne 0 ];then
+         echo "diffff"
+         count=5
+         out="First computing result: `echo -e "\n$result"` `echo -e "\n\nSecond computing result:"` `echo -e "\n$out"`"
+
+    fi
+}
+
+
 function timeCategory( ) {
 readarray -t arr3 < <(find $z -name \*.fzn)
 	for k in ${arr3[@]};do # i contains a relative path to a found mzn file.
@@ -51,6 +62,7 @@ readarray -t arr3 < <(find $z -name \*.fzn)
 		      diffresult=$?
 		      let i++
 		      count=$i
+		      diffDifference
             done
 
 	if [ $count -eq 4 ];	then
