@@ -218,7 +218,7 @@ readarray -t arr3 < <(find $z -name \*.fzn)
 	fi
 
     else {
-            if [ ${out%\%*} == "%" ];then
+            if [ "${out%\%*}" == "%" ];then
 
                 echo "Problem $k was classified as errors test"
             st=${k#*/*/}
