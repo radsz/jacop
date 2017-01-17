@@ -245,7 +245,7 @@ readarray -t arr3 < <(find $z -name \*.fzn)
 
         fi
         }
-         }
+
 
 	fi
 
