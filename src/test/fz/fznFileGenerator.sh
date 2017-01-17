@@ -4,6 +4,7 @@
 # First make sure you copy src\main\minizinc\org\jacop\minizinc directory as jacop directory inside your minizinc installation ( share\minizinc ).
 # Second run command mvn package to create a jar file for jacop inside target directory. Copy this jar one level higher than jacop git repository.
 # Third execute this script in the directory where this script resides.
+
 removingEmptyDirectories(){
     find test -mindepth 1 -type d -empty -delete
 }
@@ -85,7 +86,12 @@ readarray -t arr3 < <(find $z -name \*.fzn)
         count=0
 
        # diffDifference
+        if [ "${out%\%*}" == "%" ];then
 
+           diffresult=1
+           count=5
+
+        fi
 
         if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
             diffresult=1
@@ -212,6 +218,20 @@ readarray -t arr3 < <(find $z -name \*.fzn)
 	fi
 
     else {
+            if [ ${out%\%*} == "%" ];then
+
+                echo "Problem $k was classified as errors test"
+            st=${k#*/*/}
+
+			if [ ! -d "errors/${st%/*}" ]; then
+		            mkdir -p errors/${st%/*}
+			fi
+
+			echo "$out" > errors/${st%.*}.out
+  			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn errors/${st%.*}.fzn
+  			removingDznMznFiles
+            else
+
             echo "Problem $k was classified as flaky test"
             st=${k#*/*/}
 
@@ -222,6 +242,9 @@ readarray -t arr3 < <(find $z -name \*.fzn)
 			echo "$out" > flakyTests/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn flakyTests/${st%.*}.fzn
   			removingDznMznFiles
+
+        fi
+        }
          }
 
 	fi
