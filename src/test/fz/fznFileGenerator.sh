@@ -10,39 +10,46 @@ removingEmptyDirectories(){
 }
 
 removingDznMznFiles() {
-echo "removingMznFiles"
+
+dznCounter=0
 readarray -t arr < <(find test -name \*.dzn);
 for i in ${arr[@]}; do
 
       readarray -t arr1 < <(find upTo5sec upTo30sec upTo1min upTo5min upTo10min upTo1hour above1hour flakyTests  -name \*.fzn);
-            ii=${i##*/}
+         let dznCounter++
+            ii=${i#*/}
             iii=${ii%.*}
         for j in ${arr1[@]}; do
 
-            jj=${j##*/}
+            jj=${j#*/}
             jjj=${jj%.*}
 
-            if [ "$iii" == "$jjj" ]; then
 
+            if [ "$iii" == "$jjj" ]; then
             rm $i
         fi
-
         done
 done
+  ii=${i#*/}
+  iii=${ii%/*}
+
+ if [ $dznCounter == 1 ]; then
+    rm test/$iii/*.mzn
+ fi
 
 readarray -t arr4 < <(find test -maxdepth 2 -name \*.mzn);
-for i in ${arr4[@]}; do
-      readarray -t arr5 < <(find upTo5sec upTo30sec upTo1min upTo5min upTo10min upTo1hour above1hour flakyTests  -name \*.mzn);
-
+    for i in ${arr4[@]}; do
+      readarray -t arr5 < <(find upTo5sec upTo30sec upTo1min upTo5min upTo10min upTo1hour above1hour flakyTests -name \*.fzn);
         for j in ${arr5[@]}; do
-
-            if [ "${i##*/}" == "${j##*/}" ]; then
-
-            rm $i
-        fi
+          w="${j##*/}"
+          ww="${w%.*}"
+          if [ "${i##*/}" == "$ww.mzn" ]; then
+                rm ${i%.*}.mzn
+          fi
         done
-done
+    done
 }
+
 
 
 function diffDifference(){
