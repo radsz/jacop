@@ -9,7 +9,7 @@ removingEmptyDirectories(){
 }
 
 removingDznMznFiles() {
-echo "removingMznFiles"
+
 dznCounter=0
 
 readarray -t arr < <(find test -name \*.dzn);
@@ -39,7 +39,7 @@ done
 
     if [ $dznCounter == 0 ] ; then
         if [ "$iii" != "" ];then
-            rm -r test/$iii/ 2>/dev/null
+            rm -r test/$iii/
         fi
     fi
 
@@ -262,7 +262,6 @@ for i in ${arr4[@]}; do
         jj=${j#*/}
         jjj=${jj%.*}
             if [ "$iii" == "$jjj" ]; then
-            echo "I found file fzn" "${i##*/}"
             rm $i
         fi
         done
@@ -344,7 +343,7 @@ then
    if [[ -z $(find upTo5sec/$iii upTo30sec/$iii upTo1min/$iii upTo5min/$iii upTo10min/$iii upTo1hour/$iii above1hour/$iii flakyTests/$iii -name $iii.fzn 2>/dev/null ) || -z $(find upTo5sec/$iii upTo30sec/$iii upTo1min/$iii upTo5min/$iii upTo10min/$iii upTo1hour/$iii above1hour/$iii flakyTests/$iii -name $iii.out 2>/dev/null) ]]
    then
         # Generating fzn files and moving to the temporary directory
-        echo "Generatig fzn file for $i"
+        echo "Generating fzn file for $i"
         mzn2fzn -G jacop $i
         for file in $z/*.fzn; do mv "$file" $z/${z#*/}/"${file/*.fzn/$iii.fzn}"; done
         rm $i
@@ -362,7 +361,7 @@ for j in ${arr2[@]}; do # j contains a relative path to dzn file.
   if [[ -z $(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $filename.fzn 2>/dev/null )  ||  -z $(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $filename.out 2>/dev/null )  ]]
   then
      # Generating fzn files and moving to the temporary directory
-     echo "Generatig fzn file for $i and data file $j"
+     echo "Generating fzn file for $i and data file $j"
      mzn2fzn -G jacop $i -d $j
 	 for file in $z/*.fzn; do mv "$file" $z/${z#*/}/"${file/*.fzn/$filename.fzn}"; done
   fi
