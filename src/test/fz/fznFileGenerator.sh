@@ -5,27 +5,30 @@
 # Second run command mvn package to create a jar file for jacop inside target directory. Copy this jar one level higher than jacop git repository.
 # Third execute this script in the directory where this script resides.
 removingEmptyDirectories(){
-    find test -mindepth 1 -type d -empty -delete
+
+    find test -mindepth 1 -delete
 }
 
 removingDznMznFiles() {
 
 dznCounter=0
-
+flag=0
 readarray -t arr < <(find test -name \*.dzn);
 for i in ${arr[@]}; do
 
 let dznCounter++
-      readarray -t arr1 < <(find upTo5sec upTo30sec upTo1min upTo5min upTo10min upTo1hour above1hour flakyTests  -name \*.fzn);
-
+      readarray -t arr1 < <(find upTo5sec upTo30sec upTo1min upTo5min upTo10min upTo1hour above1hour flakyTests  -name \*.fzn 2>/dev/null);
+        flag=1
 
             ii=${i#*/}
             iii=${ii%.*}
 
         for j in ${arr1[@]}; do
 
+
             jj=${j#*/}
             jjj=${jj%.*}
+
 
             if [ "$iii" == "$jjj" ]; then
             rm $i
@@ -37,33 +40,61 @@ done
       ii=${i#*/}
       iii=${ii%/*}
 
-    if [ $dznCounter == 0 ] ; then
+    if [ $dznCounter == 0 ] && [ $flag == 1 ]; then
+
         if [ "$iii" != "" ];then
+
             rm -r test/$iii/
+
         fi
     fi
 
+#i=""
+#ii=""
+#iii=""
+if [[ -z $(find test -name $zzz.dzn) ]]; then
+
+readarray -t arr4 < <(find test -maxdepth 2 -name \*.mzn 2>/dev/null);
+for i in ${arr4[@]}; do
+            zz=${i#*/}
+            zzz=${zz%.*}
+      readarray -t arr5 < <(find upTo5sec upTo30sec upTo1min upTo5min upTo10min upTo1hour above1hour flakyTests -name \*.fzn 2>/dev/null);
+
+        for j in ${arr5[@]}; do
+
+            ww=${j#*/}
+            www=${ww%.*}
+            if [ "$zzz" == "$www" ]; then
+                rm -r ${i%/*}
+
+            fi
+        done
+    done
+
+fi
+
+
 }
+
 
 function diffDifference(){
 
-    if [ $diffresult -ne 0 ];then
+if [ $diffresult -ne 0 ];then
 
-           count=5
-           out="First computing result: `echo -e "\n$result"` `echo -e "\n\nSecond computing result:"` `echo -e "\n$out"`"
+            count=5
+            out="First computing result: `echo -e "\n$result"` `echo -e "\n\nSecond computing result:"` `echo -e "\n$out"`"
 
-    fi
+        fi
 
 }
 
 function timeCategory( ) {
 
-readarray -t arr3 < <(find $z -name \*.fzn)
-	for k in ${arr3[@]};do # i contains a relative path to a found mzn file.
+readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
+	for k in ${arr3[@]};do # i contains a relative path to a found mzn file.
         ii=${k##*/} # fzn filename with extension
         iii=${ii%.*} # fzn filename without extension
-
         echo "Computing first result for $k"
         start=$(date +%s ) # start time in seconds
         # First timeout is set to 3600 seconds
@@ -92,7 +123,7 @@ readarray -t arr3 < <(find $z -name \*.fzn)
         fi
 
         if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
-
+          echo "Out result" ${out#*%}
             diffresult=1
             count=4
             timesec=6000
@@ -100,12 +131,12 @@ readarray -t arr3 < <(find $z -name \*.fzn)
 
         fi
 
-
 	        while [ $diffresult == 0 -a $i != 4 ];
 	        do
 	          echo "Computing again result for $k"
 	          # Second timeout is set to 7200 seconds to avoid situation of the timeout when the first one did not timeout.
 	    	  out=$(java -cp ../../../target/jacop-*-SNAPSHOT.jar org.jacop.fz.Fz2jacop -t 7200 $k) # Program Fz2jacop generate test result
+
 		      diff <(echo $result) <(echo $out) # diff compare results test to find the difference between two results test
 
 		      diffresult=$?
@@ -121,11 +152,14 @@ readarray -t arr3 < <(find $z -name \*.fzn)
 
             echo "Problem $k was classified in time category upTo5sec"
 			st=${k#*/*/}
+
 			if [ ! -d "upTo5sec/${st%/*}" ]; then
 		            mkdir -p upTo5sec/${st%/*}
 			fi
+
 			echo "$out" > upTo5sec/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo5sec/${st%.*}.fzn
+
             removingDznMznFiles
 		fi
 
@@ -215,7 +249,6 @@ readarray -t arr3 < <(find $z -name \*.fzn)
 	fi
 
     else {
-
             if [ "${out%\%*}" == "%" ];then
                 echo "Problem $k was classified as errors test"
             st=${k#*/*/}
@@ -250,32 +283,15 @@ done
 
 
 #main
-echo "Start test: "
-
-removingDznMznFiles
-readarray -t arr4 < <(find test -maxdepth 2 -name \*.fzn);
-for i in ${arr4[@]}; do
-      readarray -t arr5 < <(find upTo5sec upTo30sec upTo1min upTo5min upTo10min upTo1hour above1hour flakyTests  -name \*.fzn);
-        ii=${i#*/}
-        iii=${ii%.*}
-        for j in ${arr5[@]}; do
-        jj=${j#*/}
-        jjj=${jj%.*}
-            if [ "$iii" == "$jjj" ]; then
-            rm $i
-        fi
-        done
-done
 
 counter=0
 counter2=0
-readarray -t arr3 < <(find test -maxdepth 2 -name \*.fzn);
+readarray -t arr3 < <(find test -maxdepth 2 -name \*.fzn );
 
 for i in ${arr3[@]}; do
 
-  let counter2++
-  z=${i%/*} # directory that contains mzn filename
-
+let counter2++
+    z=${i%/*} # directory that contains mzn filename
     if [ ! -d "$z/${z#*/}" ]; then
 	   mkdir "$z/${z#*/}"
 
@@ -287,21 +303,19 @@ for i in ${arr3[@]}; do
 	 for file in "$z/$filename.fzn"; do mv "$file" "$z/${z#*/}/${file/*.fzn/$filename.fzn}"; done
 done
 tab=${arr3[@]}
-    if [ -z ${arr3[0]} ]; then
-        let counter2++
-    fi
+if [ -z ${arr3[0]} ]; then
 
+ let counter2++
+fi
 
 while [ $counter -lt $counter2 ]
 do
 if [ -z $z ]; then
 
-    readarray -t arr3 < <(find test -maxdepth 3 -name \*.fzn);
+    readarray -t arr3 < <(find test -maxdepth 3 -name \*.fzn );
     if [ -z ${arr3[0]} ]; then
-
     let counter2--
     fi
-
     for i in ${arr3[@]}; do
        z=${i%/*}
        let counter2++
@@ -310,21 +324,21 @@ if [ -z $z ]; then
 
     if [ ! -z $z ]; then
 
-            let counter++
-            timeCategory
+           let counter++
+           timeCategory
 
     fi
 else
 
-     let counter++
-     if [ -d $z ]; then
-            timeCategory
-            z=""
-     fi
+        let counter++
+        if [ -d $z ]; then
+        timeCategory
+        z=""
+        fi
 fi
 done
 
-readarray -t arr < <(find test -name \*.mzn );
+readarray -t arr < <(find test -name \*.mzn 2>/dev/null);
 
 for i in ${arr[@]}; do
 
@@ -343,16 +357,15 @@ then
    if [[ -z $(find upTo5sec/$iii upTo30sec/$iii upTo1min/$iii upTo5min/$iii upTo10min/$iii upTo1hour/$iii above1hour/$iii flakyTests/$iii -name $iii.fzn 2>/dev/null ) || -z $(find upTo5sec/$iii upTo30sec/$iii upTo1min/$iii upTo5min/$iii upTo10min/$iii upTo1hour/$iii above1hour/$iii flakyTests/$iii -name $iii.out 2>/dev/null) ]]
    then
         # Generating fzn files and moving to the temporary directory
-        echo "Generating fzn file for $i"
+        echo "Generatig fzn file for $i"
         mzn2fzn -G jacop $i
         for file in $z/*.fzn; do mv "$file" $z/${z#*/}/"${file/*.fzn/$iii.fzn}"; done
-        rm $i
         timeCategory
 
    fi
 fi
 
-readarray -t arr2 < <(find $z -name \*.dzn)
+readarray -t arr2 < <(find $z -name \*.dzn 2>/dev/null)
 for j in ${arr2[@]}; do # j contains a relative path to dzn file.
 
     path=${j%.*}
@@ -361,14 +374,15 @@ for j in ${arr2[@]}; do # j contains a relative path to dzn file.
   if [[ -z $(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $filename.fzn 2>/dev/null )  ||  -z $(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $filename.out 2>/dev/null )  ]]
   then
      # Generating fzn files and moving to the temporary directory
-     echo "Generating fzn file for $i and data file $j"
+     echo "Generatig fzn file for $i and data file $j"
      mzn2fzn -G jacop $i -d $j
 	 for file in $z/*.fzn; do mv "$file" $z/${z#*/}/"${file/*.fzn/$filename.fzn}"; done
   fi
 done
-    timeCategory
+
+     timeCategory
+
 done
 
-removingEmptyDirectories
-
+    removingEmptyDirectories
 
