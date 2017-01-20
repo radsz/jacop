@@ -189,7 +189,10 @@ public class VariablesParameters implements ParserTreeConstants {
 		}
 
 	    }
-	    if (!var_introduced) table.addSearchVar(varInt);
+	    if (!var_introduced)
+	      table.addSearchVar(varInt);
+	    else if (output_var) 
+	      table.addSearchVar(varInt);
 	    if (output_var) table.addOutVar(varInt);
 	    break;
 	case 1: // int interval
@@ -224,7 +227,10 @@ public class VariablesParameters implements ParserTreeConstants {
 		}
 
 	    }
-	    if (!var_introduced) table.addSearchVar(varInt);
+	    if (!var_introduced)
+	      table.addSearchVar(varInt);
+	    else if (output_var)
+	      table.addSearchVar(varInt);
 	    if (output_var) table.addOutVar(varInt);
 	    break;
 	case 2: // int list
@@ -261,7 +267,10 @@ public class VariablesParameters implements ParserTreeConstants {
 // 		store.impose(c);
 // 		// 		System.out.println(c);
 	    }
-	    if (!var_introduced) table.addSearchVar(varInt);
+	    if (!var_introduced)
+	      table.addSearchVar(varInt);
+	    else if (output_var) 
+	      table.addSearchVar(varInt);
 	    if (output_var) table.addOutVar(varInt);
 	    break;
 	case 3: // bool
@@ -290,7 +299,10 @@ public class VariablesParameters implements ParserTreeConstants {
 // 		store.impose(c);
 // 		// 		System.out.println(c);
 	    }
-	    if (!var_introduced) table.addSearchVar(boolVar);
+	    if (!var_introduced)
+	      table.addSearchVar(boolVar);
+	    else if (output_var) 
+	      table.addSearchVar(boolVar);
 	    if (output_var) table.addOutVar(boolVar);
 	    numberBooleanVariables++;
 	    break;
@@ -313,7 +325,10 @@ public class VariablesParameters implements ParserTreeConstants {
 		}
 
 	    }
-	    if (!var_introduced) table.addSearchSetVar(varSet);
+	    if (!var_introduced)
+	      table.addSearchSetVar(varSet);
+	    else if (output_var)
+	      table.addSearchSetVar(varSet);
 	    if (output_var) table.addOutVar(varSet);
 	    break;
 	case 5: // set interval
@@ -343,7 +358,10 @@ public class VariablesParameters implements ParserTreeConstants {
 		}
 
 	    }
-	    if (!var_introduced) table.addSearchSetVar(varSet);
+	    if (!var_introduced)
+	      table.addSearchSetVar(varSet);
+	    else if (output_var)
+	      table.addSearchSetVar(varSet);
 	    if (output_var) table.addOutVar(varSet);
 	    break;
 	case 6: // set list
@@ -368,7 +386,10 @@ public class VariablesParameters implements ParserTreeConstants {
 		}
 
 	    }
-	    if (!var_introduced) table.addSearchSetVar(varSet);
+	    if (!var_introduced)
+	      table.addSearchSetVar(varSet);
+	    else if (output_var)
+	      table.addSearchSetVar(varSet);
 	    if (output_var) table.addOutVar(varSet);
 	    break;
 	case 7: // bool set
@@ -390,7 +411,10 @@ public class VariablesParameters implements ParserTreeConstants {
 		}
 
 	    }
-	    if (!var_introduced) table.addSearchSetVar(varSet);
+	    if (!var_introduced)
+	      table.addSearchSetVar(varSet);
+	    else if (output_var)
+	      table.addSearchSetVar(varSet);
 	    if (output_var) table.addOutVar(varSet);
 	    break;
 	case 8: // float
@@ -413,7 +437,10 @@ public class VariablesParameters implements ParserTreeConstants {
 		}
 
 	    }
-	    if (!var_introduced) table.addSearchFloatVar(varFloat);
+	    if (!var_introduced)
+	      table.addSearchFloatVar(varFloat);
+	    else if (output_var)
+	      table.addSearchFloatVar(varFloat);
 	    if (output_var) table.addOutVar(varFloat);
 	    break;
 	case 9: // float interval
@@ -451,7 +478,10 @@ public class VariablesParameters implements ParserTreeConstants {
 		}
 
 	    }
-	    if (!var_introduced) table.addSearchFloatVar(varFloat);
+	    if (!var_introduced)
+	      table.addSearchFloatVar(varFloat);
+	    else if (output_var)
+	      table.addSearchFloatVar(varFloat);
 	    if (output_var) table.addOutVar(varFloat);
 	    break;
 	default: 
@@ -578,7 +608,9 @@ public class VariablesParameters implements ParserTreeConstants {
 		    //varArrayInt[i] = new IntVar(store, ident+"["+ i +"]", new IntervalDomain(IntDomain.MinInt, IntDomain.MaxInt));
 		    varArrayInt[i] = new IntVar(store, ident+"["+ i +"]", IntDomain.MinInt, IntDomain.MaxInt);
 		if (! var_introduced)
-		    table.addSearchArray(varArrayInt);
+		  table.addSearchArray(varArrayInt);
+		else if (output_array)
+		  table.addSearchArray(varArrayInt);
 	    }
 	    table.addVariableArray(ident, varArrayInt);
 	    if (output_array) {
@@ -597,9 +629,9 @@ public class VariablesParameters implements ParserTreeConstants {
 		// array initialization
 		varArrayInt = getScalarFlatExpr_ArrayVar(store, node, initChild);
 		if (! var_introduced)
-		    for (int i=0; i<varArrayInt.length; i++)
+		    for (int i=0; i<varArrayInt.length; i++) 
 			if ( ! ground(varArrayInt[i]) )
-			    table.addSearchVar(varArrayInt[i]);
+			  table.addSearchVar(varArrayInt[i]);
 	    }
 	    else { // no init values
 		varArrayInt = new IntVar[size];
@@ -611,7 +643,9 @@ public class VariablesParameters implements ParserTreeConstants {
 			varArrayInt[i] = new IntVar(store, ident+"["+ i +"]", lowInterval, highInterval);
 	
 		if (! var_introduced)
-		    table.addSearchArray(varArrayInt);
+		  table.addSearchArray(varArrayInt);
+		else if (output_array)
+		  table.addSearchArray(varArrayInt);
 	    }
 	    table.addVariableArray(ident, varArrayInt);
 	    if (output_array) {
@@ -639,7 +673,9 @@ public class VariablesParameters implements ParserTreeConstants {
 		    varArrayInt[i] = new IntVar(store, ident+"["+i+"]", dom);
 		}
 		if (! var_introduced)
-		    table.addSearchArray(varArrayInt);
+		  table.addSearchArray(varArrayInt);
+		else if (output_array)
+		  table.addSearchArray(varArrayInt);
 	    }
 	    table.addVariableArray(ident, varArrayInt);
 	    if (output_array) {
@@ -662,7 +698,9 @@ public class VariablesParameters implements ParserTreeConstants {
 		for (int i=0; i<size; i++)
 		    varArrayInt[i] = new BooleanVar(store, ident+"["+i+"]"); 
 		if (! var_introduced)
-		    table.addSearchArray(varArrayInt);
+		  table.addSearchArray(varArrayInt);
+		else if (output_array)
+		  table.addSearchArray(varArrayInt);
 		numberBooleanVariables += size;
 	    }
 	    table.addVariableArray(ident, varArrayInt);
@@ -688,7 +726,9 @@ public class VariablesParameters implements ParserTreeConstants {
 		    varArraySet[i] = new SetVar(store, ident+"["+i+"]", 
 					       new BoundSetDomain(IntDomain.MinInt, IntDomain.MaxInt));
 		if (! var_introduced)
-		    table.addSearchSetArray(varArraySet);
+		  table.addSearchSetArray(varArraySet);
+		else if (output_array)
+		  table.addSearchSetArray(varArraySet);
 	    }
 	    table.addSetVariableArray(ident, varArraySet);
 	    if (output_array) {
@@ -716,7 +756,9 @@ public class VariablesParameters implements ParserTreeConstants {
 			varArraySet[i] = new SetVar(store, ident+"["+i+"]", new BoundSetDomain(new IntervalDomain(),
 											   new IntervalDomain(lowInterval, highInterval)));
 		if (! var_introduced)
-		    table.addSearchSetArray(varArraySet);
+		  table.addSearchSetArray(varArraySet);
+		else if (output_array)
+		  table.addSearchSetArray(varArraySet);
 	    }
 	    table.addSetVariableArray(ident, varArraySet);
 	    if (output_array) {
@@ -744,7 +786,9 @@ public class VariablesParameters implements ParserTreeConstants {
 		    varArraySet[i] = new SetVar(store, ident+"["+i+"]", new BoundSetDomain(new IntervalDomain(), sd));
 		}
 		if (! var_introduced)
-		    table.addSearchSetArray(varArraySet);
+		  table.addSearchSetArray(varArraySet);
+		else if (output_array)
+		  table.addSearchSetArray(varArraySet);
 	    }
 	    table.addSetVariableArray(ident, varArraySet);
 	    if (output_array) {
@@ -768,7 +812,9 @@ public class VariablesParameters implements ParserTreeConstants {
 		for (int i=0; i<size; i++)
 		    varArraySet[i] = new SetVar(store, ident+"["+i+"]", new BoundSetDomain(0,1));
 		if (! var_introduced)
-		    table.addSearchSetArray(varArraySet);
+		  table.addSearchSetArray(varArraySet);
+		else if (output_array)
+		  table.addSearchSetArray(varArraySet);
 	    }
 	    table.addSetVariableArray(ident, varArraySet);
 	    if (output_array) {
@@ -792,7 +838,9 @@ public class VariablesParameters implements ParserTreeConstants {
 		for (int i=0; i<size; i++)
 		    varArrayFloat[i] = new FloatVar(store, ident+"["+ i +"]", MIN_FLOAT, MAX_FLOAT);
 		if (! var_introduced)
-		    table.addSearchFloatArray(varArrayFloat);
+		  table.addSearchFloatArray(varArrayFloat);
+		else if (output_array)
+		  table.addSearchFloatArray(varArrayFloat);
 	    }
 	    table.addVariableFloatArray(ident, varArrayFloat);
 	    if (output_array) {
@@ -831,7 +879,9 @@ public class VariablesParameters implements ParserTreeConstants {
 		    varArrayFloat[i] = new FloatVar(store, ident+"["+ i +"]", lowFloatInterval, highFloatInterval);
 
 		if (! var_introduced)
-		    table.addSearchFloatArray(varArrayFloat);
+		  table.addSearchFloatArray(varArrayFloat);
+		else if (output_array)
+		  table.addSearchFloatArray(varArrayFloat);		   
 	    }
 	    table.addVariableFloatArray(ident, varArrayFloat);
 	    if (output_array) {
