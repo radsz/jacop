@@ -92,6 +92,9 @@ public class Support implements ParserTreeConstants {
     this.dictionary = d;
     this.debug = Options.debug();
     this.sat = sat;
+
+    parameterListForAlldistincts.clear();
+    delayedConstraints.clear();
   }
 
   static int getInt(ASTScalarFlatExpr node) {
