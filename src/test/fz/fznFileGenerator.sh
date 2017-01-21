@@ -10,7 +10,7 @@ removingEmptyDirectories(){
 }
 
 removingDznMznFiles() {
-
+echo "timeParameter" $1
 dznCounter=0
 flag=0
 readarray -t arr < <(find test -name \*.dzn);
@@ -25,12 +25,13 @@ let dznCounter++
 
         for j in ${arr1[@]}; do
 
-
             jj=${j#*/}
             jjj=${jj%.*}
 
-
             if [ "$iii" == "$jjj" ]; then
+
+            mv test/$ii $1/${jjj%/*}
+            cp  ${i%/*}/${iii%/*}.mzn $1/${jjj%/*}
             rm $i
             let dznCounter--
 
@@ -44,7 +45,8 @@ done
 
         if [ "$iii" != "" ];then
 
-            rm -r test/$iii/
+           cp  ${i%/*}/$iii.mzn $1/${jjj%/*}
+           rm -r test/$iii/
 
         fi
     fi
@@ -65,6 +67,8 @@ for i in ${arr4[@]}; do
             ww=${j#*/}
             www=${ww%.*}
             if [ "$zzz" == "$www" ]; then
+
+            mv $i $1/${www%/*}
                 rm -r ${i%/*}
 
             fi
@@ -160,7 +164,8 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 			echo "$out" > upTo5sec/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo5sec/${st%.*}.fzn
 
-            removingDznMznFiles
+            timeFlag="upTo5sec"
+            removingDznMznFiles $timeFlag
 		fi
 
 	    if [ $timesec -gt 15 ] && [ $timesec -lt 80 ]  ;then
@@ -174,7 +179,8 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 			echo "$out" > upTo30sec/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo30sec/${st%.*}.fzn
-  			removingDznMznFiles
+  			timeFlag="upTo30sec"
+  			removingDznMznFiles $timeFlag
 		fi
 
         if [ $timesec -gt 80 ] && [ $timesec -le 120 ];then
@@ -188,7 +194,8 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 			echo "$out" > upTo1min/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo1min/${st%.*}.fzn
-  			removingDznMznFiles
+  			timeFlag="upTo1min"
+  			removingDznMznFiles $timeFlag
 		fi
 
 
@@ -203,7 +210,8 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 			echo "$out" > upTo5min/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo5min/${st%.*}.fzn
-  			removingDznMznFiles
+  			timeFlag="upTo5min"
+  			removingDznMznFiles $timeFlag
 		fi
 
         if [ $timesec -ge 600 ] && [ $timesec -le 1200 ];then
@@ -217,7 +225,8 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 			echo "$out" > upTo10min/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo10min/${st%.*}.fzn
-  			removingDznMznFiles
+  			timeFlag="upTo10min"
+  			removingDznMznFiles $timeFlag
 		fi
 
         if [ $timesec -ge 1200 ] && [ $timesec -le 5400 ];then
@@ -231,7 +240,8 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 			echo "$out" > upTo1hour/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo1hour/${st%.*}.fzn
-  			removingDznMznFiles
+  			timeFlag="upTo1hour"
+  			removingDznMznFiles $timeFlag
 		fi
 
 	    if [ $timesec -ge 5400 ];then
@@ -245,7 +255,8 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 			echo "$out" > above1hour/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn above1hour/${st%.*}.fzn
-  			removingDznMznFiles
+  			timeFlag="above1hour"
+  			removingDznMznFiles $timeFlag
 	fi
 
     else {
@@ -259,7 +270,8 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 			echo "$out" > errors/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn errors/${st%.*}.fzn
-  			removingDznMznFiles
+    	    timeFlag="errors"
+  			removingDznMznFiles $timeFlag
             else
 
             echo "Problem $k was classified as flaky test"
@@ -271,7 +283,8 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 			echo "$out" > flakyTests/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn flakyTests/${st%.*}.fzn
-  			removingDznMznFiles
+  			timeFlag="flakyTests"
+  			removingDznMznFiles $timeFlag
 
         fi
         }
@@ -286,7 +299,7 @@ done
 
 counter=0
 counter2=0
-readarray -t arr3 < <(find test -maxdepth 2 -name \*.fzn );
+readarray -t arr3 < <(find test -mindepth 2 -maxdepth 2 -name \*.fzn );
 
 for i in ${arr3[@]}; do
 
@@ -312,7 +325,7 @@ while [ $counter -lt $counter2 ]
 do
 if [ -z $z ]; then
 
-    readarray -t arr3 < <(find test -maxdepth 3 -name \*.fzn );
+    readarray -t arr3 < <(find test -mindepth 3 -maxdepth 3 -name \*.fzn );
     if [ -z ${arr3[0]} ]; then
     let counter2--
     fi
@@ -351,7 +364,7 @@ if [ ! -d "$z/${z#*/}" ]; then
 	mkdir $z/${z#*/}
 fi
 
-if [[ -z $(find $z -name \*.dzn) ]]
+if [[ -z $(find   $z -name \*.dzn) ]]
 then
 
    if [[ -z $(find upTo5sec/$iii upTo30sec/$iii upTo1min/$iii upTo5min/$iii upTo10min/$iii upTo1hour/$iii above1hour/$iii flakyTests/$iii -name $iii.fzn 2>/dev/null ) || -z $(find upTo5sec/$iii upTo30sec/$iii upTo1min/$iii upTo5min/$iii upTo10min/$iii upTo1hour/$iii above1hour/$iii flakyTests/$iii -name $iii.out 2>/dev/null) ]]
@@ -365,7 +378,7 @@ then
    fi
 fi
 
-readarray -t arr2 < <(find $z -name \*.dzn 2>/dev/null)
+readarray -t arr2 < <(find  $z -name \*.dzn )
 for j in ${arr2[@]}; do # j contains a relative path to dzn file.
 
     path=${j%.*}
@@ -384,5 +397,4 @@ done
 
 done
 
-    removingEmptyDirectories
-
+    #removingEmptyDirectories
