@@ -249,6 +249,8 @@ class ComparisonConstraints extends Support implements ParserTreeConstants {
 	IntVar v1 = getVariable(p1);
 
 	int i2 = getInt(p2);
+	if (i2 < IntDomain.MinInt || i2 > IntDomain.MaxInt)
+	  throw  new ArithmeticException("Overflow occurred");
 	switch (operation) {
 
 	case eq :
@@ -352,6 +354,8 @@ class ComparisonConstraints extends Support implements ParserTreeConstants {
       } else if (p1.getType() == 0 || p1.getType() == 1) { // int rel var or bool
 	IntVar v2 = getVariable(p2);
 	int i1 = getInt(p1);
+	if (i1 < IntDomain.MinInt || i1 > IntDomain.MaxInt)
+	  throw  new ArithmeticException("Overflow occurred");
 
 	switch (operation) {
 
@@ -498,7 +502,11 @@ class ComparisonConstraints extends Support implements ParserTreeConstants {
       if (p1.getType() == 0 || p1.getType() == 1) { // first parameter int or bool
 	if (p2.getType() == 0 || p2.getType() == 1) { // first parameter int/bool & second parameter int/bool
 	  int i1 = getInt(p1);
+	  if (i1 < IntDomain.MinInt || i1 > IntDomain.MaxInt)
+	    throw  new ArithmeticException("Overflow occurred");
 	  int i2 = getInt(p2);
+	  if (i2 < IntDomain.MinInt || i2 > IntDomain.MaxInt)
+	    throw  new ArithmeticException("Overflow occurred");
 	  switch (operation) {
 	  case eq :
 	    if (i1 != i2) throw Store.failException;
@@ -523,6 +531,8 @@ class ComparisonConstraints extends Support implements ParserTreeConstants {
 	else { // first parameter int/bool & second parameter var
 
 	  int i1 = getInt(p1);
+	  if (i1 < IntDomain.MinInt || i1 > IntDomain.MaxInt)
+	    throw  new ArithmeticException("Overflow occurred");
 	  IntVar v2 = getVariable(p2);
 
 	  switch (operation) {
@@ -552,6 +562,8 @@ class ComparisonConstraints extends Support implements ParserTreeConstants {
 
 	  IntVar v1 = getVariable(p1);
 	  int i2 = getInt(p2);
+	  if (i2 < IntDomain.MinInt || i2 > IntDomain.MaxInt)
+	    throw  new ArithmeticException("Overflow occurred");
 
 	  switch (operation) {
 	  case eq :
