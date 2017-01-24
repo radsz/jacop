@@ -174,8 +174,9 @@ public class Linear extends PrimitiveConstraint {
 	    assert (list[i] != null) : i + "-th element of list in Linear constraint is null";
 			
 	    if (weights[i] != 0) {
-		// This causes problem for several examples...
-		if (list[i].singleton()) 
+		// This causes problem for several examples... 
+	      // if (list[i].singleton()) 
+	      if (list[i].min() == list[i].max()) 
 		    this.sum -= (list[i].value() * weights[i]);
 		else
 		    if (parameters.get(list[i]) != null) {
@@ -208,6 +209,9 @@ public class Linear extends PrimitiveConstraint {
 	    this.weights[0] = 1;
 	    this.list[1] = new FloatVar(store, 0,0);
 	    this.weights[1] = 1;
+
+	    if (Math.abs(this.sum) < FloatDomain.precision())
+	      this.sum = 0;
 	    
 	}
 
