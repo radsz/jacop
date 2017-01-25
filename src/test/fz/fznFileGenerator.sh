@@ -6,79 +6,9 @@
 # Third execute this script in the directory where this script resides.
 removingEmptyDirectories(){
 
-    find test -mindepth 1 -delete
+    find test -type d -empty -delete -mindepth 1
 }
 
-removingDznMznFiles() {
-echo "timeParameter" $1
-dznCounter=0
-flag=0
-readarray -t arr < <(find test -name \*.dzn);
-for i in ${arr[@]}; do
-
-let dznCounter++
-      readarray -t arr1 < <(find upTo5sec upTo30sec upTo1min upTo5min upTo10min upTo1hour above1hour flakyTests  -name \*.fzn 2>/dev/null);
-        flag=1
-
-            ii=${i#*/}
-            iii=${ii%.*}
-
-        for j in ${arr1[@]}; do
-
-            jj=${j#*/}
-            jjj=${jj%.*}
-
-            if [ "$iii" == "$jjj" ]; then
-
-            mv test/$ii $1/${jjj%/*}
-            cp  ${i%/*}/${iii%/*}.mzn $1/${jjj%/*}
-            rm $i
-            let dznCounter--
-
-        fi
-        done
-done
-      ii=${i#*/}
-      iii=${ii%/*}
-
-    if [ $dznCounter == 0 ] && [ $flag == 1 ]; then
-
-        if [ "$iii" != "" ];then
-
-           cp  ${i%/*}/$iii.mzn $1/${jjj%/*}
-           rm -r test/$iii/
-
-        fi
-    fi
-
-#i=""
-#ii=""
-#iii=""
-if [[ -z $(find test -name $zzz.dzn) ]]; then
-
-readarray -t arr4 < <(find test -maxdepth 2 -name \*.mzn 2>/dev/null);
-for i in ${arr4[@]}; do
-            zz=${i#*/}
-            zzz=${zz%.*}
-      readarray -t arr5 < <(find upTo5sec upTo30sec upTo1min upTo5min upTo10min upTo1hour above1hour flakyTests -name \*.fzn 2>/dev/null);
-
-        for j in ${arr5[@]}; do
-
-            ww=${j#*/}
-            www=${ww%.*}
-            if [ "$zzz" == "$www" ]; then
-
-            mv $i $1/${www%/*}
-                rm -r ${i%/*}
-
-            fi
-        done
-    done
-
-fi
-
-
-}
 
 
 function diffDifference(){
@@ -127,7 +57,7 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
         fi
 
         if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
-          echo "Out result" ${out#*%}
+            echo "Out result" ${out#*%}
             diffresult=1
             count=4
             timesec=6000
@@ -164,8 +94,34 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 			echo "$out" > upTo5sec/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo5sec/${st%.*}.fzn
 
-            timeFlag="upTo5sec"
-            removingDznMznFiles $timeFlag
+
+             if ls test/${st%/*}/*.mzn 2>/dev/null; then
+                if [ ! -d upTo5sec/${st%/*}/dznFolder ]; then
+
+		            mkdir -p upTo5sec/${st%/*}/dznFolder
+
+			    fi
+			 fi
+
+            if ls test/${st%/*}/*.dzn 2>/dev/null; then
+
+                mv ${k%%/*}/${st%.*}.dzn upTo5sec/${st%/*}/dznFolder/
+                cp ${k%%/*}/${st%/*}/*.mzn upTo5sec/${st%/*}/dznFolder/
+
+                if [ `ls -l test/${st%/*}/*.dzn | wc -l` == 0 2>/dev/null ]; then
+
+                    rm -r ${k%%/*}/${st%/*}
+                fi
+
+            else
+
+                if ls test/${st%/*}/*.mzn 2>/dev/null; then
+                    stt=${st#*/}
+                    cp ${k%%/*}/${st%/*}/${stt%.*}.mzn upTo5sec/${st%/*}/dznFolder/${stt%.*}.mzn
+                    rm -r ${k%%/*}/${st%/*}/
+                fi
+
+            fi
 		fi
 
 	    if [ $timesec -gt 15 ] && [ $timesec -lt 80 ]  ;then
@@ -179,8 +135,34 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 			echo "$out" > upTo30sec/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo30sec/${st%.*}.fzn
-  			timeFlag="upTo30sec"
-  			removingDznMznFiles $timeFlag
+
+            if ls test/${st%/*}/*.mzn; then
+  			    if [ ! -d upTo30sec/${st%/*}/dznFolder ]; then
+
+		            mkdir -p upTo30sec/${st%/*}/dznFolder
+
+			    fi
+			 fi
+
+            if ls test/${st%/*}/*.dzn 2>/dev/null; then
+
+                mv ${k%%/*}/${st%.*}.dzn upTo30sec/${st%/*}/dznFolder/
+                cp ${k%%/*}/${st%/*}/*.mzn upTo30sec/${st%/*}/dznFolder/
+
+                if [ `ls -l test/${st%/*}/*.dzn | wc -l` == 0 2>/dev/null ]; then
+                    echo zero dzn files ${k%%/*}/${st%/*}/*.mzn
+                    rm -r ${k%%/*}/${st%/*}
+                fi
+
+            else
+
+                if ls test/${st%/*}/*.mzn 2>/dev/null; then
+                    stt=${st#*/}
+                    cp ${k%%/*}/${st%/*}/${stt%.*}.mzn upTo30sec/${st%/*}/dznFolder/${stt%.*}.mzn
+                    rm -r ${k%%/*}/${st%/*}/
+                fi
+            fi
+
 		fi
 
         if [ $timesec -gt 80 ] && [ $timesec -le 120 ];then
@@ -194,8 +176,31 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 			echo "$out" > upTo1min/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo1min/${st%.*}.fzn
-  			timeFlag="upTo1min"
-  			removingDznMznFiles $timeFlag
+
+            if ls test/${st%/*}/*.mzn; then
+  			    if [ ! -d upTo1min/${st%/*}/dznFolder ]; then
+
+		            mkdir -p upTo1min/${st%/*}/dznFolder
+
+			    fi
+			fi
+
+                if ls test/${st%/*}/*.dzn 2>/dev/null; then
+                    mv ${k%%/*}/${st%.*}.dzn upTo1min/${st%/*}/dznFolder/
+                    cp ${k%%/*}/${st%/*}/*.mzn upTo1min/${st%/*}/dznFolder/
+
+                if [ `ls -l test/${st%/*}/*.dzn | wc -l` == 0 2>/dev/null ]; then
+                      rm -r ${k%%/*}/${st%/*}
+                fi
+
+            else
+
+                if ls test/${st%/*}/*.mzn; then
+                    stt=${st#*/}
+                    cp ${k%%/*}/${st%/*}/${stt%.*}.mzn upTo1min/${st%/*}/dznFolder/${stt%.*}.mzn
+                    rm -r ${k%%/*}/${st%/*}/
+                fi
+             fi
 		fi
 
 
@@ -210,8 +215,32 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 			echo "$out" > upTo5min/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo5min/${st%.*}.fzn
-  			timeFlag="upTo5min"
-  			removingDznMznFiles $timeFlag
+
+            if ls test/${st%/*}/*.mzn 2>/dev/null; then
+                if [ ! -d upTo5min/${st%/*}/dznFolder ]; then
+		            mkdir -p upTo1min/${st%/*}/dznFolder
+			    fi
+			fi
+
+            if ls test/${st%/*}/*.dzn 2>/dev/null ; then
+
+                mv ${k%%/*}/${st%.*}.dzn upTo5min/${st%/*}/dznFolder/
+                cp ${k%%/*}/${st%/*}/*.mzn upTo5min/${st%/*}/dznFolder/
+
+                if [ `ls -l test/${st%/*}/*.dzn | wc -l` == 0 2>/dev/null ]; then
+
+                    rm -r ${k%%/*}/${st%/*}
+                fi
+
+            else
+
+                if ls test/${st%/*}/*.mzn; then
+                    stt=${st#*/}
+                    cp ${k%%/*}/${st%/*}/${stt%.*}.mzn upTo5min/${st%/*}/dznFolder/${stt%.*}.mzn
+                    rm -r ${k%%/*}/${st%/*}/
+                fi
+             fi
+
 		fi
 
         if [ $timesec -ge 600 ] && [ $timesec -le 1200 ];then
@@ -225,8 +254,35 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 			echo "$out" > upTo10min/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo10min/${st%.*}.fzn
-  			timeFlag="upTo10min"
-  			removingDznMznFiles $timeFlag
+
+
+  		if ls test/${st%/*}/*.mzn 2>/dev/null; then
+  			if [ ! -d upTo10min/${st%/*}/dznFolder ]; then
+
+		            mkdir -p upTo10min/${st%/*}/dznFolder
+
+			    fi
+	    fi
+
+            if ls test/${st%/*}/*.dzn 2>/dev/null; then
+
+                mv ${k%%/*}/${st%.*}.dzn upTo10min/${st%/*}/dznFolder/
+                cp ${k%%/*}/${st%/*}/*.mzn upTo10min/${st%/*}/dznFolder/
+
+                if [ `ls -l test/${st%/*}/*.dzn | wc -l` == 0 2>/dev/null ]; then
+
+                    rm -r ${k%%/*}/${st%/*}
+                fi
+
+            else
+
+                if ls test/${st%/*}/*.mzn 2>/dev/null; then
+                    stt=${st#*/}
+                    cp ${k%%/*}/${st%/*}/${stt%.*}.mzn upTo10min/${st%/*}/dznFolder/${stt%.*}.mzn
+                    rm -r ${k%%/*}/${st%/*}/
+                fi
+            fi
+
 		fi
 
         if [ $timesec -ge 1200 ] && [ $timesec -le 5400 ];then
@@ -240,8 +296,34 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 			echo "$out" > upTo1hour/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo1hour/${st%.*}.fzn
-  			timeFlag="upTo1hour"
-  			removingDznMznFiles $timeFlag
+
+            if ls test/${st%/*}/*.mzn 2>/dev/null; then
+      			if [ ! -d upTo1hour/${st%/*}/dznFolder ]; then
+		            mkdir -p upTo1hour/${st%/*}/dznFolder
+
+			    fi
+			fi
+
+            if ls test/${st%/*}/*.dzn ; then
+
+                mv ${k%%/*}/${st%.*}.dzn upTo1hour/${st%/*}/dznFolder/
+                cp ${k%%/*}/${st%/*}/*.mzn upTo1hour/${st%/*}/dznFolder/
+
+                if [ `ls -l test/${st%/*}/*.dzn | wc -l` == 0 2>/dev/null ] ; then
+
+                    rm -r ${k%%/*}/${st%/*}
+                fi
+
+            else
+
+                if ls test/${st%/*}/*.mzn 2>/dev/null; then
+                    stt=${st#*/}
+                    cp ${k%%/*}/${st%/*}/${stt%.*}.mzn upTo10min/${st%/*}/dznFolder/${stt%.*}.mzn
+                    rm -r ${k%%/*}/${st%/*}/
+            fi
+         fi
+
+
 		fi
 
 	    if [ $timesec -ge 5400 ];then
@@ -255,8 +337,35 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 			echo "$out" > above1hour/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn above1hour/${st%.*}.fzn
-  			timeFlag="above1hour"
-  			removingDznMznFiles $timeFlag
+
+            if ls test/${st%/*}/*.mzn 2>/dev/null; then
+      			if [ ! -d above1hour/${st%/*}/dznFolder ]; then
+
+		            mkdir -p above1hour/${st%/*}/dznFolder
+
+			    fi
+			fi
+
+            if ls test/${st%/*}/*.dzn ; then
+
+                mv ${k%%/*}/${st%.*}.dzn above1hour/${st%/*}/dznFolder/
+                cp ${k%%/*}/${st%/*}/*.mzn above1hour/${st%/*}/dznFolder/
+
+                if [ `ls -l test/${st%/*}/*.dzn | wc -l` == 0 2>/dev/null ]; then
+
+                    rm -r ${k%%/*}/${st%/*}
+                fi
+
+            else
+
+                if ls test/${st%/*}/*.mzn 2>/dev/null; then
+                    stt=${st#*/}
+                    cp ${k%%/*}/${st%/*}/${stt%.*}.mzn above1hour/${st%/*}/dznFolder/${stt%.*}.mzn
+                    rm -r ${k%%/*}/${st%/*}/
+            fi
+         fi
+
+
 	fi
 
     else {
@@ -270,8 +379,33 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 			echo "$out" > errors/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn errors/${st%.*}.fzn
-    	    timeFlag="errors"
-  			removingDznMznFiles $timeFlag
+
+            if ls test/${st%/*}/*.mzn; then
+  			    if [ ! -d errors/${st%/*}/dznFolder ]; then
+
+		            mkdir -p errors/${st%/*}/dznFolder
+
+			    fi
+			fi
+
+            if ls test/${st%/*}/*.dzn 2>/dev/null; then
+
+                mv ${k%%/*}/${st%.*}.dzn errors/${st%/*}/dznFolder/
+                cp ${k%%/*}/${st%/*}/*.mzn errors/${st%/*}/dznFolder/
+
+                if [ `ls -l test/${st%/*}/*.dzn | wc -l` == 0 2>/dev/null ]; then
+                    rm -r ${k%%/*}/${st%/*}
+                fi
+
+            else
+
+                if ls test/${st%/*}/*.mzn 2>/dev/null; then
+                    stt=${st#*/}
+                    cp ${k%%/*}/${st%/*}/${stt%.*}.mzn errors/${st%/*}/dznFolder/${stt%.*}.mzn
+                    rm -r ${k%%/*}/${st%/*}/
+            fi
+         fi
+
             else
 
             echo "Problem $k was classified as flaky test"
@@ -283,10 +417,37 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 			echo "$out" > flakyTests/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn flakyTests/${st%.*}.fzn
-  			timeFlag="flakyTests"
-  			removingDznMznFiles $timeFlag
 
-        fi
+  			if ls test/${st%/*}/*.mzn 2>/dev/null; then
+  			    if [ ! -d flakyTests/${st%/*}/dznFolder ]; then
+
+		            mkdir -p flakyTests/${st%/*}/dznFolder
+
+			    fi
+			fi
+
+            if ls test/${st%/*}/*.dzn ; then
+
+                mv ${k%%/*}/${st%.*}.dzn flakyTests/${st%/*}/dznFolder/
+                cp ${k%%/*}/${st%/*}/*.mzn flakyTests/${st%/*}/dznFolder/
+
+                if [ `ls -l test/${st%/*}/*.dzn | wc -l` == 0 2>/dev/null ]; then
+
+                    rm -r ${k%%/*}/${st%/*}
+                fi
+
+            else
+
+
+                if ls test/${st%/*}/*.mzn 2>/dev/null; then
+#                if ls test/${st%/*}/*.mzn; then
+                    stt=${st#*/}
+                    cp ${k%%/*}/${st%/*}/${stt%.*}.mzn flakyTests/${st%/*}/dznFolder/${stt%.*}.mzn
+                    rm -r ${k%%/*}/${st%/*}/
+            fi
+            fi
+         fi
+
         }
 	fi
 
@@ -296,21 +457,36 @@ done
 
 
 #main
+echo "Main"
+readarray -t arr4 < <(find test -name \*.fzn);
+for i in ${arr4[@]}; do
+      readarray -t arr5 < <(find upTo5sec upTo30sec upTo1min upTo5min upTo10min upTo1hour above1hour flakyTests  -name \*.fzn );
+
+        for j in ${arr5[@]}; do
+
+            if [ "${i##*/}" == "${j##*/}" ]; then
+            echo "I found file fzn" "${i##*/}"
+
+            rm -r ${i%/*}/${i##*/}
+
+            fi
+        done
+done
 
 counter=0
 counter2=0
-readarray -t arr3 < <(find test -mindepth 2 -maxdepth 2 -name \*.fzn );
+readarray -t arr3 < <(find test -mindepth 2 -maxdepth 2 -name \*.fzn 2>/dev/null);
 
-for i in ${arr3[@]}; do
+for t in ${arr3[@]}; do
 
 let counter2++
-    z=${i%/*} # directory that contains mzn filename
+    z=${t%/*} # directory that contains mzn filename
     if [ ! -d "$z/${z#*/}" ]; then
 	   mkdir "$z/${z#*/}"
 
     fi
 
-     path=${i%.*}
+     path=${t%.*}
      filename=${path##*/}
 
 	 for file in "$z/$filename.fzn"; do mv "$file" "$z/${z#*/}/${file/*.fzn/$filename.fzn}"; done
@@ -329,8 +505,8 @@ if [ -z $z ]; then
     if [ -z ${arr3[0]} ]; then
     let counter2--
     fi
-    for i in ${arr3[@]}; do
-       z=${i%/*}
+    for t in ${arr3[@]}; do
+       z=${t%/*}
        let counter2++
 
     done
@@ -339,7 +515,7 @@ if [ -z $z ]; then
 
            let counter++
            timeCategory
-
+#            z=""
     fi
 else
 
@@ -349,9 +525,11 @@ else
         z=""
         fi
 fi
-done
 
-readarray -t arr < <(find test -name \*.mzn 2>/dev/null);
+
+done
+removingEmptyDirectories
+readarray -t arr < <(find test -mindepth 2 -maxdepth 2 -name \*.mzn 2>/dev/null);
 
 for i in ${arr[@]}; do
 
@@ -364,11 +542,12 @@ if [ ! -d "$z/${z#*/}" ]; then
 	mkdir $z/${z#*/}
 fi
 
-if [[ -z $(find   $z -name \*.dzn) ]]
+if [[ -z $(find  $z -mindepth 1 -maxdepth 1 -name \*.dzn 2>/dev/null) ]]
 then
 
-   if [[ -z $(find upTo5sec/$iii upTo30sec/$iii upTo1min/$iii upTo5min/$iii upTo10min/$iii upTo1hour/$iii above1hour/$iii flakyTests/$iii -name $iii.fzn 2>/dev/null ) || -z $(find upTo5sec/$iii upTo30sec/$iii upTo1min/$iii upTo5min/$iii upTo10min/$iii upTo1hour/$iii above1hour/$iii flakyTests/$iii -name $iii.out 2>/dev/null) ]]
+   if [[ -z $(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $iii.fzn 2>/dev/null ) || -z $(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $iii.out 2>/dev/null) ]]
    then
+
         # Generating fzn files and moving to the temporary directory
         echo "Generatig fzn file for $i"
         mzn2fzn -G jacop $i
@@ -378,7 +557,7 @@ then
    fi
 fi
 
-readarray -t arr2 < <(find  $z -name \*.dzn )
+readarray -t arr2 < <(find $z -mindepth 1 -maxdepth 1 -name \*.dzn 2>/dev/null)
 for j in ${arr2[@]}; do # j contains a relative path to dzn file.
 
     path=${j%.*}
@@ -390,6 +569,9 @@ for j in ${arr2[@]}; do # j contains a relative path to dzn file.
      echo "Generatig fzn file for $i and data file $j"
      mzn2fzn -G jacop $i -d $j
 	 for file in $z/*.fzn; do mv "$file" $z/${z#*/}/"${file/*.fzn/$filename.fzn}"; done
+  else
+    echo "jest" $z/$filename.dzn
+    rm $z/$filename.dzn
   fi
 done
 
