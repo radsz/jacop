@@ -133,12 +133,17 @@ class GlobalConstraints extends Support implements ParserTreeConstants {
     IntVar[] d = duration.toArray(new IntVar[duration.size()]);
     IntVar[] r = resource.toArray(new IntVar[resource.size()]);
 
+    /* !!! IMPORTANT !!!  Cumulative constraint is added after all other constraints are posed since
+     * it has expensive consistency method that do not need to be executed during model
+     * initialization every time an added constraint triggers execution of Cumulative.
+     */
+
     if (s.length == 0)
       return;		    
     else if (s.length == 1)
       pose(new XlteqY(r[0], b));
     else if (b.max() == 1)  // cumulative unary
-      pose(new CumulativeUnary(s, d, r, b, true));		  
+      delayedConstraints.add(new CumulativeUnary(s, d, r, b, true));		  
     else {
       int min     = Math.min(r[0].min(), r[1].min());
       int nextMin = Math.max(r[0].min(), r[1].min());
@@ -160,16 +165,16 @@ class GlobalConstraints extends Support implements ParserTreeConstants {
     	      pose(new XlteqY(r[i], b));
     	}
     	else // possible to use CumulativeUnary (it is used with profile propagator; option true)
-    	  pose(new org.jacop.constraints.cumulative.CumulativeUnary(s, d, r, b, true));
+    	  delayedConstraints.add(new CumulativeUnary(s, d, r, b, true));
     	// these constraints are not needed if we run with profile-based propagator
     	// for (int i = 0; i < r.length; i++) 
     	//   pose(new XlteqY(r[i], b));
       }
       else
     	if (allVarGround(d) && allVarGround(r)) 
-    	  pose(new Cumulative(s, d, r, b));
+    	  delayedConstraints.add(new Cumulative(s, d, r, b));
     	else 
-    	  pose(new CumulativeBasic(s, d, r, b));
+    	  delayedConstraints.add(new CumulativeBasic(s, d, r, b));
     }
   }
 
