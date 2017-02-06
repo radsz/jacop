@@ -43,7 +43,7 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 	    timesec=$(($stop-$start))
 
 		result=$out
-		diff <(echo $result) <(echo $out)
+		diff <(echo $result) <(echo $out) #diff compare results test to find the difference between two results test
 
         diffresult=$?
         i=0
@@ -97,20 +97,17 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
              if ls test/${st%/*}/*.mzn 2>/dev/null; then
                 if [ ! -d upTo5sec/${st%/*}/dznFolder ]; then
-
 		            mkdir -p upTo5sec/${st%/*}/dznFolder
-
 			    fi
 			 fi
 
             if ls test/${st%/*}/*.dzn 2>/dev/null; then
 
-                mv ${k%%/*}/${st%.*}.dzn upTo5sec/${st%/*}/dznFolder/
-                cp ${k%%/*}/${st%/*}/*.mzn upTo5sec/${st%/*}/dznFolder/
+                mv ${k%%/*}/${st%.*}.dzn upTo5sec/${st%/*}/dznFolder/ #move dzn file to time category
+                cp ${k%%/*}/${st%/*}/*.mzn upTo5sec/${st%/*}/dznFolder/ #copy mzn to time category
 
-                if [ `ls -l test/${st%/*}/*.dzn | wc -l` == 0 2>/dev/null ]; then
-
-                    rm -r ${k%%/*}/${st%/*}
+                if [ `ls -l test/${st%/*}/*.dzn 2>/dev/null | wc -l ` == 0 ]; then
+                    rm -r ${k%%/*}/${st%/*}  #remove dzn files
                 fi
 
             else
@@ -136,22 +133,19 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 			echo "$out" > upTo30sec/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo30sec/${st%.*}.fzn
 
-            if ls test/${st%/*}/*.mzn; then
+            if ls test/${st%/*}/*.mzn 2>/dev/null; then
   			    if [ ! -d upTo30sec/${st%/*}/dznFolder ]; then
-
 		            mkdir -p upTo30sec/${st%/*}/dznFolder
-
 			    fi
 			 fi
 
             if ls test/${st%/*}/*.dzn 2>/dev/null; then
 
-                mv ${k%%/*}/${st%.*}.dzn upTo30sec/${st%/*}/dznFolder/
-                cp ${k%%/*}/${st%/*}/*.mzn upTo30sec/${st%/*}/dznFolder/
+                mv ${k%%/*}/${st%.*}.dzn upTo30sec/${st%/*}/dznFolder/  #move dzn file to time category
+                cp ${k%%/*}/${st%/*}/*.mzn upTo30sec/${st%/*}/dznFolder/ #copy mzn to time category
 
-                if [ `ls -l test/${st%/*}/*.dzn | wc -l` == 0 2>/dev/null ]; then
-                    echo zero dzn files ${k%%/*}/${st%/*}/*.mzn
-                    rm -r ${k%%/*}/${st%/*}
+                if [ `ls -l test/${st%/*}/*.dzn 2>/dev/null | wc -l` == 0  ]; then
+                     rm -r ${k%%/*}/${st%/*}
                 fi
 
             else
@@ -177,25 +171,23 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 			echo "$out" > upTo1min/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo1min/${st%.*}.fzn
 
-            if ls test/${st%/*}/*.mzn; then
+            if ls test/${st%/*}/*.mzn 2>/dev/null; then
   			    if [ ! -d upTo1min/${st%/*}/dznFolder ]; then
-
 		            mkdir -p upTo1min/${st%/*}/dznFolder
-
 			    fi
 			fi
 
                 if ls test/${st%/*}/*.dzn 2>/dev/null; then
-                    mv ${k%%/*}/${st%.*}.dzn upTo1min/${st%/*}/dznFolder/
-                    cp ${k%%/*}/${st%/*}/*.mzn upTo1min/${st%/*}/dznFolder/
+                    mv ${k%%/*}/${st%.*}.dzn upTo1min/${st%/*}/dznFolder/ #move dzn file to time category
+                    cp ${k%%/*}/${st%/*}/*.mzn upTo1min/${st%/*}/dznFolder/ #copy mzn to time category
 
-                if [ `ls -l test/${st%/*}/*.dzn | wc -l` == 0 2>/dev/null ]; then
+                if [ `ls -l test/${st%/*}/*.dzn 2>/dev/null | wc -l` == 0 ]; then
                       rm -r ${k%%/*}/${st%/*}
                 fi
 
             else
 
-                if ls test/${st%/*}/*.mzn; then
+                if ls test/${st%/*}/*.mzn 2>/dev/null; then
                     stt=${st#*/}
                     cp ${k%%/*}/${st%/*}/${stt%.*}.mzn upTo1min/${st%/*}/dznFolder/${stt%.*}.mzn
                     rm -r ${k%%/*}/${st%/*}/
@@ -218,23 +210,22 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
             if ls test/${st%/*}/*.mzn 2>/dev/null; then
                 if [ ! -d upTo5min/${st%/*}/dznFolder ]; then
-		            mkdir -p upTo1min/${st%/*}/dznFolder
+		            mkdir -p upTo5min/${st%/*}/dznFolder
 			    fi
 			fi
 
             if ls test/${st%/*}/*.dzn 2>/dev/null ; then
 
-                mv ${k%%/*}/${st%.*}.dzn upTo5min/${st%/*}/dznFolder/
-                cp ${k%%/*}/${st%/*}/*.mzn upTo5min/${st%/*}/dznFolder/
+                mv ${k%%/*}/${st%.*}.dzn upTo5min/${st%/*}/dznFolder/ #move dzn file to time category
+                cp ${k%%/*}/${st%/*}/*.mzn upTo5min/${st%/*}/dznFolder/ #copy mzn to time category
 
-                if [ `ls -l test/${st%/*}/*.dzn | wc -l` == 0 2>/dev/null ]; then
-
+                if [ `ls -l test/${st%/*}/*.dzn 2>/dev/null | wc -l` == 0 ]; then
                     rm -r ${k%%/*}/${st%/*}
                 fi
 
             else
 
-                if ls test/${st%/*}/*.mzn; then
+                if ls test/${st%/*}/*.mzn 2>/dev/null; then
                     stt=${st#*/}
                     cp ${k%%/*}/${st%/*}/${stt%.*}.mzn upTo5min/${st%/*}/dznFolder/${stt%.*}.mzn
                     rm -r ${k%%/*}/${st%/*}/
@@ -261,16 +252,15 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 		            mkdir -p upTo10min/${st%/*}/dznFolder
 
-			    fi
+		    fi
 	    fi
 
             if ls test/${st%/*}/*.dzn 2>/dev/null; then
 
-                mv ${k%%/*}/${st%.*}.dzn upTo10min/${st%/*}/dznFolder/
-                cp ${k%%/*}/${st%/*}/*.mzn upTo10min/${st%/*}/dznFolder/
+                mv ${k%%/*}/${st%.*}.dzn upTo10min/${st%/*}/dznFolder/ #move dzn file to time category
+                cp ${k%%/*}/${st%/*}/*.mzn upTo10min/${st%/*}/dznFolder/ #copy mzn to time category
 
-                if [ `ls -l test/${st%/*}/*.dzn | wc -l` == 0 2>/dev/null ]; then
-
+                if [ `ls -l test/${st%/*}/*.dzn 2>/dev/null | wc -l`  == 0 ]; then
                     rm -r ${k%%/*}/${st%/*}
                 fi
 
@@ -304,13 +294,12 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 			    fi
 			fi
 
-            if ls test/${st%/*}/*.dzn ; then
+            if ls test/${st%/*}/*.dzn 2>/dev/null; then
 
-                mv ${k%%/*}/${st%.*}.dzn upTo1hour/${st%/*}/dznFolder/
-                cp ${k%%/*}/${st%/*}/*.mzn upTo1hour/${st%/*}/dznFolder/
+                mv ${k%%/*}/${st%.*}.dzn upTo1hour/${st%/*}/dznFolder/ #move dzn file to time category
+                cp ${k%%/*}/${st%/*}/*.mzn upTo1hour/${st%/*}/dznFolder/ #copy mzn to time category
 
-                if [ `ls -l test/${st%/*}/*.dzn | wc -l` == 0 2>/dev/null ] ; then
-
+                if [ `ls -l test/${st%/*}/*.dzn 2>/dev/null | wc -l` == 0 ] ; then
                     rm -r ${k%%/*}/${st%/*}
                 fi
 
@@ -340,19 +329,16 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
             if ls test/${st%/*}/*.mzn 2>/dev/null; then
       			if [ ! -d above1hour/${st%/*}/dznFolder ]; then
-
 		            mkdir -p above1hour/${st%/*}/dznFolder
-
 			    fi
 			fi
 
-            if ls test/${st%/*}/*.dzn ; then
+            if ls test/${st%/*}/*.dzn 2>/dev/null; then
 
-                mv ${k%%/*}/${st%.*}.dzn above1hour/${st%/*}/dznFolder/
-                cp ${k%%/*}/${st%/*}/*.mzn above1hour/${st%/*}/dznFolder/
+                mv ${k%%/*}/${st%.*}.dzn above1hour/${st%/*}/dznFolder/ #move dzn file to time category
+                cp ${k%%/*}/${st%/*}/*.mzn above1hour/${st%/*}/dznFolder/ #copy mzn to time category
 
-                if [ `ls -l test/${st%/*}/*.dzn | wc -l` == 0 2>/dev/null ]; then
-
+                if [ `ls -l test/${st%/*}/*.dzn 2>/dev/null | wc -l` == 0 ]; then
                     rm -r ${k%%/*}/${st%/*}
                 fi
 
@@ -374,26 +360,24 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
             st=${k#*/*/}
 
 			if [ ! -d "errors/${st%/*}" ]; then
-		            mkdir -p errors/${st%/*}
+    	            mkdir -p errors/${st%/*}
 			fi
 
 			echo "$out" > errors/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn errors/${st%.*}.fzn
 
-            if ls test/${st%/*}/*.mzn; then
+            if ls test/${st%/*}/*.mzn 2>/dev/null; then
   			    if [ ! -d errors/${st%/*}/dznFolder ]; then
-
 		            mkdir -p errors/${st%/*}/dznFolder
-
 			    fi
 			fi
 
             if ls test/${st%/*}/*.dzn 2>/dev/null; then
 
-                mv ${k%%/*}/${st%.*}.dzn errors/${st%/*}/dznFolder/
-                cp ${k%%/*}/${st%/*}/*.mzn errors/${st%/*}/dznFolder/
+                mv ${k%%/*}/${st%.*}.dzn errors/${st%/*}/dznFolder/ #move dzn file to time category
+                cp ${k%%/*}/${st%/*}/*.mzn errors/${st%/*}/dznFolder/ #copy mzn to time category
 
-                if [ `ls -l test/${st%/*}/*.dzn | wc -l` == 0 2>/dev/null ]; then
+                if [ `ls -l test/${st%/*}/*.dzn 2>/dev/null | wc -l` == 0 ]; then
                     rm -r ${k%%/*}/${st%/*}
                 fi
 
@@ -420,19 +404,16 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
   			if ls test/${st%/*}/*.mzn 2>/dev/null; then
   			    if [ ! -d flakyTests/${st%/*}/dznFolder ]; then
-
 		            mkdir -p flakyTests/${st%/*}/dznFolder
-
 			    fi
 			fi
 
-            if ls test/${st%/*}/*.dzn ; then
+            if ls test/${st%/*}/*.dzn 2>/dev/null; then
 
-                mv ${k%%/*}/${st%.*}.dzn flakyTests/${st%/*}/dznFolder/
-                cp ${k%%/*}/${st%/*}/*.mzn flakyTests/${st%/*}/dznFolder/
+                mv ${k%%/*}/${st%.*}.dzn flakyTests/${st%/*}/dznFolder/ #move dzn file to time category
+                cp ${k%%/*}/${st%/*}/*.mzn flakyTests/${st%/*}/dznFolder/ #copy mzn to time category
 
-                if [ `ls -l test/${st%/*}/*.dzn | wc -l` == 0 2>/dev/null ]; then
-
+                if [ `ls -l test/${st%/*}/*.dzn 2>/dev/null | wc -l` == 0 ]; then
                     rm -r ${k%%/*}/${st%/*}
                 fi
 
@@ -440,11 +421,10 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 
                 if ls test/${st%/*}/*.mzn 2>/dev/null; then
-#                if ls test/${st%/*}/*.mzn; then
                     stt=${st#*/}
-                    cp ${k%%/*}/${st%/*}/${stt%.*}.mzn flakyTests/${st%/*}/dznFolder/${stt%.*}.mzn
+                    cp ${k%%/*}/${st%/*}/${stt%.*}.mzn flakyTests/${st%/*}/dznFolder/${stt%.*}.mzn #copy mzn to time category
                     rm -r ${k%%/*}/${st%/*}/
-            fi
+                fi
             fi
          fi
 
@@ -457,7 +437,13 @@ done
 
 
 #main
-echo "Main"
+file="../../../target/jacop-*-SNAPSHOT.jar"
+if [ ! -e $file ]; then
+    echo "Jar file don't exist."
+    echo "Run command mvn package to create a jar file for jacop inside target directory. Copy this jar one level higher than jacop git repository."
+    exit
+fi
+
 readarray -t arr4 < <(find test -name \*.fzn);
 for i in ${arr4[@]}; do
       readarray -t arr5 < <(find upTo5sec upTo30sec upTo1min upTo5min upTo10min upTo1hour above1hour flakyTests  -name \*.fzn );
@@ -465,13 +451,11 @@ for i in ${arr4[@]}; do
         for j in ${arr5[@]}; do
 
             if [ "${i##*/}" == "${j##*/}" ]; then
-            echo "I found file fzn" "${i##*/}"
-
-            rm -r ${i%/*}/${i##*/}
-
+                rm -r ${i%/*}/${i##*/}
             fi
         done
 done
+
 
 counter=0
 counter2=0
@@ -480,10 +464,9 @@ readarray -t arr3 < <(find test -mindepth 2 -maxdepth 2 -name \*.fzn 2>/dev/null
 for t in ${arr3[@]}; do
 
 let counter2++
-    z=${t%/*} # directory that contains mzn filename
+    z=${t%/*} # directory that contains fzn filename
     if [ ! -d "$z/${z#*/}" ]; then
 	   mkdir "$z/${z#*/}"
-
     fi
 
      path=${t%.*}
@@ -491,16 +474,14 @@ let counter2++
 
 	 for file in "$z/$filename.fzn"; do mv "$file" "$z/${z#*/}/${file/*.fzn/$filename.fzn}"; done
 done
-tab=${arr3[@]}
+#tab=${arr3[@]}
 if [ -z ${arr3[0]} ]; then
-
- let counter2++
+     let counter2++
 fi
 
 while [ $counter -lt $counter2 ]
 do
 if [ -z $z ]; then
-
     readarray -t arr3 < <(find test -mindepth 3 -maxdepth 3 -name \*.fzn );
     if [ -z ${arr3[0]} ]; then
     let counter2--
@@ -508,14 +489,11 @@ if [ -z $z ]; then
     for t in ${arr3[@]}; do
        z=${t%/*}
        let counter2++
-
     done
 
     if [ ! -z $z ]; then
-
            let counter++
            timeCategory
-#            z=""
     fi
 else
 
@@ -532,12 +510,19 @@ removingEmptyDirectories
 readarray -t arr < <(find test -mindepth 2 -maxdepth 2 -name \*.mzn 2>/dev/null);
 
 for i in ${arr[@]}; do
-
 z=${i%/*} # directory that contains mzn filename
+
+
+if [ `ls -l $z/*.mzn 2>/dev/null | wc -l` != 1  ]; then # Tests number *.mzn files in a directory.
+    echo "Only one *.mzn file in the same directory" $z
+    exit
+
+fi
+
 ii=${i##*/} # mzn filename with extension
 iii=${ii%.*} # mzn filename without extension
-# Creating a temporary directory in the same directory as mzn file has resided using the mzn file without extension as the name.
 
+# Creating a temporary directory in the same directory as mzn file has resided using the mzn file without extension as the name.
 if [ ! -d "$z/${z#*/}" ]; then
 	mkdir $z/${z#*/}
 fi
@@ -553,13 +538,16 @@ then
         mzn2fzn -G jacop $i
         for file in $z/*.fzn; do mv "$file" $z/${z#*/}/"${file/*.fzn/$iii.fzn}"; done
         timeCategory
+    else
+     rm -r $z
 
    fi
 fi
-
+count1=0
 readarray -t arr2 < <(find $z -mindepth 1 -maxdepth 1 -name \*.dzn 2>/dev/null)
-for j in ${arr2[@]}; do # j contains a relative path to dzn file.
+    arraysize=${#arr2[@]}
 
+for j in ${arr2[@]}; do # j contains a relative path to dzn file.
     path=${j%.*}
 	filename=${path##*/}
 
@@ -570,13 +558,15 @@ for j in ${arr2[@]}; do # j contains a relative path to dzn file.
      mzn2fzn -G jacop $i -d $j
 	 for file in $z/*.fzn; do mv "$file" $z/${z#*/}/"${file/*.fzn/$filename.fzn}"; done
   else
-    echo "jest" $z/$filename.dzn
-    rm $z/$filename.dzn
+
+      let count1++
+      rm $z/$filename.dzn
   fi
+    if [ "$count1" -eq "$arraysize" ]; then
+       rm -r $z
+    fi
 done
-
      timeCategory
-
 done
 
     #removingEmptyDirectories
