@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.Domain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.util.QueueForward;
 import org.jacop.util.SimpleHashSet;
 
 /**
@@ -62,6 +63,8 @@ public class Eq extends PrimitiveConstraint {
 	 */
 	public PrimitiveConstraint c2;
 
+	final public QueueForward<PrimitiveConstraint> queueForward;
+
 	/**
 	 * It specifies the arguments required to be saved by an XML format as well as 
 	 * the constructor being called to recreate an object from an XML format.
@@ -83,6 +86,8 @@ public class Eq extends PrimitiveConstraint {
 		
 		this.c1 = c1;
 		this.c2 = c2;
+
+		queueForward = new QueueForward<PrimitiveConstraint>(new PrimitiveConstraint[] {c1, c2}, arguments());
 	}
 
 	@Override
@@ -290,5 +295,10 @@ public class Eq extends PrimitiveConstraint {
 			c2.increaseWeight();
 		}
 	}
-	
+
+	@Override
+	public void queueVariable(int level, Var var) {
+		queueForward.queueForward(level, var);
+	}
+
 }
