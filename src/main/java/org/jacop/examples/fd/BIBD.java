@@ -110,7 +110,7 @@ public class BIBD extends ExampleFD {
 				for (int m = 0; m < b; m++) {
 					BooleanVar product = new BooleanVar(store, "p" + i + "_" + j + "_" + m);
 					BooleanVar[] array = {(BooleanVar)x[i][m], (BooleanVar)x[j][m]};
-					store.impose(new AndBool(array, product), 0);
+					store.imposeDecomposition(new AndBool(array, product), 0);
 					result.add(product);
 				}
 				

@@ -44,7 +44,7 @@ import org.jacop.core.Var;
  * @version 4.4
  */
 
-public class AndBool extends PrimitiveConstraint {
+public class AndBool extends DecomposedConstraint<PrimitiveConstraint> {
 
     PrimitiveConstraint c = null;
 
@@ -84,62 +84,17 @@ public class AndBool extends PrimitiveConstraint {
         c = new AndBoolSimple(a, b, result);
     }
 
-    @Override public ArrayList<Var> arguments() {
+    @Override public void imposeDecomposition(Store store) {
 
-        return c.arguments();
-    }
-
-    @Override public void consistency(Store store) {
-        c.consistency(store);
-    }
-
-    @Override public void notConsistency(Store store) {
-        c.notConsistency(store);
-    }
-
-    @Override public int getConsistencyPruningEvent(Var var) {
-        return c.getConsistencyPruningEvent(var);
+        store.impose(c);
 
     }
 
-    @Override public int getNestedPruningEvent(Var var, boolean mode) {
-        return c.getNestedPruningEvent(var, mode);
-    }
+    @Override public ArrayList<PrimitiveConstraint> decompose(Store store) {
 
-    @Override public int getNotConsistencyPruningEvent(Var var) {
-        return c.getNotConsistencyPruningEvent(var);
-    }
+        ArrayList<PrimitiveConstraint> result = new ArrayList<>();
+        result.add(c);
+        return result;
 
-    @Override public String id() {
-        return c.id();
     }
-
-    @Override public void impose(Store store) {
-        c.impose(store);
-    }
-
-    @Override public void include(Store store) {
-        c.include(store);
-    }
-
-    @Override public void removeConstraint() {
-        c.removeConstraint();
-    }
-
-    @Override public boolean satisfied() {
-        return c.satisfied();
-    }
-
-    @Override public boolean notSatisfied() {
-        return c.notSatisfied();
-    }
-
-    @Override public String toString() {
-        return c.toString();
-    }
-
-    @Override public void increaseWeight() {
-        c.increaseWeight();
-    }
-
 }

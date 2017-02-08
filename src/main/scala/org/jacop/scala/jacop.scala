@@ -1385,7 +1385,7 @@ class BoolVar(name: String, min1: Int, max1: Int) extends org.jacop.core.Boolean
     val result = new BoolVar()
     val parameters = Array(this, that)
     val c = new org.jacop.constraints.AndBool(parameters, result)
-    getModel.constr += c
+    getModel.constr += c.decompose(store).get(0)
     result
   }
 
@@ -1399,7 +1399,7 @@ class BoolVar(name: String, min1: Int, max1: Int) extends org.jacop.core.Boolean
     val result = new BoolVar()
     val parameters = Array(this, that)
     val c = new org.jacop.constraints.OrBool(parameters, result)
-    getModel.constr += c
+    getModel.constr += c.decompose(store).get(0)
     result
   }
 

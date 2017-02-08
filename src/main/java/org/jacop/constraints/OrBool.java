@@ -35,7 +35,6 @@ import java.util.ArrayList;
 
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 
 /**
  * OrBool constraint implements logic and operation on its arguments
@@ -45,7 +44,7 @@ import org.jacop.core.Var;
  * @version 4.4
  */
 
-public class OrBool extends PrimitiveConstraint {
+public class OrBool extends DecomposedConstraint<PrimitiveConstraint> {
 
     PrimitiveConstraint c = null;
 
@@ -55,10 +54,11 @@ public class OrBool extends PrimitiveConstraint {
      * @param result result variable.
      */
     public OrBool(IntVar[] a, IntVar result) {
-	if (a.length == 2)
-	    c = new OrBoolSimple(a[0], a[1], result);
-	else
-	    c = new OrBoolVector(a, result);
+
+        if (a.length == 2)
+	          c = new OrBoolSimple(a[0], a[1], result);
+	      else
+	          c = new OrBoolVector(a, result);
     }
 
     /**
@@ -68,10 +68,11 @@ public class OrBool extends PrimitiveConstraint {
      */
     public OrBool(ArrayList<IntVar> a, IntVar result) {
 
-	if (a.size() == 2)
-	    c = new OrBoolSimple(a.get(0), a.get(1), result);
-	else
-	    c = new OrBoolVector(a.toArray(new IntVar[a.size()]), result);
+	      if (a.size() == 2)
+	          c = new OrBoolSimple(a.get(0), a.get(1), result);
+	      else
+	          c = new OrBoolVector(a.toArray(new IntVar[a.size()]), result);
+
     }
 
     /**
@@ -81,80 +82,23 @@ public class OrBool extends PrimitiveConstraint {
      * @param result result variable.
      */
     public OrBool(IntVar a, IntVar b, IntVar result) {
-	c = new OrBoolSimple(a, b, result);
-    }
 
-    @Override
-    public ArrayList<Var> arguments() {
-
-	return c.arguments();
-    }
-
-    @Override
-    public void consistency(Store store) {
-	c.consistency(store);
-    }
-
-    @Override
-    public void notConsistency(Store store) {
-	c.notConsistency(store);
-    }
-
-    @Override
-    public int getConsistencyPruningEvent(Var var) {
-	return c.getConsistencyPruningEvent(var);
+        c = new OrBoolSimple(a, b, result);
 
     }
 
-    @Override
-    public int getNestedPruningEvent(Var var, boolean mode) {
-	return c.getNestedPruningEvent(var, mode);
+    @Override public void imposeDecomposition(Store store) {
+
+        store.impose(c);
+
     }
 
-    @Override
-    public int getNotConsistencyPruningEvent(Var var) {
-	return c.getNotConsistencyPruningEvent(var);
-    }
+    @Override public ArrayList<PrimitiveConstraint> decompose(Store store) {
 
-   
-    @Override
-    public String id() {
-	return c.id();
-    }
+        ArrayList<PrimitiveConstraint> result = new ArrayList<>();
+        result.add(c);
+        return result;
 
-    @Override
-    public void impose(Store store) {
-	c.impose(store);
-    }
-
-    @Override
-    public void removeConstraint() {
-	c.removeConstraint();
-    }
-
-    @Override
-    public boolean satisfied() {
-	return c.satisfied();
-    }
-
-    @Override
-    public boolean notSatisfied() {
-	return c.notSatisfied();
-    }
-
-    @Override
-    public void include(Store store) {
-	c.include(store);
-    }
-
-    @Override
-    public String toString() {
-	return c.toString();
-    }
-
-    @Override
-    public void increaseWeight() {
-	c.increaseWeight();
     }
 
 }

@@ -55,7 +55,7 @@ import org.jacop.util.fsm.FSMTransition;
  * @version 4.4
  */
 
-public class Sequence extends DecomposedConstraint {
+public class Sequence extends DecomposedConstraint<Constraint> {
 
 	IntervalDomain set;
 	int min;

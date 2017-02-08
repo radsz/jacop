@@ -48,7 +48,7 @@ import org.jacop.core.Var;
  * @version 3.1
  */
 
-public abstract class Constraint extends DecomposedConstraint {
+public abstract class Constraint extends DecomposedConstraint<Constraint> {
 
 	public boolean trace = SwitchesPruningLogging.traceConstraint;
 	

@@ -318,7 +318,7 @@ public class CarSequencing extends ExampleFD {
 
 			// It uses decomposition of Regular into ternary constraints.
 			if (slideDecomposition) {
-				DecomposedConstraint c = new Sequence(cars, classesWithGivenOption, blockSizePerOption[i], 0, maxNoOfCarsPerOption[i]);
+				DecomposedConstraint<Constraint> c = new Sequence(cars, classesWithGivenOption, blockSizePerOption[i], 0, maxNoOfCarsPerOption[i]);
 				ArrayList<Constraint> decomposition = c.decompose(store);
 
 				for (Constraint regular : decomposition)
@@ -328,7 +328,7 @@ public class CarSequencing extends ExampleFD {
 			// It uses replacement for Regular, namely one extensional support constraint
 			// based on MDDs.
 			if (extensionalMDD) {
-				DecomposedConstraint c = new Sequence(cars, classesWithGivenOption, blockSizePerOption[i], 0, maxNoOfCarsPerOption[i]);
+				DecomposedConstraint<Constraint> c = new Sequence(cars, classesWithGivenOption, blockSizePerOption[i], 0, maxNoOfCarsPerOption[i]);
 				ArrayList<Constraint> decomposition = c.decompose(store);
 
 				for (Constraint constraint : decomposition) {

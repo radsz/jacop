@@ -79,7 +79,7 @@ class BoolConstraints extends Support implements ParserTreeConstants {
     else if (atLeastOneVarZero(a1))
       v.domain.in(store.level, v, 0, 0);
     else
-      pose(new AndBool(a1, v));
+      poseDC(new AndBool(a1, v));
   }
 
   static void gen_bool_and(SimpleNode node) {
@@ -112,7 +112,7 @@ class BoolConstraints extends Support implements ParserTreeConstants {
       else if (atLeastOneVarOne(a1))
 	v.domain.in(store.level, v, 1, 1);
       else
-	pose(new OrBool(a1, v));
+	poseDC(new OrBool(a1, v));
     }
   }
   
@@ -252,9 +252,9 @@ class BoolConstraints extends Support implements ParserTreeConstants {
 
       PrimitiveConstraint c;
       if (a1reduced.size() == 0)
-	c = new AndBool(a2reduced, dictionary.getConstant(0));
+	c = new AndBool(a2reduced, dictionary.getConstant(0)).decompose(store).get(0);
       else if (a2reduced.size() == 0) {
-	c = new OrBool(a1reduced, dictionary.getConstant(1));
+	c = new OrBool(a1reduced, dictionary.getConstant(1)).decompose(store).get(0);
       }
       else if (a1reduced.size() == 1 && a2reduced.size() == 1)
 	c = new XlteqY(a2reduced.get(0), a1reduced.get(0));

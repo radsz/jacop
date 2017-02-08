@@ -44,7 +44,7 @@ import org.jacop.core.Var;
  * @version 4.4
  */
 
-public abstract class DecomposedConstraint {
+public abstract class DecomposedConstraint<T extends Constraint> {
 	
 	/**
 	 * It specifies the queue (index), which is used to record that constraint
@@ -90,7 +90,7 @@ public abstract class DecomposedConstraint {
 	 * 
 	 * @return an array list of constraints used to decompose this constraint.
 	 */
-	public abstract ArrayList<Constraint> decompose(Store store);
+	public abstract ArrayList<T> decompose(Store store);
 	
 	
 	/**
