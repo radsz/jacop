@@ -171,8 +171,17 @@ class GlobalConstraints extends Support implements ParserTreeConstants {
     	//   pose(new XlteqY(r[i], b));
       }
       else
-    	if (allVarGround(d) && allVarGround(r)) 
-    	  delayedConstraints.add(new Cumulative(s, d, r, b));
+    	if (allVarGround(d) && allVarGround(r)) {
+	  boolean overflow = false;
+	  if (b != null)
+	    for (int i=0; i< s.length; i++) {
+	      overflow = overflow || times_overflow((s[i].max()+d[i].max()), b.max());
+	    }
+	  if (overflow)
+	    delayedConstraints.add(new CumulativeBasic(s, d, r, b));
+	  else
+	    delayedConstraints.add(new Cumulative(s, d, r, b));
+	}
     	else 
     	  delayedConstraints.add(new CumulativeBasic(s, d, r, b));
     }
@@ -911,5 +920,15 @@ class GlobalConstraints extends Support implements ParserTreeConstants {
       x[i] = il.get(i);
 
     return x;
+  }
+
+  static boolean times_overflow(int a, int b) {  
+		
+    long cc = (long)a * (long)b;
+
+    if ( cc < Integer.MIN_VALUE || cc > Integer.MAX_VALUE)
+      return true;  
+    
+    return false;   
   }
 }
