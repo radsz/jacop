@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Domain;
 import org.jacop.core.Store;
+import org.jacop.core.UsesQueueVariable;
 import org.jacop.core.Var;
 import org.jacop.util.QueueForward;
 
@@ -46,7 +47,7 @@ import org.jacop.util.QueueForward;
  * @version 4.4
  */
 
-public class IfThenElse extends PrimitiveConstraint {
+public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable {
 
 	static AtomicInteger idNumber = new AtomicInteger(0);
 

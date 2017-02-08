@@ -35,7 +35,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 
-import org.jacop.core.IntDomain;
+import org.jacop.core.*;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Constraint;
 import org.jacop.floats.constraints.PmulCeqR;
@@ -43,11 +43,8 @@ import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.floats.core.FloatVar;
-import org.jacop.core.Store;
-import org.jacop.core.Var;
 import org.jacop.floats.constraints.linear.BoundsVarValue;
 import org.jacop.util.SimpleHashSet;
-import org.jacop.core.TimeStamp;
 
 /**
  * Linear constraint implements the weighted summation over several
@@ -58,7 +55,7 @@ import org.jacop.core.TimeStamp;
  * @version 4.4
  */
 
-public class Linear extends PrimitiveConstraint {
+public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     Store store;
     static int counter = 1;
 

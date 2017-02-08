@@ -36,14 +36,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
-import org.jacop.core.Var;
-import org.jacop.core.Interval;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.IntervalEnumeration;
+import org.jacop.core.*;
 
 /**
  * SumWeightDom constraint implements the weighted summation over several
@@ -59,7 +52,7 @@ import org.jacop.core.IntervalEnumeration;
 /**
  * @deprecated  As of release 4.3.1 replaced by LinearIntDom constraint.
  */
-@Deprecated public class SumWeightDom extends Constraint {
+@Deprecated public class SumWeightDom extends Constraint implements UsesQueueVariable {
 
 	static AtomicInteger idNumber = new AtomicInteger(0);
 

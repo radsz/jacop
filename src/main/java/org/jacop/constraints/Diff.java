@@ -39,13 +39,7 @@ import java.util.HashSet;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Interval;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.IntervalEnumeration;
-import org.jacop.core.Store;
-import org.jacop.core.Var;
+import org.jacop.core.*;
 
 /**
  * Diff constraint assures that any two rectangles from a vector of rectangles
@@ -56,7 +50,7 @@ import org.jacop.core.Var;
  * @version 3.1
  */
 
-public class Diff extends Constraint {
+public class Diff extends Constraint implements UsesQueueVariable {
 
 	static AtomicInteger idNumber = new AtomicInteger(0);
 

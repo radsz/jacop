@@ -40,13 +40,7 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
-import org.jacop.core.ValueEnumeration;
-import org.jacop.core.Var;
+import org.jacop.core.*;
 import org.jacop.util.SimpleArrayList;
 import org.jacop.util.SimpleHashSet;
 
@@ -65,7 +59,7 @@ import org.jacop.util.SimpleHashSet;
  * @version 4.4
  */
 
-public class Alldistinct extends Constraint {
+public class Alldistinct extends Constraint implements UsesQueueVariable {
 
 	/* @todo implement in alldistinct remark, that only variable 
 	 * with domain of size smaller equal n (number 

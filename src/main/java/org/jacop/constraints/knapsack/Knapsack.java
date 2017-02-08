@@ -39,11 +39,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.Constraint;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
-import org.jacop.core.Var;
+import org.jacop.core.*;
 
 /**
  * 
@@ -67,7 +63,7 @@ import org.jacop.core.Var;
  *
  */
 
-public class Knapsack extends Constraint {
+public class Knapsack extends Constraint implements UsesQueueVariable {
 
 	static AtomicInteger idNumber = new AtomicInteger(0);
 

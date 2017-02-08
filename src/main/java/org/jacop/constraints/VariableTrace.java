@@ -32,6 +32,7 @@
 
 package org.jacop.constraints;
 
+import org.jacop.core.UsesQueueVariable;
 import org.jacop.core.Var;
 import org.jacop.core.Store;
 import org.jacop.core.IntDomain;
@@ -46,7 +47,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @version 4.4
  */
 
-public class VariableTrace extends Constraint {
+public class VariableTrace extends Constraint implements UsesQueueVariable {
 
   static AtomicInteger idNumber = new AtomicInteger(0);
 	

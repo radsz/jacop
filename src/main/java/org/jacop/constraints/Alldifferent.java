@@ -39,12 +39,7 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
-import org.jacop.core.Var;
+import org.jacop.core.*;
 
 /**
  * Alldifferent constraint assures that all FDVs has differnet values. It uses
@@ -54,7 +49,7 @@ import org.jacop.core.Var;
  * @version 4.4
  */
 
-public class Alldifferent extends Constraint {
+public class Alldifferent extends Constraint implements UsesQueueVariable {
 
 	static AtomicInteger idNumber = new AtomicInteger(0);
 	

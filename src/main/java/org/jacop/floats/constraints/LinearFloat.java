@@ -32,6 +32,7 @@
 package org.jacop.floats.constraints;
 
 
+import org.jacop.core.UsesQueueVariable;
 import org.jacop.core.Var;
 import org.jacop.floats.constraints.linear.Linear;
 import org.jacop.floats.core.FloatVar;
@@ -51,7 +52,7 @@ import java.util.ArrayList;
  * @version 4.4
  */
 
-public class LinearFloat extends Linear {
+public class LinearFloat extends Linear implements UsesQueueVariable {
 
     /**
      * @param store current store

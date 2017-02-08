@@ -40,14 +40,7 @@ import java.util.HashSet;
 import java.util.PriorityQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jacop.core.BoundDomain;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.IntervalDomainValueEnumeration;
-import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
-import org.jacop.core.Var;
+import org.jacop.core.*;
 
 /**
 * GCC constraint counts the number of occurences of given 
@@ -62,7 +55,7 @@ import org.jacop.core.Var;
 * @version 4.4
 */
 
-public class GCC extends Constraint {
+public class GCC extends Constraint implements UsesQueueVariable {
 
 	/**
 	 * @todo An improvement to increase the incrementality even further. 

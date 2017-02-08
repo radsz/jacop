@@ -42,13 +42,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.Constraint;
-import org.jacop.core.Domain;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
-import org.jacop.core.ValueEnumeration;
-import org.jacop.core.Var;
+import org.jacop.core.*;
 import org.jacop.util.SimpleArrayList;
 import org.jacop.util.SimpleHashSet;
 
@@ -114,7 +108,7 @@ import org.jacop.util.SimpleHashSet;
  * 
  * 
  */
-public class Geost extends Constraint {
+public class Geost extends Constraint implements UsesQueueVariable {
 
 	/**
 	 * It specifies different debugging switches to print out diverse information about

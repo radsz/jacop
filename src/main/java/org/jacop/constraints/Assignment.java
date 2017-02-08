@@ -36,12 +36,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Store;
-import org.jacop.core.ValueEnumeration;
-import org.jacop.core.Var;
+import org.jacop.core.*;
 
 /**
  * Assignment constraint implements facility to improve channeling constraints
@@ -53,7 +48,7 @@ import org.jacop.core.Var;
  * @version 4.4
  */
 
-public class Assignment extends Constraint {
+public class Assignment extends Constraint implements UsesQueueVariable {
 
 	static AtomicInteger idNumber = new AtomicInteger(0);
 

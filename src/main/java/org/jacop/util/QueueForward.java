@@ -1,6 +1,7 @@
 package org.jacop.util;
 
 import org.jacop.constraints.Constraint;
+import org.jacop.core.UsesQueueVariable;
 import org.jacop.core.Var;
 
 import java.util.*;
@@ -27,9 +28,11 @@ public class QueueForward<T extends Constraint> {
             forwardMap.put(var, new ArrayList<T>());
             for (T constraint : constraints) {
 
-                if (constraint.arguments().contains(var)) {
+                if (constraint instanceof UsesQueueVariable && constraint.arguments().contains(var)) {
 
                     try {
+                        // We assume that all constraint needing queueVariable declare this method, even for
+                        // the ones that inherit from other constraints.
                         constraint.getClass().getDeclaredMethod("queueVariable", int.class, Var.class);
                         forwardMap.get(var).add(constraint);
                     } catch (NoSuchMethodException e) {

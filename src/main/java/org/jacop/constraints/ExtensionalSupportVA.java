@@ -40,12 +40,7 @@ import java.util.regex.Pattern;
 
 import javax.xml.transform.sax.TransformerHandler;
 
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Store;
-import org.jacop.core.ValueEnumeration;
-import org.jacop.core.Var;
+import org.jacop.core.*;
 import org.jacop.util.TupleUtils;
 import org.xml.sax.SAXException;
 
@@ -60,7 +55,7 @@ import org.xml.sax.SAXException;
  * @version 4.4
  */
 
-public class ExtensionalSupportVA extends Constraint {
+public class ExtensionalSupportVA extends Constraint implements UsesQueueVariable {
 
 	// TODO raiseLevelBeforeConsistency may not be needed by this constraint. 
 	

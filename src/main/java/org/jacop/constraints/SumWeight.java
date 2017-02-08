@@ -35,11 +35,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
-import org.jacop.core.Var;
+import org.jacop.core.*;
 
 /**
  * SumWeight constraint implements the weighted summation over several
@@ -53,7 +49,7 @@ import org.jacop.core.Var;
 /**
  * @deprecated  As of release 4.3.1 replaced by LinearInt constraint.
  */
-@Deprecated public class SumWeight extends Constraint {
+@Deprecated public class SumWeight extends Constraint implements UsesQueueVariable {
 
 	static AtomicInteger idNumber = new AtomicInteger(0);
 

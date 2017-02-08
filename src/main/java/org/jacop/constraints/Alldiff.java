@@ -302,6 +302,12 @@ public class Alldiff extends Alldifferent {
 
 	}
 
+	// Overwritten as QueueForwardQueue checks that constraint has declared this method.
+	@Override
+	public void queueVariable(int level, Var var) {
+		super.queueVariable(level, var);
+	}
+
     class VariablemaxComparator<T extends IntVar> implements Comparator<T> {
 
 		VariablemaxComparator() {

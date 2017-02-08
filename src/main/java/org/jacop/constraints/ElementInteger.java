@@ -36,13 +36,7 @@ import java.util.ArrayList;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jacop.core.IntDomain;
-import org.jacop.core.Interval;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Store;
-import org.jacop.core.ValueEnumeration;
-import org.jacop.core.Var;
+import org.jacop.core.*;
 
 /**
  * ElementInteger constraint defines a relation 
@@ -58,7 +52,7 @@ import org.jacop.core.Var;
  * @version 4.4
  */
 
-public class ElementInteger extends Constraint {
+public class ElementInteger extends Constraint implements UsesQueueVariable {
 
 	static AtomicInteger idNumber = new AtomicInteger(0);
 

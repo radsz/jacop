@@ -49,13 +49,7 @@ import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ExtensionalSupportSTR;
 import org.jacop.constraints.In;
 import org.jacop.constraints.XeqC;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
-import org.jacop.core.ValueEnumeration;
-import org.jacop.core.Var;
+import org.jacop.core.*;
 import org.jacop.util.MDD;
 import org.jacop.util.fsm.FSM;
 import org.jacop.util.fsm.FSMState;
@@ -146,7 +140,7 @@ import org.jacop.util.fsm.FSMTransition;
  * @version 4.4
  */
 
-public class Regular extends Constraint {
+public class Regular extends Constraint implements UsesQueueVariable {
 
 	/**
 	 * It specifies if debugging information should be printed out.

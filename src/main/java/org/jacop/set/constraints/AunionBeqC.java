@@ -37,6 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
+import org.jacop.core.UsesQueueVariable;
 import org.jacop.core.Var;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
@@ -50,7 +51,7 @@ import org.jacop.set.core.SetVar;
  * @version 4.4
  */
 
-public class AunionBeqC extends Constraint {
+public class AunionBeqC extends Constraint implements UsesQueueVariable {
 
 	static AtomicInteger idNumber = new AtomicInteger(0);
 

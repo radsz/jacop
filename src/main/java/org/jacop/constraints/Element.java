@@ -35,6 +35,7 @@ import java.util.ArrayList;
 
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.UsesQueueVariable;
 import org.jacop.core.Var;
 
 /**
@@ -47,7 +48,7 @@ import org.jacop.core.Var;
  * @version 4.4
  */
 
-public class Element extends Constraint {
+public class Element extends Constraint implements UsesQueueVariable {
 
 	Constraint c = null;
 

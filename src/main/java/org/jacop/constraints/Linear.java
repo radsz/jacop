@@ -35,11 +35,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
-import org.jacop.core.Var;
+import org.jacop.core.*;
 
 /**
  * Linear constraint implements the weighted summation over several
@@ -56,8 +52,9 @@ import org.jacop.core.Var;
 /**
  * @deprecated  As of release 4.3.1 replaced by LinearInt constraint.
  */
-@Deprecated public class Linear extends Constraint {
-    Store store;
+@Deprecated public class Linear extends Constraint implements UsesQueueVariable {
+
+		Store store;
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 

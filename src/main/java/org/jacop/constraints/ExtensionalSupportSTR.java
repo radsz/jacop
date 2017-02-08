@@ -39,12 +39,7 @@ import java.util.regex.Pattern;
 
 import javax.xml.transform.sax.TransformerHandler;
 
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
-import org.jacop.core.Var;
+import org.jacop.core.*;
 import org.jacop.util.IndexDomainView;
 import org.xml.sax.SAXException;
 
@@ -61,7 +56,7 @@ import org.xml.sax.SAXException;
  */
 
 
-public class ExtensionalSupportSTR extends Constraint {
+public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariable {
 
 	// FIXME, remove the need for this attribute.
 	Store store;

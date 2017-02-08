@@ -38,12 +38,7 @@ import java.util.Hashtable;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.Constraint;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Store;
-import org.jacop.core.ValueEnumeration;
-import org.jacop.core.Var;
+import org.jacop.core.*;
 
 import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatInterval;
@@ -66,7 +61,7 @@ import org.jacop.floats.core.FloatIntervalEnumeration;
  * @version 4.4
  */
 
-public class ElementFloat extends Constraint {
+public class ElementFloat extends Constraint implements UsesQueueVariable {
 
 	static AtomicInteger idNumber = new AtomicInteger(0);
 

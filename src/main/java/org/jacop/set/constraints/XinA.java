@@ -268,14 +268,4 @@ public class XinA extends PrimitiveConstraint {
 		}
 	}	
 
-	
-	// @Override
-	// public void queueVariable(int level, Var variable) {
-		
-	// 	// if (variable == a) {
-	// 	// 	aHasChanged  = true;
-	// 	// 	return;
-	// 	// }
-		
-	// }
 }

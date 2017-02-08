@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Store;
+import org.jacop.core.UsesQueueVariable;
 import org.jacop.core.Var;
 import org.jacop.util.QueueForward;
 import org.jacop.util.SimpleHashSet;
@@ -47,7 +48,7 @@ import org.jacop.util.SimpleHashSet;
  * @version 4.4
  */
 
-public class Not extends PrimitiveConstraint {
+public class Not extends PrimitiveConstraint implements UsesQueueVariable {
 
 	static AtomicInteger idNumber = new AtomicInteger(0);
 

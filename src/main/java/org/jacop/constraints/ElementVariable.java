@@ -39,12 +39,7 @@ import java.util.LinkedHashSet;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Store;
-import org.jacop.core.ValueEnumeration;
-import org.jacop.core.Var;
+import org.jacop.core.*;
 
 /**
  * ElementVariable constraint defines a relation 
@@ -60,7 +55,7 @@ import org.jacop.core.Var;
  * @version 4.4
  */
 
-public class ElementVariable extends Constraint {
+public class ElementVariable extends Constraint implements UsesQueueVariable {
 
 	static AtomicInteger idNumber = new AtomicInteger(0);
 

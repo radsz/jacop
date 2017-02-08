@@ -36,12 +36,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
-import org.jacop.core.Var;
+import org.jacop.core.*;
 
 /**
  * Among constraint in its simplest form. It establishes the following
@@ -57,7 +52,7 @@ import org.jacop.core.Var;
  * @version 4.4
  */
 
-public class Among extends Constraint {
+public class Among extends Constraint implements UsesQueueVariable {
 	
 	static final boolean debugAll = false;
 

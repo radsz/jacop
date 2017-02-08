@@ -47,6 +47,7 @@ import org.jacop.constraints.netflow.simplex.Arc;
 import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.UsesQueueVariable;
 import org.jacop.core.Var;
 
 /**
@@ -59,7 +60,7 @@ import org.jacop.core.Var;
  * 
  */
 
-public class NetworkFlow extends Constraint {
+public class NetworkFlow extends Constraint implements UsesQueueVariable {
 
 	private static final int QUEUE_INDEX = 2;
 	private static final boolean DO_INSTRUMENTATION = false;
