@@ -1,0 +1,7 @@
+assign_to = array1d(1..10, [2, 2, 2, 1, 1, 4, 4, 4, 3, 3]);
+max_rank = array1d(1..4, [2, 2, 3, 3]);
+min_rank = array1d(1..4, [1, 1, 2, 2]);
+rank_diff = array1d(1..4, [1, 1, 1, 1]);
+card_of_league = array1d(1..4, [2, 2, 1, 3]);
+----------
+==========
