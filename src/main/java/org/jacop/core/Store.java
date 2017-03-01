@@ -243,6 +243,18 @@ public class Store {
      */
     public long numberConsistencyCalls = 0;
 
+	/**
+	 * It indicates that consistency function should immediately return fail if last inconsistency was not followed
+	 * yet by removeLevel function.
+	 */
+	public boolean strict = true;
+
+	/**
+	 * This flag is set to true when consistency function of the store encounters failure.
+	 */
+	public boolean isLastConsistencyFailure = false;
+
+
     /**
 	 * TimeStamp variable is a simpler version of a mutable variable. It is
 	 * basically a stack. During search items are push onto the stack. If the
@@ -508,6 +520,9 @@ public class Store {
 
 	public boolean consistency() {
 
+		if (strict && isLastConsistencyFailure)
+			return false;
+
 		if (raiseLevelBeforeConsistency) {
 			raiseLevelBeforeConsistency = false;
 			setLevel(level + 1);
@@ -553,6 +568,7 @@ public class Store {
 			recentlyFailedConstraint = currentConstraint;
 			currentConstraint = null;
 
+			isLastConsistencyFailure = true;
 			return false;
 			
 		}
@@ -1004,6 +1020,9 @@ public class Store {
 	 */
 
 	public void removeLevel(int rLevel) {
+
+		// Remove level is called so we clear flag isLastConsistencyFailure.
+		isLastConsistencyFailure = false;
 
 		while (currentQueue < queueNo) {
 			changed[currentQueue++].clear();
