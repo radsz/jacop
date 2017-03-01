@@ -97,4 +97,8 @@ public class AndBool extends DecomposedConstraint<PrimitiveConstraint> {
         return result;
 
     }
+
+  public String toString() {
+    return c.toString();
+  } 
 }

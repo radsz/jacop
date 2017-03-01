@@ -101,4 +101,7 @@ public class OrBool extends DecomposedConstraint<PrimitiveConstraint> {
 
     }
 
+  public String toString() {
+    return c.toString();
+  } 
 }
