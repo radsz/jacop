@@ -39,11 +39,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 
 /**
- *
- * It constructs a LexOrder (lexicographical order) constraint. 
- *
+ * It constructs a LexOrder (lexicographical order) constraint.
+ * <p>
  * The algorithm is based on paper
- *
+ * <p>
  * "Propagation algorithms for lexicographic ordering constraints" by
  * Alan M. Frisch, Brahim Hnich, Zeynep Kiziltan, Ian Miguel, and Toby Walsh ,
  * Artificial Intelligence 170 (2006) 803–834.
@@ -88,13 +87,13 @@ public class LexOrder extends Constraint implements UsesQueueVariable {
     HashMap<IntVar, int[]> varYToIndex = new HashMap<IntVar, int[]>();
 
     /**
-     * It creates a lexicographical order for vectors x and y, 
-     *
+     * It creates a lexicographical order for vectors x and y,
+     * <p>
      * vectors x and y does not need to be of the same size.
      * boolean lt defines if we require strict order, Lex_{{@literal <}} (lt = true) or Lex_{{@literal =<}} (lt = false)
      *
-     * @param x first vector constrained by LexOrder constraint. 
-     * @param y second vector constrained by LexOrder constraint. 
+     * @param x first vector constrained by LexOrder constraint.
+     * @param y second vector constrained by LexOrder constraint.
      */
     public LexOrder(IntVar[] x, IntVar[] y) {
 

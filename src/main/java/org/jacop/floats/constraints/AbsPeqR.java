@@ -1,32 +1,31 @@
 /**
- *  AbsPeqR.java 
- *  This file is part of JaCoP.
- *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
- *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU Affero General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU Affero General Public License for more details.
- *  
- *  Notwithstanding any other provision of this License, the copyright
- *  owners of this work supplement the terms of this License with terms
- *  prohibiting misrepresentation of the origin of this work and requiring
- *  that modified versions of this work be marked in reasonable ways as
- *  different from the original version. This supplement of the license
- *  terms is in accordance with Section 7 of GNU Affero General Public
- *  License version 3.
- *
- *  You should have received a copy of the GNU Affero General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
+ * AbsPeqR.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.jacop.floats.constraints;
@@ -43,16 +42,16 @@ import org.jacop.floats.core.FloatVar;
 
 /**
  * Constraints |P| #= R
- * 
+ *
  * Bounds consistency can be used; third parameter of constructor controls this.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.4
  */
 
 public class AbsPeqR extends Constraint {
 
-	static AtomicInteger idNumber = new AtomicInteger(0);
+    static AtomicInteger idNumber = new AtomicInteger(0);
 
     static final boolean debugAll = false;
 
@@ -83,138 +82,126 @@ public class AbsPeqR extends Constraint {
      */
     public AbsPeqR(FloatVar p, FloatVar q) {
 
-	assert (p != null) : "Variable p is null";
-	assert (q != null) : "Variable q is null";
+        assert (p != null) : "Variable p is null";
+        assert (q != null) : "Variable q is null";
 
-	numberId = idNumber.incrementAndGet();
-	numberArgs = 2;
+        numberId = idNumber.incrementAndGet();
+        numberArgs = 2;
 
-	this.queueIndex = 0;
-	this.p = p;
-	this.q = q;
+        this.queueIndex = 0;
+        this.p = p;
+        this.q = q;
     }
 
 
-    @Override
-    public ArrayList<Var> arguments() {
+    @Override public ArrayList<Var> arguments() {
 
-	ArrayList<Var> variables = new ArrayList<Var>(2);
+        ArrayList<Var> variables = new ArrayList<Var>(2);
 
-	variables.add(p);
-	variables.add(q);
-	return variables;
+        variables.add(p);
+        variables.add(q);
+        return variables;
     }
 
-    @Override
-    public void removeLevel(int level) {
-	if (level == firstConsistencyLevel) 
-	    firstConsistencyCheck = true;
+    @Override public void removeLevel(int level) {
+        if (level == firstConsistencyLevel)
+            firstConsistencyCheck = true;
     }
 
-    @Override
-    public void consistency(Store store) {
+    @Override public void consistency(Store store) {
 
-	if (firstConsistencyCheck) {
-	    q.domain.inMin(store.level, q, 0.0);
-	    firstConsistencyCheck = false;
-	    firstConsistencyLevel = store.level;
-	}
+        if (firstConsistencyCheck) {
+            q.domain.inMin(store.level, q, 0.0);
+            firstConsistencyCheck = false;
+            firstConsistencyLevel = store.level;
+        }
 
-	boundConsistency(store);
+        boundConsistency(store);
 
     }
 
     void boundConsistency(Store store) {
 
-	do {
+        do {
 
-	    if (p.min() >= 0) {
-		// possible domain consistecny for this case
-		// p.domain.in(store.level, p, q.domain);
-		// store.propagationHasOccurred = false;
-		// q.domain.in(store.level, q, p.domain);
+            if (p.min() >= 0) {
+                // possible domain consistecny for this case
+                // p.domain.in(store.level, p, q.domain);
+                // store.propagationHasOccurred = false;
+                // q.domain.in(store.level, q, p.domain);
 
-		// bounds consistency
-		p.domain.in(store.level, p, q.min(), q.max());
+                // bounds consistency
+                p.domain.in(store.level, p, q.min(), q.max());
 
-		store.propagationHasOccurred = false;
+                store.propagationHasOccurred = false;
 
-		q.domain.in(store.level, q, p.min(), p.max());
-	    }
-	    else if (p.max() < 0) {
-		p.domain.in(store.level, p, -q.max(), -q.min());
+                q.domain.in(store.level, q, p.min(), p.max());
+            } else if (p.max() < 0) {
+                p.domain.in(store.level, p, -q.max(), -q.min());
 
-		store.propagationHasOccurred = false;
+                store.propagationHasOccurred = false;
 
-		q.domain.in(store.level, q, -p.max(), -p.min());			
-	    }
-	    else { // p.min() < 0 && p.max() >= 0
-		// int pBound = Math.max(q.min(), q.max());
-		double pBound = q.max();   // q is always >= 0
-		p.domain.in(store.level, p, -pBound, pBound);
+                q.domain.in(store.level, q, -p.max(), -p.min());
+            } else { // p.min() < 0 && p.max() >= 0
+                // int pBound = Math.max(q.min(), q.max());
+                double pBound = q.max();   // q is always >= 0
+                p.domain.in(store.level, p, -pBound, pBound);
 
-		store.propagationHasOccurred = false;
+                store.propagationHasOccurred = false;
 
-		q.domain.inMax(store.level, q, Math.max(-p.min(), p.max()));
-	    }
+                q.domain.inMax(store.level, q, Math.max(-p.min(), p.max()));
+            }
 
-	} while (store.propagationHasOccurred);
+        } while (store.propagationHasOccurred);
 
     }
 
-    @Override
-    public int getConsistencyPruningEvent(Var var) {
+    @Override public int getConsistencyPruningEvent(Var var) {
 
-	// consistency function mode
-	if (consistencyPruningEvents != null) {
-	    Integer possibleEvent = consistencyPruningEvents.get(var);
-	    if (possibleEvent != null)
-		return possibleEvent;
-	}
+        // consistency function mode
+        if (consistencyPruningEvents != null) {
+            Integer possibleEvent = consistencyPruningEvents.get(var);
+            if (possibleEvent != null)
+                return possibleEvent;
+        }
 
-	return IntDomain.BOUND;
+        return IntDomain.BOUND;
 
     }
 
 
-    @Override
-    public void impose(Store store) {
-	p.putModelConstraint(this, getConsistencyPruningEvent(p));
-	q.putModelConstraint(this, getConsistencyPruningEvent(q));
-	store.addChanged(this);
-	store.countConstraint();
+    @Override public void impose(Store store) {
+        p.putModelConstraint(this, getConsistencyPruningEvent(p));
+        q.putModelConstraint(this, getConsistencyPruningEvent(q));
+        store.addChanged(this);
+        store.countConstraint();
     }
 
-    @Override
-    public void removeConstraint() {
-	p.removeConstraint(this);
-	q.removeConstraint(this);
+    @Override public void removeConstraint() {
+        p.removeConstraint(this);
+        q.removeConstraint(this);
     }
 
-    @Override
-    public boolean satisfied() {
-	return p.singleton() && q.singleton()
-	    && (p.min() == q.min() || -p.min() == q.min());
+    @Override public boolean satisfied() {
+        return p.singleton() && q.singleton() && (p.min() == q.min() || -p.min() == q.min());
     }
 
 
-    @Override
-    public String toString() {
+    @Override public String toString() {
 
-	StringBuffer result = new StringBuffer( id() );
+        StringBuffer result = new StringBuffer(id());
 
-	result.append(" : absPeqR(").append(p).append(", ").append(q).append(" )");
+        result.append(" : absPeqR(").append(p).append(", ").append(q).append(" )");
 
-	return result.toString();
+        return result.toString();
 
     }
 
-    @Override
-    public void increaseWeight() {
-	if (increaseWeight) {
-	    p.weight++;
-	    q.weight++;
-	}
+    @Override public void increaseWeight() {
+        if (increaseWeight) {
+            p.weight++;
+            q.weight++;
+        }
     }
 
 }

@@ -7,7 +7,6 @@ import org.jacop.core.Var;
 import java.util.*;
 
 /**
- *
  * Utility class that allows for constraints like Xor, Reified, etc that take other constraints
  * as parameters to forward any changes of variables to the constraints that were provided as arguments.
  *

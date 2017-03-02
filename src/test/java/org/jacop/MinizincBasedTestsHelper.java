@@ -17,7 +17,7 @@ import static org.junit.Assert.fail;
 
 /**
  * @author Mariusz Świerkot
-*/
+ */
 
 public class MinizincBasedTestsHelper {
     protected String testFilename;
@@ -29,8 +29,7 @@ public class MinizincBasedTestsHelper {
 
 
 
-    @BeforeClass
-    public static void initialize() {
+    @BeforeClass public static void initialize() {
         fz2jacop = new Fz2jacop();
     }
 
@@ -44,15 +43,14 @@ public class MinizincBasedTestsHelper {
 
         try {
             fz2jacop.main(new String[] {relativePath + filename});
-        }
-        finally {
+        } finally {
 
             System.out.flush();
             System.setOut(old);
 
             String result = baos.toString();
-            if(printInfo) {
-                System.out.println(filename+"\n" + result);
+            if (printInfo) {
+                System.out.println(filename + "\n" + result);
             }
 
             return Arrays.asList(result.split("\n"));
@@ -64,7 +62,7 @@ public class MinizincBasedTestsHelper {
 
     protected static List<String> expected(String filename) throws IOException {
 
-        String filePath = new File(relativePath + filename ).getAbsolutePath();
+        String filePath = new File(relativePath + filename).getAbsolutePath();
         return Files.readAllLines(Paths.get(filePath), StandardCharsets.UTF_8);
     }
 
@@ -75,7 +73,7 @@ public class MinizincBasedTestsHelper {
         String line = "";
         List<String> list = new ArrayList<String>();
         int i = 0;
-        while ((line = br.readLine())!=null) {
+        while ((line = br.readLine()) != null) {
             list.add(i, line);
             i++;
         }
@@ -92,25 +90,31 @@ public class MinizincBasedTestsHelper {
         if (result.size() == 0)
             fail("\n" + "File path: " + timeCategory + testFilename + ".fzn " + " gave no output to compare against.");
 
-        for (int i = 0, j = 0; i < result.size() || j < expectedResult.size();) {
-            if (i < result.size() && result.get(i).trim().isEmpty() )
-            { i++; continue;}
-            if (j < expectedResult.size() && expectedResult.get(j).trim().isEmpty() )
-            { j++; continue;}
+        for (int i = 0, j = 0; i < result.size() || j < expectedResult.size(); ) {
+            if (i < result.size() && result.get(i).trim().isEmpty()) {
+                i++;
+                continue;
+            }
+            if (j < expectedResult.size() && expectedResult.get(j).trim().isEmpty()) {
+                j++;
+                continue;
+            }
             if (result.size() == i)
-                fail("\n" + "File path: " + timeCategory + testFilename + ".out " + " gave as a result less textlines that was expected. Expected line " + (j+1) + " not found.");
+                fail("\n" + "File path: " + timeCategory + testFilename + ".out "
+                    + " gave as a result less textlines that was expected. Expected line " + (j + 1) + " not found.");
             if (expectedResult.size() == j)
-                fail("\n" + "File path: " + timeCategory + testFilename + ".out " + " gave as a result more textlines that was expected. Actual line " + (i + 1) + "not found in expected result");
+                fail("\n" + "File path: " + timeCategory + testFilename + ".out "
+                    + " gave as a result more textlines that was expected. Actual line " + (i + 1) + "not found in expected result");
 
-            assertEquals("\n" + "File path: " + timeCategory + testFilename + ".out " + "\nError line number (expected, actual): (" + (j + 1) + "," + (i + 1) + ")\n",
-                    expectedResult.get(j).trim(), result.get(i).trim());
-            i++; j++;
+            assertEquals(
+                "\n" + "File path: " + timeCategory + testFilename + ".out " + "\nError line number (expected, actual): (" + (j + 1) + ","
+                    + (i + 1) + ")\n", expectedResult.get(j).trim(), result.get(i).trim());
+            i++;
+            j++;
         }
 
 
     }
-
-
 
 
 

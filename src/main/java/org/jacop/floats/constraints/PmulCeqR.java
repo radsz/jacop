@@ -1,32 +1,31 @@
 /**
- *  PmulCeqR.java 
- *  This file is part of JaCoP.
- *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
- *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU Affero General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU Affero General Public License for more details.
- *  
- *  Notwithstanding any other provision of this License, the copyright
- *  owners of this work supplement the terms of this License with terms
- *  prohibiting misrepresentation of the origin of this work and requiring
- *  that modified versions of this work be marked in reasonable ways as
- *  different from the original version. This supplement of the license
- *  terms is in accordance with Section 7 of GNU Affero General Public
- *  License version 3.
- *
- *  You should have received a copy of the GNU Affero General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
+ * PmulCeqR.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 
@@ -46,9 +45,9 @@ import org.jacop.floats.core.FloatIntervalDomain;
 
 /**
  * Constraint P * C = R for floats
- * 
+ *
  * Boundary consistency is used.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.4
  */
@@ -86,114 +85,104 @@ public class PmulCeqR extends Constraint {
      */
     public PmulCeqR(FloatVar p, double c, FloatVar r) {
 
-	assert (p != null) : "Variable p is null";
-	assert (r != null) : "Variable r is null";
+        assert (p != null) : "Variable p is null";
+        assert (r != null) : "Variable r is null";
 
-	numberId = counter++;
-	numberArgs = 2;
+        numberId = counter++;
+        numberArgs = 2;
 
-	this.p = p;
-	this.c = c;
-	this.r = r;
+        this.p = p;
+        this.c = c;
+        this.r = r;
     }
 
-    @Override
-    public ArrayList<Var> arguments() {
+    @Override public ArrayList<Var> arguments() {
 
-	ArrayList<Var> variables = new ArrayList<Var>(2);
+        ArrayList<Var> variables = new ArrayList<Var>(2);
 
-	variables.add(p);
-	variables.add(r);
-	return variables;
+        variables.add(p);
+        variables.add(r);
+        return variables;
     }
 
-    @Override
-    public void consistency (Store store) {
+    @Override public void consistency(Store store) {
 
 
-	    do {
+        do {
 
-		store.propagationHasOccurred = false;
+            store.propagationHasOccurred = false;
 
-		// Bounds for P
-		FloatIntervalDomain pBounds = FloatDomain.divBounds(r.min(), r.max(), c, c);
+            // Bounds for P
+            FloatIntervalDomain pBounds = FloatDomain.divBounds(r.min(), r.max(), c, c);
 
-		p.domain.in(store.level, p, pBounds); //.min(), pBounds.max());
+            p.domain.in(store.level, p, pBounds); //.min(), pBounds.max());
 
-		// Bounds for R
-		FloatIntervalDomain rBounds = FloatDomain.mulBounds(p.min(), p.max(), c, c);
+            // Bounds for R
+            FloatIntervalDomain rBounds = FloatDomain.mulBounds(p.min(), p.max(), c, c);
 
-		r.domain.in(store.level, r, rBounds); //.min(), rBounds.max());
+            r.domain.in(store.level, r, rBounds); //.min(), rBounds.max());
 
-	    } while (store.propagationHasOccurred);
+        } while (store.propagationHasOccurred);
 
     }
 
-    @Override
-    public int getConsistencyPruningEvent(Var var) {
+    @Override public int getConsistencyPruningEvent(Var var) {
 
-	// If consistency function mode
-	if (consistencyPruningEvents != null) {
-	    Integer possibleEvent = consistencyPruningEvents.get(var);
-	    if (possibleEvent != null)
-		return possibleEvent;
-	}
-	return IntDomain.BOUND;
+        // If consistency function mode
+        if (consistencyPruningEvents != null) {
+            Integer possibleEvent = consistencyPruningEvents.get(var);
+            if (possibleEvent != null)
+                return possibleEvent;
+        }
+        return IntDomain.BOUND;
     }
 
-    @Override
-    public void impose(Store store) {
-	p.putModelConstraint(this, getConsistencyPruningEvent(p));
-	r.putModelConstraint(this, getConsistencyPruningEvent(r));
-	store.addChanged(this);
-	store.countConstraint();
+    @Override public void impose(Store store) {
+        p.putModelConstraint(this, getConsistencyPruningEvent(p));
+        r.putModelConstraint(this, getConsistencyPruningEvent(r));
+        store.addChanged(this);
+        store.countConstraint();
     }
 
-    @Override
-    public void removeConstraint() {
-	p.removeConstraint(this);
-	r.removeConstraint(this);
+    @Override public void removeConstraint() {
+        p.removeConstraint(this);
+        r.removeConstraint(this);
     }
 
-    @Override
-    public boolean satisfied() {
-	FloatDomain pDom = p.dom(), rDom = r.dom();
-	return pDom.singleton() && rDom.singleton()
-	    && pDom.min() * c == rDom.min();
+    @Override public boolean satisfied() {
+        FloatDomain pDom = p.dom(), rDom = r.dom();
+        return pDom.singleton() && rDom.singleton() && pDom.min() * c == rDom.min();
     }
 
-    @Override
-    public String toString() {
+    @Override public String toString() {
 
-	return id() + " : PmulCeqR(" + p + ", " + c + ", " + r + " )";
+        return id() + " : PmulCeqR(" + p + ", " + c + ", " + r + " )";
     }
 
 
-    @Override
-    public void increaseWeight() {
-	if (increaseWeight) {
-	    p.weight++;
-	    r.weight++;
-	}
+    @Override public void increaseWeight() {
+        if (increaseWeight) {
+            p.weight++;
+            r.weight++;
+        }
     }
 
     public FloatVar derivative(Store store, FloatVar f, java.util.Set<FloatVar> vars, FloatVar x) {
 
-	if (f.equals(r)) {
-	    // f = c * p
-	    // f' = c * d(p)
-	    FloatVar v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
-	    Derivative.poseDerivativeConstraint(new PmulCeqR(Derivative.getDerivative(store, p, vars, x), c, v));
-	    return v;
-	}
-	else if (f.equals(p)) {
-	    // f = 1/c * r
-	    // f' = 1/c * d(r)
-	    FloatVar v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
-	    Derivative.poseDerivativeConstraint(new PmulCeqR(Derivative.getDerivative(store, r, vars, x), 1/c, v));
-	    return v;
-	}
+        if (f.equals(r)) {
+            // f = c * p
+            // f' = c * d(p)
+            FloatVar v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+            Derivative.poseDerivativeConstraint(new PmulCeqR(Derivative.getDerivative(store, p, vars, x), c, v));
+            return v;
+        } else if (f.equals(p)) {
+            // f = 1/c * r
+            // f' = 1/c * d(r)
+            FloatVar v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+            Derivative.poseDerivativeConstraint(new PmulCeqR(Derivative.getDerivative(store, r, vars, x), 1 / c, v));
+            return v;
+        }
 
-	return null;
+        return null;
     }
 }

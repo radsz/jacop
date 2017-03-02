@@ -43,8 +43,7 @@ import org.jacop.util.fsm.FSMState;
 import org.jacop.util.fsm.FSMTransition;
 
 /**
- *
- * It constructs a Lex (lexicographical order) constraint. 
+ * It constructs a Lex (lexicographical order) constraint.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.4
@@ -58,7 +57,7 @@ public class Lex extends DecomposedConstraint {
     public IntVar[][] x;
 
     /**
-     * It contains constraints of the lex constraint decomposition. 
+     * It contains constraints of the lex constraint decomposition.
      */
     ArrayList<Constraint> constraints;
 
@@ -68,14 +67,14 @@ public class Lex extends DecomposedConstraint {
     public final boolean lexLT;
 
     /**
-     * It creates a lexicographical order for vectors x[i], i.e. 
+     * It creates a lexicographical order for vectors x[i], i.e.
      * forall i, exists j : x[i][k] = x[i+1][k] for k {@literal <} j and x[i][k] {@literal <=} x[i+1][k]
      * for k {@literal >=} j
-     *
+     * <p>
      * vectors x[i] does not need to be of the same size.
      * boolea lt defines if we require Lex_{{@literal <}} (lt = false) or Lex_{{@literal =<}} (lt = true)
      *
-     * @param x vector of vectors which assignment is constrained by Lex constraint. 
+     * @param x vector of vectors which assignment is constrained by Lex constraint.
      */
     public Lex(IntVar[][] x) {
 
@@ -221,13 +220,11 @@ public class Lex extends DecomposedConstraint {
                             state[i][j][0].transitions.add(new FSMTransition(new IntervalDomain(1, 1), addState[i][0]));
 
                             for (int s = 1; s < addState[i].length; s++)
-                                addState[i][s - 1].transitions
-                                    .add(new FSMTransition(new IntervalDomain(0, 1), addState[i][s]));
+                                addState[i][s - 1].transitions.add(new FSMTransition(new IntervalDomain(0, 1), addState[i][s]));
                             addState[i][addState[i].length - 1].transitions
                                 .add(new FSMTransition(new IntervalDomain(0, 1), state[i + 1][0][0]));
                         } else
-                            state[i][j][0].transitions
-                                .add(new FSMTransition(new IntervalDomain(1, 1), addState[i][2 * j]));
+                            state[i][j][0].transitions.add(new FSMTransition(new IntervalDomain(1, 1), addState[i][2 * j]));
 
                         state[i][j][0].transitions.add(new FSMTransition(new IntervalDomain(0, 0), state[i][j][1]));
                     }
@@ -362,16 +359,13 @@ public class Lex extends DecomposedConstraint {
                             state[i][j][0].transitions.add(new FSMTransition(new IntervalDomain(1, 1), addState[i][0]));
 
                             for (int s = 1; s < addState[i].length; s++)
-                                addState[i][s - 1].transitions
-                                    .add(new FSMTransition(new IntervalDomain(0, 1), addState[i][s]));
+                                addState[i][s - 1].transitions.add(new FSMTransition(new IntervalDomain(0, 1), addState[i][s]));
                             addState[i][addState[i].length - 1].transitions
                                 .add(new FSMTransition(new IntervalDomain(0, 1), state[i + 1][0][0]));
                         } else if (j != state[i].length - 1) {
-                            state[i][j][0].transitions
-                                .add(new FSMTransition(new IntervalDomain(1, 1), addState[i][2 * j]));
+                            state[i][j][0].transitions.add(new FSMTransition(new IntervalDomain(1, 1), addState[i][2 * j]));
                         } else
-                            state[i][j][0].transitions
-                                .add(new FSMTransition(new IntervalDomain(1, 1), state[i + 1][0][0]));
+                            state[i][j][0].transitions.add(new FSMTransition(new IntervalDomain(1, 1), state[i + 1][0][0]));
                     else
                         state[i][j][0].transitions.add(new FSMTransition(new IntervalDomain(1, 1), state[i + 1][0][0]));
                     if (j != state[i].length - 1)
@@ -415,8 +409,8 @@ public class Lex extends DecomposedConstraint {
         constraints.add(new XeqC(b[0], 1));
 
         for (int i = 0; i < sizeToCompare; i++) {
-            Constraint c = new Reified(
-                new And(new XlteqY(x[0][i], x[1][i]), new Or(new XltY(x[0][i], x[1][i]), new XeqC(b[i + 1], 1))), b[i]);
+            Constraint c =
+                new Reified(new And(new XlteqY(x[0][i], x[1][i]), new Or(new XltY(x[0][i], x[1][i]), new XeqC(b[i + 1], 1))), b[i]);
 
             constraints.add(c);
         }
@@ -447,9 +441,8 @@ public class Lex extends DecomposedConstraint {
             if (i == sizeToCompare - 1)
                 constraints.add(new Reified(new XlteqY(x[0][i], x[1][i]), b[i]));
             else
-                constraints.add(new Reified(
-                    new And(new XlteqY(x[0][i], x[1][i]), new Or(new XltY(x[0][i], x[1][i]), new XeqC(b[i + 1], 1))),
-                    b[i]));
+                constraints.add(
+                    new Reified(new And(new XlteqY(x[0][i], x[1][i]), new Or(new XltY(x[0][i], x[1][i]), new XeqC(b[i + 1], 1))), b[i]));
         }
 
         return constraints;

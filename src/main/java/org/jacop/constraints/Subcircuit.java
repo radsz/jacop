@@ -1,32 +1,31 @@
 /**
- *  Subcircuit.java 
- *  This file is part of JaCoP.
- *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
- *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU Affero General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU Affero General Public License for more details.
- *  
- *  Notwithstanding any other provision of this License, the copyright
- *  owners of this work supplement the terms of this License with terms
- *  prohibiting misrepresentation of the origin of this work and requiring
- *  that modified versions of this work be marked in reasonable ways as
- *  different from the original version. This supplement of the license
- *  terms is in accordance with Section 7 of GNU Affero General Public
- *  License version 3.
- *
- *  You should have received a copy of the GNU Affero General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
+ * Subcircuit.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.jacop.constraints;
@@ -48,14 +47,14 @@ import org.jacop.core.Var;
  * subcircuit. Value of every variable x[i] points to the next variable in 
  * the subcircuit. If a variable does not belong to a subcircuit it has value of 
  * its position, i.e., x[i] = i.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.4
  */
 
 public class Subcircuit extends Alldiff {
 
-	static AtomicInteger idNumber = new AtomicInteger(0);
+    static AtomicInteger idNumber = new AtomicInteger(0);
 
     Store store;
 
@@ -66,7 +65,7 @@ public class Subcircuit extends Alldiff {
     int sccLength = 0;
 
     int[] val;
-	
+
     Hashtable<Var, Integer> valueIndex = new Hashtable<Var, Integer>();
 
     int firstConsistencyLevel;
@@ -83,36 +82,36 @@ public class Subcircuit extends Alldiff {
      */
     public Subcircuit(IntVar[] list) {
 
-			assert (list != null) : "Variables list is null";
+        assert (list != null) : "Variables list is null";
 
-			this.numberId = idNumber.incrementAndGet();
-			this.list = new IntVar[list.length];
-			this.numberArgs = (short) list.length;
+        this.numberId = idNumber.incrementAndGet();
+        this.list = new IntVar[list.length];
+        this.numberArgs = (short) list.length;
 
-			for (int i = 0; i < list.length; i++) {
-				assert (list[i] != null) : i + "-th element in the list is null";
-				this.list[i] = list[i];
-			}
+        for (int i = 0; i < list.length; i++) {
+            assert (list[i] != null) : i + "-th element in the list is null";
+            this.list[i] = list[i];
+        }
 
-			this.queueIndex = 2;
+        this.queueIndex = 2;
 
-			this.numberArgs = (short) list.length;
-			listAlldiff = new IntVar[list.length];
+        this.numberArgs = (short) list.length;
+        listAlldiff = new IntVar[list.length];
 
-			for (int i = 0; i < list.length; i++)
-				listAlldiff[i] = list[i];
+        for (int i = 0; i < list.length; i++)
+            listAlldiff[i] = list[i];
 
-			min = new int[list.length];
-			max = new int[list.length];
-			u = new int[list.length];
+        min = new int[list.length];
+        max = new int[list.length];
+        u = new int[list.length];
 
-			numberId = idNumber.incrementAndGet();
+        numberId = idNumber.incrementAndGet();
 
-			int i = 0;
-			for (Var v : list)
-	    	valueIndex.put(v, i++);
+        int i = 0;
+        for (Var v : list)
+            valueIndex.put(v, i++);
 
-			val = new int[list.length];
+        val = new int[list.length];
     }
 
     /**
@@ -121,100 +120,95 @@ public class Subcircuit extends Alldiff {
      */
     public Subcircuit(ArrayList<IntVar> list) {
 
-	this(list.toArray(new IntVar[list.size()]));
+        this(list.toArray(new IntVar[list.size()]));
     }
 
 
-    @Override
-	public void consistency(Store store) {
+    @Override public void consistency(Store store) {
 
-	if (firstConsistencyCheck) {
-	    for (int i = 0; i < list.length; i++) 
-		list[i].domain.in(store.level, list[i], 1, list.length);
+        if (firstConsistencyCheck) {
+            for (int i = 0; i < list.length; i++)
+                list[i].domain.in(store.level, list[i], 1, list.length);
 
-	    firstConsistencyCheck = false;
-	    firstConsistencyLevel = store.level;
-	}
+            firstConsistencyCheck = false;
+            firstConsistencyLevel = store.level;
+        }
 
-	do {
-			
-	    store.propagationHasOccurred = false;
-			
-	    LinkedHashSet<IntVar> fdvs = variableQueue;
-	    variableQueue = new LinkedHashSet<IntVar>();
-			
-	    alldifferent(store, fdvs);
+        do {
 
-	} while (store.propagationHasOccurred);
+            store.propagationHasOccurred = false;
 
-	sccsBasedPruning(store); // strongly connected components
-		
+            LinkedHashSet<IntVar> fdvs = variableQueue;
+            variableQueue = new LinkedHashSet<IntVar>();
+
+            alldifferent(store, fdvs);
+
+        } while (store.propagationHasOccurred);
+
+        sccsBasedPruning(store); // strongly connected components
+
     }
 
     void alldifferent(Store store, LinkedHashSet<IntVar> fdvs) {
 
-	for (IntVar changedVar : fdvs) {
-	    if (changedVar.singleton()) {
-		for (IntVar var : list)
-		    if (var != changedVar) 
-			var.domain.inComplement(store.level, var, changedVar.min());
-	    }
-	}	
-		
-    }	
-	
-    @Override
-	public int getConsistencyPruningEvent(Var var) {
+        for (IntVar changedVar : fdvs) {
+            if (changedVar.singleton()) {
+                for (IntVar var : list)
+                    if (var != changedVar)
+                        var.domain.inComplement(store.level, var, changedVar.min());
+            }
+        }
 
-	// If consistency function mode
-	if (consistencyPruningEvents != null) {
-	    Integer possibleEvent = consistencyPruningEvents.get(var);
-	    if (possibleEvent != null)
-		return possibleEvent;
-	}
-	return IntDomain.ANY;
+    }
+
+    @Override public int getConsistencyPruningEvent(Var var) {
+
+        // If consistency function mode
+        if (consistencyPruningEvents != null) {
+            Integer possibleEvent = consistencyPruningEvents.get(var);
+            if (possibleEvent != null)
+                return possibleEvent;
+        }
+        return IntDomain.ANY;
     }
 
     // registers the constraint in the constraint store
-    @Override
-	public void impose(Store store) {
+    @Override public void impose(Store store) {
 
-	this.store = store;
+        this.store = store;
 
-	super.impose(store);
+        super.impose(store);
 
     }
 
 
-    @Override
-	public boolean satisfied() {
-		
-	if (grounded.value() != list.length)
-	    return false;
-		
-	boolean sat = super.satisfied(); // alldifferent
+    @Override public boolean satisfied() {
 
-	if (sat) {
-	    // check if there are subcricuits that together cover all nodes
-	    sat = sccs(store) == list.length;
-	}
-	return sat;
+        if (grounded.value() != list.length)
+            return false;
+
+        boolean sat = super.satisfied(); // alldifferent
+
+        if (sat) {
+            // check if there are subcricuits that together cover all nodes
+            sat = sccs(store) == list.length;
+        }
+        return sat;
     }
 
-    @Override
-	public String toString() {
-		
-	StringBuffer result = new StringBuffer( id() );
-	result.append(" : subcircuit([");
-		
-	for (int i = 0; i < list.length; i++) {
-	    result.append(list[i]);
-	    if (i < list.length - 1)
-		result.append(", ");
-	}
-	result.append("])");
-		
-	return result.toString();
+    @Override public String toString() {
+
+        StringBuffer result = new StringBuffer(id());
+        result.append(" : subcircuit([");
+
+        for (int i = 0; i < list.length; i++) {
+            result.append(list[i]);
+            if (i < list.length - 1)
+                result.append(", ");
+        }
+        result.append("])");
+
+        return result.toString();
     }
 
     // --- Strongly Connected Conmponents
@@ -233,58 +227,58 @@ public class Subcircuit extends Alldiff {
 
     void sccsBasedPruning(Store store) {
 
-	// System.out.println ("========= SCCS =========");
+        // System.out.println ("========= SCCS =========");
 
-	int maxCycle = 0;
+        int maxCycle = 0;
 
-	//ArrayList<ArrayList<IntVar>> sccList = new ArrayList<ArrayList<IntVar>>();
+        //ArrayList<ArrayList<IntVar>> sccList = new ArrayList<ArrayList<IntVar>>();
 
-	// for (int i = 0; i < val.length; i++)
-	//     val[i] = 0;
-	java.util.Arrays.fill(val, 0);
+        // for (int i = 0; i < val.length; i++)
+        //     val[i] = 0;
+        java.util.Arrays.fill(val, 0);
 
-	idd = 0;
+        idd = 0;
 
- 	for (int i=0; i< list.length; i++) {
+        for (int i = 0; i < list.length; i++) {
 
- 	    sccLength = 0;
+            sccLength = 0;
 
- 	    if (val[i] == 0) {
+            if (val[i] == 0) {
 
- 		// System.out.print("Node " + i + ": cycle = " );
+                // System.out.print("Node " + i + ": cycle = " );
 
-		visit(i);
+                visit(i);
 
-		maxCycle = (sccLength > maxCycle) ? sccLength : maxCycle;
-		//sccList.add(cycleVar);
+                maxCycle = (sccLength > maxCycle) ? sccLength : maxCycle;
+                //sccList.add(cycleVar);
 
-		// System.out.println (cycleVar + " cycle length = " + sccLength);
+                // System.out.println (cycleVar + " cycle length = " + sccLength);
 
-		if (sccLength == 1) 
-		    // the scc is of size one => it must be self-cycle		
-		    list[i].domain.in(store.level, list[i], i+1, i+1);
+                if (sccLength == 1)
+                    // the scc is of size one => it must be self-cycle
+                    list[i].domain.in(store.level, list[i], i + 1, i + 1);
 
-		else if (sccLength == numberGround && numberGround < list.length) {
-		    // subcircuit alrerady found => all others must be self-cycles
-		    for (int j=0; j<list.length; j++) {
-			if ( !cycleVar.contains(list[j]) ) 
-			    list[j].domain.in(store.level, list[j], j+1, j+1);
-		    }
-		}
-	    }
-	}
+                else if (sccLength == numberGround && numberGround < list.length) {
+                    // subcircuit alrerady found => all others must be self-cycles
+                    for (int j = 0; j < list.length; j++) {
+                        if (!cycleVar.contains(list[j]))
+                            list[j].domain.in(store.level, list[j], j + 1, j + 1);
+                    }
+                }
+            }
+        }
 
-	int possibleSelfCycles = 0;
-	for (int j=0; j<list.length; j++) 
-	    if (list[j].domain.contains(j+1))
-		possibleSelfCycles++;
+        int possibleSelfCycles = 0;
+        for (int j = 0; j < list.length; j++)
+            if (list[j].domain.contains(j + 1))
+                possibleSelfCycles++;
 
-	if (sccLength != 1 && list.length - possibleSelfCycles > maxCycle) 
-	    // maximal cycle is smaller than possible; that is all nodes minus **possible** self-cycles
-	    throw Store.failException;
+        if (sccLength != 1 && list.length - possibleSelfCycles > maxCycle)
+            // maximal cycle is smaller than possible; that is all nodes minus **possible** self-cycles
+            throw Store.failException;
 
 	/*
-	// check for a cycle with a single non ground variable and ground it to form the cycle
+  // check for a cycle with a single non ground variable and ground it to form the cycle
 	for (ArrayList<IntVar> scc : sccList) {
 
 	IntVar nonGround = null;
@@ -311,82 +305,82 @@ public class Subcircuit extends Alldiff {
 
     int sccs(Store store) {
 
-	// System.out.println ("========= SCCS =========");
+        // System.out.println ("========= SCCS =========");
 
-	int totalNodes = 0;
+        int totalNodes = 0;
 
-	// for (int i = 0; i < val.length; i++)
-	//     val[i] = 0;
-	java.util.Arrays.fill(val, 0);
+        // for (int i = 0; i < val.length; i++)
+        //     val[i] = 0;
+        java.util.Arrays.fill(val, 0);
 
-	idd = 0;
+        idd = 0;
 
- 	for (int i=0; i< list.length; i++) {
+        for (int i = 0; i < list.length; i++) {
 
- 	    sccLength = 0;
+            sccLength = 0;
 
- 	    if (val[i] == 0) {
+            if (val[i] == 0) {
 
- 		// System.out.print("Node " + i + ": cycle = " );
+                // System.out.print("Node " + i + ": cycle = " );
 
-		visit(i);
+                visit(i);
 
-		totalNodes += sccLength;
+                totalNodes += sccLength;
 
-		// System.out.println (cycleVar + " cycle length = " + sccLength);
+                // System.out.println (cycleVar + " cycle length = " + sccLength);
 
-	    }
-	}
+            }
+        }
 
-	return totalNodes;
+        return totalNodes;
     }
 
     int visit(int k) {
 
-	int m, min = 0, t;
-	idd++;
-	val[k] = idd;
-	min = idd;
+        int m, min = 0, t;
+        idd++;
+        val[k] = idd;
+        min = idd;
 
-    	stck.push(k);
+        stck.push(k);
 
-	for (ValueEnumeration e = list[k].dom().valueEnumeration(); e.hasMoreElements();) {
+        for (ValueEnumeration e = list[k].dom().valueEnumeration(); e.hasMoreElements(); ) {
 
-	    t = e.nextElement() - 1;
-	    if (val[t] == 0)
-		m = visit(t);
-	    else
-		m = val[t];
-	    if (m < min)
-		min = m;
-	}
+            t = e.nextElement() - 1;
+            if (val[t] == 0)
+                m = visit(t);
+            else
+                m = val[t];
+            if (m < min)
+                min = m;
+        }
 
-	if (min == val[k]) {
+        if (min == val[k]) {
 
-	    // System.out.print("SCC: ");
+            // System.out.print("SCC: ");
 
-	    int n;
-	    cycleVar = new ArrayList<IntVar>();
-	    numberGround=0;
+            int n;
+            cycleVar = new ArrayList<IntVar>();
+            numberGround = 0;
 
-	    sccLength = 0;
+            sccLength = 0;
 
-	    do {
-		n = stck.pop();
-		cycleVar.add(list[n]);
+            do {
+                n = stck.pop();
+                cycleVar.add(list[n]);
 
-		if (list[n].singleton())
-		    numberGround++;
+                if (list[n].singleton())
+                    numberGround++;
 
-		val[n] = list.length + 1;
+                val[n] = list.length + 1;
 
-		sccLength++;
-	    } while ( n != k);
+                sccLength++;
+            } while (n != k);
 
-	    // System.out.println ("cycleVar = " + cycleVar + ", ground = " + numberGround);
+            // System.out.println ("cycleVar = " + cycleVar + ", ground = " + numberGround);
 
-	}
-	return min;
+        }
+        return min;
     }
-	
+
 }

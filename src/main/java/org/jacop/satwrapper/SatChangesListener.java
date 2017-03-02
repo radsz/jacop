@@ -16,260 +16,254 @@ import org.jacop.satwrapper.translation.SatCPBridge;
  * TODO: many efficiency improvements!!!
  */
 
+
 /**
  * this class listens to changes in literals in SAT solver, and reminds
  * what changes this implies for CP variables
- * @author simon
  *
+ * @author simon
  */
-public final class SatChangesListener
-	implements  AssertionListener,
-				PropagateListener,
-				BackjumpListener {
+public final class SatChangesListener implements AssertionListener, PropagateListener, BackjumpListener {
 
 	/*
-	 * invariant: upperBounds.lenght == lowerBounds.length == excludedValues.length
+   * invariant: upperBounds.lenght == lowerBounds.length == excludedValues.length
 	 */
 
-	// the wrapper
-	private SatWrapper wrapper;
+    // the wrapper
+    private SatWrapper wrapper;
 
-	// the core of the SAT solver
-	private Core core;
+    // the core of the SAT solver
+    private Core core;
 
-	// set of forbidden values for variables
-	// (not BitSet because some values could be < 0)
-	@SuppressWarnings("unchecked")
-	private HashSet<Integer>[] excludedValues = new HashSet[40];
-	//private IntSet[] excludedValues = new IntSet[5];
+    // set of forbidden values for variables
+    // (not BitSet because some values could be < 0)
+    @SuppressWarnings("unchecked") private HashSet<Integer>[] excludedValues = new HashSet[40];
+    //private IntSet[] excludedValues = new IntSet[5];
 
-	// set of (true) literals representing 'x<=v' assertions on CP vars
-	private Integer[] upperBounds = new Integer[40];
+    // set of (true) literals representing 'x<=v' assertions on CP vars
+    private Integer[] upperBounds = new Integer[40];
 
-	// set of literals (false) representing 'x>v' assertions
-	private Integer[] lowerBounds = new Integer[40];
+    // set of literals (false) representing 'x>v' assertions
+    private Integer[] lowerBounds = new Integer[40];
 
-	// set of variables to update
-	private BitSet intVarsToUpdate = new BitSet();
-	private HashSet<BooleanVar> booleanVarsToUpdate =
-		new HashSet<BooleanVar>();
+    // set of variables to update
+    private BitSet intVarsToUpdate = new BitSet();
+    private HashSet<BooleanVar> booleanVarsToUpdate = new HashSet<BooleanVar>();
 
-	/**
-	 * clears all sets, so that elements occurring in them later result only
-	 * from later events
-	 */
-	public void clear() {
-		assert lowerBounds.length == upperBounds.length;
-		
-		// TODO: optimize clear(), which is often called
-		
-		Arrays.fill(upperBounds, null);
-		Arrays.fill(lowerBounds, null);
-		Arrays.fill(excludedValues, null);
-		
-		intVarsToUpdate.clear();
-		booleanVarsToUpdate.clear();
-	}
+    /**
+     * clears all sets, so that elements occurring in them later result only
+     * from later events
+     */
+    public void clear() {
+        assert lowerBounds.length == upperBounds.length;
 
-	
-	public void onPropagate(int literal, int clauseId) {
-		if (wrapper.isVarLiteral(literal))
-			onAssertion(literal);
-	}
+        // TODO: optimize clear(), which is often called
 
-	
-	public void onAssertion(int literal, int level) {
-		if (wrapper.isVarLiteral(literal))
-			onAssertion(literal);
-	}
+        Arrays.fill(upperBounds, null);
+        Arrays.fill(lowerBounds, null);
+        Arrays.fill(excludedValues, null);
 
-	/**
-	 * clear on backjump
-	 */
-	public void onBackjump(int oldLevel, int newLevel) {
-		clear();
-	}
+        intVarsToUpdate.clear();
+        booleanVarsToUpdate.clear();
+    }
 
-	public void onRestart(int oldLevel) {
-		onBackjump(oldLevel, 0);
-	}
 
-	/**
-	 * this should be called every time a new boolean variable representing
-	 * a CP proposition is asserted, but preferably only once per variable, so
-	 * that it can later update the CP variables domains
-	 * @param literal	the boolean literal that has been asserted
-	 */
-	private void onAssertion(int literal) {
+    public void onPropagate(int literal, int clauseId) {
+        if (wrapper.isVarLiteral(literal))
+            onAssertion(literal);
+    }
 
-		// only interested in literals representing assertions on CP
-		// variables domains
-		assert wrapper.isVarLiteral(literal);
-		assert core.trail.isSet(Math.abs(literal));
-		assert core.trail.values[Math.abs(literal)] == literal;
 
-		// this propagation asserts something about CP variables, let
-		// us find what exactly
+    public void onAssertion(int literal, int level) {
+        if (wrapper.isVarLiteral(literal))
+            onAssertion(literal);
+    }
 
-		// what variable and value does it concern
-		int cpValue = wrapper.boolVarToCpValue(literal);
-		IntVar cpVar = wrapper.boolVarToCpVar(literal);
-		SatCPBridge range = wrapper.boolVarToDomain(literal);
+    /**
+     * clear on backjump
+     */
+    public void onBackjump(int oldLevel, int newLevel) {
+        clear();
+    }
 
-		if (BooleanVar.class.isInstance(cpVar)) {
-			// boolean variable, only remember something happened
-			@SuppressWarnings("unchecked")
-			BooleanVar cpBoolVar = (BooleanVar) cpVar;
-			booleanVarsToUpdate.add(cpBoolVar);
-		} else {
-			// remember that something happened;
-			int cpVarIndex = cpVar.index;
-			intVarsToUpdate.set(cpVarIndex);
+    public void onRestart(int oldLevel) {
+        onBackjump(oldLevel, 0);
+    }
 
-			// is this the negation or the affirmation of some proposition ?
-			boolean isTrue = literal > 0;
+    /**
+     * this should be called every time a new boolean variable representing
+     * a CP proposition is asserted, but preferably only once per variable, so
+     * that it can later update the CP variables domains
+     *
+     * @param literal the boolean literal that has been asserted
+     */
+    private void onAssertion(int literal) {
 
-			if (range.isEqualityBoolVar(literal)) {
-				// simple cases, equality propositions
-				if (isTrue) {
-					// 'x=v', remember this by fixing the range
-					upperBounds[cpVarIndex] = cpValue;
-					lowerBounds[cpVarIndex] = cpValue;
-				} else {
-					// 'x!=v', remember that this value is excluded
-					if (excludedValues[cpVarIndex] == null)
-						excludedValues[cpVarIndex] = new HashSet<Integer>();
-					excludedValues[cpVarIndex].add(cpValue);
-				}
-			} else {
-				// check impacts on ranges
-				if (isTrue) {
-					// 'x<=v' proposition
-					if (upperBounds[cpVarIndex] == null)
-						upperBounds[cpVarIndex] = cpValue;
-					else {
-						int curBound = upperBounds[cpVarIndex];
-						if (cpValue < curBound)
-							upperBounds[cpVarIndex] = cpValue;
-					}
+        // only interested in literals representing assertions on CP
+        // variables domains
+        assert wrapper.isVarLiteral(literal);
+        assert core.trail.isSet(Math.abs(literal));
+        assert core.trail.values[Math.abs(literal)] == literal;
 
-				} else {
-					// 'not x<=v', so 'x>v' proposition
+        // this propagation asserts something about CP variables, let
+        // us find what exactly
 
-					cpValue++; // work on '>=' predicate, not '>'
-					if (lowerBounds[cpVarIndex] == null)
-						lowerBounds[cpVarIndex] = cpValue;
-					else {
-						int curBound = lowerBounds[cpVarIndex];
-						if (cpValue > curBound)
-							lowerBounds[cpVarIndex] = cpValue;
-					}
-				}
-			}
-		}
-	}
+        // what variable and value does it concern
+        int cpValue = wrapper.boolVarToCpValue(literal);
+        IntVar cpVar = wrapper.boolVarToCpVar(literal);
+        SatCPBridge range = wrapper.boolVarToDomain(literal);
 
-	/**
-	 * Using all data accumulated since last clear(), update the domain
-	 * of the given CP variable
-	 * @param storeLevel	the current level of the store
-	 */
-	public void updateCpVariables(int storeLevel) {
+        if (BooleanVar.class.isInstance(cpVar)) {
+            // boolean variable, only remember something happened
+            @SuppressWarnings("unchecked") BooleanVar cpBoolVar = (BooleanVar) cpVar;
+            booleanVarsToUpdate.add(cpBoolVar);
+        } else {
+            // remember that something happened;
+            int cpVarIndex = cpVar.index;
+            intVarsToUpdate.set(cpVarIndex);
 
-		if (intVarsToUpdate.isEmpty() && booleanVarsToUpdate.isEmpty())
-			return;
-		
-		assert wrapper.log(this, "update CP variables "+intVarsToUpdate+booleanVarsToUpdate);
+            // is this the negation or the affirmation of some proposition ?
+            boolean isTrue = literal > 0;
 
-		// first, update the IntVar
-		for (int index = intVarsToUpdate.nextSetBit(0); index >= 0;
-			index = intVarsToUpdate.nextSetBit(index+1)) {
-			IntVar variable = (IntVar) wrapper.store.vars[index];
-			
-			assert wrapper.log(this, "updating %s, with lower %s and upper %s, " +
-					"excluded values are %s", variable, lowerBounds[index],
-					upperBounds[index], excludedValues[index]);
-			
-			// update the range bounds
-			Integer lower = lowerBounds[index];
-			Integer upper = upperBounds[index];
-			if (lower != null && upper != null) {
-				variable.domain.in(storeLevel, variable, lower, upper);
-			} else {
-				if (lower != null)
-					variable.domain.inMin(storeLevel, variable, lower);
-				if (upper != null)
-					variable.domain.inMax(storeLevel, variable, upper);
-			}
-			
-			// exclude some values from the domain
-			HashSet<Integer> excluded = excludedValues[variable.index];
-			if (excluded == null)
-				continue;
-			for (int value : excluded)
-				variable.domain.inComplement(storeLevel, variable, value);
-		
-		}
+            if (range.isEqualityBoolVar(literal)) {
+                // simple cases, equality propositions
+                if (isTrue) {
+                    // 'x=v', remember this by fixing the range
+                    upperBounds[cpVarIndex] = cpValue;
+                    lowerBounds[cpVarIndex] = cpValue;
+                } else {
+                    // 'x!=v', remember that this value is excluded
+                    if (excludedValues[cpVarIndex] == null)
+                        excludedValues[cpVarIndex] = new HashSet<Integer>();
+                    excludedValues[cpVarIndex].add(cpValue);
+                }
+            } else {
+                // check impacts on ranges
+                if (isTrue) {
+                    // 'x<=v' proposition
+                    if (upperBounds[cpVarIndex] == null)
+                        upperBounds[cpVarIndex] = cpValue;
+                    else {
+                        int curBound = upperBounds[cpVarIndex];
+                        if (cpValue < curBound)
+                            upperBounds[cpVarIndex] = cpValue;
+                    }
 
-		// then, boolean variables
-		for (BooleanVar variable : booleanVarsToUpdate) {
-			int isOne = wrapper.cpVarToBoolVar(variable, 1, true);
-			int isZero = wrapper.cpVarToBoolVar(variable, 0, true);
-			int isOneValue = core.trail.values[isOne];
-			int isZeroValue = core.trail.values[isZero];
+                } else {
+                    // 'not x<=v', so 'x>v' proposition
 
-			assert ! (isZeroValue * isOneValue > 0); // not both true or false
-			assert ! (isOneValue == 0 && isZeroValue == 0); // at least one set
+                    cpValue++; // work on '>=' predicate, not '>'
+                    if (lowerBounds[cpVarIndex] == null)
+                        lowerBounds[cpVarIndex] = cpValue;
+                    else {
+                        int curBound = lowerBounds[cpVarIndex];
+                        if (cpValue > curBound)
+                            lowerBounds[cpVarIndex] = cpValue;
+                    }
+                }
+            }
+        }
+    }
 
-			if (isOneValue > 0 || isZeroValue < 0)
-				variable.domain.in(storeLevel, variable, 1, 1);
-			else if (isZeroValue > 0 || isOneValue < 0)
-				variable.domain.in(storeLevel, variable, 0, 0);
-			else
-				throw new AssertionError("no changes for boolean var "+variable+"?");
-		}
+    /**
+     * Using all data accumulated since last clear(), update the domain
+     * of the given CP variable
+     *
+     * @param storeLevel the current level of the store
+     */
+    public void updateCpVariables(int storeLevel) {
 
-		assert wrapper.log(this, "updated CP variables "+intVarsToUpdate+booleanVarsToUpdate);
-	}
+        if (intVarsToUpdate.isEmpty() && booleanVarsToUpdate.isEmpty())
+            return;
 
-	/**
-	 * gets sure we won't have a NullPointerException
-	 * @param cpVar the CP variable we are about to access
-	 */
-	public void ensureAccess(IntVar cpVar) {
-		// only check things for true IntVar, not BooleanVar
-		if (cpVar.index >= 0) {
+        assert wrapper.log(this, "update CP variables " + intVarsToUpdate + booleanVarsToUpdate);
 
-			if (upperBounds.length <= cpVar.index) {
-				int newLen = 2 * cpVar.index;
-				upperBounds = Arrays.copyOf(upperBounds, newLen);
-				lowerBounds = Arrays.copyOf(lowerBounds, newLen);
-				excludedValues = Arrays.copyOf(excludedValues, newLen);
-			}
-		}
+        // first, update the IntVar
+        for (int index = intVarsToUpdate.nextSetBit(0); index >= 0; index = intVarsToUpdate.nextSetBit(index + 1)) {
+            IntVar variable = (IntVar) wrapper.store.vars[index];
 
-	}
-	
-	@Override
-	public String toString() {
-		// number of int vars to update
-		int countPos = 0;
-		countPos = intVarsToUpdate.cardinality();
-		
-		return String.format("SatChangesListener (%d IntVar and %d BoolVar) " +
-				"vars have changes", countPos, booleanVarsToUpdate.size());
-	}
+            assert wrapper.log(this, "updating %s, with lower %s and upper %s, " + "excluded values are %s", variable, lowerBounds[index],
+                upperBounds[index], excludedValues[index]);
 
-	public void initialize(Core core) {
-		this.core = core;
-		
-		// register
-		core.assertionModules[core.numAssertionModules++] = this;
-		core.propagateModules[core.numPropagateModules++] = this;
-		core.backjumpModules[core.numBackjumpModules++] = this;
-	}
+            // update the range bounds
+            Integer lower = lowerBounds[index];
+            Integer upper = upperBounds[index];
+            if (lower != null && upper != null) {
+                variable.domain.in(storeLevel, variable, lower, upper);
+            } else {
+                if (lower != null)
+                    variable.domain.inMin(storeLevel, variable, lower);
+                if (upper != null)
+                    variable.domain.inMax(storeLevel, variable, upper);
+            }
 
-	public void initialize(SatWrapper wrapper) {
-		this.wrapper = wrapper;
-	}
+            // exclude some values from the domain
+            HashSet<Integer> excluded = excludedValues[variable.index];
+            if (excluded == null)
+                continue;
+            for (int value : excluded)
+                variable.domain.inComplement(storeLevel, variable, value);
+
+        }
+
+        // then, boolean variables
+        for (BooleanVar variable : booleanVarsToUpdate) {
+            int isOne = wrapper.cpVarToBoolVar(variable, 1, true);
+            int isZero = wrapper.cpVarToBoolVar(variable, 0, true);
+            int isOneValue = core.trail.values[isOne];
+            int isZeroValue = core.trail.values[isZero];
+
+            assert !(isZeroValue * isOneValue > 0); // not both true or false
+            assert !(isOneValue == 0 && isZeroValue == 0); // at least one set
+
+            if (isOneValue > 0 || isZeroValue < 0)
+                variable.domain.in(storeLevel, variable, 1, 1);
+            else if (isZeroValue > 0 || isOneValue < 0)
+                variable.domain.in(storeLevel, variable, 0, 0);
+            else
+                throw new AssertionError("no changes for boolean var " + variable + "?");
+        }
+
+        assert wrapper.log(this, "updated CP variables " + intVarsToUpdate + booleanVarsToUpdate);
+    }
+
+    /**
+     * gets sure we won't have a NullPointerException
+     *
+     * @param cpVar the CP variable we are about to access
+     */
+    public void ensureAccess(IntVar cpVar) {
+        // only check things for true IntVar, not BooleanVar
+        if (cpVar.index >= 0) {
+
+            if (upperBounds.length <= cpVar.index) {
+                int newLen = 2 * cpVar.index;
+                upperBounds = Arrays.copyOf(upperBounds, newLen);
+                lowerBounds = Arrays.copyOf(lowerBounds, newLen);
+                excludedValues = Arrays.copyOf(excludedValues, newLen);
+            }
+        }
+
+    }
+
+    @Override public String toString() {
+        // number of int vars to update
+        int countPos = 0;
+        countPos = intVarsToUpdate.cardinality();
+
+        return String.format("SatChangesListener (%d IntVar and %d BoolVar) " + "vars have changes", countPos, booleanVarsToUpdate.size());
+    }
+
+    public void initialize(Core core) {
+        this.core = core;
+
+        // register
+        core.assertionModules[core.numAssertionModules++] = this;
+        core.propagateModules[core.numPropagateModules++] = this;
+        core.backjumpModules[core.numBackjumpModules++] = this;
+    }
+
+    public void initialize(SatWrapper wrapper) {
+        this.wrapper = wrapper;
+    }
 }

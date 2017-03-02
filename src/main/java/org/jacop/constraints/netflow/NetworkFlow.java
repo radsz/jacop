@@ -1,32 +1,31 @@
 /**
- *  NetworkFlow.java 
- *  This file is part of JaCoP.
- *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
- *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU Affero General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU Affero General Public License for more details.
- *  
- *  Notwithstanding any other provision of this License, the copyright
- *  owners of this work supplement the terms of this License with terms
- *  prohibiting misrepresentation of the origin of this work and requiring
- *  that modified versions of this work be marked in reasonable ways as
- *  different from the original version. This supplement of the license
- *  terms is in accordance with Section 7 of GNU Affero General Public
- *  License version 3.
- *
- *  You should have received a copy of the GNU Affero General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
+ * NetworkFlow.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.jacop.constraints.netflow;
@@ -51,301 +50,290 @@ import org.jacop.core.UsesQueueVariable;
 import org.jacop.core.Var;
 
 /**
- * 
+ *
  * The network flow constraint. Use the NetworkBuilder to create a network and
  * instantiate the network.
- * 
+ *
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.4
- * 
+ *
  */
 
 public class NetworkFlow extends Constraint implements UsesQueueVariable {
 
-	private static final int QUEUE_INDEX = 2;
-	private static final boolean DO_INSTRUMENTATION = false;
-	private static final boolean SHOW_LEVEL = false;
+    private static final int QUEUE_INDEX = 2;
+    private static final boolean DO_INSTRUMENTATION = false;
+    private static final boolean SHOW_LEVEL = false;
 
-	static {
-		// fails if asserts are disabled
-		// asserts.Assert.forceAsserts();
-	}
+    static {
+        // fails if asserts are disabled
+        // asserts.Assert.forceAsserts();
+    }
 
-	/** Instance counter */
-	static AtomicInteger idNumber = new AtomicInteger(0);
+    /** Instance counter */
+    static AtomicInteger idNumber = new AtomicInteger(0);
 
-	/** The network */
-//	public final Network network;
-	public final Pruning network;
+    /** The network */
+    //	public final Network network;
+    public final Pruning network;
 
-	/** The cost variable */
-	public IntVar costVariable;
+    /** The cost variable */
+    public IntVar costVariable;
 
-	/** The variables and their handlers */
-	public final Map<IntVar, VarHandler> map;
+    /** The variables and their handlers */
+    public final Map<IntVar, VarHandler> map;
 
-	/** The set of queued variables */
-	public final Set<IntVar> queue;
+    /** The set of queued variables */
+    public final Set<IntVar> queue;
 
-	/** Disables the queue variable function during consistency */
-	public boolean disableQueueVariable;
+    /** Disables the queue variable function during consistency */
+    public boolean disableQueueVariable;
 
-	public int previousLevel = -1;
-	
-	/********************/
-	/** Initialization **/
+    public int previousLevel = -1;
 
-	private NetworkFlow(List<Node> nodes, 
-								  List<Arc> arcs,
-								  List<VarHandler> flowVariables, 
-								  IntVar costVariable) {
-		
-		this.network = new Pruning(nodes, arcs);
-		this.map = new HashMap<IntVar, VarHandler>();
-		this.queue = new HashSet<IntVar>();
-		this.costVariable = costVariable;
+    /********************/
+    /** Initialization **/
 
-		for (VarHandler ds : flowVariables) {
-			for (IntVar var : ds.listVariables()) {
-				VarHandler handler = map.get(var);
-				if (handler == null) {
-					map.put(var, ds);
-				} else if (handler instanceof MultiVarHandler) {
-					((MultiVarHandler)handler).add(ds);
-				} else {
-					map.put(var, new MultiVarHandler(var, handler, ds));
-				}
-			}
-		}
+    private NetworkFlow(List<Node> nodes, List<Arc> arcs, List<VarHandler> flowVariables, IntVar costVariable) {
 
-		// fields in superclass
-		this.queueIndex = QUEUE_INDEX;
-		this.numberId = idNumber.incrementAndGet();
-		this.numberArgs = (short) map.size();
+        this.network = new Pruning(nodes, arcs);
+        this.map = new HashMap<IntVar, VarHandler>();
+        this.queue = new HashSet<IntVar>();
+        this.costVariable = costVariable;
 
-		// for (VarHandler vh : flowVariables)
-		//     System.out.println("{flow/cost | structure} var = " + vh.listVariables());
-		// for (Arc arc : arcs) 
-		//     System.out.println(arc);
+        for (VarHandler ds : flowVariables) {
+            for (IntVar var : ds.listVariables()) {
+                VarHandler handler = map.get(var);
+                if (handler == null) {
+                    map.put(var, ds);
+                } else if (handler instanceof MultiVarHandler) {
+                    ((MultiVarHandler) handler).add(ds);
+                } else {
+                    map.put(var, new MultiVarHandler(var, handler, ds));
+                }
+            }
+        }
 
-	}
+        // fields in superclass
+        this.queueIndex = QUEUE_INDEX;
+        this.numberId = idNumber.incrementAndGet();
+        this.numberArgs = (short) map.size();
 
-	public NetworkFlow(NetworkBuilder builder) {
-		
-		this(builder.nodeList, builder.arcList, builder.handlerList, builder.costVariable);
-	
-	}
+        // for (VarHandler vh : flowVariables)
+        //     System.out.println("{flow/cost | structure} var = " + vh.listVariables());
+        // for (Arc arc : arcs)
+        //     System.out.println(arc);
 
-	@Override
-	public ArrayList<Var> arguments() {
-		return new ArrayList<Var>(map.keySet());
-	}
+    }
 
-	@Override
-	public int getConsistencyPruningEvent(Var var) {
-		return map.get(var).getPruningEvent(var);
-	}
+    public NetworkFlow(NetworkBuilder builder) {
 
-	@Override
-	public void impose(Store store) {
+        this(builder.nodeList, builder.arcList, builder.handlerList, builder.costVariable);
 
-		if (costVariable == null) {
-			costVariable = new IntVar(store, "Cost", 0, 0);
-			System.err.println("WARNING: No cost variable was set, using zero cost.");
-		}
+    }
 
-		network.initialize(store);
-		costVariable.putConstraint(this);
-		for (IntVar variable : map.keySet())
-			variable.putConstraint(this);
+    @Override public ArrayList<Var> arguments() {
+        return new ArrayList<Var>(map.keySet());
+    }
 
-		// register with store
-		queueIndex = QUEUE_INDEX;
-		store.registerRemoveLevelListener(this);
-		store.registerRemoveLevelLateListener(this);
-		store.addChanged(this);
-		store.countConstraint();
-	}
+    @Override public int getConsistencyPruningEvent(Var var) {
+        return map.get(var).getPruningEvent(var);
+    }
 
-	/***************************/
-	/** Search {@literal &} Backtracking **/
+    @Override public void impose(Store store) {
 
-	@Override
-	public void queueVariable(int level, Var variable) {
-		// DomainStructure structure = map.get(variable);
+        if (costVariable == null) {
+            costVariable = new IntVar(store, "Cost", 0, 0);
+            System.err.println("WARNING: No cost variable was set, using zero cost.");
+        }
 
-		if (!disableQueueVariable) {
-//			System.out.println("\tQueue var : " + variable);
-			if (variable == costVariable) {
-				// System.out.println("** Cost var queued, abort");
-				return;
-			}
-			queue.add((IntVar)variable);
-		} else {
-			// TODO remove
-			// System.err.println("Can this actually happen ... " + variable);
-		}
-	}
-	
-	private void updateGraph() {
-		// update graph
-		network.increaseLevel();
-		try {
-			disableQueueVariable = true;
-			for (IntVar variable : queue) {
-				VarHandler handler = map.get(variable);
-				handler.processEvent(variable, network);
-			}
-		} finally {
-			queue.clear();
-			disableQueueVariable = false;
-			// network.increaseLevel();
-		}
-	}
+        network.initialize(store);
+        costVariable.putConstraint(this);
+        for (IntVar variable : map.keySet())
+            variable.putConstraint(this);
 
-	@Override
-	public void consistency(Store store) {
-		
-		if (SHOW_LEVEL) {
-			System.out.println();
-			System.out.println("--------- Level " + store.level);
-			System.out.println();
-		}
+        // register with store
+        queueIndex = QUEUE_INDEX;
+        store.registerRemoveLevelListener(this);
+        store.registerRemoveLevelLateListener(this);
+        store.addChanged(this);
+        store.countConstraint();
+    }
 
-		if (DO_INSTRUMENTATION) {Statistics.consistencyCalls++;}
-		updateGraph();
-		
-		boolean first = true; //(previousLevel != store.level);
-		//System.out.println(store.level + "   (" + first + ")");
-		previousLevel = store.level;
-		
-		int iteration = 0;
-		while (network.needsUpdate(costVariable.max()) || (first && iteration == 0)) {
-		
-			if (DO_INSTRUMENTATION) {Statistics.consistencyIterations++;}
-			//System.out.println(iteration);
-			
-			iteration++;
-			if (SHOW_LEVEL) {
-				System.out.println("--------- => Iteration " + iteration);
-			}
-			
-			// recompute flow
-			int result = network.networkSimplex(9999999);
-			// network.print();
+    /***************************/
+    /** Search {@literal &} Backtracking **/
 
-			// is flow infeasible ?
-			if (result == -2) {
-				throw Store.failException;
-			}
+    @Override public void queueVariable(int level, Var variable) {
+        // DomainStructure structure = map.get(variable);
 
-			// compute cost and throw failure on overflow
-			int cost = (int) network.cost(costVariable.max() + 1);
-			if (cost > costVariable.max()) {
-				throw Store.failException;
-			}
-			// prune minimum cost
-			if (cost > costVariable.min()) {
-				costVariable.domain.inMin(store.level, costVariable, cost);
-			}
+        if (!disableQueueVariable) {
+            //			System.out.println("\tQueue var : " + variable);
+            if (variable == costVariable) {
+                // System.out.println("** Cost var queued, abort");
+                return;
+            }
+            queue.add((IntVar) variable);
+        } else {
+            // TODO remove
+            // System.err.println("Can this actually happen ... " + variable);
+        }
+    }
 
-			// perform domain pruning
-			int costLimit = costVariable.max() - costVariable.min();
-			
-			network.pruneNodesWithSmallDegree();
-			network.analyze(costLimit);
-			
-			assert (checkFlow(network));
-			assert (checkStructure(network));
-			
-			updateGraph();
-		}
+    private void updateGraph() {
+        // update graph
+        network.increaseLevel();
+        try {
+            disableQueueVariable = true;
+            for (IntVar variable : queue) {
+                VarHandler handler = map.get(variable);
+                handler.processEvent(variable, network);
+            }
+        } finally {
+            queue.clear();
+            disableQueueVariable = false;
+            // network.increaseLevel();
+        }
+    }
 
-		
-		// compute cost and throw failure on overflow
-		int cost = (int) network.cost(costVariable.max() + 1);
-		if (cost > costVariable.max()) {
-			throw Store.failException;
-		}
-		// prune minimum cost
-		if (cost > costVariable.min()) {
-			costVariable.domain.inMin(store.level, costVariable, cost);
-		}
+    @Override public void consistency(Store store) {
 
-		// KKU, 2016-02-08, max value of cost variable is equal min
-		// if all constraint variables are ground.
-		// It is difficult to compute the better upper bound since we have three types of variables
-		// flow, cost weight and structure. Specially structure variables are difficult since
-		// they "dynamically" make arcs active/inactive.
-		boolean allVarsGround = true;
-		for (IntVar v : map.keySet()) 
-		    if (!v.singleton()) {
-			allVarsGround = false;
-			break;
-		    }
-		if (allVarsGround)
-		    costVariable.domain.inMax(store.level, costVariable, cost);
-	}
+        if (SHOW_LEVEL) {
+            System.out.println();
+            System.out.println("--------- Level " + store.level);
+            System.out.println();
+        }
 
-	@Override
-	public void removeLevel(int level) {
-		queue.clear();
-	}
+        if (DO_INSTRUMENTATION) {
+            Statistics.consistencyCalls++;
+        }
+        updateGraph();
 
-	@Override
-	public void removeLevelLate(int level) {
+        boolean first = true; //(previousLevel != store.level);
+        //System.out.println(store.level + "   (" + first + ")");
+        previousLevel = store.level;
 
-		if (SHOW_LEVEL) {
-			System.out.println();
-			System.out.println("######### Level " + level);
-			System.out.println();
-		}
+        int iteration = 0;
+        while (network.needsUpdate(costVariable.max()) || (first && iteration == 0)) {
 
-		network.backtrack();
-	
-	}
+            if (DO_INSTRUMENTATION) {
+                Statistics.consistencyIterations++;
+            }
+            //System.out.println(iteration);
 
-	@Override
-	public boolean satisfied() {
-		// TODO Auto-generated method stub
-		return false;
-	}
+            iteration++;
+            if (SHOW_LEVEL) {
+                System.out.println("--------- => Iteration " + iteration);
+            }
 
-	/*************/
-	/** Cleanup **/
+            // recompute flow
+            int result = network.networkSimplex(9999999);
+            // network.print();
 
-	@Override
-	public void removeConstraint() {
+            // is flow infeasible ?
+            if (result == -2) {
+                throw Store.failException;
+            }
 
-		queue.clear();
+            // compute cost and throw failure on overflow
+            int cost = (int) network.cost(costVariable.max() + 1);
+            if (cost > costVariable.max()) {
+                throw Store.failException;
+            }
+            // prune minimum cost
+            if (cost > costVariable.min()) {
+                costVariable.domain.inMin(store.level, costVariable, cost);
+            }
 
-		costVariable.removeConstraint(this);
-		for (IntVar variable : map.keySet())
-			variable.removeConstraint(this);
+            // perform domain pruning
+            int costLimit = costVariable.max() - costVariable.min();
 
-		// TODO Auto-generated method stub
-		throw new AssertionError("Not implemented");
-	}
+            network.pruneNodesWithSmallDegree();
+            network.analyze(costLimit);
 
-	@Override
-	public void increaseWeight() {
-		// TODO Auto-generated method stub
-		throw new AssertionError("Not implemented");
-	}
+            assert (checkFlow(network));
+            assert (checkStructure(network));
 
-	/*****************/
-	/** Identifiers **/
+            updateGraph();
+        }
 
-	@Override
-	public String id() {
-		// TODO Auto-generated method stub
-		return null;
-	}
 
-	@Override
-	public String toString() {
-		// TODO Auto-generated method stub
-		return null;
-	}
+        // compute cost and throw failure on overflow
+        int cost = (int) network.cost(costVariable.max() + 1);
+        if (cost > costVariable.max()) {
+            throw Store.failException;
+        }
+        // prune minimum cost
+        if (cost > costVariable.min()) {
+            costVariable.domain.inMin(store.level, costVariable, cost);
+        }
+
+        // KKU, 2016-02-08, max value of cost variable is equal min
+        // if all constraint variables are ground.
+        // It is difficult to compute the better upper bound since we have three types of variables
+        // flow, cost weight and structure. Specially structure variables are difficult since
+        // they "dynamically" make arcs active/inactive.
+        boolean allVarsGround = true;
+        for (IntVar v : map.keySet())
+            if (!v.singleton()) {
+                allVarsGround = false;
+                break;
+            }
+        if (allVarsGround)
+            costVariable.domain.inMax(store.level, costVariable, cost);
+    }
+
+    @Override public void removeLevel(int level) {
+        queue.clear();
+    }
+
+    @Override public void removeLevelLate(int level) {
+
+        if (SHOW_LEVEL) {
+            System.out.println();
+            System.out.println("######### Level " + level);
+            System.out.println();
+        }
+
+        network.backtrack();
+
+    }
+
+    @Override public boolean satisfied() {
+        // TODO Auto-generated method stub
+        return false;
+    }
+
+    /*************/
+    /** Cleanup **/
+
+    @Override public void removeConstraint() {
+
+        queue.clear();
+
+        costVariable.removeConstraint(this);
+        for (IntVar variable : map.keySet())
+            variable.removeConstraint(this);
+
+        // TODO Auto-generated method stub
+        throw new AssertionError("Not implemented");
+    }
+
+    @Override public void increaseWeight() {
+        // TODO Auto-generated method stub
+        throw new AssertionError("Not implemented");
+    }
+
+    /*****************/
+    /** Identifiers **/
+
+    @Override public String id() {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override public String toString() {
+        // TODO Auto-generated method stub
+        return null;
+    }
 
 }

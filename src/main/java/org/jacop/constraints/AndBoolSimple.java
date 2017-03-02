@@ -39,7 +39,7 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 
 /**
- * If both a and b are equal 1 then result variable is equal 1 too. Otherwise, result variable 
+ * If both a and b are equal 1 then result variable is equal 1 too. Otherwise, result variable
  * is equal to zero. It restricts the domain of all x as well as result to be between 0 and 1.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -61,18 +61,18 @@ public class AndBoolSimple extends PrimitiveConstraint {
     public IntVar result;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as 
+     * It specifies the arguments required to be saved by an XML format as well as
      * the constructor being called to recreate an object from an XML format.
      */
     public static String[] xmlAttributes = {"a", "b", "result"};
 
 
     /**
-     * It constructs AndBoolSimple. 
+     * It constructs AndBoolSimple.
      *
-     * @param a parameter to predicate.
-     * @param b parameter to predicate.
-     * @param result variable which is equal 0 if any of x is equal to zero. 
+     * @param a      parameter to predicate.
+     * @param b      parameter to predicate.
+     * @param result variable which is equal 0 if any of x is equal to zero.
      */
     public AndBoolSimple(IntVar a, IntVar b, IntVar result) {
 
@@ -152,13 +152,11 @@ public class AndBoolSimple extends PrimitiveConstraint {
     }
 
     @Override public boolean satisfied() {
-        return (result.min() == 1 && a.min() == 1 && b.min() == 1) || (result.max() == 0 && (a.max() == 0
-            || b.max() == 0));
+        return (result.min() == 1 && a.min() == 1 && b.min() == 1) || (result.max() == 0 && (a.max() == 0 || b.max() == 0));
     }
 
     @Override public boolean notSatisfied() {
-        return ((result.min() == 1 && (a.max() == 0 || b.max() == 0)) || (result.max() == 0 && a.min() == 1
-            && b.min() == 1));
+        return ((result.min() == 1 && (a.max() == 0 || b.max() == 0)) || (result.max() == 0 && a.min() == 1 && b.min() == 1));
     }
 
     @Override public void removeConstraint() {
@@ -183,7 +181,7 @@ public class AndBoolSimple extends PrimitiveConstraint {
     public String checkInvariants() {
 
         if (a.min() < 0 || a.max() > 1)
-                return "Variable " + a + " does not have boolean domain";
+            return "Variable " + a + " does not have boolean domain";
 
         if (b.min() < 0 || b.max() > 1)
             return "Variable " + b + " does not have boolean domain";

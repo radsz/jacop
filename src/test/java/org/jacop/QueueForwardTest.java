@@ -1,32 +1,31 @@
 /**
- *  QueueForwardTest.java
- *  This file is part of JaCoP.
- *
- *  JaCoP is a Java Constraint Programming solver.
- *
- *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU Affero General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU Affero General Public License for more details.
- *
- *  Notwithstanding any other provision of this License, the copyright
- *  owners of this work supplement the terms of this License with terms
- *  prohibiting misrepresentation of the origin of this work and requiring
- *  that modified versions of this work be marked in reasonable ways as
- *  different from the original version. This supplement of the license
- *  terms is in accordance with Section 7 of GNU Affero General Public
- *  License version 3.
- *
- *  You should have received a copy of the GNU Affero General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
+ * QueueForwardTest.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.jacop;
@@ -62,8 +61,7 @@ public class QueueForwardTest {
     //   String nl = System.lineSeparator();
     String nl = "\n";
 
-    @Test
-    public void testQueueForwardNot() {
+    @Test public void testQueueForwardNot() {
 
         Store store = new Store();
 
@@ -72,9 +70,9 @@ public class QueueForwardTest {
 
         FloatVar[] v = {x, y};
 
-        store.impose(new Not(new LinearFloat(store, v, new double[] {1,-1}, "==", 0)));
+        store.impose(new Not(new LinearFloat(store, v, new double[] {1, -1}, "==", 0)));
 
-        System.out.println ("Precision = " + FloatDomain.precision());
+        System.out.println("Precision = " + FloatDomain.precision());
 
         // search for solutions and print results
         Search<FloatVar> label = new DepthFirstSearch<FloatVar>();
@@ -83,11 +81,10 @@ public class QueueForwardTest {
 
         boolean result = label.labeling(store, select);
 
-        if ( result ) {
+        if (result) {
             System.out.println("Solutions: ");
             label.printAllSolutions();
-        }
-        else
+        } else
             System.out.println("*** No");
 
         assertEquals(true, result);
@@ -95,8 +92,7 @@ public class QueueForwardTest {
     }
 
 
-    @Test
-    public void testQueueForwardReified() {
+    @Test public void testQueueForwardReified() {
 
         Store store = new Store();
 
@@ -106,9 +102,9 @@ public class QueueForwardTest {
         FloatVar[] v = {x, y};
 
         IntVar one = new IntVar(store, "one", 1, 1);
-        store.impose(new Reified(new LinearFloat(store, v, new double[] {1,-1}, "==", 0), one));
+        store.impose(new Reified(new LinearFloat(store, v, new double[] {1, -1}, "==", 0), one));
 
-        System.out.println ("Precision = " + FloatDomain.precision());
+        System.out.println("Precision = " + FloatDomain.precision());
 
         // search for solutions and print results
         Search<FloatVar> label = new DepthFirstSearch<FloatVar>();
@@ -117,19 +113,17 @@ public class QueueForwardTest {
 
         boolean result = label.labeling(store, select);
 
-        if ( result ) {
+        if (result) {
             System.out.println("Solutions: ");
             label.printAllSolutions();
-        }
-        else
+        } else
             System.out.println("*** No");
 
         assertEquals(false, result);
 
     }
 
-    @Test
-    public void testQueueForwardNestedReifiedNot() {
+    @Test public void testQueueForwardNestedReifiedNot() {
 
         Store store = new Store();
 
@@ -159,25 +153,22 @@ public class QueueForwardTest {
 
     }
 
-    @Test
-    public void testQueueForwardNoException() {
+    @Test public void testQueueForwardNoException() {
 
         Fz2jacop fz2jacop = new Fz2jacop();
 
         // Just checking if does not throw an exception.
-        fz2jacop.main(new String[] { "src/test/fz/queueForwardTest.fzn" } );
+        fz2jacop.main(new String[] {"src/test/fz/queueForwardTest.fzn"});
 
     }
 
 
-    @Test
-    @Ignore
-    public void testBoundEventCorrection() {
+    @Test @Ignore public void testBoundEventCorrection() {
 
         Fz2jacop fz2jacop = new Fz2jacop();
 
         // Just checking if does not throw an exception.
-        fz2jacop.main(new String[] { "-n 69", "-s", "-a", "-v", "src/test/fz/cc_base.fzn" } );
+        fz2jacop.main(new String[] {"-n 69", "-s", "-a", "-v", "src/test/fz/cc_base.fzn"});
 
 
     }

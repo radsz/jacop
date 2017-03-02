@@ -42,14 +42,14 @@ import org.jacop.floats.constraints.linear.*;
 
 /**
  * LinearInt constraint implements the weighted summation over several
- * variables . 
- *
+ * variables .
+ * <p>
  * sum(i in 1..N)(ai*xi) = b
- *
+ * <p>
  * It provides the weighted sum from all variables on the list.
  * The weights are integers.
- *
- * This implementaiton is based on 
+ * <p>
+ * This implementaiton is based on
  * "Bounds Consistency Techniques for Long Linear Constraints"
  * by Warwick Harvey and Joachim Schimpf
  *
@@ -98,17 +98,17 @@ public class LinearInt extends PrimitiveConstraint {
     int a[];
 
     /**
-     * It specifies variable for the overall sum. 
+     * It specifies variable for the overall sum.
      */
     int b;
 
     /**
-     * It specifies the index of the last positive coefficient. 
+     * It specifies the index of the last positive coefficient.
      */
     int pos;
 
     /**
-     * It specifies the number of varibales/coefficients. 
+     * It specifies the number of varibales/coefficients.
      */
     int l;
 
@@ -123,20 +123,21 @@ public class LinearInt extends PrimitiveConstraint {
     int sumMin, sumMax;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as 
+     * It specifies the arguments required to be saved by an XML format as well as
      * the constructor being called to recreate an object from an XML format.
      */
     public static String[] xmlAttributes = {"list", "weights", "sum"};
 
 
-    protected LinearInt() {}
+    protected LinearInt() {
+    }
 
     /**
-     * @param store current store
-     * @param list variables which are being multiplied by weights.
+     * @param store   current store
+     * @param list    variables which are being multiplied by weights.
      * @param weights weight for each variable.
-     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum the sum of weighted variables.
+     * @param rel     the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum     the sum of weighted variables.
      */
     public LinearInt(Store store, IntVar[] list, int[] weights, String rel, int sum) {
 
@@ -147,11 +148,11 @@ public class LinearInt extends PrimitiveConstraint {
     }
 
     /**
-     * @param store current store
-     * @param list variables which are being multiplied by weights.
+     * @param store   current store
+     * @param list    variables which are being multiplied by weights.
      * @param weights weight for each variable.
-     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum the sum of weighted variables.
+     * @param rel     the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum     the sum of weighted variables.
      */
     public LinearInt(Store store, IntVar[] list, int[] weights, String rel, IntVar sum) {
 
@@ -168,15 +169,15 @@ public class LinearInt extends PrimitiveConstraint {
     }
 
     /**
-     * It constructs the constraint LinearInt. 
-     * @param store current store
+     * It constructs the constraint LinearInt.
+     *
+     * @param store     current store
      * @param variables variables which are being multiplied by weights.
-     * @param weights weight for each variable.
-     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum the sum of weighted variables.
+     * @param weights   weight for each variable.
+     * @param rel       the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum       the sum of weighted variables.
      */
-    public LinearInt(Store store, ArrayList<? extends IntVar> variables, ArrayList<Integer> weights, String rel,
-        int sum) {
+    public LinearInt(Store store, ArrayList<? extends IntVar> variables, ArrayList<Integer> weights, String rel, int sum) {
 
         int[] w = new int[weights.size()];
         for (int i = 0; i < weights.size(); i++)
@@ -388,7 +389,7 @@ public class LinearInt extends PrimitiveConstraint {
     @Override public void impose(Store store) {
 
         if (x == null || x.length == 0)
-	          return;
+            return;
 
         reified = false;
 

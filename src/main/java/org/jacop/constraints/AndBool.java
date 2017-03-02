@@ -50,7 +50,8 @@ public class AndBool extends DecomposedConstraint<PrimitiveConstraint> {
 
     /**
      * It constructs and constraint on variables.
-     * @param a parameters variable.
+     *
+     * @param a      parameters variable.
      * @param result variable.
      */
     public AndBool(IntVar[] a, IntVar result) {
@@ -62,7 +63,8 @@ public class AndBool extends DecomposedConstraint<PrimitiveConstraint> {
 
     /**
      * It constructs and constraint on variables.
-     * @param a parameters variable.
+     *
+     * @param a      parameters variable.
      * @param result variable.
      */
     public AndBool(ArrayList<IntVar> a, IntVar result) {
@@ -76,8 +78,9 @@ public class AndBool extends DecomposedConstraint<PrimitiveConstraint> {
 
     /**
      * It constructs and constraint on variables.
-     * @param a parameter variable.
-     * @param b parameter variable.
+     *
+     * @param a      parameter variable.
+     * @param b      parameter variable.
      * @param result variable.
      */
     public AndBool(IntVar a, IntVar b, IntVar result) {
@@ -98,7 +101,7 @@ public class AndBool extends DecomposedConstraint<PrimitiveConstraint> {
 
     }
 
-  public String toString() {
-    return c.toString();
-  } 
+    public String toString() {
+        return c.toString();
+    }
 }

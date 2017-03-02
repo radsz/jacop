@@ -22,8 +22,7 @@ import static org.junit.Assert.fail;
  * @author Mariusz Świerkot
  */
 
-@RunWith(Parameterized.class)
-public class MinizincBasedTestUpTo1Hours extends MinizincBasedTestsHelper{
+@RunWith(Parameterized.class) public class MinizincBasedTestUpTo1Hours extends MinizincBasedTestsHelper {
     protected static final String timeCategory = "upTo1hour/";
 
     public MinizincBasedTestUpTo1Hours(String testFilename) {
@@ -32,14 +31,12 @@ public class MinizincBasedTestUpTo1Hours extends MinizincBasedTestsHelper{
 
     }
 
-    @Parameterized.Parameters
-    public static Collection<String> parametricTest() throws IOException {
+    @Parameterized.Parameters public static Collection<String> parametricTest() throws IOException {
 
         return fileReader(timeCategory);
     }
 
-    @Test(timeout=5400000)
-    public void testMinizinc() throws IOException {
+    @Test(timeout = 5400000) public void testMinizinc() throws IOException {
 
         testExecution(timeCategory);
     }

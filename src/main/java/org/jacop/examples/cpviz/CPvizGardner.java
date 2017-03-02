@@ -29,10 +29,10 @@ import org.jacop.set.search.IndomainSetMin;
 public class CPvizGardner {
     Store store;
 
-    public static void main (String args[]) {
+    public static void main(String args[]) {
 
-      CPvizGardner run = new CPvizGardner();
-      run.examples();
+        CPvizGardner run = new CPvizGardner();
+        run.examples();
     }
 
     CPvizGardner() {
@@ -40,93 +40,88 @@ public class CPvizGardner {
 
     void examples() {
 
-	ex1();
+        ex1();
 
-   }
+    }
 
 
     void ex1() {
-//       long T1, T2, T;
-//       T1 = System.currentTimeMillis();
+        //       long T1, T2, T;
+        //       T1 = System.currentTimeMillis();
 
 
- 	Thread tread = java.lang.Thread.currentThread();
-	java.lang.management.ThreadMXBean b = java.lang.management.ManagementFactory.getThreadMXBean();
-	
-	long startCPU = b.getThreadCpuTime(tread.getId());
-	long startUser = b.getThreadUserTime(tread.getId());
+        Thread tread = java.lang.Thread.currentThread();
+        java.lang.management.ThreadMXBean b = java.lang.management.ManagementFactory.getThreadMXBean();
 
-	int num_days = 35;
-	int num_persons_per_meeting = 3;
-	int persons = 15;
+        long startCPU = b.getThreadCpuTime(tread.getId());
+        long startUser = b.getThreadUserTime(tread.getId());
 
-	System.out.println("Gardner dinner problem ");
-	store = new Store();
+        int num_days = 35;
+        int num_persons_per_meeting = 3;
+        int persons = 15;
 
-	SetVar[] days = new SetVar[35];
-	for (int i=0; i< days.length; i++)
-	    days[i] = new SetVar(store, "days["+i+"]", 1, persons);
+        System.out.println("Gardner dinner problem ");
+        store = new Store();
 
-	// all_different(days)
-	for (int i=0; i<days.length-1; i++)
-	    for (int j=i+1; j<days.length; j++)
-		store.impose(new Not(new AeqB(days[i], days[j])));
+        SetVar[] days = new SetVar[35];
+        for (int i = 0; i < days.length; i++)
+            days[i] = new SetVar(store, "days[" + i + "]", 1, persons);
 
-	// card(days[i]) = num_persons_per_meeting
-	for (int i=0; i<days.length; i++)
-	    store.impose(new CardA(days[i], num_persons_per_meeting));
+        // all_different(days)
+        for (int i = 0; i < days.length - 1; i++)
+            for (int j = i + 1; j < days.length; j++)
+                store.impose(new Not(new AeqB(days[i], days[j])));
 
-  	for (int i=0; i<days.length-1; i++)
-  	    for (int j=i+1; j<days.length; j++) {
-		SetVar intersect = new SetVar(store, ""+i+j, 1, persons); 
-		    store.impose(new AintersectBeqC(days[i], days[j], intersect));
-		    IntVar card = new BooleanVar(store); //IntVar(store, 0, 1);
-		    store.impose(new CardAeqX(intersect, card));
-		}
+        // card(days[i]) = num_persons_per_meeting
+        for (int i = 0; i < days.length; i++)
+            store.impose(new CardA(days[i], num_persons_per_meeting));
+
+        for (int i = 0; i < days.length - 1; i++)
+            for (int j = i + 1; j < days.length; j++) {
+                SetVar intersect = new SetVar(store, "" + i + j, 1, persons);
+                store.impose(new AintersectBeqC(days[i], days[j], intersect));
+                IntVar card = new BooleanVar(store); //IntVar(store, 0, 1);
+                store.impose(new CardAeqX(intersect, card));
+            }
 
 
-      System.out.println( "\nVariable store size: "+ store.size()+
-			  "\nNumber of constraints: " + store.numberConstraints()
-			  );
+        System.out.println("\nVariable store size: " + store.size() + "\nNumber of constraints: " + store.numberConstraints());
 
-      boolean Result = store.consistency();
-      System.out.println("*** consistency = " + Result);
+        boolean Result = store.consistency();
+        System.out.println("*** consistency = " + Result);
 
-      Search<SetVar> label = new DepthFirstSearch<SetVar>();
+        Search<SetVar> label = new DepthFirstSearch<SetVar>();
 
-      SelectChoicePoint<SetVar> varSelect = new SimpleSelect<SetVar>(days, 
-						     null,
-						     new IndomainSetMin<SetVar>());
+        SelectChoicePoint<SetVar> varSelect = new SimpleSelect<SetVar>(days, null, new IndomainSetMin<SetVar>());
 
-      label.setSolutionListener(new SimpleSolutionListener<SetVar>());
-      label.getSolutionListener().searchAll(false);
-      label.getSolutionListener().recordSolutions(false);
+        label.setSolutionListener(new SimpleSolutionListener<SetVar>());
+        label.getSolutionListener().searchAll(false);
+        label.getSolutionListener().recordSolutions(false);
 
-      // Trace --->
-      SelectChoicePoint<SetVar> select = new TraceGenerator<SetVar>(label, varSelect); //, days);
-//      label.setConsistencyListener((ConsistencyListener)select);
-//     label.setExitChildListener((ExitChildListener)select);
-//      label.setExitListener((ExitListener)select);
-      // <---
+        // Trace --->
+        SelectChoicePoint<SetVar> select = new TraceGenerator<SetVar>(label, varSelect); //, days);
+        //      label.setConsistencyListener((ConsistencyListener)select);
+        //     label.setExitChildListener((ExitChildListener)select);
+        //      label.setExitListener((ExitListener)select);
+        // <---
 
-      Result = label.labeling(store, select);
+        Result = label.labeling(store, select);
 
-      if (Result) {
-	  System.out.println("*** Yes");
-	  for (int i=0; i<days.length; i++) {
-	      System.out.println(days[i]);
-	  }
-      }
-      else
-	  System.out.println("*** No");
+        if (Result) {
+            System.out.println("*** Yes");
+            for (int i = 0; i < days.length; i++) {
+                System.out.println(days[i]);
+            }
+        } else
+            System.out.println("*** No");
 
-//       T2 = System.currentTimeMillis();
-//       T = T2 - T1;
-//       System.out.println("\n\t*** Execution time = "+ T + " ms");
+        //       T2 = System.currentTimeMillis();
+        //       T = T2 - T1;
+        //       System.out.println("\n\t*** Execution time = "+ T + " ms");
 
-	System.out.println( "ThreadCpuTime = " + (b.getThreadCpuTime(tread.getId()) - startCPU)/(long)1e+6 + "ms");
-	System.out.println( "ThreadUserTime = " + (b.getThreadUserTime(tread.getId()) - startUser)/(long)1e+6 + "ms" );
+        System.out.println("ThreadCpuTime = " + (b.getThreadCpuTime(tread.getId()) - startCPU) / (long) 1e+6 + "ms");
+        System.out.println("ThreadUserTime = " + (b.getThreadUserTime(tread.getId()) - startUser) / (long) 1e+6 + "ms");
 
-// 	System.out.printf("CPU time = %5.3fs%n", (float)(((float)b.getThreadCpuTime(tread.getId()) - startCPU)/1e+9));
+        // 	System.out.printf("CPU time = %5.3fs%n", (float)(((float)b.getThreadCpuTime(tread.getId()) - startCPU)/1e+9));
     }
 }

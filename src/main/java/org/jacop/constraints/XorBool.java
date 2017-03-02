@@ -1,33 +1,32 @@
 /**
- *  XorBool.java
- *   
- *  This file is part of JaCoP.
- *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
- *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU Affero General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU Affero General Public License for more details.
- *  
- *  Notwithstanding any other provision of this License, the copyright
- *  owners of this work supplement the terms of this License with terms
- *  prohibiting misrepresentation of the origin of this work and requiring
- *  that modified versions of this work be marked in reasonable ways as
- *  different from the original version. This supplement of the license
- *  terms is in accordance with Section 7 of GNU Affero General Public
- *  License version 3.
- *
- *  You should have received a copy of the GNU Affero General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
+ * XorBool.java
+ * <p>
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.jacop.constraints;
@@ -42,7 +41,7 @@ import org.jacop.core.Var;
 
 /**
  * Constraint ( x_0 xor x_1 xor ... xor x_n ){@literal <=>} y
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.4
  */
@@ -50,7 +49,7 @@ import org.jacop.core.Var;
 public class XorBool extends PrimitiveConstraint {
 
 	/*
-	 * The logical XOR (exclusive OR) function gives True if an odd number of its arguments 
+   * The logical XOR (exclusive OR) function gives True if an odd number of its arguments
 	 * is True, and the rest are False. It gives False if an even number of its arguments is True, 
 	 * and the rest are False.
 	 *
@@ -63,289 +62,277 @@ public class XorBool extends PrimitiveConstraint {
 	 * 1   1   0
 	 */
 
-	static AtomicInteger idNumber = new AtomicInteger(0);
+    static AtomicInteger idNumber = new AtomicInteger(0);
 
-	/**
-	 * It specifies variables x for the constraint.
-	 */
-	public IntVar[] x;
+    /**
+     * It specifies variables x for the constraint.
+     */
+    public IntVar[] x;
 
-        public IntVar y;
+    public IntVar y;
 
-        final int l;
+    final int l;
 
-        /**
-	 * It specifies the arguments required to be saved by an XML format as well as 
-	 * the constructor being called to recreate an object from an XML format.
-	 */
+    /**
+     * It specifies the arguments required to be saved by an XML format as well as
+     * the constructor being called to recreate an object from an XML format.
+     */
     public static String[] xmlAttributes = {"x", "y"};
 
-	/** It constructs constraint (x_0 xor x_1 xor ... xor x_n ) {@literal <=>} y.
-	 * @param x variables x.
-	 * @param y variable y.
-	 */
+    /** It constructs constraint (x_0 xor x_1 xor ... xor x_n ) {@literal <=>} y.
+     * @param x variables x.
+     * @param y variable y.
+     */
     public XorBool(IntVar[] x, IntVar y) {
 
-		assert (x != null) : "Variables x is null";
-		assert (y != null) : "Variable y is null";
+        assert (x != null) : "Variables x is null";
+        assert (y != null) : "Variable y is null";
 
-	        queueIndex = 0;
-		numberId = idNumber.incrementAndGet();
-		this.l = x.length;
-		numberArgs = l + 1;
+        queueIndex = 0;
+        numberId = idNumber.incrementAndGet();
+        this.l = x.length;
+        numberArgs = l + 1;
 
-		this.x = x;
-		this.y = y;
+        this.x = x;
+        this.y = y;
 
-		assert ( checkInvariants() == null) : checkInvariants();
+        assert (checkInvariants() == null) : checkInvariants();
 
-		if (l > 2)
-		    queueIndex = 1;
-		else
-		    queueIndex = 0;
-	}
+        if (l > 2)
+            queueIndex = 1;
+        else
+            queueIndex = 0;
+    }
 
-	/**
-	 * It checks invariants required by the constraint. Namely that
-	 * boolean variables have boolean domain. 
-	 * 
-	 * @return the string describing the violation of the invariant, null otherwise.
-	 */
-	public String checkInvariants() {
+    /**
+     * It checks invariants required by the constraint. Namely that
+     * boolean variables have boolean domain.
+     *
+     * @return the string describing the violation of the invariant, null otherwise.
+     */
+    public String checkInvariants() {
 
-	    for (IntVar e : x)
-		if (e.min() < 0 || e.max() > 1)
-		    return "Variable " + x + " does not have boolean domain";
-	
-		if (y.min() < 0 || y.max() > 1)
-			return "Variable " + y + " does not have boolean domain";
+        for (IntVar e : x)
+            if (e.min() < 0 || e.max() > 1)
+                return "Variable " + x + " does not have boolean domain";
 
-		return null;
-	}
+        if (y.min() < 0 || y.max() > 1)
+            return "Variable " + y + " does not have boolean domain";
 
-	@Override
-	public ArrayList<Var> arguments() {
+        return null;
+    }
 
-		ArrayList<Var> variables = new ArrayList<Var>(3);
+    @Override public ArrayList<Var> arguments() {
 
-		for (IntVar e : x)
-		    variables.add(e);
+        ArrayList<Var> variables = new ArrayList<Var>(3);
 
-		variables.add(y);
+        for (IntVar e : x)
+            variables.add(e);
 
-		return variables;
-	}
+        variables.add(y);
 
-	@Override
-	public void consistency(Store store) {
+        return variables;
+    }
 
-	    do {
-		
-		store.propagationHasOccurred = false;
+    @Override public void consistency(Store store) {
 
-		IntVar nonGround = null;
+        do {
 
-		int numberOnes = 0;
-		for (IntVar e : x)
-		    if (e.min() == 1)
-			numberOnes++;
-		    else if (e.max() != 0)
-			nonGround = e;
+            store.propagationHasOccurred = false;
 
-		int numberZeros = 0;
-		for (IntVar e : x)
-		    if (e.max() == 0)
-			numberZeros++;
-		    else if (e.min() != 1)
-			nonGround = e;
+            IntVar nonGround = null;
 
-		if (numberOnes + numberZeros == l)
-		    if (numberOnes % 2 == 1)
-			y.domain.in(store.level, y, 1, 1);
-		    else
-			y.domain.in(store.level, y, 0, 0);
-		else if (numberOnes + numberZeros == l - 1)
-		    if (y.min() == 1)
-			if (numberOnes % 2 == 1)
-			    nonGround.domain.in(store.level, nonGround, 0,0);
-			else
-			    nonGround.domain.in(store.level, nonGround, 1,1);
-		    else if (y.max() == 0)
-			if (numberOnes % 2 == 1)
-			    nonGround.domain.in(store.level, nonGround, 1,1);
-			else
-			    nonGround.domain.in(store.level, nonGround, 0,0);
+            int numberOnes = 0;
+            for (IntVar e : x)
+                if (e.min() == 1)
+                    numberOnes++;
+                else if (e.max() != 0)
+                    nonGround = e;
 
-	    } while (store.propagationHasOccurred);
-	}
+            int numberZeros = 0;
+            for (IntVar e : x)
+                if (e.max() == 0)
+                    numberZeros++;
+                else if (e.min() != 1)
+                    nonGround = e;
 
-        @Override
-	public void notConsistency(Store store) {
-		
-	    do {
-			
-		store.propagationHasOccurred = false;			
+            if (numberOnes + numberZeros == l)
+                if (numberOnes % 2 == 1)
+                    y.domain.in(store.level, y, 1, 1);
+                else
+                    y.domain.in(store.level, y, 0, 0);
+            else if (numberOnes + numberZeros == l - 1)
+                if (y.min() == 1)
+                    if (numberOnes % 2 == 1)
+                        nonGround.domain.in(store.level, nonGround, 0, 0);
+                    else
+                        nonGround.domain.in(store.level, nonGround, 1, 1);
+                else if (y.max() == 0)
+                    if (numberOnes % 2 == 1)
+                        nonGround.domain.in(store.level, nonGround, 1, 1);
+                    else
+                        nonGround.domain.in(store.level, nonGround, 0, 0);
 
-		IntVar nonGround = null;
+        } while (store.propagationHasOccurred);
+    }
 
-		int numberOnes = 0;
-		for (IntVar e : x)
-		    if (e.min() == 1)
-			numberOnes++;
-		    else if (e.max() != 0)
-			nonGround = e;
+    @Override public void notConsistency(Store store) {
 
-		int numberZeros = 0;
-		for (IntVar e : x)
-		    if (e.max() == 0)
-			numberZeros++;
-		    else if (e.min() != 1)
-			nonGround = e;
+        do {
 
-		if (numberOnes + numberZeros == l)
-		    if (numberOnes % 2 == 1)
-			y.domain.in(store.level, y, 0, 0);
-		    else 
-			y.domain.in(store.level, y, 1, 1);
-		else if (numberOnes + numberZeros == l - 1)
-		    if (y.min() == 1)
-			if (numberOnes % 2 == 1)
-			    nonGround.domain.in(store.level, nonGround, 1,1);
-			else
-			    nonGround.domain.in(store.level, nonGround, 0,0);
-		    else if (y.max() == 0)
-			if (numberOnes % 2 == 1)
-			    nonGround.domain.in(store.level, nonGround, 0,0);
-			else
-			    nonGround.domain.in(store.level, nonGround, 1,1);
+            store.propagationHasOccurred = false;
 
-		} while (store.propagationHasOccurred);
-		
-	}
+            IntVar nonGround = null;
 
-	@Override
-	public int getNestedPruningEvent(Var var, boolean mode) {
+            int numberOnes = 0;
+            for (IntVar e : x)
+                if (e.min() == 1)
+                    numberOnes++;
+                else if (e.max() != 0)
+                    nonGround = e;
 
-		// If consistency function mode
-		if (mode) {
-			if (consistencyPruningEvents != null) {
-				Integer possibleEvent = consistencyPruningEvents.get(var);
-				if (possibleEvent != null)
-					return possibleEvent;
-			}
-			return IntDomain.GROUND;
-		}
-		// If notConsistency function mode
-		else {
-			if (notConsistencyPruningEvents != null) {
-				Integer possibleEvent = notConsistencyPruningEvents.get(var);
-				if (possibleEvent != null)
-					return possibleEvent;
-			}
-			return IntDomain.BOUND;
-		}
-	}
+            int numberZeros = 0;
+            for (IntVar e : x)
+                if (e.max() == 0)
+                    numberZeros++;
+                else if (e.min() != 1)
+                    nonGround = e;
 
-	@Override
-	public int getConsistencyPruningEvent(Var var) {
+            if (numberOnes + numberZeros == l)
+                if (numberOnes % 2 == 1)
+                    y.domain.in(store.level, y, 0, 0);
+                else
+                    y.domain.in(store.level, y, 1, 1);
+            else if (numberOnes + numberZeros == l - 1)
+                if (y.min() == 1)
+                    if (numberOnes % 2 == 1)
+                        nonGround.domain.in(store.level, nonGround, 1, 1);
+                    else
+                        nonGround.domain.in(store.level, nonGround, 0, 0);
+                else if (y.max() == 0)
+                    if (numberOnes % 2 == 1)
+                        nonGround.domain.in(store.level, nonGround, 0, 0);
+                    else
+                        nonGround.domain.in(store.level, nonGround, 1, 1);
 
-		// If consistency function mode
-		if (consistencyPruningEvents != null) {
-			Integer possibleEvent = consistencyPruningEvents.get(var);
-			if (possibleEvent != null)
-				return possibleEvent;
-		}
-		return IntDomain.BOUND;
-	}
+        } while (store.propagationHasOccurred);
 
-	@Override
-	public int getNotConsistencyPruningEvent(Var var) {
+    }
 
-		// If notConsistency function mode
-		if (notConsistencyPruningEvents != null) {
-			Integer possibleEvent = notConsistencyPruningEvents.get(var);
-			if (possibleEvent != null)
-				return possibleEvent;
-		}
-		return IntDomain.GROUND;
-	}
+    @Override public int getNestedPruningEvent(Var var, boolean mode) {
 
-	@Override
-	public void impose(Store store) {
+        // If consistency function mode
+        if (mode) {
+            if (consistencyPruningEvents != null) {
+                Integer possibleEvent = consistencyPruningEvents.get(var);
+                if (possibleEvent != null)
+                    return possibleEvent;
+            }
+            return IntDomain.GROUND;
+        }
+        // If notConsistency function mode
+        else {
+            if (notConsistencyPruningEvents != null) {
+                Integer possibleEvent = notConsistencyPruningEvents.get(var);
+                if (possibleEvent != null)
+                    return possibleEvent;
+            }
+            return IntDomain.BOUND;
+        }
+    }
 
-	    for (IntVar e : x)
-		e.putModelConstraint(this, getConsistencyPruningEvent(e));
+    @Override public int getConsistencyPruningEvent(Var var) {
 
-		y.putModelConstraint(this, getConsistencyPruningEvent(y));
+        // If consistency function mode
+        if (consistencyPruningEvents != null) {
+            Integer possibleEvent = consistencyPruningEvents.get(var);
+            if (possibleEvent != null)
+                return possibleEvent;
+        }
+        return IntDomain.BOUND;
+    }
 
-		store.addChanged(this);
-		store.countConstraint();
-	}
+    @Override public int getNotConsistencyPruningEvent(Var var) {
 
-	@Override
-	public boolean satisfied() {
+        // If notConsistency function mode
+        if (notConsistencyPruningEvents != null) {
+            Integer possibleEvent = notConsistencyPruningEvents.get(var);
+            if (possibleEvent != null)
+                return possibleEvent;
+        }
+        return IntDomain.GROUND;
+    }
 
-	    if (! y.singleton())
-		return false;
-	    else
-		for (IntVar e : x)
-		    if (! e.singleton())
-			return false;
+    @Override public void impose(Store store) {
 
-	    int sum = 0;
-	    for (IntVar e : x)
-		sum += e.value();
+        for (IntVar e : x)
+            e.putModelConstraint(this, getConsistencyPruningEvent(e));
 
-	    if (sum % 2 == 1 && y.min() == 1)
-		return true;
-	    else if (sum % 2 == 0 && y.max() == 0)
-		return true;
+        y.putModelConstraint(this, getConsistencyPruningEvent(y));
 
-	    return false;
+        store.addChanged(this);
+        store.countConstraint();
+    }
 
-	}
+    @Override public boolean satisfied() {
 
-	@Override
-	public boolean notSatisfied() {
+        if (!y.singleton())
+            return false;
+        else
+            for (IntVar e : x)
+                if (!e.singleton())
+                    return false;
 
-	    if (! y.singleton())
-		return false;
-	    else
-		for (IntVar e : x)
-		    if (! e.singleton())
-			return false;
+        int sum = 0;
+        for (IntVar e : x)
+            sum += e.value();
 
-	    int sum = 0;
-	    for (IntVar e : x)
-		sum += e.value();
+        if (sum % 2 == 1 && y.min() == 1)
+            return true;
+        else if (sum % 2 == 0 && y.max() == 0)
+            return true;
 
-	    if (sum % 2 == 1 && y.min() == 0)
-		return true;
-	    else if (sum % 2 == 0 && y.min() == 1)
-		return true;
+        return false;
 
-	    return false;
-	}
+    }
 
-	@Override
-	public void removeConstraint() {
-	    for (IntVar e : x)
-		e.removeConstraint(this);
+    @Override public boolean notSatisfied() {
 
-	    y.removeConstraint(this);
-	}
+        if (!y.singleton())
+            return false;
+        else
+            for (IntVar e : x)
+                if (!e.singleton())
+                    return false;
 
-	@Override
-	public String toString() {
+        int sum = 0;
+        for (IntVar e : x)
+            sum += e.value();
 
-	    return id() + " : XorBool( (" + java.util.Arrays.asList(x) + ") <=>  " + y + ")";
-	}
+        if (sum % 2 == 1 && y.min() == 0)
+            return true;
+        else if (sum % 2 == 0 && y.min() == 1)
+            return true;
 
-	@Override
-	public void increaseWeight() {
-	    if (increaseWeight) 
-		for (IntVar e : x)
-		    e.weight++;
-	}
+        return false;
+    }
+
+    @Override public void removeConstraint() {
+        for (IntVar e : x)
+            e.removeConstraint(this);
+
+        y.removeConstraint(this);
+    }
+
+    @Override public String toString() {
+
+        return id() + " : XorBool( (" + java.util.Arrays.asList(x) + ") <=>  " + y + ")";
+    }
+
+    @Override public void increaseWeight() {
+        if (increaseWeight)
+            for (IntVar e : x)
+                e.weight++;
+    }
 
 }

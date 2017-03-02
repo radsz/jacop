@@ -1,32 +1,31 @@
 /**
- *  ElementFloat.java 
- *  This file is part of JaCoP.
- *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
- *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU Affero General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU Affero General Public License for more details.
- *  
- *  Notwithstanding any other provision of this License, the copyright
- *  owners of this work supplement the terms of this License with terms
- *  prohibiting misrepresentation of the origin of this work and requiring
- *  that modified versions of this work be marked in reasonable ways as
- *  different from the original version. This supplement of the license
- *  terms is in accordance with Section 7 of GNU Affero General Public
- *  License version 3.
- *
- *  You should have received a copy of the GNU Affero General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
+ * ElementFloat.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 
@@ -48,25 +47,25 @@ import org.jacop.floats.core.FloatIntervalDomain;
 /**
  * ElementFloat constraint defines a relation 
  * list[index - indexOffset] = value.
- * 
+ *
  * The first element of the list corresponds to index - indexOffset = 1.
  * By default indexOffset is equal 0 so first value within a list corresponds to index equal 1.
- * 
+ *
  * If index has a domain from 0 to list.length-1 then indexOffset has to be equal -1 to 
  * make addressing of list array starting from 1.
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.4
  */
 
 public class ElementFloat extends Constraint implements UsesQueueVariable {
 
-	static AtomicInteger idNumber = new AtomicInteger(0);
+    static AtomicInteger idNumber = new AtomicInteger(0);
 
     boolean firstConsistencyCheck = true;
     int firstConsistencyLevel;
 
-	
+
     /**
      * It specifies variable index within an element constraint list[index-indexOffset] = value.
      */
@@ -103,16 +102,16 @@ public class ElementFloat extends Constraint implements UsesQueueVariable {
      */
     ArrayList<IntDomain> duplicates;
     IntDomain duplicatesIndexes;
-	
+
     /**
      * It specifies the arguments required to be saved by an XML format as well as 
      * the constructor being called to recreate an object from an XML format.
-     */	
+     */
     public static String[] xmlAttributes = {"index", "list", "value", "indexOffset"};
 
     /**
      * It constructs an element constraint. 
-     * 
+     *
      * @param index variable index
      * @param list list of integers from which an index-th element is taken
      * @param value a value of the index-th element from list
@@ -120,79 +119,78 @@ public class ElementFloat extends Constraint implements UsesQueueVariable {
      */
     public ElementFloat(IntVar index, double[] list, FloatVar value, int indexOffset) {
 
-	this.indexOffset = indexOffset;
-	commonInitialization(index, list, value);
-		
+        this.indexOffset = indexOffset;
+        commonInitialization(index, list, value);
+
     }
 
     private void commonInitialization(IntVar index, double[] list, FloatVar value) {
 
-	queueIndex = 1;
+        queueIndex = 1;
 
-	assert (index != null) : "Argument index is null";
-	assert (list != null) : "Argument list is null";
-	assert (value != null) : "Argument value is null";
-				
-	this.numberId = idNumber.incrementAndGet();
-	this.index = index;
-	this.value = value;
-	this.numberArgs = (short) (numberArgs + 2);
-	this.list = new double[list.length];
-	this.queueIndex = 1;
-		
-	for (int i = 0; i < list.length; i++) {
-						
-	    Double listElement = list[i];
-	    this.list[i] = list[i];
-			
-	    IntDomain oldFD = mappingValuesToIndex.get(listElement);
-	    if (oldFD == null) {
-		mappingValuesToIndex.put(listElement, new IntervalDomain(i + 1 + indexOffset, i + 1 + indexOffset));
-	    }
-	    else
-		((IntervalDomain)oldFD).addLastElement(i + 1 + indexOffset);
-	    //     			    oldFD.unionAdapt(i + 1 + indexOffset, i + 1 + indexOffset);
-			
-	}
+        assert (index != null) : "Argument index is null";
+        assert (list != null) : "Argument list is null";
+        assert (value != null) : "Argument value is null";
+
+        this.numberId = idNumber.incrementAndGet();
+        this.index = index;
+        this.value = value;
+        this.numberArgs = (short) (numberArgs + 2);
+        this.list = new double[list.length];
+        this.queueIndex = 1;
+
+        for (int i = 0; i < list.length; i++) {
+
+            Double listElement = list[i];
+            this.list[i] = list[i];
+
+            IntDomain oldFD = mappingValuesToIndex.get(listElement);
+            if (oldFD == null) {
+                mappingValuesToIndex.put(listElement, new IntervalDomain(i + 1 + indexOffset, i + 1 + indexOffset));
+            } else
+                ((IntervalDomain) oldFD).addLastElement(i + 1 + indexOffset);
+            //     			    oldFD.unionAdapt(i + 1 + indexOffset, i + 1 + indexOffset);
+
+        }
 
     }
-	
+
     /**
      * It constructs an element constraint with default indexOffset equal 0.
-     * 
+     *
      * @param index index variable.
      * @param list list containing variables which one pointed out by index variable is made equal to value variable.  
      * @param value a value variable equal to the specified element from the list. 
      */
     public ElementFloat(IntVar index, ArrayList<Double> list, FloatVar value) {
 
-	this(index, list, value, 0);
-		
+        this(index, list, value, 0);
+
     }
 
     /**
      * It constructs an element constraint. 
-     * 
+     *
      * @param index variable index
      * @param list list of integers from which an index-th element is taken
      * @param value a value of the index-th element from list
      * @param indexOffset shift applied to index variable. 
      */
     public ElementFloat(IntVar index, ArrayList<Double> list, FloatVar value, int indexOffset) {
-		
-	this.indexOffset = indexOffset;
-		
-	double [] listOfInts = new double[list.size()];
-	for (int i = 0; i < list.size(); i++)
-	    listOfInts[i] = list.get(i);
-		
-	commonInitialization(index, listOfInts, value);
-		
+
+        this.indexOffset = indexOffset;
+
+        double[] listOfInts = new double[list.size()];
+        for (int i = 0; i < list.size(); i++)
+            listOfInts[i] = list.get(i);
+
+        commonInitialization(index, listOfInts, value);
+
     }
 
     /**
      * It constructs an element constraint with indexOffset by default set to 0.  
-     * 
+     *
      * @param index variable index
      * @param list list of integers from which an index-th element is taken
      * @param value a value of the index-th element from list
@@ -200,177 +198,167 @@ public class ElementFloat extends Constraint implements UsesQueueVariable {
 
     public ElementFloat(IntVar index, double[] list, FloatVar value) {
 
-	this(index, list, value, 0);
-		
+        this(index, list, value, 0);
+
     }
 
 
-    @Override
-    public ArrayList<Var> arguments() {
+    @Override public ArrayList<Var> arguments() {
 
-	ArrayList<Var> variables = new ArrayList<Var>(2);
+        ArrayList<Var> variables = new ArrayList<Var>(2);
 
-	variables.add(index);
-	variables.add(value);
-		
-	return variables;
-		
+        variables.add(index);
+        variables.add(value);
+
+        return variables;
+
     }
 
-    @Override
-    public void removeLevel(int level) {
-	if (level == firstConsistencyLevel)
-	    firstConsistencyCheck = true;
+    @Override public void removeLevel(int level) {
+        if (level == firstConsistencyLevel)
+            firstConsistencyCheck = true;
     }
 
-    @Override
-    public void consistency(Store store) {
+    @Override public void consistency(Store store) {
 
-	if (firstConsistencyCheck) {
+        if (firstConsistencyCheck) {
 
-	    index.domain.in(store.level, index, 1 + indexOffset, list.length + indexOffset);
-	    firstConsistencyCheck = false;
-	    firstConsistencyLevel = store.level;
+            index.domain.in(store.level, index, 1 + indexOffset, list.length + indexOffset);
+            firstConsistencyCheck = false;
+            firstConsistencyLevel = store.level;
 
-	}
+        }
 
-		
-	boolean copyOfValueHasChanged = valueHasChanged;
-		
-	if (indexHasChanged) {
 
-	    indexHasChanged = false;
-	    IntDomain indexDom = index.dom().cloneLight();
-	    FloatDomain domValue = new FloatIntervalDomain(5);
+        boolean copyOfValueHasChanged = valueHasChanged;
 
-	    for (IntDomain duplicate : duplicates) {
-		if (indexDom.isIntersecting(duplicate)) {
-		    if (domValue.getSize() == 0)
-			domValue.unionAdapt(list[duplicate.min() - 1 - indexOffset]);
-		    else
-			((FloatIntervalDomain)domValue).addLastElement(list[duplicate.min() - 1 - indexOffset]);
-		}
-	    }
-	    indexDom = indexDom.subtract(duplicatesIndexes);
-			
-	    // values of index for duplicated values within list are already taken care of above.
-	    for (ValueEnumeration e = indexDom.valueEnumeration(); e.hasMoreElements();) {
-		double valueOfElement = list[e.nextElement() - 1 - indexOffset];
-		domValue.unionAdapt(valueOfElement);
-	    }
+        if (indexHasChanged) {
 
-	    value.domain.in(store.level, value, domValue);
-	    valueHasChanged = false;
-			
-	}
+            indexHasChanged = false;
+            IntDomain indexDom = index.dom().cloneLight();
+            FloatDomain domValue = new FloatIntervalDomain(5);
 
-	// the if statement above can change value variable but those changes can be ignored.
-	if (copyOfValueHasChanged) {
+            for (IntDomain duplicate : duplicates) {
+                if (indexDom.isIntersecting(duplicate)) {
+                    if (domValue.getSize() == 0)
+                        domValue.unionAdapt(list[duplicate.min() - 1 - indexOffset]);
+                    else
+                        ((FloatIntervalDomain) domValue).addLastElement(list[duplicate.min() - 1 - indexOffset]);
+                }
+            }
+            indexDom = indexDom.subtract(duplicatesIndexes);
 
-	    valueHasChanged = false;
+            // values of index for duplicated values within list are already taken care of above.
+            for (ValueEnumeration e = indexDom.valueEnumeration(); e.hasMoreElements(); ) {
+                double valueOfElement = list[e.nextElement() - 1 - indexOffset];
+                domValue.unionAdapt(valueOfElement);
+            }
 
-	    IntervalDomain indexDom = new IntervalDomain(5);
-	    for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements();) {
-		int position = e.nextElement() - 1 - indexOffset;
-		double val = list[position];
-		    
-		if (disjoint(value.domain, val))
-		    if (indexDom.size == 0)
-			indexDom.unionAdapt(position + 1 + indexOffset);
-		    else
-		    // 	// indexes are in ascending order and can be added at the end if the last element
-		    // 	// plus 1 is not equal a new value. In such case the max must be changed.
-		    	indexDom.addLastElement(position + 1 + indexOffset);
-	    }
+            value.domain.in(store.level, value, domValue);
+            valueHasChanged = false;
 
-	    index.domain.in(store.level, index, indexDom.complement());
-	    indexHasChanged = false;
+        }
 
-	}
-		
+        // the if statement above can change value variable but those changes can be ignored.
+        if (copyOfValueHasChanged) {
+
+            valueHasChanged = false;
+
+            IntervalDomain indexDom = new IntervalDomain(5);
+            for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
+                int position = e.nextElement() - 1 - indexOffset;
+                double val = list[position];
+
+                if (disjoint(value.domain, val))
+                    if (indexDom.size == 0)
+                        indexDom.unionAdapt(position + 1 + indexOffset);
+                    else
+                        // 	// indexes are in ascending order and can be added at the end if the last element
+                        // 	// plus 1 is not equal a new value. In such case the max must be changed.
+                        indexDom.addLastElement(position + 1 + indexOffset);
+            }
+
+            index.domain.in(store.level, index, indexDom.complement());
+            indexHasChanged = false;
+
+        }
+
     }
 
     boolean disjoint(FloatDomain v1, double v2) {
-	if (v1.min() > v2 || v2 > v1.max()) 
-	    return true;
-	else
-	    if (! v1.contains(v2))
-		return true;
-	    else
-		return false;
+        if (v1.min() > v2 || v2 > v1.max())
+            return true;
+        else if (!v1.contains(v2))
+            return true;
+        else
+            return false;
     }
 
-    @Override
-    public int getConsistencyPruningEvent(Var var) {
+    @Override public int getConsistencyPruningEvent(Var var) {
 
-	// If consistency function mode
-	if (consistencyPruningEvents != null) {
-	    Integer possibleEvent = consistencyPruningEvents.get(var);
-	    if (possibleEvent != null)
-		return possibleEvent;
-	}
-	return IntDomain.ANY;
+        // If consistency function mode
+        if (consistencyPruningEvents != null) {
+            Integer possibleEvent = consistencyPruningEvents.get(var);
+            if (possibleEvent != null)
+                return possibleEvent;
+        }
+        return IntDomain.ANY;
     }
 
-    @Override
-    public void impose(Store store) {
+    @Override public void impose(Store store) {
 
-	index.putModelConstraint(this, getConsistencyPruningEvent(index));
-	value.putModelConstraint(this, getConsistencyPruningEvent(value));
+        index.putModelConstraint(this, getConsistencyPruningEvent(index));
+        value.putModelConstraint(this, getConsistencyPruningEvent(value));
 
-	store.addChanged(this);
-	store.countConstraint();
-		
-	duplicates = new ArrayList<IntDomain>();
-		
-	HashMap<Double, IntDomain> map = new HashMap<Double, IntDomain>();
-		
-	for (int pos = 0; pos < list.length; pos++) {
-		
-	    double el = list[pos];
-	    IntDomain indexes = map.get(el);
-	    if (indexes == null) {
-		indexes = new IntervalDomain(pos + 1 + indexOffset, pos + 1 + indexOffset);
-		map.put(el, indexes);
-	    }
-	    else 
-		indexes.unionAdapt(pos + 1 + indexOffset);
-	}
-		
-	duplicatesIndexes = new IntervalDomain();
-	for (IntDomain duplicate: map.values()) {
-	    if ( duplicate.getSize() > 10 ) {
-		duplicates.add(duplicate);
+        store.addChanged(this);
+        store.countConstraint();
 
-		duplicatesIndexes.unionAdapt(duplicate);
-	    }
-	}
-		
-	valueHasChanged = true;
-	indexHasChanged = true;
-		
+        duplicates = new ArrayList<IntDomain>();
+
+        HashMap<Double, IntDomain> map = new HashMap<Double, IntDomain>();
+
+        for (int pos = 0; pos < list.length; pos++) {
+
+            double el = list[pos];
+            IntDomain indexes = map.get(el);
+            if (indexes == null) {
+                indexes = new IntervalDomain(pos + 1 + indexOffset, pos + 1 + indexOffset);
+                map.put(el, indexes);
+            } else
+                indexes.unionAdapt(pos + 1 + indexOffset);
+        }
+
+        duplicatesIndexes = new IntervalDomain();
+        for (IntDomain duplicate : map.values()) {
+            if (duplicate.getSize() > 10) {
+                duplicates.add(duplicate);
+
+                duplicatesIndexes.unionAdapt(duplicate);
+            }
+        }
+
+        valueHasChanged = true;
+        indexHasChanged = true;
+
     }
 
-    @Override
-    public void queueVariable(int level, Var var) {
-	if (var == index)
-	    indexHasChanged = true;
-	else
-	    valueHasChanged = true;
+    @Override public void queueVariable(int level, Var var) {
+        if (var == index)
+            indexHasChanged = true;
+        else
+            valueHasChanged = true;
     }
 
-    @Override
-    public void removeConstraint() {
-	index.removeConstraint(this);
-	value.removeConstraint(this);
+    @Override public void removeConstraint() {
+        index.removeConstraint(this);
+        value.removeConstraint(this);
     }
 
-    @Override
-    public boolean satisfied() {
+    @Override public boolean satisfied() {
 
-	if (value.singleton()) {
-		
-	    double v = value.min();
+        if (value.singleton()) {
+
+            double v = value.min();
 
             IntDomain duplicate = null;
 
@@ -381,55 +369,50 @@ public class ElementFloat extends Constraint implements UsesQueueVariable {
                 }
             }
 
-	    if (duplicate == null) {
-				
-		if (!index.singleton())
-		    return false;
-		else 
-		    if (list[index.value() - 1 - indexOffset] == v)
-			return true;
-			
-	    }
-	    else {
-			
-		if (duplicate.contains(index.domain) && list[index.min() - 1 - indexOffset] == v)
-		    return true;
-			
-	    }
-			
-	    return false;
-		
-	}
-	else
-	    return false;
-		
+            if (duplicate == null) {
+
+                if (!index.singleton())
+                    return false;
+                else if (list[index.value() - 1 - indexOffset] == v)
+                    return true;
+
+            } else {
+
+                if (duplicate.contains(index.domain) && list[index.min() - 1 - indexOffset] == v)
+                    return true;
+
+            }
+
+            return false;
+
+        } else
+            return false;
+
     }
 
-    @Override
-    public String toString() {
-		
-	StringBuffer result = new StringBuffer( id() );
-		
-	result.append(" : elementFloat").append("( ").append(index).append(", [");
-		
-	for (int i = 0; i < list.length; i++) {
-	    result.append( list[i] );
-			
-	    if (i < list.length - 1)
-		result.append(", ");
-	}
-		
-	result.append("], ").append(value).append(", " + indexOffset + " )");
+    @Override public String toString() {
 
-	return result.toString();
+        StringBuffer result = new StringBuffer(id());
+
+        result.append(" : elementFloat").append("( ").append(index).append(", [");
+
+        for (int i = 0; i < list.length; i++) {
+            result.append(list[i]);
+
+            if (i < list.length - 1)
+                result.append(", ");
+        }
+
+        result.append("], ").append(value).append(", " + indexOffset + " )");
+
+        return result.toString();
     }
 
-    @Override
-    public void increaseWeight() {
-	if (increaseWeight) {
-	    index.weight++;
-	    value.weight++;
-	}
+    @Override public void increaseWeight() {
+        if (increaseWeight) {
+            index.weight++;
+            value.weight++;
+        }
     }
 
 }

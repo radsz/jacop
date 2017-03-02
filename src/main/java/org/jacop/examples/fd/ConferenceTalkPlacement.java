@@ -1,32 +1,31 @@
 /**
- *  ConferenceTalkPlacement.java
- *  This file is part of JaCoP.
- *
- *  JaCoP is a Java Constraint Programming solver.
- *
- *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU Affero General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU Affero General Public License for more details.
- *
- *  Notwithstanding any other provision of this License, the copyright
- *  owners of this work supplement the terms of this License with terms
- *  prohibiting misrepresentation of the origin of this work and requiring
- *  that modified versions of this work be marked in reasonable ways as
- *  different from the original version. This supplement of the license
- *  terms is in accordance with Section 7 of GNU Affero General Public
- *  License version 3.
- *
- *  You should have received a copy of the GNU Affero General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
+ * ConferenceTalkPlacement.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.jacop.examples.fd;
@@ -54,7 +53,7 @@ public class ConferenceTalkPlacement {
     IntVar[][] varsMatrix;
     DepthFirstSearch<IntVar> search;
 
-    private HashMap<Integer, HashMap<Integer, Integer>> transformCosts(int [][] costs, int noOfTalks) {
+    private HashMap<Integer, HashMap<Integer, Integer>> transformCosts(int[][] costs, int noOfTalks) {
 
         HashMap<Integer, HashMap<Integer, Integer>> result = new HashMap<Integer, HashMap<Integer, Integer>>();
 
@@ -69,9 +68,7 @@ public class ConferenceTalkPlacement {
         return result;
     }
 
-    private HashMap<Integer, HashMap<Integer, Integer>> randomCosts(int noOfTalks,
-                                                                    int randomSeed,
-                                                                    int maxSingleCost) {
+    private HashMap<Integer, HashMap<Integer, Integer>> randomCosts(int noOfTalks, int randomSeed, int maxSingleCost) {
 
         Random seed = new Random(randomSeed);
 
@@ -81,43 +78,37 @@ public class ConferenceTalkPlacement {
             result.put(i, new HashMap<Integer, Integer>());
 
         for (int i = 0; i < noOfTalks; i++)
-            for (int j = i+ 1; j < noOfTalks; j++)
+            for (int j = i + 1; j < noOfTalks; j++)
                 result.get(i).put(j, seed.nextInt(maxSingleCost));
 
         return result;
     }
 
     // assumes noTalks = noOfParallelTracks * noOfTimeSlots
-    private int computeLowerBound(int noOfParallelTracks,
-                                  int noOfTimeSlots,
-                                  HashMap<Integer, HashMap<Integer, Integer>> costs
-                                  ) {
+    private int computeLowerBound(int noOfParallelTracks, int noOfTimeSlots, HashMap<Integer, HashMap<Integer, Integer>> costs) {
 
         ArrayList<Integer> costsList = new ArrayList<>();
-        for ( HashMap<Integer, Integer> elH : costs.values())
-            costsList.addAll( elH.values() );
+        for (HashMap<Integer, Integer> elH : costs.values())
+            costsList.addAll(elH.values());
 
         Integer[] sortedArray = costsList.toArray(new Integer[costsList.size()]);
-        Arrays.sort( sortedArray );
+        Arrays.sort(sortedArray);
 
         int noOfTalksInOneTimeSlot = noOfParallelTracks;
         int lowerBound = 0;
-        for (int i = 0; i < noOfTimeSlots * ( noOfTalksInOneTimeSlot * (noOfTalksInOneTimeSlot - 1) / 2 ); i++ )
+        for (int i = 0; i < noOfTimeSlots * (noOfTalksInOneTimeSlot * (noOfTalksInOneTimeSlot - 1) / 2); i++)
             lowerBound += sortedArray[i];
 
-        System.out.println( lowerBound );
+        System.out.println(lowerBound);
         return lowerBound;
     }
 
-    public void model(int noOfParallelTracks,
-                                int noOfTalks,
-                                int noOfTimeSlots,
-                                int maxSingleCost,
-                                HashMap<Integer, HashMap<Integer, Integer>> costMap) {
+    public void model(int noOfParallelTracks, int noOfTalks, int noOfTimeSlots, int maxSingleCost,
+        HashMap<Integer, HashMap<Integer, Integer>> costMap) {
 
         store = new Store();
 
-        varsMatrix = new IntVar[noOfTalks*(noOfTalks-1)/2][3];
+        varsMatrix = new IntVar[noOfTalks * (noOfTalks - 1) / 2][3];
 
         IntVar[] talkPlacement = new IntVar[noOfTalks];
 
@@ -126,20 +117,18 @@ public class ConferenceTalkPlacement {
 
         IntVar[] talkCounterInTrack = new IntVar[noOfParallelTracks];
         for (int i = 0; i < noOfParallelTracks; i++)
-            talkCounterInTrack[i] = new IntVar(store, "noOfTalksIn-" + i + "-th-Track",
-                                                noOfTalks / noOfParallelTracks - 1,
-                                                noOfTimeSlots);
+            talkCounterInTrack[i] = new IntVar(store, "noOfTalksIn-" + i + "-th-Track", noOfTalks / noOfParallelTracks - 1, noOfTimeSlots);
 
         for (int i = 0; i < noOfParallelTracks; i++)
             store.impose(new Count(talkPlacement, talkCounterInTrack[i], i));
 
-        IntVar[] pairCosts = new IntVar[noOfTalks*(noOfTalks-1)/2];
+        IntVar[] pairCosts = new IntVar[noOfTalks * (noOfTalks - 1) / 2];
 
         int pairNo = 0;
         for (int i = 0; i < noOfTalks; i++)
-            for (int j = i+ 1; j < noOfTalks; j++) {
+            for (int j = i + 1; j < noOfTalks; j++) {
 
-                pairCosts[pairNo] = new IntVar(store, "pair(" + i + ", " + j+ ")Cost", 0, maxSingleCost);
+                pairCosts[pairNo] = new IntVar(store, "pair(" + i + ", " + j + ")Cost", 0, maxSingleCost);
 
                 varsMatrix[pairNo][0] = pairCosts[pairNo];
                 varsMatrix[pairNo][1] = talkPlacement[i];
@@ -147,14 +136,14 @@ public class ConferenceTalkPlacement {
 
                 if (costMap.get(i).get(j) != null) {
 
-                    store.impose(new IfThenElse(new XeqY(talkPlacement[i], talkPlacement[j]),
-                        new XeqC(pairCosts[pairNo], costMap.get(i).get(j)), new XeqC(pairCosts[pairNo], 0)));
+                    store.impose(
+                        new IfThenElse(new XeqY(talkPlacement[i], talkPlacement[j]), new XeqC(pairCosts[pairNo], costMap.get(i).get(j)),
+                            new XeqC(pairCosts[pairNo], 0)));
 
                     IntervalDomain costPairDomain = new IntervalDomain(0, 0);
                     costPairDomain.unionAdapt(costMap.get(i).get(j));
                     store.impose(new In(pairCosts[pairNo], costPairDomain));
-                }
-                else
+                } else
                     store.impose(new XeqC(pairCosts[pairNo], 0));
 
                 pairNo++;
@@ -168,7 +157,7 @@ public class ConferenceTalkPlacement {
         for (int i = 0; i < talkPlacement.length; i++)
             vars.add(talkPlacement[i]);
 
-       // store.print();
+        // store.print();
     }
 
 
@@ -191,10 +180,8 @@ public class ConferenceTalkPlacement {
             search.setTimeOut(timeOutSeconds);
 
         // pivot variable is at index 0.
-        SelectChoicePoint<IntVar> select = new SimpleMatrixSelect<IntVar>(varsMatrix,
-            new MaxRegret<IntVar>(),
-            new SmallestDomain<IntVar>(),
-            new IndomainMin<IntVar>());
+        SelectChoicePoint<IntVar> select =
+            new SimpleMatrixSelect<IntVar>(varsMatrix, new MaxRegret<IntVar>(), new SmallestDomain<IntVar>(), new IndomainMin<IntVar>());
 
         boolean result = search.labeling(store, select, cost);
 
@@ -223,10 +210,8 @@ public class ConferenceTalkPlacement {
         search = new DepthFirstSearch<IntVar>();
 
         // pivot variable is at index 0.
-        SelectChoicePoint<IntVar> select = new SimpleMatrixSelect<IntVar>(varsMatrix,
-            new MaxRegret<IntVar>(),
-            new SmallestDomain<IntVar>(),
-            new IndomainMin<IntVar>());
+        SelectChoicePoint<IntVar> select =
+            new SimpleMatrixSelect<IntVar>(varsMatrix, new MaxRegret<IntVar>(), new SmallestDomain<IntVar>(), new IndomainMin<IntVar>());
 
         if (timeOutSeconds > 0)
             search.setTimeOut(timeOutSeconds);
@@ -246,6 +231,7 @@ public class ConferenceTalkPlacement {
         return result;
 
     }
+
     /**
      * It executes the program to solve this Travelling Salesman Problem.
      * @param args no argument is used.
@@ -267,11 +253,7 @@ public class ConferenceTalkPlacement {
         // The goal is to minimize the sum of costs.
         HashMap<Integer, HashMap<Integer, Integer>> costMap = example.randomCosts(noOfTalks, randomSeed, maxSingleCost);
 
-        example.model(noOfParallelTracks,
-                      noOfTalks,
-                      noOfTimeSlots,
-                      maxSingleCost,
-                      costMap);
+        example.model(noOfParallelTracks, noOfTalks, noOfTimeSlots, maxSingleCost, costMap);
 
         // example.store.print(); // Useful for small examples.
 
@@ -282,7 +264,7 @@ public class ConferenceTalkPlacement {
         // Unlikely to finish anytime soon for random examples of size more than noOfParallelTracks=3, and noOfTimeSlots=3.
         // Real life examples maybe solvable to optimality for much larger sizes.
 
-        if ( example.searchMaxRegretForMatrixOptimal(timeOutSeconds)) {
+        if (example.searchMaxRegretForMatrixOptimal(timeOutSeconds)) {
             System.out.println("Solution(s) found");
             return;
         }

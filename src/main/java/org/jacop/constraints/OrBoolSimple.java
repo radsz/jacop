@@ -39,10 +39,9 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 
 /**
- * If at least one variable is equal 1 then result variable is equal 1 too. 
- * Otherwise, result variable is equal to zero. 
+ * If at least one variable is equal 1 then result variable is equal 1 too.
+ * Otherwise, result variable is equal to zero.
  * It restricts the domain of a and b as well as result to be between 0 and 1.
- *
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.4
@@ -63,17 +62,17 @@ public class OrBoolSimple extends PrimitiveConstraint {
     public IntVar result;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as 
+     * It specifies the arguments required to be saved by an XML format as well as
      * the constructor being called to recreate an object from an XML format.
      */
     public static String[] xmlAttributes = {"a", "b", "result"};
 
     /**
-     * It constructs orBool. 
+     * It constructs orBool.
      *
-     * @param a a parameter
-     * @param b b parameter
-     * @param result variable which is equal 0 if none of x is equal to zero. 
+     * @param a      a parameter
+     * @param b      b parameter
+     * @param result variable which is equal 0 if none of x is equal to zero.
      */
     public OrBoolSimple(IntVar a, IntVar b, IntVar result) {
 
@@ -152,13 +151,11 @@ public class OrBoolSimple extends PrimitiveConstraint {
     }
 
     @Override public boolean satisfied() {
-        return (result.max() == 0 && a.max() == 0 && b.max() == 0) || (result.min() == 1 && (a.min() == 1
-            || b.min() == 1));
+        return (result.max() == 0 && a.max() == 0 && b.max() == 0) || (result.min() == 1 && (a.min() == 1 || b.min() == 1));
     }
 
     @Override public boolean notSatisfied() {
-        return (result.min() == 1 && a.max() == 0 && b.max() == 0) || (result.max() == 0 && (a.min() == 1
-            || b.min() == 1));
+        return (result.min() == 1 && a.max() == 0 && b.max() == 0) || (result.max() == 0 && (a.min() == 1 || b.min() == 1));
     }
 
     @Override public void removeConstraint() {

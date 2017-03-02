@@ -1,32 +1,31 @@
 /**
- *  PlteqC.java 
- *  This file is part of JaCoP.
- *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
- *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU Affero General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU Affero General Public License for more details.
- *  
- *  Notwithstanding any other provision of this License, the copyright
- *  owners of this work supplement the terms of this License with terms
- *  prohibiting misrepresentation of the origin of this work and requiring
- *  that modified versions of this work be marked in reasonable ways as
- *  different from the original version. This supplement of the license
- *  terms is in accordance with Section 7 of GNU Affero General Public
- *  License version 3.
- *
- *  You should have received a copy of the GNU Affero General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
+ * PlteqC.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.jacop.floats.constraints;
@@ -44,150 +43,138 @@ import org.jacop.floats.core.FloatDomain;
 
 /**
  * Constraint X {@literal <=} C for floats
- * 
- * 
+ *
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.4
  */
 
 public class PlteqC extends PrimitiveConstraint {
 
-	static AtomicInteger idNumber = new AtomicInteger(0);
+    static AtomicInteger idNumber = new AtomicInteger(0);
 
-	/**
-	 * It specifies variable x which must be smaller or equal to a given constant.
-	 */
-	public FloatVar p;
+    /**
+     * It specifies variable x which must be smaller or equal to a given constant.
+     */
+    public FloatVar p;
 
-	/**
-	 * It specifies constant c from which a given variable must be smaller or equal.
-	 */
-	public double c;
+    /**
+     * It specifies constant c from which a given variable must be smaller or equal.
+     */
+    public double c;
 
-	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
-	 * the constructor being called to recreate an object from an XML format.
-	 */
-	public static String[] xmlAttributes = {"p", "c"};
+    /**
+     * It specifies the arguments required to be saved by an XML format as well as
+     * the constructor being called to recreate an object from an XML format.
+     */
+    public static String[] xmlAttributes = {"p", "c"};
 
-	/**
-	 * It constructs constraint P {@literal <=} C.
-	 * @param p variable p.
-	 * @param c constant c.
-	 */
-	public PlteqC(FloatVar p, double c) {
-		
-		assert (p != null) : "Variable p is null";
+    /**
+     * It constructs constraint P {@literal <=} C.
+     * @param p variable p.
+     * @param c constant c.
+     */
+    public PlteqC(FloatVar p, double c) {
 
-		numberId = idNumber.incrementAndGet();
-		numberArgs = 1;
+        assert (p != null) : "Variable p is null";
 
-		this.p = p;
-		this.c = c;
-	
-	}
+        numberId = idNumber.incrementAndGet();
+        numberArgs = 1;
 
-	@Override
-	public ArrayList<Var> arguments() {
+        this.p = p;
+        this.c = c;
 
-		ArrayList<Var> variables = new ArrayList<Var>(1);
+    }
 
-		variables.add(p);
-		
-		return variables;
-	}
+    @Override public ArrayList<Var> arguments() {
 
-	@Override
-	public void consistency(Store store) {
-	    
-	    p.domain.inMax(store.level, p, c);
-	}
+        ArrayList<Var> variables = new ArrayList<Var>(1);
 
-	@Override
-	public int getNestedPruningEvent(Var var, boolean mode) {
+        variables.add(p);
 
-		// If consistency function mode
-		if (mode) {
-			if (consistencyPruningEvents != null) {
-				Integer possibleEvent = consistencyPruningEvents.get(var);
-				if (possibleEvent != null)
-					return possibleEvent;
-			}
-			return FloatDomain.BOUND;
-		}
-		// If notConsistency function mode
-		else {
-			if (notConsistencyPruningEvents != null) {
-				Integer possibleEvent = notConsistencyPruningEvents.get(var);
-				if (possibleEvent != null)
-					return possibleEvent;
-			}
-			return FloatDomain.BOUND;
-		}
-	}
+        return variables;
+    }
 
-	@Override
-	public int getConsistencyPruningEvent(Var var) {
+    @Override public void consistency(Store store) {
 
-		// If consistency function mode
-			if (consistencyPruningEvents != null) {
-				Integer possibleEvent = consistencyPruningEvents.get(var);
-				if (possibleEvent != null)
-					return possibleEvent;
-			}
-			return FloatDomain.NONE;
-		}
+        p.domain.inMax(store.level, p, c);
+    }
 
-	@Override
-	public int getNotConsistencyPruningEvent(Var var) {
-	
-	// If notConsistency function mode
-			if (notConsistencyPruningEvents != null) {
-				Integer possibleEvent = notConsistencyPruningEvents.get(var);
-				if (possibleEvent != null)
-					return possibleEvent;
-			}
-			return FloatDomain.NONE;
-	}
+    @Override public int getNestedPruningEvent(Var var, boolean mode) {
 
-	@Override
-	public void impose(Store store) {
-		p.putModelConstraint(this, getConsistencyPruningEvent(p));
-		store.addChanged(this);
-		store.countConstraint();
-	}
+        // If consistency function mode
+        if (mode) {
+            if (consistencyPruningEvents != null) {
+                Integer possibleEvent = consistencyPruningEvents.get(var);
+                if (possibleEvent != null)
+                    return possibleEvent;
+            }
+            return FloatDomain.BOUND;
+        }
+        // If notConsistency function mode
+        else {
+            if (notConsistencyPruningEvents != null) {
+                Integer possibleEvent = notConsistencyPruningEvents.get(var);
+                if (possibleEvent != null)
+                    return possibleEvent;
+            }
+            return FloatDomain.BOUND;
+        }
+    }
 
-	@Override
-	public void notConsistency(Store store) {
+    @Override public int getConsistencyPruningEvent(Var var) {
 
-	    p.domain.inMin(store.level, p, FloatDomain.next(c));
-	}
+        // If consistency function mode
+        if (consistencyPruningEvents != null) {
+            Integer possibleEvent = consistencyPruningEvents.get(var);
+            if (possibleEvent != null)
+                return possibleEvent;
+        }
+        return FloatDomain.NONE;
+    }
 
-	@Override
-	public boolean notSatisfied() {
-		return p.min() > c;
-	}
+    @Override public int getNotConsistencyPruningEvent(Var var) {
 
-	@Override
-	public void removeConstraint() {
-		p.removeConstraint(this);
-	}
+        // If notConsistency function mode
+        if (notConsistencyPruningEvents != null) {
+            Integer possibleEvent = notConsistencyPruningEvents.get(var);
+            if (possibleEvent != null)
+                return possibleEvent;
+        }
+        return FloatDomain.NONE;
+    }
 
-	@Override
-	public boolean satisfied() {
-		return p.max() <= c;
-	}
+    @Override public void impose(Store store) {
+        p.putModelConstraint(this, getConsistencyPruningEvent(p));
+        store.addChanged(this);
+        store.countConstraint();
+    }
 
-	@Override
-	public String toString() {
-		return id() + " : PlteqC(" + p + ", " + c + " )";
-	}
+    @Override public void notConsistency(Store store) {
 
-	@Override
-	public void increaseWeight() {
-		if (increaseWeight) {
-			p.weight++;
-		}
-	}	
-	
+        p.domain.inMin(store.level, p, FloatDomain.next(c));
+    }
+
+    @Override public boolean notSatisfied() {
+        return p.min() > c;
+    }
+
+    @Override public void removeConstraint() {
+        p.removeConstraint(this);
+    }
+
+    @Override public boolean satisfied() {
+        return p.max() <= c;
+    }
+
+    @Override public String toString() {
+        return id() + " : PlteqC(" + p + ", " + c + " )";
+    }
+
+    @Override public void increaseWeight() {
+        if (increaseWeight) {
+            p.weight++;
+        }
+    }
+
 }

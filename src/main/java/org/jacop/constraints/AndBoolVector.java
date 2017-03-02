@@ -42,7 +42,7 @@ import org.jacop.core.Var;
 import org.jacop.core.TimeStamp;
 
 /**
- * If all x's are equal 1 then result variable is equal 1 too. Otherwise, result variable 
+ * If all x's are equal 1 then result variable is equal 1 too. Otherwise, result variable
  * is equal to zero. It restricts the domain of all x as well as result to be between 0 and 1.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -69,7 +69,7 @@ public class AndBoolVector extends PrimitiveConstraint {
     public IntVar result;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as 
+     * It specifies the arguments required to be saved by an XML format as well as
      * the constructor being called to recreate an object from an XML format.
      */
     public static String[] xmlAttributes = {"list", "result"};
@@ -80,10 +80,10 @@ public class AndBoolVector extends PrimitiveConstraint {
     private TimeStamp<Integer> position;
 
     /**
-     * It constructs AndBoolVector. 
+     * It constructs AndBoolVector.
      *
-     * @param list list of x's which must all be equal 1 to make result equal 1.
-     * @param result variable which is equal 0 if any of x is equal to zero. 
+     * @param list   list of x's which must all be equal 1 to make result equal 1.
+     * @param result variable which is equal 0 if any of x is equal to zero.
      */
     public AndBoolVector(IntVar[] list, IntVar result) {
 
@@ -117,10 +117,10 @@ public class AndBoolVector extends PrimitiveConstraint {
     }
 
     /**
-     * It constructs AndBoolVector. 
+     * It constructs AndBoolVector.
      *
-     * @param list list of x's which must all be equal 1 to make result equal 1.
-     * @param result variable which is equal 0 if any of x is equal to zero. 
+     * @param list   list of x's which must all be equal 1 to make result equal 1.
+     * @param result variable which is equal 0 if any of x is equal to zero.
      */
     public AndBoolVector(ArrayList<IntVar> list, IntVar result) {
 
@@ -130,7 +130,7 @@ public class AndBoolVector extends PrimitiveConstraint {
 
     /**
      * It checks invariants required by the constraint. Namely that
-     * boolean variables have boolean domain. 
+     * boolean variables have boolean domain.
      *
      * @return the string describing the violation of the invariant, null otherwise.
      */

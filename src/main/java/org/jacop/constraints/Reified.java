@@ -1,32 +1,31 @@
 /**
- *  Reified.java 
- *  This file is part of JaCoP.
- *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
- *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU Affero General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU Affero General Public License for more details.
- *  
- *  Notwithstanding any other provision of this License, the copyright
- *  owners of this work supplement the terms of this License with terms
- *  prohibiting misrepresentation of the origin of this work and requiring
- *  that modified versions of this work be marked in reasonable ways as
- *  different from the original version. This supplement of the license
- *  terms is in accordance with Section 7 of GNU Affero General Public
- *  License version 3.
- *
- *  You should have received a copy of the GNU Affero General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
+ * Reified.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.jacop.constraints;
@@ -40,54 +39,54 @@ import org.jacop.util.SimpleHashSet;
 
 /**
  * Reified constraints "constraint" {@literal <=>} B
- * 
- * 
+ *
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.4
  */
 
 public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
 
-	static AtomicInteger idNumber = new AtomicInteger(0);
+    static AtomicInteger idNumber = new AtomicInteger(0);
 
-	/**
-	 * It specifies constraint c which status is being checked.
-	 */
-	public PrimitiveConstraint c;
+    /**
+     * It specifies constraint c which status is being checked.
+     */
+    public PrimitiveConstraint c;
 
-	/**
-	 * It specifies variable b which stores status of the constraint (0 - for certain not satisfied, 1 - for certain satisfied). 
-	 */
-	public IntVar b;
+    /**
+     * It specifies variable b which stores status of the constraint (0 - for certain not satisfied, 1 - for certain satisfied).
+     */
+    public IntVar b;
 
-	final public QueueForward<PrimitiveConstraint> queueForward;
+    final public QueueForward<PrimitiveConstraint> queueForward;
 
     boolean needRemoveLevelLate = false;
-    
-	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
-	 * the constructor being called to recreate an object from an XML format.
-	 */
-	public static String[] xmlAttributes = {"c", "b"};
 
-	/**
-	 * It creates Reified constraint.
-	 * @param c primitive constraint c.
-	 * @param b boolean variable b.
-	 */
-	public Reified(PrimitiveConstraint c, IntVar b) {
+    /**
+     * It specifies the arguments required to be saved by an XML format as well as
+     * the constructor being called to recreate an object from an XML format.
+     */
+    public static String[] xmlAttributes = {"c", "b"};
 
-		assert (c != null) : "Constraint c for reification is null";
-		assert (b != null) : "Boolean variable is null";
+    /**
+     * It creates Reified constraint.
+     * @param c primitive constraint c.
+     * @param b boolean variable b.
+     */
+    public Reified(PrimitiveConstraint c, IntVar b) {
 
-		if (b.min() > 1 || b.max() < 0)
-			throw new IllegalArgumentException("\nVariable variable in reified constraint nust have domain 0..1");
+        assert (c != null) : "Constraint c for reification is null";
+        assert (b != null) : "Boolean variable is null";
 
-		numberId = idNumber.incrementAndGet();
-		numberArgs = (short) (1 + c.numberArgs);
-		
-		this.c = c;
-		this.b = b;
+        if (b.min() > 1 || b.max() < 0)
+            throw new IllegalArgumentException("\nVariable variable in reified constraint nust have domain 0..1");
+
+        numberId = idNumber.incrementAndGet();
+        numberArgs = (short) (1 + c.numberArgs);
+
+        this.c = c;
+        this.b = b;
 
         try {
             c.getClass().getDeclaredMethod("removeLevelLate", int.class);
@@ -96,216 +95,197 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
             needRemoveLevelLate = false;
         }
 
-		queueForward = new QueueForward<PrimitiveConstraint>(c, arguments());
+        queueForward = new QueueForward<PrimitiveConstraint>(c, arguments());
 
     }
 
-	@Override
-	public ArrayList<Var> arguments() {
+    @Override public ArrayList<Var> arguments() {
 
-		ArrayList<Var> variables = new ArrayList<Var>(1);
+        ArrayList<Var> variables = new ArrayList<Var>(1);
 
-		variables.add(b);
+        variables.add(b);
 
-		variables.addAll(c.arguments());
+        variables.addAll(c.arguments());
 
-		return variables;
-	}
+        return variables;
+    }
 
-	@Override
-	public void consistency(Store store) {
+    @Override public void consistency(Store store) {
 
-	    if (c.satisfied()) {
-		b.domain.in(store.level, b, 1, 1);
-		removeSatConstraint();
-	    }
-	    else if (c.notSatisfied()) {
-		b.domain.in(store.level, b, 0, 0);
-		removeSatConstraint();
-	    }
-	    else if (b.max() == 0) // C must be false
-		c.notConsistency(store);
-	    else if (b.min() == 1) // C must be true
-		c.consistency(store);
-	}
+        if (c.satisfied()) {
+            b.domain.in(store.level, b, 1, 1);
+            removeSatConstraint();
+        } else if (c.notSatisfied()) {
+            b.domain.in(store.level, b, 0, 0);
+            removeSatConstraint();
+        } else if (b.max() == 0) // C must be false
+            c.notConsistency(store);
+        else if (b.min() == 1) // C must be true
+            c.consistency(store);
+    }
 
-	@Override
-	public void notConsistency(Store store) {
+    @Override public void notConsistency(Store store) {
 
-	    if (c.satisfied()) {
-		b.domain.in(store.level, b, 0, 0);
-		removeSatConstraint();
-	    }
-	    else if (c.notSatisfied()) {
-		b.domain.in(store.level, b, 1, 1);
-		removeSatConstraint();
-	    }
-	    else if (b.max() == 0) // C must be true
-		c.consistency(store);
-	    else if (b.min() == 1) // C must be false
-		c.notConsistency(store);		
-	}
+        if (c.satisfied()) {
+            b.domain.in(store.level, b, 0, 0);
+            removeSatConstraint();
+        } else if (c.notSatisfied()) {
+            b.domain.in(store.level, b, 1, 1);
+            removeSatConstraint();
+        } else if (b.max() == 0) // C must be true
+            c.consistency(store);
+        else if (b.min() == 1) // C must be false
+            c.notConsistency(store);
+    }
 
-	@Override
-	public int getNestedPruningEvent(Var var, boolean mode) {
+    @Override public int getNestedPruningEvent(Var var, boolean mode) {
 
-		return getConsistencyPruningEvent(var);
+        return getConsistencyPruningEvent(var);
 
-	}
+    }
 
-    
-	@Override
-	public int getConsistencyPruningEvent(Var var) {
 
-		// If consistency function mode
-		if (consistencyPruningEvents != null) {
-			Integer possibleEvent = consistencyPruningEvents.get(var);
-			if (possibleEvent != null)
-				return possibleEvent;
-		}
-		if (var == b)
-			return IntDomain.GROUND;
-		else {
+    @Override public int getConsistencyPruningEvent(Var var) {
 
-			int eventAcross = -1;
+        // If consistency function mode
+        if (consistencyPruningEvents != null) {
+            Integer possibleEvent = consistencyPruningEvents.get(var);
+            if (possibleEvent != null)
+                return possibleEvent;
+        }
+        if (var == b)
+            return IntDomain.GROUND;
+        else {
 
-			if (c.arguments().contains(var)) {
-				int event = c.getNestedPruningEvent(var, true);
-				if (event > eventAcross)
-					eventAcross = event;
-			}
+            int eventAcross = -1;
 
-			if (c.arguments().contains(var)) {
-				int event = c.getNestedPruningEvent(var, false);
-				if (event > eventAcross)
-					eventAcross = event;
-			}
+            if (c.arguments().contains(var)) {
+                int event = c.getNestedPruningEvent(var, true);
+                if (event > eventAcross)
+                    eventAcross = event;
+            }
 
-			if (eventAcross == -1)
-				return Domain.NONE;
-			else
-				return eventAcross;				
-		}
-	}
+            if (c.arguments().contains(var)) {
+                int event = c.getNestedPruningEvent(var, false);
+                if (event > eventAcross)
+                    eventAcross = event;
+            }
 
-	@Override
-	public int getNotConsistencyPruningEvent(Var var) {
+            if (eventAcross == -1)
+                return Domain.NONE;
+            else
+                return eventAcross;
+        }
+    }
 
-		// If notConsistency function mode
-		if (notConsistencyPruningEvents != null) {
-			Integer possibleEvent = notConsistencyPruningEvents.get(var);
-			if (possibleEvent != null)
-				return possibleEvent;
-		}
-		if (var == b)
-			return IntDomain.GROUND;
-		else {
+    @Override public int getNotConsistencyPruningEvent(Var var) {
 
-			int eventAcross = -1;
+        // If notConsistency function mode
+        if (notConsistencyPruningEvents != null) {
+            Integer possibleEvent = notConsistencyPruningEvents.get(var);
+            if (possibleEvent != null)
+                return possibleEvent;
+        }
+        if (var == b)
+            return IntDomain.GROUND;
+        else {
 
-			if (c.arguments().contains(var)) {
-				int event = c.getNestedPruningEvent(var, true);
-				if (event > eventAcross)
-					eventAcross = event;
-			}
+            int eventAcross = -1;
 
-			if (c.arguments().contains(var)) {
-				int event = c.getNestedPruningEvent(var, false);
-				if (event > eventAcross)
-					eventAcross = event;
-			}
+            if (c.arguments().contains(var)) {
+                int event = c.getNestedPruningEvent(var, true);
+                if (event > eventAcross)
+                    eventAcross = event;
+            }
 
-			if (eventAcross == -1)
-				return Domain.NONE;
-			else
-				return eventAcross;				
-		}
-	}
+            if (c.arguments().contains(var)) {
+                int event = c.getNestedPruningEvent(var, false);
+                if (event > eventAcross)
+                    eventAcross = event;
+            }
 
-	@Override
-	public void impose(Store store) {
+            if (eventAcross == -1)
+                return Domain.NONE;
+            else
+                return eventAcross;
+        }
+    }
 
-		SimpleHashSet<Var> variables = new SimpleHashSet<Var>();
+    @Override public void impose(Store store) {
 
-		variables.add(b);
+        SimpleHashSet<Var> variables = new SimpleHashSet<Var>();
 
-		for (Var V : c.arguments())
-			variables.add(V);
+        variables.add(b);
 
-		while (!variables.isEmpty()) {
-			Var V = variables.removeFirst();
-			V.putModelConstraint(this, getConsistencyPruningEvent(V));
-		    queueVariable(store.level, V);
-		}
+        for (Var V : c.arguments())
+            variables.add(V);
 
-		c.include(store);
+        while (!variables.isEmpty()) {
+            Var V = variables.removeFirst();
+            V.putModelConstraint(this, getConsistencyPruningEvent(V));
+            queueVariable(store.level, V);
+        }
 
-		store.registerRemoveLevelLateListener(this);
+        c.include(store);
 
-		store.addChanged(this);
-		store.countConstraint();
-	}
+        store.registerRemoveLevelLateListener(this);
 
-	@Override
-	public void removeConstraint() {
+        store.addChanged(this);
+        store.countConstraint();
+    }
 
-	    b.removeConstraint(this);
+    @Override public void removeConstraint() {
 
-	    for (Var v : c.arguments())
-		v.removeConstraint(this);
+        b.removeConstraint(this);
 
-	}
+        for (Var v : c.arguments())
+            v.removeConstraint(this);
 
-	private void removeSatConstraint() {
+    }
 
-	    // b must be gound here and it is not needed to remove
-	    // this constraint from b
-	    // b.removeConstraint(this);
+    private void removeSatConstraint() {
 
-	    for (Var v : c.arguments())
-		if (! v.singleton())
-		    v.removeConstraint(this);
+        // b must be gound here and it is not needed to remove
+        // this constraint from b
+        // b.removeConstraint(this);
 
-	}
+        for (Var v : c.arguments())
+            if (!v.singleton())
+                v.removeConstraint(this);
 
-	@Override
-	public boolean satisfied() {
-		IntDomain Bdom = b.dom();
-		return (Bdom.min() == 1 && c.satisfied())
-		|| (Bdom.max() == 0 && c.notSatisfied());
-	}
+    }
 
-	@Override
-	public boolean notSatisfied() {
-		IntDomain Bdom = b.dom();
-		return (Bdom.max() == 0 && c.satisfied())
-		|| (Bdom.min() == 1 && c.notSatisfied());
-	}
+    @Override public boolean satisfied() {
+        IntDomain Bdom = b.dom();
+        return (Bdom.min() == 1 && c.satisfied()) || (Bdom.max() == 0 && c.notSatisfied());
+    }
 
-	@Override
-	public String toString() {
+    @Override public boolean notSatisfied() {
+        IntDomain Bdom = b.dom();
+        return (Bdom.max() == 0 && c.satisfied()) || (Bdom.min() == 1 && c.notSatisfied());
+    }
 
-		return id() + " : Reified(" + c + ", " + b + " )";
-	}
+    @Override public String toString() {
 
-	@Override
-	public void increaseWeight() {
-		if (increaseWeight) {
-			b.weight++;
-			c.increaseWeight();
-		}
-	}
+        return id() + " : Reified(" + c + ", " + b + " )";
+    }
 
-    @Override
-    public void queueVariable(int level, Var variable) {
+    @Override public void increaseWeight() {
+        if (increaseWeight) {
+            b.weight++;
+            c.increaseWeight();
+        }
+    }
 
-		queueForward.queueForward(level, variable);
+    @Override public void queueVariable(int level, Var variable) {
+
+        queueForward.queueForward(level, variable);
 
     }
 
     public void removeLevelLate(int level) {
-	if (needRemoveLevelLate)
-	    c.removeLevelLate(level);
+        if (needRemoveLevelLate)
+            c.removeLevelLate(level);
     }
 
 }
