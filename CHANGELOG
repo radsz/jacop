@@ -70,6 +70,10 @@ Version 4.5
    - Bug fix in SumInt that stopped the propagator from computing a
      fix-point in some situations.
 
+18. Different Maven profiles for testing (commit, push, release) that
+    will execute different lengths tests in Maven test phase using 
+    Minizinc tests stored in src/test/fz/ directory. 
+	
 Version 4.4
 ===========
 
