@@ -33,6 +33,7 @@ package org.jacop.floats.constraints;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.core.Var;
 import org.jacop.core.Store;
 import org.jacop.constraints.Constraint;
@@ -50,9 +51,7 @@ import org.jacop.floats.core.FloatDomain;
  * @version 4.4
  */
 
-public class CosPeqR_decomposed extends Constraint {
-
-    static AtomicInteger idNumber = new AtomicInteger(0);
+public class CosPeqR_decomposed extends DecomposedConstraint<Constraint> {
 
     /**
      * It contains variable p.
@@ -79,40 +78,33 @@ public class CosPeqR_decomposed extends Constraint {
         assert (p != null) : "Variable p is null";
         assert (q != null) : "Variable q is null";
 
-        numberId = idNumber.incrementAndGet();
-        numberArgs = 2;
-
         this.p = p;
         this.q = q;
     }
 
+    @Override public String toString() {
 
-    @Override public ArrayList<Var> arguments() {
-        ArrayList<Var> args = new ArrayList<Var>();
+        StringBuffer result = new StringBuffer("Decomposition of CosPeqR(" + p + ", " + q + "): { ");
 
         for (Constraint c : constraints)
-            for (Var v : c.arguments())
-                args.add(v);
+            result.append(c).append(System.getProperty("line.separator"));
+        result.append("}");
 
-        return args;
+        return result.toString();
+
     }
 
-    @Override public void consistency(Store store) {
-        // for (Constraint c : constraints)
-        //     c.consistency(store);
-    }
+    @Override public void imposeDecomposition(Store store) {
 
-    @Override public int getConsistencyPruningEvent(Var var) {
+        if (constraints == null  || constraints.size() == 0)
+            decompose(store);
 
-        int event = -1;
         for (Constraint c : constraints)
-            if (event <= c.getConsistencyPruningEvent(var))
-                event = c.getConsistencyPruningEvent(var);
-
-        return event;
+            store.impose(c);
     }
 
-    @Override public void impose(Store store) {
+    @Override public ArrayList<Constraint> decompose(Store store) {
+
         constraints = new ArrayList<Constraint>();
 
         FloatVar pPlus = new FloatVar(store, FloatDomain.MinFloat, FloatDomain.MaxFloat);
@@ -122,45 +114,7 @@ public class CosPeqR_decomposed extends Constraint {
         constraints.add(c1);
         constraints.add(c2);
 
-        c1.impose(store);
-        c2.impose(store);
-    }
-
-    @Override public void queueVariable(int level, Var V) {
+        return constraints;
 
     }
-
-    @Override public void removeConstraint() {
-
-        for (Constraint c : constraints)
-            c.removeConstraint();
-
-    }
-
-    @Override public boolean satisfied() {
-        boolean sat = true;
-        for (Constraint c : constraints)
-            sat = sat && c.satisfied();
-
-        return sat;
-    }
-
-    @Override public void increaseWeight() {
-        for (Constraint c : constraints)
-            c.increaseWeight();
-    }
-
-    @Override public String toString() {
-
-        StringBuffer result = new StringBuffer(id() + ": {");
-
-        // result.append(" : CosPeqR_decomposed(").append(p).append(", ").append(q).append(" )");
-
-        for (Constraint c : constraints)
-            result.append(c).append(" }");
-
-        return result.toString();
-
-    }
-
 }
