@@ -422,7 +422,12 @@ setup to run configuration. -->
 			<groupId>org.jacoco</groupId>
             <artifactId>jacoco-maven-plugin</artifactId>
             <version>0.7.7.201606060606</version>
-
+				<configuration>
+					<excludes>
+						<exclude>org/jacop/examples/scala/**/*.class</exclude>
+						<exclude>org/jacop/scala/**/*.class</exclude>
+					</excludes>
+				</configuration>
 			<executions>
 				<execution>
 					<id>default-prepare-agent</id>
@@ -445,11 +450,6 @@ setup to run configuration. -->
 
 	<reporting>
 		<plugins>
-			<plugin>
-				<groupId>org.codehaus.mojo</groupId>
-				<artifactId>cobertura-maven-plugin</artifactId>
-				<version>2.5.1</version>
-			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-jxr-plugin</artifactId>
