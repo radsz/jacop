@@ -261,6 +261,19 @@ setup to run configuration. -->
 					<version>2.9</version>
 				</plugin>
 
+
+				<plugin>
+					<groupId>org.codehaus.mojo</groupId>
+					<artifactId>findbugs-maven-plugin</artifactId>
+					<version>3.0.4</version>
+					<configuration>
+						<!-- elements like effort and threshold will be ignored if put here -->
+						<excludeFilterFile>doc/findbugs-exclude.xml</excludeFilterFile>
+						<includeFilterFile>doc/findbugs-include.xml</includeFilterFile>
+					</configuration>
+				</plugin>
+
+
 			</plugins>
 		</pluginManagement>
 
@@ -432,11 +445,11 @@ setup to run configuration. -->
 				</configuration>
 			</plugin>
 
-
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-site-plugin</artifactId>
-				<version>3.4</version>
+				<version>3.0</version>
+				<!-- Using later versions, for example when tried 3.4 the findbugs report stopped working-->
 			</plugin>
 
 
@@ -468,7 +481,7 @@ setup to run configuration. -->
 
 			</executions>
         </plugin>
-        </plugins>
+		</plugins>
     </build>
 
 	<reporting>
@@ -481,7 +494,14 @@ setup to run configuration. -->
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>findbugs-maven-plugin</artifactId>
-				<version>2.3.2</version>
+				<version>3.0.4</version>
+				<!-- DO NOT put any additional configuration element here. If you it will stop working.
+				 Use pluginManagement section. -->
+				<configuration>
+					<effort>Max</effort>      <!-- Other working value is Min -->
+					<threshold>Medium</threshold>  <!-- Other working value is Low, High -->
+				</configuration>
+
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
