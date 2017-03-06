@@ -74,6 +74,7 @@
 		<maven.compiler.source>1.7</maven.compiler.source>
 		<maven.compiler.target>1.7</maven.compiler.target>
 		<aspectj.version>1.8.9</aspectj.version>
+		<checkstyle.config.location>resources/checkstyle.xml</checkstyle.config.location>
 	</properties>
 
     <!-- In order to see logging output,
@@ -236,6 +237,22 @@ setup to run configuration. -->
 				  <groupId>org.apache.maven.plugins</groupId>
 				  <artifactId>maven-compiler-plugin</artifactId>
 				  <version>3.3</version>
+				</plugin>
+
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-checkstyle-plugin</artifactId>
+					<version>2.17</version>
+					<dependencies>
+						<dependency>
+							<groupId>com.puppycrawl.tools</groupId>
+							<artifactId>checkstyle</artifactId>
+							<version>7.6</version>
+						</dependency>
+					</dependencies>
+					<configuration>
+						<configLocation>doc/checkstyle.xml</configLocation>
+					</configuration>
 				</plugin>
 
 			</plugins>
@@ -453,7 +470,7 @@ setup to run configuration. -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-jxr-plugin</artifactId>
-				<version>2.3</version>
+				<version>2.5</version>
 			</plugin>
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
@@ -478,8 +495,21 @@ setup to run configuration. -->
 				<artifactId>maven-surefire-report-plugin</artifactId>
 				<version>2.18.1</version>
 			</plugin>
-
-
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-checkstyle-plugin</artifactId>
+				<version>2.17</version>
+				<reportSets>
+					<reportSet>
+						<reports>
+							<report>checkstyle</report>
+						</reports>
+					</reportSet>
+				</reportSets>
+				<configuration>
+					<configLocation>doc/checkstyle.xml</configLocation>
+				</configuration>
+			</plugin>
 
         </plugins>
     </reporting>
