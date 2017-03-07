@@ -32,7 +32,7 @@ package org.jacop.examples.fd;
 
 import java.util.ArrayList;
 
-import org.jacop.constraints.Cumulative;
+import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XlteqY;

@@ -33,7 +33,7 @@ package org.jacop.examples.fd;
 import java.util.ArrayList;
 
 import org.jacop.constraints.Alldifferent;
-import org.jacop.constraints.Cumulative;
+import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XltY;
 import org.jacop.constraints.XneqY;
@@ -156,7 +156,7 @@ public class Conference extends ExampleFD {
         resources[iJ] = two;
 
         // last parameter true enforces edge finding propagation algorithm
-        store.impose(new Cumulative(sessions, durations, resources, three, true, true));
+        store.impose(new Cumulative(sessions, durations, resources, three));
 
     }
 

@@ -32,7 +32,7 @@ package org.jacop.examples.fd;
 
 import java.util.ArrayList;
 
-import org.jacop.constraints.Cumulative;
+import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.In;
 import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.core.IntVar;
@@ -153,28 +153,28 @@ public class Newspaper extends ExampleFD {
         four[2] = charlie[0];
         four[3] = digby[0];
         // Guardian newspaper is read at any time by only one person
-        store.impose(new Cumulative(four, guardian, fourOnes, one));
+        store.impose(new CumulativeUnary(four, guardian, fourOnes, one));
 
         four[0] = algy[1];
         four[1] = bertie[1];
         four[2] = charlie[1];
         four[3] = digby[1];
         // FT newspaper is read at any time by only one person
-        store.impose(new Cumulative(four, ft, fourOnes, one));
+        store.impose(new CumulativeUnary(four, ft, fourOnes, one));
 
         four[0] = algy[2];
         four[1] = bertie[2];
         four[2] = charlie[2];
         four[3] = digby[2];
         // Express newspaper is read at any time by only one person
-        store.impose(new Cumulative(four, express, fourOnes, one));
+        store.impose(new CumulativeUnary(four, express, fourOnes, one));
 
         four[0] = algy[3];
         four[1] = bertie[3];
         four[2] = charlie[3];
         four[3] = digby[3];
         // Sun newspaper is read at any time by only one person
-        store.impose(new Cumulative(four, sun, fourOnes, one));
+        store.impose(new CumulativeUnary(four, sun, fourOnes, one));
 
         IntVar makespan = new IntVar(store, "makespan", 0, 1000);
 
