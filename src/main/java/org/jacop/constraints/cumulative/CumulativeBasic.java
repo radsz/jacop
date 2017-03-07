@@ -60,6 +60,8 @@ public class CumulativeBasic extends Constraint {
 
     static final boolean debug = false, debugNarr = false;
 
+    EventIncComparator<Event> eventComparator = new EventIncComparator<Event>();
+  
     Store store;
 
     /*
@@ -316,7 +318,7 @@ public class CumulativeBasic extends Constraint {
         }
 
         int N = j;
-        Arrays.sort(es, 0, N, new EventIncComparator<Event>());
+        Arrays.sort(es, 0, N, eventComparator);
 
         if (debugNarr) {
             System.out.println(Arrays.asList(es));
