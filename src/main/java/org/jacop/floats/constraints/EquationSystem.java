@@ -77,9 +77,11 @@ public class EquationSystem extends Constraint {
      */
     public EquationSystem(Store store, FloatVar[] f, FloatVar[] x) {
 
-        this.f = f;
-        this.x = x;
-
+	this.f = new FloatVar[f.length];
+	System.arraycopy(f, 0, this.f, 0, f.length);
+	this.x = new FloatVar[x.length];
+	System.arraycopy(x, 0, this.x, 0, x.length);
+      
         queueIndex = 4;
 
         newton = new MultivariateIntervalNewton(store, f, x);

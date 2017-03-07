@@ -93,7 +93,8 @@ public class XorBool extends PrimitiveConstraint {
         this.l = x.length;
         numberArgs = l + 1;
 
-        this.x = x;
+	this.x = new IntVar[x.length];
+	System.arraycopy(x, 0, this.x, 0, x.length);
         this.y = y;
 
         assert (checkInvariants() == null) : checkInvariants();

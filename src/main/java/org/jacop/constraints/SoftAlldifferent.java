@@ -63,7 +63,10 @@ public class SoftAlldifferent extends DecomposedConstraint {
     public final ViolationMeasure violationMeasure;
 
     public SoftAlldifferent(IntVar[] xVars, IntVar costVar, ViolationMeasure violationMeasure) {
-        this.xVars = xVars;
+
+        this.xVars = new IntVar[xVars.length];
+	System.arraycopy(xVars, 0, this.xVars, 0, xVars.length);
+      
         this.costVar = costVar;
         this.violationMeasure = violationMeasure;
     }

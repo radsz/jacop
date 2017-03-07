@@ -113,8 +113,10 @@ public class LexOrder extends Constraint implements UsesQueueVariable {
 
         lexLT = lt;
 
-        this.x = x;
-        this.y = y;
+	this.x = new IntVar[x.length];
+	System.arraycopy(x, 0, this.x, 0, x.length);
+	this.y = new IntVar[y.length];
+	System.arraycopy(y, 0, this.y, 0, y.length);
 
         if (x.length < y.length) {
             lexLT = false;

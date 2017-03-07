@@ -78,8 +78,10 @@ public class MultivariateIntervalNewton {
 
         this.store = store;
 
-        this.f = f;
-        this.x = x;
+	this.f = new FloatVar[f.length];
+	System.arraycopy(f, 0, this.f, 0, f.length);
+	this.x = new FloatVar[x.length];
+	System.arraycopy(x, 0, this.x, 0, x.length);
 
         eval = new Stack<Constraint>();
 
