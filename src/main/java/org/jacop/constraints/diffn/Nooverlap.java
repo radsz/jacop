@@ -369,7 +369,6 @@ public class Nooverlap extends Constraint {
     // registers the constraint in the constraint store
     @Override @SuppressWarnings("unchecked") public void impose(Store store) {
         IntVar v;
-        int level = store.level;
 
         for (int i = 0; i < rectangle.length; i++) {
             Rectangle r = rectangle[i];

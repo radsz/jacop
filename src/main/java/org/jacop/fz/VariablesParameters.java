@@ -137,7 +137,6 @@ public class VariablesParameters implements ParserTreeConstants {
         dictionary = table;
         annotations = new HashSet<String>();
         boolean var_introduced = false, output_var = false;
-        OutputArrayAnnotation outArrayAnn = null;
 
         int type = getType(node);
 

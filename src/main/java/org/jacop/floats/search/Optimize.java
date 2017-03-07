@@ -43,8 +43,6 @@ import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.constraints.PlteqC;
 
-import java.lang.Double;
-
 /**
  * Implements optimization for floating point varibales
  *

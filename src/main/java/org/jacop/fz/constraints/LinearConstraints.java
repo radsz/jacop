@@ -654,13 +654,11 @@ class LinearConstraints extends Support implements ParserTreeConstants {
     static int sumLePossible(int[] ws, int result) {
         if (result == 0) {
             int one = 0, minusOne = 0;
-            int lastOnePosition = -1;
 	    int lastMinusOnePosition = -1;
 
             for (int i = 0; i < ws.length; i++)
                 if (ws[i] == 1) {
                     one++;
-                    lastOnePosition = i;
                 } else if (ws[i] == -1) {
                     minusOne++;
                     lastMinusOnePosition = i;
@@ -678,7 +676,6 @@ class LinearConstraints extends Support implements ParserTreeConstants {
         if (result == 0) {
             int one = 0, minusOne = 0;
             int lastOnePosition = -1;
-	    int lastMinusOnePosition = -1;
 
             for (int i = 0; i < ws.length; i++)
                 if (ws[i] == 1) {
@@ -686,7 +683,6 @@ class LinearConstraints extends Support implements ParserTreeConstants {
                     lastOnePosition = i;
                 } else if (ws[i] == -1) {
                     minusOne++;
-                    lastMinusOnePosition = i;
                 }
 
             if (one == 1 && minusOne == ws.length - 1)
