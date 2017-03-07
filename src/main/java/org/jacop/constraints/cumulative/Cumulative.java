@@ -34,7 +34,6 @@ package org.jacop.constraints.cumulative;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.lang.Integer;
 
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;

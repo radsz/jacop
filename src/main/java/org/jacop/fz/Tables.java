@@ -600,10 +600,10 @@ public class Tables {
         int indexVariableArray = 5;
         int indexSetVariableArray = 7;
         int indexFloatArray = 8;
-        int indexFloat = 9;
+        // int indexFloat = 9;
         int indexFloatVariableArray = 11;
         int indexConstantTable = 12;
-        int indexAliasTable = 13;
+        // int indexAliasTable = 13;
 
         String[] tableNames = {"int",   // 0
             "int arrays",  // 1

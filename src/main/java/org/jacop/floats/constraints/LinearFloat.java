@@ -108,7 +108,6 @@ public class LinearFloat extends Linear implements UsesQueueVariable {
             System.exit(0);
         }
 
-        double w = weights[fIndex];
         FloatVar[] df = new FloatVar[list.length];
         double[] ww = new double[list.length];
         FloatVar v = null;

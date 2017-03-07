@@ -63,19 +63,6 @@ public class SumFloat extends LinearFloat {
     }
 
 
-    /**
-     * It constructs the constraint SumFloat. 
-     * @param store current store
-     * @param variables variables which are being multiplied by weights.
-     * @param weights weight for each variable.
-     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}"
-     * @param sum variable containing the sum of weighted variables.
-     */
-    public SumFloat(Store store, ArrayList<? extends FloatVar> variables, ArrayList<Double> weights, String rel, FloatVar sum) {
-
-        this(store, (FloatVar[]) variables.toArray(), rel, sum);
-    }
-
     private static double[] getFilledArray(int n) {
         double[] a = new double[n];
         java.util.Arrays.fill(a, 1);

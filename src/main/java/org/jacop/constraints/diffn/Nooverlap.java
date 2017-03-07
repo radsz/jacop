@@ -33,8 +33,6 @@ package org.jacop.constraints.diffn;
 
 import java.util.ArrayList;
 import java.util.BitSet;
-import java.util.LinkedHashSet;
-import java.util.HashMap;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;

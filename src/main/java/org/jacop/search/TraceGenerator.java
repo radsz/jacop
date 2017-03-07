@@ -441,9 +441,9 @@ public class TraceGenerator<T extends Var> implements SelectChoicePoint<T>, Cons
             currentSearchNode = new SearchNode();
             currentSearchNode.v = var;
 
-            if (previousSearchNode.dom instanceof org.jacop.core.IntDomain)
+            if (previousSearchNode.dom instanceof IntDomain)
                 currentSearchNode.dom = ((IntDomain) previousSearchNode.dom).subtract(value);
-            else if (previousSearchNode.dom instanceof org.jacop.set.core.SetDomain)
+            else if (previousSearchNode.dom instanceof SetDomain)
                 currentSearchNode.dom = ((SetDomain) previousSearchNode.dom).subtract(value, value);
 
             currentSearchNode.val = value;
@@ -672,8 +672,8 @@ public class TraceGenerator<T extends Var> implements SelectChoicePoint<T>, Cons
     }
 
     private int minValue(ArrayList<Var> vars) {
-        int min = org.jacop.core.IntDomain.MaxInt;
-        if (vars.get(0) instanceof org.jacop.core.IntVar)
+        int min = IntDomain.MaxInt;
+        if (vars.get(0) instanceof IntVar)
             for (Var v : vars)
                 min = (min < ((IntVar) v).min()) ? min : ((IntVar) v).min();
 
@@ -681,8 +681,8 @@ public class TraceGenerator<T extends Var> implements SelectChoicePoint<T>, Cons
     }
 
     private int maxValue(ArrayList<Var> vars) {
-        int max = org.jacop.core.IntDomain.MinInt;
-        if (vars.get(0) instanceof org.jacop.core.IntVar)
+        int max = IntDomain.MinInt;
+        if (vars.get(0) instanceof IntVar)
             for (Var v : vars)
                 max = (max > ((IntVar) v).max()) ? max : ((IntVar) v).max();
 
@@ -838,7 +838,7 @@ public class TraceGenerator<T extends Var> implements SelectChoicePoint<T>, Cons
 
                     AttributesImpl vAtts = new AttributesImpl();
                     vAtts.addAttribute("", "", "index", "CDATA", "" + (int) (i + 1));
-                    if (tracedVar.get(i) instanceof org.jacop.core.IntVar) {
+                    if (tracedVar.get(i) instanceof IntVar) {
                         IntVar v = (IntVar) tracedVar.get(i);
                         if (v.singleton()) { // IntVar
                             vAtts.addAttribute("", "", "value", "CDATA", "" + v.value());

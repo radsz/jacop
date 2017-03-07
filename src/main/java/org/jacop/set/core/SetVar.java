@@ -31,7 +31,6 @@
 package org.jacop.set.core;
 
 import java.util.ArrayList;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.Constraint;
 import org.jacop.core.Domain;

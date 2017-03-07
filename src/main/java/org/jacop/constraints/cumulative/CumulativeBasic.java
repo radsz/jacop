@@ -283,7 +283,6 @@ public class CumulativeBasic extends Constraint {
         Event[] es = new Event[4 * taskNormal.length];
         int limitMax = limit.max();
 
-        int curDate = Integer.MIN_VALUE;
         boolean mandatoryExists = false;
         int j = 0;
         int minProfile = Integer.MAX_VALUE, maxProfile = Integer.MIN_VALUE;

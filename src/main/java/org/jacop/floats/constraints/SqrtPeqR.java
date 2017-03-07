@@ -85,8 +85,6 @@ public class SqrtPeqR extends PmulQeqR {
             // f = r^2
             // f' = d(r)*2*r
             FloatVar v1 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
-            FloatVar v2 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
-            FloatVar v3 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
             FloatVar v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
             Derivative.poseDerivativeConstraint(new PmulCeqR(r, 2.0, v1));
             Derivative.poseDerivativeConstraint(new PmulQeqR(Derivative.getDerivative(store, r, vars, x), v1, v));

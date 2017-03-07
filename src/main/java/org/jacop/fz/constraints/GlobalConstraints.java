@@ -64,8 +64,6 @@ import org.jacop.constraints.SoftGCC;
 import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.Among;
 import org.jacop.constraints.GCC;
-import org.jacop.constraints.Disjoint;
-import org.jacop.constraints.Diff2;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.ArgMin;

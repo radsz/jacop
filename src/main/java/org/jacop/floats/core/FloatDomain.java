@@ -1325,14 +1325,14 @@ public abstract class FloatDomain extends Domain {
             return new FloatIntervalDomain(-b, -a);
 
         boolean M_1 = (a < 0 && b > 0);        // contains zero
-        boolean Z_1 = (a == 0 && b == 0);     // zero
+        // boolean Z_1 = (a == 0 && b == 0);     // zero
         boolean P0_1 = (a == 0 && b > 0);       // positive with zero
         boolean P1_1 = (a > 0 && b > 0);        // strictly positive
         boolean N0_1 = (a < 0 && b == 0);       // negative with zero
         boolean N1_1 = (a < 0 && b < 0);        // strictly negative
 
         boolean M_2 = (c < 0 && d > 0);
-        boolean Z_2 = (c == 0 && d == 0);
+        // boolean Z_2 = (c == 0 && d == 0);
         boolean P0_2 = (c == 0 && d > 0);
         boolean P1_2 = (c > 0 && d > 0);
         boolean N0_2 = (c < 0 && d == 0);
@@ -1466,7 +1466,7 @@ public abstract class FloatDomain extends Domain {
         boolean N1_1 = (a < 0 && b < 0);        // strictly negative
 
         boolean M_2 = (c < 0 && d > 0);
-        boolean Z_2 = (c == 0 && d == 0);
+        // boolean Z_2 = (c == 0 && d == 0);
         boolean P0_2 = (c == 0 && d > 0);
         boolean P1_2 = (c > 0 && d > 0);
         boolean N0_2 = (c < 0 && d == 0);

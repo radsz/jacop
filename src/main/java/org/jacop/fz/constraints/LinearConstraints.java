@@ -259,14 +259,14 @@ class LinearConstraints extends Support implements ParserTreeConstants {
             case le:
                 if (p1.length == 2 && p1[0] == 1 && p1[1] == -1)
                     if (p3 == 0)
-                        pose(new Reified(new org.jacop.constraints.XlteqY(p2[0], p2[1]), p4));
+                        pose(new Reified(new XlteqY(p2[0], p2[1]), p4));
                     else
-                        pose(new Reified(new org.jacop.constraints.XplusClteqZ(p2[0], -p3, p2[1]), p4));
+                        pose(new Reified(new XplusClteqZ(p2[0], -p3, p2[1]), p4));
                 else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1)
                     if (p3 == 0)
-                        pose(new Reified(new org.jacop.constraints.XlteqY(p2[1], p2[0]), p4));
+                        pose(new Reified(new XlteqY(p2[1], p2[0]), p4));
                     else
-                        pose(new Reified(new org.jacop.constraints.XplusClteqZ(p2[1], -p3, p2[0]), p4));
+                        pose(new Reified(new XplusClteqZ(p2[1], -p3, p2[0]), p4));
                 else if (p1.length == 1 && p1[0] == 1)
                     pose(new Reified(new org.jacop.constraints.XlteqC(p2[0], p3), p4));
                 else if (p1.length == 1 && p1[0] == -1)
@@ -631,7 +631,7 @@ class LinearConstraints extends Support implements ParserTreeConstants {
         if (result == 0) {
             int one = 0, minusOne = 0;
             int lastOnePosition = -1, lastMinusOnePosition = -1;
-            //boolean sum = true;
+
             for (int i = 0; i < ws.length; i++)
                 if (ws[i] == 1) {
                     one++;
@@ -654,8 +654,9 @@ class LinearConstraints extends Support implements ParserTreeConstants {
     static int sumLePossible(int[] ws, int result) {
         if (result == 0) {
             int one = 0, minusOne = 0;
-            int lastOnePosition = -1, lastMinusOnePosition = -1;
-            //boolean sum = true;
+            int lastOnePosition = -1;
+	    int lastMinusOnePosition = -1;
+
             for (int i = 0; i < ws.length; i++)
                 if (ws[i] == 1) {
                     one++;
@@ -676,8 +677,9 @@ class LinearConstraints extends Support implements ParserTreeConstants {
     static int sumGePossible(int[] ws, int result) {
         if (result == 0) {
             int one = 0, minusOne = 0;
-            int lastOnePosition = -1, lastMinusOnePosition = -1;
-            //boolean sum = true;
+            int lastOnePosition = -1;
+	    int lastMinusOnePosition = -1;
+
             for (int i = 0; i < ws.length; i++)
                 if (ws[i] == 1) {
                     one++;

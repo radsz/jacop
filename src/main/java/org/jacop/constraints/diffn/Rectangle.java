@@ -32,9 +32,7 @@ package org.jacop.constraints.diffn;
 
 import java.util.ArrayList;
 
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
-import org.jacop.core.Var;
 
 /**
  * Defines a rectangle used in the diffn constraint.

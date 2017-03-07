@@ -30,7 +30,6 @@
 
 package org.jacop.floats.core;
 
-import java.lang.Math;
 
 /**
  * Defines interval of numbers which is part of FDV definition which consist of

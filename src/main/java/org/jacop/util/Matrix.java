@@ -30,8 +30,6 @@
 
 package org.jacop.util;
 
-import java.lang.ArithmeticException;
-
 import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatIntervalDomain;
@@ -140,7 +138,6 @@ public class Matrix {
         if (A[0].length != b.length)
             return null; //invalid dims
 
-        int n = A[0].length;
         int m = A.length;
         int p = b.length;
 

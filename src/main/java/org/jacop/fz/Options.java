@@ -181,7 +181,7 @@ public class Options {
      */
     public FileInputStream getFile() {
         try {
-            file = new java.io.FileInputStream(fileName);
+            file = new FileInputStream(fileName);
         } catch (java.io.FileNotFoundException e) {
             System.out.println("Flatzinc2JaCoP Parser Version 0.1:  File " + fileName + " not found.");
             System.exit(0);

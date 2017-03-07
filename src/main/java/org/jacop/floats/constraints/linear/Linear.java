@@ -38,7 +38,6 @@ import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.constraints.linear.BoundsVarValue;
 import org.jacop.util.SimpleHashSet;
 
 /**
@@ -325,7 +324,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
         // compute for original relation
         linearTree.root.rel = relationType;
 
-        pruneRelation(store);
+        pruneRelation();
 
         if (relationType != eq)
             if (satisfied())
@@ -338,7 +337,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
         // compute for negated original relation
         linearTree.root.rel = negRel[relationType];
 
-        pruneRelation(store);
+        pruneRelation();
 
         if (negRel[relationType] != eq)
             if (notSatisfied())
@@ -346,7 +345,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
     }
 
-    private void pruneRelation(Store store) {
+    private void pruneRelation() {
 
         while (!variableQueue.isEmpty()) {
             // propagate changes in FDV's and prune
@@ -456,7 +455,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
             try {
                 propagate(variableQueue);
-            } catch (org.jacop.core.FailException e) {
+            } catch (FailException e) {
                 noSat.update(true);
                 return false;
             }
@@ -478,7 +477,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
             try {
                 propagate(variableQueue);
-            } catch (org.jacop.core.FailException e) {
+            } catch (FailException e) {
                 noSat.update(true);
                 return true;
             }

@@ -193,7 +193,6 @@ public class Solve implements ParserTreeConstants {
 
         if (count == 1) {// only solve kind => default search
 
-            SearchItem si_int = new SearchItem(store, dictionary);
             kind = (ASTSolveKind) node.jjtGetChild(0);
             solveKind = getKind(kind.getKind());
             run_single_search(solveKind, kind, null);

@@ -34,8 +34,6 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Random;
 
-import java.lang.Math;
-
 import org.jacop.core.Store;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntDomain;

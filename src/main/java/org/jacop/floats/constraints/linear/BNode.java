@@ -39,8 +39,6 @@ package org.jacop.floats.constraints.linear;
 
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.core.Store;
-import org.jacop.floats.constraints.linear.BoundsVar;
-import org.jacop.floats.constraints.linear.BoundsVarValue;
 
 public class BNode extends BinaryNode {
 
@@ -182,7 +180,6 @@ public class BNode extends BinaryNode {
     void prune(double min, double max) {
 
         boolean left_changed = false, right_changed = false;
-        boolean changed = false;
 
         left_changed = pruneNode(min, max, left, right);
 

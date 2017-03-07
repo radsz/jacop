@@ -33,8 +33,6 @@ package org.jacop.constraints.diffn;
 
 import java.util.ArrayList;
 import java.util.BitSet;
-import java.util.LinkedHashSet;
-import java.util.HashMap;
 import java.util.Comparator;
 import java.util.Arrays;
 
@@ -44,10 +42,6 @@ import org.jacop.core.IntervalEnumeration;
 import org.jacop.core.Interval;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
-import org.jacop.core.TimeStamp;
-
-import java.util.Collections;
 
 /**
  * Diffn constraint assures that any two rectangles from a vector of rectangles

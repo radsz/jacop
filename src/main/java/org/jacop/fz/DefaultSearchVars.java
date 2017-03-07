@@ -39,7 +39,6 @@ import org.jacop.core.Var;
 import org.jacop.set.core.SetVar;
 import org.jacop.floats.core.FloatVar;
 
-import org.jacop.fz.Tables;
 
 /**
  *
@@ -82,28 +81,28 @@ public class DefaultSearchVars {
         // collect output arrays
         for (int i = 0; i < dictionary.outputArray.size(); i++)
             for (Var v : dictionary.outputArray.get(i).getArray()) {
-                if (v instanceof org.jacop.core.BooleanVar) {
+                if (v instanceof BooleanVar) {
                     if (!v.singleton())
                         bool_vars.add(v);
-                } else if (v instanceof org.jacop.core.IntVar) {
+                } else if (v instanceof IntVar) {
                     if (!v.singleton())
                         int_vars.add(v);
-                } else if (v instanceof org.jacop.set.core.SetVar)
+                } else if (v instanceof SetVar)
                     set_vars.add(v);
-                else if (v instanceof org.jacop.floats.core.FloatVar)
+                else if (v instanceof FloatVar)
                     float_vars.add((FloatVar) v);
             }
         // collect output variables
         for (Var v : dictionary.outputVariables) {
-            if (v instanceof org.jacop.core.BooleanVar) {
+            if (v instanceof BooleanVar) {
                 if (!v.singleton())
                     bool_vars.add(v);
-            } else if (v instanceof org.jacop.core.IntVar) {
+            } else if (v instanceof IntVar) {
                 if (!v.singleton())
                     int_vars.add(v);
-            } else if (v instanceof org.jacop.set.core.SetVar)
+            } else if (v instanceof SetVar)
                 set_vars.add(v);
-            else if (v instanceof org.jacop.floats.core.FloatVar)
+            else if (v instanceof FloatVar)
                 float_vars.add((FloatVar) v);
         }
         int_search_variables = int_vars.toArray(new IntVar[int_vars.size()]);
@@ -111,7 +110,7 @@ public class DefaultSearchVars {
         set_search_variables = set_vars.toArray(new SetVar[set_vars.size()]);
         float_search_variables = float_vars.toArray(new FloatVar[float_vars.size()]);
 
-        java.util.Arrays.sort(int_search_variables, new DomainSizeComparator<Var>());
+        Arrays.sort(int_search_variables, new DomainSizeComparator<Var>());
     }
 
     /**
@@ -126,13 +125,13 @@ public class DefaultSearchVars {
 
         for (int i = 0; i < dictionary.defaultSearchArrays.size(); i++)
             for (Var v : dictionary.defaultSearchArrays.get(i)) {
-                if (v instanceof org.jacop.core.BooleanVar)
+                if (v instanceof BooleanVar)
                     bool_vars.add(v);
                 else
                     int_vars.add(v);
             }
         for (Var v : dictionary.defaultSearchVariables) {
-            if (v instanceof org.jacop.core.BooleanVar)
+            if (v instanceof BooleanVar)
                 bool_vars.add(v);
             else
                 int_vars.add(v);
@@ -140,7 +139,7 @@ public class DefaultSearchVars {
         int_search_variables = int_vars.toArray(new IntVar[int_vars.size()]);
         bool_search_variables = bool_vars.toArray(new IntVar[bool_vars.size()]);
 
-        java.util.Arrays.sort(int_search_variables, new DomainSizeComparator<Var>());
+        Arrays.sort(int_search_variables, new DomainSizeComparator<Var>());
 
         LinkedHashSet<Var> set_vars = new LinkedHashSet<Var>();
         for (int i = 0; i < dictionary.defaultSearchSetArrays.size(); i++)
