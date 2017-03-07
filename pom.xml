@@ -11,20 +11,7 @@
 	<name>JaCoP</name>
 	<url>http://jacop.osolpro.com</url>
 	<description>Finite domain solver written in java.</description>
-
-	<distributionManagement>
-		<snapshotRepository>
-			<id>lth-snapshots</id>
-			<name>CS LTH snapshots maven repo</name>
-			<url>http://maven.cs.lth.se/content/repositories/snapshots</url>
-		</snapshotRepository>
-		<repository>
-			<id>lth-releases</id>
-			<name>CS LTH release maven repo</name>
-			<url>http://maven.cs.lth.se/content/repositories/releases</url>
-		</repository>
-	</distributionManagement>
-
+	
 	<developers>
 		<developer>
 			<id>kris</id>
