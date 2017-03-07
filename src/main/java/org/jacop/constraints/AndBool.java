@@ -34,7 +34,6 @@ import java.util.ArrayList;
 
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 
 /**
  * AndBool constraint implements logic and operation on its arguments

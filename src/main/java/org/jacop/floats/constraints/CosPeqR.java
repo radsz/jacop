@@ -31,7 +31,6 @@
 package org.jacop.floats.constraints;
 
 import java.util.ArrayList;
-import java.lang.Math;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;

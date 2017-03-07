@@ -46,7 +46,6 @@ import org.jacop.search.SmallestMin;
 import org.jacop.search.IndomainMin;
 import org.jacop.search.IndomainDefaultValue;
 import org.jacop.search.SimpleSolutionListener;
-import org.jacop.search.sgmpcs.SGMPCSCalculator;
 
 /**
  * Defines an interface for defining different methods for selecting next search

@@ -31,7 +31,6 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.regular.Regular;
 import org.jacop.core.BooleanVar;

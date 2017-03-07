@@ -115,7 +115,7 @@ public class XorBool extends PrimitiveConstraint {
 
         for (IntVar e : x)
             if (e.min() < 0 || e.max() > 1)
-                return "Variable " + x + " does not have boolean domain";
+                return "Variable " + e + " does not have boolean domain";
 
         if (y.min() < 0 || y.max() > 1)
             return "Variable " + y + " does not have boolean domain";

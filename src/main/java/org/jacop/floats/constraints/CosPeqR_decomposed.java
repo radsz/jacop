@@ -31,10 +31,8 @@
 package org.jacop.floats.constraints;
 
 import java.util.ArrayList;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.DecomposedConstraint;
-import org.jacop.core.Var;
 import org.jacop.core.Store;
 import org.jacop.constraints.Constraint;
 
