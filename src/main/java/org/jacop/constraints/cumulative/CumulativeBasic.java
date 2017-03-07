@@ -47,8 +47,8 @@ import org.jacop.constraints.Constraint;
 import java.util.BitSet;
 
 /**
- * CumulativeBasic implements the cumulative/4 constraint using edge-finding
- * algorithm and profile information on the resource use.
+ * CumulativeBasic implements the cumulative constraint using time tabling
+ * algorithm.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.4
