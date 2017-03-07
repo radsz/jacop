@@ -451,7 +451,7 @@ setup to run configuration. -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-site-plugin</artifactId>
-				<version>3.0</version>
+				<version>3.3</version>
 				<!-- Using later versions, for example when tried 3.4 the findbugs report stopped working-->
 			</plugin>
 
