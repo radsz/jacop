@@ -138,7 +138,6 @@ public final class FloatInterval {
         long p;
         String form;
         if (FloatDomain.format() == Double.MAX_VALUE) {
-            p = new Double(Math.ceil(Math.log10(1 / FloatDomain.precision()))).longValue();
             form = "%s";
         } else {
             p = new Double(Math.ceil(Math.log10(1 / FloatDomain.format()))).longValue();

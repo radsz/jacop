@@ -231,8 +231,6 @@ public class ElementIntegerFast extends Constraint {
 
             } else if (sort == detect) {
 
-                IntDomain vals = new IntervalDomain(5);
-
                 int min = IntDomain.MaxInt;
                 int max = IntDomain.MinInt;
                 IntervalDomain indexDom = new IntervalDomain(5); // create with size 5 ;)
@@ -276,8 +274,6 @@ public class ElementIntegerFast extends Constraint {
                     removeConstraint();
                 }
             } else {// sort == none
-
-                IntDomain vals = new IntervalDomain(5);
 
                 int min = IntDomain.MaxInt;
                 int max = IntDomain.MinInt;
