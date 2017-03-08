@@ -67,8 +67,6 @@ import org.jacop.floats.core.FloatVar;
  */
 class FloatOperationConstraints extends Support implements ParserTreeConstants {
 
-    static boolean reified;
-
     public FloatOperationConstraints(Store store, Tables d, SatTranslation sat) {
         super(store, d, sat);
     }

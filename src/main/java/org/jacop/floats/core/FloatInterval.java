@@ -40,7 +40,7 @@ package org.jacop.floats.core;
  * @version 4.4
  */
 
-public final class FloatInterval {
+public final class FloatInterval implements Cloneable {
 
     /**
      * It specifies the minimal value in the interval.
@@ -140,7 +140,7 @@ public final class FloatInterval {
         if (FloatDomain.format() == Double.MAX_VALUE) {
             form = "%s";
         } else {
-            p = new Double(Math.ceil(Math.log10(1 / FloatDomain.format()))).longValue();
+	    p = (long)Math.ceil(Math.log10(1 / FloatDomain.format()));
             form = //"%s";
                 (Math.abs(min) >= 1.0E+7d || Math.abs(max) >= 1.0E+7 || (Math.abs(min) <= 1.0E-3 && min != 0) || (Math.abs(max) <= 1.0E-3
                     && max != 0)) ? "%." + p + "e" : "%." + p + "f";

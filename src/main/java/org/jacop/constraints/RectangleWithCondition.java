@@ -70,9 +70,9 @@ class RectangleWithCondition extends Rectangle {
     }
 
     @Override public String toString() {
-        String S = "[" + index + ", ";
-        S = S + toString();
-        S = S + ", " + c + "]";
-        return S;
+        String s = "[" + index + ", ";
+        s = s + super.toString();
+        s = s + ", " + c + "]";
+        return s;
     }
 }

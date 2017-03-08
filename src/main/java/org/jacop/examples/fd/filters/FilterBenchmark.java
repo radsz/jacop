@@ -33,7 +33,7 @@ package org.jacop.examples.fd.filters;
 import java.util.ArrayList;
 
 import org.jacop.constraints.Cumulative;
-import org.jacop.constraints.Diff2;
+import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.Max;
 import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.XlteqY;
@@ -925,8 +925,8 @@ public class FilterBenchmark {
         cost = new IntVar(store, 0, 100);
         store.impose(new Max(endOp, cost));
 
-        store.impose(new Diff2(Tadd, Radd, Dadd, ResAdd));
-        store.impose(new Diff2(Tmul, Rmul, Dmul, ResMul));
+        store.impose(new Diffn(Tadd, Radd, Dadd, ResAdd));
+        store.impose(new Diffn(Tmul, Rmul, Dmul, ResMul));
 
         IntVar limitAdd = new IntVar(store, 1, addNum);
         store.impose(new Cumulative(Tadd, Dadd, ResAdd, limitAdd, true, false));
@@ -1033,8 +1033,8 @@ public class FilterBenchmark {
         cost = new IntVar(store, 0, 100);
         store.impose(new Max(endOp, cost));
 
-        store.impose(new Diff2(Tadd, Radd, Dadd, ResAdd));
-        store.impose(new Diff2(Tmul, Rmul, Dmul, ResMul));
+        store.impose(new Diffn(Tadd, Radd, Dadd, ResAdd));
+        store.impose(new Diffn(Tmul, Rmul, Dmul, ResMul));
 
         IntVar limitAdd = new IntVar(store, 0, addNum);
         store.impose(new Cumulative(Tadd, Dadd, ResAdd, limitAdd, true, false));
@@ -1158,12 +1158,12 @@ public class FilterBenchmark {
         cost = new IntVar(store, 0, 1000);
         store.impose(new Max(endOp, cost));
 
-        store.impose(new Diff2(Tadd, Radd, Dadd, ResAdd));
-        store.impose(new Diff2(Tmul, Rmul, Dmul, ResMul));
+        store.impose(new Diffn(Tadd, Radd, Dadd, ResAdd));
+        store.impose(new Diffn(Tmul, Rmul, Dmul, ResMul));
 
-        store.impose(new Diff2(TmulClock, Rmul, DmulClock, ResMul));
+        store.impose(new Diffn(TmulClock, Rmul, DmulClock, ResMul));
 
-        store.impose(new Diff2(TaddClock, Radd, Dadd, ResAdd));
+        store.impose(new Diffn(TaddClock, Radd, Dadd, ResAdd));
 
         IntVar limitAdd = new IntVar(store, 1, addNum);
         store.impose(new Cumulative(TaddClock, Dadd, ResAdd, limitAdd, true, false));
@@ -1308,8 +1308,8 @@ public class FilterBenchmark {
 
         store.impose(new XlteqY(cost, pipe3));
 
-        store.impose(new Diff2(Tadd, Radd, Dadd, ResAdd));
-        store.impose(new Diff2(Tmul, Rmul, Dmul, ResMul));
+        store.impose(new Diffn(Tadd, Radd, Dadd, ResAdd));
+        store.impose(new Diffn(Tmul, Rmul, Dmul, ResMul));
 
         Ts = new ArrayList<IntVar>();
         for (IntVar v : T)

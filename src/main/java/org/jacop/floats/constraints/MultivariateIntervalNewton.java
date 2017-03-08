@@ -60,8 +60,6 @@ public class MultivariateIntervalNewton {
 
     final static boolean debug = false;
 
-    Store store;
-
     FloatVar[] f;
     FloatVar[] x;
     FloatVar[][] fprime;
@@ -75,8 +73,6 @@ public class MultivariateIntervalNewton {
     Stack<Constraint> eval;
 
     public MultivariateIntervalNewton(Store store, FloatVar[] f, FloatVar[] x) {
-
-        this.store = store;
 
 	this.f = new FloatVar[f.length];
 	System.arraycopy(f, 0, this.f, 0, f.length);
@@ -327,17 +323,17 @@ public class MultivariateIntervalNewton {
     }
 
     public String toString() {
-        String s = "MultivariateIntervalNewton:\n";
+        StringBuffer s = new StringBuffer("MultivariateIntervalNewton:\n");
 
-        s += Arrays.asList(f) + "\n";
-        s += Arrays.asList(x) + "\n";
+        s.append(Arrays.asList(f) + "\n");
+        s.append(Arrays.asList(x) + "\n");
         for (int i = 0; i < fprime.length; i++)
             for (int j = 0; j < fprime[i].length; j++)
-                s += "f" + i + "/d" + x[j] + " = " + fprime[i][j] + "\n";
+	      s.append( "f" + i + "/d" + x[j] + " = " + fprime[i][j] + "\n");
         // for (int i = 0; i < xInit.length; i++)
-        //     s += xInit[i] + ", ";
-        s += "\n";
+        //     s.append(xInit[i] + ", ");
+        s.append("\n");
 
-        return s;
+        return s.toString();
     }
 }

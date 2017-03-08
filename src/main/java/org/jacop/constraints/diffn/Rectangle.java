@@ -161,18 +161,21 @@ public class Rectangle {
     }
 
     @Override public String toString() {
+
+        StringBuffer result = new StringBuffer();
+
         int dim = 2;
-        String S = "[" + index + ": ";
+        result.append("[" + index + ": ");
         for (int i = 0; i < dim; i++) {
-            S += origin[i] + ", ";
+	    result.append(origin[i] + ", ");
         }
         for (int i = 0; i < dim; i++) {
-            S += length[i];
+	    result.append(length[i]);
             if (i < dim - 1)
-                S += ", ";
+	        result.append(", ");
         }
-        S += "]";
-        return S;
+        result.append("]");
+        return result.toString();
     }
 
 }

@@ -97,8 +97,6 @@ public class Solve implements ParserTreeConstants {
     int costValue;
     double floatCostValue;
 
-    Parser parser;
-
     // -------- for print-out of statistics
     boolean singleSearch;
     boolean Result;

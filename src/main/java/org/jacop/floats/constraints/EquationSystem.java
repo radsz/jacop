@@ -53,8 +53,6 @@ public class EquationSystem extends Constraint {
 
     final static boolean debug = false;
 
-    Store store;
-
     // variables defining eqations
     FloatVar[] f;
 

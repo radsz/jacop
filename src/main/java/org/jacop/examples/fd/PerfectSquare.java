@@ -33,7 +33,7 @@ package org.jacop.examples.fd;
 import java.util.ArrayList;
 
 import org.jacop.constraints.And;
-import org.jacop.constraints.Diff2;
+import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.Or;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
@@ -395,7 +395,7 @@ public class PerfectSquare extends ExampleFD {
         varsY = new IntVar[numberOfRectangles];
         size = new IntVar[numberOfRectangles];
 
-        System.out.print("Constraint model without use of Diff2 constraint");
+        System.out.print("Constraint model without use of Diffn constraint");
         System.out.println("No squares = " + numberOfRectangles + " Size = " + masterSize);
         System.out.print("Square size = [");
 
@@ -488,7 +488,7 @@ public class PerfectSquare extends ExampleFD {
 
         IntVar[][] rectangles = new IntVar[noRectangles][4];
 
-        System.out.print("Constraint model based on Diff2 constraint");
+        System.out.print("Constraint model based on Diffn constraint");
         System.out.println("Example " + problemNo + "  No squares = " + noRectangles + " Size = " + masterSize);
         System.out.print("Square size = [");
 
@@ -515,7 +515,7 @@ public class PerfectSquare extends ExampleFD {
 
         System.out.println("]");
 
-        store.impose(new Diff2(rectangles));
+        store.impose(new Diffn(rectangles));
 
         System.out.println("Number of variables: " + store.size());
         System.out.println("Number of constraints: " + store.numberConstraints());
@@ -542,7 +542,7 @@ public class PerfectSquare extends ExampleFD {
         ArrayList<ExternalConstraint> constraints = new ArrayList<ExternalConstraint>();
         ArrayList<Shape> shapes = new ArrayList<Shape>();
 
-        System.out.print("Constraint model based on Geost and Diff2 constraint");
+        System.out.print("Constraint model based on Geost and Diffn constraint");
         System.out.println("Example " + problemNo + "  No squares = " + noRectangles + " Size = " + masterSize);
         System.out.print("Square size = [");
 
@@ -591,11 +591,11 @@ public class PerfectSquare extends ExampleFD {
 
         // objects, constraints, shapes.
         // Geost does not employ area reasoning and it is loosing greatly
-        // unless employed with Diff2. Geost can not prune significantly
-        // more than Diff2.
+        // unless employed with Diffn. Geost can not prune significantly
+        // more than Diffn.
         store.impose(new Geost(objects, constraints, shapes));
         // the main pruning component still.
-        store.impose(new Diff2(rectangles));
+        store.impose(new Diffn(rectangles));
 
 		/*
 		// starts, durations, resources, limit

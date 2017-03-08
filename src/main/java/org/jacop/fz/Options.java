@@ -44,8 +44,6 @@ import org.jacop.floats.core.FloatDomain;
  */
 public class Options {
 
-    String[] argument;
-
     FileInputStream file;
 
     String fileName;
@@ -82,8 +80,6 @@ public class Options {
      * @param args arguments to flatzinc to jacop parser.
      */
     public Options(String[] args) {
-
-        argument = args;
 
         if (args.length == 0) {
             System.out.println("fz2jacop: no model file specified");

@@ -100,8 +100,6 @@ import org.jacop.constraints.geost.Shape;
  */
 class GlobalConstraints extends Support implements ParserTreeConstants {
 
-    static boolean reified;
-
     public GlobalConstraints(Store store, Tables d, SatTranslation sat) {
         super(store, d, sat);
     }

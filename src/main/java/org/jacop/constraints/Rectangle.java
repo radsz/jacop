@@ -268,17 +268,19 @@ public class Rectangle {
     }
 
     @Override public String toString() {
-        String S = "[";
+        StringBuffer result = new StringBuffer();
+
+        result.append("[");
         for (int i = 0; i < dim; i++) {
-            S += origin[i] + ", ";
+	    result.append(origin[i] + ", ");
         }
         for (int i = 0; i < dim; i++) {
-            S += length[i];
+	    result.append(length[i]);
             if (i < dim - 1)
-                S += ", ";
+	        result.append(", ");
         }
-        S += "]";
-        return S;
+        result.append("]");
+        return result.toString();
     }
 
     public static Rectangle[] toArrayOf2DRectangles(ArrayList<? extends ArrayList<? extends IntVar>> rectangles) {

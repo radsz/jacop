@@ -111,7 +111,7 @@ public class Optimize<T extends Var> {
             return true;
 
         double selValue = ((PlteqC) choice).c;
-        if (costValue != Double.NaN)
+        if (Double.isNaN(costValue))  //costValue != Double.NaN)
             if (costValue < selValue) {
                 choice = new PlteqC(cost, costValue);
             }

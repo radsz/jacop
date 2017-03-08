@@ -56,6 +56,8 @@ public class Diffn extends Nooverlap {
 
     static final boolean debug = false, debugNarr = false;
 
+    EventIncComparator<Event> eventComparator = new EventIncComparator<Event>();
+  
     /**
      * It specifies a diff constraint.
      * @param rectangles list of rectangles which can not overlap in at least one dimension.
@@ -292,7 +294,7 @@ public class Diffn extends Nooverlap {
             return;
 
         int N = j;
-        Arrays.sort(es, 0, N, new EventIncComparator<Event>());
+        Arrays.sort(es, 0, N, eventComparator);
         // Arrays.parallelSort(es, 0, N, new EventIncComparator<Event>());
 
         if (debugNarr) {

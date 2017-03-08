@@ -516,14 +516,14 @@ class LinearConstraints extends Support implements ParserTreeConstants {
                 if (p1.length == 1) {
 
                     if (p1[0] < 0) {
-                        int rhsValue = (int) (Math.round(Math.ceil(((float) (p3 / p1[0])))));
+		      int rhsValue = (int) (Math.round(Math.ceil( (float)p3 / (float)p1[0] )));
 
                         p2[0].domain.inMin(store.level, p2[0], rhsValue);
                         if (debug)
                             System.out.println("Pruned variable " + p2[0] + " to be >= " + rhsValue);
                         // pose(new XgteqC(p2[0], rhsValue));
                     } else { // weight > 0
-                        int rhsValue = (int) (Math.round(Math.floor(((float) (p3 / p1[0])))));
+                        int rhsValue = (int) (Math.round(Math.floor(( (float)p3 / (float)p1[0] ))));
 
                         p2[0].domain.inMax(store.level, p2[0], rhsValue);
 

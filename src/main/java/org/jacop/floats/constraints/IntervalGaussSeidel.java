@@ -53,15 +53,20 @@ public class IntervalGaussSeidel {
     final static boolean debug = false;
 
     int MaxIterations = 100;
-    double epsilon = FloatDomain.precision();
 
     FloatInterval[][] A;
     double[] b;
     FloatInterval[] x;
 
     public IntervalGaussSeidel(FloatInterval[][] A, double[] b) {
-        this.A = A;
-        this.b = b;
+
+        this.A = new FloatInterval[A.length][];
+	for (int i = 0; i < A.length; i++) {
+	  this.A[i] = new FloatInterval[A[i].length];
+	  System.arraycopy(A[i], 0, this.A[i], 0, A[i].length);
+	}
+	this.b = new double[b.length];
+	System.arraycopy(b, 0, this.b, 0, b.length);
         x = new FloatInterval[b.length];
     }
 
@@ -263,15 +268,15 @@ public class IntervalGaussSeidel {
 
     public String toString() {
 
-        String s = "";
+        StringBuffer s = new StringBuffer();
 
         for (int i = 0; i < A.length; i++) {
             for (int j = 0; j < A[i].length; j++)
-                s += "" + A[i][j] + " ";
-            s += " = " + b[i] + "\n";
+	      s.append(A[i][j] + " ");
+            s.append(" = " + b[i] + "\n");
         }
 
-        return s;
+        return s.toString();
     }
 
 }
