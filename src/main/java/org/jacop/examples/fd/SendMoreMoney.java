@@ -175,10 +175,10 @@ public class SendMoreMoney extends ExampleFD {
         // appropriate domain, they all start with zero
         // since a letter could be zero and the position
         // value is also zero
-        numbersSEND[0] = new IntVar(store, "v(S)", 0, 9000);
-        numbersSEND[1] = new IntVar(store, "v(E)", 0, 900);
-        numbersSEND[2] = new IntVar(store, "v(N)", 0, 90);
-        numbersSEND[3] = new IntVar(store, "v(D)", 0, 9);
+        numbersSEND[0] = new IntVar(store, "v(SinSEND)", 0, 9000);
+        numbersSEND[1] = new IntVar(store, "v(EinSEND)", 0, 900);
+        numbersSEND[2] = new IntVar(store, "v(NinSEND)", 0, 90);
+        numbersSEND[3] = new IntVar(store, "v(DinSEND)", 0, 9);
 
         // Creates and imposes constraints which enforce
         // relationship between letter and value of its position
@@ -206,10 +206,10 @@ public class SendMoreMoney extends ExampleFD {
         // appropriate domain, they all start with zero
         // since a letter could be zero and the position
         // value is also zero
-        numbersMORE[0] = new IntVar(store, "v(M)", 0, 9000);
-        numbersMORE[1] = new IntVar(store, "v(O)", 0, 900);
-        numbersMORE[2] = new IntVar(store, "v(R)", 0, 90);
-        numbersMORE[3] = new IntVar(store, "v(E)", 0, 9);
+        numbersMORE[0] = new IntVar(store, "v(MinMORE)", 0, 9000);
+        numbersMORE[1] = new IntVar(store, "v(OinMORE)", 0, 900);
+        numbersMORE[2] = new IntVar(store, "v(RinMORE)", 0, 90);
+        numbersMORE[3] = new IntVar(store, "v(EinMORE)", 0, 9);
 
         // Creates and imposes constraints which enforce
         // relationship between letter and value of its position
@@ -237,11 +237,11 @@ public class SendMoreMoney extends ExampleFD {
         // appropriate domain, they all start with zero
         // since a letter could be zero and the position
         // value is also zero
-        numbersMONEY[0] = new IntVar(store, "v(M)", 0, 90000);
-        numbersMONEY[1] = new IntVar(store, "v(O)", 0, 9000);
-        numbersMONEY[2] = new IntVar(store, "v(N)", 0, 900);
-        numbersMONEY[3] = new IntVar(store, "v(E)", 0, 90);
-        numbersMONEY[4] = new IntVar(store, "v(Y)", 0, 9);
+        numbersMONEY[0] = new IntVar(store, "v(MinMONEY)", 0, 90000);
+        numbersMONEY[1] = new IntVar(store, "v(OinMONEY)", 0, 9000);
+        numbersMONEY[2] = new IntVar(store, "v(NinMONEY)", 0, 900);
+        numbersMONEY[3] = new IntVar(store, "v(EinMONEY)", 0, 90);
+        numbersMONEY[4] = new IntVar(store, "v(YinMONEY)", 0, 9);
 
         store.impose(new XmulCeqZ(letters[iM], 10000, numbersMONEY[0]));
         store.impose(new XmulCeqZ(letters[iO], 1000, numbersMONEY[1]));

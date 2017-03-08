@@ -126,7 +126,7 @@ public class TSP extends ExampleFD {
         T = T2 - T1;
 
         if (result)
-            System.out.println("Variables : " + vars);
+            System.out.println("Variables " + store.toStringOrderedVars());
         else
             System.out.println("Failed to find any solution");
 

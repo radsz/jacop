@@ -204,22 +204,22 @@ public class WhoKilledAgatha extends ExampleFD {
         SelectChoicePoint<IntVar> select =
             new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]), new SmallestDomain<IntVar>(), new IndomainMin<IntVar>());
 
-        Search<IntVar> label = new DepthFirstSearch<IntVar>();
-        label.getSolutionListener().searchAll(true);
-        label.getSolutionListener().recordSolutions(true);
-        boolean result = label.labeling(store, select);
+        search = new DepthFirstSearch<IntVar>();
+        search.getSolutionListener().searchAll(true);
+        search.getSolutionListener().recordSolutions(true);
+        boolean result = search.labeling(store, select);
 
         //
         // output
         //
         if (result) {
 
-            int numSolutions = label.getSolutionListener().solutionsNo();
+            int numSolutions = search.getSolutionListener().solutionsNo();
 
             System.out.println("Number of Solutions: " + numSolutions);
 
             for (int s = 1; s <= numSolutions; s++) {
-                Domain[] res = label.getSolutionListener().getSolution(s);
+                Domain[] res = search.getSolutionListener().getSolution(s);
                 int len = res.length;
 
                 System.out.println("the_killer: " + res[0]);

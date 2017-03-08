@@ -65,7 +65,7 @@ public class QCP extends ExampleFD {
     /**
      * It specifies the file containing the description of the problem.
      */
-    public String filename = "./psqwh-25-235-0081.pls";
+    public String filename = "src/main/java/org/jacop/examples/fd/qcp/psqwh-25-235-0081.pls";
 
     /**
      * It contains constraints which can be used to guide shaving.

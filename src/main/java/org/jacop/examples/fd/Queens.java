@@ -183,113 +183,6 @@ public class Queens extends ExampleFD {
 
     }
 
-
-
-    /**
-     * It uses a model based on fields to model Queens problem (rather inefficient model).
-     */
-    public void modelFields() {
-
-        // Creating constraint store
-        store = new Store();
-        vars = new ArrayList<IntVar>();
-
-        IntVar one = new IntVar(store, "one", 1, 1);
-
-        IntVar fields[] = new IntVar[numberQ * numberQ];
-
-        for (int i = 0; i < numberQ; i++)
-            for (int j = 0; j < numberQ; j++) {
-                fields[i * numberQ + j] = new IntVar(store, "F" + (i + 1) + "," + (j + 1), 0, 1);
-                vars.add(fields[i * numberQ + j]);
-            }
-
-        IntVar row[] = new IntVar[numberQ];
-        IntVar firstRowPosition = new IntVar(store, "firstRowPosition", 0, numberQ);
-
-        for (int i = 0; i < numberQ; i++) {
-            for (int j = 0; j < numberQ; j++)
-                row[j] = fields[i * numberQ + j];
-            IntVar rowSum = new IntVar(store, "row" + (i + 1), 1, 1);
-            store.impose(new SumInt(store, row, "==", rowSum));
-            if (i == 0) {
-                store.impose(new Element(firstRowPosition, row, one));
-            }
-        }
-
-        IntVar column[] = new IntVar[numberQ];
-        IntVar firstColumnPosition = new IntVar(store, "firstColumnPosition", 0, numberQ);
-
-        for (int j = 0; j < numberQ; j++) {
-            for (int i = 0; i < numberQ; i++)
-                column[i] = fields[i * numberQ + j];
-            IntVar columnSum = new IntVar(store, "column" + (j + 1), 1, 1);
-            store.impose(new SumInt(store, column, "==", columnSum));
-            if (j == 0) {
-                store.impose(new Element(firstColumnPosition, column, one));
-            }
-        }
-
-        // symmetry breaking
-        // store.impose(new XltY(firstColumnPosition, firstRowPosition));
-
-        IntVar diagonalSums[] = new IntVar[numberQ * 4 - 6];
-        int indexSum = 0;
-
-        IntVar diagonal[] = null;
-
-        for (int i = 0; i < numberQ - 1; i++) {
-            diagonal = new IntVar[numberQ - i];
-            for (int j = 0; j < numberQ - i; j++)
-                diagonal[j] = fields[(i + j) * numberQ + i + j];
-
-            IntVar diagonalSum = new IntVar(store, "diagonal-west-south-F" + (i + 1) + "," + 1, 0, 1);
-            diagonalSums[indexSum++] = diagonalSum;
-            store.impose(new SumInt(store, diagonal, "==", diagonalSum));
-        }
-
-        for (int i = numberQ - 1; i > 0; i--) {
-            diagonal = new IntVar[i + 1];
-            for (int j = 0; j < i + 1; j++)
-                diagonal[j] = fields[(i - j) * numberQ + j];
-
-            IntVar diagonalSum = new IntVar(store, "diagonal-west-north-F" + (i + 1) + "," + 1, 0, 1);
-            diagonalSums[indexSum++] = diagonalSum;
-            store.impose(new SumInt(store, diagonal, "==", diagonalSum));
-        }
-
-        for (int j = 1; j < numberQ - 1; j++) {
-            diagonal = new IntVar[numberQ - j];
-            for (int i = 0; i < numberQ - j; i++) {
-                diagonal[i] = fields[i * numberQ + j + i];
-            }
-
-            IntVar diagonalSum = new IntVar(store, "diagonal-west-south-F" + (1) + "," + (j + 1), 0, 1);
-            diagonalSums[indexSum++] = diagonalSum;
-            store.impose(new SumInt(store, diagonal, "==", diagonalSum));
-        }
-
-        for (int j = 1; j < numberQ - 1; j++) {
-            diagonal = new IntVar[numberQ - j];
-            for (int i = 0; i < numberQ - j; i++) {
-                diagonal[i] = fields[(numberQ - i - 1) * numberQ + j + i];
-            }
-
-            IntVar diagonalSum = new IntVar(store, "diagonal-west-north-F" + (numberQ) + "," + (j + 1), 0, 1);
-            diagonalSums[indexSum++] = diagonalSum;
-            store.impose(new SumInt(store, diagonal, "==", diagonalSum));
-        }
-
-        IntVar numberOfDiagonals = new IntVar(store, "takenDiagonals", 2 * numberQ - 1, 2 * numberQ);
-
-        store.impose(new SumInt(store, diagonalSums, "==", numberOfDiagonals));
-
-        IntVar queenNo = new IntVar(store, "noQ", numberQ, numberQ);
-
-        store.impose(new SumInt(store, fields, "==", queenNo));
-
-    }
-
     @Override public void model() {
 
         // Creating constraint store
@@ -403,19 +296,6 @@ public class Queens extends ExampleFD {
         example.modelChanneling();
 
         if (example.searchSmallestMiddle())
-            System.out.println("Solution(s) found");
-
-
-        example = new Queens();
-
-        // It is possible to supply the program
-        // with the chessboard size
-        if (args.length != 0)
-            example.numberQ = new Integer(args[0]);
-
-        example.modelFields();
-
-        if (example.search())
             System.out.println("Solution(s) found");
 
     }

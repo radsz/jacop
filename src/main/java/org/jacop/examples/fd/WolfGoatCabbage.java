@@ -152,12 +152,13 @@ public class WolfGoatCabbage extends ExampleFD {
      */
     public static void main(String args[]) {
 
+        WolfGoatCabbage example;
         int numberInnerMoves = 1;
         boolean result = false;
 
         while (numberInnerMoves < 20 && !result) {
 
-            WolfGoatCabbage example = new WolfGoatCabbage();
+            example = new WolfGoatCabbage();
             example.numberInnerMoves = numberInnerMoves;
 
             example.model();

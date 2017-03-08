@@ -174,7 +174,7 @@ public class MUCA extends ExampleFD {
     /**
      * It reads auction problem description from the file.
      */
-    public String filename = "./ExamplesJaCoP/testset3.auct";
+    public String filename = "src/main/java/org/jacop/examples/fd/muca/testset3.auct";
 
     /**
      * It creates an instance of the auction problem.
@@ -923,12 +923,12 @@ public class MUCA extends ExampleFD {
         problem.searchSpecial();
 
         problem = new MUCA();
-        problem.filename = "./ExamplesJaCoP/testset1.auct";
+        problem.filename = "src/main/java/org/jacop/examples/fd/muca/testset1.auct";
         problem.model();
         problem.searchSpecial();
 
         problem = new MUCA();
-        problem.filename = "./ExamplesJaCoP/testset2.auct";
+        problem.filename = "src/main/java/org/jacop/examples/fd/muca/testset2.auct";
         problem.model();
         problem.searchSpecial();
 

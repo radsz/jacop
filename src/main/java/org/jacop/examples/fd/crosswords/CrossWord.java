@@ -74,7 +74,7 @@ public class CrossWord extends ExampleFD {
     IntVar[][] x;      // the solution
     IntVar blank;
 
-    String defaultDictionary = "./words";
+    String defaultDictionary = "src/main/java/org/jacop/examples/fd/crosswords/words";
 
     HashMap<String, Integer> mapping = new HashMap<String, Integer>();
     HashMap<Integer, String> mappingReverse = new HashMap<Integer, String>();
@@ -346,7 +346,7 @@ public class CrossWord extends ExampleFD {
         SelectChoicePoint<IntVar> select =
             new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]), new SmallestDomain<IntVar>(), new IndomainMin<IntVar>());
 
-        Search<IntVar> search = new DepthFirstSearch<IntVar>();
+        search = new DepthFirstSearch<IntVar>();
         search.setSolutionListener(new PrintListener<IntVar>(crosswordTemplate));
 
         search.getSolutionListener().searchAll(true);
