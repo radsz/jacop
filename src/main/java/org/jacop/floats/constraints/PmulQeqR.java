@@ -221,8 +221,9 @@ public class PmulQeqR extends Constraint {
 
     @Override public boolean satisfied() {
         FloatDomain pDom = p.dom(), qDom = q.dom(), rDom = r.dom();
-        return pDom.singleton() && qDom.singleton() && rDom.singleton() && // pDom.min() * qDom.min() == rDom.min();
-	  java.lang.Math.abs(rDom.max() - FloatDomain.mulBounds(p.min(), p.max(), q.min(), q.max()).min()) <= FloatDomain.precision();
+        return pDom.singleton() && qDom.singleton() && rDom.singleton() &&
+	  rDom.eq(FloatDomain.mulBounds(pDom.min(), pDom.max(), qDom.min(), qDom.max()));
+
     }
 
     @Override public String toString() {
