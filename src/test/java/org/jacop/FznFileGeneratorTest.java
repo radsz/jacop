@@ -1,18 +1,14 @@
 package org.jacop;
-
-import org.apache.commons.io.FileUtils;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.Collection;
+
 
 /**
  * @author Mariusz Świerkot
@@ -33,7 +29,9 @@ public class FznFileGeneratorTest extends MinizincBasedTestsHelper {
     }
 
     public FznFileGeneratorTest(String testFilename)  {
+
         this.testFilename = testFilename;
+
     }
 
     @Parameterized.Parameters
@@ -43,41 +41,47 @@ public class FznFileGeneratorTest extends MinizincBasedTestsHelper {
     }
 
     @Test
-    public void testMinizinc() throws IOException {
+    public void testMinizinc() throws IOException, InterruptedException {
 
         String expected = "src/test/fz/scriptGolden/" + this.testFilename +".out";
-        String result = null;
+        String res = null;
 
         if(new File("src/test/fz/upTo5sec/" + this.testFilename+".out").exists()) {
-            result = "src/test/fz/upTo5sec/" + this.testFilename +".out";
+            res = "src/test/fz/upTo5sec/" + this.testFilename +".out";
         } else
-            if (new File("src/test/fz/upTo30sec/" + this.testFilename+".out").exists()){
-                result = "src/test/fz/upTo30sec/" + this.testFilename +".out";
-            } else
-                if (new File("src/test/fz/upTo1min/" + this.testFilename+".out").exists()){
-                    result = "src/test/fz/upTo1min/" + this.testFilename +".out";
-                } else
-                    if (new File("src/test/fz/upTo5min/" + this.testFilename+".out").exists()){
-                        result = "src/test/fz/upTo5min/" + this.testFilename +".out";
-                    } else
-                        if (new File("src/test/fz/upTo1hour/" + this.testFilename+".out").exists()){
-                            result = "src/test/fz/upTo1hour/" + this.testFilename +".out";
-                        } else
-                            if (new File("src/test/fz/above1hour/" + this.testFilename+".out").exists()){
-                                result = "src/test/fz/above1hour/" + this.testFilename +".out";
-                            } else
-                                if (new File("src/test/fz/flakyTest/" + this.testFilename+".out").exists()){
-                                    result = "src/test/fz/flakyTest/" + this.testFilename +".out";
-                                } else
-                                    if (new File("src/test/fz/errors/" + this.testFilename+".out").exists()){
-                                        result = "src/test/fz/errors/" + this.testFilename +".out";
-                                    }
+        if (new File("src/test/fz/upTo30sec/" + this.testFilename+".out").exists()){
+            res = "src/test/fz/upTo30sec/" + this.testFilename +".out";
+        } else
+        if (new File("src/test/fz/upTo1min/" + this.testFilename+".out").exists()){
+            res = "src/test/fz/upTo1min/" + this.testFilename +".out";
+        } else
+        if (new File("src/test/fz/upTo5min/" + this.testFilename+".out").exists()){
+            res = "src/test/fz/upTo5min/" + this.testFilename +".out";
+        } else
+        if (new File("src/test/fz/upTo1hour/" + this.testFilename+".out").exists()){
+            res = "src/test/fz/upTo1hour/" + this.testFilename +".out";
+        } else
+        if (new File("src/test/fz/above1hour/" + this.testFilename+".out").exists()){
+            res = "src/test/fz/above1hour/" + this.testFilename +".out";
+        } else
+        if (new File("src/test/fz/flakyTest/" + this.testFilename+".out").exists()){
+            res = "src/test/fz/flakyTest/" + this.testFilename +".out";
+        } else
+        if (new File("src/test/fz/errors/" + this.testFilename+".out").exists()){
+            res = "src/test/fz/errors/" + this.testFilename +".out";
+        }
 
         System.out.println(expected);
-        Assert.assertEquals(FileUtils.readLines(new File(expected)), FileUtils.readLines(new File(result)));
+        ProcessBuilder pb1 = new ProcessBuilder("diff", res, expected);
+        Process p2 = pb1.start();
+        boolean result = false;
+        if( 0 == p2.waitFor()) {
+            result = true;
+        }
+
+        Assert.assertEquals(true, result);
 
     }
-
 
 
     private static void copyFolders(File sourceFolder, File destinationFolder) throws IOException {
@@ -90,11 +94,11 @@ public class FznFileGeneratorTest extends MinizincBasedTestsHelper {
 
             String files[] = sourceFolder.list();
             for (String file : files) {
-             if(file != "list.txt" || file != "listgenerator") {
-                 File srcFile = new File(sourceFolder, file);
-                 File dstFile = new File(destinationFolder, file);
-                 copyFolders(srcFile, dstFile);
-             }
+                if(file != "list.txt" || file != "listgenerator") {
+                    File srcFile = new File(sourceFolder, file);
+                    File dstFile = new File(destinationFolder, file);
+                    copyFolders(srcFile, dstFile);
+                }
             }
 
 
@@ -104,20 +108,20 @@ public class FznFileGeneratorTest extends MinizincBasedTestsHelper {
     }
 
     private static void runBashScript() throws IOException {
-            ProcessBuilder pb1 = new ProcessBuilder("/bin/bash", "listgenerator");
-            pb1.directory(new File("src/test/fz/scriptTest"));
-            pb1.start();
+        ProcessBuilder pb1 = new ProcessBuilder("/bin/bash", "listgenerator");
+        pb1.directory(new File("src/test/fz/scriptTest"));
+        pb1.start();
 
-            ProcessBuilder pb2 = new ProcessBuilder("/bin/bash", "fznFileGenerator.sh");
-            pb2.directory(new File("src/test/fz/"));
-            Process p = pb2.start();
+        ProcessBuilder pb2 = new ProcessBuilder("/bin/bash", "fznFileGenerator.sh");
+        pb2.directory(new File("src/test/fz/"));
+        Process p = pb2.start();
 
-            String s = null;
-            BufferedReader stdInput = new BufferedReader(new InputStreamReader(p.getInputStream()));
+        String s = null;
+        BufferedReader stdInput = new BufferedReader(new InputStreamReader(p.getInputStream()));
 
-            while ((s = stdInput.readLine()) != null) {
-                System.out.println(s);
-            }
+        while ((s = stdInput.readLine()) != null) {
+            System.out.println(s);
+        }
     }
 }
 
