@@ -100,7 +100,7 @@ public class Nooverlap extends Constraint {
 
         for (int i = 0; i < rectangle.length; i++) {
             assert (rectangle[i] != null) : i + "-th rectangle in the list is null";
-            assert (rectangle[i].length != 4) : "The rectangle has to have exactly two dimensions";
+            assert (rectangle[i].length == 4) : "The rectangle has to have exactly two dimensions";
             this.rectangle[i] = new Rectangle(rectangle[i][0], rectangle[i][1], rectangle[i][2], rectangle[i][3]);
             this.rectangle[i].index = i;
         }
