@@ -30,10 +30,7 @@
 
 package org.jacop.core;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
@@ -1257,6 +1254,37 @@ public class Store {
                 return "Removal of old values was done properly " + vars[i];
 
         return null;
+    }
+
+    public String toStringOrderedVars() {
+
+        StringBuffer result = new StringBuffer();
+
+        result.append("[");
+
+        // first BooleanVar
+        for (String key : new TreeSet<>( variablesHashMap.keySet() )) {
+            Var v = variablesHashMap.get(key);
+            if (v instanceof BooleanVar)
+                result.append(v + ",");
+        }
+
+        // all other variables
+        TreeSet<Var> orderedVariables = new TreeSet<>(Comparator.comparing(Var::id));
+        for (int i = 0; i < size; i++)
+            orderedVariables.add(vars[i]);
+        for (Var var : orderedVariables)
+            result.append(var + ",");
+
+        int i = 0;
+        for (MutableVar var : mutableVariables) {
+            result.append("MutableVar[").append((int) i++).append("] ").append("(").append(var.value().stamp()).append(")");
+            result.append(var.value()).append(",");
+        }
+
+        result.replace(result.length() - 1, result.length(), "]");
+        return result.toString();
+
     }
 
 }

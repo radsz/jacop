@@ -92,7 +92,7 @@ public class MineSweeper extends ExampleFD {
     IntVar[][] game;    // The FDV version of the problem matrix.
     IntVar[][] mines;   // solution matrix: 0..1 where 1 means mine.
 
-    int[][] problem = null;
+    public int[][] problem = null;
 
 
     @Override public void model() {
