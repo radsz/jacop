@@ -29,9 +29,6 @@
  */
 package org.jacop.fz;
 
-import java.util.ArrayList;
-
-import org.jacop.constraints.Constraint;
 import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
