@@ -1,11 +1,18 @@
 package org.jacop;
+
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import java.io.*;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Collection;
 
@@ -42,37 +49,47 @@ public class FznFileGeneratorTest extends MinizincBasedTestsHelper {
 
     @Test
     public void testMinizinc() throws IOException, InterruptedException {
+        Path expectedDir = Paths.get(this.testFilename).getParent();
 
-        String expected = "src/test/fz/scriptGolden/" + this.testFilename +".out";
-        String res = null;
+        String expected = "";//"src/test/fz/scriptGolden/" + expectedDir;
 
-        if(new File("src/test/fz/upTo5sec/" + this.testFilename+".out").exists()) {
-            res = "src/test/fz/upTo5sec/" + this.testFilename +".out";
+        String res = "";
+
+        if(new File("src/test/fz/upTo5sec/" + Paths.get(this.testFilename).getParent()).isDirectory()) {
+            res = "src/test/fz/upTo5sec/" + Paths.get(this.testFilename).getParent();
+            expected = "src/test/fz/scriptGolden/upTo5sec/" + expectedDir;
         } else
-        if (new File("src/test/fz/upTo30sec/" + this.testFilename+".out").exists()){
-            res = "src/test/fz/upTo30sec/" + this.testFilename +".out";
+        if (new File("src/test/fz/upTo30sec/" + Paths.get(this.testFilename).getParent()).isDirectory()){
+            res = "src/test/fz/upTo30sec/" + Paths.get(this.testFilename).getParent();
+            expected = "src/test/fz/scriptGolden/upTo30sec/" + expectedDir;
         } else
-        if (new File("src/test/fz/upTo1min/" + this.testFilename+".out").exists()){
-            res = "src/test/fz/upTo1min/" + this.testFilename +".out";
+        if (new File("src/test/fz/upTo1min/" + Paths.get(this.testFilename).getParent()).isDirectory()){
+            res = "src/test/fz/upTo1min/" + Paths.get(this.testFilename).getParent();
+            expected = "src/test/fz/scriptGolden/upTo1min/" + expectedDir;
         } else
-        if (new File("src/test/fz/upTo5min/" + this.testFilename+".out").exists()){
-            res = "src/test/fz/upTo5min/" + this.testFilename +".out";
+        if (new File("src/test/fz/upTo5min/" + Paths.get(this.testFilename).getParent()).isDirectory()){
+            res = "src/test/fz/upTo5min/" + Paths.get(this.testFilename).getParent();
+            expected = "src/test/fz/scriptGolden/upTo5min/" + expectedDir;
         } else
-        if (new File("src/test/fz/upTo1hour/" + this.testFilename+".out").exists()){
-            res = "src/test/fz/upTo1hour/" + this.testFilename +".out";
+        if (new File("src/test/fz/upTo1hour/" + Paths.get(this.testFilename).getParent()).isDirectory()){
+            res = "src/test/fz/upTo1hour/" + Paths.get(this.testFilename).getParent();
+            expected = "src/test/fz/scriptGolden/upTo1hour/" + expectedDir;
         } else
-        if (new File("src/test/fz/above1hour/" + this.testFilename+".out").exists()){
-            res = "src/test/fz/above1hour/" + this.testFilename +".out";
+        if (new File("src/test/fz/above1hour/" + Paths.get(this.testFilename).getParent()).isDirectory()){
+            res = "src/test/fz/above1hour/" + Paths.get(this.testFilename).getParent();
+            expected = "src/test/fz/scriptGolden/above1hour/" + expectedDir;
         } else
-        if (new File("src/test/fz/flakyTest/" + this.testFilename+".out").exists()){
-            res = "src/test/fz/flakyTest/" + this.testFilename +".out";
+        if (new File("src/test/fz/flakyTest/" + Paths.get(this.testFilename).getParent()).isDirectory()){
+            res = "src/test/fz/flakyTest/" + Paths.get(this.testFilename).getParent();
+            expected = "src/test/fz/scriptGolden/flakyTest/" + expectedDir;
         } else
-        if (new File("src/test/fz/errors/" + this.testFilename+".out").exists()){
-            res = "src/test/fz/errors/" + this.testFilename +".out";
+        if (new File("src/test/fz/errors/" + Paths.get(this.testFilename).getParent()).isDirectory()){
+            res = "src/test/fz/errors/" + Paths.get(this.testFilename).getParent();
+            expected = "src/test/fz/scriptGolden/errors/" + expectedDir;
         }
 
         System.out.println(expected);
-        ProcessBuilder pb1 = new ProcessBuilder("diff", res, expected);
+        ProcessBuilder pb1 = new ProcessBuilder("diff", "-r", res, expected);
         Process p2 = pb1.start();
         boolean result = false;
         if( 0 == p2.waitFor()) {
@@ -89,12 +106,12 @@ public class FznFileGeneratorTest extends MinizincBasedTestsHelper {
         if (sourceFolder.isDirectory()) {
             if (!destinationFolder.exists()) {
                 destinationFolder.mkdir();
-                System.out.println("Create folder" + destinationFolder);
+//                System.out.println("Create folder" + destinationFolder);
             }
 
             String files[] = sourceFolder.list();
             for (String file : files) {
-                if(file != "list.txt" || file != "listgenerator") {
+                if(!file.equals("list.txt") && !file.equals("listgenerator")) {
                     File srcFile = new File(sourceFolder, file);
                     File dstFile = new File(destinationFolder, file);
                     copyFolders(srcFile, dstFile);
