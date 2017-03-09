@@ -163,8 +163,7 @@ public class SearchItem implements ParserTreeConstants {
                 explore = "complete";
                 System.err.println("Warning: not recognized search exploration type; use \"complete\"");
             } else {
-                System.err.println("Error: not recognized search exploration type; execution aborted");
-                System.exit(0);
+                throw new RuntimeException("Error: not recognized search exploration type; execution aborted");
             }
         } else if (search_type.equals("set_search")) {
 
@@ -200,7 +199,7 @@ public class SearchItem implements ParserTreeConstants {
                 System.err.println("Warning: not recognized search exploration type; use \"complete\"");
             } else {
                 System.err.println("Error: not recognized search exploration type; execution aborted");
-                System.exit(0);
+		System.exit(0);
             }
         }
 

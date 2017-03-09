@@ -552,7 +552,7 @@ public class CumulativeBasic extends Constraint {
     }
 
 
-    class EventIncComparator<T extends Event> implements Comparator<T> {
+  private static class EventIncComparator<T extends Event> implements Comparator<T>, java.io.Serializable {
 
         EventIncComparator() {
         }

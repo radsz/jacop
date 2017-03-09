@@ -471,19 +471,4 @@ public class SumBool extends PrimitiveConstraint {
         }
         sum.weight++;
     }
-
-    private class GroundParameters {
-
-        int start = 0;
-        int sum = 0;
-
-        GroundParameters() {
-        }
-
-        GroundParameters(int p, int s) {
-            start = p;
-            sum = s;
-        }
-
-    }
 }

@@ -39,7 +39,7 @@ import java.util.Random;
  * @version 4.4
  */
 
-public class SmallDenseDomain extends IntDomain {
+public class SmallDenseDomain extends IntDomain implements Cloneable {
 
 
     /**

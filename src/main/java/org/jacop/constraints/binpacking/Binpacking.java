@@ -142,8 +142,7 @@ public class Binpacking extends Constraint implements UsesQueueVariable {
 
             Integer varPosition = binMap.put(this.load[i], i);
             if (varPosition != null) {
-                System.err.println("ERROR: Constraint " + toString() + " must have different variables on the list");
-                System.exit(0);
+                throw new RuntimeException("ERROR: Constraint " + toString() + " must have different variables on the list");
             }
         }
 
@@ -576,7 +575,7 @@ public class Binpacking extends Constraint implements UsesQueueVariable {
         return lb;
     }
 
-    class WeightComparator<T extends BinItem> implements Comparator<T> {
+  private static class WeightComparator<T extends BinItem> implements Comparator<T>, java.io.Serializable {
 
         WeightComparator() {
         }

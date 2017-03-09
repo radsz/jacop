@@ -39,7 +39,7 @@ import org.jacop.core.MutableVarValue;
  * @version 4.4
  */
 
-class CircuitVarValue implements MutableVarValue {
+class CircuitVarValue implements MutableVarValue, Cloneable {
 
     int next = 0, previous = 0;
 

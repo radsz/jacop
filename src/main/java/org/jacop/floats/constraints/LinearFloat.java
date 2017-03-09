@@ -104,8 +104,7 @@ public class LinearFloat extends Linear implements UsesQueueVariable {
             fIndex++;
 
         if (fIndex == list.length) {
-            System.out.println("Wrong variable in derivative of " + this);
-            System.exit(0);
+            throw new RuntimeException("Wrong variable in derivative of " + this);
         }
 
         FloatVar[] df = new FloatVar[list.length];

@@ -125,20 +125,6 @@ public class SixHumpCamelFunction {
 
         System.out.println("Var store size: " + store.size() + "\nNumber of constraints: " + store.numberConstraints());
 
-        boolean result1 = store.consistency();
-
-	/*
-  DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
-	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, new FloatVar[] {x1, x2}, null); //new SmallestDomainFloat<FloatVar>());
-	label.setAssignSolution(true);
-	label.setSolutionListener(new PrintOutListener<FloatVar>());
-	// label.getSolutionListener().recordSolutions(true); 
-	// label.getSolutionListener().searchAll(true); 
-	//s.leftFirst = false;
-
-	boolean result = label.labeling(store, s, f);
-	*/
-
         DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
         SplitSelectFloat<FloatVar> s =
             new SplitSelectFloat<FloatVar>(store, new FloatVar[] {x1, x2}, null); //new LargestDomainFloat<FloatVar>());

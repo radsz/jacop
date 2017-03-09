@@ -55,7 +55,7 @@ import org.jacop.floats.constraints.ElementFloat;
 
 public class TinyTSP {
 
-    double MIN_FLOAT = -1e+150;
+    // double MIN_FLOAT = -1e+150;
     double MAX_FLOAT = 1e+150;
 
     void tiny_tsp() {

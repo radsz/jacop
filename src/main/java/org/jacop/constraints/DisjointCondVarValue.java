@@ -42,7 +42,7 @@ import org.jacop.core.MutableVarValue;
  * @version 4.4
  */
 
-class DisjointCondVarValue implements MutableVarValue {
+class DisjointCondVarValue implements MutableVarValue, Cloneable {
 
     DisjointCondVarValue previousDisjointCondVarValue = null;
 

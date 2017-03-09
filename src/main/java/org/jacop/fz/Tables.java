@@ -196,9 +196,7 @@ public class Tables {
         if (iVal != null)
             return iVal.intValue();
         else {
-            System.err.println("Symbol \"" + ident + "\" does not have assigned value when refered; execution aborted");
-            System.exit(0);
-            return -1;
+            throw new RuntimeException("Symbol \"" + ident + "\" does not have assigned value when refered; execution aborted");
         }
     }
 
@@ -234,9 +232,7 @@ public class Tables {
         if (dVal != null)
             return dVal.doubleValue();
         else {
-            System.err.println("Symbol \"" + ident + "\" does not have assigned value when refered; execution aborted");
-            System.exit(0);
-            return -1;
+            throw new RuntimeException("Symbol \"" + ident + "\" does not have assigned value when refered; execution aborted");
         }
     }
 

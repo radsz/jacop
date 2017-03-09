@@ -1483,7 +1483,7 @@ public class Solve implements ParserTreeConstants {
     }
 
 
-    class DomainSizeComparator<T extends Var> implements Comparator<T> {
+  static class DomainSizeComparator<T extends Var> implements Comparator<T>, java.io.Serializable {
 
         DomainSizeComparator() {
         }

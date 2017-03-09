@@ -205,7 +205,7 @@ public class DefaultSearchVars {
         return buf.toString();
     }
 
-    class DomainSizeComparator<T extends Var> implements Comparator<T> {
+  private static class DomainSizeComparator<T extends Var> implements Comparator<T>, java.io.Serializable {
 
         DomainSizeComparator() {
         }

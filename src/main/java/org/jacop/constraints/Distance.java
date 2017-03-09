@@ -56,8 +56,6 @@ public class Distance extends PrimitiveConstraint {
 
     boolean firstConsistencyCheck = false;
 
-    Hashtable<Var, Integer> pruningEvents;
-
     int firstConsistencyLevel;
 
     /**
@@ -304,8 +302,8 @@ public class Distance extends PrimitiveConstraint {
 
         // If consistency function mode
         if (mode) {
-            if (pruningEvents != null) {
-                Integer possibleEvent = pruningEvents.get(var);
+            if (consistencyPruningEvents != null) {
+                Integer possibleEvent = consistencyPruningEvents.get(var);
                 if (possibleEvent != null)
                     return possibleEvent;
             }
@@ -350,8 +348,8 @@ public class Distance extends PrimitiveConstraint {
     @Override public int getConsistencyPruningEvent(Var var) {
 
         // If consistency function mode
-        if (pruningEvents != null) {
-            Integer possibleEvent = pruningEvents.get(var);
+        if (consistencyPruningEvents != null) {
+            Integer possibleEvent = consistencyPruningEvents.get(var);
             if (possibleEvent != null)
                 return possibleEvent;
         }

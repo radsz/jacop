@@ -102,10 +102,7 @@ public abstract class DecomposedConstraint<T extends Constraint> {
     public org.jacop.floats.core.FloatVar derivative(Store store, org.jacop.floats.core.FloatVar f,
         java.util.Set<org.jacop.floats.core.FloatVar> vars, org.jacop.floats.core.FloatVar x) {
 
-        System.out.println("!!! Derivative not implemented for constraint " + this);
-        System.exit(0);
-
-        return null;
-    }
+        throw new RuntimeException("!!! Derivative not implemented for constraint " + this);
+   }
 
 }

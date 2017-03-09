@@ -677,21 +677,14 @@ public class FloatIntervalDomain extends FloatDomain {
      */
 
     @Override public ValueEnumeration valueEnumeration() {
-        System.out.println("This does not exist for floats :(");
-        System.exit(0);
-
-        return new org.jacop.core.IntervalDomainValueEnumeration(new org.jacop.core.IntervalDomain());  // only need for correct compilation
+        throw new RuntimeException("This does not exist for floats :(");
     }
 
     /**
      * It returns interval enumeration of the domain values.
      */
     @Override public IntervalEnumeration intervalEnumeration() {
-        System.out.println("This does not exist for floats :(");
-        System.exit(0);
-
-        return new org.jacop.core.IntervalDomainIntervalEnumeration(
-            new org.jacop.core.IntervalDomain());  // only need for correct compilation
+        throw new RuntimeException("This does not exist for floats :(");
     }
 
 
@@ -735,19 +728,7 @@ public class FloatIntervalDomain extends FloatDomain {
      */
     @Override public int getSize() {
 
-        System.out.println("getSize() has no meanning for floats. Not implemented.");
-        System.exit(0);
-
-        // assert checkInvariants() == null : checkInvariants() ;
-
-        // int n = 0;
-
-        // for (int i = 0; i < size; i++)
-        // 	n = n + intervals[i].max - intervals[i].min + 1;
-
-        // return n;
-
-        return 0;  // only needed for correct compilation
+        throw new RuntimeException("getSize() has no meanning for floats. Not implemented.");
     }
 
 

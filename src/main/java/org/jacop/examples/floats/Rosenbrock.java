@@ -116,13 +116,14 @@ public class Rosenbrock {
         Optimize<FloatVar> min = new Optimize<FloatVar>(store, label, s, z);
         boolean result = min.minimize();
 
-        System.out.println("\nPrecision = " + FloatDomain.precision());
+	if (result) {
+	  System.out.println("\nPrecision = " + FloatDomain.precision());
 
-        T2 = System.currentTimeMillis();
-        T = T2 - T1;
+	  T2 = System.currentTimeMillis();
+	  T = T2 - T1;
 
-        System.out.println("\n\t*** Execution time = " + T + " ms");
-
+	  System.out.println("\n\t*** Execution time = " + T + " ms");
+	}
     }
 
     /**

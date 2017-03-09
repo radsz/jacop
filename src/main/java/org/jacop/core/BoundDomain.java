@@ -44,7 +44,7 @@ import org.jacop.constraints.Constraint;
  * @version 4.4
  */
 
-public class BoundDomain extends IntDomain {
+public class BoundDomain extends IntDomain implements Cloneable {
 
 
     /**

@@ -51,9 +51,6 @@ import org.jacop.floats.search.SplitSelectFloat;
 
 public class Markov {
 
-    double MIN_FLOAT = -1e+150;
-    double MAX_FLOAT = 1e+150;
-
     void markov_chains_taha() {
 
         long T1, T2, T;
@@ -65,8 +62,6 @@ public class Markov {
 
         FloatDomain.setPrecision(1.0e-13);
         FloatDomain.intervalPrint(false);
-
-        double[] cost = {100.0, 125.0, 160.0};
 
         FloatVar[] mean_first_return_time = new FloatVar[3];
         for (int i = 0; i < 3; i++)

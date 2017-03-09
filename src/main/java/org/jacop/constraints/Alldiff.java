@@ -303,7 +303,7 @@ public class Alldiff extends Alldifferent {
         super.queueVariable(level, var);
     }
 
-    class VariablemaxComparator<T extends IntVar> implements Comparator<T> {
+    private static class VariablemaxComparator<T extends IntVar> implements Comparator<T>, java.io.Serializable {
 
         VariablemaxComparator() {
         }
@@ -314,7 +314,7 @@ public class Alldiff extends Alldifferent {
     }
 
 
-    class VariableminComparator<T extends IntVar> implements Comparator<T> {
+  private static class VariableminComparator<T extends IntVar> implements Comparator<T>, java.io.Serializable {
 
         VariableminComparator() {
         }

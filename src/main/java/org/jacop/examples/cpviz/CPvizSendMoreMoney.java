@@ -135,7 +135,7 @@ public class CPvizSendMoreMoney {
         //		search.setExitListener((ExitListener)select);
         // <---
 
-        boolean result = search.labeling(store, select);
+        search.labeling(store, select);
 
         // 		return result;
 
@@ -239,7 +239,7 @@ public class CPvizSendMoreMoney {
         //		search.setExitListener((ExitListener)select);
         // <---
 
-        boolean result = search.labeling(store, select);
+        search.labeling(store, select);
 
         // 		return result;
 

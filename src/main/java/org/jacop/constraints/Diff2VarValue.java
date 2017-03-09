@@ -41,7 +41,7 @@ import org.jacop.core.MutableVarValue;
  * @version 4.4
  */
 
-class Diff2VarValue implements MutableVarValue {
+class Diff2VarValue implements MutableVarValue, Cloneable {
 
     Diff2VarValue previousDiff2VarValue = null;
 
@@ -101,12 +101,14 @@ class Diff2VarValue implements MutableVarValue {
     }
 
     @Override public String toString() {
-        String S = "";
+
+        StringBuffer s = new StringBuffer();
+
         for (int i = 0; i < Rects.length; i++)
             if (i == Rects.length - 1)
-                S = S + Rects[i];
+	      s.append(Rects[i]);
             else
-                S = S + Rects[i] + ",";
-        return S;
+	      s.append(Rects[i] + ",");
+        return s.toString();
     }
 }

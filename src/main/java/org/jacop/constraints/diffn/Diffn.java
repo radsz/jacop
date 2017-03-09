@@ -624,7 +624,7 @@ public class Diffn extends Nooverlap {
     }
 
 
-    class EventIncComparator<T extends Event> implements Comparator<T> {
+  private static class EventIncComparator<T extends Event> implements Comparator<T>, java.io.Serializable {
 
         EventIncComparator() {
         }

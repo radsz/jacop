@@ -54,22 +54,8 @@ public class Constraints implements ParserTreeConstants {
     String p;
 
     final static int eq = 0, ne = 1, lt = 2, gt = 3, le = 4, ge = 5;
-    boolean intPresent = true;
-    boolean floatPresent = true;
-
-    // =========== Annotations ===========
-    boolean boundsConsistency = true, domainConsistency = false;
-    // defines_var
-    IntVar definedVar = null;
-
-    // ============ Options ==============
-    Options opt;
-
-    ArrayList<IntVar[]> parameterListForAlldistincts = new ArrayList<IntVar[]>();
-    ArrayList<Constraint> delayedConstraints = new ArrayList<Constraint>();
 
     // ============ SAT solver interface ==============
-
     SatTranslation sat;
 
     //     boolean storeLevelIncreased=false;
@@ -99,7 +85,6 @@ public class Constraints implements ParserTreeConstants {
     void generateAllConstraints(SimpleNode astTree, Options opt) throws Throwable {
 
         this.debug = opt.debug();
-        this.opt = opt;
 
         int n = astTree.jjtGetNumChildren();
 
@@ -148,8 +133,7 @@ public class Constraints implements ParserTreeConstants {
                 method.invoke(null, node);
 
             } catch (NoSuchMethodException e) {
-                System.out.println("%% JaCoP flatzinc back-end: constraint " + p + " is not supported.");
-                System.exit(0);
+                throw new RuntimeException("%% JaCoP flatzinc back-end: constraint " + p + " is not supported.");
             } catch (IllegalAccessException e) {
                 System.out.println(e);
             } catch (java.lang.reflect.InvocationTargetException e) {

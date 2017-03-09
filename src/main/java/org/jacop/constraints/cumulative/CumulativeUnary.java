@@ -358,7 +358,7 @@ public class CumulativeUnary extends Cumulative {
 
     }
 
-    class TaskIncLCTComparator<T extends TaskView> implements Comparator<T> {
+    private static class TaskIncLCTComparator<T extends TaskView> implements Comparator<T>, java.io.Serializable {
 
         TaskIncLCTComparator() {
         }
@@ -368,8 +368,7 @@ public class CumulativeUnary extends Cumulative {
         }
     }
 
-
-    class TaskIncLSTComparator<T extends TaskView> implements Comparator<T> {
+    private static class TaskIncLSTComparator<T extends TaskView> implements Comparator<T>, java.io.Serializable {
 
         TaskIncLSTComparator() {
         }
@@ -379,8 +378,7 @@ public class CumulativeUnary extends Cumulative {
         }
     }
 
-
-    class TaskIncECTComparator<T extends TaskView> implements Comparator<T> {
+    private static class TaskIncECTComparator<T extends TaskView> implements Comparator<T>, java.io.Serializable {
 
         TaskIncECTComparator() {
         }

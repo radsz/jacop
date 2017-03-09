@@ -39,7 +39,7 @@ package org.jacop.core;
  * @version 4.4
  */
 
-public final class Interval {
+public final class Interval implements Cloneable {
 
     /**
      * It specifies the minimal value in the interval.

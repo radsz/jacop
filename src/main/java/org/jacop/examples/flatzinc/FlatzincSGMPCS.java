@@ -43,7 +43,6 @@ import org.jacop.fz.*;
  * @version 4.4
  */
 public class FlatzincSGMPCS {
-    Store store;
 
     public static void main(String args[]) {
 
@@ -80,15 +79,11 @@ public class FlatzincSGMPCS {
         System.out.println("\nIntVar store size: " + store.size() + "\nNumber of constraints: " + store.numberConstraints());
 
         if (fl.getSearch().type() == null || (!fl.getSearch().type().equals("int_search"))) {
-            System.out.println("The problem is not of type int_search and cannot be handled by this method");
-
-            System.exit(0);
+            throw new RuntimeException("The problem is not of type int_search and cannot be handled by this method");
         }
 
         if (fl.getSolve().getSolveKind() != 1) {
-            System.out.println("The problem is not minimization problem and cannot be handled by this method");
-
-            System.exit(0);
+            throw new RuntimeException("The problem is not minimization problem and cannot be handled by this method");
         }
 
         int timeOut = fl.getOptions().getTimeOut();

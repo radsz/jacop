@@ -64,8 +64,6 @@ public class Steiner extends ExampleSet {
      */
     public int n = 3;
 
-    Var[] vs;
-
     /**
      * It executes the program which solves this Steiner problem.
      * @param args prameters (none)

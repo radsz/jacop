@@ -53,7 +53,7 @@ import org.xml.sax.SAXException;
  * @version 4.4
  */
 
-public class IntervalDomain extends IntDomain {
+public class IntervalDomain extends IntDomain implements Cloneable {
 
     // FIXME, implement all already implemented functions from IntDomain
     // so it is more efficient, for example public int lex(IntDomain s).

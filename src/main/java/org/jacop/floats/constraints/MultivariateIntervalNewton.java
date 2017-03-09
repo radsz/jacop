@@ -197,49 +197,43 @@ public class MultivariateIntervalNewton {
             if (f.equals(((PmulQeqR) c).r)) {
                 result = value(((PmulQeqR) c).p) * value(((PmulQeqR) c).q);
             } else {
-                System.out.println(
+	        throw new RuntimeException(
                     "!!! Anable to compute middle value for " + f + "; + Constraint " + c + " does not define a function for variable\n");
-                System.exit(0);
             }
         } else if (c instanceof PmulCeqR) {
             if (f.equals(((PmulCeqR) c).r))
                 result = value(((PmulCeqR) c).p) * ((PmulCeqR) c).c;
             else {
-                System.out.println(
+                throw new RuntimeException(
                     "!!! Anable to compute middle value for " + f + "; + Constraint " + c + " does not define a function for variable\n");
-                System.exit(0);
             }
         } else if (c instanceof PdivQeqR) {
             if (f.equals(((PdivQeqR) c).r)) {
                 result = value(((PdivQeqR) c).p) / value(((PdivQeqR) c).q);
             } else {
-                System.out.println(
+                throw new RuntimeException(
                     "!!! Anable to compute middle value for " + f + "; + Constraint " + c + " does not define a function for variable\n");
-                System.exit(0);
             }
         } else if (c instanceof PplusQeqR) {
             if (f.equals(((PplusQeqR) c).r))
                 result = value(((PplusQeqR) c).p) + value(((PplusQeqR) c).q);
             else {
-                System.out.println(
+                throw new RuntimeException(
                     "!!! Anable to compute middle value for " + f + "; + Constraint " + c + " does not define a function for variable\n");
-                System.exit(0);
             }
         } else if (c instanceof PplusCeqR) {
             if (f.equals(((PplusCeqR) c).r))
                 result = value(((PplusCeqR) c).p) + ((PplusCeqR) c).c;
             else {
-                System.out.println(
+                throw new RuntimeException(
                     "!!! Anable to compute middle value for " + f + "; + Constraint " + c + " does not define a function for variable\n");
-                System.exit(0);
             }
         } else if (c instanceof PminusQeqR) {
             if (f.equals(((PminusQeqR) c).r))
                 result = value(((PminusQeqR) c).p) - value(((PminusQeqR) c).q);
             else {
-                System.out.println(
+                throw new RuntimeException(
                     "!!! Anable to compute middle value for " + f + "; + Constraint " + c + " does not define a function for variable\n");
-                System.exit(0);
             }
         } else if (c instanceof LinearFloat) {
 
@@ -262,13 +256,11 @@ public class MultivariateIntervalNewton {
             if (vOut != null)
                 result = sum / wOut;
             else {
-                System.out.println(
+                throw new RuntimeException(
                     "!!! Anable to compute middle value for " + f + "; + Constraint " + c + " does not define a function for variable\n");
-                System.exit(0);
             }
         } else {
-            System.out.println("!!! Constraint " + c + " is not yet supported in Newtoen method\n");
-            System.exit(0);
+            throw new RuntimeException("!!! Constraint " + c + " is not yet supported in Newtoen method\n");
         }
 
         eval.pop();

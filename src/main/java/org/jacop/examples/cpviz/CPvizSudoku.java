@@ -131,7 +131,7 @@ public class CPvizSudoku {
         //		search.setExitListener((ExitListener)select);
         // <---
 
-        boolean result = search.labeling(store, select);
+        search.labeling(store, select);
     }
 
     /**
@@ -151,7 +151,6 @@ public class CPvizSudoku {
         int noColumns = 3;
 
         Store store = new Store();
-        ArrayList<Var> vars = new ArrayList<Var>();
 
         elements = new IntVar[noRows * noColumns][noRows * noColumns];
 
@@ -160,7 +159,6 @@ public class CPvizSudoku {
             for (int j = 0; j < noRows * noColumns; j++)
                 if (description[i][j] == 0) {
                     elements[i][j] = new IntVar(store, "f" + (int) (i + 1) + "," + (int) (j + 1), 1, noRows * noColumns);
-                    vars.add(elements[i][j]);
                 } else
                     elements[i][j] = new IntVar(store, "f" + i + j, description[i][j], description[i][j]);
 
@@ -199,7 +197,7 @@ public class CPvizSudoku {
             for (int j = 0; j < elements[0].length; j++)
                 el[k++] = elements[i][j];
 
-        SelectChoicePoint<IntVar> varSelect = new SimpleSelect<IntVar>(el, // vars.toArray(new IntVar[1]),
+        SelectChoicePoint<IntVar> varSelect = new SimpleSelect<IntVar>(el, 
             null, //new SmallestDomain<IntVar>(),
             new IndomainMin<IntVar>());
 
@@ -214,7 +212,7 @@ public class CPvizSudoku {
         //		search.setExitListener((ExitListener)select);
         // <---
 
-        boolean result = search.labeling(store, select);
+        search.labeling(store, select);
 
     }
 

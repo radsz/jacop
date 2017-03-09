@@ -47,7 +47,6 @@ import org.jacop.floats.core.*;
  * @version 4.4
  */
 public class FloatMinimize {
-    Store store;
 
     public static void main(String args[]) {
 
@@ -84,14 +83,10 @@ public class FloatMinimize {
 
 
         if (fl.getSearch().type() == null || (!fl.getSearch().type().equals("float_search"))) {
-            System.out.println("The problem is not of type float_search and cannot be handled by this method");
-
-            System.exit(0);
+            throw new RuntimeException("The problem is not of type float_search and cannot be handled by this method");
         }
         if (fl.getSolve().getSolveKind() != 1) {
-            System.out.println("The problem is not minimization problem and cannot be handled by this method");
-
-            System.exit(0);
+            throw new RuntimeException("The problem is not minimization problem and cannot be handled by this method");
         }
 
         FloatVar[] vars = (FloatVar[]) fl.getSearch().vars();

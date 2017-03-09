@@ -43,7 +43,6 @@ import org.jacop.fz.*;
  * @version 4.4
  */
 public class FlatzincSolver {
-    Store store;
 
     public static void main(String args[]) {
 

@@ -1296,7 +1296,7 @@ public class Cumulative extends Constraint {
         }
     }
 
-    class DomainmaxComparator<T extends IntDomain> implements Comparator<T> {
+  private static class DomainmaxComparator<T extends IntDomain> implements Comparator<T>, java.io.Serializable {
 
         DomainmaxComparator() {
         }
@@ -1307,7 +1307,7 @@ public class Cumulative extends Constraint {
     }
 
 
-    class DomainminComparator<T extends IntDomain> implements Comparator<T> {
+    private static class DomainminComparator<T extends IntDomain> implements Comparator<T>, java.io.Serializable {
 
         DomainminComparator() {
         }
@@ -1318,7 +1318,7 @@ public class Cumulative extends Constraint {
     }
 
 
-    class TaskAscECTComparator<T extends Task> implements Comparator<T> {
+    private static class TaskAscECTComparator<T extends Task> implements Comparator<T>, java.io.Serializable {
 
         TaskAscECTComparator() {
         }
@@ -1329,7 +1329,7 @@ public class Cumulative extends Constraint {
     }
 
 
-    class TaskDescLSTComparator<T extends Task> implements Comparator<T> {
+    private static class TaskDescLSTComparator<T extends Task> implements Comparator<T>, java.io.Serializable {
 
         TaskDescLSTComparator() {
         }

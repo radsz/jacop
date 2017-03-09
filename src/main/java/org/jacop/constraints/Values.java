@@ -276,7 +276,7 @@ public class Values extends Constraint {
         }
     }
 
-    class FDVminimumComparator<T extends IntVar> implements Comparator<T> {
+  private static class FDVminimumComparator<T extends IntVar> implements Comparator<T>, java.io.Serializable {
 
         FDVminimumComparator() {
         }

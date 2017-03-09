@@ -195,13 +195,11 @@ class ThetaLambdaUnaryTree extends ThetaTree {
 
     public void printTree(String name) {
 
-        try (PrintStream out = new PrintStream(new FileOutputStream(name + ".dot"))) {
+        try (PrintStream out = new PrintStream(new FileOutputStream(name + ".dot"), true, "UTF-8")) {
             out.print(toGraph(name));
             out.close();
         } catch (IOException e) {
-            //do stuff with exception
-            System.out.println("IO exception; ignored");
-            System.exit(0);
+	    throw new RuntimeException("IO exception; ignored");
         }
     }
 
