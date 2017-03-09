@@ -1,0 +1,6 @@
+objective = 253;
+b = array1d(1..18, [true, false, true, false, true, false, true, false, false, true, false, true, false, true, true, false, false, true]);
+start = array1d(1..9, [30, 62, 92, 0, 30, 85, 0, 92, 163]);
+dur = array1d(1..9, [17, 30, 160, 30, 55, 78, 62, 70, 90]);
+----------
+==========
