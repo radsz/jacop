@@ -294,7 +294,7 @@ public class CumulativeBasic extends Constraint {
 
             // mandatory task parts to create profile
             int min = t.lst(), max = t.ect();
-            if (min < max && t.res.min() > 0) { // && t.dur.min() > 0) {
+            if (min < max && t.res.min() > 0) {
                 es[j++] = new Event(profile, t, min, t.res.min());
                 es[j++] = new Event(profile, t, max, -t.res.min());
                 minProfile = (min < minProfile) ? min : minProfile;
@@ -390,13 +390,6 @@ public class CumulativeBasic extends Constraint {
                                                     ">>> CumulativeBasic Profile 1. Narrowed " + t.start + " \\ " + new IntervalDomain(
                                                         startExcluded[ti], (int) (e.date() - 1)));
 
-/*
-		    IntervalDomain update = new IntervalDomain(IntDomain.MinInt, startExcluded[ti] - 1);
-		    update.unionAdapt(e.date(), IntDomain.MaxInt);
-		    t.start.domain.in(store.level, t.start, update);
-*/
-
-                                            // ERROR DOES NOT WORK CORRECTLY IN ALL CASES!!! USE method in()
                                             t.start.domain.inComplement(store.level, t.start, startExcluded[ti], e.date() - 1);
 
                                             if (debugNarr)

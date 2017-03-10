@@ -39,7 +39,7 @@ import org.jacop.core.MutableVarValue;
  * @version 4.4
  */
 
-class BoundsVarValue implements MutableVarValue {
+class BoundsVarValue implements MutableVarValue, Cloneable {
 
     BoundsVarValue previousBoundsVarValue = null;
 

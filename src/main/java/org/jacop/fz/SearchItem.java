@@ -696,25 +696,26 @@ public class SearchItem implements ParserTreeConstants {
     }
 
     public String toString() {
-        String s = "";
+        StringBuffer s = new StringBuffer();
+
         if (search_type == null)
-            s += "defult_search\n";
+	    s.append("defult_search\n");
         else if (search_seq.size() == 0) {
-            s += search_type + "(";
+	    s.append(search_type + "(");
             if (search_variables == null)
-                s += "[]";
+	        s.append("[]");
             else
-                s += "array1d(1.." + search_variables.length + ", " + Arrays.asList(search_variables);
-            s += ", " + explore + ", " + var_selection_heuristic + ", " + indomain;
+	        s.append("array1d(1.." + search_variables.length + ", " + Arrays.asList(search_variables));
+            s.append(", " + explore + ", " + var_selection_heuristic + ", " + indomain);
             if (floatSearch)
-                s += ", " + precision;
+	        s.append(", " + precision);
         } else {
             for (int i = 0; i < search_seq.size(); i++) //SearchItem se : search_seq)
                 if (i == search_seq.size() - 1)
-                    s += search_seq.get(i) + ")";
+		    s.append(search_seq.get(i) + ")");
                 else
-                    s += search_seq.get(i) + "), ";
+		    s.append(search_seq.get(i) + "), ");
         }
-        return s;
+        return s.toString();
     }
 }

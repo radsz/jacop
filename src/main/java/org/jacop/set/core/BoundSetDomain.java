@@ -47,7 +47,7 @@ import org.jacop.core.ValueEnumeration;
  * @version 4.4
  */
 
-public class BoundSetDomain extends SetDomain {
+public class BoundSetDomain extends SetDomain implements Cloneable {
 
     // FIXME do not use emptySet to assign to lub, glb.
     /**

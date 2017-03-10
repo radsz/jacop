@@ -76,7 +76,7 @@ public class Constraints implements ParserTreeConstants {
         // impose SAT-solver
         sat.impose();
 
-        Support s = new Support(store, dict, sat);
+        new Support(store, dict, sat);
     }
 
     void generateAllConstraints(SimpleNode astTree, Options opt) throws Throwable {

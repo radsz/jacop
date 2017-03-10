@@ -56,7 +56,6 @@ public class IntervalGaussSeidel {
 
     FloatInterval[][] A;
     double[] b;
-    FloatInterval[] x;
 
     public IntervalGaussSeidel(FloatInterval[][] A, double[] b) {
 
@@ -67,7 +66,6 @@ public class IntervalGaussSeidel {
 	}
 	this.b = new double[b.length];
 	System.arraycopy(b, 0, this.b, 0, b.length);
-        x = new FloatInterval[b.length];
     }
 
     double minAbs(FloatInterval v) {
@@ -133,6 +131,7 @@ public class IntervalGaussSeidel {
 
     public FloatInterval[] solve() {
         int N = 0;
+	FloatInterval[] x = new FloatInterval[b.length];;
         FloatInterval[] previousX = new FloatInterval[x.length];
         for (int i = 0; i < x.length; i++)
             x[i] = new FloatInterval(0.0, 0.0);

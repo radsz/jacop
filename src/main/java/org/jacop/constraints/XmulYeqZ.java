@@ -200,10 +200,10 @@ public class XmulYeqZ extends Constraint {
 
     private void checkForOverflow() {
 
-        int n = IntDomain.multiply(x.min(), y.min());
-        n = IntDomain.multiply(x.min(), y.max());
-        n = IntDomain.multiply(x.max(), y.min());
-        n = IntDomain.multiply(x.max(), y.max());
+        IntDomain.multiply(x.min(), y.min());
+        IntDomain.multiply(x.min(), y.max());
+        IntDomain.multiply(x.max(), y.min());
+        IntDomain.multiply(x.max(), y.max());
 
     }
 

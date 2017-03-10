@@ -46,7 +46,12 @@ public class Matrix {
     double[][] A;
 
     public Matrix(double[][] M) {
-        A = M;
+
+        A = new double[M.length][];
+	for (int i = 0; i < M.length; i++) {
+	  A[i] = new double[M[i].length];
+	  System.arraycopy(M[i], 0, A[i], 0, M[i].length);
+	}
     }
 
     public double determinant() {

@@ -270,8 +270,8 @@ import org.jacop.core.Var;
             sumMax = add(sumMax, n2);
         }
 
-        sumMin = subtract(sumMin, sum.max());
-        sumMax = subtract(sumMax, sum.min());
+        subtract(sumMin, sum.max());
+        subtract(sumMax, sum.min());
     }
 
     @Override public String toString() {
