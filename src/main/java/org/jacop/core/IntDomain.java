@@ -83,7 +83,7 @@ public abstract class IntDomain extends Domain {
      * It specifies for each event what other events are subsumed by this
      * event. Possibly implement this by bit flags in int.
      */
-    public final static int[][] eventsInclusion = {{GROUND, BOUND, ANY}, // GROUND event
+    protected final static int[][] eventsInclusion = {{GROUND, BOUND, ANY}, // GROUND event
         {BOUND, ANY}, // BOUND event
         {ANY}}; // ANY event
 

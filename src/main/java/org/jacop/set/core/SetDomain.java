@@ -90,7 +90,7 @@ public abstract class SetDomain extends Domain {
      * It specifies for each event what other events are subsumed by this
      * event. Possibly implement this by bit flags in int.
      */
-    public final static int[][] eventsInclusion = {{GROUND, GLB, LUB, BOUND, ANY, CARDINALITY}, // GROUND event
+    protected final static int[][] eventsInclusion = {{GROUND, GLB, LUB, BOUND, ANY, CARDINALITY}, // GROUND event
         {GLB, BOUND, ANY, CARDINALITY}, // GLB event
         {LUB, BOUND, ANY, CARDINALITY}, // LUB event
         {BOUND, ANY, CARDINALITY}, // BOUND event
@@ -118,7 +118,7 @@ public abstract class SetDomain extends Domain {
      * It predefines empty domain so there is no need to constantly create it when
      * needed.
      */
-    static public SetDomain emptyDomain = new BoundSetDomain();
+    final static public SetDomain emptyDomain = new BoundSetDomain();
 
     /**
      * Adds an interval to the lub.

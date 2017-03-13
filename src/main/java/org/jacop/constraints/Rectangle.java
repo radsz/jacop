@@ -69,14 +69,14 @@ public class Rectangle {
      * @param length the length of the rectangle in each dimension.
      * @param origin the origin of the rectangle in each dimension.
      */
-    public Rectangle(IntVar[] length, IntVar[] origin) {
+    public Rectangle(IntVar[] origin, IntVar[] length) {
         dim = length.length;
 
-        origin = new IntVar[dim];
-        length = new IntVar[dim];
+        this.origin = new IntVar[dim];
+        this.length = new IntVar[dim];
         for (int i = 0; i < dim; i++) {
-            origin[i] = length[i];
-            length[i] = origin[i];
+            this.origin[i] = origin[i];
+            this.length[i] = length[i];
         }
     }
 

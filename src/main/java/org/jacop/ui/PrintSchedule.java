@@ -46,7 +46,7 @@ import org.jacop.core.IntVar;
 
 public class PrintSchedule {
 
-    class TaskScheduleComparator<T> implements Comparator<T> {
+  static class TaskScheduleComparator<T> implements Comparator<T>, java.io.Serializable {
 
         TaskScheduleComparator() {
         }
@@ -75,9 +75,14 @@ public class PrintSchedule {
         n = new ArrayList<String>();
         for (int i = 0; i < name.length; i++)
             n.add(name[i]);
-        this.t = t;
-        this.r = r;
-        this.d = d;
+
+	this.t = new IntVar[t.length];
+	System.arraycopy(t, 0, this.t, 0, t.length);
+	this.r = new IntVar[r.length];
+	System.arraycopy(r, 0, this.r, 0, r.length);
+	this.d = new int[d.length];
+	System.arraycopy(d, 0, this.d, 0, d.length);
+
     }
 
     /**
@@ -89,8 +94,12 @@ public class PrintSchedule {
      */
     public PrintSchedule(String[] name, IntVar[] t, IntVar[] d, IntVar[] r) {
         n = new ArrayList<String>();
-        this.t = t;
-        this.r = r;
+	
+	this.t = new IntVar[t.length];
+	System.arraycopy(t, 0, this.t, 0, t.length);
+	this.r = new IntVar[r.length];
+	System.arraycopy(r, 0, this.r, 0, r.length);
+
         this.d = new int[d.length];
         for (int i = 0; i < d.length; i++) {
             this.d[i] = d[i].min();
@@ -126,14 +135,18 @@ public class PrintSchedule {
      * @param r resource usage of the operations.
      */
     public PrintSchedule(ArrayList<String> name, ArrayList<? extends IntVar> t, int[] d, ArrayList<? extends IntVar> r) {
-        n = name;
+        n = new ArrayList<String>();
+        for (int i = 0; i < name.size(); i++)
+	  n.add(name.get(i));
+	
         this.t = new IntVar[t.size()];
         for (int i = 0; i < t.size(); i++)
             this.t[i] = t.get(i);
         this.r = new IntVar[r.size()];
         for (int i = 0; i < r.size(); i++)
             this.r[i] = r.get(i);
-        this.d = d;
+	this.d = new int[d.length];
+	System.arraycopy(d, 0, this.d, 0, d.length);
     }
 
     /**
@@ -145,10 +158,16 @@ public class PrintSchedule {
      */
 
     public PrintSchedule(ArrayList<String> name, IntVar[] t, int[] d, IntVar[] r) {
-        n = name;
-        this.t = t;
-        this.r = r;
-        this.d = d;
+        n = new ArrayList<String>();
+        for (int i = 0; i < name.size(); i++)
+	  n.add(name.get(i));
+
+	this.t = new IntVar[t.length];
+	System.arraycopy(t, 0, this.t, 0, t.length);
+	this.r = new IntVar[r.length];
+	System.arraycopy(r, 0, this.r, 0, r.length);
+	this.d = new int[d.length];
+	System.arraycopy(d, 0, this.d, 0, d.length);
     }
 
     /**
@@ -159,9 +178,14 @@ public class PrintSchedule {
      * @param r resource usage of the operations.
      */
     public PrintSchedule(ArrayList<String> name, IntVar[] t, IntVar[] d, IntVar[] r) {
-        n = name;
-        this.t = t;
-        this.r = r;
+        n = new ArrayList<String>();
+        for (int i = 0; i < name.size(); i++)
+	  n.add(name.get(i));
+
+	this.t = new IntVar[t.length];
+	System.arraycopy(t, 0, this.t, 0, t.length);
+	this.r = new IntVar[r.length];
+	System.arraycopy(r, 0, this.r, 0, r.length);
         this.d = new int[d.length];
         for (int i = 0; i < d.length; i++)
             this.d[i] = d[i].min();
@@ -192,10 +216,10 @@ public class PrintSchedule {
     }
 
     String tab(int i) {
-        String s = "";
+      StringBuffer s = new StringBuffer();
         for (int k = 0; k < i; k++)
-            s = s + " ";
-        return s;
+	  s.append(" ");
+        return s.toString();
     }
 
     @Override public String toString() {

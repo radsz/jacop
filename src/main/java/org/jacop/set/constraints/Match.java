@@ -257,12 +257,12 @@ public class Match extends Constraint {
 
     @Override public String toString() {
 
-        // FIXME, use StringBuffer, or automatic generation of String description.
-        String ret = id() + " : Match(" + a + ", [ ";
+        StringBuffer ret = new StringBuffer(id());
+        ret.append(" : Match(" + a + ", [ ");
         for (Var fdv : list)
-            ret += fdv + " ";
-        ret += "] )";
-        return ret;
+	  ret.append(fdv + " ");
+        ret.append("] )");
+        return ret.toString();
 
     }
 

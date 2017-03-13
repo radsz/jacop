@@ -39,6 +39,7 @@ import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.util.SimpleHashSet;
+import java.util.Map;
 
 /**
  * Linear constraint implements the weighted summation over several
@@ -183,9 +184,9 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
         this.weights = new double[parameters.size()];
 
         int k = 0;
-        for (FloatVar var : parameters.keySet()) {
-            this.list[k] = var;
-            this.weights[k] = parameters.get(var);
+        for (Map.Entry<FloatVar,Double>  e : parameters.entrySet()) {
+	    this.list[k] = e.getKey();
+            this.weights[k] = e.getValue();
             k++;
         }
 
@@ -635,7 +636,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
         }
     }
 
-    class VarWeightComparator<T extends VariableNode> implements java.util.Comparator<T> {
+  static class VarWeightComparator<T extends VariableNode> implements java.util.Comparator<T>, java.io.Serializable {
 
         VarWeightComparator() {
         }
@@ -653,12 +654,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
             else
                 diff_o2 = (o2.max() - o2.min()) * ((VarWeightNode) o2).weight;
 
-            // it sometimes violates compare contract (bcause of rounding)
-            // "The implementor must ensure that
-            // sgn(compare(x, y)) == -sgn(compare(y, x)) for all x and y.”
-            // return (int)(diff_o2 - diff_o1);
-
-            return (diff_o2 == diff_o1) ? 0 : (diff_o2 > diff_o1) ? 1 : -1;
+            return Double.compare(diff_o1, diff_o2);
         }
     }
 

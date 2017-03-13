@@ -301,11 +301,11 @@ public class NonTransitiveDice extends ExampleFD {
 
         int noDices = 4;
         if (args.length > 0)
-            noDices = new Integer(args[0]);
+            noDices = Integer.parseInt(args[0]);
 
         int noSides = 7;
         if (args.length > 1)
-            noSides = new Integer(args[1]);
+            noSides = Integer.parseInt(args[1]);
 
         int currentBest;
 

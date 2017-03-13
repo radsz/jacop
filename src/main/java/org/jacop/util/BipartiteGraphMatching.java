@@ -66,9 +66,9 @@ public class BipartiteGraphMatching {
      *            n is a maximum number of vertices on right side (v)
      */
     public BipartiteGraphMatching(int m, int n) {
-        this.m = m;
-        this.n = n;
-        adj = new int[m + 1][];
+      this.m = m;
+      this.n = n;
+      adj = new int[m + 1][];
     }
 
     /**
@@ -82,9 +82,15 @@ public class BipartiteGraphMatching {
      *            n is a maximum number of vertices on right side (v)
      */
     public BipartiteGraphMatching(int[][] adj, int m, int n) {
-        this.m = m;
-        this.n = n;
-        this.adj = adj;
+
+      this.m = m;
+      this.n = n;
+
+      this.adj = new int[adj.length][];
+	for (int i = 0; i < adj.length; i++) {
+	  this.adj[i] = new int[adj[i].length];
+	  System.arraycopy(adj[i], 0, this.adj[i], 0, adj[i].length);
+	}
     }
 
     // Returns size of maximum matching

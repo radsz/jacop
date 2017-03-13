@@ -131,11 +131,11 @@ public class BIBD extends ExampleFD {
 
         if (args.length > 1) {
             try {
-                example.v = new Integer(args[0]);
-                example.b = new Integer(args[1]);
-                example.r = new Integer(args[2]);
-                example.k = new Integer(args[3]);
-                example.lambda = new Integer(args[4]);
+                example.v = Integer.parseInt(args[0]);
+                example.b = Integer.parseInt(args[1]);
+                example.r = Integer.parseInt(args[2]);
+                example.k = Integer.parseInt(args[3]);
+                example.lambda = Integer.parseInt(args[4]);
             } catch (Exception ex) {
                 System.out.println("Program parameters if provided must specify v, b, r, k, and lambda");
             }

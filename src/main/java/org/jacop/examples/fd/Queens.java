@@ -246,7 +246,7 @@ public class Queens extends ExampleFD {
         // It is possible to supply the program
         // with the chessboard size
         if (args.length != 0)
-            example.numberQ = new Integer(args[0]);
+            example.numberQ = Integer.parseInt(args[0]);
 
         example.model();
 
@@ -267,7 +267,7 @@ public class Queens extends ExampleFD {
         // It is possible to supply the program
         // with the chessboard size
         if (args.length != 0)
-            example.numberQ = new Integer(args[0]);
+            example.numberQ = Integer.parseInt(args[0]);
 
         example.model();
 
@@ -279,7 +279,7 @@ public class Queens extends ExampleFD {
         // It is possible to supply the program
         // with the chessboard size
         if (args.length != 0)
-            example.numberQ = new Integer(args[0]);
+            example.numberQ = Integer.parseInt(args[0]);
 
         example.modelBasic();
 
@@ -291,7 +291,7 @@ public class Queens extends ExampleFD {
         // It is possible to supply the program
         // with the chessboard size
         if (args.length != 0)
-            example.numberQ = new Integer(args[0]);
+            example.numberQ = Integer.parseInt(args[0]);
 
         example.modelChanneling();
 

@@ -42,6 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.*;
 import org.jacop.util.SimpleHashSet;
+import java.util.Map;
 
 /**
  * Binpacking constraint implements bin packing problem. It ensures that
@@ -122,10 +123,11 @@ public class Binpacking extends Constraint implements UsesQueueVariable {
         this.queueIndex = 2;
 
         minBinNumber = bin[0].min();
-        Set<IntVar> bs = itemPar.keySet();
+        Set<Map.Entry<IntVar,Integer>> entries = itemPar.entrySet();
         int j = 0;
-        for (IntVar b : bs) {
-            int ws = itemPar.get(b);
+        for (Map.Entry<IntVar,Integer> e : entries) {
+	    IntVar b = e.getKey();
+	    int ws = e.getValue();
             item[j] = new BinItem(b, ws);
 
             sizeAllItems += ws;

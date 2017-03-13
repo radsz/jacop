@@ -1175,8 +1175,7 @@ public class Store {
         result.append("\n*** Store\n");
 
         // first BooleanVar
-        for (String key : variablesHashMap.keySet()) {
-            Var v = variablesHashMap.get(key);
+        for (Var v : variablesHashMap.values()) {
             if (v instanceof BooleanVar)
                 result.append(v + "\n");
         }

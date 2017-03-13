@@ -96,7 +96,7 @@ public class Golomb extends ExampleFD {
 
         for (int i = 0; i < numbers.length; i++) {
             // Create FDV for each natural number
-            numbers[i] = new IntVar(store, "n" + new Integer(i), (i + 1) * i / 2, noMarks * noMarks);
+            numbers[i] = new IntVar(store, "n" + i, (i + 1) * i / 2, noMarks * noMarks);
 
             // Impose constraints that each consequtive number
             // is larger than the previous one
@@ -193,10 +193,10 @@ public class Golomb extends ExampleFD {
         Golomb example = new Golomb();
 
         if (args.length != 0)
-            example.noMarks = new Integer(args[0]);
+            example.noMarks = Integer.parseInt(args[0]);
 
         if (args.length > 1)
-            example.bound = new Integer(args[1]);
+            example.bound = Integer.parseInt(args[1]);
 
         example.model();
 
@@ -219,10 +219,10 @@ public class Golomb extends ExampleFD {
         Golomb example = new Golomb();
 
         if (args.length != 0)
-            example.noMarks = new Integer(args[0]);
+            example.noMarks = Integer.parseInt(args[0]);
 
         if (args.length > 1)
-            example.bound = new Integer(args[1]);
+            example.bound = Integer.parseInt(args[1]);
 
         example.model();
 
@@ -233,10 +233,10 @@ public class Golomb extends ExampleFD {
         Golomb exampleAll = new Golomb();
 
         if (args.length != 0)
-            exampleAll.noMarks = new Integer(args[0]);
+            exampleAll.noMarks = Integer.parseInt(args[0]);
 
         if (args.length > 1)
-            exampleAll.bound = new Integer(args[1]);
+            exampleAll.bound = Integer.parseInt(args[1]);
 
         exampleAll.model();
 

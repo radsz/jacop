@@ -176,7 +176,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
      * An empty domain, so no constant creation of empty domains is required.
      */
 
-    static public IntervalDomain emptyDomain = new IntervalDomain(0);
+    final static public IntervalDomain emptyDomain = new IntervalDomain(0);
 
     /**
      * It creates an empty domain, with at least specified number of places in

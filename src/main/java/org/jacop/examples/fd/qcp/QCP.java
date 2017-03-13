@@ -114,7 +114,7 @@ public class QCP extends ExampleFD {
             int current = 0;
             for (int j = 0; j < result.length; j++)
                 try {
-                    int currentNo = new Integer(result[j]);
+                    int currentNo = Integer.parseInt(result[j]);
                     numbers[i - 1][current++] = currentNo;
                 } catch (Exception ex) {
 

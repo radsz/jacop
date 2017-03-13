@@ -617,116 +617,116 @@ public class Tables {
             "Alias table" // 13
         };
 
-        String s = "";
+        StringBuffer s = new StringBuffer();
         for (int i = 0; i < dictionary.length; i++) {
 
             // int array || float array
             if (i == indexIntArray) {
-                s += tableNames[i] + "\n";
-                s += "{";
+	        s.append(tableNames[i] + "\n");
+                s.append("{");
                 java.util.Set<String> keys = dictionary[i].keySet();
                 for (String k : keys) {
                     int[] a = (int[]) dictionary[i].get(k);
-                    s += k + "=[";
+                    s.append(k + "=[");
                     for (int j = 0; j < a.length; j++) {
-                        s += a[j];
+		        s.append(a[j]);
                         if (j < a.length - 1)
-                            s += ", ";
+			    s.append(", ");
                     }
-                    s += "], ";
+                    s.append("], ");
                 }
-                s += "}\n";
+                s.append("}\n");
             }
             // float array
             else if (i == indexFloatArray) {
-                s += tableNames[i] + "\n";
-                s += "{";
+	        s.append(tableNames[i] + "\n");
+                s.append("{");
                 java.util.Set<String> keys = dictionary[i].keySet();
                 for (String k : keys) {
                     double[] a = (double[]) dictionary[i].get(k);
-                    s += k + "=[";
+                    s.append(k + "=[");
                     for (int j = 0; j < a.length; j++) {
-                        s += a[j];
+		        s.append(a[j]);
                         if (j < a.length - 1)
-                            s += ", ";
+			    s.append(", ");
                     }
-                    s += "], ";
+                    s.append("], ");
                 }
-                s += "}\n";
+                s.append("}\n");
             }
             // Set Array
             else if (i == indexSetArray) {
-                s += tableNames[i] + "\n";
-                s += "{";
+	        s.append(tableNames[i] + "\n");
+                s.append("{");
                 java.util.Set<String> keys = dictionary[i].keySet();
                 for (String k : keys) {
-                    s += k + "=";
+		    s.append(k + "=");
                     IntDomain[] a = (IntDomain[]) dictionary[i].get(k);
-                    s += Arrays.asList(a);
-                    s += ", ";
+                    s.append(Arrays.asList(a));
+                    s.append(", ");
                 }
-                s += "}\n";
+                s.append("}\n");
             }
             // Variable Array (IntVar, FloatVar, SetVar)
             else if (i == indexVariableArray || i == indexFloatVariableArray || i == indexSetVariableArray) {
-                s += tableNames[i] + "\n";
-                s += "{";
+	        s.append(tableNames[i] + "\n");
+                s.append("{");
                 java.util.Set<String> keys = dictionary[i].keySet();
                 for (String k : keys) {
                     Var[] a = (Var[]) dictionary[i].get(k);
-                    s += k + "=";
-                    s += Arrays.asList(a);
-                    s += ", ";
+                    s.append(k + "=");
+                    s.append(Arrays.asList(a));
+                    s.append(", ");
                 }
-                s += "}\n";
+                s.append("}\n");
             } else if (i == indexConstantTable) {
-                s += tableNames[i] + "\n";
-                s += "{";
+	        s.append(tableNames[i] + "\n");
+                s.append("{");
                 java.util.Set<Integer> keys = dictionary[i].keySet();
                 for (Integer k : keys) {
                     Var a = (Var) dictionary[i].get(k);
-                    s += a;
-                    s += ", ";
+                    s.append(a);
+                    s.append(", ");
                 }
-                s += "}\n";
+                s.append("}\n");
             } else {
-                s += tableNames[i] + " (" + dictionary[i].size() + ")\n";
-                s += dictionary[i] + "\n";
+	        s.append(tableNames[i] + " (" + dictionary[i].size() + ")\n");
+                s.append(dictionary[i] + "\n");
             }
         }
 
-        s += "Output variables = " + outputVariables + "\n";
-        s += "Output arrays = [";//+ outputArray+"\n";
+        s.append("Output variables = " + outputVariables + "\n");
+        s.append("Output arrays = [");
         for (int i = 0; i < outputArray.size(); i++) {
             OutputArrayAnnotation a = outputArray.get(i);
-            s += a;
-            s += ", ";
+            s.append(a);
+            s.append(", ");
         }
-        s += "]\n";
-        s += "Search int variables = " + defaultSearchVariables + "\n";
-        s += "Search int variable arrays = ["; //+ defaultSearchArrays+"\n";
+	s.append("]\n");
+	s.append("Search int variables = " + defaultSearchVariables + "\n");
+        s.append("Search int variable arrays = [");
         for (int i = 0; i < defaultSearchArrays.size(); i++) {
             Var[] a = defaultSearchArrays.get(i);
-            s += Arrays.asList(a);
-            s += ", ";
+            s.append(Arrays.asList(a));
+            s.append(", ");
         }
-        s += "]\n";
-        s += "Search float variables = " + defaultSearchFloatVariables + "\n";
-        s += "Search float variables arrays = ["; //+ defaultSearchArrays+"\n";
+        s.append("]\n");
+        s.append("Search float variables = " + defaultSearchFloatVariables + "\n");
+        s.append("Search float variables arrays = [");
         for (int i = 0; i < defaultSearchFloatArrays.size(); i++) {
             Var[] a = defaultSearchFloatArrays.get(i);
-            s += Arrays.asList(a);
-            s += ", ";
+            s.append(Arrays.asList(a));
+            s.append(", ");
         }
-        s += "]\n";
-        s += "Search set variables = " + defaultSearchSetVariables + "\n";
-        s += "Search set arrays = ["; //+ defaultSearchArrays+"\n";
+        s.append("]\n");
+        s.append("Search set variables = " + defaultSearchSetVariables + "\n");
+        s.append("Search set arrays = [");
         for (int i = 0; i < defaultSearchSetArrays.size(); i++) {
             Var[] a = defaultSearchSetArrays.get(i);
-            s += Arrays.asList(a);
-            s += ", ";
+            s.append(Arrays.asList(a));
+            s.append(", ");
         }
-        s += "]\n";
-        return s;
+        s.append("]\n");
+        return s.toString();
     }
 }

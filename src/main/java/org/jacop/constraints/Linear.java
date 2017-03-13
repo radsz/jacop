@@ -35,6 +35,7 @@ import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.*;
+import java.util.Map;
 
 /**
  * Linear constraint implements the weighted summation over several
@@ -176,9 +177,9 @@ import org.jacop.core.*;
         this.weights = new int[parameters.size()];
 
         int i = 0;
-        for (IntVar var : parameters.keySet()) {
-            this.list[i] = var;
-            this.weights[i] = parameters.get(var);
+        for (Map.Entry<IntVar, Integer> e : parameters.entrySet()) {
+	    this.list[i] = e.getKey();
+            this.weights[i] = e.getValue();
             i++;
         }
 

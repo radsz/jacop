@@ -63,7 +63,7 @@ public class BoundDomain extends IntDomain implements Cloneable {
      * It predefines empty domain so there is no need to constantly create it when
      * needed.
      */
-    static public BoundDomain emptyDomain = new BoundDomain();
+    final static public BoundDomain emptyDomain = new BoundDomain();
 
 
     /**

@@ -156,8 +156,8 @@ public class Langford extends ExampleFD {
 
         Langford example = new Langford();
         if (args.length > 1) {
-            example.n = new Integer(args[0]);
-            example.m = new Integer(args[1]);
+            example.n = Integer.parseInt(args[0]);
+            example.m = Integer.parseInt(args[1]);
         }
 
         example.model();
@@ -167,8 +167,8 @@ public class Langford extends ExampleFD {
 
         Langford exampleBound = new Langford();
         if (args.length > 1) {
-            exampleBound.n = new Integer(args[0]);
-            exampleBound.m = new Integer(args[1]);
+            exampleBound.n = Integer.parseInt(args[0]);
+            exampleBound.m = Integer.parseInt(args[1]);
         }
 
         exampleBound.modelBound();
@@ -179,8 +179,8 @@ public class Langford extends ExampleFD {
 
         Langford exampleDual = new Langford();
         if (args.length > 1) {
-            exampleDual.n = new Integer(args[0]);
-            exampleDual.m = new Integer(args[1]);
+            exampleDual.n = Integer.parseInt(args[0]);
+            exampleDual.m = Integer.parseInt(args[1]);
         }
         exampleDual.modelDual();
 
@@ -201,8 +201,8 @@ public class Langford extends ExampleFD {
 
         Langford exampleDual = new Langford();
         if (args.length > 1) {
-            exampleDual.n = new Integer(args[0]);
-            exampleDual.m = new Integer(args[1]);
+            exampleDual.n = Integer.parseInt(args[0]);
+            exampleDual.m = Integer.parseInt(args[1]);
         }
         exampleDual.modelDual();
 

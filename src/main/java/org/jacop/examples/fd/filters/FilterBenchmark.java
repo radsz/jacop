@@ -66,7 +66,7 @@ import org.jacop.ui.PrintSchedule;
 
 public class FilterBenchmark {
 
-    static ArrayList<IntVar> Tc, Ts, Rs;
+    static ArrayList<IntVar> Ts, Rs;
 
     static ArrayList<Integer> Ds;
 

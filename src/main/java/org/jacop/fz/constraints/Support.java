@@ -53,6 +53,7 @@ import org.jacop.set.core.SetVar;
 import org.jacop.floats.core.FloatVar;
 
 import org.jacop.fz.*;
+import java.util.Map;
 
 /**
  *
@@ -555,14 +556,15 @@ public class Support implements ParserTreeConstants {
 
     static void aliasConstraints() {
 
-        Set<IntVar> vs = dictionary.aliasTable.keySet();
+      Set<Map.Entry<IntVar, IntVar>> entries = dictionary.aliasTable.entrySet();
 
-        for (IntVar v : vs) {
-            IntVar b = dictionary.aliasTable.get(v);
+      for (Map.Entry<IntVar, IntVar> e : entries) {
+	    IntVar v = e.getKey();
+            IntVar b = e.getValue();
 
             // give values to output vars
-            if (dictionary.isOutput(v))
-                pose(new XeqY(v, b));
+            if (dictionary.isOutput(v)) 
+	      pose(new XeqY(v, b));
         }
     }
 

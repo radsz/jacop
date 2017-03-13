@@ -42,6 +42,7 @@ import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
+import java.util.Map;
 
 /**
  *
@@ -335,18 +336,24 @@ public class SumWeightedSet extends Constraint {
     }
 
     @Override public String toString() {
-        // FIXME, use StringBuffer or automatically generated toString function.
-        String ret = id() + " : SumWeightedSet(" + a + ", < ";
-        Integer weight;
-        for (Integer el : elementWeights.keySet()) {
-            weight = elementWeights.get(el);
-            ret += "<" + el + "," + weight + "> ";
+
+        StringBuffer ret = new StringBuffer(id());
+
+        ret.append(" : SumWeightedSet(" + a + ", < ");
+        for (Map.Entry<Integer, Integer> entries : elementWeights.entrySet()) {
+	    int el = entries.getKey();
+            int weight = entries.getValue();
+            ret.append("<" + el + "," + weight + "> ");
         }
-        ret += ">, ";
-        if (totalWeight.singleton())
-            return ret + totalWeight.min() + " )";
-        else
-            return ret + totalWeight.dom() + " )";
+        ret.append( ">, ");
+        if (totalWeight.singleton()) {
+	  ret.append(totalWeight.min() + " )");
+	  return ret.toString();
+	}
+        else {
+	  ret.append(totalWeight.dom() + " )");
+	  return ret.toString();
+	}
     }
 
     @Override public void increaseWeight() {

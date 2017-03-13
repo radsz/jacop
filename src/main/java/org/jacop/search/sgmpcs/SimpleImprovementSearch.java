@@ -92,7 +92,8 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
 
     public SimpleImprovementSearch(Store store, IntVar[] vars, IntVar cost) {
         this.store = store;
-        this.vars = vars;
+	this.vars = new IntVar[vars.length];
+	System.arraycopy(vars, 0, this.vars, 0, vars.length);
         this.cost = cost;
     }
 

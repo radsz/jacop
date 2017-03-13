@@ -116,7 +116,7 @@ public class Nonogram extends ExampleFD {
             int current = 0;
             for (int j = 0; j < result.length; j++)
                 try {
-                    int currentNo = new Integer(result[j]);
+                    int currentNo = Integer.parseInt(result[j]);
                     dimensions[current++] = currentNo;
                 } catch (Exception ex) {
 
@@ -151,7 +151,7 @@ public class Nonogram extends ExampleFD {
             int current = 0;
             for (int j = 0; j < result.length; j++)
                 try {
-                    sequence[current++] = Integer.valueOf(result[j]);
+                    sequence[current++] = Integer.parseInt(result[j]);
                 } catch (Exception ex) {
                 }
 

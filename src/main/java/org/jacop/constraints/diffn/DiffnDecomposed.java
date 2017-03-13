@@ -55,8 +55,6 @@ import org.jacop.core.IntDomain;
 
 public class DiffnDecomposed extends DecomposedConstraint {
 
-    static int idNumber = 1;
-
     int numberArgs;
 
     ArrayList<Constraint> constraints = null;
@@ -77,7 +75,6 @@ public class DiffnDecomposed extends DecomposedConstraint {
         assert (rectangle != null) : "Rectangles list is null";
 
         queueIndex = 2;
-        idNumber++;
 
         x = new IntVar[rectangle.length];
         y = new IntVar[rectangle.length];
@@ -115,7 +112,6 @@ public class DiffnDecomposed extends DecomposedConstraint {
 
             this.queueIndex = 2;
 
-            idNumber++;
             this.numberArgs = (short) (size * 4);
 
             x = new IntVar[origin1.length];
@@ -143,7 +139,6 @@ public class DiffnDecomposed extends DecomposedConstraint {
         assert (rectangle != null) : "Rectangles list is null";
 
         this.queueIndex = 2;
-        idNumber++;
 
         x = new IntVar[rectangle.size()];
         y = new IntVar[rectangle.size()];
@@ -174,14 +169,6 @@ public class DiffnDecomposed extends DecomposedConstraint {
 
         this(x.toArray(new IntVar[x.size()]), y.toArray(new IntVar[y.size()]), lx.toArray(new IntVar[lx.size()]),
             ly.toArray(new IntVar[ly.size()]));
-    }
-
-    /**
-     * It gives the id string of a constraint.
-     * @return string id of the constraint.
-     */
-    String id() {
-        return this.getClass().getSimpleName() + idNumber;
     }
 
     /**
@@ -258,9 +245,9 @@ public class DiffnDecomposed extends DecomposedConstraint {
 
     @Override public String toString() {
 
-        StringBuffer result = new StringBuffer(id());
+        StringBuffer result = new StringBuffer();
 
-        result.append(" : DiffnDecomposed(");
+        result.append("DiffnDecomposed(");
 
         for (int i = 0; i < x.length; i++) {
             result.append("[");

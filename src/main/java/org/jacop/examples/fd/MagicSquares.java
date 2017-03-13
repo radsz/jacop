@@ -353,7 +353,7 @@ public class MagicSquares extends ExampleFD {
         MagicSquares example = new MagicSquares();
 
         if (args.length != 0)
-            example.number = new Integer(args[0]);
+            example.number = Integer.parseInt(args[0]);
 
         example.model();
 
@@ -363,7 +363,7 @@ public class MagicSquares extends ExampleFD {
         MagicSquares exampleDual = new MagicSquares();
 
         if (args.length != 0)
-            exampleDual.number = new Integer(args[0]);
+            exampleDual.number = Integer.parseInt(args[0]);
 
         exampleDual.modelDual();
 
@@ -373,7 +373,7 @@ public class MagicSquares extends ExampleFD {
         MagicSquares exampleShave = new MagicSquares();
 
         if (args.length != 0)
-            exampleShave.number = new Integer(args[0]);
+            exampleShave.number = Integer.parseInt(args[0]);
 
         exampleShave.model4Shaving();
 
@@ -401,7 +401,7 @@ public class MagicSquares extends ExampleFD {
         MagicSquares example = new MagicSquares();
 
         if (args.length != 0)
-            example.number = new Integer(args[0]);
+            example.number = Integer.parseInt(args[0]);
 
         example.model();
 
@@ -411,7 +411,7 @@ public class MagicSquares extends ExampleFD {
         MagicSquares exampleDual = new MagicSquares();
 
         if (args.length != 0)
-            exampleDual.number = new Integer(args[0]);
+            exampleDual.number = Integer.parseInt(args[0]);
 
         exampleDual.modelDual();
 

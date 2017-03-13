@@ -82,16 +82,16 @@ public class KnapsackExample extends ExampleFD {
         // with the volume size and items (weight, profit, maximum_quantity,
         // name )
         if (args.length >= 5 && ((args.length - 1) % 4) == 0) {
-            volume = new Integer(args[0]);
+            volume = Integer.parseInt(args[0]);
             noItems = (args.length - 1) / 4;
             weights = new int[noItems];
             profits = new int[noItems];
             maxs = new int[noItems];
             names = new String[noItems];
             for (int i = 1; i < args.length; ) {
-                weights[(i - 1) / 4] = new Integer(args[i++]);
-                profits[(i - 1) / 4] = new Integer(args[i++]);
-                maxs[(i - 1) / 4] = new Integer(args[i++]);
+                weights[(i - 1) / 4] = Integer.parseInt(args[i++]);
+                profits[(i - 1) / 4] = Integer.parseInt(args[i++]);
+                maxs[(i - 1) / 4] = Integer.parseInt(args[i++]);
                 names[(i - 1) / 4] = args[i++];
             }
         }
@@ -151,16 +151,16 @@ public class KnapsackExample extends ExampleFD {
         // with the volume size and items (weight, profit, maximum_quantity,
         // name )
         if (args.length >= 5 && ((args.length - 1) % 4) == 0) {
-            volume = new Integer(args[0]);
+            volume = Integer.parseInt(args[0]);
             noItems = (args.length - 1) / 4;
             weights = new int[noItems];
             profits = new int[noItems];
             maxs = new int[noItems];
             names = new String[noItems];
             for (int i = 1; i < args.length; ) {
-                weights[(i - 1) / 4] = new Integer(args[i++]);
-                profits[(i - 1) / 4] = new Integer(args[i++]);
-                maxs[(i - 1) / 4] = new Integer(args[i++]);
+                weights[(i - 1) / 4] = Integer.parseInt(args[i++]);
+                profits[(i - 1) / 4] = Integer.parseInt(args[i++]);
+                maxs[(i - 1) / 4] = Integer.parseInt(args[i++]);
                 names[(i - 1) / 4] = args[i++];
             }
         }
@@ -218,16 +218,16 @@ public class KnapsackExample extends ExampleFD {
         // with the volume size and items (weight, profit, maximum_quantity,
         // name )
         if (args.length >= 5 && ((args.length - 1) % 4) == 0) {
-            volume = new Integer(args[0]);
+            volume = Integer.parseInt(args[0]);
             noItems = (args.length - 1) / 4;
             weights = new int[noItems];
             profits = new int[noItems];
             maxs = new int[noItems];
             names = new String[noItems];
             for (int i = 1; i < args.length; ) {
-                weights[(i - 1) / 4] = new Integer(args[i++]);
-                profits[(i - 1) / 4] = new Integer(args[i++]);
-                maxs[(i - 1) / 4] = new Integer(args[i++]);
+                weights[(i - 1) / 4] = Integer.parseInt(args[i++]);
+                profits[(i - 1) / 4] = Integer.parseInt(args[i++]);
+                maxs[(i - 1) / 4] = Integer.parseInt(args[i++]);
                 names[(i - 1) / 4] = args[i++];
             }
         }
@@ -293,7 +293,7 @@ public class KnapsackExample extends ExampleFD {
         // It is possible to supply the program
         // with the volume size and items (weight, profit, maximumQuantity, name)
         if (args.length >= 5 && ((args.length - 1) % 4) == 0) {
-            volume = new Integer(args[0]);
+            volume = Integer.parseInt(args[0]);
             noItems = 0;
             for (int i = 3; i < args.length; i += 4) {
                 noItems += Integer.parseInt(args[i]);

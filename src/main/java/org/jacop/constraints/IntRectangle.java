@@ -133,16 +133,16 @@ class IntRectangle {
     }
 
     @Override public String toString() {
-        String S = "[";
+      StringBuffer s = new StringBuffer("[");
         for (int i = 0; i < dim; i++) {
-            S = S + origin[i] + ", ";
+	  s.append(origin[i] + ", ");
         }
         for (int i = 0; i < dim; i++) {
-            S = S + length[i];
+	    s.append(length[i]);
             if (i < dim - 1)
-                S = S + ", ";
+	        s.append(", ");
         }
-        S = S + "]";
-        return S;
+        s.append("]");
+        return s.toString();
     }
 }

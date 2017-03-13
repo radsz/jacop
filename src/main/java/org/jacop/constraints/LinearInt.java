@@ -32,6 +32,8 @@ package org.jacop.constraints;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.Set;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntVar;
@@ -215,16 +217,19 @@ public class LinearInt extends PrimitiveConstraint {
             }
         }
         int size = 0;
-        for (IntVar e : parameters.keySet())
-            if (parameters.get(e) != 0)
+        for (Integer e : parameters.values())
+            if (e != 0)
                 size++;
 
-        this.x = new IntVar[size];//parameters.size()];
-        this.a = new int[size];//parameters.size()];
+        this.x = new IntVar[size];
+        this.a = new int[size];
 
         int i = 0;
-        for (IntVar var : parameters.keySet()) {
-            int coeff = parameters.get(var);
+	Set<Map.Entry<IntVar, Integer>> entries = parameters.entrySet();
+
+        for (Map.Entry<IntVar, Integer> e : entries) {
+	    IntVar var = e.getKey();
+	    int coeff = e.getValue();
             if (coeff > 0) {
                 this.x[i] = var;
                 this.a[i] = coeff;
@@ -232,19 +237,15 @@ public class LinearInt extends PrimitiveConstraint {
             }
         }
         pos = i;
-        for (IntVar var : parameters.keySet()) {
-            int coeff = parameters.get(var);
+        for (Map.Entry<IntVar, Integer> e : entries) {
+	    IntVar var = e.getKey();
+	    int coeff = e.getValue();
             if (coeff < 0) {
                 this.x[i] = var;
                 this.a[i] = coeff;
                 i++;
             }
         }
-        // for (IntVar var : parameters.keySet()) {
-        //     int coeff = parameters.get(var);
-        //     if (coeff == 0)
-        // 	System.out.println("%% " + id() + " : " + var);;
-        // }
 
         this.l = x.length;
         this.I = new int[l];

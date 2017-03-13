@@ -102,8 +102,8 @@ public class SGMPCSearch {
     int l;
 
     // strategy to get limit l on fails
-    public final int luby = 1;
-    public final int poly = 2;
+    public final static int luby = 1;
+    public final static int poly = 2;
     int strategy = poly;
 
     // elite solutions 
@@ -130,7 +130,8 @@ public class SGMPCSearch {
     public SGMPCSearch(Store store, IntVar[] vars, IntVar cost) {
 
         this.store = store;
-        this.vars = vars;
+	this.vars = new IntVar[vars.length];
+	System.arraycopy(vars, 0, this.vars, 0, vars.length);
         this.cost = cost;
 
         search = new SimpleImprovementSearch<IntVar>(store, vars, cost);
@@ -139,7 +140,8 @@ public class SGMPCSearch {
     public SGMPCSearch(Store store, IntVar[] vars, IntVar cost, ImproveSolution<IntVar> search) {
 
         this.store = store;
-        this.vars = vars;
+	this.vars = new IntVar[vars.length];
+	System.arraycopy(vars, 0, this.vars, 0, vars.length);
         this.cost = cost;
 
         this.search = search;
@@ -492,7 +494,7 @@ public class SGMPCSearch {
         return searchCost;
     }
 
-    public class SolutionComparator implements Comparator<int[]> {
+    class SolutionComparator implements Comparator<int[]> {
 
         int p;
 

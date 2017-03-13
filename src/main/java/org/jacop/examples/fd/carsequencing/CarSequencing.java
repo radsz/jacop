@@ -194,23 +194,23 @@ public class CarSequencing extends ExampleFD {
         Pattern pat = Pattern.compile(" ");
         String[] result = pat.split(description[0]);
 
-        example.noCar = Integer.valueOf(result[0]);
-        example.noOption = Integer.valueOf(result[1]);
-        example.noClass = Integer.valueOf(result[2]);
+        example.noCar = Integer.parseInt(result[0]);
+        example.noOption = Integer.parseInt(result[1]);
+        example.noClass = Integer.parseInt(result[2]);
 
         result = pat.split(description[1]);
 
         example.maxNoOfCarsPerOption = new int[example.noOption];
 
         for (int i = 0; i < result.length; i++)
-            example.maxNoOfCarsPerOption[i] = Integer.valueOf(result[i]);
+            example.maxNoOfCarsPerOption[i] = Integer.parseInt(result[i]);
 
         result = pat.split(description[2]);
 
         example.blockSizePerOption = new int[example.noOption];
 
         for (int i = 0; i < result.length; i++)
-            example.blockSizePerOption[i] = Integer.valueOf(result[i]);
+            example.blockSizePerOption[i] = Integer.parseInt(result[i]);
 
         example.noOfCarsPerClass = new int[example.noClass];
         example.required = new boolean[example.noClass][example.noOption];
@@ -220,12 +220,12 @@ public class CarSequencing extends ExampleFD {
 
             result = pat.split(description[i]);
 
-            int classNo = Integer.valueOf(result[0]);
+            int classNo = Integer.parseInt(result[0]);
 
-            example.noOfCarsPerClass[classNo] = Integer.valueOf(result[1]);
+            example.noOfCarsPerClass[classNo] = Integer.parseInt(result[1]);
 
             for (int j = 2; j < result.length; j++)
-                if (Integer.valueOf(result[j]) == 1)
+                if (Integer.parseInt(result[j]) == 1)
                     example.required[classNo][j - 2] = true;
 
         }
