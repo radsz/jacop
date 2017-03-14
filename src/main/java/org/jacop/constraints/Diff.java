@@ -503,9 +503,7 @@ public class Diff extends Constraint implements UsesQueueVariable {
 
     void narrowIth(int i, Rectangle r, ArrayList<IntRectangle> UsedRect, ArrayList<Rectangle> ProfileCandidates) {
         int s;
-        int j = (i == 0) ? 1 : 0;
         int rLengthIMin = r.length[i].min();
-        int barierSize = 0;
 
         durMax = new ArrayList<Integer>();
         durMax.add(IntDomain.MaxInt);

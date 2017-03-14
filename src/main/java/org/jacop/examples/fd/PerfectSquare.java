@@ -332,9 +332,7 @@ public class PerfectSquare extends ExampleFD {
 
         if (args.length == 1) {
 
-            String number = args[0];
-            Integer i = new Integer(number);
-            problemNo = i.intValue();
+            problemNo = Integer.parseInt(args[0]);
 
         }
 
@@ -366,10 +364,8 @@ public class PerfectSquare extends ExampleFD {
 
         if (args.length == 1) {
 
-            String number = args[0];
-            Integer i = new Integer(number);
-            problemNo = i.intValue();
-
+	    problemNo = Integer.parseInt(args[0]);
+	    
         } else
             problemNo = squares.length - 1;
 

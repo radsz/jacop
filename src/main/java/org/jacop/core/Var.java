@@ -49,7 +49,7 @@ public abstract class Var implements Backtrackable {
     /**
      * It is a counter to indicate number of created variables.
      */
-    public static AtomicInteger idNumber = new AtomicInteger(0);
+    public final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * Id string of the variable.

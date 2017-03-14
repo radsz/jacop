@@ -34,8 +34,6 @@ package org.jacop.floats.constraints;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.core.Store;
 
-import java.util.ArrayList;
-
 /**
  * SumFloat constraint implements the weighted summation over several
  * Variable's . It provides the weighted sum from all Variable's on the list.

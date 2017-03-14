@@ -161,7 +161,6 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
                         right = value;
                 } catch (NumberFormatException ex) {
                 }
-                ;
             }
 
             if (left != null && right != null)
@@ -307,7 +306,6 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
         assert checkInvariants() == null : checkInvariants();
 
-        return;
     }
 
 
@@ -1101,7 +1099,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
         System.arraycopy(intervalDomain.intervals, 0, intervals, 0, size);
 
         assert checkInvariants() == null : checkInvariants();
-        return;
+
     }
 
     /**
@@ -2228,7 +2226,6 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
         assert checkInvariants() == null : checkInvariants();
 
         var.domainHasChanged(returnedEvent);
-        return;
 
     }
 
@@ -2988,7 +2985,6 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
         }
 
         var.domainHasChanged(returnedEvent);
-        return;
 
     }
 
@@ -3321,9 +3317,6 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
         size++;
 
         assert checkInvariants() == null : checkInvariants();
-
-        return;
-
 
     }
 

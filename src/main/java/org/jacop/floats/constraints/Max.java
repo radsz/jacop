@@ -31,6 +31,7 @@
 package org.jacop.floats.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.Constraint;
 
@@ -52,7 +53,7 @@ import org.jacop.core.IntDomain;
 
 public class Max extends Constraint {
 
-    static int counter = 1;
+    static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies a list of variables among which a maximum value is being searched for.
@@ -81,7 +82,7 @@ public class Max extends Constraint {
         assert (max != null) : "Min variable is null";
 
         this.queueIndex = 1;
-        this.numberId = counter++;
+        this.numberId = idNumber.incrementAndGet();
         this.numberArgs = (short) (list.length + 1);
         this.max = max;
         this.list = new FloatVar[list.length];

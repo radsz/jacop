@@ -264,7 +264,7 @@ public class CPvizNewspaper {
         //		search.setExitListener((ExitListener)select);
         // <---
 
-        boolean result = search.labeling(store, select, cost);
+        search.labeling(store, select, cost);
 
 
     }

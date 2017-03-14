@@ -309,8 +309,8 @@ public class Store {
 
         int count = 0;
 
-        for (Var v : watchedConstraints.keySet())
-            count += watchedConstraints.get(v).size();
+        for (HashSet<Constraint> c : watchedConstraints.values())
+            count += c.size();
 
         return count;
 
@@ -1204,9 +1204,8 @@ public class Store {
 
         HashSet<Constraint> constraints = new HashSet<Constraint>();
 
-        Set<String> ids = variablesHashMap.keySet();
-        for (String s : ids) {
-            Domain d = variablesHashMap.get(s).dom();
+        for (Var v : variablesHashMap.values()) {
+            Domain d = v.dom();
             ArrayList<Constraint> c = d.constraints();
             constraints.addAll(c);
         }

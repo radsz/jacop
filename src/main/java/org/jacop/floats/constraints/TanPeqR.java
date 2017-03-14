@@ -164,7 +164,6 @@ public class TanPeqR extends Constraint {
                             return;
                         // throw new InternalException("Selected impossible case in tan and atan constraint");
                     }
-                    ;
                     break;
 
                 case 2:
@@ -185,7 +184,6 @@ public class TanPeqR extends Constraint {
                             return;
                         // throw new InternalException("Selected impossible case in tan and atan constraint");
                     }
-                    ;
                     break;
 
                 case 3:
@@ -203,13 +201,11 @@ public class TanPeqR extends Constraint {
                         // throw new InternalException("Selected impossible case in tan and atan constraint");
 
                     }
-                    ;
                     break;
                 default:
                     return;
                 // throw new InternalException("Selected impossible case in tan and atan constraint");
             }
-            ;
 
             // System.out.println (q + " in " + qMin + ".." + qMax);
 

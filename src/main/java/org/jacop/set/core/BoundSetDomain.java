@@ -567,7 +567,6 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
         this.glb = domain.glb();
         this.lub = domain.lub();
-        return;
 
     }
 

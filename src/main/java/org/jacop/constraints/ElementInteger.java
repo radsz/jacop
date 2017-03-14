@@ -153,21 +153,7 @@ public class ElementInteger extends Constraint implements UsesQueueVariable {
         this.list = new int[list.length];
         this.queueIndex = 1;
 
-        for (int i = 0; i < list.length; i++) {
-
-            Integer listElement = list[i];
-            this.list[i] = list[i];
-
-            // 			IntDomain oldFD = mappingValuesToIndex.get(listElement);
-            // 			if (oldFD == null) {
-            //  			    mappingValuesToIndex.put(listElement, new IntervalDomain(i + 1 + indexOffset, i + 1 + indexOffset));
-            // 			}
-            // 			else
-            //     			    ((IntervalDomain)oldFD).addLastElement(i + 1 + indexOffset);
-            // //     			    oldFD.unionAdapt(i + 1 + indexOffset, i + 1 + indexOffset);
-
-        }
-
+	System.arraycopy(list, 0, this.list, 0, list.length);
     }
 
     /**

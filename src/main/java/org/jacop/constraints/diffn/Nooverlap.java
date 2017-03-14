@@ -33,6 +33,7 @@ package org.jacop.constraints.diffn;
 
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -52,7 +53,7 @@ import org.jacop.core.TimeStamp;
 
 public class Nooverlap extends Constraint {
 
-    static int IdNumber = 1;
+    static AtomicInteger idNumber = new AtomicInteger(0);
 
     static final boolean trace = false, traceNarr = false;
 
@@ -94,7 +95,7 @@ public class Nooverlap extends Constraint {
         assert (rectangle != null) : "Rectangles list is null";
 
         this.queueIndex = 2;
-        this.numberId = IdNumber++;
+        this.numberId = idNumber.incrementAndGet();
 
         this.rectangle = new Rectangle[rectangle.length];
 
@@ -137,7 +138,7 @@ public class Nooverlap extends Constraint {
 
             this.queueIndex = 2;
 
-            this.numberId = IdNumber++;
+            this.numberId = idNumber.incrementAndGet();
             this.numberArgs = (short) (numberArgs * 4);
 
             this.rectangle = new Rectangle[size];
@@ -173,7 +174,7 @@ public class Nooverlap extends Constraint {
     public Nooverlap(ArrayList<? extends ArrayList<? extends IntVar>> rectangle) {
 
         queueIndex = 2;
-        numberId = IdNumber++;
+        numberId = idNumber.incrementAndGet();
 
         this.rectangle = new Rectangle[rectangle.size()];
 

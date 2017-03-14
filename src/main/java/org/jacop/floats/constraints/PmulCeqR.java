@@ -32,6 +32,7 @@
 package org.jacop.floats.constraints;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
@@ -54,7 +55,7 @@ import org.jacop.floats.core.FloatIntervalDomain;
 
 public class PmulCeqR extends Constraint {
 
-    static int counter = 1;
+    static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies variable p in constraint p * c = r. 
@@ -88,7 +89,7 @@ public class PmulCeqR extends Constraint {
         assert (p != null) : "Variable p is null";
         assert (r != null) : "Variable r is null";
 
-        numberId = counter++;
+        numberId = idNumber.incrementAndGet();
         numberArgs = 2;
 
         this.p = p;

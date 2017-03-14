@@ -142,7 +142,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
             for (String number : oneElement) {
                 try {
-                    int value = Integer.valueOf(number);
+                    int value = Integer.parseInt(number);
                     if (left == null)
                         left = value;
                     else

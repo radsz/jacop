@@ -164,6 +164,7 @@ public class ConferenceTalkPlacement {
     /**
      *
      * It uses MaxRegret variable ordering heuristic to search for a solution.
+     * @param timeOutSeconds time-out in seconds
      * @return true if there is a solution, false otherwise.
      *
      */

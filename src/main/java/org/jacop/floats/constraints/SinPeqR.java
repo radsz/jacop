@@ -179,7 +179,6 @@ public class SinPeqR extends Constraint {
                         default:
                             throw new InternalException("Selected impossible case in sin, cos, asin or acos constraint");
                     }
-                    ;
                     break;
 
                 case 2:
@@ -203,7 +202,6 @@ public class SinPeqR extends Constraint {
                         default:
                             throw new InternalException("Selected impossible case in sin, cos, asin or acos constraint");
                     }
-                    ;
                     break;
 
                 case 3:
@@ -226,7 +224,6 @@ public class SinPeqR extends Constraint {
                         default:
                             throw new InternalException("Selected impossible case in sin, cos, asin or acos constraint");
                     }
-                    ;
                     break;
 
                 case 4:
@@ -258,12 +255,10 @@ public class SinPeqR extends Constraint {
                         default:
                             throw new InternalException("Selected impossible case in sin, cos, asin or acos constraint");
                     }
-                    ;
                     break;
                 default:
                     throw new InternalException("Selected impossible case in sin, cos, asin or acos constraint");
             }
-            ;
 
             // System.out.println (q + " in " + qMin + ".." + qMax);
 

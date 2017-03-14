@@ -35,6 +35,7 @@ import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.*;
+import java.util.Map;
 
 /**
  * SumWeight constraint implements the weighted summation over several
@@ -119,9 +120,9 @@ import org.jacop.core.*;
         this.weights = new int[parameters.size()];
 
         int i = 0;
-        for (IntVar var : parameters.keySet()) {
-            this.list[i] = var;
-            this.weights[i] = parameters.get(var);
+        for (Map.Entry<IntVar,Integer> e : parameters.entrySet()) {
+	    this.list[i] = e.getKey();
+            this.weights[i] = e.getValue();
             i++;
         }
 
@@ -296,7 +297,7 @@ import org.jacop.core.*;
             assert (positionMaping.get(list[i])
                 == null) : "The variable occurs twice in the list, not able to make a maping from the variable to its list index.";
 
-            positionMaping.put(list[i], new Integer(i));
+            positionMaping.put(list[i], i);
             queueVariable(store.level, list[i]);
         }
 
