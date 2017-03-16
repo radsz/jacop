@@ -290,7 +290,7 @@ public class BoolClause extends PrimitiveConstraint {
             y[i].domain.in(store.level, y[i], 1, 1);
 
         removeConstraint();
-        return;
+
     }
 
     @Override public boolean satisfied() {

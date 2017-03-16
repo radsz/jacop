@@ -1124,8 +1124,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable {
                 if (x.singleton())
                     gx++;
             } else {
-                System.err.println("ERROR: Constraint " + toString() + " must have different variables on the list");
-                System.exit(0);
+                throw new RuntimeException("ERROR: Constraint " + toString() + " must have different variables on the list");
             }
         }
 
@@ -1140,8 +1139,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable {
                 variableQueueY.add(i);
                 // yIndex.put(y, i);
             } else {
-                System.err.println("ERROR: Constraint " + toString() + " must have different variables on the list");
-                System.exit(0);
+                throw new RuntimeException("ERROR: Constraint " + toString() + " must have different variables on the list");
             }
         }
 

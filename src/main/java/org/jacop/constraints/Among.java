@@ -310,8 +310,7 @@ public class Among extends Constraint implements UsesQueueVariable {
                 queueVariable(level, var);
                 pos++;
             } else {
-                System.err.println("ERROR: Constraint " + toString() + " must have different variables on the list");
-                System.exit(0);
+                throw new RuntimeException("ERROR: Constraint " + toString() + " must have different variables on the list");
             }
         }
         n.putConstraint(this);

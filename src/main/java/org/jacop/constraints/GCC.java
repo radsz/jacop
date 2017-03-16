@@ -489,8 +489,7 @@ public class GCC extends Constraint implements UsesQueueVariable {
             if (!x[i].singleton()) {
                 Integer varPosition = xNodesHash.put(x[i], i);
                 if (varPosition != null) {
-                    System.err.println("ERROR: Constraint " + toString() + " must have different non ground variables on the list");
-                    System.exit(0);
+                    throw new RuntimeException("ERROR: Constraint " + toString() + " must have different non ground variables on the list");
                 }
             }
 

@@ -349,7 +349,8 @@ public class TraceGenerator<T extends Var> implements SelectChoicePoint<T>, Cons
     // Metods for tracing using ConsistencyListener
 
     public void setChildrenListeners(ConsistencyListener[] children) {
-        consistencyListeners = children;
+        consistencyListeners = new ConsistencyListener[children.length];
+        System.arraycopy(children, 0, consistencyListeners, 0, children.length);
     }
 
 
@@ -413,13 +414,14 @@ public class TraceGenerator<T extends Var> implements SelectChoicePoint<T>, Cons
     // =================================================================
     // Metods for tracing using ExitChildListener
 
-    public void setChildrenListeners(ExitChildListener<T>[] children) {
-
-        exitChildListeners = children;
+     @SuppressWarnings("unchecked") public void setChildrenListeners(ExitChildListener<T>[] children) {
+	exitChildListeners = new ExitChildListener[children.length];
+        System.arraycopy(children, 0, exitChildListeners, 0, children.length);
     }
 
     public void setChildrenListeners(ExitListener[] children) {
-        exitListeners = children;
+        exitListeners = new ExitListener[children.length];
+	System.arraycopy(children, 0, exitListeners, 0, children.length);
     }
 
     public boolean leftChild(T var, int value, boolean status) {
