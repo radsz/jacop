@@ -47,7 +47,7 @@ public abstract class BinaryNode {
     BinaryNode parent = null;
     BinaryNode left = null;
     BinaryNode right = null;
-    BinaryNode sibling = null;
+    // BinaryNode sibling = null;  // currently not used
 
     abstract void propagateAndPrune();
 

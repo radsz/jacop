@@ -398,7 +398,7 @@ public class Cumulative extends CumulativeBasic {
     }
 
 
-    static class TaskDecLCTComparator<T extends TaskView> implements Comparator<T>, java.io.Serializable {
+  static class TaskDecLCTComparator<T extends TaskView> implements Comparator<T>, java.io.Serializable {
 
         TaskDecLCTComparator() {
         }
@@ -409,7 +409,7 @@ public class Cumulative extends CumulativeBasic {
     }
 
 
-    class PrecComparator<T extends Integer> implements Comparator<T> {
+  static class PrecComparator<T extends Integer> implements Comparator<T>, java.io.Serializable {
         int[] prec;
 
         PrecComparator(int[] prec) {

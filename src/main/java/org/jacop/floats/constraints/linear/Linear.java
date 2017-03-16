@@ -265,8 +265,9 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
                 parent.left = nodes[i];
                 parent.right = nodes[i + 1];
 
-                nodes[i].sibling = nodes[i + 1];
-                nodes[i + 1].sibling = nodes[i];
+		// currently sibling not used
+                // nodes[i].sibling = nodes[i + 1];
+                // nodes[i + 1].sibling = nodes[i];
 
                 nodes[i].parent = parent;
                 nodes[i + 1].parent = parent;

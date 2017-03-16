@@ -979,7 +979,7 @@ public class Diff extends Constraint implements UsesQueueVariable {
         }
     }
 
-    class DimIMinComparator<T extends IntRectangle> implements Comparator<T> {
+  static class DimIMinComparator<T extends IntRectangle> implements Comparator<T>, java.io.Serializable {
 
         int i;
 
@@ -999,7 +999,7 @@ public class Diff extends Constraint implements UsesQueueVariable {
     }
 
 
-    class Pair {
+    static class Pair {
         int Min, Max;
 
         Pair(int i1, int i2) {

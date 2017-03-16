@@ -92,9 +92,9 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
 
     boolean addingToIntervals;
 
-    Boolean valueFalse = new Boolean(false);
+    Boolean valueFalse = Boolean.valueOf(false);
 
-    Boolean valueTrue = new Boolean(true);
+    Boolean valueTrue = Boolean.valueOf(true);
 
     @Override public void addChanged(int index) {
 

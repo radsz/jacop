@@ -89,13 +89,13 @@ public class Solve implements ParserTreeConstants {
 
     boolean debug = false;
     boolean print_search_info = false;
-    boolean setSearch = false;
     boolean heuristicSeqSearch = false;
 
     Var costVariable;
-
-    int costValue;
-    double floatCostValue;
+  
+    // used for restart search
+    // int costValue;
+    // double floatCostValue;
 
     // -------- for print-out of statistics
     boolean singleSearch;
@@ -300,7 +300,6 @@ public class Solve implements ParserTreeConstants {
             } else if (si.type().equals("set_search")) {
                 label = set_search(si);
                 list_seq_searches.add(label);
-                setSearch = true;
                 //label.setSolutionListener(new EmptyListener<Var>());
                 label.setPrintInfo(false);
 
@@ -1093,7 +1092,6 @@ public class Solve implements ParserTreeConstants {
             }
             list_seq_searches.add(label);
         } else if (si.type().equals("set_search")) {
-            setSearch = true;
             label = set_search(si);
             if (!master)
                 label.setSelectChoicePoint(variable_selection);
@@ -1188,9 +1186,6 @@ public class Solve implements ParserTreeConstants {
 
     void printSolution() {
 
-        // T = System.currentTimeMillis();
-        // System.out.println("% Search time since last solution : " + (T - TOld)/1000 + " s");
-        // TOld = T;
         StringBuffer printBuffer = new StringBuffer();
 
         if (dictionary.outputVariables.size() > 0)
@@ -1199,39 +1194,39 @@ public class Solve implements ParserTreeConstants {
 
                 if (v instanceof BooleanVar) {
                     // print boolean variables
-                    String boolVar = v.id() + " = ";
+		    printBuffer.append(v.id() + " = ");
                     if (v.singleton())
                         switch (((BooleanVar) v).value()) {
                             case 0:
-                                boolVar += "false";
+			        printBuffer.append("false");
                                 break;
                             case 1:
-                                boolVar += "true";
+			        printBuffer.append("true");
                                 break;
                             default:
-                                boolVar += v.dom();
+			        printBuffer.append(v.dom());
                         }
                     else
-                        boolVar += "false..true";
+		        printBuffer.append("false..true");
 
-                    printBuffer.append(boolVar).append(";\n");
+                    printBuffer.append(";\n");
                 } else if (v instanceof SetVar) {
                     // print set variables
-                    String setVar = v.id() + " = ";
+		    printBuffer.append(v.id() + " = ");
                     if (v.singleton()) {
                         IntDomain glb = ((SetVar) v).dom().glb();
-                        setVar += "{";
+                        printBuffer.append("{");
                         for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements(); ) {
                             int element = e.nextElement();
-                            setVar += element;
+                            printBuffer.append(element);
                             if (e.hasMoreElements())
-                                setVar += ", ";
+			        printBuffer.append(", ");
                         }
-                        setVar += "}";
+                        printBuffer.append("}");
                     } else
-                        setVar += v.dom().toString();
+		        printBuffer.append(v.dom().toString());
 
-                    printBuffer.append(setVar).append(";\n");
+                    printBuffer.append(";\n");
                 } else
 
                     printBuffer.append(v).append(";\n");
@@ -1436,29 +1431,30 @@ public class Solve implements ParserTreeConstants {
             boolean returnCode = super.executeAfterSolution(search, select);
 
 	    /* // === used to print number of search nodes for each solution
-      int nodes=0;
+            int nodes=0;
 	    for (Search<Var> label : list_seq_searches) 
 		nodes += label.getNodes();
 	    System.out.println("%% Search nodes : "+ nodes );
 	    */
-
+	    
+	    /* // ==> used for restart search
             if (costVariable != null)
                 if (costVariable instanceof IntVar)
                     costValue = ((IntVar) costVariable).value();
                 else
                     floatCostValue = ((FloatVar) costVariable).value();
-
+	    */
+	    
             FinalNumberSolutions++;
 
             printSolution();
-            // System.out.println("----------");
 
             return returnCode;
         }
     }
 
 
-    public class PrecisionSetting implements InitializeListener {
+    public static class PrecisionSetting implements InitializeListener {
 
         InitializeListener[] initializeChildListeners;
 
@@ -1473,7 +1469,8 @@ public class Solve implements ParserTreeConstants {
         }
 
         public void setChildrenListeners(InitializeListener[] children) {
-            initializeChildListeners = children;
+	    initializeChildListeners = new InitializeListener[children.length];
+	    System.arraycopy(children, 0, initializeChildListeners, 0, children.length);
         }
 
         public void setChildrenListeners(InitializeListener child) {

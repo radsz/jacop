@@ -508,7 +508,7 @@ public class CumulativeBasic extends Constraint {
     static final int profile = 0, pruneStart = 1, pruneEnd = 2;
 
 
-    private class Event {
+    private static class Event {
         int type;
         TaskView t;
         int date;

@@ -567,7 +567,7 @@ public class Diffn extends Nooverlap {
     static final int profileSubtract = 0, profileAdd = 1, pruneStart = 2, pruneEnd = 3;
 
 
-    private class Event {
+    private static class Event {
         int type;
         Rectangle r;
         int date;
@@ -617,6 +617,8 @@ public class Diffn extends Nooverlap {
                 case pruneEnd:
                     result += "pruneEnd, ";
                     break;
+	        default:
+		  result += "--";
             }
             result += r + ", " + date + ", " + value + ", " + block + ")\n";
             return result;

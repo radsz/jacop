@@ -158,18 +158,18 @@ public class XorBool extends PrimitiveConstraint {
                     nonGround = e;
 
             if (numberOnes + numberZeros == l)
-                if (numberOnes % 2 == 1)
+	        if ((numberOnes & 1) == 1)
                     y.domain.in(store.level, y, 1, 1);
                 else
                     y.domain.in(store.level, y, 0, 0);
             else if (numberOnes + numberZeros == l - 1)
                 if (y.min() == 1)
-                    if (numberOnes % 2 == 1)
+		    if ((numberOnes & 1) == 1)
                         nonGround.domain.in(store.level, nonGround, 0, 0);
                     else
                         nonGround.domain.in(store.level, nonGround, 1, 1);
                 else if (y.max() == 0)
-                    if (numberOnes % 2 == 1)
+		    if ((numberOnes & 1) == 1)
                         nonGround.domain.in(store.level, nonGround, 1, 1);
                     else
                         nonGround.domain.in(store.level, nonGround, 0, 0);
@@ -200,18 +200,18 @@ public class XorBool extends PrimitiveConstraint {
                     nonGround = e;
 
             if (numberOnes + numberZeros == l)
-                if (numberOnes % 2 == 1)
+	        if ((numberOnes & 1) == 1)
                     y.domain.in(store.level, y, 0, 0);
                 else
                     y.domain.in(store.level, y, 1, 1);
             else if (numberOnes + numberZeros == l - 1)
                 if (y.min() == 1)
-                    if (numberOnes % 2 == 1)
+		    if ((numberOnes & 1) == 1)
                         nonGround.domain.in(store.level, nonGround, 1, 1);
                     else
                         nonGround.domain.in(store.level, nonGround, 0, 0);
                 else if (y.max() == 0)
-                    if (numberOnes % 2 == 1)
+		    if ((numberOnes & 1) == 1)
                         nonGround.domain.in(store.level, nonGround, 0, 0);
                     else
                         nonGround.domain.in(store.level, nonGround, 1, 1);
@@ -288,9 +288,9 @@ public class XorBool extends PrimitiveConstraint {
         for (IntVar e : x)
             sum += e.value();
 
-        if (sum % 2 == 1 && y.min() == 1)
+        if ((sum & 1) == 1 && y.min() == 1)
             return true;
-        else if (sum % 2 == 0 && y.max() == 0)
+        else if ((sum & 1) == 0 && y.max() == 0)
             return true;
 
         return false;
@@ -310,9 +310,9 @@ public class XorBool extends PrimitiveConstraint {
         for (IntVar e : x)
             sum += e.value();
 
-        if (sum % 2 == 1 && y.min() == 0)
+        if ((sum & 1) == 1 && y.min() == 0)
             return true;
-        else if (sum % 2 == 0 && y.min() == 1)
+        else if ((sum & 1) == 0 && y.min() == 1)
             return true;
 
         return false;
