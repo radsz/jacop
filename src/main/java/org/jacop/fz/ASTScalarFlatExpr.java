@@ -80,6 +80,8 @@ public class ASTScalarFlatExpr extends SimpleNode {
                 case 5:
                     val = "(float): " + doubleValue;
                     break;
+	        default:
+		    throw new RuntimeException("Internal parsing error; " + getClass().getName());
             }
         }
 

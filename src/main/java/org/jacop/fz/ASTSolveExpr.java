@@ -50,6 +50,8 @@ public class ASTSolveExpr extends SimpleNode {
                 case 1:
                     val = "(array access): " + ident + "[" + index + "]";
                     break;
+	        default:
+		    throw new RuntimeException("Internal parsing error; " + getClass().getName());
             }
         }
 

@@ -46,6 +46,8 @@ public class ASTFloatTiExprTail extends SimpleNode {
             case 1:
                 typeS = "(interval): ";
                 break;
+	   default:
+	     throw new RuntimeException("Internal parsing error; " + getClass().getName());
         }
         return super.toString() + typeS + limits;
     }
