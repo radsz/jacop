@@ -469,12 +469,12 @@ public class SatTranslation {
 
     String clauseToString(int[] clause) {
 
-        String buffer = new String();
+        StringBuffer buffer = new StringBuffer();
 
-        for (int i = 0; i < clause.length; i++) {
-            buffer += clause[i] + " ";
-        }
-        buffer += "\n";
-        return buffer;
+        for (int i = 0; i < clause.length; i++)
+            buffer.append(clause[i] + " ");
+
+        buffer.append("\n");
+        return buffer.toString();
     }
 }

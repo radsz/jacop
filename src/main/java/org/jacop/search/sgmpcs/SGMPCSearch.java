@@ -494,7 +494,7 @@ public class SGMPCSearch {
         return searchCost;
     }
 
-    class SolutionComparator implements Comparator<int[]> {
+    static class SolutionComparator implements Comparator<int[]>, java.io.Serializable {
 
         int p;
 
