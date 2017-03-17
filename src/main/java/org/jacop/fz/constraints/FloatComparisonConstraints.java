@@ -322,25 +322,23 @@ class FloatComparisonConstraints extends Support implements ParserTreeConstants 
 
                 } else { // first parameter var & second parameter var
 
-                    PrimitiveConstraint c = null;
                     FloatVar v1 = getFloatVariable(p1);
                     FloatVar v2 = getFloatVariable(p2);
 
                     switch (operation) {
                         case eq:
-                            c = new PeqQ(v1, v2);
+                            pose(new PeqQ(v1, v2));
                             break;
                         case ne:
-                            c = new PneqQ(v1, v2);
+                            pose(new PneqQ(v1, v2));
                             break;
                         case lt:
-                            c = new PltQ(v1, v2);
+                            pose(new PltQ(v1, v2));
                             break;
                         case le:
-                            c = new PlteqQ(v1, v2);
+                            pose(new PlteqQ(v1, v2));
                             break;
                     }
-                    pose(c);
                 }
             }
 

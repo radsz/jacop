@@ -560,31 +560,29 @@ class ComparisonConstraints extends Support implements ParserTreeConstants {
 
                 } else { // first parameter var & second parameter var
 
-                    PrimitiveConstraint c = null;
                     IntVar v1 = getVariable(p1);
                     IntVar v2 = getVariable(p2);
 
                     switch (operation) {
                         case eq:
-                            c = new XeqY(v1, v2);
+                            pose(new XeqY(v1, v2));
                             break;
                         case ne:
-                            c = new XneqY(v1, v2);
+                            pose(new XneqY(v1, v2));
                             break;
                         case lt:
-                            c = new XltY(v1, v2);
+                            pose(new XltY(v1, v2));
                             break;
                         case gt:
-                            c = new XgtY(v1, v2);
+                            pose(new XgtY(v1, v2));
                             break;
                         case le:
-                            c = new XlteqY(v1, v2);
+                            pose(new XlteqY(v1, v2));
                             break;
                         case ge:
-                            c = new XgteqY(v1, v2);
+                            pose(new XgteqY(v1, v2));
                             break;
                     }
-                    pose(c);
                 }
             }
         }
