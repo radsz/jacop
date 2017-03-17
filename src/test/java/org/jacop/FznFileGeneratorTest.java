@@ -88,15 +88,24 @@ public class FznFileGeneratorTest extends MinizincBasedTestsHelper {
             expected = "src/test/fz/scriptGolden/errors/" + expectedDir;
         }
 
-        System.out.println(expected);
+//        System.out.println(expected);
         ProcessBuilder pb1 = new ProcessBuilder("diff", "-r", res, expected);
         Process p2 = pb1.start();
         boolean result = false;
-        if( 0 == p2.waitFor()) {
+        if( 0 == p2.waitFor() ) {
             result = true;
+            System.out.println(expected);
+        }
+        String s = null;
+        BufferedReader stdInput = new BufferedReader(new InputStreamReader(p2.getInputStream()));
+
+        while ((s = stdInput.readLine()) != null) {
+            System.out.println(expected + "\n" + s);
         }
 
-        Assert.assertEquals(true, result);
+        Assert.assertEquals(true, result );
+
+
 
     }
 
