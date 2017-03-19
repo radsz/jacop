@@ -1,0 +1,7 @@
+objective = 303;
+root = 6;
+es = array1d(1..105, [false, false, false, false, false, true, false, true, false, false, false, false, false, false, false, true, false, true, false, false, false, false, false, false, false, false, false, false, false, false, true, false, false, false, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true, false, false, false, false, false, false, true, false, false, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true, false, false, false, false, false, true, false, false, false, false, true, false, false, false, false, false, false, false, true, false, false, false]);
+h = array1d(1..15, [0, 2, 1, 3, 2, 1, 0, 3, 1, 3, 2, 2, 3, 2, 3]);
+p = array1d(1..15, [1, 6, 7, 2, 6, 7, 7, 14, 1, 14, 3, 3, 5, 9, 12]);
+----------
+==========
