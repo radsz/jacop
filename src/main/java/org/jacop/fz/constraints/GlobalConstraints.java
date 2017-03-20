@@ -69,6 +69,7 @@ import org.jacop.constraints.Count;
 import org.jacop.constraints.ArgMin;
 import org.jacop.constraints.ArgMax;
 import org.jacop.constraints.ExtensionalSupportMDD;
+import org.jacop.constraints.ExtensionalSupportSTR;
 import org.jacop.constraints.Assignment;
 import org.jacop.util.fsm.FSMTransition;
 import org.jacop.util.fsm.FSM;
@@ -481,6 +482,12 @@ class GlobalConstraints extends Support implements ParserTreeConstants {
             for (int j = 0; j < size; j++)
                 t[i][j] = tbl[size * i + j];
 
+	int maxDomSize = Integer.MIN_VALUE;
+	for (IntVar vi : v)
+	    if (vi.getSize() > maxDomSize)
+		maxDomSize = vi.getSize();
+	boolean mddOverflow = times_overflow(maxDomSize, tbl.length);
+
         int[] vu = uniqueIndex(v);
         if (vu.length != v.length) { // non unique variables
 
@@ -499,13 +506,18 @@ class GlobalConstraints extends Support implements ParserTreeConstants {
                     System.out.println(uniqueVar[0] + " in " + d);
 
             } else
-                delayedConstraints.add(new ExtensionalSupportMDD(uniqueVar, tt));
+		if (mddOverflow)
+		    delayedConstraints.add(new ExtensionalSupportSTR(uniqueVar, tt));
+		else
+		    delayedConstraints.add(new ExtensionalSupportMDD(uniqueVar, tt));
 
         } else
             // we do not not pose ExtensionalSupportMDD directly because of possible inconsistency with its
             // intiallization; we collect all constraints and pose them at the end when all other constraints are posed
-
-            delayedConstraints.add(new ExtensionalSupportMDD(v, t));
+	    if (mddOverflow)
+		delayedConstraints.add(new ExtensionalSupportSTR(v, t));
+	    else
+		delayedConstraints.add(new ExtensionalSupportMDD(v, t));
     }
 
     static void gen_jacop_assignment(SimpleNode node) {
