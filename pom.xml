@@ -488,6 +488,15 @@ setup to run configuration. -->
 				<configuration>
 					<linkXRef>true</linkXRef>
 					<targetJdk>1.7</targetJdk>
+					<!-- Exclude automatically generated files from jjtree and javacc -->
+					<excludes>
+					  <exclude>**/fz/Parser.java</exclude>
+					  <exclude>**/fz/ParserTreeConstants.java</exclude>
+					  <exclude>**/fz/Node.java</exclude>
+					  <exclude>**/fz/TokenMgrError.java</exclude>
+					  <exclude>**/fz/ParserTokenManager.java</exclude>
+					  <exclude>**/fz/SimpleCharStream.java</exclude>
+					</excludes>
 				</configuration>
 				<version>3.7</version>
 			</plugin>
