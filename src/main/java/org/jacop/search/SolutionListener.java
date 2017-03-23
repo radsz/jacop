@@ -94,7 +94,7 @@ public interface SolutionListener<T extends Var> {
     PrimitiveConstraint[] returnSolution();
 
     /**
-     * It returns the solution number no. The first solution has an index 0.
+     * It returns the solution number no. 
      * @param no it obtains the solution with a given index.
      * @return array containing assignments to search variables.
      */
