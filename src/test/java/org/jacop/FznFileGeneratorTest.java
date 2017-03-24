@@ -21,6 +21,13 @@ import java.util.Collection;
  * @author Mariusz Świerkot
  */
 
+/*
+ * At the beginning of the operation, program run the copyFolders function. Function copies files from the scriptTest
+ * directory to test directory. Then runBashScript () function runs a listgenerator script which generates file list.txt
+ * and runs the fznFileGenerator.sh script. Conditional statements check in which time category is checked test and then
+ * compares using diff with test folder in the scriptgolden directory.
+*/
+
 @RunWith(Parameterized.class)
 public class FznFileGeneratorTest extends MinizincBasedTestsHelper {
     private static File sourceFolder = new File("src/test/fz/scriptTest");
