@@ -31,7 +31,7 @@ public class FznFileGeneratorTest extends MinizincBasedTestsHelper {
     @BeforeClass
     public static void inicjalize() throws IOException {
         copyFolders(sourceFolder, destinationFolder);
-        runBashScript();
+
 
     }
 
@@ -43,7 +43,7 @@ public class FznFileGeneratorTest extends MinizincBasedTestsHelper {
 
     @Parameterized.Parameters
     public static Collection<String> parametricTest() throws IOException {
-
+        runBashScript();
         return fileReader(Category);
     }
 
