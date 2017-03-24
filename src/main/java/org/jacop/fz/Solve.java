@@ -550,8 +550,7 @@ public class Solve implements ParserTreeConstants {
                     else if (label.timeOutOccured)
                         System.out.println("%% =====TIME-OUT=====");
             } else if (optimization) {
-                if (!interrupted)
-                    if (si.exploration().equals("complete"))
+                if (!interrupted && si.exploration().equals("complete"))
                         if (!label.timeOutOccured) {
                             if (options.getNumberSolutions() == -1 || options.getNumberSolutions() > label.getSolutionListener()
                                 .solutionsNo())
@@ -632,8 +631,8 @@ public class Solve implements ParserTreeConstants {
         // if there are no output variables collect GUESSED SEARCH
         // VARIABLES override selection if option
         // "complementarySearch" or no search is defined is defined.
-        if ((int_search_variables.length == 0 && bool_search_variables.length == 0 && set_search_variables.length == 0
-            && float_search_variables.length == 0) || options.complementarySearch()) {
+        if (int_search_variables.length == 0 && bool_search_variables.length == 0 && set_search_variables.length == 0
+            && float_search_variables.length == 0 || options.complementarySearch()) {
 
             searchVars.defaultVars();
 

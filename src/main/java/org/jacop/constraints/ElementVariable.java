@@ -355,8 +355,7 @@ public class ElementVariable extends Constraint implements UsesQueueVariable {
 
             }
 
-            if (indexHasChanged)
-                if (index.singleton()) {
+            if (indexHasChanged && index.singleton()) {
                     // index is singleton.
 
                     int position = index.value() - 1 - indexOffset;

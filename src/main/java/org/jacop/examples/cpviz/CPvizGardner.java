@@ -56,7 +56,7 @@ public class CPvizGardner {
         long startCPU = b.getThreadCpuTime(tread.getId());
         long startUser = b.getThreadUserTime(tread.getId());
 
-        int num_days = 35;
+        // int num_days = 35;
         int num_persons_per_meeting = 3;
         int persons = 15;
 

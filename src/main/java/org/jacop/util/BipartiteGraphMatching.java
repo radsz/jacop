@@ -169,7 +169,7 @@ public class BipartiteGraphMatching {
 
         // If we could come back to NIL using alternating path of distinct vertices then there is an
         // augmenting path
-        return (dist[NIL] != INF);
+        return dist[NIL] != INF;
     }
 
     // Returns true if there is an augmenting path beginning with free vertex u
@@ -178,15 +178,14 @@ public class BipartiteGraphMatching {
             for (int v : adj[u]) {
 
                 // Follow the distances set by BFS
-                if (dist[pairV[v]] == dist[u] + 1) {
+                if (dist[pairV[v]] == dist[u] + 1 && 
                     // If dfs for pair of v also returns
                     // true
-                    if (dfs(pairV[v]) == true) {
+                    dfs(pairV[v]) == true) {
                         pairV[v] = u;
                         pairU[u] = v;
                         return true;
                     }
-                }
             }
 
             // If there is no augmenting path beginning with u.
