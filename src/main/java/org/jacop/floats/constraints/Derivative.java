@@ -57,7 +57,7 @@ public class Derivative {
 
     static Stack<Constraint> eval;
 
-    public static Set<Constraint> derivateConstraints;
+    static Set<Constraint> derivateConstraints;
 
     static HashMap<FloatVar, Constraint> definitionConstraint;
 

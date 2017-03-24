@@ -76,7 +76,7 @@ public abstract class FloatDomain extends Domain {
      * true - extend interval outward
      * false - does not extend interval and use calculation results.
      */
-    public static boolean outward = true;
+    static boolean outward = true;
 
     /**
      * It defines rounding method
@@ -94,7 +94,7 @@ public abstract class FloatDomain extends Domain {
      * If true, the print-out prints singletons, defined by method 
      * singleton() in FloatingInterval, as single values.
      */
-    public static boolean intervalPrint = false;
+    static boolean intervalPrint = false;
 
     public static void intervalPrint(boolean p) {
         intervalPrint = p;
@@ -252,7 +252,7 @@ public abstract class FloatDomain extends Domain {
      * It specifies for each event what other events are subsumed by this
      * event. Possibly implement this by bit flags in int. 
      */
-    public final static int[][] eventsInclusion = {{GROUND, BOUND, ANY}, // GROUND event
+    final static int[][] eventsInclusion = {{GROUND, BOUND, ANY}, // GROUND event
         {BOUND, ANY}, // BOUND event
         {ANY}}; // ANY event
 

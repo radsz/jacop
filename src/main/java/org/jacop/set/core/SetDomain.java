@@ -90,7 +90,7 @@ public abstract class SetDomain extends Domain {
      * It specifies for each event what other events are subsumed by this
      * event. Possibly implement this by bit flags in int.
      */
-    protected final static int[][] eventsInclusion = {{GROUND, GLB, LUB, BOUND, ANY, CARDINALITY}, // GROUND event
+    final static int[][] eventsInclusion = {{GROUND, GLB, LUB, BOUND, ANY, CARDINALITY}, // GROUND event
         {GLB, BOUND, ANY, CARDINALITY}, // GLB event
         {LUB, BOUND, ANY, CARDINALITY}, // LUB event
         {BOUND, ANY, CARDINALITY}, // BOUND event
