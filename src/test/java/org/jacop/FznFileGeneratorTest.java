@@ -1,7 +1,6 @@
 package org.jacop;
 
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -30,17 +29,18 @@ import java.util.Collection;
 
 @RunWith(Parameterized.class)
 public class FznFileGeneratorTest extends MinizincBasedTestsHelper {
+    private static String testFolderName = "test";
     private static File sourceFolder = new File("src/test/fz/scriptTest");
-    private static File destinationFolder = new File("src/test/fz/test");
+    private static File destinationFolder = new File("src/test/fz/" + testFolderName);
 
     protected static final String Category = "scriptTest/";
 
-    @BeforeClass
-    public static void inicjalize() throws IOException {
-        copyFolders(sourceFolder, destinationFolder);
-
-
-    }
+//    @BeforeClass
+//    public static void inicjalize() throws IOException {
+//        copyFolders(sourceFolder, destinationFolder);
+//
+//
+//    }
 
     public FznFileGeneratorTest(String testFilename)  {
 
@@ -50,7 +50,9 @@ public class FznFileGeneratorTest extends MinizincBasedTestsHelper {
 
     @Parameterized.Parameters
     public static Collection<String> parametricTest() throws IOException {
+        copyFolders(sourceFolder, destinationFolder);
         runBashScript();
+
         return fileReader(Category);
     }
 
@@ -95,7 +97,7 @@ public class FznFileGeneratorTest extends MinizincBasedTestsHelper {
             expected = "src/test/fz/scriptGolden/errors/" + expectedDir;
         }
 
-//        System.out.println(expected);
+        System.out.println(expected);
         ProcessBuilder pb1 = new ProcessBuilder("diff", "-r", res, expected);
         Process p2 = pb1.start();
         boolean result = false;
@@ -145,7 +147,7 @@ public class FznFileGeneratorTest extends MinizincBasedTestsHelper {
         pb1.directory(new File("src/test/fz/scriptTest"));
         pb1.start();
 
-        ProcessBuilder pb2 = new ProcessBuilder("/bin/bash", "fznFileGenerator.sh");
+        ProcessBuilder pb2 = new ProcessBuilder("/bin/bash", "fznFileGenerator.sh" , testFolderName.toString() );
         pb2.directory(new File("src/test/fz/"));
         Process p = pb2.start();
 
