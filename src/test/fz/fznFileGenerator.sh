@@ -34,7 +34,7 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
         # First timeout is set to 3600 seconds
 
           if [ -f ${k%/*/*}/*.opt ]; then
-              opt=($(<${k%/*/*}/*.opt)) 2>/dev/null
+              opt=($(<${k%/*/*}/*.opt))
               out=$(java -cp ../../../target/jacop-*-SNAPSHOT.jar org.jacop.fz.Fz2jacop -t 3600 $opt $k) # Program Fz2jacop generate test result
               echo "$out"
           else
@@ -78,7 +78,7 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 	          # Second timeout is set to 7200 seconds to avoid situation of the timeout when the first one did not timeout.
 
             if [ -f ${k%/*/*}/*.opt ]; then
-              opt=($(<${k%/*/*}/*.opt)) 2>/dev/null
+              opt=($(<${k%/*/*}/*.opt))
               out=$(java -cp ../../../target/jacop-*-SNAPSHOT.jar org.jacop.fz.Fz2jacop -t 3600 $opt $k) # Program Fz2jacop generate test result
               echo "$out"
           else
