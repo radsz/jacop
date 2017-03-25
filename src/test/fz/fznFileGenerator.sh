@@ -32,11 +32,15 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
         echo "Computing first result for $k"
         start=$(date +%s ) # start time in seconds
         # First timeout is set to 3600 seconds
-        #!/bin/bash
-        opt=$(<fznFileGeneratorOpt.opt)
 
-           out=$(java -cp ../../../target/jacop-*-SNAPSHOT.jar org.jacop.fz.Fz2jacop -t 3600 $opt $k) # Program Fz2jacop generate test result
-        echo "$out"
+          if [ -f ${k%/*/*}/*.opt ]; then
+              opt=($(<${k%/*/*}/*.opt)) 2>/dev/null
+              out=$(java -cp ../../../target/jacop-*-SNAPSHOT.jar org.jacop.fz.Fz2jacop -t 3600 $opt $k) # Program Fz2jacop generate test result
+              echo "$out"
+          else
+              out=$(java -cp ../../../target/jacop-*-SNAPSHOT.jar org.jacop.fz.Fz2jacop -t 3600 $k) # Program Fz2jacop generate test result
+              echo "$out"
+          fi
         stop=$(date +%s )  # end time in seconds
 
         # TODO, if out contains text below then the timeout occurred and the test should be automatically categorized to above 1hour test
@@ -72,8 +76,15 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 	        do
 	          echo "Computing again result for $k"
 	          # Second timeout is set to 7200 seconds to avoid situation of the timeout when the first one did not timeout.
-	    	  out=$(java -cp ../../../target/jacop-*-SNAPSHOT.jar org.jacop.fz.Fz2jacop -t 7200 $opt $k) # Program Fz2jacop generate test result
 
+            if [ -f ${k%/*/*}/*.opt ]; then
+              opt=($(<${k%/*/*}/*.opt)) 2>/dev/null
+              out=$(java -cp ../../../target/jacop-*-SNAPSHOT.jar org.jacop.fz.Fz2jacop -t 3600 $opt $k) # Program Fz2jacop generate test result
+              echo "$out"
+          else
+              out=$(java -cp ../../../target/jacop-*-SNAPSHOT.jar org.jacop.fz.Fz2jacop -t 3600 $k) # Program Fz2jacop generate test result
+              echo "$out"
+          fi
 		      diff <(echo $result) <(echo $out) # diff compare results test to find the difference between two results test
 
 		      diffresult=$?
