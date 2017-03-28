@@ -230,7 +230,7 @@ void var_decl_items() #VarDeclItems:
     ( var_decl_item() <SC> )*
  	{   //jjtThis.dump("");
 	    // jjtThis.removeChildren();
-	    solver.setNumberBoolVariables(cg.numberBooleanVariables);
+	    dict.setNumberBoolVariables(cg.numberBooleanVariables);
 	}
 //             	{ System.out.println(dict); }
 }

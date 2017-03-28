@@ -77,7 +77,6 @@ public class Solve implements ParserTreeConstants {
     Options options;
     Store store;
     int initNumberConstraints;
-    int NumberBoolVariables;
 
     Thread tread;
     java.lang.management.ThreadMXBean searchTimeMeter;
@@ -139,6 +138,8 @@ public class Solve implements ParserTreeConstants {
 
     public void solveModel(SimpleNode astTree, Tables table, Options opt) {
 
+	dictionary = table;
+	
         int n = astTree.jjtGetNumChildren();
 
         for (int i = 0; i < n; i++) {
@@ -171,13 +172,14 @@ public class Solve implements ParserTreeConstants {
         Runtime runtime = Runtime.getRuntime();
         long modelMem = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024);
 
+        dictionary = table;
+
         if (opt.getVerbose())
             System.out.println(
-                "%% Model constraints defined.\n%% Variables = " + store.size() + " and  Bool variables = " + NumberBoolVariables
+			       "%% Model constraints defined.\n%% Variables = " + store.size() + " and  Bool variables = " + dictionary.getNumberBoolVariables()
                     + " of that constant variables = " + table.constantTable.size() + "\n%% Constraints = " + initNumberConstraints
                     + ", SAT clauses = " + sat.numberClauses() + "\n%% Memory used by the model = " + modelMem + "[MB]");
 
-        dictionary = table;
         options = opt;
         solveKind = -1;
 
@@ -599,7 +601,7 @@ public class Solve implements ParserTreeConstants {
             }
 
             System.out.println(
-                "%% Model variables : " + (store.size() + NumberBoolVariables) + "\n%% Model constraints : " + initNumberConstraints
+                "%% Model variables : " + (store.size() + dictionary.getNumberBoolVariables()) + "\n%% Model constraints : " + initNumberConstraints
                     + "\n\n%% Search CPU time : " + (searchTimeMeter.getThreadCpuTime(tread.getId()) - startCPU) / (long) 1e+6 + "ms"
                     + "\n%% Search nodes : " + nodes + "\n%% Propagations : " + store.numberConsistencyCalls + "\n%% Search decisions : "
                     + decisions + "\n%% Wrong search decisions : " + wrong + "\n%% Search backtracks : " + backtracks
@@ -790,7 +792,7 @@ public class Solve implements ParserTreeConstants {
 
             if (options.getStatistics())
                 System.out.println(
-                    "%% Model variables : " + (store.size() + NumberBoolVariables) + "\n%% Model constraints : " + initNumberConstraints
+                    "%% Model variables : " + (store.size() + dictionary.getNumberBoolVariables()) + "\n%% Model constraints : " + initNumberConstraints
                         + "\n\n%% Search CPU time : " + "0ms" + "\n%% Search nodes : 0" + "\n%% Propagations : "
                         + store.numberConsistencyCalls + "\n%% Search decisions : 0" + "\n%% Wrong search decisions : 0"
                         + "\n%% Search backtracks : 0" + "\n%% Max search depth : 0" + "\n%% Number solutions : 1");
@@ -1050,7 +1052,7 @@ public class Solve implements ParserTreeConstants {
             }
 
             System.out.println(
-                "%% Model variables : " + (store.size() + NumberBoolVariables) + "\n%% Model constraints : " + initNumberConstraints
+                "%% Model variables : " + (store.size() + dictionary.getNumberBoolVariables()) + "\n%% Model constraints : " + initNumberConstraints
                     + "\n\n%% Search CPU time : " + (searchTimeMeter.getThreadCpuTime(tread.getId()) - startCPU) / (long) 1e+6 + "ms"
                     + "\n%% Search nodes : " + nodes + "\n%% Propagations : " + store.numberConsistencyCalls + "\n%% Search decisions : "
                     + decisions + "\n%% Wrong search decisions : " + wrong + "\n%% Search backtracks : " + backtracks
@@ -1384,10 +1386,6 @@ public class Solve implements ParserTreeConstants {
 
         label.setExitChildListener(credit);
         label.setTimeOutListener(credit);
-    }
-
-    void setNumberBoolVariables(int n) {
-        NumberBoolVariables = n;
     }
 
     @SuppressWarnings("unchecked") void printSearch(Search<? extends Var> label) {

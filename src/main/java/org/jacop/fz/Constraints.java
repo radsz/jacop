@@ -135,7 +135,7 @@ public class Constraints implements ParserTreeConstants {
                 System.out.println(e);
             } catch (java.lang.reflect.InvocationTargetException e) {
                 System.out.println("%% problem detected for " + p);
-
+		
                 try {
                     throw e.getCause();
                 } catch (FailException fe) {

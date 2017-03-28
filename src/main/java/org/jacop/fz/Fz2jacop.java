@@ -90,6 +90,11 @@ public class Fz2jacop {
 
         } catch (FailException e) {
             System.out.println("=====UNSATISFIABLE====="); // "*** Evaluation of model resulted in fail.");
+	    if (opt.getStatistics()) {
+		System.out.println("%% Model variables: "+ (parser.getStore().size() + parser.getTables().getNumberBoolVariables()));
+		System.out.println("%% Model constraints: "+ parser.getStore().numberConstraints());
+		System.out.println("\n%% Propagations: "+parser.getStore().numberConsistencyCalls);
+	    }
         } catch (ArithmeticException e) {
             System.err.println("%% Evaluation of model resulted in an overflow.");
             if (e.getStackTrace().length > 0)
