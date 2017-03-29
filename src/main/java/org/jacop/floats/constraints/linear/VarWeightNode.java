@@ -51,7 +51,7 @@ public class VarWeightNode extends VariableNode {
 
     public VarWeightNode(Store store, FloatVar v, double w) {
 
-        id = n++;
+        id = n.incrementAndGet();
         this.store = store;
         bound = new BoundsVar(store);
 

@@ -44,7 +44,7 @@ public class VarNode extends VariableNode {
 
     public VarNode(Store store, FloatVar v) {
 
-        id = n++;
+        id = n.incrementAndGet();
         this.store = store;
 
         var = v;

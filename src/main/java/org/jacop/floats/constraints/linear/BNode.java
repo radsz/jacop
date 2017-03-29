@@ -46,17 +46,17 @@ public class BNode extends BinaryNode {
     BoundsVar bound;
 
     public BNode(Store store) {
-        id = n++;
+        id = n.incrementAndGet();
         bound = new BoundsVar(store);
     }
 
     public BNode(Store store, double min, double max) {
-        id = n++;
+        id = n.incrementAndGet();
         bound = new BoundsVar(store, min, max);
     }
 
     public BNode(Store store, double min, double max, double lb, double ub) {
-        id = n++;
+        id = n.incrementAndGet();
         bound = new BoundsVar(store, min, max, lb, ub);
     }
 

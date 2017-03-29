@@ -30,6 +30,8 @@
 
 package org.jacop.floats.constraints.linear;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * Binary Node of the tree representing linear constraint.
  *
@@ -40,7 +42,7 @@ package org.jacop.floats.constraints.linear;
 
 public abstract class BinaryNode {
 
-    static int n = 0;
+    static AtomicInteger n = new AtomicInteger(0);
     int id;
 
     // tree structure
