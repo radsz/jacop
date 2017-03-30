@@ -537,7 +537,6 @@ readarray -t arr < <(find $folderPath -mindepth 2 -maxdepth 2 -name \*.mzn 2>/de
 for i in ${arr[@]}; do
 z=${i%/*} # directory that contains mzn filename
 
-
 if [ `ls -l $z/*.mzn 2>/dev/null | wc -l` != 1  ]; then # Tests number *.mzn files in a directory.
     echo "Only one *.mzn file in the same directory" $z
     exit
@@ -554,13 +553,14 @@ fi
 
 if [[ -z $(find  $z -mindepth 1 -maxdepth 1 -name \*.dzn 2>/dev/null) ]]
 then
-
-   if [[ -z $(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $iii.fzn 2>/dev/null ) || -z $(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $iii.out 2>/dev/null) ]]
-   then
-
-        # Generating fzn files and moving to the temporary directory
         echo "Generatig fzn file for $i"
         mzn2fzn -G jacop $i
+
+   findRes=$(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $iii.fzn 2>/dev/null)
+   diff $findRes ${i%/*}/$iii.fzn 2>/dev/null
+   diffre=$?
+   if [[ -z $(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $iii.fzn 2>/dev/null ) || -z $(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $iii.out 2>/dev/null) || $diffre -ne 0 ]]
+   then
         for file in $z/*.fzn; do mv "$file" $z/${z#*/}/"${file/*.fzn/$iii.fzn}"; done
         timeCategory $folderPath
     else
@@ -572,15 +572,20 @@ count1=0
 readarray -t arr2 < <(find $z -mindepth 1 -maxdepth 1 -name \*.dzn 2>/dev/null)
     arraysize=${#arr2[@]}
 
+
+
 for j in ${arr2[@]}; do # j contains a relative path to dzn file.
     path=${j%.*}
 	filename=${path##*/}
-
-  if [[ -z $(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $filename.fzn 2>/dev/null )  ||  -z $(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $filename.out 2>/dev/null )  ]]
-  then
-     # Generating fzn files and moving to the temporary directory
      echo "Generatig fzn file for $i and data file $j"
      mzn2fzn -G jacop $i -d $j
+     findRes=$(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $filename.fzn 2>/dev/null)
+     diff $findRes ${i%/*}/$iii.fzn 2>/dev/null
+     diffre=$?
+
+
+  if [[ -z $(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $filename.fzn 2>/dev/null )  ||  -z $(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $filename.out 2>/dev/null ) || $diffre -ne 0 ]]
+  then
 	 for file in $z/*.fzn; do mv "$file" $z/${z#*/}/"${file/*.fzn/$filename.fzn}"; done
   else
 
