@@ -221,8 +221,7 @@ public class Solve implements ParserTreeConstants {
 
                 run_sequence_search(solveKind, kind, si);
             } else {
-                System.err.println("Not recognized structure of solve statement \"" + search_type + "\"; compilation aborted");
-                System.exit(0);
+                throw new IllegalArgumentException("Not recognized structure of solve statement \"" + search_type + "\"; compilation aborted");
             }
         } else if (count > 2) {// several annotations
             SearchItem si = new SearchItem(store, dictionary);
@@ -235,8 +234,7 @@ public class Solve implements ParserTreeConstants {
 
             run_sequence_search(solveKind, kind, si);
         } else {
-            System.err.println("Not recognized structure of solve statement; compilation aborted");
-            System.exit(0);
+            throw new IllegalArgumentException("Not recognized structure of solve statement; compilation aborted");
         }
     }
 
@@ -320,8 +318,7 @@ public class Solve implements ParserTreeConstants {
                 if (to > 0)
                     label.setTimeOut(to);
             } else {
-                System.err.println("Not recognized or supported search type \"" + si.type() + "\"; compilation aborted");
-                System.exit(0);
+                throw new IllegalArgumentException("Not recognized or supported search type \"" + si.type() + "\"; compilation aborted");
             }
         }
 
@@ -504,8 +501,7 @@ public class Solve implements ParserTreeConstants {
                     break;
             }
         else {
-            System.err.println("Not recognized or supported " + si.exploration() + " search explorarion strategy ; compilation aborted");
-            System.exit(0);
+            throw new IllegalArgumentException("Not recognized or supported " + si.exploration() + " search explorarion strategy ; compilation aborted");
         }
 
         if (!options.getAll() && lastSolution != null)
@@ -991,8 +987,7 @@ public class Solve implements ParserTreeConstants {
                     break;
             }
         else {
-            System.err.println("Not recognized or supported " + si.exploration() + " search explorarion strategy ; compilation aborted");
-            System.exit(0);
+            throw new IllegalArgumentException("Not recognized or supported " + si.exploration() + " search explorarion strategy ; compilation aborted");
         }
 
         if (!options.getAll() && lastSolution != null)
@@ -1137,8 +1132,7 @@ public class Solve implements ParserTreeConstants {
             }
             list_seq_searches.add(label);
         } else {
-            System.err.println("Not recognized or supported search type \"" + si.type() + "\"; compilation aborted");
-            System.exit(0);
+            throw new IllegalArgumentException("Not recognized or supported search type \"" + si.type() + "\"; compilation aborted");
         }
 
         return label;
@@ -1255,9 +1249,7 @@ public class Solve implements ParserTreeConstants {
         else if (k.equals("maximize")) // 2 = maximize
             return 2;
         else {
-            System.err.println("Not supported search kind; compilation aborted");
-            System.exit(0);
-            return -1;
+            throw new IllegalArgumentException("Not supported search kind; compilation aborted");
         }
     }
 
@@ -1286,9 +1278,7 @@ public class Solve implements ParserTreeConstants {
                     return null;
             }
         } else {
-            System.err.println("Wrong cost function specification " + node);
-            System.exit(0);
-            return new IntVar(store);
+            throw new IllegalArgumentException("Wrong cost function specification " + node);
         }
     }
 
@@ -1316,9 +1306,7 @@ public class Solve implements ParserTreeConstants {
                     return null;
             }
         } else {
-            System.err.println("Wrong cost function specification " + node);
-            System.exit(0);
-            return new FloatVar(store);
+            throw new IllegalArgumentException("Wrong cost function specification " + node);
         }
     }
 

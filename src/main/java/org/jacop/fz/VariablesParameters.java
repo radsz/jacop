@@ -127,8 +127,7 @@ public class VariablesParameters implements ParserTreeConstants {
                 table.addFloat(ident, valFloat);
                 break;
             default:
-                System.err.println("Not supported type in parameter; compilation aborted.");
-                System.exit(0);
+                throw new IllegalArgumentException("Not supported type in parameter; compilation aborted.");
         }
     }
 
@@ -486,8 +485,7 @@ public class VariablesParameters implements ParserTreeConstants {
                     table.addOutVar(varFloat);
                 break;
             default:
-                System.err.println("Not supported type in parameter; compilation aborted.");
-                System.exit(0);
+                throw new IllegalArgumentException("Not supported type in parameter; compilation aborted.");
         }
 
     }
@@ -498,8 +496,7 @@ public class VariablesParameters implements ParserTreeConstants {
         else if (((ASTVarDeclItem) node).getKind() == 3)
             generateArrayParameters(node, table);
         else {
-            System.err.println("Internal error");
-            System.exit(0);
+            throw new IllegalArgumentException("Internal error");
         }
     }
 
@@ -556,8 +553,7 @@ public class VariablesParameters implements ParserTreeConstants {
                 // System.out.println (table);
                 break;
             default:
-                System.err.println("Not supported type in array parameter; compilation aborted.");
-                System.exit(0);
+                throw new IllegalArgumentException("Not supported type in array parameter; compilation aborted.");
         }
     }
 
@@ -881,8 +877,7 @@ public class VariablesParameters implements ParserTreeConstants {
                 break;
 
             default:
-                System.err.println("Not supported type in array parameter; compilation aborted.");
-                System.exit(0);
+                throw new IllegalArgumentException("Not supported type in array parameter; compilation aborted.");
         }
     }
 
@@ -987,9 +982,7 @@ public class VariablesParameters implements ParserTreeConstants {
                 if (id.equals("output_array")) {
                     int no = child.jjtGetNumChildren();
                     if (no > 1 || ((SimpleNode) child.jjtGetChild(0)).getId() != JJTANNEXPR) {
-                        System.err.println("More than one annotation expression in output_array annotation; execution aborted");
-                        System.exit(0);
-                        return -1;
+                        throw new IllegalArgumentException("More than one annotation expression in output_array annotation; execution aborted");
                     } else {
                         SimpleNode grandchild = (SimpleNode) child.jjtGetChild(0);
                         int number = grandchild.jjtGetNumChildren();
@@ -1008,9 +1001,7 @@ public class VariablesParameters implements ParserTreeConstants {
                                             indexBounds.add(indexes);
                                             // 					    System.out.println(indexes+"->"+indexes.min() +"__"+indexes.max());
                                         } else {
-                                            System.err.println("Unexpected set literal in output_array annotation; execution aborted");
-                                            System.exit(0);
-                                            return -1;
+                                            throw new IllegalArgumentException("Unexpected set literal in output_array annotation; execution aborted");
                                         }
                                     } else if (((ASTSetLiteral) setLiteral).getType() == 1) {// list
                                         int s_n = setLiteral.jjtGetNumChildren();
@@ -1021,15 +1012,11 @@ public class VariablesParameters implements ParserTreeConstants {
                                         }
                                         indexBounds.add(indexes);
                                     } else {
-                                        System.err.println("Unexpected set literal in output_array annotation; execution aborted");
-                                        System.exit(0);
-                                        return -1;
+                                        throw new IllegalArgumentException("Unexpected set literal in output_array annotation; execution aborted");
                                     }
                                 }
                             } else {
-                                System.err.println("Wrong expression in output_array annotation; execution aborted");
-                                System.exit(0);
-                                return -1;
+                                throw new IllegalArgumentException("Wrong expression in output_array annotation; execution aborted");
                             }
                         }
                     }
@@ -1062,14 +1049,11 @@ public class VariablesParameters implements ParserTreeConstants {
                     else
                         return false;
                 default: // string & float;
-                    System.err.println("Not supported scalar in parameter; compilation aborted.");
-                    System.exit(0);
+                    throw new IllegalArgumentException("Not supported scalar in parameter; compilation aborted.");
             }
         } else {
-            System.err.println("Not supported parameter assignment; compilation aborted.");
-            System.exit(0);
+            throw new IllegalArgumentException("Not supported parameter assignment; compilation aborted.");
         }
-        return false;
     }
 
     boolean constant_float(SimpleNode node, int i) {
@@ -1095,14 +1079,11 @@ public class VariablesParameters implements ParserTreeConstants {
                 case 5:  // float
                     return true;
                 default: // string & float;
-                    System.err.println("Not supported scalar in parameter; compilation aborted.");
-                    System.exit(0);
+                    throw new IllegalArgumentException("Not supported scalar in parameter; compilation aborted.");
             }
         } else {
-            System.err.println("Not supported parameter assignment; compilation aborted.");
-            System.exit(0);
+            throw new IllegalArgumentException("Not supported parameter assignment; compilation aborted.");
         }
-        return false;
     }
 
     boolean constant_set(SimpleNode node, int i) {
@@ -1113,8 +1094,7 @@ public class VariablesParameters implements ParserTreeConstants {
                 case 1: // list
                     return true;
                 default: // string & float;
-                    System.err.println("Not supported scalar in parameter; compilation aborted.");
-                    System.exit(0);
+                    throw new IllegalArgumentException("Not supported scalar in parameter; compilation aborted.");
             }
         } else if (child.getId() == JJTSCALARFLATEXPR) {
             switch (((ASTScalarFlatExpr) child).getType()) {
@@ -1131,14 +1111,11 @@ public class VariablesParameters implements ParserTreeConstants {
                     else
                         return false;
                 default: // int, bool, string & float;
-                    System.err.println("Not supported scalar in parameter; compilation aborted.");
-                    System.exit(0);
+                    throw new IllegalArgumentException("Not supported scalar in parameter; compilation aborted.");
             }
         } else {
-            System.err.println("Not supported parameter assignment; compilation aborted.");
-            System.exit(0);
+            throw new IllegalArgumentException("Not supported parameter assignment; compilation aborted.");
         }
-        return false;
     }
 
     int getScalarFlatExpr(SimpleNode node, int i) {
@@ -1154,14 +1131,11 @@ public class VariablesParameters implements ParserTreeConstants {
                 case 3: // array acces
                     return dictionary.getIntArray(((ASTScalarFlatExpr) child).getIdent())[((ASTScalarFlatExpr) child).getInt()];
                 default: // string & float;
-                    System.err.println("Not supported scalar in parameter; compilation aborted.");
-                    System.exit(0);
+                    throw new IllegalArgumentException("Not supported scalar in parameter; compilation aborted.");
             }
         } else {
-            System.err.println("Not supported parameter assignment; compilation aborted.");
-            System.exit(0);
+            throw new IllegalArgumentException("Not supported parameter assignment; compilation aborted.");
         }
-        return -1;
     }
 
     double getScalarFlatExprFloat(SimpleNode node, int i) {
@@ -1172,14 +1146,11 @@ public class VariablesParameters implements ParserTreeConstants {
                 case 5: // float
                     return ((ASTScalarFlatExpr) child).getFloat();
                 default: // string & float;
-                    System.err.println("Not supported scalar in parameter; compilation aborted.");
-                    System.exit(0);
+                    throw new IllegalArgumentException("Not supported scalar in parameter; compilation aborted.");
             }
         } else {
-            System.err.println("Not supported parameter assignment; compilation aborted.");
-            System.exit(0);
+            throw new IllegalArgumentException("Not supported parameter assignment; compilation aborted.");
         }
-        return -1.0;
     }
 
     IntVar[] getScalarFlatExpr_ArrayVar(Store store, SimpleNode node, int index) {
@@ -1194,9 +1165,7 @@ public class VariablesParameters implements ParserTreeConstants {
             }
             return av;
         } else {
-            System.err.println("Expeceted array literal, found " + child.getId() + " ; compilation aborted.");
-            System.exit(0);
-            return new IntVar[1];
+            throw new IllegalArgumentException("Expeceted array literal, found " + child.getId() + " ; compilation aborted.");
         }
     }
 
@@ -1212,9 +1181,7 @@ public class VariablesParameters implements ParserTreeConstants {
             }
             return av;
         } else {
-            System.err.println("Expeceted array literal, found " + child.getId() + " ; compilation aborted.");
-            System.exit(0);
-            return new FloatVar[1];
+            throw new IllegalArgumentException("Expeceted array literal, found " + child.getId() + " ; compilation aborted.");
         }
     }
 
@@ -1255,12 +1222,10 @@ public class VariablesParameters implements ParserTreeConstants {
                             break;
                     }
                 default: // string & float;
-                    System.err.println("Not supported scalar in parameter; compilation aborted.");
-                    System.exit(0);
+                    throw new IllegalArgumentException("Not supported scalar in parameter; compilation aborted.");
             }
         } else {
-            System.err.println("Not supported parameter assignment; compilation aborted.");
-            System.exit(0);
+            throw new IllegalArgumentException("Not supported parameter assignment; compilation aborted.");
         }
         return new IntVar(store);
     }
@@ -1302,12 +1267,10 @@ public class VariablesParameters implements ParserTreeConstants {
                 case 5: // float
                     return new FloatVar(store, ((ASTScalarFlatExpr) child).getFloat(), ((ASTScalarFlatExpr) child).getFloat());
                 default: // string & float;
-                    System.err.println("Not supported scalar in parameter; compilation aborted.");
-                    System.exit(0);
+                    throw new IllegalArgumentException("Not supported scalar in parameter; compilation aborted.");
             }
         } else {
-            System.err.println("Not supported parameter assignment; compilation aborted.");
-            System.exit(0);
+            throw new IllegalArgumentException("Not supported parameter assignment; compilation aborted.");
         }
         return new FloatVar(store);
     }
@@ -1326,9 +1289,7 @@ public class VariablesParameters implements ParserTreeConstants {
             }
             return av;
         } else {
-            System.err.println("Expeceted array literal, found " + child.getId() + " ; compilation aborted.");
-            System.exit(0);
-            return new SetVar[1];
+            throw new IllegalArgumentException("Expeceted array literal, found " + child.getId() + " ; compilation aborted.");
         }
     }
 
@@ -1361,19 +1322,14 @@ public class VariablesParameters implements ParserTreeConstants {
                             break;
                     }
                 default: // string & float;
-                    System.err
-                        .println("Not supported scalar in parameter " + ((ASTScalarFlatExpr) child).getIdent() + "; compilation aborted.");
-                    System.exit(0);
+                    throw new IllegalArgumentException("Not supported scalar in parameter " + ((ASTScalarFlatExpr) child).getIdent() + "; compilation aborted.");
             }
         } else if (child.getId() == JJTSETLITERAL) {
             IntDomain s = getSetLiteral(node, i);
             SetVar setVar = new SetVar(store, new BoundSetDomain(s, s));
             return setVar;
         }
-        System.err.println("Not supported parameter assignment " + ((ASTScalarFlatExpr) child).getIdent() + "; compilation aborted.");
-        System.exit(0);
-
-        return new SetVar(store);
+        throw new IllegalArgumentException("Not supported parameter assignment " + ((ASTScalarFlatExpr) child).getIdent() + "; compilation aborted.");
     }
 
     int[] getArrayOfScalarFlatExpr(SimpleNode node, int index, int size) {
@@ -1387,9 +1343,7 @@ public class VariablesParameters implements ParserTreeConstants {
             }
             return aa;
         } else {
-            System.err.println("Different size declaration and intiallization of int array; compilation aborted.");
-            System.exit(0);
-            return new int[] {};
+            throw new IllegalArgumentException("Different size declaration and intiallization of int array; compilation aborted.");
         }
     }
 
@@ -1404,9 +1358,7 @@ public class VariablesParameters implements ParserTreeConstants {
             }
             return aa;
         } else {
-            System.err.println("Different size declaration and intiallization of int array; compilation aborted.");
-            System.exit(0);
-            return new double[] {};
+            throw new IllegalArgumentException("Different size declaration and intiallization of int array; compilation aborted.");
         }
     }
 
@@ -1436,25 +1388,20 @@ public class VariablesParameters implements ParserTreeConstants {
                     }
                     return s;
                 default:
-                    System.err.println("Set type not supported; compilation aborted.");
-                    System.exit(0);
+                    throw new IllegalArgumentException("Set type not supported; compilation aborted.");
             }
         } else if (child.getId() == JJTSCALARFLATEXPR) {
             switch (((ASTScalarFlatExpr) child).getType()) {
                 case 0: // int
                 case 1: // bool
-                    System.err.println("Set initialization fault; compilation aborted.");
-                    System.exit(0);
-                    break;
+                    throw new IllegalArgumentException("Set initialization fault; compilation aborted.");
                 case 2: // ident
                     return dictionary.getSet(((ASTScalarFlatExpr) child).getIdent());
                 case 3: // array access
                     return dictionary.getSetArray(((ASTScalarFlatExpr) child).getIdent())[((ASTScalarFlatExpr) child).getInt()];
                 case 4: // string
                 case 5: // float
-                    System.err.println("Set initialization fault; compilation aborted.");
-                    System.exit(0);
-                    break;
+                    throw new IllegalArgumentException("Set initialization fault; compilation aborted.");
             }
         }
         return new IntervalDomain();
@@ -1472,8 +1419,7 @@ public class VariablesParameters implements ParserTreeConstants {
                     s[arrayIndex++] = getSetLiteral(child, i);
                 }
             } else {
-                System.err.println("Different array sizes in specification and initialization; compilation aborted.");
-                System.exit(0);
+                throw new IllegalArgumentException("Different array sizes in specification and initialization; compilation aborted.");
             }
         }
         return s;

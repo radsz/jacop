@@ -61,35 +61,40 @@ import org.jacop.satwrapper.SatTranslation;
  * @author Krzysztof Kuchcinski 
  *
  */
-class ComparisonConstraints extends Support implements ParserTreeConstants {
+class ComparisonConstraints implements ParserTreeConstants {
 
-    static boolean reified;
-
-    public ComparisonConstraints(Store store, Tables d, SatTranslation sat) {
-        super(store, d, sat);
+    boolean reified;
+    Support support;
+    Store store;
+    SatTranslation sat;
+    
+    public ComparisonConstraints(Support support) {
+	this.support = support;
+	this.store = support.store;
+	this.sat = support.sat;
     }
 
     // =========== bool =================
-    static void gen_bool_eq(SimpleNode node) {
+    void gen_bool_eq(SimpleNode node) {
 
         if (Options.useSat()) {
-            IntVar a = getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
-            IntVar b = getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
+            IntVar a = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
+            IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
 
             sat.generate_eq(a, b);
             return;
         }
         reified = false;
-        int_comparison(eq, node);
+        int_comparison(Support.eq, node);
     }
 
-    static void gen_bool_eq_reif(SimpleNode node) {
+    void gen_bool_eq_reif(SimpleNode node) {
 
         if (Options.useSat()) {
 
-            IntVar v1 = getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
-            IntVar v2 = getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
-            IntVar v3 = getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+            IntVar v1 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
+            IntVar v2 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
+            IntVar v3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
             sat.generate_eq_reif(v1, v2, v3);
 
@@ -97,142 +102,142 @@ class ComparisonConstraints extends Support implements ParserTreeConstants {
         }
 
         reified = true;
-        int_comparison(eq, node);
+        int_comparison(Support.eq, node);
     }
 
-    static void gen_bool_ne(SimpleNode node) {
+    void gen_bool_ne(SimpleNode node) {
         if (Options.useSat()) {
 
-            IntVar a = getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
-            IntVar b = getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
+            IntVar a = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
+            IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
 
             sat.generate_not(a, b);
             return;
         }
 
         reified = false;
-        int_comparison(ne, node);
+        int_comparison(Support.ne, node);
     }
 
-    static void gen_bool_ne_reif(SimpleNode node) {
+    void gen_bool_ne_reif(SimpleNode node) {
 
         if (Options.useSat()) {
 
-            IntVar v1 = getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
-            IntVar v2 = getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
-            IntVar v3 = getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+            IntVar v1 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
+            IntVar v2 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
+            IntVar v3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
             sat.generate_neq_reif(v1, v2, v3);
             return;
         }
 
         reified = true;
-        int_comparison(ne, node);
+        int_comparison(Support.ne, node);
     }
 
-    static void gen_bool_le(SimpleNode node) {
+    void gen_bool_le(SimpleNode node) {
 
         if (Options.useSat()) {
 
-            IntVar a = getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
-            IntVar b = getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
+            IntVar a = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
+            IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
 
             sat.generate_le(a, b);
             return;
         }
 
         reified = false;
-        int_comparison(le, node);
+        int_comparison(Support.le, node);
     }
 
-    static void gen_bool_le_reif(SimpleNode node) {
+    void gen_bool_le_reif(SimpleNode node) {
 
         if (Options.useSat()) {
 
-            IntVar a = getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
-            IntVar b = getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
-            IntVar c = getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+            IntVar a = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
+            IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
+            IntVar c = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
             sat.generate_le_reif(a, b, c);
             return;
         }
 
         reified = true;
-        int_comparison(le, node);
+        int_comparison(Support.le, node);
     }
 
-    static void gen_bool_lt(SimpleNode node) {
+    void gen_bool_lt(SimpleNode node) {
 
         if (Options.useSat()) {
 
-            IntVar a = getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
-            IntVar b = getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
+            IntVar a = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
+            IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
 
             sat.generate_lt(a, b);
             return;
         }
 
         reified = false;
-        int_comparison(lt, node);
+        int_comparison(Support.lt, node);
     }
 
-    static void gen_bool_lt_reif(SimpleNode node) {
+    void gen_bool_lt_reif(SimpleNode node) {
 
         if (Options.useSat()) {
 
-            IntVar a = getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
-            IntVar b = getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
-            IntVar c = getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+            IntVar a = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
+            IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
+            IntVar c = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
             sat.generate_lt_reif(a, b, c);
         }
 
         reified = true;
-        int_comparison(lt, node);
+        int_comparison(Support.lt, node);
     }
 
     // =========== int =================
-    static void gen_int_eq(SimpleNode node) {
+    void gen_int_eq(SimpleNode node) {
         reified = false;
-        int_comparison(eq, node);
+        int_comparison(Support.eq, node);
     }
 
-    static void gen_int_eq_reif(SimpleNode node) {
+    void gen_int_eq_reif(SimpleNode node) {
         reified = true;
-        int_comparison(eq, node);
+        int_comparison(Support.eq, node);
     }
 
-    static void gen_int_ne(SimpleNode node) {
+    void gen_int_ne(SimpleNode node) {
         reified = false;
-        int_comparison(ne, node);
+        int_comparison(Support.ne, node);
     }
 
-    static void gen_int_ne_reif(SimpleNode node) {
+    void gen_int_ne_reif(SimpleNode node) {
         reified = true;
-        int_comparison(ne, node);
+        int_comparison(Support.ne, node);
     }
 
-    static void gen_int_le(SimpleNode node) {
+    void gen_int_le(SimpleNode node) {
         reified = false;
-        int_comparison(le, node);
+        int_comparison(Support.le, node);
     }
 
-    static void gen_int_le_reif(SimpleNode node) {
+    void gen_int_le_reif(SimpleNode node) {
         reified = true;
-        int_comparison(le, node);
+        int_comparison(Support.le, node);
     }
 
-    static void gen_int_lt(SimpleNode node) {
+    void gen_int_lt(SimpleNode node) {
         reified = false;
-        int_comparison(lt, node);
+        int_comparison(Support.lt, node);
     }
 
-    static void gen_int_lt_reif(SimpleNode node) {
+    void gen_int_lt_reif(SimpleNode node) {
         reified = true;
-        int_comparison(lt, node);
+        int_comparison(Support.lt, node);
     }
 
-    static void int_comparison(int operation, SimpleNode node) {
+    void int_comparison(int operation, SimpleNode node) {
 
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
@@ -240,17 +245,17 @@ class ComparisonConstraints extends Support implements ParserTreeConstants {
         if (reified) { // reified constraint
             PrimitiveConstraint c = null;
             ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
-            IntVar v3 = getVariable(p3);
+            IntVar v3 = support.getVariable(p3);
 
             if (p2.getType() == 0 || p2.getType() == 1) { // var rel int or bool
-                IntVar v1 = getVariable(p1);
+                IntVar v1 = support.getVariable(p1);
 
-                int i2 = getInt(p2);
+                int i2 = support.getInt(p2);
                 if (i2 < IntDomain.MinInt || i2 > IntDomain.MaxInt)
                     throw new ArithmeticException("Overflow occurred");
                 switch (operation) {
 
-                    case eq:
+                    case Support.eq:
                         if (!v1.domain.contains(i2)) {
                             v3.domain.in(store.level, v3, 0, 0);
                             return;
@@ -272,7 +277,7 @@ class ComparisonConstraints extends Support implements ParserTreeConstants {
                             c = new XeqC(v1, i2);
                         break;
 
-                    case ne:
+                    case Support.ne:
                         if (v1.min() > i2 || v1.max() < i2) {
                             v3.domain.in(store.level, v3, 1, 1);
                             return;
@@ -293,7 +298,7 @@ class ComparisonConstraints extends Support implements ParserTreeConstants {
                             // else
                             c = new XneqC(v1, i2);
                         break;
-                    case lt:
+                    case Support.lt:
                         if (v1.max() < i2) {
                             v3.domain.in(store.level, v3, 1, 1);
                             return;
@@ -303,7 +308,7 @@ class ComparisonConstraints extends Support implements ParserTreeConstants {
                         } else
                             c = new XltC(v1, i2);
                         break;
-                    case gt:
+                    case Support.gt:
                         if (v1.min() > i2) {
                             v3.domain.in(store.level, v3, 1, 1);
                             return;
@@ -313,7 +318,7 @@ class ComparisonConstraints extends Support implements ParserTreeConstants {
                         } else
                             c = new XgtC(v1, i2);
                         break;
-                    case le:
+                    case Support.le:
                         if (v1.max() <= i2) {
                             v3.domain.in(store.level, v3, 1, 1);
                             return;
@@ -323,7 +328,7 @@ class ComparisonConstraints extends Support implements ParserTreeConstants {
                         } else
                             c = new XlteqC(v1, i2);
                         break;
-                    case ge:
+                    case Support.ge:
                         if (v1.min() >= i2) {
                             v3.domain.in(store.level, v3, 1, 1);
                             return;
@@ -335,14 +340,14 @@ class ComparisonConstraints extends Support implements ParserTreeConstants {
                         break;
                 }
             } else if (p1.getType() == 0 || p1.getType() == 1) { // int rel var or bool
-                IntVar v2 = getVariable(p2);
-                int i1 = getInt(p1);
+                IntVar v2 = support.getVariable(p2);
+                int i1 = support.getInt(p1);
                 if (i1 < IntDomain.MinInt || i1 > IntDomain.MaxInt)
                     throw new ArithmeticException("Overflow occurred");
 
                 switch (operation) {
 
-                    case eq:
+                    case Support.eq:
                         if (!v2.domain.contains(i1)) { //v2.min() > i1 || v2.max() < i1) {
                             v3.domain.in(store.level, v3, 0, 0);
                             return;
@@ -359,7 +364,7 @@ class ComparisonConstraints extends Support implements ParserTreeConstants {
                             c = new XeqC(v2, i1);
                         break;
 
-                    case ne:
+                    case Support.ne:
                         if (v2.min() > i1 || v2.max() < i1) {
                             v3.domain.in(store.level, v3, 1, 1);
                             return;
@@ -369,7 +374,7 @@ class ComparisonConstraints extends Support implements ParserTreeConstants {
                         } else
                             c = new XneqC(v2, i1);
                         break;
-                    case lt:
+                    case Support.lt:
                         if (i1 < v2.min()) {
                             v3.domain.in(store.level, v3, 1, 1);
                             return;
@@ -379,7 +384,7 @@ class ComparisonConstraints extends Support implements ParserTreeConstants {
                         } else
                             c = new XgtC(v2, i1);
                         break;
-                    case gt:
+                    case Support.gt:
                         if (i1 > v2.max()) {
                             v3.domain.in(store.level, v3, 1, 1);
                             return;
@@ -389,7 +394,7 @@ class ComparisonConstraints extends Support implements ParserTreeConstants {
                         } else
                             c = new XltC(v2, i1);
                         break;
-                    case le:
+                    case Support.le:
                         if (i1 <= v2.min()) {
                             v3.domain.in(store.level, v3, 1, 1);
                             return;
@@ -404,7 +409,7 @@ class ComparisonConstraints extends Support implements ParserTreeConstants {
                             // else
                             c = new XgteqC(v2, i1);
                         break;
-                    case ge:
+                    case Support.ge:
                         if (i1 > v2.max()) {
                             v3.domain.in(store.level, v3, 1, 1);
                             return;
@@ -416,11 +421,11 @@ class ComparisonConstraints extends Support implements ParserTreeConstants {
                         break;
                 }
             } else { // var rel var
-                IntVar v1 = getVariable(p1);
-                IntVar v2 = getVariable(p2);
+                IntVar v1 = support.getVariable(p1);
+                IntVar v2 = support.getVariable(p2);
 
                 switch (operation) {
-                    case eq:
+                    case Support.eq:
                         c = new XeqY(v1, v2);
 
                         // if (v3.singleton())
@@ -430,7 +435,7 @@ class ComparisonConstraints extends Support implements ParserTreeConstants {
                         // 		return;
                         // 	    }
                         // 	    else {
-                        // 		pose(c);
+                        // 		support.pose(c);
                         // 		return;
                         // 	    }
                         // 	else { // v3.max() == 0
@@ -439,92 +444,92 @@ class ComparisonConstraints extends Support implements ParserTreeConstants {
                         // 		return;
                         // 	    }
                         // 	    else {
-                        // 		pose(c);
+                        // 		support.pose(c);
                         // 		return;
                         // 	    }
                         // 	}
 
                         break;
-                    case ne:
+                    case Support.ne:
                         c = new XneqY(v1, v2);
                         break;
-                    case lt:
+                    case Support.lt:
                         c = new XltY(v1, v2);
                         break;
-                    case gt:
+                    case Support.gt:
                         c = new XgtY(v1, v2);
                         break;
-                    case le:
+                    case Support.le:
                         c = new XlteqY(v1, v2);
                         break;
-                    case ge:
+                    case Support.ge:
                         c = new XgteqY(v1, v2);
                         break;
                 }
             }
 
             Constraint cr = new Reified(c, v3);
-            pose(cr);
+            support.pose(cr);
         } else { // not reified constraints
 
             if (p1.getType() == 0 || p1.getType() == 1) { // first parameter int or bool
                 if (p2.getType() == 0 || p2.getType() == 1) { // first parameter int/bool & second parameter int/bool
-                    int i1 = getInt(p1);
+                    int i1 = support.getInt(p1);
                     if (i1 < IntDomain.MinInt || i1 > IntDomain.MaxInt)
                         throw new ArithmeticException("Overflow occurred");
-                    int i2 = getInt(p2);
+                    int i2 = support.getInt(p2);
                     if (i2 < IntDomain.MinInt || i2 > IntDomain.MaxInt)
                         throw new ArithmeticException("Overflow occurred");
                     switch (operation) {
-                        case eq:
+                        case Support.eq:
                             if (i1 != i2)
                                 throw Store.failException;
                             break;
-                        case ne:
+                        case Support.ne:
                             if (i1 == i2)
                                 throw Store.failException;
                             break;
-                        case lt:
+                        case Support.lt:
                             if (i1 >= i2)
                                 throw Store.failException;
                             break;
-                        case gt:
+                        case Support.gt:
                             if (i1 <= i2)
                                 throw Store.failException;
                             break;
-                        case le:
+                        case Support.le:
                             if (i1 > i2)
                                 throw Store.failException;
                             break;
-                        case ge:
+                        case Support.ge:
                             if (i1 < i2)
                                 throw Store.failException;
                             break;
                     }
                 } else { // first parameter int/bool & second parameter var
 
-                    int i1 = getInt(p1);
+                    int i1 = support.getInt(p1);
                     if (i1 < IntDomain.MinInt || i1 > IntDomain.MaxInt)
                         throw new ArithmeticException("Overflow occurred");
-                    IntVar v2 = getVariable(p2);
+                    IntVar v2 = support.getVariable(p2);
 
                     switch (operation) {
-                        case eq:
+                        case Support.eq:
                             v2.domain.in(store.level, v2, i1, i1);
                             break;
-                        case ne:
+                        case Support.ne:
                             v2.domain.inComplement(store.level, v2, i1);
                             break;
-                        case lt:
+                        case Support.lt:
                             v2.domain.in(store.level, v2, i1 + 1, IntDomain.MaxInt);
                             break;
-                        case gt:
+                        case Support.gt:
                             v2.domain.in(store.level, v2, IntDomain.MinInt, i1 - 1);
                             break;
-                        case le:
+                        case Support.le:
                             v2.domain.in(store.level, v2, i1, IntDomain.MaxInt);
                             break;
-                        case ge:
+                        case Support.ge:
                             v2.domain.in(store.level, v2, IntDomain.MinInt, i1);
                             break;
                     }
@@ -532,55 +537,55 @@ class ComparisonConstraints extends Support implements ParserTreeConstants {
             } else { // first parameter var
                 if (p2.getType() == 0 || p2.getType() == 1) { // first parameter var & second parameter int
 
-                    IntVar v1 = getVariable(p1);
-                    int i2 = getInt(p2);
+                    IntVar v1 = support.getVariable(p1);
+                    int i2 = support.getInt(p2);
                     if (i2 < IntDomain.MinInt || i2 > IntDomain.MaxInt)
                         throw new ArithmeticException("Overflow occurred");
 
                     switch (operation) {
-                        case eq:
+                        case Support.eq:
                             v1.domain.in(store.level, v1, i2, i2);
                             break;
-                        case ne:
+                        case Support.ne:
                             v1.domain.inComplement(store.level, v1, i2);
                             break;
-                        case lt:
+                        case Support.lt:
                             v1.domain.in(store.level, v1, IntDomain.MinInt, i2 - 1);
                             break;
-                        case gt:
+                        case Support.gt:
                             v1.domain.in(store.level, v1, i2 + 1, IntDomain.MaxInt);
                             break;
-                        case le:
+                        case Support.le:
                             v1.domain.in(store.level, v1, IntDomain.MinInt, i2);
                             break;
-                        case ge:
+                        case Support.ge:
                             v1.domain.in(store.level, v1, i2, IntDomain.MaxInt);
                             break;
                     }
 
                 } else { // first parameter var & second parameter var
 
-                    IntVar v1 = getVariable(p1);
-                    IntVar v2 = getVariable(p2);
+                    IntVar v1 = support.getVariable(p1);
+                    IntVar v2 = support.getVariable(p2);
 
                     switch (operation) {
-                        case eq:
-                            pose(new XeqY(v1, v2));
+                        case Support.eq:
+                            support.pose(new XeqY(v1, v2));
                             break;
-                        case ne:
-                            pose(new XneqY(v1, v2));
+                        case Support.ne:
+                            support.pose(new XneqY(v1, v2));
                             break;
-                        case lt:
-                            pose(new XltY(v1, v2));
+                        case Support.lt:
+                            support.pose(new XltY(v1, v2));
                             break;
-                        case gt:
-                            pose(new XgtY(v1, v2));
+                        case Support.gt:
+                            support.pose(new XgtY(v1, v2));
                             break;
-                        case le:
-                            pose(new XlteqY(v1, v2));
+                        case Support.le:
+                            support.pose(new XlteqY(v1, v2));
                             break;
-                        case ge:
-                            pose(new XgteqY(v1, v2));
+                        case Support.ge:
+                            support.pose(new XgteqY(v1, v2));
                             break;
                     }
                 }

@@ -198,8 +198,7 @@ public class SearchItem implements ParserTreeConstants {
                 explore = "complete";
                 System.err.println("Warning: not recognized search exploration type; use \"complete\"");
             } else {
-                System.err.println("Error: not recognized search exploration type; execution aborted");
-		System.exit(0);
+                throw new IllegalArgumentException("Error: not recognized search exploration type; execution aborted");
             }
         }
 
@@ -258,8 +257,7 @@ public class SearchItem implements ParserTreeConstants {
                 explore = "complete";
                 System.err.println("Warning: not recognized search exploration type; use \"complete\"");
             } else {
-                System.err.println("Error: not recognized search exploration type; execution aborted");
-                System.exit(0);
+                throw new IllegalArgumentException("Error: not recognized search exploration type; execution aborted");
             }
 
             ASTAnnExpr expr5 = (ASTAnnExpr) ann.jjtGetChild(1);
@@ -294,9 +292,7 @@ public class SearchItem implements ParserTreeConstants {
         else if (search_type.equals("set_search"))
             return getSetSelect();
         else {
-            System.err.println("Error: not recognized search type \"" + search_type + "\";");
-            System.exit(0);
-            return null;
+            throw new IllegalArgumentException("Error: not recognized search type \"" + search_type + "\";");
         }
     }
 
@@ -355,9 +351,7 @@ public class SearchItem implements ParserTreeConstants {
                 return sel;
             }
         } else {
-            System.err.println("Wrong parameters for float_search. Only indomain_split or indomain_reverse_split are allowed.");
-            System.exit(0);
-            return null;
+            throw new IllegalArgumentException("Wrong parameters for float_search. Only indomain_split or indomain_reverse_split are allowed.");
         }
     }
 
@@ -543,15 +537,11 @@ public class SearchItem implements ParserTreeConstants {
             return dictionary.getVariable(node.getIdent());
         else if (node.getType() == 3) {// array access
             if (node.getInt() > dictionary.getVariableArray(node.getIdent()).length || node.getInt() < 0) {
-                System.out.println("Index out of bound for " + node.getIdent() + "[" + node.getInt() + "]");
-                System.exit(0);
-                return new IntVar(store);
+                throw new IllegalArgumentException("Index out of bound for " + node.getIdent() + "[" + node.getInt() + "]");
             } else
                 return dictionary.getVariableArray(node.getIdent())[node.getInt()];
         } else {
-            System.err.println("Wrong parameter " + node);
-            System.exit(0);
-            return new IntVar(store);
+            throw new IllegalArgumentException("Wrong parameter " + node);
         }
     }
 
@@ -562,15 +552,11 @@ public class SearchItem implements ParserTreeConstants {
             return dictionary.getFloatVariable(node.getIdent());
         else if (node.getType() == 3) {// array access
             if (node.getInt() > dictionary.getVariableFloatArray(node.getIdent()).length || node.getInt() < 0) {
-                System.out.println("Index out of bound for " + node.getIdent() + "[" + node.getInt() + "]");
-                System.exit(0);
-                return new FloatVar(store);
+                throw new IllegalArgumentException("Index out of bound for " + node.getIdent() + "[" + node.getInt() + "]");
             } else
                 return dictionary.getVariableFloatArray(node.getIdent())[node.getInt()];
         } else {
-            System.err.println("Wrong parameter " + node);
-            System.exit(0);
-            return new FloatVar(store);
+            throw new IllegalArgumentException("Wrong parameter " + node);
         }
     }
 
@@ -588,14 +574,10 @@ public class SearchItem implements ParserTreeConstants {
             if (((ASTScalarFlatExpr) node).getType() == 2) // ident
                 return dictionary.getVariableArray(((ASTScalarFlatExpr) node).getIdent());
             else {
-                System.err.println("Wrong type of Variable array; compilation aborted.");
-                System.exit(0);
-                return new IntVar[] {};
+                throw new IllegalArgumentException("Wrong type of variable array; compilation aborted.");
             }
         } else {
-            System.err.println("Wrong type of Variable array; compilation aborted.");
-            System.exit(0);
-            return new IntVar[] {};
+            throw new IllegalArgumentException("Wrong type of variable array; compilation aborted.");
         }
     }
 
@@ -613,14 +595,10 @@ public class SearchItem implements ParserTreeConstants {
             if (((ASTScalarFlatExpr) node).getType() == 2) // ident
                 return dictionary.getVariableFloatArray(((ASTScalarFlatExpr) node).getIdent());
             else {
-                System.err.println("Wrong type of Variable array; compilation aborted.");
-                System.exit(0);
-                return new FloatVar[] {};
+                throw new IllegalArgumentException("Wrong type of Variable array; compilation aborted.");
             }
         } else {
-            System.err.println("Wrong type of Variable array; compilation aborted.");
-            System.exit(0);
-            return new FloatVar[] {};
+            throw new IllegalArgumentException("Wrong type of Variable array; compilation aborted.");
         }
     }
 
@@ -631,10 +609,7 @@ public class SearchItem implements ParserTreeConstants {
         else if (node.getType() == 3) // array access
             return dictionary.getSetVariableArray(node.getIdent())[node.getInt()];
         else {
-            System.err.println("Wrong parameter on list of search set varibales" + node);
-            System.exit(0);
-            // FIXME, why not return null?
-            return new SetVar(store);
+            throw new IllegalArgumentException("Wrong parameter on list of search set varibales" + node);
         }
     }
 
@@ -652,14 +627,10 @@ public class SearchItem implements ParserTreeConstants {
             if (((ASTScalarFlatExpr) node).getType() == 2) // ident
                 return dictionary.getSetVariableArray(((ASTScalarFlatExpr) node).getIdent());
             else {
-                System.err.println("Wrong type of Variable array; compilation aborted.");
-                System.exit(0);
-                return new SetVar[] {};
+                throw new IllegalArgumentException("Wrong type of variable array; compilation aborted.");
             }
         } else {
-            System.err.println("Wrong type of Variable array; compilation aborted.");
-            System.exit(0);
-            return new SetVar[] {};
+            throw new IllegalArgumentException("Wrong type of variable array; compilation aborted.");
         }
     }
 

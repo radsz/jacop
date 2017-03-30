@@ -74,9 +74,9 @@ import org.jacop.search.TraceGenerator;
 
 public class CPvizNewspaper {
 
-    static ArrayList<Var> vars;
-    static Store store;
-    static IntVar cost;
+    ArrayList<Var> vars;
+    Store store;
+    IntVar cost;
 
     public void model() {
 

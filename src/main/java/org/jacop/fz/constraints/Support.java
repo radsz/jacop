@@ -64,40 +64,37 @@ import java.util.Map;
  */
 public class Support implements ParserTreeConstants {
 
-    static Store store;
-    static Tables dictionary;
+    Store store;
+    Tables dictionary;
 
     // ============ SAT solver interface ==============
-    static SatTranslation sat;
+    SatTranslation sat;
 
     // boolean storeLevelIncreased=false;
-    static boolean debug = false;
+    boolean debug = false;
 
     // =========== Annotations ===========
-    public static boolean boundsConsistency = true, domainConsistency = false;
+    public boolean boundsConsistency = true, domainConsistency = false;
     // defines_var-- not used yet
-    public static IntVar definedVar = null;
+    public IntVar definedVar = null;
 
     // comparison operators
     final static int eq = 0, ne = 1, lt = 2, gt = 3, le = 4, ge = 5;
 
-    static boolean intPresent = true;
-    static boolean floatPresent = true;
+    boolean intPresent = true;
+    boolean floatPresent = true;
 
-    static ArrayList<IntVar[]> parameterListForAlldistincts = new ArrayList<IntVar[]>();
-    static ArrayList<Constraint> delayedConstraints = new ArrayList<Constraint>();
+    ArrayList<IntVar[]> parameterListForAlldistincts = new ArrayList<IntVar[]>();
+    ArrayList<Constraint> delayedConstraints = new ArrayList<Constraint>();
 
     public Support(Store store, Tables d, SatTranslation sat) {
         this.store = store;
         this.dictionary = d;
         this.debug = Options.debug();
         this.sat = sat;
-
-        parameterListForAlldistincts.clear();
-        delayedConstraints.clear();
     }
 
-    static int getInt(ASTScalarFlatExpr node) {
+    int getInt(ASTScalarFlatExpr node) {
         intPresent = true;
 
         if (node.getType() == 0) //int
@@ -114,13 +111,11 @@ public class Support implements ParserTreeConstants {
             } else
                 return intTable[node.getInt()];
         } else {
-            System.err.println("getInt: Wrong parameter " + node);
-            System.exit(0);
-            return 0;
+            throw new IllegalArgumentException("getInt: Wrong parameter " + node);
         }
     }
 
-    static int getScalarFlatExpr(SimpleNode node, int i) {
+    int getScalarFlatExpr(SimpleNode node, int i) {
         SimpleNode child = (SimpleNode) node.jjtGetChild(i);
         if (child.getId() == JJTSCALARFLATEXPR) {
             switch (((ASTScalarFlatExpr) child).getType()) {
@@ -133,17 +128,14 @@ public class Support implements ParserTreeConstants {
                 case 3: // array acces
                     return dictionary.getIntArray(((ASTScalarFlatExpr) child).getIdent())[((ASTScalarFlatExpr) child).getInt()];
                 default: // string & float;
-                    System.err.println("Not supported scalar in parameter; compilation aborted.");
-                    System.exit(0);
+                    throw new IllegalArgumentException("Not supported scalar in parameter; compilation aborted.");
             }
         } else {
-            System.err.println("Not supported parameter assignment; compilation aborted.");
-            System.exit(0);
+            throw new IllegalArgumentException("Not supported parameter assignment; compilation aborted.");
         }
-        return -1;
     }
 
-    static int[] getIntArray(SimpleNode node) {
+    int[] getIntArray(SimpleNode node) {
         if (node.getId() == JJTARRAYLITERAL) {
             int count = node.jjtGetNumChildren();
             int[] aa = new int[count];
@@ -161,18 +153,14 @@ public class Support implements ParserTreeConstants {
             if (((ASTScalarFlatExpr) node).getType() == 2) // ident
                 return dictionary.getIntArray(((ASTScalarFlatExpr) node).getIdent());
             else {
-                System.err.println("Wrong type of int array; compilation aborted.");
-                System.exit(0);
-                return new int[] {};
+                throw new IllegalArgumentException("Wrong type of int array; compilation aborted.");
             }
         } else {
-            System.err.println("Wrong type of int array; compilation aborted.");
-            System.exit(0);
-            return new int[] {};
+            throw new IllegalArgumentException("Wrong type of int array; compilation aborted.");
         }
     }
 
-    public static IntVar getVariable(ASTScalarFlatExpr node) {
+    public IntVar getVariable(ASTScalarFlatExpr node) {
         if (node.getType() == 0) {// int
             int val = node.getInt();
             return dictionary.getConstant(val);
@@ -189,20 +177,16 @@ public class Support implements ParserTreeConstants {
             return int_boolVar;
         } else if (node.getType() == 3) {// array access
             if (node.getInt() >= dictionary.getVariableArray(node.getIdent()).length || node.getInt() < 0) {
-                System.out.println("Index out of bound for " + node.getIdent() + "[" + node.getInt() + "]");
-                System.exit(0);
-                return new IntVar(store);
+                throw new IllegalArgumentException("Index out of bound for " + node.getIdent() + "[" + node.getInt() + "]");
             } else {
                 return dictionary.getVariableArray(node.getIdent())[node.getInt()];
             }
         } else {
-            System.err.println("Wrong parameter " + node);
-            System.exit(0);
-            return new IntVar(store);
+            throw new IllegalArgumentException("Wrong parameter " + node);
         }
     }
 
-    static FloatVar getFloatVariable(ASTScalarFlatExpr node) {
+    FloatVar getFloatVariable(ASTScalarFlatExpr node) {
 
         if (node.getType() == 5) {// float
             double val = node.getFloat();
@@ -219,19 +203,15 @@ public class Support implements ParserTreeConstants {
             return float_Var;
         } else if (node.getType() == 3) {// array access
             if (node.getInt() >= dictionary.getVariableFloatArray(node.getIdent()).length || node.getFloat() < 0) {
-                System.out.println("Index out of bound for " + node.getIdent() + "[" + node.getInt() + "]");
-                System.exit(0);
-                return new FloatVar(store);
+                throw new IllegalArgumentException("Index out of bound for " + node.getIdent() + "[" + node.getInt() + "]");
             } else
                 return dictionary.getVariableFloatArray(node.getIdent())[node.getInt()];
         } else {
-            System.err.println("getFloatVariable: Wrong parameter " + node);
-            System.exit(0);
-            return new FloatVar(store);
+            throw new IllegalArgumentException("getFloatVariable: Wrong parameter " + node);
         }
     }
 
-    static SetVar getSetVariable(SimpleNode node, int index) {
+    SetVar getSetVariable(SimpleNode node, int index) {
 
         SimpleNode child = (SimpleNode) node.jjtGetChild(index);
         if (child.getId() == JJTSETLITERAL) {
@@ -254,18 +234,14 @@ public class Support implements ParserTreeConstants {
             } else if (((ASTScalarFlatExpr) child).getType() == 3) // array access
                 return dictionary.getSetVariableArray(((ASTScalarFlatExpr) child).getIdent())[((ASTScalarFlatExpr) child).getInt()];
             else {
-                System.err.println("Wrong parameter in set " + child);
-                System.exit(0);
-                return new SetVar(store);
+                throw new IllegalArgumentException("Wrong parameter in set " + child);
             }
         } else {
-            System.err.println("Wrong parameter in set " + child);
-            System.exit(0);
-            return new SetVar(store);
+            throw new IllegalArgumentException("Wrong parameter in set " + child);
         }
     }
 
-    static double getFloat(ASTScalarFlatExpr node) {
+    double getFloat(ASTScalarFlatExpr node) {
         floatPresent = true;
 
         if (node.getType() == 5) //int
@@ -280,13 +256,11 @@ public class Support implements ParserTreeConstants {
             } else
                 return floatTable[node.getInt()];
         } else {
-            System.err.println("getFloat: Wrong parameter " + node);
-            System.exit(0);
-            return 0;
+            throw new IllegalArgumentException("getFloat: Wrong parameter " + node);
         }
     }
 
-    static double[] getFloatArray(SimpleNode node) {
+    double[] getFloatArray(SimpleNode node) {
         if (node.getId() == JJTARRAYLITERAL) {
             int count = node.jjtGetNumChildren();
             double[] aa = new double[count];
@@ -303,19 +277,15 @@ public class Support implements ParserTreeConstants {
             if (((ASTScalarFlatExpr) node).getType() == 2) // ident
                 return dictionary.getFloatArray(((ASTScalarFlatExpr) node).getIdent());
             else {
-                System.err.println("Wrong type of int array; compilation aborted.");
-                System.exit(0);
-                return new double[] {};
+                throw new IllegalArgumentException("Wrong type of int array; compilation aborted.");
             }
         } else {
-            System.err.println("Wrong type of int array; compilation aborted.");
-            System.exit(0);
-            return new double[] {};
+            throw new IllegalArgumentException("Wrong type of int array; compilation aborted.");
         }
     }
 
 
-    static IntVar[] getVarArray(SimpleNode node) {
+    IntVar[] getVarArray(SimpleNode node) {
         if (node.getId() == JJTARRAYLITERAL) {
             int count = node.jjtGetNumChildren();
             IntVar[] aa = new IntVar[count];
@@ -339,24 +309,18 @@ public class Support implements ParserTreeConstants {
                             aa[i] = dictionary.getConstant(ia[i]); // new IntVar(store, ia[i], ia[i]);
                         return aa;
                     } else {
-                        System.err.println("Cannot find array " + ((ASTScalarFlatExpr) node).getIdent() + "; compilation aborted.");
-                        System.exit(0);
-                        return new IntVar[] {};
+                        throw new IllegalArgumentException("Cannot find array " + ((ASTScalarFlatExpr) node).getIdent() + "; compilation aborted.");
                     }
                 }
             } else {
-                System.err.println("Wrong type of Variable array; compilation aborted.");
-                System.exit(0);
-                return new IntVar[] {};
+                throw new IllegalArgumentException("Wrong type of Variable array; compilation aborted.");
             }
         } else {
-            System.err.println("Wrong type of Variable array; compilation aborted.");
-            System.exit(0);
-            return new IntVar[] {};
+            throw new IllegalArgumentException("Wrong type of Variable array; compilation aborted.");
         }
     }
 
-    static FloatVar[] getFloatVarArray(SimpleNode node) {
+    FloatVar[] getFloatVarArray(SimpleNode node) {
         if (node.getId() == JJTARRAYLITERAL) {
             int count = node.jjtGetNumChildren();
             FloatVar[] aa = new FloatVar[count];
@@ -380,24 +344,18 @@ public class Support implements ParserTreeConstants {
                             aa[i] = new FloatVar(store, ia[i], ia[i]);
                         return aa;
                     } else {
-                        System.err.println("Cannot find array " + ((ASTScalarFlatExpr) node).getIdent() + "; compilation aborted.");
-                        System.exit(0);
-                        return new FloatVar[] {};
+                        throw new IllegalArgumentException("Cannot find array " + ((ASTScalarFlatExpr) node).getIdent() + "; compilation aborted.");
                     }
                 }
             } else {
-                System.err.println("Wrong type of Variable array; compilation aborted.");
-                System.exit(0);
-                return new FloatVar[] {};
+                throw new IllegalArgumentException("Wrong type of Variable array; compilation aborted.");
             }
         } else {
-            System.err.println("Wrong type of Variable array; compilation aborted.");
-            System.exit(0);
-            return new FloatVar[] {};
+            throw new IllegalArgumentException("Wrong type of Variable array; compilation aborted.");
         }
     }
 
-    static IntDomain[] getSetArray(SimpleNode node) {
+    IntDomain[] getSetArray(SimpleNode node) {
         IntDomain[] s = null;
         int arrayIndex = 0;
 
@@ -424,14 +382,13 @@ public class Support implements ParserTreeConstants {
                     }
                 }
             } else {
-                System.err.println("Wrong set array.");
-                System.exit(0);
+                throw new IllegalArgumentException("Wrong set array.");
             }
         }
         return s;
     }
 
-    static IntDomain getSetLiteral(SimpleNode node, int index) {
+    IntDomain getSetLiteral(SimpleNode node, int index) {
         SimpleNode child = (SimpleNode) node.jjtGetChild(index);
         if (child.getId() == JJTSETLITERAL) {
             switch (((ASTSetLiteral) child).getType()) {
@@ -456,31 +413,26 @@ public class Support implements ParserTreeConstants {
                     }
                     return s;
                 default:
-                    System.err.println("Set type not supported; compilation aborted.");
-                    System.exit(0);
+                    throw new IllegalArgumentException("Set type not supported; compilation aborted.");
             }
         } else if (child.getId() == JJTSCALARFLATEXPR) {
             switch (((ASTScalarFlatExpr) child).getType()) {
                 case 0: // int
                 case 1: // bool
-                    System.err.println("Set initialization fault; compilation aborted.");
-                    System.exit(0);
-                    break;
+                    throw new IllegalArgumentException("Set initialization fault; compilation aborted.");
                 case 2: // ident
                     return dictionary.getSet(((ASTScalarFlatExpr) child).getIdent());
                 case 3: // array access
                     return dictionary.getSetArray(((ASTScalarFlatExpr) child).getIdent())[((ASTScalarFlatExpr) child).getInt()];
                 case 4: // string
                 case 5: // float
-                    System.err.println("Set initialization fault; compilation aborted.");
-                    System.exit(0);
-                    break;
+                    throw new IllegalArgumentException("Set initialization fault; compilation aborted.");
             }
         }
         return new IntervalDomain();
     }
 
-    static IntVar[] unique(IntVar[] vs) {
+    IntVar[] unique(IntVar[] vs) {
 
         HashSet<IntVar> varSet = new HashSet<IntVar>();
         for (IntVar v : vs)
@@ -497,7 +449,7 @@ public class Support implements ParserTreeConstants {
         return rs;
     }
 
-    public static void parseAnnotations(SimpleNode constraintWithAnnotations) {
+    public void parseAnnotations(SimpleNode constraintWithAnnotations) {
 
         for (int i = 1; i < constraintWithAnnotations.jjtGetNumChildren(); i++) {
             ASTAnnotation ann = (ASTAnnotation) constraintWithAnnotations.jjtGetChild(i);
@@ -520,19 +472,17 @@ public class Support implements ParserTreeConstants {
         }
     }
 
-    static Var getAnnVar(ASTAnnExpr node) {
+    Var getAnnVar(ASTAnnExpr node) {
 
         ASTScalarFlatExpr e = (ASTScalarFlatExpr) node.jjtGetChild(0);
         if (e != null)
             return dictionary.getVariable(e.getIdent());
         else {
-            System.err.println("Wrong variable identified in \"defines_var\" annotation" + node);
-            System.exit(0);
-            return new IntVar(store);
+            throw new IllegalArgumentException("Wrong variable identified in \"defines_var\" annotation" + node);
         }
     }
 
-    public static void poseDelayedConstraints() {
+    public void poseDelayedConstraints() {
         // generate channeling constraints for aliases
         // variables that are output variables
         aliasConstraints();
@@ -546,7 +496,7 @@ public class Support implements ParserTreeConstants {
 
     }
 
-    static void poseAlldistinctConstraints() {
+    void poseAlldistinctConstraints() {
         for (IntVar[] v : parameterListForAlldistincts) {
             if (debug)
                 System.out.println("Alldistinct(" + java.util.Arrays.asList(v) + ")");
@@ -554,7 +504,7 @@ public class Support implements ParserTreeConstants {
         }
     }
 
-    static void aliasConstraints() {
+    void aliasConstraints() {
 
       Set<Map.Entry<IntVar, IntVar>> entries = dictionary.aliasTable.entrySet();
 
@@ -568,14 +518,14 @@ public class Support implements ParserTreeConstants {
         }
     }
 
-    static void poseDC(DecomposedConstraint c) throws FailException {
+    void poseDC(DecomposedConstraint c) throws FailException {
 
         store.imposeDecompositionWithConsistency(c);
         if (debug)
             System.out.println(c);
     }
 
-    static void pose(Constraint c) throws FailException {
+    void pose(Constraint c) throws FailException {
 
         store.imposeWithConsistency(c);
 

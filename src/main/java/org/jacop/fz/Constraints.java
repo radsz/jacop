@@ -55,11 +55,11 @@ public class Constraints implements ParserTreeConstants {
     // ============ SAT solver interface ==============
     SatTranslation sat;
 
-    //     boolean storeLevelIncreased=false;
-
+    Support support;
+    
     static boolean debug = false;
 
-    final static org.jacop.fz.constraints.ConstraintFncs cf = new org.jacop.fz.constraints.ConstraintFncs();
+    final org.jacop.fz.constraints.ConstraintFncs cf; // = new org.jacop.fz.constraints.ConstraintFncs(store, dict, sat);
 
     /**
      * It creates an object to parse the constraint part of the flatzinc file.
@@ -76,7 +76,10 @@ public class Constraints implements ParserTreeConstants {
         // impose SAT-solver
         sat.impose();
 
-        new Support(store, dict, sat);
+	support = new Support(store, dict, sat);
+	
+	cf = new org.jacop.fz.constraints.ConstraintFncs(support);
+
     }
 
     void generateAllConstraints(SimpleNode astTree, Options opt) throws Throwable {
@@ -98,7 +101,7 @@ public class Constraints implements ParserTreeConstants {
             }
         }
 
-        Support.poseDelayedConstraints();
+        support.poseDelayedConstraints();
 
     }
 
@@ -108,13 +111,13 @@ public class Constraints implements ParserTreeConstants {
         //   constraintWithAnnotations.dump("");
 
         // default consistency - bounds
-        Support.boundsConsistency = true;
-        Support.domainConsistency = false;
-        Support.definedVar = null;
+        support.boundsConsistency = true;
+        support.domainConsistency = false;
+        support.definedVar = null;
 
         int numberChildren = constraintWithAnnotations.jjtGetNumChildren();
         if (numberChildren > 1) {
-            Support.parseAnnotations(constraintWithAnnotations);
+            support.parseAnnotations(constraintWithAnnotations);
         }
 
         SimpleNode node = (SimpleNode) constraintWithAnnotations.jjtGetChild(0);
@@ -127,7 +130,7 @@ public class Constraints implements ParserTreeConstants {
             try {
 
                 java.lang.reflect.Method method = cf.getClass().getMethod(p, SimpleNode.class);
-                method.invoke(null, node);
+                method.invoke(cf, node);
 
             } catch (NoSuchMethodException e) {
                 throw new RuntimeException("%% JaCoP flatzinc back-end: constraint " + p + " is not supported.");
@@ -171,7 +174,7 @@ public class Constraints implements ParserTreeConstants {
 
                 ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
                 ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
-                IntVar v1 = Support.getVariable(p1), v2 = Support.getVariable(p2);
+                IntVar v1 = support.getVariable(p1), v2 = support.getVariable(p2);
                 dictionary.addAlias(v1, v2);
 
                 if (v1.singleton() || v2.singleton()) {

@@ -32,6 +32,7 @@ package org.jacop.fz;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Map;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -98,9 +99,7 @@ public class Tables {
 
     ArrayList<Var[]> defaultSearchSetArrays = new ArrayList<Var[]>();
 
-    // HashMap<IntVar, HashSet<IntVar>> boolAliasTable = new HashMap<IntVar, HashSet<IntVar>>();
-    // HashMap<IntVar, HashSet<IntVar>> intAliasTable = new HashMap<IntVar, HashSet<IntVar>>();
-    public static HashMap<IntVar, IntVar> aliasTable = new HashMap<IntVar, IntVar>();
+    public Map<IntVar, IntVar> aliasTable = new HashMap<IntVar, IntVar>();
 
     int numberBoolVariables = 0;    
     
@@ -142,40 +141,6 @@ public class Tables {
         else
             return v;
     }
-
-    // public void addBoolAlias(IntVar b, IntVar v) {
-    // 	HashSet<IntVar> x = boolAliasTable.get(b);
-    // 	if (x == null)
-    // 	    x = new HashSet<IntVar>();
-    // 	x.add(v);
-    // 	boolAliasTable.put(b, x);
-    // 	// System.out.println(b + " == " + x);
-    // }
-
-    // HashSet<IntVar> getBoolAlias(IntVar b) {
-    // 	HashSet<IntVar> x = boolAliasTable.get(b);
-    // 	if (x == null)
-    // 	    return new HashSet<IntVar>();
-    // 	else
-    // 	    return x;
-    // }
-
-    // public void addIntAlias(IntVar v, IntVar b) {
-    // 	HashSet<IntVar> x = intAliasTable.get(v);
-    // 	if (x == null)
-    // 	    x = new HashSet<IntVar>();
-    // 	x.add(b);
-    // 	intAliasTable.put(v, x);
-    // 	// System.out.println(v + " == " + b);
-    // }
-
-    // HashSet<IntVar> getIntAlias(IntVar v) {
-    // 	HashSet<IntVar> x = intAliasTable.get(v);
-    // 	if (x == null)
-    // 	    return new HashSet<IntVar>();
-    // 	else
-    // 	    return x;
-    // }
 
     /**
      * It adds an int parameter.
@@ -584,7 +549,7 @@ public class Tables {
 
     @SuppressWarnings("unchecked") public String toString() {
 
-        HashMap[] dictionary = {intTable,   // 0
+        Map[] dictionary = {intTable,   // 0
             intArrayTable,  // 1
             setTable,       // 2
             setArrayTable,  // 3

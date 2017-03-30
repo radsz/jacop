@@ -50,8 +50,6 @@ import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.XexpYeqZ;
 import org.jacop.floats.constraints.XeqP;
 
-import org.jacop.satwrapper.SatTranslation;
-
 /**
  *
  * Generation of linear constraints in flatzinc
@@ -59,20 +57,24 @@ import org.jacop.satwrapper.SatTranslation;
  * @author Krzysztof Kuchcinski 
  *
  */
-class OperationConstraints extends Support implements ParserTreeConstants {
+class OperationConstraints implements ParserTreeConstants {
 
-    public OperationConstraints(Store store, Tables d, SatTranslation sat) {
-        super(store, d, sat);
+    Support support;
+    Store store;
+    
+    public OperationConstraints(Support support) {
+	this.support = support;
+	this.store = support.store;
     }
 
-    static void gen_int_min(SimpleNode node) {
+    void gen_int_min(SimpleNode node) {
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
         ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
 
-        IntVar v1 = getVariable(p1);
-        IntVar v2 = getVariable(p2);
-        IntVar v3 = getVariable(p3);
+        IntVar v1 = support.getVariable(p1);
+        IntVar v2 = support.getVariable(p2);
+        IntVar v3 = support.getVariable(p3);
 
         if (v1.singleton() && v2.singleton()) {
             int min = java.lang.Math.min(v1.value(), v2.value());
@@ -84,23 +86,23 @@ class OperationConstraints extends Support implements ParserTreeConstants {
             int min = v2.value();
             v3.domain.in(store.level, v3, min, min);
         } else if (v1.min() >= v2.max())
-            pose(new XeqY(v2, v3));
+            support.pose(new XeqY(v2, v3));
         else if (v2.min() >= v1.max())
-            pose(new XeqY(v1, v3));
+            support.pose(new XeqY(v1, v3));
         else if (v1 == v2)
-            pose(new XeqY(v1, v3));
+            support.pose(new XeqY(v1, v3));
         else
-            pose(new MinSimple(v1, v2, v3));
+            support.pose(new MinSimple(v1, v2, v3));
     }
 
-    static void gen_int_max(SimpleNode node) {
+    void gen_int_max(SimpleNode node) {
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
         ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
 
-        IntVar v1 = getVariable(p1);
-        IntVar v2 = getVariable(p2);
-        IntVar v3 = getVariable(p3);
+        IntVar v1 = support.getVariable(p1);
+        IntVar v2 = support.getVariable(p2);
+        IntVar v3 = support.getVariable(p3);
 
         if (v1.singleton() && v2.singleton()) {
             int max = java.lang.Math.max(v1.value(), v2.value());
@@ -112,113 +114,113 @@ class OperationConstraints extends Support implements ParserTreeConstants {
             int max = v2.value();
             v3.domain.in(store.level, v3, max, max);
         } else if (v1.min() >= v2.max())
-            pose(new XeqY(v1, v3));
+            support.pose(new XeqY(v1, v3));
         else if (v2.min() >= v1.max())
-            pose(new XeqY(v2, v3));
+            support.pose(new XeqY(v2, v3));
         else if (v1 == v2)
-            pose(new XeqY(v1, v3));
+            support.pose(new XeqY(v1, v3));
         else
-            pose(new MaxSimple(v1, v2, v3));
+            support.pose(new MaxSimple(v1, v2, v3));
     }
 
-    static void gen_int_mod(SimpleNode node) {
+    void gen_int_mod(SimpleNode node) {
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
         ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
 
-        IntVar v1 = getVariable(p1);
-        IntVar v2 = getVariable(p2);
-        IntVar v3 = getVariable(p3);
+        IntVar v1 = support.getVariable(p1);
+        IntVar v2 = support.getVariable(p2);
+        IntVar v3 = support.getVariable(p3);
 
-        pose(new XmodYeqZ(v1, v2, v3));
+        support.pose(new XmodYeqZ(v1, v2, v3));
     }
 
-    static void gen_int_div(SimpleNode node) {
+    void gen_int_div(SimpleNode node) {
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
         ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
 
-        IntVar v1 = getVariable(p1);
-        IntVar v2 = getVariable(p2);
-        IntVar v3 = getVariable(p3);
+        IntVar v1 = support.getVariable(p1);
+        IntVar v2 = support.getVariable(p2);
+        IntVar v3 = support.getVariable(p3);
 
-        pose(new XdivYeqZ(v1, v2, v3));
+        support.pose(new XdivYeqZ(v1, v2, v3));
     }
 
-    static void gen_int_abs(SimpleNode node) {
+    void gen_int_abs(SimpleNode node) {
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
 
-        IntVar v1 = getVariable(p1);
-        IntVar v2 = getVariable(p2);
+        IntVar v1 = support.getVariable(p1);
+        IntVar v2 = support.getVariable(p2);
 
-        if (boundsConsistency)
-            pose(new AbsXeqY(v1, v2));
+        if (support.boundsConsistency)
+            support.pose(new AbsXeqY(v1, v2));
         else
-            pose(new AbsXeqY(v1, v2, true));
+            support.pose(new AbsXeqY(v1, v2, true));
     }
 
-    static void gen_int_times(SimpleNode node) {
+    void gen_int_times(SimpleNode node) {
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
         ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
 
         if (p1.getType() == 0) {// p1 int
-            int c = getInt(p1);
+            int c = support.getInt(p1);
             if (c == 1)
-                pose(new XeqY(getVariable(p2), getVariable(p3)));
+                support.pose(new XeqY(support.getVariable(p2), support.getVariable(p3)));
             else
-                pose(new XmulCeqZ(getVariable(p2), c, getVariable(p3)));
+                support.pose(new XmulCeqZ(support.getVariable(p2), c, support.getVariable(p3)));
         } else if (p2.getType() == 0) {// p2 int
-            int c = getInt(p2);
+            int c = support.getInt(p2);
             if (c == 1)
-                pose(new XeqY(getVariable(p1), getVariable(p3)));
+                support.pose(new XeqY(support.getVariable(p1), support.getVariable(p3)));
             else
-                pose(new XmulCeqZ(getVariable(p1), getInt(p2), getVariable(p3)));
+                support.pose(new XmulCeqZ(support.getVariable(p1), support.getInt(p2), support.getVariable(p3)));
         } else if (p3.getType() == 0) {// p3 int
-            pose(new XmulYeqC(getVariable(p1), getVariable(p2), getInt(p3)));
+            support.pose(new XmulYeqC(support.getVariable(p1), support.getVariable(p2), support.getInt(p3)));
         } else {
-            IntVar v1 = getVariable(p1), v2 = getVariable(p2), v3 = getVariable(p3);
+            IntVar v1 = support.getVariable(p1), v2 = support.getVariable(p2), v3 = support.getVariable(p3);
             if (v1.min() >= 0 && v1.max() <= 1 && v2.min() >= 0 && v2.max() <= 1 && v3.min() >= 0 && v3.max() <= 1)
-                pose(new AndBoolSimple(v1, v2, v3));
+                support.pose(new AndBoolSimple(v1, v2, v3));
             else if ((v1.singleton() && v1.value() == 0) || (v2.singleton() && v2.value() == 0))
                 v3.domain.in(store.level, v3, 0, 0);
             else
-                pose(new XmulYeqZ(v1, v2, v3));
+                support.pose(new XmulYeqZ(v1, v2, v3));
         }
     }
 
-    static void gen_int_plus(SimpleNode node) {
+    void gen_int_plus(SimpleNode node) {
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
         ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
 
         if (p1.getType() == 0) {// p1 int
-            pose(new XplusCeqZ(getVariable(p2), getInt(p1), getVariable(p3)));
+            support.pose(new XplusCeqZ(support.getVariable(p2), support.getInt(p1), support.getVariable(p3)));
         } else if (p2.getType() == 0) {// p2 int
-            pose(new XplusCeqZ(getVariable(p1), getInt(p2), getVariable(p3)));
+            support.pose(new XplusCeqZ(support.getVariable(p1), support.getInt(p2), support.getVariable(p3)));
         } else if (p3.getType() == 0) {// p3 int
-            pose(new XplusYeqC(getVariable(p1), getVariable(p2), getInt(p3)));
+            support.pose(new XplusYeqC(support.getVariable(p1), support.getVariable(p2), support.getInt(p3)));
         } else
-            pose(new XplusYeqZ(getVariable(p1), getVariable(p2), getVariable(p3)));
+            support.pose(new XplusYeqZ(support.getVariable(p1), support.getVariable(p2), support.getVariable(p3)));
     }
 
-    static void gen_int2float(SimpleNode node) {
+    void gen_int2float(SimpleNode node) {
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
 
-        pose(new XeqP(getVariable(p1), getFloatVariable(p2)));
+        support.pose(new XeqP(support.getVariable(p1), support.getFloatVariable(p2)));
     }
 
-    static void gen_int_pow(SimpleNode node) {
+    void gen_int_pow(SimpleNode node) {
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
         ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
 
-        IntVar v1 = getVariable(p1);
-        IntVar v2 = getVariable(p2);
-        IntVar v3 = getVariable(p3);
+        IntVar v1 = support.getVariable(p1);
+        IntVar v2 = support.getVariable(p2);
+        IntVar v3 = support.getVariable(p3);
 
-        pose(new XexpYeqZ(v1, v2, v3));
+        support.pose(new XexpYeqZ(v1, v2, v3));
     }
 }

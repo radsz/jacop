@@ -47,7 +47,6 @@ import org.jacop.set.constraints.AinB;
 
 import org.jacop.fz.*;
 
-import org.jacop.satwrapper.SatTranslation;
 import org.jacop.set.constraints.AintersectBeqC;
 import org.jacop.core.IntDomain;
 import org.jacop.set.constraints.AunionBeqC;
@@ -60,205 +59,209 @@ import org.jacop.set.constraints.AdiffBeqC;
  * @author Krzysztof Kuchcinski 
  *
  */
-class SetConstraints extends Support implements ParserTreeConstants {
+class SetConstraints implements ParserTreeConstants {
 
-    public SetConstraints(Store store, Tables d, SatTranslation sat) {
-        super(store, d, sat);
+    Support support;
+    Store store;
+    
+    public SetConstraints(Support support) {
+	this.support = support;
+	this.store = support.store;
     }
 
-    static void gen_set_card(SimpleNode node) {
-        SetVar v1 = getSetVariable(node, 0);
-        IntVar v2 = getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
+    void gen_set_card(SimpleNode node) {
+        SetVar v1 = support.getSetVariable(node, 0);
+        IntVar v2 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
 
         if (v2.singleton()) {
             v1.domain.inCardinality(store.level, v1, v2.min(), v2.max());
 
-            if (debug)
+            if (support.debug)
                 System.out.println("Cardinality of set " + v1 + " = " + v2);
 
         } else
-            pose(new CardAeqX(v1, v2));
+            support.pose(new CardAeqX(v1, v2));
     }
 
-    static void gen_set_diff(SimpleNode node) {
-        SetVar v1 = getSetVariable(node, 0);
-        SetVar v2 = getSetVariable(node, 1);
-        SetVar v3 = getSetVariable(node, 2);
+    void gen_set_diff(SimpleNode node) {
+        SetVar v1 = support.getSetVariable(node, 0);
+        SetVar v2 = support.getSetVariable(node, 1);
+        SetVar v3 = support.getSetVariable(node, 2);
 
-        pose(new AdiffBeqC(v1, v2, v3));
+        support.pose(new AdiffBeqC(v1, v2, v3));
     }
 
-    static void gen_set_eq(SimpleNode node) {
-        SetVar v1 = getSetVariable(node, 0);
-        SetVar v2 = getSetVariable(node, 1);
+    void gen_set_eq(SimpleNode node) {
+        SetVar v1 = support.getSetVariable(node, 0);
+        SetVar v2 = support.getSetVariable(node, 1);
 
         PrimitiveConstraint c = new org.jacop.set.constraints.AeqB(v1, v2);
-        pose(c);
+        support.pose(c);
     }
 
-    static void gen_set_eq_reif(SimpleNode node) {
+    void gen_set_eq_reif(SimpleNode node) {
 
-        SetVar v1 = getSetVariable(node, 0);
-        SetVar v2 = getSetVariable(node, 1);
-        IntVar v3 = getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+        SetVar v1 = support.getSetVariable(node, 0);
+        SetVar v2 = support.getSetVariable(node, 1);
+        IntVar v3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
         PrimitiveConstraint c = new org.jacop.set.constraints.AeqB(v1, v2);
-        pose(new Reified(c, v3));
+        support.pose(new Reified(c, v3));
     }
 
-    static void gen_set_in(SimpleNode node) {
+    void gen_set_in(SimpleNode node) {
         PrimitiveConstraint c;
 
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         SimpleNode v1Type = (SimpleNode) node.jjtGetChild(1);
         if (v1Type.getId() == JJTSETLITERAL) {
-            IntDomain d = getSetLiteral(node, 1);
-            IntVar v1 = getVariable(p1);
+            IntDomain d = support.getSetLiteral(node, 1);
+            IntVar v1 = support.getVariable(p1);
 
             v1.domain.in(store.level, v1, d);
             return;
         } else {
-            SetVar v2 = getSetVariable(node, 1);
+            SetVar v2 = support.getSetVariable(node, 1);
 
             if (p1.getType() == 0) { // p1 int
-                int i1 = getInt(p1);
+                int i1 = support.getInt(p1);
                 c = new EinA(i1, v2);
             } else { // p1 var
-                IntVar v1 = getVariable(p1);
+                IntVar v1 = support.getVariable(p1);
                 c = new XinA(v1, v2);
             }
         }
         // FIXME, include AinB here?
 
-        pose(c);
+        support.pose(c);
     }
 
-    static void gen_set_in_reif(SimpleNode node) {
+    void gen_set_in_reif(SimpleNode node) {
         PrimitiveConstraint c;
 
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         SimpleNode v1Type = (SimpleNode) node.jjtGetChild(1);
         if (v1Type.getId() == JJTSETLITERAL) {
-            IntDomain d = getSetLiteral(node, 1);
-            IntVar v1 = getVariable(p1);
+            IntDomain d = support.getSetLiteral(node, 1);
+            IntVar v1 = support.getVariable(p1);
             c = new org.jacop.constraints.In(v1, d);
         } else {
-            SetVar v2 = getSetVariable(node, 1);
+            SetVar v2 = support.getSetVariable(node, 1);
 
             if (p1.getType() == 0) { // p1 int
-                int i1 = getInt(p1);
+                int i1 = support.getInt(p1);
                 c = new EinA(i1, v2);
             } else { // p1 var
-                IntVar v1 = getVariable(p1);
+                IntVar v1 = support.getVariable(p1);
                 c = new XinA(v1, v2);
             }
         }
         // FIXME, include AinB here?
 
-        IntVar v3 = getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+        IntVar v3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
-        pose(new Reified(c, v3));
+        support.pose(new Reified(c, v3));
     }
 
-    static void gen_set_intersect(SimpleNode node) {
-        SetVar v1 = getSetVariable(node, 0);
-        SetVar v2 = getSetVariable(node, 1);
-        SetVar v3 = getSetVariable(node, 2);
+    void gen_set_intersect(SimpleNode node) {
+        SetVar v1 = support.getSetVariable(node, 0);
+        SetVar v2 = support.getSetVariable(node, 1);
+        SetVar v3 = support.getSetVariable(node, 2);
 
-        pose(new AintersectBeqC(v1, v2, v3));
+        support.pose(new AintersectBeqC(v1, v2, v3));
     }
 
-    static void gen_set_le(SimpleNode node) {
-        SetVar v1 = getSetVariable(node, 0);
-        SetVar v2 = getSetVariable(node, 1);
+    void gen_set_le(SimpleNode node) {
+        SetVar v1 = support.getSetVariable(node, 0);
+        SetVar v2 = support.getSetVariable(node, 1);
 
-        pose(new Lex(v1, v2, false));
+        support.pose(new Lex(v1, v2, false));
     }
 
-    static void gen_set_lt(SimpleNode node) {
-        SetVar v1 = getSetVariable(node, 0);
-        SetVar v2 = getSetVariable(node, 1);
+    void gen_set_lt(SimpleNode node) {
+        SetVar v1 = support.getSetVariable(node, 0);
+        SetVar v2 = support.getSetVariable(node, 1);
 
-        pose(new Lex(v1, v2));
+        support.pose(new Lex(v1, v2));
     }
 
-    static void gen_set_ne(SimpleNode node) {
+    void gen_set_ne(SimpleNode node) {
 
-        SetVar v1 = getSetVariable(node, 0);
-        SetVar v2 = getSetVariable(node, 1);
+        SetVar v1 = support.getSetVariable(node, 0);
+        SetVar v2 = support.getSetVariable(node, 1);
 
         PrimitiveConstraint c = new Not(new org.jacop.set.constraints.AeqB(v1, v2));
-        pose(c);
+        support.pose(c);
     }
 
-    static void gen_set_ne_reif(SimpleNode node) {
+    void gen_set_ne_reif(SimpleNode node) {
 
-        SetVar v1 = getSetVariable(node, 0);
-        SetVar v2 = getSetVariable(node, 1);
-        IntVar v3 = getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+        SetVar v1 = support.getSetVariable(node, 0);
+        SetVar v2 = support.getSetVariable(node, 1);
+        IntVar v3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
         PrimitiveConstraint c = new Not(new org.jacop.set.constraints.AeqB(v1, v2));
-        pose(new Reified(c, v3));
+        support.pose(new Reified(c, v3));
     }
 
-    static void gen_set_subset(SimpleNode node) {
-        SetVar v1 = getSetVariable(node, 0);
-        SetVar v2 = getSetVariable(node, 1);
+    void gen_set_subset(SimpleNode node) {
+        SetVar v1 = support.getSetVariable(node, 0);
+        SetVar v2 = support.getSetVariable(node, 1);
 
         PrimitiveConstraint c = new AinB(v1, v2);
-        pose(c);
+        support.pose(c);
     }
 
-    static void gen_set_subset_reif(SimpleNode node) {
-        SetVar v1 = getSetVariable(node, 0);
-        SetVar v2 = getSetVariable(node, 1);
+    void gen_set_subset_reif(SimpleNode node) {
+        SetVar v1 = support.getSetVariable(node, 0);
+        SetVar v2 = support.getSetVariable(node, 1);
 
         PrimitiveConstraint c = new AinB(v1, v2);
-        IntVar v3 = getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
-        pose(new Reified(c, v3));
+        IntVar v3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+        support.pose(new Reified(c, v3));
     }
 
-    static void gen_set_symdiff(SimpleNode node) {
-        SetVar v1 = getSetVariable(node, 0);
-        SetVar v2 = getSetVariable(node, 1);
-        SetVar v3 = getSetVariable(node, 2);
+    void gen_set_symdiff(SimpleNode node) {
+        SetVar v1 = support.getSetVariable(node, 0);
+        SetVar v2 = support.getSetVariable(node, 1);
+        SetVar v3 = support.getSetVariable(node, 2);
 
         SetVar t1 = new SetVar(store, new BoundSetDomain(IntDomain.MinInt, IntDomain.MaxInt));
         SetVar t2 = new SetVar(store, new BoundSetDomain(IntDomain.MinInt, IntDomain.MaxInt));
 
-        pose(new AdiffBeqC(v1, v2, t1));
+        support.pose(new AdiffBeqC(v1, v2, t1));
 
-        pose(new AdiffBeqC(v2, v1, t2));
+        support.pose(new AdiffBeqC(v2, v1, t2));
 
-        pose(new AunionBeqC(t1, t2, v3));
+        support.pose(new AunionBeqC(t1, t2, v3));
     }
 
-    static void gen_set_union(SimpleNode node) {
-        SetVar v1 = getSetVariable(node, 0);
-        SetVar v2 = getSetVariable(node, 1);
-        SetVar v3 = getSetVariable(node, 2);
+    void gen_set_union(SimpleNode node) {
+        SetVar v1 = support.getSetVariable(node, 0);
+        SetVar v2 = support.getSetVariable(node, 1);
+        SetVar v3 = support.getSetVariable(node, 2);
 
-        pose(new AunionBeqC(v1, v2, v3));
-    }
-
-    // Not present in current flatzinc
-    static void gen_set_superset(SimpleNode node) {
-
-        SetVar v1 = getSetVariable(node, 0);
-        SetVar v2 = getSetVariable(node, 1);
-
-        PrimitiveConstraint c = new AinB(v2, v1);
-        pose(c);
+        support.pose(new AunionBeqC(v1, v2, v3));
     }
 
     // Not present in current flatzinc
-    static void gen_set_superset_reif(SimpleNode node) {
+    void gen_set_superset(SimpleNode node) {
 
-        SetVar v1 = getSetVariable(node, 0);
-        SetVar v2 = getSetVariable(node, 1);
+        SetVar v1 = support.getSetVariable(node, 0);
+        SetVar v2 = support.getSetVariable(node, 1);
 
         PrimitiveConstraint c = new AinB(v2, v1);
-        IntVar v3 = getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
-        pose(new Reified(c, v3));
+        support.pose(c);
+    }
+
+    // Not present in current flatzinc
+    void gen_set_superset_reif(SimpleNode node) {
+
+        SetVar v1 = support.getSetVariable(node, 0);
+        SetVar v2 = support.getSetVariable(node, 1);
+
+        PrimitiveConstraint c = new AinB(v2, v1);
+        IntVar v3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+        support.pose(new Reified(c, v3));
     }
 }

@@ -34,8 +34,6 @@ import org.jacop.core.Store;
 
 import org.jacop.fz.*;
 
-import org.jacop.satwrapper.SatTranslation;
-
 import org.jacop.floats.constraints.PplusCeqR;
 import org.jacop.floats.constraints.PplusQeqR;
 import org.jacop.floats.constraints.PmulQeqR;
@@ -65,167 +63,171 @@ import org.jacop.floats.core.FloatVar;
  * @author Krzysztof Kuchcinski 
  *
  */
-class FloatOperationConstraints extends Support implements ParserTreeConstants {
+class FloatOperationConstraints implements ParserTreeConstants {
 
-    public FloatOperationConstraints(Store store, Tables d, SatTranslation sat) {
-        super(store, d, sat);
+    Support support;
+    Store store;
+    
+    public FloatOperationConstraints(Support support) {
+	this.support = support;
+	this.store = support.store;
     }
 
-    static void gen_float_abs(SimpleNode node) {
+    void gen_float_abs(SimpleNode node) {
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
 
-        pose(new AbsPeqR(getFloatVariable(p1), getFloatVariable(p2)));
+        support.pose(new AbsPeqR(support.getFloatVariable(p1), support.getFloatVariable(p2)));
     }
 
-    static void gen_float_acos(SimpleNode node) {
+    void gen_float_acos(SimpleNode node) {
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
 
-        pose(new AcosPeqR(getFloatVariable(p1), getFloatVariable(p2)));
+        support.pose(new AcosPeqR(support.getFloatVariable(p1), support.getFloatVariable(p2)));
     }
 
-    static void gen_float_asin(SimpleNode node) {
+    void gen_float_asin(SimpleNode node) {
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
 
-        pose(new AsinPeqR(getFloatVariable(p1), getFloatVariable(p2)));
+        support.pose(new AsinPeqR(support.getFloatVariable(p1), support.getFloatVariable(p2)));
     }
 
-    static void gen_float_atan(SimpleNode node) {
+    void gen_float_atan(SimpleNode node) {
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
 
-        pose(new AtanPeqR(getFloatVariable(p1), getFloatVariable(p2)));
+        support.pose(new AtanPeqR(support.getFloatVariable(p1), support.getFloatVariable(p2)));
     }
 
-    static void gen_float_cos(SimpleNode node) {
+    void gen_float_cos(SimpleNode node) {
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
 
-        pose(new CosPeqR(getFloatVariable(p1), getFloatVariable(p2)));
+        support.pose(new CosPeqR(support.getFloatVariable(p1), support.getFloatVariable(p2)));
     }
 
-    // static void gen_float_cosh(SimpleNode node) {
+    // void gen_float_cosh(SimpleNode node) {
     // }
 
-    static void gen_float_exp(SimpleNode node) {
+    void gen_float_exp(SimpleNode node) {
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
 
-        pose(new ExpPeqR(getFloatVariable(p1), getFloatVariable(p2)));
+        support.pose(new ExpPeqR(support.getFloatVariable(p1), support.getFloatVariable(p2)));
     }
 
-    static void gen_float_ln(SimpleNode node) {
+    void gen_float_ln(SimpleNode node) {
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
 
-        pose(new LnPeqR(getFloatVariable(p1), getFloatVariable(p2)));
+        support.pose(new LnPeqR(support.getFloatVariable(p1), support.getFloatVariable(p2)));
     }
 
-    static void gen_float_log10(SimpleNode node) {
+    void gen_float_log10(SimpleNode node) {
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
 
         FloatVar tmp = new FloatVar(store, -1e150, 1e150);
-        pose(new LnPeqR(getFloatVariable(p1), tmp));
-        pose(new PdivCeqR(tmp, java.lang.Math.log(10), getFloatVariable(p2)));
+        support.pose(new LnPeqR(support.getFloatVariable(p1), tmp));
+        support.pose(new PdivCeqR(tmp, java.lang.Math.log(10), support.getFloatVariable(p2)));
     }
 
-    static void gen_float_log2(SimpleNode node) {
+    void gen_float_log2(SimpleNode node) {
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
 
         FloatVar tmp = new FloatVar(store, -1e150, 1e150);
-        pose(new LnPeqR(getFloatVariable(p1), tmp));
-        pose(new PdivCeqR(tmp, java.lang.Math.log(2), getFloatVariable(p2)));
+        support.pose(new LnPeqR(support.getFloatVariable(p1), tmp));
+        support.pose(new PdivCeqR(tmp, java.lang.Math.log(2), support.getFloatVariable(p2)));
     }
 
-    static void gen_float_sqrt(SimpleNode node) {
+    void gen_float_sqrt(SimpleNode node) {
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
 
-        pose(new SqrtPeqR(getFloatVariable(p1), getFloatVariable(p2)));
+        support.pose(new SqrtPeqR(support.getFloatVariable(p1), support.getFloatVariable(p2)));
     }
 
-    static void gen_float_sin(SimpleNode node) {
+    void gen_float_sin(SimpleNode node) {
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
 
-        pose(new SinPeqR(getFloatVariable(p1), getFloatVariable(p2)));
+        support.pose(new SinPeqR(support.getFloatVariable(p1), support.getFloatVariable(p2)));
     }
 
-    // static void gen_float_sinh(SimpleNode node) {
+    // void gen_float_sinh(SimpleNode node) {
     // }
 
-    static void gen_float_tan(SimpleNode node) {
+    void gen_float_tan(SimpleNode node) {
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
 
-        pose(new TanPeqR(getFloatVariable(p1), getFloatVariable(p2)));
+        support.pose(new TanPeqR(support.getFloatVariable(p1), support.getFloatVariable(p2)));
     }
 
-    // static void gen_float_tanh(SimpleNode node) {
+    // void gen_float_tanh(SimpleNode node) {
     // }
 
-    static void gen_float_max(SimpleNode node) {
+    void gen_float_max(SimpleNode node) {
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
         ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
 
-        FloatVar v1 = getFloatVariable(p1);
-        FloatVar v2 = getFloatVariable(p2);
-        FloatVar v3 = getFloatVariable(p3);
+        FloatVar v1 = support.getFloatVariable(p1);
+        FloatVar v2 = support.getFloatVariable(p2);
+        FloatVar v3 = support.getFloatVariable(p3);
 
-        pose(new org.jacop.floats.constraints.Max(new FloatVar[] {v1, v2}, v3));
+        support.pose(new org.jacop.floats.constraints.Max(new FloatVar[] {v1, v2}, v3));
     }
 
-    static void gen_float_min(SimpleNode node) {
+    void gen_float_min(SimpleNode node) {
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
         ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
 
-        FloatVar v1 = getFloatVariable(p1);
-        FloatVar v2 = getFloatVariable(p2);
-        FloatVar v3 = getFloatVariable(p3);
+        FloatVar v1 = support.getFloatVariable(p1);
+        FloatVar v2 = support.getFloatVariable(p2);
+        FloatVar v3 = support.getFloatVariable(p3);
 
-        pose(new org.jacop.floats.constraints.Min(new FloatVar[] {v1, v2}, v3));
+        support.pose(new org.jacop.floats.constraints.Min(new FloatVar[] {v1, v2}, v3));
     }
 
-    static void gen_float_plus(SimpleNode node) {
+    void gen_float_plus(SimpleNode node) {
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
         ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
 
         if (p1.getType() == 5) {// p1 int
-            pose(new PplusCeqR(getFloatVariable(p2), getFloat(p1), getFloatVariable(p3)));
+            support.pose(new PplusCeqR(support.getFloatVariable(p2), support.getFloat(p1), support.getFloatVariable(p3)));
         } else if (p2.getType() == 5) {// p2 int
-            pose(new PplusCeqR(getFloatVariable(p1), getFloat(p2), getFloatVariable(p3)));
+            support.pose(new PplusCeqR(support.getFloatVariable(p1), support.getFloat(p2), support.getFloatVariable(p3)));
         } else
-            pose(new PplusQeqR(getFloatVariable(p1), getFloatVariable(p2), getFloatVariable(p3)));
+            support.pose(new PplusQeqR(support.getFloatVariable(p1), support.getFloatVariable(p2), support.getFloatVariable(p3)));
     }
 
-    static void gen_float_times(SimpleNode node) {
+    void gen_float_times(SimpleNode node) {
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
         ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
 
         if (p1.getType() == 5) {// p1 float
-            pose(new PmulCeqR(getFloatVariable(p2), getFloat(p1), getFloatVariable(p3)));
+            support.pose(new PmulCeqR(support.getFloatVariable(p2), support.getFloat(p1), support.getFloatVariable(p3)));
         } else if (p2.getType() == 5) {// p2 float
-            pose(new PmulCeqR(getFloatVariable(p1), getFloat(p2), getFloatVariable(p3)));
+            support.pose(new PmulCeqR(support.getFloatVariable(p1), support.getFloat(p2), support.getFloatVariable(p3)));
         } else
-            pose(new PmulQeqR(getFloatVariable(p1), getFloatVariable(p2), getFloatVariable(p3)));
+            support.pose(new PmulQeqR(support.getFloatVariable(p1), support.getFloatVariable(p2), support.getFloatVariable(p3)));
     }
 
-    static void gen_float_pow(SimpleNode node) {
+    void gen_float_pow(SimpleNode node) {
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
         ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
 
-        FloatVar v1 = getFloatVariable(p1);
-        FloatVar v2 = getFloatVariable(p2);
-        FloatVar v3 = getFloatVariable(p3);
+        FloatVar v1 = support.getFloatVariable(p1);
+        FloatVar v2 = support.getFloatVariable(p2);
+        FloatVar v3 = support.getFloatVariable(p3);
 
         if (v1.min() < 0)
             if (v2.min() == v2.max() && Math.ceil(v2.max()) == v2.max()) {
@@ -237,17 +239,17 @@ class FloatOperationConstraints extends Support implements ParserTreeConstants {
                 FloatVar tmp1 = new FloatVar(store, -1e150, 1e150);
                 FloatVar tmp2 = new FloatVar(store, -1e150, 1e150);
                 FloatVar tmp3 = new FloatVar(store, -1e150, 1e150);
-                pose(new AbsPeqR(v1, tmp0));
-                pose(new LnPeqR(tmp0, tmp1));
-                pose(new PmulQeqR(tmp1, v2, tmp2));
-                pose(new ExpPeqR(tmp2, tmp3));
+                support.pose(new AbsPeqR(v1, tmp0));
+                support.pose(new LnPeqR(tmp0, tmp1));
+                support.pose(new PmulQeqR(tmp1, v2, tmp2));
+                support.pose(new ExpPeqR(tmp2, tmp3));
 
                 if (exponent % 2 == 0)
                     // even
-                    pose(new PeqQ(tmp3, v3));
+                    support.pose(new PeqQ(tmp3, v3));
                 else
                     // odd
-                    pose(new IfThenElse(new PltC(v1, 0), new PplusQeqR(tmp3, v3, new FloatVar(store, 0, 0)), new PeqQ(tmp3, v3)));
+                    support.pose(new IfThenElse(new PltC(v1, 0), new PplusQeqR(tmp3, v3, new FloatVar(store, 0, 0)), new PeqQ(tmp3, v3)));
 
                 return;
             } else
@@ -257,17 +259,17 @@ class FloatOperationConstraints extends Support implements ParserTreeConstants {
 
         FloatVar tmp1 = new FloatVar(store, -1e150, 1e150);
         FloatVar tmp2 = new FloatVar(store, -1e150, 1e150);
-        pose(new LnPeqR(v1, tmp1));
-        pose(new PmulQeqR(tmp1, v2, tmp2));
-        pose(new ExpPeqR(tmp2, v3));
+        support.pose(new LnPeqR(v1, tmp1));
+        support.pose(new PmulQeqR(tmp1, v2, tmp2));
+        support.pose(new ExpPeqR(tmp2, v3));
     }
 
     // not supported any longer
-    static void gen_float_div(SimpleNode node) {
+    void gen_float_div(SimpleNode node) {
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
         ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
 
-        pose(new PdivQeqR(getFloatVariable(p1), getFloatVariable(p2), getFloatVariable(p3)));
+        support.pose(new PdivQeqR(support.getFloatVariable(p1), support.getFloatVariable(p2), support.getFloatVariable(p3)));
     }
 }

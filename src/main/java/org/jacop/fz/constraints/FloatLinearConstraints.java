@@ -36,8 +36,6 @@ import org.jacop.core.FailException;
 
 import org.jacop.fz.*;
 
-import org.jacop.satwrapper.SatTranslation;
-
 import org.jacop.floats.core.FloatVar;
 
 import org.jacop.floats.constraints.LinearFloat;
@@ -54,123 +52,124 @@ import org.jacop.floats.constraints.PeqQ;
  * @author Krzysztof Kuchcinski 
  *
  */
-class FloatLinearConstraints extends Support implements ParserTreeConstants {
+class FloatLinearConstraints implements ParserTreeConstants {
 
-    static boolean reified;
-
-    public FloatLinearConstraints(Store store, Tables d, SatTranslation sat) {
-        super(store, d, sat);
+    boolean reified;
+    Support support;
+    Store store;
+    
+    public FloatLinearConstraints(Support support) {
+	this.support = support;
+	this.store = support.store;
     }
 
-    static void gen_float_lin_eq(SimpleNode node) {
+    void gen_float_lin_eq(SimpleNode node) {
         reified = false;
-        float_lin_relation(eq, node);
+        float_lin_relation(Support.eq, node);
     }
 
-    static void gen_float_lin_eq_reif(SimpleNode node) {
+    void gen_float_lin_eq_reif(SimpleNode node) {
         reified = true;
-        float_lin_relation(eq, node);
+        float_lin_relation(Support.eq, node);
     }
 
-    static void gen_float_lin_le(SimpleNode node) {
+    void gen_float_lin_le(SimpleNode node) {
         reified = false;
-        float_lin_relation(le, node);
+        float_lin_relation(Support.le, node);
     }
 
-    static void gen_float_lin_le_reif(SimpleNode node) {
+    void gen_float_lin_le_reif(SimpleNode node) {
         reified = true;
-        float_lin_relation(le, node);
+        float_lin_relation(Support.le, node);
     }
 
-    static void gen_float_lin_lt(SimpleNode node) {
+    void gen_float_lin_lt(SimpleNode node) {
         reified = false;
-        float_lin_relation(lt, node);
+        float_lin_relation(Support.lt, node);
     }
 
-    static void gen_float_lin_lt_reif(SimpleNode node) {
+    void gen_float_lin_lt_reif(SimpleNode node) {
         reified = true;
-        float_lin_relation(lt, node);
+        float_lin_relation(Support.lt, node);
     }
 
-    static void gen_float_lin_ne(SimpleNode node) {
+    void gen_float_lin_ne(SimpleNode node) {
         reified = false;
-        float_lin_relation(ne, node);
+        float_lin_relation(Support.ne, node);
     }
 
-    static void gen_float_lin_ne_reif(SimpleNode node) {
+    void gen_float_lin_ne_reif(SimpleNode node) {
         reified = true;
-        float_lin_relation(ne, node);
+        float_lin_relation(Support.ne, node);
     }
 
-    static void float_lin_relation(int operation, SimpleNode node) throws FailException {
+    void float_lin_relation(int operation, SimpleNode node) throws FailException {
         // float_lin_*[_reif] (* = eq | ne | lt | gt | le | ge)
 
-        double[] p1 = getFloatArray((SimpleNode) node.jjtGetChild(0));
-        FloatVar[] p2 = getFloatVarArray((SimpleNode) node.jjtGetChild(1));
+        double[] p1 = support.getFloatArray((SimpleNode) node.jjtGetChild(0));
+        FloatVar[] p2 = support.getFloatVarArray((SimpleNode) node.jjtGetChild(1));
 
-        double p3 = getFloat((ASTScalarFlatExpr) node.jjtGetChild(2));
+        double p3 = support.getFloat((ASTScalarFlatExpr) node.jjtGetChild(2));
 
         if (reified) { // reified
-            IntVar p4 = getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
+            IntVar p4 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
 
             switch (operation) {
-                case eq:
-                    pose(new Reified(new LinearFloat(store, p2, p1, "==", p3), p4));
+                case Support.eq:
+                    support.pose(new Reified(new LinearFloat(store, p2, p1, "==", p3), p4));
                     break;
-                case ne:
-                    pose(new Reified(new LinearFloat(store, p2, p1, "!=", p3), p4));
+                case Support.ne:
+                    support.pose(new Reified(new LinearFloat(store, p2, p1, "!=", p3), p4));
                     break;
-                case lt:
-                    pose(new Reified(new LinearFloat(store, p2, p1, "<", p3), p4));
+                case Support.lt:
+                    support.pose(new Reified(new LinearFloat(store, p2, p1, "<", p3), p4));
                     break;
-                case le:
-                    pose(new Reified(new LinearFloat(store, p2, p1, "<=", p3), p4));
+                case Support.le:
+                    support.pose(new Reified(new LinearFloat(store, p2, p1, "<=", p3), p4));
                     break;
                 default:
-                    System.err.println("%% ERROR: Constraint floating-point operation not supported.");
-                    System.exit(0);
+                    throw new IllegalArgumentException("%% ERROR: Constraint floating-point operation not supported.");
             }
         } else { // non reified
             switch (operation) {
-                case eq:
+                case Support.eq:
 
                     if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
                         if (p3 != 0)
-                            pose(new PplusCeqR(p2[1], p3, p2[0]));
+                            support.pose(new PplusCeqR(p2[1], p3, p2[0]));
                         else
-                            pose(new PeqQ(p2[1], p2[0]));
+                            support.pose(new PeqQ(p2[1], p2[0]));
                     } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
                         if (p3 != 0) {
-                            pose(new PplusCeqR(p2[0], p3, p2[1]));
+                            support.pose(new PplusCeqR(p2[0], p3, p2[1]));
                         } else
-                            pose(new PeqQ(p2[0], p2[1]));
+                            support.pose(new PeqQ(p2[0], p2[1]));
                     } else if (p1.length == 2 && p1[0] == 1 && p1[1] == 1) {
-                        pose(new PplusQeqR(p2[0], p2[1], new FloatVar(store, p3, p3)));
+                        support.pose(new PplusQeqR(p2[0], p2[1], new FloatVar(store, p3, p3)));
                     } else
-                        pose(new LinearFloat(store, p2, p1, "==", p3));
+                        support.pose(new LinearFloat(store, p2, p1, "==", p3));
                     break;
-                case ne:
-                    pose(new LinearFloat(store, p2, p1, "!=", p3));
+                case Support.ne:
+                    support.pose(new LinearFloat(store, p2, p1, "!=", p3));
                     break;
-                case lt:
+                case Support.lt:
                     if (p1.length == 2 && p1[0] == 1 && p1[1] == -1 && p3 == 0)
-                        pose(new PltQ(p2[0], p2[1]));
+                        support.pose(new PltQ(p2[0], p2[1]));
                     else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1 && p3 == 0)
-                        pose(new PltQ(p2[1], p2[0]));
+                        support.pose(new PltQ(p2[1], p2[0]));
                     else
-                        pose(new LinearFloat(store, p2, p1, "<", p3));
+                        support.pose(new LinearFloat(store, p2, p1, "<", p3));
                     break;
-                case le:
+                case Support.le:
                     if (p1.length == 2 && p1[0] == 1 && p1[1] == -1 && p3 == 0)
-                        pose(new PlteqQ(p2[0], p2[1]));
+                        support.pose(new PlteqQ(p2[0], p2[1]));
                     else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1 && p3 == 0)
-                        pose(new PlteqQ(p2[1], p2[0]));
+                        support.pose(new PlteqQ(p2[1], p2[0]));
                     else
-                        pose(new LinearFloat(store, p2, p1, "<=", p3));
+                        support.pose(new LinearFloat(store, p2, p1, "<=", p3));
                     break;
                 default:
-                    System.err.println("%% ERROR: Constraint floating-point operation not supported.");
-                    System.exit(0);
+		    throw new IllegalArgumentException("%% ERROR: Constraint floating-point operation not supported.");
             }
         }
     }
