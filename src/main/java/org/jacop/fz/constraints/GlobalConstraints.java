@@ -183,7 +183,7 @@ class GlobalConstraints implements ParserTreeConstants {
 
         support.pose(new Circuit(v));
 
-        if (support.domainConsistency && !Options.getBoundConsistency())  // we add additional implied constraint if domain consistency is required
+        if (support.domainConsistency && !support.options.getBoundConsistency())  // we add additional implied constraint if domain consistency is required
             support.parameterListForAlldistincts.add(v);
     }
 
@@ -203,7 +203,7 @@ class GlobalConstraints implements ParserTreeConstants {
             // intiallization; we collect all vectors and pose it at the end when all constraints are posed
             // support.pose(new Alldistinct(v));
 
-            if (support.boundsConsistency || Options.getBoundConsistency()) {
+            if (support.boundsConsistency || support.options.getBoundConsistency()) {
                 support.pose(new Alldiff(v));
                 // System.out.println("Alldiff imposed");
             } else { // domain consistency
@@ -503,7 +503,7 @@ class GlobalConstraints implements ParserTreeConstants {
                 for (int i = 0; i < tt.length; i++)
                     d.addDom(new IntervalDomain(tt[i][0], tt[i][0]));
                 uniqueVar[0].domain.in(store.level, uniqueVar[0], d);
-                if (support.debug)
+                if (support.options.debug())
                     System.out.println(uniqueVar[0] + " in " + d);
 
             } else
@@ -530,7 +530,7 @@ class GlobalConstraints implements ParserTreeConstants {
         // we do not not pose Assignment directly because of possible inconsistency with its
         // intiallization; we collect all constraints and pose them at the end when all other constraints are posed
 
-        if (support.domainConsistency && !Options.getBoundConsistency())  // we add additional implied constraint if domain consistency is required
+        if (support.domainConsistency && !support.options.getBoundConsistency())  // we add additional implied constraint if domain consistency is required
             support.parameterListForAlldistincts.add(f);
 
         support.delayedConstraints.add(new Assignment(f, invf, index_f, index_invf));

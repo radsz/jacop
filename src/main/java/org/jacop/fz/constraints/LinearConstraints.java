@@ -282,7 +282,7 @@ class LinearConstraints implements ParserTreeConstants {
                     if (boolSum(p2))
                         if (p3 == 0)
                             // all p2's zero <=> p4
-                            if (Options.useSat())
+                            if (support.options.useSat())
                                 sat.generate_allZero_reif(support.unique(p2), p4);
                             else
                                 support.pose(new Not(new OrBoolVector(p2, p4)));
@@ -378,7 +378,7 @@ class LinearConstraints implements ParserTreeConstants {
                         support.pose(new XplusYeqC(p2[0], p2[1], p3));
                     else
                         support.pose(new XplusYeqC(p2[0], p2[1], -p3));
-                } else if (support.domainConsistency && !Options.getBoundConsistency()) {// && (maxDomain(p2) <= 4 || p2.length <= 2) ) { // heuristic rule to select domain consistency since
+                } else if (support.domainConsistency && !support.options.getBoundConsistency()) {// && (maxDomain(p2) <= 4 || p2.length <= 2) ) { // heuristic rule to select domain consistency since
                     // its complexity is O(d^n), d <= 4 or n <= 2 ;)
                     // We do not impose linear constraint with domain consistency if
                     // the cases are covered by four cases above.
@@ -523,7 +523,7 @@ class LinearConstraints implements ParserTreeConstants {
 		      int rhsValue = (int) (Math.round(Math.ceil( (float)p3 / (float)p1[0] )));
 
                         p2[0].domain.inMin(store.level, p2[0], rhsValue);
-                        if (support.debug)
+                        if (support.options.debug())
                             System.out.println("Pruned variable " + p2[0] + " to be >= " + rhsValue);
                         // support.pose(new XgteqC(p2[0], rhsValue));
                     } else { // weight > 0
@@ -531,7 +531,7 @@ class LinearConstraints implements ParserTreeConstants {
 
                         p2[0].domain.inMax(store.level, p2[0], rhsValue);
 
-                        if (support.debug)
+                        if (support.options.debug())
                             System.out.println("Pruned variable " + p2[0] + " to be <= " + rhsValue);
                         // support.pose(new XlteqC(p2[0], rhsValue));
                     }

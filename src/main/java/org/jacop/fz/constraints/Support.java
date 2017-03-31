@@ -70,8 +70,7 @@ public class Support implements ParserTreeConstants {
     // ============ SAT solver interface ==============
     SatTranslation sat;
 
-    // boolean storeLevelIncreased=false;
-    boolean debug = false;
+    public Options options;
 
     // =========== Annotations ===========
     public boolean boundsConsistency = true, domainConsistency = false;
@@ -90,7 +89,6 @@ public class Support implements ParserTreeConstants {
     public Support(Store store, Tables d, SatTranslation sat) {
         this.store = store;
         this.dictionary = d;
-        this.debug = Options.debug();
         this.sat = sat;
     }
 
@@ -177,7 +175,7 @@ public class Support implements ParserTreeConstants {
             return int_boolVar;
         } else if (node.getType() == 3) {// array access
             if (node.getInt() >= dictionary.getVariableArray(node.getIdent()).length || node.getInt() < 0) {
-                throw new IllegalArgumentException("Index out of bound for " + node.getIdent() + "[" + node.getInt() + "]");
+                throw new IllegalArgumentException("Index out of bound for " + node.getIdent() + "[" + (node.getInt()+1) + "]");
             } else {
                 return dictionary.getVariableArray(node.getIdent())[node.getInt()];
             }
@@ -203,7 +201,7 @@ public class Support implements ParserTreeConstants {
             return float_Var;
         } else if (node.getType() == 3) {// array access
             if (node.getInt() >= dictionary.getVariableFloatArray(node.getIdent()).length || node.getFloat() < 0) {
-                throw new IllegalArgumentException("Index out of bound for " + node.getIdent() + "[" + node.getInt() + "]");
+                throw new IllegalArgumentException("Index out of bound for " + node.getIdent() + "[" + (node.getInt()+1) + "]");
             } else
                 return dictionary.getVariableFloatArray(node.getIdent())[node.getInt()];
         } else {
@@ -489,7 +487,7 @@ public class Support implements ParserTreeConstants {
 
         for (Constraint c : delayedConstraints) {
             store.impose(c);
-            if (debug)
+            if (options.debug())
                 System.out.println(c);
         }
         poseAlldistinctConstraints();
@@ -498,7 +496,7 @@ public class Support implements ParserTreeConstants {
 
     void poseAlldistinctConstraints() {
         for (IntVar[] v : parameterListForAlldistincts) {
-            if (debug)
+            if (options.debug())
                 System.out.println("Alldistinct(" + java.util.Arrays.asList(v) + ")");
             store.impose(new Alldistinct(v));
         }
@@ -521,7 +519,7 @@ public class Support implements ParserTreeConstants {
     void poseDC(DecomposedConstraint c) throws FailException {
 
         store.imposeDecompositionWithConsistency(c);
-        if (debug)
+        if (options.debug())
             System.out.println(c);
     }
 
@@ -529,7 +527,7 @@ public class Support implements ParserTreeConstants {
 
         store.imposeWithConsistency(c);
 
-        if (debug)
+        if (options.debug())
             System.out.println(c);
     }
 }

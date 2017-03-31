@@ -76,7 +76,7 @@ class SetConstraints implements ParserTreeConstants {
         if (v2.singleton()) {
             v1.domain.inCardinality(store.level, v1, v2.min(), v2.max());
 
-            if (support.debug)
+            if (support.options.debug())
                 System.out.println("Cardinality of set " + v1 + " = " + v2);
 
         } else

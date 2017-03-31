@@ -77,7 +77,7 @@ class ComparisonConstraints implements ParserTreeConstants {
     // =========== bool =================
     void gen_bool_eq(SimpleNode node) {
 
-        if (Options.useSat()) {
+        if (support.options.useSat()) {
             IntVar a = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
             IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
 
@@ -90,7 +90,7 @@ class ComparisonConstraints implements ParserTreeConstants {
 
     void gen_bool_eq_reif(SimpleNode node) {
 
-        if (Options.useSat()) {
+        if (support.options.useSat()) {
 
             IntVar v1 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
             IntVar v2 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
@@ -106,7 +106,7 @@ class ComparisonConstraints implements ParserTreeConstants {
     }
 
     void gen_bool_ne(SimpleNode node) {
-        if (Options.useSat()) {
+        if (support.options.useSat()) {
 
             IntVar a = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
             IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
@@ -121,7 +121,7 @@ class ComparisonConstraints implements ParserTreeConstants {
 
     void gen_bool_ne_reif(SimpleNode node) {
 
-        if (Options.useSat()) {
+        if (support.options.useSat()) {
 
             IntVar v1 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
             IntVar v2 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
@@ -137,7 +137,7 @@ class ComparisonConstraints implements ParserTreeConstants {
 
     void gen_bool_le(SimpleNode node) {
 
-        if (Options.useSat()) {
+        if (support.options.useSat()) {
 
             IntVar a = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
             IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
@@ -152,7 +152,7 @@ class ComparisonConstraints implements ParserTreeConstants {
 
     void gen_bool_le_reif(SimpleNode node) {
 
-        if (Options.useSat()) {
+        if (support.options.useSat()) {
 
             IntVar a = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
             IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
@@ -168,7 +168,7 @@ class ComparisonConstraints implements ParserTreeConstants {
 
     void gen_bool_lt(SimpleNode node) {
 
-        if (Options.useSat()) {
+        if (support.options.useSat()) {
 
             IntVar a = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
             IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
@@ -183,7 +183,7 @@ class ComparisonConstraints implements ParserTreeConstants {
 
     void gen_bool_lt_reif(SimpleNode node) {
 
-        if (Options.useSat()) {
+        if (support.options.useSat()) {
 
             IntVar a = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
             IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
@@ -269,7 +269,7 @@ class ComparisonConstraints implements ParserTreeConstants {
                             v1.domain.in(store.level, v1, i2, i2);
                             return;
                         } else
-                            // if (Options.useSat()) {  // it can be moved to SAT solver but it is slow in the current implementation
+                            // if (support.options.useSat()) {  // it can be moved to SAT solver but it is slow in the current implementation
                             //     sat.generate_eqC_reif(v1, i2, v3);
                             //     return;
                             // }
@@ -291,7 +291,7 @@ class ComparisonConstraints implements ParserTreeConstants {
                             v1.domain.inComplement(store.level, v1, i2);
                             return;
                         } else
-                            // if (Options.useSat()) {  // it can be moved to SAT solver but it is slow in the current implementation
+                            // if (support.options.useSat()) {  // it can be moved to SAT solver but it is slow in the current implementation
                             //     sat.generate_neC_reif(v1, i2, v3);
                             //     return;
                             // }
@@ -402,7 +402,7 @@ class ComparisonConstraints implements ParserTreeConstants {
                             v3.domain.in(store.level, v3, 0, 0);
                             return;
                         } else
-                            // if (Options.useSat()) {  // it can be moved to SAT solver but it is slow in the current implementation
+                            // if (support.options.useSat()) {  // it can be moved to SAT solver but it is slow in the current implementation
                             //     sat.generate_geC_reif(v2, i1, v3);
                             //     return;
                             // }

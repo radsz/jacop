@@ -50,6 +50,8 @@ public class Constraints implements ParserTreeConstants {
     Store store;
     String p;
 
+    boolean debug;
+    
     final static int eq = 0, ne = 1, lt = 2, gt = 3, le = 4, ge = 5;
 
     // ============ SAT solver interface ==============
@@ -57,8 +59,6 @@ public class Constraints implements ParserTreeConstants {
 
     Support support;
     
-    static boolean debug = false;
-
     final org.jacop.fz.constraints.ConstraintFncs cf; // = new org.jacop.fz.constraints.ConstraintFncs(store, dict, sat);
 
     /**
@@ -71,8 +71,6 @@ public class Constraints implements ParserTreeConstants {
         this.dictionary = dict;
 
         sat = new SatTranslation(store);
-        sat.debug = debug;
-
         // impose SAT-solver
         sat.impose();
 
@@ -81,11 +79,16 @@ public class Constraints implements ParserTreeConstants {
 	cf = new org.jacop.fz.constraints.ConstraintFncs(support);
 
     }
+    
+    void setOptions(Options options) {
+	support.options = options;
+        debug = options.debug();
+    }
+    
+    void generateAllConstraints(SimpleNode astTree) throws Throwable {
 
-    void generateAllConstraints(SimpleNode astTree, Options opt) throws Throwable {
-
-        this.debug = opt.debug();
-
+	sat.debug = debug;
+	
         int n = astTree.jjtGetNumChildren();
 
         for (int i = 0; i < n; i++) {
@@ -145,7 +148,9 @@ public class Constraints implements ParserTreeConstants {
                     throw fe;
                 } catch (ArithmeticException ae) {
                     throw ae;
-                } catch (ParseException pe) {
+                } catch(IllegalArgumentException ie) {
+		    throw ie;
+		} catch (ParseException pe) {
                     throw pe;
                 } catch (TokenMgrError te) {
                     throw te;

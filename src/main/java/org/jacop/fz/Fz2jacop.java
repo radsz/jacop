@@ -99,7 +99,10 @@ public class Fz2jacop {
             System.err.println("%% Evaluation of model resulted in an overflow.");
             if (e.getStackTrace().length > 0)
                 System.out.println("%%\t" + e.toString());
-        } catch (ParseException e) {
+        } catch(IllegalArgumentException e) {
+            if (e.getStackTrace().length > 0)
+                System.out.println("%%\t" + e.toString());	    
+	} catch (ParseException e) {
             System.out.println("%% Parser exception " + e);
         } catch (TokenMgrError e) {
             System.out.println("%% Parser exception " + e);
