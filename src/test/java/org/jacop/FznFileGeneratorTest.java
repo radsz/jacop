@@ -14,6 +14,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
 
 
 /**
@@ -32,15 +34,9 @@ public class FznFileGeneratorTest extends MinizincBasedTestsHelper {
     private static String testFolderName = "test";
     private static File sourceFolder = new File("src/test/fz/scriptTest");
     private static File destinationFolder = new File("src/test/fz/" + testFolderName);
-
+    private static List<String> goldList;
+    private static Iterator<String> iterator;
     protected static final String Category = "scriptTest/";
-
-//    @BeforeClass
-//    public static void inicjalize() throws IOException {
-//        copyFolders(sourceFolder, destinationFolder);
-//
-//
-//    }
 
     public FznFileGeneratorTest(String testFilename)  {
 
@@ -52,67 +48,60 @@ public class FznFileGeneratorTest extends MinizincBasedTestsHelper {
     public static Collection<String> parametricTest() throws IOException {
         copyFolders(sourceFolder, destinationFolder);
         runBashScript();
-
+        goldList = (List<String>) fileReader("scriptGolden/");
+        iterator = goldList.iterator();
         return fileReader(Category);
     }
 
     @Test
     public void testMinizinc() throws IOException, InterruptedException {
-        Path expectedDir = Paths.get(this.testFilename).getParent();
-
         String expected = "";//"src/test/fz/scriptGolden/" + expectedDir;
-
         String res = "";
 
-        if(new File("src/test/fz/upTo5sec/" + Paths.get(this.testFilename).getParent()).isDirectory()) {
-            res = "src/test/fz/upTo5sec/" + Paths.get(this.testFilename).getParent();
-            expected = "src/test/fz/scriptGolden/upTo5sec/" + expectedDir;
-        } else
-        if (new File("src/test/fz/upTo30sec/" + Paths.get(this.testFilename).getParent()).isDirectory()){
-            res = "src/test/fz/upTo30sec/" + Paths.get(this.testFilename).getParent();
-            expected = "src/test/fz/scriptGolden/upTo30sec/" + expectedDir;
-        } else
-        if (new File("src/test/fz/upTo1min/" + Paths.get(this.testFilename).getParent()).isDirectory()){
-            res = "src/test/fz/upTo1min/" + Paths.get(this.testFilename).getParent();
-            expected = "src/test/fz/scriptGolden/upTo1min/" + expectedDir;
-        } else
-        if (new File("src/test/fz/upTo5min/" + Paths.get(this.testFilename).getParent()).isDirectory()){
-            res = "src/test/fz/upTo5min/" + Paths.get(this.testFilename).getParent();
-            expected = "src/test/fz/scriptGolden/upTo5min/" + expectedDir;
-        } else
-        if (new File("src/test/fz/upTo1hour/" + Paths.get(this.testFilename).getParent()).isDirectory()){
-            res = "src/test/fz/upTo1hour/" + Paths.get(this.testFilename).getParent();
-            expected = "src/test/fz/scriptGolden/upTo1hour/" + expectedDir;
-        } else
-        if (new File("src/test/fz/above1hour/" + Paths.get(this.testFilename).getParent()).isDirectory()){
-            res = "src/test/fz/above1hour/" + Paths.get(this.testFilename).getParent();
-            expected = "src/test/fz/scriptGolden/above1hour/" + expectedDir;
-        } else
-        if (new File("src/test/fz/flakyTest/" + Paths.get(this.testFilename).getParent()).isDirectory()){
-            res = "src/test/fz/flakyTest/" + Paths.get(this.testFilename).getParent();
-            expected = "src/test/fz/scriptGolden/flakyTest/" + expectedDir;
-        } else
-        if (new File("src/test/fz/errors/" + Paths.get(this.testFilename).getParent()).isDirectory()){
-            res = "src/test/fz/errors/" + Paths.get(this.testFilename).getParent();
-            expected = "src/test/fz/scriptGolden/errors/" + expectedDir;
-        }
+        Path expectedDir = Paths.get(iterator.next()).getParent();
 
-        System.out.println(expected);
-        ProcessBuilder pb1 = new ProcessBuilder("diff", "-r", res, expected);
-        Process p2 = pb1.start();
-        boolean result = false;
-        if( 0 == p2.waitFor() ) {
-            result = true;
-            System.out.println(expected);
-        }
-        String s = null;
-        BufferedReader stdInput = new BufferedReader(new InputStreamReader(p2.getInputStream()));
+            if (new File("src/test/fz/upTo5sec/" + Paths.get(this.testFilename).getParent()).isDirectory()) {
+                res = "src/test/fz/upTo5sec/" + Paths.get(this.testFilename).getParent();
+                expected = "src/test/fz/scriptGolden/" + expectedDir;
+            } else if (new File("src/test/fz/upTo30sec/" + Paths.get(this.testFilename).getParent()).isDirectory()) {
+                res = "src/test/fz/upTo30sec/" + Paths.get(this.testFilename).getParent();
+                expected = "src/test/fz/scriptGolden/upTo30sec/" + expectedDir;
+            } else if (new File("src/test/fz/upTo1min/" + Paths.get(this.testFilename).getParent()).isDirectory()) {
+                res = "src/test/fz/upTo1min/" + Paths.get(this.testFilename).getParent();
+                expected = "src/test/fz/scriptGolden/upTo1min/" + expectedDir;
+            } else if (new File("src/test/fz/upTo5min/" + Paths.get(this.testFilename).getParent()).isDirectory()) {
+                res = "src/test/fz/upTo5min/" + Paths.get(this.testFilename).getParent();
+                expected = "src/test/fz/scriptGolden/upTo5min/" + expectedDir;
+            } else if (new File("src/test/fz/upTo1hour/" + Paths.get(this.testFilename).getParent()).isDirectory()) {
+                res = "src/test/fz/upTo1hour/" + Paths.get(this.testFilename).getParent();
+                expected = "src/test/fz/scriptGolden/upTo1hour/" + expectedDir;
+            } else if (new File("src/test/fz/above1hour/" + Paths.get(this.testFilename).getParent()).isDirectory()) {
+                res = "src/test/fz/above1hour/" + Paths.get(this.testFilename).getParent();
+                expected = "src/test/fz/scriptGolden/above1hour/" + expectedDir;
+            } else if (new File("src/test/fz/flakyTest/" + Paths.get(this.testFilename).getParent()).isDirectory()) {
+                res = "src/test/fz/flakyTest/" + Paths.get(this.testFilename).getParent();
+                expected = "src/test/fz/scriptGolden/flakyTest/" + expectedDir;
+            } else if (new File("src/test/fz/errors/" + Paths.get(this.testFilename).getParent()).isDirectory()) {
+                res = "src/test/fz/errors/" + Paths.get(this.testFilename).getParent();
+                expected = "src/test/fz/scriptGolden/errors/" + expectedDir;
+            }
 
-        while ((s = stdInput.readLine()) != null) {
-            System.out.println(expected + "\n" + s);
-        }
+//            System.out.println(expected);
+            ProcessBuilder pb1 = new ProcessBuilder("diff", "-r", res, expected);
+            Process p2 = pb1.start();
+            boolean result = false;
+            if (0 == p2.waitFor()) {
+                result = true;
+                System.out.println(expected);
+            }
+            String s = null;
+            BufferedReader stdInput = new BufferedReader(new InputStreamReader(p2.getInputStream()));
 
-        Assert.assertEquals(true, result );
+            while ((s = stdInput.readLine()) != null) {
+                System.out.println(expected + "\n" + s);
+            }
+
+            Assert.assertEquals(true, result);
 
 
 
@@ -147,9 +136,13 @@ public class FznFileGeneratorTest extends MinizincBasedTestsHelper {
         pb1.directory(new File("src/test/fz/scriptTest"));
         pb1.start();
 
-        ProcessBuilder pb2 = new ProcessBuilder("/bin/bash", "fznFileGenerator.sh" , testFolderName.toString() );
-        pb2.directory(new File("src/test/fz/"));
-        Process p = pb2.start();
+        ProcessBuilder pb2 = new ProcessBuilder("/bin/bash", "listgenerator");
+        pb2.directory(new File("src/test/fz/scriptGolden"));
+        pb2.start();
+
+        ProcessBuilder pb3 = new ProcessBuilder("/bin/bash", "fznFileGenerator.sh" , testFolderName.toString() );
+        pb3.directory(new File("src/test/fz/"));
+        Process p = pb3.start();
 
         String s = null;
         BufferedReader stdInput = new BufferedReader(new InputStreamReader(p.getInputStream()));
