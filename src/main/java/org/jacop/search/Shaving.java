@@ -30,10 +30,7 @@
 
 package org.jacop.search;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
+import java.util.*;
 
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.PrimitiveConstraint;
@@ -242,8 +239,9 @@ import org.jacop.core.Store;
 
             HashMap<IntVar, LinkedHashSet<Integer>> shavableNeighbour = shavable.get(current);
 
-            for (IntVar shaveVar : shavableNeighbour.keySet()) {
-                LinkedHashSet<Integer> list = shavableNeighbour.get(shaveVar);
+            for (Map.Entry<IntVar, LinkedHashSet<Integer>> entry : shavableNeighbour.entrySet()) {
+                IntVar shaveVar = entry.getKey();
+                LinkedHashSet<Integer> list = entry.getValue();
 
                 for (Integer shaveVal : list) {
 

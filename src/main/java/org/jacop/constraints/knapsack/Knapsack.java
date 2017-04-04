@@ -30,11 +30,7 @@
 
 package org.jacop.constraints.knapsack;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.Constraint;
@@ -289,10 +285,12 @@ public class Knapsack extends Constraint implements UsesQueueVariable {
 
         items = new KnapsackItem[profits.length];
 
-        Set<IntVar> qs = itemPar.keySet();
         int i = 0;
-        for (IntVar q : qs)
-            items[i++] = itemPar.get(q);
+        for (Map.Entry<IntVar, KnapsackItem> entry : itemPar.entrySet()) {
+            KnapsackItem value = entry.getValue();
+            // Use the key and the value
+            items[i++] = value;
+        }
 
         this.knapsackCapacity = knapsackCapacity;
         this.knapsackProfit = knapsackProfit;

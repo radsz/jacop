@@ -191,8 +191,6 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
 
     int levelOfFirstConsistencyCheck;
 
-    int numberTuples = 0;
-
     /**
      * It represents tuples which are supports for each of the variables. The
      * first index denotes variable index. The second index denotes value index.
@@ -509,8 +507,6 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
 
         tuplesFromConstructor = temp4Shrinking;
 
-        numberTuples = tuplesFromConstructor.length;
-
         // TO DO, just store parameters for later use in impose
         // function, move all code below to impose function.
 
@@ -736,8 +732,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
             int i = 0;
             for (String number : oneElement) {
                 try {
-                    int value = Integer.valueOf(number);
-                    tuple[i++] = value;
+                    tuple[i++] = Integer.parseInt(number);
                 } catch (NumberFormatException ex) {
                 }
                 ;

@@ -621,7 +621,7 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
                     System.out.println("sortedVal " + sortedVal);
 
                 values[i][j] = sortedVal.poll();
-                supportCount[i][j] = val.get(new Integer(values[i][j]));
+                supportCount[i][j] = val.get(Integer.valueOf(values[i][j]));
                 this.tuples[i][j] = new int[supportCount[i][j]][];
             }
 
@@ -844,11 +844,9 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
             int i = 0;
             for (String number : oneElement) {
                 try {
-                    int value = Integer.valueOf(number);
-                    tuple[i++] = value;
+                    tuple[i++] = Integer.parseInt(number) ;
                 } catch (NumberFormatException ex) {
                 }
-                ;
             }
 
             tuples.add(tuple);

@@ -773,8 +773,7 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
             int i = 0;
             for (String number : oneElement) {
                 try {
-                    int value = Integer.valueOf(number);
-                    tuple[i++] = value;
+                    tuple[i++] = Integer.parseInt(number);
                 } catch (NumberFormatException ex) {
                 }
             }
