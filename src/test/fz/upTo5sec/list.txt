@@ -624,7 +624,6 @@ mapping/full2x2
 mapping/mesh2x2_1
 marathon/marathon
 marathon2/marathon2
-markov_chains/markov_chains
 markov_chains_taha/markov_chains_taha
 matching_sums/matching_sums
 matchmaker/matchmaker
@@ -737,7 +736,6 @@ numbrix/numbrix
 numeric_keypad/numeric_keypad
 numerica_p20/numerica_p20
 numerica_p21/numerica_p21
-numerica_p23/numerica_p23
 numerica_p24/numerica_p24
 nurse_rostering_with_availability/nurse_rostering_with_availability
 nurses/nurses

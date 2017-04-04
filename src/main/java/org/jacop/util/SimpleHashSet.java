@@ -227,9 +227,9 @@ public class SimpleHashSet<E> {
             capacity <<= 1;
 
         this.loadFactor = loadFactor;
-        threshold = (int) (capacity * loadFactor);
-        table = new Entry[capacity];
-        initialCapacity = table.length;
+        this.threshold = (int) (capacity * loadFactor);
+        this.table = new Entry[capacity];
+        this.initialCapacity = table.length;
     }
 
     /**

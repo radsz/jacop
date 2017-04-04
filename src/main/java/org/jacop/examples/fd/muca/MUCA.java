@@ -981,8 +981,6 @@ public class MUCA extends ExampleFD {
         int noTransformations = 0;
         int no = 0;
 
-        ArrayList<IntVar> usedXorBids = new ArrayList<IntVar>();
-
         bidCosts = new ArrayList<IntVar>();
 
         for (ArrayList<ArrayList<Transformation>> bid : bids) {
@@ -1010,8 +1008,6 @@ public class MUCA extends ExampleFD {
                 n.addDom(bid_xor.size(), bid_xor.size());
 
                 store.impose(new SumInt(store, xorUsedTransformation, "==", n));
-
-                usedXorBids.add(n);
 
                 nVars[++i] = n;
                 tuples[i] = new int[bid.size() + 1];

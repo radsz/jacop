@@ -30,13 +30,7 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.LinkedList;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.*;
@@ -87,10 +81,6 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
     // Any variable which matched edge ends up deleted is added to this
     // structure to obtain a new matched edge
     LinkedHashSet<IntVar> freeVariables = new LinkedHashSet<IntVar>();
-
-    // Any variable which matched edge ends up deleted is added to this
-    // structure to obtain a new matched edge
-    protected ArrayList<IntVar> freeVariablesAtFailure = new ArrayList<IntVar>();
 
     // failure (inconsistency) discovered during imposition
     boolean impositionFailure = false;
@@ -540,8 +530,6 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
         if (!freeVariables.isEmpty()) {
 
             if (!hopcroftKarpMaximumMatching()) {
-
-                freeVariablesAtFailure = new ArrayList<IntVar>(freeVariables);
                 freeVariables.clear();
                 variableQueue.clear();
                 throw Store.failException;
@@ -644,10 +632,11 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
 
             // Update stamps for new matching
 
-            IntVar next;
-            for (Iterator<IntVar> e = scc.keySet().iterator(); e.hasNext(); ) {
-                next = (IntVar) e.next();
-                sccStamp.get(next).update(scc.get(next));
+            for (Map.Entry<IntVar, Integer> entry : scc.entrySet()) {
+                IntVar key = entry.getKey();
+                Integer value = entry.getValue();
+                // Use the key and the value
+                sccStamp.get(key).update(value);
             }
 
             nStamp.update(vn + 1);
@@ -926,7 +915,6 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
                 System.out.println("Non Free Values" + nonFreeValues);
             }
 
-            HashSet<Integer> visitedValues = new HashSet<Integer>(valueMapVariable.size());
             HashSet<IntVar> visitedVariables = new HashSet<IntVar>(matching.size());
 
             // Very important since above it is also defined
@@ -943,7 +931,6 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
                         currentlyUsedPotentialFreeValue++;
 
                         if (!nonFreeValues.contains(potentialTop)) {
-                            visitedValues.add(potentialTop);
                             path.addLast(potentialTop);
                             break;
                         }
@@ -1033,7 +1020,6 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
                         // matching
                         top = matching.get(first).value();
                         path.addLast(top);
-                        visitedValues.add(top);
                     }
 
                     if (debugAll)
@@ -1169,11 +1155,11 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
         store.addChanged(this);
         store.countConstraint();
 
-        Integer value = null;
-
-        for (Iterator<Integer> e = valueMapVariable.keySet().iterator(); e.hasNext(); ) {
-            value = e.next();
-            stamps.put(value, new TimeStamp<Integer>(store, valueMapVariable.get(value).size() - 1));
+        for (Map.Entry<Integer, SimpleArrayList<IntVar>> entry : valueMapVariable.entrySet()) {
+            Integer key = entry.getKey();
+            SimpleArrayList<IntVar> value = entry.getValue();
+            // Use the key and the value
+            stamps.put(key, new TimeStamp<Integer>(store, value.size() - 1));
         }
 
         // the initial maximum matching needs to be computed
@@ -1825,7 +1811,7 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
 
                         for (int m = 0; m <= lastPosition; m++)
                             if (!exploredX.contains(currentSimpleArrayList.get(m)))
-                                if (singleVar != null)
+                                if (singleVar == null)
                                     singleVar = currentSimpleArrayList.get(m);
                                 else
                                     single = false;

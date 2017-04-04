@@ -32,6 +32,7 @@ package org.jacop.search;
 
 import java.util.IdentityHashMap;
 import java.util.Iterator;
+import java.util.Map;
 
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.XeqC;
@@ -242,10 +243,10 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 
             IdentityHashMap<T, Integer> position = select.getVariablesMapping();
 
-            //		vars = (T[]) new Var[position.size()];
-
-            for (Iterator<T> itr = position.keySet().iterator(); itr.hasNext(); ) {
-                T current = itr.next();
+            for (Map.Entry<T, Integer> entry : position.entrySet()) {
+                T current = entry.getKey();
+                Integer value = entry.getValue();
+                // Use the key and the value
                 if (vars == null) {
                     if (current instanceof IntVar)
                         vars = (T[]) new IntVar[position.size()];
@@ -254,7 +255,7 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
                     if (current instanceof FloatVar)
                         vars = (T[]) new FloatVar[position.size()];
                 }
-                vars[position.get(current)] = current;
+                vars[value] = current;
             }
 
             solutions = new Domain[1][vars.length];

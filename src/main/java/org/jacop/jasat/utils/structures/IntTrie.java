@@ -236,27 +236,9 @@ public class IntTrie<N extends IntTrie.Node<N>> {
     /**
      * @return the set of values that the Trie contains (quite inefficient)
      */
-    @SuppressWarnings("unused")   // TODO: remove when implemented
+    @SuppressWarnings("unused")
     public Set<Integer> values() {
-        HashSet<Integer> answer = new HashSet<Integer>();
-
-        // depth first search, with manually managed stack (quite tricky)
-        Stack<N> path = new Stack<N>(); // stack of nodes
-        int index = 0; // current value
-        int depth = 0;
-        N current = root;
-    /*
-		while (true) {
-			
-			// deal with current node
-			
-			// TODO stop condition
-			
-		}
-		*/
-
-
-        return answer;
+        throw new UnsupportedOperationException();
     }
 
     /**

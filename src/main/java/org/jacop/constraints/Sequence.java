@@ -32,6 +32,7 @@ package org.jacop.constraints;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 
 import org.jacop.constraints.regular.Regular;
 import org.jacop.core.IntDomain;
@@ -121,9 +122,9 @@ public class Sequence extends DecomposedConstraint<Constraint> {
         for (int i = 0; i < q; i++) {
             HashMap<String, FSMState> mappingStringNext = new HashMap<String, FSMState>();
 
-            for (String stateString : mappingString.keySet()) {
-
-                FSMState state = mappingString.get(stateString);
+            for (Map.Entry<String, FSMState> entry : mappingString.entrySet()) {
+                String stateString = entry.getKey();
+                FSMState state = entry.getValue();
 
                 if (mappingQuantity.get(state) < max) {
                     // transition 1 (within a set) is allowed
@@ -150,11 +151,13 @@ public class Sequence extends DecomposedConstraint<Constraint> {
         fsm.allStates.addAll(mappingString.values());
         fsm.finalStates.addAll(mappingString.values());
 
-        for (String description : mappingString.keySet()) {
+        for (Map.Entry<String, FSMState> entry : mappingString.entrySet()) {
+            String description = entry.getKey();
+            FSMState state = entry.getValue();
 
             String one = description.substring(1) + "1";
 
-            FSMState predecessor = mappingString.get(description);
+            FSMState predecessor = state;
             FSMState successor = mappingString.get(one);
             if (successor != null)
                 predecessor.addTransition(new FSMTransition(set, successor));

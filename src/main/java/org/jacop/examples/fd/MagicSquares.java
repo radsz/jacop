@@ -259,16 +259,6 @@ public class MagicSquares extends ExampleFD {
 
         // store.print();
 
-        ArrayList<IntVar> fdvV = new ArrayList<IntVar>();
-
-        for (int i = 0; i < number; i++)
-            fdvV.add(squares[(i) * number + i]);
-        for (int i = number; i > 0; i--)
-            fdvV.add(squares[(i - 1) * number + (number - i)]);
-
-        for (IntVar v : squares)
-            fdvV.add(v);
-
     }
 
     /**

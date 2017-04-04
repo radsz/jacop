@@ -73,7 +73,7 @@ public class PerfectSquare extends ExampleFD {
     /**
      * It specifies which of the pre-defined problems should be solved.
      */
-    public static int problemNo = 0;
+    // public static int problemNo = 0;
 
     IntVar[] varsX;
     IntVar[] varsY;
@@ -88,7 +88,9 @@ public class PerfectSquare extends ExampleFD {
      * second array.
      */
 
-    public static int[][][] squares =
+    public final static int[][][] squares() {
+
+        return new int[][][]
         {{{20}, {2, 3, 4, 5, 6, 7, 8}}, {{112}, {2, 4, 6, 7, 8, 9, 11, 15, 16, 17, 18, 19, 24, 25, 27, 29, 33, 35, 37, 42, 50}},
             {{110}, {2, 3, 4, 6, 7, 8, 12, 13, 14, 15, 16, 17, 18, 21, 22, 23, 24, 26, 27, 28, 50, 60}},
             {{110}, {1, 2, 3, 4, 6, 8, 9, 12, 14, 16, 17, 18, 19, 21, 22, 23, 24, 26, 27, 28, 50, 60}},
@@ -297,6 +299,7 @@ public class PerfectSquare extends ExampleFD {
             {{655}, {10, 14, 15, 21, 25, 26, 31, 40, 51, 53, 54, 57, 65, 83, 84, 86, 151, 152, 173, 193, 194, 215, 216, 246, 288}},
             {{661}, {5, 7, 17, 18, 23, 31, 36, 38, 41, 64, 73, 77, 83, 84, 102, 106, 111, 161, 175, 196, 203, 210, 238, 248, 262}}};
 
+    }
     /**
      * It runs a perfect square problem. If no problemNo specified as input
      * argument it will solve all the problems given in square matrix.
@@ -307,15 +310,12 @@ public class PerfectSquare extends ExampleFD {
 
         if (args.length == 0) {
 
-            for (int i = 0; i < squares.length; i++) {
-
-                problemNo = i;
-
+            for (int i = 0; i < squares().length; i++) {
                 System.out.println("Problem no. " + i);
 
                 PerfectSquare example = new PerfectSquare();
 
-                example.model();
+                example.model(i);
                 example.search();
 
                 //				example = new PerfectSquare();
@@ -327,6 +327,7 @@ public class PerfectSquare extends ExampleFD {
             return;
         }
 
+        int problemNo = 0;
 
         PerfectSquare example = new PerfectSquare();
 
@@ -336,16 +337,16 @@ public class PerfectSquare extends ExampleFD {
 
         }
 
-        example.model();
+        example.model(problemNo);
         example.search();
 
         example = new PerfectSquare();
 
-        example.modelBasic();
+        example.modelBasic(problemNo);
         example.search();
 
         example = new PerfectSquare();
-        example.modelGeost();
+        example.modelGeost(problemNo);
         example.search();
 
     }
@@ -362,14 +363,14 @@ public class PerfectSquare extends ExampleFD {
 
         PerfectSquare example = new PerfectSquare();
 
+        int problemNo = squares().length - 1;
         if (args.length == 1) {
 
-	    problemNo = Integer.parseInt(args[0]);
+	          problemNo = Integer.parseInt(args[0]);
 	    
-        } else
-            problemNo = squares.length - 1;
+        }
 
-        example.model();
+        example.model(problemNo);
         example.search();
 
     }
@@ -380,12 +381,12 @@ public class PerfectSquare extends ExampleFD {
      * not use diff2 constraint which is very useful for placing 2-dimensional
      * rectangles.
      */
-    public void modelBasic() {
+    public void modelBasic(int problemNo) {
 
         store = new Store();
 
-        int numberOfRectangles = squares[problemNo][1].length;
-        int masterSize = squares[problemNo][0][0];
+        int numberOfRectangles = squares()[problemNo][1].length;
+        int masterSize = squares()[problemNo][0][0];
 
         varsX = new IntVar[numberOfRectangles];
         varsY = new IntVar[numberOfRectangles];
@@ -397,7 +398,7 @@ public class PerfectSquare extends ExampleFD {
 
         for (int j = numberOfRectangles - 1; j >= 0; j--) {
 
-            int sqSize = squares[problemNo][1][j];
+            int sqSize = squares()[problemNo][1][j];
 
             IntVar X = new IntVar(store, "x" + j, 0, masterSize - sqSize);
 
@@ -419,8 +420,8 @@ public class PerfectSquare extends ExampleFD {
         for (int i = 0; i < varsX.length; i++) {
             endX[i] = new IntVar(store, 0, masterSize);
             endY[i] = new IntVar(store, 0, masterSize);
-            store.impose(new XplusCeqZ(varsX[i], squares[problemNo][1][i], endX[i]));
-            store.impose(new XplusCeqZ(varsY[i], squares[problemNo][1][i], endY[i]));
+            store.impose(new XplusCeqZ(varsX[i], squares()[problemNo][1][i], endX[i]));
+            store.impose(new XplusCeqZ(varsY[i], squares()[problemNo][1][i], endY[i]));
         }
 
         for (int i = 0; i < varsX.length; i++)
@@ -443,7 +444,7 @@ public class PerfectSquare extends ExampleFD {
                 IntVar b = new IntVar(store, 0, 1);
                 store.impose(new Reified(new And(new XlteqC(varsX[j], i), new XgtC(endX[j], i)), b));
                 IntVar s = new IntVar(store, 0, masterSize);
-                store.impose(new XmulCeqZ(b, squares[problemNo][1][j], s));
+                store.impose(new XmulCeqZ(b, squares()[problemNo][1][j], s));
                 sumList.add(s);
             }
 
@@ -459,7 +460,7 @@ public class PerfectSquare extends ExampleFD {
                 IntVar b = new IntVar(store, 0, 1);
                 store.impose(new Reified(new And(new XlteqC(varsY[j], i), new XgtC(endY[j], i)), b));
                 IntVar s = new IntVar(store, 0, masterSize);
-                store.impose(new XmulCeqZ(b, squares[problemNo][1][j], s));
+                store.impose(new XmulCeqZ(b, squares()[problemNo][1][j], s));
                 sumList.add(s);
             }
             store.impose(new SumInt(store, sumList, "==", limit));
@@ -470,13 +471,13 @@ public class PerfectSquare extends ExampleFD {
 
     }
 
-    @Override public void model() {
+    public void model(int problemNo) {
 
         store = new Store();
 
-        int noRectangles = squares[problemNo][1].length;
+        int noRectangles = squares()[problemNo][1].length;
 
-        int masterSize = squares[problemNo][0][0];
+        int masterSize = squares()[problemNo][0][0];
 
         varsX = new IntVar[noRectangles];
         varsY = new IntVar[noRectangles];
@@ -490,7 +491,7 @@ public class PerfectSquare extends ExampleFD {
 
         for (int j = noRectangles - 1; j >= 0; j--) {
 
-            int sqSize = squares[problemNo][1][j];
+            int sqSize = squares()[problemNo][1][j];
 
             IntVar X = new IntVar(store, "x" + j, 0, masterSize - sqSize);
 
@@ -520,13 +521,13 @@ public class PerfectSquare extends ExampleFD {
     }
 
 
-    public void modelGeost() {
+    public void modelGeost(int problemNo) {
 
         store = new Store();
 
-        int noRectangles = squares[problemNo][1].length;
+        int noRectangles = squares()[problemNo][1].length;
 
-        int masterSize = squares[problemNo][0][0];
+        int masterSize = squares()[problemNo][0][0];
 
         varsX = new IntVar[noRectangles];
         varsY = new IntVar[noRectangles];
@@ -544,7 +545,7 @@ public class PerfectSquare extends ExampleFD {
 
         for (int j = noRectangles - 1; j >= 0; j--) {
 
-            int sqSize = squares[problemNo][1][j];
+            int sqSize = squares()[problemNo][1][j];
 
             IntVar X = new IntVar(store, "x" + j, 0, masterSize - sqSize);
             IntVar Y = new IntVar(store, "y" + j, 0, masterSize - sqSize);
@@ -645,6 +646,10 @@ public class PerfectSquare extends ExampleFD {
 
     }
 
+    @Override public void model() {
+        model(0);
+    }
+
     @Override public boolean search() {
 
         long T1, T2, T;
@@ -714,11 +719,11 @@ public class PerfectSquare extends ExampleFD {
      * @return latex representation of the solution in a single string.
      */
 
-    public String printLaTex(long runtime) {
+    public String printLaTex(long runtime, int problemNo) {
 
         StringBuffer result = new StringBuffer();
 
-        result.append("Solution to PerfectSquare problem of master size equal to " + squares[problemNo][0][0] + "\n\n");
+        result.append("Solution to PerfectSquare problem of master size equal to " + squares()[problemNo][0][0] + "\n\n");
 
         IntVar[] xl = size;
         IntVar[] yl = size;

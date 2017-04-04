@@ -280,7 +280,6 @@ public class AmongVar extends Constraint implements UsesQueueVariable {
      */
     public void consistencyWhen_LB0_EQ_UB0(Store store) {
 
-        IntDomain lbSDom = (IntDomain) ((MutableDomainValue) lbS.value()).domain;
         IntDomain futureDom = (IntDomain) ((MutableDomainValue) futureLbS.value()).domain;
         IntVar y;
         int i;
@@ -297,6 +296,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable {
         if (debugAll) {
             System.out.println("-------------Consistency when LB0 == UB0 -------------");
             System.out.println("--LEVEL : " + store.level);
+            IntDomain lbSDom = (IntDomain) ((MutableDomainValue) lbS.value()).domain;
             System.out.println("--lbSDom  = " + lbSDom);
             System.out.println("--futureDom  = " + futureDom);
             System.out.println("covered min " + yGround);

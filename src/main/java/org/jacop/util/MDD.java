@@ -100,7 +100,7 @@ public class MDD {
     /**
      * The initial size of the array representing an MDD.
      */
-    public static int startSize = 1000;
+    public final static int START_SIZE = 1000;
 
     /**
      * It specifies the arguments required to be saved by an XML format as well as
@@ -178,7 +178,7 @@ public class MDD {
         }
 
         freePosition = 0 + domainLimits[0];
-        diagram = new int[startSize];
+        diagram = new int[START_SIZE];
 
         mtree(table);
 
@@ -317,7 +317,7 @@ public class MDD {
         }
 
         freePosition = 0 + domainLimits[0];
-        diagram = new int[startSize];
+        diagram = new int[START_SIZE];
 
         extendable = true;
 
