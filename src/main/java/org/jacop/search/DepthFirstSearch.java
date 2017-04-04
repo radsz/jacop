@@ -1010,9 +1010,11 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
         store.setLevel(store.level + 1);
         depth = store.level;
 
-        if (result)
+        if (result) {
             result = label(0);
-
+            if (printInfo)
+                System.out.println("Labeling has finished with return value of " + result);
+        }
         store.removeLevel(store.level);
         store.setLevel(store.level - 1);
         depth--;
@@ -1116,9 +1118,11 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
         store.setLevel(store.level + 1);
         depth = store.level;
 
-        if (result)
+        if (result) {
             result = label(0);
-
+            if (printInfo)
+                System.out.println("Labeling has finished with return value of " + result);
+        }
         store.removeLevel(store.level);
         store.setLevel(store.level - 1);
         depth--;

@@ -70,7 +70,7 @@ public class FSMState {
      * It creates a state with id equl to the number of instances FSMState created.
      */
     public FSMState() {
-        this.id = FSM.stateId++;
+        this.id = FSM.idNumber.incrementAndGet();
         transitions = new HashSet<FSMTransition>();
     }
 

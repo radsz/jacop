@@ -58,7 +58,7 @@ public class ExampleBasedTest {
 
         CarSequencing example = new CarSequencing();
 
-        CarSequencing.readFromArray(CarSequencing.problem, example);
+        CarSequencing.readFromArray(CarSequencing.problem(), example);
 
         example.model();
 
@@ -410,7 +410,7 @@ public class ExampleBasedTest {
         example.model();
 
         assertEquals(true, example.searchAllAtOnce());
-        assertEquals(6, example.search.getSolutionListener().solutionsNo());
+        assertEquals(1, example.search.getSolutionListener().solutionsNo());
     }
 
     @Test public void testFittingNumbers() {
@@ -696,7 +696,7 @@ public class ExampleBasedTest {
 
             PerfectSquare example = new PerfectSquare();
 
-            int[] problemNumbers = {0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, example.squares.length - 1};
+            int[] problemNumbers = {0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, example.squares().length - 1};
             String[] solutions = {  "[_1 = 8,_2 = 7,_3 = 6,_4 = 5,_5 = 4,_6 = 3,_7 = 2,x0 = 7,x1 = 8,x2 = 5,x3 = 0,x4 = 7,x5 = 0,x6 = 0,y0 = 12,y1 = 0,y2 = 8,y3 = 8,y4 = 14,y5 = 13,y6 = 0]",
                                     "[_10 = 38,_11 = 37,_12 = 32,_13 = 31,_14 = 29,_15 = 28,_16 = 21,_17 = 19,_18 = 16,_19 = 15,_20 = 14,_21 = 13,_22 = 12,_23 = 10,_24 = 8,_25 = 7,_26 = 5,_27 = 4,_28 = 3,_29 = 2,_30 = 1,_8 = 44,_9 = 41,x0 = 43,x1 = 43,x10 = 45,x11 = 44,x12 = 28,x13 = 59,x14 = 44,x15 = 0,x16 = 44,x17 = 38,x18 = 78,x19 = 73,x2 = 40,x20 = 0,x21 = 69,x22 = 0,x3 = 40,x4 = 40,x5 = 38,x6 = 65,x7 = 59,x8 = 28,x9 = 65,y0 = 64,y1 = 65,y10 = 65,y11 = 50,y12 = 44,y13 = 50,y14 = 29,y15 = 44,y16 = 0,y17 = 79,y18 = 37,y19 = 0,y2 = 64,y20 = 72,y21 = 69,y22 = 0,y3 = 60,y4 = 67,y5 = 72,y6 = 29,y7 = 69,y8 = 60,y9 = 37]",
                                     "[_31 = 134,_32 = 123,_33 = 79,_34 = 66,_35 = 63,_36 = 60,_37 = 57,_38 = 55,_39 = 49,_40 = 33,_41 = 32,_42 = 29,_43 = 28,_44 = 24,_45 = 22,_46 = 20,_47 = 17,_48 = 15,_49 = 14,_50 = 11,_51 = 9,_52 = 3,_53 = 2,x0 = 176,x1 = 191,x10 = 134,x11 = 162,x12 = 176,x13 = 123,x14 = 208,x15 = 123,x16 = 134,x17 = 134,x18 = 194,x19 = 191,x2 = 147,x20 = 178,x21 = 0,x22 = 0,x3 = 123,x4 = 162,x5 = 147,x6 = 191,x7 = 156,x8 = 156,x9 = 123,y0 = 77,y1 = 194,y10 = 112,y11 = 111,y12 = 79,y13 = 55,y14 = 79,y15 = 0,y16 = 140,y17 = 197,y18 = 194,y19 = 128,y2 = 88,y20 = 0,y21 = 0,y22 = 123,y3 = 112,y4 = 97,y5 = 97,y6 = 111,y7 = 77,y8 = 55,y9 = 88]",
@@ -716,8 +716,7 @@ public class ExampleBasedTest {
             
             for (int no = 0; no < problemNumbers.length; no++) {
 
-                example.problemNo = problemNumbers[no];
-                example.model();
+                example.model(problemNumbers[no]);
                 example.search();
 
                 assertEquals(solutions[no], example.store.toStringOrderedVars());

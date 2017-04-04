@@ -32,13 +32,7 @@ package org.jacop.examples.fd;
 
 import java.util.ArrayList;
 
-import org.jacop.constraints.Alldifferent;
-import org.jacop.constraints.PrimitiveConstraint;
-import org.jacop.constraints.XeqC;
-import org.jacop.constraints.XeqY;
-import org.jacop.constraints.XgtY;
-import org.jacop.constraints.XneqC;
-import org.jacop.constraints.XplusCeqZ;
+import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
@@ -186,6 +180,7 @@ public class Exodus extends ExampleFD {
         wiekburning[0] = new XplusCeqZ(country[ika], 2, story[iburn]);
         wiekburning[1] = new XplusCeqZ(country[ika], 3, story[iburn]);
 
+        store.impose(new Or(wiekburning));
     }
 
 

@@ -77,10 +77,10 @@ public class CarSequencing extends ExampleFD {
     /**
      * A simple car sequencing problem.
      */
-    public static String[] problem =
-        {"10 5 6", "1 2 1 2 1", "2 3 3 5 5", "0 1 1 0 1 1 0", "1 1 0 0 0 1 0", "2 2 0 1 0 0 1", "3 2 0 1 0 1 0", "4 2 1 0 1 0 0",
+    public static String[] problem() {
+        return new String[] {"10 5 6", "1 2 1 2 1", "2 3 3 5 5", "0 1 1 0 1 1 0", "1 1 0 0 0 1 0", "2 2 0 1 0 0 1", "3 2 0 1 0 1 0", "4 2 1 0 1 0 0",
             "5 2 1 1 0 0 0"};
-
+    }
 
     /** Not easy car sequencing problem.
      100 5 22
@@ -556,7 +556,7 @@ public class CarSequencing extends ExampleFD {
 
         CarSequencing example = new CarSequencing();
 
-        readFromArray(CarSequencing.problem, example);
+        readFromArray(CarSequencing.problem(), example);
 
         example.model();
 
@@ -578,7 +578,7 @@ public class CarSequencing extends ExampleFD {
 
         CarSequencing example = new CarSequencing();
 
-        readFromArray(CarSequencing.problem, example);
+        readFromArray(CarSequencing.problem(), example);
 
         example.model();
 

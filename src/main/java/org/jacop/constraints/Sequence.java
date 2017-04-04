@@ -151,11 +151,13 @@ public class Sequence extends DecomposedConstraint<Constraint> {
         fsm.allStates.addAll(mappingString.values());
         fsm.finalStates.addAll(mappingString.values());
 
-        for (String description : mappingString.keySet()) {
+        for (Map.Entry<String, FSMState> entry : mappingString.entrySet()) {
+            String description = entry.getKey();
+            FSMState state = entry.getValue();
 
             String one = description.substring(1) + "1";
 
-            FSMState predecessor = mappingString.get(description);
+            FSMState predecessor = state;
             FSMState successor = mappingString.get(one);
             if (successor != null)
                 predecessor.addTransition(new FSMTransition(set, successor));

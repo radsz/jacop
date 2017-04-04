@@ -185,8 +185,6 @@ public class Sudoku extends ExampleFD {
 
         ExampleFD.printMatrix(example.elements, example.elements.length, example.elements[0].length);
 
-        example = new Sudoku();
-
     }
 
 

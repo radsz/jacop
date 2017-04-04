@@ -32,6 +32,7 @@ package org.jacop.util.fsm;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -52,8 +53,7 @@ public class FSM {
     /**
      * It specifies number of states created in DFA class.
      */
-    public static int stateId = 0;
-
+    static AtomicInteger idNumber = new AtomicInteger(0);
     /**
      * It specifies the intial state of DFA.
      */
