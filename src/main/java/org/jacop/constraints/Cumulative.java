@@ -284,16 +284,16 @@ public class Cumulative extends Constraint {
             if (debug)
                 System.out.println("Checking if " + l + " can be after " + S);
             for (Task t : S) {
-                int tEST = t.EST();
+                int tEST = t.est();
                 if (tEST <= startS)
                     startS = tEST;
                 a += t.areaMin();
             }
 
-            afterS = ((l.LCT() - startS) * limit.max() - a >= l.areaMin());
+            afterS = ((l.lct() - startS) * limit.max() - a >= l.areaMin());
 
             if (debug)
-                System.out.println("s(S')= " + startS + ",  c(l)= " + l.LCT() + ",  a(Sp)= " + a + ",  afterS= " + afterS);
+                System.out.println("s(S')= " + startS + ",  c(l)= " + l.lct() + ",  a(Sp)= " + a + ",  afterS= " + afterS);
         }
         return afterS;
     }
@@ -321,16 +321,16 @@ public class Cumulative extends Constraint {
             if (debug)
                 System.out.println("Checking if " + l.toString() + " can be before tasks in " + S.toString());
             for (Task t : S) {
-                int tLCT = t.LCT();
+                int tLCT = t.lct();
                 if (tLCT >= completionS)
                     completionS = tLCT;
                 a += t.areaMin();
             }
 
-            beforeS = ((completionS - l.EST()) * limit.max() >= a + l.areaMin());
+            beforeS = ((completionS - l.est()) * limit.max() >= a + l.areaMin());
 
             if (debug)
-                System.out.println("s(l)= " + l.EST() + ",  c(S')= " + completionS + ",  a(Sp)= " + a + ",  beforeS= " + beforeS);
+                System.out.println("s(l)= " + l.est() + ",  c(S')= " + completionS + ",  a(Sp)= " + a + ",  beforeS= " + beforeS);
         }
         return beforeS;
     }
@@ -344,8 +344,8 @@ public class Cumulative extends Constraint {
             if (debug)
                 System.out.println("Checking if " + l + " can be between tasks in " + S);
             for (Task t : S) {
-                int tLCT = t.LCT();
-                int tEST = t.EST();
+                int tLCT = t.lct();
+                int tEST = t.est();
                 if (tLCT >= completionS)
                     completionS = tLCT;
                 if (tEST <= startS)
@@ -358,7 +358,7 @@ public class Cumulative extends Constraint {
             if (debug)
                 System.out.println(
                     "s(S')= " + startS + ",  c(S')= " + completionS + ",  a(Sp)= " + a + ", l_area= " + larea + ",  betweenS= " + betweenS);
-        }
+	}
         return betweenS;
     }
 
@@ -371,7 +371,7 @@ public class Cumulative extends Constraint {
 
             if (doProfile) {
 
-                cumulativeProfiles.make(Ts);
+                cumulativeProfiles.make(Ts, setLimit);
 
                 minProfile = cumulativeProfiles.minProfile();
                 if (setLimit)
@@ -410,35 +410,29 @@ public class Cumulative extends Constraint {
     void edgeFindingDown(Store store) {
 
         TreeSet<IntDomain> estUpList = new TreeSet<IntDomain>(new DomainminComparator<IntDomain>());
-        ArrayList<Task> S = new ArrayList<Task>(Ts.length), L = new ArrayList<Task>(Ts.length);
-        int est0;
-        Task t, l; // s, r=null;
-        int compl; // startl, durl
-        long totalArea = 0;
-        int estS = 0;
 
         if (debug)
             System.out.println("------------------------------------------------\n" + "Edge Finding Down\n"
                 + "------------------------------------------------");
-        for (Task T : Ts)
-            if (T.dur.min() > 0 && T.res.min() > 0)
-                estUpList.add(T.start.dom());
+        for (Task t : Ts)
+            if (t.nonZeroTask()) 
+                estUpList.add(t.start.dom());
 
-        for (IntDomain EST : estUpList) {
-            est0 = EST.min();
+        for (IntDomain est : estUpList) {
+            int est0 = est.min();
             if (debug)
                 System.out.println("est0 = " + est0 + "\n=================");
 
             // Create S = {t|EST(t) >= est0}
-            S.clear();
             // Create L = {t|EST(t) < est0 && LCT(t) > est0}
-            L.clear();
-            for (Task T : Ts) {
-                if (T.dur.min() > 0 && T.res.min() > 0) {
-                    if (T.EST() >= est0)
-                        S.add(T);
-                    if (T.EST() < est0 && T.LCT() > est0)
-                        L.add(T);
+	    ArrayList<Task> S = new ArrayList<Task>(Ts.length),
+		L = new ArrayList<Task>(Ts.length);
+            for (Task t : Ts) {
+                if (t.nonZeroTask()) {
+                    if (t.est() >= est0)
+                        S.add(t);
+                    else if (t.lct() > est0) // tt.est() < est0 && 
+                        L.add(t);
                 }
             }
             if (debug) {
@@ -446,9 +440,9 @@ public class Cumulative extends Constraint {
                 System.out.println("L = " + L);
             }
 
-            // update upper bound if T cannot be the last in S
-            for (Task T : S)
-                notLast(store, T, S);
+            // update upper bound if tt cannot be the last in S
+            for (Task t : S)
+                notLast(store, t, S);
 
             if (S.size() != 0 && !fitTasksAfter(S, est0))
                 throw Store.failException;
@@ -456,80 +450,75 @@ public class Cumulative extends Constraint {
             while (S.size() != 0 && L.size() != 0) {
                 // Select task l from L with the maximal area
                 int indexOfl = maxArea(L);
-                l = L.get(indexOfl);
-                int l_LCT = l.LCT();
+                Task l = L.get(indexOfl);
+                int l_LCT = l.lct();
                 int limitMax = limit.max();
                 // System.out.println("Maxumum area task= " + l);
                 // Checking if l can be between and after S
 
-                boolean AFTER = true, BETWEEN = true;
+                boolean after = true, between = true;
 
                 int startOfS = IntDomain.MaxInt, completionOfS = IntDomain.MinInt;
                 long area1 = 0, area2 = 0, larea = 0;
                 if (debug)
                     System.out.println("Checking if " + l + " can be after " + S);
-                for (Task tt : S) {
-                    int tEST = tt.EST();
-                    int tLCT = tt.LCT();
-                    if (tEST <= startOfS)
-                        startOfS = tEST;
-                    if (tLCT >= completionOfS)
-                        completionOfS = tLCT;
-                    area1 += tt.areaMin();
-                    area2 += minOverlap(tt, startOfS, completionOfS);
+                for (Task t : S) {
+		    startOfS = Math.min(startOfS, t.est());
+		    completionOfS = Math.max(completionOfS, t.lct());
+                    area1 += t.areaMin();
+                    area2 += minOverlap(t, startOfS, completionOfS);
                 }
-                totalArea = area1;
-                estS = startOfS;
-                AFTER = ((l_LCT - startOfS) * limitMax - area1 >= l.areaMin());
+                long totalArea = area1;
+                int estS = startOfS;
+                after = ((l_LCT - startOfS) * limitMax - area1 >= l.areaMin());
 
                 // larea = l.dur.min()*l.res.min();
                 larea = minOverlap(l, startOfS, completionOfS);
-                BETWEEN = ((completionOfS - startOfS) * limitMax >= area2 + larea);
+                between = ((completionOfS - startOfS) * limitMax >= area2 + larea);
 
-                if (AFTER && BETWEEN) {
+                if (after && between) {
                     L.remove(indexOfl);
                     removeFromS_Lct(S);
                 } else {
-                    if (BETWEEN && !AFTER) {
+                    if (between && !after) {
                         // update upper bound of l
                         long slack, a = 0;
                         int newCompl = IntDomain.MaxInt, startS, newStartl = IntDomain.MinInt;
                         int maxuse = limitMax - l.res.min();
 
-                        compl = l_LCT;
+                        int compl = l_LCT;
                         a = totalArea;
                         startS = estS;
                         slack = (l_LCT - startS) * limitMax - a - l.areaMin();
 
                         int j = 0;
-                        ArrayList<Task> Tasks = new ArrayList<Task>();
+			Task[] tasks = new Task[S.size()];
+			int tasksLength = 0;
                         while (slack < 0 && j < S.size()) {
-                            t = S.get(j);
+                            Task t = S.get(j);
 
-                            if (t.res.min() <= maxuse || l_LCT <= t.LST()) {
+                            if (t.res.min() <= maxuse || l_LCT <= t.lst()) {
                                 slack += t.areaMin();
                             } else {
-                                Tasks.add(t);
+                                tasks[tasksLength++] = t;
                             }
                             j++;
                         }
 
-                        if (slack < 0 && Tasks.size() != 0) {
-                            Task[] TaskArr = new Task[Tasks.size()];
-                            TaskArr = Tasks.toArray(TaskArr);
-                            Arrays.sort(TaskArr, new TaskDescLSTComparator<Task>());
+                        if (slack < 0 && tasksLength != 0) {
+                            Arrays.sort(tasks, 0, tasksLength-1, new TaskDescLSTComparator<Task>());
                             j = 0;
                             int limitMin = limit.min();
-                            while (slack < 0 && j < TaskArr.length) {
-                                t = (Task) TaskArr[j];
+                            while (slack < 0 && j < tasksLength) {
+                                Task t = tasks[j];
                                 j++;
-                                newCompl = t.LST();
+                                newCompl = t.lst();
                                 slack = slack - (compl - newCompl) * limitMin + t.areaMin();
                                 compl = newCompl;
                             }
 
                             newStartl = compl - l.dur.min();
-                            if (newStartl < l.LST()) {
+                            if (newStartl < l.lst()) {
                                 if (debugNarr)
                                     System.out.println(
                                         ">>> Cumulative EF <<< 2. Narrowed " + l.start + " in " + IntDomain.MinInt + ".." + newStartl);
@@ -544,33 +533,33 @@ public class Cumulative extends Constraint {
                         else
                             removeFromS_Lct(S);
                     } else {
-                        if (!BETWEEN && AFTER)
+                        if (!between && after)
                             L.remove(indexOfl);
                         else {
-                            // ! BETWEEN && ! AFTER => BEFORE
+                            // ! between && ! after => before
                             // l must be before S
                             // update upper bound of l.Start and l.Dur
 
                             if (debug)
-                                System.out.println("AFTER=" + AFTER + " BETWEEN=" + BETWEEN + "!!!");
+                                System.out.println("after=" + after + " between=" + between + "!!!");
 
-                            int durationOfS = 0;
-                            compl = 0;
-                            for (Task T : S) {
-                                durationOfS += T.dur.min() * T.res.min();
-                                if (T.LCT() > compl) {
-                                    compl = T.LCT();
+                            int areaOfS = 0;
+                            int compl = 0;
+                            for (Task t : S) {
+                                areaOfS += t.areaMin();
+                                if (t.lct() > compl) {
+                                    compl = t.lct();
                                 }
                             }
 
-                            int finish = compl - (durationOfS + l.dur.min() * l.res.min()) / limit.max();
+                            long finish = compl - (areaOfS + l.areaMin()) / limit.max();
                             if (l.start.max() > finish) {
                                 if (debugNarr)
                                     System.out.println(
                                         l + " must be before\n" + S + "\n>>> Cumulative EF <<< 3. Narrowed " + l.start + " in "
                                             + IntDomain.MinInt + ".." + finish);
 
-                                l.start.domain.inMax(store.level, l.start, finish);
+                                l.start.domain.inMax(store.level, l.start, (int)finish);
                             }
 
                             L.remove(indexOfl);
@@ -584,36 +573,29 @@ public class Cumulative extends Constraint {
     void edgeFindingUp(Store store) {
 
         TreeSet<IntDomain> lctDownList = new TreeSet<IntDomain>(new DomainmaxComparator<IntDomain>());
-        ArrayList<Task> S = new ArrayList<Task>(), L = new ArrayList<Task>();
-        int lct0;
-        Task t, l; // s
-        int startl; // , durl, compl;
-        long totalArea = 0;
-        int lctS = 0;
 
         if (debug)
             System.out.println("------------------------------------------------\n" + "Edge Finding Up\n"
                 + "------------------------------------------------");
-        for (Task T : Ts)
-            if (T.dur.min() > 0 && T.res.min() > 0)
-                lctDownList.add(T.Completion());
+        for (Task t : Ts)
+            if (t.nonZeroTask()) 
+                lctDownList.add(t.completion());
 
-        for (IntDomain LCT : lctDownList) {
+        for (IntDomain lct : lctDownList) {
 
-            lct0 = LCT.max();
+            int lct0 = lct.max();
             if (debug)
                 System.out.println("lct0 = " + lct0 + "\n=================");
 
             // Create S = {t|EST(t) <= lct0}
-            S.clear();
             // Create L = {t|EST(t) < lct0 && LCT(t) > lct0}
-            L.clear();
-            for (Task T : Ts) {
-                if (T.dur.min() > 0 && T.res.min() > 0) {
-                    if (T.LCT() <= lct0)
-                        S.add(T);
-                    if (T.EST() < lct0 && T.LCT() > lct0)
-                        L.add(T);
+	    ArrayList<Task> S = new ArrayList<Task>(Ts.length), L = new ArrayList<Task>(Ts.length);
+            for (Task t : Ts) {
+                if (t.nonZeroTask()) {
+                    if (t.lct() <= lct0)
+                        S.add(t);
+                    else if (t.est() < lct0) // && tt.lct() > lct0
+                        L.add(t);
                 }
             }
             if (debug) {
@@ -621,9 +603,9 @@ public class Cumulative extends Constraint {
                 System.out.println("L = " + L);
             }
 
-            // update lower bound if T cannot be the first in S
-            for (Task T : S)
-                notFirst(store, T, S);
+            // update lower bound if tt cannot be the first in S
+            for (Task t : S)
+                notFirst(store, t, S);
 
             if (S.size() != 0 && !fitTasksBefore(S, lct0))
                 throw Store.failException;
@@ -631,84 +613,78 @@ public class Cumulative extends Constraint {
             while (S.size() != 0 && L.size() != 0) {
                 // Select task l from L with the maximal area
                 int indexOfl = maxArea(L);
-                l = L.get(indexOfl);
-                int l_EST = l.EST();
+                Task l = L.get(indexOfl);
+                int l_EST = l.est();
                 int limitMax = limit.max();
                 // System.out.println("Maxumum area task= " + l);
                 // Checking if l can be between and before S
 
-                boolean BEFORE = true, BETWEEN = true;
+                boolean before = true, between = true;
 
                 int completionOfS = IntDomain.MinInt, startOfS = IntDomain.MaxInt;
                 long area1 = 0, area2 = 0, larea = 0;
                 if (debug)
                     System.out.println("Checking if " + l + " can be before or between tasks in " + S);
 
-                for (Task tt : S) {
-                    int tLCT = tt.LCT();
-                    int tEST = tt.EST();
-                    if (tLCT >= completionOfS)
-                        completionOfS = tLCT;
-                    area1 += tt.areaMin();
-                    if (tEST <= startOfS)
-                        startOfS = tEST;
-                    area2 += minOverlap(tt, startOfS, completionOfS);
+                for (Task t : S) {
+		    completionOfS = Math.max(completionOfS, t.lct());
+		    startOfS = Math.min(startOfS, t.est());
+                    area1 += t.areaMin();
+                    area2 += minOverlap(t, startOfS, completionOfS);
                 }
 
-                totalArea = area1;
-                lctS = completionOfS;
-                BEFORE = ((completionOfS - l_EST) * limitMax >= area1 + l.areaMin());
+                long totalArea = area1;
+                int lctS = completionOfS;
+                before = ((completionOfS - l_EST) * limitMax >= area1 + l.areaMin());
 
                 // larea = l.dur.min()*l.res.min();
                 larea = minOverlap(l, startOfS, completionOfS);
-                BETWEEN = ((completionOfS - startOfS) * limitMax >= area2 + larea);
+                between = ((completionOfS - startOfS) * limitMax >= area2 + larea);
 
                 if (debug)
                     System.out.println(
-                        "BEFORE=" + BEFORE + " BETWEEN=" + BETWEEN + " completionOfS=" + completionOfS + " startOfS=" + startOfS + " area2="
+                        "before=" + before + " between=" + between + " completionOfS=" + completionOfS + " startOfS=" + startOfS + " area2="
                             + area2 + "  larea=" + larea + "\nS = " + S + "\nl = " + l);
 
-                if (BEFORE && BETWEEN) {
+                if (before && between) {
                     L.remove(indexOfl);
                     removeFromS_Est(S);
                 } else {
-                    if (BETWEEN && !BEFORE) {
+                    if (between && !before) {
                         // update lower bound of l
 
                         long slack, a = 0;
-                        int completionS, // newCompl=IntDomain.MaxInt,
-                            newStartl = IntDomain.MinInt;
+                        int completionS, newStartl = IntDomain.MinInt;
                         int maxuse = limitMax - l.res.min();
 
-                        startl = l_EST;
+                        int startl = l_EST;
                         a = totalArea;
                         completionS = lctS;
                         slack = (completionS - l_EST) * limitMax - a - l.areaMin();
 
                         int j = 0;
-                        ArrayList<Task> Tasks = new ArrayList<Task>();
+			Task[] tasks = new Task[S.size()];
+			int tasksLength = 0;
                         while (slack < 0 && j < S.size()) {
-                            t = S.get(j);
+                            Task t = S.get(j);
 
-                            if (t.res.min() <= maxuse || l_EST >= t.ECT()) {
+                            if (t.res.min() <= maxuse || l_EST >= t.ect()) {
                                 slack += t.areaMin();
                             } else {
-                                Tasks.add(t);
+                                tasks[tasksLength++] = t;
                             }
                             j++;
                         }
 
-                        if (slack < 0 && Tasks.size() != 0) {
-                            Task[] TaskArr = new Task[Tasks.size()];
-                            TaskArr = Tasks.toArray(TaskArr);
-                            Arrays.sort(TaskArr, new TaskAscECTComparator<Task>());
+                        if (slack < 0 && tasksLength != 0) {
+                            Arrays.sort(tasks, 0, tasksLength-1, new TaskAscECTComparator<Task>());
 
                             j = 0;
                             int limitMin = limit.min();
-                            while (slack < 0 && j < TaskArr.length) {
-                                t = (Task) TaskArr[j];
+                            while (slack < 0 && j < tasksLength) {
+                                Task t = tasks[j];
                                 j++;
-                                newStartl = t.ECT();
+                                newStartl = t.ect();
                                 slack = slack - (newStartl - startl) * limitMin + t.areaMin();
                                 startl = newStartl;
                             }
@@ -728,20 +704,20 @@ public class Cumulative extends Constraint {
                         else
                             removeFromS_Est(S);
                     } else {
-                        if (!BETWEEN && BEFORE)
+                        if (!between && before)
                             L.remove(indexOfl);
                         else {
-                            // ! BETWEEN && ! BEFORE => AFTER S
+                            // ! between && ! before => after S
                             // l must be after S
                             // update lower bound of l
                             if (debug)
-                                System.out.println("BEFORE=" + BEFORE + " BETWEEN=" + BETWEEN + "!!!");
+                                System.out.println("before=" + before + " between=" + between + "!!!");
 
-                            int durationOfS = 0;
-                            for (Task T : S)
-                                durationOfS += T.dur.min() * T.res.min();
+                            int areaOfS = 0;
+                            for (Task t : S)
+                                areaOfS += t.areaMin();
 
-                            int start = startOfS + durationOfS / limit.max();
+                            int start = startOfS + areaOfS / limit.max();
                             if (start > l.start.min()) {
                                 if (debugNarr)
                                     System.out.println(
@@ -762,70 +738,62 @@ public class Cumulative extends Constraint {
         int estS = IntDomain.MaxInt;
 
         for (Task t : S) {
-            int tEST = t.EST();
+            int tEST = t.est();
             if (tEST < estS)
                 estS = tEST;
         }
         return estS;
     }
 
-    boolean fitTasksAfter(ArrayList<Task> S, int est0) {
-        int durOfS = 0, lctOfS = IntDomain.MinInt, maxCompl = IntDomain.MaxInt, minDur = IntDomain.MaxInt, minRes = IntDomain.MaxInt;
+    boolean fitTasksAfter(ArrayList<Task> s, int est0) {
+        int areaS = 0, lctOfS = IntDomain.MinInt, minDur = IntDomain.MaxInt, minRes = IntDomain.MaxInt;
         boolean FitAfter;
 
-        for (Task t : S) {
-            maxCompl = t.LCT();
-            int Dur = t.dur.min();
-            int Res = t.res.min();
+        for (Task t : s) {
+            int dur = t.dur.min();
+            int res = t.res.min();
 
-            if (lctOfS < maxCompl)
-                lctOfS = maxCompl;
-            if (minDur > Dur)
-                minDur = Dur;
-            if (minRes > Res)
-                minRes = Res;
-
-            durOfS += Dur * Res;
+	    lctOfS = Math.max(lctOfS, t.lct());
+	    minDur = Math.min(minDur, dur);
+	    minRes = Math.min(minRes, res);
+	    
+            areaS += dur * res;
         }
 
         int limitMax = limit.max();
         long availableArea = (lctOfS - est0) * limitMax;
         if (debug)
-            System.out.println("Fit tasks of " + S + " after " + est0 + " = " + (availableArea >= durOfS));
-        FitAfter = availableArea >= durOfS;
+            System.out.println("Fit tasks of " + s + " after " + est0 + " = " + (availableArea >= areaS));
+        FitAfter = availableArea >= areaS;
 
         if (FitAfter)
-            FitAfter = ((lctOfS - est0) / minDur) * (limitMax / minRes) >= S.size();
+            FitAfter = ((lctOfS - est0) / minDur) * (limitMax / minRes) >= s.size();
         return FitAfter;
     }
 
-    boolean fitTasksBefore(ArrayList<Task> S, int lct0) {
-        int durOfS = 0, estOfS = IntDomain.MaxInt, minStart = 0, minDur = IntDomain.MaxInt, minRes = IntDomain.MaxInt;
+    boolean fitTasksBefore(ArrayList<Task> s, int lct0) {
+        int areaS = 0, estOfS = IntDomain.MaxInt, minDur = IntDomain.MaxInt, minRes = IntDomain.MaxInt;
         boolean FitBefore;
 
-        for (Task t : S) {
-            minStart = t.EST();
-            int Dur = t.dur.min();
-            int Res = t.res.min();
+        for (Task t : s) {
+            int dur = t.dur.min();
+            int res = t.res.min();
 
-            if (estOfS > minStart)
-                estOfS = minStart;
-            if (minDur > Dur)
-                minDur = Dur;
-            if (minRes > Res)
-                minRes = Res;
-
-            durOfS += Dur * Res;
+	    estOfS = Math.min(estOfS, t.est());
+	    minDur = Math.min(minDur, dur);
+	    minRes = Math.min(minRes, res);
+	    
+            areaS += dur * res;
         }
 
         int limitMax = limit.max();
         long availableArea = (lct0 - estOfS) * limitMax;
         if (debug)
-            System.out.println("Fit tasks of " + S + " before " + lct0 + " = " + " Available are: " + availableArea + " Area: " + durOfS);
+            System.out.println("Fit tasks of " + s + " before " + lct0 + " = " + " Available are: " + availableArea + " Area: " + areaS);
 
-        FitBefore = availableArea >= durOfS;
+        FitBefore = availableArea >= areaS;
         if (FitBefore)
-            FitBefore = ((lct0 - estOfS) / minDur) * (limitMax / minRes) >= S.size();
+            FitBefore = ((lct0 - estOfS) / minDur) * (limitMax / minRes) >= s.size();
         return FitBefore;
     }
 
@@ -866,7 +834,7 @@ public class Cumulative extends Constraint {
         int lctS = IntDomain.MinInt;
 
         for (Task t : S) {
-            int tLCT = t.LCT();
+            int tLCT = t.lct();
             if (tLCT > lctS)
                 lctS = tLCT;
         }
@@ -874,14 +842,13 @@ public class Cumulative extends Constraint {
     }
 
     int maxArea(ArrayList<Task> Ts) {
-        long area = 0, newArea = 0;
-        // Task t;
-        int index = 0; // Ts_size=Ts.size();
+        long area = 0;
+        int index = 0;
 
         // Select task with the maximal area
         int i = 0;
         for (Task t : Ts) {
-            newArea = t.areaMin();
+            long newArea = t.areaMin();
             if (area < newArea) {
                 area = newArea;
                 index = i;
@@ -895,17 +862,17 @@ public class Cumulative extends Constraint {
 
         int tDur_min = 0;
         int tdur = t.dur.min();
-        int tect = t.ECT();
-        int tlst = t.LST();
-        int temp1 = tect - est;
-        int temp2 = lct - tlst;
+        int tect = t.ect();
+        int tlst = t.lst();
 
         if (est <= tlst)
-            if (tect >= lct)
+            if (tect >= lct) {
                 // |---t----|
                 // |--------------|
                 // est lct
+		int temp2 = lct - tlst;
                 tDur_min = temp2 < tdur ? temp2 : tdur;
+	    }
             else
                 // tect < lct
                 // |---t----|
@@ -915,11 +882,13 @@ public class Cumulative extends Constraint {
         else
             // est > tlst
             if (tect > est)
-                if (tect <= lct)
+                if (tect <= lct) {
                     // |---t----|
                     // |--------------|
                     // est lct
+		    int temp1 = tect - est;
                     tDur_min = temp1 < tdur ? temp1 : tdur;
+		}
                 else
                     // tect > lct
                     // |--------t---------|
@@ -933,7 +902,7 @@ public class Cumulative extends Constraint {
     }
 
     void notFirst(Store store, Task s, ArrayList<Task> S) {
-        int sEST = s.EST(); // sLCT = s.LCT();
+        int sEST = s.est(); // sLCT = s.LCT();
         int completionS = IntDomain.MinInt, newStartl = IntDomain.MinInt, startl = sEST;
         long a = 0, slack, maxuse = limit.max() - s.res.min();
 
@@ -944,7 +913,7 @@ public class Cumulative extends Constraint {
             for (Task t : S) {
                 // if ( ! t.equals(s) ) {
                 if (t != s) {
-                    int tLCT = t.LCT();
+                    int tLCT = t.lct();
                     if (tLCT >= completionS)
                         completionS = tLCT;
                     a += t.areaMin();
@@ -970,7 +939,7 @@ public class Cumulative extends Constraint {
                     // "\nmaxuse = " + maxuse + ", " +
                     // t.res.min());
 
-                    if (t.res.min() <= maxuse || sEST >= t.ECT()) {
+                    if (t.res.min() <= maxuse || sEST >= t.ect()) {
                         slack += t.areaMin();
                     } else {
                         Tasks[tasksLength++] = t;
@@ -987,7 +956,7 @@ public class Cumulative extends Constraint {
                 while (slack < 0 && j < tasksLength) {
                     Task t = (Task) Tasks[j];
                     j++;
-                    newStartl = t.ECT();
+                    newStartl = t.ect();
                     slack = slack - (newStartl - startl) * limitMin + t.areaMin();
                     startl = newStartl;
                 }
@@ -997,22 +966,13 @@ public class Cumulative extends Constraint {
                         System.out.println(">>> Cumulative EF <<< 4. Narrowed " + s.start + " in " + startl + ".." + IntDomain.MaxInt);
 
                     s.start.domain.inMin(store.level, s.start, newStartl);
-
-                    // if ( s.LaCT() - newStartl < ((Variable)s.dur).max() ) {
-                    // if ( traceNarr )
-                    // System.out.println(", "+
-                    // (Variable)s.dur +
-                    // " in " +
-                    // 0 + ".." + (int)(s.LaCT() - newStartl));
-                    // store.in(s.dur, 0, s.LaCT() - newStartl );
-                    // }
                 }
             }
         }
     }
 
     void notLast(Store store, Task s, ArrayList<Task> S) {
-        int sLCT = s.LCT(); // sEST = s.EST();
+        int sLCT = s.lct();
         int compl = sLCT;
 
         int startS = IntDomain.MaxInt, newCompl = IntDomain.MaxInt, newStartl = IntDomain.MinInt;
@@ -1024,7 +984,7 @@ public class Cumulative extends Constraint {
                 System.out.println("Not last " + s + " in " + S);
             for (Task t : S) {
                 if (t != s) {
-                    int tEST = t.EST();
+                    int tEST = t.est();
                     if (tEST <= startS)
                         startS = tEST;
                     a += t.areaMin();
@@ -1046,7 +1006,7 @@ public class Cumulative extends Constraint {
                 Task t = S.get(j);
                 if (t != s) {
 
-                    if (t.res.min() <= maxuse || sLCT <= t.LST()) {
+                    if (t.res.min() <= maxuse || sLCT <= t.lst()) {
                         slack += t.areaMin();
                     } else {
                         Tasks[tasksLength++] = t;
@@ -1063,7 +1023,7 @@ public class Cumulative extends Constraint {
                 while (slack < 0 && j < tasksLength) {
                     Task t = (Task) Tasks[j];
                     j++;
-                    newCompl = t.LST();
+                    newCompl = t.lst();
                     slack = slack - (compl - newCompl) * limitMin + t.areaMin();
                     compl = newCompl;
                 }
@@ -1177,67 +1137,73 @@ public class Cumulative extends Constraint {
         IntTask minUse = new IntTask();
 
         for (Task t : Ts) {
-            IntVar resUse = t.res;
-            IntVar dur = t.dur;
             // check only for tasks which cannot allow to have duration or resources = 0
-            // if (dur.min() > 0 && resUse.min() > 0) {
-            if (dur.max() > 0 && resUse.max() > 0) {
-                int A = -1, B = -1;
+            if (t.nonZeroTask()) {
+                int a = -1, b = -1;
                 if (t.minUse(minUse)) {
-                    A = minUse.start();
-                    B = minUse.stop();
+                    a = minUse.start();
+                    b = minUse.stop();
                 }
 
+		IntVar resUse = t.res;
+		IntVar dur = t.dur;
+	
                 if (debug)
-                    System.out.println("Start time = " + t.start + ", resource use = " + resUse + ", minimal use = {" + A + ".." + B + "}");
+                    System.out.println("Start time = " + t.start + ", resource use = " + resUse + ", minimal use = {" + a + ".." + b + "}");
 
                 IntDomain tStartDom = t.start.dom();
 
                 for (int m = 0; m < tStartDom.noIntervals(); m++)
-                    profileCheckInterval(store, t.start, dur, tStartDom.getInterval(m), resUse, A, B);
+                    profileCheckInterval(store, t.start, dur, tStartDom.getInterval(m), resUse, a, b);
             }
         }
     }
 
     @Override public void removeConstraint() {
-        for (Task T : Ts) {
-            T.start.removeConstraint(this);
-            T.dur.removeConstraint(this);
-            T.res.removeConstraint(this);
+        for (Task t : Ts) {
+            t.start.removeConstraint(this);
+            t.dur.removeConstraint(this);
+            t.res.removeConstraint(this);
         }
         limit.removeConstraint(this);
     }
 
-    void removeFromS_Est(ArrayList<Task> S) {
-        int estS;
-        ArrayList<Task> TasksToRemove = new ArrayList<Task>(S.size());
+    void removeFromS_Est(ArrayList<Task> s) {
 
-        // S = S \ {s in S|est(s) = est(S)}
-        estS = est(S);
-        for (Task t : S) {
-            if (estS == t.EST())
-                TasksToRemove.add(t);
-        }
-        S.removeAll(TasksToRemove);
+        // s = s \ {t in s | est(t) = est(s)}
+        int estS = est(s);
+	int l = s.size();
+	int i = 0;
+	while (i < l) {
+	    Task t = s.get(i);
+	    if (estS == t.est()) {
+		s.remove(i);
+		l--;
+	    }
+	    else
+		i++;
+	}
     }
 
-    void removeFromS_Lct(ArrayList<Task> S) {
-        int lctS;
-        ArrayList<Task> TasksToRemove = new ArrayList<Task>(S.size());
+    void removeFromS_Lct(ArrayList<Task> s) {
 
-        // S = S\{s in S|lct(s) = lct(S)}
-        lctS = lct(S);
-        for (Task t : S) {
-            if (lctS == t.LCT()) {
-                TasksToRemove.add(t);
-            }
-        }
-        S.removeAll(TasksToRemove);
+        // s = s \ {t in s | lct(t) = lct(s)}
+        int lctS = lct(s);
+	int l = s.size();
+	int i = 0;
+	while (i < l) {
+	    Task t = s.get(i);
+	    if (lctS == t.lct()) {
+		s.remove(i);
+		l--;
+	    }
+	    else
+		i++;
+	}
     }
 
     @Override public boolean satisfied() {
 
-        Task T;
         boolean sat = true;
 
         // if profile has been computed make a quick check
@@ -1251,9 +1217,9 @@ public class Cumulative extends Constraint {
             if (limit.singleton()) {
                 int i = 0;
                 while (sat && i < Ts.length) {
-                    T = Ts[i];
+                    Task t = Ts[i];
                     i++;
-                    sat = sat && T.start.singleton() && T.dur.singleton() && T.res.singleton();
+                    sat = sat && t.start.singleton() && t.dur.singleton() && t.res.singleton();
                 }
                 return sat;
             } else
@@ -1280,8 +1246,8 @@ public class Cumulative extends Constraint {
 
     void updateTasksRes(Store store) {
         int limitMax = limit.max();
-        for (Task T : Ts)
-            T.res.domain.inMax(store.level, T.res, limitMax);
+        for (Task t : Ts)
+            t.res.domain.inMax(store.level, t.res, limitMax);
     }
 
 
@@ -1324,7 +1290,7 @@ public class Cumulative extends Constraint {
         }
 
         public int compare(T o1, T o2) {
-            return (o1.Compl().min() - o2.Compl().min());
+            return (o1.ect() - o2.ect());
         }
     }
 
@@ -1335,7 +1301,7 @@ public class Cumulative extends Constraint {
         }
 
         public int compare(T o1, T o2) {
-            return (o2.start.max() - o1.start.max());
+            return (o2.lst() - o1.lst());
         }
     }
 

@@ -51,7 +51,7 @@ class CumulativeProfiles {
     CumulativeProfiles() {
     }
 
-    void make(Task[] Ts) {
+    void make(Task[] Ts, boolean doMaxProfile) {
         Task t;
         IntTask iTask = new IntTask();
         int strt, stp, value;
@@ -65,13 +65,15 @@ class CumulativeProfiles {
             tDurMin = t.dur.min();
             tResMin = t.res.min();
 
-            strt = t.EST();
-            stp = t.LaCT();
-            value = t.res.max();
-            if (trace)
-                System.out.println("Update profile " + "[" + strt + ".." + stp + ")=" + value);
-            maxProfile.addToProfile(strt, stp, value);
-
+	    if (doMaxProfile) {
+		strt = t.est();
+		stp = t.lastCT();
+		value = t.res.max();
+		if (trace)
+		    System.out.println("Update profile " + "[" + strt + ".." + stp + ")=" + value);
+		maxProfile.addToProfile(strt, stp, value);
+	    }
+	    
             if (tDurMin > 0 && tResMin > 0) {
                 if (t.minUse(iTask)) {
                     if (trace)

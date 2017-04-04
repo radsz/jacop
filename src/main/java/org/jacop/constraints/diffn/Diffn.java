@@ -153,7 +153,8 @@ public class Diffn extends Nooverlap {
 
             pruning();
 
-            areaCheck();
+	    if (doAreaCheck)
+	    	areaCheck();
 
             profile();
 

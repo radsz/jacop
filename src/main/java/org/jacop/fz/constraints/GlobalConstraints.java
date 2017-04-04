@@ -171,8 +171,19 @@ class GlobalConstraints implements ParserTreeConstants {
                     }
                 if (overflow)
                     support.delayedConstraints.add(new CumulativeBasic(s, d, r, b));
-                else
-                    support.delayedConstraints.add(new Cumulative(s, d, r, b));
+                else {
+		    HashSet<Integer> diff = new HashSet<Integer>();
+		    for (IntVar e : r) 
+			diff.add(e.min());
+		    double n = (double)r.length;
+		    double k = (double)diff.size();
+		    if (n*n < n*k*Math.log10((double)n)/Math.log10(2.0)) // formula when n*n < n*k*log(n)
+			// complexity O(n^2)
+			support.delayedConstraints.add(new org.jacop.constraints.Cumulative(s, d, r, b, true, true, false));
+		    else
+			// complexity O(n*k*logn)
+			support.delayedConstraints.add(new Cumulative(s, d, r, b));
+		}
             } else
                 support.delayedConstraints.add(new CumulativeBasic(s, d, r, b));
         }

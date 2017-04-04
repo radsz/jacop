@@ -59,39 +59,39 @@ class Task {
         return dur.min() * res.min();
     }
 
-    IntDomain Compl() {
+    IntDomain compl() {
         IntDomain sDom = start.dom();
         IntDomain dDom = dur.dom();
         return new IntervalDomain(sDom.min() + dDom.min(), sDom.max() + dDom.max());
     }
 
-    IntDomain Completion() {
+    IntDomain completion() {
         IntDomain sDom = start.dom();
         int dDomMin = dur.dom().min();
         return new IntervalDomain(sDom.min() + dDomMin, sDom.max() + dDomMin);
     }
 
-    IntVar Dur() {
+    IntVar dur() {
         return dur;
     }
 
-    int ECT() {
+    int ect() {
         return start.min() + dur.min();
     }
 
-    int EST() {
+    int est() {
         return start.min();
     }
 
-    int LaCT() {
+    int lastCT() {
         return start.max() + dur.max();
     }
 
-    int LCT() {
+    int lct() {
         return start.max() + dur.min();
     }
 
-    int LST() {
+    int lst() {
         return start.max();
     }
 
@@ -115,6 +115,10 @@ class Task {
 
     IntVar start() {
         return start;
+    }
+
+    boolean nonZeroTask() {
+	return dur.min() > 0 && res.min() > 0;
     }
 
     @Override public String toString() {

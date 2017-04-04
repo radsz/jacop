@@ -328,14 +328,17 @@ public class Nooverlap extends Constraint {
         }
     }
 
+    boolean doAreaCheck = true;
+    
     void energyCheck(Rectangle r, BitSet rects) {
 
         int xMin = r.est(x);
         int xMax = r.lct(x);
         int yMin = r.est(y);
         int yMax = r.lct(y);
+	long rSpace = (xMax-xMin)*(yMax-yMin);
         int xLengthMin = r.length(x).min(), yLengthMin = r.length(y).min();
-        int minArea = xLengthMin * yLengthMin;
+        long minArea = xLengthMin * yLengthMin;
         for (int j = rects.nextSetBit(0); j >= 0; j = rects.nextSetBit(j + 1)) {
             Rectangle rectj = rectangle[j];
             xMin = Math.min(xMin, rectj.est(x));
@@ -354,6 +357,8 @@ public class Nooverlap extends Constraint {
             if (maxNumberRectangles < rects.cardinality() + 1)
                 throw Store.failException;
         }
+
+	doAreaCheck = rSpace < minArea;
     }
 
     @Override public int getConsistencyPruningEvent(Var var) {

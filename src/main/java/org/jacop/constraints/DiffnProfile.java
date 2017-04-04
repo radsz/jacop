@@ -54,24 +54,23 @@ class DiffnProfile extends Profile {
     }
 
     void make(int i, int j, Rectangle r, int begin, int end, ArrayList<Rectangle> Rs) {
-        // Rectangle t;
 
         clear();
         maxProfileItemHeight = 0;
         IntDomain rOrigin_i_Dom = r.origin[i].dom();
         IntDomain rLength_i_Dom = r.length[i].dom();
         int rOriginMin = rOrigin_i_Dom.min(), rOriginMax = rOrigin_i_Dom.max(), rLengthMax = rLength_i_Dom.max();
-        IntRectangle R = new IntRectangle(r.dim);
+        IntRectangle iR = new IntRectangle(r.dim);
 
         for (Rectangle t : Rs) {
             IntDomain tOrigin_i_Dom = t.origin[i].dom();
             if (t != r && tOrigin_i_Dom.min() >= rOriginMin && tOrigin_i_Dom.max() + t.length[i].max() <= rOriginMax + rLengthMax) {
-                R.dim = 0;
-                if (t.minUse(i, R)) {
+                iR.dim = 0;
+                if (t.minUse(i, iR)) {
                     if (trace)
                         System.out
-                            .println("Update profile " + "[" + R.origin[j] + ".." + (R.origin[j] + R.length[j]) + ")=" + t.length(i).min());
-                    addToProfile(R.origin[j], R.origin[j] + R.length[j], t.length[i].min());
+                            .println("Update profile " + "[" + iR.origin[j] + ".." + (iR.origin[j] + iR.length[j]) + ")=" + t.length(i).min());
+                    addToProfile(iR.origin[j], iR.origin[j] + iR.length[j], t.length[i].min());
                 }
             }
         }
