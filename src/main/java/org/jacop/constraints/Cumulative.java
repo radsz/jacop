@@ -276,7 +276,6 @@ public class Cumulative extends Constraint {
     boolean after(Task l, ArrayList<Task> S) {
 
         int startS = IntDomain.MaxInt;
-
         long a = 0;
         boolean afterS = true;
 
@@ -284,9 +283,7 @@ public class Cumulative extends Constraint {
             if (debug)
                 System.out.println("Checking if " + l + " can be after " + S);
             for (Task t : S) {
-                int tEST = t.est();
-                if (tEST <= startS)
-                    startS = tEST;
+		startS = Math.min(startS, t.est());
                 a += t.areaMin();
             }
 
@@ -321,9 +318,7 @@ public class Cumulative extends Constraint {
             if (debug)
                 System.out.println("Checking if " + l.toString() + " can be before tasks in " + S.toString());
             for (Task t : S) {
-                int tLCT = t.lct();
-                if (tLCT >= completionS)
-                    completionS = tLCT;
+		completionS = Math.max(completionS, t.lct());
                 a += t.areaMin();
             }
 
@@ -344,12 +339,8 @@ public class Cumulative extends Constraint {
             if (debug)
                 System.out.println("Checking if " + l + " can be between tasks in " + S);
             for (Task t : S) {
-                int tLCT = t.lct();
-                int tEST = t.est();
-                if (tLCT >= completionS)
-                    completionS = tLCT;
-                if (tEST <= startS)
-                    startS = tEST;
+		completionS = Math.max(completionS, t.lct());
+		startS = Math.min(startS, t.est());
                 a += minOverlap(t, startS, completionS);
             }
             larea = minOverlap(l, startS, completionS);
@@ -834,9 +825,7 @@ public class Cumulative extends Constraint {
         int lctS = IntDomain.MinInt;
 
         for (Task t : S) {
-            int tLCT = t.lct();
-            if (tLCT > lctS)
-                lctS = tLCT;
+	    lctS = Math.max(lctS, t.lct());
         }
         return lctS;
     }
@@ -911,11 +900,8 @@ public class Cumulative extends Constraint {
             if (debug)
                 System.out.println("Not first " + s + " in " + S);
             for (Task t : S) {
-                // if ( ! t.equals(s) ) {
                 if (t != s) {
-                    int tLCT = t.lct();
-                    if (tLCT >= completionS)
-                        completionS = tLCT;
+		    completionS = Math.max(completionS, t.lct());
                     a += t.areaMin();
                 }
             }
@@ -933,12 +919,8 @@ public class Cumulative extends Constraint {
             int tasksLength = 0;
             while (slack < 0 && j < S.size()) {
                 Task t = S.get(j);
-                // if ( ! t.equals(s) ) {
-                if (t != s) {
-                    // System.out.println("s= "+s + ", t= " + t +
-                    // "\nmaxuse = " + maxuse + ", " +
-                    // t.res.min());
 
+                if (t != s) {
                     if (t.res.min() <= maxuse || sEST >= t.ect()) {
                         slack += t.areaMin();
                     } else {
@@ -984,9 +966,7 @@ public class Cumulative extends Constraint {
                 System.out.println("Not last " + s + " in " + S);
             for (Task t : S) {
                 if (t != s) {
-                    int tEST = t.est();
-                    if (tEST <= startS)
-                        startS = tEST;
+		    startS = Math.min(startS, t.est());
                     a += t.areaMin();
                 }
             }

@@ -1072,7 +1072,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
         // set cost and optimization for child searches
         if (s != null) {
             DepthFirstSearch[] childs = (DepthFirstSearch[]) s.childSearches;
-            while (childs != null) {
+            if (childs != null) {
                 for (DepthFirstSearch child : childs) {
                     child.setCostVar(costVar);
                     child.setOptimize(true);
