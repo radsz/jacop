@@ -497,7 +497,7 @@ public class Cumulative extends Constraint {
                         }
 
                         if (slack < 0 && tasksLength != 0) {
-                            Arrays.sort(tasks, 0, tasksLength-1, new TaskDescLSTComparator<Task>());
+                            Arrays.sort(tasks, 0, tasksLength, new TaskDescLSTComparator<Task>());
                             j = 0;
                             int limitMin = limit.min();
                             while (slack < 0 && j < tasksLength) {
@@ -668,7 +668,7 @@ public class Cumulative extends Constraint {
                         }
 
                         if (slack < 0 && tasksLength != 0) {
-                            Arrays.sort(tasks, 0, tasksLength-1, new TaskAscECTComparator<Task>());
+                            Arrays.sort(tasks, 0, tasksLength, new TaskAscECTComparator<Task>());
 
                             j = 0;
                             int limitMin = limit.min();

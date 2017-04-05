@@ -165,10 +165,10 @@ class GlobalConstraints implements ParserTreeConstants {
                 //   support.pose(new XlteqY(r[i], b));
             } else if (allVarGround(d) && allVarGround(r)) {
                 boolean overflow = false;
-                if (b != null)
-                    for (int i = 0; i < s.length; i++) {
-                        overflow = overflow || times_overflow((s[i].max() + d[i].max()), b.max());
-                    }
+
+		for (int i = 0; i < s.length; i++) 
+		    overflow = overflow || times_overflow((s[i].max() + d[i].max()), b.max());
+		
                 if (overflow)
                     support.delayedConstraints.add(new CumulativeBasic(s, d, r, b));
                 else {
@@ -177,9 +177,11 @@ class GlobalConstraints implements ParserTreeConstants {
 			diff.add(e.min());
 		    double n = (double)r.length;
 		    double k = (double)diff.size();
-		    if (n*n < n*k*Math.log10((double)n)/Math.log10(2.0)) // formula when n*n < n*k*log(n)
-			// complexity O(n^2)
-			support.delayedConstraints.add(new org.jacop.constraints.Cumulative(s, d, r, b, true, true, false));
+		    // KKU, 2017-04-05, formula when 3.5*n*n < n*k*log(n),
+		    // where 3.5 is experimantally selected constant
+		    if (3.5*n*n < n*k*Math.log10((double)n)/Math.log10(2.0))
+		    	// complexity O(n^2)
+		    	support.delayedConstraints.add(new org.jacop.constraints.Cumulative(s, d, r, b, true, true, false));
 		    else
 			// complexity O(n*k*logn)
 			support.delayedConstraints.add(new Cumulative(s, d, r, b));
