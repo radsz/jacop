@@ -915,7 +915,7 @@ public class Cumulative extends Constraint {
             // Upadate LB for task s
 
             int j = 0;
-            Task[] Tasks = new Task[S.size() - 1];
+            Task[] tasks = new Task[S.size() - 1];
             int tasksLength = 0;
             while (slack < 0 && j < S.size()) {
                 Task t = S.get(j);
@@ -924,19 +924,19 @@ public class Cumulative extends Constraint {
                     if (t.res.min() <= maxuse || sEST >= t.ect()) {
                         slack += t.areaMin();
                     } else {
-                        Tasks[tasksLength++] = t;
+                        tasks[tasksLength++] = t;
                     }
                 }
                 j++;
             }
 
-            // System.out.println("slack after = " + slack + "Tasks = " + Tasks );
+            // System.out.println("slack after = " + slack + "tasks = " + tasks );
             if (slack < 0 && tasksLength != 0) {
-                Arrays.sort(Tasks, 0, tasksLength - 1, new TaskAscECTComparator<Task>());
+                Arrays.sort(tasks, 0, tasksLength, new TaskAscECTComparator<Task>());
                 j = 0;
                 int limitMin = limit.min();
                 while (slack < 0 && j < tasksLength) {
-                    Task t = (Task) Tasks[j];
+                    Task t = tasks[j];
                     j++;
                     newStartl = t.ect();
                     slack = slack - (newStartl - startl) * limitMin + t.areaMin();
@@ -980,7 +980,7 @@ public class Cumulative extends Constraint {
             // Upadate UB for task s
 
             int j = 0;
-            Task[] Tasks = new Task[S.size() - 1];
+            Task[] tasks = new Task[S.size() - 1];
             int tasksLength = 0;
             while (slack < 0 && j < S.size()) {
                 Task t = S.get(j);
@@ -989,19 +989,19 @@ public class Cumulative extends Constraint {
                     if (t.res.min() <= maxuse || sLCT <= t.lst()) {
                         slack += t.areaMin();
                     } else {
-                        Tasks[tasksLength++] = t;
+                        tasks[tasksLength++] = t;
                     }
                 }
                 j++;
             }
 
             if (slack < 0 && tasksLength != 0) {
-                Arrays.sort(Tasks, 0, tasksLength - 1, new TaskDescLSTComparator<Task>());
+                Arrays.sort(tasks, 0, tasksLength, new TaskDescLSTComparator<Task>());
 
                 j = 0;
                 int limitMin = limit.min();
                 while (slack < 0 && j < tasksLength) {
-                    Task t = (Task) Tasks[j];
+                    Task t = tasks[j];
                     j++;
                     newCompl = t.lst();
                     slack = slack - (compl - newCompl) * limitMin + t.areaMin();

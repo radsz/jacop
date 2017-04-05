@@ -82,6 +82,14 @@ class TaskReversedView extends TaskView {
             start.domain.inMax(store.level, start, max);
     }
 
+    boolean exists() {
+	return dur.min() > 0 && res.min() > 0;
+    }
+
+    boolean maxNonZero() {
+	return dur.max() > 0 && res.max() > 0;
+    }
+
     // @Override
     // public String toString() {
     //   return "[" + super.toString() + ", reversed view: est = " + est() + ", lct =  " + lct() + ", ect = " + ect() + ", lst = " + lst() + ", treeIndex = " + treeIndex + "]";

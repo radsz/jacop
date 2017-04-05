@@ -311,7 +311,7 @@ public class CumulativeBasic extends Constraint {
             // from start to end
             int min = t.est();
             int max = t.lct();
-            if (t.dur.max() > 0 && t.res.max() > 0)
+            if (t.maxNonZero())  // t.dur.max() > 0 && t.res.max() > 0
                 if (!(min > maxProfile || max < minProfile)) {
                     es[j++] = new Event(pruneStart, t, min, t.res.max());
                     es[j++] = new Event(pruneEnd, t, max, -t.res.max());
@@ -375,7 +375,7 @@ public class CumulativeBasic extends Constraint {
                                 profileValue -= t.res.min();
 
                             // ========= Pruning start variable
-                            if (t.res.min() > 0 && t.dur.min() > 0)
+                            if (t.exists()) // t.res.min() > 0 && t.dur.min() > 0
                                 if (startExcluded[ti] == Integer.MAX_VALUE) {
                                     if (limitMax - profileValue < t.res.min()) {
                                         startExcluded[ti] = e.date() - t.dur.min() + 1;
@@ -428,7 +428,7 @@ public class CumulativeBasic extends Constraint {
                         profileValue -= t.res.min();
 
                     // ========= for start pruning
-                    if (t.res.min() > 0 && t.dur.min() > 0)
+                    if (t.exists()) // t.res.min() > 0 && t.dur.min() > 0
                         if (limitMax - profileValue < t.res.min()) {
                             startExcluded[ti] = e.date();
                         }
@@ -452,7 +452,7 @@ public class CumulativeBasic extends Constraint {
                         profileValue -= t.res.min();
 
                     // ========= pruning start variable
-                    if (t.res.min() > 0 && t.dur.min() > 0)
+                    if (t.exists()) // t.res.min() > 0 && t.dur.min() > 0
                         if (startExcluded[ti] != Integer.MAX_VALUE) {
                             // task ends and we remove forbidden area
 

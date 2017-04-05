@@ -84,6 +84,14 @@ class TaskNormalView extends TaskView {
             start.domain.inMin(store.level, start, est);
     }
 
+    boolean exists() {
+	return dur.min() > 0 && res.min() > 0;
+    }
+
+    boolean maxNonZero() {
+	return dur.max() > 0 && res.max() > 0;
+    }
+
     // @Override
     // public String toString() {
     //   return "[" + super.toString() + ", normal view: est = " + est() + ", lct =  " + lct() + ", ect = " + ect() + ", lst = " + lst() + ", treeIndex = " + treeIndex + "]";

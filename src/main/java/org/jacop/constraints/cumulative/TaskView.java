@@ -60,4 +60,8 @@ abstract class TaskView extends Task {
     abstract void updateNotFirstNotLast(int upd);
 
     abstract void updateDetectable(int est);
+
+    abstract boolean exists();
+
+    abstract boolean maxNonZero();
 }
