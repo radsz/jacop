@@ -434,6 +434,8 @@ import java.util.Map;
                             }
                         }
                         break;
+		default:
+		    throw new RuntimeException("Internal error in " + getClass().getName());			
                 }
             }
 

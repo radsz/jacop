@@ -264,6 +264,8 @@ public class Solve implements ParserTreeConstants {
                         getCostFloat((ASTSolveExpr) kind.jjtGetChild(0));
                     solve = "%% maximize(" + costMax + ") ";
                     break; // maximize
+		default:
+		    throw new RuntimeException("Internal error in " + getClass().getName());
             }
             System.out.println(solve + " : " + si);
         }
@@ -825,6 +827,8 @@ public class Solve implements ParserTreeConstants {
                         getCostFloat((ASTSolveExpr) kind.jjtGetChild(0));
                     solve = "%% maximize(" + costMax + ") ";
                     break; // maximize
+		default:
+		    throw new RuntimeException("Internal error in " + getClass().getName());
             }
             System.out.println(solve + " : seq_search([" + si + "])");
         }

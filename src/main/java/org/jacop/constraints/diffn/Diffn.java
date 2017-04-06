@@ -491,7 +491,8 @@ public class Diffn extends Nooverlap {
                     }
 
                     break;
-
+	    default:
+		throw new RuntimeException("Internal error in " + getClass().getName());
             }
         }
     }

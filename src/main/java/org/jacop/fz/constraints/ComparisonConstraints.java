@@ -338,6 +338,8 @@ class ComparisonConstraints implements ParserTreeConstants {
                         } else
                             c = new XgteqC(v1, i2);
                         break;
+		default:
+		    throw new RuntimeException("Internal error in " + getClass().getName());
                 }
             } else if (p1.getType() == 0 || p1.getType() == 1) { // int rel var or bool
                 IntVar v2 = support.getVariable(p2);
@@ -419,6 +421,8 @@ class ComparisonConstraints implements ParserTreeConstants {
                         } else
                             c = new XlteqC(v2, i1);
                         break;
+		default:
+		    throw new RuntimeException("Internal error in " + getClass().getName());
                 }
             } else { // var rel var
                 IntVar v1 = support.getVariable(p1);
@@ -465,6 +469,8 @@ class ComparisonConstraints implements ParserTreeConstants {
                     case Support.ge:
                         c = new XgteqY(v1, v2);
                         break;
+		default:
+		    throw new RuntimeException("Internal error in " + getClass().getName());
                 }
             }
 
@@ -505,6 +511,8 @@ class ComparisonConstraints implements ParserTreeConstants {
                             if (i1 < i2)
                                 throw Store.failException;
                             break;
+		    default:
+			throw new RuntimeException("Internal error in " + getClass().getName());
                     }
                 } else { // first parameter int/bool & second parameter var
 
@@ -532,6 +540,8 @@ class ComparisonConstraints implements ParserTreeConstants {
                         case Support.ge:
                             v2.domain.in(store.level, v2, IntDomain.MinInt, i1);
                             break;
+		    default:
+			throw new RuntimeException("Internal error in " + getClass().getName());
                     }
                 }
             } else { // first parameter var
@@ -561,6 +571,8 @@ class ComparisonConstraints implements ParserTreeConstants {
                         case Support.ge:
                             v1.domain.in(store.level, v1, i2, IntDomain.MaxInt);
                             break;
+		    default:
+			throw new RuntimeException("Internal error in " + getClass().getName());
                     }
 
                 } else { // first parameter var & second parameter var
@@ -587,6 +599,8 @@ class ComparisonConstraints implements ParserTreeConstants {
                         case Support.ge:
                             support.pose(new XgteqY(v1, v2));
                             break;
+		    default:
+			throw new RuntimeException("Internal error in " + getClass().getName());
                     }
                 }
             }

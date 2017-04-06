@@ -500,6 +500,8 @@ public class CumulativeBasic extends Constraint {
                     tasksToPrune.set(ti, false);
                     break;
 
+	    default:
+		    throw new RuntimeException("Internal error in " + getClass().getName());
             }
         }
     }

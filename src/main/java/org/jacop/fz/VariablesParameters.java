@@ -892,8 +892,8 @@ public class VariablesParameters implements ParserTreeConstants {
         if (child.getId() == JJTINTTIEXPRTAIL) {
             int intType = ((ASTIntTiExprTail) child).getType();
             switch (intType) {
-                // 	    case 0: // int
-                // 		break;
+	        case 0: // int
+		    break;
                 case 1: // int interval
                     lowInterval = ((ASTIntTiExprTail) child).getLow();
                     highInterval = ((ASTIntTiExprTail) child).getHigh();
@@ -907,6 +907,8 @@ public class VariablesParameters implements ParserTreeConstants {
                         if (e.intValue() < MIN_INT || e.intValue() > MAX_INT)
                             throw new ArithmeticException("Too large element in set " + e.intValue());
                     break;
+	    default:
+		throw new RuntimeException("Internal error in " + getClass().getName());
             }
             return intType;
         } else if (child.getId() == JJTBOOLTIEXPRTAIL)
@@ -917,8 +919,8 @@ public class VariablesParameters implements ParserTreeConstants {
 
                 int intType = ((ASTIntTiExprTail) grand_child).getType();
                 switch (intType) {
-                    // 		case 0: // int
-                    // 		    break;
+		    case 0: // int
+			break;
                     case 1: // int interval
                         lowInterval = ((ASTIntTiExprTail) grand_child).getLow();
                         highInterval = ((ASTIntTiExprTail) grand_child).getHigh();
@@ -932,6 +934,8 @@ public class VariablesParameters implements ParserTreeConstants {
                             if (e.intValue() < MIN_INT || e.intValue() > MAX_INT)
                                 throw new ArithmeticException("Too large element in set " + e.intValue());
                         break;
+		default:
+		    throw new RuntimeException("Internal error in " + getClass().getName());
                 }
                 //  		return ((ASTIntTiExprTail)grand_child).getType()+4;
                 return intType + 4;
@@ -942,12 +946,14 @@ public class VariablesParameters implements ParserTreeConstants {
         } else if (child.getId() == JJTFLOATTIEXPRTAIL) {
             int doubleType = ((ASTFloatTiExprTail) child).getType();
             switch (doubleType) {
-                // case 0: // float
-                // 	break;
+	        case 0: // float
+		    break;
                 case 1: // float interval
                     lowFloatInterval = ((ASTFloatTiExprTail) child).getLow();
                     highFloatInterval = ((ASTFloatTiExprTail) child).getHigh();
                     break;
+		default:
+		    throw new RuntimeException("Internal error in " + getClass().getName());
             }
             // System.out.println ("returns double type " + (int)(doubleType + 8));
 

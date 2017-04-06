@@ -337,6 +337,8 @@ public class LinearInt extends PrimitiveConstraint {
                             removeConstraint();
 
                     break;
+		default:
+		    throw new RuntimeException("Internal error in " + getClass().getName());
             }
 
         } while (store.propagationHasOccurred);
