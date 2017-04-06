@@ -54,13 +54,6 @@ import org.jacop.core.Var;
 
 public class GeostExample extends ExampleFD {
 
-    // Store store;
-    ArrayList<Var> vars;
-
-    Var[] varsX;
-    Var[] varsY;
-    Var[] size;
-
     /**
      * It specifies and runs a very simple Geost example. It is just
      * to present how Geost constraint can be created and imposed to store.

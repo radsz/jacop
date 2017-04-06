@@ -284,9 +284,9 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
         }
 
         output.write("p cnf ");
-        output.write(new Integer(noOfVariables).toString());
+        output.write(Integer.toString(noOfVariables));
         output.write(" ");
-        output.write(new Integer(noOfClauses).toString());
+        output.write(Integer.toString(noOfClauses));
         output.write("\n");
 
         for (int i = 0; i < databases.length; i++) {

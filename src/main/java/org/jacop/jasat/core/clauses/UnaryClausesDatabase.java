@@ -181,7 +181,7 @@ public final class UnaryClausesDatabase extends AbstractClausesDatabase {
         for (int i = 0; i < currentIndex; i++) {
             int offset = i;
             if (clauses[offset] != 0) {
-                output.write(new Integer(clauses[offset]).toString());
+                output.write(Integer.toString(clauses[offset]));
                 output.write(" 0\n");
             }
         }

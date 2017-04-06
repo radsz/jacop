@@ -461,36 +461,36 @@ public class MUCA extends ExampleFD {
 
         costs = new ArrayList<ArrayList<Integer>>();
         ArrayList<Integer> cost_bid_1 = new ArrayList<Integer>();
-        cost_bid_1.add(new Integer(-10));
+        cost_bid_1.add(-10);
 
         costs.add(cost_bid_1);
 
         ArrayList<Integer> cost_bid_2 = new ArrayList<Integer>();
-        cost_bid_2.add(new Integer(-20));
+        cost_bid_2.add(-20);
         costs.add(cost_bid_2);
 
         ArrayList<Integer> cost_bid_3 = new ArrayList<Integer>();
-        cost_bid_3.add(new Integer(-25));
+        cost_bid_3.add(25);
         costs.add(cost_bid_3);
 
         ArrayList<Integer> cost_bid_4 = new ArrayList<Integer>();
-        cost_bid_4.add(new Integer(-30));
+        cost_bid_4.add(-30);
         costs.add(cost_bid_4);
 
         ArrayList<Integer> cost_bid_5 = new ArrayList<Integer>();
-        cost_bid_5.add(new Integer(-35));
+        cost_bid_5.add(35);
         costs.add(cost_bid_5);
 
         ArrayList<Integer> cost_bid_6 = new ArrayList<Integer>();
-        cost_bid_6.add(new Integer(-32));
+        cost_bid_6.add(-32);
         costs.add(cost_bid_6);
 
         ArrayList<Integer> cost_bid_7 = new ArrayList<Integer>();
-        cost_bid_7.add(new Integer(-15));
+        cost_bid_7.add(-15);
         costs.add(cost_bid_7);
 
         ArrayList<Integer> cost_bid_8 = new ArrayList<Integer>();
-        cost_bid_8.add(new Integer(-30));
+        cost_bid_8.add(-30);
         costs.add(cost_bid_8);
 
     }
@@ -662,19 +662,19 @@ public class MUCA extends ExampleFD {
         bids.add(bid_4);
 
         ArrayList<Integer> cost_bid_1 = new ArrayList<Integer>();
-        cost_bid_1.add(new Integer(-20));
+        cost_bid_1.add(-20);
         costs.add(cost_bid_1);
 
         ArrayList<Integer> cost_bid_2 = new ArrayList<Integer>();
-        cost_bid_2.add(new Integer(-35));
+        cost_bid_2.add(-35);
         costs.add(cost_bid_2);
 
         ArrayList<Integer> cost_bid_3 = new ArrayList<Integer>();
-        cost_bid_3.add(new Integer(-15));
+        cost_bid_3.add(-15);
         costs.add(cost_bid_3);
 
         ArrayList<Integer> cost_bid_4 = new ArrayList<Integer>();
-        cost_bid_4.add(new Integer(-30));
+        cost_bid_4.add(-30);
         costs.add(cost_bid_4);
     }
 

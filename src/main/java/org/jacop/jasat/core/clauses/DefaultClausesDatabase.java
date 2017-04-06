@@ -643,7 +643,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
             if (clause != null) {
 
                 for (int j = 0; j < clause.length; j++) {
-                    output.write(new Integer(clause[j]).toString());
+                    output.write(Integer.toString(clause[j]));
                     output.write(" ");
                 }
                 output.write("0\n");

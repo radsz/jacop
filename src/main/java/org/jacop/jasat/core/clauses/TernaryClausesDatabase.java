@@ -238,11 +238,11 @@ public final class TernaryClausesDatabase extends AbstractClausesDatabase {
         for (int i = 0; i < currentIndex; i++) {
             int offset = i * 3;
             if (clauses[offset] != 0 && clauses[offset + 1] != 0 && clauses[offset + 2] != 0) {
-                output.write(new Integer(clauses[offset]).toString());
+                output.write(Integer.toString(clauses[offset]));
                 output.write(" ");
-                output.write(new Integer(clauses[offset + 1]).toString());
+                output.write(Integer.toString(clauses[offset + 1]));
                 output.write(" ");
-                output.write(new Integer(clauses[offset + 2]).toString());
+                output.write(Integer.toString(clauses[offset + 2]));
                 output.write(" 0\n");
             }
         }
