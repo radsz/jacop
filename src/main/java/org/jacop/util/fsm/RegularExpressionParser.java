@@ -233,7 +233,7 @@ public class RegularExpressionParser {
      * SyntaxException raised if not regular expression is being parsed.
      *
      */
-    public class SyntaxException extends Exception {
+    public static class SyntaxException extends Exception {
 
         /**
          *

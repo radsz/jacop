@@ -1168,7 +1168,7 @@ public class MUCA extends ExampleFD {
         return result;
     }
 
-    class Delta {
+    static class Delta {
 
         // Both must be positive, even if input means consuming.
 
@@ -1197,7 +1197,7 @@ public class MUCA extends ExampleFD {
     }
 
 
-    class Transformation {
+    static class Transformation {
 
         public ArrayList<Integer> goodsIds;
         public ArrayList<Delta> delta;

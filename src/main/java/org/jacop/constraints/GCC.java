@@ -1235,7 +1235,7 @@ public class GCC extends Constraint implements UsesQueueVariable {
     }
 
     // used in sortByDomainMin snd version
-    private class CompareLowerBound implements Comparator<XDomain> {
+    private static class CompareLowerBound implements Comparator<XDomain> {
 
         public int compare(XDomain o1, XDomain o2) {
             if (o1.min < o2.min)
@@ -1248,7 +1248,7 @@ public class GCC extends Constraint implements UsesQueueVariable {
     }
 
 
-    private class SortPriorityMinOrder implements Comparator<XDomain> {
+    private static class SortPriorityMinOrder implements Comparator<XDomain> {
 
         public int compare(XDomain o1, XDomain o2) {
             if (o1.max < o2.max)
@@ -1261,7 +1261,7 @@ public class GCC extends Constraint implements UsesQueueVariable {
     }
 
 
-    private class SortPriorityMaxOrder implements Comparator<Integer> {
+    private static class SortPriorityMaxOrder implements Comparator<Integer> {
 
         public int compare(Integer e1, Integer e2) {
             return -e1.compareTo(e2);
@@ -1270,7 +1270,7 @@ public class GCC extends Constraint implements UsesQueueVariable {
 
 
     //-----------------------INNER CLASSES-----------------------------------//
-    private class Component {
+    private static class Component {
 
         int root;
         int rightmostY;
@@ -1284,7 +1284,7 @@ public class GCC extends Constraint implements UsesQueueVariable {
     }
 
 
-    private class XDomain extends BoundDomain {
+    private static class XDomain extends BoundDomain {
         Var twin;
         int index;
 
