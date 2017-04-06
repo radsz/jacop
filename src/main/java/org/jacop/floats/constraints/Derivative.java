@@ -184,8 +184,8 @@ public class Derivative {
                                 resolved.add(cc);
                         }
                     }
-                } else if (c instanceof EquationSystem)
-                    ;
+                }  // else if (cc instanceof EquationSystem)
+                   // ;
             }
 
         if (resolved.size() == 1)
