@@ -35,21 +35,32 @@ public class FznFileGeneratorTest extends MinizincBasedTestsHelper {
     private static File sourceFolder = new File("src/test/fz/scriptTest");
     private static File destinationFolder = new File("src/test/fz/" + testFolderName);
     private static List<String> goldList;
-    private static Iterator<String> iterator;
+    private static List<String> scriptTest;
+    private static Iterator<String> itrScriptGold;
+    //    private static Iterator<String> itrScriptTest;
+    private static Path expectedDir;
+    private static int i = 0;
     protected static final String Category = "scriptTest/";
+    String testFilename;
 
-    public FznFileGeneratorTest(String testFilename)  {
+    public FznFileGeneratorTest(String testFilename) {
 
         this.testFilename = testFilename;
+
 
     }
 
     @Parameterized.Parameters
-    public static Collection<String> parametricTest() throws IOException {
+    public static Collection<String> parametricTest() throws IOException, InterruptedException {
+        System.out.println("Parametric TEST");
+        runListGenerator();
         copyFolders(sourceFolder, destinationFolder);
         runBashScript();
+        Files.copy(Paths.get("src/test/fz/scriptGolden/list.txt"),Paths.get("src/test/fz/scriptTest/list.txt"),StandardCopyOption.REPLACE_EXISTING);
         goldList = (List<String>) fileReader("scriptGolden/");
-        iterator = goldList.iterator();
+        itrScriptGold = goldList.iterator();
+        System.out.println("Parametric TEST END");
+
         return fileReader(Category);
     }
 
@@ -57,63 +68,94 @@ public class FznFileGeneratorTest extends MinizincBasedTestsHelper {
     public void testMinizinc() throws IOException, InterruptedException {
         String expected = "";//"src/test/fz/scriptGolden/" + expectedDir;
         String res = "";
+        String expectedFzn = "";
+        String resFzn = "";
 
-        Path expectedDir = Paths.get(iterator.next()).getParent();
+        expectedDir = Paths.get(itrScriptGold.next());
+        Path resultDir = expectedDir;
 
-            if (new File("src/test/fz/upTo5sec/" + Paths.get(this.testFilename).getParent()).isDirectory()) {
-                res = "src/test/fz/upTo5sec/" + Paths.get(this.testFilename).getParent();
-                expected = "src/test/fz/scriptGolden/" + expectedDir;
-            } else if (new File("src/test/fz/upTo30sec/" + Paths.get(this.testFilename).getParent()).isDirectory()) {
-                res = "src/test/fz/upTo30sec/" + Paths.get(this.testFilename).getParent();
-                expected = "src/test/fz/scriptGolden/upTo30sec/" + expectedDir;
-            } else if (new File("src/test/fz/upTo1min/" + Paths.get(this.testFilename).getParent()).isDirectory()) {
-                res = "src/test/fz/upTo1min/" + Paths.get(this.testFilename).getParent();
-                expected = "src/test/fz/scriptGolden/upTo1min/" + expectedDir;
-            } else if (new File("src/test/fz/upTo5min/" + Paths.get(this.testFilename).getParent()).isDirectory()) {
-                res = "src/test/fz/upTo5min/" + Paths.get(this.testFilename).getParent();
-                expected = "src/test/fz/scriptGolden/upTo5min/" + expectedDir;
-            } else if (new File("src/test/fz/upTo1hour/" + Paths.get(this.testFilename).getParent()).isDirectory()) {
-                res = "src/test/fz/upTo1hour/" + Paths.get(this.testFilename).getParent();
-                expected = "src/test/fz/scriptGolden/upTo1hour/" + expectedDir;
-            } else if (new File("src/test/fz/above1hour/" + Paths.get(this.testFilename).getParent()).isDirectory()) {
-                res = "src/test/fz/above1hour/" + Paths.get(this.testFilename).getParent();
-                expected = "src/test/fz/scriptGolden/above1hour/" + expectedDir;
-            } else if (new File("src/test/fz/flakyTest/" + Paths.get(this.testFilename).getParent()).isDirectory()) {
-                res = "src/test/fz/flakyTest/" + Paths.get(this.testFilename).getParent();
-                expected = "src/test/fz/scriptGolden/flakyTest/" + expectedDir;
-            } else if (new File("src/test/fz/errors/" + Paths.get(this.testFilename).getParent()).isDirectory()) {
-                res = "src/test/fz/errors/" + Paths.get(this.testFilename).getParent();
-                expected = "src/test/fz/scriptGolden/errors/" + expectedDir;
-            }
+        if (new File("src/test/fz/upTo5sec/" + Paths.get(this.testFilename).getParent()).isDirectory()) {
+            res = "src/test/fz/upTo5sec/" + resultDir + ".out";
+            expected = "src/test/fz/scriptGolden/" + expectedDir + ".out";
+            resFzn = "src/test/fz/upTo5sec/" + resultDir + ".fzn";
+            expectedFzn = "src/test/fz/scriptGolden/" + expectedDir + ".fzn";
+        } else if (new File("src/test/fz/upTo30sec/" + Paths.get(this.testFilename).getParent()).isDirectory()) {
+            res = "src/test/fz/upTo30sec/" + resultDir + ".out";
+            expected = "src/test/fz/scriptGolden/" + expectedDir + ".out";
+            resFzn = "src/test/fz/upTo30sec/" + resultDir + ".fzn";
+            expectedFzn = "src/test/fz/scriptGolden/" + expectedDir + ".fzn";
+        } else if (new File("src/test/fz/upTo1min/" + Paths.get(this.testFilename).getParent()).isDirectory()) {
+            res = "src/test/fz/upTo1min/" + resultDir + ".out";
+            expected = "src/test/fz/scriptGolden/" + expectedDir + ".out";
+            resFzn = "src/test/fz/upTo1min/" + resultDir + ".fzn";
+            expectedFzn = "src/test/fz/scriptGolden/" + expectedDir + ".fzn";
+        } else if (new File("src/test/fz/upTo5min/" + Paths.get(this.testFilename).getParent()).isDirectory()) {
+            res = "src/test/fz/upTo5min/" + resultDir + ".out";
+            expected = "src/test/fz/scriptGolden/" + expectedDir + ".out";
+            resFzn = "src/test/fz/upTo5min/" + resultDir + ".fzn";
+            expectedFzn = "src/test/fz/scriptGolden/" + expectedDir + ".fzn";
+        } else if (new File("src/test/fz/upTo1hour/" + Paths.get(this.testFilename).getParent()).isDirectory()) {
+            res = "src/test/fz/upTo1hour/" + resultDir + ".out";
+            expected = "src/test/fz/scriptGolden/" + expectedDir + ".out";
+            resFzn = "src/test/fz/upTo1hour/" + resultDir + ".fzn";
+            expectedFzn = "src/test/fz/scriptGolden/" + expectedDir + ".fzn";
+        } else if (new File("src/test/fz/above1hour/" + Paths.get(this.testFilename).getParent()).isDirectory()) {
+            res = "src/test/fz/above1hour/" + resultDir + ".out";
+            expected = "src/test/fz/scriptGolden/" + expectedDir + ".out";
+            resFzn = "src/test/fz/above1hour/" + resultDir + ".fzn";
+            expectedFzn = "src/test/fz/scriptGolden/" + expectedDir + ".fzn";
+        } else if (new File("src/test/fz/flakyTest/" + Paths.get(this.testFilename).getParent()).isDirectory()) {
+            res = "src/test/fz/flakyTest/" + resultDir + ".out";
+            expected = "src/test/fz/scriptGolden/" + expectedDir + ".out";
+            resFzn = "src/test/fz/flakyTest/" + resultDir + ".fzn";
+            expectedFzn = "src/test/fz/scriptGolden/" + expectedDir + ".fzn";
+        } else if (new File("src/test/fz/errors/" + Paths.get(this.testFilename).getParent()).isDirectory()) {
+            res = "src/test/fz/errors/" + resultDir + ".out";
+            expected = "src/test/fz/scriptGolden/" + expectedDir + ".out";
+            resFzn = "src/test/fz/errors/" + resultDir + ".fzn";
+            expectedFzn = "src/test/fz/scriptGolden/" + expectedDir + ".fzn";
+        }
 
 //            System.out.println(expected);
-            ProcessBuilder pb1 = new ProcessBuilder("diff", "-r", res, expected);
-            Process p2 = pb1.start();
-            boolean result = false;
-            if (0 == p2.waitFor()) {
-                result = true;
-                System.out.println(expected);
+        ProcessBuilder pb1 = new ProcessBuilder("diff", "-r", res, expected);
+        Process p2 = pb1.start();
+        p2.waitFor();
+
+        ProcessBuilder pb3 = new ProcessBuilder("diff", "-r", resFzn, expectedFzn);
+        Process p4 = pb3.start();
+        p4.waitFor();
+
+        boolean result = false;
+
+        if (0 == p2.waitFor() && 0 == p4.waitFor() ) {
+            result = true;
+            System.out.println(expected +"\n" + expectedFzn);
+        }
+
+
+        String s = null;
+        String ss = null;
+        BufferedReader stdInput = new BufferedReader(new InputStreamReader(p2.getInputStream()));
+        BufferedReader stdInputFzn = new BufferedReader(new InputStreamReader(p4.getInputStream()));
+        while ((s = stdInput.readLine()) != null || (ss = stdInputFzn.readLine()) != null) {
+            if( s != null) {
+                System.out.println("AAA" + expected + "\n" + s);
             }
-            String s = null;
-            BufferedReader stdInput = new BufferedReader(new InputStreamReader(p2.getInputStream()));
-
-            while ((s = stdInput.readLine()) != null) {
-                System.out.println(expected + "\n" + s);
+            if( ss != null) {
+                System.out.println("BBB" + expectedFzn + "\n" + ss);
             }
+        }
 
-            Assert.assertEquals(true, result);
-
+        Assert.assertEquals(true, result);
 
 
     }
-
 
     private static void copyFolders(File sourceFolder, File destinationFolder) throws IOException {
 
         if (sourceFolder.isDirectory()) {
             if (!destinationFolder.exists()) {
                 destinationFolder.mkdir();
-//                System.out.println("Create folder" + destinationFolder);
             }
 
             String files[] = sourceFolder.list();
@@ -131,18 +173,29 @@ public class FznFileGeneratorTest extends MinizincBasedTestsHelper {
 
     }
 
-    private static void runBashScript() throws IOException {
-        ProcessBuilder pb1 = new ProcessBuilder("/bin/bash", "listgenerator");
-        pb1.directory(new File("src/test/fz/scriptTest"));
-        pb1.start();
+    private static void runListGenerator() throws IOException, InterruptedException {
 
-        ProcessBuilder pb2 = new ProcessBuilder("/bin/bash", "listgenerator");
+        ProcessBuilder pb2 = new ProcessBuilder("/bin/bash", "listgenerator.sh");
         pb2.directory(new File("src/test/fz/scriptGolden"));
-        pb2.start();
+        Process p2 = pb2.start();
+        p2.waitFor();
+
+        ProcessBuilder pb1 = new ProcessBuilder("/bin/bash", "listgenerator.sh");
+        pb1.directory(new File("src/test/fz/scriptTest"));
+        Process p1 =pb1.start();
+        p1.waitFor();
+
+
+
+        System.out.println("runListGenerator");
+    }
+
+    private static void runBashScript() throws IOException, InterruptedException {
 
         ProcessBuilder pb3 = new ProcessBuilder("/bin/bash", "fznFileGenerator.sh" , testFolderName.toString() );
         pb3.directory(new File("src/test/fz/"));
         Process p = pb3.start();
+        p.waitFor();
 
         String s = null;
         BufferedReader stdInput = new BufferedReader(new InputStreamReader(p.getInputStream()));
