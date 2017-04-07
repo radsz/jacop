@@ -250,6 +250,12 @@ setup to run configuration. -->
 					<artifactId>maven-project-info-reports-plugin</artifactId>
 					<version>2.9</version>
 				</plugin>
+
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-jdeps-plugin</artifactId>
+					<version>3.0.0</version>
+				</plugin>
 				
 			</plugins>
 		</pluginManagement>
@@ -458,6 +464,21 @@ setup to run configuration. -->
 
 			</executions>
         </plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jdeps-plugin</artifactId>
+				<version>3.0.0</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>jdkinternals</goal> <!-- verify main classes -->
+							<goal>test-jdkinternals</goal> <!-- verify test classes -->
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			
 		</plugins>
     </build>
 
