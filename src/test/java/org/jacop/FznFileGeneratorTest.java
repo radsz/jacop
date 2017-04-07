@@ -139,10 +139,10 @@ public class FznFileGeneratorTest extends MinizincBasedTestsHelper {
         BufferedReader stdInputFzn = new BufferedReader(new InputStreamReader(p4.getInputStream()));
         while ((s = stdInput.readLine()) != null || (ss = stdInputFzn.readLine()) != null) {
             if( s != null) {
-                System.out.println("AAA" + expected + "\n" + s);
+                System.out.println(expected + "\n" + s);
             }
             if( ss != null) {
-                System.out.println("BBB" + expectedFzn + "\n" + ss);
+                System.out.println(expectedFzn + "\n" + ss);
             }
         }
 
