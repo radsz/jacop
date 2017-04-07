@@ -326,9 +326,9 @@ public class MineSweeper extends ExampleFD {
     /**
      * The collection of MineSweeper problems.
      */
-    public final static String[][] problems =
-        {problem1(), problem2(), problem3(), problem4(), problem5(), problem6(), problem7(), problem8(), problem9(), problem10()};
-
+    public final static String[][] problems() {
+      return new String[][]  {problem1(), problem2(), problem3(), problem4(), problem5(), problem6(), problem7(), problem8(), problem9(), problem10()};
+    }
 
     /**
      *
@@ -431,11 +431,11 @@ public class MineSweeper extends ExampleFD {
 
         MineSweeper minesweeper = new MineSweeper();
 
-        for (int i = 0; i < problems.length; i++) {
+        for (int i = 0; i < problems().length; i++) {
 
             T1 = System.currentTimeMillis();
 
-            minesweeper.problem = MineSweeper.readFromArray(problems[i]);
+            minesweeper.problem = MineSweeper.readFromArray(problems()[i]);
 
             minesweeper.model();
 

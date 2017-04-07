@@ -63,13 +63,13 @@ import org.xml.sax.helpers.AttributesImpl;
 
     HashMap<String, Var> varMap = new HashMap<String, Var>();
 
-    public static Class classVariable;
+    private final static Class classVariable = Var.class; // org.core.Var
 
-    public static HashMap<Class, HashMap<String, ?>> repository = new HashMap<Class, HashMap<String, ?>>();
+    private static HashMap<Class, HashMap<String, ?>> repository = new HashMap<Class, HashMap<String, ?>>();
 
-    public static HashMap<Class, HashSet<Object>> repositorySet = new HashMap<Class, HashSet<Object>>();
+    private static HashMap<Class, HashSet<Object>> repositorySet = new HashMap<Class, HashSet<Object>>();
 
-    public static HashMap<Class, HashSet<Class>> repositoryClear = new HashMap<Class, HashSet<Class>>();
+    private static HashMap<Class, HashSet<Class>> repositoryClear = new HashMap<Class, HashSet<Class>>();
 
     private static char[] space = " ".toCharArray();
 
@@ -97,8 +97,6 @@ import org.xml.sax.helpers.AttributesImpl;
         SAXTransformerFactory tf = (SAXTransformerFactory) SAXTransformerFactory.newInstance();
 
         try {
-
-            classVariable = Class.forName("JaCoP.core.Var");
 
             TransformerHandler hd = tf.newTransformerHandler();
 
@@ -151,11 +149,7 @@ import org.xml.sax.helpers.AttributesImpl;
         } catch (SAXException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
         }
-
 
     }
 
