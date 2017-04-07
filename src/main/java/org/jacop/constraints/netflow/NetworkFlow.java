@@ -65,6 +65,8 @@ public class NetworkFlow extends Constraint implements UsesQueueVariable {
     private static final boolean DO_INSTRUMENTATION = false;
     private static final boolean SHOW_LEVEL = false;
 
+    Statistics statistics = new Statistics();
+
     static {
         // fails if asserts are disabled
         // asserts.Assert.forceAsserts();
@@ -96,7 +98,7 @@ public class NetworkFlow extends Constraint implements UsesQueueVariable {
 
     private NetworkFlow(List<Node> nodes, List<Arc> arcs, List<VarHandler> flowVariables, IntVar costVariable) {
 
-        this.network = new Pruning(nodes, arcs);
+        this.network = new Pruning(nodes, arcs, statistics);
         this.map = new HashMap<IntVar, VarHandler>();
         this.queue = new HashSet<IntVar>();
         this.costVariable = costVariable;
@@ -204,7 +206,7 @@ public class NetworkFlow extends Constraint implements UsesQueueVariable {
         }
 
         if (DO_INSTRUMENTATION) {
-            Statistics.consistencyCalls++;
+            statistics.consistencyCalls++;
         }
         updateGraph();
 
@@ -216,7 +218,7 @@ public class NetworkFlow extends Constraint implements UsesQueueVariable {
         while (network.needsUpdate(costVariable.max()) || (first && iteration == 0)) {
 
             if (DO_INSTRUMENTATION) {
-                Statistics.consistencyIterations++;
+                statistics.consistencyIterations++;
             }
             //System.out.println(iteration);
 

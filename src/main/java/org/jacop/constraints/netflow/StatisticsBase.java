@@ -33,51 +33,54 @@ package org.jacop.constraints.netflow;
 import java.text.DecimalFormat;
 
 /**
- *
- * This class stores all the statistics gather during the execution of the network flow constraint. 
- *
- * @author Robin Steiger and Radoslaw Szymanek
+ * @author : Radoslaw Szymanek
  * @version 4.4
  *
  */
+public class StatisticsBase {
 
-public class Statistics extends StatisticsBase {
+    protected static final DecimalFormat DF = new DecimalFormat("0.###");
 
-    public final StatisticsBase NVARS = new StatisticsBase();
-    public final StatisticsBase XVARS = new StatisticsBase();
-    public final StatisticsBase WVARS = new StatisticsBase();
-    public final StatisticsBase SVARS = new StatisticsBase();
+    public int arcsExamined = 0;
+    public int arcsPruned = 0;
+    public int amountPruned = 0;
+    public long maxScoreSum = 0L;
+    public long minScoreSum = 0L;
+
+    public int consistencyCalls = 0;
+    public int consistencyIterations = 0;
+
+    protected void toString(StringBuilder str) {
+
+        str.append("\t# arcs examined : ");
+        str.append(arcsExamined);
+        str.append("\t(avg ");
+        str.append(DF.format((double) arcsExamined / consistencyIterations));
+
+        str.append(")\n\t# arcs pruned   : ");
+        str.append(arcsPruned);
+        str.append("\t(avg ");
+        str.append(DF.format((double) arcsPruned / arcsExamined));
+
+        str.append(")\n\tAmount pruned   : ");
+        str.append(amountPruned);
+        str.append("\t(avg ");
+        str.append(DF.format((double) amountPruned / arcsPruned));
+
+        str.append(")\n\tAvg max score   : ");
+        str.append(DF.format((double) maxScoreSum / consistencyIterations));
+        str.append("\n\tAvg min score   : ");
+        str.append(DF.format((double) minScoreSum / consistencyIterations));
+
+    }
 
     public String toString() {
 
         StringBuilder str = new StringBuilder();
-
-        str.append("# consistency calls      : ");
-        str.append(consistencyCalls);
-
-        str.append("\n# consistency iterations : ");
-        str.append(consistencyIterations);
-        str.append("\t(avg ");
-        str.append(StatisticsBase.DF.format((double) consistencyIterations / consistencyCalls));
-        str.append(")");
-
-        if (NVARS.arcsExamined > 0) {
-            str.append("\nFor X-variables GAC-pruning (node with degree <= 2)\n");
-            NVARS.toString(str);
-        }
-        if (XVARS.arcsExamined > 0) {
-            str.append("\nFor X-variables\n");
-            XVARS.toString(str);
-        }
-        if (WVARS.arcsExamined > 0) {
-            str.append("\nFor W-variables\n");
-            WVARS.toString(str);
-        }
-        if (SVARS.arcsExamined > 0) {
-            str.append("\nFor S-variables\n");
-            SVARS.toString(str);
-        }
+        toString(str);
         return str.toString();
+
     }
+
 
 }

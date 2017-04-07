@@ -1072,7 +1072,7 @@ public class Regular extends Constraint implements UsesQueueVariable {
             Integer varPosition = mapping.put(list[i], i);
             if (!list[i].singleton() && varPosition != null) {
                 System.err.println("ERROR: Constraint " + toString() + " must have different variables on the list");
-                System.exit(0);
+                throw new RuntimeException("ERROR: Constraint " + toString() + " must have different variables on the list");
             }
         }
 

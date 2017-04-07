@@ -1236,10 +1236,11 @@ public class MUCA extends ExampleFD {
     public void readAuction(String filename) {
 
         noGoods = 0;
+        BufferedReader br = null;
 
         try {
 
-            BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(filename), "UTF-8"));
+            br = new BufferedReader(new InputStreamReader(new FileInputStream(filename), "UTF-8"));
 
             // the first line represents the input goods
             String line = br.readLine();
@@ -1379,9 +1380,17 @@ public class MUCA extends ExampleFD {
         } catch (FileNotFoundException ex) {
             System.err.println("You need to run this program in a directory that contains the required file.");
             System.err.println(ex);
-            System.exit(-1);
+            throw new RuntimeException("You need to run this program in a directory that contains the required file : " + filename);
         } catch (IOException ex) {
             System.err.println(ex);
+        }
+        finally {
+            if (br != null)
+                try {
+                    br.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
         }
 
         System.out.println(this.maxCost);

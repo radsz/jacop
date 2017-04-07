@@ -38,6 +38,7 @@ import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XeqY;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import scala.tools.nsc.Global;
 
 /**
  *
@@ -97,8 +98,7 @@ public class DeBruijn extends ExampleFD {
         int pow_base_n = pow(base, n); // base^n, the range of integers
         if (m > 0) {
             if (m > pow_base_n) {
-                System.out.println("m must be <= base^n (" + m + ")");
-                System.exit(1);
+                throw new RuntimeException("m must be <= base^n (" + m + ")");
             }
         }
 

@@ -94,7 +94,7 @@ public class QCP extends ExampleFD {
         } catch (FileNotFoundException e) {
             System.err.println("You need to run this program in a directory that contains the required file.");
             System.err.println("I can not find file " + filename);
-            System.exit(-1);
+            throw new RuntimeException("You need to run this program in a directory that contains the required file : " + filename);
         } catch (IOException e) {
             System.err.println("Something is wrong with file" + filename);
         }

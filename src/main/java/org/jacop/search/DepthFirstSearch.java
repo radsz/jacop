@@ -31,6 +31,7 @@
 package org.jacop.search;
 
 import java.lang.reflect.Array;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Not;
@@ -299,12 +300,13 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
     boolean wrongDecisionsOutCheck = false;
 
-    static int no = 0;
+
+    static AtomicInteger no = new AtomicInteger(0);
 
     /**
      * It specifies the id of the search.
      */
-    public String id = "DFS" + no;
+    public String id;
 
     /**
      * It specifies if for setVar based search the left branch should impose EinA constraint.
@@ -328,9 +330,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
      */
 
     public DepthFirstSearch() {
-
-        no++;
-
+        id = "DFS" + no.incrementAndGet();
     }
 
     public void setChildSearch(Search<? extends Var>[] child) {

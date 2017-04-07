@@ -56,13 +56,13 @@ import org.jacop.jasat.utils.Utils;
 public abstract class AbstractClausesDatabase implements SolverComponent, ClauseDatabaseInterface {
 
     // some default values for clauses rates
-    protected static int CLAUSE_RATE_UNSUPPORTED = 0;
+    protected static final int CLAUSE_RATE_UNSUPPORTED = 0;
 
-    protected static int CLAUSE_RATE_LOW = 2;
+    protected static final int CLAUSE_RATE_LOW = 2;
 
-    protected static int CLAUSE_RATE_AVERAGE = 5;
+    protected static final int CLAUSE_RATE_AVERAGE = 5;
 
-    protected static int CLAUSE_RATE_WELL_SUPPORTED = 8;
+    protected static final int CLAUSE_RATE_WELL_SUPPORTED = 8;
 
     protected static int CLAUSE_RATE_I_WANT_THIS_CLAUSE = 20;
 
