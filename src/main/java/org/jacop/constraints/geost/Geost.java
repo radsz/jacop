@@ -1431,12 +1431,12 @@ public class Geost extends Constraint implements UsesQueueVariable {
                 if (c.cardInfeasible() > 0) {
 
                     //increase size by one unit because intersection is empty if of size zero
-                    int[] lowerBound = c.AbsInfeasible(Geost.SweepDirection.PRUNEMIN);
+                    int[] lowerBound = c.absInfeasible(Geost.SweepDirection.PRUNEMIN);
                     for (int i = 0; i < dimension + 1; i++)
                         constraintBoxOrigin[i] = lowerBound[i] - 1;
 
                     //note: need to to them one after the other because of array reuse in absInfeasible
-                    int[] upperBound = c.AbsInfeasible(Geost.SweepDirection.PRUNEMAX);
+                    int[] upperBound = c.absInfeasible(Geost.SweepDirection.PRUNEMAX);
                     for (int i = 0; i < dimension + 1; i++)
                         constraintBoxLength[i] = upperBound[i] - constraintBoxOrigin[i] + 2;
 

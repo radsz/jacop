@@ -456,7 +456,7 @@ public class ObstacleObjectFrame extends InternalConstraint {
     }
 
 
-    @Override public int[] AbsInfeasible(Geost.SweepDirection minlex) {
+    @Override public int[] absInfeasible(Geost.SweepDirection minlex) {
         //reuse previously allocated array
         int[] outPoint = DBox.getAllocatedInstance(obstacle.dimension + 1).origin;
 

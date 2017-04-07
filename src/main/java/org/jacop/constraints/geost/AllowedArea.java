@@ -175,7 +175,7 @@ public class AllowedArea extends InternalConstraint {
 
     }
 
-    @Override public int[] AbsInfeasible(Geost.SweepDirection minlex) {
+    @Override public int[] absInfeasible(Geost.SweepDirection minlex) {
 
         //the point is at either extremum of the space, depending on the minlex parameter
         //avoid allocating space

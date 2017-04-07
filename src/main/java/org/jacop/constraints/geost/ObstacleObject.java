@@ -118,12 +118,12 @@ public class ObstacleObject extends ObstacleObjectFrame {
         return null;
     }
 
-    @Override public int[] AbsInfeasible(Geost.SweepDirection minlex) {
+    @Override public int[] absInfeasible(Geost.SweepDirection minlex) {
 
         //TODO implement,
 
         if (frameExists)
-            return super.AbsInfeasible(minlex);
+            return super.absInfeasible(minlex);
         else {
 
             if (minlex == Geost.SweepDirection.PRUNEMAX)

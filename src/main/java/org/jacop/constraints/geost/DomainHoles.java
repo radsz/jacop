@@ -70,7 +70,7 @@ public class DomainHoles extends InternalConstraint {
         this.object = object;
     }
 
-    @Override public int[] AbsInfeasible(Geost.SweepDirection minlex) {
+    @Override public int[] absInfeasible(Geost.SweepDirection minlex) {
 
         //don't allocate array for transient data
         int[] outPoint = DBox.getAllocatedInstance(object.dimension).origin;

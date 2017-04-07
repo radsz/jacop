@@ -92,7 +92,7 @@ public abstract class InternalConstraint {
      * @param minlex defines whether the maximal or minimal point should be returned
      * @return the infeasible point's coordinates. If constraint cannot generate outbox then it returns null.
      */
-    public abstract int[] AbsInfeasible(Geost.SweepDirection minlex);
+    public abstract int[] absInfeasible(Geost.SweepDirection minlex);
 
 
     /**

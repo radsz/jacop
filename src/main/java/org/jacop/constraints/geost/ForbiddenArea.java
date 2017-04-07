@@ -138,7 +138,7 @@ public class ForbiddenArea extends InternalConstraint {
         return null;
     }
 
-    @Override public int[] AbsInfeasible(Geost.SweepDirection minlex) {
+    @Override public int[] absInfeasible(Geost.SweepDirection minlex) {
         //avoid allocating new object if possible
         final int dimension = origin.length;
         DBox outBox = DBox.getAllocatedInstance(dimension + 1);
