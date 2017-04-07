@@ -30,9 +30,7 @@
 
 package org.jacop.examples.fd;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
 
 import org.jacop.constraints.Alldiff;
@@ -209,8 +207,8 @@ public class SurvoPuzzle extends ExampleFD {
         System.out.println("readFile(" + file + ")");
 
         try {
-
-            BufferedReader inr = new BufferedReader(new FileReader(file));
+            
+            BufferedReader inr = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
             String str;
             int lineCount = 0;
             ArrayList<ArrayList<Integer>> MatrixI = new ArrayList<ArrayList<Integer>>();

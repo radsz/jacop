@@ -30,10 +30,8 @@
 
 package org.jacop.search;
 
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import java.io.*;
+import java.nio.charset.Charset;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -545,13 +543,19 @@ public class TraceGenerator<T extends Var> implements SelectChoicePoint<T>, Cons
 
     void prepareTreeHeader() {
 
-        PrintWriter printWriter;
+        OutputStreamWriter printWriter;
 
         try {
-            printWriter = new PrintWriter(new FileOutputStream(treeFilename));
+            printWriter = new OutputStreamWriter(
+                new FileOutputStream(treeFilename),
+                Charset.forName("UTF-8").newEncoder()
+            );
         } catch (FileNotFoundException e) {
             e.printStackTrace();
-            printWriter = new PrintWriter(new StringWriter());
+            printWriter = new OutputStreamWriter(
+                System.out,
+                Charset.forName("UTF-8").newEncoder()
+            );
         }
 
         StreamResult streamResult = new StreamResult(printWriter);
@@ -599,13 +603,19 @@ public class TraceGenerator<T extends Var> implements SelectChoicePoint<T>, Cons
 
     void prepareVizHeader() {
 
-        PrintWriter printWriter;
+        OutputStreamWriter printWriter;
 
         try {
-            printWriter = new PrintWriter(new FileOutputStream(visFilename));
+            printWriter = new OutputStreamWriter(
+                new FileOutputStream(visFilename),
+                Charset.forName("UTF-8").newEncoder()
+            );
         } catch (FileNotFoundException e) {
             e.printStackTrace();
-            printWriter = new PrintWriter(new StringWriter());
+            printWriter = new OutputStreamWriter(
+                System.out,
+                Charset.forName("UTF-8").newEncoder()
+            );
         }
 
         StreamResult streamResult = new StreamResult(printWriter);

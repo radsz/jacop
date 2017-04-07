@@ -30,13 +30,9 @@
 
 package org.jacop.constraints.regular;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.lang.reflect.Array;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -1325,7 +1321,7 @@ public class Regular extends Constraint implements UsesQueueVariable {
         try {
             System.out.println("save latex file " + fileName);
             fs = new FileOutputStream(f);
-            fs.write(this.toLatex(desc).getBytes());
+            fs.write(this.toLatex(desc).getBytes("UTF-8"));
             fs.flush();
             fs.close();
         } catch (FileNotFoundException e) {
@@ -1353,9 +1349,12 @@ public class Regular extends Constraint implements UsesQueueVariable {
     public void uppendToLatexFile(String desc, String fileName) {
         try {
             System.out.println("save latex file " + fileName);
-            FileWriter f = new FileWriter(fileName);
+            OutputStreamWriter char_output = new OutputStreamWriter(
+                new FileOutputStream(fileName),
+                Charset.forName("UTF-8").newEncoder()
+            );
             BufferedWriter fs;
-            fs = new BufferedWriter(f);
+            fs = new BufferedWriter(char_output);
             fs.append(this.toLatex(desc));
             fs.flush();
             fs.close();
@@ -1385,9 +1384,6 @@ public class Regular extends Constraint implements UsesQueueVariable {
      * nothing better then run the initialization phase with the complete NxN array of states
      * and then copy the useful ones into a final array (which is ugly)
      *
-     *
-     * @param dfa
-     * @param S
      */
 
     @SuppressWarnings("unchecked") private void initializeARRAY(MDD mdd) {

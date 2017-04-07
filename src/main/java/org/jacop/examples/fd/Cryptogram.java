@@ -30,10 +30,7 @@
 
 package org.jacop.examples.fd;
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.regex.Pattern;
@@ -95,8 +92,8 @@ public class Cryptogram extends ExampleFD {
 
 			/* read from file args[0] */
             try {
-
-                BufferedReader in = new BufferedReader(new FileReader(filename));
+                
+                BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(filename), "UTF-8"));
                 String str;
 
                 while ((str = in.readLine()) != null)

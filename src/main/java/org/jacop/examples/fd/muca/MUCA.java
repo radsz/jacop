@@ -30,10 +30,7 @@
 
 package org.jacop.examples.fd.muca;
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.StringTokenizer;
 
@@ -1241,7 +1238,8 @@ public class MUCA extends ExampleFD {
         noGoods = 0;
 
         try {
-            BufferedReader br = new BufferedReader(new FileReader(filename));
+
+            BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(filename), "UTF-8"));
 
             // the first line represents the input goods
             String line = br.readLine();

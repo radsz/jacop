@@ -30,9 +30,7 @@
 
 package org.jacop.examples.fd.crosswords;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -289,11 +287,9 @@ public class CrossWord extends ExampleFD {
 
             try {
 
-                BufferedReader inr = new BufferedReader(new FileReader(file));
+                BufferedReader inr = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
+
                 String str;
-                //   			int lineCount = 0;
-
-
                 while ((str = inr.readLine()) != null && str.length() > 0) {
 
                     str = str.trim();

@@ -1,13 +1,11 @@
 package org.jacop.core;
 
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import java.io.*;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -77,16 +75,22 @@ import org.xml.sax.helpers.AttributesImpl;
 
     public static void save(Store store, String filename) {
 
-        PrintWriter printWriter;
+        OutputStreamWriter printWriter;
 
         if (filename == null)
             filename = "test.xml";
 
         try {
-            printWriter = new PrintWriter(new FileOutputStream(filename));
+            printWriter = new OutputStreamWriter(
+                new FileOutputStream(filename),
+                Charset.forName("UTF-8").newEncoder()
+            );
         } catch (FileNotFoundException e) {
             e.printStackTrace();
-            printWriter = new PrintWriter(new StringWriter());
+            printWriter = new OutputStreamWriter(
+                System.out,
+                Charset.forName("UTF-8").newEncoder()
+            );
         }
 
         StreamResult streamResult = new StreamResult(printWriter);

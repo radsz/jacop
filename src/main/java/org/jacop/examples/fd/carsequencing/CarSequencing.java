@@ -30,9 +30,7 @@
 
 package org.jacop.examples.fd.carsequencing;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.regex.Pattern;
 
@@ -521,8 +519,8 @@ public class CarSequencing extends ExampleFD {
         System.out.println("readFile(" + file + ")");
 
         try {
-
-            BufferedReader inr = new BufferedReader(new FileReader(file));
+            
+            BufferedReader inr = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
             String str;
 
             while ((str = inr.readLine()) != null && str.length() > 0) {
