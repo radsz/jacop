@@ -75,6 +75,11 @@ public class CumulativeBasic extends Constraint {
     public IntVar limit;
 
     /**
+     * It specifies whether there possibly exist tasks that have duration or resource variable min value equal zero.
+     */
+    boolean possibleZeroTasks = false;
+
+    /**
      * It specifies the arguments required to be saved by an XML format as well as
      * the constructor being called to recreate an object from an XML format.
      */
@@ -115,6 +120,8 @@ public class CumulativeBasic extends Constraint {
                 if (durations[i].min() >= 0 && resources[i].min() >= 0) {
                     taskNormal[i] = new TaskNormalView(new Task(starts[i], durations[i], resources[i]));
                     taskNormal[i].index = i;
+		    if (durations[i].min() == 0 || resources[i].min() == 0)
+			possibleZeroTasks = true;
                 } else
                     throw new IllegalArgumentException("\nDurations and resources must be >= 0 in cumulative");
             }

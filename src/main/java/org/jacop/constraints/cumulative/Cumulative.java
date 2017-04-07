@@ -325,19 +325,24 @@ public class Cumulative extends CumulativeBasic {
 
     TaskView[] filterZeroTasks(TaskView[] ts) {
 
-        ArrayList<TaskView> nonZeroTasks = new ArrayList<TaskView>();
-        int k = 0;
-        for (int i = 0; i < ts.length; i++)
-            if (ts[i].res.min() != 0 && ts[i].dur.min() != 0) {
-                nonZeroTasks.add(ts[i]);
-                ts[i].index = k++;
-            }
-        int l = nonZeroTasks.size();
-        if (l == 0)
-            return null;
-        TaskView[] t = new TaskView[l];
-        System.arraycopy(nonZeroTasks.toArray(new TaskView[l]), 0, t, 0, l);
-        return t;
+	if (possibleZeroTasks) {
+	    TaskView[] nonZeroTasks = new TaskView[ts.length];
+	    int k = 0;
+	    
+	    for (int i = 0; i < ts.length; i++)
+		if (ts[i].res.min() != 0 && ts[i].dur.min() != 0) {
+		    nonZeroTasks[k] = ts[i];
+		    ts[i].index = k++;
+		}
+	    
+	    if (k == 0)
+		return null;
+	    TaskView[] t = new TaskView[k];
+	    System.arraycopy(nonZeroTasks, 0, t, 0, k);
+	    return t;
+	}
+	else
+	    return ts;
     }
 
 
