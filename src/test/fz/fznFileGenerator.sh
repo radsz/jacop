@@ -473,7 +473,7 @@ for i in ${arr4[@]}; do
 
         for j in ${arr5[@]}; do
 
-            if [ "${i##*/}" == "${j##*/}" ]; then
+            if [ "${i#*/}" == "${j#*/}" ]; then
                 echo "Test exist in time category"
                 rm -r ${i%/*}/${i##*/}
             fi
