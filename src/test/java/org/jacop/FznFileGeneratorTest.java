@@ -5,17 +5,12 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 
 /**
@@ -37,9 +32,8 @@ public class FznFileGeneratorTest extends MinizincBasedTestsHelper {
     private static List<String> goldList;
     private static List<String> scriptTest;
     private static Iterator<String> itrScriptGold;
-    //    private static Iterator<String> itrScriptTest;
+    private static Iterator<String> itrScriptTest;
     private static Path expectedDir;
-    private static int i = 0;
     protected static final String Category = "scriptTest/";
     String testFilename;
 
@@ -47,20 +41,18 @@ public class FznFileGeneratorTest extends MinizincBasedTestsHelper {
 
         this.testFilename = testFilename;
 
-
     }
 
     @Parameterized.Parameters
     public static Collection<String> parametricTest() throws IOException, InterruptedException {
-        System.out.println("Parametric TEST");
         runListGenerator();
         copyFolders(sourceFolder, destinationFolder);
         runBashScript();
-        Files.copy(Paths.get("src/test/fz/scriptGolden/list.txt"),Paths.get("src/test/fz/scriptTest/list.txt"),StandardCopyOption.REPLACE_EXISTING);
+        Files.copy(Paths.get("src/test/fz/scriptGolden/listtmp.txt"),Paths.get("src/test/fz/scriptTest/list.txt"),StandardCopyOption.REPLACE_EXISTING);
         goldList = (List<String>) fileReader("scriptGolden/");
+        scriptTest = (List<String>) fileReader("scriptTest/");
         itrScriptGold = goldList.iterator();
-        System.out.println("Parametric TEST END");
-
+        itrScriptTest = scriptTest.iterator();
         return fileReader(Category);
     }
 
@@ -72,7 +64,26 @@ public class FznFileGeneratorTest extends MinizincBasedTestsHelper {
         String resFzn = "";
 
         expectedDir = Paths.get(itrScriptGold.next());
-        Path resultDir = expectedDir;
+        Path resultDir = Paths.get(itrScriptTest.next());
+
+
+        File file = new File("src/test/fz/scriptGolden");
+        String[] directories = file.list(new FilenameFilter() {
+            @Override
+            public boolean accept(File current, String name) {
+                return new File(current, name).isDirectory();
+            }
+        });
+
+
+
+
+        for(int i=0; i<directories.length; i++) {
+            if(new File("src/test/fz/scriptGolden/" + directories[i] + "/" + resultDir + ".fzn").exists() ){
+
+                expectedDir =  Paths.get( directories[i]+"/" + resultDir );
+            }
+        }
 
         if (new File("src/test/fz/upTo5sec/" + Paths.get(this.testFilename).getParent()).isDirectory()) {
             res = "src/test/fz/upTo5sec/" + resultDir + ".out";
@@ -152,7 +163,6 @@ public class FznFileGeneratorTest extends MinizincBasedTestsHelper {
     }
 
     private static void copyFolders(File sourceFolder, File destinationFolder) throws IOException {
-
         if (sourceFolder.isDirectory()) {
             if (!destinationFolder.exists()) {
                 destinationFolder.mkdir();
@@ -185,9 +195,6 @@ public class FznFileGeneratorTest extends MinizincBasedTestsHelper {
         Process p1 =pb1.start();
         p1.waitFor();
 
-
-
-        System.out.println("runListGenerator");
     }
 
     private static void runBashScript() throws IOException, InterruptedException {
