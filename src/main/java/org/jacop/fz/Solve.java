@@ -1300,15 +1300,7 @@ public class Solve implements ParserTreeConstants {
             }
         } else if (node.getType() == 1) { // array access
             FloatVar[] a = dictionary.getVariableFloatArray(node.getIdent());
-            if (a != null)
-                return a[node.getIndex()];
-            else { // cost is constant ?
-                double[] costFloat = dictionary.getFloatArray(node.getIdent());
-                if (costFloat != null)
-                    return new FloatVar(store, costFloat[node.getIndex()], costFloat[node.getIndex()]);
-                else
-                    return null;
-            }
+	    return a[node.getIndex()];
         } else {
             throw new IllegalArgumentException("Wrong cost function specification " + node);
         }

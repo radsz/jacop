@@ -348,7 +348,7 @@ public class CumulativeBasic extends Constraint {
         int[] lastBarier = new int[taskNormal.length];
         Arrays.fill(lastBarier, Integer.MAX_VALUE);
         boolean[] startAtEnd = new boolean[taskNormal.length];
-        Arrays.fill(startAtEnd, false);
+        // Arrays.fill(startAtEnd, false);  // by default they are initialized to false
 
         for (int i = 0; i < N; i++) {
 
@@ -364,9 +364,9 @@ public class CumulativeBasic extends Constraint {
                     curProfile += e.value();
                     inProfile[e.task().index] = (e.value() > 0);
 
-                    if (ne == null || ne.type() != profile || e.date < ne
-                        .date()) { // check the tasks for pruning only at the end of all profile events
-
+                    if (ne.type() != profile || e.date < ne.date() || ne == null) {
+			// check the tasks for pruning only at the end of all profile events
+			
                         if (debug)
                             System.out.println("Profile at " + e.date() + ": " + curProfile);
 
@@ -418,7 +418,7 @@ public class CumulativeBasic extends Constraint {
                                 lastBarier[ti] = e.date();
 
                             // ========= resource pruning
-                            if (t.lst() <= e.date() && e.date() < t.ect() && limit.max() - profileValue < t.res.max())
+                            if (limit.max() - profileValue < t.res.max() && t.lst() <= e.date() && e.date() < t.ect())
                                 t.res.domain.inMax(store.level, t.res, limit.max() - profileValue);
 
                         }
@@ -444,7 +444,7 @@ public class CumulativeBasic extends Constraint {
                     startAtEnd[ti] = true;
 
                     // ========= resource pruning
-                    if (t.lst() <= e.date() && e.date() < t.ect() && limit.max() - profileValue < t.res.max())
+                    if (limit.max() - profileValue < t.res.max() && t.lst() <= e.date() && e.date() < t.ect())
                         t.res.domain.inMax(store.level, t.res, limit.max() - profileValue);
 
                     tasksToPrune.set(ti);
@@ -479,31 +479,31 @@ public class CumulativeBasic extends Constraint {
                     startExcluded[ti] = Integer.MAX_VALUE;
 
                     // ========= resource pruning
-                    if (t.lst() <= e.date() && e.date() < t.ect() && limit.max() - profileValue < t.res.max())
+                    if (limit.max() - profileValue < t.res.max() && t.lst() <= e.date() && e.date() < t.ect())
                         t.res.domain.inMax(store.level, t.res, limit.max() - profileValue);
 
                     // ========= duration pruning
-                    int maxDuration = Integer.MIN_VALUE;
-                    Interval lastInterval = null;
-
-                    for (IntervalEnumeration e1 = t.start.dom().intervalEnumeration(); e1.hasMoreElements(); ) {
-                        Interval i1 = e1.nextElement();
-                        maxDuration = Math.max(maxDuration, i1.max() - i1.min() + t.dur.min());
-                        lastInterval = i1;
-                    }
-                    if (startAtEnd[ti])
+                    if (startAtEnd[ti]) {
+			int maxDuration = Integer.MIN_VALUE;
+			Interval lastInterval = null;
+			
+			for (IntervalEnumeration e1 = t.start.dom().intervalEnumeration(); e1.hasMoreElements(); ) {
+			    Interval i1 = e1.nextElement();
+			    maxDuration = Math.max(maxDuration, i1.max() - i1.min() + t.dur.min());
+			    lastInterval = i1;
+			}
                         maxDuration = Math.max(maxDuration, lastBarier[ti] - lastInterval.min());
 
-                    if (maxDuration < t.dur.max()) {
-                        if (debugNarr)
-                            System.out.print(">>> CumulativeBasic Profile 3. Narrowed " + t.dur + " in 0.." + maxDuration);
+			if (maxDuration < t.dur.max()) {
+			    if (debugNarr)
+				System.out.print(">>> CumulativeBasic Profile 3. Narrowed " + t.dur + " in 0.." + maxDuration);
 
-                        t.dur.domain.inMax(store.level, t.dur, maxDuration);
+			    t.dur.domain.inMax(store.level, t.dur, maxDuration);
 
-                        if (debugNarr)
-                            System.out.println(" => " + t.dur);
-                    }
-
+			    if (debugNarr)
+				System.out.println(" => " + t.dur);
+			}
+		    }
                     tasksToPrune.set(ti, false);
                     break;
 

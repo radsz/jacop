@@ -394,10 +394,14 @@ public class Tables {
         FloatVar[] a = variableFloatArrayTable.get(ident);
         if (a == null) {
             double[] floatA = floatArrayTable.get(ident);
-            a = new FloatVar[floatA.length];
-            for (int i = 0; i < floatA.length; i++) {
-                a[i] = new FloatVar(store, floatA[i], floatA[i]);
-            }
+	    if (floatA != null) {
+		a = new FloatVar[floatA.length];
+		for (int i = 0; i < floatA.length; i++) {
+		    a[i] = new FloatVar(store, floatA[i], floatA[i]);
+		}
+	    }
+	    else
+		throw new IllegalArgumentException("Array identifier does not exist: " + ident);
         }
         return a;
     }

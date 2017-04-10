@@ -332,19 +332,7 @@ public class Support implements ParserTreeConstants {
             if (((ASTScalarFlatExpr) node).getType() == 2) {// ident
                 // array of var
                 FloatVar[] v = dictionary.getVariableFloatArray(((ASTScalarFlatExpr) node).getIdent());
-                if (v != null)
-                    return v;
-                else { // array of int
-                    double[] ia = dictionary.getFloatArray(((ASTScalarFlatExpr) node).getIdent());
-                    if (ia != null) {
-                        FloatVar[] aa = new FloatVar[ia.length];
-                        for (int i = 0; i < ia.length; i++)
-                            aa[i] = new FloatVar(store, ia[i], ia[i]);
-                        return aa;
-                    } else {
-                        throw new IllegalArgumentException("Cannot find array " + ((ASTScalarFlatExpr) node).getIdent() + "; compilation aborted.");
-                    }
-                }
+		return v;
             } else {
                 throw new IllegalArgumentException("Wrong type of Variable array; compilation aborted.");
             }
