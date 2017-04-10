@@ -105,7 +105,8 @@ public class SGMPCSearch {
     public final static int luby = 1;
     public final static int poly = 2;
     int strategy = poly;
-
+    final static double precision = 1e-12;
+    
     // elite solutions 
     // at position 0 is cost and values of variables start at positions 1
     public int[][] elite;
@@ -387,7 +388,7 @@ public class SGMPCSearch {
 
         double k = Math.log(i + 1) / Math.log(2d);
 
-        if (k == Math.floor(k + 0.5)) {
+        if (Math.abs(k - Math.floor(k + 0.5)) < precision) {  // k == Math.floor(k + 0.5)
             return (int) Math.pow(2, k - 1);
         } else {
             k = Math.floor(k);

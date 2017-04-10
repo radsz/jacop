@@ -364,7 +364,7 @@ public class CumulativeBasic extends Constraint {
                     curProfile += e.value();
                     inProfile[e.task().index] = (e.value() > 0);
 
-                    if (ne.type() != profile || e.date < ne.date() || ne == null) {
+                    if (ne == null || ne.type() != profile || e.date < ne.date()) {
 			// check the tasks for pruning only at the end of all profile events
 			
                         if (debug)

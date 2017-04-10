@@ -111,20 +111,10 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
                     if (p.max <= a) {
                         if (i == size() - 1) {
                             if (a != b) {
-                                if (p.max == a && val == p.value) {
                                     if (trace)
-                                        System.out.println("3a. Change " + "[" + p.min + ".." + b + ")" + "=" + val + " at position " + i);
-                                    // !!! b > p.Min && p.Max == a
-                                    // p.Max = b;
+                                        System.out.println("3. Add " + "[" + a + ".." + b + ")" + "=" + val + " at position " + (i + 1));
                                     int[] r = {index, val}; // OK
                                     add(i + 1, new ProfileItemCondition(a, b, val, r));
-                                } else {
-                                    // b > p.Max && p.Max < a
-                                    if (trace)
-                                        System.out.println("3b. Add " + "[" + a + ".." + b + ")" + "=" + val + " at position " + (i + 1));
-                                    int[] r = {index, val}; // OK
-                                    add(i + 1, new ProfileItemCondition(a, b, val, r));
-                                }
                             }
                             i++;
                             notFound = false;
