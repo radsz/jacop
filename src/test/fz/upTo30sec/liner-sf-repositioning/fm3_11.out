@@ -1,0 +1,23 @@
+poAct0 = 3;
+poAct1 = 3;
+poAct2 = 17;
+poAct3 = 22;
+poAct4 = 0;
+piPort = 2;
+piWeek = array1d(1..5, [9, 10, 8, 11, 7]);
+reposType = array1d(1..5, [1, 1, 1, 1, 1]);
+sosAct = array1d(1..5, [0, 0, 0, 0, 0]);
+sos = array1d(1..5, [0, 0, 0, 0, 0]);
+sosActSavings = array1d(1..5, [0, 0, 0, 0, 0]);
+seAct = array1d(1..5, [0, 0, 0, 0, 0]);
+seBfixed = array1d(1..5, [0, 0, 0, 0, 0]);
+seBdur = array1d(1..5, [0, 0, 0, 0, 0]);
+seDfixed = array1d(1..5, [0, 0, 0, 0, 0]);
+seDdur = array1d(1..5, [0, 0, 0, 0, 0]);
+seAfixed = array1d(1..5, [0, 0, 0, 0, 0]);
+seAdur = array1d(1..5, [0, 0, 0, 0, 0]);
+directCost = array1d(1..5, [0, 0, 2102, 619, 8625]);
+sosActACost = array1d(1..5, [0, 0, 0, 0, 0]);
+sosActBCost = array1d(1..5, [0, 0, 0, 0, 0]);
+----------
+==========

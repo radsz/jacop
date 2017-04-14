@@ -1,0 +1,5 @@
+TransitStartTimeSlot = array1d(1..5, [26, 32, 37, 49, 1]);
+ShipSails = array1d(1..5, [1, 1, 1, 1, 1]);
+Draft_cm = array1d(1..5, [1700, 1680, 1680, 1200, 1200]);
+----------
+==========

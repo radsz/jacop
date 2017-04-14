@@ -1,0 +1,7 @@
+objective = 381;
+root = 8;
+es = array1d(1..50, [false, false, false, false, true, true, false, true, false, false, false, true, false, false, false, true, true, false, false, true, true, true, true, true, true, true, true, false, true, true, false, false, false, false, false, false, true, false, false, true, false, false, false, false, true, false, false, false, false, false]);
+h = array1d(1..20, [1, 2, 2, 2, 1, 1, 1, 0, 2, 0, 2, 2, 1, 2, 1, 2, 1, 1, 2, 2]);
+p = array1d(1..20, [8, 17, 13, 1, 10, 10, 8, 8, 17, 10, 18, 5, 10, 15, 8, 1, 10, 10, 5, 17]);
+----------
+==========

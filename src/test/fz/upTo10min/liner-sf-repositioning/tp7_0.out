@@ -1,0 +1,15 @@
+poAct0 = 7;
+poAct1 = 7;
+poAct2 = 7;
+poAct3 = 4;
+poAct4 = 4;
+poAct5 = 4;
+poAct6 = 4;
+poAct7 = 4;
+poAct8 = 4;
+piPort = 2;
+piWeek = array1d(1..9, [9, 10, 11, 3, 4, 5, 6, 7, 8]);
+reposType = array1d(1..9, [1, 1, 1, 1, 1, 1, 1, 1, 1]);
+directCost = array1d(1..9, [14298, 14298, 14298, 1529, 1529, 1529, 33, 33, 33]);
+----------
+==========

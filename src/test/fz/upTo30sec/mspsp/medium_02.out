@@ -1,0 +1,5 @@
+objective = 15;
+s = array1d(1..14, [0, 0, 0, 1, 2, 6, 6, 2, 10, 8, 10, 9, 12, 12]);
+w = array2d(1..6, 1..14, [true, false, false, false, true, true, false, false, true, false, false, false, false, false, true, false, false, false, true, false, true, false, false, false, false, true, true, false, true, false, false, false, true, true, false, false, true, false, false, false, true, false, false, true, false, false, false, true, false, false, false, false, true, false, false, true, false, false, true, true, false, false, true, false, false, true, true, false, true, false, false, false, true, false, false, false, true, true, false, true, false, true, true, false]);
+----------
+==========
