@@ -44,7 +44,7 @@ import org.jacop.core.IntVar;
 
 public class ReversibleSparseBitSet  {
 
-    TimeStamp<Long>[] words;
+    TimeStamp<long[]> words;
     private int[] index;
     private TimeStamp<Integer> limit;
     private long[] mask;
@@ -60,16 +60,14 @@ public class ReversibleSparseBitSet  {
 	int numberBitSets = n / 64 + ( (lastWordSize != 0) ? 1 : 0);
 
 	limit = new TimeStamp<Integer>(store, numberBitSets-1);
-	words = new TimeStamp[numberBitSets];
 	
 	long[] bs = new long[numberBitSets];
 	for (int i = 0; i < tuple.length; i++) 
 	    if (validTuple(x, tuple[i])) 
 		setBit(i, bs);
 
-	for (int i = 0; i < numberBitSets; i++) 
-	    words[i] = new TimeStamp<Long>(store, bs[i]);
-	
+	words = new TimeStamp<long[]>(store, bs);
+	    
 	index = new int[numberBitSets];
 	for (int i = 0; i < numberBitSets; i++) 
 	    index[i] = i;
@@ -126,15 +124,22 @@ public class ReversibleSparseBitSet  {
 
     void intersectWithMask() {
 
-	for (int i = limit.value(); i >= 0; i--) {
+	int n = limit.value();
+	long[] wrds = words.value();
+	long[] ws = new long[wrds.length];
+	boolean update = false;
+	System.arraycopy(wrds, 0, ws, 0, wrds.length);
+	
+	for (int i = n; i >= 0; i--) {
 	    int offset = index[i];
-	    long wOriginal = words[offset].value();
+	    long wOriginal = ws[offset];
 	    long w = wOriginal;
 
 	    w &= mask[offset];
 
 	    if (w != wOriginal) {
-		words[offset].update(w);
+		ws[offset] = w;
+		update = true;
 		if (w == 0) {
 		    int l = limit.value();
 		    index[i] = index[l];
@@ -143,13 +148,16 @@ public class ReversibleSparseBitSet  {
 		}
 	    }
 	}
+	if (update)
+	    words.update(ws);
     }
 
     int intersectIndex(long[] m) {
 
+	long[] wrds = words.value();
 	for (int i = 0; i < limit.value()+1; i++) {
 	    int offset = index[i];
-	    long w = words[offset].value();
+	    long w = wrds[offset];
 
 	    w &= m[offset];
 	    if (w != 0)
@@ -160,18 +168,19 @@ public class ReversibleSparseBitSet  {
 
 
     int noWords() {
-	return words.length;
+    	return index.length; //words.value().length;
     }
     
     public String toString() {
 	StringBuffer s = new StringBuffer("words: ");
 
+	long[] wrds = words.value();
 	int n = limit.value()+1;
 	s.append("limit = " + (n-1) +"\n");
 	for (int i = 0; i < n; i++) {
 	    int offset = index[i];
 	    s.append(offset+": ");
-	    s.append(String.format("0x%08X", words[offset].value()));
+	    s.append(String.format("0x%08X", wrds[offset]));
 	    if ( i < n-1)
 		s.append(", ");
 	}	

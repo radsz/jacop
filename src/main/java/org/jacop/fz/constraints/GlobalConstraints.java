@@ -528,10 +528,15 @@ class GlobalConstraints implements ParserTreeConstants {
         } else
             // we do not not pose ExtensionalSupportMDD directly because of possible inconsistency with its
             // intiallization; we collect all constraints and pose them at the end when all other constraints are posed
-	    if (mddOverflow)
-		support.delayedConstraints.add(new ExtensionalSupportSTR(v, t));
-	    else
+	    // if (mddOverflow)
+	    // 	 support.delayedConstraints.add(new ExtensionalSupportSTR(v, t));
+	    // else
+	    // 	support.delayedConstraints.add(new ExtensionalSupportMDD(v, t));
+	    if (t.length <= 64)
 		support.delayedConstraints.add(new ExtensionalSupportMDD(v, t));
+		// support.pose(new org.jacop.constraints.table.SimpleTable(v, t));
+	    else
+		support.pose(new org.jacop.constraints.table.Table(v, t));	    
     }
 
     void gen_jacop_assignment(SimpleNode node) {

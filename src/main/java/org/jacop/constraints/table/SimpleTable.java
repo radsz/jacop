@@ -1,5 +1,5 @@
 /**
- * Table.java
+ * SimpleTable.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.BitSet;
+import java.util.Set;
 import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -44,10 +45,10 @@ import org.jacop.core.Var;
 import org.jacop.core.IntDomain;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.constraints.Constraint;
-import java.util.Set;
+import org.jacop.core.TimeStamp;
 
 /**
- * Table implements the table constraint using a method presented in 
+ * SimpleTable implements the table constraint using a method presented in 
  *
  * "Compact-Table: Efficient Filtering Table Constraints with Reversible Sparse Bit-Sets" Jordan Demeulenaere, Renaud Hartert, Christophe Lecoutre,
  * Guillaume Perez, Laurent Perron, Jean-Charles Régin, Pierre Schaus. Proc. International Conference on Principles and Practice of Constraint
@@ -57,7 +58,7 @@ import java.util.Set;
  * @version 4.5
  */
 
-public class Table extends Constraint {
+public class SimpleTable extends Constraint {
 
     Store store;
 
@@ -72,22 +73,21 @@ public class Table extends Constraint {
     public int[][] tuple;
 
     /**
+     * Main data structure for the constraint
+     */
+    TimeStamp<Long> words;
+    long mask;
+
+    /**
      *
      */
     HashMap<IntVar, Integer> varMap = new HashMap<IntVar, Integer>();
 
     /**
-     * Main data structure for the constraint
-     */
-    ReversibleSparseBitSet rbs;
-
-    /**
      * Data specifying support tuples for each variable; static structure created once when constraint is posed.
      */
-    Map<Integer,long[]>[] supports;
+    Map<Integer,Long>[] supports;
     
-    Map<Integer, Integer>[] residues;
-
     HashSet<IntVar> variableQueue = new HashSet<IntVar>();
 
     private int stamp = 0;
@@ -101,7 +101,10 @@ public class Table extends Constraint {
      * @param list the variables in the scope of the constraint.
      * @param tuples the tuples which define alloed values.
      */
-    public Table(IntVar[] list, int[][] tuples) {
+    public SimpleTable(IntVar[] list, int[][] tuples) {
+
+	if (tuples.length > 64)
+	    throw new IllegalArgumentException("\nSimpleTable: number of tuples must be <= 64; is " + tuples.length);
 
         this.x = new IntVar[list.length];
 	System.arraycopy(list, 0, x, 0, list.length);
@@ -114,7 +117,7 @@ public class Table extends Constraint {
 	    if (tuples[i].length == tupleLength)
 		System.arraycopy(tuples[i], 0, tuple[i], 0, tupleLength);
 	    else
-		throw new IllegalArgumentException("\nTable: tuples are not of the same size");
+		throw new IllegalArgumentException("\nSimpleTable: tuples are not of the same size");
 	}
 	
         numberId = idNumber.incrementAndGet();
@@ -127,7 +130,12 @@ public class Table extends Constraint {
 
 	int n = tuple.length;
 
-	rbs = new ReversibleSparseBitSet(store, x, tuple);
+	long bs = 0;
+	for (int i = 0; i < tuple.length; i++) 
+	    if (validTuple(i))
+		bs |=  (1L << i);
+
+	words = new TimeStamp<Long>(store, bs);
 
 	makeSupport();
     }
@@ -135,26 +143,20 @@ public class Table extends Constraint {
     @SuppressWarnings("unchecked")
     void makeSupport() {
 	supports = new HashMap[x.length];
-	residues = new HashMap[x.length];
 	int n = tuple.length;
-	int nw = rbs.noWords();
 	
 	for (int i = 0; i < x.length; i++) {	    
-	    supports[i] = new HashMap<Integer,long[]>();
-	    residues[i] = new HashMap<Integer, Integer>();
+	    supports[i] = new HashMap<Integer,Long>();
 	    for (int j = 0; j < tuple.length; j++) {
 		int v = tuple[j][i];
 		if (validTuple(j)) {
-		    residues[i].put(v, 0);  // initialize last found support to 0
-
 		    if (supports[i].containsKey(v)) {
-			long[] bs = supports[i].get(v);
-			setBit(j, bs);
+			long bs = supports[i].get(v);
+			bs |= (1L << j);
 			supports[i].put(v, bs);
 		    }
 		    else {
-			long[] bs = new long[nw];
-			setBit(j, bs);
+			long bs = (1L << j);
 			supports[i].put(v, bs);
 		    }
 		}
@@ -162,16 +164,6 @@ public class Table extends Constraint {
 	}
     }
 
-    long[] setBit(int n, long[] a) {
-
-	int l = n % 64;
-	int m = n / 64;
-	
-	a[m] |= (1L << l);
-	
-	return a;
-    }
-    
     boolean validTuple(int index) {
 
 	int[] t = tuple[index];
@@ -254,58 +246,63 @@ public class Table extends Constraint {
 		    continue;
 	    }
 		
-	    rbs.clearMask();
+	    mask = 0;  // clear mask
 	    int xIndex = varMap.get(v);
 
-	    Map<Integer,long[]> xSupport = supports[xIndex];
+	    Map<Integer, Long> xSupport = supports[xIndex];
 	    if (delta < cd.getSize()) { // incremental update
 	    	ValueEnumeration e = rp.valueEnumeration();
 	    	while (e.hasMoreElements()) {
-	    	    long[] bs = xSupport.get(e.nextElement());
+	    	    Long bs = xSupport.get(e.nextElement());
 	    	    if (bs != null)
-	    		rbs.addToMask(bs);
+	    		mask |= (bs.longValue());
 	    	}
-	    	rbs.reverseMask();
+		mask = ~ mask;
 	    } else { // reset-based update
 	    	ValueEnumeration e = cd.valueEnumeration();
 	    	while (e.hasMoreElements()) {
-	    	    long[] bs = xSupport.get(e.nextElement());
+	    	    Long bs = xSupport.get(e.nextElement());
 	    	    if (bs != null)
-	    		rbs.addToMask(bs);
+	    		mask |= (bs.longValue());
 	    	}
 	    }
 
-	    rbs.intersectWithMask();
-	    if (rbs.isEmpty()) 
+	    boolean empty = intersectWithMask();
+	    if (empty)
 	    	throw store.failException;
 	}
     }
 
+    boolean intersectWithMask() {
+	long w = words.value();
+	long wOriginal = w;
+
+	w &= mask;
+
+	if (w != wOriginal) 
+	    words.update(w);
+
+	return w == 0;  // empty
+    }
+    
     void filterDomains() {
 
-	long[] wrds = rbs.words.value();
+	long wrds = words.value();
 	for (int i = 0; i < x.length; i++) {
 	    IntVar xi = x[i];
 
 	    // check only for not assign variables and variables that become single value at this store level
 	    if (!xi.singleton() || (xi.singleton() && xi.dom().stamp() == store.level)) {
 		
-		Map<Integer,long[]> xSupport = supports[i];
+		Map<Integer,Long> xSupport = supports[i];
 		ValueEnumeration e = xi.dom().valueEnumeration();
 		while (e.hasMoreElements()) {
 		    int el = e.nextElement();
 
-		    long[] bs = xSupport.get(el);
+		    Long bs = xSupport.get(el);
 		    if (bs != null) {
-			int index = residues[i].get(el);
-			
-			if ((wrds[index] & bs[index]) == 0L) {
-			
-			    index = rbs.intersectIndex(bs);
-			    if (index == -1) 
-				xi.domain.inComplement(store.level, xi, el);
-			    else
-				residues[i].put(el, index);
+			if ((wrds & bs.longValue()) == 0L) {			
+			    xi.domain.inComplement(store.level, xi, el);
 			}
 		    } else 
 			xi.domain.inComplement(store.level, xi, el);
@@ -330,7 +327,7 @@ public class Table extends Constraint {
     }    
 
     @Override public void removeLevel(int level) {
-        variableQueue.clear();
+        variableQueue = new HashSet<IntVar>();
     }
 
     @Override public void removeConstraint() {
@@ -342,7 +339,7 @@ public class Table extends Constraint {
 
 	StringBuffer s = new StringBuffer(id());
 
-        s.append(" : table(");
+        s.append(" : simpleTable(");
 	s.append(java.util.Arrays.asList(x));
 
 	s.append(", [");
@@ -360,18 +357,16 @@ public class Table extends Constraint {
 	s.append("])");
 
 	if (debug) {
-	    s.append("\n"+rbs);
+	    s.append("\n0:"+ String.format("0x%08X", words.value()));
 
 	    s.append("\nsupports: [");
 	    for (int i = 0; i < supports.length; i++) {	    
 		s.append(i+": {");
-		Map<Integer, long[]> supi = supports[i];
-		for (Map.Entry<Integer,long[]> e : supi.entrySet()) {
+		Map<Integer, Long> supi = supports[i];
+		for (Map.Entry<Integer, Long> e : supi.entrySet()) {
 		    s.append(" "+e.getKey()+"= [");
-		    long[] mask = e.getValue();
-		    for (int j = 0; j < mask.length; j++) {
-			s.append(String.format("0x%08X", mask[j])+" ");
-		    }
+		    Long mask = e.getValue();
+		    s.append(String.format("0x%08X", mask.longValue())+" ");
 		    s.append("]");
 		}
 		s.append("} ");
