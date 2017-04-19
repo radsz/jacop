@@ -48,7 +48,6 @@ public class ReversibleSparseBitSet  {
     private int[] index;
     private TimeStamp<Integer> limit;
     private long[] mask;
-    private int lastWordsSize;
     
     public ReversibleSparseBitSet() {
     }

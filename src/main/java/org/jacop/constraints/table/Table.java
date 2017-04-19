@@ -144,7 +144,7 @@ public class Table extends Constraint {
 	    residues[i] = new HashMap<Integer, Integer>();
 	    for (int j = 0; j < tuple.length; j++) {
 		int v = tuple[j][i];
-		if (validTuple(j))
+		if (validTuple(j)) {
 		    residues[i].put(v, 0);  // initialize last found support to 0
 
 		    if (supports[i].containsKey(v)) {
@@ -157,6 +157,7 @@ public class Table extends Constraint {
 			setBit(j, bs);
 			supports[i].put(v, bs);
 		    }
+		}
 	    }
 	}
     }
@@ -223,7 +224,7 @@ public class Table extends Constraint {
 
 	HashSet<IntVar> fdvs = variableQueue;
 	variableQueue = new HashSet<IntVar>();
-
+	
 	updateTable(fdvs);
 	filterDomains();
     }
@@ -266,7 +267,6 @@ public class Table extends Constraint {
 	    	}
 	    	rbs.reverseMask();
 	    } else { // reset-based update
-		rp = cd;
 	    	ValueEnumeration e = v.dom().valueEnumeration();
 	    	while (e.hasMoreElements()) {
 	    	    long[] bs = xSupport.get(e.nextElement());
@@ -282,33 +282,33 @@ public class Table extends Constraint {
     }
 
     void filterDomains() {
+
 	for (int i = 0; i < x.length; i++) {
-	    int xIndex = varMap.get(x[i]);
+	    IntVar xi = x[i];
 
-	    Map<Integer,long[]> xSupport = supports[xIndex];
-	    ValueEnumeration e = x[i].dom().valueEnumeration();
-	    while (e.hasMoreElements()) {
-		int el = e.nextElement();
+	    // check only for not assign variables and variables that become single value at this store level
+	    if (!xi.singleton() || (xi.singleton() && xi.dom().stamp() == store.level)) {
+		
+		Map<Integer,long[]> xSupport = supports[i];
+		ValueEnumeration e = xi.dom().valueEnumeration();
+		while (e.hasMoreElements()) {
+		    int el = e.nextElement();
 
-		Integer indexInteger = residues[i].get(el);
-		if (indexInteger == null) {
-		    x[i].domain.inComplement(store.level, x[i], el);
-		    continue;
-		}
-		int index = indexInteger.intValue();
-
-		long[] bs = xSupport.get(el);
-		if (bs != null) {
-		    if ((rbs.words[index].value() & xSupport.get(el)[index]) == 0L) {
+		    long[] bs = xSupport.get(el);
+		    if (bs != null) {
+			int index = residues[i].get(el);
 			
-			index = rbs.intersectIndex(bs);
-			if (index == -1) 
-			    x[i].domain.inComplement(store.level, x[i], el);
-			else
-			    residues[i].put(el, index);
-		    }
-		} else 
-		    x[i].domain.inComplement(store.level, x[i], el);
+			if ((rbs.words[index].value() & xSupport.get(el)[index]) == 0L) {
+			
+			    index = rbs.intersectIndex(bs);
+			    if (index == -1) 
+				xi.domain.inComplement(store.level, xi, el);
+			    else
+				residues[i].put(el, index);
+			}
+		    } else 
+			xi.domain.inComplement(store.level, xi, el);
+		}
 	    }
 	}
     }
