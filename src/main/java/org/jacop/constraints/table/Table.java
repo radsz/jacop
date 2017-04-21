@@ -34,7 +34,7 @@ package org.jacop.constraints.table;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.BitSet;
+import java.util.Set;
 import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -44,7 +44,7 @@ import org.jacop.core.Var;
 import org.jacop.core.IntDomain;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.constraints.Constraint;
-import java.util.Set;
+import org.jacop.core.UsesQueueVariable;
 
 /**
  * Table implements the table constraint using a method presented in 
@@ -57,7 +57,7 @@ import java.util.Set;
  * @version 4.5
  */
 
-public class Table extends Constraint {
+public class Table extends Constraint implements UsesQueueVariable {
 
     Store store;
 
@@ -91,6 +91,8 @@ public class Table extends Constraint {
     HashSet<IntVar> variableQueue = new HashSet<IntVar>();
 
     private int stamp = 0;
+    
+    int noNoGround;
     
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -126,19 +128,23 @@ public class Table extends Constraint {
     void init() {
 
 	int n = tuple.length;
+	int lastWordSize = n % 64;
+	int numberBitSets = n / 64 + ( (lastWordSize != 0) ? 1 : 0);
 
-	rbs = new ReversibleSparseBitSet(store, x, tuple);
+	rbs = new ReversibleSparseBitSet();
 
-	makeSupport();
+	long[] words = makeSupportAndWords(numberBitSets);
+
+	rbs.init(store, words);
     }
 
     @SuppressWarnings("unchecked")
-    void makeSupport() {
+    long[] makeSupportAndWords(int nw) {
 	supports = new HashMap[x.length];
 	residues = new HashMap[x.length];
 	int n = tuple.length;
-	int nw = rbs.noWords();
 	
+	long[] words = new long[nw];
 	for (int i = 0; i < x.length; i++) {	    
 	    supports[i] = new HashMap<Integer,long[]>();
 	    residues[i] = new HashMap<Integer, Integer>();
@@ -146,7 +152,8 @@ public class Table extends Constraint {
 		int v = tuple[j][i];
 		if (validTuple(j)) {
 		    residues[i].put(v, 0);  // initialize last found support to 0
-
+		    setBit(j, words);       // initialize words for ReversibleSparseBitSet
+		    
 		    if (supports[i].containsKey(v)) {
 			long[] bs = supports[i].get(v);
 			setBit(j, bs);
@@ -160,23 +167,22 @@ public class Table extends Constraint {
 		}
 	    }
 	}
+	return words;
     }
 
-    long[] setBit(int n, long[] a) {
+    private void setBit(int n, long[] a) {
 
 	int l = n % 64;
 	int m = n / 64;
-	
 	a[m] |= (1L << l);
 	
-	return a;
     }
     
-    boolean validTuple(int index) {
+    private boolean validTuple(int index) {
 
 	int[] t = tuple[index];
 	int n = t.length;
-	int i=0;
+	int i = 0;
 	while (i < n) {
 	    if (!x[i].dom().contains(t[i]))
 		return false;
@@ -207,8 +213,6 @@ public class Table extends Constraint {
         this.store = store;
         int level = store.level;
 
-        store.registerRemoveLevelListener(this);
-	
         for (int i = 0; i < x.length; i++) {
             x[i].putModelConstraint(this, getConsistencyPruningEvent(x[i]));
 	    queueVariable(level, x[i]);
@@ -222,11 +226,21 @@ public class Table extends Constraint {
     
     @Override public void consistency(Store store) {
 
-	HashSet<IntVar> fdvs = variableQueue;
-	variableQueue = new HashSet<IntVar>();
+        do {
+
+            store.propagationHasOccurred = false;
+
+	    HashSet<IntVar> fdvs = variableQueue;
+	    variableQueue = new HashSet<IntVar>();
 	
-	updateTable(fdvs);
-	filterDomains();
+	    updateTable(fdvs);
+	    filterDomains();
+
+        } while (store.propagationHasOccurred);
+	
+	if (noNoGround == 1)
+	    removeConstraint();
+
     }
     
     @Override public boolean satisfied() {
@@ -282,13 +296,17 @@ public class Table extends Constraint {
     }
 
     void filterDomains() {
-
+	
+	noNoGround = 0;
 	long[] wrds = rbs.words.value();
 	for (int i = 0; i < x.length; i++) {
 	    IntVar xi = x[i];
-
+	    boolean xiSingleton = xi.singleton();
+	    if (!xiSingleton)
+		noNoGround++;
+	    
 	    // check only for not assign variables and variables that become single value at this store level
-	    if (!xi.singleton() || (xi.singleton() && xi.dom().stamp() == store.level)) {
+	    if (!xiSingleton || (xiSingleton && xi.dom().stamp() == store.level)) {
 		
 		Map<Integer,long[]> xSupport = supports[i];
 		ValueEnumeration e = xi.dom().valueEnumeration();
@@ -328,10 +346,6 @@ public class Table extends Constraint {
             variableQueue.add((IntVar) v);
         }
     }    
-
-    @Override public void removeLevel(int level) {
-        variableQueue.clear();
-    }
 
     @Override public void removeConstraint() {
         for (Var var : x)

@@ -55,26 +55,33 @@ public class ReversibleSparseBitSet  {
     @SuppressWarnings("unchecked")
     public ReversibleSparseBitSet(Store store, IntVar[] x, int[][] tuple) {
 
-	int n = tuple.length;
-	int lastWordSize = n % 64;
-	int numberBitSets = n / 64 + ( (lastWordSize != 0) ? 1 : 0);
+    	int n = tuple.length;
+    	int lastWordSize = n % 64;
+    	int numberBitSets = n / 64 + ( (lastWordSize != 0) ? 1 : 0);
 
-	limit = new TimeStamp<Integer>(store, numberBitSets-1);
+    	long[] bs = new long[numberBitSets];
+    	for (int i = 0; i < n; i++) 
+    	    if (validTuple(x, tuple[i])) 
+    		setBit(i, bs);
+
+    	init(store, bs);
 	
-	long[] bs = new long[numberBitSets];
-	for (int i = 0; i < tuple.length; i++) 
-	    if (validTuple(x, tuple[i])) 
-		setBit(i, bs);
-
-	words = new TimeStamp<long[]>(store, bs);
-	    
-	index = new int[numberBitSets];
-	for (int i = 0; i < numberBitSets; i++) 
-	    index[i] = i;
-
-	mask = new long[numberBitSets];
     }
 
+    void init(Store store, long[] w) {
+	int n = w.length;
+	
+	limit = new TimeStamp<Integer>(store, n-1);
+
+	words = new TimeStamp<long[]>(store, w);
+	    
+	index = new int[n];
+	for (int i = 0; i < n; i++) 
+	    index[i] = i;
+
+	mask = new long[n];
+    }
+    
     private long[] setBit(int n, long[] a) {
 
 	int l = n % 64;

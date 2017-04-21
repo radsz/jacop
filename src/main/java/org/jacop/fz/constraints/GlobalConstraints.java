@@ -496,12 +496,6 @@ class GlobalConstraints implements ParserTreeConstants {
             for (int j = 0; j < size; j++)
                 t[i][j] = tbl[size * i + j];
 
-	int maxDomSize = Integer.MIN_VALUE;
-	for (IntVar vi : v)
-	    if (vi.getSize() > maxDomSize)
-		maxDomSize = vi.getSize();
-	boolean mddOverflow = times_overflow(maxDomSize, tbl.length);
-
         int[] vu = uniqueIndex(v);
         if (vu.length != v.length) { // non unique variables
 
@@ -520,23 +514,15 @@ class GlobalConstraints implements ParserTreeConstants {
                     System.out.println(uniqueVar[0] + " in " + d);
 
             } else
-		if (mddOverflow)
-		    support.delayedConstraints.add(new ExtensionalSupportSTR(uniqueVar, tt));
+		if (t.length <= 64)
+		    support.pose(new org.jacop.constraints.table.SimpleTable(v, tt));
 		else
-		    support.delayedConstraints.add(new ExtensionalSupportMDD(uniqueVar, tt));
-
+		    support.pose(new org.jacop.constraints.table.Table(v, tt));	    
         } else
-            // we do not not pose ExtensionalSupportMDD directly because of possible inconsistency with its
-            // intiallization; we collect all constraints and pose them at the end when all other constraints are posed
-	    // if (mddOverflow)
-	    // 	 support.delayedConstraints.add(new ExtensionalSupportSTR(v, t));
-	    // else
-	    // 	support.delayedConstraints.add(new ExtensionalSupportMDD(v, t));
 	    if (t.length <= 64)
-		support.delayedConstraints.add(new ExtensionalSupportMDD(v, t));
-		// support.pose(new org.jacop.constraints.table.SimpleTable(v, t));
+	    	support.pose(new org.jacop.constraints.table.SimpleTable(v, t));
 	    else
-		support.pose(new org.jacop.constraints.table.Table(v, t));	    
+	    	support.pose(new org.jacop.constraints.table.Table(v, t));	    
     }
 
     void gen_jacop_assignment(SimpleNode node) {

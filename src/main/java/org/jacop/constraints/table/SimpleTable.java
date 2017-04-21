@@ -34,9 +34,9 @@ package org.jacop.constraints.table;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.BitSet;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Store;
@@ -46,6 +46,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.TimeStamp;
+import org.jacop.core.UsesQueueVariable;
 
 /**
  * SimpleTable implements the table constraint using a method presented in 
@@ -58,7 +59,7 @@ import org.jacop.core.TimeStamp;
  * @version 4.5
  */
 
-public class SimpleTable extends Constraint {
+public class SimpleTable extends Constraint implements UsesQueueVariable {
 
     Store store;
 
@@ -88,9 +89,11 @@ public class SimpleTable extends Constraint {
      */
     Map<Integer,Long>[] supports;
     
-    HashSet<IntVar> variableQueue = new HashSet<IntVar>();
+    HashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
 
     private int stamp = 0;
+    
+    int noNoGround;
     
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -126,30 +129,18 @@ public class SimpleTable extends Constraint {
 
     }
 
-    void init() {
-
-	int n = tuple.length;
-
-	long bs = 0;
-	for (int i = 0; i < tuple.length; i++) 
-	    if (validTuple(i))
-		bs |=  (1L << i);
-
-	words = new TimeStamp<Long>(store, bs);
-
-	makeSupport();
-    }
-
     @SuppressWarnings("unchecked")
-    void makeSupport() {
+    void init() {
 	supports = new HashMap[x.length];
 	int n = tuple.length;
-	
+
+	long wrds = 0;
 	for (int i = 0; i < x.length; i++) {	    
 	    supports[i] = new HashMap<Integer,Long>();
 	    for (int j = 0; j < tuple.length; j++) {
 		int v = tuple[j][i];
 		if (validTuple(j)) {
+		    wrds |= (1L << j);
 		    if (supports[i].containsKey(v)) {
 			long bs = supports[i].get(v);
 			bs |= (1L << j);
@@ -162,6 +153,7 @@ public class SimpleTable extends Constraint {
 		}
 	    }
 	}
+	words = new TimeStamp<Long>(store, wrds);
     }
 
     boolean validTuple(int index) {
@@ -199,7 +191,7 @@ public class SimpleTable extends Constraint {
         this.store = store;
         int level = store.level;
 
-        store.registerRemoveLevelListener(this);
+        // store.registerRemoveLevelLateListener(this);
 	
         for (int i = 0; i < x.length; i++) {
             x[i].putModelConstraint(this, getConsistencyPruningEvent(x[i]));
@@ -214,11 +206,21 @@ public class SimpleTable extends Constraint {
     
     @Override public void consistency(Store store) {
 
-	HashSet<IntVar> fdvs = variableQueue;
-	variableQueue = new HashSet<IntVar>();
+        do {
+
+            store.propagationHasOccurred = false;
+
+	    HashSet<IntVar> fdvs = variableQueue;
+	    variableQueue = new LinkedHashSet<IntVar>();
 	
-	updateTable(fdvs);
-	filterDomains();
+	    updateTable(fdvs);
+	    filterDomains();
+
+	} while (store.propagationHasOccurred);
+
+	if (noNoGround == 1)
+	    removeConstraint();
+	
     }
     
     @Override public boolean satisfied() {
@@ -237,15 +239,15 @@ public class SimpleTable extends Constraint {
 	    IntDomain rp;
 	    int delta;
 	    if (pd == null) {
-		rp = cd;
-		delta = IntDomain.MaxInt;
+	    	rp = cd;
+	    	delta = IntDomain.MaxInt;
 	    } else {
-		rp = pd.subtract(cd);
-		delta = rp.getSize();
-		if (delta == 0)
-		    continue;
+	    	rp = pd.subtract(cd);
+	    	delta = rp.getSize();
+	    	if (delta == 0)
+	    	    continue;
 	    }
-		
+
 	    mask = 0;  // clear mask
 	    int xIndex = varMap.get(v);
 
@@ -257,7 +259,7 @@ public class SimpleTable extends Constraint {
 	    	    if (bs != null)
 	    		mask |= (bs.longValue());
 	    	}
-		mask = ~ mask;
+	    	mask = ~ mask;
 	    } else { // reset-based update
 	    	ValueEnumeration e = cd.valueEnumeration();
 	    	while (e.hasMoreElements()) {
@@ -287,12 +289,16 @@ public class SimpleTable extends Constraint {
     
     void filterDomains() {
 
+	noNoGround = 0;
 	long wrds = words.value();
 	for (int i = 0; i < x.length; i++) {
 	    IntVar xi = x[i];
-
+	    boolean xiSingleton = xi.singleton();
+	    if (!xiSingleton)
+		noNoGround++;
+	    
 	    // check only for not assign variables and variables that become single value at this store level
-	    if (!xi.singleton() || (xi.singleton() && xi.dom().stamp() == store.level)) {
+	    if (!xiSingleton || (xiSingleton && xi.dom().stamp() == store.level)) {
 		
 		Map<Integer,Long> xSupport = supports[i];
 		ValueEnumeration e = xi.dom().valueEnumeration();
@@ -326,9 +332,9 @@ public class SimpleTable extends Constraint {
         }
     }    
 
-    @Override public void removeLevel(int level) {
-        variableQueue = new HashSet<IntVar>();
-    }
+    // @Override public void removeLevelLate(int level) {
+    //     variableQueue = new HashSet<IntVar>();
+    // }
 
     @Override public void removeConstraint() {
         for (Var var : x)
