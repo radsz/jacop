@@ -137,7 +137,7 @@ public class SimpleTable extends Constraint implements UsesQueueVariable {
 	long wrds = 0;
 	for (int i = 0; i < x.length; i++) {	    
 	    supports[i] = new HashMap<Integer,Long>();
-	    for (int j = 0; j < tuple.length; j++) {
+	    for (int j = 0; j < n; j++) {
 		int v = tuple[j][i];
 		if (validTuple(j)) {
 		    wrds |= (1L << j);
@@ -229,7 +229,6 @@ public class SimpleTable extends Constraint implements UsesQueueVariable {
     }
 
     void updateTable(HashSet<IntVar> fdvs) {
-	int level = store.level;
 
 	for (IntVar v : fdvs) {
 	    

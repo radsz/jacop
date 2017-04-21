@@ -148,7 +148,7 @@ public class Table extends Constraint implements UsesQueueVariable {
 	for (int i = 0; i < x.length; i++) {	    
 	    supports[i] = new HashMap<Integer,long[]>();
 	    residues[i] = new HashMap<Integer, Integer>();
-	    for (int j = 0; j < tuple.length; j++) {
+	    for (int j = 0; j < n; j++) {
 		int v = tuple[j][i];
 		if (validTuple(j)) {
 		    residues[i].put(v, 0);  // initialize last found support to 0
@@ -249,7 +249,6 @@ public class Table extends Constraint implements UsesQueueVariable {
     }
 
     void updateTable(HashSet<IntVar> fdvs) {
-	int level = store.level;
 
 	for (IntVar v : fdvs) {
 	    
