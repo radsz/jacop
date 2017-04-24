@@ -121,7 +121,7 @@ public class Table extends Constraint implements UsesQueueVariable {
 	
         numberId = idNumber.incrementAndGet();
 
-        this.queueIndex = 2;
+        this.queueIndex = 1;
 
     }
 
