@@ -136,6 +136,7 @@ public class ReversibleSparseBitSet  {
 	long[] ws = new long[wrds.length];
 	boolean update = false;
 	System.arraycopy(wrds, 0, ws, 0, wrds.length);
+	int l = n;
 	
 	for (int i = n; i >= 0; i--) {
 	    int offset = index[i];
@@ -148,15 +149,18 @@ public class ReversibleSparseBitSet  {
 		ws[offset] = w;
 		update = true;
 		if (w == 0) {
-		    int l = limit.value();
 		    index[i] = index[l];
 		    index[l] = offset;
-		    limit.update(l-1);
+		    l--;
 		}
 	    }
 	}
-	if (update)
+
+	if (update) {
 	    words.update(ws);
+	    if (l < n)
+		limit.update(l);
+	}
     }
 
     int intersectIndex(long[] m) {
