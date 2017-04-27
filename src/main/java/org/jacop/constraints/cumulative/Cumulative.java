@@ -87,10 +87,10 @@ public class Cumulative extends CumulativeBasic {
             taskReversed[i].index = i;
         }
 
-        // check for possible overflows
+        // check for possible overflow
         if (limit != null)
             for (Task t : taskNormal) {
-                mul((t.start.max() + t.dur.max()), limit.max());
+                add(t.start.max(), t.dur.max());
             }
     }
 
@@ -134,39 +134,39 @@ public class Cumulative extends CumulativeBasic {
         } while (store.propagationHasOccurred);
     }
 
-  /*
-  void overloadCheck() {
+    /*
+    void overloadCheck() {
 
-    TaskView[] estList = new TaskNormalView[taskNormal.length];
-    System.arraycopy(taskNormal, 0, estList, 0, estList.length);
-    Arrays.sort(estList, new TaskIncESTComparator<TaskView>());
-    // System.out.println(java.util.Arrays.asList(estList));
+	TaskView[] estList = new TaskNormalView[taskNormal.length];
+	System.arraycopy(taskNormal, 0, estList, 0, estList.length);
+	Arrays.sort(estList, new TaskIncESTComparator<TaskView>());
+	// System.out.println(java.util.Arrays.asList(estList));
 
-    ThetaLambdaTree tree = new ThetaLambdaTree(limit);
-    tree.buildTree(estList);
-    tree.clearTree();
+	ThetaLambdaTree tree = new ThetaLambdaTree(limit);
+	tree.buildTree(estList);
+	tree.clearTree();
 
-    TaskView[] lctList = new TaskNormalView[taskNormal.length];
-    for (int i = 0; i < taskNormal.length; i++)
-      lctList[i] = new TaskNormalView(taskNormal[i]);
-    Arrays.sort(lctList, new TaskIncLCTComparator<TaskView>());
-    System.out.println(java.util.Arrays.asList(lctList));
+	TaskView[] lctList = new TaskNormalView[taskNormal.length];
+	for (int i = 0; i < taskNormal.length; i++)
+	    lctList[i] = new TaskNormalView(taskNormal[i]);
+	Arrays.sort(lctList, new TaskIncLCTComparator<TaskView>());
+	System.out.println(java.util.Arrays.asList(lctList));
 
     
-    int C = limit.max();
-    for (int j = 0; j < lctList.length; j++) {
-      tree.enableNode(lctList[j].treeIndex, lctList[j].res.min());
+	long C = (long)limit.max();
+	for (int j = 0; j < lctList.length; j++) {
+	    tree.enableNode(lctList[j].treeIndex, lctList[j].res.min());
 
-      // System.out.println("j = " + j +", lctList[j].treeIndex = "+lctList[j].treeIndex+", tree.rootNode().env "+ tree.rootNode().env +", lctList[j].lct() = " + lctList[j].lct() + ", C = "+ C);
+	    // System.out.println("j = " + j +", lctList[j].treeIndex = "+lctList[j].treeIndex+", tree.rootNode().env "+ tree.rootNode().env +", lctList[j].lct() = " + lctList[j].lct() + ", C = "+ C);
 
-      if (tree.rootNode().env > C * lctList[j].lct()) {
-  	// System.out.println("FAIL");
+	    if (tree.rootNode().env > C * (long)lctList[j].lct()) {
+		// System.out.println("FAIL");
 
-      	throw store.failException;
-      }
+		throw store.failException;
+	    }
+	}
     }
-  }
-  */
+    */
 
     void edgeFind() {
 
@@ -199,18 +199,18 @@ public class Cumulative extends CumulativeBasic {
         }
 
         // ========== Detect Order ============
-        int[] prec = detectOrder(tree, lctList, auxOrderListInv, limit.max());
+        int[] prec = detectOrder(tree, lctList, auxOrderListInv, (long)limit.max());
         // System.out.println("*** prec = " + intArrayToString(prec));
 
         // write ThetaLambdaTree as dot file for visualization
         // tree.printTree("tree_init");
 
         // ========== Adjust Bounds ============
-        adjustBounds(tree, lctList, prec, limit.max());
+        adjustBounds(tree, lctList, prec, (long)limit.max());
 
     }
 
-    int[] detectOrder(ThetaLambdaTree tree, TaskView[] t, int[] lctInvOrder, int C) {
+    int[] detectOrder(ThetaLambdaTree tree, TaskView[] t, int[] lctInvOrder, long C) {
 
         int n = t.length;
         int[] prec = new int[n];
@@ -218,11 +218,11 @@ public class Cumulative extends CumulativeBasic {
             prec[t[i].index] = t[i].ect(); // originally Integer.MIN_VALUE; can be changed to this
 
         for (int j = 0; j < n; j++) {
-            if (tree.rootNode().env > C * t[j].lct()) {
+            if (tree.rootNode().env > C * (long)t[j].lct()) {
                 throw store.failException;
             }
 
-            while (tree.rootNode().envLambda > C * t[j].lct()) {
+            while (tree.rootNode().envLambda > C * (long)t[j].lct()) {
                 int i = tree.rootNode().responsibleEnvLambda;
                 prec[tree.get(i).task.index] = Math.max(prec[tree.get(i).task.index], t[j].lct());
                 tree.removeFromLambda(i);
@@ -238,7 +238,7 @@ public class Cumulative extends CumulativeBasic {
         return lctPrec;
     }
 
-    void adjustBounds(ThetaLambdaTree tree, TaskView[] t, int[] prec, int cap) {
+    void adjustBounds(ThetaLambdaTree tree, TaskView[] t, int[] prec, long cap) {
 
         int n = t.length;
         Set<Integer> capacities = new LinkedHashSet<Integer>();
@@ -258,27 +258,27 @@ public class Cumulative extends CumulativeBasic {
             capIndex++;
         }
 
-        int[][] update = new int[capacities.size()][n];
+        long[][] update = new long[capacities.size()][n];
 
         int capi = 0;
-        for (int ci : capacities) {
+        for (long ci : capacities) {
 
             tree.clearTree();
 
-            int upd = Integer.MIN_VALUE;
+            long upd = Long.MIN_VALUE;
 
             for (int l = n - 1; l >= 0; l--) { // by non-decreasing of lct
 
                 tree.enableNode(t[l].treeIndex, ci);
                 // tree.printTree("tree_task_"+t[l].index);
 
-                int envlc = tree.calcEnvlc(t[l].lct(), ci);
-                int diff;
-                if (envlc == Integer.MIN_VALUE) {
-                    diff = Integer.MIN_VALUE;
+                long envlc = tree.calcEnvlc((long)t[l].lct(), ci);
+                long diff;
+                if (envlc == Long.MIN_VALUE) {
+                    diff = Long.MIN_VALUE;
                 } else {
-                    long tmp = envlc - (cap - ci) * t[l].lct();
-                    diff = (int) (Math.round(Math.ceil((double) tmp / (double) ci)));
+                    long tmp = envlc - (cap - ci) * (long)t[l].lct();
+                    diff = (long) (Math.round(Math.ceil((double) tmp / (double) ci)));
                 }
                 upd = Math.max(upd, diff);
                 update[capi][l] = upd;
@@ -313,7 +313,7 @@ public class Cumulative extends CumulativeBasic {
                 inner:
                 while (nj < n && t[nj].lct() == precI) {
                     if (t[nj].lct() < taskI.lct()) {
-                        taskI.updateEdgeFind(update[capMap[taskI.index]][nj]);
+                        taskI.updateEdgeFind((int)update[capMap[taskI.index]][nj]);
                         break inner;
                     }
                     nj++;

@@ -41,13 +41,13 @@ package org.jacop.constraints.cumulative;
 class ThetaLambdaNode extends TreeNode {
 
     // Theta parameters
-    int e;
-    int env;
-    int envC;
+    long e;
+    long env;
+    long envC;
 
     // Lambda parameters
-    int eLambda;
-    int envLambda;
+    long eLambda;
+    long envLambda;
     int responsibleELambda;
     int responsibleEnvLambda;
 

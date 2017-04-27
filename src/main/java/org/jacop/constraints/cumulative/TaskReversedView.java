@@ -60,8 +60,8 @@ class TaskReversedView extends TaskView {
         return lct() - dur.min();
     }
 
-    int env(int C) {
-        return C * est() + e();
+    long env(long C) {
+        return C * (long)est() + e();
     }
 
     void updateEdgeFind(int lct) {

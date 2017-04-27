@@ -133,14 +133,6 @@ class GlobalConstraints implements ParserTreeConstants {
 	 * it has expensive consistency method that do not need to be executed during model
 	 * initialization every time an added constraint triggers execution of Cumulative.
 	 */
-
-	boolean overflow = false;	
-	for (int i = 0; i < s.length; i++) 
-	    overflow = overflow || times_overflow((s[i].max() + d[i].max()), b.max());
-	if (overflow) {
-	    support.delayedConstraints.add(new CumulativeBasic(s, d, r, b));
-	    return;
-	}
 	
         if (s.length == 0)
             return;
@@ -919,15 +911,5 @@ class GlobalConstraints implements ParserTreeConstants {
             x[i] = il.get(i);
 
         return x;
-    }
-
-    boolean times_overflow(int a, int b) {
-
-        long cc = (long) a * (long) b;
-
-        if (cc < Integer.MIN_VALUE || cc > Integer.MAX_VALUE)
-            return true;
-
-        return false;
     }
 }

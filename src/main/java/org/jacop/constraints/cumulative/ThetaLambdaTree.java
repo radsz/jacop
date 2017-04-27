@@ -81,8 +81,8 @@ class ThetaLambdaTree extends Tree {
         tree[i].index = i;
 
         addToThetaInit(i);
-        tree[i].envLambda = Integer.MIN_VALUE;
-        tree[i].eLambda = Integer.MIN_VALUE;
+        tree[i].envLambda = Long.MIN_VALUE;
+        tree[i].eLambda = Long.MIN_VALUE;
         tree[i].responsibleELambda = i;
         tree[i].responsibleEnvLambda = i;
     }
@@ -93,7 +93,7 @@ class ThetaLambdaTree extends Tree {
         orderedTasks[t].treeIndex = i;
 
         tree[i].e = orderedTasks[t].e();
-        tree[i].env = tree[i].task.env(C.max());
+        tree[i].env = tree[i].task.env((long)C.max());
     }
 
     void computeNodeVals(int i) {
@@ -163,11 +163,11 @@ class ThetaLambdaTree extends Tree {
     }
 
     void clearNode(int i) {
-        tree[i].e = 0;
-        tree[i].env = Integer.MIN_VALUE;
-        tree[i].envC = Integer.MIN_VALUE;
-        tree[i].eLambda = Integer.MIN_VALUE;
-        tree[i].envLambda = Integer.MIN_VALUE;
+        tree[i].e = 0L;
+        tree[i].env = Long.MIN_VALUE;
+        tree[i].envC = Long.MIN_VALUE;
+        tree[i].eLambda = Long.MIN_VALUE;
+        tree[i].envLambda = Long.MIN_VALUE;
     }
 
     void updateThetaTree(int i) {
@@ -177,10 +177,10 @@ class ThetaLambdaTree extends Tree {
         }
     }
 
-    void enableNode(int i, int ci) {
+    void enableNode(int i, long ci) {
         tree[i].e = tree[i].task.e();
         tree[i].env = tree[i].task.env(C.max());
-        tree[i].envC = (C.max() - ci) * tree[i].task.est() + tree[i].task.e();
+        tree[i].envC = ((long)C.max() - ci) * (long)tree[i].task.est() + tree[i].task.e();
 
         updateThetaTree(parent(i));
     }
@@ -194,16 +194,16 @@ class ThetaLambdaTree extends Tree {
         ThetaLambdaNode node = tree[i];
         node.eLambda = node.e;
         node.envLambda = node.env;
-        node.e = 0;
-        node.env = Integer.MIN_VALUE;
-        node.envC = Integer.MIN_VALUE;
+        node.e = 0L;
+        node.env = Long.MIN_VALUE;
+        node.envC = Long.MIN_VALUE;
         updateTree(parent(i));
     }
 
     void removeFromLambda(int i) {
         ThetaLambdaNode node = tree[i];
-        node.eLambda = Integer.MIN_VALUE;
-        node.envLambda = Integer.MIN_VALUE;
+        node.eLambda = Long.MIN_VALUE;
+        node.envLambda = Long.MIN_VALUE;
         updateTree(parent(i));
     }
 
@@ -214,11 +214,11 @@ class ThetaLambdaTree extends Tree {
         }
     }
 
-    int calcEnvlc(int bound, int c) {
+    long calcEnvlc(long bound, long c) {
 
         int v = root();
-        int e = 0;
-        int maxEnvC = (C.max() - c) * bound;
+        long e = 0L;
+        long maxEnvC = ((long)C.max() - c) * bound;
 
         while (!isLeaf(v)) {
             if (plus(tree[right(v)].envC, e) > maxEnvC) {
@@ -233,9 +233,9 @@ class ThetaLambdaTree extends Tree {
 
         // System.out.println("---------> Cut at node " + v + ", est = " + tree[v].task.start.min());
 
-        int e_alpha = tree[v].e;
-        int env_alpha = tree[v].env;
-        int e_beta = 0;
+        long e_alpha = tree[v].e;
+        long env_alpha = tree[v].env;
+        long e_beta = 0;
 
         while (!isRoot(v)) {
             if (isLeft(v)) {

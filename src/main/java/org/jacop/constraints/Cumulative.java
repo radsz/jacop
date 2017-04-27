@@ -177,6 +177,9 @@ public class Cumulative extends Constraint {
         this.doEdgeFinding = doEdgeFinding;
         this.doProfile = doProfile;
 
+        // check for possible overflow
+	for (Task t : Ts) 
+	    mul((t.start.max() + t.dur.max()), limit.max());
     }
 
     /**

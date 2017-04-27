@@ -53,7 +53,7 @@ abstract class TaskView extends Task {
 
     abstract int lst();
 
-    abstract int env(int C);
+    abstract long env(long C);
 
     abstract void updateEdgeFind(int upd);
 
