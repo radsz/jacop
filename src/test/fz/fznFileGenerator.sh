@@ -43,7 +43,14 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
         # First timeout is set to 3600 seconds
 
           if [ -f ${k%/*/*}/*.opt ]; then
-              opt=($(<${k%/*/*}/*.opt))
+
+           #while read line
+           #do
+            # opt=$line
+            # echo "TTT" $opt
+           #done <${k%/*/*}/*.opt
+              #opt=($(<${k%/*/*}/*.opt))
+              opt=`sed -n 1p ${k%/*/*}/*.opt`
               out=$(java -cp ../../../target/jacop-*-SNAPSHOT.jar org.jacop.fz.Fz2jacop -t 3600 $opt $k) # Program Fz2jacop generate test result
               echo "$out"
           else
@@ -65,12 +72,16 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
         i=0
         count=0
 
-        if [ "${out%\%*}" == "%" ];then
-
+        if [ "${out:0:2}" == "%%" ];then
            diffresult=1
            count=5
-
         fi
+
+        #if [ "${out%\%*}" == "%" ];then
+
+           # diffresult=1
+           # count=5
+        #fi
 
         if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
             echo "Out result" ${out#*%}
@@ -87,7 +98,12 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 	          # Second timeout is set to 7200 seconds to avoid situation of the timeout when the first one did not timeout.
 
             if [ -f ${k%/*/*}/*.opt ]; then
-              opt=($(<${k%/*/*}/*.opt)) 2>/dev/null
+              #while read line
+              #do
+              #   opt=$line
+             # done <${k%/*/*}/*.opt
+                opt=`sed -n 1p ${k%/*/*}/*.opt`
+             # opt=($(<${k%/*/*}/*.opt)) 2>/dev/null
               out=$(java -cp ../../../target/jacop-*-SNAPSHOT.jar org.jacop.fz.Fz2jacop -t 3600 $opt $k) # Program Fz2jacop generate test result
               echo "$out"
           else
@@ -378,7 +394,8 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 	fi
 
     else {
-            if [ "${out%\%*}" == "%" ];then
+            if [ "${out:0:2}" == "%%" ];then
+            #if [ "${out%\%*}" == "%" ];then
                 echo "Problem $k was classified as errors test"
             st=${k#*/*/}
 
