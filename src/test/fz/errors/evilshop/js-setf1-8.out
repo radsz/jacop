@@ -1,0 +1,2 @@
+%% problem detected for jacop_cumulative
+%%	java.lang.ArithmeticException: Overflow occurred from int 239642 * 10000
