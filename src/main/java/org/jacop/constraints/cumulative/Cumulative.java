@@ -68,6 +68,9 @@ public class Cumulative extends CumulativeBasic {
 
     TaskView[] taskReversed;
 
+    boolean doEdgeFind = true;
+    int limitOnEdgeFind = 100;
+    
     /**
      * It creates a cumulative constraint.
      * @param starts variables denoting starts of the tasks.
@@ -92,6 +95,11 @@ public class Cumulative extends CumulativeBasic {
             for (Task t : taskNormal) {
                 add(t.start.max(), t.dur.max());
             }
+
+	String s = System.getProperty("max_edge_find_size");
+	if (s != null) 
+	    limitOnEdgeFind = Integer.parseInt(s);
+	doEdgeFind = (starts.length <= limitOnEdgeFind);
     }
 
     /**
@@ -128,7 +136,7 @@ public class Cumulative extends CumulativeBasic {
 
             profileProp();
 
-            if (store.propagationHasOccurred == false)
+            if (store.propagationHasOccurred == false && doEdgeFind)
                 edgeFind();
 
         } while (store.propagationHasOccurred);
