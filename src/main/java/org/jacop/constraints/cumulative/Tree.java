@@ -111,7 +111,7 @@ abstract class Tree {
             return x + y;
     }
 
-        int plus(int x, int y) {
+    int plus(int x, int y) {
         if (x == Integer.MIN_VALUE || y == Integer.MIN_VALUE)
             return Integer.MIN_VALUE;
         else

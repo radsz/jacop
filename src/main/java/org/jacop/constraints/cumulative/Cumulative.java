@@ -266,27 +266,27 @@ public class Cumulative extends CumulativeBasic {
             capIndex++;
         }
 
-        long[][] update = new long[capacities.size()][n];
+        int[][] update = new int[capacities.size()][n];
 
         int capi = 0;
-        for (long ci : capacities) {
+        for (int ci : capacities) {
 
             tree.clearTree();
 
-            long upd = Long.MIN_VALUE;
+            int upd = Integer.MIN_VALUE;
 
             for (int l = n - 1; l >= 0; l--) { // by non-decreasing of lct
 
-                tree.enableNode(t[l].treeIndex, ci);
+                tree.enableNode(t[l].treeIndex, (long)ci);
                 // tree.printTree("tree_task_"+t[l].index);
 
-                long envlc = tree.calcEnvlc((long)t[l].lct(), ci);
-                long diff;
+                long envlc = tree.calcEnvlc((long)t[l].lct(), (long)ci);
+                int diff;
                 if (envlc == Long.MIN_VALUE) {
-                    diff = Long.MIN_VALUE;
+                    diff = Integer.MIN_VALUE;
                 } else {
-                    long tmp = envlc - (cap - ci) * (long)t[l].lct();
-                    diff = (long) (Math.round(Math.ceil((double) tmp / (double) ci)));
+                    long tmp = envlc - (cap - (long)ci) * (long)t[l].lct();
+                    diff = (int)divRoundUp(tmp, ci); //(int) (Math.round(Math.ceil((double) tmp / (double) ci)));
                 }
                 upd = Math.max(upd, diff);
                 update[capi][l] = upd;
@@ -400,7 +400,14 @@ public class Cumulative extends CumulativeBasic {
 
     }
 
-  static class TaskIncESTComparator<T extends TaskView> implements Comparator<T>, java.io.Serializable {
+    private long divRoundUp(long a, long b) {
+        if (a >= 0) 
+            return (a + b - 1) / b;
+        else // a < 0
+            return a / b;
+    }
+    
+    static class TaskIncESTComparator<T extends TaskView> implements Comparator<T>, java.io.Serializable {
 
         TaskIncESTComparator() {
         }

@@ -367,10 +367,10 @@ class CumulativePrimary extends Constraint {
 				    int excludeMin = startExcluded[ti];
 				    int excludeMax = e.date() - 1;
 				    
-				    // if (!(startExcluded[ti] > start[ti].max() || e.date() - 1 < start[ti].min())) {
-				    if ((excludeMin <= start[ti].min() && excludeMax >= start[ti].min()) ||
-				    	(excludeMin <= start[ti].max() && excludeMax >= start[ti].max())) {
-					// prune only bounds
+				    if (!(excludeMin > start[ti].max() || excludeMax < start[ti].min())) {
+				    // prune only bounds
+				    // if ((excludeMin <= start[ti].min() && excludeMax >= start[ti].min()) ||
+				    // 	(excludeMin <= start[ti].max() && excludeMax >= start[ti].max())) {
 					if (debugNarr)
 					    System.out.print(
                                                     ">>> CumulativePrimary Profile 1. Narrowed " + start[i] + " \\ " + new IntervalDomain(

@@ -411,9 +411,10 @@ public class CumulativeBasic extends Constraint {
                                     if (limitMax - profileValue >= t.res.min()) {
                                         // end of excluded interval
 
-                                        // if (!(startExcluded[ti] > t.start.max() || e.date() - 1 < t.start.min())) {
-                                        if ((startExcluded[ti] <= t.start.min() || e.date() - 1 >= t.start.min()) ||
-					    (startExcluded[ti] <= t.start.max() || e.date() - 1 >= t.start.max())) {
+                                        if (!(startExcluded[ti] > t.start.max() || e.date() - 1 < t.start.min())) {
+					// bounds only
+                                        // if ((startExcluded[ti] <= t.start.min() || e.date() - 1 >= t.start.min()) ||
+					//     (startExcluded[ti] <= t.start.max() || e.date() - 1 >= t.start.max())) {
 
                                             if (debugNarr)
                                                 System.out.print(

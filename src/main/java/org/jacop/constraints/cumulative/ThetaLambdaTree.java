@@ -235,7 +235,7 @@ class ThetaLambdaTree extends Tree {
 
         long e_alpha = tree[v].e;
         long env_alpha = tree[v].env;
-        long e_beta = 0;
+        long e_beta = 0L;
 
         while (!isRoot(v)) {
             if (isLeft(v)) {
