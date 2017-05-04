@@ -99,6 +99,8 @@ public class XmulYeqC extends PrimitiveConstraint {
         this.y = y;
         this.c = c;
 
+	checkForOverflow();
+
     }
 
     @Override public ArrayList<Var> arguments() {
@@ -250,6 +252,15 @@ public class XmulYeqC extends PrimitiveConstraint {
     @Override public String toString() {
 
         return id() + " : XmulYeqC(" + x + ", " + y + ", " + c + " )";
+    }
+
+    private void checkForOverflow() {
+
+        Math.multiplyExact(x.min(), y.min());
+        Math.multiplyExact(x.min(), y.max());
+        Math.multiplyExact(x.max(), y.min());
+        Math.multiplyExact(x.max(), y.max());
+
     }
 
     @Override public void increaseWeight() {

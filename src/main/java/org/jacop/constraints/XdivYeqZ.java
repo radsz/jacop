@@ -205,10 +205,10 @@ public class XdivYeqZ extends Constraint {
 
     private void checkForOverflow() {
 
-        IntDomain.multiply(z.min(), y.min());
-        IntDomain.multiply(z.min(), y.max());
-        IntDomain.multiply(z.max(), y.min());
-        IntDomain.multiply(z.max(), y.max());
+        Math.multiplyExact(z.min(), y.min());
+        Math.multiplyExact(z.min(), y.max());
+        Math.multiplyExact(z.max(), y.min());
+        Math.multiplyExact(z.max(), y.max());
 
     }
 

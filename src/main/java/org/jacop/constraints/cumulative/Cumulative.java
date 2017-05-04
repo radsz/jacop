@@ -281,12 +281,12 @@ public class Cumulative extends CumulativeBasic {
                 // tree.printTree("tree_task_"+t[l].index);
 
                 long envlc = tree.calcEnvlc((long)t[l].lct(), (long)ci);
-                int diff;
-                if (envlc == Long.MIN_VALUE) {
-                    diff = Integer.MIN_VALUE;
-                } else {
+                int diff = Integer.MIN_VALUE;
+		if (envlc != Long.MIN_VALUE) {
                     long tmp = envlc - (cap - (long)ci) * (long)t[l].lct();
-                    diff = (int)divRoundUp(tmp, ci); //(int) (Math.round(Math.ceil((double) tmp / (double) ci)));
+                    long diffLong = divRoundUp(tmp, ci);
+		    if (diffLong > Integer.MIN_VALUE && diffLong < Integer.MAX_VALUE)
+			diff = (int) diffLong;
                 }
                 upd = Math.max(upd, diff);
                 update[capi][l] = upd;

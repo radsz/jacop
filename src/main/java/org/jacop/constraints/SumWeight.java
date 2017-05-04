@@ -425,28 +425,28 @@ import java.util.Map;
 
     void checkForOverflow() {
 
-        int s1 = IntDomain.multiply(sum.min(), -1);
-        int s2 = IntDomain.multiply(sum.max(), -1);
+        int s1 = Math.multiplyExact(sum.min(), -1);
+        int s2 = Math.multiplyExact(sum.max(), -1);
 
         int sumMin = 0, sumMax = 0;
         if (s1 <= s2) {
-            sumMin = add(sumMin, s1);
-            sumMax = add(sumMax, s2);
+            sumMin = Math.addExact(sumMin, s1);
+            sumMax = Math.addExact(sumMax, s2);
         } else {
-            sumMin = add(sumMin, s2);
-            sumMax = add(sumMax, s1);
+            sumMin = Math.addExact(sumMin, s2);
+            sumMax = Math.addExact(sumMax, s1);
         }
 
         for (int i = 0; i < list.length; i++) {
-            int n1 = IntDomain.multiply(list[i].min(), weights[i]);
-            int n2 = IntDomain.multiply(list[i].max(), weights[i]);
+            int n1 = Math.multiplyExact(list[i].min(), weights[i]);
+            int n2 = Math.multiplyExact(list[i].max(), weights[i]);
 
             if (n1 <= n2) {
-                sumMin = add(sumMin, n1);
-                sumMax = add(sumMax, n2);
+                sumMin = Math.addExact(sumMin, n1);
+                sumMax = Math.addExact(sumMax, n2);
             } else {
-                sumMin = add(sumMin, n2);
-                sumMax = add(sumMax, n1);
+                sumMin = Math.addExact(sumMin, n2);
+                sumMax = Math.addExact(sumMax, n1);
             }
         }
     }

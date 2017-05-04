@@ -270,6 +270,7 @@ public class LinearInt extends PrimitiveConstraint {
     }
 
     @Override public void consistency(Store store) {
+
         propagate(relationType);
     }
 
@@ -731,18 +732,21 @@ public class LinearInt extends PrimitiveConstraint {
     void checkForOverflow() {
 
         int sMin = 0, sMax = 0;
-        for (int i = 0; i < x.length; i++) {
-            int n1 = IntDomain.multiply(x[i].min(), a[i]);
-            int n2 = IntDomain.multiply(x[i].max(), a[i]);
+	int i = 0;
+        for (; i < pos; i++) {
+            int n1 = Math.multiplyExact(x[i].min(), a[i]);
+            int n2 = Math.multiplyExact(x[i].max(), a[i]);
 
-            if (n1 <= n2) {
-                sMin = add(sMin, n1);
-                sMax = add(sMax, n2);
-            } else {
-                sMin = add(sMin, n2);
-                sMax = add(sMax, n1);
-            }
+	    sMin = Math.addExact(sMin, n1);
+	    sMax = Math.addExact(sMax, n2);
         }
+        for (; i < l; i++) {
+            int n1 = Math.multiplyExact(x[i].max(), a[i]);
+            int n2 = Math.multiplyExact(x[i].min(), a[i]);
+	    
+	    sMin = Math.addExact(sMin, n1);
+	    sMax = Math.addExact(sMax, n2);
+        }	
     }
 
     @Override public String toString() {
