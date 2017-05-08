@@ -234,8 +234,8 @@ public class XmulCeqZ extends PrimitiveConstraint {
 
     private void checkForOverflow() {
 
-        IntDomain.multiply(x.min(), c);
-        IntDomain.multiply(x.max(), c);
+        Math.multiplyExact(x.min(), c);
+        Math.multiplyExact(x.max(), c);
 
     }
 

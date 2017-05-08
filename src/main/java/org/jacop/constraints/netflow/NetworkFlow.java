@@ -327,15 +327,10 @@ public class NetworkFlow extends Constraint implements UsesQueueVariable {
 
     /*****************/
     /** Identifiers **/
-
-    @Override public String id() {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
+    
     @Override public String toString() {
-        // TODO Auto-generated method stub
-        return null;
+        // TODO Do proper constraint print-out
+        return id()+" :";
     }
 
 }

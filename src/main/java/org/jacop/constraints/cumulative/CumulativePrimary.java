@@ -1,5 +1,5 @@
 /**
- * CumulativeBasic.java
+ * CumulativePrimary.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -48,14 +48,14 @@ import org.jacop.constraints.Constraint;
 import java.util.BitSet;
 
 /**
- * CumulativeBasic implements the cumulative constraint using time tabling
+ * CumulativePrimary implements the cumulative constraint using time tabling
  * algorithm.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.4
  */
 
-public class CumulativeBasic extends Constraint {
+class CumulativePrimary extends Constraint {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -66,20 +66,21 @@ public class CumulativeBasic extends Constraint {
     Store store;
 
     /*
-     * All tasks of the constraint
-     */ TaskView[] taskNormal;
-
+     * start times of tasks
+     */
+    IntVar[] start;
+    
+    /*
+     * All durations and resources of the constraint
+     */
+    int[] dur;
+    int[] res;
+    
     /**
      * It specifies the limit of the profile of cumulative use of resources.
      */
     public IntVar limit;
 
-    /**
-     * It specifies whether there possibly exist tasks that have duration or resource variable min value equal zero.
-     */
-    boolean possibleZeroTasks = false;
-
-    CumulativePrimary cumulativeForConstants = null;
     
     /**
      * It specifies the arguments required to be saved by an XML format as well as
@@ -94,7 +95,7 @@ public class CumulativeBasic extends Constraint {
      * @param resources variables denoting resource usage of the tasks.
      * @param limit the overall limit of resources which has to be used.
      */
-    public CumulativeBasic(IntVar[] starts, IntVar[] durations, IntVar[] resources, IntVar limit) {
+    public CumulativePrimary(IntVar[] starts, int[] durations, int[] resources, IntVar limit) {
 
         assert (starts != null) : "Variable in starts list is null";
         assert (durations != null) : "Variable in durations list is null";
@@ -109,36 +110,25 @@ public class CumulativeBasic extends Constraint {
 
         if (starts.length == durations.length && durations.length == resources.length) {
 
-            this.taskNormal = new TaskNormalView[starts.length];
-
+	    dur = new int[durations.length];
+	    res = new int[resources.length];
+	    start = new IntVar[starts.length];
+	    
             for (int i = 0; i < starts.length; i++) {
 
                 assert (starts[i] != null) : i + "-th variable in starts list is null";
-                assert (durations[i] != null) : i + "-th variable in durations list is null";
-                assert (resources[i] != null) : i + "-th variable in resources list is null";
-                assert (durations[i].min() >= 0) : i + "-th duration is specified as possibly negative";
-                assert (resources[i].min() >= 0) : i + "-th resource consumption is specified as possibly negative";
+                assert (durations[i] >= 0) : i + "-th duration is specified as possibly negative";
+                assert (resources[i] >= 0) : i + "-th resource consumption is specified as possibly negative";
 
-                if (durations[i].min() >= 0 && resources[i].min() >= 0) {
-                    taskNormal[i] = new TaskNormalView(new Task(starts[i], durations[i], resources[i]));
-                    taskNormal[i].index = i;
-		    if (durations[i].min() == 0 || resources[i].min() == 0)
-			possibleZeroTasks = true;
+		start[i] = starts[i];
+		
+                if (durations[i] > 0 && resources[i] > 0) {
+		    dur[i] = durations[i];
+		    res[i] = resources[i];
                 } else
-                    throw new IllegalArgumentException("\nDurations and resources must be >= 0 in cumulative");
+                    throw new IllegalArgumentException("\nDurations and resources must be > 0 in cumulative when defined as constants");
             }
 
-	    if (allVarGround(durations) && allVarGround(resources)) {
-		int[] durInt = new int[durations.length];
-		for (int i = 0; i < durations.length; i++) 
-		    durInt[i] = durations[i].value();
-		int[] resInt = new int[resources.length];
-		for (int i = 0; i < resources.length; i++) 
-		    resInt[i] = resources[i].value();
-		
-		cumulativeForConstants = new CumulativePrimary(starts, durInt, resInt, limit);
-	    }
-	    
             if (limit.min() >= 0) {
                 this.limit = limit;
                 numberArgs++;
@@ -157,11 +147,11 @@ public class CumulativeBasic extends Constraint {
      * @param resources variables denoting resource usage of the tasks.
      * @param limit the overall limit of resources which has to be used.
      */
-    public CumulativeBasic(ArrayList<? extends IntVar> starts, ArrayList<? extends IntVar> durations, ArrayList<? extends IntVar> resources,
+    public CumulativePrimary(ArrayList<? extends IntVar> starts, ArrayList<? extends Integer> durations, ArrayList<? extends Integer> resources,
         IntVar limit) {
 
-        this(starts.toArray(new IntVar[starts.size()]), durations.toArray(new IntVar[durations.size()]),
-            resources.toArray(new IntVar[resources.size()]), limit);
+        this(starts.toArray(new IntVar[starts.size()]), durations.stream().mapToInt(i -> i).toArray(),
+	     resources.stream().mapToInt(i -> i).toArray(), limit);
 
     }
 
@@ -170,12 +160,8 @@ public class CumulativeBasic extends Constraint {
 
         ArrayList<Var> variables = new ArrayList<Var>(1);
 
-        for (TaskView t : taskNormal)
-            variables.add(t.start);
-        for (TaskView t : taskNormal)
-            variables.add(t.dur);
-        for (TaskView t : taskNormal)
-            variables.add(t.res);
+        for (IntVar s : start)
+            variables.add(s);
         variables.add(limit);
         return variables;
     }
@@ -185,21 +171,16 @@ public class CumulativeBasic extends Constraint {
         do {
 
             store.propagationHasOccurred = false;
-	    profileProp();
-	    
+
+            profileProp();
+
         } while (store.propagationHasOccurred);
 
     }
 
     void profileProp() {
 
-	if (cumulativeForConstants == null) {
-	    sweepPruning();
-	    updateTasksRes(store);
-	}
-	else
-	    cumulativeForConstants.sweepPruning();
-
+        sweepPruning();
     }
 
 
@@ -216,10 +197,8 @@ public class CumulativeBasic extends Constraint {
 
     @Override public void impose(Store store) {
 
-        for (TaskView t : taskNormal) {
-            t.start.putModelConstraint(this, getConsistencyPruningEvent(t.start));
-            t.dur.putModelConstraint(this, getConsistencyPruningEvent(t.dur));
-            t.res.putModelConstraint(this, getConsistencyPruningEvent(t.res));
+        for (IntVar s : start) {
+            s.putModelConstraint(this, getConsistencyPruningEvent(s));
         }
 
         limit.putModelConstraint(this, getConsistencyPruningEvent(limit));
@@ -228,24 +207,12 @@ public class CumulativeBasic extends Constraint {
         store.countConstraint();
 
         this.store = store;
-
-	if (cumulativeForConstants != null)
-	    cumulativeForConstants.store = store;
-	
-    }
-
-    void updateTasksRes(Store store) {
-        int limitMax = limit.max();
-        for (TaskView t : taskNormal)
-            t.res.domain.inMax(store.level, t.res, limitMax);
     }
 
     @Override public void removeConstraint() {
-        for (TaskView t : taskNormal) {
-            t.start.removeConstraint(this);
-            t.dur.removeConstraint(this);
-            t.res.removeConstraint(this);
-        }
+        for (IntVar s : start) 
+            s.removeConstraint(this);
+
         limit.removeConstraint(this);
     }
 
@@ -257,10 +224,9 @@ public class CumulativeBasic extends Constraint {
         // expensive checking
         if (limit.singleton()) {
             int i = 0;
-            while (sat && i < taskNormal.length) {
-                t = taskNormal[i];
-                i++;
-                sat = sat && t.start.singleton() && t.dur.singleton() && t.res.singleton();
+            while (sat && i < start.length) {
+                sat = sat && start[i].singleton();
+		i++;
             }
             return sat;
         } else
@@ -271,11 +237,11 @@ public class CumulativeBasic extends Constraint {
 
         StringBuffer result = new StringBuffer(id());
 
-        result.append(" : cumulativeBasic([ ");
-        for (int i = 0; i < taskNormal.length - 1; i++)
-            result.append(taskNormal[i]).append(", ");
+        result.append(" : cumulativePrimary([ ");
+        for (int i = 0; i < start.length - 1; i++)
+            result.append("["+start[i]+", ").append(dur[i]+", ").append(res[i]+"], ");
 
-        result.append(taskNormal[taskNormal.length - 1]);
+	result.append("["+start[start.length - 1]+", ").append(dur[start.length - 1]+", ").append(res[start.length - 1]+"]");
 
         result.append(" ]").append(", limit = ").append(limit).append(" )");
 
@@ -286,10 +252,8 @@ public class CumulativeBasic extends Constraint {
     @Override public void increaseWeight() {
         if (increaseWeight) {
             limit.weight++;
-            for (TaskView t : taskNormal) {
-                t.dur.weight++;
-                t.res.weight++;
-                t.start.weight++;
+            for (IntVar s : start) {
+                s.weight++;
             }
         }
     }
@@ -310,21 +274,19 @@ public class CumulativeBasic extends Constraint {
     // Sweep algorithm for profile
     void sweepPruning() {
 
-        Event[] es = new Event[4 * taskNormal.length];
+        Event[] es = new Event[4 * start.length];
         int limitMax = limit.max();
 
         boolean mandatoryExists = false;
         int j = 0;
         int minProfile = Integer.MAX_VALUE, maxProfile = Integer.MIN_VALUE;
-        for (int i = 0; i < taskNormal.length; i++) {
-            TaskView t = taskNormal[i];
-            t.index = i;
+        for (int i = 0; i < start.length; i++) {
 
             // mandatory task parts to create profile
-            int min = t.lst(), max = t.ect();
-            if (min < max && t.res.min() > 0) {
-                es[j++] = new Event(profile, t, min, t.res.min());
-                es[j++] = new Event(profile, t, max, -t.res.min());
+            int min = start[i].max(), max = start[i].min()+dur[i];
+            if (min < max) {
+                es[j++] = new Event(profile, i, min, res[i]);
+                es[j++] = new Event(profile, i, max, -res[i]);
                 minProfile = (min < minProfile) ? min : minProfile;
                 maxProfile = (max > maxProfile) ? max : maxProfile;
                 mandatoryExists = true;
@@ -333,16 +295,15 @@ public class CumulativeBasic extends Constraint {
         if (!mandatoryExists)
             return;
 
-        for (TaskView t : taskNormal) {
+	for (int i=0; i<start.length; i++) {
             // overlapping tasks for pruning
             // from start to end
-            int min = t.est();
-            int max = t.lct();
-            if (t.maxNonZero())  // t.dur.max() > 0 && t.res.max() > 0
-                if (!(min > maxProfile || max < minProfile)) {
-                    es[j++] = new Event(pruneStart, t, min, t.res.max());
-                    es[j++] = new Event(pruneEnd, t, max, -t.res.max());
-                }
+            int min = start[i].min(); //t.est();
+            int max = start[i].max() + dur[i]; //t.lct();
+	    if (!(min > maxProfile || max < minProfile)) {
+		es[j++] = new Event(pruneStart, i, min, res[i]);
+		es[j++] = new Event(pruneEnd, i, max, -res[i]);
+	    }
         }
 
         int N = j;
@@ -354,21 +315,15 @@ public class CumulativeBasic extends Constraint {
             System.out.println("===========================");
         }
 
-        BitSet tasksToPrune = new BitSet(taskNormal.length);
-        boolean[] inProfile = new boolean[taskNormal.length];
+        BitSet tasksToPrune = new BitSet(start.length);
+        boolean[] inProfile = new boolean[start.length];
 
         // current value of the profile for mandatory parts
         int curProfile = 0;
 
         // used for start variable pruning
-        int[] startExcluded = new int[taskNormal.length];
+        int[] startExcluded = new int[start.length];
         Arrays.fill(startExcluded, Integer.MAX_VALUE);
-
-        // used for duration variable pruning
-        int[] lastBarier = new int[taskNormal.length];
-        Arrays.fill(lastBarier, Integer.MAX_VALUE);
-        boolean[] startAtEnd = new boolean[taskNormal.length];
-        // Arrays.fill(startAtEnd, false);  // by default they are initialized to false
 
         for (int i = 0; i < N; i++) {
 
@@ -382,11 +337,11 @@ public class CumulativeBasic extends Constraint {
                 case profile: // =========== profile event ===========
 
                     curProfile += e.value();
-                    inProfile[e.task().index] = (e.value() > 0);
+                    inProfile[e.index] = (e.value() > 0);
 
                     if (ne == null || ne.type() != profile || e.date < ne.date()) {
 			// check the tasks for pruning only at the end of all profile events
-			
+
                         if (debug)
                             System.out.println("Profile at " + e.date() + ": " + curProfile);
 
@@ -395,48 +350,32 @@ public class CumulativeBasic extends Constraint {
                             limit.domain.inMin(store.level, limit, curProfile);
 
                         for (int ti = tasksToPrune.nextSetBit(0); ti >= 0; ti = tasksToPrune.nextSetBit(ti + 1)) {
-                            TaskView t = taskNormal[ti];
 
                             int profileValue = curProfile;
                             if (inProfile[ti])
-                                profileValue -= t.res.min();
+                                profileValue -= res[ti];
 
                             // ========= Pruning start variable
-                            if (t.exists()) // t.res.min() > 0 && t.dur.min() > 0
-                                if (startExcluded[ti] == Integer.MAX_VALUE) {
-                                    if (limitMax - profileValue < t.res.min()) {
-                                        startExcluded[ti] = e.date() - t.dur.min() + 1;
-                                    }
-                                } else //startExcluded[ti] != Integer.MAX_VALUE
-                                    if (limitMax - profileValue >= t.res.min()) {
-                                        // end of excluded interval
+			    if (startExcluded[ti] == Integer.MAX_VALUE) {
+				if (limitMax - profileValue < res[ti]) {
+				    startExcluded[ti] = e.date() - dur[ti] + 1;
+				}
+			    } else //startExcluded[ti] != Integer.MAX_VALUE
+				if (limitMax - profileValue >= res[ti]) {
+				    // end of excluded interval
+				    
+				    if (debugNarr)
+					System.out.print(
+                                                    ">>> CumulativePrimary Profile 1. Narrowed " + start[ti] + " \\ " + new IntervalDomain(
+                                                        startExcluded[ti], e.date() - 1));
 
-					if (debugNarr)
-					    System.out.print(
-                                                    ">>> CumulativeBasic Profile 1. Narrowed " + t.start + " \\ " + new IntervalDomain(
-                                                        startExcluded[ti], (int) (e.date() - 1)));
+				    start[ti].domain.inComplement(store.level, start[ti], startExcluded[ti], e.date() - 1);
 
-					t.start.domain.inComplement(store.level, t.start, startExcluded[ti], e.date() - 1);
+				    if (debugNarr)
+					System.out.println(" => " + start[ti]);
 
-					if (debugNarr)
-					    System.out.println(" => " + t.start);
-
-                                        startExcluded[ti] = Integer.MAX_VALUE;
-                                    }
-
-                            // ========= for duration pruning
-			    if (e.date() <= t.start.max())
-				if (limitMax - profileValue < t.res.min())
-				    startAtEnd[ti] = false;
-				else  // limitMax - profileValue >= t.res.min()
-				    startAtEnd[ti] = true;
-
-			    if (lastBarier[ti] == Integer.MAX_VALUE && limitMax - profileValue < t.res.min() && e.date() >= t.start.max())
-				lastBarier[ti] = e.date();
-
-                            // ========= resource pruning
-			    if (limit.max() - profileValue < t.res.max() && t.lst() <= e.date() && e.date() < t.ect())
-				t.res.domain.inMax(store.level, t.res, limit.max() - profileValue);
+				    startExcluded[ti] = Integer.MAX_VALUE;
+				}
                         }
                     }
 
@@ -444,81 +383,41 @@ public class CumulativeBasic extends Constraint {
 
                 case pruneStart:  // =========== start of a task ===========
                     int profileValue = curProfile;
-                    TaskView t = e.task();
-                    int ti = t.index;
+                    int ti = e.index;
 
                     if (inProfile[ti])
-                        profileValue -= t.res.min();
+                        profileValue -= res[ti];
 
                     // ========= for start pruning
-                    if (t.exists()) // t.res.min() > 0 && t.dur.min() > 0
-                        if (limitMax - profileValue < t.res.min()) {
-                            startExcluded[ti] = e.date();
-                        }
-
-                    // ========= for duration pruning
-		    startAtEnd[ti] = true;
-
-                    // ========= resource pruning
-		    if (limit.max() - profileValue < t.res.max() && t.lst() <= e.date() && e.date() < t.ect())
-			t.res.domain.inMax(store.level, t.res, limit.max() - profileValue);
+		    if (limitMax - profileValue < res[ti]) 
+			startExcluded[ti] = e.date();
 
                     tasksToPrune.set(ti);
                     break;
 
                 case pruneEnd: // =========== end of a task ===========
                     profileValue = curProfile;
-                    t = e.task();
-                    ti = t.index;
+                    ti = e.index;
 
                     if (inProfile[ti])
-                        profileValue -= t.res.min();
+                        profileValue -= res[ti];
 
                     // ========= pruning start variable
-                    if (t.exists()) 
-                        if (startExcluded[ti] != Integer.MAX_VALUE) {
-                            // task ends and we remove forbidden area
+		    if (startExcluded[ti] != Integer.MAX_VALUE) {
+			// task ends and we remove forbidden area
 
-			    if (debugNarr)
-				System.out.print(
-                                        ">>> CumulativeBasic Profile 2. Narrowed " + t.start + " inMax " + (int) (startExcluded[ti] - 1));
+			if (debugNarr)
+			    System.out.print(">>> CumulativePrimary Profile 2. Narrowed " + start[ti] + " inMax " + (int) (startExcluded[ti] - 1));
+			    
+			start[ti].domain.inMax(store.level, start[ti], startExcluded[ti] - 1);
 
-			    t.start.domain.inMax(store.level, t.start, startExcluded[ti] - 1);
-
-			    if (debugNarr)
-				System.out.println(" => " + t.start);
-
-                        }
+			if (debugNarr)
+			    System.out.println(" => " + start[ti]);
+			    
+		    }
 
                     startExcluded[ti] = Integer.MAX_VALUE;
 
-                    // ========= resource pruning
-		    if (limit.max() - profileValue < t.res.max() && t.lst() <= e.date() && e.date() < t.ect())
-			t.res.domain.inMax(store.level, t.res, limit.max() - profileValue);
-
-                    // ========= duration pruning
-		    if (startAtEnd[ti]) {
-			int maxDuration = Integer.MIN_VALUE;
-			Interval lastInterval = null;
-			
-			for (IntervalEnumeration e1 = t.start.dom().intervalEnumeration(); e1.hasMoreElements(); ) {
-			    Interval i1 = e1.nextElement();
-			    maxDuration = Math.max(maxDuration, i1.max() - i1.min() + t.dur.min());
-			    lastInterval = i1;
-			}
-			maxDuration = Math.max(maxDuration, lastBarier[ti] - lastInterval.min());
-
-			if (maxDuration < t.dur.max()) {
-			    if (debugNarr)
-				System.out.print(">>> CumulativeBasic Profile 3. Narrowed " + t.dur + " in 0.." + maxDuration);
-
-			    t.dur.domain.inMax(store.level, t.dur, maxDuration);
-			    
-			    if (debugNarr)
-				System.out.println(" => " + t.dur);
-			}
-		    }
-		    
                     tasksToPrune.set(ti, false);
                     break;
 
@@ -528,26 +427,19 @@ public class CumulativeBasic extends Constraint {
         }
     }
 
-    boolean allVarGround(IntVar[] w) {
-        for (int i = 0; i < w.length; i++)
-            if (!w[i].singleton())
-                return false;
-        return true;
-    }
-
     // event type
     static final int profile = 0, pruneStart = 1, pruneEnd = 2;
 
 
     private static class Event {
         int type;
-        TaskView t;
+        int index;
         int date;
         int value;
 
-        Event(int type, TaskView t, int date, int value) {
+        Event(int type, int t, int date, int value) {
             this.type = type;
-            this.t = t;
+            this.index = t;
             this.date = date;
             this.value = value;
         }
@@ -564,14 +456,14 @@ public class CumulativeBasic extends Constraint {
             return value;
         }
 
-        TaskView task() {
-            return t;
+        int task() {
+            return index;
         }
 
         @Override public String toString() {
             String result = "(";
             result += (type == profile) ? "profile, " : (type == pruneStart) ? "pruneStart, " : "pruneEnd, ";
-            result += t + ", " + date + ", " + value + ")\n";
+            result += index + ", " + date + ", " + value + ")\n";
             return result;
         }
     }

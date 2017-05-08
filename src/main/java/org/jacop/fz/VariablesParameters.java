@@ -63,8 +63,8 @@ public class VariablesParameters implements ParserTreeConstants {
     final static boolean interval = false; // selection of interval or dense, if possible, domain for variables
 
     public final static double MIN_FLOAT = -1e150, MAX_FLOAT = 1e150;
-    // final static int MIN_INT = Integer.MIN_VALUE, MAX_INT = Integer.MAX_VALUE;
-    public final static int MIN_INT = IntDomain.MinInt, MAX_INT = IntDomain.MaxInt;
+    // public final static int MIN_INT = IntDomain.MinInt, MAX_INT = IntDomain.MaxInt;
+    public final static int MIN_INT = -10_000_000, MAX_INT = 10_000_000;
 
     Tables dictionary;
     int lowInterval, highInterval;
@@ -165,7 +165,7 @@ public class VariablesParameters implements ParserTreeConstants {
         switch (type) {
             case 0: // int
                 ident = ((ASTVarDeclItem) node).getIdent();
-                varInt = new IntVar(store, ident, IntDomain.MinInt, IntDomain.MaxInt);
+                varInt = new IntVar(store, ident, MIN_INT, MAX_INT);
 
                 table.addVariable(ident, varInt);
                 if (initChild < ((ASTVarDeclItem) node).jjtGetNumChildren()) {
@@ -197,7 +197,7 @@ public class VariablesParameters implements ParserTreeConstants {
                 if (lowInterval > highInterval)
                     throw Store.failException;
 
-                if (lowInterval < MIN_INT || highInterval > MAX_INT)
+                if (lowInterval < IntDomain.MinInt || highInterval > IntDomain.MaxInt)
                     throw new ArithmeticException("Bounds for " + ident + ": " + lowInterval + ".." + highInterval + " are too low/high");
 
                 if (interval)
@@ -235,7 +235,7 @@ public class VariablesParameters implements ParserTreeConstants {
                 for (Integer e : intList) {
                     int element = e.intValue();
 
-                    if (element < MIN_INT || element > MAX_INT)
+                    if (element < IntDomain.MinInt || element > IntDomain.MaxInt)
                         throw new ArithmeticException("Domain value for " + ident + " is too high/low (" + element + ")");
 
                     ((IntVar) varInt).addDom(element, element);
@@ -304,7 +304,7 @@ public class VariablesParameters implements ParserTreeConstants {
                 break;
             case 4: // set int
                 ident = ((ASTVarDeclItem) node).getIdent();
-                varSet = new SetVar(store, ident, new BoundSetDomain(IntDomain.MinInt, IntDomain.MaxInt));
+                varSet = new SetVar(store, ident, new BoundSetDomain(MIN_INT, MAX_INT));
                 table.addSetVariable(ident, (SetVar) varSet);
                 if (initChild < ((ASTVarDeclItem) node).jjtGetNumChildren()) {
 
@@ -601,8 +601,8 @@ public class VariablesParameters implements ParserTreeConstants {
                 } else { // no init values
                     varArrayInt = new IntVar[size];
                     for (int i = 0; i < size; i++)
-                        //varArrayInt[i] = new IntVar(store, ident+"["+ i +"]", new IntervalDomain(IntDomain.MinInt, IntDomain.MaxInt));
-                        varArrayInt[i] = new IntVar(store, ident + "[" + i + "]", IntDomain.MinInt, IntDomain.MaxInt);
+                        //varArrayInt[i] = new IntVar(store, ident+"["+ i +"]", new IntervalDomain(MIN_INT, MAX_INT));
+                        varArrayInt[i] = new IntVar(store, ident + "[" + i + "]", MIN_INT, MAX_INT);
                     if (!var_introduced)
                         table.addSearchArray(varArrayInt);
                     else if (output_array)
@@ -715,7 +715,7 @@ public class VariablesParameters implements ParserTreeConstants {
                 } else { // no init values
                     varArraySet = new SetVar[size];
                     for (int i = 0; i < size; i++)
-                        varArraySet[i] = new SetVar(store, ident + "[" + i + "]", new BoundSetDomain(IntDomain.MinInt, IntDomain.MaxInt));
+                        varArraySet[i] = new SetVar(store, ident + "[" + i + "]", new BoundSetDomain(MIN_INT, MAX_INT));
                     if (!var_introduced)
                         table.addSearchSetArray(varArraySet);
                     else if (output_array)
@@ -897,14 +897,14 @@ public class VariablesParameters implements ParserTreeConstants {
                 case 1: // int interval
                     lowInterval = ((ASTIntTiExprTail) child).getLow();
                     highInterval = ((ASTIntTiExprTail) child).getHigh();
-                    if (lowInterval < MIN_INT || highInterval > MAX_INT)
+                    if (lowInterval < IntDomain.MinInt || highInterval > IntDomain.MaxInt)
                         throw new ArithmeticException("Too large bounds on intervals " + lowInterval + ".." + highInterval);
                     break;
                 case 2: // int list
                     SimpleNode grand_child = (SimpleNode) child.jjtGetChild(0);
                     intList = ((ASTIntLiterals) grand_child).getList();
                     for (Integer e : intList)
-                        if (e.intValue() < MIN_INT || e.intValue() > MAX_INT)
+                        if (e.intValue() < IntDomain.MinInt || e.intValue() > IntDomain.MaxInt)
                             throw new ArithmeticException("Too large element in set " + e.intValue());
                     break;
 	    default:
@@ -924,14 +924,14 @@ public class VariablesParameters implements ParserTreeConstants {
                     case 1: // int interval
                         lowInterval = ((ASTIntTiExprTail) grand_child).getLow();
                         highInterval = ((ASTIntTiExprTail) grand_child).getHigh();
-                        if (lowInterval < MIN_INT || highInterval > MAX_INT)
+                        if (lowInterval < IntDomain.MinInt || highInterval > IntDomain.MaxInt)
                             throw new ArithmeticException("Too large bounds on intervals " + lowInterval + ".." + highInterval);
                         break;
                     case 2: // int list
                         SimpleNode grand_grand_child = (SimpleNode) grand_child.jjtGetChild(0);
                         intList = ((ASTIntLiterals) grand_grand_child).getList();
                         for (Integer e : intList)
-                            if (e.intValue() < MIN_INT || e.intValue() > MAX_INT)
+                            if (e.intValue() < IntDomain.MinInt || e.intValue() > IntDomain.MaxInt)
                                 throw new ArithmeticException("Too large element in set " + e.intValue());
                         break;
 		default:

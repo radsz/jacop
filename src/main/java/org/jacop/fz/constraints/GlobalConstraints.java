@@ -129,11 +129,11 @@ class GlobalConstraints implements ParserTreeConstants {
         IntVar[] d = duration.toArray(new IntVar[duration.size()]);
         IntVar[] r = resource.toArray(new IntVar[resource.size()]);
 
-    /* !!! IMPORTANT !!!  Cumulative constraint is added after all other constraints are posed since
-     * it has expensive consistency method that do not need to be executed during model
-     * initialization every time an added constraint triggers execution of Cumulative.
-     */
-
+	/* !!! IMPORTANT !!!  Cumulative constraint is added after all other constraints are posed since
+	 * it has expensive consistency method that do not need to be executed during model
+	 * initialization every time an added constraint triggers execution of Cumulative.
+	 */
+	
         if (s.length == 0)
             return;
         else if (s.length == 1)
@@ -159,33 +159,24 @@ class GlobalConstraints implements ParserTreeConstants {
                         for (int i = 0; i < r.length; i++)
                             support.pose(new XlteqY(r[i], b));
                 } else // possible to use CumulativeUnary (it is used with profile propagator; option true)
-                    support.delayedConstraints.add(new CumulativeUnary(s, d, r, b, true));
+		    support.delayedConstraints.add(new CumulativeUnary(s, d, r, b, true));
                 // these constraints are not needed if we run with profile-based propagator
                 // for (int i = 0; i < r.length; i++)
                 //   support.pose(new XlteqY(r[i], b));
             } else if (allVarGround(d) && allVarGround(r)) {
-                boolean overflow = false;
-
-		for (int i = 0; i < s.length; i++) 
-		    overflow = overflow || times_overflow((s[i].max() + d[i].max()), b.max());
-		
-                if (overflow)
-                    support.delayedConstraints.add(new CumulativeBasic(s, d, r, b));
-                else {
-		    HashSet<Integer> diff = new HashSet<Integer>();
-		    for (IntVar e : r) 
-			diff.add(e.min());
-		    double n = (double)r.length;
-		    double k = (double)diff.size();
-		    // KKU, 2017-04-05, formula when 3.5*n*n < n*k*log(n),
-		    // where 3.5 is experimantally selected constant
-		    if (3.5*n*n < n*k*Math.log10((double)n)/Math.log10(2.0))
-		    	// complexity O(n^2)
-		    	support.delayedConstraints.add(new org.jacop.constraints.Cumulative(s, d, r, b, true, true, false));
-		    else
-			// complexity O(n*k*logn)
-			support.delayedConstraints.add(new Cumulative(s, d, r, b));
-		}
+		HashSet<Integer> diff = new HashSet<Integer>();
+		for (IntVar e : r) 
+		    diff.add(e.min());
+		double n = (double)r.length;
+		double k = (double)diff.size();
+		// KKU, 2017-04-05, formula when 3.5*n*n < n*k*log(n),
+		// where 3.5 is experimantally selected constant
+		if (3.5*n*n < n*k*Math.log10((double)n)/Math.log10(2.0))
+		    // complexity O(n^2)
+		    support.delayedConstraints.add(new org.jacop.constraints.Cumulative(s, d, r, b, true, true, false));
+		else
+		    // complexity O(n*k*logn)
+		    support.delayedConstraints.add(new Cumulative(s, d, r, b));
             } else
                 support.delayedConstraints.add(new CumulativeBasic(s, d, r, b));
         }
@@ -496,12 +487,6 @@ class GlobalConstraints implements ParserTreeConstants {
             for (int j = 0; j < size; j++)
                 t[i][j] = tbl[size * i + j];
 
-	int maxDomSize = Integer.MIN_VALUE;
-	for (IntVar vi : v)
-	    if (vi.getSize() > maxDomSize)
-		maxDomSize = vi.getSize();
-	boolean mddOverflow = times_overflow(maxDomSize, tbl.length);
-
         int[] vu = uniqueIndex(v);
         if (vu.length != v.length) { // non unique variables
 
@@ -520,18 +505,15 @@ class GlobalConstraints implements ParserTreeConstants {
                     System.out.println(uniqueVar[0] + " in " + d);
 
             } else
-		if (mddOverflow)
-		    support.delayedConstraints.add(new ExtensionalSupportSTR(uniqueVar, tt));
+		if (t.length <= 64)
+		    support.pose(new org.jacop.constraints.table.SimpleTable(v, tt));
 		else
-		    support.delayedConstraints.add(new ExtensionalSupportMDD(uniqueVar, tt));
-
+		    support.pose(new org.jacop.constraints.table.Table(v, tt));	    
         } else
-            // we do not not pose ExtensionalSupportMDD directly because of possible inconsistency with its
-            // intiallization; we collect all constraints and pose them at the end when all other constraints are posed
-	    if (mddOverflow)
-		support.delayedConstraints.add(new ExtensionalSupportSTR(v, t));
+	    if (t.length <= 64)
+	    	support.pose(new org.jacop.constraints.table.SimpleTable(v, t));
 	    else
-		support.delayedConstraints.add(new ExtensionalSupportMDD(v, t));
+	    	support.pose(new org.jacop.constraints.table.Table(v, t));	    
     }
 
     void gen_jacop_assignment(SimpleNode node) {
@@ -929,15 +911,5 @@ class GlobalConstraints implements ParserTreeConstants {
             x[i] = il.get(i);
 
         return x;
-    }
-
-    boolean times_overflow(int a, int b) {
-
-        long cc = (long) a * (long) b;
-
-        if (cc < Integer.MIN_VALUE || cc > Integer.MAX_VALUE)
-            return true;
-
-        return false;
     }
 }

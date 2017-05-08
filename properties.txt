@@ -1,0 +1,6 @@
+JaCoP properties that can be controlled by option -D in java command. For example, java -Dmax_edge_find_size=200 controls the maximal size of the task list in the cumulative constraint to use edge-finding algorithm.
+
+
+Properties:
+
+- max_edge_find_size: use edge finder in the cumulative constraints if it contains less tasks than this number; default 100.

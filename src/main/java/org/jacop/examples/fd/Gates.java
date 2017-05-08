@@ -33,6 +33,7 @@ package org.jacop.examples.fd;
 import java.util.ArrayList;
 
 import org.jacop.constraints.ExtensionalSupportVA;
+import org.jacop.constraints.table.SimpleTable;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.Domain;
 import org.jacop.core.IntVar;
@@ -99,7 +100,7 @@ public class Gates extends ExampleFD {
 
         int[][] tuples = {{0, 0, 0}, {0, 1, 0}, {1, 0, 0}, {1, 1, 1}};
 
-        store.impose(new ExtensionalSupportVA(new BooleanVar[] {in1, in2, out}, tuples));
+        store.impose(new SimpleTable(new BooleanVar[] {in1, in2, out}, tuples));
 
     }
 
@@ -114,7 +115,7 @@ public class Gates extends ExampleFD {
 
         int[][] tuples = {{0, 0, 0}, {0, 1, 1}, {1, 0, 1}, {1, 1, 1}};
 
-        store.impose(new ExtensionalSupportVA(new BooleanVar[] {in1, in2, out}, tuples));
+        store.impose(new SimpleTable(new BooleanVar[] {in1, in2, out}, tuples));
     }
 
     /**
@@ -128,7 +129,7 @@ public class Gates extends ExampleFD {
 
         int[][] tuples = {{0, 0, 0}, {0, 1, 1}, {1, 0, 1}, {1, 1, 0}};
 
-        store.impose(new ExtensionalSupportVA(new BooleanVar[] {in1, in2, out}, tuples));
+        store.impose(new SimpleTable(new BooleanVar[] {in1, in2, out}, tuples));
     }
 
     /**
@@ -141,7 +142,7 @@ public class Gates extends ExampleFD {
 
         int[][] tuples = {{0, 1}, {1, 0}};
 
-        store.impose(new ExtensionalSupportVA(new BooleanVar[] {in, out}, tuples));
+        store.impose(new SimpleTable(new BooleanVar[] {in, out}, tuples));
     }
 
 

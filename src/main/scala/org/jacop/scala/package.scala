@@ -10,6 +10,7 @@ import org.jacop.constraints.regular._
 import org.jacop.constraints.binpacking._
 import org.jacop.constraints.netflow._
 import org.jacop.constraints.diffn._
+import org.jacop.constraints.table._
 import org.jacop.search._
 //import org.jacop.set.core._
 import org.jacop.set.constraints._
@@ -624,13 +625,25 @@ package object scala {
   }
 
 /**
-* Wrapper for [[org.jacop.constraints.ExtensionalSupportVA]].
+* Wrapper for [[org.jacop.constraints.table.Table]].
 *
 * @param list array of variables. 
 * @param tuples array of tuples allowed to be assigned to variables.
 */
   def table[T <: org.jacop.core.IntVar](list: List[T], tuples: Array[Array[Int]])(implicit m: ClassTag[T]) {
-    val c = new ExtensionalSupportMDD(list.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], tuples)
+    val c = new Table(list.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], tuples)
+    if (trace) println(c)
+    impModel.impose( c )
+  }
+
+/**
+* Wrapper for [[org.jacop.constraints.table.SimpleTable]].
+*
+* @param list array of variables. 
+* @param tuples array of tuples allowed to be assigned to variables.
+*/
+  def simpleTable[T <: org.jacop.core.IntVar](list: List[T], tuples: Array[Array[Int]])(implicit m: ClassTag[T]) {
+    val c = new SimpleTable(list.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], tuples)
     if (trace) println(c)
     impModel.impose( c )
   }

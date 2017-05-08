@@ -155,6 +155,10 @@ public class Count extends Constraint {
             numberEq += numberMayBe;
             numberMayBe = 0;
 
+            counter.domain.in(store.level, counter, numberEq, numberEq);
+            removeConstraint();
+	    return;
+
         } else if (numberEq == counter.max()) {
             for (IntVar v : list)
                 if (!v.singleton() && v.domain.contains(value))
@@ -165,6 +169,7 @@ public class Count extends Constraint {
 
             counter.domain.in(store.level, counter, numberEq, numberEq);
             removeConstraint();
+	    return;
         }
 
         counter.domain.in(store.level, counter, numberEq, numberEq + numberMayBe);

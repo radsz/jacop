@@ -65,8 +65,8 @@ class Task {
         return start;
     }
 
-    int e() {
-        return dur.min() * res.min();
+    long e() {
+        return (long)dur.min() * (long)res.min();
     }
 
     @Override public String toString() {

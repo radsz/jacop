@@ -266,12 +266,12 @@ import org.jacop.core.Var;
             int n1 = list[i].min();
             int n2 = list[i].max();
 
-            sumMin = add(sumMin, n1);
-            sumMax = add(sumMax, n2);
+            sumMin = Math.addExact(sumMin, n1);
+            sumMax = Math.addExact(sumMax, n2);
         }
 
-        subtract(sumMin, sum.max());
-        subtract(sumMax, sum.min());
+        Math.subtractExact(sumMin, sum.max());
+        Math.subtractExact(sumMax, sum.min());
     }
 
     @Override public String toString() {
