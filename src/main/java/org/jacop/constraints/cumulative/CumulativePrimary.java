@@ -366,7 +366,7 @@ class CumulativePrimary extends Constraint {
 				    
 				    if (debugNarr)
 					System.out.print(
-                                                    ">>> CumulativePrimary Profile 1. Narrowed " + start[i] + " \\ " + new IntervalDomain(
+                                                    ">>> CumulativePrimary Profile 1. Narrowed " + start[ti] + " \\ " + new IntervalDomain(
                                                         startExcluded[ti], e.date() - 1));
 
 				    start[ti].domain.inComplement(store.level, start[ti], startExcluded[ti], e.date() - 1);
