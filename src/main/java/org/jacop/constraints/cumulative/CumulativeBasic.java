@@ -411,22 +411,16 @@ public class CumulativeBasic extends Constraint {
                                     if (limitMax - profileValue >= t.res.min()) {
                                         // end of excluded interval
 
-                                        if (!(startExcluded[ti] > t.start.max() || e.date() - 1 < t.start.min())) {
-					// bounds only
-                                        // if ((startExcluded[ti] <= t.start.min() || e.date() - 1 >= t.start.min()) ||
-					//     (startExcluded[ti] <= t.start.max() || e.date() - 1 >= t.start.max())) {
-
-                                            if (debugNarr)
-                                                System.out.print(
+					if (debugNarr)
+					    System.out.print(
                                                     ">>> CumulativeBasic Profile 1. Narrowed " + t.start + " \\ " + new IntervalDomain(
                                                         startExcluded[ti], (int) (e.date() - 1)));
 
-                                            t.start.domain.inComplement(store.level, t.start, startExcluded[ti], e.date() - 1);
+					t.start.domain.inComplement(store.level, t.start, startExcluded[ti], e.date() - 1);
 
-                                            if (debugNarr)
-                                                System.out.println(" => " + t.start);
+					if (debugNarr)
+					    System.out.println(" => " + t.start);
 
-                                        }
                                         startExcluded[ti] = Integer.MAX_VALUE;
                                     }
 
@@ -481,21 +475,19 @@ public class CumulativeBasic extends Constraint {
                         profileValue -= t.res.min();
 
                     // ========= pruning start variable
-                    if (t.exists()) // t.res.min() > 0 && t.dur.min() > 0
+                    if (t.exists()) 
                         if (startExcluded[ti] != Integer.MAX_VALUE) {
                             // task ends and we remove forbidden area
 
-                            if (!(startExcluded[ti] > t.start.max() || e.date() < t.start.min())) {
-                                if (debugNarr)
-                                    System.out.print(
+			    if (debugNarr)
+				System.out.print(
                                         ">>> CumulativeBasic Profile 2. Narrowed " + t.start + " inMax " + (int) (startExcluded[ti] - 1));
 
-                                t.start.domain.inMax(store.level, t.start, startExcluded[ti] - 1);
+			    t.start.domain.inMax(store.level, t.start, startExcluded[ti] - 1);
 
-                                if (debugNarr)
-                                    System.out.println(" => " + t.start);
+			    if (debugNarr)
+				System.out.println(" => " + t.start);
 
-                            }
                         }
 
                     startExcluded[ti] = Integer.MAX_VALUE;

@@ -341,7 +341,7 @@ class CumulativePrimary extends Constraint {
 
                     if (ne == null || ne.type() != profile || e.date < ne.date()) {
 			// check the tasks for pruning only at the end of all profile events
-			
+
                         if (debug)
                             System.out.println("Profile at " + e.date() + ": " + curProfile);
 
@@ -350,7 +350,6 @@ class CumulativePrimary extends Constraint {
                             limit.domain.inMin(store.level, limit, curProfile);
 
                         for (int ti = tasksToPrune.nextSetBit(0); ti >= 0; ti = tasksToPrune.nextSetBit(ti + 1)) {
-                            // TaskView t = taskNormal[ti];
 
                             int profileValue = curProfile;
                             if (inProfile[ti])
@@ -364,24 +363,17 @@ class CumulativePrimary extends Constraint {
 			    } else //startExcluded[ti] != Integer.MAX_VALUE
 				if (limitMax - profileValue >= res[ti]) {
 				    // end of excluded interval
-				    int excludeMin = startExcluded[ti];
-				    int excludeMax = e.date() - 1;
 				    
-				    if (!(excludeMin > start[ti].max() || excludeMax < start[ti].min())) {
-				    // prune only bounds
-				    // if ((excludeMin <= start[ti].min() && excludeMax >= start[ti].min()) ||
-				    // 	(excludeMin <= start[ti].max() && excludeMax >= start[ti].max())) {
-					if (debugNarr)
-					    System.out.print(
+				    if (debugNarr)
+					System.out.print(
                                                     ">>> CumulativePrimary Profile 1. Narrowed " + start[i] + " \\ " + new IntervalDomain(
-                                                        excludeMin, excludeMax));
+                                                        startExcluded[ti], e.date() - 1));
 
-					start[ti].domain.inComplement(store.level, start[ti], excludeMin, excludeMax);
+				    start[ti].domain.inComplement(store.level, start[ti], startExcluded[ti], e.date() - 1);
 
-					if (debugNarr)
-					    System.out.println(" => " + start[ti]);
+				    if (debugNarr)
+					System.out.println(" => " + start[ti]);
 
-				    }
 				    startExcluded[ti] = Integer.MAX_VALUE;
 				}
                         }
@@ -414,16 +406,14 @@ class CumulativePrimary extends Constraint {
 		    if (startExcluded[ti] != Integer.MAX_VALUE) {
 			// task ends and we remove forbidden area
 
-			if (!(startExcluded[ti] > start[ti].max() || e.date() < start[ti].min())) {
-			    if (debugNarr)
-				System.out.print(">>> CumulativePrimary Profile 2. Narrowed " + start[ti] + " inMax " + (int) (startExcluded[ti] - 1));
+			if (debugNarr)
+			    System.out.print(">>> CumulativePrimary Profile 2. Narrowed " + start[ti] + " inMax " + (int) (startExcluded[ti] - 1));
 			    
-			    start[ti].domain.inMax(store.level, start[ti], startExcluded[ti] - 1);
+			start[ti].domain.inMax(store.level, start[ti], startExcluded[ti] - 1);
 
-			    if (debugNarr)
-				System.out.println(" => " + start[ti]);
+			if (debugNarr)
+			    System.out.println(" => " + start[ti]);
 			    
-			}
 		    }
 
                     startExcluded[ti] = Integer.MAX_VALUE;

@@ -387,8 +387,14 @@ public class Cumulative extends CumulativeBasic {
     @Override public String toString() {
 
         StringBuffer result = new StringBuffer(id());
-
-        result.append(" : cumulative([ ");
+	if (doEdgeFind)
+	    result.append(" : cumulative([ ");
+	else 
+	    if (super.cumulativeForConstants != null)
+		result.append(" : cumulativePrimary([ ");
+	    else
+	       result.append(" : cumulativeBasic([ ");
+	    
         for (int i = 0; i < taskNormal.length - 1; i++)
             result.append(taskNormal[i]).append(", ");
 
