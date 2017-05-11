@@ -233,7 +233,7 @@ class GlobalConstraints implements ParserTreeConstants {
 	    }
 	}
 	// use CumulativeUnary for tasks that have resource capacity greater than half of the cumulative capacity bound.
-	if (start.size() > 0)
+	if (start.size() > 1)
 	    support.delayedConstraints.add(new CumulativeUnary(start, dur, res, b, false));
     }
     
