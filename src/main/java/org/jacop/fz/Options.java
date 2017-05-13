@@ -30,7 +30,9 @@
 
 package org.jacop.fz;
 
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 
 import org.jacop.floats.core.FloatDomain;
 
@@ -160,6 +162,14 @@ public class Options {
                     i++;
                 } else if (args[i].equals("-debug")) {
                     debug = true;
+                    i++;
+                } else if (args[i].equals("-outputfile")){
+                    File file = new File("src/test/fz/result.txt");
+                    try {
+                        file.createNewFile();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                     i++;
                 } else {
                     System.out.println("fz2jacop: not recognized option " + args[i]);

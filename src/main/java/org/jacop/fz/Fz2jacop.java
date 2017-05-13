@@ -33,6 +33,11 @@ package org.jacop.fz;
 
 import org.jacop.core.FailException;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 /**
  *
  * An executable to parse and execute the flatzinc file. 
@@ -90,7 +95,17 @@ public class Fz2jacop {
 
         } catch (FailException e) {
             System.out.println("=====UNSATISFIABLE====="); // "*** Evaluation of model resulted in fail.");
-	    if (opt.getStatistics()) {
+
+            if (Files.exists(Paths.get("src/test/fz/result.txt"))) {
+                String st = "=====UNSATISFIABLE=====";
+                try {
+                    Files.write(Paths.get("src/test/fz/result.txt"), st.getBytes());
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+//                    Files.delete(Paths.get("src/test/fz/result.txt" ));
+                }
+            }
+            if (opt.getStatistics()) {
 		System.out.println("%% Model variables: "+ (parser.getStore().size() + parser.getTables().getNumberBoolVariables()));
 		System.out.println("%% Model constraints: "+ parser.getStore().numberConstraints());
 		System.out.println("\n%% Propagations: "+parser.getStore().numberConsistencyCalls);

@@ -29,6 +29,10 @@
  */
 package org.jacop.fz;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Comparator;
 
@@ -566,7 +570,18 @@ public class Solve implements ParserTreeConstants {
         } else if (interrupted)
             System.out.println("%% =====INTERRUPTED=====");
         else if (si.exploration().equals("complete"))
+        {
             System.out.println("=====UNSATISFIABLE=====");
+            if (Files.exists(Paths.get("src/test/fz/result.txt"))) {
+                String st = "=====UNSATISFIABLE=====";
+                try {
+                    Files.write(Paths.get("src/test/fz/result.txt"), st.getBytes());
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                    //Files.delete(Paths.get("src/test/fz/result.txt" ));
+                }
+            }
+        }
         else
             System.out.println("=====UNKNOWN=====");
 
@@ -1241,8 +1256,25 @@ public class Solve implements ParserTreeConstants {
 
         if (options.getAll())
             System.out.print(printBuffer.toString());
-        else // store the print-out
-            lastSolution = printBuffer;
+        else { // store the print-out
+//            System.out.println("fdfa"+ lastSolution);
+
+            int i = 0;
+
+            Path p = Paths.get("src/test/fz/result.txt");
+            if (Files.exists(p)) {
+                try {
+                    Files.write(Paths.get("src/test/fz/result.txt"), printBuffer.toString().getBytes());
+                } catch (IOException e) {
+                    e.printStackTrace();
+
+                }
+                lastSolution = printBuffer;
+
+            } else {
+                lastSolution = printBuffer;
+            }
+        }
     }
 
     int getKind(String k) {

@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -26,29 +27,27 @@ public class MinizincBasedTestsHelper {
     protected static String timeCategory;
     protected static final String listFileName = "list.txt";
     protected static final boolean printInfo = true;
-
+    private static int counter=0;
 
 
     @BeforeClass public static void initialize() {
         fz2jacop = new Fz2jacop();
     }
 
+    public int counter(){
+        return counter;
+    }
 
 
-    protected static List<String> result(String filename) {
-
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        PrintStream old = System.out;
-        System.setOut(new PrintStream(baos));
+    protected List<String> result(String filename) throws IOException {
 
         try {
-            fz2jacop.main(new String[] {relativePath + filename});
+            fz2jacop.main(new String[] {"-outputfile", relativePath + filename});
         } finally {
 
-            System.out.flush();
-            System.setOut(old);
+            String result = new String(Files.readAllBytes(Paths.get("src/test/fz/result.txt")));
+            Files.delete(Paths.get("src/test/fz/result.txt" ));
 
-            String result = baos.toString();
             if (printInfo) {
                 System.out.println(filename + "\n" + result);
             }
@@ -83,9 +82,20 @@ public class MinizincBasedTestsHelper {
     protected void testExecution(String timeCategory) throws IOException {
 
         System.out.println("Test file: " + timeCategory + testFilename);
-
+        List<String> result = new ArrayList<String>();
         List<String> expectedResult = expected(timeCategory + testFilename + ".out");
-        List<String> result = result(timeCategory + testFilename + ".fzn");
+        List<String> res = result(timeCategory + testFilename + ".fzn");
+
+
+        if(expectedResult.get(expectedResult.size()-1).equals("==========")){
+            int i;
+            for(i=0; i <res.size(); i++){
+                result.add(res.get(i));
+            }
+            result.add("==========");
+//            result.add(res.listIterator() + "\n==========");
+        }else
+            result = res;
 
         if (result.size() == 0)
             fail("\n" + "File path: " + timeCategory + testFilename + ".fzn " + " gave no output to compare against.");
