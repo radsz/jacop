@@ -340,8 +340,8 @@ public class CumulativeBasic extends Constraint {
             int max = t.lct();
             if (t.maxNonZero())  // t.dur.max() > 0 && t.res.max() > 0
                 if (!(min > maxProfile || max < minProfile)) {
-                    es[j++] = new Event(pruneStart, t, min, t.res.max());
-                    es[j++] = new Event(pruneEnd, t, max, -t.res.max());
+                    es[j++] = new Event(pruneStart, t, min, 0);
+                    es[j++] = new Event(pruneEnd, t, max, 0);
                 }
         }
 
@@ -368,7 +368,6 @@ public class CumulativeBasic extends Constraint {
         int[] lastBarier = new int[taskNormal.length];
         Arrays.fill(lastBarier, Integer.MAX_VALUE);
         boolean[] startAtEnd = new boolean[taskNormal.length];
-        // Arrays.fill(startAtEnd, false);  // by default they are initialized to false
 
         for (int i = 0; i < N; i++) {
 
@@ -435,8 +434,8 @@ public class CumulativeBasic extends Constraint {
 				lastBarier[ti] = e.date();
 
                             // ========= resource pruning
-			    if (limit.max() - profileValue < t.res.max() && t.lst() <= e.date() && e.date() < t.ect())
-				t.res.domain.inMax(store.level, t.res, limit.max() - profileValue);
+			    if (inProfile[ti] && limitMax - profileValue < t.res.max())
+			    	t.res.domain.inMax(store.level, t.res, limitMax - profileValue);
                         }
                     }
 
@@ -460,8 +459,8 @@ public class CumulativeBasic extends Constraint {
 		    startAtEnd[ti] = true;
 
                     // ========= resource pruning
-		    if (limit.max() - profileValue < t.res.max() && t.lst() <= e.date() && e.date() < t.ect())
-			t.res.domain.inMax(store.level, t.res, limit.max() - profileValue);
+		    if (inProfile[ti] && limitMax - profileValue < t.res.max())
+		    	t.res.domain.inMax(store.level, t.res, limitMax - profileValue);
 
                     tasksToPrune.set(ti);
                     break;
@@ -493,8 +492,8 @@ public class CumulativeBasic extends Constraint {
                     startExcluded[ti] = Integer.MAX_VALUE;
 
                     // ========= resource pruning
-		    if (limit.max() - profileValue < t.res.max() && t.lst() <= e.date() && e.date() < t.ect())
-			t.res.domain.inMax(store.level, t.res, limit.max() - profileValue);
+		    if (inProfile[ti] && limitMax - profileValue < t.res.max())
+		    	t.res.domain.inMax(store.level, t.res, limitMax - profileValue);
 
                     // ========= duration pruning
 		    if (startAtEnd[ti]) {
@@ -583,7 +582,8 @@ public class CumulativeBasic extends Constraint {
         }
 
         public int compare(T o1, T o2) {
-            return (o1.date() == o2.date()) ? (o1.type() - o2.type()) : (o1.date() - o2.date());
+	    int dateDiff = o1.date() - o2.date();
+            return (dateDiff == 0) ? (o1.type() - o2.type()) : dateDiff;
         }
     }
 }

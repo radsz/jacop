@@ -475,7 +475,8 @@ class CumulativePrimary extends Constraint {
         }
 
         public int compare(T o1, T o2) {
-            return (o1.date() == o2.date()) ? (o1.type() - o2.type()) : (o1.date() - o2.date());
+	    int dateDiff = o1.date() - o2.date();
+            return (dateDiff == 0) ? (o1.type() - o2.type()) : dateDiff;
         }
     }
 }
