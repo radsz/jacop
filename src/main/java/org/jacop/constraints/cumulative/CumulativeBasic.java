@@ -433,9 +433,12 @@ public class CumulativeBasic extends Constraint {
 			    if (lastBarier[ti] == Integer.MAX_VALUE && limitMax - profileValue < t.res.min() && e.date() >= t.start.max())
 				lastBarier[ti] = e.date();
 
-                            // ========= resource pruning
-			    if (inProfile[ti] && limitMax - profileValue < t.res.max())
-			    	t.res.domain.inMax(store.level, t.res, limitMax - profileValue);
+                            // ========= resource pruning;
+
+			    // cannot use more efficient inProfile[ti] (instead of t.lst() <= e.date() && e.date() < t.ect())
+			    // since tasks with res = 0 are not in the profile :(
+			    if (limit.max() - profileValue < t.res.max() && t.lst() <= e.date() && e.date() < t.ect()) 
+				t.res.domain.inMax(store.level, t.res, limit.max() - profileValue);
                         }
                     }
 
@@ -459,8 +462,8 @@ public class CumulativeBasic extends Constraint {
 		    startAtEnd[ti] = true;
 
                     // ========= resource pruning
-		    if (inProfile[ti] && limitMax - profileValue < t.res.max())
-		    	t.res.domain.inMax(store.level, t.res, limitMax - profileValue);
+		    if (limit.max() - profileValue < t.res.max() && t.lst() <= e.date() && e.date() < t.ect()) 
+			t.res.domain.inMax(store.level, t.res, limit.max() - profileValue);
 
                     tasksToPrune.set(ti);
                     break;
@@ -492,8 +495,8 @@ public class CumulativeBasic extends Constraint {
                     startExcluded[ti] = Integer.MAX_VALUE;
 
                     // ========= resource pruning
-		    if (inProfile[ti] && limitMax - profileValue < t.res.max())
-		    	t.res.domain.inMax(store.level, t.res, limitMax - profileValue);
+		    if (limit.max() - profileValue < t.res.max() && t.lst() <= e.date() && e.date() < t.ect()) 
+			t.res.domain.inMax(store.level, t.res, limit.max() - profileValue);
 
                     // ========= duration pruning
 		    if (startAtEnd[ti]) {
