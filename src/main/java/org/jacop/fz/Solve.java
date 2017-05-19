@@ -572,10 +572,10 @@ public class Solve implements ParserTreeConstants {
         else if (si.exploration().equals("complete"))
         {
             System.out.println("=====UNSATISFIABLE=====");
-            if (Files.exists(Paths.get("src/test/fz/result.txt"))) {
+            if (Files.exists(Paths.get("src/test/fz/result" + Options.counter + ".txt"))) {
                 String st = "=====UNSATISFIABLE=====";
                 try {
-                    Files.write(Paths.get("src/test/fz/result.txt"), st.getBytes());
+                    Files.write(Paths.get("src/test/fz/result" + Options.counter + ".txt"), st.getBytes());
                 } catch (IOException e1) {
                     e1.printStackTrace();
                     //Files.delete(Paths.get("src/test/fz/result.txt" ));
@@ -1257,14 +1257,11 @@ public class Solve implements ParserTreeConstants {
         if (options.getAll())
             System.out.print(printBuffer.toString());
         else { // store the print-out
-//            System.out.println("fdfa"+ lastSolution);
 
-            int i = 0;
-
-            Path p = Paths.get("src/test/fz/result.txt");
+            Path p = Paths.get("src/test/fz/result" + Options.counter + ".txt");
             if (Files.exists(p)) {
                 try {
-                    Files.write(Paths.get("src/test/fz/result.txt"), printBuffer.toString().getBytes());
+                    Files.write(Paths.get("src/test/fz/result" + Options.counter + ".txt"), printBuffer.toString().getBytes());
                 } catch (IOException e) {
                     e.printStackTrace();
 

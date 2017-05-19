@@ -1,6 +1,7 @@
 package org.jacop;
 
 import org.jacop.fz.Fz2jacop;
+import org.jacop.fz.Options;
 import org.junit.BeforeClass;
 
 import java.io.*;
@@ -26,7 +27,7 @@ public class MinizincBasedTestsHelper {
     protected static final String relativePath = "src/test/fz/";
     protected static String timeCategory;
     protected static final String listFileName = "list.txt";
-    protected static final boolean printInfo = true;
+    protected static final boolean printInfo = false;
     private static int counter=0;
 
 
@@ -41,13 +42,15 @@ public class MinizincBasedTestsHelper {
 
     protected List<String> result(String filename) throws IOException {
 
+        String path = "src/test/fz/result";
+        int i = 0;
         try {
-            fz2jacop.main(new String[] {"-outputfile", relativePath + filename});
+            fz2jacop.main(new String[] {"-outputfile", path, relativePath + filename});
         } finally {
 
-            String result = new String(Files.readAllBytes(Paths.get("src/test/fz/result.txt")));
-            Files.delete(Paths.get("src/test/fz/result.txt" ));
-
+            String result = new String(Files.readAllBytes(Paths.get(path + Options.counter + ".txt")));
+            Files.delete(Paths.get(path + Options.counter + ".txt" ));
+            i++;
             if (printInfo) {
                 System.out.println(filename + "\n" + result);
             }

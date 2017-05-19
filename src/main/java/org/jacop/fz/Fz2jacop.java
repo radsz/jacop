@@ -95,14 +95,12 @@ public class Fz2jacop {
 
         } catch (FailException e) {
             System.out.println("=====UNSATISFIABLE====="); // "*** Evaluation of model resulted in fail.");
-
-            if (Files.exists(Paths.get("src/test/fz/result.txt"))) {
+            if (Files.exists(Paths.get("src/test/fz/result" + Options.counter +".txt"))) {
                 String st = "=====UNSATISFIABLE=====";
                 try {
-                    Files.write(Paths.get("src/test/fz/result.txt"), st.getBytes());
+                    Files.write(Paths.get("src/test/fz/result"+ Options.counter +".txt"), st.getBytes());
                 } catch (IOException e1) {
                     e1.printStackTrace();
-//                    Files.delete(Paths.get("src/test/fz/result.txt" ));
                 }
             }
             if (opt.getStatistics()) {
