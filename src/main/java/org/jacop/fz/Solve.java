@@ -1523,7 +1523,7 @@ public class Solve implements ParserTreeConstants {
 
         System.out.println(lastSolution);
 
-        if (! options.getOutputFilename().equals("")) {
+        if (! options.getOutputFilename().equals("") && ! lastSolution.isEmpty()) {
             try {
                 System.out.println("Output filename " + options.getOutputFilename());
                 Files.write(Paths.get(options.getOutputFilename()), lastSolution.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
