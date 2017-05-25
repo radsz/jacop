@@ -2,6 +2,7 @@ package org.jacop;
 
 import org.jacop.fz.Fz2jacop;
 import org.jacop.fz.Options;
+import org.junit.After;
 import org.junit.BeforeClass;
 
 import java.io.*;
@@ -25,14 +26,27 @@ public class MinizincBasedTestsHelper {
     protected String testFilename;
     protected static Fz2jacop fz2jacop;
     protected static final String relativePath = "src/test/fz/";
-    protected static String timeCategory;
+    String timeCategory;
     protected static final String listFileName = "list.txt";
     protected static final boolean printInfo = false;
     private static int counter=0;
 
+    protected MinizincBasedTestsHelper(String timeCategory) {
+        this.timeCategory = timeCategory;
+    }
 
     @BeforeClass public static void initialize() {
         fz2jacop = new Fz2jacop();
+    }
+
+    @After public void cleanUp() {
+        String outputFilename = relativePath + timeCategory + testFilename + ".fzn" + ".out";
+        try {
+            Files.delete(Paths.get(outputFilename));
+        } catch (IOException e) {
+            e.printStackTrace();
+            // File was not created (because the test timeout before it was created so deleting it failed.
+        }
     }
 
     public int counter(){
@@ -40,24 +54,19 @@ public class MinizincBasedTestsHelper {
     }
 
 
-    protected List<String> result(String filename) throws IOException {
+    protected List<String> computeResult(String filename) throws IOException {
         
         String outputFilename = relativePath + filename + ".out";
-        int i = 0;
-        try {
-            fz2jacop.main(new String[] {"-outputfile", outputFilename, relativePath + filename});
-        } finally {
 
-            String result = new String(Files.readAllBytes(Paths.get(outputFilename)));
-            Files.delete(Paths.get(outputFilename));
-            i++;
-            if (printInfo) {
-                System.out.println(filename + "\n" + result);
-            }
+        fz2jacop.main(new String[] {"-outputfile", outputFilename, relativePath + filename});
 
-            return Arrays.asList(result.split("\n"));
+        String result = new String(Files.readAllBytes(Paths.get(outputFilename)));
 
+        if (printInfo) {
+            System.out.println(filename + "\n" + result);
         }
+
+        return Arrays.asList(result.split("\n"));
 
     }
 
@@ -87,8 +96,7 @@ public class MinizincBasedTestsHelper {
         System.out.println("Test file: " + timeCategory + testFilename);
         List<String> result = new ArrayList<String>();
         List<String> expectedResult = expected(timeCategory + testFilename + ".out");
-        List<String> res = result(timeCategory + testFilename + ".fzn");
-
+        List<String> res = computeResult(timeCategory + testFilename + ".fzn");
 
         if(expectedResult.get(expectedResult.size()-1).equals("==========")){
             int i;

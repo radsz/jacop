@@ -27,6 +27,7 @@ import static org.junit.Assert.fail;
     protected static final String timeCategory = "upTo10min/";
 
     public MinizincBasedTestUpTo10Minutes(String testFilename) {
+        super(timeCategory);
         this.testFilename = testFilename;
     }
 

@@ -32,7 +32,7 @@ import static org.junit.Assert.fail;
     public Timeout globalTimeout = Timeout.seconds(20);
 
     public MinizincBasedTestUpTo5Seconds(String testFilename) {
-
+        super(timeCategory);
         this.testFilename = testFilename;
 
     }
@@ -46,15 +46,6 @@ import static org.junit.Assert.fail;
     public void testMinizinc() throws IOException {
 
         testExecution(timeCategory);
-    }
-
-    @After public void cleanUp() {
-        String outputFilename = relativePath + testFilename + ".fzn" + ".out";
-        try {
-            Files.delete(Paths.get(outputFilename));
-        } catch (IOException e) {
-            // File was not created (because the test timeout before it was created so deleting it failed.
-        }
     }
 
 }

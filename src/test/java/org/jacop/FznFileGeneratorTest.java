@@ -38,7 +38,7 @@ public class FznFileGeneratorTest extends MinizincBasedTestsHelper {
     String testFilename;
 
     public FznFileGeneratorTest(String testFilename) {
-
+        super(testFolderName);
         this.testFilename = testFilename;
 
     }

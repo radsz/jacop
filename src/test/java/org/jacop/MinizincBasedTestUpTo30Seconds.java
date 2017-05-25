@@ -28,6 +28,7 @@ import static org.junit.Assert.fail;
 
 
     public MinizincBasedTestUpTo30Seconds(String testFilename) {
+        super(timeCategory);
         this.testFilename = testFilename;
     }
 
