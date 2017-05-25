@@ -41,15 +41,15 @@ public class MinizincBasedTestsHelper {
 
 
     protected List<String> result(String filename) throws IOException {
-
-        String path = "src/test/fz/result";
+        
+        String outputFilename = relativePath + filename + ".out";
         int i = 0;
         try {
-            fz2jacop.main(new String[] {"-outputfile", path, relativePath + filename});
+            fz2jacop.main(new String[] {"-outputfile", outputFilename, relativePath + filename});
         } finally {
 
-            String result = new String(Files.readAllBytes(Paths.get(path + Options.counter + ".txt")));
-            Files.delete(Paths.get(path + Options.counter + ".txt" ));
+            String result = new String(Files.readAllBytes(Paths.get(outputFilename)));
+            Files.delete(Paths.get(outputFilename));
             i++;
             if (printInfo) {
                 System.out.println(filename + "\n" + result);

@@ -1,8 +1,11 @@
 package org.jacop;
 
 import org.jacop.fz.Fz2jacop;
+import org.junit.After;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -25,6 +28,9 @@ import static org.junit.Assert.fail;
 @RunWith(Parameterized.class) public class MinizincBasedTestUpTo5Seconds extends MinizincBasedTestsHelper {
     protected static final String timeCategory = "upTo5sec/";
 
+    @Rule
+    public Timeout globalTimeout = Timeout.seconds(20);
+
     public MinizincBasedTestUpTo5Seconds(String testFilename) {
 
         this.testFilename = testFilename;
@@ -36,11 +42,19 @@ import static org.junit.Assert.fail;
         return fileReader(timeCategory);
     }
 
-    @Test(timeout = 15000) public void testMinizinc() throws IOException {
+    @Test
+    public void testMinizinc() throws IOException {
 
         testExecution(timeCategory);
     }
 
-
+    @After public void cleanUp() {
+        String outputFilename = relativePath + testFilename + ".fzn" + ".out";
+        try {
+            Files.delete(Paths.get(outputFilename));
+        } catch (IOException e) {
+            // File was not created (because the test timeout before it was created so deleting it failed.
+        }
+    }
 
 }

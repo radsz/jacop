@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Comparator;
 
@@ -511,7 +512,7 @@ public class Solve implements ParserTreeConstants {
         }
 
         if (!options.getAll() && lastSolution != null)
-            System.out.print(lastSolution.toString());
+            helperSolutionPrinter(lastSolution.toString());
 
         printStatisticsForSingleSearch(false, Result);
 
@@ -572,13 +573,12 @@ public class Solve implements ParserTreeConstants {
         else if (si.exploration().equals("complete"))
         {
             System.out.println("=====UNSATISFIABLE=====");
-            if (Files.exists(Paths.get("src/test/fz/result" + Options.counter + ".txt"))) {
+            if (!options.getOutputFilename().equals("")) {
                 String st = "=====UNSATISFIABLE=====";
                 try {
-                    Files.write(Paths.get("src/test/fz/result" + Options.counter + ".txt"), st.getBytes());
+                    Files.write(Paths.get(options.getOutputFilename()), st.getBytes());
                 } catch (IOException e1) {
                     e1.printStackTrace();
-                    //Files.delete(Paths.get("src/test/fz/result.txt" ));
                 }
             }
         }
@@ -801,7 +801,7 @@ public class Solve implements ParserTreeConstants {
             printSolution();
 
             if (lastSolution != null)
-                System.out.print(lastSolution.toString());
+                helperSolutionPrinter(lastSolution.toString());
 
             if (options.getStatistics())
                 System.out.println(
@@ -1010,7 +1010,7 @@ public class Solve implements ParserTreeConstants {
         }
 
         if (!options.getAll() && lastSolution != null)
-            System.out.print(lastSolution.toString());
+            helperSolutionPrinter(lastSolution.toString());
 
         printStatisticsForSeqSearch(false, Result);
 
@@ -1258,19 +1258,7 @@ public class Solve implements ParserTreeConstants {
             System.out.print(printBuffer.toString());
         else { // store the print-out
 
-            Path p = Paths.get("src/test/fz/result" + Options.counter + ".txt");
-            if (Files.exists(p)) {
-                try {
-                    Files.write(Paths.get("src/test/fz/result" + Options.counter + ".txt"), printBuffer.toString().getBytes());
-                } catch (IOException e) {
-                    e.printStackTrace();
-
-                }
-                lastSolution = printBuffer;
-
-            } else {
-                lastSolution = printBuffer;
-            }
+            lastSolution = printBuffer;
         }
     }
 
@@ -1531,4 +1519,19 @@ public class Solve implements ParserTreeConstants {
     // 	}
     // }
 
+    private void helperSolutionPrinter(String lastSolution) {
+
+        System.out.println(lastSolution);
+
+        if (! options.getOutputFilename().equals("")) {
+            try {
+                System.out.println("Output filename " + options.getOutputFilename());
+                Files.write(Paths.get(options.getOutputFilename()), lastSolution.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+            } catch (IOException e) {
+                e.printStackTrace();
+
+            }
+        }
+
+    }
 }

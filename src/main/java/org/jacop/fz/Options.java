@@ -75,7 +75,8 @@ public class Options {
 
     boolean debug = false;
 
-    static public int counter;
+    String outputFilename = "";
+    
     /**
      * It constructs an Options object and parses all the parameters/options provided
      * to flatzinc to jacop parser.
@@ -165,17 +166,8 @@ public class Options {
                     debug = true;
                     i++;
                 } else if (args[i].equals("-outputfile")){
-                    String path = args[++i];
-                    counter++;
-//                    System.out.println("Licznik" + counter);
-                    File file = new File(path + counter + ".txt");
-                    try {
-                        file.createNewFile();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+                    outputFilename = args[++i];
                     i++;
-
                 } else {
                     System.out.println("fz2jacop: not recognized option " + args[i]);
                     i++;
@@ -316,6 +308,7 @@ public class Options {
         return debug;
     }
 
+    public String getOutputFilename() { return outputFilename; }
     /**
      * It defines wheter additional search should use output variables only (false, default).
      * or should try to collect all non introduced variables (true).
