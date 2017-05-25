@@ -2,7 +2,9 @@ package org.jacop;
 
 import org.jacop.fz.Fz2jacop;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -26,6 +28,9 @@ import static org.junit.Assert.fail;
 
     protected static final String timeCategory = "upTo10min/";
 
+    @Rule
+    public Timeout globalTimeout = Timeout.seconds(1800);
+
     public MinizincBasedTestUpTo10Minutes(String testFilename) {
         super(timeCategory);
         this.testFilename = testFilename;
@@ -36,7 +41,7 @@ import static org.junit.Assert.fail;
         return fileReader(timeCategory);
     }
 
-    @Test(timeout = 1200000) public void testMinizinc() throws IOException {
+    @Test public void testMinizinc() throws IOException {
         testExecution(timeCategory);
     }
 
