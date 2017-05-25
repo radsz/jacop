@@ -98,18 +98,12 @@ averbach_1.3/averbach_1.3
 averbach_1.4/averbach_1.4
 averbach_1.5/averbach_1.5
 babysitting/babysitting
-bacp/bacp-13
 bacp/bacp-14
 bacp/bacp-15
 bacp/bacp-16
 bacp/bacp-18
 bacp/bacp-19
 bacp/bacp-2
-bacp/bacp-21
-bacp/bacp-22
-bacp/bacp-23
-bacp/bacp-24
-bacp/bacp-26
 bacp/bacp-4
 balance_interval/balance_interval
 balance_modulo/balance_modulo
@@ -474,7 +468,6 @@ fillomino/16
 fillomino/18
 fillomino/20
 fillomino/21
-fillomino/22
 filters/ar_1_1
 filters/ar_1_2
 filters/ar_2_3
@@ -723,7 +716,6 @@ map_stuckey/map_stuckey
 map2/map2
 mapping/full2x2
 mapping/mesh2x2_1
-mapping/mesh4x4_1
 mapping/ring_1
 marathon/marathon
 marathon2/marathon2
@@ -731,7 +723,6 @@ mario/mario_easy_2
 mario/mario_easy_4
 mario/mario_easy_5
 mario/mario_t_hard_1
-mario/mario_t_hard_5
 market_split/s3-01
 market_split/s3-02
 market_split/s3-03
@@ -744,13 +735,11 @@ market_split/s3-09
 market_split/s3-10
 market_split/s4-01
 market_split/s4-02
-market_split/s4-03
 market_split/s4-04
 market_split/s4-05
 market_split/s4-06
 market_split/s4-08
 market_split/s4-09
-market_split/s4-10
 market_split/u3-01
 market_split/u3-02
 market_split/u3-03
@@ -761,10 +750,6 @@ market_split/u3-07
 market_split/u3-08
 market_split/u3-09
 market_split/u3-10
-market_split/u4-02
-market_split/u4-03
-market_split/u4-06
-market_split/u4-07
 markov_chains_taha/markov_chains_taha
 matching_sums/matching_sums
 matchmaker/matchmaker
@@ -830,7 +815,6 @@ monorail/monorail6
 movement_puzzle/movement_puzzle
 movie_scheduling/movie_scheduling
 movie_stars/movie_stars
-mqueens2/n11
 mr_smith/mr_smith
 mspsp/hard_02
 mspsp/medium_06
@@ -864,7 +848,6 @@ nfc/12_2_10
 nfc/12_2_5
 nfc/18_3_10
 nfc/18_3_5
-nfc/24_4_10
 nim/nim
 nine_digit_arrangement/nine_digit_arrangement
 nine_to_one_equals_100/nine_to_one_equals_100
@@ -1231,8 +1214,6 @@ still_life2/still_life_5
 still_life2/still_life_6
 still_life2/still_life_7
 still-life-wastage/slw09
-stochastic-vrp/vrp-s2-v2-c7_vrp-v2-c7_det
-stochastic-vrp/vrp-s3-v2-c6_vrp-v2-c6_det
 stretch_path/stretch_path
 strictly_decreasing/strictly_decreasing
 strimko/strimko_002
@@ -1263,7 +1244,6 @@ sudoku_pi_2010/sudoku_pi_2010
 sudoku_pi_2011/sudoku_pi_2011
 sudoku_pi_day_2015/sudoku_pi_day_2015
 sudoku_pi_with_comments/sudoku_pi_with_comments
-sugiyama2/g4_7_7_7_3
 sugiyama2-mznchallenge2010/g3_7_7_7
 sultans_children/sultans_children
 sum_ctr/sum_ctr
@@ -1281,7 +1261,6 @@ symmetric/symmetric
 symmetric_alldifferent/symmetric_alldifferent
 symmetry_breaking/symmetry_breaking
 table_of_numbers/table_of_numbers
-table-layout/en-1000-251-line273
 takuzu/takuzu
 talent/talent
 talent_scheduling/concert

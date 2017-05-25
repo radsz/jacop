@@ -44,7 +44,7 @@ public class MinizincBasedTestsHelper {
         try {
             Files.delete(Paths.get(outputFilename));
         } catch (IOException e) {
-            e.printStackTrace();
+            // e.printStackTrace(); // can be helpful when updating code and/or tests instances.
             // File was not created (because the test timeout before it was created so deleting it failed.
         }
     }
