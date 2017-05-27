@@ -20,7 +20,4 @@ testMznDzn/still_life/3x3
 testMznDzn/still_life/6x6
 testMznDzn/still_life/5x5
 testMznDzn/still_life/2x3
-testMznDzn/fast-food/ff2
-testMznDzn/fast-food/ff3
-testMznDzn/fast-food/ff1
 testMznDzn/eq/eq20

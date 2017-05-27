@@ -14,9 +14,6 @@ black-hole/6
 black-hole/7
 black-hole/8
 eq/eq20
-fast-food/ff1
-fast-food/ff2
-fast-food/ff3
 still_life/2x3
 still_life/2x4
 still_life/3x3
