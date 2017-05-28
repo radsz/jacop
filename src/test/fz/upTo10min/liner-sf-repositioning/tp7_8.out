@@ -1,0 +1,17 @@
+poAct0 = 6;
+poAct1 = 6;
+poAct2 = 9;
+poAct3 = 5;
+poAct4 = 4;
+poAct5 = 4;
+piPort = 2;
+piWeek = array1d(1..6, [3, 4, 8, 5, 6, 7]);
+reposType = array1d(1..6, [1, 1, 1, 1, 1, 1]);
+sosAct = array1d(1..6, [0, 0, 0, 0, 0, 0]);
+sos = array1d(1..6, [0, 0, 0, 0, 0, 0]);
+sosActSavings = array1d(1..6, [0, 0, 0, 0, 0, 0]);
+directCost = array1d(1..6, [14298, 14298, 4930, 1524, 33, 33]);
+sosActACost = array1d(1..6, [0, 0, 0, 0, 0, 0]);
+sosActBCost = array1d(1..6, [0, 0, 0, 0, 0, 0]);
+----------
+==========
