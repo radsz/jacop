@@ -80,18 +80,19 @@ setup to run configuration. -->
 						<version>2.19.1</version>
 						<configuration>
 							<includes>
+								<include>**/ExampleBasedTest.java</include>
 								<include>**/MinizincBasedTestUpTo5Seconds.java</include>
 							</includes>
 							<excludes>
-								<include>**/ExampleBasedTest.java</include>
-
-								<include>**/MinizincBasedTestUpTo30Seconds.java</include>
+								<exclude>**/ExampleBasedTest.java</exclude>
+								<exclude>**/MinizincBasedTestUpTo5Seconds.java</exclude>
+								<exclude>**/MinizincBasedTestUpTo30Seconds.java</exclude>
 								<exclude>**/MinizincBasedTestUpTo1Minutes.java</exclude>
-								<exclude>**/MinizincBasedTest.java</exclude>
-								<exclude>**/MinizincBasedTestAbove1Hours.java</exclude>
-								<exclude>**/MinizincBasedTestUpTo1Hours.java</exclude>
-								<exclude>**/MinizincBasedTestUpTo10Minutes.java</exclude>
 								<exclude>**/MinizincBasedTestUpTo5Minutes.java</exclude>
+								<include>**/MinizincBasedTestUpTo10Minutes.java</include>
+								<exclude>**/MinizincBasedTest.java</exclude>
+								<exclude>**/MinizincBasedTestUpTo1Hours.java</exclude>
+								<exclude>**/MinizincBasedTestAbove1Hours.java</exclude>
 								<exclude>**/MinizincBasedChosen.java</exclude>
 							</excludes>
 						</configuration>
