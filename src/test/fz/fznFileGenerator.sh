@@ -42,7 +42,7 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
         start=$(date +%s ) # start time in seconds
         # First timeout is set to 3600 seconds
 
-          if [ -f ${k%/*/*}/*.opt ]; then
+          if [ -f ${k%/*/*}/options.opt ]; then
 
            #while read line
            #do
@@ -50,7 +50,7 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
             # echo "TTT" $opt
            #done <${k%/*/*}/*.opt
               #opt=($(<${k%/*/*}/*.opt))
-              opt=`sed -n 1p ${k%/*/*}/*.opt`
+              opt=`sed -n 1p ${k%/*/*}/options.opt`
               out=$(java -cp ../../../target/jacop-*-SNAPSHOT.jar org.jacop.fz.Fz2jacop -t 3600 $opt $k) # Program Fz2jacop generate test result
               echo "$out"
           else
