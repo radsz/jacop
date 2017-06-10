@@ -105,6 +105,7 @@ bacp/bacp-18
 bacp/bacp-19
 bacp/bacp-2
 bacp/bacp-4
+box/box
 balance_interval/balance_interval
 balance_modulo/balance_modulo
 balance_partition/balance_partition
