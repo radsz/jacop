@@ -62,18 +62,19 @@ public class MinizincBasedTestsHelper {
 
         String foo = outputFilename.toString();
         foo = foo.substring(0, foo.lastIndexOf('/'));
-        System.out.println("foo" + foo);
+
         if(Files.exists(Paths.get(foo + "/options.opt"))) {
             BufferedReader reader = Files.newBufferedReader(Paths.get(foo + "/options.opt"), Charset.defaultCharset());
             StringBuffer content = new StringBuffer();
             String line = null;
-            String[] tab = new String[2];
+            String[] options = new String[2];
             int i=0;
             while ((line = reader.readLine()) != null) {
-                   tab[i] = line.toString();
-                   i++;
+                String myString = line.toString();
+                options = myString.split(" ");
+                i++;
             }
-            fz2jacop.main(new String[]{tab[0], tab[1], "-outputfile", outputFilename, relativePath + filename});
+            fz2jacop.main(new String[]{options[0], options[1], "-outputfile", outputFilename, relativePath + filename});
         }
         else
             fz2jacop.main(new String[] {"-outputfile", outputFilename, relativePath + filename});
