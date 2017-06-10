@@ -97,12 +97,12 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 	          echo "Computing again result for $k"
 	          # Second timeout is set to 7200 seconds to avoid situation of the timeout when the first one did not timeout.
 
-            if [ -f ${k%/*/*}/*.opt ]; then
+            if [ -f ${k%/*/*}/options.opt ]; then
               #while read line
               #do
               #   opt=$line
              # done <${k%/*/*}/*.opt
-                opt=`sed -n 1p ${k%/*/*}/*.opt`
+                opt=`sed -n 1p ${k%/*/*}/options.opt`
              # opt=($(<${k%/*/*}/*.opt)) 2>/dev/null
               out=$(java -cp ../../../target/jacop-*-SNAPSHOT.jar org.jacop.fz.Fz2jacop -t 3600 $opt $k) # Program Fz2jacop generate test result
               echo "$out"
@@ -132,9 +132,9 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 			echo "$out" > upTo5sec/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo5sec/${st%.*}.fzn
+            mv ${k%/*/*}/options.opt upTo5sec/${st%/*}/ #move options.opt to time category
 
-
-             if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
+            if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
                 if [ ! -d upTo5sec/${st%/*}/dznFolder ]; then
 		            mkdir -p upTo5sec/${st%/*}/dznFolder
 			    fi
@@ -171,6 +171,7 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 			echo "$out" > upTo30sec/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo30sec/${st%.*}.fzn
+            mv ${k%/*/*}/options.opt upTo5sec/${st%/*}/ #move options.opt to time category
 
             if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
   			    if [ ! -d upTo30sec/${st%/*}/dznFolder ]; then
@@ -209,6 +210,7 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 			echo "$out" > upTo1min/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo1min/${st%.*}.fzn
+            mv ${k%/*/*}/options.opt upTo5sec/${st%/*}/ #move options.opt to time category
 
             if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
   			    if [ ! -d upTo1min/${st%/*}/dznFolder ]; then
@@ -246,6 +248,7 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 			echo "$out" > upTo5min/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo5min/${st%.*}.fzn
+            mv ${k%/*/*}/options.opt upTo5sec/${st%/*}/ #move options.opt to time category
 
             if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
                 if [ ! -d upTo5min/${st%/*}/dznFolder ]; then
@@ -284,7 +287,7 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 			echo "$out" > upTo10min/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo10min/${st%.*}.fzn
-
+            mv ${k%/*/*}/options.opt upTo5sec/${st%/*}/ #move options.opt to time category
 
   		if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
   			if [ ! -d upTo10min/${st%/*}/dznFolder ]; then
@@ -325,6 +328,7 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 			echo "$out" > upTo1hour/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo1hour/${st%.*}.fzn
+            mv ${k%/*/*}/options.opt upTo5sec/${st%/*}/ #move options.opt to time category
 
             if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
       			if [ ! -d upTo1hour/${st%/*}/dznFolder ]; then
@@ -365,6 +369,7 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 			echo "$out" > above1hour/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn above1hour/${st%.*}.fzn
+            mv ${k%/*/*}/options.opt upTo5sec/${st%/*}/ #move options.opt to time category
 
             if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
       			if [ ! -d above1hour/${st%/*}/dznFolder ]; then
@@ -441,6 +446,7 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 			echo "$out" > flakyTests/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn flakyTests/${st%.*}.fzn
+            mv ${k%/*/*}/options.opt upTo5sec/${st%/*}/ #move options.opt to time category
 
   			if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
   			    if [ ! -d flakyTests/${st%/*}/dznFolder ]; then
