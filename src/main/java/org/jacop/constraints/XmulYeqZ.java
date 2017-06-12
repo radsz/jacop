@@ -161,6 +161,16 @@ public class XmulYeqZ extends Constraint {
 
         if (x.singleton(0) || y.singleton(0))
             removeConstraint();
+	else if (y.singleton(1)) {
+	    removeConstraint();
+	    if (!x.singleton() || !z.singleton())
+		store.impose(new XeqY(x, z));
+	}
+	else if (x.singleton(1)) {
+	    removeConstraint();
+	    if (!y.singleton() || !z.singleton()) 
+		store.impose(new XeqY(y, z));
+	}	
     }
 
     @Override public int getConsistencyPruningEvent(Var var) {
