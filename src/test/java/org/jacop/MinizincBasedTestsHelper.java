@@ -1,5 +1,6 @@
 package org.jacop;
 
+import org.jacop.floats.core.FloatDomain;
 import org.jacop.fz.Fz2jacop;
 import org.jacop.fz.Options;
 import org.junit.After;
@@ -75,6 +76,7 @@ public class MinizincBasedTestsHelper {
                 i++;
             }
             fz2jacop.main(new String[]{options[0], options[1], "-outputfile", outputFilename, relativePath + filename});
+            FloatDomain.setFormat(Double.MAX_VALUE);
         }
         else
             fz2jacop.main(new String[] {"-outputfile", outputFilename, relativePath + filename});
