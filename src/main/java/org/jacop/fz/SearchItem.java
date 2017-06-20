@@ -268,7 +268,8 @@ public class SearchItem implements ParserTreeConstants {
             for (int i = 0; i < count; i++) {
                 SearchItem subSearch = new SearchItem(store, dictionary);
                 subSearch.searchParameters(ann, i);
-                search_seq.add(subSearch);
+		if (subSearch.search_variables.length > 0)
+		    search_seq.add(subSearch);
             }
         }
     }
@@ -282,7 +283,8 @@ public class SearchItem implements ParserTreeConstants {
         for (int i = 0; i < count - 1; i++) {
             SearchItem subSearch = new SearchItem(store, dictionary);
             subSearch.searchParameters(node, i);
-            search_seq.add(subSearch);
+	    if (subSearch.search_variables.length > 0)
+		search_seq.add(subSearch);
         }
     }
 
