@@ -29,10 +29,60 @@ if [ $diffresult -ne 0 ];then
 
 }
 
+function above()
+{
+
+category=$pa
+    echo "Problem $k was classified in time category above${category#*o}"
+			st=${k#*/*/}
+
+			if [ ! -d "above${category#*o}/${st%/*}" ]; then
+		            mkdir -p above${category#*o}/${st%/*}
+			fi
+
+			echo "$out" > above${category#*o}/${st%.*}.out
+  			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn above${category#*o}/${st%.*}.fzn 2>/dev/null
+            mv ${k%/*/*}/options.opt above${category#*o}/${st%/*}/ 2>/dev/null #move options.opt to time category
+
+            if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
+                if [ ! -d above${category#*o}/${st%/*}/dznFolder ]; then
+		            mkdir -p above${category#*o}/${st%/*}/dznFolder
+			    fi
+			 fi
+
+            if ls $folderPath/${st%/*}/*.dzn 2>/dev/null; then
+
+                mv ${k%%/*}/${st%.*}.dzn above${category#*o}/${st%/*}/dznFolder/ #move dzn file to time category
+                cp ${k%%/*}/${st%/*}/*.mzn above${category#*o}/${st%/*}/dznFolder/ #copy mzn to time category
+
+                if [ `ls -l $folderPath/${st%/*}/*.dzn 2>/dev/null | wc -l ` == 0 ]; then
+                    rm -r ${k%%/*}/${st%/*}  #remove dzn files
+                fi
+
+            else
+
+                if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
+                    stt=${st#*/}
+                    cp ${k%%/*}/${st%/*}/${stt%.*}.mzn above${category#*o}/${st%/*}/dznFolder/${stt%.*}.mzn
+                    rm -r ${k%%/*}/${st%/*}/
+                fi
+
+            fi
+
+}
+
 function timeCategory
  {
-folderPath=$1
+ #echo "TIME CATEGORY" $1
+ #timeParameter $par
+ folderPath=$1
 #path="test"
+if [ $# -eq 2 ]
+then
+    pa=$2
+else
+    pa="x"
+fi
 readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 	for k in ${arr3[@]};do # i contains a relative path to a found mzn file.
@@ -41,6 +91,20 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
         echo "Computing first result for $k"
         start=$(date +%s ) # start time in seconds
         # First timeout is set to 3600 seconds
+
+        if [ $pa == "upTo5sec" ] || [ $pa == "upTo30sec" ] || [ $pa == "upTo1min" ] || [ $pa == "upTo5min" ] || [ $pa == "upTo10min" ] || [ $pa == "upTo1hour" ]
+        then
+            case "$pa" in
+                "upTo5sec") time="-t 15" ;;
+                "upTo30sec") time="-t 80" ;;
+                "upTo1min") time="-t 120" ;;
+                "upTo5min") time="-t 600" ;;
+                "upTo10min") time="-t 1200" ;;
+                "upTo1hour") time="-t 5400" ;;
+            esac
+            else
+             time="-t 3600"
+            fi
 
           if [ -f ${k%/*/*}/options.opt ]; then
 
@@ -51,10 +115,10 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
            #done <${k%/*/*}/*.opt
               #opt=($(<${k%/*/*}/*.opt))
               opt=`sed -n 1p ${k%/*/*}/options.opt`
-              out=$(java -cp ../../../target/jacop-*-SNAPSHOT.jar org.jacop.fz.Fz2jacop -t 3600 $opt $k) # Program Fz2jacop generate test result
+              out=$(java -cp ../../../target/jacop-*-SNAPSHOT.jar org.jacop.fz.Fz2jacop $time $opt $k) # Program Fz2jacop generate test result
               echo "$out"
           else
-              out=$(java -cp ../../../target/jacop-*-SNAPSHOT.jar org.jacop.fz.Fz2jacop -t 3600 $k) # Program Fz2jacop generate test result
+              out=$(java -cp ../../../target/jacop-*-SNAPSHOT.jar org.jacop.fz.Fz2jacop $time $k) # Program Fz2jacop generate test result
               echo "$out"
           fi
         stop=$(date +%s )  # end time in seconds
@@ -64,8 +128,7 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
         # %% =====TIME-OUT=====
 
 	    timesec=$(($stop-$start))
-
-		result=$out
+        result=$out
 		diff <(echo $result) <(echo $out) #diff compare results test to find the difference between two results test
 
         diffresult=$?
@@ -84,15 +147,43 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
         #fi
 
         if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
+          case "$pa" in
+            "upTo5sec") above $pa
+                        diffresult=1
+                        count=4
+                        timesec=6001
+                        out="" ;;
+            "upTo30sec") above $pa
+                        diffresult=1
+                        count=4
+                        timesec=6001  ;;
+            "upTo1min") above $pa
+                        diffresult=1
+                        count=4
+                        timesec=6001  ;;
+            "upTo5min") above $pa
+                        diffresult=1
+                        count=4
+                        timesec=6001  ;;
+            "upTo10min") above $pa
+                        diffresult=1
+                        count=4
+                        timesec=6001  ;;
+            "upTo1hour") above $pa
+                        diffresult=1
+                        count=4
+                        timesec=6001  ;;
+            *){
             echo "Out result" ${out#*%}
             diffresult=1
             count=4
             timesec=6000
             out="=====UNKNOWN===== `echo -e "\n%% =====TIME-OUT====="`"
+            }
 
+            esac
         fi
-
-	        while [ $diffresult == 0 -a $i != 4 ];
+            while [ $diffresult == 0 -a $i != 4 ];
 	        do
 	          echo "Computing again result for $k"
 	          # Second timeout is set to 7200 seconds to avoid situation of the timeout when the first one did not timeout.
@@ -104,10 +195,11 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
              # done <${k%/*/*}/*.opt
                 opt=`sed -n 1p ${k%/*/*}/options.opt`
              # opt=($(<${k%/*/*}/*.opt)) 2>/dev/null
-              out=$(java -cp ../../../target/jacop-*-SNAPSHOT.jar org.jacop.fz.Fz2jacop -t 3600 $opt $k) # Program Fz2jacop generate test result
+
+              out=$(java -cp ../../../target/jacop-*-SNAPSHOT.jar org.jacop.fz.Fz2jacop $time $opt $k) # Program Fz2jacop generate test result
               echo "$out"
           else
-              out=$(java -cp ../../../target/jacop-*-SNAPSHOT.jar org.jacop.fz.Fz2jacop -t 3600 $k) # Program Fz2jacop generate test result
+              out=$(java -cp ../../../target/jacop-*-SNAPSHOT.jar org.jacop.fz.Fz2jacop $time $k) # Program Fz2jacop generate test result
               echo "$out"
           fi
 		      diff <(echo $result) <(echo $out) # diff compare results test to find the difference between two results test
@@ -118,6 +210,42 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
               diffDifference
 
             done
+if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
+          case "$pa" in
+            "upTo5sec") above $pa
+                        diffresult=1
+                        count=4
+                        timesec=6001  ;;
+            "upTo30sec") above $pa
+                        diffresult=1
+                        count=4
+                        timesec=6001  ;;
+            "upTo1min") above $pa
+                        diffresult=1
+                        count=4
+                        timesec=6001  ;;
+            "upTo5min") above $pa
+                        diffresult=1
+                        count=4
+                        timesec=6001  ;;
+            "upTo10min") above $pa
+                        diffresult=1
+                        count=4
+                        timesec=6001  ;;
+            "upTo1hour") above $pa
+                        diffresult=1
+                        count=4
+                        timesec=6001  ;;
+            *){
+            echo "Out result" ${out#*%}
+            diffresult=1
+            count=4
+            timesec=6000
+            out="=====UNKNOWN===== `echo -e "\n%% =====TIME-OUT====="`"
+            }
+
+            esac
+        fi
 
 	if [ $count -eq 4 ];	then
 
@@ -132,7 +260,7 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 			echo "$out" > upTo5sec/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo5sec/${st%.*}.fzn
-            mv ${k%/*/*}/options.opt upTo5sec/${st%/*}/ #move options.opt to time category
+            mv ${k%/*/*}/options.opt upTo5sec/${st%/*}/ 2>/dev/null #move options.opt to time category
 
             if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
                 if [ ! -d upTo5sec/${st%/*}/dznFolder ]; then
@@ -158,6 +286,7 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
                 fi
 
             fi
+        #timeParameter $pa
 		fi
 
 	    if [ $timesec -gt 15 ] && [ $timesec -lt 80 ]  ;then
@@ -196,7 +325,7 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
                     rm -r ${k%%/*}/${st%/*}/
                 fi
             fi
-
+        #timeParameter $pa
 		fi
 
         if [ $timesec -gt 80 ] && [ $timesec -le 120 ];then
@@ -210,7 +339,7 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 			echo "$out" > upTo1min/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo1min/${st%.*}.fzn
-            mv ${k%/*/*}/options.opt upTo5sec/${st%/*}/ #move options.opt to time category
+            mv ${k%/*/*}/options.opt upTo5sec/${st%/*}/  #move options.opt to time category
 
             if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
   			    if [ ! -d upTo1min/${st%/*}/dznFolder ]; then
@@ -234,6 +363,7 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
                     rm -r ${k%%/*}/${st%/*}/
                 fi
              fi
+             #timeParameter $pa
 		fi
 
 
@@ -273,7 +403,7 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
                     rm -r ${k%%/*}/${st%/*}/
                 fi
              fi
-
+            #timeParameter $pa
 		fi
 
         if [ $timesec -ge 600 ] && [ $timesec -le 1200 ];then
@@ -287,7 +417,7 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 			echo "$out" > upTo10min/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo10min/${st%.*}.fzn
-            mv ${k%/*/*}/options.opt upTo5sec/${st%/*}/ #move options.opt to time category
+            mv ${k%/*/*}/options.opt upTo5sec/${st%/*}/  #move options.opt to time category
 
   		if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
   			if [ ! -d upTo10min/${st%/*}/dznFolder ]; then
@@ -314,7 +444,7 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
                     rm -r ${k%%/*}/${st%/*}/
                 fi
             fi
-
+        #timeParameter $pa
 		fi
 
         if [ $timesec -ge 1200 ] && [ $timesec -le 5400 ];then
@@ -328,7 +458,7 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 			echo "$out" > upTo1hour/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo1hour/${st%.*}.fzn
-            mv ${k%/*/*}/options.opt upTo5sec/${st%/*}/ #move options.opt to time category
+            mv ${k%/*/*}/options.opt upTo5sec/${st%/*}/  #move options.opt to time category
 
             if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
       			if [ ! -d upTo1hour/${st%/*}/dznFolder ]; then
@@ -355,10 +485,11 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
             fi
          fi
 
-
+        #timeParameter $pa
 		fi
 
-	    if [ $timesec -ge 5400 ];then
+	    if [ $timesec -ge 5400 ] && [ $timesec -ne 6001 ];
+	    then
 
             echo "Problem $k was classified in time category above1hour"
 			st=${k#*/*/}
@@ -369,7 +500,7 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 			echo "$out" > above1hour/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn above1hour/${st%.*}.fzn
-            mv ${k%/*/*}/options.opt upTo5sec/${st%/*}/ #move options.opt to time category
+            mv ${k%/*/*}/options.opt upTo5sec/${st%/*}/  #move options.opt to time category
 
             if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
       			if [ ! -d above1hour/${st%/*}/dznFolder ]; then
@@ -540,14 +671,14 @@ if [ -z $z ]; then
 
     if [ ! -z $z ]; then
            let counter++
-           timeCategory $folderPath
+           timeCategory $folderPath $2
 
     fi
 else
 
         let counter++
         if [ -d $z ]; then
-        timeCategory $folderPath
+        timeCategory $folderPath $2
         z=""
         fi
 fi
@@ -585,7 +716,7 @@ then
    if [[ -z $(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $iii.fzn 2>/dev/null ) || -z $(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $iii.out 2>/dev/null) || $diffre -ne 0 ]]
    then
         for file in $z/*.fzn; do mv "$file" $z/${z#*/}/"${file/*.fzn/$iii.fzn}"; done
-        timeCategory $folderPath
+        timeCategory $folderPath $2
     else
      rm -r $z
 
@@ -619,7 +750,7 @@ for j in ${arr2[@]}; do # j contains a relative path to dzn file.
        rm -r $z
     fi
 done
-     timeCategory $folderPath
+     timeCategory $folderPath $2
 done
 
     #removingEmptyDirectories
