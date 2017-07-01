@@ -42,7 +42,7 @@ category=$pa
 
 			echo "$out" > above${category#*o}/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn above${category#*o}/${st%.*}.fzn 2>/dev/null
-            mv ${k%/*/*}/options.opt above${category#*o}/${st%/*}/ 2>/dev/null #move options.opt to time category
+            cp ${k%/*/*}/options.opt above${category#*o}/${st%/*}/ 2>/dev/null #move options.opt to time category
 
             if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
                 if [ ! -d above${category#*o}/${st%/*}/dznFolder ]; then
@@ -260,7 +260,7 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 
 			echo "$out" > upTo5sec/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo5sec/${st%.*}.fzn
-            mv ${k%/*/*}/options.opt upTo5sec/${st%/*}/ 2>/dev/null #move options.opt to time category
+            cp ${k%/*/*}/options.opt upTo5sec/${st%/*}/ 2>/dev/null #move options.opt to time category
 
             if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
                 if [ ! -d upTo5sec/${st%/*}/dznFolder ]; then
@@ -300,7 +300,7 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 
 			echo "$out" > upTo30sec/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo30sec/${st%.*}.fzn
-            mv ${k%/*/*}/options.opt upTo5sec/${st%/*}/ #move options.opt to time category
+            cp ${k%/*/*}/options.opt upTo5sec/${st%/*}/ #move options.opt to time category
 
             if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
   			    if [ ! -d upTo30sec/${st%/*}/dznFolder ]; then
@@ -339,7 +339,7 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 
 			echo "$out" > upTo1min/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo1min/${st%.*}.fzn
-            mv ${k%/*/*}/options.opt upTo5sec/${st%/*}/  #move options.opt to time category
+            cp ${k%/*/*}/options.opt upTo5sec/${st%/*}/  #move options.opt to time category
 
             if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
   			    if [ ! -d upTo1min/${st%/*}/dznFolder ]; then
@@ -378,7 +378,7 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 
 			echo "$out" > upTo5min/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo5min/${st%.*}.fzn
-            mv ${k%/*/*}/options.opt upTo5sec/${st%/*}/ #move options.opt to time category
+            cp ${k%/*/*}/options.opt upTo5sec/${st%/*}/ #move options.opt to time category
 
             if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
                 if [ ! -d upTo5min/${st%/*}/dznFolder ]; then
@@ -417,7 +417,7 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 
 			echo "$out" > upTo10min/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo10min/${st%.*}.fzn
-            mv ${k%/*/*}/options.opt upTo5sec/${st%/*}/  #move options.opt to time category
+            cp ${k%/*/*}/options.opt upTo5sec/${st%/*}/  #move options.opt to time category
 
   		if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
   			if [ ! -d upTo10min/${st%/*}/dznFolder ]; then
@@ -458,7 +458,7 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 
 			echo "$out" > upTo1hour/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo1hour/${st%.*}.fzn
-            mv ${k%/*/*}/options.opt upTo5sec/${st%/*}/  #move options.opt to time category
+            cp ${k%/*/*}/options.opt upTo5sec/${st%/*}/  #move options.opt to time category
 
             if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
       			if [ ! -d upTo1hour/${st%/*}/dznFolder ]; then
@@ -500,7 +500,7 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 
 			echo "$out" > above1hour/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn above1hour/${st%.*}.fzn
-            mv ${k%/*/*}/options.opt upTo5sec/${st%/*}/  #move options.opt to time category
+            cp ${k%/*/*}/options.opt upTo5sec/${st%/*}/  #move options.opt to time category
 
             if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
       			if [ ! -d above1hour/${st%/*}/dznFolder ]; then
@@ -577,7 +577,7 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 
 			echo "$out" > flakyTests/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn flakyTests/${st%.*}.fzn
-            mv ${k%/*/*}/options.opt upTo5sec/${st%/*}/ #move options.opt to time category
+            cp ${k%/*/*}/options.opt upTo5sec/${st%/*}/ #move options.opt to time category
 
   			if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
   			    if [ ! -d flakyTests/${st%/*}/dznFolder ]; then
@@ -614,6 +614,15 @@ done
 
 
 #main
+mzicnpath="/usr/share/minizinc/jacop"
+if [ ! -e $mzincpath ]; then
+    echo "Path /usr/share/minizinc/jacop don't exist"
+    echo "copy JaCoP minizinc directory (src/jacop/minizinc/org/jacop/minizinc) into the minizinc
+          directory of your minizinc installation and rename it to jacop.
+          This directory is located, for example on Mac at /usr/local/share/minizinc."
+
+fi
+
 file="../../../target/jacop-*-SNAPSHOT.jar"
 if [ ! -e $file ]; then
     echo "Jar file don't exist."
