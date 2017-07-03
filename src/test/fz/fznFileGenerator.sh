@@ -617,9 +617,10 @@ done
 mzicnpath="/usr/share/minizinc/jacop"
 if [ ! -e $mzincpath ]; then
     echo "Path /usr/share/minizinc/jacop don't exist"
-    echo "copy JaCoP minizinc directory (src/jacop/minizinc/org/jacop/minizinc) into the minizinc
+    echo "copy JaCoP minizinc directory (jacop/src/main/minizinc) into the minizinc
           directory of your minizinc installation and rename it to jacop.
           This directory is located, for example on Mac at /usr/local/share/minizinc."
+    exit
 
 fi
 
