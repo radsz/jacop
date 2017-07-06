@@ -300,7 +300,7 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 
 			echo "$out" > upTo30sec/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo30sec/${st%.*}.fzn
-            cp ${k%/*/*}/options.opt upTo5sec/${st%/*}/ #copy options.opt to time category
+            cp ${k%/*/*}/options.opt upTo5sec/${st%/*}/ 2>/dev/null #copy options.opt to time category
 
             if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
   			    if [ ! -d upTo30sec/${st%/*}/dznFolder ]; then
@@ -339,7 +339,7 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 
 			echo "$out" > upTo1min/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo1min/${st%.*}.fzn
-            cp ${k%/*/*}/options.opt upTo5sec/${st%/*}/  #copy options.opt to time category
+            cp ${k%/*/*}/options.opt upTo5sec/${st%/*}/ 2>/dev/null #copy options.opt to time category
 
             if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
   			    if [ ! -d upTo1min/${st%/*}/dznFolder ]; then
@@ -417,7 +417,7 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 
 			echo "$out" > upTo10min/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo10min/${st%.*}.fzn
-            cp ${k%/*/*}/options.opt upTo5sec/${st%/*}/  #copy options.opt to time category
+            cp ${k%/*/*}/options.opt upTo5sec/${st%/*}/ 2>/dev/null #copy options.opt to time category
 
   		if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
   			if [ ! -d upTo10min/${st%/*}/dznFolder ]; then
@@ -458,7 +458,7 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 
 			echo "$out" > upTo1hour/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo1hour/${st%.*}.fzn
-            cp ${k%/*/*}/options.opt upTo5sec/${st%/*}/  #copy options.opt to time category
+            cp ${k%/*/*}/options.opt upTo5sec/${st%/*}/ 2>/dev/null #copy options.opt to time category
 
             if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
       			if [ ! -d upTo1hour/${st%/*}/dznFolder ]; then
@@ -500,7 +500,7 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 
 			echo "$out" > above1hour/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn above1hour/${st%.*}.fzn
-            cp ${k%/*/*}/options.opt upTo5sec/${st%/*}/  #copy options.opt to time category
+            cp ${k%/*/*}/options.opt upTo5sec/${st%/*}/ 2>/dev/null #copy options.opt to time category
 
             if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
       			if [ ! -d above1hour/${st%/*}/dznFolder ]; then
@@ -577,7 +577,7 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 
 			echo "$out" > flakyTests/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn flakyTests/${st%.*}.fzn
-            cp ${k%/*/*}/options.opt upTo5sec/${st%/*}/ #copy options.opt to time category
+            cp ${k%/*/*}/options.opt upTo5sec/${st%/*}/ 2>/dev/null#copy options.opt to time category
 
   			if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
   			    if [ ! -d flakyTests/${st%/*}/dznFolder ]; then
