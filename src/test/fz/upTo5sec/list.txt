@@ -681,7 +681,6 @@ lights_out/lights_out
 limerick_primes/limerick_primes
 limerick_primes2/limerick_primes2
 linear-to-program/l2p1
-loan/loan2
 local_art_theft/local_art_theft
 local_art_theft1/local_art_theft1
 locker/locker
@@ -876,7 +875,6 @@ numberlink/numberlink7
 number_of_days/number_of_days
 number_of_regions/number_of_regions
 numbrix/numbrix
-numerica_p19/numerica_p19
 numerica_p20/numerica_p20
 numerica_p21/numerica_p21
 numerica_p23/numerica_p23
