@@ -1,4 +1,0 @@
-nvar = 2;
-variables = array1d(1..5, [2, 1, 7, 1, 2]);
-values = array1d(1..4, [5, 7, 2, 9]);
-----------

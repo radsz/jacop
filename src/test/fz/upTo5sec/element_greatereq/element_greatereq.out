@@ -1,3 +1,0 @@
-item = 8;
-element_table = array1d(1..4, [6, 9, 2, 9]);
-----------

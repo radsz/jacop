@@ -1,4 +1,0 @@
-var 2..2: d = 2;
-array [1..5] of var int: x:: output_array([1..5]) = [3,4,6,2,4];
-array [1..5] of var int: y:: output_array([1..5]) = [2,6,9,3,6];
-solve  maximize d;

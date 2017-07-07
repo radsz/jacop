@@ -1,4 +1,0 @@
-var 5..5: val:: output_var;
-array [1..4] of var int: var01:: output_array([1..4]) = [0,1,0,0];
-array [1..4] of var int: values:: output_array([1..4]) = [9,5,2,7];
-solve  satisfy;

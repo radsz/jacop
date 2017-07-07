@@ -1,3 +1,0 @@
-array [1..4] of var int: d:: output_array([1..4]) = [2,3,2,2];
-array [1..16] of var int: graph:: output_array([1..4,1..4]) = [1,0,1,0,1,1,0,1,0,1,1,0,0,0,1,1];
-solve  satisfy;

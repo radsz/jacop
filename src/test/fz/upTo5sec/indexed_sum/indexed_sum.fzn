@@ -1,2 +1,0 @@
-array [1..3] of var int: xtable:: output_array([1..3]) = [6,0,-3];
-solve  satisfy;

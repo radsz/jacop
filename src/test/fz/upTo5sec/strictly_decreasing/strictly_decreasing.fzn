@@ -1,2 +1,0 @@
-array [1..4] of var int: x:: output_array([1..4]) = [8,4,3,1];
-solve  satisfy;

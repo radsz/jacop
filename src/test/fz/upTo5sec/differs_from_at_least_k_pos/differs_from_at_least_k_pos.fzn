@@ -1,4 +1,0 @@
-var 2..2: k:: output_var;
-array [1..4] of var int: a1:: output_array([1..4]) = [2,5,2,0];
-array [1..4] of var int: a2:: output_array([1..4]) = [3,6,2,1];
-solve  satisfy;

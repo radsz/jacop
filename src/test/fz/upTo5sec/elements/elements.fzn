@@ -1,3 +1,0 @@
-array [1..4] of var int: element_table:: output_array([1..4]) = [6,9,2,9];
-array [1..2] of var int: items:: output_array([1..2]) = [9,6];
-solve  satisfy;

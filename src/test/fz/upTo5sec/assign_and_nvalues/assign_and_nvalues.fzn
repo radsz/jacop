@@ -1,2 +1,0 @@
-var 2..2: limitx:: output_var;
-solve  satisfy;

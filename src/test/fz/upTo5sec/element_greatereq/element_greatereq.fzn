@@ -1,3 +1,0 @@
-var 8..8: item:: output_var;
-array [1..4] of var int: element_table:: output_array([1..4]) = [6,9,2,9];
-solve  satisfy;

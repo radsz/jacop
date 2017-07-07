@@ -1,4 +1,0 @@
-var 1..1: X_INTRODUCED_4 = 1;
-array [1..4] of var int: x:: output_array([1..2,1..2]) = [1,0,0,1];
-array [1..2] of var int: t:: output_array([1..2]) = [1,1];
-solve  satisfy;

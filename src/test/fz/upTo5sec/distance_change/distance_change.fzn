@@ -1,3 +1,0 @@
-array [1..5] of var int: v1:: output_array([1..5]) = [3,3,1,2,2];
-array [1..5] of var int: v2:: output_array([1..5]) = [4,4,3,3,3];
-solve  satisfy;
