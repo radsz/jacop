@@ -52,19 +52,19 @@ category=$pa
 
             if ls $folderPath/${st%/*}/*.dzn 2>/dev/null; then
 
-                mv ${k%%/*}/${st%.*}.dzn above${category#*o}/${st%/*}/dznFolder/ #move dzn file to time category
-                cp ${k%%/*}/${st%/*}/*.mzn above${category#*o}/${st%/*}/dznFolder/ #copy mzn to time category
+                mv ${k%%/*}/${st%.*}.dzn above${category#*o}/${st%/*}/dznFolder/ #move *.dzn file to time category
+                cp ${k%%/*}/${st%/*}/*.mzn above${category#*o}/${st%/*}/dznFolder/ #copy *.mzn to time category
 
                 if [ `ls -l $folderPath/${st%/*}/*.dzn 2>/dev/null | wc -l ` == 0 ]; then
-                    rm -r ${k%%/*}/${st%/*}  #remove dzn files
+                    rm -r ${k%%/*}/${st%/*}  #remove *.dzn files
                 fi
 
             else
 
                 if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
                     stt=${st#*/}
-                    cp ${k%%/*}/${st%/*}/${stt%.*}.mzn above${category#*o}/${st%/*}/dznFolder/${stt%.*}.mzn
-                    rm -r ${k%%/*}/${st%/*}/
+                    cp ${k%%/*}/${st%/*}/${stt%.*}.mzn above${category#*o}/${st%/*}/dznFolder/${stt%.*}.mzn #copy *.mzn to time category
+                    rm -r ${k%%/*}/${st%/*}/ #remove *.dzn files
                 fi
 
             fi
@@ -85,16 +85,16 @@ else
 fi
 readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
-	for k in ${arr3[@]};do # i contains a relative path to a found mzn file.
-        ii=${k##*/} # fzn filename with extension
-        iii=${ii%.*} # fzn filename without extension
+	for k in ${arr3[@]};do # k contains a relative path to a found mzn file.
+        ii=${k##*/} # *.fzn filename with extension
+        iii=${ii%.*} # *.fzn filename without extension
         echo "Computing first result for $k"
         start=$(date +%s ) # start time in seconds
         # First timeout is set to 3600 seconds
 
         if [ $pa == "upTo5sec" ] || [ $pa == "upTo30sec" ] || [ $pa == "upTo1min" ] || [ $pa == "upTo5min" ] || [ $pa == "upTo10min" ] || [ $pa == "upTo1hour" ]
         then
-            case "$pa" in
+            case "$pa" in #Sets the maximum time to complete the test
                 "upTo5sec") time="-t 15" ;;
                 "upTo30sec") time="-t 80" ;;
                 "upTo1min") time="-t 120" ;;
@@ -147,7 +147,7 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
         #fi
 
         if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
-          case "$pa" in
+          case "$pa" in #Sets the maximum time to complete the test
             "upTo5sec") above $pa
                         diffresult=1
                         count=4
@@ -259,7 +259,7 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 			fi
 
 			echo "$out" > upTo5sec/${st%.*}.out
-  			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo5sec/${st%.*}.fzn
+  			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo5sec/${st%.*}.fzn #move *.fzn file to time category
             cp ${k%/*/*}/options.opt upTo5sec/${st%/*}/ 2>/dev/null #copy options.opt to time category
 
             if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
@@ -270,19 +270,19 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 
             if ls $folderPath/${st%/*}/*.dzn 2>/dev/null; then
 
-                mv ${k%%/*}/${st%.*}.dzn upTo5sec/${st%/*}/dznFolder/ #move dzn file to time category
-                cp ${k%%/*}/${st%/*}/*.mzn upTo5sec/${st%/*}/dznFolder/ #copy mzn to time category
+                mv ${k%%/*}/${st%.*}.dzn upTo5sec/${st%/*}/dznFolder/ #move *.dzn file to time category
+                cp ${k%%/*}/${st%/*}/*.mzn upTo5sec/${st%/*}/dznFolder/ #copy *.mzn to time category
 
                 if [ `ls -l $folderPath/${st%/*}/*.dzn 2>/dev/null | wc -l ` == 0 ]; then
-                    rm -r ${k%%/*}/${st%/*}  #remove dzn files
+                    rm -r ${k%%/*}/${st%/*}  #remove *.dzn files
                 fi
 
             else
 
                 if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
                     stt=${st#*/}
-                    cp ${k%%/*}/${st%/*}/${stt%.*}.mzn upTo5sec/${st%/*}/dznFolder/${stt%.*}.mzn
-                    rm -r ${k%%/*}/${st%/*}/
+                    cp ${k%%/*}/${st%/*}/${stt%.*}.mzn upTo5sec/${st%/*}/dznFolder/${stt%.*}.mzn #copy *.mzn to time category
+                    rm -r ${k%%/*}/${st%/*}/ #remove *.mzn file
                 fi
 
             fi
@@ -299,7 +299,7 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 			fi
 
 			echo "$out" > upTo30sec/${st%.*}.out
-  			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo30sec/${st%.*}.fzn
+  			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo30sec/${st%.*}.fzn #move *.dzn file to time category
             cp ${k%/*/*}/options.opt upTo5sec/${st%/*}/ 2>/dev/null #copy options.opt to time category
 
             if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
@@ -310,19 +310,19 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 
             if ls $folderPath/${st%/*}/*.dzn 2>/dev/null; then
 
-                mv ${k%%/*}/${st%.*}.dzn upTo30sec/${st%/*}/dznFolder/  #move dzn file to time category
-                cp ${k%%/*}/${st%/*}/*.mzn upTo30sec/${st%/*}/dznFolder/ #copy mzn to time category
+                mv ${k%%/*}/${st%.*}.dzn upTo30sec/${st%/*}/dznFolder/  #move *.dzn file to time category
+                cp ${k%%/*}/${st%/*}/*.mzn upTo30sec/${st%/*}/dznFolder/ #copy *.mzn to time category
 
                 if [ `ls -l $folderPath/${st%/*}/*.dzn 2>/dev/null | wc -l` == 0  ]; then
-                     rm -r ${k%%/*}/${st%/*}
+                     rm -r ${k%%/*}/${st%/*} #remove *.dzn files
                 fi
 
             else
 
                 if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
                     stt=${st#*/}
-                    cp ${k%%/*}/${st%/*}/${stt%.*}.mzn upTo30sec/${st%/*}/dznFolder/${stt%.*}.mzn
-                    rm -r ${k%%/*}/${st%/*}/
+                    cp ${k%%/*}/${st%/*}/${stt%.*}.mzn upTo30sec/${st%/*}/dznFolder/${stt%.*}.mzn #copy *.mzn to time category
+                    rm -r ${k%%/*}/${st%/*}/ #remove *.mzn file
                 fi
             fi
         #timeParameter $pa
@@ -338,7 +338,7 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 			fi
 
 			echo "$out" > upTo1min/${st%.*}.out
-  			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo1min/${st%.*}.fzn
+  			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo1min/${st%.*}.fzn #move *.fzn file to time category
             cp ${k%/*/*}/options.opt upTo5sec/${st%/*}/ 2>/dev/null #copy options.opt to time category
 
             if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
@@ -348,19 +348,19 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 			fi
 
                 if ls $folderPath/${st%/*}/*.dzn 2>/dev/null; then
-                    mv ${k%%/*}/${st%.*}.dzn upTo1min/${st%/*}/dznFolder/ #move dzn file to time category
-                    cp ${k%%/*}/${st%/*}/*.mzn upTo1min/${st%/*}/dznFolder/ #copy mzn to time category
+                    mv ${k%%/*}/${st%.*}.dzn upTo1min/${st%/*}/dznFolder/ #move *.dzn file to time category
+                    cp ${k%%/*}/${st%/*}/*.mzn upTo1min/${st%/*}/dznFolder/ #copy *.mzn to time category
 
                 if [ `ls -l $folderPath/${st%/*}/*.dzn 2>/dev/null | wc -l` == 0 ]; then
-                      rm -r ${k%%/*}/${st%/*}
+                      rm -r ${k%%/*}/${st%/*} #remove *.dzn files
                 fi
 
             else
 
                 if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
                     stt=${st#*/}
-                    cp ${k%%/*}/${st%/*}/${stt%.*}.mzn upTo1min/${st%/*}/dznFolder/${stt%.*}.mzn
-                    rm -r ${k%%/*}/${st%/*}/
+                    cp ${k%%/*}/${st%/*}/${stt%.*}.mzn upTo1min/${st%/*}/dznFolder/${stt%.*}.mzn #copy *.mzn to time category
+                    rm -r ${k%%/*}/${st%/*}/ #remove *.mzn file from test folder
                 fi
              fi
              #timeParameter $pa
@@ -377,7 +377,7 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 			fi
 
 			echo "$out" > upTo5min/${st%.*}.out
-  			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo5min/${st%.*}.fzn
+  			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo5min/${st%.*}.fzn #move mv file to time category
             cp ${k%/*/*}/options.opt upTo5sec/${st%/*}/ 2>/dev/null #copy options.opt to time category
 
             if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
@@ -399,7 +399,7 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 
                 if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
                     stt=${st#*/}
-                    cp ${k%%/*}/${st%/*}/${stt%.*}.mzn upTo5min/${st%/*}/dznFolder/${stt%.*}.mzn
+                    cp ${k%%/*}/${st%/*}/${stt%.*}.mzn upTo5min/${st%/*}/dznFolder/${stt%.*}.mzn #copy mzn to time category
                     rm -r ${k%%/*}/${st%/*}/
                 fi
              fi
@@ -416,7 +416,7 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 			fi
 
 			echo "$out" > upTo10min/${st%.*}.out
-  			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo10min/${st%.*}.fzn
+  			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo10min/${st%.*}.fzn #move fzn file to time category
             cp ${k%/*/*}/options.opt upTo5sec/${st%/*}/ 2>/dev/null #copy options.opt to time category
 
   		if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
@@ -429,8 +429,8 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 
             if ls $folderPath/${st%/*}/*.dzn 2>/dev/null; then
 
-                mv ${k%%/*}/${st%.*}.dzn upTo10min/${st%/*}/dznFolder/ #move dzn file to time category
-                cp ${k%%/*}/${st%/*}/*.mzn upTo10min/${st%/*}/dznFolder/ #copy mzn to time category
+                mv ${k%%/*}/${st%.*}.dzn upTo10min/${st%/*}/dznFolder/ #move *.dzn file to time category
+                cp ${k%%/*}/${st%/*}/*.mzn upTo10min/${st%/*}/dznFolder/ #copy *.mzn to time category
 
                 if [ `ls -l $folderPath/${st%/*}/*.dzn 2>/dev/null | wc -l`  == 0 ]; then
                     rm -r ${k%%/*}/${st%/*}
@@ -440,8 +440,8 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 
                 if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
                     stt=${st#*/}
-                    cp ${k%%/*}/${st%/*}/${stt%.*}.mzn upTo10min/${st%/*}/dznFolder/${stt%.*}.mzn
-                    rm -r ${k%%/*}/${st%/*}/
+                    cp ${k%%/*}/${st%/*}/${stt%.*}.mzn upTo10min/${st%/*}/dznFolder/${stt%.*}.mzn #copy *.mzn file to time category
+                    rm -r ${k%%/*}/${st%/*}/ #remove *.mzn file
                 fi
             fi
         #timeParameter $pa
@@ -457,7 +457,7 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 			fi
 
 			echo "$out" > upTo1hour/${st%.*}.out
-  			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo1hour/${st%.*}.fzn
+  			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn upTo1hour/${st%.*}.fzn #move *.fzn file to time category
             cp ${k%/*/*}/options.opt upTo5sec/${st%/*}/ 2>/dev/null #copy options.opt to time category
 
             if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
@@ -469,19 +469,19 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 
             if ls $folderPath/${st%/*}/*.dzn 2>/dev/null; then
 
-                mv ${k%%/*}/${st%.*}.dzn upTo1hour/${st%/*}/dznFolder/ #move dzn file to time category
-                cp ${k%%/*}/${st%/*}/*.mzn upTo1hour/${st%/*}/dznFolder/ #copy mzn to time category
+                mv ${k%%/*}/${st%.*}.dzn upTo1hour/${st%/*}/dznFolder/ #move *.dzn file to time category
+                cp ${k%%/*}/${st%/*}/*.mzn upTo1hour/${st%/*}/dznFolder/ #copy *.mzn to time category
 
                 if [ `ls -l $folderPath/${st%/*}/*.dzn 2>/dev/null | wc -l` == 0 ] ; then
-                    rm -r ${k%%/*}/${st%/*}
+                    rm -r ${k%%/*}/${st%/*} #remove *.dzn file
                 fi
 
             else
 
                 if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
                     stt=${st#*/}
-                    cp ${k%%/*}/${st%/*}/${stt%.*}.mzn upTo10min/${st%/*}/dznFolder/${stt%.*}.mzn
-                    rm -r ${k%%/*}/${st%/*}/
+                    cp ${k%%/*}/${st%/*}/${stt%.*}.mzn upTo10min/${st%/*}/dznFolder/${stt%.*}.mzn #move *.dzn file to time category
+                    rm -r ${k%%/*}/${st%/*}/ #remove *.mzn file
             fi
          fi
 
@@ -499,7 +499,7 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 			fi
 
 			echo "$out" > above1hour/${st%.*}.out
-  			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn above1hour/${st%.*}.fzn
+  			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn above1hour/${st%.*}.fzn #move *.dzn file to time category
             cp ${k%/*/*}/options.opt upTo5sec/${st%/*}/ 2>/dev/null #copy options.opt to time category
 
             if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
@@ -521,8 +521,8 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 
                 if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
                     stt=${st#*/}
-                    cp ${k%%/*}/${st%/*}/${stt%.*}.mzn above1hour/${st%/*}/dznFolder/${stt%.*}.mzn
-                    rm -r ${k%%/*}/${st%/*}/
+                    cp ${k%%/*}/${st%/*}/${stt%.*}.mzn above1hour/${st%/*}/dznFolder/${stt%.*}.mzn #copy *.mzn file to time category
+                    rm -r ${k%%/*}/${st%/*}/ #copy mzn to time category
             fi
          fi
 
@@ -540,7 +540,7 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 			fi
 
 			echo "$out" > errors/${st%.*}.out
-  			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn errors/${st%.*}.fzn
+  			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn errors/${st%.*}.fzn #move *.mzn file to time category
 
             if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
   			    if [ ! -d errors/${st%/*}/dznFolder ]; then
@@ -550,19 +550,19 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 
             if ls $folderPath/${st%/*}/*.dzn 2>/dev/null; then
 
-                mv ${k%%/*}/${st%.*}.dzn errors/${st%/*}/dznFolder/ #move dzn file to time category
-                cp ${k%%/*}/${st%/*}/*.mzn errors/${st%/*}/dznFolder/ #copy mzn to time category
+                mv ${k%%/*}/${st%.*}.dzn errors/${st%/*}/dznFolder/ #move *.dzn file to time category
+                cp ${k%%/*}/${st%/*}/*.mzn errors/${st%/*}/dznFolder/ #copy *.mzn to time category
 
                 if [ `ls -l $folderPath/${st%/*}/*.dzn 2>/dev/null | wc -l` == 0 ]; then
-                    rm -r ${k%%/*}/${st%/*}
+                    rm -r ${k%%/*}/${st%/*} #remove *.dzn file
                 fi
 
             else
 
                 if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
                     stt=${st#*/}
-                    cp ${k%%/*}/${st%/*}/${stt%.*}.mzn errors/${st%/*}/dznFolder/${stt%.*}.mzn
-                    rm -r ${k%%/*}/${st%/*}/
+                    cp ${k%%/*}/${st%/*}/${stt%.*}.mzn errors/${st%/*}/dznFolder/${stt%.*}.mzn #copy *.mzn to time category
+                    rm -r ${k%%/*}/${st%/*}/ #remove *.mzn file
             fi
          fi
 
@@ -576,8 +576,8 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 			fi
 
 			echo "$out" > flakyTests/${st%.*}.out
-  			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn flakyTests/${st%.*}.fzn
-            cp ${k%/*/*}/options.opt upTo5sec/${st%/*}/ 2>/dev/null#copy options.opt to time category
+  			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn flakyTests/${st%.*}.fzn #move *.fzn to time category
+            cp ${k%/*/*}/options.opt upTo5sec/${st%/*}/ 2>/dev/null #copy options.opt to time category
 
   			if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
   			    if [ ! -d flakyTests/${st%/*}/dznFolder ]; then
@@ -591,7 +591,7 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
                 cp ${k%%/*}/${st%/*}/*.mzn flakyTests/${st%/*}/dznFolder/ #copy mzn to time category
 
                 if [ `ls -l $folderPath/${st%/*}/*.dzn 2>/dev/null | wc -l` == 0 ]; then
-                    rm -r ${k%%/*}/${st%/*}
+                    rm -r ${k%%/*}/${st%/*} #remove *.mzn file
                 fi
 
             else
