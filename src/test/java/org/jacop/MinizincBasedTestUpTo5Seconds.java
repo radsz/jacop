@@ -29,7 +29,7 @@ import static org.junit.Assert.fail;
     protected static final String timeCategory = "upTo5sec/";
 
     @Rule
-    public Timeout globalTimeout = Timeout.seconds(20);
+    public Timeout globalTimeout = Timeout.seconds(20); //The test will be completed within 20 seconds
 
     public MinizincBasedTestUpTo5Seconds(String testFilename) {
         super(timeCategory);

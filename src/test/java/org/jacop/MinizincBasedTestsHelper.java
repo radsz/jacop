@@ -64,6 +64,7 @@ public class MinizincBasedTestsHelper {
         String foo = outputFilename.toString();
         foo = foo.substring(0, foo.lastIndexOf('/'));
 
+        //If options.opt exist reads parameters from the file and uses them in fzn2jacop program.
         if(Files.exists(Paths.get(foo + "/options.opt"))) {
             BufferedReader reader = Files.newBufferedReader(Paths.get(foo + "/options.opt"), Charset.defaultCharset());
             StringBuffer content = new StringBuffer();
@@ -116,8 +117,8 @@ public class MinizincBasedTestsHelper {
 
         System.out.println("Test file: " + timeCategory + testFilename);
         List<String> result = new ArrayList<String>();
-        List<String> expectedResult = expected(timeCategory + testFilename + ".out");
-        List<String> res = computeResult(timeCategory + testFilename + ".fzn");
+        List<String> expectedResult = expected(timeCategory + testFilename + ".out"); //path to file name *.out
+        List<String> res = computeResult(timeCategory + testFilename + ".fzn"); // path to file name *.fzn
 
         if(expectedResult.get(expectedResult.size()-1).equals("==========")){
             int i;

@@ -28,7 +28,7 @@ import static org.junit.Assert.fail;
     protected static final String timeCategory = "upTo5min/";
 
     @Rule
-    public Timeout globalTimeout = Timeout.seconds(900);
+    public Timeout globalTimeout = Timeout.seconds(900); //The test will be completed within 15 minutes
 
     public MinizincBasedTestUpTo5Minutes(String testFilename) {
         super(timeCategory);

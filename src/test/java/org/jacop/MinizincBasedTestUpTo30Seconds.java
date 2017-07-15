@@ -26,7 +26,7 @@ import static org.junit.Assert.fail;
 
 @RunWith(Parameterized.class) public class MinizincBasedTestUpTo30Seconds extends MinizincBasedTestsHelper {
 
-    protected static final String timeCategory = "upTo30sec/";
+    protected static final String timeCategory = "upTo30sec/"; //The test will be completed within 1.6 minutes
 
     @Rule
     public Timeout globalTimeout = Timeout.seconds(100);
