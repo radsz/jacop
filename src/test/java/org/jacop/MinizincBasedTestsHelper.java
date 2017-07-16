@@ -12,10 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Stream;
 
 import static org.junit.Assert.assertEquals;
@@ -60,27 +57,25 @@ public class MinizincBasedTestsHelper {
     protected List<String> computeResult(String filename) throws IOException {
         
         String outputFilename = relativePath + filename + ".out";
-
-        String foo = outputFilename.toString();
-        foo = foo.substring(0, foo.lastIndexOf('/'));
+        String foo = outputFilename.substring(0, outputFilename.lastIndexOf('/'));
 
         //If options.opt exist reads parameters from the file and uses them in fzn2jacop program.
         if(Files.exists(Paths.get(foo + "/options.opt"))) {
-            BufferedReader reader = Files.newBufferedReader(Paths.get(foo + "/options.opt"), Charset.defaultCharset());
-            StringBuffer content = new StringBuffer();
-            String line = null;
-            String[] options = new String[2];
-            int i=0;
-            while ((line = reader.readLine()) != null) {
-                String myString = line.toString();
-                options = myString.split(" ");
-                i++;
+            try (BufferedReader reader = Files.newBufferedReader(Paths.get(foo + "/options.opt"), Charset.defaultCharset()))
+            {
+                String line = null;
+                ArrayList<String> options = new ArrayList<String>();
+                while ((line = reader.readLine()) != null) {
+                    options.add(line);
+                }
+
+                    fz2jacop.main(new String[]{options.get(0), options.get(1), "-outputfile", outputFilename, relativePath + filename});
+                    FloatDomain.setFormat(Double.MAX_VALUE);
+
             }
-            fz2jacop.main(new String[]{options[0], options[1], "-outputfile", outputFilename, relativePath + filename});
-            FloatDomain.setFormat(Double.MAX_VALUE);
         }
         else
-            fz2jacop.main(new String[] {"-outputfile", outputFilename, relativePath + filename});
+               fz2jacop.main(new String[]{"-outputfile", outputFilename, relativePath + filename});
 
         String result = new String(Files.readAllBytes(Paths.get(outputFilename)));
 
