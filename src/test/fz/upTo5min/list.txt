@@ -1,7 +1,7 @@
 amaze/2012-03-15
 amaze/2012-03-19
 arbitrage_loops/arbitrage_loops5
-autoref/autoref
+company_competition/company_competition
 cryptanalysis/kb128_n5_obj16
 data_square/rpp18_true
 data_square/rpp20_true

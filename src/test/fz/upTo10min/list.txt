@@ -33,6 +33,5 @@ table-layout/en-1000-1303-line283
 table-layout/en-1000-274-line403
 table-layout/en-1250-1261-line126
 table-layout/en-760-310-line795
-tsp_circuit/tsp_circuit
 zephyrus/12__8__6__3
 zephyrus/14__6__8__3

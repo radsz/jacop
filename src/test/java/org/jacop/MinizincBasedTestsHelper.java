@@ -29,7 +29,7 @@ public class MinizincBasedTestsHelper {
     String timeCategory;
     protected static final String listFileName = "list.txt";
     protected static final boolean printInfo = false;
-    private static int counter=0;
+    private static int counter = 0;
 
     protected MinizincBasedTestsHelper(String timeCategory) {
         this.timeCategory = timeCategory;
@@ -49,34 +49,32 @@ public class MinizincBasedTestsHelper {
         }
     }
 
-    public int counter(){
+    public int counter() {
         return counter;
     }
 
 
     protected List<String> computeResult(String filename) throws IOException {
-        
+
         String outputFilename = relativePath + filename + ".out"; //outputFilename contains path to *.out file.
         String foo = outputFilename.substring(0, outputFilename.lastIndexOf('/'));
 
         //If options.opt exist reads parameters from the file and uses them in fzn2jacop program.
-        if(Files.exists(Paths.get(foo + "/options.opt"))) {
-            try (BufferedReader reader = Files.newBufferedReader(Paths.get(foo + "/options.opt"), Charset.defaultCharset()))
-            {
+        if (Files.exists(Paths.get(foo + "/options.opt"))) {
+            try (BufferedReader reader = Files.newBufferedReader(Paths.get(foo + "/options.opt"), Charset.defaultCharset())) {
                 String line;
                 ArrayList<String> options = new ArrayList<String>();
                 while ((line = reader.readLine()) != null) {
                     options.add(line);
                 }
-                    //fz2jacop compute result with options
-                    fz2jacop.main(new String[]{options.get(0), options.get(1), "-outputfile", outputFilename, relativePath + filename});
-                    FloatDomain.setFormat(Double.MAX_VALUE);
+                //fz2jacop compute result with options
+                fz2jacop.main(new String[] {options.get(0), options.get(1), "-outputfile", outputFilename, relativePath + filename});
+                FloatDomain.setFormat(Double.MAX_VALUE);
 
             }
-        }
-        else
-               //fz2jacop compute result
-               fz2jacop.main(new String[]{"-outputfile", outputFilename, relativePath + filename});
+        } else
+            //fz2jacop compute result
+            fz2jacop.main(new String[] {"-outputfile", outputFilename, relativePath + filename});
 
         String result = new String(Files.readAllBytes(Paths.get(outputFilename)));
 
@@ -96,19 +94,21 @@ public class MinizincBasedTestsHelper {
     }
 
     protected static Collection<String> fileReader(String timeCategory) throws IOException {
-        System.out.println("timeCategory" + timeCategory);
-        FileReader file = new FileReader(relativePath + timeCategory + listFileName);
-       try( BufferedReader br = new BufferedReader(file)) {
-           String line = "";
-           List<String> list = new ArrayList<String>();
-           int i = 0;
-           while ((line = br.readLine()) != null) {
-               list.add(i, line);
-               i++;
-           }
 
-           return list;
-       }
+        System.out.println("timeCategory" + timeCategory);
+        try (FileReader file = new FileReader(relativePath + timeCategory + listFileName); BufferedReader br = new BufferedReader(file)) {
+
+            String line = "";
+            List<String> list = new ArrayList<String>();
+            int i = 0;
+            while ((line = br.readLine()) != null) {
+                list.add(i, line);
+                i++;
+            }
+
+            return list;
+        }
+
     }
 
     protected void testExecution(String timeCategory) throws IOException {
@@ -118,14 +118,13 @@ public class MinizincBasedTestsHelper {
         List<String> expectedResult = expected(timeCategory + testFilename + ".out"); //path to file name *.out
         List<String> res = computeResult(timeCategory + testFilename + ".fzn"); // path to file name *.fzn
 
-        if(expectedResult.get(expectedResult.size()-1).equals("==========")){
+        if (expectedResult.get(expectedResult.size() - 1).equals("==========")) {
             int i;
-            for(i=0; i <res.size(); i++){
+            for (i = 0; i < res.size(); i++) {
                 result.add(res.get(i));
             }
             result.add("==========");
-//            result.add(res.listIterator() + "\n==========");
-        }else
+        } else
             result = res;
 
         if (result.size() == 0)
