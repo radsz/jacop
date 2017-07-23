@@ -47,6 +47,8 @@ public class MinizincBasedTestsHelper {
             // e.printStackTrace(); // can be helpful when updating code and/or tests instances.
             // File was not created (because the test timeout before it was created so deleting it failed.
         }
+        System.gc();
+        System.runFinalization();
     }
 
     public int counter() {

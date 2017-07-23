@@ -52,7 +52,7 @@ var 2..3: H2; % height task 2
 
 
 % solve satisfy;
-solve :: int_search([O1,D1,H1,O2,D2,H2], first_fail, indomain_min, complete) satisfy;
+solve :: int_search([O1,D1,H1,O2,D2,H2], first_fail, indomain, complete) satisfy;
 
 constraint
  

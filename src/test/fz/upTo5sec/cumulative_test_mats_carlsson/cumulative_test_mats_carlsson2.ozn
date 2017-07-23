@@ -1,7 +1,0 @@
-output ["task 1: ",show([O1,D1,H1])," task 2: ",show([O2,D2,H2]),"\n"];
-int: O1;
-int: D1;
-int: H1;
-int: O2;
-int: D2;
-int: H2;

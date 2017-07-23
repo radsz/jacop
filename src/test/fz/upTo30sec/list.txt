@@ -82,6 +82,7 @@ rcpsp-data-psplib-J30/J30_21_8
 rcpsp-data-psplib-J30/J30_30_4
 rcpsp-data-psplib-J30/J30_6_4
 rcpsp-data-psplib-J60/J60_10_9
+rcpsp-data-psplib-J60/J60_30_1
 rot13_2/rot13_2
 rotation/rotation
 smelt/smelt_2
