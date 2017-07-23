@@ -25,6 +25,7 @@ fastfood/ff74
 fastfood/ff75
 fastfood/ff76
 fillomino/14
+fillomino/21
 fillomino/22
 gfd-schedule/n120f5d50m50k20
 ghoulomb/3-8-16
@@ -73,6 +74,14 @@ rcpsp-data_at/st103_10
 rcpsp-data_at/st103_12
 rcpsp-data_at/st27_2
 rcpsp-data_at/st51_33
+rcpsp-data_bl/Bl2509
+rcpsp-data-psplib-J30/J30_10_10
+rcpsp-data-psplib-J30/J30_10_4
+rcpsp-data-psplib-J30/J30_17_5
+rcpsp-data-psplib-J30/J30_21_8
+rcpsp-data-psplib-J30/J30_30_4
+rcpsp-data-psplib-J30/J30_6_4
+rcpsp-data-psplib-J60/J60_10_9
 rot13_2/rot13_2
 rotation/rotation
 smelt/smelt_2
