@@ -47,6 +47,9 @@ import org.jacop.fz.*;
 import org.jacop.set.constraints.AdisjointB;
 
 import org.jacop.constraints.XeqC;
+import org.jacop.constraints.XplusClteqZ;
+import org.jacop.constraints.XplusYlteqZ;
+import org.jacop.constraints.Or;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.cumulative.CumulativeBasic;
@@ -102,12 +105,19 @@ class GlobalConstraints implements ParserTreeConstants {
     Store store;
     Support support;    
 
+    boolean useDisjunctions = true;
+    boolean useCumulativeUnary = true;
+    
     public GlobalConstraints(Support support) {
 	this.store = support.store;
 	this.support = support;
     }
 
     void gen_jacop_cumulative(SimpleNode node) {
+
+	// possible to control when edge find algorithm is used for Cumulative constraint
+	// System.setProperty("max_edge_find_size", "10");
+	
         IntVar[] str = support.getVarArray((SimpleNode) node.jjtGetChild(0));
         IntVar[] dur = support.getVarArray((SimpleNode) node.jjtGetChild(1));
         IntVar[] res = support.getVarArray((SimpleNode) node.jjtGetChild(2));
@@ -177,9 +187,72 @@ class GlobalConstraints implements ParserTreeConstants {
 		else
 		    // complexity O(n*k*logn)
 		    support.delayedConstraints.add(new Cumulative(s, d, r, b));
-            } else
+
+		String p = System.getProperty("fz_cumulative_use_disjunctions");
+		if (p != null) 
+		    useDisjunctions = Boolean.parseBoolean(p);
+		p = System.getProperty("fz_cumulative_use_unary");
+		if (p != null) 
+		    useCumulativeUnary = Boolean.parseBoolean(p);
+
+		if (useCumulativeUnary)
+		    impliedCumulativeUnaryConstraints(s, d, r, b);
+		if (useDisjunctions)
+		    impliedDisjunctionConstraints(s, d, r, b);
+            } else {
                 support.delayedConstraints.add(new CumulativeBasic(s, d, r, b));
+
+		String p = System.getProperty("fz_cumulative_use_disjunctions");
+		if (p != null) 
+		    useDisjunctions = Boolean.parseBoolean(p);
+		p = System.getProperty("fz_cumulative_use_unary");
+		if (p != null) 
+		    useCumulativeUnary = Boolean.parseBoolean(p);
+
+		if (useCumulativeUnary)
+		    impliedCumulativeUnaryConstraints(s, d, r, b);
+		if (useDisjunctions)
+		    impliedDisjunctionConstraints(s, d, r, b);
+	    }
         }
+    }
+
+    void impliedCumulativeUnaryConstraints(IntVar[] s, IntVar[] d, IntVar[] r, IntVar b) {
+
+	int limit = b.max()/2 + 1;
+
+	ArrayList<IntVar> start = new ArrayList<IntVar>();
+	ArrayList<IntVar> dur = new ArrayList<IntVar>();
+	ArrayList<IntVar> res = new ArrayList<IntVar>();
+	
+	for (int i = 0; i < r.length; i++) {
+	    if (r[i].min() >= limit) {
+		start.add(s[i]);
+		dur.add(d[i]);
+		res.add(r[i]);
+	    }
+	}
+	// use CumulativeUnary for tasks that have resource capacity greater than half of the cumulative capacity bound.
+	if (start.size() > 1)
+	    support.delayedConstraints.add(new CumulativeUnary(start, dur, res, b, false));
+    }
+    
+    void impliedDisjunctionConstraints(IntVar[] s, IntVar[] d, IntVar[] r, IntVar b) {
+	
+	// use pairwaise task disjunction constraints for all pairs of tasks that have sum of resource capacities
+	// greater than the cumulative capacity bound.
+	for (int i = 0; i < s.length; i++) {
+	    for (int j = i+1; j < s.length; j++) {
+		if (r[i].min() + r[j].min() > b.max()) {
+		    if (d[i].singleton() && d[j].singleton())
+			support.pose(new Or(new XplusClteqZ(s[i], d[i].value(), s[j]),
+					    new XplusClteqZ(s[j], d[j].value(), s[i])));
+		    else 
+			support.pose(new Or(new XplusYlteqZ(s[i], d[i], s[j]),
+					    new XplusYlteqZ(s[j], d[j], s[i])));
+		}
+	    }
+	}
     }
 
     void gen_jacop_circuit(SimpleNode node) {

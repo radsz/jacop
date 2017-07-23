@@ -161,7 +161,8 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
             else if (numberNotSat == listOfC.length)
                 throw Store.failException;
 
-        }
+        } else if (numberSat > 0)
+	    removeConstraint();
 
     }
 

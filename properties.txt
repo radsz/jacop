@@ -3,4 +3,19 @@ JaCoP properties that can be controlled by option -D in java command. For exampl
 
 Properties:
 
-- max_edge_find_size: use edge finder in the cumulative constraints if it contains less tasks than this number; default 100.
+Java specific:
+==============
+- max_edge_find_size: use edge finder in the cumulative constraints if
+  it contains less tasks than this number; default 100.
+
+
+flatzinc compiler specific:
+===========================
+- fz_cumulative_use_unary: during constraints generation in flatzinc
+ compiler use CumulativeUnary for tasks that have resource capacity
+ greater than half of the cumulative capacity bound; default=true
+
+- fz_cumulative_use_disjunctions: during constraints generation in
+ flatzinc compiler pairwaise task disjunction constraints for all
+ pairs of tasks that have sum of resource capacities greater than the
+ cumulative capacity bound; default=true
