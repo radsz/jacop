@@ -24,7 +24,6 @@ oocsp_racks/oocsp_racks_030_ea4_cc
 or_seating/or_seating
 pentominoes/04
 rcpsp-data_psplib-J30/J30_10_6
-rcpsp-data_psplib-J30/J30_1_5
 scene_allocation/scene_allocation
 ship-schedule.cp/7Ships
 ship-schedule.cp/7ShipsMixedUnconst
