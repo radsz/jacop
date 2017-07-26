@@ -30,7 +30,6 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Domain;
@@ -90,16 +89,9 @@ public class In extends PrimitiveConstraint {
         this.dom = dom;
         this.DomComplement = dom.complement();
 
+        setScope(x);
+
     }
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(1);
-
-        variables.add(x);
-        return variables;
-    }
-
 
     @Override public void consistency(Store store) {
         x.domain.in(store.level, x, dom);

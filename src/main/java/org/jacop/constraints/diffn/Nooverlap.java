@@ -31,9 +31,9 @@
 
 package org.jacop.constraints.diffn;
 
-import java.util.ArrayList;
-import java.util.BitSet;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -106,7 +106,10 @@ public class Nooverlap extends Constraint {
             this.rectangle[i].index = i;
         }
 
+        setScope(this.rectangle);
+
     }
+
 
     /**
      * It specifies a diff constraint.
@@ -151,6 +154,8 @@ public class Nooverlap extends Constraint {
             String s = "\nNot equal sizes of Variable vectors in Nooverlap";
             throw new IllegalArgumentException(s);
         }
+
+        setScope(this.rectangle);
     }
 
     /**
@@ -193,6 +198,8 @@ public class Nooverlap extends Constraint {
                 String s = "\nNot equal sizes of rectangle vectors in Nooverlap";
                 throw new IllegalArgumentException(s);
             }
+
+            setScope(this.rectangle);
     }
 
 
@@ -235,18 +242,12 @@ public class Nooverlap extends Constraint {
         this.strict = strict;
     }
 
-    @Override public ArrayList<Var> arguments() {
+    private void setScope(Rectangle[] rectangle) {
 
-        ArrayList<Var> variables = new ArrayList<Var>();
+        setScope(Arrays.stream(rectangle)
+                    .map( r -> Stream.of(r.origin(0), r.origin(1), r.length(0), r.length(1)))
+                    .flatMap( i -> i));
 
-        for (Rectangle r : rectangle) {
-            for (int i = 0; i < 4; i++)
-                variables.add(r.origin(0));
-            variables.add(r.origin(1));
-            variables.add(r.length(0));
-            variables.add(r.length(1));
-        }
-        return variables;
     }
 
     @Override public void consistency(Store store) {

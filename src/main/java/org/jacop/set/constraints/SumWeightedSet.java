@@ -32,6 +32,7 @@ package org.jacop.set.constraints;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.Constraint;
@@ -132,6 +133,7 @@ public class SumWeightedSet extends Constraint {
         while (enumer.hasMoreElements())
             elementWeights.put(enumer.nextElement(), weights[i++]);
 
+        setScope(a, totalWeight);
     }
 
     /**
@@ -159,17 +161,6 @@ public class SumWeightedSet extends Constraint {
 
         this(a, a.domain.lub().toIntArray(), weights, totalWeight);
 
-    }
-
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(2);
-
-        variables.add(totalWeight);
-        variables.add(a);
-
-        return variables;
     }
 
     // FIXME, TODO, Analyse all set constraints fixpoints.

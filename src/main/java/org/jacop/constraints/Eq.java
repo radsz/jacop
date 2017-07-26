@@ -31,7 +31,6 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Domain;
@@ -87,17 +86,8 @@ public class Eq extends PrimitiveConstraint implements UsesQueueVariable {
         this.c1 = c1;
         this.c2 = c2;
 
+        setScope(new PrimitiveConstraint[] {c1, c2});
         queueForward = new QueueForward<PrimitiveConstraint>(new PrimitiveConstraint[] {c1, c2}, arguments());
-    }
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(1);
-
-        variables.addAll(c1.arguments());
-        variables.addAll(c2.arguments());
-
-        return variables;
     }
 
     @Override public void consistency(Store store) {

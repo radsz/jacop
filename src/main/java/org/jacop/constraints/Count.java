@@ -32,7 +32,9 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -96,6 +98,8 @@ public class Count extends Constraint {
             assert (list[i] != null) : i + "-th variable in the list is null";
             this.list[i] = list[i];
         }
+
+        setScope( Stream.concat(Arrays.stream(list), Stream.of(counter)) );
 
     }
 
@@ -187,19 +191,6 @@ public class Count extends Constraint {
             return (countAll == counter.min());
         } else
             return false;
-    }
-
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(list.length + 1);
-
-        variables.add(counter);
-
-        for (Var v : list)
-            variables.add(v);
-
-        return variables;
     }
 
     @Override public void removeConstraint() {

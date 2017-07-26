@@ -30,10 +30,9 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import org.jacop.core.*;
 
@@ -118,6 +117,8 @@ public class Assignment extends Constraint implements UsesQueueVariable {
 
         this.numberArgs = (short) (xs.length + ds.length);
 
+        setScope( Stream.concat(Arrays.stream(xs), Arrays.stream(ds)) );
+
     }
 
     /**
@@ -184,19 +185,6 @@ public class Assignment extends Constraint implements UsesQueueVariable {
 
         this(xs, ds, min, min);
 
-    }
-
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(x.length * 2 + 1);
-
-        for (int i = 0; i < x.length; i++) {
-            variables.add(x[i]);
-            variables.add(d[i]);
-        }
-
-        return variables;
     }
 
     @Override public void removeLevel(int level) {

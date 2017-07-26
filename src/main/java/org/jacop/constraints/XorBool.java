@@ -31,8 +31,9 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -103,6 +104,8 @@ public class XorBool extends PrimitiveConstraint {
             queueIndex = 1;
         else
             queueIndex = 0;
+
+        setScope(Stream.concat(Arrays.stream(x), Stream.of(y)));
     }
 
     /**
@@ -121,18 +124,6 @@ public class XorBool extends PrimitiveConstraint {
             return "Variable " + y + " does not have boolean domain";
 
         return null;
-    }
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(3);
-
-        for (IntVar e : x)
-            variables.add(e);
-
-        variables.add(y);
-
-        return variables;
     }
 
     @Override public void consistency(Store store) {

@@ -30,10 +30,9 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import org.jacop.core.*;
 
@@ -118,6 +117,8 @@ public class Among extends Constraint implements UsesQueueVariable {
         this.kSet = kSet.clone();
         this.n = n;
 
+        setScope( Stream.concat(Arrays.stream(list), Stream.of(n)));
+
     }
 
     /**
@@ -130,18 +131,6 @@ public class Among extends Constraint implements UsesQueueVariable {
 
         this(list.toArray(new IntVar[list.size()]), kSet, n);
 
-    }
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(this.numberArgs - 1);
-
-        variables.add(this.n);
-
-        for (Var v : this.list)
-            variables.add(v);
-
-        return variables;
     }
 
     @Override public void removeLevel(int level) {

@@ -31,6 +31,7 @@
 package org.jacop.set.constraints;
 
 import java.util.ArrayList;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.Constraint;
@@ -111,6 +112,7 @@ public class ElementSet extends Constraint {
         this.list = new IntDomain[list.length];
         System.arraycopy(list, 0, this.list, 0, list.length);
 
+        setScope(index, value);
     }
 
     /**
@@ -122,17 +124,6 @@ public class ElementSet extends Constraint {
      */
     public ElementSet(IntVar index, IntDomain[] list, SetVar value) {
         this(index, list, value, 0);
-    }
-
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(2);
-
-        variables.add(index);
-        variables.add(value);
-
-        return variables;
     }
 
     @Override public void consistency(Store store) {

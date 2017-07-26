@@ -30,12 +30,9 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Hashtable;
-import java.util.LinkedHashSet;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import org.jacop.core.*;
 
@@ -137,6 +134,9 @@ public class AmongVar extends Constraint implements UsesQueueVariable {
 
         assert (n != null) : "Variable n is null";
         this.n = n;
+
+        setScope( Stream.concat( Stream.concat(Arrays.stream(listOfX), Arrays.stream(listOfY)), Stream.of(n)));
+
     }
 
     /**
@@ -149,16 +149,6 @@ public class AmongVar extends Constraint implements UsesQueueVariable {
 
         this(listOfX.toArray(new IntVar[listOfX.size()]), listOfY.toArray(new IntVar[listOfY.size()]), n);
 
-    }
-
-    @Override public ArrayList<Var> arguments() {
-        ArrayList<Var> variables = new ArrayList<Var>(this.numberArgs - 1);
-
-        variables.add(this.n);
-        variables.addAll(Arrays.asList(this.listOfX));
-        variables.addAll(Arrays.asList(this.listOfY));
-
-        return variables;
     }
 
     @Override public void removeLevel(int level) {

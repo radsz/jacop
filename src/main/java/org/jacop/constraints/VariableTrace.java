@@ -37,6 +37,7 @@ import org.jacop.core.Store;
 import org.jacop.core.IntDomain;
 
 import java.util.ArrayList;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -58,10 +59,7 @@ public class VariableTrace extends Constraint implements UsesQueueVariable {
      * @param v variable to be traced
      */
     public VariableTrace(Var v) {
-        numberId = idNumber.incrementAndGet();
-
-        vars = new Var[1];
-        vars[0] = v;
+        this(new Var[] {v});
     }
 
     /**
@@ -69,12 +67,15 @@ public class VariableTrace extends Constraint implements UsesQueueVariable {
      * @param vs variables to be traced
      */
     public VariableTrace(Var[] vs) {
+
         numberId = idNumber.incrementAndGet();
 
         vars = new Var[vs.length];
         for (int i = 0; i < vs.length; i++) {
             vars[i] = vs[i];
         }
+
+        setScope(vars);
     }
 
     /**
@@ -82,20 +83,7 @@ public class VariableTrace extends Constraint implements UsesQueueVariable {
      * @param vs variables to be traced
      */
     public VariableTrace(ArrayList<Var> vs) {
-        numberId = idNumber.incrementAndGet();
-
-        vars = new Var[vs.size()];
-        for (int i = 0; i < vs.size(); i++) {
-            vars[i] = vs.get(i);
-        }
-    }
-
-    public ArrayList<Var> arguments() {
-        ArrayList<Var> Variables = new ArrayList<Var>(vars.length);
-
-        Variables.addAll(java.util.Arrays.asList(vars));
-
-        return Variables;
+        this(vs.toArray(new Var[vs.size()]));
     }
 
     public void impose(Store store) {

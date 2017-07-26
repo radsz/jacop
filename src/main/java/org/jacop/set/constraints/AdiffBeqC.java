@@ -31,6 +31,7 @@
 package org.jacop.set.constraints;
 
 import java.util.ArrayList;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.Constraint;
@@ -106,17 +107,8 @@ public class AdiffBeqC extends Constraint implements UsesQueueVariable {
         this.b = b;
         this.c = c;
 
-    }
+        setScope(a, b, c);
 
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(2);
-
-        variables.add(a);
-        variables.add(b);
-        variables.add(c);
-
-        return variables;
     }
 
     @Override public void consistency(Store store) {

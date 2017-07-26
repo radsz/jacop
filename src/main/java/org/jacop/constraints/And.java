@@ -30,8 +30,7 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.Hashtable;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Domain;
@@ -75,23 +74,7 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
      * @param listOfC arraylist of constraints
      */
     public And(ArrayList<PrimitiveConstraint> listOfC) {
-
-        assert (listOfC != null) : "List of constraints is empty";
-
-        this.queueIndex = 1;
-        numberId = idNumber.incrementAndGet();
-
-        this.listOfC = new PrimitiveConstraint[listOfC.size()];
-
-        int i = 0;
-
-        for (PrimitiveConstraint cc : listOfC) {
-            assert (cc != null) : (i + 1) + "-th element of constraint list is insolvent";
-            numberArgs += cc.numberArgs();
-            this.listOfC[i++] = cc;
-        }
-
-        queueForward = new QueueForward<PrimitiveConstraint>(listOfC, arguments());
+        this(listOfC.toArray(new PrimitiveConstraint[listOfC.size()]));
     }
 
     /**
@@ -100,18 +83,7 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
      * @param c2 the second primitive constraint
      */
     public And(PrimitiveConstraint c1, PrimitiveConstraint c2) {
-
-        numberId = idNumber.incrementAndGet();
-
-        this.listOfC = new PrimitiveConstraint[2];
-
-        numberArgs += c1.numberArgs();
-        this.listOfC[0] = c1;
-
-        numberArgs += c2.numberArgs();
-        this.listOfC[1] = c2;
-
-        queueForward = new QueueForward<PrimitiveConstraint>(listOfC, arguments());
+        this(new PrimitiveConstraint[] {c1, c2});
     }
 
     /**
@@ -127,18 +99,8 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
             this.numberArgs += c[i].numberArgs();
             this.listOfC[i] = c[i];
         }
+        setScope(listOfC);
         queueForward = new QueueForward<PrimitiveConstraint>(listOfC, arguments());
-    }
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>();
-
-        for (Constraint cc : listOfC)
-            for (Var V : cc.arguments())
-                variables.add(V);
-
-        return variables;
     }
 
     boolean propagation;

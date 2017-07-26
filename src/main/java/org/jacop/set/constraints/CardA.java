@@ -31,6 +31,7 @@
 package org.jacop.set.constraints;
 
 import java.util.ArrayList;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.Constraint;
@@ -118,13 +119,7 @@ public class CardA extends Constraint {
         numberArgs = 1;
         this.a = a;
 
-    }
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(1);
-        variables.add(a);
-        return variables;
+        setScope(a);
 
     }
 

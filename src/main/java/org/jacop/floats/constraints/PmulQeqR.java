@@ -31,7 +31,6 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
@@ -100,16 +99,8 @@ public class PmulQeqR extends Constraint {
         this.p = p;
         this.q = q;
         this.r = r;
-    }
 
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(3);
-
-        variables.add(p);
-        variables.add(q);
-        variables.add(r);
-        return variables;
+        setScope(p, q, r);
     }
 
     @Override public void consistency(Store store) {

@@ -30,11 +30,9 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashMap;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -102,6 +100,9 @@ public class Values extends Constraint {
             this.list[i] = list[i];
 
         }
+
+        setScope(Stream.concat(Arrays.stream(list), Stream.of(count)));
+
     }
 
 
@@ -223,16 +224,6 @@ public class Values extends Constraint {
         else
             return false;
         return sat;
-    }
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(list.length + 1);
-
-        variables.add(count);
-        for (Var v : list)
-            variables.add(v);
-        return variables;
     }
 
     @Override public void removeConstraint() {

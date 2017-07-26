@@ -30,7 +30,6 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
@@ -95,21 +94,12 @@ public class XexpYeqZ extends Constraint {
         this.y = y;
         this.z = z;
 
+        setScope(x, y, z);
+
     }
 
     double aLog(double a, double x) {
         return Math.log(x) / Math.log(a);
-    }
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(3);
-
-        variables.add(x);
-        variables.add(y);
-        variables.add(z);
-
-        return variables;
     }
 
     @Override public void consistency(Store store) {

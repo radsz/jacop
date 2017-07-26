@@ -31,7 +31,9 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import org.jacop.core.IntVar;
 import org.jacop.core.IntDomain;
@@ -149,20 +151,9 @@ public class SumBool extends PrimitiveConstraint {
         else
             queueIndex = 1;
 
+        setScope( Stream.concat( Stream.of(sum), Arrays.stream(list) ) );
+
     }
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(x.length + 1);
-
-        for (Var v : x)
-            variables.add(v);
-
-        variables.add(sum);
-
-        return variables;
-    }
-
 
     @Override public void consistency(Store store) {
         prune(relationType);

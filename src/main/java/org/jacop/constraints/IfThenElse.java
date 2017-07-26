@@ -30,7 +30,6 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Domain;
@@ -99,23 +98,8 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
         this.thenC = thenC;
         this.elseC = elseC;
 
+        setScope(new PrimitiveConstraint[]{ condC, thenC, elseC});
         queueForward = new QueueForward<PrimitiveConstraint>(new PrimitiveConstraint[] {condC, thenC, elseC}, arguments());
-    }
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(1);
-
-        for (Var V : condC.arguments())
-            variables.add(V);
-
-        for (Var V : thenC.arguments())
-            variables.add(V);
-
-        for (Var V : elseC.arguments())
-            variables.add(V);
-
-        return variables;
     }
 
     @Override public void consistency(Store store) {

@@ -31,7 +31,9 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -103,6 +105,8 @@ public class Min extends Constraint {
             this.queueIndex = 1;
 
         this.numberId = idNumber.incrementAndGet();
+
+        setScope( Stream.concat(Arrays.stream(list), Stream.of(min)) );
     }
 
     /**
@@ -114,16 +118,6 @@ public class Min extends Constraint {
 
         this(list.toArray(new IntVar[list.size()]), min);
 
-    }
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(list.length + 1);
-
-        variables.add(min);
-        for (int i = 0; i < list.length; i++)
-            variables.add(list[i]);
-        return variables;
     }
 
     @Override public void consistency(Store store) {

@@ -30,7 +30,6 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
@@ -88,19 +87,9 @@ public class MaxSimple extends Constraint {
 
         this.queueIndex = 1;
 
+        setScope(x1, x2, max);
     }
-
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(3);
-
-        variables.add(max);
-        variables.add(x1);
-        variables.add(x2);
-        return variables;
-    }
-
+    
     @Override public void consistency(Store store) {
 
         do {

@@ -30,7 +30,6 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
@@ -91,17 +90,8 @@ public class AndBoolSimple extends PrimitiveConstraint {
 
         queueIndex = 0;
 
-    }
+        setScope(a, b, result);
 
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(3);
-
-        variables.add(a);
-        variables.add(b);
-        variables.add(result);
-        return variables;
     }
 
     // registers the constraint in the constraint store

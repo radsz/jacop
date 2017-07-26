@@ -31,10 +31,7 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.*;
@@ -106,6 +103,8 @@ public class Diff extends Constraint implements UsesQueueVariable {
             this.rectangles[i] = new Rectangle(rectangles[i]);
         }
 
+        setScope(this.rectangles);
+
     }
 
     /**
@@ -120,7 +119,7 @@ public class Diff extends Constraint implements UsesQueueVariable {
         this.rectangles = Rectangle.toArrayOf2DRectangles(rectangles);
         numberArgs += this.rectangles.length * 4;
         numberId = idNumber.incrementAndGet();
-
+        setScope(this.rectangles);
     }
 
 
@@ -156,6 +155,7 @@ public class Diff extends Constraint implements UsesQueueVariable {
         this.rectangles = Rectangle.toArrayOf2DRectangles(origin1, origin2, length1, length2);
         numberArgs += this.rectangles.length * 4;
         numberId = idNumber.incrementAndGet();
+        setScope(this.rectangles);
 
     }
 
@@ -169,6 +169,7 @@ public class Diff extends Constraint implements UsesQueueVariable {
         this.rectangles = Rectangle.toArrayOf2DRectangles(rectangles);
         numberArgs += this.rectangles.length * 4;
         numberId = idNumber.incrementAndGet();
+        setScope(this.rectangles);
 
     }
 
@@ -224,8 +225,7 @@ public class Diff extends Constraint implements UsesQueueVariable {
         doProfile = profile;
     }
 
-    @Override public ArrayList<Var> arguments() {
-
+    private void setScope(Rectangle[] rectangles) {
         ArrayList<Var> variables = new ArrayList<Var>();
 
         for (Rectangle r : rectangles) {
@@ -234,8 +234,9 @@ public class Diff extends Constraint implements UsesQueueVariable {
             for (int i = 0; i < r.dim(); i++)
                 variables.add(r.length[i]);
         }
-        return variables;
+        super.setScope(variables.stream());
     }
+
 
     @Override public void removeLevel(int level) {
         variableQueue.clear();

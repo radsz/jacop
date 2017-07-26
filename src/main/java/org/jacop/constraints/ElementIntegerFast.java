@@ -108,11 +108,6 @@ public class ElementIntegerFast extends Constraint {
     public ElementIntegerFast(IntVar index, int[] list, IntVar value, int indexOffset) {
 
         this.indexOffset = indexOffset;
-        commonInitialization(index, list, value);
-    }
-
-    private void commonInitialization(IntVar index, int[] list, IntVar value) {
-
         queueIndex = 1;
 
         assert (index != null) : "Variable index is null";
@@ -124,6 +119,7 @@ public class ElementIntegerFast extends Constraint {
         this.numberArgs = (short) (numberArgs + 2);
         this.list = list;
 
+        setScope( index, value );
     }
 
     /**
@@ -134,15 +130,7 @@ public class ElementIntegerFast extends Constraint {
      * @param value a value of the index-th element from list
      */
     public ElementIntegerFast(IntVar index, ArrayList<? extends Integer> list, IntVar value) {
-
-        this.indexOffset = 0;
-
-        int[] listOfInts = new int[list.size()];
-        for (int i = 0; i < list.size(); i++)
-            listOfInts[i] = list.get(i);
-
-        commonInitialization(index, listOfInts, value);
-
+        this(index, list, value, 0);
     }
 
     /**
@@ -154,14 +142,7 @@ public class ElementIntegerFast extends Constraint {
      * @param indexOffset shift applied to index variable. 
      */
     public ElementIntegerFast(IntVar index, ArrayList<? extends Integer> list, IntVar value, int indexOffset) {
-
-        this.indexOffset = indexOffset;
-
-        int[] listOfInts = new int[list.size()];
-        for (int i = 0; i < list.size(); i++)
-            listOfInts[i] = list.get(i);
-
-        commonInitialization(index, listOfInts, value);
+        this(index, list.stream().mapToInt( i -> i).toArray(), value, indexOffset);
     }
 
     /**
@@ -172,20 +153,7 @@ public class ElementIntegerFast extends Constraint {
      * @param value a value of the index-th element from list
      */
     public ElementIntegerFast(IntVar index, int[] list, IntVar value) {
-
         this(index, list, value, 0);
-
-    }
-
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(list.length + 2);
-
-        variables.add(index);
-        variables.add(value);
-
-        return variables;
     }
 
     @Override public void consistency(Store store) {

@@ -635,8 +635,9 @@ public class Geost extends Constraint implements UsesQueueVariable {
 
         assert (checkInvariants() == null) : checkInvariants();
 
-
         groundedVars = new SimpleArrayList<Var>();
+
+        setScope(variableObjectMap.keySet());
 
         // boxDisplay = new BoxDisplay(20, "inside");
     }
@@ -1060,16 +1061,6 @@ public class Geost extends Constraint implements UsesQueueVariable {
         }
 
         return null;
-    }
-
-
-    @Override public ArrayList<Var> arguments() {
-        ArrayList<Var> args = new ArrayList<Var>();
-
-        //note: having the function return a collection would avoid this copy into an array list
-        args.addAll(variableObjectMap.keySet());
-
-        return args;
     }
 
     @Override @SuppressWarnings("all") public void consistency(Store store) {

@@ -212,6 +212,8 @@ import java.util.Map;
 
         checkForOverflow();
 
+        setScope(list);
+
     }
 
     /**
@@ -231,18 +233,6 @@ import java.util.Map;
         commonInitialization(store, variables.toArray(new IntVar[variables.size()]), w, sum);
         this.relationType = relation(rel);
     }
-
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(list.length + 1);
-
-        for (Var v : list)
-            variables.add(v);
-
-        return variables;
-    }
-
 
     @Override public void removeLevelLate(int level) {
 

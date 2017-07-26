@@ -31,6 +31,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.Set;
 
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -120,7 +121,7 @@ public class Element extends Constraint implements UsesQueueVariable {
         c = new ElementVariable(index, variables, value, shift);
     }
 
-    @Override public ArrayList<Var> arguments() {
+    @Override public Set<Var> arguments() {
 
         return c.arguments();
     }

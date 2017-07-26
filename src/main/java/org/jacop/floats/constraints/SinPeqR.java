@@ -30,7 +30,6 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
@@ -93,16 +92,8 @@ public class SinPeqR extends Constraint {
         this.queueIndex = 1;
         this.p = p;
         this.q = q;
-    }
 
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(2);
-
-        variables.add(p);
-        variables.add(q);
-        return variables;
+        setScope(p, q);
     }
 
     @Override public void removeLevel(int level) {

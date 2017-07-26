@@ -33,9 +33,10 @@ package org.jacop.constraints;
 import org.jacop.core.*;
 import org.jacop.util.SimpleHashSet;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 
 /**
@@ -124,18 +125,7 @@ public class LexOrder extends Constraint implements UsesQueueVariable {
         } else
             this.n = y.length;
 
-    }
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(3);
-
-        for (int i = 0; i < x.length; i++)
-            variables.add(x[i]);
-        for (int i = 0; i < y.length; i++)
-            variables.add(y[i]);
-
-        return variables;
+        setScope( Stream.concat(Arrays.stream(x), Arrays.stream(y)) );
 
     }
 

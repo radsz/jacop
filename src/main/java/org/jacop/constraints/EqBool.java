@@ -31,7 +31,9 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -89,6 +91,8 @@ public class EqBool extends PrimitiveConstraint {
 
         this.result = result;
 
+        setScope(Stream.concat(Arrays.stream(list), Stream.of(result)));
+
         assert (checkInvariants() == null) : checkInvariants();
 
     }
@@ -101,23 +105,7 @@ public class EqBool extends PrimitiveConstraint {
      */
     public EqBool(ArrayList<? extends IntVar> list, IntVar result) {
 
-        numberId = idNumber.incrementAndGet();
-        numberArgs = (short) (list.size() + 1);
-
-        this.list = new IntVar[list.size()];
-        for (int i = 0; i < this.list.length; i++) {
-            assert (list.get(i) != null) : i + "-th element in the list is null";
-            this.list[i] = list.get(i);
-        }
-
-        this.list = new IntVar[list.size()];
-
-        for (int i = 0; i < this.list.length; i++)
-            this.list[i] = list.get(i);
-
-        this.result = result;
-
-        assert (checkInvariants() == null) : checkInvariants();
+        this(list.toArray(new IntVar[list.size()]), result);
 
     }
 
@@ -134,16 +122,6 @@ public class EqBool extends PrimitiveConstraint {
                 return "Variable " + var + " does not have boolean domain";
 
         return null;
-    }
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(list.length + 1);
-
-        variables.add(result);
-        for (int i = 0; i < list.length; i++)
-            variables.add(list[i]);
-        return variables;
     }
 
     @Override public int getConsistencyPruningEvent(Var var) {

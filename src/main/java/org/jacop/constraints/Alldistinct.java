@@ -225,6 +225,8 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
 
         }
 
+        setScope(list);
+
     }
 
     /**
@@ -235,17 +237,6 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
 
         this(list.toArray(new IntVar[list.size()]));
 
-    }
-
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(list.length);
-
-        for (Var var : list)
-            variables.add(var);
-
-        return variables;
     }
 
     @Override public void removeLevel(int level) {

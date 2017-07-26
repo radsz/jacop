@@ -31,12 +31,9 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import org.jacop.core.*;
 
@@ -129,6 +126,8 @@ public class ElementVariable extends Constraint implements UsesQueueVariable {
 
         this.indexRange = new IntervalDomain(1 + this.indexOffset, list.length + this.indexOffset);
 
+        setScope( Stream.concat( Stream.of(index), Stream.concat( Arrays.stream(list), Stream.of(value)) ) );
+
     }
 
     /**
@@ -169,20 +168,6 @@ public class ElementVariable extends Constraint implements UsesQueueVariable {
 
         this(index, list, value, 0);
 
-    }
-
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(list.length + 2);
-
-        variables.add(index);
-        variables.add(value);
-
-        for (Var v : list)
-            variables.add(v);
-
-        return variables;
     }
 
     @Override public void removeLevel(int level) {

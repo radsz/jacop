@@ -30,7 +30,8 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.stream.Stream;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
@@ -84,21 +85,9 @@ public class EquationSystem extends Constraint {
 
         newton = new MultivariateIntervalNewton(store, f, x);
 
+        setScope( Stream.concat(Arrays.stream(f), Arrays.stream(x)) );
+
     }
-
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(f.length + x.length);
-
-        for (Var v : f)
-            variables.add(v);
-        for (Var v : x)
-            variables.add(v);
-
-        return variables;
-    }
-
 
     @Override public void consistency(Store store) {
 

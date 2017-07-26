@@ -30,7 +30,6 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
@@ -93,16 +92,8 @@ public class PplusCeqR extends PrimitiveConstraint {
         this.p = p;
         this.c = c;
         this.r = r;
-    }
 
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(2);
-
-        variables.add(p);
-        variables.add(r);
-        return variables;
-
+        setScope(p, r);
     }
 
     @Override public void consistency(Store store) {

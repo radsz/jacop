@@ -30,8 +30,8 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import org.jacop.core.*;
 import org.jacop.util.QueueForward;
@@ -95,19 +95,9 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
             needRemoveLevelLate = false;
         }
 
+        setScope( Stream.concat( c.arguments().stream(), Stream.of(b) ));
         queueForward = new QueueForward<PrimitiveConstraint>(c, arguments());
 
-    }
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(1);
-
-        variables.add(b);
-
-        variables.addAll(c.arguments());
-
-        return variables;
     }
 
     @Override public void consistency(Store store) {

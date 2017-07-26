@@ -43,6 +43,7 @@ import org.jacop.constraints.Constraint;
 import org.jacop.core.*;
 import org.jacop.util.SimpleHashSet;
 import java.util.Map;
+import java.util.stream.Stream;
 
 /**
  * Binpacking constraint implements bin packing problem. It ensures that
@@ -152,6 +153,7 @@ public class Binpacking extends Constraint implements UsesQueueVariable {
         for (int i = 0; i < item.length; i++)
             itemMap.put(item[i].bin, i);
 
+        setScope(Stream.concat(Arrays.stream(bin), Arrays.stream(load)));
     }
 
     /**
@@ -189,19 +191,6 @@ public class Binpacking extends Constraint implements UsesQueueVariable {
 
         this(bin.toArray(new IntVar[bin.size()]), load.toArray(new IntVar[load.size()]), w);
         minBinNumber = minBin;
-    }
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> Variables = new ArrayList<Var>(item.length + load.length);
-
-        for (int i = 0; i < item.length; i++) {
-            Variables.add(item[i].bin);
-        }
-
-        Variables.addAll(Arrays.asList(load));
-
-        return Variables;
     }
 
     @Override public void consistency(Store store) {

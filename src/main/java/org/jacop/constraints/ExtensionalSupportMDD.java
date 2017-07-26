@@ -32,6 +32,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
@@ -84,8 +85,8 @@ public class ExtensionalSupportMDD extends Constraint {
     IndexDomainView[] views;
 
     // Only temporary for storing table of tuples.
-    int[][] table;
-    IntVar[] vars;
+    //int[][] table;
+    //IntVar[] vars;
 
     /**
      * It specifies the arguments required to be saved by an XML format as well as
@@ -108,6 +109,8 @@ public class ExtensionalSupportMDD extends Constraint {
 
         numberId = idNumber.incrementAndGet();
 
+        setScope(this.mdd.vars);
+
     }
 
     /**
@@ -122,25 +125,11 @@ public class ExtensionalSupportMDD extends Constraint {
      */
     public ExtensionalSupportMDD(IntVar[] vars, int[][] table) {
 
-        queueIndex = 1;
-
-        this.table = table;
-        this.vars = vars;
-
-        numberId = idNumber.incrementAndGet();
+        this(new MDD(vars, table));
 
     }
 
     @Override public void impose(Store store) {
-
-        if (this.mdd == null) {
-            this.mdd = new MDD(vars, table);
-            this.views = mdd.views;
-
-            this.G_no = new SparseSet(mdd.freePosition);
-            this.table = null;
-            this.vars = null;
-        }
 
         store.registerRemoveLevelListener(this);
 
@@ -252,20 +241,6 @@ public class ExtensionalSupportMDD extends Constraint {
         return IntDomain.ANY;
     }
 
-    @Override public ArrayList<Var> arguments() {
-        ArrayList<Var> result = new ArrayList<Var>();
-
-        if (mdd.vars != null)
-            for (Var v : mdd.vars)
-                result.add(v);
-        else
-            for (Var v : vars)
-                result.add(v);
-
-        return result;
-    }
-
-
     @Override public void increaseWeight() {
         for (Var v : mdd.vars)
             v.weight++;
@@ -289,9 +264,6 @@ public class ExtensionalSupportMDD extends Constraint {
         result.append(" : extensionalSupportMDD( ");
 
         IntVar[] vars = mdd.vars;
-        // The condition below is true, if toString is called before impose.
-        if (vars == null)
-            vars = this.vars;
 
         for (int i = 0; i < vars.length; i++)
             result.append(vars[i]).append(" ");

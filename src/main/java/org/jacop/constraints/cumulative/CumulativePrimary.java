@@ -31,21 +31,16 @@
 
 package org.jacop.constraints.cumulative;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
-import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
-import org.jacop.core.IntervalEnumeration;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.constraints.Constraint;
-
-import java.util.BitSet;
 
 /**
  * CumulativePrimary implements the cumulative constraint using time tabling
@@ -138,6 +133,8 @@ class CumulativePrimary extends Constraint {
         } else {
             throw new IllegalArgumentException("\nNot equal sizes of Variable vectors in cumulative");
         }
+
+        setScope( Stream.concat(Arrays.stream(starts), Stream.of(limit)) );
     }
 
     /**
@@ -151,19 +148,8 @@ class CumulativePrimary extends Constraint {
         IntVar limit) {
 
         this(starts.toArray(new IntVar[starts.size()]), durations.stream().mapToInt(i -> i).toArray(),
-	     resources.stream().mapToInt(i -> i).toArray(), limit);
+	                          resources.stream().mapToInt(i -> i).toArray(), limit);
 
-    }
-
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(1);
-
-        for (IntVar s : start)
-            variables.add(s);
-        variables.add(limit);
-        return variables;
     }
 
     @Override public void consistency(Store store) {

@@ -30,17 +30,13 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.Set;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntVar;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.floats.constraints.linear.*;
 
 /**
  * LinearInt constraint implements the weighted summation over several
@@ -257,16 +253,8 @@ public class LinearInt extends PrimitiveConstraint {
         else
             queueIndex = 1;
 
-    }
+        setScope(Arrays.stream(list));
 
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(x.length);
-
-        for (Var v : x)
-            variables.add(v);
-
-        return variables;
     }
 
     @Override public void consistency(Store store) {

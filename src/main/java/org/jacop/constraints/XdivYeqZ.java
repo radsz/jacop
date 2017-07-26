@@ -31,7 +31,6 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
@@ -93,16 +92,8 @@ public class XdivYeqZ extends Constraint {
 
         checkForOverflow();
 
-    }
+        setScope(x, y, z);
 
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(3);
-
-        variables.add(z);
-        variables.add(y);
-        variables.add(x);
-        return variables;
     }
 
     @Override public void consistency(Store store) {

@@ -31,11 +31,9 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -180,6 +178,10 @@ public class Cumulative extends Constraint {
         // check for possible overflow
 	for (Task t : Ts) 
 	    mul((t.start.max() + t.dur.max()), limit.max());
+
+	      setScope( Stream.concat( Stream.concat(Arrays.stream(starts), Arrays.stream(durations)),
+                                 Stream.concat(Arrays.stream(resources), Stream.of(limit))) );
+
     }
 
     /**
@@ -296,20 +298,6 @@ public class Cumulative extends Constraint {
                 System.out.println("s(S')= " + startS + ",  c(l)= " + l.lct() + ",  a(Sp)= " + a + ",  afterS= " + afterS);
         }
         return afterS;
-    }
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(1);
-
-        for (Task t : Ts)
-            variables.add(t.start);
-        for (Task t : Ts)
-            variables.add(t.dur);
-        for (Task t : Ts)
-            variables.add(t.res);
-        variables.add(limit);
-        return variables;
     }
 
     boolean before(Task l, ArrayList<Task> S) {

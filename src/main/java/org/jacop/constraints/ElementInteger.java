@@ -123,22 +123,22 @@ public class ElementInteger extends Constraint implements UsesQueueVariable {
      * @param indexOffset shift applied to index variable.
      */
     public ElementInteger(IntVar index, int[] list, IntVar value, int indexOffset) {
-
-        this.indexOffset = indexOffset;
-        this.checkDuplicates = true;
-        commonInitialization(index, list, value);
-
+        this(index, list, value, indexOffset, true);
     }
 
+    /**
+     * It constructs an element constraint.
+     *
+     * @param index variable index
+     * @param list list of integers from which an index-th element is taken
+     * @param value a value of the index-th element from list
+     * @param indexOffset shift applied to index variable.
+     * @param checkDuplicates informs whether to create duplicates list for values from list (default = true).
+     */
     public ElementInteger(IntVar index, int[] list, IntVar value, int indexOffset, boolean checkDuplicates) {
 
         this.indexOffset = indexOffset;
         this.checkDuplicates = checkDuplicates;
-        commonInitialization(index, list, value);
-
-    }
-
-    private void commonInitialization(IntVar index, int[] list, IntVar value) {
 
         queueIndex = 2;
 
@@ -153,7 +153,10 @@ public class ElementInteger extends Constraint implements UsesQueueVariable {
         this.list = new int[list.length];
         this.queueIndex = 1;
 
-	System.arraycopy(list, 0, this.list, 0, list.length);
+	      System.arraycopy(list, 0, this.list, 0, list.length);
+
+	      setScope(index, value);
+
     }
 
     /**
@@ -164,9 +167,7 @@ public class ElementInteger extends Constraint implements UsesQueueVariable {
      * @param value a value variable equal to the specified element from the list.
      */
     public ElementInteger(IntVar index, ArrayList<Integer> list, IntVar value) {
-
         this(index, list, value, 0);
-
     }
 
     /**
@@ -178,16 +179,7 @@ public class ElementInteger extends Constraint implements UsesQueueVariable {
      * @param indexOffset shift applied to index variable.
      */
     public ElementInteger(IntVar index, ArrayList<Integer> list, IntVar value, int indexOffset) {
-
-        this.indexOffset = indexOffset;
-        this.checkDuplicates = true;
-
-        int[] listOfInts = new int[list.size()];
-        for (int i = 0; i < list.size(); i++)
-            listOfInts[i] = list.get(i);
-
-        commonInitialization(index, listOfInts, value);
-
+        this(index, list.stream().mapToInt( i -> i).toArray(), value, indexOffset, true);
     }
 
     /**
@@ -200,16 +192,7 @@ public class ElementInteger extends Constraint implements UsesQueueVariable {
      * @param checkDuplicates informs whether to create duplicates list for values from list (default = true).
      */
     public ElementInteger(IntVar index, ArrayList<Integer> list, IntVar value, int indexOffset, boolean checkDuplicates) {
-
-        this.indexOffset = indexOffset;
-        this.checkDuplicates = checkDuplicates;
-
-        int[] listOfInts = new int[list.size()];
-        for (int i = 0; i < list.size(); i++)
-            listOfInts[i] = list.get(i);
-
-        commonInitialization(index, listOfInts, value);
-
+        this(index, list.stream().mapToInt(i -> i).toArray(), value, indexOffset, checkDuplicates);
     }
 
     /**
@@ -221,21 +204,7 @@ public class ElementInteger extends Constraint implements UsesQueueVariable {
      */
 
     ElementInteger(IntVar index, int[] list, IntVar value) {
-
         this(index, list, value, 0);
-
-    }
-
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(2);
-
-        variables.add(index);
-        variables.add(value);
-
-        return variables;
-
     }
 
     @Override public void removeLevel(int level) {

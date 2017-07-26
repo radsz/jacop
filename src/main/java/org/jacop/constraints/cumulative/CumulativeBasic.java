@@ -31,10 +31,9 @@
 
 package org.jacop.constraints.cumulative;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -44,8 +43,6 @@ import org.jacop.core.IntervalEnumeration;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.constraints.Constraint;
-
-import java.util.BitSet;
 
 /**
  * CumulativeBasic implements the cumulative constraint using time tabling
@@ -148,6 +145,9 @@ public class CumulativeBasic extends Constraint {
         } else {
             throw new IllegalArgumentException("\nNot equal sizes of Variable vectors in cumulative");
         }
+
+        setScope( Stream.concat( Stream.concat(Arrays.stream(starts), Arrays.stream(durations)),
+                                 Stream.concat(Arrays.stream(resources), Stream.of(limit)) ) );
     }
 
     /**
@@ -163,21 +163,6 @@ public class CumulativeBasic extends Constraint {
         this(starts.toArray(new IntVar[starts.size()]), durations.toArray(new IntVar[durations.size()]),
             resources.toArray(new IntVar[resources.size()]), limit);
 
-    }
-
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(1);
-
-        for (TaskView t : taskNormal)
-            variables.add(t.start);
-        for (TaskView t : taskNormal)
-            variables.add(t.dur);
-        for (TaskView t : taskNormal)
-            variables.add(t.res);
-        variables.add(limit);
-        return variables;
     }
 
     @Override public void consistency(Store store) {

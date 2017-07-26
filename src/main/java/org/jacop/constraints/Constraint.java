@@ -30,8 +30,8 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.Hashtable;
+import java.util.*;
+import java.util.stream.Stream;
 
 import org.jacop.core.Store;
 import org.jacop.core.SwitchesPruningLogging;
@@ -61,7 +61,27 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
      * It returns the variables in a scope of the constraint.
      * @return variables in a scope of the constraint.
      */
-    public abstract ArrayList<Var> arguments();
+    public Set<Var> arguments() {
+        return scope;
+    }
+
+    protected Set<Var> scope;
+
+    protected void setScope(Var... variables) {
+        this.scope = Collections.unmodifiableSet( new HashSet<>( Arrays.asList( variables ) ) );
+    }
+
+    protected void setScope(Stream<Var> scope) {
+        setScope(scope.toArray(Var[]::new));
+    }
+
+    protected void setScope(PrimitiveConstraint[] constraints) {
+        setScope( Arrays.stream(constraints).map(Constraint::arguments).flatMap(Collection::stream));
+    }
+
+    protected void setScope(Set<? extends Var> set) {
+        setScope(set.toArray(new Var[set.size()]));
+    }
 
     /**
      * This function is called in case of the backtrack, so a constraint can

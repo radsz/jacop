@@ -31,8 +31,10 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -113,6 +115,8 @@ public class OrBoolVector extends PrimitiveConstraint {
             queueIndex = 1;
         else
             queueIndex = 0;
+
+        setScope( Stream.concat(Arrays.stream(list), Stream.of(result)));
     }
 
     /**
@@ -140,16 +144,6 @@ public class OrBoolVector extends PrimitiveConstraint {
                 return "Variable " + var + " does not have boolean domain";
 
         return null;
-    }
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(l + 1);
-
-        variables.add(result);
-        for (int i = 0; i < l; i++)
-            variables.add(list[i]);
-        return variables;
     }
 
     @Override public int getConsistencyPruningEvent(Var var) {

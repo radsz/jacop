@@ -32,6 +32,7 @@ package org.jacop.constraints.knapsack;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import org.jacop.constraints.Constraint;
 import org.jacop.core.*;
@@ -247,6 +248,9 @@ public class Knapsack extends Constraint implements UsesQueueVariable {
         this.knapsackProfit = knapsackProfit;
         this.updateLimit = (int) (items.length / (Math.log(items.length) / Math.log(2)));
 
+        setScope(Stream.concat( Arrays.stream(items).map( i -> i.getVariable()),
+                                Stream.of( knapsackCapacity, knapsackProfit)) );
+
     }
 
     /**
@@ -283,7 +287,7 @@ public class Knapsack extends Constraint implements UsesQueueVariable {
                 itemPar.put(quantity[i], new KnapsackItem(quantity[i], weights[i], profits[i]));
         }
 
-        items = new KnapsackItem[profits.length];
+        items = new KnapsackItem[profits.length]; // BUG? why profits.length used and not itemPar.size()
 
         int i = 0;
         for (Map.Entry<IntVar, KnapsackItem> entry : itemPar.entrySet()) {
@@ -295,6 +299,8 @@ public class Knapsack extends Constraint implements UsesQueueVariable {
         this.knapsackCapacity = knapsackCapacity;
         this.knapsackProfit = knapsackProfit;
         this.updateLimit = (int) (quantity.length / (Math.log(quantity.length) / Math.log(2)));
+
+        setScope( Stream.concat(Arrays.stream(quantity) , Stream.of(knapsackCapacity, knapsackProfit)));
 
     }
 
@@ -865,19 +871,6 @@ public class Knapsack extends Constraint implements UsesQueueVariable {
             for (TreeLeaf leaf : leaves)
                 leaf.getVariable().weight++;
         }
-    }
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(items.length + 2);
-
-        for (KnapsackItem item : items)
-            variables.add(item.quantity);
-
-        variables.add(knapsackProfit);
-        variables.add(knapsackCapacity);
-
-        return variables;
     }
 
     @Override public boolean satisfied() {

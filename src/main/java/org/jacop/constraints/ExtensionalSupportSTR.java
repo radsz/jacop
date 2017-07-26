@@ -217,6 +217,8 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
 
         this.queueIndex = 1;
 
+        setScope(list);
+
     }
 
 
@@ -295,14 +297,6 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
         if (firstResidue == -1)
             lastResidue = current;
         firstResidue = current;
-    }
-
-    @Override public ArrayList<Var> arguments() {
-        ArrayList<Var> result = new ArrayList<Var>();
-        for (Var var : list)
-            result.add(var);
-
-        return result;
     }
 
     @Override public void removeLevel(int level) {

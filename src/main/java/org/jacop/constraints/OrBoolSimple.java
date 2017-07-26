@@ -30,7 +30,6 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
@@ -90,16 +89,8 @@ public class OrBoolSimple extends PrimitiveConstraint {
         assert (checkInvariants() == null) : checkInvariants();
 
         queueIndex = 0;
-    }
 
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(3);
-
-        variables.add(a);
-        variables.add(b);
-        variables.add(result);
-        return variables;
+        setScope(a, b, result);
     }
 
     // registers the constraint in the constraint store

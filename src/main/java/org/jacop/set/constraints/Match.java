@@ -31,7 +31,10 @@
 package org.jacop.set.constraints;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
@@ -93,17 +96,8 @@ public class Match extends Constraint {
 
         System.arraycopy(list, 0, this.list, 0, list.length);
 
-    }
+        setScope(Stream.concat(Stream.of(a), Arrays.stream(list)));
 
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(list.length + 1);
-
-        variables.add(a);
-        for (Var fdv : list)
-            variables.add(fdv);
-
-        return variables;
     }
 
     @Override public void consistency(Store store) {

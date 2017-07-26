@@ -30,7 +30,6 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
@@ -99,18 +98,9 @@ public class XmulYeqC extends PrimitiveConstraint {
         this.y = y;
         this.c = c;
 
-	checkForOverflow();
+	      checkForOverflow();
+	      setScope(x, y);
 
-    }
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(3);
-
-        variables.add(x);
-        variables.add(y);
-
-        return variables;
     }
 
     @Override public void consistency(Store store) {

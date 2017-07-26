@@ -31,10 +31,7 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.PriorityQueue;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
@@ -117,6 +114,8 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
             this.list[i] = list[i];
 
         this.numberId = idNumber.incrementAndGet();
+
+        setScope(list);
     }
 
     /**
@@ -140,6 +139,7 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
         tuplesFromConstructor = tuples;
 
         numberId = idNumber.incrementAndGet();
+        setScope(list);
     }
 
     /**
@@ -349,18 +349,6 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
             if (!list[i].domain.contains(t[i]))
                 return i;
         return -1;
-    }
-
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(list.length + 1);
-
-        for (int i = 0; i < list.length; i++) {
-            variables.add(list[i]);
-        }
-
-        return variables;
     }
 
     /**

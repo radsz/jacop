@@ -30,12 +30,12 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.*;
-import java.util.Map;
+
+import java.util.stream.Stream;
 
 /**
  * SumWeight constraint implements the weighted summation over several
@@ -82,12 +82,6 @@ import java.util.Map;
      */
     public SumWeight(IntVar[] list, int[] weights, IntVar sum) {
 
-        commonInitialization(list, weights, sum);
-
-    }
-
-    private void commonInitialization(IntVar[] list, int[] weights, IntVar sum) {
-
         queueIndex = 1;
 
         assert (list.length == weights.length) : "\nLength of two vectors different in SumWeight";
@@ -128,6 +122,8 @@ import java.util.Map;
 
         checkForOverflow();
 
+        setScope( Stream.concat(Arrays.stream(list), Stream.of(sum)));
+
     }
 
     /**
@@ -137,26 +133,7 @@ import java.util.Map;
      * @param sum variable containing the sum of weighted variables.
      */
     public SumWeight(ArrayList<? extends IntVar> variables, ArrayList<Integer> weights, IntVar sum) {
-
-        int[] w = new int[weights.size()];
-        for (int i = 0; i < weights.size(); i++)
-            w[i] = weights.get(i);
-
-        commonInitialization(variables.toArray(new IntVar[variables.size()]), w, sum);
-
-    }
-
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(list.length + 1);
-
-        variables.add(sum);
-
-        for (Var v : list)
-            variables.add(v);
-
-        return variables;
+        this(variables.toArray(new IntVar[variables.size()]), weights.stream().mapToInt( i -> i ).toArray(), sum);
     }
 
 

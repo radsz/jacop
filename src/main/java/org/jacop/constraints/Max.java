@@ -31,7 +31,9 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -106,6 +108,8 @@ public class Max extends Constraint {
 
         this.numberId = idNumber.incrementAndGet();
 
+        setScope( Stream.concat(Arrays.stream(list), Stream.of(max)));
+
     }
 
     /**
@@ -117,17 +121,6 @@ public class Max extends Constraint {
 
         this(variables.toArray(new IntVar[variables.size()]), max);
 
-    }
-
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(list.length + 1);
-
-        variables.add(max);
-        for (int i = 0; i < list.length; i++)
-            variables.add(list[i]);
-        return variables;
     }
 
     @Override public void consistency(Store store) {

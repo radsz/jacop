@@ -30,10 +30,7 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.PriorityQueue;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
@@ -236,6 +233,8 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
             this.list[i] = list[i];
 
         this.numberId = idNumber.incrementAndGet();
+
+        setScope(list);
     }
 
     /**
@@ -248,7 +247,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
 
     public ExtensionalSupportVA(ArrayList<? extends IntVar> variables, int[][] tuples) {
 
-        this(variables.toArray(new IntVar[1]), tuples);
+        this(variables.toArray(new IntVar[variables.size()]), tuples);
 
     }
 
@@ -271,17 +270,8 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
         tuplesFromConstructor = tuples;
 
         numberId = idNumber.incrementAndGet();
-    }
 
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(list.length + 1);
-
-        for (int i = 0; i < list.length; i++) {
-            variables.add(list[i]);
-        }
-
-        return variables;
+        setScope(variables);
     }
 
     /**

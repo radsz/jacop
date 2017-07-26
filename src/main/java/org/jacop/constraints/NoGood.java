@@ -121,6 +121,8 @@ public class NoGood extends PrimitiveConstraint {
 
         System.arraycopy(listOfValues, 0, this.listOfValues, 0, listOfValues.length);
 
+        setScope(listOfVars);
+
     }
 
     /**
@@ -139,17 +141,6 @@ public class NoGood extends PrimitiveConstraint {
 
         commonInitialization(listOfVars.toArray(new IntVar[listOfVars.size()]), intValues);
 
-    }
-
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(listOfVars.length);
-
-        for (Var v : listOfVars)
-            variables.add(v);
-
-        return variables;
     }
 
     @Override public void consistency(Store store) {

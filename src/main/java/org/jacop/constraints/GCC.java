@@ -30,14 +30,9 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.PriorityQueue;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import org.jacop.core.*;
 
@@ -191,6 +186,8 @@ public class GCC extends Constraint implements UsesQueueVariable {
         xNodesHash = new HashMap<IntVar, Integer>();
         xVariableToChange = new HashSet<IntVar>();
 
+        setScope(Stream.concat(Arrays.stream(x), Arrays.stream(counters)));
+
     }
 
     HashSet<IntVar> zeroCounters;
@@ -242,19 +239,6 @@ public class GCC extends Constraint implements UsesQueueVariable {
     public GCC(ArrayList<? extends IntVar> x, ArrayList<? extends IntVar> counters) {
 
         this(x.toArray(new IntVar[x.size()]), counters.toArray(new IntVar[counters.size()]));
-
-    }
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>();
-
-        for (Var xVar : this.x)
-            variables.add(xVar);
-        for (Var counter : this.counters)
-            variables.add(counter);
-
-        return variables;
 
     }
 

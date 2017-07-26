@@ -30,7 +30,6 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Store;
@@ -84,15 +83,8 @@ public class PgteqQ extends PrimitiveConstraint {
         this.p = p;
         this.q = q;
 
-    }
+        setScope(p, q);
 
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(1);
-
-        variables.add(p);
-        variables.add(q);
-        return variables;
     }
 
     @Override public void consistency(Store store) {

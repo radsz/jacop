@@ -30,7 +30,6 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
@@ -86,16 +85,8 @@ public class XeqP extends Constraint {
 
         this.x = x;
         this.p = p;
-    }
 
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(2);
-
-        variables.add(x);
-        variables.add(p);
-
-        return variables;
+        setScope(x, p);
     }
 
     @Override public void consistency(Store store) {

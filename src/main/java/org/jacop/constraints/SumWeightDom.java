@@ -30,13 +30,10 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.*;
-import java.util.Map;
 
 /**
  * SumWeightDom constraint implements the weighted summation over several
@@ -120,15 +117,15 @@ import java.util.Map;
      */
     public SumWeightDom(IntVar[] list, int[] weights, IntVar sum) {
 
-        IntVar[] l = new IntVar[list.length + 1];
-        System.arraycopy(list, 0, l, 0, list.length);
-        l[list.length] = sum;
+        IntVar[] listIncludingSum = new IntVar[list.length + 1];
+        System.arraycopy(list, 0, listIncludingSum, 0, list.length);
+        listIncludingSum[list.length] = sum;
 
-        int[] w = new int[weights.length + 1];
-        System.arraycopy(weights, 0, w, 0, weights.length);
-        w[weights.length] = -1;
+        int[] weightsIncludingSumWeight = new int[weights.length + 1];
+        System.arraycopy(weights, 0, weightsIncludingSumWeight, 0, weights.length);
+        weightsIncludingSumWeight[weights.length] = -1;
 
-        commonInitialization(l, w, 0);
+        commonInitialization(listIncludingSum, weightsIncludingSumWeight, 0);
 
     }
 
@@ -174,6 +171,8 @@ import java.util.Map;
         }
 
         checkForOverflow();
+
+        setScope(list);
     }
 
     /**
@@ -184,11 +183,7 @@ import java.util.Map;
      */
     public SumWeightDom(ArrayList<? extends IntVar> variables, ArrayList<Integer> weights, int sum) {
 
-        int[] w = new int[weights.size()];
-        for (int i = 0; i < weights.size(); i++)
-            w[i] = weights.get(i);
-
-        commonInitialization(variables.toArray(new IntVar[variables.size()]), w, sum);
+        this(variables.toArray(new IntVar[variables.size()]), weights.stream().mapToInt(i -> i).toArray(), sum);
 
     }
 
@@ -199,31 +194,8 @@ import java.util.Map;
      * @param sum variable containing the sum of weighted variables.
      */
     public SumWeightDom(ArrayList<? extends IntVar> variables, ArrayList<Integer> weights, IntVar sum) {
-
-        IntVar[] l = new IntVar[variables.size() + 1];
-        System.arraycopy(variables.toArray(new IntVar[variables.size()]), 0, l, 0, variables.size());
-        l[variables.size()] = sum;
-
-        int[] w = new int[weights.size() + 1];
-        for (int i = 0; i < weights.size(); i++)
-            w[i] = weights.get(i);
-        w[weights.size()] = -1;
-
-        commonInitialization(l, w, 0);
-
+        this(variables.toArray(new IntVar[variables.size()]), weights.stream().mapToInt( i -> i).toArray(), sum);
     }
-
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(list.length + 1);
-
-        for (Var v : list)
-            variables.add(v);
-
-        return variables;
-    }
-
 
     @Override public void removeLevelLate(int level) {
 

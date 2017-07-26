@@ -30,7 +30,6 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
@@ -89,16 +88,8 @@ public class XmodYeqZ extends Constraint {
         this.x = x;
         this.y = y;
         this.z = z;
-    }
 
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(3);
-
-        variables.add(z);
-        variables.add(y);
-        variables.add(x);
-        return variables;
+        setScope(x, y, z);
     }
 
     @Override public void consistency(Store store) {

@@ -123,6 +123,8 @@ public class Table extends Constraint implements UsesQueueVariable {
 
         this.queueIndex = 1;
 
+        setScope(list);
+
     }
 
     void init() {
@@ -199,14 +201,6 @@ public class Table extends Constraint implements UsesQueueVariable {
                 return possibleEvent;
         }
         return IntDomain.ANY;
-    }
-
-    @Override public ArrayList<Var> arguments() {
-        ArrayList<Var> result = new ArrayList<Var>();
-        for (Var var : x)
-            result.add(var);
-
-        return result;
     }
 
     @Override public void impose(Store store) {

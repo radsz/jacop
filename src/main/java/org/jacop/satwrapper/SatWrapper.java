@@ -1,10 +1,7 @@
 package org.jacop.satwrapper;
 
 import java.io.BufferedWriter;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
+import java.util.*;
 
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
@@ -466,13 +463,6 @@ public final class SatWrapper extends Constraint implements ConflictListener, Ex
         toAssertLiterals.add(literal);
     }
 
-    @Override public ArrayList<Var> arguments() {
-        ArrayList<Var> result = new ArrayList<Var>();
-        for (Var v : registeredVars)
-            result.add(v);
-        return result;
-    }
-
     @Override public int getConsistencyPruningEvent(Var var) {
         return IntDomain.BOUND;
     }
@@ -759,8 +749,9 @@ public final class SatWrapper extends Constraint implements ConflictListener, Ex
 
         // setup everything
         core.start();
-    }
 
+        setScope(registeredVars);
+    }
 
     public void initialize(Core core) {
 

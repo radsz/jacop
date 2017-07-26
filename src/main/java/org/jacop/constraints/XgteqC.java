@@ -30,7 +30,6 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Domain;
@@ -81,14 +80,8 @@ public class XgteqC extends PrimitiveConstraint {
         this.x = x;
         this.c = c;
 
-    }
+        setScope(x);
 
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(1);
-
-        variables.add(x);
-        return variables;
     }
 
     @Override public void consistency(Store store) {

@@ -31,6 +31,7 @@
 package org.jacop.set.constraints;
 
 import java.util.ArrayList;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.PrimitiveConstraint;
@@ -106,16 +107,8 @@ public class XinA extends PrimitiveConstraint {
         this.x = x;
         this.a = a;
 
-    }
+        setScope(x, a);
 
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(2);
-
-        variables.add(x);
-        variables.add(a);
-
-        return variables;
     }
 
     @Override public void consistency(Store store) {

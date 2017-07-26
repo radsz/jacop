@@ -30,7 +30,6 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Domain;
@@ -80,15 +79,8 @@ public class XltC extends PrimitiveConstraint {
 
         this.x = x;
         this.c = c;
-    }
 
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(1);
-
-        variables.add(x);
-
-        return variables;
+        setScope(x);
     }
 
     @Override public void consistency(Store store) {

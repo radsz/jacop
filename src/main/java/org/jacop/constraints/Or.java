@@ -90,6 +90,7 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
             this.listOfC[i] = listOfC[i];
         }
 
+        setScope(listOfC);
         queueForward = new QueueForward<PrimitiveConstraint>(listOfC, arguments());
     }
 
@@ -109,27 +110,7 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
      * @param c2 the second constraint which can be satisfied.
      */
     public Or(PrimitiveConstraint c1, PrimitiveConstraint c2) {
-
-        this.queueIndex = 1;
-        this.numberId = idNumber.incrementAndGet();
-        this.listOfC = new PrimitiveConstraint[2];
-        this.numberArgs += c1.numberArgs();
-        this.listOfC[0] = c1;
-        this.numberArgs += c2.numberArgs();
-        this.listOfC[1] = c2;
-        this.queueForward = new QueueForward<PrimitiveConstraint>(this.listOfC, arguments());
-
-    }
-
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>();
-
-        for (Constraint cc : listOfC)
-            variables.addAll(cc.arguments());
-
-        return variables;
+        this(new PrimitiveConstraint[] {c1, c2});
     }
 
     @Override public void consistency(Store store) {

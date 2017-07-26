@@ -31,7 +31,6 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
@@ -99,6 +98,8 @@ public class IfThenBool extends PrimitiveConstraint {
         this.y = y;
         this.z = z;
 
+        setScope(x, y, z);
+
         assert (checkInvariants() == null) : checkInvariants();
 
     }
@@ -121,16 +122,6 @@ public class IfThenBool extends PrimitiveConstraint {
             return "Variable " + z + " does not have boolean domain";
 
         return null;
-    }
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(3);
-
-        variables.add(x);
-        variables.add(y);
-        variables.add(z);
-        return variables;
     }
 
     @Override public void consistency(Store store) {

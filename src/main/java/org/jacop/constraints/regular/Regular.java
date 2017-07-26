@@ -33,11 +33,7 @@ package org.jacop.constraints.regular;
 import java.io.*;
 import java.lang.reflect.Array;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.Constraint;
@@ -299,6 +295,7 @@ public class Regular extends Constraint implements UsesQueueVariable {
         leftPosition = 0;
         rightPosition = list.length - 1;
         touchedStates = new RegState[fsm.allStates.size() * list.length];
+        setScope(list);
     }
 
     /**
@@ -763,14 +760,6 @@ public class Regular extends Constraint implements UsesQueueVariable {
         s.pos = lim;
         activeLevels[level].update(lim);
 
-    }
-
-    @Override public ArrayList<Var> arguments() {
-        ArrayList<Var> args = new ArrayList<Var>(this.list.length);
-        for (Var v : this.list)
-            args.add(v);
-
-        return args;
     }
 
     int[] lastNumberOfActiveStates;

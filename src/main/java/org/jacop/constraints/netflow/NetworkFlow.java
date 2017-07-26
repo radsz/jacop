@@ -121,6 +121,8 @@ public class NetworkFlow extends Constraint implements UsesQueueVariable {
         this.numberId = idNumber.incrementAndGet();
         this.numberArgs = (short) map.size();
 
+        setScope(map.keySet());
+
         // for (VarHandler vh : flowVariables)
         //     System.out.println("{flow/cost | structure} var = " + vh.listVariables());
         // for (Arc arc : arcs)
@@ -132,10 +134,6 @@ public class NetworkFlow extends Constraint implements UsesQueueVariable {
 
         this(builder.nodeList, builder.arcList, builder.handlerList, builder.costVariable);
 
-    }
-
-    @Override public ArrayList<Var> arguments() {
-        return new ArrayList<Var>(map.keySet());
     }
 
     @Override public int getConsistencyPruningEvent(Var var) {

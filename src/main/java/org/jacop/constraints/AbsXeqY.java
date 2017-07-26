@@ -30,7 +30,6 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
@@ -95,6 +94,8 @@ public class AbsXeqY extends PrimitiveConstraint {
         this.queueIndex = 0;
         this.x = x;
         this.y = y;
+
+        setScope(x, y);
     }
 
     /**
@@ -114,15 +115,6 @@ public class AbsXeqY extends PrimitiveConstraint {
             this.queueIndex = 0;
     }
 
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(2);
-
-        variables.add(x);
-        variables.add(y);
-        return variables;
-    }
 
     @Override public void removeLevel(int level) {
         if (level == firstConsistencyLevel)

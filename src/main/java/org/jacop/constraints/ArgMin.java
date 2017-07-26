@@ -32,6 +32,7 @@ package org.jacop.constraints;
 
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.BoundDomain;
@@ -113,6 +114,8 @@ public class ArgMin extends Constraint {
             assert (list[i] != null) : i + "-th variable in the list is null";
             this.list[i] = list[i];
         }
+
+        setScope( Stream.concat( Stream.of( minIndex ), Stream.of( list )) );
     }
 
     /**
@@ -132,17 +135,6 @@ public class ArgMin extends Constraint {
 
         this(variables.toArray(new IntVar[variables.size()]), minIndex);
 
-    }
-
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(list.length + 1);
-
-        variables.add(minIndex);
-        for (int i = 0; i < list.length; i++)
-            variables.add(list[i]);
-        return variables;
     }
 
     @Override public void consistency(Store store) {

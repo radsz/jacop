@@ -30,7 +30,6 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Store;
@@ -82,15 +81,8 @@ public class PltC extends PrimitiveConstraint {
 
         this.p = p;
         this.c = c;
-    }
 
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(1);
-
-        variables.add(p);
-
-        return variables;
+        setScope(p);
     }
 
     @Override public void consistency(Store store) {

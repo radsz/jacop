@@ -45,7 +45,7 @@ import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.core.FloatVar;
 
 import org.jacop.constraints.Constraint;
-//import org.jacop.floats.constraints.PmulQeqR;
+
 
 
 /**

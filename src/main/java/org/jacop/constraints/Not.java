@@ -30,7 +30,7 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Store;
@@ -76,7 +76,7 @@ public class Not extends PrimitiveConstraint implements UsesQueueVariable {
         this.queueForward = new QueueForward<PrimitiveConstraint>(c, arguments());
     }
 
-    @Override public ArrayList<Var> arguments() {
+    @Override public Set<Var> arguments() {
 
         return c.arguments();
 

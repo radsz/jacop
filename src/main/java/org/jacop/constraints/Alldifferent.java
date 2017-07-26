@@ -31,11 +31,7 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.*;
@@ -91,6 +87,8 @@ public class Alldifferent extends Constraint implements UsesQueueVariable {
             this.list[i] = list[i];
         }
 
+        setScope(this.list);
+
     }
 
     /**
@@ -105,17 +103,10 @@ public class Alldifferent extends Constraint implements UsesQueueVariable {
         list = variables.toArray(list);
 
         numberArgs = (short) variables.size();
+
+        setScope(this.list);
     }
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> Variables = new ArrayList<Var>(list.length);
-
-        Variables.addAll(Arrays.asList(list));
-
-        return Variables;
-    }
-
+    
     @Override public void consistency(Store store) {
 
         do {

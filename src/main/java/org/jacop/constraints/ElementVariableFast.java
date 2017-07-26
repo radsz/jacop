@@ -32,7 +32,9 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -117,7 +119,7 @@ public class ElementVariableFast extends Constraint {
             this.numberArgs++;
         }
 
-
+        setScope( Stream.concat( Stream.concat( Stream.of(index), Arrays.stream(list)), Stream.of(value)));
     }
 
     /**
@@ -158,20 +160,6 @@ public class ElementVariableFast extends Constraint {
 
         this(index, list, value, 0);
 
-    }
-
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(list.length + 2);
-
-        variables.add(index);
-        variables.add(value);
-
-        for (Var v : list)
-            variables.add(v);
-
-        return variables;
     }
 
     @Override public void consistency(Store store) {

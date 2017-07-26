@@ -31,7 +31,9 @@
 package org.jacop.floats.constraints;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
@@ -88,6 +90,8 @@ public class Min extends Constraint {
             assert (list[i] != null) : i + "-th variable in a list is null";
             this.list[i] = list[i];
         }
+
+        setScope(Stream.concat(Arrays.stream(list), Stream.of(min)));
     }
 
     /**
@@ -99,16 +103,6 @@ public class Min extends Constraint {
 
         this(list.toArray(new FloatVar[list.size()]), min);
 
-    }
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(list.length + 1);
-
-        variables.add(min);
-        for (int i = 0; i < list.length; i++)
-            variables.add(list[i]);
-        return variables;
     }
 
     @Override public void consistency(Store store) {

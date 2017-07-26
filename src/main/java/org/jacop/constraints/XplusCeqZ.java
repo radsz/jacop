@@ -30,7 +30,6 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
@@ -88,15 +87,8 @@ public class XplusCeqZ extends PrimitiveConstraint {
         this.c = c;
         this.z = z;
 
-    }
+        setScope(x, z);
 
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(2);
-
-        variables.add(x);
-        variables.add(z);
-        return variables;
     }
 
     @Override public void consistency(Store store) {

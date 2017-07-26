@@ -31,7 +31,9 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -104,6 +106,8 @@ import org.jacop.core.Var;
         numberArgs += list.length;
 
         checkForOverflow();
+
+        setScope( Stream.concat(Arrays.stream(list), Stream.of(sum)));
     }
 
     /**
@@ -116,19 +120,6 @@ import org.jacop.core.Var;
 
         this(list.toArray(new IntVar[list.size()]), sum);
 
-    }
-
-
-    @Override public ArrayList<Var> arguments() {
-
-        ArrayList<Var> variables = new ArrayList<Var>(list.length + 1);
-
-        variables.add(sum);
-
-        for (Var v : list)
-            variables.add(v);
-
-        return variables;
     }
 
     @Override public void consistency(Store store) {
