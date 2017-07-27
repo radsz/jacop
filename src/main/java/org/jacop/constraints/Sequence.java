@@ -32,6 +32,7 @@ package org.jacop.constraints;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.jacop.constraints.regular.Regular;
@@ -62,7 +63,7 @@ public class Sequence extends DecomposedConstraint<Constraint> {
     int max;
     int q;
     IntVar[] list;
-    ArrayList<Constraint> constraints;
+    List<Constraint> constraints;
 
     /**
      * It creates a Sequence constraint.
@@ -98,15 +99,18 @@ public class Sequence extends DecomposedConstraint<Constraint> {
 
     }
 
-    @Override public ArrayList<Constraint> decompose(Store store) {
-
-        if (constraints != null)
-            return constraints;
+    /**
+     * Preferred and default option of decomposing Sequence constraint.
+     * @param sequence
+     * @param store
+     * @return
+     */
+    public static List<Constraint> decomposeByRegular(Sequence sequence, Store store) {
 
         IntDomain setComplement = new IntervalDomain();
-        for (IntVar var : list)
+        for (IntVar var : sequence.list)
             setComplement.addDom(var.domain);
-        setComplement = setComplement.subtract(set);
+        setComplement = setComplement.subtract(sequence.set);
 
         FSM fsm = new FSM();
 
@@ -119,22 +123,22 @@ public class Sequence extends DecomposedConstraint<Constraint> {
         mappingQuantity.put(fsm.initState, 0);
         mappingString.put("", fsm.initState);
 
-        for (int i = 0; i < q; i++) {
+        for (int i = 0; i < sequence.q; i++) {
             HashMap<String, FSMState> mappingStringNext = new HashMap<String, FSMState>();
 
             for (Map.Entry<String, FSMState> entry : mappingString.entrySet()) {
                 String stateString = entry.getKey();
                 FSMState state = entry.getValue();
 
-                if (mappingQuantity.get(state) < max) {
+                if (mappingQuantity.get(state) < sequence.max) {
                     // transition 1 (within a set) is allowed
                     FSMState nextState = new FSMState();
-                    state.addTransition(new FSMTransition(set, nextState));
+                    state.addTransition(new FSMTransition(sequence.set, nextState));
                     mappingStringNext.put(stateString + "1", nextState);
                     mappingQuantity.put(nextState, mappingQuantity.get(state) + 1);
                 }
 
-                if (mappingQuantity.get(state) + (q - i) > min) {
+                if (mappingQuantity.get(state) + (sequence.q - i) > sequence.min) {
                     // transition 0 (outside set) is allowed
                     FSMState nextState = new FSMState();
                     state.addTransition(new FSMTransition(setComplement, nextState));
@@ -160,7 +164,7 @@ public class Sequence extends DecomposedConstraint<Constraint> {
             FSMState predecessor = state;
             FSMState successor = mappingString.get(one);
             if (successor != null)
-                predecessor.addTransition(new FSMTransition(set, successor));
+                predecessor.addTransition(new FSMTransition(sequence.set, successor));
 
             String zero = description.substring(1) + "0";
             successor = mappingString.get(zero);
@@ -170,10 +174,21 @@ public class Sequence extends DecomposedConstraint<Constraint> {
 
         fsm.resize();
 
-        constraints = new ArrayList<Constraint>();
-        constraints.add(new Regular(fsm, list));
+        List<Constraint> constraints = new ArrayList<Constraint>();
+        constraints.add(new Regular(fsm, sequence.list));
 
         return constraints;
+
+    }
+
+    @Override public List<Constraint> decompose(Store store) {
+
+        if (constraints == null) {
+            constraints = decomposeByRegular(this, store);
+        }
+
+        return constraints;
+
     }
 
 

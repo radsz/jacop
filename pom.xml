@@ -81,6 +81,7 @@ setup to run configuration. -->
 						<configuration>
 							<includes>
 								<include>**/ExampleBasedTest.java</include>
+								<include>**/SingleConstraintTest.java</include>
 								<include>**/MinizincBasedTestUpTo5Seconds.java</include>
 							</includes>
 							<excludes>
@@ -110,6 +111,7 @@ setup to run configuration. -->
 						<configuration>
 							<includes>
 								<include>**/ExampleBasedTest.java</include>
+								<include>**/SingleConstraintTest.java</include>
 								<include>**/MinizincBasedTestUpTo5Seconds.java</include>
 								<include>**/MinizincBasedTestUpTo30Seconds.java</include>
 							</includes>
@@ -139,6 +141,7 @@ setup to run configuration. -->
 						<configuration>
 							<includes>
 								<include>**/ExampleBasedTest.java</include>
+								<include>**/SingleConstraintTest.java</include>
 								<include>**/MinizincBasedTestUpTo5Seconds.java</include>
 								<include>**/MinizincBasedTestUpTo30Seconds.java</include>
 								<include>**/MinizincBasedTestUpTo1Minutes.java</include>
@@ -168,6 +171,7 @@ setup to run configuration. -->
 						<configuration>
 							<includes>
 								<include>**/ExampleBasedTest.java</include>
+								<include>**/SingleConstraintTest.java</include>
 								<include>**/MinizincBasedTestUpTo5Seconds.java</include>
 								<include>**/MinizincBasedTestUpTo30Seconds.java</include>
 								<include>**/MinizincBasedTestUpTo1Minutes.java</include>

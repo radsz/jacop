@@ -31,6 +31,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.jacop.constraints.netflow.NetworkBuilder;
 import org.jacop.constraints.netflow.simplex.Node;
@@ -124,7 +125,7 @@ public class SoftAlldifferent extends DecomposedConstraint {
         // auxilaryVariables.addAll(costs);
     }
 
-    @Override public ArrayList<Constraint> decompose(Store store) {
+    @Override public List decompose(Store store) {
 
         if (decomposition == null || decomposition.size() > 1) {
 

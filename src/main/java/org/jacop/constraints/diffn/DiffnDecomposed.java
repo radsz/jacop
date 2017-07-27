@@ -32,6 +32,7 @@
 package org.jacop.constraints.diffn;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.Constraint;
@@ -185,7 +186,7 @@ public class DiffnDecomposed extends DecomposedConstraint {
 
     }
 
-    public ArrayList<Constraint> decompose(Store store) {
+    public List decompose(Store store) {
         constraints = new ArrayList<Constraint>();
 
         constraints.add(new org.jacop.constraints.diffn.Nooverlap(x, y, lx, ly));

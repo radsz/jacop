@@ -229,7 +229,7 @@ public class ArgMin extends Constraint {
                 for (int i = 0; i < list.length; i++) {
                     var = list[i];
 
-                    if (!minIndex.dom().isIntersecting(new BoundDomain(i + 1 + indexOffset, i + 1 + indexOffset))) {
+                    if (!minIndex.dom().isIntersecting(i + 1 + indexOffset, i + 1 + indexOffset)) {
                         if (tiebreak) {
                             if (i + 1 + indexOffset < minIndex.min())
                                 var.domain.inMin(store.level, var, minValue + 1);

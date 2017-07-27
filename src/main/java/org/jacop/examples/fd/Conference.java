@@ -32,11 +32,8 @@ package org.jacop.examples.fd;
 
 import java.util.ArrayList;
 
-import org.jacop.constraints.Alldifferent;
+import org.jacop.constraints.*;
 import org.jacop.constraints.cumulative.Cumulative;
-import org.jacop.constraints.XeqC;
-import org.jacop.constraints.XltY;
-import org.jacop.constraints.XneqY;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
@@ -159,8 +156,6 @@ public class Conference extends ExampleFD {
         store.impose(new Cumulative(sessions, durations, resources, three));
 
     }
-
-
 
     /**
      * It executes the program which solves this simple problem.

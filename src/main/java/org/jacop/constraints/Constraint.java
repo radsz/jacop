@@ -303,7 +303,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
      * @param store the constraint store in which context the decomposition takes place.
      * @return an array list of constraints used to decompose this constraint.
      */
-    @Override public ArrayList<Constraint> decompose(final Store store) {
+    @Override public List<Constraint> decompose(final Store store) {
         throw new UnsupportedOperationException();
     }
 

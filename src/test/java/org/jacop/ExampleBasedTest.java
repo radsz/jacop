@@ -454,7 +454,7 @@ public class ExampleBasedTest {
     }
 
 
-    @Test public void testGates() {
+    @Test public void testGatesUsingDefaultTable() {
 
         Gates example = new Gates();
         example.model();
@@ -463,6 +463,17 @@ public class ExampleBasedTest {
         assertEquals(8, example.search.getSolutionListener().solutionsNo());
 
     }
+
+    @Test public void testGatesUsingExtensionalSTR() {
+
+        Gates example = new Gates();
+        example.model(Gates::tableConstraintProviderUsingExtensionalSTR);
+
+        assertEquals(true, example.searchSpecific());
+        assertEquals(8, example.search.getSolutionListener().solutionsNo());
+
+    }
+
 
     @Test public void testGolf() {
 

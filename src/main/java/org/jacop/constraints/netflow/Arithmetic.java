@@ -296,7 +296,7 @@ public class Arithmetic extends DecomposedConstraint {
         }
     }
 
-    @Override public ArrayList<Constraint> decompose(Store store) {
+    @Override public List decompose(Store store) {
 
         if (decomposition == null || decomposition.size() > 1) {
 

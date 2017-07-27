@@ -31,6 +31,7 @@
 package org.jacop.floats.constraints;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.core.Store;
@@ -101,7 +102,7 @@ public class CosPeqR_decomposed extends DecomposedConstraint<Constraint> {
             store.impose(c);
     }
 
-    @Override public ArrayList<Constraint> decompose(Store store) {
+    @Override public List<Constraint> decompose(Store store) {
 
         constraints = new ArrayList<Constraint>();
 

@@ -32,6 +32,7 @@ package org.jacop.examples.fd.carsequencing;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import org.jacop.constraints.Constraint;
@@ -308,7 +309,7 @@ public class CarSequencing extends ExampleFD {
             if (slideDecomposition) {
                 DecomposedConstraint<Constraint> c =
                     new Sequence(cars, classesWithGivenOption, blockSizePerOption[i], 0, maxNoOfCarsPerOption[i]);
-                ArrayList<Constraint> decomposition = c.decompose(store);
+                List<Constraint> decomposition = c.decompose(store);
 
                 for (Constraint regular : decomposition)
                     store.imposeDecomposition(regular);
@@ -319,7 +320,7 @@ public class CarSequencing extends ExampleFD {
             if (extensionalMDD) {
                 DecomposedConstraint<Constraint> c =
                     new Sequence(cars, classesWithGivenOption, blockSizePerOption[i], 0, maxNoOfCarsPerOption[i]);
-                ArrayList<Constraint> decomposition = c.decompose(store);
+                List<Constraint> decomposition = c.decompose(store);
 
                 for (Constraint constraint : decomposition) {
                     Regular regular = (Regular) constraint;

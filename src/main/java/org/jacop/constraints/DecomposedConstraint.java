@@ -31,6 +31,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -88,8 +89,7 @@ public abstract class DecomposedConstraint<T extends Constraint> {
      *
      * @return an array list of constraints used to decompose this constraint.
      */
-    public abstract ArrayList<T> decompose(Store store);
-
+    public abstract List<T> decompose(Store store);
 
     /**
      * @return null if no auxiliary variables were created, otherwise a list with variables.

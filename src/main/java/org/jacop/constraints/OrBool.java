@@ -31,6 +31,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -92,7 +93,7 @@ public class OrBool extends DecomposedConstraint<PrimitiveConstraint> {
 
     }
 
-    @Override public ArrayList<PrimitiveConstraint> decompose(Store store) {
+    @Override public List<PrimitiveConstraint> decompose(Store store) {
 
         ArrayList<PrimitiveConstraint> result = new ArrayList<>();
         result.add(c);

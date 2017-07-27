@@ -31,6 +31,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.jacop.constraints.regular.Regular;
 import org.jacop.core.BooleanVar;
@@ -114,7 +115,7 @@ public class Lex extends DecomposedConstraint {
 
     }
 
-    @Override public ArrayList<Constraint> decompose(Store store) {
+    @Override public List decompose(Store store) {
 
         if (constraints != null)
             return constraints;

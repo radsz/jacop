@@ -33,6 +33,7 @@ package org.jacop.constraints;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -381,7 +382,7 @@ public class AndBoolVector extends PrimitiveConstraint {
 
     ArrayList<Constraint> constraints;
 
-    @Override public ArrayList<Constraint> decompose(Store store) {
+    @Override public List<Constraint> decompose(Store store) {
 
         constraints = new ArrayList<Constraint>();
 

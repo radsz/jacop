@@ -31,6 +31,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.jacop.constraints.regular.Regular;
 import org.jacop.core.IntDomain;
@@ -102,7 +103,7 @@ public class Stretch extends DecomposedConstraint {
 
     }
 
-    @Override public ArrayList<Constraint> decompose(Store store) {
+    @Override public List decompose(Store store) {
 
         if (constraints != null)
             return constraints;

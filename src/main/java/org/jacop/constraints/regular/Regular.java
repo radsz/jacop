@@ -1164,7 +1164,7 @@ public class Regular extends Constraint implements UsesQueueVariable {
     }
 
 
-    @Override public ArrayList<Constraint> decompose(Store store) {
+    @Override public List<Constraint> decompose(Store store) {
 
         fsm.resize();
 

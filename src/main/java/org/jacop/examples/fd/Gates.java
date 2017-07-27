@@ -31,8 +31,10 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import java.util.function.BiFunction;
 
-import org.jacop.constraints.ExtensionalSupportVA;
+import org.jacop.constraints.Constraint;
+import org.jacop.constraints.ExtensionalSupportSTR;
 import org.jacop.constraints.table.SimpleTable;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.Domain;
@@ -54,7 +56,12 @@ import org.jacop.search.SimpleSelect;
 
 public class Gates extends ExampleFD {
 
-    @Override public void model() {
+    @Override
+    public void model() {
+        model(Gates::tableConstraintProviderUsingSimpleTable);
+    }
+
+    public void model(BiFunction<IntVar[], int[][], Constraint> tableConstraintProvider) {
 
         store = new Store();
         vars = new ArrayList<IntVar>();
@@ -77,13 +84,15 @@ public class Gates extends ExampleFD {
             t[i] = new BooleanVar(store);
 
         // sum part
-        xor(c, nca, sum);
-        xor(a, b, nca);
+        xor(c, nca, sum, tableConstraintProvider);
+        xor(a, b, nca, tableConstraintProvider);
+
+
 
         // carry part
-        or(t[0], t[1], carry);
-        and(c, nca, t[1]);
-        and(a, b, t[0]);
+        or(t[0], t[1], carry, tableConstraintProvider);
+        and(c, nca, t[1], tableConstraintProvider);
+        and(a, b, t[0], tableConstraintProvider);
 
         System.out.println("\nBooleanVariable store size: " + store.size() + "\nNumber of constraints: " + store.numberConstraints());
 
@@ -96,11 +105,11 @@ public class Gates extends ExampleFD {
      * @param in2 the second input parameter.
      * @param out the output parameter.
      */
-    public void and(BooleanVar in1, BooleanVar in2, BooleanVar out) {
+    public void and(BooleanVar in1, BooleanVar in2, BooleanVar out, BiFunction<IntVar[], int[][], Constraint> tableConstraintProvider) {
 
         int[][] tuples = {{0, 0, 0}, {0, 1, 0}, {1, 0, 0}, {1, 1, 1}};
 
-        store.impose(new SimpleTable(new BooleanVar[] {in1, in2, out}, tuples));
+        store.impose(tableConstraintProvider.apply(new BooleanVar[] {in1, in2, out}, tuples));
 
     }
 
@@ -111,11 +120,11 @@ public class Gates extends ExampleFD {
      * @param in2 the second input parameter.
      * @param out the output parameter.
      */
-    public void or(BooleanVar in1, BooleanVar in2, BooleanVar out) {
+    public void or(BooleanVar in1, BooleanVar in2, BooleanVar out, BiFunction<IntVar[], int[][], Constraint> tableConstraintProvider) {
 
         int[][] tuples = {{0, 0, 0}, {0, 1, 1}, {1, 0, 1}, {1, 1, 1}};
 
-        store.impose(new SimpleTable(new BooleanVar[] {in1, in2, out}, tuples));
+        store.impose(tableConstraintProvider.apply(new BooleanVar[] {in1, in2, out}, tuples));
     }
 
     /**
@@ -125,11 +134,11 @@ public class Gates extends ExampleFD {
      * @param in2 the second input parameter.
      * @param out the output parameter.
      */
-    public void xor(BooleanVar in1, BooleanVar in2, BooleanVar out) {
+    public void xor(BooleanVar in1, BooleanVar in2, BooleanVar out, BiFunction<IntVar[], int[][], Constraint> tableConstraintProvider) {
 
         int[][] tuples = {{0, 0, 0}, {0, 1, 1}, {1, 0, 1}, {1, 1, 0}};
 
-        store.impose(new SimpleTable(new BooleanVar[] {in1, in2, out}, tuples));
+        store.impose(tableConstraintProvider.apply(new BooleanVar[] {in1, in2, out}, tuples));
     }
 
     /**
@@ -138,11 +147,11 @@ public class Gates extends ExampleFD {
      * @param in the first input parameter.
      * @param out the output parameter.
      */
-    public void not(BooleanVar in, BooleanVar out) {
+    public void not(BooleanVar in, BooleanVar out, BiFunction<IntVar[], int[][], Constraint> tableConstraintProvider) {
 
         int[][] tuples = {{0, 1}, {1, 0}};
 
-        store.impose(new SimpleTable(new BooleanVar[] {in, out}, tuples));
+        store.impose(tableConstraintProvider.apply(new BooleanVar[] {in, out}, tuples));
     }
 
 
@@ -204,5 +213,14 @@ public class Gates extends ExampleFD {
         return searchResult;
 
     }
+
+    public static Constraint tableConstraintProviderUsingSimpleTable(IntVar[] vars, int[][] tuples) {
+                return new SimpleTable(vars, tuples);
+    }
+
+    public static Constraint tableConstraintProviderUsingExtensionalSTR(IntVar[] vars, int[][] tuples) {
+        return new ExtensionalSupportSTR(vars, tuples);
+    }
+
 
 }
