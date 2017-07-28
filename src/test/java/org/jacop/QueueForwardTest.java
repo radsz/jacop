@@ -48,7 +48,6 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 
 /**
- *
  * It is performing testing for QueueForward functionality that makes it possible to
  * forward queueVariable events to nested constraints in a generic fashion no matter
  * in what constraint it is being used in.

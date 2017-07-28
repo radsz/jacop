@@ -1,6 +1,6 @@
 /**
  * SingleConstraintTest.java
- *
+ * <p>
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -53,8 +53,7 @@ import static org.junit.Assert.assertThat;
  */
 public class SingleConstraintTest {
 
-    @Test
-    public void testExtensionalConflictVA() {
+    @Test public void testExtensionalConflictVA() {
 
         Store store = new Store();
 
@@ -74,8 +73,7 @@ public class SingleConstraintTest {
 
     }
 
-    @Test
-    public void testIfThenBool() {
+    @Test public void testIfThenBool() {
 
         Store store = new Store();
 
@@ -94,8 +92,7 @@ public class SingleConstraintTest {
 
     }
 
-    @Test
-    public void testXor() {
+    @Test public void testXor() {
 
         Store store = new Store();
 
@@ -115,8 +112,7 @@ public class SingleConstraintTest {
 
     }
 
-    @Test
-    public void testXexpYeqZ() {
+    @Test public void testXexpYeqZ() {
 
         Store store = new Store();
 
@@ -135,8 +131,7 @@ public class SingleConstraintTest {
 
     }
 
-    @Test
-    public void testXmulYeqC() {
+    @Test public void testXmulYeqC() {
 
         Store store = new Store();
 
@@ -156,8 +151,7 @@ public class SingleConstraintTest {
     }
 
 
-    @Test
-    public void testXplusYplusCeqZ() {
+    @Test public void testXplusYplusCeqZ() {
 
         Store store = new Store();
 
@@ -176,8 +170,7 @@ public class SingleConstraintTest {
 
     }
 
-    @Test
-    public void testXplusYplusQgtC() {
+    @Test public void testXplusYplusQgtC() {
 
         Store store = new Store();
 
@@ -195,16 +188,15 @@ public class SingleConstraintTest {
         assertThat(noOfSolutions, is(17));
 
     }
-    
-    @Test
-    public void testAlldiff() {
+
+    @Test public void testAlldiff() {
 
         Store store = new Store();
 
         int xLength = 2;
         int xSize = xLength * 2 + 2;
         IntVar[] x = getIntVars(store, "x", xLength, xSize);
-        
+
         Alldiff alldiff = new Alldiff(x);
 
         store.impose(alldiff);
@@ -216,8 +208,7 @@ public class SingleConstraintTest {
 
     }
 
-    @Test
-    public void testXgtCwithHelperSimpleConstraintsToAvoidNoConstraintBeingActiveSmall() {
+    @Test public void testXgtCwithHelperSimpleConstraintsToAvoidNoConstraintBeingActiveSmall() {
 
         Store store = new Store();
 
@@ -225,7 +216,7 @@ public class SingleConstraintTest {
         int xSize = xLength * 2 + 2;
         IntVar[] x = getIntVars(store, "x", xLength, xSize);
 
-        Arrays.stream(x).forEach( i -> store.impose(new XgtC(i, i.min() + xSize / 2)));
+        Arrays.stream(x).forEach(i -> store.impose(new XgtC(i, i.min() + xSize / 2)));
         store.impose(new Alldiff(x));
 
         store.print();
@@ -237,8 +228,7 @@ public class SingleConstraintTest {
     }
 
 
-    @Test
-    public void testXgtCwithHelperSimpleConstraintsToAvoidNoConstraintBeingActive() {
+    @Test public void testXgtCwithHelperSimpleConstraintsToAvoidNoConstraintBeingActive() {
 
         Store store = new Store();
 
@@ -246,7 +236,7 @@ public class SingleConstraintTest {
         int xSize = xLength * 2 + 2;
         IntVar[] x = getIntVars(store, "x", xLength, xSize);
 
-        Arrays.stream(x).forEach( i -> store.impose(new XgtC(i, i.min() + xSize / 2)));
+        Arrays.stream(x).forEach(i -> store.impose(new XgtC(i, i.min() + xSize / 2)));
         store.impose(new Alldiff(x));
 
         store.print();
@@ -257,8 +247,7 @@ public class SingleConstraintTest {
 
     }
 
-    @Test
-    @Ignore
+    @Test @Ignore
     // TODO, BUG weird problem that has all constraints satisfied immediately int the first search node, making search not explore
     // search space
     public void testXgtC() {
@@ -269,7 +258,7 @@ public class SingleConstraintTest {
         int xSize = 4;
         IntVar[] x = getIntVars(store, "x", xLength, xSize);
 
-        Arrays.stream(x).forEach( i -> store.impose(new XgtC(i, i.min() + xSize / 2)));
+        Arrays.stream(x).forEach(i -> store.impose(new XgtC(i, i.min() + xSize / 2)));
 
         store.print();
 
@@ -280,8 +269,7 @@ public class SingleConstraintTest {
     }
 
 
-    @Test
-    public void testArgMin() {
+    @Test public void testArgMin() {
 
         Store store = new Store();
 
@@ -300,8 +288,7 @@ public class SingleConstraintTest {
 
     }
 
-    @Test
-    @Ignore
+    @Test @Ignore
     // BUG, problem with using BoundDomain, SmallDenseDomain and asserts, need to investigate.
     // The same problem and fixed applied for ArgMin. Keep this for investigation of the buggy scenario.
     public void testArgMax() {
@@ -323,8 +310,7 @@ public class SingleConstraintTest {
 
     }
 
-    @Test
-    public void testSum() {
+    @Test public void testSum() {
 
         Store store = new Store();
 
@@ -346,8 +332,7 @@ public class SingleConstraintTest {
 
 
 
-    @Test
-    public void testLinear() {
+    @Test public void testLinear() {
 
         Store store = new Store();
 
@@ -366,8 +351,7 @@ public class SingleConstraintTest {
 
     }
 
-    @Test
-    @Ignore
+    @Test @Ignore
     // TODO, BUG to be investigated.
     public void testSumWeightDom() {
 
@@ -377,7 +361,7 @@ public class SingleConstraintTest {
         int xSize = 2;
 
         IntVar[] x = getIntVars(store, "x", xLength, xSize + 1);
-        
+
         SumWeightDom sum = new SumWeightDom(x, new int[] {1, 2, 3, 4}, 4);
 
         store.impose(sum);
@@ -388,13 +372,12 @@ public class SingleConstraintTest {
 
     }
 
-    @Test
-    public void testIfThenElse() {
+    @Test public void testIfThenElse() {
 
         Store store = new Store();
 
         int size = 3;
-        
+
         IntVar x = new IntVar(store, "x", 0, size);
         IntVar y = new IntVar(store, "y", 0, size);
         IntVar z = new IntVar(store, "z", 0, size);
@@ -413,8 +396,7 @@ public class SingleConstraintTest {
 
     }
 
-    @Test
-    public void testElementIntegerFast() {
+    @Test public void testElementIntegerFast() {
 
         Store store = new Store();
 
@@ -424,7 +406,7 @@ public class SingleConstraintTest {
         IntVar x = new IntVar(store, "x", 0, length);
         IntVar z = new IntVar(store, "z", 0, length);
 
-        int [] values = IntStream.iterate(1, i -> i + 1).map( i -> i / size).limit(length).toArray();
+        int[] values = IntStream.iterate(1, i -> i + 1).map(i -> i / size).limit(length).toArray();
 
         ElementIntegerFast ifThenElse = new ElementIntegerFast(x, values, z);
 
@@ -438,8 +420,7 @@ public class SingleConstraintTest {
 
 
 
-    @Test
-    public void testEqBool() {
+    @Test public void testEqBool() {
 
         Store store = new Store();
 
@@ -457,8 +438,7 @@ public class SingleConstraintTest {
 
     }
 
-    @Test
-    public void testSumWeight() {
+    @Test public void testSumWeight() {
 
         Store store = new Store();
 
@@ -477,8 +457,7 @@ public class SingleConstraintTest {
 
     }
 
-    @Test
-    public void testLex() {
+    @Test public void testLex() {
 
         Store store = new Store();
 
@@ -488,7 +467,7 @@ public class SingleConstraintTest {
         IntVar[] x1 = getShiftedIntVars(store, "a", xLength, xSize + 1);
         IntVar[] x2 = getIntVars(store, "b", xLength + xSize, xLength);
 
-        Lex lex = new Lex(new IntVar[][] { x1, x2 }, true);
+        Lex lex = new Lex(new IntVar[][] {x1, x2}, true);
 
         store.imposeDecomposition(lex);
 
@@ -499,8 +478,7 @@ public class SingleConstraintTest {
     }
 
 
-    @Test
-    public void testGCC() {
+    @Test public void testGCC() {
 
         Store store = new Store();
 
@@ -510,7 +488,7 @@ public class SingleConstraintTest {
         IntVar[] x = getShiftedIntVars(store, "x", xLength, xSize + 1);
 
         IntVar[] counters = getIntVars(store, "counters", xLength + xSize, xLength);
-        
+
         GCC gcc = new GCC(x, counters);
 
         store.impose(gcc);
@@ -522,8 +500,7 @@ public class SingleConstraintTest {
     }
 
 
-    @Test
-    public void testAmongVar() {
+    @Test public void testAmongVar() {
 
         Store store = new Store();
 
@@ -547,8 +524,7 @@ public class SingleConstraintTest {
     }
 
 
-    @Test
-    public void testDiff() {
+    @Test public void testDiff() {
 
         Store store = new Store();
 
@@ -573,8 +549,7 @@ public class SingleConstraintTest {
 
     }
 
-    @Test
-    public void testDisjoint() {
+    @Test public void testDisjoint() {
 
         Store store = new Store();
 
@@ -599,8 +574,7 @@ public class SingleConstraintTest {
 
     }
 
-    @Test
-    public void testDiff2() {
+    @Test public void testDiff2() {
 
         Store store = new Store();
 
@@ -625,8 +599,7 @@ public class SingleConstraintTest {
 
     }
 
-    @Test
-    public void testDisjointConditional() {
+    @Test public void testDisjointConditional() {
 
         Store store = new Store();
 
@@ -642,12 +615,13 @@ public class SingleConstraintTest {
         IntVar[] length2 = getIntVars(store, "DY", noOfRectangles, durationSize);
 
         ArrayList<ArrayList<Integer>> conditionalPairs = new ArrayList<>();
-        conditionalPairs.add(new ArrayList<>( Arrays.asList(new Integer[] {1, 3})));
-        conditionalPairs.add(new ArrayList<>( Arrays.asList(new Integer[] {2, 3})));
+        conditionalPairs.add(new ArrayList<>(Arrays.asList(new Integer[] {1, 3})));
+        conditionalPairs.add(new ArrayList<>(Arrays.asList(new Integer[] {2, 3})));
 
         IntVar[] exceptionCondition = getIntVars(store, "condition", 2, 2);
 
-        Diff disjointConditional = new DisjointConditional(origin1, origin2, length1, length2, conditionalPairs, new ArrayList<>( Arrays.asList( exceptionCondition ) ) );
+        Diff disjointConditional = new DisjointConditional(origin1, origin2, length1, length2, conditionalPairs,
+            new ArrayList<>(Arrays.asList(exceptionCondition)));
 
         store.impose(disjointConditional);
 
@@ -680,8 +654,8 @@ public class SingleConstraintTest {
     private int noOfAllSolutions(Store store, IntVar[]... variables) {
 
         SelectChoicePoint<IntVar> select =
-            new SimpleSelect<IntVar>(Arrays.stream(variables).map( Arrays::stream ).flatMap( i -> i).toArray(IntVar[]::new),
-                                new MostConstrainedStatic<IntVar>(), new IndomainMin<IntVar>());
+            new SimpleSelect<IntVar>(Arrays.stream(variables).map(Arrays::stream).flatMap(i -> i).toArray(IntVar[]::new),
+                new MostConstrainedStatic<IntVar>(), new IndomainMin<IntVar>());
 
         DepthFirstSearch search = new DepthFirstSearch<IntVar>();
 

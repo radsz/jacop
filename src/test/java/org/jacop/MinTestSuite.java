@@ -1,5 +1,5 @@
 /**
- * MinizincBasedTestUpTo5Seconds.java
+ * MinTestSuite.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -30,38 +30,17 @@
 
 package org.jacop;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
-import java.io.IOException;
-import java.util.Collection;
+import org.junit.runners.Suite;
 
 /**
- * @author Mariusz Świerkot
+ * It is class to encompass all tests that belong to min profile.
+ *
+ * @author Radoslaw Szymanek and Krzysztof Kuchcinski
+ * @version 4.4
  */
 
-@RunWith(Parameterized.class) public class MinizincBasedTestUpTo5Seconds extends MinizincBasedTestsHelper {
-    protected static final String timeCategory = "upTo5sec/";
+@RunWith(Suite.class)
 
-    @Rule public Timeout globalTimeout = Timeout.seconds(20); //The test will be completed within 20 seconds
-
-    public MinizincBasedTestUpTo5Seconds(String testFilename) {
-        super(timeCategory);
-        this.testFilename = testFilename;
-
-    }
-
-    @Parameterized.Parameters public static Collection<String> parametricTest() throws IOException {
-
-        return fileReader(timeCategory);
-    }
-
-    @Test public void testMinizinc() throws IOException {
-
-        testExecution(timeCategory);
-    }
-
+@Suite.SuiteClasses({ExampleBasedTest.class, SingleConstraintTest.class, MinizincBasedTestUpTo5Seconds.class}) public class MinTestSuite {
 }
