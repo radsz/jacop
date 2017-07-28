@@ -54,6 +54,233 @@ import static org.junit.Assert.assertThat;
 public class SingleConstraintTest {
 
     @Test
+    public void testExtensionalConflictVA() {
+
+        Store store = new Store();
+
+        int xLength = 2;
+        int xSize = 2;
+        IntVar[] x = getIntVars(store, "x", xLength, xSize);
+
+        int[][] tuples = new int[][] {{0, 0}, {1, 1}};
+        ExtensionalConflictVA extensionalConflictVA = new ExtensionalConflictVA(x, tuples);
+
+        store.impose(extensionalConflictVA);
+
+        store.print();
+        int noOfSolutions = noOfAllSolutions(store, x);
+
+        assertThat(noOfSolutions, is(xSize * xSize - 2));
+
+    }
+
+    @Test
+    public void testIfThenBool() {
+
+        Store store = new Store();
+
+        IntVar x = new IntVar(store, "x", 0, 1);
+        IntVar y = new IntVar(store, "y", 0, 1);
+        IntVar b = new IntVar(store, "b", 0, 1);
+
+        IfThenBool ifThenBool = new IfThenBool(x, y, b);
+
+        store.impose(ifThenBool);
+
+        store.print();
+        int noOfSolutions = noOfAllSolutions(store, new IntVar[] {x, y, b});
+
+        assertThat(noOfSolutions, is(4));
+
+    }
+
+    @Test
+    public void testXor() {
+
+        Store store = new Store();
+
+        IntVar x = new IntVar(store, "x", 0, 4);
+        IntVar y = new IntVar(store, "y", 1, 2);
+        IntVar b = new IntVar(store, "b", 0, 1);
+
+        PrimitiveConstraint c = new XeqY(x, y);
+        Xor xor = new Xor(c, b);
+
+        store.impose(xor);
+
+        store.print();
+        int noOfSolutions = noOfAllSolutions(store, new IntVar[] {x, y, b});
+
+        assertThat(noOfSolutions, is(10));
+
+    }
+
+    @Test
+    public void testXexpYeqZ() {
+
+        Store store = new Store();
+
+        IntVar x = new IntVar(store, "x", 0, 4);
+        IntVar y = new IntVar(store, "y", 1, 2);
+        IntVar z = new IntVar(store, "z", 0, 16);
+
+        XexpYeqZ xexpYeqZ = new XexpYeqZ(x, y, z);
+
+        store.impose(xexpYeqZ);
+
+        store.print();
+        int noOfSolutions = noOfAllSolutions(store, new IntVar[] {x, y, z});
+
+        assertThat(noOfSolutions, is(10));
+
+    }
+
+    @Test
+    public void testXmulYeqC() {
+
+        Store store = new Store();
+
+        int xLength = 2;
+        int xSize = 3;
+        IntVar[] x = getIntVars(store, "x", xLength, xSize);
+
+        XmulCeqZ xmulCeqZ = new XmulCeqZ(x[0], 2, x[1]);
+
+        store.impose(xmulCeqZ);
+
+        store.print();
+        int noOfSolutions = noOfAllSolutions(store, x);
+
+        assertThat(noOfSolutions, is(2));
+
+    }
+
+
+    @Test
+    public void testXplusYplusCeqZ() {
+
+        Store store = new Store();
+
+        int xLength = 3;
+        int xSize = 3;
+        IntVar[] x = getIntVars(store, "x", xLength, xSize);
+
+        XplusYplusCeqZ xplusYplusQgtC = new XplusYplusCeqZ(x[0], x[1], 1, x[2]);
+
+        store.impose(xplusYplusQgtC);
+
+        store.print();
+        int noOfSolutions = noOfAllSolutions(store, x);
+
+        assertThat(noOfSolutions, is(xSize));
+
+    }
+
+    @Test
+    public void testXplusYplusQgtC() {
+
+        Store store = new Store();
+
+        int xLength = 3;
+        int xSize = 3;
+        IntVar[] x = getIntVars(store, "x", xLength, xSize);
+
+        XplusYplusQgtC xplusYplusQgtC = new XplusYplusQgtC(x[0], x[1], x[2], 2);
+
+        store.impose(xplusYplusQgtC);
+
+        store.print();
+        int noOfSolutions = noOfAllSolutions(store, x);
+
+        assertThat(noOfSolutions, is(17));
+
+    }
+    
+    @Test
+    public void testAlldiff() {
+
+        Store store = new Store();
+
+        int xLength = 2;
+        int xSize = xLength * 2 + 2;
+        IntVar[] x = getIntVars(store, "x", xLength, xSize);
+        
+        Alldiff alldiff = new Alldiff(x);
+
+        store.impose(alldiff);
+
+        store.print();
+        int noOfSolutions = noOfAllSolutions(store, x);
+
+        assertThat(noOfSolutions, is(30));
+
+    }
+
+    @Test
+    public void testXgtCwithHelperSimpleConstraintsToAvoidNoConstraintBeingActiveSmall() {
+
+        Store store = new Store();
+
+        int xLength = 2;
+        int xSize = xLength * 2 + 2;
+        IntVar[] x = getIntVars(store, "x", xLength, xSize);
+
+        Arrays.stream(x).forEach( i -> store.impose(new XgtC(i, i.min() + xSize / 2)));
+        store.impose(new Alldiff(x));
+
+        store.print();
+
+        int noOfSolutions = noOfAllSolutions(store, x);
+
+        assertThat(noOfSolutions, is(2));
+
+    }
+
+
+    @Test
+    public void testXgtCwithHelperSimpleConstraintsToAvoidNoConstraintBeingActive() {
+
+        Store store = new Store();
+
+        int xLength = 4;
+        int xSize = xLength * 2 + 2;
+        IntVar[] x = getIntVars(store, "x", xLength, xSize);
+
+        Arrays.stream(x).forEach( i -> store.impose(new XgtC(i, i.min() + xSize / 2)));
+        store.impose(new Alldiff(x));
+
+        store.print();
+
+        int noOfSolutions = noOfAllSolutions(store, x);
+
+        assertThat(noOfSolutions, is(24));
+
+    }
+
+    @Test
+    @Ignore
+    // TODO, BUG weird problem that has all constraints satisfied immediately int the first search node, making search not explore
+    // search space
+    public void testXgtC() {
+
+        Store store = new Store();
+
+        int xLength = 1;
+        int xSize = 4;
+        IntVar[] x = getIntVars(store, "x", xLength, xSize);
+
+        Arrays.stream(x).forEach( i -> store.impose(new XgtC(i, i.min() + xSize / 2)));
+
+        store.print();
+
+        int noOfSolutions = noOfAllSolutions(store, x);
+
+        assertThat(noOfSolutions, is(16));
+
+    }
+
+
+    @Test
     public void testArgMin() {
 
         Store store = new Store();
@@ -459,11 +686,12 @@ public class SingleConstraintTest {
         DepthFirstSearch search = new DepthFirstSearch<IntVar>();
 
         search.getSolutionListener().searchAll(true);
-        search.getSolutionListener().recordSolutions(true);
+        search.getSolutionListener().recordSolutions(false);
         search.setAssignSolution(true);
 
         boolean result = search.labeling(store, select);
 
+        // search.printAllSolutions();
         return search.getSolutionListener().solutionsNo();
 
     }
