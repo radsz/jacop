@@ -38,7 +38,6 @@ import java.util.stream.Stream;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 import org.jacop.core.TimeStamp;
 
 /**
@@ -74,12 +73,6 @@ public class Max extends Constraint {
      * Defines first position of the variable that needs to be considered
      */
     private TimeStamp<Integer> position;
-
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"list", "max"};
 
     /**
      * It constructs max constraint.
@@ -118,9 +111,7 @@ public class Max extends Constraint {
      * @param variables the array of variables for which the maximum value is imposed.
      */
     public Max(ArrayList<? extends IntVar> variables, IntVar max) {
-
         this(variables.toArray(new IntVar[variables.size()]), max);
-
     }
 
     @Override public void consistency(Store store) {
@@ -180,14 +171,7 @@ public class Max extends Constraint {
         }
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
     }
 
@@ -196,21 +180,8 @@ public class Max extends Constraint {
 
         position = new TimeStamp<Integer>(store, 0);
 
-        max.putModelConstraint(this, getConsistencyPruningEvent(max));
+        super.impose(store);
 
-        for (Var V : list)
-            V.putModelConstraint(this, getConsistencyPruningEvent(V));
-
-        store.addChanged(this);
-        store.countConstraint();
-
-    }
-
-    @Override public void removeConstraint() {
-        max.removeConstraint(this);
-        for (int i = 0; i < list.length; i++) {
-            list[i].removeConstraint(this);
-        }
     }
 
     @Override public boolean satisfied() {
@@ -244,11 +215,4 @@ public class Max extends Constraint {
         return result.toString();
     }
 
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            max.weight++;
-            for (Var v : list)
-                v.weight++;
-        }
-    }
 }

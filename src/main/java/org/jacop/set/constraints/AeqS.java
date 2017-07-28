@@ -30,8 +30,6 @@
 
 package org.jacop.set.constraints;
 
-import java.util.ArrayList;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.PrimitiveConstraint;
@@ -70,12 +68,6 @@ public class AeqS extends PrimitiveConstraint {
     int sizeOfB;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"a", "set"};
-
-    /**
      * It constructs an AeqS constraint to restrict the domain of the variables.
      * @param a variable a that is forced to be equal to a specified set value.
      * @param set it specifies the set to which variable a must be equal to.
@@ -112,13 +104,7 @@ public class AeqS extends PrimitiveConstraint {
 
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return SetDomain.ANY;
     }
 
@@ -130,12 +116,6 @@ public class AeqS extends PrimitiveConstraint {
                 return possibleEvent;
         }
         return SetDomain.GROUND;
-    }
-
-    @Override public void impose(Store store) {
-        a.putModelConstraint(this, getConsistencyPruningEvent(a));
-        store.addChanged(this);
-        store.countConstraint();
     }
 
     @Override public void notConsistency(Store store) {
@@ -164,12 +144,6 @@ public class AeqS extends PrimitiveConstraint {
         return false;
     }
 
-    @Override public void removeConstraint() {
-
-        a.removeConstraint(this);
-
-    }
-
     @Override public boolean satisfied() {
 
         if (a.domain.singleton(set))
@@ -179,36 +153,21 @@ public class AeqS extends PrimitiveConstraint {
 
     }
 
-    @Override public int getNestedPruningEvent(Var var, boolean mode) {
+    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
+        return SetDomain.ANY;
+    }
 
-        // If consistency function mode
-        if (mode) {
-            if (consistencyPruningEvents != null) {
-                Integer possibleEvent = consistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return SetDomain.ANY;
-        }
-        // If notConsistency function mode
-        else {
-            if (notConsistencyPruningEvents != null) {
-                Integer possibleEvent = notConsistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return SetDomain.ANY;
-        }
+    @Override protected int getDefaultNestedConsistencyPruningEvent() {
+        return SetDomain.ANY;
+    }
+
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
+        return SetDomain.GROUND;
     }
 
 
     @Override public String toString() {
         return id() + " : AeqS(" + a + ", " + set + " )";
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight)
-            a.weight++;
     }
 
 }

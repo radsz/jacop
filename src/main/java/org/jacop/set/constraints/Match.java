@@ -30,9 +30,7 @@
 
 package org.jacop.set.constraints;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -68,12 +66,6 @@ public class Match extends Constraint {
      * elements from a set variable a.
      */
     public IntVar[] list;
-
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"a", "list"};
 
     /**
      * It constructs a match constraint to connect the value of set variable a
@@ -212,18 +204,8 @@ public class Match extends Constraint {
             return IntDomain.ANY;
     }
 
-    @Override public void impose(Store store) {
-        a.putModelConstraint(this, getConsistencyPruningEvent(a));
-        for (Var fdv : list)
-            fdv.putModelConstraint(this, getConsistencyPruningEvent(fdv));
-        store.addChanged(this);
-        store.countConstraint();
-    }
-
-    @Override public void removeConstraint() {
-        a.removeConstraint(this);
-        for (Var fdv : list)
-            fdv.removeConstraint(this);
+    @Override public int getDefaultConsistencyPruningEvent() {
+        throw new IllegalStateException("Not implemented as more precise version exist.");
     }
 
     @Override public boolean satisfied() {
@@ -247,8 +229,6 @@ public class Match extends Constraint {
 
     }
 
-
-
     @Override public String toString() {
 
         StringBuffer ret = new StringBuffer(id());
@@ -257,16 +237,6 @@ public class Match extends Constraint {
 	  ret.append(fdv + " ");
         ret.append("] )");
         return ret.toString();
-
-    }
-
-    @Override public void increaseWeight() {
-
-        if (increaseWeight) {
-            a.weight++;
-            for (Var fdv : list)
-                fdv.weight++;
-        }
 
     }
 

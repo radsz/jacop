@@ -39,7 +39,7 @@ import org.jacop.core.*;
  * SumWeightDom constraint implements the weighted summation over several
  * variables . It provides the weighted sum from all variables on the list.
  * The weights are integers.
- *
+ * <p>
  * The complexity of domain consistency is exponential in worst case. Use it carefully!
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -92,12 +92,6 @@ import org.jacop.core.*;
     HashMap<Var, Integer> positionMaping;
 
     boolean backtrackHasOccured = false;
-
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as 
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"list", "weights", "sum"};
 
     /**
      * @param list  array of variables to be summed up
@@ -164,8 +158,8 @@ import org.jacop.core.*;
         this.weights = new int[parameters.size()];
 
         int i = 0;
-        for (Map.Entry<IntVar,Integer> e : parameters.entrySet()) {
-	  this.list[i] = e.getKey();
+        for (Map.Entry<IntVar, Integer> e : parameters.entrySet()) {
+            this.list[i] = e.getKey();
             this.weights[i] = e.getValue();
             i++;
         }
@@ -194,7 +188,7 @@ import org.jacop.core.*;
      * @param sum variable containing the sum of weighted variables.
      */
     public SumWeightDom(ArrayList<? extends IntVar> variables, ArrayList<Integer> weights, IntVar sum) {
-        this(variables.toArray(new IntVar[variables.size()]), weights.stream().mapToInt( i -> i).toArray(), sum);
+        this(variables.toArray(new IntVar[variables.size()]), weights.stream().mapToInt(i -> i).toArray(), sum);
     }
 
     @Override public void removeLevelLate(int level) {
@@ -293,27 +287,19 @@ import org.jacop.core.*;
 
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.ANY;
     }
 
     @Override public void impose(Store store) {
+
+        super.impose(store);
 
         sumGrounded = new TimeStamp<Integer>(store, 0);
         nextGroundedPosition = new TimeStamp<Integer>(store, 0);
         positionMaping = new HashMap<Var, Integer>();
 
         store.registerRemoveLevelLateListener(this);
-
-        for (Var V : list)
-            V.putModelConstraint(this, getConsistencyPruningEvent(V));
 
         lArray = new IntDomain[list.length];
         for (int i = 0; i < lArray.length; i++) {
@@ -340,8 +326,6 @@ import org.jacop.core.*;
             queueVariable(store.level, list[i]);
         }
 
-        store.addChanged(this);
-        store.countConstraint();
     }
 
     @Override public void queueVariable(int level, Var var) {
@@ -406,16 +390,8 @@ import org.jacop.core.*;
 
     }
 
-    @Override public void removeConstraint() {
-
-        for (Var v : list)
-            v.removeConstraint(this);
-    }
-
     @Override public boolean satisfied() {
-
         return nextGroundedPosition.value() == list.length && sumGrounded.value() == sum;
-
     }
 
     @Override public String toString() {
@@ -440,14 +416,6 @@ import org.jacop.core.*;
 
         return result.toString();
 
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-
-            for (Var v : list)
-                v.weight++;
-        }
     }
 
     IntDomain multiplyDom(IntDomain d, int c) {
@@ -481,43 +449,6 @@ import org.jacop.core.*;
         return (IntDomain) temp;
 
     }
-    /*
-      IntDomain multiplyDom(IntDomain d, int c) {
-      IntDomain temp;
-      // System.out.println (d + " * " + c);
-
-      if (c == 1) 
-      return d;
-      else if ( c == -1) temp = invertDom(d);
-      else {
-      temp = new IntervalDomain();
-      for (IntervalEnumeration e1 = d.intervalEnumeration(); e1.hasMoreElements();) {
-      Interval i = e1.nextElement();
-
-      IntervalDomain mulDom = new IntervalDomain();
-      if ( c > 0) 
-      for (int k=i.min(); k<=i.max(); k++) {
-      // mulDom.addDom(new IntervalDomain(k*c, k*c));
-      mulDom.unionAdapt(k*c, k*c);
-      }
-      else // c < 0
-      for (int k=i.max(); k>=i.min(); k--) {	
-      // mulDom.addDom(new IntervalDomain(k*c, k*c));
-      mulDom.unionAdapt(k*c, k*c);
-      }
-
-      // temp.addDom(mulDom);
-      temp.unionAdapt(mulDom);
-
-      }
-      }
-
-      // System.out.println ("result* = " + temp);
-
-      return temp;
-
-      }
-    */
 
     IntervalDomain invertDom(IntDomain d) {
         IntervalDomain temp = new IntervalDomain();

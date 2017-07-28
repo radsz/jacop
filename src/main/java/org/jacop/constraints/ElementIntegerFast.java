@@ -39,7 +39,6 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
-import org.jacop.core.Var;
 import org.jacop.core.TimeStamp;
 
 /**
@@ -90,12 +89,6 @@ public class ElementIntegerFast extends Constraint {
     private TimeStamp<Short> order;
 
     private short detect = 0, ascending = 1, descending = 2, none = 3;
-
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as 
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"index", "list", "value", "indexOffset"};
 
     /**
      * It constructs an element constraint. 
@@ -284,14 +277,7 @@ public class ElementIntegerFast extends Constraint {
             return false;
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.ANY;
     }
 
@@ -306,11 +292,6 @@ public class ElementIntegerFast extends Constraint {
 
         store.addChanged(this);
         store.countConstraint();
-    }
-
-    @Override public void removeConstraint() {
-        index.removeConstraint(this);
-        value.removeConstraint(this);
     }
 
     @Override public boolean satisfied() {
@@ -343,13 +324,6 @@ public class ElementIntegerFast extends Constraint {
 
         return result.toString();
 
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            index.weight++;
-            value.weight++;
-        }
     }
 
 }

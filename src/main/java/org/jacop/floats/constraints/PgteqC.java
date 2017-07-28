@@ -62,12 +62,6 @@ public class PgteqC extends PrimitiveConstraint {
     public double c;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"p", "c"};
-
-    /**
      * It constructs constraint P {@literal >=} C.
      * @param p variable p.
      * @param c constant c.
@@ -92,55 +86,20 @@ public class PgteqC extends PrimitiveConstraint {
 
     }
 
-    @Override public int getNestedPruningEvent(Var var, boolean mode) {
-
-        // If consistency function mode
-        if (mode) {
-            if (consistencyPruningEvents != null) {
-                Integer possibleEvent = consistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return FloatDomain.BOUND;
-        }
-        // If notConsistency function mode
-        else {
-            if (notConsistencyPruningEvents != null) {
-                Integer possibleEvent = notConsistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return FloatDomain.BOUND;
-        }
+    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
+        return FloatDomain.BOUND;
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
+    @Override protected int getDefaultNestedConsistencyPruningEvent() {
+        return FloatDomain.BOUND;
+    }
 
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
         return FloatDomain.NONE;
     }
 
-
-    @Override public int getNotConsistencyPruningEvent(Var var) {
-
-        // If notConsistency function mode
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return FloatDomain.NONE;
-    }
-
-    @Override public void impose(Store store) {
-        p.putModelConstraint(this, getConsistencyPruningEvent(p));
-        store.addChanged(this);
-        store.countConstraint();
     }
 
     @Override public void notConsistency(Store store) {
@@ -151,22 +110,12 @@ public class PgteqC extends PrimitiveConstraint {
         return p.max() < c;
     }
 
-    @Override public void removeConstraint() {
-        p.removeConstraint(this);
-    }
-
     @Override public boolean satisfied() {
         return p.min() >= c;
     }
 
     @Override public String toString() {
         return id() + " : PgteqC(" + p + ", " + c + " )";
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            p.weight++;
-        }
     }
 
 }

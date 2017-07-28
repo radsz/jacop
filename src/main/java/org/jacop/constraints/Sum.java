@@ -53,7 +53,8 @@ import org.jacop.core.Var;
 /**
  * @deprecated As of release 4.3.1 replaced by SumInt constraint.
  */
-@Deprecated public class Sum extends Constraint {
+@Deprecated
+public class Sum extends Constraint {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -76,12 +77,6 @@ import org.jacop.core.Var;
      * The position for the next grounded variable.
      */
     private TimeStamp<Integer> nextGroundedPosition;
-
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"list", "sum"};
 
     /**
      * It constructs sum constraint which sums all variables and makes it equal to variable sum.
@@ -117,9 +112,7 @@ import org.jacop.core.Var;
      */
 
     public Sum(ArrayList<? extends IntVar> list, IntVar sum) {
-
         this(list.toArray(new IntVar[list.size()]), sum);
-
     }
 
     @Override public void consistency(Store store) {
@@ -200,15 +193,7 @@ import org.jacop.core.Var;
 
     }
 
-
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
     }
 
@@ -218,20 +203,8 @@ import org.jacop.core.Var;
         sumGrounded = new TimeStamp<Integer>(store, 0);
         nextGroundedPosition = new TimeStamp<Integer>(store, 0);
 
-        sum.putModelConstraint(this, getConsistencyPruningEvent(sum));
+        super.impose(store);
 
-        for (int i = 0; i < list.length; i++) {
-            list[i].putModelConstraint(this, getConsistencyPruningEvent(list[i]));
-        }
-
-        store.addChanged(this);
-        store.countConstraint();
-    }
-
-    @Override public void removeConstraint() {
-        sum.removeConstraint(this);
-        for (Var v : list)
-            v.removeConstraint(this);
     }
 
     @Override public boolean satisfied() {
@@ -330,16 +303,7 @@ import org.jacop.core.Var;
 
     }
 
-
     @Override public void supplyGuideFeedback(boolean feedback) {
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            sum.weight++;
-            for (Var v : list)
-                v.weight++;
-        }
     }
 
 }

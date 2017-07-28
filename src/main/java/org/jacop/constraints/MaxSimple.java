@@ -62,12 +62,6 @@ public class MaxSimple extends Constraint {
     public IntVar max;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"x1", "x2", "max"};
-
-    /**
      * It constructs max constraint.
      * @param max variable denoting the maximum value
      * @param x1 first variable for which a  maximum value is imposed.
@@ -115,34 +109,8 @@ public class MaxSimple extends Constraint {
 
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
-    }
-
-    // registers the constraint in the constraint store
-    @Override public void impose(Store store) {
-
-
-        max.putModelConstraint(this, getConsistencyPruningEvent(max));
-        x1.putModelConstraint(this, getConsistencyPruningEvent(x1));
-        x2.putModelConstraint(this, getConsistencyPruningEvent(x2));
-
-        store.addChanged(this);
-        store.countConstraint();
-
-    }
-
-    @Override public void removeConstraint() {
-        max.removeConstraint(this);
-        x1.removeConstraint(this);
-        x2.removeConstraint(this);
     }
 
     @Override public boolean satisfied() {
@@ -162,11 +130,4 @@ public class MaxSimple extends Constraint {
         return result.toString();
     }
 
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            max.weight++;
-            x1.weight++;
-            x2.weight++;
-        }
-    }
 }

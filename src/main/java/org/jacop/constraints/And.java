@@ -59,13 +59,6 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
      */
     public PrimitiveConstraint listOfC[];
 
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"listOfC"};
-
-
     final public QueueForward<PrimitiveConstraint> queueForward;
 
     /**
@@ -122,9 +115,11 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
     }
 
     @Override public int getNestedPruningEvent(Var var, boolean mode) {
-
         return getConsistencyPruningEvent(var);
+    }
 
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
+        throw new IllegalStateException("Not implemented as more precise version exists.");
     }
 
 
@@ -154,6 +149,10 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
 
     }
 
+    @Override public int getDefaultConsistencyPruningEvent() {
+        throw new IllegalStateException("Not implemented as more precise version exists.");
+    }
+
     @Override public int getNotConsistencyPruningEvent(Var var) {
 
         if (notConsistencyPruningEvents != null) {
@@ -181,22 +180,11 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
 
     @Override public void impose(Store store) {
 
-        SimpleHashSet<Var> variables = new SimpleHashSet<Var>();
-
-        for (int i = 0; i < listOfC.length; i++)
-            for (Var var : listOfC[i].arguments())
-                variables.add(var);
-
-        while (!variables.isEmpty()) {
-            Var var = variables.removeFirst();
-            var.putModelConstraint(this, getConsistencyPruningEvent(var));
-        }
+        super.impose(store);
 
         for (PrimitiveConstraint c : listOfC)
             c.include(store);
 
-        store.addChanged(this);
-        store.countConstraint(listOfC.length);
     }
 
     @Override public void include(Store store) {
@@ -249,14 +237,6 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
         return notSat;
     }
 
-    @Override public void removeConstraint() {
-
-        for (Constraint cc : listOfC)
-            for (Var V : cc.arguments())
-                V.removeConstraint(this);
-
-    }
-
     @Override public boolean satisfied() {
         boolean sat = true;
 
@@ -282,10 +262,4 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
         return result.toString();
     }
 
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            for (Constraint c : listOfC)
-                c.increaseWeight();
-        }
-    }
 }

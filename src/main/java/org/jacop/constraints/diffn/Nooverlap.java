@@ -38,7 +38,6 @@ import java.util.stream.Stream;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.TimeStamp;
 
@@ -81,13 +80,8 @@ public class Nooverlap extends Constraint {
      */ int stamp = 0;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"rectangle"};
-
-    /**
      * It specifies a diff constraint.
+     *
      * @param rectangle list of rectangles which can not overlap in at least one dimension.
      */
     public Nooverlap(IntVar[][] rectangle) {
@@ -113,8 +107,9 @@ public class Nooverlap extends Constraint {
 
     /**
      * It specifies a diff constraint.
+     *
      * @param rectangle list of rectangles which can not overlap in at least one dimension.
-     * @param strict true- zero size rectangles need to be between other rectangles; false- these rectangles can be anywhere
+     * @param strict    true- zero size rectangles need to be between other rectangles; false- these rectangles can be anywhere
      */
     public Nooverlap(IntVar[][] rectangle, boolean strict) {
         this(rectangle);
@@ -123,6 +118,7 @@ public class Nooverlap extends Constraint {
 
     /**
      * It constructs a diff constraint.
+     *
      * @param origin1 list of variables denoting origin of the rectangle in the first dimension.
      * @param origin2 list of variables denoting origin of the rectangle in the second dimension.
      * @param length1 list of variables denoting length of the rectangle in the first dimension.
@@ -160,11 +156,12 @@ public class Nooverlap extends Constraint {
 
     /**
      * It constructs a diff constraint.
+     *
      * @param origin1 list of variables denoting origin of the rectangle in the first dimension.
      * @param origin2 list of variables denoting origin of the rectangle in the second dimension.
      * @param length1 list of variables denoting length of the rectangle in the first dimension.
      * @param length2 list of variables denoting length of the rectangle in the second dimension.
-     * @param strict true- zero size rectangles need to be between other rectangles; false- these rectangles can be anywhere
+     * @param strict  true- zero size rectangles need to be between other rectangles; false- these rectangles can be anywhere
      */
 
     public Nooverlap(IntVar[] origin1, IntVar[] origin2, IntVar[] length1, IntVar[] length2, boolean strict) {
@@ -174,6 +171,7 @@ public class Nooverlap extends Constraint {
 
     /**
      * It specifies a diffn constraint.
+     *
      * @param rectangle list of rectangles which can not overlap in at least one dimension.
      */
     public Nooverlap(ArrayList<? extends ArrayList<? extends IntVar>> rectangle) {
@@ -199,14 +197,15 @@ public class Nooverlap extends Constraint {
                 throw new IllegalArgumentException(s);
             }
 
-            setScope(this.rectangle);
+        setScope(this.rectangle);
     }
 
 
     /**
      * It specifies a diffn constraint.
+     *
      * @param rectangle list of rectangles which can not overlap in at least one dimension.
-     * @param strict true- zero size rectangles need to be between other rectangles; false- these rectangles can be anywhere
+     * @param strict    true- zero size rectangles need to be between other rectangles; false- these rectangles can be anywhere
      */
     public Nooverlap(ArrayList<? extends ArrayList<? extends IntVar>> rectangle, boolean strict) {
         this(rectangle);
@@ -215,6 +214,7 @@ public class Nooverlap extends Constraint {
 
     /**
      * It constructs a diff constraint.
+     *
      * @param o1 list of variables denoting origin of the rectangle in the first dimension.
      * @param o2 list of variables denoting origin of the rectangle in the second dimension.
      * @param l1 list of variables denoting length of the rectangle in the first dimension.
@@ -230,10 +230,11 @@ public class Nooverlap extends Constraint {
 
     /**
      * It constructs a diff constraint.
-     * @param o1 list of variables denoting origin of the rectangle in the first dimension.
-     * @param o2 list of variables denoting origin of the rectangle in the second dimension.
-     * @param l1 list of variables denoting length of the rectangle in the first dimension.
-     * @param l2 list of variables denoting length of the rectangle in the second dimension.
+     *
+     * @param o1     list of variables denoting origin of the rectangle in the first dimension.
+     * @param o2     list of variables denoting origin of the rectangle in the second dimension.
+     * @param l1     list of variables denoting length of the rectangle in the first dimension.
+     * @param l2     list of variables denoting length of the rectangle in the second dimension.
      * @param strict true- zero size rectangles need to be between other rectangles; false- these rectangles can be anywhere
      */
     public Nooverlap(ArrayList<? extends IntVar> o1, ArrayList<? extends IntVar> o2, ArrayList<? extends IntVar> l1,
@@ -242,12 +243,8 @@ public class Nooverlap extends Constraint {
         this.strict = strict;
     }
 
-    private void setScope(Rectangle[] rectangle) {
-
-        setScope(Arrays.stream(rectangle)
-                    .map( r -> Stream.of(r.origin(0), r.origin(1), r.length(0), r.length(1)))
-                    .flatMap( i -> i));
-
+    private void setScope(Rectangle[] rectangles) {
+        setScope(Arrays.stream(rectangles).map(r -> Stream.concat( Arrays.stream(r.origin), Arrays.stream( r.length) )).flatMap(i -> i));
     }
 
     @Override public void consistency(Store store) {
@@ -330,14 +327,14 @@ public class Nooverlap extends Constraint {
     }
 
     boolean doAreaCheck = true;
-    
+
     void energyCheck(Rectangle r, BitSet rects) {
 
         int xMin = r.est(x);
         int xMax = r.lct(x);
         int yMin = r.est(y);
         int yMax = r.lct(y);
-	long rSpace = (xMax-xMin)*(yMax-yMin);
+        long rSpace = (xMax - xMin) * (yMax - yMin);
         int xLengthMin = r.length(x).min(), yLengthMin = r.length(y).min();
         long minArea = xLengthMin * yLengthMin;
         for (int j = rects.nextSetBit(0); j >= 0; j = rects.nextSetBit(j + 1)) {
@@ -359,36 +356,18 @@ public class Nooverlap extends Constraint {
                 throw Store.failException;
         }
 
-	doAreaCheck = rSpace < minArea;
+        doAreaCheck = rSpace < minArea;
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
 
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.ANY;
     }
 
     // registers the constraint in the constraint store
     @Override @SuppressWarnings("unchecked") public void impose(Store store) {
-        IntVar v;
 
-        for (int i = 0; i < rectangle.length; i++) {
-            Rectangle r = rectangle[i];
-            for (int j = 0; j < 2; j++) {
-                v = r.origin(j);
-                v.putModelConstraint(this, getConsistencyPruningEvent(v));
-            }
-
-            for (int j = 0; j < 2; j++) {
-                v = r.length(j);
-                v.putModelConstraint(this, getConsistencyPruningEvent(v));
-            }
-        }
+        super.impose(store);
 
         overlapping = new TimeStamp[rectangle.length];
         for (int i = 0; i < rectangle.length; i++) {
@@ -398,19 +377,6 @@ public class Nooverlap extends Constraint {
             overlapping[i] = new TimeStamp(store, bs);
         }
 
-        store.addChanged(this);
-        store.countConstraint();
-    }
-
-    @Override public void removeConstraint() {
-        for (Rectangle r : rectangle) {
-            for (int i = 0; i < 2; i++) {
-                Var v = r.origin(i);
-                v.removeConstraint(this);
-                v = r.length(i);
-                v.removeConstraint(this);
-            }
-        }
     }
 
     @Override public boolean satisfied() {
@@ -442,18 +408,6 @@ public class Nooverlap extends Constraint {
             i++;
         }
         return result.append("], " + strict + ")").toString();
-    }
-
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            for (Rectangle r : rectangle) {
-                for (int i = 0; i < 2; i++)
-                    r.origin(i).weight++;
-                for (int i = 0; i < 2; i++)
-                    r.length(i).weight++;
-            }
-        }
     }
 
 }

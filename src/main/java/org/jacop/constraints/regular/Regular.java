@@ -270,12 +270,6 @@ public class Regular extends Constraint implements UsesQueueVariable {
     public IntVar[] list;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"fsm", "list"};
-
-    /**
      * Constructor need Store to initialize the time-stamps
      * @param fsm (deterministic) finite automaton
      * @param list variables which values have to be accepted by the automaton.
@@ -1112,30 +1106,9 @@ public class Regular extends Constraint implements UsesQueueVariable {
 
         levelHadChanged = new boolean[this.list.length + 1];
     }
-
-    @Override public boolean satisfied() {
-
-        for (int i = 0; i < list.length; i++)
-            if (!list[i].singleton())
-                return false;
-
-        return true;
-    }
-
-    @Override public int getConsistencyPruningEvent(Var var) {
-        //		If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.ANY;
-    }
-
-    @Override public void removeConstraint() {
-        for (Var var : list)
-            var.removeConstraint(this);
-
     }
 
     @Override public String toString() {
@@ -1355,15 +1328,6 @@ public class Regular extends Constraint implements UsesQueueVariable {
             e.printStackTrace();
         }
     }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            for (Var v : list)
-                v.weight++;
-        }
-    }
-
-
 
     /**
      * Initialization phase of the algorithm

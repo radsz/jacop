@@ -42,13 +42,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.*;
 import org.jacop.util.SimpleHashSet;
+
 import java.util.Map;
 import java.util.stream.Stream;
 
 /**
  * Binpacking constraint implements bin packing problem. It ensures that
  * items are packed into bins while respecting cpacity constraints of each bin.
- *
+ * <p>
  * This implementation is based on paper "A Constraint for Bin Packing" by
  * Paul Shaw, CP 2004.
  *
@@ -86,16 +87,11 @@ public class Binpacking extends Constraint implements UsesQueueVariable {
     HashMap<IntVar, Integer> binMap = new HashMap<IntVar, Integer>();
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"bin"};
-
-    /**
      * It constructs the binpacking constraint for the supplied variable.
-     * @param bin which are constrained to define bin for item i.
+     *
+     * @param bin  which are constrained to define bin for item i.
      * @param load which are constrained to define load for bin i.
-     * @param w which define size ofitem i.
+     * @param w    which define size ofitem i.
      */
     public Binpacking(IntVar[] bin, IntVar[] load, int[] w) {
 
@@ -124,11 +120,11 @@ public class Binpacking extends Constraint implements UsesQueueVariable {
         this.queueIndex = 2;
 
         minBinNumber = bin[0].min();
-        Set<Map.Entry<IntVar,Integer>> entries = itemPar.entrySet();
+        Set<Map.Entry<IntVar, Integer>> entries = itemPar.entrySet();
         int j = 0;
-        for (Map.Entry<IntVar,Integer> e : entries) {
-	    IntVar b = e.getKey();
-	    int ws = e.getValue();
+        for (Map.Entry<IntVar, Integer> e : entries) {
+            IntVar b = e.getKey();
+            int ws = e.getValue();
             item[j] = new BinItem(b, ws);
 
             sizeAllItems += ws;
@@ -158,21 +154,22 @@ public class Binpacking extends Constraint implements UsesQueueVariable {
 
     /**
      * It constructs the binpacking constraint for the supplied variable.
-     * @param bin which are constrained to define bin for item i.
+     *
+     * @param bin  which are constrained to define bin for item i.
      * @param load which are constrained to define load for bin i.
-     * @param w which define size ofitem i.
+     * @param w    which define size ofitem i.
      */
 
     public Binpacking(ArrayList<? extends IntVar> bin, ArrayList<? extends IntVar> load, int[] w) {
-
         this(bin.toArray(new IntVar[bin.size()]), load.toArray(new IntVar[load.size()]), w);
     }
 
     /**
      * It constructs the binpacking constraint for the supplied variable.
-     * @param bin which are constrained to define bin for item i.
-     * @param load which are constrained to define load for bin i.
-     * @param w which define size ofitem i.
+     *
+     * @param bin    which are constrained to define bin for item i.
+     * @param load   which are constrained to define load for bin i.
+     * @param w      which define size ofitem i.
      * @param minBin minimal index of a bin; ovewrite the value provided by minimal index of variable bin
      */
     public Binpacking(IntVar[] bin, IntVar[] load, int[] w, int minBin) {
@@ -182,9 +179,10 @@ public class Binpacking extends Constraint implements UsesQueueVariable {
 
     /**
      * It constructs the binpacking constraint for the supplied variable.
-     * @param bin which are constrained to define bin for item i.
-     * @param load which are constrained to define load for bin i.
-     * @param w which define size ofitem i.
+     *
+     * @param bin    which are constrained to define bin for item i.
+     * @param load   which are constrained to define load for bin i.
+     * @param w      which define size ofitem i.
      * @param minBin minimal index of a bin; ovewrite the value provided by minimal index of variable bin
      */
     public Binpacking(ArrayList<? extends IntVar> bin, ArrayList<? extends IntVar> load, int[] w, int minBin) {
@@ -380,14 +378,7 @@ public class Binpacking extends Constraint implements UsesQueueVariable {
         return tmp;
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.ANY;
     }
 
@@ -404,16 +395,12 @@ public class Binpacking extends Constraint implements UsesQueueVariable {
 
     @Override public void impose(Store store) {
 
+        super.impose(store);
+
         for (BinItem el : item) {
-            el.bin.putModelConstraint(this, getConsistencyPruningEvent(el.bin));
             queueVariable(store.level, el.bin);
         }
-        for (IntVar v : load) {
-            v.putModelConstraint(this, getConsistencyPruningEvent(v));
-        }
 
-        store.addChanged(this);
-        store.countConstraint();
     }
 
     @Override public void queueVariable(int level, Var V) {
@@ -427,14 +414,6 @@ public class Binpacking extends Constraint implements UsesQueueVariable {
         itemQueue.clear();
         binQueue.clear();
     }
-
-    @Override public void removeConstraint() {
-        for (BinItem v : item)
-            v.bin.removeConstraint(this);
-        for (Var v : load)
-            v.removeConstraint(this);
-    }
-
 
     @Override public String toString() {
 
@@ -464,16 +443,6 @@ public class Binpacking extends Constraint implements UsesQueueVariable {
         return result.toString();
 
     }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            for (BinItem v : item)
-                v.bin.weight++;
-            for (Var v : load)
-                v.weight++;
-        }
-    }
-
 
     boolean no_sum(int[] X, int alpha, int beta) {
 
@@ -566,7 +535,7 @@ public class Binpacking extends Constraint implements UsesQueueVariable {
         return lb;
     }
 
-  private static class WeightComparator<T extends BinItem> implements Comparator<T>, java.io.Serializable {
+    private static class WeightComparator<T extends BinItem> implements Comparator<T>, java.io.Serializable {
 
         WeightComparator() {
         }

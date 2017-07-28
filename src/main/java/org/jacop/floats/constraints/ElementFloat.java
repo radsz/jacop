@@ -34,7 +34,6 @@ package org.jacop.floats.constraints;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.Constraint;
@@ -103,12 +102,6 @@ public class ElementFloat extends Constraint implements UsesQueueVariable {
      */
     ArrayList<IntDomain> duplicates;
     IntDomain duplicatesIndexes;
-
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as 
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"index", "list", "value", "indexOffset"};
 
     /**
      * It constructs an element constraint. 
@@ -200,9 +193,7 @@ public class ElementFloat extends Constraint implements UsesQueueVariable {
      */
 
     public ElementFloat(IntVar index, double[] list, FloatVar value) {
-
         this(index, list, value, 0);
-
     }
 
     @Override public void removeLevel(int level) {
@@ -285,24 +276,13 @@ public class ElementFloat extends Constraint implements UsesQueueVariable {
             return false;
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.ANY;
     }
 
     @Override public void impose(Store store) {
 
-        index.putModelConstraint(this, getConsistencyPruningEvent(index));
-        value.putModelConstraint(this, getConsistencyPruningEvent(value));
-
-        store.addChanged(this);
-        store.countConstraint();
+        super.impose(store);
 
         duplicates = new ArrayList<IntDomain>();
 
@@ -338,11 +318,6 @@ public class ElementFloat extends Constraint implements UsesQueueVariable {
             indexHasChanged = true;
         else
             valueHasChanged = true;
-    }
-
-    @Override public void removeConstraint() {
-        index.removeConstraint(this);
-        value.removeConstraint(this);
     }
 
     @Override public boolean satisfied() {
@@ -397,13 +372,6 @@ public class ElementFloat extends Constraint implements UsesQueueVariable {
         result.append("], ").append(value).append(", " + indexOffset + " )");
 
         return result.toString();
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            index.weight++;
-            value.weight++;
-        }
     }
 
 }

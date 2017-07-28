@@ -72,12 +72,6 @@ public class Circuit extends Alldiff {
     int firstConsistencyLevel;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"list"};
-
-    /**
      * It constructs a circuit constraint.
      * @param list variables which must form a circuit.
      */
@@ -111,6 +105,8 @@ public class Circuit extends Alldiff {
             valueIndex.put(v, i++);
 
         val = new int[list.length];
+
+        setScope(list);
     }
 
     /**
@@ -118,7 +114,6 @@ public class Circuit extends Alldiff {
      * @param list variables which must form a circuit.
      */
     public Circuit(ArrayList<IntVar> list) {
-
         this(list.toArray(new IntVar[list.size()]));
     }
 
@@ -176,14 +171,7 @@ public class Circuit extends Alldiff {
         return current;
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.ANY;
     }
 

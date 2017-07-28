@@ -31,15 +31,12 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
-import org.jacop.core.Var;
 import org.jacop.util.IndexDomainView;
 import org.jacop.util.MDD;
 import org.jacop.util.SparseSet;
@@ -84,16 +81,6 @@ public class ExtensionalSupportMDD extends Constraint {
 
     IndexDomainView[] views;
 
-    // Only temporary for storing table of tuples.
-    //int[][] table;
-    //IntVar[] vars;
-
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"mdd"};
-
     /**
      * It creates an extensional constraint.
      * @param diagram multiple-valued decision diagram describing allowed tuples.
@@ -124,22 +111,16 @@ public class ExtensionalSupportMDD extends Constraint {
      * @param table list of tuples which are allowed.
      */
     public ExtensionalSupportMDD(IntVar[] vars, int[][] table) {
-
         this(new MDD(vars, table));
-
     }
 
     @Override public void impose(Store store) {
 
+        super.impose(store);
+
         store.registerRemoveLevelListener(this);
 
-        for (int i = 0; i < mdd.vars.length; i++)
-            mdd.vars[i].putConstraint(this);
-
         this.G_no_size = new TimeStamp<Integer>(store, 0);
-
-        store.addChanged(this);
-        store.countConstraint();
 
         store.raiseLevelBeforeConsistency = true;
 
@@ -231,26 +212,9 @@ public class ExtensionalSupportMDD extends Constraint {
 
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-        //		 If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.ANY;
     }
-
-    @Override public void increaseWeight() {
-        for (Var v : mdd.vars)
-            v.weight++;
-    }
-
-    @Override public void removeConstraint() {
-        for (Var var : mdd.vars)
-            var.removeConstraint(this);
-    }
-
 
     @Override public boolean satisfied() {
         return mdd.checkIfAllowed();

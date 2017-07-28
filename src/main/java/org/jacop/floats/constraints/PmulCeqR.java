@@ -35,7 +35,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 
 import org.jacop.constraints.Constraint;
 
@@ -70,12 +69,6 @@ public class PmulCeqR extends Constraint {
      * It specifies variable r in constraint p * c = r. 
      */
     public FloatVar r;
-
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as 
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"p", "c", "r"};
 
     /**
      * It constructs a constraint P * C = R.
@@ -119,46 +112,18 @@ public class PmulCeqR extends Constraint {
 
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
-    }
-
-    @Override public void impose(Store store) {
-        p.putModelConstraint(this, getConsistencyPruningEvent(p));
-        r.putModelConstraint(this, getConsistencyPruningEvent(r));
-        store.addChanged(this);
-        store.countConstraint();
-    }
-
-    @Override public void removeConstraint() {
-        p.removeConstraint(this);
-        r.removeConstraint(this);
     }
 
     @Override public boolean satisfied() {
         FloatDomain pDom = p.dom(), rDom = r.dom();
         return pDom.singleton() && rDom.singleton() &&
-	  rDom.eq(FloatDomain.mulBounds(pDom.min(), pDom.max(), c, c));
+               rDom.eq(FloatDomain.mulBounds(pDom.min(), pDom.max(), c, c));
     }
 
     @Override public String toString() {
-
         return id() + " : PmulCeqR(" + p + ", " + c + ", " + r + " )";
-    }
-
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            p.weight++;
-            r.weight++;
-        }
     }
 
     public FloatVar derivative(Store store, FloatVar f, java.util.Set<FloatVar> vars, FloatVar x) {

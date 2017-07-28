@@ -30,8 +30,6 @@
 
 package org.jacop.set.constraints;
 
-import java.util.ArrayList;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.Constraint;
@@ -81,12 +79,6 @@ public class AunionBeqC extends Constraint implements UsesQueueVariable {
     private boolean bHasChanged = true;
 
     private boolean cHasChanged = true;
-
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"a", "b", "c"};
 
     /**
      * It constructs an AunionBeqC constraint to restrict the domain of the variables A, B and C.
@@ -262,30 +254,8 @@ public class AunionBeqC extends Constraint implements UsesQueueVariable {
 
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return SetDomain.ANY;
-    }
-
-    @Override public void impose(Store store) {
-        a.putModelConstraint(this, getConsistencyPruningEvent(a));
-        b.putModelConstraint(this, getConsistencyPruningEvent(b));
-        c.putModelConstraint(this, getConsistencyPruningEvent(c));
-
-        store.addChanged(this);
-        store.countConstraint();
-    }
-
-    @Override public void removeConstraint() {
-        a.removeConstraint(this);
-        b.removeConstraint(this);
-        c.removeConstraint(this);
     }
 
     @Override public boolean satisfied() {
@@ -294,14 +264,6 @@ public class AunionBeqC extends Constraint implements UsesQueueVariable {
 
     @Override public String toString() {
         return id() + " : AunionBeqC(" + a + ", " + b + ", " + c + " )";
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            a.weight++;
-            b.weight++;
-            c.weight++;
-        }
     }
 
     @Override public void queueVariable(int level, Var variable) {

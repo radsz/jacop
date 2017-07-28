@@ -66,12 +66,6 @@ public class AeqB extends PrimitiveConstraint {
     // private boolean bHasChanged = true;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"a", "b"};
-
-    /**
      * It constructs an AeqB constraint to restrict the domain of the variables.
      * @param a variable a restricted to be equal to b.
      * @param b variable b restricted to be equal to a.
@@ -121,33 +115,6 @@ public class AeqB extends PrimitiveConstraint {
 
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
-        return SetDomain.ANY;
-    }
-
-    @Override public int getNotConsistencyPruningEvent(Var var) {
-
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
-        return SetDomain.GROUND;
-    }
-
-    @Override public void impose(Store store) {
-        a.putModelConstraint(this, getConsistencyPruningEvent(a));
-        b.putModelConstraint(this, getConsistencyPruningEvent(b));
-        store.addChanged(this);
-        store.countConstraint();
-    }
-
     @Override public void notConsistency(Store store) {
 
         if (a.singleton() && b.singleton() && a.dom().glb().eq(b.dom().glb()))
@@ -166,11 +133,6 @@ public class AeqB extends PrimitiveConstraint {
         return false;
     }
 
-    @Override public void removeConstraint() {
-        a.removeConstraint(this);
-        b.removeConstraint(this);
-    }
-
     @Override public boolean satisfied() {
 
         if (a.singleton() && b.singleton() && a.domain.glb().eq(b.domain.glb()))
@@ -179,38 +141,24 @@ public class AeqB extends PrimitiveConstraint {
         return false;
     }
 
-    @Override public int getNestedPruningEvent(Var var, boolean mode) {
-
-        // If consistency function mode
-        if (mode) {
-            if (consistencyPruningEvents != null) {
-                Integer possibleEvent = consistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return SetDomain.ANY;
-        }
-        // If notConsistency function mode
-        else {
-            if (notConsistencyPruningEvents != null) {
-                Integer possibleEvent = notConsistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return SetDomain.ANY;
-        }
+    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
+        return SetDomain.ANY;
     }
 
+    @Override protected int getDefaultNestedConsistencyPruningEvent() {
+        return SetDomain.ANY;
+    }
+
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
+        return SetDomain.GROUND;
+    }
+
+    @Override public int getDefaultConsistencyPruningEvent() {
+        return SetDomain.ANY;
+    }
 
     @Override public String toString() {
         return id() + " : AeqB(" + a + ", " + b + " )";
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            a.weight++;
-            b.weight++;
-        }
     }
 
 }

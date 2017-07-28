@@ -32,6 +32,7 @@ package org.jacop.constraints;
 
 import java.util.Hashtable;
 
+import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 
@@ -60,8 +61,16 @@ public abstract class PrimitiveConstraint extends Constraint {
      * @param var for which pruning event is retrieved
      * @return the int denoting the pruning event associated with given variable.
      */
+    public int getNotConsistencyPruningEvent(Var var) {
 
-    public abstract int getNotConsistencyPruningEvent(Var var);
+        // If notConsistency function mode
+        if (notConsistencyPruningEvents != null) {
+            Integer possibleEvent = notConsistencyPruningEvents.get(var);
+            if (possibleEvent != null)
+                return possibleEvent;
+        }
+        return getDefaultNotConsistencyPruningEvent();
+    }
 
     /**
      * It retrieves the pruning event for which any composed constraint which
@@ -72,8 +81,42 @@ public abstract class PrimitiveConstraint extends Constraint {
      * @param mode decides if pruning event for consistency or nonconsistency is required.
      * @return pruning event associated with the given variable for a given consistency mode.
      */
+    public int getNestedPruningEvent(Var var, boolean mode) {
 
-    public abstract int getNestedPruningEvent(Var var, boolean mode);
+        // If consistency function mode
+        if (mode) {
+            if (consistencyPruningEvents != null) {
+                Integer possibleEvent = consistencyPruningEvents.get(var);
+                if (possibleEvent != null)
+                    return possibleEvent;
+            }
+            return getDefaultNestedConsistencyPruningEvent();
+        }
+        // If notConsistency function mode
+        else {
+            if (notConsistencyPruningEvents != null) {
+                Integer possibleEvent = notConsistencyPruningEvents.get(var);
+                if (possibleEvent != null)
+                    return possibleEvent;
+            }
+            return getDefaultNestedNotConsistencyPruningEvent();
+        }
+    }
+
+    protected int getDefaultNestedNotConsistencyPruningEvent() {
+        return getDefaultNotConsistencyPruningEvent();
+    }
+
+    protected int getDefaultNestedConsistencyPruningEvent() {
+        return getDefaultConsistencyPruningEvent();
+    }
+
+    protected abstract int getDefaultNotConsistencyPruningEvent();
+/*
+    {
+        throw new IllegalStateException("Not implemented as more precise variants exist.");
+    }
+*/
 
     /**
      * It makes pruning in such a way that constraint is notConsistent. It

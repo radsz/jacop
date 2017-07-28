@@ -75,12 +75,6 @@ public class Alldiff extends Alldifferent {
 
     protected IntVar[] listAlldiff;
 
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"list"};
-
     protected Alldiff() {
     }
 

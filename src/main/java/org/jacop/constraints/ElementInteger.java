@@ -109,12 +109,6 @@ public class ElementInteger extends Constraint implements UsesQueueVariable {
     IntDomain duplicatesIndexes;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"index", "list", "value", "indexOffset"};
-
-    /**
      * It constructs an element constraint.
      *
      * @param index variable index
@@ -341,25 +335,13 @@ public class ElementInteger extends Constraint implements UsesQueueVariable {
             return false;
     }
 
-
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.ANY;
     }
 
     @Override public void impose(Store store) {
 
-        index.putModelConstraint(this, getConsistencyPruningEvent(index));
-        value.putModelConstraint(this, getConsistencyPruningEvent(value));
-
-        store.addChanged(this);
-        store.countConstraint();
+        super.impose(store);
 
         if (checkDuplicates) {
             duplicates = new ArrayList<IntDomain>();
@@ -397,11 +379,6 @@ public class ElementInteger extends Constraint implements UsesQueueVariable {
             indexHasChanged = true;
         else
             valueHasChanged = true;
-    }
-
-    @Override public void removeConstraint() {
-        index.removeConstraint(this);
-        value.removeConstraint(this);
     }
 
     @Override public boolean satisfied() {
@@ -456,13 +433,6 @@ public class ElementInteger extends Constraint implements UsesQueueVariable {
         result.append("], ").append(value).append(", " + indexOffset + " )");
 
         return result.toString();
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            index.weight++;
-            value.weight++;
-        }
     }
 
 }

@@ -30,13 +30,10 @@
 
 package org.jacop.set.constraints;
 
-import java.util.ArrayList;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
@@ -68,16 +65,6 @@ public class AinB extends PrimitiveConstraint {
      * It specifies if the inclusion relation is strict.
      */
     public boolean strict = false;
-
-    // private boolean aHasChanged = true;
-
-    // private boolean bHasChanged = true;
-
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"a", "b", "strict"};
 
     /**
      * It constructs an AinB constraint to restrict the domain of the variables A and B.
@@ -154,47 +141,14 @@ public class AinB extends PrimitiveConstraint {
         else
             b.domain.inCardinality(store.level, b, a.domain.card().min(), Integer.MAX_VALUE);
 
-        // aHasChanged = false;
-        // bHasChanged = false;
-
-    }
-
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
-        return SetDomain.ANY;
-    }
-
-    @Override public int getNotConsistencyPruningEvent(Var var) {
-
-        // If notConsistency function mode
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
-        return SetDomain.ANY;
     }
 
 
-    @Override public void impose(Store store) {
-        a.putModelConstraint(this, getConsistencyPruningEvent(a));
-        b.putModelConstraint(this, getConsistencyPruningEvent(b));
-
-        store.addChanged(this);
-        store.countConstraint();
-    }
 
     @Override public void notConsistency(Store store) {
 
         if (b.domain.glb().contains(a.domain.lub()))
             throw Store.failException;
-
 
     }
 
@@ -207,12 +161,6 @@ public class AinB extends PrimitiveConstraint {
 
     }
 
-    @Override public void removeConstraint() {
-        a.removeConstraint(this);
-        b.removeConstraint(this);
-
-    }
-
     @Override public boolean satisfied() {
 
         if (a.singleton() && b.singleton() && b.domain.contains(a.domain))
@@ -220,42 +168,26 @@ public class AinB extends PrimitiveConstraint {
         else
             return false;
 
-        // return ((SetDomain) b.dom()).glb().contains(((SetDomain) a.dom()).lub());
-
     }
 
-    @Override public int getNestedPruningEvent(Var var, boolean mode) {
-
-        // If consistency function mode
-        if (mode) {
-            if (consistencyPruningEvents != null) {
-                Integer possibleEvent = consistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return SetDomain.ANY;
-        }
-        // If notConsistency function mode
-        else {
-            if (notConsistencyPruningEvents != null) {
-                Integer possibleEvent = notConsistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return SetDomain.ANY;
-        }
+    @Override protected int getDefaultNestedConsistencyPruningEvent() {
+        return SetDomain.ANY;
     }
 
+    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
+        return SetDomain.ANY;
+    }
+
+    @Override public int getDefaultConsistencyPruningEvent() {
+        return SetDomain.ANY;
+    }
+
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
+        return SetDomain.ANY;
+    }
 
     @Override public String toString() {
         return id() + " : AinB(" + a + ", " + b + " )";
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            a.weight++;
-            b.weight++;
-        }
     }
 
 }

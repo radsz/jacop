@@ -69,12 +69,6 @@ public class InArea implements ExternalConstraint {
     public Set<InternalConstraint> constraints;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"allowedArea", "holes"};
-
-    /**
      * It constructs an external constraint to enforce that all objects
      * within Geost constraint are placed within a specified area with
      * holes in that area specfied as well.

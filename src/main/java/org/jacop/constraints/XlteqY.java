@@ -59,12 +59,6 @@ public class XlteqY extends PrimitiveConstraint {
     public IntVar y;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"x", "y"};
-
-    /**
      * It constructs the constraint X {@literal <=} Y.
      * @param x variable x.
      * @param y variable y.
@@ -88,55 +82,20 @@ public class XlteqY extends PrimitiveConstraint {
         y.domain.inMin(store.level, y, x.min());
     }
 
-    @Override public int getNestedPruningEvent(Var var, boolean mode) {
-
-        // If consistency function mode
-        if (mode) {
-            if (consistencyPruningEvents != null) {
-                Integer possibleEvent = consistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return IntDomain.BOUND;
-        }
-        // If notConsistency function mode
-        else {
-            if (notConsistencyPruningEvents != null) {
-                Integer possibleEvent = notConsistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return IntDomain.BOUND;
-        }
-    }
-
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
         return IntDomain.BOUND;
     }
 
-    @Override public int getNotConsistencyPruningEvent(Var var) {
-
-        // If notConsistency function mode
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override protected int getDefaultNestedConsistencyPruningEvent() {
         return IntDomain.BOUND;
     }
 
-    @Override public void impose(Store store) {
-        x.putModelConstraint(this, getConsistencyPruningEvent(x));
-        y.putModelConstraint(this, getConsistencyPruningEvent(y));
-        store.addChanged(this);
-        store.countConstraint();
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
+        return IntDomain.BOUND;
+    }
+
+    @Override public int getDefaultConsistencyPruningEvent() {
+        return IntDomain.BOUND;
     }
 
     @Override public void notConsistency(Store store) {
@@ -148,24 +107,12 @@ public class XlteqY extends PrimitiveConstraint {
         return x.min() > y.max();
     }
 
-    @Override public void removeConstraint() {
-        x.removeConstraint(this);
-        y.removeConstraint(this);
-    }
-
     @Override public boolean satisfied() {
         return x.max() <= y.min();
     }
 
     @Override public String toString() {
         return id() + " : XlteqY(" + x + ", " + y + " )";
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            x.weight++;
-            y.weight++;
-        }
     }
 
 }

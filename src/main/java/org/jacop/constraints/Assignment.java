@@ -78,12 +78,6 @@ public class Assignment extends Constraint implements UsesQueueVariable {
     int firstConsistencyLevel;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"x", "d", "shiftX", "shiftD"};
-
-    /**
      * It enforces the relationship x[d[i]-shiftX]=i+shiftD and
      * d[x[i]-shiftD]=i+shiftX.
      * @param xs array of variables x
@@ -317,14 +311,7 @@ public class Assignment extends Constraint implements UsesQueueVariable {
 
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    public int getDefaultConsistencyPruningEvent() {
         return IntDomain.ANY;
     }
 
@@ -333,13 +320,7 @@ public class Assignment extends Constraint implements UsesQueueVariable {
 
         store.registerRemoveLevelListener(this);
 
-        for (int i = 0; i < x.length; i++) {
-            x[i].putModelConstraint(this, getConsistencyPruningEvent(x[i]));
-            d[i].putModelConstraint(this, getConsistencyPruningEvent(d[i]));
-        }
-
-        store.addChanged(this);
-        store.countConstraint();
+        super.impose(store);
 
         store.raiseLevelBeforeConsistency = true;
 
@@ -347,31 +328,6 @@ public class Assignment extends Constraint implements UsesQueueVariable {
 
     @Override public void queueVariable(int level, Var var) {
         variableQueue.add((IntVar) var);
-    }
-
-    @Override public void removeConstraint() {
-
-        for (int i = 0; i < x.length; i++)
-            x[i].removeConstraint(this);
-
-        for (int i = 0; i < d.length; i++)
-            d[i].removeConstraint(this);
-
-    }
-
-    @Override public boolean satisfied() {
-
-        int i = 0;
-        while (i < x.length) {
-            if (!x[i].singleton())
-                return false;
-            if (!d[i].singleton())
-                return false;
-            i++;
-        }
-
-        return true;
-
     }
 
     @Override public String toString() {
@@ -396,15 +352,6 @@ public class Assignment extends Constraint implements UsesQueueVariable {
         result.append(shiftX + ", " + shiftD + ")");
 
         return result.toString();
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            for (Var v : x)
-                v.weight++;
-            for (Var v : d)
-                v.weight++;
-        }
     }
 
 }

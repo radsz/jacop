@@ -71,11 +71,6 @@ public class OrBoolVector extends PrimitiveConstraint {
      * It specifies the length of the list of variables.
      */
     final int l;
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"list", "result"};
 
     /*
      * Defines first position of the variable that is not ground to 0
@@ -127,9 +122,7 @@ public class OrBoolVector extends PrimitiveConstraint {
      * @param result variable which is equal 0 if none of x is equal to zero.
      */
     public OrBoolVector(ArrayList<? extends IntVar> list, IntVar result) {
-
         this(list.toArray(new IntVar[list.size()]), result);
-
     }
 
     /**
@@ -147,69 +140,30 @@ public class OrBoolVector extends PrimitiveConstraint {
         return null;
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
-        return IntDomain.BOUND;
-    }
-
-    @Override public int getNotConsistencyPruningEvent(Var var) {
-
-        // If notConsistency function mode
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
         return IntDomain.GROUND;
     }
 
-    @Override public int getNestedPruningEvent(Var var, boolean mode) {
+    @Override protected int getDefaultNestedConsistencyPruningEvent() {
+        return IntDomain.ANY;
+    }
 
-        // If consistency function mode
-        if (mode) {
-            if (consistencyPruningEvents != null) {
-                Integer possibleEvent = consistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return IntDomain.ANY;
-        }
-        // If notConsistency function mode
-        else {
-            if (notConsistencyPruningEvents != null) {
-                Integer possibleEvent = notConsistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return IntDomain.GROUND;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
+        return IntDomain.BOUND;
+    }
+
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
+        return IntDomain.GROUND;
     }
 
     // registers the constraint in the constraint store
     @Override public void impose(Store store) {
-
-        result.putModelConstraint(this, getConsistencyPruningEvent(result));
-
         position = new TimeStamp<Integer>(store, 0);
-
-        for (Var V : list)
-            V.putModelConstraint(this, getConsistencyPruningEvent(V));
-
-        store.addChanged(this);
-        store.countConstraint();
-
+        super.impose(store);
     }
 
     @Override public void include(Store store) {
-
         position = new TimeStamp<Integer>(store, 0);
-
     }
 
     public void consistency(Store store) {
@@ -347,13 +301,6 @@ public class OrBoolVector extends PrimitiveConstraint {
 
     }
 
-    @Override public void removeConstraint() {
-        result.removeConstraint(this);
-        for (int i = 0; i < l; i++) {
-            list[i].removeConstraint(this);
-        }
-    }
-
     @Override public String toString() {
 
         StringBuffer resultString = new StringBuffer(id());
@@ -400,14 +347,6 @@ public class OrBoolVector extends PrimitiveConstraint {
         for (Constraint c : constraints)
             store.impose(c, queueIndex);
 
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            result.weight++;
-            for (Var v : list)
-                v.weight++;
-        }
     }
 
 }

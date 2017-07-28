@@ -52,12 +52,6 @@ public class FSMTransition {
     public FSMState successor;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"domain", "successor"};
-
-    /**
      * It constructs a finite machine state transition.
      * @param domain the domain which triggers the transition.
      * @param state the successor state reached by a transition.

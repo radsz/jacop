@@ -30,20 +30,19 @@
 
 package org.jacop.constraints;
 
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Pattern;
-
-import javax.xml.transform.sax.TransformerHandler;
-
 import org.jacop.core.*;
 import org.jacop.util.TupleUtils;
-import org.xml.sax.SAXException;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.PriorityQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Extensional constraint assures that one of the tuples is enforced in the
  * relation.
- *
+ * <p>
  * This implementation tries to balance the usage of memory versus time
  * efficiency.
  *
@@ -57,8 +56,9 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
 
     /**
      * It seeks support for a given variable-value pair.
+     *
      * @param varPosition position of the variable for which the support is seek.
-     * @param value value for which the support is seek.
+     * @param value       value for which the support is seek.
      * @return support tuple.
      */
     public int[] seekSupportVA(int varPosition, int value) {
@@ -98,8 +98,9 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
 
     /**
      * It computes the first valid tuple for a given variable-value pair.
+     *
      * @param varPosition position of the variable.
-     * @param value value for which the fist valid tuple is seek.
+     * @param value       value for which the fist valid tuple is seek.
      * @return first valid tuple.
      */
     public int[] setFirstValid(int varPosition, int value) {
@@ -117,9 +118,10 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
 
     /**
      * It finds the first allowed tuple from the given tuple.
+     *
      * @param varPosition position of the variable.
-     * @param value value for which first allowed tuple is seek.
-     * @param t tuple from which the search commences.
+     * @param value       value for which first allowed tuple is seek.
+     * @param t           tuple from which the search commences.
      * @return first allowed tuple for a given variable-value pair.
      */
     public int[] findFirstAllowed(int varPosition, int value, int[] t) {
@@ -161,8 +163,9 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
 
     /**
      * It gives the position of the variable for which current domain of this
-     * variable does not hold the used value. It is variable because of which 
-     * allowed tuple does not become a support tuple. 
+     * variable does not hold the used value. It is variable because of which
+     * allowed tuple does not become a support tuple.
+     *
      * @param t tuple being checked.
      * @return -1 if tuple is both valid and allowed (support), otherwise the position.
      */
@@ -213,12 +216,6 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
     public IntVar[] list;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"list"};
-
-    /**
      * Partial constructor which stores variables involved in a constraint but
      * does not get information about tuples yet. The tuples must set separately.
      *
@@ -241,8 +238,9 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
      * The constructor does not create local copy of tuples array. Any changes
      * to this array will reflect on constraint behavior. Most probably
      * incorrect as other data structures will not change accordingly.
+     *
      * @param variables the constraint scope.
-     * @param tuples the tuples which are supports for the constraint.
+     * @param tuples    the tuples which are supports for the constraint.
      */
 
     public ExtensionalSupportVA(ArrayList<? extends IntVar> variables, int[][] tuples) {
@@ -256,8 +254,9 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
      * tuples parameter will be reflected in the constraint behavior. Changes to
      * tuples should not performed under any circumstances. The tuples array is
      * not copied to save memory and time.
+     *
      * @param variables the constraint scope.
-     * @param tuples the tuples which are supports for the constraint.
+     * @param tuples    the tuples which are supports for the constraint.
      */
 
     public ExtensionalSupportVA(IntVar[] variables, int[][] tuples) {
@@ -387,27 +386,15 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
 
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.ANY;
     }
 
     @Override public void impose(Store store) {
 
+        super.impose(store);
+
         store.registerRemoveLevelListener(this);
-
-        for (int i = 0; i < list.length; i++) {
-            list[i].putModelConstraint(this, getConsistencyPruningEvent(list[i]));
-        }
-
-        store.addChanged(this);
-        store.countConstraint();
 
         if (debugAll) {
             for (Var var : list)
@@ -576,26 +563,6 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
         variableQueue.add((IntVar) var);
     }
 
-    @Override public void removeConstraint() {
-
-        for (int i = 0; i < list.length; i++)
-            list[i].removeConstraint(this);
-
-    }
-
-    @Override public boolean satisfied() {
-
-        int i = 0;
-        while (i < list.length) {
-            if (!list[i].singleton())
-                return false;
-            i++;
-        }
-
-        return true;
-
-    }
-
     boolean smaller(int[] tuple1, int[] tuple2) {
 
         int arity = tuple1.length;
@@ -663,83 +630,6 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
 
         return tupleString.toString();
 
-    }
-
-
-
-    /**
-     * It writes the content of this object as the content of XML
-     * element so later it can be used to restore the object from
-     * XML. It is done after restoration of the part of the object
-     * specified in xmlAttributes.
-     *
-     * @param tf a place to write the content of the object.
-     * @throws SAXException exception from org.xml.sax
-     */
-    public void toXML(TransformerHandler tf) throws SAXException {
-
-        StringBuffer result = new StringBuffer("");
-
-        for (int[][] tuplesForGivenValue : tuples[0]) {
-            for (int[] tuple : tuplesForGivenValue) {
-
-                result.delete(0, result.length());
-
-                for (int i : tuple)
-                    result.append(String.valueOf(i)).append(" ");
-                result.append("|");
-
-                tf.characters(result.toString().toCharArray(), 0, result.length());
-
-            }
-        }
-
-    }
-
-
-    /**
-     *
-     * It updates the specified constraint with the information
-     * stored in the string.
-     *
-     * @param object the constraint to be updated.
-     * @param content the information used for update.
-     */
-    public static void fromXML(ExtensionalSupportVA object, String content) {
-
-        Pattern pat = Pattern.compile("|");
-        String[] result = pat.split(content);
-
-        ArrayList<int[]> tuples = new ArrayList<int[]>(result.length);
-
-        for (String element : result) {
-
-            Pattern dotSplit = Pattern.compile(" ");
-            String[] oneElement = dotSplit.split(element);
-
-            int[] tuple = new int[object.list.length];
-
-            int i = 0;
-            for (String number : oneElement) {
-                try {
-                    tuple[i++] = Integer.parseInt(number);
-                } catch (NumberFormatException ex) {
-                }
-                ;
-            }
-
-            tuples.add(tuple);
-        }
-
-        object.tuplesFromConstructor = tuples.toArray(new int[tuples.size()][]);
-
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            for (Var v : list)
-                v.weight++;
-        }
     }
 
 }

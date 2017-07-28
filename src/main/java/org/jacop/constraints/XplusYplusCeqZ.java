@@ -35,7 +35,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 
 /**
  * Constraints X + Y + C #= Z.
@@ -69,12 +68,6 @@ public class XplusYplusCeqZ extends PrimitiveConstraint {
      * It specifies variable x in constraint x + y + c = z.
      */
     IntVar z;
-
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"x", "y", "c", "z"};
 
     /**
      * It constructs constraint X+Y+C=Z.
@@ -117,59 +110,10 @@ public class XplusYplusCeqZ extends PrimitiveConstraint {
 
     }
 
-    @Override public int getNestedPruningEvent(Var var, boolean mode) {
-
-        // If consistency function mode
-        if (mode) {
-            if (consistencyPruningEvents != null) {
-                Integer possibleEvent = consistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return IntDomain.BOUND;
-        }
-        // If notConsistency function mode
-        else {
-            if (notConsistencyPruningEvents != null) {
-                Integer possibleEvent = notConsistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return IntDomain.GROUND;
-        }
-    }
-
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
     }
-
-    @Override public int getNotConsistencyPruningEvent(Var var) {
-
-        // If notConsistency function mode
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
-        return IntDomain.GROUND;
-    }
-
-    @Override public void impose(Store store) {
-
-        x.putModelConstraint(this, getConsistencyPruningEvent(x));
-        y.putModelConstraint(this, getConsistencyPruningEvent(y));
-        z.putModelConstraint(this, getConsistencyPruningEvent(z));
-        store.addChanged(this);
-        store.countConstraint();
-    }
-
+    
     @Override public void notConsistency(Store store) {
 
         do {
@@ -189,31 +133,21 @@ public class XplusYplusCeqZ extends PrimitiveConstraint {
 
     }
 
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
+        return IntDomain.GROUND;
+    }
+    
     @Override public boolean notSatisfied() {
         return (x.max() + y.max() + c < z.min() || x.min() + y.min() + c > z.max());
     }
 
-    @Override public void removeConstraint() {
-        x.removeConstraint(this);
-        y.removeConstraint(this);
-        z.removeConstraint(this);
-    }
-
+    // TODO, QUESTION, satisfied always called after consistency so no need to check here more than singletons.
     @Override public boolean satisfied() {
         return x.singleton() && y.singleton() && z.singleton() && x.min() + y.min() + c == z.min();
     }
 
     @Override public String toString() {
-
         return id() + " : XplusYplusQeqZ(" + x + ", " + y + ", " + ", " + c + ", " + z + " )";
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            x.weight++;
-            y.weight++;
-            z.weight++;
-        }
     }
 
 }

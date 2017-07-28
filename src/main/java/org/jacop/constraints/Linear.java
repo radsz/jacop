@@ -35,13 +35,14 @@ import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.*;
+
 import java.util.Map;
 
 /**
  * Linear constraint implements the weighted summation over several
  * variables . It provides the weighted sum from all variables on the list.
  * The weights are integers.
- *
+ * <p>
  * This version works as argument for Reified and Xor constraints.
  * For other constraints (And, Or, Not, Eq, IfThen, IfThenElse) use LinearInt.
  *
@@ -121,18 +122,13 @@ import java.util.Map;
     boolean reified = true;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"list", "weights", "sum"};
-
-    /**
      * It constructs the constraint Linear.
-     * @param store current store
-     * @param list variables which are being multiplied by weights.
+     *
+     * @param store   current store
+     * @param list    variables which are being multiplied by weights.
      * @param weights weight for each variable.
-     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum variable containing the sum of weighted variables.
+     * @param rel     the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum     variable containing the sum of weighted variables.
      */
     public Linear(Store store, IntVar[] list, int[] weights, String rel, int sum) {
 
@@ -178,7 +174,7 @@ import java.util.Map;
 
         int i = 0;
         for (Map.Entry<IntVar, Integer> e : parameters.entrySet()) {
-	    this.list[i] = e.getKey();
+            this.list[i] = e.getKey();
             this.weights[i] = e.getValue();
             i++;
         }
@@ -218,11 +214,12 @@ import java.util.Map;
 
     /**
      * It constructs the constraint Linear.
-     * @param store current store
+     *
+     * @param store     current store
      * @param variables variables which are being multiplied by weights.
-     * @param weights weight for each variable.
-     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum variable containing the sum of weighted variables.
+     * @param weights   weight for each variable.
+     * @param rel       the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum       variable containing the sum of weighted variables.
      */
     public Linear(Store store, ArrayList<? extends IntVar> variables, ArrayList<Integer> weights, String rel, int sum) {
 
@@ -250,16 +247,6 @@ import java.util.Map;
                 removeConstraint();
     }
 
-    // @Override
-    // public void notConsistency(Store store) {
-
-    //     pruneRelation(store, negRel[relationType]);
-
-    //     if (negRel[relationType] != eq)
-    //     	if (notSatisfied())
-    //     	    removeConstraint();
-
-    // }
 
     private void pruneRelation(Store store, byte rel) {
 
@@ -424,8 +411,8 @@ import java.util.Map;
                             }
                         }
                         break;
-		default:
-		    throw new RuntimeException("Internal error in " + getClass().getName());			
+                    default:
+                        throw new RuntimeException("Internal error in " + getClass().getName());
                 }
             }
 
@@ -436,54 +423,9 @@ import java.util.Map;
 
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
     }
-
-    // @Override
-    // public int getNestedPruningEvent(Var var, boolean mode) {
-
-    // 	// If consistency function mode
-    // 	if (mode) {
-    // 		if (consistencyPruningEvents != null) {
-    // 			Integer possibleEvent = consistencyPruningEvents.get(var);
-    // 			if (possibleEvent != null)
-    // 				return possibleEvent;
-    // 		}
-    // 		return IntDomain.BOUND;
-    // 	}
-
-    // 	// If notConsistency function mode
-    // 	else {
-    // 		if (notConsistencyPruningEvents != null) {
-    // 			Integer possibleEvent = notConsistencyPruningEvents.get(var);
-    // 			if (possibleEvent != null)
-    // 				return possibleEvent;
-    // 		}
-    // 		return IntDomain.BOUND;
-    // 	}
-
-    // }
-
-    // @Override
-    // public int getNotConsistencyPruningEvent(Var var) {
-
-    // 	// If notConsistency function mode
-    // 	if (notConsistencyPruningEvents != null) {
-    // 		Integer possibleEvent = notConsistencyPruningEvents.get(var);
-    // 		if (possibleEvent != null)
-    // 			return possibleEvent;
-    // 	}
-    // 	return IntDomain.BOUND;
-
-    // }
 
     @Override public void impose(Store store) {
 
@@ -582,7 +524,7 @@ import java.util.Map;
         // In such situations the variable might be queued but there is not catching
         // of FailException.
     /*
-		if (!reified) {
+    if (!reified) {
 		    if (backtrackHasOccured) {
 		    
 			backtrackHasOccured = false;
@@ -594,11 +536,6 @@ import java.util.Map;
 		    	throw Store.failException;
 		}
 		*/
-    }
-
-    @Override public void removeConstraint() {
-        for (Var v : list)
-            v.removeConstraint(this);
     }
 
     @Override public boolean satisfied() {
@@ -613,20 +550,6 @@ import java.util.Map;
         return entailed(relationType);
 
     }
-
-    // @Override
-    // public boolean notSatisfied() {
-
-    // 	if (reified && backtrackHasOccured) {
-
-    // 	    backtrackHasOccured = false;
-
-    // 	    recomputeBounds();
-    // 	}
-
-    // 	return entailed(negRel[relationType]);
-
-    // }
 
     private boolean entailed(byte rel) {
 
@@ -779,10 +702,4 @@ import java.util.Map;
 
     }
 
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            for (Var v : list)
-                v.weight++;
-        }
-    }
 }

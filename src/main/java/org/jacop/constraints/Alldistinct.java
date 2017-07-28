@@ -167,12 +167,6 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
     public IntVar[] list;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"list"};
-
-    /**
      * It constructs an alldistinct constraint.
      * @param list an array of variables.
      */
@@ -808,14 +802,7 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
 
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.ANY;
     }
 
@@ -1237,11 +1224,6 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
             System.out.println("Var " + var + ((IntVar) var).recentDomainPruning());
 
         variableQueue.add((IntVar) var);
-    }
-
-    @Override public void removeConstraint() {
-        for (Var var : list)
-            var.removeConstraint(this);
     }
 
     private void revisitTarjan(IntVar x, ArrayList<IntVar> l, HashMap<IntVar, Integer> dfsnum, HashMap<IntVar, Integer> low,
@@ -1866,13 +1848,6 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
 
         stamp = null;
         return pruning;
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            for (Var v : list)
-                v.weight++;
-        }
     }
 
 }

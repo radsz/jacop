@@ -69,12 +69,6 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
     public IntDomain cardinality;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"glb", "lub", "cardinality"};
-
-    /**
      *
      * Creates BoundSetDomain object. It requires glb to be a subset of lub.
      *

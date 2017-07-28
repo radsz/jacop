@@ -30,8 +30,6 @@
 
 package org.jacop.set.constraints;
 
-import java.util.ArrayList;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.PrimitiveConstraint;
@@ -64,16 +62,6 @@ public class XeqA extends PrimitiveConstraint {
      * It specifies variable b.
      */
     public SetVar a;
-
-    // private boolean aHasChanged = true;
-
-    // private boolean xHasChanged = true;
-
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"x", "a"};
 
     /**
      * It constructs an XeqA constraint to restrict the domain of the integer variables x and set variable a.
@@ -138,6 +126,10 @@ public class XeqA extends PrimitiveConstraint {
 
     }
 
+    @Override public int getDefaultConsistencyPruningEvent() {
+        throw new IllegalStateException("Not implemented as more precise method exists.");
+    }
+
     @Override public int getNotConsistencyPruningEvent(Var var) {
 
         // If notConsistency function mode
@@ -152,15 +144,6 @@ public class XeqA extends PrimitiveConstraint {
         else
             return IntDomain.ANY;
 
-    }
-
-    @Override public void impose(Store store) {
-
-        x.putModelConstraint(this, getConsistencyPruningEvent(x));
-        a.putModelConstraint(this, getConsistencyPruningEvent(a));
-
-        store.addChanged(this);
-        store.countConstraint();
     }
 
     @Override public void notConsistency(Store store) {
@@ -190,17 +173,8 @@ public class XeqA extends PrimitiveConstraint {
 
     }
 
-    @Override public void removeConstraint() {
-
-        x.removeConstraint(this);
-        a.removeConstraint(this);
-
-    }
-
     @Override public boolean satisfied() {
-
         return (x.singleton() && a.singleton() && a.domain.card().max() == 1 && a.domain.glb().min() == x.value());
-
     }
 
     @Override public int getNestedPruningEvent(Var var, boolean mode) {
@@ -212,7 +186,7 @@ public class XeqA extends PrimitiveConstraint {
                 if (possibleEvent != null)
                     return possibleEvent;
             }
-            return SetDomain.ANY;
+            return getConsistencyPruningEvent(var);
         }
         // If notConsistency function mode
         else {
@@ -221,20 +195,16 @@ public class XeqA extends PrimitiveConstraint {
                 if (possibleEvent != null)
                     return possibleEvent;
             }
-            return SetDomain.ANY;
+            return getNotConsistencyPruningEvent(var);
         }
     }
 
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
+        throw new IllegalStateException("Not implemented as more precise method exists.");
+    }
 
     @Override public String toString() {
         return id() + " : XeqA(" + x + ", " + a + " )";
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            x.weight++;
-            a.weight++;
-        }
     }
 
 }

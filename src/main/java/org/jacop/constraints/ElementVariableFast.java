@@ -41,7 +41,6 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
-import org.jacop.core.Var;
 
 /**
  * ElementVariableFast constraint defines a relation 
@@ -83,12 +82,6 @@ public class ElementVariableFast extends Constraint {
      * The list is addressed by positive integers ({@code >=1}) if indexOffset is equal to 0. 
      */
     public IntVar list[];
-
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as 
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"index", "list", "value", "indexOffset"};
 
     /**
      * It constructs an element constraint. 
@@ -212,14 +205,7 @@ public class ElementVariableFast extends Constraint {
             return false;
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.ANY;
     }
 
@@ -227,21 +213,8 @@ public class ElementVariableFast extends Constraint {
 
         store.registerRemoveLevelListener(this);
 
-        index.putModelConstraint(this, getConsistencyPruningEvent(index));
-        value.putModelConstraint(this, getConsistencyPruningEvent(value));
+        super.impose(store);
 
-        for (int i = 0; i < list.length; i++)
-            list[i].putModelConstraint(this, getConsistencyPruningEvent(list[i]));
-
-        store.addChanged(this);
-        store.countConstraint();
-    }
-
-    @Override public void removeConstraint() {
-        index.removeConstraint(this);
-        value.removeConstraint(this);
-        for (Var v : list)
-            v.removeConstraint(this);
     }
 
     @Override public boolean satisfied() {
@@ -274,15 +247,6 @@ public class ElementVariableFast extends Constraint {
 
         return result.toString();
 
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            index.weight++;
-            value.weight++;
-            for (Var v : list)
-                v.weight++;
-        }
     }
 
 }

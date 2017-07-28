@@ -39,11 +39,10 @@ import java.util.stream.Stream;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 
 /**
- * Count constraint implements the counting over number of occurrences of 
- * a given value in a list of variables. The number of occurrences is 
+ * Count constraint implements the counting over number of occurrences of
+ * a given value in a list of variables. The number of occurrences is
  * specified by variable idNumber.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -70,15 +69,10 @@ public class Count extends Constraint {
     public int value;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"list", "idNumber", "value"};
-
-    /**
      * It constructs a Count constraint.
-     * @param value value which is counted
-     * @param list variables which equality to val is counted.
+     *
+     * @param value   value which is counted
+     * @param list    variables which equality to val is counted.
      * @param counter number of variables equal to val.
      */
     public Count(IntVar[] list, IntVar counter, int value) {
@@ -99,44 +93,23 @@ public class Count extends Constraint {
             this.list[i] = list[i];
         }
 
-        setScope( Stream.concat(Arrays.stream(list), Stream.of(counter)) );
+        setScope(Stream.concat(Arrays.stream(list), Stream.of(counter)));
 
     }
 
     /**
      * It constructs a Count constraint.
-     * @param value value which is counted
-     * @param list variables which equality to val is counted.
+     *
+     * @param value   value which is counted
+     * @param list    variables which equality to val is counted.
      * @param counter number of variables equal to val.
      */
     public Count(ArrayList<? extends IntVar> list, IntVar counter, int value) {
-
         this(list.toArray(new IntVar[list.size()]), counter, value);
-
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.ANY;
-    }
-
-
-
-    // registers the constraint in the constraint store
-    @Override public void impose(Store store) {
-
-        counter.putConstraint(this);
-        for (Var V : list)
-            V.putConstraint(this);
-
-        store.addChanged(this);
-        store.countConstraint();
     }
 
     @Override public void consistency(Store store) {
@@ -161,7 +134,7 @@ public class Count extends Constraint {
 
             counter.domain.in(store.level, counter, numberEq, numberEq);
             removeConstraint();
-	    return;
+            return;
 
         } else if (numberEq == counter.max()) {
             for (IntVar v : list)
@@ -173,7 +146,7 @@ public class Count extends Constraint {
 
             counter.domain.in(store.level, counter, numberEq, numberEq);
             removeConstraint();
-	    return;
+            return;
         }
 
         counter.domain.in(store.level, counter, numberEq, numberEq + numberMayBe);
@@ -193,12 +166,6 @@ public class Count extends Constraint {
             return false;
     }
 
-    @Override public void removeConstraint() {
-        counter.removeConstraint(this);
-        for (Var v : list)
-            v.removeConstraint(this);
-    }
-
     @Override public String toString() {
 
         StringBuffer result = new StringBuffer(id());
@@ -215,14 +182,6 @@ public class Count extends Constraint {
 
         return result.toString();
 
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            counter.weight++;
-            for (Var v : list)
-                v.weight++;
-        }
     }
 
 }

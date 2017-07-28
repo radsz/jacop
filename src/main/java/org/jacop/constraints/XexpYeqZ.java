@@ -66,12 +66,6 @@ public class XexpYeqZ extends Constraint {
     public IntVar z;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"x", "y", "z"};
-
-    /**
      * It constructs constraint X^Y=Z.
      * @param x variable x.
      * @param y variable y.
@@ -151,29 +145,8 @@ public class XexpYeqZ extends Constraint {
 
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
-    }
-
-    @Override public void impose(Store Store) {
-        x.putModelConstraint(this, getConsistencyPruningEvent(x));
-        y.putModelConstraint(this, getConsistencyPruningEvent(y));
-        z.putModelConstraint(this, getConsistencyPruningEvent(z));
-        Store.addChanged(this);
-        Store.countConstraint();
-    }
-
-    @Override public void removeConstraint() {
-        x.removeConstraint(this);
-        y.removeConstraint(this);
-        z.removeConstraint(this);
     }
 
     @Override public boolean satisfied() {
@@ -185,14 +158,6 @@ public class XexpYeqZ extends Constraint {
 
         return id() + " : XexpYeqZ(" + x + ", " + y + ", " + z + " )";
 
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            x.weight++;
-            y.weight++;
-            z.weight++;
-        }
     }
 
 }

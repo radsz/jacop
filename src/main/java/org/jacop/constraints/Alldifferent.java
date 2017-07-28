@@ -61,12 +61,6 @@ public class Alldifferent extends Constraint implements UsesQueueVariable {
 
     protected TimeStamp<Integer> grounded;
 
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"list"};
-
     protected Alldifferent() {
     }
 
@@ -141,15 +135,7 @@ public class Alldifferent extends Constraint implements UsesQueueVariable {
 
     }
 
-
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.GROUND;
     }
 
@@ -190,28 +176,21 @@ public class Alldifferent extends Constraint implements UsesQueueVariable {
     }
 
     @Override public void impose(Store store) {
+
+        super.impose(store);
         int level = store.level;
 
         int pos = 0;
-        positionMapping = new HashMap<IntVar, Integer>();
+        positionMapping = new HashMap<>();
         for (IntVar v : list) {
             positionMapping.put(v, pos++);
-            v.putModelConstraint(this, getConsistencyPruningEvent(v));
             queueVariable(level, v);
         }
-        grounded = new TimeStamp<Integer>(store, 0);
-
-        store.addChanged(this);
-        store.countConstraint();
+        grounded = new TimeStamp<>(store, 0);
     }
 
     @Override public void queueVariable(int level, Var V) {
         variableQueue.add((IntVar) V);
-    }
-
-    @Override public void removeConstraint() {
-        for (Var v : list)
-            v.removeConstraint(this);
     }
 
     @SuppressWarnings("unused") private boolean satisfiedBound() {
@@ -247,12 +226,5 @@ public class Alldifferent extends Constraint implements UsesQueueVariable {
         return result.toString();
 
     }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            for (Var v : list)
-                v.weight++;
-        }
-    }
-
+    
 }

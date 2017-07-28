@@ -62,13 +62,6 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
      */
     private boolean propagation;
 
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"listOfC"};
-
-
     final public QueueForward<PrimitiveConstraint> queueForward;
 
     /**
@@ -153,6 +146,10 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
 
     }
 
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
+        throw new IllegalStateException("Not implemented as more precise variant exists.");
+    }
+
     @Override public int getConsistencyPruningEvent(Var var) {
 
         // If consistency function mode
@@ -177,6 +174,10 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
         else
             return eventAcross;
 
+    }
+
+    @Override public int getDefaultConsistencyPruningEvent() {
+        throw new IllegalStateException("Not implemented as more precise variant exists.");
     }
 
     @Override public int getNotConsistencyPruningEvent(Var var) {
@@ -261,14 +262,6 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
         return notSat;
     }
 
-    @Override public void removeConstraint() {
-
-        for (Constraint cc : listOfC)
-            for (Var V : cc.arguments())
-                V.removeConstraint(this);
-
-    }
-
     @Override public boolean satisfied() {
         boolean sat = false;
 
@@ -292,14 +285,6 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
                 result.append(", ");
         }
         return result.toString();
-    }
-
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            for (Constraint c : listOfC)
-                c.increaseWeight();
-        }
     }
 
 }

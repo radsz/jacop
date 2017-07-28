@@ -35,7 +35,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 
 /**
  * If both a and b are equal 1 then result variable is equal 1 too. Otherwise, result variable
@@ -58,13 +57,6 @@ public class AndBoolSimple extends PrimitiveConstraint {
      * It specifies variable result, storing the result of and function performed a list of variables.
      */
     public IntVar result;
-
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"a", "b", "result"};
-
 
     /**
      * It constructs AndBoolSimple.
@@ -92,17 +84,6 @@ public class AndBoolSimple extends PrimitiveConstraint {
 
         setScope(a, b, result);
 
-    }
-
-    // registers the constraint in the constraint store
-    @Override public void impose(Store store) {
-
-        a.putModelConstraint(this, getConsistencyPruningEvent(a));
-        b.putModelConstraint(this, getConsistencyPruningEvent(b));
-        result.putModelConstraint(this, getConsistencyPruningEvent(result));
-
-        store.addChanged(this);
-        store.countConstraint();
     }
 
     @Override public void include(Store store) {
@@ -149,12 +130,6 @@ public class AndBoolSimple extends PrimitiveConstraint {
         return ((result.min() == 1 && (a.max() == 0 || b.max() == 0)) || (result.max() == 0 && a.min() == 1 && b.min() == 1));
     }
 
-    @Override public void removeConstraint() {
-        a.removeConstraint(this);
-        b.removeConstraint(this);
-        result.removeConstraint(this);
-    }
-
     @Override public String toString() {
 
         StringBuffer resultString = new StringBuffer(id());
@@ -179,55 +154,20 @@ public class AndBoolSimple extends PrimitiveConstraint {
         return null;
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
-        return IntDomain.BOUND;
+    @Override protected int getDefaultNestedConsistencyPruningEvent() {
+        return IntDomain.ANY;
     }
 
-    @Override public int getNestedPruningEvent(Var var, boolean mode) {
-
-        // If consistency function mode
-        if (mode) {
-            if (consistencyPruningEvents != null) {
-                Integer possibleEvent = consistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return IntDomain.ANY;
-        }
-        // If notConsistency function mode
-        else {
-            if (notConsistencyPruningEvents != null) {
-                Integer possibleEvent = notConsistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return IntDomain.GROUND;
-        }
-    }
-
-    @Override public int getNotConsistencyPruningEvent(Var var) {
-
-        // If notConsistency function mode
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
         return IntDomain.GROUND;
     }
 
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            result.weight++;
-            a.weight++;
-            b.weight++;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
+        return IntDomain.BOUND;
     }
+
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
+        return IntDomain.GROUND;
+    }
+
 }

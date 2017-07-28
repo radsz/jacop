@@ -30,8 +30,6 @@
 
 package org.jacop.set.constraints;
 
-import java.util.ArrayList;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.Constraint;
@@ -40,7 +38,6 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.ValueEnumeration;
-import org.jacop.core.Var;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
@@ -78,12 +75,6 @@ public class Lex extends Constraint {
      * It specifies if the relation is strict or not.
      */
     public boolean strict = true;
-
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"a", "b"};
 
     protected int inSupport;
     protected int inclusionLevel = -1;
@@ -130,21 +121,6 @@ public class Lex extends Constraint {
     }
     
     @Override public void consistency(Store store) {
-
-	    /*
-    StringBuffer before = new StringBuffer( toString() );
-
-		System.out.println("Lex<<" + before.toString() );
-		// Lex<<Lex(list[0]={{ 1 }}, list[1]::{{{ 2 }}..{ 0 2 }}[card={1..2}])
-		
-		if (a.domain.glb().eq(new IntervalDomain(1, 1)) 
-			&& b.domain.lub().eq(new IntervalDomain(0, 1)) 
-			&& a.domain.lub().eq(new IntervalDomain(0, 1))
-			&& b.domain.glb().eq(new IntervalDomain(1, 1)) )
-				System.out.println("bug.");
-
-		try {
-		*/
 
         if (strict) {
 
@@ -506,54 +482,26 @@ public class Lex extends Constraint {
 
         }
 
-		/*
-		}
-		catch(FailException ex) {
-
-			System.out.println("BeforeFail " + before.toString() );
-			System.out.println("AfterFail  " + toString() );
-			throw ex;
-		}
-		finally {
-
-//			if (!before.toString().equals(toString())) {
-				System.out.println("Lex<<" + before.toString() );
-				System.out.println("Lex>>" + toString() );
-//			}
-
-		}
-		*/
-
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return SetDomain.ANY;
     }
 
 
     @Override public void impose(Store store) {
 
+        super.impose(store);
+
         store.registerRemoveLevelListener(this);
         smallerDifference = new TimeStamp<IntDomain>(store, a.domain.lub().subtract(b.domain.glb()));
         inDifference = new TimeStamp<IntDomain>(store, b.domain.lub().subtract(a.domain.glb()));
-
-        a.putModelConstraint(this, getConsistencyPruningEvent(a));
-        b.putModelConstraint(this, getConsistencyPruningEvent(b));
 
         assert (!a.domain.lub().contains(Integer.MIN_VALUE)) : "Lex constraint does not allow Integer.MIN_VALUE in the domain";
         assert (!b.domain.lub().contains(Integer.MIN_VALUE)) : "Lex constraint does not allow Integer.MIN_VALUE in the domain";
 
         inSupport = Integer.MIN_VALUE;
 
-        store.addChanged(this);
-        store.countConstraint();
     }
 
     @Override public void removeLevel(int level) {
@@ -563,21 +511,6 @@ public class Lex extends Constraint {
             smallerElLevel = -1;
     }
 
-    @Override public void removeConstraint() {
-
-        a.removeConstraint(this);
-        b.removeConstraint(this);
-
-    }
-
-    @Override public boolean satisfied() {
-
-        // FIXME,
-        // create function based on the counter of grounded variables.
-
-        return false;
-    }
-
     @Override public String toString() {
 
         StringBuffer result = new StringBuffer();
@@ -585,15 +518,6 @@ public class Lex extends Constraint {
         result.append(a).append(", ").append(b);
         result.append(")");
         return result.toString();
-
-    }
-
-    @Override public void increaseWeight() {
-
-        if (increaseWeight) {
-            a.weight++;
-            b.weight++;
-        }
 
     }
 

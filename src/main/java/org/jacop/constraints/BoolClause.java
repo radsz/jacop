@@ -67,12 +67,6 @@ public class BoolClause extends PrimitiveConstraint {
     final int lx, ly;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as 
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"x", "y"};
-
-    /**
      * Defines first position of the variable that is not ground to 0 (positionX) or 0 (positionY).
      */
     private TimeStamp<Integer> positionX;
@@ -147,48 +141,20 @@ public class BoolClause extends PrimitiveConstraint {
         return null;
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
-        return IntDomain.BOUND;
+    @Override protected int getDefaultNestedConsistencyPruningEvent() {
+        return IntDomain.ANY;
     }
 
-    @Override public int getNotConsistencyPruningEvent(Var var) {
-
-        // If notConsistency function mode
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
         return IntDomain.GROUND;
     }
 
-    @Override public int getNestedPruningEvent(Var var, boolean mode) {
+    @Override public int getDefaultConsistencyPruningEvent() {
+        return IntDomain.BOUND;
+    }
 
-        // If consistency function mode
-        if (mode) {
-            if (consistencyPruningEvents != null) {
-                Integer possibleEvent = consistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return IntDomain.ANY;
-        }
-        // If notConsistency function mode
-        else {
-            if (notConsistencyPruningEvents != null) {
-                Integer possibleEvent = notConsistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return IntDomain.GROUND;
-        }
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
+        return IntDomain.GROUND;
     }
 
 
@@ -198,14 +164,7 @@ public class BoolClause extends PrimitiveConstraint {
         positionX = new TimeStamp<Integer>(store, 0);
         positionY = new TimeStamp<Integer>(store, 0);
 
-        for (Var V : x)
-            V.putModelConstraint(this, getConsistencyPruningEvent(V));
-        for (Var V : y)
-            V.putModelConstraint(this, getConsistencyPruningEvent(V));
-
-        store.addChanged(this);
-        store.countConstraint();
-
+        super.impose(store);
     }
 
     @Override public void include(Store store) {
@@ -338,15 +297,6 @@ public class BoolClause extends PrimitiveConstraint {
             return false;
     }
 
-    @Override public void removeConstraint() {
-
-        for (int i = 0; i < lx; i++)
-            x[i].removeConstraint(this);
-        for (int i = 0; i < ly; i++)
-            y[i].removeConstraint(this);
-
-    }
-
     @Override public String toString() {
 
         StringBuffer resultString = new StringBuffer(id());
@@ -366,15 +316,6 @@ public class BoolClause extends PrimitiveConstraint {
         }
         resultString.append("])");
         return resultString.toString();
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            for (Var v : x)
-                v.weight++;
-            for (Var v : y)
-                v.weight++;
-        }
     }
 
 }

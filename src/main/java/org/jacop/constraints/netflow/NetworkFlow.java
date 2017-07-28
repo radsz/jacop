@@ -140,6 +140,10 @@ public class NetworkFlow extends Constraint implements UsesQueueVariable {
         return map.get(var).getPruningEvent(var);
     }
 
+    @Override public int getDefaultConsistencyPruningEvent() {
+        throw new IllegalStateException("Not yet implemented as more precise variant exists.");
+    }
+
     @Override public void impose(Store store) {
 
         if (costVariable == null) {

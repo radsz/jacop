@@ -423,13 +423,6 @@ public abstract class ExampleFD {
 
         }
 
-        // System.out.println(search.noGoodsVariables);
-        // System.out.println(search.noGoodsValues);
-        // System.out.println(store.watchedConstraints);
-
-        // store.toXCSP2_0();
-        // store.finalizeXCSP2_0(-1, "./", "restarts.xml");
-
         System.out.println();
         System.out.print(nodes + "\t");
         System.out.print(decisions + "\t");

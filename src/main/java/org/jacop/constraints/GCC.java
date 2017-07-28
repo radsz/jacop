@@ -137,12 +137,6 @@ public class GCC extends Constraint implements UsesQueueVariable {
      */
     public IntVar[] counters;
 
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"x", "counters"};
-
     /**It constructs global cardinality constraint.
      * @param x variables which values are counted.
      * @param counters variables which count the values.
@@ -450,13 +444,7 @@ public class GCC extends Constraint implements UsesQueueVariable {
         return true;
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-        // If consistency function mode
-        if (pruningConsistencyEvents != null) {
-            Integer possibleEvent = pruningConsistencyEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
     }
 
@@ -508,15 +496,8 @@ public class GCC extends Constraint implements UsesQueueVariable {
         for (i = 0; i < ySize; i++)
             this.yDomain[i] = new BoundDomain(counters[i].min(), counters[i].max());
 
-        // add the events to the constraint
-        for (i = 0; i < xSize; i++)
-            x[i].putModelConstraint(this, getConsistencyPruningEvent(x[i]));
+        super.impose(store);
 
-        for (i = 0; i < ySize; i++)
-            counters[i].putModelConstraint(this, getConsistencyPruningEvent(counters[i]));
-
-        store.addChanged(this);
-        store.countConstraint();
     }
 
     @Override public void queueVariable(int level, Var var) {
@@ -525,13 +506,6 @@ public class GCC extends Constraint implements UsesQueueVariable {
 
         // Fix suggested by Radek: the queueVariable function should store the variables that are changing in a HashSet
         this.changedVariables.add(var);
-    }
-
-    @Override public void removeConstraint() {
-        for (Var xVar : this.x)
-            xVar.removeConstraint(this);
-        for (Var counter : this.counters)
-            counter.removeConstraint(this);
     }
 
     @Override public boolean satisfied() {
@@ -1276,13 +1250,6 @@ public class GCC extends Constraint implements UsesQueueVariable {
             super(min, max);
             this.twin = twin;
         }
-    }
-
-    @Override public void increaseWeight() {
-        for (Var xVar : x)
-            xVar.weight++;
-        for (Var y : counters)
-            y.weight++;
     }
 
     protected int findPosition(int value, int[] values) {

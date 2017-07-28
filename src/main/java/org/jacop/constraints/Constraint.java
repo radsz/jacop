@@ -71,6 +71,10 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
         this.scope = Collections.unmodifiableSet( new HashSet<>( Arrays.asList( variables ) ) );
     }
 
+    protected void setScope(Var[]... variables) {
+        setScope( Arrays.stream(variables).map(Arrays::stream).flatMap( i -> i));
+    }
+
     protected void setScope(Stream<Var> scope) {
         setScope(scope.toArray(Var[]::new));
     }
@@ -119,7 +123,24 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
      * @return it returns the int code of the pruning event (GROUND, BOUND, ANY, NONE)
      */
 
-    public abstract int getConsistencyPruningEvent(Var var);
+    public int getConsistencyPruningEvent(Var var) {
+
+        // If consistency function mode
+        if (consistencyPruningEvents != null) {
+            Integer possibleEvent = consistencyPruningEvents.get(var);
+            if (possibleEvent != null)
+                return possibleEvent;
+        }
+        return getDefaultConsistencyPruningEvent();
+    }
+
+    public abstract int getDefaultConsistencyPruningEvent();
+/*
+    {
+        throw new IllegalStateException("Not implemented as more precise variants exist.");
+    }
+*/
+
 
     /**
      * It gives the id string of a constraint.
@@ -133,7 +154,13 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
      * It imposes the constraint in a given store.
      * @param store the constraint store to which the constraint is imposed to.
      */
-    public abstract void impose(Store store);
+    public void impose(Store store) {
+
+        arguments().stream().forEach( i -> i.putModelConstraint(this, getConsistencyPruningEvent(i)));
+        store.addChanged(this);
+        store.countConstraint();
+
+    }
 
     /**
      * It imposes the constraint and adjusts the queue index.
@@ -163,14 +190,18 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     /**
      * It removes the constraint by removing this constraint from all variables.
      */
-    public abstract void removeConstraint();
+    public void removeConstraint() {
+        arguments().stream().forEach( i -> i.removeConstraint(this));
+    };
 
     /**
      * It checks if the constraint is satisfied. If this function is incorrectly
      * implemented a constraint may not be satisfied in a solution.
      * @return true if the constraint is for certain satisfied, false otherwise.
      */
-    public abstract boolean satisfied();
+    public boolean satisfied() {
+        return ! arguments().stream().filter( i -> !i.singleton()).findFirst().isPresent();
+    };
 
     /**
      * It produces a string representation of a constraint state.
@@ -218,7 +249,10 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
      *
      */
 
-    public abstract void increaseWeight();
+    public void increaseWeight() {
+        if (increaseWeight)
+            arguments().stream().forEach( i -> increaseWeight());
+    };
 
 
     /**

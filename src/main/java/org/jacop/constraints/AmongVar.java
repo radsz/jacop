@@ -102,12 +102,6 @@ public class AmongVar extends Constraint implements UsesQueueVariable {
     public IntVar n;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"listOfX", "listOfY", "n"};
-
-    /**
      * It constructs an AmongVar constraint.
      * @param listOfX the list of variables whose equality to other set of variables we count
      * @param listOfY the list of variable to which equality is counted.
@@ -146,9 +140,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable {
      * @param n how many variables from list x are equal to at least one variable from list y.
      */
     public AmongVar(ArrayList<IntVar> listOfX, ArrayList<IntVar> listOfY, IntVar n) {
-
         this(listOfX.toArray(new IntVar[listOfX.size()]), listOfY.toArray(new IntVar[listOfY.size()]), n);
-
     }
 
     @Override public void removeLevel(int level) {
@@ -1082,13 +1074,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable {
         }
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-        //		 If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.ANY;
     }
 
@@ -1109,7 +1095,6 @@ public class AmongVar extends Constraint implements UsesQueueVariable {
 
             Integer varPosition = xIndex.put(x, i);
             if (varPosition == null) {
-                x.putConstraint(this);
                 // xIndex.put(x, i);
                 if (x.singleton())
                     gx++;
@@ -1125,15 +1110,12 @@ public class AmongVar extends Constraint implements UsesQueueVariable {
 
             Integer varPosition = yIndex.put(y, i);
             if (varPosition == null) {
-                y.putConstraint(this);
                 variableQueueY.add(i);
                 // yIndex.put(y, i);
             } else {
                 throw new RuntimeException("ERROR: Constraint " + toString() + " must have different variables on the list");
             }
         }
-
-        n.putConstraint(this);
 
         lbS = new MutableDomain(store);
         futureLbS = new MutableDomain(store);
@@ -1144,11 +1126,9 @@ public class AmongVar extends Constraint implements UsesQueueVariable {
         xGrounded = new TimeStamp<Integer>(store, gx);
         yGrounded = new TimeStamp<Integer>(store, 0);
 
-        store.addChanged(this);
-        store.countConstraint();
-
         store.raiseLevelBeforeConsistency = true;
 
+        super.impose(store);
 
     }
 
@@ -1183,13 +1163,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable {
             System.out.println("..................................");
         }
 
-        for (Var var : listOfX)
-            var.removeConstraint(this);
-
-        for (Var var : listOfY)
-            var.removeConstraint(this);
-
-        n.removeConstraint(this);
+        super.removeConstraint();
 
         this.variableQueueY.clear();
 
@@ -1239,16 +1213,6 @@ public class AmongVar extends Constraint implements UsesQueueVariable {
 
         return result.toString();
 
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            n.weight++;
-            for (Var v : listOfX)
-                v.weight++;
-            for (Var v : listOfY)
-                v.weight++;
-        }
     }
 
 }

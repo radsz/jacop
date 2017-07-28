@@ -63,12 +63,6 @@ public class Diff2 extends Diff {
     public int[] exclusiveList = new int[0];
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"rectangles", "exclusiveList", "doProfile"};
-
-    /**
      * Conditional Diff2. The rectangles that are specified on the list
      * Exclusive list is specified contains pairs of rectangles
      * that are excluded from checking that they must be non-overlapping.
@@ -102,6 +96,8 @@ public class Diff2 extends Diff {
         this.exclusiveList = new int[exclusiveList.length];
         System.arraycopy(exclusiveList, 0, this.exclusiveList, 0, exclusiveList.length);
 
+        setScope(Rectangle.getStream(this.rectangles));
+
     }
 
     /**
@@ -129,6 +125,7 @@ public class Diff2 extends Diff {
         numberArgs += this.rectangles.length * 4;
         numberId = idNumber.incrementAndGet();
 
+        setScope(rectangles.stream().map( i -> i.stream() ).flatMap( i -> i));
     }
 
     /**
@@ -178,6 +175,8 @@ public class Diff2 extends Diff {
         numberArgs += this.rectangles.length * 4;
         numberId = idNumber.incrementAndGet();
 
+        setScope(origin1, origin2, length1, length2);
+
     }
 
     /**
@@ -207,6 +206,8 @@ public class Diff2 extends Diff {
         numberArgs += this.rectangles.length * 4;
         numberId = idNumber.incrementAndGet();
 
+        setScope(Rectangle.getStream(this.rectangles));
+
     }
 
     /**
@@ -227,13 +228,13 @@ public class Diff2 extends Diff {
      * specifies that rectangles 1 and 3 as well as 3 and 4 can overlap each
      * other.
      *
-     * @param rect  - list of rectangles, each rectangle represented by a list of variables.
+     * @param rectangles  - list of rectangles, each rectangle represented by a list of variables.
      * @param exclusiveList - list of rectangles pairs which can overlap.
      */
-    public Diff2(ArrayList<ArrayList<IntVar>> rect, ArrayList<ArrayList<Integer>> exclusiveList) {
+    public Diff2(ArrayList<ArrayList<IntVar>> rectangles, ArrayList<ArrayList<Integer>> exclusiveList) {
 
         queueIndex = 2;
-        this.rectangles = Rectangle.toArrayOf2DRectangles(rect);
+        this.rectangles = Rectangle.toArrayOf2DRectangles(rectangles);
         numberArgs += this.rectangles.length * 4;
         numberId = idNumber.incrementAndGet();
 
@@ -248,6 +249,8 @@ public class Diff2 extends Diff {
         this.exclusiveList = new int[list.size()];
         for (int i = 0; i < list.size(); i++)
             this.exclusiveList[i] = list.get(i);
+
+        setScope(rectangles.stream().map( i -> i.stream() ).flatMap( i -> i));
 
     }
 
@@ -279,6 +282,8 @@ public class Diff2 extends Diff {
         this.exclusiveList = new int[list.size()];
         for (int i = 0; i < list.size(); i++)
             this.exclusiveList[i] = list.get(i);
+
+        setScope(Rectangle.getStream(this.rectangles));
 
     }
 

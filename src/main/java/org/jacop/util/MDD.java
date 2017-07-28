@@ -103,13 +103,6 @@ public class MDD {
     public final static int START_SIZE = 1000;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"vars", "diagram", "domainLimits"};
-
-
-    /**
      * It creates an MDD. Please note that diagram argument
      * which is potentially a very large array and can be
      * used across many constraints is not copied by the

@@ -67,12 +67,6 @@ public class In extends PrimitiveConstraint {
     private IntDomain DomComplement;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"x", "dom"};
-
-    /**
      * It constructs an In constraint to restrict the domain of the variable.
      * @param x variable x for which the restriction is applied.
      * @param dom the domain to which the variables domain is restricted.
@@ -99,38 +93,13 @@ public class In extends PrimitiveConstraint {
         removeConstraint();
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
 
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return Domain.NONE;
-    }
-
-    @Override public int getNotConsistencyPruningEvent(Var var) {
-
-        // If notConsistency function mode
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
-        return Domain.NONE;
-    }
-
-    @Override public void impose(Store store) {
-        x.putModelConstraint(this, getConsistencyPruningEvent(x));
-        store.addChanged(this);
-        store.countConstraint();
     }
 
     @Override public void notConsistency(Store store) {
-
         x.domain.in(store.level, x, DomComplement);
-
     }
 
     @Override public boolean notSatisfied() {
@@ -138,37 +107,22 @@ public class In extends PrimitiveConstraint {
         // !dom.contains(x.domain);
     }
 
-    @Override public void removeConstraint() {
-        x.removeConstraint(this);
-    }
-
     @Override public boolean satisfied() {
         return //x.singleton() &&
             dom.contains(x.domain);
     }
 
-    @Override public int getNestedPruningEvent(Var var, boolean mode) {
-
-        // If consistency function mode
-        if (mode) {
-            if (consistencyPruningEvents != null) {
-                Integer possibleEvent = consistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return IntDomain.ANY;
-        }
-        // If notConsistency function mode
-        else {
-            if (notConsistencyPruningEvents != null) {
-                Integer possibleEvent = notConsistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return IntDomain.ANY;
-        }
+    @Override protected int getDefaultNestedConsistencyPruningEvent() {
+        return IntDomain.ANY;
     }
 
+    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
+        return IntDomain.ANY;
+    }
+
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
+        return Domain.NONE;
+    }
 
     @Override public String toString() {
         return id() + " : In(" + x + ", " + dom + " )";
@@ -188,12 +142,6 @@ public class In extends PrimitiveConstraint {
     }
 
     @Override public void supplyGuideFeedback(boolean feedback) {
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            x.weight++;
-        }
     }
 
 }

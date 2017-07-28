@@ -75,12 +75,8 @@ public class XorBool extends PrimitiveConstraint {
     final int l;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"x", "y"};
-
-    /** It constructs constraint (x_0 xor x_1 xor ... xor x_n ) {@literal <=>} y.
+     * It constructs constraint (x_0 xor x_1 xor ... xor x_n ) {@literal <=>} y.
+     *
      * @param x variables x.
      * @param y variable y.
      */
@@ -94,8 +90,8 @@ public class XorBool extends PrimitiveConstraint {
         this.l = x.length;
         numberArgs = l + 1;
 
-	this.x = new IntVar[x.length];
-	System.arraycopy(x, 0, this.x, 0, x.length);
+        this.x = new IntVar[x.length];
+        System.arraycopy(x, 0, this.x, 0, x.length);
         this.y = y;
 
         assert (checkInvariants() == null) : checkInvariants();
@@ -149,18 +145,18 @@ public class XorBool extends PrimitiveConstraint {
                     nonGround = e;
 
             if (numberOnes + numberZeros == l)
-	        if ((numberOnes & 1) == 1)
+                if ((numberOnes & 1) == 1)
                     y.domain.in(store.level, y, 1, 1);
                 else
                     y.domain.in(store.level, y, 0, 0);
             else if (numberOnes + numberZeros == l - 1)
                 if (y.min() == 1)
-		    if ((numberOnes & 1) == 1)
+                    if ((numberOnes & 1) == 1)
                         nonGround.domain.in(store.level, nonGround, 0, 0);
                     else
                         nonGround.domain.in(store.level, nonGround, 1, 1);
                 else if (y.max() == 0)
-		    if ((numberOnes & 1) == 1)
+                    if ((numberOnes & 1) == 1)
                         nonGround.domain.in(store.level, nonGround, 1, 1);
                     else
                         nonGround.domain.in(store.level, nonGround, 0, 0);
@@ -191,18 +187,18 @@ public class XorBool extends PrimitiveConstraint {
                     nonGround = e;
 
             if (numberOnes + numberZeros == l)
-	        if ((numberOnes & 1) == 1)
+                if ((numberOnes & 1) == 1)
                     y.domain.in(store.level, y, 0, 0);
                 else
                     y.domain.in(store.level, y, 1, 1);
             else if (numberOnes + numberZeros == l - 1)
                 if (y.min() == 1)
-		    if ((numberOnes & 1) == 1)
+                    if ((numberOnes & 1) == 1)
                         nonGround.domain.in(store.level, nonGround, 1, 1);
                     else
                         nonGround.domain.in(store.level, nonGround, 0, 0);
                 else if (y.max() == 0)
-		    if ((numberOnes & 1) == 1)
+                    if ((numberOnes & 1) == 1)
                         nonGround.domain.in(store.level, nonGround, 0, 0);
                     else
                         nonGround.domain.in(store.level, nonGround, 1, 1);
@@ -233,37 +229,12 @@ public class XorBool extends PrimitiveConstraint {
         }
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
-        return IntDomain.BOUND;
-    }
-
-    @Override public int getNotConsistencyPruningEvent(Var var) {
-
-        // If notConsistency function mode
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
         return IntDomain.GROUND;
     }
 
-    @Override public void impose(Store store) {
-
-        for (IntVar e : x)
-            e.putModelConstraint(this, getConsistencyPruningEvent(e));
-
-        y.putModelConstraint(this, getConsistencyPruningEvent(y));
-
-        store.addChanged(this);
-        store.countConstraint();
+    @Override public int getDefaultConsistencyPruningEvent() {
+        return IntDomain.BOUND;
     }
 
     @Override public boolean satisfied() {
@@ -309,22 +280,9 @@ public class XorBool extends PrimitiveConstraint {
         return false;
     }
 
-    @Override public void removeConstraint() {
-        for (IntVar e : x)
-            e.removeConstraint(this);
-
-        y.removeConstraint(this);
-    }
-
     @Override public String toString() {
 
         return id() + " : XorBool( (" + java.util.Arrays.asList(x) + ") <=>  " + y + ")";
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight)
-            for (IntVar e : x)
-                e.weight++;
     }
 
 }

@@ -37,7 +37,6 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 
 /**
  * Constraint X div Y #= Z
@@ -64,13 +63,6 @@ public class XdivYeqZ extends Constraint {
      * It specifies variable z in constraint x / y = z.
      */
     public IntVar z;
-
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"x", "y", "z"};
-
 
     /**
      * It constructs a constraint X div Y = Z.
@@ -150,29 +142,8 @@ public class XdivYeqZ extends Constraint {
 
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
-    }
-
-    @Override public void impose(Store store) {
-        z.putModelConstraint(this, getConsistencyPruningEvent(z));
-        y.putModelConstraint(this, getConsistencyPruningEvent(y));
-        x.putModelConstraint(this, getConsistencyPruningEvent(x));
-        store.addChanged(this);
-        store.countConstraint();
-    }
-
-    @Override public void removeConstraint() {
-        z.removeConstraint(this);
-        y.removeConstraint(this);
-        x.removeConstraint(this);
     }
 
     @Override public boolean satisfied() {
@@ -184,14 +155,6 @@ public class XdivYeqZ extends Constraint {
     @Override public String toString() {
 
         return id() + " : XdivYeqZ(" + x + ", " + y + ", " + z + " )";
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            z.weight++;
-            y.weight++;
-            x.weight++;
-        }
     }
 
     private void checkForOverflow() {

@@ -69,13 +69,6 @@ public class PplusCeqR extends PrimitiveConstraint {
      */
     public FloatVar r;
 
-
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as 
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"p", "c", "r"};
-
     /** It constructs constraint P+C=R.
      * @param p variable p.
      * @param c constant c.
@@ -111,57 +104,20 @@ public class PplusCeqR extends PrimitiveConstraint {
 
     }
 
-    @Override public int getNestedPruningEvent(Var var, boolean mode) {
-
-        // If consistency function mode
-        if (mode) {
-            if (consistencyPruningEvents != null) {
-                Integer possibleEvent = consistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return IntDomain.GROUND;
-        }
-        // If notConsistency function mode
-        else {
-            if (notConsistencyPruningEvents != null) {
-                Integer possibleEvent = notConsistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return IntDomain.BOUND;
-        }
-    }
-
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
-        return IntDomain.BOUND;
-
-    }
-
-    @Override public int getNotConsistencyPruningEvent(Var var) {
-
-        // If notConsistency function mode
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override protected int getDefaultNestedConsistencyPruningEvent() {
         return IntDomain.GROUND;
     }
 
-    @Override public void impose(Store store) {
+    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
+        return IntDomain.BOUND;
+    }
 
-        p.putModelConstraint(this, getConsistencyPruningEvent(p));
-        r.putModelConstraint(this, getConsistencyPruningEvent(r));
-        store.addChanged(this);
-        store.countConstraint();
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
+        return IntDomain.GROUND;
+    }
+
+    @Override public int getDefaultConsistencyPruningEvent() {
+        return IntDomain.BOUND;
     }
 
     @Override public void notConsistency(Store store) {
@@ -185,11 +141,6 @@ public class PplusCeqR extends PrimitiveConstraint {
         return (pDom.max() + c < rDom.min() || pDom.min() + c > rDom.max());
     }
 
-    @Override public void removeConstraint() {
-        p.removeConstraint(this);
-        r.removeConstraint(this);
-    }
-
     @Override public boolean satisfied() {
 
         return (p.singleton() && r.singleton() && r.value() - p.value() - c < FloatDomain.epsilon(r.value() - p.value() - c));
@@ -199,13 +150,6 @@ public class PplusCeqR extends PrimitiveConstraint {
     @Override public String toString() {
 
         return id() + " : PplusCeqR(" + p + ", " + c + ", " + r + " )";
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            p.weight++;
-            r.weight++;
-        }
     }
 
     public FloatVar derivative(Store store, FloatVar f, java.util.Set<FloatVar> vars, FloatVar x) {

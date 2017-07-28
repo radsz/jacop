@@ -30,7 +30,6 @@
 
 package org.jacop.constraints;
 
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Store;
@@ -56,13 +55,6 @@ public class Not extends PrimitiveConstraint implements UsesQueueVariable {
      */
     public PrimitiveConstraint c;
 
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"c"};
-
-
     final public QueueForward<PrimitiveConstraint> queueForward;
 
     /**
@@ -73,13 +65,8 @@ public class Not extends PrimitiveConstraint implements UsesQueueVariable {
         numberId = idNumber.incrementAndGet();
         this.c = c;
         numberArgs += c.numberArgs();
-        this.queueForward = new QueueForward<PrimitiveConstraint>(c, arguments());
-    }
-
-    @Override public Set<Var> arguments() {
-
-        return c.arguments();
-
+        setScope(c.arguments());
+        this.queueForward = new QueueForward<>(c, arguments());
     }
 
     @Override public void consistency(Store store) {
@@ -92,6 +79,10 @@ public class Not extends PrimitiveConstraint implements UsesQueueVariable {
 
     }
 
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
+        throw new IllegalStateException("Not implemented as it delegates to internal constraint.");
+    }
+
     @Override public int getConsistencyPruningEvent(Var var) {
 
         // If consistency function mode
@@ -101,6 +92,10 @@ public class Not extends PrimitiveConstraint implements UsesQueueVariable {
                 return possibleEvent;
         }
         return c.getNestedPruningEvent(var, false);
+    }
+
+    @Override public int getDefaultConsistencyPruningEvent() {
+        throw new IllegalStateException("Not implemented as it delegates to internal constraint.");
     }
 
 
@@ -145,13 +140,6 @@ public class Not extends PrimitiveConstraint implements UsesQueueVariable {
         return c.satisfied();
     }
 
-    @Override public void removeConstraint() {
-
-        for (Var V : c.arguments())
-            V.removeConstraint(this);
-
-    }
-
     @Override public boolean satisfied() {
         return c.notSatisfied();
     }
@@ -160,16 +148,8 @@ public class Not extends PrimitiveConstraint implements UsesQueueVariable {
         return id() + " : Not( " + c + ")";
     }
 
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            c.increaseWeight();
-        }
-    }
-
     @Override public void queueVariable(int level, Var variable) {
-
         queueForward.queueForward(level, variable);
-
     }
 
 }

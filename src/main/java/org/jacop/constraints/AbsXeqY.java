@@ -73,12 +73,6 @@ public class AbsXeqY extends PrimitiveConstraint {
     public IntVar y;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"x", "y"};
-
-    /**
      * It constructs |X| = Y constraints.
      * @param x variable X1
      * @param y variable Y
@@ -278,65 +272,26 @@ public class AbsXeqY extends PrimitiveConstraint {
 
     }
 
-
-    @Override public int getNestedPruningEvent(Var var, boolean mode) {
-
-        // If consistency function mode
-        if (mode) {
-            if (consistencyPruningEvents != null) {
-                Integer possibleEvent = consistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-
-            if (domainConsistent)
-                return IntDomain.ANY;
-            else
-                return IntDomain.BOUND;
-        }
-        // If notConsistency function mode
-        else {
-            if (notConsistencyPruningEvents != null) {
-                Integer possibleEvent = notConsistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return IntDomain.GROUND;
-        }
-    }
-
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
-
+    @Override protected int getDefaultNestedConsistencyPruningEvent() {
         if (domainConsistent)
             return IntDomain.ANY;
         else
             return IntDomain.BOUND;
-
     }
 
-
-    @Override public int getNotConsistencyPruningEvent(Var var) {
-        // notConsistency function mode
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
         return IntDomain.GROUND;
     }
 
-    @Override public void impose(Store store) {
-        x.putModelConstraint(this, getConsistencyPruningEvent(x));
-        y.putModelConstraint(this, getConsistencyPruningEvent(y));
-        store.addChanged(this);
-        store.countConstraint();
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
+        return IntDomain.GROUND;
+    }
+
+    @Override public int getDefaultConsistencyPruningEvent() {
+        if (domainConsistent)
+            return IntDomain.ANY;
+        else
+            return IntDomain.BOUND;
     }
 
     @Override public void notConsistency(Store store) {
@@ -397,15 +352,9 @@ public class AbsXeqY extends PrimitiveConstraint {
 
     }
 
-    @Override public void removeConstraint() {
-        x.removeConstraint(this);
-        y.removeConstraint(this);
-    }
-
     @Override public boolean satisfied() {
         return x.singleton() && y.singleton() && (x.min() == y.min() || -x.min() == y.min());
     }
-
 
     @Override public String toString() {
 
@@ -415,13 +364,6 @@ public class AbsXeqY extends PrimitiveConstraint {
 
         return result.toString();
 
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            x.weight++;
-            y.weight++;
-        }
     }
 
 }

@@ -40,6 +40,7 @@ import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.util.SimpleHashSet;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Linear constraint implements the weighted summation over several
@@ -51,8 +52,10 @@ import java.util.Map;
  */
 
 public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
+
     Store store;
-    static int counter = 1;
+
+    static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * Defines relations
@@ -105,12 +108,6 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     TimeStamp<Boolean> noSat;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as 
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"list", "weights", "sum"};
-
-    /**
      * @param store current store
      * @param list variables which are being multiplied by weights.
      * @param weights weight for each variable.
@@ -144,7 +141,6 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
         commonInitialization(store, vars, ws, 0);
     }
 
-
     private void commonInitialization(Store store, FloatVar[] list, double[] weights, double sum) {
         this.store = store;
         queueIndex = 1;
@@ -153,7 +149,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
         numberArgs = (short) (list.length);
 
-        numberId = counter++;
+        numberId = idNumber.incrementAndGet();
 
         this.sum = sum;
 
@@ -363,51 +359,20 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
         }
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
     }
 
-    @Override public int getNestedPruningEvent(Var var, boolean mode) {
-
-        // If consistency function mode
-        if (mode) {
-            if (consistencyPruningEvents != null) {
-                Integer possibleEvent = consistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return IntDomain.BOUND;
-        }
-
-        // If notConsistency function mode
-        else {
-            if (notConsistencyPruningEvents != null) {
-                Integer possibleEvent = notConsistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return IntDomain.BOUND;
-        }
-
+    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
+        return IntDomain.BOUND;
     }
 
-    @Override public int getNotConsistencyPruningEvent(Var var) {
-
-        // If notConsistency function mode
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override protected int getDefaultNestedConsistencyPruningEvent() {
         return IntDomain.BOUND;
+    }
 
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
+        return IntDomain.BOUND;
     }
 
     @Override public void impose(Store store) {
@@ -619,13 +584,6 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
     }
     */
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            for (Var v : list)
-                v.weight++;
-        }
-    }
 
   static class VarWeightComparator<T extends VariableNode> implements java.util.Comparator<T>, java.io.Serializable {
 

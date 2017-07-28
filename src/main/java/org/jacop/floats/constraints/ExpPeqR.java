@@ -34,7 +34,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 
 import org.jacop.constraints.Constraint;
 
@@ -64,12 +63,6 @@ public class ExpPeqR extends Constraint {
      * It specifies a right hand variable in equality constraint. 
      */
     public FloatVar q;
-
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as 
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"p", "q"};
 
     /**
      * It constructs constraint P = Q.
@@ -146,38 +139,12 @@ public class ExpPeqR extends Constraint {
         return p.singleton() && q.singleton() && java.lang.Math.exp(p.min()) - q.max() <= FloatDomain.precision();
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.ANY;
-    }
-
-    @Override public void impose(Store store) {
-        p.putModelConstraint(this, getConsistencyPruningEvent(p));
-        q.putModelConstraint(this, getConsistencyPruningEvent(q));
-        store.addChanged(this);
-        store.countConstraint();
-    }
-
-    @Override public void removeConstraint() {
-        p.removeConstraint(this);
-        q.removeConstraint(this);
     }
 
     @Override public String toString() {
         return id() + " : ExpPeqR(" + p + ", " + q + " )";
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            p.weight++;
-            q.weight++;
-        }
     }
 
     public FloatVar derivative(Store store, FloatVar f, java.util.Set<FloatVar> vars, FloatVar x) {

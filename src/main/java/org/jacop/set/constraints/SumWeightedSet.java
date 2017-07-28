@@ -30,9 +30,7 @@
 
 package org.jacop.set.constraints;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.Constraint;
@@ -91,12 +89,6 @@ public class SumWeightedSet extends Constraint {
     HashMap<Integer, Integer> elementWeights;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"a", "elements", "weights", "totalWeight"};
-
-    /**
      * It constructs a weighted set sum constraint.
      *
      * @param a a set variable for which the weighted sum of its element is computed.
@@ -144,9 +136,7 @@ public class SumWeightedSet extends Constraint {
      * @param totalWeight integer variable containing information about total weight of the elements in set variable a.
      */
     public SumWeightedSet(SetVar a, IntVar totalWeight) {
-
         this(a, a.domain.lub().toIntArray(), a.domain.lub().toIntArray(), totalWeight);
-
     }
 
     /**
@@ -158,9 +148,7 @@ public class SumWeightedSet extends Constraint {
      * @param totalWeight integer variable containing information about total weight of the elements in set variable a.
      */
     public SumWeightedSet(SetVar a, int[] weights, IntVar totalWeight) {
-
         this(a, a.domain.lub().toIntArray(), weights, totalWeight);
-
     }
 
     // FIXME, TODO, Analyse all set constraints fixpoints.
@@ -298,16 +286,8 @@ public class SumWeightedSet extends Constraint {
             return IntDomain.ANY;
     }
 
-    @Override public void impose(Store store) {
-        totalWeight.putModelConstraint(this, getConsistencyPruningEvent(totalWeight));
-        a.putModelConstraint(this, getConsistencyPruningEvent(a));
-        store.addChanged(this);
-        store.countConstraint();
-    }
-
-    @Override public void removeConstraint() {
-        totalWeight.removeConstraint(this);
-        a.removeConstraint(this);
+    @Override public int getDefaultConsistencyPruningEvent() {
+        throw new IllegalStateException("Not implemented as more precise version exists.");
     }
 
     @Override public boolean satisfied() {
@@ -345,13 +325,6 @@ public class SumWeightedSet extends Constraint {
 	  ret.append(totalWeight.dom() + " )");
 	  return ret.toString();
 	}
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            a.weight++;
-            totalWeight.weight++;
-        }
     }
 
 }

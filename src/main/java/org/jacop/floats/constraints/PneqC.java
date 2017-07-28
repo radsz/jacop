@@ -65,12 +65,6 @@ public class PneqC extends PrimitiveConstraint {
     public FloatVar p;
 
     /**
-     * It specifies the arguments required to be saved by an PML format as well as
-     * the constructor being called to recreate an object from an PML format.
-     */
-    public static String[] pmlAttributes = {"x", "c"};
-
-    /**
      * It constructs the constraint P = C.
      * @param p variable p.
      * @param c constant c.
@@ -109,74 +103,24 @@ public class PneqC extends PrimitiveConstraint {
         return !p.domain.contains(c);
     }
 
-    @Override public int getNestedPruningEvent(Var var, boolean mode) {
-
-        // If satisfied function mode
-        if (mode) {
-            if (consistencyPruningEvents != null) {
-                Integer possibleEvent = consistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-
-            return IntDomain.ANY;
-
-        }
-        // If notSatisfied function mode
-        else {
-            if (notConsistencyPruningEvents != null) {
-                Integer possibleEvent = notConsistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return IntDomain.ANY;
-
-        }
+    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
+        return IntDomain.ANY;
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
+    @Override protected int getDefaultNestedConsistencyPruningEvent() {
+        return IntDomain.ANY;
+    }
 
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
-
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
         return Domain.NONE;
-
     }
 
-    @Override public int getNotConsistencyPruningEvent(Var var) {
-
-        // If notConsistency function mode
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return Domain.NONE;
-
-    }
-
-    @Override public void impose(Store store) {
-        p.putModelConstraint(this, getConsistencyPruningEvent(p));
-        store.addChanged(this);
-        store.countConstraint();
-    }
-
-    @Override public void removeConstraint() {
-        p.removeConstraint(this);
     }
 
     @Override public String toString() {
         return id() + " : PneqC(" + p + ", " + c + " )";
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            p.weight++;
-        }
     }
 
     /**

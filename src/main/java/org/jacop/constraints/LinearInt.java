@@ -120,13 +120,6 @@ public class LinearInt extends PrimitiveConstraint {
      */
     int sumMin, sumMax;
 
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"list", "weights", "sum"};
-
-
     protected LinearInt() {
     }
 
@@ -221,11 +214,11 @@ public class LinearInt extends PrimitiveConstraint {
         this.a = new int[size];
 
         int i = 0;
-	Set<Map.Entry<IntVar, Integer>> entries = parameters.entrySet();
+        Set<Map.Entry<IntVar, Integer>> entries = parameters.entrySet();
 
         for (Map.Entry<IntVar, Integer> e : entries) {
-	    IntVar var = e.getKey();
-	    int coeff = e.getValue();
+            IntVar var = e.getKey();
+            int coeff = e.getValue();
             if (coeff > 0) {
                 this.x[i] = var;
                 this.a[i] = coeff;
@@ -234,8 +227,8 @@ public class LinearInt extends PrimitiveConstraint {
         }
         pos = i;
         for (Map.Entry<IntVar, Integer> e : entries) {
-	    IntVar var = e.getKey();
-	    int coeff = e.getValue();
+            IntVar var = e.getKey();
+            int coeff = e.getValue();
             if (coeff < 0) {
                 this.x[i] = var;
                 this.a[i] = coeff;
@@ -326,55 +319,27 @@ public class LinearInt extends PrimitiveConstraint {
                             removeConstraint();
 
                     break;
-		default:
-		    throw new RuntimeException("Internal error in " + getClass().getName());
+                default:
+                    throw new RuntimeException("Internal error in " + getClass().getName());
             }
 
         } while (store.propagationHasOccurred);
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
 
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override protected int getDefaultNestedConsistencyPruningEvent() {
         return IntDomain.BOUND;
     }
 
-    @Override public int getNestedPruningEvent(Var var, boolean mode) {
-
-        // If consistency function mode
-        if (mode) {
-            if (consistencyPruningEvents != null) {
-                Integer possibleEvent = consistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return IntDomain.BOUND;
-        }
-
-        // If notConsistency function mode
-        else {
-            if (notConsistencyPruningEvents != null) {
-                Integer possibleEvent = notConsistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return IntDomain.BOUND;
-        }
+    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
+        return IntDomain.BOUND;
     }
 
-    @Override public int getNotConsistencyPruningEvent(Var var) {
+    @Override public int getDefaultConsistencyPruningEvent() {
+        return IntDomain.BOUND;
+    }
 
-        // If notConsistency function mode
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
         return IntDomain.BOUND;
     }
 
@@ -385,11 +350,8 @@ public class LinearInt extends PrimitiveConstraint {
 
         reified = false;
 
-        for (Var V : x)
-            V.putModelConstraint(this, getConsistencyPruningEvent(V));
+        super.impose(store);
 
-        store.addChanged(this);
-        store.countConstraint();
     }
 
     void computeInit() {
@@ -614,21 +576,13 @@ public class LinearInt extends PrimitiveConstraint {
         return sMin >= b;
     }
 
-    @Override public void removeConstraint() {
-        for (Var v : x)
-            v.removeConstraint(this);
-    }
 
     @Override public boolean satisfied() {
-
         return entailed(relationType);
-
     }
 
     @Override public boolean notSatisfied() {
-
         return entailed(negRel[relationType]);
-
     }
 
     private boolean entailed(int rel) {
@@ -720,21 +674,21 @@ public class LinearInt extends PrimitiveConstraint {
     void checkForOverflow() {
 
         int sMin = 0, sMax = 0;
-	int i = 0;
+        int i = 0;
         for (; i < pos; i++) {
             int n1 = Math.multiplyExact(x[i].min(), a[i]);
             int n2 = Math.multiplyExact(x[i].max(), a[i]);
 
-	    sMin = Math.addExact(sMin, n1);
-	    sMax = Math.addExact(sMax, n2);
+            sMin = Math.addExact(sMin, n1);
+            sMax = Math.addExact(sMax, n2);
         }
         for (; i < l; i++) {
             int n1 = Math.multiplyExact(x[i].max(), a[i]);
             int n2 = Math.multiplyExact(x[i].min(), a[i]);
-	    
-	    sMin = Math.addExact(sMin, n1);
-	    sMax = Math.addExact(sMax, n2);
-        }	
+
+            sMin = Math.addExact(sMin, n1);
+            sMax = Math.addExact(sMax, n2);
+        }
     }
 
     @Override public String toString() {
@@ -761,10 +715,4 @@ public class LinearInt extends PrimitiveConstraint {
 
     }
 
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            for (Var v : x)
-                v.weight++;
-        }
-    }
 }

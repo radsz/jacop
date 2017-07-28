@@ -84,12 +84,6 @@ public class ElementSet extends Constraint {
     public int indexOffset = 0;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"index", "list", "value", "indexOffset"};
-
-    /**
      * It constructs a constraint to restrict the domains of the variables index and value.
      *
      * @param value variable that is restricted to have the same elements as list[index].
@@ -191,16 +185,8 @@ public class ElementSet extends Constraint {
             return IntDomain.ANY;
     }
 
-    @Override public void impose(Store store) {
-        index.putModelConstraint(this, getConsistencyPruningEvent(index));
-        value.putModelConstraint(this, getConsistencyPruningEvent(value));
-        store.addChanged(this);
-        store.countConstraint();
-    }
-
-    @Override public void removeConstraint() {
-        index.removeConstraint(this);
-        value.removeConstraint(this);
+    @Override public int getDefaultConsistencyPruningEvent() {
+        throw new IllegalStateException("Not implemented as more precise variants exist.");
     }
 
     @Override public boolean satisfied() {
@@ -219,11 +205,6 @@ public class ElementSet extends Constraint {
         result.append(" ], ").append(value).append(" )");
 
         return result.toString();
-    }
-
-    @Override public void increaseWeight() {
-        index.weight++;
-        value.weight++;
     }
 
 }

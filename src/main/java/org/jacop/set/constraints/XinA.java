@@ -73,12 +73,6 @@ public class XinA extends PrimitiveConstraint {
     public boolean strict = false;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"x", "a", "strict"};
-
-    /**
      * It constructs an XinY constraint to restrict the domain of the variables X and Y.
      * @param x variable x that is restriction to be a subset of y.
      * @param a variable that is restricted to contain x.
@@ -146,6 +140,11 @@ public class XinA extends PrimitiveConstraint {
             return SetDomain.ANY;
     }
 
+    @Override public int getDefaultConsistencyPruningEvent() {
+        throw new IllegalStateException("Not implemented as more precise variant exists.");
+
+    }
+
     @Override public int getNotConsistencyPruningEvent(Var var) {
 
         // If notConsistency function mode
@@ -159,16 +158,6 @@ public class XinA extends PrimitiveConstraint {
             return IntDomain.GROUND;
         else
             return SetDomain.GLB;
-
-    }
-
-    @Override public void impose(Store store) {
-
-        x.putModelConstraint(this, getConsistencyPruningEvent(x));
-        a.putModelConstraint(this, getConsistencyPruningEvent(a));
-
-        store.addChanged(this);
-        store.countConstraint();
 
     }
 
@@ -189,12 +178,6 @@ public class XinA extends PrimitiveConstraint {
     @Override public boolean notSatisfied() {
 
         return !a.domain.lub().isIntersecting(x.domain);
-
-    }
-
-    @Override public void removeConstraint() {
-        x.removeConstraint(this);
-        a.removeConstraint(this);
 
     }
 
@@ -236,16 +219,13 @@ public class XinA extends PrimitiveConstraint {
         }
     }
 
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
+        throw new IllegalStateException("Not implemented as more precise variant exists.");
+    }
+
 
     @Override public String toString() {
         return id() + " : XinA(" + x + ", " + a + " )";
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            x.weight++;
-            a.weight++;
-        }
     }
 
 }

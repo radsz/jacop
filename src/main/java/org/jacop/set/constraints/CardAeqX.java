@@ -30,8 +30,6 @@
 
 package org.jacop.set.constraints;
 
-import java.util.ArrayList;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.Constraint;
@@ -62,12 +60,6 @@ public class CardAeqX extends Constraint {
      * It specifies integer variable c specifying the possible cardinality of set variable a.
      */
     public IntVar cardinality;
-
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"a", "cardinality"};
 
     /**
      * It constructs a cardinality constraint to restrict the number of elements
@@ -144,36 +136,16 @@ public class CardAeqX extends Constraint {
             return SetDomain.ANY;
     }
 
-
-    @Override public void impose(Store store) {
-
-        a.putModelConstraint(this, getConsistencyPruningEvent(a));
-        cardinality.putModelConstraint(this, getConsistencyPruningEvent(cardinality));
-
-        store.addChanged(this);
-        store.countConstraint();
-    }
-
-
-    @Override public void removeConstraint() {
-        a.removeConstraint(this);
-        cardinality.removeConstraint(this);
+    @Override public int getDefaultConsistencyPruningEvent() {
+        throw new IllegalStateException("Not implemented as more precise variant exists.");
     }
 
     @Override public boolean satisfied() {
         return (a.singleton() && cardinality.singleton() && a.domain.card().eq(cardinality.dom()));
     }
 
-
     @Override public String toString() {
         return id() + " : card(" + a + ", " + cardinality + " )";
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            a.weight++;
-            cardinality.weight++;
-        }
     }
 
 }

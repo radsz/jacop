@@ -56,12 +56,6 @@ public class Disjoint extends Diff {
     Diff2Var evalRects[];
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"rectangles", "doProfile"};
-
-    /**
      *
      * @param rectangles a list of rectangles.
      * @param doProfile should profile be computed and used.
@@ -109,6 +103,8 @@ public class Disjoint extends Diff {
         this.rectangles = Rectangle.toArrayOf2DRectangles(rectangles);
         numberArgs += this.rectangles.length * 4;
         numberId = idNumber.incrementAndGet();
+
+        setScope(Rectangle.getStream(this.rectangles));
 
     }
 
@@ -159,6 +155,7 @@ public class Disjoint extends Diff {
         numberArgs += this.rectangles.length * 4;
         numberId = idNumber.incrementAndGet();
 
+        setScope(Rectangle.getStream(this.rectangles));
     }
 
     /**
@@ -187,6 +184,8 @@ public class Disjoint extends Diff {
         this.rectangles = Rectangle.toArrayOf2DRectangles(rectangles);
         numberArgs += this.rectangles.length * 4;
         numberId = idNumber.incrementAndGet();
+
+        setScope(Rectangle.getStream(this.rectangles));
 
     }
 

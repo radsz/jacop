@@ -30,15 +30,10 @@
 
 package org.jacop.core;
 
-import java.util.ArrayList;
+import org.jacop.constraints.Constraint;
+
 import java.util.Iterator;
 import java.util.Random;
-import java.util.regex.Pattern;
-
-import javax.xml.transform.sax.TransformerHandler;
-
-import org.jacop.constraints.Constraint;
-import org.xml.sax.SAXException;
 
 //TODO, test default function which use sparse (dense) representation. Default code if
 //domain is neither Interval nor Bound domain.
@@ -80,96 +75,8 @@ public class IntervalDomain extends IntDomain implements Cloneable {
         // throw new RuntimeException("Do not use.");
     }
 
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {};
-
-    // TODO, Move all XML code to Aspect for XML.
-
-    /**
-     * It writes the content of this object as the content of XML
-     * element so later it can be used to restore the object from
-     * XML. It is done after restoration of the part of the object
-     * specified in xmlAttributes.
-     *
-     * @param tf a place to write the content of the object.
-     * @throws SAXException exception from package org.xml.sax
-     */
-    public void toXML(TransformerHandler tf) throws SAXException {
-
-        StringBuffer result = new StringBuffer("");
-
-        if (!singleton()) {
-            for (int e = 0; e < size; e++) {
-                result.append(intervals[e]);
-                if (e + 1 < size)
-                    result.append(", ");
-            }
-        } else
-            result.append(intervals[0]);
-
-        tf.characters(result.toString().toCharArray(), 0, result.length());
-
-    }
-
     public IntDomain previousDomain() {
         return previousDomain;
-    }
-
-    /**
-     *
-     * It updates an object of type IntervalDomain with the information
-     * stored in the string.
-     *
-     * @param object the object to be updated.
-     * @param content the information used for update.
-     */
-    public static void fromXML(IntervalDomain object, String content) {
-        // TODO, Move all XML code to Aspect for XML.
-        Pattern pat = Pattern.compile(",");
-        String[] result = pat.split(content);
-
-        ArrayList<Interval> intervals = new ArrayList<Interval>(result.length);
-
-        for (String element : result) {
-            Pattern dotSplit = Pattern.compile("\\.");
-            String[] oneElement = dotSplit.split(element);
-
-            Integer left = null;
-            Integer right = null;
-
-            for (String number : oneElement) {
-                try {
-                    int value = Integer.parseInt(number);
-                    if (left == null)
-                        left = value;
-                    else
-                        right = value;
-                } catch (NumberFormatException ex) {
-                }
-            }
-
-            if (left != null && right != null)
-                intervals.add(new Interval(left, right));
-            else if (left != null)
-                intervals.add(new Interval(left, left));
-
-        }
-
-        object.intervals = intervals.toArray(new Interval[intervals.size()]);
-        object.size = intervals.size();
-
-        object.searchConstraints = null;
-        object.searchConstraintsToEvaluate = 0;
-        object.previousDomain = null;
-        object.searchConstraintsCloned = false;
-
-        assert object.checkInvariants() == null : object.checkInvariants();
-
-        //	System.out.println("Next content element" + element);
-
     }
 
     /**

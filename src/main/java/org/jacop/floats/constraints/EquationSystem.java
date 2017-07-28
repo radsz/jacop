@@ -35,7 +35,6 @@ import java.util.stream.Stream;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 import org.jacop.constraints.Constraint;
 
 import org.jacop.floats.core.FloatVar;
@@ -63,29 +62,24 @@ public class EquationSystem extends Constraint {
     MultivariateIntervalNewton newton;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as 
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"f", "s"};
-
-    /**
-     * It constructs the constraint EquationSystem. 
+     * It constructs the constraint EquationSystem.
+     *
      * @param store current store
-     * @param f a variable that defines an eqation
-     * @param x  variables of eqation system
+     * @param f     a variable that defines an eqation
+     * @param x     variables of eqation system
      */
     public EquationSystem(Store store, FloatVar[] f, FloatVar[] x) {
 
-	this.f = new FloatVar[f.length];
-	System.arraycopy(f, 0, this.f, 0, f.length);
-	this.x = new FloatVar[x.length];
-	System.arraycopy(x, 0, this.x, 0, x.length);
-      
+        this.f = new FloatVar[f.length];
+        System.arraycopy(f, 0, this.f, 0, f.length);
+        this.x = new FloatVar[x.length];
+        System.arraycopy(x, 0, this.x, 0, x.length);
+
         queueIndex = 4;
 
         newton = new MultivariateIntervalNewton(store, f, x);
 
-        setScope( Stream.concat(Arrays.stream(f), Arrays.stream(x)) );
+        setScope(Stream.concat(Arrays.stream(f), Arrays.stream(x)));
 
     }
 
@@ -104,14 +98,7 @@ public class EquationSystem extends Constraint {
             }
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
     }
 
@@ -120,11 +107,9 @@ public class EquationSystem extends Constraint {
         if (f == null)
             return;
 
-        for (Var V : f)
-            V.putModelConstraint(this, getConsistencyPruningEvent(V));
-        for (Var V : x)
-            V.putModelConstraint(this, getConsistencyPruningEvent(V));
+        super.impose(store);
 
+        // TODO, why do we call consistency of the whole store inside impose function of the constraint???
         if (!store.consistency())
             throw Store.failException;
 
@@ -132,17 +117,8 @@ public class EquationSystem extends Constraint {
         store.countConstraint();
     }
 
-    @Override public void removeConstraint() {
-        for (Var v : f)
-            v.removeConstraint(this);
-        for (Var v : x)
-            v.removeConstraint(this);
-    }
-
     @Override public boolean satisfied() {
-
         return false;
-
     }
 
     @Override public String toString() {
@@ -167,15 +143,6 @@ public class EquationSystem extends Constraint {
 
         return result.toString();
 
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            for (Var v : f)
-                v.weight++;
-            for (Var v : x)
-                v.weight++;
-        }
     }
 
 }

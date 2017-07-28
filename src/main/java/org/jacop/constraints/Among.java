@@ -86,12 +86,6 @@ public class Among extends Constraint implements UsesQueueVariable {
     private HashMap<IntVar, Integer> position;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"list", "kSet", "n"};
-
-    /**
      * It constructs an Among constraint.
      * @param list variables which are compared to Kset
      * @param kSet set of integer values against which we check if variables are equal to.
@@ -128,9 +122,7 @@ public class Among extends Constraint implements UsesQueueVariable {
      * @param n number of possible variables equal to a value from Kset.
      */
     public Among(ArrayList<IntVar> list, IntervalDomain kSet, IntVar n) {
-
         this(list.toArray(new IntVar[list.size()]), kSet, n);
-
     }
 
     @Override public void removeLevel(int level) {
@@ -273,17 +265,13 @@ public class Among extends Constraint implements UsesQueueVariable {
             System.out.println(this);
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.ANY;
     }
 
     @Override public void impose(Store store) {
+
+        super.impose(store);
 
         store.registerRemoveLevelListener(this);
         this.lowerBorder = new TimeStamp<Integer>(store, 0);
@@ -295,17 +283,12 @@ public class Among extends Constraint implements UsesQueueVariable {
         for (IntVar var : list) {
             Integer varPosition = position.put(var, pos);
             if (varPosition == null) {
-                var.putConstraint(this);
                 queueVariable(level, var);
                 pos++;
             } else {
                 throw new RuntimeException("ERROR: Constraint " + toString() + " must have different variables on the list");
             }
         }
-        n.putConstraint(this);
-
-        store.addChanged(this);
-        store.countConstraint();
 
     }
 
@@ -317,17 +300,8 @@ public class Among extends Constraint implements UsesQueueVariable {
             variableQueue.add((IntVar) var);
     }
 
-    @Override public void removeConstraint() {
-        for (Var var : list)
-            var.removeConstraint(this);
-
-        n.removeConstraint(this);
-    }
-
     @Override public boolean satisfied() {
-
         return (lowerBorder.value() == upperBorder.value() && n.min() == lowerBorder.value() && n.singleton());
-
     }
 
     @Override public String toString() {
@@ -345,15 +319,6 @@ public class Among extends Constraint implements UsesQueueVariable {
         result.append(n).append(")\n");
 
         return result.toString();
-    }
-
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            n.weight++;
-            for (Var v : list)
-                v.weight++;
-        }
     }
 
 }

@@ -70,12 +70,6 @@ public class FSM {
     public HashSet<FSMState> allStates;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"initState", "finalStates", "allStates"};
-
-    /**
      * It creates a Finite State Machine.
      * @param initState it specifies the initial state.
      * @param allStates it specifies all the states.

@@ -42,7 +42,7 @@ import org.jacop.core.Var;
 
 /**
  * Constraint X * Y #= Z
- *
+ * <p>
  * Boundary consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -71,13 +71,8 @@ public class XmulYeqZ extends Constraint {
     boolean xSquare = false;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"x", "y", "z"};
-
-    /**
      * It constructs a constraint X * Y = Z.
+     *
      * @param x variable x.
      * @param y variable y.
      * @param z variable z.
@@ -152,41 +147,19 @@ public class XmulYeqZ extends Constraint {
 
         if (x.singleton(0) || y.singleton(0))
             removeConstraint();
-	else if (y.singleton(1)) {
-	    removeConstraint();
-	    if (!x.singleton() || !z.singleton())
-		store.impose(new XeqY(x, z));
-	}
-	else if (x.singleton(1)) {
-	    removeConstraint();
-	    if (!y.singleton() || !z.singleton()) 
-		store.impose(new XeqY(y, z));
-	}	
-    }
-
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
+        else if (y.singleton(1)) {
+            removeConstraint();
+            if (!x.singleton() || !z.singleton())
+                store.impose(new XeqY(x, z));
+        } else if (x.singleton(1)) {
+            removeConstraint();
+            if (!y.singleton() || !z.singleton())
+                store.impose(new XeqY(y, z));
         }
+    }
+
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
-    }
-
-    @Override public void impose(Store store) {
-        x.putModelConstraint(this, getConsistencyPruningEvent(x));
-        y.putModelConstraint(this, getConsistencyPruningEvent(y));
-        z.putModelConstraint(this, getConsistencyPruningEvent(z));
-        store.addChanged(this);
-        store.countConstraint();
-    }
-
-    @Override public void removeConstraint() {
-        x.removeConstraint(this);
-        y.removeConstraint(this);
-        z.removeConstraint(this);
     }
 
     @Override public boolean satisfied() {
@@ -206,14 +179,6 @@ public class XmulYeqZ extends Constraint {
         Math.multiplyExact(x.max(), y.min());
         Math.multiplyExact(x.max(), y.max());
 
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            x.weight++;
-            y.weight++;
-            z.weight++;
-        }
     }
 
 }

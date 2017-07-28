@@ -30,14 +30,11 @@
 
 package org.jacop.set.constraints;
 
-import java.util.ArrayList;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
@@ -67,12 +64,6 @@ public class SinA extends PrimitiveConstraint {
      * It specifies if the inclusion relation is strict.
      */
     public boolean strict;
-
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"s", "a", "strict"};
 
     /**
      * It creates a set inclusion constraint.
@@ -128,28 +119,8 @@ public class SinA extends PrimitiveConstraint {
 
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return SetDomain.ANY;
-    }
-
-
-    @Override public void impose(Store store) {
-        a.putModelConstraint(this, getConsistencyPruningEvent(a));
-
-        store.addChanged(this);
-        store.countConstraint();
-    }
-
-    @Override public void removeConstraint() {
-        a.removeConstraint(this);
-
     }
 
     @Override public boolean satisfied() {
@@ -160,41 +131,16 @@ public class SinA extends PrimitiveConstraint {
         return id() + " : SinA(" + set + " '< " + a + ")";
     }
 
-    @Override public void increaseWeight() {
-        if (increaseWeight)
-            a.weight++;
-    }
-
-    @Override public int getNestedPruningEvent(Var var, boolean mode) {
-        // If consistency function mode
-        if (mode) {
-            if (consistencyPruningEvents != null) {
-                Integer possibleEvent = consistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return SetDomain.ANY;
-        }
-        // If notConsistency function mode
-        else {
-            if (notConsistencyPruningEvents != null) {
-                Integer possibleEvent = notConsistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return SetDomain.ANY;
-        }
-    }
-
-    @Override public int getNotConsistencyPruningEvent(Var var) {
-
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
         return SetDomain.ANY;
+    }
 
+    @Override protected int getDefaultNestedConsistencyPruningEvent() {
+        return SetDomain.ANY;
+    }
+
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
+        return SetDomain.ANY;
     }
 
     @Override public void notConsistency(Store store) {

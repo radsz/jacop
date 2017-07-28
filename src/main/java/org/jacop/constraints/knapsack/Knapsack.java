@@ -214,12 +214,6 @@ public class Knapsack extends Constraint implements UsesQueueVariable {
 
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"items", "knapsackCapacity", "knapsackProfit"};
-
-    /**
      * It constructs an knapsack constraint.
      *
      * @param items list of items in knapsack with its weight, profit and quantity variable.
@@ -724,7 +718,7 @@ public class Knapsack extends Constraint implements UsesQueueVariable {
             impositionFailure = true;
 
         int level = store.level;
-        Var var;
+        IntVar var;
         for (KnapsackItem item : items) {
             var = item.getVariable();
             var.putConstraint(this);
@@ -851,26 +845,8 @@ public class Knapsack extends Constraint implements UsesQueueVariable {
         return items.length + 2;
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
-    }
-
-    @Override public void removeConstraint() {
-        for (TreeLeaf leaf : leaves)
-            leaf.getVariable().removeConstraint(this);
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            for (TreeLeaf leaf : leaves)
-                leaf.getVariable().weight++;
-        }
     }
 
     @Override public boolean satisfied() {

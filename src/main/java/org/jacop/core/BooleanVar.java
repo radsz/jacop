@@ -60,12 +60,6 @@ public class BooleanVar extends IntVar {
     }
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"store", "id", "min", "max"};
-
-    /**
      * Boolean variable constructor.
      * @param store It specifies the store in which boolean variable should be created.
      * @param name It specifies the id of the variable.

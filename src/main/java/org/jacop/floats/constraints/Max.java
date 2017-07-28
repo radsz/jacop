@@ -67,12 +67,6 @@ public class Max extends Constraint {
     public FloatVar max;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"list", "max"};
-
-    /**
      * It constructs max constraint.
      * @param max variable denoting the maximum value
      * @param list the array of variables for which the maximum value is imposed.
@@ -154,35 +148,8 @@ public class Max extends Constraint {
 
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
-    }
-
-    // registers the constraint in the constraint store
-    @Override public void impose(Store store) {
-
-        max.putModelConstraint(this, getConsistencyPruningEvent(max));
-
-        for (Var V : list)
-            V.putModelConstraint(this, getConsistencyPruningEvent(V));
-
-        store.addChanged(this);
-        store.countConstraint();
-
-    }
-
-    @Override public void removeConstraint() {
-        max.removeConstraint(this);
-        for (int i = 0; i < list.length; i++) {
-            list[i].removeConstraint(this);
-        }
     }
 
     @Override public boolean satisfied() {
@@ -216,11 +183,4 @@ public class Max extends Constraint {
         return result.toString();
     }
 
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            max.weight++;
-            for (Var v : list)
-                v.weight++;
-        }
-    }
 }

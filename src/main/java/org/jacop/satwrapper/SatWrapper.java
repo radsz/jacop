@@ -467,6 +467,10 @@ public final class SatWrapper extends Constraint implements ConflictListener, Ex
         return IntDomain.BOUND;
     }
 
+    @Override public int getDefaultConsistencyPruningEvent() {
+        return IntDomain.BOUND;
+    }
+
     /**
      * asks the solver for which literal is the most active. It will return
      * a literal, which can be transformed into a variable and a value from

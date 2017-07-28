@@ -70,12 +70,6 @@ public class Shape {
     private SimpleArrayList<DBox> holes = null;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"no", "boxes"};
-
-    /**
      * It constructs a shape with a given id based on a specified collection of Dboxes.
      *
      * @param no the unique identifier of the created shape.

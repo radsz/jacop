@@ -65,12 +65,6 @@ public class NonOverlapping implements ExternalConstraint {
     public final int[] selectedDimensions;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"objects", "selectedDimensions"};
-
-    /**
      * It creates an external constraint to make sure that specified set of objects does not overlap
      * in k-dimensional space on the given number of selected dimensions within this k-dimensional space.
      *

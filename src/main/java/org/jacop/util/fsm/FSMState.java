@@ -50,12 +50,6 @@ public class FSMState {
     public HashSet<FSMTransition> transitions;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"transitions", "id"};
-
-    /**
      * It constructs a FSM state.
      *
      * @param transitions it specifies transition

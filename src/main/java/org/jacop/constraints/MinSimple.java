@@ -35,7 +35,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 
 /**
  * MinSimple constraint implements the minimum/2 constraint. It provides the minimum
@@ -60,12 +59,6 @@ public class MinSimple extends Constraint {
      * It specifies variable min which stores the minimum value present in the list.
      */
     public IntVar min;
-
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"x1", "x2", "min"};
 
     /**
      * It constructs min constraint.
@@ -116,34 +109,8 @@ public class MinSimple extends Constraint {
 
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
-    }
-
-    // registers the constraint in the constraint store
-    @Override public void impose(Store store) {
-
-
-        min.putModelConstraint(this, getConsistencyPruningEvent(min));
-        x1.putModelConstraint(this, getConsistencyPruningEvent(x1));
-        x2.putModelConstraint(this, getConsistencyPruningEvent(x2));
-
-        store.addChanged(this);
-        store.countConstraint();
-
-    }
-
-    @Override public void removeConstraint() {
-        min.removeConstraint(this);
-        x1.removeConstraint(this);
-        x2.removeConstraint(this);
     }
 
     @Override public boolean satisfied() {
@@ -163,11 +130,4 @@ public class MinSimple extends Constraint {
         return result.toString();
     }
 
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            min.weight++;
-            x1.weight++;
-            x2.weight++;
-        }
-    }
 }

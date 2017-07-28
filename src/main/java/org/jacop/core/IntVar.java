@@ -57,12 +57,6 @@ public class IntVar extends Var {
     public SatCPBridge satBridge;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"store", "id", "domain"};
-
-    /**
      * It creates a variable in a given store, with a given name and
      * a given domain.
      * @param store store in which the variable is created.

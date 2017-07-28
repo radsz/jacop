@@ -69,12 +69,6 @@ public class AinS extends PrimitiveConstraint {
     public boolean strict;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"a", "b", "strict"};
-
-    /**
      * It constructs a constraint that makes sure that value of set variable a is contained
      * within a provided set.
      *
@@ -129,28 +123,8 @@ public class AinS extends PrimitiveConstraint {
 
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return SetDomain.ANY;
-    }
-
-
-    @Override public void impose(Store store) {
-
-        a.putModelConstraint(this, getConsistencyPruningEvent(a));
-
-        store.addChanged(this);
-        store.countConstraint();
-    }
-
-    @Override public void removeConstraint() {
-        a.removeConstraint(this);
     }
 
     @Override public boolean satisfied() {
@@ -163,47 +137,18 @@ public class AinS extends PrimitiveConstraint {
         return id() + " : AinS(" + a + " '< " + set + ")";
     }
 
-    @Override public void increaseWeight() {
-        a.weight++;
-    }
-
-
-    @Override public int getNestedPruningEvent(Var var, boolean mode) {
-
-        // If consistency function mode
-        if (mode) {
-            if (consistencyPruningEvents != null) {
-                Integer possibleEvent = consistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return SetDomain.ANY;
-        }
-        // If notConsistency function mode
-        else {
-            if (notConsistencyPruningEvents != null) {
-                Integer possibleEvent = notConsistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return SetDomain.ANY;
-        }
-
-    }
-
-
-    @Override public int getNotConsistencyPruningEvent(Var var) {
-
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
         return SetDomain.ANY;
-
     }
 
+    @Override protected int getDefaultNestedConsistencyPruningEvent() {
+        return SetDomain.ANY;
+    }
 
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
+        return SetDomain.ANY;
+    }
+    
     @Override public void notConsistency(Store store) {
 
         // TODO, test it properly.
@@ -237,7 +182,6 @@ public class AinS extends PrimitiveConstraint {
         }
 
     }
-
 
     @Override public boolean notSatisfied() {
 

@@ -70,15 +70,9 @@ import java.util.stream.Stream;
     public IntVar sum;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"list", "weights", "sum"};
-
-    /**
-     * @param list the list of varibales
+     * @param list    the list of varibales
      * @param weights the list of weights
-     * @param sum the resulting sum
+     * @param sum     the resulting sum
      */
     public SumWeight(IntVar[] list, int[] weights, IntVar sum) {
 
@@ -114,26 +108,27 @@ import java.util.stream.Stream;
         this.weights = new int[parameters.size()];
 
         int i = 0;
-        for (Map.Entry<IntVar,Integer> e : parameters.entrySet()) {
-	    this.list[i] = e.getKey();
+        for (Map.Entry<IntVar, Integer> e : parameters.entrySet()) {
+            this.list[i] = e.getKey();
             this.weights[i] = e.getValue();
             i++;
         }
 
         checkForOverflow();
 
-        setScope( Stream.concat(Arrays.stream(list), Stream.of(sum)));
+        setScope(Stream.concat(Arrays.stream(list), Stream.of(sum)));
 
     }
 
     /**
      * It constructs the constraint SumWeight.
+     *
      * @param variables variables which are being multiplied by weights.
-     * @param weights weight for each variable.
-     * @param sum variable containing the sum of weighted variables.
+     * @param weights   weight for each variable.
+     * @param sum       variable containing the sum of weighted variables.
      */
     public SumWeight(ArrayList<? extends IntVar> variables, ArrayList<Integer> weights, IntVar sum) {
-        this(variables.toArray(new IntVar[variables.size()]), weights.stream().mapToInt( i -> i ).toArray(), sum);
+        this(variables.toArray(new IntVar[variables.size()]), weights.stream().mapToInt(i -> i).toArray(), sum);
     }
 
 
@@ -241,28 +236,19 @@ import java.util.stream.Stream;
 
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
     }
 
     @Override public void impose(Store store) {
+
+        super.impose(store);
 
         sumGrounded = new TimeStamp<Integer>(store, 0);
         nextGroundedPosition = new TimeStamp<Integer>(store, 0);
         positionMaping = new HashMap<Var, Integer>();
 
         store.registerRemoveLevelLateListener(this);
-
-        sum.putModelConstraint(this, getConsistencyPruningEvent(sum));
-        for (Var V : list)
-            V.putModelConstraint(this, getConsistencyPruningEvent(V));
 
         lMinArray = new int[list.length];
         lMaxArray = new int[list.length];
@@ -278,8 +264,6 @@ import java.util.stream.Stream;
             queueVariable(store.level, list[i]);
         }
 
-        store.addChanged(this);
-        store.countConstraint();
     }
 
     int lMin;
@@ -379,12 +363,6 @@ import java.util.stream.Stream;
 
     }
 
-    @Override public void removeConstraint() {
-        sum.removeConstraint(this);
-        for (Var v : list)
-            v.removeConstraint(this);
-    }
-
     @Override public boolean satisfied() {
 
         if (!sum.singleton())
@@ -450,14 +428,6 @@ import java.util.stream.Stream;
 
         return result.toString();
 
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            sum.weight++;
-            for (Var v : list)
-                v.weight++;
-        }
     }
 
 }

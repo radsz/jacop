@@ -31,17 +31,11 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Interval;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Store;
+import org.jacop.core.*;
 
 /**
  * DisjointConditional constraint assures that any two rectangles from a vector
@@ -71,12 +65,6 @@ public class DisjointConditional extends Diff {
     public ExclusiveList exclusionList = new ExclusiveList();
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"rectangles", "exclusionList", "doProfile"};
-
-    /**
      * It specifies a diff constraint.
      * @param rectangles list of rectangles which can not overlap in at least one dimension.
      * @param exclusionList it is a list of exclusive items. Each item consists of two ints and a variable.
@@ -102,6 +90,8 @@ public class DisjointConditional extends Diff {
         this.exclusionList.addAll(exclusionList);
 
         this.numberId = idNumber.incrementAndGet();
+
+        setScope( Stream.concat( Rectangle.getStream(this.rectangles), exclusionList.stream().map( i -> i.cond) ) );
     }
 
     /**
@@ -144,7 +134,7 @@ public class DisjointConditional extends Diff {
         }
 
         numberId = idNumber.incrementAndGet();
-
+        setScope( Stream.concat( Rectangle.getStream(this.rectangles), exceptionCondition.stream() ) );
     }
 
     /**
@@ -243,6 +233,9 @@ public class DisjointConditional extends Diff {
 
         this.numberId = idNumber.incrementAndGet();
 
+        setScope( Stream.concat( Rectangle.getStream(this.rectangles), exceptionCondition.stream() ) );
+
+
     }
 
     /**
@@ -304,6 +297,8 @@ public class DisjointConditional extends Diff {
         }
 
         numberId = idNumber.incrementAndGet();
+
+        setScope( Stream.concat( Rectangle.getStream(this.rectangles), exceptionCondition.stream() ) );
     }
 
     /**
@@ -560,7 +555,6 @@ public class DisjointConditional extends Diff {
         for (ExclusiveItem ei : exclusionList) {
             IntVar v = ei.cond;
             if (!v.singleton()) {
-                v.putConstraint(this);
                 queueVariable(store.level, v);
             }
         }

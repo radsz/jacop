@@ -64,12 +64,6 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
     boolean needRemoveLevelLate = false;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"c", "b"};
-
-    /**
      * It creates Reified constraint.
      * @param c primitive constraint c.
      * @param b boolean variable b.
@@ -129,9 +123,11 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
     }
 
     @Override public int getNestedPruningEvent(Var var, boolean mode) {
-
         return getConsistencyPruningEvent(var);
+    }
 
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
+        throw new IllegalStateException("Not implemented as more precise method exists.");
     }
 
 
@@ -166,6 +162,10 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
             else
                 return eventAcross;
         }
+    }
+
+    @Override public int getDefaultConsistencyPruningEvent() {
+        throw new IllegalStateException("Not implemented as more precise method exists.");
     }
 
     @Override public int getNotConsistencyPruningEvent(Var var) {
@@ -224,15 +224,6 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
         store.countConstraint();
     }
 
-    @Override public void removeConstraint() {
-
-        b.removeConstraint(this);
-
-        for (Var v : c.arguments())
-            v.removeConstraint(this);
-
-    }
-
     private void removeSatConstraint() {
 
         // b must be gound here and it is not needed to remove
@@ -258,13 +249,6 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
     @Override public String toString() {
 
         return id() + " : Reified(" + c + ", " + b + " )";
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            b.weight++;
-            c.increaseWeight();
-        }
     }
 
     @Override public void queueVariable(int level, Var variable) {

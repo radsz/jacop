@@ -94,7 +94,6 @@ public class Cumulative extends Constraint {
     public IntVar limit;
 
     /**
-
      * It specifies/stores start variables for each corresponding task.
      */
     public IntVar[] starts;
@@ -110,19 +109,14 @@ public class Cumulative extends Constraint {
     public IntVar[] resources;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"starts", "durations", "resources", "limit", "doEdgeFinding", "doProfile"};
-
-    /**
      * It creates a cumulative constraint.
-     * @param starts variables denoting starts of the tasks.
-     * @param durations variables denoting durations of the tasks.
-     * @param resources variables denoting resource usage of the tasks.
-     * @param limit the overall limit of resources which has to be used.
+     *
+     * @param starts        variables denoting starts of the tasks.
+     * @param durations     variables denoting durations of the tasks.
+     * @param resources     variables denoting resource usage of the tasks.
+     * @param limit         the overall limit of resources which has to be used.
      * @param doEdgeFinding true if edge finding algorithm should be used.
-     * @param doProfile specifies if the profiles should be computed in order to reduce limit variable.
+     * @param doProfile     specifies if the profiles should be computed in order to reduce limit variable.
      */
     public Cumulative(IntVar[] starts, IntVar[] durations, IntVar[] resources, IntVar limit, boolean doEdgeFinding, boolean doProfile) {
 
@@ -176,23 +170,24 @@ public class Cumulative extends Constraint {
         this.doProfile = doProfile;
 
         // check for possible overflow
-	for (Task t : Ts) 
-	    mul((t.start.max() + t.dur.max()), limit.max());
+        for (Task t : Ts)
+            mul((t.start.max() + t.dur.max()), limit.max());
 
-	      setScope( Stream.concat( Stream.concat(Arrays.stream(starts), Arrays.stream(durations)),
-                                 Stream.concat(Arrays.stream(resources), Stream.of(limit))) );
+        setScope(Stream.concat(Stream.concat(Arrays.stream(starts), Arrays.stream(durations)),
+            Stream.concat(Arrays.stream(resources), Stream.of(limit))));
 
     }
 
     /**
      * It creates a cumulative constraint.
-     * @param starts variables denoting starts of the tasks.
-     * @param durations variables denoting durations of the tasks.
-     * @param resources variables denoting resource usage of the tasks.
-     * @param limit the overall limit of resources which has to be used.
+     *
+     * @param starts        variables denoting starts of the tasks.
+     * @param durations     variables denoting durations of the tasks.
+     * @param resources     variables denoting resource usage of the tasks.
+     * @param limit         the overall limit of resources which has to be used.
      * @param doEdgeFinding true if edge finding algorithm should be used.
-     * @param doProfile specifies if the profiles should be computed in order to reduce limit variable.
-     * @param setLimit specifies if limit variable will be prunded.
+     * @param doProfile     specifies if the profiles should be computed in order to reduce limit variable.
+     * @param setLimit      specifies if limit variable will be prunded.
      */
     public Cumulative(IntVar[] starts, IntVar[] durations, IntVar[] resources, IntVar limit, boolean doEdgeFinding, boolean doProfile,
         boolean setLimit) {
@@ -204,10 +199,11 @@ public class Cumulative extends Constraint {
 
     /**
      * It creates a cumulative constraint.
-     * @param starts variables denoting starts of the tasks.
+     *
+     * @param starts    variables denoting starts of the tasks.
      * @param durations variables denoting durations of the tasks.
      * @param resources variables denoting resource usage of the tasks.
-     * @param limit the overall limit of resources which has to be used.
+     * @param limit     the overall limit of resources which has to be used.
      */
     public Cumulative(ArrayList<? extends IntVar> starts, ArrayList<? extends IntVar> durations, ArrayList<? extends IntVar> resources,
         IntVar limit) {
@@ -219,10 +215,11 @@ public class Cumulative extends Constraint {
 
     /**
      * It creates a cumulative constraint.
-     * @param starts variables denoting starts of the tasks.
-     * @param durations variables denoting durations of the tasks.
-     * @param resources variables denoting resource usage of the tasks.
-     * @param limit the overall limit of resources which has to be used.
+     *
+     * @param starts      variables denoting starts of the tasks.
+     * @param durations   variables denoting durations of the tasks.
+     * @param resources   variables denoting resource usage of the tasks.
+     * @param limit       the overall limit of resources which has to be used.
      * @param edgeFinding true if edge finding algorithm should be used.
      */
 
@@ -233,12 +230,13 @@ public class Cumulative extends Constraint {
 
     /**
      * It creates a cumulative constraint.
-     * @param starts variables denoting starts of the tasks.
-     * @param durations variables denoting durations of the tasks.
-     * @param resources variables denoting resource usage of the tasks.
-     * @param limit the overall limit of resources which has to be used.
+     *
+     * @param starts      variables denoting starts of the tasks.
+     * @param durations   variables denoting durations of the tasks.
+     * @param resources   variables denoting resource usage of the tasks.
+     * @param limit       the overall limit of resources which has to be used.
      * @param edgeFinding true if edge finding algorithm should be used.
-     * @param profile specifies if the profiles should be computed in order to reduce limit variable.
+     * @param profile     specifies if the profiles should be computed in order to reduce limit variable.
      */
 
 
@@ -251,10 +249,11 @@ public class Cumulative extends Constraint {
 
     /**
      * It creates a cumulative constraint.
-     * @param starts variables denoting starts of the tasks.
+     *
+     * @param starts    variables denoting starts of the tasks.
      * @param durations variables denoting durations of the tasks.
      * @param resources variables denoting resource usage of the tasks.
-     * @param limit the overall limit of resources which has to be used.
+     * @param limit     the overall limit of resources which has to be used.
      */
     public Cumulative(IntVar[] starts, IntVar[] durations, IntVar[] resources, IntVar limit) {
 
@@ -263,10 +262,11 @@ public class Cumulative extends Constraint {
 
     /**
      * It creates a cumulative constraint.
-     * @param starts variables denoting starts of the tasks.
-     * @param durations variables denoting durations of the tasks.
-     * @param resources variables denoting resource usage of the tasks.
-     * @param limit the overall limit of resources which has to be used.
+     *
+     * @param starts      variables denoting starts of the tasks.
+     * @param durations   variables denoting durations of the tasks.
+     * @param resources   variables denoting resource usage of the tasks.
+     * @param limit       the overall limit of resources which has to be used.
      * @param edgeFinding true if edge finding algorithm should be used.
      */
 
@@ -288,7 +288,7 @@ public class Cumulative extends Constraint {
             if (debug)
                 System.out.println("Checking if " + l + " can be after " + S);
             for (Task t : S) {
-		startS = Math.min(startS, t.est());
+                startS = Math.min(startS, t.est());
                 a += t.areaMin();
             }
 
@@ -309,7 +309,7 @@ public class Cumulative extends Constraint {
             if (debug)
                 System.out.println("Checking if " + l.toString() + " can be before tasks in " + S.toString());
             for (Task t : S) {
-		completionS = Math.max(completionS, t.lct());
+                completionS = Math.max(completionS, t.lct());
                 a += t.areaMin();
             }
 
@@ -330,8 +330,8 @@ public class Cumulative extends Constraint {
             if (debug)
                 System.out.println("Checking if " + l + " can be between tasks in " + S);
             for (Task t : S) {
-		completionS = Math.max(completionS, t.lct());
-		startS = Math.min(startS, t.est());
+                completionS = Math.max(completionS, t.lct());
+                startS = Math.min(startS, t.est());
                 a += minOverlap(t, startS, completionS);
             }
             larea = minOverlap(l, startS, completionS);
@@ -340,7 +340,7 @@ public class Cumulative extends Constraint {
             if (debug)
                 System.out.println(
                     "s(S')= " + startS + ",  c(S')= " + completionS + ",  a(Sp)= " + a + ", l_area= " + larea + ",  betweenS= " + betweenS);
-	}
+        }
         return betweenS;
     }
 
@@ -397,7 +397,7 @@ public class Cumulative extends Constraint {
             System.out.println("------------------------------------------------\n" + "Edge Finding Down\n"
                 + "------------------------------------------------");
         for (Task t : Ts)
-            if (t.nonZeroTask()) 
+            if (t.nonZeroTask())
                 estUpList.add(t.start.dom());
 
         for (IntDomain est : estUpList) {
@@ -407,8 +407,7 @@ public class Cumulative extends Constraint {
 
             // Create S = {t|EST(t) >= est0}
             // Create L = {t|EST(t) < est0 && LCT(t) > est0}
-	    ArrayList<Task> S = new ArrayList<Task>(Ts.length),
-		L = new ArrayList<Task>(Ts.length);
+            ArrayList<Task> S = new ArrayList<Task>(Ts.length), L = new ArrayList<Task>(Ts.length);
             for (Task t : Ts) {
                 if (t.nonZeroTask()) {
                     if (t.est() >= est0)
@@ -445,8 +444,8 @@ public class Cumulative extends Constraint {
                 if (debug)
                     System.out.println("Checking if " + l + " can be after " + S);
                 for (Task t : S) {
-		    startOfS = Math.min(startOfS, t.est());
-		    completionOfS = Math.max(completionOfS, t.lct());
+                    startOfS = Math.min(startOfS, t.est());
+                    completionOfS = Math.max(completionOfS, t.lct());
                     area1 += t.areaMin();
                     area2 += minOverlap(t, startOfS, completionOfS);
                 }
@@ -474,8 +473,8 @@ public class Cumulative extends Constraint {
                         slack = (l_LCT - startS) * limitMax - a - l.areaMin();
 
                         int j = 0;
-			Task[] tasks = new Task[S.size()];
-			int tasksLength = 0;
+                        Task[] tasks = new Task[S.size()];
+                        int tasksLength = 0;
                         while (slack < 0 && j < S.size()) {
                             Task t = S.get(j);
 
@@ -541,7 +540,7 @@ public class Cumulative extends Constraint {
                                         l + " must be before\n" + S + "\n>>> Cumulative EF <<< 3. Narrowed " + l.start + " in "
                                             + IntDomain.MinInt + ".." + finish);
 
-                                l.start.domain.inMax(store.level, l.start, (int)finish);
+                                l.start.domain.inMax(store.level, l.start, (int) finish);
                             }
 
                             L.remove(indexOfl);
@@ -560,7 +559,7 @@ public class Cumulative extends Constraint {
             System.out.println("------------------------------------------------\n" + "Edge Finding Up\n"
                 + "------------------------------------------------");
         for (Task t : Ts)
-            if (t.nonZeroTask()) 
+            if (t.nonZeroTask())
                 lctDownList.add(t.completion());
 
         for (IntDomain lct : lctDownList) {
@@ -571,7 +570,7 @@ public class Cumulative extends Constraint {
 
             // Create S = {t|EST(t) <= lct0}
             // Create L = {t|EST(t) < lct0 && LCT(t) > lct0}
-	    ArrayList<Task> S = new ArrayList<Task>(Ts.length), L = new ArrayList<Task>(Ts.length);
+            ArrayList<Task> S = new ArrayList<Task>(Ts.length), L = new ArrayList<Task>(Ts.length);
             for (Task t : Ts) {
                 if (t.nonZeroTask()) {
                     if (t.lct() <= lct0)
@@ -609,8 +608,8 @@ public class Cumulative extends Constraint {
                     System.out.println("Checking if " + l + " can be before or between tasks in " + S);
 
                 for (Task t : S) {
-		    completionOfS = Math.max(completionOfS, t.lct());
-		    startOfS = Math.min(startOfS, t.est());
+                    completionOfS = Math.max(completionOfS, t.lct());
+                    startOfS = Math.min(startOfS, t.est());
                     area1 += t.areaMin();
                     area2 += minOverlap(t, startOfS, completionOfS);
                 }
@@ -645,8 +644,8 @@ public class Cumulative extends Constraint {
                         slack = (completionS - l_EST) * limitMax - a - l.areaMin();
 
                         int j = 0;
-			Task[] tasks = new Task[S.size()];
-			int tasksLength = 0;
+                        Task[] tasks = new Task[S.size()];
+                        int tasksLength = 0;
                         while (slack < 0 && j < S.size()) {
                             Task t = S.get(j);
 
@@ -735,10 +734,10 @@ public class Cumulative extends Constraint {
             int dur = t.dur.min();
             int res = t.res.min();
 
-	    lctOfS = Math.max(lctOfS, t.lct());
-	    minDur = Math.min(minDur, dur);
-	    minRes = Math.min(minRes, res);
-	    
+            lctOfS = Math.max(lctOfS, t.lct());
+            minDur = Math.min(minDur, dur);
+            minRes = Math.min(minRes, res);
+
             areaS += dur * res;
         }
 
@@ -761,10 +760,10 @@ public class Cumulative extends Constraint {
             int dur = t.dur.min();
             int res = t.res.min();
 
-	    estOfS = Math.min(estOfS, t.est());
-	    minDur = Math.min(minDur, dur);
-	    minRes = Math.min(minRes, res);
-	    
+            estOfS = Math.min(estOfS, t.est());
+            minDur = Math.min(minDur, dur);
+            minRes = Math.min(minRes, res);
+
             areaS += dur * res;
         }
 
@@ -779,33 +778,12 @@ public class Cumulative extends Constraint {
         return FitBefore;
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
     }
 
     Task[] getTasks() {
         return Ts;
-    }
-
-    @Override public void impose(Store store) {
-
-        for (Task T : Ts) {
-            T.start.putModelConstraint(this, getConsistencyPruningEvent(T.start));
-            T.dur.putModelConstraint(this, getConsistencyPruningEvent(T.dur));
-            T.res.putModelConstraint(this, getConsistencyPruningEvent(T.res));
-        }
-
-        limit.putModelConstraint(this, getConsistencyPruningEvent(limit));
-
-        store.addChanged(this);
-        store.countConstraint();
     }
 
     boolean intervalOverlap(int min1, int max1, int min2, int max2) {
@@ -816,7 +794,7 @@ public class Cumulative extends Constraint {
         int lctS = IntDomain.MinInt;
 
         for (Task t : S) {
-	    lctS = Math.max(lctS, t.lct());
+            lctS = Math.max(lctS, t.lct());
         }
         return lctS;
     }
@@ -850,10 +828,9 @@ public class Cumulative extends Constraint {
                 // |---t----|
                 // |--------------|
                 // est lct
-		int temp2 = lct - tlst;
+                int temp2 = lct - tlst;
                 tDur_min = temp2 < tdur ? temp2 : tdur;
-	    }
-            else
+            } else
                 // tect < lct
                 // |---t----|
                 // |--------------|
@@ -866,10 +843,9 @@ public class Cumulative extends Constraint {
                     // |---t----|
                     // |--------------|
                     // est lct
-		    int temp1 = tect - est;
+                    int temp1 = tect - est;
                     tDur_min = temp1 < tdur ? temp1 : tdur;
-		}
-                else
+                } else
                     // tect > lct
                     // |--------t---------|
                     // |--------------|
@@ -892,7 +868,7 @@ public class Cumulative extends Constraint {
                 System.out.println("Not first " + s + " in " + S);
             for (Task t : S) {
                 if (t != s) {
-		    completionS = Math.max(completionS, t.lct());
+                    completionS = Math.max(completionS, t.lct());
                     a += t.areaMin();
                 }
             }
@@ -957,7 +933,7 @@ public class Cumulative extends Constraint {
                 System.out.println("Not last " + s + " in " + S);
             for (Task t : S) {
                 if (t != s) {
-		    startS = Math.min(startS, t.est());
+                    startS = Math.min(startS, t.est());
                     a += t.areaMin();
                 }
             }
@@ -1116,9 +1092,9 @@ public class Cumulative extends Constraint {
                     b = minUse.stop();
                 }
 
-		IntVar resUse = t.res;
-		IntVar dur = t.dur;
-	
+                IntVar resUse = t.res;
+                IntVar dur = t.dur;
+
                 if (debug)
                     System.out.println("Start time = " + t.start + ", resource use = " + resUse + ", minimal use = {" + a + ".." + b + "}");
 
@@ -1130,47 +1106,36 @@ public class Cumulative extends Constraint {
         }
     }
 
-    @Override public void removeConstraint() {
-        for (Task t : Ts) {
-            t.start.removeConstraint(this);
-            t.dur.removeConstraint(this);
-            t.res.removeConstraint(this);
-        }
-        limit.removeConstraint(this);
-    }
-
     void removeFromS_Est(ArrayList<Task> s) {
 
         // s = s \ {t in s | est(t) = est(s)}
         int estS = est(s);
-	int l = s.size();
-	int i = 0;
-	while (i < l) {
-	    Task t = s.get(i);
-	    if (estS == t.est()) {
-		s.remove(i);
-		l--;
-	    }
-	    else
-		i++;
-	}
+        int l = s.size();
+        int i = 0;
+        while (i < l) {
+            Task t = s.get(i);
+            if (estS == t.est()) {
+                s.remove(i);
+                l--;
+            } else
+                i++;
+        }
     }
 
     void removeFromS_Lct(ArrayList<Task> s) {
 
         // s = s \ {t in s | lct(t) = lct(s)}
         int lctS = lct(s);
-	int l = s.size();
-	int i = 0;
-	while (i < l) {
-	    Task t = s.get(i);
-	    if (lctS == t.lct()) {
-		s.remove(i);
-		l--;
-	    }
-	    else
-		i++;
-	}
+        int l = s.size();
+        int i = 0;
+        while (i < l) {
+            Task t = s.get(i);
+            if (lctS == t.lct()) {
+                s.remove(i);
+                l--;
+            } else
+                i++;
+        }
     }
 
     @Override public boolean satisfied() {
@@ -1222,18 +1187,7 @@ public class Cumulative extends Constraint {
     }
 
 
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            limit.weight++;
-            for (Task t : Ts) {
-                t.dur.weight++;
-                t.res.weight++;
-                t.start.weight++;
-            }
-        }
-    }
-
-  private static class DomainmaxComparator<T extends IntDomain> implements Comparator<T>, java.io.Serializable {
+    private static class DomainmaxComparator<T extends IntDomain> implements Comparator<T>, java.io.Serializable {
 
         DomainmaxComparator() {
         }

@@ -31,10 +31,8 @@
 
 package org.jacop.constraints.table;
 
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.Set;
 import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -47,8 +45,8 @@ import org.jacop.constraints.Constraint;
 import org.jacop.core.UsesQueueVariable;
 
 /**
- * Table implements the table constraint using a method presented in 
- *
+ * Table implements the table constraint using a method presented in
+ * <p>
  * "Compact-Table: Efficient Filtering Table Constraints with Reversible Sparse Bit-Sets" Jordan Demeulenaere, Renaud Hartert, Christophe Lecoutre,
  * Guillaume Perez, Laurent Perron, Jean-Charles Régin, Pierre Schaus. Proc. International Conference on Principles and Practice of Constraint
  * Programming, CP 2016. pp 207-223
@@ -65,7 +63,7 @@ public class Table extends Constraint implements UsesQueueVariable {
      * Variables within the scope of table constraint
      */
     public IntVar[] x;
-    
+
     /**
      * Tuples specifying the allowed values
      */
@@ -84,41 +82,42 @@ public class Table extends Constraint implements UsesQueueVariable {
     /**
      * Data specifying support tuples for each variable; static structure created once when constraint is posed.
      */
-    Map<Integer,long[]>[] supports;
-    
+    Map<Integer, long[]>[] supports;
+
     Map<Integer, Integer>[] residues;
 
     HashSet<IntVar> variableQueue = new HashSet<IntVar>();
 
     private int stamp = 0;
-    
+
     int noNoGround;
-    
+
     static AtomicInteger idNumber = new AtomicInteger(0);
 
     static final boolean debug = false;
 
     /**
      * It constructs a table constraint.
-     * @param list the variables in the scope of the constraint.
+     *
+     * @param list   the variables in the scope of the constraint.
      * @param tuples the tuples which define alloed values.
      */
     public Table(IntVar[] list, int[][] tuples) {
 
         this.x = new IntVar[list.length];
-	System.arraycopy(list, 0, x, 0, list.length);
-	for (int i = 0; i < x.length; i++)
-	    varMap.put(x[i], i);
+        System.arraycopy(list, 0, x, 0, list.length);
+        for (int i = 0; i < x.length; i++)
+            varMap.put(x[i], i);
 
-	int tupleLength = tuples[0].length;
+        int tupleLength = tuples[0].length;
         this.tuple = new int[tuples.length][tupleLength];
-	for (int i = 0; i < tuples.length; i++) {
-	    if (tuples[i].length == tupleLength)
-		System.arraycopy(tuples[i], 0, tuple[i], 0, tupleLength);
-	    else
-		throw new IllegalArgumentException("\nTable: tuples are not of the same size");
-	}
-	
+        for (int i = 0; i < tuples.length; i++) {
+            if (tuples[i].length == tupleLength)
+                System.arraycopy(tuples[i], 0, tuple[i], 0, tupleLength);
+            else
+                throw new IllegalArgumentException("\nTable: tuples are not of the same size");
+        }
+
         numberId = idNumber.incrementAndGet();
 
         this.queueIndex = 1;
@@ -129,77 +128,70 @@ public class Table extends Constraint implements UsesQueueVariable {
 
     void init() {
 
-	int n = tuple.length;
-	int lastWordSize = n % 64;
-	int numberBitSets = n / 64 + ( (lastWordSize != 0) ? 1 : 0);
+        int n = tuple.length;
+        int lastWordSize = n % 64;
+        int numberBitSets = n / 64 + ((lastWordSize != 0) ? 1 : 0);
 
-	rbs = new ReversibleSparseBitSet();
+        rbs = new ReversibleSparseBitSet();
 
-	long[] words = makeSupportAndWords(numberBitSets);
+        long[] words = makeSupportAndWords(numberBitSets);
 
-	rbs.init(store, words);
+        rbs.init(store, words);
     }
 
-    @SuppressWarnings("unchecked")
-    long[] makeSupportAndWords(int nw) {
-	supports = new HashMap[x.length];
-	residues = new HashMap[x.length];
-	int n = tuple.length;
-	
-	long[] words = new long[nw];
-	for (int i = 0; i < x.length; i++) {	    
-	    supports[i] = new HashMap<Integer,long[]>();
-	    residues[i] = new HashMap<Integer, Integer>();
-	    for (int j = 0; j < n; j++) {
-		int v = tuple[j][i];
-		if (validTuple(j)) {
-		    residues[i].put(v, 0);  // initialize last found support to 0
-		    setBit(j, words);       // initialize words for ReversibleSparseBitSet
-		    
-		    if (supports[i].containsKey(v)) {
-			long[] bs = supports[i].get(v);
-			setBit(j, bs);
-			supports[i].put(v, bs);
-		    }
-		    else {
-			long[] bs = new long[nw];
-			setBit(j, bs);
-			supports[i].put(v, bs);
-		    }
-		}
-	    }
-	}
-	return words;
+    @SuppressWarnings("unchecked") long[] makeSupportAndWords(int nw) {
+        supports = new HashMap[x.length];
+        residues = new HashMap[x.length];
+        int n = tuple.length;
+
+        long[] words = new long[nw];
+        for (int i = 0; i < x.length; i++) {
+            supports[i] = new HashMap<Integer, long[]>();
+            residues[i] = new HashMap<Integer, Integer>();
+            for (int j = 0; j < n; j++) {
+                int v = tuple[j][i];
+                if (validTuple(j)) {
+                    residues[i].put(v, 0);  // initialize last found support to 0
+                    setBit(j, words);       // initialize words for ReversibleSparseBitSet
+
+                    if (supports[i].containsKey(v)) {
+                        long[] bs = supports[i].get(v);
+                        setBit(j, bs);
+                        supports[i].put(v, bs);
+                    } else {
+                        long[] bs = new long[nw];
+                        setBit(j, bs);
+                        supports[i].put(v, bs);
+                    }
+                }
+            }
+        }
+        return words;
     }
 
     private void setBit(int n, long[] a) {
 
-	int l = n % 64;
-	int m = n / 64;
-	a[m] |= (1L << l);
-	
+        int l = n % 64;
+        int m = n / 64;
+        a[m] |= (1L << l);
+
     }
-    
+
     private boolean validTuple(int index) {
 
-	int[] t = tuple[index];
-	int n = t.length;
-	int i = 0;
-	while (i < n) {
-	    if (!x[i].dom().contains(t[i]))
-		return false;
-	    i++;
-	}
-	return true;
+        int[] t = tuple[index];
+        int n = t.length;
+        int i = 0;
+        while (i < n) {
+            if (!x[i].dom().contains(t[i]))
+                return false;
+            i++;
+        }
+        return true;
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.ANY;
     }
 
@@ -209,125 +201,115 @@ public class Table extends Constraint implements UsesQueueVariable {
 
         for (int i = 0; i < x.length; i++) {
             x[i].putModelConstraint(this, getConsistencyPruningEvent(x[i]));
-	    queueVariable(level, x[i]);
-	}
-	
+            queueVariable(level, x[i]);
+        }
+
         store.addChanged(this);
         store.countConstraint();
 
-	init();
+        init();
     }
-    
+
     @Override public void consistency(Store store) {
 
         do {
 
             store.propagationHasOccurred = false;
 
-	    HashSet<IntVar> fdvs = variableQueue;
-	    variableQueue = new HashSet<IntVar>();
-	
-	    updateTable(fdvs);
-	    filterDomains();
+            HashSet<IntVar> fdvs = variableQueue;
+            variableQueue = new HashSet<IntVar>();
+
+            updateTable(fdvs);
+            filterDomains();
 
         } while (store.propagationHasOccurred);
-	
-	if (noNoGround == 1)
-	    removeConstraint();
 
-    }
-    
-    @Override public boolean satisfied() {
-        // FIXME.
-        return false;
+        if (noNoGround == 1)
+            removeConstraint();
+
     }
 
     void updateTable(HashSet<IntVar> fdvs) {
 
-	for (IntVar v : fdvs) {
-	    
-	    // recent pruning	    
-	    IntDomain cd = v.dom();
-	    IntDomain pd = cd.previousDomain();
-	    IntDomain rp;
-	    int delta;
-	    if (pd == null) {
-		rp = cd;
-		delta = IntDomain.MaxInt;
-	    } else {
-		rp = pd.subtract(cd);
-		delta = rp.getSize();
-		if (delta == 0)
-		    continue;
-	    }
-		
-	    rbs.clearMask();
-	    int xIndex = varMap.get(v);
+        for (IntVar v : fdvs) {
 
-	    Map<Integer,long[]> xSupport = supports[xIndex];
-	    if (delta < cd.getSize()) { // incremental update
-	    	ValueEnumeration e = rp.valueEnumeration();
-	    	while (e.hasMoreElements()) {
-	    	    long[] bs = xSupport.get(e.nextElement());
-	    	    if (bs != null)
-	    		rbs.addToMask(bs);
-	    	}
-	    	rbs.reverseMask();
-	    } else { // reset-based update
-	    	ValueEnumeration e = cd.valueEnumeration();
-	    	while (e.hasMoreElements()) {
-	    	    long[] bs = xSupport.get(e.nextElement());
-	    	    if (bs != null)
-	    		rbs.addToMask(bs);
-	    	}
-	    }
+            // recent pruning
+            IntDomain cd = v.dom();
+            IntDomain pd = cd.previousDomain();
+            IntDomain rp;
+            int delta;
+            if (pd == null) {
+                rp = cd;
+                delta = IntDomain.MaxInt;
+            } else {
+                rp = pd.subtract(cd);
+                delta = rp.getSize();
+                if (delta == 0)
+                    continue;
+            }
 
-	    rbs.intersectWithMask();
-	    if (rbs.isEmpty()) 
-	    	throw store.failException;
-	}
+            rbs.clearMask();
+            int xIndex = varMap.get(v);
+
+            Map<Integer, long[]> xSupport = supports[xIndex];
+            if (delta < cd.getSize()) { // incremental update
+                ValueEnumeration e = rp.valueEnumeration();
+                while (e.hasMoreElements()) {
+                    long[] bs = xSupport.get(e.nextElement());
+                    if (bs != null)
+                        rbs.addToMask(bs);
+                }
+                rbs.reverseMask();
+            } else { // reset-based update
+                ValueEnumeration e = cd.valueEnumeration();
+                while (e.hasMoreElements()) {
+                    long[] bs = xSupport.get(e.nextElement());
+                    if (bs != null)
+                        rbs.addToMask(bs);
+                }
+            }
+
+            rbs.intersectWithMask();
+            if (rbs.isEmpty())
+                throw store.failException;
+        }
     }
 
     void filterDomains() {
-	
-	noNoGround = 0;
-	long[] wrds = rbs.words.value();
-	for (int i = 0; i < x.length; i++) {
-	    IntVar xi = x[i];
-	    boolean xiSingleton = xi.singleton();
-	    if (!xiSingleton)
-		noNoGround++;
-	    
-	    // check only for not assign variables and variables that become single value at this store level
-	    if (!xiSingleton || (xiSingleton && xi.dom().stamp() == store.level)) {
-		
-		Map<Integer,long[]> xSupport = supports[i];
-		ValueEnumeration e = xi.dom().valueEnumeration();
-		while (e.hasMoreElements()) {
-		    int el = e.nextElement();
 
-		    long[] bs = xSupport.get(el);
-		    if (bs != null) {
-			int index = residues[i].get(el);
-			
-			if ((wrds[index] & bs[index]) == 0L) {
-			
-			    index = rbs.intersectIndex(bs);
-			    if (index == -1) 
-				xi.domain.inComplement(store.level, xi, el);
-			    else
-				residues[i].put(el, index);
-			}
-		    } else 
-			xi.domain.inComplement(store.level, xi, el);
-		}
-	    }
-	}
-    }
-    
-    @Override public void increaseWeight() {
-        for (Var var : x)
-            var.weight++;
+        noNoGround = 0;
+        long[] wrds = rbs.words.value();
+        for (int i = 0; i < x.length; i++) {
+            IntVar xi = x[i];
+            boolean xiSingleton = xi.singleton();
+            if (!xiSingleton)
+                noNoGround++;
+
+            // check only for not assign variables and variables that become single value at this store level
+            if (!xiSingleton || (xiSingleton && xi.dom().stamp() == store.level)) {
+
+                Map<Integer, long[]> xSupport = supports[i];
+                ValueEnumeration e = xi.dom().valueEnumeration();
+                while (e.hasMoreElements()) {
+                    int el = e.nextElement();
+
+                    long[] bs = xSupport.get(el);
+                    if (bs != null) {
+                        int index = residues[i].get(el);
+
+                        if ((wrds[index] & bs[index]) == 0L) {
+
+                            index = rbs.intersectIndex(bs);
+                            if (index == -1)
+                                xi.domain.inComplement(store.level, xi, el);
+                            else
+                                residues[i].put(el, index);
+                        }
+                    } else
+                        xi.domain.inComplement(store.level, xi, el);
+                }
+            }
+        }
     }
 
     @Override public void queueVariable(int level, Var v) {
@@ -338,54 +320,49 @@ public class Table extends Constraint implements UsesQueueVariable {
             stamp = level;
             variableQueue.add((IntVar) v);
         }
-    }    
-
-    @Override public void removeConstraint() {
-        for (Var var : x)
-            var.removeConstraint(this);
     }
 
     @Override public String toString() {
 
-	StringBuffer s = new StringBuffer(id());
+        StringBuffer s = new StringBuffer(id());
 
         s.append(" : table(");
-	s.append(java.util.Arrays.asList(x));
+        s.append(java.util.Arrays.asList(x));
 
-	s.append(", [");
-	for (int i = 0; i < tuple.length; i++) {
-	    s.append("[");
-	    for (int j = 0; j < tuple[i].length; j++) {
-		s.append(tuple[i][j]);
-		if (j < tuple[i].length - 1)
-		    s.append(", ");
-	    }
-	    s.append("]");
-	    if (i < tuple.length - 1)
-		s.append(", ");
-	}
-	s.append("])");
+        s.append(", [");
+        for (int i = 0; i < tuple.length; i++) {
+            s.append("[");
+            for (int j = 0; j < tuple[i].length; j++) {
+                s.append(tuple[i][j]);
+                if (j < tuple[i].length - 1)
+                    s.append(", ");
+            }
+            s.append("]");
+            if (i < tuple.length - 1)
+                s.append(", ");
+        }
+        s.append("])");
 
-	if (debug) {
-	    s.append("\n"+rbs);
+        if (debug) {
+            s.append("\n" + rbs);
 
-	    s.append("\nsupports: [");
-	    for (int i = 0; i < supports.length; i++) {	    
-		s.append(i+": {");
-		Map<Integer, long[]> supi = supports[i];
-		for (Map.Entry<Integer,long[]> e : supi.entrySet()) {
-		    s.append(" "+e.getKey()+"= [");
-		    long[] mask = e.getValue();
-		    for (int j = 0; j < mask.length; j++) {
-			s.append(String.format("0x%08X", mask[j])+" ");
-		    }
-		    s.append("]");
-		}
-		s.append("} ");
-	    }
-	    s.append("]");
+            s.append("\nsupports: [");
+            for (int i = 0; i < supports.length; i++) {
+                s.append(i + ": {");
+                Map<Integer, long[]> supi = supports[i];
+                for (Map.Entry<Integer, long[]> e : supi.entrySet()) {
+                    s.append(" " + e.getKey() + "= [");
+                    long[] mask = e.getValue();
+                    for (int j = 0; j < mask.length; j++) {
+                        s.append(String.format("0x%08X", mask[j]) + " ");
+                    }
+                    s.append("]");
+                }
+                s.append("} ");
+            }
+            s.append("]");
 
-	}
-	return s.toString();
+        }
+        return s.toString();
     }
 }

@@ -39,7 +39,6 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.util.QueueForward;
-import org.jacop.util.SimpleHashSet;
 
 /**
  * Xor constraint - xor("constraint", B).
@@ -66,12 +65,6 @@ public class Xor extends PrimitiveConstraint {
     final public QueueForward<PrimitiveConstraint> queueForward;
 
     boolean needRemoveLevelLate = false;
-
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"c", "b"};
 
     /**
      * It constructs a xor constraint.
@@ -125,6 +118,10 @@ public class Xor extends PrimitiveConstraint {
 
     }
 
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
+        throw new IllegalStateException("Not implemented as more precise variants exist.");
+    }
+
 
     @Override public int getConsistencyPruningEvent(Var var) {
 
@@ -158,6 +155,10 @@ public class Xor extends PrimitiveConstraint {
             else
                 return eventAcross;
         }
+    }
+
+    @Override public int getDefaultConsistencyPruningEvent() {
+        throw new IllegalStateException("Not implemented as more precise variants exist.");
     }
 
 
@@ -196,36 +197,14 @@ public class Xor extends PrimitiveConstraint {
 
     @Override public void impose(Store store) {
 
-        SimpleHashSet<Var> variables = new SimpleHashSet<Var>();
-
-        variables.add(b);
-
-        for (Var V : c.arguments())
-            variables.add(V);
-
-        while (!variables.isEmpty()) {
-            Var V = variables.removeFirst();
-            V.putModelConstraint(this, getConsistencyPruningEvent(V));
-            queueVariable(store.level, V);
-        }
-
+        super.impose(store);
+        arguments().stream().forEach( i -> queueVariable(store.level, i));
         c.include(store);
 
-        store.addChanged(this);
-        store.countConstraint();
     }
 
     @Override public void include(Store store) {
         c.include(store);
-    }
-
-    @Override public void removeConstraint() {
-
-        b.removeConstraint(this);
-
-        for (Var V : c.arguments())
-            V.removeConstraint(this);
-
     }
 
     @Override public boolean satisfied() {
@@ -234,7 +213,6 @@ public class Xor extends PrimitiveConstraint {
     }
 
     @Override public String toString() {
-
         return id() + " : Xor(" + c + ", " + b + " )";
     }
 
@@ -267,13 +245,6 @@ public class Xor extends PrimitiveConstraint {
     public void removeLevelLate(int level) {
         if (needRemoveLevelLate)
             c.removeLevelLate(level);
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            b.weight++;
-            c.increaseWeight();
-        }
     }
 
 }

@@ -98,12 +98,6 @@ public class DBox {
     }
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"origin", "length"};
-
-    /**
      * constructs a new Box. The parameter arrays are not copied.
      *
      * @param origin it specifies the origin of the DBox in the n-dimensional space.

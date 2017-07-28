@@ -67,12 +67,6 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
     final public QueueForward<PrimitiveConstraint> queueForward;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"condC", "thenC"};
-
-    /**
      * It constructs ifthen constraint.
      * @param condC the condition of the ifthen constraint.
      * @param thenC the constraint which must hold if the condition holds.
@@ -153,6 +147,10 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
         else
             return eventAcross;
 
+    }
+
+    @Override public int getDefaultConsistencyPruningEvent() {
+        throw new IllegalStateException("It should not be called as overrides exist.");
     }
 
     @Override public int getNotConsistencyPruningEvent(Var var) {
@@ -250,18 +248,15 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
 
     }
 
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
+        throw new IllegalStateException("It should not be called as overrides exist.");
+    }
+
     @Override public void impose(Store store) {
 
         this.store = store;
 
-        for (Var V : condC.arguments())
-            V.putModelConstraint(this, getConsistencyPruningEvent(V));
-
-        for (Var V : thenC.arguments())
-            V.putModelConstraint(this, getConsistencyPruningEvent(V));
-
-        store.addChanged(this);
-        store.countConstraint();
+        super.impose(store);
 
         condC.include(store);
         thenC.include(store);
@@ -273,16 +268,6 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
     @Override public void include(Store store) {
         condC.include(store);
         thenC.include(store);
-    }
-
-    @Override public void removeConstraint() {
-
-        for (Var V : condC.arguments())
-            V.removeConstraint(this);
-
-        for (Var V : thenC.arguments())
-            V.removeConstraint(this);
-
     }
 
     @Override public boolean satisfied() {
@@ -314,13 +299,6 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
 
         queueForward.queueForward(level, variable);
 
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            condC.increaseWeight();
-            thenC.increaseWeight();
-        }
     }
 
 }

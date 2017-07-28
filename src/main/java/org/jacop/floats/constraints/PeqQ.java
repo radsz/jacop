@@ -65,12 +65,6 @@ public class PeqQ extends PrimitiveConstraint {
     public FloatVar q;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"p", "q"};
-
-    /**
      * It constructs constraint P = Q.
      * @param p variable p.
      * @param q variable q.
@@ -106,58 +100,8 @@ public class PeqQ extends PrimitiveConstraint {
 
     }
 
-    @Override public int getNestedPruningEvent(Var var, boolean mode) {
-
-        // If consistency function mode
-        if (mode) {
-            if (consistencyPruningEvents != null) {
-                Integer possibleEvent = consistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return IntDomain.ANY;
-        }
-
-        // If notConsistency function mode
-        else {
-            if (notConsistencyPruningEvents != null) {
-                Integer possibleEvent = notConsistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return IntDomain.GROUND;
-        }
-
-    }
-
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.ANY;
-    }
-
-    @Override public int getNotConsistencyPruningEvent(Var var) {
-
-        // If notConsistency function mode
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
-        return IntDomain.GROUND;
-
-    }
-
-    @Override public void impose(Store store) {
-        p.putModelConstraint(this, getConsistencyPruningEvent(p));
-        q.putModelConstraint(this, getConsistencyPruningEvent(q));
-        store.addChanged(this);
-        store.countConstraint();
     }
 
     @Override public void notConsistency(Store store) {
@@ -171,15 +115,12 @@ public class PeqQ extends PrimitiveConstraint {
 
     }
 
-    @Override public boolean notSatisfied() {
-
-        return !p.domain.isIntersecting(q.domain);
-
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
+        return IntDomain.GROUND;
     }
 
-    @Override public void removeConstraint() {
-        p.removeConstraint(this);
-        q.removeConstraint(this);
+    @Override public boolean notSatisfied() {
+        return !p.domain.isIntersecting(q.domain);
     }
 
     @Override public boolean satisfied() {
@@ -189,13 +130,6 @@ public class PeqQ extends PrimitiveConstraint {
 
     @Override public String toString() {
         return id() + " : PeqQ(" + p + ", " + q + " )";
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            p.weight++;
-            q.weight++;
-        }
     }
 
 }

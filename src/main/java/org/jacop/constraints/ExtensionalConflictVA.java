@@ -28,18 +28,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.jacop.constraints;
-
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Pattern;
-
-import javax.xml.transform.sax.TransformerHandler;
 
 import org.jacop.core.*;
 import org.jacop.util.TupleUtils;
-import org.xml.sax.SAXException;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.PriorityQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Extensional constraint assures that none of the tuples explicitly given is enforced in the
@@ -90,12 +88,6 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
      */
 
     public IntVar[] list;
-
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"list"};
 
     /**
      * Partial constructor which stores variables involved in a constraint but
@@ -443,14 +435,7 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
 
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.ANY;
     }
 
@@ -684,26 +669,6 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
         variableQueue.add(var);
     }
 
-    @Override public void removeConstraint() {
-
-        for (int i = 0; i < list.length; i++)
-            list[i].removeConstraint(this);
-
-    }
-
-    @Override public boolean satisfied() {
-
-        int i = 0;
-        while (i < list.length) {
-            if (!list[i].singleton())
-                return false;
-            i++;
-        }
-
-        return true;
-
-    }
-
     boolean smaller(int[] tuple1, int[] tuple2) {
 
         int arity = tuple1.length;
@@ -774,81 +739,6 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
 
         return tupleString.toString();
 
-    }
-
-
-    /**
-     * It writes the content of this object as the content of XML
-     * element so later it can be used to restore the object from
-     * XML. It is done after restoration of the part of the object
-     * specified in xmlAttributes.
-     *
-     * @param tf a place to write the content of the object.
-     * @throws SAXException exception from org.xml.sax package
-     */
-    public void toXML(TransformerHandler tf) throws SAXException {
-
-        StringBuffer result = new StringBuffer("");
-
-        for (int[][] tuplesForGivenValue : tuples[0]) {
-            for (int[] tuple : tuplesForGivenValue) {
-
-                result.delete(0, result.length());
-
-                for (int i : tuple)
-                    result.append(String.valueOf(i)).append(" ");
-                result.append("|");
-
-                tf.characters(result.toString().toCharArray(), 0, result.length());
-
-            }
-        }
-
-    }
-
-
-    /**
-     *
-     * It updates the specified constraint with the information
-     * stored in the string.
-     *
-     * @param object the constraint to be updated.
-     * @param content the information used for update.
-     */
-    public static void fromXML(ExtensionalConflictVA object, String content) {
-
-        Pattern pat = Pattern.compile("|");
-        String[] result = pat.split(content);
-
-        ArrayList<int[]> tuples = new ArrayList<int[]>(result.length);
-
-        for (String element : result) {
-
-            Pattern dotSplit = Pattern.compile(" ");
-            String[] oneElement = dotSplit.split(element);
-
-            int[] tuple = new int[object.list.length];
-
-            int i = 0;
-            for (String number : oneElement) {
-                try {
-                    tuple[i++] = Integer.parseInt(number) ;
-                } catch (NumberFormatException ex) {
-                }
-            }
-
-            tuples.add(tuple);
-        }
-
-        object.tuplesFromConstructor = tuples.toArray(new int[tuples.size()][]);
-
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            for (Var v : list)
-                v.weight++;
-        }
     }
 
 }

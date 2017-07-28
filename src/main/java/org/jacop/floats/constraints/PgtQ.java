@@ -33,7 +33,6 @@ package org.jacop.floats.constraints;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 
 import org.jacop.constraints.PrimitiveConstraint;
 
@@ -62,12 +61,6 @@ public class PgtQ extends PrimitiveConstraint {
      * It specifies variable q.
      */
     public FloatVar q;
-
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"p", "q"};
 
     /**
      * It constructs constraint P {@literal <=} Q.
@@ -109,70 +102,24 @@ public class PgtQ extends PrimitiveConstraint {
         return p.min() > q.max();
     }
 
-
-    @Override public int getNestedPruningEvent(Var var, boolean mode) {
-
-        // If consistency function mode
-        if (mode) {
-            if (consistencyPruningEvents != null) {
-                Integer possibleEvent = consistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return FloatDomain.BOUND;
-        }
-        // If notConsistency function mode
-        else {
-            if (notConsistencyPruningEvents != null) {
-                Integer possibleEvent = notConsistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return FloatDomain.BOUND;
-        }
-    }
-
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
         return FloatDomain.BOUND;
     }
 
-    @Override public int getNotConsistencyPruningEvent(Var var) {
-
-        // If notConsistency function mode
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override protected int getDefaultNestedConsistencyPruningEvent() {
         return FloatDomain.BOUND;
     }
 
-    @Override public void impose(Store store) {
-        p.putModelConstraint(this, getConsistencyPruningEvent(p));
-        store.addChanged(this);
-        store.countConstraint();
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
+        return FloatDomain.BOUND;
     }
 
-    @Override public void removeConstraint() {
-        p.removeConstraint(this);
+    @Override public int getDefaultConsistencyPruningEvent() {
+        return FloatDomain.BOUND;
     }
 
     @Override public String toString() {
         return id() + " : PgtQ(" + p + ", " + q + " )";
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            p.weight++;
-            q.weight++;
-        }
     }
 
 }

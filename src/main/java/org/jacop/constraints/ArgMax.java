@@ -41,7 +41,6 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 
 /**
  * ArgMax constraint provides the index of the maximum
@@ -80,12 +79,6 @@ public class ArgMax extends Constraint {
     public boolean tiebreak = true;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as 
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"list", "maxIndex"};
-
-    /**
      * It constructs max constraint.
      * @param maxIndex variable denoting the index of the maximum value
      * @param list the array of variables for which the index of the maximum value is imposed.
@@ -93,7 +86,6 @@ public class ArgMax extends Constraint {
      * @param tiebreak defines if tie breaking should be used (returning the least index if several maximum elements
      */
     public ArgMax(IntVar[] list, IntVar maxIndex, int indexOffset, boolean tiebreak) {
-
         this(list, maxIndex);
         this.indexOffset = indexOffset;
         this.tiebreak = tiebreak;
@@ -133,9 +125,7 @@ public class ArgMax extends Constraint {
     }
 
     public ArgMax(ArrayList<? extends IntVar> variables, IntVar maxIndex) {
-
         this(variables.toArray(new IntVar[variables.size()]), maxIndex);
-
     }
 
     @Override public void consistency(Store store) {
@@ -245,35 +235,8 @@ public class ArgMax extends Constraint {
         } while (store.propagationHasOccurred);
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
-    }
-
-    // registers the constraint in the constraint store
-    @Override public void impose(Store store) {
-
-        maxIndex.putModelConstraint(this, getConsistencyPruningEvent(maxIndex));
-
-        for (Var V : list)
-            V.putModelConstraint(this, getConsistencyPruningEvent(V));
-
-        store.addChanged(this);
-        store.countConstraint();
-
-    }
-
-    @Override public void removeConstraint() {
-        maxIndex.removeConstraint(this);
-        for (int i = 0; i < list.length; i++) {
-            list[i].removeConstraint(this);
-        }
     }
 
     @Override public boolean satisfied() {
@@ -309,11 +272,4 @@ public class ArgMax extends Constraint {
         return result.toString();
     }
 
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            maxIndex.weight++;
-            for (Var v : list)
-                v.weight++;
-        }
-    }
 }

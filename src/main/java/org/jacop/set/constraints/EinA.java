@@ -30,13 +30,10 @@
 
 package org.jacop.set.constraints;
 
-import java.util.ArrayList;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
@@ -67,12 +64,6 @@ public class EinA extends PrimitiveConstraint {
      * It specifies if the inclusion relation is strict.
      */
     public boolean strict = false;
-
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"element", "a", "strict"};
 
     /**
      * It constructs an eInA constraint to restrict the domain of the variable.
@@ -115,36 +106,6 @@ public class EinA extends PrimitiveConstraint {
 
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
-
-        return SetDomain.GLB;
-
-    }
-
-    @Override public int getNotConsistencyPruningEvent(Var var) {
-
-        // If notConsistency function mode
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
-        return SetDomain.ANY;
-    }
-
-    @Override public void impose(Store store) {
-        a.putModelConstraint(this, getConsistencyPruningEvent(a));
-        store.addChanged(this);
-        store.countConstraint();
-    }
-
     @Override public void notConsistency(Store store) {
 
         // FIXME, TODO, check notConsistency() functions in other set constraints.
@@ -153,9 +114,7 @@ public class EinA extends PrimitiveConstraint {
     }
 
     @Override public boolean notSatisfied() {
-
         return !a.domain.lub().contains(element);
-
     }
 
     @Override public void removeConstraint() {
@@ -163,41 +122,27 @@ public class EinA extends PrimitiveConstraint {
     }
 
     @Override public boolean satisfied() {
-
         return a.domain.glb().contains(element);
-
     }
 
-    @Override public int getNestedPruningEvent(Var var, boolean mode) {
-
-        // If consistency function mode
-        if (mode) {
-            if (consistencyPruningEvents != null) {
-                Integer possibleEvent = consistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return SetDomain.ANY;
-        }
-        // If notConsistency function mode
-        else {
-            if (notConsistencyPruningEvents != null) {
-                Integer possibleEvent = notConsistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return SetDomain.ANY;
-        }
+    @Override protected int getDefaultNestedConsistencyPruningEvent() {
+        return SetDomain.ANY;
     }
 
+    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
+        return SetDomain.ANY;
+    }
+
+    @Override public int getDefaultConsistencyPruningEvent() {
+        return SetDomain.GLB;
+    }
+
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
+        return SetDomain.ANY;
+    }
 
     @Override public String toString() {
         return id() + " : EinA(" + element + ", " + a + " )";
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight)
-            a.weight++;
     }
 
 }

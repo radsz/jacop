@@ -73,12 +73,6 @@ public class AdisjointB extends Constraint implements UsesQueueVariable {
     private boolean bHasChanged = true;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"a", "b"};
-
-    /**
      * It constructs a disjont set constraint to restrict the domains of the variables A and B.
      *
      * @param a variable that is restricted to not have any element in common with b.
@@ -209,29 +203,8 @@ public class AdisjointB extends Constraint implements UsesQueueVariable {
 
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return SetDomain.ANY;
-    }
-
-    @Override public void impose(Store store) {
-
-        a.putModelConstraint(this, getConsistencyPruningEvent(a));
-        b.putModelConstraint(this, getConsistencyPruningEvent(b));
-
-        store.addChanged(this);
-        store.countConstraint();
-    }
-
-    @Override public void removeConstraint() {
-        a.removeConstraint(this);
-        b.removeConstraint(this);
     }
 
     @Override public boolean satisfied() {
@@ -242,13 +215,6 @@ public class AdisjointB extends Constraint implements UsesQueueVariable {
 
     @Override public String toString() {
         return id() + " : AdisjointB(" + a + ", " + b + " )";
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            a.weight++;
-            b.weight++;
-        }
     }
 
     @Override public void queueVariable(int level, Var variable) {

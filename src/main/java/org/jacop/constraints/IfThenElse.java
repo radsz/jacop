@@ -73,12 +73,6 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
     final public QueueForward<PrimitiveConstraint> queueForward;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"condC", "thenC", "elseC"};
-
-    /**
      * It creates ifthenelse constraint.
      * @param condC the condition of the constraint.
      * @param thenC the condition which must be true if the constraint condition is true.
@@ -202,6 +196,10 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
 
     }
 
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
+        throw new IllegalStateException("Not implemented as more precise method exists.");
+    }
+
     @Override public int getConsistencyPruningEvent(Var var) {
 
         // If consistency function mode
@@ -255,6 +253,10 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
             return eventAcross;
 
 
+    }
+
+    @Override public int getDefaultConsistencyPruningEvent() {
+        throw new IllegalStateException("Not implemented as more precise method exists.");
     }
 
     @Override public int getNotConsistencyPruningEvent(Var var) {
@@ -313,19 +315,9 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
 
     @Override public void impose(Store store) {
 
+        super.impose(store);
+
         this.store = store;
-
-        for (Var var : condC.arguments())
-            var.putModelConstraint(this, getConsistencyPruningEvent(var));
-
-        for (Var var : thenC.arguments())
-            var.putModelConstraint(this, getConsistencyPruningEvent(var));
-
-        for (Var var : elseC.arguments())
-            var.putModelConstraint(this, getConsistencyPruningEvent(var));
-
-        store.addChanged(this);
-        store.countConstraint();
 
         condC.include(store);
         thenC.include(store);
@@ -338,19 +330,6 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
         condC.include(store);
         thenC.include(store);
         elseC.include(store);
-    }
-
-    @Override public void removeConstraint() {
-
-        for (Var var : condC.arguments())
-            var.removeConstraint(this);
-
-        for (Var var : thenC.arguments())
-            var.removeConstraint(this);
-
-        for (Var var : elseC.arguments())
-            var.removeConstraint(this);
-
     }
 
     @Override public boolean satisfied() {
@@ -389,14 +368,6 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
 
         queueForward.queueForward(level, variable);
 
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            condC.increaseWeight();
-            thenC.increaseWeight();
-            elseC.increaseWeight();
-        }
     }
 
 }

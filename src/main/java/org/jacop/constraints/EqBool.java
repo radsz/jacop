@@ -40,7 +40,6 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 
 /**
  * If all x's are equal to each other then result variable is equal 1. Otherwise, result variable 
@@ -63,12 +62,6 @@ public class EqBool extends PrimitiveConstraint {
      * It specifies variable result in the constraint.
      */
     public IntVar result;
-
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"list", "result"};
 
     /**
      * It constructs eqBool.
@@ -105,9 +98,7 @@ public class EqBool extends PrimitiveConstraint {
      * @param result variable which is equal 0 if variables from list contain different values.
      */
     public EqBool(ArrayList<? extends IntVar> list, IntVar result) {
-
         this(list.toArray(new IntVar[list.size()]), result);
-
     }
 
     /**
@@ -125,61 +116,20 @@ public class EqBool extends PrimitiveConstraint {
         return null;
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
-        return IntDomain.BOUND;
-    }
-
-    @Override public int getNotConsistencyPruningEvent(Var var) {
-
-        // If notConsistency function mode
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
         return IntDomain.GROUND;
     }
 
-    @Override public int getNestedPruningEvent(Var var, boolean mode) {
-
-        // If consistency function mode
-        if (mode) {
-            if (consistencyPruningEvents != null) {
-                Integer possibleEvent = consistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return IntDomain.ANY;
-        }
-        // If notConsistency function mode
-        else {
-            if (notConsistencyPruningEvents != null) {
-                Integer possibleEvent = notConsistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return IntDomain.GROUND;
-        }
+    @Override protected int getDefaultNestedConsistencyPruningEvent() {
+        return IntDomain.ANY;
     }
 
-    // registers the constraint in the constraint store
-    @Override public void impose(Store store) {
+    @Override public int getDefaultConsistencyPruningEvent() {
+        return IntDomain.BOUND;
+    }
 
-        result.putModelConstraint(this, getConsistencyPruningEvent(result));
-
-        for (Var V : list)
-            V.putModelConstraint(this, getConsistencyPruningEvent(V));
-
-        store.addChanged(this);
-        store.countConstraint();
-
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
+        return IntDomain.GROUND;
     }
 
     public void consistency(Store store) {
@@ -349,14 +299,6 @@ public class EqBool extends PrimitiveConstraint {
 
     }
 
-
-    @Override public void removeConstraint() {
-        result.removeConstraint(this);
-        for (int i = 0; i < list.length; i++) {
-            list[i].removeConstraint(this);
-        }
-    }
-
     @Override public String toString() {
 
         StringBuffer resultString = new StringBuffer(id());
@@ -403,14 +345,6 @@ public class EqBool extends PrimitiveConstraint {
         for (Constraint c : constraints)
             store.impose(c, queueIndex);
 
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            result.weight++;
-            for (Var v : list)
-                v.weight++;
-        }
     }
 
 }

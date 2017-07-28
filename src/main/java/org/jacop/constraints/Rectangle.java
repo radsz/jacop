@@ -31,6 +31,8 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.stream.Stream;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -56,12 +58,6 @@ public class Rectangle {
      * It specifies the origin of the rectangle in each dimension.
      */
     public IntVar[] origin;
-
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"length", "origin"};
 
     /**
      * It constructs a rectangle.
@@ -351,5 +347,8 @@ public class Rectangle {
 
     }
 
+    public static Stream<Var> getStream(Rectangle[] scope) {
+        return Arrays.stream(scope).map(r -> Stream.concat( Arrays.stream(r.origin), Arrays.stream( r.length) )).flatMap(i -> i);
+    }
 
 }

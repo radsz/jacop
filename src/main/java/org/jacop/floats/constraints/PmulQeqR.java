@@ -74,12 +74,6 @@ public class PmulQeqR extends Constraint {
     boolean xSquare = false;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as 
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"p", "q", "r"};
-
-    /**
      * It constructs a constraint P * Q = R.
      * @param p variable p.
      * @param q variable q.
@@ -186,29 +180,8 @@ public class PmulQeqR extends Constraint {
 
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
-    }
-
-    @Override public void impose(Store store) {
-        p.putModelConstraint(this, getConsistencyPruningEvent(p));
-        q.putModelConstraint(this, getConsistencyPruningEvent(q));
-        r.putModelConstraint(this, getConsistencyPruningEvent(r));
-        store.addChanged(this);
-        store.countConstraint();
-    }
-
-    @Override public void removeConstraint() {
-        p.removeConstraint(this);
-        q.removeConstraint(this);
-        r.removeConstraint(this);
     }
 
     @Override public boolean satisfied() {
@@ -221,15 +194,6 @@ public class PmulQeqR extends Constraint {
     @Override public String toString() {
 
         return id() + " : PmulQeqR(" + p + ", " + q + ", " + r + " )";
-    }
-
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            p.weight++;
-            q.weight++;
-            r.weight++;
-        }
     }
 
     public FloatVar derivative(Store store, FloatVar f, java.util.Set<FloatVar> vars, FloatVar x) {

@@ -97,12 +97,6 @@ public class SumBool extends PrimitiveConstraint {
     int l;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as 
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"list", "sum"};
-
-    /**
      * @param store current store
      * @param list variables which are being multiplied by weights.
      * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
@@ -273,48 +267,19 @@ public class SumBool extends PrimitiveConstraint {
         }
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
+        return IntDomain.BOUND;
+    }
+    
+    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
         return IntDomain.BOUND;
     }
 
-    @Override public int getNestedPruningEvent(Var var, boolean mode) {
-
-        // If consistency function mode
-        if (mode) {
-            if (consistencyPruningEvents != null) {
-                Integer possibleEvent = consistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return IntDomain.BOUND;
-        }
-
-        // If notConsistency function mode
-        else {
-            if (notConsistencyPruningEvents != null) {
-                Integer possibleEvent = notConsistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return IntDomain.BOUND;
-        }
+    @Override protected int getDefaultNestedConsistencyPruningEvent() {
+        return IntDomain.BOUND;
     }
 
-    @Override public int getNotConsistencyPruningEvent(Var var) {
-
-        // If notConsistency function mode
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
         return IntDomain.BOUND;
     }
 
@@ -325,13 +290,8 @@ public class SumBool extends PrimitiveConstraint {
 
         reified = false;
 
-        for (Var V : x)
-            V.putModelConstraint(this, getConsistencyPruningEvent(V));
+        super.impose(store);
 
-        sum.putModelConstraint(this, getConsistencyPruningEvent(sum));
-
-        store.addChanged(this);
-        store.countConstraint();
     }
 
     @Override public void removeConstraint() {

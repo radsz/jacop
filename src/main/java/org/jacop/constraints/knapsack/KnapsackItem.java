@@ -68,12 +68,6 @@ public final class KnapsackItem implements Comparable<KnapsackItem> {
     public double efficiency;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"quantity", "weight", "profit"};
-
-    /**
      * It constructs an item. It requires information about weight and profit,
      * as well as finite domain variable denoting the quantity. It will compute
      * efficiency as well.

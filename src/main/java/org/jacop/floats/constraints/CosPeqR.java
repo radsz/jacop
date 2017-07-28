@@ -71,12 +71,6 @@ public class CosPeqR extends Constraint {
     public FloatVar q;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as 
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"p", "q"};
-
-    /**
      * It constructs cos(P) = Q constraints.
      * @param p variable P
      * @param q variable Q
@@ -114,8 +108,6 @@ public class CosPeqR extends Constraint {
     }
 
     void boundConsistency(Store store) {
-
-        // System.out.println ("1. CosPeqR("+p+", "+q+")");
 
         if (p.max() - p.min() >= 2 * FloatDomain.PI)
             return;
@@ -303,30 +295,8 @@ public class CosPeqR extends Constraint {
             return 0;  // should not return this
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
-
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
-
-    }
-
-
-    @Override public void impose(Store store) {
-        p.putModelConstraint(this, getConsistencyPruningEvent(p));
-        q.putModelConstraint(this, getConsistencyPruningEvent(q));
-        store.addChanged(this);
-        store.countConstraint();
-    }
-
-    @Override public void removeConstraint() {
-        p.removeConstraint(this);
-        q.removeConstraint(this);
     }
 
     @Override public boolean satisfied() {
@@ -351,13 +321,6 @@ public class CosPeqR extends Constraint {
 
         return result.toString();
 
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            p.weight++;
-            q.weight++;
-        }
     }
 
     public FloatVar derivative(Store store, FloatVar f, java.util.Set<FloatVar> vars, FloatVar x) {

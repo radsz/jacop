@@ -70,12 +70,6 @@ public class Values extends Constraint {
     static final boolean debug = false;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"list", "count"};
-
-    /**
      * It constructs Values constraint.
      *
      * @param list list of variables for which different values are being counted.
@@ -116,14 +110,6 @@ public class Values extends Constraint {
 
         this(list.toArray(new IntVar[list.size()]), count);
 
-    }
-
-    @Override public void impose(Store store) {
-        count.putConstraint(this);
-        for (Var v : list)
-            v.putConstraint(this);
-        store.addChanged(this);
-        store.countConstraint();
     }
 
     @Override @SuppressWarnings("unchecked") public void consistency(Store store) {
@@ -213,25 +199,6 @@ public class Values extends Constraint {
 
     }
 
-    @Override public boolean satisfied() {
-        boolean sat = true;
-        int i = 0;
-        if (count.singleton())
-            while (sat && i < list.length) {
-                sat = list[i].singleton();
-                i++;
-            }
-        else
-            return false;
-        return sat;
-    }
-
-    @Override public void removeConstraint() {
-        count.removeConstraint(this);
-        for (Var v : list)
-            v.removeConstraint(this);
-    }
-
     @Override public String toString() {
 
         StringBuffer result = new StringBuffer(id());
@@ -246,25 +213,9 @@ public class Values extends Constraint {
         return result.toString();
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         //@todo, why so restrictive?
         return IntDomain.GROUND;
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            count.weight++;
-            for (Var v : list)
-                v.weight++;
-        }
     }
 
   private static class FDVminimumComparator<T extends IntVar> implements Comparator<T>, java.io.Serializable {

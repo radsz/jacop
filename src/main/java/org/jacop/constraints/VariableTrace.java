@@ -104,20 +104,12 @@ public class VariableTrace extends Constraint implements UsesQueueVariable {
     public void consistency(Store store) {
     }
 
-    public int getConsistencyPruningEvent(Var var) {
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.ANY;
     }
 
     public void queueVariable(int level, Var var) {
-
         System.out.println("Var: " + var + ", level: " + level + ", constraint: " + store.currentConstraint);
-
     }
 
     @Override public void removeLevelLate(int level) {

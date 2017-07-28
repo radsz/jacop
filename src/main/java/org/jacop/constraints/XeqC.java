@@ -36,7 +36,6 @@ import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 
 /**
  * Constraints X #= C
@@ -60,12 +59,6 @@ public class XeqC extends PrimitiveConstraint {
      * It specifies the variable which is constrained to be equal to the specified value.
      */
     public IntVar x;
-
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"x", "c"};
 
     /**
      * It constructs the constraint X = C.
@@ -92,60 +85,20 @@ public class XeqC extends PrimitiveConstraint {
 
     }
 
-    @Override public int getNestedPruningEvent(Var var, boolean mode) {
-
-        // If satisfied function mode
-        if (mode) {
-            if (consistencyPruningEvents != null) {
-                Integer possibleEvent = consistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-
-            return IntDomain.ANY;
-
-        }
-        // If notSatisfied function mode
-        else {
-            if (notConsistencyPruningEvents != null) {
-                Integer possibleEvent = notConsistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return IntDomain.ANY;
-
-        }
+    @Override protected int getDefaultNestedConsistencyPruningEvent() {
+        return IntDomain.ANY;
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
+    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
+        return IntDomain.ANY;
+    }
 
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
-
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
         return Domain.NONE;
-
     }
 
-    @Override public int getNotConsistencyPruningEvent(Var var) {
-
-        // If notConsistency function mode
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return Domain.NONE;
-
-    }
-
-    @Override public void impose(Store store) {
-        x.putModelConstraint(this, getConsistencyPruningEvent(x));
-        store.addChanged(this);
-        store.countConstraint();
     }
 
     @Override public void notConsistency(Store store) {
@@ -158,22 +111,12 @@ public class XeqC extends PrimitiveConstraint {
         return !x.domain.contains(c);
     }
 
-    @Override public void removeConstraint() {
-        x.removeConstraint(this);
-    }
-
     @Override public boolean satisfied() {
         return x.singleton(c);
     }
 
     @Override public String toString() {
         return id() + " : XeqC(" + x + ", " + c + " )";
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            x.weight++;
-        }
     }
 
     /**

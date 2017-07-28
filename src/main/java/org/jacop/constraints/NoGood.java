@@ -84,12 +84,6 @@ public class NoGood extends PrimitiveConstraint {
     final static boolean debug = false;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"listOfVars", "listOfValues"};
-
-    /**
      * It creates a no-good constraint.
      * @param listOfVars the scope of the constraint.
      * @param listOfValues no-good values which all-together assignment to variables within constraint scope is a no-good.
@@ -263,14 +257,7 @@ public class NoGood extends PrimitiveConstraint {
             System.out.println("End" + this);
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.GROUND;
     }
 
@@ -387,13 +374,6 @@ public class NoGood extends PrimitiveConstraint {
     }
 
 
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            for (Var v : listOfVars)
-                v.weight++;
-        }
-    }
-
     @Override public boolean notSatisfied() {
 
         boolean result = true;
@@ -403,35 +383,15 @@ public class NoGood extends PrimitiveConstraint {
         return result;
     }
 
-    @Override public int getNestedPruningEvent(Var var, boolean mode) {
-
-        // If consistency function mode
-        if (mode) {
-            if (consistencyPruningEvents != null) {
-                Integer possibleEvent = consistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return IntDomain.GROUND;
-        }
-        // If notConsistency function mode
-        else {
-            if (notConsistencyPruningEvents != null) {
-                Integer possibleEvent = notConsistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return IntDomain.ANY;
-        }
+    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
+        return IntDomain.GROUND;
     }
 
-    @Override public int getNotConsistencyPruningEvent(Var var) {
-        // If notConsistency function mode
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override protected int getDefaultNestedConsistencyPruningEvent() {
+        return IntDomain.ANY;
+    }
+
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
         return IntDomain.GROUND;
     }
 

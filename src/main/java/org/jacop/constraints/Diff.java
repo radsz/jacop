@@ -33,6 +33,7 @@ package org.jacop.constraints;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import org.jacop.core.*;
 
@@ -53,7 +54,6 @@ public class Diff extends Constraint implements UsesQueueVariable {
 
     Store currentStore = null;
 
-
     int minPosition = 0;
     int stamp = 0;
 
@@ -72,12 +72,6 @@ public class Diff extends Constraint implements UsesQueueVariable {
      * It specifies if the constraint should compute and use the profile.
      */
     public boolean doProfile = true;
-
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"rectangles", "doProfile"};
 
     protected Diff() {
     }
@@ -226,15 +220,7 @@ public class Diff extends Constraint implements UsesQueueVariable {
     }
 
     private void setScope(Rectangle[] rectangles) {
-        ArrayList<Var> variables = new ArrayList<Var>();
-
-        for (Rectangle r : rectangles) {
-            for (int i = 0; i < r.dim; i++)
-                variables.add(r.origin[i]);
-            for (int i = 0; i < r.dim(); i++)
-                variables.add(r.length[i]);
-        }
-        super.setScope(variables.stream());
+        setScope(Arrays.stream(rectangles).map(r -> Stream.concat( Arrays.stream(r.origin), Arrays.stream( r.length) )).flatMap(i -> i));
     }
 
 
@@ -449,14 +435,7 @@ public class Diff extends Constraint implements UsesQueueVariable {
         return contains;
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.ANY;
     }
 
@@ -466,6 +445,9 @@ public class Diff extends Constraint implements UsesQueueVariable {
 
     // registers the constraint in the constraint store
     @Override public void impose(Store store) {
+
+        super.impose(store);
+
         Var v;
         int level = store.level;
 
@@ -476,16 +458,12 @@ public class Diff extends Constraint implements UsesQueueVariable {
         for (Rectangle r : rectangles) {
             for (int i = 0; i < r.dim(); i++) {
                 v = r.origin[i];
-                v.putModelConstraint(this, getConsistencyPruningEvent(v));
                 queueVariable(level, v);
-
                 v = r.length[i];
-                v.putModelConstraint(this, getConsistencyPruningEvent(v));
                 queueVariable(level, v);
             }
         }
-        store.addChanged(this);
-        store.countConstraint();
+
     }
 
     boolean intervalOverlap(int min1, int max1, int min2, int max2) {
@@ -923,17 +901,6 @@ public class Diff extends Constraint implements UsesQueueVariable {
         }
     }
 
-    @Override public void removeConstraint() {
-        for (Rectangle R : rectangles) {
-            for (int i = 0; i < R.dim; i++) {
-                Var v = R.origin[i];
-                v.removeConstraint(this);
-                v = R.length[i];
-                v.removeConstraint(this);
-            }
-        }
-    }
-
     @Override public boolean satisfied() {
         boolean sat = true;
 
@@ -966,18 +933,6 @@ public class Diff extends Constraint implements UsesQueueVariable {
             i++;
         }
         return result.append(")").toString();
-    }
-
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            for (Rectangle r : rectangles) {
-                for (Var v : r.length)
-                    v.weight++;
-                for (Var v : r.origin)
-                    v.weight++;
-            }
-        }
     }
 
   static class DimIMinComparator<T extends IntRectangle> implements Comparator<T>, java.io.Serializable {

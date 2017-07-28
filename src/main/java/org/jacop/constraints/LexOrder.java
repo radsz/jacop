@@ -114,10 +114,10 @@ public class LexOrder extends Constraint implements UsesQueueVariable {
 
         lexLT = lt;
 
-	this.x = new IntVar[x.length];
-	System.arraycopy(x, 0, this.x, 0, x.length);
-	this.y = new IntVar[y.length];
-	System.arraycopy(y, 0, this.y, 0, y.length);
+        this.x = new IntVar[x.length];
+        System.arraycopy(x, 0, this.x, 0, x.length);
+        this.y = new IntVar[y.length];
+        System.arraycopy(y, 0, this.y, 0, y.length);
 
         if (x.length < y.length) {
             lexLT = false;
@@ -125,7 +125,7 @@ public class LexOrder extends Constraint implements UsesQueueVariable {
         } else
             this.n = y.length;
 
-        setScope( Stream.concat(Arrays.stream(x), Arrays.stream(y)) );
+        setScope(Stream.concat(Arrays.stream(x), Arrays.stream(y)));
 
     }
 
@@ -174,13 +174,7 @@ public class LexOrder extends Constraint implements UsesQueueVariable {
         store.countConstraint();
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
     }
 
@@ -231,26 +225,6 @@ public class LexOrder extends Constraint implements UsesQueueVariable {
                 return false;
 
         return false;
-    }
-
-    @Override public void removeConstraint() {
-
-        for (int i = 0; i < n; i++)
-            x[i].removeConstraint(this);
-        for (int i = 0; i < n; i++)
-            y[i].removeConstraint(this);
-    }
-
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-
-            for (int i = 0; i < n; i++)
-                x[i].weight++;
-            for (int i = 0; i < n; i++)
-                y[i].weight++;
-
-        }
     }
 
     @Override public void queueVariable(int level, Var var) {
@@ -476,17 +450,5 @@ public class LexOrder extends Constraint implements UsesQueueVariable {
         y[i].domain.inMin(store.level, y[i], x[i].min());
 
     }
-
-    // private boolean ground(IntVar[] v) {
-    // 	boolean single = true;
-
-    // 	int i = 0;
-    // 	while (single && i < v.length) {
-    // 	    single = v[i].singleton();
-    // 	    i++;
-    // 	}
-
-    // 	return single;
-    // }
 
 }

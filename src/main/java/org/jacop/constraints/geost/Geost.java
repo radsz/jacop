@@ -444,12 +444,6 @@ public class Geost extends Constraint implements UsesQueueVariable {
      */
     public final Shape[] shapeRegister;
 
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"objects", "externalConstraints", "shapeRegister"};
-
     @SuppressWarnings("all")
     public Geost(Collection<GeostObject> objects, Collection<ExternalConstraint> constraints, Collection<Shape> shapes) {
         this(objects.toArray(new GeostObject[objects.size()]), constraints.toArray(new ExternalConstraint[constraints.size()]),
@@ -1604,6 +1598,11 @@ public class Geost extends Constraint implements UsesQueueVariable {
             return IntDomain.ANY;
 
         return IntDomain.BOUND;
+
+    }
+
+    @Override public int getDefaultConsistencyPruningEvent() {
+        throw new IllegalStateException("Not implemented as more precise implementation exists.");
 
     }
 

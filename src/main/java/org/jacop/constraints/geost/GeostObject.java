@@ -107,13 +107,6 @@ public class GeostObject {
      */
     int groundCount;
 
-
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"no", "coords", "shapeID", "start", "duration", "end"};
-
     /**
      *
      * It constructs a Geost object with all the attributes needed by the Geost

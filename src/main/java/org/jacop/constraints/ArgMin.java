@@ -79,12 +79,6 @@ public class ArgMin extends Constraint {
     public boolean tiebreak = true;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as 
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"list", "minIndex"};
-
-    /**
      * It constructs max constraint.
      * @param minIndex variable denoting the index of the maximum value
      * @param list the array of variables for which the index of the maximum value is imposed.
@@ -244,35 +238,8 @@ public class ArgMin extends Constraint {
         } while (store.propagationHasOccurred);
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
-    }
-
-    // registers the constraint in the constraint store
-    @Override public void impose(Store store) {
-
-        minIndex.putModelConstraint(this, getConsistencyPruningEvent(minIndex));
-
-        for (Var V : list)
-            V.putModelConstraint(this, getConsistencyPruningEvent(V));
-
-        store.addChanged(this);
-        store.countConstraint();
-
-    }
-
-    @Override public void removeConstraint() {
-        minIndex.removeConstraint(this);
-        for (int i = 0; i < list.length; i++) {
-            list[i].removeConstraint(this);
-        }
     }
 
     @Override public boolean satisfied() {
@@ -308,11 +275,4 @@ public class ArgMin extends Constraint {
         return result.toString();
     }
 
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            minIndex.weight++;
-            for (Var v : list)
-                v.weight++;
-        }
-    }
 }

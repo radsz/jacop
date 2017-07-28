@@ -71,12 +71,6 @@ public class Subcircuit extends Alldiff {
     int firstConsistencyLevel;
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as 
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"list"};
-
-    /**
      * It constructs a circuit constraint.
      * @param list variables which must form a circuit.
      */
@@ -119,7 +113,6 @@ public class Subcircuit extends Alldiff {
      * @param list variables which must form a circuit.
      */
     public Subcircuit(ArrayList<IntVar> list) {
-
         this(list.toArray(new IntVar[list.size()]));
     }
 

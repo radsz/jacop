@@ -90,12 +90,6 @@ public class ElementVariable extends Constraint implements UsesQueueVariable {
     HashMap<IntVar, ArrayList<Integer>> duplicates = new HashMap<IntVar, ArrayList<Integer>>();
 
     /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"index", "list", "value", "indexOffset"};
-
-    /**
      * It constructs an element constraint.
      *
      * @param index variable index
@@ -138,9 +132,7 @@ public class ElementVariable extends Constraint implements UsesQueueVariable {
      * @param value a value of the index-th element from list
      */
     public ElementVariable(IntVar index, ArrayList<? extends IntVar> list, IntVar value) {
-
         this(index, list.toArray(new IntVar[list.size()]), value, 0);
-
     }
 
     /**
@@ -152,9 +144,7 @@ public class ElementVariable extends Constraint implements UsesQueueVariable {
      * @param indexOffset shift applied to index variable.
      */
     public ElementVariable(IntVar index, ArrayList<? extends IntVar> list, IntVar value, int indexOffset) {
-
         this(index, list.toArray(new IntVar[list.size()]), value, indexOffset);
-
     }
 
     /**
@@ -165,9 +155,7 @@ public class ElementVariable extends Constraint implements UsesQueueVariable {
      * @param value a value of the index-th element from list
      */
     public ElementVariable(IntVar index, IntVar[] list, IntVar value) {
-
         this(index, list, value, 0);
-
     }
 
     @Override public void removeLevel(int level) {
@@ -355,27 +343,17 @@ public class ElementVariable extends Constraint implements UsesQueueVariable {
         }
     }
 
-
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.ANY;
     }
 
     @Override public void impose(Store store) {
 
+        super.impose(store);
+
         store.registerRemoveLevelListener(this);
 
-        index.putModelConstraint(this, getConsistencyPruningEvent(index));
-        value.putModelConstraint(this, getConsistencyPruningEvent(value));
-
         for (int i = 0; i < list.length; i++) {
-            list[i].putModelConstraint(this, getConsistencyPruningEvent(list[i]));
             Integer oldInteger = mapping.put(list[i], i);
             if (oldInteger != null) {
                 ArrayList<Integer> array = duplicates.get(list[i]);
@@ -389,8 +367,6 @@ public class ElementVariable extends Constraint implements UsesQueueVariable {
             }
         }
 
-        store.addChanged(this);
-        store.countConstraint();
     }
 
     @Override public void queueVariable(int level, Var var) {
@@ -407,13 +383,6 @@ public class ElementVariable extends Constraint implements UsesQueueVariable {
 
         variableQueue.add((IntVar) var);
 
-    }
-
-    @Override public void removeConstraint() {
-        index.removeConstraint(this);
-        value.removeConstraint(this);
-        for (Var v : list)
-            v.removeConstraint(this);
     }
 
     @Override public boolean satisfied() {
@@ -446,15 +415,6 @@ public class ElementVariable extends Constraint implements UsesQueueVariable {
 
         return result.toString();
 
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            index.weight++;
-            value.weight++;
-            for (Var v : list)
-                v.weight++;
-        }
     }
 
 }

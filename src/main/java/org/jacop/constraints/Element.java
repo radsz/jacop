@@ -122,7 +122,6 @@ public class Element extends Constraint implements UsesQueueVariable {
     }
 
     @Override public Set<Var> arguments() {
-
         return c.arguments();
     }
 
@@ -133,6 +132,10 @@ public class Element extends Constraint implements UsesQueueVariable {
     @Override public int getConsistencyPruningEvent(Var var) {
         return c.getConsistencyPruningEvent(var);
 
+    }
+
+    @Override public int getDefaultConsistencyPruningEvent() {
+        throw new IllegalStateException("Not implemented as more precise method exists..");
     }
 
     @Override public String id() {

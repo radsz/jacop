@@ -31,16 +31,11 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Pattern;
-
-import javax.xml.transform.sax.TransformerHandler;
 
 import org.jacop.core.*;
 import org.jacop.util.IndexDomainView;
-import org.xml.sax.SAXException;
 
 /**
  * Extensional constraint assures that one of the tuples is enforced in the
@@ -168,12 +163,6 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
      *
      */
     public int lastAssignedVariablePosition = -1;
-
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"list", "reinsertBefore", "residuesBefore"};
 
     /**
      * Partial constructor which stores variables involved in a constraint but
@@ -580,13 +569,7 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
 
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-        //		 If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.ANY;
     }
 
@@ -597,14 +580,9 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
         store.registerRemoveLevelListener(this);
 
         varToIndex = new HashMap<Var, Integer>();
-
         for (int i = 0; i < list.length; i++) {
-            list[i].putModelConstraint(this, getConsistencyPruningEvent(list[i]));
             varToIndex.put(list[i], i);
         }
-
-        store.addChanged(this);
-        store.countConstraint();
 
         if (debugAll) {
             for (Var var : list)
@@ -612,7 +590,6 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
         }
 
         headsOfEliminatedTuples = new TimeStamp<Integer>(store, -1);
-
         tailsOfEliminatedTuples = new TimeStamp<Integer>(store, -1);
 
         nbValuesToBeSupported = new int[list.length];
@@ -621,12 +598,7 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
 
         domainSizeAfterConsistency = new int[list.length];
 
-    }
-
-    @Override public void increaseWeight() {
-
-        for (Var var : list)
-            var.weight++;
+        super.impose(store);
 
     }
 
@@ -640,18 +612,6 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
         if (V.singleton())
             lastAssignedVariablePosition = varToIndex.get(V);
 
-    }
-
-    @Override public void removeConstraint() {
-
-        for (Var var : list)
-            var.removeConstraint(this);
-
-    }
-
-    @Override public boolean satisfied() {
-        // FIXME.
-        return false;
     }
 
     boolean smaller(int[] tuple1, int[] tuple2) {
@@ -711,73 +671,5 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
 
         return tupleString.toString();
     }
-
-
-
-    /**
-     * It writes the content of this object as the content of XML
-     * element so later it can be used to restore the object from
-     * XML. It is done after restoration of the part of the object
-     * specified in xmlAttributes.
-     *
-     * @param tf a place to write the content of the object.
-     * @throws SAXException exception from org.xml.sax package
-     */
-    public void toXML(TransformerHandler tf) throws SAXException {
-
-        StringBuffer result = new StringBuffer("");
-
-        for (int[] tuple : tuples) {
-
-            result.delete(0, result.length());
-
-            for (int i : tuple)
-                result.append(String.valueOf(i)).append(" ");
-            result.append("|");
-
-            tf.characters(result.toString().toCharArray(), 0, result.length());
-
-        }
-
-    }
-
-
-    /**
-     *
-     * It updates the specified constraint with the information
-     * stored in the string.
-     *
-     * @param object the constraint to be updated.
-     * @param content the information used for update.
-     */
-    public static void fromXML(ExtensionalSupportSTR object, String content) {
-
-        Pattern pat = Pattern.compile("|");
-        String[] result = pat.split(content);
-
-        ArrayList<int[]> tuples = new ArrayList<int[]>(result.length);
-
-        for (String element : result) {
-
-            Pattern dotSplit = Pattern.compile(" ");
-            String[] oneElement = dotSplit.split(element);
-
-            int[] tuple = new int[object.list.length];
-
-            int i = 0;
-            for (String number : oneElement) {
-                try {
-                    tuple[i++] = Integer.parseInt(number);
-                } catch (NumberFormatException ex) {
-                }
-            }
-
-            tuples.add(tuple);
-        }
-
-        object.tuples = tuples.toArray(new int[tuples.size()][]);
-
-    }
-
 
 }

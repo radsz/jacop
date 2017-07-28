@@ -38,7 +38,6 @@ import org.jacop.core.Store;
 import org.jacop.core.UsesQueueVariable;
 import org.jacop.core.Var;
 import org.jacop.util.QueueForward;
-import org.jacop.util.SimpleHashSet;
 
 /**
  * Constraint "constraint1"{@literal #<=>} "constraint2"
@@ -63,12 +62,6 @@ public class Eq extends PrimitiveConstraint implements UsesQueueVariable {
     public PrimitiveConstraint c2;
 
     final public QueueForward<PrimitiveConstraint> queueForward;
-
-    /**
-     * It specifies the arguments required to be saved by an XML format as well as
-     * the constructor being called to recreate an object from an XML format.
-     */
-    public static String[] xmlAttributes = {"c1", "c2"};
 
     /**
      * It constructs equality constraint between two constraints.
@@ -109,6 +102,10 @@ public class Eq extends PrimitiveConstraint implements UsesQueueVariable {
 
         return getConsistencyPruningEvent(var);
 
+    }
+
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
+        throw new IllegalStateException("Not implemented as more precise version exists.");
     }
 
 
@@ -152,6 +149,10 @@ public class Eq extends PrimitiveConstraint implements UsesQueueVariable {
         else
             return eventAcross;
 
+    }
+
+    @Override public int getDefaultConsistencyPruningEvent() {
+        throw new IllegalStateException("Not implemented as more precise version exists.");
     }
 
     @Override public int getNotConsistencyPruningEvent(Var var) {
@@ -198,24 +199,11 @@ public class Eq extends PrimitiveConstraint implements UsesQueueVariable {
 
     @Override public void impose(Store store) {
 
-        SimpleHashSet<Var> variables = new SimpleHashSet<Var>();
-
-        for (Var var : c1.arguments())
-            variables.add(var);
-
-        for (Var var : c2.arguments())
-            variables.add(var);
-
-        while (!variables.isEmpty()) {
-            Var V = variables.removeFirst();
-            V.putModelConstraint(this, getConsistencyPruningEvent(V));
-        }
+        super.impose(store);
 
         c1.include(store);
         c2.include(store);
 
-        store.addChanged(this);
-        store.countConstraint(2);
     }
 
     @Override public void include(Store store) {
@@ -245,16 +233,6 @@ public class Eq extends PrimitiveConstraint implements UsesQueueVariable {
         return (c1.satisfied() && c2.notSatisfied()) || (c1.notSatisfied() && c2.satisfied());
     }
 
-    @Override public void removeConstraint() {
-
-        for (Var var : c1.arguments())
-            var.removeConstraint(this);
-
-        for (Var var : c2.arguments())
-            var.removeConstraint(this);
-
-    }
-
     @Override public boolean satisfied() {
         return (c1.satisfied() && c2.satisfied()) || (c1.notSatisfied() && c2.notSatisfied());
     }
@@ -262,13 +240,6 @@ public class Eq extends PrimitiveConstraint implements UsesQueueVariable {
     @Override public String toString() {
 
         return id() + " : Eq(" + c1 + ", " + c2 + " )";
-    }
-
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            c1.increaseWeight();
-            c2.increaseWeight();
-        }
     }
 
     @Override public void queueVariable(int level, Var var) {
