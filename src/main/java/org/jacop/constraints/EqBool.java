@@ -71,19 +71,11 @@ public class EqBool extends PrimitiveConstraint {
      */
     public EqBool(IntVar[] list, IntVar result) {
 
-        assert (list != null) : "List of x's is null";
-        assert (result != null) : "Result variable is null";
+        checkInputForNullness(new String[] {"list", "result"}, new Object[][] { list, { result } });
 
         numberId = idNumber.incrementAndGet();
-
-        this.list = new IntVar[list.length];
-        for (int i = 0; i < list.length; i++) {
-            assert (list[i] != null) : i + "-th element in the list is null";
-            this.list[i] = list[i];
-        }
-
+        this.list = Arrays.copyOf(list, list.length);
         this.result = result;
-
         setScope(Stream.concat(Arrays.stream(list), Stream.of(result)));
 
         assert (checkInvariants() == null) : checkInvariants();

@@ -73,8 +73,7 @@ public class XplusClteqZ extends PrimitiveConstraint {
      */
     public XplusClteqZ(IntVar x, int c, IntVar z) {
 
-        assert (x != null) : "Variable x is null";
-        assert (z != null) : "Variable z is null";
+        checkInputForNullness(new String[]{"x", "z"}, new Object[]{x, z});
 
         numberId = idNumber.incrementAndGet();
 

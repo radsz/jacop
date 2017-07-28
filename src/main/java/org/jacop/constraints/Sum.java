@@ -85,19 +85,13 @@ public class Sum extends Constraint {
      */
     public Sum(IntVar[] list, IntVar sum) {
 
-        assert (list != null) : "List of variables is null";
-        assert (sum != null) : "Sum variable is null";
-
-        for (int i = 0; i < list.length; i++)
-            assert (list[i] != null) : i + "-th element in list is null";
+        checkInputForNullness(new String[]{"list", "sum"}, new Object[][]{list, {sum}});
 
         queueIndex = 1;
         numberId = idNumber.incrementAndGet();
 
         this.sum = sum;
-        this.list = new IntVar[list.length];
-
-        System.arraycopy(list, 0, this.list, 0, list.length);
+        this.list = Arrays.copyOf(list, list.length);
 
         checkForOverflow();
 

@@ -78,8 +78,7 @@ public class PmulCeqR extends Constraint {
      */
     public PmulCeqR(FloatVar p, double c, FloatVar r) {
 
-        assert (p != null) : "Variable p is null";
-        assert (r != null) : "Variable r is null";
+        checkInputForNullness(new String[]{"p", "r"}, new Object[]{p, r});
 
         numberId = idNumber.incrementAndGet();
 

@@ -69,9 +69,7 @@ public class MaxSimple extends Constraint {
      */
     public MaxSimple(IntVar x1, IntVar x2, IntVar max) {
 
-        assert (x1 != null) : "First variable is null";
-        assert (x2 != null) : "Second variable is null";
-        assert (max != null) : "Min variable is null";
+        checkInputForNullness(new String[]{"x1", "x2", "max"}, new Object[] {x1, x2, max});
 
         this.numberId = idNumber.incrementAndGet();
         this.max = max;

@@ -30,6 +30,7 @@
 
 package org.jacop.set.constraints;
 
+import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
@@ -77,15 +78,11 @@ public class Match extends Constraint {
 
     public Match(SetVar a, IntVar[] list) {
 
-        assert (a != null) : "Variable a is null";
-        for (int i = 0; i < list.length; i++)
-            assert (list[i] != null) : i + "-th element of the list is null.";
+        checkInputForNullness(new String[]{"a", "list"}, new Object[][]{ {a}, list});
 
         this.numberId = idNumber.incrementAndGet();
         this.a = a;
-        this.list = new IntVar[list.length];
-
-        System.arraycopy(list, 0, this.list, 0, list.length);
+        this.list = Arrays.copyOf(list, list.length);
 
         setScope(Stream.concat(Stream.of(a), Arrays.stream(list)));
 

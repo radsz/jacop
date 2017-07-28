@@ -38,7 +38,6 @@ import java.util.stream.Stream;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 import org.jacop.core.TimeStamp;
 
 /**
@@ -80,24 +79,14 @@ public class BoolClause extends PrimitiveConstraint {
      */
     public BoolClause(IntVar[] x, IntVar[] y) {
 
-        assert (x != null) : "List variable is null";
-        assert (y != null) : "Result variable is null";
+        checkInputForNullness(new String[] {"x", "y"}, x, y);
 
         this.numberId = idNumber.incrementAndGet();
         this.lx = x.length;
         this.ly = y.length;
 
-        this.x = new IntVar[lx];
-        for (int i = 0; i < lx; i++) {
-            assert (x[i] != null) : i + "-th element in the list is null";
-            this.x[i] = x[i];
-        }
-
-        this.y = new IntVar[ly];
-        for (int i = 0; i < ly; i++) {
-            assert (y[i] != null) : i + "-th element in the list is null";
-            this.y[i] = y[i];
-        }
+        this.x = Arrays.copyOf(x, x.length);
+        this.y = Arrays.copyOf(y, y.length);
 
         assert (checkInvariants() == null) : checkInvariants();
 
@@ -116,9 +105,7 @@ public class BoolClause extends PrimitiveConstraint {
      * @param y list of negative arguments y's. 
      */
     public BoolClause(ArrayList<IntVar> x, ArrayList<IntVar> y) {
-
         this(x.toArray(new IntVar[x.size()]), y.toArray(new IntVar[y.size()]));
-
     }
 
     /**

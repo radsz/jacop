@@ -74,8 +74,7 @@ public class SinA extends PrimitiveConstraint {
      */
     public SinA(IntDomain set, SetVar a, boolean strict) {
 
-        assert (a != null) : "Variable a is null";
-        assert (set != null) : "Set is null";
+        checkInputForNullness(new String[]{"set", "a"}, new Object[]{set, a});
 
         numberId = idNumber.incrementAndGet();
 

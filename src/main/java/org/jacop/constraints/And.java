@@ -85,6 +85,7 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
      */
     public And(PrimitiveConstraint[] c) {
 
+        checkInputForNullness("c", c);
         this.queueIndex = 1;
         this.numberId = idNumber.incrementAndGet();
         this.listOfC = new PrimitiveConstraint[c.length];

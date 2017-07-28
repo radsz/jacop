@@ -70,8 +70,7 @@ public class CardAeqX extends Constraint {
      */
     public CardAeqX(SetVar a, IntVar cardinality) {
 
-        assert (a != null) : "Variable a is null";
-        assert (cardinality != null) : "Cardinality value is null";
+        checkInputForNullness(new String[]{"a", "cardinality"}, new Object[]{a, cardinality});
 
         this.numberId = idNumber.incrementAndGet();
         this.a = a;

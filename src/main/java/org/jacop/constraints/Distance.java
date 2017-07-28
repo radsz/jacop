@@ -79,6 +79,7 @@ public class Distance extends PrimitiveConstraint {
      */
     public Distance(IntVar x, IntVar y, IntVar z) {
 
+        checkInputForNullness(new String[] {"x", "y", "z"}, new Object[] {x, y, z});
         numberId = idNumber.incrementAndGet();
 
         this.x = x;

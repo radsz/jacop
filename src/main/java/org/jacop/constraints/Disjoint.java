@@ -32,6 +32,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -63,19 +64,13 @@ public class Disjoint extends Diff {
      */
     public Disjoint(Rectangle[] rectangles, boolean doProfile) {
 
-        assert (rectangles != null) : "Rectangles list is null";
+        checkInputForNullness("rectangles", rectangles);
+        checkInput(rectangles, r -> r.dim == 2, "rectangle has to have exactly two dimensions");
 
         this.queueIndex = 2;
 
-        this.rectangles = new Rectangle[rectangles.length];
+        this.rectangles = Arrays.copyOf(rectangles, rectangles.length);
         this.doProfile = doProfile;
-
-        for (int i = 0; i < rectangles.length; i++) {
-            assert (rectangles[i] != null) : i + "-th rectangle in the list is null";
-            assert (rectangles[i].dim != 2) : "The rectangle has to have exactly two dimensions";
-            this.rectangles[i] = new Rectangle(rectangles[i]);
-        }
-
         this.numberId = idNumber.incrementAndGet();
 
         setScope(Rectangle.getStream(this.rectangles));

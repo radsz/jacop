@@ -75,9 +75,7 @@ public class PplusQeqR extends PrimitiveConstraint {
      */
     public PplusQeqR(FloatVar p, FloatVar q, FloatVar r) {
 
-        assert (p != null) : "Variable p is null";
-        assert (q != null) : "Variable q is null";
-        assert (r != null) : "Variable r is null";
+        checkInputForNullness(new String[]{"p", "q", "r"}, new Object[]{p, q, r});
 
         numberId = idNumber.incrementAndGet();
 

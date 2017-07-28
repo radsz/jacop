@@ -103,12 +103,11 @@ public class CardA extends Constraint {
 
     }
 
-    CardA(SetVar a) {
+    private CardA(SetVar a) {
 
-        assert (a != null) : "Variable a is null";
+        checkInputForNullness("a", new Object[]{a});
         numberId = idNumber.incrementAndGet();
         this.a = a;
-
         setScope(a);
 
     }

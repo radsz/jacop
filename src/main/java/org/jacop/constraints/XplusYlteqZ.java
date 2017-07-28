@@ -73,9 +73,7 @@ public class XplusYlteqZ extends PrimitiveConstraint {
      */
     public XplusYlteqZ(IntVar x, IntVar y, IntVar z) {
 
-        assert (x != null) : "Variable x is null";
-        assert (y != null) : "Variable y is null";
-        assert (z != null) : "Variable z is null";
+        checkInputForNullness(new String[]{"x", "y", "z"}, new Object[]{x, y, z});
 
         numberId = idNumber.incrementAndGet();
 

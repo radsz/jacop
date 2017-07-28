@@ -93,19 +93,13 @@ public class ArgMax extends Constraint {
 
     public ArgMax(IntVar[] list, IntVar maxIndex) {
 
-        assert (list != null) : "List variable is null";
-        assert (maxIndex != null) : "MaxIndex variable is null";
+        checkInputForNullness(new String[]{"list", "maxIndex"}, new Object[][] {list, { maxIndex} });
 
         this.queueIndex = 1;
         this.numberId = idNumber.incrementAndGet();
         this.indexOffset = 0;
         this.maxIndex = maxIndex;
-        this.list = new IntVar[list.length];
-
-        for (int i = 0; i < list.length; i++) {
-            assert (list[i] != null) : i + "-th variable in the list is null";
-            this.list[i] = list[i];
-        }
+        this.list = Arrays.copyOf(list, list.length);
 
         setScope( Stream.concat(Arrays.stream(list) , Stream.of(maxIndex)));
     }

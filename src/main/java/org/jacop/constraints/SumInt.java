@@ -30,24 +30,24 @@
 
 package org.jacop.constraints;
 
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
-import org.jacop.core.IntVar;
-import org.jacop.core.IntDomain;
-import org.jacop.core.Store;
-import org.jacop.core.Var;
-
 /**
  * SumInt constraint implements the summation over several variables.
- *
+ * <p>
  * sum(i in 1..N)(xi) = sum
- *
+ * <p>
  * It provides the sum from all variables on the list.
- *
- * This implementaiton is based on 
+ * <p>
+ * This implementaiton is based on
  * "Bounds Consistency Techniques for Long Linear Constraints"
  * by Warwick Harvey and Joachim Schimpf
  *
@@ -91,12 +91,12 @@ public class SumInt extends PrimitiveConstraint {
     IntVar x[];
 
     /**
-     * It specifies variable for the overall sum. 
+     * It specifies variable for the overall sum.
      */
     IntVar sum;
 
     /**
-     * It specifies the number of variables. 
+     * It specifies the number of variables.
      */
     int l;
 
@@ -112,39 +112,19 @@ public class SumInt extends PrimitiveConstraint {
 
     /**
      * @param store current store
-     * @param list variables which are being multiplied by weights.
-     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum variable containing the sum of weighted variables.
+     * @param list  variables which are being multiplied by weights.
+     * @param rel   the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum   variable containing the sum of weighted variables.
      */
     public SumInt(Store store, IntVar[] list, String rel, IntVar sum) {
 
-        commonInitialization(store, list, sum);
+        checkInputForNullness(new String[] {"list", "rel", "sum"}, new Object[][] {list, {rel}, {sum}});
+
         this.relationType = relation(rel);
-
-
-    }
-
-    /**
-     * It constructs the constraint SumInt. 
-     * @param store current store
-     * @param variables variables which are being multiplied by weights.
-     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum variable containing the sum of weighted variables.
-     */
-    public SumInt(Store store, ArrayList<? extends IntVar> variables, String rel, IntVar sum) {
-
-        commonInitialization(store, variables.toArray(new IntVar[variables.size()]), sum);
-        this.relationType = relation(rel);
-    }
-
-
-    private void commonInitialization(Store store, IntVar[] list, IntVar sum) {
-
-
         this.store = store;
         this.sum = sum;
-        x = new IntVar[list.length];
-        System.arraycopy(list, 0, x, 0, list.length);
+
+        x = Arrays.copyOf(list, list.length);
         numberId = idNumber.incrementAndGet();
 
         this.l = x.length;
@@ -157,8 +137,20 @@ public class SumInt extends PrimitiveConstraint {
         else
             queueIndex = 1;
 
-        setScope( Stream.concat(Arrays.stream(list), Stream.of(sum)));
+        setScope(Stream.concat(Arrays.stream(list), Stream.of(sum)));
 
+    }
+
+    /**
+     * It constructs the constraint SumInt.
+     *
+     * @param store     current store
+     * @param variables variables which are being multiplied by weights.
+     * @param rel       the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum       variable containing the sum of weighted variables.
+     */
+    public SumInt(Store store, ArrayList<? extends IntVar> variables, String rel, IntVar sum) {
+        this(store, variables.toArray(new IntVar[variables.size()]), rel, sum);
     }
 
     @Override public void consistency(Store store) {
@@ -228,8 +220,8 @@ public class SumInt extends PrimitiveConstraint {
                             removeConstraint();
 
                     break;
-	    default:
-		throw new RuntimeException("Internal error in " + getClass().getName());
+                default:
+                    throw new RuntimeException("Internal error in " + getClass().getName());
             }
 
         } while (store.propagationHasOccurred);

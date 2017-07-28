@@ -30,13 +30,12 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.Arrays;
-
 import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.floats.core.FloatInterval;
-
+import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.util.Matrix;
+
+import java.util.Arrays;
 
 
 /**
@@ -60,12 +59,12 @@ public class IntervalGaussSeidel {
     public IntervalGaussSeidel(FloatInterval[][] A, double[] b) {
 
         this.A = new FloatInterval[A.length][];
-	for (int i = 0; i < A.length; i++) {
-	  this.A[i] = new FloatInterval[A[i].length];
-	  System.arraycopy(A[i], 0, this.A[i], 0, A[i].length);
-	}
-	this.b = new double[b.length];
-	System.arraycopy(b, 0, this.b, 0, b.length);
+        for (int i = 0; i < A.length; i++) {
+            this.A[i] = new FloatInterval[A[i].length];
+            System.arraycopy(A[i], 0, this.A[i], 0, A[i].length);
+        }
+        this.b = new double[b.length];
+        System.arraycopy(b, 0, this.b, 0, b.length);
     }
 
     double minAbs(FloatInterval v) {
@@ -131,7 +130,8 @@ public class IntervalGaussSeidel {
 
     public FloatInterval[] solve() {
         int N = 0;
-	FloatInterval[] x = new FloatInterval[b.length];;
+        FloatInterval[] x = new FloatInterval[b.length];
+        ;
         FloatInterval[] previousX = new FloatInterval[x.length];
         for (int i = 0; i < x.length; i++)
             x[i] = new FloatInterval(0.0, 0.0);
@@ -271,7 +271,7 @@ public class IntervalGaussSeidel {
 
         for (int i = 0; i < A.length; i++) {
             for (int j = 0; j < A[i].length; j++)
-	      s.append(A[i][j] + " ");
+                s.append(A[i][j] + " ");
             s.append(" = " + b[i] + "\n");
         }
 

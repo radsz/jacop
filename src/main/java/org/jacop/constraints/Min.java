@@ -79,17 +79,11 @@ public class Min extends Constraint {
      */
     public Min(IntVar[] list, IntVar min) {
 
-        assert (list != null) : "List variable is null";
-        assert (min != null) : "Min variable is null";
+        checkInputForNullness(new String[] {"list", "min"}, list, new Object[] {min});
 
         this.l = list.length;
         this.min = min;
-        this.list = new IntVar[l];
-
-        for (int i = 0; i < l; i++) {
-            assert (list[i] != null) : i + "-th variable in a list is null";
-            this.list[i] = list[i];
-        }
+        this.list = Arrays.copyOf(list, list.length);
 
         if (list.length > 1000)  // rule of thumb
             this.queueIndex = 2;

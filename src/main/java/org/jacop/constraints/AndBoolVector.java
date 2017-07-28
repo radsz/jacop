@@ -84,25 +84,17 @@ public class AndBoolVector extends PrimitiveConstraint {
      */
     public AndBoolVector(IntVar[] list, IntVar result) {
 
-        assert (list != null) : "List variable is null";
-        assert (result != null) : "Result variable is null";
+        checkInputForNullness(new String[] {"list", "result"}, list, new Object[] {result});
 
         this.numberId = idNumber.incrementAndGet();
 
         HashSet<IntVar> varSet = new HashSet<IntVar>();
-        for (IntVar var : list) {
-            assert (var != null) : "element in the list is null";
-            varSet.add(var);
-        }
+        Arrays.stream(list).forEach(varSet::add);
+
         this.l = varSet.size();
-
-        this.list = new IntVar[l];
-        int i = 0;
-        for (IntVar v : varSet) {
-            this.list[i++] = v;
-        }
-
+        this.list = varSet.toArray(new IntVar[varSet.size()]);
         this.result = result;
+
         assert (checkInvariants() == null) : checkInvariants();
 
         if (l > 2)

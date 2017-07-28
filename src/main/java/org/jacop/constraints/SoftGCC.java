@@ -94,6 +94,11 @@ public class SoftGCC extends DecomposedConstraint {
     public SoftGCC(IntVar[] xVars, IntVar[] hardCounters, int[] countedValue, int[] softLowerBound, int[] softUpperBound, IntVar costVar,
         ViolationMeasure violationMeasure) {
 
+
+        checkInputForNullness(
+            new String[]{"xVars", "hardCounters", "countedValue", "softLowerBound", "softUpperBound", "costVar", "violationMeasure"},
+            new Object[][]{xVars, hardCounters, { countedValue }, { softLowerBound }, { softUpperBound }, {costVar}, { violationMeasure }});
+
         this.xVars = new IntVar[xVars.length];
         System.arraycopy(xVars, 0, this.xVars, 0, xVars.length);
 

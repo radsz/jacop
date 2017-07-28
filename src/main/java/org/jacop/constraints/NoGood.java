@@ -31,6 +31,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -96,22 +97,16 @@ public class NoGood extends PrimitiveConstraint {
 
     private void commonInitialization(IntVar[] listOfVars, int[] listOfValues) {
 
-        assert (listOfVars != null) : "Variables list is null";
-        assert (listOfValues != null) : "Values list is null";
+        checkInputForNullness("listOfVars", listOfVars);
+        checkInputForNullness("listOfValues", listOfValues);
 
-        assert (listOfVars.length == listOfValues.length) : "\nLength of two vectors different in NoGood";
-        for (int i = 0; i < listOfVars.length; i++)
-            assert (listOfVars[i] != null) : i + "-th element of the listOfVars is null";
+        if (listOfVars.length != listOfValues.length)
+            throw new IllegalArgumentException("Length of listOfVars is different from listOfValues");
 
         this.queueIndex = 0;
-
         this.numberId = idNumber.incrementAndGet();
-        this.listOfVars = new IntVar[listOfVars.length];
-        this.listOfValues = new int[listOfValues.length];
-
-        System.arraycopy(listOfVars, 0, this.listOfVars, 0, listOfVars.length);
-
-        System.arraycopy(listOfValues, 0, this.listOfValues, 0, listOfValues.length);
+        this.listOfVars = Arrays.copyOf(listOfVars, listOfVars.length);
+        this.listOfValues = Arrays.copyOf(listOfValues, listOfValues.length);
 
         setScope(listOfVars);
 
@@ -124,14 +119,8 @@ public class NoGood extends PrimitiveConstraint {
      */
     public NoGood(ArrayList<? extends IntVar> listOfVars, ArrayList<Integer> listOfValues) {
 
-        assert (listOfVars != null) : "Variables list is null";
-        assert (listOfValues != null) : "Values list is null";
-
-        int[] intValues = new int[listOfValues.size()];
-        for (int i = 0; i < listOfValues.size(); i++)
-            intValues[i] = listOfValues.get(i);
-
-        commonInitialization(listOfVars.toArray(new IntVar[listOfVars.size()]), intValues);
+        checkInputForNullness(new String[]{"listOfVars", "listOfValues"}, new Object[]{ listOfVars, listOfValues});
+        commonInitialization(listOfVars.toArray(new IntVar[listOfVars.size()]), listOfValues.stream().mapToInt(i -> i).toArray());
 
     }
 

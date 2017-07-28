@@ -172,6 +172,7 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
      */
     public Alldistinct(IntVar[] list) {
 
+        checkInputForNullness("list", list);
         queueIndex = 2;
 
         numberId = idNumber.incrementAndGet();

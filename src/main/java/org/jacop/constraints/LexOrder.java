@@ -106,18 +106,15 @@ public class LexOrder extends Constraint implements UsesQueueVariable {
 
     public LexOrder(IntVar[] x, IntVar[] y, boolean lt) {
 
-        assert (x != null) : "x list is null.";
-        assert (y != null) : "y list is null.";
+        checkInputForNullness(new String[]{"x", "y"}, x, y);
 
         queueIndex = 2;
         numberId = idNumber.incrementAndGet();
 
         lexLT = lt;
 
-        this.x = new IntVar[x.length];
-        System.arraycopy(x, 0, this.x, 0, x.length);
-        this.y = new IntVar[y.length];
-        System.arraycopy(y, 0, this.y, 0, y.length);
+        this.x = Arrays.copyOf(x, x.length);
+        this.y = Arrays.copyOf(y, y.length);
 
         if (x.length < y.length) {
             lexLT = false;

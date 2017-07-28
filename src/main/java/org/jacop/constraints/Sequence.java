@@ -30,10 +30,7 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import org.jacop.constraints.regular.Regular;
 import org.jacop.core.IntDomain;
@@ -76,17 +73,16 @@ public class Sequence extends DecomposedConstraint<Constraint> {
      */
     public Sequence(IntVar[] list, IntervalDomain set, int q, int min, int max) {
 
+        checkInputForNullness("list", list);
+        checkInputForNullness("set", new Object[] {set});
+
         this.min = min;
         this.max = max;
 
-        this.list = new IntVar[list.length];
-        for (int i = 0; i < list.length; i++) {
-            assert (list[i] != null) : i + "-th element in the list is null";
-            this.list[i] = list[i];
-        }
-
+        this.list = Arrays.copyOf(list, list.length);
         this.set = set.clone();
         this.q = q;
+        
     }
 
     @Override public void imposeDecomposition(Store store) {

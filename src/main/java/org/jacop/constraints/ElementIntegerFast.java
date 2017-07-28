@@ -32,6 +32,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
@@ -100,16 +101,15 @@ public class ElementIntegerFast extends Constraint {
      */
     public ElementIntegerFast(IntVar index, int[] list, IntVar value, int indexOffset) {
 
+        checkInputForNullness(new String[] {"index", "value"}, new Object[] { index, value });
+        checkInputForNullness("list", list);
+
         this.indexOffset = indexOffset;
         queueIndex = 1;
-
-        assert (index != null) : "Variable index is null";
-        assert (value != null) : "Variable value is null";
-
         this.numberId = idNumber.incrementAndGet();
         this.index = index;
         this.value = value;
-        this.list = list;
+        this.list = Arrays.copyOf(list, list.length);
 
         setScope( index, value );
     }

@@ -31,6 +31,7 @@
 
 package org.jacop.constraints;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -172,12 +173,9 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
      * @param reinsertBefore it specifies if the tuples which were removed and are reinstatiated are inserted at the beginning.
      * @param residuesBefore it specifies if the residue tuples are moved to the beginning.
      */
-
+    @Deprecated
     public ExtensionalSupportSTR(IntVar[] list, boolean reinsertBefore, boolean residuesBefore) {
-
-
         this(list, new int[0][0], reinsertBefore, residuesBefore);
-
     }
 
 
@@ -190,10 +188,10 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
      */
     public ExtensionalSupportSTR(IntVar[] list, int[][] tuples, boolean reinsertBefore, boolean residuesBefore) {
 
-        this.list = new IntVar[list.length];
+        checkInputForNullness("list", list);
+        checkInputForNullness("tuples", tuples);
 
-        for (int i = 0; i < list.length; i++)
-            this.list[i] = list[i];
+        this.list = Arrays.copyOf(list, list.length);
 
         views = new IndexDomainView[list.length];
 

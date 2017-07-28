@@ -30,13 +30,14 @@
 
 package org.jacop.constraints;
 
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.jacop.core.IntVar;
-import org.jacop.core.IntDomain;
-import org.jacop.core.Store;
-import org.jacop.core.Var;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 /**
  * LinearInt constraint implements the weighted summation over several
@@ -106,7 +107,7 @@ public class LinearInt extends PrimitiveConstraint {
     int pos;
 
     /**
-     * It specifies the number of varibales/coefficients.
+     * It specifies the number of variables/coefficients.
      */
     int l;
 
@@ -131,11 +132,25 @@ public class LinearInt extends PrimitiveConstraint {
      * @param sum     the sum of weighted variables.
      */
     public LinearInt(Store store, IntVar[] list, int[] weights, String rel, int sum) {
-
-        commonInitialization(store, list, weights, sum);
-        this.relationType = relation(rel);
+        checkInputForNullness("list", list);
+        checkInputForNullness("weights", weights);
+        commonInitialization(store, list, weights, rel, sum);
         numberId = idNumber.incrementAndGet();
+    }
 
+    /**
+     * It constructs the constraint LinearInt.
+     *
+     * @param store   current store
+     * @param list    list which are being multiplied by weights.
+     * @param weights weight for each variable.
+     * @param rel     the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum     the sum of weighted list.
+     */
+    public LinearInt(Store store, ArrayList<? extends IntVar> list, ArrayList<Integer> weights, String rel, int sum) {
+        checkInputForNullness(new String[] {"list", "weights"}, new Object[] {list, weights});
+        commonInitialization(store, list.toArray(new IntVar[list.size()]), weights.stream().mapToInt(i -> i).toArray(), rel, sum);
+        numberId = idNumber.incrementAndGet();
     }
 
     /**
@@ -146,41 +161,16 @@ public class LinearInt extends PrimitiveConstraint {
      * @param sum     the sum of weighted variables.
      */
     public LinearInt(Store store, IntVar[] list, int[] weights, String rel, IntVar sum) {
-
-        IntVar[] vars = new IntVar[list.length + 1];
-        System.arraycopy(list, 0, vars, 0, list.length);
-        vars[list.length] = sum;
-        int[] ws = new int[weights.length + 1];
-        System.arraycopy(weights, 0, ws, 0, weights.length);
-        ws[list.length] = -1;
-
-        commonInitialization(store, vars, ws, 0);
-        this.relationType = relation(rel);
+        checkInputForNullness("list", list);
+        checkInputForNullness("weights", weights);
+        commonInitialization(store, Stream.concat(Arrays.stream(list), Stream.of(sum)).toArray(IntVar[]::new),
+            IntStream.concat(Arrays.stream(weights), IntStream.of(-1)).toArray(), rel, 0);
         numberId = idNumber.incrementAndGet();
     }
 
-    /**
-     * It constructs the constraint LinearInt.
-     *
-     * @param store     current store
-     * @param variables variables which are being multiplied by weights.
-     * @param weights   weight for each variable.
-     * @param rel       the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum       the sum of weighted variables.
-     */
-    public LinearInt(Store store, ArrayList<? extends IntVar> variables, ArrayList<Integer> weights, String rel, int sum) {
+    protected void commonInitialization(Store store, IntVar[] list, int[] weights, String rel, int sum) {
 
-        int[] w = new int[weights.size()];
-        for (int i = 0; i < weights.size(); i++)
-            w[i] = weights.get(i);
-
-        commonInitialization(store, variables.toArray(new IntVar[variables.size()]), w, sum);
-        numberId = idNumber.incrementAndGet();
         this.relationType = relation(rel);
-    }
-
-
-    protected void commonInitialization(Store store, IntVar[] list, int[] weights, int sum) {
 
         assert (list.length == weights.length) : "\nLength of two vectors different in Propagations";
 

@@ -30,17 +30,18 @@
 
 package org.jacop.constraints;
 
-import java.util.*;
-import java.util.stream.Stream;
-
 import org.jacop.api.StoreAware;
 import org.jacop.core.Store;
 import org.jacop.core.SwitchesPruningLogging;
 import org.jacop.core.Var;
 
+import java.util.*;
+import java.util.function.Predicate;
+import java.util.stream.Stream;
+
 /**
  * Standard unified interface/abstract class for all constraints.
- *
+ * <p>
  * Defines how to construct a constraint, impose, check satisfiability,
  * notSatisfiability, enforce consistency.
  *
@@ -48,7 +49,7 @@ import org.jacop.core.Var;
  * @version 3.1
  */
 
-public abstract class Constraint extends DecomposedConstraint<Constraint>  implements StoreAware {
+public abstract class Constraint extends DecomposedConstraint<Constraint> implements StoreAware {
 
     public boolean trace = SwitchesPruningLogging.traceConstraint;
 
@@ -60,6 +61,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint>  imple
 
     /**
      * It returns the variables in a scope of the constraint.
+     *
      * @return variables in a scope of the constraint.
      */
     public Set<Var> arguments() {
@@ -69,11 +71,11 @@ public abstract class Constraint extends DecomposedConstraint<Constraint>  imple
     protected Set<Var> scope;
 
     protected void setScope(Var... variables) {
-        this.scope = Collections.unmodifiableSet( new HashSet<>( Arrays.asList( variables ) ) );
+        this.scope = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(variables)));
     }
 
     protected void setScope(Var[]... variables) {
-        setScope( Arrays.stream(variables).map(Arrays::stream).flatMap( i -> i));
+        setScope(Arrays.stream(variables).map(Arrays::stream).flatMap(i -> i));
     }
 
     protected void setScope(Stream<Var> scope) {
@@ -81,7 +83,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint>  imple
     }
 
     protected void setScope(PrimitiveConstraint[] constraints) {
-        setScope( Arrays.stream(constraints).map(Constraint::arguments).flatMap(Collection::stream));
+        setScope(Arrays.stream(constraints).map(Constraint::arguments).flatMap(Collection::stream));
     }
 
     protected void setScope(Set<? extends Var> set) {
@@ -93,6 +95,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint>  imple
      * clear the queue of changed variables which is no longer valid. This
      * function is called *before* all timestamps, variables, mutablevariables
      * have reverted to their previous value.
+     *
      * @param level the level which is being removed.
      */
     public void removeLevel(int level) {
@@ -102,6 +105,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint>  imple
      * This function is called in case of the backtrack. It is called
      * after all timestamps, variables, mutablevariables have reverted
      * to their values *after* removing the level.
+     *
      * @param level the level which is being removed.
      */
     public void removeLevelLate(int level) {
@@ -112,6 +116,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint>  imple
      * It is a (most probably incomplete) consistency function which removes the
      * values from variables domains. Only values which do not have any support
      * in a solution space are removed.
+     *
      * @param store constraint store within which the constraint consistency is being checked.
      */
     public abstract void consistency(Store store);
@@ -139,6 +144,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint>  imple
 
     /**
      * It gives the id string of a constraint.
+     *
      * @return string id of the constraint.
      */
     public String id() {
@@ -147,11 +153,12 @@ public abstract class Constraint extends DecomposedConstraint<Constraint>  imple
 
     /**
      * It imposes the constraint in a given store.
+     *
      * @param store the constraint store to which the constraint is imposed to.
      */
     public void impose(Store store) {
 
-        arguments().stream().forEach( i -> i.putModelConstraint(this, getConsistencyPruningEvent(i)));
+        arguments().stream().forEach(i -> i.putModelConstraint(this, getConsistencyPruningEvent(i)));
         store.addChanged(this);
         store.countConstraint();
 
@@ -159,7 +166,8 @@ public abstract class Constraint extends DecomposedConstraint<Constraint>  imple
 
     /**
      * It imposes the constraint and adjusts the queue index.
-     * @param store the constraint store to which the constraint is imposed to.
+     *
+     * @param store      the constraint store to which the constraint is imposed to.
      * @param queueIndex the index of the queue in the store it is assigned to.
      */
     public void impose(Store store, int queueIndex) {
@@ -176,8 +184,9 @@ public abstract class Constraint extends DecomposedConstraint<Constraint>  imple
      * This is a function called to indicate which variable in a scope of
      * constraint has changed. It also indicates a store level at which the
      * change has occurred.
+     *
      * @param level the level of the store at which the change has occurred.
-     * @param var variable which has changed.
+     * @param var   variable which has changed.
      */
     public void queueVariable(final int level, final Var var) {
     }
@@ -186,17 +195,22 @@ public abstract class Constraint extends DecomposedConstraint<Constraint>  imple
      * It removes the constraint by removing this constraint from all variables.
      */
     public void removeConstraint() {
-        arguments().stream().forEach( i -> i.removeConstraint(this));
-    };
+        arguments().stream().forEach(i -> i.removeConstraint(this));
+    }
+
+    ;
 
     /**
      * It checks if the constraint is satisfied. If this function is incorrectly
      * implemented a constraint may not be satisfied in a solution.
+     *
      * @return true if the constraint is for certain satisfied, false otherwise.
      */
     public boolean satisfied() {
-        return ! arguments().stream().filter( i -> !i.singleton()).findFirst().isPresent();
-    };
+        return !arguments().stream().filter(i -> !i.singleton()).findFirst().isPresent();
+    }
+
+    ;
 
     /**
      * It produces a string representation of a constraint state.
@@ -206,6 +220,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint>  imple
     /**
      * It specifies a constraint which if imposed by search will enhance
      * propagation of this constraint.
+     *
      * @return Constraint enhancing propagation of this constraint.
      */
     public Constraint getGuideConstraint() {
@@ -215,6 +230,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint>  imple
     /**
      * This function provides a variable which assigned a value returned
      * by will enhance propagation of this constraint.
+     *
      * @return Variable which is a base of enhancing constraint.
      */
     public Var getGuideVariable() {
@@ -224,6 +240,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint>  imple
     /**
      * This function provides a value which if assigned to a variable returned
      * by getGuideVariable() will enhance propagation of this constraint.
+     *
      * @return Value which is a base of enhancing constraint.
      */
     public int getGuideValue() {
@@ -234,6 +251,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint>  imple
      * This function allows to provide a guide feedback. If constraint does
      * not propose sufficiently good enhancing constraints it will be informed
      * so it has a chance to reexamine its efforts.
+     *
      * @param feedback true if the guide was useful, false otherwise.
      */
     public void supplyGuideFeedback(boolean feedback) {
@@ -241,20 +259,21 @@ public abstract class Constraint extends DecomposedConstraint<Constraint>  imple
 
     /**
      * It increases the weight of the variables in the constraint scope.
-     *
      */
 
     public void increaseWeight() {
         if (increaseWeight)
-            arguments().stream().forEach( i -> increaseWeight());
-    };
+            arguments().stream().forEach(i -> increaseWeight());
+    }
+
+    ;
 
 
     /**
      * It allows to customize the event for a given variable which
      * causes the re-execution of the consistency method for a constraint.
      *
-     * @param var variable for which the events are customized.
+     * @param var          variable for which the events are customized.
      * @param pruningEvent the event which must occur to trigger execution of the consistency method.
      */
     public void setConsistencyPruningEvent(final Var var, final int pruningEvent) {
@@ -268,6 +287,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint>  imple
 
     /**
      * It returns the number of variables within a constraint scope.
+     *
      * @return number of variables in the constraint scope.
      */
     public int numberArgs() {
@@ -314,6 +334,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint>  imple
 
     /**
      * It imposes the decomposition of the given constraint in a given store.
+     *
      * @param store the constraint store to which the constraint is imposed to.
      */
     @Override public void imposeDecomposition(Store store) {
@@ -324,6 +345,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint>  imple
      * It returns an array list of constraint which are used to decompose this
      * constraint. It actually creates a decomposition (possibly also creating
      * variables), but it does not impose the constraint.
+     *
      * @param store the constraint store in which context the decomposition takes place.
      * @return an array list of constraints used to decompose this constraint.
      */
@@ -340,6 +362,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint>  imple
 
     /**
      * Methods that checks for overflow/underflow for addition
+     *
      * @param a first addend
      * @param b second addend
      * @return summa
@@ -357,6 +380,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint>  imple
 
     /**
      * Methods that checks for overflow/underflow for subtraction
+     *
      * @param a minuend
      * @param b subtrahend
      * @return differens
@@ -374,6 +398,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint>  imple
 
     /**
      * Methods that checks for overflow/underflow for multiplication
+     *
      * @param a multiplikand
      * @param b multiplikator
      * @return produkt

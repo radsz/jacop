@@ -104,38 +104,14 @@ public class SumBool extends PrimitiveConstraint {
      */
     public SumBool(Store store, IntVar[] list, String rel, IntVar sum) {
 
-        commonInitialization(store, list, sum);
+        checkInputForNullness(new String[]{"list", "rel", "sum"}, new Object[][]{list, {rel}, {sum}});
+        checkInput(list, l -> l.min() >= 0 && l.max() <= 1, "domain must lie within 0..1 domain" );
+
+        numberId = idNumber.incrementAndGet();
         this.relationType = relation(rel);
-
-    }
-
-    /**
-     * It constructs the constraint SumBool. 
-     * @param store current store
-     * @param variables variables which are being multiplied by weights.
-     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum variable containing the sum of weighted variables.
-     */
-    public SumBool(Store store, ArrayList<? extends IntVar> variables, String rel, IntVar sum) {
-
-        commonInitialization(store, variables.toArray(new IntVar[variables.size()]), sum);
-        this.relationType = relation(rel);
-    }
-
-
-    private void commonInitialization(Store store, IntVar[] list, IntVar sum) {
-
-
         this.store = store;
         this.sum = sum;
-        x = new IntVar[list.length];
-        System.arraycopy(list, 0, x, 0, list.length);
-        numberId = idNumber.incrementAndGet();
-
-        for (IntVar v : list)
-            if (v.min() < 0 || v.max() > 1)
-                throw new IllegalArgumentException("\nArguments of SumBool must have domains 0/1; variable " + v + " is incorrect.");
-
+        x = Arrays.copyOf(list, list.length);
         this.l = x.length;
 
         checkForOverflow();
@@ -146,7 +122,17 @@ public class SumBool extends PrimitiveConstraint {
             queueIndex = 1;
 
         setScope( Stream.concat( Stream.of(sum), Arrays.stream(list) ) );
+    }
 
+    /**
+     * It constructs the constraint SumBool. 
+     * @param store current store
+     * @param variables variables which are being multiplied by weights.
+     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum variable containing the sum of weighted variables.
+     */
+    public SumBool(Store store, ArrayList<? extends IntVar> variables, String rel, IntVar sum) {
+        this(store, variables.toArray(new IntVar[variables.size()]), rel, sum);
     }
 
     @Override public void consistency(Store store) {
@@ -415,11 +401,4 @@ public class SumBool extends PrimitiveConstraint {
 
     }
 
-    @Override public void increaseWeight() {
-        if (increaseWeight) {
-            for (Var v : x)
-                v.weight++;
-        }
-        sum.weight++;
-    }
 }

@@ -87,22 +87,18 @@ public class Assignment extends Constraint implements UsesQueueVariable {
      */
     public Assignment(IntVar[] xs, IntVar[] ds, int shiftX, int shiftD) {
 
+        checkInputForNullness(new String[] {"xs", "ds"}, xs, ds);
+
         numberId = idNumber.incrementAndGet();
 
         this.shiftX = shiftX;
         this.shiftD = shiftD;
-        this.x = new IntVar[xs.length];
-        for (int i = 0; i < xs.length; i++)
-            this.x[i] = xs[i];
-
-        this.d = new IntVar[ds.length];
-        for (int i = 0; i < ds.length; i++)
-            this.d[i] = ds[i];
-
+        this.x = Arrays.copyOf(xs, xs.length);
+        this.d = Arrays.copyOf(ds, ds.length);
         this.queueIndex = 1;
 
-        this.xs = new HashMap<IntVar, Integer>(xs.length * 2);
-        this.ds = new HashMap<IntVar, Integer>(ds.length * 2);
+        this.xs = new HashMap<>(xs.length * 2);
+        this.ds = new HashMap<>(ds.length * 2);
 
         for (int i = 0; i < xs.length; i++) {
             this.xs.put(x[i], i + shiftX);
@@ -122,9 +118,7 @@ public class Assignment extends Constraint implements UsesQueueVariable {
      * @param shiftD shift for parameter ds
      */
     public Assignment(ArrayList<? extends IntVar> xs, ArrayList<? extends IntVar> ds, int shiftX, int shiftD) {
-
         this(xs.toArray(new IntVar[xs.size()]), ds.toArray(new IntVar[ds.size()]), shiftX, shiftD);
-
     }
 
 
@@ -135,9 +129,7 @@ public class Assignment extends Constraint implements UsesQueueVariable {
      * @param ds arraylist of d variables
      */
     public Assignment(ArrayList<? extends IntVar> xs, ArrayList<? extends IntVar> ds) {
-
         this(xs.toArray(new IntVar[xs.size()]), ds.toArray(new IntVar[ds.size()]), 0, 0);
-
     }
 
     /**
@@ -148,9 +140,7 @@ public class Assignment extends Constraint implements UsesQueueVariable {
      * @param min shift
      */
     public Assignment(ArrayList<? extends Var> xs, ArrayList<? extends Var> ds, int min) {
-
         this(xs.toArray(new IntVar[xs.size()]), ds.toArray(new IntVar[ds.size()]), min, min);
-
     }
 
 
@@ -161,9 +151,7 @@ public class Assignment extends Constraint implements UsesQueueVariable {
      * @param ds array of d variables
      */
     public Assignment(IntVar[] xs, IntVar[] ds) {
-
         this(xs, ds, 0, 0);
-
     }
 
     /**
@@ -174,9 +162,7 @@ public class Assignment extends Constraint implements UsesQueueVariable {
      * @param min shift
      */
     public Assignment(IntVar[] xs, IntVar[] ds, int min) {
-
         this(xs, ds, min, min);
-
     }
 
     @Override public void removeLevel(int level) {

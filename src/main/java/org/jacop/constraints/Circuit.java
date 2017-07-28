@@ -31,6 +31,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.LinkedHashSet;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -41,6 +42,7 @@ import org.jacop.core.MutableVar;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.jacop.examples.fd.filters.AR;
 
 /**
  * Circuit constraint assures that all variables build a Hamiltonian
@@ -77,22 +79,14 @@ public class Circuit extends Alldiff {
      */
     public Circuit(IntVar[] list) {
 
-        assert (list != null) : "Variables list is null";
+        checkInputForNullness("list", list);
 
         this.numberId = idNumber.incrementAndGet();
-        this.list = new IntVar[list.length];
-
-        for (int i = 0; i < list.length; i++) {
-            assert (list[i] != null) : i + "-th element in the list is null";
-            this.list[i] = list[i];
-        }
+        this.list = Arrays.copyOf(list, list.length);
 
         this.queueIndex = 2;
 
-        listAlldiff = new IntVar[list.length];
-
-        for (int i = 0; i < list.length; i++)
-            listAlldiff[i] = list[i];
+        listAlldiff = Arrays.copyOf(list, list.length);
 
         min = new int[list.length];
         max = new int[list.length];

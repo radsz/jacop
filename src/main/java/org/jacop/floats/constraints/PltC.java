@@ -67,7 +67,7 @@ public class PltC extends PrimitiveConstraint {
      */
     public PltC(FloatVar p, double c) {
 
-        assert (p != null) : "Variable p is null";
+        checkInputForNullness("p", new Object[]{p});
 
         numberId = idNumber.incrementAndGet();
 

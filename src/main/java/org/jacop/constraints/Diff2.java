@@ -32,6 +32,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -77,24 +78,17 @@ public class Diff2 extends Diff {
      */
     public Diff2(Rectangle[] rectangles, int[] exclusiveList, boolean doProfile) {
 
-        assert (rectangles != null) : "Rectangles list is null";
+        checkInputForNullness("rectangles", rectangles);
+        checkInputForNullness("exlusiveList", exclusiveList);
+        checkInput(rectangles, i -> i.dim == 2, "rectangle should have exactly two dimensions");
 
         this.queueIndex = 2;
         this.numberId = idNumber.incrementAndGet();
 
-        this.rectangles = new Rectangle[rectangles.length];
+        this.rectangles = Arrays.copyOf(rectangles, rectangles.length);
+        this.exclusiveList = Arrays.copyOf(exclusiveList, exclusiveList.length);
         this.doProfile = doProfile;
-
-        for (int i = 0; i < rectangles.length; i++) {
-            assert (rectangles[i] != null) : i + "-th rectangle in the list is null";
-            assert (rectangles[i].dim != 2) : "The rectangle has to have exactly two dimensions";
-            this.rectangles[i] = new Rectangle(rectangles[i]);
-        }
-
         exceptionListPresent = true;
-
-        this.exclusiveList = new int[exclusiveList.length];
-        System.arraycopy(exclusiveList, 0, this.exclusiveList, 0, exclusiveList.length);
 
         setScope(Rectangle.getStream(this.rectangles));
 

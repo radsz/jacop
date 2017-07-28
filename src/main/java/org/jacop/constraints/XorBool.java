@@ -82,15 +82,12 @@ public class XorBool extends PrimitiveConstraint {
      */
     public XorBool(IntVar[] x, IntVar y) {
 
-        assert (x != null) : "Variables x is null";
-        assert (y != null) : "Variable y is null";
+        checkInputForNullness(new String[]{"x", "y"}, new Object[][]{x, {y}});
 
         queueIndex = 0;
         numberId = idNumber.incrementAndGet();
         this.l = x.length;
-
-        this.x = new IntVar[x.length];
-        System.arraycopy(x, 0, this.x, 0, x.length);
+        this.x = Arrays.copyOf(x, x.length);
         this.y = y;
 
         assert (checkInvariants() == null) : checkInvariants();

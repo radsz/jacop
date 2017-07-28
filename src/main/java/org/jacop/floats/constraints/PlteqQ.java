@@ -69,8 +69,7 @@ public class PlteqQ extends PrimitiveConstraint {
      */
     public PlteqQ(FloatVar p, FloatVar q) {
 
-        assert (p != null) : "Variable p is null";
-        assert (q != null) : "Variable q is null";
+        checkInputForNullness(new String[]{"p", "q"}, new Object[]{p, q});
 
         numberId = idNumber.incrementAndGet();
 

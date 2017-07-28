@@ -120,10 +120,18 @@ public class Cumulative extends Constraint {
      */
     public Cumulative(IntVar[] starts, IntVar[] durations, IntVar[] resources, IntVar limit, boolean doEdgeFinding, boolean doProfile) {
 
-        assert (starts != null) : "Variable in starts list is null";
-        assert (durations != null) : "Variable in durations list is null";
-        assert (resources != null) : "Variable in resource list is null";
-        assert (limit != null) : "Variable limit is null";
+        checkInputForNullness(new String[] {"starts", "durations", "resources", "limit"},
+                              new Object[][] { starts,   durations,   resources, { limit } });
+
+        checkInput(durations, d -> d.min() >= 0, "duration can not have negative values in the domain" );
+        checkInput(resources, r -> r.min() >= 0, "resource consumption can not have negative values in the domain" );
+
+        if (limit.min() >= 0) {
+            this.limit = limit;
+        } else {
+            throw new IllegalArgumentException("\nResource limit must be >= 0 in cumulative");
+        }
+
         assert (starts.length == durations.length) : "Starts and durations list have different length";
         assert (resources.length == durations.length) : "Resources and durations list have different length";
 
@@ -133,33 +141,14 @@ public class Cumulative extends Constraint {
         if (starts.length == durations.length && durations.length == resources.length) {
 
             this.Ts = new Task[starts.length];
-            this.starts = new IntVar[starts.length];
-            this.durations = new IntVar[durations.length];
-            this.resources = new IntVar[resources.length];
+            this.starts = Arrays.copyOf(starts, starts.length);
+            this.durations = Arrays.copyOf(durations, durations.length);
+            this.resources = Arrays.copyOf(resources, resources.length);
 
             for (int i = 0; i < starts.length; i++) {
-
-                assert (starts[i] != null) : i + "-th variable in starts list is null";
-                assert (durations[i] != null) : i + "-th variable in durations list is null";
-                assert (resources[i] != null) : i + "-th variable in resources list is null";
-                assert (durations[i].min() >= 0) : i + "-th duration is specified as possibly negative";
-                assert (resources[i].min() >= 0) : i + "-th resource consumption is specified as possibly negative";
-
-                if (durations[i].min() >= 0 && resources[i].min() >= 0) {
-                    Ts[i] = new Task(starts[i], durations[i], resources[i]);
-                    this.starts[i] = starts[i];
-                    this.durations[i] = durations[i];
-                    this.resources[i] = resources[i];
-                } else
-                    throw new IllegalArgumentException("\nDurations and resources must be >= 0 in cumulative");
-
+                Ts[i] = new Task(starts[i], durations[i], resources[i]);
             }
 
-            if (limit.min() >= 0) {
-                this.limit = limit;
-            } else {
-                throw new IllegalArgumentException("\nResource limit must be >= 0 in cumulative");
-            }
         } else {
             throw new IllegalArgumentException("\nNot equal sizes of Variable vectors in cumulative");
         }

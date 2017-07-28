@@ -89,8 +89,7 @@ public class AinS extends PrimitiveConstraint {
      */
     public AinS(SetVar a, IntDomain set, boolean strict) {
 
-        assert (a != null) : "Variable A is null";
-        assert (set != null) : "Set B is null";
+        checkInputForNullness(new String[]{"a", "set"}, new Object[]{a, set});
 
         numberId = idNumber.incrementAndGet();
 

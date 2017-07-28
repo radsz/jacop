@@ -73,12 +73,10 @@ public class Xor extends PrimitiveConstraint {
      */
     public Xor(PrimitiveConstraint c, IntVar b) {
 
-        assert (c != null) : "Constraint c is null";
-        assert (b != null) : "Variable b is null";
-        assert (b.min() >= 0 && b.max() <= 1) : "Variable b = " + b + " has to have domain 0..1";
+        checkInputForNullness(new String[]{"c", "b"}, new Object[]{c, b});
 
-        if (b.min() < 0 || b.max() > 1)
-            throw new IllegalArgumentException("Variable b in xor constraint nust have domain 0..1");
+        if (! (b.min() >= 0 && b.max() <= 1) )
+            throw new IllegalArgumentException( "Constraint Xor has a variable b = " + b + " that has a domain outside of 0..1.");
 
         numberId = idNumber.incrementAndGet();
 

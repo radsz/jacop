@@ -35,6 +35,8 @@ import org.jacop.core.*;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
+import java.lang.reflect.Array;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -86,18 +88,14 @@ public class ElementSet extends Constraint {
      */
     public ElementSet(IntVar index, IntDomain[] list, SetVar value, int indexOffset) {
 
-        assert (index != null) : "Variable index is null";
-        assert (value != null) : "Variable value is null";
-        for (int i = 0; i < list.length; i++)
-            assert (list[i] != null) : i + "-th element of the list is null.";
+        checkInputForNullness(new String[]{"index", "list", "value"}, new Object[][]{ {index}, list, {value}});
 
         numberId = idNumber.incrementAndGet();
 
         this.index = index;
         this.value = value;
         this.indexOffset = indexOffset;
-        this.list = new IntDomain[list.length];
-        System.arraycopy(list, 0, this.list, 0, list.length);
+        this.list = Arrays.copyOf(list, list.length);
 
         setScope(index, value);
     }

@@ -30,6 +30,7 @@
 
 package org.jacop.floats.constraints;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -71,17 +72,12 @@ public class Min extends Constraint {
      */
     public Min(FloatVar[] list, FloatVar min) {
 
-        assert (list != null) : "List variable is null";
-        assert (min != null) : "Min variable is null";
+        checkInputForNullness(new String[]{"list", "max"}, new Object[][]{list, {min}});
 
         this.queueIndex = 1;
         this.numberId = idNumber.incrementAndGet();
         this.min = min;
-        this.list = new FloatVar[list.length];
-        for (int i = 0; i < list.length; i++) {
-            assert (list[i] != null) : i + "-th variable in a list is null";
-            this.list[i] = list[i];
-        }
+        this.list = Arrays.copyOf(list, list.length);
 
         setScope(Stream.concat(Arrays.stream(list), Stream.of(min)));
     }

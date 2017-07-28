@@ -93,22 +93,17 @@ public class ElementVariableFast extends Constraint {
      */
     public ElementVariableFast(IntVar index, IntVar[] list, IntVar value, int indexOffset) {
 
+        checkInputForNullness(new String[] {"index", "value"}, new Object[] {index, value});
+        checkInputForNullness("list", list);
+
         queueIndex = 2;
 
-        assert (index != null) : "Variable index is null";
-        assert (list != null) : "Variable list is null";
-        assert (value != null) : "Variable value is null";
 
         this.indexOffset = indexOffset;
         this.numberId = idNumber.incrementAndGet();
         this.index = index;
         this.value = value;
-        this.list = new IntVar[list.length];
-
-        for (int i = 0; i < list.length; i++) {
-            assert (list[i] != null) : i + "-th element of list is null";
-            this.list[i] = list[i];
-        }
+        this.list = Arrays.copyOf(list, list.length);
 
         setScope( Stream.concat( Stream.concat( Stream.of(index), Arrays.stream(list)), Stream.of(value)));
     }

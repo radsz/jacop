@@ -161,6 +161,14 @@ public class QueueForwardTest {
 
     }
 
+    @Test public void testConstraintImposition() {
+
+        Fz2jacop fz2jacop = new Fz2jacop();
+
+        // Just checking if does not throw an exception.
+        fz2jacop.main(new String[] {"src/test/fz/upTo5sec/3_jugs2/3_jugs2.fzn"});
+
+    }
 
     @Test @Ignore public void testBoundEventCorrection() {
 

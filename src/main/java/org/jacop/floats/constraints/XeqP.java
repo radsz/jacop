@@ -70,8 +70,7 @@ public class XeqP extends Constraint {
      */
     public XeqP(IntVar x, FloatVar p) {
 
-        assert (x != null) : "Variable x is null";
-        assert (p != null) : "Variable p is null";
+        checkInputForNullness(new String[]{"x", "q"}, new Object[]{x, p});
 
         numberId = idNumber.incrementAndGet();
 

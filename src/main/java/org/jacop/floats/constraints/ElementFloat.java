@@ -113,18 +113,10 @@ public class ElementFloat extends Constraint implements UsesQueueVariable {
      */
     public ElementFloat(IntVar index, double[] list, FloatVar value, int indexOffset) {
 
+        checkInputForNullness(new String[]{"index", "list", "value"}, new Object[][]{ {index}, {list}, {value}});
+
         this.indexOffset = indexOffset;
-        commonInitialization(index, list, value);
-
-    }
-
-    private void commonInitialization(IntVar index, double[] list, FloatVar value) {
-
         queueIndex = 1;
-
-        assert (index != null) : "Argument index is null";
-        assert (list != null) : "Argument list is null";
-        assert (value != null) : "Argument value is null";
 
         this.numberId = idNumber.incrementAndGet();
         this.index = index;
@@ -142,13 +134,14 @@ public class ElementFloat extends Constraint implements UsesQueueVariable {
                 mappingValuesToIndex.put(listElement, new IntervalDomain(i + 1 + indexOffset, i + 1 + indexOffset));
             } else
                 ((IntervalDomain) oldFD).addLastElement(i + 1 + indexOffset);
-            //     			    oldFD.unionAdapt(i + 1 + indexOffset, i + 1 + indexOffset);
+
 
         }
 
         setScope(index, value);
 
     }
+
 
     /**
      * It constructs an element constraint with default indexOffset equal 0.
@@ -158,9 +151,7 @@ public class ElementFloat extends Constraint implements UsesQueueVariable {
      * @param value a value variable equal to the specified element from the list. 
      */
     public ElementFloat(IntVar index, ArrayList<Double> list, FloatVar value) {
-
         this(index, list, value, 0);
-
     }
 
     /**
@@ -172,15 +163,7 @@ public class ElementFloat extends Constraint implements UsesQueueVariable {
      * @param indexOffset shift applied to index variable. 
      */
     public ElementFloat(IntVar index, ArrayList<Double> list, FloatVar value, int indexOffset) {
-
-        this.indexOffset = indexOffset;
-
-        double[] listOfInts = new double[list.size()];
-        for (int i = 0; i < list.size(); i++)
-            listOfInts[i] = list.get(i);
-
-        commonInitialization(index, listOfInts, value);
-
+        this(index, list.stream().mapToDouble(i -> i).toArray(), value, indexOffset);
     }
 
     /**

@@ -32,6 +32,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -131,22 +132,16 @@ public class ElementInteger extends Constraint implements UsesQueueVariable {
      */
     public ElementInteger(IntVar index, int[] list, IntVar value, int indexOffset, boolean checkDuplicates) {
 
+        checkInputForNullness(new String[]{"index", "value"}, new Object[] { index, value });
+        checkInputForNullness("list", list);
+
         this.indexOffset = indexOffset;
         this.checkDuplicates = checkDuplicates;
-
-        queueIndex = 2;
-
-        assert (index != null) : "Argument index is null";
-        assert (list != null) : "Argument list is null";
-        assert (value != null) : "Argument value is null";
-
         this.numberId = idNumber.incrementAndGet();
         this.index = index;
         this.value = value;
-        this.list = new int[list.length];
+        this.list = Arrays.copyOf(list, list.length);
         this.queueIndex = 1;
-
-	      System.arraycopy(list, 0, this.list, 0, list.length);
 
 	      setScope(index, value);
 

@@ -73,13 +73,14 @@ public class XexpYeqZ extends Constraint {
      */
     public XexpYeqZ(IntVar x, IntVar y, IntVar z) {
 
-        assert (x != null) : "Variable x is null";
-        assert (y != null) : "Variable y is null";
-        assert (z != null) : "Variable z is null";
+        checkInputForNullness(new String[]{"x", "y", "z"}, new Object[]{x, y, z});
 
-        assert (x.min() >= 0) : "Variable x has a domain which allows negative values";
-        assert (y.min() > 0) : "Variable y has a domain which allows negative values and zero";
-        assert (z.min() >= 0) : "Variable z has a domain which allows negative values";
+        if ( x.min() < 0 )
+            throw new IllegalArgumentException("Constraint XexpYeqZ has variable x that has a domain which allows negative values.");
+        if ( y.min() <= 0 )
+            throw new IllegalArgumentException("Constraint XexpYeqZ has variable y that has a domain which allows zero and/or negative values.");
+        if ( z.min() < 0 )
+            throw new IllegalArgumentException("Constraint XexpYeqZ has variable z that has a domain which allows negative values.");
 
         numberId = idNumber.incrementAndGet();
 

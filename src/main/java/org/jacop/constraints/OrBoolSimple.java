@@ -30,11 +30,11 @@
 
 package org.jacop.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * If at least one variable is equal 1 then result variable is equal 1 too.
@@ -68,9 +68,7 @@ public class OrBoolSimple extends PrimitiveConstraint {
      */
     public OrBoolSimple(IntVar a, IntVar b, IntVar result) {
 
-        assert (a != null) : "First variable is null";
-        assert (b != null) : "Second variable is null";
-        assert (result != null) : "Result variable is null";
+        checkInputForNullness(new String[] {"a", "b", "result"}, new Object[] {a, b, result});
 
         this.numberId = idNumber.incrementAndGet();
 

@@ -70,11 +70,9 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
      */
     public Reified(PrimitiveConstraint c, IntVar b) {
 
-        assert (c != null) : "Constraint c for reification is null";
-        assert (b != null) : "Boolean variable is null";
-
+        checkInputForNullness(new String[]{"c", "b"}, new Object[]{c, b});
         if (b.min() > 1 || b.max() < 0)
-            throw new IllegalArgumentException("\nVariable variable in reified constraint nust have domain 0..1");
+            throw new IllegalArgumentException("Variable b in reified constraint must have domain at most 0..1");
 
         numberId = idNumber.incrementAndGet();
 
@@ -217,7 +215,8 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
 
         c.include(store);
 
-        store.registerRemoveLevelLateListener(this);
+        if (needRemoveLevelLate)
+            store.registerRemoveLevelLateListener(this);
 
         store.addChanged(this);
         store.countConstraint();

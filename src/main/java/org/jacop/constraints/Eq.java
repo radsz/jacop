@@ -70,8 +70,7 @@ public class Eq extends PrimitiveConstraint implements UsesQueueVariable {
      */
     public Eq(PrimitiveConstraint c1, PrimitiveConstraint c2) {
 
-        assert (c1 != null) : "Constraint c1 is null";
-        assert (c2 != null) : "Constraint c1 is null";
+        checkInputForNullness(new String[] {"c1", "c2"}, new Object[] {c1, c2});
 
         numberId = idNumber.incrementAndGet();
 
@@ -79,7 +78,7 @@ public class Eq extends PrimitiveConstraint implements UsesQueueVariable {
         this.c2 = c2;
 
         setScope(new PrimitiveConstraint[] {c1, c2});
-        queueForward = new QueueForward<PrimitiveConstraint>(new PrimitiveConstraint[] {c1, c2}, arguments());
+        queueForward = new QueueForward<>(new PrimitiveConstraint[] {c1, c2}, arguments());
     }
 
     @Override public void consistency(Store store) {

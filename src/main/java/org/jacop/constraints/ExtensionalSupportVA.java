@@ -33,10 +33,7 @@ package org.jacop.constraints;
 import org.jacop.core.*;
 import org.jacop.util.TupleUtils;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.PriorityQueue;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -129,22 +126,22 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
      * tuples should not performed under any circumstances. The tuples array is
      * not copied to save memory and time.
      *
-     * @param variables the constraint scope.
+     * @param list the constraint scope.
      * @param tuples    the tuples which are supports for the constraint.
      */
 
-    public ExtensionalSupportVA(IntVar[] variables, int[][] tuples) {
+    public ExtensionalSupportVA(IntVar[] list, int[][] tuples) {
 
-        this.list = new IntVar[variables.length];
+        checkInputForNullness("list", list);
+        checkInputForNullness("tuples", tuples);
 
-        for (int i = 0; i < variables.length; i++)
-            list[i] = variables[i];
+        this.list = Arrays.copyOf(list, list.length);
 
         tuplesFromConstructor = tuples;
 
         numberId = idNumber.incrementAndGet();
 
-        setScope(variables);
+        setScope(list);
     }
 
     /**

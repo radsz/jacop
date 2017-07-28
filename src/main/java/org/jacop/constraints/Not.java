@@ -62,6 +62,7 @@ public class Not extends PrimitiveConstraint implements UsesQueueVariable {
      * @param c primitive constraint which is being negated.
      */
     public Not(PrimitiveConstraint c) {
+        checkInputForNullness("c", new Object[]{c});
         numberId = idNumber.incrementAndGet();
         this.c = c;
         setScope(c.arguments());
@@ -111,20 +112,10 @@ public class Not extends PrimitiveConstraint implements UsesQueueVariable {
 
     @Override public void impose(Store store) {
 
-        SimpleHashSet<Var> variables = new SimpleHashSet<Var>();
-
-        for (Var V : c.arguments())
-            variables.add(V);
-
-        while (!variables.isEmpty()) {
-            Var V = variables.removeFirst();
-            V.putModelConstraint(this, getConsistencyPruningEvent(V));
-        }
+        super.impose(store);
 
         c.include(store);
 
-        store.addChanged(this);
-        store.countConstraint();
     }
 
     @Override public void include(Store store) {

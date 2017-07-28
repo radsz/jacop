@@ -68,7 +68,7 @@ public class PgteqC extends PrimitiveConstraint {
      */
     public PgteqC(FloatVar p, double c) {
 
-        assert (p != null) : "Variable p is null";
+        checkInputForNullness("p", new Object[]{p});
 
         numberId = idNumber.incrementAndGet();
 

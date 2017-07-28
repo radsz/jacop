@@ -39,7 +39,6 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.IntervalEnumeration;
 import org.jacop.core.SmallDenseDomain;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 
 /**
  * Constraints |X| #= Y
@@ -79,8 +78,7 @@ public class AbsXeqY extends PrimitiveConstraint {
      */
     public AbsXeqY(IntVar x, IntVar y) {
 
-        assert (x != null) : "Variable x is null";
-        assert (y != null) : "Variable y is null";
+        checkInputForNullness(new String[]{"x", "y"}, new Object[] {x, y});
 
         numberId = idNumber.incrementAndGet();
 

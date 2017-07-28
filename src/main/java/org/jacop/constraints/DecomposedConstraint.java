@@ -31,7 +31,10 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -96,6 +99,84 @@ public abstract class DecomposedConstraint<T extends Constraint> {
      */
     public ArrayList<Var> auxiliaryVariables() {
         return null;
+    }
+
+    public void checkInputForNullness(String[] a, Object[]... parameters) {
+
+        // Case when parameters is just one array.
+        if (parameters.length == 1) {
+            if (a.length != parameters[0].length)
+                throw new IllegalArgumentException("Constraint " + this.getClass().getSimpleName() +
+                    " has parameters and descriptions that are not equal length as variables.");
+
+            for (int i = 0; i < a.length; i++)
+                if (parameters[0][i] == null)
+                    throw new IllegalArgumentException(
+                        "Constraint of type " + this.getClass().getSimpleName() + " has parameter " + a[i] + " that is null.");
+            return;
+        }
+
+        // Case when parameters is more than one array then the length of a and parameters must match.
+        if (a.length != parameters.length)
+            throw new IllegalArgumentException("Constraint " + this.getClass().getSimpleName() +
+                " has parameters and descriptions that are not equal length as variables.");
+
+        for (int i = 0; i < a.length; i++) {
+            if (parameters[i] == null)
+                throw new IllegalArgumentException(
+                    "Constraint of type " + this.getClass().getSimpleName() + " has parameter " + a[i] + " that is null.");
+            for (int j = 0; j < parameters[i].length; j++) {
+                if (parameters[i][j] == null)
+                    if (parameters[i].length == 1) {
+                        throw new IllegalArgumentException(
+                            "Constraint of type " + this.getClass().getSimpleName() + " has parameter " + a[i] + " that is null.");
+                    } else {
+                        throw new IllegalArgumentException(
+                            "Constrant of type " + this.getClass().getSimpleName() + " has parameter " + a[i] + "[" + j
+                                + "] that is null.");
+                    }
+            }
+        }
+    }
+
+    public void checkInputForNullness(String a, Object[] parameters) {
+
+        if (parameters == null)
+            throw new IllegalArgumentException(
+                "Constraint of type " + this.getClass().getSimpleName() + " has parameter " + a + " that is null.");
+
+        for (int i = 0; i < parameters.length; i++) {
+            if (parameters[i] == null)
+                throw new IllegalArgumentException(
+                    "Constraint of type " + this.getClass().getSimpleName() + " has parameter " + a + "[" + i + "] that is null.");
+        }
+
+    }
+
+    public void checkInputForDuplication(String a, Object[] parameters) {
+
+        if ( Arrays.stream(parameters).collect(Collectors.toSet()).size() != parameters.length )
+            throw new IllegalArgumentException(
+                "Constraint of type " + this.getClass().getSimpleName() + " has parameter " + a + " that contains repeated values.");
+
+    }
+
+
+    public void checkInputForNullness(String a, int[] parameters) {
+        if (parameters == null)
+            throw new IllegalArgumentException(
+                "Constraint of type " + this.getClass().getSimpleName() + " has parameter " + a + " that is null.");
+    }
+
+    public <T> void checkInput(T[] list, Predicate<T> condition, String conditionDescription) {
+
+        for (int i = 0; i < list.length; i++)
+            if (! condition.test(list[i])) {
+                throw new IllegalArgumentException(
+                    "Constraint of type " + this.getClass().getSimpleName() + " has a condition " + conditionDescription + " violated for "
+                        + i + "-th element");
+            }
+
     }
 
 

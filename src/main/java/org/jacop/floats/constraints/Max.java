@@ -30,7 +30,9 @@
 
 package org.jacop.floats.constraints;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -73,18 +75,12 @@ public class Max extends Constraint {
      */
     public Max(FloatVar[] list, FloatVar max) {
 
-        assert (list != null) : "List variable is null";
-        assert (max != null) : "Min variable is null";
+        checkInputForNullness(new String[]{"list", "max"}, new Object[][]{list, {max}});
 
         this.queueIndex = 1;
         this.numberId = idNumber.incrementAndGet();
         this.max = max;
-        this.list = new FloatVar[list.length];
-
-        for (int i = 0; i < list.length; i++) {
-            assert (list[i] != null) : i + "-th variable in the list is null";
-            this.list[i] = list[i];
-        }
+        this.list = Arrays.copyOf(list, list.length);
 
         setScope( Stream.concat( Stream.of(list), Stream.of(max) ) );
     }

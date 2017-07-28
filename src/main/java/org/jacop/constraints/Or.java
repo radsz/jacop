@@ -31,6 +31,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Domain;
@@ -70,17 +71,11 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
      */
     public Or(PrimitiveConstraint[] listOfC) {
 
-        assert (listOfC != null) : "List of constraints is null";
+        checkInputForNullness("listOfC", listOfC);
 
         this.queueIndex = 1;
         this.numberId = idNumber.incrementAndGet();
-        this.listOfC = new PrimitiveConstraint[listOfC.length];
-
-        for (int i = 0; i < listOfC.length; i++) {
-            assert (listOfC[i] != null) : i + "-th element of list of constraints is null";
-            this.listOfC[i] = listOfC[i];
-        }
-
+        this.listOfC = Arrays.copyOf(listOfC, listOfC.length);
         setScope(listOfC);
         queueForward = new QueueForward<PrimitiveConstraint>(listOfC, arguments());
     }

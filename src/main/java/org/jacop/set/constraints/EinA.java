@@ -72,7 +72,6 @@ public class EinA extends PrimitiveConstraint {
      * @param strict it specifies if the inclusion relation is strict.
      */
     public EinA(int element, SetVar a, boolean strict) {
-
         this(element, a);
         this.strict = strict;
 
@@ -85,7 +84,7 @@ public class EinA extends PrimitiveConstraint {
      */
     public EinA(int element, SetVar a) {
 
-        assert (a != null) : "Variable a is null";
+        checkInputForNullness("a", new Object[]{a});
 
         numberId = idNumber.incrementAndGet();
 

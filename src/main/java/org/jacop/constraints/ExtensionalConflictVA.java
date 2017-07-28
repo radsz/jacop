@@ -33,10 +33,7 @@ package org.jacop.constraints;
 import org.jacop.core.*;
 import org.jacop.util.TupleUtils;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.PriorityQueue;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -96,17 +93,16 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
      * @param list list of variables for constraint
      */
 
+    @Deprecated
     public ExtensionalConflictVA(IntVar[] list) {
 
-        this.list = new IntVar[list.length];
+        checkInputForNullness("list", list);
+
+        this.list = Arrays.copyOf(list, list.length);
         supports = new int[list.length][][];
         tuple = new int[list.length];
 
-        for (int i = 0; i < list.length; i++)
-            this.list[i] = list[i];
-
         this.numberId = idNumber.incrementAndGet();
-
         setScope(list);
     }
 
@@ -118,16 +114,13 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
      * @param list list of variables for the conflict constraint
      * @param tuples list of forbidden tuples
      */
-
     public ExtensionalConflictVA(IntVar[] list, int[][] tuples) {
 
-        this.list = new IntVar[list.length];
+        checkInputForNullness("list", list);
+
+        this.list = Arrays.copyOf(list, list.length);
         supports = new int[list.length][][];
         tuple = new int[list.length];
-
-        for (int i = 0; i < list.length; i++)
-            this.list[i] = list[i];
-
         tuplesFromConstructor = tuples;
 
         numberId = idNumber.incrementAndGet();
@@ -143,9 +136,7 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
      */
 
     public ExtensionalConflictVA(ArrayList<? extends IntVar> variables, int[][] tuples) {
-
         this(variables.toArray(new IntVar[variables.size()]), tuples);
-
     }
 
 

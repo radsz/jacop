@@ -30,6 +30,8 @@
 
 package org.jacop.set.constraints;
 
+import java.lang.reflect.Array;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -98,19 +100,14 @@ public class SumWeightedSet extends Constraint {
      */
     public SumWeightedSet(SetVar a, int[] elements, int[] weights, IntVar totalWeight) {
 
-        assert (weights != null) : "This constructor does not accept empty arrays for weights.";
-        assert (weights.length == elements.length) : "Length of elements does not equal length of weights array.";
-        assert (a != null) : "Variable a is null";
-        assert (totalWeight != null) : "Variable totalWeight is null";
+        checkInputForNullness(new String[]{"a", "elements", "weights", "totalWeight"}, new Object[][]{{a}, {elements}, {weights}, {totalWeight}});
 
         this.numberId = idNumber.incrementAndGet();
 
         this.totalWeight = totalWeight;
         this.a = a;
-        this.weights = new int[weights.length];
-        System.arraycopy(weights, 0, this.weights, 0, weights.length);
-        this.elements = new int[elements.length];
-        System.arraycopy(elements, 0, this.elements, 0, elements.length);
+        this.weights = Arrays.copyOf(weights, weights.length);
+        this.elements = Arrays.copyOf(elements, elements.length);
 
         this.increasingCosts = true;
         for (int i = 0; i < weights.length - 1 && this.increasingCosts; i++)

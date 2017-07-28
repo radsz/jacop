@@ -70,7 +70,9 @@ public class PeqC extends PrimitiveConstraint {
      */
     public PeqC(FloatVar p, double c) {
 
-        assert (p != null) : "Variable p is null";
+        checkInputForNullness("p", new Object[]{p});
+
+        // TODO, BUG? why Integer constants used here?
         assert (c >= IntDomain.MinInt && c <= IntDomain.MaxInt) : "Constant c " + c + " is not in the allowed range ";
 
         numberId = idNumber.incrementAndGet();

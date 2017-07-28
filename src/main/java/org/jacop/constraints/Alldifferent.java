@@ -70,16 +70,9 @@ public class Alldifferent extends Constraint implements UsesQueueVariable {
      */
     public Alldifferent(IntVar[] list) {
 
-        assert (list != null) : "Variables list is null";
-
+        checkInputForNullness("list", list);
         this.numberId = idNumber.incrementAndGet();
-        this.list = new IntVar[list.length];
-
-        for (int i = 0; i < list.length; i++) {
-            assert (list[i] != null) : i + "-th element in the list is null";
-            this.list[i] = list[i];
-        }
-
+        this.list = Arrays.copyOf(list, list.length);
         setScope(this.list);
 
     }

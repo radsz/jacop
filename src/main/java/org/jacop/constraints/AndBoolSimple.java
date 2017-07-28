@@ -67,9 +67,7 @@ public class AndBoolSimple extends PrimitiveConstraint {
      */
     public AndBoolSimple(IntVar a, IntVar b, IntVar result) {
 
-        assert (a != null) : "First variable is null";
-        assert (b != null) : "Second variable is null";
-        assert (result != null) : "Result variable is null";
+        checkInputForNullness(new String[] {"a", "b", "result"}, new Object[] {a, b, result});
 
         this.numberId = idNumber.incrementAndGet();
 

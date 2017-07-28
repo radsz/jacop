@@ -30,27 +30,20 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.jacop.constraints.netflow.NetworkBuilder;
 import org.jacop.constraints.netflow.simplex.Node;
-import org.jacop.core.BooleanVar;
-import org.jacop.core.BoundDomain;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Store;
-import org.jacop.core.ValueEnumeration;
+import org.jacop.core.*;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
- *
- * This class provides soft-alldifferent constraint by decomposing it 
- * either into a network flow constraint or a set of primitive constraints. 
+ * This class provides soft-alldifferent constraint by decomposing it
+ * either into a network flow constraint or a set of primitive constraints.
  *
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.4
- *
  */
 
 public class SoftAlldifferent extends DecomposedConstraint {
@@ -65,9 +58,10 @@ public class SoftAlldifferent extends DecomposedConstraint {
 
     public SoftAlldifferent(IntVar[] xVars, IntVar costVar, ViolationMeasure violationMeasure) {
 
-        this.xVars = new IntVar[xVars.length];
-	System.arraycopy(xVars, 0, this.xVars, 0, xVars.length);
-      
+        checkInputForNullness("xVars", xVars);
+        checkInputForNullness(new String[] {"costVar", "violationMeasure"}, new Object[]{costVar, violationMeasure});
+
+        this.xVars = Arrays.copyOf(xVars, xVars.length);
         this.costVar = costVar;
         this.violationMeasure = violationMeasure;
     }

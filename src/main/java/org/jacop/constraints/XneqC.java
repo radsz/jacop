@@ -65,7 +65,8 @@ public class XneqC extends PrimitiveConstraint {
      */
     public XneqC(IntVar x, int c) {
 
-        assert (x != null) : "Variable x is null";
+        if (x == null)
+            throw new IllegalArgumentException("Constraint XgtC has variable x that is null.");
 
         numberId = idNumber.incrementAndGet();
 

@@ -30,16 +30,16 @@
 
 package org.jacop.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * Constraints X #= C
- *
+ * <p>
  * Domain consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -62,13 +62,16 @@ public class XeqC extends PrimitiveConstraint {
 
     /**
      * It constructs the constraint X = C.
+     *
      * @param x variable x.
      * @param c constant c.
      */
     public XeqC(IntVar x, int c) {
 
-        assert (x != null) : "Variable x is null";
-        assert (c >= IntDomain.MinInt && c <= IntDomain.MaxInt) : "Constant c " + c + " is not in the allowed range ";
+        checkInputForNullness("x", new Object[] {x});
+
+        if (c < IntDomain.MinInt || c > IntDomain.MaxInt)
+            throw new IllegalArgumentException("Constraint XeqC has a  constant c " + c + " that is not in the allowed range.");
 
         numberId = idNumber.incrementAndGet();
         this.x = x;
@@ -120,6 +123,7 @@ public class XeqC extends PrimitiveConstraint {
 
     /**
      * It returns the constant to which a given variable should be equal to.
+     *
      * @return the constant to which the variable should be equal to.
      */
     public int getC() {

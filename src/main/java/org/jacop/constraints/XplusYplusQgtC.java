@@ -76,9 +76,7 @@ public class XplusYplusQgtC extends PrimitiveConstraint {
      */
     public XplusYplusQgtC(IntVar x, IntVar y, IntVar q, int c) {
 
-        assert (x != null) : "Variable x is null";
-        assert (y != null) : "Variable y is null";
-        assert (q != null) : "Variable q is null";
+        checkInputForNullness(new String[]{"x", "y", "q"}, new Object[]{x, y, q});
 
         numberId = idNumber.incrementAndGet();
 

@@ -32,6 +32,8 @@ package org.jacop.constraints;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import org.jacop.core.*;
 
@@ -99,35 +101,17 @@ import org.jacop.core.*;
      * @param sum  resulting sum
      */
     public SumWeightDom(IntVar[] list, int[] weights, int sum) {
-
         commonInitialization(list, weights, sum);
-
     }
 
-    /**
-     * @param list array of variables to be summed up
-     * @param weights variables' weights
-     * @param sum resulting sum
-     */
-    public SumWeightDom(IntVar[] list, int[] weights, IntVar sum) {
+    public void commonInitialization(IntVar[] list, int[] weights, int sum) {
 
-        IntVar[] listIncludingSum = new IntVar[list.length + 1];
-        System.arraycopy(list, 0, listIncludingSum, 0, list.length);
-        listIncludingSum[list.length] = sum;
+        checkInputForNullness(new String[]{"list", "weights"}, new Object[][]{list, { weights }});
 
-        int[] weightsIncludingSumWeight = new int[weights.length + 1];
-        System.arraycopy(weights, 0, weightsIncludingSumWeight, 0, weights.length);
-        weightsIncludingSumWeight[weights.length] = -1;
-
-        commonInitialization(listIncludingSum, weightsIncludingSumWeight, 0);
-
-    }
-
-    private void commonInitialization(IntVar[] list, int[] weights, int sum) {
+        if (list.length != weights.length)
+            throw new IllegalArgumentException("SumWeightDom constraint has list and weights of different lengths.");
 
         queueIndex = 4;
-
-        assert (list.length == weights.length) : "\nLength of two vectors different in SumWeightDom";
 
         numberId = idNumber.incrementAndGet();
 
@@ -136,20 +120,10 @@ import org.jacop.core.*;
         HashMap<IntVar, Integer> parameters = new HashMap<IntVar, Integer>();
 
         for (int i = 0; i < list.length; i++) {
-
-            assert (list[i] != null) : i + "-th element of list in SumWeightDom constraint is null";
-
             if (weights[i] == 0)
                 continue;
-
-            if (parameters.get(list[i]) != null) {
-                // variable ordered in the scope of the Sum Weight constraint.
-                Integer coeff = parameters.get(list[i]);
-                Integer sumOfCoeff = coeff + weights[i];
-                parameters.put(list[i], sumOfCoeff);
-            } else
-                parameters.put(list[i], weights[i]);
-
+            Integer coeff = parameters.getOrDefault(list[i], 0);
+            parameters.put(list[i], coeff + weights[i]);
         }
 
         this.list = new IntVar[parameters.size()];
@@ -165,28 +139,46 @@ import org.jacop.core.*;
         checkForOverflow();
 
         setScope(list);
-    }
-
-    /**
-     * It constructs the constraint SumWeightDom.
-     * @param variables variables which are being multiplied by weights.
-     * @param weights weight for each variable.
-     * @param sum variable containing the sum of weighted variables.
-     */
-    public SumWeightDom(ArrayList<? extends IntVar> variables, ArrayList<Integer> weights, int sum) {
-
-        this(variables.toArray(new IntVar[variables.size()]), weights.stream().mapToInt(i -> i).toArray(), sum);
 
     }
 
     /**
-     * It constructs the constraint SumWeightDom.
-     * @param variables variables which are being multiplied by weights.
-     * @param weights weight for each variable.
-     * @param sum variable containing the sum of weighted variables.
+     * @param list array of variables to be summed up
+     * @param weights variables' weights
+     * @param sum resulting sum
      */
-    public SumWeightDom(ArrayList<? extends IntVar> variables, ArrayList<Integer> weights, IntVar sum) {
-        this(variables.toArray(new IntVar[variables.size()]), weights.stream().mapToInt(i -> i).toArray(), sum);
+    public SumWeightDom(IntVar[] list, int[] weights, IntVar sum) {
+
+        checkInputForNullness(new String[]{"list", "weights"}, new Object[][]{list, { weights }});
+        commonInitialization(Stream.concat(Arrays.stream(list), Stream.of(sum)).toArray(IntVar[]::new),
+                             IntStream.concat(Arrays.stream(weights), IntStream.of(-1)).toArray(),
+                             0);
+
+    }
+
+    /**
+     * It constructs the constraint SumWeightDom.
+     * @param list list which are being multiplied by weights.
+     * @param weights weight for each variable.
+     * @param sum variable containing the sum of weighted list.
+     */
+    public SumWeightDom(ArrayList<? extends IntVar> list, ArrayList<Integer> weights, int sum) {
+        checkInputForNullness(new String[]{"list", "weights"}, new Object[][]{{list}, { weights }});
+        commonInitialization(list.toArray(new IntVar[list.size()]), weights.stream().mapToInt(i -> i).toArray(), sum);
+
+    }
+
+    /**
+     * It constructs the constraint SumWeightDom.
+     * @param list list which are being multiplied by weights.
+     * @param weights weight for each variable.
+     * @param sum variable containing the sum of weighted list.
+     */
+    public SumWeightDom(ArrayList<? extends IntVar> list, ArrayList<Integer> weights, IntVar sum) {
+        checkInputForNullness(new String[]{"list", "weights"}, new Object[][]{{list}, { weights }});
+        commonInitialization(Stream.concat(list.stream(), Stream.of(sum)).toArray(IntVar[]::new),
+            IntStream.concat(weights.stream().mapToInt(i -> i), IntStream.of(-1)).toArray(),
+            0);
     }
 
     @Override public void removeLevelLate(int level) {

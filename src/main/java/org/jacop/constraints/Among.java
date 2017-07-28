@@ -93,20 +93,11 @@ public class Among extends Constraint implements UsesQueueVariable {
      */
     public Among(IntVar[] list, IntervalDomain kSet, IntVar n) {
 
-        assert (list != null) : "List of variables is null";
-        assert (kSet != null) : "Set of values is null";
-        assert (n != null) : "N variable is null";
+        checkInputForNullness(new String[] {"list", "kSet", "n"}, new Object[][] { list, { kSet }, { n } });
 
         this.queueIndex = 1;
-
         numberId = idNumber.incrementAndGet();
-
-        this.list = new IntVar[list.length];
-        for (int i = 0; i < list.length; i++) {
-            assert (list[i] != null) : i + "-th element in list is null";
-            this.list[i] = list[i];
-        }
-
+        this.list = Arrays.copyOf(list, list.length);
         this.kSet = kSet.clone();
         this.n = n;
 

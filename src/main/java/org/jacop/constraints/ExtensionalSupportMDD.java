@@ -86,13 +86,15 @@ public class ExtensionalSupportMDD extends Constraint {
      */
     public ExtensionalSupportMDD(MDD diagram) {
 
+        checkInputForNullness("diagram", new Object[] { diagram });
+        checkInputForNullness("diagram.vars", diagram.vars);
+        checkInputForNullness("diagram.views", diagram.views);
+
         queueIndex = 1;
 
         this.mdd = diagram;
         this.views = diagram.views;
-
         G_no = new SparseSet(diagram.freePosition);
-
         numberId = idNumber.incrementAndGet();
 
         setScope(this.mdd.vars);

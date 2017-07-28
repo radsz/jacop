@@ -70,10 +70,10 @@ public class EquationSystem extends Constraint {
      */
     public EquationSystem(Store store, FloatVar[] f, FloatVar[] x) {
 
-        this.f = new FloatVar[f.length];
-        System.arraycopy(f, 0, this.f, 0, f.length);
-        this.x = new FloatVar[x.length];
-        System.arraycopy(x, 0, this.x, 0, x.length);
+        checkInputForNullness(new String[]{"f", "x"}, new Object[]{f, x});
+
+        this.f = Arrays.copyOf(f, f.length);
+        this.x = Arrays.copyOf(x, x.length);
 
         queueIndex = 4;
 

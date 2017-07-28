@@ -84,22 +84,12 @@ public class Alldiff extends Alldifferent {
      */
     public Alldiff(IntVar[] variables) {
 
-        assert (variables != null) : "Variables list is null";
+        checkInputForNullness("x", variables);
 
         this.numberId = idNumber.incrementAndGet();
-        this.list = new IntVar[variables.length];
-
-        for (int i = 0; i < variables.length; i++) {
-            assert (variables[i] != null) : i + "-th element in the list is null";
-            this.list[i] = variables[i];
-        }
-
+        this.list = Arrays.copyOf(variables, variables.length);
         this.queueIndex = 2;
-
-        listAlldiff = new IntVar[variables.length];
-
-        for (int i = 0; i < variables.length; i++)
-            listAlldiff[i] = variables[i];
+        listAlldiff = Arrays.copyOf(variables, variables.length);
 
         min = new int[variables.length];
         max = new int[variables.length];

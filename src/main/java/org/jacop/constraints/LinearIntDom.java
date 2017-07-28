@@ -30,26 +30,22 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.core.*;
 
-import org.jacop.core.IntVar;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Interval;
-import org.jacop.core.ValueEnumeration;
-import org.jacop.core.Store;
-import org.jacop.core.Var;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 /**
  * LinearIntDom constraint implements the weighted summation over several
- * variables. 
- *
+ * variables.
+ * <p>
  * sum(i in 1..N)(ai*xi) = b
- *
+ * <p>
  * It provides the weighted sum from all variables on the list.
  * The weights are integers. Domain consistency is used.
- *
  *
  * @author Krzysztof Kuchcinski
  * @version 4.4
@@ -76,62 +72,49 @@ public class LinearIntDom extends LinearInt {
     double limitDomainPruning = 1e+7;
 
     /**
-     * It constructs the constraint LinearIntDom. 
-     * @param store current store
-     * @param list variables which are being multiplied by weights.
+     * It constructs the constraint LinearIntDom.
+     *
+     * @param store   current store
+     * @param list    variables which are being multiplied by weights.
      * @param weights weight for each variable.
-     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum the sum of weighted variables.
+     * @param rel     the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum     the sum of weighted variables.
      */
     public LinearIntDom(Store store, IntVar[] list, int[] weights, String rel, int sum) {
-
-        commonInitialization(store, list, weights, sum);
-        this.relationType = relation(rel);
+        commonInitialization(store, list, weights, rel, sum);
         numberId = idNumber.incrementAndGet();
         queueIndex = 4;
     }
 
     /**
-     * It constructs the constraint LinearIntDom. 
-     * @param store current store
-     * @param list variables which are being multiplied by weights.
+     * It constructs the constraint LinearIntDom.
+     *
+     * @param store   current store
+     * @param list    variables which are being multiplied by weights.
      * @param weights weight for each variable.
-     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum variable containing the sum of weighted variables.
+     * @param rel     the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum     variable containing the sum of weighted variables.
      */
     public LinearIntDom(Store store, IntVar[] list, int[] weights, String rel, IntVar sum) {
-
-        queueIndex = 4;
-        IntVar[] vars = new IntVar[list.length + 1];
-        System.arraycopy(list, 0, vars, 0, list.length);
-        vars[list.length] = sum;
-        int[] ws = new int[weights.length + 1];
-        System.arraycopy(weights, 0, ws, 0, weights.length);
-        ws[list.length] = -1;
-
-        commonInitialization(store, vars, ws, 0);
-        this.relationType = relation(rel);
+        commonInitialization(store, Stream.concat(Arrays.stream(list), Stream.of(sum)).toArray(IntVar[]::new),
+            IntStream.concat(Arrays.stream(weights), IntStream.of(-1)).toArray(), rel, 0);
         numberId = idNumber.incrementAndGet();
+        queueIndex = 4;
 
     }
 
     /**
-     * It constructs the constraint LinearIntDom. 
-     * @param store current store
+     * It constructs the constraint LinearIntDom.
+     *
+     * @param store     current store
      * @param variables variables which are being multiplied by weights.
-     * @param weights weight for each variable.
-     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum variable containing the sum of weighted variables.
+     * @param weights   weight for each variable.
+     * @param rel       the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum       variable containing the sum of weighted variables.
      */
     public LinearIntDom(Store store, ArrayList<? extends IntVar> variables, ArrayList<Integer> weights, String rel, int sum) {
-        int[] w = new int[weights.size()];
-        for (int i = 0; i < weights.size(); i++)
-            w[i] = weights.get(i);
-
-        commonInitialization(store, variables.toArray(new IntVar[variables.size()]), w, sum);
+        commonInitialization(store, variables.toArray(new IntVar[variables.size()]), weights.stream().mapToInt(i -> i).toArray(), rel, sum);
         numberId = idNumber.incrementAndGet();
-        this.relationType = relation(rel);
-
         queueIndex = 4;
     }
 

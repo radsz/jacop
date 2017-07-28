@@ -81,17 +81,11 @@ public class Max extends Constraint {
      */
     public Max(IntVar[] list, IntVar max) {
 
-        assert (list != null) : "List variable is null";
-        assert (max != null) : "Min variable is null";
+        checkInputForNullness(new String[]{"list", "max"}, new Object[][]{ list, {max}});
 
         this.l = list.length;
         this.max = max;
-        this.list = new IntVar[l];
-
-        for (int i = 0; i < l; i++) {
-            assert (list[i] != null) : i + "-th variable in the list is null";
-            this.list[i] = list[i];
-        }
+        this.list = Arrays.copyOf(list, list.length);
 
         if (list.length > 1000)  // rule of thumb
             this.queueIndex = 2;

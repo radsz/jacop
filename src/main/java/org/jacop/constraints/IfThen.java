@@ -73,8 +73,7 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
      */
     public IfThen(PrimitiveConstraint condC, PrimitiveConstraint thenC) {
 
-        assert (condC != null) : "Constraint cond is null";
-        assert (thenC != null) : "Constraint then is null";
+        checkInputForNullness(new String[] {"condC", "thenC"}, new Object[] {condC, thenC});
 
         numberId = idNumber.incrementAndGet();
 

@@ -84,19 +84,14 @@ public class Diff extends Constraint implements UsesQueueVariable {
      */
     public Diff(Rectangle[] rectangles, boolean doProfile) {
 
-        assert (rectangles != null) : "Rectangles list is null";
+        checkInputForNullness("rectangles", rectangles);
+        checkInput(rectangles, r -> r.dim == 2, "rectangle has to have exactly two dimensions");
 
         this.queueIndex = 2;
         this.numberId = idNumber.incrementAndGet();
 
-        this.rectangles = new Rectangle[rectangles.length];
+        this.rectangles = Arrays.copyOf(rectangles, rectangles.length);
         this.doProfile = doProfile;
-
-        for (int i = 0; i < rectangles.length; i++) {
-            assert (rectangles[i] != null) : i + "-th rectangle in the list is null";
-            assert (rectangles[i].dim == 2) : "The rectangle has to have exactly two dimensions";
-            this.rectangles[i] = new Rectangle(rectangles[i]);
-        }
 
         setScope(Rectangle.getStream(this.rectangles));
 

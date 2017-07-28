@@ -132,12 +132,10 @@ import java.util.Map;
      */
     public Linear(Store store, IntVar[] list, int[] weights, String rel, int sum) {
 
-        commonInitialization(store, list, weights, sum);
+        checkInputForNullness("list", list);
+        checkInputForNullness("weights", weights);
+
         this.relationType = relation(rel);
-
-    }
-
-    private void commonInitialization(Store store, IntVar[] list, int[] weights, int sum) {
         this.store = store;
         queueIndex = 1;
 
@@ -150,9 +148,6 @@ import java.util.Map;
         HashMap<IntVar, Integer> parameters = new HashMap<IntVar, Integer>();
 
         for (int i = 0; i < list.length; i++) {
-
-            assert (list[i] != null) : i + "-th element of list in Linear constraint is null";
-
             if (weights[i] != 0) {
                 if (list[i].singleton())
                     this.sum -= list[i].value() * weights[i];
@@ -220,13 +215,7 @@ import java.util.Map;
      * @param sum       variable containing the sum of weighted variables.
      */
     public Linear(Store store, ArrayList<? extends IntVar> variables, ArrayList<Integer> weights, String rel, int sum) {
-
-        int[] w = new int[weights.size()];
-        for (int i = 0; i < weights.size(); i++)
-            w[i] = weights.get(i);
-
-        commonInitialization(store, variables.toArray(new IntVar[variables.size()]), w, sum);
-        this.relationType = relation(rel);
+        this(store, variables.toArray(new IntVar[variables.size()]), weights.stream().mapToInt(i -> i).toArray(), rel, sum);
     }
 
     @Override public void removeLevelLate(int level) {

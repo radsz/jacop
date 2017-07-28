@@ -64,8 +64,7 @@ public class XgtY extends PrimitiveConstraint {
      */
     public XgtY(IntVar x, IntVar y) {
 
-        assert (x != null) : "Variable x is null";
-        assert (y != null) : "Variable y is null";
+        checkInputForNullness(new String[]{"x", "y"}, new Object[]{x, y});
 
         numberId = idNumber.incrementAndGet();
 

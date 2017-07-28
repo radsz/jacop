@@ -76,30 +76,27 @@ import java.util.stream.Stream;
      */
     public SumWeight(IntVar[] list, int[] weights, IntVar sum) {
 
+        checkInputForNullness(new String[]{"list", "weights", "sum"}, new Object[][]{list, {weights}, {sum}});
+
+        if (list.length != weights.length)
+            throw new IllegalArgumentException("Constraint " + this.getClass().getSimpleName() +
+                "has length of list and weights parameter different.");
+
         queueIndex = 1;
-
-        assert (list.length == weights.length) : "\nLength of two vectors different in SumWeight";
         numberId = idNumber.incrementAndGet();
-
         this.sum = sum;
 
-        HashMap<IntVar, Integer> parameters = new HashMap<IntVar, Integer>();
+        Map<IntVar, Integer> parameters = new HashMap<IntVar, Integer>();
 
         for (int i = 0; i < list.length; i++) {
-
-            assert (list[i] != null) : i + "-th element of list in SumWeighted constraint is null";
-
-            if (parameters.get(list[i]) != null) {
-                // variable ordered in the scope of the Sum Weight constraint.
-                Integer coeff = parameters.get(list[i]);
-                Integer sumOfCoeff = coeff + weights[i];
-                parameters.put(list[i], sumOfCoeff);
-            } else
-                parameters.put(list[i], weights[i]);
-
+            if (weights[i] == 0)
+                continue;
+            Integer accumulatedCoefficient = parameters.getOrDefault(list[i], 0);
+            parameters.put(list[i], accumulatedCoefficient + weights[i]);
         }
 
-        assert (parameters.get(sum) == null) : "Sum variable is used in both sides of SumeWeight constraint.";
+        if (parameters.get(sum) != null) // sum is also present in the list
+                throw new IllegalArgumentException("Sum variable is used in both sides of SumWeight constraint.");
 
         this.list = new IntVar[parameters.size()];
         this.weights = new int[parameters.size()];

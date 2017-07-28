@@ -143,6 +143,8 @@ public class GCC extends Constraint implements UsesQueueVariable {
      */
     public GCC(IntVar[] x, IntVar[] counters) {
 
+        checkInputForNullness(new String[]{"x", "counters"}, x, counters);
+
         this.queueIndex = 1;
         numberId = idNumber.incrementAndGet();
 

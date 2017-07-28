@@ -77,20 +77,14 @@ public class Count extends Constraint {
      */
     public Count(IntVar[] list, IntVar counter, int value) {
 
-        assert (list != null) : "List variable is null";
-        assert (counter != null) : "Counter variable is null";
+        checkInputForNullness(new String[] {"list", "counter"}, new Object[][] {list, {counter}});
 
         this.queueIndex = 1;
         this.numberId = idNumber.incrementAndGet();
 
-        this.value = value;
+        this.list = Arrays.copyOf(list, list.length);
         this.counter = counter;
-        this.list = new IntVar[list.length];
-
-        for (int i = 0; i < list.length; i++) {
-            assert (list[i] != null) : i + "-th variable in the list is null";
-            this.list[i] = list[i];
-        }
+        this.value = value;
 
         setScope(Stream.concat(Arrays.stream(list), Stream.of(counter)));
 

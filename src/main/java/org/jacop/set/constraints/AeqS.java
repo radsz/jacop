@@ -74,8 +74,7 @@ public class AeqS extends PrimitiveConstraint {
      */
     public AeqS(SetVar a, IntDomain set) {
 
-        assert (a != null) : "Variable A is null";
-        assert (set != null) : "Set value is null";
+        checkInputForNullness(new String[]{"a", "set"}, new Object[]{a, set});
 
         numberId = idNumber.incrementAndGet();
 

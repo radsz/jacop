@@ -72,8 +72,7 @@ public class AeqB extends PrimitiveConstraint {
      */
     public AeqB(SetVar a, SetVar b) {
 
-        assert (a != null) : "Variable a is null";
-        assert (b != null) : "Variable b is null";
+        checkInputForNullness(new String[]{"a", "b"}, new Object[]{a, b});
 
         numberId = idNumber.incrementAndGet();
 

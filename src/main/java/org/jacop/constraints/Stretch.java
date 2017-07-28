@@ -31,6 +31,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.jacop.constraints.regular.Regular;
@@ -72,24 +73,12 @@ public class Stretch extends DecomposedConstraint {
      */
     public Stretch(int[] values, int[] min, int[] max, IntVar[] x) {
 
-        assert (values != null) : "values argument is null";
-        this.values = new int[values.length];
-        System.arraycopy(values, 0, this.values, 0, values.length);
+        checkInputForNullness(new String[]{"values", "min", "max", "x"}, new Object[][]{ {values}, {min}, {max}, x});
 
-        assert (min != null) : "min argument is null";
-        this.min = new int[min.length];
-        System.arraycopy(min, 0, this.min, 0, min.length);
-
-        assert (max != null) : "max argument is null";
-        this.max = new int[max.length];
-        System.arraycopy(max, 0, this.max, 0, max.length);
-
-        assert (x != null) : "x argument is null";
-        this.x = new IntVar[x.length];
-        for (int i = 0; i < x.length; i++) {
-            assert (x[i] != null) : i + "-th element of x list is null.";
-            this.x[i] = x[i];
-        }
+        this.values = Arrays.copyOf(values, values.length);
+        this.min = Arrays.copyOf(min, min.length);
+        this.max = Arrays.copyOf(max, max.length);
+        this.x = Arrays.copyOf(x, x.length);
 
     }
 

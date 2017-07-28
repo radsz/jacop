@@ -92,8 +92,7 @@ public class XinA extends PrimitiveConstraint {
      */
     public XinA(IntVar x, SetVar a) {
 
-        assert (a != null) : "Variable a is null";
-        assert (x != null) : "Variable x is null";
+        checkInputForNullness(new String[]{"x", "a"}, new Object[]{x, a});
 
         this.numberId = idNumber.incrementAndGet();
 

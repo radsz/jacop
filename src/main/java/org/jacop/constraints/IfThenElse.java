@@ -81,9 +81,7 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
     // Constructors
     public IfThenElse(PrimitiveConstraint condC, PrimitiveConstraint thenC, PrimitiveConstraint elseC) {
 
-        assert (condC != null) : "Constraint cond is null";
-        assert (thenC != null) : "Constraint then is null";
-        assert (elseC != null) : "Constraint elseC is null";
+        checkInputForNullness(new String[]{ "condC", "thenC", "elseC"}, new Object[] {condC, thenC, elseC});
 
         numberId = idNumber.incrementAndGet();
 

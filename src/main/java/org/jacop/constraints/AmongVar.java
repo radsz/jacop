@@ -109,6 +109,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable {
      */
     public AmongVar(IntVar[] listOfX, IntVar[] listOfY, IntVar n) {
 
+        checkInputForNullness(new String[] {"listOfX", "listOfY", "n"}, new Object[][] {listOfX, listOfY, { n }});
         this.queueIndex = 1;
 
         numberId = idNumber.incrementAndGet();

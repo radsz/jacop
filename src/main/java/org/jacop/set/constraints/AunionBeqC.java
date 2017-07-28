@@ -90,9 +90,7 @@ public class AunionBeqC extends Constraint implements UsesQueueVariable {
 
     public AunionBeqC(SetVar a, SetVar b, SetVar c) {
 
-        assert (a != null) : "Variable a is null";
-        assert (b != null) : "Variable b is null";
-        assert (c != null) : "Variable c is null";
+        checkInputForNullness(new String[]{"a", "b", "c"}, new Object[]{a, b, c});
 
         numberId = idNumber.incrementAndGet();
 

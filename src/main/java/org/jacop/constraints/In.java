@@ -73,8 +73,7 @@ public class In extends PrimitiveConstraint {
      */
     public In(IntVar x, IntDomain dom) {
 
-        assert (x != null) : "Variable x is null";
-        assert (dom != null) : "Domain dom is null";
+        checkInputForNullness(new String[]{"x", "dom"}, new Object[] {x, dom});
 
         numberId = idNumber.incrementAndGet();
 

@@ -32,6 +32,7 @@ package org.jacop;
 
 import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.search.*;
 import org.junit.Ignore;
@@ -45,13 +46,140 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 
 /**
- *
  * It is performing testing based on simple problems containing only one constraint.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.4
  */
 public class SingleConstraintTest {
+
+    @Test public void testSubcircuit() {
+
+        Store store = new Store();
+
+        int xLength = 4;
+        int xSize = 5;
+        IntVar[] list = getIntVars(store, "list", xLength, xSize);
+        Subcircuit c = new Subcircuit(list);
+        store.impose(c);
+
+        store.print();
+        int noOfSolutions = noOfAllSolutions(store, list);
+
+        assertThat(noOfSolutions, is(21));
+
+    }
+
+    @Test(expected = IllegalArgumentException.class) public void testInvalidSubcircuit() {
+
+        Store store = new Store();
+        IntVar[] list = getIntVars(store, "list", 3, 3);
+        list[list.length - 1] = list[0];
+        Subcircuit c = new Subcircuit(list);
+
+    }
+
+    @Test(expected = IllegalArgumentException.class) public void testInvalidStretch() {
+        IntVar[] list = null;
+        Stretch stretch = new Stretch(null, null, null, list);
+    }
+
+    @Test public void testStretch() {
+
+        Store store = new Store();
+
+        int[] values = {1, 2};
+        int[] min = {1, 2};
+        int[] max = {2, 3};
+        int xLength = 4;
+        int xSize = 4;
+        IntVar[] x = getIntVars(store, "x", xLength, xSize);
+
+        Stretch stretch = new Stretch(values, min, max, x);
+
+        store.imposeDecomposition(stretch);
+
+        store.print();
+        int noOfSolutions = noOfAllSolutions(store, x);
+
+        assertThat(noOfSolutions, is(5));
+
+    }
+
+
+    @Test(expected = IllegalArgumentException.class) public void testInvalidElementVariable() {
+
+        Store store = new Store();
+        IntVar x = new IntVar(store, "x", 0, 4);
+        IntVar[] list = null;
+        ElementVariable c = new ElementVariable(x, list, x);
+
+    }
+
+
+    @Test(expected = IllegalArgumentException.class) public void testInvalidAmong3() {
+
+        Store store = new Store();
+        IntVar min = new IntVar(store, "x", 0, 4);
+        IntVar[] list = getIntVars(store, "list", 3, 3);
+        list[list.length - 1] = null;
+        Among c = new Among(list, new IntervalDomain(1, 2), null);
+
+    }
+
+    @Test(expected = IllegalArgumentException.class) public void testInvalidAmong2() {
+
+        Store store = new Store();
+
+        IntVar[] list = getIntVars(store, "list", 3, 3);
+        Among c = new Among(list, new IntervalDomain(1, 2), null);
+
+    }
+
+    @Test(expected = IllegalArgumentException.class) public void testInvalidAmong1() {
+
+        Store store = new Store();
+
+        IntVar min = new IntVar(store, "x", 0, 4);
+        IntVar[] list = getIntVars(store, "list", 3, 3);
+        Among c = new Among(list, null, min);
+
+    }
+
+    @Test(expected = IllegalArgumentException.class) public void testInvalidMin2() {
+
+        Store store = new Store();
+
+        IntVar min = new IntVar(store, "x", 0, 4);
+        IntVar[] list = getIntVars(store, "list", 3, 3);
+        list[list.length - 1] = null;
+        Min c = new Min(list, min);
+
+    }
+
+    @Test(expected = IllegalArgumentException.class) public void testInvalidMin1() {
+
+        Store store = new Store();
+
+        IntVar min = new IntVar(store, "x", 0, 4);
+        IntVar[] list = null;
+
+        Min c = new Min(list, min);
+
+    }
+
+
+    @Test(expected = IllegalArgumentException.class) public void testInvalidAbs() {
+
+        Store store = new Store();
+
+        IntVar x = new IntVar(store, "x", 0, 4);
+        IntVar y = null;
+
+        AbsXeqY absXeqY = new AbsXeqY(x, y);
+
+    }
+
 
     @Test public void testExtensionalConflictVA() {
 
@@ -650,7 +778,6 @@ public class SingleConstraintTest {
         return x;
     }
 
-
     private int noOfAllSolutions(Store store, IntVar[]... variables) {
 
         SelectChoicePoint<IntVar> select =
@@ -660,12 +787,12 @@ public class SingleConstraintTest {
         DepthFirstSearch search = new DepthFirstSearch<IntVar>();
 
         search.getSolutionListener().searchAll(true);
-        search.getSolutionListener().recordSolutions(false);
+        search.getSolutionListener().recordSolutions(true);
         search.setAssignSolution(true);
 
         boolean result = search.labeling(store, select);
 
-        // search.printAllSolutions();
+        //search.printAllSolutions();
         return search.getSolutionListener().solutionsNo();
 
     }
