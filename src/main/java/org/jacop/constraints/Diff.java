@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 import org.jacop.core.*;
+import org.w3c.dom.css.Rect;
 
 /**
  * Diff constraint assures that any two rectangles from a vector of rectangles
@@ -97,7 +98,7 @@ public class Diff extends Constraint implements UsesQueueVariable {
             this.rectangles[i] = new Rectangle(rectangles[i]);
         }
 
-        setScope(this.rectangles);
+        setScope(Rectangle.getStream(this.rectangles));
 
     }
 
@@ -111,9 +112,8 @@ public class Diff extends Constraint implements UsesQueueVariable {
 
         queueIndex = 2;
         this.rectangles = Rectangle.toArrayOf2DRectangles(rectangles);
-        numberArgs += this.rectangles.length * 4;
         numberId = idNumber.incrementAndGet();
-        setScope(this.rectangles);
+        setScope(Rectangle.getStream(this.rectangles));
     }
 
 
@@ -147,9 +147,8 @@ public class Diff extends Constraint implements UsesQueueVariable {
 
         queueIndex = 2;
         this.rectangles = Rectangle.toArrayOf2DRectangles(origin1, origin2, length1, length2);
-        numberArgs += this.rectangles.length * 4;
         numberId = idNumber.incrementAndGet();
-        setScope(this.rectangles);
+        setScope(Rectangle.getStream(this.rectangles));
 
     }
 
@@ -161,9 +160,8 @@ public class Diff extends Constraint implements UsesQueueVariable {
 
         queueIndex = 2;
         this.rectangles = Rectangle.toArrayOf2DRectangles(rectangles);
-        numberArgs += this.rectangles.length * 4;
         numberId = idNumber.incrementAndGet();
-        setScope(this.rectangles);
+        setScope(Rectangle.getStream(this.rectangles));
 
     }
 
@@ -218,11 +216,6 @@ public class Diff extends Constraint implements UsesQueueVariable {
         this(rectangles);
         doProfile = profile;
     }
-
-    private void setScope(Rectangle[] rectangles) {
-        setScope(Arrays.stream(rectangles).map(r -> Stream.concat( Arrays.stream(r.origin), Arrays.stream( r.length) )).flatMap(i -> i));
-    }
-
 
     @Override public void removeLevel(int level) {
         variableQueue.clear();

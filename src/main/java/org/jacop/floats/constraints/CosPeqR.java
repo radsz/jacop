@@ -81,7 +81,6 @@ public class CosPeqR extends Constraint {
         assert (q != null) : "Variable q is null";
 
         numberId = idNumber.incrementAndGet();
-        numberArgs = 2;
 
         this.queueIndex = 1;
         this.p = p;

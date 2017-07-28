@@ -75,7 +75,6 @@ public class EqBool extends PrimitiveConstraint {
         assert (result != null) : "Result variable is null";
 
         numberId = idNumber.incrementAndGet();
-        numberArgs = (short) (list.length + 1);
 
         this.list = new IntVar[list.length];
         for (int i = 0; i < list.length; i++) {

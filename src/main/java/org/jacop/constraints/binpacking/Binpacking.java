@@ -116,7 +116,6 @@ public class Binpacking extends Constraint implements UsesQueueVariable {
 
         this.numberId = idNumber.incrementAndGet();
         this.item = new BinItem[itemPar.size()];
-        this.numberArgs = (short) itemPar.size() + load.length;
         this.queueIndex = 2;
 
         minBinNumber = bin[0].min();

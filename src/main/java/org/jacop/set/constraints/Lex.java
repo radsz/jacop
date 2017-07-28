@@ -97,7 +97,6 @@ public class Lex extends Constraint {
         assert (b != null) : "Variable b is null";
 
         numberId = idNumber.incrementAndGet();
-        numberArgs = 2;
 
         this.a = a;
         this.b = b;

@@ -31,8 +31,11 @@
 package org.jacop.constraints.diffn;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.stream.Stream;
 
 import org.jacop.core.IntVar;
+import org.jacop.core.Var;
 
 /**
  * Defines a rectangle used in the diffn constraint.
@@ -176,6 +179,10 @@ public class Rectangle {
         }
         result.append("]");
         return result.toString();
+    }
+
+    public static Stream<Var> getStream(Rectangle[] scope) {
+        return Arrays.stream(scope).map(r -> Stream.concat( Arrays.stream(r.origin), Arrays.stream( r.length) )).flatMap(i -> i);
     }
 
 }

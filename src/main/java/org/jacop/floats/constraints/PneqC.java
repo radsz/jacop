@@ -75,7 +75,6 @@ public class PneqC extends PrimitiveConstraint {
         assert (c >= IntDomain.MinInt && c <= IntDomain.MaxInt) : "Constant c " + c + " is not in the allowed range ";
 
         numberId = idNumber.incrementAndGet();
-        numberArgs = 1;
         this.p = p;
         this.c = c;
 

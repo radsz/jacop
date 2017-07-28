@@ -74,7 +74,6 @@ public class Eq extends PrimitiveConstraint implements UsesQueueVariable {
         assert (c2 != null) : "Constraint c1 is null";
 
         numberId = idNumber.incrementAndGet();
-        numberArgs = (short) (c1.numberArgs + c2.numberArgs);
 
         this.c1 = c1;
         this.c2 = c2;

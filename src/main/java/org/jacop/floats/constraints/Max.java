@@ -78,7 +78,6 @@ public class Max extends Constraint {
 
         this.queueIndex = 1;
         this.numberId = idNumber.incrementAndGet();
-        this.numberArgs = (short) (list.length + 1);
         this.max = max;
         this.list = new FloatVar[list.length];
 

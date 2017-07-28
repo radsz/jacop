@@ -147,8 +147,6 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
         assert (list.length == weights.length) : "\nLength of two vectors different in Linear";
 
-        numberArgs = (short) (list.length);
-
         numberId = idNumber.incrementAndGet();
 
         this.sum = sum;

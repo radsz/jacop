@@ -109,7 +109,6 @@ public class ElementIntegerFast extends Constraint {
         this.numberId = idNumber.incrementAndGet();
         this.index = index;
         this.value = value;
-        this.numberArgs = (short) (numberArgs + 2);
         this.list = list;
 
         setScope( index, value );

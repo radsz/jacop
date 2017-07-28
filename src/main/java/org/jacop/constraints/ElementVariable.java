@@ -109,13 +109,11 @@ public class ElementVariable extends Constraint implements UsesQueueVariable {
         this.numberId = idNumber.incrementAndGet();
         this.index = index;
         this.value = value;
-        this.numberArgs = (short) (numberArgs + 2);
         this.list = new IntVar[list.length];
 
         for (int i = 0; i < list.length; i++) {
             assert (list[i] != null) : i + "-th element of list is null";
             this.list[i] = list[i];
-            this.numberArgs++;
         }
 
         this.indexRange = new IntervalDomain(1 + this.indexOffset, list.length + this.indexOffset);

@@ -111,8 +111,6 @@ public class NoGood extends PrimitiveConstraint {
 
         System.arraycopy(listOfVars, 0, this.listOfVars, 0, listOfVars.length);
 
-        numberArgs += listOfVars.length;
-
         System.arraycopy(listOfValues, 0, this.listOfValues, 0, listOfValues.length);
 
         setScope(listOfVars);

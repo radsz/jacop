@@ -88,7 +88,6 @@ public class EinA extends PrimitiveConstraint {
         assert (a != null) : "Variable a is null";
 
         numberId = idNumber.incrementAndGet();
-        numberArgs = 1;
 
         this.a = a;
         this.element = element;

@@ -52,132 +52,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class ExtensionalSupportVA extends Constraint implements UsesQueueVariable {
 
-    // TODO raiseLevelBeforeConsistency may not be needed by this constraint.
-
-    /**
-     * It seeks support for a given variable-value pair.
-     *
-     * @param varPosition position of the variable for which the support is seek.
-     * @param value       value for which the support is seek.
-     * @return support tuple.
-     */
-    public int[] seekSupportVA(int varPosition, int value) {
-
-        if (debugAll)
-            System.out.println("Seeking support for " + list[varPosition] + " and value " + value);
-
-        int[] t = setFirstValid(varPosition, value);
-        int invalidPosition = -1;
-        while (true) {
-            t = findFirstAllowed(varPosition, value, t);
-            if (t == null)
-                return null;
-            invalidPosition = seekInvalidPosition(t);
-            if (invalidPosition == -1)
-                return t;
-            // setNextValidPart
-            // t = setNextValid(varPosition, value, t, invalidPosition);
-            for (int i = invalidPosition + 1; i < list.length; i++)
-                if (i != varPosition)
-                    t[i] = list[i].min();
-            boolean cont = false;
-            for (int i = invalidPosition; i >= 0; i--)
-                if (i != varPosition)
-                    if (t[i] >= list[i].max())
-                        t[i] = list[i].min();
-                    else {
-                        t[i] = list[i].domain.nextValue(t[i]);
-                        cont = true;
-                        break;
-                    }
-            if (!cont)
-                return null;
-        }
-
-    }
-
-    /**
-     * It computes the first valid tuple for a given variable-value pair.
-     *
-     * @param varPosition position of the variable.
-     * @param value       value for which the fist valid tuple is seek.
-     * @return first valid tuple.
-     */
-    public int[] setFirstValid(int varPosition, int value) {
-
-        int t[] = new int[list.length];
-
-        int noVars = list.length;
-        for (int i = 0; i < noVars; i++)
-            t[i] = list[i].min();
-
-        t[varPosition] = value;
-
-        return t;
-    }
-
-    /**
-     * It finds the first allowed tuple from the given tuple.
-     *
-     * @param varPosition position of the variable.
-     * @param value       value for which first allowed tuple is seek.
-     * @param t           tuple from which the search commences.
-     * @return first allowed tuple for a given variable-value pair.
-     */
-    public int[] findFirstAllowed(int varPosition, int value, int[] t) {
-
-        if (debugAll)
-            System.out.println("variable" + list[varPosition] + " position " + varPosition + " value " + value);
-
-        int[][] tuplesForGivenVariableValuePair = tuples[varPosition][findPosition(value, values[varPosition])];
-
-        int left = 0;
-        int right = tuplesForGivenVariableValuePair.length - 1;
-
-        if (!(smaller(t, tuplesForGivenVariableValuePair[right]) || equal(t, tuplesForGivenVariableValuePair[right]))) {
-            return null;
-        }
-
-        int position = (left + right) >> 1;
-
-        while (!(left + 1 >= right)) {
-
-            if (smaller(t, tuplesForGivenVariableValuePair[position])) {
-                right = position;
-            } else {
-                left = position;
-            }
-
-            position = (left + right) >> 1;
-
-        }
-
-        if (smaller(t, tuplesForGivenVariableValuePair[left]) || equal(t, tuplesForGivenVariableValuePair[left])) {
-            System.arraycopy(tuplesForGivenVariableValuePair[left], 0, t, 0, list.length);
-            return t;
-        } else {
-            System.arraycopy(tuplesForGivenVariableValuePair[right], 0, t, 0, list.length);
-            return t;
-        }
-    }
-
-    /**
-     * It gives the position of the variable for which current domain of this
-     * variable does not hold the used value. It is variable because of which
-     * allowed tuple does not become a support tuple.
-     *
-     * @param t tuple being checked.
-     * @return -1 if tuple is both valid and allowed (support), otherwise the position.
-     */
-    public int seekInvalidPosition(int[] t) {
-
-        int noVars = list.length;
-        for (int i = 0; i < noVars; i++)
-            if (!list[i].domain.contains(t[i]))
-                return i;
-        return -1;
-    }
-
     static final boolean debugAll = false;
 
     static final boolean debugPruning = false;
@@ -630,6 +504,132 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
 
         return tupleString.toString();
 
+    }
+
+    // TODO raiseLevelBeforeConsistency may not be needed by this constraint.
+
+    /**
+     * It seeks support for a given variable-value pair.
+     *
+     * @param varPosition position of the variable for which the support is seek.
+     * @param value       value for which the support is seek.
+     * @return support tuple.
+     */
+    public int[] seekSupportVA(int varPosition, int value) {
+
+        if (debugAll)
+            System.out.println("Seeking support for " + list[varPosition] + " and value " + value);
+
+        int[] t = setFirstValid(varPosition, value);
+        int invalidPosition = -1;
+        while (true) {
+            t = findFirstAllowed(varPosition, value, t);
+            if (t == null)
+                return null;
+            invalidPosition = seekInvalidPosition(t);
+            if (invalidPosition == -1)
+                return t;
+            // setNextValidPart
+            // t = setNextValid(varPosition, value, t, invalidPosition);
+            for (int i = invalidPosition + 1; i < list.length; i++)
+                if (i != varPosition)
+                    t[i] = list[i].min();
+            boolean cont = false;
+            for (int i = invalidPosition; i >= 0; i--)
+                if (i != varPosition)
+                    if (t[i] >= list[i].max())
+                        t[i] = list[i].min();
+                    else {
+                        t[i] = list[i].domain.nextValue(t[i]);
+                        cont = true;
+                        break;
+                    }
+            if (!cont)
+                return null;
+        }
+
+    }
+
+    /**
+     * It computes the first valid tuple for a given variable-value pair.
+     *
+     * @param varPosition position of the variable.
+     * @param value       value for which the fist valid tuple is seek.
+     * @return first valid tuple.
+     */
+    public int[] setFirstValid(int varPosition, int value) {
+
+        int t[] = new int[list.length];
+
+        int noVars = list.length;
+        for (int i = 0; i < noVars; i++)
+            t[i] = list[i].min();
+
+        t[varPosition] = value;
+
+        return t;
+    }
+
+    /**
+     * It finds the first allowed tuple from the given tuple.
+     *
+     * @param varPosition position of the variable.
+     * @param value       value for which first allowed tuple is seek.
+     * @param t           tuple from which the search commences.
+     * @return first allowed tuple for a given variable-value pair.
+     */
+    public int[] findFirstAllowed(int varPosition, int value, int[] t) {
+
+        if (debugAll)
+            System.out.println("variable" + list[varPosition] + " position " + varPosition + " value " + value);
+
+        int[][] tuplesForGivenVariableValuePair = tuples[varPosition][findPosition(value, values[varPosition])];
+
+        int left = 0;
+        int right = tuplesForGivenVariableValuePair.length - 1;
+
+        if (!(smaller(t, tuplesForGivenVariableValuePair[right]) || equal(t, tuplesForGivenVariableValuePair[right]))) {
+            return null;
+        }
+
+        int position = (left + right) >> 1;
+
+        while (!(left + 1 >= right)) {
+
+            if (smaller(t, tuplesForGivenVariableValuePair[position])) {
+                right = position;
+            } else {
+                left = position;
+            }
+
+            position = (left + right) >> 1;
+
+        }
+
+        if (smaller(t, tuplesForGivenVariableValuePair[left]) || equal(t, tuplesForGivenVariableValuePair[left])) {
+            System.arraycopy(tuplesForGivenVariableValuePair[left], 0, t, 0, list.length);
+            return t;
+        } else {
+            System.arraycopy(tuplesForGivenVariableValuePair[right], 0, t, 0, list.length);
+            return t;
+        }
+    }
+
+    /**
+     * It gives the position of the variable for which current domain of this
+     * variable does not hold the used value. It is variable because of which
+     * allowed tuple does not become a support tuple.
+     *
+     * @param t tuple being checked.
+     * @return -1 if tuple is both valid and allowed (support), otherwise the position.
+     */
+    public int seekInvalidPosition(int[] t) {
+
+        int noVars = list.length;
+        for (int i = 0; i < noVars; i++)
+            if (!list[i].domain.contains(t[i]))
+                return i;
+        return -1;
     }
 
 }

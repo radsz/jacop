@@ -85,7 +85,6 @@ public class Max extends Constraint {
         assert (max != null) : "Min variable is null";
 
         this.l = list.length;
-        this.numberArgs = (short) (l + 1);
         this.max = max;
         this.list = new IntVar[l];
 

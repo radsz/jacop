@@ -31,15 +31,15 @@
 
 package org.jacop.constraints.diffn;
 
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
-
+import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.constraints.Constraint;
 import org.jacop.core.TimeStamp;
+
+import java.util.ArrayList;
+import java.util.BitSet;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Nooverlap constraint assures that any two rectangles from a vector of rectangles
@@ -58,11 +58,12 @@ public class Nooverlap extends Constraint {
 
     static final int x = 0, y = 1;
 
-    /*
+    /**
      * defines how to treat rectangles with width zero
      * strict = true means they still need to be between other rectangles
      * strict = false these rectangles can be anywhere
-     */ boolean strict = true;
+     */
+    boolean strict = true;
 
     Store store;
 
@@ -71,13 +72,15 @@ public class Nooverlap extends Constraint {
      */
     Rectangle[] rectangle;
 
-    /*
+    /**
      * Defines first position of the variable that is not ground to 1
-     */ TimeStamp<BitSet>[] overlapping;
+     */
+    TimeStamp<BitSet>[] overlapping;
 
-    /*
+    /**
      * current stamp
-     */ int stamp = 0;
+     */
+    int stamp = 0;
 
     /**
      * It specifies a diff constraint.
@@ -100,7 +103,7 @@ public class Nooverlap extends Constraint {
             this.rectangle[i].index = i;
         }
 
-        setScope(this.rectangle);
+        setScope(Rectangle.getStream(this.rectangle));
 
     }
 
@@ -138,7 +141,6 @@ public class Nooverlap extends Constraint {
             this.queueIndex = 2;
 
             this.numberId = idNumber.incrementAndGet();
-            this.numberArgs = (short) (numberArgs * 4);
 
             this.rectangle = new Rectangle[size];
 
@@ -151,7 +153,7 @@ public class Nooverlap extends Constraint {
             throw new IllegalArgumentException(s);
         }
 
-        setScope(this.rectangle);
+        setScope(Rectangle.getStream(this.rectangle));
     }
 
     /**
@@ -182,7 +184,6 @@ public class Nooverlap extends Constraint {
         this.rectangle = new Rectangle[rectangle.size()];
 
         int i = 0;
-        numberArgs = (short) (numberArgs * 4);
 
         for (ArrayList<? extends IntVar> r : rectangle)
             if (r.size() == 4) {
@@ -197,7 +198,7 @@ public class Nooverlap extends Constraint {
                 throw new IllegalArgumentException(s);
             }
 
-        setScope(this.rectangle);
+        setScope(Rectangle.getStream(this.rectangle));
     }
 
 
@@ -241,10 +242,6 @@ public class Nooverlap extends Constraint {
         ArrayList<? extends IntVar> l2, boolean strict) {
         this(o1, o2, l1, l2);
         this.strict = strict;
-    }
-
-    private void setScope(Rectangle[] rectangles) {
-        setScope(Arrays.stream(rectangles).map(r -> Stream.concat( Arrays.stream(r.origin), Arrays.stream( r.length) )).flatMap(i -> i));
     }
 
     @Override public void consistency(Store store) {

@@ -129,8 +129,6 @@ import org.jacop.core.*;
 
         assert (list.length == weights.length) : "\nLength of two vectors different in SumWeightDom";
 
-        numberArgs = (short) (list.length + 1);
-
         numberId = idNumber.incrementAndGet();
 
         this.sum = sum;

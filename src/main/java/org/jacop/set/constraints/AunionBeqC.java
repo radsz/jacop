@@ -95,7 +95,6 @@ public class AunionBeqC extends Constraint implements UsesQueueVariable {
         assert (c != null) : "Variable c is null";
 
         numberId = idNumber.incrementAndGet();
-        numberArgs = 3;
 
         this.a = a;
         this.b = b;

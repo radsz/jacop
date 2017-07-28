@@ -246,7 +246,7 @@ public class LinearInt extends PrimitiveConstraint {
         else
             queueIndex = 1;
 
-        setScope(Arrays.stream(list));
+        setScope(list);
 
     }
 

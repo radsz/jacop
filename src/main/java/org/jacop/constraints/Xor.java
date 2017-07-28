@@ -81,7 +81,6 @@ public class Xor extends PrimitiveConstraint {
             throw new IllegalArgumentException("Variable b in xor constraint nust have domain 0..1");
 
         numberId = idNumber.incrementAndGet();
-        numberArgs = (short) (1 + c.numberArgs);
 
         this.c = c;
         this.b = b;

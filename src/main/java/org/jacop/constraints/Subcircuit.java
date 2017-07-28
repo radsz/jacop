@@ -80,7 +80,6 @@ public class Subcircuit extends Alldiff {
 
         this.numberId = idNumber.incrementAndGet();
         this.list = new IntVar[list.length];
-        this.numberArgs = (short) list.length;
 
         for (int i = 0; i < list.length; i++) {
             assert (list[i] != null) : i + "-th element in the list is null";
@@ -89,7 +88,6 @@ public class Subcircuit extends Alldiff {
 
         this.queueIndex = 2;
 
-        this.numberArgs = (short) list.length;
         listAlldiff = new IntVar[list.length];
 
         for (int i = 0; i < list.length; i++)
@@ -99,13 +97,13 @@ public class Subcircuit extends Alldiff {
         max = new int[list.length];
         u = new int[list.length];
 
-        numberId = idNumber.incrementAndGet();
-
         int i = 0;
         for (Var v : list)
             valueIndex.put(v, i++);
 
         val = new int[list.length];
+
+        setScope(list);
     }
 
     /**

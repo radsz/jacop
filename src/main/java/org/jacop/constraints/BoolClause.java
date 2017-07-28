@@ -86,7 +86,6 @@ public class BoolClause extends PrimitiveConstraint {
         this.numberId = idNumber.incrementAndGet();
         this.lx = x.length;
         this.ly = y.length;
-        this.numberArgs = (short) (lx + ly);
 
         this.x = new IntVar[lx];
         for (int i = 0; i < lx; i++) {

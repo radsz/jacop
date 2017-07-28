@@ -76,7 +76,6 @@ public class XdivYeqZ extends Constraint {
         assert (z != null) : "Variable z is null";
 
         numberId = idNumber.incrementAndGet();
-        numberArgs = 3;
 
         this.x = x;
         this.y = y;

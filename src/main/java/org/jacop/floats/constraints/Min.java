@@ -76,7 +76,6 @@ public class Min extends Constraint {
 
         this.queueIndex = 1;
         this.numberId = idNumber.incrementAndGet();
-        this.numberArgs = (short) (list.length + 1);
         this.min = min;
         this.list = new FloatVar[list.length];
         for (int i = 0; i < list.length; i++) {

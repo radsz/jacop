@@ -76,7 +76,6 @@ public class AeqB extends PrimitiveConstraint {
         assert (b != null) : "Variable b is null";
 
         numberId = idNumber.incrementAndGet();
-        numberArgs = 2;
 
         this.a = a;
         this.b = b;

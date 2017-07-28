@@ -71,7 +71,6 @@ public class PltQ extends PrimitiveConstraint {
         assert (q != null) : "Variable q is null";
 
         numberId = idNumber.incrementAndGet();
-        numberArgs = 1;
 
         this.p = p;
         this.q = q;

@@ -82,7 +82,6 @@ public class Match extends Constraint {
             assert (list[i] != null) : i + "-th element of the list is null.";
 
         this.numberId = idNumber.incrementAndGet();
-        this.numberArgs = list.length + 1;
         this.a = a;
         this.list = new IntVar[list.length];
 

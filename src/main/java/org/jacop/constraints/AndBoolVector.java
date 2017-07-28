@@ -95,7 +95,6 @@ public class AndBoolVector extends PrimitiveConstraint {
             varSet.add(var);
         }
         this.l = varSet.size();
-        this.numberArgs = (short) (l + 1);
 
         this.list = new IntVar[l];
         int i = 0;

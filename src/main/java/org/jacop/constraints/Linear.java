@@ -143,8 +143,6 @@ import java.util.Map;
 
         assert (list.length == weights.length) : "\nLength of two vectors different in Linear";
 
-        numberArgs = (short) (list.length + 1);
-
         numberId = idNumber.incrementAndGet();
 
         this.sum = sum;

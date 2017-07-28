@@ -73,7 +73,6 @@ public class MinSimple extends Constraint {
         assert (min != null) : "Min variable is null";
 
         this.numberId = idNumber.incrementAndGet();
-        this.numberArgs = (short) (3);
         this.min = min;
         this.x1 = x1;
         this.x2 = x2;

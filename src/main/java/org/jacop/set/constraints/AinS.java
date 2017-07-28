@@ -93,7 +93,6 @@ public class AinS extends PrimitiveConstraint {
         assert (set != null) : "Set B is null";
 
         numberId = idNumber.incrementAndGet();
-        numberArgs = 1;
 
         this.a = a;
         this.set = set;

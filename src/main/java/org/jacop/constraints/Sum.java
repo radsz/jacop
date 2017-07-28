@@ -98,7 +98,6 @@ public class Sum extends Constraint {
         this.list = new IntVar[list.length];
 
         System.arraycopy(list, 0, this.list, 0, list.length);
-        numberArgs += list.length;
 
         checkForOverflow();
 

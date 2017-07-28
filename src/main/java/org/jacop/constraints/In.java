@@ -77,7 +77,6 @@ public class In extends PrimitiveConstraint {
         assert (dom != null) : "Domain dom is null";
 
         numberId = idNumber.incrementAndGet();
-        numberArgs = 1;
 
         this.x = x;
         this.dom = dom;

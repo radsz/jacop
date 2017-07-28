@@ -84,7 +84,6 @@ public class AdisjointB extends Constraint implements UsesQueueVariable {
         assert (b != null) : "Variable b is null";
 
         numberId = idNumber.incrementAndGet();
-        numberArgs = 1;
 
         this.a = a;
         this.b = b;

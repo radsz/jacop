@@ -88,7 +88,6 @@ public class Alldiff extends Alldifferent {
 
         this.numberId = idNumber.incrementAndGet();
         this.list = new IntVar[variables.length];
-        this.numberArgs = (short) variables.length;
 
         for (int i = 0; i < variables.length; i++) {
             assert (variables[i] != null) : i + "-th element in the list is null";
@@ -97,7 +96,6 @@ public class Alldiff extends Alldifferent {
 
         this.queueIndex = 2;
 
-        this.numberArgs = (short) variables.length;
         listAlldiff = new IntVar[variables.length];
 
         for (int i = 0; i < variables.length; i++)
@@ -106,6 +104,9 @@ public class Alldiff extends Alldifferent {
         min = new int[variables.length];
         max = new int[variables.length];
         u = new int[variables.length];
+
+        setScope(variables);
+
     }
 
 

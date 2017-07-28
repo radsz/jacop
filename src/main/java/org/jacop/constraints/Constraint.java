@@ -33,6 +33,7 @@ package org.jacop.constraints;
 import java.util.*;
 import java.util.stream.Stream;
 
+import org.jacop.api.StoreAware;
 import org.jacop.core.Store;
 import org.jacop.core.SwitchesPruningLogging;
 import org.jacop.core.Var;
@@ -47,7 +48,7 @@ import org.jacop.core.Var;
  * @version 3.1
  */
 
-public abstract class Constraint extends DecomposedConstraint<Constraint> {
+public abstract class Constraint extends DecomposedConstraint<Constraint>  implements StoreAware {
 
     public boolean trace = SwitchesPruningLogging.traceConstraint;
 
@@ -135,12 +136,6 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     }
 
     public abstract int getDefaultConsistencyPruningEvent();
-/*
-    {
-        throw new IllegalStateException("Not implemented as more precise variants exist.");
-    }
-*/
-
 
     /**
      * It gives the id string of a constraint.
@@ -276,7 +271,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
      * @return number of variables in the constraint scope.
      */
     public int numberArgs() {
-        return numberArgs;
+        return scope.size();
     }
 
     /**
@@ -294,12 +289,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
      * It specifies if upon the failure of the constraint, all variables
      * in the constraint scope should have their weight increased.
      */
-    public boolean increaseWeight = true;
-
-    /**
-     * It specifies the number of variables in the constraint scope.
-     */
-    public int numberArgs;
+    public boolean increaseWeight = false;
 
     /**
      * It specifies the event which must occur in order for the consistency function to
@@ -348,14 +338,13 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     public void cleanAfterFailure() {
     }
 
-
     /**
      * Methods that checks for overflow/underflow for addition
      * @param a first addend
      * @param b second addend
      * @return summa
      */
-    public int add(int a, int b) {
+    static public int add(int a, int b) {
 
         long cc = (long) a + (long) b;
 
@@ -372,7 +361,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
      * @param b subtrahend
      * @return differens
      */
-    public int subtract(int a, int b) {
+    static public int subtract(int a, int b) {
 
         long cc = (long) a - (long) b;
 
@@ -389,7 +378,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
      * @param b multiplikator
      * @return produkt
      */
-    public int mul(int a, int b) {
+    static public int mul(int a, int b) {
 
         long cc = (long) a * (long) b;
 
@@ -400,7 +389,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
 
     }
 
-    int toInt(final float f) {
+    static int toInt(final float f) {
 
         if (f >= (float) Integer.MIN_VALUE && f <= (float) Integer.MAX_VALUE) {
             return (int) f;

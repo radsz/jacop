@@ -77,7 +77,6 @@ public class AbsPeqR extends Constraint {
         assert (q != null) : "Variable q is null";
 
         numberId = idNumber.incrementAndGet();
-        numberArgs = 2;
 
         this.queueIndex = 0;
         this.p = p;

@@ -77,7 +77,6 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
             throw new IllegalArgumentException("\nVariable variable in reified constraint nust have domain 0..1");
 
         numberId = idNumber.incrementAndGet();
-        numberArgs = (short) (1 + c.numberArgs);
 
         this.c = c;
         this.b = b;

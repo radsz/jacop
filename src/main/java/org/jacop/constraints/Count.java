@@ -80,7 +80,6 @@ public class Count extends Constraint {
         assert (list != null) : "List variable is null";
         assert (counter != null) : "Counter variable is null";
 
-        this.numberArgs = (short) (list.length + 1);
         this.queueIndex = 1;
         this.numberId = idNumber.incrementAndGet();
 

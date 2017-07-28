@@ -69,7 +69,6 @@ public class XgtC extends PrimitiveConstraint {
         assert (x != null) : "Variable x is null";
 
         numberId = idNumber.incrementAndGet();
-        numberArgs = 1;
 
         this.x = x;
         this.c = c;

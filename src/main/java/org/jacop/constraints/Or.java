@@ -78,8 +78,6 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
 
         for (int i = 0; i < listOfC.length; i++) {
             assert (listOfC[i] != null) : i + "-th element of list of constraints is null";
-
-            this.numberArgs += listOfC[i].numberArgs();
             this.listOfC[i] = listOfC[i];
         }
 

@@ -112,7 +112,6 @@ public class AmongVar extends Constraint implements UsesQueueVariable {
         this.queueIndex = 1;
 
         numberId = idNumber.incrementAndGet();
-        this.numberArgs = (short) (listOfX.length + listOfY.length + 1);
 
         this.listOfX = new IntVar[listOfX.length];
         for (int i = 0; i < listOfX.length; i++) {

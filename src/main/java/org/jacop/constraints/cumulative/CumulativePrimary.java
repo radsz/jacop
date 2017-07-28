@@ -93,7 +93,6 @@ class CumulativePrimary extends Constraint {
         assert (starts.length == durations.length) : "Starts and durations list have different length";
         assert (resources.length == durations.length) : "Resources and durations list have different length";
 
-        this.numberArgs = (short) (numberArgs * 3 + 1);
         this.queueIndex = 2;
         this.numberId = idNumber.incrementAndGet();
 
@@ -120,7 +119,6 @@ class CumulativePrimary extends Constraint {
 
             if (limit.min() >= 0) {
                 this.limit = limit;
-                numberArgs++;
             } else {
                 throw new IllegalArgumentException("\nResource limit must be >= 0 in cumulative");
             }

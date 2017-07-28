@@ -31,35 +31,30 @@
 
 package org.jacop.constraints.cumulative;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.core.IntDomain;
 
-import java.util.Set;
-import java.util.LinkedHashSet;
+import java.util.*;
 
 /**
- * Cumulative implements the scheduling constraint using 
- *
- * edge-finding algorithms based on 
- *
+ * Cumulative implements the scheduling constraint using
+ * <p>
+ * edge-finding algorithms based on
+ * <p>
  * Petr Vilim, "Edge Finding Filtering Algorithm for Discrete Cumulative Resources in O(kn log n)",
  * Principles and Practice of Constraint Programming - CP 2009 Volume 5732 of the series Lecture
  * Notes in Computer Science pp 802-816.
- *
- * and 
- *
+ * <p>
+ * and
+ * <p>
  * Joseph Scott, "Filtering Algorithms for Discrete Cumulative Resources", MSc thesis, Uppsala
  * University, Department of Information Technology, 2010, no IT 10 048,
- * @see <a href="http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-132172">http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-132172</a>
  *
  * @author Krzysztof Kuchcinski
  * @version 4.5
+ * @see <a href="http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-132172">http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-132172</a>
  */
 
 public class Cumulative extends CumulativeBasic {
@@ -70,13 +65,14 @@ public class Cumulative extends CumulativeBasic {
 
     boolean doEdgeFind = true;
     int limitOnEdgeFind = 100;
-    
+
     /**
      * It creates a cumulative constraint.
-     * @param starts variables denoting starts of the tasks.
+     *
+     * @param starts    variables denoting starts of the tasks.
      * @param durations variables denoting durations of the tasks.
      * @param resources variables denoting resource usage of the tasks.
-     * @param limit the overall limit of resources which has to be used.
+     * @param limit     the overall limit of resources which has to be used.
      */
     public Cumulative(IntVar[] starts, IntVar[] durations, IntVar[] resources, IntVar limit) {
 
@@ -96,18 +92,19 @@ public class Cumulative extends CumulativeBasic {
                 add(t.start.max(), t.dur.max());
             }
 
-	String s = System.getProperty("max_edge_find_size");
-	if (s != null) 
-	    limitOnEdgeFind = Integer.parseInt(s);
-	doEdgeFind = (starts.length <= limitOnEdgeFind);
+        String s = System.getProperty("max_edge_find_size");
+        if (s != null)
+            limitOnEdgeFind = Integer.parseInt(s);
+        doEdgeFind = (starts.length <= limitOnEdgeFind);
     }
 
     /**
      * It creates a cumulative constraint.
-     * @param starts variables denoting starts of the tasks.
+     *
+     * @param starts    variables denoting starts of the tasks.
      * @param durations variables denoting durations of the tasks.
      * @param resources variables denoting resource usage of the tasks.
-     * @param limit the overall limit of resources which has to be used.
+     * @param limit     the overall limit of resources which has to be used.
      */
     public Cumulative(ArrayList<? extends IntVar> starts, ArrayList<? extends IntVar> durations, ArrayList<? extends IntVar> resources,
         IntVar limit) {
@@ -207,14 +204,14 @@ public class Cumulative extends CumulativeBasic {
         }
 
         // ========== Detect Order ============
-        int[] prec = detectOrder(tree, lctList, auxOrderListInv, (long)limit.max());
+        int[] prec = detectOrder(tree, lctList, auxOrderListInv, (long) limit.max());
         // System.out.println("*** prec = " + intArrayToString(prec));
 
         // write ThetaLambdaTree as dot file for visualization
         // tree.printTree("tree_init");
 
         // ========== Adjust Bounds ============
-        adjustBounds(tree, lctList, prec, (long)limit.max());
+        adjustBounds(tree, lctList, prec, (long) limit.max());
 
     }
 
@@ -226,11 +223,11 @@ public class Cumulative extends CumulativeBasic {
             prec[t[i].index] = t[i].ect(); // originally Integer.MIN_VALUE; can be changed to this
 
         for (int j = 0; j < n; j++) {
-            if (tree.rootNode().env > C * (long)t[j].lct()) {
+            if (tree.rootNode().env > C * (long) t[j].lct()) {
                 throw store.failException;
             }
 
-            while (tree.rootNode().envLambda > C * (long)t[j].lct()) {
+            while (tree.rootNode().envLambda > C * (long) t[j].lct()) {
                 int i = tree.rootNode().responsibleEnvLambda;
                 prec[tree.get(i).task.index] = Math.max(prec[tree.get(i).task.index], t[j].lct());
                 tree.removeFromLambda(i);
@@ -277,16 +274,16 @@ public class Cumulative extends CumulativeBasic {
 
             for (int l = n - 1; l >= 0; l--) { // by non-decreasing of lct
 
-                tree.enableNode(t[l].treeIndex, (long)ci);
+                tree.enableNode(t[l].treeIndex, (long) ci);
                 // tree.printTree("tree_task_"+t[l].index);
 
-                long envlc = tree.calcEnvlc((long)t[l].lct(), (long)ci);
+                long envlc = tree.calcEnvlc((long) t[l].lct(), (long) ci);
                 int diff = Integer.MIN_VALUE;
-		if (envlc != Long.MIN_VALUE) {
-                    long tmp = envlc - (cap - (long)ci) * (long)t[l].lct();
+                if (envlc != Long.MIN_VALUE) {
+                    long tmp = envlc - (cap - (long) ci) * (long) t[l].lct();
                     long diffLong = divRoundUp(tmp, ci);
-		    if (diffLong > Integer.MIN_VALUE && diffLong < Integer.MAX_VALUE)
-			diff = (int) diffLong;
+                    if (diffLong > Integer.MIN_VALUE && diffLong < Integer.MAX_VALUE)
+                        diff = (int) diffLong;
                 }
                 upd = Math.max(upd, diff);
                 update[capi][l] = upd;
@@ -321,7 +318,7 @@ public class Cumulative extends CumulativeBasic {
                 inner:
                 while (nj < n && t[nj].lct() == precI) {
                     if (t[nj].lct() < taskI.lct()) {
-                        taskI.updateEdgeFind((int)update[capMap[taskI.index]][nj]);
+                        taskI.updateEdgeFind((int) update[capMap[taskI.index]][nj]);
                         break inner;
                     }
                     nj++;
@@ -333,24 +330,23 @@ public class Cumulative extends CumulativeBasic {
 
     TaskView[] filterZeroTasks(TaskView[] ts) {
 
-	if (possibleZeroTasks) {
-	    TaskView[] nonZeroTasks = new TaskView[ts.length];
-	    int k = 0;
-	    
-	    for (int i = 0; i < ts.length; i++)
-		if (ts[i].res.min() != 0 && ts[i].dur.min() != 0) {
-		    nonZeroTasks[k] = ts[i];
-		    ts[i].index = k++;
-		}
-	    
-	    if (k == 0)
-		return null;
-	    TaskView[] t = new TaskView[k];
-	    System.arraycopy(nonZeroTasks, 0, t, 0, k);
-	    return t;
-	}
-	else
-	    return ts;
+        if (possibleZeroTasks) {
+            TaskView[] nonZeroTasks = new TaskView[ts.length];
+            int k = 0;
+
+            for (int i = 0; i < ts.length; i++)
+                if (ts[i].res.min() != 0 && ts[i].dur.min() != 0) {
+                    nonZeroTasks[k] = ts[i];
+                    ts[i].index = k++;
+                }
+
+            if (k == 0)
+                return null;
+            TaskView[] t = new TaskView[k];
+            System.arraycopy(nonZeroTasks, 0, t, 0, k);
+            return t;
+        } else
+            return ts;
     }
 
 
@@ -387,14 +383,13 @@ public class Cumulative extends CumulativeBasic {
     @Override public String toString() {
 
         StringBuffer result = new StringBuffer(id());
-	if (doEdgeFind)
-	    result.append(" : cumulative([ ");
-	else 
-	    if (super.cumulativeForConstants != null)
-		result.append(" : cumulativePrimary([ ");
-	    else
-	       result.append(" : cumulativeBasic([ ");
-	    
+        if (doEdgeFind)
+            result.append(" : cumulative([ ");
+        else if (super.cumulativeForConstants != null)
+            result.append(" : cumulativePrimary([ ");
+        else
+            result.append(" : cumulativeBasic([ ");
+
         for (int i = 0; i < taskNormal.length - 1; i++)
             result.append(taskNormal[i]).append(", ");
 
@@ -407,12 +402,12 @@ public class Cumulative extends CumulativeBasic {
     }
 
     private long divRoundUp(long a, long b) {
-        if (a >= 0) 
+        if (a >= 0)
             return (a + b - 1) / b;
         else // a < 0
             return a / b;
     }
-    
+
     static class TaskIncESTComparator<T extends TaskView> implements Comparator<T>, java.io.Serializable {
 
         TaskIncESTComparator() {
@@ -424,7 +419,7 @@ public class Cumulative extends CumulativeBasic {
     }
 
 
-  static class TaskDecLCTComparator<T extends TaskView> implements Comparator<T>, java.io.Serializable {
+    static class TaskDecLCTComparator<T extends TaskView> implements Comparator<T>, java.io.Serializable {
 
         TaskDecLCTComparator() {
         }
@@ -435,7 +430,7 @@ public class Cumulative extends CumulativeBasic {
     }
 
 
-  static class PrecComparator<T extends Integer> implements Comparator<T>, java.io.Serializable {
+    static class PrecComparator<T extends Integer> implements Comparator<T>, java.io.Serializable {
         int[] prec;
 
         PrecComparator(int[] prec) {

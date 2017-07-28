@@ -75,7 +75,6 @@ public class PeqQ extends PrimitiveConstraint {
         assert (q != null) : "Variable q is null";
 
         numberId = idNumber.incrementAndGet();
-        numberArgs = 2;
 
         this.queueIndex = 0;
 

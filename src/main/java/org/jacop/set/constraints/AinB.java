@@ -79,7 +79,6 @@ public class AinB extends PrimitiveConstraint {
         assert (b != null) : "Variable b is null";
 
         this.numberId = idNumber.incrementAndGet();
-        this.numberArgs = 2;
 
         this.a = a;
         this.b = b;

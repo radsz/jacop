@@ -107,7 +107,6 @@ public class Among extends Constraint implements UsesQueueVariable {
             this.list[i] = list[i];
         }
 
-        this.numberArgs = (short) (1 + list.length);
         this.kSet = kSet.clone();
         this.n = n;
 

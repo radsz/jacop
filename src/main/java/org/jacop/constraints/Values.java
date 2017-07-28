@@ -83,7 +83,6 @@ public class Values extends Constraint {
         this.queueIndex = 2;
 
         numberId = idNumber.incrementAndGet();
-        numberArgs = (short) (list.length + 1);
 
         this.count = count;
         this.list = new IntVar[list.length];

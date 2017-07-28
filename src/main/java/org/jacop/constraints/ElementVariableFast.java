@@ -103,13 +103,11 @@ public class ElementVariableFast extends Constraint {
         this.numberId = idNumber.incrementAndGet();
         this.index = index;
         this.value = value;
-        this.numberArgs = (short) (numberArgs + 2);
         this.list = new IntVar[list.length];
 
         for (int i = 0; i < list.length; i++) {
             assert (list[i] != null) : i + "-th element of list is null";
             this.list[i] = list[i];
-            this.numberArgs++;
         }
 
         setScope( Stream.concat( Stream.concat( Stream.of(index), Arrays.stream(list)), Stream.of(value)));

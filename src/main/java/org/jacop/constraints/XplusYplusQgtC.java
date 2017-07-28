@@ -81,7 +81,6 @@ public class XplusYplusQgtC extends PrimitiveConstraint {
         assert (q != null) : "Variable q is null";
 
         numberId = idNumber.incrementAndGet();
-        numberArgs = 3;
 
         this.x = x;
         this.y = y;

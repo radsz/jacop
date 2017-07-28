@@ -109,8 +109,6 @@ public class Assignment extends Constraint implements UsesQueueVariable {
             this.ds.put(d[i], i + shiftD);
         }
 
-        this.numberArgs = (short) (xs.length + ds.length);
-
         setScope( Stream.concat(Arrays.stream(xs), Arrays.stream(ds)) );
 
     }

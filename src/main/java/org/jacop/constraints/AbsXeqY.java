@@ -83,7 +83,6 @@ public class AbsXeqY extends PrimitiveConstraint {
         assert (y != null) : "Variable y is null";
 
         numberId = idNumber.incrementAndGet();
-        numberArgs = 2;
 
         this.queueIndex = 0;
         this.x = x;

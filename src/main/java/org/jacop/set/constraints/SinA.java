@@ -78,7 +78,6 @@ public class SinA extends PrimitiveConstraint {
         assert (set != null) : "Set is null";
 
         numberId = idNumber.incrementAndGet();
-        numberArgs = 1;
 
         this.a = a;
         this.set = set;

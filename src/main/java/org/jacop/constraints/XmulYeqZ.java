@@ -84,7 +84,6 @@ public class XmulYeqZ extends Constraint {
         assert (z != null) : "Variable z is null";
 
         numberId = idNumber.incrementAndGet();
-        numberArgs = 3;
 
         xSquare = (x == y);
 

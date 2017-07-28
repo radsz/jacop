@@ -104,7 +104,6 @@ public class SumWeightedSet extends Constraint {
         assert (totalWeight != null) : "Variable totalWeight is null";
 
         this.numberId = idNumber.incrementAndGet();
-        this.numberArgs = 2;
 
         this.totalWeight = totalWeight;
         this.a = a;

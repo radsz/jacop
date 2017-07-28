@@ -80,7 +80,6 @@ public class PplusCeqR extends PrimitiveConstraint {
         assert (r != null) : "Variable r is null";
 
         numberId = idNumber.incrementAndGet();
-        numberArgs = 3;
 
         this.p = p;
         this.c = c;

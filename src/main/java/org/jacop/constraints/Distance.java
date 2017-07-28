@@ -80,7 +80,6 @@ public class Distance extends PrimitiveConstraint {
     public Distance(IntVar x, IntVar y, IntVar z) {
 
         numberId = idNumber.incrementAndGet();
-        numberArgs = 3;
 
         this.x = x;
         this.y = y;

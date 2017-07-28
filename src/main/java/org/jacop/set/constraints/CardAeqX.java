@@ -74,7 +74,6 @@ public class CardAeqX extends Constraint {
         assert (cardinality != null) : "Cardinality value is null";
 
         this.numberId = idNumber.incrementAndGet();
-        this.numberArgs = 1;
         this.a = a;
         this.cardinality = cardinality;
 

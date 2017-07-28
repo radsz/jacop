@@ -30,11 +30,10 @@
 
 package org.jacop.constraints;
 
-import java.util.Hashtable;
-
-import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+
+import java.util.Hashtable;
 
 /**
  * Standard unified interface for all primitive constraints. In addition to
@@ -112,11 +111,6 @@ public abstract class PrimitiveConstraint extends Constraint {
     }
 
     protected abstract int getDefaultNotConsistencyPruningEvent();
-/*
-    {
-        throw new IllegalStateException("Not implemented as more precise variants exist.");
-    }
-*/
 
     /**
      * It makes pruning in such a way that constraint is notConsistent. It
@@ -130,14 +124,6 @@ public abstract class PrimitiveConstraint extends Constraint {
      * @return true if constraint must be notSatisfied, false otherwise.
      */
     public abstract boolean notSatisfied();
-
-
-    /**
-     * It provide store for constraints that are not imposed but called from ather constraints.
-     * @param store the constraint store in which context the constraint is executed.
-     */
-    public void include(Store store) {
-    }
 
     /**
      * It allows to specify customized events required to trigger execution

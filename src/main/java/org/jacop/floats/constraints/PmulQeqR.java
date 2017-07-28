@@ -86,7 +86,6 @@ public class PmulQeqR extends Constraint {
         assert (r != null) : "Variable r is null";
 
         numberId = idNumber.incrementAndGet();
-        numberArgs = 3;
 
         xSquare = (p == q);
 

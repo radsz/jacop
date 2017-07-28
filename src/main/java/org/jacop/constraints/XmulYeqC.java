@@ -84,7 +84,6 @@ public class XmulYeqC extends PrimitiveConstraint {
         assert (y != null) : "Variable y is null";
 
         numberId = idNumber.incrementAndGet();
-        numberArgs = 2;
 
         xSquare = (x == y) ? true : false;
 

@@ -30,19 +30,12 @@
 
 package org.jacop.set.constraints;
 
-import java.util.ArrayList;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.constraints.Constraint;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Store;
-import org.jacop.core.ValueEnumeration;
-import org.jacop.core.Var;
+import org.jacop.core.*;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * It is an element constraint that make sure that set variable value has a domain equal to 
@@ -99,7 +92,7 @@ public class ElementSet extends Constraint {
             assert (list[i] != null) : i + "-th element of the list is null.";
 
         numberId = idNumber.incrementAndGet();
-        numberArgs = 2;
+
         this.index = index;
         this.value = value;
         this.indexOffset = indexOffset;

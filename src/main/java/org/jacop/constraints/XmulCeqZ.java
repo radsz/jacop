@@ -79,7 +79,6 @@ public class XmulCeqZ extends PrimitiveConstraint {
         assert (z != null) : "Variable z is null";
 
         numberId = idNumber.incrementAndGet();
-        numberArgs = 2;
 
         this.x = x;
         this.c = c;

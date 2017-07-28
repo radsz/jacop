@@ -64,7 +64,6 @@ public class Not extends PrimitiveConstraint implements UsesQueueVariable {
     public Not(PrimitiveConstraint c) {
         numberId = idNumber.incrementAndGet();
         this.c = c;
-        numberArgs += c.numberArgs();
         setScope(c.arguments());
         this.queueForward = new QueueForward<>(c, arguments());
     }

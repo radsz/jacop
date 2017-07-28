@@ -74,7 +74,6 @@ public class MaxSimple extends Constraint {
         assert (max != null) : "Min variable is null";
 
         this.numberId = idNumber.incrementAndGet();
-        this.numberArgs = (short) (3);
         this.max = max;
         this.x1 = x1;
         this.x2 = x2;

@@ -72,7 +72,6 @@ public class AndBoolSimple extends PrimitiveConstraint {
         assert (result != null) : "Result variable is null";
 
         this.numberId = idNumber.incrementAndGet();
-        this.numberArgs = 3;
 
         this.a = a;
         this.b = b;

@@ -82,7 +82,6 @@ public class XexpYeqZ extends Constraint {
         assert (z.min() >= 0) : "Variable z has a domain which allows negative values";
 
         numberId = idNumber.incrementAndGet();
-        numberArgs = 3;
 
         this.x = x;
         this.y = y;

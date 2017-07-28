@@ -72,7 +72,6 @@ public class PlteqC extends PrimitiveConstraint {
         assert (p != null) : "Variable p is null";
 
         numberId = idNumber.incrementAndGet();
-        numberArgs = 1;
 
         this.p = p;
         this.c = c;

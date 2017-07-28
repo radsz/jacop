@@ -30,9 +30,9 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-
 import org.jacop.core.IntDomain;
+
+import java.util.ArrayList;
 
 /**
  * Defines a rectangle with integer origine and length used in the diffn
@@ -133,14 +133,14 @@ class IntRectangle {
     }
 
     @Override public String toString() {
-      StringBuffer s = new StringBuffer("[");
+        StringBuffer s = new StringBuffer("[");
         for (int i = 0; i < dim; i++) {
-	  s.append(origin[i] + ", ");
+            s.append(origin[i] + ", ");
         }
         for (int i = 0; i < dim; i++) {
-	    s.append(length[i]);
+            s.append(length[i]);
             if (i < dim - 1)
-	        s.append(", ");
+                s.append(", ");
         }
         s.append("]");
         return s.toString();

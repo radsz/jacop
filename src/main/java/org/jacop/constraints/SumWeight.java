@@ -79,9 +79,6 @@ import java.util.stream.Stream;
         queueIndex = 1;
 
         assert (list.length == weights.length) : "\nLength of two vectors different in SumWeight";
-
-        numberArgs = (short) (list.length + 1);
-
         numberId = idNumber.incrementAndGet();
 
         this.sum = sum;

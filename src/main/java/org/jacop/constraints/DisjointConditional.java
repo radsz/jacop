@@ -115,7 +115,6 @@ public class DisjointConditional extends Diff {
                 Rectangle rect = new Rectangle(R);
                 this.rectangles[i] = rect;
                 i++;
-                numberArgs = (short) (numberArgs + size);
             } else {
                 String s = "\nNot equal sizes of rectangle vectors in Diff";
                 throw new IllegalArgumentException(s);
@@ -215,7 +214,6 @@ public class DisjointConditional extends Diff {
                 IntVar[] R = {origin1[i], origin2[i], length1[i], length2[i]};
                 Rectangle rect = new Rectangle(R);
                 this.rectangles[i] = rect;
-                this.numberArgs = (short) (numberArgs + 4);
             }
 
         } else {
@@ -277,7 +275,6 @@ public class DisjointConditional extends Diff {
             if (R.length == size) {
                 Rectangle rect = new Rectangle(R);
                 this.rectangles[i] = rect;
-                numberArgs = (short) (numberArgs + size);
             } else {
                 String s = "\nNot equal sizes of rectangle vectors in Diff";
                 throw new IllegalArgumentException(s);

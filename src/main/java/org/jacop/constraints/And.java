@@ -88,10 +88,7 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
         this.queueIndex = 1;
         this.numberId = idNumber.incrementAndGet();
         this.listOfC = new PrimitiveConstraint[c.length];
-        for (int i = 0; i < c.length; i++) {
-            this.numberArgs += c[i].numberArgs();
-            this.listOfC[i] = c[i];
-        }
+        this.listOfC = Arrays.copyOf(c, c.length);
         setScope(listOfC);
         queueForward = new QueueForward<PrimitiveConstraint>(listOfC, arguments());
     }

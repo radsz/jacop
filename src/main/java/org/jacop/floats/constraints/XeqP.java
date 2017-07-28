@@ -74,7 +74,6 @@ public class XeqP extends Constraint {
         assert (p != null) : "Variable p is null";
 
         numberId = idNumber.incrementAndGet();
-        numberArgs = 2;
 
         this.x = x;
         this.p = p;

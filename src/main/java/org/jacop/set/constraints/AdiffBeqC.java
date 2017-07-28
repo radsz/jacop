@@ -93,7 +93,6 @@ public class AdiffBeqC extends Constraint implements UsesQueueVariable {
         assert (c != null) : "Variable c is null";
 
         this.numberId = idNumber.incrementAndGet();
-        this.numberArgs = 3;
 
         this.a = a;
         this.b = b;

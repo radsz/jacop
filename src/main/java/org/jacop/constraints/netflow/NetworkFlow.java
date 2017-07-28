@@ -119,7 +119,6 @@ public class NetworkFlow extends Constraint implements UsesQueueVariable {
         // fields in superclass
         this.queueIndex = QUEUE_INDEX;
         this.numberId = idNumber.incrementAndGet();
-        this.numberArgs = (short) map.size();
 
         setScope(map.keySet());
 

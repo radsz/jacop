@@ -150,7 +150,6 @@ public class LexOrder extends Constraint implements UsesQueueVariable {
                 newPos[varPositions.length] = i;
                 varXToIndex.put(x[i], varPositions);
             }
-            x[i].putModelConstraint(this, getConsistencyPruningEvent(x[i]));
         }
 
         for (int i = 0; i < n; i++) {
@@ -165,13 +164,13 @@ public class LexOrder extends Constraint implements UsesQueueVariable {
                 newPos[varPositions.length] = i;
                 varYToIndex.put(y[i], varPositions);
             }
-            y[i].putModelConstraint(this, getConsistencyPruningEvent(y[i]));
+
         }
 
         store.registerRemoveLevelLateListener(this);
 
-        store.addChanged(this);
-        store.countConstraint();
+        super.impose(store);
+
     }
 
     @Override public int getDefaultConsistencyPruningEvent() {

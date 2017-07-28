@@ -82,7 +82,6 @@ public class PmulCeqR extends Constraint {
         assert (r != null) : "Variable r is null";
 
         numberId = idNumber.incrementAndGet();
-        numberArgs = 2;
 
         this.p = p;
         this.c = c;

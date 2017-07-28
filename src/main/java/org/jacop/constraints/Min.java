@@ -83,7 +83,6 @@ public class Min extends Constraint {
         assert (min != null) : "Min variable is null";
 
         this.l = list.length;
-        this.numberArgs = (short) (l + 1);
         this.min = min;
         this.list = new IntVar[l];
 

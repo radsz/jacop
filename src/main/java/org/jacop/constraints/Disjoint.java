@@ -77,6 +77,8 @@ public class Disjoint extends Diff {
         }
 
         this.numberId = idNumber.incrementAndGet();
+
+        setScope(Rectangle.getStream(this.rectangles));
     }
 
     /**
@@ -101,7 +103,6 @@ public class Disjoint extends Diff {
 
         queueIndex = 2;
         this.rectangles = Rectangle.toArrayOf2DRectangles(rectangles);
-        numberArgs += this.rectangles.length * 4;
         numberId = idNumber.incrementAndGet();
 
         setScope(Rectangle.getStream(this.rectangles));
@@ -152,7 +153,6 @@ public class Disjoint extends Diff {
 
         queueIndex = 2;
         this.rectangles = Rectangle.toArrayOf2DRectangles(origin1, origin2, length1, length2);
-        numberArgs += this.rectangles.length * 4;
         numberId = idNumber.incrementAndGet();
 
         setScope(Rectangle.getStream(this.rectangles));
@@ -182,7 +182,6 @@ public class Disjoint extends Diff {
 
         queueIndex = 2;
         this.rectangles = Rectangle.toArrayOf2DRectangles(rectangles);
-        numberArgs += this.rectangles.length * 4;
         numberId = idNumber.incrementAndGet();
 
         setScope(Rectangle.getStream(this.rectangles));

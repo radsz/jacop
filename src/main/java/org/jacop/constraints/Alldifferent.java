@@ -74,7 +74,6 @@ public class Alldifferent extends Constraint implements UsesQueueVariable {
 
         this.numberId = idNumber.incrementAndGet();
         this.list = new IntVar[list.length];
-        this.numberArgs = (short) list.length;
 
         for (int i = 0; i < list.length; i++) {
             assert (list[i] != null) : i + "-th element in the list is null";
@@ -91,14 +90,7 @@ public class Alldifferent extends Constraint implements UsesQueueVariable {
      */
 
     public Alldifferent(ArrayList<? extends IntVar> variables) {
-
-        numberId = idNumber.incrementAndGet();
-        list = new IntVar[variables.size()];
-        list = variables.toArray(list);
-
-        numberArgs = (short) variables.size();
-
-        setScope(this.list);
+        this(variables.toArray(new IntVar[variables.size()]));
     }
     
     @Override public void consistency(Store store) {

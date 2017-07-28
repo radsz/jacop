@@ -143,7 +143,6 @@ public class ElementInteger extends Constraint implements UsesQueueVariable {
         this.numberId = idNumber.incrementAndGet();
         this.index = index;
         this.value = value;
-        this.numberArgs = (short) (numberArgs + 2);
         this.list = new int[list.length];
         this.queueIndex = 1;
 
