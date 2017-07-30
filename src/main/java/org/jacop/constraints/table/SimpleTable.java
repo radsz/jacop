@@ -178,13 +178,8 @@ public class SimpleTable extends Constraint implements UsesQueueVariable {
 
         // store.registerRemoveLevelLateListener(this);
 
-        for (int i = 0; i < x.length; i++) {
-            x[i].putModelConstraint(this, getConsistencyPruningEvent(x[i]));
-            queueVariable(level, x[i]);
-        }
-
-        store.addChanged(this);
-        store.countConstraint();
+        super.impose(store);
+        arguments().stream().forEach( i -> queueVariable(store.level, i));
 
         init();
     }

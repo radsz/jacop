@@ -121,22 +121,9 @@ public class Alldiff extends Alldifferent {
 
     @Override public void impose(Store store) {
 
+        super.impose(store);
         this.store = store;
 
-        int level = store.level;
-
-        int pos = 0;
-        positionMapping = new HashMap<IntVar, Integer>();
-
-        for (IntVar v : listAlldiff) {
-            positionMapping.put(v, pos++);
-            v.putModelConstraint(this, getConsistencyPruningEvent(v));
-            queueVariable(level, v);
-        }
-        grounded = new TimeStamp<Integer>(store, 0);
-
-        store.addChanged(this);
-        store.countConstraint();
     }
 
     @Override public void consistency(Store store) {

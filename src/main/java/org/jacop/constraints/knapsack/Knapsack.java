@@ -674,6 +674,8 @@ public class Knapsack extends Constraint implements UsesQueueVariable {
 
     @Override public void impose(Store store) {
 
+        super.impose(store);
+
         store.registerRemoveLevelListener(this);
         store.registerRemoveLevelLateListener(this);
 
@@ -710,13 +712,9 @@ public class Knapsack extends Constraint implements UsesQueueVariable {
         IntVar var;
         for (KnapsackItem item : items) {
             var = item.getVariable();
-            var.putConstraint(this);
             queueVariable(level, var);
         }
 
-		/* method used to be called in the end of impose() */
-        store.addChanged(this);
-        store.countConstraint();
 
         if (debugAll) {
 

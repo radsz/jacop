@@ -282,15 +282,11 @@ public class ElementIntegerFast extends Constraint {
 
     @Override public void impose(Store store) {
 
+        super.impose(store);
+
         store.registerRemoveLevelListener(this);
-
-        index.putModelConstraint(this, getConsistencyPruningEvent(index));
-        value.putModelConstraint(this, getConsistencyPruningEvent(value));
-
         order = new TimeStamp<Short>(store, detect); // set to detect
 
-        store.addChanged(this);
-        store.countConstraint();
     }
 
     @Override public boolean satisfied() {

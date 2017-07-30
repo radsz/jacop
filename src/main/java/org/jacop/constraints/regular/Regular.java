@@ -1046,20 +1046,18 @@ public class Regular extends Constraint implements UsesQueueVariable {
         else
             initializeARRAY(fsm);
 
+        super.impose(store);
+
         store.registerRemoveLevelListener(this);
         store.registerRemoveLevelLateListener(this);
 
         for (int i = list.length - 1; i >= 0; i--) {
-            list[i].putConstraint(this);
             Integer varPosition = mapping.put(list[i], i);
             if (!list[i].singleton() && varPosition != null) {
                 System.err.println("ERROR: Constraint " + toString() + " must have different variables on the list");
                 throw new RuntimeException("ERROR: Constraint " + toString() + " must have different variables on the list");
             }
         }
-
-        store.addChanged(this);
-        store.countConstraint();
 
         lastNumberOfActiveStates = new int[list.length + 1];
         activeLevels = new TimeStamp[list.length + 1];

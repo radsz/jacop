@@ -176,12 +176,6 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
 
     }
 
-    @Override public void impose(Store store) {
-
-        super.impose(store);
-
-    }
-
     @Override public void notConsistency(Store store) {
 
         int numberCertainNotSat = 0;

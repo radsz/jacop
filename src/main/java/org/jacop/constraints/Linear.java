@@ -417,16 +417,11 @@ import java.util.Map;
 
     @Override public void impose(Store store) {
 
-        if (list == null)
-            return;
-
+        super.impose(store);
         reified = false;
 
-        for (Var V : list)
-            V.putModelConstraint(this, getConsistencyPruningEvent(V));
+        // TODO, BUG missing queueVariable execution for each variable in scope?
 
-        store.addChanged(this);
-        store.countConstraint();
     }
 
 

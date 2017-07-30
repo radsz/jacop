@@ -196,10 +196,6 @@ public class Eq extends PrimitiveConstraint implements UsesQueueVariable {
 
     }
 
-    @Override public void impose(Store store) {
-        super.impose(store);
-    }
-
     @Override public void notConsistency(Store store) {
 
         // No need for fixpoint loop in this context. Fixpoint always achieved after one execution.

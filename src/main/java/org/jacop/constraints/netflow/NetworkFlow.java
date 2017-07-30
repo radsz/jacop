@@ -33,17 +33,14 @@ package org.jacop.constraints.netflow;
 import static org.jacop.constraints.netflow.Assert.checkFlow;
 import static org.jacop.constraints.netflow.Assert.checkStructure;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.netflow.simplex.Arc;
 import org.jacop.constraints.netflow.simplex.Node;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.api.UsesQueueVariable;
@@ -117,6 +114,18 @@ public class NetworkFlow extends Constraint implements UsesQueueVariable {
             }
         }
 
+        map.put(costVariable, new VarHandler() {
+            @Override public List<IntVar> listVariables() {
+                return Arrays.asList(costVariable);
+            }
+            @Override public int getPruningEvent(Var variable) {
+                return IntDomain.ANY;
+            }
+            @Override public void processEvent(IntVar variable, MutableNetwork network) {
+                // TODO, maybe here extra work that before was not being done can be done.
+            }
+        });
+
         // fields in superclass
         this.queueIndex = QUEUE_INDEX;
         this.numberId = idNumber.incrementAndGet();
@@ -147,21 +156,17 @@ public class NetworkFlow extends Constraint implements UsesQueueVariable {
     @Override public void impose(Store store) {
 
         if (costVariable == null) {
-            costVariable = new IntVar(store, "Cost", 0, 0);
+            costVariable = new IntVar(store, 0, 0);
             System.err.println("WARNING: No cost variable was set, using zero cost.");
         }
 
         network.initialize(store);
-        costVariable.putConstraint(this);
-        for (IntVar variable : map.keySet())
-            variable.putConstraint(this);
 
         // register with store
         queueIndex = QUEUE_INDEX;
         store.registerRemoveLevelListener(this);
         store.registerRemoveLevelLateListener(this);
-        store.addChanged(this);
-        store.countConstraint();
+        super.impose(store);
     }
 
     /***************************/

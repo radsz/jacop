@@ -1114,6 +1114,8 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
 
     @Override public void impose(Store store) {
 
+        super.impose(store);
+
         store.registerRemoveLevelListener(this);
 
         stampValues = new TimeStamp<Integer>(store, valueMapVariable.size());
@@ -1127,13 +1129,10 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
         Integer zero = 0;
 
         for (IntVar var : list) {
-            var.putModelConstraint(this, getConsistencyPruningEvent(var));
             queueVariable(store.level, var);
             matching.put(var, new TimeStamp<Integer>(store, zero));
             sccStamp.put(var, new TimeStamp<Integer>(store, zero));
         }
-        store.addChanged(this);
-        store.countConstraint();
 
         for (Map.Entry<Integer, SimpleArrayList<IntVar>> entry : valueMapVariable.entrySet()) {
             Integer key = entry.getKey();

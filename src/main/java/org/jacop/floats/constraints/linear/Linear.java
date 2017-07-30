@@ -30,18 +30,21 @@
 
 package org.jacop.floats.constraints.linear;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-
 import org.jacop.api.UsesQueueVariable;
-import org.jacop.core.*;
 import org.jacop.constraints.PrimitiveConstraint;
+import org.jacop.core.*;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.util.SimpleHashSet;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.DoubleStream;
+import java.util.stream.Stream;
 
 /**
  * Linear constraint implements the weighted summation over several
@@ -91,7 +94,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     public double weights[];
 
     /**
-     * It specifies variable for the overall sum. 
+     * It specifies variable for the overall sum.
      */
     public double sum;
 
@@ -109,44 +112,40 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     TimeStamp<Boolean> noSat;
 
     /**
-     * @param store current store
-     * @param list variables which are being multiplied by weights.
+     * @param store   current store
+     * @param list    variables which are being multiplied by weights.
      * @param weights weight for each variable.
-     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum the sum of weighted variables.
+     * @param rel     the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum     the sum of weighted variables.
      */
     public Linear(Store store, FloatVar[] list, double[] weights, String rel, double sum) {
-
-        this.relationType = relation(rel);
-        commonInitialization(store, list, weights, sum);
+        commonInitialization(store, list, weights, rel, sum);
     }
 
 
     /**
-     * @param store current store
-     * @param list variables which are being multiplied by weights.
+     * @param store   current store
+     * @param list    variables which are being multiplied by weights.
      * @param weights weight for each variable.
-     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum variable containing the sum of weighted variables.
+     * @param rel     the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum     variable containing the sum of weighted variables.
      */
     public Linear(Store store, FloatVar[] list, double[] weights, String rel, FloatVar sum) {
 
-        FloatVar[] vars = new FloatVar[list.length + 1];
-        System.arraycopy(list, 0, vars, 0, list.length);
-        vars[list.length] = sum;
-        double[] ws = new double[weights.length + 1];
-        System.arraycopy(weights, 0, ws, 0, weights.length);
-        ws[list.length] = -1;
+        checkInputForNullness(new String[] {"list", "weights", "rel", "sum"}, new Object[][] {list, {weights}, {rel}, {sum}});
 
-        this.relationType = relation(rel);
-        commonInitialization(store, vars, ws, 0);
+        commonInitialization(store, Stream.concat(Arrays.stream(list), Stream.of(sum)).toArray(FloatVar[]::new),
+            DoubleStream.concat(Arrays.stream(weights), DoubleStream.of(-1)).toArray(), rel, 0);
     }
 
-    private void commonInitialization(Store store, FloatVar[] list, double[] weights, double sum) {
+    private void commonInitialization(Store store, FloatVar[] list, double[] weights, String rel, double sum) {
+
+        this.relationType = relation(rel);
         this.store = store;
         queueIndex = 1;
 
-        assert (list.length == weights.length) : "\nLength of two vectors different in Linear";
+        if (list.length != weights.length)
+            throw new IllegalArgumentException("Constraint Linear has parameters list and weights of different length.");
 
         numberId = idNumber.incrementAndGet();
 
@@ -157,9 +156,6 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
         HashMap<FloatVar, Double> parameters = new HashMap<FloatVar, Double>();
 
         for (int i = 0; i < list.length; i++) {
-
-            assert (list[i] != null) : i + "-th element of list in Linear constraint is null";
-
             if (weights[i] != 0) {
                 // This causes problem for several examples...
                 // if (list[i].singleton())
@@ -179,8 +175,8 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
         this.weights = new double[parameters.size()];
 
         int k = 0;
-        for (Map.Entry<FloatVar,Double>  e : parameters.entrySet()) {
-	    this.list[k] = e.getKey();
+        for (Map.Entry<FloatVar, Double> e : parameters.entrySet()) {
+            this.list[k] = e.getKey();
             this.weights[k] = e.getValue();
             k++;
         }
@@ -262,7 +258,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
                 parent.left = nodes[i];
                 parent.right = nodes[i + 1];
 
-		// currently sibling not used
+                // currently sibling not used
                 // nodes[i].sibling = nodes[i + 1];
                 // nodes[i + 1].sibling = nodes[i];
 
@@ -289,23 +285,21 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
 
     /**
-     * It constructs the constraint Linear. 
-     * @param store current store
+     * It constructs the constraint Linear.
+     *
+     * @param store     current store
      * @param variables variables which are being multiplied by weights.
-     * @param weights weight for each variable.
-     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}"
-     * @param sum variable containing the sum of weighted variables.
+     * @param weights   weight for each variable.
+     * @param rel       the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}"
+     * @param sum       variable containing the sum of weighted variables.
      */
     public Linear(Store store, ArrayList<? extends FloatVar> variables, ArrayList<Double> weights, String rel, double sum) {
 
-        double[] w = new double[weights.size()];
-        for (int i = 0; i < weights.size(); i++)
-            w[i] = weights.get(i);
-
-        commonInitialization(store, variables.toArray(new FloatVar[variables.size()]), w, sum);
-        this.relationType = relation(rel);
+        checkInputForNullness(new String[] {"variables", "weights", "rel"}, new Object[] {variables, weights, rel});
+        commonInitialization(store, variables.toArray(new FloatVar[variables.size()]), weights.stream().mapToDouble(i -> i).toArray(), rel,
+            sum);
     }
-    
+
     @Override public void consistency(Store store) {
 
         // compute for original relation
@@ -377,14 +371,11 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     @Override public void impose(Store store) {
 
         reified = false;
+        super.impose(store);
 
-        for (Var v : list) {
-            v.putModelConstraint(this, getConsistencyPruningEvent(v));
+        for (Var v : list)
             queueVariable(store.level, v);
-        }
 
-        store.addChanged(this);
-        store.countConstraint();
     }
 
 
@@ -584,7 +575,8 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     }
     */
 
-  static class VarWeightComparator<T extends VariableNode> implements java.util.Comparator<T>, java.io.Serializable {
+
+    static class VarWeightComparator<T extends VariableNode> implements java.util.Comparator<T>, java.io.Serializable {
 
         VarWeightComparator() {
         }

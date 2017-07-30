@@ -1612,6 +1612,8 @@ public class Geost extends Constraint implements UsesQueueVariable {
 
     @Override public void impose(Store store) {
 
+        super.impose(store);
+
         this.store = store;
 
         lastLevelLastVar = new TimeStamp<Integer>(store, store.level);
@@ -1619,17 +1621,10 @@ public class Geost extends Constraint implements UsesQueueVariable {
 
         genInternalConstraints();
 
-        for (GeostObject o : objects)
-            for (Var v : o.getVariables()) {
-                v.putModelConstraint(this, getConsistencyPruningEvent(v));
-                queueVariable(store.level, v);
-            }
+        arguments().stream().forEach( i -> queueVariable(store.level, i));
 
         store.registerRemoveLevelListener(this);
         store.registerRemoveLevelLateListener(this);
-
-        store.addChanged(this);
-        store.countConstraint();
 
         setStart = new TimeStamp<Integer>(store, store.level);
         setStart.update(0);

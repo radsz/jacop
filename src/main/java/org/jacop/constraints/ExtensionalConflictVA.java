@@ -40,7 +40,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Extensional constraint assures that none of the tuples explicitly given is enforced in the
  * relation.
- *
+ * <p>
  * This implementation tries to balance the usage of memory versus time
  * efficiency.
  *
@@ -94,8 +94,7 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
      * @param list list of variables for constraint
      */
 
-    @Deprecated
-    public ExtensionalConflictVA(IntVar[] list) {
+    @Deprecated public ExtensionalConflictVA(IntVar[] list) {
 
         checkInputForNullness("list", list);
 
@@ -112,7 +111,8 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
      * tuples parameter will be reflected in the constraint behavior. Changes to
      * tuples should not performed under any circumstances. The tuples array is
      * not copied to save memory and time.
-     * @param list list of variables for the conflict constraint
+     *
+     * @param list   list of variables for the conflict constraint
      * @param tuples list of forbidden tuples
      */
     public ExtensionalConflictVA(IntVar[] list, int[][] tuples) {
@@ -132,8 +132,9 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
      * The constructor does not create local copy of tuples array. Any changes
      * to this array will reflect on constraint behavior. Most probably
      * incorrect as other data structures will not change accordingly.
+     *
      * @param variables the scope of the extensional conflict constraint.
-     * @param tuples the conflict (forbidden) tuples for that constraint.
+     * @param tuples    the conflict (forbidden) tuples for that constraint.
      */
 
     public ExtensionalConflictVA(ArrayList<? extends IntVar> variables, int[][] tuples) {
@@ -145,8 +146,9 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
 
     /**
      * It seeks support tuple for a given variable and its value.
+     *
      * @param varPosition variable for which the support is seeked.
-     * @param value value of the variable for which support is seeked.
+     * @param value       value of the variable for which support is seeked.
      * @return support tuple supporting varPosition-value pair.
      */
     public int[] seekSupportVA(int varPosition, int value) {
@@ -254,8 +256,9 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
     /**
      * It computes the first valid tuple given restriction that a variable will
      * be equal to a given value.
+     *
      * @param varPosition the position of the variable.
-     * @param value the value of the variable.
+     * @param value       the value of the variable.
      * @return the smallest valid tuple supporting varPosition-value pair.
      */
     public int[] setFirstValid(int varPosition, int value) {
@@ -273,9 +276,10 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
 
     /**
      * It returns the position of disallowed tuple in the array of tuples for a given variable-value pair.
+     *
      * @param varPosition variable for which we search for the forbidden tuple.
-     * @param value value for which we search for the forbidden tuple.
-     * @param t tuple which we check for forbidness.
+     * @param value       value for which we search for the forbidden tuple.
+     * @param t           tuple which we check for forbidness.
      * @return position of the forbidden tuple, -1 if it is not forbidden.
      */
     public int isDisallowed(int varPosition, int value, int[] t) {
@@ -321,8 +325,9 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
     }
 
     /**
-     * It finds the position at which the tuple is invalid. The value is not in the domain 
+     * It finds the position at which the tuple is invalid. The value is not in the domain
      * of the corresponding variable.
+     *
      * @param t tuple being check for in-validity
      * @return the position in the tuple at which the corresponding variable does not contain the value used by tuple, -1 if no invalid position exists.
      */
@@ -433,15 +438,9 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
 
     @Override public void impose(Store store) {
 
+        super.impose(store);
+
         store.registerRemoveLevelListener(this);
-
-        for (int i = 0; i < list.length; i++) {
-            list[i].putModelConstraint(this, getConsistencyPruningEvent(list[i]));
-        }
-
-        store.addChanged(this);
-        store.countConstraint();
-
         this.store = store;
 
         if (debugAll) {

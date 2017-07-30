@@ -196,18 +196,12 @@ public class Table extends Constraint implements UsesQueueVariable {
     }
 
     @Override public void impose(Store store) {
+
         this.store = store;
-        int level = store.level;
-
-        for (int i = 0; i < x.length; i++) {
-            x[i].putModelConstraint(this, getConsistencyPruningEvent(x[i]));
-            queueVariable(level, x[i]);
-        }
-
-        store.addChanged(this);
-        store.countConstraint();
-
+        super.impose(store);
+        arguments().stream().forEach( i -> queueVariable(store.level, i));
         init();
+
     }
 
     @Override public void consistency(Store store) {
