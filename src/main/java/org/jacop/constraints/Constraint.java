@@ -49,7 +49,7 @@ import java.util.stream.Stream;
  * @version 3.1
  */
 
-public abstract class Constraint extends DecomposedConstraint<Constraint> implements StoreAware {
+public abstract class Constraint extends DecomposedConstraint<Constraint> {
 
     public boolean trace = SwitchesPruningLogging.traceConstraint;
 
@@ -68,6 +68,9 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> implem
         return scope;
     }
 
+    /**
+     * It specifies a set of variables that in the scope of this constraint.
+     */
     protected Set<Var> scope;
 
     protected void setScope(Var... variables) {
@@ -88,6 +91,13 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> implem
 
     protected void setScope(Set<? extends Var> set) {
         setScope(set.toArray(new Var[set.size()]));
+    }
+
+
+    public Set<PrimitiveConstraint> constraintScope;
+
+    protected void setConstraintScope(PrimitiveConstraint... primitiveConstraints) {
+        this.constraintScope = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(primitiveConstraints)));
     }
 
     /**
@@ -161,6 +171,8 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> implem
         arguments().stream().forEach(i -> i.putModelConstraint(this, getConsistencyPruningEvent(i)));
         store.addChanged(this);
         store.countConstraint();
+        if (constraintScope != null)
+            constraintScope.stream().forEach( i -> i.include(store));
 
     }
 

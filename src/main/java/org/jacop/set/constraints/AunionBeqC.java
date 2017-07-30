@@ -35,7 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
-import org.jacop.core.UsesQueueVariable;
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Var;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;

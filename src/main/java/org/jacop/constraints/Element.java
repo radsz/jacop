@@ -35,7 +35,7 @@ import java.util.Set;
 
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.UsesQueueVariable;
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Var;
 
 /**

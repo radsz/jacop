@@ -30,10 +30,12 @@
 
 package org.jacop.constraints.knapsack;
 
+import java.lang.reflect.Array;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.*;
 
@@ -97,7 +99,7 @@ public class Knapsack extends Constraint implements UsesQueueVariable {
      * of all nodes in the knapsack tree. By default it is equal to
      * n/log(n), where n is the number of the items.
      */
-    public final int updateLimit;
+    public int updateLimit;
 
     /**
      * It specifies if the constraint has already discovered to be unsatisfied
@@ -109,12 +111,12 @@ public class Knapsack extends Constraint implements UsesQueueVariable {
     /**
      *  This is a finite domain variable to specify the knapsack capacity.
      */
-    public final IntVar knapsackCapacity;
+    public IntVar knapsackCapacity;
 
     /**
      * This is a finite domain variable to specify the knapsack profit.
      */
-    public final IntVar knapsackProfit;
+    public IntVar knapsackProfit;
 
 
     /**
@@ -222,28 +224,15 @@ public class Knapsack extends Constraint implements UsesQueueVariable {
      */
     public Knapsack(KnapsackItem[] items, IntVar knapsackCapacity, IntVar knapsackProfit) {
 
-        assert (knapsackCapacity != null) : "Capacity parameter is equal to null";
-        assert (knapsackProfit != null) : "Profit parameter is equal to null";
-        assert (items != null) : "Items list is null";
+        checkInputForNullness(new String[] {"items", "knapsackCapacity", "knapsackProfit"},
+                            new Object[][]{items, {knapsackCapacity}, {knapsackProfit}});
 
-        numberId = idNumber.incrementAndGet();
-
-        queueIndex = 1;
-
-		/* We start to create an array of items */
-        this.items = new KnapsackItem[items.length];
-
-        for (int i = 0; i < items.length; i++) {
-            assert (items[i] != null) : i + "-th element in items list is null";
-            this.items[i] = items[i];
-        }
-
-        this.knapsackCapacity = knapsackCapacity;
-        this.knapsackProfit = knapsackProfit;
-        this.updateLimit = (int) (items.length / (Math.log(items.length) / Math.log(2)));
-
-        setScope(Stream.concat( Arrays.stream(items).map( i -> i.getVariable()),
-                                Stream.of( knapsackCapacity, knapsackProfit)) );
+        // it handles duplicates.
+        commonInitialization(Arrays.stream(items).mapToInt( i -> i.getProfit()).toArray(),
+                             Arrays.stream(items).mapToInt( i -> i.getWeight()).toArray(),
+                             Arrays.stream(items).map( i -> i.getVariable()).toArray(IntVar[]::new),
+                             knapsackCapacity,
+                             knapsackProfit);
 
     }
 
@@ -259,17 +248,25 @@ public class Knapsack extends Constraint implements UsesQueueVariable {
      */
     public Knapsack(int[] profits, int[] weights, IntVar[] quantity, IntVar knapsackCapacity, IntVar knapsackProfit) {
 
-        assert (profits.length == weights.length) : "Profits and Weights parameters are of different length";
-        assert (profits.length == quantity.length) : "Profits and Quantity parameters are of different length";
+        checkInputForNullness(new String[]{"profits", "weights", "quantity", "knapsackCapacity", "knapsackProfit"},
+            new Object[][]{ {profits}, {weights}, quantity, {knapsackCapacity}, {knapsackProfit}});
 
-        assert (knapsackCapacity != null) : "Capacity parameter is equal to null";
-        assert (knapsackProfit != null) : "Profit parameter is equal to null";
+        if (profits.length != weights.length)
+            throw new IllegalArgumentException("Constraint Knapsack has profits and weights parameters of different length");
+
+        if ( profits.length != quantity.length)
+            throw new IllegalArgumentException("Constraint Knapsack has profits and quantity parameters of different length");
+
+        commonInitialization(profits, weights, quantity, knapsackCapacity, knapsackProfit);
+    }
+
+    private void commonInitialization(int[] profits, int[] weights, IntVar[] quantity, IntVar knapsackCapacity, IntVar knapsackProfit) {
 
         numberId = idNumber.incrementAndGet();
         queueIndex = 1;
-		
-		/* We start to create an array of items */
-		/* KKU- 2016/01/14, duplicated items are collected into a single item */
+
+		    /* We start to create an array of items */
+		    /* KKU- 2016/01/14, duplicated items are collected into a single item */
         LinkedHashMap<IntVar, KnapsackItem> itemPar = new LinkedHashMap<IntVar, KnapsackItem>();
         for (int i = 0; i < quantity.length; i++) {
             if (itemPar.get(quantity[i]) != null) {
@@ -281,15 +278,7 @@ public class Knapsack extends Constraint implements UsesQueueVariable {
                 itemPar.put(quantity[i], new KnapsackItem(quantity[i], weights[i], profits[i]));
         }
 
-        items = new KnapsackItem[profits.length]; // BUG? why profits.length used and not itemPar.size()
-
-        int i = 0;
-        for (Map.Entry<IntVar, KnapsackItem> entry : itemPar.entrySet()) {
-            KnapsackItem value = entry.getValue();
-            // Use the key and the value
-            items[i++] = value;
-        }
-
+        items = itemPar.values().toArray(new KnapsackItem[itemPar.size()]);
         this.knapsackCapacity = knapsackCapacity;
         this.knapsackProfit = knapsackProfit;
         this.updateLimit = (int) (quantity.length / (Math.log(quantity.length) / Math.log(2)));

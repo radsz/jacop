@@ -33,10 +33,9 @@ package org.jacop.constraints;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
 
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
-import org.w3c.dom.css.Rect;
 
 /**
  * Diff constraint assures that any two rectangles from a vector of rectangles

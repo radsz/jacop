@@ -30,6 +30,7 @@
 
 package org.jacop.constraints;
 
+import org.jacop.api.StoreAware;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 
@@ -45,7 +46,7 @@ import java.util.Hashtable;
  * @version 4.4
  */
 
-public abstract class PrimitiveConstraint extends Constraint {
+public abstract class PrimitiveConstraint extends Constraint implements StoreAware {
 
     /**
      * It specifies the events which must occur for notConsistency()
@@ -140,5 +141,10 @@ public abstract class PrimitiveConstraint extends Constraint {
         notConsistencyPruningEvents.put(var, pruningEvent);
 
     }
+
+    public void include(Store store) {
+        if (constraintScope != null)
+            constraintScope.stream().forEach( i -> i.include(store));
+    };
 
 }

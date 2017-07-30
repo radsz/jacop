@@ -42,7 +42,7 @@ import org.jacop.core.Var;
 import org.jacop.core.IntDomain;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.constraints.Constraint;
-import org.jacop.core.UsesQueueVariable;
+import org.jacop.api.UsesQueueVariable;
 
 /**
  * Table implements the table constraint using a method presented in

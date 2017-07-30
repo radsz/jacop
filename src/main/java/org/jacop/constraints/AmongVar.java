@@ -30,10 +30,12 @@
 
 package org.jacop.constraints;
 
+import java.lang.reflect.Array;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
 
 /**
@@ -110,23 +112,15 @@ public class AmongVar extends Constraint implements UsesQueueVariable {
     public AmongVar(IntVar[] listOfX, IntVar[] listOfY, IntVar n) {
 
         checkInputForNullness(new String[] {"listOfX", "listOfY", "n"}, new Object[][] {listOfX, listOfY, { n }});
+        checkInputForDuplication("listOfX", listOfX);
+        checkInputForDuplication("listOfY", listOfY);
+
         this.queueIndex = 1;
 
         numberId = idNumber.incrementAndGet();
 
-        this.listOfX = new IntVar[listOfX.length];
-        for (int i = 0; i < listOfX.length; i++) {
-            assert (listOfX[i] != null) : i + "-th element in listOfX is null";
-            this.listOfX[i] = listOfX[i];
-        }
-
-        this.listOfY = new IntVar[listOfY.length];
-        for (int i = 0; i < listOfY.length; i++) {
-            assert (listOfY[i] != null) : i + "-th element in listOfY is null";
-            this.listOfY[i] = listOfY[i];
-        }
-
-        assert (n != null) : "Variable n is null";
+        this.listOfX = Arrays.copyOf(listOfX, listOfX.length);
+        this.listOfY = Arrays.copyOf(listOfY, listOfY.length);
         this.n = n;
 
         setScope( Stream.concat( Stream.concat(Arrays.stream(listOfX), Arrays.stream(listOfY)), Stream.of(n)));

@@ -31,7 +31,7 @@
 package org.jacop.floats.constraints;
 
 
-import org.jacop.core.UsesQueueVariable;
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Var;
 import org.jacop.floats.constraints.linear.Linear;
 import org.jacop.floats.core.FloatVar;

@@ -33,6 +33,7 @@ package org.jacop.floats.constraints.linear;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.floats.core.FloatDomain;

@@ -31,10 +31,8 @@
 
 package org.jacop.constraints.table;
 
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.Set;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -46,7 +44,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.TimeStamp;
-import org.jacop.core.UsesQueueVariable;
+import org.jacop.api.UsesQueueVariable;
 
 /**
  * SimpleTable implements the table constraint using a method presented in

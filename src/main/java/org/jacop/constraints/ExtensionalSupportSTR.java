@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
 import org.jacop.util.IndexDomainView;
 

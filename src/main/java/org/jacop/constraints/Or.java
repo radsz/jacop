@@ -36,10 +36,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Domain;
 import org.jacop.core.Store;
-import org.jacop.core.UsesQueueVariable;
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Var;
 import org.jacop.util.QueueForward;
-import org.jacop.util.SimpleHashSet;
 
 /**
  * Constraint c1 \/ c2 \/ ... \/ cn.
@@ -77,6 +76,7 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
         this.numberId = idNumber.incrementAndGet();
         this.listOfC = Arrays.copyOf(listOfC, listOfC.length);
         setScope(listOfC);
+        setConstraintScope(listOfC);
         queueForward = new QueueForward<PrimitiveConstraint>(listOfC, arguments());
     }
 
@@ -85,9 +85,7 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
      * @param listOfC list of primitive constraints which at least one of them has to be satisfied.
      */
     public Or(ArrayList<PrimitiveConstraint> listOfC) {
-
         this(listOfC.toArray(new PrimitiveConstraint[listOfC.size()]));
-
     }
 
     /**
@@ -196,32 +194,6 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
             return Domain.NONE;
         else
             return eventAcross;
-    }
-
-    @Override public void impose(Store store) {
-
-        SimpleHashSet<Var> variables = new SimpleHashSet<Var>();
-
-        for (int i = 0; i < listOfC.length; i++)
-            for (Var V : listOfC[i].arguments())
-                variables.add(V);
-
-        while (!variables.isEmpty()) {
-            Var V = variables.removeFirst();
-            V.putModelConstraint(this, getConsistencyPruningEvent(V));
-        }
-
-
-        for (PrimitiveConstraint c : listOfC)
-            c.include(store);
-
-        store.addChanged(this);
-        store.countConstraint(listOfC.length);
-    }
-
-    @Override public void include(Store store) {
-        for (PrimitiveConstraint c : listOfC)
-            c.include(store);
     }
 
     @Override public void queueVariable(int level, Var var) {

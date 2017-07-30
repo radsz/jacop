@@ -35,10 +35,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Domain;
 import org.jacop.core.Store;
-import org.jacop.core.UsesQueueVariable;
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Var;
 import org.jacop.util.QueueForward;
-import org.jacop.util.SimpleHashSet;
 
 /**
  * Constraint c1 /\ c2 ... /\ cn
@@ -91,7 +90,8 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
         this.listOfC = new PrimitiveConstraint[c.length];
         this.listOfC = Arrays.copyOf(c, c.length);
         setScope(listOfC);
-        queueForward = new QueueForward<PrimitiveConstraint>(listOfC, arguments());
+        setConstraintScope(listOfC);
+        queueForward = new QueueForward<>(listOfC, arguments());
     }
 
     boolean propagation;
@@ -180,14 +180,6 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
 
         super.impose(store);
 
-        for (PrimitiveConstraint c : listOfC)
-            c.include(store);
-
-    }
-
-    @Override public void include(Store store) {
-        for (PrimitiveConstraint c : listOfC)
-            c.include(store);
     }
 
     @Override public void notConsistency(Store store) {

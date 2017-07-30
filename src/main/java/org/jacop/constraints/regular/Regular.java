@@ -36,6 +36,7 @@ import java.nio.charset.Charset;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ExtensionalSupportSTR;
 import org.jacop.constraints.In;
@@ -276,14 +277,12 @@ public class Regular extends Constraint implements UsesQueueVariable {
      */
 
     public Regular(FSM fsm, IntVar[] list) {
-        this.queueIndex = 1;
 
-        assert (list != null) : "List argument is null";
-        this.list = new IntVar[list.length];
-        for (int i = 0; i < list.length; i++) {
-            assert (list[i] != null) : i + "-th element of the list is null";
-            this.list[i] = list[i];
-        }
+        checkInputForNullness("list", list);
+        checkInputForDuplicationSkipSingletons("list", list);
+
+        this.queueIndex = 1;
+        this.list = Arrays.copyOf(list, list.length);
         this.fsm = fsm;
         numberId = idNumber.incrementAndGet();
         leftPosition = 0;

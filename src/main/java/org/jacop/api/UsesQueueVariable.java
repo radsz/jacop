@@ -28,7 +28,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jacop.core;
+package org.jacop.api;
+
+import org.jacop.core.Var;
 
 /**
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
@@ -39,4 +41,5 @@ package org.jacop.core;
  */
 
 public interface UsesQueueVariable {
+
 }

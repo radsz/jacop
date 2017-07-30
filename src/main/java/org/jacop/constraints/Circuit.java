@@ -42,7 +42,6 @@ import org.jacop.core.MutableVar;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
-import org.jacop.examples.fd.filters.AR;
 
 /**
  * Circuit constraint assures that all variables build a Hamiltonian
@@ -80,6 +79,7 @@ public class Circuit extends Alldiff {
     public Circuit(IntVar[] list) {
 
         checkInputForNullness("list", list);
+        checkInputForDuplication("list", list);
 
         this.numberId = idNumber.incrementAndGet();
         this.list = Arrays.copyOf(list, list.length);

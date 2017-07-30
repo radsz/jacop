@@ -318,9 +318,9 @@ public class PerfectSquare extends ExampleFD {
                 example.model(i);
                 example.search();
 
-                //				example = new PerfectSquare();
-                //				example.modelGeost();
-                //				example.search();
+                example = new PerfectSquare();
+                example.modelGeost(i);
+                example.search();
 
             }
 
@@ -348,6 +348,44 @@ public class PerfectSquare extends ExampleFD {
         example = new PerfectSquare();
         example.modelGeost(problemNo);
         example.search();
+
+    }
+
+
+    /**
+     * It runs a perfect square problem. If no problemNo specified as input
+     * argument it will solve all the problems given in square matrix.
+     *
+     * @param args program parameters, the first one denotes the problem no to be solved.
+     */
+    public static boolean testUsingGeost(String args[]) {
+
+        if (args.length == 0) {
+
+            for (int i = 0; i < squares().length; i++) {
+                System.out.println("Problem no. " + i);
+
+                PerfectSquare example = new PerfectSquare();
+                example.modelGeost(i);
+                example.search();
+
+            }
+
+            return false;
+        }
+
+        int problemNo = 0;
+
+        PerfectSquare example = new PerfectSquare();
+
+        if (args.length == 1) {
+
+            problemNo = Integer.parseInt(args[0]);
+
+        }
+
+        example.modelGeost(problemNo);
+        return example.search();
 
     }
 

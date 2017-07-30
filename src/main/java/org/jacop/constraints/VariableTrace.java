@@ -31,13 +31,12 @@
 
 package org.jacop.constraints;
 
-import org.jacop.core.UsesQueueVariable;
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Var;
 import org.jacop.core.Store;
 import org.jacop.core.IntDomain;
 
 import java.util.ArrayList;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**

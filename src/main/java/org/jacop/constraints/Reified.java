@@ -33,9 +33,9 @@ package org.jacop.constraints;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
 import org.jacop.util.QueueForward;
-import org.jacop.util.SimpleHashSet;
 
 /**
  * Reified constraints "constraint" {@literal <=>} B
@@ -87,6 +87,7 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
         }
 
         setScope( Stream.concat( c.arguments().stream(), Stream.of(b) ));
+        setConstraintScope(new PrimitiveConstraint[]{c});
         queueForward = new QueueForward<PrimitiveConstraint>(c, arguments());
 
     }
@@ -200,26 +201,12 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
 
     @Override public void impose(Store store) {
 
-        SimpleHashSet<Var> variables = new SimpleHashSet<Var>();
-
-        variables.add(b);
-
-        for (Var V : c.arguments())
-            variables.add(V);
-
-        while (!variables.isEmpty()) {
-            Var V = variables.removeFirst();
-            V.putModelConstraint(this, getConsistencyPruningEvent(V));
-            queueVariable(store.level, V);
-        }
-
-        c.include(store);
+        super.impose(store);
+        arguments().stream().forEach( i -> queueVariable(store.level, i));
 
         if (needRemoveLevelLate)
             store.registerRemoveLevelLateListener(this);
 
-        store.addChanged(this);
-        store.countConstraint();
     }
 
     private void removeSatConstraint() {

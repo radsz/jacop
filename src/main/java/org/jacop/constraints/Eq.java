@@ -35,7 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Domain;
 import org.jacop.core.Store;
-import org.jacop.core.UsesQueueVariable;
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Var;
 import org.jacop.util.QueueForward;
 
@@ -70,14 +70,15 @@ public class Eq extends PrimitiveConstraint implements UsesQueueVariable {
      */
     public Eq(PrimitiveConstraint c1, PrimitiveConstraint c2) {
 
-        checkInputForNullness(new String[] {"c1", "c2"}, new Object[] {c1, c2});
+        PrimitiveConstraint[] scope = new PrimitiveConstraint[] {c1, c2};
 
+        checkInputForNullness(new String[] {"c1", "c2"}, scope);
         numberId = idNumber.incrementAndGet();
 
         this.c1 = c1;
         this.c2 = c2;
-
-        setScope(new PrimitiveConstraint[] {c1, c2});
+        setScope(scope);
+        setConstraintScope(scope);
         queueForward = new QueueForward<>(new PrimitiveConstraint[] {c1, c2}, arguments());
     }
 
@@ -196,19 +197,7 @@ public class Eq extends PrimitiveConstraint implements UsesQueueVariable {
     }
 
     @Override public void impose(Store store) {
-
         super.impose(store);
-
-        c1.include(store);
-        c2.include(store);
-
-    }
-
-    @Override public void include(Store store) {
-
-        c1.include(store);
-        c2.include(store);
-
     }
 
     @Override public void notConsistency(Store store) {

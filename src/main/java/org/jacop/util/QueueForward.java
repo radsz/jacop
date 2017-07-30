@@ -1,7 +1,7 @@
 package org.jacop.util;
 
 import org.jacop.constraints.Constraint;
-import org.jacop.core.UsesQueueVariable;
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Var;
 
 import java.util.*;

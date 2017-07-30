@@ -40,6 +40,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.*;
 import org.jacop.util.SimpleArrayList;
@@ -463,6 +464,9 @@ public class Geost extends Constraint implements UsesQueueVariable {
      *
      */
     @SuppressWarnings("unchecked") public Geost(GeostObject[] objects, ExternalConstraint[] constraints, Shape[] shapes) {
+
+       checkInputForDuplicationSkipSingletons("objects",
+           Arrays.stream(objects).map( obj -> obj.getVariables().stream()).flatMap( i -> i).toArray(IntVar[]::new));
 
         // This comes from the frame computation for NonOverlapping external constraint.
         assert (IntDomain.MaxInt < Integer.MAX_VALUE / 4 - 1) : "Geost can not work with too large Constants.MaxInt";

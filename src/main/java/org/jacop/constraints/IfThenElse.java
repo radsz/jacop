@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Domain;
 import org.jacop.core.Store;
-import org.jacop.core.UsesQueueVariable;
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Var;
 import org.jacop.util.QueueForward;
 
@@ -81,7 +81,8 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
     // Constructors
     public IfThenElse(PrimitiveConstraint condC, PrimitiveConstraint thenC, PrimitiveConstraint elseC) {
 
-        checkInputForNullness(new String[]{ "condC", "thenC", "elseC"}, new Object[] {condC, thenC, elseC});
+        PrimitiveConstraint[] scope = new PrimitiveConstraint[]{ condC, thenC, elseC};
+        checkInputForNullness(new String[]{ "condC", "thenC", "elseC"}, scope);
 
         numberId = idNumber.incrementAndGet();
 
@@ -89,7 +90,8 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
         this.thenC = thenC;
         this.elseC = elseC;
 
-        setScope(new PrimitiveConstraint[]{ condC, thenC, elseC});
+        setScope(scope);
+        setConstraintScope(scope);
         queueForward = new QueueForward<PrimitiveConstraint>(new PrimitiveConstraint[] {condC, thenC, elseC}, arguments());
     }
 
@@ -315,18 +317,7 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
         super.impose(store);
 
         this.store = store;
-
-        condC.include(store);
-        thenC.include(store);
-        elseC.include(store);
-
         imposed = true;
-    }
-
-    @Override public void include(Store store) {
-        condC.include(store);
-        thenC.include(store);
-        elseC.include(store);
     }
 
     @Override public boolean satisfied() {

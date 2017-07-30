@@ -34,12 +34,16 @@ import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
+import org.jacop.examples.fd.PerfectSquare;
 import org.jacop.search.*;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Set;
 import java.util.stream.IntStream;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -52,6 +56,42 @@ import static org.junit.Assert.assertThat;
  * @version 4.4
  */
 public class SingleConstraintTest {
+
+    @Test public void testGeost() {
+
+        assertThat( PerfectSquare.testUsingGeost(new String[]{"1"}), is(true));
+
+    }
+    @Test public void testCheckForInputDuplicationSkippsingSingletons2() {
+
+        Store store = new Store();
+        int xLength = 4;
+        IntVar[] list = getIntVars(store, "list", xLength, 2);
+        IntVar dubleton = new IntVar(store, "dubleton", 2, 3);
+        IntVar[] parameters = Arrays.copyOf(list, xLength + 2);
+        parameters[xLength] = dubleton;
+        parameters[xLength + 1] = dubleton;
+
+        Set<Var> dubletons = DecomposedConstraint.getDubletonsSkipSingletons(parameters);
+
+        assertThat(dubletons.size(), is(1));
+    }
+
+
+    @Test public void testCheckForInputDuplicationSkippsingSingletons1() {
+
+        Store store = new Store();
+        int xLength = 4;
+        IntVar[] list = getIntVars(store, "list", xLength, 2);
+        IntVar dubleton = new IntVar(store, "dubleton", 2, 2);
+        IntVar[] parameters = Arrays.copyOf(list, xLength + 2);
+        parameters[xLength] = dubleton;
+        parameters[xLength + 1] = dubleton;
+        
+        Set<Var> dubletons = DecomposedConstraint.getDubletonsSkipSingletons(parameters);
+
+        assertThat(dubletons.size(), is(0));
+    }
 
     @Test public void testSubcircuit() {
 

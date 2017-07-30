@@ -33,20 +33,20 @@ package org.jacop.constraints.netflow;
 import static org.jacop.constraints.netflow.Assert.checkFlow;
 import static org.jacop.constraints.netflow.Assert.checkStructure;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.netflow.simplex.Arc;
 import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.UsesQueueVariable;
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Var;
 
 /**
@@ -96,6 +96,7 @@ public class NetworkFlow extends Constraint implements UsesQueueVariable {
     /********************/
     /** Initialization **/
 
+    // It can handle duplicates of variables thanks to using MultiVarHandler that takes care of this.
     private NetworkFlow(List<Node> nodes, List<Arc> arcs, List<VarHandler> flowVariables, IntVar costVariable) {
 
         this.network = new Pruning(nodes, arcs, statistics);
@@ -120,7 +121,7 @@ public class NetworkFlow extends Constraint implements UsesQueueVariable {
         this.queueIndex = QUEUE_INDEX;
         this.numberId = idNumber.incrementAndGet();
 
-        setScope(map.keySet());
+        setScope(Stream.concat( map.keySet().stream(), Stream.of(costVariable)));
 
         // for (VarHandler vh : flowVariables)
         //     System.out.println("{flow/cost | structure} var = " + vh.listVariables());

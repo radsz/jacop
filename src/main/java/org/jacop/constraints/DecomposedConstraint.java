@@ -30,9 +30,7 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -159,6 +157,25 @@ public abstract class DecomposedConstraint<T extends Constraint> {
             throw new IllegalArgumentException(
                 "Constraint of type " + this.getClass().getSimpleName() + " has parameter " + a + " that contains repeated values.");
 
+    }
+
+    public void checkInputForDuplicationSkipSingletons(String a, Var[] parameters) {
+
+        Set<Var> dubletons = getDubletonsSkipSingletons(parameters);
+        if ( ! dubletons.isEmpty() ) {
+            throw new IllegalArgumentException(
+                "Constraint of type " + this.getClass().getSimpleName() + " has parameter " + a + " that contains repeated variables " + dubletons);
+        }
+
+    }
+
+    static public Set<Var> getDubletonsSkipSingletons(Var[] parameters) {
+        List<Var> notGroundedParametersList = Arrays.stream(parameters).filter( i -> ! i.singleton()).collect(Collectors.toList());
+        Set<Var> notGroundedParametersSet = new HashSet(notGroundedParametersList);
+        if ( notGroundedParametersSet.size() != notGroundedParametersList.size() ) {
+            notGroundedParametersSet.stream().forEach( i -> notGroundedParametersList.remove(i));
+            return new HashSet<>(notGroundedParametersList);
+        } else { return Collections.emptySet(); }
     }
 
 

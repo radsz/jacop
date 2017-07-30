@@ -33,10 +33,9 @@ package org.jacop.constraints;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Store;
-import org.jacop.core.UsesQueueVariable;
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Var;
 import org.jacop.util.QueueForward;
-import org.jacop.util.SimpleHashSet;
 
 /**
  * Constraint "not costraint"
@@ -62,10 +61,12 @@ public class Not extends PrimitiveConstraint implements UsesQueueVariable {
      * @param c primitive constraint which is being negated.
      */
     public Not(PrimitiveConstraint c) {
-        checkInputForNullness("c", new Object[]{c});
+        PrimitiveConstraint[] scope = new PrimitiveConstraint[] {c};
+        checkInputForNullness("c", scope);
         numberId = idNumber.incrementAndGet();
         this.c = c;
-        setScope(c.arguments());
+        setScope(scope);
+        setConstraintScope(scope);
         this.queueForward = new QueueForward<>(c, arguments());
     }
 
@@ -108,18 +109,6 @@ public class Not extends PrimitiveConstraint implements UsesQueueVariable {
                 return possibleEvent;
         }
         return c.getNestedPruningEvent(var, true);
-    }
-
-    @Override public void impose(Store store) {
-
-        super.impose(store);
-
-        c.include(store);
-
-    }
-
-    @Override public void include(Store store) {
-        c.include(store);
     }
 
     @Override public void notConsistency(Store store) {

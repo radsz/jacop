@@ -36,6 +36,7 @@ import java.util.Arrays;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
 
 /**

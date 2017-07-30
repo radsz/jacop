@@ -35,7 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Domain;
 import org.jacop.core.Store;
-import org.jacop.core.UsesQueueVariable;
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Var;
 import org.jacop.util.QueueForward;
 
@@ -73,14 +73,16 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
      */
     public IfThen(PrimitiveConstraint condC, PrimitiveConstraint thenC) {
 
-        checkInputForNullness(new String[] {"condC", "thenC"}, new Object[] {condC, thenC});
+        PrimitiveConstraint[] scope = new PrimitiveConstraint[] {condC, thenC};
+        checkInputForNullness(new String[] {"condC", "thenC"}, scope);
 
         numberId = idNumber.incrementAndGet();
 
         this.condC = condC;
         this.thenC = thenC;
 
-        setScope(new PrimitiveConstraint[]{condC, thenC});
+        setScope(scope);
+        setConstraintScope(scope);
         queueForward = new QueueForward<PrimitiveConstraint>(new PrimitiveConstraint[] {condC, thenC}, arguments());
     }
 
@@ -253,19 +255,9 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
     @Override public void impose(Store store) {
 
         this.store = store;
-
         super.impose(store);
-
-        condC.include(store);
-        thenC.include(store);
-
         imposed = true;
 
-    }
-
-    @Override public void include(Store store) {
-        condC.include(store);
-        thenC.include(store);
     }
 
     @Override public boolean satisfied() {

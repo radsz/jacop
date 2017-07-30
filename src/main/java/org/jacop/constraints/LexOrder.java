@@ -30,6 +30,7 @@
 
 package org.jacop.constraints;
 
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
 import org.jacop.util.SimpleHashSet;
 

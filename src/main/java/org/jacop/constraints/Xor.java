@@ -91,6 +91,7 @@ public class Xor extends PrimitiveConstraint {
         }
 
         setScope( Stream.concat(c.arguments().stream(), Stream.of(b)) );
+        setConstraintScope(new PrimitiveConstraint[]{c});
 
         queueForward = new QueueForward<PrimitiveConstraint>(c, arguments());
     }
@@ -196,12 +197,7 @@ public class Xor extends PrimitiveConstraint {
 
         super.impose(store);
         arguments().stream().forEach( i -> queueVariable(store.level, i));
-        c.include(store);
 
-    }
-
-    @Override public void include(Store store) {
-        c.include(store);
     }
 
     @Override public boolean satisfied() {
