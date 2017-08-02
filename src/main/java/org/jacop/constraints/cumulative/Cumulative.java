@@ -369,14 +369,7 @@ public class Cumulative extends CumulativeBasic {
             return false;
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
     }
 

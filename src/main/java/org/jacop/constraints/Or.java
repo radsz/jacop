@@ -34,7 +34,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jacop.core.Domain;
 import org.jacop.core.Store;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Var;
@@ -141,59 +140,8 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
         throw new IllegalStateException("Not implemented as more precise variant exists.");
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
-
-        int eventAcross = -1;
-
-        for (int i = 0; i < listOfC.length; i++) {
-            if (listOfC[i].arguments().contains(var)) {
-                int event = listOfC[i].getNestedPruningEvent(var, true);
-                if (event > eventAcross)
-                    eventAcross = event;
-            }
-        }
-
-        if (eventAcross == -1)
-            return Domain.NONE;
-        else
-            return eventAcross;
-
-    }
-
     @Override public int getDefaultConsistencyPruningEvent() {
         throw new IllegalStateException("Not implemented as more precise variant exists.");
-    }
-
-    @Override public int getNotConsistencyPruningEvent(Var var) {
-
-        // If notConsistency function mode
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
-
-        int eventAcross = -1;
-
-        for (int i = 0; i < listOfC.length; i++) {
-            if (listOfC[i].arguments().contains(var)) {
-                int event = listOfC[i].getNestedPruningEvent(var, false);
-                if (event > eventAcross)
-                    eventAcross = event;
-            }
-        }
-
-        if (eventAcross == -1)
-            return Domain.NONE;
-        else
-            return eventAcross;
     }
 
     @Override public void queueVariable(int level, Var var) {

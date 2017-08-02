@@ -30,13 +30,11 @@
 
 package org.jacop.constraints;
 
-import org.jacop.api.StoreAware;
 import org.jacop.core.Store;
 import org.jacop.core.SwitchesPruningLogging;
 import org.jacop.core.Var;
 
 import java.util.*;
-import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 /**
@@ -138,7 +136,6 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
      * @param var variable for which pruning event is retrieved
      * @return it returns the int code of the pruning event (GROUND, BOUND, ANY, NONE)
      */
-
     public int getConsistencyPruningEvent(Var var) {
 
         // If consistency function mode
@@ -147,8 +144,23 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
             if (possibleEvent != null)
                 return possibleEvent;
         }
+
+        if (constraintScope != null && ! constraintScope.isEmpty()) {
+
+            int eventAcross = constraintScope.stream()
+                .filter( i -> i.arguments().contains(var))
+                .mapToInt( i -> i.getNestedPruningEvent(var, true))
+                .max().orElseGet(() -> Integer.MIN_VALUE);
+
+            if (eventAcross != Integer.MIN_VALUE)
+                return eventAcross;
+
+        }
+
         return getDefaultConsistencyPruningEvent();
+
     }
+
 
     public abstract int getDefaultConsistencyPruningEvent();
 

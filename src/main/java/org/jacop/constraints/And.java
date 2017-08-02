@@ -120,60 +120,8 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
         throw new IllegalStateException("Not implemented as more precise version exists.");
     }
 
-
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (pruningEvents != null) {
-            Integer possibleEvent = pruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
-
-        int eventAcross = -1;
-
-        for (int i = 0; i < listOfC.length; i++) {
-            if (listOfC[i].arguments().contains(var)) {
-                int event = listOfC[i].getNestedPruningEvent(var, true);
-                if (event > eventAcross)
-                    eventAcross = event;
-            }
-        }
-
-        if (eventAcross == -1)
-            return Domain.NONE;
-        else
-            return eventAcross;
-
-    }
-
     @Override public int getDefaultConsistencyPruningEvent() {
         throw new IllegalStateException("Not implemented as more precise version exists.");
-    }
-
-    @Override public int getNotConsistencyPruningEvent(Var var) {
-
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
-
-        int eventAcross = -1;
-
-        for (int i = 0; i < listOfC.length; i++) {
-            if (listOfC[i].arguments().contains(var)) {
-                int event = listOfC[i].getNestedPruningEvent(var, false);
-                if (event > eventAcross)
-                    eventAcross = event;
-            }
-        }
-
-        if (eventAcross == -1)
-            return Domain.NONE;
-        else
-            return eventAcross;
-
     }
 
     @Override public void notConsistency(Store store) {

@@ -108,14 +108,7 @@ public class Alldiff extends Alldifferent {
         this(variables.toArray(new IntVar[variables.size()]));
     }
 
-
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
     }
 

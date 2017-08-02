@@ -404,48 +404,19 @@ public class LinearIntDom extends LinearInt {
             }
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override protected int getDefaultNestedConsistencyPruningEvent() {
         return IntDomain.ANY;
     }
 
-    @Override public int getNestedPruningEvent(Var var, boolean mode) {
-
-        // If consistency function mode
-        if (mode) {
-            if (consistencyPruningEvents != null) {
-                Integer possibleEvent = consistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return IntDomain.ANY;
-        }
-
-        // If notConsistency function mode
-        else {
-            if (notConsistencyPruningEvents != null) {
-                Integer possibleEvent = notConsistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return IntDomain.ANY;
-        }
+    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
+        return IntDomain.ANY;
     }
 
-    @Override public int getNotConsistencyPruningEvent(Var var) {
+    @Override public int getDefaultConsistencyPruningEvent() {
+        return IntDomain.ANY;
+    }
 
-        // If notConsistency function mode
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
         return IntDomain.ANY;
     }
 

@@ -69,6 +69,20 @@ public abstract class PrimitiveConstraint extends Constraint implements StoreAwa
             if (possibleEvent != null)
                 return possibleEvent;
         }
+
+        if (! constraintScope.isEmpty()) {
+
+            int eventAcross = constraintScope.stream()
+                .filter( i -> i.arguments().contains(var))
+                .mapToInt( i -> i.getNestedPruningEvent(var, false))
+                .max().orElseGet(() -> getDefaultNotConsistencyPruningEvent());
+
+            if (eventAcross < getDefaultNotConsistencyPruningEvent())
+                eventAcross = getDefaultNotConsistencyPruningEvent();
+
+            return eventAcross;
+
+        }
         return getDefaultNotConsistencyPruningEvent();
     }
 
@@ -90,6 +104,19 @@ public abstract class PrimitiveConstraint extends Constraint implements StoreAwa
                 if (possibleEvent != null)
                     return possibleEvent;
             }
+
+            if (constraintScope != null && ! constraintScope.isEmpty()) {
+
+                int eventAcross = constraintScope.stream()
+                    .filter( i -> i.arguments().contains(var))
+                    .mapToInt( i -> i.getNestedPruningEvent(var, true))
+                    .max().orElseGet(() -> Integer.MIN_VALUE);
+
+                if (eventAcross != Integer.MIN_VALUE)
+                    return eventAcross;
+
+            }
+
             return getDefaultNestedConsistencyPruningEvent();
         }
         // If notConsistency function mode
@@ -98,6 +125,17 @@ public abstract class PrimitiveConstraint extends Constraint implements StoreAwa
                 Integer possibleEvent = notConsistencyPruningEvents.get(var);
                 if (possibleEvent != null)
                     return possibleEvent;
+            }
+            if (constraintScope != null && ! constraintScope.isEmpty()) {
+
+                int eventAcross = constraintScope.stream()
+                    .filter( i -> i.arguments().contains(var))
+                    .mapToInt( i -> i.getNestedPruningEvent(var, false))
+                    .max().orElseGet(() -> Integer.MIN_VALUE);
+
+                if (eventAcross  != Integer.MIN_VALUE)
+                    return eventAcross;
+
             }
             return getDefaultNestedNotConsistencyPruningEvent();
         }
