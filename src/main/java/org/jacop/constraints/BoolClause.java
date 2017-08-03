@@ -143,21 +143,9 @@ public class BoolClause extends PrimitiveConstraint {
         return IntDomain.GROUND;
     }
 
-
-    // registers the constraint in the constraint store
-    @Override public void impose(Store store) {
-
-        positionX = new TimeStamp<Integer>(store, 0);
-        positionY = new TimeStamp<Integer>(store, 0);
-
-        super.impose(store);
-    }
-
     @Override public void include(Store store) {
-
         positionX = new TimeStamp<Integer>(store, 0);
         positionY = new TimeStamp<Integer>(store, 0);
-
     }
 
     @Override

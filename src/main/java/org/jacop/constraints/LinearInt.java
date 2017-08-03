@@ -333,6 +333,8 @@ public class LinearInt extends PrimitiveConstraint {
         return IntDomain.BOUND;
     }
 
+    // TODO, Why do we keep having those weird checks.
+    // Include method missing?
     @Override public void impose(Store store) {
 
         if (x == null || x.length == 0)

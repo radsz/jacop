@@ -149,19 +149,8 @@ public class AndBoolVector extends PrimitiveConstraint {
         return IntDomain.GROUND;
     }
 
-    // registers the constraint in the constraint store
-    @Override public void impose(Store store) {
-
-        position = new TimeStamp<Integer>(store, 0);
-
-        super.impose(store);
-
-    }
-
     @Override public void include(Store store) {
-
         position = new TimeStamp<Integer>(store, 0);
-
     }
 
     public void consistency(Store store) {

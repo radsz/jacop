@@ -83,10 +83,6 @@ public class OrBoolSimple extends PrimitiveConstraint {
         setScope(a, b, result);
     }
 
-
-    @Override public void include(Store store) {
-    }
-
     public void consistency(Store store) {
         // a OR b = result
         if (a.max() == 0 && b.max() == 0)

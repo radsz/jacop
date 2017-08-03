@@ -86,6 +86,13 @@ public abstract class PrimitiveConstraint extends Constraint implements StoreAwa
         return getDefaultNotConsistencyPruningEvent();
     }
 
+    @Override
+    public void impose(Store store) {
+
+        super.impose(store);
+        include(store);
+
+    }
     /**
      * It retrieves the pruning event for which any composed constraint which
      * uses this constraint should be evaluated. This events are the ones which

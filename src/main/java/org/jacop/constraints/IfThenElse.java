@@ -320,6 +320,10 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
         imposed = true;
     }
 
+    @Override public void include(Store store) {
+        this.store = store;
+    }
+
     @Override public boolean satisfied() {
 
         if (imposed) {
