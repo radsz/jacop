@@ -133,7 +133,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable {
      * @param listOfY the list of variable to which equality is counted.
      * @param n how many variables from list x are equal to at least one variable from list y.
      */
-    public AmongVar(ArrayList<IntVar> listOfX, ArrayList<IntVar> listOfY, IntVar n) {
+    public AmongVar(List<IntVar> listOfX, List<IntVar> listOfY, IntVar n) {
         this(listOfX.toArray(new IntVar[listOfX.size()]), listOfY.toArray(new IntVar[listOfY.size()]), n);
     }
 

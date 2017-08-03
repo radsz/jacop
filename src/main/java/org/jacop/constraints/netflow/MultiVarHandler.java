@@ -50,7 +50,7 @@ import org.jacop.core.Var;
 public class MultiVarHandler implements VarHandler {
 
     private final IntVar variable;
-    private final ArrayList<VarHandler> handlers;
+    private final List<VarHandler> handlers;
 
 
     public MultiVarHandler(IntVar variable, VarHandler... handlers) {

@@ -59,7 +59,7 @@ public class Lex extends DecomposedConstraint {
     /**
      * It contains constraints of the lex constraint decomposition.
      */
-    ArrayList<Constraint> constraints;
+    List<Constraint> constraints;
 
     /**
      * Is the lex enforcing lower then relationship?
@@ -108,7 +108,7 @@ public class Lex extends DecomposedConstraint {
     @Override public void imposeDecomposition(Store store) {
 
         if (constraints == null)
-            decompose(store);
+            constraints = decompose(store);
 
         for (Constraint c : constraints)
             store.impose(c, queueIndex);
@@ -135,7 +135,7 @@ public class Lex extends DecomposedConstraint {
     }
 
 
-    public ArrayList<Constraint> decomposeLERegular(Store store) {
+    public List<Constraint> decomposeLERegular(Store store) {
 
         if (constraints == null)
             constraints = new ArrayList<Constraint>();
@@ -256,7 +256,7 @@ public class Lex extends DecomposedConstraint {
     }
 
 
-    public ArrayList<Constraint> decomposeLTRegular(Store store) {
+    public List<Constraint> decomposeLTRegular(Store store) {
 
         if (constraints == null)
             constraints = new ArrayList<Constraint>();
@@ -388,7 +388,7 @@ public class Lex extends DecomposedConstraint {
         return constraints;
     }
 
-    public ArrayList<Constraint> decomposeLT(Store store) {
+    public List<Constraint> decomposeLT(Store store) {
 
         if (constraints == null)
             constraints = new ArrayList<Constraint>();
@@ -417,7 +417,7 @@ public class Lex extends DecomposedConstraint {
         return constraints;
     }
 
-    public ArrayList<Constraint> decomposeLE(Store store) {
+    public List<Constraint> decomposeLE(Store store) {
 
         if (constraints == null)
             constraints = new ArrayList<Constraint>();

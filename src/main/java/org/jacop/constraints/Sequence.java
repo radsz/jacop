@@ -88,7 +88,7 @@ public class Sequence extends DecomposedConstraint<Constraint> {
     @Override public void imposeDecomposition(Store store) {
 
         if (constraints == null)
-            decompose(store);
+            constraints = decompose(store);
 
         for (Constraint c : constraints)
             store.impose(c, queueIndex);

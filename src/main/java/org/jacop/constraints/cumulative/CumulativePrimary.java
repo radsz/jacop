@@ -137,8 +137,8 @@ class CumulativePrimary extends Constraint {
      * @param resources variables denoting resource usage of the tasks.
      * @param limit     the overall limit of resources which has to be used.
      */
-    public CumulativePrimary(ArrayList<? extends IntVar> starts, ArrayList<? extends Integer> durations,
-        ArrayList<? extends Integer> resources, IntVar limit) {
+    public CumulativePrimary(List<? extends IntVar> starts, List<? extends Integer> durations,
+        List<? extends Integer> resources, IntVar limit) {
 
         this(starts.toArray(new IntVar[starts.size()]), durations.stream().mapToInt(i -> i).toArray(),
             resources.stream().mapToInt(i -> i).toArray(), limit);

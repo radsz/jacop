@@ -32,7 +32,7 @@ package org.jacop.constraints;
 
 import org.jacop.core.IntDomain;
 
-import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Defines a rectangle with integer origine and length used in the diffn
@@ -50,7 +50,7 @@ class IntRectangle {
 
     int[] origin;
 
-    public IntRectangle(ArrayList<Integer> R) {
+    public IntRectangle(List<Integer> R) {
         dim = R.size() / 2;
         origin = new int[dim];
         length = new int[dim];

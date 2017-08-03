@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Constraint;
@@ -101,7 +102,7 @@ public class NonTransitiveDice extends ExampleFD {
     /**
      * It contains constraints which can be used for shaving guidance.
      */
-    public ArrayList<Constraint> shavingConstraints = new ArrayList<Constraint>();
+    public List<Constraint> shavingConstraints = new ArrayList<Constraint>();
 
     /**
      * If true then faces on non consequtive faces can be the same.

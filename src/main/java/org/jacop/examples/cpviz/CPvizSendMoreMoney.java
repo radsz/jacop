@@ -3,6 +3,7 @@ package org.jacop.examples.cpviz;
 
 // The import below is required since some utilities are used
 import java.util.ArrayList;
+import java.util.List;
 
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.LinearInt;
@@ -23,7 +24,7 @@ import org.jacop.search.TraceGenerator;
 public class CPvizSendMoreMoney {
 
     Store store = new Store();
-    ArrayList<IntVar> vars;
+    List<IntVar> vars;
     Search<IntVar> search;
 
     // Find for the equation on the left

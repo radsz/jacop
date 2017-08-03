@@ -33,6 +33,7 @@ package org.jacop.floats.constraints;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -90,7 +91,7 @@ public class Max extends Constraint {
      * @param max variable denoting the maximum value
      * @param variables the array of variables for which the maximum value is imposed.
      */
-    public Max(ArrayList<? extends FloatVar> variables, FloatVar max) {
+    public Max(List<? extends FloatVar> variables, FloatVar max) {
 
         this(variables.toArray(new FloatVar[variables.size()]), max);
 

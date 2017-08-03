@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.jacop.constraints.AndBool;
 import org.jacop.constraints.SumInt;
@@ -103,7 +104,7 @@ public class BIBD extends ExampleFD {
         for (int i = 0; i - 1 < v; i++)
             for (int j = i + 1; j < v; j++) {
 
-                ArrayList<IntVar> result = new ArrayList<IntVar>();
+                List<IntVar> result = new ArrayList<IntVar>();
 
                 for (int m = 0; m < b; m++) {
                     BooleanVar product = new BooleanVar(store, "p" + i + "_" + j + "_" + m);

@@ -137,7 +137,7 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
      * @param tuples    the conflict (forbidden) tuples for that constraint.
      */
 
-    public ExtensionalConflictVA(ArrayList<? extends IntVar> variables, int[][] tuples) {
+    public ExtensionalConflictVA(List<? extends IntVar> variables, int[][] tuples) {
         this(variables.toArray(new IntVar[variables.size()]), tuples);
     }
 

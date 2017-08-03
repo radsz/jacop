@@ -61,7 +61,7 @@ import org.jacop.core.ValueEnumeration;
 
 public class SoftGCC extends DecomposedConstraint {
 
-    public ArrayList<Constraint> decomposition;
+    public List<Constraint> decomposition;
 
     public IntVar[] xVars;
 
@@ -305,7 +305,7 @@ public class SoftGCC extends DecomposedConstraint {
     }
 
 
-    public ArrayList<Constraint> primitiveDecomposition(Store store) {
+    public List<Constraint> primitiveDecomposition(Store store) {
 
         if (decomposition == null) {
 
@@ -313,7 +313,7 @@ public class SoftGCC extends DecomposedConstraint {
 
             if (violationMeasure == ViolationMeasure.VALUE_BASED) {
 
-                ArrayList<IntVar> costs = new ArrayList<IntVar>(countedValue.length);
+                List<IntVar> costs = new ArrayList<IntVar>(countedValue.length);
 
                 for (int i = 0; i < countedValue.length; i++) {
 
@@ -356,7 +356,7 @@ public class SoftGCC extends DecomposedConstraint {
 
                         decomposition.add(new Count(xVars, hardCounter, countedValue[i]));
 
-                        ArrayList<int[]> tuples = new ArrayList<int[]>();
+                        List<int[]> tuples = new ArrayList<int[]>();
 
                         for (ValueEnumeration hard = hardCounter.domain.valueEnumeration(); hard.hasMoreElements(); ) {
 
@@ -399,11 +399,11 @@ public class SoftGCC extends DecomposedConstraint {
             return decomposition;
         } else {
 
-            ArrayList<Constraint> result = new ArrayList<Constraint>();
+            List<Constraint> result = new ArrayList<Constraint>();
 
             if (violationMeasure == ViolationMeasure.VALUE_BASED) {
 
-                ArrayList<IntVar> costs = new ArrayList<IntVar>(countedValue.length);
+                List<IntVar> costs = new ArrayList<IntVar>(countedValue.length);
 
                 for (int i = 0; i < countedValue.length; i++) {
 
@@ -446,7 +446,7 @@ public class SoftGCC extends DecomposedConstraint {
 
                         result.add(new Count(xVars, hardCounter, countedValue[i]));
 
-                        ArrayList<int[]> tuples = new ArrayList<int[]>();
+                        List<int[]> tuples = new ArrayList<int[]>();
 
                         for (ValueEnumeration hard = hardCounter.domain.valueEnumeration(); hard.hasMoreElements(); ) {
 
@@ -624,7 +624,7 @@ public class SoftGCC extends DecomposedConstraint {
     @Override public void imposeDecomposition(Store store) {
 
         if (decomposition == null)
-            decompose(store);
+            decomposition = decompose(store);
 
         for (Constraint c : decomposition)
             store.impose(c);

@@ -33,6 +33,7 @@ package org.jacop.ui;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.List;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -52,15 +53,15 @@ public class PrintSchedule {
         }
 
         @SuppressWarnings("unchecked") public int compare(T o1, T o2) {
-            return ((((ArrayList<IntVar>) o1).get(1)).min() * 1000 + (((ArrayList<IntVar>) o1).get(3)).min()) - (
-                (((ArrayList<IntVar>) o2).get(1)).min() * 1000 + (((ArrayList<IntVar>) o2).get(3)).min());
+            return ((((List<IntVar>) o1).get(1)).min() * 1000 + (((List<IntVar>) o1).get(3)).min()) - (
+                (((List<IntVar>) o2).get(1)).min() * 1000 + (((List<IntVar>) o2).get(3)).min());
         }
     }
 
 
     int[] d;
 
-    ArrayList<String> n;
+    List<String> n;
 
     IntVar[] t, r;
 
@@ -114,7 +115,7 @@ public class PrintSchedule {
      * @param d duration time of the operations.
      * @param r resource usage of the operations.
      */
-    public PrintSchedule(ArrayList<String> name, ArrayList<? extends IntVar> t, ArrayList<Integer> d, ArrayList<? extends IntVar> r) {
+    public PrintSchedule(List<String> name, List<? extends IntVar> t, List<Integer> d, List<? extends IntVar> r) {
         n = name;
         this.t = new IntVar[t.size()];
         for (int i = 0; i < t.size(); i++)
@@ -134,7 +135,7 @@ public class PrintSchedule {
      * @param d duration time of the operations.
      * @param r resource usage of the operations.
      */
-    public PrintSchedule(ArrayList<String> name, ArrayList<? extends IntVar> t, int[] d, ArrayList<? extends IntVar> r) {
+    public PrintSchedule(List<String> name, List<? extends IntVar> t, int[] d, List<? extends IntVar> r) {
         n = new ArrayList<String>();
         for (int i = 0; i < name.size(); i++)
 	  n.add(name.get(i));
@@ -157,7 +158,7 @@ public class PrintSchedule {
      * @param r resource usage of the operations.
      */
 
-    public PrintSchedule(ArrayList<String> name, IntVar[] t, int[] d, IntVar[] r) {
+    public PrintSchedule(List<String> name, IntVar[] t, int[] d, IntVar[] r) {
         n = new ArrayList<String>();
         for (int i = 0; i < name.size(); i++)
 	  n.add(name.get(i));
@@ -177,7 +178,7 @@ public class PrintSchedule {
      * @param d duration time of the operations.
      * @param r resource usage of the operations.
      */
-    public PrintSchedule(ArrayList<String> name, IntVar[] t, IntVar[] d, IntVar[] r) {
+    public PrintSchedule(List<String> name, IntVar[] t, IntVar[] d, IntVar[] r) {
         n = new ArrayList<String>();
         for (int i = 0; i < name.size(); i++)
 	  n.add(name.get(i));
@@ -226,9 +227,9 @@ public class PrintSchedule {
 
         StringBuffer result = new StringBuffer("\n");
 
-        ArrayList<?>[] TaskArr = new ArrayList[n.size()];
+        List<?>[] TaskArr = new ArrayList[n.size()];
         for (int i = 0; i < n.size(); i++) {
-            ArrayList<Object> V = new ArrayList<Object>();
+            List<Object> V = new ArrayList<Object>();
 
             V.add(n.get(i));
             V.add(t[i]);
@@ -239,7 +240,7 @@ public class PrintSchedule {
 
         }
 
-        Comparator<ArrayList<?>> c = new TaskScheduleComparator<ArrayList<?>>();
+        Comparator<List<?>> c = new TaskScheduleComparator<List<?>>();
         Arrays.sort(TaskArr, c);
 
         int maxR = findMaxR();
@@ -269,7 +270,7 @@ public class PrintSchedule {
             int start = ((IntVar) TaskArr[j].get(1)).min();
             int dur = (Integer) TaskArr[j].get(2);
 
-            ArrayList<ArrayList<Integer>> Line = new ArrayList<ArrayList<Integer>>(resSize);
+            List<List<Integer>> Line = new ArrayList<List<Integer>>(resSize);
 
             for (int n = 0; n < resSize; n++)
                 Line.add(new ArrayList<Integer>());

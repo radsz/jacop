@@ -30,8 +30,8 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -131,7 +131,7 @@ public class SumBool extends PrimitiveConstraint {
      * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
      * @param sum variable containing the sum of weighted variables.
      */
-    public SumBool(Store store, ArrayList<? extends IntVar> variables, String rel, IntVar sum) {
+    public SumBool(Store store, List<? extends IntVar> variables, String rel, IntVar sum) {
         this(store, variables.toArray(new IntVar[variables.size()]), rel, sum);
     }
 

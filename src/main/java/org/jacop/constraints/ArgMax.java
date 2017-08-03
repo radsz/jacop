@@ -30,8 +30,8 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -111,13 +111,13 @@ public class ArgMax extends Constraint {
      * @param indexOffset the offset for the index that is computed from 1 by default (if needed from 0, use -1 for this parameter)
      * @param tiebreak defines if tie breaking sgould be used (returning the least index if several maximum elements
      */
-    public ArgMax(ArrayList<? extends IntVar> variables, IntVar maxIndex, int indexOffset, boolean tiebreak) {
+    public ArgMax(List<? extends IntVar> variables, IntVar maxIndex, int indexOffset, boolean tiebreak) {
         this(variables, maxIndex);
         this.indexOffset = indexOffset;
         this.tiebreak = tiebreak;
     }
 
-    public ArgMax(ArrayList<? extends IntVar> variables, IntVar maxIndex) {
+    public ArgMax(List<? extends IntVar> variables, IntVar maxIndex) {
         this(variables.toArray(new IntVar[variables.size()]), maxIndex);
     }
 

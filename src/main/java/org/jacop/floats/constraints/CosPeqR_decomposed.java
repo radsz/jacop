@@ -65,7 +65,7 @@ public class CosPeqR_decomposed extends DecomposedConstraint<Constraint> {
     /**
      * It contains constraints of the CosPeqR_decomposed constraint decomposition. 
      */
-    ArrayList<Constraint> constraints;
+    List<Constraint> constraints;
 
     /**
      * It constructs cos(P) = Q constraints.
@@ -96,7 +96,7 @@ public class CosPeqR_decomposed extends DecomposedConstraint<Constraint> {
     @Override public void imposeDecomposition(Store store) {
 
         if (constraints == null  || constraints.size() == 0)
-            decompose(store);
+            constraints = decompose(store);
 
         for (Constraint c : constraints)
             store.impose(c);

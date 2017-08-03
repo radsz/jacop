@@ -34,11 +34,7 @@ import java.io.*;
 import java.nio.charset.Charset;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.IdentityHashMap;
-import java.util.Stack;
+import java.util.*;
 
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
@@ -158,7 +154,7 @@ public class TraceGenerator<T extends Var> implements SelectChoicePoint<T>, Cons
     /**
      * It specifies the list of variables that are being traced.
      */
-    public ArrayList<Var> tracedVar = new ArrayList<Var>();
+    public List<Var> tracedVar = new ArrayList<Var>();
 
 
     public HashMap<Var, Integer> varIndex = new HashMap<Var, Integer>();
@@ -683,7 +679,7 @@ public class TraceGenerator<T extends Var> implements SelectChoicePoint<T>, Cons
         tracedVar.add(v);
     }
 
-    private int minValue(ArrayList<Var> vars) {
+    private int minValue(List<Var> vars) {
         int min = IntDomain.MaxInt;
         if (vars.get(0) instanceof IntVar)
             for (Var v : vars)
@@ -692,7 +688,7 @@ public class TraceGenerator<T extends Var> implements SelectChoicePoint<T>, Cons
         return min;
     }
 
-    private int maxValue(ArrayList<Var> vars) {
+    private int maxValue(List<Var> vars) {
         int max = IntDomain.MinInt;
         if (vars.get(0) instanceof IntVar)
             for (Var v : vars)

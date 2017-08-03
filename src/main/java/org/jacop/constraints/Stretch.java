@@ -30,7 +30,6 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -61,7 +60,7 @@ public class Stretch extends DecomposedConstraint {
     int[] min;
     int[] max;
     IntVar[] x;
-    ArrayList<Constraint> constraints;
+    List<Constraint> constraints;
 
     /**
      * It creates a Stretch constraint.
@@ -85,7 +84,7 @@ public class Stretch extends DecomposedConstraint {
     @Override public void imposeDecomposition(Store store) {
 
         if (constraints == null)
-            decompose(store);
+            constraints = decompose(store);
 
         for (Constraint c : constraints)
             store.impose(c, queueIndex);
@@ -158,10 +157,7 @@ public class Stretch extends DecomposedConstraint {
 
         fsm.resize();
 
-        constraints = new ArrayList<Constraint>();
-        constraints.add(new Regular(fsm, x));
-
-        return constraints;
+        return Arrays.asList(new Regular(fsm, x));
     }
 
 

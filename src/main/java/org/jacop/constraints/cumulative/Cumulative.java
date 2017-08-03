@@ -106,7 +106,7 @@ public class Cumulative extends CumulativeBasic {
      * @param resources variables denoting resource usage of the tasks.
      * @param limit     the overall limit of resources which has to be used.
      */
-    public Cumulative(ArrayList<? extends IntVar> starts, ArrayList<? extends IntVar> durations, ArrayList<? extends IntVar> resources,
+    public Cumulative(List<? extends IntVar> starts, List<? extends IntVar> durations, List<? extends IntVar> resources,
         IntVar limit) {
 
         this(starts.toArray(new IntVar[starts.size()]), durations.toArray(new IntVar[durations.size()]),

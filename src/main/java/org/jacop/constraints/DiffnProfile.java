@@ -31,7 +31,7 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
+import java.util.List;
 
 import org.jacop.core.IntDomain;
 
@@ -53,7 +53,7 @@ class DiffnProfile extends Profile {
     DiffnProfile() {
     }
 
-    void make(int i, int j, Rectangle r, int begin, int end, ArrayList<Rectangle> Rs) {
+    void make(int i, int j, Rectangle r, int begin, int end, List<Rectangle> Rs) {
 
         clear();
         maxProfileItemHeight = 0;

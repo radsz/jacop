@@ -229,7 +229,7 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
      * It constructs an alldistinct constraint.
      * @param list arraylist of variables.
      */
-    public Alldistinct(ArrayList<? extends IntVar> list) {
+    public Alldistinct(List<? extends IntVar> list) {
 
         this(list.toArray(new IntVar[list.size()]));
 
@@ -559,7 +559,7 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
 
         // Revisited Tarjan
 
-        ArrayList<IntVar> l = new ArrayList<IntVar>();
+        List<IntVar> l = new ArrayList<IntVar>();
         HashMap<IntVar, Integer> dfsnum = new HashMap<IntVar, Integer>();
         HashMap<IntVar, Integer> low = new HashMap<IntVar, Integer>();
 
@@ -887,7 +887,7 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
 
         while (!maximumMatchingFound) {
 
-            ArrayList<LinkedList<Object>> allpaths = new ArrayList<LinkedList<Object>>();
+            List<LinkedList<Object>> allpaths = new ArrayList<LinkedList<Object>>();
 
             LinkedList<Object> path = new LinkedList<Object>();
 
@@ -1157,7 +1157,7 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
 
         n = nStamp.value();
 
-        ArrayList<IntVar> l = new ArrayList<IntVar>();
+        List<IntVar> l = new ArrayList<IntVar>();
         HashMap<IntVar, Integer> dfsnum = new HashMap<IntVar, Integer>();
         HashMap<IntVar, Integer> low = new HashMap<IntVar, Integer>();
 
@@ -1227,7 +1227,7 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
         variableQueue.add((IntVar) var);
     }
 
-    private void revisitTarjan(IntVar x, ArrayList<IntVar> l, HashMap<IntVar, Integer> dfsnum, HashMap<IntVar, Integer> low,
+    private void revisitTarjan(IntVar x, List<IntVar> l, HashMap<IntVar, Integer> dfsnum, HashMap<IntVar, Integer> low,
         LinkedHashSet<IntVar> fdvs) {
 
         Integer nInteger = n;
@@ -1362,7 +1362,7 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
         return buf.toString();
     }
 
-    private void visitTarjan(IntVar x, ArrayList<IntVar> l, HashMap<IntVar, Integer> dfsnum, HashMap<IntVar, Integer> low) {
+    private void visitTarjan(IntVar x, List<IntVar> l, HashMap<IntVar, Integer> dfsnum, HashMap<IntVar, Integer> low) {
 
         Integer vnInteger = vn;
         dfsnum.put(x, vnInteger);
@@ -1714,8 +1714,8 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
 
     int estimatePruning(IntVar x, Integer v) {
 
-        ArrayList<IntVar> exploredX = new ArrayList<IntVar>();
-        ArrayList<Integer> exploredV = new ArrayList<Integer>();
+        List<IntVar> exploredX = new ArrayList<IntVar>();
+        List<Integer> exploredV = new ArrayList<Integer>();
 
         int pruning = estimatePruningRecursive(x, v, exploredX, exploredV);
 
@@ -1747,7 +1747,7 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
         return pruning;
     }
 
-    int estimatePruningRecursive(IntVar xVar, Integer v, ArrayList<IntVar> exploredX, ArrayList<Integer> exploredV) {
+    int estimatePruningRecursive(IntVar xVar, Integer v, List<IntVar> exploredX, List<Integer> exploredV) {
 
         if (exploredX.contains(xVar))
             return 0;

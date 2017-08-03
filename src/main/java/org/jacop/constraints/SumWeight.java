@@ -122,7 +122,7 @@ import java.util.stream.Stream;
      * @param weights   weight for each variable.
      * @param sum       variable containing the sum of weighted variables.
      */
-    public SumWeight(ArrayList<? extends IntVar> variables, ArrayList<Integer> weights, IntVar sum) {
+    public SumWeight(List<? extends IntVar> variables, List<Integer> weights, IntVar sum) {
         this(variables.toArray(new IntVar[variables.size()]), weights.stream().mapToInt(i -> i).toArray(), sum);
     }
 

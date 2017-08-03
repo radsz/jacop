@@ -31,8 +31,8 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -115,7 +115,7 @@ public class ElementVariableFast extends Constraint {
      * @param list list of variables from which an index-th element is taken
      * @param value a value of the index-th element from list
      */
-    public ElementVariableFast(IntVar index, ArrayList<? extends IntVar> list, IntVar value) {
+    public ElementVariableFast(IntVar index, List<? extends IntVar> list, IntVar value) {
 
         this(index, list.toArray(new IntVar[list.size()]), value, 0);
 
@@ -129,7 +129,7 @@ public class ElementVariableFast extends Constraint {
      * @param value a value of the index-th element from list
      * @param indexOffset shift applied to index variable. 
      */
-    public ElementVariableFast(IntVar index, ArrayList<? extends IntVar> list, IntVar value, int indexOffset) {
+    public ElementVariableFast(IntVar index, List<? extends IntVar> list, IntVar value, int indexOffset) {
 
         this(index, list.toArray(new IntVar[list.size()]), value, indexOffset);
 

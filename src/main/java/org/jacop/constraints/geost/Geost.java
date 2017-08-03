@@ -727,7 +727,7 @@ public class Geost extends Constraint implements UsesQueueVariable {
 
                 int prevSize = scope.size();
 
-                ArrayList<GeostObject> constraintScopeArr = new ArrayList<GeostObject>(constraintScope.length);
+                List<GeostObject> constraintScopeArr = new ArrayList<GeostObject>(constraintScope.length);
                 for (GeostObject o : constraintScope)
                     constraintScopeArr.add(o);
 
@@ -1829,7 +1829,7 @@ public class Geost extends Constraint implements UsesQueueVariable {
      */
     public List<Long> getStatistics() {
 
-        ArrayList<Long> stats = new ArrayList<Long>();
+        List<Long> stats = new ArrayList<Long>();
 
         stats.add(pruneMinCount);
         stats.add(pruneMaxCount);

@@ -36,7 +36,7 @@ import org.jacop.core.Var;
 import org.jacop.core.Store;
 import org.jacop.core.IntDomain;
 
-import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -81,7 +81,7 @@ public class VariableTrace extends Constraint implements UsesQueueVariable {
      * It constructs trace daemon for variables vs
      * @param vs variables to be traced
      */
-    public VariableTrace(ArrayList<Var> vs) {
+    public VariableTrace(List<Var> vs) {
         this(vs.toArray(new Var[vs.size()]));
     }
 

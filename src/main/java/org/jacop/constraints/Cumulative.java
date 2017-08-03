@@ -192,7 +192,7 @@ public class Cumulative extends Constraint {
      * @param resources variables denoting resource usage of the tasks.
      * @param limit     the overall limit of resources which has to be used.
      */
-    public Cumulative(ArrayList<? extends IntVar> starts, ArrayList<? extends IntVar> durations, ArrayList<? extends IntVar> resources,
+    public Cumulative(List<? extends IntVar> starts, List<? extends IntVar> durations, List<? extends IntVar> resources,
         IntVar limit) {
 
         this(starts.toArray(new IntVar[starts.size()]), durations.toArray(new IntVar[durations.size()]),
@@ -210,7 +210,7 @@ public class Cumulative extends Constraint {
      * @param edgeFinding true if edge finding algorithm should be used.
      */
 
-    public Cumulative(ArrayList<? extends IntVar> starts, ArrayList<? extends IntVar> durations, ArrayList<? extends IntVar> resources,
+    public Cumulative(List<? extends IntVar> starts, List<? extends IntVar> durations, List<? extends IntVar> resources,
         IntVar limit, boolean edgeFinding) {
         this(starts, durations, resources, limit, edgeFinding, true);
     }
@@ -227,7 +227,7 @@ public class Cumulative extends Constraint {
      */
 
 
-    public Cumulative(ArrayList<? extends IntVar> starts, ArrayList<? extends IntVar> durations, ArrayList<? extends IntVar> resources,
+    public Cumulative(List<? extends IntVar> starts, List<? extends IntVar> durations, List<? extends IntVar> resources,
         IntVar limit, boolean edgeFinding, boolean profile) {
 
         this(starts.toArray(new IntVar[starts.size()]), durations.toArray(new IntVar[durations.size()]),
@@ -265,7 +265,7 @@ public class Cumulative extends Constraint {
 
 
 
-    boolean after(Task l, ArrayList<Task> S) {
+    boolean after(Task l, List<Task> S) {
 
         int startS = IntDomain.MaxInt;
         long a = 0;
@@ -287,7 +287,7 @@ public class Cumulative extends Constraint {
         return afterS;
     }
 
-    boolean before(Task l, ArrayList<Task> S) {
+    boolean before(Task l, List<Task> S) {
         int completionS = IntDomain.MinInt;
         int a = 0;
         boolean beforeS = true;
@@ -308,7 +308,7 @@ public class Cumulative extends Constraint {
         return beforeS;
     }
 
-    boolean between(Task l, ArrayList<Task> S) {
+    boolean between(Task l, List<Task> S) {
         int completionS = IntDomain.MinInt, startS = IntDomain.MaxInt;
         long a = 0, larea = 0;
         boolean betweenS = true;
@@ -394,7 +394,7 @@ public class Cumulative extends Constraint {
 
             // Create S = {t|EST(t) >= est0}
             // Create L = {t|EST(t) < est0 && LCT(t) > est0}
-            ArrayList<Task> S = new ArrayList<Task>(Ts.length), L = new ArrayList<Task>(Ts.length);
+            List<Task> S = new ArrayList<Task>(Ts.length), L = new ArrayList<Task>(Ts.length);
             for (Task t : Ts) {
                 if (t.nonZeroTask()) {
                     if (t.est() >= est0)
@@ -557,7 +557,7 @@ public class Cumulative extends Constraint {
 
             // Create S = {t|EST(t) <= lct0}
             // Create L = {t|EST(t) < lct0 && LCT(t) > lct0}
-            ArrayList<Task> S = new ArrayList<Task>(Ts.length), L = new ArrayList<Task>(Ts.length);
+            List<Task> S = new ArrayList<Task>(Ts.length), L = new ArrayList<Task>(Ts.length);
             for (Task t : Ts) {
                 if (t.nonZeroTask()) {
                     if (t.lct() <= lct0)
@@ -702,7 +702,7 @@ public class Cumulative extends Constraint {
         }
     }
 
-    int est(ArrayList<Task> S) {
+    int est(List<Task> S) {
         int estS = IntDomain.MaxInt;
 
         for (Task t : S) {
@@ -713,7 +713,7 @@ public class Cumulative extends Constraint {
         return estS;
     }
 
-    boolean fitTasksAfter(ArrayList<Task> s, int est0) {
+    boolean fitTasksAfter(List<Task> s, int est0) {
         int areaS = 0, lctOfS = IntDomain.MinInt, minDur = IntDomain.MaxInt, minRes = IntDomain.MaxInt;
         boolean FitAfter;
 
@@ -739,7 +739,7 @@ public class Cumulative extends Constraint {
         return FitAfter;
     }
 
-    boolean fitTasksBefore(ArrayList<Task> s, int lct0) {
+    boolean fitTasksBefore(List<Task> s, int lct0) {
         int areaS = 0, estOfS = IntDomain.MaxInt, minDur = IntDomain.MaxInt, minRes = IntDomain.MaxInt;
         boolean FitBefore;
 
@@ -777,7 +777,7 @@ public class Cumulative extends Constraint {
         return !(min1 >= max2 || max1 <= min2);
     }
 
-    int lct(ArrayList<Task> S) {
+    int lct(List<Task> S) {
         int lctS = IntDomain.MinInt;
 
         for (Task t : S) {
@@ -786,7 +786,7 @@ public class Cumulative extends Constraint {
         return lctS;
     }
 
-    int maxArea(ArrayList<Task> Ts) {
+    int maxArea(List<Task> Ts) {
         long area = 0;
         int index = 0;
 
@@ -844,7 +844,7 @@ public class Cumulative extends Constraint {
         return tDur_min * t.res.min();
     }
 
-    void notFirst(Store store, Task s, ArrayList<Task> S) {
+    void notFirst(Store store, Task s, List<Task> S) {
         int sEST = s.est(); // sLCT = s.LCT();
         int completionS = IntDomain.MinInt, newStartl = IntDomain.MinInt, startl = sEST;
         long a = 0, slack, maxuse = limit.max() - s.res.min();
@@ -907,7 +907,7 @@ public class Cumulative extends Constraint {
         }
     }
 
-    void notLast(Store store, Task s, ArrayList<Task> S) {
+    void notLast(Store store, Task s, List<Task> S) {
         int sLCT = s.lct();
         int compl = sLCT;
 
@@ -1093,7 +1093,7 @@ public class Cumulative extends Constraint {
         }
     }
 
-    void removeFromS_Est(ArrayList<Task> s) {
+    void removeFromS_Est(List<Task> s) {
 
         // s = s \ {t in s | est(t) = est(s)}
         int estS = est(s);
@@ -1109,7 +1109,7 @@ public class Cumulative extends Constraint {
         }
     }
 
-    void removeFromS_Lct(ArrayList<Task> s) {
+    void removeFromS_Lct(List<Task> s) {
 
         // s = s \ {t in s | lct(t) = lct(s)}
         int lctS = lct(s);

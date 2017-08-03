@@ -30,7 +30,7 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 import org.jacop.core.IntVar;
@@ -58,7 +58,7 @@ public class Element extends Constraint implements UsesQueueVariable {
      * @param variables list of variables.
      * @param value variable to which index variable is equal to.
      */
-    public Element(IntVar index, ArrayList<? extends IntVar> variables, IntVar value) {
+    public Element(IntVar index, List<? extends IntVar> variables, IntVar value) {
         queueIndex = 1;
         c = new ElementVariable(index, variables, value);
     }
@@ -70,7 +70,7 @@ public class Element extends Constraint implements UsesQueueVariable {
      * @param value value variable.
      * @param shift shift by which the index value is moved to the left.
      */
-    public Element(IntVar index, ArrayList<? extends IntVar> variables, IntVar value, int shift) {
+    public Element(IntVar index, List<? extends IntVar> variables, IntVar value, int shift) {
         queueIndex = 1;
         c = new ElementVariable(index, variables, value, shift);
     }

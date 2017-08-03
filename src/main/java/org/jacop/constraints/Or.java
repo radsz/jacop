@@ -30,8 +30,8 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Store;
@@ -83,7 +83,7 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
      * It constructs Or constraint.
      * @param listOfC list of primitive constraints which at least one of them has to be satisfied.
      */
-    public Or(ArrayList<PrimitiveConstraint> listOfC) {
+    public Or(List<PrimitiveConstraint> listOfC) {
         this(listOfC.toArray(new PrimitiveConstraint[listOfC.size()]));
     }
 

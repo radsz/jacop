@@ -58,7 +58,7 @@ public class Diff extends Constraint implements UsesQueueVariable {
     int stamp = 0;
 
     // use to collect information on possible length of rectangles for pruning
-    ArrayList<Integer> durMax;
+    List<Integer> durMax;
     //boolean durMaxDecided = false;
 
     HashSet<IntVar> variableQueue = new HashSet<IntVar>();
@@ -150,7 +150,7 @@ public class Diff extends Constraint implements UsesQueueVariable {
      * It specifies a diffn constraint.
      * @param rectangles list of rectangles which can not overlap in at least one dimension.
      */
-    public Diff(ArrayList<? extends ArrayList<? extends IntVar>> rectangles) {
+    public Diff(List<? extends List<? extends IntVar>> rectangles) {
 
         queueIndex = 2;
         this.rectangles = Rectangle.toArrayOf2DRectangles(rectangles);
@@ -164,7 +164,7 @@ public class Diff extends Constraint implements UsesQueueVariable {
      * @param profile specifies is the profiles are used.
      * @param rectangles list of rectangles which can not overlap in at least one dimension.
      */
-    public Diff(ArrayList<? extends ArrayList<? extends IntVar>> rectangles, boolean profile) {
+    public Diff(List<? extends List<? extends IntVar>> rectangles, boolean profile) {
 
         this(rectangles);
         doProfile = profile;
@@ -179,8 +179,8 @@ public class Diff extends Constraint implements UsesQueueVariable {
      * @param l1 list of variables denoting length of the rectangle in the first dimension.
      * @param l2 list of variables denoting length of the rectangle in the second dimension.
      */
-    public Diff(ArrayList<? extends IntVar> o1, ArrayList<? extends IntVar> o2, ArrayList<? extends IntVar> l1,
-        ArrayList<? extends IntVar> l2) {
+    public Diff(List<? extends IntVar> o1, List<? extends IntVar> o2, List<? extends IntVar> l1,
+        List<? extends IntVar> l2) {
 
         this(o1.toArray(new IntVar[o1.size()]), o2.toArray(new IntVar[o2.size()]), l1.toArray(new IntVar[l1.size()]),
             l2.toArray(new IntVar[l2.size()]));
@@ -195,8 +195,8 @@ public class Diff extends Constraint implements UsesQueueVariable {
      * @param l2 list of variables denoting length of the rectangle in the second dimension.
      * @param profile it specifies if the profile should be computed and used.
      */
-    public Diff(ArrayList<? extends IntVar> o1, ArrayList<? extends IntVar> o2, ArrayList<? extends IntVar> l1,
-        ArrayList<? extends IntVar> l2, boolean profile) {
+    public Diff(List<? extends IntVar> o1, List<? extends IntVar> o2, List<? extends IntVar> l1,
+        List<? extends IntVar> l2, boolean profile) {
         this(o1, o2, l1, l2);
         doProfile = profile;
     }
@@ -243,7 +243,7 @@ public class Diff extends Constraint implements UsesQueueVariable {
         return contains;
     }
 
-    boolean findRectangles(Rectangle r, ArrayList<IntRectangle> UsedRect, ArrayList<Rectangle> ProfileCandidates,
+    boolean findRectangles(Rectangle r, List<IntRectangle> UsedRect, List<Rectangle> ProfileCandidates,
         HashSet<IntVar> fdvQueue) {
 
         boolean contains = false, checkArea = false;
@@ -457,7 +457,7 @@ public class Diff extends Constraint implements UsesQueueVariable {
         return !(min1 >= max2 || max1 <= min2);
     }
 
-    Pair minForbiddenInterval(int start, int i, Rectangle r, ArrayList<IntRectangle> ConsideredRect) {
+    Pair minForbiddenInterval(int start, int i, Rectangle r, List<IntRectangle> ConsideredRect) {
 
         if (notFit(i, r, ConsideredRect, start)) {
             // System.out.println("New start = " + start + ".." + (int)(start +
@@ -467,7 +467,7 @@ public class Diff extends Constraint implements UsesQueueVariable {
             return new Pair(-1, -1);
     }
 
-    void narrowIth(int i, Rectangle r, ArrayList<IntRectangle> UsedRect, ArrayList<Rectangle> ProfileCandidates) {
+    void narrowIth(int i, Rectangle r, List<IntRectangle> UsedRect, List<Rectangle> ProfileCandidates) {
         int s;
         int rLengthIMin = r.length[i].min();
 
@@ -515,7 +515,7 @@ public class Diff extends Constraint implements UsesQueueVariable {
             }
             // System.out.println();
 
-            ArrayList<IntRectangle> ConsideredRect = new ArrayList<IntRectangle>();
+            List<IntRectangle> ConsideredRect = new ArrayList<IntRectangle>();
             for (IntRectangle ir : starts) {
                 s = ir.origin[i];
                 // System.out.println("*** start = " + s);
@@ -612,7 +612,7 @@ public class Diff extends Constraint implements UsesQueueVariable {
     }
 
 
-    void narrowRectangle(Rectangle r, ArrayList<IntRectangle> UsedRect, ArrayList<Rectangle> ProfileCandidates) {
+    void narrowRectangle(Rectangle r, List<IntRectangle> UsedRect, List<Rectangle> ProfileCandidates) {
 
         if (trace) {
             System.out.println("Narrowing " + r);
@@ -627,8 +627,8 @@ public class Diff extends Constraint implements UsesQueueVariable {
 
     void narrowRectangles(HashSet<IntVar> fdvQueue) {
         boolean needToNarrow = false;
-        ArrayList<IntRectangle> UsedRect = new ArrayList<IntRectangle>();
-        ArrayList<Rectangle> ProfileCandidates = new ArrayList<Rectangle>();
+        List<IntRectangle> UsedRect = new ArrayList<IntRectangle>();
+        List<Rectangle> ProfileCandidates = new ArrayList<Rectangle>();
 
         for (Rectangle r : rectangles) {
             boolean settled = true, minLengthEq0 = false;
@@ -668,7 +668,7 @@ public class Diff extends Constraint implements UsesQueueVariable {
         }
     }
 
-    boolean notFit(int i, Rectangle r, ArrayList<IntRectangle> ConsideredRect, int barierPosition) {
+    boolean notFit(int i, Rectangle r, List<IntRectangle> ConsideredRect, int barierPosition) {
         Profile barrier = new Profile((short) Profile.diffn);
         int minimalAfter = 0;
         int j = 0;
@@ -728,7 +728,7 @@ public class Diff extends Constraint implements UsesQueueVariable {
                     if (maxJ > last.max) // exist free space after last
                         // obstacle
                         barrier.addToProfile(last.max, maxJ, minimalAfter);
-                    ArrayList<Interval> toAdd = new ArrayList<Interval>();
+                    List<Interval> toAdd = new ArrayList<Interval>();
                     for (int m = 0; m < barrier.size() - 1; m++) {
                         ProfileItem p = barrier.get(m);
                         ProfileItem pNext = barrier.get(m + 1);
@@ -853,7 +853,7 @@ public class Diff extends Constraint implements UsesQueueVariable {
         }
     }
 
-    void profileNarrowing(int i, Rectangle r, ArrayList<Rectangle> ProfileCandidates) {
+    void profileNarrowing(int i, Rectangle r, List<Rectangle> ProfileCandidates) {
         // check profile first
 
         IntDomain rOriginIdom = r.origin[i].dom();

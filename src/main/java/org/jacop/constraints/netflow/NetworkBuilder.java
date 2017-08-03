@@ -238,14 +238,14 @@ public class NetworkBuilder {
      * @param store current store
      * @return decomposed network using primitive constraints
      */
-    public ArrayList<Constraint> primitiveDecomposition(Store store) {
+    public List<Constraint> primitiveDecomposition(Store store) {
 
-        ArrayList<Constraint> result = new ArrayList<Constraint>();
+        List<Constraint> result = new ArrayList<Constraint>();
 
         //@TODO, fix it? Check the remark above.
         for (Node node : nodeList) {
-            ArrayList<IntVar> in = new ArrayList<IntVar>();
-            ArrayList<IntVar> out = new ArrayList<IntVar>();
+            List<IntVar> in = new ArrayList<IntVar>();
+            List<IntVar> out = new ArrayList<IntVar>();
 
             for (Arc arc : arcList) {
 
@@ -316,8 +316,8 @@ public class NetworkBuilder {
             }
         }
 
-        ArrayList<IntVar> vars = new ArrayList<IntVar>();
-        ArrayList<Integer> weights = new ArrayList<Integer>();
+        List<IntVar> vars = new ArrayList<IntVar>();
+        List<Integer> weights = new ArrayList<Integer>();
 
         boolean simpleSum = true;
         for (Arc arc : arcList) {
@@ -358,7 +358,7 @@ public class NetworkBuilder {
 
     }
 
-    private void sumC(ArrayList<Constraint> list, Store store, ArrayList<IntVar> vars, IntVar result) {
+    private void sumC(List<Constraint> list, Store store, List<IntVar> vars, IntVar result) {
 
         if (result == null)
             throw new AssertionError();

@@ -78,7 +78,7 @@ import org.jacop.core.Store;
      * It contains list of constraints which suggest shaving explorations.
      */
 
-    ArrayList<Constraint> shavingConstraints = new ArrayList<Constraint>();
+    List<Constraint> shavingConstraints = new ArrayList<Constraint>();
 
     /**
      * It specifies if the search is in the left child.
@@ -133,9 +133,9 @@ import org.jacop.core.Store;
 
     private int depth = 0;
 
-    ArrayList<HashMap<IntVar, LinkedHashSet<Integer>>> shavable = new ArrayList<HashMap<IntVar, LinkedHashSet<Integer>>>();
+    List<Map<IntVar, LinkedHashSet<Integer>>> shavable = new ArrayList();
 
-    HashMap<IntVar, LinkedHashSet<Integer>> notShavable = new HashMap<IntVar, LinkedHashSet<Integer>>();
+    Map<IntVar, LinkedHashSet<Integer>> notShavable = new HashMap<IntVar, LinkedHashSet<Integer>>();
 
     /**
      * It stores number of successful shaving attempts.
@@ -180,7 +180,7 @@ import org.jacop.core.Store;
                 if (position < 0)
                     position = 0;
 
-                HashMap<IntVar, LinkedHashSet<Integer>> current = shavable.get(position);
+                Map<IntVar, LinkedHashSet<Integer>> current = shavable.get(position);
                 LinkedHashSet<Integer> shaveVarList = current.get(var);
 
                 if (shaveVarList == null) {
@@ -237,7 +237,7 @@ import org.jacop.core.Store;
 
         while (last > current) {
 
-            HashMap<IntVar, LinkedHashSet<Integer>> shavableNeighbour = shavable.get(current);
+            Map<IntVar, LinkedHashSet<Integer>> shavableNeighbour = shavable.get(current);
 
             for (Map.Entry<IntVar, LinkedHashSet<Integer>> entry : shavableNeighbour.entrySet()) {
                 IntVar shaveVar = entry.getKey();

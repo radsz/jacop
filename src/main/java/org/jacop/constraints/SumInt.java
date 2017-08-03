@@ -35,8 +35,8 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -149,7 +149,7 @@ public class SumInt extends PrimitiveConstraint {
      * @param rel       the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
      * @param sum       variable containing the sum of weighted variables.
      */
-    public SumInt(Store store, ArrayList<? extends IntVar> variables, String rel, IntVar sum) {
+    public SumInt(Store store, List<? extends IntVar> variables, String rel, IntVar sum) {
         this(store, variables.toArray(new IntVar[variables.size()]), rel, sum);
     }
 

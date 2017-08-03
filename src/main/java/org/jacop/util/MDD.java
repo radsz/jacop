@@ -32,6 +32,7 @@ package org.jacop.util;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
@@ -579,8 +580,8 @@ public class MDD {
         // Empty constructor to allowed MDD be read from external sources.
     }
 
-    ArrayList<int[]>[][] same;
-    ArrayList<Integer>[][] id;
+    List<int[]>[][] same;
+    List<Integer>[][] id;
 
     TreeMap<Integer, Integer> reducedNodes;
 

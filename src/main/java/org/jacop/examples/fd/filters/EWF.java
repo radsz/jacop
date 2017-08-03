@@ -31,6 +31,7 @@
 package org.jacop.examples.fd.filters;
 
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * It specifies EWF benchmark.
@@ -85,8 +86,8 @@ public class EWF extends Filter {
 
     }
 
-    @Override public ArrayList<String> names() {
-        ArrayList<String> names = new ArrayList<String>(34);
+    @Override public List<String> names() {
+        List<String> names = new ArrayList<String>(34);
 
         names.add("+1");
         names.add("+2");
@@ -126,8 +127,8 @@ public class EWF extends Filter {
         return names;
     }
 
-    @Override public ArrayList<String> namesPipeline() {
-        ArrayList<String> names = new ArrayList<String>(34);
+    @Override public List<String> namesPipeline() {
+        List<String> names = new ArrayList<String>(34);
 
         names.add("+1");
         names.add("+2");

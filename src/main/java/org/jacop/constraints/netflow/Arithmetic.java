@@ -62,7 +62,7 @@ public class Arithmetic extends DecomposedConstraint {
     private List<IntVar> vars;
     private Map<IntVar, Integer> map;
 
-    ArrayList<Constraint> decomposition;
+    List<Constraint> decomposition;
 
     public Arithmetic() {
         this.eqns = new ArrayList<int[]>();
@@ -129,7 +129,7 @@ public class Arithmetic extends DecomposedConstraint {
     }
 
 
-    public ArrayList<Constraint> primitiveDecomposition(Store store) {
+    public List<Constraint> primitiveDecomposition(Store store) {
 
         if (decomposition == null) {
 
@@ -138,8 +138,8 @@ public class Arithmetic extends DecomposedConstraint {
             // final IntVar ZERO = new IntVar(store, "Zero", 0, 0);
 
             for (int[] eqn : eqns) {
-                ArrayList<IntVar> variables = new ArrayList<IntVar>();
-                ArrayList<Integer> weights = new ArrayList<Integer>();
+                List<IntVar> variables = new ArrayList<IntVar>();
+                List<Integer> weights = new ArrayList<Integer>();
 
                 for (int i = 0; i < eqn.length; i++)
                     if (eqn[i] != 0) {
@@ -155,13 +155,13 @@ public class Arithmetic extends DecomposedConstraint {
             return decomposition;
         } else {
 
-            ArrayList<Constraint> result = new ArrayList<Constraint>();
+            List<Constraint> result = new ArrayList<Constraint>();
 
             // final IntVar ZERO = new IntVar(store, "Zero", 0, 0);
 
             for (int[] eqn : eqns) {
-                ArrayList<IntVar> variables = new ArrayList<IntVar>();
-                ArrayList<Integer> weights = new ArrayList<Integer>();
+                List<IntVar> variables = new ArrayList<IntVar>();
+                List<Integer> weights = new ArrayList<Integer>();
 
                 for (int i = 0; i < eqn.length; i++)
                     if (eqn[i] != 0) {
@@ -330,7 +330,7 @@ public class Arithmetic extends DecomposedConstraint {
     @Override public void imposeDecomposition(Store store) {
 
         if (decomposition == null)
-            decompose(store);
+            decomposition = decompose(store);
 
         for (Constraint c : decomposition)
             store.impose(c);

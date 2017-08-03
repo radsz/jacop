@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.SumInt;
@@ -90,7 +91,7 @@ public class Kakro extends ExampleFD {
                 if (rowDescription[i][j] > 1) {
                     IntVar sum = new IntVar(store, "sumAt" + i + "-" + j, rowDescription[i][j], rowDescription[i][j]);
 
-                    ArrayList<IntVar> row = new ArrayList<IntVar>();
+                    List<IntVar> row = new ArrayList<IntVar>();
 
                     for (int m = j + 1; m < noColumns && rowDescription[i][m] == 1; m++)
                         row.add(elements[i][m]);
@@ -105,7 +106,7 @@ public class Kakro extends ExampleFD {
                 if (columnDescription[i][j] < 0) {
                     IntVar sum = new IntVar(store, "sumCol" + i + "-" + j, -columnDescription[i][j], -columnDescription[i][j]);
 
-                    ArrayList<IntVar> column = new ArrayList<IntVar>();
+                    List<IntVar> column = new ArrayList<IntVar>();
 
                     for (int m = i + 1; m < noRows && columnDescription[m][j] == 1; m++)
                         column.add(elements[m][j]);

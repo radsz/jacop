@@ -58,9 +58,9 @@ public class DiffnDecomposed extends DecomposedConstraint {
 
     int numberArgs;
 
-    ArrayList<Constraint> constraints = null;
+    List<Constraint> constraints = null;
 
-    ArrayList<Var> auxVar = new ArrayList<Var>();
+    List<Var> auxVar = new ArrayList<Var>();
 
     IntVar[] x;
     IntVar[] y;
@@ -135,7 +135,7 @@ public class DiffnDecomposed extends DecomposedConstraint {
      * It specifies a diffn constraint.
      * @param rectangle list of rectangles which can not overlap in at least one dimension.
      */
-    public DiffnDecomposed(ArrayList<? extends ArrayList<? extends IntVar>> rectangle) {
+    public DiffnDecomposed(List<? extends List<? extends IntVar>> rectangle) {
 
         assert (rectangle != null) : "Rectangles list is null";
 
@@ -165,8 +165,8 @@ public class DiffnDecomposed extends DecomposedConstraint {
      * @param lx list of variables denoting length of the rectangle in the first dimension.
      * @param ly list of variables denoting length of the rectangle in the second dimension.
      */
-    public DiffnDecomposed(ArrayList<? extends IntVar> x, ArrayList<? extends IntVar> y, ArrayList<? extends IntVar> lx,
-        ArrayList<? extends IntVar> ly) {
+    public DiffnDecomposed(List<? extends IntVar> x, List<? extends IntVar> y, List<? extends IntVar> lx,
+        List<? extends IntVar> ly) {
 
         this(x.toArray(new IntVar[x.size()]), y.toArray(new IntVar[y.size()]), lx.toArray(new IntVar[lx.size()]),
             ly.toArray(new IntVar[ly.size()]));
@@ -179,7 +179,7 @@ public class DiffnDecomposed extends DecomposedConstraint {
     public void imposeDecomposition(Store store) {
 
         if (constraints == null)
-            decompose(store);
+            constraints = decompose(store);
 
         for (Constraint c : constraints)
             store.impose(c, queueIndex);
@@ -240,7 +240,7 @@ public class DiffnDecomposed extends DecomposedConstraint {
         return constraints;
     }
 
-    public ArrayList<Var> auxiliaryVariables() {
+    public List<Var> auxiliaryVariables() {
         return auxVar;
     }
 

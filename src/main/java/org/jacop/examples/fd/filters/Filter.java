@@ -30,7 +30,7 @@
 
 package org.jacop.examples.fd.filters;
 
-import java.util.ArrayList;
+import java.util.List;
 
 /**
  * It provides the basic functionality which must be implemented by any 
@@ -218,7 +218,7 @@ public abstract class Filter {
      * representation of the solution in textual form.
      * @return list of names.
      */
-    public abstract ArrayList<String> names();
+    public abstract List<String> names();
 
     /**
      * It specifies the names of the operations for the
@@ -226,5 +226,5 @@ public abstract class Filter {
      *
      * @return list of names.
      */
-    public abstract ArrayList<String> namesPipeline();
+    public abstract List<String> namesPipeline();
 }

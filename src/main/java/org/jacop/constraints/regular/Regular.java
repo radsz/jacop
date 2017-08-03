@@ -253,7 +253,7 @@ public class Regular extends Constraint implements UsesQueueVariable {
 
     int firstConsistencyLevel;
 
-    ArrayList<Constraint> constraints;
+    List<Constraint> constraints;
 
 
     RegState[] touchedStates;
@@ -1126,7 +1126,7 @@ public class Regular extends Constraint implements UsesQueueVariable {
     @Override public void imposeDecomposition(Store store) {
 
         if (constraints == null)
-            decompose(store);
+            constraints = decompose(store);
 
         for (Constraint c : constraints)
             store.impose(c, queueIndex);
@@ -1138,7 +1138,7 @@ public class Regular extends Constraint implements UsesQueueVariable {
 
         fsm.resize();
 
-        ArrayList<int[]> listOfTuples = new ArrayList<int[]>();
+        List<int[]> listOfTuples = new ArrayList<int[]>();
 
         // tuples for transitions from not-intial states.
 
@@ -1344,7 +1344,7 @@ public class Regular extends Constraint implements UsesQueueVariable {
         //and the time-stamps with the number of active states
         this.stateLevels = new RegState[levels + 1][];
 
-        ArrayList<RegState>[] layeredGraph = (ArrayList<RegState>[]) Array.newInstance(new ArrayList<RegState>().getClass(), levels + 1);
+        List<RegState>[] layeredGraph = (ArrayList<RegState>[]) Array.newInstance(new ArrayList<RegState>().getClass(), levels + 1);
         for (int i = 0; i < layeredGraph.length; i++)
             layeredGraph[i] = new ArrayList<RegState>();
 

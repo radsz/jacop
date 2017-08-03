@@ -30,8 +30,8 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -104,7 +104,7 @@ public class BoolClause extends PrimitiveConstraint {
      * @param x list of positive arguments x's.
      * @param y list of negative arguments y's. 
      */
-    public BoolClause(ArrayList<IntVar> x, ArrayList<IntVar> y) {
+    public BoolClause(List<IntVar> x, List<IntVar> y) {
         this(x.toArray(new IntVar[x.size()]), y.toArray(new IntVar[y.size()]));
     }
 

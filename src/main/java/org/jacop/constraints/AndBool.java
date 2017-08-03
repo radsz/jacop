@@ -31,6 +31,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.jacop.core.IntVar;
@@ -67,7 +68,7 @@ public class AndBool extends DecomposedConstraint<PrimitiveConstraint> {
      * @param a      parameters variable.
      * @param result variable.
      */
-    public AndBool(ArrayList<IntVar> a, IntVar result) {
+    public AndBool(List<IntVar> a, IntVar result) {
 
         if (a.size() == 2)
             c = new AndBoolSimple(a.get(0), a.get(1), result);
@@ -95,9 +96,7 @@ public class AndBool extends DecomposedConstraint<PrimitiveConstraint> {
 
     @Override public List<PrimitiveConstraint> decompose(Store store) {
 
-        ArrayList<PrimitiveConstraint> result = new ArrayList<>();
-        result.add(c);
-        return result;
+        return Arrays.asList(c);
 
     }
 

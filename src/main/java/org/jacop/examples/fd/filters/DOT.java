@@ -31,6 +31,7 @@
 package org.jacop.examples.fd.filters;
 
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * It specifies DOT benchmark.
@@ -80,8 +81,8 @@ public class DOT extends Filter {
         this.last = last;
     }
 
-    @Override public ArrayList<String> names() {
-        ArrayList<String> names = new ArrayList<String>(34);
+    @Override public List<String> names() {
+        List<String> names = new ArrayList<String>(34);
 
         names.add("*0");
         names.add("*1");
@@ -98,8 +99,8 @@ public class DOT extends Filter {
         return names;
     }
 
-    @Override public ArrayList<String> namesPipeline() {
-        ArrayList<String> names = new ArrayList<String>(34);
+    @Override public List<String> namesPipeline() {
+        List<String> names = new ArrayList<String>(34);
 
         names.add("*0");
         names.add("*1");

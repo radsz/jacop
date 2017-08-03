@@ -100,7 +100,7 @@ public class Subcircuit extends Alldiff {
      * It constructs a circuit constraint.
      * @param list variables which must form a circuit.
      */
-    public Subcircuit(ArrayList<IntVar> list) {
+    public Subcircuit(List<IntVar> list) {
         this(list.toArray(new IntVar[list.size()]));
     }
 
@@ -202,7 +202,7 @@ public class Subcircuit extends Alldiff {
 
     Stack<Integer> stck = new Stack<Integer>();
 
-    ArrayList<IntVar> cycleVar;
+    List<IntVar> cycleVar;
 
     int numberGround = 0;
 
@@ -212,10 +212,6 @@ public class Subcircuit extends Alldiff {
 
         int maxCycle = 0;
 
-        //ArrayList<ArrayList<IntVar>> sccList = new ArrayList<ArrayList<IntVar>>();
-
-        // for (int i = 0; i < val.length; i++)
-        //     val[i] = 0;
         java.util.Arrays.fill(val, 0);
 
         idd = 0;

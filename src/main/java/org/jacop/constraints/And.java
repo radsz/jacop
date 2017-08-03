@@ -65,7 +65,7 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
      * constraint is satisfied if all constraints are satisfied.
      * @param listOfC arraylist of constraints
      */
-    public And(ArrayList<PrimitiveConstraint> listOfC) {
+    public And(List<PrimitiveConstraint> listOfC) {
         this(listOfC.toArray(new PrimitiveConstraint[listOfC.size()]));
     }
 

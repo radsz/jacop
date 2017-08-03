@@ -30,9 +30,8 @@
 
 package org.jacop.floats.constraints;
 
-import java.lang.reflect.Array;
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -87,7 +86,7 @@ public class Min extends Constraint {
      * @param min variable denoting the minimal value
      * @param list the array of variables for which the minimal value is imposed.
      */
-    public Min(ArrayList<? extends FloatVar> list, FloatVar min) {
+    public Min(List<? extends FloatVar> list, FloatVar min) {
 
         this(list.toArray(new FloatVar[list.size()]), min);
 

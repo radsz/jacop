@@ -83,7 +83,7 @@ public class Alldifferent extends Constraint implements UsesQueueVariable {
      * @param variables variables which are constrained to take different values.
      */
 
-    public Alldifferent(ArrayList<? extends IntVar> variables) {
+    public Alldifferent(List<? extends IntVar> variables) {
         this(variables.toArray(new IntVar[variables.size()]));
     }
     

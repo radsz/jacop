@@ -52,6 +52,7 @@ package org.jacop.examples.floats;
  */
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.jacop.core.Store;
 import org.jacop.search.DepthFirstSearch;
@@ -97,16 +98,16 @@ public class MinCostFlow {
 
         for (int i = 0; i < n; i++) {
 
-            ArrayList<FloatVar> outFlow = new ArrayList<FloatVar>();
-            ArrayList<Double> outFlowWeights = new ArrayList<Double>();
+            List<FloatVar> outFlow = new ArrayList<FloatVar>();
+            List<Double> outFlowWeights = new ArrayList<Double>();
             for (int j = 0; j < m; j++)
                 if (arcs[j][1] == i + 1) {
                     outFlow.add(X[j]);
                     outFlowWeights.add(1.0);
                 }
 
-            ArrayList<FloatVar> inFlow = new ArrayList<FloatVar>();
-            ArrayList<Double> inFlowWeights = new ArrayList<Double>();
+            List<FloatVar> inFlow = new ArrayList<FloatVar>();
+            List<Double> inFlowWeights = new ArrayList<Double>();
             for (int j = 0; j < m; j++)
                 if (arcs[j][0] == i + 1) {
                     inFlow.add(X[j]);

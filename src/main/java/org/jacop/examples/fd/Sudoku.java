@@ -37,6 +37,7 @@ package org.jacop.examples.fd;
  */
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.XneqY;
@@ -96,7 +97,7 @@ public class Sudoku extends ExampleFD {
         for (int i = 0; i < noRows; i++)
             for (int j = 0; j < noColumns; j++) {
 
-                ArrayList<IntVar> block = new ArrayList<IntVar>();
+                List<IntVar> block = new ArrayList<IntVar>();
                 for (int k = 0; k < noColumns; k++)
                     for (int m = 0; m < noRows; m++)
                         block.add(elements[i * noColumns + k][j * noRows + m]);
@@ -153,7 +154,7 @@ public class Sudoku extends ExampleFD {
         for (int i = 0; i < noRows; i++)
             for (int j = 0; j < noColumns; j++) {
 
-                ArrayList<IntVar> block = new ArrayList<IntVar>();
+                List<IntVar> block = new ArrayList<IntVar>();
                 for (int k = 0; k < noColumns; k++)
                     for (int m = 0; m < noRows; m++)
                         block.add(elements[i * noColumns + k][j * noRows + m]);

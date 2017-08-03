@@ -33,6 +33,7 @@ package org.jacop.examples.fd.crosswords;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import org.jacop.constraints.ExtensionalSupportMDD;
 import org.jacop.constraints.XeqC;
@@ -64,7 +65,7 @@ public class CrossWord extends ExampleFD {
     int r = 5;          // number of rows
     int c = 5;          // number of column
     int[] wordSizesPrimitive = {4, 5};
-    ArrayList<Integer> wordSizes = new ArrayList<Integer>();
+    List<Integer> wordSizes = new ArrayList<Integer>();
     // * - black wall
     // letter - letter which must be in crossword
     // _ - unknown letter, any letter is accepted.
@@ -178,7 +179,7 @@ public class CrossWord extends ExampleFD {
 
         for (int i = 0; i < r; i++) {
 
-            ArrayList<Var> word = new ArrayList<Var>();
+            List<Var> word = new ArrayList<Var>();
 
             for (int j = 0; j < c; j++) {
 
@@ -208,7 +209,7 @@ public class CrossWord extends ExampleFD {
 
         for (int j = 0; j < c; j++) {
 
-            ArrayList<Var> word = new ArrayList<Var>();
+            List<Var> word = new ArrayList<Var>();
 
             for (int i = 0; i < r; i++) {
 
@@ -272,7 +273,7 @@ public class CrossWord extends ExampleFD {
      * @param file filename containing dictionary
      * @param wordSizes  size of the words
      */
-    public void readDictionaryFromFile(String file, ArrayList<Integer> wordSizes) {
+    public void readDictionaryFromFile(String file, List<Integer> wordSizes) {
 
         for (int wordSize : wordSizes) {
 

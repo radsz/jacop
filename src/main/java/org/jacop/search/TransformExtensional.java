@@ -32,6 +32,7 @@ package org.jacop.search;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ExtensionalSupportVA;
@@ -59,7 +60,7 @@ public class TransformExtensional implements InitializeListener {
      * the scope of the extensional constraint produced by this search
      * listener.
      */
-    public ArrayList<IntVar> variablesTransformationScope = new ArrayList<IntVar>();
+    public List<IntVar> variablesTransformationScope = new ArrayList<IntVar>();
 
     /**
      * The limit of solutions upon reaching the transformation is abandoned and solution

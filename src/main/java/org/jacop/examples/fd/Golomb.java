@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.XeqC;
@@ -83,7 +84,7 @@ public class Golomb extends ExampleFD {
     /**
      * It contains all differences between all possible pairs of marks.
      */
-    public ArrayList<IntVar> subs = new ArrayList<IntVar>();
+    public List<IntVar> subs = new ArrayList<IntVar>();
 
     @Override public void model() {
 

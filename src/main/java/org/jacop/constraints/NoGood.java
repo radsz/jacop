@@ -30,10 +30,7 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
@@ -117,7 +114,7 @@ public class NoGood extends PrimitiveConstraint {
      * @param listOfVars the scope of the constraint.
      * @param listOfValues no-good values which all-together assignment to variables within constraint scope is a no-good.
      */
-    public NoGood(ArrayList<? extends IntVar> listOfVars, ArrayList<Integer> listOfValues) {
+    public NoGood(List<? extends IntVar> listOfVars, List<Integer> listOfValues) {
 
         checkInputForNullness(new String[]{"listOfVars", "listOfValues"}, new Object[]{ listOfVars, listOfValues});
         commonInitialization(listOfVars.toArray(new IntVar[listOfVars.size()]), listOfValues.stream().mapToInt(i -> i).toArray());

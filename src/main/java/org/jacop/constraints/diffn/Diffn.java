@@ -31,10 +31,7 @@
 
 package org.jacop.constraints.diffn;
 
-import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.Comparator;
-import java.util.Arrays;
+import java.util.*;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntervalDomain;
@@ -105,7 +102,7 @@ public class Diffn extends Nooverlap {
      * It specifies a diffn constraint.
      * @param rectangles list of rectangles which can not overlap in at least one dimension.
      */
-    public Diffn(ArrayList<? extends ArrayList<? extends IntVar>> rectangles) {
+    public Diffn(List<? extends List<? extends IntVar>> rectangles) {
         super(rectangles);
     }
 
@@ -114,7 +111,7 @@ public class Diffn extends Nooverlap {
      * @param rectangles list of rectangles which can not overlap in at least one dimension.
      * @param strict true- zero size rectangles need to be between other rectangles; false- these rectangles can be anywhere
      */
-    public Diffn(ArrayList<? extends ArrayList<? extends IntVar>> rectangles, boolean strict) {
+    public Diffn(List<? extends List<? extends IntVar>> rectangles, boolean strict) {
         super(rectangles, strict);
     }
 
@@ -126,8 +123,8 @@ public class Diffn extends Nooverlap {
      * @param l1 list of variables denoting length of the rectangle in the first dimension.
      * @param l2 list of variables denoting length of the rectangle in the second dimension.
      */
-    public Diffn(ArrayList<? extends IntVar> o1, ArrayList<? extends IntVar> o2, ArrayList<? extends IntVar> l1,
-        ArrayList<? extends IntVar> l2) {
+    public Diffn(List<? extends IntVar> o1, List<? extends IntVar> o2, List<? extends IntVar> l1,
+        List<? extends IntVar> l2) {
         super(o1, o2, l1, l2);
     }
 
@@ -139,8 +136,8 @@ public class Diffn extends Nooverlap {
      * @param l2 list of variables denoting length of the rectangle in the second dimension.
      * @param strict true- zero size rectangles need to be between other rectangles; false- these rectangles can be anywhere
      */
-    public Diffn(ArrayList<? extends IntVar> o1, ArrayList<? extends IntVar> o2, ArrayList<? extends IntVar> l1,
-        ArrayList<? extends IntVar> l2, boolean strict) {
+    public Diffn(List<? extends IntVar> o1, List<? extends IntVar> o2, List<? extends IntVar> l1,
+        List<? extends IntVar> l2, boolean strict) {
         super(o1, o2, l1, l2, strict);
     }
 
@@ -309,7 +306,7 @@ public class Diffn extends Nooverlap {
         // current value of the profile for mandatory parts
         int curProfile = 0;
         // current value of the sweep line
-        ArrayList<Interval> sweepLine = new ArrayList<Interval>();
+        List<Interval> sweepLine = new ArrayList<Interval>();
 
         // used for start variable pruning
         int startExcluded = Integer.MAX_VALUE;
@@ -497,7 +494,7 @@ public class Diffn extends Nooverlap {
         }
     }
 
-    void updateSweepLine(ArrayList<Interval> sweepLine, Event e) {
+    void updateSweepLine(List<Interval> sweepLine, Event e) {
 
         Interval eBlock = e.block();
 
@@ -534,7 +531,7 @@ public class Diffn extends Nooverlap {
             }
     }
 
-    boolean blocking(ArrayList<Interval> sweepLine, int start, int end, int length) {
+    boolean blocking(List<Interval> sweepLine, int start, int end, int length) {
 
         if (sweepLine.size() == 0)
             return false;

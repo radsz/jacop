@@ -32,6 +32,7 @@ package org.jacop.util.fsm;
 
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.List;
 
 import org.jacop.constraints.regular.Regular;
 import org.jacop.core.IntDomain;
@@ -347,7 +348,7 @@ public class RegularExpressionParser {
 
     class Sum extends Expression {
 
-        public ArrayList<Expression> disj;
+        public List<Expression> disj;
 
         public Sum(Expression a, Expression b) {
             super();

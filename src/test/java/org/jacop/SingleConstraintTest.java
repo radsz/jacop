@@ -43,6 +43,7 @@ import org.junit.Test;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.IntStream;
 
@@ -782,14 +783,14 @@ public class SingleConstraintTest {
         IntVar[] length1 = getShiftedIntVars(store, "DX", noOfRectangles, durationSize);
         IntVar[] length2 = getIntVars(store, "DY", noOfRectangles, durationSize);
 
-        ArrayList<ArrayList<Integer>> conditionalPairs = new ArrayList<>();
+        List<List<Integer>> conditionalPairs = new ArrayList<>();
         conditionalPairs.add(new ArrayList<>(Arrays.asList(new Integer[] {1, 3})));
         conditionalPairs.add(new ArrayList<>(Arrays.asList(new Integer[] {2, 3})));
 
         IntVar[] exceptionCondition = getIntVars(store, "condition", 2, 2);
 
         Diff disjointConditional = new DisjointConditional(origin1, origin2, length1, length2, conditionalPairs,
-            new ArrayList<>(Arrays.asList(exceptionCondition)));
+            Arrays.asList(exceptionCondition));
 
         store.impose(disjointConditional);
 

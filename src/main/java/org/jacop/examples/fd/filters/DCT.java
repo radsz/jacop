@@ -31,6 +31,7 @@
 package org.jacop.examples.fd.filters;
 
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * It specifies DCT benchmark.
@@ -89,8 +90,8 @@ public class DCT extends Filter {
         this.last = last;
     }
 
-    @Override public ArrayList<String> names() {
-        ArrayList<String> names = new ArrayList<String>(48);
+    @Override public List<String> names() {
+        List<String> names = new ArrayList<String>(48);
 
         names.add("-1");
         names.add("-2");
@@ -144,8 +145,8 @@ public class DCT extends Filter {
         return names;
     }
 
-    @Override public ArrayList<String> namesPipeline() {
-        ArrayList<String> names = new ArrayList<String>(48);
+    @Override public List<String> namesPipeline() {
+        List<String> names = new ArrayList<String>(48);
 
         names.add("-1");
         names.add("-2");

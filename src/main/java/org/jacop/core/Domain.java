@@ -31,6 +31,7 @@
 package org.jacop.core;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.jacop.constraints.Constraint;
 
@@ -82,7 +83,7 @@ public abstract class Domain {
      * It specifies constraints which are attached to current domain.
      */
 
-    public ArrayList<Constraint> searchConstraints;
+    public List<Constraint> searchConstraints;
 
     /**
      * It specifies if the vector of constraints were cloned (if it was not
@@ -173,7 +174,7 @@ public abstract class Domain {
     /**
      * @return it returns the array containing search constraints (the ones imposed after setting up the model).
      */
-    public ArrayList<Constraint> searchConstraints() {
+    public List<Constraint> searchConstraints() {
         return searchConstraints;
     }
 
@@ -335,9 +336,9 @@ public abstract class Domain {
      *
      * @return an array of constraints currently attached to the domain.
      */
-    public ArrayList<Constraint> constraints() {
+    public List<Constraint> constraints() {
 
-        ArrayList<Constraint> result = new ArrayList<Constraint>();
+        List<Constraint> result = new ArrayList<Constraint>();
 
         result.addAll(searchConstraints);
 

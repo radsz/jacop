@@ -163,7 +163,7 @@ import org.jacop.core.*;
      * @param weights weight for each variable.
      * @param sum variable containing the sum of weighted list.
      */
-    public SumWeightDom(ArrayList<? extends IntVar> list, ArrayList<Integer> weights, int sum) {
+    public SumWeightDom(List<? extends IntVar> list, List<Integer> weights, int sum) {
         checkInputForNullness(new String[]{"list", "weights"}, new Object[][]{{list}, { weights }});
         commonInitialization(list.toArray(new IntVar[list.size()]), weights.stream().mapToInt(i -> i).toArray(), sum);
 
@@ -175,7 +175,7 @@ import org.jacop.core.*;
      * @param weights weight for each variable.
      * @param sum variable containing the sum of weighted list.
      */
-    public SumWeightDom(ArrayList<? extends IntVar> list, ArrayList<Integer> weights, IntVar sum) {
+    public SumWeightDom(List<? extends IntVar> list, List<Integer> weights, IntVar sum) {
         checkInputForNullness(new String[]{"list", "weights"}, new Object[][]{{list}, { weights }});
         commonInitialization(Stream.concat(list.stream(), Stream.of(sum)).toArray(IntVar[]::new),
             IntStream.concat(weights.stream().mapToInt(i -> i), IntStream.of(-1)).toArray(),
@@ -454,7 +454,7 @@ import org.jacop.core.*;
                 temp.intervals[k++] = new Interval(-e.max(), -e.min());
             }
         } else {
-            ArrayList<Interval> ranges = new ArrayList<Interval>();
+            List<Interval> ranges = new ArrayList<Interval>();
 
             for (IntervalEnumeration e = d.intervalEnumeration(); e.hasMoreElements(); ) {
                 Interval i = e.nextElement();
@@ -584,7 +584,7 @@ import org.jacop.core.*;
 
             } else {
                 // singleton and NOT interval domain
-                ArrayList<Interval> ranges = new ArrayList<Interval>();
+                List<Interval> ranges = new ArrayList<Interval>();
 
                 int d1Value = d1.value();
                 int sumMin = sum - lMax + d2.max();
@@ -651,7 +651,7 @@ import org.jacop.core.*;
                 // }
             } else { // First domain not singleton and not IntervalDomain
 
-                ArrayList<Interval> ranges = new ArrayList<Interval>();
+                List<Interval> ranges = new ArrayList<Interval>();
 
                 int sumMin = sum - lMax + d2.max();
                 int sumMax = sum - lMin + d2.min();

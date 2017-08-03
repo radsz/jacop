@@ -32,6 +32,7 @@ package org.jacop.core;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
@@ -49,7 +50,7 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
      * It specifies a trail. A recorded changes which will be used upon
      * backtracking to inform the objects about backtracking.
      */
-    ArrayList<Boolean> intervalBasedTrail;
+    List<Boolean> intervalBasedTrail;
 
     int intervalCutOffValue;
 

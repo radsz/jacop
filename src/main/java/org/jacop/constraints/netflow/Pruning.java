@@ -99,7 +99,7 @@ public class Pruning extends Network {
 
     public class PercentStrategy implements PruningStrategy {
 
-        ArrayList<ArcCompanion> seen = new ArrayList<ArcCompanion>();
+        List<ArcCompanion> seen = new ArrayList<ArcCompanion>();
 
         int i;
         final double percentage;

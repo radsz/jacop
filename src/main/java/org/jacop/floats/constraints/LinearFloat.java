@@ -37,7 +37,7 @@ import org.jacop.floats.constraints.linear.Linear;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.core.Store;
 
-import java.util.ArrayList;
+import java.util.List;
 
 /**
  * LinearFloat constraint implements the weighted summation over several
@@ -86,7 +86,7 @@ public class LinearFloat extends Linear implements UsesQueueVariable {
      * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}"
      * @param sum variable containing the sum of weighted variables.
      */
-    public LinearFloat(Store store, ArrayList<? extends FloatVar> variables, ArrayList<Double> weights, String rel, double sum) {
+    public LinearFloat(Store store, List<? extends FloatVar> variables, List<Double> weights, String rel, double sum) {
 
         super(store, variables, weights, rel, sum);
     }

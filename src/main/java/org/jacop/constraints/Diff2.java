@@ -34,6 +34,7 @@ package org.jacop.constraints;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
@@ -102,7 +103,7 @@ public class Diff2 extends Diff {
      * @param l2 list of variables denoting the length in the second dimension.
      * @param profile specifies if the profile should be computed.
      */
-    public Diff2(ArrayList<IntVar> o1, ArrayList<IntVar> o2, ArrayList<IntVar> l1, ArrayList<IntVar> l2, boolean profile) {
+    public Diff2(List<IntVar> o1, List<IntVar> o2, List<IntVar> l1, List<IntVar> l2, boolean profile) {
         this(o1, o2, l1, l2);
         doProfile = profile;
     }
@@ -112,7 +113,7 @@ public class Diff2 extends Diff {
      * @param rectangles list of rectangles with origins and lengths in both dimensions.
      */
 
-    public Diff2(ArrayList<? extends ArrayList<? extends IntVar>> rectangles) {
+    public Diff2(List<? extends List<? extends IntVar>> rectangles) {
 
         queueIndex = 2;
         this.rectangles = Rectangle.toArrayOf2DRectangles(rectangles);
@@ -127,7 +128,7 @@ public class Diff2 extends Diff {
      * @param profile specifies if the profile is computed and used.
      */
 
-    public Diff2(ArrayList<? extends ArrayList<? extends IntVar>> rectangles, boolean profile) {
+    public Diff2(List<? extends List<? extends IntVar>> rectangles, boolean profile) {
         this(rectangles);
         doProfile = profile;
     }
@@ -140,8 +141,8 @@ public class Diff2 extends Diff {
      * @param l1 list of variables denoting the length in the first dimension.
      * @param l2 list of variables denoting the length in the second dimension.
      */
-    public Diff2(ArrayList<? extends IntVar> o1, ArrayList<? extends IntVar> o2, ArrayList<? extends IntVar> l1,
-        ArrayList<? extends IntVar> l2) {
+    public Diff2(List<? extends IntVar> o1, List<? extends IntVar> o2, List<? extends IntVar> l1,
+        List<? extends IntVar> l2) {
 
         this(o1.toArray(new IntVar[o1.size()]), o2.toArray(new IntVar[o2.size()]), l1.toArray(new IntVar[l1.size()]),
             l2.toArray(new IntVar[l2.size()]));
@@ -222,7 +223,7 @@ public class Diff2 extends Diff {
      * @param rectangles  - list of rectangles, each rectangle represented by a list of variables.
      * @param exclusiveList - list of rectangles pairs which can overlap.
      */
-    public Diff2(ArrayList<ArrayList<IntVar>> rectangles, ArrayList<ArrayList<Integer>> exclusiveList) {
+    public Diff2(List<List<IntVar>> rectangles, List<List<Integer>> exclusiveList) {
 
         queueIndex = 2;
         this.rectangles = Rectangle.toArrayOf2DRectangles(rectangles);
@@ -230,9 +231,9 @@ public class Diff2 extends Diff {
 
         exceptionListPresent = true;
 
-        ArrayList<Integer> list = new ArrayList<Integer>(exclusiveList.size() * 2);
+        List<Integer> list = new ArrayList<Integer>(exclusiveList.size() * 2);
 
-        for (ArrayList<Integer> pair : exclusiveList)
+        for (List<Integer> pair : exclusiveList)
             for (Integer item : pair)
                 list.add(item);
 
@@ -254,7 +255,7 @@ public class Diff2 extends Diff {
      * @param rect  - list of rectangles, each rectangle represented by a list of variables.
      * @param exclusive - list of rectangles pairs which can overlap.
      */
-    public Diff2(IntVar[][] rect, ArrayList<ArrayList<Integer>> exclusive) {
+    public Diff2(IntVar[][] rect, List<List<Integer>> exclusive) {
 
         queueIndex = 2;
         this.rectangles = Rectangle.toArrayOf2DRectangles(rect);
@@ -262,9 +263,9 @@ public class Diff2 extends Diff {
 
         exceptionListPresent = true;
 
-        ArrayList<Integer> list = new ArrayList<Integer>(exclusive.size() * 2);
+        List<Integer> list = new ArrayList<Integer>(exclusive.size() * 2);
 
-        for (ArrayList<Integer> pair : exclusive)
+        for (List<Integer> pair : exclusive)
             for (Integer item : pair)
                 list.add(item);
 
@@ -278,7 +279,7 @@ public class Diff2 extends Diff {
 
     private Rectangle[] onList(int index, int[] exclusiveList) {
 
-        ArrayList<Rectangle> list = new ArrayList<Rectangle>();
+        List<Rectangle> list = new ArrayList<Rectangle>();
 
         for (int i = 0; i < rectangles.length; i++)
             if (notOverlapping(index + 1, i + 1, exclusiveList))
@@ -352,9 +353,9 @@ public class Diff2 extends Diff {
 
                 needToNarrow = needToNarrow || containsChangedVariable(r, fdvQueue);
 
-                ArrayList<IntRectangle> UsedRect = new ArrayList<IntRectangle>();
-                ArrayList<Rectangle> ProfileCandidates = new ArrayList<Rectangle>();
-                ArrayList<Rectangle> OverlappingRects = new ArrayList<Rectangle>();
+                List<IntRectangle> UsedRect = new ArrayList<IntRectangle>();
+                List<Rectangle> ProfileCandidates = new ArrayList<Rectangle>();
+                List<Rectangle> OverlappingRects = new ArrayList<Rectangle>();
                 boolean ntN = findRectangles(r, l, UsedRect, ProfileCandidates, OverlappingRects, fdvQueue);
 
                 needToNarrow = needToNarrow || ntN;
@@ -374,8 +375,8 @@ public class Diff2 extends Diff {
         }
     }
 
-    boolean findRectangles(Rectangle r, int index, ArrayList<IntRectangle> UsedRect, ArrayList<Rectangle> ProfileCandidates,
-        ArrayList<Rectangle> OverlappingRects, HashSet<IntVar> fdvQueue) {
+    boolean findRectangles(Rectangle r, int index, List<IntRectangle> UsedRect, List<Rectangle> ProfileCandidates,
+        List<Rectangle> OverlappingRects, HashSet<IntVar> fdvQueue) {
 
         boolean contains = false, checkArea = false;
 

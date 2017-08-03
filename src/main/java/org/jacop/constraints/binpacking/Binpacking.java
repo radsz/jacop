@@ -31,12 +31,7 @@
 
 package org.jacop.constraints.binpacking;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.api.UsesQueueVariable;
@@ -44,7 +39,6 @@ import org.jacop.constraints.Constraint;
 import org.jacop.core.*;
 import org.jacop.util.SimpleHashSet;
 
-import java.util.Map;
 import java.util.stream.Stream;
 
 /**
@@ -160,7 +154,7 @@ public class Binpacking extends Constraint implements UsesQueueVariable {
      * @param w    which define size ofitem i.
      */
 
-    public Binpacking(ArrayList<? extends IntVar> bin, ArrayList<? extends IntVar> load, int[] w) {
+    public Binpacking(List<? extends IntVar> bin, List<? extends IntVar> load, int[] w) {
         this(bin.toArray(new IntVar[bin.size()]), load.toArray(new IntVar[load.size()]), w);
     }
 
@@ -185,7 +179,7 @@ public class Binpacking extends Constraint implements UsesQueueVariable {
      * @param w      which define size ofitem i.
      * @param minBin minimal index of a bin; ovewrite the value provided by minimal index of variable bin
      */
-    public Binpacking(ArrayList<? extends IntVar> bin, ArrayList<? extends IntVar> load, int[] w, int minBin) {
+    public Binpacking(List<? extends IntVar> bin, List<? extends IntVar> load, int[] w, int minBin) {
 
         this(bin.toArray(new IntVar[bin.size()]), load.toArray(new IntVar[load.size()]), w);
         minBinNumber = minBin;
@@ -309,7 +303,6 @@ public class Binpacking extends Constraint implements UsesQueueVariable {
 
 
         // Lower bound pruning
-        // ArrayList<Integer> unpacked = new ArrayList<Integer>();
         int[] unpacked = new int[item.length];
         int unpackedLength = 0;
         int[] a = new int[load.length];

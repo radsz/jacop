@@ -30,8 +30,8 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -103,7 +103,7 @@ public class Max extends Constraint {
      * @param max variable denoting the maximum value
      * @param variables the array of variables for which the maximum value is imposed.
      */
-    public Max(ArrayList<? extends IntVar> variables, IntVar max) {
+    public Max(List<? extends IntVar> variables, IntVar max) {
         this(variables.toArray(new IntVar[variables.size()]), max);
     }
 

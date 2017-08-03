@@ -91,7 +91,7 @@ public class Knapsack extends Constraint implements UsesQueueVariable {
      * It is used by removeLevel function. There is a limit at which leaves
      * will not be added and the whole tree will be updated.
      */
-    private HashMap<Integer, ArrayList<TreeLeaf>> hashForUpdate;
+    private HashMap<Integer, List<TreeLeaf>> hashForUpdate;
 
     /**
      * It specifies the limit after which the changed leaves are not
@@ -310,7 +310,7 @@ public class Knapsack extends Constraint implements UsesQueueVariable {
 
         }
 
-        ArrayList<TreeLeaf> list = hashForUpdate.get(level);
+        List<TreeLeaf> list = hashForUpdate.get(level);
 		/* there was some change in this level */
         if (list != null) {
 			/* use the array to update */
@@ -406,7 +406,7 @@ public class Knapsack extends Constraint implements UsesQueueVariable {
         if (needUpdate) {
             needUpdate = false;
 
-            ArrayList<TreeLeaf> list = hashForUpdate.get(currentLevel);
+            List<TreeLeaf> list = hashForUpdate.get(currentLevel);
             if (list != null) {
                 // there were too many updates to use incremental recomputation
                 if (list.size() > updateLimit) {
@@ -679,7 +679,7 @@ public class Knapsack extends Constraint implements UsesQueueVariable {
         store.registerRemoveLevelListener(this);
         store.registerRemoveLevelLateListener(this);
 
-        hashForUpdate = new HashMap<Integer, ArrayList<TreeLeaf>>();
+        hashForUpdate = new HashMap<Integer, List<TreeLeaf>>();
 
         /** We sort it with a sorting method */
         Arrays.sort(items);
@@ -765,7 +765,7 @@ public class Knapsack extends Constraint implements UsesQueueVariable {
         if (maxBoundHasChanged || minBoundHasChanged) {
 
 			/* we test if a list exist and if it is different from null */
-            ArrayList<TreeLeaf> list;
+            List<TreeLeaf> list;
             if ((list = hashForUpdate.get(level)) == null) {
                 list = new ArrayList<TreeLeaf>();
                 hashForUpdate.put(level, list);

@@ -3,6 +3,7 @@ package org.jacop.jasat.utils.structures;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 
 import org.jacop.jasat.utils.MemoryPool;
 import org.jacop.jasat.utils.Utils;
@@ -134,7 +135,7 @@ public final class IntVec implements Iterable<Integer> {
     }
 
     public Iterator<Integer> iterator() {
-        ArrayList<Integer> list = new ArrayList<Integer>();
+        List<Integer> list = new ArrayList<Integer>();
         for (int i = 0; i < numElem; ++i)
             list.add(array[i]);
         return list.iterator();

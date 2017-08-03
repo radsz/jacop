@@ -88,7 +88,7 @@ public class EqBool extends PrimitiveConstraint {
      * @param list list of variables which must all be equal to the same value to make result equal 1.
      * @param result variable which is equal 0 if variables from list contain different values.
      */
-    public EqBool(ArrayList<? extends IntVar> list, IntVar result) {
+    public EqBool(List<? extends IntVar> list, IntVar result) {
         this(list.toArray(new IntVar[list.size()]), result);
     }
 
@@ -306,7 +306,7 @@ public class EqBool extends PrimitiveConstraint {
         return resultString.toString();
     }
 
-    ArrayList<Constraint> constraints;
+    List<Constraint> constraints;
 
     @Override public List<Constraint> decompose(Store store) {
 
@@ -331,7 +331,7 @@ public class EqBool extends PrimitiveConstraint {
     @Override public void imposeDecomposition(Store store) {
 
         if (constraints == null)
-            decompose(store);
+            constraints = decompose(store);
 
         for (Constraint c : constraints)
             store.impose(c, queueIndex);

@@ -30,8 +30,8 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -104,7 +104,7 @@ public class Sum extends Constraint {
      * @param sum the sum variable.
      */
 
-    public Sum(ArrayList<? extends IntVar> list, IntVar sum) {
+    public Sum(List<? extends IntVar> list, IntVar sum) {
         this(list.toArray(new IntVar[list.size()]), sum);
     }
 

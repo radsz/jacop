@@ -30,8 +30,8 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.api.UsesQueueVariable;
@@ -215,7 +215,7 @@ import java.util.Map;
      * @param rel       the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
      * @param sum       variable containing the sum of weighted variables.
      */
-    public Linear(Store store, ArrayList<? extends IntVar> variables, ArrayList<Integer> weights, String rel, int sum) {
+    public Linear(Store store, List<? extends IntVar> variables, List<Integer> weights, String rel, int sum) {
         this(store, variables.toArray(new IntVar[variables.size()]), weights.stream().mapToInt(i -> i).toArray(), rel, sum);
     }
 

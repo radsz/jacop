@@ -31,17 +31,10 @@
 package org.jacop.examples.fd.filters;
 
 import java.util.ArrayList;
+import java.util.List;
 
-import org.jacop.constraints.Cumulative;
+import org.jacop.constraints.*;
 import org.jacop.constraints.diffn.Diffn;
-import org.jacop.constraints.Max;
-import org.jacop.constraints.XgteqC;
-import org.jacop.constraints.XlteqY;
-import org.jacop.constraints.XmulCeqZ;
-import org.jacop.constraints.XneqY;
-import org.jacop.constraints.XplusCeqZ;
-import org.jacop.constraints.XplusClteqZ;
-import org.jacop.constraints.XplusYeqZ;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.search.CreditCalculator;
@@ -66,11 +59,11 @@ import org.jacop.ui.PrintSchedule;
 
 public class FilterBenchmark {
 
-    static ArrayList<IntVar> Ts, Rs;
+    static List<IntVar> Ts, Rs;
 
-    static ArrayList<Integer> Ds;
+    static List<Integer> Ds;
 
-    static ArrayList<String> Ns;
+    static List<String> Ns;
 
     static IntVar cost;
 
@@ -337,7 +330,7 @@ public class FilterBenchmark {
         System.out.println("with " + addNum + " adders and " + mulNum + " multipliers");
         System.out.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
 
-        ArrayList<ArrayList<IntVar>> TR = makeConstraints(store, filter, addNum, mulNum);
+        List<List<IntVar>> TR = makeConstraints(store, filter, addNum, mulNum);
 
         IntVar[][] vars = new IntVar[TR.size()][];
         for (int i = 0; i < vars.length; i++) {
@@ -392,7 +385,7 @@ public class FilterBenchmark {
         System.out.println("with " + addNum + " adders and " + mulNum + " multipliers;\nclock length: " + clock);
         System.out.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
 
-        ArrayList<ArrayList<IntVar>> TR = makeConstraintsChain(store, filter, addNum, mulNum, clock);
+        List<List<IntVar>> TR = makeConstraintsChain(store, filter, addNum, mulNum, clock);
 
         IntVar[][] vars = new IntVar[TR.size()][];
         for (int i = 0; i < vars.length; i++) {
@@ -456,7 +449,7 @@ public class FilterBenchmark {
         System.out.println("with " + addNum + " adders and " + mulNum + " multipliers");
         System.out.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
 
-        ArrayList<ArrayList<IntVar>> TR = makeConstraintsPipeMultiplier(store, filter, addNum, mulNum);
+        List<List<IntVar>> TR = makeConstraintsPipeMultiplier(store, filter, addNum, mulNum);
 
         IntVar[][] vars = new IntVar[TR.size()][];
         for (int i = 0; i < vars.length; i++) {
@@ -575,7 +568,7 @@ public class FilterBenchmark {
         System.out.println("with " + addNum + " adders and " + mulNum + " multipliers");
         System.out.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
 
-        ArrayList<ArrayList<IntVar>> TR = makeConstraintsPipeline(store, filter, addNum, mulNum);
+        List<List<IntVar>> TR = makeConstraintsPipeline(store, filter, addNum, mulNum);
 
         int tAdd = (filter.noAdd() * filter.addDel()) / addNum;
         int rAdd = (filter.noAdd() * filter.addDel()) % addNum;
@@ -586,7 +579,7 @@ public class FilterBenchmark {
         int pipeLB = (addLB > mulLB) ? addLB : mulLB;
         System.out.println("Lower bound = " + pipeLB);
 
-        ArrayList<IntVar> cc = new ArrayList<IntVar>();
+        List<IntVar> cc = new ArrayList<IntVar>();
         cc.add(new IntVar(store, 10000, 10000));
         cc.add(cost);
         TR.add(cc);
@@ -662,7 +655,7 @@ public class FilterBenchmark {
         System.out.println("with " + addNum + " adders and " + mulNum + " multipliers");
         System.out.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
 
-        ArrayList<ArrayList<IntVar>> TR = makeConstraintsPipeline(store, filter, addNum, mulNum);
+        List<List<IntVar>> TR = makeConstraintsPipeline(store, filter, addNum, mulNum);
 
         int tAdd = (filter.noAdd() * filter.addDel()) / addNum;
         int rAdd = (filter.noAdd() * filter.addDel()) % addNum;
@@ -852,7 +845,7 @@ public class FilterBenchmark {
      * @param mulNum number of multipliers available.
      * @return start time and resource assignment variables describing the scheduling problem.
      */
-    public static ArrayList<ArrayList<IntVar>> makeConstraints(Store store, Filter filter, int addNum, int mulNum) {
+    public static List<List<IntVar>> makeConstraints(Store store, Filter filter, int addNum, int mulNum) {
 
         final int addMin = 1;
         final int addMax = addMin + addNum - 1;
@@ -915,7 +908,7 @@ public class FilterBenchmark {
             store.impose(new XplusClteqZ(T[dependencies[i][0]], delays[dependencies[i][0]], T[dependencies[i][1]]));
         }
 
-        ArrayList<IntVar> endOp = new ArrayList<IntVar>();
+        List<IntVar> endOp = new ArrayList<IntVar>();
         for (int i = 0; i < lastOp.length; i++) {
             IntVar end = new IntVar(store, 0, 100);
             store.impose(new XplusCeqZ(T[lastOp[i]], D[lastOp[i]], end));
@@ -958,7 +951,7 @@ public class FilterBenchmark {
      * @param mulNum number of multipliers available.
      * @return start time and resource assignment variables describing the scheduling problem.
      */
-    public static ArrayList<ArrayList<IntVar>> makeConstraintsPipeMultiplier(Store store, Filter filter, int addNum, int mulNum) {
+    public static List<List<IntVar>> makeConstraintsPipeMultiplier(Store store, Filter filter, int addNum, int mulNum) {
 
         final int addMin = 1;
         final int addMax = addMin + addNum - 1;
@@ -1023,7 +1016,7 @@ public class FilterBenchmark {
             store.impose(new XplusClteqZ(T[dependencies[i][0]], delays[dependencies[i][0]], T[dependencies[i][1]]));
         }
 
-        ArrayList<IntVar> endOp = new ArrayList<IntVar>();
+        List<IntVar> endOp = new ArrayList<IntVar>();
         for (int i = 0; i < lastOp.length; i++) {
             IntVar end = new IntVar(store, 0, 100);
             store.impose(new XplusCeqZ(T[lastOp[i]], D[lastOp[i]], end));
@@ -1068,7 +1061,7 @@ public class FilterBenchmark {
      * @param clk number of time units within a clock.
      * @return start time and resource assignment variables describing the scheduling problem.
      */
-    public static ArrayList<ArrayList<IntVar>> makeConstraintsChain(Store store, Filter filter, int addNum, int mulNum, int clk) {
+    public static List<List<IntVar>> makeConstraintsChain(Store store, Filter filter, int addNum, int mulNum, int clk) {
 
         final int addMin = 1;
         final int addMax = addMin + addNum - 1;
@@ -1148,7 +1141,7 @@ public class FilterBenchmark {
             store.impose(new XplusClteqZ(T[dependencies[i][0]], delays[dependencies[i][0]], T[dependencies[i][1]]));
         }
 
-        ArrayList<IntVar> endOp = new ArrayList<IntVar>();
+        List<IntVar> endOp = new ArrayList<IntVar>();
         for (int i = 0; i < lastOp.length; i++) {
             IntVar end = new IntVar(store, 0, 1000);
             store.impose(new XplusCeqZ(T[lastOp[i]], D[lastOp[i]], end));
@@ -1196,7 +1189,7 @@ public class FilterBenchmark {
      * @param mulNum number of available multipliers.
      * @return variables corresponding to start time and resource assignment of the filter operations.
      */
-    public static ArrayList<ArrayList<IntVar>> makeConstraintsPipeline(Store store, Filter filter, int addNum, int mulNum) {
+    public static List<List<IntVar>> makeConstraintsPipeline(Store store, Filter filter, int addNum, int mulNum) {
 
         final int addMin = 1;
         final int addMax = addMin + addNum - 1;
@@ -1297,7 +1290,7 @@ public class FilterBenchmark {
             store.impose(new XplusClteqZ(T[dependencies[i][0]], delays[dependencies[i][0]], T[dependencies[i][1]]));
         }
 
-        ArrayList<IntVar> endOp = new ArrayList<IntVar>();
+        List<IntVar> endOp = new ArrayList<IntVar>();
         for (int i = 0; i < lastOp.length; i++) {
             IntVar end = new IntVar(store, 0, 100);
             store.impose(new XplusCeqZ(T[lastOp[i]], D[lastOp[i]], end));
@@ -1349,12 +1342,12 @@ public class FilterBenchmark {
      * @param R an array of variables corresponding to resource of an operation.
      * @return an array of arrays, each array containing one starttime and one resource assignment variable.
      */
-    public static ArrayList<ArrayList<IntVar>> makeLabelingList(IntVar[] T, IntVar[] R) {
+    public static List<List<IntVar>> makeLabelingList(IntVar[] T, IntVar[] R) {
 
-        ArrayList<ArrayList<IntVar>> list = new ArrayList<ArrayList<IntVar>>();
+        List<List<IntVar>> list = new ArrayList<List<IntVar>>();
 
         for (int i = 0; i < T.length; i++) {
-            ArrayList<IntVar> TR = new ArrayList<IntVar>();
+            List<IntVar> TR = new ArrayList<IntVar>();
             TR.add(T[i]);
             TR.add(R[i]);
             list.add(TR);

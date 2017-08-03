@@ -32,6 +32,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Reified;
@@ -126,27 +127,27 @@ public class ProAndCon extends ExampleFD {
         }
 
         // Sum constraint for each group
-        ArrayList<IntVar> votesMotion1 = new ArrayList<IntVar>();
+        List<IntVar> votesMotion1 = new ArrayList<IntVar>();
         for (int i = 0; i < 5; i++)
             votesMotion1.add(vote[i][iMotion1]);
         store.impose(new SumInt(store, votesMotion1, "==", sum4Group[iMotion1]));
 
-        ArrayList<IntVar> votesMotion2 = new ArrayList<IntVar>();
+        List<IntVar> votesMotion2 = new ArrayList<IntVar>();
         for (int i = 0; i < 5; i++)
             votesMotion2.add(vote[i][iMotion2]);
         store.impose(new SumInt(store, votesMotion2, "==", sum4Group[iMotion2]));
 
-        ArrayList<IntVar> votesMotion3 = new ArrayList<IntVar>();
+        List<IntVar> votesMotion3 = new ArrayList<IntVar>();
         for (int i = 0; i < 5; i++)
             votesMotion3.add(vote[i][iMotion3]);
         store.impose(new SumInt(store, votesMotion3, "==", sum4Group[iMotion3]));
 
-        ArrayList<IntVar> votesMotion4 = new ArrayList<IntVar>();
+        List<IntVar> votesMotion4 = new ArrayList<IntVar>();
         for (int i = 0; i < 5; i++)
             votesMotion4.add(vote[i][iMotion4]);
         store.impose(new SumInt(store, votesMotion4, "==", sum4Group[iMotion4]));
 
-        ArrayList<IntVar> votesMotion5 = new ArrayList<IntVar>();
+        List<IntVar> votesMotion5 = new ArrayList<IntVar>();
         for (int i = 0; i < 5; i++)
             votesMotion5.add(vote[i][iMotion5]);
         store.impose(new SumInt(store, votesMotion5, "==", sum4Group[iMotion5]));

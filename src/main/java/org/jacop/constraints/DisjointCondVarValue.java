@@ -31,7 +31,7 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
+import java.util.List;
 
 import org.jacop.core.MutableVarValue;
 
@@ -82,7 +82,7 @@ class DisjointCondVarValue implements MutableVarValue, Cloneable {
         Rects = R;
     }
 
-    void setValue(ArrayList<RectangleWithCondition> VR) {
+    void setValue(List<RectangleWithCondition> VR) {
         Rects = new RectangleWithCondition[VR.size()];
         for (int i = 0; i < Rects.length; i++)
             Rects[i] = VR.get(i);

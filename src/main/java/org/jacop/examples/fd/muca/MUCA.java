@@ -32,6 +32,7 @@ package org.jacop.examples.fd.muca;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.StringTokenizer;
 
 import org.jacop.constraints.Among;
@@ -77,26 +78,26 @@ public class MUCA extends ExampleFD {
      * Each bidder issues an ArrayList of xor bids.
      * Each Xor bid is a list of transformations.
      */
-    public ArrayList<ArrayList<ArrayList<Transformation>>> bids;
+    public List<List<List<Transformation>>> bids;
 
 
     /**
      * For each bidder and each xor bid there is an
      * integer representing a cost of the xor bid.
      */
-    public ArrayList<ArrayList<Integer>> costs;
+    public List<List<Integer>> costs;
 
 
     /**
      * It specifies the initial quantities of goods.
      */
-    public ArrayList<Integer> initialQuantity;
+    public List<Integer> initialQuantity;
 
 
     /**
      * It specifies the minimal quantities of items seeked to achieve.
      */
-    public ArrayList<Integer> finalQuantity;
+    public List<Integer> finalQuantity;
 
     /**
      * It specifies number of goods which are in the focus of the auction.
@@ -136,7 +137,7 @@ public class MUCA extends ExampleFD {
      * For each bidder it specifies variable representing
      * the cost of the chosen xor bid.
      */
-    public ArrayList<IntVar> bidCosts;
+    public List<IntVar> bidCosts;
 
 
     /**
@@ -178,11 +179,11 @@ public class MUCA extends ExampleFD {
      */
     public void setupProblem1() {
 
-        bids = new ArrayList<ArrayList<ArrayList<Transformation>>>();
+        bids = new ArrayList<List<List<Transformation>>>();
 
-        ArrayList<ArrayList<Transformation>> bid_1 = new ArrayList<ArrayList<Transformation>>();
+        List<List<Transformation>> bid_1 = new ArrayList<List<Transformation>>();
 
-        ArrayList<Transformation> bid_1_xor1 = new ArrayList<Transformation>();
+        List<Transformation> bid_1_xor1 = new ArrayList<Transformation>();
 
         Transformation t1 = new Transformation();
         // ((0, 1))
@@ -210,9 +211,9 @@ public class MUCA extends ExampleFD {
 
         bid_1.add(bid_1_xor1);
 
-        ArrayList<ArrayList<Transformation>> bid_2 = new ArrayList<ArrayList<Transformation>>();
+        List<List<Transformation>> bid_2 = new ArrayList<List<Transformation>>();
 
-        ArrayList<Transformation> bid_2_xor1 = new ArrayList<Transformation>();
+        List<Transformation> bid_2_xor1 = new ArrayList<Transformation>();
 
         Transformation t3 = new Transformation();
         // ((0, 1))
@@ -257,9 +258,9 @@ public class MUCA extends ExampleFD {
 
         bid_2.add(bid_2_xor1);
 
-        ArrayList<ArrayList<Transformation>> bid_3 = new ArrayList<ArrayList<Transformation>>();
+        List<List<Transformation>> bid_3 = new ArrayList<List<Transformation>>();
 
-        ArrayList<Transformation> bid_3_xor1 = new ArrayList<Transformation>();
+        List<Transformation> bid_3_xor1 = new ArrayList<Transformation>();
 
         Transformation t6 = new Transformation();
         // ((0, 1))
@@ -289,9 +290,9 @@ public class MUCA extends ExampleFD {
 
         bid_3.add(bid_3_xor1);
 
-        ArrayList<ArrayList<Transformation>> bid_4 = new ArrayList<ArrayList<Transformation>>();
+        List<List<Transformation>> bid_4 = new ArrayList<List<Transformation>>();
 
-        ArrayList<Transformation> bid_4_xor1 = new ArrayList<Transformation>();
+        List<Transformation> bid_4_xor1 = new ArrayList<Transformation>();
 
         Transformation t8 = new Transformation();
         // ((0, 1))
@@ -308,9 +309,9 @@ public class MUCA extends ExampleFD {
 
         bid_4.add(bid_4_xor1);
 
-        ArrayList<ArrayList<Transformation>> bid_5 = new ArrayList<ArrayList<Transformation>>();
+        List<List<Transformation>> bid_5 = new ArrayList<List<Transformation>>();
 
-        ArrayList<Transformation> bid_5_xor1 = new ArrayList<Transformation>();
+        List<Transformation> bid_5_xor1 = new ArrayList<Transformation>();
 
         Transformation t9 = new Transformation();
         // ((0, 1))
@@ -329,9 +330,9 @@ public class MUCA extends ExampleFD {
 
         bid_5.add(bid_5_xor1);
 
-        ArrayList<ArrayList<Transformation>> bid_6 = new ArrayList<ArrayList<Transformation>>();
+        List<List<Transformation>> bid_6 = new ArrayList<List<Transformation>>();
 
-        ArrayList<Transformation> bid_6_xor1 = new ArrayList<Transformation>();
+        List<Transformation> bid_6_xor1 = new ArrayList<Transformation>();
 
         Transformation t10 = new Transformation();
         // ((0, 1))
@@ -348,9 +349,9 @@ public class MUCA extends ExampleFD {
 
         bid_6.add(bid_6_xor1);
 
-        ArrayList<ArrayList<Transformation>> bid_7 = new ArrayList<ArrayList<Transformation>>();
+        List<List<Transformation>> bid_7 = new ArrayList<List<Transformation>>();
 
-        ArrayList<Transformation> bid_7_xor1 = new ArrayList<Transformation>();
+        List<Transformation> bid_7_xor1 = new ArrayList<Transformation>();
 
         Transformation t11 = new Transformation();
         // ((0, 1))
@@ -395,9 +396,9 @@ public class MUCA extends ExampleFD {
 
         bid_7.add(bid_7_xor1);
 
-        ArrayList<ArrayList<Transformation>> bid_8 = new ArrayList<ArrayList<Transformation>>();
+        List<List<Transformation>> bid_8 = new ArrayList<List<Transformation>>();
 
-        ArrayList<Transformation> bid_8_xor1 = new ArrayList<Transformation>();
+        List<Transformation> bid_8_xor1 = new ArrayList<Transformation>();
 
         Transformation t14 = new Transformation();
         // ((1, 2))
@@ -456,37 +457,37 @@ public class MUCA extends ExampleFD {
         finalQuantity.add(0);
         finalQuantity.add(0);
 
-        costs = new ArrayList<ArrayList<Integer>>();
-        ArrayList<Integer> cost_bid_1 = new ArrayList<Integer>();
+        costs = new ArrayList<List<Integer>>();
+        List<Integer> cost_bid_1 = new ArrayList<Integer>();
         cost_bid_1.add(-10);
 
         costs.add(cost_bid_1);
 
-        ArrayList<Integer> cost_bid_2 = new ArrayList<Integer>();
+        List<Integer> cost_bid_2 = new ArrayList<Integer>();
         cost_bid_2.add(-20);
         costs.add(cost_bid_2);
 
-        ArrayList<Integer> cost_bid_3 = new ArrayList<Integer>();
+        List<Integer> cost_bid_3 = new ArrayList<Integer>();
         cost_bid_3.add(25);
         costs.add(cost_bid_3);
 
-        ArrayList<Integer> cost_bid_4 = new ArrayList<Integer>();
+        List<Integer> cost_bid_4 = new ArrayList<Integer>();
         cost_bid_4.add(-30);
         costs.add(cost_bid_4);
 
-        ArrayList<Integer> cost_bid_5 = new ArrayList<Integer>();
+        List<Integer> cost_bid_5 = new ArrayList<Integer>();
         cost_bid_5.add(35);
         costs.add(cost_bid_5);
 
-        ArrayList<Integer> cost_bid_6 = new ArrayList<Integer>();
+        List<Integer> cost_bid_6 = new ArrayList<Integer>();
         cost_bid_6.add(-32);
         costs.add(cost_bid_6);
 
-        ArrayList<Integer> cost_bid_7 = new ArrayList<Integer>();
+        List<Integer> cost_bid_7 = new ArrayList<Integer>();
         cost_bid_7.add(-15);
         costs.add(cost_bid_7);
 
-        ArrayList<Integer> cost_bid_8 = new ArrayList<Integer>();
+        List<Integer> cost_bid_8 = new ArrayList<Integer>();
         cost_bid_8.add(-30);
         costs.add(cost_bid_8);
 
@@ -496,11 +497,11 @@ public class MUCA extends ExampleFD {
      * It creates an instance of the auction problem.
      */
     public void setupProblem2() {
-        bids = new ArrayList<ArrayList<ArrayList<Transformation>>>();
+        bids = new ArrayList<List<List<Transformation>>>();
 
-        ArrayList<ArrayList<Transformation>> bid_1 = new ArrayList<ArrayList<Transformation>>();
+        List<List<Transformation>> bid_1 = new ArrayList<List<Transformation>>();
 
-        ArrayList<Transformation> bid_1_xor1 = new ArrayList<Transformation>();
+        List<Transformation> bid_1_xor1 = new ArrayList<Transformation>();
 
         Transformation t1 = new Transformation();
         // ((0, 1))
@@ -545,9 +546,9 @@ public class MUCA extends ExampleFD {
 
         bid_1.add(bid_1_xor1);
 
-        ArrayList<ArrayList<Transformation>> bid_2 = new ArrayList<ArrayList<Transformation>>();
+        List<List<Transformation>> bid_2 = new ArrayList<List<Transformation>>();
 
-        ArrayList<Transformation> bid_2_xor1 = new ArrayList<Transformation>();
+        List<Transformation> bid_2_xor1 = new ArrayList<Transformation>();
 
         Transformation t4 = new Transformation();
         // ((0, 1))
@@ -566,9 +567,9 @@ public class MUCA extends ExampleFD {
 
         bid_2.add(bid_2_xor1);
 
-        ArrayList<ArrayList<Transformation>> bid_3 = new ArrayList<ArrayList<Transformation>>();
+        List<List<Transformation>> bid_3 = new ArrayList<List<Transformation>>();
 
-        ArrayList<Transformation> bid_3_xor1 = new ArrayList<Transformation>();
+        List<Transformation> bid_3_xor1 = new ArrayList<Transformation>();
 
         Transformation t5 = new Transformation();
         // ((0, 1))
@@ -613,9 +614,9 @@ public class MUCA extends ExampleFD {
 
         bid_3.add(bid_3_xor1);
 
-        ArrayList<ArrayList<Transformation>> bid_4 = new ArrayList<ArrayList<Transformation>>();
+        List<List<Transformation>> bid_4 = new ArrayList<List<Transformation>>();
 
-        ArrayList<Transformation> bid_4_xor1 = new ArrayList<Transformation>();
+        List<Transformation> bid_4_xor1 = new ArrayList<Transformation>();
 
         Transformation t8 = new Transformation();
         // ((1, 2))
@@ -651,26 +652,26 @@ public class MUCA extends ExampleFD {
         finalQuantity.add(0);
         finalQuantity.add(4);
 
-        costs = new ArrayList<ArrayList<Integer>>();
+        costs = new ArrayList<List<Integer>>();
 
         bids.add(bid_1);
         bids.add(bid_2);
         bids.add(bid_3);
         bids.add(bid_4);
 
-        ArrayList<Integer> cost_bid_1 = new ArrayList<Integer>();
+        List<Integer> cost_bid_1 = new ArrayList<Integer>();
         cost_bid_1.add(-20);
         costs.add(cost_bid_1);
 
-        ArrayList<Integer> cost_bid_2 = new ArrayList<Integer>();
+        List<Integer> cost_bid_2 = new ArrayList<Integer>();
         cost_bid_2.add(-35);
         costs.add(cost_bid_2);
 
-        ArrayList<Integer> cost_bid_3 = new ArrayList<Integer>();
+        List<Integer> cost_bid_3 = new ArrayList<Integer>();
         cost_bid_3.add(-15);
         costs.add(cost_bid_3);
 
-        ArrayList<Integer> cost_bid_4 = new ArrayList<Integer>();
+        List<Integer> cost_bid_4 = new ArrayList<Integer>();
         cost_bid_4.add(-30);
         costs.add(cost_bid_4);
     }
@@ -680,11 +681,11 @@ public class MUCA extends ExampleFD {
      */
     public void setupProblem3() {
 
-        bids = new ArrayList<ArrayList<ArrayList<Transformation>>>();
+        bids = new ArrayList<List<List<Transformation>>>();
 
-        ArrayList<ArrayList<Transformation>> bid_1 = new ArrayList<ArrayList<Transformation>>();
+        List<List<Transformation>> bid_1 = new ArrayList<List<Transformation>>();
 
-        ArrayList<Transformation> bid_1_xor1 = new ArrayList<Transformation>();
+        List<Transformation> bid_1_xor1 = new ArrayList<Transformation>();
 
         Transformation t1 = new Transformation();
         // ((0, 1))
@@ -710,9 +711,9 @@ public class MUCA extends ExampleFD {
 
         bid_1.add(bid_1_xor1);
 
-        ArrayList<ArrayList<Transformation>> bid_2 = new ArrayList<ArrayList<Transformation>>();
+        List<List<Transformation>> bid_2 = new ArrayList<List<Transformation>>();
 
-        ArrayList<Transformation> bid_2_xor1 = new ArrayList<Transformation>();
+        List<Transformation> bid_2_xor1 = new ArrayList<Transformation>();
 
         Transformation t4 = new Transformation();
         // ((0, 1))
@@ -738,9 +739,9 @@ public class MUCA extends ExampleFD {
 
         bid_2.add(bid_2_xor1);
 
-        ArrayList<ArrayList<Transformation>> bid_3 = new ArrayList<ArrayList<Transformation>>();
+        List<List<Transformation>> bid_3 = new ArrayList<List<Transformation>>();
 
-        ArrayList<Transformation> bid_3_xor1 = new ArrayList<Transformation>();
+        List<Transformation> bid_3_xor1 = new ArrayList<Transformation>();
 
         Transformation t3 = new Transformation();
         // ((1, 2))
@@ -770,18 +771,18 @@ public class MUCA extends ExampleFD {
         finalQuantity.add(0);
         finalQuantity.add(1);
 
-        costs = new ArrayList<ArrayList<Integer>>();
-        ArrayList<Integer> cost_bid_1 = new ArrayList<Integer>();
+        costs = new ArrayList<List<Integer>>();
+        List<Integer> cost_bid_1 = new ArrayList<Integer>();
         cost_bid_1.add(-5);
 
         costs.add(cost_bid_1);
 
-        ArrayList<Integer> cost_bid_2 = new ArrayList<Integer>();
+        List<Integer> cost_bid_2 = new ArrayList<Integer>();
         cost_bid_2.add(-8);
 
         costs.add(cost_bid_2);
 
-        ArrayList<Integer> cost_bid_3 = new ArrayList<Integer>();
+        List<Integer> cost_bid_3 = new ArrayList<Integer>();
         cost_bid_3.add(-2);
         costs.add(cost_bid_3);
 
@@ -794,11 +795,11 @@ public class MUCA extends ExampleFD {
 
         noGoods = 4;
 
-        bids = new ArrayList<ArrayList<ArrayList<Transformation>>>();
+        bids = new ArrayList<List<List<Transformation>>>();
 
-        ArrayList<ArrayList<Transformation>> bid_1 = new ArrayList<ArrayList<Transformation>>();
+        List<List<Transformation>> bid_1 = new ArrayList<List<Transformation>>();
 
-        ArrayList<Transformation> bid_1_xor1 = new ArrayList<Transformation>();
+        List<Transformation> bid_1_xor1 = new ArrayList<Transformation>();
 
         Transformation t1 = new Transformation();
         // ((0, 1))
@@ -824,7 +825,7 @@ public class MUCA extends ExampleFD {
 
         bid_1.add(bid_1_xor1);
 
-        ArrayList<Transformation> bid_1_xor2 = new ArrayList<Transformation>();
+        List<Transformation> bid_1_xor2 = new ArrayList<Transformation>();
 
         Transformation t4 = new Transformation();
         // ((0, 1))
@@ -852,9 +853,9 @@ public class MUCA extends ExampleFD {
 
 
 
-        ArrayList<ArrayList<Transformation>> bid_2 = new ArrayList<ArrayList<Transformation>>();
+        List<List<Transformation>> bid_2 = new ArrayList<List<Transformation>>();
 
-        ArrayList<Transformation> bid_2_xor1 = new ArrayList<Transformation>();
+        List<Transformation> bid_2_xor1 = new ArrayList<Transformation>();
 
         Transformation t3 = new Transformation();
         // ((1, 2))
@@ -883,14 +884,14 @@ public class MUCA extends ExampleFD {
         finalQuantity.add(0);
         finalQuantity.add(1);
 
-        costs = new ArrayList<ArrayList<Integer>>();
-        ArrayList<Integer> cost_bid_1 = new ArrayList<Integer>();
+        costs = new ArrayList<List<Integer>>();
+        List<Integer> cost_bid_1 = new ArrayList<Integer>();
         cost_bid_1.add(-5);
         cost_bid_1.add(-8);
 
         costs.add(cost_bid_1);
 
-        ArrayList<Integer> cost_bid_2 = new ArrayList<Integer>();
+        List<Integer> cost_bid_2 = new ArrayList<Integer>();
         cost_bid_2.add(-2);
         costs.add(cost_bid_2);
 
@@ -942,11 +943,11 @@ public class MUCA extends ExampleFD {
         // number of transformations
         int noAvailableTransformations = 0;
 
-        for (ArrayList<ArrayList<Transformation>> bid : bids) {
+        for (List<List<Transformation>> bid : bids) {
 
             int max = 0;
 
-            for (ArrayList<Transformation> bid_xor : bid) {
+            for (List<Transformation> bid_xor : bid) {
                 noAvailableTransformations += bid_xor.size();
                 if (bid_xor.size() > max)
                     max = bid_xor.size();
@@ -980,7 +981,7 @@ public class MUCA extends ExampleFD {
 
         bidCosts = new ArrayList<IntVar>();
 
-        for (ArrayList<ArrayList<Transformation>> bid : bids) {
+        for (List<List<Transformation>> bid : bids) {
 
             IntVar[] nVars = new IntVar[bid.size() + 1];
             int[][] tuples = new int[bid.size() + 1][];
@@ -988,11 +989,11 @@ public class MUCA extends ExampleFD {
             tuples[0] = new int[bid.size() + 1];
 
             int i = 0;
-            for (ArrayList<Transformation> bid_xor : bid) {
+            for (List<Transformation> bid_xor : bid) {
 
                 IntervalDomain kSet = new IntervalDomain();
 
-                ArrayList<IntVar> xorUsedTransformation = new ArrayList<IntVar>();
+                List<IntVar> xorUsedTransformation = new ArrayList<IntVar>();
                 for (Transformation t : bid_xor) {
                     noTransformations++;
                     t.id = noTransformations;
@@ -1031,14 +1032,14 @@ public class MUCA extends ExampleFD {
 
         for (int g = 0; g < noGoods; g++) {
 
-            ArrayList<int[]> tuples4transitions = new ArrayList<int[]>();
+            List<int[]> tuples4transitions = new ArrayList<int[]>();
 
             int[] dummyTransition = {0, 0, 0};
             tuples4transitions.add(dummyTransition);
 
-            for (ArrayList<ArrayList<Transformation>> bid : bids) {
+            for (List<List<Transformation>> bid : bids) {
 
-                for (ArrayList<Transformation> bid_xor : bid) {
+                for (List<Transformation> bid_xor : bid) {
 
                     for (Transformation t : bid_xor) {
 
@@ -1058,7 +1059,7 @@ public class MUCA extends ExampleFD {
 
             for (int i = 0; i < maxNoTransformations; i++) {
 
-                ArrayList<IntVar> vars = new ArrayList<IntVar>();
+                List<IntVar> vars = new ArrayList<IntVar>();
                 vars.add(transitions[i]);
                 deltasI[i][g] = new IntVar(store, "deltaI_g" + g + "t" + i, minDelta, maxDelta);
                 vars.add(deltasI[i][g]);
@@ -1087,9 +1088,9 @@ public class MUCA extends ExampleFD {
             weights[0] =
                 new IntVar(store, String.valueOf(initialQuantity.get(g)) + "of-g" + g, initialQuantity.get(g), initialQuantity.get(g));
 
-            for (ArrayList<ArrayList<Transformation>> bid : bids) {
+            for (List<List<Transformation>> bid : bids) {
 
-                for (ArrayList<Transformation> bid_xor : bid) {
+                for (List<Transformation> bid_xor : bid) {
 
                     for (Transformation t : bid_xor) {
 
@@ -1196,8 +1197,8 @@ public class MUCA extends ExampleFD {
 
     static class Transformation {
 
-        public ArrayList<Integer> goodsIds;
-        public ArrayList<Delta> delta;
+        public List<Integer> goodsIds;
+        public List<Delta> delta;
         public int id;
 
         public int getDelta(int goodId) {
@@ -1279,9 +1280,9 @@ public class MUCA extends ExampleFD {
             int[] input;
             int[] output;
 
-            bids = new ArrayList<ArrayList<ArrayList<Transformation>>>();
+            bids = new ArrayList<List<List<Transformation>>>();
 
-            bids.add(new ArrayList<ArrayList<Transformation>>());
+            bids.add(new ArrayList<List<Transformation>>());
 
             (bids.get(0)).add(new ArrayList<Transformation>());
 
@@ -1294,7 +1295,7 @@ public class MUCA extends ExampleFD {
                     bid_xorCounter = 1;
                     transformationCounter = 1;
 
-                    bids.add(new ArrayList<ArrayList<Transformation>>());
+                    bids.add(new ArrayList<List<Transformation>>());
                     bids.get(bidCounter - 1).add(new ArrayList<Transformation>());
                 }
                 //System.out.println(bidCounter + " " + bid_xorCounter);
@@ -1352,7 +1353,7 @@ public class MUCA extends ExampleFD {
 
             // now read in the price for each xor bid
 
-            costs = new ArrayList<ArrayList<Integer>>();
+            costs = new ArrayList<List<Integer>>();
 
             costs.add(new ArrayList<Integer>());
 

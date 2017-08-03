@@ -30,8 +30,8 @@
 
 package org.jacop.constraints.diffn;
 
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Stream;
 
 import org.jacop.core.IntVar;
@@ -96,7 +96,7 @@ public class Rectangle {
      * @param list it specifies for each dimension (one after the other) its origin and length.
      *
      */
-    public Rectangle(ArrayList<? extends IntVar> list) {
+    public Rectangle(List<? extends IntVar> list) {
         this(list.toArray(new IntVar[list.size()]));
     }
 

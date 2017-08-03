@@ -37,8 +37,8 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 
-import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -176,7 +176,7 @@ public class Nooverlap extends Constraint {
      *
      * @param rectangle list of rectangles which can not overlap in at least one dimension.
      */
-    public Nooverlap(ArrayList<? extends ArrayList<? extends IntVar>> rectangle) {
+    public Nooverlap(List<? extends List<? extends IntVar>> rectangle) {
 
         queueIndex = 2;
         numberId = idNumber.incrementAndGet();
@@ -185,7 +185,7 @@ public class Nooverlap extends Constraint {
 
         int i = 0;
 
-        for (ArrayList<? extends IntVar> r : rectangle)
+        for (List<? extends IntVar> r : rectangle)
             if (r.size() == 4) {
                 for (int j = 0; j < r.size(); j++) {
                     this.rectangle[i] =
@@ -208,7 +208,7 @@ public class Nooverlap extends Constraint {
      * @param rectangle list of rectangles which can not overlap in at least one dimension.
      * @param strict    true- zero size rectangles need to be between other rectangles; false- these rectangles can be anywhere
      */
-    public Nooverlap(ArrayList<? extends ArrayList<? extends IntVar>> rectangle, boolean strict) {
+    public Nooverlap(List<? extends List<? extends IntVar>> rectangle, boolean strict) {
         this(rectangle);
         this.strict = strict;
     }
@@ -221,8 +221,8 @@ public class Nooverlap extends Constraint {
      * @param l1 list of variables denoting length of the rectangle in the first dimension.
      * @param l2 list of variables denoting length of the rectangle in the second dimension.
      */
-    public Nooverlap(ArrayList<? extends IntVar> o1, ArrayList<? extends IntVar> o2, ArrayList<? extends IntVar> l1,
-        ArrayList<? extends IntVar> l2) {
+    public Nooverlap(List<? extends IntVar> o1, List<? extends IntVar> o2, List<? extends IntVar> l1,
+        List<? extends IntVar> l2) {
 
         this(o1.toArray(new IntVar[o1.size()]), o2.toArray(new IntVar[o2.size()]), l1.toArray(new IntVar[l1.size()]),
             l2.toArray(new IntVar[l2.size()]));
@@ -238,8 +238,8 @@ public class Nooverlap extends Constraint {
      * @param l2     list of variables denoting length of the rectangle in the second dimension.
      * @param strict true- zero size rectangles need to be between other rectangles; false- these rectangles can be anywhere
      */
-    public Nooverlap(ArrayList<? extends IntVar> o1, ArrayList<? extends IntVar> o2, ArrayList<? extends IntVar> l1,
-        ArrayList<? extends IntVar> l2, boolean strict) {
+    public Nooverlap(List<? extends IntVar> o1, List<? extends IntVar> o2, List<? extends IntVar> l1,
+        List<? extends IntVar> l2, boolean strict) {
         this(o1, o2, l1, l2);
         this.strict = strict;
     }

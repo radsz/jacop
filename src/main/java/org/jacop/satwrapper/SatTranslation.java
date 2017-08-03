@@ -31,6 +31,7 @@
 package org.jacop.satwrapper;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.jacop.core.IntVar;
 import org.jacop.core.BooleanVar;
@@ -63,13 +64,13 @@ public class SatTranslation {
 
     public void generate_clause(IntVar[] a1, IntVar[] a2) {
 
-        ArrayList<IntVar> a1reduced = new ArrayList<IntVar>();
+        List<IntVar> a1reduced = new ArrayList<IntVar>();
         for (int i = 0; i < a1.length; i++)
             if (a1[i].min() == 1)
                 return;
             else if (a1[i].max() != 0)
                 a1reduced.add(a1[i]);
-        ArrayList<IntVar> a2reduced = new ArrayList<IntVar>();
+        List<IntVar> a2reduced = new ArrayList<IntVar>();
         for (int i = 0; i < a2.length; i++)
             if (a2[i].max() == 0)
                 return;

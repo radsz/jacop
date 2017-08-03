@@ -31,11 +31,7 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.Set;
-import java.util.HashSet;
-import java.util.HashMap;
-import java.util.Stack;
-import java.util.ArrayList;
+import java.util.*;
 
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatVar;
@@ -81,7 +77,7 @@ public class Derivative {
 
         // System.out.println ("Var = " + f);
 
-        ArrayList<Constraint> constraints = new ArrayList<Constraint>();
+        List<Constraint> constraints = new ArrayList<Constraint>();
 
         if (f == x)
             return new FloatVar(store, 1.0, 1.0);
@@ -145,7 +141,7 @@ public class Derivative {
         derivateConstraints.add(c);
     }
 
-    static Constraint resolveConstraint(FloatVar f, ArrayList<Constraint> cs) {
+    static Constraint resolveConstraint(FloatVar f, List<Constraint> cs) {
 
         // resolve based on definitions given by a programmer
         Constraint c = definitionConstraint.get(f);
@@ -153,7 +149,7 @@ public class Derivative {
         // if there is no definition use heuristic to resolve it
         // basically we look for a constraint on a list of possibel constraints
         // that has output equal variable defining the function
-        ArrayList<Constraint> resolved = new ArrayList<Constraint>();
+        List<Constraint> resolved = new ArrayList<Constraint>();
         if (c == null)
             for (Constraint cc : cs) {
                 if (cc instanceof PmulQeqR) {

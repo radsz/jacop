@@ -30,9 +30,9 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-
 import org.jacop.core.IntVar;
+
+import java.util.List;
 
 /**
  * Defines a rectangle used in the diffn constraint.
@@ -47,7 +47,7 @@ class RectangleWithCondition extends Rectangle {
 
     int index = 0;
 
-    public RectangleWithCondition(int i, ArrayList<? extends IntVar> R, IntVar cond) {
+    public RectangleWithCondition(int i, List<? extends IntVar> R, IntVar cond) {
         super(R);
         c = cond;
         index = i;

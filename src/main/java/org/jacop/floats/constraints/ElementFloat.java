@@ -34,6 +34,7 @@ package org.jacop.floats.constraints;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.api.UsesQueueVariable;
@@ -101,7 +102,7 @@ public class ElementFloat extends Constraint implements UsesQueueVariable {
      * It holds information about the positions within list array that are equal. It allows
      * to safely skip duplicates when enumerating index domain. 
      */
-    ArrayList<IntDomain> duplicates;
+    List<IntDomain> duplicates;
     IntDomain duplicatesIndexes;
 
     /**
@@ -151,7 +152,7 @@ public class ElementFloat extends Constraint implements UsesQueueVariable {
      * @param list list containing variables which one pointed out by index variable is made equal to value variable.  
      * @param value a value variable equal to the specified element from the list. 
      */
-    public ElementFloat(IntVar index, ArrayList<Double> list, FloatVar value) {
+    public ElementFloat(IntVar index, List<Double> list, FloatVar value) {
         this(index, list, value, 0);
     }
 
@@ -163,7 +164,7 @@ public class ElementFloat extends Constraint implements UsesQueueVariable {
      * @param value a value of the index-th element from list
      * @param indexOffset shift applied to index variable. 
      */
-    public ElementFloat(IntVar index, ArrayList<Double> list, FloatVar value, int indexOffset) {
+    public ElementFloat(IntVar index, List<Double> list, FloatVar value, int indexOffset) {
         this(index, list.stream().mapToDouble(i -> i).toArray(), value, indexOffset);
     }
 

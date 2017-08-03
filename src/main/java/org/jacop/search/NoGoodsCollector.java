@@ -31,6 +31,7 @@
 package org.jacop.search;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.jacop.constraints.NoGood;
 import org.jacop.constraints.PrimitiveConstraint;
@@ -50,9 +51,9 @@ import org.jacop.core.Store;
 
 public class NoGoodsCollector<T extends IntVar> implements ExitChildListener<T>, TimeOutListener, ExitListener {
 
-    ArrayList<ArrayList<T>> noGoodsVariables;
+    List<List<T>> noGoodsVariables;
 
-    ArrayList<ArrayList<Integer>> noGoodsValues;
+    List<List<Integer>> noGoodsValues;
 
     /**
      * It specifies if the timeout has occurred and search is being terminated.
@@ -73,8 +74,8 @@ public class NoGoodsCollector<T extends IntVar> implements ExitChildListener<T>,
 
         if (noSolutions == 0) {
             timeOut = true;
-            noGoodsVariables = new ArrayList<ArrayList<T>>();
-            noGoodsValues = new ArrayList<ArrayList<Integer>>();
+            noGoodsVariables = new ArrayList<List<T>>();
+            noGoodsValues = new ArrayList<List<Integer>>();
         }
 
         if (timeOutListeners != null)
@@ -92,10 +93,10 @@ public class NoGoodsCollector<T extends IntVar> implements ExitChildListener<T>,
     public boolean leftChild(T var, int value, boolean status) {
 
         if (timeOut) {
-            for (ArrayList<T> noGood : noGoodsVariables)
+            for (List<T> noGood : noGoodsVariables)
                 noGood.add(var);
 
-            for (ArrayList<Integer> noGood : noGoodsValues)
+            for (List<Integer> noGood : noGoodsValues)
                 noGood.add(value);
 
             if (exitChildListeners != null)
@@ -129,9 +130,9 @@ public class NoGoodsCollector<T extends IntVar> implements ExitChildListener<T>,
     public void rightChild(T var, int value, boolean status) {
 
         if (timeOut) {
-            ArrayList<T> newNoGoodVar = new ArrayList<T>();
+            List<T> newNoGoodVar = new ArrayList<T>();
             newNoGoodVar.add(var);
-            ArrayList<Integer> newNoGoodVal = new ArrayList<Integer>();
+            List<Integer> newNoGoodVal = new ArrayList<Integer>();
             newNoGoodVal.add(value);
 
             noGoodsVariables.add(newNoGoodVar);

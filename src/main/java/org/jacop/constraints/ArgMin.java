@@ -30,8 +30,8 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -113,13 +113,13 @@ public class ArgMin extends Constraint {
      * @param indexOffset the offset for the index that is computed from 1 by default (if needed from 0, use -1 for this parameter)
      * @param tiebreak defines if tie breaking sgould be used (returning the least index if several maximum elements
      */
-    public ArgMin(ArrayList<? extends IntVar> variables, IntVar minIndex, int indexOffset, boolean tiebreak) {
+    public ArgMin(List<? extends IntVar> variables, IntVar minIndex, int indexOffset, boolean tiebreak) {
         this(variables, minIndex);
         this.indexOffset = indexOffset;
         this.tiebreak = tiebreak;
     }
 
-    public ArgMin(ArrayList<? extends IntVar> variables, IntVar minIndex) {
+    public ArgMin(List<? extends IntVar> variables, IntVar minIndex) {
 
         this(variables.toArray(new IntVar[variables.size()]), minIndex);
 

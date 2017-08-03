@@ -30,17 +30,12 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
 import org.jacop.core.Var;
 
 
@@ -104,7 +99,7 @@ public class Alldiff extends Alldifferent {
      * It constructs the alldiff constraint for the supplied variable.
      * @param variables variables which are constrained to take different values.
      */
-    public Alldiff(ArrayList<? extends IntVar> variables) {
+    public Alldiff(List<? extends IntVar> variables) {
         this(variables.toArray(new IntVar[variables.size()]));
     }
 

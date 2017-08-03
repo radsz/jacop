@@ -41,7 +41,6 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 import org.jacop.core.TimeStamp;
 
 /**
@@ -112,7 +111,7 @@ public class AndBoolVector extends PrimitiveConstraint {
      * @param list   list of x's which must all be equal 1 to make result equal 1.
      * @param result variable which is equal 0 if any of x is equal to zero.
      */
-    public AndBoolVector(ArrayList<IntVar> list, IntVar result) {
+    public AndBoolVector(List<IntVar> list, IntVar result) {
 
         this(list.toArray(new IntVar[list.size()]), result);
 
@@ -312,7 +311,7 @@ public class AndBoolVector extends PrimitiveConstraint {
         return resultString.toString();
     }
 
-    ArrayList<Constraint> constraints;
+    List<Constraint> constraints;
 
     @Override public List<Constraint> decompose(Store store) {
 
@@ -337,7 +336,7 @@ public class AndBoolVector extends PrimitiveConstraint {
     @Override public void imposeDecomposition(Store store) {
 
         if (constraints == null)
-            decompose(store);
+            constraints = decompose(store);
 
         for (Constraint c : constraints)
             store.impose(c, queueIndex);

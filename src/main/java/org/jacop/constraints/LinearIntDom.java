@@ -32,8 +32,8 @@ package org.jacop.constraints;
 
 import org.jacop.core.*;
 
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -112,7 +112,7 @@ public class LinearIntDom extends LinearInt {
      * @param rel       the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
      * @param sum       variable containing the sum of weighted variables.
      */
-    public LinearIntDom(Store store, ArrayList<? extends IntVar> variables, ArrayList<Integer> weights, String rel, int sum) {
+    public LinearIntDom(Store store, List<? extends IntVar> variables, List<Integer> weights, String rel, int sum) {
         commonInitialization(store, variables.toArray(new IntVar[variables.size()]), weights.stream().mapToInt(i -> i).toArray(), rel, sum);
         numberId = idNumber.incrementAndGet();
         queueIndex = 4;

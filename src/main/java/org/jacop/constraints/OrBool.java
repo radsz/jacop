@@ -30,7 +30,7 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.jacop.core.IntVar;
@@ -66,7 +66,7 @@ public class OrBool extends DecomposedConstraint<PrimitiveConstraint> {
      * @param a parameters
      * @param result result variable.
      */
-    public OrBool(ArrayList<IntVar> a, IntVar result) {
+    public OrBool(List<IntVar> a, IntVar result) {
 
         if (a.size() == 2)
             c = new OrBoolSimple(a.get(0), a.get(1), result);
@@ -94,11 +94,7 @@ public class OrBool extends DecomposedConstraint<PrimitiveConstraint> {
     }
 
     @Override public List<PrimitiveConstraint> decompose(Store store) {
-
-        ArrayList<PrimitiveConstraint> result = new ArrayList<>();
-        result.add(c);
-        return result;
-
+        return Arrays.asList(c);
     }
 
     public String toString() {

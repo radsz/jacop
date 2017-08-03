@@ -33,6 +33,7 @@ package org.jacop.examples.fd;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import org.jacop.constraints.Alldistinct;
@@ -148,7 +149,7 @@ public class Cryptogram extends ExampleFD {
 		/* Creating constraint store */
         store = new Store();
 
-        ArrayList<ArrayList<String>> words = new ArrayList<ArrayList<String>>();
+        List<List<String>> words = new ArrayList<>();
 
         // Adding array list for each inputed line
         for (int i = 0; i < noLines; i++)

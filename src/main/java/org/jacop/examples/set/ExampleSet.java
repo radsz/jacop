@@ -31,6 +31,7 @@
 package org.jacop.examples.set;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -57,7 +58,7 @@ public abstract class ExampleSet {
     /**
      * It contains all variables used within a specific example.
      */
-    public ArrayList<SetVar> vars;
+    public List<SetVar> vars;
 
     /**
      * It specifies the cost function, null if no cost function is used.
@@ -328,7 +329,7 @@ public abstract class ExampleSet {
      *
      * @return true if the solution exists, false otherwise.
      */
-    public boolean searchMasterSlave(ArrayList<Var> masterVars, ArrayList<Var> slaveVars) {
+    public boolean searchMasterSlave(List<Var> masterVars, List<Var> slaveVars) {
 
         long T1 = System.currentTimeMillis();
 
@@ -383,7 +384,7 @@ public abstract class ExampleSet {
      * It returns an array list of variables used to model the example.
      * @return the array list of variables used to model the example.
      */
-    public ArrayList<SetVar> getSearchVariables() {
+    public List<SetVar> getSearchVariables() {
         return vars;
     }
 

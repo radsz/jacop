@@ -98,7 +98,7 @@ public class MinizincBasedTestsHelper {
         if (Files.exists(Paths.get(foo + "/options.opt"))) {
             try (BufferedReader reader = Files.newBufferedReader(Paths.get(foo + "/options.opt"), Charset.defaultCharset())) {
                 String line;
-                ArrayList<String> options = new ArrayList<String>();
+                List<String> options = new ArrayList<String>();
                 while ((line = reader.readLine()) != null) {
                     options.add(line);
                 }

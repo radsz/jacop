@@ -32,6 +32,7 @@ package org.jacop.search;
 
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
+import java.util.List;
 
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Var;
@@ -95,7 +96,7 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
     /**
      * It stores variables which need to be labelled.
      */
-    public ArrayList<ArrayList<T>> searchVariables = new ArrayList<ArrayList<T>>();
+    public List<List<T>> searchVariables = new ArrayList<List<T>>();
 
     /**
      * This constructor uses default values for all parameters. The size of the
@@ -156,7 +157,7 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
 
         for (int i = 0; i < vars.length; i++) {
 
-            ArrayList<T> current = new ArrayList<T>();
+            List<T> current = new ArrayList<T>();
 
             assert (vars[i].length > pivotPosition);
 
@@ -192,7 +193,7 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
 
             while (firstVariable < finalIndex) {
 
-                ArrayList<T> row = searchVariables.get(firstVariable);
+                List<T> row = searchVariables.get(firstVariable);
 
                 for (int i = 0; i < row.size(); i++)
                     if (!row.get(i).singleton()) {
@@ -214,7 +215,7 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
 
             while (firstVariable < finalIndex) {
 
-                ArrayList<T> row = searchVariables.get(firstVariable);
+                List<T> row = searchVariables.get(firstVariable);
 
                 boolean allGrounded = true;
 
@@ -257,7 +258,7 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
             // if later some singletons rows are encountered they are moved to the left (firstVariable position).
             if (v.singleton()) {
 
-                ArrayList<T> row = searchVariables.get(currentPosition);
+                List<T> row = searchVariables.get(currentPosition);
 
                 boolean allGrounded = true;
 
@@ -329,7 +330,7 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
         }
 
         if (optimalPosition != firstVariable) {
-            ArrayList<T> row = searchVariables.get(optimalPosition);
+            List<T> row = searchVariables.get(optimalPosition);
             // switch rows.
             searchVariables.set(optimalPosition, searchVariables.get(firstVariable));
             searchVariables.set(firstVariable, row);
@@ -337,7 +338,7 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
         }
 
         primaryIndex = optimalPosition;
-        ArrayList<T> row = searchVariables.get(primaryIndex);
+        List<T> row = searchVariables.get(primaryIndex);
         for (int i = 0; i < row.size(); i++)
             if (!row.get(i).singleton()) {
                 secondaryIndex = i;

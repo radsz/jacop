@@ -31,6 +31,7 @@
 package org.jacop.examples.fd.filters;
 
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * FIR benchmark (16-point FIR filter).
@@ -81,8 +82,8 @@ public class FIR extends Filter {
 
     }
 
-    @Override public ArrayList<String> names() {
-        ArrayList<String> names = new ArrayList<String>(23);
+    @Override public List<String> names() {
+        List<String> names = new ArrayList<String>(23);
 
         names.add("+1");
         names.add("*2");
@@ -111,8 +112,8 @@ public class FIR extends Filter {
         return names;
     }
 
-    @Override public ArrayList<String> namesPipeline() {
-        ArrayList<String> names = new ArrayList<String>(23);
+    @Override public List<String> namesPipeline() {
+        List<String> names = new ArrayList<String>(23);
 
         names.add("+1");
         names.add("*2");

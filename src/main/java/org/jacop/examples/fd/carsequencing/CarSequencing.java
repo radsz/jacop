@@ -515,7 +515,7 @@ public class CarSequencing extends ExampleFD {
      */
     public static String[] readFile(String file) {
 
-        ArrayList<String> result = new ArrayList<String>();
+        List<String> result = new ArrayList<String>();
 
         System.out.println("readFile(" + file + ")");
 

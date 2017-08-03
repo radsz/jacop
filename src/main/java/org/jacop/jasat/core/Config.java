@@ -33,6 +33,7 @@ package org.jacop.jasat.core;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 
 import org.jacop.jasat.core.clauses.AbstractClausesDatabase;
@@ -123,12 +124,12 @@ import org.jacop.jasat.core.clauses.UnaryClausesDatabase;
     /**
      * the list of components the solver must add
      */
-    public ArrayList<SolverComponent> mainComponents = new ArrayList<SolverComponent>();
+    public List<SolverComponent> mainComponents = new ArrayList<SolverComponent>();
 
     /**
      * the list of databases the solver must add
      */
-    public ArrayList<AbstractClausesDatabase> clausesDatabases = new ArrayList<AbstractClausesDatabase>();
+    public List<AbstractClausesDatabase> clausesDatabases = new ArrayList<AbstractClausesDatabase>();
 
 
     @Override public String toString() {

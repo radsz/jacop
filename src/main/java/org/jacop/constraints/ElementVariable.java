@@ -88,7 +88,7 @@ public class ElementVariable extends Constraint implements UsesQueueVariable {
 
     HashMap<IntVar, Integer> mapping = new HashMap<IntVar, Integer>();
 
-    HashMap<IntVar, ArrayList<Integer>> duplicates = new HashMap<IntVar, ArrayList<Integer>>();
+    HashMap<IntVar, List<Integer>> duplicates = new HashMap<IntVar, List<Integer>>();
 
     /**
      * It constructs an element constraint.
@@ -123,7 +123,7 @@ public class ElementVariable extends Constraint implements UsesQueueVariable {
      * @param list list of variables from which an index-th element is taken
      * @param value a value of the index-th element from list
      */
-    public ElementVariable(IntVar index, ArrayList<? extends IntVar> list, IntVar value) {
+    public ElementVariable(IntVar index, List<? extends IntVar> list, IntVar value) {
         this(index, list.toArray(new IntVar[list.size()]), value, 0);
     }
 
@@ -135,7 +135,7 @@ public class ElementVariable extends Constraint implements UsesQueueVariable {
      * @param value a value of the index-th element from list
      * @param indexOffset shift applied to index variable.
      */
-    public ElementVariable(IntVar index, ArrayList<? extends IntVar> list, IntVar value, int indexOffset) {
+    public ElementVariable(IntVar index, List<? extends IntVar> list, IntVar value, int indexOffset) {
         this(index, list.toArray(new IntVar[list.size()]), value, indexOffset);
     }
 
@@ -310,7 +310,7 @@ public class ElementVariable extends Constraint implements UsesQueueVariable {
                         index.domain.inComplement(store.level, index, position + 1 + indexOffset);
                         list[position].removeConstraint(this);
 
-                        ArrayList<Integer> array = duplicates.get(changedVar);
+                        List<Integer> array = duplicates.get(changedVar);
                         if (array != null)
                             for (int additionalPosition : array)
                                 index.domain.inComplement(store.level, index, additionalPosition + 1 + indexOffset);
@@ -348,7 +348,7 @@ public class ElementVariable extends Constraint implements UsesQueueVariable {
         for (int i = 0; i < list.length; i++) {
             Integer oldInteger = mapping.put(list[i], i);
             if (oldInteger != null) {
-                ArrayList<Integer> array = duplicates.get(list[i]);
+                List<Integer> array = duplicates.get(list[i]);
                 if (array != null)
                     array.add(i);
                 else {

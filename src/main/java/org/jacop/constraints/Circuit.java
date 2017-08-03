@@ -30,10 +30,7 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Hashtable;
-import java.util.LinkedHashSet;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
@@ -105,7 +102,7 @@ public class Circuit extends Alldiff {
      * It constructs a circuit constraint.
      * @param list variables which must form a circuit.
      */
-    public Circuit(ArrayList<IntVar> list) {
+    public Circuit(List<IntVar> list) {
         this(list.toArray(new IntVar[list.size()]));
     }
 

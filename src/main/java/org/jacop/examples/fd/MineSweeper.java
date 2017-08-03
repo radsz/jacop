@@ -32,6 +32,7 @@ package org.jacop.examples.fd;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.List;
 
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.XeqC;
@@ -137,7 +138,7 @@ public class MineSweeper extends ExampleFD {
                     // 
                     // Note: Maybe this could be modelled more elegant
                     // instead of using an ArrayList.
-                    ArrayList<IntVar> lst = new ArrayList<IntVar>();
+                    List<IntVar> lst = new ArrayList<IntVar>();
                     for (int a = -1; a <= 1; a++) {
                         for (int b = -1; b <= 1; b++) {
                             if (i + a >= 0 && j + b >= 0 && i + a < r && j + b < c) {

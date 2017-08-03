@@ -233,7 +233,7 @@ public class GCC extends Constraint implements UsesQueueVariable {
      * @param x variables which values are counted.
      * @param counters variables which count the values.
      */
-    public GCC(ArrayList<? extends IntVar> x, ArrayList<? extends IntVar> counters) {
+    public GCC(List<? extends IntVar> x, List<? extends IntVar> counters) {
 
         this(x.toArray(new IntVar[x.size()]), counters.toArray(new IntVar[counters.size()]));
 

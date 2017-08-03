@@ -31,6 +31,7 @@
 package org.jacop.examples.fd.filters;
 
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * It specifies FFT benchmark.
@@ -78,8 +79,8 @@ public class FFT extends Filter {
         this.last = last;
     }
 
-    @Override public ArrayList<String> names() {
-        ArrayList<String> names = new ArrayList<String>(10);
+    @Override public List<String> names() {
+        List<String> names = new ArrayList<String>(10);
 
         names.add("*1");
         names.add("*2");
@@ -94,8 +95,8 @@ public class FFT extends Filter {
         return names;
     }
 
-    @Override public ArrayList<String> namesPipeline() {
-        ArrayList<String> names = new ArrayList<String>(10);
+    @Override public List<String> namesPipeline() {
+        List<String> names = new ArrayList<String>(10);
 
         names.add("*1");
         names.add("*2");

@@ -48,7 +48,7 @@ import java.util.List;
 
 public class SoftAlldifferent extends DecomposedConstraint {
 
-    public ArrayList<Constraint> decomposition;
+    public List<Constraint> decomposition;
 
     public final IntVar[] xVars;
 
@@ -66,7 +66,7 @@ public class SoftAlldifferent extends DecomposedConstraint {
         this.violationMeasure = violationMeasure;
     }
 
-    public ArrayList<Constraint> primitiveDecomposition(Store store) {
+    public List<Constraint> primitiveDecomposition(Store store) {
 
         if (decomposition == null) {
 
@@ -75,7 +75,7 @@ public class SoftAlldifferent extends DecomposedConstraint {
             if (violationMeasure == ViolationMeasure.DECOMPOSITION_BASED) {
 
                 int n = xVars.length;
-                ArrayList<IntVar> costs = new ArrayList<IntVar>(n * (n - 1));
+                List<IntVar> costs = new ArrayList<IntVar>(n * (n - 1));
                 for (int i = 0; i < n; i++) {
                     for (int j = 0; j < i; j++) {
                         IntVar v;
@@ -92,12 +92,12 @@ public class SoftAlldifferent extends DecomposedConstraint {
             return decomposition;
         } else {
 
-            ArrayList<Constraint> result = new ArrayList<Constraint>();
+            List<Constraint> result = new ArrayList<Constraint>();
 
             if (violationMeasure == ViolationMeasure.DECOMPOSITION_BASED) {
 
                 int n = xVars.length;
-                ArrayList<IntVar> costs = new ArrayList<IntVar>(n * (n - 1));
+                List<IntVar> costs = new ArrayList<IntVar>(n * (n - 1));
                 for (int i = 0; i < n; i++) {
                     for (int j = 0; j < i; j++) {
                         IntVar v;
@@ -184,7 +184,7 @@ public class SoftAlldifferent extends DecomposedConstraint {
     @Override public void imposeDecomposition(Store store) {
 
         if (decomposition == null)
-            decompose(store);
+            decomposition = decompose(store);
 
         for (Constraint c : decomposition)
             store.impose(c);

@@ -38,10 +38,7 @@ import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.util.SimpleHashSet;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.DoubleStream;
 import java.util.stream.Stream;
@@ -293,7 +290,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
      * @param rel       the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}"
      * @param sum       variable containing the sum of weighted variables.
      */
-    public Linear(Store store, ArrayList<? extends FloatVar> variables, ArrayList<Double> weights, String rel, double sum) {
+    public Linear(Store store, List<? extends FloatVar> variables, List<Double> weights, String rel, double sum) {
 
         checkInputForNullness(new String[] {"variables", "weights", "rel"}, new Object[] {variables, weights, rel});
         commonInitialization(store, variables.toArray(new FloatVar[variables.size()]), weights.stream().mapToDouble(i -> i).toArray(), rel,

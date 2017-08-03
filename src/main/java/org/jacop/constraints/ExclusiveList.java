@@ -31,6 +31,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.jacop.core.IntVar;
 
@@ -61,8 +62,8 @@ class ExclusiveList extends ArrayList<ExclusiveItem> {
         return c;
     }
 
-    ArrayList<? extends IntVar> fdvs(int index) {
-        ArrayList<IntVar> list = new ArrayList<IntVar>();
+    List<? extends IntVar> fdvs(int index) {
+        List<IntVar> list = new ArrayList<IntVar>();
         for (int i = 0; i < size(); i++) {
             ExclusiveItem v = get(i);
             if (index == v.i1 && !v.cond.singleton())

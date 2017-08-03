@@ -147,7 +147,7 @@ public class LinearInt extends PrimitiveConstraint {
      * @param rel     the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
      * @param sum     the sum of weighted list.
      */
-    public LinearInt(Store store, ArrayList<? extends IntVar> list, ArrayList<Integer> weights, String rel, int sum) {
+    public LinearInt(Store store, List<? extends IntVar> list, List<Integer> weights, String rel, int sum) {
         checkInputForNullness(new String[] {"list", "weights"}, new Object[] {list, weights});
         commonInitialization(store, list.toArray(new IntVar[list.size()]), weights.stream().mapToInt(i -> i).toArray(), rel, sum);
         numberId = idNumber.incrementAndGet();

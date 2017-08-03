@@ -30,12 +30,7 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.Arrays;
-import java.util.Set;
-import java.util.HashSet;
-import java.util.HashMap;
-import java.util.ArrayList;
-import java.util.Stack;
+import java.util.*;
 
 import org.jacop.core.Store;
 
@@ -273,7 +268,7 @@ public class MultivariateIntervalNewton {
 
     Constraint constraint(FloatVar v) {
 
-        ArrayList<Constraint> list = new ArrayList<Constraint>();
+        List<Constraint> list = new ArrayList<Constraint>();
 
         for (int i = 0; i < v.dom().modelConstraints.length; i++)
             if (v.dom().modelConstraints[i] != null)

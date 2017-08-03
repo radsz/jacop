@@ -31,9 +31,9 @@
 
 package org.jacop.constraints.cumulative;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.List;
 
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -108,7 +108,7 @@ public class CumulativeUnary extends Cumulative {
      * @param resources variables denoting resource usage of the tasks.
      * @param limit the overall limit of resources which has to be used.
      */
-    public CumulativeUnary(ArrayList<? extends IntVar> starts, ArrayList<? extends IntVar> durations, ArrayList<? extends IntVar> resources,
+    public CumulativeUnary(List<? extends IntVar> starts, List<? extends IntVar> durations, List<? extends IntVar> resources,
         IntVar limit) {
 
         this(starts.toArray(new IntVar[starts.size()]), durations.toArray(new IntVar[durations.size()]),
@@ -123,7 +123,7 @@ public class CumulativeUnary extends Cumulative {
      * @param limit the overall limit of resources which has to be used.
      * @param doProfile defines whether to do profile-based propagation (true) or not (false); default is false
      */
-    public CumulativeUnary(ArrayList<? extends IntVar> starts, ArrayList<? extends IntVar> durations, ArrayList<? extends IntVar> resources,
+    public CumulativeUnary(List<? extends IntVar> starts, List<? extends IntVar> durations, List<? extends IntVar> resources,
         IntVar limit, boolean doProfile) {
 
         this(starts.toArray(new IntVar[starts.size()]), durations.toArray(new IntVar[durations.size()]),

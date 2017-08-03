@@ -115,7 +115,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
      * @param tuples    the tuples which are supports for the constraint.
      */
 
-    public ExtensionalSupportVA(ArrayList<? extends IntVar> variables, int[][] tuples) {
+    public ExtensionalSupportVA(List<? extends IntVar> variables, int[][] tuples) {
 
         this(variables.toArray(new IntVar[variables.size()]), tuples);
 

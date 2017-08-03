@@ -33,6 +33,7 @@ package org.jacop.constraints;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -107,7 +108,7 @@ public class ElementInteger extends Constraint implements UsesQueueVariable {
      * to safely skip duplicates when enumerating index domain.
      * duplicatesIndexes is a domain having indexes of all indexes for duplicates.
      */
-    ArrayList<IntDomain> duplicates;
+    List<IntDomain> duplicates;
     IntDomain duplicatesIndexes;
 
     /**
@@ -155,7 +156,7 @@ public class ElementInteger extends Constraint implements UsesQueueVariable {
      * @param list list containing variables which one pointed out by index variable is made equal to value variable.
      * @param value a value variable equal to the specified element from the list.
      */
-    public ElementInteger(IntVar index, ArrayList<Integer> list, IntVar value) {
+    public ElementInteger(IntVar index, List<Integer> list, IntVar value) {
         this(index, list, value, 0);
     }
 
@@ -167,7 +168,7 @@ public class ElementInteger extends Constraint implements UsesQueueVariable {
      * @param value a value of the index-th element from list
      * @param indexOffset shift applied to index variable.
      */
-    public ElementInteger(IntVar index, ArrayList<Integer> list, IntVar value, int indexOffset) {
+    public ElementInteger(IntVar index, List<Integer> list, IntVar value, int indexOffset) {
         this(index, list.stream().mapToInt( i -> i).toArray(), value, indexOffset, true);
     }
 
@@ -180,7 +181,7 @@ public class ElementInteger extends Constraint implements UsesQueueVariable {
      * @param indexOffset shift applied to index variable.
      * @param checkDuplicates informs whether to create duplicates list for values from list (default = true).
      */
-    public ElementInteger(IntVar index, ArrayList<Integer> list, IntVar value, int indexOffset, boolean checkDuplicates) {
+    public ElementInteger(IntVar index, List<Integer> list, IntVar value, int indexOffset, boolean checkDuplicates) {
         this(index, list.stream().mapToInt(i -> i).toArray(), value, indexOffset, checkDuplicates);
     }
 

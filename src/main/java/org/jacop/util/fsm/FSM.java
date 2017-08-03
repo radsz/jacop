@@ -32,6 +32,7 @@ package org.jacop.util.fsm;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
@@ -191,7 +192,7 @@ public class FSM {
 
         result.allStates.add(result.initState);
 
-        ArrayList<FSMState> set = new ArrayList<FSMState>();
+        List<FSMState> set = new ArrayList<FSMState>();
 
         set.add(result.initState);
 
@@ -384,7 +385,7 @@ public class FSM {
 
         IntervalDomain dom;
         int[] tuple = new int[levels];
-        ArrayList<int[]> result = new ArrayList<int[]>();
+        List<int[]> result = new ArrayList<int[]>();
 
         for (int i = 0; i < stateNumber; i++)
             for (int j = 0; j < stateNumber; j++)
@@ -407,7 +408,7 @@ public class FSM {
     }
 
     // Recursive function used to create a list of tuples.
-    private void recursiveCall(int prevSuc, int level, int stateNumber, IntervalDomain[][][] outarc, int[] tuple, ArrayList<int[]> tuples) {
+    private void recursiveCall(int prevSuc, int level, int stateNumber, IntervalDomain[][][] outarc, int[] tuple, List<int[]> tuples) {
 
         if (level == tuple.length) {
             tuples.add(tuple.clone());

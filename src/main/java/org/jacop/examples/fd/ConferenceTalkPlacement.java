@@ -37,10 +37,7 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.search.*;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Random;
+import java.util.*;
 
 /**
  * Author : Radoslaw Szymanek
@@ -49,7 +46,7 @@ public class ConferenceTalkPlacement {
 
     Store store;
     IntVar cost;
-    ArrayList<IntVar> vars;
+    List<IntVar> vars;
     IntVar[][] varsMatrix;
     DepthFirstSearch<IntVar> search;
 
@@ -87,7 +84,7 @@ public class ConferenceTalkPlacement {
     // assumes noTalks = noOfParallelTracks * noOfTimeSlots
     private int computeLowerBound(int noOfParallelTracks, int noOfTimeSlots, HashMap<Integer, HashMap<Integer, Integer>> costs) {
 
-        ArrayList<Integer> costsList = new ArrayList<>();
+        List<Integer> costsList = new ArrayList<>();
         for (HashMap<Integer, Integer> elH : costs.values())
             costsList.addAll(elH.values());
 

@@ -98,7 +98,7 @@ public class Store {
      * backtracks has occurred. It holds the list of constraints which want to be informed
      * about level being removed before it has actually began.
      */
-    public ArrayList<Constraint> removeLevelListeners = new ArrayList<Constraint>(10);
+    public List<Constraint> removeLevelListeners = new ArrayList<Constraint>(10);
 
     /**
      * More advanced constraints may require to be informed of a backtrack to be
@@ -107,14 +107,14 @@ public class Store {
      * backtracks has occurred. It holds the list of constraints which want to be informed
      * about level being removed after it has been removed.
      */
-    public ArrayList<Constraint> removeLevelLateListeners = new ArrayList<Constraint>(10);
+    public List<Constraint> removeLevelLateListeners = new ArrayList<Constraint>(10);
 
     /**
      * It contains all auxilary variables created by decomposable constraints. They
      * have to be grounded by search for a solution to be valid.
      */
 
-    public ArrayList<Var> auxilaryVariables = new ArrayList<Var>();
+    public List<Var> auxilaryVariables = new ArrayList<Var>();
 
     /**
      * It stores constraint which is currently re-evaluated.
@@ -157,7 +157,7 @@ public class Store {
      * therefore the store keeps information about all mutable variables.
      */
 
-    protected ArrayList<MutableVar> mutableVariables = new ArrayList<MutableVar>(100);
+    protected List<MutableVar> mutableVariables = new ArrayList<MutableVar>(100);
 
     /**
      * This variable specifies if there was a new propagation. Any change to any
@@ -255,7 +255,7 @@ public class Store {
      * efficient way for getting mutable variable functionality for simple data
      * types.
      */
-    protected ArrayList<TimeStamp<?>> timeStamps = new ArrayList<TimeStamp<?>>(100);
+    protected List<TimeStamp<?>> timeStamps = new ArrayList<TimeStamp<?>>(100);
 
     /**
      * This keeps information about watched constraints by given variable.
@@ -459,7 +459,7 @@ public class Store {
 
         }
 
-        ArrayList<Constraint> constr = vDom.searchConstraints;
+        List<Constraint> constr = vDom.searchConstraints;
 
         for (int i = vDom.searchConstraintsToEvaluate - 1; i >= 0; i--) {
 
@@ -1206,7 +1206,7 @@ public class Store {
 
         for (Var v : variablesHashMap.values()) {
             Domain d = v.dom();
-            ArrayList<Constraint> c = d.constraints();
+            List<Constraint> c = d.constraints();
             constraints.addAll(c);
         }
 

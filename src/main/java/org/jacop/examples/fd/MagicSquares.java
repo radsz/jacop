@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.Alldistinct;
@@ -65,7 +66,7 @@ public class MagicSquares extends ExampleFD {
     /**
      * It specifies the list of constraints which can be used for guiding shaving.
      */
-    public ArrayList<Constraint> guidingShaving;
+    public List<Constraint> guidingShaving;
 
 
     @Override public void model() {

@@ -31,8 +31,8 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -97,7 +97,7 @@ public class Count extends Constraint {
      * @param list    variables which equality to val is counted.
      * @param counter number of variables equal to val.
      */
-    public Count(ArrayList<? extends IntVar> list, IntVar counter, int value) {
+    public Count(List<? extends IntVar> list, IntVar counter, int value) {
         this(list.toArray(new IntVar[list.size()]), counter, value);
     }
 

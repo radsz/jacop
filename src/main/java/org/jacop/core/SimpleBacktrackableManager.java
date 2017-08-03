@@ -31,6 +31,7 @@
 package org.jacop.core;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.jacop.util.SparseSet;
 
@@ -64,12 +65,12 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
      * It specifies a trail. A recorded changes which will be used upon
      * backtracking to inform the objects about backtracking.
      */
-    ArrayList<int[]> trail;
+    List<int[]> trail;
 
     /**
      * It specifies the levels of the store for which trails are stored.
      */
-    ArrayList<Integer> levelInfo;
+    List<Integer> levelInfo;
 
     /**
      * It specifies the cutoff value after which a trail is no longer stored

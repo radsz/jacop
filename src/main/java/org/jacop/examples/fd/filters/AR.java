@@ -31,6 +31,7 @@
 package org.jacop.examples.fd.filters;
 
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * It specifies AR benchmark.
@@ -84,9 +85,9 @@ public class AR extends Filter {
 
     }
 
-    @Override public ArrayList<String> names() {
+    @Override public List<String> names() {
 
-        ArrayList<String> names = new ArrayList<String>(11);
+        List<String> names = new ArrayList<String>(11);
 
         names.add("*1");
         names.add("*2");
@@ -120,9 +121,9 @@ public class AR extends Filter {
         return names;
     }
 
-    @Override public ArrayList<String> namesPipeline() {
+    @Override public List<String> namesPipeline() {
 
-        ArrayList<String> names = new ArrayList<String>(11);
+        List<String> names = new ArrayList<String>(11);
 
         names.add("*1");
         names.add("*2");

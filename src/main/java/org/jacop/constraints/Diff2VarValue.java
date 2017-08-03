@@ -30,7 +30,7 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
+import java.util.List;
 
 import org.jacop.core.MutableVarValue;
 
@@ -85,7 +85,7 @@ class Diff2VarValue implements MutableVarValue, Cloneable {
         stamp = s;
     }
 
-    void setValue(ArrayList<Rectangle> VR) {
+    void setValue(List<Rectangle> VR) {
         Rects = new Rectangle[VR.size()];
         for (int i = 0; i < Rects.length; i++)
             Rects[i] = VR.get(i);

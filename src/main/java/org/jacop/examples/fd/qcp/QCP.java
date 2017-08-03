@@ -32,6 +32,7 @@ package org.jacop.examples.fd.qcp;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import org.jacop.constraints.Alldistinct;
@@ -67,7 +68,7 @@ public class QCP extends ExampleFD {
     /**
      * It contains constraints which can be used to guide shaving.
      */
-    public ArrayList<Constraint> shavingConstraints = new ArrayList<Constraint>();
+    public List<Constraint> shavingConstraints = new ArrayList<Constraint>();
 
 
 

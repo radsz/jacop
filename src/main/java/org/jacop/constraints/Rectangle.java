@@ -30,8 +30,8 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Stream;
 
 import org.jacop.core.IntDomain;
@@ -98,7 +98,7 @@ public class Rectangle {
      * @param list it specifies for each dimension (one after the other) its origin and length.
      *
      */
-    public Rectangle(ArrayList<? extends IntVar> list) {
+    public Rectangle(List<? extends IntVar> list) {
         this(list.toArray(new IntVar[list.size()]));
     }
 
@@ -279,7 +279,7 @@ public class Rectangle {
         return result.toString();
     }
 
-    public static Rectangle[] toArrayOf2DRectangles(ArrayList<? extends ArrayList<? extends IntVar>> rectangles) {
+    public static Rectangle[] toArrayOf2DRectangles(List<? extends List<? extends IntVar>> rectangles) {
 
         Rectangle[] result = new Rectangle[rectangles.size()];
 

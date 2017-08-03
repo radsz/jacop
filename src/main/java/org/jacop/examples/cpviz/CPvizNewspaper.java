@@ -31,6 +31,7 @@ package org.jacop.examples.cpviz;
  */
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.jacop.constraints.Cumulative;
 import org.jacop.constraints.In;
@@ -74,7 +75,7 @@ import org.jacop.search.TraceGenerator;
 
 public class CPvizNewspaper {
 
-    ArrayList<Var> vars;
+    List<Var> vars;
     Store store;
     IntVar cost;
 

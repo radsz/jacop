@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.jacop.constraints.And;
 import org.jacop.constraints.diffn.Diffn;
@@ -476,7 +477,7 @@ public class PerfectSquare extends ExampleFD {
 
         for (int i = 0; i < masterSize - 1; i++) {
 
-            ArrayList<IntVar> sumList = new ArrayList<IntVar>();
+            List<IntVar> sumList = new ArrayList<IntVar>();
 
             for (int j = 0; j < varsX.length; j++) {
                 IntVar b = new IntVar(store, 0, 1);
@@ -492,7 +493,7 @@ public class PerfectSquare extends ExampleFD {
 
         for (int i = 0; i < masterSize - 1; i++) {
 
-            ArrayList<IntVar> sumList = new ArrayList<IntVar>();
+            List<IntVar> sumList = new ArrayList<IntVar>();
 
             for (int j = 0; j < varsY.length; j++) {
                 IntVar b = new IntVar(store, 0, 1);
@@ -573,9 +574,9 @@ public class PerfectSquare extends ExampleFD {
 
         IntVar[][] rectangles = new IntVar[noRectangles][4];
 
-        ArrayList<GeostObject> objects = new ArrayList<GeostObject>();
-        ArrayList<ExternalConstraint> constraints = new ArrayList<ExternalConstraint>();
-        ArrayList<Shape> shapes = new ArrayList<Shape>();
+        List<GeostObject> objects = new ArrayList<GeostObject>();
+        List<ExternalConstraint> constraints = new ArrayList<ExternalConstraint>();
+        List<Shape> shapes = new ArrayList<Shape>();
 
         System.out.print("Constraint model based on Geost and Diffn constraint");
         System.out.println("Example " + problemNo + "  No squares = " + noRectangles + " Size = " + masterSize);

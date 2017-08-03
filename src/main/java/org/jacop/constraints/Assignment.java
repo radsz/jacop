@@ -118,7 +118,7 @@ public class Assignment extends Constraint implements UsesQueueVariable {
      * @param shiftX shift for parameter xs
      * @param shiftD shift for parameter ds
      */
-    public Assignment(ArrayList<? extends IntVar> xs, ArrayList<? extends IntVar> ds, int shiftX, int shiftD) {
+    public Assignment(List<? extends IntVar> xs, List<? extends IntVar> ds, int shiftX, int shiftD) {
         this(xs.toArray(new IntVar[xs.size()]), ds.toArray(new IntVar[ds.size()]), shiftX, shiftD);
     }
 
@@ -129,7 +129,7 @@ public class Assignment extends Constraint implements UsesQueueVariable {
      * @param xs arraylist of x variables
      * @param ds arraylist of d variables
      */
-    public Assignment(ArrayList<? extends IntVar> xs, ArrayList<? extends IntVar> ds) {
+    public Assignment(List<? extends IntVar> xs, List<? extends IntVar> ds) {
         this(xs.toArray(new IntVar[xs.size()]), ds.toArray(new IntVar[ds.size()]), 0, 0);
     }
 
@@ -140,7 +140,7 @@ public class Assignment extends Constraint implements UsesQueueVariable {
      * @param ds arraylist of variables d
      * @param min shift
      */
-    public Assignment(ArrayList<? extends Var> xs, ArrayList<? extends Var> ds, int min) {
+    public Assignment(List<? extends Var> xs, List<? extends Var> ds, int min) {
         this(xs.toArray(new IntVar[xs.size()]), ds.toArray(new IntVar[ds.size()]), min, min);
     }
 

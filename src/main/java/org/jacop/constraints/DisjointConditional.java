@@ -55,7 +55,7 @@ public class DisjointConditional extends Diff {
 
     static final boolean trace = false, traceNarr = false;
 
-    ArrayList<? extends IntVar>[] condVariables;
+    List<? extends IntVar>[] condVariables;
 
     DisjointCondVar evalRects[];
 
@@ -100,8 +100,8 @@ public class DisjointConditional extends Diff {
      * @param exceptionIndices a list of pairs of conditionally overlaping rectangles.
      * @param exceptionCondition a variable specifying if a corresponding pair is nonoverlapping.
      */
-    public DisjointConditional(ArrayList<ArrayList<? extends IntVar>> rectangles, ArrayList<ArrayList<Integer>> exceptionIndices,
-        ArrayList<? extends IntVar> exceptionCondition) {
+    public DisjointConditional(List<List<? extends IntVar>> rectangles, List<List<Integer>> exceptionIndices,
+        List<? extends IntVar> exceptionCondition) {
 
         queueIndex = 2;
 
@@ -110,7 +110,7 @@ public class DisjointConditional extends Diff {
 
         int i = 0;
 
-        for (ArrayList<? extends IntVar> R : rectangles)
+        for (List<? extends IntVar> R : rectangles)
             if (R.size() == size) {
                 Rectangle rect = new Rectangle(R);
                 this.rectangles[i] = rect;
@@ -143,8 +143,8 @@ public class DisjointConditional extends Diff {
      * @param exceptionCondition a variable specifying if a corresponding pair is nonoverlapping.
      * @param profile it specifies if the profiles are used and computed within the constraint.
      */
-    public DisjointConditional(ArrayList<ArrayList<? extends IntVar>> rectangles, ArrayList<ArrayList<Integer>> exceptionIndices,
-        ArrayList<? extends IntVar> exceptionCondition, boolean profile) {
+    public DisjointConditional(List<List<? extends IntVar>> rectangles, List<List<Integer>> exceptionIndices,
+        List<? extends IntVar> exceptionCondition, boolean profile) {
 
         this(rectangles, exceptionIndices, exceptionCondition);
         doProfile = profile;
@@ -159,8 +159,8 @@ public class DisjointConditional extends Diff {
      * @param exceptionIndices it specifies a list of pairs, where each pair specifies two rectangles which conditionally overlap.
      * @param exceptionCondition a variable specifying if a corresponding pair is nonoverlapping.
      */
-    public DisjointConditional(ArrayList<? extends IntVar> o1, ArrayList<? extends IntVar> o2, ArrayList<? extends IntVar> l1,
-        ArrayList<? extends IntVar> l2, ArrayList<ArrayList<Integer>> exceptionIndices, ArrayList<? extends IntVar> exceptionCondition) {
+    public DisjointConditional(List<? extends IntVar> o1, List<? extends IntVar> o2, List<? extends IntVar> l1,
+        List<? extends IntVar> l2, List<List<Integer>> exceptionIndices, List<? extends IntVar> exceptionCondition) {
 
         this(o1.toArray(new IntVar[o1.size()]), o2.toArray(new IntVar[o2.size()]), l1.toArray(new IntVar[l1.size()]),
             l2.toArray(new IntVar[l2.size()]), exceptionIndices, exceptionCondition);
@@ -177,8 +177,8 @@ public class DisjointConditional extends Diff {
      * @param exceptionCondition a variable specifying if a corresponding pair is nonoverlapping.
      * @param profile it specifies if the profiles are being computed and used within a constraint.
      */
-    public DisjointConditional(ArrayList<? extends IntVar> o1, ArrayList<? extends IntVar> o2, ArrayList<? extends IntVar> l1,
-        ArrayList<? extends IntVar> l2, ArrayList<ArrayList<Integer>> exceptionIndices, ArrayList<? extends IntVar> exceptionCondition,
+    public DisjointConditional(List<? extends IntVar> o1, List<? extends IntVar> o2, List<? extends IntVar> l1,
+        List<? extends IntVar> l2, List<List<Integer>> exceptionIndices, List<? extends IntVar> exceptionCondition,
         boolean profile) {
 
         this(o1, o2, l1, l2, exceptionIndices, exceptionCondition);
@@ -196,7 +196,7 @@ public class DisjointConditional extends Diff {
      * @param exceptionCondition a variable specifying if a corresponding pair is nonoverlapping.
      */
     public DisjointConditional(IntVar[] origin1, IntVar[] origin2, IntVar[] length1, IntVar[] length2,
-        ArrayList<ArrayList<Integer>> exceptionIndices, ArrayList<? extends IntVar> exceptionCondition) {
+        List<List<Integer>> exceptionIndices, List<? extends IntVar> exceptionCondition) {
 
         assert (origin1 != null) : "o1 list is null";
         assert (origin2 != null) : "o2 list is null";
@@ -246,8 +246,8 @@ public class DisjointConditional extends Diff {
      * @param exceptionCondition conditions for rectangles that may not be considered
      * @param profile it specifies if the profiles are being used and computed within that constraint.
      */
-    public DisjointConditional(IntVar[] o1, IntVar[] o2, IntVar[] l1, IntVar[] l2, ArrayList<ArrayList<Integer>> exceptionIndices,
-        ArrayList<? extends IntVar> exceptionCondition, boolean profile) {
+    public DisjointConditional(IntVar[] o1, IntVar[] o2, IntVar[] l1, IntVar[] l2, List<List<Integer>> exceptionIndices,
+        List<? extends IntVar> exceptionCondition, boolean profile) {
         this(o1, o2, l1, l2, exceptionIndices, exceptionCondition);
         doProfile = profile;
     }
@@ -258,8 +258,8 @@ public class DisjointConditional extends Diff {
      * @param exceptionIndices list of rectangles that may not be considered
      * @param exceptionCondition conditions for rectangles that may not be considered
      */
-    public DisjointConditional(IntVar[][] rectangles, ArrayList<ArrayList<Integer>> exceptionIndices,
-        ArrayList<? extends IntVar> exceptionCondition) {
+    public DisjointConditional(IntVar[][] rectangles, List<List<Integer>> exceptionIndices,
+        List<? extends IntVar> exceptionCondition) {
 
         assert (rectangles != null) : "Rectangles list is null";
 
@@ -305,8 +305,8 @@ public class DisjointConditional extends Diff {
      * @param exceptionCondition conditions for rectangles that may not be considered
      * @param profile it specifies if the profiles are being computed and used within that constraint.
      */
-    public DisjointConditional(IntVar[][] rectangles, ArrayList<ArrayList<Integer>> exceptionIndices,
-        ArrayList<? extends IntVar> exceptionCondition, boolean profile) {
+    public DisjointConditional(IntVar[][] rectangles, List<List<Integer>> exceptionIndices,
+        List<? extends IntVar> exceptionCondition, boolean profile) {
 
         this(rectangles, exceptionIndices, exceptionCondition);
         doProfile = profile;
@@ -320,8 +320,7 @@ public class DisjointConditional extends Diff {
 
     boolean conditionChanged(HashSet<IntVar> fdvQueue, int j) {
         boolean changed = false;
-        // ArrayList<? extends Variable> el = condVariables.get(j);
-        ArrayList<? extends IntVar> el = condVariables[j];
+        List<? extends IntVar> el = condVariables[j];
         int i = 0;
         while (!changed && i < el.size()) {
             // System.out.println("checking "+ j + (Variable)el.get(i));
@@ -370,8 +369,8 @@ public class DisjointConditional extends Diff {
         return maxLength;
     }
 
-    boolean findRectangles(Rectangle r, int index, ArrayList<IntRectangle> UsedRect, ArrayList<RectangleWithCondition> ProfileCandidates,
-        ArrayList<RectangleWithCondition> OverlappingRects, HashSet<IntVar> fdvQueue) {
+    boolean findRectangles(Rectangle r, int index, List<IntRectangle> UsedRect, List<RectangleWithCondition> ProfileCandidates,
+        List<RectangleWithCondition> OverlappingRects, HashSet<IntVar> fdvQueue) {
         // Variable condition;
         boolean contains = false, checkArea = false;
 
@@ -539,7 +538,7 @@ public class DisjointConditional extends Diff {
         for (int i = 0; i < rectangles.length; i++) {
             condVariables[i + 1] = exclusionList.fdvs(i + 1);
 
-            ArrayList<RectangleWithCondition> rectsC = new ArrayList<RectangleWithCondition>();
+            List<RectangleWithCondition> rectsC = new ArrayList<RectangleWithCondition>();
             for (int j = 0; j < rectangles.length; j++) {
                 if (i != j) {
                     IntVar c = exclusionList.condition(i, j);
@@ -557,7 +556,7 @@ public class DisjointConditional extends Diff {
         }
     }
 
-    Interval minForbiddenInterval(int start, int i, Rectangle r, ArrayList<IntRectangle> ConsideredRect, int minI) {
+    Interval minForbiddenInterval(int start, int i, Rectangle r, List<IntRectangle> ConsideredRect, int minI) {
 
         if (notFit(i, r, ConsideredRect))
             return new Interval(start, minI);
@@ -565,7 +564,7 @@ public class DisjointConditional extends Diff {
             return new Interval(-1, -1);
     }
 
-    void narrowIthCondition(int i, Rectangle r, ArrayList<IntRectangle> UsedRect, ArrayList<RectangleWithCondition> ProfileCandidates) {
+    void narrowIthCondition(int i, Rectangle r, List<IntRectangle> UsedRect, List<RectangleWithCondition> ProfileCandidates) {
         Interval exclude;
         int s;
         int j = (i == 0) ? 1 : 0;
@@ -598,7 +597,7 @@ public class DisjointConditional extends Diff {
             }
             starts.add(strtR);
 
-            ArrayList<IntRectangle> ConsideredRect = new ArrayList<IntRectangle>();
+            List<IntRectangle> ConsideredRect = new ArrayList<IntRectangle>();
             for (IntRectangle ir : starts) {
                 s = ir.origin[i];
 
@@ -662,7 +661,7 @@ public class DisjointConditional extends Diff {
 
             // Update rectangles length in direction i
             // sort rectangles on increasing origin i
-            ArrayList<IntRectangle> ConsideredRectDur = new ArrayList<IntRectangle>();
+            List<IntRectangle> ConsideredRectDur = new ArrayList<IntRectangle>();
             for (IntRectangle t : UsedRectArray) {
                 if (t.overlap(maxRect)) {
                     ConsideredRectDur.add(t);
@@ -716,7 +715,7 @@ public class DisjointConditional extends Diff {
         }
     }
 
-    void narrowRectangleCondition(Rectangle r, ArrayList<IntRectangle> UsedRect, ArrayList<RectangleWithCondition> ProfileCandidates) {
+    void narrowRectangleCondition(Rectangle r, List<IntRectangle> UsedRect, List<RectangleWithCondition> ProfileCandidates) {
 
         if (trace) {
             System.out.println("Narrowing " + r);
@@ -752,9 +751,9 @@ public class DisjointConditional extends Diff {
 
                 needToNarrow = needToNarrow || containsChangedVariable(r, fdvQueue);
 
-                ArrayList<IntRectangle> UsedRect = new ArrayList<IntRectangle>();
-                ArrayList<RectangleWithCondition> ProfileCandidates = new ArrayList<RectangleWithCondition>();
-                ArrayList<RectangleWithCondition> OverlappingRects = new ArrayList<RectangleWithCondition>();
+                List<IntRectangle> UsedRect = new ArrayList<IntRectangle>();
+                List<RectangleWithCondition> ProfileCandidates = new ArrayList<RectangleWithCondition>();
+                List<RectangleWithCondition> OverlappingRects = new ArrayList<RectangleWithCondition>();
                 boolean ntN = findRectangles(r, l, UsedRect, ProfileCandidates, OverlappingRects, fdvQueue);
 
                 needToNarrow = needToNarrow || ntN || conditionChanged(fdvQueue, l + 1);
@@ -775,7 +774,7 @@ public class DisjointConditional extends Diff {
         }
     }
 
-    boolean notFit(int i, Rectangle r, ArrayList<IntRectangle> ConsideredRect) {
+    boolean notFit(int i, Rectangle r, List<IntRectangle> ConsideredRect) {
         boolean excludedState = true;
         Profile barrier = new Profile();
 
@@ -885,7 +884,7 @@ public class DisjointConditional extends Diff {
             profileCheckInterval(currentStore, Profile, limit, s, dur, d.leftElement(m), d.rightElement(m), resUse);
     }
 
-    void profileNarrowingCondition(int i, Rectangle r, ArrayList<RectangleWithCondition> ProfileCandidates) {
+    void profileNarrowingCondition(int i, Rectangle r, List<RectangleWithCondition> ProfileCandidates) {
         // check profile first
 
         IntDomain rOriginIdom = r.origin[i].dom();

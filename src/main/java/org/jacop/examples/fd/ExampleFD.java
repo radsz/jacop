@@ -36,7 +36,7 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.search.*;
 
-import java.util.ArrayList;
+import java.util.List;
 
 /**
  * It is an abstract class to describe all necessary functions of any store.
@@ -50,7 +50,7 @@ public abstract class ExampleFD {
     /**
      * It contains all variables used within a specific example.
      */
-    public ArrayList<IntVar> vars;
+    public List<IntVar> vars;
 
     /**
      * It specifies the cost function, null if no cost function is used.
@@ -339,7 +339,7 @@ public abstract class ExampleFD {
      * @param printInfo it specifies if that function should print any info.
      * @return true if the solution was found, false otherwise.
      */
-    public boolean shavingSearch(ArrayList<Constraint> guidingShaving, boolean printInfo) {
+    public boolean shavingSearch(List<Constraint> guidingShaving, boolean printInfo) {
 
         Shaving<IntVar> shaving = new Shaving<IntVar>();
         shaving.setStore(store);
@@ -663,7 +663,7 @@ public abstract class ExampleFD {
      *
      * @return true if the solution exists, false otherwise.
      */
-    public boolean searchMasterSlave(ArrayList<Var> masterVars, ArrayList<Var> slaveVars) {
+    public boolean searchMasterSlave(List<Var> masterVars, List<Var> slaveVars) {
 
         long T1 = System.currentTimeMillis();
 
@@ -717,7 +717,7 @@ public abstract class ExampleFD {
      * It returns an array list of variables used to model the example.
      * @return the array list of variables used to model the example.
      */
-    public ArrayList<IntVar> getSearchVariables() {
+    public List<IntVar> getSearchVariables() {
         return vars;
     }
 

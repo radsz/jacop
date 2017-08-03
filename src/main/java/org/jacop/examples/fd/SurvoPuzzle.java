@@ -32,6 +32,7 @@ package org.jacop.examples.fd;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.List;
 
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.SumInt;
@@ -149,7 +150,7 @@ public class SurvoPuzzle extends ExampleFD {
         // column sums
         //
         for (int j = 0; j < c; j++) {
-            ArrayList<IntVar> cols = new ArrayList<IntVar>();
+            List<IntVar> cols = new ArrayList<IntVar>();
             for (int i = 0; i < r; i++) {
                 cols.add(x[i][j]);
             }
@@ -211,7 +212,7 @@ public class SurvoPuzzle extends ExampleFD {
             BufferedReader inr = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
             String str;
             int lineCount = 0;
-            ArrayList<ArrayList<Integer>> MatrixI = new ArrayList<ArrayList<Integer>>();
+            List<List<Integer>> MatrixI = new ArrayList<List<Integer>>();
             while ((str = inr.readLine()) != null && str.length() > 0) {
 
                 str = str.trim();
@@ -243,7 +244,7 @@ public class SurvoPuzzle extends ExampleFD {
                         // Otherwise:
                         // The problem matrix: index 1 .. row.length-1
                         // The row sums: index row.length
-                        ArrayList<Integer> this_row = new ArrayList<Integer>();
+                        List<Integer> this_row = new ArrayList<Integer>();
                         for (int j = 0; j < row.length; j++) {
                             String s = row[j];
                             if (s.equals("*")) {
@@ -271,7 +272,7 @@ public class SurvoPuzzle extends ExampleFD {
             rowsums = new int[r];
             matrix = new int[r][c];
             for (int i = 0; i < r; i++) {
-                ArrayList<Integer> this_row = MatrixI.get(i);
+                List<Integer> this_row = MatrixI.get(i);
                 for (int j = 1; j < c + 1; j++) {
                     matrix[i][j - 1] = this_row.get(j);
                 }

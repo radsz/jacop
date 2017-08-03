@@ -105,7 +105,7 @@ public class Values extends Constraint {
      * @param list list of variables for which different values are being counted.
      * @param count specifies the number of different values in the list.
      */
-    public Values(ArrayList<? extends IntVar> list, IntVar count) {
+    public Values(List<? extends IntVar> list, IntVar count) {
 
         this(list.toArray(new IntVar[list.size()]), count);
 
