@@ -106,7 +106,7 @@ import java.util.Map;
 
     int[] lMaxArray;
 
-    HashMap<Var, Integer> positionMaping;
+    Map<Var, Integer> positionMaping;
 
     boolean backtrackHasOccured = false;
 
@@ -146,7 +146,7 @@ import java.util.Map;
 
         this.sum = sum;
 
-        HashMap<IntVar, Integer> parameters = new HashMap<IntVar, Integer>();
+        Map<IntVar, Integer> parameters = new HashMap<IntVar, Integer>();
 
         for (int i = 0; i < list.length; i++) {
             if (weights[i] != 0) {

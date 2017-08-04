@@ -269,7 +269,7 @@ import java.util.stream.Stream;
 
     int[] lMaxArray;
 
-    HashMap<Var, Integer> positionMaping;
+    Map<Var, Integer> positionMaping;
 
     boolean backtrackHasOccured = false;
 

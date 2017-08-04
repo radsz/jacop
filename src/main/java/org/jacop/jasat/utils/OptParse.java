@@ -1,8 +1,6 @@
 package org.jacop.jasat.utils;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.*;
 
 /**
  * util to parse command-line arguments
@@ -15,7 +13,7 @@ public class OptParse<E> {
     public String[] realArgs;
 
     // handlers
-    private HashMap<String, OptHandler<E>> handlers = new HashMap<String, OptHandler<E>>();
+    private Map<String, OptHandler<E>> handlers = new HashMap<String, OptHandler<E>>();
 
     // the main help string
     private String mainHelp = "";
@@ -85,7 +83,7 @@ public class OptParse<E> {
         System.out.println("options:");
 
         // print (only once for each handler) its help
-        HashSet<OptHandler<E>> printedHelps = new HashSet<OptHandler<E>>();
+        Set<OptHandler<E>> printedHelps = new HashSet<OptHandler<E>>();
         for (OptHandler<E> handler : handlers.values()) {
             if (printedHelps.contains(handler))
                 continue;

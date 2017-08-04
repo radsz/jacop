@@ -318,7 +318,7 @@ public class DisjointConditional extends Diff {
         return (r.condition() == null) ? true : ((r.condition().min() == 1) ? true : false);
     }
 
-    boolean conditionChanged(HashSet<IntVar> fdvQueue, int j) {
+    boolean conditionChanged(Set<IntVar> fdvQueue, int j) {
         boolean changed = false;
         List<? extends IntVar> el = condVariables[j];
         int i = 0;
@@ -370,7 +370,7 @@ public class DisjointConditional extends Diff {
     }
 
     boolean findRectangles(Rectangle r, int index, List<IntRectangle> UsedRect, List<RectangleWithCondition> ProfileCandidates,
-        List<RectangleWithCondition> OverlappingRects, HashSet<IntVar> fdvQueue) {
+        List<RectangleWithCondition> OverlappingRects, Set<IntVar> fdvQueue) {
         // Variable condition;
         boolean contains = false, checkArea = false;
 
@@ -728,7 +728,7 @@ public class DisjointConditional extends Diff {
         }
     }
 
-    @Override void narrowRectangles(HashSet<IntVar> fdvQueue) {
+    @Override void narrowRectangles(Set<IntVar> fdvQueue) {
         Rectangle r;
         boolean needToNarrow = false;
 

@@ -73,7 +73,7 @@ public class Knapsack extends Constraint implements UsesQueueVariable {
     /**
      * It specifies mapping from variables into the leaf of the knapsack tree.
      */
-    public HashMap<IntVar, TreeLeaf> variableLeafMapping;
+    public Map<IntVar, TreeLeaf> variableLeafMapping;
 
     /**
      *  The current position of the critical item in the tree
@@ -91,7 +91,7 @@ public class Knapsack extends Constraint implements UsesQueueVariable {
      * It is used by removeLevel function. There is a limit at which leaves
      * will not be added and the whole tree will be updated.
      */
-    private HashMap<Integer, List<TreeLeaf>> hashForUpdate;
+    private Map<Integer, List<TreeLeaf>> hashForUpdate;
 
     /**
      * It specifies the limit after which the changed leaves are not

@@ -34,11 +34,7 @@ import org.jacop.core.Var;
 import org.jacop.core.Store;
 import org.jacop.constraints.Constraint;
 
-import java.util.HashMap;
-import java.util.Comparator;
-import java.util.List;
-import java.util.LinkedList;
-import java.util.Collections;
+import java.util.*;
 import java.util.Map.Entry;
 
 
@@ -54,8 +50,8 @@ import java.util.Map.Entry;
 public class FailConstraintsStatistics<T extends Var> implements ConsistencyListener {
 
     // data structures to collect fail constraint statistics
-    public HashMap<String, Integer> failConstraintsStatistics = new HashMap<String, Integer>();
-    public HashMap<String, Integer> failConstraintsIdStatistics = new HashMap<String, Integer>();
+    public Map<String, Integer> failConstraintsStatistics = new HashMap<String, Integer>();
+    public Map<String, Integer> failConstraintsIdStatistics = new HashMap<String, Integer>();
     public long otherFails;
 
     Store store;
@@ -120,7 +116,7 @@ public class FailConstraintsStatistics<T extends Var> implements ConsistencyList
 
     }
 
-    private static List<Entry<String, Integer>> sortByValues(HashMap<String, Integer> map) {
+    private static List<Entry<String, Integer>> sortByValues(Map<String, Integer> map) {
         List<Entry<String, Integer>> list = new LinkedList<Entry<String, Integer>>(map.entrySet());
 
         // Sorting

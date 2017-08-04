@@ -31,7 +31,7 @@
 
 package org.jacop.constraints.regular;
 
-import java.util.HashMap;
+import java.util.Map;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntervalDomain;
@@ -148,7 +148,7 @@ public class RegStateDom extends RegState {
 
     }
 
-    @Override public void setSupports(HashMap<Integer, RegEdge> hashMap, int i) {
+    @Override public void setSupports(Map<Integer, RegEdge> hashMap, int i) {
 
         for (ValueEnumeration enumer = toSucDom[i].valueEnumeration(); enumer.hasMoreElements(); ) {
 

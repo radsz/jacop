@@ -34,6 +34,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 import org.jacop.constraints.Alldistinct;
@@ -156,7 +157,7 @@ public class Cryptogram extends ExampleFD {
             words.add(new ArrayList<String>());
 
         // letters used in the file.
-        HashMap<String, IntVar> letters = new HashMap<String, IntVar>();
+        Map<String, IntVar> letters = new HashMap<String, IntVar>();
 
         // parsing the words within each line.
         for (int i = 0; i < noLines; i++) {

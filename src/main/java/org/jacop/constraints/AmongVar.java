@@ -69,8 +69,8 @@ public class AmongVar extends Constraint implements UsesQueueVariable {
     static AtomicInteger idNumber = new AtomicInteger(0);
 
     //All variables attributes
-    private HashMap<IntVar, Integer> xIndex;
-    private HashMap<IntVar, Integer> yIndex;
+    private Map<IntVar, Integer> xIndex;
+    private Map<IntVar, Integer> yIndex;
 
     //Derived variables
 

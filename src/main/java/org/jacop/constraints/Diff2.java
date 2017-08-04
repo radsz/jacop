@@ -31,10 +31,7 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
@@ -323,7 +320,7 @@ public class Diff2 extends Diff {
 
     }
 
-    @Override void narrowRectangles(HashSet<IntVar> fdvQueue) {
+    @Override void narrowRectangles(Set<IntVar> fdvQueue) {
 
         boolean needToNarrow = false;
 
@@ -376,7 +373,7 @@ public class Diff2 extends Diff {
     }
 
     boolean findRectangles(Rectangle r, int index, List<IntRectangle> UsedRect, List<Rectangle> ProfileCandidates,
-        List<Rectangle> OverlappingRects, HashSet<IntVar> fdvQueue) {
+        List<Rectangle> OverlappingRects, Set<IntVar> fdvQueue) {
 
         boolean contains = false, checkArea = false;
 

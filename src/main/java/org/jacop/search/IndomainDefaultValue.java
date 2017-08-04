@@ -30,7 +30,7 @@
 
 package org.jacop.search;
 
-import java.util.HashMap;
+import java.util.Map;
 
 import org.jacop.core.Var;
 import org.jacop.core.IntVar;
@@ -60,7 +60,7 @@ public class IndomainDefaultValue<T extends Var> implements Indomain<T> {
     /**
      * It defines for each variable and a value which should be used.
      */
-    private HashMap<T, Integer> defValue;
+    private Map<T, Integer> defValue;
 
     /**
      * Constructor which specifies default values to be used
@@ -69,7 +69,7 @@ public class IndomainDefaultValue<T extends Var> implements Indomain<T> {
      * @param defaultValue default value used for each variable.
      */
 
-    public IndomainDefaultValue(HashMap<T, Integer> defaultValue, Indomain<T> defaultIndomain) {
+    public IndomainDefaultValue(Map<T, Integer> defaultValue, Indomain<T> defaultIndomain) {
 
         this.defIndomain = defaultIndomain;
         this.defValue = defaultValue;

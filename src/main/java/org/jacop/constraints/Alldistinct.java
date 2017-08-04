@@ -130,7 +130,7 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
 
     // stamps specify the position of the last fdv which posses given integer
     // it decrease with increase of the store level.
-    HashMap<Integer, TimeStamp<Integer>> stamps;
+    Map<Integer, TimeStamp<Integer>> stamps;
 
     // Variables for revisited Tarjan scc algorithm Reuse of scc
     // numbers previously computed, is only possible when matching is
@@ -153,10 +153,10 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
     // up significantly the swap operation when a value is not free
     // anymore and needs to be moved at the end of potentialFreeValues
     // array.
-    HashMap<Integer, Integer> valueIndex;
+    Map<Integer, Integer> valueIndex;
 
     // valueMapVariable specifies which Variable posses given integer
-    HashMap<Integer, SimpleArrayList<IntVar>> valueMapVariable;
+    Map<Integer, SimpleArrayList<IntVar>> valueMapVariable;
 
     LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
 
@@ -560,8 +560,8 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
         // Revisited Tarjan
 
         List<IntVar> l = new ArrayList<IntVar>();
-        HashMap<IntVar, Integer> dfsnum = new HashMap<IntVar, Integer>();
-        HashMap<IntVar, Integer> low = new HashMap<IntVar, Integer>();
+        Map<IntVar, Integer> dfsnum = new HashMap<IntVar, Integer>();
+        Map<IntVar, Integer> low = new HashMap<IntVar, Integer>();
 
         n = nStamp.value();
 
@@ -650,7 +650,7 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
             // to different representation) then no free values, so no need for
             // reachability analysis.
 
-            HashSet<Integer> matchedValues = new HashSet<Integer>(list.length, 0.50f);
+            Set<Integer> matchedValues = new HashSet<Integer>(list.length, 0.50f);
 
             int noOfReachedVariablesLastTime = stampReachability.value();
 
@@ -821,7 +821,7 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
 
         boolean maximumMatchingFound = false;
 
-        HashSet<Integer> nonFreeValues = new HashSet<Integer>();
+        Set<Integer> nonFreeValues = new HashSet<Integer>();
 
         Integer matched;
 
@@ -862,7 +862,7 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
         }
 
         // Points at edge which was not yet used by Karp-Hopcroft algorithm
-        HashMap<Integer, Integer> notYetUsedVariablePointer = new HashMap<Integer, Integer>();
+        Map<Integer, Integer> notYetUsedVariablePointer = new HashMap<Integer, Integer>();
 
         // Use Global Potential Free Values
         int sizePotentialFreeValues = stampValues.value();
@@ -895,7 +895,7 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
                 System.out.println("Non Free Values" + nonFreeValues);
             }
 
-            HashSet<IntVar> visitedVariables = new HashSet<IntVar>(matching.size());
+            Set<IntVar> visitedVariables = new HashSet<IntVar>(matching.size());
 
             // Very important since above it is also defined
             currentlyUsedPotentialFreeValue = 0;
@@ -1158,8 +1158,8 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
         n = nStamp.value();
 
         List<IntVar> l = new ArrayList<IntVar>();
-        HashMap<IntVar, Integer> dfsnum = new HashMap<IntVar, Integer>();
-        HashMap<IntVar, Integer> low = new HashMap<IntVar, Integer>();
+        Map<IntVar, Integer> dfsnum = new HashMap<IntVar, Integer>();
+        Map<IntVar, Integer> low = new HashMap<IntVar, Integer>();
 
         while (!fdvs.isEmpty()) {
 
@@ -1227,7 +1227,7 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
         variableQueue.add((IntVar) var);
     }
 
-    private void revisitTarjan(IntVar x, List<IntVar> l, HashMap<IntVar, Integer> dfsnum, HashMap<IntVar, Integer> low,
+    private void revisitTarjan(IntVar x, List<IntVar> l, Map<IntVar, Integer> dfsnum, Map<IntVar, Integer> low,
         LinkedHashSet<IntVar> fdvs) {
 
         Integer nInteger = n;
@@ -1362,7 +1362,7 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
         return buf.toString();
     }
 
-    private void visitTarjan(IntVar x, List<IntVar> l, HashMap<IntVar, Integer> dfsnum, HashMap<IntVar, Integer> low) {
+    private void visitTarjan(IntVar x, List<IntVar> l, Map<IntVar, Integer> dfsnum, Map<IntVar, Integer> low) {
 
         Integer vnInteger = vn;
         dfsnum.put(x, vnInteger);

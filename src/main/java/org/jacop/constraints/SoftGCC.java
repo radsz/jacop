@@ -59,7 +59,7 @@ import org.jacop.core.ValueEnumeration;
  *
  */
 
-public class SoftGCC extends DecomposedConstraint {
+public class SoftGCC extends DecomposedConstraint<Constraint> {
 
     public List<Constraint> decomposition;
 
@@ -492,7 +492,7 @@ public class SoftGCC extends DecomposedConstraint {
 
     }
 
-    @Override public List decompose(Store store) {
+    @Override public List<Constraint> decompose(Store store) {
 
         if (decomposition == null || decomposition.size() > 1) {
 

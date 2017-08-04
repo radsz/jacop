@@ -31,6 +31,7 @@
 package org.jacop.search;
 
 import java.util.HashMap;
+import java.util.Map;
 
 import org.jacop.core.Var;
 
@@ -55,7 +56,7 @@ public class IndomainHierarchical<T extends Var> implements Indomain<T> {
     /**
      * It defines for each variable and indomain method which should be used.
      */
-    private HashMap<T, Indomain<T>> hashmap;
+    private Map<T, Indomain<T>> hashmap;
 
     /**
      * Constructor which specifies the mapping and default indomain to be used
@@ -64,7 +65,7 @@ public class IndomainHierarchical<T extends Var> implements Indomain<T> {
      * @param defIndomain default indomain used if hashmap does not contain an entry.
      */
 
-    public IndomainHierarchical(HashMap<T, Indomain<T>> hashmap, Indomain<T> defIndomain) {
+    public IndomainHierarchical(Map<T, Indomain<T>> hashmap, Indomain<T> defIndomain) {
 
         this.hashmap = new HashMap<T, Indomain<T>>(hashmap);
         this.defIndomain = defIndomain;

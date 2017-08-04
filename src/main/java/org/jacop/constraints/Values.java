@@ -126,7 +126,7 @@ public class Values extends Constraint {
 
             int[][] adj = new int[list.length + 1][];
             adj[0] = new int[0];
-            HashMap<Integer, Integer> valueMap = new HashMap<Integer, Integer>();
+            Map<Integer, Integer> valueMap = new HashMap<Integer, Integer>();
             int valueIndex = 0;
 
             int numberSingleton = 0;

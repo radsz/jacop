@@ -117,10 +117,10 @@ public class GCC extends Constraint implements UsesQueueVariable {
     final static boolean debug = false;
 
     int[] domainHash;
-    HashMap<IntVar, Integer> pruningConsistencyEvents;
+    Map<IntVar, Integer> pruningConsistencyEvents;
 
-    HashMap<IntVar, Integer> xNodesHash;
-    HashSet<IntVar> xVariableToChange;
+    Map<IntVar, Integer> xNodesHash;
+    Set<IntVar> xVariableToChange;
 
     TimeStamp<Integer> stamp;
 
@@ -187,10 +187,10 @@ public class GCC extends Constraint implements UsesQueueVariable {
 
     }
 
-    HashSet<IntVar> zeroCounters;
+    Set<IntVar> zeroCounters;
 
     /** Fix suggested by Radek: a set that keeps track of the variables that have changed and need to be revisited in the consistency method */
-    private HashSet<Var> changedVariables = new HashSet<Var>();
+    private Set<Var> changedVariables = new HashSet<Var>();
 
     private IntVar[] removeZeroCounters(IntVar[] x, IntVar[] counters) {
 
@@ -295,7 +295,7 @@ public class GCC extends Constraint implements UsesQueueVariable {
             store.propagationHasOccurred = false;
 
             // Fix suggested by Radek (moved from queueVariable)
-            HashSet<Var> changedVariablesCopy = this.changedVariables;
+            Set<Var> changedVariablesCopy = this.changedVariables;
             this.changedVariables = new HashSet<Var>();
             for (Var var : changedVariablesCopy) {
                 // if v is singleton and is an X variable

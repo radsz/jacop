@@ -33,6 +33,7 @@ package org.jacop.jasat.core;
 
 import java.io.PrintStream;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Timer;
 
 import org.jacop.jasat.core.clauses.AbstractClausesDatabase;
@@ -81,7 +82,7 @@ public final class Core implements SolverComponent {
     private int maxVariable = 0;
 
     // a time counter
-    private HashMap<String, Long> timeMap = new HashMap<String, Long>();
+    private Map<String, Long> timeMap = new HashMap<String, Long>();
 
     // is the solver stopped ?
     public boolean isStopped = false;

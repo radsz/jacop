@@ -15,7 +15,7 @@ import java.util.*;
  */
 public class QueueForward<T extends Constraint> {
 
-    final public HashMap<Var, List<T>> forwardMap;
+    final public Map<Var, List<T>> forwardMap;
 
     final public boolean isEmpty;
 

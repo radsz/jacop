@@ -84,7 +84,7 @@ public class Among extends Constraint implements UsesQueueVariable {
 
     LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
 
-    private HashMap<IntVar, Integer> position;
+    private Map<IntVar, Integer> position;
 
     /**
      * It constructs an Among constraint.

@@ -30,7 +30,7 @@
 
 package org.jacop.util.fsm;
 
-import java.util.HashSet;
+import java.util.Set;
 
 import org.jacop.core.IntDomain;
 
@@ -67,7 +67,7 @@ public class FSMTransition {
      * @param states a list of states which have been already copied.
      * @return the transition clone.
      */
-    public FSMTransition deepClone(HashSet<FSMState> states) {
+    public FSMTransition deepClone(Set<FSMState> states) {
 
         return new FSMTransition(domain, successor.deepClone(states));
 

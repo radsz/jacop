@@ -250,7 +250,7 @@ public class NoGood extends PrimitiveConstraint {
     @Override public void impose(Store store) {
 
         if (store.watchedConstraints == null)
-            store.watchedConstraints = new HashMap<Var, HashSet<Constraint>>();
+            store.watchedConstraints = new HashMap<Var, Set<Constraint>>();
 
         if (listOfVars.length == 1) {
 

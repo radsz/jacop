@@ -265,7 +265,7 @@ public class Store {
      * watched constraints are being in the queue system).
      */
 
-    public HashMap<Var, HashSet<Constraint>> watchedConstraints;
+    public Map<Var, Set<Constraint>> watchedConstraints;
 
     /**
      * Variable given as a parameter no longer watches constraint given as
@@ -290,7 +290,7 @@ public class Store {
     public void deregisterWatchedLiteralConstraint(Constraint C) {
 
         for (Var v : C.arguments()) {
-            HashSet<Constraint> forVariable = watchedConstraints.get(v);
+            Set<Constraint> forVariable = watchedConstraints.get(v);
             if (forVariable != null)
                 forVariable.remove(C);
         }
@@ -309,7 +309,7 @@ public class Store {
 
         int count = 0;
 
-        for (HashSet<Constraint> c : watchedConstraints.values())
+        for (Set<Constraint> c : watchedConstraints.values())
             count += c.size();
 
         return count;
@@ -326,7 +326,7 @@ public class Store {
 
     public void registerWatchedLiteralConstraint(Var v, Constraint C) {
 
-        HashSet<Constraint> forVariable = watchedConstraints.get(v);
+        Set<Constraint> forVariable = watchedConstraints.get(v);
 
         if (forVariable != null)
             forVariable.add(C);
@@ -477,7 +477,7 @@ public class Store {
         // Watched constraints
         if (watchedConstraints != null && pruningEvent == IntDomain.GROUND) {
 
-            HashSet<Constraint> list = watchedConstraints.get(var);
+            Set<Constraint> list = watchedConstraints.get(var);
 
             if (list != null)
                 for (Constraint con : list) {
@@ -615,7 +615,7 @@ public class Store {
      * it exists then it will be used by functions looking for a variable given the name.
      */
 
-    public HashMap<String, Var> variablesHashMap = new HashMap<String, Var>();
+    public Map<String, Var> variablesHashMap = new HashMap<String, Var>();
 
     /**
      * This function looks for a variable with given id. It will first
@@ -1200,9 +1200,9 @@ public class Store {
 
     }
 
-    public HashSet<Constraint> getConstraints() {
+    public Set<Constraint> getConstraints() {
 
-        HashSet<Constraint> constraints = new HashSet<Constraint>();
+        Set<Constraint> constraints = new HashSet<Constraint>();
 
         for (Var v : variablesHashMap.values()) {
             Domain d = v.dom();

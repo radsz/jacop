@@ -33,6 +33,7 @@ package org.jacop.jasat.core.clauses;
 
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 
 import org.jacop.jasat.core.Trail;
 import org.jacop.jasat.utils.MemoryPool;
@@ -53,7 +54,7 @@ public final class MapClause implements Iterable<Integer> {
     /**
      * the literals of the clause
      */
-    public HashMap<Integer, Boolean> literals = new HashMap<Integer, Boolean>();
+    public Map<Integer, Boolean> literals = new HashMap<Integer, Boolean>();
 
     /**
      * the literal that will be asserted due to unit propagation of the conflict clause.

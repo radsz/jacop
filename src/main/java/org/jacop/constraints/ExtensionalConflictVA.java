@@ -551,7 +551,7 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
 
         for (i = 0; i < list.length; i++) {
 
-            HashMap<Integer, Integer> val = new HashMap<Integer, Integer>();
+            Map<Integer, Integer> val = new HashMap<Integer, Integer>();
 
             for (int[] t : tuplesFromConstructor) {
 

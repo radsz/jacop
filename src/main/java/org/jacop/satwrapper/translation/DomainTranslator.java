@@ -2,6 +2,7 @@ package org.jacop.satwrapper.translation;
 
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.Set;
 
 import org.jacop.core.IntVar;
 import org.jacop.satwrapper.SatWrapper;
@@ -19,7 +20,7 @@ public final class DomainTranslator implements WrapperComponent {
     private SatWrapper wrapper;
 
     // variables that have already been translated to clauses
-    public HashSet<IntVar> translatedVars = new HashSet<IntVar>();
+    public Set<IntVar> translatedVars = new HashSet<IntVar>();
 
     /**
      * translates the variable to clauses, if not already done, and add

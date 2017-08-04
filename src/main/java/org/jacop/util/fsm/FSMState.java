@@ -31,6 +31,7 @@
 package org.jacop.util.fsm;
 
 import java.util.HashSet;
+import java.util.Set;
 
 /**
  * @author Radoslaw Szymanek
@@ -47,7 +48,7 @@ public class FSMState {
     /**
      * It specifies the list of transitions  outgoing from this state.
      */
-    public HashSet<FSMTransition> transitions;
+    public Set<FSMTransition> transitions;
 
     /**
      * It constructs a FSM state.
@@ -84,7 +85,7 @@ public class FSMState {
      * @param states it contains the states which do not need to be created, only reused.
      * @return a deep clone of the current state.
      */
-    public FSMState deepClone(HashSet<FSMState> states) {
+    public FSMState deepClone(Set<FSMState> states) {
 
         // replace by HashSet contains check.
         FSMState newFSM = null;

@@ -33,6 +33,7 @@ package org.jacop.util.fsm;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.IntDomain;
@@ -63,12 +64,12 @@ public class FSM {
     /**
      * It specifies final states of DFA.
      */
-    public HashSet<FSMState> finalStates;
+    public Set<FSMState> finalStates;
 
     /**
      * It specifies all states including the initial one and final ones.
      */
-    public HashSet<FSMState> allStates;
+    public Set<FSMState> allStates;
 
     /**
      * It creates a Finite State Machine.
@@ -76,7 +77,7 @@ public class FSM {
      * @param allStates it specifies all the states.
      * @param finalStates it specifies the final states.
      */
-    public FSM(FSMState initState, HashSet<FSMState> finalStates, HashSet<FSMState> allStates) {
+    public FSM(FSMState initState, Set<FSMState> finalStates, Set<FSMState> allStates) {
 
         this.initState = initState;
         this.allStates = allStates;
@@ -273,8 +274,8 @@ public class FSM {
      */
     public void resize() {
 
-        HashSet<FSMState> finalStates = new HashSet<FSMState>();
-        HashSet<FSMState> states = new HashSet<FSMState>();
+        Set<FSMState> finalStates = new HashSet<FSMState>();
+        Set<FSMState> states = new HashSet<FSMState>();
 
         int id = 0;
 
@@ -307,9 +308,9 @@ public class FSM {
         IntervalDomain[][][] outarc = new IntervalDomain[levels + 1][stateNumber][stateNumber];
 
         //Reachable region of the graph
-        HashSet<FSMState> reachable = new HashSet<FSMState>();
+        Set<FSMState> reachable = new HashSet<FSMState>();
         //Temporal variable for reachable region
-        HashSet<FSMState> tmp = new HashSet<FSMState>();
+        Set<FSMState> tmp = new HashSet<FSMState>();
 
         //The id's of the states are renamed to make the future graph in latex look pretty
         int level = 0;
@@ -460,9 +461,9 @@ public class FSM {
         IntervalDomain[][][] outarc = new IntervalDomain[levels + 1][stateNumber][stateNumber];
 
         //Reachable region of the graph
-        HashSet<FSMState> reachable = new HashSet<FSMState>();
+        Set<FSMState> reachable = new HashSet<FSMState>();
         //Temporal variable for reachable region
-        HashSet<FSMState> tmp = new HashSet<FSMState>();
+        Set<FSMState> tmp = new HashSet<FSMState>();
 
         //The id's of the states are renamed to make the future graph in latex look pretty
         int level = 0;
@@ -620,9 +621,9 @@ public class FSM {
         IntervalDomain[][][] outarc = new IntervalDomain[levels + 1][stateNumber][stateNumber];
 
         //Reachable region of the graph
-        HashSet<FSMState> reachable = new HashSet<FSMState>();
+        Set<FSMState> reachable = new HashSet<FSMState>();
         //Temporal variable for reachable region
-        HashSet<FSMState> tmp = new HashSet<FSMState>();
+        Set<FSMState> tmp = new HashSet<FSMState>();
 
         //The id's of the states are renamed to make the future graph in latex look pretty
         int level = 0;

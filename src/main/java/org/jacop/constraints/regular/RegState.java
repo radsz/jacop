@@ -31,7 +31,7 @@
 
 package org.jacop.constraints.regular;
 
-import java.util.HashMap;
+import java.util.Map;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntervalDomain;
@@ -132,7 +132,7 @@ public abstract class RegState {
      * @param successorNo it specifies the edge position. 
      */
 
-    public abstract void setSupports(HashMap<Integer, RegEdge> hashMap, int successorNo);
+    public abstract void setSupports(Map<Integer, RegEdge> hashMap, int successorNo);
 
     /**
      * It updates a support if given state supports given value. 

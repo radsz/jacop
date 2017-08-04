@@ -54,7 +54,7 @@ import org.jacop.util.fsm.FSMTransition;
  * @version 4.4
  */
 
-public class Stretch extends DecomposedConstraint {
+public class Stretch extends DecomposedConstraint<Constraint> {
 
     int[] values;
     int[] min;
@@ -91,7 +91,7 @@ public class Stretch extends DecomposedConstraint {
 
     }
 
-    @Override public List decompose(Store store) {
+    @Override public List<Constraint> decompose(Store store) {
 
         if (constraints != null)
             return constraints;

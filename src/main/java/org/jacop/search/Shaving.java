@@ -230,7 +230,7 @@ import org.jacop.core.Store;
         }
 
         // Speculate based on neighbours
-        HashMap<IntVar, LinkedHashSet<Integer>> shavableCurrent = new HashMap<IntVar, LinkedHashSet<Integer>>();
+        Map<IntVar, LinkedHashSet<Integer>> shavableCurrent = new HashMap<IntVar, LinkedHashSet<Integer>>();
 
         int last = shavable.size();
         int current = depth;

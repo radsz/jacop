@@ -33,6 +33,7 @@ package org.jacop.search;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ExtensionalSupportVA;
@@ -106,7 +107,7 @@ public class TransformExtensional implements InitializeListener {
                 Constraint[][] varConstraints = v.dom().modelConstraints;
                 int[] toEvaluate = v.dom().modelConstraintsToEvaluate;
 
-                HashSet<Constraint> constraintsInQuestion = new HashSet<Constraint>();
+                Set<Constraint> constraintsInQuestion = new HashSet<Constraint>();
 
                 for (int i = 0; i < toEvaluate.length; i++)
                     for (int j = 0; j < toEvaluate[i]; j++)

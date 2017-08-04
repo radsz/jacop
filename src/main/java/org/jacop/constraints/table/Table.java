@@ -34,6 +34,7 @@ package org.jacop.constraints.table;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Store;
@@ -72,7 +73,7 @@ public class Table extends Constraint implements UsesQueueVariable {
     /**
      *
      */
-    HashMap<IntVar, Integer> varMap = new HashMap<IntVar, Integer>();
+    Map<IntVar, Integer> varMap = new HashMap<IntVar, Integer>();
 
     /**
      * Main data structure for the constraint
@@ -86,7 +87,7 @@ public class Table extends Constraint implements UsesQueueVariable {
 
     Map<Integer, Integer>[] residues;
 
-    HashSet<IntVar> variableQueue = new HashSet<IntVar>();
+    Set<IntVar> variableQueue = new HashSet<IntVar>();
 
     private int stamp = 0;
 
@@ -210,7 +211,7 @@ public class Table extends Constraint implements UsesQueueVariable {
 
             store.propagationHasOccurred = false;
 
-            HashSet<IntVar> fdvs = variableQueue;
+            Set<IntVar> fdvs = variableQueue;
             variableQueue = new HashSet<IntVar>();
 
             updateTable(fdvs);
@@ -223,7 +224,7 @@ public class Table extends Constraint implements UsesQueueVariable {
 
     }
 
-    void updateTable(HashSet<IntVar> fdvs) {
+    void updateTable(Set<IntVar> fdvs) {
 
         for (IntVar v : fdvs) {
 

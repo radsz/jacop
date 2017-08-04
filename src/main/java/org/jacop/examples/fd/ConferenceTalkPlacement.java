@@ -50,9 +50,9 @@ public class ConferenceTalkPlacement {
     IntVar[][] varsMatrix;
     DepthFirstSearch<IntVar> search;
 
-    private HashMap<Integer, HashMap<Integer, Integer>> transformCosts(int[][] costs, int noOfTalks) {
+    private Map<Integer, Map<Integer, Integer>> transformCosts(int[][] costs, int noOfTalks) {
 
-        HashMap<Integer, HashMap<Integer, Integer>> result = new HashMap<Integer, HashMap<Integer, Integer>>();
+        Map<Integer, Map<Integer, Integer>> result = new HashMap<Integer, Map<Integer, Integer>>();
 
         for (int i = 0; i < noOfTalks; i++)
             result.put(i, new HashMap<Integer, Integer>());
@@ -65,11 +65,11 @@ public class ConferenceTalkPlacement {
         return result;
     }
 
-    private HashMap<Integer, HashMap<Integer, Integer>> randomCosts(int noOfTalks, int randomSeed, int maxSingleCost) {
+    private Map<Integer, Map<Integer, Integer>> randomCosts(int noOfTalks, int randomSeed, int maxSingleCost) {
 
         Random seed = new Random(randomSeed);
 
-        HashMap<Integer, HashMap<Integer, Integer>> result = new HashMap<Integer, HashMap<Integer, Integer>>();
+        Map<Integer, Map<Integer, Integer>> result = new HashMap<Integer, Map<Integer, Integer>>();
 
         for (int i = 0; i < noOfTalks; i++)
             result.put(i, new HashMap<Integer, Integer>());
@@ -82,10 +82,10 @@ public class ConferenceTalkPlacement {
     }
 
     // assumes noTalks = noOfParallelTracks * noOfTimeSlots
-    private int computeLowerBound(int noOfParallelTracks, int noOfTimeSlots, HashMap<Integer, HashMap<Integer, Integer>> costs) {
+    private int computeLowerBound(int noOfParallelTracks, int noOfTimeSlots, Map<Integer, Map<Integer, Integer>> costs) {
 
         List<Integer> costsList = new ArrayList<>();
-        for (HashMap<Integer, Integer> elH : costs.values())
+        for (Map<Integer, Integer> elH : costs.values())
             costsList.addAll(elH.values());
 
         Integer[] sortedArray = costsList.toArray(new Integer[costsList.size()]);
@@ -101,7 +101,7 @@ public class ConferenceTalkPlacement {
     }
 
     public void model(int noOfParallelTracks, int noOfTalks, int noOfTimeSlots, int maxSingleCost,
-        HashMap<Integer, HashMap<Integer, Integer>> costMap) {
+        Map<Integer, Map<Integer, Integer>> costMap) {
 
         store = new Store();
 
@@ -249,7 +249,7 @@ public class ConferenceTalkPlacement {
         // The value in the nested hashmap specify the cost if pair of talks (first key, second key) are scheduled
         // in the same time slot.
         // The goal is to minimize the sum of costs.
-        HashMap<Integer, HashMap<Integer, Integer>> costMap = example.randomCosts(noOfTalks, randomSeed, maxSingleCost);
+        Map<Integer, Map<Integer, Integer>> costMap = example.randomCosts(noOfTalks, randomSeed, maxSingleCost);
 
         example.model(noOfParallelTracks, noOfTalks, noOfTimeSlots, maxSingleCost, costMap);
 

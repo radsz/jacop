@@ -46,7 +46,7 @@ import java.util.List;
  * @version 4.4
  */
 
-public class SoftAlldifferent extends DecomposedConstraint {
+public class SoftAlldifferent extends DecomposedConstraint<Constraint> {
 
     public List<Constraint> decomposition;
 
@@ -119,7 +119,7 @@ public class SoftAlldifferent extends DecomposedConstraint {
         // auxilaryVariables.addAll(costs);
     }
 
-    @Override public List decompose(Store store) {
+    @Override public List<Constraint> decompose(Store store) {
 
         if (decomposition == null || decomposition.size() > 1) {
 

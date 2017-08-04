@@ -50,7 +50,7 @@ import org.jacop.core.Store;
  *
  */
 
-public class Arithmetic extends DecomposedConstraint {
+public class Arithmetic extends DecomposedConstraint<Constraint> {
 
     public static final IntVar NULL_VAR = new IntVar() {
         @Override public String toString() {
@@ -296,7 +296,7 @@ public class Arithmetic extends DecomposedConstraint {
         }
     }
 
-    @Override public List decompose(Store store) {
+    @Override public List<Constraint> decompose(Store store) {
 
         if (decomposition == null || decomposition.size() > 1) {
 

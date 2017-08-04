@@ -31,10 +31,7 @@
 
 package org.jacop.constraints.table;
 
-import java.util.Map;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Store;
@@ -80,14 +77,14 @@ public class SimpleTable extends Constraint implements UsesQueueVariable {
     /**
      *
      */
-    HashMap<IntVar, Integer> varMap = new HashMap<IntVar, Integer>();
+    Map<IntVar, Integer> varMap = new HashMap<IntVar, Integer>();
 
     /**
      * Data specifying support tuples for each variable; static structure created once when constraint is posed.
      */
     Map<Integer, Long>[] supports;
 
-    HashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
+    Set<IntVar> variableQueue = new LinkedHashSet<IntVar>();
 
     private int stamp = 0;
 
@@ -190,7 +187,7 @@ public class SimpleTable extends Constraint implements UsesQueueVariable {
 
             store.propagationHasOccurred = false;
 
-            HashSet<IntVar> fdvs = variableQueue;
+            Set<IntVar> fdvs = variableQueue;
             variableQueue = new LinkedHashSet<IntVar>();
 
             updateTable(fdvs);
@@ -203,7 +200,7 @@ public class SimpleTable extends Constraint implements UsesQueueVariable {
 
     }
 
-    void updateTable(HashSet<IntVar> fdvs) {
+    void updateTable(Set<IntVar> fdvs) {
 
         for (IntVar v : fdvs) {
 

@@ -30,8 +30,8 @@
 
 package org.jacop.constraints.knapsack;
 
-import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.jacop.core.IntVar;
 
@@ -155,7 +155,7 @@ public class Tree {
      * @param leaves array of leaves of the created tree.
      * @param zero it specifies a variable equal to value 0.
      */
-    public Tree(KnapsackItem[] items, HashMap<IntVar, TreeLeaf> varPositionMaping, TreeLeaf[] leaves, IntVar zero) {
+    public Tree(KnapsackItem[] items, Map<IntVar, TreeLeaf> varPositionMaping, TreeLeaf[] leaves, IntVar zero) {
 
         assert (items.length > 1) : "Number of items must be greater than 1";
 

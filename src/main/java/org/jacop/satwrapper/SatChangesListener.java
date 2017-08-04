@@ -3,6 +3,7 @@ package org.jacop.satwrapper;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashSet;
+import java.util.Set;
 
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
@@ -37,7 +38,7 @@ public final class SatChangesListener implements AssertionListener, PropagateLis
 
     // set of forbidden values for variables
     // (not BitSet because some values could be < 0)
-    @SuppressWarnings("unchecked") private HashSet<Integer>[] excludedValues = new HashSet[40];
+    @SuppressWarnings("unchecked") private Set<Integer>[] excludedValues = new HashSet[40];
     //private IntSet[] excludedValues = new IntSet[5];
 
     // set of (true) literals representing 'x<=v' assertions on CP vars
@@ -48,7 +49,7 @@ public final class SatChangesListener implements AssertionListener, PropagateLis
 
     // set of variables to update
     private BitSet intVarsToUpdate = new BitSet();
-    private HashSet<BooleanVar> booleanVarsToUpdate = new HashSet<BooleanVar>();
+    private Set<BooleanVar> booleanVarsToUpdate = new HashSet<BooleanVar>();
 
     /**
      * clears all sets, so that elements occurring in them later result only
@@ -198,7 +199,7 @@ public final class SatChangesListener implements AssertionListener, PropagateLis
             }
 
             // exclude some values from the domain
-            HashSet<Integer> excluded = excludedValues[variable.index];
+            Set<Integer> excluded = excludedValues[variable.index];
             if (excluded == null)
                 continue;
             for (int value : excluded)

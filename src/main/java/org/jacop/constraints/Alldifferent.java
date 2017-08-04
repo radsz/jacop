@@ -58,7 +58,7 @@ public class Alldifferent extends Constraint implements UsesQueueVariable {
 
     LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
 
-    protected HashMap<IntVar, Integer> positionMapping;
+    protected Map<IntVar, Integer> positionMapping;
 
     protected TimeStamp<Integer> grounded;
 
@@ -131,7 +131,7 @@ public class Alldifferent extends Constraint implements UsesQueueVariable {
             if (!list[i].singleton())
                 return false;
 
-        HashSet<Integer> values = new HashSet<Integer>();
+        Set<Integer> values = new HashSet<Integer>();
 
         for (IntVar aList : list)
             if (!values.add(aList.value()))

@@ -1,8 +1,6 @@
 package org.jacop.jasat.utils.structures;
 
-import java.util.HashSet;
 import java.util.Set;
-import java.util.Stack;
 
 
 /**

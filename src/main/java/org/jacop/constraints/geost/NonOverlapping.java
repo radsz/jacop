@@ -29,10 +29,7 @@
  */
 package org.jacop.constraints.geost;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
+import java.util.*;
 
 import org.jacop.util.SimpleHashSet;
 
@@ -56,7 +53,7 @@ public class NonOverlapping implements ExternalConstraint {
 
     // For a moment not really needed, if the dead code inside function isInternalConstraintApplicableTo
     // is removed then this attribute can be removed too.
-    HashSet<ObstacleObjectFrame> constraints;
+    Set<ObstacleObjectFrame> constraints;
 
     /**
      * the dimensions (from 0 to dimension-1) on which the constraint applies. To consider time,

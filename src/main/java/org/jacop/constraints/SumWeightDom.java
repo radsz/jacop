@@ -92,7 +92,7 @@ import org.jacop.core.*;
      */
     IntDomain[] lArray;
 
-    HashMap<Var, Integer> positionMaping;
+    Map<Var, Integer> positionMaping;
 
     boolean backtrackHasOccured = false;
 
@@ -118,7 +118,7 @@ import org.jacop.core.*;
 
         this.sum = sum;
 
-        HashMap<IntVar, Integer> parameters = new HashMap<IntVar, Integer>();
+        Map<IntVar, Integer> parameters = new HashMap<IntVar, Integer>();
 
         for (int i = 0; i < list.length; i++) {
             if (weights[i] == 0)

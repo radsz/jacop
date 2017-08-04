@@ -1,6 +1,7 @@
 package org.jacop.jasat.utils;
 
 import java.util.HashSet;
+import java.util.Set;
 
 
 /**
@@ -84,9 +85,9 @@ public final class Utils {
             return array;
     }
 
-    public final static <E> HashSet<E>[] ensure(HashSet<E>[] array, int size) {
+    public final static <E> Set<E>[] ensure(HashSet<E>[] array, int size) {
         if (array.length <= size) {
-            @SuppressWarnings("unchecked") HashSet<E>[] answer = (HashSet<E>[]) new HashSet[2 * size];
+            @SuppressWarnings("unchecked") Set<E>[] answer = (HashSet<E>[]) new HashSet[2 * size];
             System.arraycopy(array, 0, answer, 0, array.length);
             return answer;
         } else

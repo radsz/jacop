@@ -30,10 +30,7 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -87,7 +84,7 @@ public class AndBoolVector extends PrimitiveConstraint {
 
         this.numberId = idNumber.incrementAndGet();
 
-        HashSet<IntVar> varSet = new HashSet<IntVar>();
+        Set<IntVar> varSet = new HashSet<IntVar>();
         Arrays.stream(list).forEach(varSet::add);
 
         this.l = varSet.size();

@@ -31,10 +31,7 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Hashtable;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.api.UsesQueueVariable;
@@ -270,7 +267,7 @@ public class ElementFloat extends Constraint implements UsesQueueVariable {
 
         duplicates = new ArrayList<IntDomain>();
 
-        HashMap<Double, IntDomain> map = new HashMap<Double, IntDomain>();
+        Map<Double, IntDomain> map = new HashMap<Double, IntDomain>();
 
         for (int pos = 0; pos < list.length; pos++) {
 

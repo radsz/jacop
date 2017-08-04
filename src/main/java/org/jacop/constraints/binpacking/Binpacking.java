@@ -78,8 +78,8 @@ public class Binpacking extends Constraint implements UsesQueueVariable {
     SimpleHashSet<IntVar> itemQueue = new SimpleHashSet<IntVar>();
     SimpleHashSet<IntVar> binQueue = new SimpleHashSet<IntVar>();
 
-    HashMap<IntVar, Integer> itemMap = new HashMap<IntVar, Integer>();
-    HashMap<IntVar, Integer> binMap = new HashMap<IntVar, Integer>();
+    Map<IntVar, Integer> itemMap = new HashMap<IntVar, Integer>();
+    Map<IntVar, Integer> binMap = new HashMap<IntVar, Integer>();
 
     /**
      * It constructs the binpacking constraint for the supplied variable.

@@ -36,6 +36,7 @@ import org.jacop.util.SimpleHashSet;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -85,8 +86,8 @@ public class LexOrder extends Constraint implements UsesQueueVariable {
     private int beta;
 
     SimpleHashSet<Integer> indexQueue = new SimpleHashSet<Integer>();
-    HashMap<IntVar, int[]> varXToIndex = new HashMap<IntVar, int[]>();
-    HashMap<IntVar, int[]> varYToIndex = new HashMap<IntVar, int[]>();
+    Map<IntVar, int[]> varXToIndex = new HashMap<IntVar, int[]>();
+    Map<IntVar, int[]> varYToIndex = new HashMap<IntVar, int[]>();
 
     /**
      * It creates a lexicographical order for vectors x and y,

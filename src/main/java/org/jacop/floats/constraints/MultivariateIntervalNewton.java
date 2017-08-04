@@ -64,7 +64,7 @@ public class MultivariateIntervalNewton {
     FloatInterval[][] A;
     double[] b;
 
-    HashMap<FloatVar, Double> map;
+    Map<FloatVar, Double> map;
     Stack<Constraint> eval;
 
     public MultivariateIntervalNewton(Store store, FloatVar[] f, FloatVar[] x) {

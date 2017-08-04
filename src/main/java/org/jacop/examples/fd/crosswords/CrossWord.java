@@ -34,6 +34,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.jacop.constraints.ExtensionalSupportMDD;
 import org.jacop.constraints.XeqC;
@@ -75,11 +76,11 @@ public class CrossWord extends ExampleFD {
 
     String defaultDictionary = "src/main/java/org/jacop/examples/fd/crosswords/words";
 
-    HashMap<String, Integer> mapping = new HashMap<String, Integer>();
-    HashMap<Integer, String> mappingReverse = new HashMap<Integer, String>();
+    Map<String, Integer> mapping = new HashMap<String, Integer>();
+    Map<Integer, String> mappingReverse = new HashMap<Integer, String>();
 
 
-    HashMap<Integer, MDD> mdds = new HashMap<Integer, MDD>();
+    Map<Integer, MDD> mdds = new HashMap<Integer, MDD>();
 
     char[][] crosswordTemplate =
         {{'*', '_', '_', '_', '_'}, {'_', '_', '_', 'l', '_'}, {'_', '_', '_', '_', '_'}, {'_', 'e', '_', '_', '_'},

@@ -33,6 +33,7 @@ package org.jacop.constraints;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.api.UsesQueueVariable;
@@ -159,7 +160,7 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
     /**
      * It specifies the mapping of the variable into its index.
      */
-    public HashMap<Var, Integer> varToIndex;
+    public Map<Var, Integer> varToIndex;
 
     /**
      *

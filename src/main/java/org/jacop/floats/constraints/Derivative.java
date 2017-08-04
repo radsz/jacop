@@ -55,7 +55,7 @@ public class Derivative {
 
     static Set<Constraint> derivateConstraints;
 
-    static HashMap<FloatVar, Constraint> definitionConstraint;
+    static Map<FloatVar, Constraint> definitionConstraint;
 
     static Store store;
 

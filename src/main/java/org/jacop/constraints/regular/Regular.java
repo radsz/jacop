@@ -167,7 +167,7 @@ public class Regular extends Constraint implements UsesQueueVariable {
      * If Hashmap - dNames - is not null then upon saving the latex graph
      * the values on the edges will be replaced with their "names".
      */
-    public HashMap<Integer, String> dNames;
+    public Map<Integer, String> dNames;
 
     /**
      * The ith smallest level of Layered Graph which have changed.
@@ -213,7 +213,7 @@ public class Regular extends Constraint implements UsesQueueVariable {
      */
     LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
 
-    HashMap<IntVar, Integer> mapping = new HashMap<IntVar, Integer>();
+    Map<IntVar, Integer> mapping = new HashMap<IntVar, Integer>();
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -221,7 +221,7 @@ public class Regular extends Constraint implements UsesQueueVariable {
     /**
      * It keeps for each variable value pair a current support.
      */
-    public HashMap<Integer, RegEdge>[] supports;
+    public Map<Integer, RegEdge>[] supports;
 
 
     /**
@@ -314,9 +314,9 @@ public class Regular extends Constraint implements UsesQueueVariable {
         int[][] outdeg = new int[levels + 1][stateNumber];
 
         //Reachable region of the graph
-        HashSet<FSMState> reachable = new HashSet<FSMState>();
+        Set<FSMState> reachable = new HashSet<FSMState>();
         //Temporal variable for reachable region
-        HashSet<FSMState> tmp = new HashSet<FSMState>();
+        Set<FSMState> tmp = new HashSet<FSMState>();
 
         //Initialization of the future state array
         //and the time-stamps with the number of active states

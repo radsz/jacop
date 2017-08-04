@@ -61,7 +61,7 @@ public class Diff extends Constraint implements UsesQueueVariable {
     List<Integer> durMax;
     //boolean durMaxDecided = false;
 
-    HashSet<IntVar> variableQueue = new HashSet<IntVar>();
+    Set<IntVar> variableQueue = new HashSet<IntVar>();
 
     /**
      * It specifies the list of rectangles which are of interest for this diff constraint.
@@ -223,7 +223,7 @@ public class Diff extends Constraint implements UsesQueueVariable {
 
             store.propagationHasOccurred = false;
 
-            HashSet<IntVar> fdvs = variableQueue;
+            Set<IntVar> fdvs = variableQueue;
             variableQueue = new HashSet<IntVar>();
             // System.out.println(fdvs);
             narrowRectangles(fdvs);
@@ -232,7 +232,7 @@ public class Diff extends Constraint implements UsesQueueVariable {
 
     }
 
-    boolean containsChangedVariable(Rectangle r, HashSet<IntVar> fdvQueue) {
+    boolean containsChangedVariable(Rectangle r, Set<IntVar> fdvQueue) {
         boolean contains = false;
         int dim = r.dim;
         int i = 0;
@@ -244,7 +244,7 @@ public class Diff extends Constraint implements UsesQueueVariable {
     }
 
     boolean findRectangles(Rectangle r, List<IntRectangle> UsedRect, List<Rectangle> ProfileCandidates,
-        HashSet<IntVar> fdvQueue) {
+        Set<IntVar> fdvQueue) {
 
         boolean contains = false, checkArea = false;
 
@@ -625,7 +625,7 @@ public class Diff extends Constraint implements UsesQueueVariable {
         }
     }
 
-    void narrowRectangles(HashSet<IntVar> fdvQueue) {
+    void narrowRectangles(Set<IntVar> fdvQueue) {
         boolean needToNarrow = false;
         List<IntRectangle> UsedRect = new ArrayList<IntRectangle>();
         List<Rectangle> ProfileCandidates = new ArrayList<Rectangle>();

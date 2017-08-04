@@ -60,7 +60,7 @@ public class Assignment extends Constraint implements UsesQueueVariable {
      */
     public int shiftD = 0;
 
-    HashMap<IntVar, Integer> ds;
+    Map<IntVar, Integer> ds;
 
     /**
      * It specifies a list of variables x.
@@ -71,7 +71,7 @@ public class Assignment extends Constraint implements UsesQueueVariable {
      */
     public int shiftX = 0;
 
-    HashMap<IntVar, Integer> xs;
+    Map<IntVar, Integer> xs;
 
 
     LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();

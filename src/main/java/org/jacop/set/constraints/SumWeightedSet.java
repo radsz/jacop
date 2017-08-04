@@ -30,7 +30,6 @@
 
 package org.jacop.set.constraints;
 
-import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -88,7 +87,7 @@ public class SumWeightedSet extends Constraint {
     /**
      * It provides a quick access to the weights of given elements of the set.
      */
-    HashMap<Integer, Integer> elementWeights;
+    Map<Integer, Integer> elementWeights;
 
     /**
      * It constructs a weighted set sum constraint.

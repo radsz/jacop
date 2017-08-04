@@ -54,7 +54,7 @@ import org.jacop.core.IntDomain;
  * @version 4.5
  */
 
-public class DiffnDecomposed extends DecomposedConstraint {
+public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
 
     int numberArgs;
 
@@ -186,7 +186,7 @@ public class DiffnDecomposed extends DecomposedConstraint {
 
     }
 
-    public List decompose(Store store) {
+    public List<Constraint> decompose(Store store) {
         constraints = new ArrayList<Constraint>();
 
         constraints.add(new org.jacop.constraints.diffn.Nooverlap(x, y, lx, ly));

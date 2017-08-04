@@ -88,7 +88,7 @@ public final class SatWrapper extends Constraint implements ConflictListener, Ex
     public DomainTranslator domainTranslator;
 
     // registered CP variables
-    public final HashSet<IntVar> registeredVars = new HashSet<IntVar>();
+    public final Set<IntVar> registeredVars = new HashSet<IntVar>();
 
     // SAT level to backjump to if failure
     public int levelToBackjumpTo = 0;

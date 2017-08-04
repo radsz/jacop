@@ -49,7 +49,7 @@ import org.jacop.util.fsm.FSMTransition;
  * @version 4.4
  */
 
-public class Lex extends DecomposedConstraint {
+public class Lex extends DecomposedConstraint<Constraint> {
 
     /**
      * A two dimensional array containing arrays which have to be lexicographically ordered.
@@ -115,7 +115,7 @@ public class Lex extends DecomposedConstraint {
 
     }
 
-    @Override public List decompose(Store store) {
+    @Override public List<Constraint> decompose(Store store) {
 
         if (constraints != null)
             return constraints;
