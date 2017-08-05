@@ -81,7 +81,7 @@ public class PerfectSquare extends ExampleFD {
     IntVar[] size;
 
     /**
-     * The following table contains all the data for all problems instances.
+     * @return The following table contains all the data for all problems instances.
      * Each entry (line)within a three dimensional table is one problem.
      * The first one element int array contains the size of the master square.
      * The master square is the square which must accommodate all other squares.
@@ -358,6 +358,7 @@ public class PerfectSquare extends ExampleFD {
      * argument it will solve all the problems given in square matrix.
      *
      * @param args program parameters, the first one denotes the problem no to be solved.
+     * @return true if the solution was found, false otherwise.
      */
     public static boolean testUsingGeost(String args[]) {
 
@@ -419,6 +420,7 @@ public class PerfectSquare extends ExampleFD {
      * It specifies the model using mostly PrimitiveConstraints. It does
      * not use diff2 constraint which is very useful for placing 2-dimensional
      * rectangles.
+     * @param problemNo the problem number to be fetched from the array of problem descriptions provided by squares() function.
      */
     public void modelBasic(int problemNo) {
 
@@ -755,6 +757,7 @@ public class PerfectSquare extends ExampleFD {
      \end{document}
      *
      * @param runtime it specifies the time required to find a solution.
+     * @param problemNo problem number to be used for which the latex generation is taking place.
      * @return latex representation of the solution in a single string.
      */
 

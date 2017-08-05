@@ -249,18 +249,21 @@ public class MineSweeper extends ExampleFD {
 
     /**
      * One of the possible MineSweeper problems.
+     * @return description of the problem used by the function to create a constraint model.
      */
     public final static String[] problem1() {
         return new String[] { "..2.3.", "2.....", "..24.3", "1.34..", ".....3", ".3.3.."};
     }
     /**
      * One of the possible MineSweeper problems.
+     * @return description of the problem used by the function to create a constraint model.
      */
     public final static String[] problem2() {
         return new String[] {".2.211..", "..4.2..2", "2..2..3.", "2.22.3.3", "..1...4.", "1...2..3", ".2.22.3.", "1.1..1.1"};
     }
     /**
      * One of the possible MineSweeper problems.
+     * @return description of the problem used by the function to create a constraint model.
      */
     public final static String[] problem3() {
         return new String[] {"1..2.2.2..", ".32...4..1", "...13...4.", "3.1...3...", ".21.1..3.2", ".3.2..2.1.", "2..32..2..", ".3...32..3", "..3.33....",
@@ -268,12 +271,14 @@ public class MineSweeper extends ExampleFD {
     }
     /**
      * One of the possible MineSweeper problems.
+     * @return description of the problem used by the function to create a constraint model.
      */
     public final static String[] problem4() {
         return new String[] {"2...3.1.", ".5.4...1", "..5..4..", "2...4.5.", ".2.4...2", "..5..4..", "2...5.4.", ".3.3...2"};
     }
     /**
      * One of the possible MineSweeper problems.
+     * @return description of the problem used by the function to create a constraint model.
      */
     public final static String[] problem5() {
         return new String[] {"0.0.1..11.", "1.2.2.22..", "......2..2", ".23.11....", "0......2.1", "...22.1...", ".....3.32.", ".5.2...3.1", ".3.1..3...",
@@ -281,6 +286,7 @@ public class MineSweeper extends ExampleFD {
     }
     /**
      * One of the possible MineSweeper problems.
+     * @return description of the problem used by the function to create a constraint model.
      */
     public final static String[] problem6() {
         return new String[] {".21.2.2...", ".4..3...53", "...4.44..3", "4.4..5.6..", "..45....54", "34....55..", "..4.4..5.5", "2..33.6...", "36...3..4.",
@@ -288,36 +294,42 @@ public class MineSweeper extends ExampleFD {
     }
     /**
      * One of the possible MineSweeper problems.
+     * @return description of the problem used by the function to create a constraint model.
      */
     public final static String[] problem7() {
         return new String[] {".32..1..", "....1..3", "3..2...4", ".5...5..", "..6...5.", "3...5..4", "2..5....", "..2..34."};
     }
     /**
      * One of the possible MineSweeper problems.
+     * @return description of the problem used by the function to create a constraint model.
      */
     public final static String[] problem8() {
         return new String[] {".1.....3.", "...343...", "244...443", "...4.4...", ".4.4.3.6.", "...4.3...", "123...133", "...322...", ".2.....3."};
     }
     /**
      * One of the possible MineSweeper problems.
+     * @return description of the problem used by the function to create a constraint model.
      */
     public final static String[] problem9() {
         return new String[] {".......", ".23435.", ".1...3.", "...5...", ".1...3.", ".12234.", "......."};
     }
     /**
      * One of the possible MineSweeper problems.
+     * @return description of the problem used by the function to create a constraint model.
      */
     public final static String[] problem10() {
         return new String[] {"2...2...2", ".4.4.3.4.", "..4...1..", ".4.3.3.4.", "2.......2", ".5.4.5.4.", "..3...3..", ".4.3.5.6.", "2...1...2",};
     }
     /**
      * One of the possible MineSweeper problems.
+     * @return description of the problem used by the function to create a constraint model.
      */
     public final static String[] problemTest() {
         return new String[] {"2...2...2", ".4...3.4.", "..4...1..", ".4.3.3...", "2...22..2", ".5..3..4.", "...2..3..", ".4.....6.", "2...1...2",};
     }
     /**
      * One of the possible MineSweeper problems.
+     * @return description of the problem used by the function to create a constraint model.
      */
     public final static String[] problem_kaye_splitter() {
         return new String[] {"...0...0...", "...01.10...", "...01.10...", "00001110000", ".1111.1111.", "...1.2.1...", ".1111.1111.", "00001110000",
@@ -326,6 +338,7 @@ public class MineSweeper extends ExampleFD {
 
     /**
      * The collection of MineSweeper problems.
+     * @return description of the problem used by the function to create a constraint model.
      */
     public final static String[][] problems() {
       return new String[][]  {problem1(), problem2(), problem3(), problem4(), problem5(), problem6(), problem7(), problem8(), problem9(), problem10()};

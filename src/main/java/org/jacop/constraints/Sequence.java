@@ -97,11 +97,10 @@ public class Sequence extends DecomposedConstraint<Constraint> {
 
     /**
      * Preferred and default option of decomposing Sequence constraint.
-     * @param sequence
-     * @param store
-     * @return
+     * @param sequence sequence constraint to be decomposed by regular.
+     * @return a list of constraints that are used to decompose the sequence constraints.
      */
-    public static List<Constraint> decomposeByRegular(Sequence sequence, Store store) {
+    public static List<Constraint> decomposeByRegular(Sequence sequence) {
 
         IntDomain setComplement = new IntervalDomain();
         for (IntVar var : sequence.list)
@@ -180,7 +179,7 @@ public class Sequence extends DecomposedConstraint<Constraint> {
     @Override public List<Constraint> decompose(Store store) {
 
         if (constraints == null) {
-            constraints = decomposeByRegular(this, store);
+            constraints = decomposeByRegular(this);
         }
 
         return constraints;

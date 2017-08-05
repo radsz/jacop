@@ -104,6 +104,7 @@ public class Gates extends ExampleFD {
      * @param in1 the first input parameter.
      * @param in2 the second input parameter.
      * @param out the output parameter.
+     * @param tableConstraintProvider function that when provided input to create table constraint will create one.
      */
     public void and(BooleanVar in1, BooleanVar in2, BooleanVar out, BiFunction<IntVar[], int[][], Constraint> tableConstraintProvider) {
 
@@ -119,6 +120,7 @@ public class Gates extends ExampleFD {
      * @param in1 the first input parameter.
      * @param in2 the second input parameter.
      * @param out the output parameter.
+     * @param tableConstraintProvider function that when provided input to create table constraint will create one.
      */
     public void or(BooleanVar in1, BooleanVar in2, BooleanVar out, BiFunction<IntVar[], int[][], Constraint> tableConstraintProvider) {
 
@@ -133,6 +135,7 @@ public class Gates extends ExampleFD {
      * @param in1 the first input parameter.
      * @param in2 the second input parameter.
      * @param out the output parameter.
+     * @param tableConstraintProvider function that when provided input to create table constraint will create one.
      */
     public void xor(BooleanVar in1, BooleanVar in2, BooleanVar out, BiFunction<IntVar[], int[][], Constraint> tableConstraintProvider) {
 
@@ -146,6 +149,7 @@ public class Gates extends ExampleFD {
      * between input parameter and an output parameter.
      * @param in the first input parameter.
      * @param out the output parameter.
+     * @param tableConstraintProvider function that when provided input to create table constraint will create one.
      */
     public void not(BooleanVar in, BooleanVar out, BiFunction<IntVar[], int[][], Constraint> tableConstraintProvider) {
 
