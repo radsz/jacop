@@ -33,6 +33,7 @@ package org.jacop.search;
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Var;
@@ -91,7 +92,7 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
      * tie-breaking.
      */
 
-    public IdentityHashMap<T, Integer> position = new IdentityHashMap<T, Integer>();
+    public Map<T, Integer> position = Var.createEmptyPositioning();
 
     /**
      * It stores variables which need to be labelled.
@@ -378,7 +379,7 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
      * It returns the variables for which assignment in the solution is given.
      */
 
-    public IdentityHashMap<T, Integer> getVariablesMapping() {
+    public Map<T, Integer> getVariablesMapping() {
 
         return position;
 

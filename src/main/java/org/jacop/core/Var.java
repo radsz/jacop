@@ -32,7 +32,10 @@ package org.jacop.core;
 
 import org.jacop.constraints.Constraint;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
 /**
  * Defines a variable and related operations on it.
@@ -201,5 +204,66 @@ public abstract class Var implements Backtrackable {
     public int index() {
         return index;
     }
+
+    public static <T extends Var> Map<T, Integer> createEmptyPositioning(T[] list) {
+        Map<T, Integer> position = new HashMap<>();
+        return position;
+
+    }
+
+    public static <T extends Var, R> Map<T, R> createEmptyPositioning() {
+
+        Map<T, R> position = new HashMap<>();
+        return position;
+
+    }
+
+
+
+    public static <T extends Var> Map<T, Integer> positionMapping(T[] list, boolean skipSingletons, Class clazz) {
+
+        Map<T, Integer> position = new HashMap<>();
+        addPositionMapping(position, list, skipSingletons, clazz);
+        return position;
+
+    }
+
+    public static <T extends Var> Map<T, Integer> addPositionMapping(Map<T, Integer> position, T[] list, boolean skipSingletons, Class clazz) {
+
+        for (int i = 0; i < list.length; i++) {
+            if (position.get(list[i]) != null) {
+                if ( skipSingletons && list[i].singleton() )
+                    continue;
+                throw new IllegalArgumentException("Constraint " + clazz.getSimpleName() + " can not create a position mapping for list as duplicates in the list exists.");
+            }
+            position.put(list[i], i);
+        }
+
+        return position;
+
+    }
+
+
+    public static <T extends Var, R> Map<T, R> positionMapping(T[] list, Function<T, R> function, boolean skipSingletons, Class clazz) {
+
+        Map<T, R> position = new HashMap<>();
+        addPositionMapping(position, list, function, skipSingletons, clazz);
+        return position;
+
+    }
+
+    public static <T extends Var, R> void addPositionMapping(Map<T, R> position, T[] list, Function<T, R> function, boolean skipSingletons, Class clazz) {
+
+        for (int i = 0; i < list.length; i++) {
+            if (position.get(list[i]) != null) {
+                if ( skipSingletons && list[i].singleton() )
+                    continue;
+                throw new IllegalArgumentException("Constraint " + clazz.getSimpleName() + " can not create a position mapping for list as duplicates in the list exists.");
+            }
+            position.put(list[i], function.apply(list[i]));
+        }
+
+    }
+
 
 }

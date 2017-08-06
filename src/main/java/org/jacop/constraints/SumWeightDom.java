@@ -118,7 +118,7 @@ import org.jacop.core.*;
 
         this.sum = sum;
 
-        Map<IntVar, Integer> parameters = new HashMap<IntVar, Integer>();
+        Map<IntVar, Integer> parameters = Var.createEmptyPositioning();
 
         for (int i = 0; i < list.length; i++) {
             if (weights[i] == 0)
@@ -288,7 +288,7 @@ import org.jacop.core.*;
 
         sumGrounded = new TimeStamp<Integer>(store, 0);
         nextGroundedPosition = new TimeStamp<Integer>(store, 0);
-        positionMaping = new HashMap<Var, Integer>();
+        positionMaping = Var.positionMapping(list, false, this.getClass());
 
         store.registerRemoveLevelLateListener(this);
 
@@ -308,14 +308,7 @@ import org.jacop.core.*;
             lMax += max;
         }
 
-        for (int i = 0; i < list.length; i++) {
-
-            assert (positionMaping.get(list[i])
-                == null) : "The variable occurs twice in the list, not able to make a maping from the variable to its list index.";
-
-            positionMaping.put(list[i], i);
-            queueVariable(store.level, list[i]);
-        }
+        Arrays.stream(list).forEach( i -> queueVariable(store.level, i));
 
     }
 

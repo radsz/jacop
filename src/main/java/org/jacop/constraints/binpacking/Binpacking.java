@@ -79,8 +79,8 @@ public class Binpacking extends Constraint implements UsesQueueVariable {
     SimpleHashSet<IntVar> itemQueue = new SimpleHashSet<IntVar>();
     SimpleHashSet<IntVar> binQueue = new SimpleHashSet<IntVar>();
 
-    Map<IntVar, Integer> itemMap = new HashMap<IntVar, Integer>();
-    Map<IntVar, Integer> binMap = new HashMap<IntVar, Integer>();
+    final Map<IntVar, Integer> itemMap;
+    final Map<IntVar, Integer> binMap;
 
     /**
      * It constructs the binpacking constraint for the supplied variable.
@@ -129,19 +129,14 @@ public class Binpacking extends Constraint implements UsesQueueVariable {
             j++;
         }
 
-        this.load = new IntVar[load.length];
-        for (int i = 0; i < load.length; i++) {
-            this.load[i] = load[i];
+        this.load = Arrays.copyOf(load, load.length);
 
-            Integer varPosition = binMap.put(this.load[i], i);
-            if (varPosition != null) {
-                throw new RuntimeException("ERROR: Constraint " + toString() + " must have different variables on the list");
-            }
-        }
+        binMap = Var.positionMapping(load, false, this.getClass());
 
         Arrays.sort(item, new WeightComparator<BinItem>());
-        for (int i = 0; i < item.length; i++)
-            itemMap.put(item[i].bin, i);
+
+        itemMap = Var.positionMapping(Arrays.stream(item).map( i -> i.bin ).toArray(IntVar[]::new),
+            false, this.getClass());
 
         setScope(Stream.concat(Arrays.stream(bin), Arrays.stream(load)));
     }

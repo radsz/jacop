@@ -1076,40 +1076,15 @@ public class AmongVar extends Constraint implements UsesQueueVariable {
 
         store.registerRemoveLevelListener(this);
 
-        xIndex = new HashMap<IntVar, Integer>();
+        xIndex = Var.positionMapping(listOfX, false, this.getClass());
 
         int i = 0;
         IntVar y;
         IntVar x;
-        int gx = 0;
+        int gx = (int) Arrays.stream(listOfX).filter( xElement -> xElement.singleton()).count();
 
-
-        for (i = 0; i < listOfX.length; i++) {
-            x = listOfX[i];
-
-            Integer varPosition = xIndex.put(x, i);
-            if (varPosition == null) {
-                // xIndex.put(x, i);
-                if (x.singleton())
-                    gx++;
-            } else {
-                throw new RuntimeException("ERROR: Constraint " + toString() + " must have different variables on the list");
-            }
-        }
-
-        yIndex = new HashMap<IntVar, Integer>();
-
-        for (i = 0; i < listOfY.length; i++) {
-            y = listOfY[i];
-
-            Integer varPosition = yIndex.put(y, i);
-            if (varPosition == null) {
-                variableQueueY.add(i);
-                // yIndex.put(y, i);
-            } else {
-                throw new RuntimeException("ERROR: Constraint " + toString() + " must have different variables on the list");
-            }
-        }
+        yIndex = Var.positionMapping(listOfY, false, this.getClass());
+        Arrays.stream(listOfY).forEach( yVar -> variableQueueY.add( yIndex.get(yVar) ));
 
         lbS = new MutableDomain(store);
         futureLbS = new MutableDomain(store);

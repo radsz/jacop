@@ -33,10 +33,7 @@ package org.jacop.search.sgmpcs;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.jacop.core.Store;
-import org.jacop.core.IntVar;
-import org.jacop.core.Domain;
-import org.jacop.core.IntDomain;
+import org.jacop.core.*;
 
 import org.jacop.search.Search;
 import org.jacop.search.DepthFirstSearch;
@@ -125,7 +122,7 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
 
     public boolean searchFromEliteSolution(int[] eliteSolution, int failLimit) {
 
-        Map<IntVar, Integer> mapping = new HashMap<IntVar, Integer>();
+        Map<IntVar, Integer> mapping = Var.createEmptyPositioning();
         for (int i = 0; i < eliteSolution.length - 1; i++)
             mapping.put(vars[i], eliteSolution[i]);
 

@@ -613,7 +613,7 @@ public class Geost extends Constraint implements UsesQueueVariable {
         order = new PredefinedOrder(ordering, 0);
 
 
-        variableObjectMap = new HashMap<Var, GeostObject>();
+        variableObjectMap = Var.createEmptyPositioning();
 
         for (GeostObject o : objects)
             for (Var v : o.getVariables()) {

@@ -97,7 +97,7 @@ public class NetworkFlow extends Constraint implements UsesQueueVariable {
     private NetworkFlow(List<Node> nodes, List<Arc> arcs, List<VarHandler> flowVariables, IntVar costVariable) {
 
         this.network = new Pruning(nodes, arcs, statistics);
-        this.map = new HashMap<IntVar, VarHandler>();
+        this.map = Var.createEmptyPositioning();
         this.queue = new HashSet<IntVar>();
         this.costVariable = costVariable;
 

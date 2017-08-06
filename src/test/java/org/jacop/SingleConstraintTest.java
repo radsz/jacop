@@ -32,6 +32,7 @@ package org.jacop;
 
 import org.jacop.constraints.*;
 import org.jacop.constraints.binpacking.Binpacking;
+import org.jacop.constraints.table.SimpleTable;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
@@ -59,6 +60,26 @@ import static org.junit.Assert.assertThat;
  * @version 4.4
  */
 public class SingleConstraintTest {
+
+    @Test public void testSimpleTable() {
+
+        Store store = new Store();
+
+        int xLength = 3;
+        int xSize = 3;
+        IntVar[] x = getIntVars(store, "x", xLength, xSize);
+        int[][] tuples = { {0, 0, 0}, {1, 1, 1}, {2, 2, 2}, {1, 2, 1}, {2, 2, 1}, {2, 0, 0} };
+        
+        SimpleTable c = new SimpleTable(x, tuples);
+        store.impose(c);
+
+        store.print();
+        int noOfSolutions = noOfAllSolutions(store, x);
+
+        assertThat(noOfSolutions, is(6));
+
+    }
+
 
     @Test public void testBinpacking() {
 

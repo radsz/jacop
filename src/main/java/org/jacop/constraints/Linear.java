@@ -30,6 +30,7 @@
 
 package org.jacop.constraints;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -146,7 +147,7 @@ import java.util.Map;
 
         this.sum = sum;
 
-        Map<IntVar, Integer> parameters = new HashMap<IntVar, Integer>();
+        Map<IntVar, Integer> parameters = Var.createEmptyPositioning();
 
         for (int i = 0; i < list.length; i++) {
             if (weights[i] != 0) {
@@ -178,7 +179,8 @@ import java.util.Map;
         int capacity = list.length * 4 / 3 + 1;
         if (capacity < 16)
             capacity = 16;
-        positionMaping = new HashMap<Var, Integer>(capacity);
+
+        positionMaping = Var.positionMapping(this.list, false, this.getClass());
 
         store.registerRemoveLevelLateListener(this);
 
@@ -189,16 +191,7 @@ import java.util.Map;
 
         recomputeBounds();
 
-        for (int j = 0; j < this.list.length; j++) {
-
-            assert (positionMaping.get(this.list[j])
-                == null) : "The variable occurs twice in the list, not able to make a maping from the variable to its list index.";
-
-            positionMaping.put(this.list[j], j);
-            queueVariable(store.level, this.list[j]);
-
-
-        }
+        Arrays.stream(this.list).forEach( v -> queueVariable(store.level, v));
 
         checkForOverflow();
 

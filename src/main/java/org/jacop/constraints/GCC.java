@@ -117,7 +117,6 @@ public class GCC extends Constraint implements UsesQueueVariable {
     final static boolean debug = false;
 
     int[] domainHash;
-    Map<IntVar, Integer> pruningConsistencyEvents;
 
     Map<IntVar, Integer> xNodesHash;
     Set<IntVar> xVariableToChange;
@@ -145,6 +144,7 @@ public class GCC extends Constraint implements UsesQueueVariable {
     public GCC(IntVar[] x, IntVar[] counters) {
 
         checkInputForNullness(new String[]{"x", "counters"}, x, counters);
+        checkInputForDuplicationSkipSingletons("x", x);
 
         this.queueIndex = 1;
         numberId = idNumber.incrementAndGet();
@@ -180,7 +180,7 @@ public class GCC extends Constraint implements UsesQueueVariable {
         pCount = new PriorityQueue<Integer>(10, new SortPriorityMaxOrder());
 
         compareLowerBound = new CompareLowerBound();
-        xNodesHash = new HashMap<IntVar, Integer>();
+        xNodesHash = Var.createEmptyPositioning();
         xVariableToChange = new HashSet<IntVar>();
 
         setScope(Stream.concat(Arrays.stream(x), Arrays.stream(counters)));
@@ -460,13 +460,7 @@ public class GCC extends Constraint implements UsesQueueVariable {
         // KK, 2015-10-18
         // only non ground variables need to be added
         // no duplicates allowed
-        for (int i = 0; i < xSize; i++)
-            if (!x[i].singleton()) {
-                Integer varPosition = xNodesHash.put(x[i], i);
-                if (varPosition != null) {
-                    throw new RuntimeException("ERROR: Constraint " + toString() + " must have different non ground variables on the list");
-                }
-            }
+        Var.addPositionMapping(xNodesHash, x, true, this.getClass());
 
         // here I will put normalization
         IntervalDomain d = new IntervalDomain();

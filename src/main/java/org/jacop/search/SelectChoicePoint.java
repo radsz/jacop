@@ -31,6 +31,7 @@
 package org.jacop.search;
 
 import java.util.IdentityHashMap;
+import java.util.Map;
 
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Var;
@@ -85,7 +86,7 @@ public interface SelectChoicePoint<T extends Var> {
      * @return mapping of variables to the positions in the variables array.
      */
 
-    IdentityHashMap<T, Integer> getVariablesMapping();
+    Map<T, Integer> getVariablesMapping();
 
     /**
      * It returns the current index. Supplying this value in the next invocation

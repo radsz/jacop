@@ -34,6 +34,7 @@ import java.util.*;
 
 import org.jacop.core.Store;
 
+import org.jacop.core.Var;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.floats.core.FloatInterval;
@@ -150,7 +151,7 @@ public class MultivariateIntervalNewton {
     // with store levels...
     double[] values() {
 
-        map = new HashMap<FloatVar, Double>();
+        map = Var.createEmptyPositioning();
 
         double[] b = new double[xInit.length];
 

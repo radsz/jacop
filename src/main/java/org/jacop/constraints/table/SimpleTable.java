@@ -77,7 +77,7 @@ public class SimpleTable extends Constraint implements UsesQueueVariable {
     /**
      *
      */
-    Map<IntVar, Integer> varMap = new HashMap<IntVar, Integer>();
+    Map<IntVar, Integer> varMap;
 
     /**
      * Data specifying support tuples for each variable; static structure created once when constraint is posed.
@@ -102,27 +102,31 @@ public class SimpleTable extends Constraint implements UsesQueueVariable {
      */
     public SimpleTable(IntVar[] list, int[][] tuples) {
 
+        checkInputForNullness(new String[]{"list", "tuples"}, new Object[][]{list, tuples});
+
         if (tuples.length > 64)
             throw new IllegalArgumentException("\nSimpleTable: number of tuples must be <= 64; is " + tuples.length);
 
-        this.x = new IntVar[list.length];
-        System.arraycopy(list, 0, x, 0, list.length);
-        for (int i = 0; i < x.length; i++)
-            varMap.put(x[i], i);
-
         int tupleLength = tuples[0].length;
+        if (list.length != tupleLength)
+            throw new IllegalArgumentException("Constraint " + this.getClass().getSimpleName() + " has different lengths for arguments list and first tuple.");
+
+        this.x = Arrays.copyOf(list, list.length);
+        varMap = Var.positionMapping(list, false, this.getClass());
+
+
         this.tuple = new int[tuples.length][tupleLength];
         for (int i = 0; i < tuples.length; i++) {
-            if (tuples[i].length == tupleLength)
-                System.arraycopy(tuples[i], 0, tuple[i], 0, tupleLength);
-            else
+            if (tuples[i].length == tupleLength) {
+                this.tuple[i] = Arrays.copyOf(tuples[i], tupleLength);
+            }
+            else {
                 throw new IllegalArgumentException("\nSimpleTable: tuples are not of the same size");
+            }
         }
 
         numberId = idNumber.incrementAndGet();
-
         this.queueIndex = 1;
-
         setScope(list);
 
     }

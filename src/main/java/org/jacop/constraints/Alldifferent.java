@@ -72,6 +72,8 @@ public class Alldifferent extends Constraint implements UsesQueueVariable {
     public Alldifferent(IntVar[] list) {
 
         checkInputForNullness("list", list);
+        checkInputForDuplication("list", list);
+
         this.numberId = idNumber.incrementAndGet();
         this.list = Arrays.copyOf(list, list.length);
         setScope(this.list);
@@ -166,10 +168,8 @@ public class Alldifferent extends Constraint implements UsesQueueVariable {
         super.impose(store);
         int level = store.level;
 
-        int pos = 0;
-        positionMapping = new HashMap<>();
+        positionMapping = Var.positionMapping(list, false, this.getClass());
         for (IntVar v : list) {
-            positionMapping.put(v, pos++);
             queueVariable(level, v);
         }
         grounded = new TimeStamp<>(store, 0);

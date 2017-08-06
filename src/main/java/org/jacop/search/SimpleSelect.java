@@ -67,7 +67,7 @@ import org.jacop.core.Var;
      * tie-breaking.
      */
 
-    public IdentityHashMap<T, Integer> position;
+    public Map<T, Integer> position;
 
     int currentIndex = 0;
 
@@ -79,7 +79,7 @@ import org.jacop.core.Var;
      */
     public SimpleSelect(T[] variables, ComparatorVariable<T> varSelect, Indomain<T> indomain) {
 
-        position = new IdentityHashMap<T, Integer>();
+        position = Var.createEmptyPositioning();
 
         int unique = 0;
         for (int i = 0; i < variables.length; i++) {
@@ -108,7 +108,7 @@ import org.jacop.core.Var;
      */
     public SimpleSelect(T[] variables, ComparatorVariable<T> varSelect, ComparatorVariable<T> tieBreakerVarSelect, Indomain<T> indomain) {
 
-        position = new IdentityHashMap<T, Integer>();
+        position = Var.createEmptyPositioning();
 
         int unique = 0;
         for (int i = 0; i < variables.length; i++) {
@@ -282,7 +282,7 @@ import org.jacop.core.Var;
      * It returns the variables for which assignment in the solution is given.
      */
 
-    public IdentityHashMap<T, Integer> getVariablesMapping() {
+    public Map<T, Integer> getVariablesMapping() {
 
         return position;
 

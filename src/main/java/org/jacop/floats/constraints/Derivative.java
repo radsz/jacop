@@ -34,6 +34,7 @@ package org.jacop.floats.constraints;
 import java.util.*;
 
 import org.jacop.core.Store;
+import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.constraints.Constraint;
 
@@ -70,7 +71,7 @@ public class Derivative {
 
         derivateConstraints = new HashSet<Constraint>();
         eval = new Stack<Constraint>();
-        definitionConstraint = new HashMap<FloatVar, Constraint>();
+        definitionConstraint = Var.createEmptyPositioning();
     }
 
     public final static FloatVar getDerivative(Store store, FloatVar f, Set<FloatVar> vars, FloatVar x) {

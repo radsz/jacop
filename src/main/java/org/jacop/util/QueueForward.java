@@ -21,7 +21,7 @@ public class QueueForward<T extends Constraint> {
 
     public QueueForward(Collection<T> constraints, Collection<Var> variables) {
 
-        forwardMap = new HashMap<>();
+        forwardMap = Var.createEmptyPositioning();
 
         for (Var var : variables) {
             forwardMap.put(var, new ArrayList<T>());

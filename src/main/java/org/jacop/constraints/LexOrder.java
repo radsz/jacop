@@ -86,8 +86,8 @@ public class LexOrder extends Constraint implements UsesQueueVariable {
     private int beta;
 
     SimpleHashSet<Integer> indexQueue = new SimpleHashSet<Integer>();
-    Map<IntVar, int[]> varXToIndex = new HashMap<IntVar, int[]>();
-    Map<IntVar, int[]> varYToIndex = new HashMap<IntVar, int[]>();
+    Map<IntVar, int[]> varXToIndex = Var.createEmptyPositioning();
+    Map<IntVar, int[]> varYToIndex = Var.createEmptyPositioning();
 
     /**
      * It creates a lexicographical order for vectors x and y,

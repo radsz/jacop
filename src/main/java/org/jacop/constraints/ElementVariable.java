@@ -86,9 +86,9 @@ public class ElementVariable extends Constraint implements UsesQueueVariable {
 
     LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
 
-    Map<IntVar, Integer> mapping = new HashMap<IntVar, Integer>();
+    Map<IntVar, Integer> mapping = Var.createEmptyPositioning();
 
-    Map<IntVar, List<Integer>> duplicates = new HashMap<IntVar, List<Integer>>();
+    Map<IntVar, List<Integer>> duplicates = Var.createEmptyPositioning();
 
     /**
      * It constructs an element constraint.

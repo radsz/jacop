@@ -98,8 +98,8 @@ public class Assignment extends Constraint implements UsesQueueVariable {
         this.d = Arrays.copyOf(ds, ds.length);
         this.queueIndex = 1;
 
-        this.xs = new HashMap<>(xs.length * 2);
-        this.ds = new HashMap<>(ds.length * 2);
+        this.xs = Var.createEmptyPositioning();
+        this.ds = Var.createEmptyPositioning();
 
         for (int i = 0; i < xs.length; i++) {
             this.xs.put(x[i], i + shiftX);

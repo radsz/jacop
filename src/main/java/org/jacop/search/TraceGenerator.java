@@ -157,7 +157,7 @@ public class TraceGenerator<T extends Var> implements SelectChoicePoint<T>, Cons
     public List<Var> tracedVar = new ArrayList<Var>();
 
 
-    public Map<Var, Integer> varIndex = new HashMap<Var, Integer>();
+    public Map<Var, Integer> varIndex = Var.createEmptyPositioning();
 
     /**
      * It creates a CPviz trace generator around proper select choice point object.
@@ -326,7 +326,7 @@ public class TraceGenerator<T extends Var> implements SelectChoicePoint<T>, Cons
         return c;
     }
 
-    public IdentityHashMap<T, Integer> getVariablesMapping() {
+    public Map<T, Integer> getVariablesMapping() {
         return select.getVariablesMapping();
     }
 

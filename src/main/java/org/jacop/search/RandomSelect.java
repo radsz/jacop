@@ -59,7 +59,7 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
      * tie-breaking.
      */
 
-    public IdentityHashMap<T, Integer> position;
+    public Map<T, Integer> position;
 
     int currentIndex = 0;
 
@@ -72,7 +72,7 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
      */
     @SuppressWarnings("unchecked") public RandomSelect(T[] variables, Indomain<T> indomain) {
 
-        position = new IdentityHashMap<T, Integer>();
+        position = Var.createEmptyPositioning();
 
         int unique = 0;
         for (int i = 0; i < variables.length; i++) {
@@ -166,7 +166,7 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
      * It returns the variables for which assignment in the solution is given.
      */
 
-    public IdentityHashMap<T, Integer> getVariablesMapping() {
+    public Map<T, Integer> getVariablesMapping() {
 
         return position;
 

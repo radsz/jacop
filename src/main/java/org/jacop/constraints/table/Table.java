@@ -31,10 +31,7 @@
 
 package org.jacop.constraints.table;
 
-import java.util.Map;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Store;
@@ -73,7 +70,7 @@ public class Table extends Constraint implements UsesQueueVariable {
     /**
      *
      */
-    Map<IntVar, Integer> varMap = new HashMap<IntVar, Integer>();
+    Map<IntVar, Integer> varMap;
 
     /**
      * Main data structure for the constraint
@@ -105,18 +102,21 @@ public class Table extends Constraint implements UsesQueueVariable {
      */
     public Table(IntVar[] list, int[][] tuples) {
 
-        this.x = new IntVar[list.length];
-        System.arraycopy(list, 0, x, 0, list.length);
-        for (int i = 0; i < x.length; i++)
-            varMap.put(x[i], i);
+        checkInputForNullness(new String[]{"list", "tuples"}, new Object[][]{list, tuples});
+        checkInputForDuplication("list", list);
+
+        this.x = Arrays.copyOf(list, list.length);
+        this.varMap = Var.positionMapping(list, false, this.getClass());
 
         int tupleLength = tuples[0].length;
         this.tuple = new int[tuples.length][tupleLength];
         for (int i = 0; i < tuples.length; i++) {
-            if (tuples[i].length == tupleLength)
-                System.arraycopy(tuples[i], 0, tuple[i], 0, tupleLength);
-            else
+            if (tuples[i].length == tupleLength) {
+                this.tuple[i] = Arrays.copyOf(tuples[i], tupleLength);
+            }
+            else {
                 throw new IllegalArgumentException("\nTable: tuples are not of the same size");
+            }
         }
 
         numberId = idNumber.incrementAndGet();
@@ -213,6 +213,7 @@ public class Table extends Constraint implements UsesQueueVariable {
 
             Set<IntVar> fdvs = variableQueue;
             variableQueue = new HashSet<IntVar>();
+
 
             updateTable(fdvs);
             filterDomains();

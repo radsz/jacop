@@ -95,7 +95,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
      */
     public double sum;
 
-    Map<FloatVar, VariableNode> varMap = new HashMap<FloatVar, VariableNode>();
+    Map<FloatVar, VariableNode> varMap = Var.createEmptyPositioning();
 
     // LinkedHashSet<FloatVar> variableQueue = new LinkedHashSet<FloatVar>();
     SimpleHashSet<FloatVar> variableQueue = new SimpleHashSet<FloatVar>();
@@ -150,7 +150,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
         noSat = new TimeStamp<Boolean>(store, false);
 
-        Map<FloatVar, Double> parameters = new HashMap<FloatVar, Double>();
+        Map<FloatVar, Double> parameters = Var.createEmptyPositioning();
 
         for (int i = 0; i < list.length; i++) {
             if (weights[i] != 0) {

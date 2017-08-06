@@ -42,6 +42,7 @@ import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
 
 /**
  *
@@ -67,7 +68,7 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
     public Arithmetic() {
         this.eqns = new ArrayList<int[]>();
         this.vars = new ArrayList<IntVar>();
-        this.map = new HashMap<IntVar, Integer>();
+        this.map = Var.createEmptyPositioning();
 
         vars.add(NULL_VAR);
         map.put(NULL_VAR, 0);

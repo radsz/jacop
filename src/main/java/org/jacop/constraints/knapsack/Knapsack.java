@@ -692,7 +692,7 @@ public class Knapsack extends Constraint implements UsesQueueVariable {
 
         leaves = new TreeLeaf[items.length];
 
-        variableLeafMapping = new HashMap<IntVar, TreeLeaf>();
+        variableLeafMapping = Var.createEmptyPositioning();
 
         tree = new Tree(items, variableLeafMapping, leaves, zero);
 

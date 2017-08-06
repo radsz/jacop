@@ -32,6 +32,7 @@ package org.jacop.constraints;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
@@ -93,7 +94,7 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
     // can be directly used.
     // If a matched edge was removed then the remains of maximum matching
     // are used to compute a new maximum matching.
-    IdentityHashMap<IntVar, TimeStamp<Integer>> matching;
+    Map<IntVar, TimeStamp<Integer>> matching;
 
     boolean maximumMatchingNotRecomputed = true;
 
@@ -114,9 +115,9 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
     // Variable may belong to different components given different matching.
     // Only if old maximum matching is used than the old components numbers can
     // be reused.
-    IdentityHashMap<IntVar, Integer> scc;
+    Map<IntVar, Integer> scc;
 
-    IdentityHashMap<IntVar, TimeStamp<Integer>> sccStamp;
+    Map<IntVar, TimeStamp<Integer>> sccStamp;
 
     // All grounded variables are not taken into account, they have
     // their consistent value and can be simply omitted in any kind of
@@ -174,6 +175,8 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
     public Alldistinct(IntVar[] list) {
 
         checkInputForNullness("list", list);
+        checkInputForDuplication("list", list);
+
         queueIndex = 2;
 
         numberId = idNumber.incrementAndGet();
@@ -185,8 +188,8 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
 
         valueMapVariable = new HashMap<Integer, SimpleArrayList<IntVar>>();
         stamps = new HashMap<Integer, TimeStamp<Integer>>();
-        matching = new IdentityHashMap<IntVar, TimeStamp<Integer>>();
-        sccStamp = new IdentityHashMap<IntVar, TimeStamp<Integer>>();
+        matching = Var.createEmptyPositioning();
+        sccStamp = Var.createEmptyPositioning();
 
         IntDomain sum = new IntervalDomain(5);
 
@@ -560,8 +563,8 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
         // Revisited Tarjan
 
         List<IntVar> l = new ArrayList<IntVar>();
-        Map<IntVar, Integer> dfsnum = new HashMap<IntVar, Integer>();
-        Map<IntVar, Integer> low = new HashMap<IntVar, Integer>();
+        Map<IntVar, Integer> dfsnum = Var.createEmptyPositioning();
+        Map<IntVar, Integer> low = Var.createEmptyPositioning();
 
         n = nStamp.value();
 
@@ -593,7 +596,7 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
 
         } else {
             // New maximum matching may cause different scc for variables
-            scc = new IdentityHashMap<IntVar, Integer>();
+            scc = Var.createEmptyPositioning();
 
             vn = nStamp.value();
 
@@ -1128,11 +1131,10 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
 
         Integer zero = 0;
 
-        for (IntVar var : list) {
-            queueVariable(store.level, var);
-            matching.put(var, new TimeStamp<Integer>(store, zero));
-            sccStamp.put(var, new TimeStamp<Integer>(store, zero));
-        }
+        Function<IntVar, TimeStamp<Integer>> f = ( i ) -> new TimeStamp<Integer>(store, zero);
+        Var.addPositionMapping(matching, list, f, false, this.getClass());
+        Var.addPositionMapping(sccStamp, list, f, false, this.getClass());
+        Arrays.stream(list).forEach( i -> queueVariable(store.level, i));
 
         for (Map.Entry<Integer, SimpleArrayList<IntVar>> entry : valueMapVariable.entrySet()) {
             Integer key = entry.getKey();
@@ -1158,8 +1160,8 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
         n = nStamp.value();
 
         List<IntVar> l = new ArrayList<IntVar>();
-        Map<IntVar, Integer> dfsnum = new HashMap<IntVar, Integer>();
-        Map<IntVar, Integer> low = new HashMap<IntVar, Integer>();
+        Map<IntVar, Integer> dfsnum = Var.createEmptyPositioning();
+        Map<IntVar, Integer> low = Var.createEmptyPositioning();
 
         while (!fdvs.isEmpty()) {
 

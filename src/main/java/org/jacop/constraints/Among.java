@@ -95,6 +95,7 @@ public class Among extends Constraint implements UsesQueueVariable {
     public Among(IntVar[] list, IntervalDomain kSet, IntVar n) {
 
         checkInputForNullness(new String[] {"list", "kSet", "n"}, new Object[][] { list, { kSet }, { n } });
+        checkInputForDuplication("list", list);
 
         this.queueIndex = 1;
         numberId = idNumber.incrementAndGet();
@@ -263,23 +264,15 @@ public class Among extends Constraint implements UsesQueueVariable {
     @Override public void impose(Store store) {
 
         super.impose(store);
+        int level = store.level;
+        Arrays.stream(list).forEach( i -> queueVariable(level, i));
 
         store.registerRemoveLevelListener(this);
         this.lowerBorder = new TimeStamp<Integer>(store, 0);
         this.upperBorder = new TimeStamp<Integer>(store, list.length);
 
-        int level = store.level;
-        int pos = 0;
-        position = new HashMap<IntVar, Integer>();
-        for (IntVar var : list) {
-            Integer varPosition = position.put(var, pos);
-            if (varPosition == null) {
-                queueVariable(level, var);
-                pos++;
-            } else {
-                throw new RuntimeException("ERROR: Constraint " + toString() + " must have different variables on the list");
-            }
-        }
+        position = Var.positionMapping(list, false, this.getClass());
+
 
     }
 

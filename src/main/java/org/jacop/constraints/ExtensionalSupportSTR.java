@@ -192,6 +192,7 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
 
         checkInputForNullness("list", list);
         checkInputForNullness("tuples", tuples);
+        checkInputForDuplication("list", list);
 
         this.list = Arrays.copyOf(list, list.length);
 
@@ -579,10 +580,7 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
 
         store.registerRemoveLevelListener(this);
 
-        varToIndex = new HashMap<Var, Integer>();
-        for (int i = 0; i < list.length; i++) {
-            varToIndex.put(list[i], i);
-        }
+        varToIndex = Var.positionMapping(list, false, this.getClass());
 
         if (debugAll) {
             for (Var var : list)

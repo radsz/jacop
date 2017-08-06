@@ -240,7 +240,7 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 
         if (vars == null) {
 
-            IdentityHashMap<T, Integer> position = select.getVariablesMapping();
+            Map<T, Integer> position = select.getVariablesMapping();
 
             for (Map.Entry<T, Integer> entry : position.entrySet()) {
                 T current = entry.getKey();

@@ -213,7 +213,7 @@ public class Regular extends Constraint implements UsesQueueVariable {
      */
     LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
 
-    Map<IntVar, Integer> mapping = new HashMap<IntVar, Integer>();
+    Map<IntVar, Integer> mapping;
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -1051,13 +1051,7 @@ public class Regular extends Constraint implements UsesQueueVariable {
         store.registerRemoveLevelListener(this);
         store.registerRemoveLevelLateListener(this);
 
-        for (int i = list.length - 1; i >= 0; i--) {
-            Integer varPosition = mapping.put(list[i], i);
-            if (!list[i].singleton() && varPosition != null) {
-                System.err.println("ERROR: Constraint " + toString() + " must have different variables on the list");
-                throw new RuntimeException("ERROR: Constraint " + toString() + " must have different variables on the list");
-            }
-        }
+        mapping = Var.positionMapping(list, true, this.getClass());
 
         lastNumberOfActiveStates = new int[list.length + 1];
         activeLevels = new TimeStamp[list.length + 1];

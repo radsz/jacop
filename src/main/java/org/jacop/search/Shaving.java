@@ -37,6 +37,7 @@ import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.XneqC;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
 
 /**
  * Defines functionality of shaving. Plugin in this object to search to
@@ -135,7 +136,7 @@ import org.jacop.core.Store;
 
     List<Map<IntVar, LinkedHashSet<Integer>>> shavable = new ArrayList();
 
-    Map<IntVar, LinkedHashSet<Integer>> notShavable = new HashMap<IntVar, LinkedHashSet<Integer>>();
+    Map<IntVar, LinkedHashSet<Integer>> notShavable = Var.createEmptyPositioning();
 
     /**
      * It stores number of successful shaving attempts.
@@ -230,7 +231,7 @@ import org.jacop.core.Store;
         }
 
         // Speculate based on neighbours
-        Map<IntVar, LinkedHashSet<Integer>> shavableCurrent = new HashMap<IntVar, LinkedHashSet<Integer>>();
+        Map<IntVar, LinkedHashSet<Integer>> shavableCurrent = Var.createEmptyPositioning();
 
         int last = shavable.size();
         int current = depth;
