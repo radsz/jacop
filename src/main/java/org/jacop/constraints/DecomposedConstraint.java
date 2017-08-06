@@ -196,6 +196,17 @@ public abstract class DecomposedConstraint<T extends Constraint> {
 
     }
 
+    public void checkInput(int[] list, Predicate<Integer> condition, String conditionDescription) {
+
+        for (int i = 0; i < list.length; i++)
+            if (! condition.test(list[i])) {
+                throw new IllegalArgumentException(
+                    "Constraint of type " + this.getClass().getSimpleName() + " has a condition " + conditionDescription + " violated for "
+                        + i + "-th element");
+            }
+
+    }
+
 
     public org.jacop.floats.core.FloatVar derivative(Store store, org.jacop.floats.core.FloatVar f,
         java.util.Set<org.jacop.floats.core.FloatVar> vars, org.jacop.floats.core.FloatVar x) {

@@ -39,6 +39,7 @@ import org.jacop.constraints.Constraint;
 import org.jacop.core.*;
 import org.jacop.util.SimpleHashSet;
 
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 /**
@@ -90,15 +91,15 @@ public class Binpacking extends Constraint implements UsesQueueVariable {
      */
     public Binpacking(IntVar[] bin, IntVar[] load, int[] w) {
 
-        assert (bin != null) : "Variables bin is null";
-        assert (load != null) : "Variables load is null";
-        assert (w != null) : "Integer array w is null";
-        assert (bin.length == w.length) : "Lists in bin packing constraints have different sizes";
+        checkInputForNullness(new String[]{"bin", "load", "w"}, new Object[][]{bin, load, {w}});
+        checkInputForDuplication("load", load);
+        checkInput(w, t -> t >= 0, "weight for item is not >=0");
+
+        if (bin.length != w.length)
+            throw new IllegalArgumentException("Constraint BinPacking has arguments bin and w that are of different sizes");
 
         LinkedHashMap<IntVar, Integer> itemPar = new LinkedHashMap<IntVar, Integer>();
         for (int i = 0; i < bin.length; i++) {
-            assert (bin[i] != null) : i + "-th element in bin list is null";
-            assert (w[i] >= 0) : i + "-th weight for item is not >=0";
 
             if (w[i] != 0)
                 if (itemPar.get(bin[i]) != null) {
@@ -130,7 +131,6 @@ public class Binpacking extends Constraint implements UsesQueueVariable {
 
         this.load = new IntVar[load.length];
         for (int i = 0; i < load.length; i++) {
-            assert (load[i] != null) : i + "-th element in load list is null";
             this.load[i] = load[i];
 
             Integer varPosition = binMap.put(this.load[i], i);

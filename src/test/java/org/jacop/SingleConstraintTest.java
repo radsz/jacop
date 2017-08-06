@@ -31,6 +31,7 @@
 package org.jacop;
 
 import org.jacop.constraints.*;
+import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
@@ -46,6 +47,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -57,6 +59,25 @@ import static org.junit.Assert.assertThat;
  * @version 4.4
  */
 public class SingleConstraintTest {
+
+    @Test public void testBinpacking() {
+
+        Store store = new Store();
+
+        int xLength = 4;
+        int xSize = 3;
+        IntVar[] items = getIntVars(store, "item", xLength, xSize);
+        int[] itemSize = {1, 2, 1, 2};
+        IntVar[] binLoad = getIntVars(store, "binLoad", xSize, 4);
+        Binpacking c = new Binpacking(items, binLoad, itemSize, 0);
+        store.impose(c);
+
+        store.print();
+        int noOfSolutions = noOfAllSolutions(store, Stream.concat( Arrays.stream(items), Arrays.stream(binLoad) ).toArray(IntVar[]::new));
+
+        assertThat(noOfSolutions, is(42));
+
+    }
 
     @Test public void testGeost() {
 
