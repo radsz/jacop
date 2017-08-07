@@ -232,7 +232,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
         // System.out.println(this);
         // System.out.println (linearTree);
 
-        setScope(list);
+        setScope(this.list);
 
         checkForOverflow();
 
