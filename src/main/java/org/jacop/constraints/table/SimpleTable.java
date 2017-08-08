@@ -99,27 +99,33 @@ public class SimpleTable extends Constraint implements UsesQueueVariable {
      * @param tuples the tuples which define alloed values.
      */
     public SimpleTable(IntVar[] list, int[][] tuples) {
+        this(list, tuples, false);
+    }
+        /**
+         * It constructs a table constraint.
+         *
+         * @param list   the variables in the scope of the constraint.
+         * @param tuples the tuples which define allowed values.
+         * @param reuseTupleArguments specifies if the tuples argument should be used directly without copying.               
+         */
+    public SimpleTable(IntVar[] list, int[][] tuples, boolean reuseTupleArguments) {
 
         checkInputForNullness(new String[]{"list", "tuples"}, new Object[][]{list, tuples});
-
+        checkInput(tuples, i -> i.length == list.length, "tuple need to have the same size as list argument.");
+        
         if (tuples.length > 64)
             throw new IllegalArgumentException("\nSimpleTable: number of tuples must be <= 64; is " + tuples.length);
-
-        int tupleLength = tuples[0].length;
-        if (list.length != tupleLength)
-            throw new IllegalArgumentException("Constraint " + this.getClass().getSimpleName() + " has different lengths for arguments list and first tuple.");
-
+        
         this.x = Arrays.copyOf(list, list.length);
         varMap = Var.positionMapping(list, false, this.getClass());
-
-
-        this.tuple = new int[tuples.length][tupleLength];
-        for (int i = 0; i < tuples.length; i++) {
-            if (tuples[i].length == tupleLength) {
-                this.tuple[i] = Arrays.copyOf(tuples[i], tupleLength);
-            }
-            else {
-                throw new IllegalArgumentException("\nSimpleTable: tuples are not of the same size");
+        
+        if (reuseTupleArguments) {
+            this.tuple = tuples;
+        }
+        else {
+            this.tuple = new int[tuples.length][list.length];
+            for (int i = 0; i < tuples.length; i++) {
+                this.tuple[i] = Arrays.copyOf(tuples[i], list.length);
             }
         }
 

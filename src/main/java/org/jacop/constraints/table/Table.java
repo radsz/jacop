@@ -99,21 +99,32 @@ public class Table extends Constraint implements UsesQueueVariable {
      * @param tuples the tuples which define alloed values.
      */
     public Table(IntVar[] list, int[][] tuples) {
+        this(list, tuples, false);
+    }
+
+    /**
+     * It constructs a table constraint.
+     *
+     * @param list   the variables in the scope of the constraint.
+     * @param tuples the tuples which define alloed values.
+     * @param reuseTuplesArgument specifies if the table of tuples should be used directly without copying.
+     */
+    public Table(IntVar[] list, int[][] tuples, boolean reuseTuplesArgument) {
 
         checkInputForNullness(new String[]{"list", "tuples"}, new Object[][]{list, tuples});
         checkInputForDuplication("list", list);
+        checkInput(tuples, i -> i.length == list.length, "tuple need to have the same size as list argument.");
 
         this.x = Arrays.copyOf(list, list.length);
         this.varMap = Var.positionMapping(list, false, this.getClass());
 
-        int tupleLength = tuples[0].length;
-        this.tuple = new int[tuples.length][tupleLength];
-        for (int i = 0; i < tuples.length; i++) {
-            if (tuples[i].length == tupleLength) {
-                this.tuple[i] = Arrays.copyOf(tuples[i], tupleLength);
-            }
-            else {
-                throw new IllegalArgumentException("\nTable: tuples are not of the same size");
+        if (reuseTuplesArgument) {
+            this.tuple = tuples;
+        }
+        else {
+            this.tuple = new int[tuples.length][list.length];
+            for (int i = 0; i < tuples.length; i++) {
+                this.tuple[i] = Arrays.copyOf(tuples[i], list.length);
             }
         }
 
@@ -124,6 +135,7 @@ public class Table extends Constraint implements UsesQueueVariable {
         setScope(list);
 
     }
+
 
     @SuppressWarnings("unchecked") long[] makeSupportAndWords(int nw) {
         supports = new HashMap[x.length];

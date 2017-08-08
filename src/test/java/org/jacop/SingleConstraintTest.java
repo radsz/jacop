@@ -33,6 +33,7 @@ package org.jacop;
 import org.jacop.constraints.*;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.table.SimpleTable;
+import org.jacop.constraints.table.Table;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
@@ -80,6 +81,37 @@ public class SingleConstraintTest {
         assertThat(noOfSolutions, is(2));
 
     }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testInvalidTable() {
+
+        Store store = new Store();
+
+        int xLength = 4;
+        int xSize = 3;
+        IntVar[] x = getIntVars(store, "x", xLength, xSize);
+        int[][] tuples = { {0, 0, 0}, {1, 1, 1}, {2, 2, 2}, {1, 2, 1}, {2, 2, 1}, {2, 0, 0} };
+
+        Table c = new Table(x, tuples);
+        store.impose(c);
+
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testInvalidSimpleTable() {
+
+        Store store = new Store();
+
+        int xLength = 4;
+        int xSize = 3;
+        IntVar[] x = getIntVars(store, "x", xLength, xSize);
+        int[][] tuples = { {0, 0, 0}, {1, 1, 1}, {2, 2, 2}, {1, 2, 1}, {2, 2, 1}, {2, 0, 0} };
+
+        SimpleTable c = new SimpleTable(x, tuples);
+        store.impose(c);
+
+    }
+
 
     @Test public void testSimpleTable() {
 
