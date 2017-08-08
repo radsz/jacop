@@ -1521,7 +1521,7 @@ public class Solve implements ParserTreeConstants {
 
     private void helperSolutionPrinter(String lastSolution) {
 
-        System.out.println(lastSolution);
+        System.out.print(lastSolution);
 
         if (! options.getOutputFilename().equals("") && ! lastSolution.isEmpty()) {
             try {
