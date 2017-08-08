@@ -117,12 +117,6 @@ public class Cumulative extends CumulativeBasic {
     @Override public void impose(Store store) {
 
         super.impose(store);
-        for (Task t : taskNormal) {
-            t.store = store;
-        }
-        for (Task t : taskReversed) {
-            t.store = store;
-        }
     }
 
     @Override public void consistency(Store store) {
@@ -318,7 +312,7 @@ public class Cumulative extends CumulativeBasic {
                 inner:
                 while (nj < n && t[nj].lct() == precI) {
                     if (t[nj].lct() < taskI.lct()) {
-                        taskI.updateEdgeFind((int) update[capMap[taskI.index]][nj]);
+                        taskI.updateEdgeFind(store.level, (int) update[capMap[taskI.index]][nj]);
                         break inner;
                     }
                     nj++;

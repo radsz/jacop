@@ -55,11 +55,11 @@ abstract class TaskView extends Task {
 
     abstract long env(long C);
 
-    abstract void updateEdgeFind(int upd);
+    abstract void updateEdgeFind(int storeLevel, int upd);
 
-    abstract void updateNotFirstNotLast(int upd);
+    abstract void updateNotFirstNotLast(int storeLevel, int upd);
 
-    abstract void updateDetectable(int est);
+    abstract void updateDetectable(int storeLevel, int est);
 
     abstract boolean exists();
 

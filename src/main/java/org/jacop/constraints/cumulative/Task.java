@@ -42,7 +42,6 @@ import org.jacop.core.Store;
 
 class Task {
 
-    Store store;
     int index;
     IntVar start, dur, res;
     int treeIndex;

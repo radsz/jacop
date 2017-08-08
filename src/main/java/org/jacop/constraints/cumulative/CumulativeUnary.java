@@ -133,12 +133,6 @@ public class CumulativeUnary extends Cumulative {
     @Override public void impose(Store store) {
 
         super.impose(store);
-        for (Task t : tvn) {
-            t.store = store;
-        }
-        for (Task t : tvr) {
-            t.store = store;
-        }
     }
 
     @Override public void consistency(Store store) {
@@ -245,7 +239,7 @@ public class CumulativeUnary extends Cumulative {
         }
 
         for (int i = 0; i < n; i++) {
-            t[i].updateNotFirstNotLast(updateLCT[i]);
+            t[i].updateNotFirstNotLast(store.level, updateLCT[i]);
         }
     }
 
@@ -297,7 +291,7 @@ public class CumulativeUnary extends Cumulative {
         }
 
         for (int i = 0; i < n; i++) {
-            t[i].updateDetectable(updateEST[i]);
+            t[i].updateDetectable(store.level, updateEST[i]);
         }
 
     }
@@ -335,7 +329,7 @@ public class CumulativeUnary extends Cumulative {
 
             while (tree.ectLambda() > t.lct()) {
                 int j = tree.rootNode().responsibleEctLambda;
-                tc[tree.get(j).task.index].updateEdgeFind(tree.ect());
+                tc[tree.get(j).task.index].updateEdgeFind(store.level, tree.ect());
                 tree.removeFromLambda(j);
             }
         }
