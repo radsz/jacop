@@ -34,10 +34,7 @@ import org.jacop.constraints.*;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.table.SimpleTable;
 import org.jacop.constraints.table.Table;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Store;
-import org.jacop.core.Var;
+import org.jacop.core.*;
 import org.jacop.examples.fd.PerfectSquare;
 import org.jacop.search.*;
 import org.junit.Ignore;
@@ -48,6 +45,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -61,6 +59,51 @@ import static org.junit.Assert.assertThat;
  * @version 4.4
  */
 public class SingleConstraintTest {
+
+    @Test public void testAnonymousConstraint() {
+
+        Function<IntVar[], Constraint> listXeqY = ( IntVar[] list ) -> new Constraint(list) {
+            
+            @Override public void consistency(Store store) {
+
+                do {
+
+                    store.propagationHasOccurred = false;
+
+                    for (int i = 0; i < list.length - 1; i++ ) {
+
+                        IntVar x = list[i];
+                        IntVar y = list[i+1];
+
+                        x.domain.in(store.level, x, y.domain);
+                        y.domain.in(store.level, y, x.domain);
+
+                    }
+
+                } while (store.propagationHasOccurred);
+
+            }
+
+            @Override public int getDefaultConsistencyPruningEvent() {
+                return IntDomain.ANY;
+            }
+        };
+
+        Store store = new Store();
+
+        int xLength = 3;
+        int xSize = 2;
+        IntVar[] x = getIntVars(store, "vars", xLength, xSize);
+
+        store.impose(listXeqY.apply(x));
+
+        store.print();
+        int noOfSolutions = noOfAllSolutions(store, x);
+
+        assertThat(noOfSolutions, is(2));
+
+
+    }
 
     @Test public void testNegatedIfThen() {
 

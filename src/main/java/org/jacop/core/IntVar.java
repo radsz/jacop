@@ -438,9 +438,7 @@ public class IntVar extends Var {
      */
     public String toStringFull() {
 
-        StringBuffer result = new StringBuffer(id);
-        result.append(domain.toStringFull());
-        return result.toString();
+        return id + domain.toStringFull();
 
     }
 

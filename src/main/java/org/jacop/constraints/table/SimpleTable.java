@@ -160,7 +160,7 @@ public class SimpleTable extends Constraint implements UsesQueueVariable {
 
         store.registerRemoveLevelListener(this);
 
-        supports = new HashMap[x.length];
+        supports = new Map[x.length];
         int n = tuple.length;
 
         long wrds = 0;

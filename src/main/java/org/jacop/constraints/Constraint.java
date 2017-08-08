@@ -38,6 +38,8 @@ import org.jacop.core.Var;
 import java.util.*;
 import java.util.stream.Stream;
 
+import static java.util.stream.Collectors.joining;
+
 /**
  * Standard unified interface/abstract class for all constraints.
  * <p>
@@ -49,6 +51,26 @@ import java.util.stream.Stream;
  */
 
 public abstract class Constraint extends DecomposedConstraint<Constraint> {
+
+    protected Constraint() {}
+
+    protected Constraint(Var[]... vars) {
+        setScope(vars);
+    }
+
+    protected Constraint(Stream<Var> vars) {
+        setScope(vars);
+    }
+
+    protected Constraint(PrimitiveConstraint[] constraints) {
+        setScope(constraints);
+    }
+
+    protected Constraint(Set<? extends Var> set) {
+        setScope(set);
+    }
+
+
 
     public boolean trace = SwitchesPruningLogging.traceConstraint;
 
@@ -171,7 +193,10 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
      * @return string id of the constraint.
      */
     public String id() {
-        return this.getClass().getSimpleName() + numberId;
+        String constraintType = this.getClass().getSimpleName();
+        if (constraintType.equals(""))
+            constraintType = this.getClass().getName() + "#";
+        return constraintType + numberId;
     }
 
     /**
@@ -243,7 +268,11 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     /**
      * It produces a string representation of a constraint state.
      */
-    @Override public abstract String toString();
+    @Override public String toString() {
+
+        return arguments().stream().map( i -> i.toString() ).collect(joining(", ", id() + "(", ")"));
+
+    };
 
     /**
      * It specifies a constraint which if imposed by search will enhance
