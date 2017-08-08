@@ -30,18 +30,17 @@
 
 package org.jacop.constraints;
 
+import org.jacop.api.UsesQueueVariable;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
+import org.jacop.util.QueueForward;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jacop.core.Store;
-import org.jacop.api.UsesQueueVariable;
-import org.jacop.core.Var;
-import org.jacop.util.QueueForward;
-
 /**
  * Constraint c1 \/ c2 \/ ... \/ cn.
- *
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.4
@@ -65,6 +64,7 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
 
     /**
      * It constructs Or constraint.
+     *
      * @param listOfC list of primitive constraints which at least one of them has to be satisfied.
      */
     public Or(PrimitiveConstraint[] listOfC) {
@@ -81,6 +81,7 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
 
     /**
      * It constructs Or constraint.
+     *
      * @param listOfC list of primitive constraints which at least one of them has to be satisfied.
      */
     public Or(List<PrimitiveConstraint> listOfC) {
@@ -89,6 +90,7 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
 
     /**
      * It constructs an Or constraint, at least one constraint has to be satisfied.
+     *
      * @param c1 the first constraint which can be satisfied.
      * @param c2 the second constraint which can be satisfied.
      */
@@ -125,8 +127,9 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
             else if (numberNotSat == listOfC.length)
                 throw Store.failException;
 
-        } else if (numberSat > 0)
-	    removeConstraint();
+        } else if (numberSat > 0) {
+            removeConstraint();
+        }
 
     }
 

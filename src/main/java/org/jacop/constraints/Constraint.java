@@ -30,6 +30,7 @@
 
 package org.jacop.constraints;
 
+import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Store;
 import org.jacop.core.SwitchesPruningLogging;
@@ -122,17 +123,6 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     }
 
     /**
-     * This function is called in case of the backtrack, so a constraint can
-     * clear the queue of changed variables which is no longer valid. This
-     * function is called *before* all timestamps, variables, mutablevariables
-     * have reverted to their previous value.
-     *
-     * @param level the level which is being removed.
-     */
-    public void removeLevel(int level) {
-    }
-
-    /**
      * This function is called in case of the backtrack. It is called
      * after all timestamps, variables, mutablevariables have reverted
      * to their values *after* removing the level.
@@ -214,6 +204,8 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
         }
         if (this instanceof UsesQueueVariable)
             arguments().stream().forEach( i -> queueVariable(store.level, i));
+        if (this instanceof Stateful)
+            store.registerRemoveLevelListener( (Stateful) this);
 
     }
 

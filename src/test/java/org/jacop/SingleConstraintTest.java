@@ -36,6 +36,7 @@ import org.jacop.constraints.table.SimpleTable;
 import org.jacop.constraints.table.Table;
 import org.jacop.core.*;
 import org.jacop.examples.fd.PerfectSquare;
+import org.jacop.floats.core.FloatVar;
 import org.jacop.search.*;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -952,6 +953,15 @@ public class SingleConstraintTest {
         IntVar[] x = new IntVar[xLength];
         for (int i = 0; i < x.length; i++) {
             x[i] = new IntVar(store, idPrefix + i, i, i + xSize - 1);
+        }
+        return x;
+    }
+
+    private FloatVar[] getShiftedFloatVars(Store store, String idPrefix, int xLength, int xSize) {
+
+        FloatVar[] x = new FloatVar[xLength];
+        for (int i = 0; i < x.length; i++) {
+            x[i] = new FloatVar(store, idPrefix + i, i, i + xSize - 1);
         }
         return x;
     }

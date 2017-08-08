@@ -42,5 +42,5 @@ import org.junit.runners.Suite;
 
 @RunWith(Suite.class)
 
-@Suite.SuiteClasses({ExampleBasedTest.class, SingleConstraintTest.class, MinizincBasedTestUpTo5Seconds.class}) public class MinTestSuite {
+@Suite.SuiteClasses({ExampleBasedTest.class, QueueForwardTest.class, SingleConstraintTest.class, MinizincBasedTestUpTo5Seconds.class}) public class MinTestSuite {
 }

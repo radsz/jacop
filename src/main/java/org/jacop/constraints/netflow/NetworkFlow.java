@@ -37,6 +37,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
+import org.jacop.api.Stateful;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.netflow.simplex.Arc;
 import org.jacop.constraints.netflow.simplex.Node;
@@ -56,7 +57,7 @@ import org.jacop.core.Var;
  *
  */
 
-public class NetworkFlow extends Constraint implements UsesQueueVariable {
+public class NetworkFlow extends Constraint implements UsesQueueVariable, Stateful {
 
     private static final int QUEUE_INDEX = 2;
     private static final boolean DO_INSTRUMENTATION = false;
@@ -164,7 +165,6 @@ public class NetworkFlow extends Constraint implements UsesQueueVariable {
 
         // register with store
         queueIndex = QUEUE_INDEX;
-        store.registerRemoveLevelListener(this);
         store.registerRemoveLevelLateListener(this);
         super.impose(store);
     }

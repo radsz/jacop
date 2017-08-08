@@ -32,6 +32,7 @@ package org.jacop.core;
 
 import java.util.*;
 
+import org.jacop.api.Stateful;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.util.SimpleHashSet;
@@ -98,7 +99,7 @@ public class Store {
      * backtracks has occurred. It holds the list of constraints which want to be informed
      * about level being removed before it has actually began.
      */
-    public List<Constraint> removeLevelListeners = new ArrayList<Constraint>(10);
+    public List<Stateful> removeLevelListeners = new ArrayList<Stateful>(10);
 
     /**
      * More advanced constraints may require to be informed of a backtrack to be
@@ -972,14 +973,14 @@ public class Store {
      * since the last time a consistency was called. This function is called
      * just *before* removeLevel method is executed for variables, mutable variables,
      * and timestamps.
-     * @param C constraint which is no longer interested in listening to remove level events.
-     * @return true if constraint C was watching remove level events.
+     * @param stateful constraint which is interested in listening to remove level events.
+     * @return true if constraint stateful was watching remove level events.
      */
 
-    public boolean registerRemoveLevelListener(Constraint C) {
+    public boolean registerRemoveLevelListener(Stateful stateful) {
 
-        if (!removeLevelListeners.contains(C)) {
-            return removeLevelListeners.add(C);
+        if (!removeLevelListeners.contains(stateful)) {
+            return removeLevelListeners.add(stateful);
         }
         return false;
     }
@@ -1022,8 +1023,8 @@ public class Store {
         // It has to inform listeners first, as they may use values of
         // mutables variables, just before they get deleted.
 
-        for (Constraint C : removeLevelListeners)
-            C.removeLevel(rLevel);
+        for (Stateful statefulConstraint : removeLevelListeners)
+            statefulConstraint.removeLevel(rLevel);
 
         // It needs to be before as there is a timestamp for number of boolean variables.
         for (TimeStamp<?> var : timeStamps)

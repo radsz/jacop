@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
+import org.jacop.api.Stateful;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -56,11 +57,13 @@ import org.jacop.core.ValueEnumeration;
  * @version 4.4
  */
 
-public class ElementVariableFast extends Constraint {
+public class ElementVariableFast extends Constraint implements Stateful {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
     boolean firstConsistencyCheck = true;
+
+    int firstConsistencyLevel;
 
     /**
      * It specifies variable index within an element constraint list[index - indexOffset] = value.
@@ -153,6 +156,7 @@ public class ElementVariableFast extends Constraint {
         if (firstConsistencyCheck) {
 
             index.domain.in(store.level, index, 1 + this.indexOffset, list.length + this.indexOffset);
+            firstConsistencyLevel = store.level;
             firstConsistencyCheck = false;
         }
 
@@ -202,13 +206,11 @@ public class ElementVariableFast extends Constraint {
         return IntDomain.ANY;
     }
 
-    @Override public void impose(Store store) {
-
-        store.registerRemoveLevelListener(this);
-
-        super.impose(store);
-
+    @Override public void removeLevel(int level) {
+        if (level == firstConsistencyLevel)
+            firstConsistencyCheck = true;
     }
+
 
     @Override public boolean satisfied() {
         boolean sat = value.singleton();

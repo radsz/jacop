@@ -35,6 +35,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
+import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.*;
@@ -61,7 +62,7 @@ import org.jacop.core.*;
  *
  */
 
-public class Knapsack extends Constraint implements UsesQueueVariable {
+public class Knapsack extends Constraint implements UsesQueueVariable, Stateful {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -674,7 +675,6 @@ public class Knapsack extends Constraint implements UsesQueueVariable {
 
     @Override public void impose(Store store) {
 
-        store.registerRemoveLevelListener(this);
         store.registerRemoveLevelLateListener(this);
 
         hashForUpdate = new HashMap<Integer, List<TreeLeaf>>();

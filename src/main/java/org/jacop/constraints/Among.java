@@ -34,6 +34,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
+import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
 
@@ -51,7 +52,7 @@ import org.jacop.core.*;
  * @version 4.4
  */
 
-public class Among extends Constraint implements UsesQueueVariable {
+public class Among extends Constraint implements UsesQueueVariable, Stateful {
 
     static final boolean debugAll = false;
 
@@ -264,7 +265,7 @@ public class Among extends Constraint implements UsesQueueVariable {
     @Override public void impose(Store store) {
 
         super.impose(store);
-        store.registerRemoveLevelListener(this);
+
         this.lowerBorder = new TimeStamp<Integer>(store, 0);
         this.upperBorder = new TimeStamp<Integer>(store, list.length);
 

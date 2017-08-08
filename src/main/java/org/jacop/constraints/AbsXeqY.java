@@ -32,6 +32,7 @@ package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.Stateful;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
@@ -49,7 +50,7 @@ import org.jacop.core.Store;
  * @version 4.4
  */
 
-public class AbsXeqY extends PrimitiveConstraint {
+public class AbsXeqY extends PrimitiveConstraint implements Stateful {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 

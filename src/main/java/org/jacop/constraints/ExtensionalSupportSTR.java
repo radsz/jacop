@@ -36,6 +36,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
 import org.jacop.util.IndexDomainView;
@@ -53,7 +54,7 @@ import org.jacop.util.IndexDomainView;
  */
 
 
-public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariable {
+public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariable, Stateful {
 
     // FIXME, remove the need for this attribute.
     Store store;
@@ -577,8 +578,6 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
     @Override public void impose(Store store) {
 
         this.store = store;
-
-        store.registerRemoveLevelListener(this);
 
         varToIndex = Var.positionMapping(list, false, this.getClass());
 

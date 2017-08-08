@@ -34,6 +34,7 @@ package org.jacop.constraints.binpacking;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.*;
@@ -53,7 +54,7 @@ import java.util.stream.Stream;
  * @version 4.4
  */
 
-public class Binpacking extends Constraint implements UsesQueueVariable {
+public class Binpacking extends Constraint implements UsesQueueVariable, Stateful {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 

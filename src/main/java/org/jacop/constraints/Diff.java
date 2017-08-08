@@ -34,6 +34,7 @@ package org.jacop.constraints;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
 
@@ -46,7 +47,7 @@ import org.jacop.core.*;
  * @version 3.1
  */
 
-public class Diff extends Constraint implements UsesQueueVariable {
+public class Diff extends Constraint implements UsesQueueVariable, Stateful {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -428,17 +429,6 @@ public class Diff extends Constraint implements UsesQueueVariable {
 
     Rectangle[] getRectangles() {
         return rectangles;
-    }
-
-    // registers the constraint in the constraint store
-    @Override public void impose(Store store) {
-
-        super.impose(store);
-
-        // When should it deregister? If there is any
-        // time for it, then it should be implemented
-        store.registerRemoveLevelListener(this);
-
     }
 
     boolean intervalOverlap(int min1, int max1, int min2, int max2) {

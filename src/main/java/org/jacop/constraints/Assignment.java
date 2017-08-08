@@ -34,6 +34,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
+import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
 
@@ -47,7 +48,7 @@ import org.jacop.core.*;
  * @version 4.4
  */
 
-public class Assignment extends Constraint implements UsesQueueVariable {
+public class Assignment extends Constraint implements UsesQueueVariable, Stateful {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -302,8 +303,6 @@ public class Assignment extends Constraint implements UsesQueueVariable {
 
     // registers the constraint in the constraint store
     @Override public void impose(Store store) {
-
-        store.registerRemoveLevelListener(this);
 
         super.impose(store);
 

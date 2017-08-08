@@ -36,6 +36,7 @@ import java.nio.charset.Charset;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ExtensionalSupportSTR;
@@ -132,7 +133,7 @@ import org.jacop.util.fsm.FSMTransition;
  * @version 4.4
  */
 
-public class Regular extends Constraint implements UsesQueueVariable {
+public class Regular extends Constraint implements UsesQueueVariable, Stateful {
 
     /**
      * It specifies if debugging information should be printed out.
@@ -1048,7 +1049,6 @@ public class Regular extends Constraint implements UsesQueueVariable {
 
         super.impose(store);
 
-        store.registerRemoveLevelListener(this);
         store.registerRemoveLevelLateListener(this);
 
         mapping = Var.positionMapping(list, true, this.getClass());

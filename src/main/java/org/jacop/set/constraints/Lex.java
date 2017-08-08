@@ -32,6 +32,7 @@ package org.jacop.set.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.Stateful;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntervalDomain;
@@ -55,7 +56,7 @@ import org.jacop.set.core.SetVar;
  * @version 4.4
  */
 
-public class Lex extends Constraint {
+public class Lex extends Constraint implements Stateful {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -491,7 +492,6 @@ public class Lex extends Constraint {
 
         super.impose(store);
 
-        store.registerRemoveLevelListener(this);
         smallerDifference = new TimeStamp<IntDomain>(store, a.domain.lub().subtract(b.domain.glb()));
         inDifference = new TimeStamp<IntDomain>(store, b.domain.lub().subtract(a.domain.glb()));
 

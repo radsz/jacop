@@ -30,6 +30,7 @@
 
 package org.jacop.constraints;
 
+import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
 import org.jacop.util.TupleUtils;
@@ -48,7 +49,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @version 4.4
  */
 
-public class ExtensionalSupportVA extends Constraint implements UsesQueueVariable {
+public class ExtensionalSupportVA extends Constraint implements UsesQueueVariable, Stateful {
 
     static final boolean debugAll = false;
 
@@ -265,8 +266,6 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
     @Override public void impose(Store store) {
 
         super.impose(store);
-
-        store.registerRemoveLevelListener(this);
 
         if (debugAll) {
             for (Var var : list)

@@ -30,8 +30,6 @@
 
 package org.jacop.api;
 
-import org.jacop.core.Var;
-
 /**
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  *

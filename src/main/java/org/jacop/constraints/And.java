@@ -1,4 +1,4 @@
-/**
+/*
  * And.java
  * This file is part of JaCoP.
  * <p>
@@ -33,7 +33,6 @@ package org.jacop.constraints;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jacop.core.Domain;
 import org.jacop.core.Store;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Var;
@@ -46,7 +45,6 @@ import org.jacop.util.QueueForward;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.4
  */
-
 public class And extends PrimitiveConstraint implements UsesQueueVariable {
 
     static AtomicInteger idNumber = new AtomicInteger(0);

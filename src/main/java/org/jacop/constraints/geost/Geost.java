@@ -40,6 +40,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.*;
@@ -108,7 +109,7 @@ maybe time variables always BOUND pruning event.
  *
  *
  */
-public class Geost extends Constraint implements UsesQueueVariable {
+public class Geost extends Constraint implements UsesQueueVariable, Stateful {
 
     /**
      * It specifies different debugging switches to print out diverse information about
@@ -1621,7 +1622,6 @@ public class Geost extends Constraint implements UsesQueueVariable {
 
         genInternalConstraints();
 
-        store.registerRemoveLevelListener(this);
         store.registerRemoveLevelLateListener(this);
 
         setStart = new TimeStamp<Integer>(store, store.level);

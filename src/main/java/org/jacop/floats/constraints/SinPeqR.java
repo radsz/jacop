@@ -32,6 +32,7 @@ package org.jacop.floats.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.Stateful;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -52,7 +53,7 @@ import org.jacop.floats.core.InternalException;
  * @version 4.4
  */
 
-public class SinPeqR extends Constraint {
+public class SinPeqR extends Constraint implements Stateful {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 

@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
 
@@ -54,7 +55,7 @@ import org.jacop.core.*;
  * @version 4.4
  */
 
-public class ElementInteger extends Constraint implements UsesQueueVariable {
+public class ElementInteger extends Constraint implements UsesQueueVariable, Stateful {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 

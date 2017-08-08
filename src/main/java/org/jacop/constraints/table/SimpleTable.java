@@ -34,6 +34,7 @@ package org.jacop.constraints.table;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.Stateful;
 import org.jacop.core.Store;
 import org.jacop.core.IntVar;
 import org.jacop.core.Var;
@@ -54,7 +55,7 @@ import org.jacop.api.UsesQueueVariable;
  * @version 4.5
  */
 
-public class SimpleTable extends Constraint implements UsesQueueVariable {
+public class SimpleTable extends Constraint implements UsesQueueVariable, Stateful {
 
     Store store;
 
@@ -157,8 +158,6 @@ public class SimpleTable extends Constraint implements UsesQueueVariable {
         // store.registerRemoveLevelLateListener(this);
 
         super.impose(store);
-
-        store.registerRemoveLevelListener(this);
 
         supports = new Map[x.length];
         int n = tuple.length;

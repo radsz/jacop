@@ -119,8 +119,6 @@ public class ExtensionalSupportMDD extends Constraint {
 
         super.impose(store);
 
-        store.registerRemoveLevelListener(this);
-
         this.G_no_size = new TimeStamp<Integer>(store, 0);
 
         store.raiseLevelBeforeConsistency = true;

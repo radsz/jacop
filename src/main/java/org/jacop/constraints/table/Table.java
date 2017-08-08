@@ -34,6 +34,7 @@ package org.jacop.constraints.table;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.Stateful;
 import org.jacop.core.Store;
 import org.jacop.core.IntVar;
 import org.jacop.core.Var;
@@ -53,7 +54,7 @@ import org.jacop.api.UsesQueueVariable;
  * @version 4.5
  */
 
-public class Table extends Constraint implements UsesQueueVariable {
+public class Table extends Constraint implements UsesQueueVariable, Stateful {
 
     Store store;
 
@@ -197,7 +198,6 @@ public class Table extends Constraint implements UsesQueueVariable {
 
         this.store = store;
         super.impose(store);
-        store.registerRemoveLevelListener(this);
 
         int n = tuple.length;
         int lastWordSize = n % 64;

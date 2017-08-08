@@ -33,6 +33,7 @@ package org.jacop.constraints;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.Stateful;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.MutableVar;
@@ -49,7 +50,7 @@ import org.jacop.core.Var;
  * @version 4.4
  */
 
-public class Circuit extends Alldiff {
+public class Circuit extends Alldiff implements Stateful {
 
     int chainLength = 0;
 

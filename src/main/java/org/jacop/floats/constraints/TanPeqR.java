@@ -81,9 +81,6 @@ public class TanPeqR extends Constraint {
 
         setScope(p, q);
     }
-    
-    @Override public void removeLevel(int level) {
-    }
 
     @Override public void consistency(Store store) {
 
