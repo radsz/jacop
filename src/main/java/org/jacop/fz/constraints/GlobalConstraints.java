@@ -579,14 +579,14 @@ class GlobalConstraints implements ParserTreeConstants {
 
             } else
 		if (t.length <= 64)
-		    support.pose(new org.jacop.constraints.table.SimpleTable(v, tt));
+		    support.pose(new org.jacop.constraints.table.SimpleTable(v, tt, true));
 		else
-		    support.pose(new org.jacop.constraints.table.Table(v, tt));	    
+		    support.pose(new org.jacop.constraints.table.Table(v, tt, true));	    
         } else
 	    if (t.length <= 64)
-	    	support.pose(new org.jacop.constraints.table.SimpleTable(v, t));
+	    	support.pose(new org.jacop.constraints.table.SimpleTable(v, t, true));
 	    else
-	    	support.pose(new org.jacop.constraints.table.Table(v, t));	    
+	    	support.pose(new org.jacop.constraints.table.Table(v, t, true));	    
     }
 
     void gen_jacop_assignment(SimpleNode node) {
