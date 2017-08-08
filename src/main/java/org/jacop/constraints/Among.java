@@ -264,9 +264,6 @@ public class Among extends Constraint implements UsesQueueVariable {
     @Override public void impose(Store store) {
 
         super.impose(store);
-        int level = store.level;
-        Arrays.stream(list).forEach( i -> queueVariable(level, i));
-
         store.registerRemoveLevelListener(this);
         this.lowerBorder = new TimeStamp<Integer>(store, 0);
         this.upperBorder = new TimeStamp<Integer>(store, list.length);

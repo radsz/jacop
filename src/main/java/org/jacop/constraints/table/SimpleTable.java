@@ -86,8 +86,6 @@ public class SimpleTable extends Constraint implements UsesQueueVariable {
 
     Set<IntVar> variableQueue = new LinkedHashSet<IntVar>();
 
-    private int stamp = 0;
-
     int noNoGround;
 
     static AtomicInteger idNumber = new AtomicInteger(0);
@@ -131,7 +129,31 @@ public class SimpleTable extends Constraint implements UsesQueueVariable {
 
     }
 
-    @SuppressWarnings("unchecked") void init() {
+    boolean validTuple(int index) {
+
+        int[] t = tuple[index];
+        int n = t.length;
+        int i = 0;
+        while (i < n) {
+            if (!x[i].dom().contains(t[i]))
+                return false;
+            i++;
+        }
+        return true;
+    }
+
+    @Override public int getDefaultConsistencyPruningEvent() {
+        return IntDomain.ANY;
+    }
+
+    @Override public void impose(Store store) {
+        this.store = store;
+        // store.registerRemoveLevelLateListener(this);
+
+        super.impose(store);
+
+        store.registerRemoveLevelListener(this);
+
         supports = new HashMap[x.length];
         int n = tuple.length;
 
@@ -154,35 +176,7 @@ public class SimpleTable extends Constraint implements UsesQueueVariable {
             }
         }
         words = new TimeStamp<Long>(store, wrds);
-    }
 
-    boolean validTuple(int index) {
-
-        int[] t = tuple[index];
-        int n = t.length;
-        int i = 0;
-        while (i < n) {
-            if (!x[i].dom().contains(t[i]))
-                return false;
-            i++;
-        }
-        return true;
-    }
-
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.ANY;
-    }
-
-    @Override public void impose(Store store) {
-        this.store = store;
-        int level = store.level;
-
-        // store.registerRemoveLevelLateListener(this);
-
-        super.impose(store);
-        arguments().stream().forEach( i -> queueVariable(store.level, i));
-
-        init();
     }
 
     @Override public void consistency(Store store) {
@@ -293,13 +287,11 @@ public class SimpleTable extends Constraint implements UsesQueueVariable {
     }
 
     @Override public void queueVariable(int level, Var v) {
-        if (level == stamp)
             variableQueue.add((IntVar) v);
-        else {
-            variableQueue.clear();
-            stamp = level;
-            variableQueue.add((IntVar) v);
-        }
+    }
+
+    public void removeLevel(int level) {
+        variableQueue.clear();
     }
 
     @Override public String toString() {

@@ -203,7 +203,6 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
     @Override public void impose(Store store) {
 
         super.impose(store);
-        arguments().stream().forEach( i -> queueVariable(store.level, i));
 
         if (needRemoveLevelLate)
             store.registerRemoveLevelLateListener(this);

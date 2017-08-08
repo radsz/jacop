@@ -166,13 +166,9 @@ public class Alldifferent extends Constraint implements UsesQueueVariable {
     @Override public void impose(Store store) {
 
         super.impose(store);
-        int level = store.level;
-
         positionMapping = Var.positionMapping(list, false, this.getClass());
-        for (IntVar v : list) {
-            queueVariable(level, v);
-        }
         grounded = new TimeStamp<>(store, 0);
+        
     }
 
     @Override public void queueVariable(int level, Var V) {

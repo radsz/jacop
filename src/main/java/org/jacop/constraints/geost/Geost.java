@@ -1621,8 +1621,6 @@ public class Geost extends Constraint implements UsesQueueVariable {
 
         genInternalConstraints();
 
-        arguments().stream().forEach( i -> queueVariable(store.level, i));
-
         store.registerRemoveLevelListener(this);
         store.registerRemoveLevelLateListener(this);
 

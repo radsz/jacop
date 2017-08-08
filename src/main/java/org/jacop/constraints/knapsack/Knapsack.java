@@ -674,8 +674,6 @@ public class Knapsack extends Constraint implements UsesQueueVariable {
 
     @Override public void impose(Store store) {
 
-        super.impose(store);
-
         store.registerRemoveLevelListener(this);
         store.registerRemoveLevelLateListener(this);
 
@@ -708,14 +706,6 @@ public class Knapsack extends Constraint implements UsesQueueVariable {
         if (tree.root.getWSum() + tree.alreadyUsedCapacity < knapsackCapacity.min())
             impositionFailure = true;
 
-        int level = store.level;
-        IntVar var;
-        for (KnapsackItem item : items) {
-            var = item.getVariable();
-            queueVariable(level, var);
-        }
-
-
         if (debugAll) {
 
             if (!impositionFailure)
@@ -727,6 +717,8 @@ public class Knapsack extends Constraint implements UsesQueueVariable {
             System.out.println(tree.toString());
         }
 
+        super.impose(store);
+        
     }
 
     @Override public void queueVariable(int level, Var v) {

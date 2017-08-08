@@ -284,8 +284,6 @@ import org.jacop.core.*;
 
     @Override public void impose(Store store) {
 
-        super.impose(store);
-
         sumGrounded = new TimeStamp<Integer>(store, 0);
         nextGroundedPosition = new TimeStamp<Integer>(store, 0);
         positionMaping = Var.positionMapping(list, false, this.getClass());
@@ -308,8 +306,8 @@ import org.jacop.core.*;
             lMax += max;
         }
 
-        Arrays.stream(list).forEach( i -> queueVariable(store.level, i));
-
+        super.impose(store);
+        
     }
 
     @Override public void queueVariable(int level, Var var) {

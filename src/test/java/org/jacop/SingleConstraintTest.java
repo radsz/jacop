@@ -61,6 +61,26 @@ import static org.junit.Assert.assertThat;
  */
 public class SingleConstraintTest {
 
+    @Test public void testNegatedIfThen() {
+
+        Store store = new Store();
+
+        int xLength = 3;
+        int xSize = 2;
+        IntVar[] x = getIntVars(store, "x", xLength, xSize);
+
+        IfThen ifThen = new IfThen(new XneqY(x[0], x[1]), new XeqY(x[1], x[2]));
+        
+        Not not = new Not(ifThen);
+        store.impose(not);
+
+        store.print();
+        int noOfSolutions = noOfAllSolutions(store, x);
+
+        assertThat(noOfSolutions, is(2));
+
+    }
+
     @Test public void testSimpleTable() {
 
         Store store = new Store();

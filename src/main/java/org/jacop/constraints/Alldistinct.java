@@ -1134,7 +1134,6 @@ public class Alldistinct extends Constraint implements UsesQueueVariable {
         Function<IntVar, TimeStamp<Integer>> f = ( i ) -> new TimeStamp<Integer>(store, zero);
         Var.addPositionMapping(matching, list, f, false, this.getClass());
         Var.addPositionMapping(sccStamp, list, f, false, this.getClass());
-        Arrays.stream(list).forEach( i -> queueVariable(store.level, i));
 
         for (Map.Entry<Integer, SimpleArrayList<IntVar>> entry : valueMapVariable.entrySet()) {
             Integer key = entry.getKey();

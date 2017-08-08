@@ -86,8 +86,6 @@ public class Table extends Constraint implements UsesQueueVariable {
 
     Set<IntVar> variableQueue = new HashSet<IntVar>();
 
-    private int stamp = 0;
-
     int noNoGround;
 
     static AtomicInteger idNumber = new AtomicInteger(0);
@@ -125,19 +123,6 @@ public class Table extends Constraint implements UsesQueueVariable {
 
         setScope(list);
 
-    }
-
-    void init() {
-
-        int n = tuple.length;
-        int lastWordSize = n % 64;
-        int numberBitSets = n / 64 + ((lastWordSize != 0) ? 1 : 0);
-
-        rbs = new ReversibleSparseBitSet();
-
-        long[] words = makeSupportAndWords(numberBitSets);
-
-        rbs.init(store, words);
     }
 
     @SuppressWarnings("unchecked") long[] makeSupportAndWords(int nw) {
@@ -200,8 +185,17 @@ public class Table extends Constraint implements UsesQueueVariable {
 
         this.store = store;
         super.impose(store);
-        arguments().stream().forEach( i -> queueVariable(store.level, i));
-        init();
+        store.registerRemoveLevelListener(this);
+
+        int n = tuple.length;
+        int lastWordSize = n % 64;
+        int numberBitSets = n / 64 + ((lastWordSize != 0) ? 1 : 0);
+
+        rbs = new ReversibleSparseBitSet();
+
+        long[] words = makeSupportAndWords(numberBitSets);
+
+        rbs.init(this.store, words);
 
     }
 
@@ -309,14 +303,13 @@ public class Table extends Constraint implements UsesQueueVariable {
     }
 
     @Override public void queueVariable(int level, Var v) {
-        if (level == stamp)
-            variableQueue.add((IntVar) v);
-        else {
-            variableQueue.clear();
-            stamp = level;
-            variableQueue.add((IntVar) v);
-        }
+        variableQueue.add((IntVar) v);
     }
+
+    public void removeLevel(int level) {
+        variableQueue.clear();
+    }
+
 
     @Override public String toString() {
 

@@ -381,16 +381,6 @@ public class Binpacking extends Constraint implements UsesQueueVariable {
 
     }
 
-    @Override public void impose(Store store) {
-
-        super.impose(store);
-
-        for (BinItem el : item) {
-            queueVariable(store.level, el.bin);
-        }
-
-    }
-
     @Override public void queueVariable(int level, Var V) {
         if (itemMap.get(V) != null)
             itemQueue.add((IntVar) V);

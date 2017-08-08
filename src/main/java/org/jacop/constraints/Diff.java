@@ -435,21 +435,9 @@ public class Diff extends Constraint implements UsesQueueVariable {
 
         super.impose(store);
 
-        Var v;
-        int level = store.level;
-
         // When should it deregister? If there is any
         // time for it, then it should be implemented
         store.registerRemoveLevelListener(this);
-
-        for (Rectangle r : rectangles) {
-            for (int i = 0; i < r.dim(); i++) {
-                v = r.origin[i];
-                queueVariable(level, v);
-                v = r.length[i];
-                queueVariable(level, v);
-            }
-        }
 
     }
 

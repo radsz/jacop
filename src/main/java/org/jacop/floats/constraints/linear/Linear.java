@@ -370,9 +370,6 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
         reified = false;
         super.impose(store);
 
-        for (Var v : list)
-            queueVariable(store.level, v);
-
     }
 
 

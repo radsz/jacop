@@ -237,11 +237,10 @@ import java.util.stream.Stream;
 
     @Override public void impose(Store store) {
 
-        super.impose(store);
+        positionMaping = Var.positionMapping(list, false, this.getClass());
 
         sumGrounded = new TimeStamp<Integer>(store, 0);
         nextGroundedPosition = new TimeStamp<Integer>(store, 0);
-        positionMaping = Var.positionMapping(list, false, this.getClass());
 
         store.registerRemoveLevelLateListener(this);
 
@@ -250,7 +249,7 @@ import java.util.stream.Stream;
         lMin = 0;
         lMax = 0;
 
-        Arrays.stream(list).forEach( i -> queueVariable(store.level, i));
+        super.impose(store);
 
     }
 

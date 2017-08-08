@@ -1084,7 +1084,6 @@ public class AmongVar extends Constraint implements UsesQueueVariable {
         int gx = (int) Arrays.stream(listOfX).filter( xElement -> xElement.singleton()).count();
 
         yIndex = Var.positionMapping(listOfY, false, this.getClass());
-        Arrays.stream(listOfY).forEach( yVar -> variableQueueY.add( yIndex.get(yVar) ));
 
         lbS = new MutableDomain(store);
         futureLbS = new MutableDomain(store);
@@ -1108,13 +1107,11 @@ public class AmongVar extends Constraint implements UsesQueueVariable {
             System.out.println("Var " + var + ((IntVar) var).recentDomainPruning());
         }
 
-
-        int i;
-        for (i = 0; i < this.listOfY.length; i++)
-            if (this.listOfY[i] == var) {
-                this.variableQueueY.add(i);
-                return;
-            }
+        Integer index = yIndex.get(var);
+        if (index != null) {
+            variableQueueY.add(index);
+            return;
+        }
 
 
         if (var != this.n) {

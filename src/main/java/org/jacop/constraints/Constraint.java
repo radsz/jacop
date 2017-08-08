@@ -30,6 +30,7 @@
 
 package org.jacop.constraints;
 
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Store;
 import org.jacop.core.SwitchesPruningLogging;
 import org.jacop.core.Var;
@@ -183,8 +184,11 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
         arguments().stream().forEach(i -> i.putModelConstraint(this, getConsistencyPruningEvent(i)));
         store.addChanged(this);
         store.countConstraint();
-        if (constraintScope != null)
-            constraintScope.stream().forEach( i -> i.include(store));
+        if (constraintScope != null) {
+            constraintScope.stream().forEach(i -> i.include(store));
+        }
+        if (this instanceof UsesQueueVariable)
+            arguments().stream().forEach( i -> queueVariable(store.level, i));
 
     }
 
