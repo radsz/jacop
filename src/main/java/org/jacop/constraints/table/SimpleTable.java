@@ -149,6 +149,7 @@ public class SimpleTable extends Constraint implements UsesQueueVariable, Statef
         return IntDomain.ANY;
     }
 
+    @SuppressWarnings("unchecked")
     @Override public void impose(Store store) {
         this.store = store;
 
