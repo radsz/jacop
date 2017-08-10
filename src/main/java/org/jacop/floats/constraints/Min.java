@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
 
@@ -50,7 +51,7 @@ import org.jacop.core.Store;
  * @version 4.4
  */
 
-public class Min extends Constraint {
+public class Min extends Constraint implements SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 

@@ -30,30 +30,26 @@
 
 package org.jacop.set.constraints;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.concurrent.atomic.AtomicInteger;
-
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Constraint;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Store;
-import org.jacop.core.ValueEnumeration;
-import org.jacop.core.Var;
+import org.jacop.core.*;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
+
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- *
- * It computes a weighted sum of the elements in the domain of the given set variable. 
- * The sum must be equal to the specified sum variable. 
+ * It computes a weighted sum of the elements in the domain of the given set variable.
+ * The sum must be equal to the specified sum variable.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.4
  */
 
-public class SumWeightedSet extends Constraint {
+public class SumWeightedSet extends Constraint implements SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -92,14 +88,15 @@ public class SumWeightedSet extends Constraint {
     /**
      * It constructs a weighted set sum constraint.
      *
-     * @param a a set variable for which the weighted sum of its element is computed.
-     * @param elements it specifies the elements which are allowed and for which the weight is specified.
-     * @param weights the weight for each element present in a.lub().
+     * @param a           a set variable for which the weighted sum of its element is computed.
+     * @param elements    it specifies the elements which are allowed and for which the weight is specified.
+     * @param weights     the weight for each element present in a.lub().
      * @param totalWeight an integer variable equal to the total weight of the elements in set variable a.
      */
     public SumWeightedSet(SetVar a, int[] elements, int[] weights, IntVar totalWeight) {
 
-        checkInputForNullness(new String[]{"a", "elements", "weights", "totalWeight"}, new Object[][]{{a}, {elements}, {weights}, {totalWeight}});
+        checkInputForNullness(new String[] {"a", "elements", "weights", "totalWeight"},
+            new Object[][] {{a}, {elements}, {weights}, {totalWeight}});
 
         this.numberId = idNumber.incrementAndGet();
 
@@ -127,7 +124,7 @@ public class SumWeightedSet extends Constraint {
      * It constructs a weighted set sum constraint. This constructor assumes that every element
      * within a set variable has a weight equal to its value.
      *
-     * @param a set variable being used in weighted set constraint.
+     * @param a           set variable being used in weighted set constraint.
      * @param totalWeight integer variable containing information about total weight of the elements in set variable a.
      */
     public SumWeightedSet(SetVar a, IntVar totalWeight) {
@@ -138,8 +135,8 @@ public class SumWeightedSet extends Constraint {
      * It constructs a weighted set sum constraint. This constructor assumes that every element
      * within a set variable has a weight equal to its value.
      *
-     * @param a set variable being used in weighted set constraint.
-     * @param weights it specifies a weight for each possible element of a set variable.
+     * @param a           set variable being used in weighted set constraint.
+     * @param weights     it specifies a weight for each possible element of a set variable.
      * @param totalWeight integer variable containing information about total weight of the elements in set variable a.
      */
     public SumWeightedSet(SetVar a, int[] weights, IntVar totalWeight) {
@@ -287,17 +284,14 @@ public class SumWeightedSet extends Constraint {
 
     @Override public boolean satisfied() {
 
-        if (!totalWeight.singleton())
+        if (!grounded())
             return false;
 
-        if (a.singleton()) {
-            ValueEnumeration enumer = a.domain.glb().valueEnumeration();
-            int sum = 0;
-            while (enumer.hasMoreElements())
-                sum += elementWeights.get(enumer.nextElement());
-            return totalWeight.value() == sum;
-        } else
-            return false;
+        ValueEnumeration enumer = a.domain.glb().valueEnumeration();
+        int sum = 0;
+        while (enumer.hasMoreElements())
+            sum += elementWeights.get(enumer.nextElement());
+        return totalWeight.value() == sum;
 
     }
 
@@ -307,19 +301,18 @@ public class SumWeightedSet extends Constraint {
 
         ret.append(" : SumWeightedSet(" + a + ", < ");
         for (Map.Entry<Integer, Integer> entries : elementWeights.entrySet()) {
-	    int el = entries.getKey();
+            int el = entries.getKey();
             int weight = entries.getValue();
             ret.append("<" + el + "," + weight + "> ");
         }
-        ret.append( ">, ");
+        ret.append(">, ");
         if (totalWeight.singleton()) {
-	  ret.append(totalWeight.min() + " )");
-	  return ret.toString();
-	}
-        else {
-	  ret.append(totalWeight.dom() + " )");
-	  return ret.toString();
-	}
+            ret.append(totalWeight.min() + " )");
+            return ret.toString();
+        } else {
+            ret.append(totalWeight.dom() + " )");
+            return ret.toString();
+        }
     }
 
 }

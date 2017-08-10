@@ -34,6 +34,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
@@ -51,7 +52,7 @@ import org.jacop.core.*;
  * @version 4.4
  */
 
-public class GCC extends Constraint implements UsesQueueVariable, Stateful {
+public class GCC extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
     /**
      * @todo An improvement to increase the incrementality even further.
@@ -508,17 +509,8 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful {
 
     @Override public boolean satisfied() {
 
-        for (Var xVar : x) {
-            if (!xVar.singleton()) {
-                return false;
-            }
-        }
-
-        for (Var y : counters) {
-            if (!y.singleton()) {
-                return false;
-            }
-        }
+        if (!grounded())
+            return false;
 
         int count[] = new int[domainHash.length];
 

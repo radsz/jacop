@@ -351,7 +351,7 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
     }
 
     @Override public boolean satisfied() {
-        return x.singleton() && y.singleton() && (x.min() == y.min() || -x.min() == y.min());
+        return grounded() && (x.min() == y.min() || -x.min() == y.min());
     }
 
     @Override public String toString() {

@@ -117,10 +117,6 @@ public class EquationSystem extends Constraint {
         store.countConstraint();
     }
 
-    @Override public boolean satisfied() {
-        return false;
-    }
-
     @Override public String toString() {
 
         StringBuffer result = new StringBuffer(id());

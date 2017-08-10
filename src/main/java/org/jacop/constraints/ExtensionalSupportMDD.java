@@ -32,6 +32,7 @@ package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -58,7 +59,7 @@ import org.jacop.util.SparseSet;
  * @version 2.3
  */
 
-public class ExtensionalSupportMDD extends Constraint {
+public class ExtensionalSupportMDD extends Constraint implements SatisfiedPresent {
 
     /**
      * It specifies if the debugging information is printed.

@@ -130,7 +130,7 @@ public class AeqB extends PrimitiveConstraint {
 
     @Override public boolean satisfied() {
 
-        if (a.singleton() && b.singleton() && a.domain.glb().eq(b.domain.glb()))
+        if (grounded() && a.domain.glb().eq(b.domain.glb()))
             return true;
 
         return false;

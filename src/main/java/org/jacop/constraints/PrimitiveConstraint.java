@@ -30,6 +30,7 @@
 
 package org.jacop.constraints;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.StoreAware;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -46,7 +47,7 @@ import java.util.Hashtable;
  * @version 4.4
  */
 
-public abstract class PrimitiveConstraint extends Constraint implements StoreAware {
+public abstract class PrimitiveConstraint extends Constraint implements StoreAware, SatisfiedPresent {
 
     /**
      * It specifies the events which must occur for notConsistency()
@@ -191,5 +192,15 @@ public abstract class PrimitiveConstraint extends Constraint implements StoreAwa
         if (constraintScope != null)
             constraintScope.stream().forEach( i -> i.include(store));
     };
+
+    /**
+     * It checks if the constraint is satisfied. If this function is incorrectly
+     * implemented a constraint may not be satisfied in a solution.
+     * PrimitiveConstraint requires that this function returns correct value when
+     * all variables within a scope are grounded.
+     *
+     * @return true if the constraint is for certain satisfied, false otherwise.
+     */
+    abstract public boolean satisfied();
 
 }

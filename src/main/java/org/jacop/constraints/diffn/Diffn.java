@@ -647,4 +647,15 @@ public class Diffn extends Nooverlap {
         }
         return result.append("], " + strict + ")").toString();
     }
+
+    /**
+     * Using satisfied from Nooverlap seems to be inapropriate for some reasons, therefore
+     * always returning false to prevent computation of satisfaction based on this satisfied.
+     *
+     * @return always false.
+     */
+    @Override public boolean satisfied() {
+        return false;
+    }
+
 }

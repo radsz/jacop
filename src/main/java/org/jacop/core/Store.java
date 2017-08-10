@@ -204,15 +204,6 @@ public class Store {
     public boolean raiseLevelBeforeConsistency = false;
 
     /**
-     * It specifies if evaluated constraint should be checked for satisfiability
-     * and removed if it occurs. This checks costs time but can significantly
-     * reduce execution time.
-     */
-
-    protected boolean removeConstraints = false;
-
-
-    /**
      * It specifies if the weight of variables which are in the scope of the failure
      * constraint should be increased.
      */
@@ -537,11 +528,6 @@ public class Store {
                         numberConsistencyCalls++;
                         currentConstraint.consistency(this);
 
-                        if (removeConstraints && currentConstraint.satisfied()) {
-
-                            currentConstraint.removeConstraint();
-                        }
-
                     }
 
                 currentQueue++;
@@ -652,16 +638,6 @@ public class Store {
      * @param path path pointing at a file
      * @param filename
      */
-
-
-    /**
-     * If a constraint is checked for satisfiability and it is satisfied then
-     * it will not be attached to a variable anymore.
-     * @return true if constraints are checked for satisfiability.
-     */
-    public boolean getCheckSatisfiability() {
-        return removeConstraints;
-    }
 
     /**
      * This function returns the constraint which is currently reevaluated. It
@@ -1068,15 +1044,6 @@ public class Store {
 
         assert checkInvariants() == null : checkInvariants();
 
-    }
-
-    /**
-     * It decides if constraints are checked for satisfiability. If a constraint
-     * is satisfied then it will not be attached to a variable anymore.
-     * @param value boolean value specifying if check for satisfiability should be performed.
-     */
-    public void setCheckSatisfiability(boolean value) {
-        removeConstraints = value;
     }
 
     /**

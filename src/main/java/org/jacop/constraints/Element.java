@@ -154,10 +154,6 @@ public class Element extends Constraint implements UsesQueueVariable {
         c.removeConstraint();
     }
 
-    @Override public boolean satisfied() {
-        return c.satisfied();
-    }
-
     @Override public String toString() {
         return c.toString();
     }

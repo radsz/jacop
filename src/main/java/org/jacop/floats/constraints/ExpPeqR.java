@@ -32,6 +32,7 @@ package org.jacop.floats.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 
@@ -50,7 +51,7 @@ import org.jacop.floats.core.InternalException;
  * @version 4.4
  */
 
-public class ExpPeqR extends Constraint {
+public class ExpPeqR extends Constraint implements SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -134,7 +135,7 @@ public class ExpPeqR extends Constraint {
     }
 
     @Override public boolean satisfied() {
-        return p.singleton() && q.singleton() && java.lang.Math.exp(p.min()) - q.max() <= FloatDomain.precision();
+        return grounded() && java.lang.Math.exp(p.min()) - q.max() <= FloatDomain.precision();
     }
 
     @Override public int getDefaultConsistencyPruningEvent() {

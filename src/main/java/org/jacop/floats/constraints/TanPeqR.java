@@ -32,6 +32,7 @@ package org.jacop.floats.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 
@@ -50,7 +51,7 @@ import org.jacop.floats.core.FloatInterval;
  * @version 4.4
  */
 
-public class TanPeqR extends Constraint {
+public class TanPeqR extends Constraint implements SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -258,7 +259,7 @@ public class TanPeqR extends Constraint {
 
     @Override public boolean satisfied() {
 
-        if (p.singleton() && q.singleton()) {
+        if (grounded()) {
             double tanMin = Math.tan(p.min()), tanMax = Math.tan(p.max());
 
             FloatInterval minDiff = (tanMin < q.min()) ? new FloatInterval(tanMin, q.min()) : new FloatInterval(q.min(), tanMin);

@@ -149,7 +149,7 @@ public class XplusYplusQeqZ extends PrimitiveConstraint {
     }
 
     @Override public boolean satisfied() {
-        return x.singleton() && y.singleton() && q.singleton() && z.singleton() && x.min() + y.min() + q.min() == z.min();
+        return grounded() && x.min() + y.min() + q.min() == z.min();
     }
 
     @Override public String toString() {

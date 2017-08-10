@@ -34,6 +34,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
@@ -48,7 +49,7 @@ import org.jacop.core.*;
  * @version 4.4
  */
 
-public class Assignment extends Constraint implements UsesQueueVariable, Stateful {
+public class Assignment extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -296,6 +297,29 @@ public class Assignment extends Constraint implements UsesQueueVariable, Statefu
         }
 
     }
+
+    @Override public boolean satisfied() {
+
+        if (! grounded() )
+            return false;
+
+        for (int i = 0; i < x.length; i++) {
+                int position = x[i].value() - shiftD;
+                if ( d[position].value() != i + shiftX) {
+                    return false;
+                }
+        }
+
+        for (int i = 0; i < d.length; i++) {
+                if (x[d[i].value() - shiftX].value() != i + shiftD) {
+                    return false;
+                }
+        }
+
+        return true;
+
+    }
+
 
     public int getDefaultConsistencyPruningEvent() {
         return IntDomain.ANY;

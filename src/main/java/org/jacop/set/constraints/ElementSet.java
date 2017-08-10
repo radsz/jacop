@@ -30,6 +30,7 @@
 
 package org.jacop.set.constraints;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.*;
 import org.jacop.set.core.SetDomain;
@@ -50,7 +51,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @version 4.4
  */
 
-public class ElementSet extends Constraint {
+public class ElementSet extends Constraint implements SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -181,7 +182,7 @@ public class ElementSet extends Constraint {
     }
 
     @Override public boolean satisfied() {
-        return value.singleton() && index.singleton() && list[index.domain.min() - 1 - indexOffset].eq(value.domain.glb());
+        return grounded() && list[index.domain.min() - 1 - indexOffset].eq(value.domain.glb());
     }
 
     @Override public String toString() {

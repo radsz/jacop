@@ -32,6 +32,7 @@ package org.jacop.floats.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
@@ -53,7 +54,7 @@ import org.jacop.floats.core.InternalException;
  * @version 4.4
  */
 
-public class SinPeqR extends Constraint implements Stateful {
+public class SinPeqR extends Constraint implements Stateful, SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -334,15 +335,17 @@ public class SinPeqR extends Constraint implements Stateful {
 
     @Override public boolean satisfied() {
 
-        if (p.singleton() && q.singleton()) {
+        if (grounded()) {
             double sinMin = Math.sin(p.min()), sinMax = Math.sin(p.max());
 
             FloatInterval minDiff = (sinMin < q.min()) ? new FloatInterval(sinMin, q.min()) : new FloatInterval(q.min(), sinMin);
             FloatInterval maxDiff = (sinMax < q.max()) ? new FloatInterval(sinMax, q.max()) : new FloatInterval(q.max(), sinMax);
 
             return minDiff.singleton() && maxDiff.singleton();
-        } else
+
+        } else {
             return false;
+        }
     }
 
 

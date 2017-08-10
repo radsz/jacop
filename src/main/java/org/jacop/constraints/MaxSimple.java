@@ -32,6 +32,7 @@ package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -46,7 +47,7 @@ import org.jacop.core.Store;
  * @version 4.4
  */
 
-public class MaxSimple extends Constraint {
+public class MaxSimple extends Constraint implements SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 

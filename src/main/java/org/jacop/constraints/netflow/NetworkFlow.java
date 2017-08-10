@@ -307,11 +307,6 @@ public class NetworkFlow extends Constraint implements UsesQueueVariable, Statef
 
     }
 
-    @Override public boolean satisfied() {
-        // TODO Auto-generated method stub
-        return false;
-    }
-
     /*************/
     /** Cleanup **/
 

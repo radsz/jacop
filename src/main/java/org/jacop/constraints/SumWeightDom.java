@@ -35,6 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
 
@@ -53,7 +54,7 @@ import org.jacop.core.*;
 /**
  * @deprecated As of release 4.3.1 replaced by LinearIntDom constraint.
  */
-@Deprecated public class SumWeightDom extends Constraint implements UsesQueueVariable {
+@Deprecated public class SumWeightDom extends Constraint implements UsesQueueVariable, SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 

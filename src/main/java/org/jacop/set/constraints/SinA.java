@@ -122,7 +122,7 @@ public class SinA extends PrimitiveConstraint {
     }
 
     @Override public boolean satisfied() {
-        return a.domain.lub().lex(set) < 0 && a.singleton();
+        return grounded() && a.domain.lub().lex(set) < 0;
     }
 
     @Override public String toString() {

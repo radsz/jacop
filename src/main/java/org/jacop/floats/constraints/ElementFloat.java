@@ -34,6 +34,7 @@ package org.jacop.floats.constraints;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
@@ -58,7 +59,7 @@ import org.jacop.floats.core.FloatIntervalDomain;
  * @version 4.4
  */
 
-public class ElementFloat extends Constraint implements UsesQueueVariable, Stateful {
+public class ElementFloat extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 

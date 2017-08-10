@@ -846,7 +846,6 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful {
 
     }
 
-
     @Override public void consistency(Store store) {
 
         if (firstConsistencyCheck) {

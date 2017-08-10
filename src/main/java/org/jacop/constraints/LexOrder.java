@@ -30,6 +30,7 @@
 
 package org.jacop.constraints;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
 import org.jacop.util.SimpleHashSet;
@@ -54,7 +55,7 @@ import java.util.stream.Stream;
  * @version 4.4
  */
 
-public class LexOrder extends Constraint implements UsesQueueVariable {
+public class LexOrder extends Constraint implements UsesQueueVariable, SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 

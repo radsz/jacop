@@ -34,6 +34,7 @@ package org.jacop.constraints.binpacking;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
@@ -54,7 +55,7 @@ import java.util.stream.Stream;
  * @version 4.4
  */
 
-public class Binpacking extends Constraint implements UsesQueueVariable, Stateful {
+public class Binpacking extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -372,13 +373,11 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
     }
 
     @Override public boolean satisfied() {
-        boolean allBinsSingleton = true;
 
-        int i = 0;
-        while (i < item.length && allBinsSingleton)
-            allBinsSingleton = item[i++].bin.singleton();
+        if (!grounded())
+            return false;
 
-        return allBinsSingleton;
+        return false;
 
     }
 

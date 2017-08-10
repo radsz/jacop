@@ -32,6 +32,7 @@ package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -46,7 +47,7 @@ import org.jacop.core.Store;
  * @version 4.4
  */
 
-public class MinSimple extends Constraint {
+public class MinSimple extends Constraint implements SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -110,7 +111,7 @@ public class MinSimple extends Constraint {
         return IntDomain.BOUND;
     }
 
-    @Override public boolean satisfied() {
+    public boolean satisfied() {
 
         int MIN = min.max();
         boolean sat = x1.min() >= MIN && x2.min() >= MIN;

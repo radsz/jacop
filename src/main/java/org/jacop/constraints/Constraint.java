@@ -246,12 +246,11 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     ;
 
     /**
-     * It checks if the constraint is satisfied. If this function is incorrectly
-     * implemented a constraint may not be satisfied in a solution.
+     * It checks if the constraint has all variables in its scope grounded (singletons).
      *
-     * @return true if the constraint is for certain satisfied, false otherwise.
+     * @return true if all variables in constraint scope are singletons, false otherwise.
      */
-    public boolean satisfied() {
+    public boolean grounded() {
         return !arguments().stream().filter(i -> !i.singleton()).findFirst().isPresent();
     }
 

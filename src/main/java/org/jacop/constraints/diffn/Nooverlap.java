@@ -31,6 +31,7 @@
 
 package org.jacop.constraints.diffn;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -50,7 +51,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @version 4.5
  */
 
-public class Nooverlap extends Constraint {
+public class Nooverlap extends Constraint implements SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 

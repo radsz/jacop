@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.BoundDomain;
 import org.jacop.core.IntervalDomain;
@@ -52,7 +53,7 @@ import org.jacop.core.Var;
  * @version 4.4
  */
 
-public class ArgMin extends Constraint {
+public class ArgMin extends Constraint implements SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -239,6 +240,9 @@ public class ArgMin extends Constraint {
     @Override public boolean satisfied() {
 
         boolean sat = minIndex.singleton();
+
+        if (!sat)
+            return false;
 
         int MIN = list[minIndex.value() - 1 - indexOffset].value();
         int i = 0, eq = 0;

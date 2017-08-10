@@ -143,12 +143,7 @@ public class AeqS extends PrimitiveConstraint {
     }
 
     @Override public boolean satisfied() {
-
-        if (a.domain.singleton(set))
-            return true;
-
-        return false;
-
+        return a.domain.singleton(set);
     }
 
     @Override protected int getDefaultNestedNotConsistencyPruningEvent() {

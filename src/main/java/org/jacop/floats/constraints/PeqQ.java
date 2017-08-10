@@ -122,7 +122,7 @@ public class PeqQ extends PrimitiveConstraint {
     }
 
     @Override public boolean satisfied() {
-        return p.singleton() && q.singleton() && java.lang.Math.abs(p.min() - q.max()) <= FloatDomain.precision()
+        return grounded() && java.lang.Math.abs(p.min() - q.max()) <= FloatDomain.precision()
             && java.lang.Math.abs(p.max() - q.min()) <= FloatDomain.precision();
     }
 

@@ -136,8 +136,7 @@ public class XmulCeqZ extends PrimitiveConstraint {
     }
 
     @Override public boolean satisfied() {
-        IntDomain Xdom = x.dom(), Zdom = z.dom();
-        return Xdom.singleton() && Zdom.singleton() && Xdom.min() * c == Zdom.min();
+        return grounded() && x.min() * c == z.min();
     }
 
     @Override public boolean notSatisfied() {

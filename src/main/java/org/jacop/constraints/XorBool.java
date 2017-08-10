@@ -235,12 +235,8 @@ public class XorBool extends PrimitiveConstraint {
 
     @Override public boolean satisfied() {
 
-        if (!y.singleton())
+        if (! grounded() )
             return false;
-        else
-            for (IntVar e : x)
-                if (!e.singleton())
-                    return false;
 
         int sum = 0;
         for (IntVar e : x)

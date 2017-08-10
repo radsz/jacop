@@ -30,6 +30,7 @@
 
 package org.jacop.set.constraints;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.*;
 import org.jacop.set.core.SetDomain;
@@ -47,7 +48,7 @@ import java.util.stream.Stream;
  * @version 4.4
  */
 
-public class Match extends Constraint {
+public class Match extends Constraint implements SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -201,22 +202,23 @@ public class Match extends Constraint {
 
     @Override public boolean satisfied() {
 
-        if (a.domain.glb().getSize() == list.length && a.singleton()) {
+        if (! grounded() )
+            return false;
+
+        if (a.domain.glb().getSize() == list.length ) {
 
             ValueEnumeration ve = a.domain.glb().valueEnumeration();
 
             for (int i = 0; i < list.length; i++) {
-                if (!list[i].singleton())
-                    return false;
-                if (ve.nextElement() != list[i].min())
+                if (ve.nextElement() != list[i].value())
                     return false;
             }
 
             return true;
 
+        } else {
+            return false;
         }
-
-        return false;
 
     }
 

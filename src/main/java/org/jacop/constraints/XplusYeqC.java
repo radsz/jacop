@@ -148,10 +148,7 @@ public class XplusYeqC extends PrimitiveConstraint {
     }
 
     @Override public boolean satisfied() {
-        IntDomain Xdom = x.dom(), Ydom = y.dom();
-
-        return (Xdom.singleton() && Ydom.singleton() && (Xdom.min() + Ydom.min() == c));
-
+        return (grounded() && (x.min() + y.min() == c));
     }
 
     @Override public String toString() {

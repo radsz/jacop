@@ -32,6 +32,7 @@ package org.jacop.floats.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
@@ -49,7 +50,7 @@ import org.jacop.floats.core.FloatVar;
  * @version 4.4
  */
 
-public class AbsPeqR extends Constraint implements Stateful {
+public class AbsPeqR extends Constraint implements Stateful, SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -143,7 +144,7 @@ public class AbsPeqR extends Constraint implements Stateful {
     }
 
     @Override public boolean satisfied() {
-        return p.singleton() && q.singleton() && (p.min() == q.min() || -p.min() == q.min());
+        return grounded() && (p.min() == q.min() || -p.min() == q.min());
     }
 
 

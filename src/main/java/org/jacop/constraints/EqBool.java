@@ -209,6 +209,9 @@ public class EqBool extends PrimitiveConstraint {
 
     @Override public boolean satisfied() {
 
+        if (! result.singleton())
+            return false;
+
         if (result.max() == 0) {
 
             int x1 = 0, x0 = 0;
@@ -230,20 +233,26 @@ public class EqBool extends PrimitiveConstraint {
 
             if (result.min() == 1) {
 
+                if (! grounded() )
+                    return false;
+
                 for (int i = 0; i < list.length - 1; i++)
-                    if (!list[i].singleton() || !list[i + 1].singleton() || list[i].value() != list[i + 1].value())
+                    if (list[i].value() != list[i + 1].value())
                         return false;
 
                 return true;
+            } else {
+                return false;
             }
 
         }
 
-        return false;
-
     }
 
     @Override public boolean notSatisfied() {
+
+        if (! result.singleton())
+            return false;
 
         if (result.max() == 0) {
 

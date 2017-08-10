@@ -3,6 +3,7 @@ package org.jacop.satwrapper;
 import java.io.BufferedWriter;
 import java.util.*;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
@@ -49,7 +50,7 @@ import org.jacop.satwrapper.translation.SimpleCpVarDomain;
  * @author simon
  */
 public final class SatWrapper extends Constraint implements ConflictListener, ExplanationListener, StartStopListener, SolutionListener,
-    Stateful {
+    Stateful, SatisfiedPresent {
 
     // empty == true if no cluases has been added
     boolean empty = true;
@@ -519,7 +520,7 @@ public final class SatWrapper extends Constraint implements ConflictListener, Ex
         core = null;  // garbage collect
     }
 
-    @Override public boolean satisfied() {
+    public boolean satisfied() {
         return (hasSolution || core.currentState == SolverState.SATISFIABLE);
     }
 

@@ -633,7 +633,7 @@ public class PerfectSquare extends ExampleFD {
         // more than Diffn.
         store.impose(new Geost(objects, constraints, shapes));
         // the main pruning component still.
-        store.impose(new Diffn(rectangles));
+        store.impose(new Diffn(rectangles, false));
 
 		/*
 		// starts, durations, resources, limit

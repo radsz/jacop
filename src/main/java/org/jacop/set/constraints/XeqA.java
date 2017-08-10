@@ -172,7 +172,7 @@ public class XeqA extends PrimitiveConstraint {
     }
 
     @Override public boolean satisfied() {
-        return (x.singleton() && a.singleton() && a.domain.card().max() == 1 && a.domain.glb().min() == x.value());
+        return grounded() && a.domain.card().max() == 1 && a.domain.glb().min() == x.value();
     }
 
     @Override public int getNestedPruningEvent(Var var, boolean mode) {

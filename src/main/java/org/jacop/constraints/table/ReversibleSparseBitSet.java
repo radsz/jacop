@@ -31,9 +31,9 @@
 
 package org.jacop.constraints.table;
 
+import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
-import org.jacop.core.IntVar;
 
 /**
  * ReversibleSparseBitSet implements the main data structure for table constraint.
@@ -42,165 +42,164 @@ import org.jacop.core.IntVar;
  * @version 4.5
  */
 
-public class ReversibleSparseBitSet  {
+public class ReversibleSparseBitSet {
 
     TimeStamp<long[]> words;
     private int[] index;
     private TimeStamp<Integer> limit;
     private long[] mask;
-    
+
     public ReversibleSparseBitSet() {
     }
 
-    @SuppressWarnings("unchecked")
-    public ReversibleSparseBitSet(Store store, IntVar[] x, int[][] tuple) {
+    @SuppressWarnings("unchecked") public ReversibleSparseBitSet(Store store, IntVar[] x, int[][] tuple) {
 
-    	int n = tuple.length;
-    	int lastWordSize = n % 64;
-    	int numberBitSets = n / 64 + ( (lastWordSize != 0) ? 1 : 0);
+        int n = tuple.length;
+        int lastWordSize = n % 64;
+        int numberBitSets = n / 64 + ((lastWordSize != 0) ? 1 : 0);
 
-    	long[] bs = new long[numberBitSets];
-    	for (int i = 0; i < n; i++) 
-    	    if (validTuple(x, tuple[i])) 
-    		setBit(i, bs);
+        long[] bs = new long[numberBitSets];
+        for (int i = 0; i < n; i++)
+            if (validTuple(x, tuple[i]))
+                setBit(i, bs);
 
-    	init(store, bs);
-	
+        init(store, bs);
+
     }
 
     void init(Store store, long[] w) {
-	int n = w.length;
-	
-	limit = new TimeStamp<Integer>(store, n-1);
+        int n = w.length;
 
-	words = new TimeStamp<long[]>(store, w);
-	    
-	index = new int[n];
-	for (int i = 0; i < n; i++) 
-	    index[i] = i;
+        limit = new TimeStamp<Integer>(store, n - 1);
 
-	mask = new long[n];
+        words = new TimeStamp<long[]>(store, w);
+
+        index = new int[n];
+        for (int i = 0; i < n; i++)
+            index[i] = i;
+
+        mask = new long[n];
     }
-    
+
     private long[] setBit(int n, long[] a) {
 
-	int l = n % 64;
-	int m = n / 64;
+        int l = n % 64;
+        int m = n / 64;
 
-	a[m] |= (1L << l);
-	
-	return a;
+        a[m] |= (1L << l);
+
+        return a;
     }
 
     private boolean validTuple(IntVar[] x, int[] t) {
 
-	int n = t.length;
-	int i=0;
-	while (i < n) {
-	    if (!x[i].dom().contains(t[i]))
-		return false;
-	    i++;
-	}
-	return true;
-    }	
-	
+        int n = t.length;
+        int i = 0;
+        while (i < n) {
+            if (!x[i].dom().contains(t[i]))
+                return false;
+            i++;
+        }
+        return true;
+    }
+
     boolean isEmpty() {
-	return limit.value() == -1;
+        return limit.value() == -1;
     }
 
     void clearMask() {
-	for (int i = 0; i < limit.value()+1; i++) {
-	    int offset = index[i];
-	    mask[offset] = 0;
-	}
+        for (int i = 0; i < limit.value() + 1; i++) {
+            int offset = index[i];
+            mask[offset] = 0;
+        }
     }
 
     void reverseMask() {
-	for (int i = 0; i < limit.value()+1; i++) {
-	    int offset = index[i];
-	    mask[offset] = ~ mask[offset];
-	}
+        for (int i = 0; i < limit.value() + 1; i++) {
+            int offset = index[i];
+            mask[offset] = ~mask[offset];
+        }
     }
 
     void addToMask(long[] m) {
-	for (int i = 0; i < limit.value()+1; i++) {
-	    int offset = index[i];
-	    mask[offset] = mask[offset] | m[offset];
-	}		
+        for (int i = 0; i < limit.value() + 1; i++) {
+            int offset = index[i];
+            mask[offset] = mask[offset] | m[offset];
+        }
     }
 
     void intersectWithMask() {
 
-	int n = limit.value();
-	long[] wrds = words.value();
-	long[] ws = new long[wrds.length];
-	boolean update = false;
-	System.arraycopy(wrds, 0, ws, 0, wrds.length);
-	int l = n;
-	
-	for (int i = n; i >= 0; i--) {
-	    int offset = index[i];
-	    long wOriginal = ws[offset];
-	    long w = wOriginal;
+        int n = limit.value();
+        long[] wrds = words.value();
+        long[] ws = new long[wrds.length];
+        boolean update = false;
+        System.arraycopy(wrds, 0, ws, 0, wrds.length);
+        int l = n;
 
-	    w &= mask[offset];
+        for (int i = n; i >= 0; i--) {
+            int offset = index[i];
+            long wOriginal = ws[offset];
+            long w = wOriginal;
 
-	    if (w != wOriginal) {
-		ws[offset] = w;
-		update = true;
-		if (w == 0) {
-		    index[i] = index[l];
-		    index[l] = offset;
-		    l--;
-		}
-	    }
-	}
+            w &= mask[offset];
 
-	if (update) {
-	    words.update(ws);
-	    if (l < n)
-		limit.update(l);
-	}
+            if (w != wOriginal) {
+                ws[offset] = w;
+                update = true;
+                if (w == 0) {
+                    index[i] = index[l];
+                    index[l] = offset;
+                    l--;
+                }
+            }
+        }
+
+        if (update) {
+            words.update(ws);
+            if (l < n)
+                limit.update(l);
+        }
     }
 
     int intersectIndex(long[] m) {
 
-	long[] wrds = words.value();
-	for (int i = 0; i < limit.value()+1; i++) {
-	    int offset = index[i];
-	    long w = wrds[offset];
+        long[] wrds = words.value();
+        for (int i = 0; i < limit.value() + 1; i++) {
+            int offset = index[i];
+            long w = wrds[offset];
 
-	    w &= m[offset];
-	    if (w != 0)
-		return offset;
-	}
-	return -1;
+            w &= m[offset];
+            if (w != 0)
+                return offset;
+        }
+        return -1;
     }
 
 
     int noWords() {
-    	return index.length; //words.value().length;
+        return index.length; //words.value().length;
     }
-    
+
     public String toString() {
-	StringBuffer s = new StringBuffer("words: ");
+        StringBuffer s = new StringBuffer("words: ");
 
-	long[] wrds = words.value();
-	int n = limit.value()+1;
-	s.append("limit = " + (n-1) +"\n");
-	for (int i = 0; i < n; i++) {
-	    int offset = index[i];
-	    s.append(offset+": ");
-	    s.append(String.format("0x%08X", wrds[offset]));
-	    if ( i < n-1)
-		s.append(", ");
-	}	
+        long[] wrds = words.value();
+        int n = limit.value() + 1;
+        s.append("limit = " + (n - 1) + "\n");
+        for (int i = 0; i < n; i++) {
+            int offset = index[i];
+            s.append(offset + ": ");
+            s.append(String.format("0x%08X", wrds[offset]));
+            if (i < n - 1)
+                s.append(", ");
+        }
 
-	s.append("\nmask: ");
-	for (int i = 0; i < mask.length; i++) {
-	    s.append(i+": ");
-	    s.append(String.format("0x%08X", mask[i])+", ");
-	}
-	return s.toString();
+        s.append("\nmask: ");
+        for (int i = 0; i < mask.length; i++) {
+            s.append(i + ": ");
+            s.append(String.format("0x%08X", mask[i]) + ", ");
+        }
+        return s.toString();
     }
 }

@@ -35,6 +35,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
@@ -57,7 +58,7 @@ import org.jacop.core.*;
  * @version 4.4
  */
 
-public class AmongVar extends Constraint implements UsesQueueVariable, Stateful {
+public class AmongVar extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
     /**
      * It turns out printing debugging information.

@@ -32,6 +32,7 @@ package org.jacop.floats.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
@@ -53,7 +54,7 @@ import org.jacop.floats.core.InternalException;
  * @version 4.4
  */
 
-public class CosPeqR extends Constraint implements Stateful {
+public class CosPeqR extends Constraint implements Stateful, SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -300,7 +301,7 @@ public class CosPeqR extends Constraint implements Stateful {
 
     @Override public boolean satisfied() {
 
-        if (p.singleton() && q.singleton()) {
+        if (grounded()) {
             double cosMin = Math.cos(p.min()), cosMax = Math.cos(p.max());
 
             FloatInterval minDiff = (cosMin < q.min()) ? new FloatInterval(cosMin, q.min()) : new FloatInterval(q.min(), cosMin);

@@ -160,12 +160,7 @@ public class AinB extends PrimitiveConstraint {
     }
 
     @Override public boolean satisfied() {
-
-        if (a.singleton() && b.singleton() && b.domain.contains(a.domain))
-            return true;
-        else
-            return false;
-
+        return grounded() && b.domain.contains(a.domain);
     }
 
     @Override protected int getDefaultNestedConsistencyPruningEvent() {

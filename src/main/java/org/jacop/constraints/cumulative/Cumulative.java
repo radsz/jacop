@@ -343,26 +343,6 @@ public class Cumulative extends CumulativeBasic {
             return ts;
     }
 
-
-
-    @Override public boolean satisfied() {
-
-        Task T;
-        boolean sat = true;
-
-        // expensive checking
-        if (limit.singleton()) {
-            int i = 0;
-            while (sat && i < taskNormal.length) {
-                T = taskNormal[i];
-                i++;
-                sat = sat && T.start.singleton() && T.dur.singleton() && T.res.singleton();
-            }
-            return sat;
-        } else
-            return false;
-    }
-
     @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
     }

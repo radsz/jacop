@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Constraint;
 
 import org.jacop.floats.core.FloatDomain;
@@ -55,7 +56,7 @@ import org.jacop.core.IntDomain;
  * @version 4.4
  */
 
-public class Max extends Constraint {
+public class Max extends Constraint implements SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 

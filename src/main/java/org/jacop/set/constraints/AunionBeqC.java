@@ -32,6 +32,7 @@ package org.jacop.set.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
@@ -49,7 +50,7 @@ import org.jacop.set.core.SetVar;
  * @version 4.4
  */
 
-public class AunionBeqC extends Constraint implements UsesQueueVariable {
+public class AunionBeqC extends Constraint implements UsesQueueVariable, SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -256,7 +257,7 @@ public class AunionBeqC extends Constraint implements UsesQueueVariable {
     }
 
     @Override public boolean satisfied() {
-        return (a.singleton() && b.singleton() && c.singleton() && a.domain.union(b.domain).eq(c.domain));
+        return grounded() && a.domain.union(b.domain).eq(c.domain);
     }
 
     @Override public String toString() {

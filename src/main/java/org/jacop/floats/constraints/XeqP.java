@@ -32,6 +32,7 @@ package org.jacop.floats.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -49,7 +50,7 @@ import org.jacop.floats.core.FloatVar;
  * @version 4.4
  */
 
-public class XeqP extends Constraint {
+public class XeqP extends Constraint implements SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -118,7 +119,7 @@ public class XeqP extends Constraint {
     }
 
     @Override public boolean satisfied() {
-        return x.singleton() && p.singleton() && x.min() <= p.max() && x.max() >= p.min();
+        return grounded() && x.min() <= p.max() && x.max() >= p.min();
     }
 
     @Override public String toString() {

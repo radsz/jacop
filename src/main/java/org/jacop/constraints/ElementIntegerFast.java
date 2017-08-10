@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -57,7 +58,7 @@ import org.jacop.core.TimeStamp;
  * @version 4.4
  */
 
-public class ElementIntegerFast extends Constraint implements Stateful {
+public class ElementIntegerFast extends Constraint implements Stateful, SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 

@@ -410,12 +410,6 @@ public class SumInt extends PrimitiveConstraint {
         return sMin >= sum.max() + b;
     }
 
-    @Override public void removeConstraint() {
-        for (Var v : x)
-            v.removeConstraint(this);
-        sum.removeConstraint(this);
-    }
-
     @Override public boolean satisfied() {
 
         return entailed(relationType);

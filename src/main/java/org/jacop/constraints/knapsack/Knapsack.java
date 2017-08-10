@@ -35,6 +35,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
@@ -62,7 +63,7 @@ import org.jacop.core.*;
  *
  */
 
-public class Knapsack extends Constraint implements UsesQueueVariable, Stateful {
+public class Knapsack extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 

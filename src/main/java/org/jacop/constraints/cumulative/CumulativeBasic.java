@@ -202,24 +202,6 @@ public class CumulativeBasic extends Constraint {
             t.res.domain.inMax(store.level, t.res, limitMax);
     }
 
-    @Override public boolean satisfied() {
-
-        Task t;
-        boolean sat = true;
-
-        // expensive checking
-        if (limit.singleton()) {
-            int i = 0;
-            while (sat && i < taskNormal.length) {
-                t = taskNormal[i];
-                i++;
-                sat = sat && t.start.singleton() && t.dur.singleton() && t.res.singleton();
-            }
-            return sat;
-        } else
-            return false;
-    }
-
     @Override public String toString() {
 
         StringBuffer result = new StringBuffer(id());

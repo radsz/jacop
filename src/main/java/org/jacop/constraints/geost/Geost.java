@@ -1803,17 +1803,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful {
 
     }
 
-    /**
-     * Geost is satisfied if all of its external constraints are satisfied.
-     */
-    @Override public boolean satisfied() {
-
-        if (variableObjectMap.size() != groundedVars.size())
-            return false;
-
-        return true;
-    }
-
     @Override public String toString() {
         //TODO, proper string representation of the constraint.
         return "Geost";

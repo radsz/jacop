@@ -34,6 +34,7 @@ package org.jacop.constraints;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
@@ -47,7 +48,7 @@ import org.jacop.core.*;
  * @version 3.1
  */
 
-public class Diff extends Constraint implements UsesQueueVariable, Stateful {
+public class Diff extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 

@@ -124,7 +124,7 @@ public class AinS extends PrimitiveConstraint {
 
     @Override public boolean satisfied() {
 
-        return a.domain.lub().lex(set) < 0 && a.singleton();
+        return grounded() && a.domain.lub().lex(set) < 0;
 
     }
 

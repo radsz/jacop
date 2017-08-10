@@ -173,23 +173,6 @@ class CumulativePrimary extends Constraint {
 
     }
 
-    @Override public boolean satisfied() {
-
-        Task t;
-        boolean sat = true;
-
-        // expensive checking
-        if (limit.singleton()) {
-            int i = 0;
-            while (sat && i < start.length) {
-                sat = sat && start[i].singleton();
-                i++;
-            }
-            return sat;
-        } else
-            return false;
-    }
-
     @Override public String toString() {
 
         StringBuffer result = new StringBuffer(id());

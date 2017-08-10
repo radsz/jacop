@@ -32,6 +32,7 @@ package org.jacop.set.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -47,7 +48,7 @@ import org.jacop.set.core.SetVar;
  * @version 3.1
  */
 
-public class CardAeqX extends Constraint {
+public class CardAeqX extends Constraint implements SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -139,7 +140,7 @@ public class CardAeqX extends Constraint {
     }
 
     @Override public boolean satisfied() {
-        return (a.singleton() && cardinality.singleton() && a.domain.card().eq(cardinality.dom()));
+        return (grounded() && a.domain.card().eq(cardinality.dom()));
     }
 
     @Override public String toString() {

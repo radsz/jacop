@@ -32,8 +32,10 @@ package org.jacop.constraints;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -51,7 +53,7 @@ import org.jacop.util.BipartiteGraphMatching;
  * @version 4.4
  */
 
-public class Values extends Constraint {
+public class Values extends Constraint implements SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -227,6 +229,16 @@ public class Values extends Constraint {
         }
 
     }
+
+    @Override public boolean satisfied() {
+
+        if (! grounded() )
+            return false;
+
+        return Arrays.stream(list).map( i -> i.value() ).collect(Collectors.toSet()).size() == count.value();
+
+    }
+
 
 }
 

@@ -33,6 +33,7 @@ package org.jacop.floats.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -52,7 +53,7 @@ import org.jacop.floats.core.FloatIntervalDomain;
  * @version 4.4
  */
 
-public class PmulQeqR extends Constraint {
+public class PmulQeqR extends Constraint implements SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -183,13 +184,12 @@ public class PmulQeqR extends Constraint {
 
     @Override public boolean satisfied() {
         FloatDomain pDom = p.dom(), qDom = q.dom(), rDom = r.dom();
-        return pDom.singleton() && qDom.singleton() && rDom.singleton() &&
-	  rDom.eq(FloatDomain.mulBounds(pDom.min(), pDom.max(), qDom.min(), qDom.max()));
+        return grounded() &&
+	          rDom.eq(FloatDomain.mulBounds(pDom.min(), pDom.max(), qDom.min(), qDom.max()));
 
     }
 
     @Override public String toString() {
-
         return id() + " : PmulQeqR(" + p + ", " + q + ", " + r + " )";
     }
 

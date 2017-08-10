@@ -138,9 +138,8 @@ public class XplusYplusCeqZ extends PrimitiveConstraint {
         return (x.max() + y.max() + c < z.min() || x.min() + y.min() + c > z.max());
     }
 
-    // TODO, QUESTION, satisfied always called after consistency so no need to check here more than singletons.
     @Override public boolean satisfied() {
-        return x.singleton() && y.singleton() && z.singleton() && x.min() + y.min() + c == z.min();
+        return grounded() && x.min() + y.min() + c == z.min();
     }
 
     @Override public String toString() {

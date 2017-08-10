@@ -33,6 +33,7 @@ package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
@@ -45,7 +46,7 @@ import org.jacop.core.Store;
  * @version 3.1
  */
 
-public class XdivYeqZ extends Constraint {
+public class XdivYeqZ extends Constraint implements SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -145,9 +146,7 @@ public class XdivYeqZ extends Constraint {
     }
 
     @Override public boolean satisfied() {
-        IntDomain xDom = z.dom(), yDom = y.dom(), zDom = x.dom();
-
-        return xDom.singleton() && yDom.singleton() && zDom.singleton() && zDom.min() == div(xDom.min(), yDom.min());
+        return grounded() && z.min() == div(x.min(), y.min());
     }
 
     @Override public String toString() {

@@ -366,4 +366,5 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
         }
         return s.toString();
     }
+
 }

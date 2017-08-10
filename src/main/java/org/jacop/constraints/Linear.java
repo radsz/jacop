@@ -35,6 +35,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
 
@@ -56,7 +57,7 @@ import java.util.Map;
 /**
  * @deprecated As of release 4.3.1 replaced by LinearInt constraint.
  */
-@Deprecated public class Linear extends Constraint implements UsesQueueVariable {
+@Deprecated public class Linear extends Constraint implements UsesQueueVariable, SatisfiedPresent {
 
     Store store;
 

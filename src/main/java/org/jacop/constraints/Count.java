@@ -31,14 +31,15 @@
 
 package org.jacop.constraints;
 
+import org.jacop.api.SatisfiedPresent;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
-
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Store;
 
 /**
  * Count constraint implements the counting over number of occurrences of
@@ -49,7 +50,7 @@ import org.jacop.core.Store;
  * @version 4.4
  */
 
-public class Count extends Constraint {
+public class Count extends Constraint implements SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -148,15 +149,15 @@ public class Count extends Constraint {
 
     @Override public boolean satisfied() {
 
+        if (!grounded())
+            return false;
+
         int countAll = 0;
 
-        if (counter.singleton()) {
-            for (IntVar v : list)
-                if (v.singleton(value))
-                    countAll++;
-            return (countAll == counter.min());
-        } else
-            return false;
+        for (IntVar v : list)
+            if (v.singleton(value))
+                countAll++;
+        return (countAll == counter.min());
     }
 
     @Override public String toString() {

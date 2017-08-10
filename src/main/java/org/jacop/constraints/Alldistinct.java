@@ -35,6 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 import com.sun.corba.se.spi.orbutil.fsm.State;
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
@@ -56,7 +57,7 @@ import org.jacop.util.SimpleHashSet;
  * @version 4.4
  */
 
-public class Alldistinct extends Constraint implements UsesQueueVariable, Stateful {
+public class Alldistinct extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
 	/* @todo implement in alldistinct remark, that only variable 
    * with domain of size smaller equal n (number

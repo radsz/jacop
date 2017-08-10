@@ -201,8 +201,7 @@ public class Xor extends PrimitiveConstraint {
     }
 
     @Override public boolean satisfied() {
-        IntDomain Bdom = b.dom();
-        return (Bdom.max() == 0 && c.satisfied()) || (Bdom.min() == 1 && c.notSatisfied());
+        return (b.max() == 0 && c.satisfied()) || (b.min() == 1 && c.notSatisfied());
     }
 
     @Override public String toString() {

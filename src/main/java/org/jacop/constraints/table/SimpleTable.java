@@ -31,18 +31,14 @@
 
 package org.jacop.constraints.table;
 
+import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.Stateful;
+import org.jacop.api.UsesQueueVariable;
+import org.jacop.constraints.Constraint;
+import org.jacop.core.*;
+
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.jacop.api.Stateful;
-import org.jacop.core.Store;
-import org.jacop.core.IntVar;
-import org.jacop.core.Var;
-import org.jacop.core.IntDomain;
-import org.jacop.core.ValueEnumeration;
-import org.jacop.constraints.Constraint;
-import org.jacop.core.TimeStamp;
-import org.jacop.api.UsesQueueVariable;
 
 /**
  * SimpleTable implements the table constraint using a method presented in
@@ -55,7 +51,7 @@ import org.jacop.api.UsesQueueVariable;
  * @version 4.5
  */
 
-public class SimpleTable extends Constraint implements UsesQueueVariable, Stateful {
+public class SimpleTable extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
     Store store;
 
@@ -102,28 +98,28 @@ public class SimpleTable extends Constraint implements UsesQueueVariable, Statef
     public SimpleTable(IntVar[] list, int[][] tuples) {
         this(list, tuples, false);
     }
-        /**
-         * It constructs a table constraint.
-         *
-         * @param list   the variables in the scope of the constraint.
-         * @param tuples the tuples which define allowed values.
-         * @param reuseTupleArguments specifies if the tuples argument should be used directly without copying.               
-         */
+
+    /**
+     * It constructs a table constraint.
+     *
+     * @param list                the variables in the scope of the constraint.
+     * @param tuples              the tuples which define allowed values.
+     * @param reuseTupleArguments specifies if the tuples argument should be used directly without copying.
+     */
     public SimpleTable(IntVar[] list, int[][] tuples, boolean reuseTupleArguments) {
 
-        checkInputForNullness(new String[]{"list", "tuples"}, new Object[][]{list, tuples});
+        checkInputForNullness(new String[] {"list", "tuples"}, new Object[][] {list, tuples});
         checkInput(tuples, i -> i.length == list.length, "tuple need to have the same size as list argument.");
-        
+
         if (tuples.length > 64)
             throw new IllegalArgumentException("\nSimpleTable: number of tuples must be <= 64; is " + tuples.length);
-        
+
         this.x = Arrays.copyOf(list, list.length);
         varMap = Var.positionMapping(list, false, this.getClass());
-        
+
         if (reuseTupleArguments) {
             this.tuple = tuples;
-        }
-        else {
+        } else {
             this.tuple = new int[tuples.length][list.length];
             for (int i = 0; i < tuples.length; i++) {
                 this.tuple[i] = Arrays.copyOf(tuples[i], list.length);
@@ -155,7 +151,6 @@ public class SimpleTable extends Constraint implements UsesQueueVariable, Statef
 
     @Override public void impose(Store store) {
         this.store = store;
-        // store.registerRemoveLevelLateListener(this);
 
         super.impose(store);
 
@@ -292,7 +287,30 @@ public class SimpleTable extends Constraint implements UsesQueueVariable, Statef
     }
 
     @Override public void queueVariable(int level, Var v) {
-            variableQueue.add((IntVar) v);
+        variableQueue.add((IntVar) v);
+    }
+
+    @Override public boolean satisfied() {
+
+        if (!grounded())
+            return false;
+
+        long wrds = words.value();
+        for (int i = 0; i < x.length; i++) {
+                int el = x[i].value();
+                Long bs = supports[i].get(el);
+                if (bs != null) {
+                    if ((wrds & bs.longValue()) == 0L) {
+                        return false;
+                    }
+                } else {
+                    return false;
+                }
+
+        }
+
+        return true;
+
     }
 
     public void removeLevel(int level) {

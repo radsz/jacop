@@ -35,6 +35,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
@@ -50,7 +51,7 @@ import org.jacop.core.Var;
  * @version 4.4
  */
 
-public class Cumulative extends Constraint {
+public class Cumulative extends Constraint implements SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -1136,17 +1137,12 @@ public class Cumulative extends Constraint {
             else
                 return false;
         } else {
-            // expensive checking
-            if (limit.singleton()) {
-                int i = 0;
-                while (sat && i < Ts.length) {
-                    Task t = Ts[i];
-                    i++;
-                    sat = sat && t.start.singleton() && t.dur.singleton() && t.res.singleton();
-                }
-                return sat;
-            } else
+
+            if ( ! grounded() )
                 return false;
+
+            return false;
+
         }
     }
 

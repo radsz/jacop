@@ -33,6 +33,7 @@ package org.jacop.floats.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 
@@ -51,7 +52,7 @@ import org.jacop.floats.core.FloatIntervalDomain;
  * @version 4.4
  */
 
-public class PmulCeqR extends Constraint {
+public class PmulCeqR extends Constraint implements SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -116,7 +117,7 @@ public class PmulCeqR extends Constraint {
 
     @Override public boolean satisfied() {
         FloatDomain pDom = p.dom(), rDom = r.dom();
-        return pDom.singleton() && rDom.singleton() &&
+        return grounded() &&
                rDom.eq(FloatDomain.mulBounds(pDom.min(), pDom.max(), c, c));
     }
 

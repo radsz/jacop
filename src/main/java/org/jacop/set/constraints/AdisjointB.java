@@ -32,6 +32,7 @@ package org.jacop.set.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.Store;
 import org.jacop.api.UsesQueueVariable;
@@ -47,7 +48,7 @@ import org.jacop.set.core.SetVar;
  * @version 4.4
  */
 
-public class AdisjointB extends Constraint implements UsesQueueVariable {
+public class AdisjointB extends Constraint implements UsesQueueVariable, SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
