@@ -202,19 +202,15 @@ public class Sum extends Constraint implements SatisfiedPresent {
     }
 
     @Override public boolean satisfied() {
-        boolean sat = sum.singleton();
 
-        int i = list.length - 1, sumAll = 0;
+        if (! grounded() )
+            return false;
 
-        while (sat && i >= 0) {
-            sat = list[i].singleton();
-            i--;
-        }
-        if (sat) {
-            for (IntVar v : list)
+        int sumAll = 0;
+        for (IntVar v : list)
                 sumAll += v.min();
-        }
-        return (sat && sumAll == sum.min());
+
+        return sumAll == sum.min();
     }
 
     void checkForOverflow() {

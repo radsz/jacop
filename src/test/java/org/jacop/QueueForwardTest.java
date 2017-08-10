@@ -180,4 +180,12 @@ public class QueueForwardTest {
 
     }
 
+    @Test public void testWolfCabbage() {
+
+        Fz2jacop fz2jacop = new Fz2jacop();
+
+        // Just checking if does not throw an exception.
+        fz2jacop.main(new String[] {"-sat", "src/test/fz/wolf_goat_cabbage.fzn"});
+
+    }
 }

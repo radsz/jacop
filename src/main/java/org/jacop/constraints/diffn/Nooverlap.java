@@ -51,7 +51,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @version 4.5
  */
 
-public class Nooverlap extends Constraint implements SatisfiedPresent {
+public class Nooverlap extends Constraint {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -375,13 +375,6 @@ public class Nooverlap extends Constraint implements SatisfiedPresent {
             overlapping[i] = new TimeStamp(store, bs);
         }
 
-    }
-
-    /**
-      *  @return always false.
-      */
-   @Override public boolean satisfied() {
-       return false;
     }
 
     @Override public String toString() {

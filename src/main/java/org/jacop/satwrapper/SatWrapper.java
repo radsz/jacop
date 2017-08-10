@@ -531,6 +531,10 @@ public final class SatWrapper extends Constraint implements ConflictListener, Ex
     @Override public void increaseWeight() {
     }
 
+    @Override public Set<Var> arguments() {
+        return new HashSet<>(registeredVars);
+    }
+
     /**
      * to add some module to the solver
      *
@@ -595,6 +599,9 @@ public final class SatWrapper extends Constraint implements ConflictListener, Ex
         // make solver quiet, if not debug
         if (!Store.debug)
             core.verbosity = 0;
+
+        // be warned in case of backtrack
+        store.registerRemoveLevelListener(this);
 
         store.addChanged(this);
         // watch variables
@@ -754,7 +761,6 @@ public final class SatWrapper extends Constraint implements ConflictListener, Ex
         // setup everything
         core.start();
 
-        setScope(registeredVars);
     }
 
     public void initialize(Core core) {
