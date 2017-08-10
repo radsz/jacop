@@ -377,19 +377,11 @@ public class Nooverlap extends Constraint implements SatisfiedPresent {
 
     }
 
-    @Override public boolean satisfied() {
-        boolean sat = true;
-
-        int i = 0;
-        while (sat && i < rectangle.length) {
-            int j = i + 1;
-            while (sat && j < rectangle.length) {
-                sat = sat && !rectangle[i].overlap(rectangle[j], 0) && !rectangle[i].overlap(rectangle[j], 1);
-                j++;
-            }
-            i++;
-        }
-        return sat;
+    /**
+      *  @return always false.
+      */
+   @Override public boolean satisfied() {
+       return false;
     }
 
     @Override public String toString() {
