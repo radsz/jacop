@@ -125,7 +125,7 @@ public class Rectangle {
     }
 
     /*
-     * This rectangle and rectangle r must overlap
+     * This rectangle and rectangle r must overlap in at least one dimension
      *
      * @param r the other rectangle
      * @param dim dimension of overlapping
@@ -137,11 +137,27 @@ public class Rectangle {
             && r.ect(dim) > lst(dim));
     }
 
+    /*
+     * This rectangle and rectangle r overlap in both dimensions
+     *
+     * @param r the other rectangle
+     * @param dim dimension of overlapping
+     * @return true if overlapping, false otherwise
+     */
+    boolean doOverlap(Rectangle r, int dim) {
+
+        return (lst(dim) < ect(dim) && r.ect(dim) > lst(dim) && ect(dim) > r.lst(dim)) && (r.lst(dim) < r.ect(dim) && ect(dim) > r.lst(dim)
+            && r.ect(dim) > lst(dim));
+    }
 
     boolean noOverlap(Rectangle r, int dim) {
         return est(dim) >= r.lct(dim) || r.est(dim) >= lct(dim);
     }
 
+    boolean noOverlap(Rectangle r) {
+	return noOverlap(r, 0) && noOverlap(r, 1);
+    }
+    
     boolean possibleOverlap(Rectangle r) {
         if (noOverlap(r, 0) || noOverlap(r, 1)) {
             return false;
