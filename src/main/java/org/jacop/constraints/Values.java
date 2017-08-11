@@ -79,22 +79,14 @@ public class Values extends Constraint implements SatisfiedPresent {
      */
     public Values(IntVar[] list, IntVar count) {
 
-        assert (list != null) : "List argument is null";
-        assert (count != null) : "count argument is null";
+        checkInputForNullness(new String[]{"list", "count"}, new Object[][]{list, {count}});
 
         this.queueIndex = 2;
 
         numberId = idNumber.incrementAndGet();
 
         this.count = count;
-        this.list = new IntVar[list.length];
-
-        for (int i = 0; i < list.length; i++) {
-
-            assert (list[i] != null) : i + "-th element of list is null";
-            this.list[i] = list[i];
-
-        }
+        this.list = Arrays.copyOf(list, list.length);
 
         setScope(Stream.concat(Arrays.stream(list), Stream.of(count)));
 

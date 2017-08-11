@@ -31,18 +31,15 @@
 
 package org.jacop.constraints.cumulative;
 
-import java.util.*;
+import org.jacop.constraints.Constraint;
+import org.jacop.core.*;
+
+import java.util.Arrays;
+import java.util.BitSet;
+import java.util.Comparator;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
-
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Interval;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.IntervalEnumeration;
-import org.jacop.core.Store;
-import org.jacop.core.Var;
-import org.jacop.constraints.Constraint;
 
 /**
  * CumulativeBasic implements the cumulative constraint using time tabling
@@ -89,55 +86,42 @@ public class CumulativeBasic extends Constraint {
      */
     public CumulativeBasic(IntVar[] starts, IntVar[] durations, IntVar[] resources, IntVar limit) {
 
-        assert (starts != null) : "Variable in starts list is null";
-        assert (durations != null) : "Variable in durations list is null";
-        assert (resources != null) : "Variable in resource list is null";
-        assert (limit != null) : "Variable limit is null";
-        assert (starts.length == durations.length) : "Starts and durations list have different length";
-        assert (resources.length == durations.length) : "Resources and durations list have different length";
+        checkInputForNullness(new String[] {"starts", "durations", "resources", "limit"},
+            new Object[][] {starts, durations, resources, {limit}});
+        checkInput(durations, i -> i.min() >= 0, "durations can not allow non-negative values");
+        checkInput(resources, i -> i.min() >= 0, "resources can not allow non-negative values");
+
+        if (starts.length != durations.length)
+            throw new IllegalArgumentException("Cumulative constraint needs to have starts and durations lists the same length.");
+        if (starts.length != resources.length)
+            throw new IllegalArgumentException("Cumulative constraint needs to have starts and resources lists the same length.");
+
+        if (limit.min() >= 0) {
+            this.limit = limit;
+        } else {
+            throw new IllegalArgumentException("\nResource limit must be >= 0 in cumulative");
+        }
 
         this.queueIndex = 2;
         this.numberId = idNumber.incrementAndGet();
+        this.taskNormal = new TaskNormalView[starts.length];
 
-        if (starts.length == durations.length && durations.length == resources.length) {
+        for (int i = 0; i < starts.length; i++) {
+            taskNormal[i] = new TaskNormalView(new Task(starts[i], durations[i], resources[i]));
+            taskNormal[i].index = i;
+            if (durations[i].min() == 0 || resources[i].min() == 0)
+                possibleZeroTasks = true;
+        }
 
-            this.taskNormal = new TaskNormalView[starts.length];
+        if (allVarGround(durations) && allVarGround(resources)) {
+            int[] durInt = new int[durations.length];
+            for (int i = 0; i < durations.length; i++)
+                durInt[i] = durations[i].value();
+            int[] resInt = new int[resources.length];
+            for (int i = 0; i < resources.length; i++)
+                resInt[i] = resources[i].value();
 
-            for (int i = 0; i < starts.length; i++) {
-
-                assert (starts[i] != null) : i + "-th variable in starts list is null";
-                assert (durations[i] != null) : i + "-th variable in durations list is null";
-                assert (resources[i] != null) : i + "-th variable in resources list is null";
-                assert (durations[i].min() >= 0) : i + "-th duration is specified as possibly negative";
-                assert (resources[i].min() >= 0) : i + "-th resource consumption is specified as possibly negative";
-
-                if (durations[i].min() >= 0 && resources[i].min() >= 0) {
-                    taskNormal[i] = new TaskNormalView(new Task(starts[i], durations[i], resources[i]));
-                    taskNormal[i].index = i;
-                    if (durations[i].min() == 0 || resources[i].min() == 0)
-                        possibleZeroTasks = true;
-                } else
-                    throw new IllegalArgumentException("\nDurations and resources must be >= 0 in cumulative");
-            }
-
-            if (allVarGround(durations) && allVarGround(resources)) {
-                int[] durInt = new int[durations.length];
-                for (int i = 0; i < durations.length; i++)
-                    durInt[i] = durations[i].value();
-                int[] resInt = new int[resources.length];
-                for (int i = 0; i < resources.length; i++)
-                    resInt[i] = resources[i].value();
-
-                cumulativeForConstants = new CumulativePrimary(starts, durInt, resInt, limit);
-            }
-
-            if (limit.min() >= 0) {
-                this.limit = limit;
-            } else {
-                throw new IllegalArgumentException("\nResource limit must be >= 0 in cumulative");
-            }
-        } else {
-            throw new IllegalArgumentException("\nNot equal sizes of Variable vectors in cumulative");
+            cumulativeForConstants = new CumulativePrimary(starts, durInt, resInt, limit);
         }
 
         setScope(Stream.concat(Stream.concat(Arrays.stream(starts), Arrays.stream(durations)),

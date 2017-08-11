@@ -1,4 +1,4 @@
-/**
+/*
  * BoolClause.java
  * This file is part of JaCoP.
  * <p>
@@ -148,10 +148,10 @@ public class BoolClause extends PrimitiveConstraint {
         positionY = new TimeStamp<Integer>(store, 0);
     }
 
-    @Override
     /**
      * computes consistency for x_0 \/ ... \/ x_n \/ not y_0 \/ ... \/ not y_n
-     */ public void consistency(Store store) {
+     */
+    @Override public void consistency(Store store) {
 
         int startX = positionX.value();
         int startY = positionY.value();
@@ -200,13 +200,14 @@ public class BoolClause extends PrimitiveConstraint {
         }
     }
 
-    @Override
+
     /**
      * computes consistency for not (x_0 \/ ... \/ x_n \/ not y_0 \/ ... \/ not y_n)
-     * =>
+     * implies
      * not x_0 /\ ... /\ not x_n /\ y_0 /\ ... /\ y_n
      * taht is all x_i = 0 /\ all y_i = 1
-     */ public void notConsistency(Store store) {
+     */
+    @Override public void notConsistency(Store store) {
 
         for (int i = 0; i < lx; i++)
             x[i].domain.in(store.level, x[i], 0, 0);

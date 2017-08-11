@@ -1716,15 +1716,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful {
 
     }
 
-    @Override public void removeConstraint() {
-
-        for (GeostObject o : objects)
-            for (Var v : o.getVariables())
-                v.removeConstraint(this);
-
-
-    }
-
 
     @Override @SuppressWarnings("all") public void removeLevel(int level) {
 

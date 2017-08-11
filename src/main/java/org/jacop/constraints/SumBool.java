@@ -280,12 +280,6 @@ public class SumBool extends PrimitiveConstraint {
 
     }
 
-    @Override public void removeConstraint() {
-        for (Var v : x)
-            v.removeConstraint(this);
-        sum.removeConstraint(this);
-    }
-
     @Override public boolean satisfied() {
 
         return entailed(relationType);

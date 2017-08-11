@@ -223,7 +223,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
         if (n.domain.singleton()) {
 
             if (lb0 == n.min() && (ub0) == n.min()) {
-                this.removeConstraint();
+                removeConstraint();
                 return;
             }
 
@@ -1119,19 +1119,6 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
             if (var.singleton())
                 xGrounded.update(xGrounded.value() + 1);
         }
-
-    }
-
-    @Override public void removeConstraint() {
-        if (debugAll) {
-            System.out.println("............Finished with..............");
-            System.out.println(this);
-            System.out.println("..................................");
-        }
-
-        super.removeConstraint();
-
-        this.variableQueueY.clear();
 
     }
 

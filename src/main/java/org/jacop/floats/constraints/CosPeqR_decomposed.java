@@ -74,9 +74,7 @@ public class CosPeqR_decomposed extends DecomposedConstraint<Constraint> {
      */
     public CosPeqR_decomposed(FloatVar p, FloatVar q) {
 
-        assert (p != null) : "Variable p is null";
-        assert (q != null) : "Variable q is null";
-
+        checkInputForNullness(new String[]{"p", "q"}, new Object[][]{{p}, {q}});
         this.p = p;
         this.q = q;
     }

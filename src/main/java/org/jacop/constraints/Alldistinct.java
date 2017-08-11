@@ -1,4 +1,4 @@
-/**
+/*
  * Alldistinct.java
  * This file is part of JaCoP.
  * <p>
@@ -34,7 +34,6 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
-import com.sun.corba.se.spi.orbutil.fsm.State;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;

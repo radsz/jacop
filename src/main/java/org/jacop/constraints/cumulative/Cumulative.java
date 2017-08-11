@@ -114,11 +114,6 @@ public class Cumulative extends CumulativeBasic {
 
     }
 
-    @Override public void impose(Store store) {
-
-        super.impose(store);
-    }
-
     @Override public void consistency(Store store) {
 
         do {

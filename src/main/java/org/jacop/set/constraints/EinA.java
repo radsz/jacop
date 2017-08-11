@@ -115,10 +115,6 @@ public class EinA extends PrimitiveConstraint {
         return !a.domain.lub().contains(element);
     }
 
-    @Override public void removeConstraint() {
-        a.removeConstraint(this);
-    }
-
     @Override public boolean satisfied() {
         return a.domain.glb().contains(element);
     }

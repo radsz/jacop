@@ -31,16 +31,18 @@
 
 package org.jacop.constraints.cumulative;
 
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
-
+import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
-import org.jacop.constraints.Constraint;
+
+import java.util.Arrays;
+import java.util.BitSet;
+import java.util.Comparator;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 /**
  * CumulativePrimary implements the cumulative constraint using time tabling
@@ -86,45 +88,28 @@ class CumulativePrimary extends Constraint {
      */
     public CumulativePrimary(IntVar[] starts, int[] durations, int[] resources, IntVar limit) {
 
-        assert (starts != null) : "Variable in starts list is null";
-        assert (durations != null) : "Variable in durations list is null";
-        assert (resources != null) : "Variable in resource list is null";
-        assert (limit != null) : "Variable limit is null";
-        assert (starts.length == durations.length) : "Starts and durations list have different length";
-        assert (resources.length == durations.length) : "Resources and durations list have different length";
+        checkInputForNullness(new String[] {"starts", "durations", "resources", "limit"},
+            new Object[][] {starts, {durations}, {resources}, {limit}});
+        checkInput(durations, i -> i > 0, "durations must be greater than 0");
+        checkInput(resources, i -> i > 0, "resources must be greater than 0");
+
+        if (starts.length != durations.length)
+            throw new IllegalArgumentException("Cumulative constraint needs to have starts and durations lists the same length.");
+        if (starts.length != resources.length)
+            throw new IllegalArgumentException("Cumulative constraint needs to have starts and resources lists the same length.");
+
+        if (limit.min() >= 0) {
+            this.limit = limit;
+        } else {
+            throw new IllegalArgumentException("Cumulative needs to have resource limit that is >= 0.");
+        }
 
         this.queueIndex = 2;
         this.numberId = idNumber.incrementAndGet();
 
-        if (starts.length == durations.length && durations.length == resources.length) {
-
-            dur = new int[durations.length];
-            res = new int[resources.length];
-            start = new IntVar[starts.length];
-
-            for (int i = 0; i < starts.length; i++) {
-
-                assert (starts[i] != null) : i + "-th variable in starts list is null";
-                assert (durations[i] >= 0) : i + "-th duration is specified as possibly negative";
-                assert (resources[i] >= 0) : i + "-th resource consumption is specified as possibly negative";
-
-                start[i] = starts[i];
-
-                if (durations[i] > 0 && resources[i] > 0) {
-                    dur[i] = durations[i];
-                    res[i] = resources[i];
-                } else
-                    throw new IllegalArgumentException("\nDurations and resources must be > 0 in cumulative when defined as constants");
-            }
-
-            if (limit.min() >= 0) {
-                this.limit = limit;
-            } else {
-                throw new IllegalArgumentException("\nResource limit must be >= 0 in cumulative");
-            }
-        } else {
-            throw new IllegalArgumentException("\nNot equal sizes of Variable vectors in cumulative");
-        }
+        dur = Arrays.copyOf(durations, durations.length);
+        res = Arrays.copyOf(resources, resources.length);
+        start = Arrays.copyOf(starts, starts.length);
 
         setScope(Stream.concat(Arrays.stream(starts), Stream.of(limit)));
     }
@@ -137,8 +122,8 @@ class CumulativePrimary extends Constraint {
      * @param resources variables denoting resource usage of the tasks.
      * @param limit     the overall limit of resources which has to be used.
      */
-    public CumulativePrimary(List<? extends IntVar> starts, List<? extends Integer> durations,
-        List<? extends Integer> resources, IntVar limit) {
+    public CumulativePrimary(List<? extends IntVar> starts, List<? extends Integer> durations, List<? extends Integer> resources,
+        IntVar limit) {
 
         this(starts.toArray(new IntVar[starts.size()]), durations.stream().mapToInt(i -> i).toArray(),
             resources.stream().mapToInt(i -> i).toArray(), limit);

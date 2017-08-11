@@ -31,21 +31,20 @@
 
 package org.jacop.constraints.cumulative;
 
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
-import org.jacop.core.IntVar;
-import org.jacop.core.Store;
-
 /**
  * CumulativeUnary implements the scheduling constraint for unary resources using
- *
- * overload, not-first-not-last and detectable algorithms based on 
- *
+ * <p>
+ * overload, not-first-not-last and detectable algorithms based on
+ * <p>
  * Petr Vilim, "O(n log n) Filtering Algorithms for Unary Resource Constraints", Proceedings of
  * CP-AI-OR 2004,
- *
  *
  * @author Krzysztof Kuchcinski
  * @version 4.5
@@ -65,34 +64,34 @@ public class CumulativeUnary extends Cumulative {
 
     /**
      * It creates a cumulative constraint.
-     * @param starts variables denoting starts of the tasks.
+     *
+     * @param starts    variables denoting starts of the tasks.
      * @param durations variables denoting durations of the tasks.
      * @param resources variables denoting resource usage of the tasks.
-     * @param limit the overall limit of resources which has to be used.
+     * @param limit     the overall limit of resources which has to be used.
      */
     public CumulativeUnary(IntVar[] starts, IntVar[] durations, IntVar[] resources, IntVar limit) {
 
         super(starts, durations, resources, limit);
+        checkInput(durations, i -> i.min() >= 0, "duration does not allow negative values");
+        checkInput(resources, i -> i.min() >= 0, "resource does not allow negative values");
         queueIndex = 2;
 
         tvn = new TaskNormalView[starts.length];
-        // tvr = new TaskNormalView[starts.length];
         tvr = super.taskReversed;
         for (int i = 0; i < starts.length; i++) {
-            if (durations[i].min() >= 0 && resources[i].min() >= 0) {
-                tvn[i] = new TaskNormalView(new Task(starts[i], durations[i], resources[i]));
-                tvn[i].index = i;
-            } else
-                throw new IllegalArgumentException("\nDurations and resources must be >= 0 in cumulative");
+            tvn[i] = new TaskNormalView(new Task(starts[i], durations[i], resources[i]));
+            tvn[i].index = i;
         }
     }
 
     /**
      * It creates a cumulative constraint.
-     * @param starts variables denoting starts of the tasks.
+     *
+     * @param starts    variables denoting starts of the tasks.
      * @param durations variables denoting durations of the tasks.
      * @param resources variables denoting resource usage of the tasks.
-     * @param limit the overall limit of resources which has to be used.
+     * @param limit     the overall limit of resources which has to be used.
      * @param doProfile defines whether to do profile-based propagation (true) or not (false); default is false
      */
     public CumulativeUnary(IntVar[] starts, IntVar[] durations, IntVar[] resources, IntVar limit, boolean doProfile) {
@@ -103,10 +102,11 @@ public class CumulativeUnary extends Cumulative {
 
     /**
      * It creates a cumulative constraint.
-     * @param starts variables denoting starts of the tasks.
+     *
+     * @param starts    variables denoting starts of the tasks.
      * @param durations variables denoting durations of the tasks.
      * @param resources variables denoting resource usage of the tasks.
-     * @param limit the overall limit of resources which has to be used.
+     * @param limit     the overall limit of resources which has to be used.
      */
     public CumulativeUnary(List<? extends IntVar> starts, List<? extends IntVar> durations, List<? extends IntVar> resources,
         IntVar limit) {
@@ -117,22 +117,18 @@ public class CumulativeUnary extends Cumulative {
 
     /**
      * It creates a cumulative constraint.
-     * @param starts variables denoting starts of the tasks.
+     *
+     * @param starts    variables denoting starts of the tasks.
      * @param durations variables denoting durations of the tasks.
      * @param resources variables denoting resource usage of the tasks.
-     * @param limit the overall limit of resources which has to be used.
+     * @param limit     the overall limit of resources which has to be used.
      * @param doProfile defines whether to do profile-based propagation (true) or not (false); default is false
      */
-    public CumulativeUnary(List<? extends IntVar> starts, List<? extends IntVar> durations, List<? extends IntVar> resources,
-        IntVar limit, boolean doProfile) {
+    public CumulativeUnary(List<? extends IntVar> starts, List<? extends IntVar> durations, List<? extends IntVar> resources, IntVar limit,
+        boolean doProfile) {
 
         this(starts.toArray(new IntVar[starts.size()]), durations.toArray(new IntVar[durations.size()]),
             resources.toArray(new IntVar[resources.size()]), limit, doProfile);
-    }
-
-    @Override public void impose(Store store) {
-
-        super.impose(store);
     }
 
     @Override public void consistency(Store store) {
@@ -362,6 +358,7 @@ public class CumulativeUnary extends Cumulative {
         }
     }
 
+
     private static class TaskIncLSTComparator<T extends TaskView> implements Comparator<T>, java.io.Serializable {
 
         TaskIncLSTComparator() {
@@ -371,6 +368,7 @@ public class CumulativeUnary extends Cumulative {
             return (o1.lst() == o2.lst()) ? (o1.est() - o2.est()) : (o1.lst() - o2.lst());
         }
     }
+
 
     private static class TaskIncECTComparator<T extends TaskView> implements Comparator<T>, java.io.Serializable {
 

@@ -1128,8 +1128,6 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
     @Override public boolean satisfied() {
 
-        boolean sat = true;
-
         // if profile has been computed make a quick check
         if (minProfile != null && maxProfile != null) {
             if ((minProfile.max() == maxProfile.max()) && limit.singleton() && minProfile.max() == limit.min())
@@ -1137,12 +1135,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
             else
                 return false;
         } else {
-
-            if ( ! grounded() )
-                return false;
-
-            return false;
-
+            throw new IllegalStateException("Satisfied function can only be called after call to consistency().");
         }
     }
 

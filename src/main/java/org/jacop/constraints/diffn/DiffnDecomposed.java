@@ -103,10 +103,7 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
 
     public DiffnDecomposed(IntVar[] origin1, IntVar[] origin2, IntVar[] length1, IntVar[] length2) {
 
-        assert (origin1 != null) : "x list is null";
-        assert (origin2 != null) : "y list is null";
-        assert (length1 != null) : "lx list is null";
-        assert (length2 != null) : "ly list is null";
+        checkInputForNullness(new String[]{"origin1", "origin2", "length1", "length2" }, new Object[][]{origin1, origin2, length1, length2});
 
         int size = origin1.length;
         if (size == origin1.length && size == origin2.length && size == length1.length && size == length2.length) {

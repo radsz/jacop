@@ -48,7 +48,8 @@ class BinItem {
 
     public BinItem(IntVar bin, int weight) {
 
-        assert (bin != null) : "Bin variable is null";
+        if (bin == null)
+            throw new IllegalArgumentException("Bin variable is null");
 
         this.bin = bin;
         this.weight = weight;

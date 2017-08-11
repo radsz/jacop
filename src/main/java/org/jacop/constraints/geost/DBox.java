@@ -1,4 +1,4 @@
-/**
+/*
  * DBox.java
  * This file is part of JaCoP.
  * <p>
@@ -35,25 +35,11 @@ import java.util.Collection;
 
 import org.jacop.util.SimpleArrayList;
 
-
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
  *
  */
-
 public class DBox {
-
-    // TODO what is the difference between transientInstances and freeBoxes?
-
-    /**
-     * TODO, finish the comment.
-     *
-     * static instance that can be used to avoid allocating
-     * new resources each time a DBox needs to be returned;
-     * modify the static instance using getAllocatedInstance(dim)
-     * instead
-     */
-    public static final SimpleArrayList<DBox> transientInstances = new SimpleArrayList<DBox>();
 
     /**
      * static store of available boxes, accessible by dimension. This makes it possible to
@@ -76,7 +62,7 @@ public class DBox {
      * a static collection to use for some operations. Use it instead of creating a new list when
      * only a temporary list is needed.
      */
-    private static final SimpleArrayList<DBox> workingList = new SimpleArrayList<DBox>();
+    // private static final SimpleArrayList<DBox> workingList = new SimpleArrayList<DBox>();
 
     /**
      * It makes sure that there is a slot of the given dimension in the slot.
@@ -85,14 +71,13 @@ public class DBox {
      *
      * @param dimension the number of dimensions
      */
-    public static final void supportDimension(int dimension) {
+    synchronized public static final void supportDimension(int dimension) {
 
         int size = freeBoxes.size();
 
         if (size <= dimension)
             for (int i = size; i <= dimension; i++) {
                 freeBoxes.add(new SimpleArrayList<DBox>());
-                transientInstances.add(new DBox(new int[i], new int[i]));
             }
 
     }
@@ -105,15 +90,25 @@ public class DBox {
      */
     public DBox(int[] origin, int[] length) {
 
-        // TODO what for super()?
-        super();
-
         this.origin = origin;
         this.length = length;
 
         assert (checkInvariants() == null) : checkInvariants();
 
     }
+
+    /**
+     * constructs a new Box. The parameter arrays are not copied.
+     *
+     * @param dimension it specifies the dimension of the createed DBox.
+     */
+    public DBox(int dimension) {
+
+        this.origin = new int[dimension];
+        this.length = new int[dimension];
+
+    }
+
 
     /**
      * It checks whether the DBox is consistent.
@@ -140,12 +135,7 @@ public class DBox {
      *
      * @param unusedBox the not used DBox which is being recycled.
      */
-    public static final void dispatchBox(DBox unusedBox) {
-
-        // TODO, Can it be only one transient instance at given index?
-        // This assert looks suspicous.
-
-        assert unusedBox != transientInstances.get(unusedBox.origin.length) : "placing the static instance inside the pool";
+    synchronized public static final void dispatchBox(DBox unusedBox) {
 
         freeBoxes.get(unusedBox.origin.length).push(unusedBox);
 
@@ -161,7 +151,7 @@ public class DBox {
      * @return It returns DBox with the specified dimension. Later on, when
      * box is no longer needed it should be dispatched back.
      */
-    public static final DBox newBox(int dimension) {
+    synchronized public static final DBox newBox(int dimension) {
 
         SimpleArrayList<DBox> boxes = freeBoxes.get(dimension);
 
@@ -180,7 +170,7 @@ public class DBox {
      * @return it returns a preallocated DBox of a given dimensions.
      */
     public static final DBox getAllocatedInstance(int dimension) {
-        return transientInstances.get(dimension);
+        return new DBox(dimension);
     }
 
     /**
@@ -520,10 +510,7 @@ public class DBox {
         }
         Collection<DBox> resultWork = result;
 
-
-        assert workingList.isEmpty() : "working list must be empty";
-
-        Collection<DBox> resultStep = workingList;
+        Collection<DBox> resultStep = new SimpleArrayList<DBox>();
 		
 		/*
 		 * proceed hole by hole: for each hole, subtract it to each remaining piece.
@@ -541,11 +528,7 @@ public class DBox {
             for (DBox piece : resultWork) {
                 dispatchBox(piece);
             }
-            if (resultWork == workingList) {
-                workingList.clearNoGC(); //garbage collection is not done on DBoxes anyway
-            } else {
-                resultWork.clear();
-            }
+            resultWork.clear();
             //switch lists
             Collection<DBox> resTmp = resultWork;
             resultWork = resultStep;
@@ -568,10 +551,6 @@ public class DBox {
             //and clear the ones in the working list
             resultWork.clear();
         }
-
-        assert workingList.isEmpty() : "working list must be empty";
-
-
 
         return result;
     }
@@ -597,10 +576,7 @@ public class DBox {
         Collection<DBox> resultWork = result;
         resultWork.add(this.copyInto(newBox(origin.length)));
 
-
-        assert workingList.isEmpty() : "working list must be empty";
-
-        Collection<DBox> resultStep = workingList;
+        Collection<DBox> resultStep = new SimpleArrayList<DBox>();
 		
 		/*
 		 * proceed hole by hole: for each hole, subtract it to each remaining piece.
@@ -620,10 +596,7 @@ public class DBox {
                 dispatchBox(piece);
             }
 
-            if (resultWork == workingList)
-                workingList.clearNoGC();
-            else
-                resultWork.clear();
+            resultWork.clear();
 
             //switch lists
             Collection<DBox> forExchange = resultWork;
@@ -647,8 +620,6 @@ public class DBox {
             //and clear the ones in the working list
             resultWork.clear();
         }
-
-        assert workingList.isEmpty() : "working list must be empty";
 
         return result;
 

@@ -307,25 +307,6 @@ public class NetworkFlow extends Constraint implements UsesQueueVariable, Statef
 
     }
 
-    /*************/
-    /** Cleanup **/
-
-    @Override public void removeConstraint() {
-
-        queue.clear();
-
-        costVariable.removeConstraint(this);
-        for (IntVar variable : map.keySet())
-            variable.removeConstraint(this);
-
-        // TODO Auto-generated method stub
-        throw new AssertionError("Not implemented");
-    }
-
-    @Override public void increaseWeight() {
-        // TODO Auto-generated method stub
-        throw new AssertionError("Not implemented");
-    }
 
     /*****************/
     /** Identifiers **/

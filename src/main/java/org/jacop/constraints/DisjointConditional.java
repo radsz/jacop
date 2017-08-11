@@ -73,19 +73,14 @@ public class DisjointConditional extends Diff {
      */
     public DisjointConditional(Rectangle[] rectangles, ExclusiveList exclusionList, boolean doProfile) {
 
-        assert (rectangles != null) : "Rectangles list is null";
+        checkInputForNullness(new String[]{"rectangles", "exclusionList"}, new Object[][]{rectangles, {exclusionList}});
+        checkInput(rectangles, i -> i.dim == 2, "rectangle needs to have exactly two dimensions");
 
         this.queueIndex = 2;
 
-        this.rectangles = new Rectangle[rectangles.length];
+        this.rectangles = Arrays.copyOf(rectangles, rectangles.length);
+
         this.doProfile = doProfile;
-
-        for (int i = 0; i < rectangles.length; i++) {
-            assert (rectangles[i] != null) : i + "-th rectangle in the list is null";
-            assert (rectangles[i].dim != 2) : "The rectangle has to have exactly two dimensions";
-            this.rectangles[i] = new Rectangle(rectangles[i]);
-        }
-
         this.exclusionList = new ExclusiveList();
         this.exclusionList.addAll(exclusionList);
 
@@ -198,10 +193,8 @@ public class DisjointConditional extends Diff {
     public DisjointConditional(IntVar[] origin1, IntVar[] origin2, IntVar[] length1, IntVar[] length2,
         List<List<Integer>> exceptionIndices, List<? extends IntVar> exceptionCondition) {
 
-        assert (origin1 != null) : "o1 list is null";
-        assert (origin2 != null) : "o2 list is null";
-        assert (length1 != null) : "l1 list is null";
-        assert (length2 != null) : "l2 list is null";
+        checkInputForNullness(new String[]{"origin1", "origin2", "length1", "length2", "exceptionIndices", "exceptionCondition"},
+            new Object[][]{origin1, origin2, length1, length2, {exceptionIndices}, {exceptionCondition}});
 
         this.queueIndex = 2;
 
@@ -209,16 +202,12 @@ public class DisjointConditional extends Diff {
         if (size == origin1.length && size == origin2.length && size == length1.length && size == length2.length) {
 
             this.rectangles = new Rectangle[size];
-
             for (int i = 0; i < size; i++) {
-                IntVar[] R = {origin1[i], origin2[i], length1[i], length2[i]};
-                Rectangle rect = new Rectangle(R);
-                this.rectangles[i] = rect;
+                this.rectangles[i] = new Rectangle( new IntVar[]{origin1[i], origin2[i], length1[i], length2[i]});
             }
 
         } else {
-            String s = "\nNot equal sizes of Variable vectors in Diff";
-            throw new IllegalArgumentException(s);
+            throw new IllegalArgumentException("DisjointConditional does not have equal sizes of length and origin vectors.");
         }
 
 

@@ -156,10 +156,7 @@ public class Diff2 extends Diff {
 
     public Diff2(IntVar[] origin1, IntVar[] origin2, IntVar[] length1, IntVar[] length2) {
 
-        assert (origin1 != null) : "o1 list is null";
-        assert (origin2 != null) : "o2 list is null";
-        assert (length1 != null) : "l1 list is null";
-        assert (length2 != null) : "l2 list is null";
+        checkInputForNullness(new String[]{"origin1", "origin2", "length1", "length2" }, new Object[][]{origin1, origin2, length1, length2});
 
         queueIndex = 2;
         this.rectangles = Rectangle.toArrayOf2DRectangles(origin1, origin2, length1, length2);

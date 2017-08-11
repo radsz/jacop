@@ -376,11 +376,6 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
     }
 
-    @Override public void removeConstraint() {
-        for (Var v : list)
-            v.removeConstraint(this);
-    }
-
     @Override public boolean satisfied() {
 
         if (reified) {

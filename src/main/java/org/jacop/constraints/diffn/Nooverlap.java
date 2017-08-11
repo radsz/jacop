@@ -131,10 +131,7 @@ public class Nooverlap extends Constraint {
 
     public Nooverlap(IntVar[] origin1, IntVar[] origin2, IntVar[] length1, IntVar[] length2) {
 
-        assert (origin1 != null) : "o1 list is null";
-        assert (origin2 != null) : "o2 list is null";
-        assert (length1 != null) : "l1 list is null";
-        assert (length2 != null) : "l2 list is null";
+        checkInputForNullness(new String[]{"origin1", "origin2", "length1", "length2" }, new Object[][]{origin1, origin2, length1, length2});
 
         int size = origin1.length;
         if (size == origin1.length && size == origin2.length && size == length1.length && size == length2.length) {

@@ -172,7 +172,8 @@ public class LinearInt extends PrimitiveConstraint {
 
         this.relationType = relation(rel);
 
-        assert (list.length == weights.length) : "\nLength of two vectors different in Propagations";
+        if (list.length != weights.length)
+            throw new IllegalArgumentException("LinearInt has list and weights arguments of different length.");
 
         this.store = store;
         this.b = sum;
@@ -180,8 +181,6 @@ public class LinearInt extends PrimitiveConstraint {
         LinkedHashMap<IntVar, Integer> parameters = new LinkedHashMap<IntVar, Integer>();
 
         for (int i = 0; i < list.length; i++) {
-
-            assert (list[i] != null) : i + "-th element of list in Propagations constraint is null";
             if (weights[i] != 0) {
                 if (list[i].singleton())
                     this.b -= list[i].value() * weights[i];
