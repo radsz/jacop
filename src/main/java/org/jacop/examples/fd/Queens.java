@@ -178,7 +178,7 @@ public class Queens extends ExampleFD {
             values[i] = new IntVar(store, "val-" + (i + 1), i + 1, i + 1);
 
         for (int i = 0; i < numberQ; i++)
-            store.impose(new Element(queensRows[i], queens, values[i]));
+            store.impose(Element.choose(queensRows[i], queens, values[i]));
 
     }
 

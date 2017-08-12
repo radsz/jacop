@@ -123,11 +123,11 @@ public class HistoricHomes extends ExampleFD {
 
         // Position of MagnoliaStreet within order array determines its order.
         IntVar index1 = new IntVar(store, "index1", 1, 5);
-        store.impose(new Element(index1, order, street[iMagnolia_Street]));
+        store.impose(Element.choose(index1, order, street[iMagnolia_Street]));
         // Position of value 1890 within order array determines its order.
         IntVar index2 = new IntVar(store, "index2", 1, 5);
         IntVar value1890 = new IntVar(store, "1890", 1890, 1890);
-        store.impose(new Element(index2, order, value1890));
+        store.impose(Element.choose(index2, order, value1890));
 
         store.impose(new XltY(index1, index2));
 
@@ -146,14 +146,14 @@ public class HistoricHomes extends ExampleFD {
 
         // Index 3 specifies the order for iOleander_Road
         IntVar index3 = new IntVar(store, "index3", 1, 5);
-        store.impose(new Element(index3, order, street[iOleander_Road]));
+        store.impose(Element.choose(index3, order, street[iOleander_Road]));
         // Index 4 specifies the order for Jasmine buiding.
         IntVar index4 = new IntVar(store, "index4", 1, 5);
-        store.impose(new Element(index4, order, street[iJasmine_Boulevard]));
+        store.impose(Element.choose(index4, order, street[iJasmine_Boulevard]));
         // index 2 specifies the order for building built at 1890.
         IntVar index5 = new IntVar(store, "index5", 1, 5);
         IntVar value1900 = new IntVar(store, "1900", 1900, 1900);
-        store.impose(new Element(index5, order, value1900));
+        store.impose(Element.choose(index5, order, value1900));
 
         store.impose(new XltY(index3, index4));
         store.impose(new XltY(index4, index5));

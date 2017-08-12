@@ -1,4 +1,4 @@
-/**
+/*
  * IntDomain.java
  * This file is part of JaCoP.
  * <p>
@@ -669,7 +669,7 @@ public abstract class IntDomain extends Domain {
     }
 
     @Override public void in(int level, Var var, Domain domain) {
-        in(level, (IntVar) var, (IntDomain) domain);
+        in(level, var, (IntDomain) domain);
     }
 
     @Override public boolean singleton(Domain value) {
@@ -687,10 +687,7 @@ public abstract class IntDomain extends Domain {
 
         IntDomain domain = (IntDomain) value;
 
-        if (eq(domain))
-            return true;
-        else
-            return false;
+        return eq(domain);
 
     }
 
@@ -1254,9 +1251,9 @@ public abstract class IntDomain extends Domain {
      */
     public final static Interval divBounds(int a, int b, int c, int d) {
 
-        int min = 0, max = 0;
+        int min, max;
 
-        Interval result = null;
+        Interval result;
 
         if (a <= 0 && b >= 0 && c <= 0 && d >= 0) { // case 1
             min = IntDomain.MinInt;
@@ -1288,9 +1285,9 @@ public abstract class IntDomain extends Domain {
      * Finds result interval for division of {a..b} / {c..d} for mul constraints
      */
     public final static Interval divIntBounds(int a, int b, int c, int d) {
-        int min = 0, max = 0;
+        int min, max;
 
-        Interval result = null;
+        Interval result;
 
         if (a <= 0 && b >= 0 && c <= 0 && d >= 0) { // case 1
             min = IntDomain.MinInt;

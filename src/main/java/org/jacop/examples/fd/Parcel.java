@@ -95,13 +95,13 @@ public class Parcel extends ExampleFD {
             // Variable nextTown denotes city which is visited in next move
             IntVar nextTown = new IntVar(store, "nextTown[" + i + "]", 1, cities.length);
             // This constraint defines nextTown value
-            store.impose(new Element(startTown, cities, nextTown));
+            store.impose(Element.choose(startTown, cities, nextTown));
             // This constraint defines change in the load
             // i denotes here i-th city on the road
-            store.impose(new Element(startTown, load_parcels, loads[i]));
+            store.impose(Element.choose(startTown, load_parcels, loads[i]));
             // This constraint computes cost.
             // i denotes here the number of the city person travels from.
-            store.impose(new Element(cities[i], distance[i], costs[i]));
+            store.impose(Element.choose(cities[i], distance[i], costs[i]));
 
             // person has moved to the next town, so there is a new
             // startTown

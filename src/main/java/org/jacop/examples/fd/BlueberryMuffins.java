@@ -157,9 +157,9 @@ public class BlueberryMuffins extends ExampleFD {
         IntVar I2 = new IntVar(store, "temp2", 1, 4);
 
         // I1 denotes number of muffins taken by Bill.
-        store.impose(new Element(I1, muffins, person[ibill]));
+        store.impose(Element.choose(I1, muffins, person[ibill]));
         // I2 denotes number of muffins taken by Ellis.
-        store.impose(new Element(I2, muffins, last[iellis]));
+        store.impose(Element.choose(I2, muffins, last[iellis]));
         // 2. Bill and Ellis snitched a total of six muffins.
         store.impose(new XplusYeqZ(I1, I2, six));
 
@@ -173,9 +173,9 @@ public class BlueberryMuffins extends ExampleFD {
         IntVar I4 = new IntVar(store, "temp4", 1, 4);
 
         // I3 denotes number of muffins taken by secretary.
-        store.impose(new Element(I3, muffins, profession[isecretary]));
+        store.impose(Element.choose(I3, muffins, profession[isecretary]));
         // I4 denotes number of muffins taken by dogcatcher
-        store.impose(new Element(I4, muffins, profession[idogcatcher]));
+        store.impose(Element.choose(I4, muffins, profession[idogcatcher]));
 
         // secretary has snitched more muffins than the dogcatcher.
         store.impose(new XgtY(I3, I4));

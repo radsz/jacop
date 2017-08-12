@@ -168,40 +168,40 @@ public class Flowers extends ExampleFD {
 
             IntVar xz = new IntVar(store, "xz" + x, 1, 4);
             vars.add(xz);
-            store.impose(new Element(xz, wifeD, husbandD[x]));
+            store.impose(Element.choose(xz, wifeD, husbandD[x]));
 
             IntVar xc = new IntVar(store, "xc" + x, 1, 4);
             vars.add(xc);
-            store.impose(new Element(xc, occasionD, husbandD[x]));
+            store.impose(Element.choose(xc, occasionD, husbandD[x]));
 
             IntVar xy = new IntVar(store, "xy" + x, 1, 4);
             vars.add(xy);
-            store.impose(new Element(xy, flowerD, husbandD[x]));
+            store.impose(Element.choose(xy, flowerD, husbandD[x]));
         }
 
         // Channeling constraints between day number and week.
 
         int el[] = {1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4};
 
-        store.impose(new Element(wifeD[iEmma], el, wifeT[iEmma]));
-        store.impose(new Element(wifeD[iKristin], el, wifeT[iKristin]));
-        store.impose(new Element(wifeD[iLynn], el, wifeT[iLynn]));
-        store.impose(new Element(wifeD[iToni], el, wifeT[iToni]));
+        store.impose(Element.choose(wifeD[iEmma], el, wifeT[iEmma]));
+        store.impose(Element.choose(wifeD[iKristin], el, wifeT[iKristin]));
+        store.impose(Element.choose(wifeD[iLynn], el, wifeT[iLynn]));
+        store.impose(Element.choose(wifeD[iToni], el, wifeT[iToni]));
 
-        store.impose(new Element(husbandD[iDoug], el, husbandT[iDoug]));
-        store.impose(new Element(husbandD[iJustin], el, husbandT[iJustin]));
-        store.impose(new Element(husbandD[iShane], el, husbandT[iShane]));
-        store.impose(new Element(husbandD[iTheo], el, husbandT[iTheo]));
+        store.impose(Element.choose(husbandD[iDoug], el, husbandT[iDoug]));
+        store.impose(Element.choose(husbandD[iJustin], el, husbandT[iJustin]));
+        store.impose(Element.choose(husbandD[iShane], el, husbandT[iShane]));
+        store.impose(Element.choose(husbandD[iTheo], el, husbandT[iTheo]));
 
-        store.impose(new Element(flowerD[iViolets], el, flowerT[iViolets]));
-        store.impose(new Element(flowerD[iRoses], el, flowerT[iRoses]));
-        store.impose(new Element(flowerD[iChrys], el, flowerT[iChrys]));
-        store.impose(new Element(flowerD[iDaises], el, flowerT[iDaises]));
+        store.impose(Element.choose(flowerD[iViolets], el, flowerT[iViolets]));
+        store.impose(Element.choose(flowerD[iRoses], el, flowerT[iRoses]));
+        store.impose(Element.choose(flowerD[iChrys], el, flowerT[iChrys]));
+        store.impose(Element.choose(flowerD[iDaises], el, flowerT[iDaises]));
 
-        store.impose(new Element(occasionD[iWalentynki], el, occasionT[iWalentynki]));
-        store.impose(new Element(occasionD[iAwans], el, occasionT[iAwans]));
-        store.impose(new Element(occasionD[iUrodziny], el, occasionT[iUrodziny]));
-        store.impose(new Element(occasionD[iRocznica], el, occasionT[iRocznica]));
+        store.impose(Element.choose(occasionD[iWalentynki], el, occasionT[iWalentynki]));
+        store.impose(Element.choose(occasionD[iAwans], el, occasionT[iAwans]));
+        store.impose(Element.choose(occasionD[iUrodziny], el, occasionT[iUrodziny]));
+        store.impose(Element.choose(occasionD[iRocznica], el, occasionT[iRocznica]));
 
         // 2. The woman who received flowers for Valentine's Day had them
         // delivered

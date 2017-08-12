@@ -152,10 +152,10 @@ public class LectureSeries extends ExampleFD {
         // consecutive days, in one order or the other.(*5b)
 
         IntVar dayIndex4Itakura = new IntVar(store, "dayIndex4Itakura", 1, 5);
-        store.impose(new Element(dayIndex4Itakura, days, last[iItakura]));
+        store.impose(Element.choose(dayIndex4Itakura, days, last[iItakura]));
 
         IntVar dayIndex4Study = new IntVar(store, "dayIndex4Study", 1, 5);
-        store.impose(new Element(dayIndex4Study, days, subjects[iStudy]));
+        store.impose(Element.choose(dayIndex4Study, days, subjects[iStudy]));
 
         IntVar one = new IntVar(store, "1", 1, 1);
         store.impose(new Distance(dayIndex4Itakura, dayIndex4Study, one));
@@ -170,10 +170,10 @@ public class LectureSeries extends ExampleFD {
         // 6. Haller gave a lecture sometime after Eddie did.
 
         IntVar dayIndex4Haller = new IntVar(store, "dayIndex4Haller", 1, 5);
-        store.impose(new Element(dayIndex4Haller, days, last[iHaller]));
+        store.impose(Element.choose(dayIndex4Haller, days, last[iHaller]));
 
         IntVar dayIndex4Eddie = new IntVar(store, "dayIndex4Eddie", 1, 5);
-        store.impose(new Element(dayIndex4Eddie, days, first[iEddie]));
+        store.impose(Element.choose(dayIndex4Eddie, days, first[iEddie]));
 
         store.impose(new XgtY(dayIndex4Haller, dayIndex4Eddie));
 
@@ -192,10 +192,10 @@ public class LectureSeries extends ExampleFD {
         store.impose(new XeqY(first[iDuane], last[iFelicidad]));
 
         IntVar dayIndex4Duane = new IntVar(store, "dayIndex4Duane", 1, 5);
-        store.impose(new Element(dayIndex4Duane, days, first[iDuane]));
+        store.impose(Element.choose(dayIndex4Duane, days, first[iDuane]));
 
         IntVar dayIndex4Art = new IntVar(store, "dayIndex4Art", 1, 5);
-        store.impose(new Element(dayIndex4Art, days, subjects[iArt]));
+        store.impose(Element.choose(dayIndex4Art, days, subjects[iArt]));
 
         store.impose(new XltY(dayIndex4Duane, dayIndex4Art));
 

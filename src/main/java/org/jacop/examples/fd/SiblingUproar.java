@@ -190,16 +190,16 @@ public class SiblingUproar extends ExampleFD {
 
         // Constraints to connect variables angryat and children.
         // y1=angryat[x1] denotes child y1 angry at x1.
-        store.impose(new Element(x1, angryat, y1));
-        store.impose(new Element(y1, children, x1));
-        store.impose(new Element(x2, angryat, y2));
-        store.impose(new Element(y2, children, x2));
-        store.impose(new Element(x3, angryat, y3));
-        store.impose(new Element(y3, children, x3));
-        store.impose(new Element(x4, angryat, y4));
-        store.impose(new Element(y4, children, x4));
-        store.impose(new Element(x5, angryat, y5));
-        store.impose(new Element(y5, children, x5));
+        store.impose(Element.choose(x1, angryat, y1));
+        store.impose(Element.choose(y1, children, x1));
+        store.impose(Element.choose(x2, angryat, y2));
+        store.impose(Element.choose(y2, children, x2));
+        store.impose(Element.choose(x3, angryat, y3));
+        store.impose(Element.choose(y3, children, x3));
+        store.impose(Element.choose(x4, angryat, y4));
+        store.impose(Element.choose(y4, children, x4));
+        store.impose(Element.choose(x5, angryat, y5));
+        store.impose(Element.choose(y5, children, x5));
 
         IntVar xs[] = {x1, x2, x3, x4, x5};
         // The same relation as for angry at and children.
@@ -233,12 +233,12 @@ public class SiblingUproar extends ExampleFD {
         vars.add(boy);
         vars.add(s);
 
-        store.impose(new Element(boy, children, way[iremoved_light_bulbs]));
-        store.impose(new Element(s, angryat, reason[iused_up_hot_water]));
+        store.impose(Element.choose(boy, children, way[iremoved_light_bulbs]));
+        store.impose(Element.choose(s, angryat, reason[iused_up_hot_water]));
         store.impose(new XeqY(way[iremoved_light_bulbs], reason[iused_up_hot_water]));
 
         IntVar ktos = new IntVar(store, "somebody", 1, 5);
-        store.impose(new Element(boy, angryat, ktos));
+        store.impose(Element.choose(boy, angryat, ktos));
         store.impose(new XeqY(chore[icleaning_the_basement], ktos));
         vars.add(ktos);
 
@@ -249,7 +249,7 @@ public class SiblingUproar extends ExampleFD {
         // sibling's violin.
 
         IntVar someone = new IntVar(store, "someone", 1, 5);
-        store.impose(new Element(someone, angryat, reason[ihogged_television]));
+        store.impose(Element.choose(someone, angryat, reason[ihogged_television]));
         vars.add(someone);
 
         IntVar Z = new IntVar(store, "Z", 1, 5);
@@ -288,8 +288,8 @@ public class SiblingUproar extends ExampleFD {
         // who was angry at Paula.
 
         IntVar imie = new IntVar(store, "imie", 1, 5);
-        store.impose(new Element(imie, angryat, way[ihid_violin]));
-        store.impose(new Element(imie, children, angryat[jPaula]));
+        store.impose(Element.choose(imie, angryat, way[ihid_violin]));
+        store.impose(Element.choose(imie, children, angryat[jPaula]));
         vars.add(imie);
 
         // 9. Bryan and the person who was punished by being told to wash the
@@ -309,7 +309,7 @@ public class SiblingUproar extends ExampleFD {
         // retaliated against a sibling by hanging up on his or her best friend.
 
         IntVar kto = new IntVar(store, "kto", 1, 5);
-        store.impose(new Element(kto, children, reason[ifinished_cereal]));
+        store.impose(Element.choose(kto, children, reason[ifinished_cereal]));
         store.impose(new XeqY(angryat[jNina], reason[ifinished_cereal]));
         store.impose(new XeqY(children[iStuart], way[ihung_up_on_friend]));
         vars.add(kto);

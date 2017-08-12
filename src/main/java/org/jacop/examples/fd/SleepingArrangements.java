@@ -119,32 +119,32 @@ public class SleepingArrangements extends ExampleFD {
 
         IntVar olliePos = new IntVar(store, "ollieRoomPosition", 1, 5);
         // ollie room position is obtained through room array
-        store.impose(new Element(olliePos, room, name[iOllie]));
+        store.impose(Element.choose(olliePos, room, name[iOllie]));
         IntVar ollieRoomNo = new IntVar(store, "ollieRoomNo", 1, 3);
         IntVar[] ollie = {ollieRoomNo, olliePos};
         // ollie room number is obtained based on ollie position
         store.impose(new ExtensionalSupportVA(ollie, roomNoGivenPosition));
 
         IntVar rolliePos = new IntVar(store, "rollieRoomPosition", 1, 5);
-        store.impose(new Element(rolliePos, room, name[iRollie]));
+        store.impose(Element.choose(rolliePos, room, name[iRollie]));
         IntVar rollieRoomNo = new IntVar(store, "rollieRoomNo", 1, 3);
         IntVar[] rollie = {rollieRoomNo, rolliePos};
         store.impose(new ExtensionalSupportVA(rollie, roomNoGivenPosition));
 
         IntVar melliePos = new IntVar(store, "mellieRoomPosition", 1, 5);
-        store.impose(new Element(melliePos, room, name[iMellie]));
+        store.impose(Element.choose(melliePos, room, name[iMellie]));
         IntVar mellieRoomNo = new IntVar(store, "mellieRoomNo", 1, 3);
         IntVar[] mellie = {mellieRoomNo, melliePos};
         store.impose(new ExtensionalSupportVA(mellie, roomNoGivenPosition));
 
         IntVar nelliePos = new IntVar(store, "nellieRoomPosition", 1, 5);
-        store.impose(new Element(nelliePos, room, name[iNellie]));
+        store.impose(Element.choose(nelliePos, room, name[iNellie]));
         IntVar nellieRoomNo = new IntVar(store, "nellieRoomNo", 1, 3);
         IntVar[] nellie = {nellieRoomNo, nelliePos};
         store.impose(new ExtensionalSupportVA(nellie, roomNoGivenPosition));
 
         IntVar polliePos = new IntVar(store, "pollieRoomPosition", 1, 5);
-        store.impose(new Element(polliePos, room, name[iPollie]));
+        store.impose(Element.choose(polliePos, room, name[iPollie]));
         IntVar pollieRoomNo = new IntVar(store, "pollieRoomNo", 1, 3);
         IntVar[] pollie = {pollieRoomNo, polliePos};
         store.impose(new ExtensionalSupportVA(pollie, roomNoGivenPosition));

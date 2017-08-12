@@ -183,8 +183,8 @@ public class FourIslands extends ExampleFD {
 
         IntVar iI3 = new IntVar(store, "clue4", 1, 4);
 
-        store.impose(new Element(iI3, aStadion, attraction[iJaiAlai]));
-        store.impose(new Element(iI3, aSkern, island[iSkern]));
+        store.impose(Element.choose(iI3, aStadion, attraction[iJaiAlai]));
+        store.impose(Element.choose(iI3, aSkern, island[iSkern]));
 
         // Clue no 5. Rayou and the island that exports bananas are
         // connected by an east-west bridge.
@@ -195,8 +195,8 @@ public class FourIslands extends ExampleFD {
 
         IntVar iI2 = new IntVar(store, "clue5", 1, 4);
 
-        store.impose(new Element(iI2, aBananas, export[iBananas]));
-        store.impose(new Element(iI2, aRayou, island[iRayou]));
+        store.impose(Element.choose(iI2, aBananas, export[iBananas]));
+        store.impose(Element.choose(iI2, aRayou, island[iRayou]));
 
         // Clue no. 6. The islands noted for the South Pacific's
         // largest ice skating rink and for the jai alai stadium are
@@ -208,8 +208,8 @@ public class FourIslands extends ExampleFD {
 
         IntVar iI = new IntVar(store, "clue6", 1, 4);
 
-        store.impose(new Element(iI, aIceIsland, attraction[iIceSkating]));
-        store.impose(new Element(iI, aStadionIsland, attraction[iJaiAlai]));
+        store.impose(Element.choose(iI, aIceIsland, attraction[iIceSkating]));
+        store.impose(Element.choose(iI, aStadionIsland, attraction[iJaiAlai]));
 
     }
 

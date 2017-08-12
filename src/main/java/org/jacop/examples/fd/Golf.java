@@ -183,8 +183,8 @@ public class Golf extends ExampleFD {
             IntVar el1 = new IntVar(store, "i" + i + "LN", 1, 4);
             IntVar el2 = new IntVar(store, "i" + i + "Jobs", 1, 4);
 
-            store.impose(new Element(el1, LN, FN[i]));
-            store.impose(new Element(el2, Jobs, FN[i]));
+            store.impose(Element.choose(el1, LN, FN[i]));
+            store.impose(Element.choose(el2, Jobs, FN[i]));
         }
 
     }

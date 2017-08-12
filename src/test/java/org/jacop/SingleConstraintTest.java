@@ -595,7 +595,7 @@ public class SingleConstraintTest {
 
     }
 
-    @Test @Ignore
+    @Test
     // BUG, problem with using BoundDomain, SmallDenseDomain and asserts, need to investigate.
     // The same problem and fixed applied for ArgMin. Keep this for investigation of the buggy scenario.
     public void testArgMax() {
@@ -613,7 +613,7 @@ public class SingleConstraintTest {
 
         int noOfSolutions = noOfAllSolutions(store, x, new IntVar[] {index});
 
-        assertThat(noOfSolutions, is(81));
+        assertThat(noOfSolutions, is(2401));
 
     }
 

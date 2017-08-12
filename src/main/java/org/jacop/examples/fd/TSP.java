@@ -92,7 +92,7 @@ public class TSP extends ExampleFD {
         // Computes a cost of traveling between ith city
         // and city[i]-th city
         for (int i = 0; i < cities.length; i++) {
-            store.impose(new Element(cities[i], distance[i], costs[i]));
+            store.impose(Element.choose(cities[i], distance[i], costs[i]));
         }
 
         cost = new IntVar(store, "Cost", 0, 100000);

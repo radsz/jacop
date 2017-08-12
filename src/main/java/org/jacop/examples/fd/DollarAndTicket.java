@@ -163,7 +163,7 @@ public class DollarAndTicket extends ExampleFD {
 
         vars.add(girlIndex);
 
-        store.impose(new Element(girlIndex, girlFirstname, team[icheetahs]));
+        store.impose(Element.choose(girlIndex, girlFirstname, team[icheetahs]));
         store.impose(new XmulCeqZ(firstname[idiane], 3, team[icheetahs]));
 
         // 6. Greg isn't Borecki or Ott.

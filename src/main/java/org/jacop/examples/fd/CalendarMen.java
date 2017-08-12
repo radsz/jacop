@@ -153,11 +153,11 @@ public class CalendarMen extends ExampleFD {
 
         int lista_1[] = {4, 7, 10};
 
-        store.impose(new Element(I_1_1, lista_1, first[iFrancisco]));
+        store.impose(Element.choose(I_1_1, lista_1, first[iFrancisco]));
 
-        store.impose(new Element(I_1_2, lista_1, last[iSheldon]));
+        store.impose(Element.choose(I_1_2, lista_1, last[iSheldon]));
 
-        store.impose(new Element(I_1_3, lista_1, sport[ivolleyball]));
+        store.impose(Element.choose(I_1_3, lista_1, sport[ivolleyball]));
 
         // 2. Karl, Moross, and the hockey player were
         // featured in consecutive months, but not
@@ -191,11 +191,11 @@ public class CalendarMen extends ExampleFD {
 
         IntVar lista_2[] = {X1, X2, X3};
 
-        store.impose(new Element(I_2_1, lista_2, first[iKarl]));
+        store.impose(Element.choose(I_2_1, lista_2, first[iKarl]));
 
-        store.impose(new Element(I_2_2, lista_2, last[iMoross]));
+        store.impose(Element.choose(I_2_2, lista_2, last[iMoross]));
 
-        store.impose(new Element(I_2_3, lista_2, sport[ihockey]));
+        store.impose(Element.choose(I_2_3, lista_2, sport[ihockey]));
 
         // 3. Lorenzo appeared an even number of months
         // after the squash player.
@@ -232,9 +232,9 @@ public class CalendarMen extends ExampleFD {
 
         int lista_4[] = {6, 9, 12};
 
-        store.impose(new Element(D1, lista_4, first[iIvor]));
-        store.impose(new Element(D2, lista_4, last[iO_Rourke]));
-        store.impose(new Element(D3, lista_4, sport[itennis]));
+        store.impose(Element.choose(D1, lista_4, first[iIvor]));
+        store.impose(Element.choose(D2, lista_4, last[iO_Rourke]));
+        store.impose(Element.choose(D3, lista_4, sport[itennis]));
 
         // 5. Wang was featured the month immediately after John, and two months
         // immediately before Nelsen.
@@ -284,9 +284,9 @@ public class CalendarMen extends ExampleFD {
 
         int lista_9[] = {1, 5, 9};
 
-        store.impose(new Element(I_9_1, lista_9, first[iGriff]));
-        store.impose(new Element(I_9_2, lista_9, last[iReede]));
-        store.impose(new Element(I_9_3, lista_9, sport[iarchery]));
+        store.impose(Element.choose(I_9_1, lista_9, first[iGriff]));
+        store.impose(Element.choose(I_9_2, lista_9, last[iReede]));
+        store.impose(Element.choose(I_9_3, lista_9, sport[iarchery]));
 
         // 10. Brett, Ed, and Lorenzo were featured in consecutive months,
         // though not necessarily in that order.
@@ -317,9 +317,9 @@ public class CalendarMen extends ExampleFD {
 
         IntVar lista_10[] = {W1, W2, W3};
 
-        store.impose(new Element(I_10_1, lista_10, first[iBrett]));
-        store.impose(new Element(I_10_2, lista_10, first[iEd]));
-        store.impose(new Element(I_10_3, lista_10, first[iLorenzo]));
+        store.impose(Element.choose(I_10_1, lista_10, first[iBrett]));
+        store.impose(Element.choose(I_10_2, lista_10, first[iEd]));
+        store.impose(Element.choose(I_10_3, lista_10, first[iLorenzo]));
 
         // 11. Ed, Uhler, and the croquet player were featured in consecutive
         // months, though not necessarily in that order.
@@ -350,9 +350,9 @@ public class CalendarMen extends ExampleFD {
 
         IntVar lista_11[] = {Q1, Q2, Q3};
 
-        store.impose(new Element(K1, lista_11, first[iEd]));
-        store.impose(new Element(K2, lista_11, last[iUhler]));
-        store.impose(new Element(K3, lista_11, sport[icroquet]));
+        store.impose(Element.choose(K1, lista_11, first[iEd]));
+        store.impose(Element.choose(K2, lista_11, last[iUhler]));
+        store.impose(Element.choose(K3, lista_11, sport[icroquet]));
 
         // 12. Dabney, Nelsen, and the lacrosse player were featured in April,
         // June, and August, in some order.
@@ -372,9 +372,9 @@ public class CalendarMen extends ExampleFD {
 
         int lista_12[] = {4, 6, 8};
 
-        store.impose(new Element(L1, lista_12, first[iDabney]));
-        store.impose(new Element(L2, lista_12, last[iNelsen]));
-        store.impose(new Element(L3, lista_12, sport[ilacrosse]));
+        store.impose(Element.choose(L1, lista_12, first[iDabney]));
+        store.impose(Element.choose(L2, lista_12, last[iNelsen]));
+        store.impose(Element.choose(L3, lista_12, sport[ilacrosse]));
 
         // 13. Brett doesn't play lacrosse.
 

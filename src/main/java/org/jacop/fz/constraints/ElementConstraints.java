@@ -106,7 +106,7 @@ class ElementConstraints implements ParserTreeConstants {
         if (support.options.getBoundConsistency())
             support.pose(new ElementIntegerFast(p1, newP2, p3, p1.min() - 1));
         else
-            support.pose(new Element(p1, newP2, p3, p1.min() - 1));
+            support.pose(Element.choose(p1, newP2, p3, p1.min() - 1));
 
     }
 
