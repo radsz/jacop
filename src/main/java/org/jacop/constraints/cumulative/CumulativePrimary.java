@@ -1,4 +1,4 @@
-/**
+/*
  * CumulativePrimary.java
  * This file is part of JaCoP.
  * <p>
@@ -54,24 +54,22 @@ import java.util.stream.Stream;
 
 class CumulativePrimary extends Constraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    private static AtomicInteger idNumber = new AtomicInteger(0);
 
-    static final boolean debug = false, debugNarr = false;
+    private static final boolean debug = false, debugNarr = false;
 
-    EventIncComparator<Event> eventComparator = new EventIncComparator<Event>();
-
-    Store store;
+    private EventIncComparator<Event> eventComparator = new EventIncComparator<>();
 
     /**
      * start times of tasks
      */
-    IntVar[] start;
+    private IntVar[] start;
 
     /**
      * All durations and resources of the constraint
      */
-    int[] dur;
-    int[] res;
+    private int[] dur;
+    private int[] res;
 
     /**
      * It specifies the limit of the profile of cumulative use of resources.
@@ -136,26 +134,14 @@ class CumulativePrimary extends Constraint {
 
             store.propagationHasOccurred = false;
 
-            profileProp();
+            sweepPruning(store);
 
         } while (store.propagationHasOccurred);
 
     }
 
-    void profileProp() {
-
-        sweepPruning();
-    }
-
     @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
-    }
-
-    @Override public void impose(Store store) {
-
-        super.impose(store);
-        this.store = store;
-
     }
 
     @Override public String toString() {
@@ -164,9 +150,10 @@ class CumulativePrimary extends Constraint {
 
         result.append(" : cumulativePrimary([ ");
         for (int i = 0; i < start.length - 1; i++)
-            result.append("[" + start[i] + ", ").append(dur[i] + ", ").append(res[i] + "], ");
+            result.append("[").append(start[i]).append(", ").append(dur[i]).append(", ").append(res[i]).append("], ");
 
-        result.append("[" + start[start.length - 1] + ", ").append(dur[start.length - 1] + ", ").append(res[start.length - 1] + "]");
+        result.append("[").append(start[start.length - 1]).append(", ").append(dur[start.length - 1]).append(", ")
+            .append(res[start.length - 1]).append("]");
 
         result.append(" ]").append(", limit = ").append(limit).append(" )");
 
@@ -174,21 +161,8 @@ class CumulativePrimary extends Constraint {
 
     }
 
-    String intArrayToString(int[] a) {
-        StringBuffer result = new StringBuffer("[");
-
-        for (int i = 0; i < a.length; i++) {
-            if (i != 0)
-                result.append(", ");
-            result.append(a[i]);
-        }
-        result.append("]");
-
-        return result.toString();
-    }
-
     // Sweep algorithm for profile
-    void sweepPruning() {
+    void sweepPruning(Store store) {
 
         Event[] es = new Event[4 * start.length];
         int limitMax = limit.max();
@@ -324,7 +298,7 @@ class CumulativePrimary extends Constraint {
 
                         if (debugNarr)
                             System.out.print(
-                                ">>> CumulativePrimary Profile 2. Narrowed " + start[ti] + " inMax " + (int) (startExcluded[ti] - 1));
+                                ">>> CumulativePrimary Profile 2. Narrowed " + start[ti] + " inMax " + (startExcluded[ti] - 1));
 
                         start[ti].domain.inMax(store.level, start[ti], startExcluded[ti] - 1);
 
@@ -345,7 +319,7 @@ class CumulativePrimary extends Constraint {
     }
 
     // event type
-    static final int profile = 0, pruneStart = 1, pruneEnd = 2;
+    private static final int profile = 0, pruneStart = 1, pruneEnd = 2;
 
 
     private static class Event {

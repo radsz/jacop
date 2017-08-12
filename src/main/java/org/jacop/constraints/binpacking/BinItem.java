@@ -1,4 +1,4 @@
-/**
+/*
  * BinItem.java
  * This file is part of JaCoP.
  * <p>
@@ -46,7 +46,7 @@ class BinItem {
 
     public int weight;
 
-    public BinItem(IntVar bin, int weight) {
+    BinItem(IntVar bin, int weight) {
 
         if (bin == null)
             throw new IllegalArgumentException("Bin variable is null");

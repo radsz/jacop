@@ -254,7 +254,16 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
         return !arguments().stream().filter(i -> !i.singleton()).findFirst().isPresent();
     }
 
-    ;
+
+    /**
+     * It checks if the constraint has all variables in its scope grounded (singletons).
+     *
+     * @return true if all variables in constraint scope are singletons, false otherwise.
+     */
+    public boolean grounded(Var[] vars) {
+        return ! Arrays.stream(vars).filter(i -> !i.singleton()).findFirst().isPresent();
+    }
+
 
     /**
      * It produces a string representation of a constraint state.
@@ -264,6 +273,10 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
         return arguments().stream().map( i -> i.toString() ).collect(joining(", ", id() + "(", ")"));
 
     };
+
+    public static String intArrayToString(int[] array) {
+        return Arrays.stream(array).mapToObj( i -> Integer.toString(i) ).collect(joining(", ", "[", "]"));
+    }
 
     /**
      * It specifies a constraint which if imposed by search will enhance

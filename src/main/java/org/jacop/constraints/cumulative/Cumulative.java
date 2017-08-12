@@ -1,4 +1,4 @@
-/**
+/*
  * Cumulative.java
  * This file is part of JaCoP.
  * <p>
@@ -34,9 +34,9 @@ package org.jacop.constraints.cumulative;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Cumulative implements the scheduling constraint using
@@ -59,12 +59,9 @@ import java.util.*;
 
 public class Cumulative extends CumulativeBasic {
 
-    static final boolean debug = false;
-
     TaskView[] taskReversed;
 
-    boolean doEdgeFind = true;
-    int limitOnEdgeFind = 100;
+    private boolean doEdgeFind = true;
 
     /**
      * It creates a cumulative constraint.
@@ -93,6 +90,7 @@ public class Cumulative extends CumulativeBasic {
             }
 
         String s = System.getProperty("max_edge_find_size");
+        int limitOnEdgeFind = 100;
         if (s != null)
             limitOnEdgeFind = Integer.parseInt(s);
         doEdgeFind = (starts.length <= limitOnEdgeFind);
@@ -120,10 +118,10 @@ public class Cumulative extends CumulativeBasic {
 
             store.propagationHasOccurred = false;
 
-            profileProp();
+            profileProp(store);
 
-            if (store.propagationHasOccurred == false && doEdgeFind)
-                edgeFind();
+            if ( ! store.propagationHasOccurred && doEdgeFind)
+                edgeFind(store);
 
         } while (store.propagationHasOccurred);
     }
@@ -162,14 +160,14 @@ public class Cumulative extends CumulativeBasic {
     }
     */
 
-    void edgeFind() {
+    private void edgeFind(Store store) {
 
-        edgeFind(taskNormal);
-        edgeFind(taskReversed);
+        edgeFind(store, taskNormal);
+        edgeFind(store, taskReversed);
 
     }
 
-    void edgeFind(TaskView[] tn) {
+    private void edgeFind(Store store, TaskView[] tn) {
 
         // tasks sorted in non-decreasing order of est
         TaskView[] estList = filterZeroTasks(tn); // new TaskView[taskNormal.length];
@@ -177,7 +175,7 @@ public class Cumulative extends CumulativeBasic {
         if (estList == null)
             return;
 
-        Arrays.sort(estList, new TaskIncESTComparator<TaskView>());
+        Arrays.sort(estList, new TaskIncESTComparator<>());
 
         ThetaLambdaTree tree = new ThetaLambdaTree(limit);
         tree.buildTree(estList);
@@ -185,7 +183,7 @@ public class Cumulative extends CumulativeBasic {
         // tasks sorted in non-increasing order of lct
         TaskView[] lctList = new TaskView[estList.length];
         System.arraycopy(estList, 0, lctList, 0, estList.length);
-        Arrays.sort(lctList, new TaskDecLCTComparator<TaskView>());
+        Arrays.sort(lctList, new TaskDecLCTComparator<>());
 
         int[] auxOrderListInv = new int[lctList.length];
         for (int i = 0; i < lctList.length; i++) {
@@ -200,28 +198,28 @@ public class Cumulative extends CumulativeBasic {
         // tree.printTree("tree_init");
 
         // ========== Adjust Bounds ============
-        adjustBounds(tree, lctList, prec, (long) limit.max());
+        adjustBounds(store, tree, lctList, prec, (long) limit.max());
 
     }
 
-    int[] detectOrder(ThetaLambdaTree tree, TaskView[] t, int[] lctInvOrder, long C) {
+    private int[] detectOrder(ThetaLambdaTree tree, TaskView[] t, int[] lctInvOrder, long C) {
 
         int n = t.length;
         int[] prec = new int[n];
-        for (int i = 0; i < n; i++)
-            prec[t[i].index] = t[i].ect(); // originally Integer.MIN_VALUE; can be changed to this
 
-        for (int j = 0; j < n; j++) {
-            if (tree.rootNode().env > C * (long) t[j].lct()) {
-                throw store.failException;
+        Arrays.stream(t).forEach( i -> prec[i.index] = i.ect());
+
+        for (TaskView aT : t) {
+            if (tree.rootNode().env > C * (long) aT.lct()) {
+                throw Store.failException;
             }
 
-            while (tree.rootNode().envLambda > C * (long) t[j].lct()) {
+            while (tree.rootNode().envLambda > C * (long) aT.lct()) {
                 int i = tree.rootNode().responsibleEnvLambda;
-                prec[tree.get(i).task.index] = Math.max(prec[tree.get(i).task.index], t[j].lct());
+                prec[tree.get(i).task.index] = Math.max(prec[tree.get(i).task.index], aT.lct());
                 tree.removeFromLambda(i);
             }
-            tree.moveToLambda(t[j].treeIndex);
+            tree.moveToLambda(aT.treeIndex);
         }
 
         int[] lctPrec = new int[prec.length];
@@ -232,22 +230,19 @@ public class Cumulative extends CumulativeBasic {
         return lctPrec;
     }
 
-    void adjustBounds(ThetaLambdaTree tree, TaskView[] t, int[] prec, long cap) {
+    private void adjustBounds(Store store, ThetaLambdaTree tree, TaskView[] t, int[] prec, long cap) {
 
         int n = t.length;
-        Set<Integer> capacities = new LinkedHashSet<Integer>();
-        for (int i = 0; i < n; i++) {
-            capacities.add(t[i].res.min());
-        }
+        Set<Integer> capacities = Arrays.stream(t).map( i -> i.res.min()).collect(Collectors.toCollection(HashSet::new));
 
         // System.out.println("capacities = " + capacities);
 
         int[] capMap = new int[n];
         int capIndex = 0;
         for (int ci : capacities) {
-            for (int i = 0; i < n; i++) {
-                if (t[i].res.min() == ci)
-                    capMap[t[i].index] = capIndex;
+            for (TaskView aT : t) {
+                if (aT.res.min() == ci)
+                    capMap[aT.index] = capIndex;
             }
             capIndex++;
         }
@@ -283,7 +278,7 @@ public class Cumulative extends CumulativeBasic {
         Integer[] precTaskOrder = new Integer[n];
         for (int i = n - 1; i >= 0; i--)
             precTaskOrder[i] = i;
-        Arrays.sort(precTaskOrder, new PrecComparator<Integer>(prec));
+        Arrays.sort(precTaskOrder, new PrecComparator<>(prec));
 
         int j = 0;
         outer:
@@ -307,7 +302,7 @@ public class Cumulative extends CumulativeBasic {
                 inner:
                 while (nj < n && t[nj].lct() == precI) {
                     if (t[nj].lct() < taskI.lct()) {
-                        taskI.updateEdgeFind(store.level, (int) update[capMap[taskI.index]][nj]);
+                        taskI.updateEdgeFind(store.level, update[capMap[taskI.index]][nj]);
                         break inner;
                     }
                     nj++;
@@ -323,10 +318,10 @@ public class Cumulative extends CumulativeBasic {
             TaskView[] nonZeroTasks = new TaskView[ts.length];
             int k = 0;
 
-            for (int i = 0; i < ts.length; i++)
-                if (ts[i].res.min() != 0 && ts[i].dur.min() != 0) {
-                    nonZeroTasks[k] = ts[i];
-                    ts[i].index = k++;
+            for (TaskView t1 : ts)
+                if (t1.res.min() != 0 && t1.dur.min() != 0) {
+                    nonZeroTasks[k] = t1;
+                    t1.index = k++;
                 }
 
             if (k == 0)

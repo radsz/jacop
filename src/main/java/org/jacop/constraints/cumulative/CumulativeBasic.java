@@ -1,4 +1,4 @@
-/**
+/*
  * CumulativeBasic.java
  * This file is part of JaCoP.
  * <p>
@@ -51,13 +51,11 @@ import java.util.stream.Stream;
 
 public class CumulativeBasic extends Constraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    private static AtomicInteger idNumber = new AtomicInteger(0);
 
-    static final boolean debug = false, debugNarr = false;
+    private static final boolean debug = false, debugNarr = false;
 
-    EventIncComparator<Event> eventComparator = new EventIncComparator<Event>();
-
-    Store store;
+    private EventIncComparator<Event> eventComparator = new EventIncComparator<>();
 
     /**
      * All tasks of the constraint
@@ -113,7 +111,7 @@ public class CumulativeBasic extends Constraint {
                 possibleZeroTasks = true;
         }
 
-        if (allVarGround(durations) && allVarGround(resources)) {
+        if (grounded(durations) && grounded(resources)) {
             int[] durInt = new int[durations.length];
             for (int i = 0; i < durations.length; i++)
                 durInt[i] = durations[i].value();
@@ -149,19 +147,19 @@ public class CumulativeBasic extends Constraint {
         do {
 
             store.propagationHasOccurred = false;
-            profileProp();
+            profileProp(store);
 
         } while (store.propagationHasOccurred);
 
     }
 
-    void profileProp() {
+    void profileProp(Store store) {
 
         if (cumulativeForConstants == null) {
-            sweepPruning();
+            sweepPruning(store);
             updateTasksRes(store);
         } else
-            cumulativeForConstants.sweepPruning();
+            cumulativeForConstants.sweepPruning(store);
 
     }
 
@@ -169,18 +167,7 @@ public class CumulativeBasic extends Constraint {
         return IntDomain.BOUND;
     }
 
-    @Override public void impose(Store store) {
-
-        super.impose(store);
-
-        this.store = store;
-
-        if (cumulativeForConstants != null)
-            cumulativeForConstants.store = store;
-
-    }
-
-    void updateTasksRes(Store store) {
+    private void updateTasksRes(Store store) {
         int limitMax = limit.max();
         for (TaskView t : taskNormal)
             t.res.domain.inMax(store.level, t.res, limitMax);
@@ -202,21 +189,8 @@ public class CumulativeBasic extends Constraint {
 
     }
 
-    String intArrayToString(int[] a) {
-        StringBuffer result = new StringBuffer("[");
-
-        for (int i = 0; i < a.length; i++) {
-            if (i != 0)
-                result.append(", ");
-            result.append(a[i]);
-        }
-        result.append("]");
-
-        return result.toString();
-    }
-
     // Sweep algorithm for profile
-    void sweepPruning() {
+    private void sweepPruning(Store store) {
 
         Event[] es = new Event[4 * taskNormal.length];
         int limitMax = limit.max();
@@ -321,7 +295,7 @@ public class CumulativeBasic extends Constraint {
                                         if (debugNarr)
                                             System.out.print(
                                                 ">>> CumulativeBasic Profile 1. Narrowed " + t.start + " \\ " + new IntervalDomain(
-                                                    startExcluded[ti], (int) (e.date() - 1)));
+                                                    startExcluded[ti], (e.date() - 1)));
 
                                         t.start.domain.inComplement(store.level, t.start, startExcluded[ti], e.date() - 1);
 
@@ -391,7 +365,7 @@ public class CumulativeBasic extends Constraint {
 
                             if (debugNarr)
                                 System.out.print(
-                                    ">>> CumulativeBasic Profile 2. Narrowed " + t.start + " inMax " + (int) (startExcluded[ti] - 1));
+                                    ">>> CumulativeBasic Profile 2. Narrowed " + t.start + " inMax " + (startExcluded[ti] - 1));
 
                             t.start.domain.inMax(store.level, t.start, startExcluded[ti] - 1);
 
@@ -438,15 +412,8 @@ public class CumulativeBasic extends Constraint {
         }
     }
 
-    boolean allVarGround(IntVar[] w) {
-        for (int i = 0; i < w.length; i++)
-            if (!w[i].singleton())
-                return false;
-        return true;
-    }
-
     // event type
-    static final int profile = 0, pruneStart = 1, pruneEnd = 2;
+    private static final int profile = 0, pruneStart = 1, pruneEnd = 2;
 
 
     private static class Event {

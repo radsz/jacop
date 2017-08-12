@@ -1,4 +1,4 @@
-/**
+/*
  * Binpacking.java
  * This file is part of JaCoP.
  * <p>
@@ -40,8 +40,6 @@ import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.*;
 import org.jacop.util.SimpleHashSet;
-
-import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 /**
@@ -57,32 +55,32 @@ import java.util.stream.Stream;
 
 public class Binpacking extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final private static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It keeps together a list of variables which define bin for item i and
      * their weigts.
      */
-    public BinItem[] item;
+    final public BinItem[] item;
 
     /**
      * It specifies a list of variables which define bin load.
      */
-    public IntVar[] load;
+    final public IntVar[] load;
 
-    boolean firstConsistencyCheck = true;
+    private boolean firstConsistencyCheck = true;
 
-    int minBinNumber = 0;
+    private int minBinNumber = 0;
 
-    int sizeAllItems = 0;
+    private int sizeAllItems = 0;
 
-    int alphaP = 0, betaP = 0;
+    private int alphaP = 0, betaP = 0;
 
-    SimpleHashSet<IntVar> itemQueue = new SimpleHashSet<IntVar>();
-    SimpleHashSet<IntVar> binQueue = new SimpleHashSet<IntVar>();
+    final private SimpleHashSet<IntVar> itemQueue = new SimpleHashSet<>();
+    final private SimpleHashSet<IntVar> binQueue = new SimpleHashSet<>();
 
-    final Map<IntVar, Integer> itemMap;
-    final Map<IntVar, Integer> binMap;
+    private final Map<IntVar, Integer> itemMap;
+    private final Map<IntVar, Integer> binMap;
 
     /**
      * It constructs the binpacking constraint for the supplied variable.
@@ -100,7 +98,7 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
         if (bin.length != w.length)
             throw new IllegalArgumentException("Constraint BinPacking has arguments bin and w that are of different sizes");
 
-        LinkedHashMap<IntVar, Integer> itemPar = new LinkedHashMap<IntVar, Integer>();
+        LinkedHashMap<IntVar, Integer> itemPar = new LinkedHashMap<>();
         for (int i = 0; i < bin.length; i++) {
 
             if (w[i] != 0)
@@ -135,7 +133,7 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
 
         binMap = Var.positionMapping(load, false, this.getClass());
 
-        Arrays.sort(item, new WeightComparator<BinItem>());
+        Arrays.sort(item, new WeightComparator<>());
 
         itemMap = Var.positionMapping(Arrays.stream(item).map( i -> i.bin ).toArray(IntVar[]::new),
             false, this.getClass());
@@ -186,8 +184,10 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
 
         // Rule "Pack All" -- chcecked only first time
         if (firstConsistencyCheck) {
-            for (int i = 0; i < item.length; i++)
-                item[i].bin.domain.in(store.level, item[i].bin, minBinNumber, load.length - 1 + minBinNumber);
+
+            Arrays.stream(item)
+                .map( i -> i.bin )
+                .forEach( i -> i.domain.in(store.level, i, minBinNumber, load.length - 1 + minBinNumber));
 
             firstConsistencyCheck = false;
         }
@@ -212,16 +212,15 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
             }
 
             BinItem[] candidates;
-            int candidatesLength = 0;
             // for (int i = 0; i < load.length; i++) {  // replaced with needed bins to check
             for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
                 int i = e.nextElement() - minBinNumber;
 
-                if (i >= 0
-                    && i < load.length) { // check if bin no. is in the limits; might not be there since it is FDV specified in by a user
+                // check if bin no. is in the limits; might not be there since it is FDV specified in by a user
+                if (i >= 0 && i < load.length) {
 
                     candidates = new BinItem[item.length];
-                    candidatesLength = 0;
+                    int candidatesLength = 0;
 
                     int required = 0;
                     int possible = 0;
@@ -286,15 +285,16 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
             }
 
             int allCapacityMin = 0, allCapacityMax = 0;
-            for (int i = 0; i < load.length; i++) {
-                allCapacityMin += load[i].min();
-                allCapacityMax += load[i].max();
+            for (IntVar aLoad : load) {
+                allCapacityMin += aLoad.min();
+                allCapacityMax += aLoad.max();
             }
 
             // Rule "Load and Size Coherence"
-            for (int i = 0; i < load.length; i++)
-                load[i].domain.in(store.level, load[i], sizeAllItems - (allCapacityMax - load[i].max()),
-                    sizeAllItems - (allCapacityMin - load[i].min()));
+            for (IntVar aLoad : load)
+                aLoad.domain.in(store.level, aLoad,
+                    sizeAllItems - (allCapacityMax - aLoad.max()),
+                    sizeAllItems - (allCapacityMin - aLoad.min()));
 
         } while (store.propagationHasOccurred);
 
@@ -331,10 +331,10 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
             throw Store.failException;
     }
 
-    int getNumberBins(BinItem[] item) {
+    private int getNumberBins(BinItem[] item) {
         int min = IntDomain.MaxInt, max = 0;
-        for (int i = 0; i < item.length; i++) {
-            IntVar bin = item[i].bin;
+        for (BinItem anItem : item) {
+            IntVar bin = anItem.bin;
             int bmin = bin.min(), bmax = bin.max();
             max = (max > bmax) ? max : bmax;
             min = (min < bmin) ? min : bmin;
@@ -343,7 +343,7 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
     }
 
 
-    int[] merge(int[] u, int uLength, int[] a) {
+    private int[] merge(int[] u, int uLength, int[] a) {
         int[] tmp = new int[a.length + uLength];
 
         int i = 0, j = a.length - 1, k = 0;
@@ -381,11 +381,11 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
 
     }
 
-    @Override public void queueVariable(int level, Var V) {
-        if (itemMap.get(V) != null)
-            itemQueue.add((IntVar) V);
+    @Override public void queueVariable(int level, Var var) {
+        if (itemMap.get(var) != null)
+            itemQueue.add((IntVar) var);
         else
-            binQueue.add((IntVar) V);
+            binQueue.add((IntVar) var);
     }
 
     @Override public void removeLevel(int level) {
@@ -422,12 +422,12 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
 
     }
 
-    boolean no_sum(int[] X, int alpha, int beta) {
+    private boolean no_sum(int[] X, int alpha, int beta) {
 
         if (alpha <= 0 || beta >= sum(X))
             return false;
 
-        int sum_a = 0, sum_b = 0, sum_c = 0, k = 0, kPrime = 0, N = X.length - 1; // |X|
+        int sum_a = 0, sum_b, sum_c = 0, k = 0, kPrime = 0, N = X.length - 1; // |X|
 
         while (sum_c + X[N - kPrime] < alpha) {
             sum_c += X[N - kPrime];
@@ -461,14 +461,14 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
         return sum_a < alpha;
     }
 
-    int sum(int[] x) {
+    private int sum(int[] x) {
         int summa = 0;
         for (int v : x)
             summa += v;
         return summa;
     }
 
-    int lbBins(int[] X, int C) {
+    private int lbBins(int[] X, int C) {
 
         int sum = sum(X);
         int lb = sum / C + ((sum % C != 0) ? 1 : 0);
