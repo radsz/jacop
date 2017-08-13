@@ -286,11 +286,7 @@ class CumulativePrimary extends Constraint {
                     break;
 
                 case pruneEnd: // =========== end of a task ===========
-                    profileValue = curProfile;
                     ti = e.index;
-
-                    if (inProfile[ti])
-                        profileValue -= res[ti];
 
                     // ========= pruning start variable
                     if (startExcluded[ti] != Integer.MAX_VALUE) {
