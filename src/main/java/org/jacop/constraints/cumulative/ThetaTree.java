@@ -1,4 +1,4 @@
-/**
+/*
  * ThetaTree.java
  * This file is part of JaCoP.
  * <p>
@@ -51,11 +51,11 @@ class ThetaTree extends Tree {
     // number of leaves (tasks)
     int n;
     // array that keeps all nodes of the balanced binary tree and organizes the tree structure
-    ThetaNode[] tree;
+    private ThetaNode[] tree;
     // list of ordered tasks
-    TaskView[] orderedTasks;
+    private TaskView[] orderedTasks;
 
-    ThetaNode empty = new ThetaNode();
+    private ThetaNode empty = new ThetaNode();
 
     public ThetaTree() {
     }
@@ -101,7 +101,7 @@ class ThetaTree extends Tree {
             addNode(i);
     }
 
-    void addLeave(int i) {
+    private void addLeave(int i) {
         tree[i] = new ThetaNode();
         tree[i].index = i;
 
@@ -155,7 +155,7 @@ class ThetaTree extends Tree {
     }
 
 
-    void addNode(int i) {
+    private void addNode(int i) {
 
         if (notExist(left(i))) {
             tree[i] = empty;
@@ -174,7 +174,7 @@ class ThetaTree extends Tree {
         }
     }
 
-    void computeNode(int i) {
+    private void computeNode(int i) {
 
         if (notExist(left(i))) {
             tree[i] = empty;
@@ -220,7 +220,7 @@ class ThetaTree extends Tree {
         updateTree(parent(i));
     }
 
-    void disableNode(int i) {
+    private void disableNode(int i) {
         clearNode(i);
         updateTree(parent(i));
     }
@@ -238,7 +238,7 @@ class ThetaTree extends Tree {
         }
     }
 
-    int leaveIndex(int i) {
+    private int leaveIndex(int i) {
         return i - (treeSize - n);
     }
 
@@ -274,18 +274,18 @@ class ThetaTree extends Tree {
 
         StringBuffer result = new StringBuffer();
 
-        result.append("digraph ThetaTree" + name);
+        result.append("digraph ThetaTree").append(name);
         result.append(" {");
         result.append("graph [  fontsize = 12,");
         result.append("size = \"5,5\" ];\n");
 
         for (int i = 0; i < treeSize; i++) {
-            result.append("node_" + i + " [shape = box, label = \"" + tree[i] + "\"]\n");
+            result.append("node_").append(i).append(" [shape = box, label = \"").append(tree[i]).append("\"]\n");
         }
 
         result.append(treeToGraph(root()));
 
-        result.append("label =\"\n\nThetaTree" + name + "\n\"");
+        result.append("label =\"\n\nThetaTree").append(name).append("\n\"");
 
         result.append("}");
 
@@ -301,11 +301,11 @@ class ThetaTree extends Tree {
         } else {
             String s = "node_" + i + " -> "; //"[label = \""+ tree[i] +"\"] -> ";
             if (exist(left(i))) {
-                result.append(s + "node_" + left(i) + "\n");
+                result.append(s).append("node_").append(left(i)).append("\n");
                 result.append(treeToGraph(left(i)));
             }
             if (exist(right(i))) {
-                result.append(s + "node_" + right(i) + "\n");
+                result.append(s).append("node_").append(right(i)).append("\n");
                 result.append(treeToGraph(right(i)));
             }
 
@@ -319,7 +319,7 @@ class ThetaTree extends Tree {
 
         result.append("ThetaTree\n");
         for (int i = 0; i < treeSize; i++)
-            result.append("Node " + i + "\n============\n" + tree[i] + "\n============\n");
+            result.append("Node ").append(i).append("\n============\n").append(tree[i]).append("\n============\n");
 
         return result.toString();
     }

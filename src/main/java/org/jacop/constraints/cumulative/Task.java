@@ -1,4 +1,4 @@
-/**
+/*
  * Task.java
  * This file is part of JaCoP.
  * <p>
@@ -31,7 +31,6 @@
 package org.jacop.constraints.cumulative;
 
 import org.jacop.core.IntVar;
-import org.jacop.core.Store;
 
 /**
  * Represents tasks for cumulative constraint

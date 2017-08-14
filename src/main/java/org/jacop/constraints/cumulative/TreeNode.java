@@ -1,4 +1,4 @@
-/**
+/*
  * TreeNode.java
  * This file is part of JaCoP.
  * <p>
@@ -44,7 +44,6 @@ class TreeNode {
     // index in the tree
     int index;
 
-    TreeNode() {
-    }
+    TreeNode() {}
 
 }

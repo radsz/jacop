@@ -1,4 +1,4 @@
-/**
+/*
  * TaskNormalView.java
  * This file is part of JaCoP.
  * <p>
@@ -92,8 +92,4 @@ class TaskNormalView extends TaskView {
 	return dur.max() > 0 && res.max() > 0;
     }
 
-    // @Override
-    // public String toString() {
-    //   return "[" + super.toString() + ", normal view: est = " + est() + ", lct =  " + lct() + ", ect = " + ect() + ", lst = " + lst() + ", treeIndex = " + treeIndex + "]";
-    // }
 }

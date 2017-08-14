@@ -1,4 +1,4 @@
-/**
+/*
  * TaskReversedView.java
  * This file is part of JaCoP.
  * <p>
@@ -89,10 +89,5 @@ class TaskReversedView extends TaskView {
     boolean maxNonZero() {
 	return dur.max() > 0 && res.max() > 0;
     }
-
-    // @Override
-    // public String toString() {
-    //   return "[" + super.toString() + ", reversed view: est = " + est() + ", lct =  " + lct() + ", ect = " + ect() + ", lst = " + lst() + ", treeIndex = " + treeIndex + "]";
-    // }
 
 }

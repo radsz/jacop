@@ -243,7 +243,21 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
         arguments().stream().forEach(i -> i.removeConstraint(this));
     }
 
-    ;
+
+    Var watchedVariableGrounded;
+
+    public void setWatchedVariableGrounded(Var var) {
+        watchedVariableGrounded = var;
+    };
+
+    public boolean watchedVariableGrounded() {
+        if (watchedVariableGrounded == null || watchedVariableGrounded.singleton()) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
 
     /**
      * It checks if the constraint has all variables in its scope grounded (singletons).
@@ -251,7 +265,20 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
      * @return true if all variables in constraint scope are singletons, false otherwise.
      */
     public boolean grounded() {
-        return !arguments().stream().filter(i -> !i.singleton()).findFirst().isPresent();
+
+        if (! watchedVariableGrounded())
+            return false;
+
+        Optional<Var> stillNotGrounded = arguments().stream().filter(i -> !i.singleton()).findFirst();
+
+        if (stillNotGrounded.isPresent()) {
+            setWatchedVariableGrounded(stillNotGrounded.get());
+            return false;
+        }
+        else {
+            return true;
+        }
+        
     }
 
 

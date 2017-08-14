@@ -1,4 +1,4 @@
-/**
+/*
  * ThetaLambdaTree.java
  * This file is part of JaCoP.
  * <p>
@@ -51,13 +51,13 @@ import java.io.IOException;
 class ThetaLambdaTree extends Tree {
 
     // array that keeps all nodes of the balanced binary tree and organizes the tree structure
-    ThetaLambdaNode[] tree;
+    private ThetaLambdaNode[] tree;
     // capacity
     IntVar C;
     // list of ordered tasks
-    TaskView[] orderedTasks;
+    private TaskView[] orderedTasks;
 
-    ThetaLambdaNode empty = new ThetaLambdaNode();
+    private ThetaLambdaNode empty = new ThetaLambdaNode();
 
     public ThetaLambdaTree(IntVar capacity) {
         C = capacity;
@@ -76,7 +76,7 @@ class ThetaLambdaTree extends Tree {
             computeNodeVals(i);
     }
 
-    void computeLeaveVals(int i) {
+    private void computeLeaveVals(int i) {
         tree[i] = new ThetaLambdaNode();
         tree[i].index = i;
 
@@ -87,7 +87,7 @@ class ThetaLambdaTree extends Tree {
         tree[i].responsibleEnvLambda = i;
     }
 
-    void addToThetaInit(int i) {
+    private void addToThetaInit(int i) {
         int t = i - (treeSize - n); // in our case we pass list of ordered tasks already
         tree[i].task = orderedTasks[t];
         orderedTasks[t].treeIndex = i;
@@ -96,7 +96,7 @@ class ThetaLambdaTree extends Tree {
         tree[i].env = tree[i].task.env((long)C.max());
     }
 
-    void computeNodeVals(int i) {
+    private void computeNodeVals(int i) {
 
         if (notExist(left(i))) {
             tree[i] = empty;
@@ -144,7 +144,7 @@ class ThetaLambdaTree extends Tree {
         }
     }
 
-    void computeThetaNode(int i) {
+    private void computeThetaNode(int i) {
 
         if (notExist(left(i))) {
             return;
@@ -170,7 +170,7 @@ class ThetaLambdaTree extends Tree {
         tree[i].envLambda = Long.MIN_VALUE;
     }
 
-    void updateThetaTree(int i) {
+    private void updateThetaTree(int i) {
         while (exist(i)) {
             computeThetaNode(i);
             i = parent(i);
@@ -207,7 +207,7 @@ class ThetaLambdaTree extends Tree {
         updateTree(parent(i));
     }
 
-    void updateTree(int i) {
+    private void updateTree(int i) {
         while (exist(i)) {
             computeNodeVals(i);
             i = parent(i);
@@ -263,7 +263,7 @@ class ThetaLambdaTree extends Tree {
         return tree[leafIndex(i)];
     }
 
-    boolean isLeaf(int i) {
+    private boolean isLeaf(int i) {
         int l = tree[i].index; // must use this since we make tree balanced and copy nodes up in the tree sometimes
         return l >= treeSize - n && l < treeSize;
     }
@@ -291,18 +291,18 @@ class ThetaLambdaTree extends Tree {
 
         StringBuffer result = new StringBuffer();
 
-        result.append("digraph ThetaLambdaTree" + name);
+        result.append("digraph ThetaLambdaTree").append(name);
         result.append(" {");
         result.append("graph [  fontsize = 12,");
         result.append("size = \"5,5\" ];\n");
 
         for (int i = 0; i < treeSize; i++) {
-            result.append("node_" + i + " [shape = box, label = \"" + tree[i] + "\"]\n");
+            result.append("node_").append(i).append(" [shape = box, label = \"").append(tree[i]).append("\"]\n");
         }
 
         result.append(treeToGraph(root()));
 
-        result.append("label =\"\n\nThetaLambdaTree" + name + "\n\"");
+        result.append("label =\"\n\nThetaLambdaTree").append(name).append("\n\"");
 
         result.append("}");
 
@@ -318,11 +318,11 @@ class ThetaLambdaTree extends Tree {
         } else {
             String s = "node_" + i + " -> "; //"[label = \""+ tree[i] +"\"] -> ";
             if (exist(left(i))) {
-                result.append(s + "node_" + left(i) + "\n");
+                result.append(s).append("node_").append(left(i)).append("\n");
                 result.append(treeToGraph(left(i)));
             }
             if (exist(right(i))) {
-                result.append(s + "node_" + right(i) + "\n");
+                result.append(s).append("node_").append(right(i)).append("\n");
                 result.append(treeToGraph(right(i)));
             }
 
@@ -336,7 +336,7 @@ class ThetaLambdaTree extends Tree {
 
         result.append("ThetaLambdaTree\n");
         for (int i = 0; i < treeSize; i++)
-            result.append("Node " + i + "\n============\n" + tree[i] + "\n============\n");
+            result.append("Node ").append(i).append("\n============\n").append(tree[i]).append("\n============\n");
 
         return result.toString();
     }
