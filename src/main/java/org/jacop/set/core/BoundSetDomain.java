@@ -216,7 +216,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
      */
     @Override public SetDomain clone() {
 
-        BoundSetDomain cloned = new BoundSetDomain(glb.cloneLight(), lub.cloneLight());
+        BoundSetDomain cloned = new BoundSetDomain(glb.cloneLight(), lub.cloneLight(), cardinality);
         cloned.stamp = stamp;
         cloned.previousDomain = previousDomain;
 
@@ -238,7 +238,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
      */
     public SetDomain cloneLight() {
         // FIXME, why no glb and lub cloning is safe?
-        return new BoundSetDomain(glb, lub);
+        return new BoundSetDomain(glb, lub, cardinality);
         // 		return new SetDomain(glb.cloneLight(), lub.cloneLight());
     }
 

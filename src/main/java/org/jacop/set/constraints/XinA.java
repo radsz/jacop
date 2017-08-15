@@ -178,7 +178,7 @@ public class XinA extends PrimitiveConstraint {
     }
 
     @Override public boolean satisfied() {
-        return a.domain.glb().contains(x.domain);
+        return a.domain.glb().contains(x.domain) && (!strict || a.domain.glb().getSize() > 1);
     }
 
     @Override public int getNestedPruningEvent(Var var, boolean mode) {
