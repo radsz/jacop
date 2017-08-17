@@ -96,10 +96,10 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
 
         if (c.satisfied()) {
             b.domain.in(store.level, b, 1, 1);
-            removeSatConstraint();
+            removeConstraint();
         } else if (c.notSatisfied()) {
             b.domain.in(store.level, b, 0, 0);
-            removeSatConstraint();
+            removeConstraint();
         } else if (b.max() == 0) // C must be false
             c.notConsistency(store);
         else if (b.min() == 1) // C must be true
@@ -110,10 +110,10 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
 
         if (c.satisfied()) {
             b.domain.in(store.level, b, 0, 0);
-            removeSatConstraint();
+            removeConstraint();
         } else if (c.notSatisfied()) {
             b.domain.in(store.level, b, 1, 1);
-            removeSatConstraint();
+            removeConstraint();
         } else if (b.max() == 0) // C must be true
             c.consistency(store);
         else if (b.min() == 1) // C must be false
@@ -206,18 +206,6 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
 
         if (needRemoveLevelLate)
             store.registerRemoveLevelLateListener(this);
-
-    }
-
-    private void removeSatConstraint() {
-
-        // b must be gound here and it is not needed to remove
-        // this constraint from b
-        // b.removeConstraint(this);
-
-        for (Var v : c.arguments())
-            if (!v.singleton())
-                v.removeConstraint(this);
 
     }
 

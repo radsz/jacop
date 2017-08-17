@@ -240,7 +240,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
      * It removes the constraint by removing this constraint from all variables.
      */
     public void removeConstraint() {
-        arguments().stream().forEach(i -> i.removeConstraint(this));
+        arguments().stream().filter( i -> ! i.singleton() ).forEach(i -> i.removeConstraint(this));
     }
 
 
