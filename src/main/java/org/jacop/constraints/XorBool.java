@@ -120,10 +120,6 @@ public class XorBool extends PrimitiveConstraint {
 
     @Override public void consistency(Store store) {
 
-        do {
-
-            store.propagationHasOccurred = false;
-
             IntVar nonGround = null;
 
             int numberOnes = 0;
@@ -157,15 +153,10 @@ public class XorBool extends PrimitiveConstraint {
                     else
                         nonGround.domain.in(store.level, nonGround, 0, 0);
 
-        } while (store.propagationHasOccurred);
     }
 
     @Override public void notConsistency(Store store) {
 
-        do {
-
-            store.propagationHasOccurred = false;
-
             IntVar nonGround = null;
 
             int numberOnes = 0;
@@ -198,8 +189,6 @@ public class XorBool extends PrimitiveConstraint {
                         nonGround.domain.in(store.level, nonGround, 0, 0);
                     else
                         nonGround.domain.in(store.level, nonGround, 1, 1);
-
-        } while (store.propagationHasOccurred);
 
     }
 
