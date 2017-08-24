@@ -268,8 +268,8 @@ class ComparisonConstraints implements ParserTreeConstants {
                         } else if (v3.min() == 1) {
                             v1.domain.in(store.level, v1, i2, i2);
                             return;
-                        } else if (v1.min() == 0 && v1.max() == 1) { // binary variable
-			    if (i2 == 0){
+                        } else if (v1.min() == 0 && v1.max() == 1 && i2 >= 0 && i2 <= 1) { // binary variables
+			    if (i2 == 0) {
 				support.pose(new XneqY(v1, v3));
 				return;
 			    }
@@ -300,7 +300,17 @@ class ComparisonConstraints implements ParserTreeConstants {
                         } else if (v3.min() == 1) {
                             v1.domain.inComplement(store.level, v1, i2);
                             return;
-                        } else
+                        } else if (v1.min() == 0 && v1.max() == 1 && i2 >= 0 && i2 <= 1) { // binary variable
+			    if (i2 == 0) {
+				support.pose(new XeqY(v1, v3));
+				return;
+			    }
+			    else if (i2 == 1) {
+				support.pose(new XneqY(v1, v3));
+				return;
+			    }
+			}
+			else
                             // if (support.options.useSat()) {  // it can be moved to SAT solver but it is slow in the current implementation
                             //     sat.generate_neC_reif(v1, i2, v3);
                             //     return;
@@ -372,7 +382,17 @@ class ComparisonConstraints implements ParserTreeConstants {
                         } else if (v3.min() == 1) {
                             v2.domain.in(store.level, v2, i1, i1);
                             return;
-                        } else
+                        } else if (v2.min() == 0 && v2.max() == 1 && i1 >= 0 && i1 <= 1) { // binary variable
+			    if (i1 == 0) {
+				support.pose(new XneqY(v2, v3));
+				return;
+			    }
+			    else if (i1 == 1) {
+				support.pose(new XeqY(v2, v3));
+				return;
+			    }
+			}
+			else
                             c = new XeqC(v2, i1);
                         break;
 
@@ -383,7 +403,17 @@ class ComparisonConstraints implements ParserTreeConstants {
                         } else if (v2.min() == i1 && v2.singleton()) {
                             v3.domain.in(store.level, v3, 0, 0);
                             return;
-                        } else
+                        } else if (v2.min() == 0 && v2.max() == 1 && i1 >= 0 && i1 <= 1) { // binary variables
+			    if (i1 == 0) {
+				support.pose(new XeqY(v2, v3));
+				return;
+			    }
+			    else if (i1 == 1) {
+				support.pose(new XneqY(v2, v3));
+				return;
+			    }
+			}
+			else
                             c = new XneqC(v2, i1);
                         break;
                     case Support.lt:

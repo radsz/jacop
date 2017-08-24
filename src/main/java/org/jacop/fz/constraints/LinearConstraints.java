@@ -168,8 +168,20 @@ class LinearConstraints implements ParserTreeConstants {
                 }
 
                 if (p1.length == 1) {
-                    if (p1[0] == 1)
-                        support.pose(new Reified(new XeqC(p2[0], p3), p4));
+                    if (p1[0] == 1) {
+			if (p2[0].min() == 0 && p2[0].max() == 1 && p3 >= 0 && p3 <= 1) { // binary variable
+			    if (p3 == 0) {
+				support.pose(new XneqY(p2[0], p4));
+				return;
+			    }
+			    else if (p3 == 1) {
+				support.pose(new XeqY(p2[0], p4));
+				return;
+			    }
+			}
+                        else
+			    support.pose(new Reified(new XeqC(p2[0], p3), p4));
+		    }
                     else
                         support.pose(new Reified(new XmulCeqZ(p2[0], p1[0], support.dictionary.getConstant(p3)), p4));
                 } else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
