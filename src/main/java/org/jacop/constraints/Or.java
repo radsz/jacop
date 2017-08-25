@@ -77,6 +77,7 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
         setScope(listOfC);
         setConstraintScope(listOfC);
         queueForward = new QueueForward<PrimitiveConstraint>(listOfC, arguments());
+	this.queueIndex = Arrays.stream(listOfC).max((a, b) -> Integer.max(a.queueIndex, b.queueIndex)).get().queueIndex; 
     }
 
     /**

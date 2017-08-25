@@ -94,6 +94,7 @@ public class Xor extends PrimitiveConstraint {
         setConstraintScope(new PrimitiveConstraint[]{c});
 
         queueForward = new QueueForward<PrimitiveConstraint>(c, arguments());
+	this.queueIndex = c.queueIndex;
     }
 
     @Override public void consistency(Store store) {

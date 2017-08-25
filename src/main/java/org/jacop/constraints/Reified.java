@@ -89,7 +89,7 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
         setScope( Stream.concat( c.arguments().stream(), Stream.of(b) ));
         setConstraintScope(new PrimitiveConstraint[]{c});
         queueForward = new QueueForward<PrimitiveConstraint>(c, arguments());
-
+	this.queueIndex = c.queueIndex;
     }
 
     @Override public void consistency(Store store) {

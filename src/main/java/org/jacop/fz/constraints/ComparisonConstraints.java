@@ -53,7 +53,7 @@ import org.jacop.constraints.XlteqC;
 
 import org.jacop.satwrapper.SatTranslation;
 import org.jacop.constraints.XorBool;
-import org.jacop.constraints.table.SimpleTable;
+import org.jacop.constraints.Not;
 
 
 /**
@@ -447,9 +447,7 @@ class ComparisonConstraints implements ParserTreeConstants {
 			    return;
 			else
 			    if (binaryVar(v1) && binaryVar(v2)) {
-				//support.pose(new org.jacop.constraints.Not(new XorBool(new IntVar[] {v1, v2}, v3)));
-				support.pose(new SimpleTable(new IntVar[] {v1, v2, v3},
-							     new int[][] {{0,0,1}, {0,1,0}, {1,0,0}, {1,1,1}}));
+				support.pose(new Not(new XorBool(new IntVar[] {v1, v2}, v3)));
 				return;
 			    }
 			    c = new XeqY(v1, v2);

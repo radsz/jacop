@@ -68,6 +68,7 @@ public class Not extends PrimitiveConstraint implements UsesQueueVariable {
         setScope(scope);
         setConstraintScope(scope);
         this.queueForward = new QueueForward<>(c, arguments());
+	this.queueIndex = c.queueIndex;
     }
 
     @Override public void consistency(Store store) {

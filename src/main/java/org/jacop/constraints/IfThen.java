@@ -84,6 +84,7 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
         setScope(scope);
         setConstraintScope(scope);
         queueForward = new QueueForward<PrimitiveConstraint>(new PrimitiveConstraint[] {condC, thenC}, arguments());
+	this.queueIndex = Integer.max(condC.queueIndex, thenC.queueIndex);
     }
 
     @Override public void consistency(Store store) {

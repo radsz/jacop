@@ -80,6 +80,7 @@ public class Eq extends PrimitiveConstraint implements UsesQueueVariable {
         setScope(scope);
         setConstraintScope(scope);
         queueForward = new QueueForward<>(new PrimitiveConstraint[] {c1, c2}, arguments());
+	this.queueIndex = Integer.max(c1.queueIndex, c2.queueIndex);
     }
 
     @Override public void consistency(Store store) {

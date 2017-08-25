@@ -59,7 +59,6 @@ import org.jacop.core.FailException;
 import org.jacop.constraints.XorBool;
 import org.jacop.constraints.AndBoolSimple;
 import org.jacop.constraints.OrBoolSimple;
-import org.jacop.constraints.table.SimpleTable;
 
 /**
  *
@@ -196,12 +195,8 @@ class LinearConstraints implements ParserTreeConstants {
 		    if (binaryVar(p2[0]) && binaryVar(p2[1]) && p3 >= 0 && p3 <= 2) {
 			if (p3 == 0)
 			    support.pose(new Not(new OrBoolSimple(p2[0], p2[1], p4)));
- 			    // support.pose(new SimpleTable(new IntVar[] {p2[0], p2[1], p4},
-			    // 				 new int[][] {{0,0,1}, {0,1,0}, {1,0,0},{1,1,0}}));
 			else if (p3 == 1)
 			    support.pose(new XorBool(new IntVar[] {p2[0], p2[1]}, p4));
- 			    // support.pose(new SimpleTable(new IntVar[] {p2[0], p2[1], p4},
-			    //  				 new int[][] {{0,0,0}, {0,1,1}, {1,0,1},{1,1,0}}));
 			else if (p3 == 2)
 			    support.pose(new AndBoolSimple(p2[0], p2[1], p4));
 		    }
