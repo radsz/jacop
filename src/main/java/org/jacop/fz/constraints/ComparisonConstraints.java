@@ -52,6 +52,8 @@ import org.jacop.constraints.XgteqY;
 import org.jacop.constraints.XlteqC;
 
 import org.jacop.satwrapper.SatTranslation;
+import org.jacop.constraints.XorBool;
+import org.jacop.constraints.table.SimpleTable;
 
 
 /**
@@ -268,16 +270,8 @@ class ComparisonConstraints implements ParserTreeConstants {
                         } else if (v3.min() == 1) {
                             v1.domain.in(store.level, v1, i2, i2);
                             return;
-                        } else if (v1.min() == 0 && v1.max() == 1 && i2 >= 0 && i2 <= 1) { // binary variables
-			    if (i2 == 0) {
-				support.pose(new XneqY(v1, v3));
-				return;
-			    }
-			    else if (i2 == 1) {
-				support.pose(new XeqY(v1, v3));
-				return;
-			    }
-			}
+                        } else if (generateForEqC(v1, i2, v3))
+			    return;
 			else
                             // if (support.options.useSat()) {  // it can be moved to SAT solver but it is slow in the current implementation
                             //     sat.generate_eqC_reif(v1, i2, v3);
@@ -300,15 +294,8 @@ class ComparisonConstraints implements ParserTreeConstants {
                         } else if (v3.min() == 1) {
                             v1.domain.inComplement(store.level, v1, i2);
                             return;
-                        } else if (v1.min() == 0 && v1.max() == 1 && i2 >= 0 && i2 <= 1) { // binary variable
-			    if (i2 == 0) {
-				support.pose(new XeqY(v1, v3));
-				return;
-			    }
-			    else if (i2 == 1) {
-				support.pose(new XneqY(v1, v3));
-				return;
-			    }
+                        } else if (generateForNeqC(v1, i2, v3)) { // binary variable
+			    return;
 			}
 			else
                             // if (support.options.useSat()) {  // it can be moved to SAT solver but it is slow in the current implementation
@@ -382,16 +369,8 @@ class ComparisonConstraints implements ParserTreeConstants {
                         } else if (v3.min() == 1) {
                             v2.domain.in(store.level, v2, i1, i1);
                             return;
-                        } else if (v2.min() == 0 && v2.max() == 1 && i1 >= 0 && i1 <= 1) { // binary variable
-			    if (i1 == 0) {
-				support.pose(new XneqY(v2, v3));
-				return;
-			    }
-			    else if (i1 == 1) {
-				support.pose(new XeqY(v2, v3));
-				return;
-			    }
-			}
+                        } else if (generateForEqC(v2, i1, v3))  // binary variable
+			    return;
 			else
                             c = new XeqC(v2, i1);
                         break;
@@ -403,16 +382,8 @@ class ComparisonConstraints implements ParserTreeConstants {
                         } else if (v2.min() == i1 && v2.singleton()) {
                             v3.domain.in(store.level, v3, 0, 0);
                             return;
-                        } else if (v2.min() == 0 && v2.max() == 1 && i1 >= 0 && i1 <= 1) { // binary variables
-			    if (i1 == 0) {
-				support.pose(new XeqY(v2, v3));
-				return;
-			    }
-			    else if (i1 == 1) {
-				support.pose(new XneqY(v2, v3));
-				return;
-			    }
-			}
+                        } else if (generateForNeqC(v2, i1, v3))
+			    return;
 			else
                             c = new XneqC(v2, i1);
                         break;
@@ -470,32 +441,30 @@ class ComparisonConstraints implements ParserTreeConstants {
 
                 switch (operation) {
                     case Support.eq:
-                        c = new XeqY(v1, v2);
-
-                        // if (v3.singleton())
-                        // 	if (v3.min() == 1)
-                        // 	    if (v1.singleton()) {
-                        // 		v2.domain.in(store.level, v2, v1.domain);
-                        // 		return;
-                        // 	    }
-                        // 	    else {
-                        // 		support.pose(c);
-                        // 		return;
-                        // 	    }
-                        // 	else { // v3.max() == 0
-                        // 	    if (v1.singleton()) {
-                        // 		v2.domain.inComplement(store.level, v2, v1.min());
-                        // 		return;
-                        // 	    }
-                        // 	    else {
-                        // 		support.pose(c);
-                        // 		return;
-                        // 	    }
-                        // 	}
-
+			if (generateForEq(v1, v2, v3))
+			    return;
+			else if (generateForEq(v2, v1, v3))
+			    return;
+			else
+			    if (binaryVar(v1) && binaryVar(v2)) {
+				//support.pose(new org.jacop.constraints.Not(new XorBool(new IntVar[] {v1, v2}, v3)));
+				support.pose(new SimpleTable(new IntVar[] {v1, v2, v3},
+							     new int[][] {{0,0,1}, {0,1,0}, {1,0,0}, {1,1,1}}));
+				return;
+			    }
+			    c = new XeqY(v1, v2);
                         break;
                     case Support.ne:
-                        c = new XneqY(v1, v2);
+			if (generateForNeq(v1, v2, v3))
+			    return;
+			else if (generateForNeq(v2, v1, v3))
+			    return;
+			else if (binaryVar(v1) && binaryVar(v2)) {
+			    support.pose(new XorBool(new IntVar[] {v1, v2}, v3));
+			    return;
+			}
+			else
+			    c = new XneqY(v1, v2);
                         break;
                     case Support.lt:
                         c = new XltY(v1, v2);
@@ -646,4 +615,67 @@ class ComparisonConstraints implements ParserTreeConstants {
             }
         }
     }
+
+
+    boolean generateForEqC(IntVar v1, int i2, IntVar b) {
+	if (v1.min() >= 0 && v1.max() <= 1) { // binary variables
+	    if (i2 == 0) {
+		support.pose(new XneqY(v1, b));
+		return true;
+	    }
+	    else if (i2 == 1) {
+		support.pose(new XeqY(v1, b));
+		return true;
+	    }
+	}
+	return false;
+    }
+    
+    boolean generateForNeqC(IntVar v1, int i2, IntVar b) {
+	if (v1.min() >= 0 && v1.max() <= 1) { // binary variables
+	    if (i2 == 0) {
+		support.pose(new XeqY(v1, b));
+		return true;
+	    }
+	    else if (i2 == 1) {
+		support.pose(new XneqY(v1, b));
+		return true;
+	    }
+	}
+	return false;
+    }
+    
+    boolean generateForEq(IntVar v1, IntVar v2, IntVar b) {
+	if (v1.min() >= 0 && v1.max() <= 1) {
+	    if (v2.singleton())
+		if (v2.value() == 1) {
+		    support.pose(new XeqY(v1, b));
+		    return true;
+		}
+		else if (v2.value() == 0) {
+		    support.pose(new XneqY(v1, b));
+		    return true;
+		}
+	}
+	return false;
+    }
+
+    boolean generateForNeq(IntVar v1, IntVar v2, IntVar b) {
+	if (v1.min() >= 0 && v1.max() <= 1) {
+	    if (v2.singleton())
+		if (v2.value() == 1) {
+		    support.pose(new XneqY(v1, b));
+		    return true;
+		}
+		else if (v2.value() == 0) {
+		    support.pose(new XeqY(v1, b));
+		    return true;
+		}
+	}
+	return false;
+    }
+
+    boolean binaryVar(IntVar v) {
+	return v.min() >= 0 && v.max() <= 1;
+    }    
 }

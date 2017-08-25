@@ -56,6 +56,10 @@ import org.jacop.constraints.OrBoolVector;
 
 import org.jacop.satwrapper.SatTranslation;
 import org.jacop.core.FailException;
+import org.jacop.constraints.XorBool;
+import org.jacop.constraints.AndBoolSimple;
+import org.jacop.constraints.OrBoolSimple;
+import org.jacop.constraints.table.SimpleTable;
 
 /**
  *
@@ -189,7 +193,20 @@ class LinearConstraints implements ParserTreeConstants {
                 } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
                     support.pose(new Reified(new XplusCeqZ(p2[0], p3, p2[1]), p4));
                 } else if (p1.length == 2 && p1[0] == 1 && p1[1] == 1) {
-                    support.pose(new Reified(new XplusYeqC(p2[0], p2[1], p3), p4));
+		    if (binaryVar(p2[0]) && binaryVar(p2[1]) && p3 >= 0 && p3 <= 2) {
+			if (p3 == 0)
+			    support.pose(new Not(new OrBoolSimple(p2[0], p2[1], p4)));
+ 			    // support.pose(new SimpleTable(new IntVar[] {p2[0], p2[1], p4},
+			    // 				 new int[][] {{0,0,1}, {0,1,0}, {1,0,0},{1,1,0}}));
+			else if (p3 == 1)
+			    support.pose(new XorBool(new IntVar[] {p2[0], p2[1]}, p4));
+ 			    // support.pose(new SimpleTable(new IntVar[] {p2[0], p2[1], p4},
+			    //  				 new int[][] {{0,0,0}, {0,1,1}, {1,0,1},{1,1,0}}));
+			else if (p3 == 2)
+			    support.pose(new AndBoolSimple(p2[0], p2[1], p4));
+		    }
+		    else
+			support.pose(new Reified(new XplusYeqC(p2[0], p2[1], p3), p4));
                 } else if (p1.length == 2 && p1[0] == -1 && p1[1] == -1) {
                     support.pose(new Reified(new XplusYeqC(p2[0], p2[1], -p3), p4));
                 } else {
@@ -224,12 +241,20 @@ class LinearConstraints implements ParserTreeConstants {
             case Support.ne:
                 if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
                     if (p3 == 0)
-                        support.pose(new Reified(new XneqY(p2[0], p2[1]), p4));
+			if (binaryVar(p2[0]) && binaryVar(p2[1]))
+			    // (x != y) <=> b == x xor y = b
+			    support.pose(new XorBool(new IntVar[] {p2[0], p2[1]}, p4));
+			else
+			    support.pose(new Reified(new XneqY(p2[0], p2[1]), p4));
                     else
                         support.pose(new Reified(new Not(new XplusCeqZ(p2[1], p3, p2[0])), p4));
                 } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
                     if (p3 == 0)
-                        support.pose(new Reified(new XneqY(p2[0], p2[1]), p4));
+			if (binaryVar(p2[0]) && binaryVar(p2[1]))
+			    // (x != y) <=> b == x xor y = b
+			    support.pose(new XorBool(new IntVar[] {p2[0], p2[1]}, p4));
+			else
+			    support.pose(new Reified(new XneqY(p2[0], p2[1]), p4));
                     else
                         support.pose(new Reified(new Not(new XplusCeqZ(p2[0], p3, p2[1])), p4));
                 } else if (p1.length == 2 && p1[0] == 1 && p1[1] == 1) {
@@ -710,5 +735,9 @@ class LinearConstraints implements ParserTreeConstants {
 
     boolean paramZero(IntVar v) {
         return v.singleton() && v.value() == 0;
+    }
+
+    boolean binaryVar(IntVar v) {
+	return v.min() >= 0 && v.max() <= 1;
     }
 }
