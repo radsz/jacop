@@ -105,8 +105,8 @@ class GlobalConstraints implements ParserTreeConstants {
     Store store;
     Support support;    
 
-    boolean useDisjunctions = true;
-    boolean useCumulativeUnary = true;
+    boolean useDisjunctions = false;
+    boolean useCumulativeUnary = false;
     
     public GlobalConstraints(Support support) {
 	this.store = support.store;

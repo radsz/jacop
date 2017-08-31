@@ -13,9 +13,9 @@ flatzinc compiler specific:
 ===========================
 - fz_cumulative_use_unary: during constraints generation in flatzinc
  compiler use CumulativeUnary for tasks that have resource capacity
- greater than half of the cumulative capacity bound; default=true
+ greater than half of the cumulative capacity bound; default=false
 
 - fz_cumulative_use_disjunctions: during constraints generation in
  flatzinc compiler pairwaise task disjunction constraints for all
  pairs of tasks that have sum of resource capacities greater than the
- cumulative capacity bound; default=true
+ cumulative capacity bound; default=false
