@@ -127,7 +127,7 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
 
         checkForOverflow();
 
-        setScope(Stream.concat(Arrays.stream(this.list), Stream.of(sum)));
+        setScope(Arrays.stream(this.list));
 
     }
 
