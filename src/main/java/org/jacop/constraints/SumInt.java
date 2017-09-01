@@ -493,8 +493,8 @@ public class SumInt extends PrimitiveConstraint {
             int n1 = x[i].min();
             int n2 = x[i].max();
 
-            sMin = add(sMin, n1);
-            sMax = add(sMax, n2);
+            sMin = Math.addExact(sMin, n1);
+            sMax = Math.addExact(sMax, n2);
         }
     }
 

@@ -159,7 +159,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
         // check for possible overflow
         for (Task t : Ts)
-            mul((t.start.max() + t.dur.max()), limit.max());
+            Math.multiplyExact((t.start.max() + t.dur.max()), limit.max());
 
         setScope(Stream.concat(Stream.concat(Arrays.stream(starts), Arrays.stream(durations)),
             Stream.concat(Arrays.stream(resources), Stream.of(limit))));

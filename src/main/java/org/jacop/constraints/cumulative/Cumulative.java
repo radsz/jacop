@@ -86,7 +86,7 @@ public class Cumulative extends CumulativeBasic {
         // check for possible overflow
         if (limit != null)
             for (Task t : taskNormal) {
-                add(t.start.max(), t.dur.max());
+                Math.addExact(t.start.max(), t.dur.max());
             }
 
         String s = System.getProperty("max_edge_find_size");

@@ -115,14 +115,14 @@ public class XplusYeqZ extends PrimitiveConstraint {
 
         int sumMin = 0, sumMax = 0;
 
-        sumMin = add(sumMin, x.min());
-        sumMax = add(sumMax, x.max());
+        sumMin = Math.addExact(sumMin, x.min());
+        sumMax = Math.addExact(sumMax, x.max());
 
-        sumMin = add(sumMin, y.min());
-        sumMax = add(sumMax, y.max());
+        sumMin = Math.addExact(sumMin, y.min());
+        sumMax = Math.addExact(sumMax, y.max());
 
-        sumMin = subtract(sumMin, z.max());
-        sumMax = subtract(sumMax, z.min());
+        sumMin = Math.subtractExact(sumMin, z.max());
+        sumMax = Math.subtractExact(sumMax, z.min());
     }
 
     @Override protected int getDefaultNestedNotConsistencyPruningEvent() {

@@ -451,60 +451,6 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     public void cleanAfterFailure() {
     }
 
-    /**
-     * Methods that checks for overflow/underflow for addition
-     *
-     * @param a first addend
-     * @param b second addend
-     * @return summa
-     */
-    static public int add(int a, int b) {
-
-        long cc = (long) a + (long) b;
-
-        if (cc < Integer.MIN_VALUE || cc > Integer.MAX_VALUE)
-            throw new ArithmeticException("Overflow occurred from int " + a + " + " + b);
-
-        return a + b;
-
-    }
-
-    /**
-     * Methods that checks for overflow/underflow for subtraction
-     *
-     * @param a minuend
-     * @param b subtrahend
-     * @return differens
-     */
-    static public int subtract(int a, int b) {
-
-        long cc = (long) a - (long) b;
-
-        if (cc < Integer.MIN_VALUE || cc > Integer.MAX_VALUE)
-            throw new ArithmeticException("Overflow occurred from int " + a + " - " + b);
-
-        return a - b;
-
-    }
-
-    /**
-     * Methods that checks for overflow/underflow for multiplication
-     *
-     * @param a multiplikand
-     * @param b multiplikator
-     * @return produkt
-     */
-    static public int mul(int a, int b) {
-
-        long cc = (long) a * (long) b;
-
-        if (cc < Integer.MIN_VALUE || cc > Integer.MAX_VALUE)
-            throw new ArithmeticException("Overflow occurred from int " + a + " * " + b);
-
-        return a * b;
-
-    }
-
     static int toInt(final float f) {
 
         if (f >= (float) Integer.MIN_VALUE && f <= (float) Integer.MAX_VALUE) {
