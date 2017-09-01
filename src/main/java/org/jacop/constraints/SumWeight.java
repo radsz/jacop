@@ -1,4 +1,4 @@
-/**
+/*
  * SumWeight.java
  * This file is part of JaCoP.
  * <p>
@@ -44,15 +44,12 @@ import java.util.stream.Stream;
  * variables . It provides the weighted sum from all variables on the list.
  * The weights are integers.
  *
+ * Use when number of variables is greater than 15, otherwise use LinearInt.
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 3.1
  */
-
-
-/**
- * @deprecated As of release 4.3.1 replaced by LinearInt constraint.
- */
-@Deprecated public class SumWeight extends Constraint implements UsesQueueVariable, SatisfiedPresent {
+public class SumWeight extends Constraint implements UsesQueueVariable, SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -70,6 +67,9 @@ import java.util.stream.Stream;
      * It specifies variable for the overall sum.
      */
     public IntVar sum;
+
+
+    LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
 
     /**
      * @param list    the list of varibales
@@ -112,7 +112,7 @@ import java.util.stream.Stream;
 
         checkForOverflow();
 
-        setScope(Stream.concat(Arrays.stream(list), Stream.of(sum)));
+        setScope(Stream.concat(Arrays.stream(this.list), Stream.of(sum)));
 
     }
 
@@ -129,7 +129,7 @@ import java.util.stream.Stream;
 
 
     @Override public void removeLevelLate(int level) {
-
+        variableQueue.clear();
         backtrackHasOccured = true;
 
     }
@@ -146,6 +146,8 @@ import java.util.stream.Stream;
     private TimeStamp<Integer> nextGroundedPosition;
 
     @Override public void consistency(Store store) {
+
+        treatChangedVariables();
 
         if (backtrackHasOccured) {
 
@@ -189,6 +191,8 @@ import java.util.stream.Stream;
 
         }
 
+
+
         do {
 
             sum.domain.in(store.level, sum, lMin, lMax);
@@ -204,8 +208,8 @@ import java.util.stream.Stream;
 
             for (int i = pointer1; i < list.length; i++) {
 
-                if (weights[i] == 0)
-                    continue;
+                //if (weights[i] == 0)
+                //    continue;
 
                 IntVar v = list[i];
 
@@ -227,6 +231,8 @@ import java.util.stream.Stream;
                 v.domain.in(store.level, v, divMin, divMax);
 
             }
+
+            treatChangedVariables();
 
         } while (store.propagationHasOccurred);
 
@@ -271,81 +277,92 @@ import java.util.stream.Stream;
         if (var == sum)
             return;
 
-        if (var.singleton()) {
+        variableQueue.add((IntVar) var);
 
-            int pointer = nextGroundedPosition.value();
+    }
 
-            int i = positionMaping.get(var);
 
-            if (i < pointer)
-                return;
+    private void treatChangedVariables() {
 
-            int value = ((IntVar) var).min();
+        LinkedHashSet<IntVar> fdvs = variableQueue;
+        variableQueue = new LinkedHashSet<IntVar>();
 
-            int sumJustGrounded = 0;
-
-            int weightGrounded = weights[i];
-
-            if (pointer < i) {
-                IntVar grounded = list[i];
-                list[i] = list[pointer];
-                list[pointer] = grounded;
-
-                positionMaping.put(list[i], i);
-                positionMaping.put(list[pointer], pointer);
-
-                int temp = lMinArray[i];
-                lMinArray[i] = lMinArray[pointer];
-                lMinArray[pointer] = temp;
-
-                temp = lMaxArray[i];
-                lMaxArray[i] = lMaxArray[pointer];
-                lMaxArray[pointer] = temp;
-
-                weights[i] = weights[pointer];
-                weights[pointer] = weightGrounded;
-
-            }
-
-            sumJustGrounded += value * weightGrounded; // add(sumJustGrounded, IntDomain.multiply(value, weightGrounded));
-
-            sumGrounded.update(sumGrounded.value() + sumJustGrounded);
-
-            lMin += sumJustGrounded - lMinArray[pointer]; //add(lMin, sumJustGrounded - lMinArray[pointer]);
-            lMax += sumJustGrounded - lMaxArray[pointer];
-            lMinArray[pointer] = sumJustGrounded;
-            lMaxArray[pointer] = sumJustGrounded;
-
-            pointer++;
-            nextGroundedPosition.update(pointer);
-
-        } else {
+        for (IntVar var : fdvs) {
 
             int i = positionMaping.get(var);
+            
+            if (var.singleton()) {
 
-            int mul1 = ((IntVar) var).min() * weights[i];
-            int mul2 = ((IntVar) var).max() * weights[i];
-            // int mul1 = IntDomain.multiply(((IntVar)var).min(), weights[i]);
-            // int mul2 = IntDomain.multiply(((IntVar)var).max(), weights[i]);
+                int pointer = nextGroundedPosition.value();
 
-            if (mul1 <= mul2) {
+                if (i < pointer)
+                    return;
 
-                lMin += mul1 - lMinArray[i]; //add(lMin, mul1 - lMinArray[i]);
-                lMinArray[i] = mul1;
+                int value = ((IntVar) var).min();
 
-                lMax += mul2 - lMaxArray[i]; //add(lMax, mul2 - lMaxArray[i]);
-                lMaxArray[i] = mul2;
+                int sumJustGrounded = 0;
+
+                int weightGrounded = weights[i];
+
+                if (pointer < i) {
+                    IntVar grounded = list[i];
+                    list[i] = list[pointer];
+                    list[pointer] = grounded;
+
+                    positionMaping.put(list[i], i);
+                    positionMaping.put(list[pointer], pointer);
+
+                    int temp = lMinArray[i];
+                    lMinArray[i] = lMinArray[pointer];
+                    lMinArray[pointer] = temp;
+
+                    temp = lMaxArray[i];
+                    lMaxArray[i] = lMaxArray[pointer];
+                    lMaxArray[pointer] = temp;
+
+                    weights[i] = weights[pointer];
+                    weights[pointer] = weightGrounded;
+
+                }
+
+                sumJustGrounded += value * weightGrounded; // add(sumJustGrounded, IntDomain.multiply(value, weightGrounded));
+
+                sumGrounded.update(sumGrounded.value() + sumJustGrounded);
+
+                lMin += sumJustGrounded - lMinArray[pointer]; //add(lMin, sumJustGrounded - lMinArray[pointer]);
+                lMax += sumJustGrounded - lMaxArray[pointer];
+                lMinArray[pointer] = sumJustGrounded;
+                lMaxArray[pointer] = sumJustGrounded;
+
+                pointer++;
+                nextGroundedPosition.update(pointer);
 
             } else {
 
-                lMin += mul2 - lMinArray[i]; //add(lMin, mul2 - lMinArray[i]);
-                lMinArray[i] = mul2;
+                int mul1 = ((IntVar) var).min() * weights[i];
+                int mul2 = ((IntVar) var).max() * weights[i];
+                // int mul1 = IntDomain.multiply(((IntVar)var).min(), weights[i]);
+                // int mul2 = IntDomain.multiply(((IntVar)var).max(), weights[i]);
 
-                lMax += mul1 - lMaxArray[i]; //add(lMax, mul1 - lMaxArray[i]);
-                lMaxArray[i] = mul1;
+                if (mul1 <= mul2) {
+
+                    lMin += mul1 - lMinArray[i]; //add(lMin, mul1 - lMinArray[i]);
+                    lMinArray[i] = mul1;
+
+                    lMax += mul2 - lMaxArray[i]; //add(lMax, mul2 - lMaxArray[i]);
+                    lMaxArray[i] = mul2;
+
+                } else {
+
+                    lMin += mul2 - lMinArray[i]; //add(lMin, mul2 - lMinArray[i]);
+                    lMinArray[i] = mul2;
+
+                    lMax += mul1 - lMaxArray[i]; //add(lMax, mul1 - lMaxArray[i]);
+                    lMaxArray[i] = mul1;
+
+                }
 
             }
-
 
         }
 

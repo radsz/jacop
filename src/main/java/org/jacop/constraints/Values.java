@@ -1,4 +1,4 @@
-/**
+/*
  * Values.java
  * This file is part of JaCoP.
  * <p>
@@ -41,7 +41,6 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
-import org.jacop.core.Var;
 
 import org.jacop.util.BipartiteGraphMatching;
 
@@ -65,11 +64,11 @@ public class Values extends Constraint implements SatisfiedPresent {
     /**
      * It specifies the idNumber of different values among variables on a given list.
      */
-    IntVar count;
+    private IntVar count;
 
-    Comparator<IntVar> minFDV = new FDVminimumComparator<IntVar>();
+    private Comparator<IntVar> minFDV = new FDVminimumComparator<IntVar>();
 
-    static final boolean debug = false;
+    private static final boolean debug = false;
 
     /**
      * It constructs Values constraint.
@@ -100,9 +99,7 @@ public class Values extends Constraint implements SatisfiedPresent {
      * @param count specifies the number of different values in the list.
      */
     public Values(List<? extends IntVar> list, IntVar count) {
-
         this(list.toArray(new IntVar[list.size()]), count);
-
     }
 
     @Override @SuppressWarnings("unchecked") public void consistency(Store store) {

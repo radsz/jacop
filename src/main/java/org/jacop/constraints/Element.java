@@ -1,4 +1,4 @@
-/**
+/*
  * Element.java
  * This file is part of JaCoP.
  * <p>
@@ -37,7 +37,6 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Var;
-import scala.collection.immutable.Stream;
 
 /**
  * Element constraint implements the element/4 constraint (both with integer
