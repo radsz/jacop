@@ -83,7 +83,7 @@ public class XmulCeqZ extends PrimitiveConstraint {
         this.c = c;
         this.z = z;
 
-        checkForOverflow();
+        // checkForOverflow();
 
         setScope(x, z);
     }
@@ -171,11 +171,11 @@ public class XmulCeqZ extends PrimitiveConstraint {
         return id() + " : XmulCeqZ(" + x + ", " + c + ", " + z + " )";
     }
 
-    private void checkForOverflow() {
+    // private void checkForOverflow() {
 
-        Math.multiplyExact(x.min(), c);
-        Math.multiplyExact(x.max(), c);
+    //     Math.multiplyExact(x.min(), c);
+    //     Math.multiplyExact(x.max(), c);
 
-    }
+    // }
 
 }

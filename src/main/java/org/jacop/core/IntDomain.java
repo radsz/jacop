@@ -54,12 +54,12 @@ public abstract class IntDomain extends Domain {
     /**
      * It specifies the minimum element in the domain.
      */
-    public static final int MinInt = -536870910;
+    public static final int MinInt = -536_870_910;
 
     /**
      * It specifies the maximum element in the domain.
      */
-    public static final int MaxInt = 536870909;
+    public static final int MaxInt = 536_870_909;
 
     /**
      * It specifies the constant for GROUND event. It has to be smaller
@@ -1240,8 +1240,8 @@ public abstract class IntDomain extends Domain {
      */
     public final static Interval mulBounds(int a, int b, int c, int d) {
 
-        int min = Math.min(Math.min(multiply(a, c), multiply(a, d)), Math.min(multiply(b, c), multiply(b, d)));
-        int max = Math.max(Math.max(multiply(a, c), multiply(a, d)), Math.max(multiply(b, c), multiply(b, d)));
+        int min = Math.min(Math.min(multiplyInt(a, c), multiplyInt(a, d)), Math.min(multiplyInt(b, c), multiplyInt(b, d)));
+        int max = Math.max(Math.max(multiplyInt(a, c), multiplyInt(a, d)), Math.max(multiplyInt(b, c), multiplyInt(b, d)));
 
         return new Interval(min, max);
     }
@@ -1319,13 +1319,54 @@ public abstract class IntDomain extends Domain {
         return result;
     }
 
-    public final static int multiply(int a, int b) {
-
-        long m = (long) a * (long) b;
-        if (m < Integer.MIN_VALUE || m > Integer.MAX_VALUE)
-            throw new ArithmeticException("Overflow occurred from int " + a + " * " + b);
-
-        return a * b;
+    /**
+     * Returns the product of the arguments,
+     * if the result overflows MaxInt or MinInt is returned.
+     *
+     * @param x the first value
+     * @param y the second value
+     * @return the result or MaxInt/MinInt if result causes overflow
+     */
+    public static int multiplyInt(int x, int y) {
+        long r = (long)x * (long)y;
+        if ((int)r != r) {
+	    return r > 0 ? Integer.MAX_VALUE : Integer.MIN_VALUE; //IntDomain.MaxInt : IntDomain.MinInt;
+        }
+        return (int)r;
     }
 
+    /**
+     * Returns the sum of its arguments,
+     * if the result overflows MaxInt or MinInt is returned.
+     *
+     * @param x the first value
+     * @param y the second value
+     * @return the result or MaxInt/MinInt if result causes overflow
+     */
+    public static int addInt(int x, int y) {
+        int r = x + y;
+        // HD 2-12 Overflow iff both arguments have the opposite sign of the result
+        if (((x ^ r) & (y ^ r)) < 0) {
+	    return r > 0 ? Integer.MAX_VALUE : Integer.MIN_VALUE; //IntDomain.MaxInt : IntDomain.MinInt;
+        }
+        return r;
+    }
+
+    /**
+     * Returns the difference of the arguments,
+     * if the result overflows MaxInt or MinInt is returned.
+     *
+     * @param x the first value
+     * @param y the second value to subtract from the first
+     * @return the result or MaxInt/MinInt if result causes overflow
+     */
+    public static int subtractInt(int x, int y) {
+        int r = x - y;
+        // HD 2-12 Overflow iff the arguments have different signs and
+        // the sign of the result is different than the sign of x
+        if (((x ^ y) & (x ^ r)) < 0) {
+	    return r > 0 ? Integer.MAX_VALUE : Integer.MIN_VALUE; //IntDomain.MaxInt : IntDomain.MinInt;
+        }
+        return r;
+    }    
 }

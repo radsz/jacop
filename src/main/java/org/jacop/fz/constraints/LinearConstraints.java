@@ -423,7 +423,11 @@ class LinearConstraints implements ParserTreeConstants {
                     support.pose(new XmulCeqZ(p2[1], -p1[1], p2[0]));
                 } else if (p3 == 0 && p1.length == 2 && p1[1] == 1) {
                     support.pose(new XmulCeqZ(p2[0], -p1[0], p2[1]));
-                } else if ((p3 == 0 && p1.length == 3) && ((p1[0] == 1 && p1[1] == -1 && p1[2] == -1) || (p1[0] == -1 && p1[1] == 1
+                } else if (p3 == 0 && p1.length == 2 && p1[0] == -1) {
+		    support.pose(new XmulCeqZ(p2[1], p1[1], p2[0]));
+		} if (p3 == 0 && p1.length == 2 && p1[1] == -1) {
+		    support.pose(new XmulCeqZ(p2[0], p1[0], p2[1]));
+		} else if ((p3 == 0 && p1.length == 3) && ((p1[0] == 1 && p1[1] == -1 && p1[2] == -1) || (p1[0] == -1 && p1[1] == 1
                     && p1[2] == 1))) {
                     if (paramZero(p2[1]))
                         support.pose(new XeqY(p2[2], p2[0]));

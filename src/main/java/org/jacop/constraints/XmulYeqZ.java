@@ -90,7 +90,7 @@ public class XmulYeqZ extends Constraint implements SatisfiedPresent {
         this.y = y;
         this.z = z;
 
-        checkForOverflow();
+        // checkForOverflow();
 
         setScope(x, y, z);
     }
@@ -169,13 +169,13 @@ public class XmulYeqZ extends Constraint implements SatisfiedPresent {
         return id() + " : XmulYeqZ(" + x + ", " + y + ", " + z + " )";
     }
 
-    private void checkForOverflow() {
+    // private void checkForOverflow() {
 
-        Math.multiplyExact(x.min(), y.min());
-        Math.multiplyExact(x.min(), y.max());
-        Math.multiplyExact(x.max(), y.min());
-        Math.multiplyExact(x.max(), y.max());
+    //     Math.multiplyExact(x.min(), y.min());
+    //     Math.multiplyExact(x.min(), y.max());
+    //     Math.multiplyExact(x.max(), y.min());
+    //     Math.multiplyExact(x.max(), y.max());
 
-    }
+    // }
 
 }
