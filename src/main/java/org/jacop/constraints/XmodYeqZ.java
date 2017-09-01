@@ -118,32 +118,35 @@ public class XmodYeqZ extends Constraint implements SatisfiedPresent {
 
             z.domain.in(store.level, z, reminderMin, reminderMax);
 
-            // Bounds for result
-            int oldResultMin = resultMin, oldResultMax = resultMax;
+	    if (! (y.min() <= 0 && y.max() >= 0)) {
 
-            Interval result = IntDomain.divBounds(x.min(), x.max(), y.min(), y.max());
+		// Bounds for result
+		int oldResultMin = resultMin, oldResultMax = resultMax;
 
-            resultMin = result.min();
-            resultMax = result.max();
+		Interval result = IntDomain.divBounds(x.min(), x.max(), y.min(), y.max());
 
-            if (oldResultMin != resultMin || oldResultMax != resultMax)
-                store.propagationHasOccurred = true;
+		resultMin = result.min();
+		resultMax = result.max();
 
-            // Bounds for Y
-            Interval yBounds = IntDomain.divBounds(x.min() - reminderMax, x.max() - reminderMin, resultMin, resultMax);
+		if (oldResultMin != resultMin || oldResultMax != resultMax)
+		    store.propagationHasOccurred = true;
 
-            y.domain.in(store.level, y, yBounds.min(), yBounds.max());
+		// Bounds for Y
+		Interval yBounds = IntDomain.divBounds(x.min() - reminderMax, x.max() - reminderMin, resultMin, resultMax);
 
-            // Bounds for Z and reminder
-            Interval reminder = IntDomain.mulBounds(resultMin, resultMax, y.min(), y.max());
-            int zMin = reminder.min(), zMax = reminder.max();
+		y.domain.in(store.level, y, yBounds.min(), yBounds.max());
 
-            reminderMin = x.min() - zMax;
-            reminderMax = x.max() - zMin;
+		// Bounds for Z and reminder
+		Interval reminder = IntDomain.mulBounds(resultMin, resultMax, y.min(), y.max());
+		int zMin = reminder.min(), zMax = reminder.max();
 
-            z.domain.in(store.level, z, reminderMin, reminderMax);
+		reminderMin = x.min() - zMax;
+		reminderMax = x.max() - zMin;
 
-            x.domain.in(store.level, x, zMin + z.min(), zMax + z.max());
+		z.domain.in(store.level, z, reminderMin, reminderMax);
+
+		x.domain.in(store.level, x, zMin + z.min(), zMax + z.max());
+	    }
 
             assert checkSolution(resultMin, resultMax) == null : checkSolution(resultMin, resultMax);
 
