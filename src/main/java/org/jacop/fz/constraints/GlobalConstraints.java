@@ -554,12 +554,30 @@ class GlobalConstraints implements ParserTreeConstants {
         IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
         int size = v.length;
 
+	// create tuples for the constraint; remove non feasible tuples
         int[] tbl = support.getIntArray((SimpleNode) node.jjtGetChild(1));
         int[][] t = new int[tbl.length / size][size];
-        for (int i = 0; i < t.length; i++)
-            for (int j = 0; j < size; j++)
+	boolean[] tuplesToRemove = new boolean[t.length];
+	int n=0;
+        for (int i = 0; i < t.length; i++) {
+            for (int j = 0; j < size; j++) {
+		if (! v[j].domain.contains(tbl[size * i + j])) {
+		    tuplesToRemove[i] = true;
+		}
                 t[i][j] = tbl[size * i + j];
-
+	    }
+	    if (tuplesToRemove[i])
+		n++;
+	}
+	int k = t.length-n;
+	int[][] newT = new int[k][size];
+	int m = 0;
+	for (int i = 0; i < t.length; i++) 
+	    if (! tuplesToRemove[i]) 
+		newT[m++] = t[i];
+	tbl = null;
+	t = newT;
+	
         int[] vu = uniqueIndex(v);
         if (vu.length != v.length) { // non unique variables
 

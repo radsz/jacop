@@ -120,10 +120,28 @@ public class SimpleTable extends Constraint implements UsesQueueVariable, Statef
         if (reuseTupleArguments) {
             this.tuple = tuples;
         } else {
-            this.tuple = new int[tuples.length][list.length];
-            for (int i = 0; i < tuples.length; i++) {
-                this.tuple[i] = Arrays.copyOf(tuples[i], list.length);
-            }
+	    // create tuples for the constraint; remove non feasible tuples
+	    int size = list.length;
+	    boolean[] tuplesToRemove = new boolean[tuples.length];
+	    int n=0;
+	    for (int i = 0; i < tuples.length; i++) {
+		for (int j = 0; j < size; j++) {
+		    if (! list[j].domain.contains(tuples[i][j])) {
+			tuplesToRemove[i] = true;
+		    }
+		}
+		if (tuplesToRemove[i])
+		    n++;
+	    }
+	    int k = tuples.length-n;
+	    this.tuple = new int[k][size];
+	    int m = 0;
+	    for (int i = 0; i < tuples.length; i++) {
+		if (! tuplesToRemove[i]) {
+		    this.tuple[m] = Arrays.copyOf(tuples[i], size);
+		    m++;
+		}
+	    }
         }
 
         numberId = idNumber.incrementAndGet();
