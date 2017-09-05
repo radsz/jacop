@@ -189,6 +189,16 @@ public class QueueForwardTest {
 
     }
 
+    @Test public void testPatternSetMining() {
+
+        Fz2jacop fz2jacop = new Fz2jacop();
+
+        // Just checking if does not throw an exception.
+        fz2jacop.main(new String[] {"--verbose", "src/test/fz/upTo5sec/pattern_set_mining/pattern_set_mining.fzn"});
+
+    }
+
+
     @Test public void testRemoveConstraint() {
 
         Fz2jacop fz2jacop = new Fz2jacop();

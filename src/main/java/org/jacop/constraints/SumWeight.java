@@ -106,12 +106,23 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
             if (weights[i] == 0)
                 continue;
             Integer accumulatedCoefficient = parameters.getOrDefault(list[i], 0);
-            parameters.put(list[i], accumulatedCoefficient + weights[i]);
+            accumulatedCoefficient += weights[i];
+            if (accumulatedCoefficient != 0) {
+                parameters.put(list[i], accumulatedCoefficient);
+            } else {
+                parameters.remove(list[i]);
+            }
+
         }
 
         if (sum != null) {
             Integer accumulatedCoefficient = parameters.getOrDefault(sum, 0);
-            parameters.put(sum, accumulatedCoefficient - 1);
+            accumulatedCoefficient -= 1;
+            if (accumulatedCoefficient != 0) {
+                parameters.put(sum, accumulatedCoefficient);
+            } else {
+                parameters.remove(sum);
+            }
         }
 
         this.list = new IntVar[parameters.size()];
