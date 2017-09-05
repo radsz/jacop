@@ -1,0 +1,12 @@
+predicate jacop_alldiff(array [int] of var int: x);
+var 1..4: X_INTRODUCED_0;
+var 1..4: X_INTRODUCED_1;
+var 1..4: X_INTRODUCED_2;
+var 1..4: X_INTRODUCED_3;
+array [1..4] of var int: x:: output_array([1..4]) = [X_INTRODUCED_0,X_INTRODUCED_1,X_INTRODUCED_2,X_INTRODUCED_3];
+constraint array_var_int_element(X_INTRODUCED_0,x,1);
+constraint array_var_int_element(X_INTRODUCED_1,x,2);
+constraint array_var_int_element(X_INTRODUCED_2,x,3);
+constraint array_var_int_element(X_INTRODUCED_3,x,4);
+constraint jacop_alldiff(x);
+solve  satisfy;

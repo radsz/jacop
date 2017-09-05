@@ -1,42 +1,36 @@
 /**
- *  FlatzincSolver.java 
- *  This file is part of JaCoP.
- *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
- *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU Affero General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU Affero General Public License for more details.
- *  
- *  Notwithstanding any other provision of this License, the copyright
- *  owners of this work supplement the terms of this License with terms
- *  prohibiting misrepresentation of the origin of this work and requiring
- *  that modified versions of this work be marked in reasonable ways as
- *  different from the original version. This supplement of the license
- *  terms is in accordance with Section 7 of GNU Affero General Public
- *  License version 3.
- *
- *  You should have received a copy of the GNU Affero General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
+ * FlatzincSolver.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.jacop.examples.flatzinc;
 
-import java.util.*;
-
 import org.jacop.core.*;
-import org.jacop.constraints.*;
-import org.jacop.constraints.netflow.*;
-import org.jacop.constraints.netflow.simplex.*;
 import org.jacop.search.*;
 import org.jacop.fz.*;
 
@@ -49,71 +43,70 @@ import org.jacop.fz.*;
  * @version 4.4
  */
 public class FlatzincSolver {
-    Store store;
 
-    public static void main (String args[]) {
+    public static void main(String args[]) {
 
-      FlatzincSolver run = new FlatzincSolver();
+        FlatzincSolver run = new FlatzincSolver();
 
-      run.ex(args);
+        run.ex(args);
 
     }
 
-    FlatzincSolver() {}
+    FlatzincSolver() {
+    }
 
     void ex(String[] args) {
 
-	long T1, T2, T;
-	T1 = System.currentTimeMillis();
+        long T1, T2, T;
+        T1 = System.currentTimeMillis();
 
-	if (args.length == 0) {
-	    args = new String[2];
-	    args[0] = "-s"; args[1] = "wilkinson.fzn";
-    }
-	FlatzincLoader fl = new FlatzincLoader(args); 
-	fl.load();
+        if (args.length == 0) {
+            args = new String[2];
+            args[0] = "-s";
+            args[1] = "wilkinson.fzn";
+        }
+        FlatzincLoader fl = new FlatzincLoader(args);
+        fl.load();
 
-	Store store = fl.getStore();
+        Store store = fl.getStore();
 
-	// System.out.println (store);
+        // System.out.println (store);
 
-	// System.out.println("============================================");
-	// System.out.println(fl.getTables());
-	// System.out.println("============================================");
+        // System.out.println("============================================");
+        // System.out.println(fl.getTables());
+        // System.out.println("============================================");
 
-	System.out.println( "\nIntVar store size: "+ store.size()+
-			    "\nNumber of constraints: " + store.numberConstraints()
-			    );
+        System.out.println("\nIntVar store size: " + store.size() + "\nNumber of constraints: " + store.numberConstraints());
 
-	DepthFirstSearch<Var> label = fl.getDFS();
-	SelectChoicePoint<Var> select = fl.getSelectChoicePoint();
-	Var cost = fl.getCost();
+        DepthFirstSearch<Var> label = fl.getDFS();
+        SelectChoicePoint<Var> select = fl.getSelectChoicePoint();
+        Var cost = fl.getCost();
 
-	boolean result = false;
-	if (cost != null)
-	    result = label.labeling(fl.getStore(), select, cost);
-	else
-	    result = label.labeling(fl.getStore(), select);
+        boolean result = false;
+        if (cost != null)
+            result = label.labeling(fl.getStore(), select, cost);
+        else
+            result = label.labeling(fl.getStore(), select);
 
-	if (! fl.getOptions().getAll() && fl.getSolve().lastSolution != null)
-	    System.out.print(fl.getSolve().lastSolution);
+        if (!fl.getOptions().getAll() && fl.getSolve().lastSolution != null)
+            System.out.print(fl.getSolve().lastSolution);
 
-	fl.getSolve().statistics(result);
+        fl.getSolve().statistics(result);
 
-	// System.out.println(fl.getTables());
+        // System.out.println(fl.getTables());
 
-	// System.out.println(fl.getSearch());
+        // System.out.println(fl.getSearch());
 
-	// System.out.println("cost: " + fl.getCost());
+        // System.out.println("cost: " + fl.getCost());
 
-  	if ( result )
-  	    System.out.println("*** Yes");
-	else 
-	    System.out.println("*** No");
+        if (result)
+            System.out.println("*** Yes");
+        else
+            System.out.println("*** No");
 
-	T2 = System.currentTimeMillis();
-	T = T2 - T1;
-	System.out.println("\n\t*** Execution time = "+ T + " ms");
+        T2 = System.currentTimeMillis();
+        T = T2 - T1;
+        System.out.println("\n\t*** Execution time = " + T + " ms");
 
     }
 

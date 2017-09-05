@@ -1,12 +1,12 @@
 package org.jacop.util;
 
 import org.jacop.constraints.Constraint;
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Var;
 
 import java.util.*;
 
 /**
- *
  * Utility class that allows for constraints like Xor, Reified, etc that take other constraints
  * as parameters to forward any changes of variables to the constraints that were provided as arguments.
  *
@@ -15,21 +15,23 @@ import java.util.*;
  */
 public class QueueForward<T extends Constraint> {
 
-    final public HashMap<Var, List<T>> forwardMap;
+    final public Map<Var, List<T>> forwardMap;
 
     final public boolean isEmpty;
 
     public QueueForward(Collection<T> constraints, Collection<Var> variables) {
 
-        forwardMap = new HashMap<>();
+        forwardMap = Var.createEmptyPositioning();
 
         for (Var var : variables) {
             forwardMap.put(var, new ArrayList<T>());
             for (T constraint : constraints) {
 
-                if (constraint.arguments().contains(var)) {
+                if (constraint instanceof UsesQueueVariable && constraint.arguments().contains(var)) {
 
                     try {
+                        // We assume that all constraint needing queueVariable declare this method, even for
+                        // the ones that inherit from other constraints.
                         constraint.getClass().getDeclaredMethod("queueVariable", int.class, Var.class);
                         forwardMap.get(var).add(constraint);
                     } catch (NoSuchMethodException e) {

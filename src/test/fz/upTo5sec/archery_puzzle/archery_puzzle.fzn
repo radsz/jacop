@@ -1,0 +1,12 @@
+var 0..10: X_INTRODUCED_0;
+var 0..10: X_INTRODUCED_1;
+var 0..10: X_INTRODUCED_2;
+var 0..10: X_INTRODUCED_3;
+var 0..10: X_INTRODUCED_4;
+var 0..10: X_INTRODUCED_5;
+var 0..1490: diffz:: output_var;
+var -1490..100: X_INTRODUCED_19 ::var_is_introduced :: is_defined_var;
+array [1..6] of var int: x:: output_array([1..6]) = [X_INTRODUCED_0,X_INTRODUCED_1,X_INTRODUCED_2,X_INTRODUCED_3,X_INTRODUCED_4,X_INTRODUCED_5];
+constraint int_abs(X_INTRODUCED_19,diffz);
+constraint int_lin_eq([-16,-17,-23,-24,-39,-40,-1],[X_INTRODUCED_0,X_INTRODUCED_1,X_INTRODUCED_2,X_INTRODUCED_3,X_INTRODUCED_4,X_INTRODUCED_5,X_INTRODUCED_19],-100):: defines_var(X_INTRODUCED_19);
+solve :: int_search(x,occurrence,indomain_max,complete) minimize diffz;

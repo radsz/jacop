@@ -3,14 +3,14 @@
 */
 package org.jacop
 
-//import org.jacop.core._
 import org.jacop.constraints._
 import org.jacop.constraints.knapsack._
 import org.jacop.constraints.regular._
 import org.jacop.constraints.binpacking._
 import org.jacop.constraints.netflow._
+import org.jacop.constraints.diffn._
+import org.jacop.constraints.table._
 import org.jacop.search._
-//import org.jacop.set.core._
 import org.jacop.set.constraints._
 import org.jacop.set.search._
 import org.jacop.floats.core.FloatDomain
@@ -369,7 +369,7 @@ package object scala {
 * @param value value selected from list of elements. 
 */
   def element(index: org.jacop.core.IntVar, elements: Array[Int], value: org.jacop.core.IntVar)  {
-    val c = new Element(index, elements, value)
+    val c = Element.choose(index, elements, value)
     if (trace) println(c)
     impModel.impose( c )
   }
@@ -384,7 +384,7 @@ package object scala {
 * @param offset value of index offset (shift). 
 */
   def element(index: org.jacop.core.IntVar, elements: Array[Int], value: org.jacop.core.IntVar, offset: Int)  {
-    val c = new Element(index, elements, value, offset)
+    val c = Element.choose(index, elements, value, offset)
     if (trace) println(c)
     impModel.impose( c )
   }
@@ -397,7 +397,7 @@ package object scala {
 * @param value value selected from list of elements. 
 */
   def element[T <: org.jacop.core.IntVar](index: org.jacop.core.IntVar, elements: List[T], value: org.jacop.core.IntVar)(implicit m: ClassTag[T])  {
-    val c = new Element(index, elements.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], value)
+    val c = Element.choose(index, elements.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], value)
     if (trace) println(c)
     impModel.impose( c )
   }
@@ -411,7 +411,7 @@ package object scala {
 * @param offset value of index offset (shift). 
 */
   def element[T <: org.jacop.core.IntVar](index: org.jacop.core.IntVar, elements: List[T], value: org.jacop.core.IntVar, offset: Int)(implicit m: ClassTag[T])  {
-    val c = new Element(index, elements.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], value, offset)
+    val c = Element.choose(index, elements.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], value, offset)
     if (trace) println(c)
     impModel.impose( c )
   }
@@ -425,7 +425,7 @@ package object scala {
     */
   def intAt(index: IntVar, xs: Array[Int], offset: Int = 0) : IntVar = {
     val result  = new IntVar()
-    val c       = new Element(index, xs, result, offset)
+    val c       = Element.choose(index, xs, result, offset)
     if (trace) println(c)
     impModel.impose(c)
     result
@@ -433,7 +433,7 @@ package object scala {
 
   def intVarAt(index: IntVar, xs: Array[IntVar], offset: Int = 0) : IntVar = {
     val result  = new IntVar()
-    val c       = new Element(index, xs.asInstanceOf[Array[org.jacop.core.IntVar]], result, offset)
+    val c       = Element.choose(index, xs.asInstanceOf[Array[org.jacop.core.IntVar]], result, offset)
     if (trace) println(c)
     impModel.impose(c)
     result
@@ -441,7 +441,7 @@ package object scala {
 
   def boolVarAt(index: IntVar, xs: Array[BoolVar], offset: Int = 0) : BoolVar = {
     val result  = new BoolVar()
-    val c       = new Element(index, xs.asInstanceOf[Array[org.jacop.core.IntVar]], result, offset)
+    val c       = Element.choose(index, xs.asInstanceOf[Array[org.jacop.core.IntVar]], result, offset)
     if (trace) println(c)
     impModel.impose(c)
     result
@@ -485,11 +485,53 @@ package object scala {
   def diff2(rectangles: Array[Array[IntVar]])  {
     val c = new Diff(rectangles.asInstanceOf[Array[Array[org.jacop.core.IntVar]]])
     if (trace) println(c)
-    impModel.impose( new Diff(rectangles.asInstanceOf[Array[Array[org.jacop.core.IntVar]]]) )
+    impModel.impose( c )
   }
 
 /**
-* Wrapper for [[org.jacop.constraints.Cumulative]].
+* Wrapper for [[org.jacop.constraints.diffn.Diffn]].
+*
+* @param x coordinate X of rectangle. 
+* @param y coordinate Y of rectangle. 
+* @param lx length in derection X of rectangle. 
+* @param ly length in derection Y of rectangle. 
+*/
+  def diffn(x: Array[IntVar], y: Array[IntVar], lx: Array[IntVar], ly: Array[IntVar])  {
+    val c = new Diffn(x.asInstanceOf[Array[org.jacop.core.IntVar]], y.asInstanceOf[Array[org.jacop.core.IntVar]],
+		     lx.asInstanceOf[Array[org.jacop.core.IntVar]], ly.asInstanceOf[Array[org.jacop.core.IntVar]])
+    if (trace) println(c)
+    impModel.impose(c)
+  }
+
+/**
+* Wrapper for [[org.jacop.constraints.diffn.Diffn]].
+*
+* @param rectangles array of four element vectors representing rectnagles [x, y, lx, ly]
+*/
+  def diffn(rectangles: Array[Array[IntVar]])  {
+    val c = new Diffn(rectangles.asInstanceOf[Array[Array[org.jacop.core.IntVar]]])
+    if (trace) println(c)
+    impModel.impose( c )
+  }
+
+/**
+* Wrapper for [[org.jacop.constraints.cumulative.CumulativeBasic]].
+*
+* @param t array of start times of tasks.
+* @param d array of duration of tasks.
+* @param r array of number of resources of tasks.
+* @param limit limit on number of resources used in a schedule.
+*/
+  def cumulative_basic(t: Array[IntVar], d: Array[IntVar], r: Array[IntVar], limit: IntVar)  {
+    val c = new org.jacop.constraints.cumulative.CumulativeBasic(t.asInstanceOf[Array[org.jacop.core.IntVar]],
+			   d.asInstanceOf[Array[org.jacop.core.IntVar]],
+			   r.asInstanceOf[Array[org.jacop.core.IntVar]], limit)
+    if (trace) println(c)
+    impModel.impose( c )
+  }
+
+/**
+* Wrapper for [[org.jacop.constraints.cumulative.Cumulative]].
 *
 * @param t array of start times of tasks.
 * @param d array of duration of tasks.
@@ -497,7 +539,23 @@ package object scala {
 * @param limit limit on number of resources used in a schedule.
 */
   def cumulative(t: Array[IntVar], d: Array[IntVar], r: Array[IntVar], limit: IntVar)  {
-    val c = new Cumulative(t.asInstanceOf[Array[org.jacop.core.IntVar]],
+    val c = new org.jacop.constraints.cumulative.Cumulative(t.asInstanceOf[Array[org.jacop.core.IntVar]],
+			   d.asInstanceOf[Array[org.jacop.core.IntVar]],
+			   r.asInstanceOf[Array[org.jacop.core.IntVar]], limit)
+    if (trace) println(c)
+    impModel.impose( c )
+  }
+
+/**
+* Wrapper for [[org.jacop.constraints.cumulative.CumulativeUnary]].
+*
+* @param t array of start times of tasks.
+* @param d array of duration of tasks.
+* @param r array of number of resources of tasks.
+* @param limit limit on number of resources used in a schedule.
+*/
+  def cumulative_unary(t: Array[IntVar], d: Array[IntVar], r: Array[IntVar], limit: IntVar)  {
+    val c = new org.jacop.constraints.cumulative.CumulativeUnary(t.asInstanceOf[Array[org.jacop.core.IntVar]],
 			   d.asInstanceOf[Array[org.jacop.core.IntVar]],
 			   r.asInstanceOf[Array[org.jacop.core.IntVar]], limit)
     if (trace) println(c)
@@ -565,13 +623,25 @@ package object scala {
   }
 
 /**
-* Wrapper for [[org.jacop.constraints.ExtensionalSupportVA]].
+* Wrapper for [[org.jacop.constraints.table.Table]].
 *
 * @param list array of variables. 
 * @param tuples array of tuples allowed to be assigned to variables.
 */
   def table[T <: org.jacop.core.IntVar](list: List[T], tuples: Array[Array[Int]])(implicit m: ClassTag[T]) {
-    val c = new ExtensionalSupportMDD(list.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], tuples)
+    val c = new Table(list.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], tuples)
+    if (trace) println(c)
+    impModel.impose( c )
+  }
+
+/**
+* Wrapper for [[org.jacop.constraints.table.SimpleTable]].
+*
+* @param list array of variables. 
+* @param tuples array of tuples allowed to be assigned to variables.
+*/
+  def simpleTable[T <: org.jacop.core.IntVar](list: List[T], tuples: Array[Array[Int]])(implicit m: ClassTag[T]) {
+    val c = new SimpleTable(list.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], tuples)
     if (trace) println(c)
     impModel.impose( c )
   }

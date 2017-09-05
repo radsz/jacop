@@ -1,0 +1,6 @@
+colors = array1d(1..5, [5, 1, 4, 3, 2]);
+nationalities = array1d(1..5, [3, 5, 1, 4, 2]);
+drinks = array1d(1..5, [5, 4, 2, 3, 1]);
+smokes = array1d(1..5, [2, 1, 4, 3, 5]);
+pets = array1d(1..5, [2, 3, 4, 1, 5]);
+----------

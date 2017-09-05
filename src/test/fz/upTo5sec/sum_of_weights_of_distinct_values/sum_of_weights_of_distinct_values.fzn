@@ -1,0 +1,11 @@
+var 12..12: cost:: output_var;
+var 0..7: X_INTRODUCED_14 ::var_is_introduced :: is_defined_var;
+var 0..7: X_INTRODUCED_20 ::var_is_introduced :: is_defined_var;
+var 0..7: X_INTRODUCED_26 ::var_is_introduced :: is_defined_var;
+array [1..3] of var int: variables:: output_array([1..3]) = [1,6,1];
+array [1..6] of var int: values:: output_array([1..3,1..2]) = [1,5,2,3,6,7];
+constraint int_lin_eq([-1,-1,-1],[X_INTRODUCED_14,X_INTRODUCED_20,X_INTRODUCED_26],-12);
+constraint int_times(5,1,X_INTRODUCED_14):: defines_var(X_INTRODUCED_14);
+constraint int_times(3,0,X_INTRODUCED_20):: defines_var(X_INTRODUCED_20);
+constraint int_times(7,1,X_INTRODUCED_26):: defines_var(X_INTRODUCED_26);
+solve  satisfy;

@@ -1,0 +1,5 @@
+var bool: huey:: output_var;
+var bool: louie:: output_var;
+constraint bool_clause([louie],[huey]);
+constraint bool_clause([],[louie,louie]);
+solve  satisfy;

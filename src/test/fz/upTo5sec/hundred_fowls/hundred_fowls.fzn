@@ -1,0 +1,9 @@
+array [1..3] of int: X_INTRODUCED_2 = [3,3,3];
+array [1..3] of int: X_INTRODUCED_4 = [9,15,1];
+var 0..100: cock:: output_var;
+var 0..100: hen:: output_var;
+var 0..100: chicks:: output_var;
+constraint int_mod(chicks,3,0);
+constraint int_lin_eq(X_INTRODUCED_2,[hen,cock,chicks],300);
+constraint int_lin_eq(X_INTRODUCED_4,[hen,cock,chicks],300);
+solve  satisfy;

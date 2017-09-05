@@ -1,0 +1,13 @@
+array [1..2] of int: X_INTRODUCED_4 = [1,-1];
+var 1..4: X_INTRODUCED_0;
+var 2..3: X_INTRODUCED_1;
+var {1,4}: X_INTRODUCED_2;
+var {1,4}: X_INTRODUCED_3;
+array [1..4] of var int: x:: output_array([1..4]) = [X_INTRODUCED_0,X_INTRODUCED_1,X_INTRODUCED_2,X_INTRODUCED_3];
+constraint int_lin_ne(X_INTRODUCED_4,[X_INTRODUCED_0,X_INTRODUCED_1],0);
+constraint int_lin_ne(X_INTRODUCED_4,[X_INTRODUCED_0,X_INTRODUCED_2],0);
+constraint int_lin_ne(X_INTRODUCED_4,[X_INTRODUCED_0,X_INTRODUCED_3],0);
+constraint int_lin_ne(X_INTRODUCED_4,[X_INTRODUCED_1,X_INTRODUCED_2],0);
+constraint int_lin_ne(X_INTRODUCED_4,[X_INTRODUCED_1,X_INTRODUCED_3],0);
+constraint int_lin_ne(X_INTRODUCED_4,[X_INTRODUCED_2,X_INTRODUCED_3],0);
+solve  satisfy;

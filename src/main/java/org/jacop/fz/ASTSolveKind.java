@@ -2,28 +2,28 @@
 /* JavaCCOptions:MULTI=true,NODE_USES_PARSER=true,VISITOR=false,TRACK_TOKENS=false,NODE_PREFIX=AST,NODE_EXTENDS=,NODE_FACTORY=,SUPPORT_CLASS_VISIBILITY_PUBLIC=true */
 package org.jacop.fz;
 
-public
-class ASTSolveKind extends SimpleNode {
-  public ASTSolveKind(int id) {
-    super(id);
-  }
+public class ASTSolveKind extends SimpleNode {
+    public ASTSolveKind(int id) {
+        super(id);
+    }
 
-  public ASTSolveKind(Parser p, int id) {
-    super(p, id);
-  }
+    public ASTSolveKind(Parser p, int id) {
+        super(p, id);
+    }
 
     // My additions
     String kind;
 
     public void setKind(String k) {
-	kind = k;
+        kind = k;
     }
+
     public String getKind() {
-	return kind;
+        return kind;
     }
 
     public String toString() {
-	return super.toString() + ": " + kind;
+        return super.toString() + ": " + kind;
     }
 }
 /* JavaCC - OriginalChecksum=ccb785e78a408650ada4cd9f1a866267 (do not edit this line) */

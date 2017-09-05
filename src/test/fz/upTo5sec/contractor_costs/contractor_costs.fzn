@@ -1,0 +1,16 @@
+array [1..2] of int: X_INTRODUCED_4 = [-1,-1];
+var 0..5300: Ph:: output_var;
+var 0..5300: Pa:: output_var;
+var 0..5300: Pl:: output_var;
+var 0..5300: El:: output_var;
+var 0..5300: Ca:: output_var;
+var 0..5300: Ma:: output_var;
+var 0..37100: X_INTRODUCED_1 ::var_is_introduced :: is_defined_var;
+constraint int_lin_eq(X_INTRODUCED_4,[Ma,Pa],-3200);
+constraint int_lin_eq(X_INTRODUCED_4,[Ca,Ma],-5300);
+constraint int_lin_eq(X_INTRODUCED_4,[El,Ca],-3300);
+constraint int_lin_eq(X_INTRODUCED_4,[Pl,El],-1100);
+constraint int_lin_eq(X_INTRODUCED_4,[Pa,Pl],-1700);
+constraint int_lin_eq(X_INTRODUCED_4,[Ph,Pa],-1100);
+constraint int_lin_eq([1,1,1,1,2,1,-1],[Ma,Ca,El,Pl,Pa,Ph,X_INTRODUCED_1],0):: defines_var(X_INTRODUCED_1);
+solve  minimize X_INTRODUCED_1;

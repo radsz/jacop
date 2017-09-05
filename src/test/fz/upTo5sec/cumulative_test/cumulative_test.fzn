@@ -1,0 +1,8 @@
+predicate jacop_cumulative(array [int] of var int: s,array [int] of var int: d,array [int] of var int: r,var int: b);
+var 0..10: limitx:: output_var;
+array [1..5] of var int: origin:: output_array([1..5]) = [1,2,3,6,7];
+array [1..5] of var int: duration:: output_array([1..5]) = [3,9,10,6,2];
+array [1..5] of var int: height:: output_array([1..5]) = [1,2,1,1,3];
+array [1..5] of var int: end:: output_array([1..5]) = [4,11,13,12,9];
+constraint jacop_cumulative(origin,duration,height,limitx);
+solve  minimize limitx;

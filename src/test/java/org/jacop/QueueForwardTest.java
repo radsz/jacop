@@ -1,34 +1,32 @@
 /**
- *  QueueForwardTest.java
- *  This file is part of JaCoP.
- *
- *  JaCoP is a Java Constraint Programming solver.
- *
- *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU Affero General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU Affero General Public License for more details.
- *
- *  Notwithstanding any other provision of this License, the copyright
- *  owners of this work supplement the terms of this License with terms
- *  prohibiting misrepresentation of the origin of this work and requiring
- *  that modified versions of this work be marked in reasonable ways as
- *  different from the original version. This supplement of the license
- *  terms is in accordance with Section 7 of GNU Affero General Public
- *  License version 3.
- *
- *  You should have received a copy of the GNU Affero General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
+ * QueueForwardTest.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 
 package org.jacop;
 
@@ -41,23 +39,15 @@ import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.fz.Fz2jacop;
-import org.jacop.fz.Options;
-import org.jacop.fz.Parser;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.PrintOutListener;
 import org.jacop.search.Search;
+import org.junit.Ignore;
 import org.junit.Test;
 
-import java.io.*;
-import java.util.Scanner;
-
-
-import static java.lang.System.in;
-import static org.junit.Assert.*;
-
+import static org.junit.Assert.assertEquals;
 
 /**
- *
  * It is performing testing for QueueForward functionality that makes it possible to
  * forward queueVariable events to nested constraints in a generic fashion no matter
  * in what constraint it is being used in.
@@ -65,286 +55,147 @@ import static org.junit.Assert.*;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.4
  */
-
 public class QueueForwardTest {
 
-        @Test
-        public void testQueueForwardNot() {
+    //   String nl = System.lineSeparator();
+    String nl = "\n";
 
-            Store store = new Store();
+    @Test public void testQueueForwardNot() {
 
-            FloatVar x = new FloatVar(store, "x", 0.1, 0.1);
-            FloatVar y = new FloatVar(store, "y", 0.5, 0.5);
+        Store store = new Store();
 
-            FloatVar[] v = {x, y};
+        FloatVar x = new FloatVar(store, "x", 0.1, 0.1);
+        FloatVar y = new FloatVar(store, "y", 0.5, 0.5);
 
-            store.impose(new Not(new LinearFloat(store, v, new double[] {1,-1}, "==", 0)));
+        FloatVar[] v = {x, y};
 
-            System.out.println ("Precision = " + FloatDomain.precision());
+        store.impose(new Not(new LinearFloat(store, v, new double[] {1, -1}, "==", 0)));
 
-            // search for solutions and print results
-            Search<FloatVar> label = new DepthFirstSearch<FloatVar>();
-            SplitSelectFloat<FloatVar> select = new SplitSelectFloat<FloatVar>(store, v, null);
-            label.setSolutionListener(new PrintOutListener<FloatVar>());
+        System.out.println("Precision = " + FloatDomain.precision());
 
-            boolean result = label.labeling(store, select);
+        // search for solutions and print results
+        Search<FloatVar> label = new DepthFirstSearch<FloatVar>();
+        SplitSelectFloat<FloatVar> select = new SplitSelectFloat<FloatVar>(store, v, null);
+        label.setSolutionListener(new PrintOutListener<FloatVar>());
 
-            if ( result ) {
-                System.out.println("Solutions: ");
-                label.printAllSolutions();
-            }
-            else
-                System.out.println("*** No");
+        boolean result = label.labeling(store, select);
 
-            assertEquals(true, result);
+        if (result) {
+            System.out.println("Solutions: ");
+            label.printAllSolutions();
+        } else
+            System.out.println("*** No");
 
-        }
-
-
-        @Test
-        public void testQueueForwardReified() {
-
-            Store store = new Store();
-
-            FloatVar x = new FloatVar(store, "x", 0.1, 0.4);
-            FloatVar y = new FloatVar(store, "y", 0.5, 1.0);
-
-            FloatVar[] v = {x, y};
-
-            IntVar one = new IntVar(store, "one", 1, 1);
-            store.impose(new Reified(new LinearFloat(store, v, new double[] {1,-1}, "==", 0), one));
-
-            System.out.println ("Precision = " + FloatDomain.precision());
-
-            // search for solutions and print results
-            Search<FloatVar> label = new DepthFirstSearch<FloatVar>();
-            SplitSelectFloat<FloatVar> select = new SplitSelectFloat<FloatVar>(store, v, null);
-            label.setSolutionListener(new PrintOutListener<FloatVar>());
-
-            boolean result = label.labeling(store, select);
-
-            if ( result ) {
-                System.out.println("Solutions: ");
-                label.printAllSolutions();
-            }
-            else
-                System.out.println("*** No");
-
-            assertEquals(false, result);
-
-        }
-
-        @Test
-        public void testQueueForwardNestedReifiedNot() {
-
-            Store store = new Store();
-
-            FloatVar x = new FloatVar(store, "x", 0.1, 0.4);
-            FloatVar y = new FloatVar(store, "y", 0.5, 1.0);
-
-            FloatVar[] v = {x, y};
-
-            IntVar one = new IntVar(store, "one", 1, 1);
-
-            store.impose(new Reified(new Not(new LinearFloat(store, v, new double[] {1,-1}, "!=", 0)), one));
-
-            // search for solutions and print results
-            Search<FloatVar> label = new DepthFirstSearch<FloatVar>();
-            SplitSelectFloat<FloatVar> select = new SplitSelectFloat<FloatVar>(store, v, null);
-            label.setSolutionListener(new PrintOutListener<FloatVar>());
-
-            boolean result = label.labeling(store, select);
-
-            if ( result ) {
-                System.out.println("Solutions: ");
-                label.printAllSolutions();
-            }
-            else
-                System.out.println("*** No");
-
-            assertEquals(false, result);
-
-        }
-
-        @Test
-        public void testQueueForwardNoException() {
-
-            Fz2jacop fz2jacop = new Fz2jacop();
-
-            // Just checking if does not throw an exception.
-            fz2jacop.main(new String[] { "src/test/fz/queueForwardTest.fzn" } );
-
-
-        }
-
-    @Test
-    public void testMinizinc() throws IOException {
-
-        Fz2jacop fz2jacop = new Fz2jacop();
-
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        PrintStream old = System.out;
-        System.setOut(new PrintStream(baos));
-        // Just checking if does not throw an exception.
-        fz2jacop.main(new String[]{"src/test/fz/CostasArrayTest.fzn"});
-
-        System.out.flush();
-        System.setOut(old);
-
-        String result = baos.toString();
-        System.out.println(result);
-
-        String filePath = new File("src/test/fz/CostasArrayTest.out").getAbsolutePath();
-        FileReader fileReader = new FileReader(filePath);
-        BufferedReader bufferedReader = new BufferedReader(fileReader);
-
-        String textLine = bufferedReader.readLine();
-        String expected = "";
-
-        do {
-            expected += textLine + "\n";
-            textLine = bufferedReader.readLine();
-
-        } while(textLine != null);
-
-        bufferedReader.close();
-
-        assertEquals(expected, result);
-    }
-
-
-    @Test
-    public void testCvrp() {
-
-        Fz2jacop fz2jacop = new Fz2jacop();
-
-        // Just checking if does not throw an exception.
-       // fz2jacop.main(new String[]{"src/test/fz/cvrp.fzn"});
-
+        assertEquals(true, result);
 
     }
 
 
-    @Test
-    public void testFreePizza() {
+    @Test public void testQueueForwardReified() {
+
+        Store store = new Store();
+
+        FloatVar x = new FloatVar(store, "x", 0.1, 0.4);
+        FloatVar y = new FloatVar(store, "y", 0.5, 1.0);
+
+        FloatVar[] v = {x, y};
+
+        IntVar one = new IntVar(store, "one", 1, 1);
+        store.impose(new Reified(new LinearFloat(store, v, new double[] {1, -1}, "==", 0), one));
+
+        System.out.println("Precision = " + FloatDomain.precision());
+
+        // search for solutions and print results
+        Search<FloatVar> label = new DepthFirstSearch<FloatVar>();
+        SplitSelectFloat<FloatVar> select = new SplitSelectFloat<FloatVar>(store, v, null);
+        label.setSolutionListener(new PrintOutListener<FloatVar>());
+
+        boolean result = label.labeling(store, select);
+
+        if (result) {
+            System.out.println("Solutions: ");
+            label.printAllSolutions();
+        } else
+            System.out.println("*** No");
+
+        assertEquals(false, result);
+
+    }
+
+    @Test public void testQueueForwardNestedReifiedNot() {
+
+        Store store = new Store();
+
+        FloatVar x = new FloatVar(store, "x", 0.1, 0.4);
+        FloatVar y = new FloatVar(store, "y", 0.5, 1.0);
+
+        FloatVar[] v = {x, y};
+
+        IntVar one = new IntVar(store, "one", 1, 1);
+
+        store.impose(new Reified(new Not(new LinearFloat(store, v, new double[] {1, -1}, "!=", 0)), one));
+
+        // search for solutions and print results
+        Search<FloatVar> label = new DepthFirstSearch<FloatVar>();
+        SplitSelectFloat<FloatVar> select = new SplitSelectFloat<FloatVar>(store, v, null);
+        label.setSolutionListener(new PrintOutListener<FloatVar>());
+
+        boolean result = label.labeling(store, select);
+
+        if (result) {
+            System.out.println("Solutions: ");
+            label.printAllSolutions();
+        } else
+            System.out.println("*** No");
+
+        assertEquals(false, result);
+
+    }
+
+    @Test public void testQueueForwardNoException() {
 
         Fz2jacop fz2jacop = new Fz2jacop();
 
         // Just checking if does not throw an exception.
-       // fz2jacop.main(new String[]{"src/test/fz/freepizza.fzn"});
+        fz2jacop.main(new String[] {"src/test/fz/queueForwardTest.fzn"});
+
+    }
+
+    @Test public void testConstraintImposition() {
+
+        Fz2jacop fz2jacop = new Fz2jacop();
+
+        // Just checking if does not throw an exception.
+        fz2jacop.main(new String[] {"src/test/fz/upTo5sec/3_jugs2/3_jugs2.fzn"});
+
+    }
+
+    @Test @Ignore public void testBoundEventCorrection() {
+
+        Fz2jacop fz2jacop = new Fz2jacop();
+
+        // Just checking if does not throw an exception.
+        fz2jacop.main(new String[] {"-n 69", "-s", "-a", "-v", "src/test/fz/cc_base.fzn"});
 
 
     }
 
-
-    @Test
-    public void testQueueForwardTest() {
+    @Test public void testWolfCabbage() {
 
         Fz2jacop fz2jacop = new Fz2jacop();
 
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        PrintStream old = System.out;
-        System.setOut(new PrintStream(baos));
-
         // Just checking if does not throw an exception.
-        fz2jacop.main(new String[]{"src/test/fz/queueForwardTest.fzn"});
-
-        System.out.flush();
-        System.setOut(old);
-
-        String result = baos.toString();
-        System.out.println(result);
-
-        assertEquals("x1 = 0;\n" +
-                "x2 = -1;\n" +
-                "x3 = 0;\n" +
-                "x4 = true;\n" +
-                "----------\n", result);
-    }
-
-
-    @Test
-    public void testGridColoring() {
-
-        Fz2jacop fz2jacop = new Fz2jacop();
-
-       // ByteArrayOutputStream baos = new ByteArrayOutputStream();
-       // PrintStream old = System.out;
-       // System.setOut(new PrintStream(baos));
-
-        // Just checking if does not throw an exception.
-        fz2jacop.main(new String[]{"src/test/fz/GridColoring.fzn"});
-
-       // System.out.flush();
-       // System.setOut(old);
-
-        //String result = baos.toString();
-        //System.out.println(result);
-
-
-/*assertEquals("x1 = 0;\n" +
-                "x2 = -1;\n" +
-                "x3 = 0;\n" +
-                "x4 = true;\n" +
-                "----------\n", result);*/
+        fz2jacop.main(new String[] {"-sat", "src/test/fz/wolf_goat_cabbage.fzn"});
 
     }
 
-
-    @Test
-    public void testModel() {
+    @Test public void testRemoveConstraint() {
 
         Fz2jacop fz2jacop = new Fz2jacop();
 
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        PrintStream old = System.out;
-        System.setOut(new PrintStream(baos));
-
         // Just checking if does not throw an exception.
-        fz2jacop.main(new String[]{"src/test/fz/model.fzn"});
+        fz2jacop.main(new String[] {"--statistics", "-debug", "--verbose", "src/test/fz/upTo5min/removal-large/nmseq.fzn"});
 
-        System.out.flush();
-        System.setOut(old);
-
-        String result = baos.toString();
-        System.out.println(result);
-
-        assertEquals("objective = 210944;\n" +
-                "def = array1d(0..49, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 2, 0]);\n" +
-                "loc = array1d(0..49, [31, 0, 31, 31, 0, 31, 0, 31, 31, 0, 31, 0, 31, 31, 0, 31, 0, 34, 31, 0, 31, 31, 31, 0, 31, 31, 31, 31, 0, 31, 0, 31, 0, 31, 0, 31, 0, 31, 31, 31, 0, 31, 0, 0, 31, 31, 0, 31, 31, 0]);\n" +
-                "sel = array1d(0..115, [true, false, true, true, true, true, true, true, true, true, true, true, true, true, false, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, false, false, true, false, false, true, false, true, true, true, true, true, true, false, true, true, true, false, false, true, false, false, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false, false, false, false, true]);\n" +
-                "place = array1d(0..115, [2, 5, 3, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 2, 5, 5, 1, 5, 5, 0, 5, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 5, 5, 1, 5, 5, 2, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 0, 5, 5, 5, 5, 5, 5, 5, 1, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 0]);\n" +
-                "succ = array1d(0..5, [4, 3, 5, 2, 1, 0]);\n" +
-                "----------\n" +
-                "==========\n", result);
-    }
-
-    @Test
-    public void testLargeCumulative() {
-
-        Fz2jacop fz2jacop = new Fz2jacop();
-
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        PrintStream old = System.out;
-        System.setOut(new PrintStream(baos));
-
-        // Just checking if does not throw an exception.
-        fz2jacop.main(new String[]{"src/test/fz/model.fzn"});
-
-        System.out.flush();
-        System.setOut(old);
-
-        String result = baos.toString();
-        System.out.println(result);
-
-        assertEquals("objective = 210944;\n" +
-                "def = array1d(0..49, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 2, 0]);\n" +
-                "loc = array1d(0..49, [31, 0, 31, 31, 0, 31, 0, 31, 31, 0, 31, 0, 31, 31, 0, 31, 0, 34, 31, 0, 31, 31, 31, 0, 31, 31, 31, 31, 0, 31, 0, 31, 0, 31, 0, 31, 0, 31, 31, 31, 0, 31, 0, 0, 31, 31, 0, 31, 31, 0]);\n" +
-                "sel = array1d(0..115, [true, false, true, true, true, true, true, true, true, true, true, true, true, true, false, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, false, false, true, false, false, true, false, true, true, true, true, true, true, false, true, true, true, false, false, true, false, false, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false, false, false, false, true]);\n" +
-                "place = array1d(0..115, [2, 5, 3, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 2, 5, 5, 1, 5, 5, 0, 5, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 5, 5, 1, 5, 5, 2, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 0, 5, 5, 5, 5, 5, 5, 5, 1, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 0]);\n" +
-                "succ = array1d(0..5, [4, 3, 5, 2, 1, 0]);\n" +
-                "----------\n" +
-                "==========\n", result);
     }
 
 }

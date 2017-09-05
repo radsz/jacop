@@ -1,250 +1,191 @@
 /**
- *  XmodYeqZ.java 
- *  This file is part of JaCoP.
- *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
- *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU Affero General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU Affero General Public License for more details.
- *  
- *  Notwithstanding any other provision of this License, the copyright
- *  owners of this work supplement the terms of this License with terms
- *  prohibiting misrepresentation of the origin of this work and requiring
- *  that modified versions of this work be marked in reasonable ways as
- *  different from the original version. This supplement of the license
- *  terms is in accordance with Section 7 of GNU Affero General Public
- *  License version 3.
- *
- *  You should have received a copy of the GNU Affero General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
+ * XmodYeqZ.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
 import org.jacop.core.Interval;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 
 /**
  * Constraint X mod Y = Z
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 3.1
  */
 
-public class XmodYeqZ extends Constraint {
+public class XmodYeqZ extends Constraint implements SatisfiedPresent {
 
-	static int counter = 1;
+    static AtomicInteger idNumber = new AtomicInteger(0);
 
-	/**
-	 * It specifies variable x in constraint x mod y = z. 
-	 */
-	public IntVar x;
+    /**
+     * It specifies variable x in constraint x mod y = z.
+     */
+    public IntVar x;
 
-	/**
-	 * It specifies variable y in constraint x mod y = z. 
-	 */
-	public IntVar y;
+    /**
+     * It specifies variable y in constraint x mod y = z.
+     */
+    public IntVar y;
 
-	/**
-	 * It specifies variable z in constraint x mod y = z. 
-	 */
-	public IntVar z;
+    /**
+     * It specifies variable z in constraint x mod y = z.
+     */
+    public IntVar z;
 
-	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
-	 * the constructor being called to recreate an object from an XML format.
-	 */
-	public static String[] xmlAttributes = {"x", "y", "z"};
+    /**
+     * It constructs a constraint X mod Y = Z.
+     * @param x variable x.
+     * @param y variable y.
+     * @param z variable z.
+     */
+    public XmodYeqZ(IntVar x, IntVar y, IntVar z) {
 
-	/**
-	 * It constructs a constraint X mod Y = Z.
-	 * @param x variable x.
-	 * @param y variable y.
-	 * @param z variable z.
-	 */
-	public XmodYeqZ(IntVar x, IntVar y, IntVar z) {
+        checkInputForNullness(new String[]{"x", "y", "z"}, new Object[]{x, y, z});
 
-		assert (x != null) : "Variable x is null";
-		assert (y != null) : "Variable y is null";
-		assert (z != null) : "Variable z is null";
+        numberId = idNumber.incrementAndGet();
 
-		numberId = counter++;
-		numberArgs = 3;
+        this.x = x;
+        this.y = y;
+        this.z = z;
 
-		this.x = x;
-		this.y = y;
-		this.z = z;
-	}
+        setScope(x, y, z);
+    }
 
-	@Override
-	public ArrayList<Var> arguments() {
+    @Override public void consistency(Store store) {
 
-		ArrayList<Var> variables = new ArrayList<Var>(3);
+        int resultMin = IntDomain.MinInt;
+        int resultMax = IntDomain.MaxInt;
 
-		variables.add(z);
-		variables.add(y);
-		variables.add(x);
-		return variables;
-	}
+        do {
 
-	@Override
-	public void consistency (Store store) {
+            store.propagationHasOccurred = false;
 
-		int resultMin=IntDomain.MinInt;
-		int resultMax=IntDomain.MaxInt;
+            y.domain.inComplement(store.level, y, 0);
 
-		do {
+            // Compute bounds for reminder
 
-			store.propagationHasOccurred = false;
+            int reminderMin, reminderMax;
 
-			y.domain.inComplement(store.level, y, 0);
+            if (x.min() >= 0) {
+                reminderMin = 0;
+                reminderMax = Math.max(Math.abs(y.min()), Math.abs(y.max())) - 1;
 
-			// Compute bounds for reminder 
+                reminderMax = Math.min(reminderMax, x.max());
+            } else if (x.max() < 0) {
+                reminderMax = 0;
+                reminderMin = -Math.max(Math.abs(y.min()), Math.abs(y.max())) + 1;
 
-			int reminderMin, reminderMax;
+                reminderMin = Math.max(reminderMin, x.min());
+            } else {
+                reminderMin = Math.min(Math.min(y.min(), -y.min()), Math.min(y.max(), -y.max())) + 1;
+                reminderMax = Math.max(Math.max(y.min(), -y.min()), Math.max(y.max(), -y.max())) - 1;
 
-			if (x.min() >= 0) {
-				reminderMin = 0;
-				reminderMax = Math.max(Math.abs(y.min()), Math.abs(y.max()))  - 1;
+                reminderMin = Math.max(reminderMin, x.min());
+                reminderMax = Math.min(reminderMax, x.max());
+            }
 
-				reminderMax = Math.min(reminderMax, x.max());
-			}
-			else if (x.max() < 0) {
-				reminderMax = 0;
-				reminderMin = - Math.max(Math.abs(y.min()), Math.abs(y.max())) + 1;
+            z.domain.in(store.level, z, reminderMin, reminderMax);
 
-				reminderMin = Math.max(reminderMin, x.min());
-			}
-			else {
-				reminderMin = Math.min(Math.min(y.min(),-y.min()), Math.min(y.max(),-y.max())) + 1;
-				reminderMax = Math.max(Math.max(y.min(),-y.min()), Math.max(y.max(),-y.max())) - 1;
+	    if (! (y.min() <= 0 && y.max() >= 0)) {
 
-				reminderMin = Math.max(reminderMin, x.min());
-				reminderMax = Math.min(reminderMax, x.max());
-			}
+		// Bounds for result
+		int oldResultMin = resultMin, oldResultMax = resultMax;
 
-			z.domain.in(store.level, z, reminderMin, reminderMax);
+		Interval result = IntDomain.divBounds(x.min(), x.max(), y.min(), y.max());
 
-			// Bounds for result
-			int oldResultMin = resultMin, oldResultMax = resultMax; 
+		resultMin = result.min();
+		resultMax = result.max();
 
-			Interval result = IntDomain.divBounds(x.min(), x.max(), y.min(), y.max());
+		if (oldResultMin != resultMin || oldResultMax != resultMax)
+		    store.propagationHasOccurred = true;
 
-			resultMin = result.min();
-			resultMax = result.max();
+		// Bounds for Y
+		Interval yBounds = IntDomain.divBounds(x.min() - reminderMax, x.max() - reminderMin, resultMin, resultMax);
 
-			if (oldResultMin != resultMin || oldResultMax != resultMax)
-			    store.propagationHasOccurred = true;
+		y.domain.in(store.level, y, yBounds.min(), yBounds.max());
 
-			// Bounds for Y
-			Interval yBounds = IntDomain.divBounds(x.min()-reminderMax, x.max()-reminderMin, resultMin, resultMax);
+		// Bounds for Z and reminder
+		Interval reminder = IntDomain.mulBounds(resultMin, resultMax, y.min(), y.max());
+		int zMin = reminder.min(), zMax = reminder.max();
 
- 			y.domain.in(store.level, y, yBounds.min(), yBounds.max());
+		reminderMin = x.min() - zMax;
+		reminderMax = x.max() - zMin;
 
-			// Bounds for Z and reminder
-			Interval reminder = IntDomain.mulBounds(resultMin, resultMax, y.min(), y.max());
- 			int zMin = reminder.min(), zMax = reminder.max();
+		z.domain.in(store.level, z, reminderMin, reminderMax);
 
- 			reminderMin = x.min() - zMax;
- 			reminderMax = x.max() - zMin;
+		x.domain.in(store.level, x, zMin + z.min(), zMax + z.max());
+	    }
 
- 			z.domain.in(store.level, z, reminderMin, reminderMax);
+            assert checkSolution(resultMin, resultMax) == null : checkSolution(resultMin, resultMax);
 
-			x.domain.in(store.level, x, zMin + z.min(), zMax + z.max());
+        } while (store.propagationHasOccurred);
 
-			assert checkSolution(resultMin, resultMax) == null : checkSolution(resultMin, resultMax) ;
+    }
 
-		} while (store.propagationHasOccurred);
+    @Override public int getDefaultConsistencyPruningEvent() {
+        return IntDomain.BOUND;
+    }
 
-	}
+    @Override public boolean satisfied() {
+        return grounded() && z.min() == mod(x.min(), y.min());
+    }
 
-	@Override
-	public int getConsistencyPruningEvent(Var var) {
+    @Override public String toString() {
 
-		// If consistency function mode
-		if (consistencyPruningEvents != null) {
-			Integer possibleEvent = consistencyPruningEvents.get(var);
-			if (possibleEvent != null)
-				return possibleEvent;
-		}
-		return IntDomain.BOUND;
-	}
+        return id() + " : XmodYeqZ(" + x + ", " + y + ", " + z + " )";
+    }
 
-	@Override
-	public void impose(Store store) {
-		z.putModelConstraint(this, getConsistencyPruningEvent(z));
-		y.putModelConstraint(this, getConsistencyPruningEvent(y));
-		x.putModelConstraint(this, getConsistencyPruningEvent(x));
-		store.addChanged(this);
-		store.countConstraint();
-	}
+    String checkSolution(int resultMin, int resultMax) {
+        String result = null;
 
-	@Override
-	public void removeConstraint() {
-		z.removeConstraint(this);
-		y.removeConstraint(this);
-		x.removeConstraint(this);
-	}
-
-	@Override
-	public boolean satisfied() {
-		IntDomain Xdom = z.dom(), Ydom = y.dom(), Zdom = x.dom();
-
-		return Xdom.singleton() && Ydom.singleton() && Zdom.singleton() &&
-		    Zdom.min() == mod(Xdom.min(), Ydom.min());
-	}
-
-	@Override
-	public String toString() {
-
-		return id() + " : XmodYeqZ(" + x + ", " + y + ", " + z + " )";
-	}
-
-	@Override
-	public void increaseWeight() {
-		if (increaseWeight) {
-			z.weight++;
-			y.weight++;
-			x.weight++;
-		}
-	}
-
-	String checkSolution(int resultMin, int resultMax) {
-		String result = null;
-
-		if (z.singleton() && y.singleton() && x.singleton()) {
-			result = "Operation mod does not hold " + x + " mod " + y + " = " + z + "(result "+resultMin+".."+resultMax;
-			for (int i=resultMin; i<=resultMax; i++) {
-				if ( i*y.value() + z.value() == x.value() )
-					result = null;
-			}
-		}
-		else 
-			result = null;
-		return result;
-	}
+        if (z.singleton() && y.singleton() && x.singleton()) {
+            result = "Operation mod does not hold " + x + " mod " + y + " = " + z + "(result " + resultMin + ".." + resultMax;
+            for (int i = resultMin; i <= resultMax; i++) {
+                if (i * y.value() + z.value() == x.value())
+                    result = null;
+            }
+        } else
+            result = null;
+        return result;
+    }
 
     int div(int a, int b) {
-	return (int)Math.floor((float)a / (float)b);
+        return (int) Math.floor((float) a / (float) b);
     }
 
     int mod(int a, int b) {
-	return a - div(a, b) * b;
+        return a - div(a, b) * b;
     }
 }

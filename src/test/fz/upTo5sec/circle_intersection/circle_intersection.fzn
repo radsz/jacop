@@ -1,0 +1,18 @@
+array [1..2] of float: X_INTRODUCED_7 = [-1.0,-1.0];
+var float: X:: output_var;
+var float: Y:: output_var;
+var float: X_INTRODUCED_1 ::var_is_introduced :: is_defined_var;
+var float: X_INTRODUCED_2 ::var_is_introduced :: is_defined_var;
+var float: X_INTRODUCED_3 ::var_is_introduced :: is_defined_var;
+var float: X_INTRODUCED_4 ::var_is_introduced :: is_defined_var;
+var float: X_INTRODUCED_8 ::var_is_introduced :: is_defined_var;
+var float: X_INTRODUCED_9 ::var_is_introduced :: is_defined_var;
+constraint float_lin_eq(X_INTRODUCED_7,[X_INTRODUCED_4,X_INTRODUCED_2],-4.0);
+constraint float_lin_eq(X_INTRODUCED_7,[X_INTRODUCED_9,X_INTRODUCED_8],-4.0);
+constraint float_lin_eq([1.0,-1.0],[Y,X_INTRODUCED_1],1.0):: defines_var(X_INTRODUCED_1);
+constraint float_times(X_INTRODUCED_1,X_INTRODUCED_1,X_INTRODUCED_2):: defines_var(X_INTRODUCED_2);
+constraint float_lin_eq([1.0,-1.0],[X,X_INTRODUCED_3],1.0):: defines_var(X_INTRODUCED_3);
+constraint float_times(X_INTRODUCED_3,X_INTRODUCED_3,X_INTRODUCED_4):: defines_var(X_INTRODUCED_4);
+constraint float_times(Y,Y,X_INTRODUCED_8):: defines_var(X_INTRODUCED_8);
+constraint float_times(X,X,X_INTRODUCED_9):: defines_var(X_INTRODUCED_9);
+solve  satisfy;

@@ -1,0 +1,6 @@
+var set of 1..3: X_INTRODUCED_0;
+var 0..3: X_INTRODUCED_1 ::var_is_introduced :: is_defined_var;
+array [1..1] of var set of int: sets:: output_array([1..1]) = [X_INTRODUCED_0];
+constraint int_eq(X_INTRODUCED_1,3);
+constraint set_card(X_INTRODUCED_0,X_INTRODUCED_1):: defines_var(X_INTRODUCED_1);
+solve :: set_search(sets,input_order,indomain_min,complete) satisfy;

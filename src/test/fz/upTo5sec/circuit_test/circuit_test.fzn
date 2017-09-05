@@ -1,0 +1,16 @@
+predicate jacop_alldiff(array [int] of var int: x);
+var 2..4: X_INTRODUCED_0;
+var 1..4: X_INTRODUCED_1;
+var 1..4: X_INTRODUCED_2;
+var 1..4: X_INTRODUCED_3;
+var 2..4: X_INTRODUCED_9 ::var_is_introduced :: is_defined_var;
+var 2..4: X_INTRODUCED_10 ::var_is_introduced :: is_defined_var;
+var 1..1: X_INTRODUCED_11 ::var_is_introduced ;
+array [1..4] of var int: x:: output_array([1..4]) = [X_INTRODUCED_0,X_INTRODUCED_1,X_INTRODUCED_2,X_INTRODUCED_3];
+array [1..4] of var int: X_INTRODUCED_4 ::var_is_introduced  = [X_INTRODUCED_0,X_INTRODUCED_9,X_INTRODUCED_10,1];
+constraint array_var_int_element(X_INTRODUCED_0,x,X_INTRODUCED_9):: defines_var(X_INTRODUCED_9);
+constraint array_var_int_element(X_INTRODUCED_9,x,X_INTRODUCED_10):: defines_var(X_INTRODUCED_10);
+constraint array_var_int_element(X_INTRODUCED_10,x,1);
+constraint jacop_alldiff(X_INTRODUCED_4);
+constraint jacop_alldiff(x);
+solve :: int_search(x,first_fail,indomain_min,complete) satisfy;

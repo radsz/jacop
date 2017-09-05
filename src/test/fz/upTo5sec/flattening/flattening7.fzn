@@ -1,0 +1,11 @@
+var -2..2: x:: output_var;
+var -1..2: y:: output_var;
+var bool: b:: output_var;
+var 0..2: X_INTRODUCED_0 ::var_is_introduced ;
+var bool: X_INTRODUCED_1 ::var_is_introduced :: is_defined_var;
+var bool: X_INTRODUCED_2 ::var_is_introduced :: is_defined_var;
+constraint bool_clause([X_INTRODUCED_1],[b]);
+constraint array_bool_or([b,X_INTRODUCED_2],true);
+constraint int_eq_reif(X_INTRODUCED_0,x,X_INTRODUCED_1):: defines_var(X_INTRODUCED_1);
+constraint int_eq_reif(X_INTRODUCED_0,y,X_INTRODUCED_2):: defines_var(X_INTRODUCED_2);
+solve  satisfy;

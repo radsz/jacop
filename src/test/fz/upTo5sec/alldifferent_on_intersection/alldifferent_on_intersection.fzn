@@ -1,0 +1,7 @@
+var 0..0: X_INTRODUCED_35 ::var_is_introduced :: is_defined_var;
+var 0..0: X_INTRODUCED_46 ::var_is_introduced :: is_defined_var;
+array [1..4] of var int: x:: output_array([1..4]) = [5,9,1,5];
+array [1..6] of var int: y:: output_array([1..6]) = [2,1,6,9,6,2];
+constraint bool2int(false,X_INTRODUCED_35):: defines_var(X_INTRODUCED_35);
+constraint bool2int(false,X_INTRODUCED_46):: defines_var(X_INTRODUCED_46);
+solve  satisfy;

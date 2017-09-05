@@ -1,57 +1,49 @@
-/**
- *  Alldistinct.java 
- *  This file is part of JaCoP.
- *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
- *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU Affero General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU Affero General Public License for more details.
- *  
- *  Notwithstanding any other provision of this License, the copyright
- *  owners of this work supplement the terms of this License with terms
- *  prohibiting misrepresentation of the origin of this work and requiring
- *  that modified versions of this work be marked in reasonable ways as
- *  different from the original version. This supplement of the license
- *  terms is in accordance with Section 7 of GNU Affero General Public
- *  License version 3.
- *
- *  You should have received a copy of the GNU Affero General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
+/*
+ * Alldistinct.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.LinkedList;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
-import org.jacop.core.ValueEnumeration;
-import org.jacop.core.Var;
+import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.Stateful;
+import org.jacop.api.UsesQueueVariable;
+import org.jacop.core.*;
 import org.jacop.util.SimpleArrayList;
 import org.jacop.util.SimpleHashSet;
 
 /**
  * Alldistinct constraint assures that all FDVs have different values.
- * 
+ *
  * This implementation is based on Regin paper. It uses slightly modified
  * Hopcroft-Karp algorithm to compute maximum matching. The value graph is
  * analysed and Tarjan algorithm for finding strongly connected components is
@@ -59,1988 +51,1805 @@ import org.jacop.util.SimpleHashSet;
  * variables to minimize recomputation. Value graph is expensive in terms of
  * memory usage. Use this constraint with care. One variable with domain
  * 0..1000000 will make it use few MB already and kill the efficiency.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.4
  */
 
-public class Alldistinct extends Constraint {
+public class Alldistinct extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
 	/* @todo implement in alldistinct remark, that only variable 
-	 * with domain of size smaller equal n (number 
+   * with domain of size smaller equal n (number
 	 * of variables) can contribute to any pruning. */
-	
-	static final boolean debugAll = false;
-
-	static final boolean debugPruning = false;
-
-	static int idNumber = 1;
-
-	boolean backtrackOccured = true;
-
-	/**
-	 * It counts the number of executions of the consistency function. 
-	 */
-	public int consistencyChecks = 0;
-	
-	/**
-	 * It computes how many times did consistency execution has been 
-	 * re-executed due to narrowing event at the end of the consistency 
-	 * function.
-	 */
-	public int fullConsistencyPassesWithNarrowingEvent = 0;
-
-	// Any variable which matched edge ends up deleted is added to this
-	// structure to obtain a new matched edge
-	LinkedHashSet<IntVar> freeVariables = new LinkedHashSet<IntVar>();
-
-	// Any variable which matched edge ends up deleted is added to this
-	// structure to obtain a new matched edge
-	protected ArrayList<IntVar> freeVariablesAtFailure = new ArrayList<IntVar>();
-
-	// failure (inconsistency) discovered during imposition
-	boolean impositionFailure = false;
-
-	// each fdv has a matched value in maximal matching
-	// this can change from consistency execution to consistency execution
-	// any maximum matching is good for analysis.
-	// However if no matched is removed then previously computed matching
-	// can be directly used.
-	// If a matched edge was removed then the remains of maximum matching
-	// are used to compute a new maximum matching.
-	IdentityHashMap<IntVar, TimeStamp<Integer>> matching;
-
-	boolean maximumMatchingNotRecomputed = true;
-
-	// Important global variables for visitTarjan and revisitTarjan
-	// Probably vn can be replaced by n.
-	int n;
-
-	TimeStamp<Integer> nStamp;
-
-	boolean permutationConsistency = true;
-
-	// Until pointer stampValues it stores all values still in domain of
-	// at least one variable
-	Integer potentialFreeValues[];
-
-	// Represents for each Variable a scc to which it belongs.
-	// This can change from a lot from matching to matching.
-	// Variable may belong to different components given different matching.
-	// Only if old maximum matching is used than the old components numbers can
-	// be reused.
-	IdentityHashMap<IntVar, Integer> scc;
-
-	IdentityHashMap<IntVar, TimeStamp<Integer>> sccStamp;
-
-	// All grounded variables are not taken into account, they have
-	// their consistent value and can be simply omitted in any kind of
-	// analysis.
-	TimeStamp<Integer> stampNotGroundedVariables;
-
-	// Stores how many variables were reached by free values. for
-	// efficiency purposes. If equal number of variables where reached
-	// then previously then we can stop doing reachability analysis.
-	TimeStamp<Integer> stampReachability;
-
-	// stamps specify the position of the last fdv which posses given integer
-	// it decrease with increase of the store level.
-	HashMap<Integer, TimeStamp<Integer>> stamps;
-
-	// Variables for revisited Tarjan scc algorithm Reuse of scc
-	// numbers previously computed, is only possible when matching is
-	// not changed, since then any change can only split component
-	// (components stay the same within the same matching). For Golomb
-	// problem size 9, matching recomputed 50% of the time consistency
-	// called. It is very important that this stamp is used at the
-	// begining of the (re)computation of both visited and revisited
-	// Tarjan algorithm.
 
-	// For discovery of situation when number of values is equal
-	// to number of variables, which means that there is no free
-	// values
-	// It also can say when to stop looking for free values since
-	// it is easy to compute number of free values
-	// "stampValues.value() - x.length"
-	TimeStamp<Integer> stampValues;
+    static final boolean debugAll = false;
+
+    static final boolean debugPruning = false;
 
-	// Stores index for values in array potentialFreeValues it speeds
-	// up significantly the swap operation when a value is not free
-	// anymore and needs to be moved at the end of potentialFreeValues
-	// array.
-	HashMap<Integer, Integer> valueIndex;
+    static AtomicInteger idNumber = new AtomicInteger(0);
+
+    boolean backtrackOccured = true;
+
+    /**
+     * It counts the number of executions of the consistency function.
+     */
+    public int consistencyChecks = 0;
+
+    /**
+     * It computes how many times did consistency execution has been
+     * re-executed due to narrowing event at the end of the consistency
+     * function.
+     */
+    public int fullConsistencyPassesWithNarrowingEvent = 0;
 
-	// valueMapVariable specifies which Variable posses given integer
-	HashMap<Integer, SimpleArrayList<IntVar>> valueMapVariable;
+    // Any variable which matched edge ends up deleted is added to this
+    // structure to obtain a new matched edge
+    LinkedHashSet<IntVar> freeVariables = new LinkedHashSet<IntVar>();
 
-	LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
+    // failure (inconsistency) discovered during imposition
+    boolean impositionFailure = false;
 
-	int vn;
+    // each fdv has a matched value in maximal matching
+    // this can change from consistency execution to consistency execution
+    // any maximum matching is good for analysis.
+    // However if no matched is removed then previously computed matching
+    // can be directly used.
+    // If a matched edge was removed then the remains of maximum matching
+    // are used to compute a new maximum matching.
+    Map<IntVar, TimeStamp<Integer>> matching;
 
-	/**
-	 * It specifies all variables which have to have different values.
-	 */
-	public IntVar[] list;
+    boolean maximumMatchingNotRecomputed = true;
 
-	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
-	 * the constructor being called to recreate an object from an XML format.
-	 */
-	public static String[] xmlAttributes = {"list"};
+    // Important global variables for visitTarjan and revisitTarjan
+    // Probably vn can be replaced by n.
+    int n;
 
-	/**
-	 * It constructs an alldistinct constraint. 
-	 * @param list an array of variables.
-	 */
-	public Alldistinct(IntVar[] list) {
+    TimeStamp<Integer> nStamp;
 
-		queueIndex = 2;
+    boolean permutationConsistency = true;
 
-		numberId = idNumber++;
+    // Until pointer stampValues it stores all values still in domain of
+    // at least one variable
+    Integer potentialFreeValues[];
 
-		this.list = new IntVar[list.length];
+    // Represents for each Variable a scc to which it belongs.
+    // This can change from a lot from matching to matching.
+    // Variable may belong to different components given different matching.
+    // Only if old maximum matching is used than the old components numbers can
+    // be reused.
+    Map<IntVar, Integer> scc;
 
-		for (int i = 0; i < list.length; i++)
-			this.list[i] = list[i];
+    Map<IntVar, TimeStamp<Integer>> sccStamp;
 
-		valueMapVariable = new HashMap<Integer, SimpleArrayList<IntVar>>();
-		stamps = new HashMap<Integer, TimeStamp<Integer>>();
-		matching = new IdentityHashMap<IntVar, TimeStamp<Integer>>();
-		sccStamp = new IdentityHashMap<IntVar, TimeStamp<Integer>>();
+    // All grounded variables are not taken into account, they have
+    // their consistent value and can be simply omitted in any kind of
+    // analysis.
+    TimeStamp<Integer> stampNotGroundedVariables;
 
-		IntDomain sum = new IntervalDomain(5);
+    // Stores how many variables were reached by free values. for
+    // efficiency purposes. If equal number of variables where reached
+    // then previously then we can stop doing reachability analysis.
+    TimeStamp<Integer> stampReachability;
 
-		for (int i = 0; i < this.list.length; i++)
-			sum.addDom(this.list[i].dom());
+    // stamps specify the position of the last fdv which posses given integer
+    // it decrease with increase of the store level.
+    Map<Integer, TimeStamp<Integer>> stamps;
 
-		// Each value in any variable domain will appear in a value graph
-		// Therefore it is enough that one variable has a domain 0..1000000 to
-		// create huge value graph making this constraint very ineffective
-		int value = 0;
-		SimpleArrayList<IntVar> currentSimpleArrayList = null;
+    // Variables for revisited Tarjan scc algorithm Reuse of scc
+    // numbers previously computed, is only possible when matching is
+    // not changed, since then any change can only split component
+    // (components stay the same within the same matching). For Golomb
+    // problem size 9, matching recomputed 50% of the time consistency
+    // called. It is very important that this stamp is used at the
+    // begining of the (re)computation of both visited and revisited
+    // Tarjan algorithm.
 
-		potentialFreeValues = new Integer[sum.getSize()];
+    // For discovery of situation when number of values is equal
+    // to number of variables, which means that there is no free
+    // values
+    // It also can say when to stop looking for free values since
+    // it is easy to compute number of free values
+    // "stampValues.value() - x.length"
+    TimeStamp<Integer> stampValues;
 
-		valueIndex = new HashMap<Integer, Integer>(sum.getSize(), 0.5f);
-		int m = 0;
+    // Stores index for values in array potentialFreeValues it speeds
+    // up significantly the swap operation when a value is not free
+    // anymore and needs to be moved at the end of potentialFreeValues
+    // array.
+    Map<Integer, Integer> valueIndex;
 
-		for (ValueEnumeration enumer = sum.valueEnumeration(); enumer.hasMoreElements();) {
+    // valueMapVariable specifies which Variable posses given integer
+    Map<Integer, SimpleArrayList<IntVar>> valueMapVariable;
 
-			value = enumer.nextElement();
-			Integer valueInteger = value;
-			potentialFreeValues[m] = valueInteger;
+    LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
 
-			valueIndex.put(valueInteger, m);
-			m++;
+    int vn;
 
-			currentSimpleArrayList = new SimpleArrayList<IntVar>();
-			for (int i = 0; i < this.list.length; i++)
-				if (this.list[i].domain.contains(value))
-					currentSimpleArrayList.add(this.list[i]);
-			valueMapVariable.put(valueInteger, currentSimpleArrayList);
+    /**
+     * It specifies all variables which have to have different values.
+     */
+    public IntVar[] list;
 
-		}
+    /**
+     * It constructs an alldistinct constraint.
+     * @param list an array of variables.
+     */
+    public Alldistinct(IntVar[] list) {
 
-	}
+        checkInputForNullness("list", list);
+        checkInputForDuplication("list", list);
 
-	/**
-	 * It constructs an alldistinct constraint.
-	 * @param list arraylist of variables.
-	 */
-	public Alldistinct(ArrayList<? extends IntVar> list) {
+        queueIndex = 2;
 
-		this(list.toArray(new IntVar[list.size()]));
+        numberId = idNumber.incrementAndGet();
 
-	}
+        this.list = new IntVar[list.length];
 
+        for (int i = 0; i < list.length; i++)
+            this.list[i] = list[i];
 
-	@Override
-	public ArrayList<Var> arguments() {
+        valueMapVariable = new HashMap<Integer, SimpleArrayList<IntVar>>();
+        stamps = new HashMap<Integer, TimeStamp<Integer>>();
+        matching = Var.createEmptyPositioning();
+        sccStamp = Var.createEmptyPositioning();
 
-		ArrayList<Var> variables = new ArrayList<Var>(list.length);
+        IntDomain sum = new IntervalDomain(5);
 
-		for (Var var : list)
-			variables.add(var);
+        for (int i = 0; i < this.list.length; i++)
+            sum.addDom(this.list[i].dom());
 
-		return variables;
-	}
+        // Each value in any variable domain will appear in a value graph
+        // Therefore it is enough that one variable has a domain 0..1000000 to
+        // create huge value graph making this constraint very ineffective
+        int value = 0;
+        SimpleArrayList<IntVar> currentSimpleArrayList = null;
 
-	@Override
-	public void removeLevel(int level) {
-		variableQueue = new LinkedHashSet<IntVar>();
-		backtrackOccured = true;
-	}
+        potentialFreeValues = new Integer[sum.getSize()];
 
-	@SuppressWarnings("unchecked")
-	@Override
-	public void consistency(Store store) {
+        valueIndex = new HashMap<Integer, Integer>(sum.getSize(), 0.5f);
+        int m = 0;
 
-		if (impositionFailure)
-	    	throw Store.failException;
+        for (ValueEnumeration enumer = sum.valueEnumeration(); enumer.hasMoreElements(); ) {
 
-		
-		if (store.currentQueue == queueIndex) {
+            value = enumer.nextElement();
+            Integer valueInteger = value;
+            potentialFreeValues[m] = valueInteger;
 
-			LinkedHashSet<IntVar> copy = (LinkedHashSet<IntVar>) variableQueue.clone();
+            valueIndex.put(valueInteger, m);
+            m++;
 
-			for (IntVar Q : copy) {
-				if (Q.singleton()) {
-					int qValue = Q.min();
-					int lastNotGround = stampNotGroundedVariables.value();
-					for (int i = 0; i <= lastNotGround; i++)
-						if (list[i] != Q)
-							list[i].domain.inComplement(store.level, list[i], qValue);
-				}
-			}
+            currentSimpleArrayList = new SimpleArrayList<IntVar>();
+            for (int i = 0; i < this.list.length; i++)
+                if (this.list[i].domain.contains(value))
+                    currentSimpleArrayList.add(this.list[i]);
+            valueMapVariable.put(valueInteger, currentSimpleArrayList);
 
-			if (queueIndex + 2 < store.queueNo) {
-				store.changed[queueIndex + 2].add(this);
-				return;
-			}
+        }
 
-		}
-		
-		consistencyChecks++;
+        setScope(list);
 
-		maximumMatchingNotRecomputed = true;
+    }
 
-		if (stampValues.value() - 1 == stampNotGroundedVariables.value())
-			permutationConsistency = true;
-		else
-			permutationConsistency = false;
+    /**
+     * It constructs an alldistinct constraint.
+     * @param list arraylist of variables.
+     */
+    public Alldistinct(List<? extends IntVar> list) {
 
-		// Store all changed Variable variables locally
-		LinkedHashSet<IntVar> fdvs = variableQueue;
+        this(list.toArray(new IntVar[list.size()]));
 
-		if (debugAll) {
-			System.out.println("Changed Variables " + variableQueue);
-		}
+    }
 
-		IntDomain Qdom = null;
-		Integer zero = 0;
-		SimpleArrayList<IntVar> currentSimpleArrayList = null;
-		TimeStamp<Integer> stamp = null;
+    @Override public void removeLevel(int level) {
+        variableQueue = new LinkedHashSet<IntVar>();
+        backtrackOccured = true;
+    }
 
-		SimpleHashSet<IntVar> singletons = new SimpleHashSet<IntVar>();
+    @SuppressWarnings("unchecked") @Override public void consistency(Store store) {
 
-		while (!variableQueue.isEmpty()) {
+        if (impositionFailure)
+            throw Store.failException;
 
-			variableQueue = new LinkedHashSet<IntVar>();
 
-			for (IntVar Q : fdvs) {
-				Qdom = Q.dom();
-				if (Qdom.singleton()) {
+        if (store.currentQueue == queueIndex) {
 
-					int qValue = Q.value();
+            LinkedHashSet<IntVar> copy = (LinkedHashSet<IntVar>) variableQueue.clone();
 
-					singletons.add(Q);
+            for (IntVar Q : copy) {
+                if (Q.singleton()) {
+                    int qValue = Q.min();
+                    int lastNotGround = stampNotGroundedVariables.value();
+                    for (int i = 0; i <= lastNotGround; i++)
+                        if (list[i] != Q)
+                            list[i].domain.inComplement(store.level, list[i], qValue);
+                }
+            }
 
-					int lastNotGroundedVariable = stampNotGroundedVariables
-							.value();
-					for (int i = 0; i <= lastNotGroundedVariable; i++)
-						if (list[i] == Q) {
-							list[i] = list[lastNotGroundedVariable];
-							list[lastNotGroundedVariable] = Q;
-							stampNotGroundedVariables
-									.update(lastNotGroundedVariable - 1);
-							break;
-						}
+            if (queueIndex + 2 < store.queueNo) {
+                store.changed[queueIndex + 2].add(this);
+                return;
+            }
 
-					currentSimpleArrayList = valueMapVariable.get(qValue);
+        }
 
-					// Timestamp variable which points to the position of
-					// the last variable which still has qValue in its
-					// domain
-					stamp = stamps.get(qValue);
+        consistencyChecks++;
 
-					int lastPosition = stamp.value();
+        maximumMatchingNotRecomputed = true;
 
-					int positionV = currentSimpleArrayList.indexOf(Q);
+        if (stampValues.value() - 1 == stampNotGroundedVariables.value())
+            permutationConsistency = true;
+        else
+            permutationConsistency = false;
 
-					// It has to set position to variable which has
-					// Qvalue in its domain to value 0 since only
-					// one variable will have this value.
-					stamp.update(zero);
+        // Store all changed Variable variables locally
+        LinkedHashSet<IntVar> fdvs = variableQueue;
 
-					if (positionV > 0) {
+        if (debugAll) {
+            System.out.println("Changed Variables " + variableQueue);
+        }
 
-						currentSimpleArrayList.setElementAt(
-								currentSimpleArrayList.get(0), positionV);
+        IntDomain Qdom = null;
+        Integer zero = 0;
+        SimpleArrayList<IntVar> currentSimpleArrayList = null;
+        TimeStamp<Integer> stamp = null;
 
-						currentSimpleArrayList.setElementAt(Q, 0);
-					}
+        SimpleHashSet<IntVar> singletons = new SimpleHashSet<IntVar>();
 
-					// All Variable which still had qValue in its domain
-					// have this value removed
-					// Domain complement = Domain.domain.complement(qValue);
-					for (int c = 1; c <= lastPosition; c++)
-						currentSimpleArrayList.get(c).domain.inComplement(
-								store.level, currentSimpleArrayList.get(c),
-								qValue);
+        while (!variableQueue.isEmpty()) {
 
-					// Should be seperate from above loop since failure
-					// in indexicals (in) will not clear variableQueue
-					for (int c = 1; c <= lastPosition; c++)
-						variableQueue.add(currentSimpleArrayList.get(c));
-				}
-			}
-			fdvs.addAll(variableQueue);
-		}
+            variableQueue = new LinkedHashSet<IntVar>();
 
-		variableQueue.clear();
+            for (IntVar Q : fdvs) {
+                Qdom = Q.dom();
+                if (Qdom.singleton()) {
 
-		// If additional pruning has occured than re-execute consistency
-		// algorithm
-		boolean narrowingEvent = false;
+                    int qValue = Q.value();
 
-		Iterator<IntVar> iter = fdvs.iterator();
+                    singletons.add(Q);
 
-		if (debugAll) {
-			System.out.println("Before");
-			System.out.println("Mapping Value->Variable" + valueMapVariable);
-			System.out.println("Stamps for size of Mapping Value->Variable"
-					+ stamps);
-			System.out.println("Maximum Matching " + matching);
-		}
+                    int lastNotGroundedVariable = stampNotGroundedVariables.value();
+                    for (int i = 0; i <= lastNotGroundedVariable; i++)
+                        if (list[i] == Q) {
+                            list[i] = list[lastNotGroundedVariable];
+                            list[lastNotGroundedVariable] = Q;
+                            stampNotGroundedVariables.update(lastNotGroundedVariable - 1);
+                            break;
+                        }
 
-		for (; iter.hasNext();) {
+                    currentSimpleArrayList = valueMapVariable.get(qValue);
 
-			IntVar V = iter.next();
-			IntDomain vPrunedDomain = V.recentDomainPruning();
+                    // Timestamp variable which points to the position of
+                    // the last variable which still has qValue in its
+                    // domain
+                    stamp = stamps.get(qValue);
 
-			if (debugAll) {
-				System.out.println("Variable changed " + V);
-				System.out.println("Pruned Domain " + vPrunedDomain);
-			}
+                    int lastPosition = stamp.value();
 
-			if (!vPrunedDomain.isEmpty()) {
+                    int positionV = currentSimpleArrayList.indexOf(Q);
 
-				// Check if any removed value was a edge in maximum matching
-				Integer matchedValue = matching.get(V).value();
+                    // It has to set position to variable which has
+                    // Qvalue in its domain to value 0 since only
+                    // one variable will have this value.
+                    stamp.update(zero);
 
-				// vPrunedDomain contains edge in maximum matching
-				// this variable needs recomputation
-				if (vPrunedDomain.contains(matchedValue))
-					freeVariables.add(V);
+                    if (positionV > 0) {
 
-				if (debugAll) {
-					System.out.println(" V " + V + " matchedValue "
-							+ matchedValue + " prunedDom " + vPrunedDomain
-							+ "contains? "
-							+ vPrunedDomain.contains(matchedValue));
-				}
+                        currentSimpleArrayList.setElementAt(currentSimpleArrayList.get(0), positionV);
 
-				for (ValueEnumeration enumer = vPrunedDomain.valueEnumeration(); enumer
-						.hasMoreElements();) {
+                        currentSimpleArrayList.setElementAt(Q, 0);
+                    }
 
-					int value = enumer.nextElement();
-					Integer integerValue = value;
+                    // All Variable which still had qValue in its domain
+                    // have this value removed
+                    // Domain complement = Domain.domain.complement(qValue);
+                    for (int c = 1; c <= lastPosition; c++)
+                        currentSimpleArrayList.get(c).domain.inComplement(store.level, currentSimpleArrayList.get(c), qValue);
 
-					currentSimpleArrayList = valueMapVariable.get(integerValue);
+                    // Should be seperate from above loop since failure
+                    // in indexicals (in) will not clear variableQueue
+                    for (int c = 1; c <= lastPosition; c++)
+                        variableQueue.add(currentSimpleArrayList.get(c));
+                }
+            }
+            fdvs.addAll(variableQueue);
+        }
 
-					stamp = stamps.get(integerValue);
+        variableQueue.clear();
 
-					int lastPosition = stamp.value();
+        // If additional pruning has occured than re-execute consistency
+        // algorithm
+        boolean narrowingEvent = false;
 
-					int positionV = currentSimpleArrayList.indexOf(V,
-							lastPosition);
+        Iterator<IntVar> iter = fdvs.iterator();
 
-					if (positionV == -1)
-						continue;
+        if (debugAll) {
+            System.out.println("Before");
+            System.out.println("Mapping Value->Variable" + valueMapVariable);
+            System.out.println("Stamps for size of Mapping Value->Variable" + stamps);
+            System.out.println("Maximum Matching " + matching);
+        }
 
-					if (lastPosition > positionV) {
+        for (; iter.hasNext(); ) {
 
-						stamp.update(lastPosition - 1);
+            IntVar V = iter.next();
+            IntDomain vPrunedDomain = V.recentDomainPruning();
 
-						currentSimpleArrayList.setElementAt(
-								currentSimpleArrayList.get(lastPosition),
-								positionV);
-						currentSimpleArrayList.setElementAt(V, lastPosition);
+            if (debugAll) {
+                System.out.println("Variable changed " + V);
+                System.out.println("Pruned Domain " + vPrunedDomain);
+            }
 
-						continue;
-					}
+            if (!vPrunedDomain.isEmpty()) {
 
-					if (lastPosition == positionV) {
-						stamp.update(lastPosition - 1);
+                // Check if any removed value was a edge in maximum matching
+                Integer matchedValue = matching.get(V).value();
 
-						if (lastPosition == 0) {
+                // vPrunedDomain contains edge in maximum matching
+                // this variable needs recomputation
+                if (vPrunedDomain.contains(matchedValue))
+                    freeVariables.add(V);
 
-							// index of last existing value
-							int stampValue = stampValues.value() - 1;
-							// Move value to the position pointed by stampValue
+                if (debugAll) {
+                    System.out.println(
+                        " V " + V + " matchedValue " + matchedValue + " prunedDom " + vPrunedDomain + "contains? " + vPrunedDomain
+                            .contains(matchedValue));
+                }
 
-							// indexDeletedValue is a current position of
-							// deleted Value
+                for (ValueEnumeration enumer = vPrunedDomain.valueEnumeration(); enumer.hasMoreElements(); ) {
 
-							int indexDeletedValue = valueIndex
-									.get(integerValue);
+                    int value = enumer.nextElement();
+                    Integer integerValue = value;
 
-							if (indexDeletedValue < stampValue) {
-								// Deleted value is NOT last in array of values
-								// if last then no moving necessary
+                    currentSimpleArrayList = valueMapVariable.get(integerValue);
 
-								// Update indexes in valueIndex hashtable
-								valueIndex.put(
-										potentialFreeValues[indexDeletedValue],
-										stampValue);
-								valueIndex.put(potentialFreeValues[stampValue],
-										indexDeletedValue);
+                    stamp = stamps.get(integerValue);
 
-								// integerValue points to an integer from
-								// potentialFreeValues
-								// previous integerValue equals
-								// potentialFreeValues[indexDeletedValue]
-								integerValue = potentialFreeValues[indexDeletedValue];
+                    int lastPosition = stamp.value();
 
-								// Exchange values in potentialFreeValues array
-								// use integerValue as swap
-								potentialFreeValues[indexDeletedValue] = potentialFreeValues[stampValue];
-								potentialFreeValues[stampValue] = integerValue;
-							}
-							// A value is not possible to be taken, decrease
-							// number of values.
-							stampValues.update(stampValues.value() - 1);
+                    int positionV = currentSimpleArrayList.indexOf(V, lastPosition);
 
-						}
-					}
-				}
+                    if (positionV == -1)
+                        continue;
 
-			}
+                    if (lastPosition > positionV) {
 
-			else if (debugAll) {
-				System.out
-						.println("There was an Variable which was marked as changed"
-								+ " but there is no difference in domain" + V);
-				System.out.println("Most probably the result of current "
-						+ " implementation of variableQueue signals");
-			}
+                        stamp.update(lastPosition - 1);
 
-		}
+                        currentSimpleArrayList.setElementAt(currentSimpleArrayList.get(lastPosition), positionV);
+                        currentSimpleArrayList.setElementAt(V, lastPosition);
 
-		if (debugAll) {
-			System.out.println("After");
-			System.out.println("Mapping Value->Variable" + valueMapVariable);
-			System.out.println("Stamps for size of Mapping Value->Variable"
-					+ stamps);
-		}
+                        continue;
+                    }
 
-		if (debugAll) {
-			System.out.println("Looking Maximum Matching ");
-		}
+                    if (lastPosition == positionV) {
+                        stamp.update(lastPosition - 1);
 
-		// Remove singletons from changed variables as no pruning
-		// can be achieved for them.
-		while (!singletons.isEmpty()) {
-			IntVar singleton = singletons.removeFirst();
-			fdvs.remove(singleton);
-			freeVariables.remove(singleton);
-			Integer integerValue = singleton.value();
-			matching.get(singleton).update(integerValue);
+                        if (lastPosition == 0) {
 
-			// index of last existing value
-			int stampValue = stampValues.value() - 1;
-			// Move value to the position pointed by stampValue
+                            // index of last existing value
+                            int stampValue = stampValues.value() - 1;
+                            // Move value to the position pointed by stampValue
 
-			// indexDeletedValue is a current position of deleted Value
+                            // indexDeletedValue is a current position of
+                            // deleted Value
 
-			int indexDeletedValue = valueIndex.get(integerValue);
+                            int indexDeletedValue = valueIndex.get(integerValue);
 
-			if (indexDeletedValue < stampValue) {
-				// Deleted value is NOT last in array of values
-				// if last then no moving necessary
+                            if (indexDeletedValue < stampValue) {
+                                // Deleted value is NOT last in array of values
+                                // if last then no moving necessary
 
-				// Update indexes in valueIndex hashtable
-				valueIndex.put(potentialFreeValues[indexDeletedValue],
-						stampValue);
-				valueIndex.put(potentialFreeValues[stampValue],
-						indexDeletedValue);
+                                // Update indexes in valueIndex hashtable
+                                valueIndex.put(potentialFreeValues[indexDeletedValue], stampValue);
+                                valueIndex.put(potentialFreeValues[stampValue], indexDeletedValue);
 
-				// integerValue points to an integer from potentialFreeValues
-				// previous integerValue equals
-				// potentialFreeValues[indexDeletedValue]
-				integerValue = potentialFreeValues[indexDeletedValue];
+                                // integerValue points to an integer from
+                                // potentialFreeValues
+                                // previous integerValue equals
+                                // potentialFreeValues[indexDeletedValue]
+                                integerValue = potentialFreeValues[indexDeletedValue];
 
-				// Exchange values in potentialFreeValues array
-				// use integerValue as swap
-				potentialFreeValues[indexDeletedValue] = potentialFreeValues[stampValue];
-				potentialFreeValues[stampValue] = integerValue;
-			}
-			// A value is not possible to be taken, decrease
-			// number of values.
-			stampValues.update(stampValues.value() - 1);
-		}
+                                // Exchange values in potentialFreeValues array
+                                // use integerValue as swap
+                                potentialFreeValues[indexDeletedValue] = potentialFreeValues[stampValue];
+                                potentialFreeValues[stampValue] = integerValue;
+                            }
+                            // A value is not possible to be taken, decrease
+                            // number of values.
+                            stampValues.update(stampValues.value() - 1);
 
-		if (!freeVariables.isEmpty()) {
+                        }
+                    }
+                }
 
-			if (!hopcroftKarpMaximumMatching()) {
+            } else if (debugAll) {
+                System.out.println("There was an Variable which was marked as changed" + " but there is no difference in domain" + V);
+                System.out.println("Most probably the result of current " + " implementation of variableQueue signals");
+            }
 
-				freeVariablesAtFailure = new ArrayList<IntVar>(freeVariables);
-				freeVariables.clear();
-				variableQueue.clear();
-		    	throw Store.failException;
-			}
-			freeVariables.clear();
-		} else {
+        }
 
-			// Put all matched variables in valueMapVariable on the first
-			// position
-			// It is required during backtracking, old matching is reused
-			// no need to recompute hopcroft algorithm but there is a need
-			// to fix matching data structure.
+        if (debugAll) {
+            System.out.println("After");
+            System.out.println("Mapping Value->Variable" + valueMapVariable);
+            System.out.println("Stamps for size of Mapping Value->Variable" + stamps);
+        }
 
-			int lastNotGroundedVariable = stampNotGroundedVariables.value();
-					
-			IntVar variable = null;
-			Integer matchedValue;
-			int positionMatched;
+        if (debugAll) {
+            System.out.println("Looking Maximum Matching ");
+        }
 
-			for (int i = 0; i <= lastNotGroundedVariable; i++) {
+        // Remove singletons from changed variables as no pruning
+        // can be achieved for them.
+        while (!singletons.isEmpty()) {
+            IntVar singleton = singletons.removeFirst();
+            fdvs.remove(singleton);
+            freeVariables.remove(singleton);
+            Integer integerValue = singleton.value();
+            matching.get(singleton).update(integerValue);
 
-				variable = list[i];
-				
-				matchedValue = matching.get(variable).value();
-				currentSimpleArrayList = valueMapVariable.get(matchedValue);
+            // index of last existing value
+            int stampValue = stampValues.value() - 1;
+            // Move value to the position pointed by stampValue
 
-				positionMatched = currentSimpleArrayList.indexOf(variable);
-				if (positionMatched != 0) {
+            // indexDeletedValue is a current position of deleted Value
 
-					currentSimpleArrayList.setElementAt(currentSimpleArrayList
-							.get(0), positionMatched);
+            int indexDeletedValue = valueIndex.get(integerValue);
 
-					currentSimpleArrayList.setElementAt(variable, 0);
-				}
-			}
-		}
+            if (indexDeletedValue < stampValue) {
+                // Deleted value is NOT last in array of values
+                // if last then no moving necessary
 
-		if (debugAll) {
-			System.out.println("Maximum Matching " + matching);
-		}
+                // Update indexes in valueIndex hashtable
+                valueIndex.put(potentialFreeValues[indexDeletedValue], stampValue);
+                valueIndex.put(potentialFreeValues[stampValue], indexDeletedValue);
 
-		// Revisited Tarjan
+                // integerValue points to an integer from potentialFreeValues
+                // previous integerValue equals
+                // potentialFreeValues[indexDeletedValue]
+                integerValue = potentialFreeValues[indexDeletedValue];
 
-		ArrayList<IntVar> l = new ArrayList<IntVar>();
-		HashMap<IntVar, Integer> dfsnum = new HashMap<IntVar, Integer>();
-		HashMap<IntVar, Integer> low = new HashMap<IntVar, Integer>();
+                // Exchange values in potentialFreeValues array
+                // use integerValue as swap
+                potentialFreeValues[indexDeletedValue] = potentialFreeValues[stampValue];
+                potentialFreeValues[stampValue] = integerValue;
+            }
+            // A value is not possible to be taken, decrease
+            // number of values.
+            stampValues.update(stampValues.value() - 1);
+        }
 
-		n = nStamp.value();
+        if (!freeVariables.isEmpty()) {
 
-		int lastNotGroundedVariable = stampNotGroundedVariables.value();
+            if (!hopcroftKarpMaximumMatching()) {
+                freeVariables.clear();
+                variableQueue.clear();
+                throw Store.failException;
+            }
+            freeVariables.clear();
+        } else {
 
-		if (maximumMatchingNotRecomputed || permutationConsistency) {
+            // Put all matched variables in valueMapVariable on the first
+            // position
+            // It is required during backtracking, old matching is reused
+            // no need to recompute hopcroft algorithm but there is a need
+            // to fix matching data structure.
 
-			while (!fdvs.isEmpty()) {
+            int lastNotGroundedVariable = stampNotGroundedVariables.value();
 
-				IntVar changedVariable = fdvs.iterator().next();
+            IntVar variable = null;
+            Integer matchedValue;
+            int positionMatched;
 
-				fdvs.remove(changedVariable);
+            for (int i = 0; i <= lastNotGroundedVariable; i++) {
 
-				if (debugAll) {
-					System.out.println("Tarjan start, changed variabled "
-							+ changedVariable);
-				}
+                variable = list[i];
 
-				revisitTarjan(changedVariable, l, dfsnum, low, fdvs);
+                matchedValue = matching.get(variable).value();
+                currentSimpleArrayList = valueMapVariable.get(matchedValue);
 
-				if (debugAll) {
-					System.out.println("Tarjan end");
-				}
+                positionMatched = currentSimpleArrayList.indexOf(variable);
+                if (positionMatched != 0) {
 
-			}
+                    currentSimpleArrayList.setElementAt(currentSimpleArrayList.get(0), positionMatched);
 
-			// important to keep n as large as number of the highest current
-			// component
-			nStamp.update(n + 1);
+                    currentSimpleArrayList.setElementAt(variable, 0);
+                }
+            }
+        }
 
-		} else {
-			// New maximum matching may cause different scc for variables
-			scc = new IdentityHashMap<IntVar, Integer>();
+        if (debugAll) {
+            System.out.println("Maximum Matching " + matching);
+        }
 
-			vn = nStamp.value();
+        // Revisited Tarjan
 
-			for (int i = 0; i <= lastNotGroundedVariable; i++) {
+        List<IntVar> l = new ArrayList<IntVar>();
+        Map<IntVar, Integer> dfsnum = Var.createEmptyPositioning();
+        Map<IntVar, Integer> low = Var.createEmptyPositioning();
 
-				if (debugAll) {
-					System.out.println("Tarjan start, changed variabled "
-							+ list[i]);
-					System.out.println("Tarjan start, value mapping "
-							+ valueMapVariable);
-				}
+        n = nStamp.value();
 
-				if (scc.get(list[i]) == null)
-					visitTarjan(list[i], l, dfsnum, low);
+        int lastNotGroundedVariable = stampNotGroundedVariables.value();
 
-				if (debugAll) {
-					System.out.println("Tarjan end");
-				}
+        if (maximumMatchingNotRecomputed || permutationConsistency) {
 
-			}
+            while (!fdvs.isEmpty()) {
 
-			if (debugAll) {
-				System.out.println("Tarjan end state " + scc);
-			}
+                IntVar changedVariable = fdvs.iterator().next();
 
-			// Update stamps for new matching
+                fdvs.remove(changedVariable);
 
-			IntVar next;
-			for (Iterator<IntVar> e = scc.keySet().iterator(); e.hasNext();) {
-				next = (IntVar) e.next();
-				sccStamp.get(next).update(scc.get(next));
-			}
+                if (debugAll) {
+                    System.out.println("Tarjan start, changed variabled " + changedVariable);
+                }
 
-			nStamp.update(vn + 1);
+                revisitTarjan(changedVariable, l, dfsnum, low, fdvs);
 
-		}
+                if (debugAll) {
+                    System.out.println("Tarjan end");
+                }
 
-		// Traverses the graph starting in free values and marks each variable
-		// which is reachable from a free value
+            }
 
-		// New approach
-		// Use potentialFreeValues, create ordered list of values matched
-		// each potential free value check against
+            // important to keep n as large as number of the highest current
+            // component
+            nStamp.update(n + 1);
 
-		LinkedHashSet<IntVar> variablesReachableFromFreeValues = new LinkedHashSet<IntVar>(
-				list.length, 0.50f);
+        } else {
+            // New maximum matching may cause different scc for variables
+            scc = Var.createEmptyPositioning();
 
-		int stampValue = stampValues.value();
+            vn = nStamp.value();
 
-		int lastNotGroundedVariablePlusOne = lastNotGroundedVariable + 1;
+            for (int i = 0; i <= lastNotGroundedVariable; i++) {
 
-		if (stampValue - lastNotGroundedVariablePlusOne > 0) {
+                if (debugAll) {
+                    System.out.println("Tarjan start, changed variabled " + list[i]);
+                    System.out.println("Tarjan start, value mapping " + valueMapVariable);
+                }
 
-			// if values available equal to number of variables not grounded
-			// (plus one is due
-			// to different representation) then no free values, so no need for
-			// reachability analysis.
+                if (scc.get(list[i]) == null)
+                    visitTarjan(list[i], l, dfsnum, low);
 
-			HashSet<Integer> matchedValues = new HashSet<Integer>(list.length,
-					0.50f);
+                if (debugAll) {
+                    System.out.println("Tarjan end");
+                }
 
-			int noOfReachedVariablesLastTime = stampReachability.value();
+            }
 
-			for (int i = 0; i <= lastNotGroundedVariable; i++)
-				matchedValues.add(matching.get(list[i]).value());
+            if (debugAll) {
+                System.out.println("Tarjan end state " + scc);
+            }
 
-			for (int i = 0; i < stampValue
-					&& variablesReachableFromFreeValues.size() < noOfReachedVariablesLastTime
-					&& variablesReachableFromFreeValues.size() != lastNotGroundedVariablePlusOne; i++)
-				if (!matchedValues.contains(potentialFreeValues[i]))
-					markReachableVariables(variablesReachableFromFreeValues,
-							potentialFreeValues[i]);
+            // Update stamps for new matching
 
-			stampReachability.update(variablesReachableFromFreeValues.size());
-		}
+            for (Map.Entry<IntVar, Integer> entry : scc.entrySet()) {
+                IntVar key = entry.getKey();
+                Integer value = entry.getValue();
+                // Use the key and the value
+                sccStamp.get(key).update(value);
+            }
 
-		if (debugAll) {
-			System.out.println("All reached variables "
-					+ variablesReachableFromFreeValues);
+            nStamp.update(vn + 1);
 
-			System.out
-					.println("Check for All NOT reached variables if there is an "
-							+ " edge from matched variable to a different");
-		}
+        }
 
-		IntVar variable = null;
-		Integer matched;
-		int variableComponentId;
-		int lastPosition;
-		IntVar possibleDifferentComponentVariable;
+        // Traverses the graph starting in free values and marks each variable
+        // which is reachable from a free value
 
-		for (int j = 0; j <= lastNotGroundedVariable; j++) {
+        // New approach
+        // Use potentialFreeValues, create ordered list of values matched
+        // each potential free value check against
 
-			variable = list[j];
+        LinkedHashSet<IntVar> variablesReachableFromFreeValues = new LinkedHashSet<IntVar>(list.length, 0.50f);
 
-			if (debugAll) {
-				System.out.println("Variable " + variable + " is considered ");
-			}
+        int stampValue = stampValues.value();
 
-			if (!variablesReachableFromFreeValues.contains(variable)) {
+        int lastNotGroundedVariablePlusOne = lastNotGroundedVariable + 1;
 
-				if (debugPruning) {
-					System.out.println("Variable " + variable
-							+ " is not reached by free values ");
-				}
+        if (stampValue - lastNotGroundedVariablePlusOne > 0) {
 
-				variableComponentId = sccStamp.get(variable).value();
+            // if values available equal to number of variables not grounded
+            // (plus one is due
+            // to different representation) then no free values, so no need for
+            // reachability analysis.
 
-				matched = matching.get(variable).value();
+            Set<Integer> matchedValues = new HashSet<Integer>(list.length, 0.50f);
 
-				currentSimpleArrayList = valueMapVariable.get(matched);
+            int noOfReachedVariablesLastTime = stampReachability.value();
 
-				stamp = stamps.get(matched);
+            for (int i = 0; i <= lastNotGroundedVariable; i++)
+                matchedValues.add(matching.get(list[i]).value());
 
-				lastPosition = stamp.value();
+            for (int i = 0; i < stampValue && variablesReachableFromFreeValues.size() < noOfReachedVariablesLastTime
+                && variablesReachableFromFreeValues.size() != lastNotGroundedVariablePlusOne; i++)
+                if (!matchedValues.contains(potentialFreeValues[i]))
+                    markReachableVariables(variablesReachableFromFreeValues, potentialFreeValues[i]);
 
-				if (debugAll)
-					System.out
-							.println("currentSimpleArrayList "
-									+ currentSimpleArrayList + " stamp "
-									+ lastPosition);
+            stampReachability.update(variablesReachableFromFreeValues.size());
+        }
 
-				// If permutation constraint
-				// then above if is always true then this check can
-				// reuse quite a lot of work required for other
-				// pruning anyway
-				// loop invariant is that variable is not singleton
-				if (lastPosition == 0 && permutationConsistency) {
+        if (debugAll) {
+            System.out.println("All reached variables " + variablesReachableFromFreeValues);
 
-					if (debugPruning)
-						System.out.println("Value " + matched
-								+ " has only this variable possible "
-								+ variable);
+            System.out.println("Check for All NOT reached variables if there is an " + " edge from matched variable to a different");
+        }
 
-					// store.in(variable, matched, matched);
-					variable.domain.in(store.level, variable, matched, matched);
+        IntVar variable = null;
+        Integer matched;
+        int variableComponentId;
+        int lastPosition;
+        IntVar possibleDifferentComponentVariable;
 
-					// The above pruning does not require execution of
-					// consistency
-					// function, neither update of any local structure of
-					// alldistinct
-					// constraint therefore it can be removed from
-					// variableQueue.
-					variableQueue.remove(variable);
+        for (int j = 0; j <= lastNotGroundedVariable; j++) {
 
-				}
+            variable = list[j];
 
-				for (int i = 0; i <= lastPosition; i++) {
-					possibleDifferentComponentVariable = currentSimpleArrayList
-							.get(i);
-					if (variableComponentId != sccStamp.get(
-							possibleDifferentComponentVariable).value()) {
+            if (debugAll) {
+                System.out.println("Variable " + variable + " is considered ");
+            }
 
-						if (debugPruning) {
+            if (!variablesReachableFromFreeValues.contains(variable)) {
 
-							System.out.println("\n\n\n\n\nVariable "
-									+ possibleDifferentComponentVariable
-									+ "can not take value " + matched
-									+ "\n\n\n\n");
-						}
+                if (debugPruning) {
+                    System.out.println("Variable " + variable + " is not reached by free values ");
+                }
 
-						possibleDifferentComponentVariable.domain.inComplement(
-								store.level,
-								possibleDifferentComponentVariable, matched);
+                variableComponentId = sccStamp.get(variable).value();
 
-						narrowingEvent = true;
+                matched = matching.get(variable).value();
 
-						// Required to keep the data structure consistent
-						variableQueue.add(possibleDifferentComponentVariable);
-						currentSimpleArrayList.set(i, currentSimpleArrayList
-								.get(lastPosition));
-						currentSimpleArrayList.set(lastPosition,
-								possibleDifferentComponentVariable);
+                currentSimpleArrayList = valueMapVariable.get(matched);
 
-						lastPosition = lastPosition - 1;
-						stamp.update(lastPosition);
+                stamp = stamps.get(matched);
 
-					}
-				}
+                lastPosition = stamp.value();
 
-			}
-		}
+                if (debugAll)
+                    System.out.println("currentSimpleArrayList " + currentSimpleArrayList + " stamp " + lastPosition);
 
-		if (!narrowingEvent
-				&& stampValues.value() - 1 == stampNotGroundedVariables.value()) {
+                // If permutation constraint
+                // then above if is always true then this check can
+                // reuse quite a lot of work required for other
+                // pruning anyway
+                // loop invariant is that variable is not singleton
+                if (lastPosition == 0 && permutationConsistency) {
 
-			// Use Global Potential Free Values
-			int sizePotentialFreeValues = stampValues.value();
-			int currentlyUsedPotentialFreeValue = 0;
+                    if (debugPruning)
+                        System.out.println("Value " + matched + " has only this variable possible " + variable);
 
-			Integer value;
+                    // store.in(variable, matched, matched);
+                    variable.domain.in(store.level, variable, matched, matched);
 
-			while (currentlyUsedPotentialFreeValue < sizePotentialFreeValues) {
+                    // The above pruning does not require execution of
+                    // consistency
+                    // function, neither update of any local structure of
+                    // alldistinct
+                    // constraint therefore it can be removed from
+                    // variableQueue.
+                    variableQueue.remove(variable);
 
-				value = potentialFreeValues[currentlyUsedPotentialFreeValue];
+                }
 
-				currentlyUsedPotentialFreeValue++;
+                for (int i = 0; i <= lastPosition; i++) {
+                    possibleDifferentComponentVariable = currentSimpleArrayList.get(i);
+                    if (variableComponentId != sccStamp.get(possibleDifferentComponentVariable).value()) {
 
-				stamp = stamps.get(value);
+                        if (debugPruning) {
 
-				stampValue = stamp.value();
+                            System.out.println(
+                                "\n\n\n\n\nVariable " + possibleDifferentComponentVariable + "can not take value " + matched + "\n\n\n\n");
+                        }
 
-				if (stampValue == 0) {
+                        possibleDifferentComponentVariable.domain.inComplement(store.level, possibleDifferentComponentVariable, matched);
 
-					if (valueMapVariable.get(value).get(0).dom().getSize() > 1) {
-						System.out
-								.println("Transformation Alldistinct-Permutation and "
-										+ "missing propagation ");
+                        narrowingEvent = true;
 
-						valueMapVariable.get(value).get(0).domain.in(
-								store.level,
-								valueMapVariable.get(value).get(0), value,
-								value);
+                        // Required to keep the data structure consistent
+                        variableQueue.add(possibleDifferentComponentVariable);
+                        currentSimpleArrayList.set(i, currentSimpleArrayList.get(lastPosition));
+                        currentSimpleArrayList.set(lastPosition, possibleDifferentComponentVariable);
 
-						variableQueue.add(valueMapVariable.get(value).get(0));
+                        lastPosition = lastPosition - 1;
+                        stamp.update(lastPosition);
 
-						narrowingEvent = true;
-					}
+                    }
+                }
 
-				}
-			}
-		}
+            }
+        }
 
-		// moved from place below, so re-execution does not do unnecessary work
-		backtrackOccured = false;
+        if (!narrowingEvent && stampValues.value() - 1 == stampNotGroundedVariables.value()) {
 
-		if (narrowingEvent) {
-			consistencyChecks--;
-			fullConsistencyPassesWithNarrowingEvent++;
-			consistency(store);				
-		}
-		
-		if (debugAll) {
-			System.out.println("Consistency technique has finished execution ");
-		}
+            // Use Global Potential Free Values
+            int sizePotentialFreeValues = stampValues.value();
+            int currentlyUsedPotentialFreeValue = 0;
 
-	}
+            Integer value;
 
-	@Override
-	public int getConsistencyPruningEvent(Var var) {
+            while (currentlyUsedPotentialFreeValue < sizePotentialFreeValues) {
 
-		// If consistency function mode
-			if (consistencyPruningEvents != null) {
-				Integer possibleEvent = consistencyPruningEvents.get(var);
-				if (possibleEvent != null)
-					return possibleEvent;
-			}
-			return IntDomain.ANY;
-	}
+                value = potentialFreeValues[currentlyUsedPotentialFreeValue];
 
-	// Right now accepts as input potential free values
-	// Makes check if value is matched by variable and simply skip this case
-	// It skips matched values at the begining of the path, but
-	// it can not skip matched values after
-	// potential freeValues, inside hopcroft algorithm, but outside it is free
-	// Values
+                currentlyUsedPotentialFreeValue++;
 
-	private boolean hopcroftKarpMaximumMatching() {
+                stamp = stamps.get(value);
 
-		maximumMatchingNotRecomputed = false;
+                stampValue = stamp.value();
 
-		boolean maximumMatchingFound = false;
+                if (stampValue == 0) {
 
-		HashSet<Integer> nonFreeValues = new HashSet<Integer>();
+                    if (valueMapVariable.get(value).get(0).dom().getSize() > 1) {
+                        System.out.println("Transformation Alldistinct-Permutation and " + "missing propagation ");
 
-		Integer matched;
+                        valueMapVariable.get(value).get(0).domain.in(store.level, valueMapVariable.get(value).get(0), value, value);
 
-		IntVar variable = null;
+                        variableQueue.add(valueMapVariable.get(value).get(0));
 
-		int lastNotGroundedVariable = stampNotGroundedVariables.value();
+                        narrowingEvent = true;
+                    }
 
-		for (int i = 0; i <= lastNotGroundedVariable; i++) {
-			variable = list[i];
+                }
+            }
+        }
 
-			// variable does not belong to freeVariables
-			if (!freeVariables.contains(variable)) {
+        // moved from place below, so re-execution does not do unnecessary work
+        backtrackOccured = false;
 
-				matched = matching.get(variable).value();
-				nonFreeValues.add(matched);
+        if (narrowingEvent) {
+            consistencyChecks--;
+            fullConsistencyPassesWithNarrowingEvent++;
+            consistency(store);
+        }
 
-				if (backtrackOccured) {
+        if (debugAll) {
+            System.out.println("Consistency technique has finished execution ");
+        }
 
-					SimpleArrayList<IntVar> currentSimpleArrayList = valueMapVariable
-							.get(matched);
+    }
 
-					// Correcting matching in ValueMapVariable for
-					// notGroundedYetVariable.
-					// This variable has not removed previously computed
-					// matching
-					// since last time this function was called
+    @Override public int getDefaultConsistencyPruningEvent() {
+        return IntDomain.ANY;
+    }
 
-					int positionMatched = currentSimpleArrayList
-							.indexOf(variable);
-					if (positionMatched != 0) {
+    // Right now accepts as input potential free values
+    // Makes check if value is matched by variable and simply skip this case
+    // It skips matched values at the begining of the path, but
+    // it can not skip matched values after
+    // potential freeValues, inside hopcroft algorithm, but outside it is free
+    // Values
 
-						currentSimpleArrayList.setElementAt(
-								currentSimpleArrayList.get(0), positionMatched);
+    private boolean hopcroftKarpMaximumMatching() {
 
-						currentSimpleArrayList.setElementAt(variable, 0);
+        maximumMatchingNotRecomputed = false;
 
-					}
-				}
-			}
+        boolean maximumMatchingFound = false;
 
-		}
+        Set<Integer> nonFreeValues = new HashSet<Integer>();
 
-		// Points at edge which was not yet used by Karp-Hopcroft algorithm
-		HashMap<Integer, Integer> notYetUsedVariablePointer = new HashMap<Integer, Integer>();
+        Integer matched;
 
-		// Use Global Potential Free Values
-		int sizePotentialFreeValues = stampValues.value();
-		int currentlyUsedPotentialFreeValue = 0;
+        IntVar variable = null;
 
-		Integer value;
-		TimeStamp<Integer> stamp;
-		int stampValue;
+        int lastNotGroundedVariable = stampNotGroundedVariables.value();
 
-		while (currentlyUsedPotentialFreeValue < sizePotentialFreeValues) {
+        for (int i = 0; i <= lastNotGroundedVariable; i++) {
+            variable = list[i];
 
-			value = potentialFreeValues[currentlyUsedPotentialFreeValue];
+            // variable does not belong to freeVariables
+            if (!freeVariables.contains(variable)) {
 
-			currentlyUsedPotentialFreeValue++;
+                matched = matching.get(variable).value();
+                nonFreeValues.add(matched);
 
-			stamp = stamps.get(value);
+                if (backtrackOccured) {
 
-			stampValue = stamp.value();
+                    SimpleArrayList<IntVar> currentSimpleArrayList = valueMapVariable.get(matched);
 
-			notYetUsedVariablePointer.put(value, stampValue);
-		}
+                    // Correcting matching in ValueMapVariable for
+                    // notGroundedYetVariable.
+                    // This variable has not removed previously computed
+                    // matching
+                    // since last time this function was called
 
-		while (!maximumMatchingFound) {
+                    int positionMatched = currentSimpleArrayList.indexOf(variable);
+                    if (positionMatched != 0) {
 
-			ArrayList<LinkedList<Object>> allpaths = new ArrayList<LinkedList<Object>>();
+                        currentSimpleArrayList.setElementAt(currentSimpleArrayList.get(0), positionMatched);
 
-			LinkedList<Object> path = new LinkedList<Object>();
+                        currentSimpleArrayList.setElementAt(variable, 0);
 
-			if (debugAll) {
-				System.out.println("Non Free Values" + nonFreeValues);
-			}
+                    }
+                }
+            }
 
-			HashSet<Integer> visitedValues = new HashSet<Integer>(
-					valueMapVariable.size());
-			HashSet<IntVar> visitedVariables = new HashSet<IntVar>(matching
-					.size());
+        }
 
-			// Very important since above it is also defined
-			currentlyUsedPotentialFreeValue = 0;
+        // Points at edge which was not yet used by Karp-Hopcroft algorithm
+        Map<Integer, Integer> notYetUsedVariablePointer = new HashMap<Integer, Integer>();
 
-			while (currentlyUsedPotentialFreeValue < sizePotentialFreeValues) {
+        // Use Global Potential Free Values
+        int sizePotentialFreeValues = stampValues.value();
+        int currentlyUsedPotentialFreeValue = 0;
 
-				if (path.size() == 0) {
-					// If last element from path is null - no path yet
-					// then look for free value to start a path from
-					while (currentlyUsedPotentialFreeValue < sizePotentialFreeValues) {
-						Integer potentialTop = potentialFreeValues[currentlyUsedPotentialFreeValue];
+        Integer value;
+        TimeStamp<Integer> stamp;
+        int stampValue;
 
-						currentlyUsedPotentialFreeValue++;
+        while (currentlyUsedPotentialFreeValue < sizePotentialFreeValues) {
 
-						if (!nonFreeValues.contains(potentialTop)) {
-							visitedValues.add(potentialTop);
-							path.addLast(potentialTop);
-							break;
-						}
-					}
-				}
+            value = potentialFreeValues[currentlyUsedPotentialFreeValue];
 
-				if (debugAll)
-					System.out.println("First element of the path " + path);
+            currentlyUsedPotentialFreeValue++;
 
-				if (path.size() == 0)
-					// no possibility to start new path
-					if (allpaths.size() == 0)
-						// no path was found last execution
-						// failed to find maximum matching
-						return false;
-					else
-						// some paths were found re run algorithm
-						break;
+            stamp = stamps.get(value);
 
-				// Get last element from path
-				Integer top = (Integer) path.getLast();
+            stampValue = stamp.value();
 
-				// Top contains last element of constructed path
+            notYetUsedVariablePointer.put(value, stampValue);
+        }
 
-				IntVar first;
+        while (!maximumMatchingFound) {
 
-				while (true) { // Constructs the path
-					// freeValue-...-freeVariable
+            List<LinkedList<Object>> allpaths = new ArrayList<LinkedList<Object>>();
 
-					// Exit while loop if no addition to path can be done
-					// no addition can be done if current pointer for
-					// not yet used variable is larger than last possible
-					// variable to be used.
+            LinkedList<Object> path = new LinkedList<Object>();
 
-					if (debugAll)
-						System.out.println("Visited variables "
-								+ visitedVariables);
+            if (debugAll) {
+                System.out.println("Non Free Values" + nonFreeValues);
+            }
 
-					if (debugAll)
-						System.out.println("Free variables " + freeVariables);
+            Set<IntVar> visitedVariables = new HashSet<IntVar>(matching.size());
 
-					if (debugAll)
-						System.out.println("Values for last path element "
-								+ valueMapVariable.get(top));
+            // Very important since above it is also defined
+            currentlyUsedPotentialFreeValue = 0;
 
-					// MAKE SURE you have increase level before worrying about
-					// Null Pointer exception
-					// in line below ;)).
+            while (currentlyUsedPotentialFreeValue < sizePotentialFreeValues) {
 
-					int notYetUsedVariable = notYetUsedVariablePointer.get(top);
+                if (path.size() == 0) {
+                    // If last element from path is null - no path yet
+                    // then look for free value to start a path from
+                    while (currentlyUsedPotentialFreeValue < sizePotentialFreeValues) {
+                        Integer potentialTop = potentialFreeValues[currentlyUsedPotentialFreeValue];
 
-					if (debugAll)
-						System.out.println("notYetUsedVariable "
-								+ notYetUsedVariable);
+                        currentlyUsedPotentialFreeValue++;
 
-					if (notYetUsedVariable == -1)
-						if (path.size() == 1)
-							break;
-						else {
-							if (debugAll)
-								System.out.println("Path to shorten " + path);
-							path.removeLast();
-							path.removeLast();
-							if (debugAll)
-								System.out.println("Shorten path" + path);
-							top = (Integer) path.getLast();
-							continue;
-						}
+                        if (!nonFreeValues.contains(potentialTop)) {
+                            path.addLast(potentialTop);
+                            break;
+                        }
+                    }
+                }
 
-					// Value has still some edges pointing at variables
-					first = valueMapVariable.get(top).get(notYetUsedVariable);
+                if (debugAll)
+                    System.out.println("First element of the path " + path);
 
-					// Take any edge and mark it as used.
-					notYetUsedVariablePointer.put(top, notYetUsedVariable - 1);
+                if (path.size() == 0)
+                    // no possibility to start new path
+                    if (allpaths.size() == 0)
+                        // no path was found last execution
+                        // failed to find maximum matching
+                        return false;
+                    else
+                        // some paths were found re run algorithm
+                        break;
 
-					if (!visitedVariables.contains(first)) {
+                // Get last element from path
+                Integer top = (Integer) path.getLast();
 
-						path.addLast(first);
-						visitedVariables.add(first);
+                // Top contains last element of constructed path
 
-						if (debugAll)
-							System.out.println("Current path " + path);
+                IntVar first;
 
-						// if first is free variable then path
-						// freevalue-...-freevariable found
-						if (freeVariables.contains(first))
-							break;
+                while (true) { // Constructs the path
+                    // freeValue-...-freeVariable
 
-						// variable is not free then matched value is pointed by
-						// matching
-						top = matching.get(first).value();
-						path.addLast(top);
-						visitedValues.add(top);
-					}
+                    // Exit while loop if no addition to path can be done
+                    // no addition can be done if current pointer for
+                    // not yet used variable is larger than last possible
+                    // variable to be used.
 
-					if (debugAll)
-						System.out.println("Current path " + path);
+                    if (debugAll)
+                        System.out.println("Visited variables " + visitedVariables);
 
-				}
+                    if (debugAll)
+                        System.out.println("Free variables " + freeVariables);
 
-				// If path has even elements then it means that
-				// freevalue-...-freevariable
-				// path found
-				if (path.size() % 2 == 0) {
-					allpaths.add(path);
-					path = new LinkedList<Object>();
-				} else if (path.size() > 2) {
-					// Value did not have any variables it could use to continue
-					// path builing
-					// Remove from path ....-variable-value (last variable and
-					// value)
-					path.removeLast();
-					path.removeLast();
-				} else {
-					// Free Value yielded no path, try different free value
-					path.removeLast();
-				}
+                    if (debugAll)
+                        System.out.println("Values for last path element " + valueMapVariable.get(top));
 
-				// If number of paths is equal to number of free variables
-				// this means that every free variables is visited and has its
-				// path
+                    // MAKE SURE you have increase level before worrying about
+                    // Null Pointer exception
+                    // in line below ;)).
 
-				if (debugAll)
-					System.out.println("Free variables " + freeVariables);
+                    int notYetUsedVariable = notYetUsedVariablePointer.get(top);
 
-				if (debugAll)
-					System.out.println("Allpaths " + allpaths);
+                    if (debugAll)
+                        System.out.println("notYetUsedVariable " + notYetUsedVariable);
 
-				if (freeVariables.size() == allpaths.size()) {
-					maximumMatchingFound = true;
-					break;
-				}
+                    if (notYetUsedVariable == -1)
+                        if (path.size() == 1)
+                            break;
+                        else {
+                            if (debugAll)
+                                System.out.println("Path to shorten " + path);
+                            path.removeLast();
+                            path.removeLast();
+                            if (debugAll)
+                                System.out.println("Shorten path" + path);
+                            top = (Integer) path.getLast();
+                            continue;
+                        }
 
-			}
+                    // Value has still some edges pointing at variables
+                    first = valueMapVariable.get(top).get(notYetUsedVariable);
 
-			if (debugAll)
-				System.out.println("Allpaths " + allpaths);
+                    // Take any edge and mark it as used.
+                    notYetUsedVariablePointer.put(top, notYetUsedVariable - 1);
 
-			if (allpaths.size() == 0)
-				return false;
+                    if (!visitedVariables.contains(first)) {
 
-			// Use all paths to create better matching
+                        path.addLast(first);
+                        visitedVariables.add(first);
 
-			int allPathsSize = allpaths.size();
+                        if (debugAll)
+                            System.out.println("Current path " + path);
 
-			for (int p = 0; p < allPathsSize; p++) {
-				LinkedList<Object> freepath = allpaths.get(p);
+                        // if first is free variable then path
+                        // freevalue-...-freevariable found
+                        if (freeVariables.contains(first))
+                            break;
 
-				int freePathSize = freepath.size();
+                        // variable is not free then matched value is pointed by
+                        // matching
+                        top = matching.get(first).value();
+                        path.addLast(top);
+                    }
 
-				for (int pos = 0; pos < freePathSize; pos = pos + 2) {
-					Integer matchedValue = (Integer) freepath.get(pos);
-					IntVar matchedVariable = (IntVar) freepath.get(pos + 1);
+                    if (debugAll)
+                        System.out.println("Current path " + path);
 
-					if (!freeVariables.remove(matchedVariable))
-						nonFreeValues.remove(matching.get(matchedVariable)
-								.value());
+                }
 
-					matching.get(matchedVariable).update(matchedValue);
+                // If path has even elements then it means that
+                // freevalue-...-freevariable
+                // path found
+                if (path.size() % 2 == 0) {
+                    allpaths.add(path);
+                    path = new LinkedList<Object>();
+                } else if (path.size() > 2) {
+                    // Value did not have any variables it could use to continue
+                    // path builing
+                    // Remove from path ....-variable-value (last variable and
+                    // value)
+                    path.removeLast();
+                    path.removeLast();
+                } else {
+                    // Free Value yielded no path, try different free value
+                    path.removeLast();
+                }
 
-					// Update valueMapVariable with new matched value
+                // If number of paths is equal to number of free variables
+                // this means that every free variables is visited and has its
+                // path
 
-					SimpleArrayList<IntVar> currentSimpleArrayList = valueMapVariable
-							.get(matchedValue);
-					int positionMatched = currentSimpleArrayList
-							.indexOf(matchedVariable);
-					if (positionMatched != 0) {
+                if (debugAll)
+                    System.out.println("Free variables " + freeVariables);
 
-						currentSimpleArrayList.setElementAt(
-								currentSimpleArrayList.get(0), positionMatched);
-						currentSimpleArrayList.setElementAt(matchedVariable, 0);
-					}
+                if (debugAll)
+                    System.out.println("Allpaths " + allpaths);
 
-					nonFreeValues.add(matchedValue);
+                if (freeVariables.size() == allpaths.size()) {
+                    maximumMatchingFound = true;
+                    break;
+                }
 
-				}
+            }
 
-			}
+            if (debugAll)
+                System.out.println("Allpaths " + allpaths);
 
-			if (!maximumMatchingFound) {
+            if (allpaths.size() == 0)
+                return false;
 
-				// Use Global Potential Free Values
-				sizePotentialFreeValues = stampValues.value();
-				currentlyUsedPotentialFreeValue = 0;
+            // Use all paths to create better matching
 
-				// Points at edge which was not yet used by Karp-Hopcroft
-				// algorithm
-				notYetUsedVariablePointer = new HashMap<Integer, Integer>(
-						sizePotentialFreeValues);
+            int allPathsSize = allpaths.size();
 
-				while (currentlyUsedPotentialFreeValue < sizePotentialFreeValues) {
+            for (int p = 0; p < allPathsSize; p++) {
+                LinkedList<Object> freepath = allpaths.get(p);
 
-					value = potentialFreeValues[currentlyUsedPotentialFreeValue];
+                int freePathSize = freepath.size();
 
-					currentlyUsedPotentialFreeValue++;
+                for (int pos = 0; pos < freePathSize; pos = pos + 2) {
+                    Integer matchedValue = (Integer) freepath.get(pos);
+                    IntVar matchedVariable = (IntVar) freepath.get(pos + 1);
 
-					stamp = stamps.get(value);
+                    if (!freeVariables.remove(matchedVariable))
+                        nonFreeValues.remove(matching.get(matchedVariable).value());
 
-					stampValue = stamp.value();
+                    matching.get(matchedVariable).update(matchedValue);
 
-					notYetUsedVariablePointer.put(value, stampValue);
-				}
+                    // Update valueMapVariable with new matched value
 
-			}
+                    SimpleArrayList<IntVar> currentSimpleArrayList = valueMapVariable.get(matchedValue);
+                    int positionMatched = currentSimpleArrayList.indexOf(matchedVariable);
+                    if (positionMatched != 0) {
 
-		}
+                        currentSimpleArrayList.setElementAt(currentSimpleArrayList.get(0), positionMatched);
+                        currentSimpleArrayList.setElementAt(matchedVariable, 0);
+                    }
 
-		return true;
-	}
+                    nonFreeValues.add(matchedValue);
 
-	@Override
-	public void impose(Store store) {
+                }
 
-		store.registerRemoveLevelListener(this);
+            }
 
-		stampValues = new TimeStamp<Integer>(store, valueMapVariable.size());
+            if (!maximumMatchingFound) {
 
-		stampReachability = new TimeStamp<Integer>(store, list.length);
+                // Use Global Potential Free Values
+                sizePotentialFreeValues = stampValues.value();
+                currentlyUsedPotentialFreeValue = 0;
 
-		nStamp = new TimeStamp<Integer>(store, 0);
+                // Points at edge which was not yet used by Karp-Hopcroft
+                // algorithm
+                notYetUsedVariablePointer = new HashMap<Integer, Integer>(sizePotentialFreeValues);
 
-		stampNotGroundedVariables = new TimeStamp<Integer>(store, list.length - 1);
+                while (currentlyUsedPotentialFreeValue < sizePotentialFreeValues) {
 
-		Integer zero = 0;
+                    value = potentialFreeValues[currentlyUsedPotentialFreeValue];
 
-		for (IntVar var : list) {
-			var.putModelConstraint(this, getConsistencyPruningEvent(var));
-			queueVariable(store.level, var);
-			matching.put(var, new TimeStamp<Integer>(store, zero));
-			sccStamp.put(var, new TimeStamp<Integer>(store, zero));
-		}
-		store.addChanged(this);
-		store.countConstraint();
+                    currentlyUsedPotentialFreeValue++;
 
-		Integer value = null;
+                    stamp = stamps.get(value);
 
-		for (Iterator<Integer> e = valueMapVariable.keySet().iterator(); e
-				.hasNext();) {
-			value = e.next();
-			stamps.put(value, new TimeStamp<Integer>(store, valueMapVariable.get(value).size() - 1));
-		}
+                    stampValue = stamp.value();
 
-		// the initial maximum matching needs to be computed
-		// search may return to this matching
-		for (IntVar var : list)
-			freeVariables.add(var);
+                    notYetUsedVariablePointer.put(value, stampValue);
+                }
 
-		LinkedHashSet<IntVar> fdvs = new LinkedHashSet<IntVar>(
-				freeVariables);
+            }
 
-		// If first invocation of hocroft matching algorithm fails just set
-		// variable and quit
-		if (!hopcroftKarpMaximumMatching()) {
-			impositionFailure = true;
-			return;
-		}
+        }
 
-		n = nStamp.value();
+        return true;
+    }
 
-		ArrayList<IntVar> l = new ArrayList<IntVar>();
-		HashMap<IntVar, Integer> dfsnum = new HashMap<IntVar, Integer>();
-		HashMap<IntVar, Integer> low = new HashMap<IntVar, Integer>();
+    @Override public void impose(Store store) {
 
-		while (!fdvs.isEmpty()) {
+        super.impose(store);
 
-			IntVar changedVariable = fdvs.iterator().next();
+        stampValues = new TimeStamp<Integer>(store, valueMapVariable.size());
 
-			fdvs.remove(changedVariable);
+        stampReachability = new TimeStamp<Integer>(store, list.length);
 
-			revisitTarjan(changedVariable, l, dfsnum, low, fdvs);
+        nStamp = new TimeStamp<Integer>(store, 0);
 
-		}
+        stampNotGroundedVariables = new TimeStamp<Integer>(store, list.length - 1);
 
-		nStamp.update(n + 1);
+        Integer zero = 0;
 
-		if (debugAll) {
-			System.out.println("Mapping Value->Variable" + valueMapVariable);
-			System.out.println("Maximum Matching " + matching);
-		}
+        Function<IntVar, TimeStamp<Integer>> f = ( i ) -> new TimeStamp<Integer>(store, zero);
+        Var.addPositionMapping(matching, list, f, false, this.getClass());
+        Var.addPositionMapping(sccStamp, list, f, false, this.getClass());
 
-		store.raiseLevelBeforeConsistency = true;
+        for (Map.Entry<Integer, SimpleArrayList<IntVar>> entry : valueMapVariable.entrySet()) {
+            Integer key = entry.getKey();
+            SimpleArrayList<IntVar> value = entry.getValue();
+            // Use the key and the value
+            stamps.put(key, new TimeStamp<Integer>(store, value.size() - 1));
+        }
 
-	}
+        // the initial maximum matching needs to be computed
+        // search may return to this matching
+        for (IntVar var : list)
+            freeVariables.add(var);
 
-	private void markReachableVariables(
-			LinkedHashSet<IntVar> variablesReachableFromFreeValues,
-			Integer value) {
+        LinkedHashSet<IntVar> fdvs = new LinkedHashSet<IntVar>(freeVariables);
 
-		if (debugAll) {
-			System.out.println("Start mark reachable variables " + value);
-		}
+        // If first invocation of hocroft matching algorithm fails just set
+        // variable and quit
+        if (!hopcroftKarpMaximumMatching()) {
+            impositionFailure = true;
+            return;
+        }
 
-		SimpleArrayList<IntVar> currentSimpleArrayList = valueMapVariable
-				.get(value);
+        n = nStamp.value();
 
-		TimeStamp<Integer> stamp = stamps.get(value);
+        List<IntVar> l = new ArrayList<IntVar>();
+        Map<IntVar, Integer> dfsnum = Var.createEmptyPositioning();
+        Map<IntVar, Integer> low = Var.createEmptyPositioning();
 
-		int lastPosition = stamp.value();
+        while (!fdvs.isEmpty()) {
 
-		Integer matched;
+            IntVar changedVariable = fdvs.iterator().next();
 
-		// i counter has to be from zero since free paths can go from matched
-		// edges
-		for (int i = 0; i <= lastPosition; i++) {
+            fdvs.remove(changedVariable);
 
-			IntVar reachableVariable = currentSimpleArrayList.get(i);
+            revisitTarjan(changedVariable, l, dfsnum, low, fdvs);
 
-			if (variablesReachableFromFreeValues.contains(reachableVariable))
-				continue;
+        }
 
-			if (debugAll) {
-				System.out.println("Variable " + reachableVariable
-						+ " has been reached from value " + value);
-			}
+        nStamp.update(n + 1);
 
-			matched = matching.get(reachableVariable).value();
+        if (debugAll) {
+            System.out.println("Mapping Value->Variable" + valueMapVariable);
+            System.out.println("Maximum Matching " + matching);
+        }
 
-			variablesReachableFromFreeValues.add(reachableVariable);
+        store.raiseLevelBeforeConsistency = true;
 
-			markReachableVariables(variablesReachableFromFreeValues, matched);
+    }
 
-		}
+    private void markReachableVariables(LinkedHashSet<IntVar> variablesReachableFromFreeValues, Integer value) {
 
-	}
+        if (debugAll) {
+            System.out.println("Start mark reachable variables " + value);
+        }
 
-	@Override
-	public void queueVariable(int level, Var var) {
+        SimpleArrayList<IntVar> currentSimpleArrayList = valueMapVariable.get(value);
 
-		if (debugAll)
-			System.out.println("Var " + var + ((IntVar)var).recentDomainPruning());
+        TimeStamp<Integer> stamp = stamps.get(value);
 
-		variableQueue.add((IntVar)var);
-	}
+        int lastPosition = stamp.value();
 
-	@Override
-	public void removeConstraint() {
-		for (Var var : list)
-			var.removeConstraint(this);
-	}
+        Integer matched;
 
-	private void revisitTarjan(IntVar x, ArrayList<IntVar> l,
-			HashMap<IntVar, Integer> dfsnum, HashMap<IntVar, Integer> low,
-			LinkedHashSet<IntVar> fdvs) {
+        // i idNumber has to be from zero since free paths can go from matched
+        // edges
+        for (int i = 0; i <= lastPosition; i++) {
 
-		Integer nInteger = n;
+            IntVar reachableVariable = currentSimpleArrayList.get(i);
 
-		dfsnum.put(x, nInteger);
-		low.put(x, nInteger);
-		n++;
+            if (variablesReachableFromFreeValues.contains(reachableVariable))
+                continue;
 
-		if (debugAll)
-			System.out
-					.println("Tarjan invocation : \nx " + x + "\nn " + n
-							+ "\nl " + l + "\ndfsnum " + dfsnum + "\nlow "
-							+ low + "\n");
+            if (debugAll) {
+                System.out.println("Variable " + reachableVariable + " has been reached from value " + value);
+            }
 
-		l.add(x);
+            matched = matching.get(reachableVariable).value();
 
-		Integer matchedValue = matching.get(x).value();
+            variablesReachableFromFreeValues.add(reachableVariable);
 
-		if (debugAll)
-			System.out.println("Matched value " + matchedValue + " for " + x);
+            markReachableVariables(variablesReachableFromFreeValues, matched);
 
-		SimpleArrayList<IntVar> currentSimpleArrayList = valueMapVariable
-				.get(matchedValue);
+        }
 
-		if (debugAll)
-			System.out.println("Mapped variables to Matched value "
-					+ currentSimpleArrayList);
+    }
 
-		TimeStamp<Integer> stamp = stamps.get(matchedValue);
+    @Override public void queueVariable(int level, Var var) {
 
-		int lastPosition = stamp.value();
+        if (debugAll)
+            System.out.println("Var " + var + ((IntVar) var).recentDomainPruning());
 
-		if (debugAll)
-			System.out.println("Last valid position for variables "
-					+ lastPosition);
+        variableQueue.add((IntVar) var);
+    }
 
-		int sccStampX = sccStamp.get(x).value();
-		// first variable is matched value
-		for (int i = 0; i <= lastPosition; i++) {
+    private void revisitTarjan(IntVar x, List<IntVar> l, Map<IntVar, Integer> dfsnum, Map<IntVar, Integer> low,
+        LinkedHashSet<IntVar> fdvs) {
 
-			IntVar v = currentSimpleArrayList.get(i);
+        Integer nInteger = n;
 
-			if (sccStampX == sccStamp.get(v).value())
-				if (dfsnum.get(v) == null) {
+        dfsnum.put(x, nInteger);
+        low.put(x, nInteger);
+        n++;
 
-					revisitTarjan(v, l, dfsnum, low, fdvs);
+        if (debugAll)
+            System.out.println("Tarjan invocation : \nx " + x + "\nn " + n + "\nl " + l + "\ndfsnum " + dfsnum + "\nlow " + low + "\n");
 
-					int lowv = low.get(v);
+        l.add(x);
 
-					if (low.get(x) > lowv)
-						low.put(x, lowv);
-				} else {
+        Integer matchedValue = matching.get(x).value();
 
-					if (debugAll)
-						System.out.println("Part 2 : low " + x + "="
-								+ low.get(x) + " dfsnum " + v + "="
-								+ dfsnum.get(v));
+        if (debugAll)
+            System.out.println("Matched value " + matchedValue + " for " + x);
 
-					int dfsnumv = dfsnum.get(v);
+        SimpleArrayList<IntVar> currentSimpleArrayList = valueMapVariable.get(matchedValue);
 
-					// If v was earlier visited and v belongs to stack then
-					// update low number of x.
-					if (dfsnumv < dfsnum.get(x))
-						if (l.contains(v))
-							if (low.get(x) > dfsnumv)
-								low.put(x, dfsnumv);
+        if (debugAll)
+            System.out.println("Mapped variables to Matched value " + currentSimpleArrayList);
 
-				}
-		}
+        TimeStamp<Integer> stamp = stamps.get(matchedValue);
 
-		if (debugAll) {
-			System.out.println("Invocation " + x + " Low values for it " + low);
-			System.out.println("Invocation " + x + " Dfsnum values for it "
-					+ dfsnum);
-		}
+        int lastPosition = stamp.value();
 
-		int lowx = low.get(x);
+        if (debugAll)
+            System.out.println("Last valid position for variables " + lastPosition);
 
-		if (lowx == dfsnum.get(x)) {
+        int sccStampX = sccStamp.get(x).value();
+        // first variable is matched value
+        for (int i = 0; i <= lastPosition; i++) {
 
-			if (debugAll)
-				System.out.println("Component found  ");
+            IntVar v = currentSimpleArrayList.get(i);
 
-			Var component;
+            if (sccStampX == sccStamp.get(v).value())
+                if (dfsnum.get(v) == null) {
 
-			while (true) {
-				component = l.remove(l.size() - 1);
+                    revisitTarjan(v, l, dfsnum, low, fdvs);
 
-				if (debugAll)
-					System.out.println("Component part  " + component + "id "
-							+ lowx);
+                    int lowv = low.get(v);
 
-				sccStamp.get(component).update(lowx);
-				fdvs.remove(component);
+                    if (low.get(x) > lowv)
+                        low.put(x, lowv);
+                } else {
 
-				if (component == x) {
-					break;
-				}
-			}
-		}
+                    if (debugAll)
+                        System.out.println("Part 2 : low " + x + "=" + low.get(x) + " dfsnum " + v + "=" + dfsnum.get(v));
 
-	}
+                    int dfsnumv = dfsnum.get(v);
 
-	@Override
-	public boolean satisfied() {
+                    // If v was earlier visited and v belongs to stack then
+                    // update low number of x.
+                    if (dfsnumv < dfsnum.get(x))
+                        if (l.contains(v))
+                            if (low.get(x) > dfsnumv)
+                                low.put(x, dfsnumv);
 
-		// Possible to use this check, fast but not accurate
-		// if (stampNotGroundedVariables.value() != -1)
-		// return false;
+                }
+        }
 
-		boolean sat = true;
-		int i = 0;
+        if (debugAll) {
+            System.out.println("Invocation " + x + " Low values for it " + low);
+            System.out.println("Invocation " + x + " Dfsnum values for it " + dfsnum);
+        }
 
-		while (sat && i < list.length) {
-			IntDomain vDom = list[i].dom();
-			int vMin = vDom.min(), vMax = vDom.max();
-			int j = 0;
-			while (sat && j < list.length) {
-				if (i != j) {
-					IntDomain ljDom = list[j].dom();
-					sat = (vMin > ljDom.max() || vMax < ljDom.min());
-				}
-				j++;
-			}
-			i++;
-		}
-		return sat;
-	}
+        int lowx = low.get(x);
 
-	@Override
-	public String toString() {
+        if (lowx == dfsnum.get(x)) {
 
-		StringBuffer buf = new StringBuffer( id() );
+            if (debugAll)
+                System.out.println("Component found  ");
 
-		buf.append(" : alldistinct([");
+            Var component;
 
-		for (int i = 0; i < list.length; i++) {
-			buf.append(list[i]);
-			if (i < list.length - 1)
-				buf.append(", ");
-		}
+            while (true) {
+                component = l.remove(l.size() - 1);
 
-		buf.append("]");
-		return buf.toString();
-	}
+                if (debugAll)
+                    System.out.println("Component part  " + component + "id " + lowx);
 
-	private void visitTarjan(IntVar x, ArrayList<IntVar> l,
-			HashMap<IntVar, Integer> dfsnum, HashMap<IntVar, Integer> low) {
+                sccStamp.get(component).update(lowx);
+                fdvs.remove(component);
 
-		Integer vnInteger = vn;
-		dfsnum.put(x, vnInteger);
-		low.put(x, vnInteger);
-		vn++;
+                if (component == x) {
+                    break;
+                }
+            }
+        }
 
-		if (debugAll)
-			System.out
-					.println("Tarjan invocation : \nx " + x + "\nn " + vn
-							+ "\nl " + l + "\ndfsnum " + dfsnum + "\nlow "
-							+ low + "\n");
+    }
 
-		l.add(x);
+    @Override public boolean satisfied() {
 
-		Integer matchedValue = matching.get(x).value();
+        // Possible to use this check, fast but not accurate
+        // if (stampNotGroundedVariables.value() != -1)
+        // return false;
 
-		if (debugAll)
-			System.out.println("Matched value " + matchedValue + " for " + x);
+        boolean sat = true;
+        int i = 0;
 
-		SimpleArrayList<IntVar> currentSimpleArrayList = valueMapVariable
-				.get(matchedValue);
+        while (sat && i < list.length) {
+            IntDomain vDom = list[i].dom();
+            int vMin = vDom.min(), vMax = vDom.max();
+            int j = 0;
+            while (sat && j < list.length) {
+                if (i != j) {
+                    IntDomain ljDom = list[j].dom();
+                    sat = (vMin > ljDom.max() || vMax < ljDom.min());
+                }
+                j++;
+            }
+            i++;
+        }
+        return sat;
+    }
 
-		if (debugAll)
-			System.out.println("Mapped variables to Matched value "
-					+ currentSimpleArrayList);
+    @Override public String toString() {
 
-		TimeStamp<Integer> stamp = stamps.get(matchedValue);
+        StringBuffer buf = new StringBuffer(id());
 
-		int lastPosition = stamp.value();
+        buf.append(" : alldistinct([");
 
-		if (debugAll)
-			System.out.println("Last valid position for variables "
-					+ lastPosition);
+        for (int i = 0; i < list.length; i++) {
+            buf.append(list[i]);
+            if (i < list.length - 1)
+                buf.append(", ");
+        }
 
-		IntVar v;
+        buf.append("]");
+        return buf.toString();
+    }
 
-		// first variable is matched value
-		for (int i = 1; i <= lastPosition; i++) {
+    private void visitTarjan(IntVar x, List<IntVar> l, Map<IntVar, Integer> dfsnum, Map<IntVar, Integer> low) {
 
-			v = currentSimpleArrayList.get(i);
+        Integer vnInteger = vn;
+        dfsnum.put(x, vnInteger);
+        low.put(x, vnInteger);
+        vn++;
 
-			if (dfsnum.get(v) == null) {
+        if (debugAll)
+            System.out.println("Tarjan invocation : \nx " + x + "\nn " + vn + "\nl " + l + "\ndfsnum " + dfsnum + "\nlow " + low + "\n");
 
-				visitTarjan(v, l, dfsnum, low);
+        l.add(x);
 
-				int lowv = low.get(v);
+        Integer matchedValue = matching.get(x).value();
 
-				if (low.get(x) > lowv) {
-					low.put(x, lowv);
-				}
+        if (debugAll)
+            System.out.println("Matched value " + matchedValue + " for " + x);
 
-			} else {
+        SimpleArrayList<IntVar> currentSimpleArrayList = valueMapVariable.get(matchedValue);
 
-				if (debugAll)
-					System.out.println("Part 2 : low " + x + "=" + low.get(x)
-							+ " dfsnum " + v + "=" + dfsnum.get(v));
+        if (debugAll)
+            System.out.println("Mapped variables to Matched value " + currentSimpleArrayList);
 
-				int dfsnumv = dfsnum.get(v);
+        TimeStamp<Integer> stamp = stamps.get(matchedValue);
 
-				// If v was earlier visited and v belongs to stack then
-				// update low number of x.
-				if (dfsnumv < dfsnum.get(x))
-					if (l.contains(v))
-						if (low.get(x) > dfsnumv) {
-							low.put(x, dfsnumv);
-						}
-			}
-		}
+        int lastPosition = stamp.value();
 
-		if (debugAll) {
-			System.out.println("Invocation " + x + " Low values for it " + low);
-			System.out.println("Invocation " + x + " Dfsnum values for it "
-					+ dfsnum);
-		}
+        if (debugAll)
+            System.out.println("Last valid position for variables " + lastPosition);
 
-		int lowx = low.get(x);
+        IntVar v;
 
-		if (lowx == dfsnum.get(x)) {
+        // first variable is matched value
+        for (int i = 1; i <= lastPosition; i++) {
 
-			if (debugAll)
-				System.out.println("Component found  ");
+            v = currentSimpleArrayList.get(i);
 
-			while (true) {
-				IntVar component = l.remove(l.size() - 1);
+            if (dfsnum.get(v) == null) {
 
-				if (debugAll)
-					System.out.println("Component part  " + component);
+                visitTarjan(v, l, dfsnum, low);
 
-				scc.put(component, lowx);
+                int lowv = low.get(v);
 
-				if (component == x) {
+                if (low.get(x) > lowv) {
+                    low.put(x, lowv);
+                }
 
-					break;
-				}
-			}
-		}
+            } else {
 
-	}
+                if (debugAll)
+                    System.out.println("Part 2 : low " + x + "=" + low.get(x) + " dfsnum " + v + "=" + dfsnum.get(v));
 
-	@Override
-	public Constraint getGuideConstraint() {
-		return new XeqC(guideVariable, guideValue);	
-	}
+                int dfsnumv = dfsnum.get(v);
 
-	@Override
-	public int getGuideValue() {
-		return guideValue;
-	}
+                // If v was earlier visited and v belongs to stack then
+                // update low number of x.
+                if (dfsnumv < dfsnum.get(x))
+                    if (l.contains(v))
+                        if (low.get(x) > dfsnumv) {
+                            low.put(x, dfsnumv);
+                        }
+            }
+        }
 
-	IntVar guideVariable = null;
-	int guideValue;
-	boolean greedy = true;
-	
-	@Override
-	public Var getGuideVariable() {
-		
-		int minCurrentPruning = 1;
-		int maxCurrentPruning = 100000;
+        if (debugAll) {
+            System.out.println("Invocation " + x + " Low values for it " + low);
+            System.out.println("Invocation " + x + " Dfsnum values for it " + dfsnum);
+        }
 
-		// Look at all variables with domain size two, and find the one with
-		// best pruning
+        int lowx = low.get(x);
 
-		guideVariable = null;
-		
-//		System.out.println("1. var " + guideVariable + " value " + guideValue);
-		
-		int lastNotGroundedVariable = stampNotGroundedVariables.value();
- 
-		for (int i = 0; i <= lastNotGroundedVariable; i++) {
-			if (list[i].getSize() == 2) {
+        if (lowx == dfsnum.get(x)) {
 
-			    Integer firstValue = list[i].min();
-			    Integer secondValue = list[i].max();
+            if (debugAll)
+                System.out.println("Component found  ");
 
-				// Evaluate recursively.
-				int pruningFirstValue = estimatePruning(list[i], firstValue);
+            while (true) {
+                IntVar component = l.remove(l.size() - 1);
 
-				if (pruningFirstValue >= minCurrentPruning) {
+                if (debugAll)
+                    System.out.println("Component part  " + component);
 
-					int pruningSecondValue = estimatePruning(list[i], secondValue);
+                scc.put(component, lowx);
 
-					if (pruningFirstValue < pruningSecondValue) {
+                if (component == x) {
 
-						if (pruningFirstValue > minCurrentPruning) {
+                    break;
+                }
+            }
+        }
 
-							// Lack of equal sign means greedy in propagation
-							if (stamps.get(firstValue).value() < stamps.get(
-									secondValue).value()
-									|| (stamps.get(firstValue).value() == stamps
-											.get(secondValue).value() && !greedy)) {
-								// Value with lower number of variables has a
-								// higher change to have this value
-								guideVariable = list[i];
-								guideValue = firstValue;
+    }
 
-							} else {
-								guideVariable = list[i];
-								guideValue = secondValue;
-							}
+    @Override public Constraint getGuideConstraint() {
+        return new XeqC(guideVariable, guideValue);
+    }
 
-							minCurrentPruning = pruningFirstValue;
-							maxCurrentPruning = pruningSecondValue;
-						} else if (pruningFirstValue == minCurrentPruning
-								&& pruningSecondValue > maxCurrentPruning) {
+    @Override public int getGuideValue() {
+        return guideValue;
+    }
 
-							// Lack of equal sign means greedy in propagation
-							if (stamps.get(firstValue).value() < stamps.get(
-									secondValue).value()
-									|| (stamps.get(firstValue).value() == stamps
-											.get(secondValue).value() && !greedy)) {
-								// Value with lower number of variables has a
-								// higher change to have this value
+    IntVar guideVariable = null;
+    int guideValue;
+    boolean greedy = true;
 
-								guideVariable = list[i];
-								guideValue = firstValue;
-								
-							} else {
+    @Override public Var getGuideVariable() {
 
-								guideVariable = list[i];
-								guideValue = secondValue;
+        int minCurrentPruning = 1;
+        int maxCurrentPruning = 100000;
 
-							}
-							maxCurrentPruning = pruningSecondValue;
-						}
-					} else {
-						// FirstValuePruning > SecondValuePruning
-						if (pruningSecondValue > minCurrentPruning) {
-							
-							// Lack of equal sign means no greedy in propagation
-							// Equal sign means greedy in propagation
-							if (stamps.get(firstValue).value() <= stamps.get(
-									secondValue).value()
-									|| (stamps.get(firstValue).value() == stamps
-											.get(secondValue).value() && greedy)) {
-								// Value with lower number of variables has a
-								// higher change to have this value
-								guideVariable = list[i];
-								guideValue = firstValue;
-							} else {
+        // Look at all variables with domain size two, and find the one with
+        // best pruning
 
-							    guideVariable = list[i];
-							    guideValue = secondValue;
+        guideVariable = null;
 
-							}
-							minCurrentPruning = pruningSecondValue;
-							maxCurrentPruning = pruningFirstValue;
-						} else if (pruningSecondValue == minCurrentPruning
-								&& pruningFirstValue > maxCurrentPruning) {
-							
-							// Equal sign means greedy in propagation
-							if (stamps.get(firstValue).value() <= stamps.get(
-									secondValue).value()
-									|| (stamps.get(firstValue).value() == stamps
-											.get(secondValue).value() && greedy)) {
-								// Value with lower number of variables has a
-								// higher change to have this value
-							    guideVariable = list[i];
-							    guideValue = firstValue;
-							} else {
-							    guideVariable = list[i];
-							    guideValue = secondValue;
+        //		System.out.println("1. var " + guideVariable + " value " + guideValue);
 
-							}
-							maxCurrentPruning = pruningFirstValue;
-						}
+        int lastNotGroundedVariable = stampNotGroundedVariables.value();
 
-					}
-				}
-				firstValue = null;
-				secondValue = null;
-			}
-		}
+        for (int i = 0; i <= lastNotGroundedVariable; i++) {
+            if (list[i].getSize() == 2) {
 
-		
-//		System.out.println("2. var " + guideVariable + " value " + guideValue);
-		
-		// Permutation only at this moment
+                Integer firstValue = list[i].min();
+                Integer secondValue = list[i].max();
 
-		if (stampValues.value() - stampNotGroundedVariables.value() == 1) {
+                // Evaluate recursively.
+                int pruningFirstValue = estimatePruning(list[i], firstValue);
 
-			// Use Global Potential Free Values
-			int sizePotentialFreeValues = stampValues.value();
-			int currentlyUsedPotentialFreeValue = 0;
+                if (pruningFirstValue >= minCurrentPruning) {
 
-			Integer value;
-			TimeStamp<Integer> stamp;
-			int stampValue;
+                    int pruningSecondValue = estimatePruning(list[i], secondValue);
 
-			SimpleArrayList<IntVar> currentSimpleArrayList = null;
+                    if (pruningFirstValue < pruningSecondValue) {
 
-			while (currentlyUsedPotentialFreeValue < sizePotentialFreeValues) {
+                        if (pruningFirstValue > minCurrentPruning) {
 
-				value = potentialFreeValues[currentlyUsedPotentialFreeValue];
+                            // Lack of equal sign means greedy in propagation
+                            if (stamps.get(firstValue).value() < stamps.get(secondValue).value() || (
+                                stamps.get(firstValue).value() == stamps.get(secondValue).value() && !greedy)) {
+                                // Value with lower number of variables has a
+                                // higher change to have this value
+                                guideVariable = list[i];
+                                guideValue = firstValue;
 
-				currentlyUsedPotentialFreeValue++;
+                            } else {
+                                guideVariable = list[i];
+                                guideValue = secondValue;
+                            }
 
-				stamp = stamps.get(value);
+                            minCurrentPruning = pruningFirstValue;
+                            maxCurrentPruning = pruningSecondValue;
+                        } else if (pruningFirstValue == minCurrentPruning && pruningSecondValue > maxCurrentPruning) {
 
-				stampValue = stamp.value();
+                            // Lack of equal sign means greedy in propagation
+                            if (stamps.get(firstValue).value() < stamps.get(secondValue).value() || (
+                                stamps.get(firstValue).value() == stamps.get(secondValue).value() && !greedy)) {
+                                // Value with lower number of variables has a
+                                // higher change to have this value
 
-				// Value with two variables
-				if (stampValue == 1) {
+                                guideVariable = list[i];
+                                guideValue = firstValue;
 
-					currentSimpleArrayList = valueMapVariable.get(value);
+                            } else {
 
-					int pruningFirstVariable = estimatePruning(
-							currentSimpleArrayList.get(0), value);
+                                guideVariable = list[i];
+                                guideValue = secondValue;
 
-					if (pruningFirstVariable < minCurrentPruning)
-						continue;
+                            }
+                            maxCurrentPruning = pruningSecondValue;
+                        }
+                    } else {
+                        // FirstValuePruning > SecondValuePruning
+                        if (pruningSecondValue > minCurrentPruning) {
 
-					int pruningSecondVariable = estimatePruning(
-							currentSimpleArrayList.get(1), value);
+                            // Lack of equal sign means no greedy in propagation
+                            // Equal sign means greedy in propagation
+                            if (stamps.get(firstValue).value() <= stamps.get(secondValue).value() || (
+                                stamps.get(firstValue).value() == stamps.get(secondValue).value() && greedy)) {
+                                // Value with lower number of variables has a
+                                // higher change to have this value
+                                guideVariable = list[i];
+                                guideValue = firstValue;
+                            } else {
 
-					if (pruningSecondVariable < minCurrentPruning)
-						continue;
+                                guideVariable = list[i];
+                                guideValue = secondValue;
 
-					if (pruningFirstVariable < pruningSecondVariable) {
+                            }
+                            minCurrentPruning = pruningSecondValue;
+                            maxCurrentPruning = pruningFirstValue;
+                        } else if (pruningSecondValue == minCurrentPruning && pruningFirstValue > maxCurrentPruning) {
 
-						if (pruningFirstVariable > minCurrentPruning) {
+                            // Equal sign means greedy in propagation
+                            if (stamps.get(firstValue).value() <= stamps.get(secondValue).value() || (
+                                stamps.get(firstValue).value() == stamps.get(secondValue).value() && greedy)) {
+                                // Value with lower number of variables has a
+                                // higher change to have this value
+                                guideVariable = list[i];
+                                guideValue = firstValue;
+                            } else {
+                                guideVariable = list[i];
+                                guideValue = secondValue;
 
-							// Equals sign means no greedy in propagation
-							// Lack of equal sign means greedy in propagation
-							if (currentSimpleArrayList.get(0).getSize() < currentSimpleArrayList
-									.get(1).getSize()
-									|| (currentSimpleArrayList.get(0).getSize() == currentSimpleArrayList
-									    .get(1).getSize() && !greedy)) {
+                            }
+                            maxCurrentPruning = pruningFirstValue;
+                        }
 
-							    guideVariable = currentSimpleArrayList.get(0);
-							    guideValue = value;
+                    }
+                }
+                firstValue = null;
+                secondValue = null;
+            }
+        }
 
-							} else {
 
-							    guideVariable = currentSimpleArrayList.get(1);
-							    guideValue = value;
+        //		System.out.println("2. var " + guideVariable + " value " + guideValue);
 
+        // Permutation only at this moment
 
-							}
-							minCurrentPruning = pruningFirstVariable;
-							maxCurrentPruning = pruningSecondVariable;
-						} else if (pruningFirstVariable == minCurrentPruning
-								&& pruningSecondVariable > maxCurrentPruning) {
-							// currentPruning.set(1, new
-							// Integer(pruningSecondVariable));
+        if (stampValues.value() - stampNotGroundedVariables.value() == 1) {
 
-							// Equals sign means no greedy in propagation in
-							// case of tie break
-							// Lack of equal sign means greedy in propagation
-							if (currentSimpleArrayList.get(0).getSize() < currentSimpleArrayList
-									.get(1).getSize()
-									|| (currentSimpleArrayList.get(0).getSize() == currentSimpleArrayList
-											.get(1).getSize() && !greedy)) {
+            // Use Global Potential Free Values
+            int sizePotentialFreeValues = stampValues.value();
+            int currentlyUsedPotentialFreeValue = 0;
 
-							    guideVariable = currentSimpleArrayList.get(0);
-							    guideValue = value;
+            Integer value;
+            TimeStamp<Integer> stamp;
+            int stampValue;
 
-							} else {
+            SimpleArrayList<IntVar> currentSimpleArrayList = null;
 
-							    guideVariable = currentSimpleArrayList.get(1);
-							    guideValue = value;
+            while (currentlyUsedPotentialFreeValue < sizePotentialFreeValues) {
 
-							}
+                value = potentialFreeValues[currentlyUsedPotentialFreeValue];
 
-							maxCurrentPruning = pruningSecondVariable;
-						}
+                currentlyUsedPotentialFreeValue++;
 
-					} else {
-						// PruningFirstVariable > PruningSecondVariable
-						if (pruningSecondVariable > minCurrentPruning) {
-							
-							// Equal sign means greedy in case of tie break
-							if (currentSimpleArrayList.get(0).getSize() <= currentSimpleArrayList
-									.get(1).getSize()
-									|| (currentSimpleArrayList.get(0).getSize() == currentSimpleArrayList
-											.get(1).getSize() && greedy)) {
+                stamp = stamps.get(value);
 
-							    guideVariable = currentSimpleArrayList.get(0);
-							    guideValue = value;
-							} else {
+                stampValue = stamp.value();
 
-							    guideVariable = currentSimpleArrayList.get(1);
-							    guideValue = value;
-							}
+                // Value with two variables
+                if (stampValue == 1) {
 
-							minCurrentPruning = pruningSecondVariable;
-							maxCurrentPruning = pruningFirstVariable;
-						} else if (pruningSecondVariable == minCurrentPruning
-								&& pruningFirstVariable > maxCurrentPruning) {
-							
-							// Equal sign means greedy in case of tie break
-							if (currentSimpleArrayList.get(0).getSize() <= currentSimpleArrayList
-									.get(1).getSize()
-									|| (currentSimpleArrayList.get(0).getSize() == currentSimpleArrayList
-											.get(1).getSize() && !greedy)) {
+                    currentSimpleArrayList = valueMapVariable.get(value);
 
-							    guideVariable = currentSimpleArrayList.get(0);
-							    guideValue = value;
-							
-							} else {
+                    int pruningFirstVariable = estimatePruning(currentSimpleArrayList.get(0), value);
 
-							    guideVariable = currentSimpleArrayList.get(1);
-							    guideValue = value;
-							}
-							maxCurrentPruning = pruningFirstVariable;
-						}
+                    if (pruningFirstVariable < minCurrentPruning)
+                        continue;
 
-					}
+                    int pruningSecondVariable = estimatePruning(currentSimpleArrayList.get(1), value);
 
-				}
+                    if (pruningSecondVariable < minCurrentPruning)
+                        continue;
 
-			}
+                    if (pruningFirstVariable < pruningSecondVariable) {
 
-			value = null;
-			stamp = null;
-			currentSimpleArrayList = null;
+                        if (pruningFirstVariable > minCurrentPruning) {
 
-		}
-		
-		// TODO, fix it, si does not return singleton variables.
-		return guideVariable;
-	}
+                            // Equals sign means no greedy in propagation
+                            // Lack of equal sign means greedy in propagation
+                            if (currentSimpleArrayList.get(0).getSize() < currentSimpleArrayList.get(1).getSize() || (
+                                currentSimpleArrayList.get(0).getSize() == currentSimpleArrayList.get(1).getSize() && !greedy)) {
+
+                                guideVariable = currentSimpleArrayList.get(0);
+                                guideValue = value;
+
+                            } else {
+
+                                guideVariable = currentSimpleArrayList.get(1);
+                                guideValue = value;
+
+
+                            }
+                            minCurrentPruning = pruningFirstVariable;
+                            maxCurrentPruning = pruningSecondVariable;
+                        } else if (pruningFirstVariable == minCurrentPruning && pruningSecondVariable > maxCurrentPruning) {
+                            // currentPruning.set(1, new
+                            // Integer(pruningSecondVariable));
+
+                            // Equals sign means no greedy in propagation in
+                            // case of tie break
+                            // Lack of equal sign means greedy in propagation
+                            if (currentSimpleArrayList.get(0).getSize() < currentSimpleArrayList.get(1).getSize() || (
+                                currentSimpleArrayList.get(0).getSize() == currentSimpleArrayList.get(1).getSize() && !greedy)) {
+
+                                guideVariable = currentSimpleArrayList.get(0);
+                                guideValue = value;
+
+                            } else {
+
+                                guideVariable = currentSimpleArrayList.get(1);
+                                guideValue = value;
+
+                            }
+
+                            maxCurrentPruning = pruningSecondVariable;
+                        }
+
+                    } else {
+                        // PruningFirstVariable > PruningSecondVariable
+                        if (pruningSecondVariable > minCurrentPruning) {
+
+                            // Equal sign means greedy in case of tie break
+                            if (currentSimpleArrayList.get(0).getSize() <= currentSimpleArrayList.get(1).getSize() || (
+                                currentSimpleArrayList.get(0).getSize() == currentSimpleArrayList.get(1).getSize() && greedy)) {
+
+                                guideVariable = currentSimpleArrayList.get(0);
+                                guideValue = value;
+                            } else {
+
+                                guideVariable = currentSimpleArrayList.get(1);
+                                guideValue = value;
+                            }
+
+                            minCurrentPruning = pruningSecondVariable;
+                            maxCurrentPruning = pruningFirstVariable;
+                        } else if (pruningSecondVariable == minCurrentPruning && pruningFirstVariable > maxCurrentPruning) {
+
+                            // Equal sign means greedy in case of tie break
+                            if (currentSimpleArrayList.get(0).getSize() <= currentSimpleArrayList.get(1).getSize() || (
+                                currentSimpleArrayList.get(0).getSize() == currentSimpleArrayList.get(1).getSize() && !greedy)) {
+
+                                guideVariable = currentSimpleArrayList.get(0);
+                                guideValue = value;
+
+                            } else {
+
+                                guideVariable = currentSimpleArrayList.get(1);
+                                guideValue = value;
+                            }
+                            maxCurrentPruning = pruningFirstVariable;
+                        }
+
+                    }
+
+                }
+
+            }
+
+            value = null;
+            stamp = null;
+            currentSimpleArrayList = null;
+
+        }
+
+        // TODO, fix it, si does not return singleton variables.
+        return guideVariable;
+    }
 
     int estimatePruning(IntVar x, Integer v) {
 
-		ArrayList<IntVar> exploredX = new ArrayList<IntVar>();
-		ArrayList<Integer> exploredV = new ArrayList<Integer>();
+        List<IntVar> exploredX = new ArrayList<IntVar>();
+        List<Integer> exploredV = new ArrayList<Integer>();
 
-		int pruning = estimatePruningRecursive(x, v, exploredX, exploredV);
+        int pruning = estimatePruningRecursive(x, v, exploredX, exploredV);
 
-		SimpleArrayList<IntVar> currentSimpleArrayList = null;
-		Integer value = null;
+        SimpleArrayList<IntVar> currentSimpleArrayList = null;
+        Integer value = null;
 
-		for (int i = 0; i < exploredV.size(); i++) {
+        for (int i = 0; i < exploredV.size(); i++) {
 
-			value = exploredV.get(i);
-			currentSimpleArrayList = valueMapVariable.get(value);
+            value = exploredV.get(i);
+            currentSimpleArrayList = valueMapVariable.get(value);
 
-			TimeStamp<Integer> stamp = stamps.get(value);
+            TimeStamp<Integer> stamp = stamps.get(value);
 
-			int lastPosition = stamp.value();
+            int lastPosition = stamp.value();
 
-			for (int j = 0; j <= lastPosition; j++)
-				// Edge between j and value was not counted yet
-				if (!exploredX.contains(currentSimpleArrayList.get(j)))
-					pruning++;
+            for (int j = 0; j <= lastPosition; j++)
+                // Edge between j and value was not counted yet
+                if (!exploredX.contains(currentSimpleArrayList.get(j)))
+                    pruning++;
 
-			stamp = null;
-		}
+            stamp = null;
+        }
 
-		currentSimpleArrayList = null;
-		value = null;
-		exploredX = null;
-		exploredV = null;
+        currentSimpleArrayList = null;
+        value = null;
+        exploredX = null;
+        exploredV = null;
 
-		return pruning;
-	}	
-	
-	int estimatePruningRecursive(IntVar xVar, Integer v,
-			ArrayList<IntVar> exploredX, ArrayList<Integer> exploredV) {
+        return pruning;
+    }
 
-		if (exploredX.contains(xVar))
-			return 0;
+    int estimatePruningRecursive(IntVar xVar, Integer v, List<IntVar> exploredX, List<Integer> exploredV) {
 
-		exploredX.add(xVar);
-		exploredV.add(v);
+        if (exploredX.contains(xVar))
+            return 0;
 
-		int pruning = 0;
+        exploredX.add(xVar);
+        exploredV.add(v);
 
-		IntDomain xDom = xVar.dom();
-		pruning = xDom.getSize() - 1;
+        int pruning = 0;
 
-		TimeStamp<Integer> stamp = null;
-		SimpleArrayList<IntVar> currentSimpleArrayList = null;
-		ValueEnumeration enumer = xDom.valueEnumeration();
-		
-		// Permutation only
-		if (stampValues.value() - stampNotGroundedVariables.value() == 1)
-			for (int i = enumer.nextElement(); enumer.hasMoreElements(); i = enumer
-					.nextElement()) {
-				if (!exploredV.contains(i)) {
-					Integer iInteger = i;
+        IntDomain xDom = xVar.dom();
+        pruning = xDom.getSize() - 1;
 
-					stamp = stamps.get(iInteger);
+        TimeStamp<Integer> stamp = null;
+        SimpleArrayList<IntVar> currentSimpleArrayList = null;
+        ValueEnumeration enumer = xDom.valueEnumeration();
 
-					int lastPosition = stamp.value();
+        // Permutation only
+        if (stampValues.value() - stampNotGroundedVariables.value() == 1)
+            for (int i = enumer.nextElement(); enumer.hasMoreElements(); i = enumer.nextElement()) {
+                if (!exploredV.contains(i)) {
+                    Integer iInteger = i;
 
-					// lastPosition == 0 means one variable, so check if there
-					// is atmost one variable for value
-					if (lastPosition < exploredX.size() + 1) {
+                    stamp = stamps.get(iInteger);
 
-						currentSimpleArrayList = valueMapVariable.get(iInteger);
+                    int lastPosition = stamp.value();
 
-						IntVar singleVar = null;
-						boolean single = true;
+                    // lastPosition == 0 means one variable, so check if there
+                    // is atmost one variable for value
+                    if (lastPosition < exploredX.size() + 1) {
 
-						for (int m = 0; m <= lastPosition; m++)
-							if (!exploredX.contains(currentSimpleArrayList
-									.get(m)))
-								if (singleVar != null)
-									singleVar = currentSimpleArrayList.get(m);
-								else
-									single = false;
+                        currentSimpleArrayList = valueMapVariable.get(iInteger);
 
-						if (single && singleVar == null) {
-							System.out.println(this);
-							System.out.println("StampValues - 1 "
-									+ (stampValues.value() - 1));
-							System.out.println("Not grounded Var "
-									+ stampNotGroundedVariables.value());
+                        IntVar singleVar = null;
+                        boolean single = true;
 
-							int lastNotGroundedVariable = stampNotGroundedVariables
-									.value();
-							Var variable = null;
+                        for (int m = 0; m <= lastPosition; m++)
+                            if (!exploredX.contains(currentSimpleArrayList.get(m)))
+                                if (singleVar == null)
+                                    singleVar = currentSimpleArrayList.get(m);
+                                else
+                                    single = false;
 
-							for (int l = 0; l <= lastNotGroundedVariable; l++) {
-								variable = list[l];
-								System.out.println("Stamp for " + variable
-										+ " " + sccStamp.get(variable).value());
-								System.out.println("Matching "
-										+ matching.get(variable).value());
+                        if (single && singleVar == null) {
+                            System.out.println(this);
+                            System.out.println("StampValues - 1 " + (stampValues.value() - 1));
+                            System.out.println("Not grounded Var " + stampNotGroundedVariables.value());
 
-							}
-						}
+                            int lastNotGroundedVariable = stampNotGroundedVariables.value();
+                            Var variable = null;
 
-						if (single && singleVar != null)
-							pruning += estimatePruningRecursive(singleVar,
-									iInteger, exploredX, exploredV);
+                            for (int l = 0; l <= lastNotGroundedVariable; l++) {
+                                variable = list[l];
+                                System.out.println("Stamp for " + variable + " " + sccStamp.get(variable).value());
+                                System.out.println("Matching " + matching.get(variable).value());
 
-						singleVar = null;
-					}
-					iInteger = null;
+                            }
+                        }
 
-				}
-			}
+                        if (single && singleVar != null)
+                            pruning += estimatePruningRecursive(singleVar, iInteger, exploredX, exploredV);
 
-		enumer = null;
-		stamp = stamps.get(v);
-		currentSimpleArrayList = valueMapVariable.get(v);
+                        singleVar = null;
+                    }
+                    iInteger = null;
 
-		int lastPosition = stamp.value();
+                }
+            }
 
-		for (int i = 0; i <= lastPosition; i++) {
-			IntVar variable = currentSimpleArrayList.get(i);
+        enumer = null;
+        stamp = stamps.get(v);
+        currentSimpleArrayList = valueMapVariable.get(v);
 
-			// checks if there is at most one value for variable
-			if (!exploredX.contains(variable)
-					&& variable.dom().getSize() < exploredV.size() + 2) {
+        int lastPosition = stamp.value();
 
-				boolean single = true;
-				Integer singleVal = null;
-				
-				for (ValueEnumeration enumerX = variable.dom().valueEnumeration(); enumerX.hasMoreElements();) {
-						Integer next = enumerX.nextElement();
+        for (int i = 0; i <= lastPosition; i++) {
+            IntVar variable = currentSimpleArrayList.get(i);
 
-						if (!exploredV.contains(next))
-							if (singleVal == null)
-								singleVal = next;
-							else
-								single = false;
-					}
+            // checks if there is at most one value for variable
+            if (!exploredX.contains(variable) && variable.dom().getSize() < exploredV.size() + 2) {
 
-				if (single)
-					pruning += estimatePruningRecursive(variable, singleVal,
-							exploredX, exploredV);
-			}
+                boolean single = true;
+                Integer singleVal = null;
 
-		}
+                for (ValueEnumeration enumerX = variable.dom().valueEnumeration(); enumerX.hasMoreElements(); ) {
+                    Integer next = enumerX.nextElement();
 
-		stamp = null;
-		return pruning;
-	}	
-	
-	@Override
-	public void increaseWeight() {
-		if (increaseWeight) {
-			for (Var v : list) v.weight++;
-		}
-	}
-	
+                    if (!exploredV.contains(next))
+                        if (singleVal == null)
+                            singleVal = next;
+                        else
+                            single = false;
+                }
+
+                if (single)
+                    pruning += estimatePruningRecursive(variable, singleVal, exploredX, exploredV);
+            }
+
+        }
+
+        stamp = null;
+        return pruning;
+    }
+
 }

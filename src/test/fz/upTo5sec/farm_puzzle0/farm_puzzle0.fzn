@@ -1,0 +1,10 @@
+array [1..7] of int: X_INTRODUCED_0 = [1,1,1,1,1,1,1];
+var {2,4}: animal1:: output_var;
+var {2,4}: animal2:: output_var;
+var {2,4}: animal3:: output_var;
+var {2,4}: animal4:: output_var;
+var {2,4}: animal5:: output_var;
+var {2,4}: animal6;
+var {2,4}: animal7:: output_var;
+constraint int_lin_eq(X_INTRODUCED_0,[animal6,animal5,animal4,animal3,animal2,animal1,animal7],22);
+solve  satisfy;

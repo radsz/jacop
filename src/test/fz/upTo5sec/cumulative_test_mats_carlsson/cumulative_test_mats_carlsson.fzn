@@ -1,0 +1,12 @@
+predicate jacop_cumulative(array [int] of var int: s,array [int] of var int: d,array [int] of var int: r,var int: b);
+var 1..2: O1:: output_var;
+var 2..3: D1:: output_var;
+var 1..4: H1:: output_var;
+var 3..3: O2:: output_var;
+var 2..2: D2:: output_var;
+var 2..3: H2:: output_var;
+array [1..2] of var int: X_INTRODUCED_0 ::var_is_introduced  = [H1,H2];
+array [1..2] of var int: X_INTRODUCED_1 ::var_is_introduced  = [D1,2];
+array [1..2] of var int: X_INTRODUCED_2 ::var_is_introduced  = [O1,3];
+constraint jacop_cumulative(X_INTRODUCED_2,X_INTRODUCED_1,X_INTRODUCED_0,4);
+solve :: int_search([O1,D1,H1,O2,D2,H2],first_fail,indomain_min,complete) satisfy;

@@ -1,0 +1,13 @@
+array [1..2] of int: X_INTRODUCED_6 = [1,-1];
+var 4..999: x:: output_var:: is_defined_var;
+var 2..999: d1:: output_var;
+var 2..999: d2:: output_var;
+var 1..2: X_INTRODUCED_1 ::var_is_introduced ;
+var 1..3: X_INTRODUCED_3 ::var_is_introduced ;
+var 1..5: X_INTRODUCED_5 ::var_is_introduced ;
+constraint int_mod(x,2,X_INTRODUCED_1);
+constraint int_mod(x,3,X_INTRODUCED_3);
+constraint int_mod(x,5,X_INTRODUCED_5);
+constraint int_lin_le(X_INTRODUCED_6,[d1,d2],0);
+constraint int_times(d1,d2,x):: defines_var(x);
+solve :: int_search([x,d1,d2],first_fail,indomain_min,complete) satisfy;

@@ -1,0 +1,15 @@
+var 2..2: t_min:: output_var;
+var bool: X_INTRODUCED_42 ::var_is_introduced :: is_defined_var = false;
+var bool: X_INTRODUCED_46 ::var_is_introduced :: is_defined_var = false;
+var bool: X_INTRODUCED_50 ::var_is_introduced :: is_defined_var = false;
+var 0..0: X_INTRODUCED_78 ::var_is_introduced  = 0;
+var 0..0: X_INTRODUCED_100 ::var_is_introduced  = 0;
+var 0..0: X_INTRODUCED_122 ::var_is_introduced  = 0;
+var 0..0: X_INTRODUCED_144 ::var_is_introduced  = 0;
+var bool: X_INTRODUCED_231 ::var_is_introduced  = true;
+array [1..10] of var int: variables:: output_array([1..10]) = [9,1,7,1,1,7,7,7,7,9];
+constraint int_le_reif(1,0,X_INTRODUCED_42):: defines_var(X_INTRODUCED_42);
+constraint int_le_reif(1,0,X_INTRODUCED_46):: defines_var(X_INTRODUCED_46);
+constraint int_le_reif(1,0,X_INTRODUCED_50):: defines_var(X_INTRODUCED_50);
+constraint int_eq(9,9);
+solve  satisfy;

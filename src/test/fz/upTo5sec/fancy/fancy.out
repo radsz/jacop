@@ -1,0 +1,8 @@
+t = false;
+h = false;
+r = false;
+s = false;
+n = false;
+cost = 0;
+----------
+==========

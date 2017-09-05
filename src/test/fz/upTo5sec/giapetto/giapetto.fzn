@@ -1,0 +1,11 @@
+array [1..2] of int: X_INTRODUCED_2 = [1,1];
+array [1..2] of int: X_INTRODUCED_4 = [2,1];
+var 0..40: x1:: output_var;
+var int: x2:: output_var;
+var int: X_INTRODUCED_1 ::var_is_introduced :: is_defined_var;
+constraint int_le(x1,40);
+constraint int_lin_le(X_INTRODUCED_2,[x1,x2],80);
+constraint int_lin_le(X_INTRODUCED_4,[x1,x2],100);
+constraint int_le(0,x2);
+constraint int_lin_eq([3,2,-1],[x1,x2,X_INTRODUCED_1],0):: defines_var(X_INTRODUCED_1);
+solve  maximize X_INTRODUCED_1;

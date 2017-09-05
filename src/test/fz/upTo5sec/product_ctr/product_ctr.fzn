@@ -1,0 +1,7 @@
+var 2..2: X_INTRODUCED_0;
+var 8..8: t_var:: output_var:: is_defined_var;
+var 1..16: X_INTRODUCED_9 ::var_is_introduced :: is_defined_var;
+array [1..3] of var int: variables:: output_array([1..3]) = [2,1,4];
+constraint int_times(X_INTRODUCED_0,X_INTRODUCED_9,t_var):: defines_var(t_var);
+constraint int_times(1,4,X_INTRODUCED_9):: defines_var(X_INTRODUCED_9);
+solve  satisfy;

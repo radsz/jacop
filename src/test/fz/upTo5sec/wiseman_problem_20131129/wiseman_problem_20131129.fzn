@@ -1,0 +1,15 @@
+array [1..2] of int: X_INTRODUCED_19 = [3,-1];
+array [1..6] of int: X_INTRODUCED_39 = [1,-10000,-1000,-100,-10,-1];
+var 0..9: X_INTRODUCED_0;
+var 0..9: X_INTRODUCED_1;
+var 0..9: X_INTRODUCED_2;
+var 0..9: X_INTRODUCED_3;
+var 0..9: X_INTRODUCED_4;
+var 10000..99999: number:: output_var:: is_defined_var;
+var 100000..199999: one_before:: output_var:: is_defined_var;
+var 300000..999991: one_after:: output_var:: is_defined_var;
+constraint int_lin_eq(X_INTRODUCED_19,[one_before,one_after],0):: defines_var(one_after);
+constraint int_lin_eq([1,-100000,-10000,-1000,-100,-10],[one_after,X_INTRODUCED_0,X_INTRODUCED_1,X_INTRODUCED_2,X_INTRODUCED_3,X_INTRODUCED_4],1):: defines_var(one_after);
+constraint int_lin_eq([1,-10000,-1000,-100,-10,-1],[one_before,X_INTRODUCED_0,X_INTRODUCED_1,X_INTRODUCED_2,X_INTRODUCED_3,X_INTRODUCED_4],100000):: defines_var(one_before);
+constraint int_lin_eq(X_INTRODUCED_39,[number,X_INTRODUCED_0,X_INTRODUCED_1,X_INTRODUCED_2,X_INTRODUCED_3,X_INTRODUCED_4],0):: defines_var(number);
+solve  satisfy;

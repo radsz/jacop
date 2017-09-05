@@ -1,0 +1,4 @@
+turk_foreign = 4;
+native = array1d(1..5, [1, 2, 4, 5, 3]);
+foreign = array1d(1..5, [3, 1, 2, 4, 5]);
+----------

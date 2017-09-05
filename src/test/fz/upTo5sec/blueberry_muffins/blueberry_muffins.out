@@ -1,0 +1,10 @@
+Ellis = 2;
+Ingham = 4;
+Oakley = 3;
+Summers = 1;
+dogcatcher = 3;
+flautist = 1;
+secretary = 4;
+zookeeper = 2;
+muffins = array1d(1..4, [2, 4, 1, 3]);
+----------

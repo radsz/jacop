@@ -1,0 +1,7 @@
+var 1..10000: x:: output_var;
+constraint int_mod(x,3,2);
+constraint int_mod(x,5,3);
+constraint int_mod(x,7,2);
+constraint int_mod(x,11,4);
+constraint int_mod(x,13,1);
+solve  minimize x;

@@ -1,0 +1,17 @@
+array [1..2] of int: X_INTRODUCED_4 = [1,-1];
+var 1..10: X_INTRODUCED_0;
+var 1..10: X_INTRODUCED_1;
+var 1..10: X_INTRODUCED_2;
+var 1..10: X_INTRODUCED_3;
+var int: p:: is_defined_var:: output_var;
+var int: X_INTRODUCED_10 ::var_is_introduced :: is_defined_var;
+var int: X_INTRODUCED_11 ::var_is_introduced :: is_defined_var;
+array [1..4] of var int: x:: output_array([1..4]) = [X_INTRODUCED_0,X_INTRODUCED_1,X_INTRODUCED_2,X_INTRODUCED_3];
+constraint int_lin_le(X_INTRODUCED_4,[X_INTRODUCED_0,X_INTRODUCED_1],0);
+constraint int_lin_le(X_INTRODUCED_4,[X_INTRODUCED_1,X_INTRODUCED_2],0);
+constraint int_lin_le(X_INTRODUCED_4,[X_INTRODUCED_2,X_INTRODUCED_3],0);
+constraint int_le(1,p);
+constraint int_times(X_INTRODUCED_11,X_INTRODUCED_3,p):: defines_var(p);
+constraint int_times(X_INTRODUCED_0,X_INTRODUCED_1,X_INTRODUCED_10):: defines_var(X_INTRODUCED_10);
+constraint int_times(X_INTRODUCED_10,X_INTRODUCED_2,X_INTRODUCED_11):: defines_var(X_INTRODUCED_11);
+solve  satisfy;

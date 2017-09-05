@@ -1,0 +1,14 @@
+array [1..2] of int: X_INTRODUCED_4 = [1,-1];
+var 1..10: a:: output_var;
+var 1..10: b:: output_var;
+var 1..10: c:: output_var;
+var 2..200: z:: is_defined_var;
+var 1..100: X_INTRODUCED_0 ::var_is_introduced :: is_defined_var;
+var 1..100: X_INTRODUCED_1 ::var_is_introduced :: is_defined_var;
+constraint int_lin_ne(X_INTRODUCED_4,[a,b],0);
+constraint int_lin_ne(X_INTRODUCED_4,[a,c],0);
+constraint int_lin_ne(X_INTRODUCED_4,[b,c],0);
+constraint int_lin_eq([1,1,-1],[X_INTRODUCED_1,X_INTRODUCED_0,z],0):: defines_var(z);
+constraint int_times(b,c,X_INTRODUCED_0):: defines_var(X_INTRODUCED_0);
+constraint int_times(a,b,X_INTRODUCED_1):: defines_var(X_INTRODUCED_1);
+solve  maximize z;

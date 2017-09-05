@@ -1,0 +1,4 @@
+max_ind = 3;
+max_val = 7;
+variables = array1d(1..5, [3, 2, 7, 2, 6]);
+----------

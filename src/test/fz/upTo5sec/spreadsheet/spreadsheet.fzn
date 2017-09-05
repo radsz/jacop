@@ -1,0 +1,17 @@
+array [1..3] of float: X_INTRODUCED_5 = [1.0,-1.0,-1.0];
+var 0.17..0.17: B1:: output_var;
+var 3.5..3.5: B4:: output_var;
+var 1.7..1.7: B5:: output_var;
+var 1.5..1.5: C4:: output_var;
+var 4.5..4.5: C5:: output_var;
+var 0.0..1000.0: D4:: output_var:: is_defined_var;
+var 0.0..1000.0: D5:: output_var:: is_defined_var;
+var 0.0..1000.0: E7:: output_var:: is_defined_var;
+var 0.0..1000.0: E8:: output_var:: is_defined_var;
+var 1.0..1001.0: X_INTRODUCED_1 ::var_is_introduced :: is_defined_var;
+constraint float_lin_eq(X_INTRODUCED_5,[E7,D4,D5],0.0):: defines_var(E7);
+constraint float_times(B4,C4,D4):: defines_var(D4);
+constraint float_times(B5,C5,D5):: defines_var(D5);
+constraint float_times(E7,X_INTRODUCED_1,E8):: defines_var(E8);
+constraint float_lin_eq([1.0,-1.0],[B1,X_INTRODUCED_1],-1.0):: defines_var(X_INTRODUCED_1);
+solve  satisfy;

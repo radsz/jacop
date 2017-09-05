@@ -1,4 +1,4 @@
-JaCoP v. 4.3- Installation Guide
+JaCoP v. 4.4- Installation Guide
 
 The easiest way to make jar file for JaCoP is to use maven. First, install maven on your computer and then write 
 
@@ -18,7 +18,7 @@ Generation of Scala formatted API documentation for Java and Scala
 
 mvn scala:doc
 
-Installetion using Maven
+Installation using Maven
 ------------------------
 
 To use JaCoP with maven you can just include it as a dependency in your `pom.xml`
@@ -26,10 +26,13 @@ To use JaCoP with maven you can just include it as a dependency in your `pom.xml
     <dependency>
         <groupId>org.jacop</groupId>
         <artifactId>jacop</artifactId>
-        <version>4.3.0</version>
+        <version>4.5.0</version>
     </dependency>
 
-In order for maven to find JaCoP you need add the folloing repository to your `pom.xml` aswell
+From the version 4.4.0, JaCoP is uploaded to Maven Central so the above is the only thing you need to do. 
+
+For older versions of JaCoP (4.3 and older) you also need to add the following information 
+about CSLTH Maven repository to your `pom.xml` as well
 
     <repositories>
 		<repository>

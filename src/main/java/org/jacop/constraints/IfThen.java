@@ -1,353 +1,299 @@
 /**
- *  IfThen.java 
- *  This file is part of JaCoP.
- *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
- *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU Affero General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU Affero General Public License for more details.
- *  
- *  Notwithstanding any other provision of this License, the copyright
- *  owners of this work supplement the terms of this License with terms
- *  prohibiting misrepresentation of the origin of this work and requiring
- *  that modified versions of this work be marked in reasonable ways as
- *  different from the original version. This supplement of the license
- *  terms is in accordance with Section 7 of GNU Affero General Public
- *  License version 3.
- *
- *  You should have received a copy of the GNU Affero General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
+ * IfThen.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jacop.core.Domain;
 import org.jacop.core.Store;
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Var;
 import org.jacop.util.QueueForward;
 
 /**
  * Constraint if constraint1 then constraint2
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.4
  */
 
-public class IfThen extends PrimitiveConstraint {
+public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
 
-	static int counter = 1;
+    static AtomicInteger idNumber = new AtomicInteger(0);
 
-	/**
-	 * It specifies constraint condC in the IfThen constraint. 
-	 */
-	public PrimitiveConstraint condC;
+    /**
+     * It specifies constraint condC in the IfThen constraint.
+     */
+    public PrimitiveConstraint condC;
 
-	/**
-	 * It specifies constraint condC in the IfThen constraint. 
-	 */
-	public PrimitiveConstraint thenC;
+    /**
+     * It specifies constraint condC in the IfThen constraint.
+     */
+    public PrimitiveConstraint thenC;
 
-	boolean imposed = false;
+    boolean imposed = false;
 
-	Store store;
+    Store store;
 
-	final public QueueForward<PrimitiveConstraint> queueForward;
+    final public QueueForward<PrimitiveConstraint> queueForward;
 
-	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
-	 * the constructor being called to recreate an object from an XML format.
-	 */
-	public static String[] xmlAttributes = {"condC", "thenC"};
+    /**
+     * It constructs ifthen constraint.
+     * @param condC the condition of the ifthen constraint.
+     * @param thenC the constraint which must hold if the condition holds.
+     */
+    public IfThen(PrimitiveConstraint condC, PrimitiveConstraint thenC) {
 
-	/**
-	 * It constructs ifthen constraint.
-	 * @param condC the condition of the ifthen constraint.
-	 * @param thenC the constraint which must hold if the condition holds.
-	 */
-	public IfThen(PrimitiveConstraint condC, PrimitiveConstraint thenC) {
-		
-		assert (condC != null) : "Constraint cond is null";
-		assert (thenC != null) : "Constraint then is null";
+        PrimitiveConstraint[] scope = new PrimitiveConstraint[] {condC, thenC};
+        checkInputForNullness(new String[] {"condC", "thenC"}, scope);
 
-		numberId = counter++;
-		numberArgs = (short) (condC.numberArgs + thenC.numberArgs);
+        numberId = idNumber.incrementAndGet();
 
-		this.condC = condC;
-		this.thenC = thenC;
+        this.condC = condC;
+        this.thenC = thenC;
 
+        setScope(scope);
+        setConstraintScope(scope);
         queueForward = new QueueForward<PrimitiveConstraint>(new PrimitiveConstraint[] {condC, thenC}, arguments());
-	}
+	this.queueIndex = Integer.max(condC.queueIndex, thenC.queueIndex);
+    }
 
-	@Override
-	public ArrayList<Var> arguments() {
+    @Override public void consistency(Store store) {
 
-		ArrayList<Var> variables = new ArrayList<Var>(1);
+        if (condC.satisfied())
+            thenC.consistency(store);
 
-		for (Var V : condC.arguments())
-			variables.add(V);
+        if (imposed && thenC.notSatisfied())
+            condC.notConsistency(store);
 
-		for (Var V : thenC.arguments())
-			variables.add(V);
+    }
 
-		return variables;
-	}
+    @Override public boolean notSatisfied() {
+        return condC.satisfied() && thenC.notSatisfied();
+    }
 
-	@Override
-	public void consistency(Store store) {
+    @Override public void notConsistency(Store store) {
 
-		if (condC.satisfied())
-			thenC.consistency(store);
+        thenC.notConsistency(store);
+        condC.consistency(store);
 
-		if (imposed && thenC.notSatisfied())
-				condC.notConsistency(store);
+    }
 
-	}
+    @Override public int getConsistencyPruningEvent(Var var) {
 
-	@Override
-	public boolean notSatisfied() {
-		return condC.satisfied() && thenC.notSatisfied();
-	}
+        // If consistency function mode
+        if (consistencyPruningEvents != null) {
+            Integer possibleEvent = consistencyPruningEvents.get(var);
+            if (possibleEvent != null)
+                return possibleEvent;
+        }
 
-	@Override
-	public void notConsistency(Store store) {
+        int eventAcross = -1;
 
-		thenC.notConsistency(store);
-		condC.consistency(store);
+        if (condC.arguments().contains(var)) {
+            int event = condC.getNestedPruningEvent(var, true);
+            if (event > eventAcross)
+                eventAcross = event;
+        }
 
-	}
+        if (condC.arguments().contains(var)) {
+            int event = condC.getNestedPruningEvent(var, false);
+            if (event > eventAcross)
+                eventAcross = event;
+        }
 
-	@Override
-	public int getConsistencyPruningEvent(Var var) {
+        if (thenC.arguments().contains(var)) {
+            int event = thenC.getNestedPruningEvent(var, true);
+            if (event > eventAcross)
+                eventAcross = event;
+        }
 
-		// If consistency function mode
-		if (consistencyPruningEvents != null) {
-				Integer possibleEvent = consistencyPruningEvents.get(var);
-				if (possibleEvent != null)
-					return possibleEvent;
-			}
+        if (thenC.arguments().contains(var)) {
+            int event = thenC.getNestedPruningEvent(var, false);
+            if (event > eventAcross)
+                eventAcross = event;
+        }
 
-		int eventAcross = -1;
+        if (eventAcross == -1)
+            return Domain.NONE;
+        else
+            return eventAcross;
 
-		if (condC.arguments().contains(var)) {
-			int event = condC.getNestedPruningEvent(var, true);
-			if (event > eventAcross)
-				eventAcross = event;
-		}
+    }
 
-		if (condC.arguments().contains(var)) {
-			int event = condC.getNestedPruningEvent(var, false);
-			if (event > eventAcross)
-				eventAcross = event;
-		}
+    @Override public int getDefaultConsistencyPruningEvent() {
+        throw new IllegalStateException("It should not be called as overrides exist.");
+    }
 
-		if (thenC.arguments().contains(var)) {
-			int event = thenC.getNestedPruningEvent(var, true);
-			if (event > eventAcross)
-				eventAcross = event;
-		}
+    @Override public int getNotConsistencyPruningEvent(Var var) {
 
-		if (thenC.arguments().contains(var)) {
-			int event = thenC.getNestedPruningEvent(var, false);
-			if (event > eventAcross)
-				eventAcross = event;
-		}
 
-		if (eventAcross == -1)
-			return Domain.NONE;
-		else
-			return eventAcross;
-		
-	}
+        // If notConsistency function mode
+        if (notConsistencyPruningEvents != null) {
+            Integer possibleEvent = notConsistencyPruningEvents.get(var);
+            if (possibleEvent != null)
+                return possibleEvent;
+        }
 
-	@Override
-	public int getNotConsistencyPruningEvent(Var var) {
-		
-		
-		// If notConsistency function mode
-			if (notConsistencyPruningEvents != null) {
-				Integer possibleEvent = notConsistencyPruningEvents.get(var);
-				if (possibleEvent != null)
-					return possibleEvent;
-			}
-		
-		int eventAcross = -1;
+        int eventAcross = -1;
 
-		if (condC.arguments().contains(var)) {
-			int event = condC.getNestedPruningEvent(var, true);
-			if (event > eventAcross)
-				eventAcross = event;
-		}
+        if (condC.arguments().contains(var)) {
+            int event = condC.getNestedPruningEvent(var, true);
+            if (event > eventAcross)
+                eventAcross = event;
+        }
 
-		if (condC.arguments().contains(var)) {
-			int event = condC.getNestedPruningEvent(var, false);
-			if (event > eventAcross)
-				eventAcross = event;
-		}
+        if (condC.arguments().contains(var)) {
+            int event = condC.getNestedPruningEvent(var, false);
+            if (event > eventAcross)
+                eventAcross = event;
+        }
 
-		if (thenC.arguments().contains(var)) {
-			int event = thenC.getNestedPruningEvent(var, true);
-			if (event > eventAcross)
-				eventAcross = event;
-		}
+        if (thenC.arguments().contains(var)) {
+            int event = thenC.getNestedPruningEvent(var, true);
+            if (event > eventAcross)
+                eventAcross = event;
+        }
 
-		if (thenC.arguments().contains(var)) {
-			int event = thenC.getNestedPruningEvent(var, false);
-			if (event > eventAcross)
-				eventAcross = event;
-		}
+        if (thenC.arguments().contains(var)) {
+            int event = thenC.getNestedPruningEvent(var, false);
+            if (event > eventAcross)
+                eventAcross = event;
+        }
 
-		if (eventAcross == -1)
-			return Domain.NONE;
-		else
-			return eventAcross;
+        if (eventAcross == -1)
+            return Domain.NONE;
+        else
+            return eventAcross;
 
-	}
+    }
 
-	@Override
-	public int getNestedPruningEvent(Var var, boolean mode) {
+    @Override public int getNestedPruningEvent(Var var, boolean mode) {
 
-		// If consistency function mode
-		if (mode) {
-			if (consistencyPruningEvents != null) {
-				Integer possibleEvent = consistencyPruningEvents.get(var);
-				if (possibleEvent != null)
-					return possibleEvent;
-			}
-		}
-		// If notConsistency function mode
-		else {
-			if (notConsistencyPruningEvents != null) {
-				Integer possibleEvent = notConsistencyPruningEvents.get(var);
-				if (possibleEvent != null)
-					return possibleEvent;
-			}
-		}
+        // If consistency function mode
+        if (mode) {
+            if (consistencyPruningEvents != null) {
+                Integer possibleEvent = consistencyPruningEvents.get(var);
+                if (possibleEvent != null)
+                    return possibleEvent;
+            }
+        }
+        // If notConsistency function mode
+        else {
+            if (notConsistencyPruningEvents != null) {
+                Integer possibleEvent = notConsistencyPruningEvents.get(var);
+                if (possibleEvent != null)
+                    return possibleEvent;
+            }
+        }
 
-		int eventAcross = -1;
+        int eventAcross = -1;
 
-		if (condC.arguments().contains(var)) {
-			int event = condC.getNestedPruningEvent(var, true);
-			if (event > eventAcross)
-				eventAcross = event;
-		}
+        if (condC.arguments().contains(var)) {
+            int event = condC.getNestedPruningEvent(var, true);
+            if (event > eventAcross)
+                eventAcross = event;
+        }
 
-		if (condC.arguments().contains(var)) {
-			int event = condC.getNestedPruningEvent(var, false);
-			if (event > eventAcross)
-				eventAcross = event;
-		}
+        if (condC.arguments().contains(var)) {
+            int event = condC.getNestedPruningEvent(var, false);
+            if (event > eventAcross)
+                eventAcross = event;
+        }
 
-		if (thenC.arguments().contains(var)) {
-			int event = thenC.getNestedPruningEvent(var, true);
-			if (event > eventAcross)
-				eventAcross = event;
-		}
+        if (thenC.arguments().contains(var)) {
+            int event = thenC.getNestedPruningEvent(var, true);
+            if (event > eventAcross)
+                eventAcross = event;
+        }
 
-		if (thenC.arguments().contains(var)) {
-			int event = thenC.getNestedPruningEvent(var, false);
-			if (event > eventAcross)
-				eventAcross = event;
-		}
+        if (thenC.arguments().contains(var)) {
+            int event = thenC.getNestedPruningEvent(var, false);
+            if (event > eventAcross)
+                eventAcross = event;
+        }
 
-		if (eventAcross == -1)
-			return Domain.NONE;
-		else
-			return eventAcross;
+        if (eventAcross == -1)
+            return Domain.NONE;
+        else
+            return eventAcross;
 
-	}
+    }
 
-	@Override
-	public void impose(Store store) {
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
+        throw new IllegalStateException("It should not be called as overrides exist.");
+    }
 
-		this.store = store;
+    @Override public void impose(Store store) {
 
-		for (Var V : condC.arguments())
-			V.putModelConstraint(this, getConsistencyPruningEvent(V));
+        this.store = store;
+        super.impose(store);
+        imposed = true;
 
-		for (Var V : thenC.arguments())
-			V.putModelConstraint(this, getConsistencyPruningEvent(V));
+    }
 
-		store.addChanged(this);
-		store.countConstraint();
+    @Override public void include(Store store) {
+        this.store = store;
+    }
 
-		condC.include(store);
-		thenC.include(store);
+    @Override public boolean satisfied() {
 
-		imposed = true;
+        if (imposed) {
+            if (condC.satisfied()) {
+                this.removeConstraint();
+                store.impose(thenC);
+                return false;
+            }
 
-	}
+            return condC.notSatisfied();
+        } else
+            return (condC.satisfied() && thenC.satisfied()) || (condC.notSatisfied());
 
-	@Override
-	public void include(Store store) {
-	    condC.include(store);
-	    thenC.include(store);
-	}
+    }
 
-	@Override
-	public void removeConstraint() {
+    @Override public String toString() {
 
-		for (Var V : condC.arguments())
-			V.removeConstraint(this);
+        StringBuffer result = new StringBuffer(id());
 
-		for (Var V : thenC.arguments())
-			V.removeConstraint(this);
+        result.append(" : IfThen(\n").append(condC).append(", \n").append(thenC).append(" )\n");
 
-	}
+        return result.toString();
 
-	@Override
-	public boolean satisfied() {
+    }
 
-		if (imposed) {
-			if (condC.satisfied()) {
-				this.removeConstraint();
-				store.impose(thenC);
-				return false;
-			}
-
-			return condC.notSatisfied();
-		} else
-			return (condC.satisfied() && thenC.satisfied())
-					|| (condC.notSatisfied());
-
-	}
-
-	@Override
-	public String toString() {
-
-		StringBuffer result = new StringBuffer( id() );
-		
-		result.append(" : IfThen(\n").append( condC ).append( ", \n").append(thenC).append(" )\n");
-		
-		return result.toString();
-		
-	}
-
-    @Override
-    public void queueVariable(int level, Var variable) {
+    @Override public void queueVariable(int level, Var variable) {
 
         queueForward.queueForward(level, variable);
 
     }
-
-    @Override
-	public void increaseWeight() {
-		if (increaseWeight) {
-			condC.increaseWeight();
-			thenC.increaseWeight();
-		}
-	}	
 
 }

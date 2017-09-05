@@ -1,32 +1,31 @@
 /**
- *  BlueberryMuffins.java 
- *  This file is part of JaCoP.
- *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
- *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU Affero General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU Affero General Public License for more details.
- *  
- *  Notwithstanding any other provision of this License, the copyright
- *  owners of this work supplement the terms of this License with terms
- *  prohibiting misrepresentation of the origin of this work and requiring
- *  that modified versions of this work be marked in reasonable ways as
- *  different from the original version. This supplement of the license
- *  terms is in accordance with Section 7 of GNU Affero General Public
- *  License version 3.
- *
- *  You should have received a copy of the GNU Affero General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
+ * BlueberryMuffins.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.jacop.examples.fd;
@@ -45,11 +44,11 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
 /**
- * 
+ *
  * It solves a simple logic puzzle about blueberry muffins.
- * 
+ *
  * @author Radoslaw Szymanek
- * 
+ *
  *  Logic Puzzle: Blueberry Muffins
  *
  * Description :
@@ -83,136 +82,131 @@ import org.jacop.core.Store;
 
 public class BlueberryMuffins extends ExampleFD {
 
-	@Override
-	public void model() {
+    @Override public void model() {
 
-		// Constraint store created below.
+        // Constraint store created below.
 
-		store = new Store();
-		vars = new ArrayList<IntVar>();
-		
-		System.out.println("Program to solve Blueberry Muffins ");
+        store = new Store();
+        vars = new ArrayList<IntVar>();
 
-		// String arrays with peoples' names.
+        System.out.println("Program to solve Blueberry Muffins ");
 
-		String[] lastnames = { "Ellis", "Ingham", "Oakley", "Summers" };
+        // String arrays with peoples' names.
 
-		// Constant indexes to ease referring to variables denoting people.
-		int iellis = 0, iingham = 1, ioakley = 2, isummer = 3;
+        String[] lastnames = {"Ellis", "Ingham", "Oakley", "Summers"};
 
-		// String arrays with profession names.
+        // Constant indexes to ease referring to variables denoting people.
+        int iellis = 0, iingham = 1, ioakley = 2, isummer = 3;
 
-		String[] professionNames = { "dogcatcher", "flautist", "secretary",
-				"zookeeper" };
+        // String arrays with profession names.
 
-		// Constant indexes to ease referring to profession variables.
+        String[] professionNames = {"dogcatcher", "flautist", "secretary", "zookeeper"};
 
-		int /* izookeeper = 0, */ idogcatcher = 1, iflautist = 2, isecretary = 3;
-		
-		// String arrays with firstname.
+        // Constant indexes to ease referring to profession variables.
 
-		String[] firstnames = { "Lynn", "Calla", "Bill", "Mark" };
+        int /* izookeeper = 0, */ idogcatcher = 1, iflautist = 2, isecretary = 3;
 
-		// Constant indexes to ease referring to firstname variables.
+        // String arrays with firstname.
 
-		int ilynn = 0, icalla = 1, ibill = 2, imark = 3;
+        String[] firstnames = {"Lynn", "Calla", "Bill", "Mark"};
 
-		// String arrays with muffin numbers.
+        // Constant indexes to ease referring to firstname variables.
 
-		String[] muffinnumbers = { "muffin1", "muffin2", "muffin3", "muffin4" };
-		int i1 = 0, i2 = 1, i3 = 2, i4 = 3;
+        int ilynn = 0, icalla = 1, ibill = 2, imark = 3;
 
-		// Arrays for variables.
+        // String arrays with muffin numbers.
 
-		IntVar person[] = new IntVar[4];
-		IntVar last[] = new IntVar[4];
-		IntVar profession[] = new IntVar[4];
-		IntVar muffins[] = new IntVar[4];
+        String[] muffinnumbers = {"muffin1", "muffin2", "muffin3", "muffin4"};
+        int i1 = 0, i2 = 1, i3 = 2, i4 = 3;
 
-		// All variables are created with domain 0..3. Variables from
-		// different arrays with the same values denote the same person.
+        // Arrays for variables.
 
-		for (int i = 0; i < 4; i++) {
-			last[i] = new IntVar(store, lastnames[i], 0, 3);
-			profession[i] = new IntVar(store, professionNames[i], 0, 3);
-			muffins[i] = new IntVar(store, muffinnumbers[i], 0, 3);
-			person[i] = new IntVar(store, firstnames[i], 0, 3);
-			vars.add(last[i]); vars.add(profession[i]); vars.add(muffins[i]);
-			vars.add(person[i]);
-		}
+        IntVar person[] = new IntVar[4];
+        IntVar last[] = new IntVar[4];
+        IntVar profession[] = new IntVar[4];
+        IntVar muffins[] = new IntVar[4];
 
-		// It is not possible that one person had two lastnames, or
-		// two professions.
-		store.impose(new Alldifferent(person));
-		store.impose(new Alldifferent(last));
-		store.impose(new Alldifferent(profession));
+        // All variables are created with domain 0..3. Variables from
+        // different arrays with the same values denote the same person.
 
-		// 1. Each housemate snitched a different number of muffins from
-		// one to four.
-		store.impose(new Alldifferent(muffins));
+        for (int i = 0; i < 4; i++) {
+            last[i] = new IntVar(store, lastnames[i], 0, 3);
+            profession[i] = new IntVar(store, professionNames[i], 0, 3);
+            muffins[i] = new IntVar(store, muffinnumbers[i], 0, 3);
+            person[i] = new IntVar(store, firstnames[i], 0, 3);
+            vars.add(last[i]);
+            vars.add(profession[i]);
+            vars.add(muffins[i]);
+            vars.add(person[i]);
+        }
 
-		// Auxilary variables to help express clue number 2.
+        // It is not possible that one person had two lastnames, or
+        // two professions.
+        store.impose(new Alldifferent(person));
+        store.impose(new Alldifferent(last));
+        store.impose(new Alldifferent(profession));
 
-		IntVar six = new IntVar(store, "six", 6, 6);
-		IntVar I1 = new IntVar(store, "temp1", 1, 4);
-		IntVar I2 = new IntVar(store, "temp2", 1, 4);
+        // 1. Each housemate snitched a different number of muffins from
+        // one to four.
+        store.impose(new Alldifferent(muffins));
 
-		// I1 denotes number of muffins taken by Bill.
-		store.impose(new Element(I1, muffins, person[ibill]));
-		// I2 denotes number of muffins taken by Ellis.
-		store.impose(new Element(I2, muffins, last[iellis]));
-		// 2. Bill and Ellis snitched a total of six muffins.
-		store.impose(new XplusYeqZ(I1, I2, six));
+        // Auxilary variables to help express clue number 2.
 
-		// 3. The secretary (who is a woman) snitched more than the dogcatcher.
+        IntVar six = new IntVar(store, "six", 6, 6);
+        IntVar I1 = new IntVar(store, "temp1", 1, 4);
+        IntVar I2 = new IntVar(store, "temp2", 1, 4);
 
-		// secretary is a women, so it must have had the same number
-		// as Calla or Lynn.
-		store.impose(new Or(new XeqY(profession[isecretary], person[icalla]),
-				new XeqY(profession[isecretary], person[ilynn])));
+        // I1 denotes number of muffins taken by Bill.
+        store.impose(Element.choose(I1, muffins, person[ibill]));
+        // I2 denotes number of muffins taken by Ellis.
+        store.impose(Element.choose(I2, muffins, last[iellis]));
+        // 2. Bill and Ellis snitched a total of six muffins.
+        store.impose(new XplusYeqZ(I1, I2, six));
 
-		IntVar I3 = new IntVar(store, "temp3", 1, 4);
-		IntVar I4 = new IntVar(store, "temp4", 1, 4);
+        // 3. The secretary (who is a woman) snitched more than the dogcatcher.
 
-		// I3 denotes number of muffins taken by secretary.
-		store.impose(new Element(I3, muffins, profession[isecretary]));
-		// I4 denotes number of muffins taken by dogcatcher
-		store.impose(new Element(I4, muffins, profession[idogcatcher]));
+        // secretary is a women, so it must have had the same number
+        // as Calla or Lynn.
+        store.impose(new Or(new XeqY(profession[isecretary], person[icalla]), new XeqY(profession[isecretary], person[ilynn])));
 
-		// secretary has snitched more muffins than the dogcatcher.
-		store.impose(new XgtY(I3, I4));
+        IntVar I3 = new IntVar(store, "temp3", 1, 4);
+        IntVar I4 = new IntVar(store, "temp4", 1, 4);
 
-		// 4. Mark snitched two more than Summers did.
-		store.impose(new Or(new And(new XeqY(last[isummer], muffins[i1]),
-				new XeqY(person[imark], muffins[i3])), new And(new XeqY(
-				last[isummer], muffins[i2]), new XeqY(person[imark],
-				muffins[i4]))));
+        // I3 denotes number of muffins taken by secretary.
+        store.impose(Element.choose(I3, muffins, profession[isecretary]));
+        // I4 denotes number of muffins taken by dogcatcher
+        store.impose(Element.choose(I4, muffins, profession[idogcatcher]));
 
-		// 5. The flautist snitched twice as many as Ms. Oakley did.
-		store.impose(new Or(new And(new XeqY(last[ioakley], muffins[i1]),
-				new XeqY(profession[iflautist], muffins[i2])), new And(
-				new XeqY(last[ioakley], muffins[i2]), new XeqY(
-						profession[iflautist], muffins[i4]))));
+        // secretary has snitched more muffins than the dogcatcher.
+        store.impose(new XgtY(I3, I4));
 
-		// 6. Calla's last name isn't Ingham.
-		store.impose(new XneqY(person[icalla], last[iingham]));
+        // 4. Mark snitched two more than Summers did.
+        store.impose(new Or(new And(new XeqY(last[isummer], muffins[i1]), new XeqY(person[imark], muffins[i3])),
+            new And(new XeqY(last[isummer], muffins[i2]), new XeqY(person[imark], muffins[i4]))));
 
-	}
-	
-	
-	/**
-	 * It executes the program solving this puzzle.
-	 * @param args no arguments are read.
-	 */
-	public static void main(String args[]) {
+        // 5. The flautist snitched twice as many as Ms. Oakley did.
+        store.impose(new Or(new And(new XeqY(last[ioakley], muffins[i1]), new XeqY(profession[iflautist], muffins[i2])),
+            new And(new XeqY(last[ioakley], muffins[i2]), new XeqY(profession[iflautist], muffins[i4]))));
 
-		BlueberryMuffins example = new BlueberryMuffins();
-		
-		example.model();
+        // 6. Calla's last name isn't Ingham.
+        store.impose(new XneqY(person[icalla], last[iingham]));
 
-		if (example.search())
-			System.out.println("Solution(s) found");
-		
-	}	
-	
+    }
+
+
+    /**
+     * It executes the program solving this puzzle.
+     * @param args no arguments are read.
+     */
+    public static void main(String args[]) {
+
+        BlueberryMuffins example = new BlueberryMuffins();
+
+        example.model();
+
+        if (example.search())
+            System.out.println("Solution(s) found");
+
+    }
+
 }

@@ -1,0 +1,11 @@
+array [1..5] of int: X_INTRODUCED_0 = [1,1,3,12,1];
+array [1..5] of int: X_INTRODUCED_2 = [2,1,1,1,3];
+var 8..160: A:: output_var;
+var 8..160: B:: output_var;
+var 8..160: C:: output_var;
+var 8..100: D2:: output_var;
+var 8..66: E3:: output_var;
+array [1..5] of var int: LD = [A,B,C,D2,E3];
+constraint int_lin_eq(X_INTRODUCED_0,[D2,C,B,A,E3],200);
+constraint int_lin_eq(X_INTRODUCED_2,[D2,C,B,A,E3],200);
+solve :: int_search(LD,first_fail,indomain_min,complete) satisfy;

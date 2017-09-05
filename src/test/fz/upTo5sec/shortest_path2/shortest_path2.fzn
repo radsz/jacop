@@ -1,0 +1,17 @@
+var 0..0: X_INTRODUCED_6;
+var 0..1: X_INTRODUCED_7;
+var 0..1: X_INTRODUCED_8;
+var 0..1: X_INTRODUCED_15;
+var 0..1: X_INTRODUCED_16;
+var 0..0: X_INTRODUCED_41;
+var 0..1: X_INTRODUCED_52:: is_defined_var;
+var 0..19: total_cost:: is_defined_var;
+array [1..36] of var int: x:: output_array([1..6,1..6]) = [0,X_INTRODUCED_7,X_INTRODUCED_8,0,0,0,0,0,0,X_INTRODUCED_15,X_INTRODUCED_16,0,0,0,0,0,X_INTRODUCED_8,0,0,0,0,0,0,X_INTRODUCED_15,0,0,0,0,0,X_INTRODUCED_52,0,0,0,0,0,0];
+array [1..6] of var int: outFlow:: output_array([1..6]) = [1,X_INTRODUCED_7,X_INTRODUCED_8,X_INTRODUCED_15,X_INTRODUCED_52,0];
+array [1..6] of var int: inFlow:: output_array([1..6]) = [0,X_INTRODUCED_7,X_INTRODUCED_8,X_INTRODUCED_15,X_INTRODUCED_52,1];
+constraint int_lin_eq([1,-1,-1],[X_INTRODUCED_52,X_INTRODUCED_16,X_INTRODUCED_8],0):: defines_var(X_INTRODUCED_52);
+constraint int_lin_eq([-1,-1],[X_INTRODUCED_15,X_INTRODUCED_52],-1);
+constraint int_lin_eq([-1,-1],[X_INTRODUCED_7,X_INTRODUCED_8],-1);
+constraint int_lin_eq([1,-1,-1],[X_INTRODUCED_7,X_INTRODUCED_15,X_INTRODUCED_16],0):: defines_var(X_INTRODUCED_7);
+constraint int_lin_eq([4,6,5,2,2,-1],[X_INTRODUCED_7,X_INTRODUCED_8,X_INTRODUCED_15,X_INTRODUCED_16,X_INTRODUCED_52,total_cost],0):: defines_var(total_cost);
+solve  minimize total_cost;
