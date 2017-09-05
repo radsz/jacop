@@ -1,6 +1,7 @@
 package org.jacop;
 
 
+import org.jacop.constraints.In;
 import org.jacop.core.*;
 import org.junit.Before;
 import org.junit.Test;
@@ -64,7 +65,7 @@ public class SmallDenseDomainTest {
     public void testComplement() throws Exception {
         System.out.println("Complement function test");
         IntDomain testedDomain = (IntDomain) prepareMethod.invoke(this, new Object[]{new int[]{1,3, 5,7, 12,18}});
-            assertEquals("{-50000000..0, 4, 8..11, 19..50000000}", testedDomain.complement().toString());
+            assertEquals("{" + IntDomain.MinInt + "..0, 4, 8..11, 19.." + IntDomain.MaxInt + "}", testedDomain.complement().toString());
 
     }
 
