@@ -128,44 +128,39 @@ public class LinearIntDom extends LinearInt {
 
     public void propagate(int rel) {
 
-        computeInit();
 
-        do {
+	switch (rel) {
+	case eq:
+		    
+	    if (domainSize() < limitDomainPruning) {
+		computeInit();
+		pruneEq(); // domain consistency
+	    }
+	    else 
+		// bound consistency
+		super.propagate(rel);
 
-            store.propagationHasOccurred = false;
+	    break;
 
-            switch (rel) {
-                case eq:
+	case ne:
+	    if (domainSize() < limitDomainPruning) {
+		computeInit();
+		pruneNeq();
+	    
+		computeInit();
 
-                    if (domainSize() < limitDomainPruning)
-                        pruneEq(); // domain consistency
-                    else {
-                        // bound consistency
-                        pruneLtEq(b);
-                        pruneGtEq(b);
-                    }
+		if (!reified && (sumMin > b || sumMax < b))
+		    removeConstraint();
+	    }
+	    else 
+		super.propagate(rel);
+		    
+	    break;
 
-                    if (!reified && sumMax <= b && sumMin >= b)
-                        removeConstraint();
-
-                    break;
-
-                case ne:
-                    if (domainSize() < limitDomainPruning)
-                        pruneNeq();
-                    else
-                        super.pruneNeq();
-
-                    // if (!reified && sumMin == sumMax && sumMin != b)
-                    if (!reified && (sumMin > b || sumMax < b))
-                        removeConstraint();
-                    break;
-                default:
-                    System.out.println("Not implemented relation in LinearIntDom; implemented == and != only.");
-                    break;
-            }
-
-        } while (store.propagationHasOccurred);
+	default:
+	    System.out.println("Not implemented relation in LinearIntDom; implemented == and != only.");
+	    break;
+	}
     }
 
     double domainSize() {
@@ -181,9 +176,6 @@ public class LinearIntDom extends LinearInt {
 
     void pruneEq() {
 
-        if (sumMin > b || sumMax < b)
-            throw store.failException;
-
         // System.out.println("check " + this);
         assignments = new int[l];
         support = new IntervalDomain[l];
@@ -191,23 +183,10 @@ public class LinearIntDom extends LinearInt {
             support[i] = new IntervalDomain();
 
         findSupport(0, 0);
-
+	
         // System.out.println("Variables: "+java.util.Arrays.asList(x)+" have valid assignments: " + java.util.Arrays.asList(support));
-        int f = 0, e = 0;
-        for (int i = 0; i < pos; i++) {
-            x[i].domain.in(store.level, x[i], support[i]);
-
-            f += x[i].min() * a[i];
-            e += x[i].max() * a[i];
-        }
-        for (int i = pos; i < l; i++) {
-            x[i].domain.in(store.level, x[i], support[i]);
-
-            f += x[i].max() * a[i];
-            e += x[i].min() * a[i];
-        }
-        sumMin = f;
-        sumMax = e;
+        for (int i = 0; i < l; i++)
+	    x[i].domain.in(store.level, x[i], support[i]);
     }
 
     void pruneNeq() {
@@ -221,23 +200,10 @@ public class LinearIntDom extends LinearInt {
 
         // System.out.println("valid assignments: " + java.util.Arrays.asList(support));
 
-        int f = 0, e = 0;
-        for (int i = 0; i < pos; i++) {
+        for (int i = 0; i < l; i++) 
             if (support[i].singleton())
                 x[i].domain.inComplement(store.level, x[i], support[i].value());
 
-            f += x[i].min() * a[i];
-            e += x[i].max() * a[i];
-        }
-        for (int i = pos; i < l; i++) {
-            if (support[i].singleton())
-                x[i].domain.inComplement(store.level, x[i], support[i].value());
-
-            f += x[i].max() * a[i];
-            e += x[i].min() * a[i];
-        }
-        sumMin = f;
-        sumMax = e;
     }
 
     void findSupport(int index, int sum) {

@@ -410,12 +410,21 @@ class LinearConstraints implements ParserTreeConstants {
                         support.pose(new XplusYeqC(p2[0], p2[1], p3));
                     else
                         support.pose(new XplusYeqC(p2[0], p2[1], -p3));
-                } else if (support.domainConsistency && !support.options.getBoundConsistency()) {// && (maxDomain(p2) <= 4 || p2.length <= 2) ) { // heuristic rule to select domain consistency since
-                    // its complexity is O(d^n), d <= 4 or n <= 2 ;)
+                } else if (support.domainConsistency && !support.options.getBoundConsistency()) {
                     // We do not impose linear constraint with domain consistency if
                     // the cases are covered by four cases above.
 
-                    support.pose(new LinearIntDom(store, p2, p1, "==", p3)); //SumWeightDom(p2, p1, p3));
+		    // possible use of Table constraint
+		    // int[][] tbl = org.jacop.constraints.table.TableMill.linear(p2, p1, p3);
+		    // if (tbl != null)
+		    // 	if (tbl.length <= 64)
+		    // 	    support.pose(new org.jacop.constraints.table.SimpleTable(p2, tbl, true));
+		    // 	else
+		    // 	    support.pose(new org.jacop.constraints.table.Table(p2, tbl, true));
+		    // else
+		    // 	support.pose(new LinearIntDom(store, p2, p1, "==", p3));
+		    
+                    support.pose(new LinearIntDom(store, p2, p1, "==", p3));
                 } else if ((p3 == 0 && p1.length == 3) && ((p1[0] == -1 && p1[1] == -1 && p1[2] == 1) || (p1[0] == 1 && p1[1] == 1
                     && p1[2] == -1)))
                     support.pose(new XplusYeqZ(p2[0], p2[1], p2[2]));
