@@ -179,14 +179,15 @@ public class LinearIntDom extends LinearInt {
         // System.out.println("check " + this);
         assignments = new int[l];
         support = new IntervalDomain[l];
-        for (int i = 0; i < l; i++)
-            support[i] = new IntervalDomain();
 
         findSupport(0, 0);
 	
         // System.out.println("Variables: "+java.util.Arrays.asList(x)+" have valid assignments: " + java.util.Arrays.asList(support));
         for (int i = 0; i < l; i++)
-	    x[i].domain.in(store.level, x[i], support[i]);
+	    if (support[i] == null)
+		throw store.failException;
+	    else
+		x[i].domain.in(store.level, x[i], support[i]);
     }
 
     void pruneNeq() {
@@ -200,9 +201,12 @@ public class LinearIntDom extends LinearInt {
 
         // System.out.println("valid assignments: " + java.util.Arrays.asList(support));
 
-        for (int i = 0; i < l; i++) 
-            if (support[i].singleton())
-                x[i].domain.inComplement(store.level, x[i], support[i].value());
+        for (int i = 0; i < l; i++)
+	    if (support[i] == null)
+		removeConstraint();
+	    else
+		if (support[i].singleton())
+		    x[i].domain.inComplement(store.level, x[i], support[i].value());
 
     }
 
@@ -227,7 +231,7 @@ public class LinearIntDom extends LinearInt {
                 // store assignments
                 for (int i = 0; i < l; i++) {
                     int a = assignments[i];
-                    if (support[i].getSize() == 0)
+                    if (support[i] == null)
                         support[i] = new IntervalDomain(a, a);
                     else if (support[i].max() < a)
                         support[i].addLastElement(a);
@@ -310,7 +314,7 @@ public class LinearIntDom extends LinearInt {
                 // store assignments
                 for (int i = 0; i < l; i++) {
                     int a = assignments[i];
-                    if (support[i].getSize() == 0)
+                    if (support[i] == null)
                         support[i] = new IntervalDomain(a, a);
                     else if (support[i].max() < a)
                         support[i].addLastElement(a);
