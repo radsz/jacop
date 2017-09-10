@@ -176,7 +176,6 @@ public class LinearIntDom extends LinearInt {
 
     void pruneEq() {
 
-        // System.out.println("check " + this);
         assignments = new int[l];
         support = new IntervalDomain[l];
 
@@ -194,8 +193,6 @@ public class LinearIntDom extends LinearInt {
 
         assignments = new int[l];
         support = new IntervalDomain[l];
-        for (int i = 0; i < l; i++)
-            support[i] = new IntervalDomain();
 
         findSupport(0, 0);
 
