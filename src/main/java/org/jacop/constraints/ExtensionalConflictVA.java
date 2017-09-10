@@ -351,7 +351,7 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
         // backtracking has occurred (removeLevel) therefore
         // restart tuples can not be reused.
         supports = new int[list.length][][];
-        variableQueue = new LinkedHashSet<Var>();
+        variableQueue.clear();
 
     }
 

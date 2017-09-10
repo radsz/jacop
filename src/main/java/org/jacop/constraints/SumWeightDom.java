@@ -187,7 +187,7 @@ import org.jacop.core.*;
 
         backtrackHasOccured = true;
 
-        variableQueue = new LinkedHashSet<IntVar>();
+        variableQueue.clear();
 
     }
 

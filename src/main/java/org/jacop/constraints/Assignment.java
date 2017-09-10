@@ -169,7 +169,7 @@ public class Assignment extends Constraint implements UsesQueueVariable, Statefu
     }
 
     @Override public void removeLevel(int level) {
-        variableQueue = new LinkedHashSet<IntVar>();
+        variableQueue.clear();
         if (level == firstConsistencyLevel)
             firstConsistencyCheck = true;
     }
