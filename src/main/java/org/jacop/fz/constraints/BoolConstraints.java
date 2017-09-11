@@ -45,6 +45,7 @@ import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XneqY;
+import org.jacop.constraints.XplusYgtC;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.BoolClause;
 
@@ -111,7 +112,10 @@ class BoolConstraints implements ParserTreeConstants {
             sat.generate_or(a1, v);
         else {
             if (v.singleton(1))
-                support.pose(new SumBool(store, a1, ">=", v));
+		if (a1.length == 2)
+		    support.pose(new XplusYgtC(a1[0], a1[1], 0));
+		else
+		    support.pose(new SumBool(store, a1, ">=", v));
             else if (allVarZero(a1))
                 v.domain.in(store.level, v, 0, 0);
             else if (atLeastOneVarOne(a1))

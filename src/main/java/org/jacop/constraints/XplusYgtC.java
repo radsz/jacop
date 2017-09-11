@@ -84,15 +84,8 @@ public class XplusYgtC extends PrimitiveConstraint {
 
     @Override public void consistency(Store store) {
 
-        do {
-
-            store.propagationHasOccurred = false;
-
             x.domain.inMin(store.level, x, c - y.max() + 1);
             y.domain.inMin(store.level, y, c - x.max() + 1);
-
-        } while (store.propagationHasOccurred);
-
     }
 
     @Override protected int getDefaultNestedConsistencyPruningEvent() {
@@ -113,15 +106,8 @@ public class XplusYgtC extends PrimitiveConstraint {
 
     @Override public void notConsistency(Store store) {
 
-        do {
-
-            store.propagationHasOccurred = false;
-
             x.domain.inMax(store.level, x, c - y.min());
             y.domain.inMax(store.level, y, c - x.min());
-
-        } while (store.propagationHasOccurred);
-
     }
 
     @Override public boolean notSatisfied() {
