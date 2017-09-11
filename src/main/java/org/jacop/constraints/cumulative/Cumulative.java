@@ -207,7 +207,8 @@ public class Cumulative extends CumulativeBasic {
         int n = t.length;
         int[] prec = new int[n];
 
-        Arrays.stream(t).forEach( i -> prec[i.index] = i.ect());
+	for (int i = 0; i < n; i++) 
+	    prec[t[i].index] = t[i].ect();
 
         for (TaskView aT : t) {
             if (tree.rootNode().env > C * (long) aT.lct()) {
@@ -233,7 +234,9 @@ public class Cumulative extends CumulativeBasic {
     private void adjustBounds(Store store, ThetaLambdaTree tree, TaskView[] t, int[] prec, long cap) {
 
         int n = t.length;
-        Set<Integer> capacities = Arrays.stream(t).map( i -> i.res.min()).collect(Collectors.toCollection(HashSet::new));
+	Set<Integer> capacities = new LinkedHashSet<Integer>();
+	for (int i = 0; i < n; i++) 
+	    capacities.add(t[i].res.min());
 
         // System.out.println("capacities = " + capacities);
 
