@@ -117,9 +117,9 @@ public class Min extends Constraint implements SatisfiedPresent {
         // only check for other support if that smallest value is no longer part
         // of the variable domain.
 
-        do {
+        // do {
 
-            store.propagationHasOccurred = false;
+        //     store.propagationHasOccurred = false;
 
             int minValue = IntDomain.MaxInt;
             int maxValue = IntDomain.MaxInt;
@@ -155,7 +155,7 @@ public class Min extends Constraint implements SatisfiedPresent {
                     removeConstraint();
 
             }
-        } while (store.propagationHasOccurred);
+        // } while (store.propagationHasOccurred);
 
     }
 

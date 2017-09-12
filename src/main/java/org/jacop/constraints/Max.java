@@ -114,9 +114,9 @@ public class Max extends Constraint implements SatisfiedPresent {
         IntVar var;
         IntDomain vDom;
 
-        do {
+        // do {
 
-            store.propagationHasOccurred = false;
+        //     store.propagationHasOccurred = false;
 
             int minValue = IntDomain.MinInt;
             int maxValue = IntDomain.MinInt;
@@ -153,7 +153,7 @@ public class Max extends Constraint implements SatisfiedPresent {
                     removeConstraint();
 
             }
-        } while (store.propagationHasOccurred);
+        // } while (store.propagationHasOccurred);
 
     }
 

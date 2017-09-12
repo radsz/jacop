@@ -84,14 +84,14 @@ public class MinSimple extends Constraint implements SatisfiedPresent {
 
     @Override public void consistency(Store store) {
 
-        do {
+        // do {
 
             int minMin = min.min();
 
             x1.domain.inMin(store.level, x1, minMin);
             x2.domain.inMin(store.level, x2, minMin);
 
-            store.propagationHasOccurred = false;
+            // store.propagationHasOccurred = false;
 
             int minValue = (x1.min() > x2.min()) ? x2.min() : x1.min();
             int maxValue = (x1.max() > x2.max()) ? x2.max() : x1.max();
@@ -103,7 +103,7 @@ public class MinSimple extends Constraint implements SatisfiedPresent {
             if (x2.min() > min.max())
                 x1.domain.in(store.level, x1, min.dom());
 
-        } while (store.propagationHasOccurred);
+        // } while (store.propagationHasOccurred);
 
     }
 

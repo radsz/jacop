@@ -33,6 +33,7 @@ package org.jacop.constraints.table;
 import org.jacop.core.IntVar;
 import java.util.ArrayList;
 import org.jacop.core.ValueEnumeration;
+import org.jacop.core.IntDomain;
 
 /**
  * TableMill generates tables for different constraint to be used in Table constraint
@@ -49,7 +50,6 @@ public class TableMill {
 
 	ArrayList<int[]> support = new ArrayList<int[]>();
 	int[] assignment = new int[x.length];
-	// System.out.println("calling linearSupport");
 
 	ArrayList<int[]> table =  linearSupport(x, w, b, 0, 0, support, assignment);
 
@@ -81,5 +81,23 @@ public class TableMill {
 		linearSupport(x, w, b, newSum, index+1, support, assignment);
 	}
 	return support;
+    }
+
+    static public int[][] elementSupport(IntVar index, int[] list, IntVar value, int offset) {
+
+	ArrayList<int[]> support = new ArrayList<int[]>();
+	IntDomain valDom = value.domain;
+	for (ValueEnumeration val = index.domain.valueEnumeration(); val.hasMoreElements(); ) {
+	    int e = val.nextElement();
+	    int listEl = list[e-1-offset];
+	    if (valDom.contains(listEl))
+		support.add(new int[] {e, listEl});
+		if (support.size() > tableMaxSize)
+		    return null;
+	}
+
+	int[][] t = support.toArray(new int[support.size()][2]);	
+	return t;
+	
     }
 }
