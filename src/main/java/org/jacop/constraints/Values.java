@@ -66,7 +66,7 @@ public class Values extends Constraint implements SatisfiedPresent {
      */
     private IntVar count;
 
-    private Comparator<IntVar> minFDV = new FDVminimumComparator<IntVar>();
+    private Comparator<IntVar> minFDV = new FDVminimumComparator<>();
 
     private static final boolean debug = false;
 
@@ -117,7 +117,7 @@ public class Values extends Constraint implements SatisfiedPresent {
 
             int[][] adj = new int[list.length + 1][];
             adj[0] = new int[0];
-            Map<Integer, Integer> valueMap = new HashMap<Integer, Integer>();
+            Map<Integer, Integer> valueMap = new HashMap<>();
             int valueIndex = 0;
 
             int numberSingleton = 0;
@@ -204,8 +204,7 @@ public class Values extends Constraint implements SatisfiedPresent {
     }
 
     @Override public int getDefaultConsistencyPruningEvent() {
-        //@todo, why so restrictive?
-        return IntDomain.GROUND;
+        return IntDomain.BOUND;
     }
 
   private static class FDVminimumComparator<T extends IntVar> implements Comparator<T>, java.io.Serializable {

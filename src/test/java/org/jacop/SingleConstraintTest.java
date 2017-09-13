@@ -1017,6 +1017,45 @@ public class SingleConstraintTest {
     }
 
 
+    @Test public void testValues() {
+
+        Store store = new Store();
+
+        int xLength = 4;
+        int xSize = 7;
+
+        IntVar[] x = getIntVars(store, "x", xLength, xSize);
+        IntVar n = new IntVar(store, "sum", 0, 1);
+        Values values = new Values(x, n);
+
+        store.impose(values);
+
+        int noOfSolutions = noOfAllSolutions(store, x, new IntVar[] {n});
+
+        assertThat(noOfSolutions, is(xSize));
+
+    }
+
+    @Test public void testValues2() {
+
+        Store store = new Store();
+
+        int xLength = 4;
+        int xSize = 4;
+
+        IntVar[] x = getIntVars(store, "x", xLength, xSize);
+        IntVar n = new IntVar(store, "sum", 1, 2);
+        Values values = new Values(x, n);
+
+        store.impose(values);
+
+        int noOfSolutions = noOfAllSolutions(store, x, new IntVar[] {n});
+
+        assertThat(noOfSolutions, is(88));
+
+    }
+
+
     private IntVar[] getIntVars(Store store, String idPrefix, int xLength, int xSize) {
         IntVar[] y = new IntVar[xLength];
 
