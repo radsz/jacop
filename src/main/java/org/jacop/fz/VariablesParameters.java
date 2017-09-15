@@ -63,8 +63,8 @@ public class VariablesParameters implements ParserTreeConstants {
     final static boolean interval = false; // selection of interval or dense, if possible, domain for variables
 
     public final static double MIN_FLOAT = -1e150, MAX_FLOAT = 1e150;
-    // public final static int MIN_INT = IntDomain.MinInt, MAX_INT = IntDomain.MaxInt;
-    public final static int MIN_INT = -10_000_000, MAX_INT = 10_000_000;
+    public final static int MIN_INT = IntDomain.MinInt, MAX_INT = IntDomain.MaxInt;
+    // public final static int MIN_INT = -10_000_000, MAX_INT = 10_000_000;
 
     Tables dictionary;
     int lowInterval, highInterval;

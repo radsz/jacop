@@ -136,7 +136,7 @@ public class LinearIntDom extends LinearInt {
 		computeInit();
 		pruneEq(); // domain consistency
 	    }
-	    else 
+	    else  
 		// bound consistency
 		super.propagate(rel);
 
@@ -179,7 +179,7 @@ public class LinearIntDom extends LinearInt {
         assignments = new int[l];
         support = new IntervalDomain[l];
 
-        findSupport(0, 0);
+        findSupport(0, 0L);
 	
         // System.out.println("Variables: "+java.util.Arrays.asList(x)+" have valid assignments: " + java.util.Arrays.asList(support));
         for (int i = 0; i < l; i++)
@@ -194,7 +194,7 @@ public class LinearIntDom extends LinearInt {
         assignments = new int[l];
         support = new IntervalDomain[l];
 
-        findSupport(0, 0);
+        findSupport(0, 0L);
 
         // System.out.println("valid assignments: " + java.util.Arrays.asList(support));
 
@@ -207,23 +207,24 @@ public class LinearIntDom extends LinearInt {
 
     }
 
-    void findSupport(int index, int sum) {
+    void findSupport(int index, long sum) {
 
         findSupportPositive(index, sum);
 
     }
 
-    void findSupportPositive(int index, int partialSum) {
+    void findSupportPositive(int index, long partialSum) {
 
         int newIndex = index + 1;
 
         if (index == l - 1) {
 
-            int element = b - partialSum;
-            int val = element / a[index];
-            int rest = element % a[index];
-            if (rest == 0 && x[index].domain.contains(val)) {
-                assignments[index] = val;
+            long element = b - partialSum;
+            long val = element / a[index];
+            long rest = element % a[index];
+	    int valInt = (int)val;
+            if (rest == 0 && valInt == val && x[index].domain.contains(valInt)) {
+                assignments[index] = valInt;
 
                 // store assignments
                 for (int i = 0; i < l; i++) {
@@ -240,11 +241,11 @@ public class LinearIntDom extends LinearInt {
         }
 
         IntDomain currentDom = x[index].dom();
-        int newPartialSum = partialSum;
-        int w = a[index];
+        long newPartialSum = partialSum;
+        long w = a[index];
 
-        int lb = b - sumMax + currentDom.max() * w;
-        int ub = b - sumMin + currentDom.min() * w;
+        long lb = b - sumMax + currentDom.max() * w;
+        long ub = b - sumMin + currentDom.min() * w;
 
         if (currentDom.domainID() == IntDomain.IntervalDomainID) {
             int n = ((IntervalDomain) currentDom).size;
@@ -257,7 +258,7 @@ public class LinearIntDom extends LinearInt {
 
                 for (int element = eMin; element <= eMax; element++) {
 
-                    int elementValue = element * w;
+                    long elementValue = (long)element * w;
                     if (elementValue < lb)
                         continue; // value too low
                     else if (elementValue > ub)
@@ -278,7 +279,7 @@ public class LinearIntDom extends LinearInt {
             for (ValueEnumeration val = currentDom.valueEnumeration(); val.hasMoreElements(); ) {
                 int element = val.nextElement();
 
-                int elementValue = element * w;
+                long elementValue = (long)element * w;
                 if (elementValue < lb)
                     continue; // value too low
                 else if (elementValue > ub)
@@ -296,17 +297,18 @@ public class LinearIntDom extends LinearInt {
     }
 
 
-    void findSupportNegative(int index, int partialSum) {
+    void findSupportNegative(int index, long partialSum) {
 
         int newIndex = index + 1;
 
         if (index == l - 1) {
 
-            int element = b - partialSum;
-            int val = element / a[index];
-            int rest = element % a[index];
-            if (rest == 0 && x[index].domain.contains(val)) {
-                assignments[index] = val;
+            long element = b - partialSum;
+            long val = element / a[index];
+            long rest = element % a[index];
+	    int valInt = (int)val;
+            if (rest == 0 && valInt == val && x[index].domain.contains(valInt)) {
+                assignments[index] = valInt;
 
                 // store assignments
                 for (int i = 0; i < l; i++) {
@@ -323,11 +325,11 @@ public class LinearIntDom extends LinearInt {
         }
 
         IntDomain currentDom = x[index].dom();
-        int newPartialSum = partialSum;
-        int w = a[index];
+        long newPartialSum = partialSum;
+        long w = a[index];
 
-        int lb = b - sumMax + currentDom.min() * w;
-        int ub = b - sumMin + currentDom.max() * w;
+        long lb = b - sumMax + currentDom.min() * w;
+        long ub = b - sumMin + currentDom.max() * w;
 
         if (currentDom.domainID() == IntDomain.IntervalDomainID) {
             int n = ((IntervalDomain) currentDom).size;
@@ -340,7 +342,7 @@ public class LinearIntDom extends LinearInt {
 
                 for (int element = eMin; element <= eMax; element++) {
 
-                    int elementValue = element * w;
+                    long elementValue = (long)element * w;
                     if (elementValue < lb)
                         break outerloop; // value too low
                     else if (elementValue > ub)
@@ -357,7 +359,7 @@ public class LinearIntDom extends LinearInt {
             for (ValueEnumeration val = currentDom.valueEnumeration(); val.hasMoreElements(); ) {
                 int element = val.nextElement();
 
-                int elementValue = element * w;
+                long elementValue = (long)element * w;
                 if (elementValue < lb)
                     break; // value too low
                 else if (elementValue > ub)

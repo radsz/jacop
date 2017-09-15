@@ -452,7 +452,6 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     }
 
     static int toInt(final float f) {
-
         if (f >= (float) Integer.MIN_VALUE && f <= (float) Integer.MAX_VALUE) {
             return (int) f;
         } else {
@@ -461,4 +460,12 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
 
     }
 
+    int long2int(long value) {
+	if (value > (long)Integer.MAX_VALUE)
+	    return Integer.MAX_VALUE;
+	else if (value < (long)Integer.MIN_VALUE)
+	    return Integer.MIN_VALUE;
+	else
+	    return (int)value;
+    }
 }
