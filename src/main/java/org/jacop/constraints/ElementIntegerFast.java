@@ -259,7 +259,7 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
                         max = Math.max(max, val);
                     }
                 }
-
+                
                 index.domain.in(store.level, index, indexDom.complement());
                 value.domain.in(store.level, value, min, max);
 
@@ -275,10 +275,8 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
     boolean disjoint(IntVar v1, int v2) {
         if (v1.min() > v2 || v2 > v1.max())
             return true;
-        else if (!v1.domain.contains(v2))
-            return true;
         else
-            return false;
+            return !v1.domain.contains(v2);
     }
 
     @Override public void removeLevel(int level) {

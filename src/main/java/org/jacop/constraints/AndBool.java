@@ -1,4 +1,4 @@
-/**
+/*
  * AndBool.java
  * This file is part of JaCoP.
  * <p>
@@ -30,8 +30,7 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import org.jacop.core.IntVar;
@@ -69,12 +68,7 @@ public class AndBool extends DecomposedConstraint<PrimitiveConstraint> {
      * @param result variable.
      */
     public AndBool(List<IntVar> a, IntVar result) {
-
-        if (a.size() == 2)
-            c = new AndBoolSimple(a.get(0), a.get(1), result);
-        else
-            c = new AndBoolVector(a.toArray(new IntVar[a.size()]), result);
-
+        this(a.toArray(new IntVar[a.size()]), result);
     }
 
     /**
@@ -89,18 +83,15 @@ public class AndBool extends DecomposedConstraint<PrimitiveConstraint> {
     }
 
     @Override public void imposeDecomposition(Store store) {
-
         store.impose(c);
-
     }
 
     @Override public List<PrimitiveConstraint> decompose(Store store) {
-
-        return Arrays.asList(c);
-
+        return Collections.singletonList(c);
     }
 
     public String toString() {
         return c.toString();
     }
+
 }

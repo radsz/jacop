@@ -1,4 +1,4 @@
-/**
+/*
  * XeqY.java
  * This file is part of JaCoP.
  * <p>
@@ -111,7 +111,6 @@ public class XeqY extends PrimitiveConstraint {
 
         if (y.singleton())
             x.domain.inComplement(store.level, x, y.value());
-
 
         if (x.singleton())
             y.domain.inComplement(store.level, y, x.value());

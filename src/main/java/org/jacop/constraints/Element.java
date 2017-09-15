@@ -176,7 +176,7 @@ public class Element extends Constraint implements UsesQueueVariable {
      * @return constraint that encodes the desired logic.
      */
     public static Constraint choose(IntVar index, List<? extends IntVar> variables, IntVar value) {
-        return new ElementVariable(index, variables, value);
+        return new ElementVariableFast(index, variables, value);
     }
 
     /**
@@ -188,7 +188,7 @@ public class Element extends Constraint implements UsesQueueVariable {
      * @return constraint that encodes the desired logic.
      */
     public static Constraint choose(IntVar index, List<? extends IntVar> variables, IntVar value, int shift) {
-        return new ElementVariable(index, variables, value, shift);
+        return new ElementVariableFast(index, variables, value, shift);
     }
 
     /**
@@ -222,7 +222,7 @@ public class Element extends Constraint implements UsesQueueVariable {
      * @return constraint that encodes the desired logic.
      */
     public static Constraint choose(IntVar index, IntVar[] variables, IntVar value) {
-        return new ElementVariable(index, variables, value);
+        return new ElementVariableFast(index, variables, value);
     }
 
     /**
@@ -234,7 +234,7 @@ public class Element extends Constraint implements UsesQueueVariable {
      * @return constraint that encodes the desired logic.
      */
     public static Constraint choose(IntVar index, IntVar[] variables, IntVar value, int shift) {
-        return new ElementVariable(index, variables, value, shift);
+        return new ElementVariableFast(index, variables, value, shift);
     }
 
 }
