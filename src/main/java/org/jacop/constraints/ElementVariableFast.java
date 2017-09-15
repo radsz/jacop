@@ -161,6 +161,19 @@ public class ElementVariableFast extends Constraint implements Stateful, Satisfi
             firstConsistencyCheck = false;
         }
 
+        if (value.singleton() && index.singleton()) {
+            IntVar v = list[index.value() - 1 - indexOffset];
+            v.domain.in(store.level, v, value.value(), value.value());
+            removeConstraint();
+	    return;
+        }
+        if (index.singleton()) {
+            int position = index.value() - 1 - indexOffset;
+            value.domain.in(store.level, value, list[position].domain);
+            list[position].domain.in(store.level, list[position], value.domain);
+	    return;
+        }
+	
         int min = IntDomain.MaxInt;
         int max = IntDomain.MinInt;
         IntervalDomain indexDom = new IntervalDomain(5); // create with size 5 ;)
@@ -181,17 +194,6 @@ public class ElementVariableFast extends Constraint implements Stateful, Satisfi
         index.domain.in(store.level, index, indexDom.complement());
         value.domain.in(store.level, value, min, max);
 
-        if (index.singleton()) {
-            int position = index.value() - 1 - indexOffset;
-            value.domain.in(store.level, value, list[position].domain);
-            list[position].domain.in(store.level, list[position], value.domain);
-
-        }
-        if (value.singleton() && index.singleton()) {
-            IntVar v = list[index.value() - 1 - indexOffset];
-            v.domain.in(store.level, v, value.value(), value.value());
-            removeConstraint();
-        }
     }
 
     boolean disjoint(IntVar v1, IntVar v2) {

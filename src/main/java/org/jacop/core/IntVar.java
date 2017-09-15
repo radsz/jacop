@@ -144,7 +144,7 @@ public class IntVar extends Var {
      */
     public IntVar(Store store, String name, int min, int max) {
 
-        if (max - min > 63)
+        if ((long)max - (long)min > 63L)
             commonInitialization(store, name, new IntervalDomain(min, max));
         else
             commonInitialization(store, name, new SmallDenseDomain(min, max));

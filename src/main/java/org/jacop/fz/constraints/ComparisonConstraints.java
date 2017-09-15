@@ -254,7 +254,7 @@ class ComparisonConstraints implements ParserTreeConstants {
 
                 int i2 = support.getInt(p2);
                 if (i2 < IntDomain.MinInt || i2 > IntDomain.MaxInt)
-                    throw new ArithmeticException("Too big constant "+i2+"; must be in interval "+IntDomain.MinInt+".."+IntDomain.MaxInt);
+                    throw new ArithmeticException("Constant "+i2+" outside variable bounds ; must be in interval "+IntDomain.MinInt+".."+IntDomain.MaxInt);
                 switch (operation) {
 
                     case Support.eq:
@@ -352,7 +352,7 @@ class ComparisonConstraints implements ParserTreeConstants {
                 IntVar v2 = support.getVariable(p2);
                 int i1 = support.getInt(p1);
                 if (i1 < IntDomain.MinInt || i1 > IntDomain.MaxInt)
-                    throw new ArithmeticException("Too big constant "+i1+"; must be in interval "+IntDomain.MinInt+".."+IntDomain.MaxInt);
+                    throw new ArithmeticException("Constant "+i1+" outside variable bounds; must be in interval "+IntDomain.MinInt+".."+IntDomain.MaxInt);
 
                 switch (operation) {
 
@@ -489,10 +489,10 @@ class ComparisonConstraints implements ParserTreeConstants {
                 if (p2.getType() == 0 || p2.getType() == 1) { // first parameter int/bool & second parameter int/bool
                     int i1 = support.getInt(p1);
                     if (i1 < IntDomain.MinInt || i1 > IntDomain.MaxInt)
-                        throw new ArithmeticException("Too big constant "+i1+"; must be in interval "+IntDomain.MinInt+".."+IntDomain.MaxInt);
+                        throw new ArithmeticException("Constant "+i1+" outside variable bounds; must be in interval "+IntDomain.MinInt+".."+IntDomain.MaxInt);
                     int i2 = support.getInt(p2);
                     if (i2 < IntDomain.MinInt || i2 > IntDomain.MaxInt)
-                        throw new ArithmeticException("Too big constant "+i2+"; must be in interval "+IntDomain.MinInt+".."+IntDomain.MaxInt);
+                        throw new ArithmeticException("Constant "+i2+" outside variable bounds; must be in interval "+IntDomain.MinInt+".."+IntDomain.MaxInt);
                     switch (operation) {
                         case Support.eq:
                             if (i1 != i2)
@@ -525,7 +525,7 @@ class ComparisonConstraints implements ParserTreeConstants {
 
                     int i1 = support.getInt(p1);
                     if (i1 < IntDomain.MinInt || i1 > IntDomain.MaxInt)
-                        throw new ArithmeticException("Too big constant "+i1+"; must be in interval "+IntDomain.MinInt+".."+IntDomain.MaxInt);
+                        throw new ArithmeticException("Constant "+i1+" outside variable bounds; must be in interval "+IntDomain.MinInt+".."+IntDomain.MaxInt);
                     IntVar v2 = support.getVariable(p2);
 
                     switch (operation) {
@@ -557,7 +557,7 @@ class ComparisonConstraints implements ParserTreeConstants {
                     IntVar v1 = support.getVariable(p1);
                     int i2 = support.getInt(p2);
                     if (i2 < IntDomain.MinInt || i2 > IntDomain.MaxInt)
-                        throw new ArithmeticException("Too big constant "+i2+"; must be in interval "+IntDomain.MinInt+".."+IntDomain.MaxInt);
+                        throw new ArithmeticException("Constant "+i2+" outside variable bounds; must be in interval "+IntDomain.MinInt+".."+IntDomain.MaxInt);
 
                     switch (operation) {
                         case Support.eq:
