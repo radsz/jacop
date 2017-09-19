@@ -76,13 +76,6 @@ public class XexpYeqZ extends Constraint implements SatisfiedPresent {
 
         checkInputForNullness(new String[]{"x", "y", "z"}, new Object[]{x, y, z});
 
-        if ( x.min() < 0 )
-            throw new IllegalArgumentException("Constraint XexpYeqZ has variable x that has a domain which allows negative values.");
-        if ( y.min() <= 0 )
-            throw new IllegalArgumentException("Constraint XexpYeqZ has variable y that has a domain which allows zero and/or negative values.");
-        if ( z.min() < 0 )
-            throw new IllegalArgumentException("Constraint XexpYeqZ has variable z that has a domain which allows negative values.");
-
         numberId = idNumber.incrementAndGet();
 
         this.x = x;
@@ -104,44 +97,75 @@ public class XexpYeqZ extends Constraint implements SatisfiedPresent {
         do {
 
             store.propagationHasOccurred = false;
+	    
+	    if (x.min() >= 0 && y.min() > 0) {
 
-            // compute bounds for x
-            xMin = Math.max(Math.pow(z.min(), 1.0 / y.max()), x.min());
-            xMax = Math.min(Math.pow(z.max(), 1.0 / y.min()), x.max());
+		// compute bounds for z
+		zMin = Math.max(Math.pow(x.min(), y.min()), z.min());
+		zMax = Math.min(Math.pow(x.max(), y.max()), z.max());
 
-            // compute bounds for y
-            if (x.max() == 0 || z.min() == 0)
-                yMin = y.min();
-            else if (x.max() != 1)
-                yMin = Math.max(aLog(x.max(), z.min()), y.min());
-            else
-                yMin = y.min();
-            if (x.min() == 0 || z.max() == 0)
-                yMax = y.max();
-            else if (x.min() != 1)
-                yMax = Math.min(aLog(x.min(), z.max()), y.max());
-            else
-                yMax = y.max();
+		int zMinInt = toInt(Math.floor(zMin)), zMaxInt = toInt(Math.ceil(zMax));
+		
+		if (zMinInt > zMaxInt) 
+		    throw Store.failException;
+		else
+		    z.domain.in(store.level, z, zMinInt, zMaxInt);
+		
+		// compute bounds for x
+		xMin = Math.max(Math.pow(z.min(), 1.0 / y.max()), x.min());
+		xMax = Math.min(Math.pow(z.max(), 1.0 / y.min()), x.max());
 
-            // compute bounds for z
-            zMin = Math.max(Math.pow(x.min(), y.min()), z.min());
-            zMax = Math.min(Math.pow(x.max(), y.max()), z.max());
+		int xMinInt = toInt(Math.floor(xMin)), xMaxInt = toInt(Math.ceil(xMax));
+		
+		if (xMinInt > xMaxInt)
+		    throw Store.failException;
+		else
+		    x.domain.in(store.level, x, xMinInt, xMaxInt);
 
-            if ((int) Math.floor(xMin) > (int) Math.ceil(xMax))
-                throw Store.failException;
-            else
-                x.domain.in(store.level, x, (int) Math.floor(xMin), (int) Math.ceil(xMax));
+		// compute bounds for y
+		if (x.max() == 0 || z.min() == 0)
+		    yMin = y.min();
+		else if (x.max() != 1)
+		    yMin = Math.max(aLog(x.max(), z.min()), y.min());
+		else
+		    yMin = y.min();
+		if (x.min() == 0 || z.max() == 0)
+		    yMax = y.max();
+		else if (x.min() != 1)
+		    yMax = Math.min(aLog(x.min(), z.max()), y.max());
+		else
+		    yMax = y.max();
 
-            if ((int) Math.floor(yMin) > (int) Math.ceil(yMax))
-                throw Store.failException;
-            else
-                y.domain.in(store.level, y, (int) Math.floor(yMin), (int) Math.ceil(yMax));
+		int yMinInt = toInt(Math.floor(yMin)), yMaxInt = toInt(Math.ceil(yMax));
+		
+		if (yMinInt > yMaxInt )
+		    throw Store.failException;
+		else
+		    y.domain.in(store.level, y, yMinInt, yMaxInt);
 
-            if ((int) Math.floor(zMin) > (int) Math.ceil(zMax))
-                throw Store.failException;
-            else
-                z.domain.in(store.level, z, (int) Math.floor(zMin), (int) Math.ceil(zMax));
+	    }
+	    else if (x.singleton() && y.singleton()) {  // x.min() < 0 || y.min() <= 0
 
+		    double zValue = Math.pow((double)x.value(), (double)y.value());
+
+		    if (zValue < (double)Integer.MIN_VALUE || zValue > (double)Integer.MAX_VALUE)
+			throw store.failException;
+		    
+		    double z1 = Math.floor(zValue);
+		    double z2 = Math.ceil(zValue);
+		    
+		    if (z1 == z2)
+			z.domain.in(store.level, z, toInt(z1), toInt(z1));
+		    else
+			throw store.failException;
+		}
+		else if (y.singleton(0))
+		    z.domain.in(store.level, z, 1, 1);
+		else if (y.max() < -1) {
+		    x.domain.in(store.level, x, -1, 1);
+		    z.domain.in(store.level, z, -1, 1);
+		}
+	    
         } while (store.propagationHasOccurred);
 
     }

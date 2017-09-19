@@ -451,9 +451,16 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
         } else {
             throw new ArithmeticException("Overflow occurred " + f);
         }
-
     }
 
+    static int toInt(final double f) {
+        if (f >= (double) Integer.MIN_VALUE && f <= (double) Integer.MAX_VALUE) {
+            return (int) f;
+        } else {
+            throw new ArithmeticException("Overflow occurred " + f);
+        }
+    }
+    
     int long2int(long value) {
 	if (value > (long)Integer.MAX_VALUE)
 	    return Integer.MAX_VALUE;
