@@ -39,6 +39,7 @@ import org.jacop.constraints.SumBool;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
+import org.jacop.constraints.SumWeight;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XltY;
@@ -472,7 +473,10 @@ class LinearConstraints implements ParserTreeConstants {
                         else
                             support.pose(new SumInt(store, p2, "==", v));
                     } else {
-                        support.pose(new LinearInt(store, p2, p1, "==", p3));
+                        if (p2.length < 15)
+                            support.pose(new LinearInt(store, p2, p1, "==", p3));
+                        else
+                            support.pose(new SumWeight(p2, p1, p3));
                     }
                 }
                 break;

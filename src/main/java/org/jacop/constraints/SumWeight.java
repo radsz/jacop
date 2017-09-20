@@ -61,12 +61,12 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
     /**
      * It specifies a list of weights associated with the variables being summed.
      */
-    private int weights[];
+    private long weights[];
 
     /**
      * It specifies value to which SumWeight is equal to.
      */
-    private int equalTo;
+    private long equalTo;
 
 
     LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
@@ -100,12 +100,12 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
         queueIndex = 1;
         numberId = idNumber.incrementAndGet();
 
-        Map<IntVar, Integer> parameters = Var.createEmptyPositioning();
+        Map<IntVar, Long> parameters = Var.createEmptyPositioning();
 
         for (int i = 0; i < list.length; i++) {
-            if (weights[i] == 0)
+            if (weights[i] == 0L)
                 continue;
-            Integer accumulatedCoefficient = parameters.getOrDefault(list[i], 0);
+            Long accumulatedCoefficient = parameters.getOrDefault(list[i], 0L);
             accumulatedCoefficient += weights[i];
             if (accumulatedCoefficient != 0) {
                 parameters.put(list[i], accumulatedCoefficient);
@@ -116,7 +116,7 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
         }
 
         if (sum != null) {
-            Integer accumulatedCoefficient = parameters.getOrDefault(sum, 0);
+            Long accumulatedCoefficient = parameters.getOrDefault(sum, 0L);
             accumulatedCoefficient -= 1;
             if (accumulatedCoefficient != 0) {
                 parameters.put(sum, accumulatedCoefficient);
@@ -126,11 +126,11 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
         }
 
         this.list = new IntVar[parameters.size()];
-        this.weights = new int[parameters.size()];
+        this.weights = new long[parameters.size()];
         this.equalTo = equalTo;
 
         int i = 0;
-        for (Map.Entry<IntVar, Integer> e : parameters.entrySet()) {
+        for (Map.Entry<IntVar, Long> e : parameters.entrySet()) {
             this.list[i] = e.getKey();
             this.weights[i] = e.getValue();
             i++;
@@ -165,7 +165,7 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
     /**
      * The sum of grounded variables.
      */
-    private TimeStamp<Integer> sumGrounded;
+    private TimeStamp<Long> sumGrounded;
 
     /**
      * The position for the next grounded variable.
@@ -191,23 +191,19 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
 
                 assert (!currentDomain.singleton()) : "Singletons should not occur in this part of the array";
 
-                int mul1 = currentDomain.min() * weights[i];
-                int mul2 = currentDomain.max() * weights[i];
+                long mul1 = currentDomain.min() * weights[i];
+                long mul2 = currentDomain.max() * weights[i];
 
                 if (mul1 <= mul2) {
                     lMin += mul1;
-                    // lMin = add(lMin, mul1);
                     lMinArray[i] = mul1;
                     lMax += mul2;
-                    // lMax = add(lMax, mul2);
                     lMaxArray[i] = mul2;
                 } else {
 
                     lMin += mul2;
-                    // lMin = add(lMin, mul2);
                     lMinArray[i] = mul2;
                     lMax += mul1;
-                    // lMax = add(lMax, mul1);
                     lMaxArray[i] = mul1;
 
                 }
@@ -225,8 +221,8 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
 
             store.propagationHasOccurred = false;
 
-            int min = equalTo - lMax;
-            int max = equalTo - lMin;
+            long min = equalTo - lMax;
+            long max = equalTo - lMin;
 
             int pointer1 = nextGroundedPosition.value();
 
@@ -234,17 +230,15 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
 
                 IntVar v = list[i];
 
-                float d1 = ((float) (min + lMaxArray[i]) / weights[i]);
-                float d2 = ((float) (max + lMinArray[i]) / weights[i]);
-
-                int divMin, divMax;
-                if (d1 <= d2) {
-                    divMin = toInt(Math.round(Math.ceil(d1)));
-                    divMax = toInt(Math.round(Math.floor(d2)));
-                } else {
-                    divMin = toInt(Math.round(Math.ceil(d2)));
-                    divMax = toInt(Math.round(Math.floor(d1)));
-                }
+		long w = weights[i];
+		int divMin, divMax;
+		if (w > 0) {
+		    divMin = long2int(divRoundUp((min + lMaxArray[i]), w));
+		    divMax = long2int(divRoundDown((max + lMinArray[i]), w));
+		} else { // w < 0
+		    divMin = long2int(divRoundUp(-(max + lMinArray[i]), -w));
+		    divMax = long2int(divRoundDown(-(min + lMaxArray[i]), -w));
+		}
 
                 if (divMin > divMax)
                     throw Store.failException;
@@ -259,6 +253,22 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
 
     }
 
+    private long divRoundDown(long a, long b) {
+	// return Math.floorDiv(a,b);
+        if (a >= 0)
+            return a / b;
+        else // a < 0
+            return (a - b + 1) / b;
+    }
+
+    private long divRoundUp(long a, long b) {
+	// return -Math.floorDiv(-a,b);
+        if (a >= 0)
+            return (a + b - 1) / b;
+        else // a < 0
+            return a / b;
+    }
+
     @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
     }
@@ -267,27 +277,27 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
 
         positionMaping = Var.positionMapping(list, false, this.getClass());
 
-        sumGrounded = new TimeStamp<>(store, 0);
+        sumGrounded = new TimeStamp<>(store, 0L);
         nextGroundedPosition = new TimeStamp<>(store, 0);
 
         store.registerRemoveLevelLateListener(this);
 
-        lMinArray = new int[list.length];
-        lMaxArray = new int[list.length];
-        lMin = 0;
-        lMax = 0;
+        lMinArray = new long[list.length];
+        lMaxArray = new long[list.length];
+        lMin = 0L;
+        lMax = 0L;
 
         super.impose(store);
 
     }
 
-    private int lMin;
+    private long lMin;
 
-    private int lMax;
+    private long lMax;
 
-    private int[] lMinArray;
+    private long[] lMinArray;
 
-    private int[] lMaxArray;
+    private long[] lMaxArray;
 
     private Map<Var, Integer> positionMaping;
 
@@ -314,11 +324,11 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
                 if (i < pointer)
                     return;
 
-                int value = var.min();
+                long value = (long)var.min();
 
-                int sumJustGrounded = 0;
+                long sumJustGrounded = 0;
 
-                int weightGrounded = weights[i];
+                long weightGrounded = weights[i];
 
                 if (pointer < i) {
                     IntVar grounded = list[i];
@@ -328,7 +338,7 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
                     positionMaping.put(list[i], i);
                     positionMaping.put(list[pointer], pointer);
 
-                    int temp = lMinArray[i];
+                    long temp = lMinArray[i];
                     lMinArray[i] = lMinArray[pointer];
                     lMinArray[pointer] = temp;
 
@@ -341,11 +351,11 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
 
                 }
 
-                sumJustGrounded += value * weightGrounded; // add(sumJustGrounded, IntDomain.multiply(value, weightGrounded));
+                sumJustGrounded += value * weightGrounded;
 
                 sumGrounded.update(sumGrounded.value() + sumJustGrounded);
 
-                lMin += sumJustGrounded - lMinArray[pointer]; //add(lMin, sumJustGrounded - lMinArray[pointer]);
+                lMin += sumJustGrounded - lMinArray[pointer];
                 lMax += sumJustGrounded - lMaxArray[pointer];
                 lMinArray[pointer] = sumJustGrounded;
                 lMaxArray[pointer] = sumJustGrounded;
@@ -355,23 +365,23 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
 
             } else {
 
-                int mul1 = var.min() * weights[i];
-                int mul2 = var.max() * weights[i];
+                long mul1 = var.min() * weights[i];
+                long mul2 = var.max() * weights[i];
 
                 if (mul1 <= mul2) {
 
-                    lMin += mul1 - lMinArray[i]; //add(lMin, mul1 - lMinArray[i]);
+                    lMin += mul1 - lMinArray[i];
                     lMinArray[i] = mul1;
 
-                    lMax += mul2 - lMaxArray[i]; //add(lMax, mul2 - lMaxArray[i]);
+                    lMax += mul2 - lMaxArray[i];
                     lMaxArray[i] = mul2;
 
                 } else {
 
-                    lMin += mul2 - lMinArray[i]; //add(lMin, mul2 - lMinArray[i]);
+                    lMin += mul2 - lMinArray[i];
                     lMinArray[i] = mul2;
 
-                    lMax += mul1 - lMaxArray[i]; //add(lMax, mul1 - lMaxArray[i]);
+                    lMax += mul1 - lMaxArray[i];
                     lMaxArray[i] = mul1;
 
                 }
@@ -390,10 +400,10 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
 
     void checkForOverflow() {
 
-        int s1 = Math.multiplyExact(equalTo, -1);
-        int s2 = Math.multiplyExact(equalTo, -1);
+        long s1 = Math.multiplyExact(equalTo, -1);
+        long s2 = Math.multiplyExact(equalTo, -1);
 
-        int sumMin = 0, sumMax = 0;
+        long sumMin = 0, sumMax = 0;
         if (s1 <= s2) {
             sumMin = Math.addExact(sumMin, s1);
             sumMax = Math.addExact(sumMax, s2);
@@ -403,8 +413,8 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
         }
 
         for (int i = 0; i < list.length; i++) {
-            int n1 = Math.multiplyExact(list[i].min(), weights[i]);
-            int n2 = Math.multiplyExact(list[i].max(), weights[i]);
+            long n1 = Math.multiplyExact(list[i].min(), weights[i]);
+            long n2 = Math.multiplyExact(list[i].max(), weights[i]);
 
             if (n1 <= n2) {
                 sumMin = Math.addExact(sumMin, n1);
