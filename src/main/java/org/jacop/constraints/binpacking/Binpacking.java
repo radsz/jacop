@@ -382,7 +382,7 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
     }
 
     @Override public void queueVariable(int level, Var var) {
-        if (itemMap.get(var) != null)
+        if (itemMap.containsKey(var))
             itemQueue.add((IntVar) var);
         else
             binQueue.add((IntVar) var);
@@ -395,7 +395,7 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
 
     @Override public String toString() {
 
-        StringBuffer result = new StringBuffer(id());
+        StringBuilder result = new StringBuilder(id());
 
         result.append(" : binpacking([");
 

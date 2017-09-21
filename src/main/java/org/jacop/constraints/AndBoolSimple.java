@@ -1,4 +1,4 @@
-/**
+/*
  * AndBoolSimple.java
  * This file is part of JaCoP.
  * <p>
@@ -46,17 +46,17 @@ import org.jacop.core.Store;
 
 public class AndBoolSimple extends PrimitiveConstraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies variables which all must be equal to 1 to set result variable to 1.
      */
-    public IntVar a, b;
+    final public IntVar a, b;
 
     /**
      * It specifies variable result, storing the result of and function performed a list of variables.
      */
-    public IntVar result;
+    final public IntVar result;
 
     /**
      * It constructs AndBoolSimple.
@@ -83,10 +83,8 @@ public class AndBoolSimple extends PrimitiveConstraint {
 
     }
 
-    @Override public void include(Store store) {
-    }
+    public void consistency(final Store store) {
 
-    public void consistency(Store store) {
         if (a.max() == 0 || b.max() == 0) {
             result.domain.in(store.level, result, 0, 0);
             removeConstraint();
@@ -100,9 +98,11 @@ public class AndBoolSimple extends PrimitiveConstraint {
                 b.domain.in(store.level, b, 0, 0);
             else if (b.min() == 1)
                 a.domain.in(store.level, a, 0, 0);
+
     }
 
-    @Override public void notConsistency(Store store) {
+    @Override public void notConsistency(final Store store) {
+
         // result = not a OR not b
         if (a.max() == 0 || b.max() == 0) {
             result.domain.in(store.level, result, 1, 1);
@@ -117,6 +117,7 @@ public class AndBoolSimple extends PrimitiveConstraint {
                 b.domain.in(store.level, b, 0, 0);
             else if (b.min() == 1)
                 a.domain.in(store.level, a, 0, 0);
+
     }
 
     @Override public boolean satisfied() {
@@ -129,15 +130,8 @@ public class AndBoolSimple extends PrimitiveConstraint {
 
     @Override public String toString() {
 
-        StringBuffer resultString = new StringBuffer(id());
+        return id() + " : andBoolSimple([ " + a + ", " + b + "], " + result + ")";
 
-        resultString.append(" : andBoolSimple([ ");
-        resultString.append(a + ", " + b);
-
-        resultString.append("], ");
-        resultString.append(result);
-        resultString.append(")");
-        return resultString.toString();
     }
 
     public String checkInvariants() {

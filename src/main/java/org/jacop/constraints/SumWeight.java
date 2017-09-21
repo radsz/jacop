@@ -30,20 +30,21 @@
 
 package org.jacop.constraints;
 
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
 
-import java.util.stream.Stream;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * SumWeight constraint implements the weighted summation over several
  * variables . It provides the weighted sum from all variables on the list.
  * The weights are integers.
- *
+ * <p>
  * Use when number of variables is greater than 15, otherwise use LinearInt.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -51,23 +52,32 @@ import java.util.stream.Stream;
  */
 public class SumWeight extends Constraint implements UsesQueueVariable, SatisfiedPresent {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies a list of variables being summed.
      */
-    private IntVar list[];
+    final private IntVar list[];
 
     /**
      * It specifies a list of weights associated with the variables being summed.
      */
-    private long weights[];
+    final private long weights[];
 
     /**
      * It specifies value to which SumWeight is equal to.
      */
-    private long equalTo;
+    final private long equalTo;
 
+    /**
+     * The sum of grounded variables.
+     */
+    private TimeStamp<Long> sumGrounded;
+
+    /**
+     * The position for the next grounded variable.
+     */
+    private TimeStamp<Integer> nextGroundedPosition;
 
     LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
 
@@ -83,7 +93,7 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
     /**
      * @param list    the list of varibales
      * @param weights the list of weights
-     * @param equalTo     the value to which SumWeight is equal to.
+     * @param equalTo the value to which SumWeight is equal to.
      */
     public SumWeight(IntVar[] list, int[] weights, int equalTo) {
         this(list, weights, null, equalTo);
@@ -91,11 +101,11 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
 
     private SumWeight(IntVar[] list, int[] weights, IntVar sum, int equalTo) {
 
-        checkInputForNullness(new String[]{"list", "weights"}, new Object[][]{list, {weights}});
+        checkInputForNullness(new String[] {"list", "weights"}, new Object[][] {list, {weights}});
 
         if (list.length != weights.length)
-            throw new IllegalArgumentException("Constraint " + this.getClass().getSimpleName() +
-                "has length of list and weights parameter different.");
+            throw new IllegalArgumentException(
+                "Constraint " + this.getClass().getSimpleName() + "has length of list and weights parameter different.");
 
         queueIndex = 1;
         numberId = idNumber.incrementAndGet();
@@ -154,23 +164,10 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
         this(variables.toArray(new IntVar[variables.size()]), weights.stream().mapToInt(i -> i).toArray(), sum);
     }
 
-
     @Override public void removeLevelLate(int level) {
         variableQueue.clear();
         backtrackHasOccured = true;
-
     }
-
-
-    /**
-     * The sum of grounded variables.
-     */
-    private TimeStamp<Long> sumGrounded;
-
-    /**
-     * The position for the next grounded variable.
-     */
-    private TimeStamp<Integer> nextGroundedPosition;
 
     @Override public void consistency(Store store) {
 
@@ -216,7 +213,7 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
 
         do {
 
-            if (! ( lMin <= equalTo && equalTo <= lMax ) )
+            if (!(lMin <= equalTo && equalTo <= lMax))
                 throw Store.failException;
 
             store.propagationHasOccurred = false;
@@ -230,15 +227,15 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
 
                 IntVar v = list[i];
 
-		long w = weights[i];
-		int divMin, divMax;
-		if (w > 0) {
-		    divMin = long2int(divRoundUp((min + lMaxArray[i]), w));
-		    divMax = long2int(divRoundDown((max + lMinArray[i]), w));
-		} else { // w < 0
-		    divMin = long2int(divRoundUp(-(max + lMinArray[i]), -w));
-		    divMax = long2int(divRoundDown(-(min + lMaxArray[i]), -w));
-		}
+                long w = weights[i];
+                int divMin, divMax;
+                if (w > 0) {
+                    divMin = long2int(divRoundUp((min + lMaxArray[i]), w));
+                    divMax = long2int(divRoundDown((max + lMinArray[i]), w));
+                } else { // w < 0
+                    divMin = long2int(divRoundUp(-(max + lMinArray[i]), -w));
+                    divMax = long2int(divRoundDown(-(min + lMaxArray[i]), -w));
+                }
 
                 if (divMin > divMax)
                     throw Store.failException;
@@ -254,7 +251,7 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
     }
 
     private long divRoundDown(long a, long b) {
-	// return Math.floorDiv(a,b);
+        // return Math.floorDiv(a,b);
         if (a >= 0)
             return a / b;
         else // a < 0
@@ -262,7 +259,7 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
     }
 
     private long divRoundUp(long a, long b) {
-	// return -Math.floorDiv(-a,b);
+        // return -Math.floorDiv(-a,b);
         if (a >= 0)
             return (a + b - 1) / b;
         else // a < 0
@@ -316,7 +313,7 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
         for (IntVar var : fdvs) {
 
             int i = positionMaping.get(var);
-            
+
             if (var.singleton()) {
 
                 int pointer = nextGroundedPosition.value();
@@ -324,7 +321,7 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
                 if (i < pointer)
                     return;
 
-                long value = (long)var.min();
+                long value = (long) var.min();
 
                 long sumJustGrounded = 0;
 

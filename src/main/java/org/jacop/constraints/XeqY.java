@@ -47,17 +47,17 @@ import org.jacop.core.Store;
 
 public class XeqY extends PrimitiveConstraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies a left hand variable in equality constraint.
      */
-    public IntVar x;
+    final public IntVar x;
 
     /**
      * It specifies a right hand variable in equality constraint.
      */
-    public IntVar y;
+    final public IntVar y;
 
     /**
      * It constructs constraint X = Y.
@@ -76,7 +76,7 @@ public class XeqY extends PrimitiveConstraint {
         setScope(x, y);
     }
 
-    @Override public void consistency(Store store) {
+    @Override public void consistency(final Store store) {
 
         do {
 
@@ -107,7 +107,7 @@ public class XeqY extends PrimitiveConstraint {
         return IntDomain.ANY;
     }
 
-    @Override public void notConsistency(Store store) {
+    @Override public void notConsistency(final Store store) {
 
         if (y.singleton())
             x.domain.inComplement(store.level, x, y.value());
@@ -118,9 +118,7 @@ public class XeqY extends PrimitiveConstraint {
     }
 
     @Override public boolean notSatisfied() {
-
         return !x.domain.isIntersecting(y.domain);
-
     }
 
     @Override public boolean satisfied() {

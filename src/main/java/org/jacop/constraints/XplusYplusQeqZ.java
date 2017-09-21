@@ -1,4 +1,4 @@
-/**
+/*
  * XplusYplusQeqZ.java
  * This file is part of JaCoP.
  * <p>
@@ -35,7 +35,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 
 /**
  * Constraint X + Y + Q = Z
@@ -48,27 +47,27 @@ import org.jacop.core.Var;
 
 public class XplusYplusQeqZ extends PrimitiveConstraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies variable x in constraint x + y + q = z.
      */
-    public IntVar x;
+    final public IntVar x;
 
     /**
      * It specifies variable y in constraint x + y + q = z.
      */
-    public IntVar y;
+    final public IntVar y;
 
     /**
      * It specifies variable q in constraint x + y + q = z.
      */
-    public IntVar q;
+    final public IntVar q;
 
     /**
      * It specifies variable z in constraint x + y + q = z.
      */
-    public IntVar z;
+    final public IntVar z;
 
     /**
      * It constructs X+Y+Q=Z constraint.
@@ -91,7 +90,7 @@ public class XplusYplusQeqZ extends PrimitiveConstraint {
         setScope(x, y, q, z);
     }
 
-    @Override public void consistency(Store store) {
+    @Override public void consistency(final Store store) {
 
         do {
 
@@ -122,7 +121,7 @@ public class XplusYplusQeqZ extends PrimitiveConstraint {
         return IntDomain.BOUND;
     }
 
-    @Override public void notConsistency(Store store) {
+    @Override public void notConsistency(final Store store) {
 
         do {
 

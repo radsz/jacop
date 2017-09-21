@@ -1,4 +1,4 @@
-/**
+/*
  * Xor.java
  * This file is part of JaCoP.
  * <p>
@@ -30,19 +30,14 @@
 
 package org.jacop.constraints;
 
+import org.jacop.core.*;
+import org.jacop.util.QueueForward;
+
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
-import org.jacop.core.Domain;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Store;
-import org.jacop.core.Var;
-import org.jacop.util.QueueForward;
-
 /**
  * Xor constraint - xor("constraint", B).
- *
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.4
@@ -50,33 +45,34 @@ import org.jacop.util.QueueForward;
 
 public class Xor extends PrimitiveConstraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies constraint c, which status must satisfy xor relationship with variable b.
      */
-    public PrimitiveConstraint c;
+    final public PrimitiveConstraint c;
 
     /**
      * It specifies variable b, which boolean status must satisfy xor relationship with status of constraint c.
      */
-    public IntVar b;
+    final public IntVar b;
 
-    final public QueueForward<PrimitiveConstraint> queueForward;
+    final private QueueForward<PrimitiveConstraint> queueForward;
 
-    boolean needRemoveLevelLate = false;
+    private boolean needRemoveLevelLate = false;
 
     /**
      * It constructs a xor constraint.
+     *
      * @param c constraint c.
      * @param b boolean variable b.
      */
     public Xor(PrimitiveConstraint c, IntVar b) {
 
-        checkInputForNullness(new String[]{"c", "b"}, new Object[]{c, b});
+        checkInputForNullness(new String[] {"c", "b"}, new Object[] {c, b});
 
-        if (! (b.min() >= 0 && b.max() <= 1) )
-            throw new IllegalArgumentException( "Constraint Xor has a variable b = " + b + " that has a domain outside of 0..1.");
+        if (!(b.min() >= 0 && b.max() <= 1))
+            throw new IllegalArgumentException("Constraint Xor has a variable b = " + b + " that has a domain outside of 0..1.");
 
         numberId = idNumber.incrementAndGet();
 
@@ -90,14 +86,14 @@ public class Xor extends PrimitiveConstraint {
             needRemoveLevelLate = false;
         }
 
-        setScope( Stream.concat(c.arguments().stream(), Stream.of(b)) );
-        setConstraintScope(new PrimitiveConstraint[]{c});
+        setScope(Stream.concat(c.arguments().stream(), Stream.of(b)));
+        setConstraintScope(c);
 
-        queueForward = new QueueForward<PrimitiveConstraint>(c, arguments());
-	this.queueIndex = c.queueIndex;
+        queueForward = new QueueForward<>(c, arguments());
+        this.queueIndex = c.queueIndex;
     }
 
-    @Override public void consistency(Store store) {
+    @Override public void consistency(final Store store) {
 
         // Does not need to loop on newPropagation since
         // the constraint C loops itself
@@ -197,7 +193,7 @@ public class Xor extends PrimitiveConstraint {
     @Override public void impose(Store store) {
 
         super.impose(store);
-        arguments().stream().forEach( i -> queueVariable(store.level, i));
+        arguments().forEach(i -> queueVariable(store.level, i));
 
     }
 
@@ -209,7 +205,7 @@ public class Xor extends PrimitiveConstraint {
         return id() + " : Xor(" + c + ", " + b + " )";
     }
 
-    @Override public void notConsistency(Store store) {
+    @Override public void notConsistency(final Store store) {
 
         // Does not need to loop on newPropagation since
         // the constraint C loops itself

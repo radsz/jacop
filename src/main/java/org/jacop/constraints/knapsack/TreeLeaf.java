@@ -1,4 +1,4 @@
-/**
+/*
  * TreeLeaf.java
  * This file is part of JaCoP.
  * <p>
@@ -204,7 +204,7 @@ public final class TreeLeaf extends TreeNode {
 
     @Override public final String toString() {
 
-        StringBuffer result = new StringBuffer();
+        StringBuilder result = new StringBuilder();
 
         result.append("{wmax: ").append(getWMax()).append(", eff: ").append(efficiency);
         result.append(", var: ").append(quantity).append("(, slice: ").append(slice);

@@ -1,4 +1,4 @@
-/**
+/*
  * SumBool.java
  * This file is part of JaCoP.
  * <p>
@@ -56,7 +56,7 @@ public class SumBool extends PrimitiveConstraint {
 
     Store store;
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     boolean reified = true;
 

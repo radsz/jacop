@@ -1,4 +1,4 @@
-/**
+/*
  * XmulYeqZ.java
  * This file is part of JaCoP.
  * <p>
@@ -31,15 +31,10 @@
 
 package org.jacop.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.api.SatisfiedPresent;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Interval;
-import org.jacop.core.Store;
-import org.jacop.core.Var;
+import org.jacop.core.*;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraint X * Y #= Z
@@ -52,24 +47,24 @@ import org.jacop.core.Var;
 
 public class XmulYeqZ extends Constraint implements SatisfiedPresent {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies variable x in constraint x * y = z.
      */
-    public IntVar x;
+    final public IntVar x;
 
     /**
      * It specifies variable y in constraint x * y = z.
      */
-    public IntVar y;
+    final public IntVar y;
 
     /**
      * It specifies variable z in constraint x * y = z.
      */
-    public IntVar z;
+    final public IntVar z;
 
-    boolean xSquare = false;
+    private final boolean xSquare;
 
     /**
      * It constructs a constraint X * Y = Z.
@@ -80,7 +75,7 @@ public class XmulYeqZ extends Constraint implements SatisfiedPresent {
      */
     public XmulYeqZ(IntVar x, IntVar y, IntVar z) {
 
-        checkInputForNullness(new String[]{"x", "y", "z"}, new Object[]{x, y, z});
+        checkInputForNullness(new String[] {"x", "y", "z"}, new Object[] {x, y, z});
 
         numberId = idNumber.incrementAndGet();
 
@@ -168,14 +163,5 @@ public class XmulYeqZ extends Constraint implements SatisfiedPresent {
 
         return id() + " : XmulYeqZ(" + x + ", " + y + ", " + z + " )";
     }
-
-    // private void checkForOverflow() {
-
-    //     Math.multiplyExact(x.min(), y.min());
-    //     Math.multiplyExact(x.min(), y.max());
-    //     Math.multiplyExact(x.max(), y.min());
-    //     Math.multiplyExact(x.max(), y.max());
-
-    // }
 
 }

@@ -63,14 +63,14 @@ public class XorBool extends PrimitiveConstraint {
 	 * 1   1   0
 	 */
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies variables x for the constraint.
      */
-    public IntVar[] x;
+    final public IntVar[] x;
 
-    public IntVar y;
+    final public IntVar y;
 
     final int l;
 
@@ -118,7 +118,7 @@ public class XorBool extends PrimitiveConstraint {
         return null;
     }
 
-    @Override public void consistency(Store store) {
+    @Override public void consistency(final Store store) {
 
             IntVar nonGround = null;
 
@@ -155,7 +155,7 @@ public class XorBool extends PrimitiveConstraint {
 
     }
 
-    @Override public void notConsistency(Store store) {
+    @Override public void notConsistency(final Store store) {
 
             IntVar nonGround = null;
 

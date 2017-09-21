@@ -1,4 +1,4 @@
-/**
+/*
  * XdivYeqZ.java
  * This file is part of JaCoP.
  * <p>
@@ -48,22 +48,22 @@ import org.jacop.core.Store;
 
 public class XdivYeqZ extends Constraint implements SatisfiedPresent {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies variable x in constraint x / y = z.
      */
-    public IntVar x;
+    final public IntVar x;
 
     /**
      * It specifies variable y in constraint x / y = z.
      */
-    public IntVar y;
+    final public IntVar y;
 
     /**
      * It specifies variable z in constraint x / y = z.
      */
-    public IntVar z;
+    final public IntVar z;
 
     /**
      * It constructs a constraint X div Y = Z.
@@ -87,7 +87,7 @@ public class XdivYeqZ extends Constraint implements SatisfiedPresent {
 
     }
 
-    @Override public void consistency(Store store) {
+    @Override public void consistency(final Store store) {
 
         // it must stay as the code below assumes y is never equal to 0.
         y.domain.inComplement(store.level, y, 0);

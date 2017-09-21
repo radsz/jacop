@@ -1,4 +1,4 @@
-/**
+/*
  * XplusYlteqZ.java
  * This file is part of JaCoP.
  * <p>
@@ -35,7 +35,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 
 /**
  * Constraint X + Y{@literal =<} Z
@@ -48,22 +47,22 @@ import org.jacop.core.Var;
 
 public class XplusYlteqZ extends PrimitiveConstraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies variable x in constraint x + y{@literal <=} z.
      */
-    public IntVar x;
+    final public IntVar x;
 
     /**
      * It specifies variable x in constraint x + y{@literal <=} z.
      */
-    public IntVar y;
+    final public IntVar y;
 
     /**
      * It specifies variable x in constraint x + y{@literal <=} z.
      */
-    public IntVar z;
+    final public IntVar z;
 
     /**
      * It constructs X + Y{@literal <=} Z constraint.
@@ -84,7 +83,7 @@ public class XplusYlteqZ extends PrimitiveConstraint {
         setScope(x, y, z);
     }
 
-    @Override public void consistency(Store store) {
+    @Override public void consistency(final Store store) {
         x.domain.inMax(store.level, x, z.max() - y.min());
         y.domain.inMax(store.level, y, z.max() - x.min());
         z.domain.inMin(store.level, z, x.min() + y.min());
@@ -106,7 +105,7 @@ public class XplusYlteqZ extends PrimitiveConstraint {
         return IntDomain.BOUND;
     }
 
-    @Override public void notConsistency(Store store) {
+    @Override public void notConsistency(final Store store) {
 
         x.domain.inMin(store.level, x, z.min() - y.max() + 1);
 

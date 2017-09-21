@@ -50,22 +50,22 @@ public final class KnapsackItem implements Comparable<KnapsackItem> {
     /**
      * It is a finite domain variable specifying the possible quantity of that item.
      */
-    public IntVar quantity;
+    final public IntVar quantity;
 
     /**
      * It specifies the weight of a single instance of this item.
      */
-    public int weight;
+    final public int weight;
 
     /**
      * It specifies the profit of a single instance of this item.
      */
-    public int profit;
+    final public int profit;
 
     /**
      * It stores information about the item efficiency - profit/weight.
      */
-    public double efficiency;
+    final public double efficiency;
 
     /**
      * It constructs an item. It requires information about weight and profit,
@@ -75,7 +75,7 @@ public final class KnapsackItem implements Comparable<KnapsackItem> {
      * @param weight - weight of the single item.
      * @param profit - profit due to one single item.
      */
-    public KnapsackItem(IntVar quantity, int weight, int profit) {
+    KnapsackItem(IntVar quantity, int weight, int profit) {
         super();
         if (weight <= 0)
             throw new IllegalArgumentException("Weight attribute has to be greater than 0.");
@@ -160,7 +160,8 @@ public final class KnapsackItem implements Comparable<KnapsackItem> {
 
     @Override public String toString() {
 
-        StringBuffer result = new StringBuffer();
+        StringBuilder result = new StringBuilder();
+
         result.append("item[ fdv: ").append(quantity.toString()).append(", weight: ").append(weight);
         result.append(", profit: ").append(profit).append(", efficiency: ").append(efficiency).append(" ]");
 

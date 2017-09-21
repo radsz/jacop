@@ -52,7 +52,7 @@ import org.jacop.core.Store;
 
 public class AbsXeqY extends PrimitiveConstraint implements Stateful {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     static final boolean debugAll = false;
 
@@ -65,12 +65,12 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
     /**
      * It contains variable x.
      */
-    public IntVar x;
+    final public IntVar x;
 
     /**
      * It contains variable y.
      */
-    public IntVar y;
+    final public IntVar y;
 
     /**
      * It constructs |X| = Y constraints.
@@ -113,7 +113,7 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
             firstConsistencyCheck = true;
     }
 
-    @Override public void consistency(Store store) {
+    @Override public void consistency(final Store store) {
 
         if (firstConsistencyCheck) {
             y.domain.inMin(store.level, y, 0);
@@ -128,7 +128,7 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
 
     }
 
-    void domainConsistency(Store store) {
+    void domainConsistency(final Store store) {
 
         do {
 
@@ -228,7 +228,7 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
 
     }
 
-    void boundConsistency(Store store) {
+    void boundConsistency(final Store store) {
 
         do {
 
@@ -292,7 +292,7 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
             return IntDomain.BOUND;
     }
 
-    @Override public void notConsistency(Store store) {
+    @Override public void notConsistency(final Store store) {
 
         do {
             store.propagationHasOccurred = false;
@@ -356,7 +356,7 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
 
     @Override public String toString() {
 
-        StringBuffer result = new StringBuffer(id());
+        StringBuilder result = new StringBuilder(id());
 
         result.append(" : absXeqY(").append(x).append(", ").append(y).append(" )");
 

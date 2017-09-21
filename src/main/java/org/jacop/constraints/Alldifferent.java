@@ -48,7 +48,7 @@ import org.jacop.core.*;
 
 public class Alldifferent extends Constraint implements UsesQueueVariable, SatisfiedPresent {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies a list of variables which must take different values.
@@ -134,7 +134,7 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
             if (!list[i].singleton())
                 return false;
 
-        Set<Integer> values = new HashSet<Integer>();
+        Set<Integer> values = new HashSet<>();
 
         for (IntVar aList : list)
             if (!values.add(aList.value()))
@@ -195,7 +195,7 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
 
     @Override public String toString() {
 
-        StringBuffer result = new StringBuffer(id());
+        StringBuilder result = new StringBuilder(id());
 
         result.append(" : alldifferent([");
 

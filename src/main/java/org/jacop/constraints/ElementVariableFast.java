@@ -1,4 +1,4 @@
-/**
+/*
  * ElementVariableFast.java
  * This file is part of JaCoP.
  * <p>
@@ -60,7 +60,7 @@ import org.jacop.core.ValueEnumeration;
 
 public class ElementVariableFast extends Constraint implements Stateful, SatisfiedPresent {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     boolean firstConsistencyCheck = true;
 
@@ -69,23 +69,23 @@ public class ElementVariableFast extends Constraint implements Stateful, Satisfi
     /**
      * It specifies variable index within an element constraint list[index - indexOffset] = value.
      */
-    public IntVar index;
+    final public IntVar index;
 
     /**
      * It specifies variable value within an element constraint list[index - indexOffset] = value.
      */
-    public IntVar value;
+    final public IntVar value;
 
     /**
      * It specifies indexOffset within an element constraint list[index - indexOffset] = value.
      */
-    public final int indexOffset;
+    private final int indexOffset;
 
     /**
      * It specifies list of variables within an element constraint list[index - indexOffset] = value.
      * The list is addressed by positive integers ({@code >=1}) if indexOffset is equal to 0. 
      */
-    public IntVar list[];
+    final public IntVar list[];
 
     /**
      * It constructs an element constraint. 
@@ -101,7 +101,6 @@ public class ElementVariableFast extends Constraint implements Stateful, Satisfi
         checkInputForNullness("list", list);
 
         queueIndex = 2;
-
 
         this.indexOffset = indexOffset;
         this.numberId = idNumber.incrementAndGet();
@@ -196,13 +195,8 @@ public class ElementVariableFast extends Constraint implements Stateful, Satisfi
 
     }
 
-    boolean disjoint(IntVar v1, IntVar v2) {
-        if (v1.min() > v2.max() || v2.min() > v1.max())
-            return true;
-        else if (!v1.domain.isIntersecting(v2.domain))
-            return true;
-        else
-            return false;
+    private boolean disjoint(IntVar v1, IntVar v2) {
+        return v1.min() > v2.max() || v2.min() > v1.max() || !v1.domain.isIntersecting(v2.domain);
     }
 
     @Override public int getDefaultConsistencyPruningEvent() {
@@ -230,7 +224,7 @@ public class ElementVariableFast extends Constraint implements Stateful, Satisfi
 
     @Override public String toString() {
 
-        StringBuffer result = new StringBuffer(id());
+        StringBuilder result = new StringBuilder(id());
 
         result.append(" : elementVariableFast").append("( ").append(index).append(", [");
 

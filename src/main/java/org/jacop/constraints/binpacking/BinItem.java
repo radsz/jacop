@@ -42,9 +42,9 @@ import org.jacop.core.IntVar;
 
 class BinItem {
 
-    public IntVar bin;
+    final public IntVar bin;
 
-    public int weight;
+    final public int weight;
 
     BinItem(IntVar bin, int weight) {
 

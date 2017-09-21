@@ -1,4 +1,4 @@
-/**
+/*
  * MaxSimple.java
  * This file is part of JaCoP.
  * <p>
@@ -30,17 +30,17 @@
 
 package org.jacop.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * MaxSimple constraint implements the Maximum/2 constraint. It provides the maximum
- * variable from all variables on the list. 
- *
+ * variable from all variables on the list.
+ * <p>
  * max(x1, x2) = max.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -49,27 +49,28 @@ import org.jacop.core.Store;
 
 public class MaxSimple extends Constraint implements SatisfiedPresent {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies a variables between which a maximum value is being searched for.
      */
-    public IntVar x1, x2;
+    final public IntVar x1, x2;
 
     /**
      * It specifies variable max which stores the maximum value present in the list.
      */
-    public IntVar max;
+    final public IntVar max;
 
     /**
      * It constructs max constraint.
+     *
      * @param max variable denoting the maximum value
-     * @param x1 first variable for which a  maximum value is imposed.
-     * @param x2 second variable for which a  maximum value is imposed.
+     * @param x1  first variable for which a  maximum value is imposed.
+     * @param x2  second variable for which a  maximum value is imposed.
      */
     public MaxSimple(IntVar x1, IntVar x2, IntVar max) {
 
-        checkInputForNullness(new String[]{"x1", "x2", "max"}, new Object[] {x1, x2, max});
+        checkInputForNullness(new String[] {"x1", "x2", "max"}, new Object[] {x1, x2, max});
 
         this.numberId = idNumber.incrementAndGet();
         this.max = max;
@@ -80,29 +81,23 @@ public class MaxSimple extends Constraint implements SatisfiedPresent {
 
         setScope(x1, x2, max);
     }
-    
+
     @Override public void consistency(Store store) {
 
-        // do {
+        int maxMax = max.max();
 
-            int maxMax = max.max();
+        x1.domain.inMax(store.level, x1, maxMax);
+        x2.domain.inMax(store.level, x2, maxMax);
 
-            x1.domain.inMax(store.level, x1, maxMax);
-            x2.domain.inMax(store.level, x2, maxMax);
+        int minValue = (x1.min() > x2.min()) ? x1.min() : x2.min();
+        int maxValue = (x1.max() > x2.max()) ? x1.max() : x2.max();
 
-            // store.propagationHasOccurred = false;
+        max.domain.in(store.level, max, minValue, maxValue);
 
-            int minValue = (x1.min() > x2.min()) ? x1.min() : x2.min();
-            int maxValue = (x1.max() > x2.max()) ? x1.max() : x2.max();
-
-            max.domain.in(store.level, max, minValue, maxValue);
-
-            if (x1.max() < max.min())
-                x2.domain.in(store.level, x2, max.dom());
-            if (x2.max() < max.min())
-                x1.domain.in(store.level, x1, max.dom());
-
-        // } while (store.propagationHasOccurred);
+        if (x1.max() < max.min())
+            x2.domain.in(store.level, x2, max.dom());
+        if (x2.max() < max.min())
+            x1.domain.in(store.level, x1, max.dom());
 
     }
 
@@ -113,18 +108,14 @@ public class MaxSimple extends Constraint implements SatisfiedPresent {
     @Override public boolean satisfied() {
 
         int MAX = max.min();
-        boolean sat = x1.max() <= MAX && x2.max() <= MAX;
 
-        return sat;
+        return x1.max() <= MAX && x2.max() <= MAX;
     }
 
     @Override public String toString() {
 
-        StringBuffer result = new StringBuffer(id());
+        return id() + " : maxSimple(" + x1 + ", " + x2 + ", " + max + ")";
 
-        result.append(" : maxSimple(" + x1 + ", " + x2 + ", " + max + ")");
-
-        return result.toString();
     }
 
 }

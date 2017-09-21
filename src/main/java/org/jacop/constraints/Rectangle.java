@@ -1,4 +1,4 @@
-/**
+/*
  * Rectangle.java
  * This file is part of JaCoP.
  * <p>
@@ -47,17 +47,17 @@ import org.jacop.core.Var;
 
 public class Rectangle {
 
-    int dim;
+    final int dim;
 
     /**
      * It specifies the length of the rectangle in each dimension.
      */
-    public IntVar[] length;
+    final public IntVar[] length;
 
     /**
      * It specifies the origin of the rectangle in each dimension.
      */
-    public IntVar[] origin;
+    final public IntVar[] origin;
 
     /**
      * It constructs a rectangle.

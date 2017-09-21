@@ -63,18 +63,18 @@ class CumulativePrimary extends Constraint {
     /**
      * start times of tasks
      */
-    private IntVar[] start;
+    final private IntVar[] start;
 
     /**
      * All durations and resources of the constraint
      */
-    private int[] dur;
-    private int[] res;
+    final private int[] dur;
+    final private int[] res;
 
     /**
      * It specifies the limit of the profile of cumulative use of resources.
      */
-    public IntVar limit;
+    final public IntVar limit;
 
     /**
      * It creates a cumulative constraint.
@@ -146,7 +146,7 @@ class CumulativePrimary extends Constraint {
 
     @Override public String toString() {
 
-        StringBuffer result = new StringBuffer(id());
+        StringBuilder result = new StringBuilder(id());
 
         result.append(" : cumulativePrimary([ ");
         for (int i = 0; i < start.length - 1; i++)

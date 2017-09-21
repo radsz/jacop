@@ -1,4 +1,4 @@
-/**
+/*
  * MinSimple.java
  * This file is part of JaCoP.
  * <p>
@@ -30,17 +30,17 @@
 
 package org.jacop.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * MinSimple constraint implements the minimum/2 constraint. It provides the minimum
- * variable from all variables on the list. 
- *
+ * variable from all variables on the list.
+ * <p>
  * min(x1, x2) = min.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -49,27 +49,28 @@ import org.jacop.core.Store;
 
 public class MinSimple extends Constraint implements SatisfiedPresent {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies a variables between which a minimum value is being searched for.
      */
-    public IntVar x1, x2;
+    final public IntVar x1, x2;
 
     /**
      * It specifies variable min which stores the minimum value present in the list.
      */
-    public IntVar min;
+    final public IntVar min;
 
     /**
      * It constructs min constraint.
+     *
      * @param min variable denoting the minimum value
-     * @param x1 first variable for which a  minimum value is imposed.
-     * @param x2 second variable for which a  minimum value is imposed.
+     * @param x1  first variable for which a  minimum value is imposed.
+     * @param x2  second variable for which a  minimum value is imposed.
      */
     public MinSimple(IntVar x1, IntVar x2, IntVar min) {
 
-        checkInputForNullness(new String[]{"x1", "x2", "min"}, new Object[] {x1, x2, min});
+        checkInputForNullness(new String[] {"x1", "x2", "min"}, new Object[] {x1, x2, min});
 
         this.numberId = idNumber.incrementAndGet();
         this.min = min;
@@ -82,28 +83,22 @@ public class MinSimple extends Constraint implements SatisfiedPresent {
 
     }
 
-    @Override public void consistency(Store store) {
+    @Override public void consistency(final Store store) {
 
-        // do {
+        int minMin = min.min();
 
-            int minMin = min.min();
+        x1.domain.inMin(store.level, x1, minMin);
+        x2.domain.inMin(store.level, x2, minMin);
 
-            x1.domain.inMin(store.level, x1, minMin);
-            x2.domain.inMin(store.level, x2, minMin);
+        int minValue = (x1.min() > x2.min()) ? x2.min() : x1.min();
+        int maxValue = (x1.max() > x2.max()) ? x2.max() : x1.max();
 
-            // store.propagationHasOccurred = false;
+        min.domain.in(store.level, min, minValue, maxValue);
 
-            int minValue = (x1.min() > x2.min()) ? x2.min() : x1.min();
-            int maxValue = (x1.max() > x2.max()) ? x2.max() : x1.max();
-
-            min.domain.in(store.level, min, minValue, maxValue);
-
-            if (x1.min() > min.max())
-                x2.domain.in(store.level, x2, min.dom());
-            if (x2.min() > min.max())
-                x1.domain.in(store.level, x1, min.dom());
-
-        // } while (store.propagationHasOccurred);
+        if (x1.min() > min.max())
+            x2.domain.in(store.level, x2, min.dom());
+        if (x2.min() > min.max())
+            x1.domain.in(store.level, x1, min.dom());
 
     }
 
@@ -114,18 +109,14 @@ public class MinSimple extends Constraint implements SatisfiedPresent {
     public boolean satisfied() {
 
         int MIN = min.max();
-        boolean sat = x1.min() >= MIN && x2.min() >= MIN;
+        return x1.min() >= MIN && x2.min() >= MIN;
 
-        return sat;
     }
 
     @Override public String toString() {
 
-        StringBuffer result = new StringBuffer(id());
+        return id() + " : minSimple(" + x1 + ", " + x2 + ", " + min + ")";
 
-        result.append(" : minSimple(" + x1 + ", " + x2 + ", " + min + ")");
-
-        return result.toString();
     }
 
 }

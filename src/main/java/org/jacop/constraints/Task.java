@@ -43,7 +43,7 @@ import org.jacop.core.IntervalDomain;
 
 class Task {
 
-    IntVar start, dur, res;
+    final IntVar start, dur, res;
 
     Task(IntVar start, IntVar duration, IntVar resourceUsage) {
         this.start = start;

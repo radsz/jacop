@@ -64,11 +64,11 @@ public class Alldiff extends Alldifferent {
 
     int[] min, max, u;
 
-    Comparator<IntVar> maxVariable = new VariablemaxComparator<IntVar>();
+    private Comparator<IntVar> maxVariable = new VariablemaxComparator<IntVar>();
 
-    Comparator<IntVar> minVariable = new VariableminComparator<IntVar>();
+    private Comparator<IntVar> minVariable = new VariableminComparator<IntVar>();
 
-    protected IntVar[] listAlldiff;
+    IntVar[] listAlldiff;
 
     protected Alldiff() {
     }
@@ -243,8 +243,8 @@ public class Alldiff extends Alldifferent {
 
     @Override public String toString() {
 
-        StringBuffer result = new StringBuffer(id());
-        result.append(" : alldiff([");
+        StringBuilder result = new StringBuilder(id());
+        result.append(" : Alldiff([");
 
         for (int i = 0; i < listAlldiff.length; i++) {
             result.append(listAlldiff[i]);

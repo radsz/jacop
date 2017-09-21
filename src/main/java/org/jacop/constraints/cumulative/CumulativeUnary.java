@@ -57,8 +57,8 @@ public class CumulativeUnary extends Cumulative {
     /**
      * Local copies of tasks in normal and reserved views
      */
-    private TaskView[] tvn;
-    private TaskView[] tvr;
+    final private TaskView[] tvn;
+    final private TaskView[] tvr;
 
     /**
      * It creates a cumulative constraint.
@@ -332,7 +332,7 @@ public class CumulativeUnary extends Cumulative {
 
     @Override public String toString() {
 
-        StringBuffer result = new StringBuffer(id());
+        StringBuilder result = new StringBuilder(id());
 
         result.append(" : cumulativeUnary([ ");
         for (int i = 0; i < taskNormal.length - 1; i++)

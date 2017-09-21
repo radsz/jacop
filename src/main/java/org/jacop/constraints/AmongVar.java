@@ -68,7 +68,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     /**
      * Number of Among constraints created.
      */
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     //All variables attributes
     private Map<IntVar, Integer> xIndex;

@@ -55,19 +55,19 @@ import org.jacop.core.Var;
 
 public class ArgMin extends Constraint implements SatisfiedPresent {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     boolean firstConsistencyCheck = true;
 
     /**
      * It specifies a list of variables among which a maximum value is being searched for.
      */
-    public IntVar list[];
+    final public IntVar list[];
 
     /**
      * It specifies variable max which stores the maximum value present in the list. 
      */
-    public IntVar minIndex;
+    final public IntVar minIndex;
 
 
     /**
@@ -130,8 +130,6 @@ public class ArgMin extends Constraint implements SatisfiedPresent {
 
         IntVar var;
         IntDomain vDom;
-
-        // System.out.println(" --> " + this);
 
         if (firstConsistencyCheck) {
             minIndex.domain.in(store.level, minIndex, 1 + indexOffset, list.length + indexOffset);

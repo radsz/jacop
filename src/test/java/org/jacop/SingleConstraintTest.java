@@ -63,7 +63,7 @@ import static org.junit.Assert.assertThat;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.4
  */
-public class SingleConstraintTest {
+public class SingleConstraintTest extends TestHelper {
 
     @Rule
     public TestRule watcher = new TestWatcher() {
@@ -756,90 +756,6 @@ public class SingleConstraintTest {
 
     }
 
-    @Test public void testSumWeightPerformance() {
-
-        Store store = new Store();
-
-        int xLength = 15;
-        int xSize = 3;
-
-        IntVar[] x = getIntVars(store, "x", xLength, xSize + 1);
-        IntVar n = new IntVar(store, "sum", 10, 40);
-        SumWeight sum = new SumWeight(x, new int[] {1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5}, n);
-
-        store.impose(sum);
-
-        int noOfSolutions = noOfAllSolutionsNoRecord(store, x, new IntVar[] {n});
-
-        assertThat(noOfSolutions, is(31733221));
-
-    }
-
-    @Test public void testLinearIntPerformance() {
-
-        Store store = new Store();
-
-        int xLength = 15;
-        int xSize = 3;
-
-        IntVar[] x = getIntVars(store, "x", xLength, xSize + 1);
-        IntVar n = new IntVar(store, "sum", 10, 40);
-        LinearInt sum = new LinearInt(store, x, new int[] {1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5}, "==", n);
-
-        store.impose(sum);
-
-        int noOfSolutions = noOfAllSolutionsNoRecord(store, x, new IntVar[] {n});
-
-        assertThat(noOfSolutions, is(31733221));
-
-    }
-
-    @Test public void testSumWeightPerformance2() {
-
-        Store store = new Store();
-
-        int xLength = 50;
-        int xSize = 2;
-
-        IntVar[] x = getIntVars(store, "x", xLength, xSize + 1);
-        IntVar n = new IntVar(store, "sum", 237, 240);
-        int weights[] = new int[xLength];
-        for (int i = 0; i < weights.length; i++)
-            weights[i] = i % 6;
-
-        SumWeight sum = new SumWeight(x, weights, n);
-
-        store.impose(sum);
-
-        int noOfSolutions = noOfAllSolutionsNoRecord(store, x, new IntVar[] {n});
-
-        assertThat(noOfSolutions, is(81428571));
-
-    }
-
-
-    @Test public void testLinearIntPerformance2() {
-
-        Store store = new Store();
-
-        int xLength = 50;
-        int xSize = 2;
-
-        IntVar[] x = getIntVars(store, "x", xLength, xSize + 1);
-        IntVar n = new IntVar(store, "sum", 237, 240);
-        int weights[] = new int[xLength];
-        for (int i = 0; i < weights.length; i++)
-            weights[i] = i % 6;
-
-        LinearInt sum = new LinearInt(store, x, weights, "==", n);
-
-        store.impose(sum);
-
-        int noOfSolutions = noOfAllSolutionsNoRecord(store, x, new IntVar[] {n});
-
-        assertThat(noOfSolutions, is(81428571));
-
-    }
 
 
     @Test public void testLex() {
@@ -1055,70 +971,5 @@ public class SingleConstraintTest {
 
     }
 
-
-    private IntVar[] getIntVars(Store store, String idPrefix, int xLength, int xSize) {
-        IntVar[] y = new IntVar[xLength];
-
-        for (int i = 0; i < y.length; i++) {
-            y[i] = new IntVar(store, idPrefix + i, 0, xSize - 1);
-        }
-        return y;
-    }
-
-    private IntVar[] getShiftedIntVars(Store store, String idPrefix, int xLength, int xSize) {
-
-        IntVar[] x = new IntVar[xLength];
-        for (int i = 0; i < x.length; i++) {
-            x[i] = new IntVar(store, idPrefix + i, i, i + xSize - 1);
-        }
-        return x;
-    }
-
-    private FloatVar[] getShiftedFloatVars(Store store, String idPrefix, int xLength, int xSize) {
-
-        FloatVar[] x = new FloatVar[xLength];
-        for (int i = 0; i < x.length; i++) {
-            x[i] = new FloatVar(store, idPrefix + i, i, i + xSize - 1);
-        }
-        return x;
-    }
-
-    private int noOfAllSolutions(Store store, IntVar[]... variables) {
-
-        SelectChoicePoint<IntVar> select =
-            new SimpleSelect<IntVar>(Arrays.stream(variables).map(Arrays::stream).flatMap(i -> i).toArray(IntVar[]::new),
-                new MostConstrainedStatic<IntVar>(), new IndomainMin<IntVar>());
-
-        DepthFirstSearch search = new DepthFirstSearch<IntVar>();
-
-        search.getSolutionListener().searchAll(true);
-        search.getSolutionListener().recordSolutions(true);
-        search.setAssignSolution(true);
-
-        boolean result = search.labeling(store, select);
-
-        //search.printAllSolutions();
-        return search.getSolutionListener().solutionsNo();
-
-    }
-
-    private int noOfAllSolutionsNoRecord(Store store, IntVar[]... variables) {
-
-        SelectChoicePoint<IntVar> select =
-            new SimpleSelect<IntVar>(Arrays.stream(variables).map(Arrays::stream).flatMap(i -> i).toArray(IntVar[]::new),
-                new MostConstrainedStatic<IntVar>(), new IndomainMin<IntVar>());
-
-        DepthFirstSearch search = new DepthFirstSearch<IntVar>();
-
-        search.getSolutionListener().searchAll(true);
-        search.getSolutionListener().recordSolutions(false);
-        search.setAssignSolution(true);
-
-        boolean result = search.labeling(store, select);
-
-        //search.printAllSolutions();
-        return search.getSolutionListener().solutionsNo();
-
-    }
 
 }

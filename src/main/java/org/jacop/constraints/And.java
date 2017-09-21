@@ -30,37 +30,36 @@
 
 package org.jacop.constraints;
 
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import org.jacop.core.Store;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.util.QueueForward;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * Constraint c1 /\ c2 ... /\ cn
- *
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.4
  */
 public class And extends PrimitiveConstraint implements UsesQueueVariable {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
-
-    Hashtable<Var, Integer> pruningEvents;
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies a list of constraints which must be satisfied to keep And constraint satisfied.
      */
-    public PrimitiveConstraint listOfC[];
+    private final PrimitiveConstraint listOfC[];
 
-    final public QueueForward<PrimitiveConstraint> queueForward;
+    private final QueueForward<PrimitiveConstraint> queueForward;
 
     /**
      * It constructs an And constraint based on primitive constraints. The
      * constraint is satisfied if all constraints are satisfied.
+     *
      * @param listOfC arraylist of constraints
      */
     public And(List<PrimitiveConstraint> listOfC) {
@@ -69,6 +68,7 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
 
     /**
      * It constructs a simple And constraint based on two primitive constraints.
+     *
      * @param c1 the first primitive constraint
      * @param c2 the second primitive constraint
      */
@@ -78,6 +78,7 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
 
     /**
      * It constructs an And constraint over an array of primitive constraints.
+     *
      * @param c an array of primitive constraints constituting the And constraint.
      */
     public And(PrimitiveConstraint[] c) {
@@ -85,15 +86,14 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
         checkInputForNullness("c", c);
         this.queueIndex = 1;
         this.numberId = idNumber.incrementAndGet();
-        this.listOfC = new PrimitiveConstraint[c.length];
         this.listOfC = Arrays.copyOf(c, c.length);
         setScope(listOfC);
         setConstraintScope(listOfC);
         queueForward = new QueueForward<>(listOfC, arguments());
-	this.queueIndex = Arrays.stream(c).max((a, b) -> Integer.max(a.queueIndex, b.queueIndex)).get().queueIndex; 
+        this.queueIndex = Arrays.stream(c).max((a, b) -> Integer.max(a.queueIndex, b.queueIndex)).get().queueIndex;
     }
 
-    boolean propagation;
+    private boolean propagation;
 
     @Override public void consistency(Store store) {
 
@@ -162,26 +162,25 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
 
         int i = 0;
         while (!notSat && i < listOfC.length) {
-            notSat = notSat || listOfC[i].notSatisfied();
+            notSat = listOfC[i].notSatisfied();
             i++;
         }
         return notSat;
     }
 
     @Override public boolean satisfied() {
-        boolean sat = true;
 
-        int i = 0;
-        while (sat && i < listOfC.length) {
-            sat = sat && listOfC[i].satisfied();
-            i++;
-        }
-        return sat;
+        for (PrimitiveConstraint c : listOfC)
+            if (! c.satisfied())
+                return false;
+
+        return true;
+
     }
 
     @Override public String toString() {
 
-        StringBuffer result = new StringBuffer(id());
+        StringBuilder result = new StringBuilder(id());
 
         result.append(" : And(");
 

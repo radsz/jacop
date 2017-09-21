@@ -1,4 +1,4 @@
-/**
+/*
  * XmodYeqZ.java
  * This file is part of JaCoP.
  * <p>
@@ -30,13 +30,13 @@
 
 package org.jacop.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
 import org.jacop.core.Store;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraint X mod Y = Z
@@ -47,32 +47,33 @@ import org.jacop.core.Store;
 
 public class XmodYeqZ extends Constraint implements SatisfiedPresent {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies variable x in constraint x mod y = z.
      */
-    public IntVar x;
+    final public IntVar x;
 
     /**
      * It specifies variable y in constraint x mod y = z.
      */
-    public IntVar y;
+    final public IntVar y;
 
     /**
      * It specifies variable z in constraint x mod y = z.
      */
-    public IntVar z;
+    final public IntVar z;
 
     /**
      * It constructs a constraint X mod Y = Z.
+     *
      * @param x variable x.
      * @param y variable y.
      * @param z variable z.
      */
     public XmodYeqZ(IntVar x, IntVar y, IntVar z) {
 
-        checkInputForNullness(new String[]{"x", "y", "z"}, new Object[]{x, y, z});
+        checkInputForNullness(new String[] {"x", "y", "z"}, new Object[] {x, y, z});
 
         numberId = idNumber.incrementAndGet();
 
@@ -83,7 +84,7 @@ public class XmodYeqZ extends Constraint implements SatisfiedPresent {
         setScope(x, y, z);
     }
 
-    @Override public void consistency(Store store) {
+    @Override public void consistency(final Store store) {
 
         int resultMin = IntDomain.MinInt;
         int resultMax = IntDomain.MaxInt;
@@ -118,35 +119,35 @@ public class XmodYeqZ extends Constraint implements SatisfiedPresent {
 
             z.domain.in(store.level, z, reminderMin, reminderMax);
 
-	    if (! (y.min() <= 0 && y.max() >= 0)) {
+            if (!(y.min() <= 0 && y.max() >= 0)) {
 
-		// Bounds for result
-		int oldResultMin = resultMin, oldResultMax = resultMax;
+                // Bounds for result
+                int oldResultMin = resultMin, oldResultMax = resultMax;
 
-		Interval result = IntDomain.divBounds(x.min(), x.max(), y.min(), y.max());
+                Interval result = IntDomain.divBounds(x.min(), x.max(), y.min(), y.max());
 
-		resultMin = result.min();
-		resultMax = result.max();
+                resultMin = result.min();
+                resultMax = result.max();
 
-		if (oldResultMin != resultMin || oldResultMax != resultMax)
-		    store.propagationHasOccurred = true;
+                if (oldResultMin != resultMin || oldResultMax != resultMax)
+                    store.propagationHasOccurred = true;
 
-		// Bounds for Y
-		Interval yBounds = IntDomain.divBounds(x.min() - reminderMax, x.max() - reminderMin, resultMin, resultMax);
+                // Bounds for Y
+                Interval yBounds = IntDomain.divBounds(x.min() - reminderMax, x.max() - reminderMin, resultMin, resultMax);
 
-		y.domain.in(store.level, y, yBounds.min(), yBounds.max());
+                y.domain.in(store.level, y, yBounds.min(), yBounds.max());
 
-		// Bounds for Z and reminder
-		Interval reminder = IntDomain.mulBounds(resultMin, resultMax, y.min(), y.max());
-		int zMin = reminder.min(), zMax = reminder.max();
+                // Bounds for Z and reminder
+                Interval reminder = IntDomain.mulBounds(resultMin, resultMax, y.min(), y.max());
+                int zMin = reminder.min(), zMax = reminder.max();
 
-		reminderMin = x.min() - zMax;
-		reminderMax = x.max() - zMin;
+                reminderMin = x.min() - zMax;
+                reminderMax = x.max() - zMin;
 
-		z.domain.in(store.level, z, reminderMin, reminderMax);
+                z.domain.in(store.level, z, reminderMin, reminderMax);
 
-		x.domain.in(store.level, x, zMin + z.min(), zMax + z.max());
-	    }
+                x.domain.in(store.level, x, zMin + z.min(), zMax + z.max());
+            }
 
             assert checkSolution(resultMin, resultMax) == null : checkSolution(resultMin, resultMax);
 
@@ -167,7 +168,7 @@ public class XmodYeqZ extends Constraint implements SatisfiedPresent {
         return id() + " : XmodYeqZ(" + x + ", " + y + ", " + z + " )";
     }
 
-    String checkSolution(int resultMin, int resultMax) {
+    private String checkSolution(int resultMin, int resultMax) {
         String result = null;
 
         if (z.singleton() && y.singleton() && x.singleton()) {
@@ -181,11 +182,12 @@ public class XmodYeqZ extends Constraint implements SatisfiedPresent {
         return result;
     }
 
-    int div(int a, int b) {
+    private int div(int a, int b) {
         return (int) Math.floor((float) a / (float) b);
     }
 
-    int mod(int a, int b) {
+    private int mod(int a, int b) {
         return a - div(a, b) * b;
     }
+
 }

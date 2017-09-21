@@ -1,4 +1,4 @@
-/**
+/*
  * Rectangle.java
  * This file is part of JaCoP.
  * <p>
@@ -30,12 +30,12 @@
 
 package org.jacop.constraints.diffn;
 
+import org.jacop.core.IntVar;
+import org.jacop.core.Var;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
-
-import org.jacop.core.IntVar;
-import org.jacop.core.Var;
 
 /**
  * Defines a rectangle used in the diffn constraint.
@@ -51,8 +51,8 @@ public class Rectangle {
     /**
      * It specifies the the rectangle.
      */
-    public IntVar[] origin;
-    public IntVar[] length;
+    final public IntVar[] origin;
+    final public IntVar[] length;
 
 
     /**
@@ -62,7 +62,6 @@ public class Rectangle {
      * @param o2 origin in dimension 1
      * @param l1 length in dimension 0
      * @param l2 length in dimension 1
-     *
      */
     public Rectangle(IntVar o1, IntVar o2, IntVar l1, IntVar l2) {
         int dim = 2;
@@ -78,7 +77,6 @@ public class Rectangle {
      * It constructs a rectangle.
      *
      * @param list it specifies for each dimension (one after the other) its origin and length.
-     *
      */
     public Rectangle(IntVar[] list) {
         int dim = 2;
@@ -94,7 +92,6 @@ public class Rectangle {
      * It constructs a rectangle.
      *
      * @param list it specifies for each dimension (one after the other) its origin and length.
-     *
      */
     public Rectangle(List<? extends IntVar> list) {
         this(list.toArray(new IntVar[list.size()]));
@@ -153,9 +150,9 @@ public class Rectangle {
     }
 
     boolean noOverlap(Rectangle r) {
-	return noOverlap(r, 0) && noOverlap(r, 1);
+        return noOverlap(r, 0) && noOverlap(r, 1);
     }
-    
+
     boolean possibleOverlap(Rectangle r) {
         if (noOverlap(r, 0) || noOverlap(r, 1)) {
             return false;
@@ -179,24 +176,24 @@ public class Rectangle {
 
     @Override public String toString() {
 
-        StringBuffer result = new StringBuffer();
+        StringBuilder result = new StringBuilder();
 
         int dim = 2;
-        result.append("[" + index + ": ");
+        result.append("[").append(index).append(": ");
         for (int i = 0; i < dim; i++) {
-	    result.append(origin[i] + ", ");
+            result.append(origin[i]).append(", ");
         }
         for (int i = 0; i < dim; i++) {
-	    result.append(length[i]);
+            result.append(length[i]);
             if (i < dim - 1)
-	        result.append(", ");
+                result.append(", ");
         }
         result.append("]");
         return result.toString();
     }
 
     public static Stream<Var> getStream(Rectangle[] scope) {
-        return Arrays.stream(scope).map(r -> Stream.concat( Arrays.stream(r.origin), Arrays.stream( r.length) )).flatMap(i -> i);
+        return Arrays.stream(scope).map(r -> Stream.concat(Arrays.stream(r.origin), Arrays.stream(r.length))).flatMap(i -> i);
     }
 
 }

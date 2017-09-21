@@ -1,4 +1,4 @@
-/**
+/*
  * XmulYeqC.java
  * This file is part of JaCoP.
  * <p>
@@ -30,18 +30,13 @@
 
 package org.jacop.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.core.*;
 
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Interval;
-import org.jacop.core.Store;
-import org.jacop.core.Var;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraint X * Y #= C
- *
+ * <p>
  * Boundary consistency is used.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
@@ -50,52 +45,52 @@ import org.jacop.core.Var;
 
 public class XmulYeqC extends PrimitiveConstraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies variable x in constraint x * y = c.
      */
-    public IntVar x;
+    final public IntVar x;
 
     /**
      * It specifies variable y in constraint x * y = c.
      */
-    public IntVar y;
+    final public IntVar y;
 
     /**
      * It specifies constant c in constraint x * y = c.
      */
-    public int c;
+    final public int c;
 
     /**
      * It specifies if the constraint is actually, x^2 = c.
      */
-    boolean xSquare = false;
+    private final boolean xSquare;
 
     /**
      * It constructs constraint X * Y = C.
+     *
      * @param x variable x.
      * @param y variable y.
      * @param c constant c.
      */
     public XmulYeqC(IntVar x, IntVar y, int c) {
 
-        checkInputForNullness(new String[]{"x", "y"}, new Object[]{x, y});
+        checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
 
         numberId = idNumber.incrementAndGet();
 
-        xSquare = (x == y) ? true : false;
+        xSquare = x == y;
 
         this.x = x;
         this.y = y;
         this.c = c;
 
-	// checkForOverflow();
-	setScope(x, y);
+        setScope(x, y);
 
     }
 
-    @Override public void consistency(Store store) {
+    @Override public void consistency(final Store store) {
 
         if (xSquare)  // x^2 = c
             do {
@@ -159,7 +154,7 @@ public class XmulYeqC extends PrimitiveConstraint {
         return IntDomain.ANY;
     }
 
-    @Override public void notConsistency(Store store) {
+    @Override public void notConsistency(final Store store) {
 
         do {
 
@@ -189,18 +184,6 @@ public class XmulYeqC extends PrimitiveConstraint {
     @Override public String toString() {
 
         return id() + " : XmulYeqC(" + x + ", " + y + ", " + c + " )";
-    }
-
-    private void checkForOverflow() {
-
-	if (c > IntDomain.MaxInt || c < IntDomain.MinInt)
-	    throw new ArithmeticException("integer overflow");
-
-        // Math.multiplyExact(x.min(), y.min());
-        // Math.multiplyExact(x.min(), y.max());
-        // Math.multiplyExact(x.max(), y.min());
-        // Math.multiplyExact(x.max(), y.max());
-
     }
 
 }

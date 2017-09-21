@@ -1,4 +1,4 @@
-/**
+/*
  * Assignment.java
  * This file is part of JaCoP.
  * <p>
@@ -51,12 +51,13 @@ import org.jacop.core.*;
 
 public class Assignment extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies a list of variables d.
      */
-    public IntVar d[];
+    final public IntVar d[];
+
     /**
      * It specifies a shift applied to variables d.
      */

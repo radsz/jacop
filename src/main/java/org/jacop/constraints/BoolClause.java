@@ -30,15 +30,15 @@
 
 package org.jacop.constraints;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
-
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 /**
  * I defines a boolean clause for 0/1 variables x_i and y_i.
@@ -52,18 +52,18 @@ import org.jacop.core.TimeStamp;
 
 public class BoolClause extends PrimitiveConstraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies lists of variables for the constraint.
      */
-    public IntVar[] x;
-    public IntVar[] y;
+    final public IntVar[] x;
+    final public IntVar[] y;
 
     /**
      * It specifies length of lists x and y respectively.
      */
-    final int lx, ly;
+    private final int lx, ly;
 
     /**
      * Defines first position of the variable that is not ground to 0 (positionX) or 0 (positionY).
@@ -72,10 +72,10 @@ public class BoolClause extends PrimitiveConstraint {
     private TimeStamp<Integer> positionY;
 
     /**
-     * It constructs BoolClause. 
+     * It constructs BoolClause.
      *
      * @param x list of positive arguments x's.
-     * @param y list of negative arguments y's. 
+     * @param y list of negative arguments y's.
      */
     public BoolClause(IntVar[] x, IntVar[] y) {
 
@@ -95,14 +95,14 @@ public class BoolClause extends PrimitiveConstraint {
         else
             queueIndex = 0;
 
-        setScope( Stream.concat(Arrays.stream(x), Arrays.stream(y)));
+        setScope(Stream.concat(Arrays.stream(x), Arrays.stream(y)));
     }
 
     /**
-     * It constructs BoolClause. 
+     * It constructs BoolClause.
      *
      * @param x list of positive arguments x's.
-     * @param y list of negative arguments y's. 
+     * @param y list of negative arguments y's.
      */
     public BoolClause(List<IntVar> x, List<IntVar> y) {
         this(x.toArray(new IntVar[x.size()]), y.toArray(new IntVar[y.size()]));
@@ -110,7 +110,7 @@ public class BoolClause extends PrimitiveConstraint {
 
     /**
      * It checks invariants required by the constraint. Namely that
-     * boolean variables have boolean domain. 
+     * boolean variables have boolean domain.
      *
      * @return the string describing the violation of the invariant, null otherwise.
      */
@@ -144,8 +144,8 @@ public class BoolClause extends PrimitiveConstraint {
     }
 
     @Override public void include(Store store) {
-        positionX = new TimeStamp<Integer>(store, 0);
-        positionY = new TimeStamp<Integer>(store, 0);
+        positionX = new TimeStamp<>(store, 0);
+        positionY = new TimeStamp<>(store, 0);
     }
 
     /**
@@ -266,15 +266,12 @@ public class BoolClause extends PrimitiveConstraint {
             } else
                 return false;
 
-        if (startX == lx && startY == ly)
-            return true;
-        else
-            return false;
+        return startX == lx && startY == ly;
     }
 
     @Override public String toString() {
 
-        StringBuffer resultString = new StringBuffer(id());
+        StringBuilder resultString = new StringBuilder(id());
 
         resultString.append(" : BoolClause([ ");
         for (int i = 0; i < lx; i++) {

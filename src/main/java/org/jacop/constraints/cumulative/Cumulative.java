@@ -36,7 +36,6 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Cumulative implements the scheduling constraint using
@@ -104,8 +103,7 @@ public class Cumulative extends CumulativeBasic {
      * @param resources variables denoting resource usage of the tasks.
      * @param limit     the overall limit of resources which has to be used.
      */
-    public Cumulative(List<? extends IntVar> starts, List<? extends IntVar> durations, List<? extends IntVar> resources,
-        IntVar limit) {
+    public Cumulative(List<? extends IntVar> starts, List<? extends IntVar> durations, List<? extends IntVar> resources, IntVar limit) {
 
         this(starts.toArray(new IntVar[starts.size()]), durations.toArray(new IntVar[durations.size()]),
             resources.toArray(new IntVar[resources.size()]), limit);
@@ -120,7 +118,7 @@ public class Cumulative extends CumulativeBasic {
 
             profileProp(store);
 
-            if ( ! store.propagationHasOccurred && doEdgeFind)
+            if (!store.propagationHasOccurred && doEdgeFind)
                 edgeFind(store);
 
         } while (store.propagationHasOccurred);
@@ -207,8 +205,8 @@ public class Cumulative extends CumulativeBasic {
         int n = t.length;
         int[] prec = new int[n];
 
-	for (int i = 0; i < n; i++) 
-	    prec[t[i].index] = t[i].ect();
+        for (TaskView aT1 : t)
+            prec[aT1.index] = aT1.ect();
 
         for (TaskView aT : t) {
             if (tree.rootNode().env > C * (long) aT.lct()) {
@@ -234,9 +232,9 @@ public class Cumulative extends CumulativeBasic {
     private void adjustBounds(Store store, ThetaLambdaTree tree, TaskView[] t, int[] prec, long cap) {
 
         int n = t.length;
-	Set<Integer> capacities = new LinkedHashSet<Integer>();
-	for (int i = 0; i < n; i++) 
-	    capacities.add(t[i].res.min());
+        Set<Integer> capacities = new LinkedHashSet<>();
+        for (TaskView aT1 : t)
+            capacities.add(aT1.res.min());
 
         // System.out.println("capacities = " + capacities);
 
@@ -342,7 +340,7 @@ public class Cumulative extends CumulativeBasic {
 
     @Override public String toString() {
 
-        StringBuffer result = new StringBuffer(id());
+        StringBuilder result = new StringBuilder(id());
         if (doEdgeFind)
             result.append(" : cumulative([ ");
         else if (super.cumulativeForConstants != null)

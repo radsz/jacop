@@ -1,4 +1,4 @@
-/**
+/*
  * AndBoolVector.java
  * This file is part of JaCoP.
  * <p>
@@ -84,8 +84,8 @@ public class AndBoolVector extends PrimitiveConstraint {
 
         this.numberId = idNumber.incrementAndGet();
 
-        Set<IntVar> varSet = new HashSet<IntVar>();
-        Arrays.stream(list).forEach(varSet::add);
+        Set<IntVar> varSet = new HashSet<>();
+        varSet.addAll(Arrays.asList(list));
 
         this.l = varSet.size();
         this.list = varSet.toArray(new IntVar[varSet.size()]);
@@ -146,7 +146,7 @@ public class AndBoolVector extends PrimitiveConstraint {
     }
 
     @Override public void include(Store store) {
-        position = new TimeStamp<Integer>(store, 0);
+        position = new TimeStamp<>(store, 0);
     }
 
     public void consistency(Store store) {
@@ -294,7 +294,7 @@ public class AndBoolVector extends PrimitiveConstraint {
 
     @Override public String toString() {
 
-        StringBuffer resultString = new StringBuffer(id());
+        StringBuilder resultString = new StringBuilder(id());
 
         resultString.append(" : andBool([ ");
         for (int i = 0; i < l; i++) {
@@ -312,7 +312,7 @@ public class AndBoolVector extends PrimitiveConstraint {
 
     @Override public List<Constraint> decompose(Store store) {
 
-        constraints = new ArrayList<Constraint>();
+        constraints = new ArrayList<>();
 
         PrimitiveConstraint[] andConstraints = new PrimitiveConstraint[l];
 

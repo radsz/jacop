@@ -51,7 +51,7 @@ import java.util.stream.Stream;
 
 public class CumulativeBasic extends Constraint {
 
-    private static AtomicInteger idNumber = new AtomicInteger(0);
+    final private static AtomicInteger idNumber = new AtomicInteger(0);
 
     private static final boolean debug = false, debugNarr = false;
 
@@ -60,12 +60,12 @@ public class CumulativeBasic extends Constraint {
     /**
      * All tasks of the constraint
      */
-    TaskView[] taskNormal;
+    final TaskView[] taskNormal;
 
     /**
      * It specifies the limit of the profile of cumulative use of resources.
      */
-    public IntVar limit;
+    final public IntVar limit;
 
     /**
      * It specifies whether there possibly exist tasks that have duration or resource variable min value equal zero.
@@ -175,7 +175,7 @@ public class CumulativeBasic extends Constraint {
 
     @Override public String toString() {
 
-        StringBuffer result = new StringBuffer(id());
+        StringBuilder result = new StringBuilder(id());
 
         result.append(" : cumulativeBasic([ ");
         for (int i = 0; i < taskNormal.length - 1; i++)
