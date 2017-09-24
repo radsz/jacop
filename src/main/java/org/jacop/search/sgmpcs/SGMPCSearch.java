@@ -1,4 +1,4 @@
-/**
+/*
  * SGMPCSearch.java
  * This file is part of JaCoP.
  * <p>
@@ -30,33 +30,31 @@
 
 package org.jacop.search.sgmpcs;
 
+import org.jacop.constraints.XltC;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMin;
+import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.SimpleSelect;
+
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Random;
-
-import org.jacop.core.Store;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntDomain;
-
-import org.jacop.constraints.XltC;
-
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.SelectChoicePoint;
-import org.jacop.search.SimpleSelect;
-import org.jacop.search.IndomainMin;
+import java.util.function.Function;
 
 /**
  * SGMPCSearch - implements Solution-Guided Multi-Point Constructive
  * Search. This search starts with several elite solutions and tries
  * to impove (minimizing cost variable) them by doing either search
  * assuming an elite solution or staring with an empty solution.
- *
+ * <p>
  * This implementation is based on paper "Solution-guided Multi-point
  * Constructive Search for Job Shop Scheduling" by J. Christopher
  * Beck, Journal of Artificial Intelligence Research 29 (2007) 49–77.
  *
  * @author Krzysztof Kuchcinski
- *
  * @version 4.4
  */
 
@@ -106,7 +104,7 @@ public class SGMPCSearch {
     public final static int poly = 2;
     int strategy = poly;
     final static double precision = 1e-12;
-    
+
     // elite solutions 
     // at position 0 is cost and values of variables start at positions 1
     public int[][] elite;
@@ -128,11 +126,13 @@ public class SGMPCSearch {
 
     public int costPosition;
 
+    Function<Integer, Comparator<int[]>> solutionComparator = (p) -> (int[] o1, int[] o2) -> (o1[p] - o2[p]);
+
     public SGMPCSearch(Store store, IntVar[] vars, IntVar cost) {
 
         this.store = store;
-	this.vars = new IntVar[vars.length];
-	System.arraycopy(vars, 0, this.vars, 0, vars.length);
+        this.vars = new IntVar[vars.length];
+        System.arraycopy(vars, 0, this.vars, 0, vars.length);
         this.cost = cost;
 
         search = new SimpleImprovementSearch<IntVar>(store, vars, cost);
@@ -141,8 +141,8 @@ public class SGMPCSearch {
     public SGMPCSearch(Store store, IntVar[] vars, IntVar cost, ImproveSolution<IntVar> search) {
 
         this.store = store;
-	this.vars = new IntVar[vars.length];
-	System.arraycopy(vars, 0, this.vars, 0, vars.length);
+        this.vars = new IntVar[vars.length];
+        System.arraycopy(vars, 0, this.vars, 0, vars.length);
         this.cost = cost;
 
         this.search = search;
@@ -220,7 +220,7 @@ public class SGMPCSearch {
             }
         }
 
-        Arrays.sort(solutionPool, new SolutionComparator(costPosition));
+        Arrays.sort(solutionPool, solutionComparator.apply(costPosition));
 
         elite = new int[e][];
         for (int i = 0; i < e; i++) {
@@ -494,19 +494,5 @@ public class SGMPCSearch {
     public int lastCost() {
         return searchCost;
     }
-
-    static class SolutionComparator implements Comparator<int[]>, java.io.Serializable {
-
-        int p;
-
-        public SolutionComparator(int costPosition) {
-            p = costPosition;
-        }
-
-        @Override public int compare(int[] o1, int[] o2) {
-            return (o1[p] - o2[p]);
-        }
-    }
-
 
 }

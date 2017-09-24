@@ -1,4 +1,4 @@
-/**
+/*
  * Cumulative.java
  * This file is part of JaCoP.
  * <p>
@@ -31,17 +31,12 @@
 
 package org.jacop.constraints;
 
+import org.jacop.api.SatisfiedPresent;
+import org.jacop.core.*;
+
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
-
-import org.jacop.api.SatisfiedPresent;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Interval;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Store;
-import org.jacop.core.Var;
 
 /**
  * Cumulative implements the cumulative/4 constraint using edge-finding
@@ -55,39 +50,39 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
-    static final boolean debug = false, debugNarr = false;
+    private static final boolean debug = false, debugNarr = false;
 
     /**
      * It contains information about maximal profile contributed by tasks.
      */
-    public Profile maxProfile = null;
+    private Profile maxProfile = null;
 
     /**
      * It contains information about minimal profile contributed by regions
      * for certain occupied by tasks.
      */
-    public Profile minProfile = null;
+    private Profile minProfile = null;
 
-    CumulativeProfiles cumulativeProfiles = new CumulativeProfiles();
+    private CumulativeProfiles cumulativeProfiles = new CumulativeProfiles();
 
-    Task Ts[];
+    private Task Ts[];
 
     /**
      * It specifies if the edge finding algorithm should be used.
      */
-    public boolean doEdgeFinding = true;
+    private boolean doEdgeFinding = true;
 
     /**
      * It specifies if the profiles should be computed to propagate
      * onto limit variable.
      */
-    public boolean doProfile = true;
+    private boolean doProfile = true;
 
     /**
      * It specifies if the data from profiles should be used to propagate
      * onto limit variable.
      */
-    public boolean setLimit = true;
+    private boolean setLimit = true;
 
     /**
      * It specifies the limit of the profile of cumulative use of resources.
@@ -108,6 +103,14 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
      * It specifies/stores resource variable for each corresponding task.
      */
     public IntVar[] resources;
+
+    private Comparator<IntDomain> domainMaxComparator = (o1, o2) -> (o2.max() - o1.max());
+
+    private Comparator<IntDomain> domainMinComparator = (o1, o2) -> (o1.min() - o2.min());
+
+    private Comparator<Task> taskAscEctComparator = (o1, o2) -> (o1.ect() - o2.ect());
+
+    private Comparator<Task> taskDescLstComparator = (o1, o2) -> (o2.lst() - o1.lst());
 
     /**
      * It creates a cumulative constraint.
@@ -288,7 +291,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         return afterS;
     }
 
-    boolean before(Task l, List<Task> S) {
+    private boolean before(Task l, List<Task> S) {
         int completionS = IntDomain.MinInt;
         int a = 0;
         boolean beforeS = true;
@@ -355,7 +358,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
                 if (setLimit)
                     limit.domain.in(store.level, limit, minProfile.max(), maxProfile.max());
                 else if (limit.max() < minProfile.max())
-                    throw store.failException;
+                    throw Store.failException;
 
                 updateTasksRes(store);
 
@@ -377,9 +380,9 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         maxProfile = null;
     }
 
-    void edgeFindingDown(Store store) {
+    private void edgeFindingDown(Store store) {
 
-        TreeSet<IntDomain> estUpList = new TreeSet<IntDomain>(new DomainminComparator<IntDomain>());
+        TreeSet<IntDomain> estUpList = new TreeSet<>(domainMinComparator);
 
         if (debug)
             System.out.println("------------------------------------------------\n" + "Edge Finding Down\n"
@@ -475,7 +478,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
                         }
 
                         if (slack < 0 && tasksLength != 0) {
-                            Arrays.sort(tasks, 0, tasksLength, new TaskDescLSTComparator<Task>());
+                            Arrays.sort(tasks, 0, tasksLength, taskDescLstComparator);
                             j = 0;
                             int limitMin = limit.min();
                             while (slack < 0 && j < tasksLength) {
@@ -539,9 +542,9 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         }
     }
 
-    void edgeFindingUp(Store store) {
+    private void edgeFindingUp(Store store) {
 
-        TreeSet<IntDomain> lctDownList = new TreeSet<IntDomain>(new DomainmaxComparator<IntDomain>());
+        TreeSet<IntDomain> lctDownList = new TreeSet<IntDomain>( domainMaxComparator );
 
         if (debug)
             System.out.println("------------------------------------------------\n" + "Edge Finding Up\n"
@@ -646,7 +649,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
                         }
 
                         if (slack < 0 && tasksLength != 0) {
-                            Arrays.sort(tasks, 0, tasksLength, new TaskAscECTComparator<Task>());
+                            Arrays.sort(tasks, 0, tasksLength, taskAscEctComparator);
 
                             j = 0;
                             int limitMin = limit.min();
@@ -703,7 +706,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         }
     }
 
-    int est(List<Task> S) {
+    private int est(List<Task> S) {
         int estS = IntDomain.MaxInt;
 
         for (Task t : S) {
@@ -714,7 +717,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         return estS;
     }
 
-    boolean fitTasksAfter(List<Task> s, int est0) {
+    private boolean fitTasksAfter(List<Task> s, int est0) {
         int areaS = 0, lctOfS = IntDomain.MinInt, minDur = IntDomain.MaxInt, minRes = IntDomain.MaxInt;
         boolean FitAfter;
 
@@ -740,7 +743,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         return FitAfter;
     }
 
-    boolean fitTasksBefore(List<Task> s, int lct0) {
+    private boolean fitTasksBefore(List<Task> s, int lct0) {
         int areaS = 0, estOfS = IntDomain.MaxInt, minDur = IntDomain.MaxInt, minRes = IntDomain.MaxInt;
         boolean FitBefore;
 
@@ -774,11 +777,11 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         return Ts;
     }
 
-    boolean intervalOverlap(int min1, int max1, int min2, int max2) {
+    private boolean intervalOverlap(int min1, int max1, int min2, int max2) {
         return !(min1 >= max2 || max1 <= min2);
     }
 
-    int lct(List<Task> S) {
+    private int lct(List<Task> S) {
         int lctS = IntDomain.MinInt;
 
         for (Task t : S) {
@@ -787,7 +790,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         return lctS;
     }
 
-    int maxArea(List<Task> Ts) {
+    private int maxArea(List<Task> Ts) {
         long area = 0;
         int index = 0;
 
@@ -804,7 +807,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         return index;
     }
 
-    long minOverlap(Task t, int est, int lct) {
+    private long minOverlap(Task t, int est, int lct) {
 
         int tDur_min = 0;
         int tdur = t.dur.min();
@@ -845,7 +848,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         return tDur_min * t.res.min();
     }
 
-    void notFirst(Store store, Task s, List<Task> S) {
+    private void notFirst(Store store, Task s, List<Task> S) {
         int sEST = s.est(); // sLCT = s.LCT();
         int completionS = IntDomain.MinInt, newStartl = IntDomain.MinInt, startl = sEST;
         long a = 0, slack, maxuse = limit.max() - s.res.min();
@@ -887,7 +890,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
             // System.out.println("slack after = " + slack + "tasks = " + tasks );
             if (slack < 0 && tasksLength != 0) {
-                Arrays.sort(tasks, 0, tasksLength, new TaskAscECTComparator<Task>());
+                Arrays.sort(tasks, 0, tasksLength, taskAscEctComparator );
                 j = 0;
                 int limitMin = limit.min();
                 while (slack < 0 && j < tasksLength) {
@@ -908,7 +911,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         }
     }
 
-    void notLast(Store store, Task s, List<Task> S) {
+    private void notLast(Store store, Task s, List<Task> S) {
         int sLCT = s.lct();
         int compl = sLCT;
 
@@ -951,7 +954,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
             }
 
             if (slack < 0 && tasksLength != 0) {
-                Arrays.sort(tasks, 0, tasksLength, new TaskDescLSTComparator<Task>());
+                Arrays.sort(tasks, 0, tasksLength, taskDescLstComparator);
 
                 j = 0;
                 int limitMin = limit.min();
@@ -974,7 +977,8 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         }
     }
 
-    void profileCheckInterval(Store store, IntVar Start, IntVar Duration, Interval i, IntVar Resources, int mustUseMin, int mustUseMax) {
+    private void profileCheckInterval(Store store, IntVar Start, IntVar Duration, Interval i, IntVar Resources, int mustUseMin,
+        int mustUseMax) {
 
         for (ProfileItem p : minProfile) {
             if (debug)
@@ -1048,7 +1052,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
                             offset = Resources.min();
                         if (debugNarr)
                             System.out.println(
-                                ">>> Cumulative Profile 8. Narrowed " + Resources + " in 0.." + (int) (limit.max() - p.value + offset));
+                                ">>> Cumulative Profile 8. Narrowed " + Resources + " in 0.." + (limit.max() - p.value + offset));
 
                         Resources.domain.in(store.level, Resources, 0, limit.max() - p.value + offset);
                     }
@@ -1068,7 +1072,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         }
     }
 
-    void profileCheckTasks(Store store) {
+    private void profileCheckTasks(Store store) {
         IntTask minUse = new IntTask();
 
         for (Task t : Ts) {
@@ -1094,7 +1098,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         }
     }
 
-    void removeFromS_Est(List<Task> s) {
+    private void removeFromS_Est(List<Task> s) {
 
         // s = s \ {t in s | est(t) = est(s)}
         int estS = est(s);
@@ -1110,7 +1114,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         }
     }
 
-    void removeFromS_Lct(List<Task> s) {
+    private void removeFromS_Lct(List<Task> s) {
 
         // s = s \ {t in s | lct(t) = lct(s)}
         int lctS = lct(s);
@@ -1130,10 +1134,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
         // if profile has been computed make a quick check
         if (minProfile != null && maxProfile != null) {
-            if ((minProfile.max() == maxProfile.max()) && limit.singleton() && minProfile.max() == limit.min())
-                return true;
-            else
-                return false;
+            return (minProfile.max() == maxProfile.max()) && limit.singleton() && minProfile.max() == limit.min();
         } else {
             throw new IllegalStateException("Satisfied function can only be called after call to consistency().");
         }
@@ -1141,7 +1142,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
     @Override public String toString() {
 
-        StringBuffer result = new StringBuffer(id());
+        StringBuilder result = new StringBuilder(id());
 
         result.append(" : cumulative([ ");
         for (int i = 0; i < Ts.length - 1; i++)
@@ -1155,55 +1156,10 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
     }
 
-
-    void updateTasksRes(Store store) {
+    private void updateTasksRes(Store store) {
         int limitMax = limit.max();
         for (Task t : Ts)
             t.res.domain.inMax(store.level, t.res, limitMax);
-    }
-
-
-    private static class DomainmaxComparator<T extends IntDomain> implements Comparator<T>, java.io.Serializable {
-
-        DomainmaxComparator() {
-        }
-
-        public int compare(T o1, T o2) {
-            return (o2.max() - o1.max());
-        }
-    }
-
-
-    private static class DomainminComparator<T extends IntDomain> implements Comparator<T>, java.io.Serializable {
-
-        DomainminComparator() {
-        }
-
-        public int compare(T o1, T o2) {
-            return (o1.min() - o2.min());
-        }
-    }
-
-
-    private static class TaskAscECTComparator<T extends Task> implements Comparator<T>, java.io.Serializable {
-
-        TaskAscECTComparator() {
-        }
-
-        public int compare(T o1, T o2) {
-            return (o1.ect() - o2.ect());
-        }
-    }
-
-
-    private static class TaskDescLSTComparator<T extends Task> implements Comparator<T>, java.io.Serializable {
-
-        TaskDescLSTComparator() {
-        }
-
-        public int compare(T o1, T o2) {
-            return (o2.lst() - o1.lst());
-        }
     }
 
 }

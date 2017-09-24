@@ -59,8 +59,8 @@ public class Values extends Constraint implements SatisfiedPresent {
      * It specifies the idNumber of different values among variables on a given list.
      */
     final private IntVar count;
-
-    final private Comparator<IntVar> minFDV = new FDVminimumComparator<>();
+    
+    Comparator<IntVar> minFDV = (o1, o2) -> (o1.min() - o2.min());
 
     final static private boolean debug = false;
 
@@ -199,17 +199,6 @@ public class Values extends Constraint implements SatisfiedPresent {
 
     @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
-    }
-
-    private static class FDVminimumComparator<T extends IntVar> implements Comparator<T>, java.io.Serializable {
-
-        FDVminimumComparator() {
-        }
-
-        public int compare(T o1, T o2) {
-            return (o1.min() - o2.min());
-        }
-
     }
 
     @Override public boolean satisfied() {

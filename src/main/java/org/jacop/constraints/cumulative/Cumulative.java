@@ -36,6 +36,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
 import java.util.*;
+import java.util.function.Function;
 
 /**
  * Cumulative implements the scheduling constraint using
@@ -61,6 +62,17 @@ public class Cumulative extends CumulativeBasic {
     TaskView[] taskReversed;
 
     private boolean doEdgeFind = true;
+
+    protected Comparator<TaskView> taskIncEstComparator = (o1, o2) -> {
+        return (o1.est() == o2.est()) ? (o1.lct() - o2.lct()) : (o1.est() - o2.est());
+    };
+
+    protected Comparator<TaskView> taskDecLctComparator = (o1, o2) -> {
+        return (o2.lct() == o1.lct()) ? (o2.est() - o1.est()) : (o2.lct() - o1.lct());
+    };
+
+    protected Function<int[], Comparator<Integer>> precComparator = (prec) ->
+        (Integer o1, Integer o2) -> (prec[o2.intValue()] - prec[o1.intValue()]);
 
     /**
      * It creates a cumulative constraint.
@@ -173,7 +185,7 @@ public class Cumulative extends CumulativeBasic {
         if (estList == null)
             return;
 
-        Arrays.sort(estList, new TaskIncESTComparator<>());
+        Arrays.sort(estList, taskIncEstComparator);
 
         ThetaLambdaTree tree = new ThetaLambdaTree(limit);
         tree.buildTree(estList);
@@ -181,7 +193,7 @@ public class Cumulative extends CumulativeBasic {
         // tasks sorted in non-increasing order of lct
         TaskView[] lctList = new TaskView[estList.length];
         System.arraycopy(estList, 0, lctList, 0, estList.length);
-        Arrays.sort(lctList, new TaskDecLCTComparator<>());
+        Arrays.sort(lctList, taskDecLctComparator);
 
         int[] auxOrderListInv = new int[lctList.length];
         for (int i = 0; i < lctList.length; i++) {
@@ -279,7 +291,7 @@ public class Cumulative extends CumulativeBasic {
         Integer[] precTaskOrder = new Integer[n];
         for (int i = n - 1; i >= 0; i--)
             precTaskOrder[i] = i;
-        Arrays.sort(precTaskOrder, new PrecComparator<>(prec));
+        Arrays.sort(precTaskOrder, precComparator.apply(prec));
 
         int j = 0;
         outer:
@@ -364,40 +376,6 @@ public class Cumulative extends CumulativeBasic {
             return (a + b - 1) / b;
         else // a < 0
             return a / b;
-    }
-
-    static class TaskIncESTComparator<T extends TaskView> implements Comparator<T>, java.io.Serializable {
-
-        TaskIncESTComparator() {
-        }
-
-        public int compare(T o1, T o2) {
-            return (o1.est() == o2.est()) ? (o1.lct() - o2.lct()) : (o1.est() - o2.est());
-        }
-    }
-
-
-    static class TaskDecLCTComparator<T extends TaskView> implements Comparator<T>, java.io.Serializable {
-
-        TaskDecLCTComparator() {
-        }
-
-        public int compare(T o1, T o2) {
-            return (o2.lct() == o1.lct()) ? (o2.est() - o1.est()) : (o2.lct() - o1.lct());
-        }
-    }
-
-
-    static class PrecComparator<T extends Integer> implements Comparator<T>, java.io.Serializable {
-        int[] prec;
-
-        PrecComparator(int[] prec) {
-            this.prec = prec;
-        }
-
-        public int compare(T o1, T o2) {
-            return (prec[o2.intValue()] - prec[o1.intValue()]);
-        }
     }
 
 }

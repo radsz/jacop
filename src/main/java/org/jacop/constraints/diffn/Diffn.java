@@ -48,7 +48,7 @@ public class Diffn extends Nooverlap {
 
     private static final boolean debug = false, debugNarr = false;
 
-    private EventIncComparator<Event> eventComparator = new EventIncComparator<>();
+    Comparator<Event> eventComparator = (o1, o2) -> (o1.date() == o2.date()) ? o1.type() - o2.type() : o1.date() - o2.date();
 
     /**
      * It specifies a diff constraint.
@@ -615,18 +615,6 @@ public class Diffn extends Nooverlap {
             }
             result += r + ", " + date + ", " + value + ", " + block + ")\n";
             return result;
-        }
-    }
-
-
-    private static class EventIncComparator<T extends Event> implements Comparator<T>, java.io.Serializable {
-
-        EventIncComparator() {
-        }
-
-        public int compare(T o1, T o2) {
-            // two criteria for sort (in this order): date and type
-            return (o1.date() == o2.date()) ? o1.type() - o2.type() : o1.date() - o2.date();
         }
     }
 

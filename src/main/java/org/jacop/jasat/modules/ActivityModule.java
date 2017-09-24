@@ -266,23 +266,16 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
      * @author simon
      *
      */
-    private final class ActivityComparator implements Comparator<Integer> {
+    private final Comparator<Integer> comparator = (i, j) -> {
+        assert Math.abs(i) <= posActivities.length + 1;
+        assert Math.abs(j) <= posActivities.length + 1;
+        assert posActivities.length == negActivities.length;
 
-        public final int compare(Integer i, Integer j) {
-            assert Math.abs(i) <= posActivities.length + 1;
-            assert Math.abs(j) <= posActivities.length + 1;
-            assert posActivities.length == negActivities.length;
+        int activity_i = getLiteralActivity(Math.abs(i), i > 0);
+        int activity_j = getLiteralActivity(Math.abs(j), j > 0);
 
-            int activity_i = getLiteralActivity(Math.abs(i), i > 0);
-            int activity_j = getLiteralActivity(Math.abs(j), j > 0);
-
-            return activity_j - activity_i;
-        }
-
-    }
-
-
-    private final ActivityComparator comparator = new ActivityComparator();
+        return activity_j - activity_i;
+    };
 
     @Override public String toString() {
         return "ActivityModule";

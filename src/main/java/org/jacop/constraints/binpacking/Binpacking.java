@@ -133,7 +133,8 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
 
         binMap = Var.positionMapping(load, false, this.getClass());
 
-        Arrays.sort(item, new WeightComparator<>());
+        Comparator<BinItem> weightComparator = (o1, o2) -> (o2.weight - o1.weight);
+        Arrays.sort(item, weightComparator);
 
         itemMap = Var.positionMapping(Arrays.stream(item).map( i -> i.bin ).toArray(IntVar[]::new),
             false, this.getClass());
@@ -511,16 +512,6 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
 
         }
         return lb;
-    }
-
-    private static class WeightComparator<T extends BinItem> implements Comparator<T>, java.io.Serializable {
-
-        WeightComparator() {
-        }
-
-        public int compare(T o1, T o2) {
-            return (o2.weight - o1.weight);
-        }
     }
 
 }

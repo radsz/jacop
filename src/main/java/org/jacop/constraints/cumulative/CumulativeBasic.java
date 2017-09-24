@@ -55,7 +55,10 @@ public class CumulativeBasic extends Constraint {
 
     private static final boolean debug = false, debugNarr = false;
 
-    private EventIncComparator<Event> eventComparator = new EventIncComparator<>();
+    private Comparator<Event> eventComparator = ( Event o1, Event o2 ) -> {
+            int dateDiff = o1.date() - o2.date();
+            return (dateDiff == 0) ? (o1.type() - o2.type()) : dateDiff;
+    };
 
     /**
      * All tasks of the constraint
@@ -229,6 +232,13 @@ public class CumulativeBasic extends Constraint {
 
         int N = j;
         Arrays.sort(es, 0, N, eventComparator);
+
+        Arrays.sort(es, 0, N, (o1, o2) -> {
+            int dateDiff = o1.date() - o2.date();
+            return (dateDiff == 0) ? (o1.type() - o2.type()) : dateDiff;
+        });
+
+
 
         if (debugNarr) {
             System.out.println(Arrays.asList(es));
@@ -453,15 +463,4 @@ public class CumulativeBasic extends Constraint {
         }
     }
 
-
-    private static class EventIncComparator<T extends Event> implements Comparator<T>, java.io.Serializable {
-
-        EventIncComparator() {
-        }
-
-        public int compare(T o1, T o2) {
-            int dateDiff = o1.date() - o2.date();
-            return (dateDiff == 0) ? (o1.type() - o2.type()) : dateDiff;
-        }
-    }
 }

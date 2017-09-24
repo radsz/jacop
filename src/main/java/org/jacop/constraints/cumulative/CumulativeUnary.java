@@ -60,6 +60,12 @@ public class CumulativeUnary extends Cumulative {
     final private TaskView[] tvn;
     final private TaskView[] tvr;
 
+    private Comparator<TaskView> taskIncLctComparator = (o1, o2) -> (o1.lct() == o2.lct()) ? (o1.est() - o2.est()) : (o1.lct() - o2.lct());
+
+    private Comparator<TaskView> taskIncLstComparator = (o1, o2) -> (o1.lst() == o2.lst()) ? (o1.est() - o2.est()) : (o1.lst() - o2.lst());
+
+    private Comparator<TaskView> taskIncEctComparator = (o1, o2) -> (o1.ect() == o2.ect()) ? (o1.est() - o2.est()) : (o1.ect() - o2.ect());
+
     /**
      * It creates a cumulative constraint.
      *
@@ -160,14 +166,14 @@ public class CumulativeUnary extends Cumulative {
         TaskView[] t = new TaskView[ts.length];
         System.arraycopy(ts, 0, t, 0, ts.length);
         // tasks sorted in ascending order of EST for Theta tree
-        Arrays.sort(t, new TaskIncESTComparator<>());
+        Arrays.sort(t, taskIncEstComparator);
 
         ThetaTree tree = new ThetaTree();
         tree.initTree(t);
         //tree.printTree("tree_init");
 
         // tasks sorted in ascending order of lct
-        Arrays.sort(t, new TaskIncLCTComparator<>());
+        Arrays.sort(t, taskIncLctComparator);
 
         for (TaskView aT : t) {
             tree.enableNode(aT.treeIndex);
@@ -188,19 +194,19 @@ public class CumulativeUnary extends Cumulative {
         TaskView[] t = new TaskView[tc.length];
         System.arraycopy(tc, 0, t, 0, tc.length);
         // tasks sorted in ascending order of EST for Theta tree
-        Arrays.sort(t, new TaskIncESTComparator<>());
+        Arrays.sort(t, taskIncEstComparator);
 
         ThetaTree tree = new ThetaTree();
         tree.initTree(t);
         // tree.printTree("tree_init");
 
         // tasks sorted in ascending order of lct
-        Arrays.sort(t, new TaskIncLCTComparator<>());
+        Arrays.sort(t, taskIncLctComparator);
 
         // tasks sorted in ascending order of lct - p (lst)
         TaskView[] q = new TaskView[t.length];
         System.arraycopy(t, 0, q, 0, t.length);
-        Arrays.sort(q, new TaskIncLSTComparator<>());
+        Arrays.sort(q, taskIncLstComparator);
 
         notLast(store, tree, t, q, tc);
     }
@@ -249,19 +255,19 @@ public class CumulativeUnary extends Cumulative {
         TaskView[] t = new TaskView[tc.length];
         System.arraycopy(tc, 0, t, 0, tc.length);
         // tasks sorted in ascending order of EST for Theta tree
-        Arrays.sort(t, new TaskIncESTComparator<>());
+        Arrays.sort(t, taskIncEstComparator);
 
         ThetaTree tree = new ThetaTree();
         tree.initTree(t);
         // tree.printTree("tree_init");
 
         // tasks sorted in ascending order of lct
-        Arrays.sort(t, new TaskIncECTComparator<>());
+        Arrays.sort(t, taskIncEctComparator);
 
         // tasks sorted in ascending order of lct - p (lst)
         TaskView[] q = new TaskView[t.length];
         System.arraycopy(t, 0, q, 0, t.length);
-        Arrays.sort(q, new TaskIncLSTComparator<>());
+        Arrays.sort(q, taskIncLstComparator);
 
         detectable(store, tree, t, q, tc);
 
@@ -302,7 +308,7 @@ public class CumulativeUnary extends Cumulative {
         // tasks sorted in non-decreasing order of est
         TaskView[] estList = new TaskView[tc.length];
         System.arraycopy(tc, 0, estList, 0, tc.length);
-        Arrays.sort(estList, new TaskIncESTComparator<>());
+        Arrays.sort(estList, taskIncEstComparator);
 
         ThetaLambdaUnaryTree tree = new ThetaLambdaUnaryTree();
         tree.buildTree(estList);
@@ -310,7 +316,7 @@ public class CumulativeUnary extends Cumulative {
         // tasks sorted in non-increasing order of lct
         TaskView[] lctList = new TaskView[estList.length];
         System.arraycopy(estList, 0, lctList, 0, estList.length);
-        Arrays.sort(lctList, new TaskDecLCTComparator<>());
+        Arrays.sort(lctList, taskDecLctComparator);
 
         int n = lctList.length;
         TaskView t = lctList[0];
@@ -345,39 +351,6 @@ public class CumulativeUnary extends Cumulative {
         return result.toString();
 
     }
-
-    private static class TaskIncLCTComparator<T extends TaskView> implements Comparator<T>, java.io.Serializable {
-
-        TaskIncLCTComparator() {
-        }
-
-        public int compare(T o1, T o2) {
-            return (o1.lct() == o2.lct()) ? (o1.est() - o2.est()) : (o1.lct() - o2.lct());
-        }
-    }
-
-
-    private static class TaskIncLSTComparator<T extends TaskView> implements Comparator<T>, java.io.Serializable {
-
-        TaskIncLSTComparator() {
-        }
-
-        public int compare(T o1, T o2) {
-            return (o1.lst() == o2.lst()) ? (o1.est() - o2.est()) : (o1.lst() - o2.lst());
-        }
-    }
-
-
-    private static class TaskIncECTComparator<T extends TaskView> implements Comparator<T>, java.io.Serializable {
-
-        TaskIncECTComparator() {
-        }
-
-        public int compare(T o1, T o2) {
-            return (o1.ect() == o2.ect()) ? (o1.est() - o2.est()) : (o1.ect() - o2.ect());
-        }
-    }
-
 
 }
 

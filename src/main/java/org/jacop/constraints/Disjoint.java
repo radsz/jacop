@@ -253,7 +253,7 @@ public class Disjoint extends Diff {
         }
     }
 
-    boolean findRectangles(Rectangle r, int index, List<IntRectangle> UsedRect, List<Rectangle> ProfileCandidates,
+    private boolean findRectangles(Rectangle r, int index, List<IntRectangle> UsedRect, List<Rectangle> ProfileCandidates,
         List<Rectangle> OverlappingRects, Set<IntVar> fdvQueue) {
 
         boolean contains = false, checkArea = false;
