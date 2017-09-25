@@ -1,4 +1,4 @@
-/*
+/**
  * Linear.java
  * This file is part of JaCoP.
  * <p>
@@ -54,9 +54,9 @@ import java.util.stream.Stream;
 
 public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
-    private Store store;
+    Store store;
 
-    private static AtomicInteger idNumber = new AtomicInteger(0);
+    static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * Defines relations
@@ -66,7 +66,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     /**
      * Defines negated relations
      */
-    private final static byte[] negRel = {ne, //eq=0,
+    final static byte[] negRel = {ne, //eq=0,
         ge, //lt=1,
         gt, //le=2,
         eq, //ne=3,
@@ -95,32 +95,18 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
      */
     public double sum;
 
-    private Map<FloatVar, VariableNode> varMap = Var.createEmptyPositioning();
+    Map<FloatVar, VariableNode> varMap = Var.createEmptyPositioning();
 
-    private SimpleHashSet<FloatVar> variableQueue = new SimpleHashSet<>();
+    // LinkedHashSet<FloatVar> variableQueue = new LinkedHashSet<FloatVar>();
+    SimpleHashSet<FloatVar> variableQueue = new SimpleHashSet<FloatVar>();
 
-    private boolean reified = true;
+    boolean reified = true;
 
-    private BTree linearTree;
+    BTree linearTree;
 
-    private TimeStamp<Boolean> noSat;
+    VariableNode[] sortedVarNodes;
 
-    private Comparator<VariableNode> varWeightComparator = (o1, o2) -> {
-        double diff_o1, diff_o2;
-
-        if (o1 instanceof VarNode)
-            diff_o1 = o1.max() - o1.min();
-        else
-            diff_o1 = (o1.max() - o1.min()) * ((VarWeightNode) o1).weight;
-
-        if (o2 instanceof VarNode)
-            diff_o2 = o2.max() - o2.min();
-        else
-            diff_o2 = (o2.max() - o2.min()) * ((VarWeightNode) o2).weight;
-
-        return Double.compare(diff_o1, diff_o2);
-
-    };
+    TimeStamp<Boolean> noSat;
 
     /**
      * @param store   current store
@@ -162,7 +148,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
         this.sum = sum;
 
-        noSat = new TimeStamp<>(store, false);
+        noSat = new TimeStamp<Boolean>(store, false);
 
         Map<FloatVar, Double> parameters = Var.createEmptyPositioning();
 
@@ -235,7 +221,10 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
         }
 
-        java.util.Arrays.sort(leafNodes, varWeightComparator);
+        java.util.Arrays.sort(leafNodes, new VarWeightComparator<VariableNode>());
+        sortedVarNodes = leafNodes;
+        // System.out.println (java.util.Arrays.asList(leafNodes));
+
 
         RootBNode root = buildBinaryTree(leafNodes);
         linearTree = new BTree(root);
@@ -249,7 +238,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
     }
 
-    private RootBNode buildBinaryTree(BinaryNode[] nodes) {
+    RootBNode buildBinaryTree(BinaryNode[] nodes) {
 
         BinaryNode[] nextLevelNodes = new BinaryNode[nodes.length / 2 + nodes.length % 2];
         // System.out.println ("next level length = " + nextLevelNodes.length);
@@ -346,7 +335,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
     }
 
-    private void propagate(SimpleHashSet<FloatVar> fdvs) {
+    void propagate(SimpleHashSet<FloatVar> fdvs) {
 
         while (!fdvs.isEmpty()) {
 
@@ -394,7 +383,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
             // check whether constraint has been already diagnosed as not satisfied at this level
             if (noSat.stamp() < store.level)
                 noSat.update(false);
-            else if (noSat.stamp() == store.level && noSat.value())
+            else if (noSat.stamp() == store.level && noSat.value() == true)
                 return false;
             // ==========
 
@@ -416,7 +405,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
             // check whether constraint has been already diagnosed as not satisfied at this level
             if (noSat.stamp() < store.level)
                 noSat.update(false);
-            else if (noSat.stamp() == store.level && noSat.value())
+            else if (noSat.stamp() == store.level && noSat.value() == true)
                 return true;
             // ==========
 
@@ -467,7 +456,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
         return false;
     }
 
-    private void checkForOverflow() {
+    void checkForOverflow() {
 
         double sumMin = 0, sumMax = 0;
         for (int i = 0; i < list.length; i++) {
@@ -491,32 +480,31 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     }
 
     public byte relation(String r) {
-        switch (r) {
-            case "==":
-                return eq;
-            case "=":
-                return eq;
-            case "<":
-                return lt;
-            case "<=":
-                return le;
-            case "=<":
-                return le;
-            case "!=":
-                return ne;
-            case ">":
-                return gt;
-            case ">=":
-                return ge;
-            case "=>":
-                return ge;
-            default:
-                System.err.println("Wrong relation symbol in Linear constraint " + r + "; assumed ==");
-                return eq;
+        if (r.equals("=="))
+            return eq;
+        else if (r.equals("="))
+            return eq;
+        else if (r.equals("<"))
+            return lt;
+        else if (r.equals("<="))
+            return le;
+        else if (r.equals("=<"))
+            return le;
+        else if (r.equals("!="))
+            return ne;
+        else if (r.equals(">"))
+            return gt;
+        else if (r.equals(">="))
+            return ge;
+        else if (r.equals("=>"))
+            return ge;
+        else {
+            System.err.println("Wrong relation symbol in Linear constraint " + r + "; assumed ==");
+            return eq;
         }
     }
 
-    private String rel2String() {
+    public String rel2String() {
         switch (relationType) {
             case eq:
                 return "==";
@@ -538,7 +526,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
     @Override public String toString() {
 
-        StringBuilder result = new StringBuilder(id());
+        StringBuffer result = new StringBuffer(id());
         result.append(" : Linear( [ ");
 
         for (int i = 0; i < list.length; i++) {
@@ -558,6 +546,43 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
         return result.toString();
 
+    }
+
+    /*
+    // uncomment registration in commonInitialization
+    @Override
+    public void removeLevelLate(int level) {
+	// System.out.println ("Backtrack, queue = " + variableQueue);
+
+	// variableQueue.clear();
+
+	if (variableQueue.size() > 0)
+	    variableQueue = new SimpleHashSet<IntVar>();
+
+    }
+    */
+
+
+    static class VarWeightComparator<T extends VariableNode> implements java.util.Comparator<T>, java.io.Serializable {
+
+        VarWeightComparator() {
+        }
+
+        public int compare(T o1, T o2) {
+            double diff_o1 = 0, diff_o2 = 0;
+
+            if (o1 instanceof VarNode)
+                diff_o1 = o1.max() - o1.min();
+            else
+                diff_o1 = (o1.max() - o1.min()) * ((VarWeightNode) o1).weight;
+
+            if (o2 instanceof VarNode)
+                diff_o2 = o2.max() - o2.min();
+            else
+                diff_o2 = (o2.max() - o2.min()) * ((VarWeightNode) o2).weight;
+
+            return Double.compare(diff_o1, diff_o2);
+        }
     }
 
 }
