@@ -127,7 +127,6 @@ public class Subcircuit extends Alldiff {
         } while (store.propagationHasOccurred);
 
         sccsBasedPruning(store); // strongly connected components
-
     }
 
     void alldifferent(Store store, LinkedHashSet<IntVar> fdvs) {
@@ -195,15 +194,13 @@ public class Subcircuit extends Alldiff {
     // --- Strongly Connected Conmponents
 
     // Uses Trajan's algorithm to find strongly connected components
-    // if found strongly connected component is shorter than the
-    // Hamiltonian circuit length fail is enforced (one is unable to
-    // to build a circuit. Based on the algorithm from the book
+    // Based on the algorithm from the book
     // Robert Sedgewick, Algorithms, 1988, p. 482.
 
     Stack<Integer> stck = new Stack<Integer>();
 
-    List<IntVar> cycleVar;
-
+    List<Integer> cycleVar;
+    
     int numberGround = 0;
 
     void sccsBasedPruning(Store store) {
@@ -215,7 +212,8 @@ public class Subcircuit extends Alldiff {
         java.util.Arrays.fill(val, 0);
 
         idd = 0;
-
+	boolean realCycle = false;
+	
         for (int i = 0; i < list.length; i++) {
 
             sccLength = 0;
@@ -234,14 +232,26 @@ public class Subcircuit extends Alldiff {
                 if (sccLength == 1)
                     // the scc is of size one => it must be self-cycle
                     list[i].domain.in(store.level, list[i], i + 1, i + 1);
-
-                else if (sccLength == numberGround && numberGround < list.length) {
-                    // subcircuit alrerady found => all others must be self-cycles
-                    for (int j = 0; j < list.length; j++) {
-                        if (!cycleVar.contains(list[j]))
-                            list[j].domain.in(store.level, list[j], j + 1, j + 1);
-                    }
-                }
+                else {
+		    // check if more than 1 sub-cycle possible
+		    for (int cv : cycleVar) {
+			if (!list[cv].domain.contains(cv+1))
+			    if (realCycle) // second sub-cycle under creation -> wrong!
+				throw store.failException;
+			    else {
+				realCycle = true;
+				break;
+			    }
+		    
+			if (sccLength == numberGround && numberGround < list.length) {
+			    // subcircuit alrerady found => all others must be self-cycles
+			    for (int j = 0; j < list.length; j++) {
+				if (!cycleVar.contains(j))
+				    list[j].domain.in(store.level, list[j], j + 1, j + 1);
+			    }
+			}
+		    }
+		}
             }
         }
 
@@ -253,30 +263,6 @@ public class Subcircuit extends Alldiff {
         if (sccLength != 1 && list.length - possibleSelfCycles > maxCycle)
             // maximal cycle is smaller than possible; that is all nodes minus **possible** self-cycles
             throw Store.failException;
-
-	/*
-  // check for a cycle with a single non ground variable and ground it to form the cycle
-	for (ArrayList<IntVar> scc : sccList) {
-
-	IntVar nonGround = null;
-	IntDomain cycleNodes = new IntervalDomain();
-	int numberGround = 0;
-
-	for (IntVar c : scc) {
-
-	if (c.singleton())
-	numberGround++;
-	else
-	nonGround = c;
-
-	cycleNodes.unionAdapt(valueIndex.get(c)+1, valueIndex.get(c)+1);
-	}
-
-	if (numberGround + 1 == scc.size()) 
-	nonGround.domain.in(store.level, nonGround, cycleNodes);
-	}
-	*/
-
     }
 
 
@@ -286,8 +272,6 @@ public class Subcircuit extends Alldiff {
 
         int totalNodes = 0;
 
-        // for (int i = 0; i < val.length; i++)
-        //     val[i] = 0;
         java.util.Arrays.fill(val, 0);
 
         idd = 0;
@@ -297,8 +281,6 @@ public class Subcircuit extends Alldiff {
             sccLength = 0;
 
             if (val[i] == 0) {
-
-                // System.out.print("Node " + i + ": cycle = " );
 
                 visit(i);
 
@@ -314,37 +296,36 @@ public class Subcircuit extends Alldiff {
 
     int visit(int k) {
 
-        int m, min = 0, t;
         idd++;
         val[k] = idd;
-        min = idd;
+        int min = idd;
 
         stck.push(k);
 
         for (ValueEnumeration e = list[k].dom().valueEnumeration(); e.hasMoreElements(); ) {
 
-            t = e.nextElement() - 1;
+            int t = e.nextElement() - 1;
+
+	    int m;
             if (val[t] == 0)
                 m = visit(t);
-            else
+            else 
                 m = val[t];
-            if (m < min)
+            if (m < min) 
                 min = m;
         }
 
         if (min == val[k]) {
 
-            // System.out.print("SCC: ");
-
-            int n;
-            cycleVar = new ArrayList<IntVar>();
+            cycleVar = new ArrayList<Integer>();
             numberGround = 0;
 
             sccLength = 0;
 
+            int n;
             do {
                 n = stck.pop();
-                cycleVar.add(list[n]);
+                cycleVar.add(n);
 
                 if (list[n].singleton())
                     numberGround++;
@@ -353,11 +334,8 @@ public class Subcircuit extends Alldiff {
 
                 sccLength++;
             } while (n != k);
-
-            // System.out.println ("cycleVar = " + cycleVar + ", ground = " + numberGround);
-
         }
+	
         return min;
     }
-
 }
