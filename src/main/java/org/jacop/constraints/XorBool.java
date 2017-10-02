@@ -72,8 +72,6 @@ public class XorBool extends PrimitiveConstraint {
 
     final public IntVar y;
 
-    final int l;
-
     /**
      * It constructs constraint (x_0 xor x_1 xor ... xor x_n ) {@literal <=>} y.
      *
@@ -86,13 +84,13 @@ public class XorBool extends PrimitiveConstraint {
 
         queueIndex = 0;
         numberId = idNumber.incrementAndGet();
-        this.l = x.length;
+
         this.x = Arrays.copyOf(x, x.length);
         this.y = y;
 
         assert (checkInvariants() == null) : checkInvariants();
 
-        if (l > 2)
+        if (x.length > 2)
             queueIndex = 1;
         else
             queueIndex = 0;
@@ -123,25 +121,22 @@ public class XorBool extends PrimitiveConstraint {
             IntVar nonGround = null;
 
             int numberOnes = 0;
-            for (IntVar e : x)
+            int numberZeros = 0;
+
+            for (IntVar e : x) {
                 if (e.min() == 1)
                     numberOnes++;
-                else if (e.max() != 0)
-                    nonGround = e;
-
-            int numberZeros = 0;
-            for (IntVar e : x)
-                if (e.max() == 0)
+                else if (e.max() == 0)
                     numberZeros++;
-                else if (e.min() != 1)
-                    nonGround = e;
-
-            if (numberOnes + numberZeros == l)
+                else nonGround = e;
+            }
+        
+            if (numberOnes + numberZeros == x.length)
                 if ((numberOnes & 1) == 1)
                     y.domain.in(store.level, y, 1, 1);
                 else
                     y.domain.in(store.level, y, 0, 0);
-            else if (numberOnes + numberZeros == l - 1)
+            else if (nonGround != null && numberOnes + numberZeros == x.length - 1)
                 if (y.min() == 1)
                     if ((numberOnes & 1) == 1)
                         nonGround.domain.in(store.level, nonGround, 0, 0);
@@ -160,25 +155,22 @@ public class XorBool extends PrimitiveConstraint {
             IntVar nonGround = null;
 
             int numberOnes = 0;
-            for (IntVar e : x)
+            int numberZeros = 0;
+
+            for (IntVar e : x) {
                 if (e.min() == 1)
                     numberOnes++;
-                else if (e.max() != 0)
-                    nonGround = e;
-
-            int numberZeros = 0;
-            for (IntVar e : x)
-                if (e.max() == 0)
+                else if (e.max() == 0)
                     numberZeros++;
-                else if (e.min() != 1)
-                    nonGround = e;
+                else nonGround = e;
+            }
 
-            if (numberOnes + numberZeros == l)
+            if (numberOnes + numberZeros == x.length)
                 if ((numberOnes & 1) == 1)
                     y.domain.in(store.level, y, 0, 0);
                 else
                     y.domain.in(store.level, y, 1, 1);
-            else if (numberOnes + numberZeros == l - 1)
+            else if (nonGround != null && numberOnes + numberZeros == x.length - 1)
                 if (y.min() == 1)
                     if ((numberOnes & 1) == 1)
                         nonGround.domain.in(store.level, nonGround, 1, 1);

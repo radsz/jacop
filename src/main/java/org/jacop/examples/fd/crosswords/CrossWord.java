@@ -287,9 +287,7 @@ public class CrossWord extends ExampleFD {
             int[] tupleForGivenWord = new int[wordSize];
             MDD resultForWordSize = new MDD(list);
 
-            try {
-
-                BufferedReader inr = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
+            try(BufferedReader inr = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"))) {
 
                 String str;
                 while ((str = inr.readLine()) != null && str.length() > 0) {

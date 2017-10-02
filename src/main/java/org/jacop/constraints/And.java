@@ -90,7 +90,8 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
         setScope(listOfC);
         setConstraintScope(listOfC);
         queueForward = new QueueForward<>(listOfC, arguments());
-        this.queueIndex = Arrays.stream(c).max((a, b) -> Integer.max(a.queueIndex, b.queueIndex)).get().queueIndex;
+        this.queueIndex = Arrays.stream(c).max((a, b) -> Integer.max(a.queueIndex, b.queueIndex)).map( a -> a.queueIndex).orElse(0);
+
     }
 
     private boolean propagation;

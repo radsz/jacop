@@ -153,7 +153,7 @@ public class BoundDomain extends IntDomain implements Cloneable {
         max = 0;
     }
 
-    public IntDomain previousDomain() {
+    public IntDomain getPreviousDomain() {
         return previousDomain;
     }
 

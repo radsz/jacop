@@ -255,7 +255,7 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
 
             // recent pruning
             IntDomain cd = v.dom();
-            IntDomain pd = cd.previousDomain();
+            IntDomain pd = cd.getPreviousDomain();
             IntDomain rp;
             int delta;
             if (pd == null) {

@@ -207,9 +207,8 @@ public class SurvoPuzzle extends ExampleFD {
 
         System.out.println("readFile(" + file + ")");
 
-        try {
+        try(BufferedReader inr = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"))) {
             
-            BufferedReader inr = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
             String str;
             int lineCount = 0;
             List<List<Integer>> MatrixI = new ArrayList<List<Integer>>();

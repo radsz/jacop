@@ -75,7 +75,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
         // throw new RuntimeException("Do not use.");
     }
 
-    public IntDomain previousDomain() {
+    public IntDomain getPreviousDomain() {
         return previousDomain;
     }
 

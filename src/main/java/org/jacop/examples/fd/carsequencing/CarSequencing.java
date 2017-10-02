@@ -520,9 +520,8 @@ public class CarSequencing extends ExampleFD {
 
         System.out.println("readFile(" + file + ")");
 
-        try {
+        try(BufferedReader inr = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"))) {
             
-            BufferedReader inr = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
             String str;
 
             while ((str = inr.readLine()) != null && str.length() > 0) {
