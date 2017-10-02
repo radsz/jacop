@@ -223,7 +223,7 @@ public class SimpleTable extends Constraint implements UsesQueueVariable, Statef
 
             // recent pruning
             IntDomain cd = v.dom();
-            IntDomain pd = cd.previousDomain();
+            IntDomain pd = cd.getPreviousDomain();
             IntDomain rp;
             int delta;
             if (pd == null) {

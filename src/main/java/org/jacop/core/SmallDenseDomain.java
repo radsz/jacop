@@ -182,7 +182,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
     }
 
-    public IntDomain previousDomain() {
+    public IntDomain getPreviousDomain() {
         return previousDomain;
     }
 

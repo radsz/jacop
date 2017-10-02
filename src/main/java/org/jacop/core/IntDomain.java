@@ -632,7 +632,7 @@ public abstract class IntDomain extends Domain {
      * It returns domain at earlier level at which the change has occurred.
      * @return previous domain
      */
-    public abstract IntDomain previousDomain();
+    public abstract IntDomain getPreviousDomain();
 
     /**
      * It specifies if the other int domain is equal to this one.
@@ -958,7 +958,7 @@ public abstract class IntDomain extends Domain {
 
                 result.modelConstraints = modelConstraints;
 
-                result.searchConstraints = new ArrayList<Constraint>(searchConstraints.subList(0, searchConstraintsToEvaluate));
+                result.searchConstraints = new ArrayList<>(searchConstraints.subList(0, searchConstraintsToEvaluate));
                 result.searchConstraintsCloned = true;
                 result.stamp = storeLevel;
                 result.previousDomain = this;
@@ -984,7 +984,7 @@ public abstract class IntDomain extends Domain {
                     searchConstraints.add(firstSatisfied);
                     searchConstraintsToEvaluate++;
                 } else {
-                    searchConstraints = new ArrayList<Constraint>(searchConstraints.subList(0, searchConstraintsToEvaluate));
+                    searchConstraints = new ArrayList<>(searchConstraints.subList(0, searchConstraintsToEvaluate));
                     searchConstraintsCloned = true;
                     searchConstraints.add(C);
                     searchConstraintsToEvaluate++;
@@ -1271,12 +1271,13 @@ public abstract class IntDomain extends Domain {
         else if (c != 0 && d == 0 && (a > 0 || b < 0)) // case 4 b
             result = divBounds(a, b, c, -1);
 
-        else { // if (c > 0 || d < 0) { // case 5
+        else if ((c > 0 || d < 0) && c <= d) { // case 5
             int ac = a / c, ad = a / d, bc = b / c, bd = b / d;
             min = Math.min(Math.min(ac, ad), Math.min(bc, bd));
             max = Math.max(Math.max(ac, ad), Math.max(bc, bd));
             result = new Interval(min, max);
-        }
+        } else
+            throw Store.failException; // can happen if a..b or c..d are not proper intervals
 
         return result;
     }
@@ -1305,7 +1306,7 @@ public abstract class IntDomain extends Domain {
         else if (c != 0 && d == 0 && (a > 0 || b < 0)) // case 4 b
             result = divIntBounds(a, b, c, -1);
 
-        else { // if (c > 0 || d < 0) { // case 5
+        else if ( (c > 0 || d < 0) && c <= d) { // case 5
             float ac = (float) a / c, ad = (float) a / d, bc = (float) b / c, bd = (float) b / d;
             float low = Math.min(Math.min(ac, ad), Math.min(bc, bd));
             float high = Math.max(Math.max(ac, ad), Math.max(bc, bd));
@@ -1314,7 +1315,8 @@ public abstract class IntDomain extends Domain {
             if (min > max)
                 throw Store.failException;
             result = new Interval(min, max);
-        }
+        } else
+            throw Store.failException; // can happen if a..b or c..d are not proper intervals
 
         return result;
     }

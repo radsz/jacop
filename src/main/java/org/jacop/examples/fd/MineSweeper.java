@@ -382,9 +382,7 @@ public class MineSweeper extends ExampleFD {
         System.out.println("readFile(" + file + ")");
         int lineCount = 0;
 
-        try {
-
-            BufferedReader inr = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
+        try(BufferedReader inr = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"))) {
 
             String str;
             while ((str = inr.readLine()) != null && str.length() > 0) {

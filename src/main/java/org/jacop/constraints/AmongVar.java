@@ -30,7 +30,6 @@
 
 package org.jacop.constraints;
 
-import java.lang.reflect.Array;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
@@ -532,10 +531,10 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
                         lbSDom = lbSDom.union(y.domain);
                         if (futureDom.getSize() > 0)
                             futureDom = futureDom.subtract(y.value(), y.value());
-                        if (y.domain.previousDomain() != null) {
-                            mustBeCoveredNow = (IntervalDomain) mustBeCoveredNow.union((y.domain.previousDomain()));
+                        if (y.domain.getPreviousDomain() != null) {
+                            mustBeCoveredNow = (IntervalDomain) mustBeCoveredNow.union((y.domain.getPreviousDomain()));
                             if (!firstTimeWhileLoop)
-                                pureUbs = (IntervalDomain) pureUbs.union((y.domain.previousDomain()));
+                                pureUbs = (IntervalDomain) pureUbs.union((y.domain.getPreviousDomain()));
                         }
                         //						countGY ++;
 
@@ -552,10 +551,10 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
                         }
                     } else {
                         if (!firstTimeWhileLoop)
-                            if (y.domain.previousDomain() != null)
-                                pureUbs = (IntervalDomain) pureUbs.union((y.domain.previousDomain()));
-                        if ((y.domain.previousDomain()) != null)
-                            mustBeCoveredNow = (IntervalDomain) mustBeCoveredNow.union((y.domain.previousDomain()));
+                            if (y.domain.getPreviousDomain() != null)
+                                pureUbs = (IntervalDomain) pureUbs.union((y.domain.getPreviousDomain()));
+                        if ((y.domain.getPreviousDomain()) != null)
+                            mustBeCoveredNow = (IntervalDomain) mustBeCoveredNow.union((y.domain.getPreviousDomain()));
                     }
                 }
                 variableQueueY.clear();

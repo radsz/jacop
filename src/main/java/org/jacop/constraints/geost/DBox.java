@@ -455,8 +455,9 @@ public class DBox {
      */
     public static DBox boundingBox(Collection<DBox> boxes) {
 
-        assert !boxes.isEmpty();
-
+        if (boxes.isEmpty())
+            throw new IllegalArgumentException("Boxes parameter can not be an empty collection");
+        
         DBox boundingBox = null;
         int[] mins = null;
         int[] maxes = null;
