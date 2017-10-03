@@ -1,4 +1,4 @@
-/**
+/*
  * Geost.java
  * This file is part of JaCoP.
  * <p>
@@ -173,11 +173,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful {
     long queuedObjectCount = 0;
 
     /**
-     * Not used, but kept in case graphical debugging is needed in the future.
-     */
-    //BoxDisplay display = null;
-
-    /**
      * It specifies the unique number used to differentiate geost constraints.
      */
     static AtomicInteger idNumber = new AtomicInteger(0);
@@ -200,12 +195,11 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful {
      * Indeed, if some shape ID was pruned, feasibility can change, thus a check is needed.
      */
     boolean changedShapeID = false;
-
-
+    
     /**
      * if set to true, a variable will never be skipped, even if grounded and not in queue
      */
-    public boolean enforceNoSkip = false;
+    public boolean enforceNoSkip = true; // setting to false is causing a bug that allows incorrect solution to be accepted.
 
     /**
      * It remembers if it is the first time the consistency check is being performed.
