@@ -267,7 +267,10 @@ class GlobalConstraints implements ParserTreeConstants {
     void gen_jacop_subcircuit(SimpleNode node) {
         IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
         support.pose(new Subcircuit(v));
-    }
+
+	if (support.domainConsistency && !support.options.getBoundConsistency())  // we add additional implied constraint if domain consistency is required
+            support.parameterListForAlldistincts.add(v);
+}
 
     void gen_jacop_alldiff(SimpleNode node) {
         IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
