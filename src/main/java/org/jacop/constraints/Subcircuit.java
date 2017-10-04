@@ -247,13 +247,13 @@ public class Subcircuit extends Alldiff {
 				realCycle = true;
 				break;
 			    }
-
-			if (sccLength == numberGround && numberGround < list.length) {
-			    // subcircuit alrerady found => all others must be self-cycles
-			    for (int j = 0; j < list.length; j++) {
-				if (!cycleVar.get(j))
-				    list[j].domain.in(store.level, list[j], j + 1, j + 1);
-			    }
+		    }
+		    
+		    if (sccLength == numberGround && numberGround < list.length) {
+			// subcircuit alrerady found => all others must be self-cycles
+			for (int j = 0; j < list.length; j++) {
+			    if (!cycleVar.get(j))
+				list[j].domain.in(store.level, list[j], j + 1, j + 1);
 			}
 		    }
 		}
