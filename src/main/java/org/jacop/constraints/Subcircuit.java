@@ -38,7 +38,6 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
-import org.jacop.util.LengauerTarjan;
 
 /**
  * Subcircuit constraint assures that all variables build a 
@@ -133,7 +132,6 @@ public class Subcircuit extends Alldiff {
 
         sccsBasedPruning(store); // strongly connected components
 
-	dominancePruning(); // filter based on dominance of nodes
     }
 
     void alldifferent(Store store, LinkedHashSet<IntVar> fdvs) {
@@ -203,7 +201,6 @@ public class Subcircuit extends Alldiff {
     // Based on the algorithm from the book
     // Robert Sedgewick, Algorithms, 1988, p. 482.
 
-    // Stack<Integer> stack = new Stack<Integer>();
     int[] stack;  // stack for strongly connected compoents algorithm
     int stack_pointer;
     
@@ -240,11 +237,24 @@ public class Subcircuit extends Alldiff {
                 if (sccLength == 1)
                     // the scc is of size one => it must be self-cycle
                     list[i].domain.in(store.level, list[i], i + 1, i + 1);
-                else if (sccLength == numberGround && numberGround < list.length) {
-		    // subcircuit alrerady found => all others must be self-cycles
-		    for (int j = 0; j < list.length; j++) {
-			if (!cycleVar.get(j))
-			    list[j].domain.in(store.level, list[j], j + 1, j + 1);
+                else {
+		    // check if more than 1 sub-cycle possible
+		    for (int cv = cycleVar.nextSetBit(0); cv >= 0; cv = cycleVar.nextSetBit(cv + 1)) {
+			if (!list[cv].domain.contains(cv+1))
+			    if (realCycle) // second sub-cycle under creation -> wrong!
+				throw store.failException;
+			    else {
+				realCycle = true;
+				break;
+			    }
+
+			if (sccLength == numberGround && numberGround < list.length) {
+			    // subcircuit alrerady found => all others must be self-cycles
+			    for (int j = 0; j < list.length; j++) {
+				if (!cycleVar.get(j))
+				    list[j].domain.in(store.level, list[j], j + 1, j + 1);
+			    }
+			}
 		    }
 		}
             }
@@ -334,50 +344,5 @@ public class Subcircuit extends Alldiff {
         }
 
         return min;
-    }
-
-    private void dominancePruning() {
-	int n = list.length;
-	
-	// create the graph
-	int possibleRoot = -1; 
-	int u=0;
-	while (possibleRoot == -1) {
-	    if (! list[u].domain.contains(u+1)) {
-		possibleRoot = u;
-	    }
-	    u++;
-	}
-	
-	LengauerTarjan graph = new LengauerTarjan(n+1);
-	
-	if (possibleRoot != -1) {
-	    // create graph
-	    int root = possibleRoot;
-	    for (int v = 0; v < n; v++) {
-		for (ValueEnumeration e = list[v].domain.valueEnumeration(); e.hasMoreElements(); ) {
-		    int w = e.nextElement() - 1;
-		    if (v == root || v == w) 
-			graph.addArc(n, w);  // make source for root = n & make arcs connecting root to all self-cycles nodes
-		    else 
-			graph.addArc(v, w);  // make ordinary arc; here sink = root
-		}
-	    }
-
-	    if (graph.dominators(n)) {
-		int[] dominates = graph.dom();
-		for (int w = 0; w < n; w++) {
-		    int v = dominates[w];
-		    if (v < n && v != root && v != w) { // real node (not n since n -> source root) and not a root
-			// no self-loop for dominator
-			list[v].domain.inComplement(store.level, list[v], v+1);
-			// no back loop to dominator; possibly should go to root 
-			list[w].domain.inComplement(store.level, list[w], v+1);
-		    }
-		}
-	    }
-	    else  // root does not reach all nodes -> FAIL
-		throw store.failException;
-	}
     }
 }
