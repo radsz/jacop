@@ -77,7 +77,7 @@ function timeCategory
  #timeParameter $par
  folderPath=$1
 #path="test"
-if [ $# -eq 2 ]
+if [ $# -eq 2 ] || [ $# -eq 3 ]
 then
     pa=$2
 else
@@ -114,6 +114,7 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
             # echo "TTT" $opt
            #done <${k%/*/*}/*.opt
               #opt=($(<${k%/*/*}/*.opt))
+
               opt=`sed -n 1p ${k%/*/*}/options.opt`
               out=$(java -cp ../../../target/jacop-*-SNAPSHOT.jar org.jacop.fz.Fz2jacop $time $opt $k) # Program Fz2jacop generate test result
               echo "$out"
@@ -710,6 +711,14 @@ fi
 ii=${i##*/} # mzn filename with extension
 iii=${ii%.*} # mzn filename without extension
 
+if [ $# -eq 3 ]
+then
+    sizeFznFile=$[1048576*$3]
+else
+    sizeFznFile=15728640
+fi
+
+#sizeFznFile=1048576;
 # Creating a temporary directory in the same directory as mzn file has resided using the mzn file without extension as the name.
 if [ ! -d "$z/${z#*/}" ]; then
 	mkdir $z/${z#*/}
@@ -717,20 +726,29 @@ fi
 
 if [[ -z $(find  $z -mindepth 1 -maxdepth 1 -name \*.dzn 2>/dev/null) ]]
 then
+
         echo "Generatig fzn file for $i"
         mzn2fzn -G jacop $i
 
-   findRes=$(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $iii.fzn 2>/dev/null)
-   diff $findRes ${i%/*}/$iii.fzn 2>/dev/null
-   diffre=$?
-   if [[ -z $(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $iii.fzn 2>/dev/null ) || -z $(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $iii.out 2>/dev/null) || $diffre -ne 0 ]]
-   then
-        for file in $z/*.fzn; do mv "$file" $z/${z#*/}/"${file/*.fzn/$iii.fzn}"; done
-        timeCategory $folderPath $2
-    else
-     rm -r $z
+    b=${i##*/} # *.fzn filename with extension
+    bb=${b%.*} # *.mzn filename without extension
+  file_size=`stat -c %s "test/${bb%%/}/$bb.fzn"`
+#  echo "file size" $file_size $bb $path
+  if [ $file_size -le $sizeFznFile ] #1197181
+  then
+     findRes=$(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $iii.fzn 2>/dev/null)
+     diff $findRes ${i%/*}/$iii.fzn 2>/dev/null
+     diffre=$?
+     if [[ -z $(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $iii.fzn 2>/dev/null ) || -z $(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $iii.out 2>/dev/null) || $diffre -ne 0 ]]
+     then
+            for file in $z/*.fzn; do mv "$file" $z/${z#*/}/"${file/*.fzn/$iii.fzn}"; done
+            timeCategory $folderPath $2
+     else
+         rm -r $z
 
    fi
+  else "The file is larger than $sizeFznFile"
+  fi
 fi
 count1=0
 readarray -t arr2 < <(find $z -mindepth 1 -maxdepth 1 -name \*.dzn 2>/dev/null)
@@ -743,6 +761,15 @@ for j in ${arr2[@]}; do # j contains a relative path to dzn file.
 	filename=${path##*/}
      echo "Generatig fzn file for $i and data file $j"
      mzn2fzn -G jacop $i -d $j
+#    ${string:%wzorzec},
+    b=${i##*/} # *.fzn filename with extension
+    bb=${b%.*} # *.mzn filename without extension
+  file_size=`stat -c %s "test/${bb%%/}/$bb.fzn"`
+#  sizeFznFile=1048576;
+#  echo "file size" $file_size $bb $path
+
+  if [ $file_size -le  $sizeFznFile ] #1197181
+  then
      findRes=$(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $filename.fzn 2>/dev/null)
      diff $findRes ${i%/*}/$iii.fzn 2>/dev/null
      diffre=$?
@@ -759,6 +786,10 @@ for j in ${arr2[@]}; do # j contains a relative path to dzn file.
     if [ "$count1" -eq "$arraysize" ]; then
        rm -r $z
     fi
+else echo "The file is larger than $sizeFznFile"
+rm  "test/${bb%%/}/$bb.fzn"
+fi
+
 done
      timeCategory $folderPath $2
 done
