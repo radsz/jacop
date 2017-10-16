@@ -476,7 +476,7 @@ class LinearConstraints implements ParserTreeConstants {
                         else
                             support.pose(new SumInt(store, p2, "==", v));
                     } else {
-                        if (p2.length < 15)
+                        if (p2.length < 30)
                             support.pose(new LinearInt(store, p2, p1, "==", p3));
                         else
                             support.pose(new SumWeight(p2, p1, p3));
