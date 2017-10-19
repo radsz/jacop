@@ -137,14 +137,18 @@ public class Subcircuit extends Alldiff {
             variableQueue = new LinkedHashSet<IntVar>();
 
             alldifferent(store, fdvs);
+	    
+            if (!store.propagationHasOccurred) {
 
+		if (useSCC)
+		    sccsBasedPruning(store); // strongly connected components
+
+		if (useDominance)
+		    dominanceFilter(); // filter based on dominance of nodes
+
+	    }
+	    
         } while (store.propagationHasOccurred);
-
-	if (useSCC)
-	    sccsBasedPruning(store); // strongly connected components
-
-	if (useDominance)
-	    dominanceFilter(); // filter based on dominance of nodes
     }
 
     void alldifferent(Store store, LinkedHashSet<IntVar> fdvs) {
@@ -224,14 +228,10 @@ public class Subcircuit extends Alldiff {
 
     private void sccsBasedPruning(Store store) {
 
-        // System.out.println ("========= SCCS =========");
-
-        int maxCycle = 0;
-
         java.util.Arrays.fill(val, 0);
 
         idd = 0;
-	boolean realCycle = false;
+	BitSet realCycle = null;
 	
         for (int i = 0; i < list.length; i++) {
 
@@ -239,52 +239,33 @@ public class Subcircuit extends Alldiff {
 
             if (val[i] == 0) {
 
-                // System.out.print("Node " + i + ": cycle = " );
-
                 visit(i);
-
-                maxCycle = (sccLength > maxCycle) ? sccLength : maxCycle;
-                //sccList.add(cycleVar);
-
-                // System.out.println (cycleVar + " cycle length = " + sccLength);
 
                 if (sccLength == 1)
                     // the scc is of size one => it must be self-cycle
                     list[i].domain.in(store.level, list[i], i + 1, i + 1);
-                else if (sccLength == numberGround && numberGround < list.length) {
-		    // subcircuit alrerady found => all others must be self-cycles
-		    for (int j = 0; j < list.length; j++) {
-			if (!cycleVar.get(j))
-			    list[j].domain.in(store.level, list[j], j + 1, j + 1);
-		    }
-		}
 		// check if more than 1 sub-cycle possible
 		for (int cv = cycleVar.nextSetBit(0); cv >= 0; cv = cycleVar.nextSetBit(cv + 1)) {
 		    if (!list[cv].domain.contains(cv+1))
-			if (realCycle) // second sub-cycle under creation -> wrong!
+			if (realCycle != null) // second sub-cycle under creation -> wrong!
 			    throw store.failException;
 			else {
-			    realCycle = true;
+			    realCycle = cycleVar;
 			    break;
 			}
 		}
 	    }
         }
 
-        int possibleSelfCycles = 0;
-        for (int j = 0; j < list.length; j++)
-            if (list[j].domain.contains(j + 1))
-                possibleSelfCycles++;
-
-        if (sccLength != 1 && list.length - possibleSelfCycles > maxCycle)
-            // maximal cycle is smaller than possible; that is all nodes minus **possible** self-cycles
-            throw Store.failException;
+	if (realCycle != null && realCycle.cardinality() < list.length) {
+	    // possible cycle found, the rest must be self-loop
+	    for (int j = realCycle.nextClearBit(0); j < list.length; j = realCycle.nextClearBit(j + 1))
+		    list[j].domain.in(store.level, list[j], j+1, j+1);
+	}
     }
 
 
     private int sccs(Store store) {
-
-        // System.out.println ("========= SCCS =========");
 
         int totalNodes = 0;
 
@@ -301,8 +282,6 @@ public class Subcircuit extends Alldiff {
                 visit(i);
 
                 totalNodes += sccLength;
-
-                // System.out.println (cycleVar + " cycle length = " + sccLength);
 
             }
         }
