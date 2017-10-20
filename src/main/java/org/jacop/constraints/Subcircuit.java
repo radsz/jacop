@@ -224,8 +224,6 @@ public class Subcircuit extends Alldiff {
 
     BitSet cycleVar;
     
-    int numberGround = 0;
-
     private void sccsBasedPruning(Store store) {
 
         java.util.Arrays.fill(val, 0);
@@ -314,8 +312,6 @@ public class Subcircuit extends Alldiff {
         if (min == val[k]) {
 
             cycleVar = new BitSet(list.length); 
-            numberGround = 0;
-
             sccLength = 0;
 
             int n;
@@ -323,9 +319,6 @@ public class Subcircuit extends Alldiff {
 		// stack pop
 		n = stack[--stack_pointer];
                 cycleVar.set(n);
-
-                if (list[n].singleton())
-                    numberGround++;
 
                 val[n] = list.length + 1;
 
