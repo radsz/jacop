@@ -43,7 +43,7 @@ import org.jacop.constraints.Constraint;
 
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 3.1
+ * @version 4.5
  */
 
 public abstract class IntDomain extends Domain {

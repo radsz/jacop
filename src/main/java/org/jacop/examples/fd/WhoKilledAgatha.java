@@ -1,4 +1,4 @@
-/**
+/*
  * WhoKilledAgatha.java
  * This file is part of JaCoP.
  * <p>
@@ -78,7 +78,9 @@ import org.jacop.search.SmallestDomain;
  * This JaCoP model was created by Hakan Kjellerstrand (hakank@bonetmail.com)
  * http://www.hakank.org/JaCoP/ .
  *
- *  @author Hakan Kjellerstrand and Radoslaw Szymanek
+ * @author Hakan Kjellerstrand and Radoslaw Szymanek
+ * @version 4.5
+ *
  */
 
 public class WhoKilledAgatha extends ExampleFD {

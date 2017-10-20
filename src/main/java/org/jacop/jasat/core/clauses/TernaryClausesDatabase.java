@@ -1,4 +1,4 @@
-/**
+/*
  * TernaryClausesDatabase.java
  * <p>
  * This file is part of JaCoP.
@@ -48,7 +48,7 @@ import org.jacop.jasat.utils.Utils;
  * TODO, check if this the efficient way of dealing with ternary clauses. 
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- *
+ * @version 4.5
  */
 
 public final class TernaryClausesDatabase extends AbstractClausesDatabase {

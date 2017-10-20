@@ -1,4 +1,4 @@
-/**
+/*
  * ExplanationListener.java
  * <p>
  * This file is part of JaCoP.
@@ -36,6 +36,7 @@ import org.jacop.jasat.core.clauses.MapClause;
 /**
  * module used when an explanation is found
  * @author Simon Cruanes and Radoslaw Szymanek
+ * @version 4.5
  *
  */
 public interface ExplanationListener extends SolverComponent {

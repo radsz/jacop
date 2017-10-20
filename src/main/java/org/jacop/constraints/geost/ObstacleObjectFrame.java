@@ -1,4 +1,4 @@
-/**
+/*
  * ObstacleObjectFrame.java
  * This file is part of JaCoP.
  * <p>
@@ -44,6 +44,7 @@ import org.jacop.util.SimpleArrayList;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
+ * @version 4.5
  *
  * This version of the ObstacleObject internal constraint allows the use
  * of multiple d-boxes per shape.

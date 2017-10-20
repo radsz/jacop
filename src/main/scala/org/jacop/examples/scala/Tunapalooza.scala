@@ -1,54 +1,45 @@
+/*
+ * Tunapalooza.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package org.jacop.examples.scala
 
 import scala.collection.mutable.ArrayBuffer
 import org.jacop.scala._
 
 /**
- * 
- * It solves a simple logic puzzle about music concert. 
- * 
- * @author Lesniak Kamil, Harezlak Roman, Radoslaw Szymanek
- * @version 3.0
- * 
- * Tim and Keri have a full day ahead for themselves as they plan to see
- * and hear everything at Tunapalooza '98, the annual save-the-tuna
- * benefit concert in their hometown. To cover the most ground, they
- * will have to split up.  They have arranged to meet during four rock
- * band acts (Ellyfish, Korrupt, Retread Ed and the Flat Tires, and
- * Yellow Reef) at planned rendezvous points (carnival games,
- * information booth, mosh pit, or T-shirt vendor).  Can you help match
- * each band name with the type of music they play (country, grunge,
- * reggae, or speed metal) and Tim and Kerri's prearranged meeting spot
- * while they play?
- * 
- * 1. Korrupt isn't a country or grunge music band. 
- * 
- * 2. Tim and Kerri won't meet at the carnival games during Ellyfish's performance.
- *
- * 3. The pair won't meet at the T-shirt vendor during the reggae band's show.
- *
- * 4. Exactly two of the following three statements are true:
- * a) Ellyfish plays grunge music.
- * b) Tim and Kerri won't meet at the information booth during a performance by Retread Ed and the Flat Tires.
- * c) The two friends won't meet at the T-shirt vendor while Yellow Reef is playing.
- *
- * 5. The country and speed metal acts are, in some order, Retread Ed and the Flat Tires 
- * and the act during which Tim and Kerri will meet at the mosh pit.
- *
- * 6. The reggae band is neither Korrupt nor the act during which Tim and 
- * Kerri will meet at the information booth.
- *
- * Determine: Band name -- Music type -- Meeting place
- *
- * Given solution : 
- *
- * 1 Ellyfish, grunge,  vendor
- * 2 Korrupt,  metal,   mosh
- * 3 Retread,  country, information 
- * 4 Yellow ,  reggae,  carnival
- * 
- */
-
+  * A problem defined as in Java based examples.
+  *
+  * rewriting to Scala by Krzysztof Kuchcinski.
+  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+  * @version 4.5
+  */
 object Tunapalooza extends App with jacop {
 
   var vars = new ArrayBuffer[org.jacop.core.IntVar]()

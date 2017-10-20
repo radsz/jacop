@@ -1,4 +1,4 @@
-/**
+/*
  * Tree.java
  * This file is part of JaCoP.
  * <p>
@@ -39,6 +39,8 @@ import java.util.Map;
  * This tree is a main data structure used and required by Knapsack constraint.
  *
  * @author Radoslaw Szymanek and Wadeck Follonier
+ * @version 4.5
+ *
  */
 
 public class Tree {

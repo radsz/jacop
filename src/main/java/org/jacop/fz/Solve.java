@@ -1,4 +1,4 @@
-/**
+/*
  * Solve.java
  * This file is part of JaCoP.
  * <p>
@@ -74,6 +74,7 @@ import org.jacop.satwrapper.SatTranslation;
  * that they are ground.
  *
  * @author Krzysztof Kuchcinski
+ * @version 4.5
  *
  */
 public class Solve implements ParserTreeConstants {

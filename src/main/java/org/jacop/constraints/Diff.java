@@ -46,7 +46,7 @@ import org.jacop.core.*;
  * does not use sophisticated techniques for efficient backtracking.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 3.1
+ * @version 4.5
  */
 
 public class Diff extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {

@@ -1,4 +1,4 @@
-/**
+/*
  * MinTestSuite.java
  * This file is part of JaCoP.
  * <p>
@@ -41,6 +41,5 @@ import org.junit.runners.Suite;
  */
 
 @RunWith(Suite.class)
-
 @Suite.SuiteClasses({ExampleBasedTest.class, QueueForwardTest.class, SingleConstraintTest.class, MinizincBasedTestUpTo5Seconds.class}) public class MinTestSuite {
 }

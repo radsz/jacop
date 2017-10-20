@@ -1,4 +1,4 @@
-/**
+/*
  * IntervalBasedBacktrackableManager.java
  * This file is part of JaCoP.
  * <p>
@@ -36,6 +36,7 @@ import java.util.List;
 
 /**
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
+ * @version 4.5
  *
  * This manager works as simple manager to the point when cutoff value for a list
  * is reached. The objects indexes are continously stored in a list, but they 

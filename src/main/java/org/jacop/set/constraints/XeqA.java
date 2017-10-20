@@ -1,4 +1,4 @@
-/**
+/*
  * XeqA.java
  * This file is part of JaCoP.
  * <p>
@@ -45,7 +45,6 @@ import org.jacop.set.core.SetVar;
  * is the only element of the set assigned to a set variable a. 
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- *
  * @version 4.4
  */
 

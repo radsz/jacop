@@ -1,4 +1,4 @@
-/**
+/*
  * SetDomainValueEnumeration.java
  * This file is part of JaCoP.
  * <p>
@@ -36,7 +36,7 @@ import org.jacop.core.ValueEnumeration;
 /**
  * Defines a methods for enumerating values contained in the SetDomain.
  *
- * @author Robert Åkemalm
+ * @author Krzysztof Kuchcinski, Radoslaw Szymanek and Robert Åkemalm
  * @version 4.4
  */
 

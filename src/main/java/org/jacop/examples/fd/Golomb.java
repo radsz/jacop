@@ -1,4 +1,4 @@
-/**
+/*
  * Golomb.java
  * This file is part of JaCoP.
  * <p>
@@ -53,6 +53,7 @@ import org.jacop.search.SelectChoicePoint;
  * It models a Golomb ruler problem.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
+ * @version 4.5
  *
  *
  * Golomb ruler is a special sequence of natural numbers

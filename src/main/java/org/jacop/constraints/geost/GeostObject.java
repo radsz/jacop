@@ -40,6 +40,7 @@ import org.jacop.core.Var;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
+ * @version 4.5
  *
  * It contains all information about the Geost object as well as functionality to 
  * maintain the consistency among time variables. 

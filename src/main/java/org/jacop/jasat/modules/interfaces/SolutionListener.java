@@ -1,4 +1,4 @@
-/**
+/*
  * SolutionListener.java
  * <p>
  * This file is part of JaCoP.
@@ -35,6 +35,7 @@ import org.jacop.jasat.core.SolverComponent;
 /**
  * module called when solution is found.
  * @author Simon Cruanes and Radoslaw Szymanek
+ * @version 4.5
  *
  */
 

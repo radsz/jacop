@@ -1,4 +1,4 @@
-/**
+/*
  * Golf.java
  * This file is part of JaCoP.
  * <p>
@@ -51,6 +51,7 @@ import org.jacop.core.Store;
  * A simple logic puzzle about golf players. 
  *
  * @author Mariusz Czarnojan, Krystian Burka, and Radoslaw Szymanek
+ * @version 4.5
  *
  * "A Round of Golf"
 

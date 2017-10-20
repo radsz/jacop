@@ -1,4 +1,4 @@
-/**
+/*
  * UnaryClausesDatabase.java
  * <p>
  * This file is part of JaCoP.
@@ -40,6 +40,7 @@ import org.jacop.jasat.utils.Utils;
  * A database for unit clauses (length 1). It only accepts those.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
+ * @version 4.5
  *
  */
 

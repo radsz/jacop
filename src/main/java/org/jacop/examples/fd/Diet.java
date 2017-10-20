@@ -1,4 +1,4 @@
-/**
+/*
  * Diet.java
  * This file is part of JaCoP.
  * <p>
@@ -68,7 +68,10 @@ import org.jacop.core.Store;
  *  Cola (1 bottle)                150           0            4      1
  *  Pineapple cheesecake (1 piece) 500           0            4      5
  *
- * """  
+ * """
+ *
+ * @author Hakan Kjellerstrand (hakank@bonetmail.com) and Radoslaw Szymanek
+ * @version 4.5
  *
  * Compare with my MiniZinc model:
  * http://www.hakank.org/minizinc/diet1.mzn

@@ -1,4 +1,4 @@
-/**
+/*
  * SearchModule.java
  * <p>
  * This file is part of JaCoP.
@@ -43,6 +43,7 @@ import org.jacop.jasat.modules.interfaces.StartStopListener;
 /**
  * A basic searching component, which controls the solver to solve the problem
  * @author Simon Cruanes and Radoslaw Szymanek
+ * @version 4.5
  */
 
 public final class SearchModule implements SolutionListener, ExplanationListener, StartStopListener {

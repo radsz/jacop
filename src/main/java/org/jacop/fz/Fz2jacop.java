@@ -1,4 +1,4 @@
-/**
+/*
  * Fz2jacop.java
  * This file is part of JaCoP.
  * <p>
@@ -43,6 +43,7 @@ import java.nio.file.Paths;
  * An executable to parse and execute the flatzinc file. 
  *
  * @author Krzysztof Kuchcinki
+ * @version 4.5
  *
  */
 

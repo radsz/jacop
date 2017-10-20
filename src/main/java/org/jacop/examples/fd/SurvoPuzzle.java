@@ -73,6 +73,7 @@ import org.jacop.core.Store;
  *
  *
  * @author Hakan Kjellerstrand and Radoslaw Szymanek
+ * @version 4.5
  *
  */
 

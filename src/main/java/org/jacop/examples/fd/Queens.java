@@ -1,4 +1,4 @@
-/**
+/*
  * Queens.java
  * This file is part of JaCoP.
  * <p>
@@ -45,6 +45,7 @@ import org.jacop.core.Store;
  * different search methods.
  *
  * @author Radoslaw Szymanek
+ * @version 4.5
  *
  */
 public class Queens extends ExampleFD {

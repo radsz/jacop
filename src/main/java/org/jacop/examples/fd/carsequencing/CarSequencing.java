@@ -1,4 +1,4 @@
-/**
+/*
  * CarSequencing.java
  * This file is part of JaCoP.
  * <p>
@@ -55,6 +55,7 @@ import org.jacop.util.fsm.FSMTransition;
  * It is program to model and solve simple problems of car sequencing problem (CSPLIB-p1).
  *
  * @author Radoslaw Szymanek
+ * @version 4.4
  *
  */
 

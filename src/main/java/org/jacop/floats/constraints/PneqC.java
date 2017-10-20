@@ -1,4 +1,4 @@
-/**
+/*
  * PneqC.java
  * This file is part of org.jacop.
  * <p>

@@ -1,4 +1,4 @@
-/**
+/*
  * SimpleSelect.java
  * This file is part of JaCoP.
  * <p>
@@ -30,7 +30,6 @@
 
 package org.jacop.search;
 
-import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.Map;
 

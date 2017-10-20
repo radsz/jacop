@@ -1,4 +1,4 @@
-/**
+/*
  * Cyclohexane.java
  * This file is part of JaCoP.
  * <p>
@@ -36,6 +36,7 @@ package org.jacop.examples.floats;
  * minizinc model cyclohexane.mzn by Håkan Kjellerstrand
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 4.5
  *
  */
 

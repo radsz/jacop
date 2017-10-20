@@ -40,7 +40,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Boundary consistency is used.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 3.1
+ * @version 4.5
  */
 
 public class XmulYeqC extends PrimitiveConstraint {

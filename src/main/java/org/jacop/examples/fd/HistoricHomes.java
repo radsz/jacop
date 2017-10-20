@@ -1,4 +1,4 @@
-/**
+/*
  * HistoricHomes.java
  * This file is part of JaCoP.
  * <p>
@@ -47,6 +47,7 @@ import org.jacop.core.Store;
  * It is a simple logic puzzle about houses. 
  *
  * @author Radoslaw Szymanek
+ * @version 4.5
  *
  * Each year the Glendale Women's Club sponsors a Historic Homes Tour in which 
  * five old houses are (with the owners' permission, of course) opened to the 

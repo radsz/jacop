@@ -1,4 +1,4 @@
-/**
+/*
  * OrBoolVector.java
  * This file is part of JaCoP.
  * <p>
@@ -46,7 +46,7 @@ import org.jacop.core.TimeStamp;
  * It restricts the domain of all x as well as result to be between 0 and 1.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.5
  */
 
 public class OrBoolVector extends PrimitiveConstraint {

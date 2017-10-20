@@ -1,4 +1,4 @@
-/**
+/*
  * ExampleBasedTest.java
  * This file is part of JaCoP.
  * <p>
@@ -44,16 +44,14 @@ import scala.tools.nsc.transform.patmat.Logic;
 import java.util.HashSet;
 import java.util.Set;
 
-
 /**
  *
  * It is performing testing based on the examples present in the library.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 public class ExampleBasedTest {
-
 
     @Test public void testCarSequencing() {
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Kakro.java
  * This file is part of JaCoP.
  * <p>
@@ -43,6 +43,7 @@ import org.jacop.core.Store;
  * It is program to solve Kakro puzzles. 
  *
  * @author Radoslaw Szymanek
+ * @version 4.5
  *
  * This is a program which uses Constraint Programming to find the solution to a
  * simple Kakro puzzle. For a moment the problem representation does not allow 

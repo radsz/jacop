@@ -1,4 +1,4 @@
-/**
+/*
  * IndomainMinLUB.java
  * This file is part of JaCoP.
  * <p>

@@ -1,4 +1,4 @@
-/**
+/*
  * WolfGoatCabbage.java
  * This file is part of JaCoP.
  * <p>
@@ -46,6 +46,7 @@ import org.jacop.core.Store;
  * A simple logic problem of transporting wolf, goat, and cabbage over the river.  
  *
  * @author Radoslaw Szymanek
+ * @version 4.5
  *
  * We need to transfer the cabbage, the goat and the wolf from one bank of the river to 
  * the other bank. But there is only one seat available on his boat !

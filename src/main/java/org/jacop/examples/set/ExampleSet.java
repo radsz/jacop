@@ -1,4 +1,4 @@
-/**
+/*
  * Examples.java
  * This file is part of JaCoP.
  * <p>
@@ -30,7 +30,6 @@
 
 package org.jacop.examples.set;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.jacop.core.IntVar;

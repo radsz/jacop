@@ -1,4 +1,4 @@
-/**
+/*
  * TanExample.java
  * This file is part of JaCoP.
  * <p>
@@ -35,6 +35,7 @@ package org.jacop.examples.floats;
  * It models tan(x) = -x for floating solver.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 4.5
  *
  */
 

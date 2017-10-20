@@ -1,4 +1,4 @@
-/**
+/*
  * FurnitureMoving.java
  * This file is part of JaCoP.
  * <p>
@@ -50,6 +50,7 @@ import org.jacop.search.SmallestDomain;
  * It is a simple logic puzzle about furniture moving.
  *
  * @author Hakan Kjellerstrand (hakank@bonetmail.com) and Radoslaw Szymanek
+ * @version 4.5
  *
  * Problem from Marriott {@literal &} Stuckey: 'Programming with constraints', page 112f
  *

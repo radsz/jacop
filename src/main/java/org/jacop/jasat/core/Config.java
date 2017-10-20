@@ -1,4 +1,4 @@
-/**
+/*
  * Config.java
  * <p>
  * This file is part of JaCoP.
@@ -48,6 +48,7 @@ import org.jacop.jasat.core.clauses.UnaryClausesDatabase;
  * changed before the Config object is given to the solver.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
+ * @version 4.5
  *
  */
 

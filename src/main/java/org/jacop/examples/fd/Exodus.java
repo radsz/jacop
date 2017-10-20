@@ -1,4 +1,4 @@
-/**
+/*
  * Exodus.java
  * This file is part of JaCoP.
  * <p>
@@ -84,6 +84,8 @@ import org.jacop.core.Store;
  * Determine: Age -- Child -- Country -- Story
  *
  * @author Duda Wojciech and Radoslaw Szymanek
+ * @version 4.5
+ *
  */
 
 public class Exodus extends ExampleFD {

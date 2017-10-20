@@ -1,4 +1,4 @@
-/**
+/*
  * Statistics.java
  * This file is part of JaCoP.
  * <p>
@@ -29,8 +29,6 @@
  */
 
 package org.jacop.constraints.netflow;
-
-import java.text.DecimalFormat;
 
 /**
  *

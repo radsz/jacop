@@ -1,4 +1,4 @@
-/**
+/*
  * ExtensionalSupportMDD.java
  * This file is part of JaCoP.
  * <p>
@@ -56,7 +56,7 @@ import org.jacop.util.SparseSet;
  * test against STR version.
  *
  * @author Radoslaw Szymanek
- * @version 2.3
+ * @version 4.5
  */
 
 public class ExtensionalSupportMDD extends Constraint implements SatisfiedPresent {

@@ -1,4 +1,4 @@
-/**
+/*
  * PrintOutListener.java
  * This file is part of JaCoP.
  * <p>
@@ -30,15 +30,15 @@
 
 package org.jacop.search;
 
+import org.jacop.core.Var;
+
 /**
- * It is a simple example how it is possible to extend existing listeners to 
+ * It is a simple example how it is possible to extend existing listeners to
  * add your own functionality.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.4
  */
-import org.jacop.core.Var;
-
 public class PrintOutListener<T extends Var> extends SimpleSolutionListener<T> implements SolutionListener<T> {
 
     /**

@@ -1,4 +1,4 @@
-/**
+/*
  * Trail.java
  * <p>
  * This file is part of JaCoP.
@@ -44,6 +44,7 @@ import org.jacop.jasat.utils.structures.IntStack;
  * they were asserted.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
+ * @version 4.5
  *
  */
 

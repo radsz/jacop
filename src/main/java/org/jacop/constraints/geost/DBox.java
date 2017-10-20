@@ -37,7 +37,7 @@ import org.jacop.util.SimpleArrayList;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
- *
+ * @version 4.5
  */
 public class DBox {
 

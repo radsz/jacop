@@ -1,4 +1,4 @@
-/**
+/*
  * Rosenbrock.java
  * This file is part of JaCoP.
  * <p>
@@ -48,6 +48,7 @@ package org.jacop.examples.floats;
  * It has a global minimum at (x,y) = (1,1) where f(x,y) = 0.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 4.5
  *
  */
 
