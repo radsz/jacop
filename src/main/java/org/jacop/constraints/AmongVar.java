@@ -1,4 +1,4 @@
-/**
+/*
  * AmongVar.java
  * This file is part of JaCoP.
  * <p>
@@ -56,7 +56,6 @@ import org.jacop.core.*;
  * @author Polina Makeeva and Radoslaw Szymanek
  * @version 4.4
  */
-
 public class AmongVar extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
     /**

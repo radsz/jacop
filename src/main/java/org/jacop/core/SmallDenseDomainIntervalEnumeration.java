@@ -1,4 +1,4 @@
-/**
+/*
  * SmallDenseDomainIntervalEnumeration.java
  * This file is part of JaCoP.
  * <p>
@@ -30,6 +30,12 @@
 
 package org.jacop.core;
 
+/**
+ * Defines interval enumeration of small dense domain.
+ *
+ * @author Radoslaw Szymanek and Krzysztof Kuchcinski
+ * @version 4.5
+ */
 public class SmallDenseDomainIntervalEnumeration extends IntervalEnumeration {
 
     int current;

@@ -31,24 +31,12 @@
 package org.jacop;
 
 import org.jacop.constraints.LinearInt;
-import org.jacop.constraints.Not;
-import org.jacop.constraints.Reified;
 import org.jacop.constraints.SumWeight;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.floats.constraints.LinearFloat;
-import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.search.SplitSelectFloat;
-import org.jacop.fz.Fz2jacop;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.PrintOutListener;
-import org.jacop.search.Search;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
 /**

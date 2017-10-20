@@ -1,4 +1,4 @@
-/**
+/*
  * HeuristicAssertionModule.java
  * <p>
  * This file is part of JaCoP.
@@ -38,6 +38,7 @@ import org.jacop.jasat.core.Trail;
 /**
  * module used to guide research by selecting the next literal to assert
  * @author Simon Cruanes and Radoslaw Szymanek
+ * @version 4.5
  *
  */
 public final class HeuristicAssertionModule implements SolverComponent {

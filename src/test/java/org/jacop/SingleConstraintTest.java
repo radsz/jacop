@@ -1,4 +1,4 @@
-/**
+/*
  * SingleConstraintTest.java
  * <p>
  * This file is part of JaCoP.

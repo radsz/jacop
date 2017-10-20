@@ -1,4 +1,4 @@
-/**
+/*
  * AllowedArea.java
  * This file is part of JaCoP.
  * <p>
@@ -38,6 +38,7 @@ import org.jacop.core.Var;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
+ * @version 4.5
  *
  * Constraint that represents a domain in which objects need to be contained
  *

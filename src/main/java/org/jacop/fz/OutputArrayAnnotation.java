@@ -1,4 +1,4 @@
-/**
+/*
  * OutputArrayAnnotation.java
  * This file is part of JaCoP.
  * <p>
@@ -42,6 +42,7 @@ import org.jacop.core.ValueEnumeration;
  * It stores information about the annotation for an output array. 
  *
  * @author Krzysztof Kuchcinski
+ * @version 4.5
  *
  */
 public class OutputArrayAnnotation {

@@ -1,4 +1,4 @@
-/**
+/*
  * BoxDisplay.java
  * <p>
  * This file is part of JaCoP.
@@ -42,6 +42,7 @@ import org.jacop.core.IntVar;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
+ * @version 4.5
  *
  * It specifies  a simple functionality to graphically represent 2D geost. It was 
  * mostly used during development phase but it may be still useful if user is interested

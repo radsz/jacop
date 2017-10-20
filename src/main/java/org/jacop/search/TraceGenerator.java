@@ -1,4 +1,4 @@
-/**
+/*
  * TraceGenerator.java
  * This file is part of JaCoP.
  * <p>
@@ -65,7 +65,7 @@ import org.xml.sax.helpers.AttributesImpl;
  * It generates xml format accepted by CPViz tool developed by Helmut Simonis.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 3.1
+ * @version 4.5
  */
 
 

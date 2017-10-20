@@ -44,7 +44,7 @@ import org.jacop.core.FailException;
  * Boundary consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 3.1
+ * @version 4.5
  */
 
 public class XmulCeqZ extends PrimitiveConstraint {

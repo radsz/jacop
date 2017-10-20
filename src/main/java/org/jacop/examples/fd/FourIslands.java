@@ -1,4 +1,4 @@
-/**
+/*
  * FourIslands.java
  * This file is part of JaCoP.
  * <p>
@@ -45,6 +45,7 @@ import org.jacop.core.Store;
  * It is a very simple puzzle about islands and bridges.
  *
  * @author Waldemar Sliwinski, Zdzislaw Zawada, and Radoslaw Szymanek
+ * @version 4.5
  *
  * A tiny nation in the South Pacific contains four islands connected by
  * bridges as shown (see below). Each of the four islands (Pwana, Quero,

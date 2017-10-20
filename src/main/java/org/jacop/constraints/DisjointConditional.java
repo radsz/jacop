@@ -1,4 +1,4 @@
-/**
+/*
  * DisjointConditional.java
  * This file is part of JaCoP.
  * <p>
@@ -46,7 +46,7 @@ import org.jacop.core.*;
  * not overlap otherwise the overlaping is not checked.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 2.0
+ * @version 4.5
  */
 
 public class DisjointConditional extends Diff {

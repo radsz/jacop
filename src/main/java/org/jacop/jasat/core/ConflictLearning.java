@@ -1,4 +1,4 @@
-/**
+/*
  * ConflictLearning.java
  * <p>
  * This file is part of JaCoP.
@@ -39,7 +39,7 @@ import org.jacop.jasat.utils.structures.IntStack;
  * A solver component for conflict learning. (first UIP algorithm)
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- *
+ * @version 4.5
  */
 
 public final class ConflictLearning implements SolverComponent {

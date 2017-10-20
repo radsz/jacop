@@ -42,7 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Constraint X mod Y = Z
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 3.1
+ * @version 4.5
  */
 
 public class XmodYeqZ extends Constraint implements SatisfiedPresent {

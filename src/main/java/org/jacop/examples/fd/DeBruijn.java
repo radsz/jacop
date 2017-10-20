@@ -1,4 +1,4 @@
-/**
+/*
  * DeBruijn.java
  * This file is part of JaCoP.
  * <p>
@@ -45,6 +45,7 @@ import scala.tools.nsc.Global;
  * A program solving problem of finding de Bruijn sequences. 
  *
  * @author Hakan Kjellerstrand (hakank@bonetmail.com) and Radoslaw Szymanek
+ * @version 4.5
  *
  * It finds both "normal" and "arbitrary" de Bruijn sequences.
  *

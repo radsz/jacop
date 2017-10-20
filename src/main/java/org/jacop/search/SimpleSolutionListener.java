@@ -1,4 +1,4 @@
-/**
+/*
  * SimpleSolutionListener.java
  * This file is part of JaCoP.
  * <p>
@@ -30,7 +30,6 @@
 
 package org.jacop.search;
 
-import java.util.IdentityHashMap;
 import java.util.Map;
 
 import org.jacop.constraints.PrimitiveConstraint;

@@ -1,4 +1,4 @@
-/**
+/*
  * Cryptogram.java
  * This file is part of JaCoP.
  * <p>
@@ -49,6 +49,8 @@ import org.jacop.core.Store;
  * Cryptogram. It solves any cryptogram puzzle of the form like SEND+MORE=MONEY.
  *
  * @author Radoslaw Szymanek
+ * @version 4.5
+ *
  */
 
 public class Cryptogram extends ExampleFD {

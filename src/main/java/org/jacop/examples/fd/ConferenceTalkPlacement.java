@@ -1,4 +1,4 @@
-/**
+/*
  * ConferenceTalkPlacement.java
  * This file is part of JaCoP.
  * <p>
@@ -40,7 +40,15 @@ import org.jacop.search.*;
 import java.util.*;
 
 /**
- * Author : Radoslaw Szymanek
+ *
+ * It solves a simple conference talk placement problem.
+ *
+ * @author Radoslaw Szymanek
+ * @version 4.5
+ *
+ * It solves a simple conference example problem, where different sessions
+ * must be scheduled according to the specified constraints.
+ *
  */
 public class ConferenceTalkPlacement {
 

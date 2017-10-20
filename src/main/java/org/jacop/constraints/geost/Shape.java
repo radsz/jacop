@@ -1,4 +1,4 @@
-/**
+/*
  * Shape.java
  * This file is part of JaCoP.
  * <p>
@@ -41,6 +41,7 @@ import org.jacop.util.SimpleArrayList;
 /**
  *
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
+ * @version 4.5
  *
  * A shape is composed of a set of shifted boxes.
  *

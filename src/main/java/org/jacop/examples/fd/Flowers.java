@@ -1,4 +1,4 @@
-/**
+/*
  * Flowers.java
  * This file is part of JaCoP.
  * <p>
@@ -49,6 +49,7 @@ import org.jacop.core.Store;
  * It is quite complex logic puzzle about flowers.
  *
  * @author Tomasz Szwed, Wojciech Krupa, and Radoslaw Szymanek
+ * @version 4.5
  *
  * Each of four women in our office was delighted to receive a floral delivery at her desk this month. Each of the 
  * women (Emma, Kristin, Lynn, and Toni) received flowers from her husband (Doug, Justin, Shane, or Theo) for a 

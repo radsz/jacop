@@ -1,4 +1,4 @@
-/**
+/*
  * Constraint.java
  * This file is part of JaCoP.
  * <p>
@@ -48,7 +48,7 @@ import static java.util.stream.Collectors.joining;
  * notSatisfiability, enforce consistency.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 3.1
+ * @version 4.5
  */
 
 public abstract class Constraint extends DecomposedConstraint<Constraint> {
@@ -283,8 +283,8 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     }
 
     /**
-     * It checks if the constraint has all variables in its scope grounded (singletons).
-     *
+     * It checks if provided variables are grounded (singletons).
+     * @param vars variables to be checked if they are grounded.
      * @return true if all variables in constraint scope are singletons, false otherwise.
      */
     public boolean grounded(Var[] vars) {

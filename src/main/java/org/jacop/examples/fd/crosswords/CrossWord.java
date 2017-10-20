@@ -1,4 +1,4 @@
-/**
+/*
  * Store.java
  * This file is part of JaCoP.
  * <p>
@@ -57,6 +57,7 @@ import org.jacop.util.MDD;
  * to efficiently model and solve CrossWord puzzles.
  *
  * @author : Radoslaw Szymanek
+ * @version 4.4
  *
  * This program uses problem instances and dictionary obtained from Hadrien Cambazard.
  *

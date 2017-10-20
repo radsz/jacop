@@ -1,4 +1,4 @@
-/**
+/*
  * Tables.java
  * This file is part of JaCoP.
  * <p>
@@ -49,6 +49,7 @@ import org.jacop.floats.core.FloatVar;
  * the variables which are used by search. 
  *
  * @author Krzysztof Kuchcinski
+ * @version 4.5
  *
  */
 public class Tables {

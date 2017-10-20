@@ -1,4 +1,4 @@
-/**
+/*
  * BlueberryMuffins.java
  * This file is part of JaCoP.
  * <p>
@@ -48,6 +48,7 @@ import org.jacop.core.Store;
  * It solves a simple logic puzzle about blueberry muffins.
  *
  * @author Radoslaw Szymanek
+ * @version 4.4
  *
  *  Logic Puzzle: Blueberry Muffins
  *

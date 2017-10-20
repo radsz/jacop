@@ -1,4 +1,4 @@
-/**
+/*
  * LatinSquare.java
  * This file is part of JaCoP.
  * <p>
@@ -50,6 +50,8 @@ import org.jacop.core.Store;
  * cells.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 4.5
+ *
  */
 
 public class LatinSquare extends ExampleFD {

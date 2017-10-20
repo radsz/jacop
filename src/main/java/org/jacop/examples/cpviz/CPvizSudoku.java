@@ -1,7 +1,5 @@
-package org.jacop.examples.cpviz;
-
 /**
- * Sudoku.java
+ * CPvizSudoku.java
  * This file is part of org.jacop.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -34,11 +32,7 @@ package org.jacop.examples.cpviz;
  * A simple model to solve Sudoku problem.
  */
 
-/**
- *
- * A simple model to solve Sudoku problem. 
- *
- */
+package org.jacop.examples.cpviz;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -51,7 +45,10 @@ import org.jacop.core.Var;
 import org.jacop.search.*;
 
 /**
- *  @author Radoslaw Szymanek
+ *
+ * It shows how to visualize the solving process for Sudoku problem.
+ *
+ *  @author Krzysztof Kuchcinski
  *  @version 4.4
  */
 

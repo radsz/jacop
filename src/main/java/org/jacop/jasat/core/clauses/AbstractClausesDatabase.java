@@ -1,4 +1,4 @@
-/**
+/*
  * AbstractClausesDatabase.java
  * <p>
  * This file is part of JaCoP.
@@ -50,6 +50,7 @@ import org.jacop.jasat.utils.Utils;
  * convert the clauses unique ID to their local clauses index, and conversely.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
+ * @version 4.5
  *
  */
 

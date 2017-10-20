@@ -1,4 +1,4 @@
-/**
+/*
  * ClauseState.java
  * <p>
  * This file is part of JaCoP.
@@ -34,6 +34,7 @@ package org.jacop.jasat.core.clauses;
 /**
  * constants that represent the state of a clause at some point in the search
  * @author Simon Cruanes and Radoslaw Szymanek
+ * @version 4.5
  */
 
 public final class ClauseState {

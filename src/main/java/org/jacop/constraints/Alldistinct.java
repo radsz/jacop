@@ -55,7 +55,6 @@ import org.jacop.util.SimpleHashSet;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.4
  */
-
 public class Alldistinct extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
 	/* @todo implement in alldistinct remark, that only variable 

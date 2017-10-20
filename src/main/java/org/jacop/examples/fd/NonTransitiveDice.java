@@ -1,4 +1,4 @@
-/**
+/*
  * NonTransitiveDice.java
  * This file is part of JaCoP.
  * <p>
@@ -56,6 +56,7 @@ import org.jacop.search.SimpleSelect;
  * It models and solves Nontransitive Dice Problem. 
  *
  * @author Radoslaw Szymanek
+ * @version 4.5
  *
  * Nontransitive Dice problem is to assign to given number of dices
  * a number to each side of the dice in such a way that 

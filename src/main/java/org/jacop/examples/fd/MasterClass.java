@@ -1,4 +1,4 @@
-/**
+/*
  * MasterClass.java
  * This file is part of JaCoP.
  * <p>
@@ -46,6 +46,7 @@ import org.jacop.core.Store;
  * It solves a logic puzzle about singing women.
  *
  * @author Zbigniew Danielczyk, Mariusz Jedrzejko, and Radoslaw Szymanek
+ * @version 4.5
  *
  * The great mezzo-soprano Flora Nebbiacorno has retired from the
  * international opera stage, but she still teaches master classes

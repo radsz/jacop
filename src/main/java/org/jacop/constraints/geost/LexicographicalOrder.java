@@ -1,4 +1,4 @@
-/**
+/*
  * LexicographicalOrder.java
  * This file is part of JaCoP.
  * <p>
@@ -31,6 +31,7 @@ package org.jacop.constraints.geost;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
+ * @version 4.5
  *
  * It defines the necessary functionalities needed to define a lexicographical ordering
  * of k-dimensional points.

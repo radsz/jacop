@@ -1,4 +1,4 @@
-/**
+/*
  * WeightedDegreeFloat.java
  * This file is part of JaCoP.
  * <p>
@@ -42,10 +42,7 @@ import org.jacop.search.ComparatorVariable;
  * have increased weight. The comparator will choose the variable with the 
  * highest weight divided by its size.
  *
- *
- *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- *
  * @version 4.4
  * @param <T> type of variable being compared.
  *

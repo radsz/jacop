@@ -1,4 +1,4 @@
-/**
+/*
  * ActivityModule.java
  * <p>
  * This file is part of JaCoP.
@@ -50,6 +50,7 @@ import org.jacop.jasat.modules.interfaces.ConflictListener;
 /**
  * counts the activity of literals
  * @author Simon Cruanes and Radoslaw Szymanek
+ * @version 4.5
  *
  */
 public final class ActivityModule implements ClauseListener, BackjumpListener, ConflictListener {

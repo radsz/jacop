@@ -1,4 +1,4 @@
-/**
+/*
  * MinizincBasedTestUpTo1Minutes.java
  * This file is part of JaCoP.
  * <p>
@@ -40,9 +40,13 @@ import java.io.IOException;
 import java.util.Collection;
 
 /**
- * @author Mariusz Świerkot
+ * Minizinc based tests for problems that run upTo1minute and do not belong
+ * to other shorter time category.
+ *
+ * @author Mariusz Świerkot and Radoslaw Szymanek
+ * @version 4.5
+ *
  */
-
 @RunWith(Parameterized.class) public class MinizincBasedTestUpTo1Minutes extends MinizincBasedTestsHelper {
     protected static final String timeCategory = "upTo1min/";
 

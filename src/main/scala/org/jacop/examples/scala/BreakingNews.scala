@@ -1,40 +1,44 @@
-package org.jacop.examples.scala
-
-/**
- * 
- * It solves a simple logic puzzle about reporters breaking news stories.
- * 
- * @author Marcin Chrapek, Miroslaw Klos, and Radoslaw Szymanek
- * 
- * Logic Puzzle : Breaking News.
- *
- * The Daily Galaxy sent its four best reporters (Corey, Jimmy, Lois,
- * and Perry) to different locations (Bayonne, New Hope, Port Charles,
- * and South Amboy) to cover four breaking news events (30-pound baby,
- * blimp launching, skyscraper dedication, and beached whale). Their
- * editor is trying to remember where each of the reporters is. Can
- * you match the name of each reporter with the place he or she was
- * sent, and the event that each covered?
- *
- * 1. The 30-pound baby wasn't born in South Amboy or New Hope.
- *
- * 2. Jimmy didn't go to Port Charles.
- *
- * 3. The blimp launching and the skyscraper dedication were covered, in
- * some order, by Lois and the reporter who was sent to Port Charles.
- *
- * 4. South Amboy was not the site of either the beached whale or the
- * skyscraper dedication.
- *
- * 5. Bayonne is either the place that Corey went or the place where the
- * whale was beached, or both.
- *
- * Determine: Reporter -- Location -- Story
- *
+/*
+ * BreakingNews.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+package org.jacop.examples.scala
 
 import org.jacop.scala._
 
+/**
+  * A problem defined as in Java based examples.
+  *
+  * rewriting to Scala by Krzysztof Kuchcinski.
+  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+  * @version 4.4
+  */
 object BreakingNews extends App with jacop {
 
   println("Program to solve Breaking News ")

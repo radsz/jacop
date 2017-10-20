@@ -1,4 +1,4 @@
-/**
+/*
  * InArea.java
  * This file is part of JaCoP.
  * <p>
@@ -38,7 +38,7 @@ import org.jacop.util.SimpleHashSet;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
- *
+ * @version 4.5
  *
  * InArea constraint allows on to define an area within which objects
  * should be contained, as well as a collection of "holes" within the area

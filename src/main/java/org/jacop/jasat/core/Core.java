@@ -1,4 +1,4 @@
-/**
+/*
  * Core.java
  * <p>
  * This file is part of JaCoP.
@@ -62,6 +62,7 @@ import org.jacop.jasat.utils.structures.IntVec;
  * from its components
  *
  * @author Simon Cruanes and Radoslaw Szymanek
+ * @version 4.5
  *
  */
 public final class Core implements SolverComponent {

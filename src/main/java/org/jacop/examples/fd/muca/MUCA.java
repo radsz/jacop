@@ -1,4 +1,4 @@
-/**
+/*
  * MUCA.java
  * This file is part of JaCoP.
  * <p>
@@ -58,16 +58,16 @@ import org.jacop.search.SimpleSelect;
  *
  * It solves the Mixed Multi-Unit Combinatorial Auctions. 
  *
- * @author Radoslaw Szymanek
- * @version 4.4
- *
- *
  * The idea originated from reading the following paper 
  * where the first attempt to use CP was presented.
  *
  * Comparing Winner Determination Algorithms for Mixed
  * Multi-Unit Combinatorial Auctions by Brammert Ottens
  * Ulle Endriss
+ *
+ * @author Radoslaw Szymanek
+ * @version 4.4
+ *
  *
  */
 

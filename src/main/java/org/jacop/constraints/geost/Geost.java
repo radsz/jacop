@@ -49,6 +49,7 @@ import org.jacop.util.SimpleHashSet;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
+ * @version 4.5
  *
  * 1) DONE. FlushAndQueue function should be changed and some functionality
  *	moved to firstConsistencyCheck.

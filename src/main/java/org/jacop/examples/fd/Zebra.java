@@ -1,4 +1,4 @@
-/**
+/*
  * Zebra.java
  * This file is part of JaCoP.
  * <p>
@@ -49,6 +49,7 @@ import org.jacop.core.Store;
  * It models and solves Zebra logic puzzle.
  *
  * @author Radoslaw Szymanek
+ * @version 4.5
  *
  * It was given at The German Institute of Logical Thinking in Berlin, 1981. And 98% FAILED.
  *

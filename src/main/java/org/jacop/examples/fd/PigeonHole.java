@@ -1,4 +1,4 @@
-/**
+/*
  * PigeonHole.java
  * This file is part of JaCoP.
  * <p>
@@ -47,6 +47,7 @@ import org.jacop.core.Store;
  * Clearly this problem is not satisfiable.
  *
  * @author Radoslaw Szymanek
+ * @version 4.5
  *
  */
 

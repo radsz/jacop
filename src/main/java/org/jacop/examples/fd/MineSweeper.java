@@ -1,4 +1,4 @@
-/**
+/*
  * MineSweeper.java
  * This file is part of JaCoP.
  * <p>
@@ -50,6 +50,7 @@ import org.jacop.search.SmallestDomain;
  * It models and solves Minesweeper problem.
  *
  * @author Hakan Kjellerstrand (hakank@bonetmail.com) and Radoslaw Szymanek
+ * @version 4.5
  *
  * This is a port of Hakan's MiniZinc model
  * http://www.hakank.org/minizinc/minesweeper.mzn

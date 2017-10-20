@@ -1,4 +1,4 @@
-/**
+/*
  * Nonogram.java
  * This file is part of JaCoP.
  * <p>
@@ -53,6 +53,8 @@ import java.util.regex.Pattern;
  * It solves a nonogram example problem, sometimes also called Paint by Numbers.
  *
  * @author Radoslaw Szymanek
+ * @version 4.4
+ *
  */
 
 public class Nonogram extends ExampleFD {

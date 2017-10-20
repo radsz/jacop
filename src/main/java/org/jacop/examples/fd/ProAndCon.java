@@ -1,4 +1,4 @@
-/**
+/*
  * ProAndCon.java
  * This file is part of JaCoP.
  * <p>
@@ -28,7 +28,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
@@ -53,6 +52,7 @@ import org.jacop.core.Store;
  * It solves a simple logic puzzle about voting city council.
  *
  * @author Romam Gawelek, Marcin Kazmierczak, Radoslaw Szymanek
+ * @version 4.5
  *
  * Logic Puzzle - Pro and Con
  * Author: Monica Tenniel

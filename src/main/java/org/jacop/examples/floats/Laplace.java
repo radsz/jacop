@@ -1,4 +1,4 @@
-/**
+/*
  * Laplace.java
  * This file is part of JaCoP.
  * <p>
@@ -41,6 +41,7 @@ package org.jacop.examples.floats;
  * Based on minizinc program written by Håkan Kjellerstrand
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 4.5
  *
  */
 

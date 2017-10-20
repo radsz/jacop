@@ -1,4 +1,4 @@
-/**
+/*
  * XinA.java
  * This file is part of JaCoP.
  * <p>
@@ -44,8 +44,7 @@ import org.jacop.set.core.SetVar;
  * It creates a constraint that makes sure that the value assigned to integer variable x is
  * included in the set assigned to the set variable a.
  *
- * @author Radoslaw Szymanek and Krzysztof Kuchcinski. 
- *
+ * @author Radoslaw Szymanek and Krzysztof Kuchcinski.
  * @version 4.4
  */
 

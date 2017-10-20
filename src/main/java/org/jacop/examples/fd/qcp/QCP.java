@@ -1,4 +1,4 @@
-/**
+/*
  * QCP.java
  * This file is part of JaCoP.
  * <p>
@@ -54,6 +54,8 @@ import org.jacop.search.TransformExtensional;
  * It solves QuasiGroup Completion Problem (QCP).
  *
  * @author Radoslaw Szymanek
+ * @version 4.5
+ *
  */
 
 public class QCP extends ExampleFD {

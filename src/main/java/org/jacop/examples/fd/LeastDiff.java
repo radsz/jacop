@@ -1,4 +1,4 @@
-/**
+/*
  * LeastDiff.java
  * This file is part of JaCoP.
  * <p>
@@ -51,6 +51,7 @@ import org.jacop.core.Store;
  * Also see http://www.hakank.org/JaCoP/
  *
  * @author Hakan Kjellerstrand and Radoslaw Szymanek
+ * @version 4.5
  *
  */
 

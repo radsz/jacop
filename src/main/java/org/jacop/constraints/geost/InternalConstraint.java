@@ -1,4 +1,4 @@
-/**
+/*
  * InternalConstraint.java
  * This file is part of JaCoP.
  * <p>
@@ -35,6 +35,7 @@ import org.jacop.core.Var;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
+ * @version 4.5
  *
  * This interface defines the functionality required by a constraint in order
  * to be used by Geost's sweeping algorithm.

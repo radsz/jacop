@@ -45,7 +45,7 @@ import org.jacop.core.TimeStamp;
  * is equal to zero. It restricts the domain of all x as well as result to be between 0 and 1.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.2
+ * @version 4.4
  */
 
 public class AndBoolVector extends PrimitiveConstraint {

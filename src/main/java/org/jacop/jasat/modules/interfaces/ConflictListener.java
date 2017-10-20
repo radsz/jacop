@@ -1,4 +1,4 @@
-/**
+/*
  * ConflictListener.java
  * <p>
  * This file is part of JaCoP.
@@ -38,6 +38,7 @@ import org.jacop.jasat.core.clauses.MapClause;
  * module that listens to conflicts that are discovered.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
+ * @version 4.5
  *
  */
 

@@ -1,4 +1,4 @@
-/**
+/*
  * LectureSeries.java
  * This file is part of JaCoP.
  * <p>
@@ -47,6 +47,7 @@ import org.jacop.core.Store;
  * It is a simple logic puzzle about lectures.
  *
  * @author Grzegorz Moskwa, Marcin Nowak, and Radoslaw Szymanek
+ * @version 4.5
  *
  * Last week at school was made varied by a series of lectures, one each
  * day (Monday through Friday), in the auditorium.  None of the lectures

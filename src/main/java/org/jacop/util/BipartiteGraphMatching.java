@@ -1,5 +1,5 @@
-/**
- * SimpleHashSet.java
+/*
+ * BipartiteGraphMatching.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -37,7 +37,7 @@ import java.util.Arrays;
 /* Implementation of Hopcroft Karp algorithm for maximum matching (complexity O(e*sqrt(v)).
  * This algorithm is based on <https://en.wikipedia.org/wiki/Hopcroft–Karp_algorithm>
  *
- * @author Krzysztof Kuchcinski
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
  */
 public class BipartiteGraphMatching {

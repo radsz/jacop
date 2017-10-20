@@ -1,4 +1,4 @@
-/**
+/*
  * CosPeqR_decomposed.java
  * This file is part of JaCoP.
  * <p>

@@ -1,4 +1,4 @@
-/**
+/*
  * Constraints.java
  * This file is part of JaCoP.
  * <p>
@@ -42,6 +42,7 @@ import org.jacop.fz.constraints.Support;
  * The part of the parser responsible for parsing constraints. 
  *
  * @author Krzysztof Kuchcinski 
+ * @version 4.5
  *
  */
 public class Constraints implements ParserTreeConstants {

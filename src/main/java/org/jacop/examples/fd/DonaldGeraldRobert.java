@@ -1,4 +1,4 @@
-/**
+/*
  * DonaldGeraldRobert.java
  * This file is part of JaCoP.
  * <p>
@@ -51,6 +51,8 @@ import org.jacop.core.Store;
  * Robert         723970
  *
  * @author Radoslaw Szymanek
+ * @version 4.5
+ *
  */
 
 public class DonaldGeraldRobert extends ExampleFD {
