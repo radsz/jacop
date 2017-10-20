@@ -38,7 +38,7 @@ import org.jacop.floats.core.FloatVar;
  * Bounds consistency can be used; third parameter of constructor controls this.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class AtanPeqR extends TanPeqR {

@@ -36,7 +36,7 @@ import org.jacop.core.Var;
  * Defines an interface for comparing variables.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  * @param <T> Variable type being compared.
  */
 

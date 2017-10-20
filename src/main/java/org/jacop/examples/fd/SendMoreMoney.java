@@ -50,7 +50,7 @@ import java.util.ArrayList;
  * MONEY          10652
  *
  * @author Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  *
  */
 public class SendMoreMoney extends ExampleFD {

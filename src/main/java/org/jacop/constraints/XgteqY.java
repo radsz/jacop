@@ -40,7 +40,7 @@ import org.jacop.core.Store;
  * Constraints X {@literal >=} Y
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class XgteqY extends PrimitiveConstraint {

@@ -35,7 +35,7 @@ import java.util.Set;
 
 /**
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 public class FSMState {

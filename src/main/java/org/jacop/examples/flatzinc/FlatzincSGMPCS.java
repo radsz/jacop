@@ -40,7 +40,7 @@ import org.jacop.fz.*;
  * It is used for test purpose only.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 public class FlatzincSGMPCS {
 

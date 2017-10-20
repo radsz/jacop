@@ -49,7 +49,7 @@ import org.jacop.core.Var;
  * It provides the sum from all variables on the list.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 public class SumBool extends PrimitiveConstraint {

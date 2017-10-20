@@ -43,7 +43,7 @@ import java.util.stream.Stream;
  * algorithm and profile information on the resource use.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class Cumulative extends Constraint implements SatisfiedPresent {

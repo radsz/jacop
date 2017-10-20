@@ -41,7 +41,7 @@ import org.jacop.core.Var;
  * be enforced by search.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 @SuppressWarnings("unchecked") public class SimpleSelect<T extends Var> implements SelectChoicePoint<T> {

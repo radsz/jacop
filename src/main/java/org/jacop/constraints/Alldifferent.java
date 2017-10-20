@@ -43,7 +43,7 @@ import org.jacop.core.*;
  * partial consistency technique.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class Alldifferent extends Constraint implements UsesQueueVariable, SatisfiedPresent {

@@ -45,7 +45,7 @@ import org.jacop.core.Store;
  * Zero-width rectangles does not overlap with any other rectangle. 
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class Disjoint extends Diff {

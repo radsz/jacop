@@ -54,7 +54,7 @@ import org.jacop.core.ValueEnumeration;
  * make addressing of list array starting from 1.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class ElementVariableFast extends Constraint implements Stateful, SatisfiedPresent {

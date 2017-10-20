@@ -40,7 +40,7 @@ import org.jacop.core.Store;
  * Constraint X + Y + Q {@literal >} C
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class XplusYplusQgtC extends PrimitiveConstraint {

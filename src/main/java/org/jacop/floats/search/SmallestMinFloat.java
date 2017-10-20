@@ -39,7 +39,7 @@ import org.jacop.search.ComparatorVariable;
  * which have smaller minimal value in their domain.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  * @param <T> type of variable being used in the search.
  */
 

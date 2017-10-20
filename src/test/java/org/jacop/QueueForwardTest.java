@@ -53,7 +53,7 @@ import static org.junit.Assert.assertEquals;
  * in what constraint it is being used in.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 public class QueueForwardTest {
 

@@ -66,7 +66,7 @@ import org.jacop.search.SimpleSelect;
  * Ulle Endriss
  *
  * @author Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  *
  *
  */

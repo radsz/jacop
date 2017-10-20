@@ -44,7 +44,7 @@ import org.jacop.core.ValueEnumeration;
  *
  *
  * @author Radoslaw Szymanek, Krzysztof Kuchcinski and Robert Åkemalm 
- * @version 4.4
+ * @version 4.5
  */
 
 public class BoundSetDomain extends SetDomain implements Cloneable {

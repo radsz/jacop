@@ -40,7 +40,7 @@ import org.jacop.core.Var;
  * to be informed about the solution.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  * @param <T> type of variable for which the solution is being stored.
  */
 

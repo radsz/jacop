@@ -70,7 +70,7 @@ import org.jacop.core.Var;
  *
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 @SuppressWarnings("unchecked") public class Shaving<T extends IntVar> implements ExitChildListener<T>, ConsistencyListener {

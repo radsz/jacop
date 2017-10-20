@@ -50,7 +50,7 @@ import java.util.stream.Stream;
  * Paul Shaw, CP 2004.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class Binpacking extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {

@@ -55,7 +55,7 @@ import org.jacop.core.ValueEnumeration;
  * hardCounter. It uses value based violation metric.
  *
  * @author Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  *
  */
 

@@ -45,7 +45,7 @@ import org.jacop.set.core.SetVar;
  * included in the set assigned to the set variable a.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski.
- * @version 4.4
+ * @version 4.5
  */
 
 public class XinA extends PrimitiveConstraint {

@@ -55,7 +55,7 @@ import org.jacop.core.Store;
  * inherit from this class to build a network.
  *
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  *
  */
 

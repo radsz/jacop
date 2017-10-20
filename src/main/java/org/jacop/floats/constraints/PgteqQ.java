@@ -44,7 +44,7 @@ import org.jacop.floats.core.FloatDomain;
  * Constraints P {@literal >=} Q for floats
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class PgteqQ extends PrimitiveConstraint {

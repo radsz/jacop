@@ -48,7 +48,7 @@ import org.jacop.floats.core.FloatVar;
  * and arrays.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  *
  */
 public class DefaultSearchVars {
