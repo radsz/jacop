@@ -92,7 +92,6 @@ public class LengauerTarjan {
 	    bucket[i].clear();
 	    
 	    domTreeSucc[i].clear();
-	    domClosure = new BitSet[n];
 	}	
     }
     
