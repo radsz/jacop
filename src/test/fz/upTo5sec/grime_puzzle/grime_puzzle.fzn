@@ -1,0 +1,14 @@
+array [1..7] of int: X_INTRODUCED_4 = [1,10,100,1,10,100,-100];
+array [1..7] of int: X_INTRODUCED_9 = [1,10,1,10,1,10,-10];
+array [1..7] of int: X_INTRODUCED_11 = [1,-1,-1,-1,-1,-1,-1];
+var 1..9: a:: output_var;
+var 0..9: b:: output_var;
+var 0..9: c:: output_var;
+var 0..9: d:: output_var;
+var 0..9: e:: output_var;
+var 0..9: f:: output_var;
+var 1..54: y:: output_var:: is_defined_var;
+constraint int_lin_eq(X_INTRODUCED_4,[c,b,a,f,e,d,y],0);
+constraint int_lin_eq(X_INTRODUCED_9,[d,c,b,a,f,e,y],0);
+constraint int_lin_eq(X_INTRODUCED_11,[y,a,b,c,d,e,f],0):: defines_var(y);
+solve  satisfy;

@@ -1,0 +1,4 @@
+major = array1d(1..3, [2, 3, 1]);
+major_inv = array1d(1..3, [3, 1, 2]);
+returned = array1d(1..3, [7, 8, 10]);
+----------

@@ -1,0 +1,8 @@
+array [1..4] of int: X_INTRODUCED_13 = [2,4,6,8];
+var 0..10: X_INTRODUCED_0;
+var 0..10: X_INTRODUCED_1;
+var 0..10: X_INTRODUCED_2;
+var 0..10: X_INTRODUCED_3;
+array [1..4] of var int: x:: output_array([1..4]) = [X_INTRODUCED_0,X_INTRODUCED_1,X_INTRODUCED_2,X_INTRODUCED_3];
+constraint int_lin_eq(X_INTRODUCED_13,[X_INTRODUCED_0,X_INTRODUCED_1,X_INTRODUCED_2,X_INTRODUCED_3],10);
+solve  satisfy;

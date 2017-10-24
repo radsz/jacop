@@ -1,0 +1,5 @@
+var 1..1: X_INTRODUCED_23 ::var_is_introduced :: is_defined_var;
+array [1..4] of var int: x:: output_array([1..4]) = [5,1,5,5];
+constraint int_le(6,16);
+constraint bool2int(true,X_INTRODUCED_23):: defines_var(X_INTRODUCED_23);
+solve  satisfy;

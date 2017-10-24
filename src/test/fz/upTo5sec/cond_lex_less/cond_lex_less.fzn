@@ -1,0 +1,18 @@
+array [1..2] of int: X_INTRODUCED_14 = [1,-1];
+var 1..1: X_INTRODUCED_8;
+var 0..0: X_INTRODUCED_9;
+var 0..0: X_INTRODUCED_10;
+var 0..0: X_INTRODUCED_11;
+var 1..4: X_INTRODUCED_12 ::var_is_introduced ;
+var 1..4: X_INTRODUCED_13 ::var_is_introduced ;
+array [1..8] of var int: arr:: output_array([1..4,1..2]) = [1,0,0,1,0,0,1,1];
+array [1..2] of var int: v1:: output_array([1..2]) = [1,0];
+array [1..2] of var int: v2:: output_array([1..2]) = [0,0];
+array [1..4] of var int: X_INTRODUCED_16 ::var_is_introduced  = [1,0,0,1];
+array [1..4] of var int: X_INTRODUCED_19 ::var_is_introduced  = [0,1,0,1];
+constraint int_lin_le(X_INTRODUCED_14,[X_INTRODUCED_12,X_INTRODUCED_13],-1);
+constraint array_var_int_element(X_INTRODUCED_13,X_INTRODUCED_16,0);
+constraint array_var_int_element(X_INTRODUCED_13,X_INTRODUCED_19,0);
+constraint array_var_int_element(X_INTRODUCED_12,X_INTRODUCED_16,1);
+constraint array_var_int_element(X_INTRODUCED_12,X_INTRODUCED_19,0);
+solve  satisfy;

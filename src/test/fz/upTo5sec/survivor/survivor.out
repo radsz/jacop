@@ -1,0 +1,5 @@
+sum_weight = 24;
+sum_survival_points = 75;
+x = array1d(1..4, [2, 2, 2, 3]);
+----------
+==========

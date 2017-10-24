@@ -1,4 +1,3 @@
-include "diffn_nonstrict.mzn";
 
 /** @group globals.scheduling
   Requires that a set of tasks given by start times \a s and durations \a d
@@ -21,5 +20,5 @@ predicate disjunctive(array[int] of var int: s,
         %   )
         % endif
 
-	diffn_nonstrict(s, [0 | i in index_set(s)], d, [1 | i in index_set(d)])
+	cumulative(s, d, [1 | i in index_set(d)], 1)
 );

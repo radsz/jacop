@@ -1,0 +1,13 @@
+Alan = false;
+Brian = false;
+Charlie = true;
+Dave = false;
+Eddie = false;
+Freddie = false;
+AlanC = 3;
+BrianC = 2;
+CharlieC = 3;
+DaveC = 2;
+EddieC = 2;
+FreddieC = 2;
+----------

@@ -15,7 +15,7 @@ predicate bin_packing(int: c,
     assert(lb_array(w) >= 0,
         "bin_packing: the weights must be non-negative",
 	 let {
-	   set of int: cap_index = index_set(w),
+	   set of int: cap_index = lb_array(bin)..ub_array(bin),
 	   array[cap_index] of var 0..c: cap
 	 }
 	 in 

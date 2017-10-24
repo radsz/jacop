@@ -1,0 +1,7 @@
+week_day_bt = 0;
+weekend_bt = 1;
+roster = array1d(1..10, [3, 1, 4, 2, 1, 2, 3, 1, 4, 4]);
+adj_days = array1d(1..9, [0, 0, 0, 0, 0, 0, 0, 0, 0]);
+wed_before_weekend = array1d(1..2, [0, 0]);
+----------
+==========

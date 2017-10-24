@@ -1,32 +1,31 @@
-/**
- *  FloatDomain.java 
- *  This file is part of JaCoP.
- *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
- *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU Affero General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU Affero General Public License for more details.
- *  
- *  Notwithstanding any other provision of this License, the copyright
- *  owners of this work supplement the terms of this License with terms
- *  prohibiting misrepresentation of the origin of this work and requiring
- *  that modified versions of this work be marked in reasonable ways as
- *  different from the original version. This supplement of the license
- *  terms is in accordance with Section 7 of GNU Affero General Public
- *  License version 3.
- *
- *  You should have received a copy of the GNU Affero General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
+/*
+ * FloatDomain.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.jacop.floats.core;
@@ -41,13 +40,13 @@ import org.jacop.core.ValueEnumeration;
 
 /**
  * Defines an integer domain and related operations on it.
- * 
+ *
  * FloatDomain implementations can not assume that arguments to 
  * any function can not be empty domains. 
 
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public abstract class FloatDomain extends Domain {
@@ -77,7 +76,7 @@ public abstract class FloatDomain extends Domain {
      * true - extend interval outward
      * false - does not extend interval and use calculation results.
      */
-    public static boolean outward = true;
+    static boolean outward = true;
 
     /**
      * It defines rounding method
@@ -85,7 +84,7 @@ public abstract class FloatDomain extends Domain {
      * @param out defines rounding method true = outward, false = no rounding outward
      */
     public static void setOutward(boolean out) {
-	outward = out;
+        outward = out;
     }
 
     /**
@@ -95,10 +94,23 @@ public abstract class FloatDomain extends Domain {
      * If true, the print-out prints singletons, defined by method 
      * singleton() in FloatingInterval, as single values.
      */
-    public static boolean intervalPrint = false;
+    static boolean intervalPrint = false;
 
     public static void intervalPrint(boolean p) {
-	intervalPrint = p;
+        intervalPrint = p;
+    }
+
+    /**
+     * It specifies the precision format for floating point print-out
+     */
+    static double format = Double.MAX_VALUE;
+
+    public static double format() {
+        return format;
+    }
+
+    public static void setFormat(double f) {
+        format = f;
     }
 
     /**
@@ -108,38 +120,37 @@ public abstract class FloatDomain extends Domain {
     static double precision = 1e-11;
 
     public static double precision() {
-	return precision;
+        return precision;
     }
 
-    public static void  setPrecision(double p) {
-	precision = p;
+    public static void setPrecision(double p) {
+        precision = p;
     }
 
     public static double epsilon(double f) {
 
-	return (precision() < java.lang.Math.ulp(f)) ? 
-	    java.lang.Math.ulp(f) : precision();
+        return (precision() < java.lang.Math.ulp(f)) ? java.lang.Math.ulp(f) : precision();
 
     }
 
     // Unit in the last place
     public static double ulp(double f) {
 
-	return java.lang.Math.ulp(f);
+        return java.lang.Math.ulp(f);
 
     }
 
     // Unit in the last place for minimal value
     public static double minULP(FloatVar f) {
 
-	return java.lang.Math.ulp(f.min());
+        return java.lang.Math.ulp(f.min());
 
     }
 
     // Unit in the last place for maximal value
     public static double maxULP(FloatVar f) {
 
-	return java.lang.Math.ulp(f.max());
+        return java.lang.Math.ulp(f.max());
 
     }
 
@@ -147,62 +158,61 @@ public abstract class FloatDomain extends Domain {
     // supposed to be used by constraints
     public static double down(double d) {
 
-	if (outward)
-	    return downBit(d); //d - ulp(d);  // 
-	else
-	    return d;
+        if (outward)
+            return downBit(d); //d - ulp(d);  //
+        else
+            return d;
     }
 
     // returns next (toward inf) floating-point number after d 
     // supposed to be used by constraints
     public static double up(double d) {
 
-	if (outward)
-	    return upBit(d); //d + ulp(d); // 
-	else
-	    return d;
+        if (outward)
+            return upBit(d); //d + ulp(d); //
+        else
+            return d;
     }
 
     // returns previous (toward -inf) floating-point number before d 
     // supposed to be used by constraints
     public static double upBit(double x) {
-	double y;
+        double y;
 
-	if (Double.isInfinite(x) && x > 0)
-		return FloatDomain.MaxFloat; //Double.NaN;		
+        if (Double.isInfinite(x) && x > 0)
+            return FloatDomain.MaxFloat; //Double.NaN;
 
-	long xBits = Double.doubleToLongBits(x);
-	if (x > 0.0)
-	    y = Double.longBitsToDouble(xBits + 1);
-	else 
-	    if (x == 0.0) 
-		y = Double.longBitsToDouble(1); 
-	    else
-		y = Double.longBitsToDouble(xBits - 1);
-	return y;
+        long xBits = Double.doubleToLongBits(x);
+        if (x > 0.0)
+            y = Double.longBitsToDouble(xBits + 1);
+        else if (x == 0.0)
+            y = Double.longBitsToDouble(1);
+        else
+            y = Double.longBitsToDouble(xBits - 1);
+        return y;
     }
-    
+
     // returns previous (toward -inf) floating-point number before d 
     // supposed to be used by constraints
     public static double downBit(double x) {
 
-	if (x == 0.0) 
-	    return -upBit(0.0);
-	else 
-	    return -upBit(-x);
+        if (x == 0.0)
+            return -upBit(0.0);
+        else
+            return -upBit(-x);
     }
 
 
     // returns previous (toward -inf) floating-point number before d 
     // supposed to be used by methods for domain computations
     public static double previous(double d) {
-	return downBit(d); //d - ulp(d);
+        return downBit(d); //d - ulp(d);
     }
 
     // returns next (toward inf) floating-point number after d 
     // supposed to be used by methods for domain computations
     public static double next(double d) {
-	return upBit(d); // d + ulp(d);
+        return upBit(d); // d + ulp(d);
     }
 
 
@@ -242,9 +252,9 @@ public abstract class FloatDomain extends Domain {
      * It specifies for each event what other events are subsumed by this
      * event. Possibly implement this by bit flags in int. 
      */
-    public final static int[][] eventsInclusion = { {GROUND, BOUND, ANY}, // GROUND event 
-						    {BOUND, ANY}, // BOUND event 
-						    {ANY} }; // ANY event
+    final static int[][] eventsInclusion = {{GROUND, BOUND, ANY}, // GROUND event
+        {BOUND, ANY}, // BOUND event
+        {ANY}}; // ANY event
 
     /**
      * It helps to specify what events should be executed if a given event occurs.
@@ -252,7 +262,7 @@ public abstract class FloatDomain extends Domain {
      * @return an array specifying what events should be included given this event.
      */
     public int[] getEventsInclusion(int pruningEvent) {
-	return eventsInclusion[pruningEvent];
+        return eventsInclusion[pruningEvent];
     }
 
     /**
@@ -272,7 +282,7 @@ public abstract class FloatDomain extends Domain {
      */
 
     public void unionAdapt(FloatInterval i) {
-	unionAdapt(i.min, i.max);
+        unionAdapt(i.min, i.max);
     }
 
     /**
@@ -282,11 +292,11 @@ public abstract class FloatDomain extends Domain {
 
     public void addDom(FloatDomain domain) {
 
-	// if (!domain.isSparseRepresentation()) {
-	    FloatIntervalEnumeration enumer = domain.floatIntervalEnumeration();
-	    while (enumer.hasMoreElements())
-		unionAdapt(enumer.nextElement());
-	    /*
+        // if (!domain.isSparseRepresentation()) {
+        FloatIntervalEnumeration enumer = domain.floatIntervalEnumeration();
+        while (enumer.hasMoreElements())
+            unionAdapt(enumer.nextElement());
+      /*
 	}
 	else {
 	    ValueEnumeration enumer = domain.valueEnumeration();
@@ -295,7 +305,7 @@ public abstract class FloatDomain extends Domain {
 	}
 	    */
 
-    };
+    }
 
     /**
      * It adds all values between min and max to the domain.
@@ -311,7 +321,7 @@ public abstract class FloatDomain extends Domain {
      */
 
     public void unionAdapt(double value) {
-	unionAdapt(value, value);
+        unionAdapt(value, value);
     }
 
     /**
@@ -322,13 +332,13 @@ public abstract class FloatDomain extends Domain {
 
     public boolean isIntersecting(FloatDomain domain) {
 
-	// if (!domain.isSparseRepresentation()) {
-	    FloatIntervalEnumeration enumer = domain.floatIntervalEnumeration();
-	    while (enumer.hasMoreElements()) {
-		FloatInterval next = enumer.nextElement();
-		if (isIntersecting(next.min, next.max))
-		    return true;
-	    }
+        // if (!domain.isSparseRepresentation()) {
+        FloatIntervalEnumeration enumer = domain.floatIntervalEnumeration();
+        while (enumer.hasMoreElements()) {
+            FloatInterval next = enumer.nextElement();
+            if (isIntersecting(next.min, next.max))
+                return true;
+        }
 	/*
 	}
 	else {
@@ -339,7 +349,7 @@ public abstract class FloatDomain extends Domain {
 		    return true;
 	}
 	*/
-	return false;
+        return false;
     }
 
     /**
@@ -360,14 +370,14 @@ public abstract class FloatDomain extends Domain {
 
     public boolean contains(FloatDomain domain) {
 
-	// if (!domain.isSparseRepresentation()) {
+        // if (!domain.isSparseRepresentation()) {
 
-	    FloatIntervalEnumeration enumer = domain.floatIntervalEnumeration();
-	    while (enumer.hasMoreElements()) {
-		FloatInterval next = enumer.nextElement();
-		if (!contains(next.min, next.max))
-		    return false;
-	    }
+        FloatIntervalEnumeration enumer = domain.floatIntervalEnumeration();
+        while (enumer.hasMoreElements()) {
+            FloatInterval next = enumer.nextElement();
+            if (!contains(next.min, next.max))
+                return false;
+        }
 	    /*
 	}
 	else {
@@ -377,7 +387,7 @@ public abstract class FloatDomain extends Domain {
 		    return false;
 	}
 	    */
-	return true;
+        return true;
 
     }
 
@@ -404,11 +414,11 @@ public abstract class FloatDomain extends Domain {
      */
 
     public boolean contains(int value) {
-	return contains(value, value);
+        return contains(value, value);
     }
 
 
-    public abstract boolean contains(double value);   
+    public abstract boolean contains(double value);
 
     /**
      * It gives next value in the domain from the given one (lexigraphical
@@ -482,7 +492,7 @@ public abstract class FloatDomain extends Domain {
      */
 
     public FloatDomain subtract(double value) {
-	return subtract(value, value);
+        return subtract(value, value);
     }
 
     /**
@@ -537,8 +547,8 @@ public abstract class FloatDomain extends Domain {
      */
 
     public boolean singleton(double c) {
-	return min() == c && getSize() == 1;
-    };
+        return min() == c && getSize() == 1;
+    }
 
 
     /**
@@ -549,19 +559,19 @@ public abstract class FloatDomain extends Domain {
 
     public FloatDomain subtract(FloatDomain domain) {
 
-	if (domain.isEmpty())
-	    return this.cloneLight();
+        if (domain.isEmpty())
+            return this.cloneLight();
 
-	// if (!domain.isSparseRepresentation()) {
-	    FloatIntervalEnumeration enumer = domain.floatIntervalEnumeration();
-	    FloatInterval first = enumer.nextElement();
-	    FloatDomain result = this.subtract(first.min, first.max);
-	    while (enumer.hasMoreElements()) {
-		FloatInterval next = enumer.nextElement();
-		result.subtractAdapt(next.min, next.max);
+        // if (!domain.isSparseRepresentation()) {
+        FloatIntervalEnumeration enumer = domain.floatIntervalEnumeration();
+        FloatInterval first = enumer.nextElement();
+        FloatDomain result = this.subtract(first.min, first.max);
+        while (enumer.hasMoreElements()) {
+            FloatInterval next = enumer.nextElement();
+            result.subtractAdapt(next.min, next.max);
 
-	    }
-	    return result;
+        }
+        return result;
 	    /*
 	}
 	else {
@@ -595,21 +605,21 @@ public abstract class FloatDomain extends Domain {
 
     public FloatDomain union(FloatDomain domain) {
 
-	if (this.isEmpty())
-	    return domain.cloneLight();
+        if (this.isEmpty())
+            return domain.cloneLight();
 
-	FloatDomain result = this.cloneLight();
+        FloatDomain result = this.cloneLight();
 
-	if (domain.isEmpty())
-	    return result;
+        if (domain.isEmpty())
+            return result;
 
-	// if (!domain.isSparseRepresentation()) {
-	    FloatIntervalEnumeration enumer = domain.floatIntervalEnumeration();
-	    while (enumer.hasMoreElements()) {
-		FloatInterval next = enumer.nextElement();
-		result.unionAdapt(next.min, next.max);					
-	    }
-	    return result;
+        // if (!domain.isSparseRepresentation()) {
+        FloatIntervalEnumeration enumer = domain.floatIntervalEnumeration();
+        while (enumer.hasMoreElements()) {
+            FloatInterval next = enumer.nextElement();
+            result.unionAdapt(next.min, next.max);
+        }
+        return result;
 	    /*
 	}
 	else {
@@ -632,21 +642,21 @@ public abstract class FloatDomain extends Domain {
 
     public FloatDomain union(double min, double max) {
 
-	FloatDomain result = this.cloneLight();
-	result.unionAdapt(min, max);
-	return result;
+        FloatDomain result = this.cloneLight();
+        result.unionAdapt(min, max);
+        return result;
 
-    };
+    }
 
     /**
      * It computes union of this domain and value. 
-     * 
+     *
      * @param value it specifies the value which is being added.
      * @return domain which is a union of this one and the value.
      */
 
     public FloatDomain union(double value) {
-	return union(value, value);
+        return union(value, value);
     }
 
     /**
@@ -659,9 +669,9 @@ public abstract class FloatDomain extends Domain {
 
     public void inMin(int storeLevel, Var var, double min) {
 
-	in(storeLevel, var, min, max());
+        in(storeLevel, var, min, max());
 
-    };
+    }
 
     /**
      * It updates the domain according to the maximum value and stamp value. It
@@ -673,9 +683,9 @@ public abstract class FloatDomain extends Domain {
 
     public void inMax(int storeLevel, Var var, double max) {
 
-	in(storeLevel, var, min(), max);
+        in(storeLevel, var, min(), max);
 
-    };
+    }
 
     /**
      * It updates the domain to have values only within the interval min..max.
@@ -691,13 +701,13 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It reduces domain to a single value. 
-     * 
+     *
      * @param level level of the store at which the update occurs.
      * @param var variable for which this domain is used.
      * @param value the value according to which the domain is updated.
      */
     public void inValue(int level, Var var, double value) {
-	in(level, var, value, value);
+        in(level, var, value, value);
     }
 
     /**
@@ -711,9 +721,9 @@ public abstract class FloatDomain extends Domain {
 
     public void in(int storeLevel, Var var, FloatDomain domain) {
 
-	inShift(storeLevel, var, domain, 0);
+        inShift(storeLevel, var, domain, 0);
 
-    };
+    }
 
     /**
      * It updates the domain to not contain the value complement. It informs the
@@ -725,7 +735,7 @@ public abstract class FloatDomain extends Domain {
 
     public void inComplement(int storeLevel, Var var, double complement) {
 
-	inComplement(storeLevel, var, complement, complement);
+        inComplement(storeLevel, var, complement, complement);
 
     }
 
@@ -771,8 +781,8 @@ public abstract class FloatDomain extends Domain {
      */
 
     public double leftElement(int intervalNo) {
-	return getInterval(intervalNo).min;
-    };
+        return getInterval(intervalNo).min;
+    }
 
     /**
      * It returns the right most element of the given interval.
@@ -780,9 +790,9 @@ public abstract class FloatDomain extends Domain {
      * @return the right bound of the specified interval.
      */
 
-    public double rightElement(int intervalNo)  {
-	return getInterval(intervalNo).max;
-    };
+    public double rightElement(int intervalNo) {
+        return getInterval(intervalNo).max;
+    }
 
     /**
      * It returns the values which have been removed at current store level.
@@ -800,25 +810,25 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It specifies if the other int domain is equal to this one. 
-     * 
+     *
      * @param domain the domain which is compared to this domain. 
-     * 
+     *
      * @return true if both domains contain the same elements, false otherwise.
      */
     public boolean eq(FloatDomain domain) {
 
-	if (this.getSize() != domain.getSize())
-	    return false;
+        if (this.getSize() != domain.getSize())
+            return false;
 
-	// the same size.
-	// if (!domain.isSparseRepresentation()) {
-	    FloatIntervalEnumeration enumer = domain.floatIntervalEnumeration();
-	    while (enumer.hasMoreElements()) {
-		FloatInterval next = enumer.nextElement();
-		if (!contains(next.min, next.max))
-		    return false;
-	    }
-	    return true;
+        // the same size.
+        // if (!domain.isSparseRepresentation()) {
+        FloatIntervalEnumeration enumer = domain.floatIntervalEnumeration();
+        while (enumer.hasMoreElements()) {
+            FloatInterval next = enumer.nextElement();
+            if (!contains(next.min, next.max))
+                return false;
+        }
+        return true;
 	    /*
 	}
 	else {
@@ -833,31 +843,29 @@ public abstract class FloatDomain extends Domain {
 	    */
     }
 
-    @Override
-    public void in(int level, Var var, Domain domain) {
-	in(level, (FloatVar)var, (FloatDomain)domain);
-    }	
+    @Override public void in(int level, Var var, Domain domain) {
+        in(level, (FloatVar) var, (FloatDomain) domain);
+    }
 
-    @Override 
-    public boolean singleton(Domain value) {
+    @Override public boolean singleton(Domain value) {
 
-	if (getSize() > 1)
-	    return false;
+        if (getSize() > 1)
+            return false;
 
-	if (isEmpty())
-	    return false;
+        if (isEmpty())
+            return false;
 
-	if (value.getSize() != 1)
-	    throw new IllegalArgumentException("An argument should be a singleton domain");
+        if (value.getSize() != 1)
+            throw new IllegalArgumentException("An argument should be a singleton domain");
 
-	assert (value instanceof FloatDomain) : "Can not compare int domains with other types of domains.";
+        assert (value instanceof FloatDomain) : "Can not compare int domains with other types of domains.";
 
-	FloatDomain domain = (FloatDomain) value;
+        FloatDomain domain = (FloatDomain) value;
 
-	if (eq(domain))
-	    return true;
-	else
-	    return false;
+        if (eq(domain))
+            return true;
+        else
+            return false;
 
     }
 
@@ -867,10 +875,8 @@ public abstract class FloatDomain extends Domain {
      */
 
     public int noConstraints() {
-	return searchConstraintsToEvaluate 
-	    + modelConstraintsToEvaluate[GROUND]
-	    + modelConstraintsToEvaluate[BOUND]
-	    + modelConstraintsToEvaluate[ANY];
+        return searchConstraintsToEvaluate + modelConstraintsToEvaluate[GROUND] + modelConstraintsToEvaluate[BOUND]
+            + modelConstraintsToEvaluate[ANY];
     }
 
     public abstract FloatDomain cloneLight();
@@ -880,33 +886,33 @@ public abstract class FloatDomain extends Domain {
      * @param domain the set that should be lexically compared to this set
      * @return -1 if s is greater than this set, 0 if s is equal to this set and else it returns 1.
      */
-    public int lex(FloatDomain domain){
+    public int lex(FloatDomain domain) {
 
-	ValueEnumeration thisEnumer = this.valueEnumeration();
-	ValueEnumeration paramEnumer = domain.valueEnumeration();
+        ValueEnumeration thisEnumer = this.valueEnumeration();
+        ValueEnumeration paramEnumer = domain.valueEnumeration();
 
-	int i,j;
+        int i, j;
 
-	while(thisEnumer.hasMoreElements()) {
+        while (thisEnumer.hasMoreElements()) {
 
-	    i = thisEnumer.nextElement();
+            i = thisEnumer.nextElement();
 
-	    if( paramEnumer.hasMoreElements() ) {
+            if (paramEnumer.hasMoreElements()) {
 
-		j = paramEnumer.nextElement();
+                j = paramEnumer.nextElement();
 
-		if( i < j )
-		    return -1;
-		else if( j < i )
-		    return 1;
-	    } else
-		return 1;
-	}
+                if (i < j)
+                    return -1;
+                else if (j < i)
+                    return 1;
+            } else
+                return 1;
+        }
 
-	if(paramEnumer.hasMoreElements())
-	    return -1;
+        if (paramEnumer.hasMoreElements())
+            return -1;
 
-	return 0;
+        return 0;
 
     }
 
@@ -933,7 +939,7 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It computes an intersection with a given domain and stores it in this domain. 
-     * 
+     *
      * @param intersect domain with which the intersection is being computed.
      * @return type of event which has occurred due to the operation. 
      */
@@ -942,21 +948,21 @@ public abstract class FloatDomain extends Domain {
     /**
      * It computes a union between this domain and the domain provided as a parameter. This
      * domain is changed to reflect the result. 
-     * 
+     *
      * @param union the domain with is used for the union operation with this domain. 
      * @return it returns information about the pruning event which has occurred due to this operation. 
      */
     public int unionAdapt(FloatDomain union) {
 
-	FloatDomain result = union(union);
+        FloatDomain result = union(union);
 
-	if (result.getSize() == getSize())
-	    return Domain.NONE;
-	else {
-	    setDomain(result);
-	    // FIXME, how to setup events for domain extending events?
-	    return FloatDomain.ANY;
-	}
+        if (result.getSize() == getSize())
+            return Domain.NONE;
+        else {
+            setDomain(result);
+            // FIXME, how to setup events for domain extending events?
+            return FloatDomain.ANY;
+        }
     }
 
     /**
@@ -972,20 +978,20 @@ public abstract class FloatDomain extends Domain {
     /**
      * It computes the size of the intersection between this domain and the domain 
      * supplied as a parameter. 
-     * 
+     *
      * @param domain the domain with which the intersection is computed.
      * @return the size of the intersection.
-     * 
+     *
      */
     public int sizeOfIntersection(FloatDomain domain) {
-	return intersect(domain).getSize();
-    };
+        return intersect(domain).getSize();
+    }
 
     /**
      * It access the element at the specified position. 
      * @param index the position of the element, indexing starts from 0. 
      * @return the value at a given position in the domain. 
-     * 
+     *
      */
     // public abstract int getElementAt(int index);
 
@@ -997,274 +1003,269 @@ public abstract class FloatDomain extends Domain {
      * cloned.
      */
 
-    @Override
-    public void putModelConstraint(int storeLevel, Var var, Constraint C,
-				   int pruningEvent) {
+    @Override public void putModelConstraint(int storeLevel, Var var, Constraint C, int pruningEvent) {
 
-	if (stamp < storeLevel) {
+        if (stamp < storeLevel) {
 
-	    FloatDomain result = this.cloneLight();
+            FloatDomain result = this.cloneLight();
 
-	    result.modelConstraints = modelConstraints;
-	    result.searchConstraints = searchConstraints;
-	    result.stamp = storeLevel;
-	    result.previousDomain = this;
-	    result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-	    result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-	    ((FloatVar)var).domain = result;
+            result.modelConstraints = modelConstraints;
+            result.searchConstraints = searchConstraints;
+            result.stamp = storeLevel;
+            result.previousDomain = this;
+            result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
+            result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+            ((FloatVar) var).domain = result;
 
-	    result.putModelConstraint(storeLevel, var, C, pruningEvent);
-	    return;
-	}
+            result.putModelConstraint(storeLevel, var, C, pruningEvent);
+            return;
+        }
 
-	Constraint[] pruningEventConstraints = modelConstraints[pruningEvent];
+        Constraint[] pruningEventConstraints = modelConstraints[pruningEvent];
 
-	if (pruningEventConstraints != null) {
+        if (pruningEventConstraints != null) {
 
-	    boolean alreadyImposed = false;
+            boolean alreadyImposed = false;
 
-	    if (modelConstraintsToEvaluate[pruningEvent] > 0)
-		for (int i = pruningEventConstraints.length - 1; i >= 0; i--)
-		    if (pruningEventConstraints[i] == C)
-			alreadyImposed = true;
+            if (modelConstraintsToEvaluate[pruningEvent] > 0)
+                for (int i = pruningEventConstraints.length - 1; i >= 0; i--)
+                    if (pruningEventConstraints[i] == C)
+                        alreadyImposed = true;
 
-	    int pruningConstraintsToEvaluate = modelConstraintsToEvaluate[pruningEvent];
+            int pruningConstraintsToEvaluate = modelConstraintsToEvaluate[pruningEvent];
 
-	    if (!alreadyImposed) {
-		Constraint[] newPruningEventConstraints = new Constraint[pruningConstraintsToEvaluate + 1];
+            if (!alreadyImposed) {
+                Constraint[] newPruningEventConstraints = new Constraint[pruningConstraintsToEvaluate + 1];
 
-		System.arraycopy(pruningEventConstraints, 0,
-				 newPruningEventConstraints, 0,
-				 pruningConstraintsToEvaluate);
-		newPruningEventConstraints[pruningConstraintsToEvaluate] = C;
+                System.arraycopy(pruningEventConstraints, 0, newPruningEventConstraints, 0, pruningConstraintsToEvaluate);
+                newPruningEventConstraints[pruningConstraintsToEvaluate] = C;
 
-		Constraint[][] newModelConstraints = new Constraint[3][];
+                Constraint[][] newModelConstraints = new Constraint[3][];
 
-		newModelConstraints[0] = modelConstraints[0];
-		newModelConstraints[1] = modelConstraints[1];
-		newModelConstraints[2] = modelConstraints[2];
+                newModelConstraints[0] = modelConstraints[0];
+                newModelConstraints[1] = modelConstraints[1];
+                newModelConstraints[2] = modelConstraints[2];
 
-		newModelConstraints[pruningEvent] = newPruningEventConstraints;
+                newModelConstraints[pruningEvent] = newPruningEventConstraints;
 
-		modelConstraints = newModelConstraints;
+                modelConstraints = newModelConstraints;
 
-		int[] newModelConstraintsToEvaluate = new int[3];
+                int[] newModelConstraintsToEvaluate = new int[3];
 
-		newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
-		newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
-		newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
+                newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
+                newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
+                newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
 
-		newModelConstraintsToEvaluate[pruningEvent]++;
+                newModelConstraintsToEvaluate[pruningEvent]++;
 
-		modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
+                modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
 
-	    }
+            }
 
-	} else {
+        } else {
 
-	    Constraint[] newPruningEventConstraints = new Constraint[1];
+            Constraint[] newPruningEventConstraints = new Constraint[1];
 
-	    newPruningEventConstraints[0] = C;
+            newPruningEventConstraints[0] = C;
 
-	    Constraint[][] newModelConstraints = new Constraint[3][];
+            Constraint[][] newModelConstraints = new Constraint[3][];
 
-	    newModelConstraints[0] = modelConstraints[0];
-	    newModelConstraints[1] = modelConstraints[1];
-	    newModelConstraints[2] = modelConstraints[2];
+            newModelConstraints[0] = modelConstraints[0];
+            newModelConstraints[1] = modelConstraints[1];
+            newModelConstraints[2] = modelConstraints[2];
 
-	    newModelConstraints[pruningEvent] = newPruningEventConstraints;
+            newModelConstraints[pruningEvent] = newPruningEventConstraints;
 
-	    modelConstraints = newModelConstraints;
+            modelConstraints = newModelConstraints;
 
-	    int[] newModelConstraintsToEvaluate = new int[3];
+            int[] newModelConstraintsToEvaluate = new int[3];
 
-	    newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
-	    newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
-	    newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
+            newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
+            newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
+            newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
 
-	    newModelConstraintsToEvaluate[pruningEvent] = 1;
+            newModelConstraintsToEvaluate[pruningEvent] = 1;
 
-	    modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
+            modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
 
-	}
+        }
 
     }
 
-    @Override
-    public void removeModelConstraint(int storeLevel, Var var, Constraint C) {
+    @Override public void removeModelConstraint(int storeLevel, Var var, Constraint C) {
 
-	if (stamp < storeLevel) {
+        if (stamp < storeLevel) {
 
-	    FloatDomain result = this.cloneLight();
+            FloatDomain result = this.cloneLight();
 
-	    result.modelConstraints = modelConstraints;
-	    result.searchConstraints = searchConstraints;
-	    result.stamp = storeLevel;
-	    result.previousDomain = this;
-	    result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-	    result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-	    ((FloatVar)var).domain = result;
+            result.modelConstraints = modelConstraints;
+            result.searchConstraints = searchConstraints;
+            result.stamp = storeLevel;
+            result.previousDomain = this;
+            result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
+            result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+            ((FloatVar) var).domain = result;
 
-	    result.removeModelConstraint(storeLevel, var, C);
-	    return;
-	}
+            result.removeModelConstraint(storeLevel, var, C);
+            return;
+        }
 
-	int pruningEvent = FloatDomain.GROUND;
+        int pruningEvent = FloatDomain.GROUND;
 
-	Constraint[] pruningEventConstraints = modelConstraints[pruningEvent];
+        Constraint[] pruningEventConstraints = modelConstraints[pruningEvent];
 
-	if (pruningEventConstraints != null) {
+        if (pruningEventConstraints != null) {
 
-	    boolean isImposed = false;
+            boolean isImposed = false;
 
-	    int i;
+            int i;
 
-	    for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--)
-		if (pruningEventConstraints[i] == C) {
-		    isImposed = true;
-		    break;
-		}
+            for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--)
+                if (pruningEventConstraints[i] == C) {
+                    isImposed = true;
+                    break;
+                }
 
-	    if (isImposed) {
+            if (isImposed) {
 
-		if (i != modelConstraintsToEvaluate[pruningEvent] - 1) {
+                if (i != modelConstraintsToEvaluate[pruningEvent] - 1) {
 
-		    modelConstraints[pruningEvent][i] = modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
+                    modelConstraints[pruningEvent][i] = modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
 
-		    modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = C;
-		}
+                    modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = C;
+                }
 
-		int[] newModelConstraintsToEvaluate = new int[3];
+                int[] newModelConstraintsToEvaluate = new int[3];
 
-		newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
-		newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
-		newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
+                newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
+                newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
+                newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
 
-		newModelConstraintsToEvaluate[pruningEvent]--;
+                newModelConstraintsToEvaluate[pruningEvent]--;
 
-		modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
+                modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
 
-		return;
+                return;
 
-	    }
+            }
 
-	}
+        }
 
-	pruningEvent = FloatDomain.BOUND;
+        pruningEvent = FloatDomain.BOUND;
 
-	pruningEventConstraints = modelConstraints[pruningEvent];
+        pruningEventConstraints = modelConstraints[pruningEvent];
 
-	if (pruningEventConstraints != null) {
+        if (pruningEventConstraints != null) {
 
-	    boolean isImposed = false;
+            boolean isImposed = false;
 
-	    int i;
+            int i;
 
-	    for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--)
-		if (pruningEventConstraints[i] == C) {
-		    isImposed = true;
-		    break;
-		}
+            for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--)
+                if (pruningEventConstraints[i] == C) {
+                    isImposed = true;
+                    break;
+                }
 
-	    if (isImposed) {
+            if (isImposed) {
 
-		if (i != modelConstraintsToEvaluate[pruningEvent] - 1) {
+                if (i != modelConstraintsToEvaluate[pruningEvent] - 1) {
 
-		    modelConstraints[pruningEvent][i] = modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
+                    modelConstraints[pruningEvent][i] = modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
 
-		    modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = C;
-		}
+                    modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = C;
+                }
 
-		int[] newModelConstraintsToEvaluate = new int[3];
+                int[] newModelConstraintsToEvaluate = new int[3];
 
-		newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
-		newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
-		newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
+                newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
+                newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
+                newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
 
-		newModelConstraintsToEvaluate[pruningEvent]--;
+                newModelConstraintsToEvaluate[pruningEvent]--;
 
-		modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
+                modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
 
-		return;
+                return;
 
-	    }
+            }
 
-	}
+        }
 
-	pruningEvent = FloatDomain.ANY;
+        pruningEvent = FloatDomain.ANY;
 
-	pruningEventConstraints = modelConstraints[pruningEvent];
+        pruningEventConstraints = modelConstraints[pruningEvent];
 
-	if (pruningEventConstraints != null) {
+        if (pruningEventConstraints != null) {
 
-	    boolean isImposed = false;
+            boolean isImposed = false;
 
-	    int i;
+            int i;
 
-	    for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--)
-		if (pruningEventConstraints[i] == C) {
-		    isImposed = true;
-		    break;
-		}
+            for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--)
+                if (pruningEventConstraints[i] == C) {
+                    isImposed = true;
+                    break;
+                }
 
-	    // int pruningConstraintsToEvaluate =
-	    // modelConstraintsToEvaluate[pruningEvent];
+            // int pruningConstraintsToEvaluate =
+            // modelConstraintsToEvaluate[pruningEvent];
 
-	    if (isImposed) {
+            if (isImposed) {
 
-		if (i != modelConstraintsToEvaluate[pruningEvent] - 1) {
+                if (i != modelConstraintsToEvaluate[pruningEvent] - 1) {
 
-		    modelConstraints[pruningEvent][i] = modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
+                    modelConstraints[pruningEvent][i] = modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
 
-		    modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = C;
-		}
+                    modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = C;
+                }
 
-		int[] newModelConstraintsToEvaluate = new int[3];
+                int[] newModelConstraintsToEvaluate = new int[3];
 
-		newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
-		newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
-		newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
+                newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
+                newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
+                newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
 
-		newModelConstraintsToEvaluate[pruningEvent]--;
+                newModelConstraintsToEvaluate[pruningEvent]--;
 
-		modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
+                modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
 
-	    }
+            }
 
-	}
+        }
 
     }
 
     /**
      * It constructs and int array containing all elements in the domain. 
      * The array will have size equal to the number of elements in the domain.
-     * 
+     *
      * @return the int array containing all elements in a domain.
      */
     public int[] toIntArray() {
 
-	int[] result = new int[getSize()];
+        int[] result = new int[getSize()];
 
-	ValueEnumeration enumer = this.valueEnumeration();
-	int i = 0;
+        ValueEnumeration enumer = this.valueEnumeration();
+        int i = 0;
 
-	while(enumer.hasMoreElements())
-	    result[i++] = enumer.nextElement();
+        while (enumer.hasMoreElements())
+            result[i++] = enumer.nextElement();
 
-	return result;
+        return result;
     }
 
     /**
      * It returns the value to which this domain is grounded. It assumes
      * that a domain is a singleton domain. 
-     * 
+     *
      * @return the only value remaining in the domain.
      */
     public double value() {
 
-	assert ( singleton() ) : "function value() called when domain is not a singleton domain.";
+        assert (singleton()) : "function value() called when domain is not a singleton domain.";
 
-	return min();
+        return min();
 
     }
 
@@ -1273,329 +1274,300 @@ public abstract class FloatDomain extends Domain {
      */
     public final static FloatIntervalDomain addBounds(double a, double b, double c, double d) {
 
-	double min = down(a + c);
-	double max = up(b + d);
+        double min = down(a + c);
+        double max = up(b + d);
 
-	if (d == 0.0) 
-	    max = b;
-	else if (c == 0.0)
-	    min = a;
+        if (d == 0.0)
+            max = b;
+        if (c == 0.0)
+            min = a;
 
-	if ( a == 0.0)
-	    min = c;
-	else if (b == 0.0)
-	    max = d;
+        if (a == 0.0)
+            min = c;
+        if (b == 0.0)
+            max = d;
 
-	return new FloatIntervalDomain(min, max);
+        return new FloatIntervalDomain(min, max);
     }
-	    
+
 
     /* 
      * Finds result interval for subtraction of {a..b} - {c..d}
      */
     public final static FloatIntervalDomain subBounds(double a, double b, double c, double d) {
 
-	double min = down(a - d);
-	double max = up(b - c);
+        double min = down(a - d);
+        double max = up(b - c);
 
-	if (d == 0.0) 
-	    min = a;
-	else if (c == 0.0)
-	    max = b;
+        if (d == 0.0)
+            min = a;
+        if (c == 0.0)
+            max = b;
 
-	if ( a == 0.0)
-	    min = -d;
-	else if (b == 0.0)
-	    max = -c;
+        if (a == 0.0)
+            min = -d;
+        if (b == 0.0)
+            max = -c;
 
-	return new FloatIntervalDomain(min, max);
+        return new FloatIntervalDomain(min, max);
     }
-	    
+
     /* 
      * Finds result interval for multiplication of {a..b} * {c..d}
      */
     public final static FloatIntervalDomain mulBounds(double a, double b, double c, double d) {
 
-	// System.out.println ("[" + a +".." +b +"] * [" + c + ".." + d + "]");
+        // System.out.println ("[" + a +".." +b +"] * [" + c + ".." + d + "]");
 
-	if ( c == 1.0 && d == 1.0 ) 
-	    return new FloatIntervalDomain(a, b);
-	else if (c == -1.0 && d == -1.0 ) 
-	    return new FloatIntervalDomain(-b, -a);
+        if (c == 1.0 && d == 1.0)
+            return new FloatIntervalDomain(a, b);
+        else if (c == -1.0 && d == -1.0)
+            return new FloatIntervalDomain(-b, -a);
 
-	boolean M_1 =  (a < 0 && b > 0);        // contains zero
-	boolean Z_1 =  (a == 0  && b == 0);     // zero
-	boolean P0_1 = (a == 0 && b > 0);       // positive with zero
-	boolean P1_1 = (a > 0 && b > 0);        // strictly positive
-	boolean N0_1 = (a < 0 && b == 0);       // negative with zero
-	boolean N1_1 = (a < 0 && b < 0);        // strictly negative
+        boolean M_1 = (a < 0 && b > 0);        // contains zero
+        // boolean Z_1 = (a == 0 && b == 0);     // zero
+        boolean P0_1 = (a == 0 && b > 0);       // positive with zero
+        boolean P1_1 = (a > 0 && b > 0);        // strictly positive
+        boolean N0_1 = (a < 0 && b == 0);       // negative with zero
+        boolean N1_1 = (a < 0 && b < 0);        // strictly negative
 
-	boolean M_2 =  (c < 0 && d > 0);
-	boolean Z_2 =  (c == 0  && d == 0);
-	boolean P0_2 = (c == 0 && d > 0);
-	boolean P1_2 = (c > 0 && d > 0);
-	boolean N0_2 = (c < 0 && d == 0);
-	boolean N1_2 = (c < 0 && d < 0);
+        boolean M_2 = (c < 0 && d > 0);
+        // boolean Z_2 = (c == 0 && d == 0);
+        boolean P0_2 = (c == 0 && d > 0);
+        boolean P1_2 = (c > 0 && d > 0);
+        boolean N0_2 = (c < 0 && d == 0);
+        boolean N1_2 = (c < 0 && d < 0);
 
-    	double min=0, max=0;
+        double min = 0, max = 0;
 
-	if (P1_1)
-	    if (P1_2) { // P1 /\ P1
-		min = down(a*c);
-		max = up(b*d);
-		return new FloatIntervalDomain(min, max);
-	    }
-	    else if (P0_2) { // P1 /\ P0
-		min = 0.0; //down(a*c);
-		max = up(b*d);		
-		return new FloatIntervalDomain(min, max);
-	    }
-	    else if (M_2) { // P1 /\ M
-		min = down(b*c);
-		max = up(b*d);
-		return new FloatIntervalDomain(min, max);
-	    }
-	    else if (N1_2) {// P1 /\ N1
-		min = down(b*c);
-		max = up(a*d);
-		return new FloatIntervalDomain(min, max);
-	    }
-	    else if (N0_2) { // P1 /\ N0
-		min = down(b*c);
-		max = 0.0; // up(a*d);
-		return new FloatIntervalDomain(min, max);
-	    }
-	    else {// P1 /\ Z
-		return new FloatIntervalDomain(0.0, 0.0);
-	    }
+        if (P1_1)
+            if (P1_2) { // P1 /\ P1
+                min = down(a * c);
+                max = up(b * d);
+                return new FloatIntervalDomain(min, max);
+            } else if (P0_2) { // P1 /\ P0
+                min = 0.0; //down(a*c);
+                max = up(b * d);
+                return new FloatIntervalDomain(min, max);
+            } else if (M_2) { // P1 /\ M
+                min = down(b * c);
+                max = up(b * d);
+                return new FloatIntervalDomain(min, max);
+            } else if (N1_2) {// P1 /\ N1
+                min = down(b * c);
+                max = up(a * d);
+                return new FloatIntervalDomain(min, max);
+            } else if (N0_2) { // P1 /\ N0
+                min = down(b * c);
+                max = 0.0; // up(a*d);
+                return new FloatIntervalDomain(min, max);
+            } else {// P1 /\ Z
+                return new FloatIntervalDomain(0.0, 0.0);
+            }
 
-	else if (P0_1)
-	    if (P1_2 || P0_2) { // P0 /\ { P1 \/ P0}
-		min = 0.0;
-		max = up(b*d);
-		return new FloatIntervalDomain(min, max);
-	    } else if (N1_2 || N0_2) { //P0 /\ { N0 \/ N1 } 
-		min = down(b*c);
-		max = 0.0; //up(a*d);
-		return new FloatIntervalDomain(min, max);
-	    } else if (M_2) { // P0 /\ M 
-		min = down(b*c);
-		max = up(b*d);
-		return new FloatIntervalDomain(min, max);
-	    } else {//if (Z_2) // P0 /\ Z 
-		return new FloatIntervalDomain(0.0, 0.0);
-	    }
+        else if (P0_1)
+            if (P1_2 || P0_2) { // P0 /\ { P1 \/ P0}
+                min = 0.0;
+                max = up(b * d);
+                return new FloatIntervalDomain(min, max);
+            } else if (N1_2 || N0_2) { //P0 /\ { N0 \/ N1 }
+                min = down(b * c);
+                max = 0.0; //up(a*d);
+                return new FloatIntervalDomain(min, max);
+            } else if (M_2) { // P0 /\ M
+                min = down(b * c);
+                max = up(b * d);
+                return new FloatIntervalDomain(min, max);
+            } else {//if (Z_2) // P0 /\ Z
+                return new FloatIntervalDomain(0.0, 0.0);
+            }
 
-	else if (M_1)
-	    if (P0_2 || P1_2) { // M /\ { P0 \/ P1}
-		min = down(a*d);
-		max = up(b*d);
-		return new FloatIntervalDomain(min, max);
-	    }
-	    else if (N0_2 || N1_2 ) { // M /\ { N0 \/ N1}
-		min = down(b*c);
-		max = up(a*c);
-		return new FloatIntervalDomain(min, max);
-	    } else if (M_2) { // M /\ M
-		min = down(Math.min(a*d, b*c));
-		max = up(Math.max(a*c, b*d));
-		return new FloatIntervalDomain(min, max);
-	    }
-	    else {// if (Z_2) M /\ Z
-		return new FloatIntervalDomain(0.0, 0.0);
-	    }
+        else if (M_1)
+            if (P0_2 || P1_2) { // M /\ { P0 \/ P1}
+                min = down(a * d);
+                max = up(b * d);
+                return new FloatIntervalDomain(min, max);
+            } else if (N0_2 || N1_2) { // M /\ { N0 \/ N1}
+                min = down(b * c);
+                max = up(a * c);
+                return new FloatIntervalDomain(min, max);
+            } else if (M_2) { // M /\ M
+                min = down(Math.min(a * d, b * c));
+                max = up(Math.max(a * c, b * d));
+                return new FloatIntervalDomain(min, max);
+            } else {// if (Z_2) M /\ Z
+                return new FloatIntervalDomain(0.0, 0.0);
+            }
 
-	else if (N1_1)
-	    if (P1_2)  { // N1 /\ P1
-		min = down(a*d);
-		max = up(b*c);
-		return new FloatIntervalDomain(min, max);
-	    }
-	    else if (P0_2) { // N1 /\ P0
-		min = down(a*d);
-		max = 0.0; //up(b*c);
-		return new FloatIntervalDomain(min, max);
-	    }
-	    else if (M_2) {  // N1 /\ M
-		min = down(a*d);
-		max = up(a*c);
-		return new FloatIntervalDomain(min, max);
-	    }
-	    else if (N1_2)  { // N1 /\ N1
-		min = down(b*d);
-		max = up(a*c);
-		return new FloatIntervalDomain(min, max);
-	    }
-	    else if (N0_2) { // N1 /\ N0
-		min = 0.0; //down(b*d);
-		max = up(a*c);
-		return new FloatIntervalDomain(min, max);
-	    }
-	    else {// N1 /\ Z
-		return new FloatIntervalDomain(0.0, 0.0);
-	    }
+        else if (N1_1)
+            if (P1_2) { // N1 /\ P1
+                min = down(a * d);
+                max = up(b * c);
+                return new FloatIntervalDomain(min, max);
+            } else if (P0_2) { // N1 /\ P0
+                min = down(a * d);
+                max = 0.0; //up(b*c);
+                return new FloatIntervalDomain(min, max);
+            } else if (M_2) {  // N1 /\ M
+                min = down(a * d);
+                max = up(a * c);
+                return new FloatIntervalDomain(min, max);
+            } else if (N1_2) { // N1 /\ N1
+                min = down(b * d);
+                max = up(a * c);
+                return new FloatIntervalDomain(min, max);
+            } else if (N0_2) { // N1 /\ N0
+                min = 0.0; //down(b*d);
+                max = up(a * c);
+                return new FloatIntervalDomain(min, max);
+            } else {// N1 /\ Z
+                return new FloatIntervalDomain(0.0, 0.0);
+            }
 
-	else if (N0_1)
-	    if (P0_2 || P1_2) { // N0 /\ { P0 \/ P1}
-		min = down(a*d);
-		max = 0.0; //up(b*c);
-		return new FloatIntervalDomain(min, max);
-	    }
-	    else if (N0_2 || N1_2) { // N0 /\ { N0 \/ N1}
-		min = 0.0; //down(b*d);
-		max = up(a*c);
-		return new FloatIntervalDomain(min, max);
-	    }
-	    else if (M_2) {// N0 /\ M 
-		min = down(a*d);
-		max = up(a*c);
-		return new FloatIntervalDomain(min, max);
-	    } else {// N0 /\ Z 
-		return new FloatIntervalDomain(0.0, 0.0);
-	    }
-	else  { //  Z /\ {ALL}
-		return new FloatIntervalDomain(0.0, 0.0);
-	}
+        else if (N0_1)
+            if (P0_2 || P1_2) { // N0 /\ { P0 \/ P1}
+                min = down(a * d);
+                max = 0.0; //up(b*c);
+                return new FloatIntervalDomain(min, max);
+            } else if (N0_2 || N1_2) { // N0 /\ { N0 \/ N1}
+                min = 0.0; //down(b*d);
+                max = up(a * c);
+                return new FloatIntervalDomain(min, max);
+            } else if (M_2) {// N0 /\ M
+                min = down(a * d);
+                max = up(a * c);
+                return new FloatIntervalDomain(min, max);
+            } else {// N0 /\ Z
+                return new FloatIntervalDomain(0.0, 0.0);
+            }
+        else { //  Z /\ {ALL}
+            return new FloatIntervalDomain(0.0, 0.0);
+        }
 
     }
 
     /* 
      * Finds result interval for division of {a..b} / {c..d} for div and mod constraints
      */
-    public final static FloatIntervalDomain divBounds (double a, double b, double c, double d) {
+    public final static FloatIntervalDomain divBounds(double a, double b, double c, double d) {
 
-	// System.out.println ("[" + a +".." +b +"] / [" + c + ".." + d + "]");
+        // System.out.println ("[" + a +".." +b +"] / [" + c + ".." + d + "]");
 
-	if ( c == 1.0 && d == 1.0 ) 
-	    return new FloatIntervalDomain(a, b);
-	else if (c == -1.0 && d == -1.0 ) 
-	    return new FloatIntervalDomain(-b, -a);
+        if (c == 1.0 && d == 1.0)
+            return new FloatIntervalDomain(a, b);
+        else if (c == -1.0 && d == -1.0)
+            return new FloatIntervalDomain(-b, -a);
 
-	boolean M_1 =  (a < 0 && b > 0);        // contains zero
-	boolean Z_1 =  (a == 0  && b == 0);     // zero
-	boolean P0_1 = (a == 0 && b > 0);       // positive with zero
-	boolean P1_1 = (a > 0 && b > 0);        // strictly positive
-	boolean N0_1 = (a < 0 && b == 0);       // negative with zero
-	boolean N1_1 = (a < 0 && b < 0);        // strictly negative
+        boolean M_1 = (a < 0 && b > 0);        // contains zero
+        boolean Z_1 = (a == 0 && b == 0);     // zero
+        boolean P0_1 = (a == 0 && b > 0);       // positive with zero
+        boolean P1_1 = (a > 0 && b > 0);        // strictly positive
+        boolean N0_1 = (a < 0 && b == 0);       // negative with zero
+        boolean N1_1 = (a < 0 && b < 0);        // strictly negative
 
-	boolean M_2 =  (c < 0 && d > 0);
-	boolean Z_2 =  (c == 0  && d == 0);
-	boolean P0_2 = (c == 0 && d > 0);
-	boolean P1_2 = (c > 0 && d > 0);
-	boolean N0_2 = (c < 0 && d == 0);
-	boolean N1_2 = (c < 0 && d < 0);
+        boolean M_2 = (c < 0 && d > 0);
+        // boolean Z_2 = (c == 0 && d == 0);
+        boolean P0_2 = (c == 0 && d > 0);
+        boolean P1_2 = (c > 0 && d > 0);
+        boolean N0_2 = (c < 0 && d == 0);
+        boolean N1_2 = (c < 0 && d < 0);
 
-    	double min=0, max=0;
+        double min = 0, max = 0;
 
-    	// FloatIntervalDomain result = null;
+        // FloatIntervalDomain result = null;
 
-	if (P1_1)
-	    if (P1_2) { // P1 /\ P1
-		min = down(a/d);
-		max = up(b/c);
-		return new FloatIntervalDomain(min, max); //.subtract(0.0);
-	    }
-	    else if (P0_2) { // P1 /\ P0
-		min = down(a/d);
-		return new FloatIntervalDomain(min, FloatDomain.MaxFloat); //.subtract(0.0);
-	    }
-	    else if (M_2) { // P1 /\ M
-		min = down(a/d);
-		max = up(a/c);
-		return (FloatIntervalDomain)new FloatIntervalDomain(FloatDomain.MinFloat, max).union(new FloatIntervalDomain(min, FloatDomain.MaxFloat)); //.subtract(0.0)
-	    }
-	    else if (N1_2) {// P1 /\ N1
-		min = down(b/d);
-		max = up(a/c);
-		return new FloatIntervalDomain(min, max); //.subtract(0.0);		
-	    }
-	    else if (N0_2) { // P1 /\ N0
-		max = up(a/c);
-		return new FloatIntervalDomain(FloatDomain.MinFloat, max); //.subtract(0.0);
-	    }
-	    else // P1 /\ Z
-		throw Store.failException;
+        if (P1_1)
+            if (P1_2) { // P1 /\ P1
+                min = down(a / d);
+                max = up(b / c);
+                return new FloatIntervalDomain(min, max); //.subtract(0.0);
+            } else if (P0_2) { // P1 /\ P0
+                min = down(a / d);
+                return new FloatIntervalDomain(min, FloatDomain.MaxFloat); //.subtract(0.0);
+            } else if (M_2) { // P1 /\ M
+                min = down(a / d);
+                max = up(a / c);
+                return (FloatIntervalDomain) new FloatIntervalDomain(FloatDomain.MinFloat, max)
+                    .union(new FloatIntervalDomain(min, FloatDomain.MaxFloat)); //.subtract(0.0)
+            } else if (N1_2) {// P1 /\ N1
+                min = down(b / d);
+                max = up(a / c);
+                return new FloatIntervalDomain(min, max); //.subtract(0.0);
+            } else if (N0_2) { // P1 /\ N0
+                max = up(a / c);
+                return new FloatIntervalDomain(FloatDomain.MinFloat, max); //.subtract(0.0);
+            } else // P1 /\ Z
+                throw Store.failException;
 
-	else if (P0_1)
-	    if (P1_2) { // P0 /\ P1
-		min = 0.0;
-		max = up(b/c);
-		return new FloatIntervalDomain(min, max);
-	    }
-	    else if (N1_2) { //P0 /\ N1
-		min = down(b/d);
-		max = 0.0;
-		return new FloatIntervalDomain(min, max);
-	    }
-	    else  // P0 /\ {M \/ Z \/ P0 \/ N0}}
-		return new FloatIntervalDomain(FloatDomain.MinFloat, FloatDomain.MaxFloat);
+        else if (P0_1)
+            if (P1_2) { // P0 /\ P1
+                min = 0.0;
+                max = up(b / c);
+                return new FloatIntervalDomain(min, max);
+            } else if (N1_2) { //P0 /\ N1
+                min = down(b / d);
+                max = 0.0;
+                return new FloatIntervalDomain(min, max);
+            } else  // P0 /\ {M \/ Z \/ P0 \/ N0}}
+                return new FloatIntervalDomain(FloatDomain.MinFloat, FloatDomain.MaxFloat);
 
-	else if (M_1)
-	    if (P1_2) { // M /\ P
-		min = down(a/c);
-		max = up(b/c);
-		return new FloatIntervalDomain(min, max);
-	    }
-	    else if (N1_2) { // M /\ N1
-		min = down(b/d);
-		max = up(a/d);
-		return new FloatIntervalDomain(min, max);
-	    }
-	    else 
-		return new FloatIntervalDomain(FloatDomain.MinFloat, FloatDomain.MaxFloat);
+        else if (M_1)
+            if (P1_2) { // M /\ P
+                min = down(a / c);
+                max = up(b / c);
+                return new FloatIntervalDomain(min, max);
+            } else if (N1_2) { // M /\ N1
+                min = down(b / d);
+                max = up(a / d);
+                return new FloatIntervalDomain(min, max);
+            } else
+                return new FloatIntervalDomain(FloatDomain.MinFloat, FloatDomain.MaxFloat);
 
-	else if (N1_1)
-	    if (P1_2)  { // N1 /\ P1
-		min = down(a/c);
-		max = up(b/d);
-		return new FloatIntervalDomain(min, max); //.subtract(0.0);
-	    }
-	    else if (P0_2) { // N1 /\ P0
-		max = up(b/d);
-		return new FloatIntervalDomain(FloatDomain.MinFloat, max); //.subtract(0.0);
-	    }
-	    else if (M_2) {
-		min = down(b/c);
-		max = up(b/d);
+        else if (N1_1)
+            if (P1_2) { // N1 /\ P1
+                min = down(a / c);
+                max = up(b / d);
+                return new FloatIntervalDomain(min, max); //.subtract(0.0);
+            } else if (P0_2) { // N1 /\ P0
+                max = up(b / d);
+                return new FloatIntervalDomain(FloatDomain.MinFloat, max); //.subtract(0.0);
+            } else if (M_2) {
+                min = down(b / c);
+                max = up(b / d);
 
-		return (FloatIntervalDomain)new FloatIntervalDomain(FloatDomain.MinFloat, max).union(new FloatIntervalDomain(min, FloatDomain.MaxFloat)); //.subtract(0.0)
-	    }
-	    else if (N1_2)  { // N1 /\ N1
-		min = down(b/c);
-		max = up(a/d);
-		return new FloatIntervalDomain(min, max); //.subtract(0.0);
-	    }
-	    else if (N0_2) { // N1 /\ N0
-		min = down(b/c);
-		return new FloatIntervalDomain(min, FloatDomain.MaxFloat); //.subtract(0.0);
-	    }
-	    else // N1 /\ Z
-		throw Store.failException;
+                return (FloatIntervalDomain) new FloatIntervalDomain(FloatDomain.MinFloat, max)
+                    .union(new FloatIntervalDomain(min, FloatDomain.MaxFloat)); //.subtract(0.0)
+            } else if (N1_2) { // N1 /\ N1
+                min = down(b / c);
+                max = up(a / d);
+                return new FloatIntervalDomain(min, max); //.subtract(0.0);
+            } else if (N0_2) { // N1 /\ N0
+                min = down(b / c);
+                return new FloatIntervalDomain(min, FloatDomain.MaxFloat); //.subtract(0.0);
+            } else // N1 /\ Z
+                throw Store.failException;
 
-	else if (N0_1)
-	    if (P1_2) { // N0 /\ P1
-		min = down(a/c);
-		max = 0.0;
-		return new FloatIntervalDomain(min, max);
-	    }
-	    else if (N1_2) { // N0 /\ N1
-		min = 0.0;
-		max = up(a/d);
-		return new FloatIntervalDomain(min, max);
-	    }
-	    else // N0 /\ {M \/ Z \/ P0 \/ N0}}
-		return new FloatIntervalDomain(FloatDomain.MinFloat, FloatDomain.MaxFloat);
+        else if (N0_1)
+            if (P1_2) { // N0 /\ P1
+                min = down(a / c);
+                max = 0.0;
+                return new FloatIntervalDomain(min, max);
+            } else if (N1_2) { // N0 /\ N1
+                min = 0.0;
+                max = up(a / d);
+                return new FloatIntervalDomain(min, max);
+            } else // N0 /\ {M \/ Z \/ P0 \/ N0}}
+                return new FloatIntervalDomain(FloatDomain.MinFloat, FloatDomain.MaxFloat);
 
-	else if (Z_1)
-	    if (P1_2 || N1_2) {
-		min = 0.0;
-		max = 0.0;
-		return new FloatIntervalDomain(min, max);
-	    }
-	    else
-		return new FloatIntervalDomain(FloatDomain.MinFloat, FloatDomain.MaxFloat);
+        else if (Z_1)
+            if (P1_2 || N1_2) {
+                min = 0.0;
+                max = 0.0;
+                return new FloatIntervalDomain(min, max);
+            } else
+                return new FloatIntervalDomain(FloatDomain.MinFloat, FloatDomain.MaxFloat);
 
-    	return null;
+        return null;
     }
 
 }

@@ -1,0 +1,14 @@
+array [1..3] of int: X_INTRODUCED_6 = [1,1,-1];
+array [1..3] of int: X_INTRODUCED_8 = [-1,-1,1];
+array [1..2] of int: X_INTRODUCED_10 = [1,1];
+var 0..1: X_INTRODUCED_0;
+var 0..1: X_INTRODUCED_1;
+var 0..1: X_INTRODUCED_2;
+var 0..1: X_INTRODUCED_3;
+array [1..4] of var int: x:: output_array([1..2,1..2]) = [X_INTRODUCED_0,X_INTRODUCED_1,X_INTRODUCED_2,X_INTRODUCED_3];
+array [1..2] of var int: t:: output_array([1..2]) = [X_INTRODUCED_0,X_INTRODUCED_0];
+constraint int_lin_le(X_INTRODUCED_8,[X_INTRODUCED_2,X_INTRODUCED_1,X_INTRODUCED_0],0);
+constraint int_lin_le(X_INTRODUCED_6,[X_INTRODUCED_2,X_INTRODUCED_1,X_INTRODUCED_0],0);
+constraint int_lin_eq(X_INTRODUCED_10,[X_INTRODUCED_0,X_INTRODUCED_1],1);
+constraint int_lin_eq(X_INTRODUCED_10,[X_INTRODUCED_2,X_INTRODUCED_3],1);
+solve  satisfy;

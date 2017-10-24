@@ -1,32 +1,31 @@
-/**
- *  Task.java 
- *  This file is part of JaCoP.
- *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
- *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU Affero General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU Affero General Public License for more details.
- *  
- *  Notwithstanding any other provision of this License, the copyright
- *  owners of this work supplement the terms of this License with terms
- *  prohibiting misrepresentation of the origin of this work and requiring
- *  that modified versions of this work be marked in reasonable ways as
- *  different from the original version. This supplement of the license
- *  terms is in accordance with Section 7 of GNU Affero General Public
- *  License version 3.
- *
- *  You should have received a copy of the GNU Affero General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
+/*
+ * Task.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.jacop.constraints;
@@ -37,91 +36,93 @@ import org.jacop.core.IntervalDomain;
 
 /**
  * Represents tasks for cumulative constraint
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 class Task {
 
-	IntVar start, dur, res;
+    final IntVar start, dur, res;
 
-	Task(IntVar start, IntVar duration, IntVar resourceUsage) {
-		this.start = start;
-		this.dur = duration;
-		this.res = resourceUsage;
-	}
+    Task(IntVar start, IntVar duration, IntVar resourceUsage) {
+        this.start = start;
+        this.dur = duration;
+        this.res = resourceUsage;
+    }
 
-	long areaMax() {
-		return dur.max() * res.max();
-	}
+    long areaMax() {
+        return dur.max() * res.max();
+    }
 
-	long areaMin() {
-		return dur.min() * res.min();
-	}
+    long areaMin() {
+        return dur.min() * res.min();
+    }
 
-	IntDomain Compl() {
-		IntDomain sDom = start.dom();
-		IntDomain dDom = dur.dom();
-		return new IntervalDomain(sDom.min() + dDom.min(), sDom.max()
-				+ dDom.max());
-	}
+    IntDomain compl() {
+        IntDomain sDom = start.dom();
+        IntDomain dDom = dur.dom();
+        return new IntervalDomain(sDom.min() + dDom.min(), sDom.max() + dDom.max());
+    }
 
-	IntDomain Completion() {
-		IntDomain sDom = start.dom();
-		int dDomMin = dur.dom().min();
-		return new IntervalDomain(sDom.min() + dDomMin, sDom.max() + dDomMin);
-	}
+    IntDomain completion() {
+        IntDomain sDom = start.dom();
+        int dDomMin = dur.dom().min();
+        return new IntervalDomain(sDom.min() + dDomMin, sDom.max() + dDomMin);
+    }
 
-	IntVar Dur() {
-		return dur;
-	}
+    IntVar dur() {
+        return dur;
+    }
 
-	int ECT() {
-		return start.min() + dur.min();
-	}
+    int ect() {
+        return start.min() + dur.min();
+    }
 
-	int EST() {
-		return start.min();
-	}
+    int est() {
+        return start.min();
+    }
 
-	int LaCT() {
-		return start.max() + dur.max();
-	}
+    int lastCT() {
+        return start.max() + dur.max();
+    }
 
-	int LCT() {
-		return start.max() + dur.min();
-	}
+    int lct() {
+        return start.max() + dur.min();
+    }
 
-	int LST() {
-		return start.max();
-	}
+    int lst() {
+        return start.max();
+    }
 
-	boolean minUse(IntTask t) {
-		int lst, ect;
-		IntDomain sDom = start.dom();
+    boolean minUse(IntTask t) {
+        int lst, ect;
+        IntDomain sDom = start.dom();
 
-		lst = sDom.max();
-		ect = sDom.min() + dur.min();
-		if (lst < ect) {
-			t.start = lst;
-			t.stop = ect;
-			return true;
-		} else
-			return false;
-	}
+        lst = sDom.max();
+        ect = sDom.min() + dur.min();
+        if (lst < ect) {
+            t.start = lst;
+            t.stop = ect;
+            return true;
+        } else
+            return false;
+    }
 
-	IntVar res() {
-		return res;
-	}
+    IntVar res() {
+        return res;
+    }
 
-	IntVar start() {
-		return start;
-	}
+    IntVar start() {
+        return start;
+    }
 
-	@Override
-	public String toString() {
-		return "[" + start + ", " + dur + ", " + res + "]";
-	}
-	
+    boolean nonZeroTask() {
+	return dur.min() > 0 && res.min() > 0;
+    }
+
+    @Override public String toString() {
+        return "[" + start + ", " + dur + ", " + res + "]";
+    }
+
 }

@@ -1,0 +1,8 @@
+basketball = 1;
+tennis = 3;
+cricket = 2;
+america = 3;
+israel = 2;
+australia = 1;
+place = array1d(1..3, [2, 1, 3]);
+----------

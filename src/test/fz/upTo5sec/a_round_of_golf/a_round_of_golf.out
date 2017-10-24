@@ -1,0 +1,10 @@
+Green = 4;
+Clubb = 1;
+Sands = 2;
+Carter = 3;
+cook = 2;
+maintenance_man = 1;
+clerk = 4;
+caddy = 3;
+score = array1d(1..4, [85, 71, 78, 75]);
+----------

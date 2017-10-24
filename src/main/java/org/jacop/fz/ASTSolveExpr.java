@@ -2,52 +2,60 @@
 /* JavaCCOptions:MULTI=true,NODE_USES_PARSER=true,VISITOR=false,TRACK_TOKENS=false,NODE_PREFIX=AST,NODE_EXTENDS=,NODE_FACTORY=,SUPPORT_CLASS_VISIBILITY_PUBLIC=true */
 package org.jacop.fz;
 
-public
-class ASTSolveExpr extends SimpleNode {
-  public ASTSolveExpr(int id) {
-    super(id);
-  }
+public class ASTSolveExpr extends SimpleNode {
+    public ASTSolveExpr(int id) {
+        super(id);
+    }
 
-  public ASTSolveExpr(Parser p, int id) {
-    super(p, id);
-  }
+    public ASTSolveExpr(Parser p, int id) {
+        super(p, id);
+    }
 
-    int type=-1;  // 0 - ident, 1 - array access
+    int type = -1;  // 0 - ident, 1 - array access
     int index;  // keeps index
     String ident;
 
     public void setType(int t) {
-	type = t;
+        type = t;
     }
+
     public int getType() {
-	return type;
+        return type;
     }
 
     public void setIndex(int i) {
-	index = i;
+        index = i;
     }
+
     public int getIndex() {
-	return index;
+        return index;
     }
 
     public void setIdent(String i) {
-	ident = i;
+        ident = i;
     }
+
     public String getIdent() {
-	return ident;
+        return ident;
     }
 
     public String toString() {
-	String val="";
+        String val = "";
 
-	if (type != -1) {
-	    switch (type) {
-	    case 0: val = "(ident): " + ident; break;
-	    case 1: val = "(array access): " + ident + "[" + index + "]";  break;
-	    }
-	}
+        if (type != -1) {
+            switch (type) {
+                case 0:
+                    val = "(ident): " + ident;
+                    break;
+                case 1:
+                    val = "(array access): " + ident + "[" + index + "]";
+                    break;
+	        default:
+		    throw new RuntimeException("Internal parsing error; " + getClass().getName());
+            }
+        }
 
-	return super.toString() + val;
+        return super.toString() + val;
     }
 }
 /* JavaCC - OriginalChecksum=5931bb897b8f90fb6543ec7905a67886 (do not edit this line) */

@@ -2,40 +2,41 @@
 /* JavaCCOptions:MULTI=true,NODE_USES_PARSER=true,VISITOR=false,TRACK_TOKENS=false,NODE_PREFIX=AST,NODE_EXTENDS=,NODE_FACTORY=,SUPPORT_CLASS_VISIBILITY_PUBLIC=true */
 package org.jacop.fz;
 
-public
-class ASTVariableExpr extends SimpleNode {
-  public ASTVariableExpr(int id) {
-    super(id);
-  }
+public class ASTVariableExpr extends SimpleNode {
+    public ASTVariableExpr(int id) {
+        super(id);
+    }
 
-  public ASTVariableExpr(Parser p, int id) {
-    super(p, id);
-  }
+    public ASTVariableExpr(Parser p, int id) {
+        super(p, id);
+    }
 
-    String ident=null;
-    ArrayAccess arrAccess=null;
+    String ident = null;
+    ArrayAccess arrAccess = null;
 
     void setIdent(String ID) {
-	ident = ID;
+        ident = ID;
     }
+
     String getIdent() {
-	return ident;
+        return ident;
     }
 
     void setArrayAccess(ArrayAccess a) {
-	arrAccess = a;
+        arrAccess = a;
     }
+
     ArrayAccess getArrayAccess() {
-	return arrAccess;
+        return arrAccess;
     }
 
     public String toString() {
-	String s=null;
-	if (ident != null)
-	    s = ident;
-	if (arrAccess != null)
-	    s = arrAccess.toString();
-	return super.toString() + ": " + s;
+        String s = null;
+        if (ident != null)
+            s = ident;
+        if (arrAccess != null)
+            s = arrAccess.toString();
+        return super.toString() + ": " + s;
     }
 }
 /* JavaCC - OriginalChecksum=7d7b62cf4b90b450c733bc6f3e54888e (do not edit this line) */

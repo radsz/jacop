@@ -1,0 +1,13 @@
+predicate jacop_count(array [int] of var int: x,int: y,var int: c);
+var 0..5: X_INTRODUCED_0;
+var 0..5: X_INTRODUCED_1;
+var 0..5: X_INTRODUCED_2;
+var 0..5: X_INTRODUCED_3;
+var 0..5: X_INTRODUCED_4;
+array [1..5] of var int: x:: output_array([0..4]) = [X_INTRODUCED_0,X_INTRODUCED_1,X_INTRODUCED_2,X_INTRODUCED_3,X_INTRODUCED_4];
+constraint jacop_count(x,0,X_INTRODUCED_0);
+constraint jacop_count(x,1,X_INTRODUCED_1);
+constraint jacop_count(x,2,X_INTRODUCED_2);
+constraint jacop_count(x,3,X_INTRODUCED_3);
+constraint jacop_count(x,4,X_INTRODUCED_4);
+solve  satisfy;

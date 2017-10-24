@@ -1,0 +1,4 @@
+nval = 2;
+variables1 = array1d(1..4, [1, 9, 1, 5]);
+variables2 = array1d(1..6, [2, 1, 9, 9, 6, 9]);
+----------

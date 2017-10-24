@@ -1,0 +1,10 @@
+array [1..4] of int: X_INTRODUCED_20 = [-7,-5,-4,-3];
+var 0..3: X_INTRODUCED_0;
+var 0..3: X_INTRODUCED_1;
+var 0..3: X_INTRODUCED_2;
+var 0..3: X_INTRODUCED_3;
+var 0..960: z:: is_defined_var;
+array [1..4] of var int: x:: output_array([1..4]) = [X_INTRODUCED_0,X_INTRODUCED_1,X_INTRODUCED_2,X_INTRODUCED_3];
+constraint int_lin_le(X_INTRODUCED_20,[X_INTRODUCED_0,X_INTRODUCED_1,X_INTRODUCED_2,X_INTRODUCED_3],-42);
+constraint int_lin_eq([90,60,50,40,-1],[X_INTRODUCED_0,X_INTRODUCED_1,X_INTRODUCED_2,X_INTRODUCED_3,z],0):: defines_var(z);
+solve  minimize z;

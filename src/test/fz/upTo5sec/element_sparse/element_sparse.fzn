@@ -1,0 +1,12 @@
+var 5..5: item_default:: output_var;
+var 0..9: result:: output_var;
+var bool: X_INTRODUCED_10 ::var_is_introduced :: is_defined_var;
+var bool: X_INTRODUCED_16 ::var_is_introduced :: is_defined_var;
+var bool: X_INTRODUCED_18 ::var_is_introduced :: is_defined_var;
+array [1..8] of var int: element_table:: output_array([1..4,1..2]) = [1,2,2,5,4,2,8,9];
+array [1..2] of var int: item:: output_array([1..2]) = [2,5];
+constraint array_bool_or([X_INTRODUCED_10,X_INTRODUCED_18],true);
+constraint int_eq_reif(result,5,X_INTRODUCED_10):: defines_var(X_INTRODUCED_10);
+constraint int_eq_reif(result,5,X_INTRODUCED_16):: defines_var(X_INTRODUCED_16);
+constraint array_bool_and([X_INTRODUCED_16],X_INTRODUCED_18):: defines_var(X_INTRODUCED_18);
+solve  satisfy;

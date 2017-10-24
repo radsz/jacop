@@ -1,0 +1,11 @@
+Russell = 5;
+Douglas = 3;
+Charles = 4;
+Peter = 1;
+Everett = 2;
+Elaine = 2;
+Joyce = 5;
+Marcia = 4;
+Elizabeth = 1;
+married = array1d(1..5, [10, 25, 5, 30, 20]);
+----------

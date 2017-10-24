@@ -1,0 +1,16 @@
+var 1..1: X_INTRODUCED_0;
+var 3..3: nvar:: output_var;
+var 1..8: X_INTRODUCED_13 ::var_is_introduced ;
+var 1..8: X_INTRODUCED_14 ::var_is_introduced ;
+var 3..8: X_INTRODUCED_15 ::var_is_introduced ;
+var 1..8: X_INTRODUCED_21 ::var_is_introduced ;
+var 1..8: X_INTRODUCED_22 ::var_is_introduced ;
+var 1..3: X_INTRODUCED_23 ::var_is_introduced ;
+array [1..4] of var int: x:: output_array([1..4]) = [1,1,4,8];
+constraint int_max(1,1,X_INTRODUCED_13);
+constraint int_max(4,X_INTRODUCED_13,X_INTRODUCED_14);
+constraint int_max(8,X_INTRODUCED_14,X_INTRODUCED_15);
+constraint int_min(1,1,X_INTRODUCED_21);
+constraint int_min(4,X_INTRODUCED_21,X_INTRODUCED_22);
+constraint int_min(8,X_INTRODUCED_22,X_INTRODUCED_23);
+solve  satisfy;

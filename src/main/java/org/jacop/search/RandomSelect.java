@@ -1,37 +1,35 @@
-/**
- *  RandomSelect.java 
- *  This file is part of JaCoP.
- *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
- *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU Affero General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU Affero General Public License for more details.
- *  
- *  Notwithstanding any other provision of this License, the copyright
- *  owners of this work supplement the terms of this License with terms
- *  prohibiting misrepresentation of the origin of this work and requiring
- *  that modified versions of this work be marked in reasonable ways as
- *  different from the original version. This supplement of the license
- *  terms is in accordance with Section 7 of GNU Affero General Public
- *  License version 3.
- *
- *  You should have received a copy of the GNU Affero General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
+/*
+ * RandomSelect.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.jacop.search;
 
-import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
@@ -42,9 +40,9 @@ import org.jacop.core.Var;
 /**
  * It is simple and customizable selector of decisions (constraints) which will
  * be enforced by search.
- * 
- * @author  Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ *
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 4.5
  */
 
 public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
@@ -60,7 +58,7 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
      * tie-breaking.
      */
 
-    public IdentityHashMap<T, Integer> position;
+    public Map<T, Integer> position;
 
     int currentIndex = 0;
 
@@ -71,26 +69,24 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
      * @param variables variables upon which the choice points are created.
      * @param indomain the value heuristic to choose a value for a given variable.
      */
-    @SuppressWarnings("unchecked")
-    public RandomSelect(T[] variables, Indomain<T> indomain) {
+    @SuppressWarnings("unchecked") public RandomSelect(T[] variables, Indomain<T> indomain) {
 
-	position = new IdentityHashMap<T, Integer>();
+        position = Var.createEmptyPositioning();
 
-	int unique = 0;
-	for (int i = 0; i < variables.length; i++) {
-	    if (position.get(variables[i]) == null)
-		position.put(variables[i], unique++);
-	}
+        int unique = 0;
+        for (int i = 0; i < variables.length; i++) {
+            if (position.get(variables[i]) == null)
+                position.put(variables[i], unique++);
+        }
 
-	this.searchVariables = (T[]) new Var[position.size()];
+        this.searchVariables = (T[]) new Var[position.size()];
 
-	for (Iterator<Map.Entry<T, Integer>> itr = position.entrySet()
-		 .iterator(); itr.hasNext();) {
-	    Map.Entry<T, Integer> e = itr.next();
-	    searchVariables[e.getValue()] = e.getKey();
-	}
+        for (Iterator<Map.Entry<T, Integer>> itr = position.entrySet().iterator(); itr.hasNext(); ) {
+            Map.Entry<T, Integer> e = itr.next();
+            searchVariables[e.getValue()] = e.getKey();
+        }
 
-	valueOrdering = indomain;
+        valueOrdering = indomain;
 
     }
 
@@ -105,38 +101,38 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
 
     public T getChoiceVariable(int index) {
 
-	assert (index < searchVariables.length);
+        assert (index < searchVariables.length);
 
-	if (debugAll) {
-	    System.out.println ("index = " + index);
+        if (debugAll) {
+            System.out.println("index = " + index);
 
-	    for (int i = 0; i < searchVariables.length; i++) 
-		System.out.print (searchVariables[i] + " ");
-	    System.out.println();
-	}
+            for (int i = 0; i < searchVariables.length; i++)
+                System.out.print(searchVariables[i] + " ");
+            System.out.println();
+        }
 
-	int finalIndex = searchVariables.length;
-	T currentVariable;
+        int finalIndex = searchVariables.length;
+        T currentVariable;
 
-	do {
+        do {
 
-	    int size = finalIndex - index;
+            int size = finalIndex - index;
 
-	    int selectedIndex = index + random.nextInt(size);
-	    currentVariable = placeSearchVariable(index, selectedIndex);
+            int selectedIndex = index + random.nextInt(size);
+            currentVariable = placeSearchVariable(index, selectedIndex);
 
-	} while (currentVariable.singleton() && ++index < finalIndex);
+        } while (currentVariable.singleton() && ++index < finalIndex);
 
-	if (index == finalIndex) {
-	    return null;
-	} else {
-	    currentIndex = index;
+        if (index == finalIndex) {
+            return null;
+        } else {
+            currentIndex = index;
 
-	    if (debugAll)
-		System.out.println ("selected " + currentVariable);
+            if (debugAll)
+                System.out.println("selected " + currentVariable);
 
-	    return currentVariable;
-	}
+            return currentVariable;
+        }
     }
 
     /**
@@ -146,11 +142,11 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
 
     public int getChoiceValue() {
 
-	assert (currentIndex >= 0);
-	assert (currentIndex < searchVariables.length);
-	assert (searchVariables[currentIndex].dom() != null);
-		
-	return valueOrdering.indomain(searchVariables[currentIndex]);
+        assert (currentIndex >= 0);
+        assert (currentIndex < searchVariables.length);
+        assert (searchVariables[currentIndex].dom() != null);
+
+        return valueOrdering.indomain(searchVariables[currentIndex]);
 
     }
 
@@ -161,7 +157,7 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
 
     public PrimitiveConstraint getChoiceConstraint(int index) {
 
-	return null;
+        return null;
 
     }
 
@@ -169,9 +165,9 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
      * It returns the variables for which assignment in the solution is given.
      */
 
-    public IdentityHashMap<T, Integer> getVariablesMapping() {
+    public Map<T, Integer> getVariablesMapping() {
 
-	return position;
+        return position;
 
     }
 
@@ -182,7 +178,7 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
      */
 
     public int getIndex() {
-	return currentIndex;
+        return currentIndex;
     }
 
     /**
@@ -196,20 +192,20 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
 
     public T placeSearchVariable(int searchPosition, int variablePosition) {
 
-	if (searchPosition != variablePosition) {
+        if (searchPosition != variablePosition) {
 
-	    T temp = searchVariables[searchPosition];
+            T temp = searchVariables[searchPosition];
 
-	    searchVariables[searchPosition] = searchVariables[variablePosition];
+            searchVariables[searchPosition] = searchVariables[variablePosition];
 
-	    searchVariables[variablePosition] = temp;
-	}
+            searchVariables[variablePosition] = temp;
+        }
 
-	return searchVariables[searchPosition];
+        return searchVariables[searchPosition];
 
     }
 
     public String toString() {
-	return ""+java.util.Arrays.asList(searchVariables);
+        return "" + java.util.Arrays.asList(searchVariables);
     }
 }

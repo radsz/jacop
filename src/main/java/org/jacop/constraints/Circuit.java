@@ -1,40 +1,39 @@
-/**
- *  Circuit.java 
- *  This file is part of JaCoP.
- *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
- *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU Affero General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU Affero General Public License for more details.
- *  
- *  Notwithstanding any other provision of this License, the copyright
- *  owners of this work supplement the terms of this License with terms
- *  prohibiting misrepresentation of the origin of this work and requiring
- *  that modified versions of this work be marked in reasonable ways as
- *  different from the original version. This supplement of the license
- *  terms is in accordance with Section 7 of GNU Affero General Public
- *  License version 3.
- *
- *  You should have received a copy of the GNU Affero General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
+/*
+ * Circuit.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.Hashtable;
-import java.util.LinkedHashSet;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jacop.api.Stateful;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.MutableVar;
@@ -46,287 +45,274 @@ import org.jacop.core.Var;
  * Circuit constraint assures that all variables build a Hamiltonian
  * circuit. Value of every variable x[i] points to the next variable in 
  * the circuit. Variables create one circuit. 
- * 
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
-public class Circuit extends Alldiff {
+public class Circuit extends Alldiff implements Stateful {
 
-	int chainLength = 0;
+    int chainLength = 0;
 
-	boolean firstConsistencyCheck = true;
+    boolean firstConsistencyCheck = true;
 
-	MutableVar graph[];
+    MutableVar graph[];
 
-	int idd = 0;
+    int idd = 0;
 
-	int sccLength = 0;
+    int sccLength = 0;
 
-	int[] val;
+    int[] val;
 
-	static int IdNumber = 0;
-	
-	Hashtable<Var, Integer> valueIndex = new Hashtable<Var, Integer>();
+    static AtomicInteger idNumber = new AtomicInteger(0);
 
-	int firstConsistencyLevel;
+    Hashtable<Var, Integer> valueIndex = new Hashtable<Var, Integer>();
 
-	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
-	 * the constructor being called to recreate an object from an XML format.
-	 */
-	public static String[] xmlAttributes = {"list"};
+    int firstConsistencyLevel;
 
-	/**
-	 * It constructs a circuit constraint.
-	 * @param list variables which must form a circuit.
-	 */
-	public Circuit(IntVar[] list) {
+    /**
+     * It constructs a circuit constraint.
+     * @param list variables which must form a circuit.
+     */
+    public Circuit(IntVar[] list) {
 
-		super(list);
+        checkInputForNullness("list", list);
+        checkInputForDuplication("list", list);
 
-		Alldiff.idNumber--;
-		numberId = IdNumber++;
+        this.numberId = idNumber.incrementAndGet();
+        this.list = Arrays.copyOf(list, list.length);
 
-		int i = 0;
-		for (Var v : list)
-			valueIndex.put(v, i++);
+        this.queueIndex = 2;
 
-		val = new int[list.length];
-	}
+        listAlldiff = Arrays.copyOf(list, list.length);
 
-	/**
-	 * It constructs a circuit constraint.
-	 * @param list variables which must form a circuit.
-	 */
-	public Circuit(ArrayList<IntVar> list) {
+        min = new int[list.length];
+        max = new int[list.length];
+        u = new int[list.length];
 
-		this(list.toArray(new IntVar[list.size()]));
-	}
+        int i = 0;
+        for (Var v : list)
+            valueIndex.put(v, i++);
+
+        val = new int[list.length];
+
+        setScope(list);
+    }
+
+    /**
+     * It constructs a circuit constraint.
+     * @param list variables which must form a circuit.
+     */
+    public Circuit(List<IntVar> list) {
+        this(list.toArray(new IntVar[list.size()]));
+    }
 
 
-	@Override
-	public void consistency(Store store) {
+    @Override public void consistency(Store store) {
 
-		if (firstConsistencyCheck) {
-			for (int i = 0; i < list.length; i++) {
-				list[i].domain.in(store.level, list[i], 1, list.length);
-				list[i].domain.inComplement(store.level, list[i], i + 1);
-			}
-			firstConsistencyCheck = false;
-			firstConsistencyLevel = store.level;
-		}
-
-		do {
-			
-			store.propagationHasOccurred = false;
-			
-			LinkedHashSet<IntVar> fdvs = variableQueue;
-			variableQueue = new LinkedHashSet<IntVar>();
-			
-			alldifferent(store, fdvs);
-
-			oneCircuit(store, fdvs);
-
-		} while (store.propagationHasOccurred);
-		
-		sccs(store); // strongly connected components
-		
-	}
-
-	void alldifferent(Store store, LinkedHashSet<IntVar> fdvs) {
-
-		for (IntVar changedVar : fdvs) {
-			if (changedVar.singleton()) {
-				for (IntVar var : list)
-					if (var != changedVar) 
-						var.domain.inComplement(store.level, var, changedVar.min());
-			}
-		}	
-		
-	}	
-	
-	int firstNode(int current) {
-		int start = current;
-		int first;
-		do {
-			first = ((CircuitVarValue) graph[current - 1].value()).previous;
-			if (first != 0 && first != start) {
-				current = first;
-				chainLength++;
-			}
-		} while (first != 0 && first != start);
-		return current;
-	}
-
-	@Override
-	public int getConsistencyPruningEvent(Var var) {
-
-		// If consistency function mode
-		if (consistencyPruningEvents != null) {
-				Integer possibleEvent = consistencyPruningEvents.get(var);
-				if (possibleEvent != null)
-					return possibleEvent;
-			}
-			return IntDomain.ANY;
-	}
-
-	// registers the constraint in the constraint store
-	@Override
-	public void impose(Store store) {
-
-		super.impose(store);
-
-		graph = new CircuitVar[list.length];
-		for (int j = 0; j < graph.length; j++)
-			graph[j] = new CircuitVar(store, 0, 0);
-		
-	}
-
-	int lastNode(Store store, int current) {
-		int start = current;
-		int last;
-		do {
-			last = ((CircuitVarValue) graph[current - 1].value()).next;
-			if (last != 0) {
-				current = last;
-				if (++chainLength > graph.length)
-			    	throw Store.failException;
+        if (firstConsistencyCheck) {
+            for (int i = 0; i < list.length; i++) {
+                list[i].domain.in(store.level, list[i], 1, list.length);
+                list[i].domain.inComplement(store.level, list[i], i + 1);
             }
-		} while (last != 0 && last != start);
-		if (last == current)
-			chainLength = 0;
-		return current;
-	}
+            firstConsistencyCheck = false;
+            firstConsistencyLevel = store.level;
+        }
 
-	void oneCircuit(Store store, LinkedHashSet<IntVar> fdvs) {
+        do {
 
-		IntDomain dom;
+            store.propagationHasOccurred = false;
 
-		for (IntVar var : fdvs) {
-			dom = var.dom();
-			if (dom.singleton()) {
-				updateChains(var);
-				int Qmin = dom.min();
+            LinkedHashSet<IntVar> fdvs = variableQueue;
+            variableQueue = new LinkedHashSet<IntVar>();
 
-				chainLength = 0;
-				int lastInChain = lastNode(store, Qmin);
-				int firstInChain = firstNode(Qmin);
-				if (chainLength < list.length - 1) {
-					list[lastInChain - 1].domain.inComplement(store.level,
-							list[lastInChain - 1], firstInChain);
-				}
-				
-			}
-		}
-	}
+            alldifferent(store, fdvs);
+
+            oneCircuit(store, fdvs);
+
+        } while (store.propagationHasOccurred);
+
+        sccs(store); // strongly connected components
+
+    }
+
+    void alldifferent(Store store, LinkedHashSet<IntVar> fdvs) {
+
+        for (IntVar changedVar : fdvs) {
+            if (changedVar.singleton()) {
+                for (IntVar var : list)
+                    if (var != changedVar)
+                        var.domain.inComplement(store.level, var, changedVar.min());
+            }
+        }
+
+    }
+
+    int firstNode(int current) {
+        int start = current;
+        int first;
+        do {
+            first = ((CircuitVarValue) graph[current - 1].value()).previous;
+            if (first != 0 && first != start) {
+                current = first;
+                chainLength++;
+            }
+        } while (first != 0 && first != start);
+        return current;
+    }
+
+    @Override public int getDefaultConsistencyPruningEvent() {
+        return IntDomain.ANY;
+    }
+
+    // registers the constraint in the constraint store
+    @Override public void impose(Store store) {
+
+        super.impose(store);
+
+        graph = new CircuitVar[list.length];
+        for (int j = 0; j < graph.length; j++)
+            graph[j] = new CircuitVar(store, 0, 0);
+
+    }
+
+    int lastNode(Store store, int current) {
+        int start = current;
+        int last;
+        do {
+            last = ((CircuitVarValue) graph[current - 1].value()).next;
+            if (last != 0) {
+                current = last;
+                if (++chainLength > graph.length)
+                    throw Store.failException;
+            }
+        } while (last != 0 && last != start);
+        if (last == current)
+            chainLength = 0;
+        return current;
+    }
+
+    void oneCircuit(Store store, LinkedHashSet<IntVar> fdvs) {
+
+        IntDomain dom;
+
+        for (IntVar var : fdvs) {
+            dom = var.dom();
+            if (dom.singleton()) {
+                updateChains(var);
+                int Qmin = dom.min();
+
+                chainLength = 0;
+                int lastInChain = lastNode(store, Qmin);
+                int firstInChain = firstNode(Qmin);
+                if (chainLength < list.length - 1) {
+                    list[lastInChain - 1].domain.inComplement(store.level, list[lastInChain - 1], firstInChain);
+                }
+
+            }
+        }
+    }
 
 
-	// @todo, what if there is a small circuit ending with zero, it is not consistent but can be satisfied.
-	// redesign satisfied function since the implementation of alldiff has changed.
-	@Override
-	public boolean satisfied() {
-		
-		if (grounded.value() != list.length)
-			return false;
-		
-		boolean sat = super.satisfied(); // alldifferent
+    // @todo, what if there is a small circuit ending with zero, it is not consistent but can be satisfied.
+    // redesign satisfied function since the implementation of alldiff has changed.
+    @Override public boolean satisfied() {
 
-		if (sat) {
-			int i = 0;
-			int no = 0;
-			do {
-				i = list[i].min() - 1;
-				no++;
-			} while (no < list.length && i != 0);
-			if (no != list.length || i != 0)
-				return false;
-		}
-		return sat;
-	}
+        if (grounded.value() != list.length)
+            return false;
 
-	void sccs(Store store) {
+        boolean sat = super.satisfied(); // alldifferent
 
-		for (int i = 0; i < val.length; i++)
-			val[i] = 0;
-		idd = 0;
+        if (sat) {
+            int i = 0;
+            int no = 0;
+            do {
+                i = list[i].min() - 1;
+                no++;
+            } while (no < list.length && i != 0);
+            if (no != list.length || i != 0)
+                return false;
+        }
+        return sat;
+    }
 
-		sccLength = 0;
-		visit(0, store);
+    void sccs(Store store) {
 
-	}
+        for (int i = 0; i < val.length; i++)
+            val[i] = 0;
+        idd = 0;
 
-	// --- Strongly Connected Conmponents
+        sccLength = 0;
+        visit(0);
 
-	// Uses Trajan's algorithm to find strongly connected components
-	// if found strongly connected component is shorter than the
-	// Hamiltonian circuit length fail is enforced (one is unable to
-	// to build a circuit. Based on the algorithm from the book
-	// Robert Sedgewick, Algorithms, 1988, p. 482.
+    }
 
-	@Override
-	public String toString() {
-		
-		StringBuffer result = new StringBuffer( id() );
-		result.append(" : circuit([");
-		
-		for (int i = 0; i < list.length; i++) {
-			result.append(list[i]);
-			if (i < list.length - 1)
-				result.append(", ");
-		}
-		result.append("])");
-		
-		return result.toString();
-	}
+    // --- Strongly Connected Conmponents
 
-	@Override
-	public void removeLevel(int level) {
-		if (firstConsistencyLevel == level)
-			firstConsistencyCheck = true;
-	}
-	
-	// --- Strongly Connected Conmponents
+    // Uses Trajan's algorithm to find strongly connected components
+    // if found strongly connected component is shorter than the
+    // Hamiltonian circuit length fail is enforced (one is unable to
+    // to build a circuit. Based on the algorithm from the book
+    // Robert Sedgewick, Algorithms, 1988, p. 482.
 
-	void updateChains(IntVar v) {
+    @Override public String toString() {
 
-		int i = valueIndex.get(v);
-		int vMin = v.min();
+        StringBuffer result = new StringBuffer(id());
+        result.append(" : circuit([");
 
-		graph[i].update(new CircuitVarValue(vMin, ((CircuitVarValue) graph[i]
-				.value()).previous));
-		int j = vMin;
-		graph[j - 1].update(new CircuitVarValue(((CircuitVarValue) graph[j - 1]
-				.value()).next, i + 1));
-	}
+        for (int i = 0; i < list.length; i++) {
+            result.append(list[i]);
+            if (i < list.length - 1)
+                result.append(", ");
+        }
+        result.append("])");
 
-	int visit(int k, Store store) {
+        return result.toString();
+    }
 
-		int m, min = 0, t;
-		idd++;
-		val[k] = idd;
-		min = idd;
-		sccLength++;
-		for (ValueEnumeration e = list[k].dom().valueEnumeration(); e
-				.hasMoreElements();) {
-			t = e.nextElement() - 1;
-			if (val[t] == 0)
-				m = visit(t, store);
-			else
-				m = val[t];
-			if (m < min)
-				min = m;
-		}
-		if (min == val[k]) {
-			if (sccLength != list.length && sccLength != 0) {
-				// the scc is shorter than all nodes in the circuit constraints
-				sccLength = 0;
-		    	throw Store.failException;
-			}
-			sccLength = 0;
-		}
-		return min;
-	}
+    @Override public void removeLevel(int level) {
+        if (firstConsistencyLevel == level)
+            firstConsistencyCheck = true;
+    }
 
-	
+    // --- Strongly Connected Conmponents
+
+    void updateChains(IntVar v) {
+
+        int i = valueIndex.get(v);
+        int vMin = v.min();
+
+        graph[i].update(new CircuitVarValue(vMin, ((CircuitVarValue) graph[i].value()).previous));
+        int j = vMin;
+        graph[j - 1].update(new CircuitVarValue(((CircuitVarValue) graph[j - 1].value()).next, i + 1));
+    }
+
+    int visit(int k) {
+
+        int m, min = 0, t;
+        idd++;
+        val[k] = idd;
+        min = idd;
+        sccLength++;
+        for (ValueEnumeration e = list[k].dom().valueEnumeration(); e.hasMoreElements(); ) {
+            t = e.nextElement() - 1;
+            if (val[t] == 0)
+                m = visit(t);
+            else
+                m = val[t];
+            if (m < min)
+                min = m;
+        }
+        if (min == val[k]) {
+            if (sccLength != list.length && sccLength != 0) {
+                // the scc is shorter than all nodes in the circuit constraints
+                sccLength = 0;
+                throw Store.failException;
+            }
+            sccLength = 0;
+        }
+        return min;
+    }
+
+
 }

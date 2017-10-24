@@ -1,0 +1,15 @@
+var 0..1: X_INTRODUCED_3;
+var 0..1: X_INTRODUCED_7;
+array [1..16] of var int: mines:: output_array([1..4,1..4]) = [0,0,0,X_INTRODUCED_3,0,0,0,X_INTRODUCED_7,0,1,0,0,0,0,0,0];
+array [1..16] of var int: X_INTRODUCED_28 ::var_is_introduced  = [0,0,0,X_INTRODUCED_3,0,0,0,X_INTRODUCED_7,0,1,0,0,0,0,0,0];
+constraint int_ne(0,1);
+constraint int_ne(0,1);
+constraint int_ne(0,1);
+constraint int_lin_eq([-1,-1],[X_INTRODUCED_3,X_INTRODUCED_7],0);
+constraint int_ne(0,1);
+constraint int_ne(0,1);
+constraint int_ne(0,1);
+constraint int_ne(0,1);
+constraint int_ne(0,1);
+constraint int_ne(0,1);
+solve :: int_search(X_INTRODUCED_28,first_fail,indomain_min,complete) satisfy;

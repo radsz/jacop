@@ -2,75 +2,90 @@
 /* JavaCCOptions:MULTI=true,NODE_USES_PARSER=true,VISITOR=false,TRACK_TOKENS=false,NODE_PREFIX=AST,NODE_EXTENDS=,NODE_FACTORY=,SUPPORT_CLASS_VISIBILITY_PUBLIC=true */
 package org.jacop.fz;
 
-public
-class ASTScalarFlatExpr extends SimpleNode {
-  public ASTScalarFlatExpr(int id) {
-    super(id);
-  }
+public class ASTScalarFlatExpr extends SimpleNode {
+    public ASTScalarFlatExpr(int id) {
+        super(id);
+    }
 
-  public ASTScalarFlatExpr(Parser p, int id) {
-    super(p, id);
-  }
+    public ASTScalarFlatExpr(Parser p, int id) {
+        super(p, id);
+    }
 
 
     // My part
     // type = 0-int; 1=bool; 2-ident 3=array acces; 4=string; 5=float;
-    int type=-1;
+    int type = -1;
     int intValue;  // keeps int & boolean 0/1 value
     double doubleValue;  // keeps int & boolean 0/1 value
     String ident;
 
     public void setType(int t) {
-	type = t;
+        type = t;
     }
+
     public int getType() {
-	return type;
+        return type;
     }
 
     public void setInt(int i) {
-//   	if (i <= JaCoP.core.Constants.MaxInt && i >= JaCoP.core.Constants.MinInt)
-	    intValue = i;
-//   	else {
-//   	    System.err.println("Error: Too large or too small integer " + i + 
-//   			       "; execution aborted");
-//  	    System.exit(0);
-//   	}
+        //   	if (i <= JaCoP.core.Constants.MaxInt && i >= JaCoP.core.Constants.MinInt)
+        intValue = i;
+        //   	else {
+        //   	    System.err.println("Error: Too large or too small integer " + i +
+        //   			       "; execution aborted");
+        //  	    System.exit(0);
+        //   	}
     }
 
     public int getInt() {
-	return intValue;
+        return intValue;
     }
 
     public void setFloat(double d) {
-	    doubleValue = d;
+        doubleValue = d;
     }
 
     public double getFloat() {
-	return doubleValue;
+        return doubleValue;
     }
 
     public void setIdent(String i) {
-	ident = i;
+        ident = i;
     }
+
     public String getIdent() {
-	return ident;
+        return ident;
     }
 
     public String toString() {
-	String val="";
+        String val = "";
 
-	if (type != -1) {
-	    switch (type) {
-	    case 0: val = "(int): " + intValue; break;
-	    case 1: val = "(bool): " + intValue;  break;
-	    case 2: val = "(ident): " + ident; break;
-	    case 3: val = "(array access): "+ident+"["+intValue+"]"; break;
-	    case 4: val = "(string): "; break;
-	    case 5: val = "(float): " + doubleValue; break;
-	    }
-	}
+        if (type != -1) {
+            switch (type) {
+                case 0:
+                    val = "(int): " + intValue;
+                    break;
+                case 1:
+                    val = "(bool): " + intValue;
+                    break;
+                case 2:
+                    val = "(ident): " + ident;
+                    break;
+                case 3:
+                    val = "(array access): " + ident + "[" + intValue + "]";
+                    break;
+                case 4:
+                    val = "(string): ";
+                    break;
+                case 5:
+                    val = "(float): " + doubleValue;
+                    break;
+	        default:
+		    throw new RuntimeException("Internal parsing error; " + getClass().getName());
+            }
+        }
 
-	return super.toString() + val;
+        return super.toString() + val;
     }
 }
 /* JavaCC - OriginalChecksum=49c196b8bba1246a7a05b82a5206f622 (do not edit this line) */

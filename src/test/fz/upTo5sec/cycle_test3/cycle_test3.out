@@ -1,0 +1,4 @@
+num_cycles = 7;
+num_fixpoints = 7;
+x = array1d(1..7, [1, 2, 3, 4, 5, 6, 7]);
+----------

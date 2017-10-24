@@ -1,0 +1,11 @@
+var bool: Mr_Smith:: output_var;
+var bool: Mrs_Smith:: output_var;
+var bool: Matt:: output_var;
+var bool: John:: output_var;
+var bool: X_INTRODUCED_0 ::var_is_introduced :: is_defined_var;
+constraint bool_clause([X_INTRODUCED_0],[Matt]);
+constraint bool_xor(Mrs_Smith,John,true);
+constraint array_bool_or([Matt,John],true);
+constraint bool_clause([Mrs_Smith],[Mr_Smith]);
+constraint array_bool_and([Mr_Smith,John],X_INTRODUCED_0):: defines_var(X_INTRODUCED_0);
+solve  satisfy;

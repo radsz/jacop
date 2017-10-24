@@ -1,0 +1,8 @@
+var bool: X_INTRODUCED_0;
+var bool: X_INTRODUCED_1;
+var bool: v:: is_defined_var:: output_var;
+array [1..2] of var bool: vars:: output_array([1..2]) = [X_INTRODUCED_0,X_INTRODUCED_1];
+constraint array_bool_or([X_INTRODUCED_0,v],true);
+constraint bool_clause([v],[X_INTRODUCED_1]);
+constraint bool_clause([X_INTRODUCED_1],[X_INTRODUCED_0,v]);
+solve  satisfy;

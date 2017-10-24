@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<FindBugsFilter>
+    <!-- Do not consider Scala packages -->
+    <Match>
+        <Package name="org.jacop.scala"/>
+    </Match>
+    <Match>
+        <Package name="org.jacop.examples.scala"/>
+    </Match>
+    <Match>
+        <!-- Do not consider automatically generated files for parsing -->
+        <Class name="~org.jacop.fz.Parse\w*"/>
+    </Match>
+    <Match>
+        <!-- Do not consider automatically generated file for parsing -->
+        <Class name="~org.jacop.fz.TokenMgrError"/>
+    </Match>
+    <Match>
+        <!-- Do not consider automatically generated file for parsing -->
+        <Class name="~org.jacop.fz.SimpleCharStream"/>
+    </Match>
+</FindBugsFilter>

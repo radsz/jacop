@@ -1,0 +1,12 @@
+predicate jacop_geost(int: k,array [int,int] of int: rect_size,array [int,int] of int: rect_offset,array [int] of set of int: shape,array [int,int] of var int: x,array [int] of var int: kind);
+array [1..2] of int: X_INTRODUCED_4 = [1,1];
+array [1..2] of set of int: X_INTRODUCED_5 = [1..1,1..1];
+array [1..2] of int: X_INTRODUCED_6 = [0,0];
+array [1..2] of int: X_INTRODUCED_7 = [2,3];
+var 0..5: X_INTRODUCED_0;
+var 0..5: X_INTRODUCED_1;
+var 0..5: X_INTRODUCED_2;
+var 0..5: X_INTRODUCED_3;
+array [1..4] of var int: x:: output_array([1..2,1..2]) = [X_INTRODUCED_0,X_INTRODUCED_1,X_INTRODUCED_2,X_INTRODUCED_3];
+constraint jacop_geost(2,X_INTRODUCED_7,X_INTRODUCED_6,X_INTRODUCED_5,x,X_INTRODUCED_4);
+solve :: int_search([X_INTRODUCED_0,X_INTRODUCED_1,X_INTRODUCED_2,X_INTRODUCED_3],input_order,indomain_min,complete) satisfy;

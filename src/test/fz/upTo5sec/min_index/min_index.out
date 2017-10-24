@@ -1,0 +1,4 @@
+min_ind = 2;
+min_val = 2;
+variables = array1d(1..5, [3, 2, 7, 2, 6]);
+----------

@@ -1,0 +1,10 @@
+array [1..3] of int: X_INTRODUCED_7 = [10000,1,-72];
+var 0..9: X_INTRODUCED_0;
+var 0..9: X_INTRODUCED_1;
+var 0..1345: X_INTRODUCED_2;
+array [1..3] of var int: x:: output_array([1..3]) = [X_INTRODUCED_0,X_INTRODUCED_1,X_INTRODUCED_2];
+constraint int_le(X_INTRODUCED_2,1345);
+constraint int_le(X_INTRODUCED_0,9);
+constraint int_le(X_INTRODUCED_1,9);
+constraint int_lin_eq(X_INTRODUCED_7,[X_INTRODUCED_0,X_INTRODUCED_1,X_INTRODUCED_2],-6790);
+solve  minimize X_INTRODUCED_2;

@@ -1,279 +1,189 @@
-/**
- *  XmulYeqC.java 
- *  This file is part of JaCoP.
- *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
- *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU Affero General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU Affero General Public License for more details.
- *  
- *  Notwithstanding any other provision of this License, the copyright
- *  owners of this work supplement the terms of this License with terms
- *  prohibiting misrepresentation of the origin of this work and requiring
- *  that modified versions of this work be marked in reasonable ways as
- *  different from the original version. This supplement of the license
- *  terms is in accordance with Section 7 of GNU Affero General Public
- *  License version 3.
- *
- *  You should have received a copy of the GNU Affero General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
+/*
+ * XmulYeqC.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
+import org.jacop.core.*;
 
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Interval;
-import org.jacop.core.Store;
-import org.jacop.core.Var;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraint X * Y #= C
- * 
+ * <p>
  * Boundary consistency is used.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 3.1
+ * @version 4.5
  */
 
 public class XmulYeqC extends PrimitiveConstraint {
 
-	static int IdNumber = 1;
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
-	/**
-	 * It specifies variable x in constraint x * y = c.
-	 */
-	public IntVar x;
+    /**
+     * It specifies variable x in constraint x * y = c.
+     */
+    final public IntVar x;
 
-	/**
-	 * It specifies variable y in constraint x * y = c.
-	 */
-	public IntVar y;
+    /**
+     * It specifies variable y in constraint x * y = c.
+     */
+    final public IntVar y;
 
-	/**
-	 * It specifies constant c in constraint x * y = c.
-	 */
-	public int c;
+    /**
+     * It specifies constant c in constraint x * y = c.
+     */
+    final public int c;
 
-	/**
-	 * It specifies if the constraint is actually, x^2 = c.
-	 */
-	boolean xSquare = false;
+    /**
+     * It specifies if the constraint is actually, x^2 = c.
+     */
+    private final boolean xSquare;
 
-	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
-	 * the constructor being called to recreate an object from an XML format.
-	 */
-	public static String[] xmlAttributes = {"x", "y", "c"};
+    /**
+     * It constructs constraint X * Y = C.
+     *
+     * @param x variable x.
+     * @param y variable y.
+     * @param c constant c.
+     */
+    public XmulYeqC(IntVar x, IntVar y, int c) {
 
-	/**
-	 * It constructs constraint X * Y = C.
-	 * @param x variable x.
-	 * @param y variable y.
-	 * @param c constant c.
-	 */
-	public XmulYeqC(IntVar x, IntVar y, int c) {
+        checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
 
-		assert (x != null) : "Variable x is null";
-		assert (y != null) : "Variable y is null";
+        numberId = idNumber.incrementAndGet();
 
-		numberId = IdNumber++;
-		numberArgs = 2;
+        xSquare = x == y;
 
-		xSquare = (x == y) ? true : false;
+        this.x = x;
+        this.y = y;
+        this.c = c;
 
-		this.x = x;
-		this.y = y;
-		this.c = c;
+        setScope(x, y);
 
-	}
+    }
 
-	@Override
-	public ArrayList<Var> arguments() {
+    @Override public void consistency(final Store store) {
 
-		ArrayList<Var> variables = new ArrayList<Var>(3);
+        if (xSquare)  // x^2 = c
+            do {
 
-		variables.add(x);
-		variables.add(y);
+                store.propagationHasOccurred = false;
 
-		return variables;
-	}
+                if (c < 0)
+                    throw Store.failException;
 
-	@Override
-	public void consistency (Store store) {
+                double sqrtOfC = Math.sqrt((double) c);
 
-		if (xSquare)  // x^2 = c
-			do {
-				
-				store.propagationHasOccurred = false;
+                if (Math.ceil(sqrtOfC) != Math.floor(sqrtOfC))
+                    throw Store.failException;
 
-				if ( c < 0 )
-			    	throw Store.failException;
+                int value = (int) sqrtOfC;
 
-				double sqrtOfC = Math.sqrt( (double) c);
-				
-				if (Math.ceil(sqrtOfC) != Math.floor(sqrtOfC))
-			    	throw Store.failException;
+                IntDomain dom = new IntervalDomain(-value, -value);
+                dom.unionAdapt(value, value);
 
-				int value = (int) sqrtOfC;
-				
-				IntDomain dom = new IntervalDomain(-value, -value);
-				dom.unionAdapt(value, value);
+                x.domain.in(store.level, x, dom);
 
-				x.domain.in(store.level, x, dom);
+            } while (store.propagationHasOccurred);
+        else    // X*Y=C
+            do {
 
-			} while (store.propagationHasOccurred);
-		else    // X*Y=C
-			do {
-				
-				store.propagationHasOccurred = false;
-				
-				// Bounds for X
- 				Interval xBounds = IntDomain.divIntBounds(c, c, y.min(), y.max());
+                store.propagationHasOccurred = false;
 
-  				x.domain.in(store.level, x, xBounds.min(), xBounds.max());
+                // Bounds for X
+                Interval xBounds = IntDomain.divIntBounds(c, c, y.min(), y.max());
 
-				// Bounds for Y
- 				Interval yBounds = IntDomain.divIntBounds(c, c, x.min(), x.max());
+                x.domain.in(store.level, x, xBounds.min(), xBounds.max());
 
-  				y.domain.in(store.level, y, yBounds.min(), yBounds.max());
+                // Bounds for Y
+                Interval yBounds = IntDomain.divIntBounds(c, c, x.min(), x.max());
 
-				// check bounds, if C is covered.
-				Interval cBounds = IntDomain.mulBounds(x.min(), x.max(), y.min(), y.max());
+                y.domain.in(store.level, y, yBounds.min(), yBounds.max());
 
-				if ( c < cBounds.min() || c > cBounds.max()  )
-				    throw Store.failException;
+                // check bounds, if C is covered.
+                Interval cBounds = IntDomain.mulBounds(x.min(), x.max(), y.min(), y.max());
 
-			} while(store.propagationHasOccurred);
-		
-	}
+                if (c < cBounds.min() || c > cBounds.max())
+                    throw Store.failException;
 
-	@Override
-	public int getNestedPruningEvent(Var var, boolean mode) {
+            } while (store.propagationHasOccurred);
 
-		// If consistency function mode
-		if (mode) {
-			if (consistencyPruningEvents != null) {
-				Integer possibleEvent = consistencyPruningEvents.get(var);
-				if (possibleEvent != null)
-					return possibleEvent;
-			}
-			return IntDomain.GROUND;
-		}
-		// If notConsistency function mode
-		else {
-			if (notConsistencyPruningEvents != null) {
-				Integer possibleEvent = notConsistencyPruningEvents.get(var);
-				if (possibleEvent != null)
-					return possibleEvent;
-			}
-			return IntDomain.BOUND;
-		}
-	}
+    }
 
-	@Override
-	public int getConsistencyPruningEvent(Var var) {
+    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
+        return IntDomain.BOUND;
+    }
 
-		// If consistency function mode
-		if (consistencyPruningEvents != null) {
-			Integer possibleEvent = consistencyPruningEvents.get(var);
-			if (possibleEvent != null)
-				return possibleEvent;
-		}
-		return IntDomain.ANY;
+    @Override protected int getDefaultNestedConsistencyPruningEvent() {
+        return IntDomain.GROUND;
+    }
 
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
+        return IntDomain.GROUND;
+    }
 
-	}
+    @Override public int getDefaultConsistencyPruningEvent() {
+        return IntDomain.ANY;
+    }
 
-	@Override
-	public int getNotConsistencyPruningEvent(Var var) {
-		// If notConsistency function mode
-		if (notConsistencyPruningEvents != null) {
-			Integer possibleEvent = notConsistencyPruningEvents.get(var);
-			if (possibleEvent != null)
-				return possibleEvent;
-		}
-		return IntDomain.GROUND;
-	}
+    @Override public void notConsistency(final Store store) {
 
-	@Override
-	public void impose(Store store) {
+        do {
 
-		x.putModelConstraint(this, getConsistencyPruningEvent(x));
-		y.putModelConstraint(this, getConsistencyPruningEvent(y));
-		store.addChanged(this);
-		store.countConstraint();
-	}
+            store.propagationHasOccurred = false;
 
-	@Override
-	public void notConsistency(Store store) {
+            if (x.singleton()) {
+                if (c % x.value() == 0)
+                    y.domain.inComplement(store.level, y, c / x.value());
+            } else if (y.singleton()) {
+                if (c % y.value() == 0)
+                    x.domain.inComplement(store.level, x, c / y.value());
+            }
 
-		do {
-			
-			store.propagationHasOccurred = false;
-		
-			if (x.singleton()) {
-				if (c % x.value() == 0)
-					y.domain.inComplement(store.level, y, c / x.value());
-			} else if (y.singleton()) {
-				if (c % y.value() == 0)
-					x.domain.inComplement(store.level, x, c / y.value());
-			}
-		
-		} while(store.propagationHasOccurred);
-		
-	}
+        } while (store.propagationHasOccurred);
 
-	@Override
-	public boolean notSatisfied() {
-		IntDomain Xdom = x.dom(), Ydom = y.dom();
-		return (Xdom.max() * Ydom.max() < c || Xdom.min() * Ydom.min() > c);
-	}
+    }
 
-	@Override
-	public void queueVariable(int level, Var V) {
-	}
+    @Override public boolean notSatisfied() {
+        IntDomain Xdom = x.dom(), Ydom = y.dom();
+        return (Xdom.max() * Ydom.max() < c || Xdom.min() * Ydom.min() > c);
+    }
 
-	@Override
-	public void removeConstraint() {
-		x.removeConstraint(this);
-		y.removeConstraint(this);
-	}
+    @Override public boolean satisfied() {
+        return (grounded() && (x.min() * y.min() == c));
+    }
 
-	@Override
-	public boolean satisfied() {
-		IntDomain Xdom = x.dom(), Ydom = y.dom();
+    @Override public String toString() {
 
-		return (Xdom.singleton() && Ydom.singleton() && (Xdom.min()
-				* Ydom.min() == c));
-
-	}
-
-	@Override
-	public String toString() {
-
-		return id() + " : XmulYeqC(" + x + ", " + y + ", " + c + " )";
-	}
-
-	@Override
-	public void increaseWeight() {
-		if (increaseWeight) {
-			x.weight++;
-			y.weight++;
-		}
-	}	
+        return id() + " : XmulYeqC(" + x + ", " + y + ", " + c + " )";
+    }
 
 }

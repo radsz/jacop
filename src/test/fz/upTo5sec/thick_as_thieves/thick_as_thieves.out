@@ -1,0 +1,13 @@
+artie = 0;
+bill = 1;
+crackitt = 0;
+dodgy = 0;
+edgy = 0;
+fingers = 1;
+artie_t = 1;
+bill_t = 0;
+crackitt_t = 1;
+dodgy_t = 1;
+edgy_t = 1;
+fingers_t = 0;
+----------

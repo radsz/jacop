@@ -1,0 +1,12 @@
+BurningBush = 1;
+Captivity = 2;
+MosessYouth = 3;
+Passover = 4;
+TenCommandments = 5;
+Ethiopia = 4;
+Kazakhstan = 5;
+Lithuania = 3;
+Morocco = 1;
+Yemen = 2;
+Age = array1d(1..5, [8, 3, 7, 10, 5]);
+----------

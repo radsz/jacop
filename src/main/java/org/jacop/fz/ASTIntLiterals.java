@@ -4,27 +4,28 @@ package org.jacop.fz;
 
 import java.util.ArrayList;
 
-public
-class ASTIntLiterals extends SimpleNode {
-  public ASTIntLiterals(int id) {
-    super(id);
-  }
+public class ASTIntLiterals extends SimpleNode {
+    public ASTIntLiterals(int id) {
+        super(id);
+    }
 
-  public ASTIntLiterals(Parser p, int id) {
-    super(p, id);
-  }
+    public ASTIntLiterals(Parser p, int id) {
+        super(p, id);
+    }
 
     // My additions
     ArrayList<Integer> list = new ArrayList<Integer>();
+
     public void setList(ArrayList<Integer> l) {
-	list = l;
+        list = l;
     }
+
     public ArrayList<Integer> getList() {
-	return list;
+        return list;
     }
 
     public String toString() {
-	return super.toString() + ": " + list;
+        return super.toString() + ": " + list;
     }
 }
 /* JavaCC - OriginalChecksum=ffe02839639c253f81ec8532a85651dd (do not edit this line) */

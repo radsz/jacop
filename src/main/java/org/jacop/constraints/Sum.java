@@ -1,38 +1,41 @@
-/**
- *  Sum.java 
- *  This file is part of JaCoP.
- *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
- *	Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU Affero General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU Affero General Public License for more details.
- *  
- *  Notwithstanding any other provision of this License, the copyright
- *  owners of this work supplement the terms of this License with terms
- *  prohibiting misrepresentation of the origin of this work and requiring
- *  that modified versions of this work be marked in reasonable ways as
- *  different from the original version. This supplement of the license
- *  terms is in accordance with Section 7 of GNU Affero General Public
- *  License version 3.
- *
- *  You should have received a copy of the GNU Affero General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
+/*
+ * Sum.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -42,323 +45,255 @@ import org.jacop.core.Var;
 /**
  * Sum constraint implements the summation over several Variable's . It provides
  * the sum from all Variable's on the list.
- * 
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
+
 
 /**
- * @deprecated  As of release 4.3.1 replaced by SumInt constraint.
+ * @deprecated As of release 4.3.1 replaced by SumInt constraint.
  */
-@Deprecated public class Sum extends Constraint {
+@Deprecated
+public class Sum extends Constraint implements SatisfiedPresent {
 
-	static int counter = 1;
+    static AtomicInteger idNumber = new AtomicInteger(0);
 
-	/**
-	 * It specifies the variables to be summed.
-	 */
-	public IntVar list[];
+    /**
+     * It specifies the variables to be summed.
+     */
+    public IntVar list[];
 
-	/**
-	 * It specifies variable sum to store the overall sum of the variables being summed up. 
-	 */
-	public IntVar sum;
+    /**
+     * It specifies variable sum to store the overall sum of the variables being summed up.
+     */
+    public IntVar sum;
 
-	/**
-	 * The sum of grounded variables.
-	 */
-	private TimeStamp<Integer> sumGrounded;
-	
-	/**
-	 * The position for the next grounded variable.
-	 */
-	private TimeStamp<Integer> nextGroundedPosition;	
+    /**
+     * The sum of grounded variables.
+     */
+    private TimeStamp<Integer> sumGrounded;
 
-	/**
-	 * It specifies the arguments required to be saved by an XML format as well as 
-	 * the constructor being called to recreate an object from an XML format.
-	 */
-	public static String[] xmlAttributes = {"list", "sum"};
+    /**
+     * The position for the next grounded variable.
+     */
+    private TimeStamp<Integer> nextGroundedPosition;
 
-	/**
-	 * It constructs sum constraint which sums all variables and makes it equal to variable sum.
-	 * @param list list of variables to be added
-	 * @param sum the resulting sum
-	 */
-	public Sum(IntVar[] list, IntVar sum) {
-		
-		assert (list != null) : "List of variables is null";
-		assert (sum != null) : "Sum variable is null";
-		
-		for (int i = 0; i < list.length; i++)
-			assert (list[i] != null) : i + "-th element in list is null";
-			
-		queueIndex = 1;
-		numberId = counter++;
-		
-		this.sum = sum;
-		this.list = new IntVar[list.length];
-		
-		System.arraycopy(list, 0, this.list, 0, list.length);
-		numberArgs += list.length;		
+    /**
+     * It constructs sum constraint which sums all variables and makes it equal to variable sum.
+     * @param list list of variables to be added
+     * @param sum the resulting sum
+     */
+    public Sum(IntVar[] list, IntVar sum) {
 
-		checkForOverflow();
-	}
+        checkInputForNullness(new String[]{"list", "sum"}, new Object[][]{list, {sum}});
 
-	/**
-	 * It creates a sum constraints which sums all variables and makes it equal to variable sum.
-	 * @param list variables being summed up.
-	 * @param sum the sum variable.
-	 */
+        queueIndex = 1;
+        numberId = idNumber.incrementAndGet();
 
-	public Sum(ArrayList<? extends IntVar> list, IntVar sum) {
+        this.sum = sum;
+        this.list = Arrays.copyOf(list, list.length);
 
-		this(list.toArray(new IntVar[list.size()]), sum);
-		
-	}
+        checkForOverflow();
+
+        setScope( Stream.concat(Arrays.stream(list), Stream.of(sum)));
+    }
+
+    /**
+     * It creates a sum constraints which sums all variables and makes it equal to variable sum.
+     * @param list variables being summed up.
+     * @param sum the sum variable.
+     */
+
+    public Sum(List<? extends IntVar> list, IntVar sum) {
+        this(list.toArray(new IntVar[list.size()]), sum);
+    }
+
+    @Override public void consistency(Store store) {
 
 
-	@Override
-	public ArrayList<Var> arguments() {
+        do {
 
-		ArrayList<Var> variables = new ArrayList<Var>(list.length + 1);
+            store.propagationHasOccurred = false;
 
-		variables.add(sum);
+            int pointer = nextGroundedPosition.value();
 
-		for (Var v : list)
-			variables.add(v);
+            int lMin = sumGrounded.value();
+            int lMax = lMin;
 
-		return variables;
-	}
+            int sumJustGrounded = 0;
 
-	@Override
-	public void consistency(Store store) {
-		
+            for (int i = pointer; i < list.length; i++) {
+                IntDomain currentDomain = list[i].domain;
 
-		do {
+                if (currentDomain.singleton()) {
 
-			store.propagationHasOccurred = false;
-			
-			int pointer = nextGroundedPosition.value();
+                    if (pointer < i) {
+                        IntVar grounded = list[i];
+                        list[i] = list[pointer];
+                        list[pointer] = grounded;
+                    }
 
-			int lMin = sumGrounded.value();
-			int lMax = lMin;
-			
-			int sumJustGrounded = 0;
+                    pointer++;
+                    sumJustGrounded += currentDomain.min();
+                    continue;
+                }
 
-			for (int i = pointer; i < list.length; i++) {
-				IntDomain currentDomain = list[i].domain;
-				
-				if (currentDomain.singleton()) {
-					
-					if (pointer < i) {
-						IntVar grounded = list[i];
-						list[i] = list[pointer];
-						list[pointer] = grounded;
-					}
-				
-					pointer++;
-					sumJustGrounded += currentDomain.min();
-					continue;
-				}
-				
-				lMin += currentDomain.min();
-				lMax += currentDomain.max();
-			}
+                lMin += currentDomain.min();
+                lMax += currentDomain.max();
+            }
 
-			nextGroundedPosition.update(pointer);
-			sumGrounded.update( sumGrounded.value() + sumJustGrounded );
-			
-			lMin += sumJustGrounded;
-			lMax += sumJustGrounded;
-			
-			boolean needAdaptMin = false;
-			boolean needAdaptMax = false;
+            nextGroundedPosition.update(pointer);
+            sumGrounded.update(sumGrounded.value() + sumJustGrounded);
 
-			if (sum.min() > lMin)
-				needAdaptMin = true;
+            lMin += sumJustGrounded;
+            lMax += sumJustGrounded;
 
-			if (sum.max() < lMax)
-				needAdaptMax = true;
+            boolean needAdaptMin = false;
+            boolean needAdaptMax = false;
 
-			sum.domain.in(store.level, sum, lMin, lMax);
+            if (sum.min() > lMin)
+                needAdaptMin = true;
 
-			store.propagationHasOccurred = false;
-			
-			int min = sum.min() - lMax;
-			int max = sum.max() - lMin;
+            if (sum.max() < lMax)
+                needAdaptMax = true;
 
-			if (needAdaptMin && !needAdaptMax)
-				for (int i = pointer; i < list.length; i++) {
-					IntVar v = list[i];
-					v.domain.inMin(store.level, v, min + v.max());
-				}
+            sum.domain.in(store.level, sum, lMin, lMax);
 
-			if (!needAdaptMin && needAdaptMax)
-				for (int i = pointer; i < list.length; i++) {
-					IntVar v = list[i];
-					v.domain.inMax(store.level, v, max + v.min());
-				}
+            store.propagationHasOccurred = false;
 
-			if (needAdaptMin && needAdaptMax)
-				for (int i = pointer; i < list.length; i++) {
-					IntVar v = list[i];
-					v.domain.in(store.level, v, min + v.max(), max + v.min());
-				}
+            int min = sum.min() - lMax;
+            int max = sum.max() - lMin;
 
-		} while (store.propagationHasOccurred);
-		
-	}
+            if (needAdaptMin && !needAdaptMax)
+                for (int i = pointer; i < list.length; i++) {
+                    IntVar v = list[i];
+                    v.domain.inMin(store.level, v, min + v.max());
+                }
 
+            if (!needAdaptMin && needAdaptMax)
+                for (int i = pointer; i < list.length; i++) {
+                    IntVar v = list[i];
+                    v.domain.inMax(store.level, v, max + v.min());
+                }
 
-	@Override
-	public int getConsistencyPruningEvent(Var var) {
+            if (needAdaptMin && needAdaptMax)
+                for (int i = pointer; i < list.length; i++) {
+                    IntVar v = list[i];
+                    v.domain.in(store.level, v, min + v.max(), max + v.min());
+                }
 
-		// If consistency function mode
-			if (consistencyPruningEvents != null) {
-				Integer possibleEvent = consistencyPruningEvents.get(var);
-				if (possibleEvent != null)
-					return possibleEvent;
-			}
-			return IntDomain.BOUND;
-	}
+        } while (store.propagationHasOccurred);
 
-	// registers the constraint in the constraint store
-	@Override
-	public void impose(Store store) {
+    }
 
-		sumGrounded = new TimeStamp<Integer>(store, 0);
-		nextGroundedPosition = new TimeStamp<Integer>(store, 0);
-		
-		sum.putModelConstraint(this, getConsistencyPruningEvent(sum));
-		
-		for (int i = 0; i < list.length; i++) {
-			list[i].putModelConstraint(this, getConsistencyPruningEvent(list[i]));
-		}
-		
-		store.addChanged(this);
-		store.countConstraint();
-	}
+    @Override public int getDefaultConsistencyPruningEvent() {
+        return IntDomain.BOUND;
+    }
 
-	@Override
-	public void removeConstraint() {
-		sum.removeConstraint(this);
-		for (Var v : list)
-			v.removeConstraint(this);
-	}
+    // registers the constraint in the constraint store
+    @Override public void impose(Store store) {
 
-	@Override
-	public boolean satisfied() {
-		boolean sat = sum.singleton();
-		
-		int i = list.length - 1, sumAll = 0;
-		
-		while (sat && i >= 0) {
-			sat = list[i].singleton();
-			i--;
-		}
-		if (sat) {
-			for (IntVar v : list)
-				sumAll += v.min();
-		}
-		return (sat && sumAll == sum.min());
-	}
+        sumGrounded = new TimeStamp<Integer>(store, 0);
+        nextGroundedPosition = new TimeStamp<Integer>(store, 0);
+
+        super.impose(store);
+
+    }
+
+    @Override public boolean satisfied() {
+
+        if (! grounded() )
+            return false;
+
+        int sumAll = 0;
+        for (IntVar v : list)
+                sumAll += v.min();
+
+        return sumAll == sum.min();
+    }
 
     void checkForOverflow() {
 
-	int sumMin=0, sumMax=0;
-	for (int i=0; i<list.length; i++) {
-	    int n1 = list[i].min();
-	    int n2 = list[i].max();
+        int sumMin = 0, sumMax = 0;
+        for (int i = 0; i < list.length; i++) {
+            int n1 = list[i].min();
+            int n2 = list[i].max();
 
-	    sumMin = add(sumMin, n1);
-	    sumMax = add(sumMax, n2);
-	}
+            sumMin = Math.addExact(sumMin, n1);
+            sumMax = Math.addExact(sumMax, n2);
+        }
 
-	sumMin = subtract(sumMin, sum.max());
-	sumMax = subtract(sumMax, sum.min());
+        Math.subtractExact(sumMin, sum.max());
+        Math.subtractExact(sumMax, sum.min());
     }
 
-	@Override
-	public String toString() {
-		
-		StringBuffer result = new StringBuffer( id() );
-		result.append(" : sum( [");
+    @Override public String toString() {
 
-		for (int i = 0; i < list.length; i++) {
-			result.append(list[i]);
-			if (i < list.length - 1)
-				result.append(", ");
-		}
-		result.append("], ").append(sum).append(" )");
-		
-		return result.toString();
-	}
-		
-	@Override
-	public Constraint getGuideConstraint() {
-	
-		IntVar proposedVariable = (IntVar)getGuideVariable();
-		if (proposedVariable != null)
-			return new XeqC(proposedVariable, guideValue);
-		else
-			return null;
-	}
+        StringBuffer result = new StringBuffer(id());
+        result.append(" : sum( [");
 
-	@Override
-	public int getGuideValue() {
-		return guideValue; 
-	}
+        for (int i = 0; i < list.length; i++) {
+            result.append(list[i]);
+            if (i < list.length - 1)
+                result.append(", ");
+        }
+        result.append("], ").append(sum).append(" )");
 
-	int guideValue = 0;
-	
-	
-	@Override
-	public Var getGuideVariable() {
-		
-		int regret = 1;
-		Var proposedVariable = null;
+        return result.toString();
+    }
 
-		for (IntVar v : list) {
+    @Override public Constraint getGuideConstraint() {
 
-			IntDomain listDom = v.dom();
+        IntVar proposedVariable = (IntVar) getGuideVariable();
+        if (proposedVariable != null)
+            return new XeqC(proposedVariable, guideValue);
+        else
+            return null;
+    }
 
-			if (v.singleton())
-				continue;
+    @Override public int getGuideValue() {
+        return guideValue;
+    }
 
-			int currentRegret = listDom.nextValue(listDom.min()) - listDom.min();
-			
-			if (currentRegret > regret) {
-				regret = currentRegret;
-				proposedVariable = v;
-				guideValue = listDom.min();
-			}
-
-			currentRegret = listDom.max() - listDom.previousValue(listDom.max());
-			
-			if (currentRegret > regret) {
-				regret = currentRegret;
-				proposedVariable = v;
-				guideValue = listDom.max();
-			}
-			
-		}
-
-		return proposedVariable;
-		
-	}
+    int guideValue = 0;
 
 
-	@Override
-	public void supplyGuideFeedback(boolean feedback) {
-	}
+    @Override public Var getGuideVariable() {
 
-    @Override
-	public void increaseWeight() {
-		if (increaseWeight) {
-			sum.weight++;
-			for (Var v : list) v.weight++;
-		}
-	}
-	
+        int regret = 1;
+        Var proposedVariable = null;
+
+        for (IntVar v : list) {
+
+            IntDomain listDom = v.dom();
+
+            if (v.singleton())
+                continue;
+
+            int currentRegret = listDom.nextValue(listDom.min()) - listDom.min();
+
+            if (currentRegret > regret) {
+                regret = currentRegret;
+                proposedVariable = v;
+                guideValue = listDom.min();
+            }
+
+            currentRegret = listDom.max() - listDom.previousValue(listDom.max());
+
+            if (currentRegret > regret) {
+                regret = currentRegret;
+                proposedVariable = v;
+                guideValue = listDom.max();
+            }
+
+        }
+
+        return proposedVariable;
+
+    }
+
+    @Override public void supplyGuideFeedback(boolean feedback) {
+    }
+
 }

@@ -1,33 +1,32 @@
-/**
- *  DefaultClausesDatabase.java
- *   
- *  This file is part of JaCoP.
- *
- *  JaCoP is a Java Constraint Programming solver. 
- *	
- *  Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU Affero General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU Affero General Public License for more details.
- *  
- *  Notwithstanding any other provision of this License, the copyright
- *  owners of this work supplement the terms of this License with terms
- *  prohibiting misrepresentation of the origin of this work and requiring
- *  that modified versions of this work be marked in reasonable ways as
- *  different from the original version. This supplement of the license
- *  terms is in accordance with Section 7 of GNU Affero General Public
- *  License version 3.
- *
- *  You should have received a copy of the GNU Affero General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
+/*
+ * DefaultClausesDatabase.java
+ * <p>
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 package org.jacop.jasat.core.clauses;
 
@@ -51,27 +50,30 @@ import org.jacop.jasat.utils.Utils;
  * Kris:
  * Replacing Math.abs() by direct code "(l < 0) ? -l : l" in program statements; not in assertions ;)
  */
+
+
 /**
- * 
+ *
  * A standard database of clauses, implemented in an efficient way such that insertion
  * or removal of clauses works fast.
- * 
+ *
  * Two-watched literals are used for fast unit propagation. The two first
  * literals of each clauses are the watches.
- * 
+ *
  * @author Simon Cruanes and Radoslaw Szymanek
+ * @version 4.5
  *
  */
 public final class DefaultClausesDatabase extends AbstractClausesDatabase {
 
     /**
-     * 
+     *
      * @TODO efficiency.
-     * 
+     *
      * It accepts binary or longer clauses. 
      *
      * Should we assume that clauses are at least length 4? Does it make the code quicker? 
-     * 
+     *
      */
     private static final int DEFAULT_INITIAL_NUMBER_OF_CLAUSES = 100;
     // the array of clauses
@@ -86,10 +88,10 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
      * and propagating literals if pertinent. If a conflict occurs, the solver
      * conflict Event will be triggered. This is the main part of unit
      * propagation for the solver.
-     * 
+     *
      * It always creates a list of new watched list (newWatchedList).
-     * 
-     * @param literal	the literal that is being set
+     *
+     * @param literal  the literal that is being set
      */
     public void assertLiteral(int literal) {
 
@@ -143,7 +145,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
             // get the other watch and its value, and perform some checks
             int otherWatch = clause[1 - myWatchPos];
             int otherValue = trail.values[(otherWatch < 0) ? -otherWatch : otherWatch];
-            
+
             assert Math.abs(myWatch) == var;
             assert otherWatch * myWatch != 0; // none is zero
             assert doesWatch(myWatch, clauseIndex);
@@ -167,10 +169,10 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
                 /*
                  * try to find 2 other watches in the rest of the clause
                  */
-                int watch1pos = -1;	// position (index) of first watch
-                int watch2pos = -1;	// position of second watch
-                int countWatches = 0;	// number of (real) watches found
-				/*
+                int watch1pos = -1;  // position (index) of first watch
+                int watch2pos = -1;  // position of second watch
+                int countWatches = 0;  // number of (real) watches found
+        /*
                  * iterate until two watches are found or the whole clause is explored
                  */
                 /**
@@ -197,7 +199,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
                          * We are done with this clause
                          */
                         newWatchList[newWatchNum++] = clauseIndex;
-                        continue IterateOnWatchedClauses;	// done with this clause
+                        continue IterateOnWatchedClauses;  // done with this clause
                     }
                 }
 
@@ -236,7 +238,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
                          */
                         assert watch1pos != myWatchPos;
                         assert watch1pos >= 2;
-                        assert trail.values[Math.abs(clause[watch1pos])] == 0;	// check unit clause
+                        assert trail.values[Math.abs(clause[watch1pos])] == 0;  // check unit clause
                         // keep watching it
                         newWatchList[newWatchNum++] = clauseIndex;
 
@@ -258,8 +260,8 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
                         swap(clause, 1, watch2pos);
                         // update the watch lists
                         /**
-                         * @TODO, Analysis. 
-                         * 
+                         * @TODO, Analysis.
+                         *
                          * Removing watch in this manner takes linear time to go through the list
                          * of watches, maybe this literal which is no longer capable of watching 
                          * is soon to be computed for assertion and operation check watch will be 
@@ -277,10 +279,10 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
             }
 
             // the current literal should be the second watch, to simplify many things
-//			if (myWatchPos == 0) {
-//				swap(clause, 0, 1);
-//				myWatchPos = 1;
-//			}
+            //			if (myWatchPos == 0) {
+            //				swap(clause, 0, 1);
+            //				myWatchPos = 1;
+            //			}
 
             /*
              * case c)  Maybe unit clause, maybe unknown clause if another watch
@@ -362,8 +364,8 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
          * try to find the watches
          */
 
-        int watch1pos = -1, watch2pos = -1;	// position of watches
-        int highestPos = -1, highestLevel = -1;	// literal with highest level
+        int watch1pos = -1, watch2pos = -1;  // position of watches
+        int highestPos = -1, highestLevel = -1;  // literal with highest level
         int secondHighestPos = -1, secondHighestLevel = -1; // literal with second highest level
         int numFoundWatch = 0; // how many watches did we found?
 		/*
@@ -419,7 +421,8 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
                 assert watch2pos == -1;
                 putAt0And1(clause, watch1pos, highestPos);
                 // trigger propagation of the first literal if not already fixed literal satisfying the clause.
-                if (trail.values[(clause[0] < 0) ? -clause[0] : clause[0]] == 0);
+                if (trail.values[(clause[0] < 0) ? -clause[0] : clause[0]] == 0)
+                    ;
                 core.triggerPropagateEvent(clause[0], clauseId);
                 break;
             /*
@@ -452,7 +455,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
         return clauseId;
     }
 
-    
+
     public void removeClause(int clauseIndex) {
 
         numRemoved++;
@@ -469,12 +472,12 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
 
     }
 
-    
+
     public boolean canRemove(int clauseId) {
         return true;
     }
 
-    
+
     public MapClause resolutionWith(int clauseId, MapClause explanation) {
 
         /**
@@ -494,8 +497,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
         return explanation;
     }
 
-    @Override
-    public int rateThisClause(int[] clause) {
+    @Override public int rateThisClause(int[] clause) {
 
         if (clause.length <= 1) {
             return CLAUSE_RATE_UNSUPPORTED;
@@ -505,15 +507,14 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
         return CLAUSE_RATE_AVERAGE;
     }
 
-    @Override
-    public int size() {
+    @Override public int size() {
         return currentIndex - numRemoved;
     }
 
     /**
      * returns to the given level
      */
-    
+
     public void backjump(int level) {
         // nothing to do
     }
@@ -521,10 +522,9 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
     /**
      * (used for debug) checks if the 2 first literals of the clauses
      * are exactly the set of literals that watch this clause
-     * @param clauseIndex	the index of the clause
+     * @param clauseIndex  the index of the clause
      */
-    @SuppressWarnings("unused")
-    private String checkWatches4Clause(int clauseIndex) {
+    @SuppressWarnings("unused") private String checkWatches4Clause(int clauseIndex) {
         int[] clause = clauses[clauseIndex];
         assert doesWatch(clause[0], clauseIndex);
         assert doesWatch(clause[1], clauseIndex);
@@ -537,10 +537,9 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
     /**
      * (used for debug) checks if the 2 first literals of the clauses
      * are exactly the set of literals that watch this clause
-     * @param clauseIndex	the index of the clause
+     * @param clauseIndex  the index of the clause
      */
-    @SuppressWarnings("unused")
-    private String checkWatches4var(int var) {
+    @SuppressWarnings("unused") private String checkWatches4var(int var) {
 
         if (watchLists.length <= var) {
             return null;
@@ -560,7 +559,8 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
             assert doesWatch(clause[0], clauseIndex);
             assert doesWatch(clause[1], clauseIndex);
             for (int j = 2; j < clause.length; ++j) {
-                assert !doesWatch(clause[j], clauseIndex) : "Too many watches on var " + var + " watches also on " + j + " " + new MapClause(clause).toString();
+                assert !doesWatch(clause[j], clauseIndex) :
+                    "Too many watches on var " + var + " watches also on " + j + " " + new MapClause(clause).toString();
             }
         }
 
@@ -573,13 +573,14 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
      * be correct (because it is not that trivial and it is 2:30AM) but
      * it probably could be faster.
      */
+
     /**
      * assuming i != j, this modifies clause so that the elements
      * that were at position i and j will now be at position 0 and 1 (i.e.
      * clause[i] becomes clause[0] and clause[j] becomes clause[1])
-     * @param clause	the clause to modify
-     * @param i	the first index
-     * @param j	the second index
+     * @param clause  the clause to modify
+     * @param i  the first index
+     * @param j  the second index
      */
     private final void putAt0And1(int[] clause, int i, int j) {
         assert i >= 0 && i < clause.length;
@@ -622,7 +623,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
 
     /**
      * be sure that the database can contain @param size clauses
-     * @param size	the number of clauses
+     * @param size  the number of clauses
      */
     public void ensureSize(int size) {
         assert currentIndex <= clauses.length;
@@ -634,8 +635,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
         }
     }
 
-    @Override
-    public void toCNF(BufferedWriter output) throws IOException {
+    @Override public void toCNF(BufferedWriter output) throws IOException {
 
         for (int i = 0; i < currentIndex; i++) {
 
@@ -644,7 +644,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
             if (clause != null) {
 
                 for (int j = 0; j < clause.length; j++) {
-                    output.write(new Integer(clause[j]).toString());
+                    output.write(Integer.toString(clause[j]));
                     output.write(" ");
                 }
                 output.write("0\n");

@@ -1,0 +1,18 @@
+array [1..2] of int: X_INTRODUCED_9 = [1,-1];
+var 5..5: m:: output_var;
+var -5..5: X_INTRODUCED_11 ::var_is_introduced ;
+var -5..5: X_INTRODUCED_13 ::var_is_introduced ;
+var -5..5: X_INTRODUCED_15 ::var_is_introduced ;
+var -5..5: X_INTRODUCED_17 ::var_is_introduced ;
+array [1..4] of var int: x:: output_array([1..4]) = [25,1,14,3];
+constraint int_lin_ne(X_INTRODUCED_9,[X_INTRODUCED_11,X_INTRODUCED_13],0);
+constraint int_lin_ne(X_INTRODUCED_9,[X_INTRODUCED_11,X_INTRODUCED_15],0);
+constraint int_lin_ne(X_INTRODUCED_9,[X_INTRODUCED_11,X_INTRODUCED_17],0);
+constraint int_lin_ne(X_INTRODUCED_9,[X_INTRODUCED_13,X_INTRODUCED_15],0);
+constraint int_lin_ne(X_INTRODUCED_9,[X_INTRODUCED_13,X_INTRODUCED_17],0);
+constraint int_lin_ne(X_INTRODUCED_9,[X_INTRODUCED_15,X_INTRODUCED_17],0);
+constraint int_mod(25,5,X_INTRODUCED_11);
+constraint int_mod(1,5,X_INTRODUCED_13);
+constraint int_mod(14,5,X_INTRODUCED_15);
+constraint int_mod(3,5,X_INTRODUCED_17);
+solve  satisfy;

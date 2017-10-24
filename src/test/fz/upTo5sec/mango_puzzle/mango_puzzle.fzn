@@ -1,0 +1,18 @@
+array [1..2] of int: X_INTRODUCED_5 = [-3,2];
+array [1..2] of int: X_INTRODUCED_9 = [-3,1];
+var int: X_INTRODUCED_0;
+var int: X_INTRODUCED_1;
+var int: X_INTRODUCED_2;
+var int: X_INTRODUCED_3;
+var int: X_INTRODUCED_4;
+array [1..5] of var int: x:: output_array([1..5]) = [X_INTRODUCED_0,X_INTRODUCED_1,X_INTRODUCED_2,X_INTRODUCED_3,X_INTRODUCED_4];
+constraint int_lin_eq(X_INTRODUCED_5,[X_INTRODUCED_3,X_INTRODUCED_4],2);
+constraint int_lin_eq(X_INTRODUCED_5,[X_INTRODUCED_2,X_INTRODUCED_3],2);
+constraint int_lin_eq(X_INTRODUCED_5,[X_INTRODUCED_1,X_INTRODUCED_2],2);
+constraint int_lin_eq(X_INTRODUCED_9,[X_INTRODUCED_0,X_INTRODUCED_1],1);
+constraint int_le(0,X_INTRODUCED_0);
+constraint int_le(0,X_INTRODUCED_1);
+constraint int_le(0,X_INTRODUCED_2);
+constraint int_le(0,X_INTRODUCED_3);
+constraint int_le(0,X_INTRODUCED_4);
+solve  minimize X_INTRODUCED_4;

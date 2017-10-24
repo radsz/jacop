@@ -1,0 +1,5 @@
+leo_boys = array1d(1..3, [4, 5, 9]);
+leo_girls = array1d(1..3, [3, 7, 8]);
+rene_boys = array1d(1..3, [1, 3, 8]);
+rene_girls = array1d(1..3, [0, 5, 7]);
+----------

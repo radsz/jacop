@@ -194,6 +194,7 @@ TOKEN :
 void model() #model:
 {}
 {
+    { cc.setOptions(options); }
     pred_decl_items()
     var_decl_items() 
     constraint_items()
@@ -205,7 +206,7 @@ void model() #model:
 	    // 	System.out.println(dict);
 	    
 	    // generate constraints
-	    cc.generateAllConstraints(jjtThis, options);
+	    cc.generateAllConstraints(jjtThis);
 	    // search
 	    solver.solveModel(jjtThis, dict, options);
 	}
@@ -230,7 +231,7 @@ void var_decl_items() #VarDeclItems:
     ( var_decl_item() <SC> )*
  	{   //jjtThis.dump("");
 	    // jjtThis.removeChildren();
-	    solver.setNumberBoolVariables(cg.numberBooleanVariables);
+	    dict.setNumberBoolVariables(cg.numberBooleanVariables);
 	}
 //             	{ System.out.println(dict); }
 }

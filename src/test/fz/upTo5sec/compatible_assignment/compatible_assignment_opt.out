@@ -1,0 +1,15 @@
+X_INTRODUCED_10 = false;
+X_INTRODUCED_11 = 1;
+X_INTRODUCED_15 = false;
+X_INTRODUCED_16 = 1;
+X_INTRODUCED_20 = false;
+X_INTRODUCED_21 = 1;
+X_INTRODUCED_25 = false;
+X_INTRODUCED_26 = 1;
+X_INTRODUCED_30 = false;
+X_INTRODUCED_31 = 1;
+X_INTRODUCED_35 = false;
+X_INTRODUCED_36 = 1;
+task = array1d(1..4, [3, 3, 1, 1]);
+----------
+==========

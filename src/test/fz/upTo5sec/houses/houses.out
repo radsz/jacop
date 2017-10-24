@@ -1,0 +1,10 @@
+allison = 3;
+belinda = 8;
+adrienne = 2;
+benito = 6;
+cheri = 7;
+crawford = 4;
+daryl = 1;
+don = 5;
+houses = array1d(1..8, [7, 3, 1, 6, 8, 4, 5, 2]);
+----------

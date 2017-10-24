@@ -1,0 +1,10 @@
+array [1..2] of int: X_INTRODUCED_0 = [1,-1];
+array [1..2] of int: X_INTRODUCED_2 = [-1,1];
+var 10..100: hakank_age:: output_var;
+var 10..100: anders_age:: output_var;
+var 110..110: this_year:: output_var;
+constraint int_lin_eq(X_INTRODUCED_0,[anders_age,hakank_age],4);
+constraint int_lin_le(X_INTRODUCED_2,[anders_age,hakank_age],-1);
+constraint int_lin_eq([1,1],[anders_age,hakank_age],110):: defines_var(anders_age);
+constraint int_lin_eq([1,1],[hakank_age,anders_age],110):: defines_var(hakank_age);
+solve  satisfy;

@@ -1,0 +1,7 @@
+var 0..1: X_INTRODUCED_0;
+var 0..1: X_INTRODUCED_1;
+var bool: X_INTRODUCED_2 ::var_is_introduced :: is_defined_var = false;
+array [1..2] of var int: flies:: output_array([1..2]) = [X_INTRODUCED_0,X_INTRODUCED_1];
+constraint int_eq(X_INTRODUCED_1,1);
+constraint int_eq_reif(X_INTRODUCED_0,1,X_INTRODUCED_2):: defines_var(X_INTRODUCED_2);
+solve  satisfy;
