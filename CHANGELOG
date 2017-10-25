@@ -77,8 +77,22 @@ Version 4.5
      instead).
 
 19. Different Maven profiles for testing (commit, push, release) that
-    will execute different lengths tests in Maven test phase using 
-    Minizinc tests stored in src/test/fz/ directory. 
+    will execute different lengths tests in Maven test phase using
+    Minizinc tests stored in src/test/fz/ directory.
+
+20. Various code cleaning based on complaints from findbugs, Intelij IDE,
+    and Sonar.
+
+21. Adding workaround for a bug in Geost caused by too eager ignoring
+    execution of propagation when constraint is not consistent.
+
+22. Extending testing suites by adding thousands of minizinc based tests,
+    as well as some unit tests for domain classes. Adding fznFileGenerator
+    skrypt to quickly categorize new minizinc problems into time categories
+    to be used by future tests.
+
+23. Cleaning up design around Constraints. Refactoring a lot of code from
+    particular constraints into common functionality in Constraint.
 	
 Version 4.4
 ===========
