@@ -165,4 +165,7 @@ public class InputOrderSelect<T extends Var> implements SelectChoicePoint<T> {
         return currentIndex.value();
     }
 
+    public String toString() {
+        return "" + java.util.Arrays.asList(searchVariables);
+    }
 }
