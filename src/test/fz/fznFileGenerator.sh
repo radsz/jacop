@@ -5,15 +5,80 @@
 # Second run command mvn package to create a jar file for jacop inside target directory. Copy this jar one level higher than jacop git repository.
 # Third execute this script in the directory where this script resides.
 
-if [ -z "$1" ];then
-  folderPath="test"
+TEMP=`getopt -o h::,d:,t:,s: --long directory:,timeout:,fznsize:,help:: -n 'fznFilegGenerator.sh' -- "$@" `
+
+if [ "$TEMP" = " --" ] && [ "$#" != 0  ];then
+    echo "Try './fznFileGenerator --help' for more information---."
+    exit;
+fi
+
+eval set -- "$TEMP"
+
+setDirectory="x"
+FZNSIZE=0
+while true ; do
+    case "$1" in
+        -d|--directory)
+            case "$2" in
+                "") shift 2;;
+                *) DIR=$2 ; shift 2;;
+            esac ;;
+	    -t|--timeout)
+
+            case "$2" in
+                "") shift 2;;
+                *)
+                TIMEOUT=$2 ;   shift 2 ;;
+            esac ;;
+
+        -s|--fznsize)
+           case "$2" in
+                "") shift 2;;
+                *) FZNSIZE=$2 ; setDirectory="setDirectory"; shift 2 ;;
+            esac ;;
+        -h|--help)
+            case "$2" in
+                "") if [ "$#" -ne 3 ]; then
+                      exit;
+                    else
+                      echo "  -d,  --directory "
+                      echo "  -t,  --timeout   upto5sec, upto30sec, upto1min, upto5min, upto30min, upto1hour"
+                      echo "  -s,  --fznsize - Specify file size limit in MB."
+                      echo "  -h,  --help "
+                      exit;
+                    fi
+            esac;;
+
+        --) shift ; break ;;
+        *) echo "Internal error!!!" ; exit 1 ;;
+    esac
+done
+
+if [ -z "$DIR" ];then #if parameter($directory) doesn't exist
+  if [ "$(ls -A --ignore="README" test)" ]; then
+    folderPath="test"
+  else
+    echo "Directory test is Empty"
+    exit;
+  fi
 else
-  p=$1
-  folderPath=${p##*/}
+    if [ ! -d "$DIR" ];then
+      echo "Directory $DIR does't exist"
+      exit;
+    else
+      if [ "$(ls -A $DIR)" ]; then
+        p=$DIR
+        folderPath=${p##*/}
+      else
+        echo "$DIR is Empty"
+        exit;
+    fi
+
+    fi
 fi
 removingEmptyDirectories(){
 
-    find $folderPath -type d -empty -delete -mindepth 1
+    find $folderPath -type d -empty -delete -mindepth 1 2>/dev/null
 }
 
 
@@ -32,8 +97,9 @@ if [ $diffresult -ne 0 ];then
 function above()
 {
 
-category=$pa
+category=${pa,,}
     echo "Problem $k was classified in time category above${category#*o}"
+    echo "_________________________________________________________________________________"
 			st=${k#*/*/}
 
 			if [ ! -d "above${category#*o}/${st%/*}" ]; then
@@ -43,25 +109,27 @@ category=$pa
 			echo "$out" > above${category#*o}/${st%.*}.out
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn above${category#*o}/${st%.*}.fzn 2>/dev/null
             cp ${k%/*/*}/options.opt above${category#*o}/${st%/*}/ 2>/dev/null #copy options.opt to time category
-
-            if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
+            if ls $folderPath/${st%/*}/*.mzn >/dev/null 2>&1; then
+               echo "ls 1"
                 if [ ! -d above${category#*o}/${st%/*}/dznFolder ]; then
 		            mkdir -p above${category#*o}/${st%/*}/dznFolder
 			    fi
 			 fi
 
-            if ls $folderPath/${st%/*}/*.dzn 2>/dev/null; then
+            if ls $folderPath/${st%/*}/*.dzn >/dev/null 2>&1; then
 
-                mv ${k%%/*}/${st%.*}.dzn above${category#*o}/${st%/*}/dznFolder/ #move *.dzn file to time category
+                mv ${k%%/*}/${st%.*}.dzn above${category#*o}/${st%/*}/dznFolder/ >/dev/null #move *.dzn file to time category
                 cp ${k%%/*}/${st%/*}/*.mzn above${category#*o}/${st%/*}/dznFolder/ #copy *.mzn to time category
 
-                if [ `ls -l $folderPath/${st%/*}/*.dzn 2>/dev/null | wc -l ` == 0 ]; then
+                if [ `ls -l $folderPath/${st%/*}/*.dzn >/dev/null | wc -l ` == 0  ]; then
+
                     rm -r ${k%%/*}/${st%/*}  #remove *.dzn files
                 fi
 
             else
 
-                if ls $folderPath/${st%/*}/*.mzn 2>/dev/null; then
+                if ls $folderPath/${st%/*}/*.mzn >/dev/null 2>&1; then
+
                     stt=${st#*/}
                     cp ${k%%/*}/${st%/*}/${stt%.*}.mzn above${category#*o}/${st%/*}/dznFolder/${stt%.*}.mzn #copy *.mzn to time category
                     rm -r ${k%%/*}/${st%/*}/ #remove *.dzn files
@@ -71,49 +139,85 @@ category=$pa
 
 }
 
+function sizeFznFiles
+{
+readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
+
+	for k in ${arr3[@]};do
+
+        if [ $setDirectory == "setDirectory" ]; then
+            re='^[0-9]+$'
+        if ! [[ $FZNSIZE =~ $re ]] ; then
+            echo "error: Not a number" >&2; exit 1
+        fi
+            sizeFznFile=$[1048576*FZNSIZE]
+        else
+            sizeFznFile=15728640
+        fi
+
+        file_size=`stat -c %s "$k"`
+        if [ $file_size -le $sizeFznFile ]; then #1197181
+             file_size=`stat -c %s "$k"`
+        else
+            echo "The file $k is larger than $sizeFznFile"
+            rm $k;
+
+        fi
+
+done
+
+}
+
+
+
+
+
+
 function timeCategory
  {
- #echo "TIME CATEGORY" $1
- #timeParameter $par
+
  folderPath=$1
-#path="test"
-if [ $# -eq 2 ] || [ $# -eq 3 ]
+
+if [ "${TIMEOUT,,}" == "upto5sec" ] || [ "${TIMEOUT,,}" == "upto30sec" ] || [ "${TIMEOUT,,}" == "upto1min" ] || [ "${TIMEOUT,,}" == "upto5min" ] || [ "${TIMEOUT,,}" == "upto10min" ] || [ "${TIMEOUT,,}" == "upto1hour" ];
 then
-    pa=$2
+   echo "setTime" $TIMEOUT
+   pa=$TIMEOUT
 else
-    pa="x"
+    if [ "$TIMEOUT" != "" ];then
+        echo "Try './fznFileGenerator --help' for more information.1"
+        exit;
+    else
+        pa="x"
+    fi
 fi
 readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 	for k in ${arr3[@]};do # k contains a relative path to a found mzn file.
         ii=${k##*/} # *.fzn filename with extension
         iii=${ii%.*} # *.fzn filename without extension
+
         echo "Computing first result for $k"
         start=$(date +%s ) # start time in seconds
         # First timeout is set to 3600 seconds
 
-        if [ $pa == "upTo5sec" ] || [ $pa == "upTo30sec" ] || [ $pa == "upTo1min" ] || [ $pa == "upTo5min" ] || [ $pa == "upTo10min" ] || [ $pa == "upTo1hour" ]
+        if [ ${pa,,} == "upto5sec" ] || [ ${pa,,} == "upto30sec" ] || [ ${pa,,} == "upto1min" ] || [ ${pa,,} == "upto5min" ] || [ ${pa,,} == "upto10min" ] || [ ${pa,,} == "upto1hour" ]
         then
-            case "$pa" in #Sets the maximum time to complete the test
-                "upTo5sec") time="-t 15" ;;
-                "upTo30sec") time="-t 80" ;;
-                "upTo1min") time="-t 120" ;;
-                "upTo5min") time="-t 600" ;;
-                "upTo10min") time="-t 1200" ;;
-                "upTo1hour") time="-t 5400" ;;
+            case "${pa,,}" in #Sets the maximum time to complete the test
+                "upto5sec") time="-t 15" ;;
+                "upto30sec") time="-t 80" ;;
+                "upto1min") time="-t 120" ;;
+                "upto5min") time="-t 600" ;;
+                "upto10min") time="-t 1200" ;;
+                "upto1hour") time="-t 5400" ;;
+
             esac
+
             else
+             echo "Set time 3600sec"
              time="-t 3600"
             fi
 
           if [ -f ${k%/*/*}/options.opt ]; then
-
-           #while read line
-           #do
-            # opt=$line
-            # echo "TTT" $opt
-           #done <${k%/*/*}/*.opt
-              #opt=($(<${k%/*/*}/*.opt))
 
               opt=`sed -n 1p ${k%/*/*}/options.opt`
               out=$(java -cp ../../../target/jacop-*-SNAPSHOT.jar org.jacop.fz.Fz2jacop $time $opt $k) # Program Fz2jacop generate test result
@@ -141,36 +245,30 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
            count=5
         fi
 
-        #if [ "${out%\%*}" == "%" ];then
-
-           # diffresult=1
-           # count=5
-        #fi
-
         if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
-          case "$pa" in #Sets the maximum time to complete the test
-            "upTo5sec") above $pa
+          case "${pa,,}" in #Sets the maximum time to complete the test
+            "upto5sec") above ${pa,,}
                         diffresult=1
                         count=4
                         timesec=6001
                         out="" ;;
-            "upTo30sec") above $pa
+            "upto30sec") above ${pa,,}
                         diffresult=1
                         count=4
                         timesec=6001  ;;
-            "upTo1min") above $pa
+            "upto1min") above ${pa,,}
                         diffresult=1
                         count=4
                         timesec=6001  ;;
-            "upTo5min") above $pa
+            "upto5min") above ${pa,,}
                         diffresult=1
                         count=4
                         timesec=6001  ;;
-            "upTo10min") above $pa
+            "upto10min") above ${pa,,}
                         diffresult=1
                         count=4
                         timesec=6001  ;;
-            "upTo1hour") above $pa
+            "upto1hour") above ${pa,,}
                         diffresult=1
                         count=4
                         timesec=6001  ;;
@@ -190,13 +288,7 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 	          # Second timeout is set to 7200 seconds to avoid situation of the timeout when the first one did not timeout.
 
             if [ -f ${k%/*/*}/options.opt ]; then
-              #while read line
-              #do
-              #   opt=$line
-             # done <${k%/*/*}/*.opt
-                opt=`sed -n 1p ${k%/*/*}/options.opt`
-             # opt=($(<${k%/*/*}/*.opt)) 2>/dev/null
-
+              opt=`sed -n 1p ${k%/*/*}/options.opt`
               out=$(java -cp ../../../target/jacop-*-SNAPSHOT.jar org.jacop.fz.Fz2jacop $time $opt $k) # Program Fz2jacop generate test result
               echo "$out"
           else
@@ -532,7 +624,6 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 
     else {
             if [ "${out:0:2}" == "%%" ];then
-            #if [ "${out%\%*}" == "%" ];then
                 echo "Problem $k was classified as errors test"
             st=${k#*/*/}
 
@@ -632,8 +723,11 @@ if [ ! -e $file ]; then
     exit
 fi
 
+
+
 readarray -t arr4 < <(find $folderPath -name \*.fzn);
 for i in ${arr4[@]}; do
+
       readarray -t arr5 < <(find upTo5sec upTo30sec upTo1min upTo5min upTo10min upTo1hour above1hour flakyTests  -name \*.fzn );
 
         for j in ${arr5[@]}; do
@@ -663,7 +757,7 @@ let counter2++
 
 	 for file in "$z/$filename.fzn"; do mv "$file" "$z/${z#*/}/${file/*.fzn/$filename.fzn}"; done
 done
-#tab=${arr3[@]}
+
 if [ -z ${arr3[0]} ]; then
      let counter2++
 fi
@@ -682,6 +776,7 @@ if [ -z $z ]; then
 
     if [ ! -z $z ]; then
            let counter++
+           sizeFznFiles
            timeCategory $folderPath $2
 
     fi
@@ -689,6 +784,7 @@ else
 
         let counter++
         if [ -d $z ]; then
+        sizeFznFiles
         timeCategory $folderPath $2
         z=""
         fi
@@ -711,14 +807,6 @@ fi
 ii=${i##*/} # mzn filename with extension
 iii=${ii%.*} # mzn filename without extension
 
-if [ $# -eq 3 ]
-then
-    sizeFznFile=$[1048576*$3]
-else
-    sizeFznFile=15728640
-fi
-
-#sizeFznFile=1048576;
 # Creating a temporary directory in the same directory as mzn file has resided using the mzn file without extension as the name.
 if [ ! -d "$z/${z#*/}" ]; then
 	mkdir $z/${z#*/}
@@ -732,44 +820,32 @@ then
 
     b=${i##*/} # *.fzn filename with extension
     bb=${b%.*} # *.mzn filename without extension
-  file_size=`stat -c %s "test/${bb%%/}/$bb.fzn"`
-#  echo "file size" $file_size $bb $path
-  if [ $file_size -le $sizeFznFile ] #1197181
-  then
      findRes=$(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $iii.fzn 2>/dev/null)
      diff $findRes ${i%/*}/$iii.fzn 2>/dev/null
      diffre=$?
      if [[ -z $(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $iii.fzn 2>/dev/null ) || -z $(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $iii.out 2>/dev/null) || $diffre -ne 0 ]]
      then
             for file in $z/*.fzn; do mv "$file" $z/${z#*/}/"${file/*.fzn/$iii.fzn}"; done
+            sizeFznFiles
             timeCategory $folderPath $2
      else
          rm -r $z
 
    fi
-  else "The file is larger than $sizeFznFile"
-  fi
 fi
 count1=0
 readarray -t arr2 < <(find $z -mindepth 1 -maxdepth 1 -name \*.dzn 2>/dev/null)
     arraysize=${#arr2[@]}
-
-
 
 for j in ${arr2[@]}; do # j contains a relative path to dzn file.
     path=${j%.*}
 	filename=${path##*/}
      echo "Generatig fzn file for $i and data file $j"
      mzn2fzn -G jacop $i -d $j
-#    ${string:%wzorzec},
+
     b=${i##*/} # *.fzn filename with extension
     bb=${b%.*} # *.mzn filename without extension
-  file_size=`stat -c %s "test/${bb%%/}/$bb.fzn"`
-#  sizeFznFile=1048576;
-#  echo "file size" $file_size $bb $path
 
-  if [ $file_size -le  $sizeFznFile ] #1197181
-  then
      findRes=$(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $filename.fzn 2>/dev/null)
      diff $findRes ${i%/*}/$iii.fzn 2>/dev/null
      diffre=$?
@@ -786,11 +862,9 @@ for j in ${arr2[@]}; do # j contains a relative path to dzn file.
     if [ "$count1" -eq "$arraysize" ]; then
        rm -r $z
     fi
-else echo "The file is larger than $sizeFznFile"
-rm  "test/${bb%%/}/$bb.fzn"
-fi
 
 done
+     sizeFznFiles
      timeCategory $folderPath $2
 done
 
