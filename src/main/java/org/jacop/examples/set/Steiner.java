@@ -43,7 +43,7 @@ import org.jacop.search.SimpleSelect;
 import org.jacop.set.constraints.AintersectBeqC;
 import org.jacop.set.constraints.CardA;
 import org.jacop.set.constraints.EinA;
-import org.jacop.set.constraints.Lex;
+import org.jacop.set.constraints.AltB;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
 import org.jacop.set.search.IndomainSetMax;
@@ -106,7 +106,7 @@ public class Steiner extends ExampleSet {
                 }
 
             for (int i = 0; i < s.length - 1; i++)
-                store.impose(new Lex(s[i], s[i + 1]));
+                store.impose(new AltB(s[i], s[i + 1]));
 
             // implied constraints to get better pruning
             for (int i = 1; i <= n; i++) {

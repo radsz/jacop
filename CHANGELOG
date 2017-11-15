@@ -1,3 +1,11 @@
+Version 4.6
+=============
+
+1. Replacing buggy Lex constraint for sets with simple but correct
+   AltB and AleB. Both constraints implement lexical order between
+   sets using either "<" or "<=" relations. Lex is kept for
+   compatibility.
+
 Version 4.5
 =============
 
