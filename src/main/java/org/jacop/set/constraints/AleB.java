@@ -172,7 +172,7 @@ public class AleB extends Constraint {
     @Override public String toString() {
 
         StringBuffer result = new StringBuffer();
-        result.append("AleB(");
+        result.append(id() +" : AleB(");
         result.append(a).append(", ").append(b);
         result.append(")");
         return result.toString();

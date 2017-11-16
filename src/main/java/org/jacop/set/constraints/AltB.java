@@ -180,7 +180,7 @@ public class AltB extends Constraint {
     @Override public String toString() {
 
         StringBuffer result = new StringBuffer();
-        result.append("AltB(");
+        result.append(id()+" : AltB(");
         result.append(a).append(", ").append(b);
         result.append(")");
         return result.toString();
