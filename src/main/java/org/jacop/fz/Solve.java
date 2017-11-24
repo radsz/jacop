@@ -616,7 +616,7 @@ public class Solve implements ParserTreeConstants {
 
             System.out.println(
                 "%% Model variables : " + (store.size() + dictionary.getNumberBoolVariables()) + "\n%% Model constraints : " + initNumberConstraints
-                    + "\n\n%% Search CPU time : " + (searchTimeMeter.getThreadCpuTime(tread.getId()) - startCPU) / (long) 1e+6 + "ms"
+		+ "\n\n%% Search CPU time : " + getCPUTime() //(searchTimeMeter.getThreadCpuTime(tread.getId()) - startCPU) / (long) 1e+6 + "ms"
                     + "\n%% Search nodes : " + nodes + "\n%% Propagations : " + store.numberConsistencyCalls + "\n%% Search decisions : "
                     + decisions + "\n%% Wrong search decisions : " + wrong + "\n%% Search backtracks : " + backtracks
                     + "\n%% Max search depth : " + depth + "\n%% Number solutions : " + solutions);
@@ -1068,7 +1068,7 @@ public class Solve implements ParserTreeConstants {
 
             System.out.println(
                 "%% Model variables : " + (store.size() + dictionary.getNumberBoolVariables()) + "\n%% Model constraints : " + initNumberConstraints
-                    + "\n\n%% Search CPU time : " + (searchTimeMeter.getThreadCpuTime(tread.getId()) - startCPU) / (long) 1e+6 + "ms"
+		+ "\n\n%% Search CPU time : " + getCPUTime()
                     + "\n%% Search nodes : " + nodes + "\n%% Propagations : " + store.numberConsistencyCalls + "\n%% Search decisions : "
                     + decisions + "\n%% Wrong search decisions : " + wrong + "\n%% Search backtracks : " + backtracks
                     + "\n%% Max search depth : " + depth + "\n%% Number solutions : " + solutions);
@@ -1076,6 +1076,10 @@ public class Solve implements ParserTreeConstants {
 
         if (options.debug())
             System.out.print(failStatistics);
+    }
+
+    String getCPUTime() {
+	return (searchTimeMeter.getThreadCpuTime(tread.getId()) - startCPU) / (long) 1e+6 + "ms";
     }
 
     boolean anyTimeOutOccured(ArrayList<Search<Var>> list_seq_searches) {

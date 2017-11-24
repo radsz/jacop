@@ -313,6 +313,11 @@ class LinearConstraints implements ParserTreeConstants {
                     support.pose(new Reified(new org.jacop.constraints.XlteqC(p2[0], p3), p4));
                 else if (p1.length == 1 && p1[0] == -1)
                     support.pose(new Reified(new org.jacop.constraints.XgteqC(p2[0], -p3), p4));
+		else if (boolSum(p2) && p3 == 0)  // very special case: weighted sum of 0/1 variables <= 0 =>  (all p2's zero <=> p4)
+		    if (support.options.useSat())
+			sat.generate_allZero_reif(support.unique(p2), p4);
+		    else
+			support.pose(new Not(new OrBoolVector(support.unique(p2), p4)));
                 else if (allWeightsOne(p1)) {
                     t = support.dictionary.getConstant(p3); //new IntVar(store, p3, p3);
                     if (boolSum(p2))
@@ -478,7 +483,7 @@ class LinearConstraints implements ParserTreeConstants {
                     } else {
                         if (p2.length < 30)
                             support.pose(new LinearInt(store, p2, p1, "==", p3));
-                        else
+			else
                             support.pose(new SumWeight(p2, p1, p3));
                     }
                 }
