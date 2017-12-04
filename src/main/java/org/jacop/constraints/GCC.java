@@ -552,11 +552,10 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         StringBuilder toString = new StringBuilder(id());
 
         toString.append(" : GCC ([");
-        toString.append("assignement variables : ");
         for (int i = 0; i < xSize - 1; i++)
             toString.append(x[i].toString()).append(", ");
         toString.append(x[xSize - 1].toString());
-        toString.append(" count variables : ");
+	toString.append("], [");
         for (int j = 0; j < ySize - 1; j++)
             toString.append(counters[j].toString()).append(", ");
         toString.append(counters[ySize - 1].toString()).append("])");

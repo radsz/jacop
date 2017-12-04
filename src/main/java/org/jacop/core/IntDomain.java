@@ -1247,6 +1247,21 @@ public abstract class IntDomain extends Domain {
     }
 
     /*
+     * Finds result interval for {a..b}^2
+     */
+    public final static Interval squareBounds(int a, int b) {
+
+	int aa = multiplyInt(a, a), ab = multiplyInt(a, b), bb = multiplyInt(b, b);
+        int min = Math.min(Math.min(aa, ab), bb);
+        int max = Math.max(Math.max(aa, ab), bb);
+
+	if (min < 0)
+	    min = 0;
+
+        return new Interval(min, max);
+    }
+
+    /*
      * Finds result interval for division of {a..b} / {c..d} for div and mod constraints
      */
     public final static Interval divBounds(int a, int b, int c, int d) {
