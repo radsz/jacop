@@ -55,7 +55,9 @@ public class AndBool extends DecomposedConstraint<PrimitiveConstraint> {
      * @param result variable.
      */
     public AndBool(IntVar[] a, IntVar result) {
-        if (a.length == 2)
+	if (a.length == 1)
+	    c = new XeqY(a[0], result);
+        else if (a.length == 2)
             c = new AndBoolSimple(a[0], a[1], result);
         else
             c = new AndBoolVector(a, result);

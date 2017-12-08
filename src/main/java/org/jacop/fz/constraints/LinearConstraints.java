@@ -313,13 +313,15 @@ class LinearConstraints implements ParserTreeConstants {
                     support.pose(new Reified(new org.jacop.constraints.XlteqC(p2[0], p3), p4));
                 else if (p1.length == 1 && p1[0] == -1)
                     support.pose(new Reified(new org.jacop.constraints.XgteqC(p2[0], -p3), p4));
-		else if (boolSum(p2) && p3 == 0)  // very special case: weighted sum of 0/1 variables <= 0 =>  (all p2's zero <=> p4)
+		else if (boolSum(p2) && p3 == 0 && allPositive(p1)) // very special case: positive weighted sum of 0/1 variables <= 0 =>  (all p2's zero <=> p4)
 		    if (support.options.useSat())
 			sat.generate_allZero_reif(support.unique(p2), p4);
 		    else
 			support.pose(new Not(new OrBoolVector(support.unique(p2), p4)));
-                else if (allWeightsOne(p1)) {
-                    t = support.dictionary.getConstant(p3); //new IntVar(store, p3, p3);
+		else if (boolSum(p2) && p3 == 0 && allNonPositive(p1)) // very special case: negative weighted sum of 0/1 variables <= 0 =>  (p4 = 1)
+		    p4.domain.in(store.level, p4, 1, 1);
+		else if (allWeightsOne(p1)) {
+                    t = support.dictionary.getConstant(p3);
                     if (boolSum(p2))
                         if (p3 == 0)
                             // all p2's zero <=> p4
@@ -332,7 +334,7 @@ class LinearConstraints implements ParserTreeConstants {
                     else
                         support.pose(new Reified(new SumInt(store, p2, "<=", t), p4));
                 } else if (allWeightsMinusOne(p1)) {
-                    t = support.dictionary.getConstant(-p3); //new IntVar(store, -p3, -p3);
+                    t = support.dictionary.getConstant(-p3);
                     if (boolSum(p2))
                         support.pose(new Reified(new SumBool(store, p2, ">=", t), p4));
                     else
@@ -657,6 +659,21 @@ class LinearConstraints implements ParserTreeConstants {
         }
     }
 
+    boolean allPositive(int[] ws) {
+	for (int w : ws) 
+	    if (w < 0)
+		return false;
+	return true;
+    }
+    
+    boolean allNonPositive(int[] ws) {
+	for (int w : ws) 
+	    if (w > 0)
+		return false;
+	return true;
+
+    }
+    
     boolean allConstants(IntVar[] p) {
         boolean sat = true;
         int k = 0;

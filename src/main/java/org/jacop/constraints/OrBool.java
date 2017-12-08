@@ -55,7 +55,9 @@ public class OrBool extends DecomposedConstraint<PrimitiveConstraint> {
      */
     public OrBool(IntVar[] a, IntVar result) {
 
-        if (a.length == 2)
+	if (a.length == 1)
+            c = new XeqY(a[0], result);	
+        else if (a.length == 2)
             c = new OrBoolSimple(a[0], a[1], result);
         else
             c = new OrBoolVector(a, result);
@@ -67,12 +69,7 @@ public class OrBool extends DecomposedConstraint<PrimitiveConstraint> {
      * @param result result variable.
      */
     public OrBool(List<IntVar> a, IntVar result) {
-
-        if (a.size() == 2)
-            c = new OrBoolSimple(a.get(0), a.get(1), result);
-        else
-            c = new OrBoolVector(a.toArray(new IntVar[a.size()]), result);
-
+	this(a.toArray(new IntVar[a.size()]), result);
     }
 
     /**
