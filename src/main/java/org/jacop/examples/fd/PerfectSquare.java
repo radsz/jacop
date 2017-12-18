@@ -489,7 +489,7 @@ public class PerfectSquare extends ExampleFD {
                 sumList.add(s);
             }
 
-            store.impose(new SumInt(store, sumList, "==", limit));
+            store.impose(new SumInt(sumList, "==", limit));
 
         }
 
@@ -504,7 +504,7 @@ public class PerfectSquare extends ExampleFD {
                 store.impose(new XmulCeqZ(b, squares()[problemNo][1][j], s));
                 sumList.add(s);
             }
-            store.impose(new SumInt(store, sumList, "==", limit));
+            store.impose(new SumInt(sumList, "==", limit));
         }
 
         System.out.println("Number of variables: " + store.size());

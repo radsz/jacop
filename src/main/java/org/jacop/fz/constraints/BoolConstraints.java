@@ -115,7 +115,7 @@ class BoolConstraints implements ParserTreeConstants {
 		if (a1.length == 2)
 		    support.pose(new XplusYgtC(a1[0], a1[1], 0));
 		else
-		    support.pose(new SumBool(store, a1, ">=", v));
+		    support.pose(new SumBool(a1, ">=", v));
             else if (allVarZero(a1))
                 v.domain.in(store.level, v, 0, 0);
             else if (atLeastOneVarOne(a1))

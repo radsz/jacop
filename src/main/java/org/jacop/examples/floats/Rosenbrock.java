@@ -97,7 +97,7 @@ public class Rosenbrock {
         store.impose(new PplusQeqR(x1, t2, one));   // 1 - x1
         store.impose(new PmulQeqR(t1, t1, t3));     // (x2 - x1*x1)*(x2 - x1*x1)
         store.impose(new PmulQeqR(t2, t2, t4));     // (1 - x1)*(1 -x1)
-        store.impose(new LinearFloat(store, new FloatVar[] {z, t3, t4}, new double[] {-1.0, 100.0, 1.0}, "==", 0.0));
+        store.impose(new LinearFloat(new FloatVar[] {z, t3, t4}, new double[] {-1.0, 100.0, 1.0}, "==", 0.0));
 
         System.out.println("\bFloatVar store size: " + store.size() + "\nNumber of constraints: " + store.numberConstraints());
   /*

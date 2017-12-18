@@ -83,7 +83,7 @@ public class SoftAlldifferent extends DecomposedConstraint<Constraint> {
                         decomposition.add(new Reified(new XeqY(xVars[i], xVars[j]), v));
                     }
                 }
-                decomposition.add(new SumInt(store, costs, "==", costVar));
+                decomposition.add(new SumInt(costs, "==", costVar));
 
             } else {
                 throw new UnsupportedOperationException("Unsupported violation measure " + violationMeasure);
@@ -105,7 +105,7 @@ public class SoftAlldifferent extends DecomposedConstraint<Constraint> {
                         result.add(new Reified(new XeqY(xVars[i], xVars[j]), v));
                     }
                 }
-                result.add(new SumInt(store, costs, "==", costVar));
+                result.add(new SumInt(costs, "==", costVar));
 
             } else {
                 throw new UnsupportedOperationException("Unsupported violation measure " + violationMeasure);

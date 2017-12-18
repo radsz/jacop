@@ -54,10 +54,22 @@ public class SumFloat extends LinearFloat {
      * @param list variables which are being multiplied by weights.
      * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
      * @param sum variable containing the sum of weighted variables.
+     * @deprecated SumFloat constraint does not use Store parameter any longer.
      */
+    @Deprecated
     public SumFloat(Store store, FloatVar[] list, String rel, FloatVar sum) {
 
         super(store, list, getFilledArray(list.length), rel, sum);
+    }
+
+    /**
+     * @param list variables which are being multiplied by weights.
+     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum variable containing the sum of weighted variables.
+     */
+    public SumFloat(FloatVar[] list, String rel, FloatVar sum) {
+
+        super(list, getFilledArray(list.length), rel, sum);
     }
 
 

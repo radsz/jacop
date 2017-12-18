@@ -94,11 +94,11 @@ public class DonaldGeraldRobert extends ExampleFD {
         IntVar geraldValue = new IntVar(store, "Gerald", 0, 999999);
         IntVar robertValue = new IntVar(store, "Robert", 0, 999999);
 
-        store.impose(new LinearInt(store, donald, weights, "==", donaldValue));
+        store.impose(new LinearInt(donald, weights, "==", donaldValue));
         // store.impose(new SumWeight(donald, weights, donaldValue));
-        store.impose(new LinearInt(store, gerald, weights, "==", geraldValue));
+        store.impose(new LinearInt(gerald, weights, "==", geraldValue));
         // store.impose(new SumWeight(gerald, weights, geraldValue));
-        store.impose(new LinearInt(store, robert, weights, "==", robertValue));
+        store.impose(new LinearInt(robert, weights, "==", robertValue));
         // store.impose(new SumWeight(robert, weights, robertValue));
 
         // Equation

@@ -130,7 +130,9 @@ public class LinearInt extends PrimitiveConstraint {
      * @param weights weight for each variable.
      * @param rel     the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
      * @param sum     the sum of weighted variables.
+     * @deprecated LinearInt constraint does not use Store parameter any longer.
      */
+    @Deprecated
     public LinearInt(Store store, IntVar[] list, int[] weights, String rel, int sum) {
         checkInputForNullness("list", list);
         checkInputForNullness("weights", weights);
@@ -146,7 +148,9 @@ public class LinearInt extends PrimitiveConstraint {
      * @param weights weight for each variable.
      * @param rel     the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
      * @param sum     the sum of weighted list.
+     * @deprecated LinearInt constraint does not use Store parameter any longer.
      */
+    @Deprecated
     public LinearInt(Store store, List<? extends IntVar> list, List<Integer> weights, String rel, int sum) {
         checkInputForNullness(new String[] {"list", "weights"}, new Object[] {list, weights});
         commonInitialization(store, list.toArray(new IntVar[list.size()]), weights.stream().mapToInt(i -> i).toArray(), rel, sum);
@@ -159,11 +163,56 @@ public class LinearInt extends PrimitiveConstraint {
      * @param weights weight for each variable.
      * @param rel     the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
      * @param sum     the sum of weighted variables.
+     * @deprecated LinearInt constraint does not use Store parameter any longer.
      */
+    @Deprecated
     public LinearInt(Store store, IntVar[] list, int[] weights, String rel, IntVar sum) {
         checkInputForNullness("list", list);
         checkInputForNullness("weights", weights);
         commonInitialization(store, Stream.concat(Arrays.stream(list), Stream.of(sum)).toArray(IntVar[]::new),
+            IntStream.concat(Arrays.stream(weights), IntStream.of(-1)).toArray(), rel, 0);
+        numberId = idNumber.incrementAndGet();
+    }
+
+    // ======== new constructors ===============
+    
+    /**
+     * @param list    variables which are being multiplied by weights.
+     * @param weights weight for each variable.
+     * @param rel     the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum     the sum of weighted variables.
+     */
+    public LinearInt(IntVar[] list, int[] weights, String rel, int sum) {
+        checkInputForNullness("list", list);
+        checkInputForNullness("weights", weights);
+        commonInitialization(list[0].getStore(), list, weights, rel, sum);
+        numberId = idNumber.incrementAndGet();
+    }
+
+    /**
+     * It constructs the constraint LinearInt.
+     *
+     * @param list    list which are being multiplied by weights.
+     * @param weights weight for each variable.
+     * @param rel     the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum     the sum of weighted list.
+     */
+    public LinearInt(List<? extends IntVar> list, List<Integer> weights, String rel, int sum) {
+        checkInputForNullness(new String[] {"list", "weights"}, new Object[] {list, weights});
+        commonInitialization(list.get(0).getStore(), list.toArray(new IntVar[list.size()]), weights.stream().mapToInt(i -> i).toArray(), rel, sum);
+        numberId = idNumber.incrementAndGet();
+    }
+
+    /**
+     * @param list    variables which are being multiplied by weights.
+     * @param weights weight for each variable.
+     * @param rel     the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum     the sum of weighted variables.
+     */
+    public LinearInt(IntVar[] list, int[] weights, String rel, IntVar sum) {
+        checkInputForNullness("list", list);
+        checkInputForNullness("weights", weights);
+        commonInitialization(sum.getStore(), Stream.concat(Arrays.stream(list), Stream.of(sum)).toArray(IntVar[]::new),
             IntStream.concat(Arrays.stream(weights), IntStream.of(-1)).toArray(), rel, 0);
         numberId = idNumber.incrementAndGet();
     }

@@ -1257,7 +1257,7 @@ class SetVar(name : String, glb : Int, lub : Int) extends org.jacop.set.core.Set
  */
   @deprecated("use #>= instead", "1.0") 
   def >= (that: SetVar) = {
-    val c = new org.jacop.set.constraints.Lex(that, this)
+    val c = new org.jacop.set.constraints.AleB(that, this)
     getModel.constr += c
     c
   }
@@ -1269,7 +1269,7 @@ class SetVar(name : String, glb : Int, lub : Int) extends org.jacop.set.core.Set
  * @return result this constraint.
  */
   def #>= (that: SetVar) = {
-    val c = new org.jacop.set.constraints.Lex(that, this)
+    val c = new org.jacop.set.constraints.AleB(that, this)
     getModel.constr += c
     c
   }
@@ -1282,7 +1282,7 @@ class SetVar(name : String, glb : Int, lub : Int) extends org.jacop.set.core.Set
  */
   @deprecated("use #<= instead", "1.0") 
   def <= (that: SetVar) = {
-    val c = new org.jacop.set.constraints.Lex(this, that)
+    val c = new org.jacop.set.constraints.AleB(this, that)
     getModel.constr += c
     c
   }
@@ -1294,7 +1294,7 @@ class SetVar(name : String, glb : Int, lub : Int) extends org.jacop.set.core.Set
  * @return result this constraint.
  */
   def #<= (that: SetVar) = {
-    val c = new org.jacop.set.constraints.Lex(this, that)
+    val c = new org.jacop.set.constraints.AleB(this, that)
     getModel.constr += c
     c
   }

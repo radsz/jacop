@@ -156,7 +156,7 @@ public class Tunapalooza extends ExampleFD {
 
         IntVar two = new IntVar(store, "2", 2, 2);
         IntVar sum[] = {statement1, statement2, statement3};
-        store.impose(new SumInt(store, sum, "==", two));
+        store.impose(new SumInt(sum, "==", two));
 
         for (IntVar v : sum)
             vars.add(v);

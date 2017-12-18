@@ -69,7 +69,7 @@ public class QueueForwardTest {
 
         FloatVar[] v = {x, y};
 
-        store.impose(new Not(new LinearFloat(store, v, new double[] {1, -1}, "==", 0)));
+        store.impose(new Not(new LinearFloat(v, new double[] {1, -1}, "==", 0)));
 
         System.out.println("Precision = " + FloatDomain.precision());
 
@@ -101,7 +101,7 @@ public class QueueForwardTest {
         FloatVar[] v = {x, y};
 
         IntVar one = new IntVar(store, "one", 1, 1);
-        store.impose(new Reified(new LinearFloat(store, v, new double[] {1, -1}, "==", 0), one));
+        store.impose(new Reified(new LinearFloat(v, new double[] {1, -1}, "==", 0), one));
 
         System.out.println("Precision = " + FloatDomain.precision());
 
@@ -133,7 +133,7 @@ public class QueueForwardTest {
 
         IntVar one = new IntVar(store, "one", 1, 1);
 
-        store.impose(new Reified(new Not(new LinearFloat(store, v, new double[] {1, -1}, "!=", 0)), one));
+        store.impose(new Reified(new Not(new LinearFloat(v, new double[] {1, -1}, "!=", 0)), one));
 
         // search for solutions and print results
         Search<FloatVar> label = new DepthFirstSearch<FloatVar>();

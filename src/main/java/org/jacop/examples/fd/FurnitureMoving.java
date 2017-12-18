@@ -87,7 +87,7 @@ public class FurnitureMoving extends ExampleFD {
         starts[2] = Sb;
         starts[3] = St;
 
-        store.impose(new SumInt(store, starts, "==", sumStartTimes));
+        store.impose(new SumInt(starts, "==", sumStartTimes));
 
         IntVar[] durations = new IntVar[4];
         IntVar[] resources = new IntVar[4];

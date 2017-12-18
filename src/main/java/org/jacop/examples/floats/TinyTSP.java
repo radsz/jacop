@@ -94,7 +94,7 @@ public class TinyTSP {
             var[i] = dist[i];
         var[N] = route;
 
-        store.impose(new LinearFloat(store, var, new double[] {1.0, 1.0, 1.0, 1.0, -1.0}, "==", 0.0));
+        store.impose(new LinearFloat(var, new double[] {1.0, 1.0, 1.0, 1.0, -1.0}, "==", 0.0));
 
         System.out.println("\bVar store size: " + store.size() + "\nNumber of constraints: " + store.numberConstraints());
 

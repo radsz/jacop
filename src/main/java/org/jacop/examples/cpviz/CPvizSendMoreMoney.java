@@ -237,12 +237,12 @@ public class CPvizSendMoreMoney {
         // SEND = 1000 * S + 100 * E + N * 10 + D * 1
         // MORE = 1000 * M + 100 * O + R * 10 + E * 1
         // MONEY = 10000 * M + 1000 * O + 100 * N + E * 10 + Y * 1
-        store.impose(new LinearInt(store, send, weights4, "==", 0));
+        store.impose(new LinearInt(send, weights4, "==", 0));
         // store.impose(new SumWeight(send, weights4, valueSEND));
         // store.impose(new SumWeight(more, weights4, valueMORE));
-        store.impose(new LinearInt(store, more, weights4, "==", 0));
+        store.impose(new LinearInt(more, weights4, "==", 0));
         // store.impose(new SumWeight(money, weights5, valueMONEY));
-        store.impose(new LinearInt(store, money, weights5, "==", 0));
+        store.impose(new LinearInt(money, weights5, "==", 0));
 
         // Main equation of the problem SEND + MORE = MONEY
         store.impose(new XplusYeqZ(valueSEND, valueMORE, valueMONEY));

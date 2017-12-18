@@ -116,13 +116,13 @@ public class Parcel extends ExampleFD {
             for (int j = 0; j <= i; j++)
                 tripLoads[j] = loads[j];
             IntVar partialLoad = new IntVar(store, "partialLoad[0-" + i + "]", 0, 15);
-            store.impose(new SumInt(store, tripLoads, "==", partialLoad));
+            store.impose(new SumInt(tripLoads, "==", partialLoad));
         }
 
         cost = new IntVar(store, "Cost", 0, 100000);
 
         // Computes the travel cost.
-        store.impose(new SumInt(store, costs, "==", cost));
+        store.impose(new SumInt(costs, "==", cost));
 
         vars.add(cost);
 

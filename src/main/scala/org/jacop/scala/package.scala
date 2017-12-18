@@ -154,8 +154,8 @@ package object scala {
 * @param result summation result. 
 */
   def sum[T <: org.jacop.core.IntVar](res: List[T], result: IntVar)(implicit m: ClassTag[T])  {
-    val c = if (boolSum(res) ) new SumBool(impModel, res.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], "==", result)
-	    else new SumInt(impModel, res.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], "==", result)
+    val c = if (boolSum(res) ) new SumBool(res.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], "==", result)
+	    else new SumInt(res.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], "==", result)
      if (trace) println(c)
      impModel.impose( c )
    }
@@ -168,8 +168,8 @@ package object scala {
 */
   def sum[T <: org.jacop.core.IntVar](res: List[T])(implicit m: ClassTag[T]) : IntVar = {
     val result = new IntVar()
-    val c = if (boolSum(res) ) new SumBool(impModel, res.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], "==", result)
-	    else new SumInt(impModel, res.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], "==", result)
+    val c = if (boolSum(res) ) new SumBool(res.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], "==", result)
+	    else new SumInt(res.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], "==", result)
     impModel.constr += c
     result
   }
@@ -200,7 +200,7 @@ package object scala {
     vect(res.length) = result.asInstanceOf[org.jacop.core.IntVar]
     weight(res.length) = -1
 
-    val c = new LinearInt(impModel, vect.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], weight, "==", 0)
+    val c = new LinearInt(vect.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], weight, "==", 0)
     if (trace) println(c)
     impModel.impose( c )
   }
@@ -224,7 +224,7 @@ package object scala {
     vect(res.length) = result.asInstanceOf[org.jacop.core.IntVar]
     weight(res.length) = -1
 
-    val c = new LinearInt(impModel, vect.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], weight, "==", 0)
+    val c = new LinearInt(vect.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], weight, "==", 0)
     if (trace) println(c)
     impModel.impose( c )
     result
@@ -248,7 +248,7 @@ package object scala {
     vect(res.length) = result.asInstanceOf[org.jacop.core.IntVar]
     weight(res.length) = -1
 
-    val c = new LinearIntDom(impModel, vect.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], weight, "==", 0)
+    val c = new LinearIntDom(vect.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], weight, "==", 0)
     if (trace) println(c)
     impModel.impose( c )
   }
@@ -272,7 +272,7 @@ package object scala {
     vect(res.length) = result.asInstanceOf[org.jacop.core.IntVar]
     weight(res.length) = -1
 
-    val c = new LinearIntDom(impModel, vect.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], weight, "==", 0)
+    val c = new LinearIntDom(vect.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], weight, "==", 0)
     if (trace) println(c)
     impModel.impose( c )
     result
@@ -1132,7 +1132,7 @@ package object scala {
    }
    vect(res.length) = result.asInstanceOf[org.jacop.floats.core.FloatVar]
    w(res.length) = -1.0
-   val c = new LinearFloat(impModel, vect, w, "==", 0.0)
+   val c = new LinearFloat(vect, w, "==", 0.0)
     if (trace) println(c)
    impModel.constr += c
    result
@@ -1155,7 +1155,7 @@ package object scala {
    }
    vect(res.length) = result.asInstanceOf[org.jacop.floats.core.FloatVar]
    w(res.length) = -1.0
-   val c = new LinearFloat(impModel, vect, w, "==", 0.0)
+   val c = new LinearFloat(vect, w, "==", 0.0)
     if (trace) println(c)
    impModel.constr += c
    result
@@ -1169,7 +1169,7 @@ package object scala {
 */
  def linear[T <: org.jacop.floats.core.FloatVar](res: List[T], weight: Array[Double], result: Double)(implicit m: Manifest[T]) {
 
-   val c = new LinearFloat(impModel, res.asInstanceOf[Array[org.jacop.floats.core.FloatVar]], weight, "==", result)
+   val c = new LinearFloat(res.asInstanceOf[Array[org.jacop.floats.core.FloatVar]], weight, "==", result)
     if (trace) println(c)
    impModel.constr += c
  }

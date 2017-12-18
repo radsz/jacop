@@ -186,6 +186,14 @@ public abstract class Var implements Backtrackable {
     public abstract void putConstraint(Constraint c);
 
     /**
+     * This function returns store used by this variable.
+     * @return the store of the variable.
+     */
+    public Store getStore() {
+        return store;
+    }
+
+    /**
      * This function returns variable id.
      * @return the id of the variable.
      */

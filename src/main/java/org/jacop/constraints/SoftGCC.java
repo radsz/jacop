@@ -390,7 +390,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
                 }
 
-                decomposition.add(new SumInt(store, costs, "==", costVar));
+                decomposition.add(new SumInt(costs, "==", costVar));
 
             } else {
                 throw new UnsupportedOperationException("Unsupported violation measure " + violationMeasure);
@@ -480,7 +480,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
                 }
 
-                result.add(new SumInt(store, costs, "==", costVar));
+                result.add(new SumInt(costs, "==", costVar));
 
             } else {
                 throw new UnsupportedOperationException("Unsupported violation measure " + violationMeasure);

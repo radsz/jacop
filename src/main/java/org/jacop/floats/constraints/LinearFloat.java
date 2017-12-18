@@ -59,7 +59,9 @@ public class LinearFloat extends Linear implements UsesQueueVariable {
      * @param weights weight for each variable.
      * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
      * @param sum the sum of weighted variables.
+     * @deprecated LinearFloat constraint does not use Store parameter any longer.
      */
+    @Deprecated
     public LinearFloat(Store store, FloatVar[] list, double[] weights, String rel, double sum) {
 
         super(store, list, weights, rel, sum);
@@ -71,7 +73,9 @@ public class LinearFloat extends Linear implements UsesQueueVariable {
      * @param weights weight for each variable.
      * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
      * @param sum variable containing the sum of weighted variables.
+     * @deprecated LinearFloat constraint does not use Store parameter any longer.
      */
+    @Deprecated
     public LinearFloat(Store store, FloatVar[] list, double[] weights, String rel, FloatVar sum) {
 
         super(store, list, weights, rel, sum);
@@ -85,11 +89,52 @@ public class LinearFloat extends Linear implements UsesQueueVariable {
      * @param weights weight for each variable.
      * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}"
      * @param sum variable containing the sum of weighted variables.
+     * @deprecated LinearFloat constraint does not use Store parameter any longer.
      */
+    @Deprecated
     public LinearFloat(Store store, List<? extends FloatVar> variables, List<Double> weights, String rel, double sum) {
 
         super(store, variables, weights, rel, sum);
     }
+
+    // =================== new constructors ========================
+
+    /**
+     * @param list variables which are being multiplied by weights.
+     * @param weights weight for each variable.
+     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum the sum of weighted variables.
+     */
+    public LinearFloat(FloatVar[] list, double[] weights, String rel, double sum) {
+
+        super(list[0].getStore(), list, weights, rel, sum);
+    }
+
+    /**
+     * @param list variables which are being multiplied by weights.
+     * @param weights weight for each variable.
+     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum variable containing the sum of weighted variables.
+     */
+    public LinearFloat(FloatVar[] list, double[] weights, String rel, FloatVar sum) {
+
+        super(sum.getStore(), list, weights, rel, sum);
+    }
+
+
+    /**
+     * It constructs the constraint LinearFloat. 
+     * @param variables variables which are being multiplied by weights.
+     * @param weights weight for each variable.
+     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}"
+     * @param sum variable containing the sum of weighted variables.
+     */
+    public LinearFloat(List<? extends FloatVar> variables, List<Double> weights, String rel, double sum) {
+
+        super(variables.get(0).getStore(), variables, weights, rel, sum);
+    }
+
+
 
     @Override public void queueVariable(int level, Var var) {
         super.queueVariable(level, var);

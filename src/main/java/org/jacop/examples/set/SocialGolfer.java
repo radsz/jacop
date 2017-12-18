@@ -242,7 +242,7 @@ public class SocialGolfer extends ExampleSet {
             System.arraycopy(weights, 0, ws, 0, n);
             vs[n] = v[i];
             ws[n] = -1;
-            store.impose(new LinearInt(store, vs, ws, "==", 0));
+            store.impose(new LinearInt(vs, ws, "==", 0));
             // store.impose(new SumWeight(var[i], weights, v[i]));
         }
 

@@ -182,9 +182,9 @@ public class KnapsackExample extends ExampleFD {
         IntVar profit = new IntVar(store, "Profit", 0, 1000000);
         IntVar weight = new IntVar(store, "Weight", 0, 1000000);
 
-        store.impose(new LinearInt(store, quantity, weights, "==", weight));
+        store.impose(new LinearInt(quantity, weights, "==", weight));
         // store.impose(new SumWeight(quantity, weights, weight));
-        store.impose(new LinearInt(store, quantity, profits, "==", profit));
+        store.impose(new LinearInt(quantity, profits, "==", profit));
         // store.impose(new SumWeight(quantity, profits, profit));
 
         store.impose(new XlteqC(weight, volume));
@@ -249,12 +249,12 @@ public class KnapsackExample extends ExampleFD {
         IntVar profit = new IntVar(store, "Profit", 0, 1000000);
         IntVar weight = new IntVar(store, "Weight", 0, 1000000);
 
-        store.impose(new LinearInt(store, quantity, weights, "==", weight));
+        store.impose(new LinearInt(quantity, weights, "==", weight));
         // store.impose(new SumWeight(quantity, weights, weight));
 
         store.impose(new Knapsack(profits, weights, quantity, weight, profit));
 
-        store.impose(new LinearInt(store, quantity, profits, "==", profit));
+        store.impose(new LinearInt(quantity, profits, "==", profit));
         // store.impose(new SumWeight(quantity, profits, profit));
 
         store.impose(new XlteqC(weight, volume));
@@ -328,9 +328,9 @@ public class KnapsackExample extends ExampleFD {
         IntVar profit = new IntVar(store, "Profit", 0, 1000000);
         IntVar weight = new IntVar(store, "Weight", 0, 1000000);
 
-        store.impose(new LinearInt(store, quantity, weights, "==", weight));
+        store.impose(new LinearInt(quantity, weights, "==", weight));
         // store.impose(new SumWeight(quantity, weights, weight));
-        store.impose(new LinearInt(store, quantity, profits, "==", profit));
+        store.impose(new LinearInt(quantity, profits, "==", profit));
         // store.impose(new SumWeight(quantity, profits, profit));
 
         store.impose(new XlteqC(weight, volume));

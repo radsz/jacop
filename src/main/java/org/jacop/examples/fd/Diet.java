@@ -117,7 +117,7 @@ public class Diet extends ExampleFD {
         for (int i = 0; i < n; i++) {
             sums[i] = new IntVar(store, "sums_" + i, 0, IntDomain.MaxInt);
 
-            store.impose(new LinearInt(store, x, matrix[i], "==", sums[i]));
+            store.impose(new LinearInt(x, matrix[i], "==", sums[i]));
             // store.impose(new SumWeight(x, matrix[i], sums[i]));
             store.impose(new XgteqC(sums[i], limits[i]));
         }
@@ -125,7 +125,7 @@ public class Diet extends ExampleFD {
         // Cost to minimize: x * price
         cost = new IntVar(store, "cost", 0, 120);
 
-        store.impose(new LinearInt(store, x, price, "==", cost));
+        store.impose(new LinearInt(x, price, "==", cost));
         // store.impose( new SumWeight(x, price, cost) );
 
         vars = new ArrayList<IntVar>();
@@ -160,7 +160,7 @@ public class Diet extends ExampleFD {
                 store.impose(new Knapsack(matrix[i], price, x, cost, minReq));
             else {
                 // this category has some items with zero profit, violates knapsack conditions so it is not used.
-                store.impose(new LinearInt(store, x, matrix[i], "==", minReq));
+                store.impose(new LinearInt(x, matrix[i], "==", minReq));
                 // store.impose(new SumWeight(x, matrix[i], minReq));
             }
         }

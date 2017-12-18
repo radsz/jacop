@@ -116,7 +116,7 @@ public class Steiner extends ExampleSet {
                     store.impose(new Reified(new EinA(i, s[j]), b[j]));
                 }
                 IntVar sum = new IntVar(store, "sum_" + i, (n - 1) / 2, (n - 1) / 2);
-                store.impose(new SumInt(store, b, "==", sum));
+                store.impose(new SumInt(b, "==", sum));
             }
 
         }

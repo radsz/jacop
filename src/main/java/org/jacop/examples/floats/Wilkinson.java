@@ -98,7 +98,7 @@ public class Wilkinson {
             s1 = s2;
         }
 
-        store.impose(new LinearFloat(store, new FloatVar[] {s1, t1}, new double[] {1.0, 0.00000011920928955078}, "==", 0.0));
+        store.impose(new LinearFloat(new FloatVar[] {s1, t1}, new double[] {1.0, 0.00000011920928955078}, "==", 0.0));
 
         System.out.println("\bFloatVar store size: " + store.size() + "\nNumber of constraints: " + store.numberConstraints());
 

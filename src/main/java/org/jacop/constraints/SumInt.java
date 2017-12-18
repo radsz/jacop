@@ -115,7 +115,9 @@ public class SumInt extends PrimitiveConstraint {
      * @param list  variables which are being multiplied by weights.
      * @param rel   the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
      * @param sum   variable containing the sum of weighted variables.
+     * @deprecated SumInt constraint does not use Store parameter any longer.
      */
+    @Deprecated
     public SumInt(Store store, IntVar[] list, String rel, IntVar sum) {
 
         checkInputForNullness(new String[] {"list", "rel", "sum"}, new Object[][] {list, {rel}, {sum}});
@@ -148,9 +150,53 @@ public class SumInt extends PrimitiveConstraint {
      * @param variables variables which are being multiplied by weights.
      * @param rel       the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
      * @param sum       variable containing the sum of weighted variables.
+     * @deprecated SumInt constraint does not use Store parameter any longer.
      */
+    @Deprecated
     public SumInt(Store store, List<? extends IntVar> variables, String rel, IntVar sum) {
         this(store, variables.toArray(new IntVar[variables.size()]), rel, sum);
+    }
+
+    /**
+     * @param list  variables which are being multiplied by weights.
+     * @param rel   the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum   variable containing the sum of weighted variables.
+     */
+    public SumInt(IntVar[] list, String rel, IntVar sum) {
+
+        checkInputForNullness(new String[] {"list", "rel", "sum"}, new Object[][] {list, {rel}, {sum}});
+
+        this.relationType = relation(rel);
+        this.store = sum.getStore();
+        this.sum = sum;
+
+        x = Arrays.copyOf(list, list.length);
+        numberId = idNumber.incrementAndGet();
+
+        this.l = x.length;
+        this.I = new long[l];
+
+        // checkForOverflow();
+
+        if (l <= 2)
+            queueIndex = 0;
+        else
+            queueIndex = 1;
+
+        setScope(Stream.concat(Arrays.stream(list), Stream.of(sum)));
+
+    }
+
+    /**
+     * It constructs the constraint SumInt.
+     *
+     * @param variables variables which are being multiplied by weights.
+     * @param rel       the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum       variable containing the sum of weighted variables.
+     *
+     */
+    public SumInt(List<? extends IntVar> variables, String rel, IntVar sum) {
+        this(variables.toArray(new IntVar[variables.size()]), rel, sum);
     }
 
     @Override public void consistency(Store store) {
