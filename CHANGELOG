@@ -5,6 +5,10 @@ Version 4.6
    AltB and AleB. Both constraints implement lexical order between
    sets using either "<" or "<=" relations. Lex is kept for
    compatibility.
+2. SumInt, SumBool, LinearInt, LinearIntDom and LinearFloat does not
+   need Store parameter any longer.
+3. Fixinf null pointer execption in Binpacking constraint. It is
+   sometimes present if a bin is ground when constraint is imposed.
 
 Version 4.5
 =============
