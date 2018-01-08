@@ -391,10 +391,8 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
     @Override public void queueVariable(int level, Var var) {
         if (itemMap.containsKey(var))
             itemQueue.add((IntVar) var);
-        else if (binMap.containsKey(var))
+        else 
             binQueue.add((IntVar) var);
-	// that might be duplicated variables that do not exist in mapping; specially ground variables
-	// they are neglected
     }
 
     @Override public void removeLevel(int level) {
