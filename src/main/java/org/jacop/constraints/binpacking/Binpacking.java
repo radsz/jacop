@@ -143,7 +143,7 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
         itemMap = Var.positionMapping(Arrays.stream(item).map( i -> i.bin ).toArray(IntVar[]::new),
             false, this.getClass());
 
-        setScope(Stream.concat(Arrays.stream(bin), Arrays.stream(load)));
+        setScope(Stream.concat(Arrays.stream(item).map(i -> i.bin), Arrays.stream(load)));
     }
 
     /**
