@@ -81,6 +81,7 @@ import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.Sequence;
 import org.jacop.constraints.Stretch;
 import org.jacop.constraints.LexOrder;
+import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.netflow.NetworkBuilder;
 import org.jacop.constraints.netflow.NetworkFlow;
 import org.jacop.constraints.Constraint;
@@ -737,6 +738,30 @@ class GlobalConstraints implements ParserTreeConstants {
         IntVar[] y = support.getVarArray((SimpleNode) node.jjtGetChild(1));
 
         support.pose(new LexOrder(x, y, false));
+    }
+
+    void gen_jacop_value_precede_int(SimpleNode node) {
+	int s = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(0));
+	int t = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+        IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(2));
+
+	// no repeated varibales allowed in ValuePrecede and
+	// we create a new vector with different variables
+	IntVar[] xs = new IntVar[x.length];
+        HashSet<IntVar> varSet = new HashSet<IntVar>();
+        for (int i = 0; i < x.length; i++) {
+            if (varSet.contains(x[i])) {
+		IntVar tmp = new IntVar(store, x[i].min(), x[i].max());
+		support.pose(new org.jacop.constraints.XeqY(x[i], tmp));
+                xs[i] = tmp;
+	    }
+            else {
+                xs[i] = x[i];
+                varSet.add(x[i]);
+            }
+        }
+	
+	support.pose(new ValuePrecede(s, t, xs));
     }
 
     void gen_jacop_bin_packing(SimpleNode node) {

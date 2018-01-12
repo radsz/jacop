@@ -436,6 +436,10 @@ public final class ConstraintFncs {
         gc.gen_jacop_lex_lesseq_int(n);
     }
 
+    public void jacop_value_precede_int(SimpleNode n) {
+        gc.gen_jacop_value_precede_int(n);
+    }
+
     public void jacop_bin_packing(SimpleNode n) {
         gc.gen_jacop_bin_packing(n);
     }
