@@ -134,7 +134,9 @@ public class XplusCeqZ extends PrimitiveConstraint {
     }
 
     @Override public boolean satisfied() {
-        return grounded() && x.min() + c == z.min();
+        // return grounded() && x.min() + c == z.min();
+	int xMin = x.min(), zMin = z.min();
+	return x.singleton(xMin) && z.singleton(zMin) && xMin + c == zMin;
     }
 
     @Override public String toString() {

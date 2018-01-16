@@ -147,7 +147,9 @@ public class XplusYeqC extends PrimitiveConstraint {
     }
 
     @Override public boolean satisfied() {
-        return (grounded() && (x.min() + y.min() == c));
+        // return (grounded() && (x.min() + y.min() == c));
+	int xMin = x.min(), yMin = y.min();
+	return x.singleton(xMin) && y.singleton(yMin) && xMin + yMin == c;
     }
 
     @Override public String toString() {

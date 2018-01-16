@@ -168,8 +168,9 @@ public class XplusYeqZ extends PrimitiveConstraint {
 
     @Override public boolean satisfied() {
 
-        return (grounded() && x.value() + y.value() == z.value());
-
+        // return (grounded() && x.value() + y.value() == z.value());
+	int xMin = x.min(), yMin = y.min(), zMin = z.min();
+	return x.singleton(xMin) && y.singleton(yMin) && z.singleton(zMin) && xMin + yMin == zMin;
     }
 
     @Override public String toString() {
