@@ -191,7 +191,16 @@ public class ElementVariableFast extends Constraint implements Stateful, Satisfi
 
         index.domain.in(store.level, index, indexDom.complement());
         value.domain.in(store.level, value, min, max);
+	
+	if (index.singleton()) {
+	    // index is singleton; value == list[index - 1 - offset]
+	    IntVar lp = list[index.value() - 1 - indexOffset];
+	    value.domain.in(store.level, value, lp.domain);
+	    lp.domain.in(store.level, lp, value.domain);
 
+	    // if (value.singleton())
+	    // 	removeConstraint();
+	}
     }
 
     private boolean disjoint(IntVar v1, IntVar v2) {

@@ -233,13 +233,6 @@ public class CumulativeBasic extends Constraint {
         int N = j;
         Arrays.sort(es, 0, N, eventComparator);
 
-        Arrays.sort(es, 0, N, (o1, o2) -> {
-            int dateDiff = o1.date() - o2.date();
-            return (dateDiff == 0) ? (o1.type() - o2.type()) : dateDiff;
-        });
-
-
-
         if (debugNarr) {
             System.out.println(Arrays.asList(es));
             System.out.println("limit.max() = " + limitMax);
