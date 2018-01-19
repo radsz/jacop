@@ -130,8 +130,10 @@ public class Cumulative extends CumulativeBasic {
 
             profileProp(store);
 
-            if (!store.propagationHasOccurred && doEdgeFind)
-                edgeFind(store);
+            if (!store.propagationHasOccurred && doEdgeFind) {
+	    	// overloadCheck();  // not needed if profile propagator is used
+	    	edgeFind(store);
+	    }
 
         } while (store.propagationHasOccurred);
     }
@@ -141,7 +143,9 @@ public class Cumulative extends CumulativeBasic {
 
 	TaskView[] estList = new TaskNormalView[taskNormal.length];
 	System.arraycopy(taskNormal, 0, estList, 0, estList.length);
-	Arrays.sort(estList, new TaskIncESTComparator<TaskView>());
+	Arrays.sort(estList, (o1, o2) -> {
+            return o1.est() - o2.est();
+        }); // task est incremental comparator
 	// System.out.println(java.util.Arrays.asList(estList));
 
 	ThetaLambdaTree tree = new ThetaLambdaTree(limit);
@@ -151,8 +155,10 @@ public class Cumulative extends CumulativeBasic {
 	TaskView[] lctList = new TaskNormalView[taskNormal.length];
 	for (int i = 0; i < taskNormal.length; i++)
 	    lctList[i] = new TaskNormalView(taskNormal[i]);
-	Arrays.sort(lctList, new TaskIncLCTComparator<TaskView>());
-	System.out.println(java.util.Arrays.asList(lctList));
+	Arrays.sort(lctList, (o1, o2) -> {
+            return o1.lct() - o2.lct();
+        });// task lct incremental comparator
+	//System.out.println(java.util.Arrays.asList(lctList));
 
     
 	long C = (long)limit.max();
@@ -164,12 +170,12 @@ public class Cumulative extends CumulativeBasic {
 	    if (tree.rootNode().env > C * (long)lctList[j].lct()) {
 		// System.out.println("FAIL");
 
-		throw store.failException;
+		throw Store.failException;
 	    }
 	}
     }
     */
-
+    
     private void edgeFind(Store store) {
 
         edgeFind(store, taskNormal);
@@ -203,7 +209,6 @@ public class Cumulative extends CumulativeBasic {
         // ========== Detect Order ============
         int[] prec = detectOrder(tree, lctList, auxOrderListInv, (long) limit.max());
         // System.out.println("*** prec = " + intArrayToString(prec));
-
         // write ThetaLambdaTree as dot file for visualization
         // tree.printTree("tree_init");
 
