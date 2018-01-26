@@ -176,7 +176,8 @@ class CumulativePrimary extends Constraint {
         for (int i = 0; i < start.length; i++) {
 
             // mandatory task parts to create profile
-            int min = start[i].max(), max = start[i].min() + dur[i];
+            int min = start[i].max(), // t.lst()
+		max = start[i].min() + dur[i];  // t.ect()
             if (min < max) {
                 es[j++] = new Event(profile, i, min, res[i]);
                 es[j++] = new Event(profile, i, max, -res[i]);
@@ -191,12 +192,14 @@ class CumulativePrimary extends Constraint {
         for (int i = 0; i < start.length; i++) {
             // overlapping tasks for pruning
             // from start to end
-            int min = start[i].min(); //t.est();
-            int max = start[i].max() + dur[i]; //t.lct();
-            if (!(min > maxProfile || max < minProfile)) {
-                es[j++] = new Event(pruneStart, i, min, res[i]);
-                es[j++] = new Event(pruneEnd, i, max, -res[i]);
-            }
+	    if (!start[i].singleton()) {  // task that are ground are considered for manadatory tasks
+		int min = start[i].min(); //t.est();
+		int max = start[i].max() + dur[i]; //t.lct();
+		if (!(min > maxProfile || max < minProfile)) {
+		    es[j++] = new Event(pruneStart, i, min, 0); // res[i]);
+		    es[j++] = new Event(pruneEnd, i, max, 0);   // -res[i]);
+		}
+	    }
         }
 
         int N = j;

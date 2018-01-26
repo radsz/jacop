@@ -77,14 +77,15 @@ class ThetaLambdaTree extends Tree {
     }
 
     private void computeLeaveVals(int i) {
-        tree[i] = new ThetaLambdaNode();
-        tree[i].index = i;
+	ThetaLambdaNode node = new ThetaLambdaNode();
+        tree[i] = node;
+        node.index = i;
 
         addToThetaInit(i);
-        tree[i].envLambda = Long.MIN_VALUE;
-        tree[i].eLambda = Long.MIN_VALUE;
-        tree[i].responsibleELambda = i;
-        tree[i].responsibleEnvLambda = i;
+        node.envLambda = Long.MIN_VALUE;
+        node.eLambda = Long.MIN_VALUE;
+        node.responsibleELambda = i;
+        node.responsibleEnvLambda = i;
     }
 
     private void addToThetaInit(int i) {
@@ -112,7 +113,7 @@ class ThetaLambdaTree extends Tree {
             ThetaLambdaNode l = tree[left(i)];
             ThetaLambdaNode r = tree[right(i)];
 
-            node.e = plus(l.e, r.e);
+            node.e = l.e + r.e;
             node.env = Math.max(plus(l.env, r.e), r.env);
             node.envC = Math.max(plus(l.envC, r.e), r.envC);
 
@@ -156,18 +157,19 @@ class ThetaLambdaTree extends Tree {
             ThetaLambdaNode l = tree[left(i)];
             ThetaLambdaNode r = tree[right(i)];
 
-            node.e = plus(l.e, r.e);
+            node.e = l.e + r.e;
             node.env = Math.max(plus(l.env, r.e), r.env);
             node.envC = Math.max(plus(l.envC, r.e), r.envC);
         }
     }
 
     void clearNode(int i) {
-        tree[i].e = 0L;
-        tree[i].env = Long.MIN_VALUE;
-        tree[i].envC = Long.MIN_VALUE;
-        tree[i].eLambda = Long.MIN_VALUE;
-        tree[i].envLambda = Long.MIN_VALUE;
+	ThetaLambdaNode node = tree[i];
+        node.e = 0L;
+        node.env = Long.MIN_VALUE;
+        node.envC = Long.MIN_VALUE;
+        node.eLambda = Long.MIN_VALUE;
+        node.envLambda = Long.MIN_VALUE;
     }
 
     private void updateThetaTree(int i) {
@@ -178,9 +180,10 @@ class ThetaLambdaTree extends Tree {
     }
 
     void enableNode(int i, long ci) {
-        tree[i].e = tree[i].task.e();
-        tree[i].env = tree[i].task.env(C.max());
-        tree[i].envC = ((long)C.max() - ci) * (long)tree[i].task.est() + tree[i].task.e();
+        ThetaLambdaNode node = tree[i];
+        node.e = node.task.e();
+        node.env = node.task.env(C.max());
+        node.envC = ((long)C.max() - ci) * (long)node.task.est() + node.task.e();
 
         updateThetaTree(parent(i));
     }
@@ -239,10 +242,10 @@ class ThetaLambdaTree extends Tree {
 
         while (!isRoot(v)) {
             if (isLeft(v)) {
-                e_beta = plus(tree[siblingRight(v)].e, e_beta);
+                e_beta += tree[siblingRight(v)].e;
             } else { // isRight(v)
                 env_alpha = Math.max(plus(tree[siblingLeft(v)].env, e_alpha), env_alpha);
-                e_alpha = plus(tree[siblingLeft(v)].e, e_alpha);
+                e_alpha += tree[siblingLeft(v)].e;
             }
             v = parent(v);
         }
