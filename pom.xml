@@ -638,27 +638,27 @@ setup to run configuration. -->
     </reporting>
 
     <dependencies>
-		<dependency>
-			<groupId>org.mockito</groupId>
-			<artifactId>mockito-all</artifactId>
-			<version>1.10.19</version>
-		</dependency>
-		<dependency>
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
-			<version>4.12</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.scala-lang</groupId>
-			<artifactId>scala-library</artifactId>
-			<version>2.12.4</version>
-		</dependency>
-		<dependency>
-			<groupId>org.scala-lang</groupId>
-			<artifactId>scala-compiler</artifactId>
-			<version>2.12.4</version>
-		</dependency>
+      <dependency>
+	<groupId>org.mockito</groupId>
+	<artifactId>mockito-all</artifactId>
+	<version>1.10.19</version>
+      </dependency>
+      <dependency>
+	<groupId>junit</groupId>
+	<artifactId>junit</artifactId>
+	<version>4.12</version>
+	<scope>test</scope>
+      </dependency>
+      <dependency>
+	<groupId>org.scala-lang</groupId>
+	<artifactId>scala-library</artifactId>
+	<version>2.12.0</version>
+      </dependency>
+      <dependency>
+	<groupId>org.scala-lang</groupId>
+	<artifactId>scala-compiler</artifactId>
+	<version>2.12.0</version>
+      </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
