@@ -175,7 +175,7 @@ public class SmallDenseDomainTest {
         IntDomain testedDomain  = (IntDomain) prepareMethod.invoke(this, new Object[]{new int[]{0,6,8,10,12,14,16,18,20,22,24,26}});
             assertEquals(false, testedDomain.isIntersecting(28,45));
             assertEquals(true, testedDomain.isIntersecting(0,0));
-
+            assertEquals(true, testedDomain.isIntersecting(0,26));
         }
 
     @Test
@@ -654,8 +654,146 @@ public class SmallDenseDomainTest {
         intervalDomain.setStamp(100);
         intervalDomain.inComplement(100, var, 3, 6);
 
+
         verify(var).domainHasChanged(IntDomain.ANY);
     }
+
+
+    @Test public void testinterval37b() throws InvocationTargetException, IllegalAccessException {
+
+        intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
+        intervalDomain.in(100, var, 11, 50);
+
+        verify(var).domainHasChanged(IntDomain.BOUND);
+    }
+
+    @Test public void testinterval46() throws InvocationTargetException, IllegalAccessException {
+
+        intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
+        intervalDomain.in(100, var, 35, 50);
+
+        verify(var).domainHasChanged(IntDomain.BOUND);
+    }
+
+    @Test public void testinterval47() throws InvocationTargetException, IllegalAccessException {
+
+        intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
+        intervalDomain.in(100, var, 9, 11);
+
+        verify(var).domainHasChanged(IntDomain.BOUND);
+    }
+
+    @Test public void testinterval48() throws InvocationTargetException, IllegalAccessException {
+
+        intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
+        intervalDomain.in(100, var, 9, 21);
+
+        verify(var).domainHasChanged(IntDomain.BOUND);
+    }
+
+    @Test public void testinterval49() throws InvocationTargetException, IllegalAccessException {
+
+        intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
+        intervalDomain.in(100, var, 9, 31);
+
+        verify(var).domainHasChanged(IntDomain.BOUND);
+    }
+
+    @Test public void testinterval50() throws InvocationTargetException, IllegalAccessException {
+
+        intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
+        intervalDomain.in(100, var, 11, 31);
+
+        verify(var).domainHasChanged(IntDomain.BOUND);
+    }
+
+    @Test public void testinterval51() throws InvocationTargetException, IllegalAccessException {
+
+        intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
+        intervalDomain.inMax(100, var, 11);//in(100, var, 29, 41);
+
+        verify(var).domainHasChanged(IntDomain.BOUND);
+    }
+
+    @Test public void testinterval52() throws InvocationTargetException, IllegalAccessException {
+
+        intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
+        intervalDomain.inMax(100, var, 21);//in(100, var, 29, 41);
+
+        verify(var).domainHasChanged(IntDomain.BOUND);
+    }
+
+    @Test public void testinterval53() throws InvocationTargetException, IllegalAccessException {
+
+        intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
+        intervalDomain.inMax(100, var, 32);//in(100, var, 29, 41);
+
+        verify(var).domainHasChanged(IntDomain.BOUND);
+    }
+
+    @Test public void testinterval54() throws InvocationTargetException, IllegalAccessException {
+
+        intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
+        intervalDomain.inMin(200, var, 19);
+        verify(var).domainHasChanged(IntDomain.BOUND);
+    }
+
+    @Test public void testinterval55() throws InvocationTargetException, IllegalAccessException {
+
+        intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
+        intervalDomain.inMin(200, var, 21);
+        verify(var).domainHasChanged(IntDomain.BOUND);
+    }
+
+    @Test public void testinterval56() throws InvocationTargetException, IllegalAccessException {
+
+        intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
+        intervalDomain.inShift(100, var, intervalDomain, 2);
+
+        verify(var).domainHasChanged(IntDomain.BOUND);
+    }
+
+    @Test public void testinterval57() throws InvocationTargetException, IllegalAccessException {
+
+        intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
+        intervalDomain.inShift(100, var, intervalDomain, 15);
+
+        verify(var).domainHasChanged(IntDomain.BOUND);
+    }
+
+
+    @Test public void testinterval58() throws InvocationTargetException, IllegalAccessException {
+
+        intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
+        intervalDomain.inValue(100,var, 11);
+
+        verify(var).domainHasChanged(IntDomain.GROUND);
+    }
+
+
+//    @Test
+//    public void testEvent1() throws InvocationTargetException, IllegalAccessException {
+//
+//            intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[]{new int[]{1, 2}});
+//            intervalDomain.setStamp(100);
+//            intervalDomain.contains(1);
+//
+//            verify(var).domainHasChanged(IntDomain.NONE);
+//        }
+
+
+
+
+    //        @Test
+//    public void testEvent2()  throws InvocationTargetException, IllegalAccessException {
+//
+//        intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[]{new int[]{1, 2}});
+//        intervalDomain.setStamp(100);
+//        intervalDomain.inComplement(100, var, 1, 2);
+//
+//        verify(var).domainHasChanged(IntDomain.ANY);
+//    }
+
 
     public IntDomain createDomain(Interval... intervals)
     {
