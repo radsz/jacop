@@ -62,7 +62,7 @@ public class PplusCeqR extends PrimitiveConstraint {
     /**
      * It specifies constant c in constraint p+c=r. 
      */
-    double c;
+    public double c;
 
     /**
      * It specifies variable r in constraint p+c=r. 

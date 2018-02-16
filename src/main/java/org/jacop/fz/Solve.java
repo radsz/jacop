@@ -338,7 +338,7 @@ public class Solve implements ParserTreeConstants {
                 if (solveKind == 1)  // minimize
                     costVariable = cost;
                 else { // maximize
-                    max_cost = new IntVar(store, "-" + cost.id(), IntDomain.MinInt, IntDomain.MaxInt);
+                    max_cost = new IntVar(store, "-" + cost.id(), -((IntVar)cost).max(), -((IntVar)cost).min());//IntDomain.MinInt, IntDomain.MaxInt);
                     pose(new XplusYeqC((IntVar) max_cost, (IntVar) cost, 0));
                     costVariable = max_cost;
                 }
@@ -347,7 +347,7 @@ public class Solve implements ParserTreeConstants {
                 if (solveKind == 1)  // minimize
                     costVariable = cost;
                 else { // maximize
-                    max_cost = new FloatVar(store, "-" + cost.id(), VariablesParameters.MIN_FLOAT, VariablesParameters.MAX_FLOAT);
+                    max_cost = new FloatVar(store, "-" + cost.id(), -((FloatVar)cost).max(), -((FloatVar)cost).min());//VariablesParameters.MIN_FLOAT, VariablesParameters.MAX_FLOAT);
                     pose(new PplusQeqR((FloatVar) max_cost, (FloatVar) cost, new FloatVar(store, 0.0, 0.0)));
                     costVariable = max_cost;
                 }
