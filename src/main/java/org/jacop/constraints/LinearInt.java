@@ -249,7 +249,7 @@ public class LinearInt extends PrimitiveConstraint {
                 size++;
 
 	if (size == 0 && b != 0)
-	    throw Store.failException;
+		throw Store.failException;
 	
         this.x = new IntVar[size];
         this.a = new long[size];
