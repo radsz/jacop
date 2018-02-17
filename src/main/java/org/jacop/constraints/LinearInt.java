@@ -247,9 +247,6 @@ public class LinearInt extends PrimitiveConstraint {
         for (Long e : parameters.values())
             if (e != 0)
                 size++;
-
-	if (size == 0 && b != 0)
-		throw Store.failException;
 	
         this.x = new IntVar[size];
         this.a = new long[size];
@@ -384,13 +381,14 @@ public class LinearInt extends PrimitiveConstraint {
         return IntDomain.BOUND;
     }
 
-    // TODO, Why do we keep having those weird checks.
-    // Include method missing?
     @Override public void impose(Store store) {
 
-        if (x == null || x.length == 0)
-            return;
-
+	if (x == null || x.length == 0)
+	    if (b != 0)
+		throw Store.failException;
+	    else
+		return;
+	
         reified = false;
 
         super.impose(store);
