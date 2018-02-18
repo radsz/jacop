@@ -124,7 +124,8 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
         this.glb = new IntervalDomain(0);
         this.lub = new IntervalDomain(0);
-
+        this.cardinality = new IntervalDomain(0, 0);
+        
         searchConstraints = null;
         searchConstraintsToEvaluate = 0;
         previousDomain = null;
