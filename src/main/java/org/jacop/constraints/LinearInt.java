@@ -382,12 +382,6 @@ public class LinearInt extends PrimitiveConstraint {
     }
 
     @Override public void impose(Store store) {
-
-	if (x == null || x.length == 0)
-	    if (b != 0)
-		throw Store.failException;
-	    else
-		return;
 	
         reified = false;
 
