@@ -204,7 +204,7 @@ public class ElementInteger extends Constraint implements UsesQueueVariable, Sta
     ElementInteger(IntVar index, int[] list, IntVar value) {
         this(index, list, value, 0);
     }
-
+    
     @Override public void removeLevel(int level) {
         if (level == firstConsistencyLevel)
             firstConsistencyCheck = true;
@@ -325,10 +325,24 @@ public class ElementInteger extends Constraint implements UsesQueueVariable, Sta
     @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.ANY;
     }
-
+  
+    /**
+     * It imposes the constraint in a given store.
+     *
+     * @param store the constraint store to which the constraint is imposed to.
+     */
     @Override public void impose(Store store) {
 
-        super.impose(store);
+        // super.impose(store);
+        arguments().stream().forEach(i -> i.putModelConstraint(this, getConsistencyPruningEvent(i)));
+        store.addChanged(this);
+        store.countConstraint();
+        if (!(index.min() >= 1 + this.indexOffset && index.max() <= list.length + this.indexOffset)) {
+            store.registerRemoveLevelListener((Stateful) this);
+	}
+	else
+	    firstConsistencyCheck = false;
+
 
         if (checkDuplicates) {
             duplicates = new ArrayList<IntDomain>();

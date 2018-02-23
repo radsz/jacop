@@ -290,7 +290,16 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
 
     @Override public void impose(Store store) {
 
-        super.impose(store);
+        // super.impose(store);
+        arguments().stream().forEach(i -> i.putModelConstraint(this, getConsistencyPruningEvent(i)));
+        store.addChanged(this);
+        store.countConstraint();
+        if (!(index.min() >= 1 + this.indexOffset && index.max() <= list.length + this.indexOffset)) {
+            store.registerRemoveLevelListener((Stateful) this);
+	}
+	else
+	    firstConsistencyCheck = false;
+
         order = new TimeStamp<>(store, detect); // set to detect
 
     }

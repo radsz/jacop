@@ -150,6 +150,24 @@ public class ElementVariableFast extends Constraint implements Stateful, Satisfi
 
     }
 
+    /**
+     * It imposes the constraint in a given store.
+     *
+     * @param store the constraint store to which the constraint is imposed to.
+     */
+    
+    @Override public void impose(Store store) {
+
+        arguments().stream().forEach(i -> i.putModelConstraint(this, getConsistencyPruningEvent(i)));
+        store.addChanged(this);
+        store.countConstraint();
+        if (!(index.min() >= 1 + this.indexOffset && index.max() <= list.length + this.indexOffset)) {
+            store.registerRemoveLevelListener((Stateful) this);
+	}
+	else
+	    firstConsistencyCheck = false;	    
+    }
+    
     @Override public void consistency(Store store) {
 
         if (firstConsistencyCheck) {
