@@ -158,6 +158,8 @@ public class ElementVariableFast extends Constraint implements Stateful, Satisfi
     
     @Override public void impose(Store store) {
 
+	// KKU- 2018-02-26; we do not use default method for impose since we do not want to register
+	// removeLevelListener in cases we have element indexes in the bounds of the list
         arguments().stream().forEach(i -> i.putModelConstraint(this, getConsistencyPruningEvent(i)));
         store.addChanged(this);
         store.countConstraint();
