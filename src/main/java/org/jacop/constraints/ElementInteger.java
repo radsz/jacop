@@ -204,7 +204,7 @@ public class ElementInteger extends Constraint implements UsesQueueVariable, Sta
     ElementInteger(IntVar index, int[] list, IntVar value) {
         this(index, list, value, 0);
     }
-    
+
     @Override public void removeLevel(int level) {
         if (level == firstConsistencyLevel)
             firstConsistencyCheck = true;
@@ -325,7 +325,10 @@ public class ElementInteger extends Constraint implements UsesQueueVariable, Sta
     @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.ANY;
     }
-  
+
+    @Override public boolean isStateful() {
+        return  (!(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset));
+    }
     /**
      * It imposes the constraint in a given store.
      *
@@ -333,18 +336,11 @@ public class ElementInteger extends Constraint implements UsesQueueVariable, Sta
      */
     @Override public void impose(Store store) {
 
-	// KKU- 2018-02-26; we do not use default method for impose since we do not want to register
-	// removeLevelListener in cases we have element indexes in the bounds of the list
-        // super.impose(store);
-        arguments().stream().forEach(i -> i.putModelConstraint(this, getConsistencyPruningEvent(i)));
-        store.addChanged(this);
-        store.countConstraint();
-        if (!(index.min() >= 1 + this.indexOffset && index.max() <= list.length + this.indexOffset)) {
-            store.registerRemoveLevelListener((Stateful) this);
-	}
-	else
-	    firstConsistencyCheck = false;
+        super.impose(store);
 
+        if (!isStateful()) {
+            firstConsistencyCheck = false;
+        }
 
         if (checkDuplicates) {
             duplicates = new ArrayList<IntDomain>();

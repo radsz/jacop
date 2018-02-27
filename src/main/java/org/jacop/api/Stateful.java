@@ -48,4 +48,14 @@ public interface Stateful {
      */
     void removeLevel(int level);
 
+    /**
+     * This function can be overriden by any constraint to specify dynamic conditions (based on
+     * the domain of variables at imposition level to decide if it is a stateful constraint.
+     *
+     * @return true if constraint is stateful.
+     */
+    default boolean isStateful() {
+        return true;
+    }
+
 }
