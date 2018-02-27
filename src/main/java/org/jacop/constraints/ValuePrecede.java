@@ -30,30 +30,23 @@
 
 package org.jacop.constraints;
 
-import org.jacop.core.IntDomain;
-import org.jacop.core.Var;
-import org.jacop.core.IntVar;
-import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
-
 import org.jacop.api.SatisfiedPresent;
-import org.jacop.api.UsesQueueVariable;
 import org.jacop.api.Stateful;
+import org.jacop.api.UsesQueueVariable;
+import org.jacop.core.*;
 
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
 
 /**
- * I defines Value Precedence constraint for integers.
+ * It defines Value Precedence constraint for integers.
  *
- * Value precedence of s over t in an integer sequence x = [x0,..., xn−1] 
- * means if there exists j such that xj = t,then there must
- * exist i < j such that xi = s.
+ * Value precedence of s over t in an integer sequence x = [x0,..., xn−1]
+ * means if there exists j such that xj = t, then there must
+ * exist i {@literal <} j such that xi = s.
  *
  * The algorithm is based on paper
  * "Global Constraints for Integer and Set Value Precedence" by
@@ -63,19 +56,18 @@ import java.util.stream.Stream;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
  */
-
 public class ValuePrecede extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
     final static AtomicInteger idNumber = new AtomicInteger(0);
 
     Store store;
-    
+
     /**
      * It specifies lists of variables for the constraint.
      */
     final public IntVar[] x;
     private int n;
-    
+
     /**
      * It specifies values s and t for the constraint.
      */
@@ -93,12 +85,12 @@ public class ValuePrecede extends Constraint implements UsesQueueVariable, State
     private LinkedHashSet<IntVar> varQueue = new LinkedHashSet<>();
 
     private final Map<IntVar, Integer> varMap;
-    
+
 
     /**
      * It constructs ValuePrecede.
      *
-     * @param s value occuring first 
+     * @param s value occuring first
      * @param t value occuring next
      * @param x list of arguments x's.
      */
@@ -109,12 +101,12 @@ public class ValuePrecede extends Constraint implements UsesQueueVariable, State
 
         this.numberId = idNumber.incrementAndGet();
 
-	this.s = s;
-	this.t = t;
-	this.n = x.length;
+        this.s = s;
+        this.t = t;
+        this.n = x.length;
         this.x = Arrays.copyOf(x, n);
-	
-	queueIndex = 1;
+
+        queueIndex = 1;
 
         varMap = Var.positionMapping(x, false, this.getClass());
 
@@ -124,7 +116,7 @@ public class ValuePrecede extends Constraint implements UsesQueueVariable, State
     /**
      * It constructs ValuePrecede.
      *
-     * @param s value occuring first 
+     * @param s value occuring first
      * @param t value occuring next
      * @param x list of arguments x's.
      */
@@ -137,13 +129,13 @@ public class ValuePrecede extends Constraint implements UsesQueueVariable, State
     // initialize stateful variables
     @Override public void impose(Store store) {
 
-	this.store = store;
-	
+        this.store = store;
+
         super.impose(store);
 
-	alpha = new TimeStamp<>(store, 0);
-	beta = new TimeStamp<>(store, 0);
-	gamma = new TimeStamp<>(store, 0);
+        alpha = new TimeStamp<>(store, 0);
+        beta = new TimeStamp<>(store, 0);
+        gamma = new TimeStamp<>(store, 0);
     }
 
     @Override public int getDefaultConsistencyPruningEvent() {
@@ -151,12 +143,12 @@ public class ValuePrecede extends Constraint implements UsesQueueVariable, State
     }
 
     /**
-     * 
+     *
      */
     @Override public void consistency(Store store) {
 
         if (firstConsistencyCheck) {
-	    initialize();
+            initialize();
             firstConsistencyCheck = false;
         }
 
@@ -168,17 +160,17 @@ public class ValuePrecede extends Constraint implements UsesQueueVariable, State
             varQueue = new LinkedHashSet<IntVar>();
 
             for (IntVar v : fdvs) {
-		int i = varMap.get(v);
-		propagate(i);
-	    }
-	    
-	} while (store.propagationHasOccurred);
+                int i = varMap.get(v);
+                propagate(i);
+            }
+
+        } while (store.propagationHasOccurred);
 
     }
 
     private void initialize() {
         int a = alpha.value();
-        while (a < n && ! x[a].domain.contains(s)) {
+        while (a < n && !x[a].domain.contains(s)) {
             x[a].domain.inComplement(store.level, x[a], t);
             a++;
         }
@@ -191,7 +183,7 @@ public class ValuePrecede extends Constraint implements UsesQueueVariable, State
             x[a].domain.inComplement(store.level, x[a], t);
             do {
                 g++;
-            } while (g < n && ! x[g].singleton(t));
+            } while (g < n && !x[g].singleton(t));
             gamma.update(g);
             updateBeta();
         }
@@ -201,13 +193,13 @@ public class ValuePrecede extends Constraint implements UsesQueueVariable, State
         int b = beta.value();
         if (b <= gamma.value()) {
             int a = alpha.value();
-            if (i == a && ! x[i].domain.contains(s)) {
+            if (i == a && !x[i].domain.contains(s)) {
                 a++;
                 while (a < b) {
                     x[a].domain.inComplement(store.level, x[a], t);
                     a++;
                 }
-                while (a < n && ! x[a].domain.contains(s)) {
+                while (a < n && !x[a].domain.contains(s)) {
                     x[a].domain.inComplement(store.level, x[a], t);
                     a++;
                 }
@@ -219,7 +211,7 @@ public class ValuePrecede extends Constraint implements UsesQueueVariable, State
                 if (a < n) {
                     updateBeta();
                 }
-            } else if (i == b && ! x[i].domain.contains(s)) {
+            } else if (i == b && !x[i].domain.contains(s)) {
                 updateBeta();
             }
         }
@@ -230,10 +222,10 @@ public class ValuePrecede extends Constraint implements UsesQueueVariable, State
         int b = beta.value();
         do {
             b++;
-        } while (b < n && ! x[b].domain.contains(s));
+        } while (b < n && !x[b].domain.contains(s));
 
         if (b > gamma.value()) {
-	    int a = alpha.value();
+            int a = alpha.value();
             x[a].domain.in(store.level, x[a], s, s);
             removeConstraint();
         }
@@ -241,37 +233,36 @@ public class ValuePrecede extends Constraint implements UsesQueueVariable, State
     }
 
     private void checkGamma(int i) {
-	int g = gamma.value();
+        int g = gamma.value();
         if (beta.value() < g && i < g && x[i].singleton(t)) {
             gamma.update(i);
             if (beta.value() > i) {
-		int a = alpha.value();
+                int a = alpha.value();
                 x[a].domain.in(store.level, x[a], s, s);
                 removeConstraint();
             }
         }
     }
-    
-    
+
+
     @Override public boolean satisfied() {
 
-	int firstS = -1, firstT = -1;
-	for (int i = 0; i < x.length; i++) {
-	    if (x[i].singleton()) {
-		if (firstS == -1 && x[i].singleton(s))
-		    firstS = i;
-		if (firstT == -1 && x[i].singleton(t))
-		    firstT = i;
-	    }
-	    else
-		return false;
-	}
+        int firstS = -1, firstT = -1;
+        for (int i = 0; i < x.length; i++) {
+            if (x[i].singleton()) {
+                if (firstS == -1 && x[i].singleton(s))
+                    firstS = i;
+                if (firstT == -1 && x[i].singleton(t))
+                    firstT = i;
+            } else
+                return false;
+        }
 
         return (firstT != -1 && firstS < firstT) || (firstS == -1 && firstT == -1);
     }
 
     @Override public void queueVariable(int level, Var var) {
-	    varQueue.add((IntVar) var);
+        varQueue.add((IntVar) var);
     }
 
     @Override public void removeLevel(int level) {
@@ -282,8 +273,8 @@ public class ValuePrecede extends Constraint implements UsesQueueVariable, State
 
         StringBuilder resultString = new StringBuilder(id());
 
-        resultString.append(" : ValuePrecede("+s+", "+t+", [");
-	int lx = x.length;
+        resultString.append(" : ValuePrecede(" + s + ", " + t + ", [");
+        int lx = x.length;
         for (int i = 0; i < lx; i++) {
             resultString.append(x[i]);
             if (i < lx - 1)
