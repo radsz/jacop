@@ -150,6 +150,10 @@ public class ElementVariableFast extends Constraint implements Stateful, Satisfi
 
     }
 
+    @Override public boolean isStateful() {
+        return  (!(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset));
+    }
+    
     /**
      * It imposes the constraint in a given store.
      *
@@ -158,16 +162,11 @@ public class ElementVariableFast extends Constraint implements Stateful, Satisfi
     
     @Override public void impose(Store store) {
 
-	// KKU- 2018-02-26; we do not use default method for impose since we do not want to register
-	// removeLevelListener in cases we have element indexes in the bounds of the list
-        arguments().stream().forEach(i -> i.putModelConstraint(this, getConsistencyPruningEvent(i)));
-        store.addChanged(this);
-        store.countConstraint();
-        if (!(index.min() >= 1 + this.indexOffset && index.max() <= list.length + this.indexOffset)) {
-            store.registerRemoveLevelListener((Stateful) this);
-	}
-	else
-	    firstConsistencyCheck = false;	    
+        super.impose(store);
+
+        if (!isStateful()) {
+            firstConsistencyCheck = false;
+        }
     }
     
     @Override public void consistency(Store store) {

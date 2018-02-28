@@ -329,6 +329,7 @@ public class ElementInteger extends Constraint implements UsesQueueVariable, Sta
     @Override public boolean isStateful() {
         return  (!(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset));
     }
+    
     /**
      * It imposes the constraint in a given store.
      *
