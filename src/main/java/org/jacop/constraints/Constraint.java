@@ -204,8 +204,12 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
         }
         if (this instanceof UsesQueueVariable)
             arguments().stream().forEach(i -> queueVariable(store.level, i));
-        if (this instanceof Stateful)
-            store.registerRemoveLevelListener((Stateful) this);
+        if (this instanceof Stateful) {
+            Stateful c = (Stateful)this;
+            if (c.isStateful()) {
+                store.registerRemoveLevelListener(c);
+            }
+        }
 
     }
 
