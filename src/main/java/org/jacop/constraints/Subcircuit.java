@@ -174,6 +174,15 @@ public class Subcircuit extends Alldiff {
         return IntDomain.ANY;
     }
 
+    boolean needsListPruning() {
+
+	for (IntVar el : list) {
+	    if (!(el.min() >= 1 && el.max() <= list.length))
+		return true;
+	}
+	return false;
+    }
+    
     // registers the constraint in the constraint store
     @Override public void impose(Store store) {
 
@@ -181,6 +190,8 @@ public class Subcircuit extends Alldiff {
 
         super.impose(store);
 
+	if (! needsListPruning())
+	    firstConsistencyCheck = false;
     }
 
 

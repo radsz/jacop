@@ -696,7 +696,7 @@ class ComparisonConstraints implements ParserTreeConstants {
 
 		if (x.singleton(c)) {
 		    b.domain.in(store.level, b, 1, 1);
-		} else if (!x.domain.isIntersecting(c,c)) {
+		} else if (!x.domain.contains(c)) {
 		    b.domain.in(store.level, b, 0, 0);
 		    removeConstraint();
 		} else if (b.max() == 0) {// x==c must be false
