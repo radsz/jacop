@@ -319,7 +319,7 @@ public class Cumulative extends CumulativeBasic {
         }
 	
         Integer[] precTaskOrder = new Integer[n];
-        for (int i = n - 1; i >= 0; i--)
+	for (int i = 0; i < n; i++)
             precTaskOrder[i] = i;
         Arrays.sort(precTaskOrder, precComparator.apply(prec));
 
@@ -331,13 +331,9 @@ public class Cumulative extends CumulativeBasic {
             int precI = prec[precTaskOrder[i]];
 
             // first skip all task j that are lct after prec
-
-            if (taskI.res.min() == 0)
-                continue;
-
-            while (j < n && t[j].lct() > precI) {
+            while (j < n && t[j].lct() > precI) 
                 j++;
-            }
+
             if (j < n) {
 
                 // update est[i] if possible
