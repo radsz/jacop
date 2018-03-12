@@ -74,9 +74,6 @@ public class Cumulative extends CumulativeBasic {
         return (o2.lct() == o1.lct()) ? (o2.est() - o1.est()) : (o2.lct() - o1.lct());
     };
 
-    protected Function<int[], Comparator<Integer>> precComparator = (prec) ->
-        (Integer o1, Integer o2) -> (prec[o2.intValue()] - prec[o1.intValue()]);
-
     /**
      * It creates a cumulative constraint.
      *
@@ -255,7 +252,7 @@ public class Cumulative extends CumulativeBasic {
             tree.moveToLambda(aT.treeIndex);
         }
 
-        int[] lctPrec = new int[prec.length];
+        int[] lctPrec = new int[n];
         for (int i = 0; i < prec.length; i++) {
             lctPrec[lctInvOrder[i]] = prec[i];
         }
@@ -321,7 +318,7 @@ public class Cumulative extends CumulativeBasic {
         Integer[] precTaskOrder = new Integer[n];
 	for (int i = 0; i < n; i++)
             precTaskOrder[i] = i;
-        Arrays.sort(precTaskOrder, precComparator.apply(prec));
+        Arrays.sort(precTaskOrder, (Integer o1, Integer o2) -> prec[o2.intValue()] - prec[o1.intValue()]);
 
         int j = 0;
         outer:

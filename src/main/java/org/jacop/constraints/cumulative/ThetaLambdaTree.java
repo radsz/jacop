@@ -72,8 +72,22 @@ class ThetaLambdaTree extends Tree {
 
         for (int i = treeSize - 1; i >= treeSize - n; i--)
             computeLeaveVals(i);
-        for (int i = treeSize - n - 1; i >= 0; i--)
-            computeNodeVals(i);
+
+        for (int i = treeSize - n - 1; i >= 0; i--) {
+
+	    if (notExist(left(i))) {
+		tree[i] = empty;
+		tree[i].index = i;
+		clearNode(i);
+	    } else if (notExist(right(i))) {
+		tree[i] = tree[left(i)];
+	    } else {
+		tree[i] = new ThetaLambdaNode();
+		tree[i].index = i;
+
+		computeNodeVals(i);
+	    }
+	}
     }
 
     private void computeLeaveVals(int i) {
@@ -83,7 +97,7 @@ class ThetaLambdaTree extends Tree {
 
         addToThetaInit(i);
         node.envLambda = Long.MIN_VALUE;
-        node.eLambda = Long.MIN_VALUE;
+        node.eLambda = 0L;
         node.responsibleELambda = i;
         node.responsibleEnvLambda = i;
     }
@@ -99,16 +113,10 @@ class ThetaLambdaTree extends Tree {
 
     private void computeNodeVals(int i) {
 
-        if (notExist(left(i))) {
-            tree[i] = empty;
-            tree[i].index = i;
-            clearNode(i);
-        } else if (notExist(right(i))) {
-            tree[i] = tree[left(i)];
-        } else {
-            tree[i] = new ThetaLambdaNode();
-            tree[i].index = i;
-
+	if (notExist(left(i)) || notExist(right(i)))
+	    return;
+	else {
+	    
             ThetaLambdaNode node = tree[i];
             ThetaLambdaNode l = tree[left(i)];
             ThetaLambdaNode r = tree[right(i)];
@@ -117,11 +125,11 @@ class ThetaLambdaTree extends Tree {
             node.env = Math.max(plus(l.env, r.e), r.env);
             node.envC = Math.max(plus(l.envC, r.e), r.envC);
 
-            if (plus(l.eLambda, r.e) > plus(l.e, r.eLambda)) {
-                node.eLambda = plus(l.eLambda, r.e);
+            if (l.eLambda + r.e > l.e + r.eLambda) {
+                node.eLambda = l.eLambda + r.e;
                 node.responsibleELambda = l.responsibleELambda;
             } else {
-                node.eLambda = plus(l.e, r.eLambda);
+                node.eLambda = l.e + r.eLambda;
                 node.responsibleELambda = r.responsibleELambda;
             }
 
@@ -142,7 +150,7 @@ class ThetaLambdaTree extends Tree {
                     node.responsibleEnvLambda = r.responsibleEnvLambda;
                 }
             }
-        }
+	}
     }
 
     private void computeThetaNode(int i) {
@@ -168,7 +176,7 @@ class ThetaLambdaTree extends Tree {
         node.e = 0L;
         node.env = Long.MIN_VALUE;
         node.envC = Long.MIN_VALUE;
-        node.eLambda = Long.MIN_VALUE;
+        node.eLambda = 0L;
         node.envLambda = Long.MIN_VALUE;
     }
 
@@ -205,7 +213,7 @@ class ThetaLambdaTree extends Tree {
 
     void removeFromLambda(int i) {
         ThetaLambdaNode node = tree[i];
-        node.eLambda = Long.MIN_VALUE;
+        node.eLambda = 0L;
         node.envLambda = Long.MIN_VALUE;
         updateTree(parent(i));
     }
