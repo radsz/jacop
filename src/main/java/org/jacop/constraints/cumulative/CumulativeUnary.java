@@ -84,7 +84,7 @@ public class CumulativeUnary extends Cumulative {
         tvn = new TaskNormalView[starts.length];
         tvr = super.taskReversed;
         for (int i = 0; i < starts.length; i++) {
-            tvn[i] = new TaskNormalView(new Task(starts[i], durations[i], resources[i]));
+            tvn[i] = new TaskNormalView(starts[i], durations[i], resources[i]);
             tvn[i].index = i;
         }
     }

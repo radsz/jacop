@@ -108,7 +108,7 @@ public class CumulativeBasic extends Constraint {
         this.taskNormal = new TaskNormalView[starts.length];
 
         for (int i = 0; i < starts.length; i++) {
-            taskNormal[i] = new TaskNormalView(new Task(starts[i], durations[i], resources[i]));
+            taskNormal[i] = new TaskNormalView(starts[i], durations[i], resources[i]);
             taskNormal[i].index = i;
             if (durations[i].min() == 0 || resources[i].min() == 0)
                 possibleZeroTasks = true;

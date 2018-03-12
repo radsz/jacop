@@ -88,7 +88,7 @@ public class Cumulative extends CumulativeBasic {
 
         taskReversed = new TaskReversedView[starts.length];
         for (int i = 0; i < starts.length; i++) {
-            taskReversed[i] = new TaskReversedView(new Task(starts[i], durations[i], resources[i]));
+            taskReversed[i] = new TaskReversedView(starts[i], durations[i], resources[i]);
             taskReversed[i].index = i;
         }
 
