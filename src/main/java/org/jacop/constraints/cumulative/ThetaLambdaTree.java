@@ -259,7 +259,7 @@ class ThetaLambdaTree extends Tree {
         }
         // System.out.println("e_beta = " + e_beta + ", env_alpha = " + env_alpha);
 
-        return plus(e_beta, env_alpha);
+        return plus(env_alpha, e_beta);
     }
 
     IntVar getCapacity() {
