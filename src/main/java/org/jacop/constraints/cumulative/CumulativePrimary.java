@@ -242,22 +242,18 @@ class CumulativePrimary extends Constraint {
                             System.out.println("Profile at " + e.date() + ": " + curProfile);
 
                         // prune limit variable
-                        if (curProfile > limit.min())
+                        if (curProfile > limit.min()) 
                             limit.domain.inMin(store.level, limit, curProfile);
 
                         for (int ti = tasksToPrune.nextSetBit(0); ti >= 0; ti = tasksToPrune.nextSetBit(ti + 1)) {
 
-                            int profileValue = curProfile;
-                            if (inProfile[ti])
-                                profileValue -= res[ti];
-
                             // ========= Pruning start variable
                             if (startExcluded[ti] == Integer.MAX_VALUE) {
-                                if (limitMax - profileValue < res[ti]) {
+                                if (!inProfile[ti] && limitMax - curProfile < res[ti]) {
                                     startExcluded[ti] = e.date() - dur[ti] + 1;
                                 }
                             } else //startExcluded[ti] != Integer.MAX_VALUE
-                                if (limitMax - profileValue >= res[ti]) {
+                                if (inProfile[ti] || limitMax - curProfile >= res[ti]) {
                                     // end of excluded interval
 
                                     if (debugNarr)
@@ -278,15 +274,11 @@ class CumulativePrimary extends Constraint {
                     break;
 
                 case pruneStart:  // =========== start of a task ===========
-                    int profileValue = curProfile;
                     int ti = e.index;
 
-                    if (inProfile[ti])
-                        profileValue -= res[ti];
-
-                    // ========= for start pruning
-                    if (limitMax - profileValue < res[ti])
-                        startExcluded[ti] = e.date();
+		    // ========= for start pruning
+		    if (!inProfile[ti] && limitMax - curProfile < res[ti])
+			startExcluded[ti] = e.date();
 
                     tasksToPrune.set(ti);
                     break;
