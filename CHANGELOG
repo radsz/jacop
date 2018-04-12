@@ -5,6 +5,9 @@ Version 4.6
    AltB and AleB. Both constraints implement lexical order between
    sets using either "<" or "<=" relations. Lex is kept for
    compatibility.
+   Constraints AltB and AleB are primitive and can be used as
+   parameters to other constraints. Implementation of flatzinc
+   set_lt_reif and set_le_reif.
 
 2. SumInt, SumBool, LinearInt, LinearIntDom and LinearFloat does not
    need Store parameter any longer.
@@ -14,6 +17,12 @@ Version 4.6
    imposed.
 
 4. New constraint for symmetry breaking, ValuePrecede.
+
+5. Implementation of ElementFloatVariable and related flatzinc
+   predicate array_var_float_element.
+
+6. Bug fix in sequential search when there is float search after
+   set_search.
 
 Version 4.5
 =============

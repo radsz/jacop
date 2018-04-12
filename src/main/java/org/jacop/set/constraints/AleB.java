@@ -32,7 +32,7 @@ package org.jacop.set.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jacop.constraints.Constraint;
+import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
@@ -55,7 +55,7 @@ import org.jacop.set.core.SetVar;
  * @version 4.5
  */
 
-public class AleB extends Constraint {
+public class AleB extends PrimitiveConstraint {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -68,6 +68,11 @@ public class AleB extends Constraint {
      * It specifies the second variable of the constraint
      */
     public SetVar b;
+
+    /**
+     * Negated constraint
+     */
+    AltB aGTb;
 
     /**
      * It constructs an Lexical ordering constraint to restrict the domain of the variables a and b.
@@ -83,9 +88,24 @@ public class AleB extends Constraint {
 
         this.a = a;
         this.b = b;
-
+	aGTb = new AltB(b,a, true);
+	
         setScope(a, b);
 
+    }
+
+    /**
+     * It constructs an Lexical ordering to be used in negated
+     * constrained. Not to be used for imposing constraints.
+     *
+     * @param a variable that is restricted to be less than b with lexical order.
+     * @param b variable that is restricted to be greater than a with lexical order.
+     * @param negated used to distinguish constructors only.
+     */
+    AleB(SetVar a, SetVar b, boolean negated) {
+
+        this.a = a;
+        this.b = b;
     }
 
     @Override public void consistency(Store store) {
@@ -156,6 +176,34 @@ public class AleB extends Constraint {
     	    return true;
 	
     	return le;
+    }
+
+    @Override public void notConsistency(Store store) {
+	aGTb.consistency(store);
+    }
+    
+    @Override public boolean satisfied() {
+    	if (a.domain.singleton() && b.domain.singleton())
+	    if (setLexLE(a.domain.glb(), b.domain.glb()))
+		return true;
+	return false;
+    }
+
+    @Override public boolean notSatisfied() {
+	return aGTb.satisfied();
+    }
+    
+
+    @Override protected int getDefaultNestedConsistencyPruningEvent() {
+        return IntDomain.ANY;
+    }
+
+    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
+        return IntDomain.ANY;
+    }
+
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
+        return IntDomain.ANY;
     }
 
     @Override public int getDefaultConsistencyPruningEvent() {

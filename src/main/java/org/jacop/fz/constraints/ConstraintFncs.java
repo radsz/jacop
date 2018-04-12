@@ -494,8 +494,16 @@ public final class ConstraintFncs {
         sc.gen_set_le(n);
     }
 
+    public void set_le_reif(SimpleNode n) {
+        sc.gen_set_le_reif(n);
+    }
+
     public void set_lt(SimpleNode n) {
         sc.gen_set_lt(n);
+    }
+
+    public void set_lt_reif(SimpleNode n) {
+        sc.gen_set_lt_reif(n);
     }
 
     public void set_ne(SimpleNode n) {

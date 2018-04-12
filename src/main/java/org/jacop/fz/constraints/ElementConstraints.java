@@ -40,6 +40,7 @@ import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementVariableFast;
 import org.jacop.set.constraints.ElementSet;
 import org.jacop.floats.constraints.ElementFloat;
+import org.jacop.floats.constraints.ElementFloatVariable;
 import org.jacop.set.core.SetVar;
 import org.jacop.floats.core.FloatVar;
 
@@ -190,7 +191,7 @@ class ElementConstraints implements ParserTreeConstants {
 
             poseElementFloat(p1, p2double, p3);
         } else {
-            throw new IllegalArgumentException("%% array_var_float_element with list of variables is not available in org.jacop.floats");
+	    support.pose(new ElementFloatVariable(p1, p2, p3));
         }
     }
 

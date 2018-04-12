@@ -749,6 +749,7 @@ public class Solve implements ParserTreeConstants {
             setSearch.setPrintInfo(false);
             if (lastSearch != null)
                 lastSearch.addChildSearch(setSearch);
+            lastSearch = setSearch;
             if (float_search_variables.length == 0)
                 setSearch.setSolutionListener(new CostListener<Var>());
 
@@ -778,7 +779,7 @@ public class Solve implements ParserTreeConstants {
                 variable_selection = floatSelect;
             floatSearch.setSelectChoicePoint(floatSelect);
             floatSearch.setPrintInfo(false);
-            if (lastSearch != null)
+            if (lastSearch != null) 
                 lastSearch.addChildSearch(floatSearch);
             floatSearch.setSolutionListener(new CostListener<Var>());
 
@@ -797,7 +798,6 @@ public class Solve implements ParserTreeConstants {
 
         if (int_search_variables.length == 0 && bool_search_variables.length == 0 && set_search_variables.length == 0
             && float_search_variables.length == 0) {
-
 
             printSolution();
 

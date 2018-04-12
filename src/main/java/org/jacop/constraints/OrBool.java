@@ -32,6 +32,7 @@ package org.jacop.constraints;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.ArrayList;
 
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -55,12 +56,16 @@ public class OrBool extends DecomposedConstraint<PrimitiveConstraint> {
      */
     public OrBool(IntVar[] a, IntVar result) {
 
-	if (a.length == 1)
-            c = new XeqY(a[0], result);	
-        else if (a.length == 2)
-            c = new OrBoolSimple(a[0], a[1], result);
+	IntVar[] r = filter(a);
+
+	if (r == null)
+	    c = new XeqC(result, 1);
+	else if (r.length == 1)
+            c = new XeqY(r[0], result);	
+        else if (r.length == 2)
+	    c = new OrBoolSimple(r[0], r[1], result);
         else
-            c = new OrBoolVector(a, result);
+            c = new OrBoolVector(r, result);
     }
 
     /**
@@ -79,9 +84,7 @@ public class OrBool extends DecomposedConstraint<PrimitiveConstraint> {
      * @param result result variable.
      */
     public OrBool(IntVar a, IntVar b, IntVar result) {
-
-        c = new OrBoolSimple(a, b, result);
-
+	this(new IntVar[] {a, b}, result);
     }
 
     @Override public void imposeDecomposition(Store store) {
@@ -96,5 +99,18 @@ public class OrBool extends DecomposedConstraint<PrimitiveConstraint> {
 
     public String toString() {
         return c.toString();
+    }
+
+    IntVar[] filter(IntVar[] xs) {
+	List<IntVar> result = new ArrayList<>();
+	for (IntVar x : xs)
+	    if (x.min() == 1)
+		return null;
+	    else if (x.max() == 0)
+		continue;
+	    else
+		result.add(x);
+
+	return result.toArray(new IntVar[result.size()]);
     }
 }

@@ -156,7 +156,7 @@ class BoolConstraints implements ParserTreeConstants {
         if (support.options.useSat())
             sat.generate_or(new IntVar[] {v1, v2}, v3);
         else
-            support.pose(new OrBoolSimple(v1, v2, v3));
+            support.poseDC(new OrBool(new IntVar[] {v1, v2}, v3));
     }
 
     void gen_bool_xor(SimpleNode node) {

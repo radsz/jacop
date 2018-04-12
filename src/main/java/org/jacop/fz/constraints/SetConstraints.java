@@ -179,11 +179,27 @@ class SetConstraints implements ParserTreeConstants {
         support.pose(new AleB(v1, v2));
     }
 
+    void gen_set_le_reif(SimpleNode node) {
+        SetVar v1 = support.getSetVariable(node, 0);
+        SetVar v2 = support.getSetVariable(node, 1);
+	IntVar v3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+	
+        support.pose(new Reified(new AleB(v1, v2), v3));
+    }
+
     void gen_set_lt(SimpleNode node) {
         SetVar v1 = support.getSetVariable(node, 0);
         SetVar v2 = support.getSetVariable(node, 1);
 
         support.pose(new AltB(v1, v2));
+    }
+
+    void gen_set_lt_reif(SimpleNode node) {
+        SetVar v1 = support.getSetVariable(node, 0);
+        SetVar v2 = support.getSetVariable(node, 1);
+	IntVar v3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+
+        support.pose(new Reified(new AltB(v1, v2), v3));
     }
 
     void gen_set_ne(SimpleNode node) {

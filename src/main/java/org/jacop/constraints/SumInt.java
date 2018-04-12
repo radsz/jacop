@@ -163,28 +163,7 @@ public class SumInt extends PrimitiveConstraint {
      * @param sum   variable containing the sum of weighted variables.
      */
     public SumInt(IntVar[] list, String rel, IntVar sum) {
-
-        checkInputForNullness(new String[] {"list", "rel", "sum"}, new Object[][] {list, {rel}, {sum}});
-
-        this.relationType = relation(rel);
-        this.store = sum.getStore();
-        this.sum = sum;
-
-        x = Arrays.copyOf(list, list.length);
-        numberId = idNumber.incrementAndGet();
-
-        this.l = x.length;
-        this.I = new long[l];
-
-        // checkForOverflow();
-
-        if (l <= 2)
-            queueIndex = 0;
-        else
-            queueIndex = 1;
-
-        setScope(Stream.concat(Arrays.stream(list), Stream.of(sum)));
-
+	this(sum.getStore(), list, rel, sum);
     }
 
     /**

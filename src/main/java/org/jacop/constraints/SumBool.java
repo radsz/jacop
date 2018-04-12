@@ -32,6 +32,7 @@ package org.jacop.constraints;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -113,10 +114,8 @@ public class SumBool extends PrimitiveConstraint {
         this.relationType = relation(rel);
         this.store = store;
         this.sum = sum;
-        x = Arrays.copyOf(list, list.length);
+        x = filterAndOverflow(list); //Arrays.copyOf(list, list.length);
         this.l = x.length;
-
-        checkForOverflow();
 
         if (l <= 2)
             queueIndex = 0;
@@ -145,25 +144,7 @@ public class SumBool extends PrimitiveConstraint {
      * @param sum variable containing the sum of weighted variables.
      */
     public SumBool(IntVar[] list, String rel, IntVar sum) {
-
-        checkInputForNullness(new String[]{"list", "rel", "sum"}, new Object[][]{list, {rel}, {sum}});
-        checkInput(list, l -> l.min() >= 0 && l.max() <= 1, "domain must lie within 0..1 domain" );
-
-        numberId = idNumber.incrementAndGet();
-        this.relationType = relation(rel);
-        this.store = sum.getStore();
-        this.sum = sum;
-        x = Arrays.copyOf(list, list.length);
-        this.l = x.length;
-
-        checkForOverflow();
-
-        if (l <= 2)
-            queueIndex = 0;
-        else
-            queueIndex = 1;
-
-        setScope( Stream.concat( Stream.of(sum), Arrays.stream(list) ) );
+	this(sum.getStore(), list, rel, sum);
     }
 
     /**
@@ -406,8 +387,10 @@ public class SumBool extends PrimitiveConstraint {
         return "?";
     }
 
-    void checkForOverflow() {
+    IntVar[] filterAndOverflow(IntVar[] x) {
 
+	List<IntVar> ls = new ArrayList<>();
+	
         int sMin = 0, sMax = 0;
         for (int i = 0; i < x.length; i++) {
             int n1 = x[i].min();
@@ -415,7 +398,12 @@ public class SumBool extends PrimitiveConstraint {
 
             sMin = Math.addExact(sMin, n1);
             sMax = Math.addExact(sMax, n2);
+
+	    if (x[i].max() != 0)
+		ls.add(x[i]);
         }
+
+	return ls.toArray(new IntVar[ls.size()]);	    
     }
 
     @Override public String toString() {
