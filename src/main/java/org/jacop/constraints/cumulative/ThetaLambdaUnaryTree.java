@@ -91,7 +91,7 @@ class ThetaLambdaUnaryTree extends ThetaTree {
 
         addToThetaInit(i);
         tree[i].ectLambda = Integer.MIN_VALUE;
-        tree[i].pLambda = 0;
+        tree[i].pLambda = Integer.MIN_VALUE;
         tree[i].responsiblePLambda = i;
         tree[i].responsibleEctLambda = i;
     }
@@ -118,15 +118,15 @@ class ThetaLambdaUnaryTree extends ThetaTree {
             node.p = plus(l.p, r.p);
             node.ect = Math.max(plus(l.ect, r.p), r.ect);
 
-            if (l.pLambda + r.p > l.p + r.pLambda) {
-                node.pLambda = l.pLambda + r.p;
+            if (plus(l.pLambda, r.p) > plus(r.pLambda, l.p)) {
+		node.pLambda = plus(l.pLambda, r.p);
                 node.responsiblePLambda = l.responsiblePLambda;
             } else {
-                node.pLambda = l.p + r.pLambda;
+                node.pLambda = plus(r.pLambda, l.p);
                 node.responsiblePLambda = r.responsiblePLambda;
             }
 
-            if (plus(l.ectLambda, r.p) > plus(l.ect, r.pLambda)) {
+            if (plus(l.ectLambda, r.p) > plus(r.pLambda, l.ect)) {
                 if (plus(l.ectLambda, r.p) > r.ectLambda) {
                     node.ectLambda = plus(l.ectLambda, r.p);
                     node.responsibleEctLambda = l.responsibleEctLambda;
@@ -135,8 +135,8 @@ class ThetaLambdaUnaryTree extends ThetaTree {
                     node.responsibleEctLambda = r.responsibleEctLambda;
                 }
             } else {
-                if (plus(l.ect, r.pLambda) > r.ectLambda) {
-                    node.ectLambda = plus(l.ect, r.pLambda);
+                if (plus(r.pLambda, l.ect) > r.ectLambda) {
+                    node.ectLambda = plus(r.pLambda, l.ect);
                     node.responsibleEctLambda = r.responsiblePLambda;
                 } else {
                     node.ectLambda = r.ectLambda;
@@ -157,7 +157,7 @@ class ThetaLambdaUnaryTree extends ThetaTree {
     void clearNode(int i) {
         tree[i].p = 0;
         tree[i].ect = Integer.MIN_VALUE;
-        tree[i].pLambda = 0;
+        tree[i].pLambda = Integer.MIN_VALUE;
         tree[i].ectLambda = Integer.MIN_VALUE;
     }
 
@@ -172,7 +172,7 @@ class ThetaLambdaUnaryTree extends ThetaTree {
 
     void removeFromLambda(int i) {
         ThetaLambdaUnaryNode node = tree[i];
-        node.pLambda = 0;
+        node.pLambda = Integer.MIN_VALUE;
         node.ectLambda = Integer.MIN_VALUE;
         updateTree(parent(i));
     }
