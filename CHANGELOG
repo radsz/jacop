@@ -18,8 +18,9 @@ Version 4.6
 
 4. New constraint for symmetry breaking, ValuePrecede.
 
-5. Implementation of ElementFloatVariable and related flatzinc
-   predicate array_var_float_element.
+5. Implementation of ElementFloatVariable and ElementSetVariable as
+   well as related flatzinc predicates array_var_float_element
+   array_var_set_element.
 
 6. Bug fix in sequential search when there is float search after
    set_search.

@@ -39,6 +39,7 @@ import org.jacop.constraints.ElementIntegerFast;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementVariableFast;
 import org.jacop.set.constraints.ElementSet;
+import org.jacop.set.constraints.ElementSetVariable;
 import org.jacop.floats.constraints.ElementFloat;
 import org.jacop.floats.constraints.ElementFloatVariable;
 import org.jacop.set.core.SetVar;
@@ -163,7 +164,8 @@ class ElementConstraints implements ParserTreeConstants {
             support.pose(new ElementSet(p1, p2, p3));
 
         } else {
-            throw new IllegalArgumentException("%% var_set_element with list of set variables is not available in org.jacop.set");
+	    SetVar[] vs = support.getSetVarArray((SimpleNode) node.jjtGetChild(1));
+	    support.pose(new ElementSetVariable(p1, vs, p3));
         }
     }
 
