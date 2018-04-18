@@ -35,7 +35,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
-import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -188,6 +187,7 @@ public class ElementSetVariable extends Constraint implements Stateful {
             removeConstraint();
 	    return;
         }
+
         if (index.singleton()) {
             SetVar v = list[index.value() - 1 - indexOffset];
 	    v.domain.in(store.level, v, value.dom());
@@ -197,26 +197,26 @@ public class ElementSetVariable extends Constraint implements Stateful {
 	    return;
         }
 	
-        IntDomain glb = new IntervalDomain();
+        IntDomain glb = new IntervalDomain(IntDomain.MinInt, IntDomain.MaxInt);
         IntDomain lub = new IntervalDomain();
         IntervalDomain indexDom = new IntervalDomain(5); // create with size 5 ;)
         for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
             int position = e.nextElement() - 1 - indexOffset;
 
-            if (! list[position].domain.glb().subtract(value.domain.lub()).isEmpty()) //disjoint(value, list[position]))
+            if (! list[position].domain.glb().subtract(value.domain.lub()).isEmpty() ||
+		! value.domain.glb().subtract(list[position].domain.lub()).isEmpty())
                 if (indexDom.size == 0)
                     indexDom.unionAdapt(position + 1 + indexOffset);
                 else
                     indexDom.addLastElement(position + 1 + indexOffset);
             else {
-		glb.unionAdapt(list[position].domain.glb());
+		glb = glb.intersect(list[position].domain.glb());
 		lub.unionAdapt(list[position].domain.lub());
             }
         }
-
         index.domain.in(store.level, index, indexDom.complement());
         value.domain.in(store.level, value, glb, lub);
-	
+
 	if (index.singleton()) {
 	    // index is singleton; value == list[index - 1 - offset]
 	    SetVar lp = list[index.value() - 1 - indexOffset];

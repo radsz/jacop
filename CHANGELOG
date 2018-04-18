@@ -22,7 +22,7 @@ Version 4.6
    well as related flatzinc predicates array_var_float_element
    array_var_set_element.
 
-6. Bug fix in sequential search when there is float search after
+6. Bug fix in sequential search when there is float_search after
    set_search.
 
 Version 4.5
