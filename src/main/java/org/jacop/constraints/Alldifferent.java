@@ -55,8 +55,6 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
      */
     public IntVar[] list;
 
-    int stamp = 0;
-
     LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
 
     protected Map<IntVar, Integer> positionMapping;

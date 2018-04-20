@@ -748,7 +748,7 @@ public final class SatWrapper extends Constraint implements ConflictListener, Ex
     public boolean log(Object o, String format, Object... args) {
         if (verbosity >= 1) {
             String msg = String.format(format, args);
-            System.out.printf("[%s] %s\n", o, msg);
+            System.out.printf("[%s] %s%n", o, msg);
         }
         return true;
     }

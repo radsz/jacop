@@ -104,8 +104,6 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
     BTree linearTree;
 
-    VariableNode[] sortedVarNodes;
-
     TimeStamp<Boolean> noSat;
 
     /**
@@ -222,7 +220,6 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
         }
 
         java.util.Arrays.sort(leafNodes, new VarWeightComparator<VariableNode>());
-        sortedVarNodes = leafNodes;
         // System.out.println (java.util.Arrays.asList(leafNodes));
 
 

@@ -336,7 +336,7 @@ class LinearConstraints implements ParserTreeConstants {
                             if (support.options.useSat())
                                 sat.generate_allZero_reif(support.unique(p2), p4);
                             else
-                                support.pose(new Not(new OrBoolVector(p2, p4)));
+                                support.pose(new Not(new OrBoolVector(support.unique(p2), p4)));
                         else
                             support.pose(new Reified(new SumBool(p2, "<=", t), p4));
                     else

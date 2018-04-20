@@ -144,7 +144,7 @@ public class Fz2jacop {
 	    final long min = TimeUnit.MILLISECONDS.toMinutes(execTime - TimeUnit.HOURS.toMillis(hr));
 	    final long sec = TimeUnit.MILLISECONDS.toSeconds(execTime - TimeUnit.HOURS.toMillis(hr) - TimeUnit.MINUTES.toMillis(min));
 	    final long ms = TimeUnit.MILLISECONDS.toMillis(execTime - TimeUnit.HOURS.toMillis(hr) - TimeUnit.MINUTES.toMillis(min) - TimeUnit.SECONDS.toMillis(sec));
-	    System.out.printf("\n%% Total CPU time : %d ms ", execTime);
+	    System.out.printf("%n%%%% Total CPU time : %d ms ", execTime);
 	    if (hr == 0) 
 		if (min == 0) 
 		    System.out.println(String.format("(%d.%03d)", sec, ms));

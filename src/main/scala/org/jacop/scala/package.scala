@@ -661,7 +661,12 @@ package object scala {
 * @param tuples array of tuples allowed to be assigned to variables.
 */
   def table[T <: org.jacop.core.IntVar](list: List[T], tuples: Array[Array[Int]])(implicit m: ClassTag[T]) {
-    val c = new Table(list.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], tuples)
+    var c =
+      if (tuples.length <= 64)
+	new SimpleTable(list.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], tuples)
+      else
+	new Table(list.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], tuples)
+
     if (trace) println(c)
     impModel.impose( c )
   }
