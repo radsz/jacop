@@ -41,6 +41,69 @@ JaCoP solver contains also front-end for FlatZinc language that makes it possibl
 us to perform extensive testing with the help of other solvers as we can compare results from different solvers.
 
 JaCoP is an ongoing activity. We are working on it in our free time. The most recent addition is Scala based DSL so
-it is easier to create your own constraint programs even in more intuitive manner.
+you can create your own constraint programs more intuitively.
 
-JaCoP is also available from maven repository. For details, please check INSTALL file.
+Getting started
+---------------
+
+The easiest way to make jar file for JaCoP is to use maven. First, install maven on your computer and then write
+
+    mvn install -DskipTests
+
+The jar file will be generated into the `target` directory.
+
+One can test the setup by running:
+
+    java -jar target/jacop-x.x.x.jar fd.Sudoku
+
+Where `fd` stands for 'finite domain'. See the `src/main/java/org/jacop/examples/` directory for more examples.
+
+Compilation
+-----------
+
+Compilation of JaCoP can be easily done by issuing the following command
+
+    mvn compile
+
+Documentation
+-------------
+
+Generation of Java API documentation
+
+    mvn javadoc:javadoc
+
+Generation of Scala formatted API documentation for Java and Scala
+
+    mvn scala:doc
+
+Installation using Maven
+------------------------
+
+To use JaCoP with maven you can just include it as a dependency in your `pom.xml`
+
+    <dependency>
+        <groupId>org.jacop</groupId>
+        <artifactId>jacop</artifactId>
+        <version>4.5.0</version>
+    </dependency>
+
+From the version 4.4.0, JaCoP is uploaded to Maven Central so the above is the only thing you need to do.
+
+For older versions of JaCoP (4.3 and older) you also need to add the following information 
+about CSLTH Maven repository to your `pom.xml` as well
+
+    <repositories>
+		<repository>
+			<id>CSLTH</id>
+			<name>CS LTH maven repo</name>
+			<releases>
+				<enabled>true</enabled>
+			</releases>
+			<snapshots>
+				<enabled>true</enabled>
+				<updatePolicy>always</updatePolicy>
+			</snapshots>
+			<url>http://maven.cs.lth.se/content/repositories/public/</url>
+		</repository>
+	</repositories>
+
