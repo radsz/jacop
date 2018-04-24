@@ -1234,14 +1234,19 @@ public class Solve implements ParserTreeConstants {
 		    printBuffer.append(v.id() + " = ");
                     if (v.singleton()) {
                         IntDomain glb = ((SetVar) v).dom().glb();
-                        printBuffer.append("{");
-                        for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements(); ) {
-                            int element = e.nextElement();
-                            printBuffer.append(element);
-                            if (e.hasMoreElements())
-			        printBuffer.append(", ");
-                        }
-                        printBuffer.append("}");
+			if (glb.getSize() > 0 && glb.getSize() == glb.max() - glb.min() + 1) {
+			    printBuffer.append(glb.min()+".."+glb.max());
+			}
+			else {
+			    printBuffer.append("{");
+			    for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements(); ) {
+				int element = e.nextElement();
+				printBuffer.append(element);
+				if (e.hasMoreElements())
+				    printBuffer.append(", ");
+			    }
+			    printBuffer.append("}");
+			}
                     } else
 		        printBuffer.append(v.dom().toString());
 
