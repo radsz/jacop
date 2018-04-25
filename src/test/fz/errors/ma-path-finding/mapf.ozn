@@ -1,0 +1,6 @@
+output ["agentAtTimeT = array2d(1.."++format(makespan1)++", 1.."++format(k)++", "++format(agentAtTimeT)++");\n","ET = "++format(ET)++";\n","objective = "++format(objective)++";\n"];
+int: makespan1 = 23;
+int: k = 40;
+array [1..k] of int: ET;
+int: objective;
+array [1..makespan1,1..k] of int: agentAtTimeT;
