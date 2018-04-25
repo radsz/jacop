@@ -731,7 +731,7 @@ public class ExampleBasedTest {
                 example.model(problemNumbers[no]);
                 example.search();
 
-                assertEquals(solutions[no], example.store.toStringOrderedVars());
+                assertEquals("Solution for problem no " + no + " is different ", solutions[no], example.store.toStringOrderedVars());
 
             }
     }
