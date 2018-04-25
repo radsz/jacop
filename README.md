@@ -1,3 +1,5 @@
+![](https://travis-ci.org/radsz/jacop.svg?branch=develop)
+
 JaCoP
 =====
 
