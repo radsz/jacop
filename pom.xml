@@ -487,11 +487,19 @@ setup to run configuration. -->
 				<artifactId>maven-surefire-plugin</artifactId>
 				<version>2.19.1</version>
 				<configuration>
+					<includes>
+						<include>**/IntDomainTest.java</include>
+						<include>**/ExampleBasedTest.java</include>
+						<include>**/SingleConstraintTest.java</include>
+					</includes>
 					<excludes>
-						<exclude>**/MinizincBasedTestAbove1Hours.java</exclude>
-						<exclude>**/MinizincBasedTestUpTo1Hours.java</exclude>
-						<exclude>**/MinizincBasedTestUpTo10Minutes.java</exclude>
+						<exclude>**/MinizincBasedTestUpTo5Seconds.java</exclude>
+						<exclude>**/MinizincBasedTestUpTo30Seconds.java</exclude>
+						<exclude>**/MinizincBasedTestUpTo1Minutes.java</exclude>
 						<exclude>**/MinizincBasedTestUpTo5Minutes.java</exclude>
+						<include>**/MinizincBasedTestUpTo10Minutes.java</include>
+						<exclude>**/MinizincBasedTestUpTo1Hours.java</exclude>
+						<exclude>**/MinizincBasedTestAbove1Hours.java</exclude>
 						<exclude>**/MinizincBasedChosen.java</exclude>
 					</excludes>
 				</configuration>
