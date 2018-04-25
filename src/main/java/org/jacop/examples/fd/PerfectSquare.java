@@ -538,7 +538,7 @@ public class PerfectSquare extends ExampleFD {
 
             IntVar Y = new IntVar(store, "y" + j, 0, masterSize - sqSize);
 
-            size[j] = new IntVar(store, sqSize, sqSize);
+            size[j] = new IntVar(store, "s" + j, sqSize, sqSize);
 
             IntVar[] jthRectangle = {X, Y, size[j], size[j]};
 
