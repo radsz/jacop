@@ -7,7 +7,7 @@ Java Constraint Programming (JaCoP) solver
 
 JaCoP solver is Java-based open source solver developed and maintained mainly by two people
 - Krzysztof Kuchcinski, Dept. of Computer Science, Lund University, Sweden.
-- Radoslaw Szymanek - Crossing-Tech, Switzerland.
+- Radoslaw Szymanek - LeShop.ch, Switzerland.
 
 Moreover a number of students have contributed to the solver by programming first versions of different global
 constraints and set constraints. The solver is being used in academia for research and teaching as well as in
