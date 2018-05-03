@@ -84,12 +84,6 @@ public class Circuit extends Alldiff implements Stateful {
 
         this.queueIndex = 2;
 
-        listAlldiff = Arrays.copyOf(list, list.length);
-
-        min = new int[list.length];
-        max = new int[list.length];
-        u = new int[list.length];
-
         int i = 0;
         for (Var v : list)
             valueIndex.put(v, i++);
