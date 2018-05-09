@@ -47,7 +47,7 @@ import org.jacop.core.Store;
  * Domain and bounds consistency can be used; third parameter of constructor controls this.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 public class AbsXeqY extends PrimitiveConstraint implements Stateful {

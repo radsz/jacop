@@ -46,7 +46,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * efficiency.
  *
  * @author Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class ExtensionalConflictVA extends Constraint implements UsesQueueVariable, Stateful {

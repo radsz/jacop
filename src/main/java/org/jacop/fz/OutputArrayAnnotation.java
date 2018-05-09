@@ -125,14 +125,19 @@ public class OutputArrayAnnotation {
             } else if (v instanceof SetVar) {
                 if (v.singleton()) {
                     IntDomain glb = ((SetVar) v).dom().glb();
-                    s.append("{");
-                    for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements(); ) {
-                        int element = e.nextElement();
-                        s.append(element);
-                        if (e.hasMoreElements())
-                            s.append(", ");
-                    }
-                    s.append("}");
+			if (glb.getSize() > 0 && glb.getSize() == glb.max() - glb.min() + 1) {
+			    s.append(glb.min()+".."+glb.max());
+			}
+			else {
+			    s.append("{");
+			    for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements(); ) {
+				int element = e.nextElement();
+				s.append(element);
+				if (e.hasMoreElements())
+				    s.append(", ");
+			    }
+			    s.append("}");
+			}
                 } else
                     s.append(v.dom().toString());
             } else {

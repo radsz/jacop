@@ -217,7 +217,7 @@ public class Cryptogram extends ExampleFD {
                     lettersWithinCurrentWord[i] = letters.get(new String(currentChar));
                 }
 
-                store.impose(new LinearInt(store, lettersWithinCurrentWord, createWeights(currentWord.length(), base), "==", fdv4words[j]));
+                store.impose(new LinearInt(lettersWithinCurrentWord, createWeights(currentWord.length(), base), "==", fdv4words[j]));
                 // store.impose(new SumWeight(lettersWithinCurrentWord,
                 // 		createWeights(currentWord.length(), base),
                 //  		fdv4words[j]));
@@ -226,7 +226,7 @@ public class Cryptogram extends ExampleFD {
 
             }
 
-            store.impose(new SumInt(store, terms, "==", fdv4words[noWords - 1]));
+            store.impose(new SumInt(terms, "==", fdv4words[noWords - 1]));
         }
 
     }

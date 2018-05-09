@@ -47,7 +47,7 @@ import org.jacop.util.LengauerTarjan;
  * its position, i.e., x[i] = i.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class Subcircuit extends Alldiff {
@@ -174,6 +174,15 @@ public class Subcircuit extends Alldiff {
         return IntDomain.ANY;
     }
 
+    boolean needsListPruning() {
+
+	for (IntVar el : list) {
+	    if (!(el.min() >= 1 && el.max() <= list.length))
+		return true;
+	}
+	return false;
+    }
+    
     // registers the constraint in the constraint store
     @Override public void impose(Store store) {
 
@@ -181,6 +190,8 @@ public class Subcircuit extends Alldiff {
 
         super.impose(store);
 
+	if (! needsListPruning())
+	    firstConsistencyCheck = false;
     }
 
 

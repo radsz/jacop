@@ -57,7 +57,12 @@ import org.jacop.util.MDD;
  * to efficiently model and solve CrossWord puzzles.
  *
  * @author : Radoslaw Szymanek
+<<<<<<< HEAD
  * @version 4.4
+||||||| merged common ancestors
+=======
+ * @version 4.5
+>>>>>>> radsz/develop
  *
  * This program uses problem instances and dictionary obtained from Hadrien Cambazard.
  *

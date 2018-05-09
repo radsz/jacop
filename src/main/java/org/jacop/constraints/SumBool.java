@@ -32,6 +32,7 @@ package org.jacop.constraints;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -49,7 +50,7 @@ import org.jacop.core.Var;
  * It provides the sum from all variables on the list.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 public class SumBool extends PrimitiveConstraint {
@@ -101,7 +102,9 @@ public class SumBool extends PrimitiveConstraint {
      * @param list variables which are being multiplied by weights.
      * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
      * @param sum variable containing the sum of weighted variables.
+     * @deprecated SumBool constraint does not use Store parameter any longer.
      */
+    @Deprecated
     public SumBool(Store store, IntVar[] list, String rel, IntVar sum) {
 
         checkInputForNullness(new String[]{"list", "rel", "sum"}, new Object[][]{list, {rel}, {sum}});
@@ -111,10 +114,8 @@ public class SumBool extends PrimitiveConstraint {
         this.relationType = relation(rel);
         this.store = store;
         this.sum = sum;
-        x = Arrays.copyOf(list, list.length);
+        x = filterAndOverflow(list); //Arrays.copyOf(list, list.length);
         this.l = x.length;
-
-        checkForOverflow();
 
         if (l <= 2)
             queueIndex = 0;
@@ -130,9 +131,30 @@ public class SumBool extends PrimitiveConstraint {
      * @param variables variables which are being multiplied by weights.
      * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
      * @param sum variable containing the sum of weighted variables.
+     * @deprecated SumBool constraint does not use Store parameter any longer.
      */
+    @Deprecated
     public SumBool(Store store, List<? extends IntVar> variables, String rel, IntVar sum) {
         this(store, variables.toArray(new IntVar[variables.size()]), rel, sum);
+    }
+
+    /**
+     * @param list variables which are being multiplied by weights.
+     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum variable containing the sum of weighted variables.
+     */
+    public SumBool(IntVar[] list, String rel, IntVar sum) {
+	this(sum.getStore(), list, rel, sum);
+    }
+
+    /**
+     * It constructs the constraint SumBool. 
+     * @param variables variables which are being multiplied by weights.
+     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum variable containing the sum of weighted variables.
+     */
+    public SumBool(List<? extends IntVar> variables, String rel, IntVar sum) {
+        this(variables.toArray(new IntVar[variables.size()]), rel, sum);
     }
 
     @Override public void consistency(Store store) {
@@ -365,8 +387,10 @@ public class SumBool extends PrimitiveConstraint {
         return "?";
     }
 
-    void checkForOverflow() {
+    IntVar[] filterAndOverflow(IntVar[] x) {
 
+	List<IntVar> ls = new ArrayList<>();
+	
         int sMin = 0, sMax = 0;
         for (int i = 0; i < x.length; i++) {
             int n1 = x[i].min();
@@ -374,7 +398,12 @@ public class SumBool extends PrimitiveConstraint {
 
             sMin = Math.addExact(sMin, n1);
             sMax = Math.addExact(sMax, n2);
+
+	    if (x[i].max() != 0)
+		ls.add(x[i]);
         }
+
+	return ls.toArray(new IntVar[ls.size()]);	    
     }
 
     @Override public String toString() {

@@ -55,7 +55,7 @@ import org.jacop.core.Store;
  * inherit from this class to build a network.
  *
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  *
  */
 
@@ -351,7 +351,7 @@ public class NetworkBuilder {
             }
             vs[n] = costVariable;
             ws[n] = -1;
-            result.add(new LinearInt(store, vs, ws, "==", 0));
+            result.add(new LinearInt(vs, ws, "==", 0));
             // result.add(new SumWeight(vars, weights, costVariable)); deprecated
         }
         return result;
@@ -368,7 +368,7 @@ public class NetworkBuilder {
         } else if (vars.size() == 1) {
             list.add(new XeqY(result, vars.iterator().next()));
         } else {
-            list.add(new SumInt(store, vars, "==", result));
+            list.add(new SumInt(vars, "==", result));
             // list.add(new Sum(vars, result)); deprecated
         }
 

@@ -45,7 +45,14 @@ import org.jacop.set.core.SetVar;
  * is the only element of the set assigned to a set variable a. 
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
+<<<<<<< HEAD
  * @version 4.4
+||||||| merged common ancestors
+ *
+ * @version 4.4
+=======
+ * @version 4.5
+>>>>>>> radsz/develop
  */
 
 public class XeqA extends PrimitiveConstraint {

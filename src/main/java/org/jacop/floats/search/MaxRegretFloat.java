@@ -41,7 +41,7 @@ import org.jacop.floats.core.FloatIntervalDomain;
  * Defines a MaxRegretFloat comparator for Variables.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  * @param <T> variable of type FloatVar.
  */
 

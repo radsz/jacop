@@ -42,7 +42,7 @@ import org.jacop.constraints.Constraint;
  * Defines a Float Domain Variable and related operations on it.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class FloatVar extends Var {

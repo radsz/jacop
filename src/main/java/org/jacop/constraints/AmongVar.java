@@ -54,7 +54,7 @@ import org.jacop.core.*;
  * function. The strength of propagation algorithm is incomporable to BC.
  *
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 public class AmongVar extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 

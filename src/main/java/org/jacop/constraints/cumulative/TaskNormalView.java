@@ -30,6 +30,8 @@
 
 package org.jacop.constraints.cumulative;
 
+import org.jacop.core.IntVar;
+
 /**
  * Represents tasks for cumulative constraint
  *
@@ -39,8 +41,8 @@ package org.jacop.constraints.cumulative;
 
 class TaskNormalView extends TaskView {
 
-    TaskNormalView(Task t) {
-        super(t);
+    TaskNormalView(IntVar start, IntVar dur, IntVar res) {
+        super(start, dur, res);
     }
 
     // last complition time

@@ -43,7 +43,7 @@ import org.jacop.core.Store;
  * Constraint X + Y #= C
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 public class XplusYeqC extends PrimitiveConstraint {
@@ -147,7 +147,9 @@ public class XplusYeqC extends PrimitiveConstraint {
     }
 
     @Override public boolean satisfied() {
-        return (grounded() && (x.min() + y.min() == c));
+        // return (grounded() && (x.min() + y.min() == c));
+	int xMin = x.min(), yMin = y.min();
+	return x.singleton(xMin) && y.singleton(yMin) && xMin + yMin == c;
     }
 
     @Override public String toString() {

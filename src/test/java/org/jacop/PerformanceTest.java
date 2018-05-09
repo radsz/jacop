@@ -43,7 +43,7 @@ import static org.junit.Assert.assertThat;
  * It is performing testing for performance comparisons.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 public class PerformanceTest extends TestHelper {
 
@@ -75,7 +75,7 @@ public class PerformanceTest extends TestHelper {
 
         IntVar[] x = getIntVars(store, "x", xLength, xSize + 1);
         IntVar n = new IntVar(store, "sum", 10, 40);
-        LinearInt sum = new LinearInt(store, x, new int[] {1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5}, "==", n);
+        LinearInt sum = new LinearInt(x, new int[] {1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5}, "==", n);
 
         store.impose(sum);
 
@@ -122,7 +122,7 @@ public class PerformanceTest extends TestHelper {
         for (int i = 0; i < weights.length; i++)
             weights[i] = i % 6;
 
-        LinearInt sum = new LinearInt(store, x, weights, "==", n);
+        LinearInt sum = new LinearInt(x, weights, "==", n);
 
         store.impose(sum);
 

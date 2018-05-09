@@ -42,7 +42,7 @@ import java.util.List;
  * It is an abstract class to describe all necessary functions of any store.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 public abstract class ExampleFD {
@@ -84,9 +84,9 @@ public abstract class ExampleFD {
         long T1, T2;
         T1 = System.currentTimeMillis();
 
-        SelectChoicePoint<IntVar> select = new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]), null, new IndomainMin<IntVar>());
+        SelectChoicePoint<IntVar> select = new SimpleSelect<>(vars.toArray(new IntVar[1]), null, new IndomainMin<>());
 
-        search = new DepthFirstSearch<IntVar>();
+        search = new DepthFirstSearch<>();
 
         boolean result = search.labeling(store, select);
 
@@ -119,9 +119,9 @@ public abstract class ExampleFD {
         long T1, T2;
         T1 = System.currentTimeMillis();
 
-        SelectChoicePoint<IntVar> select = new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]), null, new IndomainMin<IntVar>());
+        SelectChoicePoint<IntVar> select = new SimpleSelect<>(vars.toArray(new IntVar[1]), null, new IndomainMin<>());
 
-        search = new DepthFirstSearch<IntVar>();
+        search = new DepthFirstSearch<>();
 
         boolean result = search.labeling(store, select, cost);
 
@@ -146,9 +146,9 @@ public abstract class ExampleFD {
         long T1, T2, T;
         T1 = System.currentTimeMillis();
 
-        SelectChoicePoint<IntVar> select = new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]), null, new IndomainMin<IntVar>());
+        SelectChoicePoint<IntVar> select = new SimpleSelect<>(vars.toArray(new IntVar[1]), null, new IndomainMin<>());
 
-        search = new DepthFirstSearch<IntVar>();
+        search = new DepthFirstSearch<>();
         search.getSolutionListener().searchAll(true);
         search.getSolutionListener().recordSolutions(true);
 
@@ -176,9 +176,9 @@ public abstract class ExampleFD {
         T1 = System.currentTimeMillis();
 
         SelectChoicePoint<IntVar> select =
-            new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]), new SmallestDomain<IntVar>(), new IndomainMin<IntVar>());
+            new SimpleSelect<>(vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMin<>());
 
-        search = new DepthFirstSearch<IntVar>();
+        search = new DepthFirstSearch<>();
 
         boolean result = false;
 
@@ -220,10 +220,10 @@ public abstract class ExampleFD {
         T1 = System.currentTimeMillis();
 
         SelectChoicePoint<IntVar> select =
-            new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]), new WeightedDegree<IntVar>(), new SmallestDomain<IntVar>(),
-                new IndomainMin<IntVar>());
+            new SimpleSelect<>(vars.toArray(new IntVar[1]), new WeightedDegree<>(), new SmallestDomain<>(),
+                new IndomainMin<>());
 
-        search = new DepthFirstSearch<IntVar>();
+        search = new DepthFirstSearch<>();
 
         boolean result = search.labeling(store, select);
 
@@ -258,7 +258,7 @@ public abstract class ExampleFD {
         search = new DepthFirstSearch<IntVar>();
 
         SelectChoicePoint<IntVar> select =
-            new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]), new MostConstrainedStatic<IntVar>(), new IndomainMin<IntVar>());
+            new SimpleSelect<>(vars.toArray(new IntVar[1]), new MostConstrainedStatic<>(), new IndomainMin<>());
 
         boolean result = search.labeling(store, select);
 
@@ -288,9 +288,9 @@ public abstract class ExampleFD {
         T1 = System.currentTimeMillis();
 
         SelectChoicePoint<IntVar> select =
-            new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]), new MostConstrainedStatic<IntVar>(), new IndomainMin<IntVar>());
+            new SimpleSelect<>(vars.toArray(new IntVar[1]), new MostConstrainedStatic<>(), new IndomainMin<>());
 
-        search = new DepthFirstSearch<IntVar>();
+        search = new DepthFirstSearch<>();
 
         search.getSolutionListener().searchAll(true);
         search.getSolutionListener().recordSolutions(true);
@@ -320,9 +320,9 @@ public abstract class ExampleFD {
 
         long begin = System.currentTimeMillis();
 
-        search = new DepthFirstSearch<IntVar>();
+        search = new DepthFirstSearch<>();
 
-        SelectChoicePoint<IntVar> select = new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]), null, new IndomainMiddle<IntVar>());
+        SelectChoicePoint<IntVar> select = new SimpleSelect<>(vars.toArray(new IntVar[1]), null, new IndomainMiddle<>());
 
         boolean result = search.labeling(store, select);
 
@@ -341,7 +341,7 @@ public abstract class ExampleFD {
      */
     public boolean shavingSearch(List<Constraint> guidingShaving, boolean printInfo) {
 
-        Shaving<IntVar> shaving = new Shaving<IntVar>();
+        Shaving<IntVar> shaving = new Shaving<>();
         shaving.setStore(store);
         shaving.quickShave = true;
 
@@ -350,10 +350,10 @@ public abstract class ExampleFD {
 
         long begin = System.currentTimeMillis();
 
-        search = new DepthFirstSearch<IntVar>();
+        search = new DepthFirstSearch<>();
         search.setPrintInfo(printInfo);
 
-        SelectChoicePoint<IntVar> select = new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]), null, new IndomainMiddle<IntVar>());
+        SelectChoicePoint<IntVar> select = new SimpleSelect<>(vars.toArray(new IntVar[1]), null, new IndomainMiddle<>());
 
         search.setConsistencyListener(shaving);
         search.setExitChildListener(shaving);
@@ -392,15 +392,15 @@ public abstract class ExampleFD {
         int backtracks = 0;
         int wrongDecisions = 0;
 
-        search = new DepthFirstSearch<IntVar>();
+        search = new DepthFirstSearch<>();
 
-        NoGoodsCollector<IntVar> collector = new NoGoodsCollector<IntVar>();
+        NoGoodsCollector<IntVar> collector = new NoGoodsCollector<>();
         search.setExitChildListener(collector);
         search.setTimeOutListener(collector);
         search.setExitListener(collector);
 
         SelectChoicePoint<IntVar> select =
-            new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]), new SmallestDomain<IntVar>(), new IndomainSimpleRandom<IntVar>());
+            new SimpleSelect<>(vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainSimpleRandom<>());
 
         while (timeout) {
 
@@ -415,8 +415,8 @@ public abstract class ExampleFD {
             wrongDecisions += search.getWrongDecisions();
             backtracks += search.getBacktracks();
 
-            search = new DepthFirstSearch<IntVar>();
-            collector = new NoGoodsCollector<IntVar>();
+            search = new DepthFirstSearch<>();
+            collector = new NoGoodsCollector<>();
             search.setExitChildListener(collector);
             search.setTimeOutListener(collector);
             search.setExitListener(collector);
@@ -447,11 +447,11 @@ public abstract class ExampleFD {
     public boolean creditSearch(int credits, int backtracks, int maxDepth) {
 
         SelectChoicePoint<IntVar> select =
-            new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]), new SmallestDomain<IntVar>(), new IndomainMin<IntVar>());
+            new SimpleSelect<>(vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMin<>());
 
-        CreditCalculator<IntVar> credit = new CreditCalculator<IntVar>(credits, backtracks, maxDepth);
+        CreditCalculator<IntVar> credit = new CreditCalculator<>(credits, backtracks, maxDepth);
 
-        search = new DepthFirstSearch<IntVar>();
+        search = new DepthFirstSearch<>();
 
         if (search.getConsistencyListener() == null)
             search.setConsistencyListener(credit);
@@ -489,10 +489,10 @@ public abstract class ExampleFD {
     public boolean searchWithMaxRegret() {
 
         SelectChoicePoint<IntVar> select =
-            new SimpleSelect<IntVar>(vars.toArray(new IntVar[0]), new MaxRegret<IntVar>(), new SmallestDomain<IntVar>(),
-                new IndomainMiddle<IntVar>());
+            new SimpleSelect<>(vars.toArray(new IntVar[0]), new MaxRegret<>(), new SmallestDomain<>(),
+                new IndomainMiddle<>());
 
-        search = new DepthFirstSearch<IntVar>();
+        search = new DepthFirstSearch<>();
         search.getSolutionListener().searchAll(true);
         search.getSolutionListener().recordSolutions(true);
 
@@ -509,14 +509,14 @@ public abstract class ExampleFD {
      */
     public boolean searchLDS(int noDiscrepancy) {
 
-        search = new DepthFirstSearch<IntVar>();
+        search = new DepthFirstSearch<>();
 
         boolean result = false;
 
         SelectChoicePoint<IntVar> select =
-            new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]), new SmallestDomain<IntVar>(), new IndomainMiddle<IntVar>());
+            new SimpleSelect<>(vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMiddle<>());
 
-        LDS<IntVar> lds = new LDS<IntVar>(noDiscrepancy);
+        LDS<IntVar> lds = new LDS<>(noDiscrepancy);
 
         if (search.getExitChildListener() == null)
             search.setExitChildListener(lds);
@@ -551,7 +551,7 @@ public abstract class ExampleFD {
         search = new DepthFirstSearch<IntVar>();
 
         SelectChoicePoint<IntVar> select =
-            new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]), new MaxRegret<IntVar>(), new IndomainMin<IntVar>());
+            new SimpleSelect<>(vars.toArray(new IntVar[1]), new MaxRegret<>(), new IndomainMin<>());
 
         boolean result = search.labeling(store, select, cost);
 
@@ -579,10 +579,10 @@ public abstract class ExampleFD {
 
         boolean result = false;
 
-        search = new DepthFirstSearch<IntVar>();
+        search = new DepthFirstSearch<>();
 
         SelectChoicePoint<IntVar> select =
-            new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]), new SmallestDomain<IntVar>(), new IndomainMiddle<IntVar>());
+            new SimpleSelect<>(vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMiddle<>());
 
         result = search.labeling(store, select);
 
@@ -607,10 +607,10 @@ public abstract class ExampleFD {
 
         boolean result = false;
 
-        search = new DepthFirstSearch<IntVar>();
+        search = new DepthFirstSearch<>();
 
         SelectChoicePoint<IntVar> select =
-            new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]), new SmallestDomain<IntVar>(), new IndomainMedian<IntVar>());
+            new SimpleSelect<>(vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMedian<>());
 
         result = search.labeling(store, select);
 
@@ -635,9 +635,9 @@ public abstract class ExampleFD {
         long begin = System.currentTimeMillis();
 
         SelectChoicePoint<IntVar> select =
-            new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]), new SmallestMin<IntVar>(), new IndomainMin<IntVar>());
+            new SimpleSelect<>(vars.toArray(new IntVar[1]), new SmallestMin<>(), new IndomainMin<>());
 
-        search = new DepthFirstSearch<IntVar>();
+        search = new DepthFirstSearch<>();
 
         boolean solution = search.labeling(store, select, cost);
 
@@ -669,13 +669,13 @@ public abstract class ExampleFD {
 
         boolean result = false;
 
-        Search<IntVar> labelSlave = new DepthFirstSearch<IntVar>();
-        SelectChoicePoint<IntVar> selectSlave = new SimpleSelect<IntVar>(slaveVars.toArray(new IntVar[0]), null, new IndomainMin<IntVar>());
+        Search<IntVar> labelSlave = new DepthFirstSearch<>();
+        SelectChoicePoint<IntVar> selectSlave = new SimpleSelect<>(slaveVars.toArray(new IntVar[0]), null, new IndomainMin<>());
         labelSlave.setSelectChoicePoint(selectSlave);
 
-        Search<IntVar> labelMaster = new DepthFirstSearch<IntVar>();
+        Search<IntVar> labelMaster = new DepthFirstSearch<>();
         SelectChoicePoint<IntVar> selectMaster =
-            new SimpleSelect<IntVar>(masterVars.toArray(new IntVar[0]), null, new IndomainMin<IntVar>());
+            new SimpleSelect<>(masterVars.toArray(new IntVar[0]), null, new IndomainMin<>());
 
         labelMaster.addChildSearch(labelSlave);
 

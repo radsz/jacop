@@ -40,7 +40,7 @@ import org.jacop.core.Store;
  * Constraint X + C #= Z.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class XplusCeqZ extends PrimitiveConstraint {
@@ -134,7 +134,9 @@ public class XplusCeqZ extends PrimitiveConstraint {
     }
 
     @Override public boolean satisfied() {
-        return grounded() && x.min() + c == z.min();
+        // return grounded() && x.min() + c == z.min();
+	int xMin = x.min(), zMin = z.min();
+	return x.singleton(xMin) && z.singleton(zMin) && xMin + c == zMin;
     }
 
     @Override public String toString() {

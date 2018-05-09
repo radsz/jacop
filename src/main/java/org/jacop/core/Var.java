@@ -41,7 +41,7 @@ import java.util.function.Function;
  * Defines a variable and related operations on it.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 public abstract class Var implements Backtrackable {
@@ -184,6 +184,14 @@ public abstract class Var implements Backtrackable {
      */
 
     public abstract void putConstraint(Constraint c);
+
+    /**
+     * This function returns store used by this variable.
+     * @return the store of the variable.
+     */
+    public Store getStore() {
+        return store;
+    }
 
     /**
      * This function returns variable id.

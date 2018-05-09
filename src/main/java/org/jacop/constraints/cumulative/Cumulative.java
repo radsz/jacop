@@ -51,10 +51,10 @@ import java.util.function.Function;
  * <p>
  * Joseph Scott, "Filtering Algorithms for Discrete Cumulative Resources", MSc thesis, Uppsala
  * University, Department of Information Technology, 2010, no IT 10 048,
+ * @see <a href="http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-132172">http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-132172</a>
  *
  * @author Krzysztof Kuchcinski
  * @version 4.5
- * @see <a href="http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-132172">http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-132172</a>
  */
 
 public class Cumulative extends CumulativeBasic {
@@ -63,6 +63,9 @@ public class Cumulative extends CumulativeBasic {
 
     private boolean doEdgeFind = true;
 
+    private Set<Integer> preComputedCapacities = null;
+    private int[] preComputedCapMap;
+    
     protected Comparator<TaskView> taskIncEstComparator = (o1, o2) -> {
         return (o1.est() == o2.est()) ? (o1.lct() - o2.lct()) : (o1.est() - o2.est());
     };
@@ -70,9 +73,6 @@ public class Cumulative extends CumulativeBasic {
     protected Comparator<TaskView> taskDecLctComparator = (o1, o2) -> {
         return (o2.lct() == o1.lct()) ? (o2.est() - o1.est()) : (o2.lct() - o1.lct());
     };
-
-    protected Function<int[], Comparator<Integer>> precComparator = (prec) ->
-        (Integer o1, Integer o2) -> (prec[o2.intValue()] - prec[o1.intValue()]);
 
     /**
      * It creates a cumulative constraint.
@@ -87,10 +87,8 @@ public class Cumulative extends CumulativeBasic {
         super(starts, durations, resources, limit);
 
         taskReversed = new TaskReversedView[starts.length];
-        for (int i = 0; i < starts.length; i++)
-            taskReversed[i] = new TaskReversedView(new Task(starts[i], durations[i], resources[i]));
-
         for (int i = 0; i < starts.length; i++) {
+            taskReversed[i] = new TaskReversedView(starts[i], durations[i], resources[i]);
             taskReversed[i].index = i;
         }
 
@@ -105,6 +103,22 @@ public class Cumulative extends CumulativeBasic {
         if (s != null)
             limitOnEdgeFind = Integer.parseInt(s);
         doEdgeFind = (starts.length <= limitOnEdgeFind);
+
+	if (!possibleZeroTasks && grounded(resources)) {
+	    preComputedCapacities = new LinkedHashSet<>();
+	    for (TaskView t : taskNormal)
+	    	preComputedCapacities.add(t.res.min());
+	    
+	    preComputedCapMap = new int[starts.length];
+	    int capIndex = 0;
+	    for (int ci : preComputedCapacities) {
+		for (TaskView aT : taskNormal) {
+		    if (aT.res.min() == ci)
+			preComputedCapMap[aT.index] = capIndex;
+		}
+		capIndex++;
+	    }
+	}
     }
 
     /**
@@ -130,8 +144,10 @@ public class Cumulative extends CumulativeBasic {
 
             profileProp(store);
 
-            if (!store.propagationHasOccurred && doEdgeFind)
-                edgeFind(store);
+            if (!store.propagationHasOccurred && doEdgeFind) {
+	    	// overloadCheck();  // not needed if profile propagator is used
+	    	edgeFind(store);
+	    }
 
         } while (store.propagationHasOccurred);
     }
@@ -141,7 +157,9 @@ public class Cumulative extends CumulativeBasic {
 
 	TaskView[] estList = new TaskNormalView[taskNormal.length];
 	System.arraycopy(taskNormal, 0, estList, 0, estList.length);
-	Arrays.sort(estList, new TaskIncESTComparator<TaskView>());
+	Arrays.sort(estList, (o1, o2) -> {
+            return o1.est() - o2.est();
+        }); // task est incremental comparator
 	// System.out.println(java.util.Arrays.asList(estList));
 
 	ThetaLambdaTree tree = new ThetaLambdaTree(limit);
@@ -151,8 +169,10 @@ public class Cumulative extends CumulativeBasic {
 	TaskView[] lctList = new TaskNormalView[taskNormal.length];
 	for (int i = 0; i < taskNormal.length; i++)
 	    lctList[i] = new TaskNormalView(taskNormal[i]);
-	Arrays.sort(lctList, new TaskIncLCTComparator<TaskView>());
-	System.out.println(java.util.Arrays.asList(lctList));
+	Arrays.sort(lctList, (o1, o2) -> {
+            return o1.lct() - o2.lct();
+        });// task lct incremental comparator
+	//System.out.println(java.util.Arrays.asList(lctList));
 
     
 	long C = (long)limit.max();
@@ -164,12 +184,12 @@ public class Cumulative extends CumulativeBasic {
 	    if (tree.rootNode().env > C * (long)lctList[j].lct()) {
 		// System.out.println("FAIL");
 
-		throw store.failException;
+		throw Store.failException;
 	    }
 	}
     }
     */
-
+    
     private void edgeFind(Store store) {
 
         edgeFind(store, taskNormal);
@@ -203,7 +223,6 @@ public class Cumulative extends CumulativeBasic {
         // ========== Detect Order ============
         int[] prec = detectOrder(tree, lctList, auxOrderListInv, (long) limit.max());
         // System.out.println("*** prec = " + intArrayToString(prec));
-
         // write ThetaLambdaTree as dot file for visualization
         // tree.printTree("tree_init");
 
@@ -233,7 +252,7 @@ public class Cumulative extends CumulativeBasic {
             tree.moveToLambda(aT.treeIndex);
         }
 
-        int[] lctPrec = new int[prec.length];
+        int[] lctPrec = new int[n];
         for (int i = 0; i < prec.length; i++) {
             lctPrec[lctInvOrder[i]] = prec[i];
         }
@@ -244,21 +263,29 @@ public class Cumulative extends CumulativeBasic {
     private void adjustBounds(Store store, ThetaLambdaTree tree, TaskView[] t, int[] prec, long cap) {
 
         int n = t.length;
-        Set<Integer> capacities = new LinkedHashSet<>();
-        for (TaskView aT1 : t)
-            capacities.add(aT1.res.min());
-
+        Set<Integer> capacities;
+	int[] capMap;
+	if (preComputedCapacities == null) {
+	    capacities = new LinkedHashSet<>();
+	    for (TaskView aT1 : t)
+		capacities.add(aT1.res.min());
+	    
+	    capMap = new int[n];
+	    int capIndex = 0;
+	    for (int ci : capacities) {
+		for (TaskView aT : t) {
+		    if (aT.res.min() == ci)
+			capMap[aT.index] = capIndex;
+		}
+		capIndex++;
+	    }
+	}
+	else {
+	    capacities = preComputedCapacities;
+	    capMap = preComputedCapMap;
+	}	
         // System.out.println("capacities = " + capacities);
 
-        int[] capMap = new int[n];
-        int capIndex = 0;
-        for (int ci : capacities) {
-            for (TaskView aT : t) {
-                if (aT.res.min() == ci)
-                    capMap[aT.index] = capIndex;
-            }
-            capIndex++;
-        }
 
         int[][] update = new int[capacities.size()][n];
 
@@ -287,11 +314,11 @@ public class Cumulative extends CumulativeBasic {
             }
             capi++;
         }
-
+	
         Integer[] precTaskOrder = new Integer[n];
-        for (int i = n - 1; i >= 0; i--)
+	for (int i = 0; i < n; i++)
             precTaskOrder[i] = i;
-        Arrays.sort(precTaskOrder, precComparator.apply(prec));
+        Arrays.sort(precTaskOrder, (Integer o1, Integer o2) -> prec[o2.intValue()] - prec[o1.intValue()]);
 
         int j = 0;
         outer:
@@ -301,13 +328,9 @@ public class Cumulative extends CumulativeBasic {
             int precI = prec[precTaskOrder[i]];
 
             // first skip all task j that are lct after prec
-
-            if (taskI.res.min() == 0)
-                continue;
-
-            while (j < n && t[j].lct() > precI) {
+            while (j < n && t[j].lct() > precI) 
                 j++;
-            }
+
             if (j < n) {
 
                 // update est[i] if possible

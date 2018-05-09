@@ -50,7 +50,7 @@ import org.jacop.core.*;
  * backtracking) to improve the constraint further. 
  *
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class Among extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {

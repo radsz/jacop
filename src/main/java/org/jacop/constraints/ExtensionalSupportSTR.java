@@ -50,7 +50,7 @@ import org.jacop.util.IndexDomainView;
  * available, which helped to create our own version of this algorithm.
  *
  * @author Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 

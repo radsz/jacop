@@ -183,7 +183,7 @@ public class NonTransitiveDice extends ExampleFD {
                 for (int m = 0; m < noSides; m++)
                     matrix[j * noSides + m] = wins[i][j][m];
 
-            store.impose(new SumInt(store, matrix, "==", winningSum[i]));
+            store.impose(new SumInt(matrix, "==", winningSum[i]));
         }
 
         IntVar minimumWinning = new IntVar(store, "MinDominance", 0, noSides * noSides);

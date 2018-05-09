@@ -65,10 +65,18 @@ import org.jacop.search.SimpleSelect;
  * Multi-Unit Combinatorial Auctions by Brammert Ottens
  * Ulle Endriss
  *
+<<<<<<< HEAD
  * @author Radoslaw Szymanek
  * @version 4.4
  *
  *
+||||||| merged common ancestors
+=======
+ * @author Radoslaw Szymanek
+ * @version 4.5
+ *
+ *
+>>>>>>> radsz/develop
  */
 
 public class MUCA extends ExampleFD {
@@ -1005,7 +1013,7 @@ public class MUCA extends ExampleFD {
                 n.addDom(0, 0);
                 n.addDom(bid_xor.size(), bid_xor.size());
 
-                store.impose(new SumInt(store, xorUsedTransformation, "==", n));
+                store.impose(new SumInt(xorUsedTransformation, "==", n));
 
                 nVars[++i] = n;
                 tuples[i] = new int[bid.size() + 1];
@@ -1114,13 +1122,13 @@ public class MUCA extends ExampleFD {
 
             }
 
-            store.impose(new SumInt(store, weights, "==", sum[g]));
+            store.impose(new SumInt(weights, "==", sum[g]));
 
         }
 
         cost = new IntVar(store, "cost", minCost, maxCost);
 
-        store.impose(new SumInt(store, bidCosts, "==", cost));
+        store.impose(new SumInt(bidCosts, "==", cost));
 
     }
 

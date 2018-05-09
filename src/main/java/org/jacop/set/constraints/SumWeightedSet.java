@@ -46,7 +46,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * The sum must be equal to the specified sum variable.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 public class SumWeightedSet extends Constraint implements SatisfiedPresent {
@@ -62,13 +62,13 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
      * It specifies the list of allowed elements and helps to connect the weight
      * to the element.
      */
-    public int[] elements;
+    // public int[] elements;
 
     /**
      * It specifies a weight for every element of the allowed element in the
      * domain of set variable a.
      */
-    public int[] weights;
+    // public int[] weights;
 
     /**
      * Integer variable containing the total weight of all elements within a set variable a.
@@ -102,8 +102,8 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
 
         this.totalWeight = totalWeight;
         this.a = a;
-        this.weights = Arrays.copyOf(weights, weights.length);
-        this.elements = Arrays.copyOf(elements, elements.length);
+        // this.weights = Arrays.copyOf(weights, weights.length);
+        // this.elements = Arrays.copyOf(elements, elements.length);
 
         this.increasingCosts = true;
         for (int i = 0; i < weights.length - 1 && this.increasingCosts; i++)

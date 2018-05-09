@@ -436,6 +436,10 @@ public final class ConstraintFncs {
         gc.gen_jacop_lex_lesseq_int(n);
     }
 
+    public void jacop_value_precede_int(SimpleNode n) {
+        gc.gen_jacop_value_precede_int(n);
+    }
+
     public void jacop_bin_packing(SimpleNode n) {
         gc.gen_jacop_bin_packing(n);
     }
@@ -490,8 +494,16 @@ public final class ConstraintFncs {
         sc.gen_set_le(n);
     }
 
+    public void set_le_reif(SimpleNode n) {
+        sc.gen_set_le_reif(n);
+    }
+
     public void set_lt(SimpleNode n) {
         sc.gen_set_lt(n);
+    }
+
+    public void set_lt_reif(SimpleNode n) {
+        sc.gen_set_lt_reif(n);
     }
 
     public void set_ne(SimpleNode n) {

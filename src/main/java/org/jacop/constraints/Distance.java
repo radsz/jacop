@@ -45,7 +45,7 @@ import org.jacop.core.Store;
  *
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 public class Distance extends PrimitiveConstraint implements Stateful {

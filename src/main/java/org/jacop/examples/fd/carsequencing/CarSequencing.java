@@ -55,7 +55,12 @@ import org.jacop.util.fsm.FSMTransition;
  * It is program to model and solve simple problems of car sequencing problem (CSPLIB-p1).
  *
  * @author Radoslaw Szymanek
+<<<<<<< HEAD
  * @version 4.4
+||||||| merged common ancestors
+=======
+ * @version 4.5
+>>>>>>> radsz/develop
  *
  */
 

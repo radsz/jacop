@@ -43,7 +43,7 @@ import org.jacop.core.*;
  * partial consistency technique.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class Alldifferent extends Constraint implements UsesQueueVariable, SatisfiedPresent {
@@ -54,8 +54,6 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
      * It specifies a list of variables which must take different values.
      */
     public IntVar[] list;
-
-    int stamp = 0;
 
     LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
 

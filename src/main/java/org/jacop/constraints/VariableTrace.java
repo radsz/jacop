@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * VariableTrace is a daemon that prints information on variables whenever they are changed.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class VariableTrace extends Constraint implements UsesQueueVariable {

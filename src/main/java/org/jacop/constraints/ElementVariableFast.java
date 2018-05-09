@@ -54,7 +54,7 @@ import org.jacop.core.ValueEnumeration;
  * make addressing of list array starting from 1.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class ElementVariableFast extends Constraint implements Stateful, SatisfiedPresent {
@@ -150,6 +150,25 @@ public class ElementVariableFast extends Constraint implements Stateful, Satisfi
 
     }
 
+    @Override public boolean isStateful() {
+        return  (!(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset));
+    }
+    
+    /**
+     * It imposes the constraint in a given store.
+     *
+     * @param store the constraint store to which the constraint is imposed to.
+     */
+    
+    @Override public void impose(Store store) {
+
+        super.impose(store);
+
+        if (!isStateful()) {
+            firstConsistencyCheck = false;
+        }
+    }
+    
     @Override public void consistency(Store store) {
 
         if (firstConsistencyCheck) {
@@ -191,7 +210,16 @@ public class ElementVariableFast extends Constraint implements Stateful, Satisfi
 
         index.domain.in(store.level, index, indexDom.complement());
         value.domain.in(store.level, value, min, max);
+	
+	if (index.singleton()) {
+	    // index is singleton; value == list[index - 1 - offset]
+	    IntVar lp = list[index.value() - 1 - indexOffset];
+	    value.domain.in(store.level, value, lp.domain);
+	    lp.domain.in(store.level, lp, value.domain);
 
+	    // if (value.singleton())
+	    // 	removeConstraint();
+	}
     }
 
     private boolean disjoint(IntVar v1, IntVar v2) {

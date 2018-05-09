@@ -42,7 +42,7 @@ import org.jacop.core.Store;
  * Bound consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class XplusYeqZ extends PrimitiveConstraint {
@@ -168,8 +168,9 @@ public class XplusYeqZ extends PrimitiveConstraint {
 
     @Override public boolean satisfied() {
 
-        return (grounded() && x.value() + y.value() == z.value());
-
+        // return (grounded() && x.value() + y.value() == z.value());
+	int xMin = x.min(), yMin = y.min(), zMin = z.min();
+	return x.singleton(xMin) && y.singleton(yMin) && z.singleton(zMin) && xMin + yMin == zMin;
     }
 
     @Override public String toString() {

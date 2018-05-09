@@ -55,7 +55,7 @@ import org.jacop.core.TimeStamp;
  * make addressing of list array starting from 1.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class ElementIntegerFast extends Constraint implements Stateful, SatisfiedPresent {
@@ -93,7 +93,7 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
      */
     private TimeStamp<Short> order;
 
-    private short detect = 0, ascending = 1, descending = 2, none = 3;
+    private short detect = 0, ascending = 1, descending = 2; //, none = 3;
 
     /**
      * It constructs an element constraint. 
@@ -288,9 +288,18 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
         return IntDomain.ANY;
     }
 
+    @Override public boolean isStateful() {
+        return  (!(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset));
+    }
+
     @Override public void impose(Store store) {
 
         super.impose(store);
+
+        if (!isStateful()) {
+            firstConsistencyCheck = false;
+        }
+
         order = new TimeStamp<>(store, detect); // set to detect
 
     }

@@ -45,7 +45,7 @@ import org.jacop.core.Var;
  * The first index in the variables list is equal to 1.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class Element extends Constraint implements UsesQueueVariable {

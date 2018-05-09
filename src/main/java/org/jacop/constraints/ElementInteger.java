@@ -53,7 +53,7 @@ import org.jacop.core.*;
  * make addressing of list array starting from 1.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 public class ElementInteger extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
@@ -326,9 +326,22 @@ public class ElementInteger extends Constraint implements UsesQueueVariable, Sta
         return IntDomain.ANY;
     }
 
+    @Override public boolean isStateful() {
+        return  (!(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset));
+    }
+    
+    /**
+     * It imposes the constraint in a given store.
+     *
+     * @param store the constraint store to which the constraint is imposed to.
+     */
     @Override public void impose(Store store) {
 
         super.impose(store);
+
+        if (!isStateful()) {
+            firstConsistencyCheck = false;
+        }
 
         if (checkDuplicates) {
             duplicates = new ArrayList<IntDomain>();

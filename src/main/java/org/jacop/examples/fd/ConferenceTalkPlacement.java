@@ -156,7 +156,7 @@ public class ConferenceTalkPlacement {
 
         cost = new IntVar(store, "cost", 0, IntDomain.MaxInt);
 
-        store.impose(new SumInt(store, pairCosts, "==", cost));
+        store.impose(new SumInt(pairCosts, "==", cost));
 
         vars = new ArrayList<>();
         for (int i = 0; i < talkPlacement.length; i++)

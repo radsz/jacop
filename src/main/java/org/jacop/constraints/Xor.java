@@ -40,7 +40,7 @@ import java.util.stream.Stream;
  * Xor constraint - xor("constraint", B).
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class Xor extends PrimitiveConstraint {

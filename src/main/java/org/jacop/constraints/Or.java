@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Constraint c1 \/ c2 \/ ... \/ cn.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class Or extends PrimitiveConstraint implements UsesQueueVariable {

@@ -112,10 +112,7 @@ class BoolConstraints implements ParserTreeConstants {
             sat.generate_or(a1, v);
         else {
             if (v.singleton(1))
-		if (a1.length == 2)
-		    support.pose(new XplusYgtC(a1[0], a1[1], 0));
-		else
-		    support.pose(new SumBool(store, a1, ">=", v));
+		support.pose(new SumBool(a1, ">=", v));
             else if (allVarZero(a1))
                 v.domain.in(store.level, v, 0, 0);
             else if (atLeastOneVarOne(a1))
@@ -159,7 +156,7 @@ class BoolConstraints implements ParserTreeConstants {
         if (support.options.useSat())
             sat.generate_or(new IntVar[] {v1, v2}, v3);
         else
-            support.pose(new OrBoolSimple(v1, v2, v3));
+            support.poseDC(new OrBool(new IntVar[] {v1, v2}, v3));
     }
 
     void gen_bool_xor(SimpleNode node) {

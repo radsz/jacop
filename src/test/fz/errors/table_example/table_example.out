@@ -1,1 +1,19 @@
-%% Out of memory error; consider option -Xmx... for JVM
+model = 1;
+year = 2003;
+color = 1;
+doors = 5;
+cost = 12000;
+----------
+model = 2;
+year = 2009;
+color = 6;
+doors = 3;
+cost = 8000;
+----------
+model = 3;
+year = 2014;
+color = 4;
+doors = 4;
+cost = 10000;
+----------
+==========

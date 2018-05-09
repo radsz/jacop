@@ -55,7 +55,7 @@ import org.jacop.core.ValueEnumeration;
  * hardCounter. It uses value based violation metric.
  *
  * @author Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  *
  */
 
@@ -390,7 +390,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
                 }
 
-                decomposition.add(new SumInt(store, costs, "==", costVar));
+                decomposition.add(new SumInt(costs, "==", costVar));
 
             } else {
                 throw new UnsupportedOperationException("Unsupported violation measure " + violationMeasure);
@@ -480,7 +480,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
                 }
 
-                result.add(new SumInt(store, costs, "==", costVar));
+                result.add(new SumInt(costs, "==", costVar));
 
             } else {
                 throw new UnsupportedOperationException("Unsupported violation measure " + violationMeasure);

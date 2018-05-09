@@ -42,7 +42,7 @@ import org.jacop.core.Var;
  * It is simple input order selector of variables.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  * @param <T> type of variable being used in the search. 
  */
 
@@ -165,4 +165,7 @@ public class InputOrderSelect<T extends Var> implements SelectChoicePoint<T> {
         return currentIndex.value();
     }
 
+    public String toString() {
+        return "" + java.util.Arrays.asList(searchVariables);
+    }
 }

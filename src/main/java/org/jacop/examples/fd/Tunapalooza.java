@@ -49,7 +49,7 @@ import org.jacop.core.Store;
  * It solves a simple logic puzzle about music concert. 
  *
  * @author Lesniak Kamil, Harezlak Roman, Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  *
  * Tim and Keri have a full day ahead for themselves as they plan to see
  * and hear everything at Tunapalooza '98, the annual save-the-tuna
@@ -156,7 +156,7 @@ public class Tunapalooza extends ExampleFD {
 
         IntVar two = new IntVar(store, "2", 2, 2);
         IntVar sum[] = {statement1, statement2, statement3};
-        store.impose(new SumInt(store, sum, "==", two));
+        store.impose(new SumInt(sum, "==", two));
 
         for (IntVar v : sum)
             vars.add(v);

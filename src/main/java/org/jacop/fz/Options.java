@@ -77,7 +77,7 @@ public class Options {
     boolean debug = false;
 
     String outputFilename = "";
-    
+
     /**
      * It constructs an Options object and parses all the parameters/options provided
      * to flatzinc to jacop parser.

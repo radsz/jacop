@@ -85,7 +85,7 @@ public class Laplace {
 
         for (int i = 1; i < r; i++)
             for (int j = 1; j < c; j++)
-                store.impose(new LinearFloat(store, new FloatVar[] {x[i][j], x[i - 1][j], x[i][j - 1], x[i + 1][j], x[i][j + 1]},
+                store.impose(new LinearFloat(new FloatVar[] {x[i][j], x[i - 1][j], x[i][j - 1], x[i + 1][j], x[i][j + 1]},
                     new double[] {-4.0, 1.0, 1.0, 1.0, 1.0}, "==", 0.0));
 
 

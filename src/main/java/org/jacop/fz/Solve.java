@@ -338,7 +338,7 @@ public class Solve implements ParserTreeConstants {
                 if (solveKind == 1)  // minimize
                     costVariable = cost;
                 else { // maximize
-                    max_cost = new IntVar(store, "-" + cost.id(), IntDomain.MinInt, IntDomain.MaxInt);
+                    max_cost = new IntVar(store, "-" + cost.id(), -((IntVar)cost).max(), -((IntVar)cost).min());//IntDomain.MinInt, IntDomain.MaxInt);
                     pose(new XplusYeqC((IntVar) max_cost, (IntVar) cost, 0));
                     costVariable = max_cost;
                 }
@@ -347,7 +347,7 @@ public class Solve implements ParserTreeConstants {
                 if (solveKind == 1)  // minimize
                     costVariable = cost;
                 else { // maximize
-                    max_cost = new FloatVar(store, "-" + cost.id(), VariablesParameters.MIN_FLOAT, VariablesParameters.MAX_FLOAT);
+                    max_cost = new FloatVar(store, "-" + cost.id(), -((FloatVar)cost).max(), -((FloatVar)cost).min());//VariablesParameters.MIN_FLOAT, VariablesParameters.MAX_FLOAT);
                     pose(new PplusQeqR((FloatVar) max_cost, (FloatVar) cost, new FloatVar(store, 0.0, 0.0)));
                     costVariable = max_cost;
                 }
@@ -616,7 +616,7 @@ public class Solve implements ParserTreeConstants {
 
             System.out.println(
                 "%% Model variables : " + (store.size() + dictionary.getNumberBoolVariables()) + "\n%% Model constraints : " + initNumberConstraints
-                    + "\n\n%% Search CPU time : " + (searchTimeMeter.getThreadCpuTime(tread.getId()) - startCPU) / (long) 1e+6 + "ms"
+		+ "\n\n%% Search CPU time : " + getCPUTime() //(searchTimeMeter.getThreadCpuTime(tread.getId()) - startCPU) / (long) 1e+6 + "ms"
                     + "\n%% Search nodes : " + nodes + "\n%% Propagations : " + store.numberConsistencyCalls + "\n%% Search decisions : "
                     + decisions + "\n%% Wrong search decisions : " + wrong + "\n%% Search backtracks : " + backtracks
                     + "\n%% Max search depth : " + depth + "\n%% Number solutions : " + solutions);
@@ -749,6 +749,7 @@ public class Solve implements ParserTreeConstants {
             setSearch.setPrintInfo(false);
             if (lastSearch != null)
                 lastSearch.addChildSearch(setSearch);
+            lastSearch = setSearch;
             if (float_search_variables.length == 0)
                 setSearch.setSolutionListener(new CostListener<Var>());
 
@@ -778,7 +779,7 @@ public class Solve implements ParserTreeConstants {
                 variable_selection = floatSelect;
             floatSearch.setSelectChoicePoint(floatSelect);
             floatSearch.setPrintInfo(false);
-            if (lastSearch != null)
+            if (lastSearch != null) 
                 lastSearch.addChildSearch(floatSearch);
             floatSearch.setSolutionListener(new CostListener<Var>());
 
@@ -797,7 +798,6 @@ public class Solve implements ParserTreeConstants {
 
         if (int_search_variables.length == 0 && bool_search_variables.length == 0 && set_search_variables.length == 0
             && float_search_variables.length == 0) {
-
 
             printSolution();
 
@@ -1068,7 +1068,7 @@ public class Solve implements ParserTreeConstants {
 
             System.out.println(
                 "%% Model variables : " + (store.size() + dictionary.getNumberBoolVariables()) + "\n%% Model constraints : " + initNumberConstraints
-                    + "\n\n%% Search CPU time : " + (searchTimeMeter.getThreadCpuTime(tread.getId()) - startCPU) / (long) 1e+6 + "ms"
+		+ "\n\n%% Search CPU time : " + getCPUTime()
                     + "\n%% Search nodes : " + nodes + "\n%% Propagations : " + store.numberConsistencyCalls + "\n%% Search decisions : "
                     + decisions + "\n%% Wrong search decisions : " + wrong + "\n%% Search backtracks : " + backtracks
                     + "\n%% Max search depth : " + depth + "\n%% Number solutions : " + solutions);
@@ -1076,6 +1076,10 @@ public class Solve implements ParserTreeConstants {
 
         if (options.debug())
             System.out.print(failStatistics);
+    }
+
+    String getCPUTime() {
+	return (searchTimeMeter.getThreadCpuTime(tread.getId()) - startCPU) / (long) 1e+6 + "ms";
     }
 
     boolean anyTimeOutOccured(ArrayList<Search<Var>> list_seq_searches) {
@@ -1230,14 +1234,19 @@ public class Solve implements ParserTreeConstants {
 		    printBuffer.append(v.id() + " = ");
                     if (v.singleton()) {
                         IntDomain glb = ((SetVar) v).dom().glb();
-                        printBuffer.append("{");
-                        for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements(); ) {
-                            int element = e.nextElement();
-                            printBuffer.append(element);
-                            if (e.hasMoreElements())
-			        printBuffer.append(", ");
-                        }
-                        printBuffer.append("}");
+			if (glb.getSize() > 0 && glb.getSize() == glb.max() - glb.min() + 1) {
+			    printBuffer.append(glb.min()+".."+glb.max());
+			}
+			else {
+			    printBuffer.append("{");
+			    for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements(); ) {
+				int element = e.nextElement();
+				printBuffer.append(element);
+				if (e.hasMoreElements())
+				    printBuffer.append(", ");
+			    }
+			    printBuffer.append("}");
+			}
                     } else
 		        printBuffer.append(v.dom().toString());
 

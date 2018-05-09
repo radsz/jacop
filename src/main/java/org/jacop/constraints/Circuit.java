@@ -47,7 +47,7 @@ import org.jacop.core.Var;
  * the circuit. Variables create one circuit. 
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class Circuit extends Alldiff implements Stateful {

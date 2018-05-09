@@ -44,7 +44,7 @@ import org.jacop.constraints.Constraint;
  * The derivative of f with respect to x
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class Derivative {

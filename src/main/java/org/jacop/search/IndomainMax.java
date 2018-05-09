@@ -37,7 +37,7 @@ import org.jacop.core.IntVar;
  * maximal value in the domain of the variable.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  * @param <T> type of variable being used in the search. 
  */
 

@@ -44,7 +44,7 @@ import org.jacop.core.Store;
  * It models and solves Balanced Incomplete Block Design (BIBD) problem (CSPLIB-P28). 
  *
  * @author Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class BIBD extends ExampleFD {
@@ -91,14 +91,14 @@ public class BIBD extends ExampleFD {
         IntVar lambdaVar = new IntVar(store, "lambda", lambda, lambda);
 
         for (int i = 0; i < v; i++) {
-            store.impose(new SumInt(store, x[i], "==", rVar), 1);
+            store.impose(new SumInt(x[i], "==", rVar), 1);
         }
 
         for (int j = 0; j < b; j++) {
             IntVar[] column = new IntVar[v];
             for (int i = 0; i < v; i++)
                 column[i] = x[i][j];
-            store.impose(new SumInt(store, column, "==", kVar), 1);
+            store.impose(new SumInt(column, "==", kVar), 1);
         }
 
         for (int i = 0; i - 1 < v; i++)
@@ -113,7 +113,7 @@ public class BIBD extends ExampleFD {
                     result.add(product);
                 }
 
-                store.impose(new SumInt(store, result, "==", lambdaVar), 1);
+                store.impose(new SumInt(result, "==", lambdaVar), 1);
             }
 
     }

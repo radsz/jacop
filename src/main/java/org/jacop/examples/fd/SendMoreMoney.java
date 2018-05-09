@@ -50,7 +50,7 @@ import java.util.ArrayList;
  * MONEY          10652
  *
  * @author Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  *
  */
 public class SendMoreMoney extends ExampleFD {
@@ -483,11 +483,11 @@ public class SendMoreMoney extends ExampleFD {
          * MORE = 1000 * M + 100 * O + R * 10 + E * 1
          * MONEY = 10000 * M + 1000 * O + 100 * N + E * 10 + Y * 1
          */
-        store.impose(new LinearInt(store, send, weights4, "==", valueSEND));
+        store.impose(new LinearInt(send, weights4, "==", valueSEND));
         // store.impose(new SumWeight(send, weights4, valueSEND));
-        store.impose(new LinearInt(store, more, weights4, "==", valueMORE));
+        store.impose(new LinearInt(more, weights4, "==", valueMORE));
         // store.impose(new SumWeight(more, weights4, wvalueMORE));
-        store.impose(new LinearInt(store, money, weights5, "==", valueMONEY));
+        store.impose(new LinearInt(money, weights5, "==", valueMONEY));
         // store.impose(new SumWeight(money, weights5, valueMONEY));
 
         /**
@@ -504,7 +504,7 @@ public class SendMoreMoney extends ExampleFD {
 
         int[] weightsImplied = {1000, 91, 10, 1, -9000, -900, -90};
         IntVar[] varsImplied = {s, e, r, d, m, o, n};
-        store.impose(new LinearInt(store, varsImplied, weightsImplied, "==", y));
+        store.impose(new LinearInt(varsImplied, weightsImplied, "==", y));
         // store.impose(new SumWeight(varsImplied, weightsImplied, y));
 
         /**

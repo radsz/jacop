@@ -51,7 +51,7 @@ import org.jacop.util.fsm.FSMTransition;
  * sequence of values 2 has to be of length between 2 and 3.
  *
  * @author Radoslaw Szymanek and Polina Makeeva
- * @version 4.4
+ * @version 4.5
  */
 
 public class Stretch extends DecomposedConstraint<Constraint> {

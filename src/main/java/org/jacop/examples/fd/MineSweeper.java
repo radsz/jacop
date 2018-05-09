@@ -147,7 +147,7 @@ public class MineSweeper extends ExampleFD {
                             }
                         }
                     }
-                    store.impose(new SumInt(store, lst, "==", game[i][j]));
+                    store.impose(new SumInt(lst, "==", game[i][j]));
 
                 } // end if problem[i][j] > X
 

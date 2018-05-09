@@ -42,7 +42,7 @@ import org.jacop.core.Store;
  * Domain consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class XeqY extends PrimitiveConstraint {
@@ -122,7 +122,9 @@ public class XeqY extends PrimitiveConstraint {
     }
 
     @Override public boolean satisfied() {
-        return grounded() && x.min() == y.min();
+        // return grounded() && x.min() == y.min();  // inefficient grounded() :(
+	int xMin = x.min();
+	return x.singleton(xMin) && y.singleton(xMin);
     }
 
     @Override public String toString() {

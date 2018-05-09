@@ -272,14 +272,17 @@ class ComparisonConstraints implements ParserTreeConstants {
                             return;
                         } else if (generateForEqC(v1, i2, v3))
 			    return;
-			else
+			else {
                             // if (support.options.useSat()) {  // it can be moved to SAT solver but it is slow in the current implementation
                             //     sat.generate_eqC_reif(v1, i2, v3);
                             //     return;
                             // }
                             // else
-                            c = new XeqC(v1, i2);
-                        break;
+                            // c = new XeqC(v1, i2);
+			    support.pose(fzXeqCReified(v1, i2, v3));
+			    return;
+			}
+                        // break;
 
                     case Support.ne:
                         if (v1.min() > i2 || v1.max() < i2) {
@@ -371,10 +374,13 @@ class ComparisonConstraints implements ParserTreeConstants {
                             return;
                         } else if (generateForEqC(v2, i1, v3))  // binary variable
 			    return;
-			else
-                            c = new XeqC(v2, i1);
-                        break;
-
+			else {
+                        //     c = new XeqC(v2, i1);
+			    support.pose(fzXeqCReified(v2, i1, v3));
+			    return;
+			}
+                        // break;
+			
                     case Support.ne:
                         if (v2.min() > i1 || v2.max() < i1) {
                             v3.domain.in(store.level, v3, 1, 1);
@@ -450,6 +456,11 @@ class ComparisonConstraints implements ParserTreeConstants {
 				support.pose(new Not(new XorBool(new IntVar[] {v1, v2}, v3)));
 				return;
 			    }
+			if (v2.singleton())
+			    c = new XeqC(v1, v2.value());
+			else if (v1.singleton())
+			    c = new XeqC(v2, v1.value());
+			else
 			    c = new XeqY(v1, v2);
                         break;
                     case Support.ne:
@@ -675,5 +686,34 @@ class ComparisonConstraints implements ParserTreeConstants {
 
     boolean binaryVar(IntVar v) {
 	return v.min() >= 0 && v.max() <= 1;
-    }    
+    }
+    
+    Constraint fzXeqCReified( IntVar x, Integer c, IntVar b) {
+
+	    return new Constraint(new IntVar[] {x, b}) {
+
+	    @Override public void consistency(final Store store) {
+
+		if (x.singleton(c)) {
+		    b.domain.in(store.level, b, 1, 1);
+		} else if (!x.domain.contains(c)) {
+		    b.domain.in(store.level, b, 0, 0);
+		    removeConstraint();
+		} else if (b.max() == 0) {// x==c must be false
+		    x.domain.inComplement(store.level, x, c);
+		    removeConstraint();
+		}
+		else if (b.min() == 1) // x==c must be true
+		    x.domain.in(store.level, x, c, c);
+	    }
+
+	    @Override public int getDefaultConsistencyPruningEvent() {
+		return IntDomain.ANY;
+	    }
+    
+	    @Override public String toString() {
+		return "fz : XeqC_Reified("+x+", " + c + ", " + b + " )";
+	    }	
+	};
+    }
 }

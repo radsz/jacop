@@ -66,7 +66,7 @@ import org.jacop.search.SmallestMin;
  * a square of a given size. 
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class PerfectSquare extends ExampleFD {
@@ -489,7 +489,7 @@ public class PerfectSquare extends ExampleFD {
                 sumList.add(s);
             }
 
-            store.impose(new SumInt(store, sumList, "==", limit));
+            store.impose(new SumInt(sumList, "==", limit));
 
         }
 
@@ -504,7 +504,7 @@ public class PerfectSquare extends ExampleFD {
                 store.impose(new XmulCeqZ(b, squares()[problemNo][1][j], s));
                 sumList.add(s);
             }
-            store.impose(new SumInt(store, sumList, "==", limit));
+            store.impose(new SumInt(sumList, "==", limit));
         }
 
         System.out.println("Number of variables: " + store.size());
@@ -538,7 +538,7 @@ public class PerfectSquare extends ExampleFD {
 
             IntVar Y = new IntVar(store, "y" + j, 0, masterSize - sqSize);
 
-            size[j] = new IntVar(store, sqSize, sqSize);
+            size[j] = new IntVar(store, "s" + j, sqSize, sqSize);
 
             IntVar[] jthRectangle = {X, Y, size[j], size[j]};
 

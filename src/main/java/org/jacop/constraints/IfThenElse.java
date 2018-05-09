@@ -42,7 +42,7 @@ import org.jacop.util.QueueForward;
  * Constraint if constraint1 then constraint2 else constraint3
  *  * 
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable {

@@ -94,9 +94,9 @@ public class LeastDiff extends ExampleFD {
         IntVar value_fghij = new IntVar(store, "v_fghij", 0, 99999);
 
         // Constraints for getting value for words
-        store.impose(new LinearInt(store, abcde, weights5, "==", value_abcde));
+        store.impose(new LinearInt(abcde, weights5, "==", value_abcde));
         // store.impose(new SumWeight (abcde, weights5, value_abcde));
-        store.impose(new LinearInt(store, fghij, weights5, "==", value_fghij));
+        store.impose(new LinearInt(fghij, weights5, "==", value_fghij));
         // store.impose(new SumWeight (fghij, weights5, value_fghij));
 
         // abcde > fghij

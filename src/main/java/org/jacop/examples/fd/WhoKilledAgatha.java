@@ -191,7 +191,7 @@ public class WhoKilledAgatha extends ExampleFD {
                 a[j] = hates[i][j];
             }
             IntVar a_sum = new IntVar(store, "a_sum" + i, 0, n);
-            store.impose(new SumInt(store, a, "==", a_sum));
+            store.impose(new SumInt(a, "==", a_sum));
             store.impose(new XlteqC(a_sum, 2));
             vars.add(a_sum);
 
