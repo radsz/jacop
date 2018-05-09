@@ -1,4 +1,4 @@
-/**
+/*
  * MutableDomainValue.java
  * This file is part of JaCoP.
  * <p>
@@ -33,7 +33,7 @@ package org.jacop.core;
 
 /**
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 public class MutableDomainValue implements MutableVarValue, Cloneable {
 

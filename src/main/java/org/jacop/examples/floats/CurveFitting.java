@@ -1,4 +1,4 @@
-/**
+/*
  * CurveFitting.java
  * This file is part of JaCoP.
  * <p>
@@ -38,6 +38,7 @@ package org.jacop.examples.floats;
  * minizinc model curve_fitting3.mzn by Håkan Kjellerstrand
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 4.5
  *
  */
 
@@ -101,7 +102,7 @@ public class CurveFitting {
         w[n] = -1.0;
         ExEx[n] = sumExEx;
 
-        store.impose(new LinearFloat(store, ExEx, w, "==", 0.0));
+        store.impose(new LinearFloat(ExEx, w, "==", 0.0));
 
         FloatVar[] div = new FloatVar[n + 1];
         for (int i = 0; i < n; i++) {
@@ -114,19 +115,19 @@ public class CurveFitting {
         for (int i = 0; i < n; i++)
             ones1[i] = 1.0;
         ones1[n] = -1.0;
-        store.impose(new LinearFloat(store, div, ones1, "==", 0.0));
+        store.impose(new LinearFloat(div, ones1, "==", 0.0));
 
         double[] ones = new double[n];
         for (int i = 0; i < n; i++)
             ones[i] = 1.0;
-        store.impose(new LinearFloat(store, Ex, ones, "==", 0.0));
-        store.impose(new LinearFloat(store, Ey, ones, "==", 0.0));
+        store.impose(new LinearFloat(Ex, ones, "==", 0.0));
+        store.impose(new LinearFloat(Ey, ones, "==", 0.0));
 
         for (int i = 0; i < n; i++) {
             store.impose(new PplusQeqR(X, Ex[i], new FloatVar(store, Sx[i], Sx[i])));
             store.impose(new PplusQeqR(Y, Ey[i], new FloatVar(store, Sy[i], Sy[i])));
-            // store.impose(new LinearFloat(store, new FloatVar[] {X, Ex[i]}, new double[] {1.0, 1.0}, "==", Sx[i]));
-            // store.impose(new LinearFloat(store, new FloatVar[] {Y, Ey[i]}, new double[] {1.0, 1.0}, "==", Sy[i]));
+            // store.impose(new LinearFloat(new FloatVar[] {X, Ex[i]}, new double[] {1.0, 1.0}, "==", Sx[i]));
+            // store.impose(new LinearFloat(new FloatVar[] {Y, Ey[i]}, new double[] {1.0, 1.0}, "==", Sy[i]));
         }
 
         FloatVar[] vars = new FloatVar[2 * n + 1];

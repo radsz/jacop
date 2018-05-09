@@ -1,4 +1,4 @@
-/**
+/*
  * Linear.java
  * This file is part of JaCoP.
  * <p>
@@ -50,9 +50,8 @@ import java.util.Map;
  * For other constraints (And, Or, Not, Eq, IfThen, IfThenElse) use LinearInt.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 3.1
+ * @version 4.5
  */
-
 
 /**
  * @deprecated As of release 4.3.1 replaced by LinearInt constraint.

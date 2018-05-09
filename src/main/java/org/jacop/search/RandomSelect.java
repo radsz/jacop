@@ -1,4 +1,4 @@
-/**
+/*
  * RandomSelect.java
  * This file is part of JaCoP.
  * <p>
@@ -30,7 +30,6 @@
 
 package org.jacop.search;
 
-import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
@@ -43,7 +42,7 @@ import org.jacop.core.Var;
  * be enforced by search.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {

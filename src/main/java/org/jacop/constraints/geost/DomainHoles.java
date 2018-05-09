@@ -1,4 +1,4 @@
-/**
+/*
  * DomainHoles.java
  * This file is part of JaCoP.
  * <p>
@@ -38,7 +38,7 @@ import org.jacop.core.Var;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
- *
+ * @version 4.5
  *
  * Internal constraint used to generate outboxes that correspond to holes in the 
  * feasible domain of the object origin.

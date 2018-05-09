@@ -1,1 +1,4 @@
-=====UNSATISFIABLE=====
+%% problem detected for int_eq
+%%	java.lang.ArithmeticException: Constant 711000000 outside variable bounds; must be in interval -536870910..536870909
+
+%% Total CPU time : 82 ms (0.082)

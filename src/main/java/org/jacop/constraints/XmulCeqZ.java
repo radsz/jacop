@@ -1,4 +1,4 @@
-/**
+/*
  * XmulCeqZ.java
  * This file is part of JaCoP.
  * <p>
@@ -36,7 +36,6 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 import org.jacop.core.FailException;
 
 /**
@@ -45,27 +44,27 @@ import org.jacop.core.FailException;
  * Boundary consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 3.1
+ * @version 4.5
  */
 
 public class XmulCeqZ extends PrimitiveConstraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies variable x in constraint x * c = z.
      */
-    public IntVar x;
+    final public IntVar x;
 
     /**
      * It specifies constant c in constraint x * c = z.
      */
-    public int c;
+    final public int c;
 
     /**
      * It specifies variable x in constraint x * c = z.
      */
-    public IntVar z;
+    final public IntVar z;
 
     /**
      * It constructs a constraint X * C = Z.
@@ -83,12 +82,10 @@ public class XmulCeqZ extends PrimitiveConstraint {
         this.c = c;
         this.z = z;
 
-        // checkForOverflow();
-
         setScope(x, z);
     }
 
-    @Override public void consistency(Store store) {
+    @Override public void consistency(final Store store) {
 
         if (c != 0)
             do {
@@ -110,7 +107,7 @@ public class XmulCeqZ extends PrimitiveConstraint {
             z.domain.in(store.level, z, 0, 0);
     }
 
-    @Override public void notConsistency(Store store) {
+    @Override public void notConsistency(final Store store) {
 
         if (c != 0) {
 
@@ -144,9 +141,6 @@ public class XmulCeqZ extends PrimitiveConstraint {
         Interval r = IntDomain.mulBounds(x.min(), x.max(), c, c);
         return !z.domain.isIntersecting(r.min(), r.max());
 
-        // IntDomain Xdom = x.dom();
-        // IntDomain Zdom = z.dom();
-        // return Xdom.singleton() && Zdom.singleton() && Xdom.min() * c != Zdom.min();
     }
 
     @Override public int getDefaultConsistencyPruningEvent() {
@@ -165,17 +159,9 @@ public class XmulCeqZ extends PrimitiveConstraint {
         return IntDomain.GROUND;
     }
 
-
     @Override public String toString() {
 
         return id() + " : XmulCeqZ(" + x + ", " + c + ", " + z + " )";
     }
-
-    // private void checkForOverflow() {
-
-    //     Math.multiplyExact(x.min(), c);
-    //     Math.multiplyExact(x.max(), c);
-
-    // }
 
 }

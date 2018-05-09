@@ -1,4 +1,4 @@
-/**
+/*
  * Gates.java
  * This file is part of JaCoP.
  * <p>
@@ -51,6 +51,7 @@ import org.jacop.search.SimpleSelect;
  * It specifies an adder using gates specified by extensional constraints.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 4.5
  *
  */
 

@@ -1,4 +1,4 @@
-/**
+/*
  * BabySitting.java
  * This file is part of JaCoP.
  * <p>
@@ -44,6 +44,7 @@ import org.jacop.core.Store;
  * It is a simple logic puzzle about babysitting.
  *
  * @author Radoslaw Szymanek
+ * @version 4.5
  *
  * Each weekday, Bonnie takes care of five of the neighbors'
  * children. The children's names are Keith, Libby, Margo, Nora, and

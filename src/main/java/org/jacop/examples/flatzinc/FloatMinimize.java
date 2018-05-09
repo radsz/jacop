@@ -1,4 +1,4 @@
-/**
+/*
  * FloatMinimize.java
  * This file is part of JaCoP.
  * <p>
@@ -44,7 +44,7 @@ import org.jacop.floats.core.*;
  * It is used for test purpose only.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 public class FloatMinimize {
 

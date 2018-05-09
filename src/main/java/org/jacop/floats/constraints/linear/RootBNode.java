@@ -1,4 +1,4 @@
-/**
+/*
  * RootBNode.java
  * This file is part of JaCoP.
  * <p>
@@ -34,7 +34,7 @@ package org.jacop.floats.constraints.linear;
  * Binary Node of the tree representing linear constraint.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 import org.jacop.core.Store;

@@ -1,4 +1,4 @@
-/**
+/*
  * Gardner.java
  * This file is part of JaCoP.
  * <p>
@@ -51,7 +51,7 @@ import org.jacop.set.search.IndomainSetMin;
  * It specifies a simple Gardner problem which use set functionality from JaCoP. 
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class Gardner extends ExampleSet {

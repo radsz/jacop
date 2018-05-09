@@ -1,4 +1,4 @@
-/**
+/*
  * Cryptogram.java
  * This file is part of JaCoP.
  * <p>
@@ -49,6 +49,8 @@ import org.jacop.core.Store;
  * Cryptogram. It solves any cryptogram puzzle of the form like SEND+MORE=MONEY.
  *
  * @author Radoslaw Szymanek
+ * @version 4.5
+ *
  */
 
 public class Cryptogram extends ExampleFD {
@@ -215,7 +217,7 @@ public class Cryptogram extends ExampleFD {
                     lettersWithinCurrentWord[i] = letters.get(new String(currentChar));
                 }
 
-                store.impose(new LinearInt(store, lettersWithinCurrentWord, createWeights(currentWord.length(), base), "==", fdv4words[j]));
+                store.impose(new LinearInt(lettersWithinCurrentWord, createWeights(currentWord.length(), base), "==", fdv4words[j]));
                 // store.impose(new SumWeight(lettersWithinCurrentWord,
                 // 		createWeights(currentWord.length(), base),
                 //  		fdv4words[j]));
@@ -224,7 +226,7 @@ public class Cryptogram extends ExampleFD {
 
             }
 
-            store.impose(new SumInt(store, terms, "==", fdv4words[noWords - 1]));
+            store.impose(new SumInt(terms, "==", fdv4words[noWords - 1]));
         }
 
     }

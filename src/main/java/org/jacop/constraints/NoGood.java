@@ -1,4 +1,4 @@
-/**
+/*
  * NoGood.java
  * This file is part of JaCoP.
  * <p>
@@ -54,32 +54,32 @@ import org.jacop.core.Var;
  * master search.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
-public class NoGood extends PrimitiveConstraint {
+public class NoGood extends Constraint {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies a list of variables in no-good constraint.
      */
-    public IntVar listOfVars[];
+    private IntVar listOfVars[];
 
     /**
      * It specifies a list of values in no-good constraint.
      */
-    public int listOfValues[];
+    private int listOfValues[];
 
-    IntVar firstWatch;
+    private IntVar firstWatch;
 
-    int firstValue;
+    private int firstValue;
 
-    IntVar secondWatch;
+    private IntVar secondWatch;
 
-    int secondValue;
+    private int secondValue;
 
-    final static boolean debug = false;
+    private final static boolean debug = false;
 
     /**
      * It creates a no-good constraint.
@@ -150,8 +150,8 @@ public class NoGood extends PrimitiveConstraint {
                 // time)
                 // sanity check, just in case, but if this code is executed than
                 // mostly improper use of no-goods has been performed.
-                for (int i = 0; i < listOfVars.length; i++)
-                    if (listOfVars[i].getSize() != 1 && listOfVars[i] != firstWatch) {
+                for (IntVar listOfVar : listOfVars)
+                    if (listOfVar.getSize() != 1 && listOfVar != firstWatch) {
                         throw new RuntimeException(
                             "The NoGood learnt for one model is used in different model (model created across many store levels)");
                     }
@@ -283,16 +283,17 @@ public class NoGood extends PrimitiveConstraint {
                 // No good is of form XneqC, as there are no two variables which
                 // are not singletons.
 
+                secondWatch = firstWatch;
+                secondValue = firstValue;
+
                 // No good is already satisfied and it is ignored.
-                for (int j = 0; j < listOfVars.length; j++)
+                for (IntVar listOfVar : listOfVars)
                     if (listOfVars[i].getSize() == 1 && listOfVars[i].value() != listOfValues[i])
                         return;
 
                 // All values match, so no good is at the moment equivalent to
                 // one-variable no-good.
 
-                secondWatch = firstWatch;
-                secondValue = firstValue;
                 store.registerWatchedLiteralConstraint(firstWatch, this);
 
                 // To obtain immediate pruning when consistency is called
@@ -320,22 +321,9 @@ public class NoGood extends PrimitiveConstraint {
 
     }
 
-    /**
-     * First time consistency function does pruning is the last time it will be
-     * called. In addition, nogood constraints are not attached in a normal way
-     * to variable. Therefore this function will not be called. It returns false
-     * by default.
-     */
-
-    @Override public boolean satisfied() {
-        // Again this is watched constraint and constraint takes care in other
-        // way if it is satisfied.
-        return false;
-    }
-
     @Override public String toString() {
 
-        StringBuffer result = new StringBuffer(id());
+        StringBuilder result = new StringBuilder(id());
 
         result.append(" : noGood([");
 
@@ -355,35 +343,6 @@ public class NoGood extends PrimitiveConstraint {
         }
         result.append("] )");
         return result.toString();
-    }
-
-
-    @Override public boolean notSatisfied() {
-
-        boolean result = true;
-        for (int i = listOfVars.length - 1; i >= 0 && result; i--)
-            result &= listOfVars[i].singleton(listOfValues[i]);
-
-        return result;
-    }
-
-    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
-        return IntDomain.GROUND;
-    }
-
-    @Override protected int getDefaultNestedConsistencyPruningEvent() {
-        return IntDomain.ANY;
-    }
-
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        return IntDomain.GROUND;
-    }
-
-    @Override public void notConsistency(Store store) {
-
-        for (int j = 0; j < listOfVars.length; j++)
-            listOfVars[j].domain.in(store.level, listOfVars[j], listOfValues[j], listOfValues[j]);
-
     }
 
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * XplusClteqZ.java
  * This file is part of JaCoP.
  * <p>
@@ -35,7 +35,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 
 /**
  * Constraints X + C{@literal <=} Z.
@@ -43,27 +42,27 @@ import org.jacop.core.Var;
  * Boundary consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class XplusClteqZ extends PrimitiveConstraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies variable x in constraint x+c{@literal <=}z.
      */
-    public IntVar x;
+    final public IntVar x;
 
     /**
      * It specifies constant c in constraint x+c{@literal <=} z.
      */
-    public int c;
+    final public int c;
 
     /**
      * It specifies variable z in constraint x+c{@literal <=} z.
      */
-    public IntVar z;
+    final public IntVar z;
 
     /**
      * It constructs constraint X+C{@literal <=} Z.
@@ -84,7 +83,7 @@ public class XplusClteqZ extends PrimitiveConstraint {
         setScope(x, z);
     }
 
-    @Override public void consistency(Store store) {
+    @Override public void consistency(final Store store) {
 
         x.domain.inMax(store.level, x, z.max() - c);
         z.domain.inMin(store.level, z, x.min() + c);
@@ -107,7 +106,7 @@ public class XplusClteqZ extends PrimitiveConstraint {
         return IntDomain.BOUND;
     }
 
-    @Override public void notConsistency(Store store) {
+    @Override public void notConsistency(final Store store) {
 
         x.domain.inMin(store.level, x, z.min() - c + 1);
         z.domain.inMax(store.level, z, x.max() + c - 1);

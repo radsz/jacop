@@ -1,4 +1,4 @@
-/**
+/*
  * MagicSquares.java
  * This file is part of JaCoP.
  * <p>
@@ -48,6 +48,7 @@ import org.jacop.core.Store;
  * It solves a Magic squares problem.
  *
  * @author Radoslaw Szymanek
+ * @version 4.5
  *
  * MagicSquare problem consists of filling the square of size n with
  * numbers from 1 to n^2 in such a way that all rows, all columns, and
@@ -98,7 +99,7 @@ public class MagicSquares extends ExampleFD {
         for (int i = 0; i < number; i++) {
             for (int j = 0; j < number; j++)
                 row[j] = squares[i * number + j];
-            store.impose(new SumInt(store, row, "==", k));
+            store.impose(new SumInt(row, "==", k));
         }
 
         IntVar column[] = new IntVar[number];
@@ -106,7 +107,7 @@ public class MagicSquares extends ExampleFD {
         for (int j = 0; j < number; j++) {
             for (int i = 0; i < number; i++)
                 column[i] = squares[i * number + j];
-            store.impose(new SumInt(store, column, "==", k));
+            store.impose(new SumInt(column, "==", k));
         }
 
         IntVar diagonal[] = new IntVar[number];
@@ -114,11 +115,11 @@ public class MagicSquares extends ExampleFD {
         for (int i = 0; i < number; i++)
             diagonal[i] = squares[(i) * number + i];
 
-        store.impose(new SumInt(store, diagonal, "==", k));
+        store.impose(new SumInt(diagonal, "==", k));
 
         for (int i = number; i > 0; i--)
             diagonal[i - 1] = squares[(i - 1) * number + (number - i)];
-        store.impose(new SumInt(store, diagonal, "==", k));
+        store.impose(new SumInt(diagonal, "==", k));
 
         // symmetry breaking
         store.impose(new XltY(squares[0], squares[number - 1]));
@@ -152,7 +153,7 @@ public class MagicSquares extends ExampleFD {
         for (int i = 0; i < number; i++) {
             for (int j = 0; j < number; j++)
                 row[j] = squares[i * number + j];
-            store.impose(new SumInt(store, row, "==", k));
+            store.impose(new SumInt(row, "==", k));
         }
 
         IntVar column[] = new IntVar[number];
@@ -160,7 +161,7 @@ public class MagicSquares extends ExampleFD {
         for (int j = 0; j < number; j++) {
             for (int i = 0; i < number; i++)
                 column[i] = squares[i * number + j];
-            store.impose(new SumInt(store, column, "==", k));
+            store.impose(new SumInt(column, "==", k));
         }
 
         IntVar diagonal[] = new IntVar[number];
@@ -168,11 +169,11 @@ public class MagicSquares extends ExampleFD {
         for (int i = 0; i < number; i++)
             diagonal[i] = squares[(i) * number + i];
 
-        store.impose(new SumInt(store, diagonal, "==", k));
+        store.impose(new SumInt(diagonal, "==", k));
 
         for (int i = number; i > 0; i--)
             diagonal[i - 1] = squares[(i - 1) * number + (number - i)];
-        store.impose(new SumInt(store, diagonal, "==", k));
+        store.impose(new SumInt(diagonal, "==", k));
 
         // symmetry breaking
         //store.impose(new XltY(squares[0], squares[number - 1]));
@@ -224,7 +225,7 @@ public class MagicSquares extends ExampleFD {
         for (int i = 0; i < number; i++) {
             for (int j = 0; j < number; j++)
                 row[j] = squares[i * number + j];
-            Constraint cx = new SumInt(store, row, "==", k);
+            Constraint cx = new SumInt(row, "==", k);
             store.impose(cx);
             guidingShaving.add(cx);
         }
@@ -235,7 +236,7 @@ public class MagicSquares extends ExampleFD {
             for (int i = 0; i < number; i++)
                 column[i] = squares[i * number + j];
 
-            Constraint cx = new SumInt(store, column, "==", k);
+            Constraint cx = new SumInt(column, "==", k);
             store.impose(cx);
             guidingShaving.add(cx);
         }
@@ -245,13 +246,13 @@ public class MagicSquares extends ExampleFD {
         for (int i = 0; i < number; i++)
             diagonal[i] = squares[(i) * number + i];
 
-        Constraint cx = new SumInt(store, diagonal, "==", k);
+        Constraint cx = new SumInt(diagonal, "==", k);
         store.impose(cx);
         guidingShaving.add(cx);
 
         for (int i = number; i > 0; i--)
             diagonal[i - 1] = squares[(i - 1) * number + (number - i)];
-        store.impose(new SumInt(store, diagonal, "==", k));
+        store.impose(new SumInt(diagonal, "==", k));
 
         // symmetry breaking
         store.impose(new XltY(squares[0], squares[number - 1]));
@@ -291,7 +292,7 @@ public class MagicSquares extends ExampleFD {
         for (int i = 0; i < number; i++) {
             for (int j = 0; j < number; j++)
                 row[j] = squares[i * number + j];
-            store.impose(new SumInt(store, row, "==", k));
+            store.impose(new SumInt(row, "==", k));
         }
 
         IntVar column[] = new IntVar[number];
@@ -299,7 +300,7 @@ public class MagicSquares extends ExampleFD {
         for (int j = 0; j < number; j++) {
             for (int i = 0; i < number; i++)
                 column[i] = squares[i * number + j];
-            store.impose(new SumInt(store, column, "==", k));
+            store.impose(new SumInt(column, "==", k));
         }
 
         IntVar diagonal[] = new IntVar[number];
@@ -307,11 +308,11 @@ public class MagicSquares extends ExampleFD {
         for (int i = 0; i < number; i++)
             diagonal[i] = squares[(i) * number + i];
 
-        store.impose(new SumInt(store, diagonal, "==", k));
+        store.impose(new SumInt(diagonal, "==", k));
 
         for (int i = number; i > 0; i--)
             diagonal[i - 1] = squares[(i - 1) * number + (number - i)];
-        store.impose(new SumInt(store, diagonal, "==", k));
+        store.impose(new SumInt(diagonal, "==", k));
 
         // // symmetry breaking
         // store.impose(new XltY(squares[0], squares[number-1]));

@@ -1,4 +1,4 @@
-/**
+/*
  * Newspaper.java
  * This file is part of JaCoP.
  * <p>
@@ -45,6 +45,7 @@ import org.jacop.core.Store;
  * It is a simple newspaper reading job-shop like scheduling problem.
  *
  * @author Radoslaw Szymanek
+ * @version 4.5
  *
  * There are four students: Algy, Bertie, Charlie and Digby, who share a flat. 
  * Four newspapers are delivered to the house: the Financial Times, the Guardian, 

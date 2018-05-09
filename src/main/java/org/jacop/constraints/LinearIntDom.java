@@ -1,4 +1,4 @@
-/**
+/*
  * LinearIntDom.java
  * This file is part of JaCoP.
  * <p>
@@ -48,7 +48,7 @@ import java.util.stream.Stream;
  * The weights are integers. Domain consistency is used.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 public class LinearIntDom extends LinearInt {
@@ -79,7 +79,9 @@ public class LinearIntDom extends LinearInt {
      * @param weights weight for each variable.
      * @param rel     the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
      * @param sum     the sum of weighted variables.
+     * @deprecated LinearIntDom constraint does not use Store parameter any longer.
      */
+    @Deprecated
     public LinearIntDom(Store store, IntVar[] list, int[] weights, String rel, int sum) {
         commonInitialization(store, list, weights, rel, sum);
         numberId = idNumber.incrementAndGet();
@@ -94,7 +96,9 @@ public class LinearIntDom extends LinearInt {
      * @param weights weight for each variable.
      * @param rel     the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
      * @param sum     variable containing the sum of weighted variables.
+     * @deprecated LinearIntDom constraint does not use Store parameter any longer.
      */
+    @Deprecated
     public LinearIntDom(Store store, IntVar[] list, int[] weights, String rel, IntVar sum) {
         commonInitialization(store, Stream.concat(Arrays.stream(list), Stream.of(sum)).toArray(IntVar[]::new),
             IntStream.concat(Arrays.stream(weights), IntStream.of(-1)).toArray(), rel, 0);
@@ -111,9 +115,57 @@ public class LinearIntDom extends LinearInt {
      * @param weights   weight for each variable.
      * @param rel       the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
      * @param sum       variable containing the sum of weighted variables.
+     * @deprecated LinearIntDom constraint does not use Store parameter any longer.
      */
+    @Deprecated
     public LinearIntDom(Store store, List<? extends IntVar> variables, List<Integer> weights, String rel, int sum) {
         commonInitialization(store, variables.toArray(new IntVar[variables.size()]), weights.stream().mapToInt(i -> i).toArray(), rel, sum);
+        numberId = idNumber.incrementAndGet();
+        queueIndex = 4;
+    }
+
+
+    // ================ new constructors ===================
+    /**
+     * It constructs the constraint LinearIntDom.
+     *
+     * @param list    variables which are being multiplied by weights.
+     * @param weights weight for each variable.
+     * @param rel     the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum     the sum of weighted variables.
+     */
+    public LinearIntDom(IntVar[] list, int[] weights, String rel, int sum) {
+        commonInitialization(list[0].getStore(), list, weights, rel, sum);
+        numberId = idNumber.incrementAndGet();
+        queueIndex = 4;
+    }
+
+    /**
+     * It constructs the constraint LinearIntDom.
+     *
+     * @param list    variables which are being multiplied by weights.
+     * @param weights weight for each variable.
+     * @param rel     the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum     variable containing the sum of weighted variables.
+     */
+    public LinearIntDom(IntVar[] list, int[] weights, String rel, IntVar sum) {
+        commonInitialization(sum.getStore(), Stream.concat(Arrays.stream(list), Stream.of(sum)).toArray(IntVar[]::new),
+            IntStream.concat(Arrays.stream(weights), IntStream.of(-1)).toArray(), rel, 0);
+        numberId = idNumber.incrementAndGet();
+        queueIndex = 4;
+
+    }
+    
+    /**
+     * It constructs the constraint LinearIntDom.
+     *
+     * @param variables variables which are being multiplied by weights.
+     * @param weights   weight for each variable.
+     * @param rel       the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum       variable containing the sum of weighted variables.
+     */
+    public LinearIntDom(List<? extends IntVar> variables, List<Integer> weights, String rel, int sum) {
+        commonInitialization(variables.get(0).getStore(), variables.toArray(new IntVar[variables.size()]), weights.stream().mapToInt(i -> i).toArray(), rel, sum);
         numberId = idNumber.incrementAndGet();
         queueIndex = 4;
     }
@@ -128,44 +180,39 @@ public class LinearIntDom extends LinearInt {
 
     public void propagate(int rel) {
 
-        computeInit();
 
-        do {
+	switch (rel) {
+	case eq:
+		    
+	    if (domainSize() < limitDomainPruning) {
+		computeInit();
+		pruneEq(); // domain consistency
+	    }
+	    else  
+		// bound consistency
+		super.propagate(rel);
 
-            store.propagationHasOccurred = false;
+	    break;
 
-            switch (rel) {
-                case eq:
+	case ne:
+	    if (domainSize() < limitDomainPruning) {
+		computeInit();
+		pruneNeq();
+	    
+		computeInit();
 
-                    if (domainSize() < limitDomainPruning)
-                        pruneEq(); // domain consistency
-                    else {
-                        // bound consistency
-                        pruneLtEq(b);
-                        pruneGtEq(b);
-                    }
+		if (!reified && (sumMin > b || sumMax < b))
+		    removeConstraint();
+	    }
+	    else 
+		super.propagate(rel);
+		    
+	    break;
 
-                    if (!reified && sumMax <= b && sumMin >= b)
-                        removeConstraint();
-
-                    break;
-
-                case ne:
-                    if (domainSize() < limitDomainPruning)
-                        pruneNeq();
-                    else
-                        super.pruneNeq();
-
-                    // if (!reified && sumMin == sumMax && sumMin != b)
-                    if (!reified && (sumMin > b || sumMax < b))
-                        removeConstraint();
-                    break;
-                default:
-                    System.out.println("Not implemented relation in LinearIntDom; implemented == and != only.");
-                    break;
-            }
-
-        } while (store.propagationHasOccurred);
+	default:
+	    System.out.println("Not implemented relation in LinearIntDom; implemented == and != only.");
+	    break;
+	}
     }
 
     double domainSize() {
@@ -181,87 +228,60 @@ public class LinearIntDom extends LinearInt {
 
     void pruneEq() {
 
-        if (sumMin > b || sumMax < b)
-            throw store.failException;
-
-        // System.out.println("check " + this);
         assignments = new int[l];
         support = new IntervalDomain[l];
-        for (int i = 0; i < l; i++)
-            support[i] = new IntervalDomain();
 
-        findSupport(0, 0);
-
+        findSupport(0, 0L);
+	
         // System.out.println("Variables: "+java.util.Arrays.asList(x)+" have valid assignments: " + java.util.Arrays.asList(support));
-        int f = 0, e = 0;
-        for (int i = 0; i < pos; i++) {
-            x[i].domain.in(store.level, x[i], support[i]);
-
-            f += x[i].min() * a[i];
-            e += x[i].max() * a[i];
-        }
-        for (int i = pos; i < l; i++) {
-            x[i].domain.in(store.level, x[i], support[i]);
-
-            f += x[i].max() * a[i];
-            e += x[i].min() * a[i];
-        }
-        sumMin = f;
-        sumMax = e;
+        for (int i = 0; i < l; i++)
+	    if (support[i] == null)
+		throw store.failException;
+	    else
+		x[i].domain.in(store.level, x[i], support[i]);
     }
 
     void pruneNeq() {
 
         assignments = new int[l];
         support = new IntervalDomain[l];
-        for (int i = 0; i < l; i++)
-            support[i] = new IntervalDomain();
 
-        findSupport(0, 0);
+        findSupport(0, 0L);
 
         // System.out.println("valid assignments: " + java.util.Arrays.asList(support));
 
-        int f = 0, e = 0;
-        for (int i = 0; i < pos; i++) {
-            if (support[i].singleton())
-                x[i].domain.inComplement(store.level, x[i], support[i].value());
+        for (int i = 0; i < l; i++)
+	    if (support[i] == null)
+		removeConstraint();
+	    else
+		if (support[i].singleton())
+		    x[i].domain.inComplement(store.level, x[i], support[i].value());
 
-            f += x[i].min() * a[i];
-            e += x[i].max() * a[i];
-        }
-        for (int i = pos; i < l; i++) {
-            if (support[i].singleton())
-                x[i].domain.inComplement(store.level, x[i], support[i].value());
-
-            f += x[i].max() * a[i];
-            e += x[i].min() * a[i];
-        }
-        sumMin = f;
-        sumMax = e;
     }
 
-    void findSupport(int index, int sum) {
+    void findSupport(int index, long sum) {
 
         findSupportPositive(index, sum);
 
     }
 
-    void findSupportPositive(int index, int partialSum) {
+    void findSupportPositive(int index, long partialSum) {
 
         int newIndex = index + 1;
 
         if (index == l - 1) {
 
-            int element = b - partialSum;
-            int val = element / a[index];
-            int rest = element % a[index];
-            if (rest == 0 && x[index].domain.contains(val)) {
-                assignments[index] = val;
+            long element = b - partialSum;
+            long val = element / a[index];
+            long rest = element % a[index];
+	    int valInt = (int)val;
+            if (rest == 0 && valInt == val && x[index].domain.contains(valInt)) {
+                assignments[index] = valInt;
 
                 // store assignments
                 for (int i = 0; i < l; i++) {
                     int a = assignments[i];
-                    if (support[i].getSize() == 0)
+                    if (support[i] == null)
                         support[i] = new IntervalDomain(a, a);
                     else if (support[i].max() < a)
                         support[i].addLastElement(a);
@@ -273,11 +293,11 @@ public class LinearIntDom extends LinearInt {
         }
 
         IntDomain currentDom = x[index].dom();
-        int newPartialSum = partialSum;
-        int w = a[index];
+        long newPartialSum = partialSum;
+        long w = a[index];
 
-        int lb = b - sumMax + currentDom.max() * w;
-        int ub = b - sumMin + currentDom.min() * w;
+        long lb = b - sumMax + currentDom.max() * w;
+        long ub = b - sumMin + currentDom.min() * w;
 
         if (currentDom.domainID() == IntDomain.IntervalDomainID) {
             int n = ((IntervalDomain) currentDom).size;
@@ -290,7 +310,7 @@ public class LinearIntDom extends LinearInt {
 
                 for (int element = eMin; element <= eMax; element++) {
 
-                    int elementValue = element * w;
+                    long elementValue = (long)element * w;
                     if (elementValue < lb)
                         continue; // value too low
                     else if (elementValue > ub)
@@ -311,7 +331,7 @@ public class LinearIntDom extends LinearInt {
             for (ValueEnumeration val = currentDom.valueEnumeration(); val.hasMoreElements(); ) {
                 int element = val.nextElement();
 
-                int elementValue = element * w;
+                long elementValue = (long)element * w;
                 if (elementValue < lb)
                     continue; // value too low
                 else if (elementValue > ub)
@@ -329,22 +349,23 @@ public class LinearIntDom extends LinearInt {
     }
 
 
-    void findSupportNegative(int index, int partialSum) {
+    void findSupportNegative(int index, long partialSum) {
 
         int newIndex = index + 1;
 
         if (index == l - 1) {
 
-            int element = b - partialSum;
-            int val = element / a[index];
-            int rest = element % a[index];
-            if (rest == 0 && x[index].domain.contains(val)) {
-                assignments[index] = val;
+            long element = b - partialSum;
+            long val = element / a[index];
+            long rest = element % a[index];
+	    int valInt = (int)val;
+            if (rest == 0 && valInt == val && x[index].domain.contains(valInt)) {
+                assignments[index] = valInt;
 
                 // store assignments
                 for (int i = 0; i < l; i++) {
                     int a = assignments[i];
-                    if (support[i].getSize() == 0)
+                    if (support[i] == null)
                         support[i] = new IntervalDomain(a, a);
                     else if (support[i].max() < a)
                         support[i].addLastElement(a);
@@ -356,11 +377,11 @@ public class LinearIntDom extends LinearInt {
         }
 
         IntDomain currentDom = x[index].dom();
-        int newPartialSum = partialSum;
-        int w = a[index];
+        long newPartialSum = partialSum;
+        long w = a[index];
 
-        int lb = b - sumMax + currentDom.min() * w;
-        int ub = b - sumMin + currentDom.max() * w;
+        long lb = b - sumMax + currentDom.min() * w;
+        long ub = b - sumMin + currentDom.max() * w;
 
         if (currentDom.domainID() == IntDomain.IntervalDomainID) {
             int n = ((IntervalDomain) currentDom).size;
@@ -373,7 +394,7 @@ public class LinearIntDom extends LinearInt {
 
                 for (int element = eMin; element <= eMax; element++) {
 
-                    int elementValue = element * w;
+                    long elementValue = (long)element * w;
                     if (elementValue < lb)
                         break outerloop; // value too low
                     else if (elementValue > ub)
@@ -390,7 +411,7 @@ public class LinearIntDom extends LinearInt {
             for (ValueEnumeration val = currentDom.valueEnumeration(); val.hasMoreElements(); ) {
                 int element = val.nextElement();
 
-                int elementValue = element * w;
+                long elementValue = (long)element * w;
                 if (elementValue < lb)
                     break; // value too low
                 else if (elementValue > ub)

@@ -1,4 +1,4 @@
-/**
+/*
  * Sum.java
  * This file is part of JaCoP.
  * <p>
@@ -47,7 +47,7 @@ import org.jacop.core.Var;
  * the sum from all Variable's on the list.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 

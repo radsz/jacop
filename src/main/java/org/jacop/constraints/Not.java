@@ -1,4 +1,4 @@
-/**
+/*
  * Not.java
  * This file is part of JaCoP.
  * <p>
@@ -30,34 +30,34 @@
 
 package org.jacop.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
-import org.jacop.core.Store;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.util.QueueForward;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraint "not costraint"
  *
- *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class Not extends PrimitiveConstraint implements UsesQueueVariable {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies the constraint which negation is being created.
      */
-    public PrimitiveConstraint c;
+    final public PrimitiveConstraint c;
 
-    final public QueueForward<PrimitiveConstraint> queueForward;
+    private final QueueForward<PrimitiveConstraint> queueForward;
 
     /**
      * It constructs not constraint.
+     *
      * @param c primitive constraint which is being negated.
      */
     public Not(PrimitiveConstraint c) {
@@ -68,10 +68,10 @@ public class Not extends PrimitiveConstraint implements UsesQueueVariable {
         setScope(scope);
         setConstraintScope(scope);
         this.queueForward = new QueueForward<>(c, arguments());
-	this.queueIndex = c.queueIndex;
+        this.queueIndex = c.queueIndex;
     }
 
-    @Override public void consistency(Store store) {
+    @Override public void consistency(final Store store) {
         c.notConsistency(store);
     }
 
@@ -112,7 +112,7 @@ public class Not extends PrimitiveConstraint implements UsesQueueVariable {
         return c.getNestedPruningEvent(var, true);
     }
 
-    @Override public void notConsistency(Store store) {
+    @Override public void notConsistency(final Store store) {
         c.consistency(store);
     }
 

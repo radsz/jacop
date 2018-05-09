@@ -1,4 +1,4 @@
-/**
+/*
  * XplusYeqZ.java
  * This file is part of JaCoP.
  * <p>
@@ -42,27 +42,27 @@ import org.jacop.core.Store;
  * Bound consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class XplusYeqZ extends PrimitiveConstraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies variable x in constraint x+y=z.
      */
-    public IntVar x;
+    final public IntVar x;
 
     /**
      * It specifies variable x in constraint x+y=z.
      */
-    public IntVar y;
+    final public IntVar y;
 
     /**
      * It specifies variable x in constraint x+y=z.
      */
-    public IntVar z;
+    final public IntVar z;
 
     /** It constructs constraint X+Y=Z.
      * @param x variable x.
@@ -84,7 +84,7 @@ public class XplusYeqZ extends PrimitiveConstraint {
         setScope(x, y, z);
     }
 
-    @Override public void consistency(Store store) {
+    @Override public void consistency(final Store store) {
 
         do {
 
@@ -121,8 +121,8 @@ public class XplusYeqZ extends PrimitiveConstraint {
         sumMin = Math.addExact(sumMin, y.min());
         sumMax = Math.addExact(sumMax, y.max());
 
-        sumMin = Math.subtractExact(sumMin, z.max());
-        sumMax = Math.subtractExact(sumMax, z.min());
+        Math.subtractExact(sumMin, z.max());
+        Math.subtractExact(sumMax, z.min());
     }
 
     @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
@@ -142,7 +142,7 @@ public class XplusYeqZ extends PrimitiveConstraint {
         return IntDomain.BOUND;
     }
 
-    @Override public void notConsistency(Store store) {
+    @Override public void notConsistency(final Store store) {
 
         do {
 
@@ -168,8 +168,9 @@ public class XplusYeqZ extends PrimitiveConstraint {
 
     @Override public boolean satisfied() {
 
-        return (grounded() && x.value() + y.value() == z.value());
-
+        // return (grounded() && x.value() + y.value() == z.value());
+	int xMin = x.min(), yMin = y.min(), zMin = z.min();
+	return x.singleton(xMin) && y.singleton(yMin) && z.singleton(zMin) && xMin + yMin == zMin;
     }
 
     @Override public String toString() {

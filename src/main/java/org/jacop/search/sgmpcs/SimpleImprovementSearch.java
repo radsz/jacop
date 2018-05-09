@@ -1,4 +1,4 @@
-/**
+/*
  * SimpleImprovementSearch.java
  * This file is part of JaCoP.
  * <p>
@@ -52,7 +52,7 @@ import org.jacop.search.SimpleSolutionListener;
  * enforced.
  *
  * @author krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  * @param <T> type of the variable for which choice point is being created.
  */
 

@@ -1,4 +1,4 @@
-/**
+/*
  * SimpleSolutionListener.java
  * This file is part of JaCoP.
  * <p>
@@ -30,7 +30,6 @@
 
 package org.jacop.search;
 
-import java.util.IdentityHashMap;
 import java.util.Map;
 
 import org.jacop.constraints.PrimitiveConstraint;
@@ -48,7 +47,7 @@ import org.jacop.floats.core.FloatVar;
  * functionality of search when a solution is encountered are required.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  * @param <T> type of variable being used in search. 
  */
 

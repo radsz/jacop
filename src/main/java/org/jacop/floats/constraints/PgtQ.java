@@ -1,4 +1,4 @@
-/**
+/*
  * PgtQ.java
  * This file is part of JaCoP.
  * <p>
@@ -44,7 +44,7 @@ import org.jacop.floats.core.FloatDomain;
  *
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class PgtQ extends PrimitiveConstraint {

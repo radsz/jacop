@@ -1,4 +1,4 @@
-/**
+/*
  * XplusYeqC.java
  * This file is part of JaCoP.
  * <p>
@@ -37,34 +37,33 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 
 /**
  *
  * Constraint X + Y #= C
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 public class XplusYeqC extends PrimitiveConstraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies variable x in constraint x+y=c.
      */
-    public IntVar x;
+    final public IntVar x;
 
     /**
      * It specifies variable y in constraint x+y=c.
      */
-    public IntVar y;
+    final public IntVar y;
 
     /**
      * It specifies constant c in constraint x+y=c.
      */
-    int c;
+    final int c;
 
     /**
      * It constructs the constraint X+Y=C.
@@ -85,7 +84,7 @@ public class XplusYeqC extends PrimitiveConstraint {
         setScope(x, y);
     }
 
-    @Override public void consistency(Store store) {
+    @Override public void consistency(final Store store) {
 
         do {
 
@@ -126,7 +125,7 @@ public class XplusYeqC extends PrimitiveConstraint {
         return IntDomain.ANY;
     }
 
-    @Override public void notConsistency(Store store) {
+    @Override public void notConsistency(final Store store) {
 
         do {
 
@@ -148,7 +147,9 @@ public class XplusYeqC extends PrimitiveConstraint {
     }
 
     @Override public boolean satisfied() {
-        return (grounded() && (x.min() + y.min() == c));
+        // return (grounded() && (x.min() + y.min() == c));
+	int xMin = x.min(), yMin = y.min();
+	return x.singleton(xMin) && y.singleton(yMin) && xMin + yMin == c;
     }
 
     @Override public String toString() {

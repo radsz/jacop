@@ -1,4 +1,4 @@
-/**
+/*
  * FloatIntervalDomain.java
  * This file is part of JaCoP.
  * <p>
@@ -53,7 +53,7 @@ import org.jacop.constraints.Constraint;
  *
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 public class FloatIntervalDomain extends FloatDomain implements Cloneable {

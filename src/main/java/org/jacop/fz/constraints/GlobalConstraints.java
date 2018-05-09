@@ -81,6 +81,7 @@ import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.Sequence;
 import org.jacop.constraints.Stretch;
 import org.jacop.constraints.LexOrder;
+import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.netflow.NetworkBuilder;
 import org.jacop.constraints.netflow.NetworkFlow;
 import org.jacop.constraints.Constraint;
@@ -267,7 +268,10 @@ class GlobalConstraints implements ParserTreeConstants {
     void gen_jacop_subcircuit(SimpleNode node) {
         IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
         support.pose(new Subcircuit(v));
-    }
+
+	if (support.domainConsistency && !support.options.getBoundConsistency())  // we add additional implied constraint if domain consistency is required
+            support.parameterListForAlldistincts.add(v);
+}
 
     void gen_jacop_alldiff(SimpleNode node) {
         IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
@@ -736,29 +740,38 @@ class GlobalConstraints implements ParserTreeConstants {
         support.pose(new LexOrder(x, y, false));
     }
 
+    void gen_jacop_value_precede_int(SimpleNode node) {
+	int s = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(0));
+	int t = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+        IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(2));
+
+	// no repeated varibales allowed in ValuePrecede and
+	// we create a new vector with different variables
+	IntVar[] xs = new IntVar[x.length];
+        HashSet<IntVar> varSet = new HashSet<IntVar>();
+        for (int i = 0; i < x.length; i++) {
+            if (varSet.contains(x[i])) {
+		IntVar tmp = new IntVar(store, x[i].min(), x[i].max());
+		support.pose(new org.jacop.constraints.XeqY(x[i], tmp));
+                xs[i] = tmp;
+	    }
+            else {
+                xs[i] = x[i];
+                varSet.add(x[i]);
+            }
+        }
+	
+	support.pose(new ValuePrecede(s, t, xs));
+    }
+
     void gen_jacop_bin_packing(SimpleNode node) {
         IntVar[] bin = support.getVarArray((SimpleNode) node.jjtGetChild(0));
         IntVar[] capacity = support.getVarArray((SimpleNode) node.jjtGetChild(1));
         int[] w = support.getIntArray((SimpleNode) node.jjtGetChild(2));
         int min_bin = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3));
 
-        // ---- KK, 2015-10-18
-        // bin_packing must not have duplicated variables. on x vecor
-        // could be constants that have the same value and
-        // are duplicated.
-        IntVar[] binx = new IntVar[bin.length];
-        HashSet<IntVar> varSet = new HashSet<IntVar>();
-        for (int i = 0; i < bin.length; i++) {
-            if (varSet.contains(bin[i]) && bin[i].singleton())
-                binx[i] = new IntVar(store, bin[i].min(), bin[i].max());
-            else {
-                binx[i] = bin[i];
-                varSet.add(bin[i]);
-            }
-        }
-
         //support.pose( new org.jacop.constraints.binpacking.Binpacking(binx, capacity, w) );
-        Constraint binPack = new Binpacking(binx, capacity, w, min_bin);
+        Constraint binPack = new Binpacking(bin, capacity, w, min_bin);
         support.delayedConstraints.add(binPack);
     }
 

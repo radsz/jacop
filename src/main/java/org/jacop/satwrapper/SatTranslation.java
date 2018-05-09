@@ -1,4 +1,4 @@
-/**
+/*
  * SatTranslation.java
  * This file is part of JaCoP.
  * <p>
@@ -37,12 +37,11 @@ import org.jacop.core.IntVar;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.Store;
 
-
 /**
  * SatTranslation defines SAT clauses for typical logical constraints
  *
  * @author Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 public class SatTranslation {
 

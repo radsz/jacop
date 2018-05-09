@@ -1,0 +1,15 @@
+% RUNS ON flatzinc
+% RUNS ON fzn_fd_canon
+% RUNS ON fzn_fdlp_canon
+% RUNS ON fzn_lazyfd_canon
+
+var  0..1: x1 :: output_var;
+var -1..0: x2 :: output_var;
+var  0..2: x3 :: output_var;
+var bool:  x4 :: output_var;
+constraint int_lin_ne_reif([], [], 42, true);
+constraint int_lin_ne_reif([], [], 0, false);
+constraint int_lin_ne_reif([1, 2, 3], [1, 2, 3], 0, true);
+constraint int_lin_ne_reif([1, 2, 3], [1, 2, 3], 14, false);
+constraint int_lin_ne_reif([2, 3, -1], [x1, x2, x3], 0, x4);
+solve satisfy;

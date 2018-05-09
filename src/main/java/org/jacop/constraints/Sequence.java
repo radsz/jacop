@@ -1,4 +1,4 @@
-/**
+/*
  * Sequence.java
  * This file is part of JaCoP.
  * <p>
@@ -50,7 +50,7 @@ import org.jacop.util.fsm.FSMTransition;
  * contains between min and max values from the given set.
  *
  * @author Radoslaw Szymanek and Polina Makeeva
- * @version 4.4
+ * @version 4.5
  */
 
 public class Sequence extends DecomposedConstraint<Constraint> {

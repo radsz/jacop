@@ -1,4 +1,4 @@
-/**
+/*
  * Min.java
  * This file is part of JaCoP.
  * <p>
@@ -30,43 +30,43 @@
 
 package org.jacop.constraints;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
-
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
+
 /**
  * Min constraint implements the minimum/2 constraint. It provides the minimum
  * varable from all FD varaibles on the list.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class Min extends Constraint implements SatisfiedPresent {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies a list of variables among which the minimum value is being searched for.
      */
-    public IntVar list[];
+    final public IntVar list[];
 
     /**
      * It specifies variable min, which stores the minimum value within the whole list.
      */
-    public IntVar min;
+    final public IntVar min;
 
     /**
      * It specifies the length of the list.
      */
-    int l;
+    final int l;
 
     /**
      * Defines first position of the variable that needs to be considered
@@ -75,7 +75,8 @@ public class Min extends Constraint implements SatisfiedPresent {
 
     /**
      * It constructs min constraint.
-     * @param min variable denoting the minimal value
+     *
+     * @param min  variable denoting the minimal value
      * @param list the array of variables for which the minimal value is imposed.
      */
     public Min(IntVar[] list, IntVar min) {
@@ -93,12 +94,13 @@ public class Min extends Constraint implements SatisfiedPresent {
 
         this.numberId = idNumber.incrementAndGet();
 
-        setScope( Stream.concat(Arrays.stream(list), Stream.of(min)) );
+        setScope(Stream.concat(Arrays.stream(list), Stream.of(min)));
     }
 
     /**
      * It constructs min constraint.
-     * @param min variable denoting the minimal value
+     *
+     * @param min  variable denoting the minimal value
      * @param list the array of variables for which the minimal value is imposed.
      */
     public Min(List<? extends IntVar> list, IntVar min) {
@@ -117,45 +119,41 @@ public class Min extends Constraint implements SatisfiedPresent {
         // only check for other support if that smallest value is no longer part
         // of the variable domain.
 
-        do {
+        int minValue = IntDomain.MaxInt;
+        int maxValue = IntDomain.MaxInt;
 
-            store.propagationHasOccurred = false;
+        int minMin = min.min();
+        int maxMin = min.max();
+        for (int i = start; i < l; i++) {
+            var = list[i];
 
-            int minValue = IntDomain.MaxInt;
-            int maxValue = IntDomain.MaxInt;
+            vDom = var.dom();
+            int varMin = vDom.min(), varMax = vDom.max();
 
-            int minMin = min.min();
-            int maxMin = min.max();
-            for (int i = start; i < l; i++) {
-                var = list[i];
+            if (varMin > maxMin) {
+                swap(start, i);
+                start++;
+            } else if (varMin < minMin)
+                var.domain.inMin(store.level, var, minMin);
 
-                vDom = var.dom();
-                int varMin = vDom.min(), varMax = vDom.max();
+            minValue = (minValue < varMin) ? minValue : varMin;
+            maxValue = (maxValue < varMax) ? maxValue : varMax;
+        }
 
-                if (varMin > maxMin) {
-                    swap(start, i);
-                    start++;
-                } else if (varMin < minMin)
-                    var.domain.inMin(store.level, var, minMin);
+        position.update(start);
 
-                minValue = (minValue < varMin) ? minValue : varMin;
-                maxValue = (maxValue < varMax) ? maxValue : varMax;
-            }
+        min.domain.in(store.level, min, minValue, maxValue);
 
-            position.update(start);
+        if (start == l) // all variables have their min value greater than max value of min variable
+            throw Store.failException;
 
-            min.domain.in(store.level, min, minValue, maxValue);
+        if (start == list.length - 1) { // one variable on the list is minimal; its is max < min of all other variables
+            list[start].domain.in(store.level, list[start], min.dom());
 
-            if (start == l) // all variables have their min value greater than max value of min variable
-                throw store.failException;
-            if (start == list.length - 1) { // one variable on the list is minimal; its is max < min of all other variables
-                list[start].domain.in(store.level, list[start], min.dom());
+            if (min.singleton())
+                removeConstraint();
 
-                if (min.singleton())
-                    removeConstraint();
-
-            }
-        } while (store.propagationHasOccurred);
+        }
 
     }
 
@@ -172,10 +170,10 @@ public class Min extends Constraint implements SatisfiedPresent {
     }
 
     // registers the constraint in the constraint store
-    @Override public void impose(Store store) {
+    @Override public void impose(final Store store) {
 
         super.impose(store);
-        position = new TimeStamp<Integer>(store, 0);
+        position = new TimeStamp<>(store, 0);
 
     }
 

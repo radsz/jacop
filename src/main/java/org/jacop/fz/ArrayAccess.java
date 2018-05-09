@@ -1,4 +1,4 @@
-/**
+/*
  * ArrayAccess.java
  * This file is part of JaCoP.
  * <p>
@@ -35,6 +35,7 @@ package org.jacop.fz;
  * It stores information about a single array access encountered during parsing flatzinc file. 
  *
  * @author Krzysztof Kuchcinski
+ * @version 4.5
  *
  */
 public class ArrayAccess {

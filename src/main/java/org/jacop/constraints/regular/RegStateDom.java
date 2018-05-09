@@ -1,4 +1,4 @@
-/**
+/*
  * RegStateDom.java
  * This file is part of JaCoP.
  * <p>
@@ -44,7 +44,7 @@ import org.jacop.core.ValueEnumeration;
  * to the given successor state.
  *
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class RegStateDom extends RegState {

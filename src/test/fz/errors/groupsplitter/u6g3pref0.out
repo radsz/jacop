@@ -1,0 +1,15 @@
+objective = 167;
+user_group_map1 = array1d(1..6, [1, 2, 3, 1, 2, 3]);
+user_group_map2 = array1d(1..6, [1, 1, 2, 2, 3, 3]);
+user_act_map1 = array1d(1..6, [19, 111, 211, 19, 111, 211]);
+user_act_map2 = array1d(1..6, [7845, 7845, 13, 13, 2436, 2436]);
+user_start_time_map1 = array1d(1..6, [122, 168, 118, 122, 168, 118]);
+user_start_time_map2 = array1d(1..6, [151, 189, 144, 155, 188, 148]);
+user_duration_map1 = array1d(1..6, [27, 17, 24, 27, 17, 24]);
+user_duration_map2 = array1d(1..6, [24, 24, 18, 18, 24, 24]);
+user_end_map1 = array1d(1..6, [149, 185, 142, 149, 185, 142]);
+user_end_map2 = array1d(1..6, [288, 288, 180, 180, 288, 288]);
+user_weight_map1 = array1d(1..6, [2, 0, 2, 2, 2, 2]);
+user_weight_map2 = array1d(1..6, [0, 2, 0, 0, 1, 0]);
+----------
+==========

@@ -1,7 +1,5 @@
-package org.jacop.examples.cpviz;
-
 /**
- * Sudoku.java
+ * CPvizSudoku.java
  * This file is part of org.jacop.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -34,11 +32,7 @@ package org.jacop.examples.cpviz;
  * A simple model to solve Sudoku problem.
  */
 
-/**
- *
- * A simple model to solve Sudoku problem. 
- *
- */
+package org.jacop.examples.cpviz;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -51,8 +45,11 @@ import org.jacop.core.Var;
 import org.jacop.search.*;
 
 /**
- *  @author Radoslaw Szymanek
- *  @version 4.4
+ *
+ * It shows how to visualize the solving process for Sudoku problem.
+ *
+ *  @author Krzysztof Kuchcinski
+ *  @version 4.5
  */
 
 public class CPvizSudoku {
@@ -159,9 +156,9 @@ public class CPvizSudoku {
         for (int i = 0; i < noRows * noColumns; i++)
             for (int j = 0; j < noRows * noColumns; j++)
                 if (description[i][j] == 0) {
-                    elements[i][j] = new IntVar(store, "f" + (int) (i + 1) + "," + (int) (j + 1), 1, noRows * noColumns);
+                    elements[i][j] = new IntVar(store, "f[" + (int) (i + 1) + "," + (int) (j + 1)+"]", 1, noRows * noColumns);
                 } else
-                    elements[i][j] = new IntVar(store, "f" + i + j, description[i][j], description[i][j]);
+                    elements[i][j] = new IntVar(store, "f[" + i +","+ j+"]", description[i][j], description[i][j]);
 
         // Creating constraints for rows.
         for (int i = 0; i < noRows * noColumns; i++)

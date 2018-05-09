@@ -56,16 +56,16 @@ import org.jacop.core.IntDomain;
 
 public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
 
-    int numberArgs;
+    private int numberArgs;
 
-    List<Constraint> constraints = null;
+    private List<Constraint> constraints = null;
 
-    List<Var> auxVar = new ArrayList<Var>();
+    private List<Var> auxVar = new ArrayList<>();
 
-    IntVar[] x;
-    IntVar[] y;
-    IntVar[] lx;
-    IntVar[] ly;
+    final IntVar[] x;
+    final IntVar[] y;
+    final IntVar[] lx;
+    final IntVar[] ly;
 
     /**
      * It specifies a diff constraint.

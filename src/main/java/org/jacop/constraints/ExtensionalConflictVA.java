@@ -1,4 +1,4 @@
-/**
+/*
  * ExtensionalConflictVA.java
  * This file is part of JaCoP.
  * <p>
@@ -46,7 +46,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * efficiency.
  *
  * @author Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class ExtensionalConflictVA extends Constraint implements UsesQueueVariable, Stateful {
@@ -351,7 +351,7 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
         // backtracking has occurred (removeLevel) therefore
         // restart tuples can not be reused.
         supports = new int[list.length][][];
-        variableQueue = new LinkedHashSet<Var>();
+        variableQueue.clear();
 
     }
 

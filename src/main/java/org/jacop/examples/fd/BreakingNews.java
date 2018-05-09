@@ -1,4 +1,4 @@
-/**
+/*
  * BreakingNews.java
  * This file is part of JaCoP.
  * <p>
@@ -46,6 +46,7 @@ import org.jacop.core.Store;
  * It solves a simple logic puzzle about reporters breaking news stories.
  *
  * @author Marcin Chrapek, Miroslaw Klos, and Radoslaw Szymanek
+ * @version 4.5
  *
  * Logic Puzzle : Breaking News.
  *

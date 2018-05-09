@@ -1,4 +1,4 @@
-/**
+/*
  * XeqY.java
  * This file is part of JaCoP.
  * <p>
@@ -42,22 +42,22 @@ import org.jacop.core.Store;
  * Domain consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class XeqY extends PrimitiveConstraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies a left hand variable in equality constraint.
      */
-    public IntVar x;
+    final public IntVar x;
 
     /**
      * It specifies a right hand variable in equality constraint.
      */
-    public IntVar y;
+    final public IntVar y;
 
     /**
      * It constructs constraint X = Y.
@@ -76,7 +76,7 @@ public class XeqY extends PrimitiveConstraint {
         setScope(x, y);
     }
 
-    @Override public void consistency(Store store) {
+    @Override public void consistency(final Store store) {
 
         do {
 
@@ -107,11 +107,10 @@ public class XeqY extends PrimitiveConstraint {
         return IntDomain.ANY;
     }
 
-    @Override public void notConsistency(Store store) {
+    @Override public void notConsistency(final Store store) {
 
         if (y.singleton())
             x.domain.inComplement(store.level, x, y.value());
-
 
         if (x.singleton())
             y.domain.inComplement(store.level, y, x.value());
@@ -119,13 +118,13 @@ public class XeqY extends PrimitiveConstraint {
     }
 
     @Override public boolean notSatisfied() {
-
         return !x.domain.isIntersecting(y.domain);
-
     }
 
     @Override public boolean satisfied() {
-        return grounded() && x.min() == y.min();
+        // return grounded() && x.min() == y.min();  // inefficient grounded() :(
+	int xMin = x.min();
+	return x.singleton(xMin) && y.singleton(xMin);
     }
 
     @Override public String toString() {

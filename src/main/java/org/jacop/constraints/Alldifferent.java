@@ -1,4 +1,4 @@
-/**
+/*
  * Alldifferent.java
  * This file is part of JaCoP.
  * <p>
@@ -43,19 +43,17 @@ import org.jacop.core.*;
  * partial consistency technique.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class Alldifferent extends Constraint implements UsesQueueVariable, SatisfiedPresent {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies a list of variables which must take different values.
      */
     public IntVar[] list;
-
-    int stamp = 0;
 
     LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
 
@@ -134,7 +132,7 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
             if (!list[i].singleton())
                 return false;
 
-        Set<Integer> values = new HashSet<Integer>();
+        Set<Integer> values = new HashSet<>();
 
         for (IntVar aList : list)
             if (!values.add(aList.value()))
@@ -195,7 +193,7 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
 
     @Override public String toString() {
 
-        StringBuffer result = new StringBuffer(id());
+        StringBuilder result = new StringBuilder(id());
 
         result.append(" : alldifferent([");
 

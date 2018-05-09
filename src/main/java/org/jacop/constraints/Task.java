@@ -1,4 +1,4 @@
-/**
+/*
  * Task.java
  * This file is part of JaCoP.
  * <p>
@@ -38,12 +38,12 @@ import org.jacop.core.IntervalDomain;
  * Represents tasks for cumulative constraint
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 class Task {
 
-    IntVar start, dur, res;
+    final IntVar start, dur, res;
 
     Task(IntVar start, IntVar duration, IntVar resourceUsage) {
         this.start = start;

@@ -1,4 +1,4 @@
-/**
+/*
  * LDS.java
  * This file is part of JaCoP.
  * <p>
@@ -38,7 +38,7 @@ import org.jacop.core.Var;
  * search to change your depth first search into limited discrepancy search.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  * @param <T> type of variable being used in the search.
  */
 

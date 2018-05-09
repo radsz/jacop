@@ -1,4 +1,4 @@
-/**
+/*
  * SleepingArrangements.java
  * This file is part of JaCoP.
  * <p>
@@ -49,6 +49,7 @@ import org.jacop.core.Store;
  * It is a simple logic puzzle about sleeping arrangements. 
  *
  * @author Radoslaw Szymanek
+ * @version 4.5
  *
  * The Dillies have five teenaged children, two boys named Ollie and
  * Rollie, and three girls named Mellie, Nellie, and Pollie. Each is a

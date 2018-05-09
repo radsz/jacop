@@ -1,4 +1,4 @@
-/**
+/*
  * WolfGoatCabbage.java
  * This file is part of JaCoP.
  * <p>
@@ -35,7 +35,7 @@ import java.util.ArrayList;
 
 import org.jacop.constraints.ExtensionalSupportVA;
 import org.jacop.constraints.Reified;
-import org.jacop.constraints.SumInt;
+import org.jacop.constraints.SumBool;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XneqY;
 import org.jacop.core.IntVar;
@@ -46,6 +46,7 @@ import org.jacop.core.Store;
  * A simple logic problem of transporting wolf, goat, and cabbage over the river.  
  *
  * @author Radoslaw Szymanek
+ * @version 4.5
  *
  * We need to transfer the cabbage, the goat and the wolf from one bank of the river to 
  * the other bank. But there is only one seat available on his boat !
@@ -134,7 +135,7 @@ public class WolfGoatCabbage extends ExampleFD {
             IntVar[] b = {bw[i - 1], bg[i - 1], bc[i - 1]};
 
             IntVar numberOnBoat = new IntVar(store, "numberOnBoatInMove" + i, 0, 1);
-            store.impose(new SumInt(store, b, "==", numberOnBoat));
+            store.impose(new SumBool(b, "==", numberOnBoat));
 
             store.impose(new XneqY(wolf[i], goat[i]));
             store.impose(new XneqY(goat[i], cabbage[i]));

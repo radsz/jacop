@@ -1,4 +1,4 @@
-/**
+/*
  * Alldiff.java
  * This file is part of JaCoP.
  * <p>
@@ -50,7 +50,7 @@ import org.jacop.core.Var;
  * It extends basic functionality of Alldifferent constraint.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class Alldiff extends Alldifferent {
@@ -64,11 +64,11 @@ public class Alldiff extends Alldifferent {
 
     int[] min, max, u;
 
-    Comparator<IntVar> maxVariable = new VariablemaxComparator<IntVar>();
+    private Comparator<IntVar> maxVariable = (o1, o2) -> (o1.max() - o2.max());
 
-    Comparator<IntVar> minVariable = new VariableminComparator<IntVar>();
+    private Comparator<IntVar> minVariable = (o1, o2) -> (o2.min() - o1.min());
 
-    protected IntVar[] listAlldiff;
+    IntVar[] listAlldiff;
 
     protected Alldiff() {
     }
@@ -121,7 +121,7 @@ public class Alldiff extends Alldifferent {
             while (!variableQueue.isEmpty()) {
 
                 LinkedHashSet<IntVar> fdvs = variableQueue;
-                variableQueue = new LinkedHashSet<IntVar>();
+                variableQueue = new LinkedHashSet<>();
 
                 for (IntVar Q : fdvs)
                     if (Q.singleton()) {
@@ -155,7 +155,7 @@ public class Alldiff extends Alldifferent {
 
     }
 
-    void minPass() {
+    private void minPass() {
 
         Arrays.sort(listAlldiff, minVariable);
 
@@ -168,7 +168,7 @@ public class Alldiff extends Alldifferent {
             insertMin(i);
     }
 
-    void maxPass() {
+    private void maxPass() {
 
         Arrays.sort(listAlldiff, maxVariable);
 
@@ -181,7 +181,7 @@ public class Alldiff extends Alldifferent {
             insertMax(i);
     }
 
-    void insertMax(int i) {
+    private void insertMax(int i) {
         u[i] = min[i];
 
         int bestMin = IntDomain.MaxInt + 1;
@@ -204,14 +204,14 @@ public class Alldiff extends Alldifferent {
             incrMin(bestMin, max[i], i);
     }
 
-    void incrMin(int a, int b, int i) {
+    private void incrMin(int a, int b, int i) {
         for (int j = i + 1; j < min.length; j++)
             if (min[j] >= a) {
                 listAlldiff[j].domain.inMin(store.level, listAlldiff[j], b + 1);
             }
     }
 
-    void insertMin(int i) {
+    private void insertMin(int i) {
         u[i] = max[i];
 
         int bestMax = IntDomain.MinInt - 1;
@@ -234,7 +234,7 @@ public class Alldiff extends Alldifferent {
             decrMax(min[i], bestMax, i);
     }
 
-    void decrMax(int a, int b, int i) {
+    private void decrMax(int a, int b, int i) {
         for (int j = i + 1; j < max.length; j++)
             if (max[j] <= b) {
                 listAlldiff[j].domain.inMax(store.level, listAlldiff[j], a - 1);
@@ -243,8 +243,8 @@ public class Alldiff extends Alldifferent {
 
     @Override public String toString() {
 
-        StringBuffer result = new StringBuffer(id());
-        result.append(" : alldiff([");
+        StringBuilder result = new StringBuilder(id());
+        result.append(" : Alldiff([");
 
         for (int i = 0; i < listAlldiff.length; i++) {
             result.append(listAlldiff[i]);
@@ -263,26 +263,6 @@ public class Alldiff extends Alldifferent {
         super.queueVariable(level, var);
     }
 
-    private static class VariablemaxComparator<T extends IntVar> implements Comparator<T>, java.io.Serializable {
-
-        VariablemaxComparator() {
-        }
-
-        public int compare(T o1, T o2) {
-            return (o1.max() - o2.max());
-        }
-    }
-
-
-  private static class VariableminComparator<T extends IntVar> implements Comparator<T>, java.io.Serializable {
-
-        VariableminComparator() {
-        }
-
-        public int compare(T o1, T o2) {
-            return (o2.min() - o1.min());
-        }
-    }
 
 }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * SimpleBacktrackableManager.java
  * This file is part of JaCoP.
  * <p>
@@ -40,7 +40,7 @@ import org.jacop.util.SparseSet;
  * store level. 
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 public class SimpleBacktrackableManager implements BacktrackableManager {

@@ -1,4 +1,4 @@
-/**
+/*
  * MutableNetwork.java
  * This file is part of JaCoP.
  * <p>
@@ -36,7 +36,7 @@ import org.jacop.constraints.netflow.simplex.Arc;
  * Interface to the network used by VarHandlers.
  *
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  *
  */
 

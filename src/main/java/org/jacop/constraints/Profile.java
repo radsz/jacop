@@ -1,4 +1,4 @@
-/**
+/*
  * Profile.java
  * This file is part of JaCoP.
  * <p>
@@ -39,7 +39,7 @@ import java.util.Iterator;
  * current value.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class Profile extends ArrayList<ProfileItem> {

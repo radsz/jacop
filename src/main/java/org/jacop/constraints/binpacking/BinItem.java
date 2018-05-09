@@ -37,14 +37,14 @@ import org.jacop.core.IntVar;
  * and its weight. 
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 class BinItem {
 
-    public IntVar bin;
+    final public IntVar bin;
 
-    public int weight;
+    final public int weight;
 
     BinItem(IntVar bin, int weight) {
 

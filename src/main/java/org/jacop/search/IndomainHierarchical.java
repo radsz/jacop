@@ -1,4 +1,4 @@
-/**
+/*
  * IndomainHierarchical.java
  * This file is part of JaCoP.
  * <p>
@@ -42,7 +42,7 @@ import org.jacop.core.Var;
  *
  * @author Radoslaw Szymanek 
  *
- * @version 4.4
+ * @version 4.5
  * @param <T> type of variable being used in the search.
  */
 

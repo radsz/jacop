@@ -1,4 +1,4 @@
-/**
+/*
  * BoundDomain.java
  * This file is part of JaCoP.
  * <p>
@@ -41,7 +41,7 @@ import org.jacop.constraints.Constraint;
  *
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 public class BoundDomain extends IntDomain implements Cloneable {
@@ -153,7 +153,7 @@ public class BoundDomain extends IntDomain implements Cloneable {
         max = 0;
     }
 
-    public IntDomain previousDomain() {
+    public IntDomain getPreviousDomain() {
         return previousDomain;
     }
 

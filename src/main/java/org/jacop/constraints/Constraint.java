@@ -1,4 +1,4 @@
-/**
+/*
  * Constraint.java
  * This file is part of JaCoP.
  * <p>
@@ -48,12 +48,13 @@ import static java.util.stream.Collectors.joining;
  * notSatisfiability, enforce consistency.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 3.1
+ * @version 4.5
  */
 
 public abstract class Constraint extends DecomposedConstraint<Constraint> {
 
-    protected Constraint() {}
+    protected Constraint() {
+    }
 
     protected Constraint(Var[]... vars) {
         setScope(vars);
@@ -158,12 +159,11 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
                 return possibleEvent;
         }
 
-        if (constraintScope != null && ! constraintScope.isEmpty()) {
+        if (constraintScope != null && !constraintScope.isEmpty()) {
 
-            int eventAcross = constraintScope.stream()
-                .filter( i -> i.arguments().contains(var))
-                .mapToInt( i -> i.getNestedPruningEvent(var, true))
-                .max().orElseGet(() -> Integer.MIN_VALUE);
+            int eventAcross =
+                constraintScope.stream().filter(i -> i.arguments().contains(var)).mapToInt(i -> i.getNestedPruningEvent(var, true)).max()
+                    .orElseGet(() -> Integer.MIN_VALUE);
 
             if (eventAcross != Integer.MIN_VALUE)
                 return eventAcross;
@@ -203,9 +203,13 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
             constraintScope.stream().forEach(i -> i.include(store));
         }
         if (this instanceof UsesQueueVariable)
-            arguments().stream().forEach( i -> queueVariable(store.level, i));
-        if (this instanceof Stateful)
-            store.registerRemoveLevelListener( (Stateful) this);
+            arguments().stream().forEach(i -> queueVariable(store.level, i));
+        if (this instanceof Stateful) {
+            Stateful c = (Stateful)this;
+            if (c.isStateful()) {
+                store.registerRemoveLevelListener(c);
+            }
+        }
 
     }
 
@@ -240,10 +244,10 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
      * It removes the constraint by removing this constraint from all variables.
      */
     public void removeConstraint() {
-        // arguments().stream().filter( i -> ! i.singleton() ).forEach(i -> i.removeConstraint(this));
-	for (Var v : arguments())
-	    if (! v.singleton())
-		v.removeConstraint(this);
+        // Stream version is not used due to large performance overhead.
+        for (Var v : arguments())
+            if (!v.singleton())
+                v.removeConstraint(this);
     }
 
 
@@ -251,13 +255,12 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
 
     public void setWatchedVariableGrounded(Var var) {
         watchedVariableGrounded = var;
-    };
+    }
 
     public boolean watchedVariableGrounded() {
         if (watchedVariableGrounded == null || watchedVariableGrounded.singleton()) {
             return true;
-        }
-        else {
+        } else {
             return false;
         }
     }
@@ -269,7 +272,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
      */
     public boolean grounded() {
 
-        if (! watchedVariableGrounded())
+        if (!watchedVariableGrounded())
             return false;
 
         Optional<Var> stillNotGrounded = arguments().stream().filter(i -> !i.singleton()).findFirst();
@@ -277,35 +280,30 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
         if (stillNotGrounded.isPresent()) {
             setWatchedVariableGrounded(stillNotGrounded.get());
             return false;
-        }
-        else {
+        } else {
             return true;
         }
-        
+
     }
 
-
     /**
-     * It checks if the constraint has all variables in its scope grounded (singletons).
-     *
+     * It checks if provided variables are grounded (singletons).
+     * @param vars variables to be checked if they are grounded.
      * @return true if all variables in constraint scope are singletons, false otherwise.
      */
     public boolean grounded(Var[] vars) {
-        return ! Arrays.stream(vars).filter(i -> !i.singleton()).findFirst().isPresent();
+        return !Arrays.stream(vars).filter(i -> !i.singleton()).findFirst().isPresent();
     }
-
 
     /**
      * It produces a string representation of a constraint state.
      */
     @Override public String toString() {
-
-        return arguments().stream().map( i -> i.toString() ).collect(joining(", ", id() + "(", ")"));
-
-    };
+        return arguments().stream().map(i -> i.toString()).collect(joining(", ", id() + "(", ")"));
+    }
 
     public static String intArrayToString(int[] array) {
-        return Arrays.stream(array).mapToObj( i -> Integer.toString(i) ).collect(joining(", ", "[", "]"));
+        return Arrays.stream(array).mapToObj(i -> Integer.toString(i)).collect(joining(", ", "[", "]"));
     }
 
     /**
@@ -452,13 +450,27 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     }
 
     static int toInt(final float f) {
-
         if (f >= (float) Integer.MIN_VALUE && f <= (float) Integer.MAX_VALUE) {
             return (int) f;
         } else {
             throw new ArithmeticException("Overflow occurred " + f);
         }
-
     }
 
+    static int toInt(final double f) {
+        if (f >= (double) Integer.MIN_VALUE && f <= (double) Integer.MAX_VALUE) {
+            return (int) f;
+        } else {
+            throw new ArithmeticException("Overflow occurred " + f);
+        }
+    }
+    
+    int long2int(long value) {
+	if (value > (long)Integer.MAX_VALUE)
+	    return Integer.MAX_VALUE;
+	else if (value < (long)Integer.MIN_VALUE)
+	    return Integer.MIN_VALUE;
+	else
+	    return (int)value;
+    }
 }

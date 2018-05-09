@@ -1,4 +1,4 @@
-/**
+/*
  * Diff.java
  * This file is part of JaCoP.
  * <p>
@@ -33,6 +33,7 @@ package org.jacop.constraints;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
@@ -45,25 +46,26 @@ import org.jacop.core.*;
  * does not use sophisticated techniques for efficient backtracking.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 3.1
+ * @version 4.5
  */
 
 public class Diff extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
-    static final boolean trace = false, traceNarr = false;
+    protected static final boolean trace = false;
+
+    private static final boolean traceNarr = false;
 
     Store currentStore = null;
 
-    int minPosition = 0;
+    private int minPosition = 0;
     int stamp = 0;
 
     // use to collect information on possible length of rectangles for pruning
-    List<Integer> durMax;
-    //boolean durMaxDecided = false;
+    private List<Integer> durMax;
 
-    Set<IntVar> variableQueue = new HashSet<IntVar>();
+    Set<IntVar> variableQueue = new HashSet<>();
 
     /**
      * It specifies the list of rectangles which are of interest for this diff constraint.
@@ -73,7 +75,13 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     /**
      * It specifies if the constraint should compute and use the profile.
      */
-    public boolean doProfile = true;
+    boolean doProfile = true;
+
+    protected Function<Integer, Comparator<IntRectangle>> dimIthMinComparator = (dim -> (IntRectangle o1, IntRectangle o2) -> {
+        int v1 = o1.origin[dim];
+        int v2 = o2.origin[dim];
+        return v1 - v2;
+    });
 
     protected Diff() {
     }
@@ -224,8 +232,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
             store.propagationHasOccurred = false;
 
             Set<IntVar> fdvs = variableQueue;
-            variableQueue = new HashSet<IntVar>();
-            // System.out.println(fdvs);
+            variableQueue = new HashSet<>();
             narrowRectangles(fdvs);
 
         } while (store.propagationHasOccurred);
@@ -243,8 +250,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
         return contains;
     }
 
-    boolean findRectangles(Rectangle r, List<IntRectangle> UsedRect, List<Rectangle> ProfileCandidates,
-        Set<IntVar> fdvQueue) {
+    private boolean findRectangles(Rectangle r, List<IntRectangle> UsedRect, List<Rectangle> ProfileCandidates, Set<IntVar> fdvQueue) {
 
         boolean contains = false, checkArea = false;
 
@@ -434,7 +440,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
         return !(min1 >= max2 || max1 <= min2);
     }
 
-    Pair minForbiddenInterval(int start, int i, Rectangle r, List<IntRectangle> ConsideredRect) {
+    private Pair minForbiddenInterval(int start, int i, Rectangle r, List<IntRectangle> ConsideredRect) {
 
         if (notFit(i, r, ConsideredRect, start)) {
             // System.out.println("New start = " + start + ".." + (int)(start +
@@ -444,17 +450,17 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
             return new Pair(-1, -1);
     }
 
-    void narrowIth(int i, Rectangle r, List<IntRectangle> UsedRect, List<Rectangle> ProfileCandidates) {
+    private void narrowIth(int i, Rectangle r, List<IntRectangle> UsedRect, List<Rectangle> ProfileCandidates) {
         int s;
         int rLengthIMin = r.length[i].min();
 
-        durMax = new ArrayList<Integer>();
+        durMax = new ArrayList<>();
         durMax.add(IntDomain.MaxInt);
 
         if (ProfileCandidates.size() != 0 && doProfile)
             profileNarrowing(i, r, ProfileCandidates);
 
-        durMax = new ArrayList<Integer>();
+        durMax = new ArrayList<>();
         durMax.add(IntDomain.MaxInt);
 
         if (UsedRect.size() != 0) {
@@ -463,9 +469,9 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
             UsedRectArray = UsedRect.toArray(UsedRectArray);
 
-            TreeSet<IntRectangle> starts = new TreeSet<IntRectangle>(new DimIMinComparator<IntRectangle>(i));
-            for (IntRectangle m : UsedRectArray)
-                starts.add(m);
+            TreeSet<IntRectangle> starts = new TreeSet<>( dimIthMinComparator.apply(i) );
+
+            Collections.addAll(starts, UsedRectArray);
 
             int sizeOfstartsOfR = (r.origin[0].domain.noIntervals() > r.origin[1].domain.noIntervals()) ?
                 r.origin[0].domain.noIntervals() :
@@ -486,13 +492,9 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
                         startsOfR[n].add(rOrigin.min(), 0);
                 }
             }
-            for (IntRectangle rect : startsOfR) {
-                // System.out.print(rect+" ");
-                starts.add(rect);
-            }
-            // System.out.println();
+            Collections.addAll(starts, startsOfR);
 
-            List<IntRectangle> ConsideredRect = new ArrayList<IntRectangle>();
+            List<IntRectangle> ConsideredRect = new ArrayList<>();
             for (IntRectangle ir : starts) {
                 s = ir.origin[i];
                 // System.out.println("*** start = " + s);
@@ -562,9 +564,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     }
 
 
-    void computeNewMaxDuration(IntVar start, int durMin, int excludeMin, int excludeMax) {
-
-        // System.out.println ("+++ "+start + " exclude ["+ excludeMin + "," +excludeMax+ "]");
+    private void computeNewMaxDuration(IntVar start, int durMin, int excludeMin, int excludeMax) {
 
         int dMax = IntDomain.MaxInt;
 
@@ -604,8 +604,8 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
     void narrowRectangles(Set<IntVar> fdvQueue) {
         boolean needToNarrow = false;
-        List<IntRectangle> UsedRect = new ArrayList<IntRectangle>();
-        List<Rectangle> ProfileCandidates = new ArrayList<Rectangle>();
+        List<IntRectangle> UsedRect = new ArrayList<>();
+        List<Rectangle> ProfileCandidates = new ArrayList<>();
 
         for (Rectangle r : rectangles) {
             boolean settled = true, minLengthEq0 = false;
@@ -645,7 +645,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
         }
     }
 
-    boolean notFit(int i, Rectangle r, List<IntRectangle> ConsideredRect, int barierPosition) {
+    private boolean notFit(int i, Rectangle r, List<IntRectangle> ConsideredRect, int barierPosition) {
         Profile barrier = new Profile((short) Profile.diffn);
         int minimalAfter = 0;
         int j = 0;
@@ -705,7 +705,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
                     if (maxJ > last.max) // exist free space after last
                         // obstacle
                         barrier.addToProfile(last.max, maxJ, minimalAfter);
-                    List<Interval> toAdd = new ArrayList<Interval>();
+                    List<Interval> toAdd = new ArrayList<>();
                     for (int m = 0; m < barrier.size() - 1; m++) {
                         ProfileItem p = barrier.get(m);
                         ProfileItem pNext = barrier.get(m + 1);
@@ -721,8 +721,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
                     // System.out.println("minimalAfter = " + minimalAfter);
 
                     int minSizeAfterBarier = IntDomain.MaxInt;
-                    for (int m = 0; m < barrier.size(); m++) {
-                        ProfileItem p = barrier.get(m);
+                    for (ProfileItem p : barrier) {
                         if (p.value < minSizeAfterBarier) {
                             if (p.value == minimalAfter && p.max - p.min >= durJ) {
                                 minSizeAfterBarier = minimalAfter;
@@ -748,7 +747,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
         return excludedState;
     }
 
-    void profileCheckInterval(Store store, DiffnProfile Profile, int limit, IntVar Start, IntVar Duration, int iMin, int i_max,
+    private void profileCheckInterval(Store store, DiffnProfile Profile, int limit, IntVar Start, IntVar Duration, int iMin, int i_max,
         IntVar Resources) {
 
         int dur = Duration.min();
@@ -885,7 +884,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
     @Override public String toString() {
 
-        StringBuffer result = new StringBuffer(id());
+        StringBuilder result = new StringBuilder(id());
 
         result.append(" : diff (");
 
@@ -898,26 +897,6 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
         }
         return result.append(")").toString();
     }
-
-  static class DimIMinComparator<T extends IntRectangle> implements Comparator<T>, java.io.Serializable {
-
-        int i;
-
-        DimIMinComparator() {
-        }
-
-        DimIMinComparator(int dimension) {
-            i = dimension;
-        }
-
-        public int compare(T o1, T o2) {
-            int v1 = o1.origin[i];
-            int v2 = o2.origin[i];
-            return v1 - v2;
-        }
-
-    }
-
 
     static class Pair {
         int Min, Max;

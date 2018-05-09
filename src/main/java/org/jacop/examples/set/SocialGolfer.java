@@ -1,4 +1,4 @@
-/**
+/*
  * SocialGolfer.java
  * This file is part of JaCoP.
  * <p>
@@ -57,7 +57,7 @@ import org.jacop.set.search.MinLubCard;
  * It is a Social Golfer example based on set variables.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 public class SocialGolfer extends ExampleSet {
@@ -242,7 +242,7 @@ public class SocialGolfer extends ExampleSet {
             System.arraycopy(weights, 0, ws, 0, n);
             vs[n] = v[i];
             ws[n] = -1;
-            store.impose(new LinearInt(store, vs, ws, "==", 0));
+            store.impose(new LinearInt(vs, ws, "==", 0));
             // store.impose(new SumWeight(var[i], weights, v[i]));
         }
 

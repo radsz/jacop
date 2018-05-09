@@ -1,4 +1,4 @@
-/**
+/*
  * MineSweeper.java
  * This file is part of JaCoP.
  * <p>
@@ -50,6 +50,7 @@ import org.jacop.search.SmallestDomain;
  * It models and solves Minesweeper problem.
  *
  * @author Hakan Kjellerstrand (hakank@bonetmail.com) and Radoslaw Szymanek
+ * @version 4.5
  *
  * This is a port of Hakan's MiniZinc model
  * http://www.hakank.org/minizinc/minesweeper.mzn
@@ -146,7 +147,7 @@ public class MineSweeper extends ExampleFD {
                             }
                         }
                     }
-                    store.impose(new SumInt(store, lst, "==", game[i][j]));
+                    store.impose(new SumInt(lst, "==", game[i][j]));
 
                 } // end if problem[i][j] > X
 
@@ -382,9 +383,7 @@ public class MineSweeper extends ExampleFD {
         System.out.println("readFile(" + file + ")");
         int lineCount = 0;
 
-        try {
-
-            BufferedReader inr = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
+        try(BufferedReader inr = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"))) {
 
             String str;
             while ((str = inr.readLine()) != null && str.length() > 0) {

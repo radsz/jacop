@@ -1,4 +1,4 @@
-/**
+/*
  * IntervalDomain.java
  * This file is part of JaCoP.
  * <p>
@@ -45,7 +45,7 @@ import java.util.Random;
  *
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 public class IntervalDomain extends IntDomain implements Cloneable {
@@ -75,7 +75,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
         // throw new RuntimeException("Do not use.");
     }
 
-    public IntDomain previousDomain() {
+    public IntDomain getPreviousDomain() {
         return previousDomain;
     }
 
@@ -4006,7 +4006,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
                     assert checkInvariants() == null : checkInvariants();
 
-                    if (var.singleton())
+                    if (singleton())
                         var.domainHasChanged(IntDomain.GROUND);
                     else if (max() < min)
                         var.domainHasChanged(IntDomain.BOUND);
@@ -4131,7 +4131,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
                     assert checkInvariants() == null : checkInvariants();
                     assert result.checkInvariants() == null : result.checkInvariants();
 
-                    if (var.singleton())
+                    if (result.singleton())
                         var.domainHasChanged(IntDomain.GROUND);
                     else if (result.max() < min)
                         var.domainHasChanged(IntDomain.BOUND);
@@ -4190,7 +4190,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
                     assert checkInvariants() == null : checkInvariants();
                     assert result.checkInvariants() == null : result.checkInvariants();
 
-                    if (var.singleton())
+                    if (result.singleton())
                         var.domainHasChanged(IntDomain.GROUND);
                     else if (result.max() < min || max < result.min())
                         var.domainHasChanged(IntDomain.BOUND);

@@ -49,7 +49,7 @@ import java.util.stream.Stream;
  * algorithm.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 class CumulativePrimary extends Constraint {
@@ -58,23 +58,26 @@ class CumulativePrimary extends Constraint {
 
     private static final boolean debug = false, debugNarr = false;
 
-    private EventIncComparator<Event> eventComparator = new EventIncComparator<>();
+    private Comparator<Event> eventComparator = (o1, o2) -> {
+        int dateDiff = o1.date() - o2.date();
+        return (dateDiff == 0) ? (o1.type() - o2.type()) : dateDiff;
+    };
 
     /**
      * start times of tasks
      */
-    private IntVar[] start;
+    final private IntVar[] start;
 
     /**
      * All durations and resources of the constraint
      */
-    private int[] dur;
-    private int[] res;
+    final private int[] dur;
+    final private int[] res;
 
     /**
      * It specifies the limit of the profile of cumulative use of resources.
      */
-    public IntVar limit;
+    final public IntVar limit;
 
     /**
      * It creates a cumulative constraint.
@@ -146,7 +149,7 @@ class CumulativePrimary extends Constraint {
 
     @Override public String toString() {
 
-        StringBuffer result = new StringBuffer(id());
+        StringBuilder result = new StringBuilder(id());
 
         result.append(" : cumulativePrimary([ ");
         for (int i = 0; i < start.length - 1; i++)
@@ -173,7 +176,8 @@ class CumulativePrimary extends Constraint {
         for (int i = 0; i < start.length; i++) {
 
             // mandatory task parts to create profile
-            int min = start[i].max(), max = start[i].min() + dur[i];
+            int min = start[i].max(), // t.lst()
+		max = start[i].min() + dur[i];  // t.ect()
             if (min < max) {
                 es[j++] = new Event(profile, i, min, res[i]);
                 es[j++] = new Event(profile, i, max, -res[i]);
@@ -188,12 +192,14 @@ class CumulativePrimary extends Constraint {
         for (int i = 0; i < start.length; i++) {
             // overlapping tasks for pruning
             // from start to end
-            int min = start[i].min(); //t.est();
-            int max = start[i].max() + dur[i]; //t.lct();
-            if (!(min > maxProfile || max < minProfile)) {
-                es[j++] = new Event(pruneStart, i, min, res[i]);
-                es[j++] = new Event(pruneEnd, i, max, -res[i]);
-            }
+	    if (!start[i].singleton()) {  // task that are ground are considered for manadatory tasks
+		int min = start[i].min(); //t.est();
+		int max = start[i].max() + dur[i]; //t.lct();
+		if (!(min > maxProfile || max < minProfile)) {
+		    es[j++] = new Event(pruneStart, i, min, 0); // res[i]);
+		    es[j++] = new Event(pruneEnd, i, max, 0);   // -res[i]);
+		}
+	    }
         }
 
         int N = j;
@@ -236,22 +242,18 @@ class CumulativePrimary extends Constraint {
                             System.out.println("Profile at " + e.date() + ": " + curProfile);
 
                         // prune limit variable
-                        if (curProfile > limit.min())
+                        if (curProfile > limit.min()) 
                             limit.domain.inMin(store.level, limit, curProfile);
 
                         for (int ti = tasksToPrune.nextSetBit(0); ti >= 0; ti = tasksToPrune.nextSetBit(ti + 1)) {
 
-                            int profileValue = curProfile;
-                            if (inProfile[ti])
-                                profileValue -= res[ti];
-
                             // ========= Pruning start variable
                             if (startExcluded[ti] == Integer.MAX_VALUE) {
-                                if (limitMax - profileValue < res[ti]) {
+                                if (!inProfile[ti] && limitMax - curProfile < res[ti]) {
                                     startExcluded[ti] = e.date() - dur[ti] + 1;
                                 }
                             } else //startExcluded[ti] != Integer.MAX_VALUE
-                                if (limitMax - profileValue >= res[ti]) {
+                                if (inProfile[ti] || limitMax - curProfile >= res[ti]) {
                                     // end of excluded interval
 
                                     if (debugNarr)
@@ -272,15 +274,11 @@ class CumulativePrimary extends Constraint {
                     break;
 
                 case pruneStart:  // =========== start of a task ===========
-                    int profileValue = curProfile;
                     int ti = e.index;
 
-                    if (inProfile[ti])
-                        profileValue -= res[ti];
-
-                    // ========= for start pruning
-                    if (limitMax - profileValue < res[ti])
-                        startExcluded[ti] = e.date();
+		    // ========= for start pruning
+		    if (!inProfile[ti] && limitMax - curProfile < res[ti])
+			startExcluded[ti] = e.date();
 
                     tasksToPrune.set(ti);
                     break;
@@ -355,15 +353,4 @@ class CumulativePrimary extends Constraint {
         }
     }
 
-
-    private static class EventIncComparator<T extends Event> implements Comparator<T>, java.io.Serializable {
-
-        EventIncComparator() {
-        }
-
-        public int compare(T o1, T o2) {
-            int dateDiff = o1.date() - o2.date();
-            return (dateDiff == 0) ? (o1.type() - o2.type()) : dateDiff;
-        }
-    }
 }

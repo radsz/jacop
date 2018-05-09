@@ -1,4 +1,4 @@
-/**
+/*
  * Among.java
  * This file is part of JaCoP.
  * <p>
@@ -50,29 +50,29 @@ import org.jacop.core.*;
  * backtracking) to improve the constraint further. 
  *
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class Among extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
-    static final boolean debugAll = false;
+    private static final boolean debugAll = false;
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies the list of variables whose values are checked.
      */
-    public IntVar[] list;
+    final public IntVar[] list;
 
     /**
      * It specifies a set of values which if assigned to a variable from a list makes variable counted.
      */
-    public IntervalDomain kSet;
+    final public IntervalDomain kSet;
 
     /**
      * It is a idNumber variable.
      */
-    public IntVar n;
+    final public IntVar n;
 
     // number if x that belongs to K (Kset)
     // As search progress this time stamp can only increase
@@ -267,8 +267,8 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
 
         super.impose(store);
 
-        this.lowerBorder = new TimeStamp<Integer>(store, 0);
-        this.upperBorder = new TimeStamp<Integer>(store, list.length);
+        this.lowerBorder = new TimeStamp<>(store, 0);
+        this.upperBorder = new TimeStamp<>(store, list.length);
 
         position = Var.positionMapping(list, false, this.getClass());
 
@@ -284,21 +284,19 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
     }
 
     @Override public boolean satisfied() {
-        return (lowerBorder.value() == upperBorder.value() && n.min() == lowerBorder.value() && n.singleton());
+        return (Objects.equals(lowerBorder.value(), upperBorder.value()) && n.min() == lowerBorder.value() && n.singleton());
     }
 
     @Override public String toString() {
 
-        StringBuffer result = new StringBuffer(id());
+        StringBuilder result = new StringBuilder(id());
 
         result.append(": Among([");
 
         for (IntVar var : this.list)
-            // result.append("variable").append(var.id).append(" : ").append(var.domain).append(" ");
             result.append(var).append(" ");
 
         result.append("], ").append(this.kSet).append(", ");
-        // result.append("variable ").append(n.id).append(" : ").append(n.domain).append(")\n");
         result.append(n).append(")\n");
 
         return result.toString();

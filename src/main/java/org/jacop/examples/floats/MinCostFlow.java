@@ -1,4 +1,4 @@
-/**
+/*
  * MinCostFlow.java
  * This file is part of JaCoP.
  * <p>
@@ -48,6 +48,7 @@ package org.jacop.examples.floats;
  * Wed Jun 14
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 4.5
  *
  */
 
@@ -117,12 +118,12 @@ public class MinCostFlow {
             FloatVar outResult = new FloatVar(store, "outResult_" + i, MIN_FLOAT, MAX_FLOAT);
             outFlow.add(outResult);
             outFlowWeights.add(-1.0);
-            store.impose(new LinearFloat(store, outFlow, outFlowWeights, "==", 0.0));
+            store.impose(new LinearFloat(outFlow, outFlowWeights, "==", 0.0));
 
             FloatVar inResult = new FloatVar(store, "inResult_" + i, MIN_FLOAT, MAX_FLOAT);
             inFlow.add(inResult);
             inFlowWeights.add(-1.0);
-            store.impose(new LinearFloat(store, inFlow, inFlowWeights, "==", 0.0));
+            store.impose(new LinearFloat(inFlow, inFlowWeights, "==", 0.0));
 
             store.impose(new PplusCeqR(inResult, demand[i], outResult));
         }
@@ -136,7 +137,7 @@ public class MinCostFlow {
         vars[X.length] = cost;
         nCosts[costs.length] = -1.0;
 
-        store.impose(new LinearFloat(store, vars, nCosts, "==", 0.0));
+        store.impose(new LinearFloat(vars, nCosts, "==", 0.0));
 
         // solve minimize cost;
         DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();

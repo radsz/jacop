@@ -1,4 +1,4 @@
-/**
+/*
  * MapClause.java
  * <p>
  * This file is part of JaCoP.
@@ -45,7 +45,7 @@ import org.jacop.jasat.utils.MemoryPool;
  * This represents a *single* clause.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- *
+ * @version 4.5
  *
  */
 

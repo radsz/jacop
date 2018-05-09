@@ -1,4 +1,4 @@
-/**
+/*
  * XplusYplusCeqZ.java
  * This file is part of JaCoP.
  * <p>
@@ -42,32 +42,32 @@ import org.jacop.core.Store;
  * Bound consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class XplusYplusCeqZ extends PrimitiveConstraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies variable x in constraint x + y + c = z.
      */
-    IntVar x;
+    final IntVar x;
 
     /**
      * It specifies variable x in constraint x + y + c = z.
      */
-    IntVar y;
+    final IntVar y;
 
     /**
      * It specifies variable x in constraint x + y + c = z.
      */
-    int c;
+    final int c;
 
     /**
      * It specifies variable x in constraint x + y + c = z.
      */
-    IntVar z;
+    final IntVar z;
 
     /**
      * It constructs constraint X+Y+C=Z.
@@ -90,8 +90,7 @@ public class XplusYplusCeqZ extends PrimitiveConstraint {
         setScope(x, y, z);
     }
 
-    @Override public void consistency(Store store) {
-
+    @Override public void consistency(final Store store) {
 
         do {
 
@@ -111,7 +110,7 @@ public class XplusYplusCeqZ extends PrimitiveConstraint {
         return IntDomain.BOUND;
     }
     
-    @Override public void notConsistency(Store store) {
+    @Override public void notConsistency(final Store store) {
 
         do {
 

@@ -1,4 +1,4 @@
-/**
+/*
  * SetDomain.java
  * This file is part of JaCoP.
  * <p>
@@ -46,7 +46,7 @@ import org.jacop.core.Var;
  *
  *
  * @author Radoslaw Szymanek, Krzysztof Kuchcinski and Robert Åkemalm 
- * @version 4.4
+ * @version 4.5
  */
 
 public abstract class SetDomain extends Domain {

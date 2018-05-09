@@ -1,4 +1,4 @@
-/**
+/*
  * QueueForwardTest.java
  * This file is part of JaCoP.
  * <p>
@@ -53,7 +53,7 @@ import static org.junit.Assert.assertEquals;
  * in what constraint it is being used in.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 public class QueueForwardTest {
 
@@ -69,7 +69,7 @@ public class QueueForwardTest {
 
         FloatVar[] v = {x, y};
 
-        store.impose(new Not(new LinearFloat(store, v, new double[] {1, -1}, "==", 0)));
+        store.impose(new Not(new LinearFloat(v, new double[] {1, -1}, "==", 0)));
 
         System.out.println("Precision = " + FloatDomain.precision());
 
@@ -101,7 +101,7 @@ public class QueueForwardTest {
         FloatVar[] v = {x, y};
 
         IntVar one = new IntVar(store, "one", 1, 1);
-        store.impose(new Reified(new LinearFloat(store, v, new double[] {1, -1}, "==", 0), one));
+        store.impose(new Reified(new LinearFloat(v, new double[] {1, -1}, "==", 0), one));
 
         System.out.println("Precision = " + FloatDomain.precision());
 
@@ -133,7 +133,7 @@ public class QueueForwardTest {
 
         IntVar one = new IntVar(store, "one", 1, 1);
 
-        store.impose(new Reified(new Not(new LinearFloat(store, v, new double[] {1, -1}, "!=", 0)), one));
+        store.impose(new Reified(new Not(new LinearFloat(v, new double[] {1, -1}, "!=", 0)), one));
 
         // search for solutions and print results
         Search<FloatVar> label = new DepthFirstSearch<FloatVar>();
@@ -188,6 +188,16 @@ public class QueueForwardTest {
         fz2jacop.main(new String[] {"-sat", "src/test/fz/wolf_goat_cabbage.fzn"});
 
     }
+
+    @Test public void testPatternSetMining() {
+
+        Fz2jacop fz2jacop = new Fz2jacop();
+
+        // Just checking if does not throw an exception.
+        fz2jacop.main(new String[] {"--verbose", "src/test/fz/upTo5sec/pattern_set_mining/pattern_set_mining.fzn"});
+
+    }
+
 
     @Test public void testRemoveConstraint() {
 

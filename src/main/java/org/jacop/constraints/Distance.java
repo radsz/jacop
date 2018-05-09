@@ -1,4 +1,4 @@
-/**
+/*
  * Distance.java
  * This file is part of JaCoP.
  * <p>
@@ -45,12 +45,12 @@ import org.jacop.core.Store;
  *
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 public class Distance extends PrimitiveConstraint implements Stateful {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     boolean firstConsistencyCheck = false;
 
@@ -59,17 +59,17 @@ public class Distance extends PrimitiveConstraint implements Stateful {
     /**
      * It specifes variable x in constraint |x-y|=z.
      */
-    public IntVar x;
+    final public IntVar x;
 
     /**
      * It specifes variable y in constraint |x-y|=z.
      */
-    public IntVar y;
+    final public IntVar y;
 
     /**
      * It specifes variable z in constraint |x-y|=z.
      */
-    public IntVar z;
+    final public IntVar z;
 
     /**
      * Distance between x and y |x-y| = z
@@ -95,7 +95,7 @@ public class Distance extends PrimitiveConstraint implements Stateful {
             firstConsistencyCheck = true;
     }
 
-    @Override public void consistency(Store store) {
+    @Override public void consistency(final Store store) {
 
         if (firstConsistencyCheck) {
             z.domain.inMin(store.level, z, 0);
@@ -312,8 +312,7 @@ public class Distance extends PrimitiveConstraint implements Stateful {
 
     }
 
-    @Override public void notConsistency(Store store) {
-
+    @Override public void notConsistency(final Store store) {
 
         do {
 

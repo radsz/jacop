@@ -1,4 +1,4 @@
-/**
+/*
  * Kakro.java
  * This file is part of JaCoP.
  * <p>
@@ -43,6 +43,7 @@ import org.jacop.core.Store;
  * It is program to solve Kakro puzzles. 
  *
  * @author Radoslaw Szymanek
+ * @version 4.5
  *
  * This is a program which uses Constraint Programming to find the solution to a
  * simple Kakro puzzle. For a moment the problem representation does not allow 
@@ -96,7 +97,7 @@ public class Kakro extends ExampleFD {
                     for (int m = j + 1; m < noColumns && rowDescription[i][m] == 1; m++)
                         row.add(elements[i][m]);
 
-                    store.impose(new SumInt(store, row, "==", sum));
+                    store.impose(new SumInt(row, "==", sum));
                     store.impose(new Alldiff(row));
                 }
 
@@ -111,7 +112,7 @@ public class Kakro extends ExampleFD {
                     for (int m = i + 1; m < noRows && columnDescription[m][j] == 1; m++)
                         column.add(elements[m][j]);
 
-                    store.impose(new SumInt(store, column, "==", sum));
+                    store.impose(new SumInt(column, "==", sum));
                     store.impose(new Alldiff(column));
                 }
 

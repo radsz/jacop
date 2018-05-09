@@ -1,4 +1,4 @@
-/**
+/*
  * XneqC.java
  * This file is part of JaCoP.
  * <p>
@@ -41,22 +41,22 @@ import org.jacop.core.Store;
  * Constraints X #\= C
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class XneqC extends PrimitiveConstraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies variable x in constraint x != c.
      */
-    public IntVar x;
+    final public IntVar x;
 
     /**
      * It specifies constant c in constraint x != c.
      */
-    public int c;
+    final public int c;
 
     /**
      * It constructs x != c constraint.
@@ -76,7 +76,7 @@ public class XneqC extends PrimitiveConstraint {
         setScope(x);
     }
 
-    @Override public void consistency(Store store) {
+    @Override public void consistency(final Store store) {
 
         x.domain.inComplement(store.level, x, c);
 
@@ -98,14 +98,13 @@ public class XneqC extends PrimitiveConstraint {
         return Domain.NONE;
     }
 
-    @Override public void notConsistency(Store store) {
+    @Override public void notConsistency(final Store store) {
         x.domain.in(store.level, x, c, c);
     }
 
     @Override public boolean notSatisfied() {
         return x.singleton(c);
     }
-
 
     @Override public boolean satisfied() {
         return !x.domain.contains(c);

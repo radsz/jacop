@@ -1,4 +1,4 @@
-/**
+/*
  * XgtC.java
  * This file is part of JaCoP.
  * <p>
@@ -36,28 +36,27 @@ import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 
 /**
  * Constraint X {@literal >} C
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class XgtC extends PrimitiveConstraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies variable x which must be greater than a given constraint.
      */
-    public IntVar x;
+    final public IntVar x;
 
     /**
      * It specifies a constant C from which a given variable must be greater.
      */
-    public int c;
+    final public int c;
 
     /**
      * It constructs constraint X {@literal >} C.
@@ -78,7 +77,7 @@ public class XgtC extends PrimitiveConstraint {
 
     }
 
-    @Override public void consistency(Store store) {
+    @Override public void consistency(final Store store) {
         x.domain.inMin(store.level, x, c + 1);
     }
 
@@ -98,7 +97,7 @@ public class XgtC extends PrimitiveConstraint {
         return Domain.NONE;
     }
 
-    @Override public void notConsistency(Store store) {
+    @Override public void notConsistency(final Store store) {
         x.domain.inMax(store.level, x, c);
     }
 

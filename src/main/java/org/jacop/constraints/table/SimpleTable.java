@@ -1,4 +1,4 @@
-/**
+/*
  * SimpleTable.java
  * This file is part of JaCoP.
  * <p>
@@ -223,12 +223,12 @@ public class SimpleTable extends Constraint implements UsesQueueVariable, Statef
 
             // recent pruning
             IntDomain cd = v.dom();
-            IntDomain pd = cd.previousDomain();
+            IntDomain pd = cd.getPreviousDomain();
             IntDomain rp;
             int delta;
             if (pd == null) {
                 rp = cd;
-                delta = IntDomain.MaxInt;
+                delta = cd.getSize();
             } else {
                 rp = pd.subtract(cd);
                 delta = rp.getSize();
@@ -249,12 +249,25 @@ public class SimpleTable extends Constraint implements UsesQueueVariable, Statef
                 }
                 mask = ~mask;
             } else { // reset-based update
-                ValueEnumeration e = cd.valueEnumeration();
-                while (e.hasMoreElements()) {
-                    Long bs = xSupport.get(e.nextElement());
-                    if (bs != null)
-                        mask |= (bs.longValue());
-                }
+		Set<Map.Entry<Integer, Long>> xsEntry = xSupport.entrySet();
+		if (cd.getSize() < xsEntry.size()) { 
+		    // update based on the variable
+		    ValueEnumeration e = cd.valueEnumeration();
+		    while (e.hasMoreElements()) {
+			Long bs = xSupport.get(e.nextElement());
+			if (bs != null)
+			    mask |= (bs.longValue());
+		    }
+		}
+		else {
+		    // updates based on table values
+		    for (Map.Entry<Integer, Long> e : xsEntry) {
+			Integer val = e.getKey();
+			Long bits = e.getValue();
+			if (cd.contains(val))
+			    mask |= bits;
+		    }
+		}
             }
 
             boolean empty = intersectWithMask();
@@ -289,18 +302,33 @@ public class SimpleTable extends Constraint implements UsesQueueVariable, Statef
             if (!xiSingleton || (xiSingleton && xi.dom().stamp() == store.level)) {
 
                 Map<Integer, Long> xSupport = supports[i];
-                ValueEnumeration e = xi.dom().valueEnumeration();
-                while (e.hasMoreElements()) {
-                    int el = e.nextElement();
 
-                    Long bs = xSupport.get(el);
-                    if (bs != null) {
-                        if ((wrds & bs.longValue()) == 0L) {
-                            xi.domain.inComplement(store.level, xi, el);
-                        }
-                    } else
-                        xi.domain.inComplement(store.level, xi, el);
-                }
+		Set<Map.Entry<Integer, Long>> xsEntry = xSupport.entrySet();
+		if (xi.dom().getSize() <= xsEntry.size()) { 		
+		    // filter based on the variable
+		    ValueEnumeration e = xi.dom().valueEnumeration();
+		    while (e.hasMoreElements()) {
+			int el = e.nextElement();
+
+			Long bs = xSupport.get(el);
+			if (bs != null) {
+			    if ((wrds & bs.longValue()) == 0L) {
+				xi.domain.inComplement(store.level, xi, el);
+			    }
+			} else
+			    xi.domain.inComplement(store.level, xi, el);
+		    }
+		} else {
+		    // filter based on the table values
+		    IntDomain xDom = new IntervalDomain();
+		    for (Map.Entry<Integer, Long> e : xsEntry) {
+			Integer val = e.getKey();
+			Long bits = e.getValue();
+			if (xi.domain.contains(val) && (wrds & bits.longValue()) != 0L)
+			    xDom.unionAdapt(val);
+		    }
+		    xi.domain.in(store.level, xi, xDom);
+		}
             }
         }
     }

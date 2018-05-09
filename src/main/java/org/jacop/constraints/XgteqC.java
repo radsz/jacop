@@ -1,4 +1,4 @@
-/**
+/*
  * XgteqC.java
  * This file is part of JaCoP.
  * <p>
@@ -41,22 +41,22 @@ import org.jacop.core.Store;
  * Constraints X {@literal >=} C
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class XgteqC extends PrimitiveConstraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies variables x which must be greater or equal to a given constant.
      */
-    public IntVar x;
+    final public IntVar x;
 
     /**
      * It specifies a constant c from which a given variable must be greater or equal.
      */
-    public int c;
+    final public int c;
 
     /**
      * It constructs constraint X {@literal >=} C.
@@ -77,7 +77,7 @@ public class XgteqC extends PrimitiveConstraint {
 
     }
 
-    @Override public void consistency(Store store) {
+    @Override public void consistency(final Store store) {
 
         x.domain.inMin(store.level, x, c);
 
@@ -99,7 +99,7 @@ public class XgteqC extends PrimitiveConstraint {
         return Domain.NONE;
     }
 
-    @Override public void notConsistency(Store store) {
+    @Override public void notConsistency(final Store store) {
         x.domain.inMax(store.level, x, c - 1);
     }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Min.java
  * This file is part of JaCoP.
  * <p>
@@ -48,7 +48,7 @@ import org.jacop.core.Store;
  * varable from all FD varaibles on the list.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class Min extends Constraint implements SatisfiedPresent {

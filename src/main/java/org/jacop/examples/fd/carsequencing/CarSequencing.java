@@ -1,4 +1,4 @@
-/**
+/*
  * CarSequencing.java
  * This file is part of JaCoP.
  * <p>
@@ -55,6 +55,7 @@ import org.jacop.util.fsm.FSMTransition;
  * It is program to model and solve simple problems of car sequencing problem (CSPLIB-p1).
  *
  * @author Radoslaw Szymanek
+ * @version 4.5
  *
  */
 
@@ -520,9 +521,8 @@ public class CarSequencing extends ExampleFD {
 
         System.out.println("readFile(" + file + ")");
 
-        try {
+        try(BufferedReader inr = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"))) {
             
-            BufferedReader inr = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
             String str;
 
             while ((str = inr.readLine()) != null && str.length() > 0) {

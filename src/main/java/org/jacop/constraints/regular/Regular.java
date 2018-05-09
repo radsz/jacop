@@ -1,4 +1,4 @@
-/**
+/*
  * Regular.java
  * This file is part of JaCoP.
  * <p>
@@ -130,7 +130,7 @@ import org.jacop.util.fsm.FSMTransition;
  * backtracking) to improve the constraint further. 
  *
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class Regular extends Constraint implements UsesQueueVariable, Stateful {
@@ -1269,10 +1269,8 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful {
     public void saveLatexToFile(String desc) {
         String fileName = this.latexFile + (calls++) + ".tex";
         File f = new File(fileName);
-        FileOutputStream fs;
-        try {
+        try(FileOutputStream fs = new FileOutputStream(f)) {
             System.out.println("save latex file " + fileName);
-            fs = new FileOutputStream(f);
             fs.write(this.toLatex(desc).getBytes("UTF-8"));
             fs.flush();
             fs.close();
@@ -1299,14 +1297,11 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful {
      * @param fileName filename where the description is appended.
      */
     public void uppendToLatexFile(String desc, String fileName) {
-        try {
+        try(OutputStreamWriter char_output = new OutputStreamWriter(new FileOutputStream(fileName),
+                                                                    Charset.forName("UTF-8").newEncoder());
+            BufferedWriter fs = new BufferedWriter(char_output)) {
+
             System.out.println("save latex file " + fileName);
-            OutputStreamWriter char_output = new OutputStreamWriter(
-                new FileOutputStream(fileName),
-                Charset.forName("UTF-8").newEncoder()
-            );
-            BufferedWriter fs;
-            fs = new BufferedWriter(char_output);
             fs.append(this.toLatex(desc));
             fs.flush();
             fs.close();

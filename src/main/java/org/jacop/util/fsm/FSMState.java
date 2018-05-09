@@ -1,4 +1,4 @@
-/**
+/*
  * FSMState.java
  * This file is part of JaCoP.
  * <p>
@@ -34,8 +34,8 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * @author Radoslaw Szymanek
- * @version 4.4
+ * @author Radoslaw Szymanek and Krzysztof Kuchcinski
+ * @version 4.5
  */
 
 public class FSMState {

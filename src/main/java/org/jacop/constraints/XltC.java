@@ -1,4 +1,4 @@
-/**
+/*
  * XltC.java
  * This file is part of JaCoP.
  * <p>
@@ -30,37 +30,37 @@
 
 package org.jacop.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraint X {@literal <} C
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class XltC extends PrimitiveConstraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies variable x to be lower than a given constant.
      */
-    public IntVar x;
+    final public IntVar x;
 
     /**
      * It specifies constant
      */
-    public int c;
+    final public int c;
 
     /**
      * It constructs constraint X {@literal <} C.
+     *
      * @param x variable x.
      * @param c constant c.
      */
@@ -77,7 +77,7 @@ public class XltC extends PrimitiveConstraint {
         setScope(x);
     }
 
-    @Override public void consistency(Store store) {
+    @Override public void consistency(final Store store) {
         x.domain.inMax(store.level, x, c - 1);
     }
 
@@ -97,7 +97,7 @@ public class XltC extends PrimitiveConstraint {
         return Domain.NONE;
     }
 
-    @Override public void notConsistency(Store store) {
+    @Override public void notConsistency(final Store store) {
         x.domain.inMin(store.level, x, c);
     }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Diff2VarValue.java
  * This file is part of JaCoP.
  * <p>
@@ -38,7 +38,7 @@ import org.jacop.core.MutableVarValue;
  * Defines a current value of the Diff2Var and related operations on it.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 class Diff2VarValue implements MutableVarValue, Cloneable {

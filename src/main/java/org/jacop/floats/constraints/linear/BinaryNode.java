@@ -1,4 +1,4 @@
-/**
+/*
  * BinaryNode.java
  * This file is part of JaCoP.
  * <p>
@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Binary Node of the tree representing linear constraint.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 

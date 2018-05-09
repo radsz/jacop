@@ -1,4 +1,4 @@
-/**
+/*
  * IndexDomainView.java
  * This file is part of JaCoP.
  * <p>
@@ -40,7 +40,7 @@ import org.jacop.core.ValueEnumeration;
  * Defines index domain view for a variable and related operations on it.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 public class IndexDomainView {

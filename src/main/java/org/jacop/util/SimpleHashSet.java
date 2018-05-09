@@ -1,4 +1,4 @@
-/**
+/*
  * SimpleHashSet.java
  * This file is part of JaCoP.
  * <p>
@@ -39,7 +39,7 @@ import java.util.Arrays;
  * util class.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  * @param <E> Class being stored in SimpleHashSet.
  */
 

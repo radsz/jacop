@@ -1,0 +1,7 @@
+objective = 149034;
+vs = array1d(1..54, [true, true, true, true, true, true, false, true, true, false, false, true, true, true, false, true, true, false, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false]);
+es = array1d(1..80, [false, true, true, false, true, false, true, false, false, false, false, false, false, false, false, true, false, true, false, true, true, false, true, true, true, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false]);
+match = array1d(1..10, [13, 9, 5, 19, 6, 16, 14, 8, 17, 12]);
+----------
+
+==========

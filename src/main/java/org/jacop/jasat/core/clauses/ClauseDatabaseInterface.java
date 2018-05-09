@@ -1,4 +1,4 @@
-/**
+/*
  * ClauseDatabaseInterface.java
  * <p>
  * This file is part of JaCoP.
@@ -39,6 +39,7 @@ import java.io.BufferedWriter;
  * contains clauses and can perform different operations on them. 
  *
  * @author Simon Cruanes and Radoslaw Szymanek
+ * @version 4.5
  *
  */
 

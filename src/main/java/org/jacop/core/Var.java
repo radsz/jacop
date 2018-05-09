@@ -1,5 +1,5 @@
-/**
- * Variable.java
+/*
+ * Var.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -41,18 +41,15 @@ import java.util.function.Function;
  * Defines a variable and related operations on it.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 public abstract class Var implements Backtrackable {
 
-
-    public boolean trace = SwitchesPruningLogging.traceVar;
-
     /**
      * It is a counter to indicate number of created variables.
      */
-    public final static AtomicInteger idNumber = new AtomicInteger(0);
+    public static final AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * Id string of the variable.
@@ -162,10 +159,9 @@ public abstract class Var implements Backtrackable {
     /**
      * This function returns stamp of the current domain of variable. It is
      * equal or smaller to the stamp of store. Larger difference indicates that
-     * variable has been changed for a longer time.
+     * variable has not been changed for a longer time.
      * @return level for which the most recent changes have been applied to.
      */
-
     public abstract int level();
 
     /**
@@ -190,6 +186,14 @@ public abstract class Var implements Backtrackable {
     public abstract void putConstraint(Constraint c);
 
     /**
+     * This function returns store used by this variable.
+     * @return the store of the variable.
+     */
+    public Store getStore() {
+        return store;
+    }
+
+    /**
      * This function returns variable id.
      * @return the id of the variable.
      */
@@ -205,20 +209,9 @@ public abstract class Var implements Backtrackable {
         return index;
     }
 
-    public static <T extends Var> Map<T, Integer> createEmptyPositioning(T[] list) {
-        Map<T, Integer> position = new HashMap<>();
-        return position;
-
-    }
-
     public static <T extends Var, R> Map<T, R> createEmptyPositioning() {
-
-        Map<T, R> position = new HashMap<>();
-        return position;
-
+        return new HashMap<>();
     }
-
-
 
     public static <T extends Var> Map<T, Integer> positionMapping(T[] list, boolean skipSingletons, Class clazz) {
 
@@ -228,7 +221,7 @@ public abstract class Var implements Backtrackable {
 
     }
 
-    public static <T extends Var> Map<T, Integer> addPositionMapping(Map<T, Integer> position, T[] list, boolean skipSingletons, Class clazz) {
+    public static <T extends Var> void addPositionMapping(Map<T, Integer> position, T[] list, boolean skipSingletons, Class clazz) {
 
         for (int i = 0; i < list.length; i++) {
             if (position.get(list[i]) != null) {
@@ -238,8 +231,6 @@ public abstract class Var implements Backtrackable {
             }
             position.put(list[i], i);
         }
-
-        return position;
 
     }
 
@@ -254,13 +245,14 @@ public abstract class Var implements Backtrackable {
 
     public static <T extends Var, R> void addPositionMapping(Map<T, R> position, T[] list, Function<T, R> function, boolean skipSingletons, Class clazz) {
 
-        for (int i = 0; i < list.length; i++) {
-            if (position.get(list[i]) != null) {
-                if ( skipSingletons && list[i].singleton() )
+        for (T aList : list) {
+            if (position.get(aList) != null) {
+                if (skipSingletons && aList.singleton())
                     continue;
-                throw new IllegalArgumentException("Constraint " + clazz.getSimpleName() + " can not create a position mapping for list as duplicates in the list exists.");
+                throw new IllegalArgumentException("Constraint " + clazz.getSimpleName()
+                    + " can not create a position mapping for list as duplicates in the list exists.");
             }
-            position.put(list[i], function.apply(list[i]));
+            position.put(aList, function.apply(aList));
         }
 
     }

@@ -1,4 +1,4 @@
-/**
+/*
  * AinS.java
  * This file is part of JaCoP.
  * <p>
@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * a provided set. 
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 public class AinS extends PrimitiveConstraint {

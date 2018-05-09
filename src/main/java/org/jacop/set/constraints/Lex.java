@@ -1,4 +1,4 @@
-/**
+/*
  * Lex.java
  * This file is part of JaCoP.
  * <p>
@@ -53,9 +53,13 @@ import org.jacop.set.core.SetVar;
  * {1}{@literal <} {2}
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
+/**
+ * @deprecated As of release 4.5.1 replaced by AltB and AleB constraints.
+ */
+@Deprecated
 public class Lex extends Constraint implements Stateful {
 
     static AtomicInteger idNumber = new AtomicInteger(0);

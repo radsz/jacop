@@ -1,4 +1,4 @@
-/**
+/*
  * SimpleArrayList.java
  * This file is part of JaCoP.
  * <p>
@@ -39,7 +39,7 @@ import java.util.Collection;
  * tailored for JaCoP. Use with care, check when it uses == instead of equals().
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  * @param <V> the type which is being stored by this class.
  */
 

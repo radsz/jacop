@@ -1,4 +1,4 @@
-/**
+/*
  * DomainStructure.java
  * This file is part of JaCoP.
  * <p>
@@ -50,7 +50,7 @@ import org.jacop.core.Var;
  * sub-domain and it is inactive otherwise.
  *
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  *
  */
 

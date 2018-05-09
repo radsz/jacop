@@ -1,4 +1,4 @@
-/**
+/*
  * Linear.java
  * This file is part of JaCoP.
  * <p>
@@ -49,7 +49,7 @@ import java.util.stream.Stream;
  * The weights must be positive integers.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
@@ -103,8 +103,6 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     boolean reified = true;
 
     BTree linearTree;
-
-    VariableNode[] sortedVarNodes;
 
     TimeStamp<Boolean> noSat;
 
@@ -222,7 +220,6 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
         }
 
         java.util.Arrays.sort(leafNodes, new VarWeightComparator<VariableNode>());
-        sortedVarNodes = leafNodes;
         // System.out.println (java.util.Arrays.asList(leafNodes));
 
 

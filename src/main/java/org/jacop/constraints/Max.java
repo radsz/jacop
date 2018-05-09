@@ -1,4 +1,4 @@
-/**
+/*
  * Max.java
  * This file is part of JaCoP.
  * <p>
@@ -30,45 +30,45 @@
 
 package org.jacop.constraints;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
-
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
+
 /**
  * Max constraint implements the Maximum/2 constraint. It provides the maximum
- * variable from all variables on the list. 
- *
+ * variable from all variables on the list.
+ * <p>
  * max(list) = max.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class Max extends Constraint implements SatisfiedPresent {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies a list of variables among which a maximum value is being searched for.
      */
-    public IntVar list[];
+    final public IntVar list[];
 
     /**
      * It specifies variable max which stores the maximum value present in the list.
      */
-    public IntVar max;
+    final public IntVar max;
 
     /**
      * It specifies length of the list.
      */
-    int l;
+    final int l;
 
     /**
      * Defines first position of the variable that needs to be considered
@@ -77,12 +77,13 @@ public class Max extends Constraint implements SatisfiedPresent {
 
     /**
      * It constructs max constraint.
-     * @param max variable denoting the maximum value
+     *
+     * @param max  variable denoting the maximum value
      * @param list the array of variables for which the maximum value is imposed.
      */
     public Max(IntVar[] list, IntVar max) {
 
-        checkInputForNullness(new String[]{"list", "max"}, new Object[][]{ list, {max}});
+        checkInputForNullness(new String[] {"list", "max"}, new Object[][] {list, {max}});
 
         this.l = list.length;
         this.max = max;
@@ -95,13 +96,14 @@ public class Max extends Constraint implements SatisfiedPresent {
 
         this.numberId = idNumber.incrementAndGet();
 
-        setScope( Stream.concat(Arrays.stream(list), Stream.of(max)));
+        setScope(Stream.concat(Arrays.stream(list), Stream.of(max)));
 
     }
 
     /**
      * It constructs max constraint.
-     * @param max variable denoting the maximum value
+     *
+     * @param max       variable denoting the maximum value
      * @param variables the array of variables for which the maximum value is imposed.
      */
     public Max(List<? extends IntVar> variables, IntVar max) {
@@ -114,46 +116,42 @@ public class Max extends Constraint implements SatisfiedPresent {
         IntVar var;
         IntDomain vDom;
 
-        do {
+        int minValue = IntDomain.MinInt;
+        int maxValue = IntDomain.MinInt;
 
-            store.propagationHasOccurred = false;
+        int maxMax = max.max();
+        int minMax = max.min();
+        for (int i = start; i < l; i++) {
 
-            int minValue = IntDomain.MinInt;
-            int maxValue = IntDomain.MinInt;
+            var = list[i];
 
-            int maxMax = max.max();
-            int minMax = max.min();
-            for (int i = start; i < l; i++) {
+            vDom = var.dom();
+            int varMin = vDom.min(), varMax = vDom.max();
 
-                var = list[i];
+            if (varMax < minMax) {
+                swap(start, i);
+                start++;
+            } else if (varMax > maxMax)
+                var.domain.inMax(store.level, var, maxMax);
 
-                vDom = var.dom();
-                int varMin = vDom.min(), varMax = vDom.max();
+            minValue = (minValue > varMin) ? minValue : varMin;
+            maxValue = (maxValue > varMax) ? maxValue : varMax;
+        }
 
-                if (varMax < minMax) {
-                    swap(start, i);
-                    start++;
-                } else if (varMax > maxMax)
-                    var.domain.inMax(store.level, var, maxMax);
+        position.update(start);
 
-                minValue = (minValue > varMin) ? minValue : varMin;
-                maxValue = (maxValue > varMax) ? maxValue : varMax;
-            }
+        max.domain.in(store.level, max, minValue, maxValue);
 
-            position.update(start);
+        if (start == l) // all variables have their max value lower than min value of max variable
+            throw Store.failException;
 
-            max.domain.in(store.level, max, minValue, maxValue);
+        if (start == list.length - 1) { // one variable on the list is maximal; its is min > max of all other variables
+            list[start].domain.in(store.level, list[start], max.dom());
 
-            if (start == l) // all variables have their max value lower than min value of max variable
-                throw store.failException;
-            if (start == list.length - 1) { // one variable on the list is maximal; its is min > max of all other variables
-                list[start].domain.in(store.level, list[start], max.dom());
+            if (max.singleton())
+                removeConstraint();
 
-                if (max.singleton())
-                    removeConstraint();
-
-            }
-        } while (store.propagationHasOccurred);
+        }
 
     }
 
@@ -169,10 +167,9 @@ public class Max extends Constraint implements SatisfiedPresent {
         return IntDomain.BOUND;
     }
 
-    // registers the constraint in the constraint store
     @Override public void impose(Store store) {
 
-        position = new TimeStamp<Integer>(store, 0);
+        position = new TimeStamp<>(store, 0);
 
         super.impose(store);
 

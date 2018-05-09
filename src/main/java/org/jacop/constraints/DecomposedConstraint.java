@@ -1,4 +1,4 @@
-/**
+/*
  * DecomposedConstraint.java
  * This file is part of JaCoP.
  * <p>
@@ -42,7 +42,7 @@ import org.jacop.core.Var;
  * Defines how to construct a constraint out of other constraints.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 public abstract class DecomposedConstraint<T extends Constraint> {

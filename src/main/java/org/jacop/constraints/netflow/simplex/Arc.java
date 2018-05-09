@@ -1,4 +1,4 @@
-/**
+/*
  * Arc.java
  * This file is part of JaCoP.
  * <p>
@@ -37,7 +37,7 @@ import org.jacop.constraints.netflow.ArcCompanion;
  * A directed, residual arc in the graph.
  *
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  *
  */
 

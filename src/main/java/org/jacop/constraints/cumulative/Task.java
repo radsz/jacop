@@ -42,7 +42,9 @@ import org.jacop.core.IntVar;
 class Task {
 
     int index;
-    IntVar start, dur, res;
+
+    final IntVar start, dur, res;
+
     int treeIndex;
 
     Task(IntVar start, IntVar duration, IntVar resourceUsage) {

@@ -1,4 +1,4 @@
-/**
+/*
  * FFT.java
  * This file is part of JaCoP.
  * <p>
@@ -42,7 +42,7 @@ import java.util.List;
  * Symposium on VLSI p. 0095
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class FFT extends Filter {

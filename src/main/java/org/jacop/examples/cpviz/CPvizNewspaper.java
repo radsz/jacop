@@ -1,7 +1,5 @@
-package org.jacop.examples.cpviz;
-
-/**
- * Newspaper.java
+/*
+ * CPvizNewspaper.java
  * This file is part of org.jacop.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -30,6 +28,8 @@ package org.jacop.examples.cpviz;
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+package org.jacop.examples.cpviz;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -51,7 +51,7 @@ import org.jacop.search.TraceGenerator;
  *
  * It is a simple newspaper reading job-shop like scheduling problem.
  *
- * @author Radoslaw Szymanek
+ * @author Krzysztof Kuchcinski
  *
  * There are four students: Algy, Bertie, Charlie and Digby, who share a flat. 
  * Four newspapers are delivered to the house: the Financial Times, the Guardian, 

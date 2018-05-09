@@ -1,4 +1,4 @@
-/**
+/*
  * DisjointConditional.java
  * This file is part of JaCoP.
  * <p>
@@ -46,7 +46,7 @@ import org.jacop.core.*;
  * not overlap otherwise the overlaping is not checked.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 2.0
+ * @version 4.5
  */
 
 public class DisjointConditional extends Diff {
@@ -570,9 +570,8 @@ public class DisjointConditional extends Diff {
 
             UsedRectArray = UsedRect.toArray(UsedRectArray);
 
-            TreeSet<IntRectangle> starts = new TreeSet<IntRectangle>(new DimIMinComparator<IntRectangle>(i));
-            for (IntRectangle ur : UsedRectArray)
-                starts.add(ur);
+            TreeSet<IntRectangle> starts = new TreeSet<IntRectangle>(dimIthMinComparator.apply(i));
+            Collections.addAll(starts, UsedRectArray);
 
             IntRectangle strtR = new IntRectangle(r.dim);
             IntRectangle maxRect = new IntRectangle(r.dim);
@@ -662,7 +661,7 @@ public class DisjointConditional extends Diff {
 
                 IntRectangle[] rects = new IntRectangle[ConsideredRectDur.size()];
                 rects = ConsideredRectDur.toArray(rects);
-                Arrays.sort(rects, new DimIMinComparator<IntRectangle>(i));
+                Arrays.sort(rects, dimIthMinComparator.apply(i));
 
                 // Object[] rects = ConsideredRectDur.toArray();
                 // Comparator<Object> c = new DimIMinComparator<Object>(i);

@@ -1,4 +1,4 @@
-/**
+/*
  * OrBoolSimple.java
  * This file is part of JaCoP.
  * <p>
@@ -42,7 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * It restricts the domain of a and b as well as result to be between 0 and 1.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class OrBoolSimple extends PrimitiveConstraint {

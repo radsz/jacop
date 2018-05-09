@@ -1,4 +1,4 @@
-/**
+/*
  * GCC.java
  * This file is part of JaCoP.
  * <p>
@@ -49,13 +49,13 @@ import org.jacop.core.*;
  *
  * @author Jocelyne Lotfi and Radoslaw Szymanek.
  *
- * @version 4.4
+ * @version 4.5
  */
 
 public class GCC extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
     /**
-     * @todo An improvement to increase the incrementality even further.
+     * TODO An improvement to increase the incrementality even further.
      *
      * 1. The first matching uses minimal values. Remember which minimal value has changed which
      * removed from the domain the value which was used in the matching.
@@ -84,48 +84,47 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
      * The array which stores the first computed matching, which may not take into account
      * the lower bound of count variables.
      */
-    int[] match1;
+    private int[] match1;
 
     /**
      * The array which stores the second computed matching, which may not take into account
      * the upper bound of count variables.
      */
-    int[] match2;
+    private int[] match2;
 
     /**
      * The array which stores the third proper matching, constructed from the first one
      * and second one so both lower and upper bounds are respected.
      */
-    int[] match3;
+    private int[] match3;
 
-    int[] match1XOrder;
-    int[] match2XOrder;
-    int[] nbOfMatchPerY;
+    private int[] match1XOrder;
+    private int[] match2XOrder;
+    private int[] nbOfMatchPerY;
 
-    int[] compOfY;
+    private int[] compOfY;
 
-    XDomain[] xDomain;
-    BoundDomain[] yDomain;
+    private XDomain[] xDomain;
+    private BoundDomain[] yDomain;
 
-    int xSize;
-    int ySize;
+    private int xSize;
+    private int ySize;
 
-    ArrayDeque<Integer> S1;
-    ArrayDeque<Component> S2;
-    PriorityQueue<XDomain> pFirst, pSecond;
-    PriorityQueue<Integer> pCount;
-    CompareLowerBound compareLowerBound;
+    private ArrayDeque<Integer> S1;
+    private ArrayDeque<Component> S2;
+    private PriorityQueue<XDomain> pFirst, pSecond;
+    private PriorityQueue<Integer> pCount;
 
-    final static boolean debug = false;
+    private final static boolean debug = false;
 
-    int[] domainHash;
+    private int[] domainHash;
 
-    Map<IntVar, Integer> xNodesHash;
-    Set<IntVar> xVariableToChange;
+    private Map<IntVar, Integer> xNodesHash;
+    private Set<IntVar> xVariableToChange;
 
     TimeStamp<Integer> stamp;
 
-    int stampValue;
+    private int stampValue;
     int firstConsistencyLevel;
 
     /**
@@ -137,7 +136,26 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
      * It species variables counters for counting occurences of each possible value from the
      * intial domain of x variables.
      */
-    public IntVar[] counters;
+    private IntVar[] counters;
+
+    private Comparator<XDomain> compareLowerBound = (o1, o2) -> {
+        if (o1.min < o2.min)
+            return -1;
+        else if (o1.min > o2.min)
+            return 1;
+        return 0;
+    };
+
+    private Comparator<XDomain> sortPriorityMinOrder = (o1, o2) -> {
+        if (o1.max < o2.max)
+            return -1;
+        else if (o1.max > o2.max)
+            return 1;
+
+        return 0;
+    };
+
+    private Comparator<Integer> sortPriorityMaxOrder = (e1, e2) -> -e1.compareTo(e2);
 
     /**It constructs global cardinality constraint.
      * @param x variables which values are counted.
@@ -175,24 +193,23 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         nbOfMatchPerY = new int[ySize];
         compOfY = new int[ySize];
 
-        S1 = new ArrayDeque<Integer>();
-        S2 = new ArrayDeque<Component>();
-        pFirst = new PriorityQueue<XDomain>(10, new SortPriorityMinOrder());
-        pSecond = new PriorityQueue<XDomain>(10, new SortPriorityMinOrder());
-        pCount = new PriorityQueue<Integer>(10, new SortPriorityMaxOrder());
+        S1 = new ArrayDeque<>();
+        S2 = new ArrayDeque<>();
+        pFirst = new PriorityQueue<>(10, sortPriorityMinOrder);
+        pSecond = new PriorityQueue<>(10, sortPriorityMinOrder);
+        pCount = new PriorityQueue<>(10, sortPriorityMaxOrder);
 
-        compareLowerBound = new CompareLowerBound();
         xNodesHash = Var.createEmptyPositioning();
-        xVariableToChange = new HashSet<IntVar>();
+        xVariableToChange = new HashSet<>();
 
         setScope(Stream.concat(Arrays.stream(x), Arrays.stream(counters)));
 
     }
 
-    Set<IntVar> zeroCounters;
+    private Set<IntVar> zeroCounters;
 
     /** Fix suggested by Radek: a set that keeps track of the variables that have changed and need to be revisited in the consistency method */
-    private Set<Var> changedVariables = new HashSet<Var>();
+    private Set<Var> changedVariables = new HashSet<>();
 
     private IntVar[] removeZeroCounters(IntVar[] x, IntVar[] counters) {
 
@@ -201,8 +218,8 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         // here I will put normalization
         IntervalDomain d = new IntervalDomain();
 
-        for (int i = 0; i < x.length; i++)
-            d = (IntervalDomain) d.union(x[i].domain);
+        for (IntVar aX : x)
+            d = (IntervalDomain) d.union(aX.domain);
 
         // I check the consistency of the x and y variable
         if (d.getSize() != counters.length && (d.max() - d.min() + 1) != counters.length)
@@ -219,7 +236,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
         // zero counters encountered.
         result = new IntVar[d.getSize()];
-        zeroCounters = new HashSet<IntVar>();
+        zeroCounters = new HashSet<>();
 
         int i = 0;
         for (int k = d.min(); k <= d.max(); k++)
@@ -455,7 +472,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
     @Override public void impose(Store store) {
 
-        stamp = new TimeStamp<Integer>(store, xSize);
+        stamp = new TimeStamp<>(store, xSize);
 
         // first I will put all the xNodes in a hashTable to be able to use
         // it with the queueVariable function
@@ -532,14 +549,13 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
     @Override public String toString() {
 
-        StringBuffer toString = new StringBuffer(id());
+        StringBuilder toString = new StringBuilder(id());
 
         toString.append(" : GCC ([");
-        toString.append("assignement variables : ");
         for (int i = 0; i < xSize - 1; i++)
             toString.append(x[i].toString()).append(", ");
         toString.append(x[xSize - 1].toString());
-        toString.append(" count variables : ");
+	toString.append("], [");
         for (int j = 0; j < ySize - 1; j++)
             toString.append(counters[j].toString()).append(", ");
         toString.append(counters[ySize - 1].toString()).append("])");
@@ -666,14 +682,14 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         if (debug) {
 
             System.out.print("match1Xorder : ");
-            for (int i = 0; i < match1XOrder.length; i++)
-                System.out.print(match1XOrder[i] + " ");
+            for (int aMatch1XOrder : match1XOrder)
+                System.out.print(aMatch1XOrder + " ");
 
             System.out.println("");
             System.out.print("match1 : ");
 
-            for (int i = 0; i < match1.length; i++)
-                System.out.print(match1[i] + " ");
+            for (int aMatch1 : match1)
+                System.out.print(aMatch1 + " ");
 
             System.out.println("");
         }
@@ -733,14 +749,14 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
             System.out.print("match2Xorder : ");
 
-            for (int i = 0; i < match2XOrder.length; i++)
-                System.out.print(match2XOrder[i] + " ");
+            for (int aMatch2XOrder : match2XOrder)
+                System.out.print(aMatch2XOrder + " ");
 
             System.out.println("");
 
             System.out.print("match2 : ");
-            for (int i = 0; i < match2.length; i++)
-                System.out.print(match2[i] + " ");
+            for (int aMatch2 : match2)
+                System.out.print(aMatch2 + " ");
 
             System.out.println("");
         }
@@ -784,8 +800,8 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         }
         if (debug) {
             System.out.print("match3 : ");
-            for (int i = 0; i < match3.length; i++)
-                System.out.print(match3[i] + " ");
+            for (int aMatch3 : match3)
+                System.out.print(aMatch3 + " ");
             System.out.println("");
         }
     }
@@ -810,18 +826,18 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         if (debug) {
             System.out.println("sccNb : " + sccNb);
             System.out.println("compReachesLeft ");
-            for (int i = 0; i < compReachesLeft.length; i++)
-                System.out.print(compReachesLeft[i] + " ");
+            for (int aCompReachesLeft : compReachesLeft)
+                System.out.print(aCompReachesLeft + " ");
 
             System.out.println("");
             System.out.println("compReachesRight ");
-            for (int i = 0; i < compReachesRight.length; i++)
-                System.out.print(compReachesRight[i] + " ");
+            for (int aCompReachesRight : compReachesRight)
+                System.out.print(aCompReachesRight + " ");
 
             System.out.println("");
             System.out.println("compOfY ");
-            for (int i = 0; i < compOfY.length; i++)
-                System.out.print(compOfY[i] + " ");
+            for (int aCompOfY : compOfY)
+                System.out.print(aCompOfY + " ");
 
             System.out.println("");
         }
@@ -913,8 +929,8 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
         if (debug) {
             System.out.println("compOfY after S ");
-            for (int i = 0; i < compOfY.length; i++)
-                System.out.print(compOfY[i] + " ");
+            for (int aCompOfY : compOfY)
+                System.out.print(aCompOfY + " ");
 
             System.out.println("");
         }
@@ -1072,13 +1088,13 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
         if (debug) {
             System.out.println("max_u ");
-            for (int i = 0; i < max_u.length; i++)
-                System.out.print(max_u[i] + " ");
+            for (int aMax_u : max_u)
+                System.out.print(aMax_u + " ");
 
             System.out.println("");
             System.out.println("min_l ");
-            for (int i = 0; i < min_l.length; i++)
-                System.out.print(min_l[i] + " ");
+            for (int aMin_l : min_l)
+                System.out.print(aMin_l + " ");
 
             System.out.println("");
         }
@@ -1180,42 +1196,8 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         // I need to sort only the part concern, otherwise old values still after
         // the stamp value will interfer with the sorting
         Arrays.sort(xDomain, 0, stampValue, compareLowerBound);
+
     }
-
-    // used in sortByDomainMin snd version
-    private static class CompareLowerBound implements Comparator<XDomain> {
-
-        public int compare(XDomain o1, XDomain o2) {
-            if (o1.min < o2.min)
-                return -1;
-            else if (o1.min > o2.min)
-                return 1;
-
-            return 0;
-        }
-    }
-
-
-    private static class SortPriorityMinOrder implements Comparator<XDomain> {
-
-        public int compare(XDomain o1, XDomain o2) {
-            if (o1.max < o2.max)
-                return -1;
-            else if (o1.max > o2.max)
-                return 1;
-
-            return 0;
-        }
-    }
-
-
-    private static class SortPriorityMaxOrder implements Comparator<Integer> {
-
-        public int compare(Integer e1, Integer e2) {
-            return -e1.compareTo(e2);
-        }
-    }
-
 
     //-----------------------INNER CLASSES-----------------------------------//
     private static class Component {
@@ -1236,13 +1218,13 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         Var twin;
         int index;
 
-        public XDomain(Var twin, int min, int max) {
+        XDomain(Var twin, int min, int max) {
             super(min, max);
             this.twin = twin;
         }
     }
 
-    protected int findPosition(int value, int[] values) {
+    private int findPosition(int value, int[] values) {
 
         int left = 0;
         int right = values.length - 1;

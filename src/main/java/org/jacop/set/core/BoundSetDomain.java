@@ -1,4 +1,4 @@
-/**
+/*
  * BoundSetDomain.java
  * This file is part of JaCoP.
  * <p>
@@ -44,7 +44,7 @@ import org.jacop.core.ValueEnumeration;
  *
  *
  * @author Radoslaw Szymanek, Krzysztof Kuchcinski and Robert Åkemalm 
- * @version 4.4
+ * @version 4.5
  */
 
 public class BoundSetDomain extends SetDomain implements Cloneable {
@@ -124,7 +124,8 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
         this.glb = new IntervalDomain(0);
         this.lub = new IntervalDomain(0);
-
+        this.cardinality = new IntervalDomain(0, 0);
+        
         searchConstraints = null;
         searchConstraintsToEvaluate = 0;
         previousDomain = null;

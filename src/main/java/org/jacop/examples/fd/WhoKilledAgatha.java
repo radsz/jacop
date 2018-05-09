@@ -1,4 +1,4 @@
-/**
+/*
  * WhoKilledAgatha.java
  * This file is part of JaCoP.
  * <p>
@@ -78,7 +78,9 @@ import org.jacop.search.SmallestDomain;
  * This JaCoP model was created by Hakan Kjellerstrand (hakank@bonetmail.com)
  * http://www.hakank.org/JaCoP/ .
  *
- *  @author Hakan Kjellerstrand and Radoslaw Szymanek
+ * @author Hakan Kjellerstrand and Radoslaw Szymanek
+ * @version 4.5
+ *
  */
 
 public class WhoKilledAgatha extends ExampleFD {
@@ -189,7 +191,7 @@ public class WhoKilledAgatha extends ExampleFD {
                 a[j] = hates[i][j];
             }
             IntVar a_sum = new IntVar(store, "a_sum" + i, 0, n);
-            store.impose(new SumInt(store, a, "==", a_sum));
+            store.impose(new SumInt(a, "==", a_sum));
             store.impose(new XlteqC(a_sum, 2));
             vars.add(a_sum);
 

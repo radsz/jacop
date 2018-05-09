@@ -1,4 +1,4 @@
-/**
+/*
  * PrimitiveConstraint.java
  * This file is part of JaCoP.
  * <p>
@@ -44,7 +44,7 @@ import java.util.Hashtable;
  * arguments to constraints Not, And, Or, etc.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 public abstract class PrimitiveConstraint extends Constraint implements StoreAware, SatisfiedPresent {

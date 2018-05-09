@@ -1,4 +1,4 @@
-/**
+/*
  * ElementInteger.java
  * This file is part of JaCoP.
  * <p>
@@ -53,7 +53,7 @@ import org.jacop.core.*;
  * make addressing of list array starting from 1.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 public class ElementInteger extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
@@ -69,6 +69,12 @@ public class ElementInteger extends Constraint implements UsesQueueVariable, Sta
      */
     static final int limitForDomainPruning = 100;
 
+    /**
+     * It specifies the minimal size of number of duplicated values on the list that are consodered together..
+     * Otherwise they are processed one by one.
+     */
+    static final int minDuplicatesSize = 10;
+    
     /**
      * It specifies variable index within an element constraint list[index-indexOffset] = value.
      */
@@ -214,6 +220,23 @@ public class ElementInteger extends Constraint implements UsesQueueVariable, Sta
 
         }
 
+	// ====== Very simple implementation =========
+	// IntDomain vs = new IntervalDomain();
+	// IntDomain xs = new IntervalDomain();
+
+	// for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
+	//     int idx = e.nextElement();
+	//     int i = idx - 1 - indexOffset;
+	//     int valueOfElement = list[i];
+
+	//     if (value.domain.contains(valueOfElement)) {
+	// 	vs.unionAdapt(valueOfElement);
+	// 	xs.unionAdapt(idx);
+	//     }
+	// }
+	// index.domain.in(store.level, index, xs);
+	// value.domain.in(store.level, value, vs);
+	// ==============================================
 
         boolean copyOfValueHasChanged = valueHasChanged;
 
@@ -231,24 +254,8 @@ public class ElementInteger extends Constraint implements UsesQueueVariable, Sta
                             domValue.unionAdapt(list[duplicate.min() - 1 - indexOffset]);
                         else
                             ((IntervalDomain) domValue).addLastElement(list[duplicate.min() - 1 - indexOffset]);
-
-                        // indexDom = indexDom.subtract(duplicate);
                     }
                 }
-            // else {
-            //     int min = IntDomain.MaxInt, max = IntDomain.MinInt;
-            //     for (IntDomain duplicate : duplicates) {
-            // 	if (indexDom.isIntersecting(duplicate)) {
-            // 	    int valueOfElement = list[duplicate.min() - 1 - indexOffset];
-
-            // 	    min = Math.min(min, valueOfElement);
-            // 	    max = Math.max(max, valueOfElement);
-
-            // 	    // indexDom = indexDom.subtract(duplicate);
-            // 	}
-            //     }
-            //     domValue.unionAdapt(min, max);
-            // }
 
             indexDom = indexDom.subtract(duplicatesIndexes);
 
@@ -302,26 +309,8 @@ public class ElementInteger extends Constraint implements UsesQueueVariable, Sta
 
         }
 
-        // !!! removing this part since it is too slow; specially addDom is very costly
-        // !!! the version above is much faster
-        // if (copyOfValueHasChanged) {
-
-        // 	valueHasChanged = false;
-        // 	IntDomain valDom = value.dom();
-        // 	IntDomain domIndex = new IntervalDomain(5);
-
-        // 	for (ValueEnumeration e = valDom.valueEnumeration(); e.hasMoreElements();) {
-        // 		IntDomain i = mappingValuesToIndex.get(e.nextElement());
-        // 		if (i != null) {
-        // 		    domIndex.addDom(i);
-        // 		}
-        // 	}
-
-        // 	index.domain.in(store.level, index, domIndex);
-        // 	indexHasChanged = false;
-
-        // }
-
+	if (value.singleton() && ! index.singleton())
+	    removeConstraint();	
     }
 
     boolean disjoint(IntDomain v1, int v2) {
@@ -337,9 +326,22 @@ public class ElementInteger extends Constraint implements UsesQueueVariable, Sta
         return IntDomain.ANY;
     }
 
+    @Override public boolean isStateful() {
+        return  (!(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset));
+    }
+    
+    /**
+     * It imposes the constraint in a given store.
+     *
+     * @param store the constraint store to which the constraint is imposed to.
+     */
     @Override public void impose(Store store) {
 
         super.impose(store);
+
+        if (!isStateful()) {
+            firstConsistencyCheck = false;
+        }
 
         if (checkDuplicates) {
             duplicates = new ArrayList<IntDomain>();
@@ -360,7 +362,7 @@ public class ElementInteger extends Constraint implements UsesQueueVariable, Sta
 
             duplicatesIndexes = new IntervalDomain();
             for (IntDomain duplicate : map.values()) {
-                if (duplicate.getSize() > 10) {
+                if (duplicate.getSize() > minDuplicatesSize) {
                     duplicates.add(duplicate);
 
                     duplicatesIndexes.unionAdapt(duplicate);

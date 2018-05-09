@@ -1,4 +1,4 @@
-/**
+/*
  * DefaultClausesDatabase.java
  * <p>
  * This file is part of JaCoP.
@@ -61,6 +61,7 @@ import org.jacop.jasat.utils.Utils;
  * literals of each clauses are the watches.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
+ * @version 4.5
  *
  */
 public final class DefaultClausesDatabase extends AbstractClausesDatabase {

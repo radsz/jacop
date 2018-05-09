@@ -1,4 +1,4 @@
-/**
+/*
  * SimpleTimeOut.java
  * This file is part of JaCoP.
  * <p>
@@ -37,7 +37,7 @@ package org.jacop.search;
  * before the timeout.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 public class SimpleTimeOut implements TimeOutListener {

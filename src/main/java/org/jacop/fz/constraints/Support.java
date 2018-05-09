@@ -374,6 +374,32 @@ public class Support implements ParserTreeConstants {
         return s;
     }
 
+    SetVar[] getSetVarArray(SimpleNode node) {
+        SetVar[] s = null;
+        int arrayIndex = 0;
+
+        if (node.getId() == JJTARRAYLITERAL) {
+            int count = node.jjtGetNumChildren();
+            s = new SetVar[count];
+            for (int i = 0; i < count; i++) {
+                SetVar el = getSetVariable(node, i);
+                s[i] = el;
+            }
+            return s;
+        } else if (node.getId() == JJTSCALARFLATEXPR) {
+            if (((ASTScalarFlatExpr) node).getType() == 2) {// ident
+		s = dictionary.getSetVariableArray(((ASTScalarFlatExpr) node).getIdent());
+		if (s != null)
+		    return s;
+		else 
+		    throw new IllegalArgumentException("Wrong set variable array; compilation aborted.");
+            } else
+                throw new IllegalArgumentException("Wrong set variable array; compilation aborted.");
+        }
+	else
+	    throw new IllegalArgumentException("Wrong set variable array; compilation aborted.");
+    }
+
     IntDomain getSetLiteral(SimpleNode node, int index) {
         SimpleNode child = (SimpleNode) node.jjtGetChild(index);
         if (child.getId() == JJTSETLITERAL) {

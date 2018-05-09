@@ -1,4 +1,4 @@
-/**
+/*
  * ForbiddenArea.java
  * This file is part of JaCoP.
  * <p>
@@ -36,6 +36,7 @@ import org.jacop.core.Var;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
+ * @version 4.5
  *
  * The simplest possible internal constraint: DBox defining a set of points
  * with which no object can overlap.

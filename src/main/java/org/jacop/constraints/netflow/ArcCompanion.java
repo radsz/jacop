@@ -1,4 +1,4 @@
-/**
+/*
  * ArcCompanion.java
  * This file is part of JaCoP.
  * <p>
@@ -52,7 +52,7 @@ import org.jacop.core.Var;
  * also provides a hook for S-variables of any
  *
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  *
  */
 

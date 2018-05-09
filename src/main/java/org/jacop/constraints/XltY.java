@@ -1,4 +1,4 @@
-/**
+/*
  * XltY.java
  * This file is part of JaCoP.
  * <p>
@@ -35,28 +35,27 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 
 /**
  * Constraint X {@literal <} Y
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class XltY extends PrimitiveConstraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies x variable in constraint x {@literal <} y.
      */
-    public IntVar x;
+    final public IntVar x;
 
     /**
      * It specifies y variable in constraint x {@literal <} y.
      */
-    public IntVar y;
+    final public IntVar y;
 
     /**
      * It constructs the constraint X {@literal <} Y.
@@ -75,7 +74,7 @@ public class XltY extends PrimitiveConstraint {
         setScope(x, y);
     }
 
-    @Override public void consistency(Store store) {
+    @Override public void consistency(final Store store) {
 
         x.domain.inMax(store.level, x, y.max() - 1);
         y.domain.inMin(store.level, y, x.min() + 1);
@@ -98,7 +97,7 @@ public class XltY extends PrimitiveConstraint {
         return IntDomain.BOUND;
     }
 
-    @Override public void notConsistency(Store store) {
+    @Override public void notConsistency(final Store store) {
 
         x.domain.inMin(store.level, x, y.min());
         y.domain.inMax(store.level, y, x.max());

@@ -1,4 +1,4 @@
-/**
+/*
  * SumWeightDom.java
  * This file is part of JaCoP.
  * <p>
@@ -47,7 +47,7 @@ import org.jacop.core.*;
  * The complexity of domain consistency is exponential in worst case. Use it carefully!
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 3.1
+ * @version 4.5
  */
 
 
@@ -187,7 +187,7 @@ import org.jacop.core.*;
 
         backtrackHasOccured = true;
 
-        variableQueue = new LinkedHashSet<IntVar>();
+        variableQueue.clear();
 
     }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * EWF.java
  * This file is part of JaCoP.
  * <p>
@@ -41,7 +41,7 @@ import java.util.List;
  * @see "Michel, P. and Lauther U. and Duzy, P., The Synthesis Approach to Digital System Design, Kluwer Academic Publisher, 1992"
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class EWF extends Filter {

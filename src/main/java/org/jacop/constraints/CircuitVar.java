@@ -1,4 +1,4 @@
-/**
+/*
  * CircuitVar.java
  * This file is part of JaCoP.
  * <p>
@@ -39,7 +39,7 @@ import org.jacop.core.Store;
  * keeps current next node and previous node for the circuit
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 class CircuitVar implements MutableVar {

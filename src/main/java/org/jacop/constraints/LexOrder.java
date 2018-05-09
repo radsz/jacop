@@ -1,4 +1,4 @@
-/**
+/*
  * LexOrder.java
  * This file is part of JaCoP.
  * <p>
@@ -52,7 +52,7 @@ import java.util.stream.Stream;
  * Artificial Intelligence 170 (2006) 803–834.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class LexOrder extends Constraint implements UsesQueueVariable, SatisfiedPresent {

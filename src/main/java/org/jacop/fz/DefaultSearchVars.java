@@ -1,4 +1,4 @@
-/**
+/*
  * DefaultSearchVars.java
  * This file is part of JaCoP.
  * <p>
@@ -48,18 +48,26 @@ import org.jacop.floats.core.FloatVar;
  * and arrays.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  *
  */
 public class DefaultSearchVars {
 
     Var[] int_search_variables = new IntVar[0], set_search_variables = new SetVar[0], bool_search_variables = new BooleanVar[0];
+
     FloatVar[] float_search_variables = new FloatVar[0];
 
     Tables dictionary;
 
+    private Comparator<Var> domainSizeComparator = (o1, o2) -> {
+        int v1 = o1.getSize();
+        int v2 = o2.getSize();
+        return v1 - v2;
+    };
+
     /**
-     * It constructs the class for collecting default and complementary search variables. 
+     * It constructs the class for collecting default and complementary search variables.
+     *
      * @param dict tables with model variables.
      */
     public DefaultSearchVars(Tables dict) {
@@ -67,7 +75,7 @@ public class DefaultSearchVars {
     }
 
     /**
-     * It collects all output variables for search. 
+     * It collects all output variables for search.
      */
     void outputVars() {
 
@@ -110,7 +118,7 @@ public class DefaultSearchVars {
         set_search_variables = set_vars.toArray(new SetVar[set_vars.size()]);
         float_search_variables = float_vars.toArray(new FloatVar[float_vars.size()]);
 
-        Arrays.sort(int_search_variables, new DomainSizeComparator<Var>());
+        Arrays.sort(int_search_variables, domainSizeComparator);
     }
 
     /**
@@ -139,7 +147,7 @@ public class DefaultSearchVars {
         int_search_variables = int_vars.toArray(new IntVar[int_vars.size()]);
         bool_search_variables = bool_vars.toArray(new IntVar[bool_vars.size()]);
 
-        Arrays.sort(int_search_variables, new DomainSizeComparator<Var>());
+        Arrays.sort(int_search_variables, domainSizeComparator);
 
         LinkedHashSet<Var> set_vars = new LinkedHashSet<Var>();
         for (int i = 0; i < dictionary.defaultSearchSetArrays.size(); i++)
@@ -205,15 +213,4 @@ public class DefaultSearchVars {
         return buf.toString();
     }
 
-  private static class DomainSizeComparator<T extends Var> implements Comparator<T>, java.io.Serializable {
-
-        DomainSizeComparator() {
-        }
-
-        public int compare(T o1, T o2) {
-            int v1 = o1.getSize();
-            int v2 = o2.getSize();
-            return v1 - v2;
-        }
-    }
 }

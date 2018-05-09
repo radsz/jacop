@@ -1,4 +1,4 @@
-/**
+/*
  * Diff2.java
  * This file is part of JaCoP.
  * <p>
@@ -45,7 +45,7 @@ import org.jacop.core.Store;
  * Zero-width rectangles can be packed anywhere.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class Diff2 extends Diff {

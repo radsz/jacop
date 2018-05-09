@@ -1,4 +1,4 @@
-/**
+/*
  * FurnitureMoving.java
  * This file is part of JaCoP.
  * <p>
@@ -50,6 +50,7 @@ import org.jacop.search.SmallestDomain;
  * It is a simple logic puzzle about furniture moving.
  *
  * @author Hakan Kjellerstrand (hakank@bonetmail.com) and Radoslaw Szymanek
+ * @version 4.5
  *
  * Problem from Marriott {@literal &} Stuckey: 'Programming with constraints', page 112f
  *
@@ -86,7 +87,7 @@ public class FurnitureMoving extends ExampleFD {
         starts[2] = Sb;
         starts[3] = St;
 
-        store.impose(new SumInt(store, starts, "==", sumStartTimes));
+        store.impose(new SumInt(starts, "==", sumStartTimes));
 
         IntVar[] durations = new IntVar[4];
         IntVar[] resources = new IntVar[4];

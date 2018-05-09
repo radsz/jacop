@@ -1,4 +1,4 @@
-/**
+/*
  * Nonogram.java
  * This file is part of JaCoP.
  * <p>
@@ -30,10 +30,6 @@
 
 package org.jacop.examples.fd.nonogram;
 
-import java.io.*;
-import java.util.ArrayList;
-import java.util.regex.Pattern;
-
 import org.jacop.constraints.ExtensionalSupportMDD;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.core.IntDomain;
@@ -49,12 +45,15 @@ import org.jacop.util.fsm.FSM;
 import org.jacop.util.fsm.FSMState;
 import org.jacop.util.fsm.FSMTransition;
 
+import java.io.*;
+import java.util.ArrayList;
+import java.util.regex.Pattern;
+
 /**
- *
  * It solves a nonogram example problem, sometimes also called Paint by Numbers.
  *
- *
  * @author Radoslaw Szymanek
+ * @version 4.5
  *
  */
 
@@ -99,10 +98,9 @@ public class Nonogram extends ExampleFD {
 
         int[] dimensions = new int[2];
 
-		/* read from file args[0] or qcp.txt */
-        try {
-            
-            BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(filename), "UTF-8"));
+		    /* read from file args[0] or qcp.txt */
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(filename), "UTF-8"))) {
+
             String str;
 
             str = in.readLine();
@@ -328,6 +326,7 @@ public class Nonogram extends ExampleFD {
 
     /**
      * It prints a matrix of variables. All variables must be grounded.
+     *
      * @param matrix matrix containing the grounded variables.
      */
     public void printMatrix(IntVar[][] matrix) {
@@ -346,6 +345,7 @@ public class Nonogram extends ExampleFD {
 
     /**
      * It executes the program which solves this simple problem.
+     *
      * @param args no arguments are read.
      */
     public static void main(String args[]) {
@@ -362,6 +362,7 @@ public class Nonogram extends ExampleFD {
 
     /**
      * It executes the program which solves this simple problem.
+     *
      * @param args no arguments are read.
      */
     public static void test(String args[]) {
@@ -620,7 +621,7 @@ public class Nonogram extends ExampleFD {
 	{2,2,5},
 	{3}};
 	*/
-	/*
+  /*
 	public int[][]	row_rules = {
 			  {3},
 			  {5},

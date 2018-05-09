@@ -1,4 +1,4 @@
-/**
+/*
  * AdisjointB.java
  * This file is part of JaCoP.
  * <p>
@@ -45,7 +45,7 @@ import org.jacop.set.core.SetVar;
  * do not contain any common element.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 public class AdisjointB extends Constraint implements UsesQueueVariable, SatisfiedPresent {

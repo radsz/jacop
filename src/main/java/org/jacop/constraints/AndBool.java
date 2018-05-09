@@ -1,4 +1,4 @@
-/**
+/*
  * AndBool.java
  * This file is part of JaCoP.
  * <p>
@@ -30,9 +30,9 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.ArrayList;
 
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -42,7 +42,7 @@ import org.jacop.core.Store;
  * and returns result.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class AndBool extends DecomposedConstraint<PrimitiveConstraint> {
@@ -56,10 +56,18 @@ public class AndBool extends DecomposedConstraint<PrimitiveConstraint> {
      * @param result variable.
      */
     public AndBool(IntVar[] a, IntVar result) {
-        if (a.length == 2)
-            c = new AndBoolSimple(a[0], a[1], result);
+
+	IntVar[] r = filter(a);
+
+	if (r == null)
+	    c = new XeqC(result, 0);
+	else if (r.length == 1)
+	    c = new XeqY(r[0], result);
+        else if (r.length == 2) {
+	    c = new AndBoolSimple(r[0], r[1], result);
+	}
         else
-            c = new AndBoolVector(a, result);
+            c = new AndBoolVector(r, result);
     }
 
     /**
@@ -69,12 +77,7 @@ public class AndBool extends DecomposedConstraint<PrimitiveConstraint> {
      * @param result variable.
      */
     public AndBool(List<IntVar> a, IntVar result) {
-
-        if (a.size() == 2)
-            c = new AndBoolSimple(a.get(0), a.get(1), result);
-        else
-            c = new AndBoolVector(a.toArray(new IntVar[a.size()]), result);
-
+        this(a.toArray(new IntVar[a.size()]), result);
     }
 
     /**
@@ -85,22 +88,31 @@ public class AndBool extends DecomposedConstraint<PrimitiveConstraint> {
      * @param result variable.
      */
     public AndBool(IntVar a, IntVar b, IntVar result) {
-        c = new AndBoolSimple(a, b, result);
+	this(new IntVar[] {a, b}, result);
     }
 
     @Override public void imposeDecomposition(Store store) {
-
         store.impose(c);
-
     }
 
     @Override public List<PrimitiveConstraint> decompose(Store store) {
-
-        return Arrays.asList(c);
-
+        return Collections.singletonList(c);
     }
 
     public String toString() {
         return c.toString();
+    }
+
+    IntVar[] filter(IntVar[] xs) {
+	List<IntVar> result = new ArrayList<>();
+	for (IntVar x : xs)
+	    if (x.max() == 0)
+		return null;
+	    else if (x.min() == 1)
+		continue;
+	    else
+		result.add(x);
+
+	return result.toArray(new IntVar[result.size()]);
     }
 }

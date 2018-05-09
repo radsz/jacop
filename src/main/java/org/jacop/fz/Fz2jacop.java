@@ -1,4 +1,4 @@
-/**
+/*
  * Fz2jacop.java
  * This file is part of JaCoP.
  * <p>
@@ -38,11 +38,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  *
  * An executable to parse and execute the flatzinc file. 
  *
  * @author Krzysztof Kuchcinki
+ * @version 4.5
  *
  */
 
@@ -136,8 +139,19 @@ public class Fz2jacop {
         if (opt.getStatistics()) {
             Runtime.getRuntime().removeShutdownHook(t);
 
-            System.out.println("\n%% Total CPU time : " + (b.getThreadCpuTime(tread.getId()) - startCPU) / (long) 1e+6 + "ms");
+	    long execTime = (b.getThreadCpuTime(tread.getId()) - startCPU) / (long) 1e+6;  // in ms
+	    final long hr = TimeUnit.MILLISECONDS.toHours(execTime);
+	    final long min = TimeUnit.MILLISECONDS.toMinutes(execTime - TimeUnit.HOURS.toMillis(hr));
+	    final long sec = TimeUnit.MILLISECONDS.toSeconds(execTime - TimeUnit.HOURS.toMillis(hr) - TimeUnit.MINUTES.toMillis(min));
+	    final long ms = TimeUnit.MILLISECONDS.toMillis(execTime - TimeUnit.HOURS.toMillis(hr) - TimeUnit.MINUTES.toMillis(min) - TimeUnit.SECONDS.toMillis(sec));
+	    System.out.printf("%n%%%% Total CPU time : %d ms ", execTime);
+	    if (hr == 0) 
+		if (min == 0) 
+		    System.out.println(String.format("(%d.%03d)", sec, ms));
+		else
+		    System.out.println(String.format("(%d:%02d.%03d)", min, sec, ms));
+	    else
+		System.out.println(String.format("(%d:%02d:%02d.%03d)", hr, min, sec, ms));
         }
-
     }
 }

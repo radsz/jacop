@@ -73,6 +73,7 @@ import org.jacop.core.Store;
  *
  *
  * @author Hakan Kjellerstrand and Radoslaw Szymanek
+ * @version 4.5
  *
  */
 
@@ -141,7 +142,7 @@ public class SurvoPuzzle extends ExampleFD {
         //
         for (int i = 0; i < r; i++) {
             IntVar r_sum = new IntVar(store, "r_" + i, 1, r * c * r * c);
-            store.impose(new SumInt(store, x[i], "==", r_sum));
+            store.impose(new SumInt(x[i], "==", r_sum));
             store.impose(new XeqC(r_sum, rowsums[i]));
         }
 
@@ -155,7 +156,7 @@ public class SurvoPuzzle extends ExampleFD {
                 cols.add(x[i][j]);
             }
             IntVar c_sum = new IntVar(store, "c_" + j, 1, r * c * r * c);
-            store.impose(new SumInt(store, cols, "==", c_sum));
+            store.impose(new SumInt(cols, "==", c_sum));
             store.impose(new XeqC(c_sum, colsums[j]));
         }
 
@@ -207,9 +208,8 @@ public class SurvoPuzzle extends ExampleFD {
 
         System.out.println("readFile(" + file + ")");
 
-        try {
+        try(BufferedReader inr = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"))) {
             
-            BufferedReader inr = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
             String str;
             int lineCount = 0;
             List<List<Integer>> MatrixI = new ArrayList<List<Integer>>();

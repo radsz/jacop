@@ -1,4 +1,4 @@
-/**
+/*
  * Knapsack.java
  * This file is part of JaCoP.
  * <p>
@@ -30,42 +30,41 @@
 
 package org.jacop.constraints.knapsack;
 
-import java.lang.reflect.Array;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
-
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.*;
 
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
+
 /**
- *
  * It specifies a knapsack constraint. This implementation was inspired
- * by the paper by Irit Katriel, Meinolf Sellmann, Eli Upfal, 
- * Pascal Van Hentenryck: "Propagating Knapsack Constraints in Sublinear Time", 
- * AAAI 2007: pp. 231-236. 
- *
+ * by the paper by Irit Katriel, Meinolf Sellmann, Eli Upfal,
+ * Pascal Van Hentenryck: "Propagating Knapsack Constraints in Sublinear Time",
+ * AAAI 2007: pp. 231-236.
+ * <p>
  * Tha major extensions of that paper are the following. The quantity variables
- * do not have to be binary. The profit and capacity of the knapsacks do not 
- * have to be integers. In both cases, the constraint accepts any finite 
+ * do not have to be binary. The profit and capacity of the knapsacks do not
+ * have to be integers. In both cases, the constraint accepts any finite
  * domain variable.
- *
- * This implementation is based on the implementation obtained by Wadeck 
- * Follonier during his work on a student semester project. 
- *
+ * <p>
+ * This implementation is based on the implementation obtained by Wadeck
+ * Follonier during his work on a student semester project.
+ * <p>
  * We would like to thank Meinolf Sellmann for his appreciation of our work
- * and useful comments. 
+ * and useful comments.
  *
  * @author Radoslaw Szymanek and Wadeck Follonier
+ * @version 4.5
  *
  */
 
 public class Knapsack extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    private final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies if any debugging information should be printed.
@@ -75,10 +74,10 @@ public class Knapsack extends Constraint implements UsesQueueVariable, Stateful,
     /**
      * It specifies mapping from variables into the leaf of the knapsack tree.
      */
-    public Map<IntVar, TreeLeaf> variableLeafMapping;
+    private Map<IntVar, TreeLeaf> variableLeafMapping;
 
     /**
-     *  The current position of the critical item in the tree
+     * The current position of the critical item in the tree
      */
     private TimeStamp<Integer> positionOfCriticalItem;
 
@@ -86,7 +85,7 @@ public class Knapsack extends Constraint implements UsesQueueVariable, Stateful,
      * It stores all the leaves of the knapsack tree in one array. The leaves
      * are sorted from the most efficient to the least efficient.
      */
-    public TreeLeaf[] leaves;
+    private TreeLeaf[] leaves;
 
     /**
      * It stores for each level the leaves which have changed at this level.
@@ -101,24 +100,24 @@ public class Knapsack extends Constraint implements UsesQueueVariable, Stateful,
      * of all nodes in the knapsack tree. By default it is equal to
      * n/log(n), where n is the number of the items.
      */
-    public int updateLimit;
+    private int updateLimit;
 
     /**
      * It specifies if the constraint has already discovered to be unsatisfied
      * during the imposition stage.
      */
 
-    public boolean impositionFailure = false;
+    private boolean impositionFailure = false;
 
     /**
-     *  This is a finite domain variable to specify the knapsack capacity.
+     * This is a finite domain variable to specify the knapsack capacity.
      */
-    public IntVar knapsackCapacity;
+    private IntVar knapsackCapacity;
 
     /**
      * This is a finite domain variable to specify the knapsack profit.
      */
-    public IntVar knapsackProfit;
+    private IntVar knapsackProfit;
 
 
     /**
@@ -134,43 +133,43 @@ public class Knapsack extends Constraint implements UsesQueueVariable, Stateful,
      * is called multiple times within the same store level.
      */
 
-    public int positionOfAlreadyUpdated;
+    private int positionOfAlreadyUpdated;
 
     /**
      * It specifies if the knapsack tree requires an update.
      */
-    public boolean needUpdate = true;
+    private boolean needUpdate = true;
 
     /**
      * It specifies if the consistency function should execute.
      */
-    public boolean needConsistency = true;
+    private boolean needConsistency = true;
 
     /**
      * It specifies if the mandatory part of the consistency algorithm should be
      * executed.
      */
-    public boolean needMandatory = true;
+    private boolean needMandatory = true;
 
     /**
      * It specifies if the forbidden part of the consistency algortihm should be
      * executed.
      */
-    public boolean needForbidden = true;
+    private boolean needForbidden = true;
 
     /**
      * It specifies if the recomputation of the critical item should take place.
      */
-    public boolean needCriticalUpdate = true;
+    private boolean needCriticalUpdate = true;
 
     /**
      * It specifies if the constraint is executing the consistency function.
      */
-    public boolean inConsistency = false;
+    private boolean inConsistency = false;
 
     /**
-     *  The tree for the storing information about the maximalWeight,
-     *  sum of weights and sum of profits.
+     * The tree for the storing information about the maximalWeight,
+     * sum of weights and sum of profits.
      */
     public Tree tree;
 
@@ -183,80 +182,77 @@ public class Knapsack extends Constraint implements UsesQueueVariable, Stateful,
     /**
      * It counts the number of time the consistency function has been executed.
      */
-    public int countConsistency = 0;
+    private int countConsistency = 0;
 
     /**
      * It counts the number of times the queueVariable function has been executed.
      */
-    public int countQueueVariable = 0;
+    private int countQueueVariable = 0;
 
     /**
      * It counts the number of time the removeLevel function has been executed.
      */
-    public int countRemoveLevel = 0;
+    private int countRemoveLevel = 0;
 
 
     /**
      * It specifies how many removeLevel functions must be executed before the information
      * about the constraint is being printed out.
      */
-    public int REMOVE_INFO_FROM = 0;
+    private int REMOVE_INFO_FROM = 0;
 
     /**
      * It specifies how many queueVariable functions must be executed before the information
      * about the constraint is being printed out.
      */
 
-    public int QUEUE_INFO_FROM = 0;
+    private int QUEUE_INFO_FROM = 0;
 
     /**
      * It specifies how many consistency functions must be executed before the information
      * about the constraint is being printed out.
      */
 
-    public int CONSISTENCY_INFO_FROM = 0;
+    private int CONSISTENCY_INFO_FROM = 0;
 
 
     /**
      * It constructs an knapsack constraint.
      *
-     * @param items list of items in knapsack with its weight, profit and quantity variable.
+     * @param items            list of items in knapsack with its weight, profit and quantity variable.
      * @param knapsackCapacity overall knapsack capacity.
-     * @param knapsackProfit overall profit obtained by the items in the knapsack.
+     * @param knapsackProfit   overall profit obtained by the items in the knapsack.
      */
     public Knapsack(KnapsackItem[] items, IntVar knapsackCapacity, IntVar knapsackProfit) {
 
         checkInputForNullness(new String[] {"items", "knapsackCapacity", "knapsackProfit"},
-                            new Object[][]{items, {knapsackCapacity}, {knapsackProfit}});
+            new Object[][] {items, {knapsackCapacity}, {knapsackProfit}});
 
         // it handles duplicates.
-        commonInitialization(Arrays.stream(items).mapToInt( i -> i.getProfit()).toArray(),
-                             Arrays.stream(items).mapToInt( i -> i.getWeight()).toArray(),
-                             Arrays.stream(items).map( i -> i.getVariable()).toArray(IntVar[]::new),
-                             knapsackCapacity,
-                             knapsackProfit);
+        commonInitialization(Arrays.stream(items).mapToInt(KnapsackItem::getProfit).toArray(),
+            Arrays.stream(items).mapToInt(KnapsackItem::getWeight).toArray(),
+            Arrays.stream(items).map(KnapsackItem::getVariable).toArray(IntVar[]::new), knapsackCapacity, knapsackProfit);
 
     }
 
     /**
-     *
      * It constructs the knapsack constraint.
      *
-     * @param profits the list of profits, each for the corresponding item no.
-     * @param weights the list of weights, each for the corresponding item no.
-     * @param quantity finite domain variable specifying allowed values for the vars.
+     * @param profits          the list of profits, each for the corresponding item no.
+     * @param weights          the list of weights, each for the corresponding item no.
+     * @param quantity         finite domain variable specifying allowed values for the vars.
      * @param knapsackCapacity finite domain variable specifying the capacity limit of the knapsack.
-     * @param knapsackProfit finite domain variable defining the profit
+     * @param knapsackProfit   finite domain variable defining the profit
      */
     public Knapsack(int[] profits, int[] weights, IntVar[] quantity, IntVar knapsackCapacity, IntVar knapsackProfit) {
 
-        checkInputForNullness(new String[]{"profits", "weights", "quantity", "knapsackCapacity", "knapsackProfit"},
-            new Object[][]{ {profits}, {weights}, quantity, {knapsackCapacity}, {knapsackProfit}});
+        checkInputForNullness(new String[] {"profits", "weights", "quantity", "knapsackCapacity", "knapsackProfit"},
+            new Object[][] {{profits}, {weights}, quantity, {knapsackCapacity}, {knapsackProfit}});
 
         if (profits.length != weights.length)
             throw new IllegalArgumentException("Constraint Knapsack has profits and weights parameters of different length");
 
-        if ( profits.length != quantity.length)
+        if (profits.length != quantity.length)
             throw new IllegalArgumentException("Constraint Knapsack has profits and quantity parameters of different length");
 
         commonInitialization(profits, weights, quantity, knapsackCapacity, knapsackProfit);
@@ -268,8 +264,8 @@ public class Knapsack extends Constraint implements UsesQueueVariable, Stateful,
         queueIndex = 1;
 
 		    /* We start to create an array of items */
-		    /* KKU- 2016/01/14, duplicated items are collected into a single item */
-        LinkedHashMap<IntVar, KnapsackItem> itemPar = new LinkedHashMap<IntVar, KnapsackItem>();
+        /* KKU- 2016/01/14, duplicated items are collected into a single item */
+        LinkedHashMap<IntVar, KnapsackItem> itemPar = new LinkedHashMap<>();
         for (int i = 0; i < quantity.length; i++) {
             if (itemPar.get(quantity[i]) != null) {
                 KnapsackItem ki = itemPar.get(quantity[i]);
@@ -285,7 +281,7 @@ public class Knapsack extends Constraint implements UsesQueueVariable, Stateful,
         this.knapsackProfit = knapsackProfit;
         this.updateLimit = (int) (quantity.length / (Math.log(quantity.length) / Math.log(2)));
 
-        setScope( Stream.concat(Arrays.stream(quantity) , Stream.of(knapsackCapacity, knapsackProfit)));
+        setScope(Stream.concat(Arrays.stream(quantity), Stream.of(knapsackCapacity, knapsackProfit)));
 
     }
 
@@ -335,12 +331,12 @@ public class Knapsack extends Constraint implements UsesQueueVariable, Stateful,
     /**
      * It makes sure that no item has a possibility to use more than
      * available capacity.
-     *
+     * <p>
      * quantity.max() * weight < remainingCapacity.
      *
-     * @param store the constraint store responsible for stroing the problem.
-     * @param parent the node from which the restriction
-     * of items quantities takes place (usually the root).
+     * @param store             the constraint store responsible for stroing the problem.
+     * @param parent            the node from which the restriction
+     *                          of items quantities takes place (usually the root).
      * @param availableCapacity it specifies how much left there is a knapsack company.
      */
     private void restrictItemQuantity(Store store, TreeNode parent, int availableCapacity) {
@@ -402,7 +398,7 @@ public class Knapsack extends Constraint implements UsesQueueVariable, Stateful,
      * profit as well as already used capacity. The domain of knapsack profit
      * or capacity variable may be reduced.
      */
-    private final void blockUpdate() {
+    private void blockUpdate() {
 
         // It first updates the tree data structure.
         if (needUpdate) {
@@ -555,7 +551,7 @@ public class Knapsack extends Constraint implements UsesQueueVariable, Stateful,
      * can not be fully included without violating the profit requirement
      * in the knapsack constraint.
      */
-    public void computeForbidden() {
+    private void computeForbidden() {
 
         tree.initializeComputeForbidden();
 
@@ -615,7 +611,7 @@ public class Knapsack extends Constraint implements UsesQueueVariable, Stateful,
     /**
      * It computes the mandatory part of the knapsack pruning.
      */
-    public void computeMandatory() {
+    private void computeMandatory() {
 
         tree.initializeComputeMandatory();
 
@@ -678,12 +674,12 @@ public class Knapsack extends Constraint implements UsesQueueVariable, Stateful,
 
         store.registerRemoveLevelLateListener(this);
 
-        hashForUpdate = new HashMap<Integer, List<TreeLeaf>>();
+        hashForUpdate = new HashMap<>();
 
-        /** We sort it with a sorting method */
+        /* We sort it with a sorting method */
         Arrays.sort(items);
 
-        /**
+        /*
          * We create the tree from the items and initialize the positionsInTree
          */
 
@@ -697,7 +693,7 @@ public class Knapsack extends Constraint implements UsesQueueVariable, Stateful,
 
         if (knapsackCapacity.max() >= tree.alreadyUsedCapacity) {
             tree.updateCritical(knapsackCapacity.max() - tree.alreadyUsedCapacity);
-            positionOfCriticalItem = new TimeStamp<Integer>(store, tree.criticalLeaf.positionInTheTree);
+            positionOfCriticalItem = new TimeStamp<>(store, tree.criticalLeaf.positionInTheTree);
         } else
             impositionFailure = true;
 
@@ -719,7 +715,7 @@ public class Knapsack extends Constraint implements UsesQueueVariable, Stateful,
         }
 
         super.impose(store);
-        
+
     }
 
     @Override public void queueVariable(int level, Var v) {
@@ -754,19 +750,19 @@ public class Knapsack extends Constraint implements UsesQueueVariable, Stateful,
         final boolean maxBoundHasChanged = leafForV.hasMaxChanged();
         final boolean minBoundHasChanged = leafForV.hasMinChanged();
 		
-		/* at least one bound has changed */
+		    /* at least one bound has changed */
         if (maxBoundHasChanged || minBoundHasChanged) {
 
-			/* we test if a list exist and if it is different from null */
+			      /* we test if a list exist and if it is different from null */
             List<TreeLeaf> list;
             if ((list = hashForUpdate.get(level)) == null) {
-                list = new ArrayList<TreeLeaf>();
+                list = new ArrayList<>();
                 hashForUpdate.put(level, list);
                 positionOfAlreadyUpdated = 0;
             }
 
             if (list.size() > updateLimit) {
-				/* we don't add, we recompute */
+				        /* we don't add, we recompute */
             } else {
                 list.add(leafForV);
             }
@@ -786,16 +782,16 @@ public class Knapsack extends Constraint implements UsesQueueVariable, Stateful,
 
         assert (!(leftToCrit && rightToCrit)) : "Error, a leaf cannot be right and left to the critical ";
 
-		/* we look if there is some changed to do */
+		    /* we look if there is some changed to do */
         if (maxBoundHasChanged) {
-			/* for max decreased of mandatory items */
+			      /* for max decreased of mandatory items */
             if (leftToCrit) {
                 needConsistency = true;
                 needMandatory = true;
                 needForbidden = true;
                 needCriticalUpdate = true;
             }
-			/* for max decreased of forbidden items */
+			      /* for max decreased of forbidden items */
             else {
                 needConsistency = true;
                 if (leafForV.positionInTheTree <= tree.criticalRightLeaf)
@@ -804,13 +800,13 @@ public class Knapsack extends Constraint implements UsesQueueVariable, Stateful,
         }
 
         if (minBoundHasChanged) {
-			/* for min increased of mandatory items */
+			  /* for min increased of mandatory items */
             if (leftToCrit) {
                 needConsistency = true;
                 if (leafForV.positionInTheTree >= tree.criticalLeftLeaf)
                     needForbidden = true;
             }
-			/* for min increased of forbidden items */
+			      /* for min increased of forbidden items */
             else {
                 needConsistency = true;
                 needMandatory = true;
@@ -853,7 +849,7 @@ public class Knapsack extends Constraint implements UsesQueueVariable, Stateful,
 
     @Override public String toString() {
 
-        StringBuffer result = new StringBuffer();
+        StringBuilder result = new StringBuilder();
 
         result.append("Knapsack[ [");
         for (int i = 0; i < items.length; i++) {
@@ -881,10 +877,10 @@ public class Knapsack extends Constraint implements UsesQueueVariable, Stateful,
 
         int alreadyObtainedProfit = 0, alreadyUsedCapacity = 0;
 
-        for (int i = 0; i < leaves.length; i++)
-            if (leaves[i].slice > 0) {
-                alreadyObtainedProfit += leaves[i].slice * leaves[i].getProfitOfOne();
-                alreadyUsedCapacity += leaves[i].slice * leaves[i].getWeightOfOne();
+        for (TreeLeaf leave : leaves)
+            if (leave.slice > 0) {
+                alreadyObtainedProfit += leave.slice * leave.getProfitOfOne();
+                alreadyUsedCapacity += leave.slice * leave.getWeightOfOne();
             }
 
         assert (alreadyObtainedProfit == tree.alreadyObtainedProfit) : "Already obtained profit is not correctly maintained.";
@@ -897,16 +893,16 @@ public class Knapsack extends Constraint implements UsesQueueVariable, Stateful,
 
     private String displayQuantitiesInEfficiencyOrder() {
 
-        StringBuffer buf = new StringBuffer();
+        StringBuilder result = new StringBuilder();
 
-        buf.append("[ ");
+        result.append("[ ");
 
-        for (int i = 0; i < items.length; i++)
-            buf.append(this.items[i].getVariable().domain + " ");
+        for (KnapsackItem item : items)
+            result.append(item.getVariable().domain).append(" ");
 
-        buf.append("]");
+        result.append("]");
 
-        return buf.toString();
+        return result.toString();
 
     }
 

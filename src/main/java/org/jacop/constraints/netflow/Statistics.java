@@ -1,4 +1,4 @@
-/**
+/*
  * Statistics.java
  * This file is part of JaCoP.
  * <p>
@@ -30,14 +30,12 @@
 
 package org.jacop.constraints.netflow;
 
-import java.text.DecimalFormat;
-
 /**
  *
  * This class stores all the statistics gather during the execution of the network flow constraint. 
  *
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  *
  */
 

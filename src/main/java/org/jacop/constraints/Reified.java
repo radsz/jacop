@@ -1,4 +1,4 @@
-/**
+/*
  * Reified.java
  * This file is part of JaCoP.
  * <p>
@@ -30,47 +30,47 @@
 
 package org.jacop.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
-
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
 import org.jacop.util.QueueForward;
 
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
+
 /**
  * Reified constraints "constraint" {@literal <=>} B
  *
- *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies constraint c which status is being checked.
      */
-    public PrimitiveConstraint c;
+    final public PrimitiveConstraint c;
 
     /**
      * It specifies variable b which stores status of the constraint (0 - for certain not satisfied, 1 - for certain satisfied).
      */
-    public IntVar b;
+    final public IntVar b;
 
-    final public QueueForward<PrimitiveConstraint> queueForward;
+    final private QueueForward<PrimitiveConstraint> queueForward;
 
-    boolean needRemoveLevelLate = false;
+    private boolean needRemoveLevelLate = false;
 
     /**
      * It creates Reified constraint.
+     *
      * @param c primitive constraint c.
      * @param b boolean variable b.
      */
     public Reified(PrimitiveConstraint c, IntVar b) {
 
-        checkInputForNullness(new String[]{"c", "b"}, new Object[]{c, b});
+        checkInputForNullness(new String[] {"c", "b"}, new Object[] {c, b});
         if (b.min() > 1 || b.max() < 0)
             throw new IllegalArgumentException("Variable b in reified constraint must have domain at most 0..1");
 
@@ -86,13 +86,13 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
             needRemoveLevelLate = false;
         }
 
-        setScope( Stream.concat( c.arguments().stream(), Stream.of(b) ));
-        setConstraintScope(new PrimitiveConstraint[]{c});
-        queueForward = new QueueForward<PrimitiveConstraint>(c, arguments());
-	this.queueIndex = c.queueIndex;
+        setScope(Stream.concat(c.arguments().stream(), Stream.of(b)));
+        setConstraintScope(c);
+        queueForward = new QueueForward<>(c, arguments());
+        this.queueIndex = c.queueIndex;
     }
 
-    @Override public void consistency(Store store) {
+    @Override public void consistency(final Store store) {
 
         if (c.satisfied()) {
             b.domain.in(store.level, b, 1, 1);
@@ -106,7 +106,7 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
             c.consistency(store);
     }
 
-    @Override public void notConsistency(Store store) {
+    @Override public void notConsistency(final Store store) {
 
         if (c.satisfied()) {
             b.domain.in(store.level, b, 0, 0);
@@ -127,7 +127,6 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
     @Override protected int getDefaultNotConsistencyPruningEvent() {
         throw new IllegalStateException("Not implemented as more precise method exists.");
     }
-
 
     @Override public int getConsistencyPruningEvent(Var var) {
 

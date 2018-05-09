@@ -1,1 +1,4 @@
-%% Stack overflow exception error; consider option -Xss... for JVM
+B = 6000;
+T = 1400;
+----------
+==========

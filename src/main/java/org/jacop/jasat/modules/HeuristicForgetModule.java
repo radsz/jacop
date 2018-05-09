@@ -1,4 +1,4 @@
-/**
+/*
  * HeuristicForgetModule.java
  * <p>
  * This file is part of JaCoP.
@@ -52,6 +52,7 @@ import org.jacop.jasat.modules.interfaces.ForgetListener;
  * It may also call forget() after a restart.
  * Heuristic is from glucose.
  * @author Simon Cruanes and Radoslaw Szymanek
+ * @version 4.5
  *
  */
 public final class HeuristicForgetModule implements ForgetListener, ExplanationListener, BackjumpListener {

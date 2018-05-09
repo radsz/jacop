@@ -1,4 +1,4 @@
-/**
+/*
  * IfThen.java
  * This file is part of JaCoP.
  * <p>
@@ -28,7 +28,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -43,7 +42,7 @@ import org.jacop.util.QueueForward;
  * Constraint if constraint1 then constraint2
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {

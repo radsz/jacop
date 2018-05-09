@@ -30,55 +30,49 @@
 
 package org.jacop.constraints;
 
+import org.jacop.api.SatisfiedPresent;
+import org.jacop.core.*;
+import org.jacop.util.BipartiteGraphMatching;
+
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.jacop.api.SatisfiedPresent;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Store;
-import org.jacop.core.ValueEnumeration;
-
-import org.jacop.util.BipartiteGraphMatching;
-
 /**
  * Constraint Values counts number of different values on a list of Variables.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- *
- * @version 4.4
+ * @version 4.5
  */
 
 public class Values extends Constraint implements SatisfiedPresent {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies a list of variables which are counted.
      */
-    IntVar[] list;
+    final private IntVar[] list;
 
     /**
      * It specifies the idNumber of different values among variables on a given list.
      */
-    private IntVar count;
+    final private IntVar count;
+    
+    Comparator<IntVar> minFDV = (o1, o2) -> (o1.min() - o2.min());
 
-    private Comparator<IntVar> minFDV = new FDVminimumComparator<IntVar>();
-
-    private static final boolean debug = false;
+    final static private boolean debug = false;
 
     /**
      * It constructs Values constraint.
      *
-     * @param list list of variables for which different values are being counted.
+     * @param list  list of variables for which different values are being counted.
      * @param count specifies the number of different values in the list.
      */
     public Values(IntVar[] list, IntVar count) {
 
-        checkInputForNullness(new String[]{"list", "count"}, new Object[][]{list, {count}});
+        checkInputForNullness(new String[] {"list", "count"}, new Object[][] {list, {count}});
 
         this.queueIndex = 2;
 
@@ -95,7 +89,7 @@ public class Values extends Constraint implements SatisfiedPresent {
     /**
      * It constructs Values constraint.
      *
-     * @param list list of variables for which different values are being counted.
+     * @param list  list of variables for which different values are being counted.
      * @param count specifies the number of different values in the list.
      */
     public Values(List<? extends IntVar> list, IntVar count) {
@@ -117,7 +111,7 @@ public class Values extends Constraint implements SatisfiedPresent {
 
             int[][] adj = new int[list.length + 1][];
             adj[0] = new int[0];
-            Map<Integer, Integer> valueMap = new HashMap<Integer, Integer>();
+            Map<Integer, Integer> valueMap = new HashMap<>();
             int valueIndex = 0;
 
             int numberSingleton = 0;
@@ -204,27 +198,12 @@ public class Values extends Constraint implements SatisfiedPresent {
     }
 
     @Override public int getDefaultConsistencyPruningEvent() {
-        //@todo, why so restrictive?
-        return IntDomain.GROUND;
-    }
-
-  private static class FDVminimumComparator<T extends IntVar> implements Comparator<T>, java.io.Serializable {
-
-        FDVminimumComparator() {
-        }
-
-        public int compare(T o1, T o2) {
-            return (o1.min() - o2.min());
-        }
-
+        return IntDomain.BOUND;
     }
 
     @Override public boolean satisfied() {
 
-        if (! grounded() )
-            return false;
-
-        return Arrays.stream(list).map( i -> i.value() ).collect(Collectors.toSet()).size() == count.value();
+        return grounded() && Arrays.stream(list).map(IntVar::value).collect(Collectors.toSet()).size() == count.value();
 
     }
 

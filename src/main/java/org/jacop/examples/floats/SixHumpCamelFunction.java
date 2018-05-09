@@ -1,4 +1,4 @@
-/**
+/*
  * SixHumpCamelFunction.java
  * This file is part of JaCoP.
  * <p>
@@ -36,6 +36,7 @@ package org.jacop.examples.floats;
  * SixHumpCamelFunction function (a nonlinear standard problem).
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 4.5
  *
  */
 
@@ -101,7 +102,7 @@ public class SixHumpCamelFunction {
         store.impose(new PmulQeqR(x1x1, x1x1x1x1, x1x1x1x1x1x1));
 
         FloatVar f = new FloatVar(store, "f", MIN_FLOAT, MAX_FLOAT);
-        store.impose(new LinearFloat(store, new FloatVar[] {f, x1x1, x1x1x1x1, x1x1x1x1x1x1, x1x2, x2x2, x2x2x2x2},
+        store.impose(new LinearFloat(new FloatVar[] {f, x1x1, x1x1x1x1, x1x1x1x1x1x1, x1x2, x2x2, x2x2x2x2},
             new double[] {-1.0, 4.0, -2.1, (1.0 / 3.0), 1.0, -4.0, 4.0}, "==", 0.0));
 
         // with first derivative it computes minimum value

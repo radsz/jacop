@@ -1,4 +1,4 @@
-/**
+/*
  * FIR16.java
  * This file is part of JaCoP.
  * <p>
@@ -41,7 +41,7 @@ import java.util.List;
  * IEEE Trans. on CAD, vol. 25, no. 3, March 2006.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class FIR16 extends Filter {

@@ -1,4 +1,4 @@
-/**
+/*
  * SiblingUproar.java
  * This file is part of JaCoP.
  * <p>
@@ -44,6 +44,7 @@ import org.jacop.core.Store;
  * It is quite complex logic puzzle about siblings. 
  *
  * @author Krzysztof "Vrbl" Wrobel, Wioletta "Vuka" Kruzolek, and Radoslaw Szymanek 
+ * @version 4.5
  *
  * This is quite difficult logic puzzle to be modeled and solved by CP.
  *

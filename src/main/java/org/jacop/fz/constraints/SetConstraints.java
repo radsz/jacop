@@ -39,7 +39,8 @@ import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.Not;
 
-import org.jacop.set.constraints.Lex;
+import org.jacop.set.constraints.AleB;
+import org.jacop.set.constraints.AltB;
 import org.jacop.set.constraints.CardAeqX;
 import org.jacop.set.constraints.EinA;
 import org.jacop.set.constraints.XinA;
@@ -175,14 +176,30 @@ class SetConstraints implements ParserTreeConstants {
         SetVar v1 = support.getSetVariable(node, 0);
         SetVar v2 = support.getSetVariable(node, 1);
 
-        support.pose(new Lex(v1, v2, false));
+        support.pose(new AleB(v1, v2));
+    }
+
+    void gen_set_le_reif(SimpleNode node) {
+        SetVar v1 = support.getSetVariable(node, 0);
+        SetVar v2 = support.getSetVariable(node, 1);
+	IntVar v3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+	
+        support.pose(new Reified(new AleB(v1, v2), v3));
     }
 
     void gen_set_lt(SimpleNode node) {
         SetVar v1 = support.getSetVariable(node, 0);
         SetVar v2 = support.getSetVariable(node, 1);
 
-        support.pose(new Lex(v1, v2));
+        support.pose(new AltB(v1, v2));
+    }
+
+    void gen_set_lt_reif(SimpleNode node) {
+        SetVar v1 = support.getSetVariable(node, 0);
+        SetVar v2 = support.getSetVariable(node, 1);
+	IntVar v3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+
+        support.pose(new Reified(new AltB(v1, v2), v3));
     }
 
     void gen_set_ne(SimpleNode node) {

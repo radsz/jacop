@@ -37,7 +37,7 @@ import org.jacop.util.SimpleArrayList;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
- *
+ * @version 4.5
  */
 public class DBox {
 
@@ -455,8 +455,9 @@ public class DBox {
      */
     public static DBox boundingBox(Collection<DBox> boxes) {
 
-        assert !boxes.isEmpty();
-
+        if (boxes.isEmpty())
+            throw new IllegalArgumentException("Boxes parameter can not be an empty collection");
+        
         DBox boundingBox = null;
         int[] mins = null;
         int[] maxes = null;

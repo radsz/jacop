@@ -1,4 +1,4 @@
-/**
+/*
  * PrintSchedule.java
  * This file is part of JaCoP.
  * <p>
@@ -30,34 +30,22 @@
 
 package org.jacop.ui;
 
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-
 /**
  * Prints the computed schedule
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class PrintSchedule {
-
-  static class TaskScheduleComparator<T> implements Comparator<T>, java.io.Serializable {
-
-        TaskScheduleComparator() {
-        }
-
-        @SuppressWarnings("unchecked") public int compare(T o1, T o2) {
-            return ((((List<IntVar>) o1).get(1)).min() * 1000 + (((List<IntVar>) o1).get(3)).min()) - (
-                (((List<IntVar>) o2).get(1)).min() * 1000 + (((List<IntVar>) o2).get(3)).min());
-        }
-    }
-
 
     int[] d;
 
@@ -67,39 +55,41 @@ public class PrintSchedule {
 
     /**
      * It constructs PrintSchedule object.
+     *
      * @param name name of the operations.
-     * @param t start time of the operations.
-     * @param d duration time of the operations.
-     * @param r resource usage of the operations.
+     * @param t    start time of the operations.
+     * @param d    duration time of the operations.
+     * @param r    resource usage of the operations.
      */
     public PrintSchedule(String[] name, IntVar[] t, int[] d, IntVar[] r) {
         n = new ArrayList<String>();
         for (int i = 0; i < name.length; i++)
             n.add(name[i]);
 
-	this.t = new IntVar[t.length];
-	System.arraycopy(t, 0, this.t, 0, t.length);
-	this.r = new IntVar[r.length];
-	System.arraycopy(r, 0, this.r, 0, r.length);
-	this.d = new int[d.length];
-	System.arraycopy(d, 0, this.d, 0, d.length);
+        this.t = new IntVar[t.length];
+        System.arraycopy(t, 0, this.t, 0, t.length);
+        this.r = new IntVar[r.length];
+        System.arraycopy(r, 0, this.r, 0, r.length);
+        this.d = new int[d.length];
+        System.arraycopy(d, 0, this.d, 0, d.length);
 
     }
 
     /**
      * It constructs PrintSchedule object.
+     *
      * @param name name of the operations.
-     * @param t start time of the operations.
-     * @param d duration time of the operations.
-     * @param r resource usage of the operations.
+     * @param t    start time of the operations.
+     * @param d    duration time of the operations.
+     * @param r    resource usage of the operations.
      */
     public PrintSchedule(String[] name, IntVar[] t, IntVar[] d, IntVar[] r) {
         n = new ArrayList<String>();
-	
-	this.t = new IntVar[t.length];
-	System.arraycopy(t, 0, this.t, 0, t.length);
-	this.r = new IntVar[r.length];
-	System.arraycopy(r, 0, this.r, 0, r.length);
+
+        this.t = new IntVar[t.length];
+        System.arraycopy(t, 0, this.t, 0, t.length);
+        this.r = new IntVar[r.length];
+        System.arraycopy(r, 0, this.r, 0, r.length);
 
         this.d = new int[d.length];
         for (int i = 0; i < d.length; i++) {
@@ -110,10 +100,11 @@ public class PrintSchedule {
 
     /**
      * It constructs PrintSchedule object.
+     *
      * @param name name of the operations.
-     * @param t start time of the operations.
-     * @param d duration time of the operations.
-     * @param r resource usage of the operations.
+     * @param t    start time of the operations.
+     * @param d    duration time of the operations.
+     * @param r    resource usage of the operations.
      */
     public PrintSchedule(List<String> name, List<? extends IntVar> t, List<Integer> d, List<? extends IntVar> r) {
         n = name;
@@ -130,63 +121,66 @@ public class PrintSchedule {
 
     /**
      * It constructs PrintSchedule object.
+     *
      * @param name name of the operations.
-     * @param t start time of the operations.
-     * @param d duration time of the operations.
-     * @param r resource usage of the operations.
+     * @param t    start time of the operations.
+     * @param d    duration time of the operations.
+     * @param r    resource usage of the operations.
      */
     public PrintSchedule(List<String> name, List<? extends IntVar> t, int[] d, List<? extends IntVar> r) {
         n = new ArrayList<String>();
         for (int i = 0; i < name.size(); i++)
-	  n.add(name.get(i));
-	
+            n.add(name.get(i));
+
         this.t = new IntVar[t.size()];
         for (int i = 0; i < t.size(); i++)
             this.t[i] = t.get(i);
         this.r = new IntVar[r.size()];
         for (int i = 0; i < r.size(); i++)
             this.r[i] = r.get(i);
-	this.d = new int[d.length];
-	System.arraycopy(d, 0, this.d, 0, d.length);
+        this.d = new int[d.length];
+        System.arraycopy(d, 0, this.d, 0, d.length);
     }
 
     /**
      * It constructs PrintSchedule object.
+     *
      * @param name name of the operations.
-     * @param t start time of the operations.
-     * @param d duration time of the operations.
-     * @param r resource usage of the operations.
+     * @param t    start time of the operations.
+     * @param d    duration time of the operations.
+     * @param r    resource usage of the operations.
      */
 
     public PrintSchedule(List<String> name, IntVar[] t, int[] d, IntVar[] r) {
         n = new ArrayList<String>();
         for (int i = 0; i < name.size(); i++)
-	  n.add(name.get(i));
+            n.add(name.get(i));
 
-	this.t = new IntVar[t.length];
-	System.arraycopy(t, 0, this.t, 0, t.length);
-	this.r = new IntVar[r.length];
-	System.arraycopy(r, 0, this.r, 0, r.length);
-	this.d = new int[d.length];
-	System.arraycopy(d, 0, this.d, 0, d.length);
+        this.t = new IntVar[t.length];
+        System.arraycopy(t, 0, this.t, 0, t.length);
+        this.r = new IntVar[r.length];
+        System.arraycopy(r, 0, this.r, 0, r.length);
+        this.d = new int[d.length];
+        System.arraycopy(d, 0, this.d, 0, d.length);
     }
 
     /**
      * It constructs PrintSchedule object.
+     *
      * @param name name of the operations.
-     * @param t start time of the operations.
-     * @param d duration time of the operations.
-     * @param r resource usage of the operations.
+     * @param t    start time of the operations.
+     * @param d    duration time of the operations.
+     * @param r    resource usage of the operations.
      */
     public PrintSchedule(List<String> name, IntVar[] t, IntVar[] d, IntVar[] r) {
         n = new ArrayList<String>();
         for (int i = 0; i < name.size(); i++)
-	  n.add(name.get(i));
+            n.add(name.get(i));
 
-	this.t = new IntVar[t.length];
-	System.arraycopy(t, 0, this.t, 0, t.length);
-	this.r = new IntVar[r.length];
-	System.arraycopy(r, 0, this.r, 0, r.length);
+        this.t = new IntVar[t.length];
+        System.arraycopy(t, 0, this.t, 0, t.length);
+        this.r = new IntVar[r.length];
+        System.arraycopy(r, 0, this.r, 0, r.length);
         this.d = new int[d.length];
         for (int i = 0; i < d.length; i++)
             this.d[i] = d[i].min();
@@ -217,9 +211,9 @@ public class PrintSchedule {
     }
 
     String tab(int i) {
-      StringBuffer s = new StringBuffer();
+        StringBuffer s = new StringBuffer();
         for (int k = 0; k < i; k++)
-	  s.append(" ");
+            s.append(" ");
         return s.toString();
     }
 
@@ -240,7 +234,8 @@ public class PrintSchedule {
 
         }
 
-        Comparator<List<?>> c = new TaskScheduleComparator<List<?>>();
+        Comparator<List<?>> c = Comparator.comparingInt(o -> ((IntVar) o.get(1)).min() * 1000 + ((IntVar) o.get(3)).min());
+
         Arrays.sort(TaskArr, c);
 
         int maxR = findMaxR();

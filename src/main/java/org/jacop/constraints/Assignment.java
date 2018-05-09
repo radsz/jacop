@@ -1,4 +1,4 @@
-/**
+/*
  * Assignment.java
  * This file is part of JaCoP.
  * <p>
@@ -46,17 +46,18 @@ import org.jacop.core.*;
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  *
- * @version 4.4
+ * @version 4.5
  */
 
 public class Assignment extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies a list of variables d.
      */
-    public IntVar d[];
+    final public IntVar d[];
+
     /**
      * It specifies a shift applied to variables d.
      */
@@ -169,7 +170,7 @@ public class Assignment extends Constraint implements UsesQueueVariable, Statefu
     }
 
     @Override public void removeLevel(int level) {
-        variableQueue = new LinkedHashSet<IntVar>();
+        variableQueue.clear();
         if (level == firstConsistencyLevel)
             firstConsistencyCheck = true;
     }

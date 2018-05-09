@@ -1,4 +1,4 @@
-/**
+/*
  * Tree.java
  * This file is part of JaCoP.
  * <p>
@@ -30,15 +30,17 @@
 
 package org.jacop.constraints.knapsack;
 
+import org.jacop.core.IntVar;
+
 import java.util.List;
 import java.util.Map;
 
-import org.jacop.core.IntVar;
-
 /**
- * This tree is a main data structure used and required by Knapsack constraint. 
+ * This tree is a main data structure used and required by Knapsack constraint.
  *
  * @author Radoslaw Szymanek and Wadeck Follonier
+ * @version 4.5
+ *
  */
 
 public class Tree {
@@ -113,6 +115,7 @@ public class Tree {
 
     /**
      * Create a single node tree.
+     *
      * @param node a root of this one-node tree.
      */
     public Tree(TreeNode node) {
@@ -121,6 +124,7 @@ public class Tree {
 
     /**
      * It creates a tree by making a shallow copy.
+     *
      * @param tree tree to be constructed
      */
     public Tree(Tree tree) {
@@ -131,8 +135,8 @@ public class Tree {
 
     /**
      * A merge method for trees, it added a new root from the ancients
-     * @param that A tree that is being merged with this tree.
      *
+     * @param that A tree that is being merged with this tree.
      * @return The tree resulting of the merge of <i>this</i> and <i>that</i>
      */
     public Tree merge(Tree that) {
@@ -150,10 +154,10 @@ public class Tree {
      * proper supporting structures. It assumes the list of items
      * is greater than 1.
      *
-     * @param items knapsack items used to create the tree.
+     * @param items             knapsack items used to create the tree.
      * @param varPositionMaping mapping of variables into positions within the tree.
-     * @param leaves array of leaves of the created tree.
-     * @param zero it specifies a variable equal to value 0.
+     * @param leaves            array of leaves of the created tree.
+     * @param zero              it specifies a variable equal to value 0.
      */
     public Tree(KnapsackItem[] items, Map<IntVar, TreeLeaf> varPositionMaping, TreeLeaf[] leaves, IntVar zero) {
 
@@ -276,11 +280,11 @@ public class Tree {
             } else if (current.right.getWSum() == 0) {
                 current = current.left;
             } else
-        /* sum(0->s-1) of w <= C and sum(0->s) of w > C */
+                /* sum(0->s-1) of w <= C and sum(0->s) of w > C */
                 if (usedCapacity + current.left.getWSum() <= capacity) {
                     usedCapacity += current.left.getWSum();
 
-					/* we add the profit of all the left part */
+					          /* we add the profit of all the left part */
                     obtainedProfit += current.left.getPSum();
 
                     current = current.right;
@@ -290,8 +294,8 @@ public class Tree {
         }
 
         criticalLeaf = (TreeLeaf) current;
-		
-		/* the last part of the capacity used within critical */
+
+        /* the last part of the capacity used within critical */
         // min function required for situation when capacity allows to take all the items.
         takenWeightOfCriticalItem = Math.min(capacity - usedCapacity, criticalLeaf.getWSum());
 
@@ -333,7 +337,7 @@ public class Tree {
             } else if (current.right.getWSum() == 0) {
                 current = current.left;
             } else
-				/* sum(0->s-1) of w <= C and sum(0->s) of w > C */
+				        /* sum(0->s-1) of w <= C and sum(0->s) of w > C */
                 if (usedCapacity + current.left.getWSum() <= capacity) {
                     usedCapacity += current.left.getWSum();
                     current = current.right;
@@ -374,7 +378,7 @@ public class Tree {
     /**
      * Used for updating the tree using a list of nodes that have changed.
      *
-     * @param list list of leaves that needs to be updated.
+     * @param list             list of leaves that needs to be updated.
      * @param startingPosition it specifies the first leaf in the array which has not been updated before.
      */
     public void updateFromList(List<TreeLeaf> list, int startingPosition) {
@@ -463,12 +467,11 @@ public class Tree {
      * It returns the amount of weight of a given item being checked which can be replaced by Right items given
      * the amount of profitSlack.
      *
-     * @param weightOfItemChecked the weight of item being checked.
-     * @param maxNoOfItems the maximum number which can be taken of checked items.
-     * @param profitOfItemChecked the profit of the item being checked.
+     * @param weightOfItemChecked     the weight of item being checked.
+     * @param maxNoOfItems            the maximum number which can be taken of checked items.
+     * @param profitOfItemChecked     the profit of the item being checked.
      * @param efficiencyOfItemChecked the efficiency of the item being checked.
-     * @param profitSlack the amount of reserve profit which can be sacrificed before violating the constraint.
-     *
+     * @param profitSlack             the amount of reserve profit which can be sacrificed before violating the constraint.
      * @return the amount of weight of a given item that can be replaced by Right items without violating the constraint.
      */
     public int computeReplacableWeight(int weightOfItemChecked, int maxNoOfItems, int profitOfItemChecked, double efficiencyOfItemChecked,
@@ -624,11 +627,10 @@ public class Tree {
 
 
     /**
-     *
      * It finds next leaf of a maximum weight of at least weight, so
      * it can have some parts of it mandatory.
      *
-     * @param leaf starting leaf, the result must be to the right of this leaf.
+     * @param leaf   starting leaf, the result must be to the right of this leaf.
      * @param weight weight condition which must be satisfied by the found leaf.
      * @return tree leaf on the right to the supplied leaf with at least specified weight.
      */
@@ -697,12 +699,11 @@ public class Tree {
      * It returns the amount of weight of a given item being checked which can be replaced by Right items given
      * the amount of profitSlack.
      *
-     * @param weightOfItemChecked the weight of item being checked.
-     * @param maxNoOfItems the maximum number which can be taken of checked items.
-     * @param profitOfItemChecked the profit of the item being checked.
+     * @param weightOfItemChecked     the weight of item being checked.
+     * @param maxNoOfItems            the maximum number which can be taken of checked items.
+     * @param profitOfItemChecked     the profit of the item being checked.
      * @param efficiencyOfItemChecked the efficiency of the item being checked.
-     * @param profitSlack the amount of reserve profit which can be sacrificed before violating the constraint.
-     *
+     * @param profitSlack             the amount of reserve profit which can be sacrificed before violating the constraint.
      * @return the amount of weight of a given item that can be replaced by Right items without violating the constraint.
      */
     public int computeIntrusionWeight(int weightOfItemChecked, int maxNoOfItems, int profitOfItemChecked, double efficiencyOfItemChecked,
@@ -849,11 +850,10 @@ public class Tree {
 
 
     /**
-     *
      * It finds previous leaf of a maximum weight of at least weight, so
      * it can have some parts of it forbidden.
      *
-     * @param leaf starting leaf, the result must be to the left of this leaf.
+     * @param leaf   starting leaf, the result must be to the left of this leaf.
      * @param weight weight condition which must be satisfied by the found leaf.
      * @return tree leaf on the left to the supplied leaf with at least specified weight.
      */

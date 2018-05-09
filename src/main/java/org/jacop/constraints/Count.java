@@ -1,4 +1,4 @@
-/**
+/*
  * Count.java
  * This file is part of JaCoP.
  * <p>
@@ -28,7 +28,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.jacop.constraints;
 
 import org.jacop.api.SatisfiedPresent;
@@ -47,27 +46,27 @@ import java.util.stream.Stream;
  * specified by variable idNumber.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class Count extends Constraint implements SatisfiedPresent {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies variable idNumber to count the number of occurences of the specified value in a list.
      */
-    public IntVar counter;
+    final public IntVar counter;
 
     /**
      * The list of variables which are checked and counted if equal to specified value.
      */
-    public IntVar list[];
+    final public IntVar list[];
 
     /**
      * The value to which is any variable is equal to makes the constraint count it.
      */
-    public int value;
+    final public int value;
 
     /**
      * It constructs a Count constraint.
@@ -106,7 +105,7 @@ public class Count extends Constraint implements SatisfiedPresent {
         return IntDomain.ANY;
     }
 
-    @Override public void consistency(Store store) {
+    @Override public void consistency(final Store store) {
 
         int numberEq = 0, numberMayBe = 0;
         for (IntVar v : list) {
@@ -162,7 +161,7 @@ public class Count extends Constraint implements SatisfiedPresent {
 
     @Override public String toString() {
 
-        StringBuffer result = new StringBuffer(id());
+        StringBuilder result = new StringBuilder(id());
 
         result.append(" : count(").append(value).append(",[");
 

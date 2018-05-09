@@ -1,4 +1,4 @@
-/**
+/*
  * MinizincBasedTestsHelper.java
  * This file is part of JaCoP.
  * <p>
@@ -52,7 +52,11 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 /**
- * @author Mariusz Świerkot
+ * Test Helper used by all Minizinc based tests.
+ *
+ * @author Mariusz Świerkot and Radoslaw Szymanek
+ * @version 4.5
+ *
  */
 
 public class MinizincBasedTestsHelper {

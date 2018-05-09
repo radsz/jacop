@@ -1,4 +1,4 @@
-/**
+/*
  * Store.java
  * This file is part of JaCoP.
  * <p>
@@ -57,6 +57,7 @@ import org.jacop.util.MDD;
  * to efficiently model and solve CrossWord puzzles.
  *
  * @author : Radoslaw Szymanek
+ * @version 4.5
  *
  * This program uses problem instances and dictionary obtained from Hadrien Cambazard.
  *
@@ -287,9 +288,7 @@ public class CrossWord extends ExampleFD {
             int[] tupleForGivenWord = new int[wordSize];
             MDD resultForWordSize = new MDD(list);
 
-            try {
-
-                BufferedReader inr = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
+            try(BufferedReader inr = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"))) {
 
                 String str;
                 while ((str = inr.readLine()) != null && str.length() > 0) {

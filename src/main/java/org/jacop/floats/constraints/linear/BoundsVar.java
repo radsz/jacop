@@ -1,4 +1,4 @@
-/**
+/*
  * BoundsVar.java
  * This file is part of JaCoP.
  * <p>
@@ -39,7 +39,7 @@ import org.jacop.core.Store;
  * values
  *
  * @author Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 class BoundsVar implements MutableVar {

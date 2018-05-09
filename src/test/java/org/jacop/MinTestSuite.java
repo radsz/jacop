@@ -1,4 +1,4 @@
-/**
+/*
  * MinTestSuite.java
  * This file is part of JaCoP.
  * <p>
@@ -37,10 +37,9 @@ import org.junit.runners.Suite;
  * It is class to encompass all tests that belong to min profile.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 @RunWith(Suite.class)
-
 @Suite.SuiteClasses({ExampleBasedTest.class, QueueForwardTest.class, SingleConstraintTest.class, MinizincBasedTestUpTo5Seconds.class}) public class MinTestSuite {
 }

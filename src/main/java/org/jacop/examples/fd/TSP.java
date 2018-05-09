@@ -1,4 +1,4 @@
-/**
+/*
  * TSP.java
  * This file is part of JaCoP.
  * <p>
@@ -47,6 +47,7 @@ import org.jacop.search.SmallestDomain;
  * It models Travelling Salesman Problem (TSP). 
  *
  * @author Radoslaw Szymanek
+ * @version 4.5
  *
  */
 
@@ -99,7 +100,7 @@ public class TSP extends ExampleFD {
 
         // Computes overall cost of traveling
         // simply sum of all costs
-        store.impose(new SumInt(store, costs, "==", cost));
+        store.impose(new SumInt(costs, "==", cost));
 
     }
 

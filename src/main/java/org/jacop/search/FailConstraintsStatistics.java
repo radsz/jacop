@@ -1,4 +1,4 @@
-/**
+/*
  * FailConstraintsStatistics.java
  * This file is part of JaCoP.
  * <p>
@@ -44,7 +44,7 @@ import java.util.Map.Entry;
  * individual constraint as well as a class of constraints.
  *
  * @author Krzysztof Kuchcinski 
- * @version 4.4
+ * @version 4.5
  */
 
 public class FailConstraintsStatistics<T extends Var> implements ConsistencyListener {
@@ -117,14 +117,10 @@ public class FailConstraintsStatistics<T extends Var> implements ConsistencyList
     }
 
     private static List<Entry<String, Integer>> sortByValues(Map<String, Integer> map) {
-        List<Entry<String, Integer>> list = new LinkedList<Entry<String, Integer>>(map.entrySet());
+        List<Entry<String, Integer>> list = new LinkedList<>(map.entrySet());
 
         // Sorting
-        Collections.sort(list, new Comparator<Entry<String, Integer>>() {
-            public int compare(Entry<String, Integer> o1, Entry<String, Integer> o2) {
-                return o2.getValue().compareTo(o1.getValue());
-            }
-        });
+        Collections.sort(list, (o1, o2) -> o2.getValue().compareTo(o1.getValue()));
 
         return list;
     }

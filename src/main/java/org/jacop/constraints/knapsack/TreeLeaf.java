@@ -1,4 +1,4 @@
-/**
+/*
  * TreeLeaf.java
  * This file is part of JaCoP.
  * <p>
@@ -37,6 +37,7 @@ import org.jacop.core.IntVar;
  * It contains information required by the leaf node of the item tree.
  *
  * @author Radoslaw Szymanek and Wadeck Follonier
+ * @version 4.5
  *
  */
 
@@ -204,7 +205,7 @@ public final class TreeLeaf extends TreeNode {
 
     @Override public final String toString() {
 
-        StringBuffer result = new StringBuffer();
+        StringBuilder result = new StringBuilder();
 
         result.append("{wmax: ").append(getWMax()).append(", eff: ").append(efficiency);
         result.append(", var: ").append(quantity).append("(, slice: ").append(slice);

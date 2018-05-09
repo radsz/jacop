@@ -30,6 +30,8 @@
 
 package org.jacop.constraints.cumulative;
 
+import org.jacop.core.IntVar;
+
 /**
  * Represents tasks for cumulative constraint
  *
@@ -39,8 +41,8 @@ package org.jacop.constraints.cumulative;
 
 class TaskReversedView extends TaskView {
 
-    TaskReversedView(Task t) {
-        super(t);
+    TaskReversedView(IntVar start, IntVar dur, IntVar res) {
+        super(start, dur, res);
     }
 
     int lct() {

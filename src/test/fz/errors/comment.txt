@@ -1,0 +1,4 @@
+Benchmarks in this directory do not report any error (integer overflow
+or stack overflow). Some of them can be, in fact solved to optimality
+or generate all solutions. Some can generate solutions but cannot
+prove their optimality in a reasonable time.

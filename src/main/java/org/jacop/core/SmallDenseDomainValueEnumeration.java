@@ -1,4 +1,4 @@
-/**
+/*
  * SmallDenseDomainValueEnumeration.java
  * This file is part of JaCoP.
  * <p>
@@ -34,7 +34,7 @@ package org.jacop.core;
  * Defines a methods for enumerating values contain in the domain.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 public class SmallDenseDomainValueEnumeration extends ValueEnumeration {

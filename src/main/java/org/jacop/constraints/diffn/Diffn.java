@@ -1,4 +1,4 @@
-/**
+/*
  * Diffn.java
  * This file is part of JaCoP.
  * <p>
@@ -31,14 +31,9 @@
 
 package org.jacop.constraints.diffn;
 
-import java.util.*;
+import org.jacop.core.*;
 
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.IntervalEnumeration;
-import org.jacop.core.Interval;
-import org.jacop.core.IntVar;
-import org.jacop.core.Store;
+import java.util.*;
 
 /**
  * Diffn constraint assures that any two rectangles from a vector of rectangles
@@ -51,12 +46,13 @@ import org.jacop.core.Store;
 
 public class Diffn extends Nooverlap {
 
-    static final boolean debug = false, debugNarr = false;
+    private static final boolean debug = false, debugNarr = false;
 
-    EventIncComparator<Event> eventComparator = new EventIncComparator<Event>();
-  
+    Comparator<Event> eventComparator = (o1, o2) -> (o1.date() == o2.date()) ? o1.type() - o2.type() : o1.date() - o2.date();
+
     /**
      * It specifies a diff constraint.
+     *
      * @param rectangles list of rectangles which can not overlap in at least one dimension.
      */
     public Diffn(IntVar[][] rectangles) {
@@ -65,8 +61,9 @@ public class Diffn extends Nooverlap {
 
     /**
      * It specifies a diff constraint.
+     *
      * @param rectangles list of rectangles which can not overlap in at least one dimension.
-     * @param strict true- zero size rectangles need to be between other rectangles; false- these rectangles can be anywhere
+     * @param strict     true- zero size rectangles need to be between other rectangles; false- these rectangles can be anywhere
      */
     public Diffn(IntVar[][] rectangles, boolean strict) {
         super(rectangles, strict);
@@ -74,6 +71,7 @@ public class Diffn extends Nooverlap {
 
     /**
      * It constructs a diff constraint.
+     *
      * @param origin1 list of variables denoting origin of the rectangle in the first dimension.
      * @param origin2 list of variables denoting origin of the rectangle in the second dimension.
      * @param length1 list of variables denoting length of the rectangle in the first dimension.
@@ -86,11 +84,12 @@ public class Diffn extends Nooverlap {
 
     /**
      * It constructs a diff constraint.
+     *
      * @param origin1 list of variables denoting origin of the rectangle in the first dimension.
      * @param origin2 list of variables denoting origin of the rectangle in the second dimension.
      * @param length1 list of variables denoting length of the rectangle in the first dimension.
      * @param length2 list of variables denoting length of the rectangle in the second dimension.
-     * @param strict true- zero size rectangles need to be between other rectangles; false- these rectangles can be anywhere
+     * @param strict  true- zero size rectangles need to be between other rectangles; false- these rectangles can be anywhere
      */
 
     public Diffn(IntVar[] origin1, IntVar[] origin2, IntVar[] length1, IntVar[] length2, boolean strict) {
@@ -100,6 +99,7 @@ public class Diffn extends Nooverlap {
 
     /**
      * It specifies a diffn constraint.
+     *
      * @param rectangles list of rectangles which can not overlap in at least one dimension.
      */
     public Diffn(List<? extends List<? extends IntVar>> rectangles) {
@@ -108,8 +108,9 @@ public class Diffn extends Nooverlap {
 
     /**
      * It specifies a diffn constraint.
+     *
      * @param rectangles list of rectangles which can not overlap in at least one dimension.
-     * @param strict true- zero size rectangles need to be between other rectangles; false- these rectangles can be anywhere
+     * @param strict     true- zero size rectangles need to be between other rectangles; false- these rectangles can be anywhere
      */
     public Diffn(List<? extends List<? extends IntVar>> rectangles, boolean strict) {
         super(rectangles, strict);
@@ -118,26 +119,27 @@ public class Diffn extends Nooverlap {
 
     /**
      * It constructs a diff constraint.
+     *
      * @param o1 list of variables denoting origin of the rectangle in the first dimension.
      * @param o2 list of variables denoting origin of the rectangle in the second dimension.
      * @param l1 list of variables denoting length of the rectangle in the first dimension.
      * @param l2 list of variables denoting length of the rectangle in the second dimension.
      */
-    public Diffn(List<? extends IntVar> o1, List<? extends IntVar> o2, List<? extends IntVar> l1,
-        List<? extends IntVar> l2) {
+    public Diffn(List<? extends IntVar> o1, List<? extends IntVar> o2, List<? extends IntVar> l1, List<? extends IntVar> l2) {
         super(o1, o2, l1, l2);
     }
 
     /**
      * It constructs a diff constraint.
-     * @param o1 list of variables denoting origin of the rectangle in the first dimension.
-     * @param o2 list of variables denoting origin of the rectangle in the second dimension.
-     * @param l1 list of variables denoting length of the rectangle in the first dimension.
-     * @param l2 list of variables denoting length of the rectangle in the second dimension.
+     *
+     * @param o1     list of variables denoting origin of the rectangle in the first dimension.
+     * @param o2     list of variables denoting origin of the rectangle in the second dimension.
+     * @param l1     list of variables denoting length of the rectangle in the first dimension.
+     * @param l2     list of variables denoting length of the rectangle in the second dimension.
      * @param strict true- zero size rectangles need to be between other rectangles; false- these rectangles can be anywhere
      */
-    public Diffn(List<? extends IntVar> o1, List<? extends IntVar> o2, List<? extends IntVar> l1,
-        List<? extends IntVar> l2, boolean strict) {
+    public Diffn(List<? extends IntVar> o1, List<? extends IntVar> o2, List<? extends IntVar> l1, List<? extends IntVar> l2,
+        boolean strict) {
         super(o1, o2, l1, l2, strict);
     }
 
@@ -150,15 +152,15 @@ public class Diffn extends Nooverlap {
 
             pruning();
 
-	    if (doAreaCheck)
-	    	areaCheck();
+            if (doAreaCheck)
+                areaCheck();
 
             profile();
 
         } while (store.propagationHasOccurred);
     }
 
-    void areaCheck() {
+    private void areaCheck() {
         for (int k = 0; k < rectangle.length; k++) {
             Rectangle r = rectangle[k];
             BitSet o = overlapping[k].value();
@@ -178,7 +180,7 @@ public class Diffn extends Nooverlap {
 
                         if (s.origin(i).min() <= r_min) {
                             if (s.origin(i).max() + s.length(i).min() <= r_max) {
-                                int distance1 = s.ect(i) - r_min; 
+                                int distance1 = s.ect(i) - r_min;
                                 sLengthMin = (distance1 > 0) ? distance1 : 0;
                             } else {
                                 // s.origin(i).max() + slength(i).min()> r_max)
@@ -186,8 +188,8 @@ public class Diffn extends Nooverlap {
 
                                 int distance1 = s.ect(i) - r_min;
                                 int distance2 = -s.origin(i).max() + rmax;
-				distance1 = Math.min(distance1, rmax - r_min);
-				distance2 = Math.min(distance2, rmax - r_min);
+                                distance1 = Math.min(distance1, rmax - r_min);
+                                distance2 = Math.min(distance2, rmax - r_min);
                                 if (distance1 < distance2)
                                     sLengthMin = (distance1 > 0) ? distance1 : 0;
                                 else if (distance2 > 0) {
@@ -216,7 +218,7 @@ public class Diffn extends Nooverlap {
         }
     }
 
-    void profile() {
+    private void profile() {
 
         for (int i = 0; i < rectangle.length; i++) {
             Rectangle r = rectangle[i];
@@ -229,7 +231,7 @@ public class Diffn extends Nooverlap {
         }
     }
 
-    void sweepPruning(Rectangle r, BitSet o, int dim) {
+    private void sweepPruning(Rectangle r, BitSet o, int dim) {
 
         int oDim = (dim == 0) ? 1 : 0;
 
@@ -306,7 +308,7 @@ public class Diffn extends Nooverlap {
         // current value of the profile for mandatory parts
         int curProfile = 0;
         // current value of the sweep line
-        List<Interval> sweepLine = new ArrayList<Interval>();
+        List<Interval> sweepLine = new ArrayList<>();
 
         // used for start variable pruning
         int startExcluded = Integer.MAX_VALUE;
@@ -368,7 +370,7 @@ public class Diffn extends Nooverlap {
 
                                             if (debugNarr)
                                                 System.out.print(">>> Diffn (" + dim + ") Profile 1. Narrowed " + r.origin(dim) + " \\ "
-                                                    + new IntervalDomain(startExcluded, (int) (e.date() - 1)));
+                                                    + new IntervalDomain(startExcluded, (e.date() - 1)));
 
                                             IntervalDomain update = new IntervalDomain(IntDomain.MinInt, startExcluded - 1);
                                             update.unionAdapt(e.date(), IntDomain.MaxInt);
@@ -488,13 +490,13 @@ public class Diffn extends Nooverlap {
                     }
 
                     break;
-	    default:
-		throw new RuntimeException("Internal error in " + getClass().getName());
+                default:
+                    throw new RuntimeException("Internal error in " + getClass().getName());
             }
         }
     }
 
-    void updateSweepLine(List<Interval> sweepLine, Event e) {
+    private void updateSweepLine(List<Interval> sweepLine, Event e) {
 
         Interval eBlock = e.block();
 
@@ -531,7 +533,7 @@ public class Diffn extends Nooverlap {
             }
     }
 
-    boolean blocking(List<Interval> sweepLine, int start, int end, int length) {
+    private boolean blocking(List<Interval> sweepLine, int start, int end, int length) {
 
         if (sweepLine.size() == 0)
             return false;
@@ -551,11 +553,7 @@ public class Diffn extends Nooverlap {
             }
             s = Math.min(sweepLineElement.max(), end);
         }
-        if (end - s >= length) {
-            return false;
-        }
-
-        return true;
+        return end - s < length;
     }
 
     // event type
@@ -612,29 +610,17 @@ public class Diffn extends Nooverlap {
                 case pruneEnd:
                     result += "pruneEnd, ";
                     break;
-	        default:
-		  result += "--";
+                default:
+                    result += "--";
             }
             result += r + ", " + date + ", " + value + ", " + block + ")\n";
             return result;
         }
     }
 
-
-  private static class EventIncComparator<T extends Event> implements Comparator<T>, java.io.Serializable {
-
-        EventIncComparator() {
-        }
-
-        public int compare(T o1, T o2) {
-            // two criteria for sort (in this order): date and type
-            return (o1.date() == o2.date()) ? o1.type() - o2.type() : o1.date() - o2.date();
-        }
-    }
-
     @Override public String toString() {
 
-        StringBuffer result = new StringBuffer(id());
+        StringBuilder result = new StringBuilder(id());
 
         result.append(" : diffn([");
 
@@ -645,7 +631,7 @@ public class Diffn extends Nooverlap {
                 result.append(", ");
             i++;
         }
-        return result.append("], " + strict + ")").toString();
+        return result.append("], ").append(strict).append(")").toString();
     }
 
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * BasicLogicPascal.java
  * This file is part of JaCoP.
  * <p>
@@ -44,6 +44,7 @@ import org.jacop.core.Store;
  * It solves an arithmetic puzzle BASIC+LOGIC=PASCAL.
  *
  * @author Radoslaw Szymanek
+ * @version 4.5
  *
  * 	Find for the equation on the left
  *	what digits are represented by the letters
@@ -98,11 +99,11 @@ public class BasicLogicPascal extends ExampleFD {
         // BASIC = 10000 * B + 1000 * A + 100 * S + I * 10 + C * 1
         // LOGIC = 10000 * L + 1000 * O + 100 * G + I * 10 + C * 1
         // PASCAL = 100000 * P + 10000 * A + 1000 * S + 100 * C + 10 * A + L * 1
-        store.impose(new LinearInt(store, basic, weights5, "==", valueBASIC));
+        store.impose(new LinearInt(basic, weights5, "==", valueBASIC));
         // store.impose(new SumWeight(basic, weights5, valueBASIC));
-        store.impose(new LinearInt(store, logic, weights5, "==", valueLOGIC));
+        store.impose(new LinearInt(logic, weights5, "==", valueLOGIC));
         // store.impose(new SumWeight(logic, weights5, valueLOGIC));
-        store.impose(new LinearInt(store, pascal, weights6, "==", valuePASCAL));
+        store.impose(new LinearInt(pascal, weights6, "==", valuePASCAL));
         // store.impose(new SumWeight(pascal, weights6, valuePASCAL));
 
         // Main equation of the problem BASIC+ LOGIC = PASCAL

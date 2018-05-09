@@ -1,4 +1,4 @@
-/**
+/*
  * Match.java
  * This file is part of JaCoP.
  * <p>
@@ -45,7 +45,7 @@ import java.util.stream.Stream;
  * onto a list of integer variables. 
  *
  * @author Radoslaw Szymanek, Krzysztof Kuchcinski, and Robert Åkemalm
- * @version 4.4
+ * @version 4.5
  */
 
 public class Match extends Constraint implements SatisfiedPresent {

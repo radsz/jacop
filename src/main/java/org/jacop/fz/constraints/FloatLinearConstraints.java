@@ -116,16 +116,16 @@ class FloatLinearConstraints implements ParserTreeConstants {
 
             switch (operation) {
                 case Support.eq:
-                    support.pose(new Reified(new LinearFloat(store, p2, p1, "==", p3), p4));
+                    support.pose(new Reified(new LinearFloat(p2, p1, "==", p3), p4));
                     break;
                 case Support.ne:
-                    support.pose(new Reified(new LinearFloat(store, p2, p1, "!=", p3), p4));
+                    support.pose(new Reified(new LinearFloat(p2, p1, "!=", p3), p4));
                     break;
                 case Support.lt:
-                    support.pose(new Reified(new LinearFloat(store, p2, p1, "<", p3), p4));
+                    support.pose(new Reified(new LinearFloat(p2, p1, "<", p3), p4));
                     break;
                 case Support.le:
-                    support.pose(new Reified(new LinearFloat(store, p2, p1, "<=", p3), p4));
+                    support.pose(new Reified(new LinearFloat(p2, p1, "<=", p3), p4));
                     break;
                 default:
                     throw new IllegalArgumentException("%% ERROR: Constraint floating-point operation not supported.");
@@ -147,10 +147,10 @@ class FloatLinearConstraints implements ParserTreeConstants {
                     } else if (p1.length == 2 && p1[0] == 1 && p1[1] == 1) {
                         support.pose(new PplusQeqR(p2[0], p2[1], new FloatVar(store, p3, p3)));
                     } else
-                        support.pose(new LinearFloat(store, p2, p1, "==", p3));
+                        support.pose(new LinearFloat(p2, p1, "==", p3));
                     break;
                 case Support.ne:
-                    support.pose(new LinearFloat(store, p2, p1, "!=", p3));
+                    support.pose(new LinearFloat(p2, p1, "!=", p3));
                     break;
                 case Support.lt:
                     if (p1.length == 2 && p1[0] == 1 && p1[1] == -1 && p3 == 0)
@@ -158,7 +158,7 @@ class FloatLinearConstraints implements ParserTreeConstants {
                     else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1 && p3 == 0)
                         support.pose(new PltQ(p2[1], p2[0]));
                     else
-                        support.pose(new LinearFloat(store, p2, p1, "<", p3));
+                        support.pose(new LinearFloat(p2, p1, "<", p3));
                     break;
                 case Support.le:
                     if (p1.length == 2 && p1[0] == 1 && p1[1] == -1 && p3 == 0)
@@ -166,7 +166,7 @@ class FloatLinearConstraints implements ParserTreeConstants {
                     else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1 && p3 == 0)
                         support.pose(new PlteqQ(p2[1], p2[0]));
                     else
-                        support.pose(new LinearFloat(store, p2, p1, "<=", p3));
+                        support.pose(new LinearFloat(p2, p1, "<=", p3));
                     break;
                 default:
 		    throw new IllegalArgumentException("%% ERROR: Constraint floating-point operation not supported.");

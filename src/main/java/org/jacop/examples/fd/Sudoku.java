@@ -1,4 +1,4 @@
-/**
+/*
  * Sudoku.java
  * This file is part of JaCoP.
  * <p>
@@ -30,12 +30,6 @@
 
 package org.jacop.examples.fd;
 
-/**
- *
- * A simple model to solve Sudoku problem. 
- *
- */
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -45,8 +39,11 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
 /**
+ *
+ * A simple model to solve Sudoku problem.
+ *
  *  @author Radoslaw Szymanek
- *  @version 4.4
+ *  @version 4.5
  */
 
 public class Sudoku extends ExampleFD {

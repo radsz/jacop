@@ -1,4 +1,4 @@
-/**
+/*
  * AssertionListener.java
  * <p>
  * This file is part of JaCoP.
@@ -32,12 +32,12 @@ package org.jacop.jasat.modules.interfaces;
 
 import org.jacop.jasat.core.SolverComponent;
 
-
 /**
  * A class that can register to the Solver, to be notified when some events
  * occur. Allows one to add modules to the Solver.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
+ * @version 4.5
  *
  */
 public interface AssertionListener extends SolverComponent {

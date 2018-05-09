@@ -1,4 +1,4 @@
-/**
+/*
  * BacktrackableManager.java
  * This file is part of JaCoP.
  * <p>
@@ -32,6 +32,7 @@ package org.jacop.core;
 
 /**
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
+ * @version 4.5
  *
  */
 public interface BacktrackableManager {

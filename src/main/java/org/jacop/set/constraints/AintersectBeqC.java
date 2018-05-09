@@ -1,4 +1,4 @@
-/**
+/*
  * AintersectBeqC.java
  * This file is part of JaCoP.
  * <p>
@@ -46,7 +46,7 @@ import org.jacop.set.core.SetVar;
  * is equal to C. A /\ B = C. 
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 public class AintersectBeqC extends Constraint implements UsesQueueVariable, SatisfiedPresent {

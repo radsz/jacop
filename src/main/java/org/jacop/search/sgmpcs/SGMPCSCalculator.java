@@ -1,4 +1,4 @@
-/**
+/*
  * SGMPCSCalculator.java
  * This file is part of JaCoP.
  * <p>
@@ -37,7 +37,7 @@ import org.jacop.search.ConsistencyListener;
  * Defines functionality for SGMPCS search
  *
  * @author Krzysztof Kuchcinski
- * @version 4.4
+ * @version 4.5
  */
 
 public class SGMPCSCalculator<T extends Var> implements ConsistencyListener {

@@ -46,26 +46,29 @@ import java.util.stream.Stream;
  * algorithm.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class CumulativeBasic extends Constraint {
 
-    private static AtomicInteger idNumber = new AtomicInteger(0);
+    final private static AtomicInteger idNumber = new AtomicInteger(0);
 
     private static final boolean debug = false, debugNarr = false;
 
-    private EventIncComparator<Event> eventComparator = new EventIncComparator<>();
+    private Comparator<Event> eventComparator = ( Event o1, Event o2 ) -> {
+            int dateDiff = o1.date() - o2.date();
+            return (dateDiff == 0) ? (o1.type() - o2.type()) : dateDiff;
+    };
 
     /**
      * All tasks of the constraint
      */
-    TaskView[] taskNormal;
+    final TaskView[] taskNormal;
 
     /**
      * It specifies the limit of the profile of cumulative use of resources.
      */
-    public IntVar limit;
+    final public IntVar limit;
 
     /**
      * It specifies whether there possibly exist tasks that have duration or resource variable min value equal zero.
@@ -105,7 +108,7 @@ public class CumulativeBasic extends Constraint {
         this.taskNormal = new TaskNormalView[starts.length];
 
         for (int i = 0; i < starts.length; i++) {
-            taskNormal[i] = new TaskNormalView(new Task(starts[i], durations[i], resources[i]));
+            taskNormal[i] = new TaskNormalView(starts[i], durations[i], resources[i]);
             taskNormal[i].index = i;
             if (durations[i].min() == 0 || resources[i].min() == 0)
                 possibleZeroTasks = true;
@@ -175,7 +178,7 @@ public class CumulativeBasic extends Constraint {
 
     @Override public String toString() {
 
-        StringBuffer result = new StringBuffer(id());
+        StringBuilder result = new StringBuilder(id());
 
         result.append(" : cumulativeBasic([ ");
         for (int i = 0; i < taskNormal.length - 1; i++)
@@ -453,15 +456,4 @@ public class CumulativeBasic extends Constraint {
         }
     }
 
-
-    private static class EventIncComparator<T extends Event> implements Comparator<T>, java.io.Serializable {
-
-        EventIncComparator() {
-        }
-
-        public int compare(T o1, T o2) {
-            int dateDiff = o1.date() - o2.date();
-            return (dateDiff == 0) ? (o1.type() - o2.type()) : dateDiff;
-        }
-    }
 }

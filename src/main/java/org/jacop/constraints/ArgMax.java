@@ -1,4 +1,4 @@
-/**
+/*
  * ArgMax.java
  * This file is part of JaCoP.
  * <p>
@@ -49,24 +49,24 @@ import org.jacop.core.Store;
  *
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class ArgMax extends Constraint implements SatisfiedPresent{
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     boolean firstConsistencyCheck = true;
 
     /**
      * It specifies a list of variables among which a maximum value is being searched for.
      */
-    public IntVar list[];
+    final public IntVar list[];
 
     /**
      * It specifies variable max which stores the maximum value present in the list. 
      */
-    public IntVar maxIndex;
+    final public IntVar maxIndex;
 
 
     /**
@@ -251,7 +251,7 @@ public class ArgMax extends Constraint implements SatisfiedPresent{
 
     @Override public String toString() {
 
-        StringBuffer result = new StringBuffer(id());
+        StringBuilder result = new StringBuilder(id());
 
         result.append(" : ArgMax(  [ ");
         for (int i = 0; i < list.length; i++) {

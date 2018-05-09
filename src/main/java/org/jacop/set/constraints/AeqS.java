@@ -1,4 +1,4 @@
-/**
+/*
  * AeqS.java
  * This file is part of JaCoP.
  * <p>
@@ -44,8 +44,7 @@ import org.jacop.set.core.SetVar;
  * is equal to a given set. 
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- *
- * @version 4.4
+ * @version 4.5
  */
 
 public class AeqS extends PrimitiveConstraint {

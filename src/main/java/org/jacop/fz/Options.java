@@ -1,4 +1,4 @@
-/**
+/*
  * Options.java
  * This file is part of JaCoP.
  * <p>
@@ -42,6 +42,7 @@ import org.jacop.floats.core.FloatDomain;
  * information about all options used for a given flatzinc file. 
  *
  * @author Krzysztof Kuchcinski
+ * @version 4.5
  *
  */
 public class Options {

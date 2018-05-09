@@ -1,4 +1,4 @@
-/**
+/*
  * XeqC.java
  * This file is part of org.jacop.
  * <p>
@@ -43,22 +43,22 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Domain consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 public class XeqC extends PrimitiveConstraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies the constant to which a specified variable should be equal to.
      */
-    public int c;
+    final public int c;
 
     /**
      * It specifies the variable which is constrained to be equal to the specified value.
      */
-    public IntVar x;
+    final public IntVar x;
 
     /**
      * It constructs the constraint X = C.
@@ -81,7 +81,7 @@ public class XeqC extends PrimitiveConstraint {
 
     }
 
-    @Override public void consistency(Store store) {
+    @Override public void consistency(final Store store) {
 
         x.domain.in(store.level, x, c, c);
 
@@ -103,7 +103,7 @@ public class XeqC extends PrimitiveConstraint {
         return Domain.NONE;
     }
 
-    @Override public void notConsistency(Store store) {
+    @Override public void notConsistency(final Store store) {
 
         x.domain.inComplement(store.level, x, c);
 

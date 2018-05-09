@@ -1,4 +1,4 @@
-/**
+/*
  * SearchItem.java
  * This file is part of JaCoP.
  * <p>
@@ -74,6 +74,7 @@ import org.jacop.set.search.MaxLubCard;
  * The part of the parser responsible for parsing search part of the flatzinc specification. 
  *
  * @author Krzysztof Kuchcinski
+ * @version 4.5
  *
  */
 public class SearchItem implements ParserTreeConstants {

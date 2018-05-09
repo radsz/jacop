@@ -1,4 +1,4 @@
-/**
+/*
  * CircuitVarValue.java
  * This file is part of JaCoP.
  * <p>
@@ -36,7 +36,7 @@ import org.jacop.core.MutableVarValue;
  * Defines a current value of the CircuitVar and related operations on it.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.4
+ * @version 4.5
  */
 
 class CircuitVarValue implements MutableVarValue, Cloneable {
