@@ -133,7 +133,7 @@ public class Fz2jacop {
         } catch (TrivialSolution e) {
             // do nothing
             Runtime.getRuntime().removeShutdownHook(t);
-            return;
+            //return;
         }
 
         if (opt.getStatistics()) {
