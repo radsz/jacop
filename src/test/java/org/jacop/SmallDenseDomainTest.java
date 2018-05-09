@@ -1,6 +1,5 @@
 package org.jacop;
 
-
 import org.jacop.constraints.In;
 import org.jacop.core.*;
 import org.junit.Before;
@@ -8,6 +7,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.Spy;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -16,7 +17,9 @@ import java.util.Collection;
 
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.verify;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.*;
 import static org.mockito.MockitoAnnotations.initMocks;
 
 /**
@@ -64,7 +67,7 @@ public class SmallDenseDomainTest {
     @Test
     public void testComplement() throws Exception {
         System.out.println("Complement function test");
-        IntDomain testedDomain = (IntDomain) prepareMethod.invoke(this, new Object[]{new int[]{1,3, 5,7, 12,18}});
+        IntDomain testedDomain = (IntDomain) prepareMethod.invoke(this, new Object[]{new int[]{1, 3, 5, 7, 12, 18}});
             assertEquals("{" + IntDomain.MinInt + "..0, 4, 8..11, 19.." + IntDomain.MaxInt + "}", testedDomain.complement().toString());
 
     }
@@ -218,6 +221,7 @@ public class SmallDenseDomainTest {
 
     @Mock
     IntVar var;
+
 
     IntDomain intervalDomain;
     @Before
@@ -843,7 +847,7 @@ public class SmallDenseDomainTest {
         intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[]{new int[]{10, 11, 13, 15}});
         intervalDomain.in(100, var, 9, 14);
 
-        verify(var).domainHasChanged(IntDomain.ANY);
+        verify(var).domainHasChanged(IntDomain.BOUND);
     }
 
     @Test public void testinterval68() throws InvocationTargetException, IllegalAccessException {
@@ -954,18 +958,161 @@ public class SmallDenseDomainTest {
 
 
 
-//    @Test
-//    public void testEvent1() throws InvocationTargetException, IllegalAccessException {
-//
-//            intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[]{new int[]{1, 2}});
-//            intervalDomain.setStamp(100);
-//            intervalDomain.contains(1);
-//
-//            verify(var).domainHasChanged(IntDomain.NONE);
-//        }
+    @Test
+    public void testinterval81() throws InvocationTargetException, IllegalAccessException {
+
+        IntDomain intDomain = (IntDomain) prepareMethod.invoke(this, new Object[]{new int[]{1, 2}});
+        intDomain.inShift(100, var, intDomain,1);
+
+        verify(var).domainHasChanged(IntDomain.GROUND);
+    }
+
+    @Test
+    public void testinterval82() throws InvocationTargetException, IllegalAccessException {
+
+        IntDomain intDomain = (IntDomain) prepareMethod.invoke(this, new Object[]{new int[]{1, 3, 5, 7, 12, 18}});
+        intDomain.inShift(100, var, intDomain,1);
+
+        verify(var).domainHasChanged(IntDomain.BOUND);
+    }
+
+    @Test
+    public void testinterval83() throws InvocationTargetException, IllegalAccessException {
+
+        IntDomain intDomain = (IntDomain) prepareMethod.invoke(this, new Object[]{new int[]{1, 3, 5, 7, 12, 18}});
+        intDomain.inShift(100, var, intDomain,1);
+
+        verify(var).domainHasChanged(IntDomain.BOUND);
+    }
+
+
+    @Test
+    public void testinterval84() throws InvocationTargetException, IllegalAccessException {
+
+        IntDomain intDomain = (IntDomain) prepareMethod.invoke(this, new Object[]{new int[]{1, 3, 5, 7, 12, 18}});
+
+        IntDomain intDomain1 = mock(IntDomain.class, Mockito.CALLS_REAL_METHODS);
+        when(intDomain1.contains(anyInt(), anyInt())).thenReturn(true);
+
+        boolean result = intDomain1.contains(intDomain);
+
+        assertTrue(result);
+
+    }
+
+
+    @Test
+    public void testinterval86() throws InvocationTargetException, IllegalAccessException {
+
+        IntDomain intDomain = (IntDomain) prepareMethod.invoke(this, new Object[]{new int[]{1, 3, 5, 7, 12, 18}});
+
+        IntDomain intDomain1 = mock(IntDomain.class, Mockito.CALLS_REAL_METHODS);
+
+        when(intDomain1.isIntersecting(anyInt(), anyInt())).thenReturn(true);
+        when(intDomain1.contains(anyInt())).thenReturn(true);
+
+        boolean result = intDomain1.isIntersecting(intDomain);
+
+        assertTrue(result);
+
+    }
+
+
+    @Test
+    public void testinterval87() throws InvocationTargetException, IllegalAccessException {
+
+        IntDomain intDomain = (IntDomain) prepareMethod.invoke(this, new Object[]{new int[]{ 5, 5 }});
+        IntDomain intDomain1 = mock(IntDomain.class, Mockito.CALLS_REAL_METHODS);
+
+        when(intDomain1.eq(intDomain)).thenReturn(true);
+        boolean result = intDomain1.singleton(intDomain);
+
+        assertTrue(result);
+
+    }
+
+    @Test
+    public void testinterval88() throws InvocationTargetException, IllegalAccessException {
+
+        IntDomain intDomain = (IntDomain) prepareMethod.invoke(this, new Object[]{new int[]{5, 5}});
+
+        IntDomain intDomain1 = mock(IntDomain.class, Mockito.CALLS_REAL_METHODS);
+
+        when(intDomain1.getSize()).thenReturn(10);
+        boolean result = intDomain1.singleton(intDomain);
+
+        assertFalse(result);
+
+    }
+
+    @Test
+    public void testinterval89() throws InvocationTargetException, IllegalAccessException {
+
+        IntDomain intDomain = (IntDomain) prepareMethod.invoke(this, new Object[]{new int[]{5, 5}});
+
+        IntDomain intDomain1 = mock(IntDomain.class, Mockito.CALLS_REAL_METHODS);
+
+        when(intDomain1.isEmpty()).thenReturn(true);
+        boolean result = intDomain1.singleton(intDomain);
+
+        assertFalse(result);
+
+    }
 
 
 
+    @Test
+    public void testinterval90() throws InvocationTargetException, IllegalAccessException {
+
+        IntDomain intDomain = (IntDomain) prepareMethod.invoke(this, new Object[]{new int[]{5, 5, 6, 6 }});
+
+        IntDomain intDomain1 = mock(IntDomain.class, Mockito.CALLS_REAL_METHODS);
+        intDomain = mock(IntDomain.class, Mockito.CALLS_REAL_METHODS);
+
+        when(intDomain.getSize()).thenReturn(10);
+////        when(intDomain1.isEmpty()).thenReturn(false);
+//        when(intDomain1.contains(anyInt())).thenReturn(true);
+//        when(intDomain1.contains(anyInt(),anyInt())).thenReturn(false);
+        when(intDomain1.getSize()).thenReturn(0);
+
+        boolean result = intDomain1.singleton(intDomain);
+
+        assertFalse(result);
+
+    }
+
+
+    @Test
+    public void testinterval188() throws InvocationTargetException, IllegalAccessException {
+
+        IntDomain intDomain = (IntDomain) prepareMethod.invoke(this, new Object[]{new int[]{1, 3, 5, 7, 12, 18}});
+
+        IntDomain intDomain1 = mock(IntDomain.class, Mockito.CALLS_REAL_METHODS);
+
+        when(intDomain1.contains(anyInt(), anyInt())).thenReturn(true, true, true, true, true, false  );
+
+        intDomain1.contains(intDomain);
+        intDomain1.contains(intDomain);
+        intDomain1.contains(intDomain);
+        intDomain1.contains(intDomain);
+        intDomain1.contains(intDomain);
+
+        boolean result = intDomain1.contains(intDomain);
+
+        assertFalse(result);
+
+    }
+
+    @Test
+    public void testinterval85() throws InvocationTargetException, IllegalAccessException {
+
+        BoundDomain boundDomain =  (BoundDomain) prepareMethod.invoke(this, new Object[]{new int[]{1, 3, 5, 7, 12, 18}});
+//        intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[]{new int[]{-10, 10}});
+//        intervalDomain.inShift(100, var, intervalDomain, 5);
+        //boundDomain.inShift(100, var, boundDomain , 1);
+
+       // verify(var).domainHasChanged(boundDomain.BOUND);
+    }
 
     //        @Test
 //    public void testEvent2()  throws InvocationTargetException, IllegalAccessException {
