@@ -44,17 +44,8 @@ import org.jacop.set.core.SetVar;
  * It creates a constraint that makes sure that the value assigned to integer variable x is
  * included in the set assigned to the set variable a.
  *
-<<<<<<< HEAD
- * @author Radoslaw Szymanek and Krzysztof Kuchcinski.
- * @version 4.4
-||||||| merged common ancestors
- * @author Radoslaw Szymanek and Krzysztof Kuchcinski. 
- *
- * @version 4.4
-=======
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski.
  * @version 4.5
->>>>>>> radsz/develop
  */
 
 public class XinA extends PrimitiveConstraint {

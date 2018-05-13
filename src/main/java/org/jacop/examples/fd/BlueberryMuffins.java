@@ -48,12 +48,7 @@ import org.jacop.core.Store;
  * It solves a simple logic puzzle about blueberry muffins.
  *
  * @author Radoslaw Szymanek
-<<<<<<< HEAD
- * @version 4.4
-||||||| merged common ancestors
-=======
  * @version 4.5
->>>>>>> radsz/develop
  *
  *  Logic Puzzle: Blueberry Muffins
  *

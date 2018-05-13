@@ -34,16 +34,8 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
-<<<<<<< HEAD
- * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.4
-||||||| merged common ancestors
- * @author Radoslaw Szymanek
- * @version 4.4
-=======
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.5
->>>>>>> radsz/develop
  */
 
 public class FSMState {

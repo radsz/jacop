@@ -65,18 +65,10 @@ import org.jacop.search.SimpleSelect;
  * Multi-Unit Combinatorial Auctions by Brammert Ottens
  * Ulle Endriss
  *
-<<<<<<< HEAD
- * @author Radoslaw Szymanek
- * @version 4.4
- *
- *
-||||||| merged common ancestors
-=======
  * @author Radoslaw Szymanek
  * @version 4.5
  *
  *
->>>>>>> radsz/develop
  */
 
 public class MUCA extends ExampleFD {

@@ -45,22 +45,11 @@ import org.jacop.core.Var;
 import org.jacop.search.*;
 
 /**
-<<<<<<< HEAD
- *
- * It shows how to visualize the solving process for Sudoku problem.
- *
- *  @author Krzysztof Kuchcinski
- *  @version 4.4
-||||||| merged common ancestors
- *  @author Radoslaw Szymanek
- *  @version 4.4
-=======
  *
  * It shows how to visualize the solving process for Sudoku problem.
  *
  *  @author Krzysztof Kuchcinski
  *  @version 4.5
->>>>>>> radsz/develop
  */
 
 public class CPvizSudoku {

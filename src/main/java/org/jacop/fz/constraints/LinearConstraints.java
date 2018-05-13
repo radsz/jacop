@@ -491,19 +491,9 @@ class LinearConstraints implements ParserTreeConstants {
                         else
                             support.pose(new SumInt(p2, "==", v));
                     } else {
-<<<<<<< HEAD
-                        if (p2.length < 30)
-                            support.pose(new LinearInt(store, p2, p1, "==", p3));
-                        else
-||||||| merged common ancestors
-                        if (p2.length < 15)
-                            support.pose(new LinearInt(store, p2, p1, "==", p3));
-                        else
-=======
                         if (p2.length < 30)
                             support.pose(new LinearInt(p2, p1, "==", p3));
 			else
->>>>>>> radsz/develop
                             support.pose(new SumWeight(p2, p1, p3));
                     }
                 }

@@ -43,14 +43,7 @@ import org.jacop.search.ComparatorVariable;
  * highest weight divided by its size.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
-<<<<<<< HEAD
- * @version 4.4
-||||||| merged common ancestors
- *
- * @version 4.4
-=======
  * @version 4.5
->>>>>>> radsz/develop
  * @param <T> type of variable being compared.
  *
  */

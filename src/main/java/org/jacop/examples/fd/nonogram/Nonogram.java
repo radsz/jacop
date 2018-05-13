@@ -53,12 +53,7 @@ import java.util.regex.Pattern;
  * It solves a nonogram example problem, sometimes also called Paint by Numbers.
  *
  * @author Radoslaw Szymanek
-<<<<<<< HEAD
- * @version 4.4
-||||||| merged common ancestors
-=======
  * @version 4.5
->>>>>>> radsz/develop
  *
  */
 
