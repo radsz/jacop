@@ -51,6 +51,7 @@ import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.Or;
 import org.jacop.constraints.XlteqY;
+import org.jacop.constraints.XneqY;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeUnary;
@@ -276,6 +277,13 @@ class GlobalConstraints implements ParserTreeConstants {
     void gen_jacop_alldiff(SimpleNode node) {
         IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
 
+	if (v.length == 1)
+	    return;
+	else if (v.length == 2) {
+	    support.pose(new XneqY(v[0], v[1]));
+	    return;
+	}
+	
         IntervalDomain dom = new IntervalDomain();
         for (IntVar var : v)
             dom = (IntervalDomain) dom.union(var.dom());
