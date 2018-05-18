@@ -277,7 +277,9 @@ class GlobalConstraints implements ParserTreeConstants {
     void gen_jacop_alldiff(SimpleNode node) {
         IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
 
-	if (v.length == 1)
+	if (v.length == 0)
+	    return;
+	else if (v.length == 1)
 	    return;
 	else if (v.length == 2) {
 	    support.pose(new XneqY(v[0], v[1]));

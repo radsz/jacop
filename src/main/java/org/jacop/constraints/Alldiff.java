@@ -131,6 +131,9 @@ public class Alldiff extends Alldifferent {
 
     @Override public void impose(Store store) {
 
+	if (list.length == 0)
+	    return;
+
         super.impose(store);
         this.store = store;
 
