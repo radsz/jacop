@@ -101,36 +101,27 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
 
     @Override public void consistency(Store store) {
 
-        //@todo, why so much work?
-        // search for the first one which returns false for notSatisfied() call
-        // use circular buffer approach to remember the last notSatisfied()== false to start checking from this one.
-        int numberSat = 0;
         int numberNotSat = 0;
         int j = 0;
-
-        int i = 0;
-        while (numberSat == 0 && i < listOfC.length) {
-            if (listOfC[i].satisfied())
-                numberSat++;
+	int n = listOfC.length;
+	
+	for (int i = 0; i < n; i++) {
+            if (listOfC[i].satisfied()) {
+		removeConstraint();
+                return;
+	    }
             else {
                 if (listOfC[i].notSatisfied())
                     numberNotSat++;
                 else
                     j = i;
             }
-            i++;
         }
 
-        if (numberSat == 0) {
-
-            if (numberNotSat == listOfC.length - 1)
-                listOfC[j].consistency(store);
-            else if (numberNotSat == listOfC.length)
-                throw Store.failException;
-
-        } else if (numberSat > 0) {
-            removeConstraint();
-        }
+	if (numberNotSat == n - 1)
+	    listOfC[j].consistency(store);
+	else if (numberNotSat == n)
+	    throw Store.failException;
 
     }
 
