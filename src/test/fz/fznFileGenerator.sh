@@ -733,7 +733,7 @@ for i in ${arr4[@]}; do
         for j in ${arr5[@]}; do
 
             if [ "${i#*/}" == "${j#*/}" ]; then
-                echo "Test exist in time category"
+                echo "Test $i exist in time category"
                 rm -r ${i%/*}/${i##*/}
             fi
         done
@@ -812,11 +812,25 @@ if [ ! -d "$z/${z#*/}" ]; then
 	mkdir $z/${z#*/}
 fi
 
-if [[ -z $(find  $z -mindepth 1 -maxdepth 1 -name \*.dzn 2>/dev/null) ]]
-then
+    if [[ -z $(find  $z -mindepth 1 -maxdepth 1 -name \*.dzn 2>/dev/null) ]]
+    then
 
         echo "Generatig fzn file for $i"
         mzn2fzn -G jacop $i
+
+        readarray -t arr4 < <(find $folderPath -name \*.fzn);
+        for i in ${arr4[@]}; do
+
+            readarray -t arr5 < <(find upTo5sec upTo30sec upTo1min upTo5min upTo10min upTo1hour above1hour flakyTests  -name \*.fzn );
+
+                for j in ${arr5[@]}; do
+
+                    if [ "${i#*/}" == "${j#*/}" ]; then
+                        echo "Test $i exist in time category"
+                    rm -r ${i%/*}/${i##*/}
+                fi
+            done
+        done
 
     b=${i##*/} # *.fzn filename with extension
     bb=${b%.*} # *.mzn filename without extension
@@ -825,7 +839,7 @@ then
      diffre=$?
      if [[ -z $(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $iii.fzn 2>/dev/null ) || -z $(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $iii.out 2>/dev/null) || $diffre -ne 0 ]]
      then
-            for file in $z/*.fzn; do mv "$file" $z/${z#*/}/"${file/*.fzn/$iii.fzn}"; done
+            for file in $z/*.fzn; do mv "$file" $z/${z#*/}/"${file/*.fzn/$iii.fzn}" 2>/dev/null ; done
             sizeFznFiles
             timeCategory $folderPath $2
      else
@@ -843,6 +857,23 @@ for j in ${arr2[@]}; do # j contains a relative path to dzn file.
      echo "Generatig fzn file for $i and data file $j"
      mzn2fzn -G jacop $i -d $j
 
+        xx=${j#*/%.*}
+        xxx=${xx%.*}.fzn
+
+ readarray -t arr4 < <(find $folderPath -name \*.fzn);
+        for ii in ${arr4[@]}; do
+
+            readarray -t arr5 < <(find upTo5sec upTo30sec upTo1min upTo5min upTo10min upTo1hour above1hour  -name \*.fzn );
+
+                for j in ${arr5[@]}; do
+
+                    if [ "${xxx#*/}" == "${j#*/}" ]; then
+                        echo "Test $xxx exist in time category"
+                    rm -r ${ii%/*}/${ii##*/}
+                fi
+            done
+        done
+
     b=${i##*/} # *.fzn filename with extension
     bb=${b%.*} # *.mzn filename without extension
 
@@ -853,7 +884,7 @@ for j in ${arr2[@]}; do # j contains a relative path to dzn file.
 
   if [[ -z $(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $filename.fzn 2>/dev/null )  ||  -z $(find upTo5sec/${z#*/} upTo30sec/${z#*/} upTo1min/${z#*/} upTo5min/${z#*/} upTo10min/${z#*/} upTo1hour/${z#*/} above1hour/${z#*/} flakyTests/${z#*/} -name $filename.out 2>/dev/null ) || $diffre -ne 0 ]]
   then
-	 for file in $z/*.fzn; do mv "$file" $z/${z#*/}/"${file/*.fzn/$filename.fzn}"; done
+	 for file in $z/*.fzn; do mv "$file" $z/${z#*/}/"${file/*.fzn/$filename.fzn}" 2>/dev/null; done
   else
 
       let count1++
