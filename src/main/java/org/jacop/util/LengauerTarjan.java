@@ -80,7 +80,8 @@ public class LengauerTarjan {
 	    succ[i] = new BitSet(n);
 	    pred[i] = new BitSet(n);
 	    bucket[i] = new BitSet(n);
-	    
+
+	    domClosure[i] = new BitSet(n);	
 	    domTreeSucc[i] = new BitSet(n);
 	}
     }
@@ -90,7 +91,8 @@ public class LengauerTarjan {
 	    succ[i].clear();
 	    pred[i].clear();
 	    bucket[i].clear();
-	    
+
+	    domClosure[i].clear();	    
 	    domTreeSucc[i].clear();
 	}	
     }
@@ -120,7 +122,7 @@ public class LengauerTarjan {
 		    semi[w] = semi[u];
 	    }
 	    bucket[vertex[semi[w]]].set(w);
-		
+	    
 	    link(parent[w], w);
 
 	    // step_3:
@@ -129,7 +131,6 @@ public class LengauerTarjan {
 		int u = eval(v);
 		dom[v] = (semi[u] < semi[v]) ? u : parent[w];
 	    }
-	    bs.clear();
 	}
 	// step_4:
 	for (int i = 1; i < n; i++) {
@@ -144,7 +145,7 @@ public class LengauerTarjan {
 	    
 	dom[r] = r;
 
-	transitiveClosure();
+	transitiveClosure(root, domClosure[root]);
 	
 	return true;
     }
@@ -168,7 +169,7 @@ public class LengauerTarjan {
 	}
     }
 
-    private void compress(int v) {
+    void compress(int v) {
 	if (ancestor[ancestor[v]] != NIL) {
 	    compress(ancestor[v]);
 	    if (semi[label[ancestor[v]]] < semi[label[v]])
@@ -202,27 +203,16 @@ public class LengauerTarjan {
     */
     public boolean dominatedBy(int n1, int n2) {
 	return domClosure[n1].get(n2);	
-	
-	// if (dom[n1] == n2 || dom[dom[n1]] == n2)   // check only two intermediate dominators (does not need to calla transitiveClosure() first)
-	//     return true;
-	// else
-	//     return false;
-	
-	// return dom[n1] == n2;  // check only intermediate dominator (does not need to calla transitiveClosure() first)
     }
 
-    public void transitiveClosure() {
-	BitSet rs = new BitSet(n);
-	transitiveClosure(root, rs);
-    }
-
-    public void transitiveClosure(int v, BitSet closure) {
-	closure.set(v);
-	domClosure[v] = closure;
-
+    private void transitiveClosure(int v, BitSet closure) {
+	BitSet dcV = domClosure[v];
+	dcV.or(closure);
+	dcV.set(v);
+	
 	BitSet next = domTreeSucc[v];
 	for (int i = next.nextSetBit(0); i >= 0; i = next.nextSetBit(i + 1))
-	    transitiveClosure(i, (BitSet)closure.clone());
+	    transitiveClosure(i, dcV);
     }
 
     public void generate(String filename) {

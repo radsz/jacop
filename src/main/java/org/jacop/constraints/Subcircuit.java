@@ -38,7 +38,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
-import org.jacop.util.LengauerTarjan;
+import org.jacop.util.SophisticatedLengauerTarjan;
 
 /**
  * Subcircuit constraint assures that all variables build a 
@@ -58,7 +58,7 @@ public class Subcircuit extends Alldiff {
 
     boolean firstConsistencyCheck = true;
 
-    boolean useSCC = true, useDominance = false;
+    boolean useSCC = true, useDominance = true;
 
     int idd = 0;
 
@@ -70,7 +70,7 @@ public class Subcircuit extends Alldiff {
 
     int firstConsistencyLevel;
 
-    LengauerTarjan graphDominance;
+    SophisticatedLengauerTarjan graphDominance;
 
 
     /**
@@ -84,7 +84,7 @@ public class Subcircuit extends Alldiff {
 
         this.numberId = idNumber.incrementAndGet();
         this.list = Arrays.copyOf(list, list.length);
-	this.graphDominance = new LengauerTarjan(list.length + 1);
+	this.graphDominance = new SophisticatedLengauerTarjan(list.length + 1);
 
 	this.queueIndex = 2;
 
@@ -117,7 +117,8 @@ public class Subcircuit extends Alldiff {
         this(list.toArray(new IntVar[list.size()]));
     }
 
-
+    int sccCounter = 0;
+    
     @Override public void consistency(Store store) {
 
         if (firstConsistencyCheck) {
@@ -137,18 +138,28 @@ public class Subcircuit extends Alldiff {
             variableQueue = new LinkedHashSet<IntVar>();
 
             alldifferent(store, fdvs);
-	    
-            if (!store.propagationHasOccurred) {
 
-		if (useSCC)
-		    sccsBasedPruning(store); // strongly connected components
-
-		if (useDominance)
-		    dominanceFilter(); // filter based on dominance of nodes
-
-	    }
-	    
         } while (store.propagationHasOccurred);
+
+	if (useSCC) {
+	    sccsBasedPruning(store); // strongly connected components
+
+	    if (store.propagationHasOccurred)
+		sccCounter = 0;
+
+	    // if 10 consecutive applications of SCC based pruning did
+	    // not give any pruning try domianance based pruning
+	    if (useDominance && sccCounter++ > 10) {
+		sccCounter = 0;
+		dominanceFilter(); // filter based on dominance of nodes
+	    }
+	}
+	else if (useDominance)
+	    dominanceFilter(); // filter based on dominance of nodes
+	
+	if (store.propagationHasOccurred)
+	    store.addChanged(this);
+
     }
 
     void alldifferent(Store store, LinkedHashSet<IntVar> fdvs) {
@@ -356,16 +367,16 @@ public class Subcircuit extends Alldiff {
 	}
 	
 	if (pr > 0) {
-	    graphDominance(possibleRoots[random.nextInt(pr)]);
-	
-	    reversedGraphDominance(possibleRoots[random.nextInt(pr)]);
+	    if (!graphDominance(possibleRoots[random.nextInt(pr)]))
+		reversedGraphDominance(possibleRoots[random.nextInt(pr)]);
 	}
     }
     
-    private void graphDominance(int root) {
+    private boolean graphDominance(int root) {
 
 	int n = list.length;
-
+	boolean pruning = false;
+	
 	graphDominance.init();
 	
 	// create graph
@@ -385,6 +396,7 @@ public class Subcircuit extends Alldiff {
 		    for (ValueEnumeration e = list[v].domain.valueEnumeration(); e.hasMoreElements(); ) {
 			int w = e.nextElement() - 1;
 			if (v != w && graphDominance.dominatedBy(v, w)) {
+			    pruning = true;
 			    // no back to dominator
 			    list[v].domain.inComplement(store.level, list[v], w+1);
 			    // no back loop for dominator
@@ -395,11 +407,14 @@ public class Subcircuit extends Alldiff {
 	}
 	else  // root does not reach all nodes -> FAIL
 	    throw store.failException;
+
+	return pruning;
     }
 
-    private void reversedGraphDominance(int root) {
+    private boolean reversedGraphDominance(int root) {
 
 	int n = list.length;
+	boolean pruning = false;
 	
 	graphDominance.init();
 
@@ -421,6 +436,7 @@ public class Subcircuit extends Alldiff {
 		    for (ValueEnumeration e = list[v].domain.valueEnumeration(); e.hasMoreElements(); ) {
 			int w = e.nextElement() - 1;
 			if (v != w && w != root && graphDominance.dominatedBy(w, v)) {
+			    pruning = true;
 			    // no back loop to dominator
 			    list[v].domain.inComplement(store.level, list[v], w+1);
 			    // no self loop 
@@ -431,5 +447,7 @@ public class Subcircuit extends Alldiff {
 	}
 	else  // root does not reach all nodes -> FAIL
 	    throw store.failException;
+
+	return pruning;
     }
 }
