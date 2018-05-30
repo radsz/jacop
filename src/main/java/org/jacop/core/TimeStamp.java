@@ -30,6 +30,8 @@
 
 package org.jacop.core;
 
+import org.jacop.api.Stateful;
+
 /**
  * This class provides mutable variable functionality. The variable value
  * depends on the store level. Each value is time stamped with different store
@@ -47,7 +49,7 @@ package org.jacop.core;
  * @param <T> a class being stored at different time stamps. 
  */
 
-public class TimeStamp<T> {
+public class TimeStamp<T> implements Stateful {
 
     final static boolean debug = false;
 

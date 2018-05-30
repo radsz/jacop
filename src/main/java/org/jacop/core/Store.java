@@ -247,7 +247,7 @@ public class Store {
      * efficient way for getting mutable variable functionality for simple data
      * types.
      */
-    protected List<TimeStamp<?>> timeStamps = new ArrayList<TimeStamp<?>>(100);
+    protected List<Stateful> timeStamps = new ArrayList<>(100);
 
     /**
      * This keeps information about watched constraints by given variable.
@@ -841,7 +841,7 @@ public class Store {
      * @return the position of timestamp at which it is being stored.
      */
 
-    public int putMutableVar(TimeStamp<?> value) {
+    public int putMutableVar(Stateful value) {
         timeStamps.add(value);
         return timeStamps.size() - 1;
     }
@@ -1003,7 +1003,7 @@ public class Store {
             statefulConstraint.removeLevel(rLevel);
 
         // It needs to be before as there is a timestamp for number of boolean variables.
-        for (TimeStamp<?> var : timeStamps)
+        for (Stateful var : timeStamps)
             var.removeLevel(rLevel);
 
         // Boolean Variables.
