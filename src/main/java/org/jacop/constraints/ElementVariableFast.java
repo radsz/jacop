@@ -99,7 +99,7 @@ public class ElementVariableFast extends Constraint implements Stateful, Satisfi
         checkInputForNullness(new String[] {"index", "value"}, new Object[] {index, value});
         checkInputForNullness("list", list);
 
-        queueIndex = 2;
+        queueIndex = 1;
 
         this.indexOffset = indexOffset;
         this.numberId = idNumber.incrementAndGet();
