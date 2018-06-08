@@ -194,23 +194,27 @@ public class ElementVariableFast extends Constraint implements Stateful, Satisfi
         int min = IntDomain.MaxInt;
         int max = IntDomain.MinInt;
         IntervalDomain indexDom = new IntervalDomain(5); // create with size 5 ;)
+	boolean indexDomNonEmpty = false;
         for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
             int position = e.nextElement() - 1 - indexOffset;
 
-            if (disjoint(value, list[position]))
+            if (disjoint(value, list[position])) {
+		indexDomNonEmpty = true;
                 if (indexDom.size == 0)
                     indexDom.unionAdapt(position + 1 + indexOffset);
                 else
                     indexDom.addLastElement(position + 1 + indexOffset);
+	    }
             else {
                 min = Math.min(min, list[position].min());
                 max = Math.max(max, list[position].max());
             }
         }
 
-        index.domain.in(store.level, index, indexDom.complement());
-        value.domain.in(store.level, value, min, max);
-	
+	if (indexDomNonEmpty)
+	    index.domain.in(store.level, index, indexDom.complement());
+	value.domain.in(store.level, value, min, max);
+
 	if (index.singleton()) {
 	    // index is singleton; value == list[index - 1 - offset]
 	    IntVar lp = list[index.value() - 1 - indexOffset];
