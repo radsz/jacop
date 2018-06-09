@@ -45,7 +45,6 @@ import java.util.Properties;
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 @SuppressWarnings("serial") public class Config extends Properties {
@@ -147,6 +146,7 @@ import java.util.Properties;
 
     /**
      * check some properties of the config
+     *
      * @return true if the config passes check, false if there is a problem
      */
     public boolean check() {

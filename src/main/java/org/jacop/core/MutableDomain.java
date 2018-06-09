@@ -57,7 +57,7 @@ public class MutableDomain implements MutableVar {
     }
 
     /**
-     * @param store store in which the mutable domain is created.
+     * @param store  store in which the mutable domain is created.
      * @param domain specifies the domain used to create mutable domain.
      */
     public MutableDomain(Store store, IntDomain domain) {

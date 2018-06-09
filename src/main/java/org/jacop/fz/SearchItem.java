@@ -43,12 +43,10 @@ import java.util.Arrays;
 
 
 /**
- *
- * The part of the parser responsible for parsing search part of the flatzinc specification. 
+ * The part of the parser responsible for parsing search part of the flatzinc specification.
  *
  * @author Krzysztof Kuchcinski
  * @version 4.5
- *
  */
 public class SearchItem implements ParserTreeConstants {
 
@@ -68,9 +66,9 @@ public class SearchItem implements ParserTreeConstants {
 
     /**
      * It constructs search part parsing object based on dictionaries
-     * provided as well as store object within which the search will take place. 
+     * provided as well as store object within which the search will take place.
      *
-     * @param store the finite domain store within which the search will take place. 
+     * @param store the finite domain store within which the search will take place.
      * @param table the holder of all the objects present in the flatzinc file.
      */
     public SearchItem(Store store, Tables table) {
@@ -242,8 +240,8 @@ public class SearchItem implements ParserTreeConstants {
             for (int i = 0; i < count; i++) {
                 SearchItem subSearch = new SearchItem(store, dictionary);
                 subSearch.searchParameters(ann, i);
-		if (subSearch.search_variables.length > 0)
-		    search_seq.add(subSearch);
+                if (subSearch.search_variables.length > 0)
+                    search_seq.add(subSearch);
             }
         }
     }
@@ -257,8 +255,8 @@ public class SearchItem implements ParserTreeConstants {
         for (int i = 0; i < count - 1; i++) {
             SearchItem subSearch = new SearchItem(store, dictionary);
             subSearch.searchParameters(node, i);
-	    if (subSearch.search_variables.length > 0)
-		search_seq.add(subSearch);
+            if (subSearch.search_variables.length > 0)
+                search_seq.add(subSearch);
         }
     }
 
@@ -327,7 +325,8 @@ public class SearchItem implements ParserTreeConstants {
                 return sel;
             }
         } else {
-            throw new IllegalArgumentException("Wrong parameters for float_search. Only indomain_split or indomain_reverse_split are allowed.");
+            throw new IllegalArgumentException(
+                "Wrong parameters for float_search. Only indomain_split or indomain_reverse_split are allowed.");
         }
     }
 
@@ -646,22 +645,22 @@ public class SearchItem implements ParserTreeConstants {
         StringBuffer s = new StringBuffer();
 
         if (search_type == null)
-	    s.append("defult_search\n");
+            s.append("defult_search\n");
         else if (search_seq.size() == 0) {
-	    s.append(search_type + "(");
+            s.append(search_type + "(");
             if (search_variables == null)
-	        s.append("[]");
+                s.append("[]");
             else
-	        s.append("array1d(1.." + search_variables.length + ", " + Arrays.asList(search_variables));
+                s.append("array1d(1.." + search_variables.length + ", " + Arrays.asList(search_variables));
             s.append(", " + explore + ", " + var_selection_heuristic + ", " + indomain);
             if (floatSearch)
-	        s.append(", " + precision);
+                s.append(", " + precision);
         } else {
             for (int i = 0; i < search_seq.size(); i++) //SearchItem se : search_seq)
                 if (i == search_seq.size() - 1)
-		    s.append(search_seq.get(i) + ")");
+                    s.append(search_seq.get(i) + ")");
                 else
-		    s.append(search_seq.get(i) + "), ");
+                    s.append(search_seq.get(i) + "), ");
         }
         return s.toString();
     }

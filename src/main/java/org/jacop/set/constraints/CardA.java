@@ -93,7 +93,7 @@ public class CardA extends Constraint implements SatisfiedPresent {
      * It constructs a cardinality constraint to restrict the number of elements
      * in the set assigned to set variable a.
      *
-     * @param a variable that is restricted to have the cardinality [min, max].
+     * @param a   variable that is restricted to have the cardinality [min, max].
      * @param min the minimum value possible for the cardinality of a.
      * @param max the maximum value possible for the cardinality of a.
      */
@@ -106,7 +106,7 @@ public class CardA extends Constraint implements SatisfiedPresent {
 
     private CardA(SetVar a) {
 
-        checkInputForNullness("a", new Object[]{a});
+        checkInputForNullness("a", new Object[] {a});
         numberId = idNumber.incrementAndGet();
         this.a = a;
         setScope(a);

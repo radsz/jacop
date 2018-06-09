@@ -40,14 +40,13 @@ import java.util.stream.Stream;
 
 /**
  * ArgMax constraint provides the index of the maximum
- * variable from all variables on the list. 
- *
+ * variable from all variables on the list.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
  */
 
-public class ArgMax extends Constraint implements SatisfiedPresent{
+public class ArgMax extends Constraint implements SatisfiedPresent {
 
     final static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -59,7 +58,7 @@ public class ArgMax extends Constraint implements SatisfiedPresent{
     final public IntVar list[];
 
     /**
-     * It specifies variable max which stores the maximum value present in the list. 
+     * It specifies variable max which stores the maximum value present in the list.
      */
     final public IntVar maxIndex;
 
@@ -70,16 +69,17 @@ public class ArgMax extends Constraint implements SatisfiedPresent{
     public int indexOffset;
 
     /**
-     * tirbreak == true {@literal -->} select element with the lowest index if exist several 
+     * tirbreak == true {@literal -->} select element with the lowest index if exist several
      */
     public boolean tiebreak = true;
 
     /**
      * It constructs max constraint.
-     * @param maxIndex variable denoting the index of the maximum value
-     * @param list the array of variables for which the index of the maximum value is imposed.
+     *
+     * @param maxIndex    variable denoting the index of the maximum value
+     * @param list        the array of variables for which the index of the maximum value is imposed.
      * @param indexOffset the offset for the index that is computed from 1 by default (if needed from 0, use -1 for this parameter)
-     * @param tiebreak defines if tie breaking should be used (returning the least index if several maximum elements
+     * @param tiebreak    defines if tie breaking should be used (returning the least index if several maximum elements
      */
     public ArgMax(IntVar[] list, IntVar maxIndex, int indexOffset, boolean tiebreak) {
         this(list, maxIndex);
@@ -89,7 +89,7 @@ public class ArgMax extends Constraint implements SatisfiedPresent{
 
     public ArgMax(IntVar[] list, IntVar maxIndex) {
 
-        checkInputForNullness(new String[]{"list", "maxIndex"}, new Object[][] {list, { maxIndex} });
+        checkInputForNullness(new String[] {"list", "maxIndex"}, new Object[][] {list, {maxIndex}});
 
         this.queueIndex = 1;
         this.numberId = idNumber.incrementAndGet();
@@ -97,15 +97,16 @@ public class ArgMax extends Constraint implements SatisfiedPresent{
         this.maxIndex = maxIndex;
         this.list = Arrays.copyOf(list, list.length);
 
-        setScope( Stream.concat(Arrays.stream(list) , Stream.of(maxIndex)));
+        setScope(Stream.concat(Arrays.stream(list), Stream.of(maxIndex)));
     }
 
     /**
      * It constructs max constraint.
-     * @param maxIndex variable denoting index of the maximum value
-     * @param variables the array of variables for which the maximum value is imposed.
+     *
+     * @param maxIndex    variable denoting index of the maximum value
+     * @param variables   the array of variables for which the maximum value is imposed.
      * @param indexOffset the offset for the index that is computed from 1 by default (if needed from 0, use -1 for this parameter)
-     * @param tiebreak defines if tie breaking sgould be used (returning the least index if several maximum elements
+     * @param tiebreak    defines if tie breaking sgould be used (returning the least index if several maximum elements
      */
     public ArgMax(List<? extends IntVar> variables, IntVar maxIndex, int indexOffset, boolean tiebreak) {
         this(variables, maxIndex);

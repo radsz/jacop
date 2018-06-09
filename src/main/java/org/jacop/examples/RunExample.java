@@ -38,12 +38,11 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
 /**
- * This class executes the provided example. It also allows to specify 
+ * This class executes the provided example. It also allows to specify
  * the arguments for the executed example.
  *
  * @author Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 public class RunExample {

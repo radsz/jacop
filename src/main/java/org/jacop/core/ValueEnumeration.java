@@ -41,12 +41,14 @@ public abstract class ValueEnumeration {
 
     /**
      * It checks if the value enumeration has more elements.
+     *
      * @return true if more elements can be enumerated, false otherwise.
      */
     public abstract boolean hasMoreElements();
 
     /**
      * It returns the next element in the enumeration.
+     *
      * @return the next element.
      */
     public abstract int nextElement();

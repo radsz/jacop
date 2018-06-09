@@ -68,8 +68,8 @@ class DiffnProfile extends Profile {
                 iR.dim = 0;
                 if (t.minUse(i, iR)) {
                     if (trace)
-                        System.out
-                            .println("Update profile " + "[" + iR.origin[j] + ".." + (iR.origin[j] + iR.length[j]) + ")=" + t.length(i).min());
+                        System.out.println(
+                            "Update profile " + "[" + iR.origin[j] + ".." + (iR.origin[j] + iR.length[j]) + ")=" + t.length(i).min());
                     addToProfile(iR.origin[j], iR.origin[j] + iR.length[j], t.length[i].min());
                 }
             }

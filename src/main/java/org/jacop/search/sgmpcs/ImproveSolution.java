@@ -38,9 +38,9 @@ import org.jacop.core.Var;
  * enforced and later upon backtrack a negation of that search decision will be
  * enforced.
  *
+ * @param <T> type of the variable for which choice point is being created.
  * @author krzysztof Kuchcinski
  * @version 4.5
- * @param <T> type of the variable for which choice point is being created.
  */
 
 public interface ImproveSolution<T extends Var> {

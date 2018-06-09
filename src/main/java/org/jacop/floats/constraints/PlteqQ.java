@@ -40,7 +40,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Constraint P {@literal <=} Q for floats
  *
- *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
  */
@@ -61,12 +60,13 @@ public class PlteqQ extends PrimitiveConstraint {
 
     /**
      * It constructs constraint P {@literal <=} Q.
+     *
      * @param p variable p.
      * @param q constant q.
      */
     public PlteqQ(FloatVar p, FloatVar q) {
 
-        checkInputForNullness(new String[]{"p", "q"}, new Object[]{p, q});
+        checkInputForNullness(new String[] {"p", "q"}, new Object[] {p, q});
 
         numberId = idNumber.incrementAndGet();
 

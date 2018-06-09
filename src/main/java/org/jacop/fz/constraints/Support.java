@@ -46,11 +46,9 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- *
  * Basic support for generation of constraints in flatzinc
  *
- * @author Krzysztof Kuchcinski 
- *
+ * @author Krzysztof Kuchcinski
  */
 public class Support implements ParserTreeConstants {
 
@@ -165,7 +163,7 @@ public class Support implements ParserTreeConstants {
             return int_boolVar;
         } else if (node.getType() == 3) {// array access
             if (node.getInt() >= dictionary.getVariableArray(node.getIdent()).length || node.getInt() < 0) {
-                throw new IllegalArgumentException("Index out of bound for " + node.getIdent() + "[" + (node.getInt()+1) + "]");
+                throw new IllegalArgumentException("Index out of bound for " + node.getIdent() + "[" + (node.getInt() + 1) + "]");
             } else {
                 return dictionary.getVariableArray(node.getIdent())[node.getInt()];
             }
@@ -191,7 +189,7 @@ public class Support implements ParserTreeConstants {
             return float_Var;
         } else if (node.getType() == 3) {// array access
             if (node.getInt() >= dictionary.getVariableFloatArray(node.getIdent()).length || node.getFloat() < 0) {
-                throw new IllegalArgumentException("Index out of bound for " + node.getIdent() + "[" + (node.getInt()+1) + "]");
+                throw new IllegalArgumentException("Index out of bound for " + node.getIdent() + "[" + (node.getInt() + 1) + "]");
             } else
                 return dictionary.getVariableFloatArray(node.getIdent())[node.getInt()];
         } else {
@@ -297,7 +295,8 @@ public class Support implements ParserTreeConstants {
                             aa[i] = dictionary.getConstant(ia[i]); // new IntVar(store, ia[i], ia[i]);
                         return aa;
                     } else {
-                        throw new IllegalArgumentException("Cannot find array " + ((ASTScalarFlatExpr) node).getIdent() + "; compilation aborted.");
+                        throw new IllegalArgumentException(
+                            "Cannot find array " + ((ASTScalarFlatExpr) node).getIdent() + "; compilation aborted.");
                     }
                 }
             } else {
@@ -322,7 +321,7 @@ public class Support implements ParserTreeConstants {
             if (((ASTScalarFlatExpr) node).getType() == 2) {// ident
                 // array of var
                 FloatVar[] v = dictionary.getVariableFloatArray(((ASTScalarFlatExpr) node).getIdent());
-		return v;
+                return v;
             } else {
                 throw new IllegalArgumentException("Wrong type of Variable array; compilation aborted.");
             }
@@ -378,16 +377,15 @@ public class Support implements ParserTreeConstants {
             return s;
         } else if (node.getId() == JJTSCALARFLATEXPR) {
             if (((ASTScalarFlatExpr) node).getType() == 2) {// ident
-		s = dictionary.getSetVariableArray(((ASTScalarFlatExpr) node).getIdent());
-		if (s != null)
-		    return s;
-		else 
-		    throw new IllegalArgumentException("Wrong set variable array; compilation aborted.");
+                s = dictionary.getSetVariableArray(((ASTScalarFlatExpr) node).getIdent());
+                if (s != null)
+                    return s;
+                else
+                    throw new IllegalArgumentException("Wrong set variable array; compilation aborted.");
             } else
                 throw new IllegalArgumentException("Wrong set variable array; compilation aborted.");
-        }
-	else
-	    throw new IllegalArgumentException("Wrong set variable array; compilation aborted.");
+        } else
+            throw new IllegalArgumentException("Wrong set variable array; compilation aborted.");
     }
 
     IntDomain getSetLiteral(SimpleNode node, int index) {
@@ -508,15 +506,15 @@ public class Support implements ParserTreeConstants {
 
     void aliasConstraints() {
 
-      Set<Map.Entry<IntVar, IntVar>> entries = dictionary.aliasTable.entrySet();
+        Set<Map.Entry<IntVar, IntVar>> entries = dictionary.aliasTable.entrySet();
 
-      for (Map.Entry<IntVar, IntVar> e : entries) {
-	    IntVar v = e.getKey();
+        for (Map.Entry<IntVar, IntVar> e : entries) {
+            IntVar v = e.getKey();
             IntVar b = e.getValue();
 
             // give values to output vars
-            if (dictionary.isOutput(v)) 
-	      pose(new XeqY(v, b));
+            if (dictionary.isOutput(v))
+                pose(new XeqY(v, b));
         }
     }
 

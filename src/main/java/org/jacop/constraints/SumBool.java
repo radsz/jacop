@@ -42,10 +42,10 @@ import java.util.stream.Stream;
 
 /**
  * SumBool constraint implements the summation over several
- * 0/1 variables. 
- *
+ * 0/1 variables.
+ * <p>
  * sum(i in 1..N)(xi) = sum
- *
+ * <p>
  * It provides the sum from all variables on the list.
  *
  * @author Krzysztof Kuchcinski
@@ -87,27 +87,26 @@ public class SumBool extends PrimitiveConstraint {
     IntVar x[];
 
     /**
-     * It specifies variable for the overall sum. 
+     * It specifies variable for the overall sum.
      */
     IntVar sum;
 
     /**
-     * It specifies the number of variables. 
+     * It specifies the number of variables.
      */
     int l;
 
     /**
      * @param store current store
-     * @param list variables which are being multiplied by weights.
-     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum variable containing the sum of weighted variables.
+     * @param list  variables which are being multiplied by weights.
+     * @param rel   the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum   variable containing the sum of weighted variables.
      * @deprecated SumBool constraint does not use Store parameter any longer.
      */
-    @Deprecated
-    public SumBool(Store store, IntVar[] list, String rel, IntVar sum) {
+    @Deprecated public SumBool(Store store, IntVar[] list, String rel, IntVar sum) {
 
-        checkInputForNullness(new String[]{"list", "rel", "sum"}, new Object[][]{list, {rel}, {sum}});
-        checkInput(list, l -> l.min() >= 0 && l.max() <= 1, "domain must lie within 0..1 domain" );
+        checkInputForNullness(new String[] {"list", "rel", "sum"}, new Object[][] {list, {rel}, {sum}});
+        checkInput(list, l -> l.min() >= 0 && l.max() <= 1, "domain must lie within 0..1 domain");
 
         numberId = idNumber.incrementAndGet();
         this.relationType = relation(rel);
@@ -121,36 +120,37 @@ public class SumBool extends PrimitiveConstraint {
         else
             queueIndex = 1;
 
-        setScope( Stream.concat( Stream.of(sum), Arrays.stream(list) ) );
+        setScope(Stream.concat(Stream.of(sum), Arrays.stream(list)));
     }
 
     /**
-     * It constructs the constraint SumBool. 
-     * @param store current store
+     * It constructs the constraint SumBool.
+     *
+     * @param store     current store
      * @param variables variables which are being multiplied by weights.
-     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum variable containing the sum of weighted variables.
+     * @param rel       the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum       variable containing the sum of weighted variables.
      * @deprecated SumBool constraint does not use Store parameter any longer.
      */
-    @Deprecated
-    public SumBool(Store store, List<? extends IntVar> variables, String rel, IntVar sum) {
+    @Deprecated public SumBool(Store store, List<? extends IntVar> variables, String rel, IntVar sum) {
         this(store, variables.toArray(new IntVar[variables.size()]), rel, sum);
     }
 
     /**
      * @param list variables which are being multiplied by weights.
-     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum variable containing the sum of weighted variables.
+     * @param rel  the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum  variable containing the sum of weighted variables.
      */
     public SumBool(IntVar[] list, String rel, IntVar sum) {
-	this(sum.getStore(), list, rel, sum);
+        this(sum.getStore(), list, rel, sum);
     }
 
     /**
-     * It constructs the constraint SumBool. 
+     * It constructs the constraint SumBool.
+     *
      * @param variables variables which are being multiplied by weights.
-     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum variable containing the sum of weighted variables.
+     * @param rel       the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum       variable containing the sum of weighted variables.
      */
     public SumBool(List<? extends IntVar> variables, String rel, IntVar sum) {
         this(variables.toArray(new IntVar[variables.size()]), rel, sum);
@@ -277,7 +277,7 @@ public class SumBool extends PrimitiveConstraint {
     @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
     }
-    
+
     @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
         return IntDomain.BOUND;
     }
@@ -388,8 +388,8 @@ public class SumBool extends PrimitiveConstraint {
 
     IntVar[] filterAndOverflow(IntVar[] x) {
 
-	List<IntVar> ls = new ArrayList<>();
-	
+        List<IntVar> ls = new ArrayList<>();
+
         int sMin = 0, sMax = 0;
         for (int i = 0; i < x.length; i++) {
             int n1 = x[i].min();
@@ -398,11 +398,11 @@ public class SumBool extends PrimitiveConstraint {
             sMin = Math.addExact(sMin, n1);
             sMax = Math.addExact(sMax, n2);
 
-	    if (x[i].max() != 0)
-		ls.add(x[i]);
+            if (x[i].max() != 0)
+                ls.add(x[i]);
         }
 
-	return ls.toArray(new IntVar[ls.size()]);	    
+        return ls.toArray(new IntVar[ls.size()]);
     }
 
     @Override public String toString() {

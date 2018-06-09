@@ -43,29 +43,28 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- *
  * It is a simple newspaper reading job-shop like scheduling problem.
  *
  * @author Krzysztof Kuchcinski
- *
- * There are four students: Algy, Bertie, Charlie and Digby, who share a flat. 
- * Four newspapers are delivered to the house: the Financial Times, the Guardian, 
- * the Daily Express and the Sun. Each of the students reads all of the newspapers, 
- * in particular order and for a specified amount of time (see below). 
- *
- * Question: Given that Algy gets up at 8:30, Bertie and Charlie at 8:45 
- * and Digby at 9:30, what is the earliest that they can all set off for college? 
- *
- *			Algy 		Bertie		Charlie		Digby
- * Guardian		30		75		15		1
- * FinancialTime (FT)	60		25		10		1
- * Express		2		3 		5		1
- * Sun			5		10		30		90
- *
- * Algy order - FT, Guardian, Express, Sun
- * Bertie order - Guardian, Express, FT, Sun
- * Charlie order - Express, Guardian, FT, Sun
- * Digby order - Sun, FT, Guardian, Express
+ *         <p>
+ *         There are four students: Algy, Bertie, Charlie and Digby, who share a flat.
+ *         Four newspapers are delivered to the house: the Financial Times, the Guardian,
+ *         the Daily Express and the Sun. Each of the students reads all of the newspapers,
+ *         in particular order and for a specified amount of time (see below).
+ *         <p>
+ *         Question: Given that Algy gets up at 8:30, Bertie and Charlie at 8:45
+ *         and Digby at 9:30, what is the earliest that they can all set off for college?
+ *         <p>
+ *         Algy 		Bertie		Charlie		Digby
+ *         Guardian		30		75		15		1
+ *         FinancialTime (FT)	60		25		10		1
+ *         Express		2		3 		5		1
+ *         Sun			5		10		30		90
+ *         <p>
+ *         Algy order - FT, Guardian, Express, Sun
+ *         Bertie order - Guardian, Express, FT, Sun
+ *         Charlie order - Express, Guardian, FT, Sun
+ *         Digby order - Sun, FT, Guardian, Express
  */
 
 public class CPvizNewspaper {

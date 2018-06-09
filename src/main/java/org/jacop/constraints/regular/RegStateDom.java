@@ -53,9 +53,10 @@ public class RegStateDom extends RegState {
 
     /**
      * It constructs a state.
-     * @param level the position of the associated variable with the state.
-     * @param id the state id.
-     * @param sucNumber the number of successors for this state.
+     *
+     * @param level      the position of the associated variable with the state.
+     * @param id         the state id.
+     * @param sucNumber  the number of successors for this state.
      * @param posInArray the position within a states array for the level of this state.
      */
     public RegStateDom(int level, int id, int sucNumber, int posInArray) {

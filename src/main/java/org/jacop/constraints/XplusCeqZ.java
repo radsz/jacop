@@ -64,13 +64,14 @@ public class XplusCeqZ extends PrimitiveConstraint {
 
     /**
      * It constructs a constraint x+c=z.
+     *
      * @param x variable x.
      * @param c constant c.
      * @param z variable z.
      */
     public XplusCeqZ(IntVar x, int c, IntVar z) {
 
-        checkInputForNullness(new String[]{"x", "z"}, new Object[]{x, z});
+        checkInputForNullness(new String[] {"x", "z"}, new Object[] {x, z});
 
         numberId = idNumber.incrementAndGet();
 
@@ -135,8 +136,8 @@ public class XplusCeqZ extends PrimitiveConstraint {
 
     @Override public boolean satisfied() {
         // return grounded() && x.min() + c == z.min();
-	int xMin = x.min(), zMin = z.min();
-	return x.singleton(xMin) && z.singleton(zMin) && xMin + c == zMin;
+        int xMin = x.min(), zMin = z.min();
+        return x.singleton(xMin) && z.singleton(zMin) && xMin + c == zMin;
     }
 
     @Override public String toString() {

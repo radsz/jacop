@@ -105,7 +105,7 @@ abstract class Tree {
     }
 
     long plus(long x, long y) {
-        if (x == Long.MIN_VALUE) 
+        if (x == Long.MIN_VALUE)
             return Long.MIN_VALUE;
         else
             return x + y;
@@ -114,8 +114,7 @@ abstract class Tree {
     int plus(int x, int y) {
         if (x == Integer.MIN_VALUE) {
             return Integer.MIN_VALUE;
-	}
-        else
+        } else
             return x + y;
     }
 

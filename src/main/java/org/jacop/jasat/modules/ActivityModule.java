@@ -49,9 +49,9 @@ import java.util.Comparator;
 
 /**
  * counts the activity of literals
+ *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.5
- *
  */
 public final class ActivityModule implements ClauseListener, BackjumpListener, ConflictListener {
 
@@ -159,6 +159,7 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
 
     /**
      * returns the non-set literal with highest activity, if any
+     *
      * @return a non set literal, or 0 if all known literals are set
      */
     public final int getLiteralToAssert() {
@@ -179,6 +180,7 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
 
     /**
      * gives activity of a (signed) literal
+     *
      * @param literal the literal
      * @return the activity of this (variable, polarity)
      */
@@ -193,7 +195,8 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
 
     /**
      * code that really performs variable and polarity activity bumping.
-     * @param var  the variable
+     *
+     * @param var the variable
      * @return the new activity of the variable
      */
     private final int bumpVar(int literal) {
@@ -246,6 +249,7 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
 
     /**
      * rebases all values
+     *
      * @param value the value that just overflowed
      */
     private final void rebase(int value) {
@@ -264,8 +268,8 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
      * compares literals according to their activity. This stands for
      * i > j and not i < j, because we want activities to
      * be sorted in decreasing order
-     * @author simon
      *
+     * @author simon
      */
     private final Comparator<Integer> comparator = (i, j) -> {
         assert Math.abs(i) <= posActivities.length + 1;

@@ -69,12 +69,12 @@ import java.util.stream.Stream;
     public int weights[];
 
     /**
-     * It specifies variable for the overall sum. 
+     * It specifies variable for the overall sum.
      */
     public int sum;
 
     /**
-     * It specifies variable queue of grounded varibales since last run. 
+     * It specifies variable queue of grounded varibales since last run.
      */
     LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
 
@@ -98,9 +98,9 @@ import java.util.stream.Stream;
     boolean backtrackHasOccured = false;
 
     /**
-     * @param list  array of variables to be summed up
+     * @param list    array of variables to be summed up
      * @param weights variables' weights
-     * @param sum  resulting sum
+     * @param sum     resulting sum
      */
     public SumWeightDom(IntVar[] list, int[] weights, int sum) {
         commonInitialization(list, weights, sum);
@@ -108,7 +108,7 @@ import java.util.stream.Stream;
 
     public void commonInitialization(IntVar[] list, int[] weights, int sum) {
 
-        checkInputForNullness(new String[]{"list", "weights"}, new Object[][]{list, { weights }});
+        checkInputForNullness(new String[] {"list", "weights"}, new Object[][] {list, {weights}});
 
         if (list.length != weights.length)
             throw new IllegalArgumentException("SumWeightDom constraint has list and weights of different lengths.");
@@ -145,42 +145,42 @@ import java.util.stream.Stream;
     }
 
     /**
-     * @param list array of variables to be summed up
+     * @param list    array of variables to be summed up
      * @param weights variables' weights
-     * @param sum resulting sum
+     * @param sum     resulting sum
      */
     public SumWeightDom(IntVar[] list, int[] weights, IntVar sum) {
 
-        checkInputForNullness(new String[]{"list", "weights"}, new Object[][]{list, { weights }});
+        checkInputForNullness(new String[] {"list", "weights"}, new Object[][] {list, {weights}});
         commonInitialization(Stream.concat(Arrays.stream(list), Stream.of(sum)).toArray(IntVar[]::new),
-                             IntStream.concat(Arrays.stream(weights), IntStream.of(-1)).toArray(),
-                             0);
+            IntStream.concat(Arrays.stream(weights), IntStream.of(-1)).toArray(), 0);
 
     }
 
     /**
      * It constructs the constraint SumWeightDom.
-     * @param list list which are being multiplied by weights.
+     *
+     * @param list    list which are being multiplied by weights.
      * @param weights weight for each variable.
-     * @param sum variable containing the sum of weighted list.
+     * @param sum     variable containing the sum of weighted list.
      */
     public SumWeightDom(List<? extends IntVar> list, List<Integer> weights, int sum) {
-        checkInputForNullness(new String[]{"list", "weights"}, new Object[][]{{list}, { weights }});
+        checkInputForNullness(new String[] {"list", "weights"}, new Object[][] {{list}, {weights}});
         commonInitialization(list.toArray(new IntVar[list.size()]), weights.stream().mapToInt(i -> i).toArray(), sum);
 
     }
 
     /**
      * It constructs the constraint SumWeightDom.
-     * @param list list which are being multiplied by weights.
+     *
+     * @param list    list which are being multiplied by weights.
      * @param weights weight for each variable.
-     * @param sum variable containing the sum of weighted list.
+     * @param sum     variable containing the sum of weighted list.
      */
     public SumWeightDom(List<? extends IntVar> list, List<Integer> weights, IntVar sum) {
-        checkInputForNullness(new String[]{"list", "weights"}, new Object[][]{{list}, { weights }});
+        checkInputForNullness(new String[] {"list", "weights"}, new Object[][] {{list}, {weights}});
         commonInitialization(Stream.concat(list.stream(), Stream.of(sum)).toArray(IntVar[]::new),
-            IntStream.concat(weights.stream().mapToInt(i -> i), IntStream.of(-1)).toArray(),
-            0);
+            IntStream.concat(weights.stream().mapToInt(i -> i), IntStream.of(-1)).toArray(), 0);
     }
 
     @Override public void removeLevelLate(int level) {
@@ -308,7 +308,7 @@ import java.util.stream.Stream;
         }
 
         super.impose(store);
-        
+
     }
 
     @Override public void queueVariable(int level, Var var) {

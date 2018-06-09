@@ -35,13 +35,12 @@ import java.util.List;
 
 /**
  * It specifies EWF benchmark.
- *
+ * <p>
  * Source:
- *
- * @see "Michel, P. and Lauther U. and Duzy, P., The Synthesis Approach to Digital System Design, Kluwer Academic Publisher, 1992"
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
+ * @see "Michel, P. and Lauther U. and Duzy, P., The Synthesis Approach to Digital System Design, Kluwer Academic Publisher, 1992"
  */
 
 public class EWF extends Filter {

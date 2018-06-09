@@ -40,21 +40,19 @@ import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
 
 /**
- *
  * Generation of set constraints in flatzinc
  *
- * @author Krzysztof Kuchcinski 
- *
+ * @author Krzysztof Kuchcinski
  */
 class FloatLinearConstraints implements ParserTreeConstants {
 
     boolean reified;
     Support support;
     Store store;
-    
+
     public FloatLinearConstraints(Support support) {
-	this.support = support;
-	this.store = support.store;
+        this.support = support;
+        this.store = support.store;
     }
 
     void gen_float_lin_eq(SimpleNode node) {
@@ -163,7 +161,7 @@ class FloatLinearConstraints implements ParserTreeConstants {
                         support.pose(new LinearFloat(p2, p1, "<=", p3));
                     break;
                 default:
-		    throw new IllegalArgumentException("%% ERROR: Constraint floating-point operation not supported.");
+                    throw new IllegalArgumentException("%% ERROR: Constraint floating-point operation not supported.");
             }
         }
     }

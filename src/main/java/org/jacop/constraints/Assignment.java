@@ -45,10 +45,9 @@ import java.util.stream.Stream;
 /**
  * Assignment constraint implements facility to improve channeling constraints
  * between dual viewpoints of permutation models.
- * It enforces the relationship x[d[i]-shiftX]=i+shiftD and d[x[i]-shiftD]=i+shiftX. 
+ * It enforces the relationship x[d[i]-shiftX]=i+shiftD and d[x[i]-shiftD]=i+shiftX.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- *
  * @version 4.5
  */
 
@@ -87,8 +86,9 @@ public class Assignment extends Constraint implements UsesQueueVariable, Statefu
     /**
      * It enforces the relationship x[d[i]-shiftX]=i+shiftD and
      * d[x[i]-shiftD]=i+shiftX.
-     * @param xs array of variables x
-     * @param ds array of variables d
+     *
+     * @param xs     array of variables x
+     * @param ds     array of variables d
      * @param shiftX a shift of indexes in X array.
      * @param shiftD a shift of indexes in D array.
      */
@@ -112,15 +112,16 @@ public class Assignment extends Constraint implements UsesQueueVariable, Statefu
             this.ds.put(d[i], i + shiftD);
         }
 
-        setScope( Stream.concat(Arrays.stream(xs), Arrays.stream(ds)) );
+        setScope(Stream.concat(Arrays.stream(xs), Arrays.stream(ds)));
 
     }
 
     /**
      * It enforces the relationship x[d[i]-shiftX]=i+shiftD and
      * d[x[i]-shiftD]=i+shiftX.
-     * @param xs arraylist of variables x
-     * @param ds arraylist of variables d
+     *
+     * @param xs     arraylist of variables x
+     * @param ds     arraylist of variables d
      * @param shiftX shift for parameter xs
      * @param shiftD shift for parameter ds
      */
@@ -132,6 +133,7 @@ public class Assignment extends Constraint implements UsesQueueVariable, Statefu
     /**
      * It constructs an Assignment constraint with shift equal 0. It
      * enforces relation - d[x[j]] = i and x[d[i]] = j.
+     *
      * @param xs arraylist of x variables
      * @param ds arraylist of d variables
      */
@@ -142,8 +144,9 @@ public class Assignment extends Constraint implements UsesQueueVariable, Statefu
     /**
      * It enforces the relationship x[d[i]-min]=i+min and
      * d[x[i]-min]=i+min.
-     * @param xs arraylist of variables x
-     * @param ds arraylist of variables d
+     *
+     * @param xs  arraylist of variables x
+     * @param ds  arraylist of variables d
      * @param min shift
      */
     public Assignment(List<? extends Var> xs, List<? extends Var> ds, int min) {
@@ -154,6 +157,7 @@ public class Assignment extends Constraint implements UsesQueueVariable, Statefu
     /**
      * It constructs an Assignment constraint with shift equal 0. It
      * enforces relation - d[x[i]] = i and x[d[i]] = i.
+     *
      * @param xs array of x variables
      * @param ds array of d variables
      */
@@ -164,8 +168,9 @@ public class Assignment extends Constraint implements UsesQueueVariable, Statefu
     /**
      * It enforces the relationship x[d[i]-min]=i+min and
      * d[x[i]-min]=i+min.
-     * @param xs array of variables x
-     * @param ds array of variables d
+     *
+     * @param xs  array of variables x
+     * @param ds  array of variables d
      * @param min shift
      */
     public Assignment(IntVar[] xs, IntVar[] ds, int min) {
@@ -304,20 +309,20 @@ public class Assignment extends Constraint implements UsesQueueVariable, Statefu
 
     @Override public boolean satisfied() {
 
-        if (! grounded() )
+        if (!grounded())
             return false;
 
         for (int i = 0; i < x.length; i++) {
-                int position = x[i].value() - shiftD;
-                if ( d[position].value() != i + shiftX) {
-                    return false;
-                }
+            int position = x[i].value() - shiftD;
+            if (d[position].value() != i + shiftX) {
+                return false;
+            }
         }
 
         for (int i = 0; i < d.length; i++) {
-                if (x[d[i].value() - shiftX].value() != i + shiftD) {
-                    return false;
-                }
+            if (x[d[i].value() - shiftX].value() != i + shiftD) {
+                return false;
+            }
         }
 
         return true;

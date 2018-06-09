@@ -80,8 +80,8 @@ import java.util.Set;
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.5
  */
-public final class SatWrapper extends Constraint implements ConflictListener, ExplanationListener, StartStopListener, SolutionListener,
-    Stateful, SatisfiedPresent {
+public final class SatWrapper extends Constraint
+    implements ConflictListener, ExplanationListener, StartStopListener, SolutionListener, Stateful, SatisfiedPresent {
 
     // empty == true if no cluases has been added
     boolean empty = true;
@@ -211,7 +211,7 @@ public final class SatWrapper extends Constraint implements ConflictListener, Ex
         satChangesListener.clear();
 
 		/*
-		 * Learn the last conflict clause, if any.
+     * Learn the last conflict clause, if any.
 		 * Then, add waiting clauses to the solver and check consistency
 		 * again.
 		 */

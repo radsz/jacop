@@ -43,12 +43,10 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 /**
- *
  * It solves QuasiGroup Completion Problem (QCP).
  *
  * @author Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 public class QCP extends ExampleFD {
@@ -78,7 +76,7 @@ public class QCP extends ExampleFD {
 
 		/* read from file args[0] or qcp.txt */
         try {
-            
+
             BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(filename), "UTF-8"));
             String str;
 
@@ -96,7 +94,7 @@ public class QCP extends ExampleFD {
         }
 
         n = n - 1;
-		/* Creating constraint store */
+    /* Creating constraint store */
         int numbers[][] = new int[n][n];
 
         // Transforms strings into ints
@@ -230,6 +228,7 @@ public class QCP extends ExampleFD {
 
     /**
      * It executes the program which solves the QCP in multiple different ways.
+     *
      * @param args the first argument is the name of the file containing the problem.
      */
     public static void test(String[] args) {
@@ -295,6 +294,7 @@ public class QCP extends ExampleFD {
 
     /**
      * It executes the program which solves the QCP in multiple different ways.
+     *
      * @param args the first argument is the name of the file containing the problem.
      */
     public static void main(String[] args) {

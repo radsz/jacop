@@ -66,7 +66,7 @@ public class DBox {
 
     /**
      * It makes sure that there is a slot of the given dimension in the slot.
-     *
+     * <p>
      * It has to be called at least once before using newBox() and dispatchBox().
      *
      * @param dimension the number of dimensions
@@ -165,8 +165,8 @@ public class DBox {
     /**
      * It returns an instance of DBox of the corresponding dimension,
      * using a previously allocated one if possible
-     * @param dimension the number of dimensions
      *
+     * @param dimension the number of dimensions
      * @return it returns a preallocated DBox of a given dimensions.
      */
     public static final DBox getAllocatedInstance(int dimension) {
@@ -191,10 +191,9 @@ public class DBox {
     }
 
     /**
-     *
      * It checks if this DBox contains the point as specified by an array of coordinates.
-     * @param pointCoordinates it specifies the point coordinates.
      *
+     * @param pointCoordinates it specifies the point coordinates.
      * @return true if the point is inside DBox.
      */
     public boolean containsPoint(int[] pointCoordinates) {
@@ -224,12 +223,11 @@ public class DBox {
 
     /**
      * It intersects this DBox with the given DBox.
-     *
+     * <p>
      * For efficiency reasons, the DBox returned is the static instance;
      * if it needs to be stored, a copy has to be made using clone().
      *
      * @param other the DBox to intersect this one with
-     *
      * @return null if the intersection is empty, or a reference to a static DBox corresponding
      * to the intersection. The result must be cloned if its scope is not local.
      */
@@ -259,13 +257,12 @@ public class DBox {
     /**
      * It intersects this DBox with the given DBox, but the other DBox is
      * shifted by the specified offset.
-     *
+     * <p>
      * For efficiency reasons, the DBox returned is the static instance;
      * if it needs to be stored, a copy has to be made using clone().
      *
-     * @param other DBox with which the intersection is computed.
+     * @param other       DBox with which the intersection is computed.
      * @param otherOffset the offset
-     *
      * @return null if the intersection is empty, or a reference to a static DBox corresponding
      * to the intersection. The result must be cloned if its scope is not local.
      */
@@ -298,11 +295,12 @@ public class DBox {
      * It intersects this DBox with a view of the given DBox that was
      * shifted according to the given offset. If the intersection is empty,
      * returns null.
-     *
+     * <p>
      * For efficiency reasons, the DBox returned is the static instance;
      * if it needs to be stored, a copy has to be made using clone().
-     * @param offset the offset to apply to this box before intersecting
-     * @param other the DBox to intersect this one with
+     *
+     * @param offset      the offset to apply to this box before intersecting
+     * @param other       the DBox to intersect this one with
      * @param otherOffset the offset to apply to the other DBox before intersecting
      * @return null if the intersection is empty, or a reference to a static DBox corresponding
      * to the intersection. Clone if its scope is not local.
@@ -332,21 +330,21 @@ public class DBox {
     /**
      * computes the difference between this box and the given box. The difference
      * is returned under the form of a collection of boxes.
-     *
+     * <p>
      * NOTE: the collection of DBoxes returned is not minimal (in some cases,
      * some boxes can be merged)
-     *
+     * <p>
      * if needed, implement a version that can take a lexical order as argument,
      * to allow brute force search or learning of the best decomposition
      *
-     * @param hole the box to subtract this box with
+     * @param hole       the box to subtract this box with
      * @param difference the collection of boxes corresponding to the remaining area
      * @return the computed difference, which is the difference paramter after the call
-     *         (this is for ease of use only)
+     * (this is for ease of use only)
      */
     public Collection<DBox> subtract(DBox hole, Collection<DBox> difference) {
     /*
-		 * the cutting algorithm works in the following way:
+     * the cutting algorithm works in the following way:
 		 * for each dimension, it maintains an upper and lower bound,
 		 * which are the bounds of the remaining area to cut. Initially,
 		 * they are the bounds of this box.
@@ -449,15 +447,16 @@ public class DBox {
 
     /**
      * computes the bounding box of the given collection of boxes
+     *
      * @param boxes collection of boxes
      * @return a temporary DBox that represents the bounding box of the given boxes.
-     * 	       clone it if you need to reuse it.
+     * clone it if you need to reuse it.
      */
     public static DBox boundingBox(Collection<DBox> boxes) {
 
         if (boxes.isEmpty())
             throw new IllegalArgumentException("Boxes parameter can not be an empty collection");
-        
+
         DBox boundingBox = null;
         int[] mins = null;
         int[] maxes = null;
@@ -497,7 +496,7 @@ public class DBox {
      * (after the call, the result argument is equal to the returned value).
      *
      * @param source the collection of boxes to subtract from
-     * @param holes the boxes to subtract from the source boxes
+     * @param holes  the boxes to subtract from the source boxes
      * @param result the collection to store the resulting boxes into
      * @return the result argument, for ease of use
      */
@@ -630,7 +629,6 @@ public class DBox {
      * It computes the area in 2D case or volume in 3D case.
      *
      * @return the area/volume of the DBox.
-     *
      */
     public int area() {
 

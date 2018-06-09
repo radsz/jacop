@@ -40,7 +40,6 @@ import java.util.Map;
  *
  * @author Radoslaw Szymanek and Wadeck Follonier
  * @version 4.5
- *
  */
 
 public class Tree {
@@ -337,7 +336,7 @@ public class Tree {
             } else if (current.right.getWSum() == 0) {
                 current = current.left;
             } else
-				        /* sum(0->s-1) of w <= C and sum(0->s) of w > C */
+                /* sum(0->s-1) of w <= C and sum(0->s) of w > C */
                 if (usedCapacity + current.left.getWSum() <= capacity) {
                     usedCapacity += current.left.getWSum();
                     current = current.right;

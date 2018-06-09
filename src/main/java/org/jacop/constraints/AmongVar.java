@@ -43,11 +43,11 @@ import java.util.stream.Stream;
  * Among constraint in its general form. It establishes the following
  * relation. The given number N of X`s take values from the set
  * specified by Y`s.
- *
+ * <p>
  * This constraint significantly extends the algorithms presented in
  * the literature as it does not use the decomposition into simpler
  * constraints.
- *
+ * <p>
  * Therefore as a result, it provides stronger pruning methods without
  * noticeable increase in the execution time. The large part of the
  * computation is reused across following executions of the consistency
@@ -105,13 +105,14 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
     /**
      * It constructs an AmongVar constraint.
+     *
      * @param listOfX the list of variables whose equality to other set of variables we count
      * @param listOfY the list of variable to which equality is counted.
-     * @param n how many variables from list x are equal to at least one variable from list y.
+     * @param n       how many variables from list x are equal to at least one variable from list y.
      */
     public AmongVar(IntVar[] listOfX, IntVar[] listOfY, IntVar n) {
 
-        checkInputForNullness(new String[] {"listOfX", "listOfY", "n"}, new Object[][] {listOfX, listOfY, { n }});
+        checkInputForNullness(new String[] {"listOfX", "listOfY", "n"}, new Object[][] {listOfX, listOfY, {n}});
         checkInputForDuplication("listOfX", listOfX);
         checkInputForDuplication("listOfY", listOfY);
 
@@ -123,15 +124,16 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
         this.listOfY = Arrays.copyOf(listOfY, listOfY.length);
         this.n = n;
 
-        setScope( Stream.concat( Stream.concat(Arrays.stream(listOfX), Arrays.stream(listOfY)), Stream.of(n)));
+        setScope(Stream.concat(Stream.concat(Arrays.stream(listOfX), Arrays.stream(listOfY)), Stream.of(n)));
 
     }
 
     /**
      * It constructs an AmongVar constraint.
+     *
      * @param listOfX the list of variables whose equality to other set of variables we count
      * @param listOfY the list of variable to which equality is counted.
-     * @param n how many variables from list x are equal to at least one variable from list y.
+     * @param n       how many variables from list x are equal to at least one variable from list y.
      */
     public AmongVar(List<IntVar> listOfX, List<IntVar> listOfY, IntVar n) {
         this(listOfX.toArray(new IntVar[listOfX.size()]), listOfY.toArray(new IntVar[listOfY.size()]), n);
@@ -144,6 +146,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
     /**
      * Is called when all y are grounded and amongForSet is equivalent to simple version of Among.
+     *
      * @param store constraint store in which context that consistency function is being executed.
      */
     public void consistencyForX(Store store) {
@@ -248,7 +251,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
     /**
      * The number of x in lbsDom is equal to the number of X intersecting ubSDom.
-     *
+     * <p>
      * 1) If there are not enough of y to cover future domain then fail
      * 2)
      *
@@ -309,6 +312,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
     /**
      * It is a function which makes Y consistent if all X's are grounded.
+     *
      * @param store a constraint store in which context all prunings are executed.
      */
     public void consistencyForY(Store store) {
@@ -738,7 +742,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
             n.domain.in(store.level, n, minN, maxN);
 
 			/*----------------------------------------------------------
-			 Now we will enter the pruning N part
+       Now we will enter the pruning N part
 			 For each value of UBS we will calculate : 
 			 lbV - lower border on N if v was included into S
 			 weight - max number of X which can take value from S if v was included into S 
@@ -1079,7 +1083,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
         int i = 0;
         IntVar y;
         IntVar x;
-        int gx = (int) Arrays.stream(listOfX).filter( xElement -> xElement.singleton()).count();
+        int gx = (int) Arrays.stream(listOfX).filter(xElement -> xElement.singleton()).count();
 
         yIndex = Var.positionMapping(listOfY, false, this.getClass());
 

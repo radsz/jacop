@@ -50,8 +50,7 @@ import java.util.stream.Stream;
 /**
  * @deprecated As of release 4.3.1 replaced by SumInt constraint.
  */
-@Deprecated
-public class Sum extends Constraint implements SatisfiedPresent {
+@Deprecated public class Sum extends Constraint implements SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -77,12 +76,13 @@ public class Sum extends Constraint implements SatisfiedPresent {
 
     /**
      * It constructs sum constraint which sums all variables and makes it equal to variable sum.
+     *
      * @param list list of variables to be added
-     * @param sum the resulting sum
+     * @param sum  the resulting sum
      */
     public Sum(IntVar[] list, IntVar sum) {
 
-        checkInputForNullness(new String[]{"list", "sum"}, new Object[][]{list, {sum}});
+        checkInputForNullness(new String[] {"list", "sum"}, new Object[][] {list, {sum}});
 
         queueIndex = 1;
         numberId = idNumber.incrementAndGet();
@@ -92,13 +92,14 @@ public class Sum extends Constraint implements SatisfiedPresent {
 
         checkForOverflow();
 
-        setScope( Stream.concat(Arrays.stream(list), Stream.of(sum)));
+        setScope(Stream.concat(Arrays.stream(list), Stream.of(sum)));
     }
 
     /**
      * It creates a sum constraints which sums all variables and makes it equal to variable sum.
+     *
      * @param list variables being summed up.
-     * @param sum the sum variable.
+     * @param sum  the sum variable.
      */
 
     public Sum(List<? extends IntVar> list, IntVar sum) {
@@ -199,12 +200,12 @@ public class Sum extends Constraint implements SatisfiedPresent {
 
     @Override public boolean satisfied() {
 
-        if (! grounded() )
+        if (!grounded())
             return false;
 
         int sumAll = 0;
         for (IntVar v : list)
-                sumAll += v.min();
+            sumAll += v.min();
 
         return sumAll == sum.min();
     }

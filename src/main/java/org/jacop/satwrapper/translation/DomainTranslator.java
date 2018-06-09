@@ -77,7 +77,7 @@ public final class DomainTranslator implements WrapperComponent {
             LinkedList<Integer> clause = new LinkedList<Integer>();
 
 			/*
-			 * special case: singleton
+       * special case: singleton
 			 */
             if (variable.domain.singleton()) {
                 int v = variable.domain.value();

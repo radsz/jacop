@@ -61,7 +61,8 @@ public class IndexDomainView {
     /**
      * It creates an index domain view for a given variable. It currently implements only
      * sparse representation for index domain view.
-     * @param var variable for which the index domain view is created.
+     *
+     * @param var         variable for which the index domain view is created.
      * @param forceSparse forces a sparse representation inside (one value has one entry within the mapping).
      */
     public IndexDomainView(IntVar var, boolean forceSparse) {
@@ -93,7 +94,7 @@ public class IndexDomainView {
      * of the index domain view. Only values in focus may end up being removed
      * if no support is founded.
      *
-     * @param var variable for which the index domain view is created.
+     * @param var           variable for which the index domain view is created.
      * @param valuesInFocus values which are of interest.
      */
     public IndexDomainView(IntVar var, int[] valuesInFocus) {
@@ -152,6 +153,7 @@ public class IndexDomainView {
     /**
      * It removes all values for which no support was found since the initialization of
      * the support sweep.
+     *
      * @param store current store
      */
     public void removeUnSupportedValues(Store store) {
@@ -166,9 +168,9 @@ public class IndexDomainView {
 
     /**
      * It checks if the value of a given index is still in the domain.
+     *
      * @param i index which is being checked if it is still contained within a variable.
      * @return true if the i-th value is still in the domain, false otherwise.
-     *
      */
     public boolean contains(int i) {
         // check if ith index is still int the domain
@@ -176,8 +178,8 @@ public class IndexDomainView {
     }
 
     /**
-     *
      * It returns true if the ith-value was supported before.
+     *
      * @param i the position of the value which is being supported.
      * @return false if value has not been supported before by other value, true otherwise.
      */
@@ -199,6 +201,7 @@ public class IndexDomainView {
 
     /**
      * It checks if all values are currently supported.
+     *
      * @return true if all values are supported, false otherwise.
      */
     public boolean isSupported() {
@@ -219,6 +222,7 @@ public class IndexDomainView {
 
     /**
      * It finds an index for a given value.
+     *
      * @param value value for which the indexed is searched for.
      * @return index for a given value.
      */

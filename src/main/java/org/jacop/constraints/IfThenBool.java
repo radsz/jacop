@@ -40,7 +40,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Constraint ( X {@literal =>} Y ) {@literal <=>} Z.
  *
- *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
  */
@@ -72,7 +71,9 @@ public class IfThenBool extends PrimitiveConstraint {
      */
     public IntVar z;
 
-    /** It constructs constraint ( X {@literal =>} Y ) {@literal <=>} Z.
+    /**
+     * It constructs constraint ( X {@literal =>} Y ) {@literal <=>} Z.
+     *
      * @param x variable x.
      * @param y variable y.
      * @param z variable z.
@@ -240,5 +241,5 @@ public class IfThenBool extends PrimitiveConstraint {
 
         return id() + " : IfThenBool( (" + x + "=> " + y + ") <=> " + z + " )";
     }
-    
+
 }

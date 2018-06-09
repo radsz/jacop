@@ -45,13 +45,11 @@ import static org.jacop.constraints.netflow.Assert.checkFlow;
 import static org.jacop.constraints.netflow.Assert.checkStructure;
 
 /**
- *
  * This class extends the minimum-cost flow network by providing operations and
  * data structures for removal and modification of arcs.
  *
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 public class Network extends NetworkSimplex implements MutableNetwork {
@@ -60,25 +58,37 @@ public class Network extends NetworkSimplex implements MutableNetwork {
 
     // Data structure for arc removal
 
-    /** List of deleted arcs (contains no duplicates) */
+    /**
+     * List of deleted arcs (contains no duplicates)
+     */
     public final List<Arc> deletedArcs;
 
-    /** Number of deleted arcs at each level */
+    /**
+     * Number of deleted arcs at each level
+     */
     public TimeStamp<Integer> deletedSize;
 
-    /** Cost due to deleted arcs */
+    /**
+     * Cost due to deleted arcs
+     */
     public long costOffset;
 
     // Data structure for arc modification
     // (similar to geost constraint)
 
-    /** List of modified arcs (may contain duplicates) */
+    /**
+     * List of modified arcs (may contain duplicates)
+     */
     public final List<ArcCompanion> modifiedArcs;
 
-    /** Number of modified arcs at each level */
+    /**
+     * Number of modified arcs at each level
+     */
     public TimeStamp<Integer> modifiedSize;
 
-    /** Set of arcs modified at current level */
+    /**
+     * Set of arcs modified at current level
+     */
     public final LinkedHashSet<ArcCompanion> lastModifiedArcs;
 
     // Data structure for pruning
@@ -87,7 +97,9 @@ public class Network extends NetworkSimplex implements MutableNetwork {
     /** Whether the network is a minimum-cost or a maximum-gain problem */
     // public final boolean isMinimizing;
 
-    /** The store */
+    /**
+     * The store
+     */
     public Store store;
 
     public Network(List<Node> nodes, List<Arc> arcs) {

@@ -43,20 +43,18 @@ import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
 
 /**
- *
  * Generation of set constraints in flatzinc
  *
- * @author Krzysztof Kuchcinski 
- *
+ * @author Krzysztof Kuchcinski
  */
 class SetConstraints implements ParserTreeConstants {
 
     Support support;
     Store store;
-    
+
     public SetConstraints(Support support) {
-	this.support = support;
-	this.store = support.store;
+        this.support = support;
+        this.store = support.store;
     }
 
     void gen_set_card(SimpleNode node) {
@@ -171,8 +169,8 @@ class SetConstraints implements ParserTreeConstants {
     void gen_set_le_reif(SimpleNode node) {
         SetVar v1 = support.getSetVariable(node, 0);
         SetVar v2 = support.getSetVariable(node, 1);
-	IntVar v3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
-	
+        IntVar v3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+
         support.pose(new Reified(new AleB(v1, v2), v3));
     }
 
@@ -186,7 +184,7 @@ class SetConstraints implements ParserTreeConstants {
     void gen_set_lt_reif(SimpleNode node) {
         SetVar v1 = support.getSetVariable(node, 0);
         SetVar v2 = support.getSetVariable(node, 1);
-	IntVar v3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+        IntVar v3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
         support.pose(new Reified(new AltB(v1, v2), v3));
     }

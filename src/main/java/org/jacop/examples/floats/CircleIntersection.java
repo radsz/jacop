@@ -31,19 +31,17 @@
 package org.jacop.examples.floats;
 
 /**
- *
  * It models circle intersection for floating solver.
- *
+ * <p>
  * The following equations are solved
- *
- *       4 = X^2 + Y^2,
- *       4 = (X-1)^2 + (Y-1)^2,
- *
+ * <p>
+ * 4 = X^2 + Y^2,
+ * 4 = (X-1)^2 + (Y-1)^2,
+ * <p>
  * Based on minizinc model circle_intersection.mzn by Håkan Kjellerstrand
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 import org.jacop.core.Store;

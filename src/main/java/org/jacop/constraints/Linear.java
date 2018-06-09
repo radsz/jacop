@@ -51,6 +51,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @version 4.5
  */
 
+
 /**
  * @deprecated As of release 4.3.1 replaced by LinearInt constraint.
  */
@@ -189,7 +190,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
         recomputeBounds();
 
-        Arrays.stream(this.list).forEach( v -> queueVariable(store.level, v));
+        Arrays.stream(this.list).forEach(v -> queueVariable(store.level, v));
 
         checkForOverflow();
 

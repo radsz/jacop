@@ -40,7 +40,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraints P #= Q for P and Q floats
- *
+ * <p>
  * Domain consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -63,12 +63,13 @@ public class PeqQ extends PrimitiveConstraint {
 
     /**
      * It constructs constraint P = Q.
+     *
      * @param p variable p.
      * @param q variable q.
      */
     public PeqQ(FloatVar p, FloatVar q) {
 
-        checkInputForNullness(new String[]{"p", "q"}, new Object[]{p, q});
+        checkInputForNullness(new String[] {"p", "q"}, new Object[] {p, q});
 
         numberId = idNumber.incrementAndGet();
 

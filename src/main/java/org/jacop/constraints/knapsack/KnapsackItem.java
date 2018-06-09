@@ -33,17 +33,15 @@ package org.jacop.constraints.knapsack;
 import org.jacop.core.IntVar;
 
 /**
- *
- * This class stores information about items being considered by a Knapsack constraint. 
- * It is a holder for integer attributes like weight and profit, as well as finite domain 
- * variable denoting the quantity being taken. It also stores precomputed efficiency of the item. 
- *
- * It implements comparable interface in such a away so that items can be sorted in decreasing 
+ * This class stores information about items being considered by a Knapsack constraint.
+ * It is a holder for integer attributes like weight and profit, as well as finite domain
+ * variable denoting the quantity being taken. It also stores precomputed efficiency of the item.
+ * <p>
+ * It implements comparable interface in such a away so that items can be sorted in decreasing
  * efficiency. In case of equal efficiency then item which is heavier is preferred.
  *
  * @author Radoslaw Szymanek and Wadeck Follonier
  * @version 4.5
- *
  */
 
 public final class KnapsackItem implements Comparable<KnapsackItem> {
@@ -72,9 +70,10 @@ public final class KnapsackItem implements Comparable<KnapsackItem> {
      * It constructs an item. It requires information about weight and profit,
      * as well as finite domain variable denoting the quantity. It will compute
      * efficiency as well.
+     *
      * @param quantity - number of items it is possible to take.
-     * @param weight - weight of the single item.
-     * @param profit - profit due to one single item.
+     * @param weight   - weight of the single item.
+     * @param profit   - profit due to one single item.
      */
     KnapsackItem(IntVar quantity, int weight, int profit) {
         super();
@@ -94,7 +93,7 @@ public final class KnapsackItem implements Comparable<KnapsackItem> {
      * this item is less efficient than that item. This function returns -1 if
      * this item is more efficient than that item. If both items are equally efficient
      * then this function returns 1 if this item has smaller weight than that item.
-     *
+     * <p>
      * In connection with Arrays.sort() it will produce items from most efficient to
      * least efficient breaking ties in the favor of the larger weight.
      */
@@ -153,7 +152,6 @@ public final class KnapsackItem implements Comparable<KnapsackItem> {
      * It returns an efficiency of that item.
      *
      * @return the efficiency of that item.
-     *
      */
     public final double getEfficiency() {
         return efficiency;

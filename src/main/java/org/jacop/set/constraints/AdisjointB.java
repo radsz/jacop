@@ -79,7 +79,7 @@ public class AdisjointB extends Constraint implements UsesQueueVariable, Satisfi
      */
     public AdisjointB(SetVar a, SetVar b) {
 
-        checkInputForNullness(new String[]{"a", "b"}, new Object[]{a, b});
+        checkInputForNullness(new String[] {"a", "b"}, new Object[] {a, b});
 
         numberId = idNumber.incrementAndGet();
 

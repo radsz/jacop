@@ -42,12 +42,12 @@ import java.util.stream.Stream;
 /**
  * Among constraint in its simplest form. It establishes the following
  * relation. The given number N of X`s take values from the supplied set
- * of values Kset. 
- *
- * This constraint implements a simple and polynomial algorithm to establish 
- * GAC as presented in different research papers. There are number of 
- * improvements (iterative execution, optimization of computational load upon 
- * backtracking) to improve the constraint further. 
+ * of values Kset.
+ * <p>
+ * This constraint implements a simple and polynomial algorithm to establish
+ * GAC as presented in different research papers. There are number of
+ * improvements (iterative execution, optimization of computational load upon
+ * backtracking) to improve the constraint further.
  *
  * @author Polina Makeeva and Radoslaw Szymanek
  * @version 4.5
@@ -90,13 +90,14 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
 
     /**
      * It constructs an Among constraint.
+     *
      * @param list variables which are compared to Kset
      * @param kSet set of integer values against which we check if variables are equal to.
-     * @param n number of possible variables equal to a value from Kset.
+     * @param n    number of possible variables equal to a value from Kset.
      */
     public Among(IntVar[] list, IntervalDomain kSet, IntVar n) {
 
-        checkInputForNullness(new String[] {"list", "kSet", "n"}, new Object[][] { list, { kSet }, { n } });
+        checkInputForNullness(new String[] {"list", "kSet", "n"}, new Object[][] {list, {kSet}, {n}});
         checkInputForDuplication("list", list);
 
         this.queueIndex = 1;
@@ -105,15 +106,16 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
         this.kSet = kSet.clone();
         this.n = n;
 
-        setScope( Stream.concat(Arrays.stream(list), Stream.of(n)));
+        setScope(Stream.concat(Arrays.stream(list), Stream.of(n)));
 
     }
 
     /**
      * It constructs an Among constraint.
+     *
      * @param list variables which are compared to Kset
      * @param kSet set of integer values against which we check if variables are equal to.
-     * @param n number of possible variables equal to a value from Kset.
+     * @param n    number of possible variables equal to a value from Kset.
      */
     public Among(List<IntVar> list, IntervalDomain kSet, IntVar n) {
         this(list.toArray(new IntVar[list.size()]), kSet, n);

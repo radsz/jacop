@@ -43,11 +43,10 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- *
  * It constructs a Stretch constraint based on Regular constraint. An example
  * of a Stretch constraint is values = [1, 2], min = [1, 2], max = [2, 3], and
- * x = [x1, x2, x3, x4]. It specifies that variables x are equal to value 1 and 
- * 2, and any sequence of values 1 has to be of length between 1 and 2, and any 
+ * x = [x1, x2, x3, x4]. It specifies that variables x are equal to value 1 and
+ * 2, and any sequence of values 1 has to be of length between 1 and 2, and any
  * sequence of values 2 has to be of length between 2 and 3.
  *
  * @author Radoslaw Szymanek and Polina Makeeva
@@ -66,13 +65,13 @@ public class Stretch extends DecomposedConstraint<Constraint> {
      * It creates a Stretch constraint.
      *
      * @param values a list of values which can be taken by variables.
-     * @param min the minimal sequence length for each value.
-     * @param max the maximal sequence length for each value.
-     * @param x variables which assignment is constrained by Stretch constraint.
+     * @param min    the minimal sequence length for each value.
+     * @param max    the maximal sequence length for each value.
+     * @param x      variables which assignment is constrained by Stretch constraint.
      */
     public Stretch(int[] values, int[] min, int[] max, IntVar[] x) {
 
-        checkInputForNullness(new String[]{"values", "min", "max", "x"}, new Object[][]{ {values}, {min}, {max}, x});
+        checkInputForNullness(new String[] {"values", "min", "max", "x"}, new Object[][] {{values}, {min}, {max}, x});
 
         this.values = Arrays.copyOf(values, values.length);
         this.min = Arrays.copyOf(min, min.length);

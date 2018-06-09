@@ -43,10 +43,8 @@ import static org.jacop.constraints.netflow.Assert.checkFlow;
 import static org.jacop.constraints.netflow.Assert.checkStructure;
 
 /**
- *
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 public class Pruning extends Network {
@@ -67,6 +65,7 @@ public class Pruning extends Network {
     private static final int FAIL_SCORE = 2;
 
     private Statistics statistics;
+
 
     interface PruningStrategy {
 
@@ -495,7 +494,7 @@ public class Pruning extends Network {
             // costLimit -= arc.cost * delta;
 
 			/*
-			 * int currentFlow = baseFlow + ((arc.forward) ? flow : -flow); if
+       * int currentFlow = baseFlow + ((arc.forward) ? flow : -flow); if
 			 * (currentFlow > 0) { int deltaWeight = costLimit / currentFlow; if
 			 * (maxWeight < deltaWeight) { maxWeight = deltaWeight;
 			 * flowAtMaxWeight = currentFlow; } }

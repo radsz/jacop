@@ -55,6 +55,7 @@ public class VariableTrace extends Constraint implements UsesQueueVariable {
 
     /**
      * It constructs trace daemon for variable v
+     *
      * @param v variable to be traced
      */
     public VariableTrace(Var v) {
@@ -63,6 +64,7 @@ public class VariableTrace extends Constraint implements UsesQueueVariable {
 
     /**
      * It constructs trace daemon for variables vs
+     *
      * @param vs variables to be traced
      */
     public VariableTrace(Var[] vs) {
@@ -79,6 +81,7 @@ public class VariableTrace extends Constraint implements UsesQueueVariable {
 
     /**
      * It constructs trace daemon for variables vs
+     *
      * @param vs variables to be traced
      */
     public VariableTrace(List<Var> vs) {

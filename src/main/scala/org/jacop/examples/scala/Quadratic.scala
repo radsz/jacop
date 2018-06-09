@@ -36,6 +36,7 @@ import org.jacop.scala._
   * A problem defined as in Java based examples.
   *
   * rewriting to Scala by Krzysztof Kuchcinski.
+  *
   * @author Krzysztof Kuchcinski and Radoslaw Szymanek
   * @version 4.5
   */
@@ -47,9 +48,9 @@ object Quadratic extends App with jacop {
   val y = new FloatVar("y", -10, 10)
 
   // constraints
-  2.0*x*y + y #= 1.0
-  x*y #= 0.2
+  2.0 * x * y + y #= 1.0
+  x * y #= 0.2
 
-  val result = satisfyAll(search_float(List(x,y), input_order), () => println(x+"\n"+y)) 
+  val result = satisfyAll(search_float(List(x, y), input_order), () => println(x + "\n" + y))
   statistics
 }

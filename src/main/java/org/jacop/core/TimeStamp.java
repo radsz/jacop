@@ -40,13 +40,13 @@ import org.jacop.api.Stateful;
  * appropriate for objects which do not share data across store levels. If you
  * have objects which share data across store levels than you need to make your
  * own implementation of mutable variable using MutableVar interface.
- *
+ * <p>
  * It will (it has to) store the same object at different levels as users of the
  * timestamp may ask for the level at which the timestamp was recently updated.
  *
+ * @param <T> a class being stored at different time stamps.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.5
- * @param <T> a class being stored at different time stamps. 
  */
 
 public class TimeStamp<T> implements Stateful {
@@ -65,6 +65,7 @@ public class TimeStamp<T> implements Stateful {
 
     /**
      * The constructor.
+     *
      * @param store the store where the timestamp is registered.
      * @param input the value of the stamp to be stored.
      */
@@ -85,6 +86,7 @@ public class TimeStamp<T> implements Stateful {
 
     /**
      * Specify  least number of different values to be used by Timestamp.
+     *
      * @param minCapacity capacity that will be ensured
      */
     @SuppressWarnings("unchecked") public void ensureCapacity(int minCapacity) {
@@ -143,6 +145,7 @@ public class TimeStamp<T> implements Stateful {
 
     /**
      * It returns the value of the most recent stamp used within that timestamp.
+     *
      * @return the stamp value.
      */
     public final int stamp() {
@@ -162,6 +165,7 @@ public class TimeStamp<T> implements Stateful {
 
     /**
      * It updates the value of the timestamp with the provided value.
+     *
      * @param val value to which the timestamp needs to be updated.
      */
     public void update(T val) {

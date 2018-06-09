@@ -41,7 +41,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraints sin(P) = R
- *
+ * <p>
  * Bounds consistency can be used; third parameter of constructor controls this.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -65,15 +65,16 @@ public class SinPeqR extends Constraint implements Stateful, SatisfiedPresent {
      * It contains variable q.
      */
     public FloatVar q;
-    
+
     /**
      * It constructs sin(P) = Q constraints.
+     *
      * @param p variable P
      * @param q variable Q
      */
     public SinPeqR(FloatVar p, FloatVar q) {
 
-        checkInputForNullness(new String[]{"p", "q"}, new Object[]{p, q});
+        checkInputForNullness(new String[] {"p", "q"}, new Object[] {p, q});
 
         numberId = idNumber.incrementAndGet();
 

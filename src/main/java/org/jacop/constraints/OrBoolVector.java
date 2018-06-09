@@ -95,7 +95,7 @@ public class OrBoolVector extends PrimitiveConstraint {
         else
             queueIndex = 0;
 
-        setScope( Stream.concat(Arrays.stream(list), Stream.of(result)));
+        setScope(Stream.concat(Arrays.stream(list), Stream.of(result)));
     }
 
     /**

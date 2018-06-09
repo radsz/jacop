@@ -42,11 +42,10 @@ import org.jacop.set.core.SetVar;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * It creates a constraint that makes sure that A union B is equal to C. 
- * A \/ B = C. 
+ * It creates a constraint that makes sure that A union B is equal to C.
+ * A \/ B = C.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- *
  * @version 4.5
  */
 
@@ -91,7 +90,7 @@ public class AunionBeqC extends Constraint implements UsesQueueVariable, Satisfi
 
     public AunionBeqC(SetVar a, SetVar b, SetVar c) {
 
-        checkInputForNullness(new String[]{"a", "b", "c"}, new Object[]{a, b, c});
+        checkInputForNullness(new String[] {"a", "b", "c"}, new Object[] {a, b, c});
 
         numberId = idNumber.incrementAndGet();
 

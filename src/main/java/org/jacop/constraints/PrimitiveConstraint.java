@@ -71,12 +71,11 @@ public abstract class PrimitiveConstraint extends Constraint implements StoreAwa
                 return possibleEvent;
         }
 
-        if (! constraintScope.isEmpty()) {
+        if (!constraintScope.isEmpty()) {
 
-            int eventAcross = constraintScope.stream()
-                .filter( i -> i.arguments().contains(var))
-                .mapToInt( i -> i.getNestedPruningEvent(var, false))
-                .max().orElseGet(this::getDefaultNotConsistencyPruningEvent);
+            int eventAcross =
+                constraintScope.stream().filter(i -> i.arguments().contains(var)).mapToInt(i -> i.getNestedPruningEvent(var, false)).max()
+                    .orElseGet(this::getDefaultNotConsistencyPruningEvent);
 
             if (eventAcross < getDefaultNotConsistencyPruningEvent())
                 eventAcross = getDefaultNotConsistencyPruningEvent();
@@ -87,19 +86,19 @@ public abstract class PrimitiveConstraint extends Constraint implements StoreAwa
         return getDefaultNotConsistencyPruningEvent();
     }
 
-    @Override
-    public void impose(Store store) {
+    @Override public void impose(Store store) {
 
         super.impose(store);
         include(store);
 
     }
+
     /**
      * It retrieves the pruning event for which any composed constraint which
      * uses this constraint should be evaluated. This events are the ones which
      * can change satisfied status?
      *
-     * @param var for which pruning event is retrieved
+     * @param var  for which pruning event is retrieved
      * @param mode decides if pruning event for consistency or nonconsistency is required.
      * @return pruning event associated with the given variable for a given consistency mode.
      */
@@ -113,12 +112,11 @@ public abstract class PrimitiveConstraint extends Constraint implements StoreAwa
                     return possibleEvent;
             }
 
-            if (constraintScope != null && ! constraintScope.isEmpty()) {
+            if (constraintScope != null && !constraintScope.isEmpty()) {
 
-                int eventAcross = constraintScope.stream()
-                    .filter( i -> i.arguments().contains(var))
-                    .mapToInt( i -> i.getNestedPruningEvent(var, true))
-                    .max().orElseGet(() -> Integer.MIN_VALUE);
+                int eventAcross =
+                    constraintScope.stream().filter(i -> i.arguments().contains(var)).mapToInt(i -> i.getNestedPruningEvent(var, true))
+                        .max().orElseGet(() -> Integer.MIN_VALUE);
 
                 if (eventAcross != Integer.MIN_VALUE)
                     return eventAcross;
@@ -134,14 +132,13 @@ public abstract class PrimitiveConstraint extends Constraint implements StoreAwa
                 if (possibleEvent != null)
                     return possibleEvent;
             }
-            if (constraintScope != null && ! constraintScope.isEmpty()) {
+            if (constraintScope != null && !constraintScope.isEmpty()) {
 
-                int eventAcross = constraintScope.stream()
-                    .filter( i -> i.arguments().contains(var))
-                    .mapToInt( i -> i.getNestedPruningEvent(var, false))
-                    .max().orElse(Integer.MIN_VALUE);
+                int eventAcross =
+                    constraintScope.stream().filter(i -> i.arguments().contains(var)).mapToInt(i -> i.getNestedPruningEvent(var, false))
+                        .max().orElse(Integer.MIN_VALUE);
 
-                if (eventAcross  != Integer.MIN_VALUE)
+                if (eventAcross != Integer.MIN_VALUE)
                     return eventAcross;
 
             }
@@ -162,12 +159,14 @@ public abstract class PrimitiveConstraint extends Constraint implements StoreAwa
     /**
      * It makes pruning in such a way that constraint is notConsistent. It
      * removes values which always belong to a solution.
+     *
      * @param store the constraint store in which context the notConsistency technique is evaluated.
      */
     public abstract void notConsistency(Store store);
 
     /**
      * It checks if constraint would be always not satisfied.
+     *
      * @return true if constraint must be notSatisfied, false otherwise.
      */
     public abstract boolean notSatisfied();
@@ -176,7 +175,7 @@ public abstract class PrimitiveConstraint extends Constraint implements StoreAwa
      * It allows to specify customized events required to trigger execution
      * of notConsitency() method.
      *
-     * @param var variable for which customized event is setup.
+     * @param var          variable for which customized event is setup.
      * @param pruningEvent the type of the event being setup.
      */
     public void setNotConsistencyPruningEvent(Var var, int pruningEvent) {
@@ -190,7 +189,7 @@ public abstract class PrimitiveConstraint extends Constraint implements StoreAwa
 
     public void include(Store store) {
         if (constraintScope != null)
-            constraintScope.forEach( i -> i.include(store));
+            constraintScope.forEach(i -> i.include(store));
     }
 
 }

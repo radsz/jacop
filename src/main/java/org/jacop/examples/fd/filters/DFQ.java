@@ -51,6 +51,7 @@ public class DFQ extends Filter {
 
     /**
      * It creates DFQ filter problem with specified delays.
+     *
      * @param addDel addition delay.
      * @param mulDel multiplication delay.
      */

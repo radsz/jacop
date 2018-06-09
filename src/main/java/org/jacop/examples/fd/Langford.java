@@ -38,8 +38,7 @@ import org.jacop.core.Store;
 import java.util.ArrayList;
 
 /**
- *
- * It solves Langford problem. 
+ * It solves Langford problem.
  *
  * @author Radoslaw Szymanek
  * @version 4.5

@@ -39,7 +39,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * It creates an equality constraint to make sure that two set variables
- * have the same value. 
+ * have the same value.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.5
@@ -64,12 +64,13 @@ public class AeqB extends PrimitiveConstraint {
 
     /**
      * It constructs an AeqB constraint to restrict the domain of the variables.
+     *
      * @param a variable a restricted to be equal to b.
      * @param b variable b restricted to be equal to a.
      */
     public AeqB(SetVar a, SetVar b) {
 
-        checkInputForNullness(new String[]{"a", "b"}, new Object[]{a, b});
+        checkInputForNullness(new String[] {"a", "b"}, new Object[] {a, b});
 
         numberId = idNumber.incrementAndGet();
 

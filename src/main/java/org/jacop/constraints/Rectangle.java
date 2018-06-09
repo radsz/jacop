@@ -80,7 +80,6 @@ public class Rectangle {
      * It constructs a rectangle.
      *
      * @param list it specifies for each dimension (one after the other) its origin and length.
-     *
      */
     public Rectangle(IntVar[] list) {
         dim = list.length / 2;
@@ -96,7 +95,6 @@ public class Rectangle {
      * It constructs a rectangle.
      *
      * @param list it specifies for each dimension (one after the other) its origin and length.
-     *
      */
     public Rectangle(List<? extends IntVar> list) {
         this(list.toArray(new IntVar[list.size()]));
@@ -104,8 +102,8 @@ public class Rectangle {
 
     /**
      * It constructs a rectangle.
-     * @param rect the rectangle based on which a new rectangle is created.
      *
+     * @param rect the rectangle based on which a new rectangle is created.
      */
     public Rectangle(Rectangle rect) {
 
@@ -268,12 +266,12 @@ public class Rectangle {
 
         result.append("[");
         for (int i = 0; i < dim; i++) {
-	    result.append(origin[i] + ", ");
+            result.append(origin[i] + ", ");
         }
         for (int i = 0; i < dim; i++) {
-	    result.append(length[i]);
+            result.append(length[i]);
             if (i < dim - 1)
-	        result.append(", ");
+                result.append(", ");
         }
         result.append("]");
         return result.toString();
@@ -348,7 +346,7 @@ public class Rectangle {
     }
 
     public static Stream<Var> getStream(Rectangle[] scope) {
-        return Arrays.stream(scope).map(r -> Stream.concat( Arrays.stream(r.origin), Arrays.stream( r.length) )).flatMap(i -> i);
+        return Arrays.stream(scope).map(r -> Stream.concat(Arrays.stream(r.origin), Arrays.stream(r.length))).flatMap(i -> i);
     }
 
 }

@@ -304,7 +304,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
         pruneRelation();
 
         if (relationType != eq && entailed(relationType))
-	    removeConstraint();
+            removeConstraint();
 
     }
 
@@ -316,7 +316,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
         pruneRelation();
 
         if (negRel[relationType] != eq && entailed(negRel[relationType]))
-	    removeConstraint();
+            removeConstraint();
 
     }
 

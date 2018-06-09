@@ -39,7 +39,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Constraint |X - Y| #= Z
  *
- *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.5
  */
@@ -69,6 +68,7 @@ public class Distance extends PrimitiveConstraint implements Stateful {
 
     /**
      * Distance between x and y |x-y| = z
+     *
      * @param x first parameter
      * @param y second parameter
      * @param z result

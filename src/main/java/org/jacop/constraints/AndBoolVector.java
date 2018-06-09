@@ -94,7 +94,7 @@ public class AndBoolVector extends PrimitiveConstraint {
         else
             queueIndex = 0;
 
-        setScope( Stream.concat(Arrays.stream(list), Stream.of(result)));
+        setScope(Stream.concat(Arrays.stream(list), Stream.of(result)));
 
     }
 
@@ -174,7 +174,7 @@ public class AndBoolVector extends PrimitiveConstraint {
         }
 
         if (result.max() == 0 && start == l - 1)
-                list[index_01].domain.in(store.level, list[index_01], 0, 0);
+            list[index_01].domain.in(store.level, list[index_01], 0, 0);
 
         if ((l - start) < 3)
             queueIndex = 0;
@@ -217,7 +217,7 @@ public class AndBoolVector extends PrimitiveConstraint {
         }
 
         if (result.max() == 0 && start == l - 1)
-                list[index_01].domain.in(store.level, list[index_01], 1, 1);
+            list[index_01].domain.in(store.level, list[index_01], 1, 1);
 
         if ((l - start) < 3)
             queueIndex = 0;

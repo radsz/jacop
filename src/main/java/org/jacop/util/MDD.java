@@ -39,8 +39,8 @@ import java.util.Map.Entry;
 import java.util.TreeMap;
 
 /**
- * Defines an MDD as used in the following paper. 
- *
+ * Defines an MDD as used in the following paper.
+ * <p>
  * K.C. Cheng and R.H. Yap, "Maintaining generalized arc consistency
  * on ad-hoc n-ary constraints.", CP 2008.
  *
@@ -65,13 +65,13 @@ public class MDD {
     private static final boolean debugAll = false;
 
     /**
-     *  The ordered list of variables participating in MDD.
+     * The ordered list of variables participating in MDD.
      */
 
     public IntVar vars[];
 
     /**
-     *  The initial domain limits used to create an MDD array representation.
+     * The initial domain limits used to create an MDD array representation.
      */
 
     public int domainLimits[];
@@ -109,10 +109,9 @@ public class MDD {
      * used across many constraints is not copied by the
      * constructor but used directly.
      *
-     * @param vars variables involved in this multiple-value decision diagram.
-     * @param diagram an int array representation of the diagram.
+     * @param vars         variables involved in this multiple-value decision diagram.
+     * @param diagram      an int array representation of the diagram.
      * @param domainLimits the limits on the number of values imposed on each variable.
-     *
      */
     public MDD(IntVar[] vars, int[] diagram, int[] domainLimits) {
 
@@ -137,14 +136,14 @@ public class MDD {
     }
 
     /**
-     *
      * It creates and MDD representation given the list of variables
      * and (dis)allowed tuples. Minimum domain limits allows artificially
      * increase the size of the variable domain to make reuse of the same
      * mdd across multiple constraints possible.
-     * @param vars variables and their order used in the MDD.
+     *
+     * @param vars                variables and their order used in the MDD.
      * @param minimumDomainLimits it specifies the minimal number of values used for each of the variables.
-     * @param table it specifies the allowed tuples which are being converted into an MDD.
+     * @param table               it specifies the allowed tuples which are being converted into an MDD.
      */
 
     public MDD(IntVar[] vars, int[] minimumDomainLimits, int[][] table) {
@@ -184,12 +183,12 @@ public class MDD {
 
 
     /**
-     *
      * It creates and MDD representation given the list of variables
      * and (dis)allowed tuples. Minimum domain limits allows artificially
      * increase the size of the variable domain to make reuse of the same
      * mdd across multiple constraints possible.
-     * @param vars variables and their order used in the MDD.
+     *
+     * @param vars  variables and their order used in the MDD.
      * @param table it specifies the allowed tuples which are being converted into an MDD.
      */
 
@@ -239,6 +238,7 @@ public class MDD {
      * of the current MDD. It returns null if one of the variables supplied
      * has a larger domain then assumed by respective variable from this MDD.
      * In order to make reuse possible first create MDD for largest size variables.
+     *
      * @param vars array of new variables for which this MDD is being reused for.
      * @return an MDD with parts of it reused for new variables.
      */
@@ -268,19 +268,16 @@ public class MDD {
     }
 
     /**
-     *
      * It creates and MDD representation given the list of variables. Tuples
      * must be added manually (addTuple function). After all tuples are added
      * reduce function can be called to reduce MDD. After reducing MDD adding
      * tuples is not allowed to maintain cannonic and minimal representation.
-     *
      **/
 
     private boolean extendable = false;
 
 
     /**
-     *
      * It creates and MDD representation given the list of variables.
      * The domain limits are set to be equal to the size of the variables domains.
      * The tuples are being added separately one by one.
@@ -323,7 +320,6 @@ public class MDD {
      * It allows to add one by one tuple before the reduction of the initial MDD takes place.
      *
      * @param tuple an allowed tuple being added to MDD.
-     *
      */
     public void addTuple(int[] tuple) {
 
@@ -497,7 +493,8 @@ public class MDD {
 
     /**
      * It finds a position of a value inside the array.
-     * @param value the value being searched.
+     *
+     * @param value  the value being searched.
      * @param values the array in which the value is being searched for.
      * @return position of the value in the array.
      */
@@ -698,6 +695,7 @@ public class MDD {
 
     /**
      * It checks if the specified tuple is allowed.
+     *
      * @param tuple the tuple being checked.
      * @return true if the tuple is allowed, false otherwise.
      */

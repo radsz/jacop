@@ -38,8 +38,7 @@ import org.jacop.set.core.SetVar;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- *
- * It constructs a constraint which makes sure that a given element is 
+ * It constructs a constraint which makes sure that a given element is
  * in the domain of the set variable.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
@@ -67,9 +66,10 @@ public class EinA extends PrimitiveConstraint {
 
     /**
      * It constructs an eInA constraint to restrict the domain of the variable.
-     * @param a variable a for which the restriction is applied.
+     *
+     * @param a       variable a for which the restriction is applied.
      * @param element the element that has to be a part of the variable domain.
-     * @param strict it specifies if the inclusion relation is strict.
+     * @param strict  it specifies if the inclusion relation is strict.
      */
     public EinA(int element, SetVar a, boolean strict) {
         this(element, a);
@@ -79,12 +79,13 @@ public class EinA extends PrimitiveConstraint {
 
     /**
      * It constructs an eInA constraint to restrict the domain of the variable.
-     * @param a variable a for which the restriction is applied.
+     *
+     * @param a       variable a for which the restriction is applied.
      * @param element the element that has to be a part of the variable domain.
      */
     public EinA(int element, SetVar a) {
 
-        checkInputForNullness("a", new Object[]{a});
+        checkInputForNullness("a", new Object[] {a});
 
         numberId = idNumber.incrementAndGet();
 

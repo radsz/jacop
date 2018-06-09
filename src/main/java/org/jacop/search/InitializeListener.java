@@ -44,6 +44,7 @@ public interface InitializeListener {
 
     /**
      * It is executed before the search starts labeling procedure.
+     *
      * @param store store in which context the search is performed.
      */
 
@@ -51,6 +52,7 @@ public interface InitializeListener {
 
     /**
      * It sets the children listeners of this initialize listener.
+     *
      * @param children children listeners being set
      */
     void setChildrenListeners(InitializeListener[] children);
@@ -58,6 +60,7 @@ public interface InitializeListener {
 
     /**
      * It sets one child listener for this initialize listener.
+     *
      * @param child the child of this initialize listener.
      */
     void setChildrenListeners(InitializeListener child);

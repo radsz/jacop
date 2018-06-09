@@ -36,12 +36,10 @@ import org.jacop.fz.constraints.Support;
 import org.jacop.satwrapper.SatTranslation;
 
 /**
+ * The part of the parser responsible for parsing constraints.
  *
- * The part of the parser responsible for parsing constraints. 
- *
- * @author Krzysztof Kuchcinski 
+ * @author Krzysztof Kuchcinski
  * @version 4.5
- *
  */
 public class Constraints implements ParserTreeConstants {
 
@@ -50,20 +48,21 @@ public class Constraints implements ParserTreeConstants {
     String p;
 
     boolean debug;
-    
+
     final static int eq = 0, ne = 1, lt = 2, gt = 3, le = 4, ge = 5;
 
     // ============ SAT solver interface ==============
     SatTranslation sat;
 
     Support support;
-    
+
     final org.jacop.fz.constraints.ConstraintFncs cf; // = new org.jacop.fz.constraints.ConstraintFncs(store, dict, sat);
 
     /**
      * It creates an object to parse the constraint part of the flatzinc file.
+     *
      * @param store the constraint store in which the constraints are being created.
-     * @param dict the current dictionary (tables of all variables and constants)
+     * @param dict  the current dictionary (tables of all variables and constants)
      */
     public Constraints(Store store, Tables dict) {
         this.store = store;
@@ -73,21 +72,21 @@ public class Constraints implements ParserTreeConstants {
         // impose SAT-solver
         sat.impose();
 
-	support = new Support(store, dict, sat);
-	
-	cf = new org.jacop.fz.constraints.ConstraintFncs(support);
+        support = new Support(store, dict, sat);
+
+        cf = new org.jacop.fz.constraints.ConstraintFncs(support);
 
     }
-    
+
     void setOptions(Options options) {
-	support.options = options;
+        support.options = options;
         debug = options.debug();
     }
-    
+
     void generateAllConstraints(SimpleNode astTree) throws Throwable {
 
-	sat.debug = debug;
-	
+        sat.debug = debug;
+
         int n = astTree.jjtGetNumChildren();
 
         for (int i = 0; i < n; i++) {
@@ -140,16 +139,16 @@ public class Constraints implements ParserTreeConstants {
                 System.out.println(e);
             } catch (java.lang.reflect.InvocationTargetException e) {
                 System.out.println("%% problem detected for " + p);
-		
+
                 try {
                     throw e.getCause();
                 } catch (FailException fe) {
                     throw fe;
                 } catch (ArithmeticException ae) {
                     throw ae;
-                } catch(IllegalArgumentException ie) {
-		    throw ie;
-		} catch (ParseException pe) {
+                } catch (IllegalArgumentException ie) {
+                    throw ie;
+                } catch (ParseException pe) {
                     throw pe;
                 } catch (TokenMgrError te) {
                     throw te;

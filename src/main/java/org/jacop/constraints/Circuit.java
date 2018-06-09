@@ -41,8 +41,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Circuit constraint assures that all variables build a Hamiltonian
- * circuit. Value of every variable x[i] points to the next variable in 
- * the circuit. Variables create one circuit. 
+ * circuit. Value of every variable x[i] points to the next variable in
+ * the circuit. Variables create one circuit.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
@@ -70,6 +70,7 @@ public class Circuit extends Alldiff implements Stateful {
 
     /**
      * It constructs a circuit constraint.
+     *
      * @param list variables which must form a circuit.
      */
     public Circuit(IntVar[] list) {
@@ -93,6 +94,7 @@ public class Circuit extends Alldiff implements Stateful {
 
     /**
      * It constructs a circuit constraint.
+     *
      * @param list variables which must form a circuit.
      */
     public Circuit(List<IntVar> list) {

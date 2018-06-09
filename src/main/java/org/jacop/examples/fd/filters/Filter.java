@@ -33,12 +33,11 @@ package org.jacop.examples.fd.filters;
 import java.util.List;
 
 /**
- * It provides the basic functionality which must be implemented by any 
- * filter problem. 
+ * It provides the basic functionality which must be implemented by any
+ * filter problem.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
- *
  */
 public abstract class Filter {
 
@@ -93,6 +92,7 @@ public abstract class Filter {
     /**
      * It returns the dependencies between operations which need to be satisfy in the
      * final solution.
+     *
      * @return list of dependencies.
      */
     public int[][] dependencies() {
@@ -101,6 +101,7 @@ public abstract class Filter {
 
     /**
      * It returns the ids of each operation.
+     *
      * @return an array of ids.
      */
     public int[] ids() {
@@ -131,6 +132,7 @@ public abstract class Filter {
     /**
      * It returns the number of operations in the filter. It
      * is not the number of different operations.
+     *
      * @return number of operations present in the filter.
      */
     public int noOp() {
@@ -139,6 +141,7 @@ public abstract class Filter {
 
     /**
      * It returns a string id of the problem.
+     *
      * @return id of the filter problem being modeled and solved.
      */
     public String name() {
@@ -148,6 +151,7 @@ public abstract class Filter {
     /**
      * It returns a number of addition operations in the current
      * problem.
+     *
      * @return number of addition operations.
      */
     public int noAdd() {
@@ -161,6 +165,7 @@ public abstract class Filter {
     /**
      * It returns a number of multiplications operations in the current
      * problem.
+     *
      * @return number of multiplications operations.
      */
     public int noMul() {
@@ -173,6 +178,7 @@ public abstract class Filter {
 
     /**
      * It returns the delay of the addition operation.
+     *
      * @return the delay of the addition operation.
      */
     public int addDel() {
@@ -181,6 +187,7 @@ public abstract class Filter {
 
     /**
      * It returns the delay of the multiplication operation.
+     *
      * @return the delay of the multiplication operation.
      */
     public int mulDel() {
@@ -189,6 +196,7 @@ public abstract class Filter {
 
     /**
      * It returns the id of the addition operation.
+     *
      * @return the id of the addition operation.
      */
     public int addId() {
@@ -197,6 +205,7 @@ public abstract class Filter {
 
     /**
      * It returns the id of the multiplication operation.
+     *
      * @return the id of the multiplication operation.
      */
     public int mulId() {
@@ -206,6 +215,7 @@ public abstract class Filter {
     /**
      * It returns the list of operations which are not
      * preceding any other operation.
+     *
      * @return it returns the indexes of the operations which are used to
      * compute the makespan of the schedule.
      */
@@ -216,6 +226,7 @@ public abstract class Filter {
     /**
      * It specifies the names of the operations for the
      * representation of the solution in textual form.
+     *
      * @return list of names.
      */
     public abstract List<String> names();

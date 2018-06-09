@@ -42,32 +42,31 @@ import java.util.*;
 /**
  * Defines functionality of shaving. Plugin in this object to search to
  * change your depth first search to a search with shaving capabilities.
- *
+ * <p>
  * Shaving
- *
+ * <p>
  * Each search level stores the variable value pairs which were shaved at a
  * given level.
- *
+ * <p>
  * Shaving speculation.
- *
+ * <p>
  * The right child is using all the shavable pairs from the subtree rooted at
  * the sibling of the current search node. If shaving fails then it is recorded
  * in non shavable.
- *
+ * <p>
  * Not-shavable speculation
- *
+ * <p>
  * Every time a variable value pair is being schedule for shavability check then
  * it is checked if that pair was not already checked for shavability before
  * with a negative results. If so, then check is not performed but also entry in
  * not-shavable is removed.
- *
+ * <p>
  * If variable value pair proofs to be not shavable then this variable value pair
  * is recorded into Not-shavable speculation.
- *
+ * <p>
  * Quick shave - upon exiting any subtree the variable value pair which was
  * choosen at the root of that subtree is recorded as shavable variable value
  * pair.
- *
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.5
@@ -381,6 +380,7 @@ import java.util.*;
 
     /**
      * It adds shaving constraint to the list of constraints guiding shaving.
+     *
      * @param c constraint which is added to the list of guiding constraints.
      */
     public void addShavingConstraint(Constraint c) {
@@ -391,6 +391,7 @@ import java.util.*;
 
     /**
      * It specifies the constraint store in which context the shaving will take place.
+     *
      * @param store constraint store.
      */
     public void setStore(Store store) {

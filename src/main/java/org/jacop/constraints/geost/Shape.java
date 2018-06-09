@@ -35,12 +35,10 @@ import org.jacop.util.SimpleArrayList;
 import java.util.*;
 
 /**
- *
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
  * @version 4.5
- *
- * A shape is composed of a set of shifted boxes.
- *
+ *          <p>
+ *          A shape is composed of a set of shifted boxes.
  */
 public class Shape {
 
@@ -69,7 +67,7 @@ public class Shape {
     /**
      * It constructs a shape with a given id based on a specified collection of Dboxes.
      *
-     * @param no the unique identifier of the created shape.
+     * @param no    the unique identifier of the created shape.
      * @param boxes the collection of boxes constituting the shape.
      */
     public Shape(int no, Collection<DBox> boxes) {
@@ -88,7 +86,7 @@ public class Shape {
     /**
      * It constructs a shape from only one DBox.
      *
-     * @param id shape unique identifier.
+     * @param id  shape unique identifier.
      * @param box the single dbox specifying the shape.
      */
     public Shape(int id, DBox box) {
@@ -107,7 +105,7 @@ public class Shape {
      * It constructs a shape with a given id based on a single dbox
      * specified by the origin and length arrays.
      *
-     * @param id the unique identifier of the constructed shape.
+     * @param id     the unique identifier of the constructed shape.
      * @param origin it specifies the origin of the dbox specifying the shape.
      * @param length it specifies the length of the dbox specifying the shape.
      */
@@ -198,7 +196,6 @@ public class Shape {
      * It checks whether a given point lies within any of the shapes boxes.
      *
      * @param point the point which containment within a shape is being checked.
-     *
      * @return true if the point lies within a shape, false otherwise.
      */
     public boolean containsPoint(int[] point) {
@@ -219,7 +216,7 @@ public class Shape {
      */
     private void initHoles() {
     /*
-		 * the holes are the result of the subtraction to the bounding
+     * the holes are the result of the subtraction to the bounding
 		 * box of all components
 		 */
         if (holes == null) {
@@ -270,9 +267,9 @@ public class Shape {
     /**
      * It returns the set of holes of this shape. The set of holes is
      * a set of boxes with the following properties, once scaled by a factor 1/4:
-     *   - none of its components overlaps with the shape's components
-     *   - its union with the set of components covers the bounding box of the shape, except for
-     *     an empty area at the component boundary that has size 1/4
+     * - none of its components overlaps with the shape's components
+     * - its union with the set of components covers the bounding box of the shape, except for
+     * an empty area at the component boundary that has size 1/4
      *
      * @return the set of holes of this shape.
      */
@@ -322,7 +319,7 @@ public class Shape {
     /**
      * It computes a collection of DBoxes that form the same shape, but that are certain
      * to not overlap
-     *
+     * <p>
      * This implementation is probably not the most efficient possible representation.
      *
      * @return non overlapping representation of the shape.

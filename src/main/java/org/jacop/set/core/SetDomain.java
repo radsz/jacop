@@ -37,11 +37,10 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 /**
- * Defines a set interval determined by a least upper bound(lub) and a 
+ * Defines a set interval determined by a least upper bound(lub) and a
  * greatest lower bound(glb). The domain consist of zero, one or several sets.
  *
- *
- * @author Radoslaw Szymanek, Krzysztof Kuchcinski and Robert Åkemalm 
+ * @author Radoslaw Szymanek, Krzysztof Kuchcinski and Robert Åkemalm
  * @version 4.5
  */
 
@@ -95,6 +94,7 @@ public abstract class SetDomain extends Domain {
 
     /**
      * It helps to specify what events should be executed if a given event occurs.
+     *
      * @param pruningEvent the pruning event for which we want to know what events it encompasses.
      * @return an array specifying what events should be included given this event.
      */
@@ -118,7 +118,8 @@ public abstract class SetDomain extends Domain {
 
     /**
      * Adds an interval to the lub.
-     * @param i  The interval to be added to the lub.
+     *
+     * @param i The interval to be added to the lub.
      */
     public abstract void addDom(Interval i);
 
@@ -127,7 +128,6 @@ public abstract class SetDomain extends Domain {
      * too to avoid cardinality constraining the domain.
      *
      * @param set a set of values which can be taken by a set domain.
-     *
      */
     public abstract void addDom(IntDomain set);
 
@@ -138,12 +138,12 @@ public abstract class SetDomain extends Domain {
      * union of two sets.
      *
      * @param domain a set domain containing information what sets are being added.
-     *
      */
     public abstract void addDom(SetDomain domain);
 
     /**
      * Adds an interval [min..max] to the domain.
+     *
      * @param min min value in the set
      * @param max max value in the set
      */
@@ -151,6 +151,7 @@ public abstract class SetDomain extends Domain {
 
     /**
      * Returns the cardinality of the setDomain as [glb.card(), lub.card()]
+     *
      * @return The cardinality of the setDomain given as a boundDomain.
      */
     public abstract IntDomain card();
@@ -162,6 +163,7 @@ public abstract class SetDomain extends Domain {
 
     /**
      * It checks if the supplied set or setDomain is still potentially a subset of this domain.
+     *
      * @param set the set for which we check the inclusion relation.
      * @return true, if this domain contains provided set, false otherwise.
      */
@@ -181,19 +183,20 @@ public abstract class SetDomain extends Domain {
      * It checks if value belongs to the domain of the set.
      *
      * @param value value which is checked.
-     *
      * @return true if the value being checked can still be included in the set, false otherwise.
      */
     public abstract boolean contains(int value);
 
     /**
      * It returns an unique identifier of the domain.
+     *
      * @return it returns an integer id of the domain.
      */
     @Override public abstract int domainID();
 
     /**
      * It checks if the domain is equal to the supplied domain.
+     *
      * @param domain against which the equivalence test is performed.
      * @return true if suppled domain has the same elements as this domain.
      */
@@ -203,9 +206,9 @@ public abstract class SetDomain extends Domain {
      * This function is equivalent to in(int storeLevel, Variable var, int min, int max).
      *
      * @param storeLevel the level of the store at which the change occurrs.
-     * @param var the set variable for which the domain may change.
-     * @param glb the greatest lower bound of the domain.
-     * @param lub the least upper bound of the domain.
+     * @param var        the set variable for which the domain may change.
+     * @param glb        the greatest lower bound of the domain.
+     * @param lub        the least upper bound of the domain.
      */
     public abstract void in(int storeLevel, SetVar var, IntDomain glb, IntDomain lub);
 
@@ -213,14 +216,16 @@ public abstract class SetDomain extends Domain {
      * It updates the domain to have values only within the domain. The type of
      * update is decided by the value of stamp. It informs the variable of a
      * change if it occurred.
+     *
      * @param storeLevel level of the store at which the update occurs.
-     * @param var variable for which this domain is used.
-     * @param domain the domain according to which the domain is updated.
+     * @param var        variable for which this domain is used.
+     * @param domain     the domain according to which the domain is updated.
      */
     public abstract void in(int storeLevel, SetVar var, SetDomain domain);
 
     /**
      * It intersects current domain with the one given as a parameter.
+     *
      * @param domain domain with which the intersection needs to be computed.
      * @return the intersection between supplied domain and this domain.
      */
@@ -231,27 +236,28 @@ public abstract class SetDomain extends Domain {
      * by the set domain.
      *
      * @param set set of values which are allowed to be used within a set.
-     *
      * @return the intersection of this domain with the set of allowed values.
      */
     public abstract SetDomain intersect(IntDomain set);
 
     /**
      * It returns true if given domain is empty.
+     *
      * @return true if the given domain is empty.
      */
     @Override public abstract boolean isEmpty();
 
     /**
      * It returns true if this domain intersects with the supplied domain.
-     * @param domain the domain against which the intersection is being checked.
      *
+     * @param domain the domain against which the intersection is being checked.
      * @return true if the given domain intersects this domain.
      */
     public abstract boolean isIntersecting(SetDomain domain);
 
     /**
      * In intersects current domain with the interval min..max.
+     *
      * @param min the left bound of the interval (inclusive)
      * @param max the right bound of the interval (inclusive)
      * @return the intersection between the specified interval and this domain.
@@ -260,24 +266,28 @@ public abstract class SetDomain extends Domain {
 
     /**
      * A set is never numeric
+     *
      * @return false
      */
     @Override public abstract boolean isNumeric();
 
     /**
      * A set is not sparse
+     *
      * @return false
      */
     @Override public abstract boolean isSparseRepresentation();
 
     /**
      * It returns the least upper bound of the domain.
+     *
      * @return the least upper bound of the domain.
      */
     public abstract IntDomain lub();
 
     /**
      * It returns the least upper bound of the domain.
+     *
      * @return the least upper bound of the domain.
      */
     public abstract IntDomain glb();
@@ -285,6 +295,7 @@ public abstract class SetDomain extends Domain {
     /**
      * It clones the domain object, only data responsible for encoding domain
      * values is cloned. All other fields must be set separately.
+     *
      * @return return a clone of the domain. It aims at getting domain of the proper class type.
      */
     public abstract SetDomain cloneLight();
@@ -429,6 +440,7 @@ public abstract class SetDomain extends Domain {
 
     /**
      * It returns the values which have been removed at current store level.
+     *
      * @param storeLevel the current store level.
      * @return emptyDomain if domain did not change at current level, or the set of values which have been removed at current level.
      */
@@ -446,8 +458,9 @@ public abstract class SetDomain extends Domain {
      * It removes the specified level. This function may re-instantiate
      * the old copy of the domain (previous value) or recover from changes done at stamp
      * level to get the previous value at level lower at provided level.
+     *
      * @param level the level which is being removed.
-     * @param var the variable to which this domain belonged to.
+     * @param var   the variable to which this domain belonged to.
      */
     @Override public void removeLevel(int level, Var var) {
 
@@ -646,6 +659,7 @@ public abstract class SetDomain extends Domain {
 
     /**
      * It sets the domain to the specified domain.
+     *
      * @param domain the domain from which this domain takes all elements.
      */
     public abstract void setDomain(SetDomain domain);
@@ -660,6 +674,7 @@ public abstract class SetDomain extends Domain {
 
     /**
      * It returns true if given domain has only one set-element.
+     *
      * @return true if the domain contains only one set-element.
      */
     public abstract boolean singleton();
@@ -669,7 +684,6 @@ public abstract class SetDomain extends Domain {
      * equal to the specified set.
      *
      * @param set the set for which we check if it is equal to a value taken by this set domain.
-     *
      * @return true, if this set domain is equal to supplied set, false otherwise.
      */
     public abstract boolean singleton(IntDomain set);
@@ -677,6 +691,7 @@ public abstract class SetDomain extends Domain {
     /**
      * It returns all constraints which are associated with variable, even the
      * ones which are already satisfied.
+     *
      * @return the number of constraints attached to the original domain of the variable associated with this domain.
      */
     @Override public int sizeConstraintsOriginal() {
@@ -697,6 +712,7 @@ public abstract class SetDomain extends Domain {
 
     /**
      * It subtracts domain from current domain and returns the result.
+     *
      * @param domain the domain which is subtracted from this domain.
      * @return the result of the subtraction.
      */
@@ -704,6 +720,7 @@ public abstract class SetDomain extends Domain {
 
     /**
      * It subtracts the set {min..max}.
+     *
      * @param min the left bound of the set.
      * @param max the right bound of the set.
      * @return the result of the subtraction.
@@ -715,14 +732,13 @@ public abstract class SetDomain extends Domain {
      * by this set domain.
      *
      * @param value value which can not be used within any set value assigned to this set domain.
-     *
      * @return the domain which does not allow specified value to be used.
-     *
      */
     public abstract SetDomain subtract(int value);
 
     /**
      * It returns string description of the constraints attached to the domain.
+     *
      * @return the string description.
      */
     @Override public String toStringConstraints() {
@@ -745,7 +761,7 @@ public abstract class SetDomain extends Domain {
     @Override public String toStringFull() {
         throw new RuntimeException("This function is not used for setDomain.");
     /*
-		StringBuffer S = new StringBuffer("");
+    StringBuffer S = new StringBuffer("");
 
 		Domain domain = this;
 
@@ -787,6 +803,7 @@ public abstract class SetDomain extends Domain {
 
     /**
      * It computes union of the supplied domain with this domain.
+     *
      * @param domain the domain for which the union is computed.
      * @return the union of this domain with the supplied one.
      */
@@ -794,6 +811,7 @@ public abstract class SetDomain extends Domain {
 
     /**
      * It computes union of this domain and the interval.
+     *
      * @param min the left bound of the interval (inclusive).
      * @param max the right bound of the interval (inclusive).
      * @return the union of this domain and the interval.
@@ -811,6 +829,7 @@ public abstract class SetDomain extends Domain {
 
     /**
      * It returns value enumeration of the domain values.
+     *
      * @return valueEnumeration which can be used to enumerate the sets of this domain one by one.
      */
     @Override public abstract ValueEnumeration valueEnumeration();
@@ -831,8 +850,8 @@ public abstract class SetDomain extends Domain {
      * any new elements only removed the elements currently in LUB
      * but not permitted by the argument domain.
      *
-     * @param level level of the store at which this restriction takes place.
-     * @param var variable which domain is being restricted.
+     * @param level  level of the store at which this restriction takes place.
+     * @param var    variable which domain is being restricted.
      * @param domain the domain specifying the allowed values the domain of the set variable.
      */
     public abstract void inLUB(int level, SetVar var, IntDomain domain);
@@ -841,8 +860,8 @@ public abstract class SetDomain extends Domain {
      * It specifies the element which can *NOT* be used as an element within a set assign
      * to a set variable.
      *
-     * @param level level of the store at which this restriction takes place.
-     * @param var variable which domain is being restricted.
+     * @param level   level of the store at which this restriction takes place.
+     * @param var     variable which domain is being restricted.
      * @param element the value being removed from the domain of the set variable.
      */
     public abstract void inLUBComplement(int level, SetVar var, int element);
@@ -851,8 +870,8 @@ public abstract class SetDomain extends Domain {
      * It specifies what elements must be in GLB. It will add
      * new elements if they are not already in GLB.
      *
-     * @param level level of the store at which this addition takes place.
-     * @param var variable which domain is being restricted.
+     * @param level  level of the store at which this addition takes place.
+     * @param var    variable which domain is being restricted.
      * @param domain the domain specifying the required values of the set variable.
      */
 
@@ -860,8 +879,9 @@ public abstract class SetDomain extends Domain {
 
     /**
      * It adds if necessary an element to glb.
-     * @param level level at which the change is recorded.
-     * @param var set variable to which the change applies to.
+     *
+     * @param level   level at which the change is recorded.
+     * @param var     set variable to which the change applies to.
      * @param element the element which must be in glb.
      */
     public abstract void inGLB(int level, SetVar var, int element);
@@ -870,13 +890,14 @@ public abstract class SetDomain extends Domain {
      * It assigns a set variable to the specified value.
      *
      * @param level level at which the change is recorded.
-     * @param var set variable to which the change applies to.
-     * @param set the value assigned to a set variable.
+     * @param var   set variable to which the change applies to.
+     * @param set   the value assigned to a set variable.
      */
     public abstract void inValue(int level, SetVar var, IntDomain set);
 
     /**
      * It returns the number of constraints
+     *
      * @return the number of constraints attached to this domain.
      */
     // FIXME, how to deal with repeated constraints without penalty hit.
@@ -890,9 +911,9 @@ public abstract class SetDomain extends Domain {
      * It restricts the possible cardinality of the set domain.
      *
      * @param level level of the store at which the restriction takes place.
-     * @param a the variable which domain is being restricted.
-     * @param i the minimal allowed cardinality
-     * @param j the maximal allowed cardinality
+     * @param a     the variable which domain is being restricted.
+     * @param i     the minimal allowed cardinality
+     * @param j     the maximal allowed cardinality
      */
     public abstract void inCardinality(int level, SetVar a, int i, int j);
 

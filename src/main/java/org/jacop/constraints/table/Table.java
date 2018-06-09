@@ -102,13 +102,13 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
     /**
      * It constructs a table constraint.
      *
-     * @param list   the variables in the scope of the constraint.
-     * @param tuples the tuples which define alloed values.
+     * @param list                the variables in the scope of the constraint.
+     * @param tuples              the tuples which define alloed values.
      * @param reuseTuplesArgument specifies if the table of tuples should be used directly without copying.
      */
     public Table(IntVar[] list, int[][] tuples, boolean reuseTuplesArgument) {
 
-        checkInputForNullness(new String[]{"list", "tuples"}, new Object[][]{list, tuples});
+        checkInputForNullness(new String[] {"list", "tuples"}, new Object[][] {list, tuples});
         checkInputForDuplication("list", list);
         checkInput(tuples, i -> i.length == list.length, "tuple need to have the same size as list argument.");
 
@@ -117,30 +117,29 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
 
         if (reuseTuplesArgument) {
             this.tuple = tuples;
-        }
-        else {
-	    // create tuples for the constraint; remove non feasible tuples
-	    int size = list.length;
-	    boolean[] tuplesToRemove = new boolean[tuples.length];
-	    int n=0;
-	    for (int i = 0; i < tuples.length; i++) {
-		for (int j = 0; j < size; j++) {
-		    if (! list[j].domain.contains(tuples[i][j])) {
-			tuplesToRemove[i] = true;
-		    }
-		}
-		if (tuplesToRemove[i])
-		    n++;
-	    }
-	    int k = tuples.length-n;
-	    this.tuple = new int[k][size];
-	    int m = 0;
-	    for (int i = 0; i < tuples.length; i++) {
-		if (! tuplesToRemove[i]) {
-		    this.tuple[m] = Arrays.copyOf(tuples[i], size);
-		    m++;
-		}
-	    }
+        } else {
+            // create tuples for the constraint; remove non feasible tuples
+            int size = list.length;
+            boolean[] tuplesToRemove = new boolean[tuples.length];
+            int n = 0;
+            for (int i = 0; i < tuples.length; i++) {
+                for (int j = 0; j < size; j++) {
+                    if (!list[j].domain.contains(tuples[i][j])) {
+                        tuplesToRemove[i] = true;
+                    }
+                }
+                if (tuplesToRemove[i])
+                    n++;
+            }
+            int k = tuples.length - n;
+            this.tuple = new int[k][size];
+            int m = 0;
+            for (int i = 0; i < tuples.length; i++) {
+                if (!tuplesToRemove[i]) {
+                    this.tuple[m] = Arrays.copyOf(tuples[i], size);
+                    m++;
+                }
+            }
         }
 
         numberId = idNumber.incrementAndGet();
@@ -268,35 +267,34 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
             int xIndex = varMap.get(v);
 
             Map<Integer, long[]> xSupport = supports[xIndex];
-	    if (delta < cd.getSize()) { // incremental update
-		ValueEnumeration e = rp.valueEnumeration();
-		while (e.hasMoreElements()) {
-		    long[] bs = xSupport.get(e.nextElement());
-		    if (bs != null)
-			rbs.addToMask(bs);
-		}
-		rbs.reverseMask();
+            if (delta < cd.getSize()) { // incremental update
+                ValueEnumeration e = rp.valueEnumeration();
+                while (e.hasMoreElements()) {
+                    long[] bs = xSupport.get(e.nextElement());
+                    if (bs != null)
+                        rbs.addToMask(bs);
+                }
+                rbs.reverseMask();
             } else { // reset-based update
-		Set<Map.Entry<Integer, long[]>> xsEntry = xSupport.entrySet();
-		if (cd.getSize() < xsEntry.size()) {
-		    // update based on the variable
-		    ValueEnumeration e = cd.valueEnumeration();
-		    while (e.hasMoreElements()) {
-			long[] bs = xSupport.get(e.nextElement());
-			if (bs != null)
-			    rbs.addToMask(bs);
-		    }
-		}
-		else {
-		    // updates based on table values
-		    for (Map.Entry<Integer, long[]> e : xsEntry) {
-			Integer val = e.getKey();
-			long[] bits = e.getValue();
-			if (cd.contains(val))
-			    rbs.addToMask(bits);
-		    }
-		}
-	    }
+                Set<Map.Entry<Integer, long[]>> xsEntry = xSupport.entrySet();
+                if (cd.getSize() < xsEntry.size()) {
+                    // update based on the variable
+                    ValueEnumeration e = cd.valueEnumeration();
+                    while (e.hasMoreElements()) {
+                        long[] bs = xSupport.get(e.nextElement());
+                        if (bs != null)
+                            rbs.addToMask(bs);
+                    }
+                } else {
+                    // updates based on table values
+                    for (Map.Entry<Integer, long[]> e : xsEntry) {
+                        Integer val = e.getKey();
+                        long[] bits = e.getValue();
+                        if (cd.contains(val))
+                            rbs.addToMask(bits);
+                    }
+                }
+            }
 
             rbs.intersectWithMask();
             if (rbs.isEmpty())
@@ -319,53 +317,53 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
 
                 Map<Integer, long[]> xSupport = supports[i];
 
-		Set<Map.Entry<Integer, long[]>> xsEntry = xSupport.entrySet();
-		if (xi.dom().getSize() <= xsEntry.size()) { 		
-		    // filter based on the variable
-		    ValueEnumeration e = xi.dom().valueEnumeration();
-		    while (e.hasMoreElements()) {
-			int el = e.nextElement();
+                Set<Map.Entry<Integer, long[]>> xsEntry = xSupport.entrySet();
+                if (xi.dom().getSize() <= xsEntry.size()) {
+                    // filter based on the variable
+                    ValueEnumeration e = xi.dom().valueEnumeration();
+                    while (e.hasMoreElements()) {
+                        int el = e.nextElement();
 
-			long[] bs = xSupport.get(el);
-			if (bs != null) {
-			    int index = residues[i].get(el);
+                        long[] bs = xSupport.get(el);
+                        if (bs != null) {
+                            int index = residues[i].get(el);
 
-			    if ((wrds[index] & bs[index]) == 0L) {
+                            if ((wrds[index] & bs[index]) == 0L) {
 
-				index = rbs.intersectIndex(bs);
-				if (index == -1)
-				    xi.domain.inComplement(store.level, xi, el);
-				else
-				    residues[i].put(el, index);
-			    }
-			} else
-			    xi.domain.inComplement(store.level, xi, el);
-		    }
-		} else {
-		    // filter based on the table values
-		    IntDomain xDom = new IntervalDomain();
-		    for (Map.Entry<Integer, long[]> e : xsEntry) {
-			Integer el = e.getKey();
-			long[] bs = e.getValue();
+                                index = rbs.intersectIndex(bs);
+                                if (index == -1)
+                                    xi.domain.inComplement(store.level, xi, el);
+                                else
+                                    residues[i].put(el, index);
+                            }
+                        } else
+                            xi.domain.inComplement(store.level, xi, el);
+                    }
+                } else {
+                    // filter based on the table values
+                    IntDomain xDom = new IntervalDomain();
+                    for (Map.Entry<Integer, long[]> e : xsEntry) {
+                        Integer el = e.getKey();
+                        long[] bs = e.getValue();
 
-			if (xi.domain.contains(el) && bs != null) {
-			    int index = residues[i].get(el);
-			    
-			    xDom.unionAdapt(el, el);
+                        if (xi.domain.contains(el) && bs != null) {
+                            int index = residues[i].get(el);
 
-			    if ((wrds[index] & bs[index]) == 0L) {
+                            xDom.unionAdapt(el, el);
 
-				index = rbs.intersectIndex(bs);
-				if (index == -1)
-				    xi.domain.inComplement(store.level, xi, el);
-				else 
-				    residues[i].put(el, index);
-				}
-			} else
-			    xi.domain.inComplement(store.level, xi, el);
-		    }
-		    xi.domain.in(store.level, xi, xDom);
-		}
+                            if ((wrds[index] & bs[index]) == 0L) {
+
+                                index = rbs.intersectIndex(bs);
+                                if (index == -1)
+                                    xi.domain.inComplement(store.level, xi, el);
+                                else
+                                    residues[i].put(el, index);
+                            }
+                        } else
+                            xi.domain.inComplement(store.level, xi, el);
+                    }
+                    xi.domain.in(store.level, xi, xDom);
+                }
             }
         }
     }

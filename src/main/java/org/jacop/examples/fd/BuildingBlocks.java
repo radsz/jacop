@@ -38,23 +38,22 @@ import org.jacop.core.Store;
 import java.util.ArrayList;
 
 /**
- *
  * It solves a simple logic puzzle about blocks.
  *
  * @author Krzysztof "Vrbl" Wrobel and Radoslaw Szymanek
  * @version 4.5
- *
- * Each of four alphabet blocks has a single letter of the alphabet on
- * each of its six sides.  In all, the four blocks contain every letter
- * but Q and Z.  By arranging the blocks in various ways, you can spell
- * all of the words listed below.  Can you figure out how the letters are
- * arranged on the four blocks?
- *
- * BAKE ONYX ECHO OVAL 
- *
- * GIRD SMUG JUMP TORN 
- *
- * LUCK VINY LUSH WRAP 
+ *          <p>
+ *          Each of four alphabet blocks has a single letter of the alphabet on
+ *          each of its six sides.  In all, the four blocks contain every letter
+ *          but Q and Z.  By arranging the blocks in various ways, you can spell
+ *          all of the words listed below.  Can you figure out how the letters are
+ *          arranged on the four blocks?
+ *          <p>
+ *          BAKE ONYX ECHO OVAL
+ *          <p>
+ *          GIRD SMUG JUMP TORN
+ *          <p>
+ *          LUCK VINY LUSH WRAP
  */
 
 public class BuildingBlocks extends ExampleFD {
@@ -154,6 +153,7 @@ public class BuildingBlocks extends ExampleFD {
 
     /**
      * It executes the program to solve this logic puzzle.
+     *
      * @param args args for the program (none)
      */
     public static void main(String args[]) {

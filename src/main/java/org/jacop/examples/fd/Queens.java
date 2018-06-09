@@ -40,13 +40,11 @@ import org.jacop.core.Store;
 import java.util.ArrayList;
 
 /**
- *
- * It models the queens problem in different ways as well as applies 
+ * It models the queens problem in different ways as well as applies
  * different search methods.
  *
  * @author Radoslaw Szymanek
  * @version 4.5
- *
  */
 public class Queens extends ExampleFD {
 
@@ -237,6 +235,7 @@ public class Queens extends ExampleFD {
 
     /**
      * It executes different models and search methods to solve Queens problem.
+     *
      * @param args first argument specifies the size of the chessboard.
      */
     public static void main(String args[]) {
@@ -258,6 +257,7 @@ public class Queens extends ExampleFD {
 
     /**
      * It executes different models and search methods to solve Queens problem.
+     *
      * @param args first argument specifies the size of the chessboard.
      */
     public static void test(String args[]) {

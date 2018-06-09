@@ -31,13 +31,10 @@
 package org.jacop.examples.floats;
 
 /**
- *
- *
  * SixHumpCamelFunction function (a nonlinear standard problem).
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 import org.jacop.constraints.Constraint;

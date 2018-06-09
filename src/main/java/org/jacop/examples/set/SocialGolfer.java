@@ -68,7 +68,6 @@ public class SocialGolfer extends ExampleSet {
     SetVar[][] golferGroup;
 
     /**
-     *
      * It runs a number of social golfer problems.
      *
      * @param args parameters (none)
@@ -151,8 +150,8 @@ public class SocialGolfer extends ExampleSet {
     /**
      * It sets the parameters for the model creation function.
      *
-     * @param weeks how many weeks to play
-     * @param groups how many groups will play
+     * @param weeks   how many weeks to play
+     * @param groups  how many groups will play
      * @param players how many players will play
      */
     public void setup(int weeks, int groups, int players) {

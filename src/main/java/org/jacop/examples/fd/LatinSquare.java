@@ -37,21 +37,19 @@ import org.jacop.core.Store;
 import java.util.ArrayList;
 
 /**
- *
  * It solves a Latin Square problem.
- *
+ * <p>
  * LatinSquare problem consists of filling the square
  * of size n by n with numbers 1..n in such a way that
- * every row and column does not contain two numbers 
+ * every row and column does not contain two numbers
  * of the same value.
- *
+ * <p>
  * QuasiGroupCompletion example provides possibility to
  * impose initial conditions on the values of pre-assigned
  * cells.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 public class LatinSquare extends ExampleFD {
@@ -91,6 +89,7 @@ public class LatinSquare extends ExampleFD {
 
     /**
      * It executes the program to solve the LatinSquare problem.
+     *
      * @param args size of the problem
      */
     public static void main(String args[]) {

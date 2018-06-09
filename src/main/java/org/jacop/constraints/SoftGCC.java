@@ -40,17 +40,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- *
- * This class provides soft-gcc constraint by decomposing it 
- * either into a network flow constraint or a set of primitive constraints. 
- *
+ * This class provides soft-gcc constraint by decomposing it
+ * either into a network flow constraint or a set of primitive constraints.
+ * <p>
  * It is soft in a sense that every violation of softLower, softUpper bound or softCounter contributes
  * to the violation cost. It is hard in a sense that it does enforce hardLower, hardUpper bound or
  * hardCounter. It uses value based violation metric.
  *
  * @author Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 public class SoftGCC extends DecomposedConstraint<Constraint> {
@@ -77,12 +75,12 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
     /**
      * It specifies soft-GCC constraint.
      *
-     * @param xVars variables over which counting takes place.
-     * @param hardCounters idNumber variables for different values being counted. Their domain specify hard constraints on the occurrences.
-     * @param countedValue it specifies values which occurrence is being counted.
-     * @param softLowerBound it specifies constraint what is the minimal number of occurrences.
-     * @param softUpperBound it specifies constraint what is the maximal number of occurrences.
-     * @param costVar a cost variable specifying the cost of violations.
+     * @param xVars            variables over which counting takes place.
+     * @param hardCounters     idNumber variables for different values being counted. Their domain specify hard constraints on the occurrences.
+     * @param countedValue     it specifies values which occurrence is being counted.
+     * @param softLowerBound   it specifies constraint what is the minimal number of occurrences.
+     * @param softUpperBound   it specifies constraint what is the maximal number of occurrences.
+     * @param costVar          a cost variable specifying the cost of violations.
      * @param violationMeasure it is only accepted to use Value_Based violation measure.
      */
     public SoftGCC(IntVar[] xVars, IntVar[] hardCounters, int[] countedValue, int[] softLowerBound, int[] softUpperBound, IntVar costVar,
@@ -90,8 +88,8 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
 
         checkInputForNullness(
-            new String[]{"xVars", "hardCounters", "countedValue", "softLowerBound", "softUpperBound", "costVar", "violationMeasure"},
-            new Object[][]{xVars, hardCounters, { countedValue }, { softLowerBound }, { softUpperBound }, {costVar}, { violationMeasure }});
+            new String[] {"xVars", "hardCounters", "countedValue", "softLowerBound", "softUpperBound", "costVar", "violationMeasure"},
+            new Object[][] {xVars, hardCounters, {countedValue}, {softLowerBound}, {softUpperBound}, {costVar}, {violationMeasure}});
 
         this.xVars = new IntVar[xVars.length];
         System.arraycopy(xVars, 0, this.xVars, 0, xVars.length);
@@ -116,12 +114,12 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
     /**
      * It specifies soft-GCC constraint.
      *
-     * @param xVars variables over which counting takes place.
-     * @param hardLowerBound it specifies constraint what is the minimal number of occurrences. (hard)
-     * @param hardUpperBound it specifies constraint what is the maximal number of occurrences. (hard)
-     * @param countedValue it specifies values which occurrence is being counted.
-     * @param softCounters it specifies the number of occurrences (soft).
-     * @param costVar a cost variable specifying the cost of violations.
+     * @param xVars            variables over which counting takes place.
+     * @param hardLowerBound   it specifies constraint what is the minimal number of occurrences. (hard)
+     * @param hardUpperBound   it specifies constraint what is the maximal number of occurrences. (hard)
+     * @param countedValue     it specifies values which occurrence is being counted.
+     * @param softCounters     it specifies the number of occurrences (soft).
+     * @param costVar          a cost variable specifying the cost of violations.
      * @param violationMeasure it is only accepted to use Value_Based violation measure.
      */
     public SoftGCC(IntVar[] xVars, int[] hardLowerBound, int[] hardUpperBound, int[] countedValue, IntVar[] softCounters, IntVar costVar,
@@ -151,11 +149,11 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
     /**
      * It specifies soft-GCC constraint.
      *
-     * @param xVars variables over which counting takes place.
-     * @param hardCounters idNumber variables for different values being counted. (hard)
-     * @param countedValue it specifies values which occurrence is being counted.
-     * @param softCounters idNumber variables for different values being counted. (soft)
-     * @param costVar a cost variable specifying the cost of violations.
+     * @param xVars            variables over which counting takes place.
+     * @param hardCounters     idNumber variables for different values being counted. (hard)
+     * @param countedValue     it specifies values which occurrence is being counted.
+     * @param softCounters     idNumber variables for different values being counted. (soft)
+     * @param costVar          a cost variable specifying the cost of violations.
      * @param violationMeasure it is only accepted to use Value_Based violation measure.
      */
     public SoftGCC(IntVar[] xVars, IntVar[] hardCounters, int[] countedValue, IntVar[] softCounters, IntVar costVar,
@@ -182,11 +180,11 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
     /**
      * It specifies soft-GCC constraint.
      *
-     * @param xVars variables over which counting takes place.
-     * @param hardCounters idNumber variables for different values being counted. (hard)
-     * @param softLowerBound it specifies constraint what is the minimal number of occurrences. (soft)
-     * @param softUpperBound it specifies constraint what is the maximal number of occurrences. (soft)
-     * @param costVar a cost variable specifying the cost of violations.
+     * @param xVars            variables over which counting takes place.
+     * @param hardCounters     idNumber variables for different values being counted. (hard)
+     * @param softLowerBound   it specifies constraint what is the minimal number of occurrences. (soft)
+     * @param softUpperBound   it specifies constraint what is the maximal number of occurrences. (soft)
+     * @param costVar          a cost variable specifying the cost of violations.
      * @param violationMeasure it is only accepted to use Value_Based violation measure.
      */
     public SoftGCC(IntVar[] xVars, IntVar[] hardCounters, int[] softLowerBound, int[] softUpperBound, IntVar costVar,
@@ -225,11 +223,11 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
     /**
      * It specifies soft-GCC constraint.
      *
-     * @param xVars variables over which counting takes place.
-     * @param hardLowerBound it specifies constraint what is the minimal number of occurrences. (hard)
-     * @param hardUpperBound it specifies constraint what is the maximal number of occurrences. (hard)
-     * @param softCounters idNumber variables for different values being counted. (soft)
-     * @param costVar a cost variable specifying the cost of violations.
+     * @param xVars            variables over which counting takes place.
+     * @param hardLowerBound   it specifies constraint what is the minimal number of occurrences. (hard)
+     * @param hardUpperBound   it specifies constraint what is the maximal number of occurrences. (hard)
+     * @param softCounters     idNumber variables for different values being counted. (soft)
+     * @param costVar          a cost variable specifying the cost of violations.
      * @param violationMeasure it is only accepted to use Value_Based violation measure.
      */
     public SoftGCC(IntVar[] xVars, int[] hardLowerBound, int[] hardUpperBound, IntVar[] softCounters, IntVar costVar,
@@ -266,10 +264,10 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
     /**
      * It specifies soft-GCC constraint.
      *
-     * @param xVars variables over which counting takes place.
-     * @param hardCounters idNumber variables for different values being counted. (hard)
-     * @param softCounters idNumber variables that may be violated.
-     * @param costVar a cost variable specifying the cost of violations.
+     * @param xVars            variables over which counting takes place.
+     * @param hardCounters     idNumber variables for different values being counted. (hard)
+     * @param softCounters     idNumber variables that may be violated.
+     * @param costVar          a cost variable specifying the cost of violations.
      * @param violationMeasure it is only accepted to use Value_Based violation measure.
      */
     public SoftGCC(IntVar[] xVars, IntVar[] hardCounters, IntVar[] softCounters, IntVar costVar, ViolationMeasure violationMeasure) {

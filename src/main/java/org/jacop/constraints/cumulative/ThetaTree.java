@@ -102,7 +102,7 @@ class ThetaTree extends Tree {
     }
 
     private void addLeave(int i) {
-	ThetaNode node = new ThetaNode();
+        ThetaNode node = new ThetaNode();
         tree[i] = node;
         node.index = i;
 

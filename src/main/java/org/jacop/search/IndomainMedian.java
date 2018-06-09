@@ -36,9 +36,9 @@ import org.jacop.core.*;
  * IndomainMedian - implements enumeration method based on the selection of the
  * median value in the domain of FD variable and then right and left values.
  *
+ * @param <T> type of variable being used in search.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
- * @param <T> type of variable being used in search.
  */
 
 public class IndomainMedian<T extends IntVar> implements Indomain<T> {

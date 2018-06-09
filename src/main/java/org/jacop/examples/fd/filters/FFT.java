@@ -35,7 +35,7 @@ import java.util.List;
 
 /**
  * It specifies FFT benchmark.
- *
+ * <p>
  * Source: Naotaka Ohsawa, Masanori Hariyama and Michitaka Kameyama
  * "High-Performance Field Programmable VLSI Processor Based on a Direct
  * Allocation of a Control/Data Flow Graph" IEEE Computer Society Annual

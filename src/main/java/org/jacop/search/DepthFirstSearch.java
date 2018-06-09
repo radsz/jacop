@@ -48,9 +48,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Implements Depth First Search with number of possible plugins (listeners) to
  * be attached to modify the search.
  *
+ * @param <T> type of variables used in this search.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.5
- * @param <T> type of variables used in this search. 
  */
 
 public class DepthFirstSearch<T extends Var> implements Search<T> {
@@ -59,7 +59,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     static final boolean debugAll = true;
 
     /**
-     * If it is set to true then the optimizing search will 
+     * If it is set to true then the optimizing search will
      * quit the search if this action is indicated by the solution
      * listener.
      */
@@ -308,6 +308,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
     /**
      * It sets the id of the store.
+     *
      * @param name the id of the store object.
      */
     public void setID(String name) {
@@ -427,7 +428,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
         return null;
 
 	/*
-	  IdentityHashMap<T, Integer> position = heuristic.getVariablesMapping();
+    IdentityHashMap<T, Integer> position = heuristic.getVariablesMapping();
 
 	  vars = new Var[position.size()];
 
@@ -1183,8 +1184,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     /**
      * It turns on the backtrack out.
      *
-     * @param out
-     *            defines how many backtracks are performed before the search
+     * @param out defines how many backtracks are performed before the search
      *            exits.
      */
     public void setBacktracksOut(long out) {
@@ -1196,8 +1196,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     /**
      * It turns on the decisions out.
      *
-     * @param out
-     *            defines how many decisions are made before the search exits.
+     * @param out defines how many decisions are made before the search exits.
      */
     public void setDecisionsOut(long out) {
         decisionsOut = out;
@@ -1208,8 +1207,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     /**
      * It turns on the nodes out.
      *
-     * @param out
-     *            defines how many nodes are visited before the search exits.
+     * @param out defines how many nodes are visited before the search exits.
      */
     public void setNodesOut(long out) {
         nodesOut = out;
@@ -1220,8 +1218,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     /**
      * It decides if information about search is printed.
      *
-     * @param value
-     *            defines if info is printed to standard output.
+     * @param value defines if info is printed to standard output.
      */
 
     public void setPrintInfo(boolean value) {
@@ -1231,8 +1228,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     /**
      * It turns on the timeout.
      *
-     * @param out
-     *            defines how many seconds before the search exits.
+     * @param out defines how many seconds before the search exits.
      */
     public void setTimeOut(long out) {
         tOut = out;
@@ -1244,8 +1240,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     /**
      * It turns on the wrong decisions out.
      *
-     * @param out
-     *            defines how many wrong decisions are made before the search
+     * @param out defines how many wrong decisions are made before the search
      *            exits.
      */
     public void setWrongDecisionsOut(long out) {

@@ -39,7 +39,7 @@ import org.jacop.set.core.SetVar;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * It creates an inclusion set constraint to make sure that provided set is 
+ * It creates an inclusion set constraint to make sure that provided set is
  * included in a set variable a.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
@@ -68,13 +68,13 @@ public class SinA extends PrimitiveConstraint {
     /**
      * It creates a set inclusion constraint.
      *
-     * @param a variable which value must include a provided set.
-     * @param set a set that must be included within a provided set variable a.
+     * @param a      variable which value must include a provided set.
+     * @param set    a set that must be included within a provided set variable a.
      * @param strict it specifies if the inclusion relation is strict.
      */
     public SinA(IntDomain set, SetVar a, boolean strict) {
 
-        checkInputForNullness(new String[]{"set", "a"}, new Object[]{set, a});
+        checkInputForNullness(new String[] {"set", "a"}, new Object[] {set, a});
 
         numberId = idNumber.incrementAndGet();
 
@@ -89,7 +89,7 @@ public class SinA extends PrimitiveConstraint {
     /**
      * It creates a set inclusion constraint. It is not strict by default.
      *
-     * @param a variable which value must include a provided set.
+     * @param a   variable which value must include a provided set.
      * @param set a set that must be included within a provided set variable a.
      */
     public SinA(IntDomain set, SetVar a) {

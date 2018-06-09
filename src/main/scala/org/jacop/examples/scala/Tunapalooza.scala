@@ -38,15 +38,19 @@ import scala.collection.mutable.ArrayBuffer
   * A problem defined as in Java based examples.
   *
   * rewriting to Scala by Krzysztof Kuchcinski.
+  *
   * @author Krzysztof Kuchcinski and Radoslaw Szymanek
   * @version 4.5
   */
 object Tunapalooza extends App with jacop {
 
   var vars = new ArrayBuffer[org.jacop.core.IntVar]()
-		
+
   // names
-  val Ellyfish = 1; val Korrupt = 2; val Retread = 3; val Yellow = 4
+  val Ellyfish = 1;
+  val Korrupt = 2;
+  val Retread = 3;
+  val Yellow = 4
 
 
   // types
@@ -60,20 +64,20 @@ object Tunapalooza extends App with jacop {
   val mosh = new IntVar("mosh", 1, 4)
   val vendor = new IntVar("vendor", 1, 4)
 
-		// arrays of variables
-  val types= Array( country, grunge, reggae, metal )
-  val places = Array( carnival, information, mosh, vendor )
+  // arrays of variables
+  val types = Array(country, grunge, reggae, metal)
+  val places = Array(carnival, information, mosh, vendor)
 
   for (v <- types) vars :+= v
   for (v <- places) vars :+= v
 
-   // All types and places have to be associated with different band.
-   alldifferent(types)
-   alldifferent(places)
+  // All types and places have to be associated with different band.
+  alldifferent(types)
+  alldifferent(places)
 
   // 1. Korrupt isn't a country or grunge music band.
 
-  AND( country #\= Korrupt, grunge #\= Korrupt )
+  AND(country #\= Korrupt, grunge #\= Korrupt)
 
   // 2. Tim and Kerri won't meet at the carnival games during Ellyfish's
   // performance.
@@ -100,18 +104,18 @@ object Tunapalooza extends App with jacop {
   statement2 <=> (information #\= Retread)
   statement3 <=> (vendor #\= Yellow)
 
-  sum(List( statement1, statement2, statement3 )) #= 2
+  sum(List(statement1, statement2, statement3)) #= 2
 
-  for (v <-  Array( statement1, statement2, statement3 ))
-    vars :+= v 
+  for (v <- Array(statement1, statement2, statement3))
+    vars :+= v
 
   // 5. The country and speed metal acts are, in some order, Retread Ed
   // and the Flat Tires
   // and the act during which Tim and Kerri will meet at the mosh pit.
 
-  OR( country #= mosh, metal #= mosh )
-  OR( country #= Retread, metal #= Retread )
-  mosh #\=  Retread
+  OR(country #= mosh, metal #= mosh)
+  OR(country #= Retread, metal #= Retread)
+  mosh #\= Retread
 
   // 6. The reggae band is neither Korrupt nor the act during which Tim
   // and
@@ -120,6 +124,6 @@ object Tunapalooza extends App with jacop {
   reggae #\= Korrupt
   reggae #\= information
 
-  val result = satisfyAll( search(vars.toList, input_order, indomain_min))
+  val result = satisfyAll(search(vars.toList, input_order, indomain_min))
 
 }

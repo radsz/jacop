@@ -92,7 +92,7 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase impleme
 			return;
 		}
 		*/
-		
+
 		/*
 		 * only do something for literals representing a variable, which have
 		 * not yet been examined

@@ -42,7 +42,7 @@ import java.util.List;
 
 /**
  * Constraints cos(P) = R
- *
+ * <p>
  * Bounds consistency can be used; third parameter of constructor controls this.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -62,18 +62,19 @@ public class CosPeqR_decomposed extends DecomposedConstraint<Constraint> {
     public FloatVar q;
 
     /**
-     * It contains constraints of the CosPeqR_decomposed constraint decomposition. 
+     * It contains constraints of the CosPeqR_decomposed constraint decomposition.
      */
     List<Constraint> constraints;
 
     /**
      * It constructs cos(P) = Q constraints.
+     *
      * @param p variable P
      * @param q variable Q
      */
     public CosPeqR_decomposed(FloatVar p, FloatVar q) {
 
-        checkInputForNullness(new String[]{"p", "q"}, new Object[][]{{p}, {q}});
+        checkInputForNullness(new String[] {"p", "q"}, new Object[][] {{p}, {q}});
         this.p = p;
         this.q = q;
     }
@@ -92,7 +93,7 @@ public class CosPeqR_decomposed extends DecomposedConstraint<Constraint> {
 
     @Override public void imposeDecomposition(Store store) {
 
-        if (constraints == null  || constraints.size() == 0)
+        if (constraints == null || constraints.size() == 0)
             constraints = decompose(store);
 
         for (Constraint c : constraints)

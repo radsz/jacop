@@ -40,42 +40,40 @@ import org.jacop.core.Store;
 import java.util.ArrayList;
 
 /**
- *
  * It specifies a simple diet problem.
- *
+ * <p>
  * Problem from http://www.mcs.vuw.ac.nz/courses/OPRE251/2006T1/Labs/lab09.pdf
- *
- *  My diet requires that all the food I eat come from one of the four .basic 
- *  food groups. (chocolate cake, ice cream, soft drink, and cheesecake). 
- *  Each (large) slice of chocolate cake costs 50c, 
- *  each scoop of chocolate ice cream costs 20c, 
- *  each bottle of cola costs 30c, 
- *  and each piece of pineapple cheesecake costs 80c. 
- *
- *  Each day, I must ingest at least 500 calories, 
- *  6 oz of chocolate, 
- *  10 oz of sugar, 
- *  and 8 oz of fat.
- *  The nutritional content per unit of each food is shown in the table below. 
- *
- *  Formulate a linear programming model that can be used to satisfy my daily 
- *  nutritional requirement at minimum cost.
-
- *  Type of                        Calories   Chocolate    Sugar    Fat
- *  Food                                      (ounces)     (ounces) (ounces)
- *  Chocolate Cake (1 slice)       400           3            2      2
- *  Chocolate ice cream (1 scoop)  200           2            2      4
- *  Cola (1 bottle)                150           0            4      1
- *  Pineapple cheesecake (1 piece) 500           0            4      5
- *
+ * <p>
+ * My diet requires that all the food I eat come from one of the four .basic
+ * food groups. (chocolate cake, ice cream, soft drink, and cheesecake).
+ * Each (large) slice of chocolate cake costs 50c,
+ * each scoop of chocolate ice cream costs 20c,
+ * each bottle of cola costs 30c,
+ * and each piece of pineapple cheesecake costs 80c.
+ * <p>
+ * Each day, I must ingest at least 500 calories,
+ * 6 oz of chocolate,
+ * 10 oz of sugar,
+ * and 8 oz of fat.
+ * The nutritional content per unit of each food is shown in the table below.
+ * <p>
+ * Formulate a linear programming model that can be used to satisfy my daily
+ * nutritional requirement at minimum cost.
+ * <p>
+ * Type of                        Calories   Chocolate    Sugar    Fat
+ * Food                                      (ounces)     (ounces) (ounces)
+ * Chocolate Cake (1 slice)       400           3            2      2
+ * Chocolate ice cream (1 scoop)  200           2            2      4
+ * Cola (1 bottle)                150           0            4      1
+ * Pineapple cheesecake (1 piece) 500           0            4      5
+ * <p>
  * """
  *
  * @author Hakan Kjellerstrand (hakank@bonetmail.com) and Radoslaw Szymanek
  * @version 4.5
- *
- * Compare with my MiniZinc model:
- * http://www.hakank.org/minizinc/diet1.mzn
- *
+ *          <p>
+ *          Compare with my MiniZinc model:
+ *          http://www.hakank.org/minizinc/diet1.mzn
  */
 
 public class Diet extends ExampleFD {
@@ -99,9 +97,7 @@ public class Diet extends ExampleFD {
         {2, 4, 1, 5}}; // fat
 
     /**
-     *
-     *  Imposes the model of the problem.
-     *
+     * Imposes the model of the problem.
      */
     @Override public void model() {
 
@@ -137,9 +133,7 @@ public class Diet extends ExampleFD {
 
 
     /**
-     *
-     *  Imposes the model of the problem.
-     *
+     * Imposes the model of the problem.
      */
     public void modelKnapsack() {
 
@@ -182,6 +176,7 @@ public class Diet extends ExampleFD {
 
     /**
      * It executes the program optimizing the diet.
+     *
      * @param args no argument is used.
      */
     public static void main(String args[]) {

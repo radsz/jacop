@@ -38,7 +38,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraints X #\= Y
- *
+ * <p>
  * Domain consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -61,12 +61,13 @@ public class XneqY extends PrimitiveConstraint {
 
     /**
      * It constructs X != Y constraint.
+     *
      * @param x variable x.
      * @param y variable y.
      */
     public XneqY(IntVar x, IntVar y) {
 
-        checkInputForNullness(new String[]{"x", "y"}, new Object[]{x, y});
+        checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
 
         numberId = idNumber.incrementAndGet();
 

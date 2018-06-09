@@ -75,23 +75,23 @@ class ThetaLambdaTree extends Tree {
 
         for (int i = treeSize - n - 1; i >= 0; i--) {
 
-	    if (notExist(left(i))) {
-		tree[i] = empty;
-		tree[i].index = i;
-		clearNode(i);
-	    } else if (notExist(right(i))) {
-		tree[i] = tree[left(i)];
-	    } else {
-		tree[i] = new ThetaLambdaNode();
-		tree[i].index = i;
+            if (notExist(left(i))) {
+                tree[i] = empty;
+                tree[i].index = i;
+                clearNode(i);
+            } else if (notExist(right(i))) {
+                tree[i] = tree[left(i)];
+            } else {
+                tree[i] = new ThetaLambdaNode();
+                tree[i].index = i;
 
-		computeNodeVals(i);
-	    }
-	}
+                computeNodeVals(i);
+            }
+        }
     }
 
     private void computeLeaveVals(int i) {
-	ThetaLambdaNode node = new ThetaLambdaNode();
+        ThetaLambdaNode node = new ThetaLambdaNode();
         tree[i] = node;
         node.index = i;
 
@@ -108,15 +108,15 @@ class ThetaLambdaTree extends Tree {
         orderedTasks[t].treeIndex = i;
 
         tree[i].e = orderedTasks[t].e();
-        tree[i].env = tree[i].task.env((long)C.max());
+        tree[i].env = tree[i].task.env((long) C.max());
     }
 
     private void computeNodeVals(int i) {
 
-	if (notExist(left(i)) || notExist(right(i)))
-	    return;
-	else {
-	    
+        if (notExist(left(i)) || notExist(right(i)))
+            return;
+        else {
+
             ThetaLambdaNode node = tree[i];
             ThetaLambdaNode l = tree[left(i)];
             ThetaLambdaNode r = tree[right(i)];
@@ -150,7 +150,7 @@ class ThetaLambdaTree extends Tree {
                     node.responsibleEnvLambda = r.responsibleEnvLambda;
                 }
             }
-	}
+        }
     }
 
     private void computeThetaNode(int i) {
@@ -172,7 +172,7 @@ class ThetaLambdaTree extends Tree {
     }
 
     void clearNode(int i) {
-	ThetaLambdaNode node = tree[i];
+        ThetaLambdaNode node = tree[i];
         node.e = 0L;
         node.env = Long.MIN_VALUE;
         node.envC = Long.MIN_VALUE;
@@ -191,7 +191,7 @@ class ThetaLambdaTree extends Tree {
         ThetaLambdaNode node = tree[i];
         node.e = node.task.e();
         node.env = node.task.env(C.max());
-        node.envC = ((long)C.max() - ci) * (long)node.task.est() + node.task.e();
+        node.envC = ((long) C.max() - ci) * (long) node.task.est() + node.task.e();
 
         updateThetaTree(parent(i));
     }
@@ -229,7 +229,7 @@ class ThetaLambdaTree extends Tree {
 
         int v = root();
         long e = 0L;
-        long maxEnvC = ((long)C.max() - c) * bound;
+        long maxEnvC = ((long) C.max() - c) * bound;
 
         while (!isLeaf(v)) {
             if (plus(tree[right(v)].envC, e) > maxEnvC) {
@@ -289,11 +289,11 @@ class ThetaLambdaTree extends Tree {
 
     public void printTree(String name) {
 
-      try (PrintStream out = new PrintStream(new FileOutputStream(name + ".dot"), true, "UTF-8")) {
+        try (PrintStream out = new PrintStream(new FileOutputStream(name + ".dot"), true, "UTF-8")) {
             out.print(toGraph(name));
             out.close();
         } catch (IOException e) {
-	    throw new RuntimeException("IO exception; ignored");
+            throw new RuntimeException("IO exception; ignored");
         }
     }
 

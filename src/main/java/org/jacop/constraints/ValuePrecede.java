@@ -43,11 +43,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * It defines Value Precedence constraint for integers.
- *
+ * <p>
  * Value precedence of s over t in an integer sequence x = [x0,..., xn−1]
  * means if there exists j such that xj = t, then there must
  * exist i {@literal <} j such that xi = s.
- *
+ * <p>
  * The algorithm is based on paper
  * "Global Constraints for Integer and Set Value Precedence" by
  * Y. C. Law, J. H. Lee

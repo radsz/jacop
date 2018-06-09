@@ -57,7 +57,8 @@ public final class RunSolver {
 
     /**
      * launch the solver on a file, given by command line parameters
-     * @param args  command line arguments
+     *
+     * @param args command line arguments
      */
     public static void main(String[] args) {
 
@@ -155,6 +156,7 @@ public final class RunSolver {
 
     /**
      * parse the file which name is filename, and returns a stream on success
+     *
      * @return an input stream for the content of the file
      */
     private static InputStream readFile() {

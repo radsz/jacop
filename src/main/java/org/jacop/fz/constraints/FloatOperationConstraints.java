@@ -38,20 +38,18 @@ import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
 
 /**
- *
  * Generation of set constraints in flatzinc
  *
- * @author Krzysztof Kuchcinski 
- *
+ * @author Krzysztof Kuchcinski
  */
 class FloatOperationConstraints implements ParserTreeConstants {
 
     Support support;
     Store store;
-    
+
     public FloatOperationConstraints(Support support) {
-	this.support = support;
-	this.store = support.store;
+        this.support = support;
+        this.store = support.store;
     }
 
     void gen_float_abs(SimpleNode node) {

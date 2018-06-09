@@ -38,15 +38,15 @@ import org.jacop.jasat.core.SolverComponent;
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.5
- *
  */
 public interface AssertionListener extends SolverComponent {
 
     /**
      * Called when a variable is set
-     * @param literal  the literal that is set
-     * propagation, false otherwise
-     * @param level  the search level
+     *
+     * @param literal the literal that is set
+     *                propagation, false otherwise
+     * @param level   the search level
      */
     void onAssertion(int literal, int level);
 

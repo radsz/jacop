@@ -42,9 +42,9 @@ import java.util.TimerTask;
 
 /**
  * collects statistics about the solver
+ *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.5
- *
  */
 public final class StatModule
     implements AssertionListener, BackjumpListener, ConflictListener, ForgetListener, ClauseListener, PropagateListener, StartStopListener {
@@ -200,6 +200,7 @@ public final class StatModule
 
     /**
      * Create a StatModule. It can schedule
+     *
      * @param threaded true if threaded
      */
     public StatModule(boolean threaded) {

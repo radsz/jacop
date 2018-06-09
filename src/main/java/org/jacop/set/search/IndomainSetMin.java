@@ -37,9 +37,9 @@ import org.jacop.set.core.SetVar;
  * IndomainMin - implements enumeration method based on the selection of the
  * minimal value in the domain of variable
  *
+ * @param <T> type of variable being used in search.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
- * @param <T> type of variable being used in search.
  */
 
 public class IndomainSetMin<T extends SetVar> implements Indomain<T> {

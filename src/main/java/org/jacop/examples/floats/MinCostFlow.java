@@ -31,17 +31,16 @@
 package org.jacop.examples.floats;
 
 /**
- *
  * It models min-cost flow for floating solver.
- *
+ * <p>
  * Minimum Cost Flow problem.
  * One of the most classic OR problems known: Find the minimum cost
  * flow in a network, while satisfying the demands in the nodes,
  * and not violating the capacities of the arcs.
- *
+ * <p>
  * Testdata available at:
- * http://elib.zib.de/pub/Packages/mp-testdata/mincost/ 
- *
+ * http://elib.zib.de/pub/Packages/mp-testdata/mincost/
+ * <p>
  * Based on minizinc model
  * min_cost_flow.mzn
  * Jakob Puchinger <jakobp@cs.mu.oz.au>
@@ -49,7 +48,6 @@ package org.jacop.examples.floats;
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 import org.jacop.core.Store;

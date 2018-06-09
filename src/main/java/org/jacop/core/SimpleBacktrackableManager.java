@@ -37,7 +37,7 @@ import java.util.List;
 
 /**
  * It is responsible of remembering what variables have changed at given
- * store level. 
+ * store level.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.5
@@ -120,7 +120,7 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
      * It constructs a trail manager.
      *
      * @param noOfObjects it specifies number of objects being managed.
-     * @param vars it specifies the list of objects being managed.
+     * @param vars        it specifies the list of objects being managed.
      */
 
     public SimpleBacktrackableManager(Backtrackable[] vars, int noOfObjects) {
@@ -185,6 +185,7 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
 
     /**
      * It specifies the level which should become the active one in the manager.
+     *
      * @param level the active level at which the changes will be recorded.
      */
     public void setLevel(int level) {

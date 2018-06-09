@@ -77,7 +77,7 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
         setScope(listOfC);
         setConstraintScope(listOfC);
         queueForward = new QueueForward<PrimitiveConstraint>(listOfC, arguments());
-        this.queueIndex = Arrays.stream(listOfC).max((a, b) -> Integer.max(a.queueIndex, b.queueIndex)).map( a -> a.queueIndex ).orElse(0);
+        this.queueIndex = Arrays.stream(listOfC).max((a, b) -> Integer.max(a.queueIndex, b.queueIndex)).map(a -> a.queueIndex).orElse(0);
     }
 
     /**
@@ -103,14 +103,13 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
 
         int numberNotSat = 0;
         int j = 0;
-	int n = listOfC.length;
-	
-	for (int i = 0; i < n; i++) {
+        int n = listOfC.length;
+
+        for (int i = 0; i < n; i++) {
             if (listOfC[i].satisfied()) {
-		removeConstraint();
+                removeConstraint();
                 return;
-	    }
-            else {
+            } else {
                 if (listOfC[i].notSatisfied())
                     numberNotSat++;
                 else
@@ -118,10 +117,10 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
             }
         }
 
-	if (numberNotSat == n - 1)
-	    listOfC[j].consistency(store);
-	else if (numberNotSat == n)
-	    throw Store.failException;
+        if (numberNotSat == n - 1)
+            listOfC[j].consistency(store);
+        else if (numberNotSat == n)
+            throw Store.failException;
 
     }
 

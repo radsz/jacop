@@ -62,8 +62,7 @@ import static org.junit.Assert.assertThat;
  */
 public class SingleConstraintTest extends TestHelper {
 
-    @Rule
-    public TestRule watcher = new TestWatcher() {
+    @Rule public TestRule watcher = new TestWatcher() {
         protected void starting(Description description) {
             System.out.println("Starting test: " + description.getMethodName());
         }
@@ -71,18 +70,18 @@ public class SingleConstraintTest extends TestHelper {
 
     @Test public void testAnonymousConstraint() {
 
-        Function<IntVar[], Constraint> listXeqY = ( IntVar[] list ) -> new Constraint(list) {
-            
+        Function<IntVar[], Constraint> listXeqY = (IntVar[] list) -> new Constraint(list) {
+
             @Override public void consistency(Store store) {
 
                 do {
 
                     store.propagationHasOccurred = false;
 
-                    for (int i = 0; i < list.length - 1; i++ ) {
+                    for (int i = 0; i < list.length - 1; i++) {
 
                         IntVar x = list[i];
-                        IntVar y = list[i+1];
+                        IntVar y = list[i + 1];
 
                         x.domain.in(store.level, x, y.domain);
                         y.domain.in(store.level, y, x.domain);
@@ -123,7 +122,7 @@ public class SingleConstraintTest extends TestHelper {
         IntVar[] x = getIntVars(store, "x", xLength, xSize);
 
         IfThen ifThen = new IfThen(new XneqY(x[0], x[1]), new XeqY(x[1], x[2]));
-        
+
         Not not = new Not(ifThen);
         store.impose(not);
 
@@ -134,30 +133,28 @@ public class SingleConstraintTest extends TestHelper {
 
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void testInvalidTable() {
+    @Test(expected = IllegalArgumentException.class) public void testInvalidTable() {
 
         Store store = new Store();
 
         int xLength = 4;
         int xSize = 3;
         IntVar[] x = getIntVars(store, "x", xLength, xSize);
-        int[][] tuples = { {0, 0, 0}, {1, 1, 1}, {2, 2, 2}, {1, 2, 1}, {2, 2, 1}, {2, 0, 0} };
+        int[][] tuples = {{0, 0, 0}, {1, 1, 1}, {2, 2, 2}, {1, 2, 1}, {2, 2, 1}, {2, 0, 0}};
 
         Table c = new Table(x, tuples);
         store.impose(c);
 
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void testInvalidSimpleTable() {
+    @Test(expected = IllegalArgumentException.class) public void testInvalidSimpleTable() {
 
         Store store = new Store();
 
         int xLength = 4;
         int xSize = 3;
         IntVar[] x = getIntVars(store, "x", xLength, xSize);
-        int[][] tuples = { {0, 0, 0}, {1, 1, 1}, {2, 2, 2}, {1, 2, 1}, {2, 2, 1}, {2, 0, 0} };
+        int[][] tuples = {{0, 0, 0}, {1, 1, 1}, {2, 2, 2}, {1, 2, 1}, {2, 2, 1}, {2, 0, 0}};
 
         SimpleTable c = new SimpleTable(x, tuples);
         store.impose(c);
@@ -172,8 +169,8 @@ public class SingleConstraintTest extends TestHelper {
         int xLength = 3;
         int xSize = 3;
         IntVar[] x = getIntVars(store, "x", xLength, xSize);
-        int[][] tuples = { {0, 0, 0}, {1, 1, 1}, {2, 2, 2}, {1, 2, 1}, {2, 2, 1}, {2, 0, 0} };
-        
+        int[][] tuples = {{0, 0, 0}, {1, 1, 1}, {2, 2, 2}, {1, 2, 1}, {2, 2, 1}, {2, 0, 0}};
+
         SimpleTable c = new SimpleTable(x, tuples);
         store.impose(c);
 
@@ -198,7 +195,7 @@ public class SingleConstraintTest extends TestHelper {
         store.impose(c);
 
         store.print();
-        int noOfSolutions = noOfAllSolutions(store, Stream.concat( Arrays.stream(items), Arrays.stream(binLoad) ).toArray(IntVar[]::new));
+        int noOfSolutions = noOfAllSolutions(store, Stream.concat(Arrays.stream(items), Arrays.stream(binLoad)).toArray(IntVar[]::new));
 
         assertThat(noOfSolutions, is(42));
 
@@ -206,9 +203,10 @@ public class SingleConstraintTest extends TestHelper {
 
     @Test public void testGeost() {
 
-        assertThat( PerfectSquare.testUsingGeost(new String[]{"1"}), is(true));
+        assertThat(PerfectSquare.testUsingGeost(new String[] {"1"}), is(true));
 
     }
+
     @Test public void testCheckForInputDuplicationSkippsingSingletons2() {
 
         Store store = new Store();
@@ -234,7 +232,7 @@ public class SingleConstraintTest extends TestHelper {
         IntVar[] parameters = Arrays.copyOf(list, xLength + 2);
         parameters[xLength] = dubleton;
         parameters[xLength + 1] = dubleton;
-        
+
         Set<Var> dubletons = DecomposedConstraint.getDubletonsSkipSingletons(parameters);
 
         assertThat(dubletons.size(), is(0));
@@ -918,8 +916,8 @@ public class SingleConstraintTest extends TestHelper {
 
         IntVar[] exceptionCondition = getIntVars(store, "condition", 2, 2);
 
-        Diff disjointConditional = new DisjointConditional(origin1, origin2, length1, length2, conditionalPairs,
-            Arrays.asList(exceptionCondition));
+        Diff disjointConditional =
+            new DisjointConditional(origin1, origin2, length1, length2, conditionalPairs, Arrays.asList(exceptionCondition));
 
         store.impose(disjointConditional);
 

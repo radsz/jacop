@@ -117,8 +117,7 @@ public class SumInt extends PrimitiveConstraint {
      * @param sum   variable containing the sum of weighted variables.
      * @deprecated SumInt constraint does not use Store parameter any longer.
      */
-    @Deprecated
-    public SumInt(Store store, IntVar[] list, String rel, IntVar sum) {
+    @Deprecated public SumInt(Store store, IntVar[] list, String rel, IntVar sum) {
 
         checkInputForNullness(new String[] {"list", "rel", "sum"}, new Object[][] {list, {rel}, {sum}});
 
@@ -152,18 +151,17 @@ public class SumInt extends PrimitiveConstraint {
      * @param sum       variable containing the sum of weighted variables.
      * @deprecated SumInt constraint does not use Store parameter any longer.
      */
-    @Deprecated
-    public SumInt(Store store, List<? extends IntVar> variables, String rel, IntVar sum) {
+    @Deprecated public SumInt(Store store, List<? extends IntVar> variables, String rel, IntVar sum) {
         this(store, variables.toArray(new IntVar[variables.size()]), rel, sum);
     }
 
     /**
-     * @param list  variables which are being multiplied by weights.
-     * @param rel   the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum   variable containing the sum of weighted variables.
+     * @param list variables which are being multiplied by weights.
+     * @param rel  the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum  variable containing the sum of weighted variables.
      */
     public SumInt(IntVar[] list, String rel, IntVar sum) {
-	this(sum.getStore(), list, rel, sum);
+        this(sum.getStore(), list, rel, sum);
     }
 
     /**
@@ -172,7 +170,6 @@ public class SumInt extends PrimitiveConstraint {
      * @param variables variables which are being multiplied by weights.
      * @param rel       the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
      * @param sum       variable containing the sum of weighted variables.
-     *
      */
     public SumInt(List<? extends IntVar> variables, String rel, IntVar sum) {
         this(variables.toArray(new IntVar[variables.size()]), rel, sum);
@@ -285,8 +282,8 @@ public class SumInt extends PrimitiveConstraint {
 
         for (int i = 0; i < l; i++) {
             IntDomain xd = x[i].dom();
-            min = (long)xd.min();
-            max = (long)xd.max();
+            min = (long) xd.min();
+            max = (long) xd.max();
             f += min;
             e += max;
             I[i] = (max - min);
@@ -301,14 +298,14 @@ public class SumInt extends PrimitiveConstraint {
         sum.domain.inMin(store.level, sum, long2int(sumXmin + b));
 
         long min, max;
-        long sMax = (long)sum.max();
+        long sMax = (long) sum.max();
 
         for (int i = 0; i < l; i++) {
             if (I[i] > (sMax - sumXmin - b)) {
-                min = (long)x[i].min();
+                min = (long) x[i].min();
                 max = min + I[i];
                 if (pruneMax(x[i], sMax - sumXmin + min - b)) {
-                    long newMax = (long)x[i].max();
+                    long newMax = (long) x[i].max();
                     sumXmax -= max - newMax;
                     I[i] = newMax - min;
                 }
@@ -321,14 +318,14 @@ public class SumInt extends PrimitiveConstraint {
         sum.domain.inMax(store.level, sum, long2int(sumXmax - b));
 
         long min, max;
-        long sMin = (long)sum.min();
+        long sMin = (long) sum.min();
 
         for (int i = 0; i < l; i++) {
             if (I[i] > -(sMin - sumXmax + b)) {
-                max = (long)x[i].max();
+                max = (long) x[i].max();
                 min = max - I[i];
                 if (pruneMin(x[i], (sMin - sumXmax + max + b))) {
-                    long newMin = (long)x[i].min();
+                    long newMin = (long) x[i].min();
                     sumXmin += newMin - min;
                     I[i] = max - newMin;
                 }
@@ -345,12 +342,12 @@ public class SumInt extends PrimitiveConstraint {
         long min, max;
 
         for (int i = 0; i < l; i++) {
-            min = (long)x[i].min();
+            min = (long) x[i].min();
             max = min + I[i];
 
-            if (pruneNe(x[i], (long)sum.min() - sumXmax + max, sum.max() - sumXmin + min)) {
-                long newMin = (long)x[i].min();
-                long newMax = (long)x[i].max();
+            if (pruneNe(x[i], (long) sum.min() - sumXmax + max, sum.max() - sumXmin + min)) {
+                long newMin = (long) x[i].min();
+                long newMax = (long) x[i].max();
                 sumXmin += newMin - min;
                 sumXmax += newMax - max;
                 I[i] = newMax - newMin;
@@ -359,7 +356,7 @@ public class SumInt extends PrimitiveConstraint {
     }
 
     private boolean pruneMin(IntVar x, long min) {
-        if (min > (long)x.min()) {
+        if (min > (long) x.min()) {
             x.domain.inMin(store.level, x, long2int(min));
             return true;
         } else
@@ -367,7 +364,7 @@ public class SumInt extends PrimitiveConstraint {
     }
 
     private boolean pruneMax(IntVar x, long max) {
-        if (max < (long)x.max()) {
+        if (max < (long) x.max()) {
             x.domain.inMax(store.level, x, long2int(max));
             return true;
         } else
@@ -378,7 +375,7 @@ public class SumInt extends PrimitiveConstraint {
 
         if (min == max) {
             boolean boundsChanged = false;
-            if (min == (long)x.min() || max == (long)x.max())
+            if (min == (long) x.min() || max == (long) x.max())
                 boundsChanged = true;
 
             x.domain.inComplement(store.level, x, long2int(min));
@@ -394,11 +391,11 @@ public class SumInt extends PrimitiveConstraint {
         long sMin = 0, sMax = 0;
 
         for (int i = 0; i < l; i++) {
-            sMin += (long)x[i].min();
-            sMax += (long)x[i].max();
+            sMin += (long) x[i].min();
+            sMax += (long) x[i].max();
         }
 
-        return sMax <= (long)sum.min() && sMin >= (long)sum.max(); //sMin == sMax && sMin == sum.min() && sMin == sum.max();
+        return sMax <= (long) sum.min() && sMin >= (long) sum.max(); //sMin == sMax && sMin == sum.min() && sMin == sum.max();
     }
 
     public boolean satisfiedNeq() {
@@ -406,11 +403,11 @@ public class SumInt extends PrimitiveConstraint {
         long sMax = 0, sMin = 0;
 
         for (int i = 0; i < l; i++) {
-            sMin += (long)x[i].min();
-            sMax += (long)x[i].max();
+            sMin += (long) x[i].min();
+            sMax += (long) x[i].max();
         }
 
-        return sMin > (long)sum.max() || sMax < (long)sum.min();
+        return sMin > (long) sum.max() || sMax < (long) sum.min();
     }
 
     public boolean satisfiedLtEq(int b) {
@@ -418,10 +415,10 @@ public class SumInt extends PrimitiveConstraint {
         long sMax = 0;
 
         for (int i = 0; i < l; i++) {
-            sMax += (long)x[i].max();
+            sMax += (long) x[i].max();
         }
 
-        return sMax <= (long)sum.min() - b;
+        return sMax <= (long) sum.min() - b;
     }
 
     public boolean satisfiedGtEq(int b) {
@@ -429,10 +426,10 @@ public class SumInt extends PrimitiveConstraint {
         long sMin = 0;
 
         for (int i = 0; i < l; i++) {
-            sMin += (long)x[i].min();
+            sMin += (long) x[i].min();
         }
 
-        return sMin >= (long)sum.max() + b;
+        return sMin >= (long) sum.max() + b;
     }
 
     @Override public boolean satisfied() {

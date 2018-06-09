@@ -35,7 +35,6 @@ package org.jacop.core;
  * Defines a methods for enumerating values contain in the intersal domain. It
  * implements the interface Enumeration.
  *
- *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
  */
@@ -52,6 +51,7 @@ public class IntervalDomainIntervalEnumeration extends IntervalEnumeration {
 
     /**
      * It creates an enumeration for a given interval domain.
+     *
      * @param dom interval domain for which an enumeration is created.
      */
     public IntervalDomainIntervalEnumeration(IntervalDomain dom) {

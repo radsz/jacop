@@ -37,7 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraints |X| #= Y
- *
+ * <p>
  * Domain and bounds consistency can be used; third parameter of constructor controls this.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
@@ -68,12 +68,13 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
 
     /**
      * It constructs |X| = Y constraints.
+     *
      * @param x variable X1
      * @param y variable Y
      */
     public AbsXeqY(IntVar x, IntVar y) {
 
-        checkInputForNullness(new String[]{"x", "y"}, new Object[] {x, y});
+        checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
 
         numberId = idNumber.incrementAndGet();
 
@@ -86,8 +87,9 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
 
     /**
      * It constructs |X| = Y constraints.
-     * @param x variable X1
-     * @param y variable Y
+     *
+     * @param x              variable X1
+     * @param y              variable Y
      * @param domConsistency controls which consistency method is used; true = domain, false = bound
      */
     public AbsXeqY(IntVar x, IntVar y, boolean domConsistency) {

@@ -34,13 +34,11 @@ package org.jacop.jasat.core.clauses;
 import java.io.BufferedWriter;
 
 /**
- *
- * Interface for clause databases or database stores. Any entity that 
- * contains clauses and can perform different operations on them. 
+ * Interface for clause databases or database stores. Any entity that
+ * contains clauses and can perform different operations on them.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 public interface ClauseDatabaseInterface {
@@ -50,7 +48,7 @@ public interface ClauseDatabaseInterface {
      * example if the clause is unsatisfiable in the current trail affectation,
      * the solver will get in the conflict state.
      *
-     * @param clause  the clause to add
+     * @param clause        the clause to add
      * @param isModelClause defined if the clause is model clause
      * @return the unique ID referring to the clause
      */
@@ -61,12 +59,13 @@ public interface ClauseDatabaseInterface {
      * It informs the ClausesDatabase that this literal is set, so that it
      * can perform unit propagation.
      *
-     * @param literal  the literal that is set
+     * @param literal the literal that is set
      */
     void assertLiteral(int literal);
 
     /**
      * It removes the clause which unique ID is @param clauseId.
+     *
      * @param clauseId clause id
      */
     void removeClause(int clauseId);
@@ -75,7 +74,7 @@ public interface ClauseDatabaseInterface {
     /**
      * It tells if the implementation of ClausesDatabase can remove clauses or not
      *
-     * @param clauseId  the unique Id of the clause
+     * @param clauseId the unique Id of the clause
      * @return true iff removal of clauses is possible
      */
     boolean canRemove(int clauseId);
@@ -85,20 +84,22 @@ public interface ClauseDatabaseInterface {
      * It returns the clause obtained by resolution between clauseIndex and clause.
      * It will also modify in place the given SetClause (avoid allocating).
      *
-     * @param clauseIndex  the unique id of the clause
-     * @param clause  an explanation clause that is modified by resolution
+     * @param clauseIndex the unique id of the clause
+     * @param clause      an explanation clause that is modified by resolution
      * @return the clause obtained by resolution
      */
     MapClause resolutionWith(int clauseIndex, MapClause clause);
 
     /**
      * Do everything needed to return to the given level.
-     * @param level  the level to return to. Must be {@literal <} solver.getCurrentLevel().
+     *
+     * @param level the level to return to. Must be {@literal <} solver.getCurrentLevel().
      */
     void backjump(int level);
 
     /**
      * size of the database
+     *
      * @return the number of clauses in the database
      */
     int size();

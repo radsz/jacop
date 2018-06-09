@@ -35,9 +35,9 @@ import java.util.List;
 
 /**
  * It specifies AR benchmark.
- *
+ * <p>
  * Source:
- *
+ * <p>
  * Rajiv Jain, Alice C. Parker "Experience with the ADAM Synthesis System" 26th
  * ACM/IEEE Design Automation Conference, 1989. and Rajiv Jain, Alice C. Parker,
  * Nohbyung Park, "Predicting Sysem-Level Area and Dealy for Pipelined and
@@ -58,6 +58,7 @@ public class AR extends Filter {
 
     /**
      * It possible to specify the delay of the addition and multiplication.
+     *
      * @param addDel the delay of the addition operation.
      * @param mulDel the delay of the multiplication operation.
      */

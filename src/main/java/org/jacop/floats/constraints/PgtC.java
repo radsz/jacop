@@ -60,12 +60,13 @@ public class PgtC extends PrimitiveConstraint {
 
     /**
      * It constructs constraint P {@literal >} C.
+     *
      * @param p variable p.
      * @param c constant c.
      */
     public PgtC(FloatVar p, double c) {
 
-        checkInputForNullness("p", new Object[]{p});
+        checkInputForNullness("p", new Object[] {p});
 
         numberId = idNumber.incrementAndGet();
 

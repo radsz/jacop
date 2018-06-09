@@ -38,17 +38,15 @@ import org.jacop.core.Store;
 import java.util.ArrayList;
 
 /**
- *
- * It solves the PigeonHole problem. 
- *
- *
- * The problem is how to assign n pigeons into n-1 holes in 
+ * It solves the PigeonHole problem.
+ * <p>
+ * <p>
+ * The problem is how to assign n pigeons into n-1 holes in
  * such a way that each hole holds only one pigeons.
  * Clearly this problem is not satisfiable.
  *
  * @author Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 public class PigeonHole extends ExampleFD {

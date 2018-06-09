@@ -37,15 +37,15 @@ import java.io.IOException;
 
 /**
  * A database for ternary clauses. It only accepts those.
- *
- * It does not work with watched literals. All literals are 
- * watching and if any of them changes then clause is being 
- * checked for unit propagation. 
- *
- * Pros : no need to change watches. 
+ * <p>
+ * It does not work with watched literals. All literals are
+ * watching and if any of them changes then clause is being
+ * checked for unit propagation.
+ * <p>
+ * Pros : no need to change watches.
  * Cons : need to check the clause every time any literal changes.
- *
- * TODO, check if this the efficient way of dealing with ternary clauses. 
+ * <p>
+ * TODO, check if this the efficient way of dealing with ternary clauses.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.5
@@ -177,7 +177,8 @@ public final class TernaryClausesDatabase extends AbstractClausesDatabase {
 
     /**
      * when something changed, find the status of the clause
-     * @param clauseIndex  index of the clause
+     *
+     * @param clauseIndex index of the clause
      * @return the state of the clause
      */
     private final int notifyClause(int clauseIndex) {

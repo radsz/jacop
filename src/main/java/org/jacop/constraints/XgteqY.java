@@ -59,12 +59,13 @@ public class XgteqY extends PrimitiveConstraint {
 
     /**
      * It constructs constraint X {@literal >=} Y.
+     *
      * @param x variable x.
      * @param y variable y.
      */
     public XgteqY(IntVar x, IntVar y) {
 
-        checkInputForNullness(new String[]{"x", "y"}, new Object[]{x, y});
+        checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
 
         numberId = idNumber.incrementAndGet();
 

@@ -41,7 +41,6 @@ import java.util.LinkedHashSet;
 
 
 /**
- *
  * The class gathers variables and array variables for default or
  * complementary search. Two methods are supported. One gathers all
  * output variables and the second one all non-introduced variables
@@ -49,7 +48,6 @@ import java.util.LinkedHashSet;
  *
  * @author Krzysztof Kuchcinski
  * @version 4.5
- *
  */
 public class DefaultSearchVars {
 

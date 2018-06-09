@@ -146,7 +146,6 @@ public class FilterBenchmark {
      * It solves available filters for different scenario
      * consisting of different number of resources. It
      * performs pipelining of multiplier operations.
-     *
      */
     public static void pipeMulSchedule() {
 
@@ -196,7 +195,6 @@ public class FilterBenchmark {
      * It solves available filters for different scenario
      * consisting of different number of resources. It
      * performs chaining of operations.
-     *
      */
     public static void chainingSchedule() {
 
@@ -249,7 +247,6 @@ public class FilterBenchmark {
      * It solves available filters for different scenario
      * consisting of different number of resources. It
      * performs algorithmic pipelining.
-     *
      */
     public static void pipelineSchedule() {
 
@@ -308,7 +305,7 @@ public class FilterBenchmark {
     /**
      * It optimizes scheduling of filter operations.
      *
-     * @param store the constraint store in which the constraints are imposed.
+     * @param store  the constraint store in which the constraints are imposed.
      * @param filter the filter being scheduled.
      * @param addNum number of adders available.
      * @param mulNum number of multipliers available.
@@ -362,11 +359,11 @@ public class FilterBenchmark {
      * It optimizes scheduling of filter operation in fashion allowing
      * chaining of operations within one clock cycle.
      *
-     * @param store the constraint store in which the constraints are imposed.
+     * @param store  the constraint store in which the constraints are imposed.
      * @param filter the filter being scheduled.
      * @param addNum number of adders available.
      * @param mulNum number of multipliers available.
-     * @param clock number of time units within a clock.
+     * @param clock  number of time units within a clock.
      */
     public static void experiment1C(Store store, Filter filter, int addNum, int mulNum, int clock) {
         boolean result;
@@ -426,7 +423,7 @@ public class FilterBenchmark {
      * It optimizes scheduling of filter operations in a fashion allowing
      * pipelining of multiplication operations.
      *
-     * @param store the constraint store in which the constraints are imposed.
+     * @param store  the constraint store in which the constraints are imposed.
      * @param filter the filter being scheduled.
      * @param addNum number of adders available.
      * @param mulNum number of multipliers available.
@@ -481,7 +478,7 @@ public class FilterBenchmark {
      * It optimizes scheduling of filter operation in fashion allowing
      * pipelining of multiplication operations.
      *
-     * @param store the constraint store in which the constraints are imposed.
+     * @param store  the constraint store in which the constraints are imposed.
      * @param filter the filter being scheduled.
      * @param addNum number of adders available.
      * @param mulNum number of multipliers available.
@@ -545,7 +542,7 @@ public class FilterBenchmark {
      * It optimizes scheduling of filter operations. It performs algorithmic
      * pipelining.
      *
-     * @param store the constraint store in which the constraints are imposed.
+     * @param store  the constraint store in which the constraints are imposed.
      * @param filter the filter being scheduled.
      * @param addNum number of adders available.
      * @param mulNum number of multipliers available.
@@ -632,7 +629,7 @@ public class FilterBenchmark {
      * It optimizes scheduling of filter operations. It performs
      * algorithmic pipelining three times.
      *
-     * @param store the constraint store in which the constraints are imposed.
+     * @param store  the constraint store in which the constraints are imposed.
      * @param filter the filter being scheduled.
      * @param addNum number of adders available.
      * @param mulNum number of multipliers available.
@@ -706,7 +703,7 @@ public class FilterBenchmark {
     /**
      * It optimizes scheduling of filter operations.
      *
-     * @param store the constraint store in which the constraints are imposed.
+     * @param store  the constraint store in which the constraints are imposed.
      * @param filter the filter being scheduled.
      * @param addNum number of adders available.
      * @param mulNum number of multipliers available.
@@ -767,11 +764,11 @@ public class FilterBenchmark {
      * It optimizes scheduling of filter operation in fashion allowing
      * chaining of operations within one clock cycle.
      *
-     * @param store the constraint store in which the constraints are imposed.
+     * @param store  the constraint store in which the constraints are imposed.
      * @param filter the filter being scheduled.
      * @param addNum number of adders available.
      * @param mulNum number of multipliers available.
-     * @param clock number of time units within a clock.
+     * @param clock  number of time units within a clock.
      */
     public static void experiment2C(Store store, Filter filter, int addNum, int mulNum, int clock) {
 
@@ -829,7 +826,7 @@ public class FilterBenchmark {
     /**
      * It creates constraint model for scheduling of filter operations.
      *
-     * @param store the constraint store in which the constraints are imposed.
+     * @param store  the constraint store in which the constraints are imposed.
      * @param filter the filter being scheduled.
      * @param addNum number of adders available.
      * @param mulNum number of multipliers available.
@@ -935,7 +932,7 @@ public class FilterBenchmark {
      * It creates constraint model for scheduling of filter operation in fashion allowing
      * pipelining of multiplication operations.
      *
-     * @param store the constraint store in which the constraints are imposed.
+     * @param store  the constraint store in which the constraints are imposed.
      * @param filter the filter being scheduled.
      * @param addNum number of adders available.
      * @param mulNum number of multipliers available.
@@ -1044,11 +1041,11 @@ public class FilterBenchmark {
      * It creates constraint model for scheduling of filter operation in fashion allowing
      * chaining of operations within one clock cycle.
      *
-     * @param store the constraint store in which the constraints are imposed.
+     * @param store  the constraint store in which the constraints are imposed.
      * @param filter the filter being scheduled.
      * @param addNum number of adders available.
      * @param mulNum number of multipliers available.
-     * @param clk number of time units within a clock.
+     * @param clk    number of time units within a clock.
      * @return start time and resource assignment variables describing the scheduling problem.
      */
     public static List<List<IntVar>> makeConstraintsChain(Store store, Filter filter, int addNum, int mulNum, int clk) {
@@ -1173,7 +1170,7 @@ public class FilterBenchmark {
      * It creates a model for optimization of scheduling of operations of a given filter.
      * The pipelined model assumes that the filter is unrolled three times.
      *
-     * @param store constraint store in which the constraints are imposed.
+     * @param store  constraint store in which the constraints are imposed.
      * @param filter filter for which pipelined execution is optimized.
      * @param addNum number of available adders
      * @param mulNum number of available multipliers.

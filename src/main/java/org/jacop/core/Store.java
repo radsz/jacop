@@ -242,6 +242,7 @@ public class Store {
      * Variable given as a parameter no longer watches constraint given as
      * parameter. This function will be called when watch is being moved from
      * one variable to another.
+     *
      * @param v variable at which constraint is no longer watching.
      * @param C constraint which is no longer watched by given variable.
      */
@@ -255,6 +256,7 @@ public class Store {
     /**
      * Watched constraint given as parameter is being removed, no variable will
      * be watching it.
+     *
      * @param C constraint for which all watches are removed.
      */
 
@@ -291,6 +293,7 @@ public class Store {
      * It register variable to watch given constraint. This function is called
      * either by impose function of a constraint or by consistency function of a
      * constraint when watch is being moved.
+     *
      * @param v variable which is used to watch the constraint.
      * @param c the constraint being used.
      */
@@ -333,7 +336,6 @@ public class Store {
     /**
      * It allows to manage information about changed variables in
      * efficient/specialized/tailored manner.
-     *
      */
     public BacktrackableManager trailManager;
 
@@ -350,6 +352,7 @@ public class Store {
     /**
      * It specifies the constructor of the store, which allows to decide what is
      * the initial size of the Variable list.
+     *
      * @param size specifies the initial number of variables.
      */
 
@@ -370,6 +373,7 @@ public class Store {
      * This function schedules given constraint for re-evaluation. This function
      * will most probably be rarely used as constraints require reevaluation
      * only when a variable changes.
+     *
      * @param c constraint which needs reevaluation.
      */
 
@@ -389,10 +393,11 @@ public class Store {
      * This function schedules all attached (not yet satisfied constraints) for
      * given variable for re-evaluation. This function must add all attached
      * constraints for reevaluation but it will do it any order which suits it.
-     * @param var variable for which some pruning event has occurred.
+     *
+     * @param var          variable for which some pruning event has occurred.
      * @param pruningEvent specifies the type of the pruning event.
-     * @param info it specifies detailed information about the change of the variable domain.
-     * the inputs of the currentConstraint in the manner that would validate another execution.
+     * @param info         it specifies detailed information about the change of the variable domain.
+     *                     the inputs of the currentConstraint in the manner that would validate another execution.
      */
 
     public void addChanged(Var var, int pruningEvent, int info) {
@@ -477,6 +482,7 @@ public class Store {
     /**
      * This function computes the consistency function. It evaluates all
      * constraints which are in the changed queue.
+     *
      * @return returns true if all constraints which were in changed queue are consistent, false otherwise.
      */
 
@@ -548,6 +554,7 @@ public class Store {
      * This function is called when a counter of constraints should be increased
      * by given value. If for some reason some constraints should be counted as
      * multiple ones than this function could be called.
+     *
      * @param n integer by which the counter of constraints should be increased.
      */
     public void countConstraint(int n) {
@@ -558,6 +565,7 @@ public class Store {
      * This function deregisters a constraint from the listeners queue. The
      * constraint will know that it has to re-execute its consistency function,
      * but it will not be informed which variables has changed.
+     *
      * @param C constraint which no longer needs to be removed when level is removed.
      * @return true if constraint was listening beforehand, otherwise false.
      */
@@ -588,6 +596,7 @@ public class Store {
      * variable from the hashmap in constant time. Only if the variable
      * was not found or hashmap object was not created a linear algorithm
      * scanning through the whole list of variables will be employed.
+     *
      * @param id unique identifier of the variable.
      * @return reference to a variable with the given id.
      */
@@ -621,6 +630,7 @@ public class Store {
      * This function returns the constraint which is currently reevaluated. It
      * is an easy way to discover which constraint caused a failure right after
      * the inconsistency is signaled.
+     *
      * @return constraint for which consistency method is being executed.
      */
 
@@ -630,6 +640,7 @@ public class Store {
 
     /**
      * This function returns the long description of the store.
+     *
      * @return store description.
      */
     public String getDescription() {
@@ -642,6 +653,7 @@ public class Store {
      * easy, fair, and efficient way of getting constraints for reevaluation.
      * The constraint is _removed_ from the queue, since it is assumed that they
      * are reevaluated right away.
+     *
      * @return first constraint which is being marked as the one which needs to be checked for consistency.
      */
 
@@ -653,6 +665,7 @@ public class Store {
 
     /**
      * This function returns the id of the store.
+     *
      * @return id of store.
      */
     public String getName() {
@@ -662,6 +675,7 @@ public class Store {
     /**
      * This function returns the prefix of the automatically generated names for
      * noname variables.
+     *
      * @return he prefix of the automatically generated names for noname variables.
      */
     public String getVariableIdPrefix() {
@@ -672,6 +686,7 @@ public class Store {
      * This function imposes a constraint to a store. The constraint is
      * scheduled for evaluation for the next store consistency call. Therefore,
      * the constraint is added to queue of changed constraints.
+     *
      * @param c constraint to be imposed.
      */
 
@@ -685,7 +700,8 @@ public class Store {
      * This function imposes a constraint to a store. The constraint is
      * scheduled for evaluation for the next store consistency call. Therefore,
      * the constraint is added to queue of changed constraints.
-     * @param c constraint to be added to specified queue.
+     *
+     * @param c          constraint to be added to specified queue.
      * @param queueIndex specifies index of the queue for a constraint.
      */
 
@@ -701,6 +717,7 @@ public class Store {
      * constraint store immediately after the constraint is imposed. This
      * function will impose a constraint and call the consistency function of
      * the store immediately.
+     *
      * @param c constraint to be imposed.
      * @throws FailException failure exception.
      */
@@ -720,6 +737,7 @@ public class Store {
      * This function imposes a decomposable constraint to a store. The decomposition is
      * scheduled for evaluation for the next store consistency call. Therefore,
      * the constraints are added to queue of changed constraints.
+     *
      * @param c constraint to be imposed.
      */
 
@@ -733,7 +751,8 @@ public class Store {
      * This function imposes a constraint decomposition to a store. The decomposition
      * constraints are scheduled for evaluation for the next store consistency call. Therefore,
      * the constraints are added to queue of changed constraints.
-     * @param c constraint to be added to specified queue.
+     *
+     * @param c          constraint to be added to specified queue.
      * @param queueIndex specifies index of the queue for a constraint.
      */
 
@@ -749,6 +768,7 @@ public class Store {
      * constraint store immediately after the decomposed constraint is imposed. This
      * function will impose constraint decomposition and call the consistency function of
      * the store immediately.
+     *
      * @param c decomposed constraint to be imposed.
      */
 
@@ -780,6 +800,7 @@ public class Store {
 
     /**
      * This function returns the number of constraints.
+     *
      * @return number of constraints.
      */
 
@@ -801,6 +822,7 @@ public class Store {
      * at store and then store will be responsible for calling appropriate
      * functions from MutableVar interface to keep the variables consistent with
      * the search.
+     *
      * @param value MutableVariable to be added and maintained by a store.
      * @return the position of MutableVariable at which it is being stored.
      */
@@ -815,6 +837,7 @@ public class Store {
      * (timestamps) which can be register at store and then store will be
      * responsible for calling appropriate functions from TimeStamp class to
      * keep the variables consistent with the search.
+     *
      * @param value timestamp to be added and maintained by a store.
      * @return the position of timestamp at which it is being stored.
      */
@@ -828,6 +851,7 @@ public class Store {
      * This function is used to register a variable within a store. It will be
      * most probably called from variable constructor. It returns the current
      * position of fdv in a store local data structure.
+     *
      * @param var variable to be registered.
      * @return position of the variable at which it is being stored.
      */
@@ -875,6 +899,7 @@ public class Store {
     /**
      * Any boolean variable which is changed must be recorded by store, so it
      * can be restored to the previous state if backtracking is performed.
+     *
      * @param recordedVariable boolean variable which has changed.
      */
 
@@ -900,6 +925,7 @@ public class Store {
     /**
      * Any change of finite domain variable must also be recorded, so intervals
      * denoting changed variables can be updated.
+     *
      * @param recordedVariable variable which has changed.
      */
 
@@ -927,6 +953,7 @@ public class Store {
      * since the last time a consistency was called. This function is called
      * just *before* removeLevel method is executed for variables, mutable variables,
      * and timestamps.
+     *
      * @param stateful constraint which is interested in listening to remove level events.
      * @return true if constraint stateful was watching remove level events.
      */
@@ -945,6 +972,7 @@ public class Store {
      * since the last time a consistency was called. This function is called
      * just *after* removeLevel method is executed for variables, mutable variables,
      * and timestamps.
+     *
      * @param c constraint which is no longer interested in listening to remove level events.
      * @return true if constraint c was watching remove level events.
      */
@@ -962,6 +990,7 @@ public class Store {
      * any variable at given level. Before backtracking to earlier level all
      * levels after earlier level must be removed. The removal order must be
      * reversed to the creation order.
+     *
      * @param rLevel Store level to be removed.
      */
 
@@ -1026,7 +1055,8 @@ public class Store {
 
     /**
      * This function sets the long description of the store.
-     * @param description  description of the store
+     *
+     * @param description description of the store
      */
     public void setDescription(String description) {
         this.description = description;
@@ -1035,6 +1065,7 @@ public class Store {
     /**
      * This function sets the id of the store. This id is used when saving to
      * XML file.
+     *
      * @param id store id.
      */
     public void setID(String id) {
@@ -1046,6 +1077,7 @@ public class Store {
      * which new values for variables will be recorded. This function is also
      * used during backtracking, after removing current level the store can be
      * set to the previous level.
+     *
      * @param levelSetTo level number to which store is changing to.
      */
 
@@ -1080,6 +1112,7 @@ public class Store {
     /**
      * This function sets the prefix of the automatically generated names for
      * noname variables.
+     *
      * @param idPrefix prefix of all variables with automatically generated names.
      */
     public void setVariableIdPrefix(String idPrefix) {
@@ -1088,6 +1121,7 @@ public class Store {
 
     /**
      * It returns number of variables in a store.
+     *
      * @return number of variables in a store.
      */
 
@@ -1098,8 +1132,8 @@ public class Store {
     /**
      * It throws an exception after printing trace information if tracing is
      * switched on.
-     * @param X variable causing the failure exception.
      *
+     * @param X variable causing the failure exception.
      * @throws FailException is always thrown.
      */
 
@@ -1162,6 +1196,7 @@ public class Store {
     /**
      * This function returns a string representation of the constraints pending
      * for re-evaluation.
+     *
      * @return string description of changed constraints.
      */
 
@@ -1189,6 +1224,7 @@ public class Store {
 
     /**
      * It checks invariants to see if the execution went smoothly.
+     *
      * @return description of the violated invariant, null otherwise.
      */
     public String checkInvariants() {
@@ -1207,7 +1243,7 @@ public class Store {
         result.append("[");
 
         // first BooleanVar
-        for (String key : new TreeSet<>( variablesHashMap.keySet() )) {
+        for (String key : new TreeSet<>(variablesHashMap.keySet())) {
             Var v = variablesHashMap.get(key);
             if (v instanceof BooleanVar)
                 result.append(v + ",");

@@ -31,14 +31,11 @@
 package org.jacop.examples.floats;
 
 /**
- *
- * It models wilkinson problem for floating solver based  
+ * It models wilkinson problem for floating solver based
  * on minizinc model by Håkan Kjellerstrand
- *
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 import org.jacop.core.Store;

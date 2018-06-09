@@ -54,9 +54,9 @@ import java.util.*;
 
 
 /**
- * It is a wrapper over Select methods that makes it possible to trace search and 
+ * It is a wrapper over Select methods that makes it possible to trace search and
  * variables' changes.
- *
+ * <p>
  * It generates xml format accepted by CPViz tool developed by Helmut Simonis.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -403,14 +403,14 @@ public class TraceGenerator<T extends Var> implements SelectChoicePoint<T>, Cons
     // =================================================================
     // Metods for tracing using ExitChildListener
 
-     @SuppressWarnings("unchecked") public void setChildrenListeners(ExitChildListener<T>[] children) {
-	exitChildListeners = new ExitChildListener[children.length];
+    @SuppressWarnings("unchecked") public void setChildrenListeners(ExitChildListener<T>[] children) {
+        exitChildListeners = new ExitChildListener[children.length];
         System.arraycopy(children, 0, exitChildListeners, 0, children.length);
     }
 
     public void setChildrenListeners(ExitListener[] children) {
         exitListeners = new ExitListener[children.length];
-	System.arraycopy(children, 0, exitListeners, 0, children.length);
+        System.arraycopy(children, 0, exitListeners, 0, children.length);
     }
 
     public boolean leftChild(T var, int value, boolean status) {
@@ -537,16 +537,10 @@ public class TraceGenerator<T extends Var> implements SelectChoicePoint<T>, Cons
         OutputStreamWriter printWriter;
 
         try {
-            printWriter = new OutputStreamWriter(
-                new FileOutputStream(treeFilename),
-                Charset.forName("UTF-8").newEncoder()
-            );
+            printWriter = new OutputStreamWriter(new FileOutputStream(treeFilename), Charset.forName("UTF-8").newEncoder());
         } catch (FileNotFoundException e) {
             e.printStackTrace();
-            printWriter = new OutputStreamWriter(
-                System.out,
-                Charset.forName("UTF-8").newEncoder()
-            );
+            printWriter = new OutputStreamWriter(System.out, Charset.forName("UTF-8").newEncoder());
         }
 
         StreamResult streamResult = new StreamResult(printWriter);
@@ -597,16 +591,10 @@ public class TraceGenerator<T extends Var> implements SelectChoicePoint<T>, Cons
         OutputStreamWriter printWriter;
 
         try {
-            printWriter = new OutputStreamWriter(
-                new FileOutputStream(visFilename),
-                Charset.forName("UTF-8").newEncoder()
-            );
+            printWriter = new OutputStreamWriter(new FileOutputStream(visFilename), Charset.forName("UTF-8").newEncoder());
         } catch (FileNotFoundException e) {
             e.printStackTrace();
-            printWriter = new OutputStreamWriter(
-                System.out,
-                Charset.forName("UTF-8").newEncoder()
-            );
+            printWriter = new OutputStreamWriter(System.out, Charset.forName("UTF-8").newEncoder());
         }
 
         StreamResult streamResult = new StreamResult(printWriter);

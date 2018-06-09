@@ -37,31 +37,30 @@ import org.jacop.core.Store;
 import java.util.ArrayList;
 
 /**
- *
  * It is a simple logic puzzle about shoe purchases.
  *
  * @author Adam Plonka, Piotr Ogrodzki, and Radoslaw Szymanek
  * @version 4.5
- *
- * Logic Puzzle
-
- * Title       : Arch Friends
- * Author      : Mark T. Zegarelli
- * Publication : Dell Logic Puzzles
- * Issue       : April, 1998
- * Page        : 7
- * Stars       : 1
-
- * Description : 
-
- * Harriet, upon returning from the mall, is happily describing her
- * four shoe purchases to her friend Aurora. Aurora just loves the four
- * different kinds of shoes that Harriet bought (ecru espadrilles,
- * fuchsia flats, purple pumps, and suede sandals), but Harriet can't
- * recall at which different store (Foot Farm, Heels in a Handcart, The
- * Shoe Palace, or Tootsies) she got each pair. Can you help these two
- * figure out the order in which Harriet bought each pair of shoes, and
- * where she bought each?
+ *          <p>
+ *          Logic Puzzle
+ *          <p>
+ *          Title       : Arch Friends
+ *          Author      : Mark T. Zegarelli
+ *          Publication : Dell Logic Puzzles
+ *          Issue       : April, 1998
+ *          Page        : 7
+ *          Stars       : 1
+ *          <p>
+ *          Description :
+ *          <p>
+ *          Harriet, upon returning from the mall, is happily describing her
+ *          four shoe purchases to her friend Aurora. Aurora just loves the four
+ *          different kinds of shoes that Harriet bought (ecru espadrilles,
+ *          fuchsia flats, purple pumps, and suede sandals), but Harriet can't
+ *          recall at which different store (Foot Farm, Heels in a Handcart, The
+ *          Shoe Palace, or Tootsies) she got each pair. Can you help these two
+ *          figure out the order in which Harriet bought each pair of shoes, and
+ *          where she bought each?
  */
 
 public class ArchFriends extends ExampleFD {
@@ -128,6 +127,7 @@ public class ArchFriends extends ExampleFD {
 
     /**
      * It executes the program to solve the logic puzzle.
+     *
      * @param args no arguments are read.
      */
     public static void main(String args[]) {

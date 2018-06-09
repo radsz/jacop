@@ -118,7 +118,7 @@ class Task {
     }
 
     boolean nonZeroTask() {
-	return dur.min() > 0 && res.min() > 0;
+        return dur.min() > 0 && res.min() > 0;
     }
 
     @Override public String toString() {

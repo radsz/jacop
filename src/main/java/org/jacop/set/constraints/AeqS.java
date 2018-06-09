@@ -41,7 +41,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * It creates an equality constraint to make sure that a set variable
- * is equal to a given set. 
+ * is equal to a given set.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.5
@@ -68,12 +68,13 @@ public class AeqS extends PrimitiveConstraint {
 
     /**
      * It constructs an AeqS constraint to restrict the domain of the variables.
-     * @param a variable a that is forced to be equal to a specified set value.
+     *
+     * @param a   variable a that is forced to be equal to a specified set value.
      * @param set it specifies the set to which variable a must be equal to.
      */
     public AeqS(SetVar a, IntDomain set) {
 
-        checkInputForNullness(new String[]{"a", "set"}, new Object[]{a, set});
+        checkInputForNullness(new String[] {"a", "set"}, new Object[] {a, set});
 
         numberId = idNumber.incrementAndGet();
 

@@ -37,9 +37,9 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Subcircuit constraint assures that all variables build a 
- * subcircuit. Value of every variable x[i] points to the next variable in 
- * the subcircuit. If a variable does not belong to a subcircuit it has value of 
+ * Subcircuit constraint assures that all variables build a
+ * subcircuit. Value of every variable x[i] points to the next variable in
+ * the subcircuit. If a variable does not belong to a subcircuit it has value of
  * its position, i.e., x[i] = i.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -71,6 +71,7 @@ public class Subcircuit extends Alldiff {
 
     /**
      * It constructs a circuit constraint.
+     *
      * @param list variables which must form a circuit.
      */
     public Subcircuit(IntVar[] list) {
@@ -80,9 +81,9 @@ public class Subcircuit extends Alldiff {
 
         this.numberId = idNumber.incrementAndGet();
         this.list = Arrays.copyOf(list, list.length);
-	this.graphDominance = new SophisticatedLengauerTarjan(list.length + 1);
+        this.graphDominance = new SophisticatedLengauerTarjan(list.length + 1);
 
-	this.queueIndex = 2;
+        this.queueIndex = 2;
 
         int i = 0;
         for (Var v : list)
@@ -90,23 +91,24 @@ public class Subcircuit extends Alldiff {
 
         val = new int[list.length];
 
-	stack = new int[list.length];
-	stack_pointer = 0;	
+        stack = new int[list.length];
+        stack_pointer = 0;
 
-	String scc = System.getProperty("sub_circuit_scc_pruning");
-	String dominance = System.getProperty("sub_circuit_dominance_pruning");
-	if ( scc != null)
-	    useSCC = Boolean.parseBoolean(scc);
-	if ( dominance != null)
-	    useDominance = Boolean.parseBoolean(dominance);
-	if (useSCC == false && useDominance == false)
-	    throw new java.lang.IllegalArgumentException("Wrong property configuration for Subcircuit");		
-	
+        String scc = System.getProperty("sub_circuit_scc_pruning");
+        String dominance = System.getProperty("sub_circuit_dominance_pruning");
+        if (scc != null)
+            useSCC = Boolean.parseBoolean(scc);
+        if (dominance != null)
+            useDominance = Boolean.parseBoolean(dominance);
+        if (useSCC == false && useDominance == false)
+            throw new java.lang.IllegalArgumentException("Wrong property configuration for Subcircuit");
+
         setScope(list);
     }
 
     /**
      * It constructs a circuit constraint.
+     *
      * @param list variables which must form a circuit.
      */
     public Subcircuit(List<IntVar> list) {
@@ -114,7 +116,7 @@ public class Subcircuit extends Alldiff {
     }
 
     int sccCounter = 0;
-    
+
     @Override public void consistency(Store store) {
 
         if (firstConsistencyCheck) {
@@ -128,7 +130,7 @@ public class Subcircuit extends Alldiff {
 
         do {
 
-	    store.propagationHasOccurred = false;
+            store.propagationHasOccurred = false;
 
             LinkedHashSet<IntVar> fdvs = variableQueue;
             variableQueue = new LinkedHashSet<IntVar>();
@@ -137,24 +139,23 @@ public class Subcircuit extends Alldiff {
 
         } while (store.propagationHasOccurred);
 
-	if (useSCC) {
-	    sccsBasedPruning(store); // strongly connected components
+        if (useSCC) {
+            sccsBasedPruning(store); // strongly connected components
 
-	    if (store.propagationHasOccurred)
-		sccCounter = 0;
+            if (store.propagationHasOccurred)
+                sccCounter = 0;
 
-	    // if 10 consecutive applications of SCC based pruning did
-	    // not give any pruning try domianance based pruning
-	    if (useDominance && sccCounter++ > 10) {
-		sccCounter = 0;
-		dominanceFilter(); // filter based on dominance of nodes
-	    }
-	}
-	else if (useDominance)
-	    dominanceFilter(); // filter based on dominance of nodes
-	
-	if (store.propagationHasOccurred)
-	    store.addChanged(this);
+            // if 10 consecutive applications of SCC based pruning did
+            // not give any pruning try domianance based pruning
+            if (useDominance && sccCounter++ > 10) {
+                sccCounter = 0;
+                dominanceFilter(); // filter based on dominance of nodes
+            }
+        } else if (useDominance)
+            dominanceFilter(); // filter based on dominance of nodes
+
+        if (store.propagationHasOccurred)
+            store.addChanged(this);
 
     }
 
@@ -183,13 +184,13 @@ public class Subcircuit extends Alldiff {
 
     boolean needsListPruning() {
 
-	for (IntVar el : list) {
-	    if (!(el.min() >= 1 && el.max() <= list.length))
-		return true;
-	}
-	return false;
+        for (IntVar el : list) {
+            if (!(el.min() >= 1 && el.max() <= list.length))
+                return true;
+        }
+        return false;
     }
-    
+
     // registers the constraint in the constraint store
     @Override public void impose(Store store) {
 
@@ -197,8 +198,8 @@ public class Subcircuit extends Alldiff {
 
         super.impose(store);
 
-	if (! needsListPruning())
-	    firstConsistencyCheck = false;
+        if (!needsListPruning())
+            firstConsistencyCheck = false;
     }
 
 
@@ -241,14 +242,14 @@ public class Subcircuit extends Alldiff {
     int stack_pointer;
 
     BitSet cycleVar;
-    
+
     private void sccsBasedPruning(Store store) {
 
         java.util.Arrays.fill(val, 0);
 
         idd = 0;
-	BitSet realCycle = null;
-	
+        BitSet realCycle = null;
+
         for (int i = 0; i < list.length; i++) {
 
             sccLength = 0;
@@ -260,24 +261,24 @@ public class Subcircuit extends Alldiff {
                 if (sccLength == 1)
                     // the scc is of size one => it must be self-cycle
                     list[i].domain.in(store.level, list[i], i + 1, i + 1);
-		// check if more than 1 sub-cycle possible
-		for (int cv = cycleVar.nextSetBit(0); cv >= 0; cv = cycleVar.nextSetBit(cv + 1)) {
-		    if (!list[cv].domain.contains(cv+1))
-			if (realCycle != null) // second sub-cycle under creation -> wrong!
-			    throw store.failException;
-			else {
-			    realCycle = cycleVar;
-			    break;
-			}
-		}
-	    }
+                // check if more than 1 sub-cycle possible
+                for (int cv = cycleVar.nextSetBit(0); cv >= 0; cv = cycleVar.nextSetBit(cv + 1)) {
+                    if (!list[cv].domain.contains(cv + 1))
+                        if (realCycle != null) // second sub-cycle under creation -> wrong!
+                            throw store.failException;
+                        else {
+                            realCycle = cycleVar;
+                            break;
+                        }
+                }
+            }
         }
 
-	if (realCycle != null && realCycle.cardinality() < list.length) {
-	    // possible cycle found, the rest must be self-loop
-	    for (int j = realCycle.nextClearBit(0); j < list.length; j = realCycle.nextClearBit(j + 1))
-		    list[j].domain.in(store.level, list[j], j+1, j+1);
-	}
+        if (realCycle != null && realCycle.cardinality() < list.length) {
+            // possible cycle found, the rest must be self-loop
+            for (int j = realCycle.nextClearBit(0); j < list.length; j = realCycle.nextClearBit(j + 1))
+                list[j].domain.in(store.level, list[j], j + 1, j + 1);
+        }
     }
 
 
@@ -311,31 +312,31 @@ public class Subcircuit extends Alldiff {
         val[k] = idd;
         int min = idd;
 
-	// stack push
-	stack[stack_pointer++] = k;
+        // stack push
+        stack[stack_pointer++] = k;
 
         for (ValueEnumeration e = list[k].dom().valueEnumeration(); e.hasMoreElements(); ) {
 
             int t = e.nextElement() - 1;
 
-	    int m;
+            int m;
             if (val[t] == 0)
                 m = visit(t);
-            else 
+            else
                 m = val[t];
-            if (m < min) 
+            if (m < min)
                 min = m;
         }
 
         if (min == val[k]) {
 
-            cycleVar = new BitSet(list.length); 
+            cycleVar = new BitSet(list.length);
             sccLength = 0;
 
             int n;
             do {
-		// stack pop
-		n = stack[--stack_pointer];
+                // stack pop
+                n = stack[--stack_pointer];
                 cycleVar.set(n);
 
                 val[n] = list.length + 1;
@@ -343,107 +344,105 @@ public class Subcircuit extends Alldiff {
                 sccLength++;
             } while (n != k);
         }
-	
+
         return min;
     }
 
     java.util.Random random = new java.util.Random(0);
-    
+
     private void dominanceFilter() {
-	int n = list.length;
-	
-	// find possible roots
-	int[] possibleRoots = new int[n];
-	int pr = 0;
-	for (int v = 0; v < n; v++) {
-	    if (! list[v].dom().contains(v+1)) {
-		possibleRoots[pr++] = v;
-		// break;  // find only first root
-	    }
-	}
-	
-	if (pr > 0) {
-	    if (!graphDominance(possibleRoots[random.nextInt(pr)]))
-		reversedGraphDominance(possibleRoots[random.nextInt(pr)]);
-	}
+        int n = list.length;
+
+        // find possible roots
+        int[] possibleRoots = new int[n];
+        int pr = 0;
+        for (int v = 0; v < n; v++) {
+            if (!list[v].dom().contains(v + 1)) {
+                possibleRoots[pr++] = v;
+                // break;  // find only first root
+            }
+        }
+
+        if (pr > 0) {
+            if (!graphDominance(possibleRoots[random.nextInt(pr)]))
+                reversedGraphDominance(possibleRoots[random.nextInt(pr)]);
+        }
     }
-    
+
     private boolean graphDominance(int root) {
 
-	int n = list.length;
-	boolean pruning = false;
-	
-	graphDominance.init();
-	
-	// create graph
-	for (int v = 0; v < n; v++) {
-	    for (ValueEnumeration e = list[v].dom().valueEnumeration(); e.hasMoreElements(); ) {
-		int w = e.nextElement() - 1;
-		if (v == root || v == w) 
-		    graphDominance.addArc(n, w);
-		else
-		    graphDominance.addArc(v, w);
-	    }
-	}
+        int n = list.length;
+        boolean pruning = false;
 
-	if (graphDominance.dominators(n)) {		
-	    for (int v = 0; v < n; v++) {
-		if (v != root)
-		    for (ValueEnumeration e = list[v].domain.valueEnumeration(); e.hasMoreElements(); ) {
-			int w = e.nextElement() - 1;
-			if (v != w && graphDominance.dominatedBy(v, w)) {
-			    pruning = true;
-			    // no back to dominator
-			    list[v].domain.inComplement(store.level, list[v], w+1);
-			    // no back loop for dominator
-			    list[w].domain.inComplement(store.level, list[w], w+1);
-			}
-		    }
-	    }
-	}
-	else  // root does not reach all nodes -> FAIL
-	    throw store.failException;
+        graphDominance.init();
 
-	return pruning;
+        // create graph
+        for (int v = 0; v < n; v++) {
+            for (ValueEnumeration e = list[v].dom().valueEnumeration(); e.hasMoreElements(); ) {
+                int w = e.nextElement() - 1;
+                if (v == root || v == w)
+                    graphDominance.addArc(n, w);
+                else
+                    graphDominance.addArc(v, w);
+            }
+        }
+
+        if (graphDominance.dominators(n)) {
+            for (int v = 0; v < n; v++) {
+                if (v != root)
+                    for (ValueEnumeration e = list[v].domain.valueEnumeration(); e.hasMoreElements(); ) {
+                        int w = e.nextElement() - 1;
+                        if (v != w && graphDominance.dominatedBy(v, w)) {
+                            pruning = true;
+                            // no back to dominator
+                            list[v].domain.inComplement(store.level, list[v], w + 1);
+                            // no back loop for dominator
+                            list[w].domain.inComplement(store.level, list[w], w + 1);
+                        }
+                    }
+            }
+        } else  // root does not reach all nodes -> FAIL
+            throw store.failException;
+
+        return pruning;
     }
 
     private boolean reversedGraphDominance(int root) {
 
-	int n = list.length;
-	boolean pruning = false;
-	
-	graphDominance.init();
+        int n = list.length;
+        boolean pruning = false;
 
-	// create graph
-	// int root = possibleRoots[random.nextInt(pr)];
-	for (int v = 0; v < n; v++) {
-	    for (ValueEnumeration e = list[v].dom().valueEnumeration(); e.hasMoreElements(); ) {
-		int w = e.nextElement() - 1;
-		if (w == root || v == w)
-		    graphDominance.addArc(n, v);
-		else 
-		    graphDominance.addArc(w, v);
-	    }
-	}
+        graphDominance.init();
 
-	if (graphDominance.dominators(n)) {	    
-	    for (int v = 0; v < n; v++) {
-		if (v != root)
-		    for (ValueEnumeration e = list[v].domain.valueEnumeration(); e.hasMoreElements(); ) {
-			int w = e.nextElement() - 1;
-			if (v != w && w != root && graphDominance.dominatedBy(w, v)) {
-			    pruning = true;
-			    // no back loop to dominator
-			    list[v].domain.inComplement(store.level, list[v], w+1);
-			    // no self loop 
-			    list[v].domain.inComplement(store.level, list[v], v+1);
-			}
-		    }
-	    }
-	}
-	else  // root does not reach all nodes -> FAIL
-	    throw store.failException;
+        // create graph
+        // int root = possibleRoots[random.nextInt(pr)];
+        for (int v = 0; v < n; v++) {
+            for (ValueEnumeration e = list[v].dom().valueEnumeration(); e.hasMoreElements(); ) {
+                int w = e.nextElement() - 1;
+                if (w == root || v == w)
+                    graphDominance.addArc(n, v);
+                else
+                    graphDominance.addArc(w, v);
+            }
+        }
 
-	return pruning;
+        if (graphDominance.dominators(n)) {
+            for (int v = 0; v < n; v++) {
+                if (v != root)
+                    for (ValueEnumeration e = list[v].domain.valueEnumeration(); e.hasMoreElements(); ) {
+                        int w = e.nextElement() - 1;
+                        if (v != w && w != root && graphDominance.dominatedBy(w, v)) {
+                            pruning = true;
+                            // no back loop to dominator
+                            list[v].domain.inComplement(store.level, list[v], w + 1);
+                            // no self loop
+                            list[v].domain.inComplement(store.level, list[v], v + 1);
+                        }
+                    }
+            }
+        } else  // root does not reach all nodes -> FAIL
+            throw store.failException;
+
+        return pruning;
     }
 }

@@ -106,9 +106,9 @@ class Diff2VarValue implements MutableVarValue, Cloneable {
 
         for (int i = 0; i < Rects.length; i++)
             if (i == Rects.length - 1)
-	      s.append(Rects[i]);
+                s.append(Rects[i]);
             else
-	      s.append(Rects[i] + ",");
+                s.append(Rects[i] + ",");
         return s.toString();
     }
 }

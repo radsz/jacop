@@ -145,7 +145,7 @@ public final class Utils {
 
 	
 	/*
-	 * TODO: try to replace arithmetic negation by this var(), not() methods
+   * TODO: try to replace arithmetic negation by this var(), not() methods
 	 * (which should be faster) about representation of signed literals
 	 */
 

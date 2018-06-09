@@ -43,13 +43,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 /**
- * ElementFloatVariable constraint defines a relation 
+ * ElementFloatVariable constraint defines a relation
  * list[index - indexOffset] = value. This version uses bounds consistency.
- *
+ * <p>
  * The first element of the list corresponds to index - indexOffset = 1.
  * By default indexOffset is equal 0 so first value within a list corresponds to index equal 1.
- *
- * If index has a domain from 0 to list.length-1 then indexOffset has to be equal -1 to 
+ * <p>
+ * If index has a domain from 0 to list.length-1 then indexOffset has to be equal -1 to
  * make addressing of list array starting from 1.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -81,17 +81,17 @@ public class ElementFloatVariable extends Constraint implements Stateful, Satisf
 
     /**
      * It specifies list of variables within an element constraint list[index - indexOffset] = value.
-     * The list is addressed by positive integers ({@code >=1}) if indexOffset is equal to 0. 
+     * The list is addressed by positive integers ({@code >=1}) if indexOffset is equal to 0.
      */
     final public FloatVar list[];
 
     /**
-     * It constructs an element constraint. 
+     * It constructs an element constraint.
      *
-     * @param index variable index
-     * @param list list of variables from which an index-th element is taken
-     * @param value a value of the index-th element from list
-     * @param indexOffset shift applied to index variable. 
+     * @param index       variable index
+     * @param list        list of variables from which an index-th element is taken
+     * @param value       a value of the index-th element from list
+     * @param indexOffset shift applied to index variable.
      */
     public ElementFloatVariable(IntVar index, FloatVar[] list, FloatVar value, int indexOffset) {
 
@@ -106,14 +106,14 @@ public class ElementFloatVariable extends Constraint implements Stateful, Satisf
         this.value = value;
         this.list = Arrays.copyOf(list, list.length);
 
-        setScope( Stream.concat( Stream.concat( Stream.of(index), Arrays.stream(list)), Stream.of(value)));
+        setScope(Stream.concat(Stream.concat(Stream.of(index), Arrays.stream(list)), Stream.of(value)));
     }
 
     /**
-     * It constructs an element constraint. 
+     * It constructs an element constraint.
      *
      * @param index variable index
-     * @param list list of variables from which an index-th element is taken
+     * @param list  list of variables from which an index-th element is taken
      * @param value a value of the index-th element from list
      */
     public ElementFloatVariable(IntVar index, List<? extends FloatVar> list, FloatVar value) {
@@ -123,12 +123,12 @@ public class ElementFloatVariable extends Constraint implements Stateful, Satisf
     }
 
     /**
-     * It constructs an element constraint. 
+     * It constructs an element constraint.
      *
-     * @param index variable index
-     * @param list list of variables from which an index-th element is taken
-     * @param value a value of the index-th element from list
-     * @param indexOffset shift applied to index variable. 
+     * @param index       variable index
+     * @param list        list of variables from which an index-th element is taken
+     * @param value       a value of the index-th element from list
+     * @param indexOffset shift applied to index variable.
      */
     public ElementFloatVariable(IntVar index, List<? extends FloatVar> list, FloatVar value, int indexOffset) {
 
@@ -137,10 +137,10 @@ public class ElementFloatVariable extends Constraint implements Stateful, Satisf
     }
 
     /**
-     * It constructs an element constraint. 
+     * It constructs an element constraint.
      *
      * @param index variable index
-     * @param list list of variables from which an index-th element is taken
+     * @param list  list of variables from which an index-th element is taken
      * @param value a value of the index-th element from list
      */
     public ElementFloatVariable(IntVar index, FloatVar[] list, FloatVar value) {
@@ -150,15 +150,15 @@ public class ElementFloatVariable extends Constraint implements Stateful, Satisf
     }
 
     @Override public boolean isStateful() {
-        return  (!(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset));
+        return (!(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset));
     }
-    
+
     /**
      * It imposes the constraint in a given store.
      *
      * @param store the constraint store to which the constraint is imposed to.
      */
-    
+
     @Override public void impose(Store store) {
 
         super.impose(store);
@@ -167,7 +167,7 @@ public class ElementFloatVariable extends Constraint implements Stateful, Satisf
             firstConsistencyCheck = false;
         }
     }
-    
+
     @Override public void consistency(Store store) {
 
         if (firstConsistencyCheck) {
@@ -181,15 +181,15 @@ public class ElementFloatVariable extends Constraint implements Stateful, Satisf
             FloatVar v = list[index.value() - 1 - indexOffset];
             v.domain.in(store.level, v, value.value(), value.value());
             removeConstraint();
-	    return;
+            return;
         }
         if (index.singleton()) {
             int position = index.value() - 1 - indexOffset;
             value.domain.in(store.level, value, list[position].domain);
             list[position].domain.in(store.level, list[position], value.domain);
-	    return;
+            return;
         }
-	
+
         double min = FloatDomain.MaxFloat;
         double max = FloatDomain.MinFloat;
         IntervalDomain indexDom = new IntervalDomain(5); // create with size 5 ;)
@@ -209,16 +209,16 @@ public class ElementFloatVariable extends Constraint implements Stateful, Satisf
 
         index.domain.in(store.level, index, indexDom.complement());
         value.domain.in(store.level, value, min, max);
-	
-	if (index.singleton()) {
-	    // index is singleton; value == list[index - 1 - offset]
-	    FloatVar lp = list[index.value() - 1 - indexOffset];
-	    value.domain.in(store.level, value, lp.domain);
-	    lp.domain.in(store.level, lp, value.domain);
 
-	    // if (value.singleton())
-	    // 	removeConstraint();
-	}
+        if (index.singleton()) {
+            // index is singleton; value == list[index - 1 - offset]
+            FloatVar lp = list[index.value() - 1 - indexOffset];
+            value.domain.in(store.level, value, lp.domain);
+            lp.domain.in(store.level, lp, value.domain);
+
+            // if (value.singleton())
+            // 	removeConstraint();
+        }
     }
 
     private boolean disjoint(FloatVar v1, FloatVar v2) {

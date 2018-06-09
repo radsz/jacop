@@ -49,15 +49,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- *
  * It is an example of the power of ExtensionalSupportMDD constraint which can be used
  * to efficiently model and solve CrossWord puzzles.
  *
  * @author : Radoslaw Szymanek
  * @version 4.5
- *
- * This program uses problem instances and dictionary obtained from Hadrien Cambazard.
- *
+ *          <p>
+ *          This program uses problem instances and dictionary obtained from Hadrien Cambazard.
  */
 public class CrossWord extends ExampleFD {
 
@@ -85,9 +83,7 @@ public class CrossWord extends ExampleFD {
             {'_', '_', 'm', '_', '_'}};
 
     /**
-     *
-     *  model()
-     *
+     * model()
      */
     @Override public void model() {
 
@@ -247,6 +243,7 @@ public class CrossWord extends ExampleFD {
 
     /**
      * It prints a variable crosswordTemplate.
+     *
      * @param crossWordTemplate the template
      */
     public void printSolution(char[][] crossWordTemplate) {
@@ -265,12 +262,12 @@ public class CrossWord extends ExampleFD {
     }
 
     /**
-     * It reads a dictionary. For every word length specified 
-     * it reads a dictionary and creates an MDD representation 
+     * It reads a dictionary. For every word length specified
+     * it reads a dictionary and creates an MDD representation
      * of it for use by an extensional constraint.
      *
-     * @param file filename containing dictionary
-     * @param wordSizes  size of the words
+     * @param file      filename containing dictionary
+     * @param wordSizes size of the words
      */
     public void readDictionaryFromFile(String file, List<Integer> wordSizes) {
 
@@ -285,7 +282,7 @@ public class CrossWord extends ExampleFD {
             int[] tupleForGivenWord = new int[wordSize];
             MDD resultForWordSize = new MDD(list);
 
-            try(BufferedReader inr = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"))) {
+            try (BufferedReader inr = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"))) {
 
                 String str;
                 while ((str = inr.readLine()) != null && str.length() > 0) {
@@ -365,11 +362,10 @@ public class CrossWord extends ExampleFD {
 
 
     /**
-     *  It executes the program to create a model and solve
-     *  crossword problem. 
+     * It executes the program to create a model and solve
+     * crossword problem.
      *
-     *  @param args no arguments used.
-     *
+     * @param args no arguments used.
      */
     public static void main(String args[]) {
 

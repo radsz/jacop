@@ -43,24 +43,22 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- *
- * It models and solves Nontransitive Dice Problem. 
+ * It models and solves Nontransitive Dice Problem.
  *
  * @author Radoslaw Szymanek
  * @version 4.5
- *
- * Nontransitive Dice problem is to assign to given number of dices
- * a number to each side of the dice in such a way that 
- *
- * a) given cyclic order of dices, each dice wins with the next one
- * with probability p larger than 0.5. 
- *
- * b) maximize minimum p.
- *
- * c) no two dices which are matched against each other can result
- *    in draw. default approach to satisfy this condition is to 
- *    require all sides of all dices to be assigned unique values.
- *
+ *          <p>
+ *          Nontransitive Dice problem is to assign to given number of dices
+ *          a number to each side of the dice in such a way that
+ *          <p>
+ *          a) given cyclic order of dices, each dice wins with the next one
+ *          with probability p larger than 0.5.
+ *          <p>
+ *          b) maximize minimum p.
+ *          <p>
+ *          c) no two dices which are matched against each other can result
+ *          in draw. default approach to satisfy this condition is to
+ *          require all sides of all dices to be assigned unique values.
  */
 public class NonTransitiveDice extends ExampleFD {
 
@@ -78,14 +76,14 @@ public class NonTransitiveDice extends ExampleFD {
     /**
      * It specifies the currently best solution which is a bound
      * for the next solution.
-     *
+     * <p>
      * The currentBest specifies the difference between noSides^2
      * and minimumWinning. Since we maximize minimumWinning we
      * minimize currentBest. The next solution must have a lower
      * value for currentBest. currentBest is an upperbound.
-     *
+     * <p>
      * minimumWinning + currentBest = noSides^2
-     *
+     * <p>
      * Good initial value for currentBest is noSides^2 / 2.
      */
 
@@ -284,6 +282,7 @@ public class NonTransitiveDice extends ExampleFD {
     /**
      * It executes the program solving non transitive dice problem using
      * two different methods. The second method employs constraint guided shaving.
+     *
      * @param args the first argument specifies number of dices, the second argument specifies the number of sides of each dice.
      */
     public static void main(String args[]) {

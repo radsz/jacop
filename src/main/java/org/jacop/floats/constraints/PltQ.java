@@ -60,12 +60,13 @@ public class PltQ extends PrimitiveConstraint {
 
     /**
      * It constructs constraint P {@literal <} C.
+     *
      * @param p variable p.
      * @param q constant q.
      */
     public PltQ(FloatVar p, FloatVar q) {
 
-        checkInputForNullness(new String[]{"p", "q"}, new Object[]{p, q});
+        checkInputForNullness(new String[] {"p", "q"}, new Object[] {p, q});
 
         numberId = idNumber.incrementAndGet();
 

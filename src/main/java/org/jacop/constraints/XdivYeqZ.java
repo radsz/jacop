@@ -67,13 +67,14 @@ public class XdivYeqZ extends Constraint implements SatisfiedPresent {
 
     /**
      * It constructs a constraint X div Y = Z.
+     *
      * @param x variable x.
      * @param y variable y.
      * @param z variable z.
      */
     public XdivYeqZ(IntVar x, IntVar y, IntVar z) {
 
-        checkInputForNullness(new String[]{"x", "y", "z"}, new Object[]{x, y, z});
+        checkInputForNullness(new String[] {"x", "y", "z"}, new Object[] {x, y, z});
 
         numberId = idNumber.incrementAndGet();
 

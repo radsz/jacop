@@ -42,9 +42,9 @@ import java.util.Map;
  * It defines a simple solution listener which should be used if some basic
  * functionality of search when a solution is encountered are required.
  *
+ * @param <T> type of variable being used in search.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.5
- * @param <T> type of variable being used in search. 
  */
 
 public class SimpleSolutionListener<T extends Var> implements SolutionListener<T> {
@@ -346,6 +346,7 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
     /**
      * It returns the solution with the given number (value 0 denotes the first solution) as
      * a set of primitive constraints.
+     *
      * @param number the solution number (0 denotes the first solution).
      * @return set of primitive constraint which if imposed will enforce given solution.
      */

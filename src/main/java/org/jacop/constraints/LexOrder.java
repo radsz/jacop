@@ -111,7 +111,7 @@ public class LexOrder extends Constraint implements UsesQueueVariable, Satisfied
 
     public LexOrder(IntVar[] x, IntVar[] y, boolean lt) {
 
-        checkInputForNullness(new String[]{"x", "y"}, x, y);
+        checkInputForNullness(new String[] {"x", "y"}, x, y);
 
         queueIndex = 2;
         numberId = idNumber.incrementAndGet();

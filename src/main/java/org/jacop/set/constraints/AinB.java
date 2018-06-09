@@ -75,7 +75,7 @@ public class AinB extends PrimitiveConstraint {
      */
     public AinB(SetVar a, SetVar b) {
 
-        checkInputForNullness(new String[]{"a", "b"}, new Object[]{a, b});
+        checkInputForNullness(new String[] {"a", "b"}, new Object[] {a, b});
 
         this.numberId = idNumber.incrementAndGet();
 
@@ -89,8 +89,8 @@ public class AinB extends PrimitiveConstraint {
     /**
      * It constructs an AinB constraint to restrict the domain of the variables A and B.
      *
-     * @param a variable a that is restricted to be a subset of variable b.
-     * @param b variable that is restricted to contain variable a.
+     * @param a      variable a that is restricted to be a subset of variable b.
+     * @param b      variable that is restricted to contain variable a.
      * @param strict it specifies if the inclusion relation is strict.
      */
     public AinB(SetVar a, SetVar b, boolean strict) {
@@ -99,7 +99,7 @@ public class AinB extends PrimitiveConstraint {
         this.strict = strict;
 
     }
-    
+
     @Override public void consistency(Store store) {
 
         // FIXME, take into account strict relation.

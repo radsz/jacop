@@ -39,17 +39,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- *
  * It solves a Magic squares problem.
  *
  * @author Radoslaw Szymanek
  * @version 4.5
- *
- * MagicSquare problem consists of filling the square of size n with
- * numbers from 1 to n^2 in such a way that all rows, all columns, and
- * main diagonals are equal to the same number K. K can be computed to 
- * be equal to (n * (n^2 + 1)) / 2.
- *
+ *          <p>
+ *          MagicSquare problem consists of filling the square of size n with
+ *          numbers from 1 to n^2 in such a way that all rows, all columns, and
+ *          main diagonals are equal to the same number K. K can be computed to
+ *          be equal to (n * (n^2 + 1)) / 2.
  */
 
 public class MagicSquares extends ExampleFD {

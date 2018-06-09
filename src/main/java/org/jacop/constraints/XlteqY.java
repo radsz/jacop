@@ -59,12 +59,13 @@ public class XlteqY extends PrimitiveConstraint {
 
     /**
      * It constructs the constraint X {@literal <=} Y.
+     *
      * @param x variable x.
      * @param y variable y.
      */
     public XlteqY(IntVar x, IntVar y) {
 
-        checkInputForNullness(new String[]{"x", "y"}, new Object[]{x, y});
+        checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
 
         numberId = idNumber.incrementAndGet();
 

@@ -60,6 +60,7 @@ public class XneqC extends PrimitiveConstraint {
 
     /**
      * It constructs x != c constraint.
+     *
      * @param x variable x.
      * @param c constant c.
      */

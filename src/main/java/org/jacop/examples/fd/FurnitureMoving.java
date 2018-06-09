@@ -47,13 +47,12 @@ import java.util.ArrayList;
  *
  * @author Hakan Kjellerstrand (hakank@bonetmail.com) and Radoslaw Szymanek
  * @version 4.5
- *
- * Problem from Marriott {@literal &} Stuckey: 'Programming with constraints', page 112f
- *
- * Feature: testing cumulative.
- *
- * Also see http://www.hakank.org/JaCoP/
- *
+ *          <p>
+ *          Problem from Marriott {@literal &} Stuckey: 'Programming with constraints', page 112f
+ *          <p>
+ *          Feature: testing cumulative.
+ *          <p>
+ *          Also see http://www.hakank.org/JaCoP/
  */
 
 public class FurnitureMoving extends ExampleFD {
@@ -129,6 +128,7 @@ public class FurnitureMoving extends ExampleFD {
 
     /**
      * It executes the program which solves this logic puzzle.
+     *
      * @param args command arguments (none)
      */
     public static void main(String args[]) {
@@ -148,7 +148,7 @@ public class FurnitureMoving extends ExampleFD {
 
 
     /**
-     * It specifies search for that logic puzzle. 
+     * It specifies search for that logic puzzle.
      *
      * @return true when solution is found false otherwise
      */

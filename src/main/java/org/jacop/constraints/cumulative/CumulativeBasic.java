@@ -55,9 +55,9 @@ public class CumulativeBasic extends Constraint {
 
     private static final boolean debug = false, debugNarr = false;
 
-    private Comparator<Event> eventComparator = ( Event o1, Event o2 ) -> {
-            int dateDiff = o1.date() - o2.date();
-            return (dateDiff == 0) ? (o1.type() - o2.type()) : dateDiff;
+    private Comparator<Event> eventComparator = (Event o1, Event o2) -> {
+        int dateDiff = o1.date() - o2.date();
+        return (dateDiff == 0) ? (o1.type() - o2.type()) : dateDiff;
     };
 
     /**
@@ -367,8 +367,8 @@ public class CumulativeBasic extends Constraint {
                             // task ends and we remove forbidden area
 
                             if (debugNarr)
-                                System.out.print(
-                                    ">>> CumulativeBasic Profile 2. Narrowed " + t.start + " inMax " + (startExcluded[ti] - 1));
+                                System.out
+                                    .print(">>> CumulativeBasic Profile 2. Narrowed " + t.start + " inMax " + (startExcluded[ti] - 1));
 
                             t.start.domain.inMax(store.level, t.start, startExcluded[ti] - 1);
 

@@ -40,7 +40,7 @@ import java.util.List;
 
 /**
  * It specifies an example where squares of the given size must be placed within
- * a square of a given size. 
+ * a square of a given size.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5

@@ -42,7 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraints exp(P) #= Q for P and Q floats
- *
+ * <p>
  * Domain consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -54,23 +54,24 @@ public class ExpPeqR extends Constraint implements SatisfiedPresent {
     static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
-     * It specifies a left hand variable in equality constraint. 
+     * It specifies a left hand variable in equality constraint.
      */
     public FloatVar p;
 
     /**
-     * It specifies a right hand variable in equality constraint. 
+     * It specifies a right hand variable in equality constraint.
      */
     public FloatVar q;
 
     /**
      * It constructs constraint P = Q.
+     *
      * @param p variable p.
      * @param q variable q.
      */
     public ExpPeqR(FloatVar p, FloatVar q) {
 
-        checkInputForNullness(new String[]{"p", "q"}, new Object[]{p, q});
+        checkInputForNullness(new String[] {"p", "q"}, new Object[] {p, q});
 
         numberId = idNumber.incrementAndGet();
 

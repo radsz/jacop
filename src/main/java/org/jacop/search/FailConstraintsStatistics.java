@@ -43,7 +43,7 @@ import java.util.Map.Entry;
  * collects statistics on the failed constraints; both for each
  * individual constraint as well as a class of constraints.
  *
- * @author Krzysztof Kuchcinski 
+ * @author Krzysztof Kuchcinski
  * @version 4.5
  */
 

@@ -59,7 +59,7 @@ public class SoftAlldifferent extends DecomposedConstraint<Constraint> {
     public SoftAlldifferent(IntVar[] xVars, IntVar costVar, ViolationMeasure violationMeasure) {
 
         checkInputForNullness("xVars", xVars);
-        checkInputForNullness(new String[] {"costVar", "violationMeasure"}, new Object[]{costVar, violationMeasure});
+        checkInputForNullness(new String[] {"costVar", "violationMeasure"}, new Object[] {costVar, violationMeasure});
 
         this.xVars = Arrays.copyOf(xVars, xVars.length);
         this.costVar = costVar;

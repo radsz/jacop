@@ -35,9 +35,9 @@ import org.jacop.core.Var;
 /**
  * Defines a interface for different indomain enumeration methods.
  *
+ * @param <T> type of variable for which the assignment value is being generated.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
- * @param <T> type of variable for which the assignment value is being generated.
  */
 
 public interface Indomain<T extends Var> {
@@ -47,8 +47,7 @@ public interface Indomain<T extends Var> {
      * assignment. This function only returns value, it is not required to do
      * any changes to variable, its domain, etc.
      *
-     * @param var
-     *            defines variable for which value for assignment is suggested.
+     * @param var defines variable for which value for assignment is suggested.
      * @return defines value for current assignment.
      */
 

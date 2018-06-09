@@ -37,7 +37,6 @@ import org.jacop.constraints.netflow.simplex.Arc;
  *
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 public interface MutableNetwork {
@@ -46,8 +45,7 @@ public interface MutableNetwork {
      * Removes an arc from the network. The arc must be at its lower or upper
      * bound before it can be removed.
      *
-     * @param arc
-     *            The arc to be removed
+     * @param arc The arc to be removed
      */
     void remove(Arc arc);
 
@@ -55,8 +53,7 @@ public interface MutableNetwork {
      * Tells the network that an arc has been modified. The network will then
      * restore the arc upon backtracking.
      *
-     * @param companion
-     *            The arc that was modified
+     * @param companion The arc that was modified
      */
     void modified(ArcCompanion companion);
 
@@ -70,8 +67,7 @@ public interface MutableNetwork {
     /**
      * Changes the cost offset by some value.
      *
-     * @param delta
-     *            the change in cost
+     * @param delta the change in cost
      */
     void changeCostOffset(long delta);
 

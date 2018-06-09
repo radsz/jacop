@@ -43,6 +43,7 @@ public interface MutableVar extends Stateful {
 
     /**
      * It returns the earlier value of variable comparing to the current one.
+     *
      * @return previous value of a mutable variable.
      */
     MutableVarValue previous();
@@ -50,6 +51,7 @@ public interface MutableVar extends Stateful {
     /**
      * It replace the current representation of the value with a new
      * representation. It ignores the store level.
+     *
      * @param o value to which a mutable variable is set.
      */
     void setCurrent(MutableVarValue o);
@@ -63,12 +65,14 @@ public interface MutableVar extends Stateful {
      * It updates the value of a mutable variable based on value given as a
      * parameter, the stamp level of current value and stamp value of passed
      * value.
+     *
      * @param value it specifies the new value of a mutable variable.
      */
     void update(MutableVarValue value);
 
     /**
      * It returns current value of MutableVariable.
+     *
      * @return current value of the mutable variable.
      */
     MutableVarValue value();

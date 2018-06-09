@@ -53,6 +53,7 @@ public class RegularExpressionParser {
 
     /**
      * It constructs a parser of the regular expression.
+     *
      * @param input string reader containing the regular expression.
      * @throws SyntaxException if first token is neither word or left parenthesis.
      */
@@ -70,8 +71,8 @@ public class RegularExpressionParser {
 
     /**
      * This method parses an expression that it reads from a given input stream.
-     * @param parseOneNext if parsing should parse only one item.
      *
+     * @param parseOneNext if parsing should parse only one item.
      * @return An expression that is the root of the parse tree produced by the parser.
      * @throws SyntaxException execption rised when syntax is not followed
      */
@@ -232,7 +233,6 @@ public class RegularExpressionParser {
 
     /**
      * SyntaxException raised if not regular expression is being parsed.
-     *
      */
     public static class SyntaxException extends Exception {
 
@@ -249,6 +249,7 @@ public class RegularExpressionParser {
 
         /**
          * The constructor to create an syntax exception with a given message.
+         *
          * @param msg message for the syntax exception
          */
         public SyntaxException(final String msg) {
@@ -260,7 +261,6 @@ public class RegularExpressionParser {
     /**
      * It creates an abstract class expression which specifies basic methods of
      * the expression.
-     *
      */
     public abstract class Expression {
 
@@ -282,6 +282,7 @@ public class RegularExpressionParser {
 
         /**
          * It specifies if the expression is simple.
+         *
          * @return true if expression is a literal or disjunction of literals.
          */
         public boolean isSimple() {
@@ -290,6 +291,7 @@ public class RegularExpressionParser {
 
         /**
          * It creates Finite State Machine from the expression.
+         *
          * @return Finite State Machine corresponding
          */
         public abstract FSM parseToFSM();
@@ -438,6 +440,7 @@ public class RegularExpressionParser {
 
         /**
          * It constructs a literal.
+         *
          * @param lit string representation of the literal.
          */
         public Literal(String lit) {

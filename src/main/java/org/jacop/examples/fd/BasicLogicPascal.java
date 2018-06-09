@@ -40,20 +40,18 @@ import org.jacop.core.Store;
 import java.util.ArrayList;
 
 /**
- *
  * It solves an arithmetic puzzle BASIC+LOGIC=PASCAL.
  *
  * @author Radoslaw Szymanek
  * @version 4.5
- *
- * 	Find for the equation on the left
- *	what digits are represented by the letters
- *	different letters represent different digits
- *
- *	BASIC 			9567
- * +LOGIC{@literal =======>} +1085
- * PASCAL 		   10652
- *
+ *          <p>
+ *          Find for the equation on the left
+ *          what digits are represented by the letters
+ *          different letters represent different digits
+ *          <p>
+ *          BASIC 			9567
+ *          +LOGIC{@literal =======>} +1085
+ *          PASCAL 		   10652
  */
 public class BasicLogicPascal extends ExampleFD {
 
@@ -119,6 +117,7 @@ public class BasicLogicPascal extends ExampleFD {
 
     /**
      * It executes the program to solve this puzzle.
+     *
      * @param args no arguments are read.
      */
     public static void main(String args[]) {

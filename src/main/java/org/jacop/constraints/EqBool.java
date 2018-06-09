@@ -42,7 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 /**
- * If all x's are equal to each other then result variable is equal 1. Otherwise, result variable 
+ * If all x's are equal to each other then result variable is equal 1. Otherwise, result variable
  * is equal to zero. It restricts the domains of all variables to be either 0 or 1.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -66,12 +66,12 @@ public class EqBool extends PrimitiveConstraint {
     /**
      * It constructs eqBool.
      *
-     * @param list list of x's which must all be equal to the same value to make result equal 1.
+     * @param list   list of x's which must all be equal to the same value to make result equal 1.
      * @param result variable which is equal 0 if x's contain different values.
      */
     public EqBool(IntVar[] list, IntVar result) {
 
-        checkInputForNullness(new String[] {"list", "result"}, new Object[][] { list, { result } });
+        checkInputForNullness(new String[] {"list", "result"}, new Object[][] {list, {result}});
 
         numberId = idNumber.incrementAndGet();
         this.list = Arrays.copyOf(list, list.length);
@@ -85,7 +85,7 @@ public class EqBool extends PrimitiveConstraint {
     /**
      * It constructs eqBool.
      *
-     * @param list list of variables which must all be equal to the same value to make result equal 1.
+     * @param list   list of variables which must all be equal to the same value to make result equal 1.
      * @param result variable which is equal 0 if variables from list contain different values.
      */
     public EqBool(List<? extends IntVar> list, IntVar result) {
@@ -209,7 +209,7 @@ public class EqBool extends PrimitiveConstraint {
 
     @Override public boolean satisfied() {
 
-        if (! result.singleton())
+        if (!result.singleton())
             return false;
 
         if (result.max() == 0) {
@@ -233,7 +233,7 @@ public class EqBool extends PrimitiveConstraint {
 
             if (result.min() == 1) {
 
-                if (! grounded() )
+                if (!grounded())
                     return false;
 
                 for (int i = 0; i < list.length - 1; i++)
@@ -251,7 +251,7 @@ public class EqBool extends PrimitiveConstraint {
 
     @Override public boolean notSatisfied() {
 
-        if (! result.singleton())
+        if (!result.singleton())
             return false;
 
         if (result.max() == 0) {

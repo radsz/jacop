@@ -50,12 +50,10 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 /**
- *
  * It is program to model and solve simple problems of car sequencing problem (CSPLIB-p1).
  *
  * @author Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 public class CarSequencing extends ExampleFD {
@@ -75,11 +73,12 @@ public class CarSequencing extends ExampleFD {
 
     /**
      * A simple car sequencing problem.
-     * @return problem description. 
+     *
+     * @return problem description.
      */
     public static String[] problem() {
-        return new String[] {"10 5 6", "1 2 1 2 1", "2 3 3 5 5", "0 1 1 0 1 1 0", "1 1 0 0 0 1 0", "2 2 0 1 0 0 1", "3 2 0 1 0 1 0", "4 2 1 0 1 0 0",
-            "5 2 1 1 0 0 0"};
+        return new String[] {"10 5 6", "1 2 1 2 1", "2 3 3 5 5", "0 1 1 0 1 1 0", "1 1 0 0 0 1 0", "2 2 0 1 0 0 1", "3 2 0 1 0 1 0",
+            "4 2 1 0 1 0 0", "5 2 1 1 0 0 0"};
     }
 
     /** Not easy car sequencing problem.
@@ -187,7 +186,7 @@ public class CarSequencing extends ExampleFD {
      * representation. It stores the whole description in the internal attributes.
      *
      * @param description array of strings representing the problem.
-     * @param example example in which the passed instance is stored.
+     * @param example     example in which the passed instance is stored.
      */
     public static void readFromArray(String[] description, CarSequencing example) {
 
@@ -391,7 +390,7 @@ public class CarSequencing extends ExampleFD {
 	 */
 
 	/* @TODO Add functionality to FSM to be able to do intersections and use the model below.
-	public void modelIntersection() {
+  public void modelIntersection() {
 
 		store = new FDstore();
 		vars = new ArrayList<Variable>();
@@ -465,9 +464,8 @@ public class CarSequencing extends ExampleFD {
 
     /**
      * @param count The number of times a value from yes domain needs to be encountered.
-     * @param yes the values which are counted.
-     * @param no the values which are not counted.
-     *
+     * @param yes   the values which are counted.
+     * @param no    the values which are not counted.
      * @return FSM for simple count constraint.
      */
     public static FSM createFSM(int count, IntervalDomain yes, IntervalDomain no) {
@@ -520,8 +518,8 @@ public class CarSequencing extends ExampleFD {
 
         System.out.println("readFile(" + file + ")");
 
-        try(BufferedReader inr = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"))) {
-            
+        try (BufferedReader inr = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"))) {
+
             String str;
 
             while ((str = inr.readLine()) != null && str.length() > 0) {
@@ -549,6 +547,7 @@ public class CarSequencing extends ExampleFD {
 
     /**
      * It executes the program to solve car sequencing problem.
+     *
      * @param args parameters (none)
      */
     public static void main(String args[]) {
@@ -571,6 +570,7 @@ public class CarSequencing extends ExampleFD {
 
     /**
      * It executes the program to solve car sequencing problem.
+     *
      * @param args parameters (none)
      */
     public static void test(String args[]) {

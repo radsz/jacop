@@ -66,12 +66,13 @@ public class Min extends Constraint implements SatisfiedPresent {
 
     /**
      * It constructs min constraint.
-     * @param min variable denoting the minimal value
+     *
+     * @param min  variable denoting the minimal value
      * @param list the array of variables for which the minimal value is imposed.
      */
     public Min(FloatVar[] list, FloatVar min) {
 
-        checkInputForNullness(new String[]{"list", "max"}, new Object[][]{list, {min}});
+        checkInputForNullness(new String[] {"list", "max"}, new Object[][] {list, {min}});
 
         this.queueIndex = 1;
         this.numberId = idNumber.incrementAndGet();
@@ -83,7 +84,8 @@ public class Min extends Constraint implements SatisfiedPresent {
 
     /**
      * It constructs min constraint.
-     * @param min variable denoting the minimal value
+     *
+     * @param min  variable denoting the minimal value
      * @param list the array of variables for which the minimal value is imposed.
      */
     public Min(List<? extends FloatVar> list, FloatVar min) {

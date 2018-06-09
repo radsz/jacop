@@ -48,7 +48,6 @@ import java.util.List;
  *
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 
@@ -163,7 +162,7 @@ public class NetworkBuilder {
      * Returns two arrays containing the nodes for each variable and the nodes
      * for each domain, respectively.
      *
-     * @param vars varibales for nodes
+     * @param vars    varibales for nodes
      * @param domains nodes for each variable
      * @return two arrays containing the nodes for each variable and the nodes
      * for each domain, respectively
@@ -227,6 +226,7 @@ public class NetworkBuilder {
      * solutions is not practically achievable in all cases it is possible
      * that decomposition will have more solutions due to the fact that
      * decomposition may use more expensive arcs to transfer the flow.
+     *
      * @param store current store
      * @return decomposed network using primitive constraints
      */

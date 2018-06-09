@@ -34,7 +34,6 @@ package org.jacop.core;
  * Defines interval of numbers which is part of FDV definition which consist of
  * one or several intervals.
  *
- *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.5
  */
@@ -61,6 +60,7 @@ public final class Interval implements Cloneable {
 
     /**
      * It creates an interval with a given minimum and maximal value.
+     *
      * @param min the minimal value in the interval (the left bound).
      * @param max the maximal value in the interval (the right bound).
      */
@@ -79,6 +79,7 @@ public final class Interval implements Cloneable {
 
     /**
      * It checks equality between intervals.
+     *
      * @param interval the inerval to which the comparison is made.
      * @return true if an input interval is equal to this one.
      */
@@ -88,6 +89,7 @@ public final class Interval implements Cloneable {
 
     /**
      * It returns the right bound of the interval (maximum value).
+     *
      * @return the maximal value from the interval.
      */
     public int max() {
@@ -96,6 +98,7 @@ public final class Interval implements Cloneable {
 
     /**
      * It returns the left range of the interval (minimum value).
+     *
      * @return the minimal value from the interval.
      */
     public int min() {
@@ -104,6 +107,7 @@ public final class Interval implements Cloneable {
 
     /**
      * It checks if an intervals contains only one value (singleton).
+     *
      * @return true if domain has only one value.
      */
     public boolean singleton() {
@@ -112,6 +116,7 @@ public final class Interval implements Cloneable {
 
     /**
      * It checks if an intervals contains only value c.
+     *
      * @param c integer value to which the singleton is compared to.
      * @return true if variable has a singleton domain and it is equal to value c.
      */

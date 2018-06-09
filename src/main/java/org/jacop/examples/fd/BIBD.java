@@ -40,8 +40,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- *
- * It models and solves Balanced Incomplete Block Design (BIBD) problem (CSPLIB-P28). 
+ * It models and solves Balanced Incomplete Block Design (BIBD) problem (CSPLIB-P28).
  *
  * @author Radoslaw Szymanek
  * @version 4.5

@@ -35,7 +35,6 @@ package org.jacop.core;
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 public final class FailException extends RuntimeException {

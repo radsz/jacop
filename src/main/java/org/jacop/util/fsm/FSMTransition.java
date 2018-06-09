@@ -53,8 +53,9 @@ public class FSMTransition {
 
     /**
      * It constructs a finite machine state transition.
+     *
      * @param domain the domain which triggers the transition.
-     * @param state the successor state reached by a transition.
+     * @param state  the successor state reached by a transition.
      */
     public FSMTransition(IntDomain domain, FSMState state) {
         this.domain = domain;
@@ -64,6 +65,7 @@ public class FSMTransition {
 
     /**
      * It performs a clone of a transition with copying the attributes too.
+     *
      * @param states a list of states which have been already copied.
      * @return the transition clone.
      */

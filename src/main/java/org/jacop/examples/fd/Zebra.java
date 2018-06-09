@@ -37,34 +37,33 @@ import org.jacop.core.Store;
 import java.util.ArrayList;
 
 /**
- *
  * It models and solves Zebra logic puzzle.
  *
  * @author Radoslaw Szymanek
  * @version 4.5
- *
- * It was given at The German Institute of Logical Thinking in Berlin, 1981. And 98% FAILED.
- *
- * Conditions
- *
- * 1. The Englishman lives in the red house. 
- * 2. The Spaniard owns a dog.
- * 3. The Japanese is a painter.
- * 4. The Italian drinks tea.
- * 5. The Norwegian lives in the first house on the left.
- * 6. The owner of the green house drinks coffee.
- * 7. The green house is on the right of the white one.
- * 8. The sculptor breeds snails.
- * 9. The diplomat lives in the yellow house.
- * 10. Milk is drunk in the middle house.
- * 11. The Norwegian's house is next to the blue one.
- * 12. The violinist drinks fruit juice.
- * 13. The fox is in a house next to that of the doctor.
- * 14. The horse is in a house next to that of the diplomat.
- * Q. Who owns a Zebra, and who drinks water?
- *
- * They sometimes smoke different brands of cigarettes too, 
- * but that's apparently no longer politically correct, so they all quit. 
+ *          <p>
+ *          It was given at The German Institute of Logical Thinking in Berlin, 1981. And 98% FAILED.
+ *          <p>
+ *          Conditions
+ *          <p>
+ *          1. The Englishman lives in the red house.
+ *          2. The Spaniard owns a dog.
+ *          3. The Japanese is a painter.
+ *          4. The Italian drinks tea.
+ *          5. The Norwegian lives in the first house on the left.
+ *          6. The owner of the green house drinks coffee.
+ *          7. The green house is on the right of the white one.
+ *          8. The sculptor breeds snails.
+ *          9. The diplomat lives in the yellow house.
+ *          10. Milk is drunk in the middle house.
+ *          11. The Norwegian's house is next to the blue one.
+ *          12. The violinist drinks fruit juice.
+ *          13. The fox is in a house next to that of the doctor.
+ *          14. The horse is in a house next to that of the diplomat.
+ *          Q. Who owns a Zebra, and who drinks water?
+ *          <p>
+ *          They sometimes smoke different brands of cigarettes too,
+ *          but that's apparently no longer politically correct, so they all quit.
  */
 
 public class Zebra extends ExampleFD {

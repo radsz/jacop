@@ -46,18 +46,18 @@ public final class ConstraintFncs {
 
     public ConstraintFncs(Support support) {
 
-	bc = new BoolConstraints(support);
-	cc = new ComparisonConstraints(support);
-	lc = new LinearConstraints(support);
-	oc = new OperationConstraints(support);
-	ec = new ElementConstraints(support);
-	gc = new GlobalConstraints(support);
-	sc = new SetConstraints(support);
-	fcc = new FloatComparisonConstraints(support);
-	flc = new FloatLinearConstraints(support);
-	foc = new FloatOperationConstraints(support);	
+        bc = new BoolConstraints(support);
+        cc = new ComparisonConstraints(support);
+        lc = new LinearConstraints(support);
+        oc = new OperationConstraints(support);
+        ec = new ElementConstraints(support);
+        gc = new GlobalConstraints(support);
+        sc = new SetConstraints(support);
+        fcc = new FloatComparisonConstraints(support);
+        flc = new FloatLinearConstraints(support);
+        foc = new FloatOperationConstraints(support);
     }
-    
+
     // Boolean constraints
     public void array_bool_and(SimpleNode n) {
         bc.gen_array_bool_and(n);

@@ -648,6 +648,7 @@ import static org.mockito.MockitoAnnotations.initMocks;
 
     /**
      * It is used by the reflection used by the parametrization parameters. It has to stay public.
+     *
      * @param intervalList list of intervals where each two consequtive numbers specify the minimum and maximum of an interval.
      * @return
      */
@@ -671,6 +672,7 @@ import static org.mockito.MockitoAnnotations.initMocks;
 
     /**
      * It is used by the reflection used by the parametrization parameters. It has to stay public.
+     *
      * @param intervalList list of intervals where each two consequtive numbers specify the minimum and maximum of an interval.
      * @return
      */

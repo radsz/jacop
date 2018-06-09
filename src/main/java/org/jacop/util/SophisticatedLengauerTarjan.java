@@ -40,56 +40,55 @@ public class SophisticatedLengauerTarjan extends LengauerTarjan {
 
     int[] child;
     int[] size;
-    
-    public SophisticatedLengauerTarjan(int n) {
-	super(n);
 
-	child = new int[n];
-	size = new int[n];
-	for (int i = 0; i < n; i++) {
-	    child[i] = 0;
-	    size[i] = 1;
-	}
+    public SophisticatedLengauerTarjan(int n) {
+        super(n);
+
+        child = new int[n];
+        size = new int[n];
+        for (int i = 0; i < n; i++) {
+            child[i] = 0;
+            size[i] = 1;
+        }
     }
-    
+
     private int eval(int v) {
-	if (ancestor[v] == NIL)
-	    return label[v];
-	else {
-	    compress(v);
-	    return semi[label[ancestor[v]]] >= semi[label[v]] ? label[v] : label[ancestor[v]];
-	}
+        if (ancestor[v] == NIL)
+            return label[v];
+        else {
+            compress(v);
+            return semi[label[ancestor[v]]] >= semi[label[v]] ? label[v] : label[ancestor[v]];
+        }
     }
 
     private void link(int v, int w) {
 
-	int s = w;
+        int s = w;
 
-	while (semi[label[w]] < semi[label[child[s]]]) {
-	    if (size[s] + size[child[child[s]]] >= 2*size[child[s]]) {
-		// small child case
-		ancestor[child[s]] = s;
-		child[s] = child[child[s]];
-	    }
-	    else {
-		// big child case
-		size[child[s]] = size[s];
-		s = ancestor[s] = child[s];
-	    }
-	}
-	label[s] = label[w];
-	size[v] = size[v] + size[w];
+        while (semi[label[w]] < semi[label[child[s]]]) {
+            if (size[s] + size[child[child[s]]] >= 2 * size[child[s]]) {
+                // small child case
+                ancestor[child[s]] = s;
+                child[s] = child[child[s]];
+            } else {
+                // big child case
+                size[child[s]] = size[s];
+                s = ancestor[s] = child[s];
+            }
+        }
+        label[s] = label[w];
+        size[v] = size[v] + size[w];
 
-	if (size[v] < 2*size[w]) {
-	    int t = s;
-	    s = child[v];
-	    child[v] = t;
-	}
+        if (size[v] < 2 * size[w]) {
+            int t = s;
+            s = child[v];
+            child[v] = t;
+        }
 
-	while (s >= 0)  {
-	    ancestor[s] = v;
-	    s = child[s];
-	}
+        while (s >= 0) {
+            ancestor[s] = v;
+            s = child[s];
+        }
     }
 
 }

@@ -48,7 +48,7 @@ import org.jacop.set.search.IndomainSetMin;
 import java.util.ArrayList;
 
 /**
- * It specifies a simple Gardner problem which use set functionality from JaCoP. 
+ * It specifies a simple Gardner problem which use set functionality from JaCoP.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
@@ -58,6 +58,7 @@ public class Gardner extends ExampleSet {
 
     /**
      * It executes the program which solves this gardner problem.
+     *
      * @param args parameters (none)
      */
     public static void main(String args[]) {

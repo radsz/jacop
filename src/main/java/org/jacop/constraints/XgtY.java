@@ -58,12 +58,13 @@ public class XgtY extends PrimitiveConstraint {
 
     /**
      * It constructs a constraint X {@literal >} Y.
+     *
      * @param x variable x.
      * @param y variable y.
      */
     public XgtY(IntVar x, IntVar y) {
 
-        checkInputForNullness(new String[]{"x", "y"}, new Object[]{x, y});
+        checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
 
         numberId = idNumber.incrementAndGet();
 

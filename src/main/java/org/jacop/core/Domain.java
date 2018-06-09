@@ -118,6 +118,7 @@ public abstract class Domain {
     /**
      * It clones the domain object, only data responsible for encoding domain
      * values is cloned. All other fields must be set separately.
+     *
      * @return return a clone of the domain. It aims at getting domain of the proper class type.
      */
 
@@ -131,6 +132,7 @@ public abstract class Domain {
 
     /**
      * It returns value enumeration of the domain values.
+     *
      * @return valueEnumeration which can be used to enumerate one by one value from this domain.
      */
 
@@ -138,6 +140,7 @@ public abstract class Domain {
 
     /**
      * It returns the size of the domain.
+     *
      * @return number of elements in this domain.
      */
 
@@ -145,6 +148,7 @@ public abstract class Domain {
 
     /**
      * It returns true if given domain is empty.
+     *
      * @return true if the given domain is empty.
      */
 
@@ -154,9 +158,10 @@ public abstract class Domain {
      * It removes a constraint from a domain, it should only be called by
      * removeConstraint function of Variable object. It is called for example in a
      * situation when a constraint is satisfied.
+     *
      * @param storeLevel specifies the current level of the store, from which it should be removed.
-     * @param var specifies variable for which the constraint is being removed.
-     * @param c the constraint which is being removed.
+     * @param var        specifies variable for which the constraint is being removed.
+     * @param c          the constraint which is being removed.
      */
 
     public abstract void removeModelConstraint(int storeLevel, Var var, Constraint c);
@@ -164,10 +169,11 @@ public abstract class Domain {
     /**
      * It removes a constraint from a domain, it should only be called by
      * removeConstraint function of Variable object.
+     *
      * @param storeLevel specifies the current level of the store, from which it should be removed.
-     * @param var specifies variable for which the constraint is being removed.
-     * @param position specifies the position of the removed constraint.
-     * @param c the constraint which is being removed.
+     * @param var        specifies variable for which the constraint is being removed.
+     * @param position   specifies the position of the removed constraint.
+     * @param c          the constraint which is being removed.
      */
     public abstract void removeSearchConstraint(int storeLevel, Var var, int position, Constraint c);
 
@@ -190,6 +196,7 @@ public abstract class Domain {
 
     /**
      * It returns true if given domain has only one element.
+     *
      * @return true if the domain contains only one element.
      */
     public abstract boolean singleton();
@@ -197,6 +204,7 @@ public abstract class Domain {
 
     /**
      * It returns true if given domain has only one element.
+     *
      * @param value value represented as domain object to which the domain must be equal to.
      * @return true if the domain contains only one element.
      */
@@ -204,6 +212,7 @@ public abstract class Domain {
 
     /**
      * It returns the number of constraints
+     *
      * @return the number of constraints attached to this domain.
      */
 
@@ -211,6 +220,7 @@ public abstract class Domain {
 
     /**
      * It returns number of search constraints.
+     *
      * @return the number of search constraints.
      */
 
@@ -220,6 +230,7 @@ public abstract class Domain {
 
     /**
      * It returns the stamp of the domain.
+     *
      * @return the level of the domain.
      */
     public int stamp() {
@@ -234,6 +245,7 @@ public abstract class Domain {
 
     /**
      * It returns string description of the constraints attached to the domain.
+     *
      * @return the string description.
      */
 
@@ -242,6 +254,7 @@ public abstract class Domain {
     /**
      * It returns complete string description containing all relevant
      * information about the domain.
+     *
      * @return complete description of the domain.
      */
 
@@ -252,14 +265,16 @@ public abstract class Domain {
      * It removes the specified level. This function may re-instantiate
      * the old copy of the domain (previous value) or recover from changes done at stamp
      * level to get the previous value at level lower at provided level.
+     *
      * @param level the level which is being removed.
-     * @param var the variable to which this domain belonged to.
+     * @param var   the variable to which this domain belonged to.
      */
 
     public abstract void removeLevel(int level, Var var);
 
     /**
      * It returns an unique identifier of the domain.
+     *
      * @return it returns an integer id of the domain.
      */
 
@@ -268,6 +283,7 @@ public abstract class Domain {
     /**
      * It specifies if the domain type is more suited to representing sparse
      * domain.
+     *
      * @return true if sparse, false otherwise.
      */
 
@@ -275,6 +291,7 @@ public abstract class Domain {
 
     /**
      * It specifies if domain is a finite domain of numeric values (integers).
+     *
      * @return true if domains contains numeric values.
      */
 
@@ -285,9 +302,10 @@ public abstract class Domain {
      * putConstraint function of Variable object. putConstraint function from
      * Variable must make a copy of a list of model constraints if vector was not
      * cloned.
-     * @param storeLevel the level at which the model constraint is to be added.
-     * @param var variable to which the constraint is attached to.
-     * @param C the constraint which is being attached to a variable.
+     *
+     * @param storeLevel   the level at which the model constraint is to be added.
+     * @param var          variable to which the constraint is attached to.
+     * @param C            the constraint which is being attached to a variable.
      * @param pruningEvent the type of the prunning event required to check the consistency of the attached constraint.
      */
 
@@ -298,9 +316,10 @@ public abstract class Domain {
      * putConstraint function of Variable object. putConstraint function from
      * Variable must make a copy of a list of search constraints if vector was not
      * cloned.
+     *
      * @param storeLevel the level at which the search constraint is to be added.
-     * @param var variable to which the constraint is attached to.
-     * @param C the constraint which is being attached to a variable.
+     * @param var        variable to which the constraint is attached to.
+     * @param C          the constraint which is being attached to a variable.
      */
 
     public abstract void putSearchConstraint(int storeLevel, Var var, Constraint C);
@@ -316,6 +335,7 @@ public abstract class Domain {
     /**
      * It returns all constraints which are associated with variable, even the
      * ones which are already satisfied.
+     *
      * @return the number of constraint attached to this domain.
      */
 
@@ -326,6 +346,7 @@ public abstract class Domain {
     /**
      * It returns all constraints which are associated with variable, even the
      * ones which are already satisfied.
+     *
      * @return the number of constraints attached to the original domain of the variable associated with this domain.
      */
     public abstract int sizeConstraintsOriginal();
@@ -358,8 +379,8 @@ public abstract class Domain {
     /**
      * It enforces that this domain is included within the specified domain.
      *
-     * @param level store level at which this inclusion is enforced.
-     * @param var variable which is informed of the change if any occurs.
+     * @param level  store level at which this inclusion is enforced.
+     * @param var    variable which is informed of the change if any occurs.
      * @param domain the domain which restricts this domain.
      */
     public abstract void in(int level, Var var, Domain domain);
@@ -393,13 +414,14 @@ public abstract class Domain {
 
     /**
      * It checks if the domain has correct state.
-     * @return null if everything is ok, otherwise a string describing the problem.
      *
+     * @return null if everything is ok, otherwise a string describing the problem.
      */
     public abstract String checkInvariants();
 
     /**
      * It specifies what events should be executed if a given event occurs.
+     *
      * @param pruningEvent the pruning event for which we want to know what events it encompasses.
      * @return an array specifying what events should be included given this event.
      */

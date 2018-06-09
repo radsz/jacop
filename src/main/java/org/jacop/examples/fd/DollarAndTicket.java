@@ -37,30 +37,28 @@ import org.jacop.core.Store;
 import java.util.ArrayList;
 
 /**
- *
- * It solves a simple logic puzzle - Dollar and Ticket problem. 
+ * It solves a simple logic puzzle - Dollar and Ticket problem.
  *
  * @author Wojciech Swietek, Maciej Trela, and Radoslaw Szymanek
  * @version 4.5
- *
- *
- * Every year the Soccer Club has a raffle to support the cost of playing
- * fields, equipment, and camps.  This year the top five sellers were
- * three girls named Diane, Jenny, and Maggie, and two boys named Greg
- * and Kevin; last names are Borecki, Ott, Panos, Ruiz, and Vogel. Each
- * of them is on a different team (the Bobcats, Cheetahs, Kickers,
- * Stars, and Wolves), and each sold a different number of books of
- * tickets (20, 18, 12, 10, and 6).  Can you match each seller's full
- * name with his or her team and number of ticket books sold?
- *
- * 1. Jenny sold exactly twice as many books as Ms. Ruiz.
- * 2. The one who sold 12 books (who isn't Panos) isn't on the Bobcats or Stars.
- * 3. The player from the Wolves sold at least twice as many books as Ott.
- * 4. Borecki isn't on the Kickers.
- * 5. The girl on the Cheetahs sold exactly three times as many books as Diane.
- * 6. Greg isn't Borecki or Ott.
- * 7. Kevin isn't on the Bobcats.
- *
+ *          <p>
+ *          <p>
+ *          Every year the Soccer Club has a raffle to support the cost of playing
+ *          fields, equipment, and camps.  This year the top five sellers were
+ *          three girls named Diane, Jenny, and Maggie, and two boys named Greg
+ *          and Kevin; last names are Borecki, Ott, Panos, Ruiz, and Vogel. Each
+ *          of them is on a different team (the Bobcats, Cheetahs, Kickers,
+ *          Stars, and Wolves), and each sold a different number of books of
+ *          tickets (20, 18, 12, 10, and 6).  Can you match each seller's full
+ *          name with his or her team and number of ticket books sold?
+ *          <p>
+ *          1. Jenny sold exactly twice as many books as Ms. Ruiz.
+ *          2. The one who sold 12 books (who isn't Panos) isn't on the Bobcats or Stars.
+ *          3. The player from the Wolves sold at least twice as many books as Ott.
+ *          4. Borecki isn't on the Kickers.
+ *          5. The girl on the Cheetahs sold exactly three times as many books as Diane.
+ *          6. Greg isn't Borecki or Ott.
+ *          7. Kevin isn't on the Bobcats.
  */
 
 public class DollarAndTicket extends ExampleFD {
@@ -173,6 +171,7 @@ public class DollarAndTicket extends ExampleFD {
 
     /**
      * It executes the program to solve this simple puzzle.
+     *
      * @param args no argument is used.
      */
     public static void main(String args[]) {

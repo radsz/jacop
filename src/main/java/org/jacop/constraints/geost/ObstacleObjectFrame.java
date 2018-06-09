@@ -41,12 +41,11 @@ import java.util.*;
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
  * @version 4.5
- *
- * This version of the ObstacleObject internal constraint allows the use
- * of multiple d-boxes per shape.
- *
- * TODO, description explaining how it works, what is it good for, etc...
- *
+ *          <p>
+ *          This version of the ObstacleObject internal constraint allows the use
+ *          of multiple d-boxes per shape.
+ *          <p>
+ *          TODO, description explaining how it works, what is it good for, etc...
  */
 
 public class ObstacleObjectFrame extends InternalConstraint {
@@ -59,7 +58,7 @@ public class ObstacleObjectFrame extends InternalConstraint {
     final static boolean DISPLAY_FRAME = false;
 
     static BoxDisplay display = null;
-        //TODO remove if not needed anymore, or better separate from other code by putting it inside functions.
+    //TODO remove if not needed anymore, or better separate from other code by putting it inside functions.
 
     /**
      * It specifies the geost constraint to which this internal constraint belongs to.
@@ -114,9 +113,8 @@ public class ObstacleObjectFrame extends InternalConstraint {
      * It creates an internal constraint to enforce non-overlapping relation with this
      * obstacle object.
      *
-     * @param geost the geost constraint which this constraint is part of.
-     * @param obstacle the obstacle object responsible for this internal constraint.
-     *
+     * @param geost              the geost constraint which this constraint is part of.
+     * @param obstacle           the obstacle object responsible for this internal constraint.
      * @param selectedDimensions the dimensions on which the constraint is applied
      */
     public ObstacleObjectFrame(Geost geost, GeostObject obstacle, int[] selectedDimensions) {
@@ -200,7 +198,7 @@ public class ObstacleObjectFrame extends InternalConstraint {
         }
 
 		/*
-		 * to find the frame, we subtract from the domain always covered by the bounding box the area that can be
+     * to find the frame, we subtract from the domain always covered by the bounding box the area that can be
 		 * covered by some hole
 		 */
         if (DISPLAY_FRAME) {

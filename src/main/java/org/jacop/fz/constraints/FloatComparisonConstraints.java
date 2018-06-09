@@ -43,21 +43,19 @@ import org.jacop.fz.SimpleNode;
 import org.jacop.fz.VariablesParameters;
 
 /**
- *
  * Generation of set constraints in flatzinc
  *
- * @author Krzysztof Kuchcinski 
- *
+ * @author Krzysztof Kuchcinski
  */
 class FloatComparisonConstraints implements ParserTreeConstants {
 
     boolean reified;
     Support support;
     Store store;
-    
+
     public FloatComparisonConstraints(Support support) {
-	this.support = support;
-	this.store = support.store;
+        this.support = support;
+        this.store = support.store;
     }
 
     void gen_float_eq(SimpleNode node) {
@@ -170,8 +168,8 @@ class FloatComparisonConstraints implements ParserTreeConstants {
                         } else
                             c = new PlteqC(v1, i2);
                         break;
-		default:
-		    throw new RuntimeException("Internal error in " + getClass().getName());
+                    default:
+                        throw new RuntimeException("Internal error in " + getClass().getName());
                 }
             } else if (p1.getType() == 5) { // float rel var
                 FloatVar v2 = support.getFloatVariable(p2);
@@ -226,8 +224,8 @@ class FloatComparisonConstraints implements ParserTreeConstants {
                         } else
                             c = new PgteqC(v2, i1);
                         break;
-		default:
-		    throw new RuntimeException("Internal error in " + getClass().getName());
+                    default:
+                        throw new RuntimeException("Internal error in " + getClass().getName());
                 }
             } else { // var rel var
                 FloatVar v1 = support.getFloatVariable(p1);
@@ -246,8 +244,8 @@ class FloatComparisonConstraints implements ParserTreeConstants {
                     case Support.le:
                         c = new PlteqQ(v1, v2);
                         break;
-		default:
-		    throw new RuntimeException("Internal error in " + getClass().getName());
+                    default:
+                        throw new RuntimeException("Internal error in " + getClass().getName());
                 }
             }
 
@@ -276,8 +274,8 @@ class FloatComparisonConstraints implements ParserTreeConstants {
                             if (i1 > i2)
                                 throw Store.failException;
                             break;
-		    default:
-			throw new RuntimeException("Internal error in " + getClass().getName());
+                        default:
+                            throw new RuntimeException("Internal error in " + getClass().getName());
                     }
                 } else { // first parameter float & second parameter var
 
@@ -297,8 +295,8 @@ class FloatComparisonConstraints implements ParserTreeConstants {
                         case Support.le:
                             v2.domain.in(store.level, v2, i1, VariablesParameters.MAX_FLOAT);
                             break;
-		    default:
-			throw new RuntimeException("Internal error in " + getClass().getName());
+                        default:
+                            throw new RuntimeException("Internal error in " + getClass().getName());
                     }
                 }
             } else { // first parameter var
@@ -320,8 +318,8 @@ class FloatComparisonConstraints implements ParserTreeConstants {
                         case Support.le:
                             v1.domain.in(store.level, v1, VariablesParameters.MIN_FLOAT, i2);
                             break;
-		    default:
-			throw new RuntimeException("Internal error in " + getClass().getName());
+                        default:
+                            throw new RuntimeException("Internal error in " + getClass().getName());
                     }
 
                 } else { // first parameter var & second parameter var
@@ -342,8 +340,8 @@ class FloatComparisonConstraints implements ParserTreeConstants {
                         case Support.le:
                             support.pose(new PlteqQ(v1, v2));
                             break;
-		    default:
-			throw new RuntimeException("Internal error in " + getClass().getName());
+                        default:
+                            throw new RuntimeException("Internal error in " + getClass().getName());
                     }
                 }
             }

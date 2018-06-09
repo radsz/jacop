@@ -45,7 +45,6 @@ import java.util.Collection;
  *
  * @author Mariusz Świerkot and Radoslaw Szymanek
  * @version 4.5
- *
  */
 @RunWith(Parameterized.class) public class MinizincBasedTestUpTo30Seconds extends MinizincBasedTestsHelper {
 

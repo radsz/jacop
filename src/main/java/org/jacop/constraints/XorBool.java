@@ -80,7 +80,7 @@ public class XorBool extends PrimitiveConstraint {
      */
     public XorBool(IntVar[] x, IntVar y) {
 
-        checkInputForNullness(new String[]{"x", "y"}, new Object[][]{x, {y}});
+        checkInputForNullness(new String[] {"x", "y"}, new Object[][] {x, {y}});
 
         queueIndex = 0;
         numberId = idNumber.incrementAndGet();
@@ -118,69 +118,71 @@ public class XorBool extends PrimitiveConstraint {
 
     @Override public void consistency(final Store store) {
 
-            IntVar nonGround = null;
+        IntVar nonGround = null;
 
-            int numberOnes = 0;
-            int numberZeros = 0;
+        int numberOnes = 0;
+        int numberZeros = 0;
 
-            for (IntVar e : x) {
-                if (e.min() == 1)
-                    numberOnes++;
-                else if (e.max() == 0)
-                    numberZeros++;
-                else nonGround = e;
-            }
-        
-            if (numberOnes + numberZeros == x.length)
+        for (IntVar e : x) {
+            if (e.min() == 1)
+                numberOnes++;
+            else if (e.max() == 0)
+                numberZeros++;
+            else
+                nonGround = e;
+        }
+
+        if (numberOnes + numberZeros == x.length)
+            if ((numberOnes & 1) == 1)
+                y.domain.in(store.level, y, 1, 1);
+            else
+                y.domain.in(store.level, y, 0, 0);
+        else if (nonGround != null && numberOnes + numberZeros == x.length - 1)
+            if (y.min() == 1)
                 if ((numberOnes & 1) == 1)
-                    y.domain.in(store.level, y, 1, 1);
+                    nonGround.domain.in(store.level, nonGround, 0, 0);
                 else
-                    y.domain.in(store.level, y, 0, 0);
-            else if (nonGround != null && numberOnes + numberZeros == x.length - 1)
-                if (y.min() == 1)
-                    if ((numberOnes & 1) == 1)
-                        nonGround.domain.in(store.level, nonGround, 0, 0);
-                    else
-                        nonGround.domain.in(store.level, nonGround, 1, 1);
-                else if (y.max() == 0)
-                    if ((numberOnes & 1) == 1)
-                        nonGround.domain.in(store.level, nonGround, 1, 1);
-                    else
-                        nonGround.domain.in(store.level, nonGround, 0, 0);
+                    nonGround.domain.in(store.level, nonGround, 1, 1);
+            else if (y.max() == 0)
+                if ((numberOnes & 1) == 1)
+                    nonGround.domain.in(store.level, nonGround, 1, 1);
+                else
+                    nonGround.domain.in(store.level, nonGround, 0, 0);
 
     }
 
     @Override public void notConsistency(final Store store) {
 
-            IntVar nonGround = null;
+        IntVar nonGround = null;
 
-            int numberOnes = 0;
-            int numberZeros = 0;
+        int numberOnes = 0;
+        int numberZeros = 0;
 
-            for (IntVar e : x) {
-                if (e.min() == 1)
-                    numberOnes++;
-                else if (e.max() == 0)
-                    numberZeros++;
-                else nonGround = e;
-            }
+        for (IntVar e : x) {
+            if (e.min() == 1)
+                numberOnes++;
+            else if (e.max() == 0)
+                numberZeros++;
+            else
+                nonGround = e;
+        }
 
-            if (numberOnes + numberZeros == x.length)
+        if (numberOnes + numberZeros == x.length)
+            if ((numberOnes & 1) == 1)
+                y.domain.in(store.level, y, 0, 0);
+            else
+                y.domain.in(store.level, y, 1, 1);
+        else if (nonGround != null && numberOnes + numberZeros == x.length - 1)
+            if (y.min() == 1)
                 if ((numberOnes & 1) == 1)
-                    y.domain.in(store.level, y, 0, 0);
+                    nonGround.domain.in(store.level, nonGround, 1, 1);
                 else
-                    y.domain.in(store.level, y, 1, 1);
-            else if (nonGround != null && numberOnes + numberZeros == x.length - 1)
-                if (y.min() == 1)
-                    if ((numberOnes & 1) == 1)
-                        nonGround.domain.in(store.level, nonGround, 1, 1);
-                    else
-                        nonGround.domain.in(store.level, nonGround, 0, 0);
-                else if (y.max() == 0)
-                    if ((numberOnes & 1) == 1)
-                        nonGround.domain.in(store.level, nonGround, 0, 0);
-                    else
-                        nonGround.domain.in(store.level, nonGround, 1, 1);
+                    nonGround.domain.in(store.level, nonGround, 0, 0);
+            else if (y.max() == 0)
+                if ((numberOnes & 1) == 1)
+                    nonGround.domain.in(store.level, nonGround, 0, 0);
+                else
+                    nonGround.domain.in(store.level, nonGround, 1, 1);
 
     }
 
@@ -216,7 +218,7 @@ public class XorBool extends PrimitiveConstraint {
 
     @Override public boolean satisfied() {
 
-        if (! grounded() )
+        if (!grounded())
             return false;
 
         int sum = 0;

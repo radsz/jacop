@@ -59,7 +59,6 @@ import java.util.stream.Stream;
  *
  * @author Radoslaw Szymanek and Wadeck Follonier
  * @version 4.5
- *
  */
 
 public class Knapsack extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
@@ -309,7 +308,7 @@ public class Knapsack extends Constraint implements UsesQueueVariable, Stateful,
         }
 
         List<TreeLeaf> list = hashForUpdate.get(level);
-		/* there was some change in this level */
+    /* there was some change in this level */
         if (list != null) {
 			/* use the array to update */
             if (list.size() > updateLimit) {

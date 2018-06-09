@@ -59,7 +59,7 @@ public class CPvizSendMoreMoney {
     // MONEY 10652
 
 	/*
-	 * This creates a standard model using simple basic constraints. 
+   * This creates a standard model using simple basic constraints.
 	 */
 
     public void model() {

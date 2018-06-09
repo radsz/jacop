@@ -376,8 +376,8 @@ public class Lex extends DecomposedConstraint<Constraint> {
                         state[i][j][0].transitions.add(new FSMTransition(new IntervalDomain(0, 0), state[i][j][1]));
                 }
 
-		if (j != state[i].length - 1)
-		    state[i][j][1].transitions.add(new FSMTransition(new IntervalDomain(1, 1), state[i][j + 1][0]));
+                if (j != state[i].length - 1)
+                    state[i][j][1].transitions.add(new FSMTransition(new IntervalDomain(1, 1), state[i][j + 1][0]));
             }
         }
 

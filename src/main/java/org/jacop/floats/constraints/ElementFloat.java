@@ -45,13 +45,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 
 /**
- * ElementFloat constraint defines a relation 
+ * ElementFloat constraint defines a relation
  * list[index - indexOffset] = value.
- *
+ * <p>
  * The first element of the list corresponds to index - indexOffset = 1.
  * By default indexOffset is equal 0 so first value within a list corresponds to index equal 1.
- *
- * If index has a domain from 0 to list.length-1 then indexOffset has to be equal -1 to 
+ * <p>
+ * If index has a domain from 0 to list.length-1 then indexOffset has to be equal -1 to
  * make addressing of list array starting from 1.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -83,13 +83,13 @@ public class ElementFloat extends Constraint implements UsesQueueVariable, State
 
     /**
      * It specifies list of variables within an element constraint list[index-indexOffset] = value.
-     * The list is addressed by positive integers ({@literal >=1}) if indexOffset is equal to 0. 
+     * The list is addressed by positive integers ({@literal >=1}) if indexOffset is equal to 0.
      */
     public double list[];
 
     /**
-     * It specifies for each value what are the possible values of the index variable (it 
-     * takes into account indexOffset. 
+     * It specifies for each value what are the possible values of the index variable (it
+     * takes into account indexOffset.
      */
     Hashtable<Double, IntDomain> mappingValuesToIndex = new Hashtable<Double, IntDomain>();
 
@@ -98,22 +98,22 @@ public class ElementFloat extends Constraint implements UsesQueueVariable, State
 
     /**
      * It holds information about the positions within list array that are equal. It allows
-     * to safely skip duplicates when enumerating index domain. 
+     * to safely skip duplicates when enumerating index domain.
      */
     List<IntDomain> duplicates;
     IntDomain duplicatesIndexes;
 
     /**
-     * It constructs an element constraint. 
+     * It constructs an element constraint.
      *
-     * @param index variable index
-     * @param list list of integers from which an index-th element is taken
-     * @param value a value of the index-th element from list
-     * @param indexOffset shift applied to index variable. 
+     * @param index       variable index
+     * @param list        list of integers from which an index-th element is taken
+     * @param value       a value of the index-th element from list
+     * @param indexOffset shift applied to index variable.
      */
     public ElementFloat(IntVar index, double[] list, FloatVar value, int indexOffset) {
 
-        checkInputForNullness(new String[]{"index", "list", "value"}, new Object[][]{ {index}, {list}, {value}});
+        checkInputForNullness(new String[] {"index", "list", "value"}, new Object[][] {{index}, {list}, {value}});
 
         this.indexOffset = indexOffset;
         queueIndex = 1;
@@ -147,30 +147,30 @@ public class ElementFloat extends Constraint implements UsesQueueVariable, State
      * It constructs an element constraint with default indexOffset equal 0.
      *
      * @param index index variable.
-     * @param list list containing variables which one pointed out by index variable is made equal to value variable.  
-     * @param value a value variable equal to the specified element from the list. 
+     * @param list  list containing variables which one pointed out by index variable is made equal to value variable.
+     * @param value a value variable equal to the specified element from the list.
      */
     public ElementFloat(IntVar index, List<Double> list, FloatVar value) {
         this(index, list, value, 0);
     }
 
     /**
-     * It constructs an element constraint. 
+     * It constructs an element constraint.
      *
-     * @param index variable index
-     * @param list list of integers from which an index-th element is taken
-     * @param value a value of the index-th element from list
-     * @param indexOffset shift applied to index variable. 
+     * @param index       variable index
+     * @param list        list of integers from which an index-th element is taken
+     * @param value       a value of the index-th element from list
+     * @param indexOffset shift applied to index variable.
      */
     public ElementFloat(IntVar index, List<Double> list, FloatVar value, int indexOffset) {
         this(index, list.stream().mapToDouble(i -> i).toArray(), value, indexOffset);
     }
 
     /**
-     * It constructs an element constraint with indexOffset by default set to 0.  
+     * It constructs an element constraint with indexOffset by default set to 0.
      *
      * @param index variable index
-     * @param list list of integers from which an index-th element is taken
+     * @param list  list of integers from which an index-th element is taken
      * @param value a value of the index-th element from list
      */
 
@@ -263,9 +263,9 @@ public class ElementFloat extends Constraint implements UsesQueueVariable, State
     }
 
     @Override public boolean isStateful() {
-        return  (!(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset));
+        return (!(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset));
     }
-    
+
     @Override public void impose(Store store) {
 
         super.impose(store);

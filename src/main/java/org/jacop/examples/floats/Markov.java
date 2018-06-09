@@ -31,15 +31,13 @@
 package org.jacop.examples.floats;
 
 /**
- *
  * From Hamdy Taha "Operations Research" (8th edition), page 649ff.
  * Fertilizer example.
- *
+ * <p>
  * Based on minizinc model by Håkan Kjellerstrand.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 import org.jacop.core.Store;
@@ -78,8 +76,7 @@ public class Markov {
         store.impose(new LinearFloat(new FloatVar[] {p[1], p[0], p[1], p[2]}, new double[] {-1.0, 0.6, 0.6, 0.4}, "==", 0.0));
         FloatVar one = new FloatVar(store, "1", 1.0, 1.0);
         store.impose(new LinearFloat(new FloatVar[] {one, p[0], p[1], p[2]}, new double[] {-1.0, 1.0, 1.0, 1.0}, "==", 0.0));
-        store.impose(
-            new LinearFloat(new FloatVar[] {tot_cost, p[0], p[1], p[2]}, new double[] {-1.0, 100.0, 125.0, 160.0}, "==", 0.0));
+        store.impose(new LinearFloat(new FloatVar[] {tot_cost, p[0], p[1], p[2]}, new double[] {-1.0, 100.0, 125.0, 160.0}, "==", 0.0));
 
 
         FloatVar[] vars = new FloatVar[7];

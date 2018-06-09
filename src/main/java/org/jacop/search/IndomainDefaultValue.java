@@ -40,14 +40,13 @@ import java.util.Map;
  * selection of the default value for each variable first. If
  * selection of this value will not succeed it will try to assign
  * values with the default indomain method.
- *
- *
+ * <p>
+ * <p>
  * This method works only for IntVar.
  *
- * @author Krzysztof Kuchcinski 
- *
- * @version 4.5
  * @param <T> type of variable being used in the search.
+ * @author Krzysztof Kuchcinski
+ * @version 4.5
  */
 
 public class IndomainDefaultValue<T extends Var> implements Indomain<T> {
@@ -65,8 +64,9 @@ public class IndomainDefaultValue<T extends Var> implements Indomain<T> {
     /**
      * Constructor which specifies default values to be used
      * if values are not in the domain a defualt indomain is used.
+     *
      * @param defaultIndomain default indomain heuristic used.
-     * @param defaultValue default value used for each variable.
+     * @param defaultValue    default value used for each variable.
      */
 
     public IndomainDefaultValue(Map<T, Integer> defaultValue, Indomain<T> defaultIndomain) {

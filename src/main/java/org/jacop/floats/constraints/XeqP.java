@@ -41,7 +41,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraints X #= P for X and P floats
- *
+ * <p>
  * Domain consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -64,12 +64,13 @@ public class XeqP extends Constraint implements SatisfiedPresent {
 
     /**
      * It constructs constraint X = P.
+     *
      * @param x variable x.
      * @param p variable p.
      */
     public XeqP(IntVar x, FloatVar p) {
 
-        checkInputForNullness(new String[]{"x", "q"}, new Object[]{x, p});
+        checkInputForNullness(new String[] {"x", "q"}, new Object[] {x, p});
 
         numberId = idNumber.incrementAndGet();
 

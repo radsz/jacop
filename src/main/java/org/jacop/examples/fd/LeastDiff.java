@@ -41,18 +41,17 @@ import java.util.ArrayList;
 
 /**
  * Simple least Diff problem.
- *
- * Minimize the difference ABCDE - FGHIJ 
- *                     where A..J is all different in the range 0..9.
- *
+ * <p>
+ * Minimize the difference ABCDE - FGHIJ
+ * where A..J is all different in the range 0..9.
+ * <p>
  * The solution is: 50123 - 49876 = 247
- *
+ * <p>
  * JaCoP Model by Hakan Kjellerstrand (hakank@bonetmail.com)
  * Also see http://www.hakank.org/JaCoP/
  *
  * @author Hakan Kjellerstrand and Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 public class LeastDiff extends ExampleFD {
@@ -119,6 +118,7 @@ public class LeastDiff extends ExampleFD {
 
     /**
      * It executes the program which solves this simple optimization problem.
+     *
      * @param args parameters (none)
      */
     public static void main(String args[]) {

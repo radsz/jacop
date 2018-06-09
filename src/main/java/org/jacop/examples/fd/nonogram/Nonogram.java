@@ -54,7 +54,6 @@ import java.util.regex.Pattern;
  *
  * @author Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 public class Nonogram extends ExampleFD {
@@ -622,7 +621,7 @@ public class Nonogram extends ExampleFD {
 	{3}};
 	*/
   /*
-	public int[][]	row_rules = {
+  public int[][]	row_rules = {
 			  {3},
 			  {5},
 			  {3,1},

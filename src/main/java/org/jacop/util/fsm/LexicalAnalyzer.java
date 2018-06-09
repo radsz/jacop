@@ -60,6 +60,7 @@ class LexicalAnalyzer {
 
     /**
      * Constructor creating a Lexical Analyzer.
+     *
      * @param in the StringReader providing the characters which are being analyzed.
      */
     LexicalAnalyzer(StringReader in) {

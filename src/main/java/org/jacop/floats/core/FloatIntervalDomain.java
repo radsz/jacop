@@ -48,7 +48,6 @@ import java.util.Iterator;
  * Defines interval of numbers which is part of FDV definition which consist of
  * one or several intervals.
  *
- *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.5
  */
@@ -188,7 +187,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     }
 
     /**
-     * It adds values as specified by the parameter to the domain. The 
+     * It adds values as specified by the parameter to the domain. The
      * input parameter can not be an empty set.
      */
 
@@ -400,6 +399,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     /**
      * It clones the domain object, only data responsible for encoding domain
      * values is cloned. All other fields must be set separately.
+     *
      * @return It returns a clone of this domain.
      */
 
@@ -595,6 +595,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
     /**
      * It returns interval enumeration of the domain values.
+     *
      * @return intervalEnumeration which can be used to enumerate intervals in this domain.
      */
 
@@ -969,6 +970,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
     /**
      * It removes the counter-th interval from the domain.
+     *
      * @param position it specifies the position of the removed interval.
      */
 
@@ -2147,7 +2149,8 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     }
 
     /**
-     * It specifies the position of the interval which contains specified value. 
+     * It specifies the position of the interval which contains specified value.
+     *
      * @param value value for which an interval containing it is searched.
      * @return the position of the interval containing the specified value.
      */
@@ -3009,9 +3012,10 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     /**
      * It removes a constraint from a domain, it should only be called by
      * removeConstraint function of Variable object.
+     *
      * @param storeLevel the current level of the store.
-     * @param var the variable for which the constraint is being removed.
-     * @param C the constraint being removed.
+     * @param var        the variable for which the constraint is being removed.
+     * @param C          the constraint being removed.
      */
 
     public void removeSearchConstraint(int storeLevel, Var var, Constraint C) {
@@ -3129,7 +3133,8 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
 
     /**
-     * It is a function to check if the object is in consistent state. 
+     * It is a function to check if the object is in consistent state.
+     *
      * @return String describing the violated invariant, null if no invariant is violated.
      */
     public String checkInvariants() {

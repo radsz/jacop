@@ -60,6 +60,7 @@ public class XgtC extends PrimitiveConstraint {
 
     /**
      * It constructs constraint X {@literal >} C.
+     *
      * @param x variable x.
      * @param c constant c.
      */

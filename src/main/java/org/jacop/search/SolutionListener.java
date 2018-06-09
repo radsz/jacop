@@ -39,9 +39,9 @@ import org.jacop.core.Var;
  * Defines an interface which needs to be implemented by all classes which wants
  * to be informed about the solution.
  *
+ * @param <T> type of variable for which the solution is being stored.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.5
- * @param <T> type of variable for which the solution is being stored.
  */
 
 public interface SolutionListener<T extends Var> {
@@ -58,8 +58,9 @@ public interface SolutionListener<T extends Var> {
 
     /**
      * It imposes the constraints, so the last found solution is enforced.
+     *
      * @param store store in which the solution is enforced.
-     * @param no the number of the solution to be enforced.
+     * @param no    the number of the solution to be enforced.
      * @return true if the store is consistent after enforcing a solution, false otherwise.
      */
 
@@ -74,12 +75,14 @@ public interface SolutionListener<T extends Var> {
     /**
      * It returns the variables in the same order as the one used to encode
      * solutions.
+     *
      * @return list of variables
      */
     T[] getVariables();
 
     /**
      * It returns all solutions. Each solution is in a separate array.
+     *
      * @return first dimension is indexed by solution, second dimension is indexed by a variable.
      */
 
@@ -88,13 +91,15 @@ public interface SolutionListener<T extends Var> {
     /**
      * It returns a collection of constraints which represent the last found
      * solution.
+     *
      * @return the set of constraints which imposed enforce the last found solution.
      */
 
     PrimitiveConstraint[] returnSolution();
 
     /**
-     * It returns the solution number no. 
+     * It returns the solution number no.
+     *
      * @param no it obtains the solution with a given index.
      * @return array containing assignments to search variables.
      */
@@ -104,6 +109,7 @@ public interface SolutionListener<T extends Var> {
     /**
      * It returns number of solutions found while using this choice point
      * selector.
+     *
      * @return the number of solutions.
      */
 
@@ -112,6 +118,7 @@ public interface SolutionListener<T extends Var> {
     /**
      * It will enforce the solution listener to instruct search to keep looking
      * for a solution making the search explore the whole search space.
+     *
      * @param status true if we are interested in search for all solutions, false otherwise.
      */
 
@@ -120,6 +127,7 @@ public interface SolutionListener<T extends Var> {
     /**
      * It records each solution so it can be later retrieved and used. Search will
      * always record the last solution.
+     *
      * @param status true if we are interested in recording all solutions, false otherwise.
      */
 
@@ -128,6 +136,7 @@ public interface SolutionListener<T extends Var> {
     /**
      * It allows to inform sub-search of what is the current number of the
      * solution in master search.
+     *
      * @param parent solution listener used by a master search.
      */
 
@@ -136,6 +145,7 @@ public interface SolutionListener<T extends Var> {
     /**
      * For a given master solution finds any solution within that listener which
      * matches the master solution.
+     *
      * @param parentSolutionNo solution number of the parent for which we search matching solution.
      * @return -1 if no solution was found, otherwise the index of the solution.
      */
@@ -146,18 +156,21 @@ public interface SolutionListener<T extends Var> {
 
     /**
      * It sets the children listeners for this solution listener.
+     *
      * @param children an array containing children listeners.
      */
     void setChildrenListeners(SolutionListener<T>[] children);
 
     /**
      * It sets the child listener for this solution listener.
+     *
      * @param child the child listener.
      */
     void setChildrenListeners(SolutionListener<T> child);
 
     /**
      * It specifies if the solution listener is recording solutions or not.
+     *
      * @return true if all solutions are recorded, false if only the last one is recorded.
      */
     boolean isRecordingSolutions();
@@ -171,6 +184,7 @@ public interface SolutionListener<T extends Var> {
 
     /**
      * It sets the solution limit.
+     *
      * @param limit the maximal number of solutions we are interested in.
      */
     void setSolutionLimit(int limit);

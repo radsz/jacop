@@ -60,12 +60,13 @@ public class PgteqQ extends PrimitiveConstraint {
 
     /**
      * It constructs constraint P {@literal >=} Q.
+     *
      * @param p variable p.
      * @param q variable q.
      */
     public PgteqQ(FloatVar p, FloatVar q) {
 
-        checkInputForNullness(new String[]{"p", "q"}, new Object[]{p, q});
+        checkInputForNullness(new String[] {"p", "q"}, new Object[] {p, q});
 
         numberId = idNumber.incrementAndGet();
 

@@ -96,7 +96,7 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
     public void assertLiteral(int literal) {
 
 		/* get the watched clauses for this literal;
-		 * for each such clause, find its state, and if needed, propagate,
+     * for each such clause, find its state, and if needed, propagate,
 		 * find a new watch or trigger conflict
 		 */
 

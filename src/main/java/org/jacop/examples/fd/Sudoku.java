@@ -39,11 +39,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- *
  * A simple model to solve Sudoku problem.
  *
- *  @author Radoslaw Szymanek
- *  @version 4.5
+ * @author Radoslaw Szymanek
+ * @version 4.5
  */
 
 public class Sudoku extends ExampleFD {

@@ -67,8 +67,8 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
     /**
      * reads an int from the stream
      *
-     * @throws IOException
      * @return the parsed int
+     * @throws IOException
      */
     private int parseInt() throws IOException {
         int answer = 0;

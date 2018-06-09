@@ -37,7 +37,6 @@ import org.jacop.core.Var;
 import java.util.List;
 
 /**
- *
  * Common interface to all objects that can handle one or more variables of the
  * network flow constraint.
  *
@@ -67,7 +66,7 @@ public interface VarHandler {
      * handler to update the state of the network accordingly.
      *
      * @param variable the variable that changed
-     * @param network the network
+     * @param network  the network
      */
     void processEvent(IntVar variable, MutableNetwork network);
 

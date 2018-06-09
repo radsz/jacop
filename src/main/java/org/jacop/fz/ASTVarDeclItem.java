@@ -63,8 +63,8 @@ public class ASTVarDeclItem extends SimpleNode {
             case 3:
                 kindS = "(array-non-var): ";
                 break;
-	    default:
-	       throw new RuntimeException("Internal parsing error; " + getClass().getName());
+            default:
+                throw new RuntimeException("Internal parsing error; " + getClass().getName());
         }
         return super.toString() + kindS + id + limits;
     }

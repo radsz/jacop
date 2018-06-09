@@ -43,20 +43,17 @@ import java.util.List;
 import java.util.StringTokenizer;
 
 /**
- *
- * It solves the Mixed Multi-Unit Combinatorial Auctions. 
- *
- * The idea originated from reading the following paper 
+ * It solves the Mixed Multi-Unit Combinatorial Auctions.
+ * <p>
+ * The idea originated from reading the following paper
  * where the first attempt to use CP was presented.
- *
+ * <p>
  * Comparing Winner Determination Algorithms for Mixed
  * Multi-Unit Combinatorial Auctions by Brammert Ottens
  * Ulle Endriss
  *
  * @author Radoslaw Szymanek
  * @version 4.5
- *
- *
  */
 
 public class MUCA extends ExampleFD {
@@ -1220,6 +1217,7 @@ public class MUCA extends ExampleFD {
 
     /**
      * It reads the auction problem from the file.
+     *
      * @param filename file describing the auction problem.
      */
     public void readAuction(String filename) {
@@ -1372,8 +1370,7 @@ public class MUCA extends ExampleFD {
             throw new RuntimeException("You need to run this program in a directory that contains the required file : " + filename);
         } catch (IOException ex) {
             System.err.println(ex);
-        }
-        finally {
+        } finally {
             if (br != null)
                 try {
                     br.close();

@@ -40,7 +40,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Constraint X {@literal <=} C
  *
- *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
  */
@@ -61,6 +60,7 @@ public class XlteqC extends PrimitiveConstraint {
 
     /**
      * It constructs constraint X {@literal <=} C.
+     *
      * @param x variable x.
      * @param c constant c.
      */

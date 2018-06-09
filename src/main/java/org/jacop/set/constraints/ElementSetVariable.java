@@ -41,13 +41,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 /**
- * ElementSetVariable constraint defines a relation 
+ * ElementSetVariable constraint defines a relation
  * list[index - indexOffset] = value. This version uses bounds consistency.
- *
+ * <p>
  * The first element of the list corresponds to index - indexOffset = 1.
  * By default indexOffset is equal 0 so first value within a list corresponds to index equal 1.
- *
- * If index has a domain from 0 to list.length-1 then indexOffset has to be equal -1 to 
+ * <p>
+ * If index has a domain from 0 to list.length-1 then indexOffset has to be equal -1 to
  * make addressing of list array starting from 1.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -79,17 +79,17 @@ public class ElementSetVariable extends Constraint implements Stateful {
 
     /**
      * It specifies list of variables within an element constraint list[index - indexOffset] = value.
-     * The list is addressed by positive integers ({@code >=1}) if indexOffset is equal to 0. 
+     * The list is addressed by positive integers ({@code >=1}) if indexOffset is equal to 0.
      */
     final public SetVar list[];
 
     /**
-     * It constructs an element constraint. 
+     * It constructs an element constraint.
      *
-     * @param index variable index
-     * @param list list of variables from which an index-th element is taken
-     * @param value a value of the index-th element from list
-     * @param indexOffset shift applied to index variable. 
+     * @param index       variable index
+     * @param list        list of variables from which an index-th element is taken
+     * @param value       a value of the index-th element from list
+     * @param indexOffset shift applied to index variable.
      */
     public ElementSetVariable(IntVar index, SetVar[] list, SetVar value, int indexOffset) {
 
@@ -104,14 +104,14 @@ public class ElementSetVariable extends Constraint implements Stateful {
         this.value = value;
         this.list = Arrays.copyOf(list, list.length);
 
-        setScope( Stream.concat( Stream.concat( Stream.of(index), Arrays.stream(list)), Stream.of(value)));
+        setScope(Stream.concat(Stream.concat(Stream.of(index), Arrays.stream(list)), Stream.of(value)));
     }
 
     /**
-     * It constructs an element constraint. 
+     * It constructs an element constraint.
      *
      * @param index variable index
-     * @param list list of variables from which an index-th element is taken
+     * @param list  list of variables from which an index-th element is taken
      * @param value a value of the index-th element from list
      */
     public ElementSetVariable(IntVar index, List<? extends SetVar> list, SetVar value) {
@@ -121,12 +121,12 @@ public class ElementSetVariable extends Constraint implements Stateful {
     }
 
     /**
-     * It constructs an element constraint. 
+     * It constructs an element constraint.
      *
-     * @param index variable index
-     * @param list list of variables from which an index-th element is taken
-     * @param value a value of the index-th element from list
-     * @param indexOffset shift applied to index variable. 
+     * @param index       variable index
+     * @param list        list of variables from which an index-th element is taken
+     * @param value       a value of the index-th element from list
+     * @param indexOffset shift applied to index variable.
      */
     public ElementSetVariable(IntVar index, List<? extends SetVar> list, SetVar value, int indexOffset) {
 
@@ -135,10 +135,10 @@ public class ElementSetVariable extends Constraint implements Stateful {
     }
 
     /**
-     * It constructs an element constraint. 
+     * It constructs an element constraint.
      *
      * @param index variable index
-     * @param list list of variables from which an index-th element is taken
+     * @param list  list of variables from which an index-th element is taken
      * @param value a value of the index-th element from list
      */
     public ElementSetVariable(IntVar index, SetVar[] list, SetVar value) {
@@ -148,15 +148,15 @@ public class ElementSetVariable extends Constraint implements Stateful {
     }
 
     @Override public boolean isStateful() {
-        return  (!(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset));
+        return (!(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset));
     }
-    
+
     /**
      * It imposes the constraint in a given store.
      *
      * @param store the constraint store to which the constraint is imposed to.
      */
-    
+
     @Override public void impose(Store store) {
 
         super.impose(store);
@@ -165,7 +165,7 @@ public class ElementSetVariable extends Constraint implements Stateful {
             firstConsistencyCheck = false;
         }
     }
-    
+
     @Override public void consistency(Store store) {
 
         if (firstConsistencyCheck) {
@@ -177,52 +177,52 @@ public class ElementSetVariable extends Constraint implements Stateful {
 
         if (value.singleton() && index.singleton()) {
             SetVar v = list[index.value() - 1 - indexOffset];
-	    v.domain.in(store.level, v, value.dom());
-	    v.domain.inCardinality(store.level, v, value.domain.card().min(), value.domain.card().max());
+            v.domain.in(store.level, v, value.dom());
+            v.domain.inCardinality(store.level, v, value.domain.card().min(), value.domain.card().max());
             removeConstraint();
-	    return;
+            return;
         }
 
         if (index.singleton()) {
             SetVar v = list[index.value() - 1 - indexOffset];
-	    v.domain.in(store.level, v, value.dom());
-	    value.domain.in(store.level, value, v.dom());
-	    v.domain.inCardinality(store.level, v, value.domain.card().min(), value.domain.card().max());
-	    value.domain.inCardinality(store.level, value, v.domain.card().min(), v.domain.card().max());
-	    return;
+            v.domain.in(store.level, v, value.dom());
+            value.domain.in(store.level, value, v.dom());
+            v.domain.inCardinality(store.level, v, value.domain.card().min(), value.domain.card().max());
+            value.domain.inCardinality(store.level, value, v.domain.card().min(), v.domain.card().max());
+            return;
         }
-	
+
         IntDomain glb = new IntervalDomain(IntDomain.MinInt, IntDomain.MaxInt);
         IntDomain lub = new IntervalDomain();
         IntervalDomain indexDom = new IntervalDomain(5); // create with size 5 ;)
         for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
             int position = e.nextElement() - 1 - indexOffset;
 
-            if (! list[position].domain.glb().subtract(value.domain.lub()).isEmpty() ||
-		! value.domain.glb().subtract(list[position].domain.lub()).isEmpty())
+            if (!list[position].domain.glb().subtract(value.domain.lub()).isEmpty() || !value.domain.glb()
+                .subtract(list[position].domain.lub()).isEmpty())
                 if (indexDom.size == 0)
                     indexDom.unionAdapt(position + 1 + indexOffset);
                 else
                     indexDom.addLastElement(position + 1 + indexOffset);
             else {
-		glb = glb.intersect(list[position].domain.glb());
-		lub.unionAdapt(list[position].domain.lub());
+                glb = glb.intersect(list[position].domain.glb());
+                lub.unionAdapt(list[position].domain.lub());
             }
         }
         index.domain.in(store.level, index, indexDom.complement());
         value.domain.in(store.level, value, glb, lub);
 
-	if (index.singleton()) {
-	    // index is singleton; value == list[index - 1 - offset]
-	    SetVar lp = list[index.value() - 1 - indexOffset];
-	    lp.domain.in(store.level, lp, value.dom());
-	    value.domain.in(store.level, value, lp.dom());
-	    lp.domain.inCardinality(store.level, lp, value.domain.card().min(), value.domain.card().max());
-	    value.domain.inCardinality(store.level, value, lp.domain.card().min(), lp.domain.card().max());
+        if (index.singleton()) {
+            // index is singleton; value == list[index - 1 - offset]
+            SetVar lp = list[index.value() - 1 - indexOffset];
+            lp.domain.in(store.level, lp, value.dom());
+            value.domain.in(store.level, value, lp.dom());
+            lp.domain.inCardinality(store.level, lp, value.domain.card().min(), value.domain.card().max());
+            value.domain.inCardinality(store.level, value, lp.domain.card().min(), lp.domain.card().max());
 
-	    // if (value.singleton())
-	    // 	removeConstraint();
-	}
+            // if (value.singleton())
+            // 	removeConstraint();
+        }
     }
 
     @Override public int getDefaultConsistencyPruningEvent() {

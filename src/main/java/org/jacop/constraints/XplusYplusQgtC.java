@@ -69,6 +69,7 @@ public class XplusYplusQgtC extends PrimitiveConstraint {
 
     /**
      * It creates X+Y+Q{@literal >=} C constraint.
+     *
      * @param x variable x.
      * @param y variable y.
      * @param q variable q.
@@ -76,7 +77,7 @@ public class XplusYplusQgtC extends PrimitiveConstraint {
      */
     public XplusYplusQgtC(IntVar x, IntVar y, IntVar q, int c) {
 
-        checkInputForNullness(new String[]{"x", "y", "q"}, new Object[]{x, y, q});
+        checkInputForNullness(new String[] {"x", "y", "q"}, new Object[] {x, y, q});
 
         numberId = idNumber.incrementAndGet();
 

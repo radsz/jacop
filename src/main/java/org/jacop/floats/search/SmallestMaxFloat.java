@@ -37,9 +37,9 @@ import org.jacop.search.ComparatorVariable;
  * Defines a SmallestMaxFloat comparator for Variables. The variable with maximum value 5 will
  * have a priority over variable with maximum value equal 10.
  *
+ * @param <T> type of variable being used in the search.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
- * @param <T> type of variable being used in the search.
  */
 
 public class SmallestMaxFloat<T extends FloatVar> implements ComparatorVariable<T> {

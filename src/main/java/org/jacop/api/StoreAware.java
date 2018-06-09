@@ -43,6 +43,7 @@ public interface StoreAware {
 
     /**
      * It provide store for constraints that are not imposed but called from ather constraints.
+     *
      * @param store the constraint store in which context the constraint is executed.
      */
     void include(Store store);

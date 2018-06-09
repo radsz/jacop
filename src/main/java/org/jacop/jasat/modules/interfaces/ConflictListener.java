@@ -39,15 +39,15 @@ import org.jacop.jasat.core.clauses.MapClause;
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 public interface ConflictListener extends SolverComponent {
 
     /**
      * called when a conflict occurs
-     * @param conflictclause  the conflict (unsatisfiable) clause
-     * @param level  the level at which the conflict occurred
+     *
+     * @param conflictclause the conflict (unsatisfiable) clause
+     * @param level          the level at which the conflict occurred
      */
     void onConflict(MapClause conflictclause, int level);
 

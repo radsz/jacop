@@ -101,7 +101,7 @@ public final class LazyCpVarDomain<E extends IntVar> extends SatCPBridge {
     @Override public void propagate(int literal) {
         // TODO Auto-generated method stub
     /*
-		 * TODO : lazy propagation (only propagate literals that are generated)
+     * TODO : lazy propagation (only propagate literals that are generated)
 		 */
     }
 

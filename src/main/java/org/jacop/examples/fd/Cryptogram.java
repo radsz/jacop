@@ -50,7 +50,6 @@ import java.util.regex.Pattern;
  *
  * @author Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 public class Cryptogram extends ExampleFD {
@@ -96,7 +95,7 @@ public class Cryptogram extends ExampleFD {
 
 			/* read from file args[0] */
             try {
-                
+
                 BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(filename), "UTF-8"));
                 String str;
 
@@ -233,6 +232,7 @@ public class Cryptogram extends ExampleFD {
 
     /**
      * It executes the program to solve any cryptographic puzzle.
+     *
      * @param args no arguments read.
      */
     public static void main(String args[]) {

@@ -34,7 +34,7 @@ import org.jacop.floats.core.FloatVar;
 
 /**
  * Constraints atan(P) = R
- *
+ * <p>
  * Bounds consistency can be used; third parameter of constructor controls this.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -45,6 +45,7 @@ public class AtanPeqR extends TanPeqR {
 
     /**
      * It constructs sin(P) = Q constraints.
+     *
      * @param p variable P
      * @param q variable Q
      */

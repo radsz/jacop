@@ -40,7 +40,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraints P != C
- *
+ * <p>
  * Domain consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -63,13 +63,14 @@ public class PneqC extends PrimitiveConstraint {
 
     /**
      * It constructs the constraint P = C.
+     *
      * @param p variable p.
      * @param c constant c.
      */
     public PneqC(FloatVar p, double c) {
 
-        checkInputForNullness(new String[]{"p"}, new Object[][]{ {p} });
-        if ( ! ( c >= IntDomain.MinInt && c <= IntDomain.MaxInt ) )
+        checkInputForNullness(new String[] {"p"}, new Object[][] {{p}});
+        if (!(c >= IntDomain.MinInt && c <= IntDomain.MaxInt))
             throw new IllegalArgumentException("PneqC constraint has constant c " + c + " in the not allowed range.");
 
         numberId = idNumber.incrementAndGet();
@@ -122,6 +123,7 @@ public class PneqC extends PrimitiveConstraint {
 
     /**
      * It returns the constant to which a given variable should be equal to.
+     *
      * @return the constant to which the variable should be equal to.
      */
     public double getC() {
