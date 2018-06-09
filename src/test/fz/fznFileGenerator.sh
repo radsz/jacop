@@ -42,7 +42,7 @@ while true ; do
                       exit;
                     else
                       echo "  -d,  --directory "
-                      echo "  -t,  --timeout   upto5sec, upto30sec, upto1min, upto5min, upto30min, upto1hour"
+                      echo "  -t,  --timeout   upto5sec, upto30sec, upto1min,  upto5min, upto10min, upto30min, upto1hour"
                       echo "  -s,  --fznsize - Specify file size limit in MB."
                       echo "  -h,  --help "
                       exit;
@@ -110,7 +110,7 @@ category=${pa,,}
   			mv ${k%%/*}/$(echo "$k" | cut -d / -f 2)/${st%.*}.fzn above${category#*o}/${st%.*}.fzn 2>/dev/null
             cp ${k%/*/*}/options.opt above${category#*o}/${st%/*}/ 2>/dev/null #copy options.opt to time category
             if ls $folderPath/${st%/*}/*.mzn >/dev/null 2>&1; then
-               echo "ls 1"
+#               echo "ls 1"
                 if [ ! -d above${category#*o}/${st%/*}/dznFolder ]; then
 		            mkdir -p above${category#*o}/${st%/*}/dznFolder
 			    fi
@@ -121,7 +121,7 @@ category=${pa,,}
                 mv ${k%%/*}/${st%.*}.dzn above${category#*o}/${st%/*}/dznFolder/ >/dev/null #move *.dzn file to time category
                 cp ${k%%/*}/${st%/*}/*.mzn above${category#*o}/${st%/*}/dznFolder/ #copy *.mzn to time category
 
-                if [ `ls -l $folderPath/${st%/*}/*.dzn >/dev/null | wc -l ` == 0  ]; then
+                if [ `ls -l $folderPath/${st%/*}/*.dzn >/dev/null 2>&1 | wc -l ` == 0  ]; then
 
                     rm -r ${k%%/*}/${st%/*}  #remove *.dzn files
                 fi
@@ -255,23 +255,28 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
             "upto30sec") above ${pa,,}
                         diffresult=1
                         count=4
-                        timesec=6001  ;;
+                        timesec=6001
+                        out="" ;;
             "upto1min") above ${pa,,}
                         diffresult=1
                         count=4
-                        timesec=6001  ;;
+                        timesec=6001
+                        out="" ;;
             "upto5min") above ${pa,,}
                         diffresult=1
                         count=4
-                        timesec=6001  ;;
+                        timesec=6001
+                        out="" ;;
             "upto10min") above ${pa,,}
                         diffresult=1
                         count=4
-                        timesec=6001  ;;
+                        timesec=6001  
+			            out="" ;;
             "upto1hour") above ${pa,,}
                         diffresult=1
                         count=4
-                        timesec=6001  ;;
+                        timesec=6001
+                        out="" ;;
             *){
             echo "Out result" ${out#*%}
             diffresult=1
@@ -308,29 +313,36 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
             "upTo5sec") above $pa
                         diffresult=1
                         count=4
-                        timesec=6001  ;;
+                        timesec=6001
+                        out="" ;;
             "upTo30sec") above $pa
                         diffresult=1
                         count=4
-                        timesec=6001  ;;
+                        timesec=6001
+                        out="" ;;
             "upTo1min") above $pa
                         diffresult=1
                         count=4
-                        timesec=6001  ;;
+                        timesec=6001
+                        out="" ;;
             "upTo5min") above $pa
                         diffresult=1
                         count=4
-                        timesec=6001  ;;
+                        timesec=6001
+                        out="" ;;
             "upTo10min") above $pa
                         diffresult=1
                         count=4
-                        timesec=6001  ;;
+                        timesec=6001  
+			            out="" ;;
+
             "upTo1hour") above $pa
                         diffresult=1
                         count=4
-                        timesec=6001  ;;
+                        timesec=6001
+                        out="" ;;
             *){
-            echo "Out result" ${out#*%}
+            echo "Out result-" ${out#*%}
             diffresult=1
             count=4
             timesec=6000
@@ -584,7 +596,7 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 	    if [ $timesec -ge 5400 ] && [ $timesec -ne 6001 ];
 	    then
 
-            echo "Problem $k was classified in time category above1hour"
+            echo "Problem $k was classified in time category above1hour-"
 			st=${k#*/*/}
 
 			if [ ! -d "above1hour/${st%/*}" ]; then
