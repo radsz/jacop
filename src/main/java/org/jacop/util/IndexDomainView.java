@@ -30,11 +30,11 @@
 
 package org.jacop.util;
 
-import java.util.Arrays;
-
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
+
+import java.util.Arrays;
 
 /**
  * Defines index domain view for a variable and related operations on it.

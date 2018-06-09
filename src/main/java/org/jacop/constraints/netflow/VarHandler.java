@@ -31,10 +31,10 @@
 
 package org.jacop.constraints.netflow;
 
-import java.util.List;
-
 import org.jacop.core.IntVar;
 import org.jacop.core.Var;
+
+import java.util.List;
 
 /**
  *

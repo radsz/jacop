@@ -30,26 +30,23 @@
 
 package org.jacop.examples.fd.crosswords;
 
-import java.io.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.jacop.constraints.ExtensionalSupportMDD;
 import org.jacop.constraints.XeqC;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.examples.fd.ExampleFD;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.IndomainMin;
-import org.jacop.search.Search;
-import org.jacop.search.SelectChoicePoint;
-import org.jacop.search.SimpleSelect;
-import org.jacop.search.SimpleSolutionListener;
-import org.jacop.search.SmallestDomain;
+import org.jacop.search.*;
 import org.jacop.util.MDD;
+
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  *

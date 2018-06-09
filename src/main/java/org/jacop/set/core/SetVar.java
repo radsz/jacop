@@ -30,12 +30,12 @@
 
 package org.jacop.set.core;
 
-import java.util.ArrayList;
-
 import org.jacop.constraints.Constraint;
 import org.jacop.core.Domain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+
+import java.util.ArrayList;
 
 /**
  * Defines a Finite Domain Variable (FDV) and related operations on it.

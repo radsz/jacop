@@ -29,27 +29,18 @@
  */
 package org.jacop.fz.constraints;
 
-import org.jacop.core.Store;
-import org.jacop.core.IntVar;
-import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
-
-import org.jacop.fz.*;
-
-import org.jacop.floats.core.FloatVar;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.floats.constraints.*;
 import org.jacop.floats.core.FloatDomain;
-
-import org.jacop.floats.constraints.PgteqC;
-import org.jacop.floats.constraints.PeqC;
-import org.jacop.floats.constraints.PneqC;
-import org.jacop.floats.constraints.PeqQ;
-import org.jacop.floats.constraints.PneqQ;
-import org.jacop.floats.constraints.PltQ;
-import org.jacop.floats.constraints.PlteqQ;
-import org.jacop.floats.constraints.PlteqC;
-import org.jacop.floats.constraints.PgtC;
-import org.jacop.floats.constraints.PltC;
+import org.jacop.floats.core.FloatVar;
+import org.jacop.fz.ASTScalarFlatExpr;
+import org.jacop.fz.ParserTreeConstants;
+import org.jacop.fz.SimpleNode;
+import org.jacop.fz.VariablesParameters;
 
 /**
  *

@@ -38,7 +38,9 @@ import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.util.SimpleHashSet;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.DoubleStream;
 import java.util.stream.Stream;

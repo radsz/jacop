@@ -30,8 +30,8 @@
 
 package org.jacop.examples.scala
 
-import org.jacop.core._
 import org.jacop.constraints._
+import org.jacop.core._
 import org.jacop.search._
 
 /**

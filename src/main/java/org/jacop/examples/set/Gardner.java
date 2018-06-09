@@ -30,8 +30,6 @@
 
 package org.jacop.examples.set;
 
-import java.util.ArrayList;
-
 import org.jacop.constraints.Not;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -46,6 +44,8 @@ import org.jacop.set.constraints.CardAeqX;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
 import org.jacop.set.search.IndomainSetMin;
+
+import java.util.ArrayList;
 
 /**
  * It specifies a simple Gardner problem which use set functionality from JaCoP. 

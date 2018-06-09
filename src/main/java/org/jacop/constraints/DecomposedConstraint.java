@@ -30,12 +30,12 @@
 
 package org.jacop.constraints;
 
+import org.jacop.core.Store;
+import org.jacop.core.Var;
+
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-
-import org.jacop.core.Store;
-import org.jacop.core.Var;
 
 /**
  * Standard unified interface/abstract class for constraints, which can only be decomposed. 

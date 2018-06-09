@@ -30,25 +30,15 @@
 
 package org.jacop.examples.fd.filters;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.jacop.constraints.*;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.search.CreditCalculator;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.IndomainMin;
-import org.jacop.search.MostConstrainedStatic;
-import org.jacop.search.Search;
-import org.jacop.search.SelectChoicePoint;
-import org.jacop.search.SimpleMatrixSelect;
-import org.jacop.search.SimpleSelect;
-import org.jacop.search.SmallestDomain;
-import org.jacop.search.SmallestMax;
-import org.jacop.search.SmallestMin;
+import org.jacop.search.*;
 import org.jacop.ui.PrintSchedule;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * This is a set of filter scheduling examples, commonly used in High-Level Synthesis.

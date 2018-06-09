@@ -30,15 +30,14 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.Arrays;
-import java.util.stream.Stream;
-
+import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
-import org.jacop.constraints.Constraint;
-
-import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatInterval;
+import org.jacop.floats.core.FloatVar;
+
+import java.util.Arrays;
+import java.util.stream.Stream;
 
 /**
  * EquationSystem constraint implements the multivariate interval

@@ -30,24 +30,13 @@
 
 package org.jacop.examples.cpviz;
 
+import org.jacop.constraints.*;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.search.*;
+
 import java.util.ArrayList;
 import java.util.List;
-
-import org.jacop.constraints.Alldifferent;
-import org.jacop.constraints.LinearInt;
-import org.jacop.constraints.XmulCeqZ;
-import org.jacop.constraints.XneqC;
-import org.jacop.constraints.XneqY;
-import org.jacop.constraints.XplusYeqZ;
-import org.jacop.core.Store;
-import org.jacop.core.IntVar;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.IndomainMin;
-import org.jacop.search.Search;
-import org.jacop.search.SelectChoicePoint;
-import org.jacop.search.SimpleSelect;
-
-import org.jacop.search.TraceGenerator;
 
 /**
  * It shows how to visualize solving process for SendMoreMoney problem.

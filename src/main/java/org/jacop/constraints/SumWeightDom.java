@@ -30,14 +30,14 @@
 
 package org.jacop.constraints;
 
+import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.UsesQueueVariable;
+import org.jacop.core.*;
+
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-
-import org.jacop.api.SatisfiedPresent;
-import org.jacop.api.UsesQueueVariable;
-import org.jacop.core.*;
 
 /**
  * SumWeightDom constraint implements the weighted summation over several

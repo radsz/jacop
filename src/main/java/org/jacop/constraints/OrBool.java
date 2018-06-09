@@ -30,12 +30,12 @@
 
 package org.jacop.constraints;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.ArrayList;
-
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * OrBool constraint implements logic and operation on its arguments

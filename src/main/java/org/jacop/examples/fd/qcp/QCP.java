@@ -30,24 +30,17 @@
 
 package org.jacop.examples.fd.qcp;
 
-import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.regex.Pattern;
-
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.examples.fd.ExampleFD;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.IndomainMiddle;
-import org.jacop.search.IndomainMin;
-import org.jacop.search.SelectChoicePoint;
-import org.jacop.search.Shaving;
-import org.jacop.search.SimpleSelect;
-import org.jacop.search.SmallestDomain;
-import org.jacop.search.TransformExtensional;
+import org.jacop.search.*;
+
+import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  *

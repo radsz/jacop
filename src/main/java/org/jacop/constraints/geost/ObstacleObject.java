@@ -29,10 +29,10 @@
  */
 package org.jacop.constraints.geost;
 
-import java.util.Arrays;
-
 import org.jacop.core.IntDomain;
 import org.jacop.util.SimpleArrayList;
+
+import java.util.Arrays;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek

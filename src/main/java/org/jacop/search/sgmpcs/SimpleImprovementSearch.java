@@ -30,20 +30,10 @@
 
 package org.jacop.search.sgmpcs;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.jacop.core.*;
+import org.jacop.search.*;
 
-import org.jacop.search.Search;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.SelectChoicePoint;
-import org.jacop.search.SimpleSelect;
-import org.jacop.search.RandomSelect;
-import org.jacop.search.SmallestMin;
-import org.jacop.search.IndomainMin;
-import org.jacop.search.IndomainDefaultValue;
-import org.jacop.search.SimpleSolutionListener;
+import java.util.Map;
 
 /**
  * Defines an interface for defining different methods for selecting next search

@@ -30,10 +30,11 @@
 
 package org.jacop.constraints.table;
 
-import org.jacop.core.IntVar;
-import java.util.ArrayList;
-import org.jacop.core.ValueEnumeration;
 import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.ValueEnumeration;
+
+import java.util.ArrayList;
 
 /**
  * TableMill generates tables for different constraint to be used in Table constraint

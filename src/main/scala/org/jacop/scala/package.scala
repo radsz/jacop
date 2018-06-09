@@ -36,18 +36,18 @@
 package org.jacop
 
 import org.jacop.constraints._
-import org.jacop.constraints.knapsack._
-import org.jacop.constraints.regular._
 import org.jacop.constraints.binpacking._
-import org.jacop.constraints.netflow._
 import org.jacop.constraints.diffn._
+import org.jacop.constraints.knapsack._
+import org.jacop.constraints.netflow._
+import org.jacop.constraints.regular._
 import org.jacop.constraints.table._
+import org.jacop.floats.constraints._
+import org.jacop.floats.core.FloatDomain
+import org.jacop.floats.search._
 import org.jacop.search._
 import org.jacop.set.constraints._
 import org.jacop.set.search._
-import org.jacop.floats.core.FloatDomain
-import org.jacop.floats.constraints._
-import org.jacop.floats.search._
 
 import _root_.scala.reflect._
 

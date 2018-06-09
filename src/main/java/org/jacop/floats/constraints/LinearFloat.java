@@ -32,10 +32,10 @@ package org.jacop.floats.constraints;
 
 
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.floats.constraints.linear.Linear;
 import org.jacop.floats.core.FloatVar;
-import org.jacop.core.Store;
 
 import java.util.List;
 

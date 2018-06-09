@@ -32,7 +32,6 @@ package org.jacop.floats.search;
 
 import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
-
 import org.jacop.search.ComparatorVariable;
 
 /**

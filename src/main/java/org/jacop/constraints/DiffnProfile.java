@@ -31,9 +31,9 @@
 
 package org.jacop.constraints;
 
-import java.util.List;
-
 import org.jacop.core.IntDomain;
+
+import java.util.List;
 
 /**
  * Defines a basic data structure to keep the profile for the diff2/1

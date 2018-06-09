@@ -30,20 +30,13 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.jacop.constraints.Constraint;
-import org.jacop.constraints.geost.DBox;
-import org.jacop.constraints.geost.ExternalConstraint;
-import org.jacop.constraints.geost.Geost;
-import org.jacop.constraints.geost.GeostObject;
-import org.jacop.constraints.geost.InArea;
-import org.jacop.constraints.geost.NonOverlapping;
-import org.jacop.constraints.geost.Shape;
+import org.jacop.constraints.geost.*;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * It specifies an example where squares of the given size must be placed within

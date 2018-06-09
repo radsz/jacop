@@ -30,8 +30,8 @@
 
 package org.jacop.search;
 
-import org.jacop.core.Var;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
 
 /**
  * Defines functionality for OneSolution plug-in, that is the search

@@ -30,11 +30,11 @@
 
 package org.jacop.set.search;
 
-import java.util.Random;
-
 import org.jacop.core.IntDomain;
 import org.jacop.search.Indomain;
 import org.jacop.set.core.SetVar;
+
+import java.util.Random;
 
 /**
  * IndomainMin - implements enumeration method based on the selection of the

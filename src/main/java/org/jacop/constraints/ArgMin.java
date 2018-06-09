@@ -30,19 +30,13 @@
 
 package org.jacop.constraints;
 
+import org.jacop.api.SatisfiedPresent;
+import org.jacop.core.*;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
-
-import org.jacop.api.SatisfiedPresent;
-import org.jacop.core.IntDomain;
-import org.jacop.core.BoundDomain;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.ValueEnumeration;
-import org.jacop.core.IntVar;
-import org.jacop.core.Store;
-import org.jacop.core.Var;
 
 /**
  * ArgMin constraint provides the index of the maximum

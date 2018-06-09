@@ -30,13 +30,13 @@
 
 package org.jacop.constraints;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Stream;
-
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Var;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * Defines a rectangle used in the diffn constraint.

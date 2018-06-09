@@ -30,10 +30,10 @@
 
 package org.jacop.core;
 
+import org.jacop.util.SparseSet;
+
 import java.util.ArrayList;
 import java.util.List;
-
-import org.jacop.util.SparseSet;
 
 /**
  * It is responsible of remembering what variables have changed at given
@@ -132,9 +132,9 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
         cutOffValue = Math.max(noOfObjects / 50, 20);
         trailContainsAllChanges = false;
         currentLevelMax = false;
-        objects = (Backtrackable[]) vars;
-        trail = new ArrayList<int[]>();
-        levelInfo = new ArrayList<Integer>();
+        objects = vars;
+        trail = new ArrayList<>();
+        levelInfo = new ArrayList<>();
         emptyLevel = new int[0];
         fullLevel = new int[0];
         assert (emptyLevel != fullLevel) : "Code needs to be changed.";

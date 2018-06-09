@@ -30,10 +30,9 @@
 
 package org.jacop.floats.search;
 
-import org.jacop.search.ComparatorVariable;
-
-import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatIntervalDomain;
+import org.jacop.floats.core.FloatVar;
+import org.jacop.search.ComparatorVariable;
 //import org.jacop.core.ValueEnumeration;
 
 

@@ -30,14 +30,12 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
-import org.jacop.core.Store;
-
 import org.jacop.constraints.PrimitiveConstraint;
-
-import org.jacop.floats.core.FloatVar;
+import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraint P {@literal <} C for floats

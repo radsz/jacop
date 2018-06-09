@@ -30,8 +30,8 @@
 
 package org.jacop.util;
 
-import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.core.FloatIntervalDomain;
 
 /**

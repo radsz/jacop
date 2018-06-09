@@ -38,15 +38,11 @@ package org.jacop.core;
  *
  */
 
-public class FailException extends RuntimeException {
+public final class FailException extends RuntimeException {
 
     private static final long serialVersionUID = 8683452581100000007L;
 
     FailException() {
-    }
-
-    FailException(String message) {
-        super(message);
     }
 
     @Override public Throwable fillInStackTrace() {

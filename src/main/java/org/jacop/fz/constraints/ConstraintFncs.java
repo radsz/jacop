@@ -29,7 +29,7 @@
  */
 package org.jacop.fz.constraints;
 
-import org.jacop.fz.*;
+import org.jacop.fz.SimpleNode;
 
 public final class ConstraintFncs {
 

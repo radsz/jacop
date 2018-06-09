@@ -30,8 +30,6 @@
 
 package org.jacop.set.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntervalDomain;
@@ -39,6 +37,8 @@ import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * It creates a {@literal <} b constraint on two set variables. The

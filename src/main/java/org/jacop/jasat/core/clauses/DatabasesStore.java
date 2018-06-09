@@ -31,11 +31,11 @@
 
 package org.jacop.jasat.core.clauses;
 
-import java.io.BufferedWriter;
-
 import org.jacop.jasat.core.Core;
 import org.jacop.jasat.core.SolverComponent;
 import org.jacop.jasat.core.SolverState;
+
+import java.io.BufferedWriter;
 
 /**
  * This provides a unique interface to several databases. It also translates

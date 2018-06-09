@@ -31,7 +31,6 @@
 
 package org.jacop.constraints.diffn;
 
-import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;

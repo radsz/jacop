@@ -30,12 +30,7 @@
 
 package org.jacop.search;
 
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Interval;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.IntervalEnumeration;
-import org.jacop.core.ValueEnumeration;
+import org.jacop.core.*;
 
 /**
  * IndomainMedian - implements enumeration method based on the selection of the

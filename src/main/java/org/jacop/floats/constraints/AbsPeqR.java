@@ -30,16 +30,14 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
+import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
-
-import org.jacop.constraints.Constraint;
 import org.jacop.floats.core.FloatVar;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraints |P| #= R

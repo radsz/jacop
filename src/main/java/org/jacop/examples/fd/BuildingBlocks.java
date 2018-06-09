@@ -30,12 +30,12 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+
+import java.util.ArrayList;
 
 /**
  *

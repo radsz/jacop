@@ -31,18 +31,17 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.*;
-
-import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatIntervalDomain;
+import org.jacop.floats.core.FloatVar;
+
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 /**

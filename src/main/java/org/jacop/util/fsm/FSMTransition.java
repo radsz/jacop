@@ -30,9 +30,9 @@
 
 package org.jacop.util.fsm;
 
-import java.util.Set;
-
 import org.jacop.core.IntDomain;
+
+import java.util.Set;
 
 /**
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski

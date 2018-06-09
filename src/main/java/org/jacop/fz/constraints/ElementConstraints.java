@@ -29,21 +29,22 @@
  */
 package org.jacop.fz.constraints;
 
-import org.jacop.core.Store;
-import org.jacop.core.IntVar;
-
-import org.jacop.fz.*;
+import org.jacop.constraints.ElementInteger;
+import org.jacop.constraints.ElementIntegerFast;
+import org.jacop.constraints.ElementVariableFast;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
-import org.jacop.constraints.ElementIntegerFast;
-import org.jacop.constraints.ElementInteger;
-import org.jacop.constraints.ElementVariableFast;
-import org.jacop.set.constraints.ElementSet;
-import org.jacop.set.constraints.ElementSetVariable;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
 import org.jacop.floats.constraints.ElementFloat;
 import org.jacop.floats.constraints.ElementFloatVariable;
-import org.jacop.set.core.SetVar;
 import org.jacop.floats.core.FloatVar;
+import org.jacop.fz.ASTScalarFlatExpr;
+import org.jacop.fz.ParserTreeConstants;
+import org.jacop.fz.SimpleNode;
+import org.jacop.set.constraints.ElementSet;
+import org.jacop.set.constraints.ElementSetVariable;
+import org.jacop.set.core.SetVar;
 
 /**
  *

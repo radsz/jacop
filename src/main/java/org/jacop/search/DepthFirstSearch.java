@@ -30,26 +30,19 @@
 
 package org.jacop.search;
 
-import java.lang.reflect.Array;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.XltC;
-import org.jacop.core.Domain;
-import org.jacop.core.FailException;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Store;
-import org.jacop.core.SwitchesPruningLogging;
-import org.jacop.core.Var;
+import org.jacop.core.*;
+import org.jacop.floats.constraints.PltC;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
-import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.constraints.PltC;
+import java.lang.reflect.Array;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Implements Depth First Search with number of possible plugins (listeners) to

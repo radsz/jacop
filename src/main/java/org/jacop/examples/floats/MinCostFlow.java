@@ -52,18 +52,17 @@ package org.jacop.examples.floats;
  *
  */
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.jacop.core.Store;
-import org.jacop.search.DepthFirstSearch;
-
-import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.constraints.PplusCeqR;
-import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.SmallestDomainFloat;
+import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.search.DepthFirstSearch;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class MinCostFlow {
 

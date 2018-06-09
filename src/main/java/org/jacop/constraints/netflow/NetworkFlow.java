@@ -30,22 +30,22 @@
 
 package org.jacop.constraints.netflow;
 
-import static org.jacop.constraints.netflow.Assert.checkFlow;
-import static org.jacop.constraints.netflow.Assert.checkStructure;
-
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
-
 import org.jacop.api.Stateful;
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.netflow.simplex.Arc;
 import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Var;
+
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
+
+import static org.jacop.constraints.netflow.Assert.checkFlow;
+import static org.jacop.constraints.netflow.Assert.checkStructure;
 
 /**
  *

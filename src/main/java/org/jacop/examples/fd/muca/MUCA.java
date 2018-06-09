@@ -30,29 +30,17 @@
 
 package org.jacop.examples.fd.muca;
 
-import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.StringTokenizer;
-
-import org.jacop.constraints.Among;
-import org.jacop.constraints.ExtensionalSupportVA;
-import org.jacop.constraints.IfThen;
-import org.jacop.constraints.SumInt;
-import org.jacop.constraints.XeqC;
-import org.jacop.constraints.XgteqC;
-import org.jacop.constraints.XplusYgtC;
-import org.jacop.constraints.XplusYplusQeqZ;
+import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.examples.fd.ExampleFD;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.IndomainMin;
-import org.jacop.search.MaxRegret;
-import org.jacop.search.Search;
-import org.jacop.search.SelectChoicePoint;
-import org.jacop.search.SimpleSelect;
+import org.jacop.search.*;
+
+import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.StringTokenizer;
 
 /**
  *

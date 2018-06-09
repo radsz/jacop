@@ -30,15 +30,11 @@
 
 package org.jacop.set.core;
 
+import org.jacop.constraints.Constraint;
+import org.jacop.core.*;
+
 import java.util.ArrayList;
 import java.util.Iterator;
-
-import org.jacop.constraints.Constraint;
-import org.jacop.core.Domain;
-import org.jacop.core.IntDomain;
-import org.jacop.core.Interval;
-import org.jacop.core.ValueEnumeration;
-import org.jacop.core.Var;
 
 /**
  * Defines a set interval determined by a least upper bound(lub) and a 

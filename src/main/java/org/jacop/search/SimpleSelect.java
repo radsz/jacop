@@ -30,11 +30,11 @@
 
 package org.jacop.search;
 
-import java.util.Iterator;
-import java.util.Map;
-
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Var;
+
+import java.util.Iterator;
+import java.util.Map;
 
 /**
  * It is simple and customizable selector of decisions (constraints) which will

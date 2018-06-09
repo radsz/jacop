@@ -31,11 +31,11 @@
 
 package org.jacop.constraints;
 
+import org.jacop.core.*;
+
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
-
-import org.jacop.core.*;
 
 /**
  * DisjointConditional constraint assures that any two rectangles from a vector

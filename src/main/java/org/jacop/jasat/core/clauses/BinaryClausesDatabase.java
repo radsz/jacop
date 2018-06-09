@@ -31,9 +31,9 @@
 
 package org.jacop.jasat.core.clauses;
 
-import java.io.BufferedWriter;
-
 import org.jacop.jasat.utils.Utils;
+
+import java.io.BufferedWriter;
 
 /**
  * A database for binary clauses. It only accepts those.

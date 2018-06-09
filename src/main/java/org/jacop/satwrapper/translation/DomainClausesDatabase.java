@@ -31,15 +31,15 @@
 
 package org.jacop.satwrapper.translation;
 
-import java.io.BufferedWriter;
-import java.io.IOException;
-
 import org.jacop.core.Store;
 import org.jacop.jasat.core.clauses.AbstractClausesDatabase;
 import org.jacop.jasat.core.clauses.MapClause;
 import org.jacop.jasat.utils.Utils;
 import org.jacop.satwrapper.SatWrapper;
 import org.jacop.satwrapper.WrapperComponent;
+
+import java.io.BufferedWriter;
+import java.io.IOException;
 
 /*
  * NOTE :

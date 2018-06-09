@@ -30,18 +30,18 @@
 
 package org.jacop.constraints.netflow;
 
-import static org.jacop.constraints.netflow.simplex.NetworkSimplex.DELETED_ARC;
-
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-
 import org.jacop.constraints.netflow.DomainStructure.Behavior;
 import org.jacop.constraints.netflow.simplex.Arc;
 import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Var;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
+import static org.jacop.constraints.netflow.simplex.NetworkSimplex.DELETED_ARC;
 
 /**
  *

@@ -30,9 +30,9 @@
 
 package org.jacop.search;
 
-import org.jacop.core.Var;
-import org.jacop.core.Store;
 import org.jacop.constraints.Constraint;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
 
 import java.util.*;
 import java.util.Map.Entry;

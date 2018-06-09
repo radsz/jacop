@@ -32,9 +32,9 @@
 package org.jacop.constraints;
 
 import org.jacop.api.UsesQueueVariable;
-import org.jacop.core.Var;
-import org.jacop.core.Store;
 import org.jacop.core.IntDomain;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;

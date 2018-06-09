@@ -30,10 +30,10 @@
 
 package org.jacop.search;
 
-import java.util.Map;
-
-import org.jacop.core.Var;
 import org.jacop.core.IntVar;
+import org.jacop.core.Var;
+
+import java.util.Map;
 
 /**
  * IndomainDefaultValue - implements enumeration method based on the

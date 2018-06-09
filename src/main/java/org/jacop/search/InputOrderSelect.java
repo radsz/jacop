@@ -30,13 +30,13 @@
 
 package org.jacop.search;
 
-import java.util.Iterator;
-import java.util.Map;
-
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.Var;
+
+import java.util.Iterator;
+import java.util.Map;
 
 /**
  * It is simple input order selector of variables.

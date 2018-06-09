@@ -29,41 +29,23 @@
  */
 package org.jacop.fz;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
-import java.util.ArrayList;
-import java.util.Comparator;
-
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.XplusYeqC;
-import org.jacop.core.BooleanVar;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Store;
-import org.jacop.core.Var;
-import org.jacop.core.ValueEnumeration;
-import org.jacop.floats.core.FloatVar;
+import org.jacop.core.*;
 import org.jacop.floats.constraints.PplusQeqR;
-import org.jacop.search.CreditCalculator;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.IndomainMin;
-import org.jacop.search.LDS;
-import org.jacop.search.Search;
-import org.jacop.search.SelectChoicePoint;
-import org.jacop.search.SimpleSelect;
-import org.jacop.search.SimpleSolutionListener;
-import org.jacop.search.InitializeListener;
-import org.jacop.search.FailConstraintsStatistics;
-import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.floats.core.FloatDomain;
-
+import org.jacop.floats.core.FloatVar;
+import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.satwrapper.SatTranslation;
+import org.jacop.search.*;
 import org.jacop.set.core.SetVar;
 import org.jacop.set.search.IndomainSetMin;
 
-import org.jacop.satwrapper.SatTranslation;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
 
 /**
  *

@@ -30,8 +30,6 @@
 
 package org.jacop.set.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -39,6 +37,8 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * It creates a constraint that makes sure that the value assigned to integer variable x is

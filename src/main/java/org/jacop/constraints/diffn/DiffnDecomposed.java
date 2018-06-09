@@ -31,19 +31,15 @@
 
 package org.jacop.constraints.diffn;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.jacop.constraints.DecomposedConstraint;
-import org.jacop.constraints.Constraint;
-import org.jacop.constraints.Min;
-import org.jacop.constraints.Max;
-import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.*;
 import org.jacop.constraints.cumulative.CumulativeBasic;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntDomain;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Diffn constraint assures that any two rectangles from a vector of rectangles

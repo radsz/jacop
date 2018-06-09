@@ -30,10 +30,10 @@
 
 package org.jacop.core;
 
+import org.jacop.constraints.Constraint;
+
 import java.util.Iterator;
 import java.util.Random;
-
-import org.jacop.constraints.Constraint;
 
 /**
  * Defines interval of numbers which is part of FDV definition which consist of

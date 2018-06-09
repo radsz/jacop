@@ -29,12 +29,12 @@
  */
 package org.jacop.constraints.geost;
 
+import org.jacop.util.SimpleHashSet;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
-
-import org.jacop.util.SimpleHashSet;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek

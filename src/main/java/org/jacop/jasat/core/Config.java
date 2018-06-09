@@ -31,16 +31,12 @@
 
 package org.jacop.jasat.core;
 
+import org.jacop.jasat.core.clauses.*;
+
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
-
-import org.jacop.jasat.core.clauses.AbstractClausesDatabase;
-import org.jacop.jasat.core.clauses.BinaryClausesDatabase;
-import org.jacop.jasat.core.clauses.DefaultClausesDatabase;
-import org.jacop.jasat.core.clauses.TernaryClausesDatabase;
-import org.jacop.jasat.core.clauses.UnaryClausesDatabase;
 
 /**
  * The configuration for a solver. It contains all numeric values or

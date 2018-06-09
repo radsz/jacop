@@ -30,9 +30,6 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.jacop.constraints.regular.Regular;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
@@ -41,6 +38,9 @@ import org.jacop.core.Store;
 import org.jacop.util.fsm.FSM;
 import org.jacop.util.fsm.FSMState;
 import org.jacop.util.fsm.FSMTransition;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * It constructs a Lex (lexicographical order) constraint.

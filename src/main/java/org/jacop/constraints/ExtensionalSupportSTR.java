@@ -31,15 +31,14 @@
 
 package org.jacop.constraints;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
 import org.jacop.util.IndexDomainView;
+
+import java.util.Arrays;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Extensional constraint assures that one of the tuples is enforced in the

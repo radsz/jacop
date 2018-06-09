@@ -29,9 +29,9 @@
  */
 package org.jacop.constraints.geost;
 
-import java.util.Collection;
-
 import org.jacop.util.SimpleHashSet;
+
+import java.util.Collection;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek

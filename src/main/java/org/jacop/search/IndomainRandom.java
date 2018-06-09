@@ -30,10 +30,10 @@
 
 package org.jacop.search;
 
-import java.util.Random;
-
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+
+import java.util.Random;
 
 /**
  * IndomainRandom - implements enumeration method based on the selection of the

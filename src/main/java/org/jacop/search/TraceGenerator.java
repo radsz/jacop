@@ -30,11 +30,13 @@
 
 package org.jacop.search;
 
-import java.io.*;
-import java.nio.charset.Charset;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.*;
+import org.jacop.constraints.Not;
+import org.jacop.constraints.PrimitiveConstraint;
+import org.jacop.core.*;
+import org.jacop.set.core.SetDomain;
+import org.jacop.set.core.SetVar;
+import org.xml.sax.SAXException;
+import org.xml.sax.helpers.AttributesImpl;
 
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
@@ -42,20 +44,13 @@ import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.transform.sax.SAXTransformerFactory;
 import javax.xml.transform.sax.TransformerHandler;
 import javax.xml.transform.stream.StreamResult;
-
-import org.jacop.constraints.Not;
-import org.jacop.constraints.PrimitiveConstraint;
-import org.jacop.core.Domain;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Interval;
-import org.jacop.core.IntervalEnumeration;
-import org.jacop.core.Store;
-import org.jacop.core.Var;
-import org.jacop.set.core.SetDomain;
-import org.jacop.set.core.SetVar;
-import org.xml.sax.SAXException;
-import org.xml.sax.helpers.AttributesImpl;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
+import java.nio.charset.Charset;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 
 /**

@@ -31,14 +31,14 @@
 
 package org.jacop.jasat.modules;
 
-import java.util.Iterator;
-import java.util.LinkedList;
-
 import org.jacop.jasat.core.Core;
 import org.jacop.jasat.core.clauses.MapClause;
 import org.jacop.jasat.modules.interfaces.BackjumpListener;
 import org.jacop.jasat.modules.interfaces.ExplanationListener;
 import org.jacop.jasat.modules.interfaces.ForgetListener;
+
+import java.util.Iterator;
+import java.util.LinkedList;
 
 
 

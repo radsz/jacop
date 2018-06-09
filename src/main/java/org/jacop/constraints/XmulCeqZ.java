@@ -30,13 +30,9 @@
 
 package org.jacop.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.core.*;
 
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Interval;
-import org.jacop.core.Store;
-import org.jacop.core.FailException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraint X * C #= Z

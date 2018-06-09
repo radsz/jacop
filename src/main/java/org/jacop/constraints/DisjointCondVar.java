@@ -31,11 +31,11 @@
 
 package org.jacop.constraints;
 
-import java.util.List;
-
 import org.jacop.core.MutableVar;
 import org.jacop.core.MutableVarValue;
 import org.jacop.core.Store;
+
+import java.util.List;
 
 /**
  * Defines a Variable for Diff2 constraints and related operations on it. It

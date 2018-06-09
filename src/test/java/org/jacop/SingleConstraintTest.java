@@ -36,8 +36,6 @@ import org.jacop.constraints.table.SimpleTable;
 import org.jacop.constraints.table.Table;
 import org.jacop.core.*;
 import org.jacop.examples.fd.PerfectSquare;
-import org.jacop.floats.core.FloatVar;
-import org.jacop.search.*;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
@@ -45,7 +43,6 @@ import org.junit.rules.TestRule;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;

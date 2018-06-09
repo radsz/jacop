@@ -30,11 +30,11 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
 import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+
+import java.util.ArrayList;
 
 /**
  *

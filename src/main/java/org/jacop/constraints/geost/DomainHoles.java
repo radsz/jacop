@@ -29,12 +29,12 @@
  */
 package org.jacop.constraints.geost;
 
-import java.util.Arrays;
-import java.util.Collection;
-
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Var;
+
+import java.util.Arrays;
+import java.util.Collection;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek

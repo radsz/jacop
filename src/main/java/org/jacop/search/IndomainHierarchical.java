@@ -30,10 +30,10 @@
 
 package org.jacop.search;
 
+import org.jacop.core.Var;
+
 import java.util.HashMap;
 import java.util.Map;
-
-import org.jacop.core.Var;
 
 /**
  * IndomainHierarchical - implements enumeration method based on the selection

@@ -31,14 +31,14 @@
 
 package org.jacop.constraints.netflow;
 
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Var;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Var;
 
 /**
  *

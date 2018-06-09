@@ -29,37 +29,14 @@
  */
 package org.jacop.fz.constraints;
 
-import org.jacop.core.Store;
-import org.jacop.core.IntVar;
-
-import org.jacop.fz.*;
-
-import org.jacop.constraints.Reified;
-import org.jacop.constraints.SumBool;
-import org.jacop.constraints.SumInt;
-import org.jacop.constraints.LinearInt;
-import org.jacop.constraints.LinearIntDom;
-import org.jacop.constraints.SumWeight;
-import org.jacop.constraints.XlteqY;
-import org.jacop.constraints.XneqY;
-import org.jacop.constraints.XltY;
-import org.jacop.constraints.XeqY;
-import org.jacop.constraints.XeqC;
-import org.jacop.constraints.XneqC;
-import org.jacop.constraints.XplusClteqZ;
-import org.jacop.constraints.XplusYeqZ;
-import org.jacop.constraints.XplusYeqC;
-import org.jacop.constraints.XplusCeqZ;
-import org.jacop.constraints.XmulCeqZ;
-import org.jacop.constraints.XplusYlteqZ;
-import org.jacop.constraints.Not;
-import org.jacop.constraints.OrBoolVector;
-
-import org.jacop.satwrapper.SatTranslation;
+import org.jacop.constraints.*;
 import org.jacop.core.FailException;
-import org.jacop.constraints.XorBool;
-import org.jacop.constraints.AndBoolSimple;
-import org.jacop.constraints.OrBoolSimple;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.fz.ASTScalarFlatExpr;
+import org.jacop.fz.ParserTreeConstants;
+import org.jacop.fz.SimpleNode;
+import org.jacop.satwrapper.SatTranslation;
 
 /**
  *

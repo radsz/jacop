@@ -30,8 +30,6 @@
 
 package org.jacop;
 
-import static org.junit.Assert.*;
-
 import org.jacop.examples.fd.*;
 import org.jacop.examples.fd.carsequencing.CarSequencing;
 import org.jacop.examples.fd.crosswords.CrossWord;
@@ -39,10 +37,11 @@ import org.jacop.examples.fd.muca.MUCA;
 import org.jacop.examples.fd.nonogram.Nonogram;
 import org.jacop.examples.fd.qcp.QCP;
 import org.junit.Test;
-import scala.tools.nsc.transform.patmat.Logic;
 
 import java.util.HashSet;
 import java.util.Set;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  *

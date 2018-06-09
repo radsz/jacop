@@ -31,14 +31,14 @@
 
 package org.jacop.constraints;
 
-import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
-
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+
+import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 /**
  * Constraint ( x_0 xor x_1 xor ... xor x_n ){@literal <=>} y

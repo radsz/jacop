@@ -30,15 +30,11 @@
 
 package org.jacop.constraints;
 
+import org.jacop.core.*;
+import org.jacop.util.SophisticatedLengauerTarjan;
+
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Store;
-import org.jacop.core.ValueEnumeration;
-import org.jacop.core.Var;
-import org.jacop.util.SophisticatedLengauerTarjan;
 
 /**
  * Subcircuit constraint assures that all variables build a 

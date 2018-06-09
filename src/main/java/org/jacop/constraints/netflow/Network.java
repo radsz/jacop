@@ -30,19 +30,19 @@
 
 package org.jacop.constraints.netflow;
 
-import static org.jacop.constraints.netflow.Assert.checkFlow;
-import static org.jacop.constraints.netflow.Assert.checkStructure;
+import org.jacop.constraints.netflow.simplex.Arc;
+import org.jacop.constraints.netflow.simplex.NetworkSimplex;
+import org.jacop.constraints.netflow.simplex.Node;
+import org.jacop.core.Store;
+import org.jacop.core.TimeStamp;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 
-import org.jacop.constraints.netflow.simplex.Arc;
-import org.jacop.constraints.netflow.simplex.NetworkSimplex;
-import org.jacop.constraints.netflow.simplex.Node;
-import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
+import static org.jacop.constraints.netflow.Assert.checkFlow;
+import static org.jacop.constraints.netflow.Assert.checkStructure;
 
 /**
  *

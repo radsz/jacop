@@ -30,9 +30,6 @@
 
 package org.jacop.examples.cpviz;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.jacop.constraints.Cumulative;
 import org.jacop.constraints.In;
 import org.jacop.constraints.XplusYlteqZ;
@@ -40,12 +37,10 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.IndomainMin;
-import org.jacop.search.SelectChoicePoint;
-import org.jacop.search.SimpleSelect;
-import org.jacop.search.SmallestMax;
-import org.jacop.search.TraceGenerator;
+import org.jacop.search.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  *

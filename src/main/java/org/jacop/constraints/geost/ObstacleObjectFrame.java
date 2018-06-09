@@ -29,18 +29,14 @@
  */
 package org.jacop.constraints.geost;
 
-import java.awt.Color;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.LinkedList;
-import java.util.ListIterator;
-
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 import org.jacop.util.SimpleArrayList;
+
+import java.awt.*;
+import java.util.*;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek

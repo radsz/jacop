@@ -29,71 +29,30 @@
  */
 package org.jacop.fz.constraints;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-
-import org.jacop.core.Store;
-import org.jacop.core.IntVar;
-import org.jacop.core.Interval;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.ValueEnumeration;
-import org.jacop.core.IntDomain;
-import org.jacop.core.Var;
-
-import org.jacop.set.core.SetVar;
-
-import org.jacop.fz.*;
-
-import org.jacop.set.constraints.AdisjointB;
-
-import org.jacop.constraints.XeqC;
-import org.jacop.constraints.XplusClteqZ;
-import org.jacop.constraints.XplusYlteqZ;
-import org.jacop.constraints.Or;
-import org.jacop.constraints.XlteqY;
-import org.jacop.constraints.XneqY;
-import org.jacop.constraints.Alldiff;
+import org.jacop.constraints.*;
+import org.jacop.constraints.binpacking.Binpacking;
+import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeUnary;
-import org.jacop.constraints.cumulative.Cumulative;
-import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.diffn.Diffn;
-import org.jacop.constraints.Circuit;
-import org.jacop.constraints.Subcircuit;
-import org.jacop.constraints.SoftAlldifferent;
-import org.jacop.constraints.ViolationMeasure;
-import org.jacop.constraints.SoftGCC;
-import org.jacop.constraints.AmongVar;
-import org.jacop.constraints.Among;
-import org.jacop.constraints.GCC;
-import org.jacop.constraints.Values;
-import org.jacop.constraints.Count;
-import org.jacop.constraints.ArgMin;
-import org.jacop.constraints.ArgMax;
-import org.jacop.constraints.ExtensionalSupportMDD;
-import org.jacop.constraints.ExtensionalSupportSTR;
-import org.jacop.constraints.Assignment;
-import org.jacop.util.fsm.FSMTransition;
-import org.jacop.util.fsm.FSM;
-import org.jacop.util.fsm.FSMState;
-import org.jacop.constraints.regular.Regular;
+import org.jacop.constraints.geost.*;
 import org.jacop.constraints.knapsack.Knapsack;
-import org.jacop.constraints.DecomposedConstraint;
-import org.jacop.constraints.Sequence;
-import org.jacop.constraints.Stretch;
-import org.jacop.constraints.LexOrder;
-import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.netflow.NetworkBuilder;
 import org.jacop.constraints.netflow.NetworkFlow;
-import org.jacop.constraints.Constraint;
+import org.jacop.constraints.regular.Regular;
+import org.jacop.core.*;
 import org.jacop.floats.core.FloatVar;
-import org.jacop.constraints.geost.Geost;
-import org.jacop.constraints.geost.ExternalConstraint;
-import org.jacop.constraints.geost.GeostObject;
-import org.jacop.constraints.geost.NonOverlapping;
-import org.jacop.constraints.geost.InArea;
-import org.jacop.constraints.geost.DBox;
-import org.jacop.constraints.geost.Shape;
+import org.jacop.fz.ASTScalarFlatExpr;
+import org.jacop.fz.ParserTreeConstants;
+import org.jacop.fz.SimpleNode;
+import org.jacop.set.constraints.AdisjointB;
+import org.jacop.set.core.SetVar;
+import org.jacop.util.fsm.FSM;
+import org.jacop.util.fsm.FSMState;
+import org.jacop.util.fsm.FSMTransition;
+
+import java.util.ArrayList;
+import java.util.HashSet;
 
 /**
  *

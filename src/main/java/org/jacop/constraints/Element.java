@@ -30,13 +30,13 @@
 
 package org.jacop.constraints;
 
-import java.util.List;
-import java.util.Set;
-
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Var;
+
+import java.util.List;
+import java.util.Set;
 
 /**
  * Element constraint implements the element/4 constraint (both with integer

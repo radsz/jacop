@@ -30,9 +30,11 @@
 
 package org.jacop.examples.flatzinc;
 
-import org.jacop.core.*;
-import org.jacop.search.*;
-import org.jacop.fz.*;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
+import org.jacop.fz.FlatzincLoader;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.SelectChoicePoint;
 
 
 /**

@@ -33,9 +33,9 @@ package org.jacop.constraints.cumulative;
 
 import org.jacop.core.IntVar;
 
-import java.io.PrintStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 
 /**
  * Implements ThetaLambdaTree and operations on this tree for Cumulative constraint

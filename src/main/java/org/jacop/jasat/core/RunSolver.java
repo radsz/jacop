@@ -31,12 +31,6 @@
 
 package org.jacop.jasat.core;
 
-import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.InputStream;
-
 import org.jacop.jasat.modules.DebugModule;
 import org.jacop.jasat.modules.SearchModule;
 import org.jacop.jasat.modules.StatModule;
@@ -46,6 +40,8 @@ import org.jacop.jasat.utils.CnfParser.ParseException;
 import org.jacop.jasat.utils.OptParse;
 import org.jacop.jasat.utils.OptParse.OptHandler;
 import org.jacop.jasat.utils.structures.IntVec;
+
+import java.io.*;
 
 /**
  * The main class for the SAT solver when it is used standalone (without being

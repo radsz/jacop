@@ -30,9 +30,9 @@
 
 package org.jacop.core;
 
-import java.util.ArrayList;
-
 import org.jacop.constraints.Constraint;
+
+import java.util.ArrayList;
 
 /**
  * Defines a variable and related operations on it.

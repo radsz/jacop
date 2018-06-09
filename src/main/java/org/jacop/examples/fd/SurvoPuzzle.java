@@ -30,16 +30,19 @@
 
 package org.jacop.examples.fd;
 
-import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  *

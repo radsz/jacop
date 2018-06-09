@@ -30,18 +30,17 @@
 
 package org.jacop.floats.constraints;
 
+import org.jacop.api.SatisfiedPresent;
+import org.jacop.constraints.Constraint;
+import org.jacop.core.IntDomain;
+import org.jacop.core.Store;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
-
-import org.jacop.api.SatisfiedPresent;
-import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.core.FloatVar;
-
-import org.jacop.constraints.Constraint;
-import org.jacop.core.IntDomain;
-import org.jacop.core.Store;
 
 /**
  * Min constraint implements the minimum/2 constraint. It provides the minimum

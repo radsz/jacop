@@ -30,16 +30,14 @@
 
 package org.jacop.constraints;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Linear constraint implements the weighted summation over several

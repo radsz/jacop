@@ -30,12 +30,6 @@
 
 package org.jacop.constraints.regular;
 
-import java.io.*;
-import java.lang.reflect.Array;
-import java.nio.charset.Charset;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
@@ -47,6 +41,12 @@ import org.jacop.util.MDD;
 import org.jacop.util.fsm.FSM;
 import org.jacop.util.fsm.FSMState;
 import org.jacop.util.fsm.FSMTransition;
+
+import java.io.*;
+import java.lang.reflect.Array;
+import java.nio.charset.Charset;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  *

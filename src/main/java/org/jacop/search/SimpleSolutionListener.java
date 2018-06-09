@@ -30,17 +30,13 @@
 
 package org.jacop.search;
 
-import java.util.Map;
-
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.XeqC;
-import org.jacop.core.Domain;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Store;
-import org.jacop.core.Var;
-import org.jacop.set.core.SetVar;
+import org.jacop.core.*;
 import org.jacop.floats.core.FloatVar;
+import org.jacop.set.core.SetVar;
+
+import java.util.Map;
 
 /**
  * It defines a simple solution listener which should be used if some basic

@@ -29,19 +29,18 @@
  */
 package org.jacop.fz;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.floats.core.FloatVar;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
 
-import org.jacop.floats.core.FloatVar;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  *

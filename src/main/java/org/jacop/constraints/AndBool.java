@@ -30,12 +30,12 @@
 
 package org.jacop.constraints;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.ArrayList;
-
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * AndBool constraint implements logic and operation on its arguments

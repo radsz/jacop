@@ -31,11 +31,11 @@
 
 package org.jacop.jasat.core;
 
-import java.util.Arrays;
-
 import org.jacop.jasat.utils.MemoryPool;
 import org.jacop.jasat.utils.Utils;
 import org.jacop.jasat.utils.structures.IntStack;
+
+import java.util.Arrays;
 
 
 /**

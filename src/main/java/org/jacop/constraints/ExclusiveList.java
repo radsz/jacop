@@ -30,10 +30,10 @@
 
 package org.jacop.constraints;
 
+import org.jacop.core.IntVar;
+
 import java.util.ArrayList;
 import java.util.List;
-
-import org.jacop.core.IntVar;
 
 /**
  * Defines a list of exclusive items.

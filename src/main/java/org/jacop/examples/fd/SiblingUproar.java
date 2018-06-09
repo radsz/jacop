@@ -30,14 +30,14 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Element;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XneqY;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+
+import java.util.ArrayList;
 
 /**
  *

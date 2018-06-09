@@ -30,14 +30,14 @@
 
 package org.jacop.search;
 
-import java.util.*;
-
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.XneqC;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+
+import java.util.*;
 
 /**
  * Defines functionality of shaving. Plugin in this object to search to

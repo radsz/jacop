@@ -32,10 +32,8 @@ package org.jacop.fz;
 import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-
-import org.jacop.satwrapper.SatTranslation;
-
 import org.jacop.fz.constraints.Support;
+import org.jacop.satwrapper.SatTranslation;
 
 /**
  *

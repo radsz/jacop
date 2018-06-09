@@ -30,17 +30,13 @@
 
 package org.jacop.set.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.api.Stateful;
 import org.jacop.constraints.Constraint;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
-import org.jacop.core.ValueEnumeration;
+import org.jacop.core.*;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * It creates a lex constraint on a list of set variables. Each consecutive pair of

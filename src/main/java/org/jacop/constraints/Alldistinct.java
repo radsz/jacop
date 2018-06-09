@@ -30,16 +30,16 @@
 
 package org.jacop.constraints;
 
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
-
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
 import org.jacop.util.SimpleArrayList;
 import org.jacop.util.SimpleHashSet;
+
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
 /**
  * Alldistinct constraint assures that all FDVs have different values.

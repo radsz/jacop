@@ -30,14 +30,12 @@
 
 package org.jacop.examples.scala
 
-import java.io.BufferedReader
-import java.io.FileNotFoundException
-import java.io.FileReader
-import java.io.IOException
+import java.io.{BufferedReader, FileNotFoundException, FileReader, IOException}
 import java.util.regex.Pattern
 
-import scala.collection.mutable.ArrayBuffer
 import org.jacop.scala._
+
+import scala.collection.mutable.ArrayBuffer
 
 /**
  * 

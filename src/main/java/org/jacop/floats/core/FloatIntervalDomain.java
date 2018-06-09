@@ -30,17 +30,14 @@
 
 package org.jacop.floats.core;
 
+import org.jacop.constraints.Constraint;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntervalEnumeration;
+import org.jacop.core.ValueEnumeration;
+import org.jacop.core.Var;
+
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.regex.Pattern;
-
-import org.jacop.core.Var;
-import org.jacop.core.IntDomain;
-
-import org.jacop.core.ValueEnumeration;
-import org.jacop.core.IntervalEnumeration;
-
-import org.jacop.constraints.Constraint;
 
 
 //TODO, test default function which use sparse (dense) representation. Default code if

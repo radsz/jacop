@@ -37,8 +37,8 @@ package org.jacop.floats.constraints.linear;
  * @version 4.5
  */
 
-import org.jacop.floats.core.FloatVar;
 import org.jacop.core.Store;
+import org.jacop.floats.core.FloatVar;
 
 public class VarNode extends VariableNode {
 

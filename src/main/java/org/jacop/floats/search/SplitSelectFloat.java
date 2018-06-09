@@ -32,20 +32,18 @@
 package org.jacop.floats.search;
 
 import org.jacop.constraints.PrimitiveConstraint;
-
+import org.jacop.core.Store;
+import org.jacop.core.TimeStamp;
+import org.jacop.core.Var;
 import org.jacop.floats.constraints.PeqC;
 import org.jacop.floats.constraints.PgtC;
 import org.jacop.floats.constraints.PltC;
 import org.jacop.floats.constraints.PlteqC;
 import org.jacop.floats.core.FloatVar;
-
-import org.jacop.core.Var;
-import org.jacop.core.Store;
-
-import org.jacop.search.SimpleSelect;
 import org.jacop.search.ComparatorVariable;
+import org.jacop.search.SimpleSelect;
+
 // import org.jacop.search.Indomain;
-import org.jacop.core.TimeStamp;
 
 /**
  * It is simple and customizable selector of decisions (constraints) which will

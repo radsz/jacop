@@ -31,9 +31,6 @@
 
 package org.jacop.satwrapper;
 
-import java.io.BufferedWriter;
-import java.util.*;
-
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.constraints.Constraint;
@@ -41,11 +38,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.jasat.core.Config;
-import org.jacop.jasat.core.Core;
-import org.jacop.jasat.core.SolverComponent;
-import org.jacop.jasat.core.SolverState;
-import org.jacop.jasat.core.Trail;
+import org.jacop.jasat.core.*;
 import org.jacop.jasat.core.clauses.MapClause;
 import org.jacop.jasat.modules.ActivityModule;
 import org.jacop.jasat.modules.HeuristicAssertionModule;
@@ -60,6 +53,12 @@ import org.jacop.satwrapper.translation.DomainClausesDatabase;
 import org.jacop.satwrapper.translation.DomainTranslator;
 import org.jacop.satwrapper.translation.SatCPBridge;
 import org.jacop.satwrapper.translation.SimpleCpVarDomain;
+
+import java.io.BufferedWriter;
+import java.util.ArrayDeque;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 
 /*
  * Global TODO:

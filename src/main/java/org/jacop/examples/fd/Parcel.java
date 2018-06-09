@@ -30,13 +30,13 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Element;
 import org.jacop.constraints.SumInt;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+
+import java.util.ArrayList;
 
 /**
  * It solves a simple parcel shipment problem. 

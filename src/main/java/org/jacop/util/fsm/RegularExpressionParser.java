@@ -30,13 +30,13 @@
 
 package org.jacop.util.fsm;
 
-import java.io.StringReader;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.jacop.constraints.regular.Regular;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntervalDomain;
+
+import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Instances of this class parse the word combination little language.

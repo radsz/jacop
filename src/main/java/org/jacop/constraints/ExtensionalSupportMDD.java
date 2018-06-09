@@ -30,8 +30,6 @@
 
 package org.jacop.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -40,6 +38,8 @@ import org.jacop.core.TimeStamp;
 import org.jacop.util.IndexDomainView;
 import org.jacop.util.MDD;
 import org.jacop.util.SparseSet;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 /**

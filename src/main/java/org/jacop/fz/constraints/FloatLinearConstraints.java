@@ -29,21 +29,15 @@
  */
 package org.jacop.fz.constraints;
 
-import org.jacop.core.Store;
-import org.jacop.core.IntVar;
 import org.jacop.constraints.Reified;
 import org.jacop.core.FailException;
-
-import org.jacop.fz.*;
-
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.floats.constraints.*;
 import org.jacop.floats.core.FloatVar;
-
-import org.jacop.floats.constraints.LinearFloat;
-import org.jacop.floats.constraints.PlteqQ;
-import org.jacop.floats.constraints.PltQ;
-import org.jacop.floats.constraints.PplusQeqR;
-import org.jacop.floats.constraints.PplusCeqR;
-import org.jacop.floats.constraints.PeqQ;
+import org.jacop.fz.ASTScalarFlatExpr;
+import org.jacop.fz.ParserTreeConstants;
+import org.jacop.fz.SimpleNode;
 
 /**
  *

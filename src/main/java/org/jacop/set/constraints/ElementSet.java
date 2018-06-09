@@ -36,7 +36,6 @@ import org.jacop.core.*;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
-import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 

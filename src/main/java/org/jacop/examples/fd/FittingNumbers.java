@@ -30,12 +30,12 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
 import org.jacop.constraints.LinearInt;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+
+import java.util.ArrayList;
 
 /**
  *

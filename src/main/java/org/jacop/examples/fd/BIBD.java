@@ -30,14 +30,14 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.jacop.constraints.AndBool;
 import org.jacop.constraints.SumInt;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  *

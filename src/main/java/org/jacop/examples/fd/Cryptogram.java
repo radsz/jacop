@@ -30,20 +30,20 @@
 
 package org.jacop.examples.fd;
 
+import org.jacop.constraints.Alldistinct;
+import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.SumInt;
+import org.jacop.constraints.XneqC;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+
 import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
-
-import org.jacop.constraints.Alldistinct;
-import org.jacop.constraints.SumInt;
-import org.jacop.constraints.LinearInt;
-import org.jacop.constraints.XneqC;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Store;
 
 /**
  * Cryptogram. It solves any cryptogram puzzle of the form like SEND+MORE=MONEY.

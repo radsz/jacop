@@ -40,19 +40,14 @@ package org.jacop.examples.floats;
  *
  */
 
-import org.jacop.core.Store;
-import org.jacop.core.IntVar;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.SelectChoicePoint;
-import org.jacop.search.SimpleSelect;
-import org.jacop.search.SmallestDomain;
-import org.jacop.search.IndomainMin;
 import org.jacop.constraints.Circuit;
-
-import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.constraints.LinearFloat;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
 import org.jacop.floats.constraints.ElementFloat;
+import org.jacop.floats.constraints.LinearFloat;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
+import org.jacop.search.*;
 
 public class TinyTSP {
 

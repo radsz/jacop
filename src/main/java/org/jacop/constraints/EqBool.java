@@ -30,16 +30,16 @@
 
 package org.jacop.constraints;
 
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.Store;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
-
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Store;
 
 /**
  * If all x's are equal to each other then result variable is equal 1. Otherwise, result variable 

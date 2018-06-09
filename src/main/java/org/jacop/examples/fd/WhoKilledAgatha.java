@@ -30,21 +30,13 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
-import org.jacop.constraints.Eq;
-import org.jacop.constraints.IfThen;
-import org.jacop.constraints.SumInt;
-import org.jacop.constraints.XeqC;
-import org.jacop.constraints.XlteqC;
+import org.jacop.constraints.*;
 import org.jacop.core.Domain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.IndomainMin;
-import org.jacop.search.SelectChoicePoint;
-import org.jacop.search.SimpleSelect;
-import org.jacop.search.SmallestDomain;
+import org.jacop.search.*;
+
+import java.util.ArrayList;
 
 /**
  *

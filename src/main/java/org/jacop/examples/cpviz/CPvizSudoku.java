@@ -34,15 +34,15 @@
 
 package org.jacop.examples.cpviz;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.XneqY;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.search.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  *

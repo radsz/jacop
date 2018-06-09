@@ -30,12 +30,6 @@
 
 package org.jacop.constraints.netflow;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.LinearInt;
@@ -43,6 +37,11 @@ import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
 /**
  *

@@ -30,10 +30,10 @@
 
 package org.jacop.constraints.geost;
 
+import org.jacop.util.SimpleArrayList;
+
 import java.util.Arrays;
 import java.util.Collection;
-
-import org.jacop.util.SimpleArrayList;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek

@@ -29,10 +29,10 @@
  */
 package org.jacop.constraints.geost;
 
+import org.jacop.core.Var;
+
 import java.util.ArrayList;
 import java.util.Collection;
-
-import org.jacop.core.Var;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek

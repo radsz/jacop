@@ -30,13 +30,13 @@
 
 package org.jacop.util;
 
+import org.jacop.core.IntVar;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.TreeMap;
-
-import org.jacop.core.IntVar;
 
 /**
  * Defines an MDD as used in the following paper. 

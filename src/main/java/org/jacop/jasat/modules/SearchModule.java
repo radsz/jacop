@@ -31,14 +31,14 @@
 
 package org.jacop.jasat.modules;
 
-import java.util.TimerTask;
-
 import org.jacop.jasat.core.Core;
 import org.jacop.jasat.core.SolverState;
 import org.jacop.jasat.core.clauses.MapClause;
 import org.jacop.jasat.modules.interfaces.ExplanationListener;
 import org.jacop.jasat.modules.interfaces.SolutionListener;
 import org.jacop.jasat.modules.interfaces.StartStopListener;
+
+import java.util.TimerTask;
 
 /**
  * A basic searching component, which controls the solver to solve the problem

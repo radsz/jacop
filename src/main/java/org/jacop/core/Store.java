@@ -30,13 +30,13 @@
 
 package org.jacop.core;
 
-import java.util.*;
-
 import org.jacop.api.Stateful;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.util.SimpleHashSet;
 import org.jacop.util.SparseSet;
+
+import java.util.*;
 
 /**
  * It is an abstract class to describe all necessary functions of any store.
@@ -48,23 +48,6 @@ import org.jacop.util.SparseSet;
 public class Store {
 
     /**
-     * It creates a logger for this class. It seeks properties in the file
-     * log4j.properties. It needs to be placed in the classpath. In eclipse
-     * project it should be in a build directory.
-     */
-
-    // @todo implement logging through log4j.
-    // private static final org.apache.log4j.Logger log = Logger.getLogger(Store.class);
-
-    /**
-     * It specifies an empty domain. It is often used by any function which
-     * requires to return empty domain. It saves effort creation empty domain
-     * each time it is required.
-     */
-
-    // public static final IntDomain emptyDomain = new IntervalDomain(0);
-
-    /**
      * It stores standard fail exception used when empty domain encountered.
      */
 
@@ -74,7 +57,6 @@ public class Store {
      * It specifies if some debugging information is printed.
      */
     public static final boolean debug = true;
-
 
     /**
      * It stores constraints scheduled for reevaluation. It does not register
@@ -99,7 +81,7 @@ public class Store {
      * backtracks has occurred. It holds the list of constraints which want to be informed
      * about level being removed before it has actually began.
      */
-    public List<Stateful> removeLevelListeners = new ArrayList<Stateful>(10);
+    public List<Stateful> removeLevelListeners = new ArrayList<>(10);
 
     /**
      * More advanced constraints may require to be informed of a backtrack to be
@@ -108,14 +90,14 @@ public class Store {
      * backtracks has occurred. It holds the list of constraints which want to be informed
      * about level being removed after it has been removed.
      */
-    public List<Constraint> removeLevelLateListeners = new ArrayList<Constraint>(10);
+    public List<Constraint> removeLevelLateListeners = new ArrayList<>(10);
 
     /**
      * It contains all auxilary variables created by decomposable constraints. They
      * have to be grounded by search for a solution to be valid.
      */
 
-    public List<Var> auxilaryVariables = new ArrayList<Var>();
+    public List<Var> auxilaryVariables = new ArrayList<>();
 
     /**
      * It stores constraint which is currently re-evaluated.
@@ -158,16 +140,13 @@ public class Store {
      * therefore the store keeps information about all mutable variables.
      */
 
-    protected List<MutableVar> mutableVariables = new ArrayList<MutableVar>(100);
+    protected List<MutableVar> mutableVariables = new ArrayList<>(100);
 
     /**
      * This variable specifies if there was a new propagation. Any change to any
      * variable will setup this variable to true. Usefull variable to discover
      * the idempodence of the consistency propagator.
      */
-
-    //	public boolean newPropagation = false;
-
     public boolean propagationHasOccurred = false;
 
     /**
@@ -313,18 +292,18 @@ public class Store {
      * either by impose function of a constraint or by consistency function of a
      * constraint when watch is being moved.
      * @param v variable which is used to watch the constraint.
-     * @param C the constraint being used.
+     * @param c the constraint being used.
      */
 
-    public void registerWatchedLiteralConstraint(Var v, Constraint C) {
+    public void registerWatchedLiteralConstraint(Var v, Constraint c) {
 
         Set<Constraint> forVariable = watchedConstraints.get(v);
 
         if (forVariable != null)
-            forVariable.add(C);
+            forVariable.add(c);
         else {
-            forVariable = new HashSet<Constraint>();
-            forVariable.add(C);
+            forVariable = new HashSet<>();
+            forVariable.add(c);
             watchedConstraints.put(v, forVariable);
         }
 
@@ -381,9 +360,8 @@ public class Store {
         changed = new SimpleHashSet[queueNo];
 
         for (int i = 0; i < queueNo; i++)
-            changed[i] = new SimpleHashSet<Constraint>(100);
+            changed[i] = new SimpleHashSet<>(100);
 
-        //trailManager = new SimpleBacktrackableManager(vars, 0);
         trailManager = new IntervalBasedBacktrackableManager(vars, this.size, 10, Math.max(size / 10, 4));
 
     }
@@ -967,14 +945,14 @@ public class Store {
      * since the last time a consistency was called. This function is called
      * just *after* removeLevel method is executed for variables, mutable variables,
      * and timestamps.
-     * @param C constraint which is no longer interested in listening to remove level events.
-     * @return true if constraint C was watching remove level events.
+     * @param c constraint which is no longer interested in listening to remove level events.
+     * @return true if constraint c was watching remove level events.
      */
 
-    public boolean registerRemoveLevelLateListener(Constraint C) {
+    public boolean registerRemoveLevelLateListener(Constraint c) {
 
-        if (!removeLevelLateListeners.contains(C)) {
-            return removeLevelLateListeners.add(C);
+        if (!removeLevelLateListeners.contains(c)) {
+            return removeLevelLateListeners.add(c);
         }
         return false;
     }

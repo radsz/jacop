@@ -30,16 +30,7 @@
 
 package org.jacop.examples.fd.carsequencing;
 
-import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.regex.Pattern;
-
-import org.jacop.constraints.Constraint;
-import org.jacop.constraints.Count;
-import org.jacop.constraints.DecomposedConstraint;
-import org.jacop.constraints.ExtensionalSupportMDD;
-import org.jacop.constraints.Sequence;
+import org.jacop.constraints.*;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -49,6 +40,14 @@ import org.jacop.examples.fd.ExampleFD;
 import org.jacop.util.fsm.FSM;
 import org.jacop.util.fsm.FSMState;
 import org.jacop.util.fsm.FSMTransition;
+
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  *

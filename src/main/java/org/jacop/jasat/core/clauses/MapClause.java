@@ -31,12 +31,12 @@
 
 package org.jacop.jasat.core.clauses;
 
+import org.jacop.jasat.core.Trail;
+import org.jacop.jasat.utils.MemoryPool;
+
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-
-import org.jacop.jasat.core.Trail;
-import org.jacop.jasat.utils.MemoryPool;
 
 /**
  * A clause used for resolution, easily modifiable several times, and that

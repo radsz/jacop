@@ -30,18 +30,17 @@
 
 package org.jacop.floats.search;
 
+import org.jacop.constraints.Not;
+import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.search.Search;
+import org.jacop.floats.constraints.PlteqC;
+import org.jacop.floats.core.FloatInterval;
+import org.jacop.floats.core.FloatVar;
 import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSolutionListener;
-import org.jacop.constraints.PrimitiveConstraint;
-import org.jacop.constraints.Not;
-
-import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatInterval;
-import org.jacop.floats.constraints.PlteqC;
 
 /**
  * Implements optimization for floating point varibales

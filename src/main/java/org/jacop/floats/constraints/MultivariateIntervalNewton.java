@@ -30,17 +30,15 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.*;
-
+import org.jacop.constraints.Constraint;
 import org.jacop.core.Store;
-
 import org.jacop.core.Var;
 import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.floats.core.FloatInterval;
+import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.floats.core.FloatVar;
 
-import org.jacop.constraints.Constraint;
+import java.util.*;
 
 
 

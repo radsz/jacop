@@ -30,14 +30,14 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XgtY;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+
+import java.util.ArrayList;
 
 /**
  * Simple least Diff problem.

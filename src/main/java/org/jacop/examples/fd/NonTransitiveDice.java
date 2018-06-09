@@ -30,19 +30,7 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.jacop.constraints.Alldistinct;
-import org.jacop.constraints.Constraint;
-import org.jacop.constraints.Max;
-import org.jacop.constraints.Min;
-import org.jacop.constraints.Reified;
-import org.jacop.constraints.SumInt;
-import org.jacop.constraints.XeqC;
-import org.jacop.constraints.XgtY;
-import org.jacop.constraints.XltY;
-import org.jacop.constraints.XplusYeqC;
+import org.jacop.constraints.*;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -50,6 +38,9 @@ import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMiddle;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  *

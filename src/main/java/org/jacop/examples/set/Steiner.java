@@ -30,8 +30,6 @@
 
 package org.jacop.examples.set;
 
-import java.util.ArrayList;
-
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SumInt;
 import org.jacop.core.IntVar;
@@ -41,13 +39,15 @@ import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
 import org.jacop.set.constraints.AintersectBeqC;
+import org.jacop.set.constraints.AltB;
 import org.jacop.set.constraints.CardA;
 import org.jacop.set.constraints.EinA;
-import org.jacop.set.constraints.AltB;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
 import org.jacop.set.search.IndomainSetMax;
 import org.jacop.set.search.MaxCardDiff;
+
+import java.util.ArrayList;
 
 /**
  * It models and solves Steiner problem.

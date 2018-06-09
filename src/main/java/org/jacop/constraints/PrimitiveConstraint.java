@@ -76,7 +76,7 @@ public abstract class PrimitiveConstraint extends Constraint implements StoreAwa
             int eventAcross = constraintScope.stream()
                 .filter( i -> i.arguments().contains(var))
                 .mapToInt( i -> i.getNestedPruningEvent(var, false))
-                .max().orElseGet(() -> getDefaultNotConsistencyPruningEvent());
+                .max().orElseGet(this::getDefaultNotConsistencyPruningEvent);
 
             if (eventAcross < getDefaultNotConsistencyPruningEvent())
                 eventAcross = getDefaultNotConsistencyPruningEvent();
@@ -139,7 +139,7 @@ public abstract class PrimitiveConstraint extends Constraint implements StoreAwa
                 int eventAcross = constraintScope.stream()
                     .filter( i -> i.arguments().contains(var))
                     .mapToInt( i -> i.getNestedPruningEvent(var, false))
-                    .max().orElseGet(() -> Integer.MIN_VALUE);
+                    .max().orElse(Integer.MIN_VALUE);
 
                 if (eventAcross  != Integer.MIN_VALUE)
                     return eventAcross;
@@ -182,7 +182,7 @@ public abstract class PrimitiveConstraint extends Constraint implements StoreAwa
     public void setNotConsistencyPruningEvent(Var var, int pruningEvent) {
 
         if (notConsistencyPruningEvents == null)
-            notConsistencyPruningEvents = new Hashtable<Var, Integer>();
+            notConsistencyPruningEvents = new Hashtable<>();
 
         notConsistencyPruningEvents.put(var, pruningEvent);
 
@@ -190,17 +190,7 @@ public abstract class PrimitiveConstraint extends Constraint implements StoreAwa
 
     public void include(Store store) {
         if (constraintScope != null)
-            constraintScope.stream().forEach( i -> i.include(store));
-    };
-
-    /**
-     * It checks if the constraint is satisfied. If this function is incorrectly
-     * implemented a constraint may not be satisfied in a solution.
-     * PrimitiveConstraint requires that this function returns correct value when
-     * all variables within a scope are grounded.
-     *
-     * @return true if the constraint is for certain satisfied, false otherwise.
-     */
-    abstract public boolean satisfied();
+            constraintScope.forEach( i -> i.include(store));
+    }
 
 }

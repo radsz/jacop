@@ -29,28 +29,15 @@
  */
 package org.jacop.fz.constraints;
 
-import java.util.ArrayList;
-
-import org.jacop.core.Store;
+import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
-
-import org.jacop.fz.*;
-
-import org.jacop.constraints.AndBool;
-import org.jacop.constraints.XorBool;
-import org.jacop.constraints.OrBool;
-import org.jacop.constraints.SumBool;
-import org.jacop.constraints.AndBoolSimple;
-import org.jacop.constraints.PrimitiveConstraint;
-import org.jacop.constraints.XlteqY;
-import org.jacop.constraints.XeqY;
-import org.jacop.constraints.XneqY;
-import org.jacop.constraints.XplusYgtC;
-import org.jacop.constraints.Reified;
-import org.jacop.constraints.BoolClause;
-
+import org.jacop.core.Store;
+import org.jacop.fz.ASTScalarFlatExpr;
+import org.jacop.fz.ParserTreeConstants;
+import org.jacop.fz.SimpleNode;
 import org.jacop.satwrapper.SatTranslation;
-import org.jacop.constraints.OrBoolSimple;
+
+import java.util.ArrayList;
 
 
 /**

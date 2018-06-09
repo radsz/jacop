@@ -30,8 +30,6 @@
 
 package org.jacop.set.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
@@ -39,6 +37,8 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * The set cardinality constraint.

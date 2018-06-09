@@ -30,10 +30,10 @@
 
 package org.jacop.core;
 
+import org.jacop.constraints.Constraint;
+
 import java.util.ArrayList;
 import java.util.List;
-
-import org.jacop.constraints.Constraint;
 
 /**
  * Defines a Domain and related operations on it.

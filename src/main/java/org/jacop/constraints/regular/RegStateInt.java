@@ -31,12 +31,12 @@
 
 package org.jacop.constraints.regular;
 
-import java.util.Map;
-
 import org.jacop.core.IntDomain;
 import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.TimeStamp;
+
+import java.util.Map;
 
 /**
  * It is an implementation of the Regular state which uses a separate successor for each 

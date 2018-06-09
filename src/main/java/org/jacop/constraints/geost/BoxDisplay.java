@@ -31,14 +31,10 @@
 
 package org.jacop.constraints.geost;
 
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Graphics;
-import java.awt.Image;
-
-import javax.swing.JFrame;
-
 import org.jacop.core.IntVar;
+
+import javax.swing.*;
+import java.awt.*;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek

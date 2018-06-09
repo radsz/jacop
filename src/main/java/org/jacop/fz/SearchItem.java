@@ -29,44 +29,17 @@
  */
 package org.jacop.fz;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
-import org.jacop.search.ComparatorVariable;
-import org.jacop.search.Indomain;
-import org.jacop.search.IndomainMax;
-import org.jacop.search.IndomainMedian;
-import org.jacop.search.IndomainMiddle;
-import org.jacop.search.IndomainMin;
-import org.jacop.search.IndomainRandom;
-import org.jacop.search.LargestDomain;
-import org.jacop.search.LargestMax;
-import org.jacop.search.MaxRegret;
-import org.jacop.search.MostConstrainedStatic;
-import org.jacop.search.SelectChoicePoint;
-import org.jacop.search.SimpleSelect;
-import org.jacop.search.SmallestDomain;
-import org.jacop.search.SmallestMin;
-import org.jacop.search.SmallestMax;
-import org.jacop.search.SplitSelect;
-import org.jacop.search.WeightedDegree;
-import org.jacop.search.InputOrderSelect;
-import org.jacop.floats.search.SmallestDomainFloat;
-import org.jacop.floats.search.LargestDomainFloat;
-import org.jacop.floats.search.SmallestMinFloat;
-import org.jacop.floats.search.LargestMaxFloat;
-import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.floats.search.*;
+import org.jacop.search.*;
 import org.jacop.set.core.SetVar;
-import org.jacop.set.search.IndomainSetMax;
-import org.jacop.set.search.IndomainSetMin;
-import org.jacop.set.search.MaxCardDiff;
-import org.jacop.set.search.MinCardDiff;
-import org.jacop.set.search.MinGlbCard;
-import org.jacop.set.search.MaxLubCard;
+import org.jacop.set.search.*;
+
+import java.util.ArrayList;
+import java.util.Arrays;
 
 
 /**

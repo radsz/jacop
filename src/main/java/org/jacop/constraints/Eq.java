@@ -31,13 +31,13 @@
 
 package org.jacop.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Domain;
 import org.jacop.core.Store;
-import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Var;
 import org.jacop.util.QueueForward;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraint "constraint1"{@literal #<=>} "constraint2"

@@ -30,13 +30,9 @@
 
 package org.jacop.constraints.geost;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.LinkedList;
-
 import org.jacop.util.SimpleArrayList;
+
+import java.util.*;
 
 /**
  *

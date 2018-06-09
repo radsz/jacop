@@ -30,10 +30,10 @@
 
 package org.jacop.core;
 
-import java.util.Random;
-import java.util.ArrayList;
-
 import org.jacop.constraints.Constraint;
+
+import java.util.ArrayList;
+import java.util.Random;
 
 /**
  * Defines an integer domain and related operations on it.

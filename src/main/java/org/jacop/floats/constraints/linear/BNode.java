@@ -37,8 +37,8 @@ package org.jacop.floats.constraints.linear;
  * @version 4.5
  */
 
-import org.jacop.floats.core.FloatDomain;
 import org.jacop.core.Store;
+import org.jacop.floats.core.FloatDomain;
 
 public class BNode extends BinaryNode {
 

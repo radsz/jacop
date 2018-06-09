@@ -31,10 +31,10 @@
 
 package org.jacop.jasat.core.clauses;
 
+import org.jacop.jasat.utils.Utils;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
-
-import org.jacop.jasat.utils.Utils;
 
 /**
  * A database for unit clauses (length 1). It only accepts those.

@@ -31,12 +31,12 @@
 
 package org.jacop.constraints.regular;
 
-import java.util.Map;
-
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.ValueEnumeration;
+
+import java.util.Map;
 
 /**
  * It is a state representation which uses a domain representation

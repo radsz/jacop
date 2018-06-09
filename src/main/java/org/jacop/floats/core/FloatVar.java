@@ -30,13 +30,12 @@
 
 package org.jacop.floats.core;
 
-import org.jacop.core.Var;
-import org.jacop.core.Store;
+import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
 
 import java.util.ArrayList;
-
-import org.jacop.constraints.Constraint;
 
 /**
  * Defines a Float Domain Variable and related operations on it.

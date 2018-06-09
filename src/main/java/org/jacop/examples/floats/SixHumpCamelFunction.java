@@ -40,21 +40,20 @@ package org.jacop.examples.floats;
  *
  */
 
-import java.util.Set;
-import java.util.HashSet;
-
-import org.jacop.core.Store;
 import org.jacop.constraints.Constraint;
-import org.jacop.search.DepthFirstSearch;
-
-import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatDomain;
+import org.jacop.core.Store;
+import org.jacop.floats.constraints.Derivative;
 import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.constraints.PeqC;
-import org.jacop.floats.constraints.Derivative;
 import org.jacop.floats.constraints.PmulQeqR;
-import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.Optimize;
+import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.search.DepthFirstSearch;
+
+import java.util.HashSet;
+import java.util.Set;
 
 public class SixHumpCamelFunction {
 

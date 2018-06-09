@@ -30,11 +30,10 @@
 
 package org.jacop.core;
 
-import java.util.ArrayList;
-
 import org.jacop.constraints.Constraint;
-
 import org.jacop.satwrapper.translation.SatCPBridge;
+
+import java.util.ArrayList;
 
 /**
  * Defines a Finite Domain Variable (FDV) and related operations on it.

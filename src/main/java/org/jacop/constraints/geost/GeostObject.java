@@ -30,13 +30,13 @@
 
 package org.jacop.constraints.geost;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek

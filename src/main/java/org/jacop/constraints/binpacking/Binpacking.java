@@ -31,15 +31,15 @@
 
 package org.jacop.constraints.binpacking;
 
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.*;
 import org.jacop.util.SimpleHashSet;
+
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 /**

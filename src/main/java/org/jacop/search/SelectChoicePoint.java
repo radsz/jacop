@@ -30,10 +30,10 @@
 
 package org.jacop.search;
 
-import java.util.Map;
-
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Var;
+
+import java.util.Map;
 
 /**
  * Defines an interface for defining different methods for selecting next search

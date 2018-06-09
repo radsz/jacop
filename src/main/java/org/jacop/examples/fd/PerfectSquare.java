@@ -30,36 +30,15 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.jacop.constraints.And;
+import org.jacop.constraints.*;
 import org.jacop.constraints.diffn.Diffn;
-import org.jacop.constraints.Or;
-import org.jacop.constraints.PrimitiveConstraint;
-import org.jacop.constraints.Reified;
-import org.jacop.constraints.SumInt;
-import org.jacop.constraints.XgtC;
-import org.jacop.constraints.XgteqY;
-import org.jacop.constraints.XlteqC;
-import org.jacop.constraints.XlteqY;
-import org.jacop.constraints.XmulCeqZ;
-import org.jacop.constraints.XplusCeqZ;
-import org.jacop.constraints.geost.DBox;
-import org.jacop.constraints.geost.ExternalConstraint;
-import org.jacop.constraints.geost.Geost;
-import org.jacop.constraints.geost.GeostObject;
-import org.jacop.constraints.geost.NonOverlapping;
-import org.jacop.constraints.geost.Shape;
+import org.jacop.constraints.geost.*;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.IndomainMin;
-import org.jacop.search.Search;
-import org.jacop.search.SelectChoicePoint;
-import org.jacop.search.SimpleSelect;
-import org.jacop.search.SmallestDomain;
-import org.jacop.search.SmallestMin;
+import org.jacop.search.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * It specifies an example where squares of the given size must be placed within

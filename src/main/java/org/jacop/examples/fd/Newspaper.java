@@ -30,14 +30,14 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
-import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.In;
 import org.jacop.constraints.XplusYlteqZ;
+import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+
+import java.util.ArrayList;
 
 
 /**

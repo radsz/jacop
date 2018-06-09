@@ -30,20 +30,15 @@
 
 package org.jacop.set.constraints;
 
+import org.jacop.api.Stateful;
+import org.jacop.constraints.Constraint;
+import org.jacop.core.*;
+import org.jacop.set.core.SetVar;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
-
-import org.jacop.api.Stateful;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Store;
-import org.jacop.core.ValueEnumeration;
-
-import org.jacop.set.core.SetVar;
-import org.jacop.constraints.Constraint;
 
 /**
  * ElementSetVariable constraint defines a relation 

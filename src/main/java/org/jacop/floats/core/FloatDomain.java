@@ -31,12 +31,7 @@
 package org.jacop.floats.core;
 
 import org.jacop.constraints.Constraint;
-import org.jacop.core.Store;
-import org.jacop.core.Domain;
-import org.jacop.core.IntervalEnumeration;
-import org.jacop.core.Var;
-
-import org.jacop.core.ValueEnumeration;
+import org.jacop.core.*;
 
 /**
  * Defines an integer domain and related operations on it.

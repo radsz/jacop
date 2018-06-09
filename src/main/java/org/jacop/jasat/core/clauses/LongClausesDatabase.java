@@ -30,11 +30,11 @@
  */
 package org.jacop.jasat.core.clauses;
 
+import org.jacop.jasat.utils.Utils;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.util.Random;
-
-import org.jacop.jasat.utils.Utils;
 
 /*
  * TODO : code bcp, and maybe reuse watch node lists in some other databases

@@ -228,7 +228,6 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
 
     }
 
-
     private int[] computeIntervals() {
 
         int noOfIntervals = maxNoOfIntervals * 2;

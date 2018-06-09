@@ -31,14 +31,14 @@
 
 package org.jacop.jasat.core.clauses;
 
-import java.io.BufferedWriter;
-import java.util.Arrays;
-
 import org.jacop.jasat.core.Core;
 import org.jacop.jasat.core.SolverComponent;
 import org.jacop.jasat.core.Trail;
 import org.jacop.jasat.utils.MemoryPool;
 import org.jacop.jasat.utils.Utils;
+
+import java.io.BufferedWriter;
+import java.util.Arrays;
 
 /**
  *

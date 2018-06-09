@@ -31,11 +31,11 @@
 
 package org.jacop.examples;
 
+import org.jacop.fz.Fz2jacop;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-
-import org.jacop.fz.Fz2jacop;
 
 /**
  * This class executes the provided example. It also allows to specify 

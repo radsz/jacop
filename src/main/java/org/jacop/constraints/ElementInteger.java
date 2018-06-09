@@ -31,16 +31,16 @@
 
 package org.jacop.constraints;
 
+import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.Stateful;
+import org.jacop.api.UsesQueueVariable;
+import org.jacop.core.*;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.jacop.api.SatisfiedPresent;
-import org.jacop.api.Stateful;
-import org.jacop.api.UsesQueueVariable;
-import org.jacop.core.*;
 
 /**
  * ElementInteger constraint defines a relation 

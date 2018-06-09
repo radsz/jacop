@@ -30,18 +30,14 @@
 
 package org.jacop.util.fsm;
 
+import org.jacop.core.*;
+import org.jacop.util.MDD;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Interval;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.ValueEnumeration;
-import org.jacop.util.MDD;
 
 /**
  * Deterministic Finite Acyclic graph.

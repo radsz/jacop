@@ -30,15 +30,14 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
 import org.jacop.constraints.Alldifferent;
-import org.jacop.constraints.Min;
 import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.Min;
 import org.jacop.constraints.XeqY;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import scala.tools.nsc.Global;
+
+import java.util.ArrayList;
 
 /**
  *

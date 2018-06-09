@@ -30,20 +30,11 @@
 
 package org.jacop.constraints.netflow.simplex;
 
-import static org.jacop.constraints.netflow.Assert.checkBeforeUpdate;
-import static org.jacop.constraints.netflow.Assert.checkFlow;
-import static org.jacop.constraints.netflow.Assert.checkInfeasibleNodes;
-import static org.jacop.constraints.netflow.Assert.checkOptimality;
-import static org.jacop.constraints.netflow.Assert.checkStructure;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-
 import org.jacop.constraints.netflow.Pruning;
+
+import java.util.*;
+
+import static org.jacop.constraints.netflow.Assert.*;
 
 /**
  *

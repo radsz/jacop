@@ -29,31 +29,21 @@
  */
 package org.jacop.fz.constraints;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Set;
-
-import org.jacop.core.IntVar;
-import org.jacop.core.Store;
-import org.jacop.core.FailException;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.IntDomain;
-import org.jacop.core.Var;
-
+import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
-import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.XeqY;
-
+import org.jacop.core.*;
+import org.jacop.floats.core.FloatVar;
+import org.jacop.fz.*;
 import org.jacop.satwrapper.SatTranslation;
-
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
 
-import org.jacop.floats.core.FloatVar;
-
-import org.jacop.fz.*;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 /**
  *

@@ -30,9 +30,9 @@
 
 package org.jacop.util;
 
-import java.util.Queue;
-import java.util.LinkedList;
 import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.Queue;
 
 /* Implementation of Hopcroft Karp algorithm for maximum matching (complexity O(e*sqrt(v)).
  * This algorithm is based on <https://en.wikipedia.org/wiki/Hopcroft–Karp_algorithm>

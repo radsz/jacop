@@ -30,11 +30,9 @@
 
 package org.jacop.fz;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-
 import org.jacop.floats.core.FloatDomain;
+
+import java.io.FileInputStream;
 
 /**
  *

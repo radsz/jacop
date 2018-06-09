@@ -29,13 +29,13 @@
  */
 package org.jacop.fz;
 
-import java.util.ArrayList;
-
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntDomain;
+import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 import org.jacop.set.core.SetVar;
-import org.jacop.core.ValueEnumeration;
+
+import java.util.ArrayList;
 
 /**
  *

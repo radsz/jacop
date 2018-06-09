@@ -30,11 +30,10 @@
 
 package org.jacop.util;
 
-import java.util.ArrayList;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
-import java.util.BitSet;
 import java.util.Arrays;
+import java.util.BitSet;
 
 /*
  * The implementation of the algorithm for finding dominators (simple version) in a directed graph based on 

@@ -31,15 +31,11 @@
 package org.jacop.examples.fd;
 
 
-import java.util.ArrayList;
-
-import org.jacop.constraints.ExtensionalSupportVA;
-import org.jacop.constraints.Reified;
-import org.jacop.constraints.SumBool;
-import org.jacop.constraints.XeqC;
-import org.jacop.constraints.XneqY;
+import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+
+import java.util.ArrayList;
 
 /**
  *

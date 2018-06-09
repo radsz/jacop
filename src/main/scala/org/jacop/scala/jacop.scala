@@ -35,13 +35,13 @@
   */
 package org.jacop.scala
 
-import org.jacop.core._
 import org.jacop.constraints._
-import org.jacop.set.constraints._
+import org.jacop.core._
 import org.jacop.floats.constraints._
+import org.jacop.set.constraints._
 
-import scala.language.implicitConversions
 import scala.collection.mutable
+import scala.language.implicitConversions
 
 /**
 * Manages all variables, constraints and global constraints for [[org.jacop]] constraint solver.

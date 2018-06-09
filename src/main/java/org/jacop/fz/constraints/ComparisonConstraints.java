@@ -29,31 +29,14 @@
  */
 package org.jacop.fz.constraints;
 
-import org.jacop.core.Store;
-import org.jacop.core.IntVar;
+import org.jacop.constraints.*;
 import org.jacop.core.IntDomain;
-
-import org.jacop.fz.*;
-
-import org.jacop.constraints.Constraint;
-import org.jacop.constraints.PrimitiveConstraint;
-import org.jacop.constraints.XlteqY;
-import org.jacop.constraints.XltY;
-import org.jacop.constraints.XltC;
-import org.jacop.constraints.XeqY;
-import org.jacop.constraints.XeqC;
-import org.jacop.constraints.XneqY;
-import org.jacop.constraints.XneqC;
-import org.jacop.constraints.Reified;
-import org.jacop.constraints.XgtC;
-import org.jacop.constraints.XgteqC;
-import org.jacop.constraints.XgtY;
-import org.jacop.constraints.XgteqY;
-import org.jacop.constraints.XlteqC;
-
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.fz.ASTScalarFlatExpr;
+import org.jacop.fz.ParserTreeConstants;
+import org.jacop.fz.SimpleNode;
 import org.jacop.satwrapper.SatTranslation;
-import org.jacop.constraints.XorBool;
-import org.jacop.constraints.Not;
 
 
 /**

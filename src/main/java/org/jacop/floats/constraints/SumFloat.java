@@ -31,8 +31,8 @@
 package org.jacop.floats.constraints;
 
 
-import org.jacop.floats.core.FloatVar;
 import org.jacop.core.Store;
+import org.jacop.floats.core.FloatVar;
 
 /**
  * SumFloat constraint implements the weighted summation over several

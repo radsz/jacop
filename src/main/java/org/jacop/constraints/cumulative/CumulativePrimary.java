@@ -28,7 +28,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.jacop.constraints.cumulative;
 
 import org.jacop.constraints.Constraint;

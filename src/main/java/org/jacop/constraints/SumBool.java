@@ -30,16 +30,15 @@
 
 package org.jacop.constraints;
 
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
-
-import org.jacop.core.IntVar;
-import org.jacop.core.IntDomain;
-import org.jacop.core.Store;
-import org.jacop.core.Var;
 
 /**
  * SumBool constraint implements the summation over several

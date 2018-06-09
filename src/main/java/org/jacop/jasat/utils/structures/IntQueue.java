@@ -31,9 +31,9 @@
 
 package org.jacop.jasat.utils.structures;
 
-import java.util.Iterator;
-
 import org.jacop.jasat.utils.MemoryPool;
+
+import java.util.Iterator;
 
 /**
  * Special class for unboxed int FIFO

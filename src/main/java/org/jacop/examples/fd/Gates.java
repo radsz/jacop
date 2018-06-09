@@ -30,9 +30,6 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-import java.util.function.BiFunction;
-
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ExtensionalSupportSTR;
 import org.jacop.constraints.table.SimpleTable;
@@ -40,11 +37,10 @@ import org.jacop.core.BooleanVar;
 import org.jacop.core.Domain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.IndomainMin;
-import org.jacop.search.MostConstrainedStatic;
-import org.jacop.search.SelectChoicePoint;
-import org.jacop.search.SimpleSelect;
+import org.jacop.search.*;
+
+import java.util.ArrayList;
+import java.util.function.BiFunction;
 
 /**
  *

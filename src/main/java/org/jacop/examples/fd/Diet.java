@@ -30,14 +30,14 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+
+import java.util.ArrayList;
 
 /**
  *

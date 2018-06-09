@@ -30,20 +30,14 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.jacop.constraints.netflow.DomainStructure;
 import org.jacop.constraints.netflow.NetworkBuilder;
 import org.jacop.constraints.netflow.simplex.Arc;
 import org.jacop.constraints.netflow.simplex.Node;
-import org.jacop.core.BoundDomain;
-import org.jacop.core.Domain;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Store;
-import org.jacop.core.ValueEnumeration;
+import org.jacop.core.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  *

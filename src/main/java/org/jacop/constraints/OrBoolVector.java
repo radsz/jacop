@@ -30,15 +30,11 @@
 
 package org.jacop.constraints;
 
+import org.jacop.core.*;
+
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
-
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
 
 /**
  * If at least one variable from the list is equal 1 then result variable is equal 1 too.

@@ -30,13 +30,16 @@
 
 package org.jacop.constraints;
 
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 /**
@@ -46,7 +49,7 @@ import org.jacop.core.Var;
  * consistency of the alldifferent constraint", Proceedings of the 18th international
  * joint conference on Artificial intelligence (IJCAI'03), Pages 245-250. Before using
  * bounds consistency it calls consistency method for ground variables.
- *
+ * <p>
  * It extends basic functionality of Alldifferent constraint.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -67,15 +70,15 @@ public class Alldiff extends Alldifferent {
     private Comparator<Element> minVariable = (o1, o2) -> (o1.var.min() - o2.var.min());
 
     private int[] t; // holds the critical capacity pointers; that is, t[i] points to the
-		     // predecessor of i in the bounds list.
+    // predecessor of i in the bounds list.
     private int[] d; // holds the differences between critical capacities; that is d[i] is
-		     // the difference of capacities between bounds[i] and its predecessor
-		     // element in the list bounds[t[i]].
+    // the difference of capacities between bounds[i] and its predecessor
+    // element in the list bounds[t[i]].
     private int[] h; // holds the Hall interval pointers; that is, if h[i] < i then the
-		     // half-open interval [bounds[h[i]],bounds[i]) is contained in a Hall
-		     // interval, and otherwise holds a pointer to the Hall interval it
-		     // belongs to. This Hall interval is represented by a tree, with the
-		     // root containing the value of its right end.
+    // half-open interval [bounds[h[i]],bounds[i]) is contained in a Hall
+    // interval, and otherwise holds a pointer to the Hall interval it
+    // belongs to. This Hall interval is represented by a tree, with the
+    // root containing the value of its right end.
     private int[] bounds; // is a sorted array of all min’s and max’s.
 
     private int nb; // holds the number of unique bounds.
@@ -87,6 +90,7 @@ public class Alldiff extends Alldifferent {
 
     /**
      * It constructs the alldiff constraint for the supplied variable.
+     *
      * @param variables variables which are constrained to take different values.
      */
     public Alldiff(IntVar[] variables) {
@@ -97,28 +101,29 @@ public class Alldiff extends Alldifferent {
         this.list = Arrays.copyOf(variables, variables.length);
         this.queueIndex = 2;
 
-	int n = list.length;
-	t = new int[2 * n + 2];
-	d = new int[2 * n + 2];
-	h = new int[2 * n + 2];
-	bounds = new int[2 * n + 2];
+        int n = list.length;
+        t = new int[2 * n + 2];
+        d = new int[2 * n + 2];
+        h = new int[2 * n + 2];
+        bounds = new int[2 * n + 2];
 
-	minsorted = new Element[n];
-	maxsorted = new Element[n];
+        minsorted = new Element[n];
+        maxsorted = new Element[n];
         for (int i = 0; i < n; i++) {
-	    Element el = new Element();
-	    el.var = list[i];
+            Element el = new Element();
+            el.var = list[i];
             minsorted[i] = el;
             maxsorted[i] = el;
         }
 
-	setScope(variables);
+        setScope(variables);
 
     }
 
 
     /**
      * It constructs the alldiff constraint for the supplied variable.
+     *
      * @param variables variables which are constrained to take different values.
      */
     public Alldiff(List<? extends IntVar> variables) {
@@ -131,8 +136,8 @@ public class Alldiff extends Alldifferent {
 
     @Override public void impose(Store store) {
 
-	if (list.length == 0)
-	    return;
+        if (list.length == 0)
+            return;
 
         super.impose(store);
         this.store = store;
@@ -176,11 +181,11 @@ public class Alldiff extends Alldifferent {
         }
 
         // do {
-	// store.propagationHasOccurred = false;
-	
-            init();
-            updateLB();
-            updateUB();
+        // store.propagationHasOccurred = false;
+
+        init();
+        updateLB();
+        updateUB();
 
         // } while (store.propagationHasOccurred);
     }
@@ -189,7 +194,7 @@ public class Alldiff extends Alldifferent {
         int n = list.length;
         Arrays.sort(minsorted, 0, n, minVariable);
         Arrays.sort(maxsorted, 0, n, maxVariable);
-	
+
         int min = minsorted[0].var.min();
         int max = maxsorted[0].var.max() + 1;
         int last = min - 2;
@@ -198,11 +203,11 @@ public class Alldiff extends Alldifferent {
         int i = 0, j = 0;
         while (true) {
             if (i < n && min <= max) {
-                if (min != last) 
+                if (min != last)
                     bounds[++nb] = last = min;
 
                 minsorted[i].minrank = nb;
-                if (++i < n) 
+                if (++i < n)
                     min = minsorted[i].var.min();
 
             } else {
@@ -210,7 +215,7 @@ public class Alldiff extends Alldifferent {
                     bounds[++nb] = last = max;
 
                 maxsorted[j].maxrank = nb;
-                if (++j == n) 
+                if (++j == n)
                     break;
 
                 max = maxsorted[j].var.max() + 1;
@@ -243,7 +248,7 @@ public class Alldiff extends Alldifferent {
             }
             if (h[x] > x) {
                 int w = pathmax(h, h[x]);
-		maxsorted[i].var.domain.inMin(store.level, maxsorted[i].var, bounds[w]);
+                maxsorted[i].var.domain.inMin(store.level, maxsorted[i].var, bounds[w]);
                 pathset(h, x, w, w);
             }
             if (d[z] == bounds[z] - bounds[y]) {
@@ -275,7 +280,7 @@ public class Alldiff extends Alldifferent {
             }
             if (h[x] < x) {
                 int w = pathmin(h, h[x]);
-		minsorted[i].var.domain.inMax(store.level, minsorted[i].var, bounds[w] - 1);
+                minsorted[i].var.domain.inMax(store.level, minsorted[i].var, bounds[w] - 1);
                 pathset(h, x, w, w);
             }
             if (d[z] == bounds[y] - bounds[z]) {
@@ -296,10 +301,10 @@ public class Alldiff extends Alldifferent {
     }
 
     private int pathmin(int[] v, int i) {
-        while (v[i] < i) 
+        while (v[i] < i)
             i = v[i];
 
-	return i;
+        return i;
     }
 
     private int pathmax(int[] v, int i) {

@@ -31,11 +31,11 @@
 
 package org.jacop.jasat.utils;
 
+import org.jacop.jasat.utils.structures.IntVec;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
-
-import org.jacop.jasat.utils.structures.IntVec;
 
 /**
  * CNF file format (low-level) parser.

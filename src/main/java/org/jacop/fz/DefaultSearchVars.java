@@ -29,15 +29,15 @@
  */
 package org.jacop.fz;
 
-import java.util.Comparator;
-import java.util.Arrays;
-import java.util.LinkedHashSet;
-
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
 import org.jacop.core.Var;
-import org.jacop.set.core.SetVar;
 import org.jacop.floats.core.FloatVar;
+import org.jacop.set.core.SetVar;
+
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
 
 
 /**

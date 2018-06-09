@@ -30,13 +30,7 @@
 
 package org.jacop.set.core;
 
-import org.jacop.core.Domain;
-import org.jacop.core.IntDomain;
-import org.jacop.core.Interval;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.SmallDenseDomain;
-import org.jacop.core.Store;
-import org.jacop.core.ValueEnumeration;
+import org.jacop.core.*;
 
 /**
  * Defines a set interval determined by a least upper bound(lub) and a 

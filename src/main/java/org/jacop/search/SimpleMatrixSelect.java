@@ -30,13 +30,12 @@
 
 package org.jacop.search;
 
-import java.util.ArrayList;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Var;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * SimpleMatrixSelect selects first a row in the matrix based on metric of the 

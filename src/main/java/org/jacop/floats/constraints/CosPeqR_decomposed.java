@@ -30,15 +30,14 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.ArrayList;
-import java.util.List;
-
+import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.core.Store;
-import org.jacop.constraints.Constraint;
-
-import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
+
+import java.util.ArrayList;
+import java.util.List;
 
 
 /**

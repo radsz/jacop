@@ -31,8 +31,9 @@
 package org.jacop.examples.scala
 
 
-import scala.collection.mutable.ArrayBuffer
 import org.jacop.scala._
+
+import scala.collection.mutable.ArrayBuffer
 
 /**
   *

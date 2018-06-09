@@ -29,25 +29,18 @@
  */
 package org.jacop.fz;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-
 import org.jacop.constraints.XeqY;
-import org.jacop.core.BooleanVar;
-import org.jacop.core.BoundDomain;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Store;
-import org.jacop.core.Var;
+import org.jacop.core.*;
+import org.jacop.floats.constraints.PeqQ;
+import org.jacop.floats.core.FloatVar;
 import org.jacop.set.constraints.AeqB;
 import org.jacop.set.constraints.AeqS;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
-import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.constraints.PeqQ;
+import java.util.ArrayList;
+import java.util.HashSet;
 
 /**
  * TODO, a short description what it does and how it is used. Remark, 

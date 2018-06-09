@@ -30,20 +30,19 @@
 
 package org.jacop.examples.fd;
 
-import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.XeqC;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.IndomainMin;
-import org.jacop.search.SelectChoicePoint;
-import org.jacop.search.SimpleMatrixSelect;
-import org.jacop.search.SmallestDomain;
+import org.jacop.search.*;
+
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  *

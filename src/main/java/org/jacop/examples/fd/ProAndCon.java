@@ -30,22 +30,12 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.jacop.constraints.Alldifferent;
-import org.jacop.constraints.Reified;
-import org.jacop.constraints.SumInt;
-import org.jacop.constraints.LinearInt;
-import org.jacop.constraints.XeqC;
-import org.jacop.constraints.XeqY;
-import org.jacop.constraints.XlteqC;
-import org.jacop.constraints.XmulCeqZ;
-import org.jacop.constraints.XplusCeqZ;
-import org.jacop.constraints.XplusYeqZ;
-import org.jacop.constraints.XplusYlteqZ;
+import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  *
