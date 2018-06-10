@@ -95,8 +95,14 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
                 thenC.consistency(store);            }
         }
 
-        if (imposed && thenC.notSatisfied()) {
-            condC.notConsistency(store);
+        if (thenC.notSatisfied()) {
+            if (imposed) {
+             this.removeConstraint();
+             store.impose(new Not(condC));
+             return;
+            } else {
+                condC.notConsistency(store);
+            }
         }
 
     }
