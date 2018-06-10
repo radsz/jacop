@@ -30,6 +30,7 @@
 
 package org.jacop.core;
 
+import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.Stateful;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
@@ -81,7 +82,7 @@ public class Store {
      * backtracks has occurred. It holds the list of constraints which want to be informed
      * about level being removed before it has actually began.
      */
-    public List<Stateful> removeLevelListeners = new ArrayList<>(10);
+    public Set<Stateful> removeLevelListeners = new HashSet<>(10);
 
     /**
      * More advanced constraints may require to be informed of a backtrack to be
@@ -90,7 +91,7 @@ public class Store {
      * backtracks has occurred. It holds the list of constraints which want to be informed
      * about level being removed after it has been removed.
      */
-    public List<Constraint> removeLevelLateListeners = new ArrayList<>(10);
+    public Set<RemoveLevelLate> removeLevelLateListeners = new HashSet<>(10);
 
     /**
      * It contains all auxilary variables created by decomposable constraints. They
@@ -562,27 +563,6 @@ public class Store {
     }
 
     /**
-     * This function deregisters a constraint from the listeners queue. The
-     * constraint will know that it has to re-execute its consistency function,
-     * but it will not be informed which variables has changed.
-     *
-     * @param C constraint which no longer needs to be removed when level is removed.
-     * @return true if constraint was listening beforehand, otherwise false.
-     */
-
-    public boolean deRegisterRemoveLevelListener(Constraint C) {
-
-        int i = removeLevelListeners.indexOf(C);
-
-        if (i == -1)
-            return false;
-        else if (removeLevelListeners.remove(i) != null)
-            return true;
-
-        return false;
-    }
-
-    /**
      * It may be used for faster retrieval of variables given their id. However,
      * by default this variable is not created to reduce memory consumption. If
      * it exists then it will be used by functions looking for a variable given the name.
@@ -977,7 +957,7 @@ public class Store {
      * @return true if constraint c was watching remove level events.
      */
 
-    public boolean registerRemoveLevelLateListener(Constraint c) {
+    public boolean registerRemoveLevelLateListener(RemoveLevelLate c) {
 
         if (!removeLevelLateListeners.contains(c)) {
             return removeLevelLateListeners.add(c);
@@ -1046,7 +1026,7 @@ public class Store {
         for (int i = mutableVariables.size() - 1; i >= 0; i--)
             mutableVariables.get(i).removeLevel(rLevel);
 
-        for (Constraint C : removeLevelLateListeners)
+        for (RemoveLevelLate C : removeLevelLateListeners)
             C.removeLevelLate(rLevel);
 
         assert checkInvariants() == null : checkInvariants();

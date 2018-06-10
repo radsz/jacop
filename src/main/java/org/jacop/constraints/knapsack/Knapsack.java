@@ -30,6 +30,7 @@
 
 package org.jacop.constraints.knapsack;
 
+import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
@@ -61,7 +62,7 @@ import java.util.stream.Stream;
  * @version 4.5
  */
 
-public class Knapsack extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
+public class Knapsack extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent, RemoveLevelLate {
 
     private final static AtomicInteger idNumber = new AtomicInteger(0);
 

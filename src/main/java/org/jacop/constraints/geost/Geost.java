@@ -29,6 +29,7 @@
  */
 package org.jacop.constraints.geost;
 
+import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
@@ -99,7 +100,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *          5. If objects have the same shape, and they are indistingushable
  *          then symmetry breaking can be employed.
  */
-public class Geost extends Constraint implements UsesQueueVariable, Stateful {
+public class Geost extends Constraint implements UsesQueueVariable, Stateful, RemoveLevelLate {
 
     /**
      * It specifies different debugging switches to print out diverse information about

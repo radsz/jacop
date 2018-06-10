@@ -75,17 +75,8 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
             throw new IllegalArgumentException("Variable b in reified constraint must have domain at most 0..1");
 
         numberId = idNumber.incrementAndGet();
-
         this.c = c;
         this.b = b;
-
-        try {
-            c.getClass().getDeclaredMethod("removeLevelLate", int.class);
-            needRemoveLevelLate = true;
-        } catch (NoSuchMethodException e) {
-            needRemoveLevelLate = false;
-        }
-
         setScope(Stream.concat(c.arguments().stream(), Stream.of(b)));
         setConstraintScope(c);
         queueForward = new QueueForward<>(c, arguments());
@@ -203,9 +194,6 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
 
         super.impose(store);
 
-        if (needRemoveLevelLate)
-            store.registerRemoveLevelLateListener(this);
-
     }
 
     @Override public boolean satisfied() {
@@ -227,11 +215,6 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
 
         queueForward.queueForward(level, variable);
 
-    }
-
-    public void removeLevelLate(int level) {
-        if (needRemoveLevelLate)
-            c.removeLevelLate(level);
     }
 
 }

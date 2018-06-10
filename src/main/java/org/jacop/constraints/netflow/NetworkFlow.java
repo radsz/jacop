@@ -30,6 +30,7 @@
 
 package org.jacop.constraints.netflow;
 
+import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
@@ -55,7 +56,7 @@ import static org.jacop.constraints.netflow.Assert.checkStructure;
  * @version 4.5
  */
 
-public class NetworkFlow extends Constraint implements UsesQueueVariable, Stateful {
+public class NetworkFlow extends Constraint implements UsesQueueVariable, Stateful, RemoveLevelLate {
 
     private static final int QUEUE_INDEX = 2;
     private static final boolean DO_INSTRUMENTATION = false;

@@ -178,7 +178,6 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
             k++;
         }
 
-
         if (this.list.length == 0) {
 
             this.list = new FloatVar[2];
@@ -546,21 +545,6 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
         return result.toString();
 
     }
-
-    /*
-    // uncomment registration in commonInitialization
-    @Override
-    public void removeLevelLate(int level) {
-	// System.out.println ("Backtrack, queue = " + variableQueue);
-
-	// variableQueue.clear();
-
-	if (variableQueue.size() > 0)
-	    variableQueue = new SimpleHashSet<IntVar>();
-
-    }
-    */
-
 
     static class VarWeightComparator<T extends VariableNode> implements java.util.Comparator<T>, java.io.Serializable {
 

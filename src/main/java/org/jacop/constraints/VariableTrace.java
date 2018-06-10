@@ -31,6 +31,7 @@
 
 package org.jacop.constraints;
 
+import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
@@ -46,7 +47,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @version 4.5
  */
 
-public class VariableTrace extends Constraint implements UsesQueueVariable {
+public class VariableTrace extends Constraint implements UsesQueueVariable, RemoveLevelLate {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 

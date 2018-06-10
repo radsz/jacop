@@ -30,6 +30,7 @@
 
 package org.jacop.constraints.regular;
 
+import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
@@ -131,7 +132,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @version 4.5
  */
 
-public class Regular extends Constraint implements UsesQueueVariable, Stateful {
+public class Regular extends Constraint implements UsesQueueVariable, Stateful, RemoveLevelLate {
 
     /**
      * It specifies if debugging information should be printed out.

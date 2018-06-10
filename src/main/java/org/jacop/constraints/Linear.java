@@ -30,6 +30,7 @@
 
 package org.jacop.constraints;
 
+import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
@@ -55,7 +56,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * @deprecated As of release 4.3.1 replaced by LinearInt constraint.
  */
-@Deprecated public class Linear extends Constraint implements UsesQueueVariable, SatisfiedPresent {
+@Deprecated public class Linear extends Constraint implements UsesQueueVariable, SatisfiedPresent, RemoveLevelLate {
 
     Store store;
 

@@ -30,6 +30,7 @@
 
 package org.jacop.constraints;
 
+import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
@@ -54,7 +55,7 @@ import java.util.stream.Stream;
 /**
  * @deprecated As of release 4.3.1 replaced by LinearIntDom constraint.
  */
-@Deprecated public class SumWeightDom extends Constraint implements UsesQueueVariable, SatisfiedPresent {
+@Deprecated public class SumWeightDom extends Constraint implements UsesQueueVariable, SatisfiedPresent, RemoveLevelLate {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 

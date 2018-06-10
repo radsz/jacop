@@ -1,5 +1,5 @@
 /*
- * StoreAware.java
+ * RemoveLevelLate.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -30,22 +30,22 @@
 
 package org.jacop.api;
 
-import org.jacop.core.Store;
-
 /**
- * Interface to mark the need of an entity to receive information about Constraint Store within which this
- * entity operates.
+ * Interface that provides the entity ability to be called after the level
+ * has been removed to finalize the removal of the level for the constraint.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.5
  */
-public interface StoreAware {
+public interface RemoveLevelLate {
 
     /**
-     * It provide store for constraints that are not imposed but called from other constraints.
+     * This function is called in case of the backtrack. It is called
+     * after all timestamps, variables, mutablevariables have reverted
+     * to their values *after* removing the level.
      *
-     * @param store the constraint store in which context the constraint is executed.
+     * @param level the level which is being removed.
      */
-    void include(Store store);
+    public void removeLevelLate(int level);
 
 }

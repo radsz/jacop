@@ -30,6 +30,7 @@
 
 package org.jacop.constraints;
 
+import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.IntDomain;
@@ -57,7 +58,7 @@ import java.util.stream.Stream;
  * @version 4.5
  */
 
-public class LexOrder extends Constraint implements UsesQueueVariable, SatisfiedPresent {
+public class LexOrder extends Constraint implements UsesQueueVariable, SatisfiedPresent, RemoveLevelLate {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 

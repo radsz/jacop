@@ -30,8 +30,7 @@
 
 package org.jacop.constraints;
 
-import org.jacop.api.Stateful;
-import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.*;
 import org.jacop.core.Store;
 import org.jacop.core.SwitchesPruningLogging;
 import org.jacop.core.Var;
@@ -114,21 +113,10 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
         setScope(set.toArray(new Var[set.size()]));
     }
 
-
     public Set<PrimitiveConstraint> constraintScope;
 
     protected void setConstraintScope(PrimitiveConstraint... primitiveConstraints) {
         this.constraintScope = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(primitiveConstraints)));
-    }
-
-    /**
-     * This function is called in case of the backtrack. It is called
-     * after all timestamps, variables, mutablevariables have reverted
-     * to their values *after* removing the level.
-     *
-     * @param level the level which is being removed.
-     */
-    public void removeLevelLate(int level) {
     }
 
     /**
@@ -200,6 +188,15 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
         }
         if (this instanceof UsesQueueVariable)
             arguments().stream().forEach(i -> queueVariable(store.level, i));
+
+        if (constraintScope != null) {
+            Set<RemoveLevelLate> fixpoint = computeFixpoint(this, new HashSet<>());
+            fixpoint.forEach(store::registerRemoveLevelLateListener);
+        }
+
+        if (this instanceof RemoveLevelLate)
+            store.registerRemoveLevelLateListener((RemoveLevelLate)this);
+
         if (this instanceof Stateful) {
             Stateful c = (Stateful) this;
             if (c.isStateful()) {
@@ -207,6 +204,14 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
             }
         }
 
+    }
+
+    private Set<RemoveLevelLate> computeFixpoint(Constraint c, Set<RemoveLevelLate> fixpoint) {
+        if (c instanceof RemoveLevelLate)
+            fixpoint.add((RemoveLevelLate)c);
+        if (c.constraintScope != null)
+            c.constraintScope.forEach( ic -> computeFixpoint(ic, fixpoint));
+        return fixpoint;
     }
 
     /**
