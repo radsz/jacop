@@ -31,11 +31,15 @@
 package org.jacop.core;
 
 import org.jacop.api.RemoveLevelLate;
+import org.jacop.api.Replaceable;
 import org.jacop.api.Stateful;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
+import org.jacop.constraints.Reified;
+import org.jacop.constraints.replace.ReifiedIfThen;
 import org.jacop.util.SimpleHashSet;
 import org.jacop.util.SparseSet;
+import scala.collection.immutable.Stream;
 
 import java.util.*;
 
@@ -240,6 +244,13 @@ public class Store {
     public Map<Var, Set<Constraint>> watchedConstraints;
 
     /**
+     * It stores all the active replacements of constraints that are being applied
+     * upon constraint imposition. It makes it possible to replace constraints into
+     * other constraints. It can be very useful for efficiency or testing purposes. 
+     */
+    private Map<Class<? extends Constraint>, Set<Replaceable>> replacements = new HashMap<>();
+
+    /**
      * Variable given as a parameter no longer watches constraint given as
      * parameter. This function will be called when watch is being moved from
      * one variable to another.
@@ -347,7 +358,7 @@ public class Store {
     public Store() {
 
         this(100);
-
+        
     }
 
     /**
@@ -672,6 +683,13 @@ public class Store {
 
     public void impose(Constraint c) {
 
+        Optional.ofNullable(replacements.get(c.getClass())).ifPresent(
+            l -> l.forEach( r -> {
+            if (r.isReplaceable(c)) {
+                r.replace(c).imposeDecomposition(this);
+                return;
+            }
+        }));
         c.impose(this);
 
     }
@@ -928,6 +946,34 @@ public class Store {
 
     }
 
+    /**
+     * It makes it possible to register replacement for a particular constraint
+     * type.
+     *
+     * @return true if replacement has been added and was not already registered, false otherwise.
+     * @param replacement that is being registered.
+     *
+     */
+    public boolean registerReplacement(Replaceable<? extends Constraint> replacement) {
+
+        if (!replacements.containsKey(replacement.forClass())) {
+            replacements.put(replacement.forClass(), new HashSet<>());
+        }
+
+        Set<Replaceable> current = replacements.get(replacement.forClass());
+
+        return current.add(replacement);
+        
+    }
+
+    public boolean deregisterReplacement(Replaceable<? extends Constraint> replacement) {
+
+        Optional<Set<Replaceable>> forClass =
+            Optional.ofNullable(replacements.get(replacement.forClass()));
+
+        return forClass.map(replaceables -> replaceables.remove(replacement)).orElse(false);
+
+    }
     /**
      * Any constraint in general may need information what variables have changed
      * since the last time a consistency was called. This function is called
