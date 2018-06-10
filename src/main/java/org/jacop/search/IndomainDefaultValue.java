@@ -41,7 +41,6 @@ import java.util.Map;
  * selection of this value will not succeed it will try to assign
  * values with the default indomain method.
  * <p>
- * <p>
  * This method works only for IntVar.
  *
  * @param <T> type of variable being used in the search.

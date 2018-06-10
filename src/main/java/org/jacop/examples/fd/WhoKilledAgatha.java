@@ -61,10 +61,8 @@ import java.util.ArrayList;
  * - Comet: http://www.hakank.org/comet/who_killed_agatha.mzn
  * - Gecode: http://www.hakank.org/gecode/who_killed_agatha.cpp
  * <p>
- * <p>
  * This Choco model was created by Hakan Kjellerstrand (hakank@bonetmail.com)
  * Also, see my Choco page: http://www.hakank.org/choco/
- * <p>
  * <p>
  * This JaCoP model was created by Hakan Kjellerstrand (hakank@bonetmail.com)
  * http://www.hakank.org/JaCoP/ .

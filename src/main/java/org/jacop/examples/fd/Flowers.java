@@ -49,7 +49,6 @@ import java.util.ArrayList;
  *          and determine the date on which each woman received flowers, the occasion for the flowers, and the type of
  *          flowers in each bouquet?
  *          <p>
- *          <p>
  *          Calendar for February
  *          <p>
  *          Mon  Tue   Wed   Thu   Fri

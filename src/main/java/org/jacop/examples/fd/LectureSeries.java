@@ -68,7 +68,6 @@ import java.util.ArrayList;
  *          7. Duane Felicidad (*7a) gave his lecture sometime before the modern
  *          art lecture(*7b)
  *          <p>
- *          <p>
  *          Answer:
  *          <p>
  *          Monday, Alice Itakura, choosing a college

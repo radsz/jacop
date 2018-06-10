@@ -44,7 +44,6 @@ import java.util.List;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.5
  *          <p>
- *          <p>
  *          Golomb ruler is a special sequence of natural numbers
  *          an example is 0 1 4 6
  *          <p>

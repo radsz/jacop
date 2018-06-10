@@ -47,7 +47,6 @@ import java.util.Collection;
  *          slower processing in case of domains with holes, when using the event point
  *          series to prune the set of internal constraints
  *          <p>
- *          <p>
  *          TODO implement outbox generation for time (if feasible)
  */
 

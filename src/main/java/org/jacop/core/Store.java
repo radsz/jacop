@@ -966,6 +966,13 @@ public class Store {
         
     }
 
+    /**
+     * It makes it possible to deregister the replacement. The constraint that have been
+     * already replaced remained replaced.
+     *
+     * @param replacement that is being deregister from within the constraint store.
+     * @return true if replacement was present and was deregistered, false otherwise.
+     */
     public boolean deregisterReplacement(Replaceable<? extends Constraint> replacement) {
 
         Optional<Set<Replaceable>> forClass =

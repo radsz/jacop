@@ -60,7 +60,6 @@ import java.util.ArrayList;
  *          http://www.hakank.org/comb/debruijn.cgi
  *          http://www.hakank.org/comb/deBruijnApplet.html (as Java applet)
  *          <p>
- *          <p>
  *          - "Arbitrary" de Bruijn sequences
  *          Program "de Bruijn arbitrary sequences"
  *          http://www.hakank.org/comb/debruijn_arb.cgi

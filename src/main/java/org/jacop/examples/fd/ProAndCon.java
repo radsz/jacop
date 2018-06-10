@@ -54,7 +54,6 @@ import java.util.List;
  *          had to vote on five motions, number 1 to 5 in the clues below.
  *          Can you discover how each one voted on each motion?
  *          <p>
- *          <p>
  *          Note: a motion may have received zero or one yes vote, even though
  *          in real life it's unlikely that both the maker and seconder of
  *          the motion would change their minds before the motion came up for a vote.

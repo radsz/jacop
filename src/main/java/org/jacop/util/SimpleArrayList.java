@@ -426,7 +426,6 @@ public class SimpleArrayList<V> extends AbstractList<V> {
      * therein. Otherwise, a new array is allocated with the runtime type of the
      * specified array and the size of this list.
      * <p>
-     * <p>
      * If the list fits in the specified array with room to spare (i.e., the
      * array has more elements than the list), the element in the array
      * immediately following the end of the collection is set to <tt>null</tt>.

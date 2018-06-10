@@ -60,7 +60,6 @@ import java.util.ArrayList;
  *          Ming, Sung, and Tang). Can you match each figurine with its color and
  *          dynasty, and give the home country of each buyer?
  *          <p>
- *          <p>
  *          1. The rare white dragon (which the American didn't buy) didn't come
  *          from the Sung dynasty.
  *          <p>
@@ -75,7 +74,6 @@ import java.util.ArrayList;
  *          4. The American decided against both the grasshopper and the piece
  *          from the Sung dynasty, neither of which she felt would match her
  *          home decor.
- *          <p>
  *          <p>
  *          Belt buckle, red, Tang, U.S
  *          Dragon, white, Ching, Italy

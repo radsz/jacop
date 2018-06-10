@@ -58,7 +58,6 @@ import java.util.ArrayList;
  *          <p>
  *          Determine: First name - Last name - Age
  *          <p>
- *          <p>
  *          Given solution :
  *          <p>
  *          Keith Fell, five years old
