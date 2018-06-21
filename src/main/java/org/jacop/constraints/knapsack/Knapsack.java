@@ -32,7 +32,6 @@ package org.jacop.constraints.knapsack;
 
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.SatisfiedPresent;
-import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.*;
@@ -62,7 +61,7 @@ import java.util.stream.Stream;
  * @version 4.5
  */
 
-public class Knapsack extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent, RemoveLevelLate {
+public class Knapsack extends Constraint implements UsesQueueVariable, SatisfiedPresent, RemoveLevelLate {
 
     private final static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -283,10 +282,6 @@ public class Knapsack extends Constraint implements UsesQueueVariable, Stateful,
 
         setScope(Stream.concat(Arrays.stream(quantity), Stream.of(knapsackCapacity, knapsackProfit)));
 
-    }
-
-    @Override public void removeLevel(int level) {
-        // we do nothing here, the work is done in removeLevelLate()
     }
 
     @Override public void cleanAfterFailure() {
