@@ -601,6 +601,22 @@ class GlobalConstraints implements ParserTreeConstants {
         IntDomain F = support.getSetLiteral(node, 5);
         int minIndex = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(6));
 
+        // ---- KK, 2018-07-27
+	//regular must not have duplicated variables; we create all
+        // different variables and equality constraints here
+        IntVar[] xx = new IntVar[x.length];
+        HashSet<IntVar> varSet = new HashSet<IntVar>();
+        for (int i = 0; i < x.length; i++) {
+            if (varSet.contains(x[i])) {
+                xx[i] = new IntVar(store, x[i].min(), x[i].max());
+		support.pose(new XeqY(x[i], xx[i]));
+	    }
+            else {
+                xx[i] = x[i];
+                varSet.add(x[i]);
+            }
+        }
+
         // Build DFA
         FSM dfa = new FSM();
         FSMState[] s = new FSMState[Q];
@@ -620,7 +636,7 @@ class GlobalConstraints implements ParserTreeConstants {
                 }
         }
 
-        support.pose(new Regular(dfa, x));
+        support.pose(new Regular(dfa, xx));
     }
 
     void gen_jacop_knapsack(SimpleNode node) {
