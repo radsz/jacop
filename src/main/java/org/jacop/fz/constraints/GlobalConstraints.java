@@ -474,9 +474,20 @@ class GlobalConstraints implements ParserTreeConstants {
         int y = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
         IntVar c = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
+	if (c.singleton(0)) {
+	    for (IntVar v : x) 
+		v.domain.inComplement(store.level, v, y);
+	    return;
+	}
+	else if (c.singleton(x.length)) {
+	    for (IntVar v : x) 
+		v.domain.in(store.level, v, y, y);
+	    return;
+	}
+	
         ArrayList<IntVar> xs = new ArrayList<IntVar>();
         for (IntVar v : x) {
-            if (y >= v.min() && y <= v.max())
+            if (v.domain.contains(y)) //y >= v.min() && y <= v.max())
                 xs.add(v);
         }
         if (xs.size() == 0) {
@@ -484,6 +495,40 @@ class GlobalConstraints implements ParserTreeConstants {
             return;
         } else
             support.pose(new Count(xs, c, y));
+    }
+
+    void gen_jacop_atleast(SimpleNode node) {
+        IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+        int y = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+        int c = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+
+	support.pose(new AtLeast(x, c, y));
+    }
+
+    void gen_jacop_atleast_reif(SimpleNode node) {
+        IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+        int y = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+        int c = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+	IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
+	    
+	support.pose(new Reified(new AtLeast(x, c, y), b));
+    }
+
+    void gen_jacop_atmost(SimpleNode node) {
+        IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+        int y = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+        int c = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+
+	support.pose(new AtMost(x, c, y));
+    }
+
+    void gen_jacop_atmost_reif(SimpleNode node) {
+        IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+        int y = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+        int c = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+	IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
+	    
+	support.pose(new Reified(new AtMost(x, c, y), b));
     }
 
     void gen_jacop_nvalue(SimpleNode node) {

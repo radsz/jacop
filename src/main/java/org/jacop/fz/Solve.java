@@ -653,7 +653,8 @@ public class Solve implements ParserTreeConstants {
         if (int_search_variables.length != 0) {
             // add search containing int variables to be sure that they get a value
             SelectChoicePoint<Var> intSelect = new SimpleSelect<Var>(int_search_variables, null,
-                //    								     new org.jacop.search.MostConstrainedStatic<Var>(),
+								     // new org.jacop.search.MostConstrainedDynamic<Var>(),
+								     // new org.jacop.search.SmallestDomain<Var>(),
                 new IndomainMin());
             if (variable_selection == null)
                 variable_selection = intSelect;
@@ -687,7 +688,7 @@ public class Solve implements ParserTreeConstants {
         if (bool_search_variables.length != 0) {
             // add search containing boolean variables to be sure that they get a value
             SelectChoicePoint<Var> boolSelect = new SimpleSelect<Var>(bool_search_variables, null,
-                // 								      new org.jacop.search.MostConstrainedStatic<Var>(),
+                 								      // new org.jacop.search.MostConstrainedDynamic<Var>(),
                 new IndomainMin());
             if (variable_selection == null)
                 variable_selection = boolSelect;

@@ -28,7 +28,10 @@ Version 4.6
 7. Improvements in subcircuit constraint. It applies "expensive"
    domiance pruning if SCC did not pruned anything.
 
-8. Bug fix in sequential search when there is float_search after
+8. New primitive constraints AtLeast and AtLast. Adding generation of
+   these constraints and their reified versions for flatzinc.
+
+9. Bug fix in sequential search when there is float_search after
    set_search.
 
 Version 4.5
