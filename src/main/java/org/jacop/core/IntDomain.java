@@ -1409,7 +1409,7 @@ public abstract class IntDomain extends Domain {
         int r = x + y;
         // HD 2-12 Overflow iff both arguments have the opposite sign of the result
         if (((x ^ r) & (y ^ r)) < 0) {
-            return r > 0 ? Integer.MAX_VALUE : Integer.MIN_VALUE; //IntDomain.MaxInt : IntDomain.MinInt;
+            return (long)x + (long)y > 0 ? Integer.MAX_VALUE : Integer.MIN_VALUE; //IntDomain.MaxInt : IntDomain.MinInt;
         }
         return r;
     }
@@ -1427,7 +1427,7 @@ public abstract class IntDomain extends Domain {
         // HD 2-12 Overflow iff the arguments have different signs and
         // the sign of the result is different than the sign of x
         if (((x ^ y) & (x ^ r)) < 0) {
-            return r > 0 ? Integer.MAX_VALUE : Integer.MIN_VALUE; //IntDomain.MaxInt : IntDomain.MinInt;
+            return (long)x - (long)y > 0 ? Integer.MAX_VALUE : Integer.MIN_VALUE; //IntDomain.MaxInt : IntDomain.MinInt;
         }
         return r;
     }
