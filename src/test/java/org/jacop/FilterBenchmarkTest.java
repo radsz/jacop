@@ -7,11 +7,19 @@ import org.jacop.core.Store;
 import org.jacop.examples.fd.filters.*;
 import org.jacop.search.*;
 import org.jacop.ui.PrintSchedule;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.File;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -26,33 +34,74 @@ import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
 public class FilterBenchmarkTest {
+//    Method[] methods = SampleClass.class.getMethods();
+//    SampleClass sampleObject = new SampleClass();
+//    methods[1].invoke(sampleObject, "data");
+//      System.out.println(methods[0].invoke(sampleObject));
 
 
-    private  int  sfqExTest[][];// = new int[][];
+    private int sfqExTest[][];// = new int[][];
     private Filter filter;
     private Filter filterTest;
+    //    private static Object method;
+    private static Method[] methods;
+    private  int numberMetod;
+    private int costExp;
+    private String experiment;
+//    public FilterBenchmarkTest(){};
+        FilterBenchmarkTest filterBenchmarkTest;
 
-    public FilterBenchmarkTest(int sfqExTest[][], Filter filterTest ) {
+    public FilterBenchmarkTest(int sfqExTest[][], Filter filterTest, String experiment, int costExp) {
         //this.sfqExTest[][] =  {{1, 1}, {1, 2}, {1, 3}, {2, 2}, {1, 4}, {2, 3}};
         this.sfqExTest = sfqExTest;
         this.filter = filterTest;
-
+        this.experiment = experiment;
+        this.costExp = costExp;
     }
+
 
     @Parameterized.Parameters
     public static Collection primeNumbers() {
-        return Arrays.asList(new Object[][] {
-               {new int[][]{{1, 1}, {1, 2}, {1, 3}, {2, 2}, {1, 4}, {2, 3}}, new DFQ()}
+        return Arrays.asList(new Object[][]{
+                {new int[][]{{1, 1}}, new DFQ(), "experiment1", 13},
+                {new int[][]{{1, 2}}, new DFQ(), "experiment1", 8},
+                {new int[][]{{1, 3}}, new DFQ(), "experiment1", 7},
+                {new int[][]{{2, 2}}, new DFQ(), "experiment1", 7},
+                {new int[][]{{1, 4}}, new DFQ(), "experiment1", 6},
+                {new int[][]{{2, 3}}, new DFQ(), "experiment1", 6},
+                {new int[][]{{2, 3}}, new FIR(), "experiment1", 10},
+                {new int[][]{{1, 1}}, new DFQ(), "experiment1PM", 8},
+
+
+
 
         });
     }
 
+    @Before
+    public void before() {
+         filterBenchmarkTest = new FilterBenchmarkTest(sfqExTest, filterTest, experiment, costExp);
+
+    }
 
     @Test
-    public void testPrimeNumberChecker() {
+    public void testPrimeNumberChecker() throws InvocationTargetException, IllegalAccessException, ClassNotFoundException, NoSuchMethodException {
 
-        schedule(sfqExTest, filterTest);
-        assertEquals(6, cost.value());
+        Class cls = Class.forName("org.jacop.FilterBenchmarkTest");
+       // Method[] methods = cls.getMethods();
+
+        Method exp = cls.getMethod(experiment, Store.class, Filter.class, int.class, int.class);
+
+        int dfqEx[][] = sfqExTest;
+//        int a = dfqEx[0][0], m = dfqEx[0][1];
+
+//        Store store = new Store();
+        Filter dfq = filter;
+
+        exp.invoke(filterBenchmarkTest, new Store(), dfq, dfqEx[0][0], dfqEx[0][1]);
+
+//        methods[numberMetod].invoke(filterBenchmarkTest, store, dfq, a, m);
+        assertEquals("Test " + experiment + " failed",costExp, cost.value());
     }
 
 
@@ -88,39 +137,41 @@ public class FilterBenchmarkTest {
 
 
 
-        public static void main(String args[]) {
-
-            long T1, T2, T;
-            T1 = System.currentTimeMillis();
-
-//            schedule();
+//        public static void main(String args[]) {
 //
-//            pipeMulSchedule();
+//            long T1, T2, T;
+//            T1 = System.currentTimeMillis();
 //
-//            chainingSchedule();
+////            schedule();
+////
+////            pipeMulSchedule();
+////
+////            chainingSchedule();
+////
+////            pipelineSchedule();
 //
-//            pipelineSchedule();
-
-            T2 = System.currentTimeMillis();
-            T = T2 - T1;
-            System.out.println("\n\t*** Execution time = " + T + " ms");
-
-        }
+//            T2 = System.currentTimeMillis();
+//            T = T2 - T1;
+//            System.out.println("\n\t*** Execution time = " + T + " ms");
+//
+//        }
 
         /**
          * It solves available filters for different scenario
          * consisting of different number of resources.
          */
-        public static void schedule(int dfqeX[][], Filter filter ) {
-
-            int dfqEx[][] = {{1, 1}, {1, 2}, {1, 3}, {2, 2}, {1, 4}, {2, 3}};
+//        public void schedule(int dfqeX[][], Filter filter ) {
+//
+////            int dfqEx[][] = {{1, 1}, {1, 2}, {1, 3}, {2, 2}, {1, 4}, {2, 3}};
 //            int dfqEx[][] = dfqeX;
-            for (int i = 0; i < dfqEx.length; i++) {
-                int a = dfqEx[i][0], m = dfqEx[i][1];
-                Store store = new Store();
-                DFQ dfq = new DFQ();
-                experiment1(store, dfq, a, m);
-            }
+//           // for (int i = 0; i < dfqEx.length; i++) {
+//                int a = dfqEx[0][0], m = dfqEx[0][1];
+////            int a = dfqEx[i][0], m = dfqEx[i][1];
+//
+//            Store store = new Store();
+//                Filter dfq = filter;
+//                experiment1(store, dfq, a, m);
+//         //   }
 
 //            int firEx[][] = {{1, 1}, {1, 2}, {2, 2}, {2, 3}};
 //            for (int i = 0; i < firEx.length; i++) {
@@ -162,7 +213,7 @@ public class FilterBenchmarkTest {
 //                experiment1(store, dct, a, m);
 //            }
 
-        }
+//        }
 
 
         /**
@@ -171,102 +222,102 @@ public class FilterBenchmarkTest {
          * performs pipelining of multiplier operations.
          *
          */
-        public static void pipeMulSchedule() {
-
-            int dfqEx[][] = {{1, 1}, {1, 2}};
-            for (int i = 0; i < dfqEx.length; i++) {
-                int a = dfqEx[i][0], m = dfqEx[i][1];
-                Store store = new Store();
-                DFQ dfq = new DFQ();
-                experiment1PM(store, dfq, a, m);
-            }
-
-            int firEx[][] = {{1, 1}, {2, 1}, {2, 2}};
-            for (int i = 0; i < firEx.length; i++) {
-                int a = firEx[i][0], m = firEx[i][1];
-                FIR fir = new FIR();
-                Store store = new Store();
-                experiment1PM(store, fir, a, m);
-            }
-
-            int arEx[][] = {{1, 1}, {1, 2}, {2, 2}, {2, 4}};
-            for (int i = 0; i < arEx.length; i++) {
-                int a = arEx[i][0], m = arEx[i][1];
-                AR ar = new AR();
-                Store store = new Store();
-                experiment2PM(store, ar, a, m);
-            }
-
-            int ewfEx[][] = {{2, 1}, {3, 1}, {3, 2}};
-            for (int i = 0; i < ewfEx.length; i++) {
-                int a = ewfEx[i][0], m = ewfEx[i][1];
-                EWF ewf = new EWF();
-                Store store = new Store();
-                experiment1PM(store, ewf, a, m);
-            }
-
-            int dctEx[][] = {{1, 1}, {2, 1}, {2, 2}, {3, 2}, {4, 3}, {5, 4}, {6, 5}};
-            for (int i = 0; i < dctEx.length; i++) {
-                int a = dctEx[i][0], m = dctEx[i][1];
-                DCT dct = new DCT();
-                Store store = new Store();
-                experiment1PM(store, dct, a, m);
-            }
-
-        }
-
-        /**
-         * It solves available filters for different scenario
-         * consisting of different number of resources. It
-         * performs chaining of operations.
-         *
-         */
-        public static void chainingSchedule() {
-
-            int dfqEx[][] = {{1, 1, 3}, {1, 2, 3}, {2, 2, 3}};
-            for (int i = 0; i < dfqEx.length; i++) {
-                int a = dfqEx[i][0], m = dfqEx[i][1], s = dfqEx[i][2];
-                Store store = new Store();
-                DFQ dfq = new DFQ();
-                experiment1C(store, dfq, a, m, s);
-            }
-
-            int firEx[][] = {{2, 1, 2}, {2, 2, 2}, {3, 2, 2}, {1, 1, 3}, {2, 1, 3}, {3, 2, 3}};
-            for (int i = 0; i < firEx.length; i++) {
-                int a = firEx[i][0], m = firEx[i][1], s = firEx[i][2];
-                FIR fir = new FIR();
-                Store store = new Store();
-                experiment1C(store, fir, a, m, s);
-            }
-
-            int arEx[][] =
-                    {{2, 2, 2}, {2, 3, 2}, {4, 4, 2}, {1, 1, 3}, {1, 2, 3}, {2, 2, 3}, {2, 3, 3}, {2, 4, 3}, {3, 4, 3}, {2, 2, 4}, {2, 3, 4},
-                            {3, 4, 4}};
-            for (int i = 0; i < arEx.length; i++) {
-                int a = arEx[i][0], m = arEx[i][1], s = arEx[i][2];
-                AR ar = new AR();
-                Store store = new Store();
-                experiment1C(store, ar, a, m, s);
-            }
-
-            int ewfEx[][] = {{2, 1, 2}, {3, 1, 2}, {1, 1, 3}, {2, 1, 3}, {3, 1, 3}, {1, 1, 4}, {2, 1, 4}, {3, 1, 4}};
-            for (int i = 0; i < ewfEx.length; i++) {
-                int a = ewfEx[i][0], m = ewfEx[i][1], s = ewfEx[i][2];
-                EWF ewf = new EWF();
-                Store store = new Store();
-                experiment1C(store, ewf, a, m, s);
-            }
-
-            int dctEx[][] =
-                    {{2, 1, 2}, {2, 2, 2}, {3, 2, 2}, {4, 2, 2}, {4, 3, 2}, {5, 4, 2}, {1, 1, 3}, {2, 1, 3}, {3, 2, 3}, {4, 2, 3}, {5, 3, 3}};
-            for (int i = 0; i < dctEx.length; i++) {
-                int a = dctEx[i][0], m = dctEx[i][1], s = dctEx[i][2];
-                DCT dct = new DCT();
-                Store store = new Store();
-                experiment1C(store, dct, a, m, s);
-            }
-
-        }
+//        public static void pipeMulSchedule() {
+//
+//            int dfqEx[][] = {{1, 1}, {1, 2}};
+//            for (int i = 0; i < dfqEx.length; i++) {
+//                int a = dfqEx[i][0], m = dfqEx[i][1];
+//                Store store = new Store();
+//                DFQ dfq = new DFQ();
+//                experiment1PM(store, dfq, a, m);
+//            }
+//
+//            int firEx[][] = {{1, 1}, {2, 1}, {2, 2}};
+//            for (int i = 0; i < firEx.length; i++) {
+//                int a = firEx[i][0], m = firEx[i][1];
+//                FIR fir = new FIR();
+//                Store store = new Store();
+//                experiment1PM(store, fir, a, m);
+//            }
+//
+//            int arEx[][] = {{1, 1}, {1, 2}, {2, 2}, {2, 4}};
+//            for (int i = 0; i < arEx.length; i++) {
+//                int a = arEx[i][0], m = arEx[i][1];
+//                AR ar = new AR();
+//                Store store = new Store();
+//                experiment2PM(store, ar, a, m);
+//            }
+//
+//            int ewfEx[][] = {{2, 1}, {3, 1}, {3, 2}};
+//            for (int i = 0; i < ewfEx.length; i++) {
+//                int a = ewfEx[i][0], m = ewfEx[i][1];
+//                EWF ewf = new EWF();
+//                Store store = new Store();
+//                experiment1PM(store, ewf, a, m);
+//            }
+//
+//            int dctEx[][] = {{1, 1}, {2, 1}, {2, 2}, {3, 2}, {4, 3}, {5, 4}, {6, 5}};
+//            for (int i = 0; i < dctEx.length; i++) {
+//                int a = dctEx[i][0], m = dctEx[i][1];
+//                DCT dct = new DCT();
+//                Store store = new Store();
+//                experiment1PM(store, dct, a, m);
+//            }
+//
+//        }
+//
+//        /**
+//         * It solves available filters for different scenario
+//         * consisting of different number of resources. It
+//         * performs chaining of operations.
+//         *
+//         */
+//        public static void chainingSchedule() {
+//
+//            int dfqEx[][] = {{1, 1, 3}, {1, 2, 3}, {2, 2, 3}};
+//            for (int i = 0; i < dfqEx.length; i++) {
+//                int a = dfqEx[i][0], m = dfqEx[i][1], s = dfqEx[i][2];
+//                Store store = new Store();
+//                DFQ dfq = new DFQ();
+//                experiment1C(store, dfq, a, m, s);
+//            }
+//
+//            int firEx[][] = {{2, 1, 2}, {2, 2, 2}, {3, 2, 2}, {1, 1, 3}, {2, 1, 3}, {3, 2, 3}};
+//            for (int i = 0; i < firEx.length; i++) {
+//                int a = firEx[i][0], m = firEx[i][1], s = firEx[i][2];
+//                FIR fir = new FIR();
+//                Store store = new Store();
+//                experiment1C(store, fir, a, m, s);
+//            }
+//
+//            int arEx[][] =
+//                    {{2, 2, 2}, {2, 3, 2}, {4, 4, 2}, {1, 1, 3}, {1, 2, 3}, {2, 2, 3}, {2, 3, 3}, {2, 4, 3}, {3, 4, 3}, {2, 2, 4}, {2, 3, 4},
+//                            {3, 4, 4}};
+//            for (int i = 0; i < arEx.length; i++) {
+//                int a = arEx[i][0], m = arEx[i][1], s = arEx[i][2];
+//                AR ar = new AR();
+//                Store store = new Store();
+//                experiment1C(store, ar, a, m, s);
+//            }
+//
+//            int ewfEx[][] = {{2, 1, 2}, {3, 1, 2}, {1, 1, 3}, {2, 1, 3}, {3, 1, 3}, {1, 1, 4}, {2, 1, 4}, {3, 1, 4}};
+//            for (int i = 0; i < ewfEx.length; i++) {
+//                int a = ewfEx[i][0], m = ewfEx[i][1], s = ewfEx[i][2];
+//                EWF ewf = new EWF();
+//                Store store = new Store();
+//                experiment1C(store, ewf, a, m, s);
+//            }
+//
+//            int dctEx[][] =
+//                    {{2, 1, 2}, {2, 2, 2}, {3, 2, 2}, {4, 2, 2}, {4, 3, 2}, {5, 4, 2}, {1, 1, 3}, {2, 1, 3}, {3, 2, 3}, {4, 2, 3}, {5, 3, 3}};
+//            for (int i = 0; i < dctEx.length; i++) {
+//                int a = dctEx[i][0], m = dctEx[i][1], s = dctEx[i][2];
+//                DCT dct = new DCT();
+//                Store store = new Store();
+//                experiment1C(store, dct, a, m, s);
+//            }
+//
+//        }
 
         /**
          * It solves available filters for different scenario
@@ -274,59 +325,59 @@ public class FilterBenchmarkTest {
          * performs algorithmic pipelining.
          *
          */
-        public static void pipelineSchedule() {
-
-            // **************** Pipeline schedules
-
-            int dfqEx[][] = {{1, 3}, {2, 3}};
-            for (int i = 0; i < dfqEx.length; i++) {
-                int a = dfqEx[i][0], m = dfqEx[i][1];
-                Store store = new Store();
-                DFQ dfqP = new DFQ();
-                experiment1P(store, dfqP, a, m);
-            }
-
-            int firEx[][] = {{2, 2}, {3, 3}, {3, 4}};
-            for (int i = 0; i < firEx.length; i++) {
-                int a = firEx[i][0], m = firEx[i][1];
-                FIR firP = new FIR();
-                Store store = new Store();
-                experiment1P(store, firP, a, m);
-            }
-
-            int arEx[][] = {{2, 4}, {2, 6}, {3, 8}};
-            for (int i = 0; i < arEx.length; i++) {
-                int a = arEx[i][0], m = arEx[i][1];
-                AR arP = new AR();
-                Store store = new Store();
-                experiment1P(store, arP, a, m);
-            }
-
-            int ewfEx[][] = {{3, 2}, {4, 2}, {4, 3}, {5, 4}};
-            for (int i = 0; i < ewfEx.length; i++) {
-                int a = ewfEx[i][0], m = ewfEx[i][1];
-                EWF ewfP = new EWF();
-                Store store = new Store();
-                experiment1P(store, ewfP, a, m);
-            }
-
-            int dctEx[][] = {{4, 4}, {4, 5}, {5, 6}, {6, 7}, {7, 8}};
-            for (int i = 0; i < dctEx.length; i++) {
-                int a = dctEx[i][0], m = dctEx[i][1];
-                DCT dctP = new DCT();
-                Store store = new Store();
-                experiment1P(store, dctP, a, m);
-            }
-
-            int fftEx[][] = {{1, 1}, {1, 2}, {2, 2}, {3, 4}};
-            for (int i = 0; i < fftEx.length; i++) {
-                int a = fftEx[i][0], m = fftEx[i][1];
-                FFT fftP = new FFT();
-                Store store = new Store();
-                experiment1P(store, fftP, a, m);
-            }
-
-        }
+//        public static void pipelineSchedule() {
+//
+//            // **************** Pipeline schedules
+//
+//            int dfqEx[][] = {{1, 3}, {2, 3}};
+//            for (int i = 0; i < dfqEx.length; i++) {
+//                int a = dfqEx[i][0], m = dfqEx[i][1];
+//                Store store = new Store();
+//                DFQ dfqP = new DFQ();
+//                experiment1P(store, dfqP, a, m);
+//            }
+//
+//            int firEx[][] = {{2, 2}, {3, 3}, {3, 4}};
+//            for (int i = 0; i < firEx.length; i++) {
+//                int a = firEx[i][0], m = firEx[i][1];
+//                FIR firP = new FIR();
+//                Store store = new Store();
+//                experiment1P(store, firP, a, m);
+//            }
+//
+//            int arEx[][] = {{2, 4}, {2, 6}, {3, 8}};
+//            for (int i = 0; i < arEx.length; i++) {
+//                int a = arEx[i][0], m = arEx[i][1];
+//                AR arP = new AR();
+//                Store store = new Store();
+//                experiment1P(store, arP, a, m);
+//            }
+//
+//            int ewfEx[][] = {{3, 2}, {4, 2}, {4, 3}, {5, 4}};
+//            for (int i = 0; i < ewfEx.length; i++) {
+//                int a = ewfEx[i][0], m = ewfEx[i][1];
+//                EWF ewfP = new EWF();
+//                Store store = new Store();
+//                experiment1P(store, ewfP, a, m);
+//            }
+//
+//            int dctEx[][] = {{4, 4}, {4, 5}, {5, 6}, {6, 7}, {7, 8}};
+//            for (int i = 0; i < dctEx.length; i++) {
+//                int a = dctEx[i][0], m = dctEx[i][1];
+//                DCT dctP = new DCT();
+//                Store store = new Store();
+//                experiment1P(store, dctP, a, m);
+//            }
+//
+//            int fftEx[][] = {{1, 1}, {1, 2}, {2, 2}, {3, 4}};
+//            for (int i = 0; i < fftEx.length; i++) {
+//                int a = fftEx[i][0], m = fftEx[i][1];
+//                FFT fftP = new FFT();
+//                Store store = new Store();
+//                experiment1P(store, fftP, a, m);
+//            }
+//
+//        }
 
         /**
          * It optimizes scheduling of filter operations.
@@ -454,6 +505,7 @@ public class FilterBenchmarkTest {
          * @param mulNum number of multipliers available.
          */
         public static void experiment1PM(Store store, Filter filter, int addNum, int mulNum) {
+
             boolean result;
 
             System.out.println("\n\nTest of scheduling for " + filter.name() + " example with pipeline multiplier"); // without cumulative
