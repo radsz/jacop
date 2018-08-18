@@ -7,19 +7,12 @@ import org.jacop.core.Store;
 import org.jacop.examples.fd.filters.*;
 import org.jacop.search.*;
 import org.jacop.ui.PrintSchedule;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.File;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -34,74 +27,45 @@ import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
 public class FilterBenchmarkTest {
-//    Method[] methods = SampleClass.class.getMethods();
-//    SampleClass sampleObject = new SampleClass();
-//    methods[1].invoke(sampleObject, "data");
-//      System.out.println(methods[0].invoke(sampleObject));
 
-
-    private int sfqExTest[][];// = new int[][];
+    private int[] resourcesConfiguration;
     private Filter filter;
     private Filter filterTest;
-    //    private static Object method;
     private static Method[] methods;
     private  int numberMetod;
     private int costExp;
     private String experiment;
-//    public FilterBenchmarkTest(){};
-        FilterBenchmarkTest filterBenchmarkTest;
 
-    public FilterBenchmarkTest(int sfqExTest[][], Filter filterTest, String experiment, int costExp) {
-        //this.sfqExTest[][] =  {{1, 1}, {1, 2}, {1, 3}, {2, 2}, {1, 4}, {2, 3}};
-        this.sfqExTest = sfqExTest;
+    public FilterBenchmarkTest(int resourcesConfiguration[], Filter filterTest, String experiment, int costExp) {
+        this.resourcesConfiguration = resourcesConfiguration;
         this.filter = filterTest;
         this.experiment = experiment;
         this.costExp = costExp;
     }
 
-
     @Parameterized.Parameters
     public static Collection primeNumbers() {
         return Arrays.asList(new Object[][]{
-                {new int[][]{{1, 1}}, new DFQ(), "experiment1", 13},
-                {new int[][]{{1, 2}}, new DFQ(), "experiment1", 8},
-                {new int[][]{{1, 3}}, new DFQ(), "experiment1", 7},
-                {new int[][]{{2, 2}}, new DFQ(), "experiment1", 7},
-                {new int[][]{{1, 4}}, new DFQ(), "experiment1", 6},
-                {new int[][]{{2, 3}}, new DFQ(), "experiment1", 6},
-                {new int[][]{{2, 3}}, new FIR(), "experiment1", 10},
-                {new int[][]{{1, 1}}, new DFQ(), "experiment1PM", 8},
-
-
-
-
+                {new int[]{1, 1}, new DFQ(), "experiment1", 13},
+                {new int[]{1, 2}, new DFQ(), "experiment1", 8},
+                {new int[]{1, 3}, new DFQ(), "experiment1", 7},
+                {new int[]{2, 2}, new DFQ(), "experiment1", 7},
+                {new int[]{1, 4}, new DFQ(), "experiment1", 6},
+                {new int[]{2, 3}, new DFQ(), "experiment1", 6},
+                {new int[]{2, 3}, new FIR(), "experiment1", 10},
+                {new int[]{1, 1}, new DFQ(), "experiment1PM", 8}
         });
     }
 
-    @Before
-    public void before() {
-         filterBenchmarkTest = new FilterBenchmarkTest(sfqExTest, filterTest, experiment, costExp);
-
-    }
-
     @Test
-    public void testPrimeNumberChecker() throws InvocationTargetException, IllegalAccessException, ClassNotFoundException, NoSuchMethodException {
+    public void testFilter() throws InvocationTargetException, IllegalAccessException, ClassNotFoundException, NoSuchMethodException {
 
-        Class cls = Class.forName("org.jacop.FilterBenchmarkTest");
-       // Method[] methods = cls.getMethods();
+        Class cls = this.getClass();
+        Method exp = cls.getMethod(experiment, Store.class, Filter.class, int[].class);
+        
+        int costFound = (Integer) exp.invoke(this, new Store(), filter, resourcesConfiguration);
 
-        Method exp = cls.getMethod(experiment, Store.class, Filter.class, int.class, int.class);
-
-        int dfqEx[][] = sfqExTest;
-//        int a = dfqEx[0][0], m = dfqEx[0][1];
-
-//        Store store = new Store();
-        Filter dfq = filter;
-
-        exp.invoke(filterBenchmarkTest, new Store(), dfq, dfqEx[0][0], dfqEx[0][1]);
-
-//        methods[numberMetod].invoke(filterBenchmarkTest, store, dfq, a, m);
-        assertEquals("Test " + experiment + " failed",costExp, cost.value());
+        assertEquals("Test " + experiment + " failed for " + Filter.class , costExp, costFound);
     }
 
 
@@ -114,13 +78,13 @@ public class FilterBenchmarkTest {
 
 
 
-        static List<IntVar> Ts, Rs;
+        private List<IntVar> Ts, Rs;
 
-        static List<Integer> Ds;
+        private List<Integer> Ds;
 
-        static List<String> Ns;
+        private List<String> Ns;
 
-        static IntVar cost;
+        private IntVar cost;
 
 
 
@@ -384,10 +348,11 @@ public class FilterBenchmarkTest {
          *
          * @param store the constraint store in which the constraints are imposed.
          * @param filter the filter being scheduled.
-         * @param addNum number of adders available.
-         * @param mulNum number of multipliers available.
          */
-        public static void experiment1(Store store, Filter filter, int addNum, int mulNum) {
+        public int experiment1(Store store, Filter filter, int[] configuration) {
+
+            int addNum = configuration[0];
+            int mulNum = configuration[1];
             boolean result;
 
             System.out.println("\n\nTest of scheduling for " + filter.name() + " example"); // without cumulative constraint");
@@ -427,8 +392,12 @@ public class FilterBenchmarkTest {
                 System.out.println("\n*** Yes");
                 PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
                 System.out.println(Sch);
-            } else
+                return cost.value();
+            } else {
                 System.out.println("*** No");
+                return -1;
+            }
+
         }
 
         /**
@@ -437,11 +406,14 @@ public class FilterBenchmarkTest {
          *
          * @param store the constraint store in which the constraints are imposed.
          * @param filter the filter being scheduled.
-         * @param addNum number of adders available.
-         * @param mulNum number of multipliers available.
-         * @param clock number of time units within a clock.
+         * @param configuration number of adders available, number of multipliers available, number of time units within a clock.
          */
-        public static void experiment1C(Store store, Filter filter, int addNum, int mulNum, int clock) {
+        public void experiment1C(Store store, Filter filter, int[] configuration) {
+
+            int addNum = configuration[0];
+            int mulNum = configuration[1];
+            int clock = configuration[2];
+
             boolean result;
 
             System.out.println("\n\nTest of scheduling for " + filter.name() + " example");
@@ -501,11 +473,12 @@ public class FilterBenchmarkTest {
          *
          * @param store the constraint store in which the constraints are imposed.
          * @param filter the filter being scheduled.
-         * @param addNum number of adders available.
-         * @param mulNum number of multipliers available.
+         * @param configuration number of adders available, number of multipliers available.
          */
-        public static void experiment1PM(Store store, Filter filter, int addNum, int mulNum) {
+        public int experiment1PM(Store store, Filter filter, int[] configuration) {
 
+            int addNum = configuration[0];
+            int mulNum = configuration[1];
             boolean result;
 
             System.out.println("\n\nTest of scheduling for " + filter.name() + " example with pipeline multiplier"); // without cumulative
@@ -547,8 +520,11 @@ public class FilterBenchmarkTest {
                 System.out.println("\n*** Yes");
                 PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
                 System.out.println(Sch);
-            } else
+                return cost.value();
+            } else {
                 System.out.println("*** No");
+                return -1;
+            }
         }
 
         /**
@@ -560,7 +536,7 @@ public class FilterBenchmarkTest {
          * @param addNum number of adders available.
          * @param mulNum number of multipliers available.
          */
-        public static void experiment2PM(Store store, Filter filter, int addNum, int mulNum) {
+        public void experiment2PM(Store store, Filter filter, int addNum, int mulNum) {
 
             boolean result;
 
@@ -624,7 +600,7 @@ public class FilterBenchmarkTest {
          * @param addNum number of adders available.
          * @param mulNum number of multipliers available.
          */
-        public static void experiment1P(Store store, Filter filter, int addNum, int mulNum) {
+        public void experiment1P(Store store, Filter filter, int addNum, int mulNum) {
 
             boolean result;
 
@@ -711,7 +687,7 @@ public class FilterBenchmarkTest {
          * @param addNum number of adders available.
          * @param mulNum number of multipliers available.
          */
-        public static void experiment2P(Store store, Filter filter, int addNum, int mulNum) {
+        public void experiment2P(Store store, Filter filter, int addNum, int mulNum) {
 
             boolean result;
 
@@ -785,7 +761,7 @@ public class FilterBenchmarkTest {
          * @param addNum number of adders available.
          * @param mulNum number of multipliers available.
          */
-        public static void experiment2(Store store, Filter filter, int addNum, int mulNum) {
+        public void experiment2(Store store, Filter filter, int addNum, int mulNum) {
 
             boolean result;
 
@@ -847,7 +823,7 @@ public class FilterBenchmarkTest {
          * @param mulNum number of multipliers available.
          * @param clock number of time units within a clock.
          */
-        public static void experiment2C(Store store, Filter filter, int addNum, int mulNum, int clock) {
+        public void experiment2C(Store store, Filter filter, int addNum, int mulNum, int clock) {
 
             boolean result;
 
@@ -909,7 +885,7 @@ public class FilterBenchmarkTest {
          * @param mulNum number of multipliers available.
          * @return start time and resource assignment variables describing the scheduling problem.
          */
-        public static List<List<IntVar>> makeConstraints(Store store, Filter filter, int addNum, int mulNum) {
+        public List<List<IntVar>> makeConstraints(Store store, Filter filter, int addNum, int mulNum) {
 
             final int addMin = 1;
             final int addMax = addMin + addNum - 1;
@@ -1015,7 +991,7 @@ public class FilterBenchmarkTest {
          * @param mulNum number of multipliers available.
          * @return start time and resource assignment variables describing the scheduling problem.
          */
-        public static List<List<IntVar>> makeConstraintsPipeMultiplier(Store store, Filter filter, int addNum, int mulNum) {
+        public List<List<IntVar>> makeConstraintsPipeMultiplier(Store store, Filter filter, int addNum, int mulNum) {
 
             final int addMin = 1;
             final int addMax = addMin + addNum - 1;
@@ -1125,7 +1101,7 @@ public class FilterBenchmarkTest {
          * @param clk number of time units within a clock.
          * @return start time and resource assignment variables describing the scheduling problem.
          */
-        public static List<List<IntVar>> makeConstraintsChain(Store store, Filter filter, int addNum, int mulNum, int clk) {
+        public List<List<IntVar>> makeConstraintsChain(Store store, Filter filter, int addNum, int mulNum, int clk) {
 
             final int addMin = 1;
             final int addMax = addMin + addNum - 1;
@@ -1253,7 +1229,7 @@ public class FilterBenchmarkTest {
          * @param mulNum number of available multipliers.
          * @return variables corresponding to start time and resource assignment of the filter operations.
          */
-        public static List<List<IntVar>> makeConstraintsPipeline(Store store, Filter filter, int addNum, int mulNum) {
+        public List<List<IntVar>> makeConstraintsPipeline(Store store, Filter filter, int addNum, int mulNum) {
 
             final int addMin = 1;
             final int addMax = addMin + addNum - 1;
