@@ -30,9 +30,6 @@ public class FilterBenchmarkTest {
 
     private int[] resourcesConfiguration;
     private Filter filter;
-    private Filter filterTest;
-    private static Method[] methods;
-    private  int numberMetod;
     private int costExp;
     private String experiment;
 
@@ -52,8 +49,145 @@ public class FilterBenchmarkTest {
                 {new int[]{2, 2}, new DFQ(), "experiment1", 7},
                 {new int[]{1, 4}, new DFQ(), "experiment1", 6},
                 {new int[]{2, 3}, new DFQ(), "experiment1", 6},
+                {new int[]{1, 1}, new FIR(), "experiment1", 18},
+                {new int[]{1, 2}, new FIR(), "experiment1", 15},
+                {new int[]{2, 2}, new FIR(), "experiment1", 11},
                 {new int[]{2, 3}, new FIR(), "experiment1", 10},
-                {new int[]{1, 1}, new DFQ(), "experiment1PM", 8}
+                {new int[]{1, 1}, new AR(1,1), "experiment2", 18},
+                {new int[]{1, 2}, new AR(1,1), "experiment2", 13},
+                {new int[]{1, 3}, new AR(1,1), "experiment2", 13},
+                {new int[]{2, 3}, new AR(1,1), "experiment2", 10},
+                {new int[]{2, 4}, new AR(1,1), "experiment2", 8},
+                {new int[]{1, 1}, new EWF(), "experiment1", 28},
+                {new int[]{2, 1},  new EWF(), "experiment1", 21},
+                {new int[]{2, 2},  new EWF(), "experiment1", 18},
+                {new int[]{3, 3},  new EWF(), "experiment1", 17},
+                {new int[]{1, 1}, new EWF(1,1), "experiment1", 27},
+                {new int[]{2, 1},  new EWF(1,1), "experiment1", 16},
+                {new int[]{2, 2},  new EWF(1,1), "experiment1", 16},
+                {new int[]{3, 3},  new EWF(1,1), "experiment1", 14},
+                {new int[]{1, 1},  new DCT(), "experiment1", 34},
+                {new int[]{1, 2},  new DCT(), "experiment1", 32},
+                {new int[]{2, 2},  new DCT(), "experiment1", 18},
+                {new int[]{2, 3},  new DCT(), "experiment1", 16},
+                {new int[]{3, 3},  new DCT(), "experiment1", 14},
+                {new int[]{3, 4},  new DCT(), "experiment1", 11},
+                {new int[]{4, 4},  new DCT(), "experiment1", 10},
+                {new int[]{1, 1},  new DFQ(), "experiment1PM", 8},
+                {new int[]{1, 2},  new DFQ(), "experiment1PM", 6},
+                {new int[]{1, 1},  new FIR(), "experiment1PM", 15},
+                {new int[]{2, 1},  new FIR(), "experiment1PM", 11},
+                {new int[]{2, 2},  new FIR(), "experiment1PM", 10},
+                {new int[]{1, 1},  new AR(), "experiment2PM", 19},
+                {new int[]{2, 1},  new AR(), "experiment2PM", 19},
+                {new int[]{2, 2},  new AR(), "experiment2PM", 13},
+                {new int[]{2, 4},  new AR(), "experiment2PM", 11},
+                {new int[]{2, 1},  new EWF(), "experiment1PM", 19},
+                {new int[]{3, 1},  new EWF(), "experiment1PM", 18},
+                {new int[]{3, 2},  new EWF(), "experiment1PM", 17},
+                {new int[]{1, 1},  new DCT(), "experiment1PM", 32},
+                {new int[]{2, 1},  new DCT(), "experiment1PM", 19},
+                {new int[]{2, 2},  new DCT(), "experiment1PM", 16},
+                {new int[]{3, 2},  new DCT(), "experiment1PM", 11},
+                {new int[]{4, 3},  new DCT(), "experiment1PM", 9},
+                {new int[]{5, 4},  new DCT(), "experiment1PM", 8},
+                {new int[]{6, 5},  new DCT(), "experiment1PM", 7},
+                {new int[]{1, 1, 3},  new DFQ(), "experiment1C", 18},
+                {new int[]{1, 2, 3},  new DFQ(), "experiment1C", 13},
+                {new int[]{2, 2, 3},  new DFQ(), "experiment1C", 9},
+                {new int[]{2, 1, 2},  new FIR(), "experiment1C", 19},
+                {new int[]{2, 2, 2},  new FIR(), "experiment1C", 15},
+                {new int[]{3, 2, 2},  new FIR(), "experiment1C", 12},
+                {new int[]{1, 1, 3},  new FIR(), "experiment1C", 43},
+                {new int[]{2, 1, 3},  new FIR(), "experiment1C", 24},
+                {new int[]{3, 2, 3},  new FIR(), "experiment1C", 15},
+                {new int[]{2, 2, 2},  new AR(), "experiment1C", 18},
+                {new int[]{2, 3, 2},  new AR(), "experiment1C", 16},
+                {new int[]{4, 4, 2},  new AR(), "experiment1C", 12},
+                {new int[]{1, 1, 3},  new AR(), "experiment1C", 49},
+                {new int[]{1, 2, 3},  new AR(), "experiment1C", 34},
+                {new int[]{2, 2, 3},  new AR(), "experiment1C", 25},
+                {new int[]{2, 3, 3},  new AR(), "experiment1C", 19},
+                {new int[]{3, 4, 3},  new AR(), "experiment1C", 13},
+                {new int[]{3, 4, 3},  new AR(), "experiment1C", 13},
+                {new int[]{2, 2, 4},  new AR(), "experiment1C", 32},
+                {new int[]{2, 3, 4},  new AR(), "experiment1C", 24},
+                {new int[]{2, 1, 2},  new EWF(), "experiment1C", 29},
+                {new int[]{3, 1, 2},  new EWF(), "experiment1C", 21},
+                {new int[]{1, 1, 3},  new EWF(), "experiment1C", 76},
+                {new int[]{2, 1, 3},  new EWF(), "experiment1C", 40},
+                {new int[]{3, 1, 3},  new EWF(), "experiment1C", 30},
+                {new int[]{1, 1, 4},  new EWF(), "experiment1C", 101},
+                {new int[]{2, 1, 4},  new EWF(), "experiment1C", 49},
+                {new int[]{3, 1, 4},  new EWF(), "experiment1C", 35},
+                {new int[]{2, 1, 2},  new DCT(), "experiment1C", 35},
+                {new int[]{2, 2, 2},  new DCT(), "experiment1C", 31},
+                {new int[]{3, 2, 2},  new DCT(), "experiment1C", 21},
+                {new int[]{4, 2, 2},  new DCT(), "experiment1C", 19},
+                {new int[]{4, 3, 2},  new DCT(), "experiment1C", 15},
+                {new int[]{5, 4, 2},  new DCT(), "experiment1C", 13},
+                {new int[]{1, 1, 3},  new DCT(), "experiment1C", 94},
+                {new int[]{2, 1, 3},  new DCT(), "experiment1C", 48},
+                {new int[]{3, 2, 3},  new DCT(), "experiment1C", 31},
+                {new int[]{4, 2, 3},  new DCT(), "experiment1C", 24},
+                {new int[]{5, 3, 3},  new DCT(), "experiment1C", 19},
+
+                {new int[]{1, 3},  new DFQ(), "experiment1P", 19},
+
+//        public static void pipelineSchedule() {
+//
+//            // **************** Pipeline schedules
+//
+//            int dfqEx[][] = {{1, 3}, {2, 3}};
+//            for (int i = 0; i < dfqEx.length; i++) {
+//                int a = dfqEx[i][0], m = dfqEx[i][1];
+//                Store store = new Store();
+//                DFQ dfqP = new DFQ();
+//                experiment1P(store, dfqP, a, m);
+//            }
+//
+//            int firEx[][] = {{2, 2}, {3, 3}, {3, 4}};
+//            for (int i = 0; i < firEx.length; i++) {
+//                int a = firEx[i][0], m = firEx[i][1];
+//                FIR firP = new FIR();
+//                Store store = new Store();
+//                experiment1P(store, firP, a, m);
+//            }
+//
+//            int arEx[][] = {{2, 4}, {2, 6}, {3, 8}};
+//            for (int i = 0; i < arEx.length; i++) {
+//                int a = arEx[i][0], m = arEx[i][1];
+//                AR arP = new AR();
+//                Store store = new Store();
+//                experiment1P(store, arP, a, m);
+//            }
+//
+//            int ewfEx[][] = {{3, 2}, {4, 2}, {4, 3}, {5, 4}};
+//            for (int i = 0; i < ewfEx.length; i++) {
+//                int a = ewfEx[i][0], m = ewfEx[i][1];
+//                EWF ewfP = new EWF();
+//                Store store = new Store();
+//                experiment1P(store, ewfP, a, m);
+//            }
+//
+//            int dctEx[][] = {{4, 4}, {4, 5}, {5, 6}, {6, 7}, {7, 8}};
+//            for (int i = 0; i < dctEx.length; i++) {
+//                int a = dctEx[i][0], m = dctEx[i][1];
+//                DCT dctP = new DCT();
+//                Store store = new Store();
+//                experiment1P(store, dctP, a, m);
+//            }
+//
+//            int fftEx[][] = {{1, 1}, {1, 2}, {2, 2}, {3, 4}};
+//            for (int i = 0; i < fftEx.length; i++) {
+//                int a = fftEx[i][0], m = fftEx[i][1];
+//                FFT fftP = new FFT();
+//                Store store = new Store();
+//                experiment1P(store, fftP, a, m);
+//            }
+//
+
+
         });
     }
 
@@ -110,7 +244,7 @@ public class FilterBenchmarkTest {
 ////
 ////            pipeMulSchedule();
 ////
-////            chainingSchedule();
+//            chainingSchedule();
 ////
 ////            pipelineSchedule();
 //
@@ -408,7 +542,7 @@ public class FilterBenchmarkTest {
          * @param filter the filter being scheduled.
          * @param configuration number of adders available, number of multipliers available, number of time units within a clock.
          */
-        public void experiment1C(Store store, Filter filter, int[] configuration) {
+        public int experiment1C(Store store, Filter filter, int[] configuration) {
 
             int addNum = configuration[0];
             int mulNum = configuration[1];
@@ -455,8 +589,11 @@ public class FilterBenchmarkTest {
                 System.out.println("Schedule length: " + div(cost.min(), clock));
                 PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
                 System.out.println(Sch);
-            } else
+                return cost.value();
+            } else {
                 System.out.println("*** No");
+                return -1;
+            }
         }
 
         private static int div(int A, int B) {
@@ -536,7 +673,10 @@ public class FilterBenchmarkTest {
          * @param addNum number of adders available.
          * @param mulNum number of multipliers available.
          */
-        public void experiment2PM(Store store, Filter filter, int addNum, int mulNum) {
+        public int experiment2PM(Store store, Filter filter, int[] configuration) {
+
+            int addNum = configuration[0];
+            int mulNum = configuration[1];
 
             boolean result;
 
@@ -585,8 +725,11 @@ public class FilterBenchmarkTest {
                 System.out.println("\n*** Yes");
                 PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
                 System.out.println(Sch);
-            } else
+                return cost.value();
+            } else {
                 System.out.println("*** No");
+                return -1;
+            }
         }
 
 
@@ -600,7 +743,10 @@ public class FilterBenchmarkTest {
          * @param addNum number of adders available.
          * @param mulNum number of multipliers available.
          */
-        public void experiment1P(Store store, Filter filter, int addNum, int mulNum) {
+        public int experiment1P(Store store, Filter filter, int[] configuration ) {
+
+            int addNum = configuration[0];
+            int mulNum = configuration[1];
 
             boolean result;
 
@@ -669,13 +815,16 @@ public class FilterBenchmarkTest {
             T2 = System.currentTimeMillis();
             T = T2 - T1;
             System.out.println("\n\t*** Execution time = " + T + " ms");
-            System.out.println("Wynik ........................................................................." + ((DepthFirstSearch<IntVar>) search).costValue);
+
             if (result) {
                 System.out.println("\n*** Yes");
                 PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
                 System.out.println(Sch);
-            } else
+                return cost.value();
+            } else {
                 System.out.println("*** No");
+                return -1;
+            }
         }
 
         /**
@@ -761,7 +910,10 @@ public class FilterBenchmarkTest {
          * @param addNum number of adders available.
          * @param mulNum number of multipliers available.
          */
-        public void experiment2(Store store, Filter filter, int addNum, int mulNum) {
+        public int experiment2(Store store, Filter filter, int[] configuration) {
+
+            int addNum = configuration[0];
+            int mulNum = configuration[1];
 
             boolean result;
 
@@ -809,8 +961,10 @@ public class FilterBenchmarkTest {
                 System.out.println("\n*** Yes");
                 PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
                 System.out.println(Sch);
+                return cost.value();
             } else
                 System.out.println("*** No");
+                return -1;
         }
 
         /**
