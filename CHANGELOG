@@ -31,7 +31,10 @@ Version 4.6
 8. New primitive constraints AtLeast and AtLast. Adding generation of
    these constraints and their reified versions for flatzinc.
 
-9. Bug fix in sequential search when there is float_search after
+9. Adding print-out of intermediate statistics for search (search nodes
+   and execution time) to flatzinc when option -v is given.
+
+10.Bug fix in sequential search when there is float_search after
    set_search.
 
 Version 4.5

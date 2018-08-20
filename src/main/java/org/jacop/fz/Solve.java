@@ -598,8 +598,8 @@ public class Solve implements ParserTreeConstants {
             System.out.println("%% Model variables : " + (store.size() + dictionary.getNumberBoolVariables()) + "\n%% Model constraints : "
                 + initNumberConstraints + "\n\n%% Search CPU time : " + getCPUTime()
                 //(searchTimeMeter.getThreadCpuTime(tread.getId()) - startCPU) / (long) 1e+6 + "ms"
-                + "\n%% Search nodes : " + nodes + "\n%% Propagations : " + store.numberConsistencyCalls + "\n%% Search decisions : "
-                + decisions + "\n%% Wrong search decisions : " + wrong + "\n%% Search backtracks : " + backtracks
+			       + "\n%% Search nodes : " + String.format("%,d", nodes) + "\n%% Propagations : " + String.format("%,d", store.numberConsistencyCalls) + "\n%% Search decisions : "
+			       + String.format("%,d", decisions) + "\n%% Wrong search decisions : " + String.format("%,d", wrong) + "\n%% Search backtracks : " + String.format("%,d", backtracks)
                 + "\n%% Max search depth : " + depth + "\n%% Number solutions : " + solutions);
 
 
@@ -1050,9 +1050,9 @@ public class Solve implements ParserTreeConstants {
             }
 
             System.out.println("%% Model variables : " + (store.size() + dictionary.getNumberBoolVariables()) + "\n%% Model constraints : "
-                + initNumberConstraints + "\n\n%% Search CPU time : " + getCPUTime() + "\n%% Search nodes : " + nodes
-                + "\n%% Propagations : " + store.numberConsistencyCalls + "\n%% Search decisions : " + decisions
-                + "\n%% Wrong search decisions : " + wrong + "\n%% Search backtracks : " + backtracks + "\n%% Max search depth : " + depth
+			       + initNumberConstraints + "\n\n%% Search CPU time : " + getCPUTime() + "\n%% Search nodes : " + String.format("%,d", nodes)
+			       + "\n%% Propagations : " + String.format("%,d", store.numberConsistencyCalls) + "\n%% Search decisions : " + String.format("%,d", decisions)
+			       + "\n%% Wrong search decisions : " + String.format("%,d", wrong) + "\n%% Search backtracks : " + String.format("%,d", backtracks) + "\n%% Max search depth : " + depth
                 + "\n%% Number solutions : " + solutions);
         }
 
@@ -1062,6 +1062,10 @@ public class Solve implements ParserTreeConstants {
 
     String getCPUTime() {
         return (searchTimeMeter.getThreadCpuTime(tread.getId()) - startCPU) / (long) 1e+6 + "ms";
+    }
+
+    double getCPUTime_ms() {
+        return (searchTimeMeter.getThreadCpuTime(tread.getId()) - startCPU) / (long) 1e+6;
     }
 
     boolean anyTimeOutOccured(ArrayList<Search<Var>> list_seq_searches) {
@@ -1243,9 +1247,21 @@ public class Solve implements ParserTreeConstants {
             printBuffer.append(a).append("\n");
         }
 
+	if (options.getVerbose()) {
+	    // print number of search nodes and CPU time for this solution
+	    int nodes=0;
+	    for (Search<Var> label : list_seq_searches) 
+		nodes += label.getNodes();
+	    
+	    double cpuTime = getCPUTime_ms();
+	    printBuffer.append(String.format("%%%% Search nodes : %,d", nodes));
+	    printBuffer.append(String.format(" (%,.1f nodes/s)\n", (double)nodes/(cpuTime/1000))); // + " nodes/s)\n");
+	    printBuffer.append("%% Search CPU time : " + cpuTime + "ms\n");
+	}
+	
         printBuffer.append("----------\n");
 
-        if (options.getAll())
+	if (options.getAll())
             System.out.print(printBuffer.toString());
         else { // store the print-out
 
