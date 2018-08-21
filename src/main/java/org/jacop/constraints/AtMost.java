@@ -143,15 +143,15 @@ public class AtMost extends PrimitiveConstraint {
 	else if (!reified)
 	    if (numberEq + numberMayBe <= counter) {
 		removeConstraint();
-	}
-        else if (numberEq == counter) {
-            for (IntVar v : list) {
-                if (!v.singleton() && v.domain.contains(value))
-                    v.domain.inComplement(store.level, v, value, value);
-            }
-	    if (!reified)
-		removeConstraint();
-        }
+	    }
+	    else if (numberEq == counter) {
+		for (IntVar v : list) {
+		    if (!v.singleton() && v.domain.contains(value))
+			v.domain.inComplement(store.level, v, value, value);
+		}
+		if (!reified)
+		    removeConstraint();
+	    }
     }
 
     @Override public void notConsistency(final Store store) {
@@ -170,15 +170,15 @@ public class AtMost extends PrimitiveConstraint {
 	else if (!reified)
 	    if (numberEq >= counter+1) {
 		removeConstraint();
-	}
-	else if (numberMayBe + numberEq == counter+1) {
-            for (IntVar v : list) {
-                if (!v.singleton() && v.domain.contains(value))
-                    v.domain.in(store.level, v, value, value);
-            }
-	    if (!reified)
-		removeConstraint();
-        }
+	    }
+	    else if (numberMayBe + numberEq == counter+1) {
+		for (IntVar v : list) {
+		    if (!v.singleton() && v.domain.contains(value))
+			v.domain.in(store.level, v, value, value);
+		}
+		if (!reified)
+		    removeConstraint();
+	    }
     }
     
     @Override public boolean satisfied() {
