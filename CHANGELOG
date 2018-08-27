@@ -34,7 +34,11 @@ Version 4.6
 9. Adding print-out of intermediate statistics for search (search nodes
    and execution time) to flatzinc when option -v is given.
 
-10.Bug fix in sequential search when there is float_search after
+10. Adding JaCoP solver configuration file, 'org.jacop.msc', for
+    minizinc 2.2 (both stand-alone and IDE) and fzn-jacop sctipt to be
+    used to call JaCoP solve.
+
+11.Bug fix in sequential search when there is float_search after
    set_search.
 
 Version 4.5
