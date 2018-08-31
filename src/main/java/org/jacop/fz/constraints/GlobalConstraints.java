@@ -423,18 +423,36 @@ class GlobalConstraints implements ParserTreeConstants {
         int[] cover = support.getIntArray((SimpleNode) node.jjtGetChild(1));
         int[] low = support.getIntArray((SimpleNode) node.jjtGetChild(2));
         int[] up = support.getIntArray((SimpleNode) node.jjtGetChild(3));
-
+		   
         IntDomain gcc_dom = new IntervalDomain();
-        for (int e : cover)
+	int[] newCover = new int[cover.length];
+	int n=0;
+        for (int i=0; i < cover.length; i++) {
+	    int e = cover[i];
+	    if (varsContain(x, e))
+		newCover[n++] = i;
+	    else if (low[i] != 0)
+		throw store.failException;
+
             gcc_dom = gcc_dom.union(e);
-        for (IntVar v : x)
+	}
+
+	for (IntVar v : x)
             v.domain.in(store.level, v, gcc_dom);
 
-        IntVar[] counter = new IntVar[low.length];
-        for (int i = 0; i < counter.length; i++)
-            counter[i] = new IntVar(store, "counter" + i, low[i], up[i]);
+        IntVar[] counter = new IntVar[n];
+        for (int i = 0; i < n; i++) 
+            counter[i] = new IntVar(store, "counter" + i, low[newCover[i]], up[newCover[i]]);
 
         support.pose(new GCC(x, counter));
+    }
+
+    boolean varsContain(IntVar[] x, int e) {
+	for (IntVar v : x)
+	    if (v.domain.contains(e))
+		return true;
+
+	return false;
     }
 
     void gen_jacop_diff2_strict(SimpleNode node) {

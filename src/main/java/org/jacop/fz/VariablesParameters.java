@@ -67,6 +67,8 @@ public class VariablesParameters implements ParserTreeConstants {
     ArrayList<IntDomain> indexBounds;
 
     int numberBooleanVariables = 0;
+    int numberFloatVariables = 0;
+    int numberSetVariables = 0;
 
     /**
      * It constructs variables parameters.
@@ -282,6 +284,7 @@ public class VariablesParameters implements ParserTreeConstants {
                     table.addSearchSetVar(varSet);
                 if (output_var)
                     table.addOutVar(varSet);
+                numberSetVariables++;
                 break;
             case 5: // set interval
                 ident = ((ASTVarDeclItem) node).getIdent();
@@ -310,6 +313,7 @@ public class VariablesParameters implements ParserTreeConstants {
                     table.addSearchSetVar(varSet);
                 if (output_var)
                     table.addOutVar(varSet);
+                numberSetVariables++;
                 break;
             case 6: // set list
                 ident = ((ASTVarDeclItem) node).getIdent();
@@ -336,6 +340,7 @@ public class VariablesParameters implements ParserTreeConstants {
                     table.addSearchSetVar(varSet);
                 if (output_var)
                     table.addOutVar(varSet);
+                numberSetVariables++;
                 break;
             case 7: // bool set
                 ident = ((ASTVarDeclItem) node).getIdent();
@@ -358,6 +363,7 @@ public class VariablesParameters implements ParserTreeConstants {
                     table.addSearchSetVar(varSet);
                 if (output_var)
                     table.addOutVar(varSet);
+                numberSetVariables++;
                 break;
             case 8: // float
                 ident = ((ASTVarDeclItem) node).getIdent();
@@ -380,6 +386,7 @@ public class VariablesParameters implements ParserTreeConstants {
                     table.addSearchFloatVar(varFloat);
                 if (output_var)
                     table.addOutVar(varFloat);
+                numberFloatVariables++;
                 break;
             case 9: // float interval
                 ident = ((ASTVarDeclItem) node).getIdent();
@@ -415,6 +422,7 @@ public class VariablesParameters implements ParserTreeConstants {
                     table.addSearchFloatVar(varFloat);
                 if (output_var)
                     table.addOutVar(varFloat);
+                numberFloatVariables++;
                 break;
             default:
                 throw new IllegalArgumentException("Not supported type in parameter; compilation aborted.");
@@ -611,6 +619,7 @@ public class VariablesParameters implements ParserTreeConstants {
                     for (int i = 0; i < size; i++)
                         varArraySet[i] = new SetVar(store, ident + "[" + i + "]", new BoundSetDomain(MIN_INT, MAX_INT));
 		    table.addSearchSetArray(varArraySet);
+                    numberSetVariables += size;
                 }
                 table.addSetVariableArray(ident, varArraySet);
                 if (output_array) {
@@ -633,6 +642,7 @@ public class VariablesParameters implements ParserTreeConstants {
                             varArraySet[i] = new SetVar(store, ident + "[" + i + "]",
                                 new BoundSetDomain(new IntervalDomain(), new IntervalDomain(lowInterval, highInterval)));
 		    table.addSearchSetArray(varArraySet);
+                    numberSetVariables += size;
                 }
                 table.addSetVariableArray(ident, varArraySet);
                 if (output_array) {
@@ -655,6 +665,7 @@ public class VariablesParameters implements ParserTreeConstants {
                         varArraySet[i] = new SetVar(store, ident + "[" + i + "]", new BoundSetDomain(new IntervalDomain(), sd));
                     }
 		    table.addSearchSetArray(varArraySet);
+                    numberSetVariables += size;
                 }
                 table.addSetVariableArray(ident, varArraySet);
                 if (output_array) {
@@ -673,6 +684,7 @@ public class VariablesParameters implements ParserTreeConstants {
                     for (int i = 0; i < size; i++)
                         varArraySet[i] = new SetVar(store, ident + "[" + i + "]", new BoundSetDomain(0, 1));
 		    table.addSearchSetArray(varArraySet);
+                    numberSetVariables += size;
                 }
                 table.addSetVariableArray(ident, varArraySet);
                 if (output_array) {
@@ -691,6 +703,7 @@ public class VariablesParameters implements ParserTreeConstants {
                     for (int i = 0; i < size; i++)
                         varArrayFloat[i] = new FloatVar(store, ident + "[" + i + "]", MIN_FLOAT, MAX_FLOAT);
 		    table.addSearchFloatArray(varArrayFloat);
+                    numberFloatVariables += size;
                 }
                 table.addVariableFloatArray(ident, varArrayFloat);
                 if (output_array) {
@@ -724,6 +737,7 @@ public class VariablesParameters implements ParserTreeConstants {
                         varArrayFloat[i] = new FloatVar(store, ident + "[" + i + "]", lowFloatInterval, highFloatInterval);
 
 		    table.addSearchFloatArray(varArrayFloat);
+                    numberFloatVariables += size;
                 }
                 table.addVariableFloatArray(ident, varArrayFloat);
                 if (output_array) {

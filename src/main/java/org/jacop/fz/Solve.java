@@ -597,6 +597,8 @@ public class Solve implements ParserTreeConstants {
 
             System.out.println("%%mzn-stat: variables=" + (store.size() + dictionary.getNumberBoolVariables() - dictionary.constantTable.size())
 			       // + "\n%%mzn-stat: boolVariables="+ (dictionary.getNumberBoolVariables()-dictionary.aliasTable.size())
+			       // + "\n%%mzn-stat: setVariables="+ dictionary.getNumberSetVariables()
+			       // + "\n%%mzn-stat: floatVariables="+ dictionary.getNumberFloatVariables()
 			       + "\n%%mzn-stat: propagators=" + (initNumberConstraints - 1)
 			       + "\n\n%%mzn-stat: initTime=" + getInitTime_ms()/1000.0
 			       + "\n%%mzn-stat: solveTime=" + getSearchTime_ms()/1000.0
@@ -796,6 +798,8 @@ public class Solve implements ParserTreeConstants {
                 System.out.println(
 				   "%%mzn-stat: variables=" + (store.size() + dictionary.getNumberBoolVariables() - dictionary.constantTable.size())
 				   // + "\n%%mzn-stat: boolVariables="+ (dictionary.getNumberBoolVariables()-dictionary.aliasTable.size())
+				   // + "\n%%mzn-stat: setVariables="+ dictionary.getNumberSetVariables()
+				   // + "\n%%mzn-stat: floatVariables="+ dictionary.getNumberFloatVariables()
 				   + "\n%%mzn-stat: propagators=" + initNumberConstraints
 				   + "\n\n%%mzn-stat: initTime=" + getInitTime_ms()/1000.0
 				   + "\n%%mzn-stat: solveTime=" + "0"
@@ -1062,6 +1066,8 @@ public class Solve implements ParserTreeConstants {
 
             System.out.println("%%mzn-stat: variables=" + (store.size() + dictionary.getNumberBoolVariables() - dictionary.constantTable.size())
 			       // + "\n%%mzn-stat: boolVariables="+ (dictionary.getNumberBoolVariables()-dictionary.aliasTable.size())
+			       // + "\n%%mzn-stat: setVariables="+ dictionary.getNumberSetVariables()
+			       // + "\n%%mzn-stat: floatVariables="+ dictionary.getNumberFloatVariables()
 			       + "\n%%mzn-stat: propagators=" + (initNumberConstraints - 1)
 			       + "\n\n%%mzn-stat: initTime=" + getInitTime_ms()/1000.0
 			       + "\n%%mzn-stat: solveTime=" + getSearchTime_ms()/1000.0

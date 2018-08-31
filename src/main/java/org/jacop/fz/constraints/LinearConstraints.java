@@ -416,7 +416,28 @@ class LinearConstraints implements ParserTreeConstants {
                     // else
                     // 	support.pose(new LinearIntDom(p2, p1, "==", p3));
 
-                    support.pose(new LinearIntDom(p2, p1, "==", p3));
+		    int pos = sumPossible(p1);
+		    if (pos > -1) {
+			// Use SumBool constraint instead of LinearIntDom
+		    	IntVar[] vect = new IntVar[p1.length - 1];
+		    	int n = 0;
+		    	for (int i = 0; i < p2.length; i++)
+		    	    if (i != pos)
+		    		vect[n++] = p2[i];
+
+		    	if (boolSum(vect))
+		    	    if (p3 == 0)
+		    		support.pose(new SumBool(vect, "==", p2[pos]));
+		    	    else {
+		    		IntVar tmp = new IntVar(store, 0, org.jacop.core.IntDomain.MaxInt);
+		    		support.pose(new SumBool(vect, "==", tmp));
+		    		support.pose(new XplusCeqZ(p2[pos], p3, tmp));
+		    	    }
+		    	    return;
+		    }
+
+		    support.pose(new LinearIntDom(p2, p1, "==", p3));
+
                 } else if ((p3 == 0 && p1.length == 3) && ((p1[0] == -1 && p1[1] == -1 && p1[2] == 1) || (p1[0] == 1 && p1[1] == 1
                     && p1[2] == -1)))
                     support.pose(new XplusYeqZ(p2[0], p2[1], p2[2]));
@@ -665,7 +686,6 @@ class LinearConstraints implements ParserTreeConstants {
     }
 
     boolean allWeightsOne(int[] w) {
-        //boolean allOne=true;
         for (int i = 0; i < w.length; i++)
             if (w[i] != 1)
                 return false;
@@ -673,7 +693,6 @@ class LinearConstraints implements ParserTreeConstants {
     }
 
     boolean allWeightsMinusOne(int[] w) {
-        //boolean allOne=true;
         for (int i = 0; i < w.length; i++)
             if (w[i] != -1)
                 return false;
@@ -709,6 +728,28 @@ class LinearConstraints implements ParserTreeConstants {
                 return -1;
         } else
             return -1;
+    }
+
+    int sumPossible(int[] ws) {
+
+            int one = 0, minusOne = 0;
+            int lastOnePosition = -1, lastMinusOnePosition = -1;
+
+            for (int i = 0; i < ws.length; i++)
+                if (ws[i] == 1) {
+                    one++;
+                    lastOnePosition = i;
+                } else if (ws[i] == -1) {
+                    minusOne++;
+                    lastMinusOnePosition = i;
+                }
+
+            if (one == 1 && minusOne == ws.length - 1)
+                return lastOnePosition;
+            else if (minusOne == 1 && one == ws.length - 1)
+                return lastMinusOnePosition;
+            else
+                return -1;
     }
 
     int sumLePossible(int[] ws, int result) {

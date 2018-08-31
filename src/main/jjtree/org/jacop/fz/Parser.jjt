@@ -231,7 +231,7 @@ void var_decl_items() #VarDeclItems:
     ( var_decl_item() <SC> )*
  	{   //jjtThis.dump("");
 	    // jjtThis.removeChildren();
-	    dict.setNumberBoolVariables(cg.numberBooleanVariables);
+	    dict.setNumberOfAllVariables(cg.numberBooleanVariables, cg.numberSetVariables, cg.numberFloatVariables);
 	}
 //             	{ System.out.println(dict); }
 }

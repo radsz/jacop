@@ -100,6 +100,8 @@ public class Tables {
     public Map<IntVar, IntVar> aliasTable = new HashMap<IntVar, IntVar>();
 
     int numberBoolVariables = 0;
+    int numberFloatVariables = 0;
+    int numberSetVariables = 0;
 
     /**
      * It constructs the storage object to store different objects, like int, array of ints, sets, ... .
@@ -542,12 +544,35 @@ public class Tables {
         defaultSearchSetArrays.add(v);
     }
 
+    public void setNumberOfAllVariables(int nb, int ns, int nf) {
+        numberBoolVariables = nb;
+        numberSetVariables = ns;
+        numberFloatVariables = nf;
+    }
+    
+
     public void setNumberBoolVariables(int n) {
         numberBoolVariables = n;
     }
 
     public int getNumberBoolVariables() {
         return numberBoolVariables;
+    }
+
+    public void setNumberFloatVariables(int n) {
+        numberFloatVariables = n;
+    }
+
+    public int getNumberFloatVariables() {
+        return numberFloatVariables;
+    }
+
+    public void setNumberSetVariables(int n) {
+        numberSetVariables = n;
+    }
+
+    public int getNumberSetVariables() {
+        return numberSetVariables;
     }
 
     // StringBuilder to be used instead of normal string additions. 
