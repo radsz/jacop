@@ -100,7 +100,7 @@ setup to run configuration. -->
 								<exclude>**/MinizincBasedTestUpTo30Seconds.java</exclude>
 								<exclude>**/MinizincBasedTestUpTo1Minutes.java</exclude>
 								<exclude>**/MinizincBasedTestUpTo5Minutes.java</exclude>
-								<include>**/MinizincBasedTestUpTo10Minutes.java</include>
+								<exclude>**/MinizincBasedTestUpTo10Minutes.java</exclude>
 								<exclude>**/MinizincBasedTestUpTo1Hours.java</exclude>
 								<exclude>**/MinizincBasedTestAbove1Hours.java</exclude>
 								<exclude>**/MinizincBasedChosen.java</exclude>
@@ -194,7 +194,7 @@ setup to run configuration. -->
 								<include>**/MinizincBasedTestUpTo10Minutes.java</include>
 							</includes>
 							<excludes>
-								<include>**/MinizincBasedTestUpTo1Hours.java</include>
+								<exclude>**/MinizincBasedTestUpTo1Hours.java</exclude>
 								<exclude>**/MinizincBasedTestAbove1Hours.java</exclude>
 								<exclude>**/MinizincBasedChosen.java</exclude>
 							</excludes>
