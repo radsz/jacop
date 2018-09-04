@@ -1127,7 +1127,7 @@ public class VariablesParameters implements ParserTreeConstants {
                     else {
                         Double n = dictionary.getFloat(((ASTScalarFlatExpr) child).getIdent());
                         if (n != null)
-                            return new FloatVar(store, n.doubleValue(), n.doubleValue());
+                            return dictionary.getFloatConstant(n.doubleValue()); //new FloatVar(store, n.doubleValue(), n.doubleValue());
                         else
                             break;
                     }
@@ -1139,12 +1139,12 @@ public class VariablesParameters implements ParserTreeConstants {
                     else {
                         Double an = dictionary.getFloatArray(((ASTScalarFlatExpr) child).getIdent())[((ASTScalarFlatExpr) child).getInt()];
                         if (an != null)
-                            return new FloatVar(store, an.doubleValue(), an.doubleValue());
+                            return dictionary.getFloatConstant(an.doubleValue()); //new FloatVar(store, an.doubleValue(), an.doubleValue());
                         else
                             break;
                     }
                 case 5: // float
-                    return new FloatVar(store, ((ASTScalarFlatExpr) child).getFloat(), ((ASTScalarFlatExpr) child).getFloat());
+                    return dictionary.getFloatConstant(((ASTScalarFlatExpr) child).getFloat()); //new FloatVar(store, ((ASTScalarFlatExpr) child).getFloat(), ((ASTScalarFlatExpr) child).getFloat());
                 default: // string & float;
                     throw new IllegalArgumentException("Not supported scalar in parameter; compilation aborted.");
             }

@@ -55,6 +55,7 @@ public class Tables {
     // IntVar zero, one;
 
     HashMap<Integer, IntVar> constantTable = new HashMap<Integer, IntVar>();
+    HashMap<Double, FloatVar> constantFloatTable = new HashMap<Double, FloatVar>();
 
     // intTable keeps both int & bool (0=false, 1=true) parameters
     HashMap<String, Integer> intTable = new HashMap<String, Integer>();
@@ -119,6 +120,17 @@ public class Tables {
         if (v == null) {
             v = new IntVar(store, c, c);
             constantTable.put(c, v);
+        }
+
+        return v;
+    }
+
+    public FloatVar getFloatConstant(double c) {
+        FloatVar v = constantFloatTable.get(c);
+
+        if (v == null) {
+            v = new FloatVar(store, c, c);
+            constantFloatTable.put(c, v);
         }
 
         return v;
@@ -367,7 +379,6 @@ public class Tables {
         } else
             for (int i = 0; i < a.length; i++)
                 a[i] = getAlias(a[i]);
-
         return a;
     }
 
@@ -396,7 +407,7 @@ public class Tables {
             if (floatA != null) {
                 a = new FloatVar[floatA.length];
                 for (int i = 0; i < floatA.length; i++) {
-                    a[i] = new FloatVar(store, floatA[i], floatA[i]);
+                    a[i] = getFloatConstant(floatA[i]); //new FloatVar(store, floatA[i], floatA[i]);
                 }
             } else
                 throw new IllegalArgumentException("Array identifier does not exist: " + ident);
