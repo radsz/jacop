@@ -364,6 +364,10 @@ public final class ConstraintFncs {
         gc.gen_jacop_count(n);
     }
 
+    public void jacop_count_bounds(SimpleNode n) {
+        gc.gen_jacop_count_bounds(n);
+    }
+
     public void jacop_atleast(SimpleNode n) {
         gc.gen_jacop_atleast(n);
     }
