@@ -49,6 +49,7 @@ import static org.junit.Assert.assertEquals;
 *
 * @author Mariusz Świerkot and Radoslaw Szymanek
 */
+
 @RunWith(Parameterized.class)
 public class FilterBenchmarkTest extends FilterBenchmark {
 
@@ -65,7 +66,7 @@ public class FilterBenchmarkTest extends FilterBenchmark {
     }
 
     @Parameterized.Parameters
-    public static Collection primeNumbers() {
+    public static Collection testData() {
         return Arrays.asList(new Object[][]{
                 {new int[]{1, 1}, new DFQ(), "experiment1", 13},
                 {new int[]{1, 2}, new DFQ(), "experiment1", 8},
@@ -155,12 +156,32 @@ public class FilterBenchmarkTest extends FilterBenchmark {
                 {new int[]{3, 2, 3},  new DCT(), "experiment1C", 31},
                 {new int[]{4, 2, 3},  new DCT(), "experiment1C", 24},
                 {new int[]{5, 3, 3},  new DCT(), "experiment1C", 19},
-                {new int[]{1, 3},  new DFQ(), "experiment1P", 5}
+                {new int[]{1, 3},  new DFQ(), "experiment1P", 5},
+                {new int[]{2, 3},  new DFQ(), "experiment1P", 4},
+                {new int[]{2, 2},  new FIR(), "experiment1P", 9},
+                {new int[]{3, 3},  new FIR(), "experiment1P", 7},
+                {new int[]{3, 4},  new FIR(), "experiment1P", 6},
+                {new int[]{2, 4},  new AR(), "experiment1P", 9},
+                {new int[]{2, 6},  new AR(), "experiment1P", 9},
+                {new int[]{3, 8},  new AR(), "experiment1P", 9},
+                {new int[]{3, 2},  new EWF(), "experiment1P", 17},
+                {new int[]{4, 2},  new EWF(), "experiment1P", 17},
+                {new int[]{4, 3},  new EWF(), "experiment1P", 16},
+                {new int[]{5, 4},  new EWF(), "experiment1P", 15},
+                {new int[]{4, 4},  new DCT(), "experiment1P", 10},
+                {new int[]{4, 5},  new DCT(), "experiment1P", 9},
+                {new int[]{5, 6},  new DCT(), "experiment1P", 7},
+                {new int[]{6, 7},  new DCT(), "experiment1P", 7},
+                {new int[]{7, 8},  new DCT(), "experiment1P", 6},
+                {new int[]{1, 1},  new FFT(), "experiment1P", 8},
+                {new int[]{1, 2},  new FFT(), "experiment1P", 6},
+                {new int[]{2, 2},  new FFT(), "experiment1P", 4},
+                {new int[]{3, 4},  new FFT(), "experiment1P", 2},
         });
     }
 
     @Test
-    public void testFilter() throws InvocationTargetException, IllegalAccessException, ClassNotFoundException, NoSuchMethodException {
+    public void testFilter() throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
 
         Class cls = this.getClass();
         Method exp = cls.getMethod(experiment, Store.class, Filter.class, int[].class);
@@ -170,88 +191,6 @@ public class FilterBenchmarkTest extends FilterBenchmark {
         assertEquals("Test " + experiment + " failed for " + Filter.class , costExp, costFound);
     }
 
-
-        /**
-         * It solves available filters for different scenario
-         * consisting of different number of resources.
-         */
-//        public void schedule(int dfqeX[][], Filter filter ) {
-//
-////            int dfqEx[][] = {{1, 1}, {1, 2}, {1, 3}, {2, 2}, {1, 4}, {2, 3}};
-//                experiment1(store, dfq, a, m);
-
-//            int firEx[][] = {{1, 1}, {1, 2}, {2, 2}, {2, 3}};
-//                experiment1(store, fir, a, m);
-//
-//            int arEx[][] = {{1, 1}, {1, 2}, {1, 3}, {2, 3}, {2, 4}};
-//                experiment2(store, ar, a, m);
-//
-//            int ewfEx[][] = {{1, 1}, {2, 1}, {2, 2}, {3, 3}};
-//                experiment1(store, ewf, a, m);
-//
-//            int ewfEx2[][] = {{1, 1}, {2, 1}, {2, 2}, {3, 3}};
-//                experiment1(store, ewf, a, m);
-//
-//            int dctEx[][] = {{1, 1}, {1, 2}, {2, 2}, {2, 3}, {3, 3}, {3, 4}, {4, 4}};
-//                experiment1(store, dct, a, m);
-
-//
-//            int dfqEx[][] = {{1, 1}, {1, 2}};
-//                experiment1PM(store, dfq, a, m);
-//
-//            int firEx[][] = {{1, 1}, {2, 1}, {2, 2}};
-//                experiment1PM(store, fir, a, m);
-
-//            int arEx[][] = {{1, 1}, {1, 2}, {2, 2}, {2, 4}};
-//                experiment2PM(store, ar, a, m);
-//
-//            int ewfEx[][] = {{2, 1}, {3, 1}, {3, 2}};
-//                experiment1PM(store, ewf, a, m);
-
-//            int dctEx[][] = {{1, 1}, {2, 1}, {2, 2}, {3, 2}, {4, 3}, {5, 4}, {6, 5}};
-//                experiment1PM(store, dct, a, m);
-//
-//        }
-//
-//
-//            int dfqEx[][] = {{1, 1, 3}, {1, 2, 3}, {2, 2, 3}};
-//                experiment1C(store, dfq, a, m, s);
-//
-//            int firEx[][] = {{2, 1, 2}, {2, 2, 2}, {3, 2, 2}, {1, 1, 3}, {2, 1, 3}, {3, 2, 3}};
-//                experiment1C(store, fir, a, m, s);
-//
-//            int arEx[][] =
-//                    {{2, 2, 2}, {2, 3, 2}, {4, 4, 2}, {1, 1, 3}, {1, 2, 3}, {2, 2, 3}, {2, 3, 3}, {2, 4, 3}, {3, 4, 3}, {2, 2, 4}, {2, 3, 4},
-//                            {3, 4, 4}};
-//                experiment1C(store, ar, a, m, s);
-//
-//            int ewfEx[][] = {{2, 1, 2}, {3, 1, 2}, {1, 1, 3}, {2, 1, 3}, {3, 1, 3}, {1, 1, 4}, {2, 1, 4}, {3, 1, 4}};
-//                experiment1C(store, ewf, a, m, s);
-//
-//            int dctEx[][] =
-//                    {{2, 1, 2}, {2, 2, 2}, {3, 2, 2}, {4, 2, 2}, {4, 3, 2}, {5, 4, 2}, {1, 1, 3}, {2, 1, 3}, {3, 2, 3}, {4, 2, 3}, {5, 3, 3}};
-//                experiment1C(store, dct, a, m, s);
-//
-//
-//            int dfqEx[][] = {{1, 3}, {2, 3}};
-//                experiment1P(store, dfqP, a, m);
-//
-//            int firEx[][] = {{2, 2}, {3, 3}, {3, 4}};
-//                experiment1P(store, firP, a, m);
-//            }
-//
-//            int arEx[][] = {{2, 4}, {2, 6}, {3, 8}};
-//                experiment1P(store, arP, a, m);
-//
-//            int ewfEx[][] = {{3, 2}, {4, 2}, {4, 3}, {5, 4}};
-//                experiment1P(store, ewfP, a, m);
-//
-//            int dctEx[][] = {{4, 4}, {4, 5}, {5, 6}, {6, 7}, {7, 8}};
-//                experiment1P(store, dctP, a, m);
-//
-//            int fftEx[][] = {{1, 1}, {1, 2}, {2, 2}, {3, 4}};
-//                experiment1P(store, fftP, a, m);
-//
 
         /**
          * It optimizes scheduling of filter operations.
