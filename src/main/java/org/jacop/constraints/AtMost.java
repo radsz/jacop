@@ -34,6 +34,7 @@ import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.TimeStamp;
 
 import java.util.Arrays;
 import java.util.List;
@@ -70,6 +71,17 @@ public class AtMost extends PrimitiveConstraint {
 
     boolean reified = true;
 
+    /*
+     * Defines first position of the variable that are not considered;
+     * either equal to value or missing the value in their domain.
+     */
+    private TimeStamp<Integer> position;
+
+    /*
+     * Defines number of variables equal to the value.
+     */
+    private TimeStamp<Integer> equal;
+
     /**
      * It constructs a AtMost constraint.
      *
@@ -103,6 +115,11 @@ public class AtMost extends PrimitiveConstraint {
         this(list.toArray(new IntVar[list.size()]), counter, value);
     }
 
+    @Override public void include(Store store) {
+        position = new TimeStamp<>(store, 0);
+        equal = new TimeStamp<>(store, 0);
+    }
+
     @Override public void impose(Store store) {
 
         reified = false;
@@ -129,13 +146,23 @@ public class AtMost extends PrimitiveConstraint {
     
     @Override public void consistency(final Store store) {
 
-        int numberEq = 0, numberMayBe = 0;
-        for (IntVar v : list) {
+        int numberEq = equal.value();
+	int numberMayBe = 0;
+	int start = position.value();
+        for (int i = start; i < list.length; i++) {
+	    IntVar v = list[i];
             if (v.domain.contains(value))
-                if (v.singleton())
+                if (v.singleton()) {
                     numberEq++;
+		    swap(start, i);
+		    start++;
+		}
                 else
                     numberMayBe++;
+	    else { // does not have the value in its domain
+                swap(start, i);
+		start++;
+	    }
         }
 
 	if (numberEq > counter)
@@ -145,24 +172,38 @@ public class AtMost extends PrimitiveConstraint {
 		removeConstraint();
 	    }
 	    else if (numberEq == counter) {
-		for (IntVar v : list) {
+		for (int i = start; i < list.length; i++) {
+		    IntVar v = list[i];
 		    if (!v.singleton() && v.domain.contains(value))
 			v.domain.inComplement(store.level, v, value, value);
 		}
 		if (!reified)
 		    removeConstraint();
 	    }
+
+	equal.update(numberEq);
+	position.update(start);
     }
 
     @Override public void notConsistency(final Store store) {
 	// at least counter + 1 values
-        int numberEq = 0, numberMayBe = 0;
-        for (IntVar v : list) {
+        int numberEq = equal.value();
+	int numberMayBe = 0;
+	int start = position.value();
+        for (int i = start; i < list.length; i++) {
+	    IntVar v = list[i];
             if (v.domain.contains(value))
-                if (v.singleton())
+                if (v.singleton()) {
                     numberEq++;
+		    swap(start, i);
+		    start++;
+		}
                 else
                     numberMayBe++;
+	    else { // does not have the value in its domain
+                swap(start, i);
+		start++;
+	    }
         }
 
 	if (numberMayBe + numberEq < counter+1)
@@ -172,15 +213,27 @@ public class AtMost extends PrimitiveConstraint {
 		removeConstraint();
 	    }
 	    else if (numberMayBe + numberEq == counter+1) {
-		for (IntVar v : list) {
+		for (int i = start; i < list.length; i++) {
+		    IntVar v = list[i];
 		    if (!v.singleton() && v.domain.contains(value))
 			v.domain.in(store.level, v, value, value);
 		}
 		if (!reified)
 		    removeConstraint();
 	    }
+
+    	equal.update(numberEq);
+	position.update(start);
     }
     
+    private void swap(int i, int j) {
+        if (i != j) {
+            IntVar tmp = list[i];
+            list[i] = list[j];
+            list[j] = tmp;
+        }
+    }
+
     @Override public boolean satisfied() {
 
         int numberEq = 0, numberMayBe = 0;

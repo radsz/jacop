@@ -511,7 +511,9 @@ class GlobalConstraints implements ParserTreeConstants {
         if (xs.size() == 0) {
             c.domain.in(store.level, c, 0, 0);
             return;
-        } else
+        } else if (c.singleton()) 
+	    support.pose(new CountBounds(xs, y, c.value(), c.value()));
+	else
             support.pose(new Count(xs, c, y));
     }
 

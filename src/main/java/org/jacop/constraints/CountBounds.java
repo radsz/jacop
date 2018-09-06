@@ -34,6 +34,7 @@ import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.TimeStamp;
 
 import java.util.Arrays;
 import java.util.List;
@@ -68,6 +69,17 @@ public class CountBounds extends Constraint implements SatisfiedPresent {
      */
     final public int value;
 
+    /*
+     * Defines first position of the variable that are not considered;
+     * either equal to value or missing the value in their domain.
+     */
+    private TimeStamp<Integer> position;
+
+    /*
+     * Defines number of variables equal to the value.
+     */
+    private TimeStamp<Integer> equal;
+
     /**
      * It constructs a CountBounds constraint.
      *
@@ -101,7 +113,17 @@ public class CountBounds extends Constraint implements SatisfiedPresent {
      * @param ub      maximal number of occurences of value at list.
      */
     public CountBounds(List<? extends IntVar> list, int value, int lb, int ub) {
-        this(list.toArray(new IntVar[list.size()]), lb, ub, value);
+        this(list.toArray(new IntVar[list.size()]), value, lb, ub);
+    }
+
+    // registers the constraint in the constraint store and
+    // initialize stateful variables
+    @Override public void impose(Store store) {
+
+        super.impose(store);
+
+        position = new TimeStamp<>(store, 0);
+        equal = new TimeStamp<>(store, 0);
     }
 
     @Override public int getDefaultConsistencyPruningEvent() {
@@ -110,13 +132,23 @@ public class CountBounds extends Constraint implements SatisfiedPresent {
 
     @Override public void consistency(final Store store) {
 
-        int numberEq = 0, numberMayBe = 0;
-        for (IntVar v : list) {
+        int numberEq = equal.value();
+	int numberMayBe = 0;
+	int start = position.value();
+        for (int i = start; i < list.length; i++) {
+	    IntVar v = list[i];
             if (v.domain.contains(value))
-                if (v.singleton())
+                if (v.singleton()) {
                     numberEq++;
+		    swap(start, i);
+		    start++;
+		}
                 else
                     numberMayBe++;
+	    else { // does not have the value in its domain
+                swap(start, i);
+		start++;
+	    }	    
         }
 
 	if (numberEq > ub || numberMayBe + numberEq < lb) {
@@ -126,18 +158,32 @@ public class CountBounds extends Constraint implements SatisfiedPresent {
             removeConstraint();
 	}	
         else if (numberMayBe + numberEq == lb) {
-            for (IntVar v : list) {
+            for (int i = start; i < list.length; i++) {
+		IntVar v = list[i];
                 if (!v.singleton() && v.domain.contains(value))
                     v.domain.in(store.level, v, value, value);
             }
 
             removeConstraint();
         } else if (numberEq == ub) {
-            for (IntVar v : list)
+            for (int i = start; i < list.length; i++) {
+		IntVar v = list[i];
                 if (!v.singleton() && v.domain.contains(value))
                     v.domain.inComplement(store.level, v, value);
-
+	    }
+	    
             removeConstraint();
+        }
+
+	equal.update(numberEq);
+	position.update(start);	
+    }
+
+    private void swap(int i, int j) {
+        if (i != j) {
+            IntVar tmp = list[i];
+            list[i] = list[j];
+            list[j] = tmp;
         }
     }
 
