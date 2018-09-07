@@ -151,8 +151,7 @@ public class Count extends Constraint implements SatisfiedPresent {
         if (numberMayBe == counter.min() - numberEq) {
             for (int i = start; i < list.length; i++) {
 		IntVar v = list[i];
-                if (!v.singleton() && v.domain.contains(value))
-                    v.domain.in(store.level, v, value, value);
+		v.domain.in(store.level, v, value, value);
             }
 
             numberEq += numberMayBe;
@@ -165,8 +164,7 @@ public class Count extends Constraint implements SatisfiedPresent {
         } else if (numberEq == counter.max()) {
             for (int i = start; i < list.length; i++) {
 		IntVar v = list[i];
-                if (!v.singleton() && v.domain.contains(value))
-                    v.domain.inComplement(store.level, v, value);
+		v.domain.inComplement(store.level, v, value);
 	    }
 
             numberMayBe = 0;

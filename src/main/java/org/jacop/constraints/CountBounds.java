@@ -160,16 +160,14 @@ public class CountBounds extends Constraint implements SatisfiedPresent {
         else if (numberMayBe + numberEq == lb) {
             for (int i = start; i < list.length; i++) {
 		IntVar v = list[i];
-                if (!v.singleton() && v.domain.contains(value))
-                    v.domain.in(store.level, v, value, value);
+		v.domain.in(store.level, v, value, value);
             }
 
             removeConstraint();
         } else if (numberEq == ub) {
             for (int i = start; i < list.length; i++) {
 		IntVar v = list[i];
-                if (!v.singleton() && v.domain.contains(value))
-                    v.domain.inComplement(store.level, v, value);
+		v.domain.inComplement(store.level, v, value);
 	    }
 	    
             removeConstraint();

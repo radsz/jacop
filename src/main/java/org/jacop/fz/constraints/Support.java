@@ -498,9 +498,10 @@ public class Support implements ParserTreeConstants {
 
     void poseAlldistinctConstraints() {
         for (IntVar[] v : parameterListForAlldistincts) {
+	    Alldistinct ad = new Alldistinct(v);
+            store.impose(ad);
             if (options.debug())
-                System.out.println("Alldistinct(" + java.util.Arrays.asList(v) + ")");
-            store.impose(new Alldistinct(v));
+                System.out.println(ad);
         }
     }
 
