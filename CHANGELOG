@@ -14,7 +14,9 @@ Version 4.6
 
 3. Fix of null pointer exception in Binpacking constraint. It is
    sometimes present if a bin variable is ground when constraint is
-   imposed.
+   imposed. Improving performance of Binpacking constraint by running
+   computationally expensive lower bound computations only when
+   constraint is fix-point.
 
 4. New constraint for symmetry breaking, ValuePrecede.
 
@@ -25,8 +27,8 @@ Version 4.6
 6. New version of Alldiff constraints that uses new algorithm with
    complexity O(n logn) instead of O(n^2).
 
-7. Improvements in subcircuit constraint. It applies "expensive"
-   domiance pruning if SCC did not pruned anything.
+7. Improvements in subcircuit constraint. It applies computationally
+   expensive dominance pruning if SCC did not pruned anything.
 
 8. New primitive constraints AtLeast and AtLast. Adding generation of
    these constraints and their reified versions for flatzinc.
@@ -35,7 +37,7 @@ Version 4.6
    and execution time) to flatzinc when option -v is given.
 
 10. Adding JaCoP solver configuration file, 'org.jacop.msc', for
-    minizinc 2.2 (both stand-alone and IDE) and fzn-jacop sctipt to be
+    minizinc 2.2 (both stand-alone and IDE) and fzn-jacop script to be
     used to call JaCoP solve.
 
 11. New print-out of statistics for flatzinc that follows minizinc 2.2
