@@ -147,17 +147,20 @@ public class Diffn extends Nooverlap {
 
         this.store = store;
 
-        do {
+        // do {
             store.propagationHasOccurred = false;
 
             pruning();
 
-            if (doAreaCheck)
-                areaCheck();
-
             profile();
 
-        } while (store.propagationHasOccurred);
+        // } while (store.propagationHasOccurred);
+
+    if (store.propagationHasOccurred)
+	store.addChanged(this);
+    else
+	if (doAreaCheck)
+	    areaCheck();
     }
 
     private void areaCheck() {

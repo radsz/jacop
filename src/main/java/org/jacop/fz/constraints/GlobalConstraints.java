@@ -140,9 +140,16 @@ class GlobalConstraints implements ParserTreeConstants {
                 double k = (double) diff.size();
                 // KKU, 2017-04-05, formula when 3.5*n*n < n*k*log(n),
                 // where 3.5 is experimantally selected constant
-                if (3.5 * n * n < n * k * Math.log10((double) n) / Math.log10(2.0))
+                if (3.5 * n * n < n * k * Math.log10((double) n) / Math.log10(2.0)) {
                     // complexity O(n^2)
-                    support.delayedConstraints.add(new org.jacop.constraints.Cumulative(s, d, r, b, true, true, false));
+		    String p = System.getProperty("max_edge_find_size");
+		    int limitOnEdgeFind = 100;
+		    if (p != null)
+			limitOnEdgeFind = Integer.parseInt(p);
+		    boolean doEdgeFinding = (s.length <= limitOnEdgeFind);
+
+                    support.delayedConstraints.add(new org.jacop.constraints.Cumulative(s, d, r, b, doEdgeFinding, true, false));
+		}
                 else
                     // complexity O(n*k*logn)
                     support.delayedConstraints.add(new Cumulative(s, d, r, b));
