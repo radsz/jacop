@@ -44,7 +44,7 @@ import java.util.stream.Stream;
 /**
  * AtLeast constraint implements the counting over number of occurrences of
  * a given value in a list of variables. The number of occurrences is
- * specified by variable idNumber.
+ * specified by variable value.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
