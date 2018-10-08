@@ -39,7 +39,7 @@ import java.util.*;
 /**
  * Cumulative implements the scheduling constraint using
  * <p>
- * edge-finding algorithms based on
+ * edge-finding (edgeFind) algorithms based on
  * <p>
  * Petr Vilim, "Edge Finding Filtering Algorithm for Discrete Cumulative Resources in O(kn log n)",
  * Principles and Practice of Constraint Programming - CP 2009 Volume 5732 of the series Lecture
@@ -49,7 +49,13 @@ import java.util.*;
  * <p>
  * Joseph Scott, "Filtering Algorithms for Discrete Cumulative Resources", MSc thesis, Uppsala
  * University, Department of Information Technology, 2010, no IT 10 048,
- *
+ * <p>
+ * edge-finding algorithm with quadratic complexity (edgeFindQuad) is based on 
+ * <p>
+ * Roger Kameugne, Laure Pauline Fotso, Joseph Scott, and Youcheu Ngo-Kateu,
+ * "A quadratic edge-finding filtering algorithm for cumulative resource constraints",
+ * Constraints, 2014, July, vol. 19, no. 3, pp. 243--269.
+ * <p>
  * @author Krzysztof Kuchcinski
  * @version 4.5
  * @see <a href="http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-132172">http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-132172</a>
@@ -60,7 +66,8 @@ public class Cumulative extends CumulativeBasic {
     TaskView[] taskReversed;
 
     private boolean doEdgeFind = true;
-
+    private boolean doQuadraticEdgeFind = false;
+    
     private Set<Integer> preComputedCapacities = null;
     private int[] preComputedCapMap;
 
@@ -132,6 +139,10 @@ public class Cumulative extends CumulativeBasic {
 
     }
 
+    public void doQuadraticEdgeFind(boolean doQEF) {
+	doQuadraticEdgeFind = doQEF;
+    }
+    
     @Override public void consistency(Store store) {
 
         do {
@@ -142,7 +153,10 @@ public class Cumulative extends CumulativeBasic {
 
             if (!store.propagationHasOccurred && doEdgeFind) {
                 // overloadCheck();  // not needed if profile propagator is used
-                edgeFind(store);
+		if (doQuadraticEdgeFind)
+		    edgeFindQuad(store);
+		else
+		    edgeFind(store);
             }
 
         } while (store.propagationHasOccurred);
@@ -343,6 +357,99 @@ public class Cumulative extends CumulativeBasic {
         }
     }
 
+    private void edgeFindQuad(Store store) {
+
+	edgeFindQuad(store, taskNormal);
+        edgeFindQuad(store, taskReversed);
+
+    }
+
+    private void edgeFindQuad(Store store, TaskView[] tn) {
+
+	long C = (long)limit.max();
+	TaskView[] ts = filterZeroTasks(tn);
+        if (ts == null)
+            return;
+
+	int n = ts.length;
+	// sorted by non-decreasing deadline (lct)
+        Arrays.sort(ts, (TaskView o1, TaskView o2) -> o1.lct() - o2.lct());
+    
+	int[] LB = new int[n];
+	int[] Dupd = new int[n];
+	int[] SLupd = new int[n];
+	for (int i = 0; i < n; i++)
+	    LB[i] = ts[i].est();
+        Arrays.fill(Dupd, Integer.MIN_VALUE);
+        Arrays.fill(SLupd, Integer.MIN_VALUE);
+	long[] E = new long[n];
+
+	Integer[] t1 = new Integer[n];
+	Integer[] t2 = new Integer[n];
+	for (int i = 0; i < n; i++) 
+	    t1[i] = i;
+	System.arraycopy(t1, 0, t2, 0, n);
+
+	// tasks t1 sorted by non-incereasing relese dates (est)
+        Arrays.sort(t1, (Integer o1, Integer o2) -> ts[o2.intValue()].est() - ts[o1.intValue()].est());
+	// tasks t2 sorted by non-decreasing relese dates (est)
+        Arrays.sort(t2, (Integer o1, Integer o2) -> ts[o1.intValue()].est() - ts[o2.intValue()].est());
+
+	for (TaskView u : ts) {
+
+	    long Energy = 0, maxEnergy = 0;
+	    int rr = Integer.MIN_VALUE;
+
+	    for (int i : t1) {
+		TaskView t = ts[i];
+
+		if (t.lct() <= u.lct()) {
+		    Energy += t.e();
+
+		    if (rr == Integer.MIN_VALUE || (float)Energy/(float)(u.lct()-t.est()) > (float)maxEnergy/((float)u.lct()-(float)rr)) {
+			maxEnergy = Energy;
+			rr = t.est();
+		    }
+		}
+		else if (rr != Integer.MIN_VALUE) {
+		    long rest = maxEnergy - (C - t.res().min())*(u.lct() - rr);
+		    if (rest > 0)
+			Dupd[i] = (int)Math.max(Dupd[i], rr + divRoundUp(rest, t.res().max()));
+
+		    
+		    if (maxEnergy + t.res.min()*(t.ect() - rr) > C*(u.lct() - rr))
+			LB[i] = Math.max(LB[i], Dupd[i]);
+		}
+		E[i] = Energy;
+	    }
+
+	    long minSL = Integer.MAX_VALUE;
+	    int rt = u.lct();
+	    for (int i : t2) {
+		TaskView t = ts[i];
+
+		if (C*(u.lct() - t.est()) - E[i] < minSL) {
+		    rt = t.est();
+		    minSL = C*(u.lct() - rt) - E[i];
+		}
+
+		if (t.lct() > u.lct()) {
+		    
+		    long rest = t.res().min()*(u.lct() - rt) - minSL;
+		    if (rt <= u.lct() && rest > 0) 
+			SLupd[i] = (int)Math.max(SLupd[i], rt + divRoundUp(rest, t.res().max()));
+
+		    if (t.ect() >= u.lct() || minSL - t.e() < 0) 
+		    	LB[i] = Math.max(Math.max(LB[i], Dupd[i]), SLupd[i]);
+		}
+	    }
+	}
+
+	// update LB's
+	for (int i = 0; i < n; i++)
+	    ts[i].updateEdgeFind(store.level, LB[i]);
+    }
+    
     TaskView[] filterZeroTasks(TaskView[] ts) {
 
         if (possibleZeroTasks) {
@@ -383,7 +490,7 @@ public class Cumulative extends CumulativeBasic {
 
         result.append(taskNormal[taskNormal.length - 1]);
 
-        result.append(" ]").append(", limit = ").append(limit).append(" )");
+        result.append(" ]").append(", limit = ").append(limit).append(", quad="+doQuadraticEdgeFind+" )");
 
         return result.toString();
 
