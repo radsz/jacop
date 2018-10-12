@@ -142,7 +142,7 @@ class GlobalConstraints implements ParserTreeConstants {
 
 		Cumulative cumul = new Cumulative(s, d, r, b);
 
-                if (n * n < n * k * Math.log10((double) n) / Math.log10(2.0)) 
+                if (2*n * n < n * k * Math.log10((double) n) / Math.log10(2.0))
 		    // algorithm with complexity O(n^2) selected
 		    cumul.doQuadraticEdgeFind(true);
 		// algorithm with complexity O(n*k*logn) is default
