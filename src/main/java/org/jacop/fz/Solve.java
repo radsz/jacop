@@ -655,6 +655,39 @@ public class Solve implements ParserTreeConstants {
         DepthFirstSearch<Var> lastSearch = label;
         DepthFirstSearch<Var> intSearch = new DepthFirstSearch<Var>();
 
+        if (set_search_variables.length != 0) {
+            // add set search containing all variables to be sure that they get a value
+            DepthFirstSearch<Var> setSearch = new DepthFirstSearch<Var>();
+
+            if (opt.debug())
+                setSearch.setConsistencyListener(failStatistics);
+
+            SelectChoicePoint<Var> setSelect = new SimpleSelect<Var>(set_search_variables, null,
+                // 								     new org.jacop.search.MostConstrainedStatic<Var>(),
+                new IndomainSetMin());
+            if (variable_selection == null)
+                variable_selection = setSelect;
+            setSearch.setSelectChoicePoint(setSelect);
+            setSearch.setPrintInfo(false);
+            if (lastSearch != null)
+                lastSearch.addChildSearch(setSearch);
+            lastSearch = setSearch;
+            if (float_search_variables.length == 0)
+                setSearch.setSolutionListener(new CostListener<Var>());
+
+            if (costVariable != null) {
+                intSearch.setCostVar(costVariable);
+                intSearch.setOptimize(true);
+            }
+
+            // time-out option
+            int to = options.getTimeOut();
+            if (to > 0)
+                setSearch.setTimeOut(to);
+
+            intAndSetSearch[0] = setSearch;
+        }
+
         if (opt.debug())
             intSearch.setConsistencyListener(failStatistics);
 
@@ -685,7 +718,7 @@ public class Solve implements ParserTreeConstants {
             if (to > 0)
                 intSearch.setTimeOut(to);
 
-            intAndSetSearch[0] = intSearch;
+            intAndSetSearch[1] = intSearch;
         }
 
         DepthFirstSearch<Var> boolSearch = new DepthFirstSearch<Var>();
@@ -719,42 +752,9 @@ public class Solve implements ParserTreeConstants {
             if (to > 0)
                 boolSearch.setTimeOut(to);
 
-            intAndSetSearch[1] = boolSearch;
+            intAndSetSearch[2] = boolSearch;
         }
 
-
-        if (set_search_variables.length != 0) {
-            // add set search containing all variables to be sure that they get a value
-            DepthFirstSearch<Var> setSearch = new DepthFirstSearch<Var>();
-
-            if (opt.debug())
-                setSearch.setConsistencyListener(failStatistics);
-
-            SelectChoicePoint<Var> setSelect = new SimpleSelect<Var>(set_search_variables, null,
-                // 								     new org.jacop.search.MostConstrainedStatic<Var>(),
-                new IndomainSetMin());
-            if (variable_selection == null)
-                variable_selection = setSelect;
-            setSearch.setSelectChoicePoint(setSelect);
-            setSearch.setPrintInfo(false);
-            if (lastSearch != null)
-                lastSearch.addChildSearch(setSearch);
-            lastSearch = setSearch;
-            if (float_search_variables.length == 0)
-                setSearch.setSolutionListener(new CostListener<Var>());
-
-            if (costVariable != null) {
-                intSearch.setCostVar(costVariable);
-                intSearch.setOptimize(true);
-            }
-
-            // time-out option
-            int to = options.getTimeOut();
-            if (to > 0)
-                setSearch.setTimeOut(to);
-
-            intAndSetSearch[2] = setSearch;
-        }
 
         if (float_search_variables.length != 0) {
             // add float search containing all variables to be sure that they get a value

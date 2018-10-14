@@ -41,6 +41,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * This class contains information about all variables, including
@@ -152,6 +153,17 @@ public class Tables {
             return b;
         else
             return v;
+    }
+
+    void removeAliasFromSearch() {
+
+        Set<Map.Entry<IntVar, IntVar>> entries = aliasTable.entrySet();
+
+        for (Map.Entry<IntVar, IntVar> e : entries) {
+            IntVar b = e.getKey();
+            IntVar v = e.getValue();
+	    defaultSearchVariables.remove(b);
+	}
     }
 
     /**

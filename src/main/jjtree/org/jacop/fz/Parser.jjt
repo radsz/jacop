@@ -204,6 +204,7 @@ void model() #model:
 	    // print debug information
 	    // if (options.debug())
 	    // 	System.out.println(dict);
+	    dict.removeAliasFromSearch();
 	    
 	    // generate constraints
 	    cc.generateAllConstraints(jjtThis);
