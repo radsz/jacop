@@ -672,7 +672,7 @@ public class Solve implements ParserTreeConstants {
             if (lastSearch != null)
                 lastSearch.addChildSearch(setSearch);
             lastSearch = setSearch;
-            if (float_search_variables.length == 0)
+            if (int_search_variables.length == 0 && bool_search_variables.length == 0 && float_search_variables.length == 0)
                 setSearch.setSolutionListener(new CostListener<Var>());
 
             if (costVariable != null) {
@@ -704,7 +704,7 @@ public class Solve implements ParserTreeConstants {
             if (lastSearch != null)
                 lastSearch.addChildSearch(intSearch);
             lastSearch = intSearch;
-            if (bool_search_variables.length == 0 && set_search_variables.length == 0 && float_search_variables.length == 0) {
+            if (bool_search_variables.length == 0 && float_search_variables.length == 0) {
                 intSearch.setSolutionListener(new CostListener<Var>());
 
                 if (costVariable != null) {
@@ -738,7 +738,7 @@ public class Solve implements ParserTreeConstants {
             if (lastSearch != null)
                 lastSearch.addChildSearch(boolSearch);
             lastSearch = boolSearch;
-            if (set_search_variables.length == 0 && float_search_variables.length == 0) {
+            if (float_search_variables.length == 0) {
                 boolSearch.setSolutionListener(new CostListener<Var>());
 
                 if (costVariable != null) {
@@ -793,6 +793,9 @@ public class Solve implements ParserTreeConstants {
 
             if (lastSolution != null)
                 helperSolutionPrinter(lastSolution.toString());
+
+	    if (options.getAll())
+		System.out.println("==========");
 
             if (options.getStatistics())
                 System.out.println(
@@ -936,7 +939,7 @@ public class Solve implements ParserTreeConstants {
                     else {
                         cost = getCostFloat((ASTSolveExpr) kind.jjtGetChild(0));
                         costVariable = cost;
-                    }
+                   }
 
                     // Result = restart_search(masterLabel, masterSelect, cost, true);
 
