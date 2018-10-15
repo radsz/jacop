@@ -161,7 +161,6 @@ public class Tables {
 
         for (Map.Entry<IntVar, IntVar> e : entries) {
             IntVar b = e.getKey();
-            IntVar v = e.getValue();
 	    defaultSearchVariables.remove(b);
 	}
     }

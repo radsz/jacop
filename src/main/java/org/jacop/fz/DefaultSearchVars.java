@@ -38,6 +38,8 @@ import org.jacop.set.core.SetVar;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.Map;
 
 
 /**
@@ -128,13 +130,21 @@ public class DefaultSearchVars {
 
         LinkedHashSet<Var> int_vars = new LinkedHashSet<Var>();
         LinkedHashSet<Var> bool_vars = new LinkedHashSet<Var>();
+        Set<Map.Entry<IntVar, IntVar>> aliasEntries = dictionary.aliasTable.entrySet();
+
+	Set<IntVar> aliasVars = new LinkedHashSet<IntVar>();
+	// collect all boolean variables with int var alias
+        for (Map.Entry<IntVar, IntVar> e : aliasEntries) {
+            IntVar b = e.getKey();
+	    aliasVars.add(b);
+	}
 
         for (int i = 0; i < dictionary.defaultSearchArrays.size(); i++)
             for (Var v : dictionary.defaultSearchArrays.get(i)) {
 		if (!v.singleton())
 		    if (v instanceof BooleanVar)
                     bool_vars.add(v);
-		    else  if (((IntVar)v).min() >= 0 && ((IntVar)v).max() <= 1)
+		    else  if (((IntVar)v).min() >= 0 && ((IntVar)v).max() <= 1 && aliasVars.contains(v))
 			bool_vars.add(v);
 		    else
 			int_vars.add(v);
@@ -143,7 +153,7 @@ public class DefaultSearchVars {
 	    if (!v.singleton())
 	    	if (v instanceof BooleanVar)
 	    	    bool_vars.add(v);
-	    	else if (((IntVar)v).min() >= 0 && ((IntVar)v).max() <= 1)
+	    	else if (((IntVar)v).min() >= 0 && ((IntVar)v).max() <= 1 && aliasVars.contains(v))
 	    	    bool_vars.add(v);
 	    	else
 		    int_vars.add(v);
