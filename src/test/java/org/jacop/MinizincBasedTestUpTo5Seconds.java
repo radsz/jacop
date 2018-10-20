@@ -48,7 +48,7 @@ import java.util.Collection;
 @RunWith(Parameterized.class) public class MinizincBasedTestUpTo5Seconds extends MinizincBasedTestsHelper {
     protected static final String timeCategory = "upTo5sec/";
 
-    @Rule public Timeout globalTimeout = Timeout.seconds(300); //The test will be completed within 20 seconds
+    @Rule public Timeout globalTimeout = Timeout.seconds(20); //The test will be completed within 20 seconds
 
     public MinizincBasedTestUpTo5Seconds(String testFilename) {
         super(timeCategory);
