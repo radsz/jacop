@@ -36,7 +36,6 @@ package org.jacop.jasat.core;
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.5
- *
  */
 public interface SolverComponent {
 

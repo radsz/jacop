@@ -29,25 +29,24 @@
  */
 package org.jacop.constraints.geost;
 
+import org.jacop.util.SimpleHashSet;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.jacop.util.SimpleHashSet;
-
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
  * @version 4.5
- *
- * InArea constraint allows on to define an area within which objects
- * should be contained, as well as a collection of "holes" within the area
- *
- * TODO implement the use of a subset of objects only. In some applications,
- * classes of objects may need to be placed in different portions of the space.
- * Possibly, create class InAreaSetOfObjects extending from InArea to allow 
- * specification of the objects in the focus of the constraint.
- *
+ *          <p>
+ *          InArea constraint allows on to define an area within which objects
+ *          should be contained, as well as a collection of "holes" within the area
+ *          <p>
+ *          TODO implement the use of a subset of objects only. In some applications,
+ *          classes of objects may need to be placed in different portions of the space.
+ *          Possibly, create class InAreaSetOfObjects extending from InArea to allow
+ *          specification of the objects in the focus of the constraint.
  */
 
 public class InArea implements ExternalConstraint {
@@ -73,7 +72,7 @@ public class InArea implements ExternalConstraint {
      * within Geost constraint are placed within a specified area with
      * holes in that area specfied as well.
      *
-     * @param area the specification of the area within which the objects have to be placed.
+     * @param area  the specification of the area within which the objects have to be placed.
      * @param holes the holes in which the objects can not be placed.
      */
     public InArea(DBox area, Collection<DBox> holes) {

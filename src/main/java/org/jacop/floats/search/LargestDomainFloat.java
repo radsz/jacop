@@ -32,16 +32,15 @@ package org.jacop.floats.search;
 
 import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
-
 import org.jacop.search.ComparatorVariable;
 
 /**
  * Defines LargestDomainFloat comparator for Variables. Variable with the largest
  * domain has the priority.
  *
+ * @param <T> it specifies the class of the variable being used in this variable selection method.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
- * @param <T> it specifies the class of the variable being used in this variable selection method.
  */
 
 public class LargestDomainFloat<T extends Var> implements ComparatorVariable<T> {

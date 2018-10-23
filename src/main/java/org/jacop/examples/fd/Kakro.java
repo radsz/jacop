@@ -30,24 +30,23 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.SumInt;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
- *
- * It is program to solve Kakro puzzles. 
+ * It is program to solve Kakro puzzles.
  *
  * @author Radoslaw Szymanek
  * @version 4.5
- *
- * This is a program which uses Constraint Programming to find the solution to a
- * simple Kakro puzzle. For a moment the problem representation does not allow 
- * to model the problems with fields which are both origins of the row and column word.
+ *          <p>
+ *          This is a program which uses Constraint Programming to find the solution to a
+ *          simple Kakro puzzle. For a moment the problem representation does not allow
+ *          to model the problems with fields which are both origins of the row and column word.
  */
 
 public class Kakro extends ExampleFD {
@@ -121,6 +120,7 @@ public class Kakro extends ExampleFD {
 
     /**
      * It executes the program to solve simple Kakro puzzle.
+     *
      * @param args no parameters
      */
     public static void main(String args[]) {

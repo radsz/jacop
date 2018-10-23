@@ -31,27 +31,23 @@
 package org.jacop.examples.floats;
 
 /**
- *
- *
  * From the CLP(R) laplace example:
- *
+ * <p>
  * Solves the Dirichlet problem for Laplace's equation using
- * Leibman's five-point finite-difference approximation. 
- *
+ * Leibman's five-point finite-difference approximation.
+ * <p>
  * Based on minizinc program written by Håkan Kjellerstrand
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 import org.jacop.core.Store;
-import org.jacop.search.DepthFirstSearch;
-
-import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.constraints.LinearFloat;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.search.DepthFirstSearch;
 
 public class Laplace {
 

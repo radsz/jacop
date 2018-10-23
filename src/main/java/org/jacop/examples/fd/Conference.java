@@ -30,23 +30,24 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
-import org.jacop.constraints.*;
+import org.jacop.constraints.Alldifferent;
+import org.jacop.constraints.XeqC;
+import org.jacop.constraints.XltY;
+import org.jacop.constraints.XneqY;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.util.ArrayList;
+
 /**
- *
  * It solves a simple conference session placement problem.
  *
  * @author Radoslaw Szymanek
  * @version 4.5
- *
- * It solves a simple conference example problem, where different sessions 
- * must be scheduled according to the specified constraints.
- *
+ *          <p>
+ *          It solves a simple conference example problem, where different sessions
+ *          must be scheduled according to the specified constraints.
  */
 
 public class Conference extends ExampleFD {
@@ -160,6 +161,7 @@ public class Conference extends ExampleFD {
 
     /**
      * It executes the program which solves this simple problem.
+     *
      * @param args no arguments are read.
      */
     public static void main(String args[]) {

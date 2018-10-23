@@ -31,29 +31,24 @@
 package org.jacop.examples.fd;
 
 
-import java.util.ArrayList;
-
-import org.jacop.constraints.ExtensionalSupportVA;
-import org.jacop.constraints.Reified;
-import org.jacop.constraints.SumBool;
-import org.jacop.constraints.XeqC;
-import org.jacop.constraints.XneqY;
+import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.util.ArrayList;
+
 /**
- *
- * A simple logic problem of transporting wolf, goat, and cabbage over the river.  
+ * A simple logic problem of transporting wolf, goat, and cabbage over the river.
  *
  * @author Radoslaw Szymanek
  * @version 4.5
- *
- * We need to transfer the cabbage, the goat and the wolf from one bank of the river to 
- * the other bank. But there is only one seat available on his boat !
- *
- * Furthermore, if the goat and the cabbage stay together as we are leaving on a boat, 
- * the goat will eat the cabbage. And if the wolf and the goat stay together as we are leaving, 
- * the wolf will eat the goat !
+ *          <p>
+ *          We need to transfer the cabbage, the goat and the wolf from one bank of the river to
+ *          the other bank. But there is only one seat available on his boat !
+ *          <p>
+ *          Furthermore, if the goat and the cabbage stay together as we are leaving on a boat,
+ *          the goat will eat the cabbage. And if the wolf and the goat stay together as we are leaving,
+ *          the wolf will eat the goat !
  */
 
 public class WolfGoatCabbage extends ExampleFD {

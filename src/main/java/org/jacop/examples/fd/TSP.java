@@ -35,20 +35,13 @@ import org.jacop.constraints.Element;
 import org.jacop.constraints.SumInt;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.IndomainMin;
-import org.jacop.search.MaxRegret;
-import org.jacop.search.SelectChoicePoint;
-import org.jacop.search.SimpleMatrixSelect;
-import org.jacop.search.SmallestDomain;
+import org.jacop.search.*;
 
 /**
- *
- * It models Travelling Salesman Problem (TSP). 
+ * It models Travelling Salesman Problem (TSP).
  *
  * @author Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 public class TSP extends ExampleFD {
@@ -105,10 +98,9 @@ public class TSP extends ExampleFD {
     }
 
     /**
-     *
      * It uses MaxRegret variable ordering heuristic to search for a solution.
-     * @return true if there is a solution, false otherwise.
      *
+     * @return true if there is a solution, false otherwise.
      */
     public boolean searchMaxRegretForMatrixOptimal() {
 
@@ -139,6 +131,7 @@ public class TSP extends ExampleFD {
 
     /**
      * It executes the program to solve this Travelling Salesman Problem.
+     *
      * @param args no argument is used.
      */
     public static void main(String args[]) {

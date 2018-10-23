@@ -30,23 +30,19 @@
 
 package org.jacop.set.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.api.Stateful;
 import org.jacop.constraints.Constraint;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
-import org.jacop.core.ValueEnumeration;
+import org.jacop.core.*;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * It creates a lex constraint on a list of set variables. Each consecutive pair of
  * set variables is being constrained to be lexicographically ordered.
- *
- * For example, 
+ * <p>
+ * For example,
  * {}{@literal <}lex {1}
  * {1, 2}{@literal <}lex {1, 2, 3}
  * {1, 3}{@literal <}lex {2}
@@ -56,11 +52,11 @@ import org.jacop.set.core.SetVar;
  * @version 4.5
  */
 
+
 /**
  * @deprecated As of release 4.5.1 replaced by AltB and AleB constraints.
  */
-@Deprecated
-public class Lex extends Constraint implements Stateful {
+@Deprecated public class Lex extends Constraint implements Stateful {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -98,7 +94,7 @@ public class Lex extends Constraint implements Stateful {
      */
     public Lex(SetVar a, SetVar b) {
 
-        checkInputForNullness(new String[]{"a", "b"}, new Object[]{a, b});
+        checkInputForNullness(new String[] {"a", "b"}, new Object[] {a, b});
 
         numberId = idNumber.incrementAndGet();
 
@@ -122,7 +118,7 @@ public class Lex extends Constraint implements Stateful {
         this.strict = strict;
 
     }
-    
+
     @Override public void consistency(Store store) {
 
         if (strict) {

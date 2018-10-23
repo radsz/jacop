@@ -30,8 +30,6 @@
 
 package org.jacop.set.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
@@ -39,6 +37,8 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * The set cardinality constraint.
@@ -93,7 +93,7 @@ public class CardA extends Constraint implements SatisfiedPresent {
      * It constructs a cardinality constraint to restrict the number of elements
      * in the set assigned to set variable a.
      *
-     * @param a variable that is restricted to have the cardinality [min, max].
+     * @param a   variable that is restricted to have the cardinality [min, max].
      * @param min the minimum value possible for the cardinality of a.
      * @param max the maximum value possible for the cardinality of a.
      */
@@ -106,7 +106,7 @@ public class CardA extends Constraint implements SatisfiedPresent {
 
     private CardA(SetVar a) {
 
-        checkInputForNullness("a", new Object[]{a});
+        checkInputForNullness("a", new Object[] {a});
         numberId = idNumber.incrementAndGet();
         this.a = a;
         setScope(a);

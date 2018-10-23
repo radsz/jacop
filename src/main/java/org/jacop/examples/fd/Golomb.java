@@ -30,42 +30,31 @@
 
 package org.jacop.examples.fd;
 
+import org.jacop.constraints.*;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.search.*;
+
 import java.util.ArrayList;
 import java.util.List;
 
-import org.jacop.constraints.Alldiff;
-import org.jacop.constraints.XeqC;
-import org.jacop.constraints.XltY;
-import org.jacop.constraints.XlteqC;
-import org.jacop.constraints.XplusClteqZ;
-import org.jacop.constraints.XplusYeqZ;
-import org.jacop.core.IntVar;
-import org.jacop.core.Store;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.IndomainMin;
-import org.jacop.search.InputOrderSelect;
-import org.jacop.search.PrintOutListener;
-import org.jacop.search.Search;
-import org.jacop.search.SelectChoicePoint;
-
 /**
- *
  * It models a Golomb ruler problem.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.5
- *
- *
- * Golomb ruler is a special sequence of natural numbers
- * an example is 0 1 4 6
- *
- * a sequence is a Golomb ruler if all differences are different
- * (1-0), (4-0), (6-0), (4-1), (6-1), (6-4)
- * 1 4 6 3 5 2
- * All differences above have different values
- * A Golomb ruler is optimal if the length of it (the last mark)
- * has the smallest possible value
- * The presented ruler with 4 marks of length 6 is optimal
+ *          <p>
+ *          <p>
+ *          Golomb ruler is a special sequence of natural numbers
+ *          an example is 0 1 4 6
+ *          <p>
+ *          a sequence is a Golomb ruler if all differences are different
+ *          (1-0), (4-0), (6-0), (4-1), (6-1), (6-4)
+ *          1 4 6 3 5 2
+ *          All differences above have different values
+ *          A Golomb ruler is optimal if the length of it (the last mark)
+ *          has the smallest possible value
+ *          The presented ruler with 4 marks of length 6 is optimal
  */
 
 public class Golomb extends ExampleFD {

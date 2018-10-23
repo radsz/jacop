@@ -31,9 +31,9 @@
 
 package org.jacop.constraints.cumulative;
 
-import java.io.PrintStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 
 /**
  * Implements ThetaLambdaUnaryTree and operations on this tree for Cumulative constraint
@@ -70,19 +70,19 @@ class ThetaLambdaUnaryTree extends ThetaTree {
 
         for (int i = treeSize - n - 1; i >= 0; i--) {
 
-	    if (notExist(left(i))) {
-		tree[i] = empty;
-		tree[i].index = i;
-		clearNode(i);
-	    } else if (notExist(right(i))) {
-		tree[i] = tree[left(i)];
-	    } else {
-		tree[i] = new ThetaLambdaUnaryNode();
-		tree[i].index = i;
+            if (notExist(left(i))) {
+                tree[i] = empty;
+                tree[i].index = i;
+                clearNode(i);
+            } else if (notExist(right(i))) {
+                tree[i] = tree[left(i)];
+            } else {
+                tree[i] = new ThetaLambdaUnaryNode();
+                tree[i].index = i;
 
-		computeNodeVals(i);
-	    }
-	}
+                computeNodeVals(i);
+            }
+        }
     }
 
     void computeLeaveVals(int i) {
@@ -107,9 +107,9 @@ class ThetaLambdaUnaryTree extends ThetaTree {
 
     void computeNodeVals(int i) {
 
-	if (notExist(left(i)) || notExist(right(i)))
-	    return;
-	else {
+        if (notExist(left(i)) || notExist(right(i)))
+            return;
+        else {
 
             ThetaLambdaUnaryNode node = tree[i];
             ThetaLambdaUnaryNode l = tree[left(i)];
@@ -119,7 +119,7 @@ class ThetaLambdaUnaryTree extends ThetaTree {
             node.ect = Math.max(plus(l.ect, r.p), r.ect);
 
             if (plus(l.pLambda, r.p) > plus(r.pLambda, l.p)) {
-		node.pLambda = plus(l.pLambda, r.p);
+                node.pLambda = plus(l.pLambda, r.p);
                 node.responsiblePLambda = l.responsiblePLambda;
             } else {
                 node.pLambda = plus(r.pLambda, l.p);
@@ -207,7 +207,7 @@ class ThetaLambdaUnaryTree extends ThetaTree {
             out.print(toGraph(name));
             out.close();
         } catch (IOException e) {
-	    throw new RuntimeException("IO exception; ignored");
+            throw new RuntimeException("IO exception; ignored");
         }
     }
 

@@ -31,39 +31,30 @@
 
 package org.jacop.jasat.core;
 
+import org.jacop.jasat.core.clauses.AbstractClausesDatabase;
+import org.jacop.jasat.core.clauses.DatabasesStore;
+import org.jacop.jasat.core.clauses.MapClause;
+import org.jacop.jasat.modules.SearchModule;
+import org.jacop.jasat.modules.interfaces.*;
+import org.jacop.jasat.utils.MemoryPool;
+import org.jacop.jasat.utils.structures.IntQueue;
+import org.jacop.jasat.utils.structures.IntVec;
+
 import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Timer;
 
-import org.jacop.jasat.core.clauses.AbstractClausesDatabase;
-import org.jacop.jasat.core.clauses.DatabasesStore;
-import org.jacop.jasat.core.clauses.MapClause;
-import org.jacop.jasat.modules.SearchModule;
-import org.jacop.jasat.modules.interfaces.AssertionListener;
-import org.jacop.jasat.modules.interfaces.BackjumpListener;
-import org.jacop.jasat.modules.interfaces.ClauseListener;
-import org.jacop.jasat.modules.interfaces.ConflictListener;
-import org.jacop.jasat.modules.interfaces.ExplanationListener;
-import org.jacop.jasat.modules.interfaces.ForgetListener;
-import org.jacop.jasat.modules.interfaces.PropagateListener;
-import org.jacop.jasat.modules.interfaces.SolutionListener;
-import org.jacop.jasat.modules.interfaces.StartStopListener;
-import org.jacop.jasat.utils.MemoryPool;
-import org.jacop.jasat.utils.structures.IntQueue;
-import org.jacop.jasat.utils.structures.IntVec;
-
 
 /**
  * The main solver structure, to be used either by a search component or by
  * another program that uses it for conflict learning and detection.
- *
+ * <p>
  * This implements interfaces for being manipulated from the outside, and
  * from its components
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.5
- *
  */
 public final class Core implements SolverComponent {
 
@@ -166,7 +157,8 @@ public final class Core implements SolverComponent {
 
     /**
      * adds a clause to the solver
-     * @param clause  the clause to add
+     *
+     * @param clause the clause to add
      * @return the unique ID of the clause
      */
     public int addModelClause(IntVec clause) {
@@ -176,7 +168,8 @@ public final class Core implements SolverComponent {
 
     /**
      * same as previous, add the clause as a model clause
-     * @param clause  the clause to add
+     *
+     * @param clause the clause to add
      * @return the unique ID of this clause, or -1 if it is trivial
      */
     public int addModelClause(int[] clause) {
@@ -200,7 +193,8 @@ public final class Core implements SolverComponent {
     /**
      * predicate : can we remove the clause without breaking the correctness
      * of the solver ?
-     * @param clauseId  the unique Id of the clause
+     *
+     * @param clauseId the unique Id of the clause
      * @return true if removing the clause is allowed
      */
     public boolean canRemove(int clauseId) {
@@ -209,7 +203,8 @@ public final class Core implements SolverComponent {
 
     /**
      * removes the clause with unique Id, if possible
-     * @param clauseId  the unique Id of the clause to remove
+     *
+     * @param clauseId the unique Id of the clause to remove
      * @return true if success, false if failure
      */
     public boolean removeClause(int clauseId) {
@@ -230,8 +225,9 @@ public final class Core implements SolverComponent {
 
     /**
      * decides a single step of search by setting the value of a variable
-     * @param literal the literal to set true
-     * @param newLevel  the current search level
+     *
+     * @param literal  the literal to set true
+     * @param newLevel the current search level
      */
     public void assertLiteral(int literal, int newLevel) {
         assert newLevel > this.currentLevel;
@@ -243,7 +239,8 @@ public final class Core implements SolverComponent {
     /**
      * tells the SAT-solver to backtrack to the given level. The level must be
      * lower or equal to the solver's current level.
-     * @param level  the level to return to
+     *
+     * @param level the level to return to
      */
     public void backjumpToLevel(int level) {
         assert level < currentLevel;
@@ -307,6 +304,7 @@ public final class Core implements SolverComponent {
     /**
      * Computes at which level we should backjump to solve the conflict.
      * The solver must be in CONFLICT state.
+     *
      * @return a level lower than the current level, in which the solver
      * state would no longer be CONFLICT.
      */
@@ -325,6 +323,7 @@ public final class Core implements SolverComponent {
      * gets a fresh variable that one can use for example
      * for lazy clause generation. If used, every clause added must use only
      * the variables get by this way, or a variable collision could occur.
+     *
      * @return a fresh variable
      */
     public int getFreshVariable() {
@@ -338,7 +337,8 @@ public final class Core implements SolverComponent {
      * get several new variables at once, more efficiently than
      * running getFreshVariable() @param number times. The variables range
      * from the returned int to the returned int + @param number - 1
-     * @param number  the number of fresh variables we want
+     *
+     * @param number the number of fresh variables we want
      * @return The first variable in the range of new variables
      */
     public int getManyFreshVariables(int number) {
@@ -350,8 +350,9 @@ public final class Core implements SolverComponent {
 
     /**
      * Tells the solver what is the greatest variable in the problem
+     *
      * @param maxVariable the new maximum variable. Must not be lower than
-     * solver.getMaxVariable().
+     *                    solver.getMaxVariable().
      */
     public void setMaxVariable(int maxVariable) {
         //logc(3, "higher variable for solver : "+maxVariable);
@@ -375,7 +376,8 @@ public final class Core implements SolverComponent {
     /**
      * give the module access to the whole class, even if the solver is only
      * known as a ISatSolver
-     * @param module  the module to add to the solver
+     *
+     * @param module the module to add to the solver
      */
     public void addComponent(SolverComponent module) {
         module.initialize(this);
@@ -420,9 +422,10 @@ public final class Core implements SolverComponent {
 
     /**
      * triggers an event for assertion of a literal
+     *
      * @param literal  the literal asserted
-     * @param newLevel  the new level, after assertion. It must be strictly
-     * greater than currentLevel.
+     * @param newLevel the new level, after assertion. It must be strictly
+     *                 greater than currentLevel.
      */
     private void triggerAssertEvent(int literal, int newLevel) {
         assert newLevel > currentLevel;
@@ -464,7 +467,8 @@ public final class Core implements SolverComponent {
 
     /**
      * triggers an event of learning
-     * @param clauseToLearn  the clause which is learnt
+     *
+     * @param clauseToLearn the clause which is learnt
      */
     public void triggerLearnEvent(MapClause clauseToLearn) {
         assert currentState == SolverState.UNKNOWN;
@@ -485,7 +489,8 @@ public final class Core implements SolverComponent {
     /**
      * triggers a conflict. The next step of the research should be
      * conflict learning and then backjumping.
-     * @param clause  an unsatisfiable clause.
+     *
+     * @param clause an unsatisfiable clause.
      */
     public void triggerConflictEvent(MapClause clause) {
         assert currentState != SolverState.CONFLICT;
@@ -521,9 +526,10 @@ public final class Core implements SolverComponent {
 
     /**
      * triggers a unit propagation event. This keeps the same level.
-     * @param literal  the unique unset literal, which must be true for the
-     * 	clause to be satisfied
-     * @param unitClauseId  the unique id of the unit clause that propagates
+     *
+     * @param literal      the unique unset literal, which must be true for the
+     *                     clause to be satisfied
+     * @param unitClauseId the unique id of the unit clause that propagates
      */
     public void triggerPropagateEvent(int literal, int unitClauseId) {
         assert Math.abs(literal) <= maxVariable;
@@ -544,7 +550,8 @@ public final class Core implements SolverComponent {
 
     /**
      * triggers an event to backjump
-     * @param level  the level to backjump to
+     *
+     * @param level the level to backjump to
      */
     public void triggerBackjumpEvent(int level) {
         assert level < currentLevel;
@@ -618,7 +625,8 @@ public final class Core implements SolverComponent {
 
     /**
      * remembers that @param s is associated with the current time (in ms)
-     * @param s  the mark of current time
+     *
+     * @param s the mark of current time
      */
     public final void markTime(String s) {
         timeMap.put(s, System.currentTimeMillis());
@@ -626,7 +634,8 @@ public final class Core implements SolverComponent {
 
     /**
      * get the time associated with given mark, or 0 if none
-     * @param s  the mark
+     *
+     * @param s the mark
      * @return the time associated with given mark, or 0 if none
      */
     public final long getTime(String s) {
@@ -637,7 +646,8 @@ public final class Core implements SolverComponent {
 
     /**
      * gets the time difference (in ms) between now and the mark
-     * @param s  the mark
+     *
+     * @param s the mark
      * @return the time elapsed since mark, in ms
      */
     public final long getTimeDiff(String s) {
@@ -650,7 +660,7 @@ public final class Core implements SolverComponent {
     /**
      * logs important messages in comments
      *
-     * @param s the message
+     * @param s    the message
      * @param args the arguments for the message
      */
     public final void logc(String s, Object... args) {
@@ -665,8 +675,8 @@ public final class Core implements SolverComponent {
      * logs less important messages, in comments
      *
      * @param level verbosity level
-     * @param s the message
-     * @param args the arguments for the message
+     * @param s     the message
+     * @param args  the arguments for the message
      */
     public final void logc(int level, String s, Object... args) {
         if (verbosity >= level) {
@@ -721,6 +731,7 @@ public final class Core implements SolverComponent {
 
     /**
      * before exiting, we must know which return code we must give
+     *
      * @return the return code to exit with
      */
     public final int getReturnCode() {

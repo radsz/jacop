@@ -30,24 +30,17 @@
 
 package org.jacop.constraints;
 
+import org.jacop.api.SatisfiedPresent;
+import org.jacop.core.*;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
-import org.jacop.api.SatisfiedPresent;
-import org.jacop.core.IntDomain;
-import org.jacop.core.BoundDomain;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.ValueEnumeration;
-import org.jacop.core.IntVar;
-import org.jacop.core.Store;
-import org.jacop.core.Var;
-
 /**
  * ArgMin constraint provides the index of the maximum
- * variable from all variables on the list. 
- *
+ * variable from all variables on the list.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
@@ -65,7 +58,7 @@ public class ArgMin extends Constraint implements SatisfiedPresent {
     final public IntVar list[];
 
     /**
-     * It specifies variable max which stores the maximum value present in the list. 
+     * It specifies variable max which stores the maximum value present in the list.
      */
     final public IntVar minIndex;
 
@@ -76,16 +69,17 @@ public class ArgMin extends Constraint implements SatisfiedPresent {
     public int indexOffset;
 
     /**
-     * tirbreak == true {@literal -->} select element with the lowest index if exist several 
+     * tirbreak == true {@literal -->} select element with the lowest index if exist several
      */
     public boolean tiebreak = true;
 
     /**
      * It constructs max constraint.
-     * @param minIndex variable denoting the index of the maximum value
-     * @param list the array of variables for which the index of the maximum value is imposed.
+     *
+     * @param minIndex    variable denoting the index of the maximum value
+     * @param list        the array of variables for which the index of the maximum value is imposed.
      * @param indexOffset the offset for the index that is computed from 1 by default (if needed from 0, use -1 for this parameter)
-     * @param tiebreak defines if tie breaking should be used (returning the least index if several maximum elements
+     * @param tiebreak    defines if tie breaking should be used (returning the least index if several maximum elements
      */
     public ArgMin(IntVar[] list, IntVar minIndex, int indexOffset, boolean tiebreak) {
 
@@ -96,7 +90,7 @@ public class ArgMin extends Constraint implements SatisfiedPresent {
 
     public ArgMin(IntVar[] list, IntVar minIndex) {
 
-        checkInputForNullness(new String[]{"list", "minIndex"}, new Object[][] {list, { minIndex } });
+        checkInputForNullness(new String[] {"list", "minIndex"}, new Object[][] {list, {minIndex}});
 
         this.queueIndex = 1;
         this.numberId = idNumber.incrementAndGet();
@@ -104,15 +98,16 @@ public class ArgMin extends Constraint implements SatisfiedPresent {
         this.minIndex = minIndex;
         this.list = Arrays.copyOf(list, list.length);
 
-        setScope( Stream.concat( Stream.of( minIndex ), Stream.of( list )) );
+        setScope(Stream.concat(Stream.of(minIndex), Stream.of(list)));
     }
 
     /**
      * It constructs max constraint.
-     * @param minIndex variable denoting the index of minimum value
-     * @param variables the array of variables for which the minimum value is imposed.
+     *
+     * @param minIndex    variable denoting the index of minimum value
+     * @param variables   the array of variables for which the minimum value is imposed.
      * @param indexOffset the offset for the index that is computed from 1 by default (if needed from 0, use -1 for this parameter)
-     * @param tiebreak defines if tie breaking sgould be used (returning the least index if several maximum elements
+     * @param tiebreak    defines if tie breaking sgould be used (returning the least index if several maximum elements
      */
     public ArgMin(List<? extends IntVar> variables, IntVar minIndex, int indexOffset, boolean tiebreak) {
         this(variables, minIndex);

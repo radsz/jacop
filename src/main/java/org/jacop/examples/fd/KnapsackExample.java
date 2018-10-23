@@ -30,8 +30,6 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XgteqY;
 import org.jacop.constraints.XlteqC;
@@ -40,22 +38,22 @@ import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.util.ArrayList;
+
 /**
- *
  * It shows the capabilities and usage of Knapsack constraint.
  *
  * @author Radoslaw Szymanek
  * @version 4.5
- *
- * It models and solves a simple knapsack problem. There 
- * are two different models. The first one uses quantity
- * from 0 to n, where the second model is allowed to use
- * only binary variables. 
- *
- * Each item is specified by its weight and profit. Find
- * what objects should be put in the knapsack to maximize 
- * the profit without exceeding the knapsack capacity.
- *
+ *          <p>
+ *          It models and solves a simple knapsack problem. There
+ *          are two different models. The first one uses quantity
+ *          from 0 to n, where the second model is allowed to use
+ *          only binary variables.
+ *          <p>
+ *          Each item is specified by its weight and profit. Find
+ *          what objects should be put in the knapsack to maximize
+ *          the profit without exceeding the knapsack capacity.
  */
 
 public class KnapsackExample extends ExampleFD {
@@ -133,7 +131,6 @@ public class KnapsackExample extends ExampleFD {
 
     /**
      * It does not use Knapsack constraint only SumWeight constraints.
-     *
      */
     public void modelNoKnapsackConstraint() {
 
@@ -200,7 +197,6 @@ public class KnapsackExample extends ExampleFD {
 
     /**
      * It does not use Knapsack constraint only SumWeight constraints.
-     *
      */
     public void modelBoth() {
 
@@ -358,7 +354,7 @@ public class KnapsackExample extends ExampleFD {
      * string denoting the capacity of the knapsack
      * 4 strings denoting the item (weight, profit, maximumQuantity, name)
      * the number of strings total must be equal to 1+4*noOfItems.
-     *
+     * <p>
      * If no arguments is provided or improper number of them the program will use
      * internal instance of the knapsack problem.
      *

@@ -31,12 +31,12 @@
 
 package org.jacop.constraints;
 
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
+
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Alldifferent constraint assures that all FDVs has differnet values. It uses
@@ -66,6 +66,7 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
 
     /**
      * It constructs the alldifferent constraint for the supplied variable.
+     *
      * @param list variables which are constrained to take different values.
      */
     public Alldifferent(IntVar[] list) {
@@ -81,13 +82,14 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
 
     /**
      * It constructs the alldifferent constraint for the supplied variable.
+     *
      * @param variables variables which are constrained to take different values.
      */
 
     public Alldifferent(List<? extends IntVar> variables) {
         this(variables.toArray(new IntVar[variables.size()]));
     }
-    
+
     @Override public void consistency(Store store) {
 
         do {
@@ -167,7 +169,7 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
         super.impose(store);
         positionMapping = Var.positionMapping(list, false, this.getClass());
         grounded = new TimeStamp<>(store, 0);
-        
+
     }
 
     @Override public void queueVariable(int level, Var V) {
@@ -207,5 +209,5 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
         return result.toString();
 
     }
-    
+
 }

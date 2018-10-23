@@ -30,6 +30,8 @@
 
 package org.jacop.core;
 
+import org.jacop.api.Stateful;
+
 /**
  * Standard mutable variable definition
  *
@@ -37,23 +39,19 @@ package org.jacop.core;
  * @version 4.5
  */
 
-public interface MutableVar {
+public interface MutableVar extends Stateful {
 
     /**
      * It returns the earlier value of variable comparing to the current one.
+     *
      * @return previous value of a mutable variable.
      */
     MutableVarValue previous();
 
     /**
-     * It removes given level from mutable variable.
-     * @param removeLevel it specifies the level which is being removed.
-     */
-    void removeLevel(int removeLevel);
-
-    /**
      * It replace the current representation of the value with a new
      * representation. It ignores the store level.
+     *
      * @param o value to which a mutable variable is set.
      */
     void setCurrent(MutableVarValue o);
@@ -67,12 +65,14 @@ public interface MutableVar {
      * It updates the value of a mutable variable based on value given as a
      * parameter, the stamp level of current value and stamp value of passed
      * value.
+     *
      * @param value it specifies the new value of a mutable variable.
      */
     void update(MutableVarValue value);
 
     /**
      * It returns current value of MutableVariable.
+     *
      * @return current value of the mutable variable.
      */
     MutableVarValue value();

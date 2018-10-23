@@ -30,54 +30,48 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
-import org.jacop.constraints.Alldifferent;
-import org.jacop.constraints.Or;
-import org.jacop.constraints.XeqC;
-import org.jacop.constraints.XeqY;
-import org.jacop.constraints.XneqC;
-import org.jacop.constraints.XneqY;
+import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.util.ArrayList;
+
 /**
- *
  * It solves a logic puzzle about singing women.
  *
  * @author Zbigniew Danielczyk, Mariusz Jedrzejko, and Radoslaw Szymanek
  * @version 4.5
- *
- * The great mezzo-soprano Flora Nebbiacorno has retired from the
- * international opera stage, but she still teaches master classes
- * regularly.  At a recent class, her five students were one soprano,
- * one mezzo-soprano, two tenors, and one bass.  (The first two voice
- * types are women's, and the last two are men's).  Their first names
- * are Chris, J.P., Lee, Pat, and Val -- any of which could belong to a
- * man or a woman - - and their last names are Kingsley, Robinson,
- * Robinson (the two are unrelated but have the same last name), Ulrich,
- * and Walker. Can you find the order in which these five sang for the
- * class, identifying each by full name and voice type?
- *
- * 1. The first and second students were, in some order, Pat and the bass.
- *
- * 2. The second and third students included at least one tenor.
- *
- * 3. Kingsley and the fifth student (who isn't named Robinson) were, in
- * some order, a mezzo-soprano and a tenor.
- *
- * 4. Neither the third student, whose name is Robinson, nor Walker has
- * the first name of Chris.
- *
- * 5. Ulrich is not the bass or the mezzo-soprano.
- *
- * 6. Neither Lee or Val (who wasn't third) is a tenor.
- *
- * 7. J.P. wasn't third, and Chris wasn't fifth.
- *
- * 8. The bass isn't named Robinson.
- *
- * Determine: Order -- First name -- Last name -- Voice
+ *          <p>
+ *          The great mezzo-soprano Flora Nebbiacorno has retired from the
+ *          international opera stage, but she still teaches master classes
+ *          regularly.  At a recent class, her five students were one soprano,
+ *          one mezzo-soprano, two tenors, and one bass.  (The first two voice
+ *          types are women's, and the last two are men's).  Their first names
+ *          are Chris, J.P., Lee, Pat, and Val -- any of which could belong to a
+ *          man or a woman - - and their last names are Kingsley, Robinson,
+ *          Robinson (the two are unrelated but have the same last name), Ulrich,
+ *          and Walker. Can you find the order in which these five sang for the
+ *          class, identifying each by full name and voice type?
+ *          <p>
+ *          1. The first and second students were, in some order, Pat and the bass.
+ *          <p>
+ *          2. The second and third students included at least one tenor.
+ *          <p>
+ *          3. Kingsley and the fifth student (who isn't named Robinson) were, in
+ *          some order, a mezzo-soprano and a tenor.
+ *          <p>
+ *          4. Neither the third student, whose name is Robinson, nor Walker has
+ *          the first name of Chris.
+ *          <p>
+ *          5. Ulrich is not the bass or the mezzo-soprano.
+ *          <p>
+ *          6. Neither Lee or Val (who wasn't third) is a tenor.
+ *          <p>
+ *          7. J.P. wasn't third, and Chris wasn't fifth.
+ *          <p>
+ *          8. The bass isn't named Robinson.
+ *          <p>
+ *          Determine: Order -- First name -- Last name -- Voice
  */
 
 public class MasterClass extends ExampleFD {
@@ -196,6 +190,7 @@ public class MasterClass extends ExampleFD {
 
     /**
      * It executes the program to solve this simple logic puzzle.
+     *
      * @param args no arguments is used.
      */
     public static void main(String args[]) {

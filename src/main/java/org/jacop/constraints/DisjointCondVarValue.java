@@ -31,9 +31,9 @@
 
 package org.jacop.constraints;
 
-import java.util.List;
-
 import org.jacop.core.MutableVarValue;
+
+import java.util.List;
 
 /**
  * Defines a current value of the Diff2Var and related operations on it.

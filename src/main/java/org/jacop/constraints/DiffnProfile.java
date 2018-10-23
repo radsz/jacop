@@ -31,9 +31,9 @@
 
 package org.jacop.constraints;
 
-import java.util.List;
-
 import org.jacop.core.IntDomain;
+
+import java.util.List;
 
 /**
  * Defines a basic data structure to keep the profile for the diff2/1
@@ -68,8 +68,8 @@ class DiffnProfile extends Profile {
                 iR.dim = 0;
                 if (t.minUse(i, iR)) {
                     if (trace)
-                        System.out
-                            .println("Update profile " + "[" + iR.origin[j] + ".." + (iR.origin[j] + iR.length[j]) + ")=" + t.length(i).min());
+                        System.out.println(
+                            "Update profile " + "[" + iR.origin[j] + ".." + (iR.origin[j] + iR.length[j]) + ")=" + t.length(i).min());
                     addToProfile(iR.origin[j], iR.origin[j] + iR.length[j], t.length[i].min());
                 }
             }

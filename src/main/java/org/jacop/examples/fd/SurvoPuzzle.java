@@ -30,10 +30,6 @@
 
 package org.jacop.examples.fd;
 
-import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.XeqC;
@@ -41,40 +37,44 @@ import org.jacop.constraints.XeqY;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
+
 /**
- *
  * It solves Survo puzzle.
- *
+ * <p>
  * http://en.wikipedia.org/wiki/Survo_Puzzle
  * """
  * Survo puzzle is a kind of logic puzzle presented (in April 2006) and studied
  * by Seppo Mustonen. The name of the puzzle is associated to Mustonen's
  * Survo system which is a general environment for statistical computing and
  * related areas.
- *
+ * <p>
  * In a Survo puzzle the task is to fill an m * n table by integers 1,2,...,m*n so
  * that each of these numbers appears only once and their row and column sums are
  * equal to integers given on the bottom and the right side of the table.
  * Often some of the integers are given readily in the table in order to
  * guarantee uniqueness of the solution and/or for making the task easier.
  * """
- *
+ * <p>
  * See also
  * http://www.survo.fi/english/index.html
  * http://www.survo.fi/puzzles/index.html
- *
+ * <p>
  * References:
  * - Mustonen, S. (2006b). "On certain cross sum puzzles"
- *   http://www.survo.fi/papers/puzzles.pdf
+ * http://www.survo.fi/papers/puzzles.pdf
  * - Mustonen, S. (2007b). "Enumeration of uniquely solvable open Survo puzzles."
- *   http://www.survo.fi/papers/enum_survo_puzzles.pdf
+ * http://www.survo.fi/papers/enum_survo_puzzles.pdf
  * - Kimmo Vehkalahti: "Some comments on magic squares and Survo puzzles"
- *   http://www.helsinki.fi/~kvehkala/Kimmo_Vehkalahti_Windsor.pdf
- *
+ * http://www.helsinki.fi/~kvehkala/Kimmo_Vehkalahti_Windsor.pdf
  *
  * @author Hakan Kjellerstrand and Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 public class SurvoPuzzle extends ExampleFD {
@@ -90,9 +90,7 @@ public class SurvoPuzzle extends ExampleFD {
 
 
     /**
-     *
-     *  model()
-     *
+     * model()
      */
     @Override public void model() {
 
@@ -172,9 +170,10 @@ public class SurvoPuzzle extends ExampleFD {
 
     /**
      * It prints a matrix of variables. All variables must be grounded.
+     *
      * @param matrix matrix containing the grounded variables.
-     * @param rows number of elements in the first dimension.
-     * @param cols number of elements in the second dimension.
+     * @param rows   number of elements in the first dimension.
+     * @param cols   number of elements in the second dimension.
      */
     public static void printMatrix(IntVar[][] matrix, int rows, int cols) {
 
@@ -189,11 +188,10 @@ public class SurvoPuzzle extends ExampleFD {
 
 
     /**
-     *
      * readFile()
-     *
+     * <p>
      * Reads a Survo puzzle in the following format
-     *
+     * <p>
      * % From http://www.survo.fi/puzzles/280708.txt
      * % Survo puzzle 128/2008 (1700) #364-35846
      * A  B  C  D  E  F
@@ -201,15 +199,15 @@ public class SurvoPuzzle extends ExampleFD {
      * 2  *  * 18  *  *  * 86
      * 3  *  *  *  *  *  * 55
      * 22 11 42 32 27 37
-     * @param file the filename containing the problem description.
      *
+     * @param file the filename containing the problem description.
      */
     public void readFile(String file) {
 
         System.out.println("readFile(" + file + ")");
 
-        try(BufferedReader inr = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"))) {
-            
+        try (BufferedReader inr = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"))) {
+
             String str;
             int lineCount = 0;
             List<List<Integer>> MatrixI = new ArrayList<List<Integer>>();
@@ -288,10 +286,9 @@ public class SurvoPuzzle extends ExampleFD {
 
 
     /**
-     *
      * It executes the program to solve the specified SurvoPuzzle.
-     * @param args the first argument specifies the filename containing the puzzle to be solved.
      *
+     * @param args the first argument specifies the filename containing the puzzle to be solved.
      */
     public static void main(String args[]) {
 

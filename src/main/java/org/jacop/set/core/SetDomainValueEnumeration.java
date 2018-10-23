@@ -79,6 +79,7 @@ public class SetDomainValueEnumeration extends ValueEnumeration {
 
     /**
      * Returns the next element in the SetDomain.
+     *
      * @return the next element in the SetDomain.
      */
 
@@ -104,8 +105,8 @@ public class SetDomainValueEnumeration extends ValueEnumeration {
     /**
      * The number of elements at each level is described by Pascal's-triangle.
      * Example: domain = {{}..{1..3}
-     * 	glb.size = 0
-     * 	lub.size = 3
+     * glb.size = 0
+     * lub.size = 3
      * the level(pascalLevel) in Pascal's-triangle: level = 3-0 (lub.size-glb.size)
      * This level(pascalLevel) in Pascal's-triangle is 1 3 3 1
      * And we get the elements:
@@ -114,14 +115,14 @@ public class SetDomainValueEnumeration extends ValueEnumeration {
      * level 2 : {1,2}, {1,3}, {2,3}
      * level 3 : {1,2,3}
      * So getPascal(2,2) returns the Set {1,3}
-     *
+     * <p>
      * occLevel = The level in Pascal's triangle that describes how many times the first
-     * 			value occurs.
-     *
+     * value occurs.
+     * <p>
      * occPos = the position in Pascal's triangle on row occLevel that describes how many
-     * 			times the first value occurs
-     *
-     *  occ = the number of times the first value occurs.
+     * times the first value occurs
+     * <p>
+     * occ = the number of times the first value occurs.
      *
      * @param level = Number of element from the ground set(lub\glb) that should be added
      * @param place = The position in this level for the wanted element
@@ -161,6 +162,7 @@ public class SetDomainValueEnumeration extends ValueEnumeration {
 
     /**
      * Returns the maximum place number for an element in this level
+     *
      * @param level
      * @return the maximum place number for an element in this level
      */
@@ -170,6 +172,7 @@ public class SetDomainValueEnumeration extends ValueEnumeration {
 
     /**
      * Returns the value of a specific element in Pascal's triangle.
+     *
      * @param level The level in Pascal's triangle.
      * @param place The position in this level of Pascal's triangle.
      * @return The element on this position in Pascal's triangle.

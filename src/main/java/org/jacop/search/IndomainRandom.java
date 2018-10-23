@@ -30,19 +30,19 @@
 
 package org.jacop.search;
 
-import java.util.Random;
-
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+
+import java.util.Random;
 
 /**
  * IndomainRandom - implements enumeration method based on the selection of the
  * random value in the domain of FD variable. Can split domains into multiple
  * intervals
  *
+ * @param <T> type of variable being used in the search.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.5
- * @param <T> type of variable being used in the search.
  */
 
 public class IndomainRandom<T extends IntVar> implements Indomain<T> {
@@ -58,6 +58,7 @@ public class IndomainRandom<T extends IntVar> implements Indomain<T> {
 
     /**
      * It specifies Indomain function, which assigns values randomly.
+     *
      * @param seed it specifies the seed of the random generator.
      */
     public IndomainRandom(int seed) {

@@ -29,36 +29,21 @@
  */
 package org.jacop.fz.constraints;
 
-import java.util.ArrayList;
-
-import org.jacop.core.Store;
+import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
-
-import org.jacop.fz.*;
-
-import org.jacop.constraints.AndBool;
-import org.jacop.constraints.XorBool;
-import org.jacop.constraints.OrBool;
-import org.jacop.constraints.SumBool;
-import org.jacop.constraints.AndBoolSimple;
-import org.jacop.constraints.PrimitiveConstraint;
-import org.jacop.constraints.XlteqY;
-import org.jacop.constraints.XeqY;
-import org.jacop.constraints.XneqY;
-import org.jacop.constraints.XplusYgtC;
-import org.jacop.constraints.Reified;
-import org.jacop.constraints.BoolClause;
-
+import org.jacop.core.Store;
+import org.jacop.fz.ASTScalarFlatExpr;
+import org.jacop.fz.ParserTreeConstants;
+import org.jacop.fz.SimpleNode;
 import org.jacop.satwrapper.SatTranslation;
-import org.jacop.constraints.OrBoolSimple;
+
+import java.util.ArrayList;
 
 
 /**
- *
  * Generation of boolean constraints in flatzinc
  *
- * @author Krzysztof Kuchcinski 
- *
+ * @author Krzysztof Kuchcinski
  */
 class BoolConstraints implements ParserTreeConstants {
 
@@ -66,11 +51,11 @@ class BoolConstraints implements ParserTreeConstants {
     boolean reified;
     SatTranslation sat;
     Support support;
-    
+
     public BoolConstraints(Support support) {
-	this.support = support;
-	this.store = support.store;
-	this.sat = support.sat;
+        this.support = support;
+        this.store = support.store;
+        this.sat = support.sat;
     }
 
     void gen_array_bool_and(SimpleNode node) {
@@ -112,7 +97,10 @@ class BoolConstraints implements ParserTreeConstants {
             sat.generate_or(a1, v);
         else {
             if (v.singleton(1))
-		support.pose(new SumBool(a1, ">=", v));
+		if (a1.length == 2)
+		    support.pose(new org.jacop.constraints.XplusYgtC(a1[0], a1[1], 0));
+		else
+		    support.pose(new SumBool(a1, ">=", v));
             else if (allVarZero(a1))
                 v.domain.in(store.level, v, 0, 0);
             else if (atLeastOneVarOne(a1))
@@ -172,19 +160,19 @@ class BoolConstraints implements ParserTreeConstants {
         if (support.options.useSat())
             sat.generate_neq_reif(v1, v2, v3);
         else if (v1.max() == 0)
-	    support.pose(new XeqY(v2, v3));
-	else if (v2.max() == 0)
-	    support.pose(new XeqY(v1, v3));
+            support.pose(new XeqY(v2, v3));
+        else if (v2.max() == 0)
+            support.pose(new XeqY(v1, v3));
         else if (v1.min() == 1)
-	    support.pose(new XneqY(v2, v3));
-	else if (v2.min() == 1)
-	    support.pose(new XneqY(v1, v3));
-	else if (v3.max() == 0)
-	    support.pose(new XeqY(v1, v2));
-	else if (v3.min() == 1)
-	    support.pose(new XneqY(v1, v2));
-	else
-	    support.pose(new XorBool(new IntVar[] {v1, v2}, v3));
+            support.pose(new XneqY(v2, v3));
+        else if (v2.min() == 1)
+            support.pose(new XneqY(v1, v3));
+        else if (v3.max() == 0)
+            support.pose(new XeqY(v1, v2));
+        else if (v3.min() == 1)
+            support.pose(new XneqY(v1, v2));
+        else
+            support.pose(new XorBool(new IntVar[] {v1, v2}, v3));
     }
 
     void gen_bool_clause(SimpleNode node) {

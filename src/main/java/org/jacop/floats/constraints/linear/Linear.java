@@ -38,7 +38,9 @@ import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.util.SimpleHashSet;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.DoubleStream;
 import java.util.stream.Stream;
@@ -302,7 +304,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
         pruneRelation();
 
         if (relationType != eq && entailed(relationType))
-	    removeConstraint();
+            removeConstraint();
 
     }
 
@@ -314,7 +316,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
         pruneRelation();
 
         if (negRel[relationType] != eq && entailed(negRel[relationType]))
-	    removeConstraint();
+            removeConstraint();
 
     }
 

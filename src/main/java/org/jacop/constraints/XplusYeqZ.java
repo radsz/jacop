@@ -30,15 +30,15 @@
 
 package org.jacop.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * Constraint X + Y = Z
- *
+ * <p>
  * Bound consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -64,14 +64,16 @@ public class XplusYeqZ extends PrimitiveConstraint {
      */
     final public IntVar z;
 
-    /** It constructs constraint X+Y=Z.
+    /**
+     * It constructs constraint X+Y=Z.
+     *
      * @param x variable x.
      * @param y variable y.
      * @param z variable z.
      */
     public XplusYeqZ(IntVar x, IntVar y, IntVar z) {
 
-        checkInputForNullness(new String[]{"x", "y", "z"}, new Object[]{x, y, z});
+        checkInputForNullness(new String[] {"x", "y", "z"}, new Object[] {x, y, z});
 
         numberId = idNumber.incrementAndGet();
 
@@ -169,8 +171,8 @@ public class XplusYeqZ extends PrimitiveConstraint {
     @Override public boolean satisfied() {
 
         // return (grounded() && x.value() + y.value() == z.value());
-	int xMin = x.min(), yMin = y.min(), zMin = z.min();
-	return x.singleton(xMin) && y.singleton(yMin) && z.singleton(zMin) && xMin + yMin == zMin;
+        int xMin = x.min(), yMin = y.min(), zMin = z.min();
+        return x.singleton(xMin) && y.singleton(yMin) && z.singleton(zMin) && xMin + yMin == zMin;
     }
 
     @Override public String toString() {

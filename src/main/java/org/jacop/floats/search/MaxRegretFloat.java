@@ -30,19 +30,18 @@
 
 package org.jacop.floats.search;
 
-import org.jacop.search.ComparatorVariable;
-
-import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatIntervalDomain;
+import org.jacop.floats.core.FloatVar;
+import org.jacop.search.ComparatorVariable;
 //import org.jacop.core.ValueEnumeration;
 
 
 /**
  * Defines a MaxRegretFloat comparator for Variables.
  *
+ * @param <T> variable of type FloatVar.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
- * @param <T> variable of type FloatVar.
  */
 
 public class MaxRegretFloat<T extends FloatVar> implements ComparatorVariable<T> {

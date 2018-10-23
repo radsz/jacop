@@ -28,7 +28,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.jacop.constraints.cumulative;
 
 import org.jacop.constraints.Constraint;
@@ -177,7 +176,7 @@ class CumulativePrimary extends Constraint {
 
             // mandatory task parts to create profile
             int min = start[i].max(), // t.lst()
-		max = start[i].min() + dur[i];  // t.ect()
+                max = start[i].min() + dur[i];  // t.ect()
             if (min < max) {
                 es[j++] = new Event(profile, i, min, res[i]);
                 es[j++] = new Event(profile, i, max, -res[i]);
@@ -192,14 +191,14 @@ class CumulativePrimary extends Constraint {
         for (int i = 0; i < start.length; i++) {
             // overlapping tasks for pruning
             // from start to end
-	    if (!start[i].singleton()) {  // task that are ground are considered for manadatory tasks
-		int min = start[i].min(); //t.est();
-		int max = start[i].max() + dur[i]; //t.lct();
-		if (!(min > maxProfile || max < minProfile)) {
-		    es[j++] = new Event(pruneStart, i, min, 0); // res[i]);
-		    es[j++] = new Event(pruneEnd, i, max, 0);   // -res[i]);
-		}
-	    }
+            if (!start[i].singleton()) {  // task that are ground are considered for manadatory tasks
+                int min = start[i].min(); //t.est();
+                int max = start[i].max() + dur[i]; //t.lct();
+                if (!(min > maxProfile || max < minProfile)) {
+                    es[j++] = new Event(pruneStart, i, min, 0); // res[i]);
+                    es[j++] = new Event(pruneEnd, i, max, 0);   // -res[i]);
+                }
+            }
         }
 
         int N = j;
@@ -242,7 +241,7 @@ class CumulativePrimary extends Constraint {
                             System.out.println("Profile at " + e.date() + ": " + curProfile);
 
                         // prune limit variable
-                        if (curProfile > limit.min()) 
+                        if (curProfile > limit.min())
                             limit.domain.inMin(store.level, limit, curProfile);
 
                         for (int ti = tasksToPrune.nextSetBit(0); ti >= 0; ti = tasksToPrune.nextSetBit(ti + 1)) {
@@ -276,9 +275,9 @@ class CumulativePrimary extends Constraint {
                 case pruneStart:  // =========== start of a task ===========
                     int ti = e.index;
 
-		    // ========= for start pruning
-		    if (!inProfile[ti] && limitMax - curProfile < res[ti])
-			startExcluded[ti] = e.date();
+                    // ========= for start pruning
+                    if (!inProfile[ti] && limitMax - curProfile < res[ti])
+                        startExcluded[ti] = e.date();
 
                     tasksToPrune.set(ti);
                     break;
@@ -291,8 +290,8 @@ class CumulativePrimary extends Constraint {
                         // task ends and we remove forbidden area
 
                         if (debugNarr)
-                            System.out.print(
-                                ">>> CumulativePrimary Profile 2. Narrowed " + start[ti] + " inMax " + (startExcluded[ti] - 1));
+                            System.out
+                                .print(">>> CumulativePrimary Profile 2. Narrowed " + start[ti] + " inMax " + (startExcluded[ti] - 1));
 
                         start[ti].domain.inMax(store.level, start[ti], startExcluded[ti] - 1);
 

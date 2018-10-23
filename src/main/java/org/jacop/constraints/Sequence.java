@@ -30,8 +30,6 @@
 
 package org.jacop.constraints;
 
-import java.util.*;
-
 import org.jacop.constraints.regular.Regular;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -41,10 +39,11 @@ import org.jacop.util.fsm.FSM;
 import org.jacop.util.fsm.FSMState;
 import org.jacop.util.fsm.FSMTransition;
 
+import java.util.*;
+
 /**
- *
  * It constructs a Sequence constraint. The sequence constraint
- * establishes the following relationship: For a given list of 
+ * establishes the following relationship: For a given list of
  * variables (list) and the length of each sequence (q) it makes
  * sure that each subsequence of consecutive variables from the list
  * contains between min and max values from the given set.
@@ -66,10 +65,10 @@ public class Sequence extends DecomposedConstraint<Constraint> {
      * It creates a Sequence constraint.
      *
      * @param list variables which assignment is constrained by Sequence constraint.
-     * @param set set of values which occurrence is counted within each sequence.
-     * @param q the length of the sequence
-     * @param min the minimal occurrences of values from set within a sequence.
-     * @param max the maximal occurrences of values from set within a sequence.
+     * @param set  set of values which occurrence is counted within each sequence.
+     * @param q    the length of the sequence
+     * @param min  the minimal occurrences of values from set within a sequence.
+     * @param max  the maximal occurrences of values from set within a sequence.
      */
     public Sequence(IntVar[] list, IntervalDomain set, int q, int min, int max) {
 
@@ -82,7 +81,7 @@ public class Sequence extends DecomposedConstraint<Constraint> {
         this.list = Arrays.copyOf(list, list.length);
         this.set = set.clone();
         this.q = q;
-        
+
     }
 
     @Override public void imposeDecomposition(Store store) {
@@ -97,6 +96,7 @@ public class Sequence extends DecomposedConstraint<Constraint> {
 
     /**
      * Preferred and default option of decomposing Sequence constraint.
+     *
      * @param sequence sequence constraint to be decomposed by regular.
      * @return a list of constraints that are used to decompose the sequence constraints.
      */

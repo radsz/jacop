@@ -30,20 +30,15 @@
 
 package org.jacop.search;
 
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Interval;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.IntervalEnumeration;
-import org.jacop.core.ValueEnumeration;
+import org.jacop.core.*;
 
 /**
  * IndomainMedian - implements enumeration method based on the selection of the
  * median value in the domain of FD variable and then right and left values.
  *
+ * @param <T> type of variable being used in search.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
- * @param <T> type of variable being used in search.
  */
 
 public class IndomainMedian<T extends IntVar> implements Indomain<T> {

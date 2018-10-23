@@ -30,10 +30,6 @@
 
 package org.jacop.constraints;
 
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
-
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
@@ -41,9 +37,13 @@ import org.jacop.core.*;
 import org.jacop.util.SimpleArrayList;
 import org.jacop.util.SimpleHashSet;
 
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
+
 /**
  * Alldistinct constraint assures that all FDVs have different values.
- *
+ * <p>
  * This implementation is based on Regin paper. It uses slightly modified
  * Hopcroft-Karp algorithm to compute maximum matching. The value graph is
  * analysed and Tarjan algorithm for finding strongly connected components is
@@ -171,6 +171,7 @@ public class Alldistinct extends Constraint implements UsesQueueVariable, Statef
 
     /**
      * It constructs an alldistinct constraint.
+     *
      * @param list an array of variables.
      */
     public Alldistinct(IntVar[] list) {
@@ -231,6 +232,7 @@ public class Alldistinct extends Constraint implements UsesQueueVariable, Statef
 
     /**
      * It constructs an alldistinct constraint.
+     *
      * @param list arraylist of variables.
      */
     public Alldistinct(List<? extends IntVar> list) {
@@ -1130,7 +1132,7 @@ public class Alldistinct extends Constraint implements UsesQueueVariable, Statef
 
         Integer zero = 0;
 
-        Function<IntVar, TimeStamp<Integer>> f = ( i ) -> new TimeStamp<Integer>(store, zero);
+        Function<IntVar, TimeStamp<Integer>> f = (i) -> new TimeStamp<Integer>(store, zero);
         Var.addPositionMapping(matching, list, f, false, this.getClass());
         Var.addPositionMapping(sccStamp, list, f, false, this.getClass());
 

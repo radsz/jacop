@@ -31,22 +31,19 @@
 package org.jacop.examples.floats;
 
 /**
- *
  * It models tan(x) = -x for floating solver.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 import org.jacop.core.Store;
-import org.jacop.search.DepthFirstSearch;
-
-import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.constraints.TanPeqR;
 import org.jacop.floats.constraints.PplusQeqR;
+import org.jacop.floats.constraints.TanPeqR;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.search.DepthFirstSearch;
 
 public class TanExample {
 

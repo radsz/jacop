@@ -30,8 +30,6 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XmulCeqZ;
@@ -39,36 +37,35 @@ import org.jacop.constraints.XplusCeqZ;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.util.ArrayList;
+
 /**
- *
  * It is a simple logic puzzle about babysitting.
  *
  * @author Radoslaw Szymanek
  * @version 4.5
- *
- * Each weekday, Bonnie takes care of five of the neighbors'
- * children. The children's names are Keith, Libby, Margo, Nora, and
- * Otto; last names are Fell, Grant, Hall, Ivey, and Jule. Each is a
- * different number of years old, from two to six. Can you find each
- * child's full name and age?
-
- * 1. One child is named Libby Jule.
- * 2. Keith is one year older than the Ivey child, who is one year older than Nora.
- * 3. The Fell child is three years older than Margo.
- * 4. Otto is twice as many years old as the Hall child.
-
- * Determine: First name - Last name - Age
-
-
- * Given solution : 
-
- * Keith Fell, five years old
- * Libby Jule, six years old
- * Margo Hall, two years old
- * Nora Grant, three years old
- * Otto Ivey, four years old 
- *
- *
+ *          <p>
+ *          Each weekday, Bonnie takes care of five of the neighbors'
+ *          children. The children's names are Keith, Libby, Margo, Nora, and
+ *          Otto; last names are Fell, Grant, Hall, Ivey, and Jule. Each is a
+ *          different number of years old, from two to six. Can you find each
+ *          child's full name and age?
+ *          <p>
+ *          1. One child is named Libby Jule.
+ *          2. Keith is one year older than the Ivey child, who is one year older than Nora.
+ *          3. The Fell child is three years older than Margo.
+ *          4. Otto is twice as many years old as the Hall child.
+ *          <p>
+ *          Determine: First name - Last name - Age
+ *          <p>
+ *          <p>
+ *          Given solution :
+ *          <p>
+ *          Keith Fell, five years old
+ *          Libby Jule, six years old
+ *          Margo Hall, two years old
+ *          Nora Grant, three years old
+ *          Otto Ivey, four years old
  */
 
 public class BabySitting extends ExampleFD {
@@ -126,6 +123,7 @@ public class BabySitting extends ExampleFD {
 
     /**
      * It runs the program solving this puzzle.
+     *
      * @param args no arguments are read.
      */
     public static void main(String args[]) {

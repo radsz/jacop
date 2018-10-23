@@ -36,7 +36,7 @@ import org.jacop.floats.core.FloatVar;
 
 /**
  * Constraint sqrt(P) = R for floats
- *
+ * <p>
  * Boundary consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -47,6 +47,7 @@ public class SqrtPeqR extends PmulQeqR {
 
     /**
      * It constructs a constraint sqrt(P) = R.
+     *
      * @param p variable p.
      * @param r variable r.
      */

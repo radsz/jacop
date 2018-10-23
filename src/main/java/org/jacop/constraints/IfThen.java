@@ -30,13 +30,13 @@
 
 package org.jacop.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Domain;
 import org.jacop.core.Store;
-import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Var;
 import org.jacop.util.QueueForward;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraint if constraint1 then constraint2
@@ -67,6 +67,7 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
 
     /**
      * It constructs ifthen constraint.
+     *
      * @param condC the condition of the ifthen constraint.
      * @param thenC the constraint which must hold if the condition holds.
      */
@@ -74,25 +75,35 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
 
         PrimitiveConstraint[] scope = new PrimitiveConstraint[] {condC, thenC};
         checkInputForNullness(new String[] {"condC", "thenC"}, scope);
-
         numberId = idNumber.incrementAndGet();
-
         this.condC = condC;
         this.thenC = thenC;
-
         setScope(scope);
         setConstraintScope(scope);
-        queueForward = new QueueForward<PrimitiveConstraint>(new PrimitiveConstraint[] {condC, thenC}, arguments());
-	this.queueIndex = Integer.max(condC.queueIndex, thenC.queueIndex);
+        queueForward = new QueueForward<>(new PrimitiveConstraint[] {condC, thenC}, arguments());
+        this.queueIndex = Integer.max(condC.queueIndex, thenC.queueIndex);
     }
 
     @Override public void consistency(Store store) {
 
-        if (condC.satisfied())
-            thenC.consistency(store);
+        if (condC.satisfied()) {
+            if (imposed) {
+                this.removeConstraint();
+                store.impose(thenC);
+                return;
+            } else {
+                thenC.consistency(store);            }
+        }
 
-        if (imposed && thenC.notSatisfied())
-            condC.notConsistency(store);
+        if (thenC.notSatisfied()) {
+            if (imposed) {
+             this.removeConstraint();
+             store.impose(new Not(condC));
+             return;
+            } else {
+                condC.notConsistency(store);
+            }
+        }
 
     }
 
@@ -267,12 +278,6 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
     @Override public boolean satisfied() {
 
         if (imposed) {
-            if (condC.satisfied()) {
-                this.removeConstraint();
-                store.impose(thenC);
-                return false;
-            }
-
             return condC.notSatisfied();
         } else
             return (condC.satisfied() && thenC.satisfied()) || (condC.notSatisfied());

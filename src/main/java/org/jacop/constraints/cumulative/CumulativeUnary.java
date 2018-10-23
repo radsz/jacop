@@ -149,7 +149,7 @@ public class CumulativeUnary extends Cumulative {
             if (doProfile)
                 profileProp(store);
 
-            if (! store.propagationHasOccurred) {
+            if (!store.propagationHasOccurred) {
 
                 if (!doProfile)
                     overload(tn);

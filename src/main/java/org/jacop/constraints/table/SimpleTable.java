@@ -120,28 +120,28 @@ public class SimpleTable extends Constraint implements UsesQueueVariable, Statef
         if (reuseTupleArguments) {
             this.tuple = tuples;
         } else {
-	    // create tuples for the constraint; remove non feasible tuples
-	    int size = list.length;
-	    boolean[] tuplesToRemove = new boolean[tuples.length];
-	    int n=0;
-	    for (int i = 0; i < tuples.length; i++) {
-		for (int j = 0; j < size; j++) {
-		    if (! list[j].domain.contains(tuples[i][j])) {
-			tuplesToRemove[i] = true;
-		    }
-		}
-		if (tuplesToRemove[i])
-		    n++;
-	    }
-	    int k = tuples.length-n;
-	    this.tuple = new int[k][size];
-	    int m = 0;
-	    for (int i = 0; i < tuples.length; i++) {
-		if (! tuplesToRemove[i]) {
-		    this.tuple[m] = Arrays.copyOf(tuples[i], size);
-		    m++;
-		}
-	    }
+            // create tuples for the constraint; remove non feasible tuples
+            int size = list.length;
+            boolean[] tuplesToRemove = new boolean[tuples.length];
+            int n = 0;
+            for (int i = 0; i < tuples.length; i++) {
+                for (int j = 0; j < size; j++) {
+                    if (!list[j].domain.contains(tuples[i][j])) {
+                        tuplesToRemove[i] = true;
+                    }
+                }
+                if (tuplesToRemove[i])
+                    n++;
+            }
+            int k = tuples.length - n;
+            this.tuple = new int[k][size];
+            int m = 0;
+            for (int i = 0; i < tuples.length; i++) {
+                if (!tuplesToRemove[i]) {
+                    this.tuple[m] = Arrays.copyOf(tuples[i], size);
+                    m++;
+                }
+            }
         }
 
         numberId = idNumber.incrementAndGet();
@@ -167,8 +167,7 @@ public class SimpleTable extends Constraint implements UsesQueueVariable, Statef
         return IntDomain.ANY;
     }
 
-    @SuppressWarnings("unchecked")
-    @Override public void impose(Store store) {
+    @SuppressWarnings("unchecked") @Override public void impose(Store store) {
         this.store = store;
 
         super.impose(store);
@@ -249,25 +248,24 @@ public class SimpleTable extends Constraint implements UsesQueueVariable, Statef
                 }
                 mask = ~mask;
             } else { // reset-based update
-		Set<Map.Entry<Integer, Long>> xsEntry = xSupport.entrySet();
-		if (cd.getSize() < xsEntry.size()) { 
-		    // update based on the variable
-		    ValueEnumeration e = cd.valueEnumeration();
-		    while (e.hasMoreElements()) {
-			Long bs = xSupport.get(e.nextElement());
-			if (bs != null)
-			    mask |= (bs.longValue());
-		    }
-		}
-		else {
-		    // updates based on table values
-		    for (Map.Entry<Integer, Long> e : xsEntry) {
-			Integer val = e.getKey();
-			Long bits = e.getValue();
-			if (cd.contains(val))
-			    mask |= bits;
-		    }
-		}
+                Set<Map.Entry<Integer, Long>> xsEntry = xSupport.entrySet();
+                if (cd.getSize() < xsEntry.size()) {
+                    // update based on the variable
+                    ValueEnumeration e = cd.valueEnumeration();
+                    while (e.hasMoreElements()) {
+                        Long bs = xSupport.get(e.nextElement());
+                        if (bs != null)
+                            mask |= (bs.longValue());
+                    }
+                } else {
+                    // updates based on table values
+                    for (Map.Entry<Integer, Long> e : xsEntry) {
+                        Integer val = e.getKey();
+                        Long bits = e.getValue();
+                        if (cd.contains(val))
+                            mask |= bits;
+                    }
+                }
             }
 
             boolean empty = intersectWithMask();
@@ -303,32 +301,32 @@ public class SimpleTable extends Constraint implements UsesQueueVariable, Statef
 
                 Map<Integer, Long> xSupport = supports[i];
 
-		Set<Map.Entry<Integer, Long>> xsEntry = xSupport.entrySet();
-		if (xi.dom().getSize() <= xsEntry.size()) { 		
-		    // filter based on the variable
-		    ValueEnumeration e = xi.dom().valueEnumeration();
-		    while (e.hasMoreElements()) {
-			int el = e.nextElement();
+                Set<Map.Entry<Integer, Long>> xsEntry = xSupport.entrySet();
+                if (xi.dom().getSize() <= xsEntry.size()) {
+                    // filter based on the variable
+                    ValueEnumeration e = xi.dom().valueEnumeration();
+                    while (e.hasMoreElements()) {
+                        int el = e.nextElement();
 
-			Long bs = xSupport.get(el);
-			if (bs != null) {
-			    if ((wrds & bs.longValue()) == 0L) {
-				xi.domain.inComplement(store.level, xi, el);
-			    }
-			} else
-			    xi.domain.inComplement(store.level, xi, el);
-		    }
-		} else {
-		    // filter based on the table values
-		    IntDomain xDom = new IntervalDomain();
-		    for (Map.Entry<Integer, Long> e : xsEntry) {
-			Integer val = e.getKey();
-			Long bits = e.getValue();
-			if (xi.domain.contains(val) && (wrds & bits.longValue()) != 0L)
-			    xDom.unionAdapt(val);
-		    }
-		    xi.domain.in(store.level, xi, xDom);
-		}
+                        Long bs = xSupport.get(el);
+                        if (bs != null) {
+                            if ((wrds & bs.longValue()) == 0L) {
+                                xi.domain.inComplement(store.level, xi, el);
+                            }
+                        } else
+                            xi.domain.inComplement(store.level, xi, el);
+                    }
+                } else {
+                    // filter based on the table values
+                    IntDomain xDom = new IntervalDomain();
+                    for (Map.Entry<Integer, Long> e : xsEntry) {
+                        Integer val = e.getKey();
+                        Long bits = e.getValue();
+                        if (xi.domain.contains(val) && (wrds & bits.longValue()) != 0L)
+                            xDom.unionAdapt(val);
+                    }
+                    xi.domain.in(store.level, xi, xDom);
+                }
             }
         }
     }
@@ -344,15 +342,15 @@ public class SimpleTable extends Constraint implements UsesQueueVariable, Statef
 
         long wrds = words.value();
         for (int i = 0; i < x.length; i++) {
-                int el = x[i].value();
-                Long bs = supports[i].get(el);
-                if (bs != null) {
-                    if ((wrds & bs.longValue()) == 0L) {
-                        return false;
-                    }
-                } else {
+            int el = x[i].value();
+            Long bs = supports[i].get(el);
+            if (bs != null) {
+                if ((wrds & bs.longValue()) == 0L) {
                     return false;
                 }
+            } else {
+                return false;
+            }
 
         }
 

@@ -41,7 +41,7 @@ public final class SolverState {
     /**
      * It gives a nice representation of the state.
      *
-     * @param state  the state
+     * @param state the state
      * @return a string representing the state
      */
     public static String show(int state) {

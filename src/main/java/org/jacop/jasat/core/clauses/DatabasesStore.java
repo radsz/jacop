@@ -31,11 +31,11 @@
 
 package org.jacop.jasat.core.clauses;
 
-import java.io.BufferedWriter;
-
 import org.jacop.jasat.core.Core;
 import org.jacop.jasat.core.SolverComponent;
 import org.jacop.jasat.core.SolverState;
+
+import java.io.BufferedWriter;
 
 /**
  * This provides a unique interface to several databases. It also translates
@@ -44,7 +44,6 @@ import org.jacop.jasat.core.SolverState;
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.5
- *
  */
 public final class DatabasesStore implements SolverComponent, ClauseDatabaseInterface {
 
@@ -127,7 +126,8 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
 
     /**
      * removes this clause from the database it belongs to.
-     * @param clauseId  the id of the clause to be deleted
+     *
+     * @param clauseId the id of the clause to be deleted
      */
     public void removeClause(int clauseId) {
         if (canRemove(clauseId)) {
@@ -153,7 +153,8 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
 
     /**
      * Adds a ClausesDatabase to the Store
-     * @param database  the database to add
+     *
+     * @param database the database to add
      */
     public void addDatabase(AbstractClausesDatabase database) {
         assert currentIndex < MAX_NUMBER_OF_DATABASES;
@@ -178,7 +179,8 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
 
     /**
      * tells all databases to backjump at this level
-     * @param level  the level to backjump to
+     *
+     * @param level the level to backjump to
      */
     public void backjump(int level) {
         for (int i = 0; i < currentIndex; ++i) {
@@ -191,7 +193,8 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
     /**
      * tells all databases that the literal is set, for unit propagation. Stops
      * when all databases are informed, or the solver has reached a stop-state
-     * @param literal  the literal
+     *
+     * @param literal the literal
      */
     public final void assertLiteral(int literal) {
         // assert in all databases
@@ -206,7 +209,8 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
 
     /**
      * returns the ClausesDatabase associated with this clauseId
-     * @param clauseId  a unique clause Id
+     *
+     * @param clauseId a unique clause Id
      * @return the index of the ClausesDatabase that contains the clause
      */
     public final int uniqueIdToDb(int clauseId) {
@@ -225,7 +229,7 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
      * The normal way to use it is together with getClausesDatabase(), so
      * that we have both the good database and the real id of the clause
      *
-     * @param clauseId  the unique clauseId
+     * @param clauseId the unique clauseId
      * @return the clause index in the database
      */
     public final int uniqueIdToIndex(int clauseId) {
@@ -239,7 +243,8 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
     /**
      * It gets a unique id from a clause index, relative to a database,
      * and a database index.
-     * @param clauseIndex clause index
+     *
+     * @param clauseIndex   clause index
      * @param databaseIndex database index
      * @return unique id from a clause index
      */

@@ -30,12 +30,12 @@
 
 package org.jacop.constraints;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.ArrayList;
-
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * AndBool constraint implements logic and operation on its arguments
@@ -57,16 +57,15 @@ public class AndBool extends DecomposedConstraint<PrimitiveConstraint> {
      */
     public AndBool(IntVar[] a, IntVar result) {
 
-	IntVar[] r = filter(a);
+        IntVar[] r = filter(a);
 
-	if (r == null)
-	    c = new XeqC(result, 0);
-	else if (r.length == 1)
-	    c = new XeqY(r[0], result);
+        if (r == null)
+            c = new XeqC(result, 0);
+        else if (r.length == 1)
+            c = new XeqY(r[0], result);
         else if (r.length == 2) {
-	    c = new AndBoolSimple(r[0], r[1], result);
-	}
-        else
+            c = new AndBoolSimple(r[0], r[1], result);
+        } else
             c = new AndBoolVector(r, result);
     }
 
@@ -88,7 +87,7 @@ public class AndBool extends DecomposedConstraint<PrimitiveConstraint> {
      * @param result variable.
      */
     public AndBool(IntVar a, IntVar b, IntVar result) {
-	this(new IntVar[] {a, b}, result);
+        this(new IntVar[] {a, b}, result);
     }
 
     @Override public void imposeDecomposition(Store store) {
@@ -104,15 +103,15 @@ public class AndBool extends DecomposedConstraint<PrimitiveConstraint> {
     }
 
     IntVar[] filter(IntVar[] xs) {
-	List<IntVar> result = new ArrayList<>();
-	for (IntVar x : xs)
-	    if (x.max() == 0)
-		return null;
-	    else if (x.min() == 1)
-		continue;
-	    else
-		result.add(x);
+        List<IntVar> result = new ArrayList<>();
+        for (IntVar x : xs)
+            if (x.max() == 0)
+                return null;
+            else if (x.min() == 1)
+                continue;
+            else
+                result.add(x);
 
-	return result.toArray(new IntVar[result.size()]);
+        return result.toArray(new IntVar[result.size()]);
     }
 }

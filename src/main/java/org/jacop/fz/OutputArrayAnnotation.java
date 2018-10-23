@@ -29,21 +29,19 @@
  */
 package org.jacop.fz;
 
-import java.util.ArrayList;
-
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntDomain;
+import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 import org.jacop.set.core.SetVar;
-import org.jacop.core.ValueEnumeration;
+
+import java.util.ArrayList;
 
 /**
- *
- * It stores information about the annotation for an output array. 
+ * It stores information about the annotation for an output array.
  *
  * @author Krzysztof Kuchcinski
  * @version 4.5
- *
  */
 public class OutputArrayAnnotation {
 
@@ -54,10 +52,9 @@ public class OutputArrayAnnotation {
     Var[] array;
 
     /**
-     * It constructs and output array annotation. 
+     * It constructs and output array annotation.
      *
-     * @param name the name of the output array annotation. 
-     *
+     * @param name        the name of the output array annotation.
      * @param indexBounds the indexes bounds.
      */
     public OutputArrayAnnotation(String name, ArrayList<IntDomain> indexBounds) {
@@ -125,19 +122,18 @@ public class OutputArrayAnnotation {
             } else if (v instanceof SetVar) {
                 if (v.singleton()) {
                     IntDomain glb = ((SetVar) v).dom().glb();
-			if (glb.getSize() > 0 && glb.getSize() == glb.max() - glb.min() + 1) {
-			    s.append(glb.min()+".."+glb.max());
-			}
-			else {
-			    s.append("{");
-			    for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements(); ) {
-				int element = e.nextElement();
-				s.append(element);
-				if (e.hasMoreElements())
-				    s.append(", ");
-			    }
-			    s.append("}");
-			}
+                    if (glb.getSize() > 0 && glb.getSize() == glb.max() - glb.min() + 1) {
+                        s.append(glb.min() + ".." + glb.max());
+                    } else {
+                        s.append("{");
+                        for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements(); ) {
+                            int element = e.nextElement();
+                            s.append(element);
+                            if (e.hasMoreElements())
+                                s.append(", ");
+                        }
+                        s.append("}");
+                    }
                 } else
                     s.append(v.dom().toString());
             } else {

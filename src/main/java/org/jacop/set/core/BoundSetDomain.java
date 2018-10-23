@@ -30,20 +30,13 @@
 
 package org.jacop.set.core;
 
-import org.jacop.core.Domain;
-import org.jacop.core.IntDomain;
-import org.jacop.core.Interval;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.SmallDenseDomain;
-import org.jacop.core.Store;
-import org.jacop.core.ValueEnumeration;
+import org.jacop.core.*;
 
 /**
- * Defines a set interval determined by a least upper bound(lub) and a 
+ * Defines a set interval determined by a least upper bound(lub) and a
  * greatest lower bound(glb). The domain consist of zero, one or several sets.
  *
- *
- * @author Radoslaw Szymanek, Krzysztof Kuchcinski and Robert Åkemalm 
+ * @author Radoslaw Szymanek, Krzysztof Kuchcinski and Robert Åkemalm
  * @version 4.5
  */
 
@@ -69,11 +62,10 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
     public IntDomain cardinality;
 
     /**
-     *
      * Creates BoundSetDomain object. It requires glb to be a subset of lub.
      *
-     * @param glb it specifies the left bound of the SetDomain (inclusive).
-     * @param lub it specifies the right bound of the setDomain (inclusive).
+     * @param glb         it specifies the left bound of the SetDomain (inclusive).
+     * @param lub         it specifies the right bound of the setDomain (inclusive).
      * @param cardinality it specifies the allowed cardinality of the assigned set.
      */
     public BoundSetDomain(IntDomain glb, IntDomain lub, IntDomain cardinality) {
@@ -93,7 +85,9 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
     }
 
 
-    /** Creates a new instance of SetDomain. It requires glb to be a subset of lub.
+    /**
+     * Creates a new instance of SetDomain. It requires glb to be a subset of lub.
+     *
      * @param glb it specifies the left bound of the SetDomain (inclusive).
      * @param lub it specifies the right bound of the setDomain (inclusive).
      */
@@ -125,7 +119,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
         this.glb = new IntervalDomain(0);
         this.lub = new IntervalDomain(0);
         this.cardinality = new IntervalDomain(0, 0);
-        
+
         searchConstraints = null;
         searchConstraintsToEvaluate = 0;
         previousDomain = null;
@@ -134,8 +128,8 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
     }
 
     /**
-     *
      * It creates a new instance of SetDomain with glb empty and lub={e1..e2}
+     *
      * @param e1 the minimum element of lub.
      * @param e2 the maximum element of lub.
      */
@@ -161,7 +155,6 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
     /**
      * Adds a set of value to the possible values used within this set domain. It changes the cardinality
      * too to avoid cardinality constraining the domain.
-     *
      */
     public void addDom(IntDomain set) {
 
@@ -188,6 +181,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
     /**
      * Adds an interval [min..max] to the domain.
+     *
      * @param min min value in the set
      * @param max max value in the set
      */
@@ -197,6 +191,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
     /**
      * Returns the cardinality of the setDomain as [glb.card(), lub.card()]
+     *
      * @return The cardinality of the setDomain given as a boundDomain.
      */
     public IntDomain card() {
@@ -235,6 +230,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
     /**
      * It clones the domain object, only data responsible for encoding domain
      * values is cloned. All other fields must be set separately.
+     *
      * @return return a clone of the domain. It aims at getting domain of the proper class type.
      */
     public SetDomain cloneLight() {
@@ -245,6 +241,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
     /**
      * It creates a complement of a domain.
+     *
      * @return it returns the complement of this domain.
      */
     public SetDomain complement() {
@@ -285,6 +282,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
     /**
      * It returns an unique identifier of the domain.
+     *
      * @return it returns an integer id of the domain.
      */
     @Override public int domainID() {
@@ -293,6 +291,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
     /**
      * It checks if the domain is equal to the supplied domain.
+     *
      * @param domain against which the equivalence test is performed.
      * @return true if suppled domain has the same elements as this domain.
      */
@@ -311,6 +310,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
     /**
      * It returns the greatest lower bound of the domain.
+     *
      * @return the greatest lower bound of the domain.
      */
     public IntDomain glb() {
@@ -321,9 +321,9 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
      * This function is equivalent to in(int storeLevel, Variable var, int min, int max).
      *
      * @param storeLevel the level of the store at which the change occurrs.
-     * @param var the set variable for which the domain may change.
-     * @param inGLB the greatest lower bound of the domain.
-     * @param inLUB the least upper bound of the domain.
+     * @param var        the set variable for which the domain may change.
+     * @param inGLB      the greatest lower bound of the domain.
+     * @param inLUB      the least upper bound of the domain.
      */
     public void in(int storeLevel, SetVar var, IntDomain inGLB, IntDomain inLUB) {
 
@@ -350,7 +350,11 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
                     throw Store.failException;
                 var.domainHasChanged(IntDomain.GROUND);
             } else {
-                int eventCardinality = cardinality.intersectAdapt(glb.getSize(), lub.getSize());
+		int min = glb.getSize(), max = lub.getSize();
+		if (min > max)
+		    throw Store.failException;
+
+                int eventCardinality = cardinality.intersectAdapt(min, max);
 
                 if (cardinality.isEmpty())
                     throw Store.failException;
@@ -446,9 +450,10 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
      * It updates the domain to have values only within the domain. The type of
      * update is decided by the value of stamp. It informs the variable of a
      * change if it occurred.
+     *
      * @param storeLevel level of the store at which the update occurs.
-     * @param var variable for which this domain is used.
-     * @param setDom the domain according to which the domain is updated.
+     * @param var        variable for which this domain is used.
+     * @param setDom     the domain according to which the domain is updated.
      */
     public void in(int storeLevel, SetVar var, SetDomain setDom) {
         in(storeLevel, var, setDom.glb(), setDom.lub());
@@ -460,6 +465,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
     /**
      * It intersects current domain with the one given as a parameter.
+     *
      * @param domain domain with which the intersection needs to be computed.
      * @return the intersection between supplied domain and this domain.
      */
@@ -479,6 +485,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
     /**
      * It intersects current domain with the one given as a parameter.
+     *
      * @param domain domain with which the intersection needs to be computed.
      * @return the intersection between supplied domain and this domain.
      */
@@ -500,6 +507,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
     /**
      * It returns true if given domain is empty.
+     *
      * @return true if the given domain is empty.
      */
     @Override public boolean isEmpty() {
@@ -510,6 +518,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
     /**
      * It returns true if given domain intersects this domain.
+     *
      * @return true if the given domain intersects this domain.
      */
     // FIXME, improve the implementation.
@@ -519,6 +528,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
     /**
      * In intersects current domain with the interval min..max.
+     *
      * @param min the left bound of the interval (inclusive)
      * @param max the right bound of the interval (inclusive)
      * @return the intersection between the specified interval and this domain.
@@ -530,6 +540,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
     /**
      * A set is never numeric
+     *
      * @return false
      */
     @Override public boolean isNumeric() {
@@ -538,6 +549,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
     /**
      * A set is not sparse
+     *
      * @return false
      */
     @Override public boolean isSparseRepresentation() {
@@ -546,6 +558,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
     /**
      * It returns the least upper bound of the domain.
+     *
      * @return the least upper bound of the domain.
      */
     public IntDomain lub() {
@@ -554,6 +567,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
     /**
      * It sets the domain to the specified domain.
+     *
      * @param domain the domain from which this domain takes all elements.
      */
     public void setDomain(SetDomain domain) {
@@ -583,6 +597,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
     /**
      * It returns true if given domain has only one set-element.
+     *
      * @return true if the domain contains only one set-element.
      */
     @Override public boolean singleton() {
@@ -591,6 +606,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
     /**
      * It returns true if given domain has only one set-element and this set-element only contains c.
+     *
      * @return true if the domain contains only one set-element and this set-element only contains c.
      */
     public boolean singleton(IntDomain set) {
@@ -601,6 +617,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
     /**
      * It subtracts domain from current domain and returns the result.
+     *
      * @param domain the domain which is subtracted from this domain.
      * @return the result of the subtraction.
      */
@@ -617,10 +634,10 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
     /**
      * It subtracts the elements of the set {min..max}.
+     *
      * @param min the left bound of the set.
      * @param max the right bound of the set.
      * @return the domain after removing the int elements specified by the set.
-     *
      */
     public SetDomain subtract(int min, int max) {
 
@@ -634,6 +651,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
     /**
      * It subtracts the set {value}.
      * FIXME, it does not subtract set {value}, it subtracts value from the set domain.
+     *
      * @return the result of the subtraction.
      */
     public SetDomain subtract(int value) {
@@ -683,6 +701,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
     /**
      * It computes union of the supplied domain with this domain.
+     *
      * @param domain the domain for which the union is computed.
      * @return the union of this domain with the supplied one.
      */
@@ -699,6 +718,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
     /**
      * It computes union of this domain and the interval.
+     *
      * @param min the left bound of the interval (inclusive).
      * @param max the right bound of the interval (inclusive).
      * @return the union of this domain and the interval.
@@ -733,6 +753,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
     /**
      * It returns value enumeration of the domain values.
+     *
      * @return valueEnumeration which can be used to enumerate the sets of this domain one by one.
      */
     @Override public ValueEnumeration valueEnumeration() {
@@ -756,8 +777,9 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
     /**
      * It adds if necessary an element to glb.
-     * @param level level at which the change is recorded.
-     * @param var set variable to which the change applies to.
+     *
+     * @param level   level at which the change is recorded.
+     * @param var     set variable to which the change applies to.
      * @param element the element which must be in glb.
      */
     public void inGLB(int level, SetVar var, int element) {
@@ -826,8 +848,9 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
     /**
      * It removes if necessary an element from lub.
-     * @param level level at which the change is recorded.
-     * @param var set variable to which the change applies to.
+     *
+     * @param level   level at which the change is recorded.
+     * @param var     set variable to which the change applies to.
      * @param element the element which can not be in lub.
      */
     @Override public void inLUBComplement(int level, SetVar var, int element) {
@@ -1057,9 +1080,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
      * It assigns a set variable to lub of its current domain.
      *
      * @param level level of the store at which the change takes place.
-     *
-     * @param var variable for which the domain is changing.
-     *
+     * @param var   variable for which the domain is changing.
      */
     public void inValueLUB(int level, SetVar var) {
 
@@ -1179,9 +1200,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
      * It assigns a set variable to glb of its current domain.
      *
      * @param level level of the store at which the change takes place.
-     *
-     * @param var variable for which the domain is changing.
-     *
+     * @param var   variable for which the domain is changing.
      */
     public void inValueGLB(int level, SetVar var) {
 

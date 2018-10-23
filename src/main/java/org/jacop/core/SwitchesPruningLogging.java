@@ -31,7 +31,6 @@
 package org.jacop.core;
 
 /**
- *
  * It is a container class which specifies all different switches to turn
  * on debugging information.
  *

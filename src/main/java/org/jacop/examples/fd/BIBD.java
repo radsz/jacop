@@ -30,18 +30,17 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.jacop.constraints.AndBool;
 import org.jacop.constraints.SumInt;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
- *
- * It models and solves Balanced Incomplete Block Design (BIBD) problem (CSPLIB-P28). 
+ * It models and solves Balanced Incomplete Block Design (BIBD) problem (CSPLIB-P28).
  *
  * @author Radoslaw Szymanek
  * @version 4.5

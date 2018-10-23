@@ -266,8 +266,7 @@ public class IntTrie<N extends IntTrie.Node<N>> {
     /**
      * @return the set of values that the Trie contains (quite inefficient)
      */
-    @SuppressWarnings("unused")
-    public Set<Integer> values() {
+    @SuppressWarnings("unused") public Set<Integer> values() {
         throw new UnsupportedOperationException();
     }
 

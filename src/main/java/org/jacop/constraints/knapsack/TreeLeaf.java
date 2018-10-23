@@ -38,7 +38,6 @@ import org.jacop.core.IntVar;
  *
  * @author Radoslaw Szymanek and Wadeck Follonier
  * @version 4.5
- *
  */
 
 public final class TreeLeaf extends TreeNode {
@@ -97,9 +96,9 @@ public final class TreeLeaf extends TreeNode {
     /**
      * It creates a leaf in the tree of items.
      *
-     * @param quantity finite domain variable specifying the quantity.
-     * @param weight it specifies the weight of one instance of the item.
-     * @param profit it specifies the profit of one instance of the item.
+     * @param quantity          finite domain variable specifying the quantity.
+     * @param weight            it specifies the weight of one instance of the item.
+     * @param profit            it specifies the profit of one instance of the item.
      * @param positionInTheTree it specifies the position in the tree.
      */
 
@@ -224,7 +223,6 @@ public final class TreeLeaf extends TreeNode {
      * and slice. It does not updates anything else in the tree.
      *
      * @param tree it specifies the tree to which this leaf belongs too.
-     *
      */
     public void updateInternalValues(Tree tree) {
 

@@ -105,8 +105,8 @@ public class RootBNode extends BNode {
                 if (min == max && min == val)
                     throw Store.failException;
                 break;
-	default:
-	    throw new RuntimeException("Internal error in " + getClass().getName());
+            default:
+                throw new RuntimeException("Internal error in " + getClass().getName());
         }
 
         double current_min = min();
@@ -192,8 +192,8 @@ public class RootBNode extends BNode {
             case Linear.ge: //=============================================
                 min = val;
                 break;
-	default:
-	    throw new RuntimeException("Internal error in " + getClass().getName());
+            default:
+                throw new RuntimeException("Internal error in " + getClass().getName());
         }
 
         prune(min, max);

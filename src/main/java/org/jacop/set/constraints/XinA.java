@@ -30,8 +30,6 @@
 
 package org.jacop.set.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -39,6 +37,8 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * It creates a constraint that makes sure that the value assigned to integer variable x is
@@ -71,8 +71,9 @@ public class XinA extends PrimitiveConstraint {
 
     /**
      * It constructs an XinY constraint to restrict the domain of the variables X and Y.
-     * @param x variable x that is restriction to be a subset of y.
-     * @param a variable that is restricted to contain x.
+     *
+     * @param x      variable x that is restriction to be a subset of y.
+     * @param a      variable that is restricted to contain x.
      * @param strict it specifies if the inclusion relation is strict.
      */
     public XinA(IntVar x, SetVar a, boolean strict) {
@@ -84,12 +85,13 @@ public class XinA extends PrimitiveConstraint {
 
     /**
      * It constructs an XinA constraint to restrict the domain of the variables X and A.
+     *
      * @param x variable x that is restriction to be a subset of A.
      * @param a variable that is restricted to contain x.
      */
     public XinA(IntVar x, SetVar a) {
 
-        checkInputForNullness(new String[]{"x", "a"}, new Object[]{x, a});
+        checkInputForNullness(new String[] {"x", "a"}, new Object[] {x, a});
 
         this.numberId = idNumber.incrementAndGet();
 

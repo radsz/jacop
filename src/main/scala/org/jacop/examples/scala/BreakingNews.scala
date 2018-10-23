@@ -36,6 +36,7 @@ import org.jacop.scala._
   * A problem defined as in Java based examples.
   *
   * rewriting to Scala by Krzysztof Kuchcinski.
+  *
   * @author Krzysztof Kuchcinski and Radoslaw Szymanek
   * @version 4.4
   */
@@ -44,30 +45,39 @@ object BreakingNews extends App with jacop {
   println("Program to solve Breaking News ")
 
   // String arrays with reporters names.
-  val ReporterName = Array( "Corey", "Jimmy", "Lous", "Perry" )
+  val ReporterName = Array("Corey", "Jimmy", "Lous", "Perry")
 
   // Constant indexes to ease referring to variables denoting reporters.
-  val iCorey = 1; val iJimmy = 2; val iLous = 3; /* val iPerry = 0; */ 
-		
+  val iCorey = 1;
+  val iJimmy = 2;
+  val iLous = 3;
+  /* val iPerry = 0; */
+
   // String arrays with locations names.
-  val LocationName = Array( "Bayonne", "NewHope", "PortCharles",
-				"SouthAmboy" )
-		
+  val LocationName = Array("Bayonne", "NewHope", "PortCharles",
+    "SouthAmboy")
+
   // Constant indexes to ease referring to variables denoting locations.
-  val iBayonne = 0; val iNewHope = 1; val iPortCharles = 2; val iSouthAmboy = 3
+  val iBayonne = 0;
+  val iNewHope = 1;
+  val iPortCharles = 2;
+  val iSouthAmboy = 3
 
   // String arrays with stories names.
-  val StoryName = Array( "30pound", "blimp", "skyscraper", "beached" )
+  val StoryName = Array("30pound", "blimp", "skyscraper", "beached")
 
   // Constant indexes to ease referring to variables denoting stories.
-  val i30pound = 0; val iblimp = 1; val iskyscraper = 2; val ibeached = 3
+  val i30pound = 0;
+  val iblimp = 1;
+  val iskyscraper = 2;
+  val ibeached = 3
 
   // All variables are created with domain 1..4. Variables from
   // different arrays with the same values denote the same person.
 
-  val reporter = Array.tabulate(4)( i => new IntVar(ReporterName(i), 1, 4))
-  val location = Array.tabulate(4)( i => new IntVar(LocationName(i), 1, 4))
-  val story = Array.tabulate(4)( i => new IntVar(StoryName(i), 1, 4))
+  val reporter = Array.tabulate(4)(i => new IntVar(ReporterName(i), 1, 4))
+  val location = Array.tabulate(4)(i => new IntVar(LocationName(i), 1, 4))
+  val story = Array.tabulate(4)(i => new IntVar(StoryName(i), 1, 4))
 
   // It is not possible that one person has two names, or
   // has been in two locations.
@@ -77,7 +87,7 @@ object BreakingNews extends App with jacop {
   alldifferent(story)
 
   // 1. The 30-pound baby wasn't born in South Amboy or New Hope.
-  OR( story(i30pound) #\= location(iNewHope), story(i30pound) #\= location(iSouthAmboy))
+  OR(story(i30pound) #\= location(iNewHope), story(i30pound) #\= location(iSouthAmboy))
 
   // 2. Jimmy didn't go to Port Charles.
   reporter(iJimmy) #\= location(iPortCharles)
@@ -86,18 +96,18 @@ object BreakingNews extends App with jacop {
   // covered, in some order, by Lois and the reporter who was
   // sent to Port Charles.
 
-  OR( AND(story(iblimp) #= reporter(iLous), story(iskyscraper) #= location(iPortCharles)), 
-      AND(story(iblimp) #= location(iPortCharles), story(iskyscraper) #= reporter(iLous)) )
+  OR(AND(story(iblimp) #= reporter(iLous), story(iskyscraper) #= location(iPortCharles)),
+    AND(story(iblimp) #= location(iPortCharles), story(iskyscraper) #= reporter(iLous)))
 
   // 4. South Amboy was not the site of either the beached whale
   // or the skyscraper dedication.
-  OR( location(iSouthAmboy) #\= story(ibeached), location(iSouthAmboy) #\= story(iskyscraper) )
+  OR(location(iSouthAmboy) #\= story(ibeached), location(iSouthAmboy) #\= story(iskyscraper))
 
   // 5. Bayonne is either the place that Corey went or the place
   // where the whale was beached, or both.
-   OR( location(iBayonne) #= reporter(iCorey), location(iBayonne) #= story(ibeached),
-       AND( story(ibeached) #= reporter(iCorey), reporter(iCorey) #= location(iBayonne)) )
+  OR(location(iBayonne) #= reporter(iCorey), location(iBayonne) #= story(ibeached),
+    AND(story(ibeached) #= reporter(iCorey), reporter(iCorey) #= location(iBayonne)))
 
 
-  val result = satisfy( search( reporter ++ location ++ story, input_order, indomain_min) )
+  val result = satisfy(search(reporter ++ location ++ story, input_order, indomain_min))
 }

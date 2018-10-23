@@ -38,13 +38,11 @@ import java.io.IOException;
 import java.util.Collection;
 
 /**
- *
  * Test class for running problems above 1hour. It is not really used except to
  * see if some problems are now being executed faster.
  *
  * @author Mariusz Świerkot and Radoslaw Szymanek
  * @version 4.5
- *
  */
 @RunWith(Parameterized.class) public class MinizincBasedTestAbove1Hours extends MinizincBasedTestsHelper {
     protected static final String timeCategory = "above1hour/";

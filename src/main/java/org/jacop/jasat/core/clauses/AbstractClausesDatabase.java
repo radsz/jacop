@@ -31,27 +31,25 @@
 
 package org.jacop.jasat.core.clauses;
 
-import java.io.BufferedWriter;
-import java.util.Arrays;
-
 import org.jacop.jasat.core.Core;
 import org.jacop.jasat.core.SolverComponent;
 import org.jacop.jasat.core.Trail;
 import org.jacop.jasat.utils.MemoryPool;
 import org.jacop.jasat.utils.Utils;
 
+import java.io.BufferedWriter;
+import java.util.Arrays;
+
 /**
- *
- * This class specifies an abstract class for clauses pools. 
- *
- * Those databases must use a MemoryPool to allocate their structures. 
- *
- * All ClausesDatabases have access to the DatabasesStore they belong to, so that they can 
+ * This class specifies an abstract class for clauses pools.
+ * <p>
+ * Those databases must use a MemoryPool to allocate their structures.
+ * <p>
+ * All ClausesDatabases have access to the DatabasesStore they belong to, so that they can
  * convert the clauses unique ID to their local clauses index, and conversely.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 public abstract class AbstractClausesDatabase implements SolverComponent, ClauseDatabaseInterface {
@@ -95,11 +93,9 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
      */
 
     /**
-     *
      * The first dimension corresponds to the index of the variable for which the watches are stored.
      * The second index at position equal to 0 then it specifies the first free position to put index of next watched clause.
      * The second index at position equal to n then it specifies the clause index of the n-th watched clause.
-     *
      */
     protected int[][] watchLists = new int[10][];
 
@@ -113,6 +109,7 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
     /**
      * Indicates how much this database is optimized for this clause. The
      * Database that gives the higher rank will get the clause.
+     *
      * @param clause a clause to rate
      * @return a non negative integer indicating how much the database is interested in this clause
      */
@@ -121,6 +118,7 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
     /**
      * Called by the databaseStore, to inform the DatabasesStore of which
      * index it has.
+     *
      * @param index the index of the database
      */
     public final void setDatabaseIndex(int index) {
@@ -136,7 +134,8 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
 
     /**
      * gets an unique ID from a clause index in this clause database
-     * @param clauseIndex  a local clause index
+     *
+     * @param clauseIndex a local clause index
      * @return an unique ID
      */
     public final int indexToUniqueId(int clauseIndex) {
@@ -145,7 +144,8 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
 
     /**
      * gets a local index from the unique ID
-     * @param clauseId  the unique Id
+     *
+     * @param clauseId the unique Id
      * @return the index of the clause it corresponds to
      */
     public final int uniqueIdToIndex(int clauseId) {
@@ -153,7 +153,7 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
     }
 
     /**
-     * @param literal the literal to check
+     * @param literal     the literal to check
      * @param clauseIndex the clause id for checking
      * @return true if the literal watches the clause, false otherwise
      */
@@ -175,7 +175,8 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
 
     /**
      * ensures that varWatches.get(var) will succeed with a correct content.
-     * @param var  the var we want to be able to add clauses to watch to
+     *
+     * @param var the var we want to be able to add clauses to watch to
      */
     protected final void ensureWatch(int var) {
 
@@ -202,8 +203,9 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
 
     /**
      * adds a watch (var {@literal =>} clause), ie make var watch clause
-     * @param literal    the watching literal
-     * @param clauseIndex  the index of clause to watch. Not a unique ID.
+     *
+     * @param literal     the watching literal
+     * @param clauseIndex the index of clause to watch. Not a unique ID.
      */
     protected final void addWatch(int literal, int clauseIndex) {
 
@@ -234,8 +236,9 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
 
     /**
      * removes the clause from the list of clauses that literal watches
-     * @param literal    the literal
-     * @param clauseIndex  the clause to remove
+     *
+     * @param literal     the literal
+     * @param clauseIndex the clause to remove
      */
     protected final void removeWatch(int literal, int clauseIndex) {
 
@@ -277,6 +280,7 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
 
     /**
      * number of clauses in the database
+     *
      * @return the number of clauses in the database
      */
     public abstract int size();
@@ -284,6 +288,7 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
     /**
      * prints the content of the database in a nice way, each line being
      * prefixed with
+     *
      * @param prefix prefix for printed line
      * @return a String representation of the database
      */
@@ -312,15 +317,17 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
 
     /**
      * It creates a CNF description of the clauses stored in this database.
+     *
      * @param output it specifies the target to which the description will be written.
      */
     public abstract void toCNF(BufferedWriter output) throws java.io.IOException;
 
     /**
      * swaps the two literals at position i and j in the clause
-     * @param clause  the clause
+     *
+     * @param clause the clause
      * @param i      the position (index) of the first literal
-     * @param j    the position of the second literal
+     * @param j      the position of the second literal
      */
     protected final void swap(int[] clause, int i, int j) {
         //assert i >= 0 && j >= 0;

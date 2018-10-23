@@ -72,8 +72,6 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
         setScope(set);
     }
 
-
-
     public boolean trace = SwitchesPruningLogging.traceConstraint;
 
     /**
@@ -133,7 +131,6 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     public void removeLevelLate(int level) {
     }
 
-
     /**
      * It is a (most probably incomplete) consistency function which removes the
      * values from variables domains. Only values which do not have any support
@@ -174,7 +171,6 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
 
     }
 
-
     public abstract int getDefaultConsistencyPruningEvent();
 
     /**
@@ -205,7 +201,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
         if (this instanceof UsesQueueVariable)
             arguments().stream().forEach(i -> queueVariable(store.level, i));
         if (this instanceof Stateful) {
-            Stateful c = (Stateful)this;
+            Stateful c = (Stateful) this;
             if (c.isStateful()) {
                 store.registerRemoveLevelListener(c);
             }
@@ -288,6 +284,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
 
     /**
      * It checks if provided variables are grounded (singletons).
+     *
      * @param vars variables to be checked if they are grounded.
      * @return true if all variables in constraint scope are singletons, false otherwise.
      */
@@ -349,14 +346,11 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     /**
      * It increases the weight of the variables in the constraint scope.
      */
-
     public void increaseWeight() {
+
         if (increaseWeight)
-            arguments().stream().forEach(i -> increaseWeight());
+            arguments().forEach(v -> v.weight++);
     }
-
-    ;
-
 
     /**
      * It allows to customize the event for a given variable which
@@ -368,7 +362,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     public void setConsistencyPruningEvent(final Var var, final int pruningEvent) {
 
         if (consistencyPruningEvents == null)
-            consistencyPruningEvents = new Hashtable<Var, Integer>();
+            consistencyPruningEvents = new Hashtable<>();
         consistencyPruningEvents.put(var, pruningEvent);
 
     }
@@ -464,13 +458,13 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
             throw new ArithmeticException("Overflow occurred " + f);
         }
     }
-    
+
     int long2int(long value) {
-	if (value > (long)Integer.MAX_VALUE)
-	    return Integer.MAX_VALUE;
-	else if (value < (long)Integer.MIN_VALUE)
-	    return Integer.MIN_VALUE;
-	else
-	    return (int)value;
+        if (value > (long) Integer.MAX_VALUE)
+            return Integer.MAX_VALUE;
+        else if (value < (long) Integer.MIN_VALUE)
+            return Integer.MIN_VALUE;
+        else
+            return (int) value;
     }
 }

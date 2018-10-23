@@ -29,42 +29,27 @@
  */
 package org.jacop.fz.constraints;
 
-import org.jacop.fz.*;
-
-import org.jacop.core.Store;
+import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
-
-import org.jacop.constraints.XplusYeqC;
-import org.jacop.constraints.XplusCeqZ;
-import org.jacop.constraints.XplusYeqZ;
-import org.jacop.constraints.XmulYeqZ;
-import org.jacop.constraints.XmulYeqC;
-import org.jacop.constraints.XmulCeqZ;
-import org.jacop.constraints.AndBoolSimple;
-import org.jacop.constraints.XdivYeqZ;
-import org.jacop.constraints.XmodYeqZ;
-import org.jacop.constraints.MinSimple;
-import org.jacop.constraints.XeqY;
-import org.jacop.constraints.MaxSimple;
-import org.jacop.constraints.AbsXeqY;
-import org.jacop.constraints.XexpYeqZ;
+import org.jacop.core.Store;
 import org.jacop.floats.constraints.XeqP;
+import org.jacop.fz.ASTScalarFlatExpr;
+import org.jacop.fz.ParserTreeConstants;
+import org.jacop.fz.SimpleNode;
 
 /**
- *
  * Generation of linear constraints in flatzinc
  *
- * @author Krzysztof Kuchcinski 
- *
+ * @author Krzysztof Kuchcinski
  */
 class OperationConstraints implements ParserTreeConstants {
 
     Support support;
     Store store;
-    
+
     public OperationConstraints(Support support) {
-	this.support = support;
-	this.store = support.store;
+        this.support = support;
+        this.store = support.store;
     }
 
     void gen_int_min(SimpleNode node) {
@@ -170,32 +155,29 @@ class OperationConstraints implements ParserTreeConstants {
             if (c == 1)
                 support.pose(new XeqY(support.getVariable(p2), support.getVariable(p3)));
             else if (c == 0) {
-		IntVar v3 = support.getVariable(p3);
-		v3.domain.in(store.level, v3, 0, 0);
-	    }
-	    else
+                IntVar v3 = support.getVariable(p3);
+                v3.domain.in(store.level, v3, 0, 0);
+            } else
                 support.pose(new XmulCeqZ(support.getVariable(p2), c, support.getVariable(p3)));
         } else if (p2.getType() == 0) {// p2 int
             int c = support.getInt(p2);
             if (c == 1)
                 support.pose(new XeqY(support.getVariable(p1), support.getVariable(p3)));
             else if (c == 0) {
-		IntVar v3 = support.getVariable(p3);
-		v3.domain.in(store.level, v3, 0, 0);
-	    }
-	    else
+                IntVar v3 = support.getVariable(p3);
+                v3.domain.in(store.level, v3, 0, 0);
+            } else
                 support.pose(new XmulCeqZ(support.getVariable(p1), support.getInt(p2), support.getVariable(p3)));
         } else if (p3.getType() == 0) {// p3 int
             support.pose(new XmulYeqC(support.getVariable(p1), support.getVariable(p2), support.getInt(p3)));
         } else {
             IntVar v1 = support.getVariable(p1), v2 = support.getVariable(p2), v3 = support.getVariable(p3);
             if (v1.min() >= 0 && v1.max() <= 1 && v2.min() >= 0 && v2.max() <= 1 && v3.min() >= 0 && v3.max() <= 1) {
-		if (v1.equals(v2))
-		    support.pose(new XeqY(v1, v3));
-		else
-		    support.pose(new AndBoolSimple(v1, v2, v3));
-	    }
-            else if ((v1.singleton() && v1.value() == 0) || (v2.singleton() && v2.value() == 0))
+                if (v1.equals(v2))
+                    support.pose(new XeqY(v1, v3));
+                else
+                    support.pose(new AndBoolSimple(v1, v2, v3));
+            } else if ((v1.singleton() && v1.value() == 0) || (v2.singleton() && v2.value() == 0))
                 v3.domain.in(store.level, v3, 0, 0);
             else
                 support.pose(new XmulYeqZ(v1, v2, v3));

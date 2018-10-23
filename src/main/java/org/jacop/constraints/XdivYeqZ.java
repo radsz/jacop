@@ -31,13 +31,13 @@
 
 package org.jacop.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
 import org.jacop.core.Store;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraint X div Y #= Z
@@ -67,13 +67,14 @@ public class XdivYeqZ extends Constraint implements SatisfiedPresent {
 
     /**
      * It constructs a constraint X div Y = Z.
+     *
      * @param x variable x.
      * @param y variable y.
      * @param z variable z.
      */
     public XdivYeqZ(IntVar x, IntVar y, IntVar z) {
 
-        checkInputForNullness(new String[]{"x", "y", "z"}, new Object[]{x, y, z});
+        checkInputForNullness(new String[] {"x", "y", "z"}, new Object[] {x, y, z});
 
         numberId = idNumber.incrementAndGet();
 

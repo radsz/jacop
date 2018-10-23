@@ -30,26 +30,15 @@
 
 package org.jacop.constraints.netflow.simplex;
 
-import static org.jacop.constraints.netflow.Assert.checkBeforeUpdate;
-import static org.jacop.constraints.netflow.Assert.checkFlow;
-import static org.jacop.constraints.netflow.Assert.checkInfeasibleNodes;
-import static org.jacop.constraints.netflow.Assert.checkOptimality;
-import static org.jacop.constraints.netflow.Assert.checkStructure;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-
 import org.jacop.constraints.netflow.Pruning;
 
+import java.util.*;
+
+import static org.jacop.constraints.netflow.Assert.*;
+
 /**
- *
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 public class NetworkSimplex {
@@ -275,10 +264,9 @@ public class NetworkSimplex {
     /** Primal Network Simplex **/
 
     /**
-     *
      * @param maxPivots max value of the pivot
      * @return the number of pivots performed until optimality was reached, or
-     *         -1 if the maximum number of pivots was reached.
+     * -1 if the maximum number of pivots was reached.
      */
     public int networkSimplex(int maxPivots) {
 
@@ -308,7 +296,7 @@ public class NetworkSimplex {
                 Arc arc = node.artificial;
                 arc.set(-LARGE_COST, -delta);
                 if (arc.index == DELETED_ARC) {
-					/*addArc(arc);*/
+          /*addArc(arc);*/
                     assert false;
                 }
                 if (arc.index != TREE_ARC)
@@ -395,8 +383,7 @@ public class NetworkSimplex {
     /**
      * Performs a primal pivot.
      *
-     * @param entering
-     *            a non-tree arc that violates optimality
+     * @param entering a non-tree arc that violates optimality
      */
     public void primalStep(Arc entering) {
         // entering arc (k,l)
@@ -433,14 +420,11 @@ public class NetworkSimplex {
      * Augments the flow between two nodes by the maximum amount along the
      * unique tree path that connects these nodes.
      *
-     * @param from
-     *            the source of the flow
-     * @param to
-     *            the sink of the flow
-     * @param delta
-     *            an upper limit on the flow to send
+     * @param from  the source of the flow
+     * @param to    the sink of the flow
+     * @param delta an upper limit on the flow to send
      * @return the actual flow that was sent. the blocking arc is 'returned' in
-     *         the instance field 'blocking'.
+     * the instance field 'blocking'.
      */
     public int augmentFlow(Node from, Node to, int delta) {
         assert (delta >= 0);
@@ -481,14 +465,12 @@ public class NetworkSimplex {
 
     /**
      * TODO prove (or disprove) correctness (and efficiency)
-     *
+     * <p>
      * Both arcs must form a cycle in the tree and point in the same direction
      * on that cycle.
      *
-     * @param leaving
-     *            the tree arc that leaves the tree
-     * @param entering
-     *            the non-tree arc that enters the tree
+     * @param leaving  the tree arc that leaves the tree
+     * @param entering the non-tree arc that enters the tree
      */
     public void updateTree(Arc leaving, Arc entering) {
 
@@ -556,22 +538,19 @@ public class NetworkSimplex {
 
     /**
      * TODO prove (or disprove) correctness
-     *
+     * <p>
      * TODO can be 'inlined' in updateTree (but that would decrease readability)
-     *
+     * <p>
      * Changes the parent of a node and updates the thread data structure (This
      * operation invalidates the depth values in the subtree)
-     *
+     * <p>
      * Runs in O(T2) amortized time over all treeSwaps performed by an
      * updateTree operation where T2 is the size of the subtree that is being
      * reversed.
      *
-     * @param a
-     *            the old parent of a
-     * @param b
-     *            the child node
-     * @param c
-     *            the new parent of a
+     * @param a the old parent of a
+     * @param b the child node
+     * @param c the new parent of a
      */
     public void treeSwap(Node a, Node b, Node c) {
         // shortcut for multiple arcs (for performance, not correctness)
@@ -595,19 +574,18 @@ public class NetworkSimplex {
      * Given an optimal flow that satisfies all feasibility constraints except
      * mass balance on two nodes, the parametric simplex algorithm tries to
      * achieve feasibility while keeping the solution optimal.
-     *
+     * <p>
      * TODO do more tests TODO test whether non-feasibility can actually be
      * detected due to the fact that we have 'artificial' arcs going to the
      * root.
      *
-     * @param source source node
-     * @param sink sink node
-     * @param balance difference between in flow and out flow
-     *            the flow to send from the source to the sink
-     * @param maxPivots
-     *            limits the number of dual pivots
+     * @param source    source node
+     * @param sink      sink node
+     * @param balance   difference between in flow and out flow
+     *                  the flow to send from the source to the sink
+     * @param maxPivots limits the number of dual pivots
      * @return the number of pivots on success, -1 if the pivot limit was
-     *         reached, -2 if the problem is infeasible
+     * reached, -2 if the problem is infeasible
      */
     public int parametricStep(Node source, Node sink, int balance, int maxPivots) {
         // check input
@@ -715,7 +693,9 @@ public class NetworkSimplex {
     }
 
     /***********/
-    /** Debug **/
+    /**
+     * Debug
+     **/
 
     // displays the state of the spanning tree and the flow
     public void print() {

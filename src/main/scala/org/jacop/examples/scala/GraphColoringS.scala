@@ -38,9 +38,9 @@ import org.jacop.scala._
   * @author Krzysztof Kuchcinski and Radoslaw Szymanek
   * @version 4.5
   */
-object GraphColoringS extends App with jacop{
+object GraphColoringS extends App with jacop {
   val size = 4
-  val v = Array.tabulate(size)(i => new IntVar("v"+i, 1, size))
+  val v = Array.tabulate(size)(i => new IntVar("v" + i, 1, size))
 
   v.foreach(x => println(x))
 
@@ -53,13 +53,13 @@ object GraphColoringS extends App with jacop{
   val result = satisfy(search(v, input_order, indomain_min), printSol())
   statistics()
 
-  if ( result )
-    println("*** After Search: " + v(0)+", "+v(1) +", "+ v(2) +", "+v(3))
+  if (result)
+    println("*** After Search: " + v(0) + ", " + v(1) + ", " + v(2) + ", " + v(3))
   else
     println("*** No")
 
-  def printSol () = () => {
-        println("Solution: " + v.toList)
+  def printSol() = () => {
+    println("Solution: " + v.toList)
   }
 
 }

@@ -30,64 +30,54 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
-import org.jacop.constraints.Alldifferent;
-import org.jacop.constraints.And;
-import org.jacop.constraints.Or;
-import org.jacop.constraints.Reified;
-import org.jacop.constraints.SumInt;
-import org.jacop.constraints.XeqC;
-import org.jacop.constraints.XeqY;
-import org.jacop.constraints.XneqC;
-import org.jacop.constraints.XneqY;
+import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.util.ArrayList;
+
 /**
- *
- * It solves a simple logic puzzle about music concert. 
+ * It solves a simple logic puzzle about music concert.
  *
  * @author Lesniak Kamil, Harezlak Roman, Radoslaw Szymanek
  * @version 4.5
- *
- * Tim and Keri have a full day ahead for themselves as they plan to see
- * and hear everything at Tunapalooza '98, the annual save-the-tuna
- * benefit concert in their hometown. To cover the most ground, they
- * will have to split up.  They have arranged to meet during four rock
- * band acts (Ellyfish, Korrupt, Retread Ed and the Flat Tires, and
- * Yellow Reef) at planned rendezvous points (carnival games,
- * information booth, mosh pit, or T-shirt vendor).  Can you help match
- * each band name with the type of music they play (country, grunge,
- * reggae, or speed metal) and Tim and Kerri's prearranged meeting spot
- * while they play?
- *
- * 1. Korrupt isn't a country or grunge music band. 
- *
- * 2. Tim and Kerri won't meet at the carnival games during Ellyfish's performance.
- *
- * 3. The pair won't meet at the T-shirt vendor during the reggae band's show.
- *
- * 4. Exactly two of the following three statements are true:
- * a) Ellyfish plays grunge music.
- * b) Tim and Kerri won't meet at the information booth during a performance by Retread Ed and the Flat Tires.
- * c) The two friends won't meet at the T-shirt vendor while Yellow Reef is playing.
- *
- * 5. The country and speed metal acts are, in some order, Retread Ed and the Flat Tires 
- * and the act during which Tim and Kerri will meet at the mosh pit.
- *
- * 6. The reggae band is neither Korrupt nor the act during which Tim and 
- * Kerri will meet at the information booth.
- *
- * Determine: Band name -- Music type -- Meeting place
- *
- * Given solution : 
- *
- * 1 Ellyfish, grunge,  vendor
- * 2 Korrupt,  metal,   mosh
- * 3 Retread,  country, information 
- * 4 Yellow ,  reggae,  carnival
- *
+ *          <p>
+ *          Tim and Keri have a full day ahead for themselves as they plan to see
+ *          and hear everything at Tunapalooza '98, the annual save-the-tuna
+ *          benefit concert in their hometown. To cover the most ground, they
+ *          will have to split up.  They have arranged to meet during four rock
+ *          band acts (Ellyfish, Korrupt, Retread Ed and the Flat Tires, and
+ *          Yellow Reef) at planned rendezvous points (carnival games,
+ *          information booth, mosh pit, or T-shirt vendor).  Can you help match
+ *          each band name with the type of music they play (country, grunge,
+ *          reggae, or speed metal) and Tim and Kerri's prearranged meeting spot
+ *          while they play?
+ *          <p>
+ *          1. Korrupt isn't a country or grunge music band.
+ *          <p>
+ *          2. Tim and Kerri won't meet at the carnival games during Ellyfish's performance.
+ *          <p>
+ *          3. The pair won't meet at the T-shirt vendor during the reggae band's show.
+ *          <p>
+ *          4. Exactly two of the following three statements are true:
+ *          a) Ellyfish plays grunge music.
+ *          b) Tim and Kerri won't meet at the information booth during a performance by Retread Ed and the Flat Tires.
+ *          c) The two friends won't meet at the T-shirt vendor while Yellow Reef is playing.
+ *          <p>
+ *          5. The country and speed metal acts are, in some order, Retread Ed and the Flat Tires
+ *          and the act during which Tim and Kerri will meet at the mosh pit.
+ *          <p>
+ *          6. The reggae band is neither Korrupt nor the act during which Tim and
+ *          Kerri will meet at the information booth.
+ *          <p>
+ *          Determine: Band name -- Music type -- Meeting place
+ *          <p>
+ *          Given solution :
+ *          <p>
+ *          1 Ellyfish, grunge,  vendor
+ *          2 Korrupt,  metal,   mosh
+ *          3 Retread,  country, information
+ *          4 Yellow ,  reggae,  carnival
  */
 
 public class Tunapalooza extends ExampleFD {
@@ -180,6 +170,7 @@ public class Tunapalooza extends ExampleFD {
 
     /**
      * It executes the program to solve this simple logic puzzle.
+     *
      * @param args no arguments are used.
      */
     public static void main(String args[]) {

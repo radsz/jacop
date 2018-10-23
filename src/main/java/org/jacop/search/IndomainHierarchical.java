@@ -30,20 +30,19 @@
 
 package org.jacop.search;
 
+import org.jacop.core.Var;
+
 import java.util.HashMap;
 import java.util.Map;
-
-import org.jacop.core.Var;
 
 /**
  * IndomainHierarchical - implements enumeration method based on the selection
  * of the preferred indomain for each variable. The initial idea of having such
  * functionality was proposed by Ben Weiner.
  *
- * @author Radoslaw Szymanek 
- *
- * @version 4.5
  * @param <T> type of variable being used in the search.
+ * @author Radoslaw Szymanek
+ * @version 4.5
  */
 
 public class IndomainHierarchical<T extends Var> implements Indomain<T> {
@@ -61,7 +60,8 @@ public class IndomainHierarchical<T extends Var> implements Indomain<T> {
     /**
      * Constructor which specifies the mapping and default indomain to be used
      * if mapping does not give specific indomain for some variables.
-     * @param hashmap a mapping from variable to indomain heuristic used.
+     *
+     * @param hashmap     a mapping from variable to indomain heuristic used.
      * @param defIndomain default indomain used if hashmap does not contain an entry.
      */
 

@@ -81,8 +81,7 @@ public class LinearIntDom extends LinearInt {
      * @param sum     the sum of weighted variables.
      * @deprecated LinearIntDom constraint does not use Store parameter any longer.
      */
-    @Deprecated
-    public LinearIntDom(Store store, IntVar[] list, int[] weights, String rel, int sum) {
+    @Deprecated public LinearIntDom(Store store, IntVar[] list, int[] weights, String rel, int sum) {
         commonInitialization(store, list, weights, rel, sum);
         numberId = idNumber.incrementAndGet();
         queueIndex = 4;
@@ -98,8 +97,7 @@ public class LinearIntDom extends LinearInt {
      * @param sum     variable containing the sum of weighted variables.
      * @deprecated LinearIntDom constraint does not use Store parameter any longer.
      */
-    @Deprecated
-    public LinearIntDom(Store store, IntVar[] list, int[] weights, String rel, IntVar sum) {
+    @Deprecated public LinearIntDom(Store store, IntVar[] list, int[] weights, String rel, IntVar sum) {
         commonInitialization(store, Stream.concat(Arrays.stream(list), Stream.of(sum)).toArray(IntVar[]::new),
             IntStream.concat(Arrays.stream(weights), IntStream.of(-1)).toArray(), rel, 0);
         numberId = idNumber.incrementAndGet();
@@ -117,8 +115,7 @@ public class LinearIntDom extends LinearInt {
      * @param sum       variable containing the sum of weighted variables.
      * @deprecated LinearIntDom constraint does not use Store parameter any longer.
      */
-    @Deprecated
-    public LinearIntDom(Store store, List<? extends IntVar> variables, List<Integer> weights, String rel, int sum) {
+    @Deprecated public LinearIntDom(Store store, List<? extends IntVar> variables, List<Integer> weights, String rel, int sum) {
         commonInitialization(store, variables.toArray(new IntVar[variables.size()]), weights.stream().mapToInt(i -> i).toArray(), rel, sum);
         numberId = idNumber.incrementAndGet();
         queueIndex = 4;
@@ -126,6 +123,7 @@ public class LinearIntDom extends LinearInt {
 
 
     // ================ new constructors ===================
+
     /**
      * It constructs the constraint LinearIntDom.
      *
@@ -155,7 +153,7 @@ public class LinearIntDom extends LinearInt {
         queueIndex = 4;
 
     }
-    
+
     /**
      * It constructs the constraint LinearIntDom.
      *
@@ -165,7 +163,8 @@ public class LinearIntDom extends LinearInt {
      * @param sum       variable containing the sum of weighted variables.
      */
     public LinearIntDom(List<? extends IntVar> variables, List<Integer> weights, String rel, int sum) {
-        commonInitialization(variables.get(0).getStore(), variables.toArray(new IntVar[variables.size()]), weights.stream().mapToInt(i -> i).toArray(), rel, sum);
+        commonInitialization(variables.get(0).getStore(), variables.toArray(new IntVar[variables.size()]),
+            weights.stream().mapToInt(i -> i).toArray(), rel, sum);
         numberId = idNumber.incrementAndGet();
         queueIndex = 4;
     }
@@ -181,38 +180,36 @@ public class LinearIntDom extends LinearInt {
     public void propagate(int rel) {
 
 
-	switch (rel) {
-	case eq:
-		    
-	    if (domainSize() < limitDomainPruning) {
-		computeInit();
-		pruneEq(); // domain consistency
-	    }
-	    else  
-		// bound consistency
-		super.propagate(rel);
+        switch (rel) {
+            case eq:
 
-	    break;
+                if (domainSize() < limitDomainPruning) {
+                    computeInit();
+                    pruneEq(); // domain consistency
+                } else
+                    // bound consistency
+                    super.propagate(rel);
 
-	case ne:
-	    if (domainSize() < limitDomainPruning) {
-		computeInit();
-		pruneNeq();
-	    
-		computeInit();
+                break;
 
-		if (!reified && (sumMin > b || sumMax < b))
-		    removeConstraint();
-	    }
-	    else 
-		super.propagate(rel);
-		    
-	    break;
+            case ne:
+                if (domainSize() < limitDomainPruning) {
+                    computeInit();
+                    pruneNeq();
 
-	default:
-	    System.out.println("Not implemented relation in LinearIntDom; implemented == and != only.");
-	    break;
-	}
+                    computeInit();
+
+                    if (!reified && (sumMin > b || sumMax < b))
+                        removeConstraint();
+                } else
+                    super.propagate(rel);
+
+                break;
+
+            default:
+                System.out.println("Not implemented relation in LinearIntDom; implemented == and != only.");
+                break;
+        }
     }
 
     double domainSize() {
@@ -232,13 +229,13 @@ public class LinearIntDom extends LinearInt {
         support = new IntervalDomain[l];
 
         findSupport(0, 0L);
-	
+
         // System.out.println("Variables: "+java.util.Arrays.asList(x)+" have valid assignments: " + java.util.Arrays.asList(support));
         for (int i = 0; i < l; i++)
-	    if (support[i] == null)
-		throw store.failException;
-	    else
-		x[i].domain.in(store.level, x[i], support[i]);
+            if (support[i] == null)
+                throw store.failException;
+            else
+                x[i].domain.in(store.level, x[i], support[i]);
     }
 
     void pruneNeq() {
@@ -251,11 +248,10 @@ public class LinearIntDom extends LinearInt {
         // System.out.println("valid assignments: " + java.util.Arrays.asList(support));
 
         for (int i = 0; i < l; i++)
-	    if (support[i] == null)
-		removeConstraint();
-	    else
-		if (support[i].singleton())
-		    x[i].domain.inComplement(store.level, x[i], support[i].value());
+            if (support[i] == null)
+                removeConstraint();
+            else if (support[i].singleton())
+                x[i].domain.inComplement(store.level, x[i], support[i].value());
 
     }
 
@@ -274,7 +270,7 @@ public class LinearIntDom extends LinearInt {
             long element = b - partialSum;
             long val = element / a[index];
             long rest = element % a[index];
-	    int valInt = (int)val;
+            int valInt = (int) val;
             if (rest == 0 && valInt == val && x[index].domain.contains(valInt)) {
                 assignments[index] = valInt;
 
@@ -310,7 +306,7 @@ public class LinearIntDom extends LinearInt {
 
                 for (int element = eMin; element <= eMax; element++) {
 
-                    long elementValue = (long)element * w;
+                    long elementValue = (long) element * w;
                     if (elementValue < lb)
                         continue; // value too low
                     else if (elementValue > ub)
@@ -331,7 +327,7 @@ public class LinearIntDom extends LinearInt {
             for (ValueEnumeration val = currentDom.valueEnumeration(); val.hasMoreElements(); ) {
                 int element = val.nextElement();
 
-                long elementValue = (long)element * w;
+                long elementValue = (long) element * w;
                 if (elementValue < lb)
                     continue; // value too low
                 else if (elementValue > ub)
@@ -358,7 +354,7 @@ public class LinearIntDom extends LinearInt {
             long element = b - partialSum;
             long val = element / a[index];
             long rest = element % a[index];
-	    int valInt = (int)val;
+            int valInt = (int) val;
             if (rest == 0 && valInt == val && x[index].domain.contains(valInt)) {
                 assignments[index] = valInt;
 
@@ -394,7 +390,7 @@ public class LinearIntDom extends LinearInt {
 
                 for (int element = eMin; element <= eMax; element++) {
 
-                    long elementValue = (long)element * w;
+                    long elementValue = (long) element * w;
                     if (elementValue < lb)
                         break outerloop; // value too low
                     else if (elementValue > ub)
@@ -411,7 +407,7 @@ public class LinearIntDom extends LinearInt {
             for (ValueEnumeration val = currentDom.valueEnumeration(); val.hasMoreElements(); ) {
                 int element = val.nextElement();
 
-                long elementValue = (long)element * w;
+                long elementValue = (long) element * w;
                 if (elementValue < lb)
                     break; // value too low
                 else if (elementValue > ub)

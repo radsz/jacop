@@ -31,14 +31,14 @@
 
 package org.jacop.constraints;
 
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
-
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
+
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
 /**
  * Diff constraint assures that any two rectangles from a vector of rectangles
@@ -88,8 +88,9 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
     /**
      * It specifies a diff constraint.
+     *
      * @param rectangles list of rectangles which can not overlap in at least one dimension.
-     * @param doProfile should the constraint compute and use the profile functionality.
+     * @param doProfile  should the constraint compute and use the profile functionality.
      */
     public Diff(Rectangle[] rectangles, boolean doProfile) {
 
@@ -108,6 +109,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
     /**
      * It specifies a diff constraint.
+     *
      * @param rectangles list of rectangles which can not overlap in at least one dimension.
      */
     public Diff(IntVar[][] rectangles) {
@@ -123,10 +125,11 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
     /**
      * It constructs a diff constraint.
-     * @param o1 list of variables denoting origin of the rectangle in the first dimension.
-     * @param o2 list of variables denoting origin of the rectangle in the second dimension.
-     * @param l1 list of variables denoting length of the rectangle in the first dimension.
-     * @param l2 list of variables denoting length of the rectangle in the second dimension.
+     *
+     * @param o1      list of variables denoting origin of the rectangle in the first dimension.
+     * @param o2      list of variables denoting origin of the rectangle in the second dimension.
+     * @param l1      list of variables denoting length of the rectangle in the first dimension.
+     * @param l2      list of variables denoting length of the rectangle in the second dimension.
      * @param profile it specifies if the profile should be computed and used.
      */
     public Diff(IntVar[] o1, IntVar[] o2, IntVar[] l1, IntVar[] l2, boolean profile) {
@@ -136,6 +139,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
     /**
      * It constructs a diff constraint.
+     *
      * @param origin1 list of variables denoting origin of the rectangle in the first dimension.
      * @param origin2 list of variables denoting origin of the rectangle in the second dimension.
      * @param length1 list of variables denoting length of the rectangle in the first dimension.
@@ -144,8 +148,8 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
     public Diff(IntVar[] origin1, IntVar[] origin2, IntVar[] length1, IntVar[] length2) {
 
-        checkInputForNullness(new String[]{"origin1", "origin2", "length1", "length2"},
-            new Object[][]{origin1, origin2, length1, length2});
+        checkInputForNullness(new String[] {"origin1", "origin2", "length1", "length2"},
+            new Object[][] {origin1, origin2, length1, length2});
 
         queueIndex = 2;
         this.rectangles = Rectangle.toArrayOf2DRectangles(origin1, origin2, length1, length2);
@@ -156,6 +160,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
     /**
      * It specifies a diffn constraint.
+     *
      * @param rectangles list of rectangles which can not overlap in at least one dimension.
      */
     public Diff(List<? extends List<? extends IntVar>> rectangles) {
@@ -169,7 +174,8 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
     /**
      * It specifies a diff constraint.
-     * @param profile specifies is the profiles are used.
+     *
+     * @param profile    specifies is the profiles are used.
      * @param rectangles list of rectangles which can not overlap in at least one dimension.
      */
     public Diff(List<? extends List<? extends IntVar>> rectangles, boolean profile) {
@@ -182,13 +188,13 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
     /**
      * It constructs a diff constraint.
+     *
      * @param o1 list of variables denoting origin of the rectangle in the first dimension.
      * @param o2 list of variables denoting origin of the rectangle in the second dimension.
      * @param l1 list of variables denoting length of the rectangle in the first dimension.
      * @param l2 list of variables denoting length of the rectangle in the second dimension.
      */
-    public Diff(List<? extends IntVar> o1, List<? extends IntVar> o2, List<? extends IntVar> l1,
-        List<? extends IntVar> l2) {
+    public Diff(List<? extends IntVar> o1, List<? extends IntVar> o2, List<? extends IntVar> l1, List<? extends IntVar> l2) {
 
         this(o1.toArray(new IntVar[o1.size()]), o2.toArray(new IntVar[o2.size()]), l1.toArray(new IntVar[l1.size()]),
             l2.toArray(new IntVar[l2.size()]));
@@ -197,21 +203,23 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
     /**
      * It constructs a diff constraint.
-     * @param o1 list of variables denoting origin of the rectangle in the first dimension.
-     * @param o2 list of variables denoting origin of the rectangle in the second dimension.
-     * @param l1 list of variables denoting length of the rectangle in the first dimension.
-     * @param l2 list of variables denoting length of the rectangle in the second dimension.
+     *
+     * @param o1      list of variables denoting origin of the rectangle in the first dimension.
+     * @param o2      list of variables denoting origin of the rectangle in the second dimension.
+     * @param l1      list of variables denoting length of the rectangle in the first dimension.
+     * @param l2      list of variables denoting length of the rectangle in the second dimension.
      * @param profile it specifies if the profile should be computed and used.
      */
-    public Diff(List<? extends IntVar> o1, List<? extends IntVar> o2, List<? extends IntVar> l1,
-        List<? extends IntVar> l2, boolean profile) {
+    public Diff(List<? extends IntVar> o1, List<? extends IntVar> o2, List<? extends IntVar> l1, List<? extends IntVar> l2,
+        boolean profile) {
         this(o1, o2, l1, l2);
         doProfile = profile;
     }
 
     /**
      * It specifies a diff constraint.
-     * @param profile specifies is the profiles are used.
+     *
+     * @param profile    specifies is the profiles are used.
      * @param rectangles list of rectangles which can not overlap in at least one dimension.
      */
     public Diff(IntVar[][] rectangles, boolean profile) {
@@ -469,7 +477,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
             UsedRectArray = UsedRect.toArray(UsedRectArray);
 
-            TreeSet<IntRectangle> starts = new TreeSet<>( dimIthMinComparator.apply(i) );
+            TreeSet<IntRectangle> starts = new TreeSet<>(dimIthMinComparator.apply(i));
 
             Collections.addAll(starts, UsedRectArray);
 

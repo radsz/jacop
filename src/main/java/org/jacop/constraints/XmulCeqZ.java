@@ -30,17 +30,13 @@
 
 package org.jacop.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.core.*;
 
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Interval;
-import org.jacop.core.Store;
-import org.jacop.core.FailException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraint X * C #= Z
- *
+ * <p>
  * Boundary consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -68,13 +64,14 @@ public class XmulCeqZ extends PrimitiveConstraint {
 
     /**
      * It constructs a constraint X * C = Z.
+     *
      * @param x variable x.
      * @param c constant c.
      * @param z variable z.
      */
     public XmulCeqZ(IntVar x, int c, IntVar z) {
 
-        checkInputForNullness(new String[]{"x", "z"}, new Object[]{x, z});
+        checkInputForNullness(new String[] {"x", "z"}, new Object[] {x, z});
 
         numberId = idNumber.incrementAndGet();
 

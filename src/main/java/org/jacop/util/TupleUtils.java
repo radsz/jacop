@@ -45,6 +45,7 @@ public class TupleUtils {
     /**
      * It recordTuples to store so tuples can be reused across multiple
      * extensional constraints. It can potentially save memory.
+     *
      * @param ts tuples to be recorded.
      * @return two-dimensional array with tuples.
      */
@@ -147,6 +148,7 @@ public class TupleUtils {
 
     /**
      * searches for the position of the tuple in the tuple list.
+     *
      * @param tuple to be compared to.
      * @return position at which the tuple is stored in tuple list array.
      */
@@ -181,7 +183,6 @@ public class TupleUtils {
     /**
      * @param ts tuples to be sorted.
      * @return sorted tuples.
-     *
      */
     public int[][] sortTuples(int[][] ts) {
 
@@ -211,6 +212,7 @@ public class TupleUtils {
 
     /**
      * It sorts tuples.
+     *
      * @param ts tuples to be sorted.
      */
     public static void sortTuplesWithin(int[][] ts) {
@@ -235,7 +237,8 @@ public class TupleUtils {
 
     /**
      * It compares tuples.
-     * @param left tuple to be compared to.
+     *
+     * @param left  tuple to be compared to.
      * @param right tuple to compar with.
      * @return true if the left tuple is larger than right tuple.
      */

@@ -36,24 +36,31 @@ import org.jacop.scala._
   * A problem defined as in Java based examples.
   *
   * rewriting to Scala by Krzysztof Kuchcinski.
+  *
   * @author Krzysztof Kuchcinski and Radoslaw Szymanek
   * @version 4.4
   */
 object ArchFriends extends App with jacop {
-	
+
   println("Program to solve ArchFriends problem ")
 
   // Declaration of constants (names, variables' indexes
 
-  val shoeNames = Array( "EcruEspadrilles", "FuchsiaFlats",
-				"PurplePumps", "SuedeSandals" )
+  val shoeNames = Array("EcruEspadrilles", "FuchsiaFlats",
+    "PurplePumps", "SuedeSandals")
 
-  val iFuchsiaFlats = 1; val iPurplePumps = 2; val iSuedeSandals = 3; /* iEcruEspadrilles = 0, */ 
+  val iFuchsiaFlats = 1;
+  val iPurplePumps = 2;
+  val iSuedeSandals = 3;
+  /* iEcruEspadrilles = 0, */
 
-  val shopNames = Array( "FootFarm", "HeelsInAHandcart", "TheShoePalace",
-				"Tootsies" )
+  val shopNames = Array("FootFarm", "HeelsInAHandcart", "TheShoePalace",
+    "Tootsies")
 
-  val iFootFarm = 0; val iHeelsInAHandcart = 1; val iTheShoePalace = 2; val iTootsies = 3
+  val iFootFarm = 0;
+  val iHeelsInAHandcart = 1;
+  val iTheShoePalace = 2;
+  val iTootsies = 3
 
   // Variables shoe and shop
 
@@ -86,7 +93,7 @@ object ArchFriends extends App with jacop {
   // bought her suede sandals.
   shop(iTheShoePalace) + 2 #= shoe(iSuedeSandals)
 
-  val result = satisfyAll( search( shoe ++ shop, input_order, indomain_min))
+  val result = satisfyAll(search(shoe ++ shop, input_order, indomain_min))
 
 }
 

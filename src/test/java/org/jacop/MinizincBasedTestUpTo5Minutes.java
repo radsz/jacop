@@ -45,7 +45,6 @@ import java.util.Collection;
  *
  * @author Mariusz Świerkot and Radoslaw Szymanek
  * @version 4.5
- *
  */
 @RunWith(Parameterized.class) public class MinizincBasedTestUpTo5Minutes extends MinizincBasedTestsHelper {
     protected static final String timeCategory = "upTo5min/";

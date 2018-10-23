@@ -31,15 +31,14 @@
 package org.jacop.floats.search;
 
 import org.jacop.floats.core.FloatVar;
-
 import org.jacop.search.ComparatorVariable;
 
 /**
  * Defines a LargestMaxFloat comparator for Variables.
  *
+ * @param <T> type of IntVar being compared.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
- * @param <T> type of IntVar being compared.
  */
 
 public class LargestMaxFloat<T extends FloatVar> implements ComparatorVariable<T> {

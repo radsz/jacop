@@ -35,7 +35,6 @@ package org.jacop.floats.core;
  * Defines interval of numbers which is part of FDV definition which consist of
  * one or several intervals.
  *
- *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
  */
@@ -62,7 +61,8 @@ public final class FloatInterval implements Cloneable {
 
     /**
      * It creates an interval with a given minimum and maximal value.
-     * @param min the minimal value in the interval (the left bound). 
+     *
+     * @param min the minimal value in the interval (the left bound).
      * @param max the maximal value in the interval (the right bound).
      */
     public FloatInterval(double min, double max) {
@@ -80,6 +80,7 @@ public final class FloatInterval implements Cloneable {
 
     /**
      * It checks equality between intervals.
+     *
      * @param interval the inerval to which the comparison is made.
      * @return true if an input interval is equal to this one.
      */
@@ -93,6 +94,7 @@ public final class FloatInterval implements Cloneable {
 
     /**
      * It returns the right bound of the interval (maximum value).
+     *
      * @return the maximal value from the interval.
      */
     public double max() {
@@ -101,6 +103,7 @@ public final class FloatInterval implements Cloneable {
 
     /**
      * It returns the left range of the interval (minimum value).
+     *
      * @return the minimal value from the interval.
      */
     public double min() {
@@ -109,6 +112,7 @@ public final class FloatInterval implements Cloneable {
 
     /**
      * It checks if an intervals contains only one value (singleton).
+     *
      * @return true if domain has only one value.
      */
     public boolean singleton() {
@@ -122,6 +126,7 @@ public final class FloatInterval implements Cloneable {
 
     /**
      * It checks if an intervals contains only value c.
+     *
      * @param c integer value to which the singleton is compared to.
      * @return true if variable has a singleton domain and it is equal to value c.
      */
@@ -140,7 +145,7 @@ public final class FloatInterval implements Cloneable {
         if (FloatDomain.format() == Double.MAX_VALUE) {
             form = "%s";
         } else {
-	    p = (long)Math.ceil(Math.log10(1 / FloatDomain.format()));
+            p = (long) Math.ceil(Math.log10(1 / FloatDomain.format()));
             form = //"%s";
                 (Math.abs(min) >= 1.0E+7d || Math.abs(max) >= 1.0E+7 || (Math.abs(min) <= 1.0E-3 && min != 0) || (Math.abs(max) <= 1.0E-3
                     && max != 0)) ? "%." + p + "e" : "%." + p + "f";

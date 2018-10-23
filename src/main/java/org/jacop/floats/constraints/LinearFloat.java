@@ -32,17 +32,17 @@ package org.jacop.floats.constraints;
 
 
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.floats.constraints.linear.Linear;
 import org.jacop.floats.core.FloatVar;
-import org.jacop.core.Store;
 
 import java.util.List;
 
 /**
  * LinearFloat constraint implements the weighted summation over several
  * Variable's . It provides the weighted sum from all Variable's on the list.
- *
+ * <p>
  * This version works as argument to Reified and Xor constraints.  For
  * other constraints And, Or, Not, Eq, IfThen, IfThenElse it does not
  * work currently.
@@ -54,45 +54,43 @@ import java.util.List;
 public class LinearFloat extends Linear implements UsesQueueVariable {
 
     /**
-     * @param store current store
-     * @param list variables which are being multiplied by weights.
+     * @param store   current store
+     * @param list    variables which are being multiplied by weights.
      * @param weights weight for each variable.
-     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum the sum of weighted variables.
+     * @param rel     the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum     the sum of weighted variables.
      * @deprecated LinearFloat constraint does not use Store parameter any longer.
      */
-    @Deprecated
-    public LinearFloat(Store store, FloatVar[] list, double[] weights, String rel, double sum) {
+    @Deprecated public LinearFloat(Store store, FloatVar[] list, double[] weights, String rel, double sum) {
 
         super(store, list, weights, rel, sum);
     }
 
     /**
-     * @param store current store
-     * @param list variables which are being multiplied by weights.
+     * @param store   current store
+     * @param list    variables which are being multiplied by weights.
      * @param weights weight for each variable.
-     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum variable containing the sum of weighted variables.
+     * @param rel     the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum     variable containing the sum of weighted variables.
      * @deprecated LinearFloat constraint does not use Store parameter any longer.
      */
-    @Deprecated
-    public LinearFloat(Store store, FloatVar[] list, double[] weights, String rel, FloatVar sum) {
+    @Deprecated public LinearFloat(Store store, FloatVar[] list, double[] weights, String rel, FloatVar sum) {
 
         super(store, list, weights, rel, sum);
     }
 
 
     /**
-     * It constructs the constraint LinearFloat. 
-     * @param store current store
+     * It constructs the constraint LinearFloat.
+     *
+     * @param store     current store
      * @param variables variables which are being multiplied by weights.
-     * @param weights weight for each variable.
-     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}"
-     * @param sum variable containing the sum of weighted variables.
+     * @param weights   weight for each variable.
+     * @param rel       the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}"
+     * @param sum       variable containing the sum of weighted variables.
      * @deprecated LinearFloat constraint does not use Store parameter any longer.
      */
-    @Deprecated
-    public LinearFloat(Store store, List<? extends FloatVar> variables, List<Double> weights, String rel, double sum) {
+    @Deprecated public LinearFloat(Store store, List<? extends FloatVar> variables, List<Double> weights, String rel, double sum) {
 
         super(store, variables, weights, rel, sum);
     }
@@ -100,10 +98,10 @@ public class LinearFloat extends Linear implements UsesQueueVariable {
     // =================== new constructors ========================
 
     /**
-     * @param list variables which are being multiplied by weights.
+     * @param list    variables which are being multiplied by weights.
      * @param weights weight for each variable.
-     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum the sum of weighted variables.
+     * @param rel     the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum     the sum of weighted variables.
      */
     public LinearFloat(FloatVar[] list, double[] weights, String rel, double sum) {
 
@@ -111,10 +109,10 @@ public class LinearFloat extends Linear implements UsesQueueVariable {
     }
 
     /**
-     * @param list variables which are being multiplied by weights.
+     * @param list    variables which are being multiplied by weights.
      * @param weights weight for each variable.
-     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum variable containing the sum of weighted variables.
+     * @param rel     the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+     * @param sum     variable containing the sum of weighted variables.
      */
     public LinearFloat(FloatVar[] list, double[] weights, String rel, FloatVar sum) {
 
@@ -123,11 +121,12 @@ public class LinearFloat extends Linear implements UsesQueueVariable {
 
 
     /**
-     * It constructs the constraint LinearFloat. 
+     * It constructs the constraint LinearFloat.
+     *
      * @param variables variables which are being multiplied by weights.
-     * @param weights weight for each variable.
-     * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}"
-     * @param sum variable containing the sum of weighted variables.
+     * @param weights   weight for each variable.
+     * @param rel       the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}"
+     * @param sum       variable containing the sum of weighted variables.
      */
     public LinearFloat(List<? extends FloatVar> variables, List<Double> weights, String rel, double sum) {
 

@@ -29,7 +29,7 @@
  */
 package org.jacop.fz.constraints;
 
-import org.jacop.fz.*;
+import org.jacop.fz.SimpleNode;
 
 public final class ConstraintFncs {
 
@@ -46,18 +46,18 @@ public final class ConstraintFncs {
 
     public ConstraintFncs(Support support) {
 
-	bc = new BoolConstraints(support);
-	cc = new ComparisonConstraints(support);
-	lc = new LinearConstraints(support);
-	oc = new OperationConstraints(support);
-	ec = new ElementConstraints(support);
-	gc = new GlobalConstraints(support);
-	sc = new SetConstraints(support);
-	fcc = new FloatComparisonConstraints(support);
-	flc = new FloatLinearConstraints(support);
-	foc = new FloatOperationConstraints(support);	
+        bc = new BoolConstraints(support);
+        cc = new ComparisonConstraints(support);
+        lc = new LinearConstraints(support);
+        oc = new OperationConstraints(support);
+        ec = new ElementConstraints(support);
+        gc = new GlobalConstraints(support);
+        sc = new SetConstraints(support);
+        fcc = new FloatComparisonConstraints(support);
+        flc = new FloatLinearConstraints(support);
+        foc = new FloatOperationConstraints(support);
     }
-    
+
     // Boolean constraints
     public void array_bool_and(SimpleNode n) {
         bc.gen_array_bool_and(n);
@@ -364,6 +364,26 @@ public final class ConstraintFncs {
         gc.gen_jacop_count(n);
     }
 
+    public void jacop_count_bounds(SimpleNode n) {
+        gc.gen_jacop_count_bounds(n);
+    }
+
+    public void jacop_atleast(SimpleNode n) {
+        gc.gen_jacop_atleast(n);
+    }
+
+    public void jacop_atleast_reif(SimpleNode n) {
+        gc.gen_jacop_atleast_reif(n);
+    }
+    
+    public void jacop_atmost(SimpleNode n) {
+        gc.gen_jacop_atmost(n);
+    }
+
+    public void jacop_atmost_reif(SimpleNode n) {
+        gc.gen_jacop_atmost_reif(n);
+    }
+    
     public void jacop_nvalue(SimpleNode n) {
         gc.gen_jacop_nvalue(n);
     }

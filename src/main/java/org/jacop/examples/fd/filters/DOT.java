@@ -35,9 +35,9 @@ import java.util.List;
 
 /**
  * It specifies DOT benchmark.
- *
+ * <p>
  * Source:
- *
+ * <p>
  * Raghunathan, A. and Jha, N. K. "An Iterative Improvement Algorithm for Low
  * Power Data Path Synthesis" ICCAD 1995
  *

@@ -30,18 +30,14 @@
 
 package org.jacop.util.fsm;
 
+import org.jacop.core.*;
+import org.jacop.util.MDD;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Interval;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.ValueEnumeration;
-import org.jacop.util.MDD;
 
 /**
  * Deterministic Finite Acyclic graph.
@@ -73,8 +69,9 @@ public class FSM {
 
     /**
      * It creates a Finite State Machine.
-     * @param initState it specifies the initial state.
-     * @param allStates it specifies all the states.
+     *
+     * @param initState   it specifies the initial state.
+     * @param allStates   it specifies all the states.
      * @param finalStates it specifies the final states.
      */
     public FSM(FSMState initState, Set<FSMState> finalStates, Set<FSMState> allStates) {
@@ -98,6 +95,7 @@ public class FSM {
 
     /**
      * It computes a union of two Finite State Machines.
+     *
      * @param other the other FSM which is used in the union computation.
      * @return the resulting FSM.
      */
@@ -135,6 +133,7 @@ public class FSM {
 
     /**
      * It does concatenation of two FSM.
+     *
      * @param other the FSM with which the concatenation takes place.
      * @return the resulting FSM.
      */
@@ -183,6 +182,7 @@ public class FSM {
 
     /**
      * It performs star operation on this FSM.
+     *
      * @return the resulting FSM.
      */
     public FSM star() {
@@ -227,6 +227,7 @@ public class FSM {
 
     /**
      * It gets state of a given id.
+     *
      * @param id the id of the searched state.
      * @return the state of FSM with a given id.
      */
@@ -337,7 +338,7 @@ public class FSM {
                     outarc[level][s.id][t.successor.id] = (IntervalDomain) dom;
 
 					/* If the edge is not empty them add the state to tmp set
-					 * check that such states wasn't previously added.
+           * check that such states wasn't previously added.
 					 * 
 					 * If the level is the last, then check whether the state 
 					 * belongs to the set of accepted states 

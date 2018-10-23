@@ -38,9 +38,9 @@ import org.jacop.set.core.SetVar;
  * Defines a maximum cardinality, of the least upper bound, variable comparator. The variable with the maximum
  * cardinality for the least upper bound has the priority.
  *
+ * @param <T> type of variable
  * @author Krzysztof Kuchcinski and Robert Åkemalm
  * @version 4.5
- * @param <T> type of variable
  */
 
 public class MaxLubCard<T extends SetVar> implements ComparatorVariable<T> {

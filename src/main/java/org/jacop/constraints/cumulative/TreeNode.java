@@ -44,6 +44,7 @@ class TreeNode {
     // index in the tree
     int index;
 
-    TreeNode() {}
+    TreeNode() {
+    }
 
 }

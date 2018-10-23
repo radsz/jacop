@@ -31,11 +31,6 @@
 
 package org.jacop.satwrapper;
 
-import java.util.Arrays;
-import java.util.BitSet;
-import java.util.HashSet;
-import java.util.Set;
-
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
 import org.jacop.jasat.core.Core;
@@ -43,6 +38,11 @@ import org.jacop.jasat.modules.interfaces.AssertionListener;
 import org.jacop.jasat.modules.interfaces.BackjumpListener;
 import org.jacop.jasat.modules.interfaces.PropagateListener;
 import org.jacop.satwrapper.translation.SatCPBridge;
+
+import java.util.Arrays;
+import java.util.BitSet;
+import java.util.HashSet;
+import java.util.Set;
 
 /*
  * TODO: many efficiency improvements!!!

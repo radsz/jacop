@@ -30,9 +30,6 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-import java.util.function.BiFunction;
-
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ExtensionalSupportSTR;
 import org.jacop.constraints.table.SimpleTable;
@@ -40,25 +37,21 @@ import org.jacop.core.BooleanVar;
 import org.jacop.core.Domain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.IndomainMin;
-import org.jacop.search.MostConstrainedStatic;
-import org.jacop.search.SelectChoicePoint;
-import org.jacop.search.SimpleSelect;
+import org.jacop.search.*;
+
+import java.util.ArrayList;
+import java.util.function.BiFunction;
 
 /**
- *
  * It specifies an adder using gates specified by extensional constraints.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 public class Gates extends ExampleFD {
 
-    @Override
-    public void model() {
+    @Override public void model() {
         model(Gates::tableConstraintProviderUsingSimpleTable);
     }
 
@@ -102,9 +95,10 @@ public class Gates extends ExampleFD {
     /**
      * It imposes an extensional constraint enforcing an and relationship
      * between two input parameters and an output parameter.
-     * @param in1 the first input parameter.
-     * @param in2 the second input parameter.
-     * @param out the output parameter.
+     *
+     * @param in1                     the first input parameter.
+     * @param in2                     the second input parameter.
+     * @param out                     the output parameter.
      * @param tableConstraintProvider function that when provided input to create table constraint will create one.
      */
     public void and(BooleanVar in1, BooleanVar in2, BooleanVar out, BiFunction<IntVar[], int[][], Constraint> tableConstraintProvider) {
@@ -118,9 +112,10 @@ public class Gates extends ExampleFD {
     /**
      * It imposes an extensional constraint enforcing an or relationship
      * between two input parameters and an output parameter.
-     * @param in1 the first input parameter.
-     * @param in2 the second input parameter.
-     * @param out the output parameter.
+     *
+     * @param in1                     the first input parameter.
+     * @param in2                     the second input parameter.
+     * @param out                     the output parameter.
      * @param tableConstraintProvider function that when provided input to create table constraint will create one.
      */
     public void or(BooleanVar in1, BooleanVar in2, BooleanVar out, BiFunction<IntVar[], int[][], Constraint> tableConstraintProvider) {
@@ -133,9 +128,10 @@ public class Gates extends ExampleFD {
     /**
      * It imposes an extensional constraint enforcing an xor relationship
      * between two input parameters and an output parameter.
-     * @param in1 the first input parameter.
-     * @param in2 the second input parameter.
-     * @param out the output parameter.
+     *
+     * @param in1                     the first input parameter.
+     * @param in2                     the second input parameter.
+     * @param out                     the output parameter.
      * @param tableConstraintProvider function that when provided input to create table constraint will create one.
      */
     public void xor(BooleanVar in1, BooleanVar in2, BooleanVar out, BiFunction<IntVar[], int[][], Constraint> tableConstraintProvider) {
@@ -148,8 +144,9 @@ public class Gates extends ExampleFD {
     /**
      * It imposes an extensional constraint enforcing an not relationship
      * between input parameter and an output parameter.
-     * @param in the first input parameter.
-     * @param out the output parameter.
+     *
+     * @param in                      the first input parameter.
+     * @param out                     the output parameter.
      * @param tableConstraintProvider function that when provided input to create table constraint will create one.
      */
     public void not(BooleanVar in, BooleanVar out, BiFunction<IntVar[], int[][], Constraint> tableConstraintProvider) {
@@ -162,6 +159,7 @@ public class Gates extends ExampleFD {
 
     /**
      * It executes a program to solve gates problems.
+     *
      * @param args parameters (none)
      */
     public static void main(String args[]) {
@@ -183,6 +181,7 @@ public class Gates extends ExampleFD {
 
     /**
      * It provides a specific search with extensive printout of the result.
+     *
      * @return true if there is a solution, false otherwise.
      */
     public boolean searchSpecific() {
@@ -220,7 +219,7 @@ public class Gates extends ExampleFD {
     }
 
     public static Constraint tableConstraintProviderUsingSimpleTable(IntVar[] vars, int[][] tuples) {
-                return new SimpleTable(vars, tuples);
+        return new SimpleTable(vars, tuples);
     }
 
     public static Constraint tableConstraintProviderUsingExtensionalSTR(IntVar[] vars, int[][] tuples) {

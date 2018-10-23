@@ -38,9 +38,9 @@ import org.jacop.core.IntVar;
  * random value in the domain of FD variable. Can split domains into multiple
  * intervals
  *
+ * @param <T> type of variable being used in the search.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.5
- * @param <T> type of variable being used in the search. 
  */
 
 public class IndomainSimpleRandom<T extends IntVar> implements Indomain<T> {

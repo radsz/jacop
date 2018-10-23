@@ -38,6 +38,7 @@ import org.jacop.scala._
   * A problem defined as in Java based examples.
   *
   * rewriting to Scala by Krzysztof Kuchcinski.
+  *
   * @author Krzysztof Kuchcinski and Radoslaw Szymanek
   * @version 4.5
   */
@@ -45,19 +46,19 @@ object Powell extends App with jacop {
 
   setPrecision(1e-20)
 
-  val x = Array.tabulate(4)( i => new FloatVar("x[" + i + "]", -2, 2))
+  val x = Array.tabulate(4)(i => new FloatVar("x[" + i + "]", -2, 2))
 
   // constraint
-  x(0) + 10.0*x(1) #= 0.0
+  x(0) + 10.0 * x(1) #= 0.0
   //sum(x, Array[Double](1, 10, 0, 0)) #= 0
 
-  scala.math.sqrt(5.0)*(x(2) - x(3)) #= 0.0
+  scala.math.sqrt(5.0) * (x(2) - x(3)) #= 0.0
 
-  (x(1) - 2.0*x(2))*(x(1) - 2.0*x(2)) #= 0.0
+  (x(1) - 2.0 * x(2)) * (x(1) - 2.0 * x(2)) #= 0.0
 
-  scala.math.sqrt(10.0)*(x(0) - x(3))*(x(0) - x(3)) #= 0.0
+  scala.math.sqrt(10.0) * (x(0) - x(3)) * (x(0) - x(3)) #= 0.0
 
-  val result = satisfyAll(search_float(x.toList, input_order), () => println(x.toList)) 
+  val result = satisfyAll(search_float(x.toList, input_order), () => println(x.toList))
   statistics
 
 }

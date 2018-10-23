@@ -30,34 +30,29 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
-import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.IndomainMin;
-import org.jacop.search.SelectChoicePoint;
-import org.jacop.search.SimpleSelect;
-import org.jacop.search.SmallestDomain;
+import org.jacop.search.*;
+
+import java.util.ArrayList;
 
 /**
  * It is a simple logic puzzle about furniture moving.
  *
  * @author Hakan Kjellerstrand (hakank@bonetmail.com) and Radoslaw Szymanek
  * @version 4.5
- *
- * Problem from Marriott {@literal &} Stuckey: 'Programming with constraints', page 112f
- *
- * Feature: testing cumulative.
- *
- * Also see http://www.hakank.org/JaCoP/
- *
+ *          <p>
+ *          Problem from Marriott {@literal &} Stuckey: 'Programming with constraints', page 112f
+ *          <p>
+ *          Feature: testing cumulative.
+ *          <p>
+ *          Also see http://www.hakank.org/JaCoP/
  */
 
 public class FurnitureMoving extends ExampleFD {
@@ -133,6 +128,7 @@ public class FurnitureMoving extends ExampleFD {
 
     /**
      * It executes the program which solves this logic puzzle.
+     *
      * @param args command arguments (none)
      */
     public static void main(String args[]) {
@@ -152,7 +148,7 @@ public class FurnitureMoving extends ExampleFD {
 
 
     /**
-     * It specifies search for that logic puzzle. 
+     * It specifies search for that logic puzzle.
      *
      * @return true when solution is found false otherwise
      */

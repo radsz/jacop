@@ -30,20 +30,20 @@
 
 package org.jacop.search;
 
-import java.util.Iterator;
-import java.util.Map;
-
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.Var;
 
+import java.util.Iterator;
+import java.util.Map;
+
 /**
  * It is simple input order selector of variables.
  *
+ * @param <T> type of variable being used in the search.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.5
- * @param <T> type of variable being used in the search. 
  */
 
 public class InputOrderSelect<T extends Var> implements SelectChoicePoint<T> {
@@ -65,9 +65,10 @@ public class InputOrderSelect<T extends Var> implements SelectChoicePoint<T> {
 
     /**
      * It constructs an input order selection procedure.
-     * @param store a constraint store in which variables resides.
+     *
+     * @param store     a constraint store in which variables resides.
      * @param variables a list of variables which must be assigned a value by search.
-     * @param indomain the indomain heuristic for assigning values to variables.
+     * @param indomain  the indomain heuristic for assigning values to variables.
      */
     @SuppressWarnings("unchecked") public InputOrderSelect(Store store, T[] variables, Indomain<T> indomain) {
 

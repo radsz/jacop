@@ -30,11 +30,11 @@
 
 package org.jacop.search;
 
-import java.util.Iterator;
-import java.util.Map;
-
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Var;
+
+import java.util.Iterator;
+import java.util.Map;
 
 /**
  * It is simple and customizable selector of decisions (constraints) which will
@@ -72,9 +72,10 @@ import org.jacop.core.Var;
 
     /**
      * The constructor to create a simple choice select mechanism.
+     *
      * @param variables variables upon which the choice points are created.
      * @param varSelect the variable comparator to choose the variable.
-     * @param indomain the value heuristic to choose a value for a given variable.
+     * @param indomain  the value heuristic to choose a value for a given variable.
      */
     public SimpleSelect(T[] variables, ComparatorVariable<T> varSelect, Indomain<T> indomain) {
 
@@ -100,10 +101,11 @@ import org.jacop.core.Var;
 
     /**
      * It constructs a simple selection mechanism for choice points.
-     * @param variables variables used as basis of the choice point.
-     * @param varSelect the main variable comparator.
+     *
+     * @param variables           variables used as basis of the choice point.
+     * @param varSelect           the main variable comparator.
      * @param tieBreakerVarSelect secondary variable comparator employed if the first one gives the same metric.
-     * @param indomain the heuristic to choose value assigned to a chosen variable.
+     * @param indomain            the heuristic to choose value assigned to a chosen variable.
      */
     public SimpleSelect(T[] variables, ComparatorVariable<T> varSelect, ComparatorVariable<T> tieBreakerVarSelect, Indomain<T> indomain) {
 
@@ -301,7 +303,8 @@ import org.jacop.core.Var;
      * It gets as input the index of the variable which is chosen by search to
      * be instantiated at this stage. The variable is positioned at search
      * position.
-     * @param searchPosition position at which search store currently choosen variable.
+     *
+     * @param searchPosition   position at which search store currently choosen variable.
      * @param variablePosition current position of the variable choosen by search.
      * @return variable choosen to be a base of the choice point.
      */

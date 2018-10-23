@@ -33,15 +33,7 @@ package org.jacop.satwrapper;
 
 import org.jacop.jasat.core.Core;
 import org.jacop.jasat.core.clauses.MapClause;
-import org.jacop.jasat.modules.interfaces.AssertionListener;
-import org.jacop.jasat.modules.interfaces.BackjumpListener;
-import org.jacop.jasat.modules.interfaces.ClauseListener;
-import org.jacop.jasat.modules.interfaces.ConflictListener;
-import org.jacop.jasat.modules.interfaces.ExplanationListener;
-import org.jacop.jasat.modules.interfaces.ForgetListener;
-import org.jacop.jasat.modules.interfaces.PropagateListener;
-import org.jacop.jasat.modules.interfaces.SolutionListener;
-import org.jacop.jasat.modules.interfaces.StartStopListener;
+import org.jacop.jasat.modules.interfaces.*;
 import org.jacop.jasat.utils.Utils;
 
 

@@ -37,7 +37,6 @@ import java.util.Enumeration;
  * Defines a methods for enumerating values contain in the intersal domain. It
  * implements the interface Enumeration.
  *
- *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
  */

@@ -56,7 +56,6 @@ import static org.junit.Assert.fail;
  *
  * @author Mariusz Świerkot and Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 public class MinizincBasedTestsHelper {

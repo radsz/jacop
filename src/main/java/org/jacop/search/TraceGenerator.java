@@ -30,11 +30,13 @@
 
 package org.jacop.search;
 
-import java.io.*;
-import java.nio.charset.Charset;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.*;
+import org.jacop.constraints.Not;
+import org.jacop.constraints.PrimitiveConstraint;
+import org.jacop.core.*;
+import org.jacop.set.core.SetDomain;
+import org.jacop.set.core.SetVar;
+import org.xml.sax.SAXException;
+import org.xml.sax.helpers.AttributesImpl;
 
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
@@ -42,26 +44,19 @@ import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.transform.sax.SAXTransformerFactory;
 import javax.xml.transform.sax.TransformerHandler;
 import javax.xml.transform.stream.StreamResult;
-
-import org.jacop.constraints.Not;
-import org.jacop.constraints.PrimitiveConstraint;
-import org.jacop.core.Domain;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Interval;
-import org.jacop.core.IntervalEnumeration;
-import org.jacop.core.Store;
-import org.jacop.core.Var;
-import org.jacop.set.core.SetDomain;
-import org.jacop.set.core.SetVar;
-import org.xml.sax.SAXException;
-import org.xml.sax.helpers.AttributesImpl;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
+import java.nio.charset.Charset;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 
 /**
- * It is a wrapper over Select methods that makes it possible to trace search and 
+ * It is a wrapper over Select methods that makes it possible to trace search and
  * variables' changes.
- *
+ * <p>
  * It generates xml format accepted by CPViz tool developed by Helmut Simonis.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -408,14 +403,14 @@ public class TraceGenerator<T extends Var> implements SelectChoicePoint<T>, Cons
     // =================================================================
     // Metods for tracing using ExitChildListener
 
-     @SuppressWarnings("unchecked") public void setChildrenListeners(ExitChildListener<T>[] children) {
-	exitChildListeners = new ExitChildListener[children.length];
+    @SuppressWarnings("unchecked") public void setChildrenListeners(ExitChildListener<T>[] children) {
+        exitChildListeners = new ExitChildListener[children.length];
         System.arraycopy(children, 0, exitChildListeners, 0, children.length);
     }
 
     public void setChildrenListeners(ExitListener[] children) {
         exitListeners = new ExitListener[children.length];
-	System.arraycopy(children, 0, exitListeners, 0, children.length);
+        System.arraycopy(children, 0, exitListeners, 0, children.length);
     }
 
     public boolean leftChild(T var, int value, boolean status) {
@@ -542,16 +537,10 @@ public class TraceGenerator<T extends Var> implements SelectChoicePoint<T>, Cons
         OutputStreamWriter printWriter;
 
         try {
-            printWriter = new OutputStreamWriter(
-                new FileOutputStream(treeFilename),
-                Charset.forName("UTF-8").newEncoder()
-            );
+            printWriter = new OutputStreamWriter(new FileOutputStream(treeFilename), Charset.forName("UTF-8").newEncoder());
         } catch (FileNotFoundException e) {
             e.printStackTrace();
-            printWriter = new OutputStreamWriter(
-                System.out,
-                Charset.forName("UTF-8").newEncoder()
-            );
+            printWriter = new OutputStreamWriter(System.out, Charset.forName("UTF-8").newEncoder());
         }
 
         StreamResult streamResult = new StreamResult(printWriter);
@@ -602,16 +591,10 @@ public class TraceGenerator<T extends Var> implements SelectChoicePoint<T>, Cons
         OutputStreamWriter printWriter;
 
         try {
-            printWriter = new OutputStreamWriter(
-                new FileOutputStream(visFilename),
-                Charset.forName("UTF-8").newEncoder()
-            );
+            printWriter = new OutputStreamWriter(new FileOutputStream(visFilename), Charset.forName("UTF-8").newEncoder());
         } catch (FileNotFoundException e) {
             e.printStackTrace();
-            printWriter = new OutputStreamWriter(
-                System.out,
-                Charset.forName("UTF-8").newEncoder()
-            );
+            printWriter = new OutputStreamWriter(System.out, Charset.forName("UTF-8").newEncoder());
         }
 
         StreamResult streamResult = new StreamResult(printWriter);

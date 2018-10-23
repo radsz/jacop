@@ -47,6 +47,7 @@ public interface ConsistencyListener {
      * It is executed right after consistency of the current search node.
      * Returning true when the parameter was false is not advised as things
      * like invalid solutions can be found.
+     *
      * @param consistent specifies if the consistency call returned true or false.
      * @return true if the search should continue, false if the search should act as the consistency returned false.
      */
@@ -56,12 +57,14 @@ public interface ConsistencyListener {
     /**
      * Each of the child listeners will be called and the return code from them
      * will be combined (taken into account) by a parent).
+     *
      * @param children the children listeners attached to this listener.
      */
     void setChildrenListeners(ConsistencyListener[] children);
 
     /**
      * Setting one child listener.
+     *
      * @param child the only child listener added to this consistency listener.
      */
 

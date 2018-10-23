@@ -44,6 +44,7 @@ public interface TimeOutListener {
 
     /**
      * It is executed right after time out is determined.
+     *
      * @param solutionsNo number of solutions found before the timeout occurred.
      */
 
@@ -51,12 +52,14 @@ public interface TimeOutListener {
 
     /**
      * It sets children listeners for this timeout listener.
+     *
      * @param children list of children listeners.
      */
     void setChildrenListeners(TimeOutListener[] children);
 
     /**
      * It sets child listener for this timeout listener.
+     *
      * @param child child listener for this timeout listener.
      */
     void setChildrenListeners(TimeOutListener child);

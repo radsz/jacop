@@ -30,13 +30,13 @@
 
 package org.jacop.search;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.jacop.constraints.NoGood;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * NoGoodCollector collects no-goods from search when timeout has occurred. As

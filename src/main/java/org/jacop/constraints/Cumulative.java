@@ -125,10 +125,10 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     public Cumulative(IntVar[] starts, IntVar[] durations, IntVar[] resources, IntVar limit, boolean doEdgeFinding, boolean doProfile) {
 
         checkInputForNullness(new String[] {"starts", "durations", "resources", "limit"},
-                              new Object[][] { starts,   durations,   resources, { limit } });
+            new Object[][] {starts, durations, resources, {limit}});
 
-        checkInput(durations, d -> d.min() >= 0, "duration can not have negative values in the domain" );
-        checkInput(resources, r -> r.min() >= 0, "resource consumption can not have negative values in the domain" );
+        checkInput(durations, d -> d.min() >= 0, "duration can not have negative values in the domain");
+        checkInput(resources, r -> r.min() >= 0, "resource consumption can not have negative values in the domain");
 
         if (limit.min() >= 0) {
             this.limit = limit;
@@ -196,8 +196,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
      * @param resources variables denoting resource usage of the tasks.
      * @param limit     the overall limit of resources which has to be used.
      */
-    public Cumulative(List<? extends IntVar> starts, List<? extends IntVar> durations, List<? extends IntVar> resources,
-        IntVar limit) {
+    public Cumulative(List<? extends IntVar> starts, List<? extends IntVar> durations, List<? extends IntVar> resources, IntVar limit) {
 
         this(starts.toArray(new IntVar[starts.size()]), durations.toArray(new IntVar[durations.size()]),
             resources.toArray(new IntVar[resources.size()]), limit, true, true);
@@ -214,8 +213,8 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
      * @param edgeFinding true if edge finding algorithm should be used.
      */
 
-    public Cumulative(List<? extends IntVar> starts, List<? extends IntVar> durations, List<? extends IntVar> resources,
-        IntVar limit, boolean edgeFinding) {
+    public Cumulative(List<? extends IntVar> starts, List<? extends IntVar> durations, List<? extends IntVar> resources, IntVar limit,
+        boolean edgeFinding) {
         this(starts, durations, resources, limit, edgeFinding, true);
     }
 
@@ -231,8 +230,8 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
      */
 
 
-    public Cumulative(List<? extends IntVar> starts, List<? extends IntVar> durations, List<? extends IntVar> resources,
-        IntVar limit, boolean edgeFinding, boolean profile) {
+    public Cumulative(List<? extends IntVar> starts, List<? extends IntVar> durations, List<? extends IntVar> resources, IntVar limit,
+        boolean edgeFinding, boolean profile) {
 
         this(starts.toArray(new IntVar[starts.size()]), durations.toArray(new IntVar[durations.size()]),
             resources.toArray(new IntVar[resources.size()]), limit, edgeFinding, profile);
@@ -544,7 +543,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
     private void edgeFindingUp(Store store) {
 
-        TreeSet<IntDomain> lctDownList = new TreeSet<IntDomain>( domainMaxComparator );
+        TreeSet<IntDomain> lctDownList = new TreeSet<IntDomain>(domainMaxComparator);
 
         if (debug)
             System.out.println("------------------------------------------------\n" + "Edge Finding Up\n"
@@ -890,7 +889,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
             // System.out.println("slack after = " + slack + "tasks = " + tasks );
             if (slack < 0 && tasksLength != 0) {
-                Arrays.sort(tasks, 0, tasksLength, taskAscEctComparator );
+                Arrays.sort(tasks, 0, tasksLength, taskAscEctComparator);
                 j = 0;
                 int limitMin = limit.min();
                 while (slack < 0 && j < tasksLength) {
@@ -1051,8 +1050,8 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
                         if (intervalOverlap(p.min(), p.max(), mustUseMin, mustUseMax))
                             offset = Resources.min();
                         if (debugNarr)
-                            System.out.println(
-                                ">>> Cumulative Profile 8. Narrowed " + Resources + " in 0.." + (limit.max() - p.value + offset));
+                            System.out
+                                .println(">>> Cumulative Profile 8. Narrowed " + Resources + " in 0.." + (limit.max() - p.value + offset));
 
                         Resources.domain.in(store.level, Resources, 0, limit.max() - p.value + offset);
                     }
@@ -1150,7 +1149,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
         result.append(Ts[Ts.length - 1]);
 
-        result.append(" ]").append(", limit = ").append(limit).append(" )");
+        result.append(" ]").append(", limit = ").append(limit).append(", ").append(doEdgeFinding).append(", ").append(doProfile).append(" )");
 
         return result.toString();
 

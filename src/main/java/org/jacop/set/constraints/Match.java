@@ -42,7 +42,7 @@ import java.util.stream.Stream;
 
 /**
  * This constraint matches the elements of the given set variable
- * onto a list of integer variables. 
+ * onto a list of integer variables.
  *
  * @author Radoslaw Szymanek, Krzysztof Kuchcinski, and Robert Åkemalm
  * @version 4.5
@@ -68,13 +68,13 @@ public class Match extends Constraint implements SatisfiedPresent {
      * It constructs a match constraint to connect the value of set variable a
      * to the values of integer variables provided in the list.
      *
-     * @param a set variable that is restricted to be equal to a set created from values specified by integer variables form the list.
+     * @param a    set variable that is restricted to be equal to a set created from values specified by integer variables form the list.
      * @param list of integer variables that is restricted to have the same elements as set variable a.
      */
 
     public Match(SetVar a, IntVar[] list) {
 
-        checkInputForNullness(new String[]{"a", "list"}, new Object[][]{ {a}, list});
+        checkInputForNullness(new String[] {"a", "list"}, new Object[][] {{a}, list});
 
         this.numberId = idNumber.incrementAndGet();
         this.a = a;
@@ -202,10 +202,10 @@ public class Match extends Constraint implements SatisfiedPresent {
 
     @Override public boolean satisfied() {
 
-        if (! grounded() )
+        if (!grounded())
             return false;
 
-        if (a.domain.glb().getSize() == list.length ) {
+        if (a.domain.glb().getSize() == list.length) {
 
             ValueEnumeration ve = a.domain.glb().valueEnumeration();
 
@@ -227,7 +227,7 @@ public class Match extends Constraint implements SatisfiedPresent {
         StringBuffer ret = new StringBuffer(id());
         ret.append(" : Match(" + a + ", [ ");
         for (Var fdv : list)
-	  ret.append(fdv + " ");
+            ret.append(fdv + " ");
         ret.append("] )");
         return ret.toString();
 

@@ -31,17 +31,20 @@
 
 package org.jacop.constraints;
 
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * Diff2 constraint assures that any two rectangles from a vector of
  * rectangles does not overlap in at least one direction.
- *
+ * <p>
  * Zero-width rectangles can be packed anywhere.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -57,7 +60,7 @@ public class Diff2 extends Diff {
     boolean exceptionListPresent = false;
 
     /**
-     * It specifies a list of pairs of rectangles which can overlap. 
+     * It specifies a list of pairs of rectangles which can overlap.
      */
     public int[] exclusiveList = new int[0];
 
@@ -69,10 +72,9 @@ public class Diff2 extends Diff {
      * specifies that rectangles 1 and 3 as well as 3 and 4 can overlap each
      * other.
      *
-     * @param rectangles a list of rectangles.
+     * @param rectangles    a list of rectangles.
      * @param exclusiveList a list denoting the pair of rectangles, which can overlap
-     * @param doProfile should profile be computed and used.
-     *
+     * @param doProfile     should profile be computed and used.
      */
     public Diff2(Rectangle[] rectangles, int[] exclusiveList, boolean doProfile) {
 
@@ -94,10 +96,11 @@ public class Diff2 extends Diff {
 
     /**
      * It creates a diff2 constraint.
-     * @param o1 list of variables denoting the origin in the first dimension.
-     * @param o2 list of variables denoting the origin in the second dimension.
-     * @param l1 list of variables denoting the length in the first dimension.
-     * @param l2 list of variables denoting the length in the second dimension.
+     *
+     * @param o1      list of variables denoting the origin in the first dimension.
+     * @param o2      list of variables denoting the origin in the second dimension.
+     * @param l1      list of variables denoting the length in the first dimension.
+     * @param l2      list of variables denoting the length in the second dimension.
      * @param profile specifies if the profile should be computed.
      */
     public Diff2(List<IntVar> o1, List<IntVar> o2, List<IntVar> l1, List<IntVar> l2, boolean profile) {
@@ -107,6 +110,7 @@ public class Diff2 extends Diff {
 
     /**
      * It creates a diff2 constraint.
+     *
      * @param rectangles list of rectangles with origins and lengths in both dimensions.
      */
 
@@ -116,13 +120,14 @@ public class Diff2 extends Diff {
         this.rectangles = Rectangle.toArrayOf2DRectangles(rectangles);
         numberId = idNumber.incrementAndGet();
 
-        setScope(rectangles.stream().map( i -> i.stream() ).flatMap( i -> i));
+        setScope(rectangles.stream().map(i -> i.stream()).flatMap(i -> i));
     }
 
     /**
      * It creates a diff2 constraint.
+     *
      * @param rectangles list of rectangles with origins and lengths in both dimensions.
-     * @param profile specifies if the profile is computed and used.
+     * @param profile    specifies if the profile is computed and used.
      */
 
     public Diff2(List<? extends List<? extends IntVar>> rectangles, boolean profile) {
@@ -133,13 +138,13 @@ public class Diff2 extends Diff {
 
     /**
      * It creates a diff2 constraint.
+     *
      * @param o1 list of variables denoting the origin in the first dimension.
      * @param o2 list of variables denoting the origin in the second dimension.
      * @param l1 list of variables denoting the length in the first dimension.
      * @param l2 list of variables denoting the length in the second dimension.
      */
-    public Diff2(List<? extends IntVar> o1, List<? extends IntVar> o2, List<? extends IntVar> l1,
-        List<? extends IntVar> l2) {
+    public Diff2(List<? extends IntVar> o1, List<? extends IntVar> o2, List<? extends IntVar> l1, List<? extends IntVar> l2) {
 
         this(o1.toArray(new IntVar[o1.size()]), o2.toArray(new IntVar[o2.size()]), l1.toArray(new IntVar[l1.size()]),
             l2.toArray(new IntVar[l2.size()]));
@@ -148,6 +153,7 @@ public class Diff2 extends Diff {
 
     /**
      * It creates a diff2 constraint.
+     *
      * @param origin1 list of variables denoting the origin in the first dimension.
      * @param origin2 list of variables denoting the origin in the second dimension.
      * @param length1 list of variables denoting the length in the first dimension.
@@ -156,7 +162,8 @@ public class Diff2 extends Diff {
 
     public Diff2(IntVar[] origin1, IntVar[] origin2, IntVar[] length1, IntVar[] length2) {
 
-        checkInputForNullness(new String[]{"origin1", "origin2", "length1", "length2" }, new Object[][]{origin1, origin2, length1, length2});
+        checkInputForNullness(new String[] {"origin1", "origin2", "length1", "length2"},
+            new Object[][] {origin1, origin2, length1, length2});
 
         queueIndex = 2;
         this.rectangles = Rectangle.toArrayOf2DRectangles(origin1, origin2, length1, length2);
@@ -168,10 +175,11 @@ public class Diff2 extends Diff {
 
     /**
      * It creates a diff2 constraint.
-     * @param o1 list of variables denoting the origin in the first dimension.
-     * @param o2 list of variables denoting the origin in the second dimension.
-     * @param l1 list of variables denoting the length in the first dimension.
-     * @param l2 list of variables denoting the length in the second dimension.
+     *
+     * @param o1      list of variables denoting the origin in the first dimension.
+     * @param o2      list of variables denoting the origin in the second dimension.
+     * @param l1      list of variables denoting the length in the first dimension.
+     * @param l2      list of variables denoting the length in the second dimension.
      * @param profile specifies if the profile should be computed.
      */
     public Diff2(IntVar[] o1, IntVar[] o2, IntVar[] l1, IntVar[] l2, boolean profile) {
@@ -181,6 +189,7 @@ public class Diff2 extends Diff {
 
     /**
      * It creates a diff2 constraint.
+     *
      * @param rectangles list of rectangles with origins and lengths in both dimensions.
      */
 
@@ -198,8 +207,9 @@ public class Diff2 extends Diff {
 
     /**
      * It creates a diff2 constraint.
+     *
      * @param rectangles list of rectangles with origins and lengths in both dimensions.
-     * @param profile specifies if the profile is computed and used.
+     * @param profile    specifies if the profile is computed and used.
      */
 
     public Diff2(IntVar[][] rectangles, boolean profile) {
@@ -214,7 +224,7 @@ public class Diff2 extends Diff {
      * specifies that rectangles 1 and 3 as well as 3 and 4 can overlap each
      * other.
      *
-     * @param rectangles  - list of rectangles, each rectangle represented by a list of variables.
+     * @param rectangles    - list of rectangles, each rectangle represented by a list of variables.
      * @param exclusiveList - list of rectangles pairs which can overlap.
      */
     public Diff2(List<List<IntVar>> rectangles, List<List<Integer>> exclusiveList) {
@@ -235,7 +245,7 @@ public class Diff2 extends Diff {
         for (int i = 0; i < list.size(); i++)
             this.exclusiveList[i] = list.get(i);
 
-        setScope(rectangles.stream().map( i -> i.stream() ).flatMap( i -> i));
+        setScope(rectangles.stream().map(i -> i.stream()).flatMap(i -> i));
 
     }
 
@@ -246,7 +256,7 @@ public class Diff2 extends Diff {
      * specifies that rectangles 1 and 3 as well as 3 and 4 can overlap each
      * other.
      *
-     * @param rect  - list of rectangles, each rectangle represented by a list of variables.
+     * @param rect      - list of rectangles, each rectangle represented by a list of variables.
      * @param exclusive - list of rectangles pairs which can overlap.
      */
     public Diff2(IntVar[][] rect, List<List<Integer>> exclusive) {

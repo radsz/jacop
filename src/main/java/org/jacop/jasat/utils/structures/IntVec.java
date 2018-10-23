@@ -31,13 +31,13 @@
 
 package org.jacop.jasat.utils.structures;
 
+import org.jacop.jasat.utils.MemoryPool;
+import org.jacop.jasat.utils.Utils;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-
-import org.jacop.jasat.utils.MemoryPool;
-import org.jacop.jasat.utils.Utils;
 
 /**
  * low level, efficient int vector

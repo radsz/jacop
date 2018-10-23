@@ -31,15 +31,15 @@
 
 package org.jacop.constraints.binpacking;
 
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.*;
 import org.jacop.util.SimpleHashSet;
+
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 /**
@@ -48,7 +48,7 @@ import java.util.stream.Stream;
  * <p>
  * This implementation is based on paper "A Constraint for Bin Packing" by
  * Paul Shaw, CP 2004.
- *
+ * <p>
  * This constraint is not idempotent (does not compute fix-point) and,
  * in case when another computation for fix-point is needed, it adds
  * itself to the constraint queue.
@@ -95,7 +95,7 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
      */
     public Binpacking(IntVar[] bin, IntVar[] load, int[] w) {
 
-        checkInputForNullness(new String[]{"bin", "load", "w"}, new Object[][]{bin, load, {w}});
+        checkInputForNullness(new String[] {"bin", "load", "w"}, new Object[][] {bin, load, {w}});
         checkInputForDuplication("load", load);
         checkInput(w, t -> t >= 0, "weight for item is not >=0");
 
@@ -140,8 +140,7 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
         Comparator<BinItem> weightComparator = (o1, o2) -> (o2.weight - o1.weight);
         Arrays.sort(item, weightComparator);
 
-        itemMap = Var.positionMapping(Arrays.stream(item).map( i -> i.bin ).toArray(IntVar[]::new),
-            false, this.getClass());
+        itemMap = Var.positionMapping(Arrays.stream(item).map(i -> i.bin).toArray(IntVar[]::new), false, this.getClass());
 
         setScope(Stream.concat(Arrays.stream(item).map(i -> i.bin), Arrays.stream(load)));
     }
@@ -190,127 +189,129 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
         // Rule "Pack All" -- chcecked only first time
         if (firstConsistencyCheck) {
 
-            Arrays.stream(item)
-                .map( i -> i.bin )
-                .forEach( i -> i.domain.in(store.level, i, minBinNumber, load.length - 1 + minBinNumber));
+            Arrays.stream(item).map(i -> i.bin).forEach(i -> i.domain.in(store.level, i, minBinNumber, load.length - 1 + minBinNumber));
 
             firstConsistencyCheck = false;
         }
 
-	store.propagationHasOccurred = false;
+        store.propagationHasOccurred = false;
 
-	// we check bins that changed recently only
-	// it means:
-	//      - load[i] variables have changed,
-	//      - item[i] variables have changed (we check both current domain and pruned values)
-	IntervalDomain d = new IntervalDomain();
-	while (binQueue.size() != 0) {
-	    IntVar var = binQueue.removeFirst();
-	    int i = binMap.get(var) + minBinNumber;
-	    d.addDom(new IntervalDomain(i, i));
-	}
-	while (itemQueue.size() != 0) {
-	    IntVar var = itemQueue.removeFirst();
-	    IntDomain pd = var.dom().previousDomain;
-	    if (pd != null)
-		d.addDom(pd);
-	    else
-		d.addDom(var.dom());
-	}
+        // we check bins that changed recently only
+        // it means:
+        //      - load[i] variables have changed,
+        //      - item[i] variables have changed (we check both current domain and pruned values)
+        IntervalDomain d = new IntervalDomain();
+        while (binQueue.size() != 0) {
+            IntVar var = binQueue.removeFirst();
+            int i = binMap.get(var) + minBinNumber;
+            d.addDom(new IntervalDomain(i, i));
+        }
+        while (itemQueue.size() != 0) {
+            IntVar var = itemQueue.removeFirst();
+            IntDomain pd = var.dom().previousDomain;
+            if (pd != null)
+                d.addDom(pd);
+            else
+                d.addDom(var.dom());
+        }
 
-	BinItem[] candidates;
-	// for (int i = 0; i < load.length; i++) {  // replaced with needed bins to check
-	for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
-	    int i = e.nextElement() - minBinNumber;
+        BinItem[] candidates;
+        // for (int i = 0; i < load.length; i++) {  // replaced with needed bins to check
+        for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
+            int i = e.nextElement() - minBinNumber;
 
-	    // check if bin no. is in the limits; might not be there since it is FDV specified in by a user
-	    if (i >= 0 && i < load.length) {
+            // check if bin no. is in the limits; might not be there since it is FDV specified in by a user
+            if (i >= 0 && i < load.length) {
 
-		candidates = new BinItem[item.length];
-		int candidatesLength = 0;
+                candidates = new BinItem[item.length];
+                int candidatesLength = 0;
 
-		int required = 0;
-		int possible = 0;
+                int required = 0;
+                int possible = 0;
 
-		for (BinItem itemEl : item) {
-		    //  		    System.out.println (itemEl.bin + " prunned = "+itemEl.bin.dom().recentDomainPruning(store.level));
+                for (BinItem itemEl : item) {
+		    // System.out.println (itemEl.bin + " prunned = "+itemEl.bin.dom().recentDomainPruning(store.level));
 
-		    if (itemEl.bin.dom().contains(i + minBinNumber)) {
-			possible += itemEl.weight;
-			if (itemEl.bin.singleton())
-			    required += itemEl.weight;
-			else // not singleton
-			    candidates[candidatesLength++] = itemEl;
-		    }
-		}
+                    if (itemEl.bin.dom().contains(i + minBinNumber)) {
+                        possible += itemEl.weight;
+                        if (itemEl.bin.singleton())
+                            required += itemEl.weight;
+                        else // not singleton
+                            candidates[candidatesLength++] = itemEl;
+                    }
+                }
 
-		// 		    System.out.println ("load " + i + "  " +required +".."+possible);
+		// System.out.println ("load " + i + "  " +required +".."+possible);
 
-		// Rule "Load Maintenance"
-		load[i].domain.in(store.level, load[i], required, possible);
+                // Rule "Load Maintenance"
+                load[i].domain.in(store.level, load[i], required, possible);
 
-		for (int l = 0; l < candidatesLength; l++) {
-		    BinItem bi = candidates[l];
-		    if (required + bi.weight > load[i].max())
-			bi.bin.domain.inComplement(store.level, bi.bin, i + minBinNumber);
-		    else if (possible - bi.weight < load[i].min())
-			bi.bin.domain.in(store.level, bi.bin, i + minBinNumber, i + minBinNumber);
-		}
+                for (int l = 0; l < candidatesLength; l++) {
+                    BinItem bi = candidates[l];
+                    if (required + bi.weight > load[i].max())
+                        bi.bin.domain.inComplement(store.level, bi.bin, i + minBinNumber);
+                    else if (possible - bi.weight < load[i].min())
+                        bi.bin.domain.in(store.level, bi.bin, i + minBinNumber, i + minBinNumber);
+                }
 
-		// Rule 3.2 "Search Pruning"
-		int[] Cj = new int[candidatesLength];
-		for (int l = 0; l < candidatesLength; l++)
-		    Cj[l] = candidates[l].weight;
+                // Rule 3.2 "Search Pruning"
+                int[] Cj = new int[candidatesLength];
+                for (int l = 0; l < candidatesLength; l++)
+                    Cj[l] = candidates[l].weight;
 
-		if (no_sum(Cj, load[i].min() - required, load[i].max() - required))
-		    throw Store.failException;
+                // if (no_sum(Cj, load[i].min() - required, load[i].max() - required))
+                //     throw Store.failException;
 
-		// Rule 3.3 "Tighteing Bounds on Bin Load"
-		if (no_sum(Cj, load[i].min() - required, load[i].min() - required))
-		    load[i].domain.inMin(store.level, load[i], required + betaP);
+                // Rule 3.3 "Tighteing Bounds on Bin Load"
+                if (no_sum(Cj, load[i].min() - required, load[i].min() - required))
+                    load[i].domain.inMin(store.level, load[i], required + betaP);
 
-		if (no_sum(Cj, load[i].max() - required, load[i].max() - required))
-		    load[i].domain.inMax(store.level, load[i], required + alphaP);
+                if (no_sum(Cj, load[i].max() - required, load[i].max() - required))
+                    load[i].domain.inMax(store.level, load[i], required + alphaP);
 
-		// Rule 3.4 "Elimination and Commitment of Items"
-		for (int j = 0; j < candidatesLength; j++) {
-		    int[] CjMinusI = new int[candidatesLength - 1];
-		    System.arraycopy(Cj, 0, CjMinusI, 0, j);
-		    System.arraycopy(Cj, j + 1, CjMinusI, j, (Cj.length - j - 1));
+                // Rule 3.4 "Elimination and Commitment of Items"
+                for (int j = 0; j < candidatesLength; j++) {
+                    int[] CjMinusI = new int[candidatesLength - 1];
+                    System.arraycopy(Cj, 0, CjMinusI, 0, j);
+                    System.arraycopy(Cj, j + 1, CjMinusI, j, (Cj.length - j - 1));
 
-		    if (no_sum(CjMinusI, load[i].min() - required - Cj[j], load[i].max() - required - Cj[j]))
-			candidates[j].bin.domain.inComplement(store.level, candidates[j].bin, i + minBinNumber);
-		    if (no_sum(CjMinusI, load[i].min() - required, load[i].max() - required))
-			candidates[j].bin.domain.in(store.level, candidates[j].bin, i + minBinNumber, i + minBinNumber);
-		}
-	    }
-	}
+                    if (no_sum(CjMinusI, load[i].min() - required - Cj[j], load[i].max() - required - Cj[j]))
+                        candidates[j].bin.domain.inComplement(store.level, candidates[j].bin, i + minBinNumber);
+                    if (no_sum(CjMinusI, load[i].min() - required, load[i].max() - required))
+                        candidates[j].bin.domain.in(store.level, candidates[j].bin, i + minBinNumber, i + minBinNumber);
+                }
+            }
+        }
 
-	int allCapacityMin = 0, allCapacityMax = 0;
-	for (IntVar aLoad : load) {
-	    allCapacityMin += aLoad.min();
-	    allCapacityMax += aLoad.max();
-	}
+        int allCapacityMin = 0, allCapacityMax = 0;
+        for (IntVar aLoad : load) {
+            allCapacityMin += aLoad.min();
+            allCapacityMax += aLoad.max();
+        }
 
-	// Rule "Load and Size Coherence"
-	int s1 = sizeAllItems - allCapacityMax;
-	int s2 = sizeAllItems - allCapacityMin;
-	for (IntVar aLoad : load)
-	    aLoad.domain.in(store.level, aLoad,
-			    s1 + aLoad.max(),
-			    s2 + aLoad.min());
+        // Rule "Load and Size Coherence"
+        int s1 = sizeAllItems - allCapacityMax;
+        int s2 = sizeAllItems - allCapacityMin;
+        for (IntVar aLoad : load)
+            aLoad.domain.in(store.level, aLoad, s1 + aLoad.max(), s2 + aLoad.min());
 
-	// since the constraint is not idempotent (does not compute
-	// fix-point) we need to add it to the constraint queue for
-	// re-evaluation, if there was a changed in any of variables
-	if (store.propagationHasOccurred)
-	    store.addChanged(this);
+        // since the constraint is not idempotent (does not compute
+        // fix-point) we need to add it to the constraint queue for
+        // re-evaluation, if there was a changed in any of variables
+        if (store.propagationHasOccurred)
+            store.addChanged(this);
+	else
+	    // when the constraint is fix-point check expensive LB computation
+	    lbNumberBins();
+    }
 
-        // Lower bound pruning
+    static long LBnumber=0;
+    
+    void lbNumberBins() {
+        // Lower bound of number of bins pruning
         int[] unpacked = new int[item.length];
         int unpackedLength = 0;
         int[] a = new int[load.length];
-        Arrays.fill(a, 0);
 
         for (BinItem itemI : item) {
             if (itemI.bin.singleton()) {
@@ -319,25 +320,30 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
             } else
                 unpacked[unpackedLength++] = itemI.weight;
         }
+	if (unpackedLength == 0)
+	    return;
 
         int maxCapacity = 0;
-        for (IntVar maxC : load)
-            if (maxCapacity < maxC.max())
-                maxCapacity = maxC.max();
+        for (IntVar c : load) {
+	    int maxC = c.max();
+            if (maxCapacity < maxC) 
+                maxCapacity = maxC;
+	}
 
-        for (int i = 0; i < load.length; i++)
-            if (a[i] != 0)   // consider only already loaded bins to add additional "load"
-                a[i] += maxCapacity - load[i].max();
-
+	for (int i = 0; i < load.length; i++) {
+	    if (a[i] != 0)   // consider only already loaded bins to add additional "load"
+		a[i] += maxCapacity - load[i].max();
+	}
+	
         Arrays.sort(a);  // sort array a in ascending order
 
         int[] z = merge(unpacked, unpackedLength, a);
 
-        // if number of possible bins is lower than lower bound then fail
-        if (getNumberBins(item) < lbBins(z, maxCapacity))
-            throw Store.failException;
+        // check if there is enough binns to pack all items by computing LB.
+	// If the number of possible bins is lower than lower bound then fail
+	lbBins(z, maxCapacity, getNumberBins(item));
     }
-
+    
     private int getNumberBins(BinItem[] item) {
         int min = IntDomain.MaxInt, max = 0;
         for (BinItem anItem : item) {
@@ -349,30 +355,20 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
         return max - min + 1;
     }
 
-
-    private int[] merge(int[] u, int uLength, int[] a) {
-        int[] tmp = new int[a.length + uLength];
-
-        int i = 0, j = a.length - 1, k = 0;
-
-        while (i < uLength && j >= 0) {
-            if (a[j] > u[i] || i >= uLength)
-                if (a[j] != 0)
-                    tmp[k++] = a[j--];
-                else
-                    j--;
-            else
-                tmp[k++] = u[i++];
+    private int[] merge(int[] a, int aLength, int[] b) {
+        int[] c = new int[aLength + b.length];
+        int i = 0, j = b.length-1;
+        for (int k = 0; k < c.length; k++) {
+            if (i >= aLength) 
+		c[k] = b[j--];
+            else if (j < 0)
+		c[k] = a[i++];
+            else if (a[i] >= b[j])
+		c[k] = a[i++];
+            else 
+		c[k] = b[j--];
         }
-        while (i < uLength)
-            tmp[k++] = u[i++];
-        while (j >= 0)
-            if (a[j] != 0)
-                tmp[k++] = a[j--];
-            else
-                j--;
-
-        return tmp;
+        return c;
     }
 
     @Override public int getDefaultConsistencyPruningEvent() {
@@ -391,7 +387,7 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
     @Override public void queueVariable(int level, Var var) {
         if (itemMap.containsKey(var))
             itemQueue.add((IntVar) var);
-        else 
+        else
             binQueue.add((IntVar) var);
     }
 
@@ -429,31 +425,31 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
 
     }
 
-    private boolean no_sum(int[] X, int alpha, int beta) {
+    private boolean no_sum(int[] x, int alpha, int beta) {
 
-        if (alpha <= 0 || beta >= sum(X))
+        if (alpha <= 0 || beta >= sum(x))
             return false;
 
-        int sum_a = 0, sum_b, sum_c = 0, k = 0, kPrime = 0, N = X.length - 1; // |X|
+        int sum_a = 0, sum_b, sum_c = 0, k = 0, kPrime = 0, N = x.length - 1; // |x|
 
-        while (sum_c + X[N - kPrime] < alpha) {
-            sum_c += X[N - kPrime];
-            kPrime++; // += 1;
+        while (sum_c + x[N - kPrime] < alpha) {
+            sum_c += x[N - kPrime];
+            kPrime++;
         }
         // 	System.out.println("sum_c = " + sum_c + " k' = " + kPrime);
 
-        sum_b = X[N - kPrime];
+        sum_b = x[N - kPrime];
         while (sum_a < alpha && sum_b <= beta) {
             // 	    System.out.println(sum_a +" < " +alpha + "  "+sum_b + " <= " + beta);
-            sum_a += X[k++];
+            sum_a += x[k++];
             if (sum_a < alpha) {
-                kPrime--; // -= 1;
-                sum_b += X[N - kPrime];
-                sum_c -= X[N - kPrime];
+                kPrime--;
+                sum_b += x[N - kPrime];
+                sum_c -= x[N - kPrime];
                 while (sum_a + sum_c >= alpha) {
-                    kPrime -= 1;
-                    sum_c -= X[N - kPrime];
-                    sum_b += X[N - kPrime] - X[N - kPrime - k - 1];
+                    kPrime--;
+                    sum_c -= x[N - kPrime];
+                    sum_b += x[N - kPrime] - x[N - kPrime - k - 1];
                 }
             }
         }
@@ -473,48 +469,49 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
         return summa;
     }
 
-    private int lbBins(int[] X, int C) {
+    private void lbBins(int[] x, int C, int nb) {
 
-        int sum = sum(X);
+	int nn = x.length;
+        int sum = sum(x);
         int lb = sum / C + ((sum % C != 0) ? 1 : 0);
 
-        int[] N = new int[3];
+	if (nb < lb)
+	    throw Store.failException;
 
         for (int K = 0; K <= C / 2; K++) {
-	    Arrays.fill(N, 0);
+	    int N1=0, N2=0;
 
             int i = 0;
-            while (i < X.length && X[i] > C - K) {
-                N[0] += 1;
-                i += 1;
+            while (i < nn && x[i] > C - K) {
+                N1++;
+                i++;
             }
 
-            int freeSpaceN1 = 0;
-            while (i < X.length && X[i] > C / 2) {
-                N[1] += 1;
-                freeSpaceN1 += C - X[i];
-                i += 1;
+            int freeSpaceN2 = 0;
+            while (i < nn && x[i] > C / 2) {
+                N2++;
+                freeSpaceN2 += C - x[i];
+                i++;
             }
 
-            int sizeInN2 = 0;
-            while (i < X.length && X[i] >= K) {
-                N[2] += 1;
-                sizeInN2 += X[i];
-                i += 1;
+            int sizeInN3 = 0;
+            while (i < nn && x[i] >= K) {
+                sizeInN3 += x[i];
+                i++;
             }
 
-            int toPack = sizeInN2 - freeSpaceN1;
-            int noBinsN2 = 0;
+            int toPack = sizeInN3 - freeSpaceN2;
+            int noBinsN3 = 0;
             if (toPack > 0)
-                noBinsN2 = toPack / C + ((toPack % C > 0) ? 1 : 0);
+                noBinsN3 = toPack / C + ((toPack % C > 0) ? 1 : 0);
 
-            int currentLb = N[0] + N[1] + noBinsN2;
+            int currentLb = N1 + N2 + noBinsN3;
 
             if (currentLb > lb)
                 lb = currentLb;
 
         }
-        return lb;
+	if (nb < lb)
+	    throw Store.failException;
     }
-
 }

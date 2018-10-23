@@ -35,7 +35,6 @@ package org.jacop.constraints.knapsack;
  *
  * @author Radoslaw Szymanek and Wadeck Follonier
  * @version 4.5
- *
  */
 
 public class TreeNode {
@@ -94,7 +93,8 @@ public class TreeNode {
 
     /**
      * It constructs a node of the item tree.
-     * @param left left child
+     *
+     * @param left  left child
      * @param right right child
      */
     public TreeNode(TreeNode left, TreeNode right) {
@@ -109,6 +109,7 @@ public class TreeNode {
 
     /**
      * It sets the left neighbor of this tree node.
+     *
      * @param leftNeighbor left neighbor of this node.
      */
     public void setLeftNeighbor(TreeNode leftNeighbor) {
@@ -118,6 +119,7 @@ public class TreeNode {
 
     /**
      * It sets the right neighbor of this tree node.
+     *
      * @param rightNeighbor right neighbor of this node.
      */
     public void setRightNeighbor(TreeNode rightNeighbor) {
@@ -152,6 +154,7 @@ public class TreeNode {
 
     /**
      * It does not recompute sum of profits.
+     *
      * @return The previously computed sum of profits of its children
      */
     public int getPSum() {
@@ -177,7 +180,7 @@ public class TreeNode {
      * subtree have a correct values for their attributes.
      *
      * @param tree only added to be in agreement with the function template
-     * for leaf which need information about tree it belongs to.
+     *             for leaf which need information about tree it belongs to.
      */
     public void recomputeUp(Tree tree) {
 
@@ -209,6 +212,7 @@ public class TreeNode {
 
     /**
      * It generates description of the node only.
+     *
      * @return the description containing values of all node internal attributes.
      */
     public String nodeToString() {

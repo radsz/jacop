@@ -30,17 +30,15 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.*;
-
+import org.jacop.constraints.Constraint;
 import org.jacop.core.Store;
-
 import org.jacop.core.Var;
 import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.floats.core.FloatInterval;
+import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.floats.core.FloatVar;
 
-import org.jacop.constraints.Constraint;
+import java.util.*;
 
 
 
@@ -70,10 +68,10 @@ public class MultivariateIntervalNewton {
 
     public MultivariateIntervalNewton(Store store, FloatVar[] f, FloatVar[] x) {
 
-	this.f = new FloatVar[f.length];
-	System.arraycopy(f, 0, this.f, 0, f.length);
-	this.x = new FloatVar[x.length];
-	System.arraycopy(x, 0, this.x, 0, x.length);
+        this.f = new FloatVar[f.length];
+        System.arraycopy(f, 0, this.f, 0, f.length);
+        this.x = new FloatVar[x.length];
+        System.arraycopy(x, 0, this.x, 0, x.length);
 
         eval = new Stack<Constraint>();
 
@@ -193,7 +191,7 @@ public class MultivariateIntervalNewton {
             if (f.equals(((PmulQeqR) c).r)) {
                 result = value(((PmulQeqR) c).p) * value(((PmulQeqR) c).q);
             } else {
-	        throw new RuntimeException(
+                throw new RuntimeException(
                     "!!! Anable to compute middle value for " + f + "; + Constraint " + c + " does not define a function for variable\n");
             }
         } else if (c instanceof PmulCeqR) {
@@ -317,7 +315,7 @@ public class MultivariateIntervalNewton {
         s.append(Arrays.asList(x) + "\n");
         for (int i = 0; i < fprime.length; i++)
             for (int j = 0; j < fprime[i].length; j++)
-	      s.append( "f" + i + "/d" + x[j] + " = " + fprime[i][j] + "\n");
+                s.append("f" + i + "/d" + x[j] + " = " + fprime[i][j] + "\n");
         // for (int i = 0; i < xInit.length; i++)
         //     s.append(xInit[i] + ", ");
         s.append("\n");

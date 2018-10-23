@@ -33,14 +33,11 @@ package org.jacop.search;
 import org.jacop.core.Var;
 
 /**
- *
  * Defines a MinDomainOverDegree comparator for Variables.
  *
- * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- *
- * @version 4.5
  * @param <T> type of variable being compared.
- *
+ * @author Radoslaw Szymanek and Krzysztof Kuchcinski
+ * @version 4.5
  */
 
 public class MinDomainOverDegree<T extends Var> implements ComparatorVariable<T> {

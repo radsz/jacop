@@ -29,37 +29,36 @@
  */
 package org.jacop.fz.constraints;
 
-import org.jacop.core.Store;
-import org.jacop.core.IntVar;
-
-import org.jacop.fz.*;
+import org.jacop.constraints.ElementInteger;
+import org.jacop.constraints.ElementIntegerFast;
+import org.jacop.constraints.ElementVariableFast;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
-import org.jacop.constraints.ElementIntegerFast;
-import org.jacop.constraints.ElementInteger;
-import org.jacop.constraints.ElementVariableFast;
-import org.jacop.set.constraints.ElementSet;
-import org.jacop.set.constraints.ElementSetVariable;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
 import org.jacop.floats.constraints.ElementFloat;
 import org.jacop.floats.constraints.ElementFloatVariable;
-import org.jacop.set.core.SetVar;
 import org.jacop.floats.core.FloatVar;
+import org.jacop.fz.ASTScalarFlatExpr;
+import org.jacop.fz.ParserTreeConstants;
+import org.jacop.fz.SimpleNode;
+import org.jacop.set.constraints.ElementSet;
+import org.jacop.set.constraints.ElementSetVariable;
+import org.jacop.set.core.SetVar;
 
 /**
- *
  * Generation of boolean constraints in flatzinc
  *
- * @author Krzysztof Kuchcinski 
- *
+ * @author Krzysztof Kuchcinski
  */
 class ElementConstraints implements ParserTreeConstants {
 
-    Support support;    
+    Support support;
     Store store;
-    
+
     public ElementConstraints(Support support) {
-	this.support = support;
-	this.store = support.store;
+        this.support = support;
+        this.store = support.store;
     }
 
     void gen_array_int_element(SimpleNode node) {
@@ -142,7 +141,7 @@ class ElementConstraints implements ParserTreeConstants {
 
         for (int i = 0; i < p2.length; i++)
             if (p2[i] == null) {
-		throw new IllegalArgumentException("%% var_set_element with list of set variables is not avaible in org.jacop.set");
+                throw new IllegalArgumentException("%% var_set_element with list of set variables is not avaible in org.jacop.set");
             }
 
         support.pose(new ElementSet(p1, p2, p3));
@@ -164,8 +163,8 @@ class ElementConstraints implements ParserTreeConstants {
             support.pose(new ElementSet(p1, p2, p3));
 
         } else {
-	    SetVar[] vs = support.getSetVarArray((SimpleNode) node.jjtGetChild(1));
-	    support.pose(new ElementSetVariable(p1, vs, p3));
+            SetVar[] vs = support.getSetVarArray((SimpleNode) node.jjtGetChild(1));
+            support.pose(new ElementSetVariable(p1, vs, p3));
         }
     }
 
@@ -193,7 +192,7 @@ class ElementConstraints implements ParserTreeConstants {
 
             poseElementFloat(p1, p2double, p3);
         } else {
-	    support.pose(new ElementFloatVariable(p1, p2, p3));
+            support.pose(new ElementFloatVariable(p1, p2, p3));
         }
     }
 

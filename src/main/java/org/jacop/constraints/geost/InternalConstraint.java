@@ -29,24 +29,22 @@
  */
 package org.jacop.constraints.geost;
 
-import java.util.Collection;
-
 import org.jacop.core.Var;
+
+import java.util.Collection;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
  * @version 4.5
- *
- * This interface defines the functionality required by a constraint in order
- * to be used by Geost's sweeping algorithm.
- *
- * The different methods defined by this interface are likely to be called
- * often during a single call to the consistency function, and should therefore 
- * be as efficient as possible.
- *
- * Comments about implementation details. 
- *
- *
+ *          <p>
+ *          This interface defines the functionality required by a constraint in order
+ *          to be used by Geost's sweeping algorithm.
+ *          <p>
+ *          The different methods defined by this interface are likely to be called
+ *          often during a single call to the consistency function, and should therefore
+ *          be as efficient as possible.
+ *          <p>
+ *          Comments about implementation details.
  */
 
 public abstract class InternalConstraint {
@@ -60,7 +58,6 @@ public abstract class InternalConstraint {
     /**
      * In order to avoid the cost of repeated calls to isInternalConstraintApplicable,
      * we need 3 different states.
-     *
      */
     enum Applicability {
         UNDEFINED, // no check done yet
@@ -78,15 +75,15 @@ public abstract class InternalConstraint {
      * It provides the largest or smallest point contained in the forbidden area represented by this
      * constraint. This point must be larger or equal (resp. smaller or equal) to the lexicographically
      * largest (resp. smallest) point included in the forbidden area, whatever the lexical order is.
-     *
+     * <p>
      * TODO, is this function potentially still useful? If not remove, if yes then adapt the description about
      * event point series. What is it used now for? I will keep it as it may be used later on, but for sure
      * the code implementing those functions is not tested much or requires some cleaning.
-     *
+     * <p>
      * This allows to build an event point series that stays consistent whatever the lexical order is,
      * and whatever the object to place is (some shifting is applied to take the object's shape into
      * account)
-     *
+     * <p>
      * The dimension of the point returned is k+1, where k is the object dimension. The
      * last dimension is time.
      *
@@ -100,10 +97,10 @@ public abstract class InternalConstraint {
      * It provides information about the constraint future. If a constraint will always generate the same
      * outboxes deeper in the tree, it should return false, so that jumps in the event point series
      * can be done.
-     *
+     * <p>
      * TODO the description above suggests that it should be called isDynamic as it returns false if the
      * constraint outboxes stay the same.
-     *
+     * <p>
      * (not taking placed object into account; i.e. absInfeasible will always return the same points)
      *
      * @return TODO, proper description after fixing the above todo.
@@ -114,9 +111,9 @@ public abstract class InternalConstraint {
      * In some cases, a constraint is used only once per sweep direction on a path
      * from root to leaf in the search tree. In that case, the constraint can be ignored if
      * it was seen at some point.
-     *
+     * <p>
      * TODO, what is the example of such constraint?
-     *
+     * <p>
      * Use this function to provide the information to Geost.
      *
      * @return TODO. Is this function used at all? It seems that all implementations return false and nowhere in geost it is used.
@@ -127,19 +124,19 @@ public abstract class InternalConstraint {
      * It determines whether the given point is a feasible origin of object o, considering
      * this constraint only. If it is not, returns a DBox corresponding to the largest infeasible domain,
      * considering a sweep which uses the given ordering.
-     *
+     * <p>
      * The boundaries of the forbidden area must have the following properties:
      * the lower extremum has to be infeasible, but the upper extremum has to be feasible
      * (with respect to this constraint only).
-     *
+     * <p>
      * The dimension of the DBox returned is k+1, where k is the object dimension. The
      * last dimension is time.
      *
-     * @param min the direction of the sweep
-     * @param order the order to be used
-     * @param o the object the constraint is applied to
+     * @param min          the direction of the sweep
+     * @param order        the order to be used
+     * @param o            the object the constraint is applied to
      * @param currentShape the shape id that is currently considered for o
-     * @param c the current position of the sweep.
+     * @param c            the current position of the sweep.
      * @return a DBox representing the forbidden region
      */
     public abstract DBox isFeasible(Geost.SweepDirection min, LexicographicalOrder order, GeostObject o, int currentShape, int[] c);
@@ -149,7 +146,7 @@ public abstract class InternalConstraint {
      * The information provided by this function cannot be accurate, since no object is passed as an argument,
      * but some consistent approximation should exist. For instance, in the case of a forbidden area,
      * the returned value can be the number of points included in the area.
-     *
+     * <p>
      * This information is used as a heuristic in the sweeping algorithm to decide which constraint to use,
      * so that the constraints that cover the largest space are used first.
      *

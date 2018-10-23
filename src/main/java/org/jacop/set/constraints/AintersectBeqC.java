@@ -30,20 +30,20 @@
 
 package org.jacop.set.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
-import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Var;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
- * It creates a constraint that makes sure that A intersected with B 
- * is equal to C. A /\ B = C. 
+ * It creates a constraint that makes sure that A intersected with B
+ * is equal to C. A /\ B = C.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.5
@@ -85,12 +85,11 @@ public class AintersectBeqC extends Constraint implements UsesQueueVariable, Sat
      *
      * @param a set variable a, which is being intersected with set variable b.
      * @param b set variable b, which is being intersected with set variable a.
-     *
      * @param c variable that is restricted to be the intersection of a and b.
      */
     public AintersectBeqC(SetVar a, SetVar b, SetVar c) {
 
-        checkInputForNullness(new String[]{"a", "b", "c"}, new Object[]{a, b, c});
+        checkInputForNullness(new String[] {"a", "b", "c"}, new Object[] {a, b, c});
 
         numberId = idNumber.incrementAndGet();
 

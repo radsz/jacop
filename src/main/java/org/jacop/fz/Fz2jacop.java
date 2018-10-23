@@ -35,29 +35,24 @@ import org.jacop.core.FailException;
 
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
-
 import java.util.concurrent.TimeUnit;
 
 /**
- *
- * An executable to parse and execute the flatzinc file. 
+ * An executable to parse and execute the flatzinc file.
  *
  * @author Krzysztof Kuchcinki
  * @version 4.5
- *
  */
 
 public class Fz2jacop {
 
     /**
-     * It parses the provided file and parsing parameters followed by problem solving. 
+     * It parses the provided file and parsing parameters followed by problem solving.
      *
-     * @param args parameters describing the flatzinc file containing the problem to be solved as well as options for problem solving. 
-     *
-     * TODO what are the conditions for different exceptions being thrown? Write little info below.
-     *
+     * @param args parameters describing the flatzinc file containing the problem to be solved as well as options for problem solving.
+     *             <p>
+     *             TODO what are the conditions for different exceptions being thrown? Write little info below.
      */
 
     public static void main(String[] args) {
@@ -81,9 +76,9 @@ public class Fz2jacop {
         if (opt.getVerbose())
             System.out.println("%% Flatzinc2JaCoP: compiling and executing " + args[args.length - 1]);
 
-        Thread tread = java.lang.Thread.currentThread();
-        java.lang.management.ThreadMXBean b = java.lang.management.ManagementFactory.getThreadMXBean();
-        long startCPU = b.getThreadCpuTime(tread.getId());
+        // Thread tread = java.lang.Thread.currentThread();
+        // java.lang.management.ThreadMXBean b = java.lang.management.ManagementFactory.getThreadMXBean();
+        // long startCPU = b.getThreadCpuTime(tread.getId());
 
         Parser parser = new Parser(opt.getFile());
         parser.setOptions(opt);
@@ -107,18 +102,18 @@ public class Fz2jacop {
                 }
             }
             if (opt.getStatistics()) {
-		System.out.println("%% Model variables: "+ (parser.getStore().size() + parser.getTables().getNumberBoolVariables()));
-		System.out.println("%% Model constraints: "+ parser.getStore().numberConstraints());
-		System.out.println("\n%% Propagations: "+parser.getStore().numberConsistencyCalls);
-	    }
+                System.out.println("%%mzn-stat: variables=" + (parser.getStore().size() + parser.getTables().getNumberBoolVariables()));
+                System.out.println("%%mzn-stat: propagators=" + parser.getStore().numberConstraints());
+                System.out.println("\n%%mzn-stat: propagations=" + parser.getStore().numberConsistencyCalls);
+            }
         } catch (ArithmeticException e) {
             System.err.println("%% Evaluation of model resulted in an overflow.");
             if (e.getStackTrace().length > 0)
                 System.out.println("%%\t" + e.toString());
-        } catch(IllegalArgumentException e) {
+        } catch (IllegalArgumentException e) {
             if (e.getStackTrace().length > 0)
-                System.out.println("%%\t" + e.toString());	    
-	} catch (ParseException e) {
+                System.out.println("%%\t" + e.toString());
+        } catch (ParseException e) {
             System.out.println("%% Parser exception " + e);
         } catch (TokenMgrError e) {
             System.out.println("%% Parser exception " + e);
@@ -133,25 +128,27 @@ public class Fz2jacop {
         } catch (TrivialSolution e) {
             // do nothing
             Runtime.getRuntime().removeShutdownHook(t);
-            return;
+            //return;
         }
 
         if (opt.getStatistics()) {
             Runtime.getRuntime().removeShutdownHook(t);
 
-	    long execTime = (b.getThreadCpuTime(tread.getId()) - startCPU) / (long) 1e+6;  // in ms
-	    final long hr = TimeUnit.MILLISECONDS.toHours(execTime);
-	    final long min = TimeUnit.MILLISECONDS.toMinutes(execTime - TimeUnit.HOURS.toMillis(hr));
-	    final long sec = TimeUnit.MILLISECONDS.toSeconds(execTime - TimeUnit.HOURS.toMillis(hr) - TimeUnit.MINUTES.toMillis(min));
-	    final long ms = TimeUnit.MILLISECONDS.toMillis(execTime - TimeUnit.HOURS.toMillis(hr) - TimeUnit.MINUTES.toMillis(min) - TimeUnit.SECONDS.toMillis(sec));
-	    System.out.printf("%n%%%% Total CPU time : %d ms ", execTime);
-	    if (hr == 0) 
-		if (min == 0) 
-		    System.out.println(String.format("(%d.%03d)", sec, ms));
-		else
-		    System.out.println(String.format("(%d:%02d.%03d)", min, sec, ms));
-	    else
-		System.out.println(String.format("(%d:%02d:%02d.%03d)", hr, min, sec, ms));
+            // long execTime = (b.getThreadCpuTime(tread.getId()) - startCPU) / (long) 1e+6;  // in ms
+	    long execTime = (parser.solver.initTime + parser.solver.searchTime) / (long) 1e+6; // in ms
+            final long hr = TimeUnit.MILLISECONDS.toHours(execTime);
+            final long min = TimeUnit.MILLISECONDS.toMinutes(execTime - TimeUnit.HOURS.toMillis(hr));
+            final long sec = TimeUnit.MILLISECONDS.toSeconds(execTime - TimeUnit.HOURS.toMillis(hr) - TimeUnit.MINUTES.toMillis(min));
+            final long ms = TimeUnit.MILLISECONDS
+                .toMillis(execTime - TimeUnit.HOURS.toMillis(hr) - TimeUnit.MINUTES.toMillis(min) - TimeUnit.SECONDS.toMillis(sec));
+            System.out.printf("%n%%%%mzn-stat: time=%.3f ", (double)execTime/1000.0);
+            if (hr == 0) 
+                if (min == 0)
+                    System.out.println(); //String.format("(%d.%03d)", sec, ms));
+                else
+                    System.out.println(String.format("(%d:%02d.%03d)", min, sec, ms));
+            else
+                System.out.println(String.format("(%d:%02d:%02d.%03d)", hr, min, sec, ms));
         }
     }
 }

@@ -30,20 +30,19 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Element;
 import org.jacop.constraints.SumInt;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.util.ArrayList;
+
 /**
- * It solves a simple parcel shipment problem. 
+ * It solves a simple parcel shipment problem.
  *
  * @author Radoslaw Szymanek
  * @version 4.5
- *
  */
 public class Parcel extends ExampleFD {
 
@@ -130,6 +129,7 @@ public class Parcel extends ExampleFD {
 
     /**
      * It executes the program to solve the parcel shipment problem.
+     *
      * @param args no parameters
      */
     public static void main(String args[]) {

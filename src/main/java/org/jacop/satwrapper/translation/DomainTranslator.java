@@ -31,13 +31,13 @@
 
 package org.jacop.satwrapper.translation;
 
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.Set;
-
 import org.jacop.core.IntVar;
 import org.jacop.satwrapper.SatWrapper;
 import org.jacop.satwrapper.WrapperComponent;
+
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.Set;
 
 /**
  * A component that translates CP variables ranges to boolean clauses to
@@ -77,7 +77,7 @@ public final class DomainTranslator implements WrapperComponent {
             LinkedList<Integer> clause = new LinkedList<Integer>();
 
 			/*
-			 * special case: singleton
+       * special case: singleton
 			 */
             if (variable.domain.singleton()) {
                 int v = variable.domain.value();

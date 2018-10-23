@@ -139,6 +139,7 @@ public abstract class ExampleFD {
 
     /**
      * It searches for all solutions with the optimal value.
+     *
      * @return true if any optimal solution has been found.
      */
     public boolean searchAllOptimal() {
@@ -165,8 +166,8 @@ public abstract class ExampleFD {
     /**
      * It specifies simple search method based on smallest domain variable order
      * and lexigraphical ordering of values.
-     * @param optimal it specifies if the search the optimal solution takes place.
      *
+     * @param optimal it specifies if the search the optimal solution takes place.
      * @return true if there is a solution, false otherwise.
      */
 
@@ -175,8 +176,7 @@ public abstract class ExampleFD {
         long T1, T2;
         T1 = System.currentTimeMillis();
 
-        SelectChoicePoint<IntVar> select =
-            new SimpleSelect<>(vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMin<>());
+        SelectChoicePoint<IntVar> select = new SimpleSelect<>(vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMin<>());
 
         search = new DepthFirstSearch<>();
 
@@ -220,8 +220,7 @@ public abstract class ExampleFD {
         T1 = System.currentTimeMillis();
 
         SelectChoicePoint<IntVar> select =
-            new SimpleSelect<>(vars.toArray(new IntVar[1]), new WeightedDegree<>(), new SmallestDomain<>(),
-                new IndomainMin<>());
+            new SimpleSelect<>(vars.toArray(new IntVar[1]), new WeightedDegree<>(), new SmallestDomain<>(), new IndomainMin<>());
 
         search = new DepthFirstSearch<>();
 
@@ -314,6 +313,7 @@ public abstract class ExampleFD {
 
     /**
      * It searches using an input order search with indomain based on middle value.
+     *
      * @return true if there is a solution, false otherwise.
      */
     public boolean searchMiddle() {
@@ -335,8 +335,9 @@ public abstract class ExampleFD {
 
     /**
      * It searches with shaving which is guided by supplied constraints.
+     *
      * @param guidingShaving the array of constraints proposing shaving candidates.
-     * @param printInfo it specifies if that function should print any info.
+     * @param printInfo      it specifies if that function should print any info.
      * @return true if the solution was found, false otherwise.
      */
     public boolean shavingSearch(List<Constraint> guidingShaving, boolean printInfo) {
@@ -379,6 +380,7 @@ public abstract class ExampleFD {
      * Every search contributes with new no-goods which are kept so eventually
      * the search is complete (although can be very expensive to maintain explicitly
      * all no-goods found during search).
+     *
      * @return true if there is a solution, false otherwise.
      */
     public boolean searchWithRestarts() {
@@ -439,15 +441,15 @@ public abstract class ExampleFD {
 
     /**
      * It uses credit search to solve a problem.
-     * @param credits the number of credits available.
+     *
+     * @param credits    the number of credits available.
      * @param backtracks the maximum number of backtracks used when a path exhausts its credits.
-     * @param maxDepth the maximum depth to which the credit distribution takes place.
+     * @param maxDepth   the maximum depth to which the credit distribution takes place.
      * @return true if a solution was found, false otherwise.
      */
     public boolean creditSearch(int credits, int backtracks, int maxDepth) {
 
-        SelectChoicePoint<IntVar> select =
-            new SimpleSelect<>(vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMin<>());
+        SelectChoicePoint<IntVar> select = new SimpleSelect<>(vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMin<>());
 
         CreditCalculator<IntVar> credit = new CreditCalculator<>(credits, backtracks, maxDepth);
 
@@ -481,16 +483,14 @@ public abstract class ExampleFD {
 
 
     /**
-     *
      * It uses MaxRegret variable ordering heuristic to search for a solution.
-     * @return true if there is a solution, false otherwise.
      *
+     * @return true if there is a solution, false otherwise.
      */
     public boolean searchWithMaxRegret() {
 
         SelectChoicePoint<IntVar> select =
-            new SimpleSelect<>(vars.toArray(new IntVar[0]), new MaxRegret<>(), new SmallestDomain<>(),
-                new IndomainMiddle<>());
+            new SimpleSelect<>(vars.toArray(new IntVar[0]), new MaxRegret<>(), new SmallestDomain<>(), new IndomainMiddle<>());
 
         search = new DepthFirstSearch<>();
         search.getSolutionListener().searchAll(true);
@@ -504,6 +504,7 @@ public abstract class ExampleFD {
 
     /**
      * It searches for solution using Limited Discrepancy Search.
+     *
      * @param noDiscrepancy maximal number of discrepancies
      * @return true if the solution was found, false otherwise.
      */
@@ -513,8 +514,7 @@ public abstract class ExampleFD {
 
         boolean result = false;
 
-        SelectChoicePoint<IntVar> select =
-            new SimpleSelect<>(vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMiddle<>());
+        SelectChoicePoint<IntVar> select = new SimpleSelect<>(vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMiddle<>());
 
         LDS<IntVar> lds = new LDS<>(noDiscrepancy);
 
@@ -541,6 +541,7 @@ public abstract class ExampleFD {
     /**
      * It searches for optimal solution using max regret variable ordering
      * and indomain min for value ordering.
+     *
      * @return true if there is a solution, false otherwise.
      */
     public boolean searchMaxRegretOptimal() {
@@ -550,8 +551,7 @@ public abstract class ExampleFD {
 
         search = new DepthFirstSearch<IntVar>();
 
-        SelectChoicePoint<IntVar> select =
-            new SimpleSelect<>(vars.toArray(new IntVar[1]), new MaxRegret<>(), new IndomainMin<>());
+        SelectChoicePoint<IntVar> select = new SimpleSelect<>(vars.toArray(new IntVar[1]), new MaxRegret<>(), new IndomainMin<>());
 
         boolean result = search.labeling(store, select, cost);
 
@@ -571,6 +571,7 @@ public abstract class ExampleFD {
     /**
      * It searches using smallest domain variable ordering and
      * indomain middle value ordering.
+     *
      * @return true if there is a solution, false otherwise.
      */
     public boolean searchSmallestMiddle() {
@@ -581,8 +582,7 @@ public abstract class ExampleFD {
 
         search = new DepthFirstSearch<>();
 
-        SelectChoicePoint<IntVar> select =
-            new SimpleSelect<>(vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMiddle<>());
+        SelectChoicePoint<IntVar> select = new SimpleSelect<>(vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMiddle<>());
 
         result = search.labeling(store, select);
 
@@ -599,6 +599,7 @@ public abstract class ExampleFD {
     /**
      * It searches using smallest domain variable ordering and
      * indomain middle value ordering.
+     *
      * @return true if there is a solution, false otherwise.
      */
     public boolean searchSmallestMedian() {
@@ -609,8 +610,7 @@ public abstract class ExampleFD {
 
         search = new DepthFirstSearch<>();
 
-        SelectChoicePoint<IntVar> select =
-            new SimpleSelect<>(vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMedian<>());
+        SelectChoicePoint<IntVar> select = new SimpleSelect<>(vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMedian<>());
 
         result = search.labeling(store, select);
 
@@ -634,8 +634,7 @@ public abstract class ExampleFD {
 
         long begin = System.currentTimeMillis();
 
-        SelectChoicePoint<IntVar> select =
-            new SimpleSelect<>(vars.toArray(new IntVar[1]), new SmallestMin<>(), new IndomainMin<>());
+        SelectChoicePoint<IntVar> select = new SimpleSelect<>(vars.toArray(new IntVar[1]), new SmallestMin<>(), new IndomainMin<>());
 
         search = new DepthFirstSearch<>();
 
@@ -659,8 +658,7 @@ public abstract class ExampleFD {
      * It conducts master-slave search. Both of them use input order variable ordering.
      *
      * @param masterVars it specifies the search variables used in master search.
-     * @param slaveVars it specifies the search variables used in slave search.
-     *
+     * @param slaveVars  it specifies the search variables used in slave search.
      * @return true if the solution exists, false otherwise.
      */
     public boolean searchMasterSlave(List<Var> masterVars, List<Var> slaveVars) {
@@ -674,8 +672,7 @@ public abstract class ExampleFD {
         labelSlave.setSelectChoicePoint(selectSlave);
 
         Search<IntVar> labelMaster = new DepthFirstSearch<>();
-        SelectChoicePoint<IntVar> selectMaster =
-            new SimpleSelect<>(masterVars.toArray(new IntVar[0]), null, new IndomainMin<>());
+        SelectChoicePoint<IntVar> selectMaster = new SimpleSelect<>(masterVars.toArray(new IntVar[0]), null, new IndomainMin<>());
 
         labelMaster.addChildSearch(labelSlave);
 
@@ -699,6 +696,7 @@ public abstract class ExampleFD {
 
     /**
      * It returns the search used within an example.
+     *
      * @return the search used within an example.
      */
     public Search<IntVar> getSearch() {
@@ -707,6 +705,7 @@ public abstract class ExampleFD {
 
     /**
      * It specifies the constraint store used within an example.
+     *
      * @return constraint store used within an example.
      */
     public Store getStore() {
@@ -715,6 +714,7 @@ public abstract class ExampleFD {
 
     /**
      * It returns an array list of variables used to model the example.
+     *
      * @return the array list of variables used to model the example.
      */
     public List<IntVar> getSearchVariables() {
@@ -723,9 +723,10 @@ public abstract class ExampleFD {
 
     /**
      * It prints a matrix of variables. All variables must be grounded.
+     *
      * @param matrix matrix containing the grounded variables.
-     * @param rows number of elements in the first dimension.
-     * @param cols number of elements in the second dimension.
+     * @param rows   number of elements in the first dimension.
+     * @param cols   number of elements in the second dimension.
      */
     public static void printMatrix(IntVar[][] matrix, int rows, int cols) {
 

@@ -47,6 +47,7 @@ public class SmallDenseDomainValueEnumeration extends ValueEnumeration {
 
     /**
      * It create an enumeration for a given domain.
+     *
      * @param dom domain for which value enumeration is created.
      */
     public SmallDenseDomainValueEnumeration(SmallDenseDomain dom) {

@@ -30,26 +30,22 @@
 
 package org.jacop.floats.constraints;
 
-import java.lang.reflect.Array;
-import java.util.ArrayList;
+import org.jacop.api.SatisfiedPresent;
+import org.jacop.constraints.Constraint;
+import org.jacop.core.IntDomain;
+import org.jacop.core.Store;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
-import org.jacop.api.SatisfiedPresent;
-import org.jacop.constraints.Constraint;
-
-import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.core.FloatVar;
-import org.jacop.core.Store;
-import org.jacop.core.Var;
-import org.jacop.core.IntDomain;
-
 /**
  * Max constraint implements the Maximum/2 constraint. It provides the maximum
- * variable from all variables on the list. 
- *
+ * variable from all variables on the list.
+ * <p>
  * max(list) = max.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -72,24 +68,26 @@ public class Max extends Constraint implements SatisfiedPresent {
 
     /**
      * It constructs max constraint.
-     * @param max variable denoting the maximum value
+     *
+     * @param max  variable denoting the maximum value
      * @param list the array of variables for which the maximum value is imposed.
      */
     public Max(FloatVar[] list, FloatVar max) {
 
-        checkInputForNullness(new String[]{"list", "max"}, new Object[][]{list, {max}});
+        checkInputForNullness(new String[] {"list", "max"}, new Object[][] {list, {max}});
 
         this.queueIndex = 1;
         this.numberId = idNumber.incrementAndGet();
         this.max = max;
         this.list = Arrays.copyOf(list, list.length);
 
-        setScope( Stream.concat( Stream.of(list), Stream.of(max) ) );
+        setScope(Stream.concat(Stream.of(list), Stream.of(max)));
     }
 
     /**
      * It constructs max constraint.
-     * @param max variable denoting the maximum value
+     *
+     * @param max       variable denoting the maximum value
      * @param variables the array of variables for which the maximum value is imposed.
      */
     public Max(List<? extends FloatVar> variables, FloatVar max) {

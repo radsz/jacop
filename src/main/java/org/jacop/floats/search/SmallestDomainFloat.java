@@ -32,16 +32,15 @@ package org.jacop.floats.search;
 
 import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
-
 import org.jacop.search.ComparatorVariable;
 
 /**
  * Defines a Smallest Domain comparator for Variables. The variable with the smallest
  * domain has the priority.
  *
+ * @param <T> type of variable being used in the search.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
- * @param <T> type of variable being used in the search.
  */
 
 public class SmallestDomainFloat<T extends Var> implements ComparatorVariable<T> {

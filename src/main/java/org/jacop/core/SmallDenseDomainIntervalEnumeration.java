@@ -46,6 +46,7 @@ public class SmallDenseDomainIntervalEnumeration extends IntervalEnumeration {
 
     /**
      * It create an enumeration for a given domain.
+     *
      * @param dom domain for which value enumeration is created.
      */
     public SmallDenseDomainIntervalEnumeration(SmallDenseDomain dom) {

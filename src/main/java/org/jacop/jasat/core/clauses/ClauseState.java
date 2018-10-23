@@ -33,6 +33,7 @@ package org.jacop.jasat.core.clauses;
 
 /**
  * constants that represent the state of a clause at some point in the search
+ *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.5
  */
@@ -40,8 +41,8 @@ package org.jacop.jasat.core.clauses;
 public final class ClauseState {
 
     /**
-     *  TODO, Radek : I would put this in AbstractClausesDatabase as
-     *  only ClausesDatabases uses this.
+     * TODO, Radek : I would put this in AbstractClausesDatabase as
+     * only ClausesDatabases uses this.
      */
     public static final int UNKNOWN_CLAUSE = 0; // too much non affected literals
     public static final int UNSATISFIABLE_CLAUSE = 1; // unsatisfiable clause

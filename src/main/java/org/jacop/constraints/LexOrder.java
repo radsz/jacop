@@ -32,11 +32,13 @@ package org.jacop.constraints;
 
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
 import org.jacop.util.SimpleHashSet;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
@@ -109,7 +111,7 @@ public class LexOrder extends Constraint implements UsesQueueVariable, Satisfied
 
     public LexOrder(IntVar[] x, IntVar[] y, boolean lt) {
 
-        checkInputForNullness(new String[]{"x", "y"}, x, y);
+        checkInputForNullness(new String[] {"x", "y"}, x, y);
 
         queueIndex = 2;
         numberId = idNumber.incrementAndGet();

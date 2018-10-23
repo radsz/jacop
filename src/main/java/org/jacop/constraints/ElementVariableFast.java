@@ -30,27 +30,23 @@
 
 package org.jacop.constraints;
 
+import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.Stateful;
+import org.jacop.core.*;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
-import org.jacop.api.SatisfiedPresent;
-import org.jacop.api.Stateful;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Store;
-import org.jacop.core.ValueEnumeration;
-
 /**
- * ElementVariableFast constraint defines a relation 
+ * ElementVariableFast constraint defines a relation
  * list[index - indexOffset] = value. This version uses bounds consistency.
- *
+ * <p>
  * The first element of the list corresponds to index - indexOffset = 1.
  * By default indexOffset is equal 0 so first value within a list corresponds to index equal 1.
- *
- * If index has a domain from 0 to list.length-1 then indexOffset has to be equal -1 to 
+ * <p>
+ * If index has a domain from 0 to list.length-1 then indexOffset has to be equal -1 to
  * make addressing of list array starting from 1.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -82,24 +78,24 @@ public class ElementVariableFast extends Constraint implements Stateful, Satisfi
 
     /**
      * It specifies list of variables within an element constraint list[index - indexOffset] = value.
-     * The list is addressed by positive integers ({@code >=1}) if indexOffset is equal to 0. 
+     * The list is addressed by positive integers ({@code >=1}) if indexOffset is equal to 0.
      */
     final public IntVar list[];
 
     /**
-     * It constructs an element constraint. 
+     * It constructs an element constraint.
      *
-     * @param index variable index
-     * @param list list of variables from which an index-th element is taken
-     * @param value a value of the index-th element from list
-     * @param indexOffset shift applied to index variable. 
+     * @param index       variable index
+     * @param list        list of variables from which an index-th element is taken
+     * @param value       a value of the index-th element from list
+     * @param indexOffset shift applied to index variable.
      */
     public ElementVariableFast(IntVar index, IntVar[] list, IntVar value, int indexOffset) {
 
         checkInputForNullness(new String[] {"index", "value"}, new Object[] {index, value});
         checkInputForNullness("list", list);
 
-        queueIndex = 2;
+        queueIndex = 1;
 
         this.indexOffset = indexOffset;
         this.numberId = idNumber.incrementAndGet();
@@ -107,14 +103,14 @@ public class ElementVariableFast extends Constraint implements Stateful, Satisfi
         this.value = value;
         this.list = Arrays.copyOf(list, list.length);
 
-        setScope( Stream.concat( Stream.concat( Stream.of(index), Arrays.stream(list)), Stream.of(value)));
+        setScope(Stream.concat(Stream.concat(Stream.of(index), Arrays.stream(list)), Stream.of(value)));
     }
 
     /**
-     * It constructs an element constraint. 
+     * It constructs an element constraint.
      *
      * @param index variable index
-     * @param list list of variables from which an index-th element is taken
+     * @param list  list of variables from which an index-th element is taken
      * @param value a value of the index-th element from list
      */
     public ElementVariableFast(IntVar index, List<? extends IntVar> list, IntVar value) {
@@ -124,12 +120,12 @@ public class ElementVariableFast extends Constraint implements Stateful, Satisfi
     }
 
     /**
-     * It constructs an element constraint. 
+     * It constructs an element constraint.
      *
-     * @param index variable index
-     * @param list list of variables from which an index-th element is taken
-     * @param value a value of the index-th element from list
-     * @param indexOffset shift applied to index variable. 
+     * @param index       variable index
+     * @param list        list of variables from which an index-th element is taken
+     * @param value       a value of the index-th element from list
+     * @param indexOffset shift applied to index variable.
      */
     public ElementVariableFast(IntVar index, List<? extends IntVar> list, IntVar value, int indexOffset) {
 
@@ -138,10 +134,10 @@ public class ElementVariableFast extends Constraint implements Stateful, Satisfi
     }
 
     /**
-     * It constructs an element constraint. 
+     * It constructs an element constraint.
      *
      * @param index variable index
-     * @param list list of variables from which an index-th element is taken
+     * @param list  list of variables from which an index-th element is taken
      * @param value a value of the index-th element from list
      */
     public ElementVariableFast(IntVar index, IntVar[] list, IntVar value) {
@@ -151,15 +147,15 @@ public class ElementVariableFast extends Constraint implements Stateful, Satisfi
     }
 
     @Override public boolean isStateful() {
-        return  (!(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset));
+        return (!(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset));
     }
-    
+
     /**
      * It imposes the constraint in a given store.
      *
      * @param store the constraint store to which the constraint is imposed to.
      */
-    
+
     @Override public void impose(Store store) {
 
         super.impose(store);
@@ -168,7 +164,7 @@ public class ElementVariableFast extends Constraint implements Stateful, Satisfi
             firstConsistencyCheck = false;
         }
     }
-    
+
     @Override public void consistency(Store store) {
 
         if (firstConsistencyCheck) {
@@ -182,44 +178,47 @@ public class ElementVariableFast extends Constraint implements Stateful, Satisfi
             IntVar v = list[index.value() - 1 - indexOffset];
             v.domain.in(store.level, v, value.value(), value.value());
             removeConstraint();
-	    return;
+            return;
         }
         if (index.singleton()) {
             int position = index.value() - 1 - indexOffset;
             value.domain.in(store.level, value, list[position].domain);
             list[position].domain.in(store.level, list[position], value.domain);
-	    return;
+            return;
         }
-	
+
         int min = IntDomain.MaxInt;
         int max = IntDomain.MinInt;
         IntervalDomain indexDom = new IntervalDomain(5); // create with size 5 ;)
+        boolean indexDomNonEmpty = false;
         for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
             int position = e.nextElement() - 1 - indexOffset;
 
-            if (disjoint(value, list[position]))
+            if (disjoint(value, list[position])) {
+                indexDomNonEmpty = true;
                 if (indexDom.size == 0)
                     indexDom.unionAdapt(position + 1 + indexOffset);
                 else
                     indexDom.addLastElement(position + 1 + indexOffset);
-            else {
+            } else {
                 min = Math.min(min, list[position].min());
                 max = Math.max(max, list[position].max());
             }
         }
 
-        index.domain.in(store.level, index, indexDom.complement());
+        if (indexDomNonEmpty)
+            index.domain.in(store.level, index, indexDom.complement());
         value.domain.in(store.level, value, min, max);
-	
-	if (index.singleton()) {
-	    // index is singleton; value == list[index - 1 - offset]
-	    IntVar lp = list[index.value() - 1 - indexOffset];
-	    value.domain.in(store.level, value, lp.domain);
-	    lp.domain.in(store.level, lp, value.domain);
 
-	    // if (value.singleton())
-	    // 	removeConstraint();
-	}
+        if (index.singleton()) {
+            // index is singleton; value == list[index - 1 - offset]
+            IntVar lp = list[index.value() - 1 - indexOffset];
+            value.domain.in(store.level, value, lp.domain);
+            lp.domain.in(store.level, lp, value.domain);
+
+            // if (value.singleton())
+            // 	removeConstraint();
+        }
     }
 
     private boolean disjoint(IntVar v1, IntVar v2) {

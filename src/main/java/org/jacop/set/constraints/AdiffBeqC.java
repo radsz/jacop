@@ -30,22 +30,22 @@
 
 package org.jacop.set.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.Store;
-import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Var;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
- * It creates a constraints that subtracts from set variable A the 
- * elements from of the set variable B and assigns the result to set 
- * variable C. 
- *
- * A \ B = C. 
+ * It creates a constraints that subtracts from set variable A the
+ * elements from of the set variable B and assigns the result to set
+ * variable C.
+ * <p>
+ * A \ B = C.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.5
@@ -89,7 +89,7 @@ public class AdiffBeqC extends Constraint implements UsesQueueVariable, Satisfie
      */
     public AdiffBeqC(SetVar a, SetVar b, SetVar c) {
 
-        checkInputForNullness(new String[]{"a", "b", "c"}, new Object[]{a, b, c});
+        checkInputForNullness(new String[] {"a", "b", "c"}, new Object[] {a, b, c});
 
         this.numberId = idNumber.incrementAndGet();
 

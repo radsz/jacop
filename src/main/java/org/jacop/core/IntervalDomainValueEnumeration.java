@@ -51,6 +51,7 @@ public class IntervalDomainValueEnumeration extends ValueEnumeration {
 
     /**
      * It create an enumeration for a given domain.
+     *
      * @param dom domain for which value enumeration is created.
      */
     public IntervalDomainValueEnumeration(IntervalDomain dom) {

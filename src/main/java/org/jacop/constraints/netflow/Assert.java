@@ -30,19 +30,17 @@
 
 package org.jacop.constraints.netflow;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.jacop.constraints.netflow.simplex.Arc;
 import org.jacop.constraints.netflow.simplex.NetworkSimplex;
 import org.jacop.constraints.netflow.simplex.Node;
 
+import java.util.ArrayList;
+import java.util.List;
+
 
 /**
- *
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 public class Assert {

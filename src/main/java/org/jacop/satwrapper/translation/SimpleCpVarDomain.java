@@ -31,10 +31,10 @@
 
 package org.jacop.satwrapper.translation;
 
-import java.util.Arrays;
-
 import org.jacop.core.IntVar;
 import org.jacop.satwrapper.SatWrapper;
+
+import java.util.Arrays;
 
 
 /**

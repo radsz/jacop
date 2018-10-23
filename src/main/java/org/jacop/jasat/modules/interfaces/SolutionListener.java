@@ -34,17 +34,18 @@ import org.jacop.jasat.core.SolverComponent;
 
 /**
  * module called when solution is found.
+ *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 public interface SolutionListener extends SolverComponent {
 
     /**
      * a handler called when a solution is found.
-     * @param satisfiable  true when the solution is Satisfiable, false if
-     * it is Unsatisfiable.
+     *
+     * @param satisfiable true when the solution is Satisfiable, false if
+     *                    it is Unsatisfiable.
      */
     void onSolution(boolean satisfiable);
 

@@ -30,20 +30,19 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.ArrayList;
-import java.util.List;
-
+import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.core.Store;
-import org.jacop.constraints.Constraint;
-
-import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
+
+import java.util.ArrayList;
+import java.util.List;
 
 
 /**
  * Constraints cos(P) = R
- *
+ * <p>
  * Bounds consistency can be used; third parameter of constructor controls this.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -63,18 +62,19 @@ public class CosPeqR_decomposed extends DecomposedConstraint<Constraint> {
     public FloatVar q;
 
     /**
-     * It contains constraints of the CosPeqR_decomposed constraint decomposition. 
+     * It contains constraints of the CosPeqR_decomposed constraint decomposition.
      */
     List<Constraint> constraints;
 
     /**
      * It constructs cos(P) = Q constraints.
+     *
      * @param p variable P
      * @param q variable Q
      */
     public CosPeqR_decomposed(FloatVar p, FloatVar q) {
 
-        checkInputForNullness(new String[]{"p", "q"}, new Object[][]{{p}, {q}});
+        checkInputForNullness(new String[] {"p", "q"}, new Object[][] {{p}, {q}});
         this.p = p;
         this.q = q;
     }
@@ -93,7 +93,7 @@ public class CosPeqR_decomposed extends DecomposedConstraint<Constraint> {
 
     @Override public void imposeDecomposition(Store store) {
 
-        if (constraints == null  || constraints.size() == 0)
+        if (constraints == null || constraints.size() == 0)
             constraints = decompose(store);
 
         for (Constraint c : constraints)

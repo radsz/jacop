@@ -30,13 +30,12 @@
 
 package org.jacop.floats.core;
 
-import org.jacop.core.Var;
-import org.jacop.core.Store;
+import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
 
 import java.util.ArrayList;
-
-import org.jacop.constraints.Constraint;
 
 /**
  * Defines a Float Domain Variable and related operations on it.
@@ -56,9 +55,10 @@ public class FloatVar extends Var {
     /**
      * It creates a variable in a given store, with a given name and
      * a given domain.
+     *
      * @param store store in which the variable is created.
-     * @param name the name for the variable being created.
-     * @param dom the domain of the variable being created.
+     * @param name  the name for the variable being created.
+     * @param dom   the domain of the variable being created.
      */
     public FloatVar(Store store, String name, FloatDomain dom) {
 
@@ -85,8 +85,9 @@ public class FloatVar extends Var {
     /**
      * It creates a variable in a given store, with a given name and
      * a given domain.
+     *
      * @param store store in which the variable is created.
-     * @param dom the domain of the variable being created.
+     * @param dom   the domain of the variable being created.
      */
     public FloatVar(Store store, FloatDomain dom) {
         this(store, store.getVariableIdPrefix() + idNumber.incrementAndGet(), dom);
@@ -102,6 +103,7 @@ public class FloatVar extends Var {
      * This constructor creates a variable with empty domain (standard
      * FloatIntervalDomain domain), automatically generated name, and empty attached
      * constraint list.
+     *
      * @param store store in which the variable is created.
      */
     public FloatVar(Store store) {
@@ -111,9 +113,10 @@ public class FloatVar extends Var {
     /**
      * This constructor creates a variable with a domain between min..max,
      * automatically generated name, and empty attached constraint list.
+     *
      * @param store store in which the variable is created.
-     * @param min the minimum value of the domain.
-     * @param max the maximum value of the domain.
+     * @param min   the minimum value of the domain.
+     * @param max   the maximum value of the domain.
      */
     public FloatVar(Store store, double min, double max) {
         this(store, store.getVariableIdPrefix() + idNumber.incrementAndGet(), min, max);
@@ -125,7 +128,7 @@ public class FloatVar extends Var {
      * constraint list.
      *
      * @param store store in which the variable is created.
-     * @param name the name for the variable being created.
+     * @param name  the name for the variable being created.
      */
     public FloatVar(Store store, String name) {
         this(store, name, new FloatIntervalDomain(5));
@@ -134,10 +137,11 @@ public class FloatVar extends Var {
     /**
      * This constructor creates a variable in a given store, with
      * the domain specified by min..max and with the given name.
+     *
      * @param store the store in which the variable is created.
-     * @param name the name of the variable being created.
-     * @param min the minimum value of the variables domain.
-     * @param max the maximum value of the variables domain.
+     * @param name  the name of the variable being created.
+     * @param min   the minimum value of the variables domain.
+     * @param max   the maximum value of the variables domain.
      */
     public FloatVar(Store store, String name, double min, double max) {
 
@@ -151,6 +155,7 @@ public class FloatVar extends Var {
      * care, only right after variable was created and before it is used in
      * constraints or search. Current implementation requires domains being
      * added in the increasing order (e.g. 1..5 before 9..10).
+     *
      * @param min the left bound of the interval being added.
      * @param max the right bound of the interval being added.
      */
@@ -163,6 +168,7 @@ public class FloatVar extends Var {
      * It is possible to set the domain of variable. It should be used with
      * care, only right after variable was created and before it is used in
      * constraints or search.
+     *
      * @param min the left bound of the interval used to set this variable domain to.
      * @param max the right bound of the interval used to set this variable domain to.
      */
@@ -175,6 +181,7 @@ public class FloatVar extends Var {
      * This function returns current value in the domain of the variable. If
      * current domain of variable is not singleton then warning is printed and
      * minimal value is returned.
+     *
      * @return the value to which the variable has been grounded to.
      */
 
@@ -190,6 +197,7 @@ public class FloatVar extends Var {
 
     /**
      * It checks if the domain contains only one value equal to c.
+     *
      * @param val value to which we compare the singleton of the variable.
      * @return true if a variable domain is singleton and it is equal to the specified value.
      */
@@ -201,6 +209,7 @@ public class FloatVar extends Var {
     /**
      * This function returns current maximal value in the domain of the
      * variable.
+     *
      * @return the maximum value belonging to the domain.
      */
 
@@ -211,6 +220,7 @@ public class FloatVar extends Var {
     /**
      * This function returns current minimal value in the domain of the
      * variable.
+     *
      * @return the minimum value beloning to the domain.
      */
     public double min() {
@@ -222,6 +232,7 @@ public class FloatVar extends Var {
      * It is possible to set the domain of variable. It should be used with
      * care, only right after variable was created and before it is used in
      * constraints or search.
+     *
      * @param dom domain to which the current variable domain is set to.
      */
 
@@ -233,6 +244,7 @@ public class FloatVar extends Var {
      * It is possible to add the domain of variable. It should be used with
      * care, only right after variable was created and before it is used in
      * constraints or search.
+     *
      * @param dom the added domain.
      */
 
@@ -242,6 +254,7 @@ public class FloatVar extends Var {
 
     /**
      * This function returns current domain of the variable.
+     *
      * @return the domain of the variable.
      */
 
@@ -251,6 +264,7 @@ public class FloatVar extends Var {
 
     /**
      * It checks if the domains of variables are equal.
+     *
      * @param var the variable to which current variable is compared to.
      * @return true if both variables have the same domain.
      */
@@ -260,6 +274,7 @@ public class FloatVar extends Var {
 
     /**
      * It returns the size of the current domain.
+     *
      * @return the size of the variables domain.
      */
 
@@ -274,6 +289,7 @@ public class FloatVar extends Var {
 
     /**
      * It checks if the domain is empty.
+     *
      * @return true if variable domain is empty.
      */
 
@@ -286,7 +302,8 @@ public class FloatVar extends Var {
      * It registers constraint with current variable, so anytime this variable
      * is changed the constraint is reevaluated. Pruning events constants from 0
      * to n, where n is the strongest pruning event.
-     * @param c the constraint which is being attached to the variable.
+     *
+     * @param c            the constraint which is being attached to the variable.
      * @param pruningEvent type of the event which must occur to trigger the execution of the consistency function.
      */
 
@@ -316,6 +333,7 @@ public class FloatVar extends Var {
     /**
      * It registers constraint with current variable, so always when this variable
      * is changed the constraint is reevaluated.
+     *
      * @param c the constraint which is added as a search constraint.
      */
 
@@ -333,6 +351,7 @@ public class FloatVar extends Var {
     /**
      * It returns the values which have been removed at current store level. It does
      * _not_ return the recent pruning in between the calls to that function.
+     *
      * @return difference between the current level and the one before it.
      */
     public FloatDomain recentDomainPruning() {
@@ -369,6 +388,7 @@ public class FloatVar extends Var {
 
     /**
      * It checks if the domain contains only one value.
+     *
      * @return true if the variable domain is a singleton, false otherwise.
      */
 
@@ -380,6 +400,7 @@ public class FloatVar extends Var {
     /**
      * It returns current number of constraints which are associated with
      * variable and are not yet satisfied.
+     *
      * @return number of constraints attached to the variable.
      */
     public int sizeConstraints() {
@@ -389,6 +410,7 @@ public class FloatVar extends Var {
     /**
      * It returns all constraints which are associated with variable, even the
      * ones which are already satisfied.
+     *
      * @return number of constraints attached at the earliest level of the variable.
      */
     public int sizeConstraintsOriginal() {
@@ -398,6 +420,7 @@ public class FloatVar extends Var {
     /**
      * It returns current number of constraints which are associated with
      * variable and are not yet satisfied.
+     *
      * @return number of attached search constraints.
      */
     public int sizeSearchConstraints() {
@@ -408,6 +431,7 @@ public class FloatVar extends Var {
      * This function returns stamp of the current domain of variable. It is
      * equal or smaller to the stamp of store. Larger difference indicates that
      * variable has been changed for a longer time.
+     *
      * @return level for which the most recent changes have been applied to.
      */
 
@@ -432,6 +456,7 @@ public class FloatVar extends Var {
     /**
      * It returns the string representation of the variable using the full representation
      * of the domain.
+     *
      * @return string representation.
      */
     public String toStringFull() {
@@ -449,6 +474,7 @@ public class FloatVar extends Var {
 
     /**
      * It informs the variable that its variable has changed according to the specified event.
+     *
      * @param event the type of the change (GROUND, BOUND, ANY).
      */
     public void domainHasChanged(int event) {

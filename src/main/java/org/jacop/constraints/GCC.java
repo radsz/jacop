@@ -30,25 +30,24 @@
 
 package org.jacop.constraints;
 
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
-
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
 
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
+
 /**
  * GCC constraint counts the number of occurences of given
  * values in x variables. The counters are specified by y's.
  * The occurence of all values in the domain of xs is counted.
- *
+ * <p>
  * We would like to thank Irit Katriel for making the code of GCC in C she wrote
  * available to us.
  *
  * @author Jocelyne Lotfi and Radoslaw Szymanek.
- *
  * @version 4.5
  */
 
@@ -56,24 +55,22 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
     /**
      * TODO An improvement to increase the incrementality even further.
-     *
+     * <p>
      * 1. The first matching uses minimal values. Remember which minimal value has changed which
      * removed from the domain the value which was used in the matching.
      * Reuse from old matching 1 all values smaller than the minimal which has changed.
-     *
+     * <p>
      * Similar principle applies to matching 2 (skip the positions (variables) until
      * the first index for which m1 did change or for which the m2 value is no longer in the
      * domain.
-     *
-     *
+     * <p>
+     * <p>
      * 2. Use IndexDomainView instead of local solution.
-     *
-     *
+     * <p>
+     * <p>
      * 3. boolean variable first - is it only once in the consistency function? Then this functionality
      * can be moved out of the while(newPropagation), if it should be executed every time consistency
      * is executed then (it should be setup to true somewhere).
-     *
-     *
      */
 
     boolean firstConsistencyCheck = true;
@@ -157,13 +154,15 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
     private Comparator<Integer> sortPriorityMaxOrder = (e1, e2) -> -e1.compareTo(e2);
 
-    /**It constructs global cardinality constraint.
-     * @param x variables which values are counted.
+    /**
+     * It constructs global cardinality constraint.
+     *
+     * @param x        variables which values are counted.
      * @param counters variables which count the values.
      */
     public GCC(IntVar[] x, IntVar[] counters) {
 
-        checkInputForNullness(new String[]{"x", "counters"}, x, counters);
+        checkInputForNullness(new String[] {"x", "counters"}, x, counters);
         checkInputForDuplicationSkipSingletons("x", x);
 
         this.queueIndex = 1;
@@ -208,7 +207,9 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
     private Set<IntVar> zeroCounters;
 
-    /** Fix suggested by Radek: a set that keeps track of the variables that have changed and need to be revisited in the consistency method */
+    /**
+     * Fix suggested by Radek: a set that keeps track of the variables that have changed and need to be revisited in the consistency method
+     */
     private Set<Var> changedVariables = new HashSet<>();
 
     private IntVar[] removeZeroCounters(IntVar[] x, IntVar[] counters) {
@@ -248,8 +249,10 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         return result;
     }
 
-    /**It constructs global cardinality constraint.
-     * @param x variables which values are counted.
+    /**
+     * It constructs global cardinality constraint.
+     *
+     * @param x        variables which values are counted.
      * @param counters variables which count the values.
      */
     public GCC(List<? extends IntVar> x, List<? extends IntVar> counters) {
@@ -450,7 +453,9 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
     }
 
-    /** A method to be called in asserts that checks whether all grounded X variables are correctly put at the end of the list
+    /**
+     * A method to be called in asserts that checks whether all grounded X variables are correctly put at the end of the list
+     *
      * @return false if the X variable order is inconsistent
      */
     private boolean checkXorder() {
@@ -555,7 +560,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         for (int i = 0; i < xSize - 1; i++)
             toString.append(x[i].toString()).append(", ");
         toString.append(x[xSize - 1].toString());
-	toString.append("], [");
+        toString.append("], [");
         for (int j = 0; j < ySize - 1; j++)
             toString.append(counters[j].toString()).append(", ");
         toString.append(counters[ySize - 1].toString()).append("])");

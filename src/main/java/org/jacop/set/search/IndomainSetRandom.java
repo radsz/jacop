@@ -30,19 +30,19 @@
 
 package org.jacop.set.search;
 
-import java.util.Random;
-
 import org.jacop.core.IntDomain;
 import org.jacop.search.Indomain;
 import org.jacop.set.core.SetVar;
+
+import java.util.Random;
 
 /**
  * IndomainMin - implements enumeration method based on the selection of the
  * maximal value in the domain of variable
  *
+ * @param <T> type of variable being used in search.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
- * @param <T> type of variable being used in search.
  */
 
 public class IndomainSetRandom<T extends SetVar> implements Indomain<T> {
@@ -58,6 +58,7 @@ public class IndomainSetRandom<T extends SetVar> implements Indomain<T> {
     /**
      * It creates random indomain heuristic according to the provided random
      * generator.
+     *
      * @param seed seed for random number genrator
      */
     public IndomainSetRandom(Random seed) {

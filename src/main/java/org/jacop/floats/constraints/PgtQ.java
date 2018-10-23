@@ -30,18 +30,15 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
-import org.jacop.core.Store;
-
 import org.jacop.constraints.PrimitiveConstraint;
-
-import org.jacop.floats.core.FloatVar;
+import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraint P {@literal >} Q for floats
- *
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
@@ -64,12 +61,13 @@ public class PgtQ extends PrimitiveConstraint {
 
     /**
      * It constructs constraint P {@literal <=} Q.
+     *
      * @param p variable p.
      * @param q constant q.
      */
     public PgtQ(FloatVar p, FloatVar q) {
 
-        checkInputForNullness(new String[]{"p", "q"}, new Object[]{p, q});
+        checkInputForNullness(new String[] {"p", "q"}, new Object[] {p, q});
 
         numberId = idNumber.incrementAndGet();
 

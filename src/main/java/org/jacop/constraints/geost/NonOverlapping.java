@@ -29,14 +29,13 @@
  */
 package org.jacop.constraints.geost;
 
-import java.util.*;
-
 import org.jacop.util.SimpleHashSet;
+
+import java.util.*;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
  * @version 4.5
- *
  */
 public class NonOverlapping implements ExternalConstraint {
 
@@ -66,7 +65,7 @@ public class NonOverlapping implements ExternalConstraint {
      * It creates an external constraint to make sure that specified set of objects does not overlap
      * in k-dimensional space on the given number of selected dimensions within this k-dimensional space.
      *
-     * @param objects the set of objects which can not overlap
+     * @param objects            the set of objects which can not overlap
      * @param selectedDimensions the dimensions among which there must be at least one for which the objects do not overlap.
      */
     public NonOverlapping(GeostObject[] objects, int[] selectedDimensions) {
@@ -87,7 +86,7 @@ public class NonOverlapping implements ExternalConstraint {
      * It creates an external constraint to make sure that specified set of objects does not overlap
      * in k-dimensional space on the given number of selected dimensions within this k-dimensional space.
      *
-     * @param objects the set of objects which can not overlap
+     * @param objects            the set of objects which can not overlap
      * @param selectedDimensions the dimensions among which there must be at least one for which the objects do not overlap.
      */
     public NonOverlapping(Collection<GeostObject> objects, int[] selectedDimensions) {

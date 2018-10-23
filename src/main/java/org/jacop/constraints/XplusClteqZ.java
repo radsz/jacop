@@ -30,15 +30,15 @@
 
 package org.jacop.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * Constraints X + C{@literal <=} Z.
- *
+ * <p>
  * Boundary consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -66,13 +66,14 @@ public class XplusClteqZ extends PrimitiveConstraint {
 
     /**
      * It constructs constraint X+C{@literal <=} Z.
+     *
      * @param x variable x.
      * @param c constant c.
      * @param z variable z.
      */
     public XplusClteqZ(IntVar x, int c, IntVar z) {
 
-        checkInputForNullness(new String[]{"x", "z"}, new Object[]{x, z});
+        checkInputForNullness(new String[] {"x", "z"}, new Object[] {x, z});
 
         numberId = idNumber.incrementAndGet();
 

@@ -31,21 +31,20 @@
 
 package org.jacop.jasat.core;
 
-import java.util.Arrays;
-
 import org.jacop.jasat.utils.MemoryPool;
 import org.jacop.jasat.utils.Utils;
 import org.jacop.jasat.utils.structures.IntStack;
 
+import java.util.Arrays;
+
 
 /**
  * It stores the current variables status (affected or not, with which value and explanation).
- * It values of variables are packed in an int, together with the level at which 
+ * It values of variables are packed in an int, together with the level at which
  * they were asserted.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 public final class Trail implements SolverComponent {
@@ -70,7 +69,8 @@ public final class Trail implements SolverComponent {
 
     /**
      * It adds a variable to the trail.
-     * @param var  the variable
+     *
+     * @param var the variable
      */
     public void addVariable(int var) {
 
@@ -84,7 +84,8 @@ public final class Trail implements SolverComponent {
 
     /**
      * It ensures the trail can contain @param numVar variables
-     * @param numVar  the number of variables the trail must be able to contain
+     *
+     * @param numVar the number of variables the trail must be able to contain
      */
     public void ensureCapacity(int numVar) {
 
@@ -111,8 +112,9 @@ public final class Trail implements SolverComponent {
      * Sets a literal, that is, a variable signed with its value ({@literal >} 0 for true,
      * {@literal <} 0 for false). This must be used only for asserted values,
      * not the ones propagated from unit clauses.
-     * @param literal  the literal
-     * @param level  the current level
+     *
+     * @param literal the literal
+     * @param level   the current level
      */
     public void assertLiteral(int literal, int level) {
 
@@ -131,9 +133,10 @@ public final class Trail implements SolverComponent {
 
     /**
      * Sets a literal, with an explanation clause. For unit propagation only.
-     * @param literal  the literal (non nul relative number)
-     * @param level    the level at which this assertion occurs
-     * @param causeId  the ID of the clause that triggered this assertion
+     *
+     * @param literal the literal (non nul relative number)
+     * @param level   the level at which this assertion occurs
+     * @param causeId the ID of the clause that triggered this assertion
      */
     public void assertLiteral(int literal, int level, int causeId) {
 
@@ -165,7 +168,8 @@ public final class Trail implements SolverComponent {
 
     /**
      * It unsets the given variable. Does not take car of assertionLevels !
-     * @param var  the variable to unset. Must be positive.
+     *
+     * @param var the variable to unset. Must be positive.
      */
     public void unset(int var) {
         assert var > 0;
@@ -179,7 +183,8 @@ public final class Trail implements SolverComponent {
      * It tells the trail to return to given level. It will therefore erase all
      * assertion strictly above this level. Literals asserted at @param level will
      * be kept.
-     * @param level  the level to jump to.
+     *
+     * @param level the level to jump to.
      */
     public void backjump(int level) {
         assert explanations.length == values.length;
@@ -211,7 +216,8 @@ public final class Trail implements SolverComponent {
     /**
      * It returns the level at which @param var has been set. @param var *must*
      * be set, otherwise this will fail.
-     * @param var  the literal which level we wish to know
+     *
+     * @param var the literal which level we wish to know
      * @return the level
      */
     public int getLevel(int var) {
@@ -227,7 +233,8 @@ public final class Trail implements SolverComponent {
 
     /**
      * It returns the index of the clause that caused this variable to be set
-     * @param var  the literal. Must be set.
+     *
+     * @param var the literal. Must be set.
      * @return an index if there was an explanation, 0 otherwise
      */
     public int getExplanation(int var) {
@@ -243,7 +250,8 @@ public final class Trail implements SolverComponent {
 
     /**
      * It returns information if a variable was asserted or only propagated.
-     * @param var  the variable
+     *
+     * @param var the variable
      * @return true if the variable was asserted
      */
     public boolean isAsserted(int var) {
@@ -259,7 +267,8 @@ public final class Trail implements SolverComponent {
 
     /**
      * predicate which meaning is : is this variable set or unknown ?
-     * @param var  the variable, must be positive
+     *
+     * @param var the variable, must be positive
      * @return true if the variable is set.
      */
     public boolean isSet(int var) {
@@ -298,7 +307,8 @@ public final class Trail implements SolverComponent {
 
     /**
      * to be called before any use of the trail
-     * @param core  the Solver instance
+     *
+     * @param core the Solver instance
      */
     public void initialize(Core core) {
 

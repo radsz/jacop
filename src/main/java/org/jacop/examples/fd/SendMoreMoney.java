@@ -38,20 +38,18 @@ import org.jacop.search.*;
 import java.util.ArrayList;
 
 /**
- *
  * It is a simple arithmetic logic puzzle, where SEND+MORE=MONEY.
- *
- *  Find for the equation on the left
- *   what digits are represented by the letters
- *    different letters represent different digits
-
- *  SEND           9567
+ * <p>
+ * Find for the equation on the left
+ * what digits are represented by the letters
+ * different letters represent different digits
+ * <p>
+ * SEND           9567
  * +MORE ======={@literal >}+1085
  * MONEY          10652
  *
  * @author Radoslaw Szymanek
  * @version 4.5
- *
  */
 public class SendMoreMoney extends ExampleFD {
 
@@ -62,7 +60,7 @@ public class SendMoreMoney extends ExampleFD {
     /**
      * 1. Every CP program consists of two parts. The first one is a model and
      * the second one is the specification of the search.
-     *
+     * <p>
      * The model consists of variables and constraints.
      */
     public void modelBasic() {
@@ -286,7 +284,7 @@ public class SendMoreMoney extends ExampleFD {
          * before executing any code in this function to see at what point the
          * constraints were not able to reason more.
          */
-		
+
 		/*
 			store.consistency();
 			store.print();
@@ -342,6 +340,7 @@ public class SendMoreMoney extends ExampleFD {
 
     /**
      * It executes the program to solve this simple logic puzzle.
+     *
      * @param args no arguments used.
      */
     public static void main(String args[]) {

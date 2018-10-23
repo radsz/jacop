@@ -30,8 +30,6 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XneqC;
@@ -39,20 +37,20 @@ import org.jacop.constraints.XplusYeqZ;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.util.ArrayList;
+
 /**
- *
- * It specifies the logic puzzle (cryptogram) which need to satisfy the following 
- * equation that DONALD+GERALD=ROBERT. 
- *
+ * It specifies the logic puzzle (cryptogram) which need to satisfy the following
+ * equation that DONALD+GERALD=ROBERT.
+ * <p>
  * The solution is provided below.
- *
+ * <p>
  * Donald 		  526485
  * Gerald{@literal =====>} +197485
  * Robert         723970
  *
  * @author Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 public class DonaldGeraldRobert extends ExampleFD {
@@ -123,6 +121,7 @@ public class DonaldGeraldRobert extends ExampleFD {
     /**
      * It executes the program to solve cryptogram puzzle
      * DONALD+GERALD=ROBERT.
+     *
      * @param args no argument is used.
      */
     public static void main(String args[]) {

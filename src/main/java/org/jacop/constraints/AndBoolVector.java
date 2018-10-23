@@ -30,15 +30,11 @@
 
 package org.jacop.constraints;
 
+import org.jacop.core.*;
+
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
-
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
 
 /**
  * If all x's are equal 1 then result variable is equal 1 too. Otherwise, result variable
@@ -98,7 +94,7 @@ public class AndBoolVector extends PrimitiveConstraint {
         else
             queueIndex = 0;
 
-        setScope( Stream.concat(Arrays.stream(list), Stream.of(result)));
+        setScope(Stream.concat(Arrays.stream(list), Stream.of(result)));
 
     }
 
@@ -178,7 +174,7 @@ public class AndBoolVector extends PrimitiveConstraint {
         }
 
         if (result.max() == 0 && start == l - 1)
-                list[index_01].domain.in(store.level, list[index_01], 0, 0);
+            list[index_01].domain.in(store.level, list[index_01], 0, 0);
 
         if ((l - start) < 3)
             queueIndex = 0;
@@ -221,7 +217,7 @@ public class AndBoolVector extends PrimitiveConstraint {
         }
 
         if (result.max() == 0 && start == l - 1)
-                list[index_01].domain.in(store.level, list[index_01], 1, 1);
+            list[index_01].domain.in(store.level, list[index_01], 1, 1);
 
         if ((l - start) < 3)
             queueIndex = 0;

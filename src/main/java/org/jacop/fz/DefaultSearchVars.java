@@ -29,19 +29,20 @@
  */
 package org.jacop.fz;
 
-import java.util.Comparator;
-import java.util.Arrays;
-import java.util.LinkedHashSet;
-
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
 import org.jacop.core.Var;
-import org.jacop.set.core.SetVar;
 import org.jacop.floats.core.FloatVar;
+import org.jacop.set.core.SetVar;
+
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.Map;
 
 
 /**
- *
  * The class gathers variables and array variables for default or
  * complementary search. Two methods are supported. One gathers all
  * output variables and the second one all non-introduced variables
@@ -49,7 +50,6 @@ import org.jacop.floats.core.FloatVar;
  *
  * @author Krzysztof Kuchcinski
  * @version 4.5
- *
  */
 public class DefaultSearchVars {
 
@@ -130,19 +130,33 @@ public class DefaultSearchVars {
 
         LinkedHashSet<Var> int_vars = new LinkedHashSet<Var>();
         LinkedHashSet<Var> bool_vars = new LinkedHashSet<Var>();
+        Set<Map.Entry<IntVar, IntVar>> aliasEntries = dictionary.aliasTable.entrySet();
+
+	Set<IntVar> aliasVars = new LinkedHashSet<IntVar>();
+	// collect all boolean variables with int var alias
+        for (Map.Entry<IntVar, IntVar> e : aliasEntries) {
+            IntVar b = e.getKey();
+	    aliasVars.add(b);
+	}
 
         for (int i = 0; i < dictionary.defaultSearchArrays.size(); i++)
             for (Var v : dictionary.defaultSearchArrays.get(i)) {
-                if (v instanceof BooleanVar)
+		if (!v.singleton())
+		    if (v instanceof BooleanVar)
                     bool_vars.add(v);
-                else
-                    int_vars.add(v);
+		    else  if (((IntVar)v).min() >= 0 && ((IntVar)v).max() <= 1 && aliasVars.contains(v))
+			bool_vars.add(v);
+		    else
+			int_vars.add(v);
             }
         for (Var v : dictionary.defaultSearchVariables) {
-            if (v instanceof BooleanVar)
-                bool_vars.add(v);
-            else
-                int_vars.add(v);
+	    if (!v.singleton())
+	    	if (v instanceof BooleanVar)
+	    	    bool_vars.add(v);
+	    	else if (((IntVar)v).min() >= 0 && ((IntVar)v).max() <= 1 && aliasVars.contains(v))
+	    	    bool_vars.add(v);
+	    	else
+		    int_vars.add(v);
         }
         int_search_variables = int_vars.toArray(new IntVar[int_vars.size()]);
         bool_search_variables = bool_vars.toArray(new IntVar[bool_vars.size()]);

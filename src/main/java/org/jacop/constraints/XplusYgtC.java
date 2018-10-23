@@ -30,15 +30,14 @@
 
 package org.jacop.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * Constraint X + Y{@literal >} C
- *
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
@@ -65,13 +64,14 @@ public class XplusYgtC extends PrimitiveConstraint {
 
     /**
      * It constructs X+Y{@literal >} C constraint.
+     *
      * @param x variable x.
      * @param y variable y.
      * @param c variable c.
      */
     public XplusYgtC(IntVar x, IntVar y, int c) {
 
-        checkInputForNullness(new String[]{"x", "y"}, new Object[]{x, y});
+        checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
 
         numberId = idNumber.incrementAndGet();
 
@@ -84,8 +84,8 @@ public class XplusYgtC extends PrimitiveConstraint {
 
     @Override public void consistency(final Store store) {
 
-            x.domain.inMin(store.level, x, c - y.max() + 1);
-            y.domain.inMin(store.level, y, c - x.max() + 1);
+        x.domain.inMin(store.level, x, c - y.max() + 1);
+        y.domain.inMin(store.level, y, c - x.max() + 1);
     }
 
     @Override protected int getDefaultNestedConsistencyPruningEvent() {
@@ -106,8 +106,8 @@ public class XplusYgtC extends PrimitiveConstraint {
 
     @Override public void notConsistency(final Store store) {
 
-            x.domain.inMax(store.level, x, c - y.min());
-            y.domain.inMax(store.level, y, c - x.min());
+        x.domain.inMax(store.level, x, c - y.min());
+        y.domain.inMax(store.level, y, c - x.min());
     }
 
     @Override public boolean notSatisfied() {

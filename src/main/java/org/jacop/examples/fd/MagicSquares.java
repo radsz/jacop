@@ -30,31 +30,24 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.jacop.constraints.Alldiff;
-import org.jacop.constraints.Alldistinct;
-import org.jacop.constraints.Assignment;
-import org.jacop.constraints.Constraint;
-import org.jacop.constraints.SumInt;
-import org.jacop.constraints.XltY;
+import org.jacop.constraints.*;
 import org.jacop.core.BoundDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
- *
  * It solves a Magic squares problem.
  *
  * @author Radoslaw Szymanek
  * @version 4.5
- *
- * MagicSquare problem consists of filling the square of size n with
- * numbers from 1 to n^2 in such a way that all rows, all columns, and
- * main diagonals are equal to the same number K. K can be computed to 
- * be equal to (n * (n^2 + 1)) / 2.
- *
+ *          <p>
+ *          MagicSquare problem consists of filling the square of size n with
+ *          numbers from 1 to n^2 in such a way that all rows, all columns, and
+ *          main diagonals are equal to the same number K. K can be computed to
+ *          be equal to (n * (n^2 + 1)) / 2.
  */
 
 public class MagicSquares extends ExampleFD {

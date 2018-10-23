@@ -30,8 +30,8 @@
 
 package org.jacop.search;
 
-import org.jacop.core.Var;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
 
 /**
  * Defines functionality for OneSolution plug-in, that is the search
@@ -63,6 +63,7 @@ public class OneSolution<T extends Var> extends SimpleSolutionListener<T> implem
 
     /**
      * It sets the children listeners of this initialize listener.
+     *
      * @param children children listeners
      */
     public void setChildrenListeners(InitializeListener[] children) {
@@ -73,6 +74,7 @@ public class OneSolution<T extends Var> extends SimpleSolutionListener<T> implem
 
     /**
      * It sets one child listener for this initialize listener.
+     *
      * @param child the child of this initialize listener.
      */
     public void setChildrenListeners(InitializeListener child) {

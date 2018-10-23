@@ -30,18 +30,17 @@
 
 package org.jacop.floats.constraints;
 
+import org.jacop.api.SatisfiedPresent;
+import org.jacop.constraints.Constraint;
+import org.jacop.core.IntDomain;
+import org.jacop.core.Store;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
-
-import org.jacop.api.SatisfiedPresent;
-import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.core.FloatVar;
-
-import org.jacop.constraints.Constraint;
-import org.jacop.core.IntDomain;
-import org.jacop.core.Store;
 
 /**
  * Min constraint implements the minimum/2 constraint. It provides the minimum
@@ -67,12 +66,13 @@ public class Min extends Constraint implements SatisfiedPresent {
 
     /**
      * It constructs min constraint.
-     * @param min variable denoting the minimal value
+     *
+     * @param min  variable denoting the minimal value
      * @param list the array of variables for which the minimal value is imposed.
      */
     public Min(FloatVar[] list, FloatVar min) {
 
-        checkInputForNullness(new String[]{"list", "max"}, new Object[][]{list, {min}});
+        checkInputForNullness(new String[] {"list", "max"}, new Object[][] {list, {min}});
 
         this.queueIndex = 1;
         this.numberId = idNumber.incrementAndGet();
@@ -84,7 +84,8 @@ public class Min extends Constraint implements SatisfiedPresent {
 
     /**
      * It constructs min constraint.
-     * @param min variable denoting the minimal value
+     *
+     * @param min  variable denoting the minimal value
      * @param list the array of variables for which the minimal value is imposed.
      */
     public Min(List<? extends FloatVar> list, FloatVar min) {

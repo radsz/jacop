@@ -31,11 +31,11 @@
 
 package org.jacop.jasat.utils;
 
+import org.jacop.jasat.utils.structures.IntVec;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
-
-import org.jacop.jasat.utils.structures.IntVec;
 
 /**
  * CNF file format (low-level) parser.
@@ -67,8 +67,8 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
     /**
      * reads an int from the stream
      *
-     * @throws IOException
      * @return the parsed int
+     * @throws IOException
      */
     private int parseInt() throws IOException {
         int answer = 0;

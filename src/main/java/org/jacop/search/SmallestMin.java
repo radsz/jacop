@@ -36,9 +36,9 @@ import org.jacop.core.IntVar;
  * Defines a SmallestMin comparator for variables. It prefers variables
  * which have smaller minimal value in their domain.
  *
+ * @param <T> type of variable being used in the search.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
- * @param <T> type of variable being used in the search.
  */
 
 public class SmallestMin<T extends IntVar> implements ComparatorVariable<T> {

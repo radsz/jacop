@@ -30,9 +30,9 @@
 
 package org.jacop.constraints;
 
-import java.util.List;
-
 import org.jacop.core.MutableVarValue;
+
+import java.util.List;
 
 /**
  * Defines a current value of the Diff2Var and related operations on it.
@@ -106,9 +106,9 @@ class Diff2VarValue implements MutableVarValue, Cloneable {
 
         for (int i = 0; i < Rects.length; i++)
             if (i == Rects.length - 1)
-	      s.append(Rects[i]);
+                s.append(Rects[i]);
             else
-	      s.append(Rects[i] + ",");
+                s.append(Rects[i] + ",");
         return s.toString();
     }
 }

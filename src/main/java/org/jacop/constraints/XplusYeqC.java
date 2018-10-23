@@ -30,16 +30,11 @@
 
 package org.jacop.constraints;
 
+import org.jacop.core.*;
+
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Interval;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Store;
-
 /**
- *
  * Constraint X + Y #= C
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
@@ -67,13 +62,14 @@ public class XplusYeqC extends PrimitiveConstraint {
 
     /**
      * It constructs the constraint X+Y=C.
+     *
      * @param x variable x.
      * @param y variable y.
      * @param c constant c.
      */
     public XplusYeqC(IntVar x, IntVar y, int c) {
 
-        checkInputForNullness(new String[]{"x", "y"}, new Object[]{x, y});
+        checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
 
         numberId = idNumber.incrementAndGet();
 
@@ -148,8 +144,8 @@ public class XplusYeqC extends PrimitiveConstraint {
 
     @Override public boolean satisfied() {
         // return (grounded() && (x.min() + y.min() == c));
-	int xMin = x.min(), yMin = y.min();
-	return x.singleton(xMin) && y.singleton(yMin) && xMin + yMin == c;
+        int xMin = x.min(), yMin = y.min();
+        return x.singleton(xMin) && y.singleton(yMin) && xMin + yMin == c;
     }
 
     @Override public String toString() {

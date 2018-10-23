@@ -42,7 +42,6 @@ import org.jacop.jasat.core.SolverComponent;
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.5
- *
  */
 public interface ForgetListener extends SolverComponent {
 

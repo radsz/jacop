@@ -12,5 +12,4 @@ user_end_map2 = array1d(1..5, [288, 288, 288, 288, 288]);
 user_weight_map1 = array1d(1..5, [2, 0, 1, 0, 0]);
 user_weight_map2 = array1d(1..5, [0, 0, 0, 2, 0]);
 ----------
-
 ==========

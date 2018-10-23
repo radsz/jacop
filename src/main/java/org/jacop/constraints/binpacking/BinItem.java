@@ -34,7 +34,7 @@ import org.jacop.core.IntVar;
 
 /**
  * BinItem is used in bin-packing constraint to keep bin variable for an item
- * and its weight. 
+ * and its weight.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5

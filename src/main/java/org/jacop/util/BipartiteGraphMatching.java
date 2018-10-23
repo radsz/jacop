@@ -30,9 +30,9 @@
 
 package org.jacop.util;
 
-import java.util.Queue;
-import java.util.LinkedList;
 import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.Queue;
 
 /* Implementation of Hopcroft Karp algorithm for maximum matching (complexity O(e*sqrt(v)).
  * This algorithm is based on <https://en.wikipedia.org/wiki/Hopcroft–Karp_algorithm>
@@ -60,37 +60,32 @@ public class BipartiteGraphMatching {
      * Constructs empty data structure for Hopcroft Karp algorithm for maximum matching
      * edges can be added by addEdge method.
      *
-     * @param m
-     *            m is  number of vertices on left side (u)
-     * @param n
-     *            n is a maximum number of vertices on right side (v)
+     * @param m m is  number of vertices on left side (u)
+     * @param n n is a maximum number of vertices on right side (v)
      */
     public BipartiteGraphMatching(int m, int n) {
-      this.m = m;
-      this.n = n;
-      adj = new int[m + 1][];
+        this.m = m;
+        this.n = n;
+        adj = new int[m + 1][];
     }
 
     /**
      * Constructs data structure for Hopcroft Karp algorithm for maximum matching.
      *
-     * @param adj
-     *            adjency matrix; adj stores adjacents vertices of vertex 'u'
-     * @param m
-     *            m is  number of vertices on left side (u)
-     * @param n
-     *            n is a maximum number of vertices on right side (v)
+     * @param adj adjency matrix; adj stores adjacents vertices of vertex 'u'
+     * @param m   m is  number of vertices on left side (u)
+     * @param n   n is a maximum number of vertices on right side (v)
      */
     public BipartiteGraphMatching(int[][] adj, int m, int n) {
 
-      this.m = m;
-      this.n = n;
+        this.m = m;
+        this.n = n;
 
-      this.adj = new int[adj.length][];
-	for (int i = 0; i < adj.length; i++) {
-	  this.adj[i] = new int[adj[i].length];
-	  System.arraycopy(adj[i], 0, this.adj[i], 0, adj[i].length);
-	}
+        this.adj = new int[adj.length][];
+        for (int i = 0; i < adj.length; i++) {
+            this.adj[i] = new int[adj[i].length];
+            System.arraycopy(adj[i], 0, this.adj[i], 0, adj[i].length);
+        }
     }
 
     // Returns size of maximum matching
@@ -178,14 +173,14 @@ public class BipartiteGraphMatching {
             for (int v : adj[u]) {
 
                 // Follow the distances set by BFS
-                if (dist[pairV[v]] == dist[u] + 1 && 
+                if (dist[pairV[v]] == dist[u] + 1 &&
                     // If dfs for pair of v also returns
                     // true
                     dfs(pairV[v]) == true) {
-                        pairV[v] = u;
-                        pairU[u] = v;
-                        return true;
-                    }
+                    pairV[v] = u;
+                    pairU[u] = v;
+                    return true;
+                }
             }
 
             // If there is no augmenting path beginning with u.

@@ -31,17 +31,16 @@
 
 package org.jacop.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Domain;
 import org.jacop.core.Store;
-import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Var;
 import org.jacop.util.QueueForward;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * Constraint "constraint1"{@literal #<=>} "constraint2"
- *
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
@@ -65,6 +64,7 @@ public class Eq extends PrimitiveConstraint implements UsesQueueVariable {
 
     /**
      * It constructs equality constraint between two constraints.
+     *
      * @param c1 the first constraint
      * @param c2 the second constraint
      */
@@ -80,7 +80,7 @@ public class Eq extends PrimitiveConstraint implements UsesQueueVariable {
         setScope(scope);
         setConstraintScope(scope);
         queueForward = new QueueForward<>(new PrimitiveConstraint[] {c1, c2}, arguments());
-	this.queueIndex = Integer.max(c1.queueIndex, c2.queueIndex);
+        this.queueIndex = Integer.max(c1.queueIndex, c2.queueIndex);
     }
 
     @Override public void consistency(Store store) {

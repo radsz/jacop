@@ -30,8 +30,6 @@
 
 package org.jacop.set.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -40,9 +38,11 @@ import org.jacop.core.Var;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * It creates a constraint that makes sure that the value assigned to the integer variable x
- * is the only element of the set assigned to a set variable a. 
+ * is the only element of the set assigned to a set variable a.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.5
@@ -70,7 +70,7 @@ public class XeqA extends PrimitiveConstraint {
      */
     public XeqA(IntVar x, SetVar a) {
 
-        checkInputForNullness(new String[]{"x", "a"}, new Object[]{x, a});
+        checkInputForNullness(new String[] {"x", "a"}, new Object[] {x, a});
 
         this.numberId = idNumber.incrementAndGet();
 
@@ -80,7 +80,7 @@ public class XeqA extends PrimitiveConstraint {
         setScope(x, a);
 
     }
-    
+
     @Override public void consistency(Store store) {
 
         /**

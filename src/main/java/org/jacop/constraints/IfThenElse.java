@@ -30,17 +30,18 @@
 
 package org.jacop.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Domain;
 import org.jacop.core.Store;
-import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Var;
 import org.jacop.util.QueueForward;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * Constraint if constraint1 then constraint2 else constraint3
- *  * 
+ * *
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.5
  */
@@ -74,6 +75,7 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
 
     /**
      * It creates ifthenelse constraint.
+     *
      * @param condC the condition of the constraint.
      * @param thenC the condition which must be true if the constraint condition is true.
      * @param elseC the condition which must be true if the constraint condition is not true.
@@ -81,8 +83,8 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
     // Constructors
     public IfThenElse(PrimitiveConstraint condC, PrimitiveConstraint thenC, PrimitiveConstraint elseC) {
 
-        PrimitiveConstraint[] scope = new PrimitiveConstraint[]{ condC, thenC, elseC};
-        checkInputForNullness(new String[]{ "condC", "thenC", "elseC"}, scope);
+        PrimitiveConstraint[] scope = new PrimitiveConstraint[] {condC, thenC, elseC};
+        checkInputForNullness(new String[] {"condC", "thenC", "elseC"}, scope);
 
         numberId = idNumber.incrementAndGet();
 
@@ -93,7 +95,7 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
         setScope(scope);
         setConstraintScope(scope);
         queueForward = new QueueForward<PrimitiveConstraint>(new PrimitiveConstraint[] {condC, thenC, elseC}, arguments());
-	this.queueIndex = Integer.max(Integer.max(condC.queueIndex, thenC.queueIndex), elseC.queueIndex);
+        this.queueIndex = Integer.max(Integer.max(condC.queueIndex, thenC.queueIndex), elseC.queueIndex);
     }
 
     @Override public void consistency(Store store) {

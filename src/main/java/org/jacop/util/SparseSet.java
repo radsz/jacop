@@ -60,6 +60,7 @@ public class SparseSet {
     /**
      * It creates a SparseSet with given upper limit on the value
      * of the biggest element in the set.
+     *
      * @param size the upper limit for the SparseSet
      */
     public SparseSet(int size) {
@@ -75,6 +76,7 @@ public class SparseSet {
 
     /**
      * It checks if the specified element belongs to the set.
+     *
      * @param k element for which the membership in the given set is checked.
      * @return true if k belongs to the sparse set, false otherwise.
      */
@@ -91,6 +93,7 @@ public class SparseSet {
 
     /**
      * It adds an element to the set.
+     *
      * @param value value being added.
      * @return true if the value was not present before and was added to the set, false otherwise.
      */
@@ -110,6 +113,7 @@ public class SparseSet {
 
     /**
      * It sets the size of the SparseSet.
+     *
      * @param size the assigned size of the set.
      */
     public void setSize(int size) {
@@ -118,6 +122,7 @@ public class SparseSet {
 
     /**
      * It returns true if the set is empty.
+     *
      * @return true if the set is empty, false otherwise.
      */
     public boolean isEmpty() {

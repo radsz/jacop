@@ -31,11 +31,11 @@
 
 package org.jacop.constraints;
 
+import org.jacop.core.*;
+
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
-
-import org.jacop.core.*;
 
 /**
  * DisjointConditional constraint assures that any two rectangles from a vector
@@ -66,14 +66,14 @@ public class DisjointConditional extends Diff {
 
     /**
      * It specifies a diff constraint.
-     * @param rectangles list of rectangles which can not overlap in at least one dimension.
-     * @param exclusionList it is a list of exclusive items. Each item consists of two ints and a variable.
-     * @param doProfile should the constraint compute and use the profile functionality.
      *
+     * @param rectangles    list of rectangles which can not overlap in at least one dimension.
+     * @param exclusionList it is a list of exclusive items. Each item consists of two ints and a variable.
+     * @param doProfile     should the constraint compute and use the profile functionality.
      */
     public DisjointConditional(Rectangle[] rectangles, ExclusiveList exclusionList, boolean doProfile) {
 
-        checkInputForNullness(new String[]{"rectangles", "exclusionList"}, new Object[][]{rectangles, {exclusionList}});
+        checkInputForNullness(new String[] {"rectangles", "exclusionList"}, new Object[][] {rectangles, {exclusionList}});
         checkInput(rectangles, i -> i.dim == 2, "rectangle needs to have exactly two dimensions");
 
         this.queueIndex = 2;
@@ -86,13 +86,14 @@ public class DisjointConditional extends Diff {
 
         this.numberId = idNumber.incrementAndGet();
 
-        setScope( Stream.concat( Rectangle.getStream(this.rectangles), exclusionList.stream().map( i -> i.cond) ) );
+        setScope(Stream.concat(Rectangle.getStream(this.rectangles), exclusionList.stream().map(i -> i.cond)));
     }
 
     /**
      * It creates Disjoint conditional constraint.
-     * @param rectangles the rectangles within a constraint.
-     * @param exceptionIndices a list of pairs of conditionally overlaping rectangles.
+     *
+     * @param rectangles         the rectangles within a constraint.
+     * @param exceptionIndices   a list of pairs of conditionally overlaping rectangles.
      * @param exceptionCondition a variable specifying if a corresponding pair is nonoverlapping.
      */
     public DisjointConditional(List<List<? extends IntVar>> rectangles, List<List<Integer>> exceptionIndices,
@@ -128,15 +129,16 @@ public class DisjointConditional extends Diff {
         }
 
         numberId = idNumber.incrementAndGet();
-        setScope( Stream.concat( Rectangle.getStream(this.rectangles), exceptionCondition.stream() ) );
+        setScope(Stream.concat(Rectangle.getStream(this.rectangles), exceptionCondition.stream()));
     }
 
     /**
      * It creates Disjoint conditional constraint.
-     * @param rectangles the rectangles within a constraint.
-     * @param exceptionIndices it specifies a list of pairs, where each pair specifies two rectangles which conditionally overlap.
+     *
+     * @param rectangles         the rectangles within a constraint.
+     * @param exceptionIndices   it specifies a list of pairs, where each pair specifies two rectangles which conditionally overlap.
      * @param exceptionCondition a variable specifying if a corresponding pair is nonoverlapping.
-     * @param profile it specifies if the profiles are used and computed within the constraint.
+     * @param profile            it specifies if the profiles are used and computed within the constraint.
      */
     public DisjointConditional(List<List<? extends IntVar>> rectangles, List<List<Integer>> exceptionIndices,
         List<? extends IntVar> exceptionCondition, boolean profile) {
@@ -147,15 +149,16 @@ public class DisjointConditional extends Diff {
 
     /**
      * It constructs a disjoint conditional constraint.
-     * @param o1 variables specifying the origin in the first dimension.
-     * @param o2 variables specifying the origin in the second dimension.
-     * @param l1 variables specifying the length in the first dimension.
-     * @param l2 variables specifying the length in the second dimension.
-     * @param exceptionIndices it specifies a list of pairs, where each pair specifies two rectangles which conditionally overlap.
+     *
+     * @param o1                 variables specifying the origin in the first dimension.
+     * @param o2                 variables specifying the origin in the second dimension.
+     * @param l1                 variables specifying the length in the first dimension.
+     * @param l2                 variables specifying the length in the second dimension.
+     * @param exceptionIndices   it specifies a list of pairs, where each pair specifies two rectangles which conditionally overlap.
      * @param exceptionCondition a variable specifying if a corresponding pair is nonoverlapping.
      */
-    public DisjointConditional(List<? extends IntVar> o1, List<? extends IntVar> o2, List<? extends IntVar> l1,
-        List<? extends IntVar> l2, List<List<Integer>> exceptionIndices, List<? extends IntVar> exceptionCondition) {
+    public DisjointConditional(List<? extends IntVar> o1, List<? extends IntVar> o2, List<? extends IntVar> l1, List<? extends IntVar> l2,
+        List<List<Integer>> exceptionIndices, List<? extends IntVar> exceptionCondition) {
 
         this(o1.toArray(new IntVar[o1.size()]), o2.toArray(new IntVar[o2.size()]), l1.toArray(new IntVar[l1.size()]),
             l2.toArray(new IntVar[l2.size()]), exceptionIndices, exceptionCondition);
@@ -164,17 +167,17 @@ public class DisjointConditional extends Diff {
 
     /**
      * It constructs a disjoint conditional constraint.
-     * @param o1 variables specifying the origin in the first dimension.
-     * @param o2 variables specifying the origin in the second dimension.
-     * @param l1 variables specifying the length in the first dimension.
-     * @param l2 variables specifying the length in the second dimension.
-     * @param exceptionIndices it specifies a list of pairs, where each pair specifies two rectangles which conditionally overlap.
+     *
+     * @param o1                 variables specifying the origin in the first dimension.
+     * @param o2                 variables specifying the origin in the second dimension.
+     * @param l1                 variables specifying the length in the first dimension.
+     * @param l2                 variables specifying the length in the second dimension.
+     * @param exceptionIndices   it specifies a list of pairs, where each pair specifies two rectangles which conditionally overlap.
      * @param exceptionCondition a variable specifying if a corresponding pair is nonoverlapping.
-     * @param profile it specifies if the profiles are being computed and used within a constraint.
+     * @param profile            it specifies if the profiles are being computed and used within a constraint.
      */
-    public DisjointConditional(List<? extends IntVar> o1, List<? extends IntVar> o2, List<? extends IntVar> l1,
-        List<? extends IntVar> l2, List<List<Integer>> exceptionIndices, List<? extends IntVar> exceptionCondition,
-        boolean profile) {
+    public DisjointConditional(List<? extends IntVar> o1, List<? extends IntVar> o2, List<? extends IntVar> l1, List<? extends IntVar> l2,
+        List<List<Integer>> exceptionIndices, List<? extends IntVar> exceptionCondition, boolean profile) {
 
         this(o1, o2, l1, l2, exceptionIndices, exceptionCondition);
         doProfile = profile;
@@ -183,18 +186,19 @@ public class DisjointConditional extends Diff {
 
     /**
      * It constructs a disjoint conditional constraint.
-     * @param origin1 variables specifying the origin in the first dimension.
-     * @param origin2 variables specifying the origin in the second dimension.
-     * @param length1 variables specifying the length in the first dimension.
-     * @param length2 variables specifying the length in the second dimension.
-     * @param exceptionIndices it specifies a list of pairs, where each pair specifies two rectangles which conditionally overlap.
+     *
+     * @param origin1            variables specifying the origin in the first dimension.
+     * @param origin2            variables specifying the origin in the second dimension.
+     * @param length1            variables specifying the length in the first dimension.
+     * @param length2            variables specifying the length in the second dimension.
+     * @param exceptionIndices   it specifies a list of pairs, where each pair specifies two rectangles which conditionally overlap.
      * @param exceptionCondition a variable specifying if a corresponding pair is nonoverlapping.
      */
-    public DisjointConditional(IntVar[] origin1, IntVar[] origin2, IntVar[] length1, IntVar[] length2,
-        List<List<Integer>> exceptionIndices, List<? extends IntVar> exceptionCondition) {
+    public DisjointConditional(IntVar[] origin1, IntVar[] origin2, IntVar[] length1, IntVar[] length2, List<List<Integer>> exceptionIndices,
+        List<? extends IntVar> exceptionCondition) {
 
-        checkInputForNullness(new String[]{"origin1", "origin2", "length1", "length2", "exceptionIndices", "exceptionCondition"},
-            new Object[][]{origin1, origin2, length1, length2, {exceptionIndices}, {exceptionCondition}});
+        checkInputForNullness(new String[] {"origin1", "origin2", "length1", "length2", "exceptionIndices", "exceptionCondition"},
+            new Object[][] {origin1, origin2, length1, length2, {exceptionIndices}, {exceptionCondition}});
 
         this.queueIndex = 2;
 
@@ -203,7 +207,7 @@ public class DisjointConditional extends Diff {
 
             this.rectangles = new Rectangle[size];
             for (int i = 0; i < size; i++) {
-                this.rectangles[i] = new Rectangle( new IntVar[]{origin1[i], origin2[i], length1[i], length2[i]});
+                this.rectangles[i] = new Rectangle(new IntVar[] {origin1[i], origin2[i], length1[i], length2[i]});
             }
 
         } else {
@@ -220,20 +224,21 @@ public class DisjointConditional extends Diff {
 
         this.numberId = idNumber.incrementAndGet();
 
-        setScope( Stream.concat( Rectangle.getStream(this.rectangles), exceptionCondition.stream() ) );
+        setScope(Stream.concat(Rectangle.getStream(this.rectangles), exceptionCondition.stream()));
 
 
     }
 
     /**
      * It constructs a disjoint conditional constraint.
-     * @param o1 variables specifying the origin in the first dimension.
-     * @param o2 variables specifying the origin in the second dimension.
-     * @param l1 variables specifying the length in the first dimension.
-     * @param l2 variables specifying the length in the second dimension.
-     * @param exceptionIndices list of rectangles that may not be considered
+     *
+     * @param o1                 variables specifying the origin in the first dimension.
+     * @param o2                 variables specifying the origin in the second dimension.
+     * @param l1                 variables specifying the length in the first dimension.
+     * @param l2                 variables specifying the length in the second dimension.
+     * @param exceptionIndices   list of rectangles that may not be considered
      * @param exceptionCondition conditions for rectangles that may not be considered
-     * @param profile it specifies if the profiles are being used and computed within that constraint.
+     * @param profile            it specifies if the profiles are being used and computed within that constraint.
      */
     public DisjointConditional(IntVar[] o1, IntVar[] o2, IntVar[] l1, IntVar[] l2, List<List<Integer>> exceptionIndices,
         List<? extends IntVar> exceptionCondition, boolean profile) {
@@ -243,12 +248,12 @@ public class DisjointConditional extends Diff {
 
     /**
      * It creates Disjoint conditional constraint.
-     * @param rectangles the rectangles within a constraint.
-     * @param exceptionIndices list of rectangles that may not be considered
+     *
+     * @param rectangles         the rectangles within a constraint.
+     * @param exceptionIndices   list of rectangles that may not be considered
      * @param exceptionCondition conditions for rectangles that may not be considered
      */
-    public DisjointConditional(IntVar[][] rectangles, List<List<Integer>> exceptionIndices,
-        List<? extends IntVar> exceptionCondition) {
+    public DisjointConditional(IntVar[][] rectangles, List<List<Integer>> exceptionIndices, List<? extends IntVar> exceptionCondition) {
 
         assert (rectangles != null) : "Rectangles list is null";
 
@@ -284,18 +289,19 @@ public class DisjointConditional extends Diff {
 
         numberId = idNumber.incrementAndGet();
 
-        setScope( Stream.concat( Rectangle.getStream(this.rectangles), exceptionCondition.stream() ) );
+        setScope(Stream.concat(Rectangle.getStream(this.rectangles), exceptionCondition.stream()));
     }
 
     /**
      * It creates Disjoint conditional constraint.
-     * @param rectangles the rectangles within a constraint.
-     * @param exceptionIndices list of rectangles that may not be considered
+     *
+     * @param rectangles         the rectangles within a constraint.
+     * @param exceptionIndices   list of rectangles that may not be considered
      * @param exceptionCondition conditions for rectangles that may not be considered
-     * @param profile it specifies if the profiles are being computed and used within that constraint.
+     * @param profile            it specifies if the profiles are being computed and used within that constraint.
      */
-    public DisjointConditional(IntVar[][] rectangles, List<List<Integer>> exceptionIndices,
-        List<? extends IntVar> exceptionCondition, boolean profile) {
+    public DisjointConditional(IntVar[][] rectangles, List<List<Integer>> exceptionIndices, List<? extends IntVar> exceptionCondition,
+        boolean profile) {
 
         this(rectangles, exceptionIndices, exceptionCondition);
         doProfile = profile;

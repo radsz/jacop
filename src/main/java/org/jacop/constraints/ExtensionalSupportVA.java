@@ -128,8 +128,8 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
      * tuples should not performed under any circumstances. The tuples array is
      * not copied to save memory and time.
      *
-     * @param list the constraint scope.
-     * @param tuples    the tuples which are supports for the constraint.
+     * @param list   the constraint scope.
+     * @param tuples the tuples which are supports for the constraint.
      */
 
     public ExtensionalSupportVA(IntVar[] list, int[][] tuples) {

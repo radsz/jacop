@@ -30,8 +30,6 @@
 
 package org.jacop.examples.set;
 
-import java.util.ArrayList;
-
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XlteqY;
 import org.jacop.core.IntVar;
@@ -41,17 +39,14 @@ import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
-import org.jacop.set.constraints.AdisjointB;
-import org.jacop.set.constraints.AeqS;
-import org.jacop.set.constraints.AintersectBeqC;
-import org.jacop.set.constraints.AunionBeqC;
-import org.jacop.set.constraints.CardA;
-import org.jacop.set.constraints.Match;
+import org.jacop.set.constraints.*;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
 import org.jacop.set.search.IndomainSetMin;
 import org.jacop.set.search.MaxGlbCard;
 import org.jacop.set.search.MinLubCard;
+
+import java.util.ArrayList;
 
 /**
  * It is a Social Golfer example based on set variables.
@@ -73,7 +68,6 @@ public class SocialGolfer extends ExampleSet {
     SetVar[][] golferGroup;
 
     /**
-     *
      * It runs a number of social golfer problems.
      *
      * @param args parameters (none)
@@ -156,8 +150,8 @@ public class SocialGolfer extends ExampleSet {
     /**
      * It sets the parameters for the model creation function.
      *
-     * @param weeks how many weeks to play
-     * @param groups how many groups will play
+     * @param weeks   how many weeks to play
+     * @param groups  how many groups will play
      * @param players how many players will play
      */
     public void setup(int weeks, int groups, int players) {

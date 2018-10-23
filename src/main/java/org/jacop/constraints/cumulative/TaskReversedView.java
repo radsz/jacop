@@ -63,7 +63,7 @@ class TaskReversedView extends TaskView {
     }
 
     long env(long C) {
-        return C * (long)est() + e();
+        return C * (long) est() + e();
     }
 
     void updateEdgeFind(int storeLevel, int lct) {
@@ -85,11 +85,11 @@ class TaskReversedView extends TaskView {
     }
 
     boolean exists() {
-	return dur.min() > 0 && res.min() > 0;
+        return dur.min() > 0 && res.min() > 0;
     }
 
     boolean maxNonZero() {
-	return dur.max() > 0 && res.max() > 0;
+        return dur.max() > 0 && res.max() > 0;
     }
 
 }

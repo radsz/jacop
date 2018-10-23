@@ -30,6 +30,14 @@
 
 package org.jacop.examples.fd;
 
+import org.jacop.constraints.Alldistinct;
+import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.SumInt;
+import org.jacop.constraints.XneqC;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+
 import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -37,20 +45,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-import org.jacop.constraints.Alldistinct;
-import org.jacop.constraints.SumInt;
-import org.jacop.constraints.LinearInt;
-import org.jacop.constraints.XneqC;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Store;
-
 /**
  * Cryptogram. It solves any cryptogram puzzle of the form like SEND+MORE=MONEY.
  *
  * @author Radoslaw Szymanek
  * @version 4.5
- *
  */
 
 public class Cryptogram extends ExampleFD {
@@ -96,7 +95,7 @@ public class Cryptogram extends ExampleFD {
 
 			/* read from file args[0] */
             try {
-                
+
                 BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(filename), "UTF-8"));
                 String str;
 
@@ -233,6 +232,7 @@ public class Cryptogram extends ExampleFD {
 
     /**
      * It executes the program to solve any cryptographic puzzle.
+     *
      * @param args no arguments read.
      */
     public static void main(String args[]) {

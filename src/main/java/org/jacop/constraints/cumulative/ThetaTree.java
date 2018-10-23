@@ -31,9 +31,9 @@
 
 package org.jacop.constraints.cumulative;
 
-import java.io.PrintStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 
 /**
  * Implements ThetaTree and operations on this tree for Cumulative constraint
@@ -102,7 +102,7 @@ class ThetaTree extends Tree {
     }
 
     private void addLeave(int i) {
-	ThetaNode node = new ThetaNode();
+        ThetaNode node = new ThetaNode();
         tree[i] = node;
         node.index = i;
 
