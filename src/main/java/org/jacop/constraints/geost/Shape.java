@@ -36,7 +36,7 @@ import java.util.*;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  *          <p>
  *          A shape is composed of a set of shifted boxes.
  */

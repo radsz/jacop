@@ -34,7 +34,7 @@ package org.jacop.constraints.knapsack;
  * It contains information required by an internal node of the item tree.
  *
  * @author Radoslaw Szymanek and Wadeck Follonier
- * @version 4.5
+ * @version 4.6
  */
 
 public class TreeNode {

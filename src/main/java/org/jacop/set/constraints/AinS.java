@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * a provided set.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class AinS extends PrimitiveConstraint {

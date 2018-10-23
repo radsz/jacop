@@ -45,7 +45,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * included in the set assigned to the set variable a.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski.
- * @version 4.5
+ * @version 4.6
  */
 
 public class XinA extends PrimitiveConstraint {

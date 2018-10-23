@@ -35,7 +35,7 @@ package org.jacop.core;
  * one or several intervals.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public final class Interval implements Cloneable {

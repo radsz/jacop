@@ -40,7 +40,7 @@ import java.util.Random;
  * one or several intervals.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class BoundDomain extends IntDomain implements Cloneable {

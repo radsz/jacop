@@ -47,7 +47,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Boundary consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class PmulCeqR extends Constraint implements SatisfiedPresent {

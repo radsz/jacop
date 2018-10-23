@@ -41,7 +41,7 @@ import java.util.ArrayList;
  * Defines a Float Domain Variable and related operations on it.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class FloatVar extends Var {

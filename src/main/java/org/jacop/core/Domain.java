@@ -39,7 +39,7 @@ import java.util.List;
  * Defines a Domain and related operations on it.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public abstract class Domain {

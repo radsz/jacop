@@ -47,7 +47,7 @@ import java.util.stream.Stream;
  * specified by lower bound and upper bound, lb and ub.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class CountBounds extends Constraint implements SatisfiedPresent {

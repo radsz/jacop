@@ -43,7 +43,7 @@ import java.util.Collection;
  * Minizinc based tests for problems that run upTo5seconds.
  *
  * @author Mariusz Świerkot and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 @RunWith(Parameterized.class) public class MinizincBasedTestUpTo5Seconds extends MinizincBasedTestsHelper {
     protected static final String timeCategory = "upTo5sec/";

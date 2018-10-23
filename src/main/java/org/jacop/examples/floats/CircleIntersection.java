@@ -41,7 +41,7 @@ package org.jacop.examples.floats;
  * Based on minizinc model circle_intersection.mzn by Håkan Kjellerstrand
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 import org.jacop.core.Store;

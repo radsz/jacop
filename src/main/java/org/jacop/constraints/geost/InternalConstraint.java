@@ -35,7 +35,7 @@ import java.util.Collection;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  *          <p>
  *          This interface defines the functionality required by a constraint in order
  *          to be used by Geost's sweeping algorithm.

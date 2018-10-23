@@ -37,7 +37,7 @@ package org.jacop.examples.floats;
  * minizinc model curve_fitting3.mzn by Håkan Kjellerstrand
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 import org.jacop.core.Store;

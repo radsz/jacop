@@ -40,7 +40,7 @@ import java.util.ArrayList;
  * A simple logic puzzle about golf players.
  *
  * @author Mariusz Czarnojan, Krystian Burka, and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  *          <p>
  *          "A Round of Golf"
  *          <p>

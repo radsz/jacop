@@ -43,7 +43,7 @@ import java.util.ArrayList;
  * A program solving problem of finding de Bruijn sequences.
  *
  * @author Hakan Kjellerstrand (hakank@bonetmail.com) and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  *          <p>
  *          It finds both "normal" and "arbitrary" de Bruijn sequences.
  *          <p>

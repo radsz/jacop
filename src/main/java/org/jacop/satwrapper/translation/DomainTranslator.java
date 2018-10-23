@@ -44,7 +44,7 @@ import java.util.Set;
  * be added to the SAT solver
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 public final class DomainTranslator implements WrapperComponent {
 

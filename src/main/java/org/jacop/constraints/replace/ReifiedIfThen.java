@@ -43,7 +43,7 @@ import java.util.List;
  * of the solver.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 public class ReifiedIfThen implements Replaceable<Reified> {
 

@@ -43,7 +43,7 @@ import java.util.List;
  * either into a network flow constraint or a set of primitive constraints.
  *
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class SoftAlldifferent extends DecomposedConstraint<Constraint> {

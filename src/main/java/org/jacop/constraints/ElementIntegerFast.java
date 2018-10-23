@@ -50,7 +50,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * make addressing of list array starting from 1.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class ElementIntegerFast extends Constraint implements Stateful, SatisfiedPresent {

@@ -42,7 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * It restricts the domain of a and b as well as result to be between 0 and 1.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class OrBoolSimple extends PrimitiveConstraint {

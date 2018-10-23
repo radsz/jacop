@@ -48,7 +48,7 @@ import java.util.stream.Stream;
  * algorithm.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 class CumulativePrimary extends Constraint {

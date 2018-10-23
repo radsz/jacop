@@ -52,7 +52,7 @@ import java.util.ArrayList;
  * It is a Social Golfer example based on set variables.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class SocialGolfer extends ExampleSet {

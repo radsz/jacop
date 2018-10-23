@@ -34,7 +34,7 @@ package org.jacop.core;
  * Defines interval enumeration of small dense domain.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 public class SmallDenseDomainIntervalEnumeration extends IntervalEnumeration {
 

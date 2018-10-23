@@ -41,7 +41,7 @@ import org.jacop.search.SelectChoicePoint;
  * An executable to parse the flatzinc file and create the JaCoP model.
  *
  * @author Krzysztof Kuchcinki
- * @version 4.5
+ * @version 4.6
  */
 
 public class FlatzincLoader {

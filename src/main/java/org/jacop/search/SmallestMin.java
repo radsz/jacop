@@ -38,7 +38,7 @@ import org.jacop.core.IntVar;
  *
  * @param <T> type of variable being used in the search.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class SmallestMin<T extends IntVar> implements ComparatorVariable<T> {

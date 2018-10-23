@@ -39,7 +39,7 @@ import org.jacop.core.ValueEnumeration;
  *
  * @param <T> variable of type IntVar.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class MaxRegret<T extends IntVar> implements ComparatorVariable<T> {

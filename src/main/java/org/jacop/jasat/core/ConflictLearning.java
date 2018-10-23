@@ -39,7 +39,7 @@ import org.jacop.jasat.utils.structures.IntStack;
  * A solver component for conflict learning. (first UIP algorithm)
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public final class ConflictLearning implements SolverComponent {

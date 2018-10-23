@@ -51,7 +51,7 @@ import static org.mockito.MockitoAnnotations.initMocks;
  * Tests to test different domain operations for IntDomains in particular SmallDenseDomain and IntervalDomain.
  *
  * @author Mariusz Świerkot and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 @RunWith(Parameterized.class) public class IntDomainTest {
 

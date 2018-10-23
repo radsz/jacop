@@ -39,7 +39,7 @@ import org.jacop.set.core.SetVar;
  *
  * @param <T> type of variable being used in the search.
  * @author Krzysztof Kuchcinski, Robert Åkemalm, and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class MaxGlbCard<T extends SetVar> implements ComparatorVariable<T> {

@@ -42,7 +42,7 @@ import java.util.concurrent.TimeUnit;
  * An executable to parse and execute the flatzinc file.
  *
  * @author Krzysztof Kuchcinki
- * @version 4.5
+ * @version 4.6
  */
 
 public class Fz2jacop {

@@ -43,7 +43,7 @@ import java.util.ArrayList;
  * It is quite complex logic puzzle about siblings.
  *
  * @author Krzysztof "Vrbl" Wrobel, Wioletta "Vuka" Kruzolek, and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  *          <p>
  *          This is quite difficult logic puzzle to be modeled and solved by CP.
  *          <p>

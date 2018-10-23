@@ -51,7 +51,7 @@ import java.util.ArrayList;
  * Also see http://www.hakank.org/JaCoP/
  *
  * @author Hakan Kjellerstrand and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class LeastDiff extends ExampleFD {

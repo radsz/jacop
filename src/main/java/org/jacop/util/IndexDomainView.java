@@ -40,7 +40,7 @@ import java.util.Arrays;
  * Defines index domain view for a variable and related operations on it.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class IndexDomainView {

@@ -41,7 +41,7 @@ import org.jacop.search.*;
  * It models Travelling Salesman Problem (TSP).
  *
  * @author Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class TSP extends ExampleFD {

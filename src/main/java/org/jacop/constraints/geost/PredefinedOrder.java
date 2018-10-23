@@ -33,7 +33,7 @@ import java.util.Arrays;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  *          <p>
  *          It provides a very simple lexicographical order based on the dimension
  *          ordering, with the possibility to choose the most significant dimension

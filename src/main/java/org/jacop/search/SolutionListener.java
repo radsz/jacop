@@ -41,7 +41,7 @@ import org.jacop.core.Var;
  *
  * @param <T> type of variable for which the solution is being stored.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public interface SolutionListener<T extends Var> {

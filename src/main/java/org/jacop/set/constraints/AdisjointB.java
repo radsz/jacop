@@ -45,7 +45,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * do not contain any common element.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class AdisjointB extends Constraint implements UsesQueueVariable, SatisfiedPresent {

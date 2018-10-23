@@ -35,7 +35,7 @@ package org.jacop.constraints.cumulative;
  * Implements ThetaNode for ThetaTree.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 class ThetaNode extends TreeNode {

@@ -36,7 +36,7 @@ import java.util.Random;
  * Defines small dense domain based on bits within a long number.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class SmallDenseDomain extends IntDomain implements Cloneable {

@@ -49,7 +49,7 @@ import java.util.Arrays;
  * convert the clauses unique ID to their local clauses index, and conversely.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public abstract class AbstractClausesDatabase implements SolverComponent, ClauseDatabaseInterface {

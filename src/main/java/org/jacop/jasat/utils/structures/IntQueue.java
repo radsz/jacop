@@ -39,7 +39,7 @@ import java.util.Iterator;
  * Special class for unboxed int FIFO
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 public final class IntQueue implements Iterable<Integer> {
 

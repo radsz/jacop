@@ -47,7 +47,7 @@ import static org.junit.Assert.assertEquals;
  * It is performing testing based on the examples present in the library.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 public class ExampleBasedTest {
 

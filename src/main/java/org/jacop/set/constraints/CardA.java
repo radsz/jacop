@@ -44,7 +44,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * The set cardinality constraint.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class CardA extends Constraint implements SatisfiedPresent {

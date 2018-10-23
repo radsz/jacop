@@ -41,7 +41,7 @@ import java.util.Iterator;
  * greatest lower bound(glb). The domain consist of zero, one or several sets.
  *
  * @author Radoslaw Szymanek, Krzysztof Kuchcinski and Robert Åkemalm
- * @version 4.5
+ * @version 4.6
  */
 
 public abstract class SetDomain extends Domain {

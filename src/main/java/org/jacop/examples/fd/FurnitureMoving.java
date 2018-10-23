@@ -46,7 +46,7 @@ import java.util.ArrayList;
  * It is a simple logic puzzle about furniture moving.
  *
  * @author Hakan Kjellerstrand (hakank@bonetmail.com) and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  *          <p>
  *          Problem from Marriott {@literal &} Stuckey: 'Programming with constraints', page 112f
  *          <p>

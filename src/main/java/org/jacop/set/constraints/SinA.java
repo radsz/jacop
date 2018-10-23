@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * included in a set variable a.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class SinA extends PrimitiveConstraint {

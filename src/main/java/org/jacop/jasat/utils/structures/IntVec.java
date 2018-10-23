@@ -43,7 +43,7 @@ import java.util.List;
  * low level, efficient int vector
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 public final class IntVec implements Iterable<Integer> {
 

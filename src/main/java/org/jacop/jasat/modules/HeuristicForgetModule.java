@@ -53,7 +53,7 @@ import java.util.LinkedList;
  * Heuristic is from glucose.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 public final class HeuristicForgetModule implements ForgetListener, ExplanationListener, BackjumpListener {
 

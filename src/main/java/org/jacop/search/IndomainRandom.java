@@ -42,7 +42,7 @@ import java.util.Random;
  *
  * @param <T> type of variable being used in the search.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class IndomainRandom<T extends IntVar> implements Indomain<T> {

@@ -39,7 +39,7 @@ import org.jacop.jasat.core.Trail;
  * module used to guide research by selecting the next literal to assert
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 public final class HeuristicAssertionModule implements SolverComponent {
 

@@ -47,7 +47,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Programming, CP 2016. pp 207-223
  *
  * @author Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class Table extends Constraint implements UsesQueueVariable, Stateful {

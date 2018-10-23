@@ -40,7 +40,7 @@ import java.util.List;
  * store level.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class SimpleBacktrackableManager implements BacktrackableManager {

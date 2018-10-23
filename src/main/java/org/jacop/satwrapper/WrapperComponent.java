@@ -35,7 +35,7 @@ package org.jacop.satwrapper;
  * a component that is aware of the existence of a SatWrapper
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 public interface WrapperComponent {
 

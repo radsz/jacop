@@ -43,7 +43,7 @@ import java.util.Map;
  *
  * @param <T> type of the variable for which choice point is being created.
  * @author Radoslaw Szymanek and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public interface SelectChoicePoint<T extends Var> {

@@ -41,7 +41,7 @@ import java.util.List;
  * IEEE Trans. on CAD, vol. 25, no. 3, March 2006.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class FIR16 extends Filter {

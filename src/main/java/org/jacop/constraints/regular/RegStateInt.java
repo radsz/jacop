@@ -44,7 +44,7 @@ import java.util.Map;
  * same successor.
  *
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 public class RegStateInt extends RegState {
 

@@ -48,7 +48,7 @@ import java.util.stream.Stream;
  * available to us.
  *
  * @author Jocelyne Lotfi and Radoslaw Szymanek.
- * @version 4.5
+ * @version 4.6
  */
 
 public class GCC extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {

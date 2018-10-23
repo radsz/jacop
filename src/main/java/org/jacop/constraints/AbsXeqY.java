@@ -41,7 +41,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Domain and bounds consistency can be used; third parameter of constructor controls this.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class AbsXeqY extends PrimitiveConstraint implements Stateful {

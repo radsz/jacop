@@ -49,7 +49,7 @@ import java.util.*;
  * contains between min and max values from the given set.
  *
  * @author Radoslaw Szymanek and Polina Makeeva
- * @version 4.5
+ * @version 4.6
  */
 
 public class Sequence extends DecomposedConstraint<Constraint> {

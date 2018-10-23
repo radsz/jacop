@@ -55,7 +55,7 @@ import java.util.ArrayList;
  * that they are ground.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 public class Solve implements ParserTreeConstants {
 

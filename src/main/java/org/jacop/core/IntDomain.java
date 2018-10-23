@@ -42,7 +42,7 @@ import java.util.Random;
  * any function can not be empty domains.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public abstract class IntDomain extends Domain {

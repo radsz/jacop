@@ -37,7 +37,7 @@ import org.jacop.core.Var;
  *
  * @param <T> type of variable being compared.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class MinDomainOverDegree<T extends Var> implements ComparatorVariable<T> {

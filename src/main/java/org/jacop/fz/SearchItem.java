@@ -46,7 +46,7 @@ import java.util.Arrays;
  * The part of the parser responsible for parsing search part of the flatzinc specification.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 public class SearchItem implements ParserTreeConstants {
 

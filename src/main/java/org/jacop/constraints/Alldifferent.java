@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * partial consistency technique.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class Alldifferent extends Constraint implements UsesQueueVariable, SatisfiedPresent {

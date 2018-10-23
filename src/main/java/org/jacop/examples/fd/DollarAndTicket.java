@@ -40,7 +40,7 @@ import java.util.ArrayList;
  * It solves a simple logic puzzle - Dollar and Ticket problem.
  *
  * @author Wojciech Swietek, Maciej Trela, and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  *          <p>
  *          Every year the Soccer Club has a raffle to support the cost of playing
  *          fields, equipment, and camps.  This year the top five sellers were

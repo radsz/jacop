@@ -40,7 +40,7 @@ import java.util.ArrayList;
  * It solves a simple logic puzzle about music concert.
  *
  * @author Lesniak Kamil, Harezlak Roman, Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  *          <p>
  *          Tim and Keri have a full day ahead for themselves as they plan to see
  *          and hear everything at Tunapalooza '98, the annual save-the-tuna

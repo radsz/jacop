@@ -35,7 +35,7 @@ package org.jacop.api;
  * (Constraint) to compute if the constraint is satisfied.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 public interface SatisfiedPresent {
 

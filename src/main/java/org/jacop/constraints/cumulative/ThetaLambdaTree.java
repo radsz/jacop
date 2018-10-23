@@ -41,7 +41,7 @@ import java.io.PrintStream;
  * Implements ThetaLambdaTree and operations on this tree for Cumulative constraint
  *
  * @author Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 

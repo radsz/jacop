@@ -53,7 +53,7 @@ import java.util.regex.Pattern;
  * It is program to model and solve simple problems of car sequencing problem (CSPLIB-p1).
  *
  * @author Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class CarSequencing extends ExampleFD {

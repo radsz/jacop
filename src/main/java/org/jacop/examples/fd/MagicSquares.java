@@ -42,7 +42,7 @@ import java.util.List;
  * It solves a Magic squares problem.
  *
  * @author Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  *          <p>
  *          MagicSquare problem consists of filling the square of size n with
  *          numbers from 1 to n^2 in such a way that all rows, all columns, and

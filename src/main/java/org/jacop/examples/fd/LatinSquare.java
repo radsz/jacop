@@ -49,7 +49,7 @@ import java.util.ArrayList;
  * cells.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class LatinSquare extends ExampleFD {

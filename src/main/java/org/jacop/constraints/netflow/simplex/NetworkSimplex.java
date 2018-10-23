@@ -38,7 +38,7 @@ import static org.jacop.constraints.netflow.Assert.*;
 
 /**
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class NetworkSimplex {

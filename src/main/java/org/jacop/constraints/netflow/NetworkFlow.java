@@ -53,7 +53,7 @@ import static org.jacop.constraints.netflow.Assert.checkStructure;
  * instantiate the network.
  *
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class NetworkFlow extends Constraint implements UsesQueueVariable, Stateful, RemoveLevelLate {

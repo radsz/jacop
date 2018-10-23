@@ -63,7 +63,7 @@ import java.io.IOException;
  * a CP semantic with respect to their meaning about domains.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 public final class DomainClausesDatabase extends AbstractClausesDatabase implements WrapperComponent {
 

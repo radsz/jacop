@@ -43,7 +43,7 @@ import java.util.ArrayList;
  * It solves an arithmetic puzzle BASIC+LOGIC=PASCAL.
  *
  * @author Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  *          <p>
  *          Find for the equation on the left
  *          what digits are represented by the letters
