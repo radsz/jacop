@@ -1149,7 +1149,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
         result.append(Ts[Ts.length - 1]);
 
-        result.append(" ]").append(", limit = ").append(limit).append(" )");
+        result.append(" ]").append(", limit = ").append(limit).append(", ").append(doEdgeFinding).append(", ").append(doProfile).append(" )");
 
         return result.toString();
 

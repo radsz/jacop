@@ -370,6 +370,32 @@ package object scala {
   }
 
   /**
+    * Wrapper for [[org.jacop.constraints.AtLeast]].
+    *
+    * @param list  list of variables to count number of values value.
+    * @param count minimal number of values in list.
+    * @param value values to check.
+    */
+  def atleast[T <: org.jacop.core.IntVar](list: List[T], count: Int, value: Int)(implicit m: ClassTag[T]) {
+    val c = new AtLeast(list.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], count, value)
+    if (trace) println(c)
+    impModel.impose(c)
+  }
+
+  /**
+    * Wrapper for [[org.jacop.constraints.AtMost]].
+    *
+    * @param list  list of variables to count number of values value.
+    * @param count maximal number of values in list.
+    * @param value values to check.
+    */
+  def atmost[T <: org.jacop.core.IntVar](list: List[T], count: Int, value: Int)(implicit m: ClassTag[T]) {
+    val c = new AtMost(list.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], count, value)
+    if (trace) println(c)
+    impModel.impose(c)
+  }
+
+  /**
     * Wrapper for [[org.jacop.constraints.Values]].
     *
     * @param list  list of variables to count number of different values.
@@ -800,7 +826,7 @@ package object scala {
   /**
     * Wrapper for [[org.jacop.constraints.LexOrder]].
     *
-    * @param x array of vectors of varibales to be lexicographically ordered.
+    * @param x array of vectors of variables to be lexicographically ordered.
     */
   def lex(x: Array[IntVar], y: Array[IntVar]) {
     val c = new LexOrder(x.asInstanceOf[Array[org.jacop.core.IntVar]], y.asInstanceOf[Array[org.jacop.core.IntVar]])
@@ -811,10 +837,23 @@ package object scala {
   /**
     * Wrapper for [[org.jacop.constraints.Lex]].
     *
-    * @param x array of vectors of varibales to be lexicographically ordered.
+    * @param x array of vectors of variables to be lexicographically ordered.
     */
   def lex(x: Array[Array[IntVar]]) {
     val c = new org.jacop.constraints.Lex(x.asInstanceOf[Array[Array[org.jacop.core.IntVar]]])
+    if (trace) println(c)
+    impModel.imposeDecomposition(c)
+  }
+
+  /**
+    * Wrapper for [[org.jacop.constraints.ValueProcede]].
+    *
+    * @param x vectors of variables.
+    * @param s value occuring first.
+    * @param t value occuring next.
+    */
+  def valueprocede(x: Array[Array[IntVar]], s: Int, t: Int) {
+    val c = new org.jacop.constraints.ValuePrecede(s, t, x.asInstanceOf[Array[org.jacop.core.IntVar]])
     if (trace) println(c)
     impModel.imposeDecomposition(c)
   }

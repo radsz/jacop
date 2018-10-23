@@ -138,14 +138,15 @@ class GlobalConstraints implements ParserTreeConstants {
                     diff.add(e.min());
                 double n = (double) r.length;
                 double k = (double) diff.size();
-                // KKU, 2017-04-05, formula when 3.5*n*n < n*k*log(n),
-                // where 3.5 is experimantally selected constant
-                if (3.5 * n * n < n * k * Math.log10((double) n) / Math.log10(2.0))
-                    // complexity O(n^2)
-                    support.delayedConstraints.add(new org.jacop.constraints.Cumulative(s, d, r, b, true, true, false));
-                else
-                    // complexity O(n*k*logn)
-                    support.delayedConstraints.add(new Cumulative(s, d, r, b));
+                // KKU, 2018-10-03, use quadratic edge-finding when n*n < n*k*log(n),
+
+		Cumulative cumul = new Cumulative(s, d, r, b);
+
+                if (2*n * n < n * k * Math.log10((double) n) / Math.log10(2.0))
+		    // algorithm with complexity O(n^2) selected
+		    cumul.doQuadraticEdgeFind(true);
+		// algorithm with complexity O(n*k*logn) is default
+		support.delayedConstraints.add(cumul);
 
                 String p = System.getProperty("fz_cumulative_use_disjunctions");
                 if (p != null)
@@ -423,18 +424,36 @@ class GlobalConstraints implements ParserTreeConstants {
         int[] cover = support.getIntArray((SimpleNode) node.jjtGetChild(1));
         int[] low = support.getIntArray((SimpleNode) node.jjtGetChild(2));
         int[] up = support.getIntArray((SimpleNode) node.jjtGetChild(3));
-
+		   
         IntDomain gcc_dom = new IntervalDomain();
-        for (int e : cover)
+	int[] newCover = new int[cover.length];
+	int n=0;
+        for (int i=0; i < cover.length; i++) {
+	    int e = cover[i];
+	    if (varsContain(x, e))
+		newCover[n++] = i;
+	    else if (low[i] != 0)
+		throw store.failException;
+
             gcc_dom = gcc_dom.union(e);
-        for (IntVar v : x)
+	}
+
+	for (IntVar v : x)
             v.domain.in(store.level, v, gcc_dom);
 
-        IntVar[] counter = new IntVar[low.length];
-        for (int i = 0; i < counter.length; i++)
-            counter[i] = new IntVar(store, "counter" + i, low[i], up[i]);
+        IntVar[] counter = new IntVar[n];
+        for (int i = 0; i < n; i++) 
+            counter[i] = new IntVar(store, "counter" + i, low[newCover[i]], up[newCover[i]]);
 
         support.pose(new GCC(x, counter));
+    }
+
+    boolean varsContain(IntVar[] x, int e) {
+	for (IntVar v : x)
+	    if (v.domain.contains(e))
+		return true;
+
+	return false;
     }
 
     void gen_jacop_diff2_strict(SimpleNode node) {
@@ -474,16 +493,72 @@ class GlobalConstraints implements ParserTreeConstants {
         int y = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
         IntVar c = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
+	if (c.singleton(0)) {
+	    for (IntVar v : x) 
+		v.domain.inComplement(store.level, v, y);
+	    return;
+	}
+	else if (c.singleton(x.length)) {
+	    for (IntVar v : x) 
+		v.domain.in(store.level, v, y, y);
+	    return;
+	}
+	
         ArrayList<IntVar> xs = new ArrayList<IntVar>();
         for (IntVar v : x) {
-            if (y >= v.min() && y <= v.max())
+            if (v.domain.contains(y)) //y >= v.min() && y <= v.max())
                 xs.add(v);
         }
         if (xs.size() == 0) {
             c.domain.in(store.level, c, 0, 0);
             return;
-        } else
+        } else if (c.singleton()) 
+	    support.pose(new CountBounds(xs, y, c.value(), c.value()));
+	else
             support.pose(new Count(xs, c, y));
+    }
+
+    void gen_jacop_count_bounds(SimpleNode node) {
+        IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+        int value = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+        int lb = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+        int ub = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3));
+
+	support.pose(new CountBounds(x, value, lb, ub));
+    }
+    
+    void gen_jacop_atleast(SimpleNode node) {
+        IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+        int y = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+        int c = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+
+	support.pose(new AtLeast(x, c, y));
+    }
+
+    void gen_jacop_atleast_reif(SimpleNode node) {
+        IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+        int y = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+        int c = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+	IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
+	    
+	support.pose(new Reified(new AtLeast(x, c, y), b));
+    }
+
+    void gen_jacop_atmost(SimpleNode node) {
+        IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+        int y = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+        int c = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+
+	support.pose(new AtMost(x, c, y));
+    }
+
+    void gen_jacop_atmost_reif(SimpleNode node) {
+        IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+        int y = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+        int c = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+	IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
+	    
+	support.pose(new Reified(new AtMost(x, c, y), b));
     }
 
     void gen_jacop_nvalue(SimpleNode node) {
@@ -601,6 +676,22 @@ class GlobalConstraints implements ParserTreeConstants {
         IntDomain F = support.getSetLiteral(node, 5);
         int minIndex = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(6));
 
+        // ---- KK, 2018-07-27
+	//regular must not have duplicated variables; we create all
+        // different variables and equality constraints here
+        IntVar[] xx = new IntVar[x.length];
+        HashSet<IntVar> varSet = new HashSet<IntVar>();
+        for (int i = 0; i < x.length; i++) {
+            if (varSet.contains(x[i])) {
+                xx[i] = new IntVar(store, x[i].min(), x[i].max());
+		support.pose(new XeqY(x[i], xx[i]));
+	    }
+            else {
+                xx[i] = x[i];
+                varSet.add(x[i]);
+            }
+        }
+
         // Build DFA
         FSM dfa = new FSM();
         FSMState[] s = new FSMState[Q];
@@ -620,7 +711,7 @@ class GlobalConstraints implements ParserTreeConstants {
                 }
         }
 
-        support.pose(new Regular(dfa, x));
+        support.pose(new Regular(dfa, xx));
     }
 
     void gen_jacop_knapsack(SimpleNode node) {

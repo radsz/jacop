@@ -1,0 +1,2 @@
+#!/bin/bash
+exec java -XX:+UseSerialGC -server -cp "path to JaCoP classes ot .jar file" -Xmx8G -Xss100M org.jacop.fz.Fz2jacop "$@"

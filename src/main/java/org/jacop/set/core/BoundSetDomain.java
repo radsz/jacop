@@ -350,7 +350,11 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
                     throw Store.failException;
                 var.domainHasChanged(IntDomain.GROUND);
             } else {
-                int eventCardinality = cardinality.intersectAdapt(glb.getSize(), lub.getSize());
+		int min = glb.getSize(), max = lub.getSize();
+		if (min > max)
+		    throw Store.failException;
+
+                int eventCardinality = cardinality.intersectAdapt(min, max);
 
                 if (cardinality.isEmpty())
                     throw Store.failException;

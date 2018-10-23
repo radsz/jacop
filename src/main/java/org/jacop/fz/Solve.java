@@ -65,9 +65,11 @@ public class Solve implements ParserTreeConstants {
     int initNumberConstraints;
 
     Thread tread;
-    java.lang.management.ThreadMXBean searchTimeMeter;
+    java.lang.management.ThreadMXBean timeMeter;
     long startCPU;
-
+    long initTime=0;
+    long searchTime=0;
+    
     //ComparatorVariable tieBreaking=null;
     SelectChoicePoint<Var> variable_selection;
     ArrayList<Search<Var>> list_seq_searches = null;
@@ -161,10 +163,11 @@ public class Solve implements ParserTreeConstants {
         dictionary = table;
 
         if (opt.getVerbose())
-            System.out.println("%% Model constraints defined.\n%% Variables = " + store.size() + " and  Bool variables = " + dictionary
-                .getNumberBoolVariables() + " of that constant variables = " + table.constantTable.size() + "\n%% Constraints = "
-                + initNumberConstraints + ", SAT clauses = " + sat.numberClauses() + "\n%% Memory used by the model = " + modelMem
-                + "[MB]");
+            System.out.println("%% Model constraints defined.\n%% Variables = " + store.size()
+			       + " and  Bool variables = " + dictionary.getNumberBoolVariables()
+			       + " of that constant variables = " + table.constantTable.size()
+			       + "\n%% Constraints = " + (initNumberConstraints-1)
+			       + ", SAT clauses = " + sat.numberClauses() + "\n%% Memory used by the model = " + modelMem + "[MB]");
 
         options = opt;
         solveKind = -1;
@@ -383,12 +386,9 @@ public class Solve implements ParserTreeConstants {
 
         Result = false;
 
-        tread = java.lang.Thread.currentThread();
-        java.lang.management.ThreadMXBean b = java.lang.management.ManagementFactory.getThreadMXBean();
-        searchTimeMeter = b;
-
-        startCPU = b.getThreadCpuTime(tread.getId());
-        // 	long startUser = b.getThreadUserTime(tread.getId());
+	long currentTime = timeMeter.getThreadCpuTime(tread.getId());
+	initTime = currentTime - startCPU;
+        startCPU = currentTime;
 
         if (si == null || si.exploration() == null || si.exploration().equals("complete") || si.exploration().equals("lds") || si
             .exploration().equals("credit"))
@@ -595,18 +595,26 @@ public class Solve implements ParserTreeConstants {
                 }
             }
 
-            System.out.println("%% Model variables : " + (store.size() + dictionary.getNumberBoolVariables()) + "\n%% Model constraints : "
-                + initNumberConstraints + "\n\n%% Search CPU time : " + getCPUTime()
-                //(searchTimeMeter.getThreadCpuTime(tread.getId()) - startCPU) / (long) 1e+6 + "ms"
-                + "\n%% Search nodes : " + nodes + "\n%% Propagations : " + store.numberConsistencyCalls + "\n%% Search decisions : "
-                + decisions + "\n%% Wrong search decisions : " + wrong + "\n%% Search backtracks : " + backtracks
-                + "\n%% Max search depth : " + depth + "\n%% Number solutions : " + solutions);
-
+            System.out.println("%%mzn-stat: variables=" + (store.size() + dictionary.getNumberBoolVariables() - dictionary.constantTable.size())
+			       // + "\n%%mzn-stat: boolVariables="+ (dictionary.getNumberBoolVariables()-dictionary.aliasTable.size())
+			       // + "\n%%mzn-stat: setVariables="+ dictionary.getNumberSetVariables()
+			       // + "\n%%mzn-stat: floatVariables="+ dictionary.getNumberFloatVariables()
+			       + "\n%%mzn-stat: propagators=" + (initNumberConstraints - 1)
+			       + "\n\n%%mzn-stat: initTime=" + getInitTime_ms()/1000.0
+			       + "\n%%mzn-stat: solveTime=" + getSearchTime_ms()/1000.0
+			       + "\n%%mzn-stat: nodes=" + String.format("%,d", nodes)
+			       + "\n%%mzn-stat: propagations=" + String.format("%,d", store.numberConsistencyCalls)
+			       // + "\n%% Search decisions : "+ String.format("%,d", decisions)
+			       + "\n%%mzn-stat: failers=" + String.format("%,d", wrong) //Wrong search decisions : 
+			       // + "\n%%mzn-stat: backtracks=" + String.format("%,d", backtracks)
+			       + "\n%%mzn-stat; peakDepth=" + depth
+			       + "\n%%mzn-stat: solutions=" + solutions
+			       // + "\n%%mzn-stat-end"
+			       );
 
             if (options.debug())
                 System.out.print(failStatistics);
         }
-
     }
 
     @SuppressWarnings("unchecked") DepthFirstSearch<Var>[] setSubSearchForAll(DepthFirstSearch<Var> label, Options opt) {
@@ -647,73 +655,6 @@ public class Solve implements ParserTreeConstants {
         DepthFirstSearch<Var> lastSearch = label;
         DepthFirstSearch<Var> intSearch = new DepthFirstSearch<Var>();
 
-        if (opt.debug())
-            intSearch.setConsistencyListener(failStatistics);
-
-        if (int_search_variables.length != 0) {
-            // add search containing int variables to be sure that they get a value
-            SelectChoicePoint<Var> intSelect = new SimpleSelect<Var>(int_search_variables, null,
-                //    								     new org.jacop.search.MostConstrainedStatic<Var>(),
-                new IndomainMin());
-            if (variable_selection == null)
-                variable_selection = intSelect;
-            intSearch.setSelectChoicePoint(intSelect);
-            intSearch.setPrintInfo(false);
-            if (lastSearch != null)
-                lastSearch.addChildSearch(intSearch);
-            lastSearch = intSearch;
-            if (bool_search_variables.length == 0 && set_search_variables.length == 0 && float_search_variables.length == 0) {
-                intSearch.setSolutionListener(new CostListener<Var>());
-
-                if (costVariable != null) {
-                    intSearch.setCostVar(costVariable);
-                    intSearch.setOptimize(true);
-                }
-            }
-
-            // time-out option
-            int to = options.getTimeOut();
-            if (to > 0)
-                intSearch.setTimeOut(to);
-
-            intAndSetSearch[0] = intSearch;
-        }
-
-        DepthFirstSearch<Var> boolSearch = new DepthFirstSearch<Var>();
-
-        if (opt.debug())
-            boolSearch.setConsistencyListener(failStatistics);
-
-        if (bool_search_variables.length != 0) {
-            // add search containing boolean variables to be sure that they get a value
-            SelectChoicePoint<Var> boolSelect = new SimpleSelect<Var>(bool_search_variables, null,
-                // 								      new org.jacop.search.MostConstrainedStatic<Var>(),
-                new IndomainMin());
-            if (variable_selection == null)
-                variable_selection = boolSelect;
-            boolSearch.setSelectChoicePoint(boolSelect);
-            boolSearch.setPrintInfo(false);
-            if (lastSearch != null)
-                lastSearch.addChildSearch(boolSearch);
-            lastSearch = boolSearch;
-            if (set_search_variables.length == 0 && float_search_variables.length == 0) {
-                boolSearch.setSolutionListener(new CostListener<Var>());
-
-                if (costVariable != null) {
-                    intSearch.setCostVar(costVariable);
-                    intSearch.setOptimize(true);
-                }
-            }
-
-            // time-out option
-            int to = options.getTimeOut();
-            if (to > 0)
-                boolSearch.setTimeOut(to);
-
-            intAndSetSearch[1] = boolSearch;
-        }
-
-
         if (set_search_variables.length != 0) {
             // add set search containing all variables to be sure that they get a value
             DepthFirstSearch<Var> setSearch = new DepthFirstSearch<Var>();
@@ -731,7 +672,7 @@ public class Solve implements ParserTreeConstants {
             if (lastSearch != null)
                 lastSearch.addChildSearch(setSearch);
             lastSearch = setSearch;
-            if (float_search_variables.length == 0)
+            if (int_search_variables.length == 0 && bool_search_variables.length == 0 && float_search_variables.length == 0)
                 setSearch.setSolutionListener(new CostListener<Var>());
 
             if (costVariable != null) {
@@ -744,8 +685,76 @@ public class Solve implements ParserTreeConstants {
             if (to > 0)
                 setSearch.setTimeOut(to);
 
-            intAndSetSearch[2] = setSearch;
+            intAndSetSearch[0] = setSearch;
         }
+
+        if (opt.debug())
+            intSearch.setConsistencyListener(failStatistics);
+
+        if (int_search_variables.length != 0) {
+            // add search containing int variables to be sure that they get a value
+            SelectChoicePoint<Var> intSelect = new SimpleSelect<Var>(int_search_variables, null,
+								     // new org.jacop.search.MostConstrainedDynamic<Var>(),
+								     // new org.jacop.search.SmallestDomain<Var>(),
+                new IndomainMin());
+            if (variable_selection == null)
+                variable_selection = intSelect;
+            intSearch.setSelectChoicePoint(intSelect);
+            intSearch.setPrintInfo(false);
+            if (lastSearch != null)
+                lastSearch.addChildSearch(intSearch);
+            lastSearch = intSearch;
+            if (bool_search_variables.length == 0 && float_search_variables.length == 0) {
+                intSearch.setSolutionListener(new CostListener<Var>());
+
+                if (costVariable != null) {
+                    intSearch.setCostVar(costVariable);
+                    intSearch.setOptimize(true);
+                }
+            }
+
+            // time-out option
+            int to = options.getTimeOut();
+            if (to > 0)
+                intSearch.setTimeOut(to);
+
+            intAndSetSearch[1] = intSearch;
+        }
+
+        DepthFirstSearch<Var> boolSearch = new DepthFirstSearch<Var>();
+
+        if (opt.debug())
+            boolSearch.setConsistencyListener(failStatistics);
+
+        if (bool_search_variables.length != 0) {
+            // add search containing boolean variables to be sure that they get a value
+            SelectChoicePoint<Var> boolSelect = new SimpleSelect<Var>(bool_search_variables, null,
+                 								      // new org.jacop.search.MostConstrainedDynamic<Var>(),
+                new IndomainMin());
+            if (variable_selection == null)
+                variable_selection = boolSelect;
+            boolSearch.setSelectChoicePoint(boolSelect);
+            boolSearch.setPrintInfo(false);
+            if (lastSearch != null)
+                lastSearch.addChildSearch(boolSearch);
+            lastSearch = boolSearch;
+            if (float_search_variables.length == 0) {
+                boolSearch.setSolutionListener(new CostListener<Var>());
+
+                if (costVariable != null) {
+                    intSearch.setCostVar(costVariable);
+                    intSearch.setOptimize(true);
+                }
+            }
+
+            // time-out option
+            int to = options.getTimeOut();
+            if (to > 0)
+                boolSearch.setTimeOut(to);
+
+            intAndSetSearch[2] = boolSearch;
+        }
+
 
         if (float_search_variables.length != 0) {
             // add float search containing all variables to be sure that they get a value
@@ -785,12 +794,25 @@ public class Solve implements ParserTreeConstants {
             if (lastSolution != null)
                 helperSolutionPrinter(lastSolution.toString());
 
+	    if (options.getAll())
+		System.out.println("==========");
+
             if (options.getStatistics())
                 System.out.println(
-                    "%% Model variables : " + (store.size() + dictionary.getNumberBoolVariables()) + "\n%% Model constraints : "
-                        + initNumberConstraints + "\n\n%% Search CPU time : " + "0ms" + "\n%% Search nodes : 0" + "\n%% Propagations : "
-                        + store.numberConsistencyCalls + "\n%% Search decisions : 0" + "\n%% Wrong search decisions : 0"
-                        + "\n%% Search backtracks : 0" + "\n%% Max search depth : 0" + "\n%% Number solutions : 1");
+				   "%%mzn-stat: variables=" + (store.size() + dictionary.getNumberBoolVariables() - dictionary.constantTable.size())
+				   // + "\n%%mzn-stat: boolVariables="+ (dictionary.getNumberBoolVariables()-dictionary.aliasTable.size())
+				   // + "\n%%mzn-stat: setVariables="+ dictionary.getNumberSetVariables()
+				   // + "\n%%mzn-stat: floatVariables="+ dictionary.getNumberFloatVariables()
+				   + "\n%%mzn-stat: propagators=" + initNumberConstraints
+				   + "\n\n%%mzn-stat: initTime=" + getInitTime_ms()/1000.0
+				   + "\n%%mzn-stat: solveTime=" + "0"
+				   + "\n%%mzn-stat: nodes=0"
+				   + "\n%%man-stat: propagations="+ store.numberConsistencyCalls
+				   + "\n%%mzn-stat: nodes=0"
+				   + "\n%%mzn-stat: failers=0"
+				   // + "\n%%mzn-stat: backtracks=0"
+				   + "\n%%mzn-stat: peakDepth=0"
+				   + "\n%%mzn-stat: solutions=1");
 
             throw new TrivialSolution();
         }
@@ -869,12 +891,9 @@ public class Solve implements ParserTreeConstants {
 
         final_search_seq = list_seq_searches.get(list_seq_searches.size() - 1);
 
-        tread = java.lang.Thread.currentThread();
-        java.lang.management.ThreadMXBean b = java.lang.management.ManagementFactory.getThreadMXBean();
-        searchTimeMeter = b;
-
-        startCPU = b.getThreadCpuTime(tread.getId());
-        // 	long startUser = b.getThreadUserTime(tread.getId());
+	long currentTime = timeMeter.getThreadCpuTime(tread.getId());
+	initTime = currentTime - startCPU;
+        startCPU = currentTime;
 
         int to = options.getTimeOut();
         if (to > 0)
@@ -920,7 +939,7 @@ public class Solve implements ParserTreeConstants {
                     else {
                         cost = getCostFloat((ASTSolveExpr) kind.jjtGetChild(0));
                         costVariable = cost;
-                    }
+                   }
 
                     // Result = restart_search(masterLabel, masterSelect, cost, true);
 
@@ -1048,19 +1067,33 @@ public class Solve implements ParserTreeConstants {
                 solutions = label.getSolutionListener().solutionsNo();
             }
 
-            System.out.println("%% Model variables : " + (store.size() + dictionary.getNumberBoolVariables()) + "\n%% Model constraints : "
-                + initNumberConstraints + "\n\n%% Search CPU time : " + getCPUTime() + "\n%% Search nodes : " + nodes
-                + "\n%% Propagations : " + store.numberConsistencyCalls + "\n%% Search decisions : " + decisions
-                + "\n%% Wrong search decisions : " + wrong + "\n%% Search backtracks : " + backtracks + "\n%% Max search depth : " + depth
-                + "\n%% Number solutions : " + solutions);
+            System.out.println("%%mzn-stat: variables=" + (store.size() + dictionary.getNumberBoolVariables() - dictionary.constantTable.size())
+			       // + "\n%%mzn-stat: boolVariables="+ (dictionary.getNumberBoolVariables()-dictionary.aliasTable.size())
+			       // + "\n%%mzn-stat: setVariables="+ dictionary.getNumberSetVariables()
+			       // + "\n%%mzn-stat: floatVariables="+ dictionary.getNumberFloatVariables()
+			       + "\n%%mzn-stat: propagators=" + (initNumberConstraints - 1)
+			       + "\n\n%%mzn-stat: initTime=" + getInitTime_ms()/1000.0
+			       + "\n%%mzn-stat: solveTime=" + getSearchTime_ms()/1000.0
+			       + "\n%%mzn-stat: nodes=" + String.format("%,d", nodes)
+			       + "\n%%mzn-stat: propagations=" + String.format("%,d", store.numberConsistencyCalls)
+			       // + "\n%% Search decisions : " + String.format("%,d", decisions)
+			       + "\n%%mzn-stat: failers=" + String.format("%,d", wrong) //Wrong search decisions : 
+			       // + "\n%%mzn-stat: backtracks=" + String.format("%,d", backtracks)
+			       + "\n%%mzn-stat: peakDepth=" + depth
+			       + "\n%%mzn-stat: solutions=" + solutions);
         }
 
         if (options.debug())
             System.out.print(failStatistics);
     }
 
-    String getCPUTime() {
-        return (searchTimeMeter.getThreadCpuTime(tread.getId()) - startCPU) / (long) 1e+6 + "ms";
+    double getSearchTime_ms() {
+	searchTime = timeMeter.getThreadCpuTime(tread.getId())  - startCPU;
+        return searchTime / (long) 1e+6;
+    }
+
+    double getInitTime_ms() {
+	return initTime / (long) 1e+6;
     }
 
     boolean anyTimeOutOccured(ArrayList<Search<Var>> list_seq_searches) {
@@ -1242,9 +1275,21 @@ public class Solve implements ParserTreeConstants {
             printBuffer.append(a).append("\n");
         }
 
+	if (options.getVerbose()) {
+	    // print number of search nodes and CPU time for this solution
+	    int nodes=0;
+	    for (Search<Var> label : list_seq_searches) 
+		nodes += label.getNodes();
+	    
+	    double cpuTime = getSearchTime_ms();
+	    printBuffer.append(String.format("%%%% Search nodes : %,d", nodes));
+	    printBuffer.append(String.format(" (%,.1f nodes/s)\n", (double)nodes/(cpuTime/1000))); // + " nodes/s)\n");
+	    printBuffer.append("%% Search time : " + cpuTime/1000 + "s\n");
+	}
+	
         printBuffer.append("----------\n");
 
-        if (options.getAll())
+	if (options.getAll())
             System.out.print(printBuffer.toString());
         else { // store the print-out
 
@@ -1508,5 +1553,12 @@ public class Solve implements ParserTreeConstants {
             }
         }
 
+    }
+
+    void startTimer() {
+        tread = java.lang.Thread.currentThread();
+        java.lang.management.ThreadMXBean b = java.lang.management.ManagementFactory.getThreadMXBean();
+	startCPU = b.getThreadCpuTime(tread.getId());
+        timeMeter = b;
     }
 }

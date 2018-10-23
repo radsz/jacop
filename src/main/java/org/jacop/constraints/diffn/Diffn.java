@@ -147,17 +147,17 @@ public class Diffn extends Nooverlap {
 
         this.store = store;
 
-        do {
-            store.propagationHasOccurred = false;
+	store.propagationHasOccurred = false;
 
-            pruning();
+	pruning();
 
-            if (doAreaCheck)
-                areaCheck();
+	profile();
 
-            profile();
-
-        } while (store.propagationHasOccurred);
+	if (store.propagationHasOccurred)
+	    store.addChanged(this);
+	else
+	    if (doAreaCheck)
+		areaCheck();
     }
 
     private void areaCheck() {
@@ -234,6 +234,8 @@ public class Diffn extends Nooverlap {
     private void sweepPruning(Rectangle r, BitSet o, int dim) {
 
         int oDim = (dim == 0) ? 1 : 0;
+        if (r.length(dim).max() == 0 || r.length(oDim).max() == 0)
+	    return;
 
         Event[] es = new Event[2 * o.cardinality() + 2];
 
@@ -246,17 +248,16 @@ public class Diffn extends Nooverlap {
 
             // mandatory task parts to create profile
             int min = rr.lst(dim), max = rr.ect(dim);
-            if (min < max && rr.length(oDim).min() > 0) {
+	    int lMin = rr.length(oDim).min();
+            if (min < max && lMin > 0) {
                 if (rr.est(oDim) >= r.est(oDim) && rr.lct(oDim) <= r.lct(oDim)) {
                     // for profile take only rectangles with their area laying within the considered rectangle
                     int oMin = rr.lst(oDim), oMax = rr.ect(oDim);
                     if (oMin < oMax) {
                         Interval block = new Interval(oMin, oMax);
-                        int lMin = rr.length(oDim).min();
                         es[j++] = new Event(profileAdd, rr, min, lMin, block);
-                        es[j++] = new Event(profileSubtract, rr, max, -lMin, block);
-                    } else {
-                        int lMin = rr.length(oDim).min();
+                        es[j++] = new Event(profileSubtract, rr, max, -lMin, block); 
+                   } else {
                         es[j++] = new Event(profileAdd, rr, min, lMin, null);
                         es[j++] = new Event(profileSubtract, rr, max, -lMin, null);
                     }
@@ -269,8 +270,8 @@ public class Diffn extends Nooverlap {
                         Interval block = new Interval(oMin, oMax);
                         es[j++] = new Event(profileAdd, rr, min, 0, block);
                         es[j++] = new Event(profileSubtract, rr, max, 0, block);
+		  	mandatoryExists = true;
                     }
-                    mandatoryExists = true;
                 }
             }
         }
@@ -283,11 +284,8 @@ public class Diffn extends Nooverlap {
         // from start to end
         int min = r.est(dim);
         int max = r.lct(dim);
-        if (r.length(dim).max() > 0 && r.length(oDim).max() > 0) {
-            es[j++] = new Event(pruneStart, r, min, 0, null);
-            es[j++] = new Event(pruneEnd, r, max, 0, null);
-        } else
-            return;
+	es[j++] = new Event(pruneStart, r, min, 0, null);
+	es[j++] = new Event(pruneEnd, r, max, 0, null);
 
         int N = j;
         Arrays.sort(es, 0, N, eventComparator);
@@ -299,7 +297,7 @@ public class Diffn extends Nooverlap {
             System.out.println(Arrays.asList(es));
             System.out.println("limit = " + limit);
             System.out.println("===========================");
-        }
+	}
 
         boolean considerR = false;
 

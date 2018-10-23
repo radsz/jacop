@@ -352,8 +352,9 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
      * It increases the weight of the variables in the constraint scope.
      */
     public void increaseWeight() {
+
         if (increaseWeight)
-            arguments().forEach(i -> increaseWeight());
+            arguments().forEach(v -> v.weight++);
     }
 
     /**

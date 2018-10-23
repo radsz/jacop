@@ -311,7 +311,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(get
     * @return IntVar variable being the result of the addition constraint.
     */
   def +(that: org.jacop.core.IntVar) = {
-    val result = new IntVar(this.min() + that.min(), this.max() + that.max())
+    val result = new IntVar(IntDomain.addInt(this.min(), that.min()), IntDomain.addInt(this.max(), that.max()))
     val c = new XplusYeqZ(this, that, result)
     getModel.constr += c
     result
@@ -324,7 +324,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(get
     * @return IntVar variable being the result of the addition constraint.
     */
   def +(that: Int) = {
-    val result = new IntVar(this.min() + that, this.max() + that)
+    val result = new IntVar(IntDomain.addInt(this.min(), that), IntDomain.addInt(this.max(), that))
     val c = new XplusCeqZ(this, that, result)
     getModel.constr += c
     result
@@ -337,7 +337,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(get
     * @return IntVar variable being the result of the subtraction constraint.
     */
   def -(that: org.jacop.core.IntVar) = {
-    val result = new IntVar(this.min() - that.max(), this.max() - that.min())
+    val result = new IntVar(IntDomain.subtractInt(this.min(), that.max()), IntDomain.subtractInt(this.max(), that.min()))
     val c = new XplusYeqZ(result, that, this)
     getModel.constr += c
     result
@@ -350,7 +350,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(get
     * @return IntVar variable being the result of the subtraction constraint.
     */
   def -(that: Int) = {
-    val result = new IntVar(this.min() - that, this.max() - that)
+    val result = new IntVar(IntDomain.subtractInt(this.min(), that), IntDomain.subtractInt(this.max(), that))
     val c = new XplusCeqZ(result, that, this)
     getModel.constr += c
     result
@@ -364,7 +364,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(get
     */
   def *(that: org.jacop.core.IntVar) = {
     val bounds = IntDomain.mulBounds(this.min(), this.max(), that.min(), that.max())
-    val result = new IntVar()
+    val result = new IntVar(bounds.min(), bounds.max())
     val c = new XmulYeqZ(this, that, result)
     getModel.constr += c
     result
