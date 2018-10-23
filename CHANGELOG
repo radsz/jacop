@@ -30,7 +30,7 @@ Version 4.6
 7. Improvements in subcircuit constraint. It applies computationally
    expensive dominance pruning if SCC did not pruned anything.
 
-8. New primitive constraints AtLeast and AtLast. Adding generation of
+8. New primitive constraints AtLeast and AtMost. Adding generation of
    these constraints and their reified versions for flatzinc.
 
 9. Adding print-out of intermediate statistics for search (search nodes

@@ -87,7 +87,11 @@ public class SplitSelect<T extends IntVar> extends SimpleSelect<T> {
         if (var == null)
             return null;
 
-        int value = super.getChoiceValue();
+	int value = var.min();
+	if (var.domain.getSize() == 2 && var.dom().domainID() == org.jacop.core.IntDomain.BoundDomainID) 
+	    value = var.min();
+	else
+	    value = super.getChoiceValue();
 
         if (leftFirst)
             if (var.max() != value)
