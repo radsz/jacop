@@ -41,7 +41,7 @@ import java.util.stream.Stream;
  * Defines a rectangle used in the diffn constraint.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class Rectangle {

@@ -30,54 +30,46 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
-import org.jacop.constraints.Alldifferent;
-import org.jacop.constraints.And;
-import org.jacop.constraints.Element;
-import org.jacop.constraints.Or;
-import org.jacop.constraints.XeqY;
-import org.jacop.constraints.XgtY;
-import org.jacop.constraints.XneqY;
-import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.util.ArrayList;
+
 /**
- *
  * It solves a simple logic puzzle about blueberry muffins.
  *
  * @author Radoslaw Szymanek
- * @version 4.5
- *
- *  Logic Puzzle: Blueberry Muffins
- *
- * Description :
- *
- * Daniel made a dozen blueberry muffins on Friday night -- and by
- * the timehe was ready for brunch on Saturday, there were only
- * two left. The other ten had been snitched by his housemates,
- * all of whom had gotten up early because they had to work on
- * Saturday. The fourhousemates include two men named Bill and
- * Mark, and two women named Calla and Lynn; last names are Ellis,
- * Ingham, Oakley, and Summers, and their differing professions
- * are dogcatcher, flautist, secretary, and zookeeper. Can you
- * discover each one's full name, profession, and number of
- * muffins snitched?
-
- * 1. Each housemate snitched a different number of muffins from one to four.
- * 2. Bill and Ellis snitched a total of six muffins.
- * 3. The secretary (who is a woman) snitched more than the dogcatcher.
- * 4. Mark snitched two more than Summers did.
- * 5. The flautist snitched twice as many as Ms. Oakley did.
- * 6. Calla's last name isn't Ingham.
-
- * Solution:
-
- * Calla Oakley dogcatcher 1 muffin
- * Bill Summers flautist 2 muffins
- * Lynn Ingham secretary 3 muffins
- * Mark Ellis zookeeper 4 muffins
+ * @version 4.6
+ *          <p>
+ *          Logic Puzzle: Blueberry Muffins
+ *          <p>
+ *          Description :
+ *          <p>
+ *          Daniel made a dozen blueberry muffins on Friday night -- and by
+ *          the timehe was ready for brunch on Saturday, there were only
+ *          two left. The other ten had been snitched by his housemates,
+ *          all of whom had gotten up early because they had to work on
+ *          Saturday. The fourhousemates include two men named Bill and
+ *          Mark, and two women named Calla and Lynn; last names are Ellis,
+ *          Ingham, Oakley, and Summers, and their differing professions
+ *          are dogcatcher, flautist, secretary, and zookeeper. Can you
+ *          discover each one's full name, profession, and number of
+ *          muffins snitched?
+ *          <p>
+ *          1. Each housemate snitched a different number of muffins from one to four.
+ *          2. Bill and Ellis snitched a total of six muffins.
+ *          3. The secretary (who is a woman) snitched more than the dogcatcher.
+ *          4. Mark snitched two more than Summers did.
+ *          5. The flautist snitched twice as many as Ms. Oakley did.
+ *          6. Calla's last name isn't Ingham.
+ *          <p>
+ *          Solution:
+ *          <p>
+ *          Calla Oakley dogcatcher 1 muffin
+ *          Bill Summers flautist 2 muffins
+ *          Lynn Ingham secretary 3 muffins
+ *          Mark Ellis zookeeper 4 muffins
  */
 
 
@@ -197,6 +189,7 @@ public class BlueberryMuffins extends ExampleFD {
 
     /**
      * It executes the program solving this puzzle.
+     *
      * @param args no arguments are read.
      */
     public static void main(String args[]) {

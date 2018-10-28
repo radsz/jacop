@@ -36,6 +36,7 @@ import org.jacop.scala._
   * A problem defined as in Java based examples.
   *
   * rewriting to Scala by Krzysztof Kuchcinski.
+  *
   * @author Krzysztof Kuchcinski and Radoslaw Szymanek
   * @version 4.4
   */
@@ -55,11 +56,11 @@ object Adder extends App with jacop {
 
   recordSolutions = true
 
-  val result = satisfyAll(search(List(a, b, c, summa, carry), input_order, indomain_min), printTableRow()) 
+  val result = satisfyAll(search(List(a, b, c, summa, carry), input_order, indomain_min), printTableRow())
 
   println("" + a + " " + b + " " + " " + c + " " + " " + summa + " " + " " + carry)
 
   def printTableRow() = () => {
-    println(a.value + " | " + b.value + " | " + c.value + " || " + summa.value + " | " + carry.value )
+    println(a.value + " | " + b.value + " | " + c.value + " || " + summa.value + " | " + carry.value)
   }
 }

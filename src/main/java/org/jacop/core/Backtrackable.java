@@ -32,11 +32,10 @@ package org.jacop.core;
 
 /**
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
- *
- * It specifies the interface of the backtrackable object which is being
- * recorded by Backtrackable Manager. 
- *
+ * @version 4.6
+ *          <p>
+ *          It specifies the interface of the backtrackable object which is being
+ *          recorded by Backtrackable Manager.
  */
 
 public interface Backtrackable {
@@ -45,12 +44,14 @@ public interface Backtrackable {
      * It specifies the function being called by the manager upon backtracking.
      * The manager may call this function for the objects which have not changed
      * but it must call this function for all objects that have changed.
+     *
      * @param removedLevel level that is being removed.
      */
     void remove(int removedLevel);
 
     /**
      * It returns the level of the object (its last copy of the state).
+     *
      * @return the object level
      */
     int level();

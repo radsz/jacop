@@ -39,7 +39,7 @@ import org.jacop.jasat.utils.structures.IntStack;
  * A solver component for conflict learning. (first UIP algorithm)
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public final class ConflictLearning implements SolverComponent {
@@ -54,7 +54,7 @@ public final class ConflictLearning implements SolverComponent {
      * It computes to which level we should backjump to solve the conflict
      * explained by @param explanationClause
      *
-     * @param explanationClause  used for backjumping computation
+     * @param explanationClause used for backjumping computation
      * @return a level
      */
     public int getLevelToBackjump(MapClause explanationClause) {
@@ -101,8 +101,8 @@ public final class ConflictLearning implements SolverComponent {
      * asserted and  triggered, in another clause, the propagation of a literal
      * present in the current clause)
      *
-     * @param explanationClause  the SetClause we use, which must be initialized
-     * to the conflict clause
+     * @param explanationClause the SetClause we use, which must be initialized
+     *                          to the conflict clause
      */
     public void applyExplainUIP(MapClause explanationClause) {
 
@@ -133,7 +133,7 @@ public final class ConflictLearning implements SolverComponent {
         }
 
 		/*
-		 * TODO : if the resulting clause is too complicated, use subsumption
+     * TODO : if the resulting clause is too complicated, use subsumption
 		 * to get a simpler clause ?
 		 */
     }
@@ -141,8 +141,8 @@ public final class ConflictLearning implements SolverComponent {
     /**
      * It gets the position of last set literal of the clause.
      *
-     * @param explanationClause  the clause
-     * @param level  the level of selectable literals
+     * @param explanationClause the clause
+     * @param level             the level of selectable literals
      * @return the last set literal of the clause, at current level, or 0 if none
      * has been found
      */
@@ -175,8 +175,9 @@ public final class ConflictLearning implements SolverComponent {
     /**
      * performs one step of resolution for conflict explanation on given
      * explanation clause.
-     * @param  explanationClause the explanation clause
-     * @param  literal  the literal that must be resolved
+     *
+     * @param explanationClause the explanation clause
+     * @param literal           the literal that must be resolved
      */
     private final void applyExplain(MapClause explanationClause, int literal) {
         assert explanationClause.containsVariable(literal);

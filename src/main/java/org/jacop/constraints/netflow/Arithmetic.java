@@ -30,12 +30,6 @@
 
 package org.jacop.constraints.netflow;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.LinearInt;
@@ -44,11 +38,14 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+
 /**
- *
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.5
- *
+ * @version 4.6
  */
 
 public class Arithmetic extends DecomposedConstraint<Constraint> {
@@ -149,7 +146,7 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
                     }
 
 
-                decomposition.add(new LinearInt(store, variables, weights, "==", 0));
+                decomposition.add(new LinearInt(variables, weights, "==", 0));
                 // decomposition.add(new SumWeight(variables, weights, ZERO));
             }
 
@@ -170,7 +167,7 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
                         weights.add(eqn[i]);
                     }
 
-                result.add(new LinearInt(store, variables, weights, "==", 0));
+                result.add(new LinearInt(variables, weights, "==", 0));
                 // result.add(new SumWeight(variables, weights, ZERO));
             }
 

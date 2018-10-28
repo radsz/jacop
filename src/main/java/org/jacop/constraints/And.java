@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Constraint c1 /\ c2 ... /\ cn
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 public class And extends PrimitiveConstraint implements UsesQueueVariable {
 
@@ -90,7 +90,7 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
         setScope(listOfC);
         setConstraintScope(listOfC);
         queueForward = new QueueForward<>(listOfC, arguments());
-        this.queueIndex = Arrays.stream(c).max((a, b) -> Integer.max(a.queueIndex, b.queueIndex)).map( a -> a.queueIndex).orElse(0);
+        this.queueIndex = Arrays.stream(c).max((a, b) -> Integer.max(a.queueIndex, b.queueIndex)).map(a -> a.queueIndex).orElse(0);
 
     }
 
@@ -172,7 +172,7 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
     @Override public boolean satisfied() {
 
         for (PrimitiveConstraint c : listOfC)
-            if (! c.satisfied())
+            if (!c.satisfied())
                 return false;
 
         return true;

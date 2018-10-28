@@ -30,9 +30,9 @@
 
 package org.jacop.search;
 
-import org.jacop.core.Var;
-import org.jacop.core.Store;
 import org.jacop.constraints.Constraint;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
 
 import java.util.*;
 import java.util.Map.Entry;
@@ -43,8 +43,8 @@ import java.util.Map.Entry;
  * collects statistics on the failed constraints; both for each
  * individual constraint as well as a class of constraints.
  *
- * @author Krzysztof Kuchcinski 
- * @version 4.5
+ * @author Krzysztof Kuchcinski
+ * @version 4.6
  */
 
 public class FailConstraintsStatistics<T extends Var> implements ConsistencyListener {

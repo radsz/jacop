@@ -40,15 +40,13 @@ import org.jacop.search.*;
 import java.util.*;
 
 /**
- *
  * It solves a simple conference talk placement problem.
  *
  * @author Radoslaw Szymanek
- * @version 4.5
- *
- * It solves a simple conference example problem, where different sessions
- * must be scheduled according to the specified constraints.
- *
+ * @version 4.6
+ *          <p>
+ *          It solves a simple conference example problem, where different sessions
+ *          must be scheduled according to the specified constraints.
  */
 public class ConferenceTalkPlacement {
 
@@ -156,7 +154,7 @@ public class ConferenceTalkPlacement {
 
         cost = new IntVar(store, "cost", 0, IntDomain.MaxInt);
 
-        store.impose(new SumInt(store, pairCosts, "==", cost));
+        store.impose(new SumInt(pairCosts, "==", cost));
 
         vars = new ArrayList<>();
         for (int i = 0; i < talkPlacement.length; i++)
@@ -167,11 +165,10 @@ public class ConferenceTalkPlacement {
 
 
     /**
-     *
      * It uses MaxRegret variable ordering heuristic to search for a solution.
+     *
      * @param timeOutSeconds time-out in seconds
      * @return true if there is a solution, false otherwise.
-     *
      */
     public boolean searchMaxRegretForMatrixOptimal(int timeOutSeconds) {
 
@@ -240,6 +237,7 @@ public class ConferenceTalkPlacement {
 
     /**
      * It executes the program to solve this Travelling Salesman Problem.
+     *
      * @param args no argument is used.
      */
     public static void main(String args[]) {

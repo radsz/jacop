@@ -37,48 +37,61 @@ import org.jacop.scala._
   * A problem defined as in Java based examples.
   *
   * rewriting to Scala by Krzysztof Kuchcinski.
+  *
   * @author Krzysztof Kuchcinski and Radoslaw Szymanek
   * @version 4.5
   */
 object Flowers extends App with jacop {
-		
+
 
   println("Program to solve Flower logic puzzle")
 
-  val wifeWeek = Array( "Emma", "Kristin", "Lynn", "Toni" )
-  val wifeDay =  Array( "EmmaDay", "KristinDay", "LynnDay", "ToniDay" )
+  val wifeWeek = Array("Emma", "Kristin", "Lynn", "Toni")
+  val wifeDay = Array("EmmaDay", "KristinDay", "LynnDay", "ToniDay")
   // index to women for ease of referring.
-  val iEmma = 0; val iKristin = 1; val iLynn = 2; val iToni = 3
+  val iEmma = 0;
+  val iKristin = 1;
+  val iLynn = 2;
+  val iToni = 3
 
-  val husbandWeek = Array( "Doug", "Justin", "Shane", "Theo" )
-  val husbandDay =  Array( "DougDay", "JustinDay", "ShaneDay", "TheoDay" )
+  val husbandWeek = Array("Doug", "Justin", "Shane", "Theo")
+  val husbandDay = Array("DougDay", "JustinDay", "ShaneDay", "TheoDay")
   // index to men for ease of referring.
-  val iDoug = 0; val iJustin = 1; val iShane = 2; val iTheo = 3
+  val iDoug = 0;
+  val iJustin = 1;
+  val iShane = 2;
+  val iTheo = 3
 
-  val flowerWeek = Array( "Violets", "Roses", "Chrys", "Daises" )
-  val flowerDay =  Array( "VioletsDay", "RosesDay", "ChrysDay", "DaisesDay" )
+  val flowerWeek = Array("Violets", "Roses", "Chrys", "Daises")
+  val flowerDay = Array("VioletsDay", "RosesDay", "ChrysDay", "DaisesDay")
   // index to flowers for ease of referring.
-  val iViolets = 0; val iRoses = 1; val iChrys = 2; val iDaises = 3
+  val iViolets = 0;
+  val iRoses = 1;
+  val iChrys = 2;
+  val iDaises = 3
 
-  val occasionWeek = Array( "Walentynki", "Awans", "Urodziny", "Rocznica" )
-  val occasionDay =  Array( "WalentynkiDay", "AwansDay", "UrodzinyDay", "RocznicaDay" )
+  val occasionWeek = Array("Walentynki", "Awans", "Urodziny", "Rocznica")
+  val occasionDay = Array("WalentynkiDay", "AwansDay", "UrodzinyDay", "RocznicaDay")
   // index to occasions for ease of referring.
-  val iWalentynki = 0; val iAwans = 1; val iUrodziny = 2; val iRocznica = 3
+  val iWalentynki = 0;
+  val iAwans = 1;
+  val iUrodziny = 2;
+  val iRocznica = 3
 
   // For each (wife, husband, flower, occassion) there are two sets of
   // variables. One denotes a day and the
   // other denotes the week.
 
   // Days in February are from 1 to 28.
-  val husbandD = Array.tabulate(4)( i => new IntVar(husbandDay(i), 1, 28))
-  val wifeD = Array.tabulate(4)( i => new IntVar(wifeDay(i), 1, 28))
-  val occasionD = Array.tabulate(4)( i => new IntVar(flowerDay(i), 1, 28))
-  val flowerD = Array.tabulate(4)( i => new IntVar(flowerDay(i), 1, 28))
+  val husbandD = Array.tabulate(4)(i => new IntVar(husbandDay(i), 1, 28))
+  val wifeD = Array.tabulate(4)(i => new IntVar(wifeDay(i), 1, 28))
+  val occasionD = Array.tabulate(4)(i => new IntVar(flowerDay(i), 1, 28))
+  val flowerD = Array.tabulate(4)(i => new IntVar(flowerDay(i), 1, 28))
   // There are 4 weeks in February.
-  val husbandT = Array.tabulate(4)( i => new IntVar(husbandWeek(i), 1, 4))
-  val wifeT = Array.tabulate(4)( i => new IntVar(wifeWeek(i), 1, 4))
-  val occasionT = Array.tabulate(4)( i => new IntVar(occasionWeek(i), 1, 4))
-  val flowerT = Array.tabulate(4)( i => new IntVar(flowerWeek(i), 1, 4))
+  val husbandT = Array.tabulate(4)(i => new IntVar(husbandWeek(i), 1, 4))
+  val wifeT = Array.tabulate(4)(i => new IntVar(wifeWeek(i), 1, 4))
+  val occasionT = Array.tabulate(4)(i => new IntVar(occasionWeek(i), 1, 4))
+  val flowerT = Array.tabulate(4)(i => new IntVar(flowerWeek(i), 1, 4))
 
 
   // 1. No two women received flowers on the same day of the week, and no
@@ -110,8 +123,8 @@ object Flowers extends App with jacop {
 
   // Channeling constraints between day number and week.
 
-  val el = Array( 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3,
-				3, 4, 4, 4, 4 )
+  val el = Array(1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3,
+    3, 4, 4, 4, 4)
 
   el(wifeD(iEmma)) #= wifeT(iEmma)
   el(wifeD(iKristin)) #= wifeT(iKristin)
@@ -136,7 +149,7 @@ object Flowers extends App with jacop {
   // 2. The woman who received flowers for Valentine's Day had them
   // delivered
   // on either Friday the 11th or Monday the 14th.
-  OR( occasionD(iWalentynki) #= 11, occasionD(iWalentynki) #= 14 )
+  OR(occasionD(iWalentynki) #= 11, occasionD(iWalentynki) #= 14)
 
 
   // 3. Emma received flowers one day later in the week than the woman who
@@ -155,8 +168,8 @@ object Flowers extends App with jacop {
   // on Thursday the 24th (in which case she is the woman who received
   // flowers to celebrate her birthday).
 
-  OR (AND( husbandD(iJustin) #= 7, flowerD(iRoses) #= 7, husbandD(iJustin) #= flowerD(iRoses)),
-      AND( husbandD(iJustin) #= 24, occasionD(iUrodziny) #= 24, husbandD(iJustin) #= occasionD(iUrodziny)) )
+  OR(AND(husbandD(iJustin) #= 7, flowerD(iRoses) #= 7, husbandD(iJustin) #= flowerD(iRoses)),
+    AND(husbandD(iJustin) #= 24, occasionD(iUrodziny) #= 24, husbandD(iJustin) #= occasionD(iUrodziny)))
 
 
   // 6. Theo's wife didn't receive flowers exactly eight days before
@@ -166,23 +179,23 @@ object Flowers extends App with jacop {
 
   // 7. Toni's husband is either Doug or Shane.
 
-  OR( wifeD(iToni) #= husbandD(iShane), wifeD(iToni) #= husbandD(iDoug))
+  OR(wifeD(iToni) #= husbandD(iShane), wifeD(iToni) #= husbandD(iDoug))
 
   // 8. One woman received either chrysanthemums or white roses for
   // her wedding anniversary.
-  OR( occasionD(iRocznica) #= flowerD(iChrys), occasionD(iRocznica) #= flowerD(iRoses) )
+  OR(occasionD(iRocznica) #= flowerD(iChrys), occasionD(iRocznica) #= flowerD(iRoses))
 
   // 9. Kristin received flowers on either Tuesday the 1st
   // (in which case she is the one who received daisies) or
   // Friday the 18th (in which case she received them from Doug).
 
-  OR( AND( wifeD(iKristin) #= 1, flowerD(iDaises) #= 1, wifeD(iKristin) #= flowerD(iDaises)),
-      AND( wifeD(iKristin) #= 18, husbandD(iDoug) #= 18, wifeD(iKristin) #= husbandD(iDoug)) )
+  OR(AND(wifeD(iKristin) #= 1, flowerD(iDaises) #= 1, wifeD(iKristin) #= flowerD(iDaises)),
+    AND(wifeD(iKristin) #= 18, husbandD(iDoug) #= 18, wifeD(iKristin) #= husbandD(iDoug)))
 
   // 10. Shane's wife received flowers during the second week of the
   // month.
   husbandT(iShane) #= 2
 
-  val result = satisfy( search(wifeT ++ wifeD ++ husbandT ++ husbandD ++ occasionT ++ occasionD ++ flowerT ++ flowerD, input_order, indomain_min) )
+  val result = satisfy(search(wifeT ++ wifeD ++ husbandT ++ husbandD ++ occasionT ++ occasionD ++ flowerT ++ flowerD, input_order, indomain_min))
 
 }

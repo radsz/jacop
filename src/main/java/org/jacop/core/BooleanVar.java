@@ -30,15 +30,15 @@
 
 package org.jacop.core;
 
-import java.util.ArrayList;
-
 import org.jacop.constraints.Constraint;
+
+import java.util.ArrayList;
 
 /**
  * Defines a variable and related operations on it.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class BooleanVar extends IntVar {
@@ -53,6 +53,7 @@ public class BooleanVar extends IntVar {
      * This constructor creates a variable with empty domain (standard FD
      * domain), automatically generated name, and empty attached constraint
      * list.
+     *
      * @param store It specifies the store in which boolean variable should be created.
      */
     public BooleanVar(final Store store) {
@@ -61,8 +62,9 @@ public class BooleanVar extends IntVar {
 
     /**
      * Boolean variable constructor.
+     *
      * @param store It specifies the store in which boolean variable should be created.
-     * @param name It specifies the id of the variable.
+     * @param name  It specifies the id of the variable.
      */
     public BooleanVar(Store store, String name) {
         this(store, name, new BoundDomain(0, 1));
@@ -71,10 +73,11 @@ public class BooleanVar extends IntVar {
 
     /**
      * Boolean variable constructor.
+     *
      * @param store It specifies the store in which boolean variable should be created.
-     * @param name It specifies the id of the variable.
-     * @param min it specifies the minimum value, which must be greater or equal 0.
-     * @param max it specifies the maximum value, which must be smaller or equal 1.
+     * @param name  It specifies the id of the variable.
+     * @param min   it specifies the minimum value, which must be greater or equal 0.
+     * @param max   it specifies the maximum value, which must be smaller or equal 1.
      */
     public BooleanVar(Store store, String name, int min, int max) {
         this(store, name, new BoundDomain(min, max));
@@ -84,7 +87,7 @@ public class BooleanVar extends IntVar {
      * It creates a Boolean variable.
      *
      * @param store It specifies the store in which boolean variable should be created.
-     * @param dom It specifies the domain of the boolean variable.
+     * @param dom   It specifies the domain of the boolean variable.
      */
     public BooleanVar(Store store, BoundDomain dom) {
         this(store, store.getVariableIdPrefix() + idNumber.incrementAndGet(), dom);
@@ -94,8 +97,8 @@ public class BooleanVar extends IntVar {
      * It creates a Boolean variable.
      *
      * @param store the store in which the variable is being created.
-     * @param name the name of the created variable.
-     * @param dom the domain specifying the domain of the variable.
+     * @param name  the name of the created variable.
+     * @param dom   the domain specifying the domain of the variable.
      */
     // @FIXME, constructor uses an argument without copying, (dom)
     // it will cause problems if dom is reused.
@@ -130,9 +133,9 @@ public class BooleanVar extends IntVar {
      * is changed the constraint is reevaluated. Pruning event is ignored as all
      * are evaluated with GROUND event, since any change to Boolean Variable
      * makes it ground.
-     * @param constraint - constraint being attached to a variable.
-     * @param pruningEvent - Only NONE and GROUND events are considered. By default GROUND event is used.
      *
+     * @param constraint   - constraint being attached to a variable.
+     * @param pruningEvent - Only NONE and GROUND events are considered. By default GROUND event is used.
      */
     @Override public void putModelConstraint(Constraint constraint, int pruningEvent) {
 
@@ -152,6 +155,7 @@ public class BooleanVar extends IntVar {
     /**
      * It registers constraint with current variable, so anytime this variable
      * is changed the constraint is reevaluated.
+     *
      * @param constraint It specifies the constraint which is being added.
      */
     @Override public void putSearchConstraint(Constraint constraint) {
@@ -167,6 +171,7 @@ public class BooleanVar extends IntVar {
     /**
      * It unregisters constraint with current variable, so change in variable
      * will not cause constraint reevaluation.
+     *
      * @param constraint it specifies the constraint which is no longer attached to a variable.
      */
     @Override public void removeConstraint(Constraint constraint) {
@@ -189,6 +194,7 @@ public class BooleanVar extends IntVar {
     /**
      * It returns current number of constraints which are associated with
      * variable and are not yet satisfied.
+     *
      * @return the number of constraints currently attached to this variable.
      */
     @Override public int sizeConstraints() {
@@ -198,6 +204,7 @@ public class BooleanVar extends IntVar {
     /**
      * It returns all constraints which are associated with variable, even the
      * ones which are already satisfied.
+     *
      * @return the number of constraints originally attached to this variable.
      */
     @Override public int sizeConstraintsOriginal() {
@@ -207,6 +214,7 @@ public class BooleanVar extends IntVar {
     /**
      * It returns current number of constraints which are associated with
      * a boolean variable and are not yet satisfied.
+     *
      * @return the number of constraints.
      */
     @Override public int sizeSearchConstraints() {
@@ -215,7 +223,6 @@ public class BooleanVar extends IntVar {
 
     /**
      * @return it returns the string description of the boolean variable.
-     *
      */
     @Override public String toString() {
         if (domain.singleton())
@@ -226,7 +233,6 @@ public class BooleanVar extends IntVar {
 
     /**
      * @return It returns elaborate string description of the boolean variable and all the components of its domain.
-     *
      */
     @Override public String toStringFull() {
         return id + domain.toStringFull();
@@ -236,6 +242,7 @@ public class BooleanVar extends IntVar {
      * It is possible to add the domain of variable. It should be used with
      * care, only right after variable was created and before it is used in
      * constraints or search.
+     *
      * @param dom the added domain.
      */
 
@@ -247,6 +254,7 @@ public class BooleanVar extends IntVar {
 
     /**
      * This function returns current domain of the variable.
+     *
      * @return the domain of the variable.
      */
 
@@ -256,6 +264,7 @@ public class BooleanVar extends IntVar {
 
     /**
      * It checks if the domains of variables are equal.
+     *
      * @param var the variable to which current variable is compared to.
      * @return true if both variables have the same domain.
      */
@@ -265,6 +274,7 @@ public class BooleanVar extends IntVar {
 
     /**
      * It returns the size of the current domain.
+     *
      * @return the size of the variables domain.
      */
 
@@ -275,6 +285,7 @@ public class BooleanVar extends IntVar {
 
     /**
      * It checks if the domain is empty.
+     *
      * @return true if variable domain is empty.
      */
 
@@ -287,6 +298,7 @@ public class BooleanVar extends IntVar {
     /**
      * It returns the values which have been removed at current store level. It does
      * _not_ return the recent pruning in between the calls to that function.
+     *
      * @return difference between the current level and the one before it.
      */
     public BoundDomain recentDomainPruning() {
@@ -298,6 +310,7 @@ public class BooleanVar extends IntVar {
 
     /**
      * It checks if the domain contains only one value.
+     *
      * @return true if the variable domain is a singleton, false otherwise.
      */
 
@@ -311,6 +324,7 @@ public class BooleanVar extends IntVar {
      * This function returns stamp of the current domain of variable. It is
      * equal or smaller to the stamp of store. Larger difference indicates that
      * variable has been changed for a longer time.
+     *
      * @return level for which the most recent changes have been applied to.
      */
 
@@ -324,6 +338,7 @@ public class BooleanVar extends IntVar {
 
     /**
      * It informs the variable that its variable has changed according to the specified event.
+     *
      * @param event the type of the change (GROUND, BOUND, ANY).
      */
     public void domainHasChanged(int event) {

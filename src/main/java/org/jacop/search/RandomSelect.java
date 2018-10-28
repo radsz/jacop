@@ -30,19 +30,19 @@
 
 package org.jacop.search;
 
+import org.jacop.constraints.PrimitiveConstraint;
+import org.jacop.core.Var;
+
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
-
-import org.jacop.constraints.PrimitiveConstraint;
-import org.jacop.core.Var;
 
 /**
  * It is simple and customizable selector of decisions (constraints) which will
  * be enforced by search.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
@@ -66,8 +66,9 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
 
     /**
      * The constructor to create a simple choice select mechanism.
+     *
      * @param variables variables upon which the choice points are created.
-     * @param indomain the value heuristic to choose a value for a given variable.
+     * @param indomain  the value heuristic to choose a value for a given variable.
      */
     @SuppressWarnings("unchecked") public RandomSelect(T[] variables, Indomain<T> indomain) {
 
@@ -185,8 +186,9 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
      * It gets as input the index of the variable which is chosen by search to
      * be instantiated at this stage. The variable is positioned at search
      * position.
-     * @param searchPosition position at which search store currently choosen variable.
-     * @param variablePosition current position of the variable choosen by search. 
+     *
+     * @param searchPosition   position at which search store currently choosen variable.
+     * @param variablePosition current position of the variable choosen by search.
      * @return variable choosen to be a base of the choice point.
      */
 

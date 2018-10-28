@@ -30,57 +30,45 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
-import org.jacop.constraints.Eq;
-import org.jacop.constraints.IfThen;
-import org.jacop.constraints.SumInt;
-import org.jacop.constraints.XeqC;
-import org.jacop.constraints.XlteqC;
+import org.jacop.constraints.*;
 import org.jacop.core.Domain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.IndomainMin;
-import org.jacop.search.SelectChoicePoint;
-import org.jacop.search.SimpleSelect;
-import org.jacop.search.SmallestDomain;
+import org.jacop.search.*;
+
+import java.util.ArrayList;
 
 /**
- *
- *   Who killed agatha? (The Dreadsbury Mansion Murder Mystery).
-
- *   This is a standard benchmark for theorem proving.
- *   http://www.lsv.ens-cachan.fr/~goubault/H1.dist/H1.1/Doc/h1003.html
- *   """
- *   Someone in Dreadsbury Mansion killed Aunt Agatha.
- *   Agatha, the butler, and Charles live in Dreadsbury Mansion, and
- *   are the only ones to live there. A killer always hates, and is no
- *   richer than his victim. Charles hates noone that Agatha hates. Agatha
- *   hates everybody except the butler. The butler hates everyone not richer
- *   than Aunt Agatha. The butler hates everyone whom Agatha hates.
- *   Noone hates everyone. Who killed Agatha?
- *   """
-
- *   Originally from
- *   F. J. Pelletier: Seventy-five problems for testing automatic theorem provers. Journal of Automated Reasoning, 2: 191â€“216, 1986.
-
- *   Compare with the following models:
- *   - MiniZinc: http://www.hakank.org/minizinc/who_killed_agatha.mzn
- *   - Comet: http://www.hakank.org/comet/who_killed_agatha.mzn
- *   - Gecode: http://www.hakank.org/gecode/who_killed_agatha.cpp
-
- *
+ * Who killed agatha? (The Dreadsbury Mansion Murder Mystery).
+ * <p>
+ * This is a standard benchmark for theorem proving.
+ * http://www.lsv.ens-cachan.fr/~goubault/H1.dist/H1.1/Doc/h1003.html
+ * """
+ * Someone in Dreadsbury Mansion killed Aunt Agatha.
+ * Agatha, the butler, and Charles live in Dreadsbury Mansion, and
+ * are the only ones to live there. A killer always hates, and is no
+ * richer than his victim. Charles hates noone that Agatha hates. Agatha
+ * hates everybody except the butler. The butler hates everyone not richer
+ * than Aunt Agatha. The butler hates everyone whom Agatha hates.
+ * Noone hates everyone. Who killed Agatha?
+ * """
+ * <p>
+ * Originally from
+ * F. J. Pelletier: Seventy-five problems for testing automatic theorem provers. Journal of Automated Reasoning, 2: 191â€“216, 1986.
+ * <p>
+ * Compare with the following models:
+ * - MiniZinc: http://www.hakank.org/minizinc/who_killed_agatha.mzn
+ * - Comet: http://www.hakank.org/comet/who_killed_agatha.mzn
+ * - Gecode: http://www.hakank.org/gecode/who_killed_agatha.cpp
+ * <p>
  * This Choco model was created by Hakan Kjellerstrand (hakank@bonetmail.com)
  * Also, see my Choco page: http://www.hakank.org/choco/
-
- *
+ * <p>
  * This JaCoP model was created by Hakan Kjellerstrand (hakank@bonetmail.com)
  * http://www.hakank.org/JaCoP/ .
  *
  * @author Hakan Kjellerstrand and Radoslaw Szymanek
- * @version 4.5
- *
+ * @version 4.6
  */
 
 public class WhoKilledAgatha extends ExampleFD {
@@ -191,7 +179,7 @@ public class WhoKilledAgatha extends ExampleFD {
                 a[j] = hates[i][j];
             }
             IntVar a_sum = new IntVar(store, "a_sum" + i, 0, n);
-            store.impose(new SumInt(store, a, "==", a_sum));
+            store.impose(new SumInt(a, "==", a_sum));
             store.impose(new XlteqC(a_sum, 2));
             vars.add(a_sum);
 
@@ -244,7 +232,8 @@ public class WhoKilledAgatha extends ExampleFD {
     }
 
     /**
-     * It runs the program which solves the logic puzzle "Who killed Agatha". 
+     * It runs the program which solves the logic puzzle "Who killed Agatha".
+     *
      * @param args parameters (none)
      */
     public static void main(String args[]) {

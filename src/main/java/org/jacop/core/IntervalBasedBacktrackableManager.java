@@ -36,14 +36,13 @@ import java.util.List;
 
 /**
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
- *
- * This manager works as simple manager to the point when cutoff value for a list
- * is reached. The objects indexes are continously stored in a list, but they 
- * are stored in the trail only as a list of holes. There is a possibility to express
- * the maximum number of holes being registered as well as minimum size requirement
- * for hole. 
- *
+ * @version 4.6
+ *          <p>
+ *          This manager works as simple manager to the point when cutoff value for a list
+ *          is reached. The objects indexes are continously stored in a list, but they
+ *          are stored in the trail only as a list of holes. There is a possibility to express
+ *          the maximum number of holes being registered as well as minimum size requirement
+ *          for hole.
  */
 public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManager {
 
@@ -71,9 +70,9 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
      * It creates a interval based backtrackable manager. At some point, instead of storing a list of changed
      * indexes the manager stores a fixed number of intervals representing objects which have not changed.
      *
-     * @param vars the number of objects.
-     * @param noOfObjects the number of objects being handled.
-     * @param minHoleSize the minimum size of the hole to be registered.
+     * @param vars             the number of objects.
+     * @param noOfObjects      the number of objects being handled.
+     * @param minHoleSize      the minimum size of the hole to be registered.
      * @param maxNoOfIntervals maximum number of holes (intervals) being registered.
      */
     public IntervalBasedBacktrackableManager(Backtrackable[] vars, int noOfObjects, int minHoleSize, int maxNoOfIntervals) {
@@ -227,7 +226,6 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
             System.out.println("<" + this + "Add level " + level + "\n");
 
     }
-
 
     private int[] computeIntervals() {
 

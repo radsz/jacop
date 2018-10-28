@@ -30,15 +30,11 @@
 
 package org.jacop.constraints;
 
+import org.jacop.core.*;
+
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
-
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
 
 /**
  * If at least one variable from the list is equal 1 then result variable is equal 1 too.
@@ -46,7 +42,7 @@ import org.jacop.core.TimeStamp;
  * It restricts the domain of all x as well as result to be between 0 and 1.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class OrBoolVector extends PrimitiveConstraint {
@@ -99,7 +95,7 @@ public class OrBoolVector extends PrimitiveConstraint {
         else
             queueIndex = 0;
 
-        setScope( Stream.concat(Arrays.stream(list), Stream.of(result)));
+        setScope(Stream.concat(Arrays.stream(list), Stream.of(result)));
     }
 
     /**

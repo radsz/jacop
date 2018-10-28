@@ -31,16 +31,15 @@
 package org.jacop.floats.search;
 
 import org.jacop.floats.core.FloatVar;
-
 import org.jacop.search.ComparatorVariable;
 
 /**
  * Defines a SmallestMinFloat comparator for variables. It prefers variables
  * which have smaller minimal value in their domain.
  *
- * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
  * @param <T> type of variable being used in the search.
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 4.6
  */
 
 public class SmallestMinFloat<T extends FloatVar> implements ComparatorVariable<T> {

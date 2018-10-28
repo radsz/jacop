@@ -38,7 +38,7 @@ import java.util.Iterator;
  * disjointConditonal/2
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 class ProfileConditional extends ArrayList<ProfileItemCondition> {
@@ -111,10 +111,10 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
                     if (p.max <= a) {
                         if (i == size() - 1) {
                             if (a != b) {
-                                    if (trace)
-                                        System.out.println("3. Add " + "[" + a + ".." + b + ")" + "=" + val + " at position " + (i + 1));
-                                    int[] r = {index, val}; // OK
-                                    add(i + 1, new ProfileItemCondition(a, b, val, r));
+                                if (trace)
+                                    System.out.println("3. Add " + "[" + a + ".." + b + ")" + "=" + val + " at position " + (i + 1));
+                                int[] r = {index, val}; // OK
+                                add(i + 1, new ProfileItemCondition(a, b, val, r));
                             }
                             i++;
                             notFound = false;

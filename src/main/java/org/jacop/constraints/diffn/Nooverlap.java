@@ -31,7 +31,6 @@
 
 package org.jacop.constraints.diffn;
 
-import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -48,7 +47,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * does not use sophisticated techniques for efficient backtracking.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class Nooverlap extends Constraint {
@@ -131,7 +130,8 @@ public class Nooverlap extends Constraint {
 
     public Nooverlap(IntVar[] origin1, IntVar[] origin2, IntVar[] length1, IntVar[] length2) {
 
-        checkInputForNullness(new String[]{"origin1", "origin2", "length1", "length2" }, new Object[][]{origin1, origin2, length1, length2});
+        checkInputForNullness(new String[] {"origin1", "origin2", "length1", "length2"},
+            new Object[][] {origin1, origin2, length1, length2});
 
         int size = origin1.length;
         if (size == origin1.length && size == origin2.length && size == length1.length && size == length2.length) {
@@ -219,8 +219,7 @@ public class Nooverlap extends Constraint {
      * @param l1 list of variables denoting length of the rectangle in the first dimension.
      * @param l2 list of variables denoting length of the rectangle in the second dimension.
      */
-    public Nooverlap(List<? extends IntVar> o1, List<? extends IntVar> o2, List<? extends IntVar> l1,
-        List<? extends IntVar> l2) {
+    public Nooverlap(List<? extends IntVar> o1, List<? extends IntVar> o2, List<? extends IntVar> l1, List<? extends IntVar> l2) {
 
         this(o1.toArray(new IntVar[o1.size()]), o2.toArray(new IntVar[o2.size()]), l1.toArray(new IntVar[l1.size()]),
             l2.toArray(new IntVar[l2.size()]));
@@ -236,8 +235,8 @@ public class Nooverlap extends Constraint {
      * @param l2     list of variables denoting length of the rectangle in the second dimension.
      * @param strict true- zero size rectangles need to be between other rectangles; false- these rectangles can be anywhere
      */
-    public Nooverlap(List<? extends IntVar> o1, List<? extends IntVar> o2, List<? extends IntVar> l1,
-        List<? extends IntVar> l2, boolean strict) {
+    public Nooverlap(List<? extends IntVar> o1, List<? extends IntVar> o2, List<? extends IntVar> l1, List<? extends IntVar> l2,
+        boolean strict) {
         this(o1, o2, l1, l2);
         this.strict = strict;
     }

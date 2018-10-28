@@ -29,17 +29,7 @@
  */
 package org.jacop.constraints.geost;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
-
+import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
@@ -47,70 +37,70 @@ import org.jacop.core.*;
 import org.jacop.util.SimpleArrayList;
 import org.jacop.util.SimpleHashSet;
 
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
- * @version 4.5
- *
- * 1) DONE. FlushAndQueue function should be changed and some functionality
- *	moved to firstConsistencyCheck.
- *
- * 2) DONE. No propagation inside queueVariable function.
- *
- * 3) DONE. How to incorporate GUI code within Geost constraint.
- *
- * 4) DONE. Move part of the functionality of onObjectUpdate to consistency function.
- *
- * 5) Refactor use of TimeBoundConstraint 
- * 5b) DONE. remove runTimeConstraint boolean variable.
- *
- * 6) DONE. asserts for Shape register 
- * 6b) asserts about possible values of MaxInt and MinInt.
- *
- * 7) DONE. Use simpleHashSet instead of LinkedHashSet for objectQueue.
- *
- * 8) DONE. Discuss pruning events, do we really need ANY for all variables? For example, 
-maybe time variables always BOUND pruning event.
- *
- * 9) DONE. Simplify queueObject by removing if statements and make sure that
- * this function is being called properly (avoid non-asserts checks
- * inside it).
- *
- * 10) DONE. Discuss the possible implementation of satisfied function.
- *
- * 11) Introduce time switch so geost can work without time dimension. 
- *
- * 12) Lessen the feature of geost that it does not work with variables used
- * multiple times within different objects 
- * 12b) DONE. (at least for singleton variables). 
- *
- * 13) DONE. Verify fix to address bug in case of multiple level removals, or level 
- * removals for which no consistency function has been called. Functionality 
- * around variable currentLevel. It is still needed.
- *
- * 14. DONE. Fixing a bug connected with timestamps and multiple remove levels calls. 
- * 14b Check lastLevelVar (possibly needs to be done similarly as setStart). 
- *
- * Future Work : 
- *
- * 1. InArea should support subset of objects and dimensions. 
- *
- * 2. Reuse previously generated outboxes. Create a function to create a hashkey 
- * from points coordinates for which an outbox is required. Later, for each 
- * new point we check if we have proper outbox for a given hash-key generated
- * from this outbox. 
- *
- * 3. Not always finishing at consistency fixpoint, speculative fixpoint. 
- *
- * 4. consider polymorphism due to rotations only, and see if
- * better performance can be reached under this assumption. 
- *
- * 5. If objects have the same shape, and they are indistingushable 
- * then symmetry breaking can be employed. 
-
- *
- *
+ * @version 4.6
+ *          <p>
+ *          1) DONE. FlushAndQueue function should be changed and some functionality
+ *          moved to firstConsistencyCheck.
+ *          <p>
+ *          2) DONE. No propagation inside queueVariable function.
+ *          <p>
+ *          3) DONE. How to incorporate GUI code within Geost constraint.
+ *          <p>
+ *          4) DONE. Move part of the functionality of onObjectUpdate to consistency function.
+ *          <p>
+ *          5) Refactor use of TimeBoundConstraint
+ *          5b) DONE. remove runTimeConstraint boolean variable.
+ *          <p>
+ *          6) DONE. asserts for Shape register
+ *          6b) asserts about possible values of MaxInt and MinInt.
+ *          <p>
+ *          7) DONE. Use simpleHashSet instead of LinkedHashSet for objectQueue.
+ *          <p>
+ *          8) DONE. Discuss pruning events, do we really need ANY for all variables? For example,
+ *          maybe time variables always BOUND pruning event.
+ *          <p>
+ *          9) DONE. Simplify queueObject by removing if statements and make sure that
+ *          this function is being called properly (avoid non-asserts checks
+ *          inside it).
+ *          <p>
+ *          10) DONE. Discuss the possible implementation of satisfied function.
+ *          <p>
+ *          11) Introduce time switch so geost can work without time dimension.
+ *          <p>
+ *          12) Lessen the feature of geost that it does not work with variables used
+ *          multiple times within different objects
+ *          12b) DONE. (at least for singleton variables).
+ *          <p>
+ *          13) DONE. Verify fix to address bug in case of multiple level removals, or level
+ *          removals for which no consistency function has been called. Functionality
+ *          around variable currentLevel. It is still needed.
+ *          <p>
+ *          14. DONE. Fixing a bug connected with timestamps and multiple remove levels calls.
+ *          14b Check lastLevelVar (possibly needs to be done similarly as setStart).
+ *          <p>
+ *          Future Work :
+ *          <p>
+ *          1. InArea should support subset of objects and dimensions.
+ *          <p>
+ *          2. Reuse previously generated outboxes. Create a function to create a hashkey
+ *          from points coordinates for which an outbox is required. Later, for each
+ *          new point we check if we have proper outbox for a given hash-key generated
+ *          from this outbox.
+ *          <p>
+ *          3. Not always finishing at consistency fixpoint, speculative fixpoint.
+ *          <p>
+ *          4. consider polymorphism due to rotations only, and see if
+ *          better performance can be reached under this assumption.
+ *          <p>
+ *          5. If objects have the same shape, and they are indistingushable
+ *          then symmetry breaking can be employed.
  */
-public class Geost extends Constraint implements UsesQueueVariable, Stateful {
+public class Geost extends Constraint implements UsesQueueVariable, Stateful, RemoveLevelLate {
 
     /**
      * It specifies different debugging switches to print out diverse information about
@@ -196,7 +186,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful {
      * Indeed, if some shape ID was pruned, feasibility can change, thus a check is needed.
      */
     boolean changedShapeID = false;
-    
+
     /**
      * if set to true, a variable will never be skipped, even if grounded and not in queue
      */
@@ -269,7 +259,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful {
     //int lowerBound;
 
     /**
-     * 	It contains objects that need to be checked in the next sweep.
+     * It contains objects that need to be checked in the next sweep.
      */
     SimpleHashSet<GeostObject> objectQueue;
 
@@ -329,7 +319,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful {
 
     /**
      * It keeps a reference to the store.
-     *
      */
     protected Store store;
 
@@ -454,15 +443,14 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful {
      * Make sure that the largest object id is as small as possible to avoid
      * unnecessary memory cost.
      *
-     * @param objects objects in the scope of the geost constraint.
+     * @param objects     objects in the scope of the geost constraint.
      * @param constraints the collection of external constraints enforced by geost.
-     * @param shapes the list of different shapes used by the objects in scope of the geost.
-     *
+     * @param shapes      the list of different shapes used by the objects in scope of the geost.
      */
     @SuppressWarnings("unchecked") public Geost(GeostObject[] objects, ExternalConstraint[] constraints, Shape[] shapes) {
 
-       checkInputForDuplicationSkipSingletons("objects",
-           Arrays.stream(objects).map( obj -> obj.getVariables().stream()).flatMap( i -> i).toArray(IntVar[]::new));
+        checkInputForDuplicationSkipSingletons("objects",
+            Arrays.stream(objects).map(obj -> obj.getVariables().stream()).flatMap(i -> i).toArray(IntVar[]::new));
 
         // This comes from the frame computation for NonOverlapping external constraint.
         assert (IntDomain.MaxInt < Integer.MAX_VALUE / 4 - 1) : "Geost can not work with too large Constants.MaxInt";
@@ -705,7 +693,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful {
         stillUsefulInternalConstraints = internalConstraints.toArray(new InternalConstraint[internalConstraints.size()]);
 
 		/*
-		 * TODO reuse different scopes if equal so that quadratic use of memory is avoided
+     * TODO reuse different scopes if equal so that quadratic use of memory is avoided
 		 * 
 		 * For a moment a simple solution is implemented: simple case where all constraints apply to all objects
 		 */
@@ -781,11 +769,12 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful {
      * and only the weakest result is used, it cannot have side-effects. In particular, it cannot
      * directly update domain values.
      * If any data structure is updated here, make sure that it is done carefully enough.
-     * @param store the store
-     * @param o the object to prune
+     *
+     * @param store        the store
+     * @param o            the object to prune
      * @param currentShape the shape of the object
-     * @param d the current most significant dimension
-     * @param limit stop pruning if going beyond this value
+     * @param d            the current most significant dimension
+     * @param limit        stop pruning if going beyond this value
      * @return the bound found if there is one, and Constants.MaxInt if there is no feasible placement.
      */
 
@@ -892,11 +881,12 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful {
      * and only the weakest result is used, it cannot have side-effects. In particular, it cannot
      * directly update domain values.
      * If any data structure is updated here, make sure that it is done carefully enough.
-     * @param store the store
-     * @param o the object to prune
-     * @param d the current most significant dimension
+     *
+     * @param store        the store
+     * @param o            the object to prune
+     * @param d            the current most significant dimension
      * @param currentShape the shape of the object
-     * @param limit stop pruning if going beyond this value
+     * @param limit        stop pruning if going beyond this value
      * @return the bound found if there is one, and Constants.MinInt if there is no feasible placement.
      */
     protected int pruneMax(Store store, GeostObject o, int currentShape, int d,
@@ -1459,6 +1449,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful {
     /**
      * It does the processing needed given the set of variables that was updated
      * between two consecutive calls to the consistency function.
+     *
      * @param variables variables in the queue
      */
     protected void flushQueue(Collection<Var> variables) {
@@ -1491,7 +1482,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful {
      * It puts the object into the queue if it can be still pruned or cause failure.
      *
      * @param o the object which is possibly put into the queue.
-     *
      */
     final public void queueObject(GeostObject o) {
 
@@ -1517,12 +1507,12 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful {
 
     /**
      * It performs the necessary operations for a given changed object.
-     *
+     * <p>
      * If the change occurred due to backtracking then only external constraints
      * are being informed about the change, so they can restore proper state in
      * connection to the object. If this function is not called during backtracking
      * then also the following is executed.
-     *
+     * <p>
      * If the change occurs due to search progress downwards then it stores
      * the information about object change as well as schedules pruning
      * check for all connected objects.
@@ -1642,11 +1632,10 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful {
     /**
      * It specifies the first position of the variables being removed
      * from grounded list upon backtracking.
-     *
+     * <p>
      * If there is no change in lastLevelVar.value between removeLevel (
      * stored in removeLimit) and removeLevelLate then this indicates
      * that no variable was grounded at removed level.
-     *
      */
     private int removeLimit;
 
@@ -1818,8 +1807,8 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful {
 
     /**
      * @author Marc-Olivier Fleury and Radoslaw Szymanek
-     *
-     * It specifies in what direction the sweep algorithm is progressing.
+     *         <p>
+     *         It specifies in what direction the sweep algorithm is progressing.
      */
 
     public enum SweepDirection {

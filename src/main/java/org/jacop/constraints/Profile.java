@@ -39,7 +39,7 @@ import java.util.Iterator;
  * current value.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class Profile extends ArrayList<ProfileItem> {
@@ -63,6 +63,7 @@ public class Profile extends ArrayList<ProfileItem> {
 
     /**
      * It constructs the profile of a given type (e.g. for cumulative).
+     *
      * @param type type of the profile (cumul=0, diffn=1)
      */
     public Profile(short type) {
@@ -72,8 +73,8 @@ public class Profile extends ArrayList<ProfileItem> {
     /**
      * It adds given amount (val) to the profile between a and b.
      *
-     * @param a the minimum range at which it is being added.
-     * @param b the maximum range at which it is being added.
+     * @param a   the minimum range at which it is being added.
+     * @param b   the maximum range at which it is being added.
      * @param val the amount by which the profiles is updated.
      */
     public void addToProfile(int a, int b, int val) {
@@ -210,6 +211,7 @@ public class Profile extends ArrayList<ProfileItem> {
 
     /**
      * It returns the max height of the profile item encountered in the profile.
+     *
      * @return the max height.
      */
     public int max() {

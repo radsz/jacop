@@ -31,23 +31,18 @@
 
 package org.jacop.constraints.geost;
 
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Graphics;
-import java.awt.Image;
-
-import javax.swing.JFrame;
-
 import org.jacop.core.IntVar;
+
+import javax.swing.*;
+import java.awt.*;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
- * @version 4.5
- *
- * It specifies  a simple functionality to graphically represent 2D geost. It was 
- * mostly used during development phase but it may be still useful if user is interested
- * in visualizing Geost constraint. 
- *
+ * @version 4.6
+ *          <p>
+ *          It specifies  a simple functionality to graphically represent 2D geost. It was
+ *          mostly used during development phase but it may be still useful if user is interested
+ *          in visualizing Geost constraint.
  */
 public class BoxDisplay extends JFrame {
 
@@ -100,8 +95,8 @@ public class BoxDisplay extends JFrame {
      * It creates a display to visualize 2D geost constraint.
      *
      * @param pixelsPerUnit number of pixels per unit of object length.
-     * @param title the title of the display
-     * @param geost geost constraint to visualize
+     * @param title         the title of the display
+     * @param geost         geost constraint to visualize
      */
     public void displayState(int pixelsPerUnit, String title, Geost geost) {
 
@@ -120,10 +115,10 @@ public class BoxDisplay extends JFrame {
     /**
      * It displays the state of the geost constraint.
      *
-     * @param domainWidth the width of the domain
+     * @param domainWidth  the width of the domain
      * @param groundedOnly only grounded objects should be displayed.
-     * @param withFrames should frames describing non-overlapping constraint be displayed too?
-     * @param geost geost constraint being displayed.
+     * @param withFrames   should frames describing non-overlapping constraint be displayed too?
+     * @param geost        geost constraint being displayed.
      */
     public void displayState(int domainWidth, boolean groundedOnly, boolean withFrames, Geost geost) {
 
@@ -178,8 +173,9 @@ public class BoxDisplay extends JFrame {
     /**
      * It constructs a window given the parameters like pixels per unit shape,
      * and name of the window.
+     *
      * @param pixelsPerUnit number of pixels per unit length.
-     * @param name window name.
+     * @param name          window name.
      */
     public BoxDisplay(int pixelsPerUnit, String name) {
         super(name);
@@ -208,7 +204,8 @@ public class BoxDisplay extends JFrame {
 
     /**
      * It displays a given dbox using a given color.
-     * @param b dbox to be displayed.
+     *
+     * @param b     dbox to be displayed.
      * @param color color to be used to draw dbox.
      */
     public void display2DBox(DBox b, Color color) {
@@ -220,9 +217,9 @@ public class BoxDisplay extends JFrame {
      * It draws dboxes given color. If n-dimensional box supplied
      * then its 2D projection will be drawn only if it cuts the plane.
      *
-     * @param b dbox to be displayed.
+     * @param b     dbox to be displayed.
      * @param color color to be used.
-     * @param fill should the object be filled.
+     * @param fill  should the object be filled.
      */
     public void display2DBox(DBox b, Color color, boolean fill) {
         //a box that has dimension more than 2 should only be drawn if it cuts the plane
@@ -281,8 +278,8 @@ public class BoxDisplay extends JFrame {
      * It displays a 2D geost object.
      *
      * @param geost Geost constraint containting information about object shapes.
-     * @param o geost object to be drawn.
-     * @param c color in which the remaining units should be painted with.
+     * @param o     geost object to be drawn.
+     * @param c     color in which the remaining units should be painted with.
      */
     public void display2DGeostObject(Geost geost, GeostObject o, Color c) {
         Shape shape = geost.getShape(o.shapeID.min());
@@ -313,9 +310,9 @@ public class BoxDisplay extends JFrame {
     /**
      * It displays 3D geost by slicing 3rd dimension at given point and displaying the resulting slice.
      *
-     * @param geost Geost constraint containing information about shapes.
-     * @param o object to be displayed.
-     * @param c color the object should be painted with.
+     * @param geost       Geost constraint containing information about shapes.
+     * @param o           object to be displayed.
+     * @param c           color the object should be painted with.
      * @param sliceHeight the slice position in the third dimension.
      */
     public void display3DGeostObjectSlice(Geost geost, GeostObject o, Color c, int sliceHeight) {
@@ -399,13 +396,17 @@ public class BoxDisplay extends JFrame {
         g.clearRect(0, 0, getWidth(), getHeight());
     }
 
-    /**paints all objects, repaint only if requested to*/
+    /**
+     * paints all objects, repaint only if requested to
+     */
     public void paint(Graphics g) {
         super.paint(g);
         g.drawImage(displayImgae, 0, 0, null);
     }
 
-    /**same as paint*/
+    /**
+     * same as paint
+     */
     public void update(Graphics g) {
         super.update(g);
         g.drawImage(displayImgae, 0, 0, null);

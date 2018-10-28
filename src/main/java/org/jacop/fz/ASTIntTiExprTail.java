@@ -49,8 +49,8 @@ public class ASTIntTiExprTail extends SimpleNode {
             case 2:
                 typeS = "(list): ";
                 break;
-	   default:
-	     throw new RuntimeException("Internal parsing error; " + getClass().getName());
+            default:
+                throw new RuntimeException("Internal parsing error; " + getClass().getName());
         }
         return super.toString() + typeS + limits;
     }

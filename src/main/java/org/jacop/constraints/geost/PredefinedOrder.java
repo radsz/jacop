@@ -33,11 +33,10 @@ import java.util.Arrays;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
- * @version 4.5
- *
- *
- * It provides a very simple lexicographical order based on the dimension
- * ordering, with the possibility to choose the most significant dimension
+ * @version 4.6
+ *          <p>
+ *          It provides a very simple lexicographical order based on the dimension
+ *          ordering, with the possibility to choose the most significant dimension
  */
 
 public class PredefinedOrder implements LexicographicalOrder {
@@ -69,7 +68,7 @@ public class PredefinedOrder implements LexicographicalOrder {
      * It specifies the comparison of k-dimensional point comparator based on
      * the dimension ordering and the most significant dimension.
      *
-     * @param ordering how dimensions are stored within each compared point.
+     * @param ordering                 how dimensions are stored within each compared point.
      * @param mostSignificantDimension the most significant dimension
      */
     public PredefinedOrder(int[] ordering, int mostSignificantDimension) {

@@ -36,7 +36,7 @@ import org.jacop.core.IntVar;
  * Represents tasks for cumulative constraint
  *
  * @author Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 class Task {
@@ -66,7 +66,7 @@ class Task {
     }
 
     long e() {
-        return (long)dur.min() * (long)res.min();
+        return (long) dur.min() * (long) res.min();
     }
 
     @Override public String toString() {

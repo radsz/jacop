@@ -43,7 +43,7 @@ import java.util.List;
  * either into a network flow constraint or a set of primitive constraints.
  *
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class SoftAlldifferent extends DecomposedConstraint<Constraint> {
@@ -59,7 +59,7 @@ public class SoftAlldifferent extends DecomposedConstraint<Constraint> {
     public SoftAlldifferent(IntVar[] xVars, IntVar costVar, ViolationMeasure violationMeasure) {
 
         checkInputForNullness("xVars", xVars);
-        checkInputForNullness(new String[] {"costVar", "violationMeasure"}, new Object[]{costVar, violationMeasure});
+        checkInputForNullness(new String[] {"costVar", "violationMeasure"}, new Object[] {costVar, violationMeasure});
 
         this.xVars = Arrays.copyOf(xVars, xVars.length);
         this.costVar = costVar;
@@ -83,7 +83,7 @@ public class SoftAlldifferent extends DecomposedConstraint<Constraint> {
                         decomposition.add(new Reified(new XeqY(xVars[i], xVars[j]), v));
                     }
                 }
-                decomposition.add(new SumInt(store, costs, "==", costVar));
+                decomposition.add(new SumInt(costs, "==", costVar));
 
             } else {
                 throw new UnsupportedOperationException("Unsupported violation measure " + violationMeasure);
@@ -105,7 +105,7 @@ public class SoftAlldifferent extends DecomposedConstraint<Constraint> {
                         result.add(new Reified(new XeqY(xVars[i], xVars[j]), v));
                     }
                 }
-                result.add(new SumInt(store, costs, "==", costVar));
+                result.add(new SumInt(costs, "==", costVar));
 
             } else {
                 throw new UnsupportedOperationException("Unsupported violation measure " + violationMeasure);

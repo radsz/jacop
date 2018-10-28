@@ -34,7 +34,7 @@ package org.jacop.core;
  * Standard mutable variable's value definition
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public interface MutableVarValue {
@@ -42,12 +42,14 @@ public interface MutableVarValue {
     /**
      * It clones the value of mutable variable. It includes the stamp, pointer
      * to earlier value, and current value of variable.
+     *
      * @return clone of the mutable variable value.
      */
     Object clone();
 
     /**
      * It returns the earlier value of mutable variable.
+     *
      * @return earlier value of mutable variable.
      */
     MutableVarValue previous();
@@ -55,18 +57,21 @@ public interface MutableVarValue {
     /**
      * It replaces the earlier value of a mutable variable with value passed as
      * parameter.
+     *
      * @param o the previous value for this mutable variable.
      */
     void setPrevious(MutableVarValue o);
 
     /**
      * It sets the stamp of value of mutable variable.
+     *
      * @param stamp the new stamp of value of mutable variable
      */
     void setStamp(int stamp);
 
     /**
      * It returns the stamp value of value of mutable variable.
+     *
      * @return the current stamp of value of mutable variable.
      */
     int stamp();

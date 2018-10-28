@@ -30,22 +30,22 @@
 
 package org.jacop.set.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.Store;
-import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Var;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * The disjoint set constraint makes sure that two set variables
  * do not contain any common element.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class AdisjointB extends Constraint implements UsesQueueVariable, SatisfiedPresent {
@@ -79,7 +79,7 @@ public class AdisjointB extends Constraint implements UsesQueueVariable, Satisfi
      */
     public AdisjointB(SetVar a, SetVar b) {
 
-        checkInputForNullness(new String[]{"a", "b"}, new Object[]{a, b});
+        checkInputForNullness(new String[] {"a", "b"}, new Object[] {a, b});
 
         numberId = idNumber.incrementAndGet();
 

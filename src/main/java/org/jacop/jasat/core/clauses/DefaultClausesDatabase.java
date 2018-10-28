@@ -30,10 +30,10 @@
  */
 package org.jacop.jasat.core.clauses;
 
+import org.jacop.jasat.utils.Utils;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
-
-import org.jacop.jasat.utils.Utils;
 
 /*
  * Radek:
@@ -53,27 +53,23 @@ import org.jacop.jasat.utils.Utils;
 
 
 /**
- *
  * A standard database of clauses, implemented in an efficient way such that insertion
  * or removal of clauses works fast.
- *
+ * <p>
  * Two-watched literals are used for fast unit propagation. The two first
  * literals of each clauses are the watches.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.5
- *
+ * @version 4.6
  */
 public final class DefaultClausesDatabase extends AbstractClausesDatabase {
 
     /**
-     *
      * @TODO efficiency.
-     *
-     * It accepts binary or longer clauses. 
-     *
-     * Should we assume that clauses are at least length 4? Does it make the code quicker? 
-     *
+     * <p>
+     * It accepts binary or longer clauses.
+     * <p>
+     * Should we assume that clauses are at least length 4? Does it make the code quicker?
      */
     private static final int DEFAULT_INITIAL_NUMBER_OF_CLAUSES = 100;
     // the array of clauses
@@ -88,10 +84,10 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
      * and propagating literals if pertinent. If a conflict occurs, the solver
      * conflict Event will be triggered. This is the main part of unit
      * propagation for the solver.
-     *
+     * <p>
      * It always creates a list of new watched list (newWatchedList).
      *
-     * @param literal  the literal that is being set
+     * @param literal the literal that is being set
      */
     public void assertLiteral(int literal) {
 
@@ -368,7 +364,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
         int highestPos = -1, highestLevel = -1;  // literal with highest level
         int secondHighestPos = -1, secondHighestLevel = -1; // literal with second highest level
         int numFoundWatch = 0; // how many watches did we found?
-		/*
+    /*
          * search for watches or literals asserted at current level
          */
         for (int i = 0; i < clause.length && numFoundWatch < 2; ++i) {
@@ -522,7 +518,8 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
     /**
      * (used for debug) checks if the 2 first literals of the clauses
      * are exactly the set of literals that watch this clause
-     * @param clauseIndex  the index of the clause
+     *
+     * @param clauseIndex the index of the clause
      */
     @SuppressWarnings("unused") private String checkWatches4Clause(int clauseIndex) {
         int[] clause = clauses[clauseIndex];
@@ -537,7 +534,8 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
     /**
      * (used for debug) checks if the 2 first literals of the clauses
      * are exactly the set of literals that watch this clause
-     * @param clauseIndex  the index of the clause
+     *
+     * @param clauseIndex the index of the clause
      */
     @SuppressWarnings("unused") private String checkWatches4var(int var) {
 
@@ -578,9 +576,10 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
      * assuming i != j, this modifies clause so that the elements
      * that were at position i and j will now be at position 0 and 1 (i.e.
      * clause[i] becomes clause[0] and clause[j] becomes clause[1])
-     * @param clause  the clause to modify
-     * @param i  the first index
-     * @param j  the second index
+     *
+     * @param clause the clause to modify
+     * @param i      the first index
+     * @param j      the second index
      */
     private final void putAt0And1(int[] clause, int i, int j) {
         assert i >= 0 && i < clause.length;
@@ -623,7 +622,8 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
 
     /**
      * be sure that the database can contain @param size clauses
-     * @param size  the number of clauses
+     *
+     * @param size the number of clauses
      */
     public void ensureSize(int size) {
         assert currentIndex <= clauses.length;

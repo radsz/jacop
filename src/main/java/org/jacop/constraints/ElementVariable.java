@@ -31,27 +31,27 @@
 
 package org.jacop.constraints;
 
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
-
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
 
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
+
 /**
- * ElementVariable constraint defines a relation 
+ * ElementVariable constraint defines a relation
  * list[index - indexOffset] = value.
- *
+ * <p>
  * The first element of the list corresponds to index - indexOffset = 1.
  * By default indexOffset is equal 0 so first value within a list corresponds to index equal 1.
- *
- * If index has a domain from 0 to list.length-1 then indexOffset has to be equal -1 to 
+ * <p>
+ * If index has a domain from 0 to list.length-1 then indexOffset has to be equal -1 to
  * make addressing of list array starting from 1.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class ElementVariable extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
@@ -95,14 +95,14 @@ public class ElementVariable extends Constraint implements UsesQueueVariable, St
     /**
      * It constructs an element constraint.
      *
-     * @param index variable index
-     * @param list list of variables from which an index-th element is taken
-     * @param value a value of the index-th element from list
+     * @param index       variable index
+     * @param list        list of variables from which an index-th element is taken
+     * @param value       a value of the index-th element from list
      * @param indexOffset shift applied to index variable.
      */
     public ElementVariable(IntVar index, IntVar[] list, IntVar value, int indexOffset) {
 
-        checkInputForNullness(new String[] {"index", "value"}, new Object[] { index, value });
+        checkInputForNullness(new String[] {"index", "value"}, new Object[] {index, value});
         checkInputForNullness("list", list);
 
         queueIndex = 2;
@@ -114,7 +114,7 @@ public class ElementVariable extends Constraint implements UsesQueueVariable, St
         this.list = Arrays.copyOf(list, list.length);
         this.indexRange = new IntervalDomain(1 + this.indexOffset, list.length + this.indexOffset);
 
-        setScope( Stream.concat( Stream.of(index), Stream.concat( Arrays.stream(list), Stream.of(value)) ) );
+        setScope(Stream.concat(Stream.of(index), Stream.concat(Arrays.stream(list), Stream.of(value))));
 
     }
 
@@ -122,7 +122,7 @@ public class ElementVariable extends Constraint implements UsesQueueVariable, St
      * It constructs an element constraint.
      *
      * @param index variable index
-     * @param list list of variables from which an index-th element is taken
+     * @param list  list of variables from which an index-th element is taken
      * @param value a value of the index-th element from list
      */
     public ElementVariable(IntVar index, List<? extends IntVar> list, IntVar value) {
@@ -132,9 +132,9 @@ public class ElementVariable extends Constraint implements UsesQueueVariable, St
     /**
      * It constructs an element constraint.
      *
-     * @param index variable index
-     * @param list list of variables from which an index-th element is taken
-     * @param value a value of the index-th element from list
+     * @param index       variable index
+     * @param list        list of variables from which an index-th element is taken
+     * @param value       a value of the index-th element from list
      * @param indexOffset shift applied to index variable.
      */
     public ElementVariable(IntVar index, List<? extends IntVar> list, IntVar value, int indexOffset) {
@@ -145,7 +145,7 @@ public class ElementVariable extends Constraint implements UsesQueueVariable, St
      * It constructs an element constraint.
      *
      * @param index variable index
-     * @param list list of variables from which an index-th element is taken
+     * @param list  list of variables from which an index-th element is taken
      * @param value a value of the index-th element from list
      */
     public ElementVariable(IntVar index, IntVar[] list, IntVar value) {
@@ -323,12 +323,12 @@ public class ElementVariable extends Constraint implements UsesQueueVariable, St
             }
 
             if (indexHasChanged && index.singleton()) {
-                    // index is singleton.
+                // index is singleton.
 
-                    int position = index.value() - 1 - indexOffset;
-                    value.domain.in(store.level, value, list[position].domain);
-                    list[position].domain.in(store.level, list[position], value.domain);
-                }
+                int position = index.value() - 1 - indexOffset;
+                value.domain.in(store.level, value, list[position].domain);
+                list[position].domain.in(store.level, list[position], value.domain);
+            }
 
             indexHasChanged = false;
             valueHasChanged = false;

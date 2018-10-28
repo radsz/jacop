@@ -31,25 +31,22 @@
 package org.jacop.examples.floats;
 
 /**
- *
  * This model is based on
  * minizinc model cyclohexane.mzn by Håkan Kjellerstrand
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
- *
+ * @version 4.6
  */
 
 import org.jacop.core.Store;
+import org.jacop.floats.constraints.LinearFloat;
+import org.jacop.floats.constraints.PmulQeqR;
+import org.jacop.floats.constraints.PplusCeqR;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
+import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.PrintOutListener;
-
-import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.constraints.LinearFloat;
-import org.jacop.floats.constraints.PplusCeqR;
-import org.jacop.floats.constraints.PmulQeqR;
-import org.jacop.floats.search.SplitSelectFloat;
 
 public class Cyclohexane {
 
@@ -109,13 +106,13 @@ public class Cyclohexane {
 
         // z - 24.0*y
         FloatVar t7 = new FloatVar(store, "t7", MIN_FLOAT, MAX_FLOAT);
-        store.impose(new LinearFloat(store, new FloatVar[] {z, y, t7}, new double[] {1.0, -24.0, -1.0}, "==", 0.0));
+        store.impose(new LinearFloat(new FloatVar[] {z, y, t7}, new double[] {1.0, -24.0, -1.0}, "==", 0.0));
         // x - 24.0*z
         FloatVar t8 = new FloatVar(store, "t8", MIN_FLOAT, MAX_FLOAT);
-        store.impose(new LinearFloat(store, new FloatVar[] {x, z, t8}, new double[] {1.0, -24.0, -1.0}, "==", 0.0));
+        store.impose(new LinearFloat(new FloatVar[] {x, z, t8}, new double[] {1.0, -24.0, -1.0}, "==", 0.0));
         // y - 24.0*x
         FloatVar t9 = new FloatVar(store, "t9", MIN_FLOAT, MAX_FLOAT);
-        store.impose(new LinearFloat(store, new FloatVar[] {y, x, t9}, new double[] {1.0, -24.0, -1.0}, "==", 0.0));
+        store.impose(new LinearFloat(new FloatVar[] {y, x, t9}, new double[] {1.0, -24.0, -1.0}, "==", 0.0));
 
         // z*(z - 24.0*y)
         FloatVar t10 = new FloatVar(store, "t10", MIN_FLOAT, MAX_FLOAT);
@@ -132,9 +129,9 @@ public class Cyclohexane {
         // store.impose(new PplusQeqR(t5, t11, t));
         // store.impose(new PplusQeqR(t6, t12, t));
 
-        store.impose(new LinearFloat(store, new FloatVar[] {t4, t10}, new double[] {1.0, 1.0}, "==", -13.0));
-        store.impose(new LinearFloat(store, new FloatVar[] {t5, t11}, new double[] {1.0, 1.0}, "==", -13.0));
-        store.impose(new LinearFloat(store, new FloatVar[] {t6, t12}, new double[] {1.0, 1.0}, "==", -13.0));
+        store.impose(new LinearFloat(new FloatVar[] {t4, t10}, new double[] {1.0, 1.0}, "==", -13.0));
+        store.impose(new LinearFloat(new FloatVar[] {t5, t11}, new double[] {1.0, 1.0}, "==", -13.0));
+        store.impose(new LinearFloat(new FloatVar[] {t6, t12}, new double[] {1.0, 1.0}, "==", -13.0));
 
         System.out.println("\bVar store size: " + store.size() + "\nNumber of constraints: " + store.numberConstraints());
 

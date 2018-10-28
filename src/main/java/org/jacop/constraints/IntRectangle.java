@@ -39,7 +39,7 @@ import java.util.List;
  * constraint.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 class IntRectangle {

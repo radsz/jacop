@@ -30,43 +30,22 @@
 
 package org.jacop.examples.fd;
 
+import org.jacop.constraints.*;
+import org.jacop.constraints.diffn.Diffn;
+import org.jacop.constraints.geost.*;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.search.*;
+
 import java.util.ArrayList;
 import java.util.List;
 
-import org.jacop.constraints.And;
-import org.jacop.constraints.diffn.Diffn;
-import org.jacop.constraints.Or;
-import org.jacop.constraints.PrimitiveConstraint;
-import org.jacop.constraints.Reified;
-import org.jacop.constraints.SumInt;
-import org.jacop.constraints.XgtC;
-import org.jacop.constraints.XgteqY;
-import org.jacop.constraints.XlteqC;
-import org.jacop.constraints.XlteqY;
-import org.jacop.constraints.XmulCeqZ;
-import org.jacop.constraints.XplusCeqZ;
-import org.jacop.constraints.geost.DBox;
-import org.jacop.constraints.geost.ExternalConstraint;
-import org.jacop.constraints.geost.Geost;
-import org.jacop.constraints.geost.GeostObject;
-import org.jacop.constraints.geost.NonOverlapping;
-import org.jacop.constraints.geost.Shape;
-import org.jacop.core.IntVar;
-import org.jacop.core.Store;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.IndomainMin;
-import org.jacop.search.Search;
-import org.jacop.search.SelectChoicePoint;
-import org.jacop.search.SimpleSelect;
-import org.jacop.search.SmallestDomain;
-import org.jacop.search.SmallestMin;
-
 /**
  * It specifies an example where squares of the given size must be placed within
- * a square of a given size. 
+ * a square of a given size.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class PerfectSquare extends ExampleFD {
@@ -91,8 +70,8 @@ public class PerfectSquare extends ExampleFD {
 
     public final static int[][][] squares() {
 
-        return new int[][][]
-        {{{20}, {2, 3, 4, 5, 6, 7, 8}}, {{112}, {2, 4, 6, 7, 8, 9, 11, 15, 16, 17, 18, 19, 24, 25, 27, 29, 33, 35, 37, 42, 50}},
+        return new int[][][] {{{20}, {2, 3, 4, 5, 6, 7, 8}},
+            {{112}, {2, 4, 6, 7, 8, 9, 11, 15, 16, 17, 18, 19, 24, 25, 27, 29, 33, 35, 37, 42, 50}},
             {{110}, {2, 3, 4, 6, 7, 8, 12, 13, 14, 15, 16, 17, 18, 21, 22, 23, 24, 26, 27, 28, 50, 60}},
             {{110}, {1, 2, 3, 4, 6, 8, 9, 12, 14, 16, 17, 18, 19, 21, 22, 23, 24, 26, 27, 28, 50, 60}},
             {{139}, {1, 2, 3, 4, 7, 8, 10, 17, 18, 20, 21, 22, 24, 27, 28, 29, 30, 31, 32, 38, 59, 80}},
@@ -301,6 +280,7 @@ public class PerfectSquare extends ExampleFD {
             {{661}, {5, 7, 17, 18, 23, 31, 36, 38, 41, 64, 73, 77, 83, 84, 102, 106, 111, 161, 175, 196, 203, 210, 238, 248, 262}}};
 
     }
+
     /**
      * It runs a perfect square problem. If no problemNo specified as input
      * argument it will solve all the problems given in square matrix.
@@ -406,8 +386,8 @@ public class PerfectSquare extends ExampleFD {
         int problemNo = squares().length - 1;
         if (args.length == 1) {
 
-	          problemNo = Integer.parseInt(args[0]);
-	    
+            problemNo = Integer.parseInt(args[0]);
+
         }
 
         example.model(problemNo);
@@ -420,6 +400,7 @@ public class PerfectSquare extends ExampleFD {
      * It specifies the model using mostly PrimitiveConstraints. It does
      * not use diff2 constraint which is very useful for placing 2-dimensional
      * rectangles.
+     *
      * @param problemNo the problem number to be fetched from the array of problem descriptions provided by squares() function.
      */
     public void modelBasic(int problemNo) {
@@ -489,7 +470,7 @@ public class PerfectSquare extends ExampleFD {
                 sumList.add(s);
             }
 
-            store.impose(new SumInt(store, sumList, "==", limit));
+            store.impose(new SumInt(sumList, "==", limit));
 
         }
 
@@ -504,7 +485,7 @@ public class PerfectSquare extends ExampleFD {
                 store.impose(new XmulCeqZ(b, squares()[problemNo][1][j], s));
                 sumList.add(s);
             }
-            store.impose(new SumInt(store, sumList, "==", limit));
+            store.impose(new SumInt(sumList, "==", limit));
         }
 
         System.out.println("Number of variables: " + store.size());
@@ -538,7 +519,7 @@ public class PerfectSquare extends ExampleFD {
 
             IntVar Y = new IntVar(store, "y" + j, 0, masterSize - sqSize);
 
-            size[j] = new IntVar(store, sqSize, sqSize);
+            size[j] = new IntVar(store, "s" + j, sqSize, sqSize);
 
             IntVar[] jthRectangle = {X, Y, size[j], size[j]};
 
@@ -636,7 +617,7 @@ public class PerfectSquare extends ExampleFD {
         store.impose(new Diffn(rectangles, false));
 
 		/*
-		// starts, durations, resources, limit
+    // starts, durations, resources, limit
 		// Not really useful implied constraints
 		// Variable limit = new Variable(store, "limit", masterSize, masterSize);
 		// store.impose(new Cumulative(varsX, size, size, limit));
@@ -746,17 +727,17 @@ public class PerfectSquare extends ExampleFD {
      * Enclose the output of this function inside a simple latex document like the one
      * below. Remove additional "\" before usepackage as it was added to avoid conflict
      * with Doxygen.
+     * <p>
+     * \documentclass[]{article}
+     * \\usepackage{color}
+     * \hyphenation{}
+     * \makeatother
+     * \begin{document}
+     * \thispagestyle{empty}
+     * \include{figure}
+     * \end{document}
      *
-     \documentclass[]{article}
-     \\usepackage{color}
-     \hyphenation{}
-     \makeatother
-     \begin{document}
-     \thispagestyle{empty}
-     \include{figure}
-     \end{document}
-     *
-     * @param runtime it specifies the time required to find a solution.
+     * @param runtime   it specifies the time required to find a solution.
      * @param problemNo problem number to be used for which the latex generation is taking place.
      * @return latex representation of the solution in a single string.
      */

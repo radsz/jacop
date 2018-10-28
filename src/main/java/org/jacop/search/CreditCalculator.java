@@ -38,9 +38,9 @@ import org.jacop.core.Var;
  * change your depth first search into credit search. It has to be plugin as
  * ExitChildListener, TimeOutListener, and Consistency Listener.
  *
- * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
  * @param <T> type of variable being used in the search.
+ * @author Radoslaw Szymanek and Krzysztof Kuchcinski
+ * @version 4.6
  */
 
 public class CreditCalculator<T extends Var> implements ExitChildListener<T>, TimeOutListener, ConsistencyListener {
@@ -99,9 +99,10 @@ public class CreditCalculator<T extends Var> implements ExitChildListener<T>, Ti
      * than max depth with a maximumally number of backtracks performed in those
      * subtrees. This approach allows to limit detrimental effect of early
      * mistake which can not be proven easily by a backtrack search.
-     * @param credit the number of credits given to a search.
+     *
+     * @param credit     the number of credits given to a search.
      * @param backtracks the maximum number of allowed backtracks from the node which has no remaining credits.
-     * @param maxDepth the maximum depth at which it is still alowed to distribute credits.
+     * @param maxDepth   the maximum depth at which it is still alowed to distribute credits.
      */
 
     public CreditCalculator(int credit, int backtracks, int maxDepth) {
@@ -119,13 +120,15 @@ public class CreditCalculator<T extends Var> implements ExitChildListener<T>, Ti
     }
 
 
-    /** The constructor allows to specify number of credits. Credits of the
+    /**
+     * The constructor allows to specify number of credits. Credits of the
      * parent are divided equally among children. As soon a node has only one
      * credit, there is a restriction how many backtracks can be performed in
      * search in the left and right child altogether. This approach allows to
      * limit detrimental effect of early mistake which can not be proven easily
      * by a backtrack search.
-     * @param credit the number of credits given to a search.
+     *
+     * @param credit     the number of credits given to a search.
      * @param backtracks the maximum number of allowed backtracks from the node which has no remaining credits.
      */
     public CreditCalculator(int credit, int backtracks) {

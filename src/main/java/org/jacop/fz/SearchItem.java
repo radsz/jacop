@@ -29,53 +29,24 @@
  */
 package org.jacop.fz;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
-import org.jacop.search.ComparatorVariable;
-import org.jacop.search.Indomain;
-import org.jacop.search.IndomainMax;
-import org.jacop.search.IndomainMedian;
-import org.jacop.search.IndomainMiddle;
-import org.jacop.search.IndomainMin;
-import org.jacop.search.IndomainRandom;
-import org.jacop.search.LargestDomain;
-import org.jacop.search.LargestMax;
-import org.jacop.search.MaxRegret;
-import org.jacop.search.MostConstrainedStatic;
-import org.jacop.search.SelectChoicePoint;
-import org.jacop.search.SimpleSelect;
-import org.jacop.search.SmallestDomain;
-import org.jacop.search.SmallestMin;
-import org.jacop.search.SmallestMax;
-import org.jacop.search.SplitSelect;
-import org.jacop.search.WeightedDegree;
-import org.jacop.search.InputOrderSelect;
-import org.jacop.floats.search.SmallestDomainFloat;
-import org.jacop.floats.search.LargestDomainFloat;
-import org.jacop.floats.search.SmallestMinFloat;
-import org.jacop.floats.search.LargestMaxFloat;
-import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.floats.search.*;
+import org.jacop.search.*;
 import org.jacop.set.core.SetVar;
-import org.jacop.set.search.IndomainSetMax;
-import org.jacop.set.search.IndomainSetMin;
-import org.jacop.set.search.MaxCardDiff;
-import org.jacop.set.search.MinCardDiff;
-import org.jacop.set.search.MinGlbCard;
-import org.jacop.set.search.MaxLubCard;
+import org.jacop.set.search.*;
+
+import java.util.ArrayList;
+import java.util.Arrays;
 
 
 /**
- *
- * The part of the parser responsible for parsing search part of the flatzinc specification. 
+ * The part of the parser responsible for parsing search part of the flatzinc specification.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.5
- *
+ * @version 4.6
  */
 public class SearchItem implements ParserTreeConstants {
 
@@ -95,9 +66,9 @@ public class SearchItem implements ParserTreeConstants {
 
     /**
      * It constructs search part parsing object based on dictionaries
-     * provided as well as store object within which the search will take place. 
+     * provided as well as store object within which the search will take place.
      *
-     * @param store the finite domain store within which the search will take place. 
+     * @param store the finite domain store within which the search will take place.
      * @param table the holder of all the objects present in the flatzinc file.
      */
     public SearchItem(Store store, Tables table) {
@@ -269,8 +240,8 @@ public class SearchItem implements ParserTreeConstants {
             for (int i = 0; i < count; i++) {
                 SearchItem subSearch = new SearchItem(store, dictionary);
                 subSearch.searchParameters(ann, i);
-		if (subSearch.search_variables.length > 0)
-		    search_seq.add(subSearch);
+                if (subSearch.search_variables.length > 0)
+                    search_seq.add(subSearch);
             }
         }
     }
@@ -284,8 +255,8 @@ public class SearchItem implements ParserTreeConstants {
         for (int i = 0; i < count - 1; i++) {
             SearchItem subSearch = new SearchItem(store, dictionary);
             subSearch.searchParameters(node, i);
-	    if (subSearch.search_variables.length > 0)
-		search_seq.add(subSearch);
+            if (subSearch.search_variables.length > 0)
+                search_seq.add(subSearch);
         }
     }
 
@@ -354,7 +325,8 @@ public class SearchItem implements ParserTreeConstants {
                 return sel;
             }
         } else {
-            throw new IllegalArgumentException("Wrong parameters for float_search. Only indomain_split or indomain_reverse_split are allowed.");
+            throw new IllegalArgumentException(
+                "Wrong parameters for float_search. Only indomain_split or indomain_reverse_split are allowed.");
         }
     }
 
@@ -673,22 +645,22 @@ public class SearchItem implements ParserTreeConstants {
         StringBuffer s = new StringBuffer();
 
         if (search_type == null)
-	    s.append("defult_search\n");
+            s.append("defult_search\n");
         else if (search_seq.size() == 0) {
-	    s.append(search_type + "(");
+            s.append(search_type + "(");
             if (search_variables == null)
-	        s.append("[]");
+                s.append("[]");
             else
-	        s.append("array1d(1.." + search_variables.length + ", " + Arrays.asList(search_variables));
+                s.append("array1d(1.." + search_variables.length + ", " + Arrays.asList(search_variables));
             s.append(", " + explore + ", " + var_selection_heuristic + ", " + indomain);
             if (floatSearch)
-	        s.append(", " + precision);
+                s.append(", " + precision);
         } else {
             for (int i = 0; i < search_seq.size(); i++) //SearchItem se : search_seq)
                 if (i == search_seq.size() - 1)
-		    s.append(search_seq.get(i) + ")");
+                    s.append(search_seq.get(i) + ")");
                 else
-		    s.append(search_seq.get(i) + "), ");
+                    s.append(search_seq.get(i) + "), ");
         }
         return s.toString();
     }

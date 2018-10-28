@@ -30,17 +30,19 @@
 
 package org.jacop.constraints.cumulative;
 
+import org.jacop.core.IntVar;
+
 /**
  * Represents tasks for cumulative constraint
  *
  * @author Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 class TaskNormalView extends TaskView {
 
-    TaskNormalView(Task t) {
-        super(t);
+    TaskNormalView(IntVar start, IntVar dur, IntVar res) {
+        super(start, dur, res);
     }
 
     // last complition time
@@ -65,7 +67,7 @@ class TaskNormalView extends TaskView {
 
     // envelope
     long env(long C) {
-        return C * (long)est() + e();
+        return C * (long) est() + e();
     }
 
     void updateEdgeFind(int storeLevel, int est) {
@@ -85,11 +87,11 @@ class TaskNormalView extends TaskView {
     }
 
     boolean exists() {
-	return dur.min() > 0 && res.min() > 0;
+        return dur.min() > 0 && res.min() > 0;
     }
 
     boolean maxNonZero() {
-	return dur.max() > 0 && res.max() > 0;
+        return dur.max() > 0 && res.max() > 0;
     }
 
 }

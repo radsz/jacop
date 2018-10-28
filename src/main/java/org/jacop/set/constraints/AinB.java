@@ -30,19 +30,19 @@
 
 package org.jacop.set.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Store;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * It creates a constraint that makes sure that the set value of set variable A is included
  * in the set value of set variable B.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class AinB extends PrimitiveConstraint {
@@ -75,7 +75,7 @@ public class AinB extends PrimitiveConstraint {
      */
     public AinB(SetVar a, SetVar b) {
 
-        checkInputForNullness(new String[]{"a", "b"}, new Object[]{a, b});
+        checkInputForNullness(new String[] {"a", "b"}, new Object[] {a, b});
 
         this.numberId = idNumber.incrementAndGet();
 
@@ -89,8 +89,8 @@ public class AinB extends PrimitiveConstraint {
     /**
      * It constructs an AinB constraint to restrict the domain of the variables A and B.
      *
-     * @param a variable a that is restricted to be a subset of variable b.
-     * @param b variable that is restricted to contain variable a.
+     * @param a      variable a that is restricted to be a subset of variable b.
+     * @param b      variable that is restricted to contain variable a.
      * @param strict it specifies if the inclusion relation is strict.
      */
     public AinB(SetVar a, SetVar b, boolean strict) {
@@ -99,7 +99,7 @@ public class AinB extends PrimitiveConstraint {
         this.strict = strict;
 
     }
-    
+
     @Override public void consistency(Store store) {
 
         // FIXME, take into account strict relation.

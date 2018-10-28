@@ -30,16 +30,15 @@
 
 package org.jacop.constraints;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-
+import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Linear constraint implements the weighted summation over several
@@ -50,13 +49,14 @@ import java.util.Map;
  * For other constraints (And, Or, Not, Eq, IfThen, IfThenElse) use LinearInt.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
+
 
 /**
  * @deprecated As of release 4.3.1 replaced by LinearInt constraint.
  */
-@Deprecated public class Linear extends Constraint implements UsesQueueVariable, SatisfiedPresent {
+@Deprecated public class Linear extends Constraint implements UsesQueueVariable, SatisfiedPresent, RemoveLevelLate {
 
     Store store;
 
@@ -191,7 +191,7 @@ import java.util.Map;
 
         recomputeBounds();
 
-        Arrays.stream(this.list).forEach( v -> queueVariable(store.level, v));
+        Arrays.stream(this.list).forEach(v -> queueVariable(store.level, v));
 
         checkForOverflow();
 

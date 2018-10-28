@@ -38,7 +38,9 @@ import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.util.SimpleHashSet;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.DoubleStream;
 import java.util.stream.Stream;
@@ -49,7 +51,7 @@ import java.util.stream.Stream;
  * The weights must be positive integers.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
@@ -103,8 +105,6 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     boolean reified = true;
 
     BTree linearTree;
-
-    VariableNode[] sortedVarNodes;
 
     TimeStamp<Boolean> noSat;
 
@@ -178,7 +178,6 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
             k++;
         }
 
-
         if (this.list.length == 0) {
 
             this.list = new FloatVar[2];
@@ -222,7 +221,6 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
         }
 
         java.util.Arrays.sort(leafNodes, new VarWeightComparator<VariableNode>());
-        sortedVarNodes = leafNodes;
         // System.out.println (java.util.Arrays.asList(leafNodes));
 
 
@@ -305,7 +303,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
         pruneRelation();
 
         if (relationType != eq && entailed(relationType))
-	    removeConstraint();
+            removeConstraint();
 
     }
 
@@ -317,7 +315,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
         pruneRelation();
 
         if (negRel[relationType] != eq && entailed(negRel[relationType]))
-	    removeConstraint();
+            removeConstraint();
 
     }
 
@@ -547,21 +545,6 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
         return result.toString();
 
     }
-
-    /*
-    // uncomment registration in commonInitialization
-    @Override
-    public void removeLevelLate(int level) {
-	// System.out.println ("Backtrack, queue = " + variableQueue);
-
-	// variableQueue.clear();
-
-	if (variableQueue.size() > 0)
-	    variableQueue = new SimpleHashSet<IntVar>();
-
-    }
-    */
-
 
     static class VarWeightComparator<T extends VariableNode> implements java.util.Comparator<T>, java.io.Serializable {
 

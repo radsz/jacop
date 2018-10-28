@@ -29,28 +29,26 @@
  */
 package org.jacop.fz;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.floats.core.FloatVar;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
 
-import org.jacop.floats.core.FloatVar;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 /**
- *
- * This class contains information about all variables, including 
- * the variables which are used by search. 
+ * This class contains information about all variables, including
+ * the variables which are used by search.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.5
- *
+ * @version 4.6
  */
 public class Tables {
 
@@ -58,6 +56,7 @@ public class Tables {
     // IntVar zero, one;
 
     HashMap<Integer, IntVar> constantTable = new HashMap<Integer, IntVar>();
+    HashMap<Double, FloatVar> constantFloatTable = new HashMap<Double, FloatVar>();
 
     // intTable keeps both int & bool (0=false, 1=true) parameters
     HashMap<String, Integer> intTable = new HashMap<String, Integer>();
@@ -102,10 +101,12 @@ public class Tables {
 
     public Map<IntVar, IntVar> aliasTable = new HashMap<IntVar, IntVar>();
 
-    int numberBoolVariables = 0;    
-    
+    int numberBoolVariables = 0;
+    int numberFloatVariables = 0;
+    int numberSetVariables = 0;
+
     /**
-     * It constructs the storage object to store different objects, like int, array of ints, sets, ... . 
+     * It constructs the storage object to store different objects, like int, array of ints, sets, ... .
      */
     public Tables() {
     }
@@ -120,6 +121,17 @@ public class Tables {
         if (v == null) {
             v = new IntVar(store, c, c);
             constantTable.put(c, v);
+        }
+
+        return v;
+    }
+
+    public FloatVar getFloatConstant(double c) {
+        FloatVar v = constantFloatTable.get(c);
+
+        if (v == null) {
+            v = new FloatVar(store, c, c);
+            constantFloatTable.put(c, v);
         }
 
         return v;
@@ -143,11 +155,21 @@ public class Tables {
             return v;
     }
 
+    void removeAliasFromSearch() {
+
+        Set<Map.Entry<IntVar, IntVar>> entries = aliasTable.entrySet();
+
+        for (Map.Entry<IntVar, IntVar> e : entries) {
+            IntVar b = e.getKey();
+	    defaultSearchVariables.remove(b);
+	}
+    }
+
     /**
      * It adds an int parameter.
      *
      * @param ident the identity of the added int parameter.
-     * @param val the value of the parameter.
+     * @param val   the value of the parameter.
      */
     public void addInt(String ident, int val) {
         intTable.put(ident, val);
@@ -183,7 +205,7 @@ public class Tables {
      * It adds an float parameter.
      *
      * @param ident the identity of the added int parameter.
-     * @param val the value of the parameter.
+     * @param val   the value of the parameter.
      */
     public void addFloat(String ident, double val) {
         floatTable.put(ident, val);
@@ -238,10 +260,10 @@ public class Tables {
     }
 
     /**
-     * It adds a set of the given identity. 
+     * It adds a set of the given identity.
      *
-     * @param ident the identity of the set being added. 
-     * @param val the set being added.
+     * @param ident the identity of the set being added.
+     * @param val   the set being added.
      */
     public void addSet(String ident, IntDomain val) {
         setTable.put(ident, val);
@@ -251,7 +273,6 @@ public class Tables {
      * It returns the set of the given identity.
      *
      * @param ident the identity of the searched set.
-     *
      * @return the set of the given identity.
      */
     public IntDomain getSet(String ident) {
@@ -259,7 +280,7 @@ public class Tables {
     }
 
     /**
-     * It adds the set array to the storage. 
+     * It adds the set array to the storage.
      *
      * @param ident the identity of the added set array.
      * @param array the array being added.
@@ -269,10 +290,10 @@ public class Tables {
     }
 
     /**
-     *
      * It returns the set array of the given id.
+     *
      * @param ident the unique id of the looked for set array.
-     * @return the set array of the given identity. 
+     * @return the set array of the given identity.
      */
     public IntDomain[] getSetArray(String ident) {
         return setArrayTable.get(ident);
@@ -295,10 +316,10 @@ public class Tables {
     }
 
     /**
-     * It adds a variable with a given identity to the storage. 
+     * It adds a variable with a given identity to the storage.
      *
-     * @param ident the identity of the added variable. 
-     * @param var the variable being added.
+     * @param ident the identity of the added variable.
+     * @param var   the variable being added.
      */
     public void addVariable(String ident, IntVar var) {
         variableTable.put(ident, var);
@@ -306,7 +327,7 @@ public class Tables {
 
 
     /**
-     * It returns the variable of the given identity. 
+     * It returns the variable of the given identity.
      *
      * @param ident the identity of the returned variable.
      * @return the variable of the given identity.
@@ -317,10 +338,10 @@ public class Tables {
 
 
     /**
-     * It adds a variable with a given identity to the storage. 
+     * It adds a variable with a given identity to the storage.
      *
-     * @param ident the identity of the added variable. 
-     * @param var the variable being added.
+     * @param ident the identity of the added variable.
+     * @param var   the variable being added.
      */
     public void addFloatVariable(String ident, FloatVar var) {
         variableFloatTable.put(ident, var);
@@ -328,7 +349,7 @@ public class Tables {
 
 
     /**
-     * It returns the variable of the given identity. 
+     * It returns the variable of the given identity.
      *
      * @param ident the identity of the returned variable.
      * @return the variable of the given identity.
@@ -369,7 +390,6 @@ public class Tables {
         } else
             for (int i = 0; i < a.length; i++)
                 a[i] = getAlias(a[i]);
-
         return a;
     }
 
@@ -395,14 +415,13 @@ public class Tables {
         FloatVar[] a = variableFloatArrayTable.get(ident);
         if (a == null) {
             double[] floatA = floatArrayTable.get(ident);
-	    if (floatA != null) {
-		a = new FloatVar[floatA.length];
-		for (int i = 0; i < floatA.length; i++) {
-		    a[i] = new FloatVar(store, floatA[i], floatA[i]);
-		}
-	    }
-	    else
-		throw new IllegalArgumentException("Array identifier does not exist: " + ident);
+            if (floatA != null) {
+                a = new FloatVar[floatA.length];
+                for (int i = 0; i < floatA.length; i++) {
+                    a[i] = getFloatConstant(floatA[i]); //new FloatVar(store, floatA[i], floatA[i]);
+                }
+            } else
+                throw new IllegalArgumentException("Array identifier does not exist: " + ident);
         }
         return a;
     }
@@ -411,7 +430,7 @@ public class Tables {
      * It adds the set variable of the given identity.
      *
      * @param ident the identity of the added set variable.
-     * @param var the set variable being added.
+     * @param var   the set variable being added.
      */
     public void addSetVariable(String ident, SetVar var) {
         setVariableTable.put(ident, var);
@@ -442,7 +461,7 @@ public class Tables {
     /**
      * It returns the array of set variables of the given identity.
      *
-     * @param ident the identity of the returned array of set variables. 
+     * @param ident the identity of the returned array of set variables.
      * @return the array of set variables with the given identity.
      */
     public SetVar[] getSetVariableArray(String ident) {
@@ -460,6 +479,7 @@ public class Tables {
 
     /**
      * It adds an output variable.
+     *
      * @param v the output variable being added.
      */
     public void addOutVar(Var v) {
@@ -468,6 +488,7 @@ public class Tables {
 
     /**
      * It checks whether a variable is output variable.
+     *
      * @param v the variable to be checked.
      * @return true if variable is output, false otherwise
      */
@@ -483,7 +504,7 @@ public class Tables {
     }
 
     /**
-     * It adds an output array annotation. 
+     * It adds an output array annotation.
      *
      * @param v the output array annotation being added.
      */
@@ -492,7 +513,7 @@ public class Tables {
     }
 
     /**
-     * It adds a search variable. 
+     * It adds a search variable.
      *
      * @param v the search variable being added.
      */
@@ -501,7 +522,7 @@ public class Tables {
     }
 
     /**
-     * It adds a search variable. 
+     * It adds a search variable.
      *
      * @param v the search variable being added.
      */
@@ -511,6 +532,7 @@ public class Tables {
 
     /**
      * It adds a search array.
+     *
      * @param v the search array being added.
      */
     public void addSearchArray(Var[] v) {
@@ -519,6 +541,7 @@ public class Tables {
 
     /**
      * It adds a search array.
+     *
      * @param v the search array being added.
      */
     public void addSearchFloatArray(Var[] v) {
@@ -526,7 +549,7 @@ public class Tables {
     }
 
     /**
-     * It adds a search set variable. 
+     * It adds a search set variable.
      *
      * @param v the set search variable being added.
      */
@@ -536,18 +559,42 @@ public class Tables {
 
     /**
      * It adds an array of search set variables.
+     *
      * @param v array of set variables being  added
      */
     public void addSearchSetArray(Var[] v) {
         defaultSearchSetArrays.add(v);
     }
 
+    public void setNumberOfAllVariables(int nb, int ns, int nf) {
+        numberBoolVariables = nb;
+        numberSetVariables = ns;
+        numberFloatVariables = nf;
+    }
+    
+
     public void setNumberBoolVariables(int n) {
-	numberBoolVariables = n;
+        numberBoolVariables = n;
     }
 
     public int getNumberBoolVariables() {
-	return numberBoolVariables;
+        return numberBoolVariables;
+    }
+
+    public void setNumberFloatVariables(int n) {
+        numberFloatVariables = n;
+    }
+
+    public int getNumberFloatVariables() {
+        return numberFloatVariables;
+    }
+
+    public void setNumberSetVariables(int n) {
+        numberSetVariables = n;
+    }
+
+    public int getNumberSetVariables() {
+        return numberSetVariables;
     }
 
     // StringBuilder to be used instead of normal string additions. 
@@ -601,16 +648,16 @@ public class Tables {
 
             // int array || float array
             if (i == indexIntArray) {
-	        s.append(tableNames[i] + "\n");
+                s.append(tableNames[i] + "\n");
                 s.append("{");
                 java.util.Set<String> keys = dictionary[i].keySet();
                 for (String k : keys) {
                     int[] a = (int[]) dictionary[i].get(k);
                     s.append(k + "=[");
                     for (int j = 0; j < a.length; j++) {
-		        s.append(a[j]);
+                        s.append(a[j]);
                         if (j < a.length - 1)
-			    s.append(", ");
+                            s.append(", ");
                     }
                     s.append("], ");
                 }
@@ -618,16 +665,16 @@ public class Tables {
             }
             // float array
             else if (i == indexFloatArray) {
-	        s.append(tableNames[i] + "\n");
+                s.append(tableNames[i] + "\n");
                 s.append("{");
                 java.util.Set<String> keys = dictionary[i].keySet();
                 for (String k : keys) {
                     double[] a = (double[]) dictionary[i].get(k);
                     s.append(k + "=[");
                     for (int j = 0; j < a.length; j++) {
-		        s.append(a[j]);
+                        s.append(a[j]);
                         if (j < a.length - 1)
-			    s.append(", ");
+                            s.append(", ");
                     }
                     s.append("], ");
                 }
@@ -635,11 +682,11 @@ public class Tables {
             }
             // Set Array
             else if (i == indexSetArray) {
-	        s.append(tableNames[i] + "\n");
+                s.append(tableNames[i] + "\n");
                 s.append("{");
                 java.util.Set<String> keys = dictionary[i].keySet();
                 for (String k : keys) {
-		    s.append(k + "=");
+                    s.append(k + "=");
                     IntDomain[] a = (IntDomain[]) dictionary[i].get(k);
                     s.append(Arrays.asList(a));
                     s.append(", ");
@@ -648,7 +695,7 @@ public class Tables {
             }
             // Variable Array (IntVar, FloatVar, SetVar)
             else if (i == indexVariableArray || i == indexFloatVariableArray || i == indexSetVariableArray) {
-	        s.append(tableNames[i] + "\n");
+                s.append(tableNames[i] + "\n");
                 s.append("{");
                 java.util.Set<String> keys = dictionary[i].keySet();
                 for (String k : keys) {
@@ -659,7 +706,7 @@ public class Tables {
                 }
                 s.append("}\n");
             } else if (i == indexConstantTable) {
-	        s.append(tableNames[i] + "\n");
+                s.append(tableNames[i] + "\n");
                 s.append("{");
                 java.util.Set<Integer> keys = dictionary[i].keySet();
                 for (Integer k : keys) {
@@ -669,7 +716,7 @@ public class Tables {
                 }
                 s.append("}\n");
             } else {
-	        s.append(tableNames[i] + " (" + dictionary[i].size() + ")\n");
+                s.append(tableNames[i] + " (" + dictionary[i].size() + ")\n");
                 s.append(dictionary[i] + "\n");
             }
         }
@@ -681,8 +728,8 @@ public class Tables {
             s.append(a);
             s.append(", ");
         }
-	s.append("]\n");
-	s.append("Search int variables = " + defaultSearchVariables + "\n");
+        s.append("]\n");
+        s.append("Search int variables = " + defaultSearchVariables + "\n");
         s.append("Search int variable arrays = [");
         for (int i = 0; i < defaultSearchArrays.size(); i++) {
             Var[] a = defaultSearchArrays.get(i);

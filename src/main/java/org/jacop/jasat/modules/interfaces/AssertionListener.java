@@ -37,16 +37,16 @@ import org.jacop.jasat.core.SolverComponent;
  * occur. Allows one to add modules to the Solver.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.5
- *
+ * @version 4.6
  */
 public interface AssertionListener extends SolverComponent {
 
     /**
      * Called when a variable is set
-     * @param literal  the literal that is set
-     * propagation, false otherwise
-     * @param level  the search level
+     *
+     * @param literal the literal that is set
+     *                propagation, false otherwise
+     * @param level   the search level
      */
     void onAssertion(int literal, int level);
 

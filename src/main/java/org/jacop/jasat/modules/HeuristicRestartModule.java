@@ -51,13 +51,14 @@ import org.jacop.jasat.modules.interfaces.ConflictListener;
  * If it fails, do the same thing with a slightly higher value of N.
  */
 
+
 /**
  * A module that indicates if a restart would be useful now.
  * Currently based on number of conflicts since last restart. Each restart makes
  * the next restart twice harder to reach.
- * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.5
  *
+ * @author Simon Cruanes and Radoslaw Szymanek
+ * @version 4.6
  */
 public final class HeuristicRestartModule implements ConflictListener, BackjumpListener {
 

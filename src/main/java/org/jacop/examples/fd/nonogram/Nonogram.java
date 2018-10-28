@@ -53,8 +53,7 @@ import java.util.regex.Pattern;
  * It solves a nonogram example problem, sometimes also called Paint by Numbers.
  *
  * @author Radoslaw Szymanek
- * @version 4.5
- *
+ * @version 4.6
  */
 
 public class Nonogram extends ExampleFD {
@@ -622,7 +621,7 @@ public class Nonogram extends ExampleFD {
 	{3}};
 	*/
   /*
-	public int[][]	row_rules = {
+  public int[][]	row_rules = {
 			  {3},
 			  {5},
 			  {3,1},

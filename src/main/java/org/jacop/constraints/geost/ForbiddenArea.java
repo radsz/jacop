@@ -29,18 +29,17 @@
  */
 package org.jacop.constraints.geost;
 
+import org.jacop.core.Var;
+
 import java.util.ArrayList;
 import java.util.Collection;
 
-import org.jacop.core.Var;
-
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
- * @version 4.5
- *
- * The simplest possible internal constraint: DBox defining a set of points
- * with which no object can overlap.
- *
+ * @version 4.6
+ *          <p>
+ *          The simplest possible internal constraint: DBox defining a set of points
+ *          with which no object can overlap.
  */
 public class ForbiddenArea extends InternalConstraint {
 
@@ -55,7 +54,7 @@ public class ForbiddenArea extends InternalConstraint {
      * It constructs an internal constraint forbidding an object to be
      * placed within this aread.
      *
-     * @param geost the geost constraint in which this internal constraint exists.
+     * @param geost  the geost constraint in which this internal constraint exists.
      * @param origin the origin of the forbidden area.
      * @param length the length of the forbidden area.
      */

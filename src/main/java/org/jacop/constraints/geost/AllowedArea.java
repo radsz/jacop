@@ -29,19 +29,18 @@
  */
 package org.jacop.constraints.geost;
 
+import org.jacop.core.IntDomain;
+import org.jacop.core.Var;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 
-import org.jacop.core.IntDomain;
-import org.jacop.core.Var;
-
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
- * @version 4.5
- *
- * Constraint that represents a domain in which objects need to be contained
- *
+ * @version 4.6
+ *          <p>
+ *          Constraint that represents a domain in which objects need to be contained
  */
 public class AllowedArea extends InternalConstraint {
 
@@ -56,7 +55,7 @@ public class AllowedArea extends InternalConstraint {
      * It constructs an internal Geost constraint that restricts an object
      * to be within an allowed area.
      *
-     * @param geost the geost constraint for which the internal constraint is being created.
+     * @param geost  the geost constraint for which the internal constraint is being created.
      * @param origin it specifies the origin of the area in which objects have to be placed.
      * @param length it specifies the length of the area in each dimension in which the objects have to be placed.
      */
@@ -98,7 +97,7 @@ public class AllowedArea extends InternalConstraint {
     @Override public DBox isFeasible(Geost.SweepDirection min, LexicographicalOrder order, GeostObject o, int currentShape, int[] c) {
 
 		/*
-		 * TODO improve this implementation, which is slightly inefficient when c will 
+     * TODO improve this implementation, which is slightly inefficient when c will
 		 * need to move next to the allowed area during a sweep. Indeed, this
 		 * will cause (at least) 2 steps to be used, but a box could be created
 		 * to skip it all in a single step.

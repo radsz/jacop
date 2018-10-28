@@ -33,12 +33,10 @@ package org.jacop.constraints.netflow.simplex;
 import org.jacop.constraints.netflow.ArcCompanion;
 
 /**
- *
  * A directed, residual arc in the graph.
  *
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.5
- *
+ * @version 4.6
  */
 
 public final class Arc {
@@ -49,16 +47,24 @@ public final class Arc {
      */
     public final Node head;
 
-    /** The cost of the Arc cost */
+    /**
+     * The cost of the Arc cost
+     */
     public int cost;
 
-    /** The unused (i.e. residual) capacity of the arc */
+    /**
+     * The unused (i.e. residual) capacity of the arc
+     */
     public int capacity;
 
-    /** The flow of an arc is the residual capacity of its sister arc. */
+    /**
+     * The flow of an arc is the residual capacity of its sister arc.
+     */
     public final Arc sister;
 
-    /** Index in lower arcs array */
+    /**
+     * Index in lower arcs array
+     */
     public int index;
 
     /**
@@ -67,7 +73,9 @@ public final class Arc {
      */
     public ArcCompanion companion;
 
-    /** whether this arc is a forward arc or a residual arc */
+    /**
+     * whether this arc is a forward arc or a residual arc
+     */
     public boolean forward;
 
     /**
@@ -88,9 +96,9 @@ public final class Arc {
      * subclass) a NetworkBuilder instead. A NetworkBuilder provides various
      * addArc methods to create arcs more conveniently.
      *
-     * @param tail tail of the arc
-     * @param head head of the arc
-     * @param cost cost-per-unit of the arc
+     * @param tail          tail of the arc
+     * @param head          head of the arc
+     * @param cost          cost-per-unit of the arc
      * @param lowerCapacity lower capacity of the arc
      * @param upperCapacity upper capacity of the arc
      */
@@ -159,7 +167,7 @@ public final class Arc {
     /**
      * Initializes an artificial arc
      *
-     * @param newCost new cost for the arc
+     * @param newCost     new cost for the arc
      * @param newCapacity new capacity for the arc
      */
     public void set(int newCost, int newCapacity) {
@@ -177,7 +185,9 @@ public final class Arc {
         sister.forward = true;
     }
 
-    /** Clears an artificial arc */
+    /**
+     * Clears an artificial arc
+     */
     public void clear() {
 
         cost = 0;
@@ -188,7 +198,6 @@ public final class Arc {
     }
 
     /**
-     *
      * @return cost associated with an arc.
      */
     public long longCost() {

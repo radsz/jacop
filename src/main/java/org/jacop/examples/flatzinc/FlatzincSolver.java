@@ -30,9 +30,11 @@
 
 package org.jacop.examples.flatzinc;
 
-import org.jacop.core.*;
-import org.jacop.search.*;
-import org.jacop.fz.*;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
+import org.jacop.fz.FlatzincLoader;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.SelectChoicePoint;
 
 
 /**
@@ -40,7 +42,7 @@ import org.jacop.fz.*;
  * It is used for test purpose only.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 public class FlatzincSolver {
 

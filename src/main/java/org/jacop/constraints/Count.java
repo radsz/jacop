@@ -34,6 +34,7 @@ import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.TimeStamp;
 
 import java.util.Arrays;
 import java.util.List;
@@ -46,7 +47,7 @@ import java.util.stream.Stream;
  * specified by variable idNumber.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class Count extends Constraint implements SatisfiedPresent {
@@ -67,6 +68,17 @@ public class Count extends Constraint implements SatisfiedPresent {
      * The value to which is any variable is equal to makes the constraint count it.
      */
     final public int value;
+
+    /*
+     * Defines first position of the variable that are not considered;
+     * either equal to value or missing the value in their domain.
+     */
+    private TimeStamp<Integer> position;
+
+    /*
+     * Defines number of variables equal to the value.
+     */
+    private TimeStamp<Integer> equal;
 
     /**
      * It constructs a Count constraint.
@@ -101,25 +113,45 @@ public class Count extends Constraint implements SatisfiedPresent {
         this(list.toArray(new IntVar[list.size()]), counter, value);
     }
 
+    // registers the constraint in the constraint store and
+    // initialize stateful variables
+    @Override public void impose(Store store) {
+
+        super.impose(store);
+
+        position = new TimeStamp<>(store, 0);
+        equal = new TimeStamp<>(store, 0);
+    }
+
     @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.ANY;
     }
 
-    @Override public void consistency(final Store store) {
+      @Override public void consistency(final Store store) {
 
-        int numberEq = 0, numberMayBe = 0;
-        for (IntVar v : list) {
+        int numberEq = equal.value();
+	int numberMayBe = 0;
+	int start = position.value();
+        for (int i = start; i < list.length; i++) {
+	    IntVar v = list[i];
             if (v.domain.contains(value))
-                if (v.singleton())
+                if (v.singleton()) {
                     numberEq++;
+		    swap(start, i);
+		    start++;
+		}
                 else
                     numberMayBe++;
-        }
-
+	    else { // does not have the value in its domain
+                swap(start, i);
+		start++;
+	    }
+	}
+	
         if (numberMayBe == counter.min() - numberEq) {
-            for (IntVar v : list) {
-                if (!v.singleton() && v.domain.contains(value))
-                    v.domain.in(store.level, v, value, value);
+            for (int i = start; i < list.length; i++) {
+		IntVar v = list[i];
+		v.domain.in(store.level, v, value, value);
             }
 
             numberEq += numberMayBe;
@@ -130,10 +162,10 @@ public class Count extends Constraint implements SatisfiedPresent {
             return;
 
         } else if (numberEq == counter.max()) {
-            for (IntVar v : list)
-                if (!v.singleton() && v.domain.contains(value))
-                    v.domain.inComplement(store.level, v, value);
-
+            for (int i = start; i < list.length; i++) {
+		IntVar v = list[i];
+		v.domain.inComplement(store.level, v, value);
+	    }
 
             numberMayBe = 0;
 
@@ -142,8 +174,19 @@ public class Count extends Constraint implements SatisfiedPresent {
             return;
         }
 
+	equal.update(numberEq);
+	position.update(start);
+	
         counter.domain.in(store.level, counter, numberEq, numberEq + numberMayBe);
 
+    }
+
+    private void swap(int i, int j) {
+        if (i != j) {
+            IntVar tmp = list[i];
+            list[i] = list[j];
+            list[j] = tmp;
+        }
     }
 
     @Override public boolean satisfied() {

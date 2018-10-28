@@ -31,15 +31,14 @@
 package org.jacop.examples.floats;
 
 /**
- *
- * It models rosenbrock for floating solver based on minizinc model 
+ * It models rosenbrock for floating solver based on minizinc model
  * by Håkan Kjellerstrand
- *
+ * <p>
  * Rosenbrock function (a nonlinear standard problem).
- *
+ * <p>
  * This is problem 3.1 from
  * http://www.cs.cas.cz/ics/reports/v798-00.ps
- *
+ * <p>
  * Also see:
  * http://mathworld.wolfram.com/RosenbrockFunction.html
  * http://en.wikipedia.org/wiki/Rosenbrock_function
@@ -48,20 +47,18 @@ package org.jacop.examples.floats;
  * It has a global minimum at (x,y) = (1,1) where f(x,y) = 0.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
- *
+ * @version 4.6
  */
 
 import org.jacop.core.Store;
-import org.jacop.search.DepthFirstSearch;
-
-import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.constraints.LinearFloat;
-import org.jacop.floats.constraints.PplusQeqR;
 import org.jacop.floats.constraints.PmulQeqR;
-import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.floats.constraints.PplusQeqR;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.Optimize;
+import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.search.DepthFirstSearch;
 
 public class Rosenbrock {
 
@@ -97,11 +94,11 @@ public class Rosenbrock {
         store.impose(new PplusQeqR(x1, t2, one));   // 1 - x1
         store.impose(new PmulQeqR(t1, t1, t3));     // (x2 - x1*x1)*(x2 - x1*x1)
         store.impose(new PmulQeqR(t2, t2, t4));     // (1 - x1)*(1 -x1)
-        store.impose(new LinearFloat(store, new FloatVar[] {z, t3, t4}, new double[] {-1.0, 100.0, 1.0}, "==", 0.0));
+        store.impose(new LinearFloat(new FloatVar[] {z, t3, t4}, new double[] {-1.0, 100.0, 1.0}, "==", 0.0));
 
         System.out.println("\bFloatVar store size: " + store.size() + "\nNumber of constraints: " + store.numberConstraints());
   /*
-	DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
+  DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
 	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, new FloatVar[] {x1, x2, z}, new SmallestDomainFloat<FloatVar>());
 	label.setAssignSolution(true);
 	// s.leftFirst = false;
@@ -117,14 +114,14 @@ public class Rosenbrock {
         Optimize<FloatVar> min = new Optimize<FloatVar>(store, label, s, z);
         boolean result = min.minimize();
 
-	if (result) {
-	  System.out.println("\nPrecision = " + FloatDomain.precision());
+        if (result) {
+            System.out.println("\nPrecision = " + FloatDomain.precision());
 
-	  T2 = System.currentTimeMillis();
-	  T = T2 - T1;
+            T2 = System.currentTimeMillis();
+            T = T2 - T1;
 
-	  System.out.println("\n\t*** Execution time = " + T + " ms");
-	}
+            System.out.println("\n\t*** Execution time = " + T + " ms");
+        }
     }
 
     /**

@@ -38,7 +38,7 @@ import org.jacop.core.IntervalDomain;
  * Represents tasks for cumulative constraint
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 class Task {
@@ -118,7 +118,7 @@ class Task {
     }
 
     boolean nonZeroTask() {
-	return dur.min() > 0 && res.min() > 0;
+        return dur.min() > 0 && res.min() > 0;
     }
 
     @Override public String toString() {

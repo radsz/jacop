@@ -46,7 +46,7 @@ import java.util.stream.Stream;
  * algorithm.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class CumulativeBasic extends Constraint {
@@ -55,9 +55,9 @@ public class CumulativeBasic extends Constraint {
 
     private static final boolean debug = false, debugNarr = false;
 
-    private Comparator<Event> eventComparator = ( Event o1, Event o2 ) -> {
-            int dateDiff = o1.date() - o2.date();
-            return (dateDiff == 0) ? (o1.type() - o2.type()) : dateDiff;
+    private Comparator<Event> eventComparator = (Event o1, Event o2) -> {
+        int dateDiff = o1.date() - o2.date();
+        return (dateDiff == 0) ? (o1.type() - o2.type()) : dateDiff;
     };
 
     /**
@@ -108,7 +108,7 @@ public class CumulativeBasic extends Constraint {
         this.taskNormal = new TaskNormalView[starts.length];
 
         for (int i = 0; i < starts.length; i++) {
-            taskNormal[i] = new TaskNormalView(new Task(starts[i], durations[i], resources[i]));
+            taskNormal[i] = new TaskNormalView(starts[i], durations[i], resources[i]);
             taskNormal[i].index = i;
             if (durations[i].min() == 0 || resources[i].min() == 0)
                 possibleZeroTasks = true;
@@ -232,13 +232,6 @@ public class CumulativeBasic extends Constraint {
 
         int N = j;
         Arrays.sort(es, 0, N, eventComparator);
-
-        Arrays.sort(es, 0, N, (o1, o2) -> {
-            int dateDiff = o1.date() - o2.date();
-            return (dateDiff == 0) ? (o1.type() - o2.type()) : dateDiff;
-        });
-
-
 
         if (debugNarr) {
             System.out.println(Arrays.asList(es));
@@ -374,8 +367,8 @@ public class CumulativeBasic extends Constraint {
                             // task ends and we remove forbidden area
 
                             if (debugNarr)
-                                System.out.print(
-                                    ">>> CumulativeBasic Profile 2. Narrowed " + t.start + " inMax " + (startExcluded[ti] - 1));
+                                System.out
+                                    .print(">>> CumulativeBasic Profile 2. Narrowed " + t.start + " inMax " + (startExcluded[ti] - 1));
 
                             t.start.domain.inMax(store.level, t.start, startExcluded[ti] - 1);
 

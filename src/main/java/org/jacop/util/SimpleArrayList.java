@@ -38,9 +38,9 @@ import java.util.Collection;
  * Different implementation of an ArrayList data structures. This version is
  * tailored for JaCoP. Use with care, check when it uses == instead of equals().
  *
- * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
  * @param <V> the type which is being stored by this class.
+ * @author Radoslaw Szymanek and Krzysztof Kuchcinski
+ * @version 4.6
  */
 
 public class SimpleArrayList<V> extends AbstractList<V> {
@@ -53,7 +53,6 @@ public class SimpleArrayList<V> extends AbstractList<V> {
 
     /**
      * The size of the ArrayList (the number of elements it contains).
-     *
      */
     private int size;
 
@@ -70,10 +69,8 @@ public class SimpleArrayList<V> extends AbstractList<V> {
      * <tt>ArrayList</tt> instance has an initial capacity of 110% the size of
      * the specified collection.
      *
-     * @param c
-     *            the collection whose elements are to be placed into this list.
-     * @throws NullPointerException
-     *             if the specified collection is null.
+     * @param c the collection whose elements are to be placed into this list.
+     * @throws NullPointerException if the specified collection is null.
      */
     @SuppressWarnings("unchecked") public SimpleArrayList(Collection<? extends V> c) {
         size = c.size();
@@ -96,7 +93,7 @@ public class SimpleArrayList<V> extends AbstractList<V> {
     /**
      * AbstractList defines hashCode so that it depends on the objects included.
      * This makes it costly (linear in the number of elements).
-     *
+     * <p>
      * Taking the hash of elementData will make it faster
      * TODO make sure this is what we want
      */
@@ -107,7 +104,7 @@ public class SimpleArrayList<V> extends AbstractList<V> {
     /**
      * AbstractList defines equals so that it depends on the objects included.
      * This makes it costly (linear in the number of elements).
-     *
+     * <p>
      * Equality of references makes it faster
      * TODO make sure this is what we want
      */
@@ -135,7 +132,7 @@ public class SimpleArrayList<V> extends AbstractList<V> {
      * Shifts the element currently at that position (if any) and any subsequent
      * elements to the right (adds one to their indices).
      *
-     * @param index index at which the specified element is to be inserted.
+     * @param index   index at which the specified element is to be inserted.
      * @param element element to be inserted.
      */
     public void add(int index, V element) {
@@ -189,10 +186,9 @@ public class SimpleArrayList<V> extends AbstractList<V> {
     /**
      * Returns <tt>true</tt> if this list contains the specified element.
      *
-     * @param elem
-     *            element whose presence in this list is to be tested.
+     * @param elem element whose presence in this list is to be tested.
      * @return <code>true</code> if the specified element is present;
-     *         <code>false</code> otherwise.
+     * <code>false</code> otherwise.
      */
     public boolean contains(Object elem) {
         return indexOf(elem) >= 0;
@@ -203,8 +199,7 @@ public class SimpleArrayList<V> extends AbstractList<V> {
      * necessary, to ensure that it can hold at least the number of elements
      * specified by the minimum capacity argument.
      *
-     * @param minCapacity
-     *            the desired minimum capacity.
+     * @param minCapacity the desired minimum capacity.
      */
     @SuppressWarnings("unchecked") public void ensureCapacity(int minCapacity) {
         int oldCapacity = elementData.length;
@@ -252,6 +247,7 @@ public class SimpleArrayList<V> extends AbstractList<V> {
 
     /**
      * It inserts the element at the end of the list
+     *
      * @param element the added element.
      */
     public void push(V element) {
@@ -264,7 +260,7 @@ public class SimpleArrayList<V> extends AbstractList<V> {
      *
      * @param elem an object.
      * @return the index of the first occurrence of the argument in this list;
-     *         returns value -1 if the object is not found.
+     * returns value -1 if the object is not found.
      */
     public int indexOf(Object elem) {
         if (elem == null) {
@@ -283,10 +279,10 @@ public class SimpleArrayList<V> extends AbstractList<V> {
      * Searches for the first occurrence of the given argument, testing for
      * equality using the == method.
      *
-     * @param elem an object.
+     * @param elem         an object.
      * @param lastPosition last index to which it should check.
      * @return the index of the first occurrence of the argument in this list;
-     *         returns value -1 if the object is not found.
+     * returns value -1 if the object is not found.
      */
     public int indexOf(Object elem, int lastPosition) {
 
@@ -310,10 +306,9 @@ public class SimpleArrayList<V> extends AbstractList<V> {
      * Returns the index of the last occurrence of the specified object in this
      * list.
      *
-     * @param elem
-     *            the desired element.
+     * @param elem the desired element.
      * @return the index of the last occurrence of the specified object in this
-     *         list; returns -1 if the object is not found.
+     * list; returns -1 if the object is not found.
      */
     public int lastIndexOf(Object elem) {
         if (elem == null) {
@@ -380,10 +375,8 @@ public class SimpleArrayList<V> extends AbstractList<V> {
      * Replaces the element at the specified position in this list with the
      * specified element.
      *
-     * @param index
-     *            index of element to replace.
-     * @param element
-     *            element to be stored at the specified position.
+     * @param index   index of element to replace.
+     * @param element element to be stored at the specified position.
      * @return the element previously at the specified position.
      */
     public V set(int index, V element) {
@@ -397,10 +390,8 @@ public class SimpleArrayList<V> extends AbstractList<V> {
      * Replaces the element at the specified position in this list with the
      * specified element.
      *
-     * @param index
-     *            index of element to replace.
-     * @param element
-     *            element to be stored at the specified position.
+     * @param index   index of element to replace.
+     * @param element element to be stored at the specified position.
      */
     public void setElementAt(V element, int index) {
         elementData[index] = element;
@@ -420,7 +411,7 @@ public class SimpleArrayList<V> extends AbstractList<V> {
      * correct order.
      *
      * @return an array containing all of the elements in this list in the
-     *         correct order.
+     * correct order.
      */
     public Object[] toArray() {
         Object[] result = new Object[size];
@@ -435,22 +426,19 @@ public class SimpleArrayList<V> extends AbstractList<V> {
      * therein. Otherwise, a new array is allocated with the runtime type of the
      * specified array and the size of this list.
      * <p>
-     *
      * If the list fits in the specified array with room to spare (i.e., the
      * array has more elements than the list), the element in the array
      * immediately following the end of the collection is set to <tt>null</tt>.
      * This is useful in determining the length of the list <i>only</i> if the
      * caller knows that the list does not contain any <tt>null</tt> elements.
-     * @param <T> the type which is being stored by a SimpleArrayList.
      *
-     * @param a
-     *            the array into which the elements of the list are to be
+     * @param <T> the type which is being stored by a SimpleArrayList.
+     * @param a   the array into which the elements of the list are to be
      *            stored, if it is big enough; otherwise, a new array of the
      *            same runtime type is allocated for this purpose.
      * @return an array containing the elements of the list.
-     * @throws ArrayStoreException
-     *             if the runtime type of a is not a supertype of the runtime
-     *             type of every element in this list.
+     * @throws ArrayStoreException if the runtime type of a is not a supertype of the runtime
+     *                             type of every element in this list.
      */
     @SuppressWarnings("unchecked") public <T> T[] toArray(T[] a) {
         if (a.length < size)

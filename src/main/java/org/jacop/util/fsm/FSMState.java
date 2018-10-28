@@ -35,7 +35,7 @@ import java.util.Set;
 
 /**
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class FSMState {
@@ -54,7 +54,7 @@ public class FSMState {
      * It constructs a FSM state.
      *
      * @param transitions it specifies transition
-     * @param id state id
+     * @param id          state id
      */
     public FSMState(HashSet<FSMTransition> transitions, int id) {
         this.transitions = transitions;
@@ -72,6 +72,7 @@ public class FSMState {
 
     /**
      * It creates a state with an id as the id specified by a supplied state.
+     *
      * @param a state from which id is taken while creating this state.
      */
     public FSMState(FSMState a) {
@@ -82,6 +83,7 @@ public class FSMState {
     /**
      * Performing deep clone unless this state has already a state with
      * the same id in the array of states.
+     *
      * @param states it contains the states which do not need to be created, only reused.
      * @return a deep clone of the current state.
      */
@@ -105,6 +107,7 @@ public class FSMState {
     /**
      * It adds transition to the list of transitions from
      * this state.
+     *
      * @param transition the transition being added.
      */
     public void addTransition(FSMTransition transition) {

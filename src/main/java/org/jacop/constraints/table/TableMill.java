@@ -30,16 +30,17 @@
 
 package org.jacop.constraints.table;
 
-import org.jacop.core.IntVar;
-import java.util.ArrayList;
-import org.jacop.core.ValueEnumeration;
 import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.ValueEnumeration;
+
+import java.util.ArrayList;
 
 /**
  * TableMill generates tables for different constraint to be used in Table constraint
  *
  * @author Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class TableMill {
@@ -48,56 +49,55 @@ public class TableMill {
 
     static public int[][] linear(IntVar[] x, int[] w, int b) {
 
-	ArrayList<int[]> support = new ArrayList<int[]>();
-	int[] assignment = new int[x.length];
+        ArrayList<int[]> support = new ArrayList<int[]>();
+        int[] assignment = new int[x.length];
 
-	ArrayList<int[]> table =  linearSupport(x, w, b, 0, 0, support, assignment);
+        ArrayList<int[]> table = linearSupport(x, w, b, 0, 0, support, assignment);
 
-	int[][] t = null;
-	if (table != null)
-	    t = table.toArray(new int[table.size()][x.length]);
-	
-	return t;
+        int[][] t = null;
+        if (table != null)
+            t = table.toArray(new int[table.size()][x.length]);
+
+        return t;
     }
 
     static ArrayList<int[]> linearSupport(IntVar[] x, int[] w, int b, int sum, int index, ArrayList<int[]> support, int[] assignment) {
-	
-	if (index == x.length) {
-	    if (sum == b) {
-		int[] a = new int[assignment.length];
-		System.arraycopy(assignment, 0, a, 0, assignment.length);
-		support.add(a);
-		if (support.size() > tableMaxSize)
-		    return null;
-	    }
-	}
-	else
-	    for (ValueEnumeration val = x[index].domain.valueEnumeration(); val.hasMoreElements(); ) {
-		int element = val.nextElement();
 
-		int newSum = sum + element * w[index];
+        if (index == x.length) {
+            if (sum == b) {
+                int[] a = new int[assignment.length];
+                System.arraycopy(assignment, 0, a, 0, assignment.length);
+                support.add(a);
+                if (support.size() > tableMaxSize)
+                    return null;
+            }
+        } else
+            for (ValueEnumeration val = x[index].domain.valueEnumeration(); val.hasMoreElements(); ) {
+                int element = val.nextElement();
 
-		assignment[index] = element;
-		linearSupport(x, w, b, newSum, index+1, support, assignment);
-	}
-	return support;
+                int newSum = sum + element * w[index];
+
+                assignment[index] = element;
+                linearSupport(x, w, b, newSum, index + 1, support, assignment);
+            }
+        return support;
     }
 
     static public int[][] elementSupport(IntVar index, int[] list, IntVar value, int offset) {
 
-	ArrayList<int[]> support = new ArrayList<int[]>();
-	IntDomain valDom = value.domain;
-	for (ValueEnumeration val = index.domain.valueEnumeration(); val.hasMoreElements(); ) {
-	    int e = val.nextElement();
-	    int listEl = list[e-1-offset];
-	    if (valDom.contains(listEl))
-		support.add(new int[] {e, listEl});
-		if (support.size() > tableMaxSize)
-		    return null;
-	}
+        ArrayList<int[]> support = new ArrayList<int[]>();
+        IntDomain valDom = value.domain;
+        for (ValueEnumeration val = index.domain.valueEnumeration(); val.hasMoreElements(); ) {
+            int e = val.nextElement();
+            int listEl = list[e - 1 - offset];
+            if (valDom.contains(listEl))
+                support.add(new int[] {e, listEl});
+            if (support.size() > tableMaxSize)
+                return null;
+        }
 
-	int[][] t = support.toArray(new int[support.size()][2]);	
-	return t;
-	
+        int[][] t = support.toArray(new int[support.size()][2]);
+        return t;
+
     }
 }

@@ -37,9 +37,9 @@ import org.jacop.core.Var;
  * Defines functionality of limited discrepancy search. Plugin in this object to
  * search to change your depth first search into limited discrepancy search.
  *
- * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
  * @param <T> type of variable being used in the search.
+ * @author Radoslaw Szymanek and Krzysztof Kuchcinski
+ * @version 4.6
  */
 
 public class LDS<T extends Var> implements ExitChildListener<T> {
@@ -60,6 +60,7 @@ public class LDS<T extends Var> implements ExitChildListener<T> {
      * The search will not be allowed to deviate more than maxDiscrepancies
      * times from the heuristic (e.g. variable and value ordering) in the
      * search.
+     *
      * @param maxDiscrepancies maximal number of discrepancies allowed.
      */
 

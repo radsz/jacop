@@ -38,9 +38,9 @@ import org.jacop.core.IntervalDomain;
  * IndomainMiddle - implements enumeration method based on the selection of the
  * middle value in the domain of FD variable and then right and left values.
  *
- * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
  * @param <T> type of variable being used in search.
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 4.6
  */
 
 public class IndomainMiddle<T extends IntVar> implements Indomain<T> {

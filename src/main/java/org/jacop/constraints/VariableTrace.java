@@ -31,10 +31,11 @@
 
 package org.jacop.constraints;
 
+import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.UsesQueueVariable;
-import org.jacop.core.Var;
-import org.jacop.core.Store;
 import org.jacop.core.IntDomain;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -43,10 +44,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  * VariableTrace is a daemon that prints information on variables whenever they are changed.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
-public class VariableTrace extends Constraint implements UsesQueueVariable {
+public class VariableTrace extends Constraint implements UsesQueueVariable, RemoveLevelLate {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -55,6 +56,7 @@ public class VariableTrace extends Constraint implements UsesQueueVariable {
 
     /**
      * It constructs trace daemon for variable v
+     *
      * @param v variable to be traced
      */
     public VariableTrace(Var v) {
@@ -63,6 +65,7 @@ public class VariableTrace extends Constraint implements UsesQueueVariable {
 
     /**
      * It constructs trace daemon for variables vs
+     *
      * @param vs variables to be traced
      */
     public VariableTrace(Var[] vs) {
@@ -79,6 +82,7 @@ public class VariableTrace extends Constraint implements UsesQueueVariable {
 
     /**
      * It constructs trace daemon for variables vs
+     *
      * @param vs variables to be traced
      */
     public VariableTrace(List<Var> vs) {

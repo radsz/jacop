@@ -41,8 +41,7 @@ import org.jacop.jasat.core.SolverComponent;
  * about which clauses appear in conflicts or propagations
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.5
- *
+ * @version 4.6
  */
 public interface ForgetListener extends SolverComponent {
 

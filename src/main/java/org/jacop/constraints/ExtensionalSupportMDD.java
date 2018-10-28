@@ -30,8 +30,6 @@
 
 package org.jacop.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -41,22 +39,24 @@ import org.jacop.util.IndexDomainView;
 import org.jacop.util.MDD;
 import org.jacop.util.SparseSet;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 
 /**
  * Extensional constraint assures that one of the tuples is enforced in the
  * relation.
- *
+ * <p>
  * This implementation uses technique developed/improved by Roland Yap and his student.
  * Paper presented at CP2008. We would like to thank Roland for answering our detailed
  * questions about the implementation. It is a slightly improved version to what was
  * presented at the conference.
- *
+ * <p>
  * This constraint uses a lot of memory, despite using an MDD. However, if the constraint
  * is imposed multiple times (50+) its overall usage of memory maybe advantageous. Always
  * test against STR version.
  *
  * @author Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class ExtensionalSupportMDD extends Constraint implements SatisfiedPresent {
@@ -83,11 +83,12 @@ public class ExtensionalSupportMDD extends Constraint implements SatisfiedPresen
 
     /**
      * It creates an extensional constraint.
+     *
      * @param diagram multiple-valued decision diagram describing allowed tuples.
      */
     public ExtensionalSupportMDD(MDD diagram) {
 
-        checkInputForNullness("diagram", new Object[] { diagram });
+        checkInputForNullness("diagram", new Object[] {diagram});
         checkInputForNullness("diagram.vars", diagram.vars);
         checkInputForNullness("diagram.views", diagram.views);
 
@@ -109,7 +110,7 @@ public class ExtensionalSupportMDD extends Constraint implements SatisfiedPresen
      * Changing parameters after constructing the constraint and
      * before its imposition will change the constraint too.
      *
-     * @param vars the variables in the scope of the constraint.
+     * @param vars  the variables in the scope of the constraint.
      * @param table list of tuples which are allowed.
      */
     public ExtensionalSupportMDD(IntVar[] vars, int[][] table) {
@@ -155,8 +156,9 @@ public class ExtensionalSupportMDD extends Constraint implements SatisfiedPresen
 
     /**
      * It checks if the node at a given level of MDD has a support.
+     *
      * @param nodeId the position of the node in the MDD.
-     * @param level number of variable associated with the node.
+     * @param level  number of variable associated with the node.
      * @return true if node is supported by current domains of variables.
      */
     public boolean seekSupport(int nodeId, int level) {

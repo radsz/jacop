@@ -30,13 +30,16 @@
 
 package org.jacop.constraints;
 
+import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
 import org.jacop.util.SimpleHashSet;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
@@ -52,10 +55,10 @@ import java.util.stream.Stream;
  * Artificial Intelligence 170 (2006) 803–834.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
-public class LexOrder extends Constraint implements UsesQueueVariable, SatisfiedPresent {
+public class LexOrder extends Constraint implements UsesQueueVariable, SatisfiedPresent, RemoveLevelLate {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -109,7 +112,7 @@ public class LexOrder extends Constraint implements UsesQueueVariable, Satisfied
 
     public LexOrder(IntVar[] x, IntVar[] y, boolean lt) {
 
-        checkInputForNullness(new String[]{"x", "y"}, x, y);
+        checkInputForNullness(new String[] {"x", "y"}, x, y);
 
         queueIndex = 2;
         numberId = idNumber.incrementAndGet();

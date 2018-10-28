@@ -30,16 +30,16 @@
 
 package org.jacop.constraints;
 
+import org.jacop.core.IntVar;
+
 import java.util.ArrayList;
 import java.util.List;
-
-import org.jacop.core.IntVar;
 
 /**
  * Defines a list of exclusive items.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 class ExclusiveList extends ArrayList<ExclusiveItem> {

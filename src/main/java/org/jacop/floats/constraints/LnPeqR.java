@@ -34,17 +34,18 @@ import org.jacop.floats.core.FloatVar;
 
 /**
  * Constraints Ln(P) #= Q for P and Q floats
- *
+ * <p>
  * Domain consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class LnPeqR extends ExpPeqR {
 
     /**
      * It constructs constraint Ln(P) = Q.
+     *
      * @param p variable p.
      * @param q variable q.
      */

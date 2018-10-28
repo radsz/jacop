@@ -35,9 +35,9 @@ import org.jacop.core.Var;
 /**
  * Defines a MostConstrainedDynamic comparator for Variables.
  *
- * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
  * @param <T> type of variable being compared.
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 4.6
  */
 
 public class MostConstrainedDynamic<T extends Var> implements ComparatorVariable<T> {

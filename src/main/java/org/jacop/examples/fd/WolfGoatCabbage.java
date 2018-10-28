@@ -31,29 +31,24 @@
 package org.jacop.examples.fd;
 
 
-import java.util.ArrayList;
-
-import org.jacop.constraints.ExtensionalSupportVA;
-import org.jacop.constraints.Reified;
-import org.jacop.constraints.SumInt;
-import org.jacop.constraints.XeqC;
-import org.jacop.constraints.XneqY;
+import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.util.ArrayList;
+
 /**
- *
- * A simple logic problem of transporting wolf, goat, and cabbage over the river.  
+ * A simple logic problem of transporting wolf, goat, and cabbage over the river.
  *
  * @author Radoslaw Szymanek
- * @version 4.5
- *
- * We need to transfer the cabbage, the goat and the wolf from one bank of the river to 
- * the other bank. But there is only one seat available on his boat !
- *
- * Furthermore, if the goat and the cabbage stay together as we are leaving on a boat, 
- * the goat will eat the cabbage. And if the wolf and the goat stay together as we are leaving, 
- * the wolf will eat the goat !
+ * @version 4.6
+ *          <p>
+ *          We need to transfer the cabbage, the goat and the wolf from one bank of the river to
+ *          the other bank. But there is only one seat available on his boat !
+ *          <p>
+ *          Furthermore, if the goat and the cabbage stay together as we are leaving on a boat,
+ *          the goat will eat the cabbage. And if the wolf and the goat stay together as we are leaving,
+ *          the wolf will eat the goat !
  */
 
 public class WolfGoatCabbage extends ExampleFD {
@@ -135,7 +130,7 @@ public class WolfGoatCabbage extends ExampleFD {
             IntVar[] b = {bw[i - 1], bg[i - 1], bc[i - 1]};
 
             IntVar numberOnBoat = new IntVar(store, "numberOnBoatInMove" + i, 0, 1);
-            store.impose(new SumInt(store, b, "==", numberOnBoat));
+            store.impose(new SumBool(b, "==", numberOnBoat));
 
             store.impose(new XneqY(wolf[i], goat[i]));
             store.impose(new XneqY(goat[i], cabbage[i]));

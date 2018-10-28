@@ -32,20 +32,17 @@ package org.jacop.floats.search;
 
 import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
-
 import org.jacop.search.ComparatorVariable;
 
 /**
- *
  * Defines a WeightedDegreeFloat comparator for Variables. Every time a constraint
  * failure is encountered all variables within the scope of that constraints
- * have increased weight. The comparator will choose the variable with the 
+ * have increased weight. The comparator will choose the variable with the
  * highest weight divided by its size.
  *
- * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
  * @param <T> type of variable being compared.
- *
+ * @author Radoslaw Szymanek and Krzysztof Kuchcinski
+ * @version 4.6
  */
 
 public class WeightedDegreeFloat<T extends Var> implements ComparatorVariable<T> {

@@ -30,21 +30,18 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
-import org.jacop.core.Store;
-import org.jacop.core.Var;
-
 import org.jacop.constraints.PrimitiveConstraint;
-
-import org.jacop.floats.core.FloatVar;
+import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraints P {@literal >=} C for floats
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class PgteqC extends PrimitiveConstraint {
@@ -63,12 +60,13 @@ public class PgteqC extends PrimitiveConstraint {
 
     /**
      * It constructs constraint P {@literal >=} C.
+     *
      * @param p variable p.
      * @param c constant c.
      */
     public PgteqC(FloatVar p, double c) {
 
-        checkInputForNullness("p", new Object[]{p});
+        checkInputForNullness("p", new Object[] {p});
 
         numberId = idNumber.incrementAndGet();
 

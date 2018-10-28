@@ -30,8 +30,7 @@
 
 package org.jacop.constraints;
 
-import org.jacop.api.Stateful;
-import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.*;
 import org.jacop.core.Store;
 import org.jacop.core.SwitchesPruningLogging;
 import org.jacop.core.Var;
@@ -48,7 +47,7 @@ import static java.util.stream.Collectors.joining;
  * notSatisfiability, enforce consistency.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public abstract class Constraint extends DecomposedConstraint<Constraint> {
@@ -71,8 +70,6 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     protected Constraint(Set<? extends Var> set) {
         setScope(set);
     }
-
-
 
     public boolean trace = SwitchesPruningLogging.traceConstraint;
 
@@ -116,23 +113,11 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
         setScope(set.toArray(new Var[set.size()]));
     }
 
-
     public Set<PrimitiveConstraint> constraintScope;
 
     protected void setConstraintScope(PrimitiveConstraint... primitiveConstraints) {
         this.constraintScope = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(primitiveConstraints)));
     }
-
-    /**
-     * This function is called in case of the backtrack. It is called
-     * after all timestamps, variables, mutablevariables have reverted
-     * to their values *after* removing the level.
-     *
-     * @param level the level which is being removed.
-     */
-    public void removeLevelLate(int level) {
-    }
-
 
     /**
      * It is a (most probably incomplete) consistency function which removes the
@@ -174,7 +159,6 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
 
     }
 
-
     public abstract int getDefaultConsistencyPruningEvent();
 
     /**
@@ -204,9 +188,30 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
         }
         if (this instanceof UsesQueueVariable)
             arguments().stream().forEach(i -> queueVariable(store.level, i));
-        if (this instanceof Stateful)
-            store.registerRemoveLevelListener((Stateful) this);
 
+        if (constraintScope != null) {
+            Set<RemoveLevelLate> fixpoint = computeFixpoint(this, new HashSet<>());
+            fixpoint.forEach(store::registerRemoveLevelLateListener);
+        }
+
+        if (this instanceof RemoveLevelLate)
+            store.registerRemoveLevelLateListener((RemoveLevelLate)this);
+
+        if (this instanceof Stateful) {
+            Stateful c = (Stateful) this;
+            if (c.isStateful()) {
+                store.registerRemoveLevelListener(c);
+            }
+        }
+
+    }
+
+    private Set<RemoveLevelLate> computeFixpoint(Constraint c, Set<RemoveLevelLate> fixpoint) {
+        if (c instanceof RemoveLevelLate)
+            fixpoint.add((RemoveLevelLate)c);
+        if (c.constraintScope != null)
+            c.constraintScope.forEach( ic -> computeFixpoint(ic, fixpoint));
+        return fixpoint;
     }
 
     /**
@@ -284,6 +289,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
 
     /**
      * It checks if provided variables are grounded (singletons).
+     *
      * @param vars variables to be checked if they are grounded.
      * @return true if all variables in constraint scope are singletons, false otherwise.
      */
@@ -345,14 +351,11 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     /**
      * It increases the weight of the variables in the constraint scope.
      */
-
     public void increaseWeight() {
+
         if (increaseWeight)
-            arguments().stream().forEach(i -> increaseWeight());
+            arguments().forEach(v -> v.weight++);
     }
-
-    ;
-
 
     /**
      * It allows to customize the event for a given variable which
@@ -364,7 +367,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     public void setConsistencyPruningEvent(final Var var, final int pruningEvent) {
 
         if (consistencyPruningEvents == null)
-            consistencyPruningEvents = new Hashtable<Var, Integer>();
+            consistencyPruningEvents = new Hashtable<>();
         consistencyPruningEvents.put(var, pruningEvent);
 
     }
@@ -460,13 +463,13 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
             throw new ArithmeticException("Overflow occurred " + f);
         }
     }
-    
+
     int long2int(long value) {
-	if (value > (long)Integer.MAX_VALUE)
-	    return Integer.MAX_VALUE;
-	else if (value < (long)Integer.MIN_VALUE)
-	    return Integer.MIN_VALUE;
-	else
-	    return (int)value;
+        if (value > (long) Integer.MAX_VALUE)
+            return Integer.MAX_VALUE;
+        else if (value < (long) Integer.MIN_VALUE)
+            return Integer.MIN_VALUE;
+        else
+            return (int) value;
     }
 }

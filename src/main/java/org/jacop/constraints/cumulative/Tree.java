@@ -35,7 +35,7 @@ package org.jacop.constraints.cumulative;
  * Implements ThetaLambdaTree and operations on this tree for Cumulative constraint
  *
  * @author Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 
@@ -105,16 +105,16 @@ abstract class Tree {
     }
 
     long plus(long x, long y) {
-        if (x == Long.MIN_VALUE || y == Long.MIN_VALUE)
+        if (x == Long.MIN_VALUE)
             return Long.MIN_VALUE;
         else
             return x + y;
     }
 
     int plus(int x, int y) {
-        if (x == Integer.MIN_VALUE || y == Integer.MIN_VALUE)
+        if (x == Integer.MIN_VALUE) {
             return Integer.MIN_VALUE;
-        else
+        } else
             return x + y;
     }
 

@@ -44,7 +44,7 @@ import java.util.Hashtable;
  * arguments to constraints Not, And, Or, etc.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public abstract class PrimitiveConstraint extends Constraint implements StoreAware, SatisfiedPresent {
@@ -71,12 +71,11 @@ public abstract class PrimitiveConstraint extends Constraint implements StoreAwa
                 return possibleEvent;
         }
 
-        if (! constraintScope.isEmpty()) {
+        if (!constraintScope.isEmpty()) {
 
-            int eventAcross = constraintScope.stream()
-                .filter( i -> i.arguments().contains(var))
-                .mapToInt( i -> i.getNestedPruningEvent(var, false))
-                .max().orElseGet(() -> getDefaultNotConsistencyPruningEvent());
+            int eventAcross =
+                constraintScope.stream().filter(i -> i.arguments().contains(var)).mapToInt(i -> i.getNestedPruningEvent(var, false)).max()
+                    .orElseGet(this::getDefaultNotConsistencyPruningEvent);
 
             if (eventAcross < getDefaultNotConsistencyPruningEvent())
                 eventAcross = getDefaultNotConsistencyPruningEvent();
@@ -87,19 +86,19 @@ public abstract class PrimitiveConstraint extends Constraint implements StoreAwa
         return getDefaultNotConsistencyPruningEvent();
     }
 
-    @Override
-    public void impose(Store store) {
+    @Override public void impose(Store store) {
 
         super.impose(store);
         include(store);
 
     }
+
     /**
      * It retrieves the pruning event for which any composed constraint which
      * uses this constraint should be evaluated. This events are the ones which
      * can change satisfied status?
      *
-     * @param var for which pruning event is retrieved
+     * @param var  for which pruning event is retrieved
      * @param mode decides if pruning event for consistency or nonconsistency is required.
      * @return pruning event associated with the given variable for a given consistency mode.
      */
@@ -113,12 +112,11 @@ public abstract class PrimitiveConstraint extends Constraint implements StoreAwa
                     return possibleEvent;
             }
 
-            if (constraintScope != null && ! constraintScope.isEmpty()) {
+            if (constraintScope != null && !constraintScope.isEmpty()) {
 
-                int eventAcross = constraintScope.stream()
-                    .filter( i -> i.arguments().contains(var))
-                    .mapToInt( i -> i.getNestedPruningEvent(var, true))
-                    .max().orElseGet(() -> Integer.MIN_VALUE);
+                int eventAcross =
+                    constraintScope.stream().filter(i -> i.arguments().contains(var)).mapToInt(i -> i.getNestedPruningEvent(var, true))
+                        .max().orElseGet(() -> Integer.MIN_VALUE);
 
                 if (eventAcross != Integer.MIN_VALUE)
                     return eventAcross;
@@ -134,14 +132,13 @@ public abstract class PrimitiveConstraint extends Constraint implements StoreAwa
                 if (possibleEvent != null)
                     return possibleEvent;
             }
-            if (constraintScope != null && ! constraintScope.isEmpty()) {
+            if (constraintScope != null && !constraintScope.isEmpty()) {
 
-                int eventAcross = constraintScope.stream()
-                    .filter( i -> i.arguments().contains(var))
-                    .mapToInt( i -> i.getNestedPruningEvent(var, false))
-                    .max().orElseGet(() -> Integer.MIN_VALUE);
+                int eventAcross =
+                    constraintScope.stream().filter(i -> i.arguments().contains(var)).mapToInt(i -> i.getNestedPruningEvent(var, false))
+                        .max().orElse(Integer.MIN_VALUE);
 
-                if (eventAcross  != Integer.MIN_VALUE)
+                if (eventAcross != Integer.MIN_VALUE)
                     return eventAcross;
 
             }
@@ -162,12 +159,14 @@ public abstract class PrimitiveConstraint extends Constraint implements StoreAwa
     /**
      * It makes pruning in such a way that constraint is notConsistent. It
      * removes values which always belong to a solution.
+     *
      * @param store the constraint store in which context the notConsistency technique is evaluated.
      */
     public abstract void notConsistency(Store store);
 
     /**
      * It checks if constraint would be always not satisfied.
+     *
      * @return true if constraint must be notSatisfied, false otherwise.
      */
     public abstract boolean notSatisfied();
@@ -176,13 +175,13 @@ public abstract class PrimitiveConstraint extends Constraint implements StoreAwa
      * It allows to specify customized events required to trigger execution
      * of notConsitency() method.
      *
-     * @param var variable for which customized event is setup.
+     * @param var          variable for which customized event is setup.
      * @param pruningEvent the type of the event being setup.
      */
     public void setNotConsistencyPruningEvent(Var var, int pruningEvent) {
 
         if (notConsistencyPruningEvents == null)
-            notConsistencyPruningEvents = new Hashtable<Var, Integer>();
+            notConsistencyPruningEvents = new Hashtable<>();
 
         notConsistencyPruningEvents.put(var, pruningEvent);
 
@@ -190,17 +189,7 @@ public abstract class PrimitiveConstraint extends Constraint implements StoreAwa
 
     public void include(Store store) {
         if (constraintScope != null)
-            constraintScope.stream().forEach( i -> i.include(store));
-    };
-
-    /**
-     * It checks if the constraint is satisfied. If this function is incorrectly
-     * implemented a constraint may not be satisfied in a solution.
-     * PrimitiveConstraint requires that this function returns correct value when
-     * all variables within a scope are grounded.
-     *
-     * @return true if the constraint is for certain satisfied, false otherwise.
-     */
-    abstract public boolean satisfied();
+            constraintScope.forEach(i -> i.include(store));
+    }
 
 }

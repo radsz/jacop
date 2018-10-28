@@ -34,19 +34,21 @@ package org.jacop.core;
  * Defines a methods for enumerating values contained in the domain.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public abstract class ValueEnumeration {
 
     /**
      * It checks if the value enumeration has more elements.
+     *
      * @return true if more elements can be enumerated, false otherwise.
      */
     public abstract boolean hasMoreElements();
 
     /**
      * It returns the next element in the enumeration.
+     *
      * @return the next element.
      */
     public abstract int nextElement();

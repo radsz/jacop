@@ -35,9 +35,8 @@ package org.jacop.floats.core;
  * Defines a methods for enumerating values contain in the intersal domain. It
  * implements the interface Enumeration.
  *
- *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class FloatIntervalDomainIntervalEnumeration extends FloatIntervalEnumeration {
@@ -52,6 +51,7 @@ public class FloatIntervalDomainIntervalEnumeration extends FloatIntervalEnumera
 
     /**
      * It creates an enumeration for a given interval domain.
+     *
      * @param dom interval domain for which an enumeration is created.
      */
     public FloatIntervalDomainIntervalEnumeration(FloatIntervalDomain dom) {

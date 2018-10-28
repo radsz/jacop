@@ -30,23 +30,21 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
+import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
-
-import org.jacop.constraints.PrimitiveConstraint;
-
 import org.jacop.floats.core.FloatVar;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraints P #= C
- *
+ * <p>
  * Domain consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class PeqC extends PrimitiveConstraint {
@@ -65,12 +63,13 @@ public class PeqC extends PrimitiveConstraint {
 
     /**
      * It constructs the constraint P = C.
+     *
      * @param p variable p.
      * @param c constant c.
      */
     public PeqC(FloatVar p, double c) {
 
-        checkInputForNullness("p", new Object[]{p});
+        checkInputForNullness("p", new Object[] {p});
 
         // TODO, BUG? why Integer constants used here?
         assert (c >= IntDomain.MinInt && c <= IntDomain.MaxInt) : "Constant c " + c + " is not in the allowed range ";
@@ -123,6 +122,7 @@ public class PeqC extends PrimitiveConstraint {
 
     /**
      * It returns the constant to which a given variable should be equal to.
+     *
      * @return the constant to which the variable should be equal to.
      */
     public double getC() {

@@ -37,13 +37,14 @@ package org.jacop.search;
  * timeout has occurred.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public interface TimeOutListener {
 
     /**
      * It is executed right after time out is determined.
+     *
      * @param solutionsNo number of solutions found before the timeout occurred.
      */
 
@@ -51,12 +52,14 @@ public interface TimeOutListener {
 
     /**
      * It sets children listeners for this timeout listener.
+     *
      * @param children list of children listeners.
      */
     void setChildrenListeners(TimeOutListener[] children);
 
     /**
      * It sets child listener for this timeout listener.
+     *
      * @param child child listener for this timeout listener.
      */
     void setChildrenListeners(TimeOutListener child);

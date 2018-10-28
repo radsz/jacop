@@ -30,12 +30,7 @@
 
 package org.jacop.constraints.regular;
 
-import java.io.*;
-import java.lang.reflect.Array;
-import java.nio.charset.Charset;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-
+import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
@@ -48,78 +43,82 @@ import org.jacop.util.fsm.FSM;
 import org.jacop.util.fsm.FSMState;
 import org.jacop.util.fsm.FSMTransition;
 
+import java.io.*;
+import java.lang.reflect.Array;
+import java.nio.charset.Charset;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
- *
- * Store all edges removed because of the value removal in one big array. Edges removed due to states being 
+ * Store all edges removed because of the value removal in one big array. Edges removed due to states being
  * removed restore in the old fashion way.
- *
+ * <p>
  * Split pruneArc and reachability analysis so there is only one forward sweep and one backward sweep.
  * To make it work we need to store number of states for each layer before pruneArc(s) execution.
- *
- * Implement predecessors array to simplify UnreachBackwardLoop, update this array and inDegree 
+ * <p>
+ * Implement predecessors array to simplify UnreachBackwardLoop, update this array and inDegree
  * as successors array upon removeLevel. Compare two versions. PruneArc will get expensive because
  * predecessor array has to be updated to upon edges removal due to pruning.
- *
+ * <p>
  * DONE. Write decomposition of Regular into Table constraints as Slide decomposition of Regular has proposed.
- *
- * DONE. Write a translator of Regular (FSM) constraint into one large MDD. 
- *
- * DONE. Fix the problem if regular is being executed with other constraints (external removal of 
- * values mixing with the removals inferred by a regular). 
- *
+ * <p>
+ * DONE. Write a translator of Regular (FSM) constraint into one large MDD.
+ * <p>
+ * DONE. Fix the problem if regular is being executed with other constraints (external removal of
+ * values mixing with the removals inferred by a regular).
+ * <p>
  * DONE. Improve the efficiency of queueVariable().
- *
+ * <p>
  * DONE. Move initializeArray from constructor to impose (takes advantage of the fact if imposition is
  * done much later than creation).
- *
+ * <p>
  * DONE. Clean initialize array, do not use Stack but HashSet.
- *
- * DONE. todo store range, (min, max) per search level in two timestamps so the backtracking can 
- * be done only for layers in between min..max. If not much change happen then backtracking 
+ * <p>
+ * DONE. todo store range, (min, max) per search level in two timestamps so the backtracking can
+ * be done only for layers in between min..max. If not much change happen then backtracking
  * will be significantly restricted.
- *
+ * <p>
  * DONE. todo check if possible to remove level attribute from the state.
- *
+ * <p>
  * todo DONE. CLEAN code (variables, loops, finishing conditions, etc)
  *
  * @todo Create toXML() and fromXML() functions.
- *
+ * <p>
  * todo DONE. Make levelHadChanged a global variable which is allocated only once and is only filled with false
- *      values at the beginning of consistency function. 
- *
- * DONE. fix a null pointer exception bug after reshuffling impose and consistency. 
- *
+ * values at the beginning of consistency function.
+ * <p>
+ * DONE. fix a null pointer exception bug after reshuffling impose and consistency.
+ * <p>
  * DONE. changed indexing in for loop (++ to --) and remove redundant variables after changing
  * indexing
- *
+ * <p>
  * DONE. clean consistency function from stuff which can be done at impose function once.
- *
+ * <p>
  * DONE. efficiency improvements - sweepgraph() only once in consistency function not
  * multiple times in pruneArc function.
- *
- * DONE. If supports are switched off, it seams that constraint does not achieve GAC, 
- *       1% of nodes are wrong decisions. Addded line in pruneArc function.
- *
+ * <p>
+ * DONE. If supports are switched off, it seams that constraint does not achieve GAC,
+ * 1% of nodes are wrong decisions. Addded line in pruneArc function.
+ * <p>
  * DONE. import tests of Regular constraint into Test package.
- *
- * DONE. Make the choice of object assigned to an edge within a RegState object 
- *       an encapsulated decision so both implementations based on int and domain
- *		can easily coexist.
- *
+ * <p>
+ * DONE. Make the choice of object assigned to an edge within a RegState object
+ * an encapsulated decision so both implementations based on int and domain
+ * can easily coexist.
+ * <p>
  * DONE. implement one support which does not create new objects and
- *       does not replace RegEdge when new support is found. It only 
- *       replaces internal data structure of RegEdge object.
- *
+ * does not replace RegEdge when new support is found. It only
+ * replaces internal data structure of RegEdge object.
+ * <p>
  * DONE. use inComplement(a) instead of in(currentdomain.subtract(a).
- *
+ * <p>
  * DONE. remove store dependent operations from constructor and put in impose. e.g.
- *       initializeArray. 
- *
+ * initializeArray.
+ * <p>
  * DONE. remove zeroNode check from consistency and change it to firstTimeConsistencyCalled
- *       as zero node check does not have to be correct (level does not have to be equal to 0). 
- *
+ * as zero node check does not have to be correct (level does not have to be equal to 0).
+ * <p>
  * DONE. check if union domain function can be changed to addDomain(); (no copying).
- *
  */
 
 
@@ -130,10 +129,10 @@ import org.jacop.util.fsm.FSMTransition;
  * backtracking) to improve the constraint further. 
  *
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
-public class Regular extends Constraint implements UsesQueueVariable, Stateful {
+public class Regular extends Constraint implements UsesQueueVariable, Stateful, RemoveLevelLate {
 
     /**
      * It specifies if debugging information should be printed out.
@@ -374,7 +373,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful {
         }
 
         //initialize the last time-stamp because the counter didn't reach it.
-		/* ----- delete the paths of the graph that doesn't reach the accepted state -----
+    /* ----- delete the paths of the graph that doesn't reach the accepted state -----
 		 * 
 		 * 
 		 *  by calculating the reachable region of the graph starting from the accepted 
@@ -1096,7 +1095,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful {
 
         levelHadChanged = new boolean[this.list.length + 1];
     }
-    
+
     @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.ANY;
     }
@@ -1269,7 +1268,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful {
     public void saveLatexToFile(String desc) {
         String fileName = this.latexFile + (calls++) + ".tex";
         File f = new File(fileName);
-        try(FileOutputStream fs = new FileOutputStream(f)) {
+        try (FileOutputStream fs = new FileOutputStream(f)) {
             System.out.println("save latex file " + fileName);
             fs.write(this.toLatex(desc).getBytes("UTF-8"));
             fs.flush();
@@ -1297,8 +1296,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful {
      * @param fileName filename where the description is appended.
      */
     public void uppendToLatexFile(String desc, String fileName) {
-        try(OutputStreamWriter char_output = new OutputStreamWriter(new FileOutputStream(fileName),
-                                                                    Charset.forName("UTF-8").newEncoder());
+        try (OutputStreamWriter char_output = new OutputStreamWriter(new FileOutputStream(fileName), Charset.forName("UTF-8").newEncoder());
             BufferedWriter fs = new BufferedWriter(char_output)) {
 
             System.out.println("save latex file " + fileName);

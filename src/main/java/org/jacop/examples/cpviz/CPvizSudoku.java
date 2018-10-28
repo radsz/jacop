@@ -34,9 +34,6 @@
 
 package org.jacop.examples.cpviz;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.XneqY;
 import org.jacop.core.IntVar;
@@ -44,12 +41,14 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.search.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
- *
  * It shows how to visualize the solving process for Sudoku problem.
  *
- *  @author Krzysztof Kuchcinski
- *  @version 4.5
+ * @author Krzysztof Kuchcinski
+ * @version 4.6
  */
 
 public class CPvizSudoku {
@@ -156,9 +155,9 @@ public class CPvizSudoku {
         for (int i = 0; i < noRows * noColumns; i++)
             for (int j = 0; j < noRows * noColumns; j++)
                 if (description[i][j] == 0) {
-                    elements[i][j] = new IntVar(store, "f" + (int) (i + 1) + "," + (int) (j + 1), 1, noRows * noColumns);
+                    elements[i][j] = new IntVar(store, "f[" + (int) (i + 1) + "," + (int) (j + 1) + "]", 1, noRows * noColumns);
                 } else
-                    elements[i][j] = new IntVar(store, "f" + i + j, description[i][j], description[i][j]);
+                    elements[i][j] = new IntVar(store, "f[" + i + "," + j + "]", description[i][j], description[i][j]);
 
         // Creating constraints for rows.
         for (int i = 0; i < noRows * noColumns; i++)
@@ -195,8 +194,7 @@ public class CPvizSudoku {
             for (int j = 0; j < elements[0].length; j++)
                 el[k++] = elements[i][j];
 
-        SelectChoicePoint<IntVar> varSelect = new SimpleSelect<IntVar>(el, 
-            null, //new SmallestDomain<IntVar>(),
+        SelectChoicePoint<IntVar> varSelect = new SimpleSelect<IntVar>(el, null, //new SmallestDomain<IntVar>(),
             new IndomainMin<IntVar>());
 
         DepthFirstSearch<IntVar> search = new DepthFirstSearch<IntVar>();

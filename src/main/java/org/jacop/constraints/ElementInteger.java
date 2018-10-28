@@ -31,29 +31,29 @@
 
 package org.jacop.constraints;
 
+import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.Stateful;
+import org.jacop.api.UsesQueueVariable;
+import org.jacop.core.*;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jacop.api.SatisfiedPresent;
-import org.jacop.api.Stateful;
-import org.jacop.api.UsesQueueVariable;
-import org.jacop.core.*;
-
 /**
- * ElementInteger constraint defines a relation 
+ * ElementInteger constraint defines a relation
  * list[index - indexOffset] = value.
- *
+ * <p>
  * The first element of the list corresponds to index - indexOffset = 1.
  * By default indexOffset is equal 0 so first value within a list corresponds to index equal 1.
- *
- * If index has a domain from 0 to list.length-1 then indexOffset has to be equal -1 to 
+ * <p>
+ * If index has a domain from 0 to list.length-1 then indexOffset has to be equal -1 to
  * make addressing of list array starting from 1.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class ElementInteger extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
@@ -74,7 +74,7 @@ public class ElementInteger extends Constraint implements UsesQueueVariable, Sta
      * Otherwise they are processed one by one.
      */
     static final int minDuplicatesSize = 10;
-    
+
     /**
      * It specifies variable index within an element constraint list[index-indexOffset] = value.
      */
@@ -122,9 +122,9 @@ public class ElementInteger extends Constraint implements UsesQueueVariable, Sta
     /**
      * It constructs an element constraint.
      *
-     * @param index variable index
-     * @param list list of integers from which an index-th element is taken
-     * @param value a value of the index-th element from list
+     * @param index       variable index
+     * @param list        list of integers from which an index-th element is taken
+     * @param value       a value of the index-th element from list
      * @param indexOffset shift applied to index variable.
      */
     public ElementInteger(IntVar index, int[] list, IntVar value, int indexOffset) {
@@ -134,15 +134,15 @@ public class ElementInteger extends Constraint implements UsesQueueVariable, Sta
     /**
      * It constructs an element constraint.
      *
-     * @param index variable index
-     * @param list list of integers from which an index-th element is taken
-     * @param value a value of the index-th element from list
-     * @param indexOffset shift applied to index variable.
+     * @param index           variable index
+     * @param list            list of integers from which an index-th element is taken
+     * @param value           a value of the index-th element from list
+     * @param indexOffset     shift applied to index variable.
      * @param checkDuplicates informs whether to create duplicates list for values from list (default = true).
      */
     public ElementInteger(IntVar index, int[] list, IntVar value, int indexOffset, boolean checkDuplicates) {
 
-        checkInputForNullness(new String[]{"index", "value"}, new Object[] { index, value });
+        checkInputForNullness(new String[] {"index", "value"}, new Object[] {index, value});
         checkInputForNullness("list", list);
 
         this.indexOffset = indexOffset;
@@ -153,7 +153,7 @@ public class ElementInteger extends Constraint implements UsesQueueVariable, Sta
         this.list = Arrays.copyOf(list, list.length);
         this.queueIndex = 1;
 
-	      setScope(index, value);
+        setScope(index, value);
 
     }
 
@@ -161,7 +161,7 @@ public class ElementInteger extends Constraint implements UsesQueueVariable, Sta
      * It constructs an element constraint with default indexOffset equal 0.
      *
      * @param index index variable.
-     * @param list list containing variables which one pointed out by index variable is made equal to value variable.
+     * @param list  list containing variables which one pointed out by index variable is made equal to value variable.
      * @param value a value variable equal to the specified element from the list.
      */
     public ElementInteger(IntVar index, List<Integer> list, IntVar value) {
@@ -171,22 +171,22 @@ public class ElementInteger extends Constraint implements UsesQueueVariable, Sta
     /**
      * It constructs an element constraint.
      *
-     * @param index variable index
-     * @param list list of integers from which an index-th element is taken
-     * @param value a value of the index-th element from list
+     * @param index       variable index
+     * @param list        list of integers from which an index-th element is taken
+     * @param value       a value of the index-th element from list
      * @param indexOffset shift applied to index variable.
      */
     public ElementInteger(IntVar index, List<Integer> list, IntVar value, int indexOffset) {
-        this(index, list.stream().mapToInt( i -> i).toArray(), value, indexOffset, true);
+        this(index, list.stream().mapToInt(i -> i).toArray(), value, indexOffset, true);
     }
 
     /**
      * It constructs an element constraint.
      *
-     * @param index variable index
-     * @param list list of integers from which an index-th element is taken
-     * @param value a value of the index-th element from list
-     * @param indexOffset shift applied to index variable.
+     * @param index           variable index
+     * @param list            list of integers from which an index-th element is taken
+     * @param value           a value of the index-th element from list
+     * @param indexOffset     shift applied to index variable.
      * @param checkDuplicates informs whether to create duplicates list for values from list (default = true).
      */
     public ElementInteger(IntVar index, List<Integer> list, IntVar value, int indexOffset, boolean checkDuplicates) {
@@ -197,7 +197,7 @@ public class ElementInteger extends Constraint implements UsesQueueVariable, Sta
      * It constructs an element constraint with indexOffset by default set to 0.
      *
      * @param index variable index
-     * @param list list of integers from which an index-th element is taken
+     * @param list  list of integers from which an index-th element is taken
      * @param value a value of the index-th element from list
      */
 
@@ -220,23 +220,23 @@ public class ElementInteger extends Constraint implements UsesQueueVariable, Sta
 
         }
 
-	// ====== Very simple implementation =========
-	// IntDomain vs = new IntervalDomain();
-	// IntDomain xs = new IntervalDomain();
+        // ====== Very simple implementation =========
+        // IntDomain vs = new IntervalDomain();
+        // IntDomain xs = new IntervalDomain();
 
-	// for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
-	//     int idx = e.nextElement();
-	//     int i = idx - 1 - indexOffset;
-	//     int valueOfElement = list[i];
+        // for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
+        //     int idx = e.nextElement();
+        //     int i = idx - 1 - indexOffset;
+        //     int valueOfElement = list[i];
 
-	//     if (value.domain.contains(valueOfElement)) {
-	// 	vs.unionAdapt(valueOfElement);
-	// 	xs.unionAdapt(idx);
-	//     }
-	// }
-	// index.domain.in(store.level, index, xs);
-	// value.domain.in(store.level, value, vs);
-	// ==============================================
+        //     if (value.domain.contains(valueOfElement)) {
+        // 	vs.unionAdapt(valueOfElement);
+        // 	xs.unionAdapt(idx);
+        //     }
+        // }
+        // index.domain.in(store.level, index, xs);
+        // value.domain.in(store.level, value, vs);
+        // ==============================================
 
         boolean copyOfValueHasChanged = valueHasChanged;
 
@@ -309,8 +309,8 @@ public class ElementInteger extends Constraint implements UsesQueueVariable, Sta
 
         }
 
-	if (value.singleton() && ! index.singleton())
-	    removeConstraint();	
+        if (value.singleton() && !index.singleton())
+            removeConstraint();
     }
 
     boolean disjoint(IntDomain v1, int v2) {
@@ -326,9 +326,22 @@ public class ElementInteger extends Constraint implements UsesQueueVariable, Sta
         return IntDomain.ANY;
     }
 
+    @Override public boolean isStateful() {
+        return (!(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset));
+    }
+
+    /**
+     * It imposes the constraint in a given store.
+     *
+     * @param store the constraint store to which the constraint is imposed to.
+     */
     @Override public void impose(Store store) {
 
         super.impose(store);
+
+        if (!isStateful()) {
+            firstConsistencyCheck = false;
+        }
 
         if (checkDuplicates) {
             duplicates = new ArrayList<IntDomain>();

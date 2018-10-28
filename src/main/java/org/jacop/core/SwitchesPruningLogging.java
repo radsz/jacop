@@ -31,12 +31,11 @@
 package org.jacop.core;
 
 /**
- *
  * It is a container class which specifies all different switches to turn
  * on debugging information.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public final class SwitchesPruningLogging {

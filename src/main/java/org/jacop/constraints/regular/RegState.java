@@ -31,18 +31,18 @@
 
 package org.jacop.constraints.regular;
 
-import java.util.Map;
-
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.TimeStamp;
 
+import java.util.Map;
+
 /**
- * The state class representing a state in the regular automaton 
- * within Regular constraint. 
+ * The state class representing a state in the regular automaton
+ * within Regular constraint.
  *
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public abstract class RegState {
@@ -83,6 +83,7 @@ public abstract class RegState {
     /**
      * It specifies that for a given values from an interval an automata
      * will move from the current state to the successor state.
+     *
      * @param suc successor state
      * @param val interval of accepting values.
      */
@@ -90,8 +91,9 @@ public abstract class RegState {
     public abstract void addTransitions(RegState suc, IntervalDomain val);
 
     /**
-     * It specifies that for a given value an automata will move from the 
+     * It specifies that for a given value an automata will move from the
      * current state to the successor state.
+     *
      * @param suc successor state
      * @param val an accepting value
      */
@@ -99,10 +101,11 @@ public abstract class RegState {
     public abstract void addTransition(RegState suc, Integer val);
 
     /**
-     * The function return if the state is still active. It depends on 
-     * how many active levels remains for state level and the position of 
+     * The function return if the state is still active. It depends on
+     * how many active levels remains for state level and the position of
      * the state.
-     * @param activeLevels - 
+     *
+     * @param activeLevels -
      * @return true is the state is still active.
      */
 
@@ -119,26 +122,26 @@ public abstract class RegState {
 
     /**
      * It checks if the accepting values associated with an edge intersect.
-     * @param dom domain against which interesection is performed.
+     *
+     * @param dom         domain against which interesection is performed.
      * @param successorNo a position of the edge.
-     * @return true if at least one value associated with an edge intersects with domain. 
+     * @return true if at least one value associated with an edge intersects with domain.
      */
 
     public abstract boolean intersects(IntDomain dom, int successorNo);
 
     /**
-     *
-     * @param hashMap It contains supports for all values of a given variable.
-     * @param successorNo it specifies the edge position. 
+     * @param hashMap     It contains supports for all values of a given variable.
+     * @param successorNo it specifies the edge position.
      */
 
     public abstract void setSupports(Map<Integer, RegEdge> hashMap, int successorNo);
 
     /**
-     * It updates a support if given state supports given value. 
+     * It updates a support if given state supports given value.
      *
      * @param edge information about support is stored here.
-     * @param v value for which support is looked for.
+     * @param v    value for which support is looked for.
      * @return It returns true if state has an edge which supports given value.
      */
 
@@ -146,15 +149,15 @@ public abstract class RegState {
 
     /**
      * It adds to domain values which are accepted by a given edge.
-     * @param varDom - domain collecting suported values.
+     *
+     * @param varDom      - domain collecting suported values.
      * @param successorNo - position of an edge from which values are collected.
      */
     public abstract void add(IntDomain varDom, int successorNo);
 
     /**
-     *
      * @param successorNo - edge position.
-     * @return It return the string representation of the values accepted by 
+     * @return It return the string representation of the values accepted by
      * specified edge.
      */
 

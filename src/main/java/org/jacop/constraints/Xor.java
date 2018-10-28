@@ -40,7 +40,7 @@ import java.util.stream.Stream;
  * Xor constraint - xor("constraint", B).
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class Xor extends PrimitiveConstraint {
@@ -78,13 +78,6 @@ public class Xor extends PrimitiveConstraint {
 
         this.c = c;
         this.b = b;
-
-        try {
-            c.getClass().getDeclaredMethod("removeLevelLate", int.class);
-            needRemoveLevelLate = true;
-        } catch (NoSuchMethodException e) {
-            needRemoveLevelLate = false;
-        }
 
         setScope(Stream.concat(c.arguments().stream(), Stream.of(b)));
         setConstraintScope(c);
@@ -226,14 +219,7 @@ public class Xor extends PrimitiveConstraint {
     }
 
     @Override public void queueVariable(int level, Var variable) {
-
         queueForward.queueForward(level, variable);
-
-    }
-
-    public void removeLevelLate(int level) {
-        if (needRemoveLevelLate)
-            c.removeLevelLate(level);
     }
 
 }

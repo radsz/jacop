@@ -38,7 +38,7 @@ import java.util.List;
  * Defines a rectangle used in the diffn constraint.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 class RectangleWithCondition extends Rectangle {

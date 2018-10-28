@@ -30,69 +30,56 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.jacop.constraints.Alldifferent;
-import org.jacop.constraints.Reified;
-import org.jacop.constraints.SumInt;
-import org.jacop.constraints.LinearInt;
-import org.jacop.constraints.XeqC;
-import org.jacop.constraints.XeqY;
-import org.jacop.constraints.XlteqC;
-import org.jacop.constraints.XmulCeqZ;
-import org.jacop.constraints.XplusCeqZ;
-import org.jacop.constraints.XplusYeqZ;
-import org.jacop.constraints.XplusYlteqZ;
+import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
- *
  * It solves a simple logic puzzle about voting city council.
  *
  * @author Romam Gawelek, Marcin Kazmierczak, Radoslaw Szymanek
- * @version 4.5
- *
- * Logic Puzzle - Pro and Con
- * Author: Monica Tenniel
- * Publication: Dell Logic Puzzles
- * Issue: April, 1998
- * Page: 12
- * Stars: 2
- * At the last meeting of the local city council, each member 
- * (Mr. Akerman, Ms. Baird, Mr. Chatham, Ms. Duval, and Mr. Etting) 
- * had to vote on five motions, number 1 to 5 in the clues below. 
- * Can you discover how each one voted on each motion?
- *
- *
- * Note: a motion may have received zero or one yes vote, even though 
- * in real life it's unlikely that both the maker and seconder of 
- * the motion would change their minds before the motion came up for a vote. 
- * Each member voted either yes or no on each motion; no one abstained 
- * from voting on any motion.
- *
- * Voting Chart
- * (view with non-proportional fonts)
- *
- *               1     2     3     4     5  
- * Mr. Akerman
- * Ms. Baird
- * Mr. Chatham
- * Ms. Duval
- * Mr. Etting
-
- * 1. Each motion got a different number of yes votes.
- * 2. In all, the five motions got three more yes votes than no votes.
- * 3. No two council members voted the same way on all five motions.
- * 4. The two women disagreed in their voting more often than they agreed.
- * 5. Mr. Chatham never made two yes votes on consecutive motions.
- * 6. Mr. Akerman and Ms. Baird both voted in favor of motion 4.
- * 7. Motion 1 received two more yes votes than motion 2 did.
- * 8. Motion 3 received twice as many yes votes as motion 4 did.
- *
- * Determine: fill in the chart (Yes/No) for each motion
- *
+ * @version 4.6
+ *          <p>
+ *          Logic Puzzle - Pro and Con
+ *          Author: Monica Tenniel
+ *          Publication: Dell Logic Puzzles
+ *          Issue: April, 1998
+ *          Page: 12
+ *          Stars: 2
+ *          At the last meeting of the local city council, each member
+ *          (Mr. Akerman, Ms. Baird, Mr. Chatham, Ms. Duval, and Mr. Etting)
+ *          had to vote on five motions, number 1 to 5 in the clues below.
+ *          Can you discover how each one voted on each motion?
+ *          <p>
+ *          Note: a motion may have received zero or one yes vote, even though
+ *          in real life it's unlikely that both the maker and seconder of
+ *          the motion would change their minds before the motion came up for a vote.
+ *          Each member voted either yes or no on each motion; no one abstained
+ *          from voting on any motion.
+ *          <p>
+ *          Voting Chart
+ *          (view with non-proportional fonts)
+ *          <p>
+ *          1     2     3     4     5
+ *          Mr. Akerman
+ *          Ms. Baird
+ *          Mr. Chatham
+ *          Ms. Duval
+ *          Mr. Etting
+ *          <p>
+ *          1. Each motion got a different number of yes votes.
+ *          2. In all, the five motions got three more yes votes than no votes.
+ *          3. No two council members voted the same way on all five motions.
+ *          4. The two women disagreed in their voting more often than they agreed.
+ *          5. Mr. Chatham never made two yes votes on consecutive motions.
+ *          6. Mr. Akerman and Ms. Baird both voted in favor of motion 4.
+ *          7. Motion 1 received two more yes votes than motion 2 did.
+ *          8. Motion 3 received twice as many yes votes as motion 4 did.
+ *          <p>
+ *          Determine: fill in the chart (Yes/No) for each motion
  */
 
 public class ProAndCon extends ExampleFD {
@@ -130,27 +117,27 @@ public class ProAndCon extends ExampleFD {
         List<IntVar> votesMotion1 = new ArrayList<IntVar>();
         for (int i = 0; i < 5; i++)
             votesMotion1.add(vote[i][iMotion1]);
-        store.impose(new SumInt(store, votesMotion1, "==", sum4Group[iMotion1]));
+        store.impose(new SumInt(votesMotion1, "==", sum4Group[iMotion1]));
 
         List<IntVar> votesMotion2 = new ArrayList<IntVar>();
         for (int i = 0; i < 5; i++)
             votesMotion2.add(vote[i][iMotion2]);
-        store.impose(new SumInt(store, votesMotion2, "==", sum4Group[iMotion2]));
+        store.impose(new SumInt(votesMotion2, "==", sum4Group[iMotion2]));
 
         List<IntVar> votesMotion3 = new ArrayList<IntVar>();
         for (int i = 0; i < 5; i++)
             votesMotion3.add(vote[i][iMotion3]);
-        store.impose(new SumInt(store, votesMotion3, "==", sum4Group[iMotion3]));
+        store.impose(new SumInt(votesMotion3, "==", sum4Group[iMotion3]));
 
         List<IntVar> votesMotion4 = new ArrayList<IntVar>();
         for (int i = 0; i < 5; i++)
             votesMotion4.add(vote[i][iMotion4]);
-        store.impose(new SumInt(store, votesMotion4, "==", sum4Group[iMotion4]));
+        store.impose(new SumInt(votesMotion4, "==", sum4Group[iMotion4]));
 
         List<IntVar> votesMotion5 = new ArrayList<IntVar>();
         for (int i = 0; i < 5; i++)
             votesMotion5.add(vote[i][iMotion5]);
-        store.impose(new SumInt(store, votesMotion5, "==", sum4Group[iMotion5]));
+        store.impose(new SumInt(votesMotion5, "==", sum4Group[iMotion5]));
 
         // Clues enconding
 
@@ -171,7 +158,7 @@ public class ProAndCon extends ExampleFD {
         vars.add(noVotes);
 
         // We constraint number of yes votes.
-        store.impose(new SumInt(store, sum4Group, "==", noYesVotes));
+        store.impose(new SumInt(sum4Group, "==", noYesVotes));
         // To connect no of yes votes with no of no votes.
         store.impose(new XplusYeqZ(noYesVotes, noNoVotes, noVotes));
 
@@ -190,19 +177,19 @@ public class ProAndCon extends ExampleFD {
         for (int i = 0; i < 5; i++)
             weightedVotes[i] = new IntVar(store, "weightedVotes4" + surname[i], 1, 32);
 
-        store.impose(new LinearInt(store, vote[iAkerman], weights, "==", weightedVotes[iAkerman]));
+        store.impose(new LinearInt(vote[iAkerman], weights, "==", weightedVotes[iAkerman]));
         // store.impose(new SumWeight(vote[iAkerman], weights,
         // 		weightedVotes[iAkerman]));
-        store.impose(new LinearInt(store, vote[iBaird], weights, "==", weightedVotes[iBaird]));
+        store.impose(new LinearInt(vote[iBaird], weights, "==", weightedVotes[iBaird]));
         // store.impose(new SumWeight(vote[iBaird], weights,
         // 				weightedVotes[iBaird]));
-        store.impose(new LinearInt(store, vote[iChatham], weights, "==", weightedVotes[iChatham]));
+        store.impose(new LinearInt(vote[iChatham], weights, "==", weightedVotes[iChatham]));
         // store.impose(new SumWeight(vote[iChatham], weights,
         // 		weightedVotes[iChatham]));
-        store.impose(new LinearInt(store, vote[iDuval], weights, "==", weightedVotes[iDuval]));
+        store.impose(new LinearInt(vote[iDuval], weights, "==", weightedVotes[iDuval]));
         // store.impose(new SumWeight(vote[iDuval], weights,
         // 				weightedVotes[iDuval]));
-        store.impose(new LinearInt(store, vote[iEtting], weights, "==", weightedVotes[iEtting]));
+        store.impose(new LinearInt(vote[iEtting], weights, "==", weightedVotes[iEtting]));
         // store.impose(new SumWeight(vote[iEtting], weights,
         // 		weightedVotes[iEtting]));
 
@@ -224,14 +211,14 @@ public class ProAndCon extends ExampleFD {
         // There are 5 votes for each person, this means that no of yes votes is
         // at most 2.
         IntVar sumOfReified = new IntVar(store, "noAgreeBairdAndDuval", 1, 5);
-        store.impose(new SumInt(store, reified, "==", sumOfReified));
+        store.impose(new SumInt(reified, "==", sumOfReified));
         store.impose(new XlteqC(sumOfReified, 2));
 
         // 5. Mr. Chatham never made two yes votes on consecutive motions.
 
         // implied constraint, the sum must be smaller than 4.
         IntVar sumChatham = new IntVar(store, "sumChatham", 0, 3);
-        store.impose(new SumInt(store, vote[iChatham], "==", sumChatham));
+        store.impose(new SumInt(vote[iChatham], "==", sumChatham));
 
         // We take each pair and make sure they are not two yes votes
         IntVar two = new IntVar(store, "2", 2, 2);
@@ -252,6 +239,7 @@ public class ProAndCon extends ExampleFD {
 
     /**
      * It executes the program which solves this logic puzzle.
+     *
      * @param args command arguments (none here)
      */
     public static void main(String args[]) {

@@ -31,12 +31,12 @@
 
 package org.jacop.constraints.regular;
 
-import java.util.Map;
-
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.ValueEnumeration;
+
+import java.util.Map;
 
 /**
  * It is a state representation which uses a domain representation
@@ -44,7 +44,7 @@ import org.jacop.core.ValueEnumeration;
  * to the given successor state.
  *
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class RegStateDom extends RegState {
@@ -53,9 +53,10 @@ public class RegStateDom extends RegState {
 
     /**
      * It constructs a state.
-     * @param level the position of the associated variable with the state.
-     * @param id the state id.
-     * @param sucNumber the number of successors for this state.
+     *
+     * @param level      the position of the associated variable with the state.
+     * @param id         the state id.
+     * @param sucNumber  the number of successors for this state.
      * @param posInArray the position within a states array for the level of this state.
      */
     public RegStateDom(int level, int id, int sucNumber, int posInArray) {

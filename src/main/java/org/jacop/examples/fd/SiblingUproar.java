@@ -30,8 +30,6 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Element;
 import org.jacop.constraints.XeqY;
@@ -39,67 +37,67 @@ import org.jacop.constraints.XneqY;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.util.ArrayList;
+
 /**
+ * It is quite complex logic puzzle about siblings.
  *
- * It is quite complex logic puzzle about siblings. 
- *
- * @author Krzysztof "Vrbl" Wrobel, Wioletta "Vuka" Kruzolek, and Radoslaw Szymanek 
- * @version 4.5
- *
- * This is quite difficult logic puzzle to be modeled and solved by CP.
- *
- * Mrs. Wheatley returned home from her job to find the household in a
- * turmoil of arguments.  Each of her five teenagers (three boys named
- * Bryan, Russell, and Stuart, and two girls named Nina and Paula) had
- * gotten angry at one of his or her siblings for a different reason
- * (finished cereal, let dog in room, used up hot water, failed to return
- * rollerblades, and hogged television) and had decided to retaliate in a
- * different way (knocked over chess game, let gerbil out of cage, hung
- * up on friend, removed light bulbs, and hid violin).
- *
- * After a few futile minutes of trying to sort out blame, 
- * Mrs. Wheatley called a halt to the arguments by declaring everyone 
- * equally guilty and giving each a different chore around the house 
- * as that evening's punishment (cleaning the attic, basement, or garage, 
- * or washing the Venetian blinds or windows).  Can you discover, for 
- * each child, the sibling he or she was initially angry at, the reason 
- * for the anger, the retaliatory measure he or she took, and the chore 
- * meted out to each child?
- *
- * 1. No one was originally angry at the sibling who was angry at him or
- * her.
- *
- * 2. The boy who was angry at the sibling who used up all the hot water
- * taking a shower retaliated against him or her by removing all the
- * light bulbs from his or her room; the child who was angry at this boy
- * was later punished by being sent to sweep the basement.
- *
- * 3. The five siblings are: Paula, the person who was angry at Paula,
- * the person who was angry because a sibling was hogging the television,
- * the child who was told to straighten the attic, and a child to didn't 
- * remove a sibling's light bulbs or hide a sibling's violin.
- *
- * 4. The child who was angry at Stuart was punished by being told to wash 
- * the Venetian blinds.
- *
- * 5. Russell was punished by being sent to clean out a section of the garage. 
- *
- * 6. The child who let the dog in a sibling's room didn't retaliate against another sibling by knocking over a chess game that he or she was playing.
- *
- * 7. The child who was hogging the television was angry at a sibling who wasn't punished by being told to straighten up the attic or wash the windows.
- *
- * 8. In retaliation, one person hid the violin belonging to the person who was angry at Paula.
- *
- * 9. Bryan and the person who was punished by being told to wash the
- * windows are, in same order, the child who was angry at the sibling
- * who didn't return the rollerblades and the one who retaliated against 
- * a sibling by knocking over a chess game in progress.
- *
- * 10. Stuart and the person who was angry at Nina are, in some order, the child 
- * who was angry at the person who finished the best cereal in the house and the one who retaliated against a sibling by hanging up on his or her best friend.
- *
- * Determine: Sibling - Angry at - Reason - Retaliation - Chore
- *
+ * @author Krzysztof "Vrbl" Wrobel, Wioletta "Vuka" Kruzolek, and Radoslaw Szymanek
+ * @version 4.6
+ *          <p>
+ *          This is quite difficult logic puzzle to be modeled and solved by CP.
+ *          <p>
+ *          Mrs. Wheatley returned home from her job to find the household in a
+ *          turmoil of arguments.  Each of her five teenagers (three boys named
+ *          Bryan, Russell, and Stuart, and two girls named Nina and Paula) had
+ *          gotten angry at one of his or her siblings for a different reason
+ *          (finished cereal, let dog in room, used up hot water, failed to return
+ *          rollerblades, and hogged television) and had decided to retaliate in a
+ *          different way (knocked over chess game, let gerbil out of cage, hung
+ *          up on friend, removed light bulbs, and hid violin).
+ *          <p>
+ *          After a few futile minutes of trying to sort out blame,
+ *          Mrs. Wheatley called a halt to the arguments by declaring everyone
+ *          equally guilty and giving each a different chore around the house
+ *          as that evening's punishment (cleaning the attic, basement, or garage,
+ *          or washing the Venetian blinds or windows).  Can you discover, for
+ *          each child, the sibling he or she was initially angry at, the reason
+ *          for the anger, the retaliatory measure he or she took, and the chore
+ *          meted out to each child?
+ *          <p>
+ *          1. No one was originally angry at the sibling who was angry at him or
+ *          her.
+ *          <p>
+ *          2. The boy who was angry at the sibling who used up all the hot water
+ *          taking a shower retaliated against him or her by removing all the
+ *          light bulbs from his or her room; the child who was angry at this boy
+ *          was later punished by being sent to sweep the basement.
+ *          <p>
+ *          3. The five siblings are: Paula, the person who was angry at Paula,
+ *          the person who was angry because a sibling was hogging the television,
+ *          the child who was told to straighten the attic, and a child to didn't
+ *          remove a sibling's light bulbs or hide a sibling's violin.
+ *          <p>
+ *          4. The child who was angry at Stuart was punished by being told to wash
+ *          the Venetian blinds.
+ *          <p>
+ *          5. Russell was punished by being sent to clean out a section of the garage.
+ *          <p>
+ *          6. The child who let the dog in a sibling's room didn't retaliate against another sibling by knocking over a chess game that he or she was playing.
+ *          <p>
+ *          7. The child who was hogging the television was angry at a sibling who wasn't punished by being told to straighten up the attic or wash the windows.
+ *          <p>
+ *          8. In retaliation, one person hid the violin belonging to the person who was angry at Paula.
+ *          <p>
+ *          9. Bryan and the person who was punished by being told to wash the
+ *          windows are, in same order, the child who was angry at the sibling
+ *          who didn't return the rollerblades and the one who retaliated against
+ *          a sibling by knocking over a chess game in progress.
+ *          <p>
+ *          10. Stuart and the person who was angry at Nina are, in some order, the child
+ *          who was angry at the person who finished the best cereal in the house and the one who retaliated against a sibling by hanging up on his or her best friend.
+ *          <p>
+ *          Determine: Sibling - Angry at - Reason - Retaliation - Chore
  */
 
 public class SiblingUproar extends ExampleFD {
@@ -319,6 +317,7 @@ public class SiblingUproar extends ExampleFD {
 
     /**
      * It executes the program to solve this logic puzzle.
+     *
      * @param args no argument is used.
      */
     public static void main(String args[]) {

@@ -37,14 +37,15 @@ import org.jacop.core.Store;
  * the labeling procedure.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public interface ExitListener {
 
     /**
      * It is executed right after time out is determined.
-     * @param store store in the context of which the search took place.
+     *
+     * @param store       store in the context of which the search took place.
      * @param solutionsNo the number of solutions found.
      */
 
@@ -52,12 +53,14 @@ public interface ExitListener {
 
     /**
      * It sets the children of this exit listener.
+     *
      * @param children an array containing the children.
      */
     void setChildrenListeners(ExitListener[] children);
 
     /**
      * It sets one child listener.
+     *
      * @param child the only child listener used by this listener.
      */
     void setChildrenListeners(ExitListener child);

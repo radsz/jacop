@@ -30,26 +30,20 @@
 
 package org.jacop.examples.set;
 
-import java.util.List;
-
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.MostConstrainedStatic;
-import org.jacop.search.Search;
-import org.jacop.search.SelectChoicePoint;
-import org.jacop.search.SimpleSelect;
-import org.jacop.search.SmallestDomain;
-import org.jacop.search.WeightedDegree;
+import org.jacop.search.*;
 import org.jacop.set.core.SetVar;
 import org.jacop.set.search.IndomainSetMin;
+
+import java.util.List;
 
 /**
  * It is an abstract class to describe all necessary functions of any store.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public abstract class ExampleSet {
@@ -146,6 +140,7 @@ public abstract class ExampleSet {
 
     /**
      * It searches for all solutions with the optimal value.
+     *
      * @return true if any optimal solution has been found.
      */
     public boolean searchAllOptimal() {
@@ -172,8 +167,8 @@ public abstract class ExampleSet {
     /**
      * It specifies simple search method based on smallest domain variable order
      * and lexigraphical ordering of values.
-     * @param optimal it specifies if the search the optimal solution takes place.
      *
+     * @param optimal it specifies if the search the optimal solution takes place.
      * @return true if there is a solution, false otherwise.
      */
 
@@ -324,8 +319,7 @@ public abstract class ExampleSet {
      * It conducts master-slave search. Both of them use input order variable ordering.
      *
      * @param masterVars it specifies the search variables used in master search.
-     * @param slaveVars it specifies the search variables used in slave search.
-     *
+     * @param slaveVars  it specifies the search variables used in slave search.
      * @return true if the solution exists, false otherwise.
      */
     public boolean searchMasterSlave(List<Var> masterVars, List<Var> slaveVars) {
@@ -365,6 +359,7 @@ public abstract class ExampleSet {
 
     /**
      * It returns the search used within an example.
+     *
      * @return the search used within an example.
      */
     public Search<SetVar> getSearch() {
@@ -373,6 +368,7 @@ public abstract class ExampleSet {
 
     /**
      * It specifies the constraint store used within an example.
+     *
      * @return constraint store used within an example.
      */
     public Store getStore() {
@@ -381,6 +377,7 @@ public abstract class ExampleSet {
 
     /**
      * It returns an array list of variables used to model the example.
+     *
      * @return the array list of variables used to model the example.
      */
     public List<SetVar> getSearchVariables() {
@@ -389,9 +386,10 @@ public abstract class ExampleSet {
 
     /**
      * It prints a matrix of variables. All variables must be grounded.
+     *
      * @param matrix matrix containing the grounded variables.
-     * @param rows number of elements in the first dimension.
-     * @param cols number of elements in the second dimension.
+     * @param rows   number of elements in the first dimension.
+     * @param cols   number of elements in the second dimension.
      */
     public static void printMatrix(IntVar[][] matrix, int rows, int cols) {
 

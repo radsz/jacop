@@ -31,28 +31,20 @@
 package org.jacop.examples.floats;
 
 /**
- *
  * It models traveling slaesperson problem for floating solver.
  *
- *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
- *
+ * @version 4.6
  */
 
-import org.jacop.core.Store;
-import org.jacop.core.IntVar;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.SelectChoicePoint;
-import org.jacop.search.SimpleSelect;
-import org.jacop.search.SmallestDomain;
-import org.jacop.search.IndomainMin;
 import org.jacop.constraints.Circuit;
-
-import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.constraints.LinearFloat;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
 import org.jacop.floats.constraints.ElementFloat;
+import org.jacop.floats.constraints.LinearFloat;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
+import org.jacop.search.*;
 
 public class TinyTSP {
 
@@ -94,7 +86,7 @@ public class TinyTSP {
             var[i] = dist[i];
         var[N] = route;
 
-        store.impose(new LinearFloat(store, var, new double[] {1.0, 1.0, 1.0, 1.0, -1.0}, "==", 0.0));
+        store.impose(new LinearFloat(var, new double[] {1.0, 1.0, 1.0, 1.0, -1.0}, "==", 0.0));
 
         System.out.println("\bVar store size: " + store.size() + "\nNumber of constraints: " + store.numberConstraints());
 

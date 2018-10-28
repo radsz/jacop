@@ -47,7 +47,7 @@ import java.util.List;
  * CP-AI-OR 2004,
  *
  * @author Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class CumulativeUnary extends Cumulative {
@@ -84,7 +84,7 @@ public class CumulativeUnary extends Cumulative {
         tvn = new TaskNormalView[starts.length];
         tvr = super.taskReversed;
         for (int i = 0; i < starts.length; i++) {
-            tvn[i] = new TaskNormalView(new Task(starts[i], durations[i], resources[i]));
+            tvn[i] = new TaskNormalView(starts[i], durations[i], resources[i]);
             tvn[i].index = i;
         }
     }
@@ -149,7 +149,7 @@ public class CumulativeUnary extends Cumulative {
             if (doProfile)
                 profileProp(store);
 
-            if (! store.propagationHasOccurred) {
+            if (!store.propagationHasOccurred) {
 
                 if (!doProfile)
                     overload(tn);

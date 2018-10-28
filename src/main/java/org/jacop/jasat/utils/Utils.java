@@ -39,7 +39,7 @@ import java.util.Set;
  * Contains utils for arrays manipulation
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 public final class Utils {
 
@@ -145,7 +145,7 @@ public final class Utils {
 
 	
 	/*
-	 * TODO: try to replace arithmetic negation by this var(), not() methods
+   * TODO: try to replace arithmetic negation by this var(), not() methods
 	 * (which should be faster) about representation of signed literals
 	 */
 

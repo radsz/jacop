@@ -36,19 +36,18 @@ import org.jacop.core.*;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
-import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * It is an element constraint that make sure that set variable value has a domain equal to 
+ * It is an element constraint that make sure that set variable value has a domain equal to
  * the index-th element of the supplied list of sets.
- *
- * By default, indexing starts from 1, if it is required to be different for example starting from 0, 
- * then indexOffset must be specified to be equal to -1. 
+ * <p>
+ * By default, indexing starts from 1, if it is required to be different for example starting from 0,
+ * then indexOffset must be specified to be equal to -1.
  *
  * @author Radoslaw Szymanek, Krzysztof Kuchcinski and Robert Åkemalm
- * @version 4.5
+ * @version 4.6
  */
 
 public class ElementSet extends Constraint implements SatisfiedPresent {
@@ -82,14 +81,14 @@ public class ElementSet extends Constraint implements SatisfiedPresent {
     /**
      * It constructs a constraint to restrict the domains of the variables index and value.
      *
-     * @param value variable that is restricted to have the same elements as list[index].
-     * @param list array of sets that contains possible values for variable value.
-     * @param index variable that is restricted to be the index of sets for which list[index] == value.
+     * @param value       variable that is restricted to have the same elements as list[index].
+     * @param list        array of sets that contains possible values for variable value.
+     * @param index       variable that is restricted to be the index of sets for which list[index] == value.
      * @param indexOffset the shift applied to the index variable.
      */
     public ElementSet(IntVar index, IntDomain[] list, SetVar value, int indexOffset) {
 
-        checkInputForNullness(new String[]{"index", "list", "value"}, new Object[][]{ {index}, list, {value}});
+        checkInputForNullness(new String[] {"index", "list", "value"}, new Object[][] {{index}, list, {value}});
 
         numberId = idNumber.incrementAndGet();
 
@@ -105,7 +104,7 @@ public class ElementSet extends Constraint implements SatisfiedPresent {
      * It constructs an elementSet constraint to restrict the domains of the variables index and value.
      *
      * @param value variable that is restricted to have the same elements as list[index].
-     * @param list array of sets that contains possible values for variable value.
+     * @param list  array of sets that contains possible values for variable value.
      * @param index variable that is restricted to be the index of sets for which list[index] == value.
      */
     public ElementSet(IntVar index, IntDomain[] list, SetVar value) {

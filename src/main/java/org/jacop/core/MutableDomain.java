@@ -32,7 +32,7 @@ package org.jacop.core;
 
 /**
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 public class MutableDomain implements MutableVar {
 
@@ -51,14 +51,13 @@ public class MutableDomain implements MutableVar {
      * @param store store in which the mutable domain is created.
      */
     public MutableDomain(Store store) {
-        MutableDomainValue val = new MutableDomainValue(IntervalDomain.emptyDomain);
-        value = val;
-        index = store.putMutableVar(this);
+        this.value = new MutableDomainValue(IntervalDomain.emptyDomain);
+        this.index = store.putMutableVar(this);
         this.store = store;
     }
 
     /**
-     * @param store store in which the mutable domain is created.
+     * @param store  store in which the mutable domain is created.
      * @param domain specifies the domain used to create mutable domain.
      */
     public MutableDomain(Store store, IntDomain domain) {

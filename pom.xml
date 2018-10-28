@@ -3,225 +3,225 @@
 
     <modelVersion>4.0.0</modelVersion>
 
-	<groupId>org.jacop</groupId>
-	<artifactId>jacop</artifactId>
-	<version>4.5.1</version>
-	<packaging>jar</packaging>
+    <groupId>org.jacop</groupId>
+    <artifactId>jacop</artifactId>
+    <version>4.6.0</version>
+    <packaging>jar</packaging>
 
-	<name>JaCoP</name>
-	<url>http://jacop.osolpro.com</url>
-	<description>Finite domain solver written in java.</description>
-	
-	<developers>
-		<developer>
-			<id>kris</id>
-			<name>Krzysztof Kuchcinski</name>
-			<email>krzysztof.kuchcinski@cs.lth.se</email>
-			<roles>
-				<role>Core developer</role>
-			</roles>
-			<organization>Lunds Tekniska Högskola</organization>
-			<organizationUrl>cs.lth.se</organizationUrl>
-			<timezone>+1</timezone>
-		</developer>
-		<developer>
-			<id>radek</id>
-			<name>Radoslaw Szymanek</name>
-			<email>radoslaw.szymanek@gmail.com</email>
-			<roles>
-				<role>Core developer</role>
-			</roles>
-			<organization>osolpro</organization>
-			<organizationUrl>osolpro.com</organizationUrl>
-			<timezone>+1</timezone>
-		</developer>
-	</developers>
+    <name>JaCoP</name>
+    <url>http://jacop.osolpro.com</url>
+    <description>Finite domain solver written in java.</description>
 
-	<licenses>
-		<license>
-			<name>GNU Affero General Public License, Version 3</name>
-			<url>http://www.gnu.org/licenses/agpl-3.0-standalone.html</url>
-		</license>
-	</licenses>
+    <developers>
+        <developer>
+            <id>kris</id>
+            <name>Krzysztof Kuchcinski</name>
+            <email>krzysztof.kuchcinski@cs.lth.se</email>
+            <roles>
+                <role>Core developer</role>
+            </roles>
+            <organization>Lunds Tekniska Högskola</organization>
+            <organizationUrl>cs.lth.se</organizationUrl>
+            <timezone>+1</timezone>
+        </developer>
+        <developer>
+            <id>radek</id>
+            <name>Radoslaw Szymanek</name>
+            <email>radoslaw.szymanek@gmail.com</email>
+            <roles>
+                <role>Core developer</role>
+            </roles>
+            <organization>osolpro</organization>
+            <organizationUrl>osolpro.com</organizationUrl>
+            <timezone>+1</timezone>
+        </developer>
+    </developers>
 
-	<!-- <scm>
-		<connection>scm:svn:http://sourceforge.net/projects/jacop-solver/</connection>
-		<developerConnection>scm:svn:http://sourceforge.net/projects/jacop-solver/</developerConnection>
-		<url>http://sourceforge.net/projects/jacop-solver/</url>
-	</scm> -->
+    <licenses>
+        <license>
+            <name>GNU Affero General Public License, Version 3</name>
+            <url>http://www.gnu.org/licenses/agpl-3.0-standalone.html</url>
+        </license>
+    </licenses>
 
-	<scm>
-		<connection>scm:git:git@github.com:radsz/jacop.git</connection>
-		<developerConnection>scm:git:git@github.com:radsz/jacop.git</developerConnection>
-		<url>git@github.com:radsz/jacop.git</url>
-	</scm>
+    <!-- <scm>
+        <connection>scm:svn:http://sourceforge.net/projects/jacop-solver/</connection>
+        <developerConnection>scm:svn:http://sourceforge.net/projects/jacop-solver/</developerConnection>
+        <url>http://sourceforge.net/projects/jacop-solver/</url>
+    </scm> -->
 
-	<distributionManagement>
-		<snapshotRepository>
-			<id>ossrh</id>
-			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
-		</snapshotRepository>
-		<repository>
-			<id>ossrh</id>
-			<url>https://oss.sonatype.org/service/local/staging/deploy/maven2</url>
-		</repository>
-	</distributionManagement>
+    <scm>
+        <connection>scm:git:git@github.com:radsz/jacop.git</connection>
+        <developerConnection>scm:git:git@github.com:radsz/jacop.git</developerConnection>
+        <url>git@github.com:radsz/jacop.git</url>
+    </scm>
 
-	<properties>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<maven.compiler.source>1.8</maven.compiler.source>
-		<maven.compiler.target>1.8</maven.compiler.target>
-		<aspectj.version>1.8.10</aspectj.version>
-		<checkstyle.config.location>resources/checkstyle.xml</checkstyle.config.location>
-	</properties>
+    <distributionManagement>
+        <snapshotRepository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+        <repository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2</url>
+        </repository>
+    </distributionManagement>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <aspectj.version>1.8.10</aspectj.version>
+        <checkstyle.config.location>resources/checkstyle.xml</checkstyle.config.location>
+    </properties>
 
     <!-- In order to see logging output,
 then -Dlog4j.configuration=log4j.xml should be
 setup to run configuration. -->
 
-	<profiles>
+    <profiles>
 
-		<profile>
-			<id>min</id>
-			<build>
-				<plugins>
-					<plugin>
-						<groupId>org.apache.maven.plugins</groupId>
-						<artifactId>maven-surefire-plugin</artifactId>
-						<version>2.19.1</version>
-						<configuration>
-							<includes>
-								<include>**/IntDomainTest.java</include>
-								<include>**/ExampleBasedTest.java</include>
-								<include>**/SingleConstraintTest.java</include>
-								<include>**/MinizincBasedTestUpTo5Seconds.java</include>
-							</includes>
-							<excludes>
-								<exclude>**/MinizincBasedTestUpTo30Seconds.java</exclude>
-								<exclude>**/MinizincBasedTestUpTo1Minutes.java</exclude>
-								<exclude>**/MinizincBasedTestUpTo5Minutes.java</exclude>
-								<include>**/MinizincBasedTestUpTo10Minutes.java</include>
-								<exclude>**/MinizincBasedTestUpTo1Hours.java</exclude>
-								<exclude>**/MinizincBasedTestAbove1Hours.java</exclude>
-								<exclude>**/MinizincBasedChosen.java</exclude>
-							</excludes>
-						</configuration>
-					</plugin>
+        <profile>
+            <id>min</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>2.19.1</version>
+                        <configuration>
+                            <includes>
+                                <include>**/IntDomainTest.java</include>
+                                <include>**/ExampleBasedTest.java</include>
+                                <include>**/SingleConstraintTest.java</include>
+                                <include>**/MinizincBasedTestUpTo5Seconds.java</include>
+                            </includes>
+                            <excludes>
+                                <exclude>**/MinizincBasedTestUpTo30Seconds.java</exclude>
+                                <exclude>**/MinizincBasedTestUpTo1Minutes.java</exclude>
+                                <exclude>**/MinizincBasedTestUpTo5Minutes.java</exclude>
+                                <include>**/MinizincBasedTestUpTo10Minutes.java</include>
+                                <exclude>**/MinizincBasedTestUpTo1Hours.java</exclude>
+                                <exclude>**/MinizincBasedTestAbove1Hours.java</exclude>
+                                <exclude>**/MinizincBasedChosen.java</exclude>
+                            </excludes>
+                        </configuration>
+                    </plugin>
 
-				</plugins>
-			</build>
-		</profile>
+                </plugins>
+            </build>
+        </profile>
 
-		<profile>
-			<id>commit</id>
-			<build>
-				<plugins>
-					<plugin>
-						<groupId>org.apache.maven.plugins</groupId>
-						<artifactId>maven-surefire-plugin</artifactId>
-						<version>2.19.1</version>
-						<configuration>
-							<includes>
-								<include>**/IntDomainTest.java</include>
-								<include>**/ExampleBasedTest.java</include>
-								<include>**/SingleConstraintTest.java</include>
-								<include>**/MinizincBasedTestUpTo5Seconds.java</include>
-								<include>**/MinizincBasedTestUpTo30Seconds.java</include>
-							</includes>
-							<excludes>
-								<exclude>**/MinizincBasedTestUpTo1Minutes.java</exclude>
-								<exclude>**/MinizincBasedTestUpTo5Minutes.java</exclude>
-								<exclude>**/MinizincBasedTestUpTo10Minutes.java</exclude>
-								<exclude>**/MinizincBasedTestUpTo1Hours.java</exclude>
-								<exclude>**/MinizincBasedTestAbove1Hours.java</exclude>
-								<exclude>**/MinizincBasedChosen.java</exclude>
-							</excludes>
-						</configuration>
-					</plugin>
+        <profile>
+            <id>commit</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>2.19.1</version>
+                        <configuration>
+                            <includes>
+                                <include>**/IntDomainTest.java</include>
+                                <include>**/ExampleBasedTest.java</include>
+                                <include>**/SingleConstraintTest.java</include>
+                                <include>**/MinizincBasedTestUpTo5Seconds.java</include>
+                                <include>**/MinizincBasedTestUpTo30Seconds.java</include>
+                            </includes>
+                            <excludes>
+                                <exclude>**/MinizincBasedTestUpTo1Minutes.java</exclude>
+                                <exclude>**/MinizincBasedTestUpTo5Minutes.java</exclude>
+                                <exclude>**/MinizincBasedTestUpTo10Minutes.java</exclude>
+                                <exclude>**/MinizincBasedTestUpTo1Hours.java</exclude>
+                                <exclude>**/MinizincBasedTestAbove1Hours.java</exclude>
+                                <exclude>**/MinizincBasedChosen.java</exclude>
+                            </excludes>
+                        </configuration>
+                    </plugin>
 
-				</plugins>
-			</build>
-		</profile>
+                </plugins>
+            </build>
+        </profile>
 
-		<profile>
-			<id>push</id>
-			<build>
-				<plugins>
-					<plugin>
-						<groupId>org.apache.maven.plugins</groupId>
-						<artifactId>maven-surefire-plugin</artifactId>
-						<version>2.19.1</version>
-						<configuration>
-							<includes>
-								<include>**/IntDomainTest.java</include>
-								<include>**/ExampleBasedTest.java</include>
-								<include>**/SingleConstraintTest.java</include>
-								<include>**/MinizincBasedTestUpTo5Seconds.java</include>
-								<include>**/MinizincBasedTestUpTo30Seconds.java</include>
-								<include>**/MinizincBasedTestUpTo1Minutes.java</include>
-								<include>**/MinizincBasedTestUpTo5Minutes.java</include>
-							</includes>
-							<excludes>
-								<exclude>**/MinizincBasedTestUpTo10Minutes.java</exclude>
-								<exclude>**/MinizincBasedTestUpTo1Hours.java</exclude>
-								<exclude>**/MinizincBasedTestAbove1Hours.java</exclude>
-								<exclude>**/MinizincBasedChosen.java</exclude>
-							</excludes>
-						</configuration>
-					</plugin>
+        <profile>
+            <id>push</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>2.19.1</version>
+                        <configuration>
+                            <includes>
+                                <include>**/IntDomainTest.java</include>
+                                <include>**/ExampleBasedTest.java</include>
+                                <include>**/SingleConstraintTest.java</include>
+                                <include>**/MinizincBasedTestUpTo5Seconds.java</include>
+                                <include>**/MinizincBasedTestUpTo30Seconds.java</include>
+                                <include>**/MinizincBasedTestUpTo1Minutes.java</include>
+                                <include>**/MinizincBasedTestUpTo5Minutes.java</include>
+                            </includes>
+                            <excludes>
+                                <exclude>**/MinizincBasedTestUpTo10Minutes.java</exclude>
+                                <exclude>**/MinizincBasedTestUpTo1Hours.java</exclude>
+                                <exclude>**/MinizincBasedTestAbove1Hours.java</exclude>
+                                <exclude>**/MinizincBasedChosen.java</exclude>
+                            </excludes>
+                        </configuration>
+                    </plugin>
 
-				</plugins>
-			</build>
-		</profile>
+                </plugins>
+            </build>
+        </profile>
 
-		<profile>
-			<id>release</id>
-			<build>
-				<plugins>
-					<plugin>
-						<groupId>org.apache.maven.plugins</groupId>
-						<artifactId>maven-surefire-plugin</artifactId>
-						<version>2.19.1</version>
-						<configuration>
-							<includes>
-								<include>**/IntDomainTest.java</include>
-								<include>**/ExampleBasedTest.java</include>
-								<include>**/SingleConstraintTest.java</include>
-								<include>**/MinizincBasedTestUpTo5Seconds.java</include>
-								<include>**/MinizincBasedTestUpTo30Seconds.java</include>
-								<include>**/MinizincBasedTestUpTo1Minutes.java</include>
-								<include>**/MinizincBasedTestUpTo5Minutes.java</include>
-								<include>**/MinizincBasedTestUpTo10Minutes.java</include>
-							</includes>
-							<excludes>
-								<include>**/MinizincBasedTestUpTo1Hours.java</include>
-								<exclude>**/MinizincBasedTestAbove1Hours.java</exclude>
-								<exclude>**/MinizincBasedChosen.java</exclude>
-							</excludes>
-						</configuration>
-					</plugin>
-				</plugins>
-			</build>
-		</profile>
+        <profile>
+            <id>release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>2.19.1</version>
+                        <configuration>
+                            <includes>
+                                <include>**/IntDomainTest.java</include>
+                                <include>**/ExampleBasedTest.java</include>
+                                <include>**/SingleConstraintTest.java</include>
+                                <include>**/MinizincBasedTestUpTo5Seconds.java</include>
+                                <include>**/MinizincBasedTestUpTo30Seconds.java</include>
+                                <include>**/MinizincBasedTestUpTo1Minutes.java</include>
+                                <include>**/MinizincBasedTestUpTo5Minutes.java</include>
+                                <include>**/MinizincBasedTestUpTo10Minutes.java</include>
+                            </includes>
+                            <excludes>
+                                <include>**/MinizincBasedTestUpTo1Hours.java</include>
+                                <exclude>**/MinizincBasedTestAbove1Hours.java</exclude>
+                                <exclude>**/MinizincBasedChosen.java</exclude>
+                            </excludes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
 
 
-		<profile>
-			<id>logging</id>
-			<build>
-				<plugins>
-					<plugin>
-						<groupId>org.codehaus.mojo</groupId>
-						<artifactId>aspectj-maven-plugin</artifactId>
-						<version>1.9</version>
-						<executions>
-							<execution>
-								<goals>
-									<goal>compile</goal>
-									<goal>test-compile</goal>
-								</goals>
-							</execution>
-						</executions>
-						<configuration>
+        <profile>
+            <id>logging</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>aspectj-maven-plugin</artifactId>
+                        <version>1.9</version>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>compile</goal>
+                                    <goal>test-compile</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
                             <!--
                             <aspectLibraries>
                                     <aspectLibrary>
@@ -230,435 +230,445 @@ setup to run configuration. -->
                                     </aspectLibrary>
                             </aspectLibraries>
                             -->
-							<verbose>true</verbose>
-							<source>${maven.compiler.source}</source>
-							<target>${maven.compiler.target}</target>
+                            <verbose>true</verbose>
+                            <source>${maven.compiler.source}</source>
+                            <target>${maven.compiler.target}</target>
                         </configuration>
                     </plugin>
                 </plugins>
             </build>
 
-			<dependencies>
-				<dependency>
-					<groupId>org.aspectj</groupId>
-					<artifactId>aspectjweaver</artifactId>
-					<version>${aspectj.version}</version>
-				</dependency>
-				<dependency>
-					<groupId>org.aspectj</groupId>
-					<artifactId>aspectjtools</artifactId>
-					<version>${aspectj.version}</version>
-				</dependency>
-				<dependency>
-					<groupId>org.aspectj</groupId>
-					<artifactId>aspectjrt</artifactId>
-					<version>${aspectj.version}</version>
-				</dependency>
-			</dependencies>
+            <dependencies>
+                <dependency>
+                    <groupId>org.aspectj</groupId>
+                    <artifactId>aspectjweaver</artifactId>
+                    <version>${aspectj.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.aspectj</groupId>
+                    <artifactId>aspectjtools</artifactId>
+                    <version>${aspectj.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.aspectj</groupId>
+                    <artifactId>aspectjrt</artifactId>
+                    <version>${aspectj.version}</version>
+                </dependency>
+            </dependencies>
         </profile>
 
 
-		<profile>
-			<id>ossrh</id>
-			<build>
-				<plugins>
-					<plugin>
-						<groupId>org.apache.maven.plugins</groupId>
-						<artifactId>maven-gpg-plugin</artifactId>
-						<version>1.5</version>
-						<executions>
-							<execution>
-								<id>sign-artifacts</id>
-								<phase>verify</phase>
-								<goals>
-									<goal>sign</goal>
-								</goals>
-							</execution>
-						</executions>
-					</plugin>
-				</plugins>
-			</build>
-		</profile>
+        <profile>
+            <id>ossrh</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>1.5</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
 
 
     </profiles>
 
-	<build>
+    <build>
 
-		<pluginManagement>
-			<plugins>
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-surefire-report-plugin</artifactId>
-					<version>2.19.1</version>
-				</plugin>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-report-plugin</artifactId>
+                    <version>2.19.1</version>
+                </plugin>
 
-				<plugin>
-				  <groupId>org.apache.maven.plugins</groupId>
-				  <artifactId>maven-compiler-plugin</artifactId>
-				  <version>3.6.1</version>
-				</plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.6.1</version>
+                </plugin>
 
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-checkstyle-plugin</artifactId>
-					<version>2.17</version>
-					<dependencies>
-						<dependency>
-							<groupId>com.puppycrawl.tools</groupId>
-							<artifactId>checkstyle</artifactId>
-							<version>7.6</version>
-						</dependency>
-					</dependencies>
-					<configuration>
-						<configLocation>doc/checkstyle.xml</configLocation>
-					</configuration>
-				</plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-checkstyle-plugin</artifactId>
+                    <version>2.17</version>
+                    <dependencies>
+                        <dependency>
+                            <groupId>com.puppycrawl.tools</groupId>
+                            <artifactId>checkstyle</artifactId>
+                            <version>7.6</version>
+                        </dependency>
+                    </dependencies>
+                    <configuration>
+                        <configLocation>doc/checkstyle.xml</configLocation>
+                    </configuration>
+                </plugin>
 
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-project-info-reports-plugin</artifactId>
-					<version>2.9</version>
-				</plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-project-info-reports-plugin</artifactId>
+                    <version>2.9</version>
+                </plugin>
 
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-jdeps-plugin</artifactId>
-					<version>3.0.0</version>
-				</plugin>
-				
-			</plugins>
-		</pluginManagement>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jdeps-plugin</artifactId>
+                    <version>3.0.0</version>
+                </plugin>
 
-		<plugins>
+            </plugins>
+        </pluginManagement>
 
-		  <!-- Java plugin -->
-		  <plugin>
-		    <groupId>org.apache.maven.plugins</groupId>
-		    <artifactId>maven-compiler-plugin</artifactId>
-		    <version>3.6.1</version>
-		    <configuration>
-		      <source>1.8</source>
-		      <target>1.8</target>
-		      <compilerArgument>-Xlint:all</compilerArgument>
-		      <!-- <showWarnings>true</showWarnings>
-			   <showDeprecation>true</showDeprecation>  -->
-		    </configuration>
-		  </plugin>
- 
-			<!-- Scala plugin -->
-			<plugin>
-				<groupId>org.scala-tools</groupId>
-				<artifactId>maven-scala-plugin</artifactId>
-				<version>2.15.2</version>
-				<executions>
-					<execution>
-						<goals>
-							<goal>compile</goal>
-							<goal>testCompile</goal>
-						</goals>
-						<configuration>
-							<args>
-								<arg>-deprecation</arg>
-								<arg>-feature</arg>
-							</args>
-							<sendJavaToScalac>false</sendJavaToScalac>
-							<sourceDir>src/main/scala</sourceDir>
-							<includes>
-								<include>**/*.scala</include>
-							</includes>
-						</configuration>
-					</execution>
-				</executions>
-			</plugin>
+        <plugins>
 
-			<!-- JJTree and javacc plugin -->
-			<plugin>
-				<groupId>org.codehaus.mojo</groupId>
-				<artifactId>javacc-maven-plugin</artifactId>
-				<version>2.6</version>
-				<executions>
-					<execution>
-						<id>javacc</id>
-						<goals>
-							<goal>jjtree-javacc</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
+            <!-- Java plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.6.1</version>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                    <compilerArgument>-Xlint:all</compilerArgument>
+                    <!-- <showWarnings>true</showWarnings>
+                     <showDeprecation>true</showDeprecation>  -->
+                </configuration>
+            </plugin>
 
-			<!-- Defines sources -->
-			<plugin>
-				<groupId>org.codehaus.mojo</groupId>
-				<artifactId>build-helper-maven-plugin</artifactId>
-				<version>3.0.0</version>
-				<executions>
-					<execution>
-						<phase>generate-sources</phase>
-						<goals>
-							<goal>add-source</goal>
-						</goals>
-						<configuration>
-							<sources>
-								<!-- <source>src/main/java</source> -->
-								<source>src/main/scala</source>
-								<source>src/main/jjtree</source>
-								<source>src/main/minizinc</source>
-							</sources>
-						</configuration>
-					</execution>
-				</executions>
-			</plugin>
+            <!-- Scala plugin -->
+            <plugin>
+                <groupId>org.scala-tools</groupId>
+                <artifactId>maven-scala-plugin</artifactId>
+                <version>2.15.2</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                            <goal>testCompile</goal>
+                        </goals>
+                        <configuration>
+                            <args>
+                                <arg>-deprecation</arg>
+                                <arg>-feature</arg>
+                            </args>
+                            <sendJavaToScalac>false</sendJavaToScalac>
+                            <sourceDir>src/main/scala</sourceDir>
+                            <includes>
+                                <include>**/*.scala</include>
+                            </includes>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
 
-			<!-- Plugin for creation of jar file with sources -->
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-source-plugin</artifactId>
-				<version>3.0.1</version>  
-				<executions>
-					<execution>
-						<id>attach-sources</id>
-						<goals>
-							<goal>jar-no-fork</goal>
-						</goals>
-					</execution>
-				</executions>
-				<configuration>
-					<outputDirectory>target</outputDirectory>
-				</configuration>
-			</plugin>
+            <!-- JJTree and javacc plugin -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>javacc-maven-plugin</artifactId>
+                <version>2.6</version>
+                <executions>
+                    <execution>
+                        <id>javacc</id>
+                        <goals>
+                            <goal>jjtree-javacc</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
 
-			<!-- Plugin for creation of jar with executables -->
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-jar-plugin</artifactId>
-				<version>3.0.2</version> 
-				<configuration>
-					<archive>
-						<manifest>
-							<mainClass>org.jacop.examples.RunExample</mainClass>
-							<packageName>org.jacop</packageName>
-						</manifest>
-						<manifestEntries>
-							<mode>development</mode>
-							<url>${project.url}</url>
-						</manifestEntries>
-					</archive>
-				</configuration>
-			</plugin>
-			
-			<!-- Plugin for generating javadoc jar -->
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-javadoc-plugin</artifactId>
-				<version>2.10.4</version>
+            <!-- Defines sources -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.0.0</version>
+                <executions>
+                    <execution>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <!-- <source>src/main/java</source> -->
+                                <source>src/main/scala</source>
+                                <source>src/main/jjtree</source>
+                                <source>src/main/minizinc</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
 
-				<configuration>
-				  <!--- Possible solution to not print any warrnings for Java 1.8
-				      <additionalparam>-Xdoclint:none</additionalparam>
-				  -->				  
+            <!-- Plugin for creation of jar file with sources -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.0.1</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <outputDirectory>target</outputDirectory>
+                </configuration>
+            </plugin>
 
-				  <sourceFileExcludes>
-				    <sourcepath>${basedir}/src/main/java:${basedir}/target/generated-sources/jjtree:${basedir}/target/generated-sources/javacc</sourcepath>
+            <!-- Plugin for creation of jar with executables -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.0.2</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>org.jacop.examples.RunExample</mainClass>
+                            <packageName>org.jacop</packageName>
+                        </manifest>
+                        <manifestEntries>
+                            <mode>development</mode>
+                            <url>${project.url}</url>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
 
-				    <exclude>**/Node.java</exclude>
-				    <exclude>**/SimpleNode.java</exclude>
-				    <exclude>**/ParseException.java</exclude>
-				    <exclude>**/Parser.java</exclude>
-				    <exclude>**/ParserTokenManager.java</exclude>
-				    <exclude>**/Token.java</exclude>
-				    <exclude>**/TokenMgrError.java</exclude>
-				    <exclude>**/SimpleCharStream.java</exclude>
-				    <exclude>**/ASTSolveItem.java</exclude>
-				  </sourceFileExcludes>
-				</configuration>
-				<executions>
-					<execution>
-						<id>attach-javadocs</id>
-						<goals>
-							<goal>jar</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
+            <!-- Plugin for generating javadoc jar -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>2.10.4</version>
 
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-surefire-plugin</artifactId>
-				<version>2.19.1</version>
-				<configuration>
-					<excludes>
-						<exclude>**/MinizincBasedTestAbove1Hours.java</exclude>
-						<exclude>**/MinizincBasedTestUpTo1Hours.java</exclude>
-						<exclude>**/MinizincBasedTestUpTo10Minutes.java</exclude>
-						<exclude>**/MinizincBasedTestUpTo5Minutes.java</exclude>
-						<exclude>**/MinizincBasedChosen.java</exclude>
-					</excludes>
-				</configuration>
-			</plugin>
+                <configuration>
+                    <!--- Possible solution to not print any warrnings for Java 1.8
+                        <additionalparam>-Xdoclint:none</additionalparam>
+                    -->
 
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-site-plugin</artifactId>
-				<version>3.3</version>
-				<!-- Using later versions, for example when tried 3.4 the findbugs report stopped working-->
-			</plugin>
+                    <sourceFileExcludes>
+                        <sourcepath>
+                            ${basedir}/src/main/java:${basedir}/target/generated-sources/jjtree:${basedir}/target/generated-sources/javacc
+                        </sourcepath>
+
+                        <exclude>**/Node.java</exclude>
+                        <exclude>**/SimpleNode.java</exclude>
+                        <exclude>**/ParseException.java</exclude>
+                        <exclude>**/Parser.java</exclude>
+                        <exclude>**/ParserTokenManager.java</exclude>
+                        <exclude>**/Token.java</exclude>
+                        <exclude>**/TokenMgrError.java</exclude>
+                        <exclude>**/SimpleCharStream.java</exclude>
+                        <exclude>**/ASTSolveItem.java</exclude>
+                    </sourceFileExcludes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.19.1</version>
+                <configuration>
+                    <includes>
+                        <include>**/IntDomainTest.java</include>
+                        <include>**/ExampleBasedTest.java</include>
+                        <include>**/SingleConstraintTest.java</include>
+                    </includes>
+                    <excludes>
+                        <exclude>**/MinizincBasedTestUpTo5Seconds.java</exclude>
+                        <exclude>**/MinizincBasedTestUpTo30Seconds.java</exclude>
+                        <exclude>**/MinizincBasedTestUpTo1Minutes.java</exclude>
+                        <exclude>**/MinizincBasedTestUpTo5Minutes.java</exclude>
+                        <include>**/MinizincBasedTestUpTo10Minutes.java</include>
+                        <exclude>**/MinizincBasedTestUpTo1Hours.java</exclude>
+                        <exclude>**/MinizincBasedTestAbove1Hours.java</exclude>
+                        <exclude>**/MinizincBasedChosen.java</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-site-plugin</artifactId>
+                <version>3.3</version>
+                <!-- Using later versions, for example when tried 3.4 the findbugs report stopped working-->
+            </plugin>
 
 
-			<plugin>
+            <plugin>
 
-			<groupId>org.jacoco</groupId>
-            <artifactId>jacoco-maven-plugin</artifactId>
-            <version>0.7.9</version>  
-				<configuration>
-					<excludes>
-						<exclude>org/jacop/examples/scala/**/*.class</exclude>
-						<exclude>org/jacop/scala/**/*.class</exclude>
-					</excludes>
-				</configuration>
-			<executions>
-				<execution>
-					<id>default-prepare-agent</id>
-					<goals>
-						<goal>prepare-agent</goal>
-					</goals>
-				</execution>
-				<execution>
-					<id>default-report</id>
-					<phase>prepare-package</phase>
-					<goals>
-						<goal>report</goal>
-					</goals>
-				</execution>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.7.9</version>
+                <configuration>
+                    <excludes>
+                        <exclude>org/jacop/examples/scala/**/*.class</exclude>
+                        <exclude>org/jacop/scala/**/*.class</exclude>
+                    </excludes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>default-prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>default-report</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
 
-			</executions>
-        </plugin>
+                </executions>
+            </plugin>
 
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-jdeps-plugin</artifactId>
-				<version>3.0.0</version>
-				<executions>
-					<execution>
-						<goals>
-							<goal>jdkinternals</goal> <!-- verify main classes -->
-							<goal>test-jdkinternals</goal> <!-- verify test classes -->
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
-			
-		</plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jdeps-plugin</artifactId>
+                <version>3.0.0</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>jdkinternals</goal> <!-- verify main classes -->
+                            <goal>test-jdkinternals</goal> <!-- verify test classes -->
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+        </plugins>
     </build>
 
-	<reporting>
-		<plugins>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-jxr-plugin</artifactId>
-				<version>2.5</version>
-			</plugin>
-			<plugin>
-				<groupId>org.codehaus.mojo</groupId>
-				<artifactId>findbugs-maven-plugin</artifactId>
-				<version>3.0.4</version>
-				<!-- Put any additional configuration element here. It is working.
-				 Do not need to use pluginManagement section, where it does not work. -->
-				<configuration>
-					<effort>Max</effort>      <!-- Other working value is Min -->
-					<threshold>Medium</threshold>  <!-- Other working value is Low, High -->
-					<excludeFilterFile>doc/findbugs-exclude.xml</excludeFilterFile>
-					<includeFilterFile>doc/findbugs-include.xml</includeFilterFile>
-				</configuration>
+    <reporting>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jxr-plugin</artifactId>
+                <version>2.5</version>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>findbugs-maven-plugin</artifactId>
+                <version>3.0.4</version>
+                <!-- Put any additional configuration element here. It is working.
+                 Do not need to use pluginManagement section, where it does not work. -->
+                <configuration>
+                    <effort>Max</effort>      <!-- Other working value is Min -->
+                    <threshold>Medium</threshold>  <!-- Other working value is Low, High -->
+                    <excludeFilterFile>doc/findbugs-exclude.xml</excludeFilterFile>
+                    <includeFilterFile>doc/findbugs-include.xml</includeFilterFile>
+                </configuration>
 
-			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-pmd-plugin</artifactId>
-				<configuration>
-					<linkXRef>true</linkXRef>
-					<targetJdk>1.7</targetJdk>
-					<!-- Exclude automatically generated files from jjtree and javacc -->
-					<excludes>
-					  <exclude>**/fz/Parser.java</exclude>
-					  <exclude>**/fz/ParserTreeConstants.java</exclude>
-					  <exclude>**/fz/Node.java</exclude>
-					  <exclude>**/fz/TokenMgrError.java</exclude>
-					  <exclude>**/fz/ParserTokenManager.java</exclude>
-					  <exclude>**/fz/SimpleCharStream.java</exclude>
-					</excludes>
-				</configuration>
-				<version>3.7</version>
-			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-javadoc-plugin</artifactId>
-				<version>2.10.4</version>  
-				<configuration>
-					<additionalparam>-Xdoclint:none</additionalparam>
-				</configuration>
-			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-surefire-report-plugin</artifactId>
-				<version>2.19.1</version>
-				<configuration>
-					<enableAssertions>true</enableAssertions>
-				</configuration>
-			</plugin>
-<!--			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-checkstyle-plugin</artifactId>
-				<version>2.17</version>
-				<reportSets>
-					<reportSet>
-						<reports>
-							<report>checkstyle</report>
-						</reports>
-					</reportSet>
-				</reportSets>
-				<configuration>
-					<configLocation>doc/checkstyle.xml</configLocation>
-				</configuration>
-			</plugin>-->
-			<plugin>
-				<groupId>org.jacoco</groupId>
-				<artifactId>jacoco-maven-plugin</artifactId>
-				<version>0.7.9</version>
-				<reportSets>
-					<reportSet>
-						<reports>
-							<!-- select non-aggregate reports -->
-							<report>report</report>
-						</reports>
-					</reportSet>
-				</reportSets>
-			</plugin>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-pmd-plugin</artifactId>
+                <configuration>
+                    <linkXRef>true</linkXRef>
+                    <targetJdk>1.7</targetJdk>
+                    <!-- Exclude automatically generated files from jjtree and javacc -->
+                    <excludes>
+                        <exclude>**/fz/Parser.java</exclude>
+                        <exclude>**/fz/ParserTreeConstants.java</exclude>
+                        <exclude>**/fz/Node.java</exclude>
+                        <exclude>**/fz/TokenMgrError.java</exclude>
+                        <exclude>**/fz/ParserTokenManager.java</exclude>
+                        <exclude>**/fz/SimpleCharStream.java</exclude>
+                    </excludes>
+                </configuration>
+                <version>3.7</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>2.10.4</version>
+                <configuration>
+                    <additionalparam>-Xdoclint:none</additionalparam>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-report-plugin</artifactId>
+                <version>2.19.1</version>
+                <configuration>
+                    <enableAssertions>true</enableAssertions>
+                </configuration>
+            </plugin>
+            <!--			<plugin>
+                            <groupId>org.apache.maven.plugins</groupId>
+                            <artifactId>maven-checkstyle-plugin</artifactId>
+                            <version>2.17</version>
+                            <reportSets>
+                                <reportSet>
+                                    <reports>
+                                        <report>checkstyle</report>
+                                    </reports>
+                                </reportSet>
+                            </reportSets>
+                            <configuration>
+                                <configLocation>doc/checkstyle.xml</configLocation>
+                            </configuration>
+                        </plugin>-->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.7.9</version>
+                <reportSets>
+                    <reportSet>
+                        <reports>
+                            <!-- select non-aggregate reports -->
+                            <report>report</report>
+                        </reports>
+                    </reportSet>
+                </reportSets>
+            </plugin>
         </plugins>
     </reporting>
 
     <dependencies>
-		<dependency>
-			<groupId>org.mockito</groupId>
-			<artifactId>mockito-all</artifactId>
-			<version>1.10.19</version>
-		</dependency>
-		<dependency>
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
-			<version>4.12</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.scala-lang</groupId>
-			<artifactId>scala-library</artifactId>
-			<version>2.12.0</version>
-		</dependency>
-		<dependency>
-			<groupId>org.scala-lang</groupId>
-			<artifactId>scala-compiler</artifactId>
-			<version>2.12.0</version>
-		</dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-all</artifactId>
+            <version>1.10.19</version>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.scala-lang</groupId>
+            <artifactId>scala-library</artifactId>
+            <version>2.12.7</version>
+        </dependency>
+        <dependency>
+            <groupId>org.scala-lang</groupId>
+            <artifactId>scala-compiler</artifactId>
+            <version>2.12.7</version>
+        </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>

@@ -30,18 +30,19 @@
 
 package org.jacop.constraints;
 
-import java.util.Arrays;
-import java.util.List;
-
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * OrBool constraint implements logic and operation on its arguments
  * and returns result.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class OrBool extends DecomposedConstraint<PrimitiveConstraint> {
@@ -50,41 +51,43 @@ public class OrBool extends DecomposedConstraint<PrimitiveConstraint> {
 
     /**
      * It constructs and constraint on variables.
-     * @param a parameters
+     *
+     * @param a      parameters
      * @param result result variable.
      */
     public OrBool(IntVar[] a, IntVar result) {
 
-        if (a.length == 2)
-            c = new OrBoolSimple(a[0], a[1], result);
+        IntVar[] r = filter(a);
+
+        if (r == null)
+            c = new XeqC(result, 1);
+        else if (r.length == 1)
+            c = new XeqY(r[0], result);
+        else if (r.length == 2)
+            c = new OrBoolSimple(r[0], r[1], result);
         else
-            c = new OrBoolVector(a, result);
+            c = new OrBoolVector(r, result);
     }
 
     /**
      * It constructs and constraint on variables.
-     * @param a parameters
+     *
+     * @param a      parameters
      * @param result result variable.
      */
     public OrBool(List<IntVar> a, IntVar result) {
-
-        if (a.size() == 2)
-            c = new OrBoolSimple(a.get(0), a.get(1), result);
-        else
-            c = new OrBoolVector(a.toArray(new IntVar[a.size()]), result);
-
+        this(a.toArray(new IntVar[a.size()]), result);
     }
 
     /**
      * It constructs and constraint on variables.
-     * @param a a parameter
-     * @param b b parameter
+     *
+     * @param a      a parameter
+     * @param b      b parameter
      * @param result result variable.
      */
     public OrBool(IntVar a, IntVar b, IntVar result) {
-
-        c = new OrBoolSimple(a, b, result);
-
+        this(new IntVar[] {a, b}, result);
     }
 
     @Override public void imposeDecomposition(Store store) {
@@ -99,5 +102,18 @@ public class OrBool extends DecomposedConstraint<PrimitiveConstraint> {
 
     public String toString() {
         return c.toString();
+    }
+
+    IntVar[] filter(IntVar[] xs) {
+        List<IntVar> result = new ArrayList<>();
+        for (IntVar x : xs)
+            if (x.min() == 1)
+                return null;
+            else if (x.max() == 0)
+                continue;
+            else
+                result.add(x);
+
+        return result.toArray(new IntVar[result.size()]);
     }
 }

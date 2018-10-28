@@ -30,24 +30,18 @@
 
 package org.jacop.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.api.Stateful;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Interval;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.IntervalEnumeration;
-import org.jacop.core.SmallDenseDomain;
-import org.jacop.core.Store;
+import org.jacop.core.*;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraints |X| #= Y
- *
+ * <p>
  * Domain and bounds consistency can be used; third parameter of constructor controls this.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class AbsXeqY extends PrimitiveConstraint implements Stateful {
@@ -74,12 +68,13 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
 
     /**
      * It constructs |X| = Y constraints.
+     *
      * @param x variable X1
      * @param y variable Y
      */
     public AbsXeqY(IntVar x, IntVar y) {
 
-        checkInputForNullness(new String[]{"x", "y"}, new Object[] {x, y});
+        checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
 
         numberId = idNumber.incrementAndGet();
 
@@ -92,8 +87,9 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
 
     /**
      * It constructs |X| = Y constraints.
-     * @param x variable X1
-     * @param y variable Y
+     *
+     * @param x              variable X1
+     * @param y              variable Y
      * @param domConsistency controls which consistency method is used; true = domain, false = bound
      */
     public AbsXeqY(IntVar x, IntVar y, boolean domConsistency) {

@@ -30,27 +30,30 @@
 
 package org.jacop.constraints;
 
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+
 
 /**
  * Alldiff constraint assures that all FDVs has different values. It uses bounds
- * consistency technique as described in the paper by J.-F. Puget, "A fast
- * algorithm for the bound consistency of alldiff constraints", in Proceedings
- * of the Fifteenth National Conference on Artificial Intelligence (AAAI '98),
- * 1998. It implements the method with time complexity O(n^2). Before using
- * bounds consistency it calls consistency method from Alldifferent constraint.
- *
+ * consistency technique as described in the paper by Alejandro Lopez-Ortiz, Claude-Guy
+ * Quimper, John Tromp, Peter van Beek, "A fast and simple algorithm for bounds
+ * consistency of the alldifferent constraint", Proceedings of the 18th international
+ * joint conference on Artificial intelligence (IJCAI'03), Pages 245-250. Before using
+ * bounds consistency it calls consistency method for ground variables.
+ * <p>
  * It extends basic functionality of Alldifferent constraint.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class Alldiff extends Alldifferent {
@@ -62,19 +65,32 @@ public class Alldiff extends Alldifferent {
     // without passing store argument every time their function is called.
     Store store;
 
-    int[] min, max, u;
+    private Comparator<Element> maxVariable = (o1, o2) -> (o1.var.max() - o2.var.max());
 
-    private Comparator<IntVar> maxVariable = (o1, o2) -> (o1.max() - o2.max());
+    private Comparator<Element> minVariable = (o1, o2) -> (o1.var.min() - o2.var.min());
 
-    private Comparator<IntVar> minVariable = (o1, o2) -> (o2.min() - o1.min());
+    private int[] t; // holds the critical capacity pointers; that is, t[i] points to the
+    // predecessor of i in the bounds list.
+    private int[] d; // holds the differences between critical capacities; that is d[i] is
+    // the difference of capacities between bounds[i] and its predecessor
+    // element in the list bounds[t[i]].
+    private int[] h; // holds the Hall interval pointers; that is, if h[i] < i then the
+    // half-open interval [bounds[h[i]],bounds[i]) is contained in a Hall
+    // interval, and otherwise holds a pointer to the Hall interval it
+    // belongs to. This Hall interval is represented by a tree, with the
+    // root containing the value of its right end.
+    private int[] bounds; // is a sorted array of all min’s and max’s.
 
-    IntVar[] listAlldiff;
+    private int nb; // holds the number of unique bounds.
+
+    private Element[] minsorted, maxsorted;
 
     protected Alldiff() {
     }
 
     /**
      * It constructs the alldiff constraint for the supplied variable.
+     *
      * @param variables variables which are constrained to take different values.
      */
     public Alldiff(IntVar[] variables) {
@@ -84,11 +100,21 @@ public class Alldiff extends Alldifferent {
         this.numberId = idNumber.incrementAndGet();
         this.list = Arrays.copyOf(variables, variables.length);
         this.queueIndex = 2;
-        listAlldiff = Arrays.copyOf(variables, variables.length);
 
-        min = new int[variables.length];
-        max = new int[variables.length];
-        u = new int[variables.length];
+        int n = list.length;
+        t = new int[2 * n + 2];
+        d = new int[2 * n + 2];
+        h = new int[2 * n + 2];
+        bounds = new int[2 * n + 2];
+
+        minsorted = new Element[n];
+        maxsorted = new Element[n];
+        for (int i = 0; i < n; i++) {
+            Element el = new Element();
+            el.var = list[i];
+            minsorted[i] = el;
+            maxsorted[i] = el;
+        }
 
         setScope(variables);
 
@@ -97,6 +123,7 @@ public class Alldiff extends Alldifferent {
 
     /**
      * It constructs the alldiff constraint for the supplied variable.
+     *
      * @param variables variables which are constrained to take different values.
      */
     public Alldiff(List<? extends IntVar> variables) {
@@ -108,6 +135,9 @@ public class Alldiff extends Alldifferent {
     }
 
     @Override public void impose(Store store) {
+
+        if (list.length == 0)
+            return;
 
         super.impose(store);
         this.store = store;
@@ -150,95 +180,138 @@ public class Alldiff extends Alldifferent {
 
         }
 
-        maxPass();
-        minPass();
+        // do {
+        // store.propagationHasOccurred = false;
 
+        init();
+        updateLB();
+        updateUB();
+
+        // } while (store.propagationHasOccurred);
     }
 
-    private void minPass() {
+    private void init() {
+        int n = list.length;
+        Arrays.sort(minsorted, 0, n, minVariable);
+        Arrays.sort(maxsorted, 0, n, maxVariable);
 
-        Arrays.sort(listAlldiff, minVariable);
+        int min = minsorted[0].var.min();
+        int max = maxsorted[0].var.max() + 1;
+        int last = min - 2;
+        int nb = 0;
+        bounds[0] = last;
+        int i = 0, j = 0;
+        while (true) {
+            if (i < n && min <= max) {
+                if (min != last)
+                    bounds[++nb] = last = min;
 
-        for (int i = 0; i < listAlldiff.length; i++) {
-            min[i] = listAlldiff[i].min();
-            max[i] = listAlldiff[i].max();
-        }
+                minsorted[i].minrank = nb;
+                if (++i < n)
+                    min = minsorted[i].var.min();
 
-        for (int i = 0; i < listAlldiff.length; i++)
-            insertMin(i);
-    }
+            } else {
+                if (max != last)
+                    bounds[++nb] = last = max;
 
-    private void maxPass() {
+                maxsorted[j].maxrank = nb;
+                if (++j == n)
+                    break;
 
-        Arrays.sort(listAlldiff, maxVariable);
-
-        for (int i = 0; i < listAlldiff.length; i++) {
-            min[i] = listAlldiff[i].min();
-            max[i] = listAlldiff[i].max();
-        }
-
-        for (int i = 0; i < listAlldiff.length; i++)
-            insertMax(i);
-    }
-
-    private void insertMax(int i) {
-        u[i] = min[i];
-
-        int bestMin = IntDomain.MaxInt + 1;
-        for (int j = 0; j < i; j++) {
-            if (min[j] < min[i]) {
-                u[j]++;
-                if (u[j] > max[i])
-                    throw Store.failException;
-                if (u[j] == max[i] && min[j] < bestMin)
-                    bestMin = min[j];
-            } else
-                u[i]++;
-        }
-        if (u[i] > max[i])
-            throw Store.failException;
-        if (u[i] == max[i] && min[i] < bestMin)
-            bestMin = min[i];
-
-        if (bestMin <= IntDomain.MaxInt)
-            incrMin(bestMin, max[i], i);
-    }
-
-    private void incrMin(int a, int b, int i) {
-        for (int j = i + 1; j < min.length; j++)
-            if (min[j] >= a) {
-                listAlldiff[j].domain.inMin(store.level, listAlldiff[j], b + 1);
+                max = maxsorted[j].var.max() + 1;
             }
-    }
-
-    private void insertMin(int i) {
-        u[i] = max[i];
-
-        int bestMax = IntDomain.MinInt - 1;
-        for (int j = 0; j < i; j++) {
-            if (max[j] > max[i]) {
-                u[j]--;
-                if (u[j] < min[i])
-                    throw Store.failException;
-                if (u[j] == min[i] && max[j] > bestMax)
-                    bestMax = max[j];
-            } else
-                u[i]--;
         }
-        if (u[i] < min[i])
-            throw Store.failException;
-        if (u[i] == min[i] && max[i] > bestMax)
-            bestMax = max[i];
-
-        if (bestMax >= IntDomain.MinInt)
-            decrMax(min[i], bestMax, i);
+        this.nb = nb;
+        bounds[nb + 1] = bounds[nb] + 2;
     }
 
-    private void decrMax(int a, int b, int i) {
-        for (int j = i + 1; j < max.length; j++)
-            if (max[j] <= b) {
-                listAlldiff[j].domain.inMax(store.level, listAlldiff[j], a - 1);
+    private void updateLB() {
+
+        for (int i = 1; i <= nb + 1; i++) {
+            t[i] = h[i] = i - 1;
+            d[i] = bounds[i] - bounds[i - 1];
+        }
+        for (int i = 0; i < this.list.length; i++) {
+            int x = maxsorted[i].minrank;
+            int y = maxsorted[i].maxrank;
+            int z = pathmax(t, x + 1);
+            int j = t[z];
+
+            if (--d[z] == 0) {
+                t[z] = z + 1;
+                z = pathmax(t, t[z]);
+                t[z] = j;
             }
+            pathset(t, x + 1, z, z);
+            if (d[z] < bounds[z] - bounds[y]) {
+                throw store.failException;
+            }
+            if (h[x] > x) {
+                int w = pathmax(h, h[x]);
+                maxsorted[i].var.domain.inMin(store.level, maxsorted[i].var, bounds[w]);
+                pathset(h, x, w, w);
+            }
+            if (d[z] == bounds[z] - bounds[y]) {
+                pathset(h, h[y], j - 1, y);
+                h[y] = j - 1;
+            }
+        }
+    }
+
+    private void updateUB() {
+
+        for (int i = 0; i <= nb; i++) {
+            t[i] = h[i] = i + 1;
+            d[i] = bounds[i + 1] - bounds[i];
+        }
+        for (int i = this.list.length - 1; i >= 0; i--) {
+            int x = minsorted[i].maxrank;
+            int y = minsorted[i].minrank;
+            int z = pathmin(t, x - 1);
+            int j = t[z];
+            if (--d[z] == 0) {
+                t[z] = z - 1;
+                z = pathmin(t, t[z]);
+                t[z] = j;
+            }
+            pathset(t, x - 1, z, z);
+            if (d[z] < bounds[y] - bounds[z]) {
+                throw store.failException;
+            }
+            if (h[x] < x) {
+                int w = pathmin(h, h[x]);
+                minsorted[i].var.domain.inMax(store.level, minsorted[i].var, bounds[w] - 1);
+                pathset(h, x, w, w);
+            }
+            if (d[z] == bounds[y] - bounds[z]) {
+                pathset(h, h[y], j + 1, y);
+                h[y] = j + 1;
+            }
+        }
+    }
+
+    private void pathset(int[] v, int start, int end, int to) {
+        int next = start;
+        int prev = next;
+        while (prev != end) {
+            next = v[prev];
+            v[prev] = to;
+            prev = next;
+        }
+    }
+
+    private int pathmin(int[] v, int i) {
+        while (v[i] < i)
+            i = v[i];
+
+        return i;
+    }
+
+    private int pathmax(int[] v, int i) {
+        while (v[i] > i)
+            i = v[i];
+
+        return i;
     }
 
     @Override public String toString() {
@@ -246,9 +319,9 @@ public class Alldiff extends Alldifferent {
         StringBuilder result = new StringBuilder(id());
         result.append(" : Alldiff([");
 
-        for (int i = 0; i < listAlldiff.length; i++) {
-            result.append(listAlldiff[i]);
-            if (i < listAlldiff.length - 1)
+        for (int i = 0; i < list.length; i++) {
+            result.append(list[i]);
+            if (i < list.length - 1)
                 result.append(", ");
         }
 
@@ -263,6 +336,10 @@ public class Alldiff extends Alldifferent {
         super.queueVariable(level, var);
     }
 
+    private static class Element {
+        private IntVar var;
+        private int minrank, maxrank;
+    }
 
 }
 

@@ -30,24 +30,22 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
+import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
-
-import org.jacop.constraints.Constraint;
 import org.jacop.floats.core.FloatVar;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraints |P| #= R
- *
+ * <p>
  * Bounds consistency can be used; third parameter of constructor controls this.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class AbsPeqR extends Constraint implements Stateful, SatisfiedPresent {
@@ -70,12 +68,13 @@ public class AbsPeqR extends Constraint implements Stateful, SatisfiedPresent {
 
     /**
      * It constructs |P| = Q constraints.
+     *
      * @param p variable P1
      * @param q variable Q
      */
     public AbsPeqR(FloatVar p, FloatVar q) {
 
-        checkInputForNullness(new String[]{"p", "q"}, new Object[]{p, q});
+        checkInputForNullness(new String[] {"p", "q"}, new Object[] {p, q});
 
         numberId = idNumber.incrementAndGet();
 

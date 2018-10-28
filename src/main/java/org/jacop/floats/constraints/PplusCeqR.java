@@ -30,24 +30,22 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
+import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
-
-import org.jacop.constraints.PrimitiveConstraint;
-import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatIntervalDomain;
+import org.jacop.floats.core.FloatVar;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraint P + C #= R
- *
+ * <p>
  * Bound consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class PplusCeqR extends PrimitiveConstraint {
@@ -55,28 +53,30 @@ public class PplusCeqR extends PrimitiveConstraint {
     static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
-     * It specifies variable p in constraint p+c=r. 
+     * It specifies variable p in constraint p+c=r.
      */
     public FloatVar p;
 
     /**
-     * It specifies constant c in constraint p+c=r. 
+     * It specifies constant c in constraint p+c=r.
      */
-    double c;
+    public double c;
 
     /**
-     * It specifies variable r in constraint p+c=r. 
+     * It specifies variable r in constraint p+c=r.
      */
     public FloatVar r;
 
-    /** It constructs constraint P+C=R.
+    /**
+     * It constructs constraint P+C=R.
+     *
      * @param p variable p.
      * @param c constant c.
      * @param r variable r.
      */
     public PplusCeqR(FloatVar p, double c, FloatVar r) {
 
-        checkInputForNullness(new String[]{"p", "r"}, new Object[]{p, r});
+        checkInputForNullness(new String[] {"p", "r"}, new Object[] {p, r});
 
         numberId = idNumber.incrementAndGet();
 

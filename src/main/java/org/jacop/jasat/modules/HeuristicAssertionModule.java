@@ -37,9 +37,9 @@ import org.jacop.jasat.core.Trail;
 
 /**
  * module used to guide research by selecting the next literal to assert
- * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.5
  *
+ * @author Simon Cruanes and Radoslaw Szymanek
+ * @version 4.6
  */
 public final class HeuristicAssertionModule implements SolverComponent {
 
@@ -56,6 +56,7 @@ public final class HeuristicAssertionModule implements SolverComponent {
      * this is the main heuristic function, which tries to guess which
      * literal is the most interesting to set now.
      * Can trigger SAT if no unset variable is found.
+     *
      * @return a literal with no current value. Polarity counts.
      */
     public int findNextVar() {

@@ -35,7 +35,7 @@ package org.jacop.constraints.cumulative;
  * Implements TreeNode for Tree.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 class TreeNode {
@@ -44,6 +44,7 @@ class TreeNode {
     // index in the tree
     int index;
 
-    TreeNode() {}
+    TreeNode() {
+    }
 
 }

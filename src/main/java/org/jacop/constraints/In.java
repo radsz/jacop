@@ -30,21 +30,17 @@
 
 package org.jacop.constraints;
 
+import org.jacop.core.*;
+
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jacop.core.Domain;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Store;
-import org.jacop.core.Var;
-
 /**
- * Constraints X to belong to a specified domain. 
- *
+ * Constraints X to belong to a specified domain.
+ * <p>
  * Domain consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class In extends PrimitiveConstraint {
@@ -68,12 +64,13 @@ public class In extends PrimitiveConstraint {
 
     /**
      * It constructs an In constraint to restrict the domain of the variable.
-     * @param x variable x for which the restriction is applied.
+     *
+     * @param x   variable x for which the restriction is applied.
      * @param dom the domain to which the variables domain is restricted.
      */
     public In(IntVar x, IntDomain dom) {
 
-        checkInputForNullness(new String[]{"x", "dom"}, new Object[] {x, dom});
+        checkInputForNullness(new String[] {"x", "dom"}, new Object[] {x, dom});
 
         numberId = idNumber.incrementAndGet();
 

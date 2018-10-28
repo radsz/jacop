@@ -29,20 +29,19 @@
  */
 package org.jacop.constraints.geost;
 
-import java.util.Arrays;
-
 import org.jacop.core.IntDomain;
 import org.jacop.util.SimpleArrayList;
 
+import java.util.Arrays;
+
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
- * @version 4.5
- *
- * This version of the ObstacleObject internal constraint allows the use
- * of multiple d-boxes per shape.
- *
- * TODO, describe how it works and what is the idea behind this implementation?
- *
+ * @version 4.6
+ *          <p>
+ *          This version of the ObstacleObject internal constraint allows the use
+ *          of multiple d-boxes per shape.
+ *          <p>
+ *          TODO, describe how it works and what is the idea behind this implementation?
  */
 
 public class ObstacleObject extends ObstacleObjectFrame {
@@ -72,8 +71,8 @@ public class ObstacleObject extends ObstacleObjectFrame {
      * It constructs an internal constraint to constraint the objects not to overlap with this
      * obstacle object.
      *
-     * @param geost the constraint for which this internal constraint has been created.
-     * @param obstacle the obstacle object which is responsible for this constraint.
+     * @param geost              the constraint for which this internal constraint has been created.
+     * @param obstacle           the obstacle object which is responsible for this constraint.
      * @param selectedDimensions the dimensions on which the constraint is applicable.
      */
     public ObstacleObject(Geost geost, GeostObject obstacle, int[] selectedDimensions) {

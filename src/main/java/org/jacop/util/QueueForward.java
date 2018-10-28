@@ -30,8 +30,8 @@
 
 package org.jacop.util;
 
-import org.jacop.constraints.Constraint;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.constraints.Constraint;
 import org.jacop.core.Var;
 
 import java.util.*;
@@ -41,7 +41,7 @@ import java.util.*;
  * as parameters to forward any changes of variables to the constraints that were provided as arguments.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 public class QueueForward<T extends Constraint> {
 

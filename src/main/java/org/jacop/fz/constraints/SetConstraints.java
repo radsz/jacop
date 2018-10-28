@@ -29,44 +29,32 @@
  */
 package org.jacop.fz.constraints;
 
-import org.jacop.core.Store;
-import org.jacop.core.IntVar;
-
-import org.jacop.set.core.SetVar;
-import org.jacop.set.core.BoundSetDomain;
-
+import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
-import org.jacop.constraints.Not;
-
-import org.jacop.set.constraints.Lex;
-import org.jacop.set.constraints.CardAeqX;
-import org.jacop.set.constraints.EinA;
-import org.jacop.set.constraints.XinA;
-import org.jacop.set.constraints.AinB;
-
-import org.jacop.fz.*;
-
-import org.jacop.set.constraints.AintersectBeqC;
 import org.jacop.core.IntDomain;
-import org.jacop.set.constraints.AunionBeqC;
-import org.jacop.set.constraints.AdiffBeqC;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.fz.ASTScalarFlatExpr;
+import org.jacop.fz.ParserTreeConstants;
+import org.jacop.fz.SimpleNode;
+import org.jacop.set.constraints.*;
+import org.jacop.set.core.BoundSetDomain;
+import org.jacop.set.core.SetVar;
 
 /**
- *
  * Generation of set constraints in flatzinc
  *
- * @author Krzysztof Kuchcinski 
- *
+ * @author Krzysztof Kuchcinski
  */
 class SetConstraints implements ParserTreeConstants {
 
     Support support;
     Store store;
-    
+
     public SetConstraints(Support support) {
-	this.support = support;
-	this.store = support.store;
+        this.support = support;
+        this.store = support.store;
     }
 
     void gen_set_card(SimpleNode node) {
@@ -175,14 +163,30 @@ class SetConstraints implements ParserTreeConstants {
         SetVar v1 = support.getSetVariable(node, 0);
         SetVar v2 = support.getSetVariable(node, 1);
 
-        support.pose(new Lex(v1, v2, false));
+        support.pose(new AleB(v1, v2));
+    }
+
+    void gen_set_le_reif(SimpleNode node) {
+        SetVar v1 = support.getSetVariable(node, 0);
+        SetVar v2 = support.getSetVariable(node, 1);
+        IntVar v3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+
+        support.pose(new Reified(new AleB(v1, v2), v3));
     }
 
     void gen_set_lt(SimpleNode node) {
         SetVar v1 = support.getSetVariable(node, 0);
         SetVar v2 = support.getSetVariable(node, 1);
 
-        support.pose(new Lex(v1, v2));
+        support.pose(new AltB(v1, v2));
+    }
+
+    void gen_set_lt_reif(SimpleNode node) {
+        SetVar v1 = support.getSetVariable(node, 0);
+        SetVar v2 = support.getSetVariable(node, 1);
+        IntVar v3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+
+        support.pose(new Reified(new AltB(v1, v2), v3));
     }
 
     void gen_set_ne(SimpleNode node) {

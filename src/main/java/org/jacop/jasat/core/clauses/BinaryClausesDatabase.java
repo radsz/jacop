@@ -31,16 +31,15 @@
 
 package org.jacop.jasat.core.clauses;
 
-import java.io.BufferedWriter;
-
 import org.jacop.jasat.utils.Utils;
+
+import java.io.BufferedWriter;
 
 /**
  * A database for binary clauses. It only accepts those.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.5
- *
+ * @version 4.6
  */
 
 public final class BinaryClausesDatabase extends AbstractClausesDatabase {
@@ -57,13 +56,11 @@ public final class BinaryClausesDatabase extends AbstractClausesDatabase {
     private int numRemoved = 0;
 
     /**
-     *
      * TODO Efficiency,
-     *
+     * <p>
      * Watches require a very large array, but there maybe not so many
      * binary clauses. Maybe a hashmap, connecting variable and list of
      * watched clauses is more appropriate.
-     *
      */
 
     public int addClause(int[] clause, boolean isModel) {
@@ -183,7 +180,8 @@ public final class BinaryClausesDatabase extends AbstractClausesDatabase {
 
     /**
      * when something changed, find the status of the clause
-     * @param clauseIndex  index of the clause
+     *
+     * @param clauseIndex index of the clause
      * @return the state of the clause
      */
     private final int notifyClause(int clauseIndex) {

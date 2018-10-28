@@ -28,7 +28,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.jacop.constraints.cumulative;
 
 import org.jacop.constraints.Constraint;
@@ -49,7 +48,7 @@ import java.util.stream.Stream;
  * algorithm.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 class CumulativePrimary extends Constraint {
@@ -176,7 +175,8 @@ class CumulativePrimary extends Constraint {
         for (int i = 0; i < start.length; i++) {
 
             // mandatory task parts to create profile
-            int min = start[i].max(), max = start[i].min() + dur[i];
+            int min = start[i].max(), // t.lst()
+                max = start[i].min() + dur[i];  // t.ect()
             if (min < max) {
                 es[j++] = new Event(profile, i, min, res[i]);
                 es[j++] = new Event(profile, i, max, -res[i]);
@@ -191,11 +191,13 @@ class CumulativePrimary extends Constraint {
         for (int i = 0; i < start.length; i++) {
             // overlapping tasks for pruning
             // from start to end
-            int min = start[i].min(); //t.est();
-            int max = start[i].max() + dur[i]; //t.lct();
-            if (!(min > maxProfile || max < minProfile)) {
-                es[j++] = new Event(pruneStart, i, min, res[i]);
-                es[j++] = new Event(pruneEnd, i, max, -res[i]);
+            if (!start[i].singleton()) {  // task that are ground are considered for manadatory tasks
+                int min = start[i].min(); //t.est();
+                int max = start[i].max() + dur[i]; //t.lct();
+                if (!(min > maxProfile || max < minProfile)) {
+                    es[j++] = new Event(pruneStart, i, min, 0); // res[i]);
+                    es[j++] = new Event(pruneEnd, i, max, 0);   // -res[i]);
+                }
             }
         }
 
@@ -244,17 +246,13 @@ class CumulativePrimary extends Constraint {
 
                         for (int ti = tasksToPrune.nextSetBit(0); ti >= 0; ti = tasksToPrune.nextSetBit(ti + 1)) {
 
-                            int profileValue = curProfile;
-                            if (inProfile[ti])
-                                profileValue -= res[ti];
-
                             // ========= Pruning start variable
                             if (startExcluded[ti] == Integer.MAX_VALUE) {
-                                if (limitMax - profileValue < res[ti]) {
+                                if (!inProfile[ti] && limitMax - curProfile < res[ti]) {
                                     startExcluded[ti] = e.date() - dur[ti] + 1;
                                 }
                             } else //startExcluded[ti] != Integer.MAX_VALUE
-                                if (limitMax - profileValue >= res[ti]) {
+                                if (inProfile[ti] || limitMax - curProfile >= res[ti]) {
                                     // end of excluded interval
 
                                     if (debugNarr)
@@ -275,14 +273,10 @@ class CumulativePrimary extends Constraint {
                     break;
 
                 case pruneStart:  // =========== start of a task ===========
-                    int profileValue = curProfile;
                     int ti = e.index;
 
-                    if (inProfile[ti])
-                        profileValue -= res[ti];
-
                     // ========= for start pruning
-                    if (limitMax - profileValue < res[ti])
+                    if (!inProfile[ti] && limitMax - curProfile < res[ti])
                         startExcluded[ti] = e.date();
 
                     tasksToPrune.set(ti);
@@ -296,8 +290,8 @@ class CumulativePrimary extends Constraint {
                         // task ends and we remove forbidden area
 
                         if (debugNarr)
-                            System.out.print(
-                                ">>> CumulativePrimary Profile 2. Narrowed " + start[ti] + " inMax " + (startExcluded[ti] - 1));
+                            System.out
+                                .print(">>> CumulativePrimary Profile 2. Narrowed " + start[ti] + " inMax " + (startExcluded[ti] - 1));
 
                         start[ti].domain.inMax(store.level, start[ti], startExcluded[ti] - 1);
 

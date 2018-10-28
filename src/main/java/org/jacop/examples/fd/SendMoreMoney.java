@@ -38,20 +38,18 @@ import org.jacop.search.*;
 import java.util.ArrayList;
 
 /**
- *
  * It is a simple arithmetic logic puzzle, where SEND+MORE=MONEY.
- *
- *  Find for the equation on the left
- *   what digits are represented by the letters
- *    different letters represent different digits
-
- *  SEND           9567
+ * <p>
+ * Find for the equation on the left
+ * what digits are represented by the letters
+ * different letters represent different digits
+ * <p>
+ * SEND           9567
  * +MORE ======={@literal >}+1085
  * MONEY          10652
  *
  * @author Radoslaw Szymanek
- * @version 4.5
- *
+ * @version 4.6
  */
 public class SendMoreMoney extends ExampleFD {
 
@@ -62,7 +60,7 @@ public class SendMoreMoney extends ExampleFD {
     /**
      * 1. Every CP program consists of two parts. The first one is a model and
      * the second one is the specification of the search.
-     *
+     * <p>
      * The model consists of variables and constraints.
      */
     public void modelBasic() {
@@ -286,7 +284,7 @@ public class SendMoreMoney extends ExampleFD {
          * before executing any code in this function to see at what point the
          * constraints were not able to reason more.
          */
-		
+
 		/*
 			store.consistency();
 			store.print();
@@ -342,6 +340,7 @@ public class SendMoreMoney extends ExampleFD {
 
     /**
      * It executes the program to solve this simple logic puzzle.
+     *
      * @param args no arguments used.
      */
     public static void main(String args[]) {
@@ -483,11 +482,11 @@ public class SendMoreMoney extends ExampleFD {
          * MORE = 1000 * M + 100 * O + R * 10 + E * 1
          * MONEY = 10000 * M + 1000 * O + 100 * N + E * 10 + Y * 1
          */
-        store.impose(new LinearInt(store, send, weights4, "==", valueSEND));
+        store.impose(new LinearInt(send, weights4, "==", valueSEND));
         // store.impose(new SumWeight(send, weights4, valueSEND));
-        store.impose(new LinearInt(store, more, weights4, "==", valueMORE));
+        store.impose(new LinearInt(more, weights4, "==", valueMORE));
         // store.impose(new SumWeight(more, weights4, wvalueMORE));
-        store.impose(new LinearInt(store, money, weights5, "==", valueMONEY));
+        store.impose(new LinearInt(money, weights5, "==", valueMONEY));
         // store.impose(new SumWeight(money, weights5, valueMONEY));
 
         /**
@@ -504,7 +503,7 @@ public class SendMoreMoney extends ExampleFD {
 
         int[] weightsImplied = {1000, 91, 10, 1, -9000, -900, -90};
         IntVar[] varsImplied = {s, e, r, d, m, o, n};
-        store.impose(new LinearInt(store, varsImplied, weightsImplied, "==", y));
+        store.impose(new LinearInt(varsImplied, weightsImplied, "==", y));
         // store.impose(new SumWeight(varsImplied, weightsImplied, y));
 
         /**

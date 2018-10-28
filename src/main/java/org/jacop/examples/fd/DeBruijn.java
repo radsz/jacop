@@ -30,47 +30,43 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
 import org.jacop.constraints.Alldifferent;
-import org.jacop.constraints.Min;
 import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.Min;
 import org.jacop.constraints.XeqY;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import scala.tools.nsc.Global;
+
+import java.util.ArrayList;
 
 /**
- *
- * A program solving problem of finding de Bruijn sequences. 
+ * A program solving problem of finding de Bruijn sequences.
  *
  * @author Hakan Kjellerstrand (hakank@bonetmail.com) and Radoslaw Szymanek
- * @version 4.5
- *
- * It finds both "normal" and "arbitrary" de Bruijn sequences.
- *
- * This is a port from my MiniZinc model
- *    http://www.hakank.org/minizinc/debruijn_binary.mzn
- *
- * and is explained somewhat in the swedish blog post
- * "Constraint Programming: Minizinc, Gecode/flatzinc och ECLiPSe/minizinc"
- * http://www.hakank.org/webblogg/archives/001209.html
- *
- * Related programs:
- * - "Normal" de Bruijn sequences
- *  CGI program for calculating the sequences
- *  http://www.hakank.org/comb/debruijn.cgi
- *  http://www.hakank.org/comb/deBruijnApplet.html (as Java applet)
- *
- *
- * - "Arbitrary" de Bruijn sequences
- *   Program "de Bruijn arbitrary sequences"
- *   http://www.hakank.org/comb/debruijn_arb.cgi
- *
- *   This (swedish) blog post explains the program:
- *   "de Bruijn-sekvenser av godtycklig längd"
- *   http://www.hakank.org/webblogg/archives/001114.html
- *
+ * @version 4.6
+ *          <p>
+ *          It finds both "normal" and "arbitrary" de Bruijn sequences.
+ *          <p>
+ *          This is a port from my MiniZinc model
+ *          http://www.hakank.org/minizinc/debruijn_binary.mzn
+ *          <p>
+ *          and is explained somewhat in the swedish blog post
+ *          "Constraint Programming: Minizinc, Gecode/flatzinc och ECLiPSe/minizinc"
+ *          http://www.hakank.org/webblogg/archives/001209.html
+ *          <p>
+ *          Related programs:
+ *          - "Normal" de Bruijn sequences
+ *          CGI program for calculating the sequences
+ *          http://www.hakank.org/comb/debruijn.cgi
+ *          http://www.hakank.org/comb/deBruijnApplet.html (as Java applet)
+ *          <p>
+ *          - "Arbitrary" de Bruijn sequences
+ *          Program "de Bruijn arbitrary sequences"
+ *          http://www.hakank.org/comb/debruijn_arb.cgi
+ *          <p>
+ *          This (swedish) blog post explains the program:
+ *          "de Bruijn-sekvenser av godtycklig längd"
+ *          http://www.hakank.org/webblogg/archives/001114.html
  */
 
 public class DeBruijn extends ExampleFD {
@@ -132,7 +128,7 @@ public class DeBruijn extends ExampleFD {
                 binary[i][j] = new IntVar(store, "binary_" + i + "_" + j, 0, base - 1);
             }
 
-            store.impose(new LinearInt(store, binary[i], weights, "==", x[i]));
+            store.impose(new LinearInt(binary[i], weights, "==", x[i]));
             // store.impose(new SumWeight (binary[i], weights, x[i]));
         }
 
@@ -173,6 +169,7 @@ public class DeBruijn extends ExampleFD {
      * Running the program
      * java DeBruijn base n
      * java DeBruijn base n m
+     *
      * @param args between 2 and 3 arguments are used.
      */
     public static void main(String args[]) {

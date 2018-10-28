@@ -30,57 +30,46 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
-import org.jacop.constraints.Alldifferent;
-import org.jacop.constraints.Distance;
-import org.jacop.constraints.Element;
-import org.jacop.constraints.ExtensionalSupportVA;
-import org.jacop.constraints.XgtY;
-import org.jacop.constraints.XltY;
-import org.jacop.constraints.XneqY;
-import org.jacop.constraints.XplusCeqZ;
-import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.util.ArrayList;
+
 /**
- *
- * It is a simple logic puzzle about sleeping arrangements. 
+ * It is a simple logic puzzle about sleeping arrangements.
  *
  * @author Radoslaw Szymanek
- * @version 4.5
- *
- * The Dillies have five teenaged children, two boys named Ollie and
- * Rollie, and three girls named Mellie, Nellie, and Pollie. Each is a
- * different number of years old, from 13 to 17. There are three bedrooms
- * for the children in the Dillie house, so two share the yellow room,
- * two share the white room, and one alone has the smaller green
- * room. Can you match each one's name and age, and tell who sleeps
- * where?
- *
- * 1. No one shares a room with a sibling of the opposite sex.
- *
- * 2. Pollie is exactly one year older than Mellie.
- *
- * 3. The two teenagers who share the yellow room are two years apart in age.
- *
- * 4. The two who share the white room are three years apart in age.
- *
- * 5. Rollie is somewhat older than Ollie, but somewhat younger than the
- * sibling who has the green room.
- *
- * Determine: Child -- Age -- Room
- *
- * Given solution : 
- *
- * Mellie, 16, green room
- * Nellie, 14, white room
- * Ollie, 13, yellow room
- * Pollie, 17, white room
- * Rollie, 15, yellow room
- *
- *
+ * @version 4.6
+ *          <p>
+ *          The Dillies have five teenaged children, two boys named Ollie and
+ *          Rollie, and three girls named Mellie, Nellie, and Pollie. Each is a
+ *          different number of years old, from 13 to 17. There are three bedrooms
+ *          for the children in the Dillie house, so two share the yellow room,
+ *          two share the white room, and one alone has the smaller green
+ *          room. Can you match each one's name and age, and tell who sleeps
+ *          where?
+ *          <p>
+ *          1. No one shares a room with a sibling of the opposite sex.
+ *          <p>
+ *          2. Pollie is exactly one year older than Mellie.
+ *          <p>
+ *          3. The two teenagers who share the yellow room are two years apart in age.
+ *          <p>
+ *          4. The two who share the white room are three years apart in age.
+ *          <p>
+ *          5. Rollie is somewhat older than Ollie, but somewhat younger than the
+ *          sibling who has the green room.
+ *          <p>
+ *          Determine: Child -- Age -- Room
+ *          <p>
+ *          Given solution :
+ *          <p>
+ *          Mellie, 16, green room
+ *          Nellie, 14, white room
+ *          Ollie, 13, yellow room
+ *          Pollie, 17, white room
+ *          Rollie, 15, yellow room
  */
 
 public class SleepingArrangements extends ExampleFD {
@@ -187,6 +176,7 @@ public class SleepingArrangements extends ExampleFD {
 
     /**
      * It executes a program to solve this simple logic puzzle.
+     *
      * @param args no arguments are used.
      */
     public static void main(String args[]) {

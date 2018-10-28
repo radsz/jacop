@@ -31,26 +31,25 @@
 
 package org.jacop.constraints;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
 import org.jacop.util.IndexDomainView;
 
+import java.util.Arrays;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * Extensional constraint assures that one of the tuples is enforced in the
  * relation.
- *
+ * <p>
  * This implementation uses technique developed/improved by Christophe Lecoutre.
- * Paper presented at CP2008. We would like to thank him for making his code 
+ * Paper presented at CP2008. We would like to thank him for making his code
  * available, which helped to create our own version of this algorithm.
  *
  * @author Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 
@@ -172,20 +171,20 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
      * Partial constructor which stores variables involved in a constraint but
      * does not get information about tuples yet. The tuples must set separately.
      *
-     * @param list the variables in the scope of the constraint.
+     * @param list           the variables in the scope of the constraint.
      * @param reinsertBefore it specifies if the tuples which were removed and are reinstatiated are inserted at the beginning.
      * @param residuesBefore it specifies if the residue tuples are moved to the beginning.
      */
-    @Deprecated
-    public ExtensionalSupportSTR(IntVar[] list, boolean reinsertBefore, boolean residuesBefore) {
+    @Deprecated public ExtensionalSupportSTR(IntVar[] list, boolean reinsertBefore, boolean residuesBefore) {
         this(list, new int[0][0], reinsertBefore, residuesBefore);
     }
 
 
     /**
      * It constructs an extensional constraint.
-     * @param list the variables in the scope of the constraint.
-     * @param tuples the tuples which are supports.
+     *
+     * @param list           the variables in the scope of the constraint.
+     * @param tuples         the tuples which are supports.
      * @param reinsertBefore it specifies if the tuples which were removed and are reinstatiated are inserted at the beginning.
      * @param residuesBefore it specifies if the residue tuples are moved to the beginning.
      */
@@ -215,8 +214,9 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
 
     /**
      * It creates an extensional constraint.
+     *
      * @param variables the variables in the scope of the constraint.
-     * @param tuples the support tuples.
+     * @param tuples    the support tuples.
      */
     public ExtensionalSupportSTR(IntVar[] variables, int[][] tuples) {
         this(variables, tuples, true, true);
@@ -246,8 +246,9 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
 
     /**
      * It removes the tuple which is no longer valid.
+     *
      * @param previous the tuple pointing at removed tuple.
-     * @param current the removed tuple.
+     * @param current  the removed tuple.
      */
     public void remove(int previous, int current) {
 
@@ -274,8 +275,9 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
 
     /**
      * It moves the residue to the beginning of the list.
+     *
      * @param previous the tuple pointing at tuple residue.
-     * @param current the residue tuple.
+     * @param current  the residue tuple.
      */
     public void storeResidue(int previous, int current) {
         if (previous == -1)

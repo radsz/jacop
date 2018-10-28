@@ -31,16 +31,12 @@
 
 package org.jacop.jasat.core;
 
+import org.jacop.jasat.core.clauses.*;
+
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
-
-import org.jacop.jasat.core.clauses.AbstractClausesDatabase;
-import org.jacop.jasat.core.clauses.BinaryClausesDatabase;
-import org.jacop.jasat.core.clauses.DefaultClausesDatabase;
-import org.jacop.jasat.core.clauses.TernaryClausesDatabase;
-import org.jacop.jasat.core.clauses.UnaryClausesDatabase;
 
 /**
  * The configuration for a solver. It contains all numeric values or
@@ -48,8 +44,7 @@ import org.jacop.jasat.core.clauses.UnaryClausesDatabase;
  * changed before the Config object is given to the solver.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.5
- *
+ * @version 4.6
  */
 
 @SuppressWarnings("serial") public class Config extends Properties {
@@ -151,6 +146,7 @@ import org.jacop.jasat.core.clauses.UnaryClausesDatabase;
 
     /**
      * check some properties of the config
+     *
      * @return true if the config passes check, false if there is a problem
      */
     public boolean check() {

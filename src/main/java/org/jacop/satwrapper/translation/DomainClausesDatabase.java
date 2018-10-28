@@ -31,15 +31,15 @@
 
 package org.jacop.satwrapper.translation;
 
-import java.io.BufferedWriter;
-import java.io.IOException;
-
 import org.jacop.core.Store;
 import org.jacop.jasat.core.clauses.AbstractClausesDatabase;
 import org.jacop.jasat.core.clauses.MapClause;
 import org.jacop.jasat.utils.Utils;
 import org.jacop.satwrapper.SatWrapper;
 import org.jacop.satwrapper.WrapperComponent;
+
+import java.io.BufferedWriter;
+import java.io.IOException;
 
 /*
  * NOTE :
@@ -63,7 +63,7 @@ import org.jacop.satwrapper.WrapperComponent;
  * a CP semantic with respect to their meaning about domains.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 public final class DomainClausesDatabase extends AbstractClausesDatabase implements WrapperComponent {
 
@@ -92,7 +92,7 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase impleme
 			return;
 		}
 		*/
-		
+
 		/*
 		 * only do something for literals representing a variable, which have
 		 * not yet been examined

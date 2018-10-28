@@ -30,28 +30,27 @@
 
 package org.jacop.search;
 
-import java.util.ArrayList;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Var;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 /**
- * SimpleMatrixSelect selects first a row in the matrix based on metric of the 
+ * SimpleMatrixSelect selects first a row in the matrix based on metric of the
  * variable at pivotPosition. As soon as a row is choosen, variables starting
- * from the beginning of the row which are not assigned yet are selected.  
+ * from the beginning of the row which are not assigned yet are selected.
  * The row selection is done with the help of variable comparators. Two comparators
  * can be employed main and tiebreaking one. If two are not sufficient to differentiate
- * two rows than the lexigraphical ordering is used. 
- *
+ * two rows than the lexigraphical ordering is used.
+ * <p>
  * Default values: pivotPosition = 0,
  * mainComparator = InputOrder, tieBreakingComparator = InputOrder.
  *
- * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
  * @param <T> type of variable being used in the Search.
+ * @author Radoslaw Szymanek and Krzysztof Kuchcinski
+ * @version 4.6
  */
 
 public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
@@ -103,7 +102,8 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
      * This constructor uses default values for all parameters. The size of the
      * sublist is equal to two. The pivot position points to the first element.
      * The tiebreaking delete used is DeleteMostConstrainedStatic.
-     * @param vars variables to choose from.
+     *
+     * @param vars     variables to choose from.
      * @param indomain value ordering heuristic used to choose a value for a given variable.
      */
 
@@ -113,9 +113,10 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
 
     /**
      * It constructs a MatrixSelection variable ordering.
-     * @param vars matrix of variables to be selected from.
+     *
+     * @param vars           matrix of variables to be selected from.
      * @param mainComparator the variable comparator to choose the proper vector.
-     * @param indomain variable ordering value to be used to determine value for a given variable.
+     * @param indomain       variable ordering value to be used to determine value for a given variable.
      */
     public SimpleMatrixSelect(T[][] vars, ComparatorVariable<T> mainComparator, Indomain<T> indomain) {
         this(vars, mainComparator, null, indomain, 0);
@@ -123,10 +124,11 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
 
     /**
      * It constructs a MatrixSelection variable ordering.
-     * @param vars matrix of variables to be selected from.
-     * @param mainComparator the variable comparator to choose the proper vector.
+     *
+     * @param vars                  matrix of variables to be selected from.
+     * @param mainComparator        the variable comparator to choose the proper vector.
      * @param tieBreakingComparator the variable comparator used if the main comparator can not distinguish between vectors.
-     * @param indomain variable ordering value to be used to determine value for a given variable.
+     * @param indomain              variable ordering value to be used to determine value for a given variable.
      */
     public SimpleMatrixSelect(T[][] vars, ComparatorVariable<T> mainComparator, ComparatorVariable<T> tieBreakingComparator,
         Indomain<T> indomain) {
@@ -137,11 +139,12 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
      * This constructor allows to specify all parameters for the selection mechanism. Specifying
      * mainComparator or tieBreaking to value null do not use that functionality of the selection
      * mechanims.
-     * @param vars variables from which the base of the choice point is choosen.
-     * @param mainComparator the main variable comparator used to compare variables.
+     *
+     * @param vars                  variables from which the base of the choice point is choosen.
+     * @param mainComparator        the main variable comparator used to compare variables.
      * @param tieBreakingComparator the secondary variable comparator used to break ties.
-     * @param indomain the value ordering heuristic used to assign value to a chosen variable.
-     * @param pivotPosition the position of the variable which is used to rank the rows.
+     * @param indomain              the value ordering heuristic used to assign value to a chosen variable.
+     * @param pivotPosition         the position of the variable which is used to rank the rows.
      */
 
     public SimpleMatrixSelect(T[][] vars, ComparatorVariable<T> mainComparator, ComparatorVariable<T> tieBreakingComparator,
@@ -397,6 +400,7 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
 
     /**
      * It returns the position of the pivot variable.
+     *
      * @return the position of the pivot variable.
      */
     public int getPivotPosition() {

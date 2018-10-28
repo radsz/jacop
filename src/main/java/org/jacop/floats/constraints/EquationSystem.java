@@ -30,15 +30,14 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.Arrays;
-import java.util.stream.Stream;
-
+import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
-import org.jacop.constraints.Constraint;
-
-import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatInterval;
+import org.jacop.floats.core.FloatVar;
+
+import java.util.Arrays;
+import java.util.stream.Stream;
 
 /**
  * EquationSystem constraint implements the multivariate interval
@@ -46,7 +45,7 @@ import org.jacop.floats.core.FloatInterval;
  * non-linear equations.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class EquationSystem extends Constraint {
@@ -70,7 +69,7 @@ public class EquationSystem extends Constraint {
      */
     public EquationSystem(Store store, FloatVar[] f, FloatVar[] x) {
 
-        checkInputForNullness(new String[]{"f", "x"}, new Object[]{f, x});
+        checkInputForNullness(new String[] {"f", "x"}, new Object[] {f, x});
 
         this.f = Arrays.copyOf(f, f.length);
         this.x = Arrays.copyOf(x, x.length);

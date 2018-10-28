@@ -30,20 +30,16 @@
 
 package org.jacop.fz;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-
 import org.jacop.floats.core.FloatDomain;
 
+import java.io.FileInputStream;
+
 /**
- *
  * It parses the options provided to flatzinc parser/executable. It contains
- * information about all options used for a given flatzinc file. 
+ * information about all options used for a given flatzinc file.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.5
- *
+ * @version 4.6
  */
 public class Options {
 
@@ -98,10 +94,11 @@ public class Options {
                     + "    -t <value>, --time-out <value>\n" + "        <value> - time in second.\n" + "    -s, --statistics\n"
                     + "    -n <value>, --num-solutions <value>\n" + "        <value> - limit on solution number.\n"
                     + "    -b, --bound - use bounds consistency whenever possible;\n"
-                    + "        override annotation \":: domain\" and select constraints\n"
-                    + "        implementing bounds consistency (default false).\n" + "    -sat use SAT solver for boolean constraints.\n"
-                    + "    -cs, --complementary-search - try to gather all model, non-introduced\n"
-                    + "         variables to define the final or default search, instead of using\n" + "         output variables only.\n"
+                    + "        overrides annotation \":: domain\" and selects constraints\n"
+                    + "        implementing bounds consistency (default false).\n"
+		    + "    -sat use SAT solver for boolean constraints.\n"
+                    + "    -cs, --complementary-search - gathers all model, non-defined\n"
+                    + "         variables to create the final search\n"
                     + "    -i, --interval print intervals instead of values for floating variables\n"
                     + "    -p <value>, --precision <value> defines precision for floating operations\n"
                     + "        overrides precision definition in search annotation.\n"
@@ -166,7 +163,7 @@ public class Options {
                 } else if (args[i].equals("-debug")) {
                     debug = true;
                     i++;
-                } else if (args[i].equals("-outputfile")){
+                } else if (args[i].equals("-outputfile")) {
                     outputFilename = args[++i];
                     i++;
                 } else {
@@ -181,6 +178,7 @@ public class Options {
 
     /**
      * It returns the file input stream for the file containing flatzinc description.
+     *
      * @return file containing flatzinc description.
      */
     public FileInputStream getFile() {
@@ -196,6 +194,7 @@ public class Options {
 
     /**
      * It returns the file name for the file containing flatzinc description.
+     *
      * @return file name containing flatzinc description.
      */
     public String getFileName() {
@@ -204,6 +203,7 @@ public class Options {
 
     /**
      * It returns true if the search for all solution has been requested.
+     *
      * @return true if the search for all solution should take place, false otherwise.
      */
     public boolean getAll() {
@@ -212,6 +212,7 @@ public class Options {
 
     /**
      * It returns true if the verbose mode has been requested.
+     *
      * @return true if the verbose mode is active, false otherwise.
      */
     public boolean getVerbose() {
@@ -247,6 +248,7 @@ public class Options {
 
     /**
      * It returns true if the interval print mode has been requested.
+     *
      * @return true if the interval print mode is active, false otherwise.
      */
     public boolean getInterval() {
@@ -262,6 +264,7 @@ public class Options {
 
     /**
      * It returns true if the search must be run and false otherwise.
+     *
      * @return true if run search, false otherwise.
      */
     public boolean runSearch() {
@@ -271,6 +274,7 @@ public class Options {
 
     /**
      * It defines whether to use bound consistency
+     *
      * @return true if bound consistency prefered, false otherwise (defult).
      */
     public boolean getBoundConsistency() {
@@ -279,6 +283,7 @@ public class Options {
 
     /**
      * It returns precision defined in the command line
+     *
      * @return precision.
      */
     public double getPrecision() {
@@ -287,6 +292,7 @@ public class Options {
 
     /**
      * It informs whether precision is defined.
+     *
      * @return true if precision for floating point solver is defined
      */
     public boolean precision() {
@@ -295,6 +301,7 @@ public class Options {
 
     /**
      * It defines whether sat is used.
+     *
      * @return true sat is used, false otherwise
      */
     public boolean useSat() {
@@ -303,16 +310,21 @@ public class Options {
 
     /**
      * It defines whether to use debug information print-out.
+     *
      * @return true if debugging information is printed, false otherwise
      */
     public boolean debug() {
         return debug;
     }
 
-    public String getOutputFilename() { return outputFilename; }
+    public String getOutputFilename() {
+        return outputFilename;
+    }
+
     /**
      * It defines wheter additional search should use output variables only (false, default).
      * or should try to collect all non introduced variables (true).
+     *
      * @return additional search should use output variables only (false, default).
      * or should try to collect all non introduced variables (true)
      */

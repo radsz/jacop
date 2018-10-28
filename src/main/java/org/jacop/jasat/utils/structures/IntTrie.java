@@ -44,7 +44,7 @@ import java.util.Set;
  *
  * @param <N> the type of the nodes of the Trie
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 public class IntTrie<N extends IntTrie.Node<N>> {
 
@@ -266,8 +266,7 @@ public class IntTrie<N extends IntTrie.Node<N>> {
     /**
      * @return the set of values that the Trie contains (quite inefficient)
      */
-    @SuppressWarnings("unused")
-    public Set<Integer> values() {
+    @SuppressWarnings("unused") public Set<Integer> values() {
         throw new UnsupportedOperationException();
     }
 

@@ -30,27 +30,21 @@
 
 package org.jacop.constraints.netflow;
 
-import static org.jacop.constraints.netflow.Assert.checkFlow;
-import static org.jacop.constraints.netflow.Assert.checkStructure;
+import org.jacop.constraints.netflow.DomainStructure.Behavior;
+import org.jacop.constraints.netflow.simplex.Arc;
+import org.jacop.constraints.netflow.simplex.Node;
+import org.jacop.core.*;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.PriorityQueue;
 
-import org.jacop.constraints.netflow.DomainStructure.Behavior;
-import org.jacop.constraints.netflow.simplex.Arc;
-import org.jacop.constraints.netflow.simplex.Node;
-import org.jacop.core.Domain;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Interval;
-import org.jacop.core.IntervalDomain;
+import static org.jacop.constraints.netflow.Assert.checkFlow;
+import static org.jacop.constraints.netflow.Assert.checkStructure;
 
 /**
- *
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.5
- *
+ * @version 4.6
  */
 
 public class Pruning extends Network {
@@ -71,6 +65,7 @@ public class Pruning extends Network {
     private static final int FAIL_SCORE = 2;
 
     private Statistics statistics;
+
 
     interface PruningStrategy {
 
@@ -499,7 +494,7 @@ public class Pruning extends Network {
             // costLimit -= arc.cost * delta;
 
 			/*
-			 * int currentFlow = baseFlow + ((arc.forward) ? flow : -flow); if
+       * int currentFlow = baseFlow + ((arc.forward) ? flow : -flow); if
 			 * (currentFlow > 0) { int deltaWeight = costLimit / currentFlow; if
 			 * (maxWeight < deltaWeight) { maxWeight = deltaWeight;
 			 * flowAtMaxWeight = currentFlow; } }

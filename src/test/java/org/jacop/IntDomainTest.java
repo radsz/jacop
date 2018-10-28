@@ -51,7 +51,7 @@ import static org.mockito.MockitoAnnotations.initMocks;
  * Tests to test different domain operations for IntDomains in particular SmallDenseDomain and IntervalDomain.
  *
  * @author Mariusz Świerkot and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 @RunWith(Parameterized.class) public class IntDomainTest {
 
@@ -648,8 +648,9 @@ import static org.mockito.MockitoAnnotations.initMocks;
 
     /**
      * It is used by the reflection used by the parametrization parameters. It has to stay public.
+     *
      * @param intervalList list of intervals where each two consequtive numbers specify the minimum and maximum of an interval.
-     * @return
+     * @return prepared domain using SmallDenseDomain.
      */
     public IntDomain prepareSmallDenseDomain(int[] intervalList) {
         IntDomain domain;
@@ -671,8 +672,9 @@ import static org.mockito.MockitoAnnotations.initMocks;
 
     /**
      * It is used by the reflection used by the parametrization parameters. It has to stay public.
+     *
      * @param intervalList list of intervals where each two consequtive numbers specify the minimum and maximum of an interval.
-     * @return
+     * @return prepared domain using IntevalDomain.
      */
     public IntDomain prepareIntervalDomain(int[] intervalList) {
         IntDomain domain;

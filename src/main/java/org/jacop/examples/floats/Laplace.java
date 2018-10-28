@@ -31,27 +31,23 @@
 package org.jacop.examples.floats;
 
 /**
- *
- *
  * From the CLP(R) laplace example:
- *
+ * <p>
  * Solves the Dirichlet problem for Laplace's equation using
- * Leibman's five-point finite-difference approximation. 
- *
+ * Leibman's five-point finite-difference approximation.
+ * <p>
  * Based on minizinc program written by Håkan Kjellerstrand
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
- *
+ * @version 4.6
  */
 
 import org.jacop.core.Store;
-import org.jacop.search.DepthFirstSearch;
-
-import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.constraints.LinearFloat;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.search.DepthFirstSearch;
 
 public class Laplace {
 
@@ -85,7 +81,7 @@ public class Laplace {
 
         for (int i = 1; i < r; i++)
             for (int j = 1; j < c; j++)
-                store.impose(new LinearFloat(store, new FloatVar[] {x[i][j], x[i - 1][j], x[i][j - 1], x[i + 1][j], x[i][j + 1]},
+                store.impose(new LinearFloat(new FloatVar[] {x[i][j], x[i - 1][j], x[i][j - 1], x[i + 1][j], x[i][j + 1]},
                     new double[] {-4.0, 1.0, 1.0, 1.0, 1.0}, "==", 0.0));
 
 

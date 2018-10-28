@@ -30,34 +30,33 @@
 
 package org.jacop.constraints.netflow;
 
-import static org.jacop.constraints.netflow.Assert.checkFlow;
-import static org.jacop.constraints.netflow.Assert.checkStructure;
-
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
-
+import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.Stateful;
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.netflow.simplex.Arc;
 import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Var;
 
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
+
+import static org.jacop.constraints.netflow.Assert.checkFlow;
+import static org.jacop.constraints.netflow.Assert.checkStructure;
+
 /**
- *
  * The network flow constraint. Use the NetworkBuilder to create a network and
  * instantiate the network.
  *
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.5
- *
+ * @version 4.6
  */
 
-public class NetworkFlow extends Constraint implements UsesQueueVariable, Stateful {
+public class NetworkFlow extends Constraint implements UsesQueueVariable, Stateful, RemoveLevelLate {
 
     private static final int QUEUE_INDEX = 2;
     private static final boolean DO_INSTRUMENTATION = false;
@@ -70,29 +69,43 @@ public class NetworkFlow extends Constraint implements UsesQueueVariable, Statef
         // asserts.Assert.forceAsserts();
     }
 
-    /** Instance counter */
+    /**
+     * Instance counter
+     */
     static AtomicInteger idNumber = new AtomicInteger(0);
 
-    /** The network */
+    /**
+     * The network
+     */
     //	public final Network network;
     public final Pruning network;
 
-    /** The cost variable */
+    /**
+     * The cost variable
+     */
     public IntVar costVariable;
 
-    /** The variables and their handlers */
+    /**
+     * The variables and their handlers
+     */
     public final Map<IntVar, VarHandler> map;
 
-    /** The set of queued variables */
+    /**
+     * The set of queued variables
+     */
     public final Set<IntVar> queue;
 
-    /** Disables the queue variable function during consistency */
+    /**
+     * Disables the queue variable function during consistency
+     */
     public boolean disableQueueVariable;
 
     public int previousLevel = -1;
 
     /********************/
-    /** Initialization **/
+    /**
+     * Initialization
+     **/
 
     // It can handle duplicates of variables thanks to using MultiVarHandler that takes care of this.
     private NetworkFlow(List<Node> nodes, List<Arc> arcs, List<VarHandler> flowVariables, IntVar costVariable) {
@@ -119,9 +132,11 @@ public class NetworkFlow extends Constraint implements UsesQueueVariable, Statef
             @Override public List<IntVar> listVariables() {
                 return Arrays.asList(costVariable);
             }
+
             @Override public int getPruningEvent(Var variable) {
                 return IntDomain.ANY;
             }
+
             @Override public void processEvent(IntVar variable, MutableNetwork network) {
                 // TODO, maybe here extra work that before was not being done can be done.
             }
@@ -131,7 +146,7 @@ public class NetworkFlow extends Constraint implements UsesQueueVariable, Statef
         this.queueIndex = QUEUE_INDEX;
         this.numberId = idNumber.incrementAndGet();
 
-        setScope(Stream.concat( map.keySet().stream(), Stream.of(costVariable)));
+        setScope(Stream.concat(map.keySet().stream(), Stream.of(costVariable)));
 
         // for (VarHandler vh : flowVariables)
         //     System.out.println("{flow/cost | structure} var = " + vh.listVariables());
@@ -170,7 +185,9 @@ public class NetworkFlow extends Constraint implements UsesQueueVariable, Statef
     }
 
     /***************************/
-    /** Search {@literal &} Backtracking **/
+    /**
+     * Search {@literal &} Backtracking
+     **/
 
     @Override public void queueVariable(int level, Var variable) {
         // DomainStructure structure = map.get(variable);
@@ -309,11 +326,13 @@ public class NetworkFlow extends Constraint implements UsesQueueVariable, Statef
 
 
     /*****************/
-    /** Identifiers **/
-    
+    /**
+     * Identifiers
+     **/
+
     @Override public String toString() {
         // TODO Do proper constraint print-out
-        return id()+" :";
+        return id() + " :";
     }
 
 }

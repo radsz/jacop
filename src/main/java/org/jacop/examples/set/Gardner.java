@@ -30,8 +30,6 @@
 
 package org.jacop.examples.set;
 
-import java.util.ArrayList;
-
 import org.jacop.constraints.Not;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -47,17 +45,20 @@ import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
 import org.jacop.set.search.IndomainSetMin;
 
+import java.util.ArrayList;
+
 /**
- * It specifies a simple Gardner problem which use set functionality from JaCoP. 
+ * It specifies a simple Gardner problem which use set functionality from JaCoP.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class Gardner extends ExampleSet {
 
     /**
      * It executes the program which solves this gardner problem.
+     *
      * @param args parameters (none)
      */
     public static void main(String args[]) {

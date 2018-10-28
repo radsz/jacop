@@ -43,7 +43,7 @@ import java.util.stream.Stream;
  * Constraint Values counts number of different values on a list of Variables.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class Values extends Constraint implements SatisfiedPresent {
@@ -59,7 +59,7 @@ public class Values extends Constraint implements SatisfiedPresent {
      * It specifies the idNumber of different values among variables on a given list.
      */
     final private IntVar count;
-    
+
     Comparator<IntVar> minFDV = (o1, o2) -> (o1.min() - o2.min());
 
     final static private boolean debug = false;

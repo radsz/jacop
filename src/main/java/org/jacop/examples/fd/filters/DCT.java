@@ -35,15 +35,15 @@ import java.util.List;
 
 /**
  * It specifies DCT benchmark.
- *
+ * <p>
  * Source:
- *
+ * <p>
  * Nestor, J.A.; Krishnamoorthy, G.; "SALSA: a new approach to scheduling with
  * timing constraints" IEEE Transactions on Computer-Aided Design of Integrated
  * Circuits and Systems, Volume 12, Issue 8, Aug. 1993 Page(s):1107 - 1122
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class DCT extends Filter {

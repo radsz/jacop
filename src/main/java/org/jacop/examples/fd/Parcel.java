@@ -30,20 +30,19 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Element;
 import org.jacop.constraints.SumInt;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.util.ArrayList;
+
 /**
- * It solves a simple parcel shipment problem. 
+ * It solves a simple parcel shipment problem.
  *
  * @author Radoslaw Szymanek
- * @version 4.5
- *
+ * @version 4.6
  */
 public class Parcel extends ExampleFD {
 
@@ -116,13 +115,13 @@ public class Parcel extends ExampleFD {
             for (int j = 0; j <= i; j++)
                 tripLoads[j] = loads[j];
             IntVar partialLoad = new IntVar(store, "partialLoad[0-" + i + "]", 0, 15);
-            store.impose(new SumInt(store, tripLoads, "==", partialLoad));
+            store.impose(new SumInt(tripLoads, "==", partialLoad));
         }
 
         cost = new IntVar(store, "Cost", 0, 100000);
 
         // Computes the travel cost.
-        store.impose(new SumInt(store, costs, "==", cost));
+        store.impose(new SumInt(costs, "==", cost));
 
         vars.add(cost);
 
@@ -130,6 +129,7 @@ public class Parcel extends ExampleFD {
 
     /**
      * It executes the program to solve the parcel shipment problem.
+     *
      * @param args no parameters
      */
     public static void main(String args[]) {

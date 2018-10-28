@@ -36,6 +36,7 @@ import org.jacop.scala._
   * A problem defined as in Java based examples.
   *
   * rewriting to Scala by Krzysztof Kuchcinski.
+  *
   * @author Krzysztof Kuchcinski and Radoslaw Szymanek
   * @version 4.5
   */
@@ -43,16 +44,16 @@ object QueenGlobal extends App with jacop {
 
   val n = 100
 
-  val q = Array.tabulate(n)( i => new IntVar("q"+i, 0, n) )
+  val q = Array.tabulate(n)(i => new IntVar("q" + i, 0, n))
   alldifferent(q)
 
-  val q1 = Array.tabulate(n)( i => q(i) + i )
+  val q1 = Array.tabulate(n)(i => q(i) + i)
   alldifferent(q1)
 
-  val q2 = Array.tabulate(n)( i => q(i) - i )
+  val q2 = Array.tabulate(n)(i => q(i) - i)
   alldifferent(q2)
-  
-  val result = satisfy( search(q, first_fail, indomain_middle) )
+
+  val result = satisfy(search(q, first_fail, indomain_middle))
 
   if (result) println("Yes")
   else println("No solution")

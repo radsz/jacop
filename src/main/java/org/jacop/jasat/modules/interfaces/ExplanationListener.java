@@ -35,15 +35,16 @@ import org.jacop.jasat.core.clauses.MapClause;
 
 /**
  * module used when an explanation is found
- * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.5
  *
+ * @author Simon Cruanes and Radoslaw Szymanek
+ * @version 4.6
  */
 public interface ExplanationListener extends SolverComponent {
 
     /**
      * called when the conflict clause is explained
-     * @param explanation    the explanation clause
+     *
+     * @param explanation the explanation clause
      */
     void onExplain(MapClause explanation);
 

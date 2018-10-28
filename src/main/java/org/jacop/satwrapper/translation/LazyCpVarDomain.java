@@ -44,7 +44,7 @@ import org.jacop.satwrapper.SatWrapper;
  * of values for a variable
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 @Deprecated  // TODO : implement it completely
 public final class LazyCpVarDomain<E extends IntVar> extends SatCPBridge {
@@ -101,7 +101,7 @@ public final class LazyCpVarDomain<E extends IntVar> extends SatCPBridge {
     @Override public void propagate(int literal) {
         // TODO Auto-generated method stub
     /*
-		 * TODO : lazy propagation (only propagate literals that are generated)
+     * TODO : lazy propagation (only propagate literals that are generated)
 		 */
     }
 

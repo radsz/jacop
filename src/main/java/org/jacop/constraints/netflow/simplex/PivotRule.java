@@ -34,8 +34,7 @@ package org.jacop.constraints.netflow.simplex;
  * A pivot selection rule for the primal network simplex algorithm.
  *
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.5
- *
+ * @version 4.6
  */
 
 public interface PivotRule {

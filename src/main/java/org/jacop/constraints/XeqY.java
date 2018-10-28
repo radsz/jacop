@@ -30,19 +30,19 @@
 
 package org.jacop.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * Constraints X #= Y
- *
+ * <p>
  * Domain consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class XeqY extends PrimitiveConstraint {
@@ -61,12 +61,13 @@ public class XeqY extends PrimitiveConstraint {
 
     /**
      * It constructs constraint X = Y.
+     *
      * @param x variable x.
      * @param y variable y.
      */
     public XeqY(IntVar x, IntVar y) {
 
-        checkInputForNullness(new String[]{"x", "y"}, new Object[]{x, y});
+        checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
 
         numberId = idNumber.incrementAndGet();
 
@@ -122,7 +123,9 @@ public class XeqY extends PrimitiveConstraint {
     }
 
     @Override public boolean satisfied() {
-        return grounded() && x.min() == y.min();
+        // return grounded() && x.min() == y.min();  // inefficient grounded() :(
+        int xMin = x.min();
+        return x.singleton(xMin) && y.singleton(xMin);
     }
 
     @Override public String toString() {

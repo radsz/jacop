@@ -30,17 +30,17 @@
 
 package org.jacop.core;
 
+import org.jacop.util.SparseSet;
+
 import java.util.ArrayList;
 import java.util.List;
 
-import org.jacop.util.SparseSet;
-
 /**
  * It is responsible of remembering what variables have changed at given
- * store level. 
+ * store level.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class SimpleBacktrackableManager implements BacktrackableManager {
@@ -120,7 +120,7 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
      * It constructs a trail manager.
      *
      * @param noOfObjects it specifies number of objects being managed.
-     * @param vars it specifies the list of objects being managed.
+     * @param vars        it specifies the list of objects being managed.
      */
 
     public SimpleBacktrackableManager(Backtrackable[] vars, int noOfObjects) {
@@ -132,9 +132,9 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
         cutOffValue = Math.max(noOfObjects / 50, 20);
         trailContainsAllChanges = false;
         currentLevelMax = false;
-        objects = (Backtrackable[]) vars;
-        trail = new ArrayList<int[]>();
-        levelInfo = new ArrayList<Integer>();
+        objects = vars;
+        trail = new ArrayList<>();
+        levelInfo = new ArrayList<>();
         emptyLevel = new int[0];
         fullLevel = new int[0];
         assert (emptyLevel != fullLevel) : "Code needs to be changed.";
@@ -185,6 +185,7 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
 
     /**
      * It specifies the level which should become the active one in the manager.
+     *
      * @param level the active level at which the changes will be recorded.
      */
     public void setLevel(int level) {

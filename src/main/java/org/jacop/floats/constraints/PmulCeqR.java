@@ -31,25 +31,23 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
-
-import org.jacop.constraints.Constraint;
-
-import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatIntervalDomain;
+import org.jacop.floats.core.FloatVar;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraint P * C = R for floats
- *
+ * <p>
  * Boundary consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class PmulCeqR extends Constraint implements SatisfiedPresent {
@@ -57,29 +55,30 @@ public class PmulCeqR extends Constraint implements SatisfiedPresent {
     static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
-     * It specifies variable p in constraint p * c = r. 
+     * It specifies variable p in constraint p * c = r.
      */
     public FloatVar p;
 
     /**
-     * It specifies constants c in constraint p * c = r. 
+     * It specifies constants c in constraint p * c = r.
      */
     public double c;
 
     /**
-     * It specifies variable r in constraint p * c = r. 
+     * It specifies variable r in constraint p * c = r.
      */
     public FloatVar r;
 
     /**
      * It constructs a constraint P * C = R.
+     *
      * @param p variable p.
      * @param c constnat c.
      * @param r variable r.
      */
     public PmulCeqR(FloatVar p, double c, FloatVar r) {
 
-        checkInputForNullness(new String[]{"p", "r"}, new Object[]{p, r});
+        checkInputForNullness(new String[] {"p", "r"}, new Object[] {p, r});
 
         numberId = idNumber.incrementAndGet();
 
@@ -117,8 +116,7 @@ public class PmulCeqR extends Constraint implements SatisfiedPresent {
 
     @Override public boolean satisfied() {
         FloatDomain pDom = p.dom(), rDom = r.dom();
-        return grounded() &&
-               rDom.eq(FloatDomain.mulBounds(pDom.min(), pDom.max(), c, c));
+        return grounded() && rDom.eq(FloatDomain.mulBounds(pDom.min(), pDom.max(), c, c));
     }
 
     @Override public String toString() {

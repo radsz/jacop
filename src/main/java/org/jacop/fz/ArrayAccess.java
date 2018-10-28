@@ -31,12 +31,10 @@ package org.jacop.fz;
 
 
 /**
- *
- * It stores information about a single array access encountered during parsing flatzinc file. 
+ * It stores information about a single array access encountered during parsing flatzinc file.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.5
- *
+ * @version 4.6
  */
 public class ArrayAccess {
 
@@ -47,7 +45,7 @@ public class ArrayAccess {
     /**
      * It creates an array access storage object.
      *
-     * @param id the string describing identity of the array being accessed.
+     * @param id    the string describing identity of the array being accessed.
      * @param index the index of the element being accessed.
      */
     public ArrayAccess(String id, int index) {

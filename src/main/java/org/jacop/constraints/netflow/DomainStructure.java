@@ -31,27 +31,26 @@
 
 package org.jacop.constraints.netflow;
 
-import static org.jacop.constraints.netflow.simplex.NetworkSimplex.DELETED_ARC;
-
-import java.util.Arrays;
-import java.util.List;
-
 import org.jacop.constraints.netflow.simplex.Arc;
 import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Var;
 
+import java.util.Arrays;
+import java.util.List;
+
+import static org.jacop.constraints.netflow.simplex.NetworkSimplex.DELETED_ARC;
+
 /**
  * A domain based structure variable.
- *
+ * <p>
  * Arcs can be associated to sub-domains of the structure variable. The state of
  * the arc is said to be active if the variable takes a value from its
  * sub-domain and it is inactive otherwise.
  *
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.5
- *
+ * @version 4.6
  */
 
 public class DomainStructure implements VarHandler {
@@ -76,8 +75,8 @@ public class DomainStructure implements VarHandler {
      * Creates an S-variable
      *
      * @param variable variable to create for
-     * @param domList list of domains
-     * @param arcList list of arcs
+     * @param domList  list of domains
+     * @param arcList  list of arcs
      */
     public DomainStructure(IntVar variable, List<Domain> domList, List<Arc> arcList) {
 

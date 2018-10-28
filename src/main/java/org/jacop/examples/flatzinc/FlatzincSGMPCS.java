@@ -30,9 +30,10 @@
 
 package org.jacop.examples.flatzinc;
 
-import org.jacop.core.*;
-import org.jacop.search.sgmpcs.*;
-import org.jacop.fz.*;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.fz.FlatzincLoader;
+import org.jacop.search.sgmpcs.SGMPCSearch;
 
 
 /**
@@ -40,7 +41,7 @@ import org.jacop.fz.*;
  * It is used for test purpose only.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 public class FlatzincSGMPCS {
 

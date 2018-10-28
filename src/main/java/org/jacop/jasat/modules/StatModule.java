@@ -32,25 +32,19 @@
 package org.jacop.jasat.modules;
 
 
-import java.util.TimerTask;
-
 import org.jacop.jasat.core.Core;
 import org.jacop.jasat.core.clauses.AbstractClausesDatabase;
 import org.jacop.jasat.core.clauses.MapClause;
-import org.jacop.jasat.modules.interfaces.AssertionListener;
-import org.jacop.jasat.modules.interfaces.BackjumpListener;
-import org.jacop.jasat.modules.interfaces.ClauseListener;
-import org.jacop.jasat.modules.interfaces.ConflictListener;
-import org.jacop.jasat.modules.interfaces.ForgetListener;
-import org.jacop.jasat.modules.interfaces.PropagateListener;
-import org.jacop.jasat.modules.interfaces.StartStopListener;
+import org.jacop.jasat.modules.interfaces.*;
+
+import java.util.TimerTask;
 
 
 /**
  * collects statistics about the solver
- * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.5
  *
+ * @author Simon Cruanes and Radoslaw Szymanek
+ * @version 4.6
  */
 public final class StatModule
     implements AssertionListener, BackjumpListener, ConflictListener, ForgetListener, ClauseListener, PropagateListener, StartStopListener {
@@ -206,6 +200,7 @@ public final class StatModule
 
     /**
      * Create a StatModule. It can schedule
+     *
      * @param threaded true if threaded
      */
     public StatModule(boolean threaded) {

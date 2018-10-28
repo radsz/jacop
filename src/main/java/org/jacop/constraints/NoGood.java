@@ -30,13 +30,14 @@
 
 package org.jacop.constraints;
 
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * NoGood constraints implements a constraint which disallows given combination
@@ -44,17 +45,17 @@ import org.jacop.core.Var;
  * only triggered only when all variables except one are grounded and equal to
  * disallow values. This allows efficient implementation based on watched
  * literals idea from SAT community.
- *
+ * <p>
  * Do not be fooled by watched literals, if you add thousands of no-goods then
- * traversing even 1/10 of them if they are watched by variable which has been 
- * grounded can slow down search considerably. 
- *
- * NoGoods constraints are imposed at all levels once added. Do not use in 
+ * traversing even 1/10 of them if they are watched by variable which has been
+ * grounded can slow down search considerably.
+ * <p>
+ * NoGoods constraints are imposed at all levels once added. Do not use in
  * subsearches, as it will not take into account the assignments performed in
  * master search.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class NoGood extends Constraint {
@@ -83,7 +84,8 @@ public class NoGood extends Constraint {
 
     /**
      * It creates a no-good constraint.
-     * @param listOfVars the scope of the constraint.
+     *
+     * @param listOfVars   the scope of the constraint.
      * @param listOfValues no-good values which all-together assignment to variables within constraint scope is a no-good.
      */
     public NoGood(IntVar[] listOfVars, int[] listOfValues) {
@@ -111,12 +113,13 @@ public class NoGood extends Constraint {
 
     /**
      * It creates a no-good constraint.
-     * @param listOfVars the scope of the constraint.
+     *
+     * @param listOfVars   the scope of the constraint.
      * @param listOfValues no-good values which all-together assignment to variables within constraint scope is a no-good.
      */
     public NoGood(List<? extends IntVar> listOfVars, List<Integer> listOfValues) {
 
-        checkInputForNullness(new String[]{"listOfVars", "listOfValues"}, new Object[]{ listOfVars, listOfValues});
+        checkInputForNullness(new String[] {"listOfVars", "listOfValues"}, new Object[] {listOfVars, listOfValues});
         commonInitialization(listOfVars.toArray(new IntVar[listOfVars.size()]), listOfValues.stream().mapToInt(i -> i).toArray());
 
     }

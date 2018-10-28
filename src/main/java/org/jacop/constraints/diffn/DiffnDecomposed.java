@@ -31,19 +31,15 @@
 
 package org.jacop.constraints.diffn;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.jacop.constraints.DecomposedConstraint;
-import org.jacop.constraints.Constraint;
-import org.jacop.constraints.Min;
-import org.jacop.constraints.Max;
-import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.*;
 import org.jacop.constraints.cumulative.CumulativeBasic;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntDomain;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Diffn constraint assures that any two rectangles from a vector of rectangles
@@ -51,7 +47,7 @@ import org.jacop.core.IntDomain;
  * does not use sophisticated techniques for efficient backtracking.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
@@ -69,6 +65,7 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
 
     /**
      * It specifies a diff constraint.
+     *
      * @param rectangle list of rectangles which can not overlap in at least one dimension.
      */
     public DiffnDecomposed(IntVar[][] rectangle) {
@@ -95,6 +92,7 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
 
     /**
      * It constructs a diff constraint.
+     *
      * @param origin1 list of variables denoting origin of the rectangle in the first dimension.
      * @param origin2 list of variables denoting origin of the rectangle in the second dimension.
      * @param length1 list of variables denoting length of the rectangle in the first dimension.
@@ -103,7 +101,8 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
 
     public DiffnDecomposed(IntVar[] origin1, IntVar[] origin2, IntVar[] length1, IntVar[] length2) {
 
-        checkInputForNullness(new String[]{"origin1", "origin2", "length1", "length2" }, new Object[][]{origin1, origin2, length1, length2});
+        checkInputForNullness(new String[] {"origin1", "origin2", "length1", "length2"},
+            new Object[][] {origin1, origin2, length1, length2});
 
         int size = origin1.length;
         if (size == origin1.length && size == origin2.length && size == length1.length && size == length2.length) {
@@ -130,6 +129,7 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
 
     /**
      * It specifies a diffn constraint.
+     *
      * @param rectangle list of rectangles which can not overlap in at least one dimension.
      */
     public DiffnDecomposed(List<? extends List<? extends IntVar>> rectangle) {
@@ -157,13 +157,13 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
 
     /**
      * It constructs a diff constraint.
-     * @param x list of variables denoting origin of the rectangle in the first dimension.
-     * @param y list of variables denoting origin of the rectangle in the second dimension.
+     *
+     * @param x  list of variables denoting origin of the rectangle in the first dimension.
+     * @param y  list of variables denoting origin of the rectangle in the second dimension.
      * @param lx list of variables denoting length of the rectangle in the first dimension.
      * @param ly list of variables denoting length of the rectangle in the second dimension.
      */
-    public DiffnDecomposed(List<? extends IntVar> x, List<? extends IntVar> y, List<? extends IntVar> lx,
-        List<? extends IntVar> ly) {
+    public DiffnDecomposed(List<? extends IntVar> x, List<? extends IntVar> y, List<? extends IntVar> lx, List<? extends IntVar> ly) {
 
         this(x.toArray(new IntVar[x.size()]), y.toArray(new IntVar[y.size()]), lx.toArray(new IntVar[lx.size()]),
             ly.toArray(new IntVar[ly.size()]));
@@ -171,6 +171,7 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
 
     /**
      * It imposes DiffnDecomposed in a given store.
+     *
      * @param store the constraint store to which the constraint is imposed to.
      */
     public void imposeDecomposition(Store store) {

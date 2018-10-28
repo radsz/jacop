@@ -34,7 +34,7 @@ package org.jacop.api;
  * Interface to mark the need of an entity to receive information about level being removed.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 public interface Stateful {
 
@@ -47,5 +47,15 @@ public interface Stateful {
      * @param level the level which is being removed.
      */
     void removeLevel(int level);
+
+    /**
+     * This function can be overriden by any constraint to specify dynamic conditions (based on
+     * the domain of variables at imposition level to decide if it is a stateful constraint.
+     *
+     * @return true if constraint is stateful.
+     */
+    default boolean isStateful() {
+        return true;
+    }
 
 }

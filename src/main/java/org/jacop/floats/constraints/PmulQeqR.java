@@ -31,26 +31,23 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
-
-import org.jacop.constraints.Constraint;
-
-import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatIntervalDomain;
+import org.jacop.floats.core.FloatVar;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraint P * Q = R for floats
- *
+ * <p>
  * Boundary consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class PmulQeqR extends Constraint implements SatisfiedPresent {
@@ -58,17 +55,17 @@ public class PmulQeqR extends Constraint implements SatisfiedPresent {
     static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
-     * It specifies variable p in constraint p * q = r. 
+     * It specifies variable p in constraint p * q = r.
      */
     public FloatVar p;
 
     /**
-     * It specifies variable q in constraint p * q = r. 
+     * It specifies variable q in constraint p * q = r.
      */
     public FloatVar q;
 
     /**
-     * It specifies variable r in constraint p * q = r. 
+     * It specifies variable r in constraint p * q = r.
      */
     public FloatVar r;
 
@@ -76,13 +73,14 @@ public class PmulQeqR extends Constraint implements SatisfiedPresent {
 
     /**
      * It constructs a constraint P * Q = R.
+     *
      * @param p variable p.
      * @param q variable q.
      * @param r variable r.
      */
     public PmulQeqR(FloatVar p, FloatVar q, FloatVar r) {
 
-        checkInputForNullness(new String[]{"p", "q", "r"}, new Object[]{p, q, r});
+        checkInputForNullness(new String[] {"p", "q", "r"}, new Object[] {p, q, r});
 
         numberId = idNumber.incrementAndGet();
 
@@ -184,8 +182,7 @@ public class PmulQeqR extends Constraint implements SatisfiedPresent {
 
     @Override public boolean satisfied() {
         FloatDomain pDom = p.dom(), qDom = q.dom(), rDom = r.dom();
-        return grounded() &&
-	          rDom.eq(FloatDomain.mulBounds(pDom.min(), pDom.max(), qDom.min(), qDom.max()));
+        return grounded() && rDom.eq(FloatDomain.mulBounds(pDom.min(), pDom.max(), qDom.min(), qDom.max()));
 
     }
 

@@ -42,7 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Boundary consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class XmulYeqZ extends Constraint implements SatisfiedPresent {
@@ -96,7 +96,7 @@ public class XmulYeqZ extends Constraint implements SatisfiedPresent {
             do {
 
                 // Bounds for Z
-                Interval zBounds = IntDomain.mulBounds(x.min(), x.max(), x.min(), x.max());
+                Interval zBounds = IntDomain.squareBounds(x.min(), x.max());
                 z.domain.in(store.level, z, zBounds.min(), zBounds.max());
 
                 store.propagationHasOccurred = false;

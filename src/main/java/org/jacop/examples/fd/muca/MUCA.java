@@ -30,45 +30,30 @@
 
 package org.jacop.examples.fd.muca;
 
+import org.jacop.constraints.*;
+import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.Store;
+import org.jacop.examples.fd.ExampleFD;
+import org.jacop.search.*;
+
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
 
-import org.jacop.constraints.Among;
-import org.jacop.constraints.ExtensionalSupportVA;
-import org.jacop.constraints.IfThen;
-import org.jacop.constraints.SumInt;
-import org.jacop.constraints.XeqC;
-import org.jacop.constraints.XgteqC;
-import org.jacop.constraints.XplusYgtC;
-import org.jacop.constraints.XplusYplusQeqZ;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Store;
-import org.jacop.examples.fd.ExampleFD;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.IndomainMin;
-import org.jacop.search.MaxRegret;
-import org.jacop.search.Search;
-import org.jacop.search.SelectChoicePoint;
-import org.jacop.search.SimpleSelect;
-
 /**
- *
- * It solves the Mixed Multi-Unit Combinatorial Auctions. 
- *
- * The idea originated from reading the following paper 
+ * It solves the Mixed Multi-Unit Combinatorial Auctions.
+ * <p>
+ * The idea originated from reading the following paper
  * where the first attempt to use CP was presented.
- *
+ * <p>
  * Comparing Winner Determination Algorithms for Mixed
  * Multi-Unit Combinatorial Auctions by Brammert Ottens
  * Ulle Endriss
  *
  * @author Radoslaw Szymanek
- * @version 4.5
- *
- *
+ * @version 4.6
  */
 
 public class MUCA extends ExampleFD {
@@ -1005,7 +990,7 @@ public class MUCA extends ExampleFD {
                 n.addDom(0, 0);
                 n.addDom(bid_xor.size(), bid_xor.size());
 
-                store.impose(new SumInt(store, xorUsedTransformation, "==", n));
+                store.impose(new SumInt(xorUsedTransformation, "==", n));
 
                 nVars[++i] = n;
                 tuples[i] = new int[bid.size() + 1];
@@ -1114,13 +1099,13 @@ public class MUCA extends ExampleFD {
 
             }
 
-            store.impose(new SumInt(store, weights, "==", sum[g]));
+            store.impose(new SumInt(weights, "==", sum[g]));
 
         }
 
         cost = new IntVar(store, "cost", minCost, maxCost);
 
-        store.impose(new SumInt(store, bidCosts, "==", cost));
+        store.impose(new SumInt(bidCosts, "==", cost));
 
     }
 
@@ -1232,6 +1217,7 @@ public class MUCA extends ExampleFD {
 
     /**
      * It reads the auction problem from the file.
+     *
      * @param filename file describing the auction problem.
      */
     public void readAuction(String filename) {
@@ -1384,8 +1370,7 @@ public class MUCA extends ExampleFD {
             throw new RuntimeException("You need to run this program in a directory that contains the required file : " + filename);
         } catch (IOException ex) {
             System.err.println(ex);
-        }
-        finally {
+        } finally {
             if (br != null)
                 try {
                     br.close();

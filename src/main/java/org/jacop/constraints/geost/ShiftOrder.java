@@ -31,11 +31,10 @@ package org.jacop.constraints.geost;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
- * @version 4.5
- *
- *
- * It provides a very simple lexicographical order based on the dimension
- * ordering, with the possibility to choose the most significant dimension
+ * @version 4.6
+ *          <p>
+ *          It provides a very simple lexicographical order based on the dimension
+ *          ordering, with the possibility to choose the most significant dimension
  */
 
 public class ShiftOrder implements LexicographicalOrder {
@@ -52,7 +51,7 @@ public class ShiftOrder implements LexicographicalOrder {
      * It creates a lexicographical order with the possibility
      * to shift the order according to the most significant dimension.
      *
-     * @param dimensions number of dimensions.
+     * @param dimensions      number of dimensions.
      * @param mostSignificant the position of the most significant dimension.
      */
     public ShiftOrder(int dimensions, int mostSignificant) {

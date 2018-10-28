@@ -30,19 +30,19 @@
 
 package org.jacop.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * Constraints X + Y + C #= Z.
- *
+ * <p>
  * Bound consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class XplusYplusCeqZ extends PrimitiveConstraint {
@@ -71,6 +71,7 @@ public class XplusYplusCeqZ extends PrimitiveConstraint {
 
     /**
      * It constructs constraint X+Y+C=Z.
+     *
      * @param x variable X.
      * @param y variable Y.
      * @param c constant C.
@@ -78,7 +79,7 @@ public class XplusYplusCeqZ extends PrimitiveConstraint {
      */
     public XplusYplusCeqZ(IntVar x, IntVar y, int c, IntVar z) {
 
-        checkInputForNullness(new String[]{"x", "y", "z"}, new Object[]{x, y, z});
+        checkInputForNullness(new String[] {"x", "y", "z"}, new Object[] {x, y, z});
 
         numberId = idNumber.incrementAndGet();
 
@@ -109,7 +110,7 @@ public class XplusYplusCeqZ extends PrimitiveConstraint {
     @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
     }
-    
+
     @Override public void notConsistency(final Store store) {
 
         do {
@@ -132,7 +133,7 @@ public class XplusYplusCeqZ extends PrimitiveConstraint {
     @Override protected int getDefaultNotConsistencyPruningEvent() {
         return IntDomain.GROUND;
     }
-    
+
     @Override public boolean notSatisfied() {
         return (x.max() + y.max() + c < z.min() || x.min() + y.min() + c > z.max());
     }

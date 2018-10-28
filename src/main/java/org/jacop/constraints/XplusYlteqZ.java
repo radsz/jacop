@@ -30,19 +30,19 @@
 
 package org.jacop.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * Constraint X + Y{@literal =<} Z
- *
+ * <p>
  * Bound consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class XplusYlteqZ extends PrimitiveConstraint {
@@ -66,13 +66,14 @@ public class XplusYlteqZ extends PrimitiveConstraint {
 
     /**
      * It constructs X + Y{@literal <=} Z constraint.
+     *
      * @param x variable x.
      * @param y variable y.
      * @param z variable z.
      */
     public XplusYlteqZ(IntVar x, IntVar y, IntVar z) {
 
-        checkInputForNullness(new String[]{"x", "y", "z"}, new Object[]{x, y, z});
+        checkInputForNullness(new String[] {"x", "y", "z"}, new Object[] {x, y, z});
 
         numberId = idNumber.incrementAndGet();
 

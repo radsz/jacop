@@ -36,9 +36,9 @@ import org.jacop.core.Var;
  * Defines a Smallest Domain comparator for Variables. The variable with the smallest
  * domain has the priority.
  *
- * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
  * @param <T> type of variable being used in the search.
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 4.6
  */
 
 public class SmallestDomain<T extends Var> implements ComparatorVariable<T> {

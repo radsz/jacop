@@ -30,18 +30,18 @@
 
 package org.jacop.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * Constraints X {@literal >=} C
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class XgteqC extends PrimitiveConstraint {
@@ -60,6 +60,7 @@ public class XgteqC extends PrimitiveConstraint {
 
     /**
      * It constructs constraint X {@literal >=} C.
+     *
      * @param x variable x.
      * @param c constant c.
      */

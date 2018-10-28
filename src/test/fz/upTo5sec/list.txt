@@ -159,8 +159,6 @@ carpool_fairness/carpool_fairness4
 carpool_fairness/carpool_fairness5
 cashier_change/cashier_change
 catalan_numbers/catalan_numbers
-cell_block/cell_block
-cell_block/cell_block_func
 celsius_fahrenheit/celsius_fahrenheit
 chain_of_primes/chain_of_primes
 chandelier_balancing/chandelier_balancing
@@ -333,7 +331,6 @@ evision/evision
 exact_cover_dlx/exact_cover_dlx
 exact_cover_dlx_matrix/exact_cover_dlx_matrix
 exodus/exodus
-eyedrop_optimize/eyedrop_optimize
 eyedrop_optimize2/eyedrop_optimize2
 facility_location_problem/facility_location_problem
 fair_split_into_3_groups/fair_split_into_3_groups
@@ -490,7 +487,6 @@ gardner_prime_puzzle/gardner_prime_puzzle
 gardner_sum_square/gardner_sum_square
 gardner_two_plus_two/gardner_two_plus_two
 gather_homage_martin/gather_homage_martin
-gcd_lcm/gcd_lcm
 general_store/general_store
 generalized_knapsack_problem/generalized_knapsack_problem
 geost_test/geost_test
@@ -508,10 +504,8 @@ global_contiguity/global_contiguity
 global_contiguity2/global_contiguity2
 golden_search/golden_search
 golden_spiral/golden_spiral
-golf_puzzle/golf_puzzle
 good_burger_puzzlor/good_burger_puzzlor
 graceful_labeling/graceful_labeling
-graph/graph
 graph_partition/graph_partition
 gray_code/gray_code
 greatest_combination/greatest_combination
@@ -543,7 +537,6 @@ in_set/in_set
 increasing_except_0/increasing_except_0
 int_value_precede/int_value_precede
 integer_programming1/integer_programming1
-inter_distance/inter_distance
 inverse_within_range/inverse_within_range
 investment_problem/investment_problem
 investment_problem_mip/investment_problem_mip
@@ -883,8 +876,6 @@ photo_hkj2_data2/photo_hkj2_data2
 pigeon_hole/pigeon_hole
 pigeon_hole2/pigeon_hole2
 pilgrim/pilgrim
-place_number/place_number
-place_number2/place_number2
 planet_colonization_puzzlor/planet_colonization_puzzlor
 pool_ball_triangles/pool_ball_triangles
 popsicle_stand/popsicle_stand
@@ -990,7 +981,6 @@ rcpsp-data_bl/Bl2017
 rcpsp-data_bl/Bl2018
 rcpsp-data_bl/Bl2019
 rcpsp-data_bl/Bl2020
-rcpsp-data_bl/Bl2501
 rcpsp-data_bl/Bl2504
 rcpsp-data_bl/Bl2505
 rcpsp-data_bl/Bl2513
@@ -1637,8 +1627,6 @@ rcpsp-data_psplib-J30/J30_4_6
 rcpsp-data_psplib-J30/J30_4_7
 rcpsp-data_psplib-J30/J30_4_8
 rcpsp-data_psplib-J30/J30_4_9
-rcpsp-data_psplib-J30/J30_5_6
-rcpsp-data_psplib-J30/J30_5_9
 rcpsp-data_psplib-J30/J30_6_10
 rcpsp-data_psplib-J30/J30_6_2
 rcpsp-data_psplib-J30/J30_6_3
@@ -1942,7 +1930,6 @@ ship-schedule.cp/6ShipsMixed
 ship-schedule.cp/6ShipsMixedUnconst
 ship-schedule.cp/6ShipsUnconst
 shopping/shopping
-shopping_basket/shopping_basket
 shopping_basket2/shopping_basket2
 shortest_path/00
 shortest_path/01
@@ -2024,7 +2011,6 @@ still_life_no_border/slnb7x7
 still_life2/still_life_5
 still_life2/still_life_6
 still_life2/still_life_7
-still-life-wastage/slw09
 stretch_path/stretch_path
 strimko/strimko_002
 strimko/strimko_067
@@ -2041,7 +2027,6 @@ submultisetsum/submultisetsum
 subsequence/subsequence
 subsequence_sum/subsequence_sum
 subset_plus_2/subset_plus_2
-subsets_100/subsets_100
 successive_number_problem/successive_number_problem
 sudoku_25x25_250/sudoku_25x25_250
 sudoku_gcc/sudoku_gcc

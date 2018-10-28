@@ -30,18 +30,18 @@
 
 package org.jacop.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * If both a and b are equal 1 then result variable is equal 1 too. Otherwise, result variable
  * is equal to zero. It restricts the domain of all x as well as result to be between 0 and 1.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class AndBoolSimple extends PrimitiveConstraint {

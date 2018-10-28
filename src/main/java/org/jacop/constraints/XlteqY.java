@@ -30,17 +30,17 @@
 
 package org.jacop.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraint X {@literal <=} Y
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class XlteqY extends PrimitiveConstraint {
@@ -59,12 +59,13 @@ public class XlteqY extends PrimitiveConstraint {
 
     /**
      * It constructs the constraint X {@literal <=} Y.
+     *
      * @param x variable x.
      * @param y variable y.
      */
     public XlteqY(IntVar x, IntVar y) {
 
-        checkInputForNullness(new String[]{"x", "y"}, new Object[]{x, y});
+        checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
 
         numberId = idNumber.incrementAndGet();
 

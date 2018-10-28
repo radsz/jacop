@@ -34,7 +34,7 @@ package org.jacop.fz;
  * It is thrown in flazinc when search is not needed since the solution is known.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class TrivialSolution extends RuntimeException {

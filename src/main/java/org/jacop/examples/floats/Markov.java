@@ -31,24 +31,21 @@
 package org.jacop.examples.floats;
 
 /**
- *
  * From Hamdy Taha "Operations Research" (8th edition), page 649ff.
  * Fertilizer example.
- *
+ * <p>
  * Based on minizinc model by Håkan Kjellerstrand.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
- *
+ * @version 4.6
  */
 
 import org.jacop.core.Store;
-import org.jacop.search.DepthFirstSearch;
-
-import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.constraints.LinearFloat;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.search.DepthFirstSearch;
 
 public class Markov {
 
@@ -74,13 +71,12 @@ public class Markov {
 
         FloatVar tot_cost = new FloatVar(store, "tot_cost", 0.0, 385.0);
 
-        store.impose(new LinearFloat(store, new FloatVar[] {p[2], p[0], p[1], p[2]}, new double[] {-1.0, 0.1, 0.3, 0.55}, "==", 0.0));
-        store.impose(new LinearFloat(store, new FloatVar[] {p[0], p[0], p[1], p[2]}, new double[] {-1.0, 0.3, 0.1, 0.05}, "==", 0.0));
-        store.impose(new LinearFloat(store, new FloatVar[] {p[1], p[0], p[1], p[2]}, new double[] {-1.0, 0.6, 0.6, 0.4}, "==", 0.0));
+        store.impose(new LinearFloat(new FloatVar[] {p[2], p[0], p[1], p[2]}, new double[] {-1.0, 0.1, 0.3, 0.55}, "==", 0.0));
+        store.impose(new LinearFloat(new FloatVar[] {p[0], p[0], p[1], p[2]}, new double[] {-1.0, 0.3, 0.1, 0.05}, "==", 0.0));
+        store.impose(new LinearFloat(new FloatVar[] {p[1], p[0], p[1], p[2]}, new double[] {-1.0, 0.6, 0.6, 0.4}, "==", 0.0));
         FloatVar one = new FloatVar(store, "1", 1.0, 1.0);
-        store.impose(new LinearFloat(store, new FloatVar[] {one, p[0], p[1], p[2]}, new double[] {-1.0, 1.0, 1.0, 1.0}, "==", 0.0));
-        store.impose(
-            new LinearFloat(store, new FloatVar[] {tot_cost, p[0], p[1], p[2]}, new double[] {-1.0, 100.0, 125.0, 160.0}, "==", 0.0));
+        store.impose(new LinearFloat(new FloatVar[] {one, p[0], p[1], p[2]}, new double[] {-1.0, 1.0, 1.0, 1.0}, "==", 0.0));
+        store.impose(new LinearFloat(new FloatVar[] {tot_cost, p[0], p[1], p[2]}, new double[] {-1.0, 100.0, 125.0, 160.0}, "==", 0.0));
 
 
         FloatVar[] vars = new FloatVar[7];

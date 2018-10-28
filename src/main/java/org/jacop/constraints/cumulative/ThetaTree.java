@@ -31,15 +31,15 @@
 
 package org.jacop.constraints.cumulative;
 
-import java.io.PrintStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 
 /**
  * Implements ThetaTree and operations on this tree for Cumulative constraint
  *
  * @author Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 
@@ -102,18 +102,19 @@ class ThetaTree extends Tree {
     }
 
     private void addLeave(int i) {
-        tree[i] = new ThetaNode();
-        tree[i].index = i;
+        ThetaNode node = new ThetaNode();
+        tree[i] = node;
+        node.index = i;
 
         int t = i - (treeSize - n); // in our case we pass list of ordered tasks already
-        tree[i].task = orderedTasks[t];
+        node.task = orderedTasks[t];
         orderedTasks[t].treeIndex = i;
 
-        tree[i].p = 0;
-        tree[i].ect = Integer.MIN_VALUE;
+        node.p = 0;
+        node.ect = Integer.MIN_VALUE;
 
-        tree[i].pT = orderedTasks[t].dur().min();
-        tree[i].ectT = tree[i].task.ect();
+        node.pT = orderedTasks[t].dur().min();
+        node.ectT = node.task.ect();
 
     }
 
@@ -149,11 +150,10 @@ class ThetaTree extends Tree {
             ThetaNode l = tree[left(i)];
             ThetaNode r = tree[right(i)];
 
-            node.p = plus(l.p, r.p);
+            node.p = l.p + r.p;
             node.ect = Math.max(plus(l.ect, r.p), r.ect);
         }
     }
-
 
     private void addNode(int i) {
 
@@ -188,7 +188,7 @@ class ThetaTree extends Tree {
             ThetaNode l = tree[left(i)];
             ThetaNode r = tree[right(i)];
 
-            node.p = plus(l.p, r.p);
+            node.p = l.p + r.p;
             node.ect = Math.max(plus(l.ect, r.p), r.ect);
         }
     }

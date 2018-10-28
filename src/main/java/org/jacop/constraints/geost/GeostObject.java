@@ -30,20 +30,20 @@
 
 package org.jacop.constraints.geost;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
- * @version 4.5
- *
- * It contains all information about the Geost object as well as functionality to 
- * maintain the consistency among time variables. 
+ * @version 4.6
+ *          <p>
+ *          It contains all information about the Geost object as well as functionality to
+ *          maintain the consistency among time variables.
  */
 
 public class GeostObject {
@@ -109,16 +109,15 @@ public class GeostObject {
     int groundCount;
 
     /**
-     *
      * It constructs a Geost object with all the attributes needed by the Geost
      * constraint.
      *
-     * @param no nonnegative unique id of this object.
-     * @param coords an array of variables representing the origin (start) of the objects.
-     * @param shapeID the variable specifying the shape finite domain variable.
-     * @param start it determines the start time of the geost object in terms of time.
+     * @param no       nonnegative unique id of this object.
+     * @param coords   an array of variables representing the origin (start) of the objects.
+     * @param shapeID  the variable specifying the shape finite domain variable.
+     * @param start    it determines the start time of the geost object in terms of time.
      * @param duration finite domain variable specifying the duration of the geost object in terms of time.
-     * @param end finite domain variable specifying the end of the geost object in terms of time.
+     * @param end      finite domain variable specifying the end of the geost object in terms of time.
      */
     public GeostObject(int no, IntVar[] coords, IntVar shapeID, IntVar start, IntVar duration, IntVar end) {
 
@@ -162,6 +161,7 @@ public class GeostObject {
 
     /**
      * It is executed as soon as any object variable is grounded.
+     *
      * @param variable variable being grounded.
      */
     public final void onGround(Var variable) {
@@ -208,8 +208,8 @@ public class GeostObject {
 
     /**
      * @author Marc-Olivier Fleury and Radoslaw Szymanek
-     *
-     * It contains facility to keep the domain of time variables consistent.
+     *         <p>
+     *         It contains facility to keep the domain of time variables consistent.
      */
     public class TimeBoundConstraint {
 
@@ -222,6 +222,7 @@ public class GeostObject {
 
         /**
          * It evaluates part of the constraint that ensures that start + duration = end
+         *
          * @param store current store
          * @return true if some variable was changed, false otherwise
          */

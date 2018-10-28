@@ -30,23 +30,21 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
 import org.jacop.constraints.LinearInt;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 
+import java.util.ArrayList;
+
 /**
- *
- * It is program to solve problem of fitting numbers to made them equal to zero. 
+ * It is program to solve problem of fitting numbers to made them equal to zero.
  *
  * @author Radoslaw Szymanek
- * @version 4.5
- *
- * Find how many copies of each numbers to take that its sum is equal to one of the specified domain. 
- * 520, 247, 2626, 2119, 520, 2054, 1976, 1209, 1118, 1287, 1040, 741, 390, 2691, 2717, -1000
- *
+ * @version 4.6
+ *          <p>
+ *          Find how many copies of each numbers to take that its sum is equal to one of the specified domain.
+ *          520, 247, 2626, 2119, 520, 2054, 1976, 1209, 1118, 1287, 1040, 741, 390, 2691, 2717, -1000
  */
 
 public class FittingNumbers extends ExampleFD {
@@ -75,7 +73,7 @@ public class FittingNumbers extends ExampleFD {
             vars.add(counters[i]);
         }
 
-        store.impose(new LinearInt(store, counters, elements, "==", sum));
+        store.impose(new LinearInt(counters, elements, "==", sum));
         // store.impose(new SumWeight(counters, elements, sum));
 
         System.out.println(store);
@@ -84,6 +82,7 @@ public class FittingNumbers extends ExampleFD {
 
     /**
      * It executes the program to solve simple Kakro puzzle.
+     *
      * @param args commans arguments (none)
      */
     public static void main(String args[]) {

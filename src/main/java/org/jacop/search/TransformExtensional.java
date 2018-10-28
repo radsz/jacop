@@ -30,18 +30,14 @@
 
 package org.jacop.search;
 
+import org.jacop.constraints.Constraint;
+import org.jacop.constraints.ExtensionalSupportVA;
+import org.jacop.core.*;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
-import org.jacop.constraints.Constraint;
-import org.jacop.constraints.ExtensionalSupportVA;
-import org.jacop.core.Domain;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Store;
-import org.jacop.core.Var;
 
 /**
  * It defines an intialize listener which transforms part of the problem
@@ -49,7 +45,7 @@ import org.jacop.core.Var;
  * given the scope of the variables of interest.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class TransformExtensional implements InitializeListener {

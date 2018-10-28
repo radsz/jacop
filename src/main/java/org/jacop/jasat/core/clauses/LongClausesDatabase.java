@@ -30,11 +30,11 @@
  */
 package org.jacop.jasat.core.clauses;
 
+import org.jacop.jasat.utils.Utils;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.util.Random;
-
-import org.jacop.jasat.utils.Utils;
 
 /*
  * TODO : code bcp, and maybe reuse watch node lists in some other databases
@@ -46,7 +46,7 @@ import org.jacop.jasat.utils.Utils;
  * to minimize cache misses.
  *
  * @author Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public final class LongClausesDatabase extends AbstractClausesDatabase {
@@ -96,7 +96,7 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
     public void assertLiteral(int literal) {
 
 		/* get the watched clauses for this literal;
-		 * for each such clause, find its state, and if needed, propagate,
+     * for each such clause, find its state, and if needed, propagate,
 		 * find a new watch or trigger conflict
 		 */
 

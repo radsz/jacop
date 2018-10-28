@@ -30,21 +30,23 @@
 
 package org.jacop.examples.flatzinc;
 
-import java.util.*;
+import org.jacop.core.Store;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatInterval;
+import org.jacop.floats.core.FloatVar;
+import org.jacop.floats.search.Optimize;
+import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.fz.FlatzincLoader;
+import org.jacop.search.DepthFirstSearch;
 
-import org.jacop.core.*;
-import org.jacop.search.*;
-import org.jacop.fz.*;
-
-import org.jacop.floats.search.*;
-import org.jacop.floats.core.*;
+import java.util.Arrays;
 
 /**
  * The class Run is used to run test programs for JaCoP package.
  * It is used for test purpose only.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 public class FloatMinimize {
 

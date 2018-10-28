@@ -30,15 +30,15 @@
 
 package org.jacop.util;
 
-import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.core.FloatIntervalDomain;
 
 /**
  * Matrix and operations on matrices.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class Matrix {
@@ -48,10 +48,10 @@ public class Matrix {
     public Matrix(double[][] M) {
 
         A = new double[M.length][];
-	for (int i = 0; i < M.length; i++) {
-	  A[i] = new double[M[i].length];
-	  System.arraycopy(M[i], 0, A[i], 0, M[i].length);
-	}
+        for (int i = 0; i < M.length; i++) {
+            A[i] = new double[M[i].length];
+            System.arraycopy(M[i], 0, A[i], 0, M[i].length);
+        }
     }
 
     public double determinant() {

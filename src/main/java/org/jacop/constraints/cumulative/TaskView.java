@@ -30,19 +30,19 @@
 
 package org.jacop.constraints.cumulative;
 
+import org.jacop.core.IntVar;
+
 /**
  * Represents tasks for cumulative constraint
  *
  * @author Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 abstract class TaskView extends Task {
 
-    TaskView(Task t) {
-        super(t.start, t.dur, t.res);
-        index = t.index;
-        treeIndex = t.treeIndex;
+    TaskView(IntVar start, IntVar dur, IntVar res) {
+        super(start, dur, res);
     }
 
     abstract int lct();

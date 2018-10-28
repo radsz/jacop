@@ -35,13 +35,13 @@ import java.util.List;
 
 /**
  * FIR benchmark (16-point FIR filter).
- *
+ * <p>
  * Source: Ramesh Karri, Karin Hogstedt and Alex Orailoglu "Computer-Aided
  * Design of Fault-Tolerant VLSI Design Systems" IEEE Design {@literal &} Test, Fall 1996
  * (Vol. 13, No. 3), pp. 88-96
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class FIR extends Filter {

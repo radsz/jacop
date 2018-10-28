@@ -34,23 +34,25 @@ import org.jacop.jasat.core.SolverComponent;
 
 /**
  * module that listens to add/removal of clauses
- * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.5
  *
+ * @author Simon Cruanes and Radoslaw Szymanek
+ * @version 4.6
  */
 public interface ClauseListener extends SolverComponent {
 
     /**
      * called when the given clause is added.
-     * @param clause  the clause
-     * @param clauseId  the clause's unique Id
+     *
+     * @param clause        the clause
+     * @param clauseId      the clause's unique Id
      * @param isModelClause is this clause a model clause ?
      */
     void onClauseAdd(int[] clause, int clauseId, boolean isModelClause);
 
     /**
      * called when the clause with unique Id @param clauseId is removed
-     * @param clauseId  the id
+     *
+     * @param clauseId the id
      */
     void onClauseRemoval(int clauseId);
 

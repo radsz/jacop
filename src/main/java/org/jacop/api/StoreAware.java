@@ -37,12 +37,13 @@ import org.jacop.core.Store;
  * entity operates.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 public interface StoreAware {
 
     /**
-     * It provide store for constraints that are not imposed but called from ather constraints.
+     * It provide store for constraints that are not imposed but called from other constraints.
+     *
      * @param store the constraint store in which context the constraint is executed.
      */
     void include(Store store);

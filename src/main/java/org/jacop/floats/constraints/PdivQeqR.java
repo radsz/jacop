@@ -35,17 +35,18 @@ import org.jacop.floats.core.FloatVar;
 
 /**
  * Constraint P / Q = R for floats
- *
+ * <p>
  * Boundary consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class PdivQeqR extends PmulQeqR {
 
     /**
      * It constructs a constraint P / Q = R.
+     *
      * @param p variable p.
      * @param q variable q.
      * @param r variable r.

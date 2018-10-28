@@ -29,26 +29,25 @@
  */
 package org.jacop.constraints.geost;
 
-import java.util.Arrays;
-import java.util.Collection;
-
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Var;
 
+import java.util.Arrays;
+import java.util.Collection;
+
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
- * @version 4.5
- *
- * Internal constraint used to generate outboxes that correspond to holes in the 
- * feasible domain of the object origin.
- *
- * Due to the amount of space it can cover, this constraint will probably cause
- * slower processing in case of domains with holes, when using the event point
- * series to prune the set of internal constraints
- *
- *
- * TODO implement outbox generation for time (if feasible)
+ * @version 4.6
+ *          <p>
+ *          Internal constraint used to generate outboxes that correspond to holes in the
+ *          feasible domain of the object origin.
+ *          <p>
+ *          Due to the amount of space it can cover, this constraint will probably cause
+ *          slower processing in case of domains with holes, when using the event point
+ *          series to prune the set of internal constraints
+ *          <p>
+ *          TODO implement outbox generation for time (if feasible)
  */
 
 public class DomainHoles extends InternalConstraint {
@@ -63,7 +62,7 @@ public class DomainHoles extends InternalConstraint {
      * variables.
      *
      * @param object the object for which the domain holes internal constraint
-     * is applied to.
+     *               is applied to.
      */
     public DomainHoles(GeostObject object) {
         super();
@@ -76,7 +75,7 @@ public class DomainHoles extends InternalConstraint {
         int[] outPoint = DBox.getAllocatedInstance(object.dimension).origin;
 
 		/*
-		 * if for some dimension there is a hole, the hole will slice the 
+     * if for some dimension there is a hole, the hole will slice the
 		 * whole feasible domain; in other words, the minimal point is
 		 * the extremum of the hole in its dimension, and the complete space
 		 * in the other dimensions

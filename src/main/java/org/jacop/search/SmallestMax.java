@@ -36,9 +36,9 @@ import org.jacop.core.IntVar;
  * Defines a SmallestMax comparator for Variables. The variable with maximum value 5 will
  * have a priority over variable with maximum value equal 10.
  *
- * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
  * @param <T> type of variable being used in the search.
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 4.6
  */
 
 public class SmallestMax<T extends IntVar> implements ComparatorVariable<T> {

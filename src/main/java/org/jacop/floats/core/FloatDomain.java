@@ -31,22 +31,16 @@
 package org.jacop.floats.core;
 
 import org.jacop.constraints.Constraint;
-import org.jacop.core.Store;
-import org.jacop.core.Domain;
-import org.jacop.core.IntervalEnumeration;
-import org.jacop.core.Var;
-
-import org.jacop.core.ValueEnumeration;
+import org.jacop.core.*;
 
 /**
  * Defines an integer domain and related operations on it.
- *
- * FloatDomain implementations can not assume that arguments to 
- * any function can not be empty domains. 
-
+ * <p>
+ * FloatDomain implementations can not assume that arguments to
+ * any function can not be empty domains.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public abstract class FloatDomain extends Domain {
@@ -91,7 +85,7 @@ public abstract class FloatDomain extends Domain {
      * It specifies the method for printing a domain.
      * If true, we print each domain as an interval regardles of
      * the current precision of calculations.
-     * If true, the print-out prints singletons, defined by method 
+     * If true, the print-out prints singletons, defined by method
      * singleton() in FloatingInterval, as single values.
      */
     static boolean intervalPrint = false;
@@ -224,13 +218,13 @@ public abstract class FloatDomain extends Domain {
     public FloatDomain previousDomain;
 
     /**
-     * It specifies the constant for GROUND event. It has to be smaller 
+     * It specifies the constant for GROUND event. It has to be smaller
      * than the constant for events BOUND and ANY.
      */
     public final static int GROUND = 0;
 
     /**
-     * It specifies the constant for BOUND event. It has to be smaller 
+     * It specifies the constant for BOUND event. It has to be smaller
      * than the constant for event ANY.
      */
     public final static int BOUND = 1;
@@ -250,7 +244,7 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It specifies for each event what other events are subsumed by this
-     * event. Possibly implement this by bit flags in int. 
+     * event. Possibly implement this by bit flags in int.
      */
     final static int[][] eventsInclusion = {{GROUND, BOUND, ANY}, // GROUND event
         {BOUND, ANY}, // BOUND event
@@ -258,6 +252,7 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It helps to specify what events should be executed if a given event occurs.
+     *
      * @param pruningEvent the pruning event for which we want to know what events it encompasses.
      * @return an array specifying what events should be included given this event.
      */
@@ -272,12 +267,13 @@ public abstract class FloatDomain extends Domain {
     public static final int IntervalDomainID = 0;
 
     /**
-     * It specifies an empty integer domain. 
+     * It specifies an empty integer domain.
      */
     public static final FloatDomain emptyFloatDomain = new FloatIntervalDomain(0);
 
     /**
      * It adds interval of values to the domain.
+     *
      * @param i Interval which needs to be added to the domain.
      */
 
@@ -287,6 +283,7 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It adds values as specified by the parameter to the domain.
+     *
      * @param domain Domain which needs to be added to the domain.
      */
 
@@ -297,7 +294,7 @@ public abstract class FloatDomain extends Domain {
         while (enumer.hasMoreElements())
             unionAdapt(enumer.nextElement());
       /*
-	}
+  }
 	else {
 	    ValueEnumeration enumer = domain.valueEnumeration();
 	    while (enumer.hasMoreElements())
@@ -309,6 +306,7 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It adds all values between min and max to the domain.
+     *
      * @param min the left bound of the interval being added.
      * @param max the right bound of the interval being added.
      */
@@ -317,6 +315,7 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It adds a values to the domain.
+     *
      * @param value value being added to the domain.
      */
 
@@ -326,6 +325,7 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * Checks if two domains intersect.
+     *
      * @param domain the domain for which intersection is checked.
      * @return true if domains are intersecting.
      */
@@ -354,6 +354,7 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It checks if interval min..max intersects with current domain.
+     *
      * @param min the left bound of the interval.
      * @param max the right bound of the interval.
      * @return true if domain intersects with the specified interval.
@@ -364,6 +365,7 @@ public abstract class FloatDomain extends Domain {
     /**
      * It specifies if the current domain contains the domain given as a
      * parameter.
+     *
      * @param domain for which we check if it is contained in the current domain.
      * @return true if the supplied domain is cover by this domain.
      */
@@ -393,6 +395,7 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It checks if an interval min..max belongs to the domain.
+     *
      * @param min the minimum value of the interval being checked
      * @param max the maximum value of the interval being checked
      * @return true if value belongs to the domain.
@@ -402,6 +405,7 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It creates a complement of a domain.
+     *
      * @return it returns the complement of this domain.
      */
 
@@ -409,6 +413,7 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It checks if value belongs to the domain.
+     *
      * @param value which is checked if it exists in the domain.
      * @return true if value belongs to the domain.
      */
@@ -441,6 +446,7 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It returns value enumeration of the domain values.
+     *
      * @return valueEnumeration which can be used to enumerate one by one value from this domain.
      */
 
@@ -449,6 +455,7 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It returns interval enumeration of the domain values.
+     *
      * @return intervalEnumeration which can be used to enumerate intervals in this domain.
      */
 
@@ -456,6 +463,7 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It returns interval enumeration of the domain values.
+     *
      * @return intervalEnumeration which can be used to enumerate intervals in this domain.
      */
 
@@ -463,6 +471,7 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It returns the size of the domain.
+     *
      * @return number of elements in this domain.
      */
 
@@ -470,6 +479,7 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It intersects current domain with the one given as a parameter.
+     *
      * @param dom domain with which the intersection needs to be computed.
      * @return the intersection between supplied domain and this domain.
      */
@@ -478,6 +488,7 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * In intersects current domain with the interval min..max.
+     *
      * @param min the left bound of the interval (inclusive)
      * @param max the right bound of the interval (inclusive)
      * @return the intersection between the specified interval and this domain.
@@ -486,7 +497,8 @@ public abstract class FloatDomain extends Domain {
     public abstract FloatDomain intersect(double min, double max);
 
     /**
-     * It intersects with the domain which is a complement of value. 
+     * It intersects with the domain which is a complement of value.
+     *
      * @param value the value for which the complement is computed
      * @return the domain which does not contain specified value.
      */
@@ -496,7 +508,8 @@ public abstract class FloatDomain extends Domain {
     }
 
     /**
-     * It removes value from the domain. It adapts current (this) domain. 
+     * It removes value from the domain. It adapts current (this) domain.
+     *
      * @param value the value for which the complement is computed
      */
 
@@ -504,6 +517,7 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It removes all values between min and max to the domain.
+     *
      * @param min the left bound of the interval being removed.
      * @param max the right bound of the interval being removed.
      */
@@ -514,6 +528,7 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It returns the maximum value in a domain.
+     *
      * @return the largest value present in the domain.
      */
 
@@ -521,12 +536,14 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It returns the minimum value in a domain.
+     *
      * @return the smallest value present in the domain.
      */
     public abstract double min();
 
     /**
      * It sets the domain to the specified domain.
+     *
      * @param domain the domain from which this domain takes all elements.
      */
 
@@ -534,6 +551,7 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It sets this domain to contain exactly all values between min and max.
+     *
      * @param min the left bound of the interval (inclusive).
      * @param max the right bound of the interval (inclusive).
      */
@@ -542,6 +560,7 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It returns true if given domain has only one element equal c.
+     *
      * @param c the value to which the only element should be equal to.
      * @return true if the domain contains only one element c.
      */
@@ -553,6 +572,7 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It subtracts domain from current domain and returns the result.
+     *
      * @param domain the domain which is subtracted from this domain.
      * @return the result of the subtraction.
      */
@@ -590,6 +610,7 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It subtracts interval min..max.
+     *
      * @param min the left bound of the interval (inclusive).
      * @param max the right bound of the interval (inclusive).
      * @return the result of the subtraction.
@@ -599,6 +620,7 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It computes union of the supplied domain with this domain.
+     *
      * @param domain the domain for which the union is computed.
      * @return the union of this domain with the supplied one.
      */
@@ -635,6 +657,7 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It computes union of this domain and the interval.
+     *
      * @param min the left bound of the interval (inclusive).
      * @param max the right bound of the interval (inclusive).
      * @return the union of this domain and the interval.
@@ -649,7 +672,7 @@ public abstract class FloatDomain extends Domain {
     }
 
     /**
-     * It computes union of this domain and value. 
+     * It computes union of this domain and value.
      *
      * @param value it specifies the value which is being added.
      * @return domain which is a union of this one and the value.
@@ -662,9 +685,10 @@ public abstract class FloatDomain extends Domain {
     /**
      * It updates the domain according to the minimum value and stamp value. It
      * informs the variable of a change if it occurred.
+     *
      * @param storeLevel level of the store at which the update occurs.
-     * @param var variable for which this domain is used.
-     * @param min the minimum value to which the domain is updated.
+     * @param var        variable for which this domain is used.
+     * @param min        the minimum value to which the domain is updated.
      */
 
     public void inMin(int storeLevel, Var var, double min) {
@@ -676,9 +700,10 @@ public abstract class FloatDomain extends Domain {
     /**
      * It updates the domain according to the maximum value and stamp value. It
      * informs the variable of a change if it occurred.
+     *
      * @param storeLevel level of the store at which the update occurs.
-     * @param var variable for which this domain is used.
-     * @param max the maximum value to which the domain is updated.
+     * @param var        variable for which this domain is used.
+     * @param max        the maximum value to which the domain is updated.
      */
 
     public void inMax(int storeLevel, Var var, double max) {
@@ -691,19 +716,20 @@ public abstract class FloatDomain extends Domain {
      * It updates the domain to have values only within the interval min..max.
      * The type of update is decided by the value of stamp. It informs the
      * variable of a change if it occurred.
+     *
      * @param storeLevel level of the store at which the update occurs.
-     * @param var variable for which this domain is used.
-     * @param min the minimum value to which the domain is updated.
-     * @param max the maximum value to which the domain is updated.
+     * @param var        variable for which this domain is used.
+     * @param min        the minimum value to which the domain is updated.
+     * @param max        the maximum value to which the domain is updated.
      */
 
     public abstract void in(int storeLevel, Var var, double min, double max);
 
     /**
-     * It reduces domain to a single value. 
+     * It reduces domain to a single value.
      *
      * @param level level of the store at which the update occurs.
-     * @param var variable for which this domain is used.
+     * @param var   variable for which this domain is used.
      * @param value the value according to which the domain is updated.
      */
     public void inValue(int level, Var var, double value) {
@@ -714,9 +740,10 @@ public abstract class FloatDomain extends Domain {
      * It updates the domain to have values only within the domain. The type of
      * update is decided by the value of stamp. It informs the variable of a
      * change if it occurred.
+     *
      * @param storeLevel level of the store at which the update occurs.
-     * @param var variable for which this domain is used.
-     * @param domain the domain according to which the domain is updated.
+     * @param var        variable for which this domain is used.
+     * @param domain     the domain according to which the domain is updated.
      */
 
     public void in(int storeLevel, Var var, FloatDomain domain) {
@@ -728,8 +755,9 @@ public abstract class FloatDomain extends Domain {
     /**
      * It updates the domain to not contain the value complement. It informs the
      * variable of a change if it occurred.
+     *
      * @param storeLevel level of the store at which the update occurs.
-     * @param var variable for which this domain is used.
+     * @param var        variable for which this domain is used.
      * @param complement value which is removed from the domain if it belonged to the domain.
      */
 
@@ -742,22 +770,25 @@ public abstract class FloatDomain extends Domain {
     /**
      * It updates the domain so it does not contain the supplied interval. It informs
      * the variable of a change if it occurred.
+     *
      * @param storeLevel level of the store at which the update occurs.
-     * @param var variable for which this domain is used.
-     * @param min the left bound of the interval (inclusive).
-     * @param max the right bound of the interval (inclusive).
+     * @param var        variable for which this domain is used.
+     * @param min        the left bound of the interval (inclusive).
+     * @param max        the right bound of the interval (inclusive).
      */
 
     public abstract void inComplement(int storeLevel, Var var, double min, double max);
 
     /**
      * It returns number of intervals required to represent this domain.
+     *
      * @return the number of intervals in the domain.
      */
     public abstract int noIntervals();
 
     /**
      * It returns required interval.
+     *
      * @param position the position of the interval.
      * @return the interval, or null if the required interval does not exist.
      */
@@ -766,16 +797,18 @@ public abstract class FloatDomain extends Domain {
     /**
      * It updates the domain to contain the elements as specifed by the domain,
      * which is shifted. E.g. {1..4} + 3 = 4..7
+     *
      * @param storeLevel level of the store at which the update occurs.
-     * @param var variable for which this domain is used.
-     * @param domain the domain according to which the domain is updated.
-     * @param shift the shift which is used to shift the domain supplied as argument.
+     * @param var        variable for which this domain is used.
+     * @param domain     the domain according to which the domain is updated.
+     * @param shift      the shift which is used to shift the domain supplied as argument.
      */
 
     public abstract void inShift(int storeLevel, Var var, FloatDomain domain, double shift);
 
     /**
      * It returns the left most element of the given interval.
+     *
      * @param intervalNo the interval number.
      * @return the left bound of the specified interval.
      */
@@ -786,6 +819,7 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It returns the right most element of the given interval.
+     *
      * @param intervalNo the interval number.
      * @return the right bound of the specified interval.
      */
@@ -796,6 +830,7 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It returns the values which have been removed at current store level.
+     *
      * @param currentStoreLevel the current store level.
      * @return emptyDomain if domain did not change at current level, or the set of values which have been removed at current level.
      */
@@ -804,15 +839,15 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It returns domain at earlier level at which the change has occurred.
+     *
      * @return previous domain
      */
     public abstract FloatDomain previousDomain();
 
     /**
-     * It specifies if the other int domain is equal to this one. 
+     * It specifies if the other int domain is equal to this one.
      *
-     * @param domain the domain which is compared to this domain. 
-     *
+     * @param domain the domain which is compared to this domain.
      * @return true if both domains contain the same elements, false otherwise.
      */
     public boolean eq(FloatDomain domain) {
@@ -871,6 +906,7 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It returns the number of constraints
+     *
      * @return the number of constraints attached to this domain.
      */
 
@@ -883,6 +919,7 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * Returns the lexical ordering between the sets
+     *
      * @param domain the set that should be lexically compared to this set
      * @return -1 if s is greater than this set, 0 if s is equal to this set and else it returns 1.
      */
@@ -938,19 +975,19 @@ public abstract class FloatDomain extends Domain {
 
 
     /**
-     * It computes an intersection with a given domain and stores it in this domain. 
+     * It computes an intersection with a given domain and stores it in this domain.
      *
      * @param intersect domain with which the intersection is being computed.
-     * @return type of event which has occurred due to the operation. 
+     * @return type of event which has occurred due to the operation.
      */
     public abstract int intersectAdapt(FloatDomain intersect);
 
     /**
      * It computes a union between this domain and the domain provided as a parameter. This
-     * domain is changed to reflect the result. 
+     * domain is changed to reflect the result.
      *
-     * @param union the domain with is used for the union operation with this domain. 
-     * @return it returns information about the pruning event which has occurred due to this operation. 
+     * @param union the domain with is used for the union operation with this domain.
+     * @return it returns information about the pruning event which has occurred due to this operation.
      */
     public int unionAdapt(FloatDomain union) {
 
@@ -966,22 +1003,22 @@ public abstract class FloatDomain extends Domain {
     }
 
     /**
-     * It computes an intersection of this domain with an interval [min..max]. 
-     * It adapts this domain to the result of the intersection. 
-     * @param min the minimum value of the interval used in the intersection computation. 
-     * @param max the maximum value of the interval used in the intersection computation. 
-     * @return it returns information about the pruning event which has occurred due to this operation. 
+     * It computes an intersection of this domain with an interval [min..max].
+     * It adapts this domain to the result of the intersection.
+     *
+     * @param min the minimum value of the interval used in the intersection computation.
+     * @param max the maximum value of the interval used in the intersection computation.
+     * @return it returns information about the pruning event which has occurred due to this operation.
      */
     public abstract int intersectAdapt(int min, int max);
 
 
     /**
-     * It computes the size of the intersection between this domain and the domain 
-     * supplied as a parameter. 
+     * It computes the size of the intersection between this domain and the domain
+     * supplied as a parameter.
      *
      * @param domain the domain with which the intersection is computed.
      * @return the size of the intersection.
-     *
      */
     public int sizeOfIntersection(FloatDomain domain) {
         return intersect(domain).getSize();
@@ -1237,7 +1274,7 @@ public abstract class FloatDomain extends Domain {
     }
 
     /**
-     * It constructs and int array containing all elements in the domain. 
+     * It constructs and int array containing all elements in the domain.
      * The array will have size equal to the number of elements in the domain.
      *
      * @return the int array containing all elements in a domain.
@@ -1257,7 +1294,7 @@ public abstract class FloatDomain extends Domain {
 
     /**
      * It returns the value to which this domain is grounded. It assumes
-     * that a domain is a singleton domain. 
+     * that a domain is a singleton domain.
      *
      * @return the only value remaining in the domain.
      */

@@ -31,31 +31,26 @@
 
 package org.jacop.constraints;
 
+import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.Stateful;
+import org.jacop.core.*;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jacop.api.SatisfiedPresent;
-import org.jacop.api.Stateful;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Store;
-import org.jacop.core.ValueEnumeration;
-import org.jacop.core.TimeStamp;
-
 /**
- * ElementIntegerFast constraint defines a relation 
+ * ElementIntegerFast constraint defines a relation
  * list[index - indexOffset] = value. This version uses bounds consistency.
- *
+ * <p>
  * The first element of the list corresponds to index - indexOffset = 1.
  * By default indexOffset is equal 0 so first value within a list corresponds to index equal 1.
- *
- * If index has a domain from 0 to list.length-1 then indexOffset has to be equal -1 to 
+ * <p>
+ * If index has a domain from 0 to list.length-1 then indexOffset has to be equal -1 to
  * make addressing of list array starting from 1.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class ElementIntegerFast extends Constraint implements Stateful, SatisfiedPresent {
@@ -83,7 +78,7 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
 
     /**
      * It specifies list of variables within an element constraint list[index - indexOffset] = value.
-     * The list is addressed by positive integers ({@code >=1}) if indexOffset is equal to 0. 
+     * The list is addressed by positive integers ({@code >=1}) if indexOffset is equal to 0.
      */
     final public int list[];
 
@@ -93,19 +88,19 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
      */
     private TimeStamp<Short> order;
 
-    private short detect = 0, ascending = 1, descending = 2, none = 3;
+    private short detect = 0, ascending = 1, descending = 2; //, none = 3;
 
     /**
-     * It constructs an element constraint. 
+     * It constructs an element constraint.
      *
-     * @param index variable index
-     * @param list list of variables from which an index-th element is taken
-     * @param value a value of the index-th element from list
-     * @param indexOffset shift applied to index variable. 
+     * @param index       variable index
+     * @param list        list of variables from which an index-th element is taken
+     * @param value       a value of the index-th element from list
+     * @param indexOffset shift applied to index variable.
      */
     public ElementIntegerFast(IntVar index, int[] list, IntVar value, int indexOffset) {
 
-        checkInputForNullness(new String[] {"index", "value"}, new Object[] { index, value });
+        checkInputForNullness(new String[] {"index", "value"}, new Object[] {index, value});
         checkInputForNullness("list", list);
 
         this.indexOffset = indexOffset;
@@ -115,14 +110,14 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
         this.value = value;
         this.list = Arrays.copyOf(list, list.length);
 
-        setScope( index, value );
+        setScope(index, value);
     }
 
     /**
-     * It constructs an element constraint. 
+     * It constructs an element constraint.
      *
      * @param index variable index
-     * @param list list of variables from which an index-th element is taken
+     * @param list  list of variables from which an index-th element is taken
      * @param value a value of the index-th element from list
      */
     public ElementIntegerFast(IntVar index, List<? extends Integer> list, IntVar value) {
@@ -130,22 +125,22 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
     }
 
     /**
-     * It constructs an element constraint. 
+     * It constructs an element constraint.
      *
-     * @param index variable index
-     * @param list list of variables from which an index-th element is taken
-     * @param value a value of the index-th element from list
-     * @param indexOffset shift applied to index variable. 
+     * @param index       variable index
+     * @param list        list of variables from which an index-th element is taken
+     * @param value       a value of the index-th element from list
+     * @param indexOffset shift applied to index variable.
      */
     public ElementIntegerFast(IntVar index, List<? extends Integer> list, IntVar value, int indexOffset) {
-        this(index, list.stream().mapToInt( i -> i).toArray(), value, indexOffset);
+        this(index, list.stream().mapToInt(i -> i).toArray(), value, indexOffset);
     }
 
     /**
-     * It constructs an element constraint. 
+     * It constructs an element constraint.
      *
      * @param index variable index
-     * @param list list of variables from which an index-th element is taken
+     * @param list  list of variables from which an index-th element is taken
      * @param value a value of the index-th element from list
      */
     public ElementIntegerFast(IntVar index, int[] list, IntVar value) {
@@ -259,7 +254,7 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
                         max = Math.max(max, val);
                     }
                 }
-                
+
                 index.domain.in(store.level, index, indexDom.complement());
                 value.domain.in(store.level, value, min, max);
 
@@ -288,9 +283,18 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
         return IntDomain.ANY;
     }
 
+    @Override public boolean isStateful() {
+        return (!(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset));
+    }
+
     @Override public void impose(Store store) {
 
         super.impose(store);
+
+        if (!isStateful()) {
+            firstConsistencyCheck = false;
+        }
+
         order = new TimeStamp<>(store, detect); // set to detect
 
     }

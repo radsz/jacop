@@ -38,9 +38,9 @@ import java.util.Arrays;
  * partially based on standard hash set implementation as implemented in java
  * util class.
  *
- * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
  * @param <E> Class being stored in SimpleHashSet.
+ * @author Radoslaw Szymanek and Krzysztof Kuchcinski
+ * @version 4.6
  */
 
 public class SimpleHashSet<E> {
@@ -117,10 +117,10 @@ public class SimpleHashSet<E> {
      * function," which defends against poor quality hash functions. This is
      * critical because SimpleHashSet uses power-of two length hash tables.
      * <p>
-     *
+     * <p>
      * The shift distances in this function were chosen as the result of an
      * automated search over the entire four-dimensional search space.
-     *
+     * <p>
      * This hash code function implementation is original Sun function proposed
      * in util package.
      */
@@ -192,10 +192,8 @@ public class SimpleHashSet<E> {
      * Constructs an empty <tt>HashSet</tt> with the specified initial
      * capacity and the default load factor (0.75).
      *
-     * @param initialCapacity
-     *            the initial capacity.
-     * @throws IllegalArgumentException
-     *             if the initial capacity is negative.
+     * @param initialCapacity the initial capacity.
+     * @throws IllegalArgumentException if the initial capacity is negative.
      */
     public SimpleHashSet(int initialCapacity) {
         this(initialCapacity, DEFAULT_LOAD_FACTOR);
@@ -205,13 +203,10 @@ public class SimpleHashSet<E> {
      * Constructs an empty <tt>HashSet</tt> with the specified initial
      * capacity and load factor.
      *
-     * @param initialCapacity
-     *            The initial capacity.
-     * @param loadFactor
-     *            The load factor.
-     * @throws IllegalArgumentException
-     *             if the initial capacity is negative or the load factor is
-     *             nonpositive.
+     * @param initialCapacity The initial capacity.
+     * @param loadFactor      The load factor.
+     * @throws IllegalArgumentException if the initial capacity is negative or the load factor is
+     *                                  nonpositive.
      */
     public SimpleHashSet(int initialCapacity, float loadFactor) {
         if (initialCapacity < 0)
@@ -235,10 +230,9 @@ public class SimpleHashSet<E> {
     /**
      * Adds the specified element to this set.
      *
-     * @param element
-     *            element with which the specified value is to be associated.
+     * @param element element with which the specified value is to be associated.
      * @return <tt>true</tt> if object is inserted and <tt>false</tt> if
-     *         object was already in the set.
+     * object was already in the set.
      */
     @SuppressWarnings("unchecked") public boolean add(E element) {
         int hash = hash(element);
@@ -322,10 +316,9 @@ public class SimpleHashSet<E> {
      * Returns the boolean value which specifies if given element is already in
      * this identity hash set.
      *
-     * @param element
-     *            the element whose existence in the hash set is to be checked.
+     * @param element the element whose existence in the hash set is to be checked.
      * @return the boolean value which specifies if given element exists in a
-     *         hash set.
+     * hash set.
      */
     @SuppressWarnings({"unchecked"}) public boolean contains(E element) {
         int hash = hash(element);
@@ -349,6 +342,7 @@ public class SimpleHashSet<E> {
     /**
      * Removes and returns an entry removed from the HashSet. Returns null if
      * the HashSet contains no entry.
+     *
      * @return the first entry which has been removed.
      */
 
@@ -379,15 +373,14 @@ public class SimpleHashSet<E> {
      * Rehashes the contents of this set into a new array with a larger
      * capacity. This method is called automatically when the number of elements
      * in this set reaches its threshold.
-     *
+     * <p>
      * If current capacity is MAXIMUM_CAPACITY, this method does not resize the
      * set, but sets threshold to Integer.MAX_VALUE. This has the effect of
      * preventing future calls.
      *
-     * @param newCapacity
-     *            the new capacity, MUST be a power of two; must be greater than
-     *            current capacity unless current capacity is MAXIMUM_CAPACITY
-     *            (in which case value is irrelevant).
+     * @param newCapacity the new capacity, MUST be a power of two; must be greater than
+     *                    current capacity unless current capacity is MAXIMUM_CAPACITY
+     *                    (in which case value is irrelevant).
      */
     @SuppressWarnings("unchecked") void resize(int newCapacity) {
 

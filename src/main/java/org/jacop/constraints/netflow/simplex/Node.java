@@ -31,31 +31,42 @@
 package org.jacop.constraints.netflow.simplex;
 
 /**
- *  A node (vertex) in the network.
+ * A node (vertex) in the network.
  *
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.5
- *
+ * @version 4.6
  */
 
 public final class Node {
 
-    /** for debug only */
+    /**
+     * for debug only
+     */
     public final int initialBalance;
 
-    /** a label, great for debugging */
+    /**
+     * a label, great for debugging
+     */
     public final String name;
 
-    /** the potential (or dual variable) of the network simplex */
+    /**
+     * the potential (or dual variable) of the network simplex
+     */
     public int potential;
 
-    /** balance of the last feasible flow */
+    /**
+     * balance of the last feasible flow
+     */
     public int balance;
 
-    /** change in balance for the next flow computation */
+    /**
+     * change in balance for the next flow computation
+     */
     public int deltaBalance;
 
-    /** connects this node to the root */
+    /**
+     * connects this node to the root
+     */
     public Arc artificial;
 
     // we use the parent-thread-depth data structure to store the spanning tree
@@ -64,13 +75,19 @@ public final class Node {
     public Node thread;
     public int depth;
 
-    /** marks the cut (S,T) for dual pivot */
+    /**
+     * marks the cut (S,T) for dual pivot
+     */
     boolean marked;
 
-    /** number of connected arcs */
+    /**
+     * number of connected arcs
+     */
     public int degree;
 
-    /** adjacency list (recorded when degree reaches 2) */
+    /**
+     * adjacency list (recorded when degree reaches 2)
+     */
     public Arc[] adjacencyList;
 
     public Node(String name, int balance) {
@@ -86,8 +103,7 @@ public final class Node {
      * Finds the root of the smallest subtree that contains both this node and
      * that node.
      *
-     * @param that
-     *            another node
+     * @param that another node
      * @return the least common ancestor of this {@literal &} that
      */
     public Node lca(Node that) {
@@ -133,8 +149,7 @@ public final class Node {
     /**
      * Sets or clears a mark on a subtree rooted at this node
      *
-     * @param setMark
-     *            whether to set or clear the mark
+     * @param setMark whether to set or clear the mark
      */
     public void markTree(boolean setMark) {
         Node i = this;

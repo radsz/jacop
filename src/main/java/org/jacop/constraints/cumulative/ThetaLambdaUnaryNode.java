@@ -34,7 +34,7 @@ package org.jacop.constraints.cumulative;
  * Implements ThetaLambdaUnaryNode for ThetaLambdaUnaryTree.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 class ThetaLambdaUnaryNode extends ThetaNode {

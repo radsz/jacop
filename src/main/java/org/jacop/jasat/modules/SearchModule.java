@@ -31,8 +31,6 @@
 
 package org.jacop.jasat.modules;
 
-import java.util.TimerTask;
-
 import org.jacop.jasat.core.Core;
 import org.jacop.jasat.core.SolverState;
 import org.jacop.jasat.core.clauses.MapClause;
@@ -40,10 +38,13 @@ import org.jacop.jasat.modules.interfaces.ExplanationListener;
 import org.jacop.jasat.modules.interfaces.SolutionListener;
 import org.jacop.jasat.modules.interfaces.StartStopListener;
 
+import java.util.TimerTask;
+
 /**
  * A basic searching component, which controls the solver to solve the problem
+ *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public final class SearchModule implements SolutionListener, ExplanationListener, StartStopListener {

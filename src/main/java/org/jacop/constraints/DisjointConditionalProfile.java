@@ -31,9 +31,9 @@
 
 package org.jacop.constraints;
 
-import java.util.List;
-
 import org.jacop.core.IntDomain;
+
+import java.util.List;
 
 /**
  * Defines a basic data structure to keep the profile for the diffn/1
@@ -41,7 +41,7 @@ import org.jacop.core.IntDomain;
  * value.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 class DisjointConditionalProfile extends ProfileConditional {

@@ -30,19 +30,19 @@
 
 package org.jacop.constraints;
 
+import org.jacop.core.Store;
+import org.jacop.core.Var;
+
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-import org.jacop.core.Store;
-import org.jacop.core.Var;
-
 /**
- * Standard unified interface/abstract class for constraints, which can only be decomposed. 
+ * Standard unified interface/abstract class for constraints, which can only be decomposed.
  * Defines how to construct a constraint out of other constraints.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public abstract class DecomposedConstraint<T extends Constraint> {
@@ -50,11 +50,11 @@ public abstract class DecomposedConstraint<T extends Constraint> {
     /**
      * It specifies the queue (index), which is used to record that constraint
      * needs to be re-evaluated.
-     *
+     * <p>
      * Priorytet 0 - O(c), constant execution time, e.g. primitive constraints
      * Priorytet 1 - O(n), linear execution time, e.g. Sum, SumWeight
      * Priorytet 2 - O(n^2) quadratic execution time, e.g. Cumulative Diff2
-     * Priorytet 3 - plynomial execution time
+     * Priorytet 3 - polynomial execution time
      * Priorytet 4 - execution time can be exponential in worst case, SumWeightDom
      */
 
@@ -62,13 +62,15 @@ public abstract class DecomposedConstraint<T extends Constraint> {
 
     /**
      * It imposes the constraint in a given store.
+     *
      * @param store the constraint store to which the constraint is imposed to.
      */
     public abstract void imposeDecomposition(Store store);
 
     /**
      * It imposes the constraint and adjusts the queue index.
-     * @param store the constraint store to which the constraint is imposed to.
+     *
+     * @param store      the constraint store to which the constraint is imposed to.
      * @param queueIndex the index of the queue in the store it is assigned to.
      */
 
@@ -86,8 +88,8 @@ public abstract class DecomposedConstraint<T extends Constraint> {
      * It returns an array list of constraint which are used to decompose this
      * constraint. It actually creates a decomposition (possibly also creating
      * variables), but it does not impose the constraint.
-     * @param store the constraint store in which context the decomposition takes place.
      *
+     * @param store the constraint store in which context the decomposition takes place.
      * @return an array list of constraints used to decompose this constraint.
      */
     public abstract List<T> decompose(Store store);
@@ -104,8 +106,8 @@ public abstract class DecomposedConstraint<T extends Constraint> {
         // Case when parameters is just one array.
         if (parameters.length == 1) {
             if (a.length != parameters[0].length)
-                throw new IllegalArgumentException("Constraint " + this.getClass().getSimpleName() +
-                    " has parameters and descriptions that are not equal length as variables.");
+                throw new IllegalArgumentException("Constraint " + this.getClass().getSimpleName()
+                    + " has parameters and descriptions that are not equal length as variables.");
 
             for (int i = 0; i < a.length; i++)
                 if (parameters[0][i] == null)
@@ -116,8 +118,8 @@ public abstract class DecomposedConstraint<T extends Constraint> {
 
         // Case when parameters is more than one array then the length of a and parameters must match.
         if (a.length != parameters.length)
-            throw new IllegalArgumentException("Constraint " + this.getClass().getSimpleName() +
-                " has parameters and descriptions that are not equal length as variables.");
+            throw new IllegalArgumentException("Constraint " + this.getClass().getSimpleName()
+                + " has parameters and descriptions that are not equal length as variables.");
 
         for (int i = 0; i < a.length; i++) {
             if (parameters[i] == null)
@@ -153,7 +155,7 @@ public abstract class DecomposedConstraint<T extends Constraint> {
 
     public void checkInputForDuplication(String a, Object[] parameters) {
 
-        if ( Arrays.stream(parameters).collect(Collectors.toSet()).size() != parameters.length )
+        if (Arrays.stream(parameters).collect(Collectors.toSet()).size() != parameters.length)
             throw new IllegalArgumentException(
                 "Constraint of type " + this.getClass().getSimpleName() + " has parameter " + a + " that contains repeated values.");
 
@@ -162,20 +164,23 @@ public abstract class DecomposedConstraint<T extends Constraint> {
     public void checkInputForDuplicationSkipSingletons(String a, Var[] parameters) {
 
         Set<Var> dubletons = getDubletonsSkipSingletons(parameters);
-        if ( ! dubletons.isEmpty() ) {
+        if (!dubletons.isEmpty()) {
             throw new IllegalArgumentException(
-                "Constraint of type " + this.getClass().getSimpleName() + " has parameter " + a + " that contains repeated variables " + dubletons);
+                "Constraint of type " + this.getClass().getSimpleName() + " has parameter " + a + " that contains repeated variables "
+                    + dubletons);
         }
 
     }
 
     static public Set<Var> getDubletonsSkipSingletons(Var[] parameters) {
-        List<Var> notGroundedParametersList = Arrays.stream(parameters).filter( i -> ! i.singleton()).collect(Collectors.toList());
+        List<Var> notGroundedParametersList = Arrays.stream(parameters).filter(i -> !i.singleton()).collect(Collectors.toList());
         Set<Var> notGroundedParametersSet = new HashSet<Var>(notGroundedParametersList);
-        if ( notGroundedParametersSet.size() != notGroundedParametersList.size() ) {
-            notGroundedParametersSet.stream().forEach( i -> notGroundedParametersList.remove(i));
+        if (notGroundedParametersSet.size() != notGroundedParametersList.size()) {
+            notGroundedParametersSet.stream().forEach(i -> notGroundedParametersList.remove(i));
             return new HashSet<>(notGroundedParametersList);
-        } else { return Collections.emptySet(); }
+        } else {
+            return Collections.emptySet();
+        }
     }
 
 
@@ -188,7 +193,7 @@ public abstract class DecomposedConstraint<T extends Constraint> {
     public <T> void checkInput(T[] list, Predicate<T> condition, String conditionDescription) {
 
         for (int i = 0; i < list.length; i++)
-            if (! condition.test(list[i])) {
+            if (!condition.test(list[i])) {
                 throw new IllegalArgumentException(
                     "Constraint of type " + this.getClass().getSimpleName() + " has a condition " + conditionDescription + " violated for "
                         + i + "-th element");
@@ -199,7 +204,7 @@ public abstract class DecomposedConstraint<T extends Constraint> {
     public void checkInput(int[] list, Predicate<Integer> condition, String conditionDescription) {
 
         for (int i = 0; i < list.length; i++)
-            if (! condition.test(list[i])) {
+            if (!condition.test(list[i])) {
                 throw new IllegalArgumentException(
                     "Constraint of type " + this.getClass().getSimpleName() + " has a condition " + conditionDescription + " violated for "
                         + i + "-th element");
@@ -212,6 +217,6 @@ public abstract class DecomposedConstraint<T extends Constraint> {
         java.util.Set<org.jacop.floats.core.FloatVar> vars, org.jacop.floats.core.FloatVar x) {
 
         throw new RuntimeException("!!! Derivative not implemented for constraint " + this);
-   }
+    }
 
 }

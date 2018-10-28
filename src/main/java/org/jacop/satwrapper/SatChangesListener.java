@@ -31,11 +31,6 @@
 
 package org.jacop.satwrapper;
 
-import java.util.Arrays;
-import java.util.BitSet;
-import java.util.HashSet;
-import java.util.Set;
-
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
 import org.jacop.jasat.core.Core;
@@ -43,6 +38,11 @@ import org.jacop.jasat.modules.interfaces.AssertionListener;
 import org.jacop.jasat.modules.interfaces.BackjumpListener;
 import org.jacop.jasat.modules.interfaces.PropagateListener;
 import org.jacop.satwrapper.translation.SatCPBridge;
+
+import java.util.Arrays;
+import java.util.BitSet;
+import java.util.HashSet;
+import java.util.Set;
 
 /*
  * TODO: many efficiency improvements!!!
@@ -54,7 +54,7 @@ import org.jacop.satwrapper.translation.SatCPBridge;
  * what changes this implies for CP variables
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 public final class SatChangesListener implements AssertionListener, PropagateListener, BackjumpListener {
 

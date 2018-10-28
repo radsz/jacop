@@ -39,11 +39,11 @@ import org.jacop.set.core.SetVar;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * It creates a constraint that makes sure that value of the variable A is included within 
- * a provided set. 
+ * It creates a constraint that makes sure that value of the variable A is included within
+ * a provided set.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class AinS extends PrimitiveConstraint {
@@ -69,7 +69,7 @@ public class AinS extends PrimitiveConstraint {
      * It constructs a constraint that makes sure that value of set variable a is contained
      * within a provided set.
      *
-     * @param a variable that is restricted to be included within a provided set.
+     * @param a   variable that is restricted to be included within a provided set.
      * @param set set that is restricted to contain the value of set variable a.
      */
     public AinS(SetVar a, IntDomain set) {
@@ -80,13 +80,13 @@ public class AinS extends PrimitiveConstraint {
      * It constructs a constraint that makes sure that value of set variable a is contained
      * within a provided set.
      *
-     * @param a variable that is restricted to be included within a provided set.
-     * @param set set that is restricted to contain the value of set variable a.
+     * @param a      variable that is restricted to be included within a provided set.
+     * @param set    set that is restricted to contain the value of set variable a.
      * @param strict strict inclusion (true)
      */
     public AinS(SetVar a, IntDomain set, boolean strict) {
 
-        checkInputForNullness(new String[]{"a", "set"}, new Object[]{a, set});
+        checkInputForNullness(new String[] {"a", "set"}, new Object[] {a, set});
 
         numberId = idNumber.incrementAndGet();
 
@@ -143,7 +143,7 @@ public class AinS extends PrimitiveConstraint {
     @Override protected int getDefaultNotConsistencyPruningEvent() {
         return SetDomain.ANY;
     }
-    
+
     @Override public void notConsistency(Store store) {
 
         // TODO, test it properly.

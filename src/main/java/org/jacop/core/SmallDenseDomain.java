@@ -33,10 +33,10 @@ package org.jacop.core;
 import java.util.Random;
 
 /**
- * Defines small dense domain based on bits within a long number. 
+ * Defines small dense domain based on bits within a long number.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class SmallDenseDomain extends IntDomain implements Cloneable {
@@ -84,7 +84,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     /**
      * It creates a domain of type small dense.
      *
-     * @param min the minimum value present in this domain.
+     * @param min  the minimum value present in this domain.
      * @param bits the bits representing presence of any value from the range [ min .. min + 63].
      */
     public SmallDenseDomain(int min, long bits) {
@@ -121,6 +121,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
     /**
      * It creates a domain with values between min and max inclusive.
+     *
      * @param min min element in the domain
      * @param max max element in the domain
      */
@@ -213,7 +214,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
         if (size < domain.getSize())
             return false;
-		
+
 		
 		/* TODO implement special code, 
 		if (domain.domainID() == IntDomain.IntervalDomainID) {
@@ -372,9 +373,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
      * It computes the number of 1's in the binary representation of the number given in the field input.
      *
      * @param input the 64bits for which calculation of number of 1's takes place.
-     *
      * @return the number of 1's.
-     *
      */
     public int getSize(long input) {
 
@@ -2191,6 +2190,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     /**
      * It clones the domain object, only data responsible for encoding domain
      * values is cloned. All other fields must be set separately.
+     *
      * @return It returns a clone of this domain.
      */
 

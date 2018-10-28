@@ -41,7 +41,7 @@ import java.util.function.Function;
  * Defines a variable and related operations on it.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public abstract class Var implements Backtrackable {
@@ -76,6 +76,7 @@ public abstract class Var implements Backtrackable {
 
     /**
      * This function returns current domain of the variable.
+     *
      * @return the domain of the variable.
      */
 
@@ -84,6 +85,7 @@ public abstract class Var implements Backtrackable {
 
     /**
      * It returns the size of the current domain.
+     *
      * @return the size of the variables domain.
      */
 
@@ -92,6 +94,7 @@ public abstract class Var implements Backtrackable {
 
     /**
      * It checks if the domain is empty.
+     *
      * @return true if variable domain is empty.
      */
 
@@ -102,7 +105,8 @@ public abstract class Var implements Backtrackable {
      * It registers constraint with current variable, so anytime this variable
      * is changed the constraint is reevaluated. Pruning events constants from 0
      * to n, where n is the strongest pruning event.
-     * @param c the constraint which is being attached to the variable.
+     *
+     * @param c            the constraint which is being attached to the variable.
      * @param pruningEvent type of the event which must occur to trigger the execution of the consistency function.
      */
 
@@ -111,6 +115,7 @@ public abstract class Var implements Backtrackable {
     /**
      * It registers constraint with current variable, so always when this variable
      * is changed the constraint is reevaluated.
+     *
      * @param c the constraint which is added as a search constraint.
      */
 
@@ -129,6 +134,7 @@ public abstract class Var implements Backtrackable {
 
     /**
      * It checks if the domain contains only one value.
+     *
      * @return true if the variable domain is a singleton, false otherwise.
      */
 
@@ -138,6 +144,7 @@ public abstract class Var implements Backtrackable {
     /**
      * It returns current number of constraints which are associated with
      * variable and are not yet satisfied.
+     *
      * @return number of constraints attached to the variable.
      */
     public abstract int sizeConstraints();
@@ -145,6 +152,7 @@ public abstract class Var implements Backtrackable {
     /**
      * It returns all constraints which are associated with variable, even the
      * ones which are already satisfied.
+     *
      * @return number of constraints attached at the earliest level of the variable.
      */
     public abstract int sizeConstraintsOriginal();
@@ -152,6 +160,7 @@ public abstract class Var implements Backtrackable {
     /**
      * It returns current number of constraints which are associated with
      * variable and are not yet satisfied.
+     *
      * @return number of attached search constraints.
      */
     public abstract int sizeSearchConstraints();
@@ -160,6 +169,7 @@ public abstract class Var implements Backtrackable {
      * This function returns stamp of the current domain of variable. It is
      * equal or smaller to the stamp of store. Larger difference indicates that
      * variable has not been changed for a longer time.
+     *
      * @return level for which the most recent changes have been applied to.
      */
     public abstract int level();
@@ -167,12 +177,14 @@ public abstract class Var implements Backtrackable {
     /**
      * It returns the string representation of the variable using the full representation
      * of the domain.
+     *
      * @return string representation.
      */
     public abstract String toStringFull();
 
     /**
      * It informs the variable that its variable has changed according to the specified event.
+     *
      * @param event the type of the change (GROUND, BOUND, ANY).
      */
     public abstract void domainHasChanged(int event);
@@ -180,13 +192,24 @@ public abstract class Var implements Backtrackable {
     /**
      * It registers constraint with current variable, so anytime this variable
      * is changed the constraint is reevaluated.
+     *
      * @param c the constraint being attached to this variable.
      */
 
     public abstract void putConstraint(Constraint c);
 
     /**
+     * This function returns store used by this variable.
+     *
+     * @return the store of the variable.
+     */
+    public Store getStore() {
+        return store;
+    }
+
+    /**
      * This function returns variable id.
+     *
      * @return the id of the variable.
      */
     public String id() {
@@ -195,6 +218,7 @@ public abstract class Var implements Backtrackable {
 
     /**
      * This function returns the index of variable in store array.
+     *
      * @return the index of the variable.
      */
     public int index() {
@@ -217,9 +241,10 @@ public abstract class Var implements Backtrackable {
 
         for (int i = 0; i < list.length; i++) {
             if (position.get(list[i]) != null) {
-                if ( skipSingletons && list[i].singleton() )
+                if (skipSingletons && list[i].singleton())
                     continue;
-                throw new IllegalArgumentException("Constraint " + clazz.getSimpleName() + " can not create a position mapping for list as duplicates in the list exists.");
+                throw new IllegalArgumentException("Constraint " + clazz.getSimpleName()
+                    + " can not create a position mapping for list as duplicates in the list exists.");
             }
             position.put(list[i], i);
         }
@@ -235,7 +260,8 @@ public abstract class Var implements Backtrackable {
 
     }
 
-    public static <T extends Var, R> void addPositionMapping(Map<T, R> position, T[] list, Function<T, R> function, boolean skipSingletons, Class clazz) {
+    public static <T extends Var, R> void addPositionMapping(Map<T, R> position, T[] list, Function<T, R> function, boolean skipSingletons,
+        Class clazz) {
 
         for (T aList : list) {
             if (position.get(aList) != null) {

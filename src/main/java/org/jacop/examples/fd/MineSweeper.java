@@ -30,53 +30,49 @@
 
 package org.jacop.examples.fd;
 
-import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.XeqC;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.IndomainMin;
-import org.jacop.search.SelectChoicePoint;
-import org.jacop.search.SimpleMatrixSelect;
-import org.jacop.search.SmallestDomain;
+import org.jacop.search.*;
+
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- *
  * It models and solves Minesweeper problem.
  *
  * @author Hakan Kjellerstrand (hakank@bonetmail.com) and Radoslaw Szymanek
- * @version 4.5
- *
- * This is a port of Hakan's MiniZinc model
- * http://www.hakank.org/minizinc/minesweeper.mzn
- *
- * which is commented in the (swedish) blog post
- * "Fler constraint programming-modeller i MiniZinc, t.ex. Minesweeper och Game of Life"
- * http://www.hakank.org/webblogg/archives/001231.html
- *
- * See also
- *
- * The first 10 examples are from gecode/examples/minesweeper.cc
- * http://www.gecode.org/gecode-doc-latest/minesweeper_8cc-source.html
- *
- * http://www.janko.at/Raetsel/Minesweeper/index.htm
- *
- * http://en.wikipedia.org/wiki/Minesweeper_(computer_game)
- *
- * Ian Stewart on Minesweeper: http://www.claymath.org/Popular_Lectures/Minesweeper/
- *
- * Richard Kaye's Minesweeper Pages:
- * http://web.mat.bham.ac.uk/R.W.Kaye/minesw/minesw.htm
- *
- * Some Minesweeper Configurations:
- * http://web.mat.bham.ac.uk/R.W.Kaye/minesw/minesw.pdf
- *
- *
+ * @version 4.6
+ *          <p>
+ *          This is a port of Hakan's MiniZinc model
+ *          http://www.hakank.org/minizinc/minesweeper.mzn
+ *          <p>
+ *          which is commented in the (swedish) blog post
+ *          "Fler constraint programming-modeller i MiniZinc, t.ex. Minesweeper och Game of Life"
+ *          http://www.hakank.org/webblogg/archives/001231.html
+ *          <p>
+ *          See also
+ *          <p>
+ *          The first 10 examples are from gecode/examples/minesweeper.cc
+ *          http://www.gecode.org/gecode-doc-latest/minesweeper_8cc-source.html
+ *          <p>
+ *          http://www.janko.at/Raetsel/Minesweeper/index.htm
+ *          <p>
+ *          http://en.wikipedia.org/wiki/Minesweeper_(computer_game)
+ *          <p>
+ *          Ian Stewart on Minesweeper: http://www.claymath.org/Popular_Lectures/Minesweeper/
+ *          <p>
+ *          Richard Kaye's Minesweeper Pages:
+ *          http://web.mat.bham.ac.uk/R.W.Kaye/minesw/minesw.htm
+ *          <p>
+ *          Some Minesweeper Configurations:
+ *          http://web.mat.bham.ac.uk/R.W.Kaye/minesw/minesw.pdf
  */
 
 public class MineSweeper extends ExampleFD {
@@ -147,7 +143,7 @@ public class MineSweeper extends ExampleFD {
                             }
                         }
                     }
-                    store.impose(new SumInt(store, lst, "==", game[i][j]));
+                    store.impose(new SumInt(lst, "==", game[i][j]));
 
                 } // end if problem[i][j] > X
 
@@ -162,6 +158,7 @@ public class MineSweeper extends ExampleFD {
 
     /**
      * It executes special search with solution printing to present the solutions.
+     *
      * @param recordSolutions specifies if the solutions should be recorded.
      */
     public void searchSpecific(boolean recordSolutions) {
@@ -250,115 +247,142 @@ public class MineSweeper extends ExampleFD {
 
     /**
      * One of the possible MineSweeper problems.
+     *
      * @return description of the problem used by the function to create a constraint model.
      */
     public final static String[] problem1() {
-        return new String[] { "..2.3.", "2.....", "..24.3", "1.34..", ".....3", ".3.3.."};
+        return new String[] {"..2.3.", "2.....", "..24.3", "1.34..", ".....3", ".3.3.."};
     }
+
     /**
      * One of the possible MineSweeper problems.
+     *
      * @return description of the problem used by the function to create a constraint model.
      */
     public final static String[] problem2() {
         return new String[] {".2.211..", "..4.2..2", "2..2..3.", "2.22.3.3", "..1...4.", "1...2..3", ".2.22.3.", "1.1..1.1"};
     }
+
     /**
      * One of the possible MineSweeper problems.
+     *
      * @return description of the problem used by the function to create a constraint model.
      */
     public final static String[] problem3() {
-        return new String[] {"1..2.2.2..", ".32...4..1", "...13...4.", "3.1...3...", ".21.1..3.2", ".3.2..2.1.", "2..32..2..", ".3...32..3", "..3.33....",
-            ".2.2...22."};
+        return new String[] {"1..2.2.2..", ".32...4..1", "...13...4.", "3.1...3...", ".21.1..3.2", ".3.2..2.1.", "2..32..2..", ".3...32..3",
+            "..3.33....", ".2.2...22."};
     }
+
     /**
      * One of the possible MineSweeper problems.
+     *
      * @return description of the problem used by the function to create a constraint model.
      */
     public final static String[] problem4() {
         return new String[] {"2...3.1.", ".5.4...1", "..5..4..", "2...4.5.", ".2.4...2", "..5..4..", "2...5.4.", ".3.3...2"};
     }
+
     /**
      * One of the possible MineSweeper problems.
+     *
      * @return description of the problem used by the function to create a constraint model.
      */
     public final static String[] problem5() {
-        return new String[] {"0.0.1..11.", "1.2.2.22..", "......2..2", ".23.11....", "0......2.1", "...22.1...", ".....3.32.", ".5.2...3.1", ".3.1..3...",
-            ".2...12..0"};
+        return new String[] {"0.0.1..11.", "1.2.2.22..", "......2..2", ".23.11....", "0......2.1", "...22.1...", ".....3.32.", ".5.2...3.1",
+            ".3.1..3...", ".2...12..0"};
     }
+
     /**
      * One of the possible MineSweeper problems.
+     *
      * @return description of the problem used by the function to create a constraint model.
      */
     public final static String[] problem6() {
-        return new String[] {".21.2.2...", ".4..3...53", "...4.44..3", "4.4..5.6..", "..45....54", "34....55..", "..4.4..5.5", "2..33.6...", "36...3..4.",
-            "...4.2.21."};
+        return new String[] {".21.2.2...", ".4..3...53", "...4.44..3", "4.4..5.6..", "..45....54", "34....55..", "..4.4..5.5", "2..33.6...",
+            "36...3..4.", "...4.2.21."};
     }
+
     /**
      * One of the possible MineSweeper problems.
+     *
      * @return description of the problem used by the function to create a constraint model.
      */
     public final static String[] problem7() {
         return new String[] {".32..1..", "....1..3", "3..2...4", ".5...5..", "..6...5.", "3...5..4", "2..5....", "..2..34."};
     }
+
     /**
      * One of the possible MineSweeper problems.
+     *
      * @return description of the problem used by the function to create a constraint model.
      */
     public final static String[] problem8() {
-        return new String[] {".1.....3.", "...343...", "244...443", "...4.4...", ".4.4.3.6.", "...4.3...", "123...133", "...322...", ".2.....3."};
+        return new String[] {".1.....3.", "...343...", "244...443", "...4.4...", ".4.4.3.6.", "...4.3...", "123...133", "...322...",
+            ".2.....3."};
     }
+
     /**
      * One of the possible MineSweeper problems.
+     *
      * @return description of the problem used by the function to create a constraint model.
      */
     public final static String[] problem9() {
         return new String[] {".......", ".23435.", ".1...3.", "...5...", ".1...3.", ".12234.", "......."};
     }
+
     /**
      * One of the possible MineSweeper problems.
+     *
      * @return description of the problem used by the function to create a constraint model.
      */
     public final static String[] problem10() {
-        return new String[] {"2...2...2", ".4.4.3.4.", "..4...1..", ".4.3.3.4.", "2.......2", ".5.4.5.4.", "..3...3..", ".4.3.5.6.", "2...1...2",};
+        return new String[] {"2...2...2", ".4.4.3.4.", "..4...1..", ".4.3.3.4.", "2.......2", ".5.4.5.4.", "..3...3..", ".4.3.5.6.",
+            "2...1...2",};
     }
+
     /**
      * One of the possible MineSweeper problems.
+     *
      * @return description of the problem used by the function to create a constraint model.
      */
     public final static String[] problemTest() {
-        return new String[] {"2...2...2", ".4...3.4.", "..4...1..", ".4.3.3...", "2...22..2", ".5..3..4.", "...2..3..", ".4.....6.", "2...1...2",};
+        return new String[] {"2...2...2", ".4...3.4.", "..4...1..", ".4.3.3...", "2...22..2", ".5..3..4.", "...2..3..", ".4.....6.",
+            "2...1...2",};
     }
+
     /**
      * One of the possible MineSweeper problems.
+     *
      * @return description of the problem used by the function to create a constraint model.
      */
     public final static String[] problem_kaye_splitter() {
-        return new String[] {"...0...0...", "...01.10...", "...01.10...", "00001110000", ".1111.1111.", "...1.2.1...", ".1111.1111.", "00001110000",
-            "...01.10...", "...01.10...", "...0...0..."};
+        return new String[] {"...0...0...", "...01.10...", "...01.10...", "00001110000", ".1111.1111.", "...1.2.1...", ".1111.1111.",
+            "00001110000", "...01.10...", "...01.10...", "...0...0..."};
     }
 
     /**
      * The collection of MineSweeper problems.
+     *
      * @return description of the problem used by the function to create a constraint model.
      */
     public final static String[][] problems() {
-      return new String[][]  {problem1(), problem2(), problem3(), problem4(), problem5(), problem6(), problem7(), problem8(), problem9(), problem10()};
+        return new String[][] {problem1(), problem2(), problem3(), problem4(), problem5(), problem6(), problem7(), problem8(), problem9(),
+            problem10()};
     }
 
     /**
-     *
      * Reads a minesweeper file.
      * File format:
-     *  # a comment which is ignored
-     *  % a comment which also is ignored
-     *  number of rows
-     *  number of columns
-     *  {@literal <}
-     *    row number of neighbours lines...
-     *  {@literal >}
-     *
+     * # a comment which is ignored
+     * % a comment which also is ignored
+     * number of rows
+     * number of columns
+     * {@literal <}
+     * row number of neighbours lines...
+     * {@literal >}
+     * <p>
      * 0..8 means number of neighbours, "." mean unknown (may be a mine)
-     *
+     * <p>
      * Example (from minesweeper0.txt)
      * # Problem from Gecode/examples/minesweeper.cc  problem 0
      * 6
@@ -369,9 +393,9 @@ public class MineSweeper extends ExampleFD {
      * 1.34..
      * .....3
      * .3.3..
+     *
      * @param file it specifies the filename containing the problem description.
      * @return the int array description of the problem.
-     *
      */
 
     public static int[][] readFile(String file) {
@@ -383,7 +407,7 @@ public class MineSweeper extends ExampleFD {
         System.out.println("readFile(" + file + ")");
         int lineCount = 0;
 
-        try(BufferedReader inr = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"))) {
+        try (BufferedReader inr = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"))) {
 
             String str;
             while ((str = inr.readLine()) != null && str.length() > 0) {
@@ -430,12 +454,10 @@ public class MineSweeper extends ExampleFD {
 
 
     /**
-     *
      * It executes the program to solve any MineSweeper problem.
      * It is possible to supply the filename containing the problem specification.
      *
      * @param args the filename containing the problem description.
-     *
      */
     public static void main(String args[]) {
 

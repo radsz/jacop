@@ -30,63 +30,57 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
-import org.jacop.constraints.Alldifferent;
-import org.jacop.constraints.Element;
-import org.jacop.constraints.XeqC;
-import org.jacop.constraints.XneqY;
-import org.jacop.constraints.XplusCeqZ;
+import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.util.ArrayList;
+
 /**
- *
  * It is a very simple puzzle about islands and bridges.
  *
  * @author Waldemar Sliwinski, Zdzislaw Zawada, and Radoslaw Szymanek
- * @version 4.5
- *
- * A tiny nation in the South Pacific contains four islands connected by
- * bridges as shown (see below). Each of the four islands (Pwana, Quero,
- * Rayou, and Skern) boasts a different primary export (alabaster,
- * bananas, coconuts, and durian fruit) and a different tourist
- * attraction (hotel, ice skating rink, jai alai stadium, and koala
- * preserve). Can you find the name, export, and tourist attraction of
- * each island on the map?
- *
- *    N
- *  W   E     *compass directions
- *    S
- *
- * A, B, C, D are the islands
- *
- * (A) -- (B)
- *  |      |
- *  |      |
- * (C) -- (D)
- *
- * (view with non-proportional font)
- * 1. The island noted for its koala preserve is due south of Pwana.
- *
- * 2. The island with the largest alabaster quarry is due west of Quero.
- *
- * 3. The island with the resort hotel is due east of the one that exports durian fruit.
- *
- * 4. Skern and the island with the jai alai stadium are connected by a north-south bridge. 
- *
- * 5. Rayou and the island that exports bananas are connected by an east-west bridge.
- *
- * 6. The islands noted for the South Pacific's largest ice skating rink and for the jai alai stadium are not connected by a bridge.
- *
- * Determine: Island location -- Island name -- Export -- Tourist Attraction
- *
- * ANSWER:
- * Northwest, Pwana, durian fruit, ice skating rink
- * Northeast, Skern, coconuts, hotel
- * Southwest, Rayou, alabaster, koala preserve
- * Southeast, Quero, bananas, jai alai stadium
- *
+ * @version 4.6
+ *          <p>
+ *          A tiny nation in the South Pacific contains four islands connected by
+ *          bridges as shown (see below). Each of the four islands (Pwana, Quero,
+ *          Rayou, and Skern) boasts a different primary export (alabaster,
+ *          bananas, coconuts, and durian fruit) and a different tourist
+ *          attraction (hotel, ice skating rink, jai alai stadium, and koala
+ *          preserve). Can you find the name, export, and tourist attraction of
+ *          each island on the map?
+ *          <p>
+ *          N
+ *          W   E     *compass directions
+ *          S
+ *          <p>
+ *          A, B, C, D are the islands
+ *          <p>
+ *          (A) -- (B)
+ *          |      |
+ *          |      |
+ *          (C) -- (D)
+ *          <p>
+ *          (view with non-proportional font)
+ *          1. The island noted for its koala preserve is due south of Pwana.
+ *          <p>
+ *          2. The island with the largest alabaster quarry is due west of Quero.
+ *          <p>
+ *          3. The island with the resort hotel is due east of the one that exports durian fruit.
+ *          <p>
+ *          4. Skern and the island with the jai alai stadium are connected by a north-south bridge.
+ *          <p>
+ *          5. Rayou and the island that exports bananas are connected by an east-west bridge.
+ *          <p>
+ *          6. The islands noted for the South Pacific's largest ice skating rink and for the jai alai stadium are not connected by a bridge.
+ *          <p>
+ *          Determine: Island location -- Island name -- Export -- Tourist Attraction
+ *          <p>
+ *          ANSWER:
+ *          Northwest, Pwana, durian fruit, ice skating rink
+ *          Northeast, Skern, coconuts, hotel
+ *          Southwest, Rayou, alabaster, koala preserve
+ *          Southeast, Quero, bananas, jai alai stadium
  */
 
 public class FourIslands extends ExampleFD {
@@ -216,6 +210,7 @@ public class FourIslands extends ExampleFD {
 
     /**
      * It executes a program to solve this simple logic puzzle.
+     *
      * @param args no argument is used.
      */
     public static void main(String args[]) {

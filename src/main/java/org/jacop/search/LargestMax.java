@@ -35,9 +35,9 @@ import org.jacop.core.IntVar;
 /**
  * Defines a LargestMax comparator for Variables.
  *
- * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
  * @param <T> type of IntVar being compared.
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 4.6
  */
 
 public class LargestMax<T extends IntVar> implements ComparatorVariable<T> {

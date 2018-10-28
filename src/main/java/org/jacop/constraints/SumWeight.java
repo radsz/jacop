@@ -30,6 +30,7 @@
 
 package org.jacop.constraints;
 
+import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
@@ -50,7 +51,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 3.1
  */
-public class SumWeight extends Constraint implements UsesQueueVariable, SatisfiedPresent {
+public class SumWeight extends Constraint implements UsesQueueVariable, SatisfiedPresent, RemoveLevelLate {
 
     final static AtomicInteger idNumber = new AtomicInteger(0);
 

@@ -30,20 +30,10 @@
 
 package org.jacop.search.sgmpcs;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.jacop.core.*;
+import org.jacop.search.*;
 
-import org.jacop.search.Search;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.SelectChoicePoint;
-import org.jacop.search.SimpleSelect;
-import org.jacop.search.RandomSelect;
-import org.jacop.search.SmallestMin;
-import org.jacop.search.IndomainMin;
-import org.jacop.search.IndomainDefaultValue;
-import org.jacop.search.SimpleSolutionListener;
+import java.util.Map;
 
 /**
  * Defines an interface for defining different methods for selecting next search
@@ -51,9 +41,9 @@ import org.jacop.search.SimpleSolutionListener;
  * enforced and later upon backtrack a negation of that search decision will be
  * enforced.
  *
- * @author krzysztof Kuchcinski
- * @version 4.5
  * @param <T> type of the variable for which choice point is being created.
+ * @author krzysztof Kuchcinski
+ * @version 4.6
  */
 
 public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolution<T> {
@@ -90,8 +80,8 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
 
     public SimpleImprovementSearch(Store store, IntVar[] vars, IntVar cost) {
         this.store = store;
-	this.vars = new IntVar[vars.length];
-	System.arraycopy(vars, 0, this.vars, 0, vars.length);
+        this.vars = new IntVar[vars.length];
+        System.arraycopy(vars, 0, this.vars, 0, vars.length);
         this.cost = cost;
     }
 
@@ -179,7 +169,6 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
      * Saves the cost produced by a given search
      *
      * @author Krzysztof Kuchcinski
-     *
      */
     public class CostListener<T extends IntVar> extends SimpleSolutionListener<T> {
 

@@ -30,30 +30,19 @@
 
 package org.jacop.examples.cpviz;
 
+import org.jacop.constraints.*;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.search.*;
+
 import java.util.ArrayList;
 import java.util.List;
-
-import org.jacop.constraints.Alldifferent;
-import org.jacop.constraints.LinearInt;
-import org.jacop.constraints.XmulCeqZ;
-import org.jacop.constraints.XneqC;
-import org.jacop.constraints.XneqY;
-import org.jacop.constraints.XplusYeqZ;
-import org.jacop.core.Store;
-import org.jacop.core.IntVar;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.IndomainMin;
-import org.jacop.search.Search;
-import org.jacop.search.SelectChoicePoint;
-import org.jacop.search.SimpleSelect;
-
-import org.jacop.search.TraceGenerator;
 
 /**
  * It shows how to visualize solving process for SendMoreMoney problem.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 public class CPvizSendMoreMoney {
 
@@ -70,7 +59,7 @@ public class CPvizSendMoreMoney {
     // MONEY 10652
 
 	/*
-	 * This creates a standard model using simple basic constraints. 
+   * This creates a standard model using simple basic constraints.
 	 */
 
     public void model() {
@@ -237,12 +226,12 @@ public class CPvizSendMoreMoney {
         // SEND = 1000 * S + 100 * E + N * 10 + D * 1
         // MORE = 1000 * M + 100 * O + R * 10 + E * 1
         // MONEY = 10000 * M + 1000 * O + 100 * N + E * 10 + Y * 1
-        store.impose(new LinearInt(store, send, weights4, "==", 0));
+        store.impose(new LinearInt(send, weights4, "==", 0));
         // store.impose(new SumWeight(send, weights4, valueSEND));
         // store.impose(new SumWeight(more, weights4, valueMORE));
-        store.impose(new LinearInt(store, more, weights4, "==", 0));
+        store.impose(new LinearInt(more, weights4, "==", 0));
         // store.impose(new SumWeight(money, weights5, valueMONEY));
-        store.impose(new LinearInt(store, money, weights5, "==", 0));
+        store.impose(new LinearInt(money, weights5, "==", 0));
 
         // Main equation of the problem SEND + MORE = MONEY
         store.impose(new XplusYeqZ(valueSEND, valueMORE, valueMONEY));

@@ -38,12 +38,10 @@ import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.SelectChoicePoint;
 
 /**
- *
- * An executable to parse the flatzinc file and create the JaCoP model. 
+ * An executable to parse the flatzinc file and create the JaCoP model.
  *
  * @author Krzysztof Kuchcinki
- * @version 4.5
- *
+ * @version 4.6
  */
 
 public class FlatzincLoader {
@@ -53,12 +51,11 @@ public class FlatzincLoader {
     Parser parser;
 
     /**
-     * It parses the provided file and parsing parameters and creates the JaCoP model.. 
+     * It parses the provided file and parsing parameters and creates the JaCoP model..
      *
-     * @param args parameters describing the flatzinc file containing the problem to be solved as well as options for problem solving. 
-     *
-     * TODO what are the conditions for different exceptions being thrown? Write little info below.
-     *
+     * @param args parameters describing the flatzinc file containing the problem to be solved as well as options for problem solving.
+     *             <p>
+     *             TODO what are the conditions for different exceptions being thrown? Write little info below.
      */
 
 

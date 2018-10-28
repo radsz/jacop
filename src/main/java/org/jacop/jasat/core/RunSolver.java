@@ -31,12 +31,6 @@
 
 package org.jacop.jasat.core;
 
-import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.InputStream;
-
 import org.jacop.jasat.modules.DebugModule;
 import org.jacop.jasat.modules.SearchModule;
 import org.jacop.jasat.modules.StatModule;
@@ -47,12 +41,14 @@ import org.jacop.jasat.utils.OptParse;
 import org.jacop.jasat.utils.OptParse.OptHandler;
 import org.jacop.jasat.utils.structures.IntVec;
 
+import java.io.*;
+
 /**
  * The main class for the SAT solver when it is used standalone (without being
  * controlled by a master).
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public final class RunSolver {
@@ -61,7 +57,8 @@ public final class RunSolver {
 
     /**
      * launch the solver on a file, given by command line parameters
-     * @param args  command line arguments
+     *
+     * @param args command line arguments
      */
     public static void main(String[] args) {
 
@@ -159,6 +156,7 @@ public final class RunSolver {
 
     /**
      * parse the file which name is filename, and returns a stream on success
+     *
      * @return an input stream for the content of the file
      */
     private static InputStream readFile() {

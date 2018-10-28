@@ -31,36 +31,34 @@
 
 package org.jacop.jasat.core.clauses;
 
+import org.jacop.jasat.utils.Utils;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
-
-import org.jacop.jasat.utils.Utils;
 
 /**
  * A database for unit clauses (length 1). It only accepts those.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.5
- *
+ * @version 4.6
  */
 
 public final class UnaryClausesDatabase extends AbstractClausesDatabase {
 
     /**
      * TODO: Radek, just curious
-     *
+     * <p>
      * how is the conflict raised by this database?
      * how is the propagation done? After clauses are added, how is the unit propagation taking place?
-     *
+     * <p>
      * => conflicts are only raised when a clause is added, because either
      * we propagate the only literal of the clause, either it is false (=> conflict)
      * However, a good question is: what if we add such a clause at level > 0
      * and some backjump goes under this level, maybe we should watch literals
      * after all. ==> FIXME
-     *
+     * <p>
      * Is the addClause a right place to do above? Would it cause troubles for consistency of state
      * of different components?
-     *
      */
     private static final int INITIAL_SIZE = 100;
 
@@ -75,10 +73,9 @@ public final class UnaryClausesDatabase extends AbstractClausesDatabase {
 
     /**
      * TODO: Radek,
-     *
+     * <p>
      * why would you bother with having any code for removal when nothing is being actually removed.
      * Why not disallow removal altogether and call it StaticUnaryClausesDatabase?
-     *
      */
 
     public int addClause(int[] clause, boolean isModel) {

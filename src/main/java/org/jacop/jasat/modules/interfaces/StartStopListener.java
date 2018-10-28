@@ -35,9 +35,9 @@ import org.jacop.jasat.core.SolverComponent;
 
 /**
  * called when the solver starts or stops.
- * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.5
  *
+ * @author Simon Cruanes and Radoslaw Szymanek
+ * @version 4.6
  */
 public interface StartStopListener extends SolverComponent {
 

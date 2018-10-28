@@ -30,8 +30,8 @@
 
 package org.jacop.constraints.knapsack;
 
+import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.SatisfiedPresent;
-import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.*;
@@ -58,11 +58,10 @@ import java.util.stream.Stream;
  * and useful comments.
  *
  * @author Radoslaw Szymanek and Wadeck Follonier
- * @version 4.5
- *
+ * @version 4.6
  */
 
-public class Knapsack extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
+public class Knapsack extends Constraint implements UsesQueueVariable, SatisfiedPresent, RemoveLevelLate {
 
     private final static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -285,10 +284,6 @@ public class Knapsack extends Constraint implements UsesQueueVariable, Stateful,
 
     }
 
-    @Override public void removeLevel(int level) {
-        // we do nothing here, the work is done in removeLevelLate()
-    }
-
     @Override public void cleanAfterFailure() {
         inConsistency = false;
     }
@@ -309,7 +304,7 @@ public class Knapsack extends Constraint implements UsesQueueVariable, Stateful,
         }
 
         List<TreeLeaf> list = hashForUpdate.get(level);
-		/* there was some change in this level */
+    /* there was some change in this level */
         if (list != null) {
 			/* use the array to update */
             if (list.size() > updateLimit) {

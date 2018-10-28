@@ -30,21 +30,20 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
 import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.util.ArrayList;
+
 /**
- *
  * It is a simple logic puzzle about children reading stories.
- *
- * Title: Exodus 
- * Author: Sophy McHannot 
+ * <p>
+ * Title: Exodus
+ * Author: Sophy McHannot
  * Publication: Dell Logic
  * Puzzles Issue: April, 1998 Page: 14 Stars: 2
-
+ * <p>
  * In preparation for Passover, five children at Hebrew school
  * (Bernice, Carl, Debby, Sammy, and Ted) have been chosen to
  * present different parts of the story of the Exodus from Egypt
@@ -56,36 +55,35 @@ import org.jacop.core.Store;
  * Yemen). Can you find the age of each child, his or her
  * family's country of origin, and the part of the Exodus story
  * each related?
- *
+ * <p>
  * 1. Debby's family is from Lithuania.
- *
+ * <p>
  * 2. The child who told the story of the Passover is two years
  * older than Bernice.
- *
+ * <p>
  * 3. The child whose family is from Yemen is younger than the
  * child from the Ethiopian family.
- *
+ * <p>
  * 4. The child from the Moroccan family is three years older
  * than Ted.
- *
+ * <p>
  * 5. Sammy is three years older than the child who told the
  * story of Moses's youth in the house of the Pharaoh.
- *
+ * <p>
  * 6. Carl related the story of the captivity of the Israelites
  * in Egypt.
- *
+ * <p>
  * 7. The five-year-old child told the story of the Ten
  * Commandments.
- *
+ * <p>
  * 8. The child who told the story of the burning bush is either
  * two or three years older than the one whose family came
  * from Kazakhstan.
- *
+ * <p>
  * Determine: Age -- Child -- Country -- Story
  *
  * @author Duda Wojciech and Radoslaw Szymanek
- * @version 4.5
- *
+ * @version 4.6
  */
 
 public class Exodus extends ExampleFD {
@@ -188,6 +186,7 @@ public class Exodus extends ExampleFD {
 
     /**
      * It executes the program to solve this simple puzzle.
+     *
      * @param args no argument is used.
      */
     public static void main(String args[]) {

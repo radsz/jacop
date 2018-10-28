@@ -31,27 +31,23 @@
 package org.jacop.examples.floats;
 
 /**
- *
- * It models wilkinson problem for floating solver based  
+ * It models wilkinson problem for floating solver based
  * on minizinc model by Håkan Kjellerstrand
  *
- *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
- *
+ * @version 4.6
  */
 
 import org.jacop.core.Store;
+import org.jacop.floats.constraints.LinearFloat;
+import org.jacop.floats.constraints.PmulQeqR;
+import org.jacop.floats.constraints.PplusQeqR;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
+import org.jacop.floats.search.SmallestDomainFloat;
+import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.PrintOutListener;
-
-import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.constraints.LinearFloat;
-import org.jacop.floats.constraints.PplusQeqR;
-import org.jacop.floats.constraints.PmulQeqR;
-import org.jacop.floats.search.SplitSelectFloat;
-import org.jacop.floats.search.SmallestDomainFloat;
 
 public class Wilkinson {
 
@@ -98,7 +94,7 @@ public class Wilkinson {
             s1 = s2;
         }
 
-        store.impose(new LinearFloat(store, new FloatVar[] {s1, t1}, new double[] {1.0, 0.00000011920928955078}, "==", 0.0));
+        store.impose(new LinearFloat(new FloatVar[] {s1, t1}, new double[] {1.0, 0.00000011920928955078}, "==", 0.0));
 
         System.out.println("\bFloatVar store size: " + store.size() + "\nNumber of constraints: " + store.numberConstraints());
 

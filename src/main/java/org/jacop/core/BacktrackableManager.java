@@ -32,8 +32,7 @@ package org.jacop.core;
 
 /**
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
- *
+ * @version 4.6
  */
 public interface BacktrackableManager {
 
@@ -46,6 +45,7 @@ public interface BacktrackableManager {
 
     /**
      * It specifies the level which should become the active one in the manager.
+     *
      * @param level the active level at which the changes will be recorded.
      */
     void setLevel(int level);
@@ -78,6 +78,7 @@ public interface BacktrackableManager {
 
     /**
      * It returns the current level at which the changes are being registered.
+     *
      * @return the active level for which the changes are being registered.
      */
     int getLevel();
@@ -87,7 +88,8 @@ public interface BacktrackableManager {
      * This function works properly only during model creation phase, so manager can learn
      * about freshly created objects. If used during search then the old array must be part
      * of the new array to allow manager work properly.
-     * @param objects a new array of objects
+     *
+     * @param objects     a new array of objects
      * @param noOfObjects number of objects in the new array to be taken care of.
      */
 

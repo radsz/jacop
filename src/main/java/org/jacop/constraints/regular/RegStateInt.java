@@ -31,20 +31,20 @@
 
 package org.jacop.constraints.regular;
 
-import java.util.Map;
-
 import org.jacop.core.IntDomain;
 import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.TimeStamp;
 
+import java.util.Map;
+
 /**
- * It is an implementation of the Regular state which uses a separate successor for each 
- * value. Different values using different entries in the successor array can lead to the 
- * same successor. 
+ * It is an implementation of the Regular state which uses a separate successor for each
+ * value. Different values using different entries in the successor array can lead to the
+ * same successor.
  *
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 public class RegStateInt extends RegState {
 
@@ -52,9 +52,10 @@ public class RegStateInt extends RegState {
 
     /**
      * It constructs an integer based representation of the state.
-     * @param level level of the state (position of the associated variable).
-     * @param id id of the state.
-     * @param sucNumber the number of successors.
+     *
+     * @param level      level of the state (position of the associated variable).
+     * @param id         id of the state.
+     * @param sucNumber  the number of successors.
      * @param posInArray the position within the array of states.
      */
     public RegStateInt(int level, int id, int sucNumber, int posInArray) {

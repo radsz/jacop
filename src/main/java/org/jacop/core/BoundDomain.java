@@ -30,18 +30,17 @@
 
 package org.jacop.core;
 
+import org.jacop.constraints.Constraint;
+
 import java.util.Iterator;
 import java.util.Random;
-
-import org.jacop.constraints.Constraint;
 
 /**
  * Defines interval of numbers which is part of FDV definition which consist of
  * one or several intervals.
  *
- *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class BoundDomain extends IntDomain implements Cloneable {
@@ -75,8 +74,10 @@ public class BoundDomain extends IntDomain implements Cloneable {
         max = 0;
     }
 
-    /** Creates a new instance of BoundDomain. It requires min to be smaller
+    /**
+     * Creates a new instance of BoundDomain. It requires min to be smaller
      * or equal to max.
+     *
      * @param min it specifies the left bound of the BoundDomain (inclusive).
      * @param max it specifies the right bound of the BoundDomain (inclusive).
      */
@@ -96,8 +97,7 @@ public class BoundDomain extends IntDomain implements Cloneable {
 
 
     /**
-     * @param i  interval for union operation
-     *
+     * @param i interval for union operation
      */
     @Override public void unionAdapt(Interval i) {
 
@@ -182,6 +182,7 @@ public class BoundDomain extends IntDomain implements Cloneable {
 
     /**
      * It clones this domain.
+     *
      * @return clone of this domain.
      */
     public BoundDomain cloneLight() {
@@ -237,6 +238,7 @@ public class BoundDomain extends IntDomain implements Cloneable {
 
     /**
      * It divides the domain by a given constant.
+     *
      * @param div the constant by which the domain should be divided.
      * @return the domain obtained by dividing this domain by a given constant.
      */
@@ -661,6 +663,7 @@ public class BoundDomain extends IntDomain implements Cloneable {
 
     /**
      * It multiplies the domain by a given constant.
+     *
      * @param mul a factor by which the domain is being multiplied.
      * @return Domain created by multiplication of this domain.
      */

@@ -30,12 +30,6 @@
 
 package org.jacop.constraints.netflow;
 
-import static org.jacop.constraints.netflow.simplex.NetworkSimplex.DELETED_ARC;
-
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-
 import org.jacop.constraints.netflow.DomainStructure.Behavior;
 import org.jacop.constraints.netflow.simplex.Arc;
 import org.jacop.core.Domain;
@@ -43,40 +37,58 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Var;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
+import static org.jacop.constraints.netflow.simplex.NetworkSimplex.DELETED_ARC;
+
 /**
- *
  * This class extends the definition of an arc by a lower bound on the capacity
  * and connects the arc to variables that constrain it.
- *
+ * <p>
  * The ArcCompanion plays the role of the VarHandler for X- and W-variables. It
  * also provides a hook for S-variables of any
  *
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.5
- *
+ * @version 4.6
  */
 
 public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> {
 
-    /** The (forward) arc */
+    /**
+     * The (forward) arc
+     */
     public final Arc arc;
 
-    /** Current lower capacity of the arc */
+    /**
+     * Current lower capacity of the arc
+     */
     public int flowOffset;
 
-    /** The FDV for lower and upper capacity */
+    /**
+     * The FDV for lower and upper capacity
+     */
     public IntVar xVar;
 
-    /** The FDV for lower and upper cost */
+    /**
+     * The FDV for lower and upper cost
+     */
     public IntVar wVar;
 
-    /** The associated structure variable */
+    /**
+     * The associated structure variable
+     */
     public DomainStructure structure;
 
-    /** Identifier for this arc in the structure variable */
+    /**
+     * Identifier for this arc in the structure variable
+     */
     public int arcID;
 
-    /** The pruningScore */
+    /**
+     * The pruningScore
+     */
     public int pruningScore;
 
     public ArcCompanion(Arc arc, int offset) {
@@ -103,10 +115,8 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
      * Changes the lower and upper capacity of the arc in any way, performing
      * the necessary changes to node balance and flow offset functions.
      *
-     * @param min
-     *            the new lower capacity
-     * @param max
-     *            the new upper capacity
+     * @param min the new lower capacity
+     * @param max the new upper capacity
      */
     public void changeCapacity(int min, int max) {
 
@@ -249,8 +259,7 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
     /**
      * Restores the capacity and weight of the arc after backtracking.
      *
-     * @param network
-     *            the network
+     * @param network the network
      */
     public void restore(MutableNetwork network) {
 
@@ -266,7 +275,7 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
                 //				System.out.println(arc.name() + " : " + ((long) flow * (long) deltaCost));
                 //				throw new RuntimeException();
             } /*else if (flowOffset != 0) {
-				int deltaCost = newCost - arc.cost;
+        int deltaCost = newCost - arc.cost;
 				int flow = flowOffset;
 				network.changeCostOffset((long) flow * (long) deltaCost);
 			}*/
@@ -284,8 +293,7 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
     /**
      * Forces the flow to a given value (within capacity bounds).
      *
-     * @param flow
-     *            the new flow value
+     * @param flow the new flow value
      */
     public void setFlow(int flow) {
 
@@ -314,6 +322,7 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
 
     /**
      * interaction with structure variable
+     *
      * @param level current store level
      * @return whether the domain of the s-variable has been updated
      */

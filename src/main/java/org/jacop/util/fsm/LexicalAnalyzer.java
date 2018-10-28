@@ -36,7 +36,7 @@ import java.io.StringReader;
 
 /**
  * @author Polina Maakeva and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 class LexicalAnalyzer {
@@ -60,6 +60,7 @@ class LexicalAnalyzer {
 
     /**
      * Constructor creating a Lexical Analyzer.
+     *
      * @param in the StringReader providing the characters which are being analyzed.
      */
     LexicalAnalyzer(StringReader in) {

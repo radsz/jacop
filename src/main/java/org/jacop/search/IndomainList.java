@@ -41,7 +41,7 @@ import org.jacop.core.IntVar;
  * will be used.
  *
  * @author Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class IndomainList<T extends IntVar> implements Indomain<T> {
@@ -52,7 +52,8 @@ public class IndomainList<T extends IntVar> implements Indomain<T> {
 
     /**
      * It creates an IndomainList heuristic for choosing the values.
-     * @param order the order of values used to decide which values goes first.
+     *
+     * @param order       the order of values used to decide which values goes first.
      * @param defIndomain the default indomain used if some values are not specified by the order array.
      */
     public IndomainList(int[] order, Indomain<T> defIndomain) {

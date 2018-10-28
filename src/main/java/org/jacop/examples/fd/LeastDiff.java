@@ -30,8 +30,6 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XgtY;
@@ -39,20 +37,21 @@ import org.jacop.constraints.XplusYeqZ;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.util.ArrayList;
+
 /**
  * Simple least Diff problem.
- *
- * Minimize the difference ABCDE - FGHIJ 
- *                     where A..J is all different in the range 0..9.
- *
+ * <p>
+ * Minimize the difference ABCDE - FGHIJ
+ * where A..J is all different in the range 0..9.
+ * <p>
  * The solution is: 50123 - 49876 = 247
- *
+ * <p>
  * JaCoP Model by Hakan Kjellerstrand (hakank@bonetmail.com)
  * Also see http://www.hakank.org/JaCoP/
  *
  * @author Hakan Kjellerstrand and Radoslaw Szymanek
- * @version 4.5
- *
+ * @version 4.6
  */
 
 public class LeastDiff extends ExampleFD {
@@ -94,9 +93,9 @@ public class LeastDiff extends ExampleFD {
         IntVar value_fghij = new IntVar(store, "v_fghij", 0, 99999);
 
         // Constraints for getting value for words
-        store.impose(new LinearInt(store, abcde, weights5, "==", value_abcde));
+        store.impose(new LinearInt(abcde, weights5, "==", value_abcde));
         // store.impose(new SumWeight (abcde, weights5, value_abcde));
-        store.impose(new LinearInt(store, fghij, weights5, "==", value_fghij));
+        store.impose(new LinearInt(fghij, weights5, "==", value_fghij));
         // store.impose(new SumWeight (fghij, weights5, value_fghij));
 
         // abcde > fghij
@@ -119,6 +118,7 @@ public class LeastDiff extends ExampleFD {
 
     /**
      * It executes the program which solves this simple optimization problem.
+     *
      * @param args parameters (none)
      */
     public static void main(String args[]) {

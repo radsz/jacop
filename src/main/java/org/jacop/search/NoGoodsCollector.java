@@ -30,13 +30,13 @@
 
 package org.jacop.search;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.jacop.constraints.NoGood;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * NoGoodCollector collects no-goods from search when timeout has occurred. As
@@ -46,7 +46,7 @@ import org.jacop.core.Store;
  * when collector is informed about exiting the search.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class NoGoodsCollector<T extends IntVar> implements ExitChildListener<T>, TimeOutListener, ExitListener {

@@ -30,17 +30,19 @@
 
 package org.jacop.constraints.cumulative;
 
+import org.jacop.core.IntVar;
+
 /**
  * Represents tasks for cumulative constraint
  *
  * @author Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 class TaskReversedView extends TaskView {
 
-    TaskReversedView(Task t) {
-        super(t);
+    TaskReversedView(IntVar start, IntVar dur, IntVar res) {
+        super(start, dur, res);
     }
 
     int lct() {
@@ -61,7 +63,7 @@ class TaskReversedView extends TaskView {
     }
 
     long env(long C) {
-        return C * (long)est() + e();
+        return C * (long) est() + e();
     }
 
     void updateEdgeFind(int storeLevel, int lct) {
@@ -83,11 +85,11 @@ class TaskReversedView extends TaskView {
     }
 
     boolean exists() {
-	return dur.min() > 0 && res.min() > 0;
+        return dur.min() > 0 && res.min() > 0;
     }
 
     boolean maxNonZero() {
-	return dur.max() > 0 && res.max() > 0;
+        return dur.max() > 0 && res.max() > 0;
     }
 
 }

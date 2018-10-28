@@ -31,14 +31,14 @@
 
 package org.jacop.jasat.modules;
 
-import java.util.Iterator;
-import java.util.LinkedList;
-
 import org.jacop.jasat.core.Core;
 import org.jacop.jasat.core.clauses.MapClause;
 import org.jacop.jasat.modules.interfaces.BackjumpListener;
 import org.jacop.jasat.modules.interfaces.ExplanationListener;
 import org.jacop.jasat.modules.interfaces.ForgetListener;
+
+import java.util.Iterator;
+import java.util.LinkedList;
 
 
 
@@ -51,9 +51,9 @@ import org.jacop.jasat.modules.interfaces.ForgetListener;
  * A component that selects clauses to forget when solver.forget() is called.
  * It may also call forget() after a restart.
  * Heuristic is from glucose.
- * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.5
  *
+ * @author Simon Cruanes and Radoslaw Szymanek
+ * @version 4.6
  */
 public final class HeuristicForgetModule implements ForgetListener, ExplanationListener, BackjumpListener {
 
@@ -138,6 +138,7 @@ public final class HeuristicForgetModule implements ForgetListener, ExplanationL
     /**
      * should we forget now ? Will always return false if the current level
      * is not 0
+     *
      * @return true if the heuristic advises to forget AND the level is 0
      */
     public final boolean shouldTriggerForget() {
@@ -156,7 +157,8 @@ public final class HeuristicForgetModule implements ForgetListener, ExplanationL
 
     /**
      * compute the LBD (Literal Block Distance) of a clause
-     * @param clause  the clause
+     *
+     * @param clause the clause
      * @return the LBD of this clause
      */
     private int computeLBD(MapClause clause) {

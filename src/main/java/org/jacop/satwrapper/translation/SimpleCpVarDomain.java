@@ -31,10 +31,10 @@
 
 package org.jacop.satwrapper.translation;
 
-import java.util.Arrays;
-
 import org.jacop.core.IntVar;
 import org.jacop.satwrapper.SatWrapper;
+
+import java.util.Arrays;
 
 
 /**
@@ -43,7 +43,7 @@ import org.jacop.satwrapper.SatWrapper;
  * the domain of x (even '[x{@literal <=}max]', which is a tautology, for simplicity)
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 public class SimpleCpVarDomain extends SatCPBridge {
 

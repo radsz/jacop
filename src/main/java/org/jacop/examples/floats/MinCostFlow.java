@@ -31,39 +31,36 @@
 package org.jacop.examples.floats;
 
 /**
- *
  * It models min-cost flow for floating solver.
- *
+ * <p>
  * Minimum Cost Flow problem.
  * One of the most classic OR problems known: Find the minimum cost
  * flow in a network, while satisfying the demands in the nodes,
  * and not violating the capacities of the arcs.
- *
+ * <p>
  * Testdata available at:
- * http://elib.zib.de/pub/Packages/mp-testdata/mincost/ 
- *
+ * http://elib.zib.de/pub/Packages/mp-testdata/mincost/
+ * <p>
  * Based on minizinc model
  * min_cost_flow.mzn
  * Jakob Puchinger <jakobp@cs.mu.oz.au>
  * Wed Jun 14
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
- *
+ * @version 4.6
  */
+
+import org.jacop.core.Store;
+import org.jacop.floats.constraints.LinearFloat;
+import org.jacop.floats.constraints.PplusCeqR;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
+import org.jacop.floats.search.SmallestDomainFloat;
+import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.search.DepthFirstSearch;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import org.jacop.core.Store;
-import org.jacop.search.DepthFirstSearch;
-
-import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.constraints.LinearFloat;
-import org.jacop.floats.constraints.PplusCeqR;
-import org.jacop.floats.search.SplitSelectFloat;
-import org.jacop.floats.search.SmallestDomainFloat;
 
 public class MinCostFlow {
 
@@ -118,12 +115,12 @@ public class MinCostFlow {
             FloatVar outResult = new FloatVar(store, "outResult_" + i, MIN_FLOAT, MAX_FLOAT);
             outFlow.add(outResult);
             outFlowWeights.add(-1.0);
-            store.impose(new LinearFloat(store, outFlow, outFlowWeights, "==", 0.0));
+            store.impose(new LinearFloat(outFlow, outFlowWeights, "==", 0.0));
 
             FloatVar inResult = new FloatVar(store, "inResult_" + i, MIN_FLOAT, MAX_FLOAT);
             inFlow.add(inResult);
             inFlowWeights.add(-1.0);
-            store.impose(new LinearFloat(store, inFlow, inFlowWeights, "==", 0.0));
+            store.impose(new LinearFloat(inFlow, inFlowWeights, "==", 0.0));
 
             store.impose(new PplusCeqR(inResult, demand[i], outResult));
         }
@@ -137,7 +134,7 @@ public class MinCostFlow {
         vars[X.length] = cost;
         nCosts[costs.length] = -1.0;
 
-        store.impose(new LinearFloat(store, vars, nCosts, "==", 0.0));
+        store.impose(new LinearFloat(vars, nCosts, "==", 0.0));
 
         // solve minimize cost;
         DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();

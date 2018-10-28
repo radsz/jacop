@@ -37,7 +37,7 @@ package org.jacop.jasat.utils.structures;
  * It also provides a part of the interface of BitSet.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 public final class IntSet extends IntTrie<IntTrie.SimpleNode> {
 

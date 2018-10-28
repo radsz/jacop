@@ -29,39 +29,20 @@
  */
 package org.jacop.fz.constraints;
 
-import org.jacop.core.Store;
-import org.jacop.core.IntVar;
+import org.jacop.constraints.*;
 import org.jacop.core.IntDomain;
-
-import org.jacop.fz.*;
-
-import org.jacop.constraints.Constraint;
-import org.jacop.constraints.PrimitiveConstraint;
-import org.jacop.constraints.XlteqY;
-import org.jacop.constraints.XltY;
-import org.jacop.constraints.XltC;
-import org.jacop.constraints.XeqY;
-import org.jacop.constraints.XeqC;
-import org.jacop.constraints.XneqY;
-import org.jacop.constraints.XneqC;
-import org.jacop.constraints.Reified;
-import org.jacop.constraints.XgtC;
-import org.jacop.constraints.XgteqC;
-import org.jacop.constraints.XgtY;
-import org.jacop.constraints.XgteqY;
-import org.jacop.constraints.XlteqC;
-
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.fz.ASTScalarFlatExpr;
+import org.jacop.fz.ParserTreeConstants;
+import org.jacop.fz.SimpleNode;
 import org.jacop.satwrapper.SatTranslation;
-import org.jacop.constraints.XorBool;
-import org.jacop.constraints.Not;
 
 
 /**
- *
  * Generation of comparison constraints in flatzinc
  *
- * @author Krzysztof Kuchcinski 
- *
+ * @author Krzysztof Kuchcinski
  */
 class ComparisonConstraints implements ParserTreeConstants {
 
@@ -69,11 +50,11 @@ class ComparisonConstraints implements ParserTreeConstants {
     Support support;
     Store store;
     SatTranslation sat;
-    
+
     public ComparisonConstraints(Support support) {
-	this.support = support;
-	this.store = support.store;
-	this.sat = support.sat;
+        this.support = support;
+        this.store = support.store;
+        this.sat = support.sat;
     }
 
     // =========== bool =================
@@ -254,7 +235,8 @@ class ComparisonConstraints implements ParserTreeConstants {
 
                 int i2 = support.getInt(p2);
                 if (i2 < IntDomain.MinInt || i2 > IntDomain.MaxInt)
-                    throw new ArithmeticException("Constant "+i2+" outside variable bounds ; must be in interval "+IntDomain.MinInt+".."+IntDomain.MaxInt);
+                    throw new ArithmeticException(
+                        "Constant " + i2 + " outside variable bounds ; must be in interval " + IntDomain.MinInt + ".." + IntDomain.MaxInt);
                 switch (operation) {
 
                     case Support.eq:
@@ -271,15 +253,18 @@ class ComparisonConstraints implements ParserTreeConstants {
                             v1.domain.in(store.level, v1, i2, i2);
                             return;
                         } else if (generateForEqC(v1, i2, v3))
-			    return;
-			else
+                            return;
+                        else {
                             // if (support.options.useSat()) {  // it can be moved to SAT solver but it is slow in the current implementation
                             //     sat.generate_eqC_reif(v1, i2, v3);
                             //     return;
                             // }
                             // else
-                            c = new XeqC(v1, i2);
-                        break;
+                            // c = new XeqC(v1, i2);
+                            support.pose(fzXeqCReified(v1, i2, v3));
+                            return;
+                        }
+                        // break;
 
                     case Support.ne:
                         if (v1.min() > i2 || v1.max() < i2) {
@@ -295,9 +280,8 @@ class ComparisonConstraints implements ParserTreeConstants {
                             v1.domain.inComplement(store.level, v1, i2);
                             return;
                         } else if (generateForNeqC(v1, i2, v3)) { // binary variable
-			    return;
-			}
-			else
+                            return;
+                        } else
                             // if (support.options.useSat()) {  // it can be moved to SAT solver but it is slow in the current implementation
                             //     sat.generate_neC_reif(v1, i2, v3);
                             //     return;
@@ -345,14 +329,15 @@ class ComparisonConstraints implements ParserTreeConstants {
                         } else
                             c = new XgteqC(v1, i2);
                         break;
-		default:
-		    throw new RuntimeException("Internal error in " + getClass().getName());
+                    default:
+                        throw new RuntimeException("Internal error in " + getClass().getName());
                 }
             } else if (p1.getType() == 0 || p1.getType() == 1) { // int rel var or bool
                 IntVar v2 = support.getVariable(p2);
                 int i1 = support.getInt(p1);
                 if (i1 < IntDomain.MinInt || i1 > IntDomain.MaxInt)
-                    throw new ArithmeticException("Constant "+i1+" outside variable bounds; must be in interval "+IntDomain.MinInt+".."+IntDomain.MaxInt);
+                    throw new ArithmeticException(
+                        "Constant " + i1 + " outside variable bounds; must be in interval " + IntDomain.MinInt + ".." + IntDomain.MaxInt);
 
                 switch (operation) {
 
@@ -370,10 +355,13 @@ class ComparisonConstraints implements ParserTreeConstants {
                             v2.domain.in(store.level, v2, i1, i1);
                             return;
                         } else if (generateForEqC(v2, i1, v3))  // binary variable
-			    return;
-			else
-                            c = new XeqC(v2, i1);
-                        break;
+                            return;
+                        else {
+                            //     c = new XeqC(v2, i1);
+                            support.pose(fzXeqCReified(v2, i1, v3));
+                            return;
+                        }
+                        // break;
 
                     case Support.ne:
                         if (v2.min() > i1 || v2.max() < i1) {
@@ -383,8 +371,8 @@ class ComparisonConstraints implements ParserTreeConstants {
                             v3.domain.in(store.level, v3, 0, 0);
                             return;
                         } else if (generateForNeqC(v2, i1, v3))
-			    return;
-			else
+                            return;
+                        else
                             c = new XneqC(v2, i1);
                         break;
                     case Support.lt:
@@ -432,8 +420,8 @@ class ComparisonConstraints implements ParserTreeConstants {
                         } else
                             c = new XlteqC(v2, i1);
                         break;
-		default:
-		    throw new RuntimeException("Internal error in " + getClass().getName());
+                    default:
+                        throw new RuntimeException("Internal error in " + getClass().getName());
                 }
             } else { // var rel var
                 IntVar v1 = support.getVariable(p1);
@@ -441,28 +429,31 @@ class ComparisonConstraints implements ParserTreeConstants {
 
                 switch (operation) {
                     case Support.eq:
-			if (generateForEq(v1, v2, v3))
-			    return;
-			else if (generateForEq(v2, v1, v3))
-			    return;
-			else
-			    if (binaryVar(v1) && binaryVar(v2)) {
-				support.pose(new Not(new XorBool(new IntVar[] {v1, v2}, v3)));
-				return;
-			    }
-			    c = new XeqY(v1, v2);
+                        if (generateForEq(v1, v2, v3))
+                            return;
+                        else if (generateForEq(v2, v1, v3))
+                            return;
+                        else if (binaryVar(v1) && binaryVar(v2)) {
+                            support.pose(new Not(new XorBool(new IntVar[] {v1, v2}, v3)));
+                            return;
+                        }
+                        if (v2.singleton())
+                            c = new XeqC(v1, v2.value());
+                        else if (v1.singleton())
+                            c = new XeqC(v2, v1.value());
+                        else
+                            c = new XeqY(v1, v2);
                         break;
                     case Support.ne:
-			if (generateForNeq(v1, v2, v3))
-			    return;
-			else if (generateForNeq(v2, v1, v3))
-			    return;
-			else if (binaryVar(v1) && binaryVar(v2)) {
-			    support.pose(new XorBool(new IntVar[] {v1, v2}, v3));
-			    return;
-			}
-			else
-			    c = new XneqY(v1, v2);
+                        if (generateForNeq(v1, v2, v3))
+                            return;
+                        else if (generateForNeq(v2, v1, v3))
+                            return;
+                        else if (binaryVar(v1) && binaryVar(v2)) {
+                            support.pose(new XorBool(new IntVar[] {v1, v2}, v3));
+                            return;
+                        } else
+                            c = new XneqY(v1, v2);
                         break;
                     case Support.lt:
                         c = new XltY(v1, v2);
@@ -476,8 +467,8 @@ class ComparisonConstraints implements ParserTreeConstants {
                     case Support.ge:
                         c = new XgteqY(v1, v2);
                         break;
-		default:
-		    throw new RuntimeException("Internal error in " + getClass().getName());
+                    default:
+                        throw new RuntimeException("Internal error in " + getClass().getName());
                 }
             }
 
@@ -489,10 +480,14 @@ class ComparisonConstraints implements ParserTreeConstants {
                 if (p2.getType() == 0 || p2.getType() == 1) { // first parameter int/bool & second parameter int/bool
                     int i1 = support.getInt(p1);
                     if (i1 < IntDomain.MinInt || i1 > IntDomain.MaxInt)
-                        throw new ArithmeticException("Constant "+i1+" outside variable bounds; must be in interval "+IntDomain.MinInt+".."+IntDomain.MaxInt);
+                        throw new ArithmeticException(
+                            "Constant " + i1 + " outside variable bounds; must be in interval " + IntDomain.MinInt + ".."
+                                + IntDomain.MaxInt);
                     int i2 = support.getInt(p2);
                     if (i2 < IntDomain.MinInt || i2 > IntDomain.MaxInt)
-                        throw new ArithmeticException("Constant "+i2+" outside variable bounds; must be in interval "+IntDomain.MinInt+".."+IntDomain.MaxInt);
+                        throw new ArithmeticException(
+                            "Constant " + i2 + " outside variable bounds; must be in interval " + IntDomain.MinInt + ".."
+                                + IntDomain.MaxInt);
                     switch (operation) {
                         case Support.eq:
                             if (i1 != i2)
@@ -518,14 +513,16 @@ class ComparisonConstraints implements ParserTreeConstants {
                             if (i1 < i2)
                                 throw Store.failException;
                             break;
-		    default:
-			throw new RuntimeException("Internal error in " + getClass().getName());
+                        default:
+                            throw new RuntimeException("Internal error in " + getClass().getName());
                     }
                 } else { // first parameter int/bool & second parameter var
 
                     int i1 = support.getInt(p1);
                     if (i1 < IntDomain.MinInt || i1 > IntDomain.MaxInt)
-                        throw new ArithmeticException("Constant "+i1+" outside variable bounds; must be in interval "+IntDomain.MinInt+".."+IntDomain.MaxInt);
+                        throw new ArithmeticException(
+                            "Constant " + i1 + " outside variable bounds; must be in interval " + IntDomain.MinInt + ".."
+                                + IntDomain.MaxInt);
                     IntVar v2 = support.getVariable(p2);
 
                     switch (operation) {
@@ -547,8 +544,8 @@ class ComparisonConstraints implements ParserTreeConstants {
                         case Support.ge:
                             v2.domain.in(store.level, v2, IntDomain.MinInt, i1);
                             break;
-		    default:
-			throw new RuntimeException("Internal error in " + getClass().getName());
+                        default:
+                            throw new RuntimeException("Internal error in " + getClass().getName());
                     }
                 }
             } else { // first parameter var
@@ -557,7 +554,9 @@ class ComparisonConstraints implements ParserTreeConstants {
                     IntVar v1 = support.getVariable(p1);
                     int i2 = support.getInt(p2);
                     if (i2 < IntDomain.MinInt || i2 > IntDomain.MaxInt)
-                        throw new ArithmeticException("Constant "+i2+" outside variable bounds; must be in interval "+IntDomain.MinInt+".."+IntDomain.MaxInt);
+                        throw new ArithmeticException(
+                            "Constant " + i2 + " outside variable bounds; must be in interval " + IntDomain.MinInt + ".."
+                                + IntDomain.MaxInt);
 
                     switch (operation) {
                         case Support.eq:
@@ -578,8 +577,8 @@ class ComparisonConstraints implements ParserTreeConstants {
                         case Support.ge:
                             v1.domain.in(store.level, v1, i2, IntDomain.MaxInt);
                             break;
-		    default:
-			throw new RuntimeException("Internal error in " + getClass().getName());
+                        default:
+                            throw new RuntimeException("Internal error in " + getClass().getName());
                     }
 
                 } else { // first parameter var & second parameter var
@@ -606,8 +605,8 @@ class ComparisonConstraints implements ParserTreeConstants {
                         case Support.ge:
                             support.pose(new XgteqY(v1, v2));
                             break;
-		    default:
-			throw new RuntimeException("Internal error in " + getClass().getName());
+                        default:
+                            throw new RuntimeException("Internal error in " + getClass().getName());
                     }
                 }
             }
@@ -616,64 +615,88 @@ class ComparisonConstraints implements ParserTreeConstants {
 
 
     boolean generateForEqC(IntVar v1, int i2, IntVar b) {
-	if (v1.min() >= 0 && v1.max() <= 1) { // binary variables
-	    if (i2 == 0) {
-		support.pose(new XneqY(v1, b));
-		return true;
-	    }
-	    else if (i2 == 1) {
-		support.pose(new XeqY(v1, b));
-		return true;
-	    }
-	}
-	return false;
+        if (v1.min() >= 0 && v1.max() <= 1) { // binary variables
+            if (i2 == 0) {
+                support.pose(new XneqY(v1, b));
+                return true;
+            } else if (i2 == 1) {
+                support.pose(new XeqY(v1, b));
+                return true;
+            }
+        }
+        return false;
     }
-    
+
     boolean generateForNeqC(IntVar v1, int i2, IntVar b) {
-	if (v1.min() >= 0 && v1.max() <= 1) { // binary variables
-	    if (i2 == 0) {
-		support.pose(new XeqY(v1, b));
-		return true;
-	    }
-	    else if (i2 == 1) {
-		support.pose(new XneqY(v1, b));
-		return true;
-	    }
-	}
-	return false;
+        if (v1.min() >= 0 && v1.max() <= 1) { // binary variables
+            if (i2 == 0) {
+                support.pose(new XeqY(v1, b));
+                return true;
+            } else if (i2 == 1) {
+                support.pose(new XneqY(v1, b));
+                return true;
+            }
+        }
+        return false;
     }
-    
+
     boolean generateForEq(IntVar v1, IntVar v2, IntVar b) {
-	if (v1.min() >= 0 && v1.max() <= 1) {
-	    if (v2.singleton())
-		if (v2.value() == 1) {
-		    support.pose(new XeqY(v1, b));
-		    return true;
-		}
-		else if (v2.value() == 0) {
-		    support.pose(new XneqY(v1, b));
-		    return true;
-		}
-	}
-	return false;
+        if (v1.min() >= 0 && v1.max() <= 1) {
+            if (v2.singleton())
+                if (v2.value() == 1) {
+                    support.pose(new XeqY(v1, b));
+                    return true;
+                } else if (v2.value() == 0) {
+                    support.pose(new XneqY(v1, b));
+                    return true;
+                }
+        }
+        return false;
     }
 
     boolean generateForNeq(IntVar v1, IntVar v2, IntVar b) {
-	if (v1.min() >= 0 && v1.max() <= 1) {
-	    if (v2.singleton())
-		if (v2.value() == 1) {
-		    support.pose(new XneqY(v1, b));
-		    return true;
-		}
-		else if (v2.value() == 0) {
-		    support.pose(new XeqY(v1, b));
-		    return true;
-		}
-	}
-	return false;
+        if (v1.min() >= 0 && v1.max() <= 1) {
+            if (v2.singleton())
+                if (v2.value() == 1) {
+                    support.pose(new XneqY(v1, b));
+                    return true;
+                } else if (v2.value() == 0) {
+                    support.pose(new XeqY(v1, b));
+                    return true;
+                }
+        }
+        return false;
     }
 
     boolean binaryVar(IntVar v) {
-	return v.min() >= 0 && v.max() <= 1;
-    }    
+        return v.min() >= 0 && v.max() <= 1;
+    }
+
+    Constraint fzXeqCReified(IntVar x, Integer c, IntVar b) {
+
+        return new Constraint(new IntVar[] {x, b}) {
+
+            @Override public void consistency(final Store store) {
+
+                if (x.singleton(c)) {
+                    b.domain.in(store.level, b, 1, 1);
+                } else if (!x.domain.contains(c)) {
+                    b.domain.in(store.level, b, 0, 0);
+                    removeConstraint();
+                } else if (b.max() == 0) {// x==c must be false
+                    x.domain.inComplement(store.level, x, c);
+                    removeConstraint();
+                } else if (b.min() == 1) // x==c must be true
+                    x.domain.in(store.level, x, c, c);
+            }
+
+            @Override public int getDefaultConsistencyPruningEvent() {
+                return IntDomain.ANY;
+            }
+
+            @Override public String toString() {
+                return "fz : XeqC_Reified(" + x + ", " + c + ", " + b + " )";
+            }
+        };
+    }
 }

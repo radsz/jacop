@@ -35,16 +35,17 @@ import org.jacop.jasat.core.SolverComponent;
 
 /**
  * module called when a propagate event is called
- * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.5
  *
+ * @author Simon Cruanes and Radoslaw Szymanek
+ * @version 4.6
  */
 public interface PropagateListener extends SolverComponent {
 
 
     /**
      * called when a propagation occurs
-     * @param clauseId  the unique ID of the unit clause
+     *
+     * @param clauseId the unique ID of the unit clause
      * @param literal  the literal propagated
      */
     void onPropagate(int literal, int clauseId);

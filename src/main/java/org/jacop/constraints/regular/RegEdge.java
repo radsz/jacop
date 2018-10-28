@@ -34,12 +34,11 @@ package org.jacop.constraints.regular;
 import org.jacop.core.TimeStamp;
 
 /**
- *
  * The class responsible for connecting two states in regular automaton
- * of Regular constraint. 
+ * of Regular constraint.
  *
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class RegEdge {
@@ -56,7 +55,8 @@ public class RegEdge {
 
     /**
      * The constructor which creates an edge.
-     * @param org the origin state.
+     *
+     * @param org  the origin state.
      * @param dest the destination state.
      */
     public RegEdge(RegState org, RegState dest) {

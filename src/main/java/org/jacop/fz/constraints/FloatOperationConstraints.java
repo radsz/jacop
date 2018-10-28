@@ -29,48 +29,27 @@
  */
 package org.jacop.fz.constraints;
 
-import org.jacop.core.Store;
-
-
-import org.jacop.fz.*;
-
-import org.jacop.floats.constraints.PplusCeqR;
-import org.jacop.floats.constraints.PplusQeqR;
-import org.jacop.floats.constraints.PmulQeqR;
-import org.jacop.floats.constraints.PmulCeqR;
-import org.jacop.floats.constraints.PdivQeqR;
-import org.jacop.floats.constraints.AbsPeqR;
-import org.jacop.floats.constraints.SqrtPeqR;
-import org.jacop.floats.constraints.SinPeqR;
-import org.jacop.floats.constraints.CosPeqR;
-import org.jacop.floats.constraints.AsinPeqR;
-import org.jacop.floats.constraints.AcosPeqR;
-import org.jacop.floats.constraints.TanPeqR;
-import org.jacop.floats.constraints.AtanPeqR;
-import org.jacop.floats.constraints.ExpPeqR;
-import org.jacop.floats.constraints.LnPeqR;
-import org.jacop.floats.constraints.PdivCeqR;
-import org.jacop.floats.constraints.PltC;
-import org.jacop.floats.constraints.PeqQ;
-
 import org.jacop.constraints.IfThenElse;
+import org.jacop.core.Store;
+import org.jacop.floats.constraints.*;
 import org.jacop.floats.core.FloatVar;
+import org.jacop.fz.ASTScalarFlatExpr;
+import org.jacop.fz.ParserTreeConstants;
+import org.jacop.fz.SimpleNode;
 
 /**
- *
  * Generation of set constraints in flatzinc
  *
- * @author Krzysztof Kuchcinski 
- *
+ * @author Krzysztof Kuchcinski
  */
 class FloatOperationConstraints implements ParserTreeConstants {
 
     Support support;
     Store store;
-    
+
     public FloatOperationConstraints(Support support) {
-	this.support = support;
-	this.store = support.store;
+        this.support = support;
+        this.store = support.store;
     }
 
     void gen_float_abs(SimpleNode node) {

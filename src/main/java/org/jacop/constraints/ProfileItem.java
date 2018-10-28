@@ -37,7 +37,7 @@ package org.jacop.constraints;
  * belongs to it nad b does not) and the value.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class ProfileItem {
@@ -69,8 +69,8 @@ public class ProfileItem {
      * It constructs a profile item which spans over interval (a, b) with a given amount
      * specified by val.
      *
-     * @param a starting point of the profile item.
-     * @param b ending point of the profile item.
+     * @param a   starting point of the profile item.
+     * @param b   ending point of the profile item.
      * @param val the contribution of the item towards the profile.
      */
     public ProfileItem(int a, int b, int val) {
@@ -81,6 +81,7 @@ public class ProfileItem {
 
     /**
      * It constructs the profile item with a given type.
+     *
      * @param type it specifies the type of the profile item.
      */
     public ProfileItem(short type) {
@@ -92,9 +93,9 @@ public class ProfileItem {
      * and contributing a given amount towards the profile.
      *
      * @param type it specifies the type of the profile item.
-     * @param a it specifies the starting point of the profile item.
-     * @param b it specifies the ending point of the profile item.
-     * @param val it specifies how much this profile item contributes in the profile.
+     * @param a    it specifies the starting point of the profile item.
+     * @param b    it specifies the ending point of the profile item.
+     * @param val  it specifies how much this profile item contributes in the profile.
      */
     public ProfileItem(short type, int a, int b, int val) {
         this.type = type;
@@ -105,6 +106,7 @@ public class ProfileItem {
 
     /**
      * It returns the ending point of the profile item.
+     *
      * @return the ending point of the profile item.
      */
     public int max() {
@@ -113,6 +115,7 @@ public class ProfileItem {
 
     /**
      * It returns the starting point of the profile item.
+     *
      * @return the starting point of the profile item.
      */
     public int min() {
@@ -123,10 +126,10 @@ public class ProfileItem {
     /**
      * It compute the overlap with the specified profile item. The results are given as profile items too.
      *
-     * @param a the object for which the overlap with current object is being computed.
-     * @param left the left part of this profile item which is not being overlapped.
+     * @param a       the object for which the overlap with current object is being computed.
+     * @param left    the left part of this profile item which is not being overlapped.
      * @param overlap the overlapped part.
-     * @param right the right part of this profile item which is not being overlapped.
+     * @param right   the right part of this profile item which is not being overlapped.
      */
     public void overlap(ProfileItem a, ProfileItem left, ProfileItem overlap, ProfileItem right) {
 
@@ -230,8 +233,8 @@ public class ProfileItem {
     /**
      * It sets the attributes of the profile item.
      *
-     * @param a the starting point of the profile item.
-     * @param b the ending point of the profile item.
+     * @param a   the starting point of the profile item.
+     * @param b   the ending point of the profile item.
      * @param val the amount contributed towards a profile by this profile item.
      */
     public void set(int a, int b, int val) {
@@ -242,6 +245,7 @@ public class ProfileItem {
 
     /**
      * It sets the ending point of the profile item.
+     *
      * @param b the ending point of the profile item
      */
     public void setMax(int b) {
@@ -250,6 +254,7 @@ public class ProfileItem {
 
     /**
      * It sets the starting point of the profile item.
+     *
      * @param a the starting point of the profile item.
      */
     public void setMin(int a) {
@@ -258,6 +263,7 @@ public class ProfileItem {
 
     /**
      * It sets the amount by which this profile item is contributing towards the profile.
+     *
      * @param val amount by which this profile item is contributing towards the profile
      */
     public void setValue(int val) {
@@ -266,8 +272,9 @@ public class ProfileItem {
 
     /**
      * It computes subtraction of a given item and returns the result.
-     * @param a the item being subtracted from this profile item.
-     * @param left the left part remaining after subtraction.
+     *
+     * @param a     the item being subtracted from this profile item.
+     * @param left  the left part remaining after subtraction.
      * @param right the right part remaining after subtraction.
      */
     public void subtract(ProfileItem a, ProfileItem left, ProfileItem right) {

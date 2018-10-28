@@ -30,8 +30,6 @@
 
 package org.jacop.examples.set;
 
-import java.util.ArrayList;
-
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SumInt;
 import org.jacop.core.IntVar;
@@ -41,19 +39,21 @@ import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
 import org.jacop.set.constraints.AintersectBeqC;
+import org.jacop.set.constraints.AltB;
 import org.jacop.set.constraints.CardA;
 import org.jacop.set.constraints.EinA;
-import org.jacop.set.constraints.Lex;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
 import org.jacop.set.search.IndomainSetMax;
 import org.jacop.set.search.MaxCardDiff;
 
+import java.util.ArrayList;
+
 /**
  * It models and solves Steiner problem.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 public class Steiner extends ExampleSet {
@@ -65,6 +65,7 @@ public class Steiner extends ExampleSet {
 
     /**
      * It executes the program which solves this Steiner problem.
+     *
      * @param args prameters (none)
      */
     public static void main(String args[]) {
@@ -106,7 +107,7 @@ public class Steiner extends ExampleSet {
                 }
 
             for (int i = 0; i < s.length - 1; i++)
-                store.impose(new Lex(s[i], s[i + 1]));
+                store.impose(new AltB(s[i], s[i + 1]));
 
             // implied constraints to get better pruning
             for (int i = 1; i <= n; i++) {
@@ -116,7 +117,7 @@ public class Steiner extends ExampleSet {
                     store.impose(new Reified(new EinA(i, s[j]), b[j]));
                 }
                 IntVar sum = new IntVar(store, "sum_" + i, (n - 1) / 2, (n - 1) / 2);
-                store.impose(new SumInt(store, b, "==", sum));
+                store.impose(new SumInt(b, "==", sum));
             }
 
         }

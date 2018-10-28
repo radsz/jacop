@@ -34,12 +34,7 @@ import org.jacop.constraints.Not;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.Search;
-import org.jacop.search.SelectChoicePoint;
-import org.jacop.search.SimpleSelect;
-import org.jacop.search.SimpleSolutionListener;
-import org.jacop.search.TraceGenerator;
+import org.jacop.search.*;
 import org.jacop.set.constraints.AeqB;
 import org.jacop.set.constraints.AintersectBeqC;
 import org.jacop.set.constraints.CardA;
@@ -51,7 +46,7 @@ import org.jacop.set.search.IndomainSetMin;
  * It shows how to visualize solving process for Gardner problem.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 public class CPvizGardner {
     Store store;

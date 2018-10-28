@@ -30,41 +30,34 @@
 
 package org.jacop.examples.fd;
 
-import java.util.ArrayList;
-
-import org.jacop.constraints.Alldifferent;
-import org.jacop.constraints.Element;
-import org.jacop.constraints.XeqC;
-import org.jacop.constraints.XltY;
-import org.jacop.constraints.XneqC;
-import org.jacop.constraints.XneqY;
-import org.jacop.constraints.XplusCeqZ;
+import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.util.ArrayList;
+
 /**
- *
- * It is a simple logic puzzle about houses. 
+ * It is a simple logic puzzle about houses.
  *
  * @author Radoslaw Szymanek
- * @version 4.5
- *
- * Each year the Glendale Women's Club sponsors a Historic Homes Tour in which 
- * five old houses are (with the owners' permission, of course) opened to the 
- * public. This year the five homes are on different streets (Azalea Drive, 
- * Crepe Myrtle Court, Jasmine Boulevard, Magnolia Street, and Oleander Road), 
- * and each was built in a different year (1860, 1870, 1890, 1900, and 1920). 
- * Can you give the order in which the tour visited the five homes (identifying 
- * them by street) and match each with its year?
- *
- * 1. The home on Jasmine is 20 years older than the one on Azalea.
- * 2. The third home on the tour was built in 1860.
- * 3. The tour visited the home on Magnolia sometime before the one built in 1890.
- * 4. The tour visited the home on Oleander (which wasn't the last of the five to 
- * be built) sometime before it visited the one on Jasmine, which in turn was 
- * seen sometime before the one built in 1900.
- *
- * Determine: Order -- Street -- Year
+ * @version 4.6
+ *          <p>
+ *          Each year the Glendale Women's Club sponsors a Historic Homes Tour in which
+ *          five old houses are (with the owners' permission, of course) opened to the
+ *          public. This year the five homes are on different streets (Azalea Drive,
+ *          Crepe Myrtle Court, Jasmine Boulevard, Magnolia Street, and Oleander Road),
+ *          and each was built in a different year (1860, 1870, 1890, 1900, and 1920).
+ *          Can you give the order in which the tour visited the five homes (identifying
+ *          them by street) and match each with its year?
+ *          <p>
+ *          1. The home on Jasmine is 20 years older than the one on Azalea.
+ *          2. The third home on the tour was built in 1860.
+ *          3. The tour visited the home on Magnolia sometime before the one built in 1890.
+ *          4. The tour visited the home on Oleander (which wasn't the last of the five to
+ *          be built) sometime before it visited the one on Jasmine, which in turn was
+ *          seen sometime before the one built in 1900.
+ *          <p>
+ *          Determine: Order -- Street -- Year
  */
 
 
@@ -180,6 +173,7 @@ public class HistoricHomes extends ExampleFD {
 
     /**
      * It executes the program to solve this simple logic puzzle.
+     *
      * @param args parameters (none)
      */
     public static void main(String args[]) {

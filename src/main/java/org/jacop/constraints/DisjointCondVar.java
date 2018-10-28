@@ -31,18 +31,18 @@
 
 package org.jacop.constraints;
 
-import java.util.List;
-
 import org.jacop.core.MutableVar;
 import org.jacop.core.MutableVarValue;
 import org.jacop.core.Store;
+
+import java.util.List;
 
 /**
  * Defines a Variable for Diff2 constraints and related operations on it. It
  * keeps current recatngles for evaluation ([[R2, R3], [R1, R3], ...]
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 class DisjointCondVar implements MutableVar {

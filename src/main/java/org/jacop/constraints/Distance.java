@@ -31,21 +31,16 @@
 
 package org.jacop.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jacop.api.Stateful;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Interval;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Store;
+import org.jacop.core.*;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraint |X - Y| #= Z
  *
- *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.5
+ * @version 4.6
  */
 
 public class Distance extends PrimitiveConstraint implements Stateful {
@@ -73,6 +68,7 @@ public class Distance extends PrimitiveConstraint implements Stateful {
 
     /**
      * Distance between x and y |x-y| = z
+     *
      * @param x first parameter
      * @param y second parameter
      * @param z result

@@ -39,7 +39,7 @@ import org.jacop.core.Store;
  * keeps current recatngles for evaluation ([[R2, R3], [R1, R3], ...]
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.5
+ * @version 4.6
  */
 
 class Diff2Var implements MutableVar {
