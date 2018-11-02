@@ -256,8 +256,7 @@ public class FilterBenchmarkTest extends FilterBenchmark {
          *
          * @param store the constraint store in which the constraints are imposed.
          * @param filter the filter being scheduled.
-         * @param addNum number of adders available.
-         * @param mulNum number of multipliers available.
+         * @param configuration number of adders and multipliers.
          */
         public int experiment1P(Store store, Filter filter, int[] configuration ) {
 
@@ -271,8 +270,7 @@ public class FilterBenchmarkTest extends FilterBenchmark {
          *
          * @param store the constraint store in which the constraints are imposed.
          * @param filter the filter being scheduled.
-         * @param addNum number of adders available.
-         * @param mulNum number of multipliers available.
+         * @param configuration number of adders and multipliers.
          */
         public int experiment2P(Store store, Filter filter, int[] configuration) {
 
@@ -286,9 +284,7 @@ public class FilterBenchmarkTest extends FilterBenchmark {
          *
          * @param store the constraint store in which the constraints are imposed.
          * @param filter the filter being scheduled.
-         * @param addNum number of adders available.
-         * @param mulNum number of multipliers available.
-         * @param clock number of time units within a clock.
+         * @param configuration number of adders, multipliers, and time units within a clock.
          */
         public int experiment2C(Store store, Filter filter, int[] configuration) {
 
