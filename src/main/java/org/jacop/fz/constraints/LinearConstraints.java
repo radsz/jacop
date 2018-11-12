@@ -214,7 +214,11 @@ class LinearConstraints implements ParserTreeConstants {
                         if (binaryVar(p2[0]) && binaryVar(p2[1]))
                             // (x != y) <=> b == x xor y = b
                             support.pose(new XorBool(new IntVar[] {p2[0], p2[1]}, p4));
-                        else
+                        else if (p2[0].singleton())
+			    support.pose(new Reified(new XneqC(p2[1], p2[0].value()), p4));
+			else if (p2[1].singleton())
+			    support.pose(new Reified(new XneqC(p2[0], p2[1].value()), p4));
+			else
                             support.pose(new Reified(new XneqY(p2[0], p2[1]), p4));
                     else
                         support.pose(new Reified(new Not(new XplusCeqZ(p2[1], p3, p2[0])), p4));
@@ -223,6 +227,10 @@ class LinearConstraints implements ParserTreeConstants {
                         if (binaryVar(p2[0]) && binaryVar(p2[1]))
                             // (x != y) <=> b == x xor y = b
                             support.pose(new XorBool(new IntVar[] {p2[0], p2[1]}, p4));
+                        else if (p2[0].singleton())
+			    support.pose(new Reified(new XneqC(p2[1], p2[0].value()), p4));
+			else if (p2[1].singleton())
+			    support.pose(new Reified(new XneqC(p2[0], p2[1].value()), p4));
                         else
                             support.pose(new Reified(new XneqY(p2[0], p2[1]), p4));
                     else
