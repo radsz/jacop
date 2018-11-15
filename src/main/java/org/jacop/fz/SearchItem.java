@@ -172,9 +172,7 @@ public class SearchItem implements ParserTreeConstants {
             } else {
                 throw new IllegalArgumentException("Error: not recognized search exploration type; execution aborted");
             }
-        }
-
-        if (search_type.equals("float_search")) {
+        } else if (search_type.equals("float_search")) {
             floatSearch = true;
 
             ASTAnnExpr expr1 = (ASTAnnExpr) ann.jjtGetChild(0);
@@ -243,7 +241,9 @@ public class SearchItem implements ParserTreeConstants {
                 if (subSearch.search_variables.length > 0)
                     search_seq.add(subSearch);
             }
-        }
+        } else //if (search_type.startsWith("restart"))
+	    // TODO implement restart_* search annotations and related search
+	    throw new IllegalArgumentException("Not supported search annotation "+search_type+"; compilation aborted.");
     }
 
     void searchParametersForSeveralAnnotations(SimpleNode node, int n) {
@@ -255,7 +255,7 @@ public class SearchItem implements ParserTreeConstants {
         for (int i = 0; i < count - 1; i++) {
             SearchItem subSearch = new SearchItem(store, dictionary);
             subSearch.searchParameters(node, i);
-            if (subSearch.search_variables.length > 0)
+            //if (subSearch.search_variables != null && subSearch.search_variables.length > 0)
                 search_seq.add(subSearch);
         }
     }
@@ -652,15 +652,19 @@ public class SearchItem implements ParserTreeConstants {
                 s.append("[]");
             else
                 s.append("array1d(1.." + search_variables.length + ", " + Arrays.asList(search_variables));
-            s.append(", " + explore + ", " + var_selection_heuristic + ", " + indomain);
+            s.append(", " + explore + ", " + var_selection_heuristic + ", " + indomain + ")");
             if (floatSearch)
                 s.append(", " + precision);
         } else {
-            for (int i = 0; i < search_seq.size(); i++) //SearchItem se : search_seq)
+	    s.append("seq_search(");
+            for (int i = 0; i < search_seq.size(); i++) {//SearchItem se : search_seq)
                 if (i == search_seq.size() - 1)
-                    s.append(search_seq.get(i) + ")");
+                    s.append(search_seq.get(i));
                 else
-                    s.append(search_seq.get(i) + "), ");
+                    s.append(search_seq.get(i) + ", ");
+	    }
+	    s.append(")");
+
         }
         return s.toString();
     }
