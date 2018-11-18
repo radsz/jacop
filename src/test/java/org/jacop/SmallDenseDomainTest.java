@@ -1060,28 +1060,6 @@ public class SmallDenseDomainTest {
     }
 
 
-
-    @Test
-    public void testinterval90() throws InvocationTargetException, IllegalAccessException {
-
-        IntDomain intDomain = (IntDomain) prepareMethod.invoke(this, new Object[]{new int[]{5, 5, 6, 6 }});
-
-        IntDomain intDomain1 = mock(IntDomain.class, Mockito.CALLS_REAL_METHODS);
-        intDomain = mock(IntDomain.class, Mockito.CALLS_REAL_METHODS);
-
-        when(intDomain.getSize()).thenReturn(10);
-////        when(intDomain1.isEmpty()).thenReturn(false);
-//        when(intDomain1.contains(anyInt())).thenReturn(true);
-//        when(intDomain1.contains(anyInt(),anyInt())).thenReturn(false);
-        when(intDomain1.getSize()).thenReturn(0);
-
-        boolean result = intDomain1.singleton(intDomain);
-
-        assertFalse(result);
-
-    }
-
-
     @Test
     public void testinterval188() throws InvocationTargetException, IllegalAccessException {
 
@@ -1102,28 +1080,6 @@ public class SmallDenseDomainTest {
         assertFalse(result);
 
     }
-
-    @Test
-    public void testinterval85() throws InvocationTargetException, IllegalAccessException {
-
-        BoundDomain boundDomain =  (BoundDomain) prepareMethod.invoke(this, new Object[]{new int[]{1, 3, 5, 7, 12, 18}});
-//        intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[]{new int[]{-10, 10}});
-//        intervalDomain.inShift(100, var, intervalDomain, 5);
-        //boundDomain.inShift(100, var, boundDomain , 1);
-
-       // verify(var).domainHasChanged(boundDomain.BOUND);
-    }
-
-    //        @Test
-//    public void testEvent2()  throws InvocationTargetException, IllegalAccessException {
-//
-//        intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[]{new int[]{1, 2}});
-//        intervalDomain.setStamp(100);
-//        intervalDomain.inComplement(100, var, 1, 2);
-//
-//        verify(var).domainHasChanged(IntDomain.ANY);
-//    }
-
 
     public IntDomain createDomain(Interval... intervals)
     {
