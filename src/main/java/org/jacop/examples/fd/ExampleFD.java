@@ -220,7 +220,7 @@ public abstract class ExampleFD {
         T1 = System.currentTimeMillis();
 
         SelectChoicePoint<IntVar> select =
-            new SimpleSelect<>(vars.toArray(new IntVar[1]), new WeightedDegree<>(), new SmallestDomain<>(), new IndomainMin<>());
+            new SimpleSelect<>(vars.toArray(new IntVar[1]), new WeightedDegree<>(store), new SmallestDomain<>(), new IndomainMin<>());
 
         search = new DepthFirstSearch<>();
 

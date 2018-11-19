@@ -397,7 +397,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
      * It specifies if upon the failure of the constraint, all variables
      * in the constraint scope should have their weight increased.
      */
-    public boolean increaseWeight = false;
+    public boolean increaseWeight = true;
 
     /**
      * It specifies the event which must occur in order for the consistency function to

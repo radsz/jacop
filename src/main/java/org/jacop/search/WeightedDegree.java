@@ -30,6 +30,7 @@
 
 package org.jacop.search;
 
+import org.jacop.core.Store;
 import org.jacop.core.Var;
 
 /**
@@ -45,6 +46,13 @@ import org.jacop.core.Var;
 
 public class WeightedDegree<T extends Var> implements ComparatorVariable<T> {
 
+
+    private WeightedDegree() {}
+
+    public WeightedDegree(Store store) {
+	store.variableWeightManagement = true;	
+    }
+    
     public int compare(float left, T var) {
 
         float right = ((float) var.weight) / ((float) var.getSize());
@@ -62,7 +70,7 @@ public class WeightedDegree<T extends Var> implements ComparatorVariable<T> {
     }
 
     public int compare(T leftVar, T rightVar) {
-
+    
         float left = ((float) leftVar.weight) / ((float) leftVar.getSize());
 
         float right = ((float) rightVar.weight) / ((float) rightVar.getSize());

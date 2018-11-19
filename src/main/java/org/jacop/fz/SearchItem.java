@@ -409,9 +409,9 @@ public class SearchItem implements ParserTreeConstants {
             return new LargestMax<IntVar>();
         else if (var_selection_heuristic.equals("max_regret"))
             return new MaxRegret<IntVar>();
-        else if (var_selection_heuristic.equals("weighted_degree")) {
-            store.variableWeightManagement = true;
-            return new WeightedDegree<IntVar>();
+        else if (var_selection_heuristic.equals("dom_w_deg")) {
+            // store.variableWeightManagement = true;
+            return new WeightedDegree<IntVar>(store);
         } else if (var_selection_heuristic.equals("smallest_max")) {
             // does not follow flatzinc standard (JaCoP specific) ;)
             tieBreaking = new SmallestDomain();
@@ -458,12 +458,12 @@ public class SearchItem implements ParserTreeConstants {
             return new SmallestMinFloat<FloatVar>();
         } else if (var_selection_heuristic.equals("largest"))
             return new LargestMaxFloat<FloatVar>();
-            // else if (var_selection_heuristic.equals("max_regret"))
-            //     return new MaxRegret();
-            // else if (var_selection_heuristic.equals("weighted_degree")) {
-            //     store.variableWeightManagement = true;
-            //     return new WeightedDegree();
-            // }
+	// else if (var_selection_heuristic.equals("max_regret"))
+	//     return new MaxRegret();
+	// else if (var_selection_heuristic.equals("dom_w_deg")) {
+	//     store.variableWeightManagement = true;
+        //     return new WeightedDegree(store);
+	// }
         else
             System.err
                 .println("Warning: Not implemented variable selection heuristic \"" + var_selection_heuristic + "\"; used input_order");
@@ -486,9 +486,9 @@ public class SearchItem implements ParserTreeConstants {
             return new MostConstrainedStatic<SetVar>();
         else if (var_selection_heuristic.equals("anti_first_fail"))
             return new MaxCardDiff<SetVar>();
-        else if (var_selection_heuristic.equals("weighted_degree")) {
-            store.variableWeightManagement = true;
-            return new WeightedDegree<SetVar>();
+        else if (var_selection_heuristic.equals("dom_w_deg")) {
+            // store.variableWeightManagement = true;
+            return new WeightedDegree<SetVar>(store);
         }
         //  	else if (var_selection_heuristic.equals("most_constrained")) {
         // 	    tieBreaking = new MostConstrainedStatic();

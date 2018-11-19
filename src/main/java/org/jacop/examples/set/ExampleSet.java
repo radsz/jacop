@@ -222,7 +222,7 @@ public abstract class ExampleSet {
         T1 = System.currentTimeMillis();
 
         SelectChoicePoint<SetVar> select =
-            new SimpleSelect<SetVar>(vars.toArray(new SetVar[1]), new WeightedDegree<SetVar>(), new SmallestDomain<SetVar>(),
+            new SimpleSelect<SetVar>(vars.toArray(new SetVar[1]), new WeightedDegree<SetVar>(store), new SmallestDomain<SetVar>(),
                 new IndomainSetMin<SetVar>());
 
         search = new DepthFirstSearch<SetVar>();

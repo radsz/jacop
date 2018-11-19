@@ -1,5 +1,4 @@
 %% ===== JaCoP specific search annotations =====
-annotation weighted_degree;
 
 annotation lds(int: d);
 annotation credit(int: c, ann: b);
