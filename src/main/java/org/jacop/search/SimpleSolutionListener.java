@@ -68,7 +68,7 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
     /**
      * It specifies the number of solutions we want to find.
      */
-    public int solutionLimit = 1;
+    public int solutionLimit = -1;
 
     protected int noSolutions = 0;
 

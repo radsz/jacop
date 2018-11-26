@@ -35,6 +35,7 @@ import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.*;
 import org.jacop.search.*;
+import org.jacop.search.restart.*;
 import org.jacop.set.core.SetVar;
 import org.jacop.set.search.*;
 
@@ -64,6 +65,8 @@ public class SearchItem implements ParserTreeConstants {
 
     ComparatorVariable tieBreaking = null;
 
+    Calculator restartCalculator = null;
+    
     /**
      * It constructs search part parsing object based on dictionaries
      * provided as well as store object within which the search will take place.
@@ -243,21 +246,47 @@ public class SearchItem implements ParserTreeConstants {
             }
         } else //if (search_type.startsWith("restart"))
 	    // TODO implement restart_* search annotations and related search
-	    throw new IllegalArgumentException("Not supported search annotation "+search_type+"; compilation aborted.");
+	    if (search_type.equals("restart_none"))
+		;
+	    else if (search_type.equals("restart_constant")) {
+		ASTAnnExpr expr = (ASTAnnExpr) ann.jjtGetChild(0);
+		int scale = ((ASTScalarFlatExpr) expr.jjtGetChild(0)).getInt();
+		restartCalculator = new ConstantCalculator(scale);
+	    }
+	    else if (search_type.equals("restart_linear")) {
+		ASTAnnExpr expr = (ASTAnnExpr) ann.jjtGetChild(0);
+		int scale = ((ASTScalarFlatExpr) expr.jjtGetChild(0)).getInt();
+		restartCalculator = new LinearCalculator(scale);
+	    }
+	    else if (search_type.equals("restart_luby")) {
+		ASTAnnExpr expr = (ASTAnnExpr) ann.jjtGetChild(0);
+		int scale = ((ASTScalarFlatExpr) expr.jjtGetChild(0)).getInt();
+		restartCalculator = new LubyCalculator(scale);
+	    }
+	    else if (search_type.equals("restart_geometric")) {
+		ASTAnnExpr expr1 = (ASTAnnExpr) ann.jjtGetChild(0);
+		double base = ((ASTScalarFlatExpr) expr1.jjtGetChild(0)).getFloat();
+		ASTAnnExpr expr2 = (ASTAnnExpr) ann.jjtGetChild(1);
+		int scale = ((ASTScalarFlatExpr) expr2.jjtGetChild(0)).getInt();
+		restartCalculator = new GeometricCalculator(base, scale);
+	    }
+	    else
+		throw new IllegalArgumentException("Not supported search annotation "+search_type+"; compilation aborted.");
     }
 
     void searchParametersForSeveralAnnotations(SimpleNode node, int n) {
 
-        //  	node.dump("");
+        // node.dump("");
 
         int count = node.jjtGetNumChildren();
 
         for (int i = 0; i < count - 1; i++) {
             SearchItem subSearch = new SearchItem(store, dictionary);
             subSearch.searchParameters(node, i);
-            //if (subSearch.search_variables != null && subSearch.search_variables.length > 0)
-                search_seq.add(subSearch);
+            // if (subSearch.search_variables != null && subSearch.search_variables.length > 0)
+	    search_seq.add(subSearch);
         }
+	// System.out.println(search_seq);
     }
 
     SelectChoicePoint getSelect() {
@@ -404,6 +433,7 @@ public class SearchItem implements ParserTreeConstants {
             // does not follow flatzinc definition but may give better results ;)
             // tieBreaking = new MostConstrainedStatic();
             //tieBreaking = new SmallestDomain();
+	    // tieBreaking = new WeightedDegree(store);
             return new SmallestMin<IntVar>();
         } else if (var_selection_heuristic.equals("largest"))
             return new LargestMax<IntVar>();

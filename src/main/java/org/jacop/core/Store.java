@@ -681,7 +681,7 @@ public class Store {
      * @param c constraint to be imposed.
      */
 
-    public void impose(Constraint c) {
+    @SuppressWarnings("unchecked") public void impose(Constraint c) {
 
         Optional.ofNullable(replacements.get(c.getClass())).ifPresent(
             l -> l.forEach( r -> {

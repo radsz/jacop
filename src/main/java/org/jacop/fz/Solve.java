@@ -38,6 +38,7 @@ import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.satwrapper.SatTranslation;
 import org.jacop.search.*;
+import org.jacop.search.restart.*;
 import org.jacop.set.core.SetVar;
 import org.jacop.set.search.IndomainSetMin;
 
@@ -80,10 +81,10 @@ public class Solve implements ParserTreeConstants {
 
     Var costVariable;
 
-    // used for restart search
-    // int costValue;
-    // double floatCostValue;
-
+    // restart search
+    Calculator restartCalculator;
+    RestartSearch<Var> rs;
+    
     // -------- for print-out of statistics
     boolean singleSearch;
     boolean Result;
@@ -216,18 +217,46 @@ public class Solve implements ParserTreeConstants {
         } else if (count > 2) {// several annotations
             SearchItem si = new SearchItem(store, dictionary);
             si.searchParametersForSeveralAnnotations(node, 0);
-            // 	    System.out.println("*** "+si +"\nsize="+si.search_seqSize());
 
-            kind = (ASTSolveKind) node.jjtGetChild(si.search_seqSize());
-            solveKind = getKind(kind.getKind());
-            // 	    System.out.println ("kind="+kind+" solveKind="+solveKind);
+	    ArrayList<SearchItem> nsi = parseSearchAnnotations(si.search_seq);
 
-            run_sequence_search(solveKind, kind, si);
+	    if (nsi.size() == 1) { // single search (int, set, float or seq) + other annotations (restart_*)
+		SearchItem fs = nsi.get(0);
+
+		kind = (ASTSolveKind) node.jjtGetChild(si.search_seqSize());
+		solveKind = getKind(kind.getKind());
+		
+		if (fs.search_seq.size() > 0)
+		    run_sequence_search(solveKind, kind, fs);
+		else
+		    run_single_search(solveKind, kind, fs);
+	    }
+	    else {
+		kind = (ASTSolveKind) node.jjtGetChild(si.search_seqSize());
+		solveKind = getKind(kind.getKind());
+
+		run_sequence_search(solveKind, kind, si);
+	    }
         } else {
             throw new IllegalArgumentException("Not recognized structure of solve statement; compilation aborted");
         }
     }
 
+    ArrayList<SearchItem> parseSearchAnnotations(ArrayList<SearchItem> search_seq) {
+	ArrayList<SearchItem> ns = new ArrayList<SearchItem>();
+
+	for (SearchItem s : search_seq) 
+	    if (s.search_type.equals("restart_none"))
+		continue;
+	    else if (s.search_type.equals("restart_constant") || s.search_type.equals("restart_linear") || s.search_type.equals("restart_geometric") ||
+		     s.search_type.equals("restart_luby"))
+		restartCalculator = s.restartCalculator;
+	    else
+		ns.add(s);
+
+	return ns;
+    }
+    
     void run_single_search(int solveKind, SimpleNode kind, SearchItem si) {
 
         singleSearch = true;
@@ -398,6 +427,9 @@ public class Solve implements ParserTreeConstants {
                     FloatDomain.intervalPrint(options.getInterval()); // print intervals for float variables
 
                     if (options.getAll()) { // all solutions
+			if (restartCalculator != null)
+			    throw new IllegalArgumentException("Flatzinc option for search for all solutions (-a) cannot be used in restart search.");
+
                         label.getSolutionListener().searchAll(true);
                         label.getSolutionListener().recordSolutions(false);
 
@@ -430,7 +462,12 @@ public class Solve implements ParserTreeConstants {
                     this.si = si;
 
                     if (options.runSearch())
-                        Result = label.labeling(store, variable_selection);
+			if (restartCalculator != null) {
+			    rs = new RestartSearch<>(store, label, variable_selection, restartCalculator);
+			    Result = rs.labeling();
+			}
+			else
+			    Result = label.labeling(store, variable_selection);
                     else {
                         // storing flatiznc defined search
                         flatzincDFS = label;
@@ -453,7 +490,12 @@ public class Solve implements ParserTreeConstants {
                     this.si = si;
 
                     if (options.runSearch())
-                        Result = label.labeling(store, variable_selection, cost);
+			if (restartCalculator != null) {
+			    rs = new RestartSearch<>(store, label, variable_selection, restartCalculator, cost);
+			    Result = rs.labeling();
+			}
+			else
+			    Result = label.labeling(store, variable_selection, cost);
                     else {
                         // storing flatiznc defined search
                         flatzincDFS = label;
@@ -480,7 +522,12 @@ public class Solve implements ParserTreeConstants {
                     this.si = si;
 
                     if (options.runSearch())
-                        Result = label.labeling(store, variable_selection, max_cost);
+			if (restartCalculator != null) {
+			    rs = new RestartSearch<>(store, label, variable_selection, restartCalculator, cost);
+			    Result = rs.labeling();
+			}
+			else
+			    Result = label.labeling(store, variable_selection, max_cost);
                     else {
                         // storing flatiznc defined search
                         flatzincDFS = label;
@@ -595,6 +642,8 @@ public class Solve implements ParserTreeConstants {
                 }
             }
 
+	    int restarts = (rs != null) ? rs.restarts() : 0;
+	    
             System.out.println("%%mzn-stat: variables=" + (store.size() + dictionary.getNumberBoolVariables() - dictionary.constantTable.size())
 			       // + "\n%%mzn-stat: boolVariables="+ (dictionary.getNumberBoolVariables()-dictionary.aliasTable.size())
 			       // + "\n%%mzn-stat: setVariables="+ dictionary.getNumberSetVariables()
@@ -603,6 +652,7 @@ public class Solve implements ParserTreeConstants {
 			       + "\n\n%%mzn-stat: initTime=" + getInitTime_ms()/1000.0
 			       + "\n%%mzn-stat: solveTime=" + getSearchTime_ms()/1000.0
 			       + "\n%%mzn-stat: nodes=" + String.format("%,d", nodes)
+			       + "\n%%mzn-stat: restarts=" + String.format("%,d", restarts)
 			       + "\n%%mzn-stat: propagations=" + String.format("%,d", store.numberConsistencyCalls)
 			       // + "\n%% Search decisions : "+ String.format("%,d", decisions)
 			       + "\n%%mzn-stat: failers=" + String.format("%,d", wrong) //Wrong search decisions : 
@@ -797,7 +847,7 @@ public class Solve implements ParserTreeConstants {
 	    if (options.getAll())
 		System.out.println("==========");
 
-            if (options.getStatistics())
+            if (options.getStatistics()) {
                 System.out.println(
 				   "%%mzn-stat: variables=" + (store.size() + dictionary.getNumberBoolVariables() - dictionary.constantTable.size())
 				   // + "\n%%mzn-stat: boolVariables="+ (dictionary.getNumberBoolVariables()-dictionary.aliasTable.size())
@@ -809,16 +859,18 @@ public class Solve implements ParserTreeConstants {
 				   + "\n%%mzn-stat: nodes=0"
 				   + "\n%%man-stat: propagations="+ store.numberConsistencyCalls
 				   + "\n%%mzn-stat: nodes=0"
+				   + "\n%%mzn-stat: restarts=0"
 				   + "\n%%mzn-stat: failers=0"
 				   // + "\n%%mzn-stat: backtracks=0"
 				   + "\n%%mzn-stat: peakDepth=0"
 				   + "\n%%mzn-stat: solutions=1");
 
-            throw new TrivialSolution();
-        }
+	    }
+	    throw new TrivialSolution();
+	}
 
         return intAndSetSearch;
-    }
+    }	
 
 
     void run_sequence_search(int solveKind, SimpleNode kind, SearchItem si) {
@@ -908,6 +960,9 @@ public class Solve implements ParserTreeConstants {
                     FloatDomain.intervalPrint(options.getInterval()); // print intervals for float variables
 
                     if (options.getAll()) { // all solutions
+			if (restartCalculator != null)
+			    throw new IllegalArgumentException("Flatzinc option for search for all solutions (-a) cannot be used in restart search.");
+
                         for (int i = 0; i < si.getSearchItems().size(); i++) {  //list_seq_searches.size(); i++) {
                             list_seq_searches.get(i).getSolutionListener().searchAll(true);
                             list_seq_searches.get(i).getSolutionListener().recordSolutions(false);
@@ -917,7 +972,12 @@ public class Solve implements ParserTreeConstants {
                     }
 
                     if (options.runSearch())
-                        Result = masterLabel.labeling(store, masterSelect);
+			if (restartCalculator != null) {
+			    rs = new RestartSearch<>(store, masterLabel, masterSelect, restartCalculator);
+			    Result = rs.labeling();
+			}
+			else
+			    Result = masterLabel.labeling(store, masterSelect);
                     else {
                         // storing flatiznc defined search
                         flatzincDFS = masterLabel;
@@ -954,7 +1014,12 @@ public class Solve implements ParserTreeConstants {
                     }
 
                     if (options.runSearch())
-                        Result = masterLabel.labeling(store, masterSelect, cost);
+			if (restartCalculator != null) {
+			    rs = new RestartSearch<>(store, masterLabel, masterSelect, restartCalculator, cost);
+			    Result = rs.labeling();
+			}
+			else
+			    Result = masterLabel.labeling(store, masterSelect, cost);
                     else {
                         // storing flatiznc defined search
                         flatzincDFS = masterLabel;
@@ -995,7 +1060,12 @@ public class Solve implements ParserTreeConstants {
                     }
 
                     if (options.runSearch())
-                        Result = masterLabel.labeling(store, masterSelect, max_cost);
+			if (restartCalculator != null) {
+			    rs = new RestartSearch<>(store, masterLabel, masterSelect, restartCalculator, cost);
+			    Result = rs.labeling();
+			}
+			else
+			    Result = masterLabel.labeling(store, masterSelect, max_cost);
                     else {
                         // storing flatiznc defined search
                         flatzincDFS = masterLabel;
@@ -1067,6 +1137,8 @@ public class Solve implements ParserTreeConstants {
                 solutions = label.getSolutionListener().solutionsNo();
             }
 
+	    int restarts = (rs != null) ? rs.restarts() : 0;
+	    
             System.out.println("%%mzn-stat: variables=" + (store.size() + dictionary.getNumberBoolVariables() - dictionary.constantTable.size())
 			       // + "\n%%mzn-stat: boolVariables="+ (dictionary.getNumberBoolVariables()-dictionary.aliasTable.size())
 			       // + "\n%%mzn-stat: setVariables="+ dictionary.getNumberSetVariables()
@@ -1075,6 +1147,7 @@ public class Solve implements ParserTreeConstants {
 			       + "\n\n%%mzn-stat: initTime=" + getInitTime_ms()/1000.0
 			       + "\n%%mzn-stat: solveTime=" + getSearchTime_ms()/1000.0
 			       + "\n%%mzn-stat: nodes=" + String.format("%,d", nodes)
+			       + "\n%%mzn-stat: restarts=" + String.format("%,d", restarts)
 			       + "\n%%mzn-stat: propagations=" + String.format("%,d", store.numberConsistencyCalls)
 			       // + "\n%% Search decisions : " + String.format("%,d", decisions)
 			       + "\n%%mzn-stat: failers=" + String.format("%,d", wrong) //Wrong search decisions : 

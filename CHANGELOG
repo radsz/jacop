@@ -1,3 +1,13 @@
+Version 4.7
+=============
+
+1. Introduction of restart search both in JaCoP and flatzinc.
+
+2. Making WeightedDegree variable selection method working
+   correctly. Adding variable selection method dom_w_deg to flatzinc.
+
+3. Small corrections in pom.xml to use right version of Scala.
+
 Version 4.6
 =============
 
