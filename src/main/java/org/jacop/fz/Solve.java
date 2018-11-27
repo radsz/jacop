@@ -251,8 +251,10 @@ public class Solve implements ParserTreeConstants {
 	    else if (s.search_type.equals("restart_constant") || s.search_type.equals("restart_linear") || s.search_type.equals("restart_geometric") ||
 		     s.search_type.equals("restart_luby"))
 		restartCalculator = s.restartCalculator;
-	    else
+	    else if (s.search_type.endsWith("_search"))
 		ns.add(s);
+	    else
+		System.out.println("%% Warning: Not supported search annotation: "+s.search_type+"; ignored.");
 
 	return ns;
     }

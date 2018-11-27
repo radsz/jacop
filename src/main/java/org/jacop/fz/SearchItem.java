@@ -270,8 +270,8 @@ public class SearchItem implements ParserTreeConstants {
 		int scale = ((ASTScalarFlatExpr) expr2.jjtGetChild(0)).getInt();
 		restartCalculator = new GeometricCalculator(base, scale);
 	    }
-	    else
-		throw new IllegalArgumentException("Not supported search annotation "+search_type+"; compilation aborted.");
+	    // else
+	    // 	throw new IllegalArgumentException("Not supported search annotation "+search_type+"; compilation aborted.");
     }
 
     void searchParametersForSeveralAnnotations(SimpleNode node, int n) {
@@ -283,6 +283,7 @@ public class SearchItem implements ParserTreeConstants {
         for (int i = 0; i < count - 1; i++) {
             SearchItem subSearch = new SearchItem(store, dictionary);
             subSearch.searchParameters(node, i);
+
             // if (subSearch.search_variables != null && subSearch.search_variables.length > 0)
 	    search_seq.add(subSearch);
         }
@@ -320,7 +321,25 @@ public class SearchItem implements ParserTreeConstants {
                 sel.leftFirst = false;
                 return sel;
             }
-        } else if (var_selection_heuristic.equals("input_order")) {
+        }  else if (indomain != null && indomain.equals("outdomain_max")) {
+            if (tieBreaking == null) {
+                SplitSelect<IntVar> sel = new SplitSelect<IntVar>(searchVars, var_sel, new IndomainMax<IntVar>());
+                return sel;
+            } else {
+                SplitSelect<IntVar> sel = new SplitSelect<IntVar>(searchVars, var_sel, tieBreaking, new IndomainMax<IntVar>());
+                return sel;
+            }
+        }  else if (indomain != null && indomain.equals("outdomain_min")) {
+            if (tieBreaking == null) {
+                SplitSelect<IntVar> sel = new SplitSelect<IntVar>(searchVars, var_sel, new IndomainMin<IntVar>());
+                sel.leftFirst = false;
+                return sel;
+            } else {
+                SplitSelect<IntVar> sel = new SplitSelect<IntVar>(searchVars, var_sel, tieBreaking, new IndomainMin<IntVar>());
+                sel.leftFirst = false;
+                return sel;
+            }
+	} else if (var_selection_heuristic.equals("input_order")) {
             Indomain indom = getIndomain(indomain);
             return new InputOrderSelect(store, search_variables, indom);
         } else {

@@ -57,7 +57,7 @@ public class LubyCalculator<T extends Var> extends Calculator {
     }
     
     public String toString() {
-	return "constantCalculator("+scale+")";
+	return "lubyCalculator("+scale+")";
     }
 
     public int getLuby(int i) {
