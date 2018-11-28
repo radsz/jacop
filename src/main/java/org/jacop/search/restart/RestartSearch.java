@@ -43,6 +43,7 @@ import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSolutionListener;
 import org.jacop.search.SolutionListener;
+import org.jacop.search.ConsistencyListener;
 
 /**
  * Implements restart search. Only cost as IntVar is possible.
@@ -82,7 +83,9 @@ public class RestartSearch<T extends Var> {
 	
 	do {
 	    // add calculator & do not assign solutions
+	    ConsistencyListener cs = ns.getConsistencyListener();
 	    ns.setConsistencyListener(calculator);
+	    ns.consistencyListener.setChildrenListeners(cs);
 	    ns.setAssignSolution(false);
 	    ns.setPrintInfo(false);
 	    lastNotNullSearch = ns;

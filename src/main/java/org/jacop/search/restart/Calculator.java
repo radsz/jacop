@@ -46,6 +46,8 @@ public abstract class Calculator<T extends Var> implements ConsistencyListener {
 
     long failLimit;
 
+    ConsistencyListener child;
+
     public abstract void newLimit();
 
     /**
@@ -55,6 +57,9 @@ public abstract class Calculator<T extends Var> implements ConsistencyListener {
      */
     public boolean executeAfterConsistency(boolean consistent) {
 
+	if (child != null)
+	    child.executeAfterConsistency(consistent);
+	
         if (numberFails >= failLimit)
             return false;
         else {
@@ -88,6 +93,7 @@ public abstract class Calculator<T extends Var> implements ConsistencyListener {
     }
 
     public void setChildrenListeners(ConsistencyListener child) {
+	this.child = child;
     }
 
 }
