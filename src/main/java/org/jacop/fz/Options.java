@@ -103,7 +103,8 @@ public class Options {
                     + "    -p <value>, --precision <value> defines precision for floating operations\n"
                     + "        overrides precision definition in search annotation.\n"
                     + "    -f <value>, --format <value> defines format (number digits after decimal point)\n"
-                    + "        for floating variables.\n");
+                    + "        for floating variables.\n"
+		    + "    -o, --outputfile defines file for solver output");
                 System.exit(0);
             } else { // input file
                 fileName = args[0];
@@ -163,7 +164,7 @@ public class Options {
                 } else if (args[i].equals("-debug")) {
                     debug = true;
                     i++;
-                } else if (args[i].equals("-outputfile")) {
+                } else if (args[i].equals("-o") || args[i].equals("--outputfile")) {
                     outputFilename = args[++i];
                     i++;
                 } else {

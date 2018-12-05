@@ -37,6 +37,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
+import java.nio.charset.Charset;
 
 /**
  * An executable to parse and execute the flatzinc file.
@@ -96,7 +97,7 @@ public class Fz2jacop {
             if (!opt.getOutputFilename().equals("")) {
                 String st = "=====UNSATISFIABLE=====";
                 try {
-                    Files.write(Paths.get(opt.getOutputFilename()), st.getBytes());
+                    Files.write(Paths.get(opt.getOutputFilename()), st.getBytes(Charset.forName("UTF-8")));
                 } catch (IOException e1) {
                     e1.printStackTrace();
                 }

@@ -42,13 +42,13 @@ import org.jacop.search.ConsistencyListener;
 
 public class LinearCalculator<T extends Var> extends Calculator {
 
-    int increment;
-    int n;
+    long increment;
+    long n;
     
     public LinearCalculator(int scale) {
 	n = 1;
         failLimit = scale;
-	increment = scale;
+	increment = (long)scale;
     }
 
     public void newLimit() {

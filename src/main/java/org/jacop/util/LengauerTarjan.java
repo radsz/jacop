@@ -34,6 +34,8 @@ import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.nio.charset.Charset;
+import java.io.UnsupportedEncodingException;
 
 /*
  * The implementation of the algorithm for finding dominators (simple version) in a directed graph based on 
@@ -227,7 +229,7 @@ public class LengauerTarjan {
             out = new FileOutputStream(filenameExt);
 
             // Connect print stream to the output stream
-            p = new PrintStream(out);
+            p = new PrintStream(out, false, "UTF-8");
 
             p.print("digraph ");
             p.print(filename);
@@ -242,6 +244,8 @@ public class LengauerTarjan {
             p.println("}");
 
             p.close();
+	} catch (UnsupportedEncodingException e) {
+	    System.err.println("Unsupported encoding for file writing");
         } catch (Exception e) {
             System.err.println("Error writing to file");
         }

@@ -47,6 +47,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.nio.charset.Charset;
 
 /**
  * The parser part responsible for parsing the solve part of the flatzinc file,
@@ -608,7 +609,7 @@ public class Solve implements ParserTreeConstants {
             if (!options.getOutputFilename().equals("")) {
                 String st = "=====UNSATISFIABLE=====";
                 try {
-                    Files.write(Paths.get(options.getOutputFilename()), st.getBytes());
+                    Files.write(Paths.get(options.getOutputFilename()), st.getBytes(Charset.forName("UTF-8")));
                 } catch (IOException e1) {
                     e1.printStackTrace();
                 }
@@ -1358,8 +1359,8 @@ public class Solve implements ParserTreeConstants {
 	    
 	    double cpuTime = getSearchTime_ms();
 	    printBuffer.append(String.format("%%%% Search nodes : %,d", nodes));
-	    printBuffer.append(String.format(" (%,.1f nodes/s)\n", (double)nodes/(cpuTime/1000))); // + " nodes/s)\n");
-	    printBuffer.append("%% Search time : " + cpuTime/1000 + "s\n");
+	    printBuffer.append(String.format(" (%,.1f nodes/s)%n", (double)nodes/(cpuTime/1000))); // + " nodes/s)\n");
+	    printBuffer.append("%% Search time : " + cpuTime/1000 + "s%n");
 	}
 	
         printBuffer.append("----------\n");
@@ -1613,14 +1614,14 @@ public class Solve implements ParserTreeConstants {
     // 	}
     // }
 
-    private void helperSolutionPrinter(String lastSolution) {
+    void helperSolutionPrinter(String lastSolution) {
 
         System.out.print(lastSolution);
 
         if (!options.getOutputFilename().equals("") && !lastSolution.isEmpty()) {
             try {
-                System.out.println("Output filename " + options.getOutputFilename());
-                Files.write(Paths.get(options.getOutputFilename()), lastSolution.getBytes(), StandardOpenOption.CREATE,
+                System.out.println("%%Output filename " + options.getOutputFilename());
+                Files.write(Paths.get(options.getOutputFilename()), lastSolution.getBytes(Charset.forName("UTF-8")), StandardOpenOption.CREATE,
                     StandardOpenOption.TRUNCATE_EXISTING);
             } catch (IOException e) {
                 e.printStackTrace();

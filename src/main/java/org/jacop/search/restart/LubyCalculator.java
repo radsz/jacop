@@ -42,13 +42,13 @@ import org.jacop.search.ConsistencyListener;
 
 public class LubyCalculator<T extends Var> extends Calculator {
 
-    int scale;
+    long scale;
     int n;
     
     public LubyCalculator(int scale) {
 	n = 1;
-        failLimit = scale*getLuby(n);
-	this.scale = scale;
+	this.scale = (long)scale;
+        failLimit = this.scale*getLuby(n);
     }
 
     public void newLimit() {
