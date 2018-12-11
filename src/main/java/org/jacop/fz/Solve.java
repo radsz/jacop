@@ -1359,8 +1359,8 @@ public class Solve implements ParserTreeConstants {
 	    
 	    double cpuTime = getSearchTime_ms();
 	    printBuffer.append(String.format("%%%% Search nodes : %,d", nodes));
-	    printBuffer.append(String.format(" (%,.1f nodes/s)%n", (double)nodes/(cpuTime/1000))); // + " nodes/s)\n");
-	    printBuffer.append("%% Search time : " + cpuTime/1000 + "s%n");
+	    printBuffer.append(String.format(" (%,.1f nodes/s)%n", (cpuTime == 0) ? 0.0 : (double)nodes/(cpuTime/1000)));
+	    printBuffer.append("%% Search time : " + cpuTime/1000 + "s\n");
 	}
 	
         printBuffer.append("----------\n");
