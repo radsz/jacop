@@ -7,6 +7,7 @@ annotation bbs(int: b);
 annotation smallest_max;
 annotation smallest_most_constrained;
 annotation smallest_first_fail;
+annotation random;
 
 %% ===== JaCoP specific global constraints =====
 include "all_distinct.mzn";

@@ -342,7 +342,10 @@ public class SearchItem implements ParserTreeConstants {
 	} else if (var_selection_heuristic.equals("input_order")) {
             Indomain indom = getIndomain(indomain);
             return new InputOrderSelect(store, search_variables, indom);
-        } else {
+	} else if (var_selection_heuristic.equals("random")) {
+            Indomain indom = getIndomain(indomain);
+            return new RandomSelect(search_variables, indom);
+	} else {
             Indomain indom = getIndomain(indomain);
             if (tieBreaking == null)
                 return new SimpleSelect(search_variables, var_sel, indom);
@@ -433,7 +436,7 @@ public class SearchItem implements ParserTreeConstants {
     public ComparatorVariable<IntVar> getVarSelect() {
 
         tieBreaking = null;
-        if (var_selection_heuristic == null)
+        if (var_selection_heuristic == null || var_selection_heuristic.equals("random"))
             return null;
         else if (var_selection_heuristic.equals("input_order"))
             return null;
@@ -460,7 +463,7 @@ public class SearchItem implements ParserTreeConstants {
             return new MaxRegret<IntVar>();
         else if (var_selection_heuristic.equals("dom_w_deg")) {
             // store.variableWeightManagement = true;
-            return new WeightedDegree<IntVar>(store);
+            return new DomWDeg<IntVar>(store);
         } else if (var_selection_heuristic.equals("smallest_max")) {
             // does not follow flatzinc standard (JaCoP specific) ;)
             tieBreaking = new SmallestDomain();
