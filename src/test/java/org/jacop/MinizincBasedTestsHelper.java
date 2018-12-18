@@ -106,13 +106,13 @@ public class MinizincBasedTestsHelper {
                     options.add(line);
                 }
                 //fz2jacop compute result with options
-                fz2jacop.main(new String[] {options.get(0), options.get(1), "-outputfile", outputFilename, relativePath + filename});
+                fz2jacop.main(new String[] {options.get(0), options.get(1), "--outputfile", outputFilename, relativePath + filename});
                 FloatDomain.setFormat(Double.MAX_VALUE);
 
             }
         } else
             //fz2jacop compute result
-            fz2jacop.main(new String[] {"-outputfile", outputFilename, relativePath + filename});
+            fz2jacop.main(new String[] {"--outputfile", outputFilename, relativePath + filename});
 
         String result = new String(Files.readAllBytes(Paths.get(outputFilename)));
 

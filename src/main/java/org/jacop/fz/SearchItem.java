@@ -311,12 +311,17 @@ public class SearchItem implements ParserTreeConstants {
                 return new SplitSelect<IntVar>(searchVars, var_sel, new IndomainMiddle<IntVar>());
             else
                 return new SplitSelect<IntVar>(searchVars, var_sel, tieBreaking, new IndomainMiddle<IntVar>());
-        } else if (indomain != null && indomain.equals("indomain_reverse_split")) {
-            if (tieBreaking == null) {
-                SplitSelect<IntVar> sel = new SplitSelect<IntVar>(searchVars, var_sel, new IndomainMiddle<IntVar>());
-                sel.leftFirst = false;
-                return sel;
-            } else {
+	} else if (indomain != null && indomain.equals("indomain_split_random")) {
+		if (tieBreaking == null)
+		    return new SplitRandomSelect<IntVar>(searchVars, var_sel, new IndomainMiddle<IntVar>());
+		else
+		    return new SplitRandomSelect<IntVar>(searchVars, var_sel, tieBreaking, new IndomainMiddle<IntVar>());
+	} else if (indomain != null && indomain.equals("indomain_reverse_split")) {
+	    if (tieBreaking == null) {
+		SplitSelect<IntVar> sel = new SplitSelect<IntVar>(searchVars, var_sel, new IndomainMiddle<IntVar>());
+		sel.leftFirst = false;
+		return sel;
+	    } else {
                 SplitSelect<IntVar> sel = new SplitSelect<IntVar>(searchVars, var_sel, tieBreaking, new IndomainMiddle<IntVar>());
                 sel.leftFirst = false;
                 return sel;
@@ -365,6 +370,11 @@ public class SearchItem implements ParserTreeConstants {
                 return new SplitSelectFloat<FloatVar>(store, searchVars, var_sel);
             else
                 return new SplitSelectFloat<FloatVar>(store, searchVars, var_sel, tieBreaking);
+	} else if (indomain.equals("indomain_split_random")) {
+            if (tieBreaking == null)
+                return new SplitRandomSelectFloat<FloatVar>(store, searchVars, var_sel);
+            else
+                return new SplitRandomSelectFloat<FloatVar>(store, searchVars, var_sel, tieBreaking);
         } else if (indomain.equals("indomain_reverse_split")) {
             if (tieBreaking == null) {
                 SplitSelectFloat<FloatVar> sel = new SplitSelectFloat<FloatVar>(store, searchVars, var_sel);
@@ -377,7 +387,7 @@ public class SearchItem implements ParserTreeConstants {
             }
         } else {
             throw new IllegalArgumentException(
-                "Wrong parameters for float_search. Only indomain_split or indomain_reverse_split are allowed.");
+                "Wrong parameters for float_search. Only indomain_split, indomain_reverse_split or indomain_split_random are allowed.");
         }
     }
 
