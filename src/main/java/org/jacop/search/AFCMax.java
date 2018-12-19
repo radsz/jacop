@@ -1,5 +1,5 @@
 /*
- * WeightedDegree.java
+ * AFCMax.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -32,34 +32,36 @@ package org.jacop.search;
 
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.constraints.Constraint;
 
 /**
- * Defines a WeightedDegree comparator for variables. Every time a constraint
- * failure is encountered all variables within the scope of that constraints
- * have increased weight. The comparator will choose the variable with the
- * highest weight divided by its size.
- *
- * This implementation is not equivalent to AFCMaxDeg since it takes
- * all accumulated failures for a variable while AFCMaxDeg sums up
- * weights for still active constraints only!
+ * Defines a AccumulatedFailureCount comparator (afc) for variables. Every time a
+ * constraint failure is encountered the constraint afc_weight is increased by
+ * one. All other constraints afc weight value is recalculated as afc_weight * decay.
+ * The comparator will choose the variable with the highest afc_weight.
  *
  * @param <T> type of variable being compared.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.6
  */
 
-public class WeightedDegree<T extends Var> implements ComparatorVariable<T> {
+public class AFCMax<T extends Var> implements ComparatorVariable<T> {
 
+    private AFCMax() {}
 
-    private WeightedDegree() {}
-
-    public WeightedDegree(Store store) {
-	store.variableWeightManagement = true;	
+    public AFCMax(Store store) {
+	this(store, store.getDecay());
+    }
+    
+    public AFCMax(Store store, float decay) {
+	store.setAllConstraints();
+	store.afcManagement(true);
+	store.setDecay(decay);
     }
     
     public int compare(float left, T var) {
 
-        float right = ((float) var.weight) / ((float) var.getSize());
+        float right = afcValue(var);
 
         if (left > right)
 
@@ -75,9 +77,9 @@ public class WeightedDegree<T extends Var> implements ComparatorVariable<T> {
 
     public int compare(T leftVar, T rightVar) {
     
-        float left = ((float) leftVar.weight) / ((float) leftVar.getSize());
+        float left = afcValue(leftVar);
 
-        float right = ((float) rightVar.weight) / ((float) rightVar.getSize());
+        float right = afcValue(rightVar);
 
         if (left > right)
 
@@ -93,8 +95,14 @@ public class WeightedDegree<T extends Var> implements ComparatorVariable<T> {
 
     public float metric(T var) {
 
-        return ((float) var.weight) / ((float) var.getSize());
+        return afcValue(var);
 
     }
 
+    float afcValue(Var v) {
+	float value = 0.0f;
+	for (Constraint c : v.dom().constraints())
+	    value += c.afc();
+	return value;
+    }
 }

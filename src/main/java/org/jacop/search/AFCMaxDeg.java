@@ -1,5 +1,5 @@
 /*
- * DomWDeg.java
+ * AFCMaxDeg.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -32,30 +32,38 @@ package org.jacop.search;
 
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.constraints.Constraint;
 
 /**
- * Defines a DomWDeg comparator for Variables. Every time a constraint
- * failure is encountered all variables within the scope of that constraints
- * have increased weight. The comparator will choose the variable with the
- * highest weight divided by its size.
+ * Defines a AccumulatedFailureCount comparator (afc) for variables. Every time
+ * a constraint failure is encountered the constraint afc_weight is increased by
+ * one. All other constraints afc_weight value is recalculated as afc_weight *
+ * decay.  The comparator will choose the variable with the highest afc_weight,
+ * defined as sum of all its constraints afc_weights, divided by variable's
+ * domain size.
  *
  * @param <T> type of variable being compared.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.6
  */
 
-public class DomWDeg<T extends Var> implements ComparatorVariable<T> {
+public class AFCMaxDeg<T extends Var> implements ComparatorVariable<T> {
 
+    private AFCMaxDeg() {}
 
-    private DomWDeg() {}
-
-    public DomWDeg(Store store) {
-	store.variableWeightManagement = true;	
+    public AFCMaxDeg(Store store) {
+	this(store, store.getDecay());
+    }
+    
+    public AFCMaxDeg(Store store, float decay) {
+	store.setAllConstraints();
+	store.afcManagement(true);
+	store.setDecay(decay);
     }
     
     public int compare(float left, T var) {
 
-        float right = ((float) var.weight) * (((float) var.getSize()) / ((float) var.dom().noConstraints())) ;
+        float right = afcValue(var) / ((float)var.getSize());
 
         if (left > right)
 
@@ -71,9 +79,9 @@ public class DomWDeg<T extends Var> implements ComparatorVariable<T> {
 
     public int compare(T leftVar, T rightVar) {
     
-        float left = ((float) leftVar.weight) * (((float) leftVar.getSize()) / ((float) leftVar.dom().noConstraints()));
+        float left = afcValue(leftVar) / ((float)leftVar.getSize());
 
-        float right = ((float) rightVar.weight) * (((float) rightVar.getSize()) / ((float) rightVar.dom().noConstraints()));
+        float right = afcValue(rightVar) / ((float)rightVar.getSize());
 
         if (left > right)
 
@@ -89,8 +97,14 @@ public class DomWDeg<T extends Var> implements ComparatorVariable<T> {
 
     public float metric(T var) {
 
-        return ((float) var.weight) * (((float) var.getSize()) / ((float) var.dom().noConstraints()));
+        return afcValue(var) / ((float)var.getSize());
 
     }
 
+    float afcValue(Var v) {
+	float value = 0.0f;
+	for (Constraint c : v.dom().constraints())
+	    value += c.afc();
+	return value;
+    }
 }

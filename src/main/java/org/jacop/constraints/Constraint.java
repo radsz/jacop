@@ -442,6 +442,25 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     }
 
     /**
+     * Handling of AFC (accumulated failure fail) for constraints
+     *
+     */
+    float afcWeight = 1.0f;
+
+    public float afc() {
+	return afcWeight;
+    }
+    
+    public void updateAFC(Set<Constraint> allConstraints, float decay) {
+	afcWeight += 1.0f;
+
+	if (decay < 1.0f)
+	    for (Constraint c : allConstraints)
+		if (!this.equals(c))
+		    c.afcWeight = c.afcWeight * decay;
+    }
+    
+    /**
      * It is executed after the constraint has failed. It allows to clean some
      * data structures.
      */

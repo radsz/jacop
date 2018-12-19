@@ -523,7 +523,7 @@ public class Support implements ParserTreeConstants {
 
         store.imposeDecompositionWithConsistency(c);
         if (options.debug())
-            System.out.println(c);
+            System.out.println("% " + c);
     }
 
     void pose(Constraint c) throws FailException {
@@ -531,6 +531,6 @@ public class Support implements ParserTreeConstants {
         store.imposeWithConsistency(c);
 
         if (options.debug())
-            System.out.println(c);
+            System.out.println("% " + c);
     }
 }

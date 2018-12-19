@@ -154,6 +154,8 @@ public class Solve implements ParserTreeConstants {
         if (opt.debug())
             failStatistics = new FailConstraintsStatistics(store);
 
+	store.setDecay(opt.getDecay());
+
         // 	System.out.println(table);
 
         initNumberConstraints = store.numberConstraints();

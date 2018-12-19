@@ -251,6 +251,16 @@ public class Store {
     private Map<Class<? extends Constraint>, Set<Replaceable>> replacements = new HashMap<>();
 
     /**
+     * Variables for accumulated failure count (AFC) for constraints.
+     * constraintAFCManagement- opens AFC menagement
+     * afcdecay- decay factor
+     * allConstraints- all constraints in the store
+     */
+    boolean constraintAFCManagement = false;
+    float afcDecay = 0.99f;
+    Set<Constraint>  allConstraints;
+    
+    /**
      * Variable given as a parameter no longer watches constraint given as
      * parameter. This function will be called when watch is being moved from
      * one variable to another.
@@ -538,6 +548,8 @@ public class Store {
                 if (variableWeightManagement)
                     currentConstraint.increaseWeight();
 
+		if (constraintAFCManagement)
+		    currentConstraint.updateAFC(allConstraints, afcDecay);
             }
 
             recentlyFailedConstraint = currentConstraint;
@@ -1226,6 +1238,23 @@ public class Store {
         return constraints;
     }
 
+    public void setAllConstraints() {
+	allConstraints = getConstraints();
+    }
+    
+
+    public void setDecay(float d) {
+	afcDecay = d;
+    }
+
+    public float getDecay() {
+	return afcDecay ;
+    }
+
+    public void afcManagement(boolean m) {
+	constraintAFCManagement = m;
+    }
+    
     /**
      * This function returns a string representation of the constraints pending
      * for re-evaluation.

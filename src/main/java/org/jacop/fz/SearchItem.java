@@ -473,7 +473,7 @@ public class SearchItem implements ParserTreeConstants {
             return new MaxRegret<IntVar>();
         else if (var_selection_heuristic.equals("dom_w_deg")) {
             // store.variableWeightManagement = true;
-            return new DomWDeg<IntVar>(store);
+            return new WeightedDegree<IntVar>(store);
         } else if (var_selection_heuristic.equals("smallest_max")) {
             // does not follow flatzinc standard (JaCoP specific) ;)
             tieBreaking = new SmallestDomain();
@@ -486,7 +486,19 @@ public class SearchItem implements ParserTreeConstants {
             // does not follow flatzinc standard (JaCoP specific) ;)
             tieBreaking = new SmallestDomain();
             return new SmallestMin<IntVar>();
-        } else
+        } else if (var_selection_heuristic.equals("afc_max"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new AFCMax<IntVar>(store);
+        else if (var_selection_heuristic.equals("afc_min")) 
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new AFCMin<IntVar>(store);
+	else if (var_selection_heuristic.equals("afc_max_deg"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new AFCMaxDeg<IntVar>(store);
+	else if (var_selection_heuristic.equals("afc_min_deg"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new AFCMinDeg<IntVar>(store);
+        else
             System.err
                 .println("Warning: Not implemented variable selection heuristic \"" + var_selection_heuristic + "\"; used input_order");
 
@@ -522,10 +534,22 @@ public class SearchItem implements ParserTreeConstants {
             return new LargestMaxFloat<FloatVar>();
 	// else if (var_selection_heuristic.equals("max_regret"))
 	//     return new MaxRegret();
-	// else if (var_selection_heuristic.equals("dom_w_deg")) {
-	//     store.variableWeightManagement = true;
-        //     return new WeightedDegree(store);
-	// }
+	else if (var_selection_heuristic.equals("dom_w_deg")) {
+            return new WeightedDegree<FloatVar>(store);
+	}
+        else if (var_selection_heuristic.equals("afc_max")) 
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new AFCMax<FloatVar>(store);
+        else if (var_selection_heuristic.equals("afc_min")) 
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new AFCMin<FloatVar>(store);
+	// for FloatVar's getSize() is not defined :(
+	// else if (var_selection_heuristic.equals("afc_max_deg"))
+        //     // does not follow flatzinc standard (JaCoP specific) ;)
+        //     return new AFCMaxDeg<FloatVar>(store);
+	// else if (var_selection_heuristic.equals("afc_min_deg"))
+        //     // does not follow flatzinc standard (JaCoP specific) ;)
+        //     return new AFCMinDeg<FloatVar>(store);
         else
             System.err
                 .println("Warning: Not implemented variable selection heuristic \"" + var_selection_heuristic + "\"; used input_order");
@@ -551,12 +575,23 @@ public class SearchItem implements ParserTreeConstants {
         else if (var_selection_heuristic.equals("dom_w_deg")) {
             // store.variableWeightManagement = true;
             return new WeightedDegree<SetVar>(store);
-        }
+        } else if (var_selection_heuristic.equals("afc_max")) 
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new AFCMax<SetVar>(store);
+        else if (var_selection_heuristic.equals("afc_min")) 
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new AFCMin<SetVar>(store);
+	else if (var_selection_heuristic.equals("afc_max_deg"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new AFCMaxDeg<SetVar>(store);
+	else if (var_selection_heuristic.equals("afc_min_deg"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new AFCMinDeg<SetVar>(store);
         //  	else if (var_selection_heuristic.equals("most_constrained")) {
         // 	    tieBreaking = new MostConstrainedStatic();
         //  	    return new SmallestDomain();
         // 	}
-        else if (var_selection_heuristic.equals("largest"))
+	else if (var_selection_heuristic.equals("largest"))
             return new MaxLubCard<SetVar>();
             // 	else if (var_selection_heuristic.equals("max_regret"))
             // 	    return new MaxRegret();

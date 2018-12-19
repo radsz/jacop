@@ -225,6 +225,14 @@ public abstract class Var implements Backtrackable {
         return index;
     }
 
+
+    public float afcValue() {
+	float value = 0.0f;
+	for (Constraint c : dom().constraints())
+	    value += c.afc();
+	return value;
+    }
+    
     public static <T extends Var, R> Map<T, R> createEmptyPositioning() {
         return new HashMap<>();
     }

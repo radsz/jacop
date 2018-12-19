@@ -8,6 +8,10 @@ annotation smallest_max;
 annotation smallest_most_constrained;
 annotation smallest_first_fail;
 annotation random;
+annotation afc_max;
+annotation afc_min;
+annotation afc_max_deg;
+annotation afc_min_deg;
 
 %% ===== JaCoP specific global constraints =====
 include "all_distinct.mzn";

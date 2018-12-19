@@ -70,6 +70,8 @@ public class Options {
 
     boolean complementary_search = false;
 
+    float decay = 0.99f;
+    
     boolean debug = false;
 
     String outputFilename = "";
@@ -104,7 +106,10 @@ public class Options {
                     + "        overrides precision definition in search annotation.\n"
                     + "    -f <value>, --format <value> defines format (number digits after decimal point)\n"
                     + "        for floating variables.\n"
-		    + "    -o, --outputfile defines file for solver output");
+		    + "    -o, --outputfile defines file for solver output\n"
+		    + "    -d, --decay decay factor for accumulated failure count (afc)\n"
+		    + "         variable selection heuristic")
+		    ;
                 System.exit(0);
             } else { // input file
                 fileName = args[0];
@@ -167,7 +172,12 @@ public class Options {
                 } else if (args[i].equals("-o") || args[i].equals("--outputfile")) {
                     outputFilename = args[++i];
                     i++;
-                } else {
+                } else if (args[i].equals("-d") || args[i].equals("--decay")) {
+                    decay = Float.parseFloat(args[++i]);
+		    if (decay < 0.0f || decay > 1.0f)
+			System.err.println("%% Decay parameter incorrect; assumed default value 0.99");
+		    i++;
+		} else {
                     System.out.println("fz2jacop: not recognized option " + args[i]);
                     i++;
                 }
@@ -320,6 +330,10 @@ public class Options {
 
     public String getOutputFilename() {
         return outputFilename;
+    }
+
+    public float getDecay() {
+        return decay;
     }
 
     /**
