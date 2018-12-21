@@ -1,5 +1,5 @@
 /*
- * AFCMin.java
+ * ActivityMin.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -35,33 +35,33 @@ import org.jacop.core.Var;
 import org.jacop.constraints.Constraint;
 
 /**
- * Defines a AccumulatedFailureCount comparator (afc) for variables. Every time a
- * constraint failure is encountered the constraint afc_weight is increased by
- * one. All other constraints afc weight value is recalculated as afc_weight * decay.
- * The comparator will choose the variable with the lowest afc_weight.
+ * Defines a pruning activity comparatorfor variables. Every time a constraint
+ * prunes a variable activity weight is increased by one. All other variables of
+ * constraint's activity weight value is recalculated as activity weight * decay.
+ * The comparator will choose the variable with the lowest activity
+ * weight.
  *
  * @param <T> type of variable being compared.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.6
  */
 
-public class AFCMin<T extends Var> implements ComparatorVariable<T> {
+public class ActivityMin<T extends Var> implements ComparatorVariable<T> {
 
-    private AFCMin() {}
+    private ActivityMin() {}
 
-    public AFCMin(Store store) {
+    public ActivityMin(Store store) {
 	this(store, store.getDecay());
     }
     
-    public AFCMin(Store store, float decay) {
-	store.setAllConstraints();
-	store.afcManagement(true);
+    public ActivityMin(Store store, float decay) {
+	store.activityManagement(true);
 	store.setDecay(decay);
     }
     
     public int compare(float left, T var) {
 
-        float right = afcValue(var);
+        float right = var.activity();
 
         if (left < right)
 
@@ -77,9 +77,9 @@ public class AFCMin<T extends Var> implements ComparatorVariable<T> {
 
     public int compare(T leftVar, T rightVar) {
     
-        float left = afcValue(leftVar);
+        float left = leftVar.activity();
 
-        float right = afcValue(rightVar);
+        float right = rightVar.activity();
 
         if (left < right)
 
@@ -95,14 +95,7 @@ public class AFCMin<T extends Var> implements ComparatorVariable<T> {
 
     public float metric(T var) {
 
-        return afcValue(var);
+        return var.activity();
 
-    }
-
-    float afcValue(Var v) {
-	float value = 0.0f;
-	for (Constraint c : v.dom().constraints())
-	    value += c.afc();
-	return value;
     }
 }

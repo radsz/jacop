@@ -12,6 +12,10 @@ annotation afc_max;
 annotation afc_min;
 annotation afc_max_deg;
 annotation afc_min_deg;
+annotation activity_max;
+annotation activity_min;
+annotation activity_max_deg;
+annotation activity_min_deg;
 
 %% ===== JaCoP specific global constraints =====
 include "all_distinct.mzn";

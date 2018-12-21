@@ -253,12 +253,21 @@ public class Store {
     /**
      * Variables for accumulated failure count (AFC) for constraints.
      * constraintAFCManagement- opens AFC menagement
-     * afcdecay- decay factor
+     * decay- decay factor
      * allConstraints- all constraints in the store
      */
     boolean constraintAFCManagement = false;
-    float afcDecay = 0.99f;
     Set<Constraint>  allConstraints;
+
+    float decay = 0.99f;
+    
+    /**
+     * Variables for pruning count (variable activity) for constraints.
+     * variableActivityManagement- opens activity menagement
+     * variablePrunnedConstraints- all constraints in the store
+     */
+    boolean variableActivityManagement = false;
+    Set<Var>  variablesPrunned;
     
     /**
      * Variable given as a parameter no longer watches constraint given as
@@ -426,6 +435,9 @@ public class Store {
 
         propagationHasOccurred = true;
 
+	if (variableActivityManagement)
+	    variablesPrunned.add(var);
+
         // It records V as being changed so backtracking later on can be invoked for this variable.
         recordChange(var);
 
@@ -532,8 +544,13 @@ public class Store {
                         currentConstraint = getFirstChanged();
 
                         numberConsistencyCalls++;
+			if (variableActivityManagement)
+			    variablesPrunned.clear();
+			
                         currentConstraint.consistency(this);
 
+			if (variableActivityManagement)
+			    updateActivities(currentConstraint);
                     }
 
                 currentQueue++;
@@ -549,7 +566,7 @@ public class Store {
                     currentConstraint.increaseWeight();
 
 		if (constraintAFCManagement)
-		    currentConstraint.updateAFC(allConstraints, afcDecay);
+		    currentConstraint.updateAFC(allConstraints, decay);
             }
 
             recentlyFailedConstraint = currentConstraint;
@@ -1244,15 +1261,29 @@ public class Store {
     
 
     public void setDecay(float d) {
-	afcDecay = d;
+	decay = d;
     }
 
     public float getDecay() {
-	return afcDecay ;
+	return decay ;
     }
 
     public void afcManagement(boolean m) {
 	constraintAFCManagement = m;
+    }
+    
+    public void activityManagement(boolean m) {
+	variableActivityManagement = m;
+	variablesPrunned = new HashSet<Var>();
+    }
+
+    void updateActivities(Constraint constraint) {
+	for (Var v : variablesPrunned)
+	    v.updateActivity();
+
+	for (Var v : constraint.arguments())
+	    if (!variablesPrunned.contains(v))
+		v.applyDecay();
     }
     
     /**

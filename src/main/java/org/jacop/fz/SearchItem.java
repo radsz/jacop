@@ -498,6 +498,18 @@ public class SearchItem implements ParserTreeConstants {
 	else if (var_selection_heuristic.equals("afc_min_deg"))
             // does not follow flatzinc standard (JaCoP specific) ;)
             return new AFCMinDeg<IntVar>(store);
+	else if (var_selection_heuristic.equals("activity_max"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new ActivityMax<IntVar>(store);
+	else if (var_selection_heuristic.equals("activity_min"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new ActivityMin<IntVar>(store);
+	else if (var_selection_heuristic.equals("activity_max_deg"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new ActivityMaxDeg<IntVar>(store);
+	else if (var_selection_heuristic.equals("activity_min_deg"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new ActivityMinDeg<IntVar>(store);
         else
             System.err
                 .println("Warning: Not implemented variable selection heuristic \"" + var_selection_heuristic + "\"; used input_order");
@@ -543,13 +555,14 @@ public class SearchItem implements ParserTreeConstants {
         else if (var_selection_heuristic.equals("afc_min")) 
             // does not follow flatzinc standard (JaCoP specific) ;)
             return new AFCMin<FloatVar>(store);
+	else if (var_selection_heuristic.equals("activity_max"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new ActivityMax<FloatVar>(store);
+	else if (var_selection_heuristic.equals("activity_min"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new ActivityMin<FloatVar>(store);
 	// for FloatVar's getSize() is not defined :(
-	// else if (var_selection_heuristic.equals("afc_max_deg"))
-        //     // does not follow flatzinc standard (JaCoP specific) ;)
-        //     return new AFCMaxDeg<FloatVar>(store);
-	// else if (var_selection_heuristic.equals("afc_min_deg"))
-        //     // does not follow flatzinc standard (JaCoP specific) ;)
-        //     return new AFCMinDeg<FloatVar>(store);
+	// afc*_deg and activity*_deg cannot be used
         else
             System.err
                 .println("Warning: Not implemented variable selection heuristic \"" + var_selection_heuristic + "\"; used input_order");
@@ -587,6 +600,18 @@ public class SearchItem implements ParserTreeConstants {
 	else if (var_selection_heuristic.equals("afc_min_deg"))
             // does not follow flatzinc standard (JaCoP specific) ;)
             return new AFCMinDeg<SetVar>(store);
+	else if (var_selection_heuristic.equals("activity_max"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new ActivityMax<SetVar>(store);
+	else if (var_selection_heuristic.equals("activity_min"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new ActivityMin<SetVar>(store);
+	else if (var_selection_heuristic.equals("activity_max_deg"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new ActivityMaxDeg<SetVar>(store);
+	else if (var_selection_heuristic.equals("activity_min_deg"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new ActivityMinDeg<SetVar>(store);
         //  	else if (var_selection_heuristic.equals("most_constrained")) {
         // 	    tieBreaking = new MostConstrainedStatic();
         //  	    return new SmallestDomain();

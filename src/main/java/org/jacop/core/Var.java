@@ -75,6 +75,11 @@ public abstract class Var implements Backtrackable {
     public Store store;
 
     /**
+     * Pruning activity of this variable.
+     */
+    float pruningActivity = 1.0f;
+
+    /**
      * This function returns current domain of the variable.
      *
      * @return the domain of the variable.
@@ -231,6 +236,18 @@ public abstract class Var implements Backtrackable {
 	for (Constraint c : dom().constraints())
 	    value += c.afc();
 	return value;
+    }
+
+    public void updateActivity() {
+	pruningActivity += 1.0;
+    }
+
+    public float activity() {
+	return pruningActivity;
+    }
+    
+    public void applyDecay() {
+	pruningActivity = pruningActivity * store.decay;
     }
     
     public static <T extends Var, R> Map<T, R> createEmptyPositioning() {

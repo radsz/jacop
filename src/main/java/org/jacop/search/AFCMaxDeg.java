@@ -43,7 +43,7 @@ import org.jacop.constraints.Constraint;
  * domain size.
  *
  * @param <T> type of variable being compared.
- * @author Radoslaw Szymanek and Krzysztof Kuchcinski
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.6
  */
 
