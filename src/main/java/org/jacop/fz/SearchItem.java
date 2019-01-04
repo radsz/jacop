@@ -244,34 +244,32 @@ public class SearchItem implements ParserTreeConstants {
                 if (subSearch.search_variables.length > 0)
                     search_seq.add(subSearch);
             }
-        } else //if (search_type.startsWith("restart"))
-	    // TODO implement restart_* search annotations and related search
-	    if (search_type.equals("restart_none"))
-		;
-	    else if (search_type.equals("restart_constant")) {
-		ASTAnnExpr expr = (ASTAnnExpr) ann.jjtGetChild(0);
-		int scale = ((ASTScalarFlatExpr) expr.jjtGetChild(0)).getInt();
-		restartCalculator = new ConstantCalculator(scale);
-	    }
-	    else if (search_type.equals("restart_linear")) {
-		ASTAnnExpr expr = (ASTAnnExpr) ann.jjtGetChild(0);
-		int scale = ((ASTScalarFlatExpr) expr.jjtGetChild(0)).getInt();
-		restartCalculator = new LinearCalculator(scale);
-	    }
-	    else if (search_type.equals("restart_luby")) {
-		ASTAnnExpr expr = (ASTAnnExpr) ann.jjtGetChild(0);
-		int scale = ((ASTScalarFlatExpr) expr.jjtGetChild(0)).getInt();
-		restartCalculator = new LubyCalculator(scale);
-	    }
-	    else if (search_type.equals("restart_geometric")) {
-		ASTAnnExpr expr1 = (ASTAnnExpr) ann.jjtGetChild(0);
-		double base = ((ASTScalarFlatExpr) expr1.jjtGetChild(0)).getFloat();
-		ASTAnnExpr expr2 = (ASTAnnExpr) ann.jjtGetChild(1);
-		int scale = ((ASTScalarFlatExpr) expr2.jjtGetChild(0)).getInt();
-		restartCalculator = new GeometricCalculator(base, scale);
-	    }
-	    // else
-	    // 	throw new IllegalArgumentException("Not supported search annotation "+search_type+"; compilation aborted.");
+        } else if (search_type.equals("restart_none"))
+	    ;
+	else if (search_type.equals("restart_constant")) {
+	    ASTAnnExpr expr = (ASTAnnExpr) ann.jjtGetChild(0);
+	    int scale = ((ASTScalarFlatExpr) expr.jjtGetChild(0)).getInt();
+	    restartCalculator = new ConstantCalculator(scale);
+	}
+	else if (search_type.equals("restart_linear")) {
+	    ASTAnnExpr expr = (ASTAnnExpr) ann.jjtGetChild(0);
+	    int scale = ((ASTScalarFlatExpr) expr.jjtGetChild(0)).getInt();
+	    restartCalculator = new LinearCalculator(scale);
+	}
+	else if (search_type.equals("restart_luby")) {
+	    ASTAnnExpr expr = (ASTAnnExpr) ann.jjtGetChild(0);
+	    int scale = ((ASTScalarFlatExpr) expr.jjtGetChild(0)).getInt();
+	    restartCalculator = new LubyCalculator(scale);
+	}
+	else if (search_type.equals("restart_geometric")) {
+	    ASTAnnExpr expr1 = (ASTAnnExpr) ann.jjtGetChild(0);
+	    double base = ((ASTScalarFlatExpr) expr1.jjtGetChild(0)).getFloat();
+	    ASTAnnExpr expr2 = (ASTAnnExpr) ann.jjtGetChild(1);
+	    int scale = ((ASTScalarFlatExpr) expr2.jjtGetChild(0)).getInt();
+	    restartCalculator = new GeometricCalculator(base, scale);
+	}
+	// else
+	// 	throw new IllegalArgumentException("Not supported search annotation "+search_type+"; compilation aborted.");
     }
 
     void searchParametersForSeveralAnnotations(SimpleNode node, int n) {

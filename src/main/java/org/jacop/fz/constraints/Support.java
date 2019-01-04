@@ -490,7 +490,7 @@ public class Support implements ParserTreeConstants {
         for (Constraint c : delayedConstraints) {
             store.impose(c);
             if (options.debug())
-                System.out.println(c);
+                System.out.println("% " + c);
         }
         poseAlldistinctConstraints();
 
@@ -501,7 +501,7 @@ public class Support implements ParserTreeConstants {
 	    Alldistinct ad = new Alldistinct(v);
             store.impose(ad);
             if (options.debug())
-                System.out.println(ad);
+                System.out.println("% " + ad);
         }
     }
 

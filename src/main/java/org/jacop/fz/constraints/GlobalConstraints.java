@@ -639,7 +639,7 @@ class GlobalConstraints implements ParserTreeConstants {
                     d.addDom(new IntervalDomain(tt[i][0], tt[i][0]));
                 uniqueVar[0].domain.in(store.level, uniqueVar[0], d);
                 if (support.options.debug())
-                    System.out.println(uniqueVar[0] + " in " + d);
+                    System.out.println("% " + uniqueVar[0] + " in " + d);
 
             } else if (t.length <= 64)
                 support.pose(new org.jacop.constraints.table.SimpleTable(v, tt, true));
