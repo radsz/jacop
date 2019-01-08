@@ -186,7 +186,7 @@ public class Constraints implements ParserTreeConstants {
                 }
 
                 if (debug)
-                    System.out.println("Alias: " + v1 + " == " + v2);
+                    System.out.println("% Alias: " + v1 + " == " + v2);
             }
         }
     }
