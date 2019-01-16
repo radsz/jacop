@@ -185,12 +185,10 @@ public class Nooverlap extends Constraint {
 
         for (List<? extends IntVar> r : rectangle)
             if (r.size() == 4) {
-                for (int j = 0; j < r.size(); j++) {
-                    this.rectangle[i] =
-                        new Rectangle(rectangle.get(i).get(0), rectangle.get(i).get(1), rectangle.get(i).get(2), rectangle.get(i).get(3));
-                    this.rectangle[i].index = i;
-                    i++;
-                }
+		this.rectangle[i] =
+		    new Rectangle(rectangle.get(i).get(0), rectangle.get(i).get(1), rectangle.get(i).get(2), rectangle.get(i).get(3));
+		this.rectangle[i].index = i;
+		i++;
             } else {
                 String s = "\nNot equal sizes of rectangle vectors in Nooverlap";
                 throw new IllegalArgumentException(s);
