@@ -132,8 +132,10 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
         int i = 0;
 
         while (numberCertainNotSat == 0 && i < listOfC.length) {
-            if (listOfC[i].notSatisfied())
+            if (listOfC[i].notSatisfied()) {
                 numberCertainNotSat++;
+		removeConstraint();
+	    }
             else {
                 if (listOfC[i].satisfied())
                     numberCertainSat++;
@@ -187,9 +189,10 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
 
         for (int i = 0; i < listOfC.length; i++) {
             result.append(listOfC[i]);
-            if (i == listOfC.length - 1)
-                result.append(",");
+            if (i != listOfC.length - 1)
+                result.append(", ");
         }
+	result.append(")");
         return result.toString();
     }
 
