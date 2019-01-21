@@ -108,7 +108,7 @@ public class Options {
                     + "        for floating variables.\n"
 		    + "    -o, --outputfile defines file for solver output\n"
 		    + "    -d, --decay decay factor for accumulated failure count (afc)\n"
-		    + "         variable selection heuristic")
+		    + "         and activity-based variable selection heuristic")
 		    ;
                 System.exit(0);
             } else { // input file

@@ -1281,9 +1281,10 @@ public class Store {
 	for (Var v : variablesPrunned)
 	    v.updateActivity();
 
-	for (Var v : constraint.arguments())
-	    if (!variablesPrunned.contains(v))
-		v.applyDecay();
+	if (decay < 1.0f)
+	    for (Var v : constraint.arguments())
+		if (!variablesPrunned.contains(v))
+		    v.applyDecay();
     }
     
     /**
