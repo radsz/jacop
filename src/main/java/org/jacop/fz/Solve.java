@@ -312,7 +312,7 @@ public class Solve implements ParserTreeConstants {
                 // time-out option
                 int to = options.getTimeOut();
                 if (to > 0)
-                    label.setTimeOut(to);
+                    label.setTimeOutMilliseconds(to);
             } else if (si.type().equals("bool_search")) {
                 label = int_search(si);
                 list_seq_searches.add(label);
@@ -322,7 +322,7 @@ public class Solve implements ParserTreeConstants {
                 // time-out option
                 int to = options.getTimeOut();
                 if (to > 0)
-                    label.setTimeOut(to);
+                    label.setTimeOutMilliseconds(to);
             } else if (si.type().equals("set_search")) {
                 label = set_search(si);
                 list_seq_searches.add(label);
@@ -332,7 +332,7 @@ public class Solve implements ParserTreeConstants {
                 // time-out option
                 int to = options.getTimeOut();
                 if (to > 0)
-                    label.setTimeOut(to);
+                    label.setTimeOutMilliseconds(to);
             } else if (si.type().equals("float_search")) {
                 label = float_search(si);
                 list_seq_searches.add(label);
@@ -342,7 +342,7 @@ public class Solve implements ParserTreeConstants {
                 // time-out option
                 int to = options.getTimeOut();
                 if (to > 0)
-                    label.setTimeOut(to);
+                    label.setTimeOutMilliseconds(to);
             } else {
                 throw new IllegalArgumentException("Not recognized or supported search type \"" + si.type() + "\"; compilation aborted");
             }
@@ -738,7 +738,7 @@ public class Solve implements ParserTreeConstants {
             // time-out option
             int to = options.getTimeOut();
             if (to > 0)
-                setSearch.setTimeOut(to);
+                setSearch.setTimeOutMilliseconds(to);
 
             intAndSetSearch[0] = setSearch;
         }
@@ -771,7 +771,7 @@ public class Solve implements ParserTreeConstants {
             // time-out option
             int to = options.getTimeOut();
             if (to > 0)
-                intSearch.setTimeOut(to);
+                intSearch.setTimeOutMilliseconds(to);
 
             intAndSetSearch[1] = intSearch;
         }
@@ -805,7 +805,7 @@ public class Solve implements ParserTreeConstants {
             // time-out option
             int to = options.getTimeOut();
             if (to > 0)
-                boolSearch.setTimeOut(to);
+                boolSearch.setTimeOutMilliseconds(to);
 
             intAndSetSearch[2] = boolSearch;
         }
@@ -836,7 +836,7 @@ public class Solve implements ParserTreeConstants {
             // time-out option
             int to = options.getTimeOut();
             if (to > 0)
-                floatSearch.setTimeOut(to);
+                floatSearch.setTimeOutMilliseconds(to);
 
             intAndSetSearch[3] = floatSearch;
         }
@@ -955,7 +955,7 @@ public class Solve implements ParserTreeConstants {
         int to = options.getTimeOut();
         if (to > 0)
             for (Search s : list_seq_searches)
-                s.setTimeOut(to);
+                s.setTimeOutMilliseconds(to);
 
         int ns = options.getNumberSolutions();
         if (si.exploration() == null || si.exploration().equals("complete"))

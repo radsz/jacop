@@ -240,6 +240,13 @@ public interface Search<T extends Var> {
     public void setTimeOut(long out);
 
     /**
+     * It turns on the timeout.
+     *
+     * @param out defines how many miliseconds before the search exits.
+     */
+    public void setTimeOutMilliseconds(long out);
+
+    /**
      * It turns on the wrong decisions out.
      *
      * @param out defines how many wrong decisions are made before the search

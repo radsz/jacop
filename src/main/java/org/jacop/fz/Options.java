@@ -93,7 +93,7 @@ public class Options {
             if (arg.equals("-h") || arg.equals("--help")) {
                 System.out.println("Usage: java org.jacop.fz.Fz2jacop [<options>] <file>.fzn\n" + "Options:\n" + "    -h, --help\n"
                     + "        Print this message.\n" + "    -a, --all, --all-solutions\n" + "    -v, --verbose\n"
-                    + "    -t <value>, --time-out <value>\n" + "        <value> - time in second.\n" + "    -s, --statistics\n"
+                    + "    -t <value>, --time-out <value>\n" + "        <value> - time in milisecond.\n" + "    -s, --statistics\n"
                     + "    -n <value>, --num-solutions <value>\n" + "        <value> - limit on solution number.\n"
                     + "    -b, --bound - use bounds consistency whenever possible;\n"
                     + "        overrides annotation \":: domain\" and selects constraints\n"

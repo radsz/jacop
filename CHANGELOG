@@ -8,7 +8,10 @@ Version 4.7
    methods based on accumulated failur count (AFC) and pruning
    activity; defined in flatzinc also.
 
-3. Small corrections in pom.xml to use right version of Scala.
+3. Time-out in flatzinc is changed to be specified in milliseconds (to
+   be compatible with minizinc options).
+
+4. Small corrections in pom.xml to use right version of Scala.
 
 Version 4.6
 =============

@@ -1237,6 +1237,13 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
         timeOut = System.currentTimeMillis() + tOut * 1000;
     }
 
+    public void setTimeOutMilliseconds(long out) {
+        tOut = out;
+        check = true;
+        timeOutCheck = true;
+        timeOut = System.currentTimeMillis() + tOut;
+    }
+
     /**
      * It turns on the wrong decisions out.
      *
