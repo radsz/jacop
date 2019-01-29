@@ -34,7 +34,6 @@ import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.BitSet;
-import java.nio.charset.Charset;
 import java.io.UnsupportedEncodingException;
 
 /*

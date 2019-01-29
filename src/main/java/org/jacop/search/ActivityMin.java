@@ -32,7 +32,6 @@ package org.jacop.search;
 
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.constraints.Constraint;
 
 /**
  * Defines a pruning activity comparatorfor variables. Every time a constraint

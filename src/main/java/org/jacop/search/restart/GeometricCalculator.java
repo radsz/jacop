@@ -31,7 +31,6 @@
 package org.jacop.search.restart;
 
 import org.jacop.core.Var;
-import org.jacop.search.ConsistencyListener;
 
 /**
  * Defines functionality for constant calculator for restart search
