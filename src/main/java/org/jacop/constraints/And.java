@@ -90,7 +90,9 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
         setScope(listOfC);
         setConstraintScope(listOfC);
         queueForward = new QueueForward<>(listOfC, arguments());
-        this.queueIndex = Arrays.stream(c).max((a, b) -> Integer.max(a.queueIndex, b.queueIndex)).map(a -> a.queueIndex).orElse(0);
+	// KKU, 2019-01-30; next line is wrong! it will always give queueIndex = 0 since primitive constraints have queueIndex = 0
+	// Then... if this constraint is reified, the reified will get queueIndex = 0 as well.
+        //this.queueIndex = Arrays.stream(c).max((a, b) -> Integer.max(a.queueIndex, b.queueIndex)).map(a -> a.queueIndex).orElse(0);
 
     }
 

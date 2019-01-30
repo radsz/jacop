@@ -348,7 +348,7 @@ public class Subcircuit extends Alldiff {
         return min;
     }
 
-    java.util.Random random = new java.util.Random(0);
+    Random random = new Random(0);
 
     private void dominanceFilter() {
         int n = list.length;

@@ -39,7 +39,6 @@ import org.jacop.core.TimeStamp;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
 
 /**
  * CountBounds constraint implements the counting over number of occurrences of

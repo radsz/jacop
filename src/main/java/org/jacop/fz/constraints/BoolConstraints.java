@@ -98,7 +98,7 @@ class BoolConstraints implements ParserTreeConstants {
         else {
             if (v.singleton(1))
 		if (a1.length == 2)
-		    support.pose(new org.jacop.constraints.XplusYgtC(a1[0], a1[1], 0));
+		    support.pose(new XplusYgtC(a1[0], a1[1], 0));
 		else
 		    support.pose(new SumBool(a1, ">=", v));
             else if (allVarZero(a1))

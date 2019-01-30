@@ -365,7 +365,7 @@ public class Support implements ParserTreeConstants {
 
     SetVar[] getSetVarArray(SimpleNode node) {
         SetVar[] s = null;
-        int arrayIndex = 0;
+        // int arrayIndex = 0;
 
         if (node.getId() == JJTARRAYLITERAL) {
             int count = node.jjtGetNumChildren();

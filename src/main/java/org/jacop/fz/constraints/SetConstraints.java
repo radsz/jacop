@@ -83,7 +83,7 @@ class SetConstraints implements ParserTreeConstants {
         SetVar v1 = support.getSetVariable(node, 0);
         SetVar v2 = support.getSetVariable(node, 1);
 
-        PrimitiveConstraint c = new org.jacop.set.constraints.AeqB(v1, v2);
+        PrimitiveConstraint c = new AeqB(v1, v2);
         support.pose(c);
     }
 
@@ -93,7 +93,7 @@ class SetConstraints implements ParserTreeConstants {
         SetVar v2 = support.getSetVariable(node, 1);
         IntVar v3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
-        PrimitiveConstraint c = new org.jacop.set.constraints.AeqB(v1, v2);
+        PrimitiveConstraint c = new AeqB(v1, v2);
         support.pose(new Reified(c, v3));
     }
 
@@ -194,7 +194,7 @@ class SetConstraints implements ParserTreeConstants {
         SetVar v1 = support.getSetVariable(node, 0);
         SetVar v2 = support.getSetVariable(node, 1);
 
-        PrimitiveConstraint c = new Not(new org.jacop.set.constraints.AeqB(v1, v2));
+        PrimitiveConstraint c = new Not(new AeqB(v1, v2));
         support.pose(c);
     }
 
@@ -204,7 +204,7 @@ class SetConstraints implements ParserTreeConstants {
         SetVar v2 = support.getSetVariable(node, 1);
         IntVar v3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
-        PrimitiveConstraint c = new Not(new org.jacop.set.constraints.AeqB(v1, v2));
+        PrimitiveConstraint c = new Not(new AeqB(v1, v2));
         support.pose(new Reified(c, v3));
     }
 

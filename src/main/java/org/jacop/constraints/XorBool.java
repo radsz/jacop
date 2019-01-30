@@ -257,7 +257,7 @@ public class XorBool extends PrimitiveConstraint {
 
     @Override public String toString() {
 
-        return id() + " : XorBool( (" + java.util.Arrays.asList(x) + ") <=>  " + y + ")";
+        return id() + " : XorBool( (" + Arrays.asList(x) + ") <=>  " + y + ")";
     }
 
 }
