@@ -544,13 +544,13 @@ public class Store {
                         currentConstraint = getFirstChanged();
 
                         numberConsistencyCalls++;
-			if (variableActivityManagement)
-			    variablesPrunned.clear();
-			
+
                         currentConstraint.consistency(this);
 
-			if (variableActivityManagement)
+			if (variableActivityManagement) {
 			    updateActivities(currentConstraint);
+			    variablesPrunned.clear();
+			}
                     }
 
                 currentQueue++;
@@ -567,6 +567,11 @@ public class Store {
 
 		if (constraintAFCManagement)
 		    currentConstraint.updateAFC(allConstraints, decay);
+
+		if (variableActivityManagement) {
+		    updateActivities(currentConstraint);
+		    variablesPrunned.clear();
+		}
             }
 
             recentlyFailedConstraint = currentConstraint;
