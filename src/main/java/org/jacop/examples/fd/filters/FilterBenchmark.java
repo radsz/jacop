@@ -310,7 +310,7 @@ public class FilterBenchmark {
      * @param addNum number of adders available.
      * @param mulNum number of multipliers available.
      */
-    public static void experiment1(Store store, Filter filter, int addNum, int mulNum) {
+    public static int experiment1(Store store, Filter filter, int addNum, int mulNum) {
         boolean result;
 
         System.out.println("\n\nTest of scheduling for " + filter.name() + " example"); // without cumulative constraint");
@@ -351,8 +351,11 @@ public class FilterBenchmark {
             System.out.println("\n*** Yes");
             PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
             System.out.println(Sch);
-        } else
+            return cost.value();
+        } else {
             System.out.println("*** No");
+            return -1;
+        }
     }
 
     /**
@@ -365,7 +368,8 @@ public class FilterBenchmark {
      * @param mulNum number of multipliers available.
      * @param clock  number of time units within a clock.
      */
-    public static void experiment1C(Store store, Filter filter, int addNum, int mulNum, int clock) {
+    public static int experiment1C(Store store, Filter filter, int addNum, int mulNum, int clock) {
+
         boolean result;
 
         System.out.println("\n\nTest of scheduling for " + filter.name() + " example");
@@ -407,8 +411,11 @@ public class FilterBenchmark {
             System.out.println("Schedule length: " + div(cost.min(), clock));
             PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
             System.out.println(Sch);
-        } else
+            return cost.value();
+        } else {
             System.out.println("*** No");
+            return -1;
+        }
     }
 
     private static int div(int A, int B) {
@@ -428,7 +435,7 @@ public class FilterBenchmark {
      * @param addNum number of adders available.
      * @param mulNum number of multipliers available.
      */
-    public static void experiment1PM(Store store, Filter filter, int addNum, int mulNum) {
+    public static int experiment1PM(Store store, Filter filter, int addNum, int mulNum) {
         boolean result;
 
         System.out.println("\n\nTest of scheduling for " + filter.name() + " example with pipeline multiplier"); // without cumulative
@@ -470,8 +477,11 @@ public class FilterBenchmark {
             System.out.println("\n*** Yes");
             PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
             System.out.println(Sch);
-        } else
+            return cost.value();
+        } else {
             System.out.println("*** No");
+            return -1;
+        }
     }
 
     /**
@@ -483,7 +493,7 @@ public class FilterBenchmark {
      * @param addNum number of adders available.
      * @param mulNum number of multipliers available.
      */
-    public static void experiment2PM(Store store, Filter filter, int addNum, int mulNum) {
+    public static int experiment2PM(Store store, Filter filter, int addNum, int mulNum) {
 
         boolean result;
 
@@ -532,8 +542,11 @@ public class FilterBenchmark {
             System.out.println("\n*** Yes");
             PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
             System.out.println(Sch);
-        } else
+            return cost.value();
+        } else {
             System.out.println("*** No");
+            return -1;
+        }
     }
 
 
@@ -547,7 +560,7 @@ public class FilterBenchmark {
      * @param addNum number of adders available.
      * @param mulNum number of multipliers available.
      */
-    public static void experiment1P(Store store, Filter filter, int addNum, int mulNum) {
+    public static int experiment1P(Store store, Filter filter, int addNum, int mulNum) {
 
         boolean result;
 
@@ -621,8 +634,11 @@ public class FilterBenchmark {
             System.out.println("\n*** Yes");
             PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
             System.out.println(Sch);
-        } else
+            return cost.value();
+        } else {
             System.out.println("*** No");
+            return -1;
+        }
     }
 
     /**
@@ -634,7 +650,7 @@ public class FilterBenchmark {
      * @param addNum number of adders available.
      * @param mulNum number of multipliers available.
      */
-    public static void experiment2P(Store store, Filter filter, int addNum, int mulNum) {
+    public static int experiment2P(Store store, Filter filter, int addNum, int mulNum) {
 
         boolean result;
 
@@ -696,8 +712,11 @@ public class FilterBenchmark {
             System.out.println("\n*** Yes");
             PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
             System.out.println(Sch);
-        } else
+            return cost.value();
+        } else {
             System.out.println("*** No");
+            return -1;
+        }
     }
 
     /**
@@ -708,7 +727,7 @@ public class FilterBenchmark {
      * @param addNum number of adders available.
      * @param mulNum number of multipliers available.
      */
-    public static void experiment2(Store store, Filter filter, int addNum, int mulNum) {
+    public static int experiment2(Store store, Filter filter, int addNum, int mulNum) {
 
         boolean result;
 
@@ -756,8 +775,11 @@ public class FilterBenchmark {
             System.out.println("\n*** Yes");
             PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
             System.out.println(Sch);
-        } else
+            return cost.value();
+        } else {
             System.out.println("*** No");
+            return -1;
+        }
     }
 
     /**
@@ -770,7 +792,7 @@ public class FilterBenchmark {
      * @param mulNum number of multipliers available.
      * @param clock  number of time units within a clock.
      */
-    public static void experiment2C(Store store, Filter filter, int addNum, int mulNum, int clock) {
+    public static int experiment2C(Store store, Filter filter, int addNum, int mulNum, int clock) {
 
         boolean result;
 
@@ -819,8 +841,11 @@ public class FilterBenchmark {
             System.out.println("Schedule length: " + div(cost.min(), clock));
             PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
             System.out.println(Sch);
-        } else
+            return cost.value();
+        } else {
             System.out.println("*** No");
+            return -1;
+        }
     }
 
     /**
