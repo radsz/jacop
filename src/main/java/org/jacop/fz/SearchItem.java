@@ -544,9 +544,9 @@ public class SearchItem implements ParserTreeConstants {
             return new LargestMaxFloat<FloatVar>();
 	// else if (var_selection_heuristic.equals("max_regret"))
 	//     return new MaxRegret();
-	else if (var_selection_heuristic.equals("dom_w_deg")) {
-            return new WeightedDegree<FloatVar>(store);
-	}
+	// else if (var_selection_heuristic.equals("dom_w_deg")) {
+        //     return new WeightedDegree<FloatVar>(store);
+	// }
         else if (var_selection_heuristic.equals("afc_max")) 
             // does not follow flatzinc standard (JaCoP specific) ;)
             return new AFCMax<FloatVar>(store);
