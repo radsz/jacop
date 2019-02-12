@@ -288,6 +288,16 @@ public class IntVar extends Var {
         return domain.getSize();
     }
 
+    /**
+     * It returns the size of the current domain.
+     *
+     * @return the size of the variables domain.
+     */
+
+    public double getSizeFloat() {
+        return (double)getSize();
+    }
+
 
     /**
      * It checks if the domain is empty.

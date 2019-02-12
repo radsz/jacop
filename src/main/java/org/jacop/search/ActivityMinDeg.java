@@ -60,7 +60,7 @@ public class ActivityMinDeg<T extends Var> implements ComparatorVariable<T> {
     
     public int compare(float left, T var) {
 
-        float right = var.activity() / ((float)var.getSize());
+        double right = var.activity() / var.getSizeFloat();
 
         if (left < right)
 
@@ -76,9 +76,9 @@ public class ActivityMinDeg<T extends Var> implements ComparatorVariable<T> {
 
     public int compare(T leftVar, T rightVar) {
     
-        float left = leftVar.activity() / ((float)leftVar.getSize());
+        double left = leftVar.activity() / leftVar.getSizeFloat();
 
-        float right = rightVar.activity() / ((float)rightVar.getSize());
+        double right = rightVar.activity() / rightVar.getSizeFloat();
 
         if (left < right)
 
@@ -94,7 +94,7 @@ public class ActivityMinDeg<T extends Var> implements ComparatorVariable<T> {
 
     public float metric(T var) {
 
-        return var.activity() / ((float)var.getSize());
+        return var.activity() / ((float)var.getSizeFloat());
 
     }
 }

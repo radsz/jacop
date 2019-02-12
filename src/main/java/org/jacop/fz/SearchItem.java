@@ -544,21 +544,33 @@ public class SearchItem implements ParserTreeConstants {
             return new LargestMaxFloat<FloatVar>();
 	// else if (var_selection_heuristic.equals("max_regret"))
 	//     return new MaxRegret();
-	// else if (var_selection_heuristic.equals("dom_w_deg")) {
-        //     return new WeightedDegree<FloatVar>(store);
-	// }
+	else if (var_selection_heuristic.equals("dom_w_deg")) {
+            return new WeightedDegree<FloatVar>(store);
+	}
         else if (var_selection_heuristic.equals("afc_max")) 
             // does not follow flatzinc standard (JaCoP specific) ;)
             return new AFCMax<FloatVar>(store);
+        else if (var_selection_heuristic.equals("afc_max_deg")) 
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new AFCMaxDeg<FloatVar>(store);
         else if (var_selection_heuristic.equals("afc_min")) 
             // does not follow flatzinc standard (JaCoP specific) ;)
             return new AFCMin<FloatVar>(store);
+        else if (var_selection_heuristic.equals("afc_min_deg")) 
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new AFCMinDeg<FloatVar>(store);
 	else if (var_selection_heuristic.equals("activity_max"))
             // does not follow flatzinc standard (JaCoP specific) ;)
             return new ActivityMax<FloatVar>(store);
+	else if (var_selection_heuristic.equals("activity_max_deg"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new ActivityMaxDeg<FloatVar>(store);
 	else if (var_selection_heuristic.equals("activity_min"))
             // does not follow flatzinc standard (JaCoP specific) ;)
             return new ActivityMin<FloatVar>(store);
+	else if (var_selection_heuristic.equals("activity_min_deg"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new ActivityMinDeg<FloatVar>(store);
 	// for FloatVar's getSize() is not defined :(
 	// afc*_deg and activity*_deg cannot be used
         else

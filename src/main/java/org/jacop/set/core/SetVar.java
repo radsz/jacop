@@ -226,6 +226,16 @@ public class SetVar extends Var {
 
 
     /**
+     * It returns the size of the current domain.
+     *
+     * @return the size of the variables domain.
+     */
+
+    public double getSizeFloat() {
+        return (double)getSize();
+    }
+
+    /**
      * It checks if the domain is empty.
      *
      * @return true if variable domain is empty.

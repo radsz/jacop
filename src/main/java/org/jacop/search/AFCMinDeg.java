@@ -62,7 +62,7 @@ public class AFCMinDeg<T extends Var> implements ComparatorVariable<T> {
     
     public int compare(float left, T var) {
 
-        float right = afcValue(var) / ((float)var.getSize());
+        double right = afcValue(var) / var.getSizeFloat();
 
         if (left < right)
 
@@ -78,9 +78,9 @@ public class AFCMinDeg<T extends Var> implements ComparatorVariable<T> {
 
     public int compare(T leftVar, T rightVar) {
 
-        float left = afcValue(leftVar) / ((float)leftVar.getSize());
+        double left = afcValue(leftVar) / leftVar.getSizeFloat();
 
-        float right = afcValue(rightVar) / ((float)rightVar.getSize());
+        double right = afcValue(rightVar) / rightVar.getSizeFloat();
 
         if (left < right)
 
@@ -96,7 +96,7 @@ public class AFCMinDeg<T extends Var> implements ComparatorVariable<T> {
 
     public float metric(T var) {
 
-        return afcValue(var) / ((float)var.getSize());
+        return afcValue(var) / ((float)var.getSizeFloat());
 
     }
 

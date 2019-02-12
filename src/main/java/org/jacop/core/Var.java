@@ -96,6 +96,14 @@ public abstract class Var implements Backtrackable {
 
     public abstract int getSize();
 
+    /**
+     * It returns the size of the current domain.
+     *
+     * @return the size of the variables domain.
+     */
+
+    public abstract double getSizeFloat();
+
 
     /**
      * It checks if the domain is empty.
