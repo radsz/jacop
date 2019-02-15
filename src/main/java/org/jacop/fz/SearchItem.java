@@ -530,8 +530,8 @@ public class SearchItem implements ParserTreeConstants {
             return new LargestDomainFloat<FloatVar>();
         }
         else if (var_selection_heuristic.equals("most_constrained")) {
-            tieBreaking = new MostConstrainedStatic();
-            return new SmallestDomainFloat();
+            tieBreaking = new MostConstrainedStatic<FloatVar>();
+            return new SmallestDomainFloat<FloatVar>();
         }
         else if (var_selection_heuristic.equals("occurrence"))
             return new MostConstrainedStatic<FloatVar>();
