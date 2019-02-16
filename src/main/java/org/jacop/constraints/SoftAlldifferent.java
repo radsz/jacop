@@ -136,7 +136,7 @@ public class SoftAlldifferent extends DecomposedConstraint<Constraint> {
             ValueEnumeration it = all.valueEnumeration();
             for (int i = 0; it.hasMoreElements(); i++) {
                 int value = it.nextElement();
-                doms[i] = new BoundDomain(value, value);
+                doms[i] = new IntervalDomain(value, value);
             }
 
             // create constraint

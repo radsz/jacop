@@ -197,7 +197,7 @@ public class ArgMax extends Constraint implements SatisfiedPresent {
                 for (int i = 0; i < list.length; i++) {
                     var = list[i];
                     if (var.max() >= minValue && var.max() <= maxValue) // (d.isIntersecting(var.dom()) )
-                        indexDom.addDom(new BoundDomain(i + 1 + indexOffset, i + 1 + indexOffset));
+                        indexDom.unionAdapt(i + 1 + indexOffset, i + 1 + indexOffset);
                 }
 
                 maxIndex.domain.in(store.level, maxIndex, indexDom);

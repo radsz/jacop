@@ -309,6 +309,7 @@ public class FilterBenchmark {
      * @param filter the filter being scheduled.
      * @param addNum number of adders available.
      * @param mulNum number of multipliers available.
+     * @return cost of the solution or -1 if no solution found.
      */
     public static int experiment1(Store store, Filter filter, int addNum, int mulNum) {
         boolean result;
@@ -367,6 +368,7 @@ public class FilterBenchmark {
      * @param addNum number of adders available.
      * @param mulNum number of multipliers available.
      * @param clock  number of time units within a clock.
+     * @return cost of the solution or -1 if no solution found.
      */
     public static int experiment1C(Store store, Filter filter, int addNum, int mulNum, int clock) {
 
@@ -434,6 +436,7 @@ public class FilterBenchmark {
      * @param filter the filter being scheduled.
      * @param addNum number of adders available.
      * @param mulNum number of multipliers available.
+     * @return cost of the solution or -1 if no solution found.
      */
     public static int experiment1PM(Store store, Filter filter, int addNum, int mulNum) {
         boolean result;
@@ -492,6 +495,7 @@ public class FilterBenchmark {
      * @param filter the filter being scheduled.
      * @param addNum number of adders available.
      * @param mulNum number of multipliers available.
+     * @return cost of the solution or -1 if no solution found.
      */
     public static int experiment2PM(Store store, Filter filter, int addNum, int mulNum) {
 
@@ -559,6 +563,7 @@ public class FilterBenchmark {
      * @param filter the filter being scheduled.
      * @param addNum number of adders available.
      * @param mulNum number of multipliers available.
+     * @return cost of the solution or -1 if no solution found.
      */
     public static int experiment1P(Store store, Filter filter, int addNum, int mulNum) {
 
@@ -649,6 +654,7 @@ public class FilterBenchmark {
      * @param filter the filter being scheduled.
      * @param addNum number of adders available.
      * @param mulNum number of multipliers available.
+     * @return cost of the solution or -1 if no solution found.
      */
     public static int experiment2P(Store store, Filter filter, int addNum, int mulNum) {
 
@@ -726,6 +732,7 @@ public class FilterBenchmark {
      * @param filter the filter being scheduled.
      * @param addNum number of adders available.
      * @param mulNum number of multipliers available.
+     * @return cost of the solution or -1 if no solution found.
      */
     public static int experiment2(Store store, Filter filter, int addNum, int mulNum) {
 
@@ -791,6 +798,7 @@ public class FilterBenchmark {
      * @param addNum number of adders available.
      * @param mulNum number of multipliers available.
      * @param clock  number of time units within a clock.
+     * @return cost of the solution or -1 if no solution found.
      */
     public static int experiment2C(Store store, Filter filter, int addNum, int mulNum, int clock) {
 

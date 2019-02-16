@@ -31,7 +31,6 @@
 package org.jacop.examples.fd;
 
 import org.jacop.constraints.*;
-import org.jacop.core.BoundDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
@@ -120,68 +119,6 @@ public class MagicSquares extends ExampleFD {
         store.impose(new XltY(squares[0], squares[number * number - number]));
 
     }
-
-    /**
-     * It specifies the model which uses only variables with BoundDomain.
-     */
-    public void modelBound() {
-
-        // Creating constraint store
-        store = new Store();
-        vars = new ArrayList<IntVar>();
-
-        IntVar squares[] = new IntVar[number * number];
-
-        IntVar k = new IntVar(store, "K", (number * (number * number + 1)) / 2, (number * (number * number + 1)) / 2);
-
-        for (int i = 0; i < number; i++)
-            for (int j = 0; j < number; j++)
-                squares[i * number + j] = new IntVar(store, "S" + (i + 1) + "," + (j + 1), new BoundDomain(1, number * number));
-
-        // Imposing inequalities constraints between squares
-        store.impose(new Alldiff(squares));
-
-        IntVar row[] = new IntVar[number];
-
-        for (int i = 0; i < number; i++) {
-            for (int j = 0; j < number; j++)
-                row[j] = squares[i * number + j];
-            store.impose(new SumInt(row, "==", k));
-        }
-
-        IntVar column[] = new IntVar[number];
-
-        for (int j = 0; j < number; j++) {
-            for (int i = 0; i < number; i++)
-                column[i] = squares[i * number + j];
-            store.impose(new SumInt(column, "==", k));
-        }
-
-        IntVar diagonal[] = new IntVar[number];
-
-        for (int i = 0; i < number; i++)
-            diagonal[i] = squares[(i) * number + i];
-
-        store.impose(new SumInt(diagonal, "==", k));
-
-        for (int i = number; i > 0; i--)
-            diagonal[i - 1] = squares[(i - 1) * number + (number - i)];
-        store.impose(new SumInt(diagonal, "==", k));
-
-        // symmetry breaking
-        //store.impose(new XltY(squares[0], squares[number - 1]));
-        //store.impose(new XltY(squares[0], squares[number * number - 1]));
-        //store.impose(new XltY(squares[0], squares[number * number - number]));
-
-        for (int i = 0; i < number; i++)
-            vars.add(squares[(i) * number + i]);
-        for (int i = number; i > 0; i--)
-            vars.add(squares[(i - 1) * number + (number - i)]);
-        for (IntVar v : squares)
-            vars.add(v);
-
-    }
-
 
     /**
      * It creates the model with specification of what constraint can
@@ -363,13 +300,6 @@ public class MagicSquares extends ExampleFD {
         exampleShave.model4Shaving();
 
         if (exampleShave.shavingSearch(exampleShave.guidingShaving, true))
-            System.out.println("Solution(s) found");
-
-        MagicSquares exampleBound = new MagicSquares();
-        exampleBound.number = 5;
-        exampleBound.modelBound();
-
-        if (exampleBound.search())
             System.out.println("Solution(s) found");
 
     }

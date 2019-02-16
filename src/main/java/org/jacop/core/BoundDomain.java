@@ -43,7 +43,7 @@ import java.util.Random;
  * @version 4.6
  */
 
-public class BoundDomain extends IntDomain implements Cloneable {
+class BoundDomain extends IntDomain implements Cloneable {
 
 
     /**

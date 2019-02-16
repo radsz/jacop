@@ -31,7 +31,6 @@
 package org.jacop.examples.fd;
 
 import org.jacop.constraints.*;
-import org.jacop.core.BoundDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
@@ -74,34 +73,6 @@ public class Langford extends ExampleFD {
         store.impose(cx);
 
     }
-
-    /**
-     * It uses BoundDomain for all variables.
-     */
-    public void modelBound() {
-
-        store = new Store();
-        vars = new ArrayList<IntVar>();
-
-        // Get problem size n from second program argument.
-        IntVar[] x = new IntVar[n * m];
-
-        for (int i = 0; i < n * m; i++) {
-            x[i] = new IntVar(store, "x" + i, new BoundDomain(1, m * n));
-            vars.add(x[i]);
-        }
-
-        for (int i = 0; i + 1 < n; i++) {
-            for (int j = 0; j < m; j++) {
-                store.impose(new XplusCeqZ(x[i * m + j], (j + 2), x[(i + 1) * m + j]));
-            }
-        }
-
-        Constraint cx = new Alldiff(x);
-        store.impose(cx);
-
-    }
-
 
     /**
      * It uses the dual model.
@@ -165,12 +136,6 @@ public class Langford extends ExampleFD {
             exampleBound.n = Integer.parseInt(args[0]);
             exampleBound.m = Integer.parseInt(args[1]);
         }
-
-        exampleBound.modelBound();
-
-        if (exampleBound.search())
-            System.out.println("Solution(s) found");
-
 
         Langford exampleDual = new Langford();
         if (args.length > 1) {

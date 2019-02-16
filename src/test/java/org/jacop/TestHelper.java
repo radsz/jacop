@@ -75,10 +75,10 @@ public class TestHelper {
     protected int noOfAllSolutions(Store store, IntVar[]... variables) {
 
         SelectChoicePoint<IntVar> select =
-            new SimpleSelect<IntVar>(Arrays.stream(variables).map(Arrays::stream).flatMap(i -> i).toArray(IntVar[]::new),
-                new MostConstrainedStatic<IntVar>(), new IndomainMin<IntVar>());
+                new SimpleSelect<>(Arrays.stream(variables).map(Arrays::stream).flatMap(i -> i).toArray(IntVar[]::new),
+                        new MostConstrainedStatic<>(), new IndomainMin<>());
 
-        DepthFirstSearch search = new DepthFirstSearch<IntVar>();
+        DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
 
         search.getSolutionListener().searchAll(true);
         search.getSolutionListener().recordSolutions(true);
@@ -94,10 +94,10 @@ public class TestHelper {
     protected int noOfAllSolutionsNoRecord(Store store, IntVar[]... variables) {
 
         SelectChoicePoint<IntVar> select =
-            new SimpleSelect<IntVar>(Arrays.stream(variables).map(Arrays::stream).flatMap(i -> i).toArray(IntVar[]::new),
-                new MostConstrainedStatic<IntVar>(), new IndomainMin<IntVar>());
+                new SimpleSelect<>(Arrays.stream(variables).map(Arrays::stream).flatMap(i -> i).toArray(IntVar[]::new),
+                        new MostConstrainedStatic<>(), new IndomainMin<>());
 
-        DepthFirstSearch search = new DepthFirstSearch<IntVar>();
+        DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
 
         search.getSolutionListener().searchAll(true);
         search.getSolutionListener().recordSolutions(false);
