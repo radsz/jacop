@@ -125,13 +125,15 @@ public class LexOrder extends Constraint implements UsesQueueVariable, Satisfied
 
 	n = Math.min(x.length, y.length);
 
-	// special border cases
+	// special cases; mostly on different sizes of vectors
 	if (x.length > 0 && y.length == 0)
-	    lexLT = true;  // changing relation to "<" to generate non-satisfiablity; empty is not greater tan any non-empty vector
+	    lexLT = true;  // changing relation to "<" to generate non-satisfiablity; empty is not greater than any non-empty vector
 	if (x.length == 0 && y.length > 0)
 	    lexLT = false;  // changing relation to "<=" to generate always satisfiablity; empty vector is always smaller
 	if (x.length > 1 && y.length >= 1 && x.length > y.length)
 	    lexLT = true;  // changing relation to "<" to generate correct pruning; x is longer therefore y must be always lexicographically greater
+	if (x.length >= 1 && y.length > 1 && x.length < y.length)
+	    lexLT = false;  // changing relation to "<=" to generate correct pruning; x is shorter therefore y must be always lexicographically greater or equal
 
 	setScope(Stream.concat(Arrays.stream(x), Arrays.stream(y)));
 

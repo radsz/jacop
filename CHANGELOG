@@ -4,14 +4,16 @@ Version 4.7
 1. Introduction of restart search both in JaCoP and flatzinc.
 
 2. Making WeightedDegree variable selection method working correctly;
-   availble in flatzinc as dom_w_deg. Adding new variable selection
-   methods based on accumulated failur count (AFC) and pruning
+   available in flatzinc as dom_w_deg. Adding new variable selection
+   methods based on accumulated failure count (AFC) and pruning
    activity; defined in flatzinc also.
 
 3. Time-out in flatzinc is changed to be specified in milliseconds (to
    be compatible with minizinc options).
 
 4. Small corrections in pom.xml to use right version of Scala.
+
+5. Bug corrections.
 
 Version 4.6
 =============
