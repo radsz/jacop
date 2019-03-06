@@ -209,15 +209,23 @@ public class Solve implements ParserTreeConstants {
 
                 run_single_search(solveKind, kind, si);
             } else if (search_type.equals("seq_search")) {
+
                 kind = (ASTSolveKind) node.jjtGetChild(1);
                 solveKind = getKind(kind.getKind());
 
                 run_sequence_search(solveKind, kind, si);
+            } else if (search_type.equals("priority_search")) {
+		
+                kind = (ASTSolveKind) node.jjtGetChild(1);
+                solveKind = getKind(kind.getKind());
+
+                run_single_search(solveKind, kind, si);
             } else {
                 throw new IllegalArgumentException(
                     "Not recognized structure of solve statement \"" + search_type + "\"; compilation aborted");
             }
         } else if (count > 2) {// several annotations
+
             SearchItem si = new SearchItem(store, dictionary);
             si.searchParametersForSeveralAnnotations(node, 0);
 
@@ -254,7 +262,7 @@ public class Solve implements ParserTreeConstants {
 	    else if (s.search_type.equals("restart_constant") || s.search_type.equals("restart_linear") || s.search_type.equals("restart_geometric") ||
 		     s.search_type.equals("restart_luby"))
 		restartCalculator = s.restartCalculator;
-	    else if (s.search_type.endsWith("_search"))
+	    else if (s.search_type.endsWith("_search") && !s.search_type.equals("priority_search"))
 		ns.add(s);
 	    else
 		System.out.println("%% Warning: Not supported search annotation: "+s.search_type+"; ignored.");
@@ -337,6 +345,15 @@ public class Solve implements ParserTreeConstants {
                 label = float_search(si);
                 list_seq_searches.add(label);
                 //label.setSolutionListener(new EmptyListener<Var>());
+                label.setPrintInfo(false);
+
+                // time-out option
+                int to = options.getTimeOut();
+                if (to > 0)
+                    label.setTimeOutMilliseconds(to);
+	    } else if (si.type().equals("priority_search")) {
+                label = priority_search(si);
+                list_seq_searches.add(label);
                 label.setPrintInfo(false);
 
                 // time-out option
@@ -594,8 +611,13 @@ public class Solve implements ParserTreeConstants {
             } else if (optimization) {
                 if (!interrupted && si.exploration().equals("complete"))
                     if (!label.timeOutOccured) {
-                        if (options.getNumberSolutions() == -1 || options.getNumberSolutions() > label.getSolutionListener().solutionsNo())
-                            System.out.println("==========");
+			if (si.type().equals("priority_search")) {
+			    if (options.getNumberSolutions() == -1 || options.getNumberSolutions() > ((PrioritySearch)label).noSolutions())
+				System.out.println("==========");
+			} else {// no priority_search
+			    if (options.getNumberSolutions() == -1 || options.getNumberSolutions() > label.getSolutionListener().solutionsNo())
+				System.out.println("==========");
+			}
                     } else
                         System.out.println("%% =====TIME-OUT=====");
                 else if (label.timeOutOccured)
@@ -620,6 +642,10 @@ public class Solve implements ParserTreeConstants {
             System.out.println("=====UNKNOWN=====");
 
         if (options.getStatistics()) {
+
+	    if (si.type().equals("priority_search"))
+		((PrioritySearch)label).getStatistics();
+
             int nodes = 0, //label.getNodes(),
                 decisions = 0, //label.getDecisions(),
                 wrong = 0, //label.getWrongDecisions(),
@@ -633,7 +659,7 @@ public class Solve implements ParserTreeConstants {
                 wrong = label.getWrongDecisions();
                 backtracks = label.getBacktracks();
                 depth = label.getMaximumDepth();
-                solutions = label.getSolutionListener().solutionsNo();
+                solutions = (si.type().equals("priority_search")) ? ((PrioritySearch)label).noSolutions() : label.getSolutionListener().solutionsNo();
             }
 
             for (DepthFirstSearch<Var> l : final_search) {
@@ -643,7 +669,7 @@ public class Solve implements ParserTreeConstants {
                     wrong += l.getWrongDecisions();
                     backtracks += l.getBacktracks();
                     depth += l.getMaximumDepth();
-                    solutions = l.getSolutionListener().solutionsNo();
+                    solutions = (si.type().equals("priority_search")) ? solutions : l.getSolutionListener().solutionsNo();
                 }
             }
 
@@ -881,7 +907,8 @@ public class Solve implements ParserTreeConstants {
     void run_sequence_search(int solveKind, SimpleNode kind, SearchItem si) {
 
         singleSearch = false;
-
+	//kind.dump("");
+	
         this.si = si;
 
         if (options.getVerbose()) {
@@ -906,7 +933,7 @@ public class Solve implements ParserTreeConstants {
                 default:
                     throw new RuntimeException("Internal error in " + getClass().getName());
             }
-            System.out.println(solve + " : seq_search([" + si + "])");
+            System.out.println(solve + " : " + si);
         }
 
         DepthFirstSearch<Var> masterLabel = null;
@@ -1293,6 +1320,40 @@ public class Solve implements ParserTreeConstants {
         return label;
     }
 
+    @SuppressWarnings("unchecked") DepthFirstSearch<Var> priority_search(SearchItem si) {
+
+	// System.out.println("============\n"+si);
+	
+	ArrayList<SearchItem> dfs_s = si.getSearchItems();
+	DepthFirstSearch<Var>[] searches = new DepthFirstSearch[dfs_s.size()];
+	int i = 0;
+	for (SearchItem s : dfs_s) {
+	    DepthFirstSearch<Var> subSearch = int_search(s);
+	    subSearch.setSelectChoicePoint(variable_selection);
+	    subSearch.setPrintInfo(false);
+	    searches[i++] = subSearch;
+	}
+
+	ComparatorVariable<IntVar> comparator = comparator = si.getVarSelect();
+	
+        PrioritySearch<Var> label = new PrioritySearch(si.vars(), comparator, searches);
+	label.setPrintInfo(false);
+	label.addReporter(new PrioritySolutionReporter());
+
+        if (options.debug())
+            label.setConsistencyListener(failStatistics);
+
+	int to = options.getTimeOut();
+	if (to > 0)
+	    for (DepthFirstSearch s : searches)
+		s.setTimeOutMilliseconds(to);
+
+	if (options.getNumberSolutions() > 0)
+	    ((PrioritySearch)label).setSolutionLimit(options.getNumberSolutions());
+	
+        return label;
+    }
+
 
 
     void printSolution() {
@@ -1355,6 +1416,9 @@ public class Solve implements ParserTreeConstants {
 
 	if (options.getVerbose()) {
 	    // print number of search nodes and CPU time for this solution
+	    if (si.type().equals("priority_search"))
+		((PrioritySearch)label).getStatistics();
+
 	    int nodes=0;
 	    for (Search<Var> label : list_seq_searches) 
 		nodes += label.getNodes();
@@ -1640,5 +1704,12 @@ public class Solve implements ParserTreeConstants {
         java.lang.management.ThreadMXBean b = java.lang.management.ManagementFactory.getThreadMXBean();
 	startCPU = b.getThreadCpuTime(tread.getId());
         timeMeter = b;
+    }
+
+    public class PrioritySolutionReporter extends CustomReport {
+
+	public void report() {
+	    printSolution();
+	}
     }
 }

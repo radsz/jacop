@@ -454,22 +454,27 @@ public class Support implements ParserTreeConstants {
         for (int i = 1; i < constraintWithAnnotations.jjtGetNumChildren(); i++) {
             ASTAnnotation ann = (ASTAnnotation) constraintWithAnnotations.jjtGetChild(i);
 
-            //  	    ann.dump("");
-            // 	    System.out.println ("ann["+i+"] = "+ ann.getAnnId());
+	    // ann.dump("");
+	    // System.out.println ("ann["+i+"] = "+ ann.getAnnId());
 
-            if (ann.getAnnId().equals("bounds") || ann.getAnnId().equals("boundsZ")) {
-                boundsConsistency = true;
-                domainConsistency = false;
-            } else if (ann.getAnnId().equals("domain")) {
-                boundsConsistency = false;
-                domainConsistency = true;
-            } else if (ann.getAnnId().equals("defines_var")) {  // no used in JaCoP yet
-                ASTAnnExpr expr = (ASTAnnExpr) ann.jjtGetChild(0);
+	    if (ann.getAnnId().equals("$expr")) {
+		ASTScalarFlatExpr n = (ASTScalarFlatExpr)ann.jjtGetChild(0).jjtGetChild(0);
+		if (n.getIdent().equals("bounds") || n.getIdent().equals("boundsZ")) {
+		    boundsConsistency = true;
+		    domainConsistency = false;
+		} else if (n.getIdent().equals("domain")) {
+		    boundsConsistency = false;
+		    domainConsistency = true;
+		}
+	    } else if (ann.getAnnId().equals("defines_var")) {  // no used in JaCoP yet
+		SimpleNode child = (SimpleNode) ann.jjtGetChild(0);		
+                ASTAnnExpr expr = (ASTAnnExpr) child.jjtGetChild(0);
                 Var v = getAnnVar(expr);
 
                 definedVar = (IntVar) v;
             }
         }
+	// System.out.println("defines " + definedVar);
     }
 
     Var getAnnVar(ASTAnnExpr node) {

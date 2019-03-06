@@ -131,13 +131,13 @@ public class VariablesParameters implements ParserTreeConstants {
         annotations = new HashSet<String>();
         boolean var_introduced = false, output_var = false, is_defined_var = false;
 
+        // node.dump("*   ");
+        // System.out.println("*** Type = " + type + " init index = " + initChild);
+        // System.out.println("*** Annotations: " + annotations);
+
         int type = getType(node);
 
         int initChild = getAnnotations(node, 1);
-
-        // node.dump("");
-        // System.out.println("*** Type = " + type + " init index = " + initChild);
-        // System.out.println("*** Annotations: " + annotations);
 
         if (annotations.contains("var_is_introduced"))
             var_introduced = true;
@@ -501,13 +501,13 @@ public class VariablesParameters implements ParserTreeConstants {
         boolean var_introduced = false, output_array = false;
         OutputArrayAnnotation outArrayAnn = null;
 
+        // node.dump("a  ");
+        //    	System.out.println("*** Type = " + type + " init index = " + initChild);
+        //     	System.out.println("*** Annotations: " + annotations + "  " + indexBounds);
+
         int type = getType(node);
 
         int initChild = getArrayAnnotations(node, 1);
-
-        //    	node.dump("");
-        //    	System.out.println("*** Type = " + type + " init index = " + initChild);
-        //     	System.out.println("*** Annotations: " + annotations + "  " + indexBounds);
 
         String ident = ((ASTVarDeclItem) node).getIdent();
 
@@ -858,73 +858,120 @@ public class VariablesParameters implements ParserTreeConstants {
         if (j < count) {
             SimpleNode child = (SimpleNode) node.jjtGetChild(j);
             while (j < count && child.getId() == JJTANNOTATION) {
-                annotations.add(((ASTAnnotation) child).getAnnId());
-                j++;
+		SimpleNode grandchild = (SimpleNode) child.jjtGetChild(0);
+		
+		if (grandchild.getId() == JJTANNEXPR) 
+		    annotations.add(parseAnnExpr(grandchild, 0));
+
+		j++;
                 if (j < count)
                     child = (SimpleNode) node.jjtGetChild(j);
             }
         }
+	// System.out.println(annotations);
+
         return j;
     }
 
+    String parseAnnExpr(SimpleNode node, int i) {
+        SimpleNode child = (SimpleNode) node.jjtGetChild(i);
+        if (child.getId() == JJTSCALARFLATEXPR) {
+            switch (((ASTScalarFlatExpr) child).getType()) {
+                case 2: // ident
+                    return ((ASTScalarFlatExpr) child).getIdent();
+                default: // string & float;
+                    throw new IllegalArgumentException("Not supported scalar in annotation; compilation aborted.");
+            }
+        } else {
+            throw new IllegalArgumentException("Not supported annotation type; compilation aborted.");
+        }
+    }
+    
     int getArrayAnnotations(SimpleNode node, int i) {
+	// node.dump("output_array   ");
+
         int j = i;
         int count = node.jjtGetNumChildren();
+
         if (j < count) {
             SimpleNode child = (SimpleNode) node.jjtGetChild(j);
             while (j < count && child.getId() == JJTANNOTATION) {
+		// child.dump("ch  ");
                 String id = ((ASTAnnotation) child).getAnnId();
-                annotations.add(id);
-                if (id.equals("output_array")) {
-                    int no = child.jjtGetNumChildren();
-                    if (no > 1 || ((SimpleNode) child.jjtGetChild(0)).getId() != JJTANNEXPR) {
-                        throw new IllegalArgumentException(
-                            "More than one annotation expression in output_array annotation; execution aborted");
-                    } else {
-                        SimpleNode grandchild = (SimpleNode) child.jjtGetChild(0);
-                        int number = grandchild.jjtGetNumChildren();
-                        if (number == 1) {
-                            SimpleNode arrayLiteral = (SimpleNode) grandchild.jjtGetChild(0);
-                            if (arrayLiteral.getId() == JJTARRAYLITERAL) {
-                                int numberSL = arrayLiteral.jjtGetNumChildren();
-                                for (int p = 0; p < numberSL; p++) {
-                                    SimpleNode setLiteral = (SimpleNode) arrayLiteral.jjtGetChild(p);
-                                    if (((ASTSetLiteral) setLiteral).getType() == 0) {// interval
-                                        int s_n = setLiteral.jjtGetNumChildren();
-                                        if (s_n == 2) {
-                                            int low = ((ASTIntFlatExpr) setLiteral.jjtGetChild(0)).getInt();
-                                            int high = ((ASTIntFlatExpr) setLiteral.jjtGetChild(1)).getInt();
-                                            IntDomain indexes = new IntervalDomain(low, high);
-                                            indexBounds.add(indexes);
-                                            // 					    System.out.println(indexes+"->"+indexes.min() +"__"+indexes.max());
-                                        } else {
-                                            throw new IllegalArgumentException(
-                                                "Unexpected set literal in output_array annotation; execution aborted");
-                                        }
-                                    } else if (((ASTSetLiteral) setLiteral).getType() == 1) {// list
-                                        int s_n = setLiteral.jjtGetNumChildren();
-                                        IntDomain indexes = new IntervalDomain();
-                                        for (int k = 0; k < s_n; k++) {
-                                            int el = ((ASTScalarFlatExpr) setLiteral.jjtGetChild(k)).getInt();
-                                            indexes.unionAdapt(el);
-                                        }
-                                        indexBounds.add(indexes);
-                                    } else {
-                                        throw new IllegalArgumentException(
-                                            "Unexpected set literal in output_array annotation; execution aborted");
-                                    }
-                                }
-                            } else {
-                                throw new IllegalArgumentException("Wrong expression in output_array annotation; execution aborted");
-                            }
-                        }
-                    }
-                }
-                j++;
-                if (j < count)
-                    child = (SimpleNode) node.jjtGetChild(j);
-            }
+
+                if (id != null && id.equals("output_array")) {
+		    annotations.add(id);
+
+		    child = (SimpleNode) child.jjtGetChild(0);
+
+		    int noAnnotations = child.jjtGetNumChildren();
+		    // System.out.println("children = " + noAnnotations);
+		    for (int nc = 0; nc < noAnnotations; nc++) {
+
+			// System.out.println("=====================>");
+
+			SimpleNode nchild = (SimpleNode) child.jjtGetChild(nc);
+			int no = nchild.jjtGetNumChildren();
+			// nchild.dump("g  ");
+
+			if (no > 1 || ((SimpleNode) nchild.jjtGetChild(0)).getId() != JJTANNEXPR) {
+			    throw new IllegalArgumentException(
+							       "More than one annotation expression in output_array annotation; execution aborted");
+			} else {
+			    SimpleNode grandchild = (SimpleNode) nchild.jjtGetChild(0);
+			    int number = grandchild.jjtGetNumChildren();
+			    if (number == 1) {
+				SimpleNode setLiteral = (SimpleNode) grandchild.jjtGetChild(0);
+				if (setLiteral.getId() == JJTSETLITERAL) {
+
+				    // int numberSL = arrayLiteral.jjtGetNumChildren();
+				    // for (int p = 0; p < numberSL; p++) {
+				    // 	SimpleNode setLiteral = (SimpleNode) arrayLiteral.jjtGetChild(p);
+				    if (((ASTSetLiteral) setLiteral).getType() == 0) {// interval
+					int s_n = setLiteral.jjtGetNumChildren();
+					if (s_n == 2) {
+						int low = ((ASTIntFlatExpr) setLiteral.jjtGetChild(0)).getInt();
+						int high = ((ASTIntFlatExpr) setLiteral.jjtGetChild(1)).getInt();
+						IntDomain indexes = new IntervalDomain(low, high);
+						indexBounds.add(indexes);
+						//System.out.println(indexes+"->"+indexes.min() +"__"+indexes.max());
+					    } else {
+						throw new IllegalArgumentException(
+										   "Unexpected set literal in output_array annotation; execution aborted");
+					    }
+					} else if (((ASTSetLiteral) setLiteral).getType() == 1) {// list
+					    int s_n = setLiteral.jjtGetNumChildren();
+					    IntDomain indexes = new IntervalDomain();
+					    for (int k = 0; k < s_n; k++) {
+						int el = ((ASTScalarFlatExpr) setLiteral.jjtGetChild(k)).getInt();
+						indexes.unionAdapt(el);
+					    }
+					    indexBounds.add(indexes);
+					} else {
+					    throw new IllegalArgumentException(
+									       "Unexpected set literal in output_array annotation; execution aborted");
+					}
+				    // }
+				} else {
+				    throw new IllegalArgumentException("Wrong expression in output_array annotation; execution aborted");
+				}
+			    }
+			}
+			// System.out.println("<=====================");
+
+		    }
+		    j++;
+		    if (j < count)
+			child = (SimpleNode) node.jjtGetChild(j);
+		} else {
+		    // simple annotation id
+		    annotations.add(parseAnnExpr((SimpleNode)child.jjtGetChild(0), 0));
+		    return j + annotations.size();
+		}
+	    }
         }
+	// System.out.println(annotations +", "+indexBounds);
+
         return j;
     }
 
