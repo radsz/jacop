@@ -611,7 +611,7 @@ public class Solve implements ParserTreeConstants {
             } else if (optimization) {
                 if (!interrupted && si.exploration().equals("complete"))
                     if (!label.timeOutOccured) {
-			if (si.type().equals("priority_search")) {
+			if (si.type() != null && si.type().equals("priority_search")) {
 			    if (options.getNumberSolutions() == -1 || options.getNumberSolutions() > ((PrioritySearch)label).noSolutions())
 				System.out.println("==========");
 			} else {// no priority_search
@@ -643,7 +643,7 @@ public class Solve implements ParserTreeConstants {
 
         if (options.getStatistics()) {
 
-	    if (si.type().equals("priority_search"))
+	    if (si.type() != null && si.type().equals("priority_search"))
 		((PrioritySearch)label).getStatistics();
 
             int nodes = 0, //label.getNodes(),
@@ -659,7 +659,7 @@ public class Solve implements ParserTreeConstants {
                 wrong = label.getWrongDecisions();
                 backtracks = label.getBacktracks();
                 depth = label.getMaximumDepth();
-                solutions = (si.type().equals("priority_search")) ? ((PrioritySearch)label).noSolutions() : label.getSolutionListener().solutionsNo();
+                solutions = (si.type() != null && si.type().equals("priority_search")) ? ((PrioritySearch)label).noSolutions() : label.getSolutionListener().solutionsNo();
             }
 
             for (DepthFirstSearch<Var> l : final_search) {
@@ -669,7 +669,7 @@ public class Solve implements ParserTreeConstants {
                     wrong += l.getWrongDecisions();
                     backtracks += l.getBacktracks();
                     depth += l.getMaximumDepth();
-                    solutions = (si.type().equals("priority_search")) ? solutions : l.getSolutionListener().solutionsNo();
+                    solutions = (si.type() != null && si.type().equals("priority_search")) ? solutions : l.getSolutionListener().solutionsNo();
                 }
             }
 
@@ -1416,7 +1416,7 @@ public class Solve implements ParserTreeConstants {
 
 	if (options.getVerbose()) {
 	    // print number of search nodes and CPU time for this solution
-	    if (si.type().equals("priority_search"))
+	    if (si.type() != null && si.type().equals("priority_search"))
 		((PrioritySearch)label).getStatistics();
 
 	    int nodes=0;
