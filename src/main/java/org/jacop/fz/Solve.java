@@ -236,10 +236,10 @@ public class Solve implements ParserTreeConstants {
 
 		kind = (ASTSolveKind) node.jjtGetChild(si.search_seqSize());
 		solveKind = getKind(kind.getKind());
-		
+
 		if (fs.search_seq.size() > 0)
 		    run_sequence_search(solveKind, kind, fs);
-		else
+		else 
 		    run_single_search(solveKind, kind, fs);
 	    }
 	    else {
@@ -601,9 +601,14 @@ public class Solve implements ParserTreeConstants {
                 if (!interrupted)
                     if (si.exploration().equals("complete"))
                         if (!label.timeOutOccured) {
-                            if (options.getNumberSolutions() == -1 || options.getNumberSolutions() > label.getSolutionListener()
-                                .solutionsNo())
-                                System.out.println("==========");
+			    if (si.type() != null && si.type().equals("priority_search")) {
+				if (options.getNumberSolutions() == -1 || options.getNumberSolutions() > ((PrioritySearch)label).noSolutions())
+				    System.out.println("==========");
+			    } else {// no priority_search
+				if (options.getNumberSolutions() == -1 || options.getNumberSolutions() > label.getSolutionListener()
+				    .solutionsNo())
+				    System.out.println("==========");
+			    }
                         } else
                             System.out.println("%% =====TIME-OUT=====");
                     else if (label.timeOutOccured)
@@ -659,7 +664,7 @@ public class Solve implements ParserTreeConstants {
                 wrong = label.getWrongDecisions();
                 backtracks = label.getBacktracks();
                 depth = label.getMaximumDepth();
-                solutions = (si.type() != null && si.type().equals("priority_search")) ? ((PrioritySearch)label).noSolutions() : label.getSolutionListener().solutionsNo();
+                solutions = (label != null && label instanceof PrioritySearch) ? ((PrioritySearch)label).noSolutions() : label.getSolutionListener().solutionsNo();
             }
 
             for (DepthFirstSearch<Var> l : final_search) {
@@ -669,7 +674,7 @@ public class Solve implements ParserTreeConstants {
                     wrong += l.getWrongDecisions();
                     backtracks += l.getBacktracks();
                     depth += l.getMaximumDepth();
-                    solutions = (si.type() != null && si.type().equals("priority_search")) ? solutions : l.getSolutionListener().solutionsNo();
+                    solutions = (l != null && l instanceof PrioritySearch) ? solutions : l.getSolutionListener().solutionsNo();
                 }
             }
 
@@ -1247,6 +1252,10 @@ public class Solve implements ParserTreeConstants {
             }
 
             list_seq_searches.add(label);
+        } else if (si.type().equals("priority_search")) {
+            label = priority_search(si);
+
+            list_seq_searches.add(label);
         } else if (si.type().equals("seq_search")) {
             for (int i = 0; i < si.getSearchItems().size(); i++)
                 if (i == 0) { // master search
@@ -1328,10 +1337,39 @@ public class Solve implements ParserTreeConstants {
 	DepthFirstSearch<Var>[] searches = new DepthFirstSearch[dfs_s.size()];
 	int i = 0;
 	for (SearchItem s : dfs_s) {
-	    DepthFirstSearch<Var> subSearch = int_search(s);
-	    subSearch.setSelectChoicePoint(variable_selection);
-	    subSearch.setPrintInfo(false);
-	    searches[i++] = subSearch;
+
+	    DepthFirstSearch<Var> subSearch = null;
+	    if (s.search_type.equals("int_search")) {
+		subSearch = int_search(s);
+		subSearch.setSelectChoicePoint(variable_selection);
+		subSearch.setPrintInfo(false);
+		searches[i++] = subSearch;
+	    } else if (s.search_type.equals("set_search")) {
+		subSearch = set_search(s);
+		subSearch.setSelectChoicePoint(variable_selection);
+		subSearch.setPrintInfo(false);
+		searches[i++] = subSearch;
+	    } else if (s.search_type.equals("float_search")) {
+		subSearch = float_search(s);
+		subSearch.setSelectChoicePoint(variable_selection);
+		subSearch.setPrintInfo(false);
+		searches[i++] = subSearch;
+	    } else if (s.search_type.equals("seq_search")) {
+		subSearch = sub_search(s, null, false);
+
+		DepthFirstSearch ns = subSearch;
+		do {
+		    ns.setPrintInfo(false);
+		    // find next search
+		    if (ns.childSearches == null)
+			ns = null;
+		    else 
+			ns = (DepthFirstSearch)ns.childSearches[0];
+		} while (ns != null);
+		
+		searches[i++] = subSearch;
+	    } else
+		throw new RuntimeException("Error: Not supported search type in priority_search; execution aborted");
 	}
 
 	ComparatorVariable<IntVar> comparator = comparator = si.getVarSelect();

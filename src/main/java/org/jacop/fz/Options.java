@@ -120,6 +120,7 @@ public class Options {
                 // decode options
                 if (args[i].equals("-a") || args[i].equals("--all-solutions") || args[i].equals("--all")) {
                     all = true;
+		    number_solutions = Integer.MAX_VALUE;
                     i++;
                 } else if (args[i].equals("-t") || args[i].equals("--time-out")) {
                     time_out = Integer.parseInt(args[++i]);

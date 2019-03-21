@@ -44,7 +44,8 @@ import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSolutionListener;
 import org.jacop.search.SolutionListener;
 import org.jacop.search.ConsistencyListener;
-
+import org.jacop.search.PrioritySearch;
+;
 /**
  * Implements restart search. Only cost as IntVar is possible.
  *
@@ -82,6 +83,10 @@ public class RestartSearch<T extends Var> {
 	lastNotNullSearch = ns;
 	
 	do {
+
+	    if (ns instanceof PrioritySearch)
+		throw new RuntimeException("Error: PrioritySearch is not supported in RestartSearch; execution aborted");
+		    
 	    // add calculator & do not assign solutions
 	    ConsistencyListener cs = ns.getConsistencyListener();
 	    ns.setConsistencyListener(calculator);

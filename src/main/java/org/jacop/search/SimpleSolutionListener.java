@@ -151,6 +151,10 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
         return noSolutions;
     }
 
+    public void setSolutionsNo(int no) {
+        noSolutions = no;
+    }
+
     /**
      * It records all solutions so they can be later retrieved and
      * used.

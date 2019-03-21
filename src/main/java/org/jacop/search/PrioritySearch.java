@@ -107,21 +107,36 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 	    
 	search = new DepthFirstSearch[2*dfs.length];
 	for (int i = 0; i < n; i++) {
-
-	    String selectClassName = dfs[i].heuristic.getClass().getName();
-	    if (selectClassName.equals("org.jacop.search.SplitSelect") || selectClassName.equals("org.jacop.search.SplitRandomSelect"))
-		throw new RuntimeException("Variable selection methods that use domain split cannot be used in priority search");
-		
+	    
 	    search[2*i] = dfs[i];
 	    if (dfs[i].heuristic == null)
 		throw new RuntimeException("heuristic in depth first search must be set");
 
 	    search[2*i+1] = new LinkingSearch<T>(this);
-	    dfs[i].addChildSearch(search[2*i+1]);
-	    search[2*i+1].setMasterSearch(dfs[i]);
+	    // dfs[i].addChildSearch(search[2*i+1]);
+	    DepthFirstSearch last = lastSearch(dfs[i]);
+	    last.addChildSearch(search[2*i+1]);
+	    search[2*i+1].setMasterSearch(last);//dfs[i]);
 	}
 	this.allVars = getVariables();
 	reportSolution.addVariables(allVars);
+
+    }
+
+    DepthFirstSearch lastSearch(DepthFirstSearch dfs) {
+	DepthFirstSearch<T> ns = dfs;
+	DepthFirstSearch lastNotNullSearch = ns;
+	
+	do {
+	    lastNotNullSearch = ns;
+	    // find next search
+	    if (ns.childSearches == null)
+		ns = null;
+	    else 
+		ns = (DepthFirstSearch<T>)ns.childSearches[0];
+	} while (ns != null);
+
+	return lastNotNullSearch;
     }
     
     public boolean labeling(Store store, SelectChoicePoint<T> select) {
@@ -234,9 +249,14 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 	    solutionsLimit = Integer.MAX_VALUE;
 	
 	for(DepthFirstSearch dfs : search) {
-	    dfs.setStore(store);
-	    dfs.setCostVar(costVar);
-	    dfs.respectSolutionListenerAdvice = true;
+	    DepthFirstSearch ns = dfs;
+	    do {
+		ns.setStore(store);
+		ns.setCostVar(costVar);
+		ns.respectSolutionListenerAdvice = true;
+		// find next search
+		ns = (ns.childSearches == null) ? null : (DepthFirstSearch<T>)ns.childSearches[0];
+	    } while (ns != null);	    
 	}
 	
         if (store.raiseLevelBeforeConsistency) {
@@ -338,7 +358,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 		dfs.setCostVar(costVariable);
 		dfs.respectSolutionListenerAdvice = true;
 		dfs.costVariable = costVariable;
-	    }	    
+	    }
 	    solutionsLimit = Integer.MAX_VALUE;
 	    optimize = true;
 	    cost = null;
@@ -377,7 +397,6 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 	visited.set(subSearch);
 	
         if (result) {
-            // result = label(0);
 	    try {
 		result = search[2*subSearch].labeling();
 	    }
@@ -412,7 +431,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         }
 
         if (noSolutions > 0) {
-	    
+	    // update number solutions in solution listener; otherwise it will be zero :(
+	    ((SimpleSolutionListener)solutionListener).setSolutionsNo(noSolutions);
+
             if (printInfo) {
                 if (costVariable != null)
                     if (costVariable instanceof IntVar)
@@ -460,7 +481,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 	decisions = java.util.Arrays.stream(search).mapToInt(i -> i.decisions).sum();
 	wrongDecisions = java.util.Arrays.stream(search).mapToInt(i -> i.wrongDecisions).sum();
 	numberBacktracks = java.util.Arrays.stream(search).mapToInt(i -> i.numberBacktracks).sum();
-	maxDepthExcludePaths = java.util.Arrays.stream(search).mapToInt(i -> i.maxDepthExcludePaths).reduce(Integer.MIN_VALUE, (a, b) -> Integer.max(a, b));
+	maxDepthExcludePaths = java.util.Arrays.stream(search).mapToInt(i -> i.maxDepthExcludePaths).sum(); //java.util.Arrays.stream(search).mapToInt(i -> i.maxDepthExcludePaths).reduce(Integer.MIN_VALUE, (a, b) -> Integer.max(a, b)); // wrong; one has to sum up all depth from all searches
     }
     
     String statistics() {
@@ -558,10 +579,12 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
 		if (newCost < costValue) {
 		    costValue = newCost;
+		    master.costValue = newCost;
 			    
 		    for (int i = 0; i < n; i++) {
- 			search[2*i].costValue = ((IntVar) costVariable).dom().max();
-			search[2*i].cost = new XltC((IntVar) search[2*i].costVariable, newCost);
+			DepthFirstSearch ls = lastSearch(search[2*i]);
+ 			ls.costValue = ((IntVar) costVariable).dom().max();
+			ls.cost = new XltC((IntVar) search[2*i].costVariable, newCost);
 		    }
 		}
 
@@ -570,15 +593,48 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
 		if (newCost < costValueFloat) {
 		    costValueFloat = newCost;
+		    master.costValueFloat = newCost;
 
 		    for (int i = 0; i < n; i++) {
-			search[2*i].costValueFloat = ((FloatVar) costVariable).dom().max();
-			search[2*i].cost = new PltC((FloatVar) search[2*i].costVariable, newCost);    
+			DepthFirstSearch ls = lastSearch(search[2*i]);
+			ls.costValueFloat = ((FloatVar) costVariable).dom().max();
+			ls.cost = new PltC((FloatVar) search[2*i].costVariable, newCost);    
 		    }
 		}
 	    }
 	}
-	
+
+	void constraineCostFromChild(DepthFirstSearch child) {
+	    if (costVariable instanceof IntVar) {
+		int newCost = child.costValue;
+
+		if (newCost < costValue) {
+		    costValue = newCost;
+		    master.costValue = newCost;
+			    
+		    for (int i = 0; i < n; i++) {
+			DepthFirstSearch ls = lastSearch(search[2*i]);
+ 			ls.costValue = newCost;
+			ls.cost = new XltC((IntVar) search[2*i].costVariable, newCost);
+		    }
+		}
+
+	    } else if (costVariable instanceof FloatVar) {
+		double newCost = child.costValueFloat;
+
+		if (newCost < costValueFloat) {
+		    costValueFloat = newCost;
+		    master.costValueFloat = newCost;
+
+		    for (int i = 0; i < n; i++) {
+			DepthFirstSearch ls = lastSearch(search[2*i]);
+			ls.costValueFloat = newCost;
+			ls.cost = new PltC((FloatVar) search[2*i].costVariable, newCost);    
+		    }
+		}
+	    }
+	}
+
 	public boolean labeling() {
 
     	    int index = getSubSearch();
@@ -593,36 +649,97 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 	    } else { // index == n
 		if (costVariable != null) {
 
-		    // if (master.childSearches != null) {
-		    // 	for (DepthFirstSearch child : master.childSearches) {
-		    // 	    boolean results = child.labeling();
-		    // 	    if (result)
-		    // 		break;
-		    // 	}
-		    // 	// TODO: need to paroapgate costValue from child search
-			
-		    // 	visited.set(index, false);
-		    // 	return false;
-		    // }
-		    // else {  // no child search
-		    constraineCost();
-		    noSolutions++;
+		    if (master.childSearches != null) {
 
-		    if (reportSolution != null)
-			reportSolution.report();
+			 DepthFirstSearch childSearch = null;
 
+			 for (DepthFirstSearch child : (DepthFirstSearch[])master.childSearches) {
+			    childSearch = child;
+			    child.setStore(store);
+			    child.setCostVar(costVariable);
+                            int currentChildSolutionNo = child.getSolutionListener().solutionsNo();
+
+		    	    boolean result = child.labeling();
+
+		    	    if (result) {
+				// gets here when the limit of solutions was reached
+		    		break;
+			    } else {
+				if (child.getSolutionListener().solutionsNo() > currentChildSolutionNo) {
+			 
+				    noSolutions = child.getSolutionListener().solutionsNo();
+
+				    constraineCostFromChild(child);
+
+				    if (noSolutions >= solutionsLimit)
+					throw new SolutionsLimitReached();				    
+				    
+				    visited.set(index, false);
+				    return false;
+				}
+			    }
+		    	}
+
+		        noSolutions++;
+			constraineCostFromChild(childSearch);
+			if (noSolutions >= solutionsLimit)
+			    throw new SolutionsLimitReached();				    
+
+		    	visited.set(index, false);
+		    	return false;
+		    }
+		    else {  // no child search
+
+			constraineCost();
+			noSolutions++;
+
+			if (reportSolution != null)
+			    reportSolution.report();
+
+			if (noSolutions >= solutionsLimit)
+			    throw new SolutionsLimitReached();
+
+			visited.set(index, false);
+			return false;
+		    }
+		} else if (master.childSearches != null) { // no optimization and child search
+		    DepthFirstSearch childSearch = null;
+
+		    for (DepthFirstSearch child : (DepthFirstSearch[])master.childSearches) {
+			childSearch = child;
+			child.setStore(store);
+			int currentChildSolutionNo = child.getSolutionListener().solutionsNo();
+
+			boolean result = child.labeling();
+
+			if (result) {
+			    // gets here when the limit of solutions was reached
+			    break;
+			} else {
+			    if (child.getSolutionListener().solutionsNo() > currentChildSolutionNo) {
+				noSolutions = child.getSolutionListener().solutionsNo();
+
+				if (noSolutions >= solutionsLimit)
+				    throw new SolutionsLimitReached();				    
+				    
+				visited.set(index, false);
+				return false;
+			    }
+			}
+		    }
+
+		    noSolutions += childSearch.getSolutionListener().solutionsNo();
 		    if (noSolutions >= solutionsLimit)
-			throw new SolutionsLimitReached();
-
+			throw new SolutionsLimitReached();				    
+				    
 		    visited.set(index, false);
 		    return false;
-		    // }
-		} else { // not optimization
+		} else { // not optimization and no child search
 		    noSolutions++;
 
 		    if (reportSolution != null)
 			reportSolution.report();
-		    
+
 		    if (noSolutions >= solutionsLimit)
 			throw new SolutionsLimitReached();
 		    

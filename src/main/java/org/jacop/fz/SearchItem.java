@@ -138,11 +138,6 @@ public class SearchItem implements ParserTreeConstants {
 
 	    makeVectorOfSearches(body);
 
-	    for (int i = 0; i < search_seq.size(); i++) {
-		if (search_seq.get(i).prioritySearch)
-		    throw new RuntimeException("Error: No priority_search allowed in seq_search yet; execution aborted");
-	    }
-	    
         } else if (search_type.equals("priority_search")) {
 	    // ann.dump("");
 
@@ -199,9 +194,20 @@ public class SearchItem implements ParserTreeConstants {
 	    
 	int count = body.jjtGetNumChildren();
 
-	for (int i = 0; i < count; i++) {
+	for (int i = 0; i < count; i++) {	    
 	    SearchItem subSearch = new SearchItem(store, dictionary);
+
+	    ASTAnnotation ann = (ASTAnnotation)body.jjtGetChild(i);
+	    // if (ann.getAnnId().equals("seq_search"))
+	    // 	throw new RuntimeException("Error: Nested seq_search or seq_search in priority_search not supported; execution aborted");
+	    
 	    subSearch.searchParameters(body, i);
+
+	    if (ann.getAnnId().equals("seq_search")) {
+		search_seq.add(subSearch);
+		continue;
+	    }
+	    
 	    if (subSearch.search_variables.length > 0)
 		search_seq.add(subSearch);
 	}
@@ -289,46 +295,46 @@ public class SearchItem implements ParserTreeConstants {
     }
 
     @SuppressWarnings("unchecked") SelectChoicePoint getIntSelect() {
-        ComparatorVariable<IntVar> var_sel = getVarSelect();
+        // ComparatorVariable<IntVar> var_sel = getVarSelect();
         IntVar[] searchVars = new IntVar[search_variables.length];
         for (int i = 0; i < search_variables.length; i++)
             searchVars[i] = (IntVar) search_variables[i];
 
         if (indomain != null && indomain.equals("indomain_split")) {
             if (tieBreaking == null)
-                return new SplitSelect<IntVar>(searchVars, var_sel, new IndomainMiddle<IntVar>());
+                return new SplitSelect<IntVar>(searchVars, getVarSelect(), new IndomainMiddle<IntVar>());
             else
-                return new SplitSelect<IntVar>(searchVars, var_sel, tieBreaking, new IndomainMiddle<IntVar>());
+                return new SplitSelect<IntVar>(searchVars, getVarSelect(), tieBreaking, new IndomainMiddle<IntVar>());
 	} else if (indomain != null && indomain.equals("indomain_split_random")) {
 		if (tieBreaking == null)
-		    return new SplitRandomSelect<IntVar>(searchVars, var_sel, new IndomainMiddle<IntVar>());
+		    return new SplitRandomSelect<IntVar>(searchVars, getVarSelect(), new IndomainMiddle<IntVar>());
 		else
-		    return new SplitRandomSelect<IntVar>(searchVars, var_sel, tieBreaking, new IndomainMiddle<IntVar>());
+		    return new SplitRandomSelect<IntVar>(searchVars, getVarSelect(), tieBreaking, new IndomainMiddle<IntVar>());
 	} else if (indomain != null && indomain.equals("indomain_reverse_split")) {
 	    if (tieBreaking == null) {
-		SplitSelect<IntVar> sel = new SplitSelect<IntVar>(searchVars, var_sel, new IndomainMiddle<IntVar>());
+		SplitSelect<IntVar> sel = new SplitSelect<IntVar>(searchVars, getVarSelect(), new IndomainMiddle<IntVar>());
 		sel.leftFirst = false;
 		return sel;
 	    } else {
-                SplitSelect<IntVar> sel = new SplitSelect<IntVar>(searchVars, var_sel, tieBreaking, new IndomainMiddle<IntVar>());
+                SplitSelect<IntVar> sel = new SplitSelect<IntVar>(searchVars, getVarSelect(), tieBreaking, new IndomainMiddle<IntVar>());
                 sel.leftFirst = false;
                 return sel;
             }
         }  else if (indomain != null && indomain.equals("outdomain_max")) {
             if (tieBreaking == null) {
-                SplitSelect<IntVar> sel = new SplitSelect<IntVar>(searchVars, var_sel, new IndomainMax<IntVar>());
+                SplitSelect<IntVar> sel = new SplitSelect<IntVar>(searchVars, getVarSelect(), new IndomainMax<IntVar>());
                 return sel;
             } else {
-                SplitSelect<IntVar> sel = new SplitSelect<IntVar>(searchVars, var_sel, tieBreaking, new IndomainMax<IntVar>());
+                SplitSelect<IntVar> sel = new SplitSelect<IntVar>(searchVars, getVarSelect(), tieBreaking, new IndomainMax<IntVar>());
                 return sel;
             }
         }  else if (indomain != null && indomain.equals("outdomain_min")) {
             if (tieBreaking == null) {
-                SplitSelect<IntVar> sel = new SplitSelect<IntVar>(searchVars, var_sel, new IndomainMin<IntVar>());
+                SplitSelect<IntVar> sel = new SplitSelect<IntVar>(searchVars, getVarSelect(), new IndomainMin<IntVar>());
                 sel.leftFirst = false;
                 return sel;
             } else {
-                SplitSelect<IntVar> sel = new SplitSelect<IntVar>(searchVars, var_sel, tieBreaking, new IndomainMin<IntVar>());
+                SplitSelect<IntVar> sel = new SplitSelect<IntVar>(searchVars, getVarSelect(), tieBreaking, new IndomainMin<IntVar>());
                 sel.leftFirst = false;
                 return sel;
             }
@@ -341,9 +347,9 @@ public class SearchItem implements ParserTreeConstants {
 	} else {
             Indomain indom = getIndomain(indomain);
             if (tieBreaking == null)
-                return new SimpleSelect(search_variables, var_sel, indom);
+                return new SimpleSelect(search_variables, getVarSelect(), indom);
             else
-                return new SimpleSelect(search_variables, var_sel, tieBreaking, indom);
+                return new SimpleSelect(search_variables, getVarSelect(), tieBreaking, indom);
         }
     }
 
@@ -434,10 +440,10 @@ public class SearchItem implements ParserTreeConstants {
     public ComparatorVariable<IntVar> getVarSelect() {
 
         tieBreaking = null;
-        if (var_selection_heuristic == null || var_selection_heuristic.equals("random"))
+        if (var_selection_heuristic == null || var_selection_heuristic.equals("input_order"))
             return null;
-        else if (var_selection_heuristic.equals("input_order"))
-            return null;
+        else if (var_selection_heuristic.equals("random"))
+            throw new IllegalArgumentException("Error: random variable selection method not supported; execution aborted");
         else if (var_selection_heuristic.equals("first_fail"))
             return new SmallestDomain<IntVar>();
         else if (var_selection_heuristic.equals("anti_first_fail")) {
