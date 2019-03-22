@@ -314,6 +314,12 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
             return false;
     }
 
+    public void setVariables(T[] vs) {
+	vars = vs;
+	solutions = new Domain[1][vars.length];
+	parentSolutionNo = new int[1];
+    }
+
     @Override public String toString() {
 
         StringBuffer buf = new StringBuffer();

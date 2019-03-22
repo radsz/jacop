@@ -81,12 +81,19 @@ public class RestartSearch<T extends Var> {
 	
 	DepthFirstSearch<T> ns = search;
 	lastNotNullSearch = ns;
-	
+
 	do {
 
-	    if (ns instanceof PrioritySearch)
-		throw new RuntimeException("Error: PrioritySearch is not supported in RestartSearch; execution aborted");
-		    
+	    if (ns instanceof PrioritySearch) {
+		// throw new RuntimeException("Error: PrioritySearch is not supported in RestartSearch; execution aborted");
+		DepthFirstSearch[] dfs = ((PrioritySearch)ns).getSearchSeq();
+		for (int i = 0; i < dfs.length; i++) {
+		    ConsistencyListener cs = dfs[i].getConsistencyListener();
+		    dfs[i].setConsistencyListener(calculator);
+		    dfs[i].consistencyListener.setChildrenListeners(cs);
+		}
+	    }
+
 	    // add calculator & do not assign solutions
 	    ConsistencyListener cs = ns.getConsistencyListener();
 	    ns.setConsistencyListener(calculator);
@@ -117,6 +124,7 @@ public class RestartSearch<T extends Var> {
 	store.setLevel(store.level+1); 
 	boolean result = true, atLeastOneSolution = false;
 	while (result) {
+
 	    if (cost == null)
 		result = search.labeling(store, select);
 	    else
@@ -151,7 +159,7 @@ public class RestartSearch<T extends Var> {
 	    if (result)
 		numberRestarts++;
 	}
-	
+
 	store.removeLevel(store.level); 
 	store.setLevel(store.level-1);
 

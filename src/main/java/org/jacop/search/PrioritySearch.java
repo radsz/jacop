@@ -39,7 +39,6 @@ import org.jacop.constraints.XltC;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.constraints.PltC;
-import org.jacop.search.restart.CustomReport;
     
 import java.util.BitSet;
 import java.util.ArrayList;
@@ -83,9 +82,6 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     int solutionsLimit = -1; //Integer.MAX_VALUE;
     boolean solutionsReached = false;	
 	
-    CustomReport reportSolution = new CustomReport();
-	
-
     /**
      * It constructs a PrioritySearch variable ordering.
      *
@@ -113,13 +109,11 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 		throw new RuntimeException("heuristic in depth first search must be set");
 
 	    search[2*i+1] = new LinkingSearch<T>(this);
-	    // dfs[i].addChildSearch(search[2*i+1]);
 	    DepthFirstSearch last = lastSearch(dfs[i]);
 	    last.addChildSearch(search[2*i+1]);
 	    search[2*i+1].setMasterSearch(last);//dfs[i]);
 	}
 	this.allVars = getVariables();
-	reportSolution.addVariables(allVars);
 
     }
 
@@ -148,6 +142,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     public boolean labeling(Store store) {
 
         this.store = store;
+	((SimpleSolutionListener)solutionListener).setVariables(allVars);
 
 	for (DepthFirstSearch dfs: search)
 	    dfs.setStore(store);
@@ -169,6 +164,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         store.setLevel(store.level + 1);
         depth = store.level;
 
+	visited.clear();
 	int subSearch = getSubSearch();
 	visited.set(subSearch);
 
@@ -245,6 +241,8 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     public boolean labeling(Store store, Var costVar) {
 
 	this.store = store;
+	((SimpleSolutionListener)solutionListener).setVariables(allVars);
+
 	if (solutionsLimit == -1)
 	    solutionsLimit = Integer.MAX_VALUE;
 	
@@ -280,6 +278,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         store.setLevel(store.level + 1);
         depth = store.level;
 
+	visited.clear();
 	int subSearch = getSubSearch();
 	visited.set(subSearch);
 	
@@ -350,6 +349,8 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     public boolean labeling() {
 
 	this.store = allVars[0].getStore();
+	((SimpleSolutionListener)solutionListener).setVariables(allVars);
+
 	for(DepthFirstSearch dfs : search) 
 	    dfs.setStore(store);
 
@@ -393,6 +394,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         store.setLevel(store.level + 1);
         depth = store.level;
 
+	visited.clear();
 	int subSearch = getSubSearch();
 	visited.set(subSearch);
 	
@@ -543,10 +545,6 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     	return varsArray;
     }
 
-    public void addReporter(CustomReport r) {
-	reportSolution = r;
-    }
-
     public void setSolutionLimit(int no) {
 	solutionsLimit = no;
     }
@@ -559,6 +557,10 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 	    i++; 
 	}
 	return correct;
+    }
+
+    public DepthFirstSearch[] getSearchSeq() {
+	return search;
     }
     
     public String toString() {
@@ -656,6 +658,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 			 for (DepthFirstSearch child : (DepthFirstSearch[])master.childSearches) {
 			    childSearch = child;
 			    child.setStore(store);
+			    child.getSolutionListener().setParentSolutionListener(solutionListener);
 			    child.setCostVar(costVariable);
                             int currentChildSolutionNo = child.getSolutionListener().solutionsNo();
 
@@ -673,7 +676,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
 				    if (noSolutions >= solutionsLimit)
 					throw new SolutionsLimitReached();				    
-				    
+
 				    visited.set(index, false);
 				    return false;
 				}
@@ -693,11 +696,11 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 			constraineCost();
 			noSolutions++;
 
-			if (reportSolution != null)
-			    reportSolution.report();
-
 			if (noSolutions >= solutionsLimit)
 			    throw new SolutionsLimitReached();
+
+			((SimpleSolutionListener)master.getSolutionListener()).recordSolution();
+			master.solutionListener.executeAfterSolution(this, null);
 
 			visited.set(index, false);
 			return false;
@@ -708,6 +711,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 		    for (DepthFirstSearch child : (DepthFirstSearch[])master.childSearches) {
 			childSearch = child;
 			child.setStore(store);
+			child.getSolutionListener().setParentSolutionListener(solutionListener);
 			int currentChildSolutionNo = child.getSolutionListener().solutionsNo();
 
 			boolean result = child.labeling();
@@ -737,8 +741,8 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 		} else { // not optimization and no child search
 		    noSolutions++;
 
-		    if (reportSolution != null)
-			reportSolution.report();
+		    ((SimpleSolutionListener)master.getSolutionListener()).recordSolution();
+		    master.solutionListener.executeAfterSolution(this, null);
 
 		    if (noSolutions >= solutionsLimit)
 			throw new SolutionsLimitReached();

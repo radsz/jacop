@@ -231,13 +231,15 @@ public class Solve implements ParserTreeConstants {
 
 	    ArrayList<SearchItem> nsi = parseSearchAnnotations(si.search_seq);
 
-	    if (nsi.size() == 1) { // single search (int, set, float or seq) + other annotations (restart_*)
+	    if (nsi.size() == 1) { // single search (int, set, float, seq or priority) + other annotations (restart_*)
 		SearchItem fs = nsi.get(0);
 
 		kind = (ASTSolveKind) node.jjtGetChild(si.search_seqSize());
 		solveKind = getKind(kind.getKind());
 
-		if (fs.search_seq.size() > 0)
+		if (nsi.size() == 1)
+		    run_single_search(solveKind, kind, fs);
+		else if (fs.search_seq.size() > 0)
 		    run_sequence_search(solveKind, kind, fs);
 		else 
 		    run_single_search(solveKind, kind, fs);
@@ -262,7 +264,7 @@ public class Solve implements ParserTreeConstants {
 	    else if (s.search_type.equals("restart_constant") || s.search_type.equals("restart_linear") || s.search_type.equals("restart_geometric") ||
 		     s.search_type.equals("restart_luby"))
 		restartCalculator = s.restartCalculator;
-	    else if (s.search_type.endsWith("_search") && !s.search_type.equals("priority_search"))
+	    else if (s.search_type.endsWith("_search"))// && !s.search_type.equals("priority_search"))
 		ns.add(s);
 	    else
 		System.out.println("%% Warning: Not supported search annotation: "+s.search_type+"; ignored.");
@@ -971,8 +973,6 @@ public class Solve implements ParserTreeConstants {
             }
         }
 
-        // System.out.println("*** " + list_seq_searches);
-
         Result = false;
         Var cost = null;
         Var max_cost = null;
@@ -1376,7 +1376,7 @@ public class Solve implements ParserTreeConstants {
 	
         PrioritySearch<Var> label = new PrioritySearch(si.vars(), comparator, searches);
 	label.setPrintInfo(false);
-	label.addReporter(new PrioritySolutionReporter());
+	label.setSolutionListener(new CostListener<Var>());
 
         if (options.debug())
             label.setConsistencyListener(failStatistics);
@@ -1742,12 +1742,5 @@ public class Solve implements ParserTreeConstants {
         java.lang.management.ThreadMXBean b = java.lang.management.ManagementFactory.getThreadMXBean();
 	startCPU = b.getThreadCpuTime(tread.getId());
         timeMeter = b;
-    }
-
-    public class PrioritySolutionReporter extends CustomReport {
-
-	public void report() {
-	    printSolution();
-	}
     }
 }
