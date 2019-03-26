@@ -237,11 +237,9 @@ public class Solve implements ParserTreeConstants {
 		kind = (ASTSolveKind) node.jjtGetChild(si.search_seqSize());
 		solveKind = getKind(kind.getKind());
 
-		if (nsi.size() == 1)
-		    run_single_search(solveKind, kind, fs);
-		else if (fs.search_seq.size() > 0)
+		if (fs.type().equals("seq_search"))
 		    run_sequence_search(solveKind, kind, fs);
-		else 
+		else
 		    run_single_search(solveKind, kind, fs);
 	    }
 	    else {
@@ -1294,6 +1292,7 @@ public class Solve implements ParserTreeConstants {
 
         variable_selection = si.getIntSelect();
         DepthFirstSearch label = new DepthFirstSearch<Var>();
+	label.setAssignSolution(false);
 
         if (options.debug())
             label.setConsistencyListener(failStatistics);
@@ -1305,6 +1304,7 @@ public class Solve implements ParserTreeConstants {
 
         variable_selection = si.getSetSelect();
         DepthFirstSearch label = new DepthFirstSearch<Var>();
+	label.setAssignSolution(false);
 
         if (options.debug())
             label.setConsistencyListener(failStatistics);
@@ -1317,6 +1317,7 @@ public class Solve implements ParserTreeConstants {
         variable_selection = si.getFloatSelect();
 
         DepthFirstSearch<Var> label = new DepthFirstSearch<Var>();
+	label.setAssignSolution(false);
 
         if (options.debug())
             label.setConsistencyListener(failStatistics);
@@ -1339,7 +1340,7 @@ public class Solve implements ParserTreeConstants {
 	for (SearchItem s : dfs_s) {
 
 	    DepthFirstSearch<Var> subSearch = null;
-	    if (s.search_type.equals("int_search")) {
+	    if (s.search_type.equals("int_search") || s.search_type.equals("bool_search")) {
 		subSearch = int_search(s);
 		subSearch.setSelectChoicePoint(variable_selection);
 		subSearch.setPrintInfo(false);
@@ -1376,15 +1377,17 @@ public class Solve implements ParserTreeConstants {
 	
         PrioritySearch<Var> label = new PrioritySearch(si.vars(), comparator, searches);
 	label.setPrintInfo(false);
-	label.setSolutionListener(new CostListener<Var>());
+	label.setAssignSolution(false);
 
         if (options.debug())
             label.setConsistencyListener(failStatistics);
 
 	int to = options.getTimeOut();
-	if (to > 0)
+	if (to > 0) {
+	    label.setTimeOutMilliseconds(to);
 	    for (DepthFirstSearch s : searches)
 		s.setTimeOutMilliseconds(to);
+	}
 
 	if (options.getNumberSolutions() > 0)
 	    ((PrioritySearch)label).setSolutionLimit(options.getNumberSolutions());

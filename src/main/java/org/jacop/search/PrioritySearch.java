@@ -111,7 +111,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 	    search[2*i+1] = new LinkingSearch<T>(this);
 	    DepthFirstSearch last = lastSearch(dfs[i]);
 	    last.addChildSearch(search[2*i+1]);
-	    search[2*i+1].setMasterSearch(last);//dfs[i]);
+	    search[2*i+1].setMasterSearch(last);
 	}
 	this.allVars = getVariables();
 
@@ -549,16 +549,6 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 	solutionsLimit = no;
     }
 
-    public boolean assignSolution() {
-	boolean correct = true;
-	int i = 0;
-	while (correct && i < n) {
-	    correct = search[2*i].assignSolution();
-	    i++; 
-	}
-	return correct;
-    }
-
     public DepthFirstSearch[] getSearchSeq() {
 	return search;
     }
@@ -677,6 +667,8 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 				    if (noSolutions >= solutionsLimit)
 					throw new SolutionsLimitReached();				    
 
+				    master.solutionListener.executeAfterSolution(this, null);
+
 				    visited.set(index, false);
 				    return false;
 				}
@@ -687,6 +679,8 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 			constraineCostFromChild(childSearch);
 			if (noSolutions >= solutionsLimit)
 			    throw new SolutionsLimitReached();				    
+
+			master.solutionListener.executeAfterSolution(this, null);
 
 		    	visited.set(index, false);
 		    	return false;
@@ -699,7 +693,6 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 			if (noSolutions >= solutionsLimit)
 			    throw new SolutionsLimitReached();
 
-			((SimpleSolutionListener)master.getSolutionListener()).recordSolution();
 			master.solutionListener.executeAfterSolution(this, null);
 
 			visited.set(index, false);
@@ -726,6 +719,8 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 				if (noSolutions >= solutionsLimit)
 				    throw new SolutionsLimitReached();				    
 				    
+				master.solutionListener.executeAfterSolution(this, null);
+
 				visited.set(index, false);
 				return false;
 			    }
@@ -734,14 +729,15 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
 		    noSolutions += childSearch.getSolutionListener().solutionsNo();
 		    if (noSolutions >= solutionsLimit)
-			throw new SolutionsLimitReached();				    
-				    
+			throw new SolutionsLimitReached();
+
+		    master.solutionListener.executeAfterSolution(this, null);
+
 		    visited.set(index, false);
 		    return false;
 		} else { // not optimization and no child search
 		    noSolutions++;
 
-		    ((SimpleSolutionListener)master.getSolutionListener()).recordSolution();
 		    master.solutionListener.executeAfterSolution(this, null);
 
 		    if (noSolutions >= solutionsLimit)
