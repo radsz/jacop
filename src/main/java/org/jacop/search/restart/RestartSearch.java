@@ -70,6 +70,9 @@ public class RestartSearch<T extends Var> {
     double floatCostValue = Double.MAX_VALUE;
 
     int numberRestarts = 0;
+
+    boolean timeOutCheck = false;
+    long timeOut;
     
     @SuppressWarnings("unchecked") 
     public RestartSearch(Store store, DepthFirstSearch<T> s, SelectChoicePoint<T> sel, Calculator calculator, Var cost) {
@@ -85,13 +88,7 @@ public class RestartSearch<T extends Var> {
 	do {
 
 	    if (ns instanceof PrioritySearch) {
-		// throw new RuntimeException("Error: PrioritySearch is not supported in RestartSearch; execution aborted");
-		DepthFirstSearch[] dfs = ((PrioritySearch)ns).getSearchSeq();
-		for (int i = 0; i < dfs.length; i++) {
-		    ConsistencyListener cs = dfs[i].getConsistencyListener();
-		    dfs[i].setConsistencyListener(calculator);
-		    dfs[i].consistencyListener.setChildrenListeners(cs);
-		}
+		((PrioritySearch)ns).addRestartCalculator((PrioritySearch)ns, calculator);
 	    }
 
 	    // add calculator & do not assign solutions
@@ -135,9 +132,14 @@ public class RestartSearch<T extends Var> {
 	    int sl = ((SimpleSolutionListener)lastNotNullSearch.getSolutionListener()).solutionLimit;
 	    if (sl > 0 && search.getSolutionListener().solutionsNo() >= sl) 
 		return true;
+
+	    if (timeOutCheck && System.currentTimeMillis() > timeOut)
+		return true;
 	    
 	    if (result)	    
 		if (cost != null) {
+		    if (!calculator.pointsExhausted())
+			result = false;
 		    if (cost instanceof IntVar)
 			store.impose(new XltC((IntVar)cost, intCostValue));
 		    else if (cost instanceof FloatVar)
@@ -183,6 +185,16 @@ public class RestartSearch<T extends Var> {
 	return numberRestarts;
     }
     
+    public void setTimeOut(long tOut) {
+	timeOutCheck = true;
+	timeOut = System.currentTimeMillis() + tOut * 1000;
+    }
+
+    public void setTimeOutMilliseconds(long tOut) {
+	timeOutCheck = true;
+        timeOut = System.currentTimeMillis() + tOut;
+    }
+
     public class CostListener<T extends Var> extends SimpleSolutionListener<T> { 
  
    	public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) { 

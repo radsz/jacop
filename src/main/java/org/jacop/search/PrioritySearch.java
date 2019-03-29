@@ -39,7 +39,8 @@ import org.jacop.constraints.XltC;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.constraints.PltC;
-    
+import org.jacop.search.restart.Calculator;
+
 import java.util.BitSet;
 import java.util.ArrayList;
 import java.util.List;
@@ -105,7 +106,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 	for (int i = 0; i < n; i++) {
 	    
 	    search[2*i] = dfs[i];
-	    if (dfs[i].heuristic == null)
+	    if (!dfs[i].getClass().getName().equals("org.jacop.search.PrioritySearch") && dfs[i].heuristic == null)
 		throw new RuntimeException("heuristic in depth first search must be set");
 
 	    search[2*i+1] = new LinkingSearch<T>(this);
@@ -113,7 +114,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 	    last.addChildSearch(search[2*i+1]);
 	    search[2*i+1].setMasterSearch(last);
 	}
-	this.allVars = getVariables();
+	this.allVars = getVariables(this);
 
     }
 
@@ -241,6 +242,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     public boolean labeling(Store store, Var costVar) {
 
 	this.store = store;
+
 	((SimpleSolutionListener)solutionListener).setVariables(allVars);
 
 	if (solutionsLimit == -1)
@@ -523,28 +525,63 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 	return current;
     }
 
-    public T[] getVariables() {
+    public T[] getVariables(PrioritySearch ps) {
 
+	T[] varsArray;
     	List<T> vars = new ArrayList<>();
 
-	for (int i = 0; i < n; i++) {
-	    SelectChoicePoint<T> heuristic =  search[2*i].heuristic;
+	for (int i = 0; i < ps.search.length/2; i++) {
+	    SelectChoicePoint<T> heuristic =  ps.search[2*i].heuristic;
 
-	    java.util.Map<T, Integer> position = heuristic.getVariablesMapping();
+	    if (heuristic == null) {
+		// PrioritySearch
+		T[] vs = null;
+		for (int j = 0; j < ps.search.length/2; j++) {
+		    vs = getVariables((PrioritySearch)ps.search[2*j]);
 
-	    for (java.util.Iterator<T> itr = position.keySet().iterator(); itr.hasNext();) {
-		T current = itr.next();
-		vars.add(current);
+		}
+
+		varsArray = (T[]) new Var[vs.length];
+		for (int k = 0; k < vs.length; k++) 
+		    varsArray[k] = vs[k];
+
+	    } else {
+		java.util.Map<T, Integer> position = heuristic.getVariablesMapping();
+
+		for (java.util.Iterator<T> itr = position.keySet().iterator(); itr.hasNext();) {
+		    T current = itr.next();
+		    vars.add(current);
+		}
 	    }
 	}
 
-    	T[] varsArray = (T[]) new Var[vars.size()];
+    	varsArray = (T[]) new Var[vars.size()];
     	for (int i = 0; i < vars.size(); i++) 
-    	    varsArray[i] = vars.get(i);
+	    varsArray[i] = vars.get(i);
 
     	return varsArray;
     }
 
+    public void addRestartCalculator(DepthFirstSearch s, Calculator calc) {
+
+	DepthFirstSearch[] ns = null;
+	if (s instanceof PrioritySearch)
+	    ns  = ((PrioritySearch)s).getSearchSeq();
+	else
+	    ns = new DepthFirstSearch[] {s};
+
+	for (DepthFirstSearch dfs : ns)
+	    if (dfs instanceof PrioritySearch) {
+		for (int i = 0; i < ((PrioritySearch)dfs).search.length/2; i++) {
+	    	    addRestartCalculator(((PrioritySearch)dfs).search[2*i], calc);
+	    	}
+	    } else {
+		ConsistencyListener consist = dfs.getConsistencyListener();
+		dfs.setConsistencyListener(calc);
+		dfs.consistencyListener.setChildrenListeners(consist);
+	    }
+    }
+    
     public void setSolutionLimit(int no) {
 	solutionsLimit = no;
     }

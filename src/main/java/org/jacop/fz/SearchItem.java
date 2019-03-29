@@ -275,13 +275,8 @@ public class SearchItem implements ParserTreeConstants {
             SearchItem subSearch = new SearchItem(store, dictionary);
             subSearch.searchParameters(node, i);
 
-            // if (subSearch.search_variables != null && subSearch.search_variables.length > 0)
 	    search_seq.add(subSearch);
-	    // System.out.println(i+" : " + search_seq);
-	    // System.out.println("=======================");
-
         }
-	// System.out.println(search_seq);
     }
 
     SelectChoicePoint getSelect() {
@@ -389,7 +384,7 @@ public class SearchItem implements ParserTreeConstants {
 
 
     @SuppressWarnings("unchecked") SelectChoicePoint getSetSelect() {
-        ComparatorVariable<SetVar> var_sel = getsetVarSelect();
+        ComparatorVariable<SetVar> var_sel = getSetVarSelect();
         Indomain<SetVar> indom = getIndomain4Set(indomain);
         SetVar[] searchVars = new SetVar[search_variables.length];
         for (int i = 0; i < search_variables.length; i++)
@@ -445,7 +440,7 @@ public class SearchItem implements ParserTreeConstants {
         if (var_selection_heuristic == null || var_selection_heuristic.equals("input_order"))
             return null;
         else if (var_selection_heuristic.equals("random"))
-            throw new IllegalArgumentException("Error: random variable selection method not supported; execution aborted");
+	    return new RandomVar<IntVar>();
         else if (var_selection_heuristic.equals("first_fail"))
             return new SmallestDomain<IntVar>();
         else if (var_selection_heuristic.equals("anti_first_fail")) {
@@ -468,7 +463,6 @@ public class SearchItem implements ParserTreeConstants {
         else if (var_selection_heuristic.equals("max_regret"))
             return new MaxRegret<IntVar>();
         else if (var_selection_heuristic.equals("dom_w_deg")) {
-            // store.variableWeightManagement = true;
             return new WeightedDegree<IntVar>(store);
         } else if (var_selection_heuristic.equals("smallest_max")) {
             // does not follow flatzinc standard (JaCoP specific) ;)
@@ -571,6 +565,8 @@ public class SearchItem implements ParserTreeConstants {
             return new ActivityMinDeg<FloatVar>(store);
 	// for FloatVar's getSize() is not defined :(
 	// afc*_deg and activity*_deg cannot be used
+	else if (var_selection_heuristic.equals("random"))
+	    return new RandomVar<FloatVar>();
         else
             System.err
                 .println("Warning: Not implemented variable selection heuristic \"" + var_selection_heuristic + "\"; used input_order");
@@ -578,7 +574,7 @@ public class SearchItem implements ParserTreeConstants {
         return null; // input_order
     }
 
-    ComparatorVariable<SetVar> getsetVarSelect() {
+    ComparatorVariable<SetVar> getSetVarSelect() {
 
         tieBreaking = null;
         if (var_selection_heuristic == null)
@@ -628,6 +624,8 @@ public class SearchItem implements ParserTreeConstants {
             return new MaxLubCard<SetVar>();
             // 	else if (var_selection_heuristic.equals("max_regret"))
             // 	    return new MaxRegret();
+	else if (var_selection_heuristic.equals("random"))
+	    return new RandomVar<SetVar>();
         else
             System.err
                 .println("Warning: Not implemented variable selection heuristic \"" + var_selection_heuristic + "\"; used input_order");

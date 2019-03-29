@@ -486,6 +486,9 @@ public class Solve implements ParserTreeConstants {
                     if (options.runSearch())
 			if (restartCalculator != null) {
 			    rs = new RestartSearch<>(store, label, variable_selection, restartCalculator);
+			    int to = options.getTimeOut();
+			    if (to > 0)
+				rs.setTimeOutMilliseconds(to);
 			    Result = rs.labeling();
 			}
 			else
@@ -514,6 +517,9 @@ public class Solve implements ParserTreeConstants {
                     if (options.runSearch())
 			if (restartCalculator != null) {
 			    rs = new RestartSearch<>(store, label, variable_selection, restartCalculator, cost);
+			    int to = options.getTimeOut();
+			    if (to > 0)
+				rs.setTimeOutMilliseconds(to);
 			    Result = rs.labeling();
 			}
 			else
@@ -546,6 +552,9 @@ public class Solve implements ParserTreeConstants {
                     if (options.runSearch())
 			if (restartCalculator != null) {
 			    rs = new RestartSearch<>(store, label, variable_selection, restartCalculator, max_cost);
+			    int to = options.getTimeOut();
+			    if (to > 0)
+				rs.setTimeOutMilliseconds(to);
 			    Result = rs.labeling();
 			}
 			else
@@ -1369,12 +1378,16 @@ public class Solve implements ParserTreeConstants {
 		} while (ns != null);
 		
 		searches[i++] = subSearch;
+	    } else if (s.search_type.equals("priority_search")) {
+		subSearch = priority_search(s);
+		subSearch.setPrintInfo(false);
+		searches[i++] = subSearch;
 	    } else
-		throw new RuntimeException("Error: Not supported search type in priority_search; execution aborted");
+		throw new RuntimeException("Error: Not supported search type " + s.search_type + "in priority_search; execution aborted");
 	}
 
 	ComparatorVariable<IntVar> comparator = comparator = si.getVarSelect();
-	
+
         PrioritySearch<Var> label = new PrioritySearch(si.vars(), comparator, searches);
 	label.setPrintInfo(false);
 	label.setAssignSolution(false);
