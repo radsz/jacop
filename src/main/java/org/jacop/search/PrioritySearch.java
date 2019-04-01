@@ -172,7 +172,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         if (result) {
 
 	    try {
-		result = search[2*subSearch].label(0);
+		result = search[2*subSearch].labeling();
 	    }
 	    catch (SolutionsLimitReached e) {
 		solutionsReached = true;
