@@ -30,6 +30,7 @@
 
 package org.jacop.floats.search;
 
+import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.search.ComparatorVariable;
@@ -46,6 +47,12 @@ import org.jacop.search.ComparatorVariable;
  */
 
 public class WeightedDegreeFloat<T extends Var> implements ComparatorVariable<T> {
+
+    private WeightedDegreeFloat() {}
+
+    public WeightedDegreeFloat(Store store) {
+	store.variableWeightManagement = true;
+    }
 
     public int compare(float left, T var) {
 

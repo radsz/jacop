@@ -108,7 +108,10 @@ class GlobalConstraints implements ParserTreeConstants {
         else if (s.length == 1)
             support.pose(new XlteqY(r[0], b));
         else if (b.max() == 1)  // cumulative unary
-            support.delayedConstraints.add(new CumulativeUnary(s, d, r, b, true));
+	    if (allVarOne(d) && allVarOne(r))
+		support.pose(new Alldiff(s));
+	    else
+		support.delayedConstraints.add(new CumulativeUnary(s, d, r, b, true));
         else {
             int min = Math.min(r[0].min(), r[1].min());
             int nextMin = Math.max(r[0].min(), r[1].min());
@@ -1045,7 +1048,7 @@ class GlobalConstraints implements ParserTreeConstants {
 
     boolean allVarOne(IntVar[] w) {
         for (int i = 0; i < w.length; i++)
-            if (w[i].min() != 1)
+            if (!w[i].singleton(1))
                 return false;
         return true;
     }

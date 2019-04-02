@@ -479,13 +479,18 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
     }
 
+    @Override
+    public boolean label(int n) {
+	 throw new RuntimeException("Method label is not defined for PrioritySearch.");
+    }
+
     public void getStatistics() {
 
 	nodes = java.util.Arrays.stream(search).mapToInt(i -> i.nodes).sum();
 	decisions = java.util.Arrays.stream(search).mapToInt(i -> i.decisions).sum();
 	wrongDecisions = java.util.Arrays.stream(search).mapToInt(i -> i.wrongDecisions).sum();
 	numberBacktracks = java.util.Arrays.stream(search).mapToInt(i -> i.numberBacktracks).sum();
-	maxDepthExcludePaths = java.util.Arrays.stream(search).mapToInt(i -> i.maxDepthExcludePaths).sum(); //java.util.Arrays.stream(search).mapToInt(i -> i.maxDepthExcludePaths).reduce(Integer.MIN_VALUE, (a, b) -> Integer.max(a, b)); // wrong; one has to sum up all depth from all searches
+	maxDepthExcludePaths = java.util.Arrays.stream(search).mapToInt(i -> i.getMaximumDepth()).sum();//java.util.Arrays.stream(search).mapToInt(i -> i.maxDepthExcludePaths).reduce(Integer.MIN_VALUE, (a, b) -> Integer.max(a, b)); // wrong; one has to sum up all depth from all searches
     }
     
     String statistics() {
