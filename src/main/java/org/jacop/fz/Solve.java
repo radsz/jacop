@@ -657,8 +657,8 @@ public class Solve implements ParserTreeConstants {
 
         if (options.getStatistics()) {
 
-	    if (si.type() != null && si.type().equals("priority_search"))
-		((PrioritySearch)label).getStatistics();
+	    // if (si.type() != null && si.type().equals("priority_search"))
+	    // 	((PrioritySearch)label).getStatistics();
 
             int nodes = 0, //label.getNodes(),
                 decisions = 0, //label.getDecisions(),
@@ -673,7 +673,7 @@ public class Solve implements ParserTreeConstants {
                 wrong = label.getWrongDecisions();
                 backtracks = label.getBacktracks();
                 depth = label.getMaximumDepth();
-                solutions = (label != null && label instanceof PrioritySearch) ? ((PrioritySearch)label).noSolutions() : label.getSolutionListener().solutionsNo();
+                solutions = label.getSolutionListener().solutionsNo();
             }
 
             for (DepthFirstSearch<Var> l : final_search) {
@@ -1020,8 +1020,10 @@ public class Solve implements ParserTreeConstants {
 			    rs = new RestartSearch<>(store, masterLabel, masterSelect, restartCalculator);
 			    Result = rs.labeling();
 			}
-			else
+			else {
+			    label = masterLabel;
 			    Result = masterLabel.labeling(store, masterSelect);
+			}
                     else {
                         // storing flatiznc defined search
                         flatzincDFS = masterLabel;
@@ -1051,9 +1053,11 @@ public class Solve implements ParserTreeConstants {
                         list_seq_searche.setOptimize(true);
 
                     if (ns > 0) {
-                        for (int i = 0; i < list_seq_searches.size() - 1; i++)
+                        for (int i = 0; i < list_seq_searches.size() - 1; i++) {
                             ((DepthFirstSearch) list_seq_searches.get(i)).respectSolutionListenerAdvice = true;
-                        final_search_seq.getSolutionListener().setSolutionLimit(ns);
+			    ((DepthFirstSearch) list_seq_searches.get(i)).getSolutionListener().setSolutionLimit(ns);
+			}
+			final_search_seq.getSolutionListener().setSolutionLimit(ns);
                         ((DepthFirstSearch) final_search_seq).respectSolutionListenerAdvice = true;
                     }
 
@@ -1062,8 +1066,10 @@ public class Solve implements ParserTreeConstants {
 			    rs = new RestartSearch<>(store, masterLabel, masterSelect, restartCalculator, cost);
 			    Result = rs.labeling();
 			}
-			else
+			else {
+			    label = masterLabel;
 			    Result = masterLabel.labeling(store, masterSelect, cost);
+			}
                     else {
                         // storing flatiznc defined search
                         flatzincDFS = masterLabel;
@@ -1108,8 +1114,10 @@ public class Solve implements ParserTreeConstants {
 			    rs = new RestartSearch<>(store, masterLabel, masterSelect, restartCalculator, max_cost);
 			    Result = rs.labeling();
 			}
-			else
+			else {
+			    label = masterLabel;
 			    Result = masterLabel.labeling(store, masterSelect, max_cost);
+			}
                     else {
                         // storing flatiznc defined search
                         flatzincDFS = masterLabel;
@@ -1470,12 +1478,12 @@ public class Solve implements ParserTreeConstants {
 
 	if (options.getVerbose()) {
 	    // print number of search nodes and CPU time for this solution
-	    if (si.type() != null && si.type().equals("priority_search"))
-		((PrioritySearch)label).getStatistics();
-
 	    int nodes=0;
-	    for (Search<Var> label : list_seq_searches) 
-		nodes += label.getNodes();
+	    DepthFirstSearch dfs = label;
+	    while (dfs != null) {
+		nodes += dfs.getNodes();
+		dfs = (dfs.childSearches == null) ? null : (DepthFirstSearch)dfs.childSearches[0];
+	    }
 	    
 	    double cpuTime = getSearchTime_ms();
 	    printBuffer.append(String.format("%%%% Search nodes : %,d", nodes));

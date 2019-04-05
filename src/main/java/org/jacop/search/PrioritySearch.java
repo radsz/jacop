@@ -362,9 +362,11 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 		dfs.respectSolutionListenerAdvice = true;
 		dfs.costVariable = costVariable;
 	    }
-	    solutionsLimit = Integer.MAX_VALUE;
 	    optimize = true;
 	    cost = null;
+
+	    if (solutionsLimit == -1)
+		solutionsLimit = Integer.MAX_VALUE;
 	}
 	
         boolean raisedLevel = false;
@@ -484,13 +486,74 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 	 throw new RuntimeException("Method label is not defined for PrioritySearch.");
     }
 
+    @Override
+    public int getNodes() {
+	nodes = 0;
+	for (DepthFirstSearch<Var> l : search) {
+	    nodes += l.getNodes();
+
+	    if (l.childSearches != null)
+		nodes += l.childSearches[0].getNodes();
+	}
+	return nodes;
+    }
+
+    @Override
+    public int getDecisions() {
+	decisions = 0;
+	for (DepthFirstSearch<Var> l : search) {
+	    decisions += l.getDecisions();
+
+	    if (l.childSearches != null)
+		decisions += l.childSearches[0].getDecisions();
+	}
+	return decisions;
+    }
+
+    @Override
+    public int getWrongDecisions() {
+	wrongDecisions = 0;
+	for (DepthFirstSearch<Var> l : search) {
+	    wrongDecisions += l.getWrongDecisions();
+
+	    if (l.childSearches != null)
+		wrongDecisions += l.childSearches[0].getWrongDecisions();
+	}
+	return wrongDecisions;
+    }
+
+    @Override
+    public int getBacktracks() {
+	numberBacktracks = 0;
+	for (DepthFirstSearch<Var> l : search) {
+	    numberBacktracks += l.getBacktracks();
+
+	    if (l.childSearches != null)
+		numberBacktracks += l.childSearches[0].getBacktracks();
+	}
+	return numberBacktracks;
+    }
+
+    @Override
+    public int getMaximumDepth() {
+	maxDepthExcludePaths = 0;
+	for (DepthFirstSearch<Var> l : search) {
+	    maxDepthExcludePaths += l.getMaximumDepth();
+
+	    if (l.childSearches != null)
+		maxDepthExcludePaths += l.childSearches[0].getMaximumDepth();
+
+	}
+	return maxDepthExcludePaths;
+    }
+
     public void getStatistics() {
 
-	nodes = java.util.Arrays.stream(search).mapToInt(i -> i.nodes).sum();
-	decisions = java.util.Arrays.stream(search).mapToInt(i -> i.decisions).sum();
-	wrongDecisions = java.util.Arrays.stream(search).mapToInt(i -> i.wrongDecisions).sum();
-	numberBacktracks = java.util.Arrays.stream(search).mapToInt(i -> i.numberBacktracks).sum();
-	maxDepthExcludePaths = java.util.Arrays.stream(search).mapToInt(i -> i.getMaximumDepth()).sum();//java.util.Arrays.stream(search).mapToInt(i -> i.maxDepthExcludePaths).reduce(Integer.MIN_VALUE, (a, b) -> Integer.max(a, b)); // wrong; one has to sum up all depth from all searches
+	nodes = getNodes();
+	decisions = getDecisions();
+	wrongDecisions = getWrongDecisions();
+	numberBacktracks = getBacktracks();
+	maxDepthExcludePaths = getMaximumDepth();
     }
     
     String statistics() {
