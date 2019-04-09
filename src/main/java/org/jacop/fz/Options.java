@@ -120,7 +120,10 @@ public class Options {
                 // decode options
                 if (args[i].equals("-a") || args[i].equals("--all-solutions") || args[i].equals("--all")) {
                     all = true;
-		    number_solutions = Integer.MAX_VALUE;
+		    if (number_solutions == -1)
+			number_solutions = Integer.MAX_VALUE;
+		    else
+			System.err.println("%% Option -a ignored since number of solutions has been specified by option -n");
                     i++;
                 } else if (args[i].equals("-t") || args[i].equals("--time-out")) {
                     time_out = Integer.parseInt(args[++i]);
@@ -132,6 +135,8 @@ public class Options {
                     use_sat = true;
                     i++;
                 } else if (args[i].equals("-n") || args[i].equals("--num-solutions")) {
+		    if (number_solutions == Integer.MAX_VALUE)
+			System.err.println("%% Option -a ignored since number of solutions has been specified by option -n");
                     number_solutions = Integer.parseInt(args[++i]);
                     if (number_solutions > 1)
                         all = true;

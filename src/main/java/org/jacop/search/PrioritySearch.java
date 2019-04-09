@@ -94,8 +94,8 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     public PrioritySearch(T[] priority, ComparatorVariable<T> comparator, DepthFirstSearch<T>[] dfs) {
 	int pLength = priority.length;
 	int vLength = dfs.length;
-	if (pLength != vLength || pLength < 2)
-	    throw new RuntimeException("length of priority variables and depth first searches must be the same and greater than 2");
+	if (pLength != vLength)
+	    throw new RuntimeException("length of priority variables and depth first searches must be the same");
 
 	n = priority.length;
 	this.priority = priority;
