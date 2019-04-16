@@ -31,13 +31,10 @@
 package org.jacop.search;
 
 import org.jacop.core.Store;
-import org.jacop.core.FailException;
 import org.jacop.core.Var;
 import org.jacop.core.IntVar;
-import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.XltC;
 import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.constraints.PltC;
 import org.jacop.search.restart.Calculator;
 
@@ -388,7 +385,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
         // Iterative Solution listener sets it to zero so it can find the next batch, so it has to be executed
         // after initialize listener.
-        int solutionNoBeforeSearch = solutionListener.solutionsNo();
+        // int solutionNoBeforeSearch = solutionListener.solutionsNo();
 
         // If constraints employ only one time execution of the part of
         // the consistency technique then the results of that part must be
@@ -609,9 +606,8 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
 		}
 
-		varsArray = (T[]) new Var[vs.length];
 		for (int k = 0; k < vs.length; k++) 
-		    varsArray[k] = vs[k];
+		    vars.add(vs[k]);
 
 	    } else {
 		java.util.Map<T, Integer> position = heuristic.getVariablesMapping();
