@@ -533,16 +533,16 @@ class ComparisonConstraints implements ParserTreeConstants {
                             v2.domain.inComplement(store.level, v2, i1);
                             break;
                         case Support.lt:
-                            v2.domain.in(store.level, v2, i1 + 1, IntDomain.MaxInt);
+                            v2.domain.inMin(store.level, v2, i1 + 1);
                             break;
                         case Support.gt:
-                            v2.domain.in(store.level, v2, IntDomain.MinInt, i1 - 1);
+                            v2.domain.inMax(store.level, v2, i1 - 1);
                             break;
                         case Support.le:
-                            v2.domain.in(store.level, v2, i1, IntDomain.MaxInt);
+                            v2.domain.inMin(store.level, v2, i1);
                             break;
                         case Support.ge:
-                            v2.domain.in(store.level, v2, IntDomain.MinInt, i1);
+                            v2.domain.inMax(store.level, v2, i1);
                             break;
                         default:
                             throw new RuntimeException("Internal error in " + getClass().getName());
@@ -566,16 +566,16 @@ class ComparisonConstraints implements ParserTreeConstants {
                             v1.domain.inComplement(store.level, v1, i2);
                             break;
                         case Support.lt:
-                            v1.domain.in(store.level, v1, IntDomain.MinInt, i2 - 1);
+                            v1.domain.inMax(store.level, v1, i2 - 1);
                             break;
                         case Support.gt:
-                            v1.domain.in(store.level, v1, i2 + 1, IntDomain.MaxInt);
+                            v1.domain.inMin(store.level, v1, i2 + 1);
                             break;
                         case Support.le:
-                            v1.domain.in(store.level, v1, IntDomain.MinInt, i2);
+                            v1.domain.inMax(store.level, v1, i2);
                             break;
                         case Support.ge:
-                            v1.domain.in(store.level, v1, i2, IntDomain.MaxInt);
+                            v1.domain.inMin(store.level, v1, i2);
                             break;
                         default:
                             throw new RuntimeException("Internal error in " + getClass().getName());
