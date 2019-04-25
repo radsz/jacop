@@ -88,7 +88,26 @@ public class XplusYplusCeqZ extends PrimitiveConstraint {
         this.c = c;
         this.z = z;
 
+	checkForOverflow();
+
         setScope(x, y, z);
+    }
+
+    void checkForOverflow() {
+
+        int sumMin = 0, sumMax = 0;
+
+        sumMin = Math.addExact(sumMin, x.min());
+        sumMax = Math.addExact(sumMax, x.max());
+
+        sumMin = Math.addExact(sumMin, y.min());
+        sumMax = Math.addExact(sumMax, y.max());
+
+        sumMin = Math.addExact(sumMin, c);
+        sumMax = Math.addExact(sumMax, c);
+
+        Math.subtractExact(sumMin, z.max());
+        Math.subtractExact(sumMax, z.min());
     }
 
     @Override public void consistency(final Store store) {

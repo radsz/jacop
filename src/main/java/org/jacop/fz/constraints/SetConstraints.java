@@ -39,6 +39,7 @@ import org.jacop.fz.ASTScalarFlatExpr;
 import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
 import org.jacop.set.constraints.*;
+import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
 
@@ -230,8 +231,8 @@ class SetConstraints implements ParserTreeConstants {
         SetVar v2 = support.getSetVariable(node, 1);
         SetVar v3 = support.getSetVariable(node, 2);
 
-        SetVar t1 = new SetVar(store, new BoundSetDomain(IntDomain.MinInt, IntDomain.MaxInt));
-        SetVar t2 = new SetVar(store, new BoundSetDomain(IntDomain.MinInt, IntDomain.MaxInt));
+        SetVar t1 = new SetVar(store, new BoundSetDomain(SetDomain.MinElement, SetDomain.MaxElement));
+	SetVar t2 = new SetVar(store, new BoundSetDomain(SetDomain.MinElement, SetDomain.MaxElement));
 
         support.pose(new AdiffBeqC(v1, v2, t1));
 

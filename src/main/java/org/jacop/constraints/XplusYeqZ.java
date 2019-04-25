@@ -104,6 +104,12 @@ public class XplusYeqZ extends PrimitiveConstraint {
 
             } else {
 
+		// for large domains (for example, Integer.MIN_VALUE..Integer.MAX_VALUE) uncomment three lines below,
+		// comment three lines after uncommented lines and checkForOverlow in the constructor
+                // x.domain.in(store.level, x, IntDomain.subtractInt(z.min(), y.max()), IntDomain.subtractInt(z.max(), y.min()));
+                // y.domain.in(store.level, y, IntDomain.subtractInt(z.min(), x.max()), IntDomain.subtractInt(z.max(), x.min()));
+                // z.domain.in(store.level, z, IntDomain.addInt(x.min(), y.min()), IntDomain.addInt(x.max(), y.max()));
+
                 x.domain.in(store.level, x, z.min() - y.max(), z.max() - y.min());
                 y.domain.in(store.level, y, z.min() - x.max(), z.max() - x.min());
                 z.domain.in(store.level, z, x.min() + y.min(), x.max() + y.max());
