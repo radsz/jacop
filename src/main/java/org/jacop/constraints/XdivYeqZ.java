@@ -82,7 +82,7 @@ public class XdivYeqZ extends Constraint implements SatisfiedPresent {
         this.y = y;
         this.z = z;
 
-        checkForOverflow();
+        // checkForOverflow();
 
         setScope(x, y, z);
 
@@ -126,8 +126,8 @@ public class XdivYeqZ extends Constraint implements SatisfiedPresent {
             int xMin = xBounds.min();
             int xMax = xBounds.max();
 
-            int rMin = x.min() - xMax;
-            int rMax = x.max() - xMin;
+            int rMin = IntDomain.subtractInt(x.min(), xMax);
+            int rMax = IntDomain.subtractInt(x.max(), xMin);
 
             if (reminderMin > rMin)
                 rMin = reminderMin;
@@ -136,7 +136,7 @@ public class XdivYeqZ extends Constraint implements SatisfiedPresent {
             if (rMin > rMax)
                 throw Store.failException;
 
-            x.domain.in(store.level, x, xMin + rMin, xMax + rMax);
+            x.domain.in(store.level, x, IntDomain.addInt(xMin, rMin), IntDomain.addInt(xMax, rMax));
 
         } while (store.propagationHasOccurred);
 
@@ -155,14 +155,14 @@ public class XdivYeqZ extends Constraint implements SatisfiedPresent {
         return id() + " : XdivYeqZ(" + x + ", " + y + ", " + z + " )";
     }
 
-    private void checkForOverflow() {
+    // private void checkForOverflow() {
 
-        Math.multiplyExact(z.min(), y.min());
-        Math.multiplyExact(z.min(), y.max());
-        Math.multiplyExact(z.max(), y.min());
-        Math.multiplyExact(z.max(), y.max());
+    //     Math.multiplyExact(z.min(), y.min());
+    //     Math.multiplyExact(z.min(), y.max());
+    //     Math.multiplyExact(z.max(), y.min());
+    //     Math.multiplyExact(z.max(), y.max());
 
-    }
+    // }
 
     int div(int a, int b) {
         return (int) Math.floor((float) a / (float) b);
