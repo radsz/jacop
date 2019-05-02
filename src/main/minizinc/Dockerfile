@@ -55,7 +55,7 @@ cp -r /jacop/src/main/minizinc/org/jacop/minizinc/* /entry_data/mzn-lib/
 RUN \
     echo "#!/bin/bash                                 " >  /entry_data/fzn-exec && \
     echo "#------------------------------------------#" >> /entry_data/fzn-exec && \
-    echo "exec java -server -cp /jacop/target/jacop-*-SNAPSHOT.jar -Xmx10G -Xms10M org.jacop.fz.Fz2jacop \"\$@\" " >> /entry_data/fzn-exec && \
+    echo "exec java -server -cp /jacop/target/jacop-*-SNAPSHOT.jar -Xmx10G -Xms100M org.jacop.fz.Fz2jacop -cs \"\$@\" " >> /entry_data/fzn-exec && \
     chmod a+x /entry_data/fzn-exec
 
 
