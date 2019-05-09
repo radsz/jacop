@@ -34,6 +34,9 @@ import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Store;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -89,11 +92,11 @@ public class XmodYeqZ extends Constraint implements SatisfiedPresent {
         int resultMin = IntDomain.MinInt;
         int resultMax = IntDomain.MaxInt;
 
+	y.domain.inComplement(store.level, y, 0);
+
         do {
 
             store.propagationHasOccurred = false;
-
-            y.domain.inComplement(store.level, y, 0);
 
             // Compute bounds for reminder
 
@@ -104,22 +107,51 @@ public class XmodYeqZ extends Constraint implements SatisfiedPresent {
                 reminderMax = Math.max(Math.abs(y.min()), Math.abs(y.max())) - 1;
 
                 reminderMax = Math.min(reminderMax, x.max());
+
             } else if (x.max() < 0) {
                 reminderMax = 0;
                 reminderMin = -Math.max(Math.abs(y.min()), Math.abs(y.max())) + 1;
 
                 reminderMin = Math.max(reminderMin, x.min());
+
             } else {
                 reminderMin = Math.min(Math.min(y.min(), -y.min()), Math.min(y.max(), -y.max())) + 1;
                 reminderMax = Math.max(Math.max(y.min(), -y.min()), Math.max(y.max(), -y.max())) - 1;
 
                 reminderMin = Math.max(reminderMin, x.min());
                 reminderMax = Math.min(reminderMax, x.max());
+
             }
 
-            z.domain.in(store.level, z, reminderMin, reminderMax);
+	    z.domain.in(store.level, z, reminderMin, reminderMax);
 
-            if (!(y.min() <= 0 && y.max() >= 0)) {
+	    if (y.singleton()) {
+	    	if (x.domain.getSize() < 100) {
+	    	    // domain consistency method for small domains of x
+	    	    int absY = Math.abs(y.value());
+	    	    IntDomain d = makeDomain(x, absY, z);
+	    	    x.domain.in(store.level, x, d);
+	    	}
+	    	else {
+		    // bound consistency
+		    int absY = Math.abs(y.value());
+		    if (!z.domain.contains(x.min() % y.max()))
+			x.domain.inMin(store.level, x, x.min() + 1);
+		    else if (!z.domain.contains(x.max() % y.max()))
+			x.domain.inMax(store.level, x, x.max() - 1);
+	    	}
+	    }
+	    
+	    if (x.singleton())
+	    	if (! z.domain.contains(x.value() % y.min()))
+	    	    y.domain.inMin(store.level, y, y.min() + 1);
+	    	else if (! z.domain.contains(x.value() % y.max()))
+	    	    y.domain.inMin(store.level, y, y.max() - 1);
+	    
+	    reminderMin = z.min();
+	    reminderMax = z.max();
+
+	    if (!(y.min() <= 0 && y.max() >= 0)) {
 
                 // Bounds for result
                 int oldResultMin = resultMin, oldResultMax = resultMax;
@@ -152,9 +184,22 @@ public class XmodYeqZ extends Constraint implements SatisfiedPresent {
             assert checkSolution(resultMin, resultMax) == null : checkSolution(resultMin, resultMax);
 
         } while (store.propagationHasOccurred);
-
     }
 
+    IntDomain makeDomain(IntVar x, int y, IntVar z) {
+	IntervalDomain d = new IntervalDomain();
+	IntDomain zDom = z.dom();
+	for (ValueEnumeration e = x.domain.valueEnumeration(); e.hasMoreElements(); ) {
+	    int val = e.nextElement();
+	    if (zDom.contains(val % y))
+		if (d.getSize() == 0)
+		    d.unionAdapt(val);
+		else
+		    d.addLastElement(val);
+	}
+	return d;
+    }
+    
     @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
     }
