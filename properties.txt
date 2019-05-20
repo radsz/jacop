@@ -24,3 +24,5 @@ flatzinc compiler specific:
  flatzinc compiler pairwaise task disjunction constraints for all
  pairs of tasks that have sum of resource capacities greater than the
  cumulative capacity bound; default=false
+- fz_system_timer: if =true use System.nonoTime instead of ManagementFactory
+ timer threads, otherwise use thread time.

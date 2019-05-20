@@ -66,8 +66,7 @@ public class Solve implements ParserTreeConstants {
     Store store;
     int initNumberConstraints;
 
-    Thread tread;
-    java.lang.management.ThreadMXBean timeMeter;
+    Timer timer;
     long startCPU;
     long initTime=0;
     long searchTime=0;
@@ -437,7 +436,7 @@ public class Solve implements ParserTreeConstants {
 
         Result = false;
 
-	long currentTime = timeMeter.getThreadCpuTime(tread.getId());
+	long currentTime = timer.getCPUTime();
 	initTime = currentTime - startCPU;
         startCPU = currentTime;
 
@@ -987,7 +986,7 @@ public class Solve implements ParserTreeConstants {
 
         final_search_seq = list_seq_searches.get(list_seq_searches.size() - 1);
 
-	long currentTime = timeMeter.getThreadCpuTime(tread.getId());
+	long currentTime = timer.getCPUTime();
 	initTime = currentTime - startCPU;
         startCPU = currentTime;
 
@@ -1213,7 +1212,7 @@ public class Solve implements ParserTreeConstants {
     }
 
     double getSearchTime_ms() {
-	searchTime = timeMeter.getThreadCpuTime(tread.getId())  - startCPU;
+	searchTime = timer.getCPUTime()  - startCPU;
         return searchTime / (long) 1e+6;
     }
 
@@ -1761,10 +1760,15 @@ public class Solve implements ParserTreeConstants {
 
     }
 
+    final static String p = System.getProperty("fz_system_timer");
+
     void startTimer() {
-        tread = java.lang.Thread.currentThread();
-        java.lang.management.ThreadMXBean b = java.lang.management.ManagementFactory.getThreadMXBean();
-	startCPU = b.getThreadCpuTime(tread.getId());
-        timeMeter = b;
+	
+	if (p != null && p.equals("true")) 
+	    timer = new SystemTimer();
+	else
+	    timer = new ThreadTimer();
+
+	startCPU = timer.getCPUTime();
     }
 }
