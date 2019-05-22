@@ -17,12 +17,13 @@ Java specific:
 flatzinc compiler specific:
 ===========================
 - fz_cumulative_use_unary: during constraints generation in flatzinc
- compiler use CumulativeUnary for tasks that have resource capacity
- greater than half of the cumulative capacity bound; default=false
+  compiler use CumulativeUnary for tasks that have resource capacity
+  greater than half of the cumulative capacity bound; default=false
 
 - fz_cumulative_use_disjunctions: during constraints generation in
- flatzinc compiler pairwaise task disjunction constraints for all
- pairs of tasks that have sum of resource capacities greater than the
- cumulative capacity bound; default=false
+  flatzinc compiler pairwaise task disjunction constraints for all
+  pairs of tasks that have sum of resource capacities greater than the
+  cumulative capacity bound; default=false
+
 - fz_system_timer: if =true use System.nonoTime instead of ManagementFactory
- timer threads, otherwise use thread time.
+  timer for threads, otherwise use thread time.
