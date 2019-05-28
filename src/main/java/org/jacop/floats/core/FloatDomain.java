@@ -58,6 +58,11 @@ public abstract class FloatDomain extends Domain {
     /**
      * It specifies the constant pi, as defined in java.lang.Math package.
      */
+    public static double minimizationStep = 0;
+
+    /**
+     * It specifies the constant pi, as defined in java.lang.Math package.
+     */
     public static final double PI = java.lang.Math.PI;
 
     /**
@@ -201,6 +206,20 @@ public abstract class FloatDomain extends Domain {
     // supposed to be used by methods for domain computations
     public static double previous(double d) {
         return downBit(d); //d - ulp(d);
+    }
+
+    // Sets optimization step for floating point optimization
+    public static void setStep(double s) {
+	minimizationStep = s;
+    }
+    
+    // returns previous floating-point number before d 
+    // for minimization with FloatVar cost function
+    public static double previousForMinimization(double d) {
+	if (minimizationStep == 0)
+	    return previous(d);
+	else
+	    return d - minimizationStep;// + upBit(d);
     }
 
     // returns next (toward inf) floating-point number after d 

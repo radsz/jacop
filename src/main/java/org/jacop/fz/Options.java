@@ -71,6 +71,8 @@ public class Options {
     boolean complementary_search = false;
 
     float decay = 0.99f;
+
+    double step = 0.0d;
     
     boolean debug = false;
 
@@ -107,8 +109,9 @@ public class Options {
                     + "    -f <value>, --format <value> defines format (number digits after decimal point)\n"
                     + "        for floating variables.\n"
 		    + "    -o, --outputfile defines file for solver output\n"
-		    + "    -d, --decay decay factor for accumulated failure count (afc)\n"
-		    + "         and activity-based variable selection heuristic")
+ 		    + "    -d, --decay decay factor for accumulated failure count (afc)\n"
+		    + "         and activity-based variable selection heuristic\n"
+		    + "    --step <value> distance step for cost function for floating-point optimization")
 		    ;
                 System.exit(0);
             } else { // input file
@@ -182,6 +185,14 @@ public class Options {
                     decay = Float.parseFloat(args[++i]);
 		    if (decay < 0.0f || decay > 1.0f)
 			System.err.println("%% Decay parameter incorrect; assumed default value 0.99");
+		    i++;
+                } else if (args[i].equals("--step")) {
+                    step = Double.parseDouble(args[++i]);
+		    if (step < 0.0f) {
+			System.err.println("%% Step for floating-point optimization is incorrect; assumed default step");
+			step = 0.0d;
+		    }
+		    FloatDomain.setStep(step);
 		    i++;
 		} else {
                     System.out.println("fz2jacop: not recognized option " + args[i]);

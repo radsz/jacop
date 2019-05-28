@@ -36,7 +36,8 @@ import org.jacop.core.Var;
 import org.jacop.constraints.XltC;
 
 import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.constraints.PltC;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.constraints.PlteqC;
 
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.Search;
@@ -143,7 +144,7 @@ public class RestartSearch<T extends Var> {
 		    if (cost instanceof IntVar)
 			store.impose(new XltC((IntVar)cost, intCostValue));
 		    else if (cost instanceof FloatVar)
-			store.impose(new PltC((FloatVar)cost, floatCostValue));
+			store.impose(new PlteqC((FloatVar)cost, FloatDomain.previousForMinimization(floatCostValue)));
 		}
 		else
 		    break; // single solution for satisfy search found

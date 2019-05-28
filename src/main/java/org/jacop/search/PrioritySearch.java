@@ -35,7 +35,8 @@ import org.jacop.core.Var;
 import org.jacop.core.IntVar;
 import org.jacop.constraints.XltC;
 import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.constraints.PltC;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.constraints.PlteqC;
 import org.jacop.search.restart.Calculator;
 
 import java.util.BitSet;
@@ -691,7 +692,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 		    for (int i = 0; i < n; i++) {
 			DepthFirstSearch ls = lastSearch(search[2*i]);
 			ls.costValueFloat = ((FloatVar) costVariable).dom().max();
-			ls.cost = new PltC((FloatVar) search[2*i].costVariable, newCost);    
+			ls.cost = new PlteqC((FloatVar) search[2*i].costVariable, FloatDomain.previousForMinimization(newCost));
 		    }
 		}
 	    }
@@ -722,7 +723,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 		    for (int i = 0; i < n; i++) {
 			DepthFirstSearch ls = lastSearch(search[2*i]);
 			ls.costValueFloat = newCost;
-			ls.cost = new PltC((FloatVar) search[2*i].costVariable, newCost);    
+			ls.cost = new PlteqC((FloatVar) search[2*i].costVariable, FloatDomain.previousForMinimization(newCost));
 		    }
 		}
 	    }

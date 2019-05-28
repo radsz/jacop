@@ -16,9 +16,12 @@ Version 4.7
 4. Time-out in flatzinc is changed to be specified in milliseconds (to
    be compatible with minizinc options).
 
-5. Small corrections in pom.xml to use right version of Scala.
+5. New distance step option for search with cost function specified as
+   FloatVar. Availble in both Java and flatzinc.
 
-6. Bug corrections.
+6. Small corrections in pom.xml to use right version of Scala.
+
+7. Bug corrections.
 
 Version 4.6
 =============
