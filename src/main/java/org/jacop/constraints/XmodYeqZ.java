@@ -135,9 +135,9 @@ public class XmodYeqZ extends Constraint implements SatisfiedPresent {
 	    // 	else {
 	    	    // bound consistency
 	    	    int absY = Math.abs(y.value());
-	    	    if (!z.domain.contains(x.min() % y.max()))
+	    	    if (!z.domain.contains(x.min() % absY))
 	    		x.domain.inMin(store.level, x, x.min() + 1);
-	    	    else if (!z.domain.contains(x.max() % y.max()))
+	    	    else if (!z.domain.contains(x.max() % absY))
 	    		x.domain.inMax(store.level, x, x.max() - 1);
 	    	// }
 	    }
