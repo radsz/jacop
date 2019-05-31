@@ -126,20 +126,20 @@ public class XmodYeqZ extends Constraint implements SatisfiedPresent {
 	    z.domain.in(store.level, z, reminderMin, reminderMax);
 
 	    if (y.singleton()) {
-	    	if (x.domain.getSize() < 100) {
-	    	    // domain consistency method for small domains of x
+	    // 	if (x.domain.getSize() < 100) {
+	    // 	    // domain consistency method for small domains of x
+	    // 	    int absY = Math.abs(y.value());
+	    // 	    IntDomain d = makeDomain(x, absY, z);
+	    // 	    x.domain.in(store.level, x, d);
+	    // 	}
+	    // 	else {
+	    	    // bound consistency
 	    	    int absY = Math.abs(y.value());
-	    	    IntDomain d = makeDomain(x, absY, z);
-	    	    x.domain.in(store.level, x, d);
-	    	}
-	    	else {
-		    // bound consistency
-		    int absY = Math.abs(y.value());
-		    if (!z.domain.contains(x.min() % y.max()))
-			x.domain.inMin(store.level, x, x.min() + 1);
-		    else if (!z.domain.contains(x.max() % y.max()))
-			x.domain.inMax(store.level, x, x.max() - 1);
-	    	}
+	    	    if (!z.domain.contains(x.min() % y.max()))
+	    		x.domain.inMin(store.level, x, x.min() + 1);
+	    	    else if (!z.domain.contains(x.max() % y.max()))
+	    		x.domain.inMax(store.level, x, x.max() - 1);
+	    	// }
 	    }
 	    
 	    if (x.singleton())
@@ -186,19 +186,19 @@ public class XmodYeqZ extends Constraint implements SatisfiedPresent {
         } while (store.propagationHasOccurred);
     }
 
-    IntDomain makeDomain(IntVar x, int y, IntVar z) {
-	IntervalDomain d = new IntervalDomain();
-	IntDomain zDom = z.dom();
-	for (ValueEnumeration e = x.domain.valueEnumeration(); e.hasMoreElements(); ) {
-	    int val = e.nextElement();
-	    if (zDom.contains(val % y))
-		if (d.getSize() == 0)
-		    d.unionAdapt(val);
-		else
-		    d.addLastElement(val);
-	}
-	return d;
-    }
+    // IntDomain makeDomain(IntVar x, int y, IntVar z) {
+    // 	IntervalDomain d = new IntervalDomain();
+    // 	IntDomain zDom = z.dom();
+    // 	for (ValueEnumeration e = x.domain.valueEnumeration(); e.hasMoreElements(); ) {
+    // 	    int val = e.nextElement();
+    // 	    if (zDom.contains(val % y))
+    // 		if (d.getSize() == 0)
+    // 		    d.unionAdapt(val);
+    // 		else
+    // 		    d.addLastElement(val);
+    // 	}
+    // 	return d;
+    // }
     
     @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
