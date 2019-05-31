@@ -489,6 +489,7 @@ setup to run configuration. -->
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>2.19.1</version>
                 <configuration>
+                    <rerunFailingTestsCount>1</rerunFailingTestsCount>
                     <includes>
                         <include>**/IntDomainTest.java</include>
                         <include>**/ExampleBasedTest.java</include>
