@@ -126,27 +126,27 @@ public class XmodYeqZ extends Constraint implements SatisfiedPresent {
 	    z.domain.in(store.level, z, reminderMin, reminderMax);
 
 	    if (y.singleton()) {
-	    // 	if (x.domain.getSize() < 100) {
-	    // 	    // domain consistency method for small domains of x
-	    // 	    int absY = Math.abs(y.value());
-	    // 	    IntDomain d = makeDomain(x, absY, z);
-	    // 	    x.domain.in(store.level, x, d);
-	    // 	}
-	    // 	else {
+		if (x.domain.getSize() < 100) {
+		    // domain consistency method for small domains of x
+		    int absY = Math.abs(y.value());
+		    IntDomain d = makeDomain(x, absY, z);
+		    x.domain.in(store.level, x, d);
+		}
+		else {
 	    	    // bound consistency
 	    	    int absY = Math.abs(y.value());
 	    	    if (!z.domain.contains(x.min() % absY))
 	    		x.domain.inMin(store.level, x, x.min() + 1);
 	    	    else if (!z.domain.contains(x.max() % absY))
 	    		x.domain.inMax(store.level, x, x.max() - 1);
-	    	// }
+		}
 	    }
 	    
 	    if (x.singleton())
-	    	if (! z.domain.contains(x.value() % y.min()))
-	    	    y.domain.inMin(store.level, y, y.min() + 1);
-	    	else if (! z.domain.contains(x.value() % y.max()))
-	    	    y.domain.inMin(store.level, y, y.max() - 1);
+		if (! z.domain.contains(x.value() % Math.abs(y.min())))
+		    y.domain.inMin(store.level, y, y.min() + 1);
+		else if (! z.domain.contains(x.value() % Math.abs(y.max())))
+		    y.domain.inMax(store.level, y, y.max() - 1);
 	    
 	    reminderMin = z.min();
 	    reminderMax = z.max();
@@ -181,27 +181,33 @@ public class XmodYeqZ extends Constraint implements SatisfiedPresent {
                 x.domain.in(store.level, x, zMin + z.min(), zMax + z.max());
             }
 
-            assert checkSolution(resultMin, resultMax) == null : checkSolution(resultMin, resultMax);
-
         } while (store.propagationHasOccurred);
+
+	assert checkSolution(resultMin, resultMax) == null : checkSolution(resultMin, resultMax);
+
     }
 
-    // IntDomain makeDomain(IntVar x, int y, IntVar z) {
-    // 	IntervalDomain d = new IntervalDomain();
-    // 	IntDomain zDom = z.dom();
-    // 	for (ValueEnumeration e = x.domain.valueEnumeration(); e.hasMoreElements(); ) {
-    // 	    int val = e.nextElement();
-    // 	    if (zDom.contains(val % y))
-    // 		if (d.getSize() == 0)
-    // 		    d.unionAdapt(val);
-    // 		else
-    // 		    d.addLastElement(val);
-    // 	}
-    // 	return d;
-    // }
+    IntDomain makeDomain(IntVar x, int y, IntVar z) {
+	IntervalDomain d = new IntervalDomain();
+	boolean empty = true;
+	IntDomain zDom = z.dom();
+	for (ValueEnumeration e = x.domain.valueEnumeration(); e.hasMoreElements(); ) {
+	    int val = e.nextElement();
+	    if (zDom.contains(val % y)) {
+		empty = false;
+		if (d.getSize() == 0)
+		    d.unionAdapt(val);
+		else
+		    d.addLastElement(val);
+	    }
+	}
+	if (empty)
+	    throw Store.failException;
+	return d;
+    }
     
     @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.BOUND;
+        return IntDomain.ANY;
     }
 
     @Override public boolean satisfied() {
