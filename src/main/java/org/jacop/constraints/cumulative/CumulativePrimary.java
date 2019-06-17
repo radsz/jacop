@@ -35,6 +35,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.core.TimeStamp;
 
 import java.util.Arrays;
 import java.util.BitSet;
@@ -73,6 +74,9 @@ class CumulativePrimary extends Constraint {
     final private int[] dur;
     final private int[] res;
 
+    private int[] activeMap;
+    private TimeStamp<Integer> activePnt;
+
     /**
      * It specifies the limit of the profile of cumulative use of resources.
      */
@@ -110,8 +114,14 @@ class CumulativePrimary extends Constraint {
         dur = Arrays.copyOf(durations, durations.length);
         res = Arrays.copyOf(resources, resources.length);
         start = Arrays.copyOf(starts, starts.length);
+	activeMap = new int[start.length];
+	for (int i = 0; i < start.length; i++)
+	    activeMap[i] = i;
 
         setScope(Stream.concat(Arrays.stream(starts), Stream.of(limit)));
+
+        activePnt = new TimeStamp<Integer>(starts[0].getStore(), 0);
+
     }
 
     /**
@@ -172,14 +182,16 @@ class CumulativePrimary extends Constraint {
         boolean mandatoryExists = false;
         int j = 0;
         int minProfile = Integer.MAX_VALUE, maxProfile = Integer.MIN_VALUE;
-        for (int i = 0; i < start.length; i++) {
+	int first = activePnt.value();
+        for (int i = first; i < start.length; i++) {
+	    int k = activeMap[i];
 
             // mandatory task parts to create profile
-            int min = start[i].max(), // t.lst()
-                max = start[i].min() + dur[i];  // t.ect()
+            int min = start[k].max(), // t.lst()
+                max = start[k].min() + dur[k];  // t.ect()
             if (min < max) {
-                es[j++] = new Event(profile, i, min, res[i]);
-                es[j++] = new Event(profile, i, max, -res[i]);
+                es[j++] = new Event(profile, k, min, res[k]);
+                es[j++] = new Event(profile, k, max, -res[k]);
                 minProfile = (min < minProfile) ? min : minProfile;
                 maxProfile = (max > maxProfile) ? max : maxProfile;
                 mandatoryExists = true;
@@ -188,15 +200,17 @@ class CumulativePrimary extends Constraint {
         if (!mandatoryExists)
             return;
 
-        for (int i = 0; i < start.length; i++) {
+        for (int i = first; i < start.length; i++) {
             // overlapping tasks for pruning
             // from start to end
-            if (!start[i].singleton()) {  // task that are ground are considered for manadatory tasks
-                int min = start[i].min(); //t.est();
-                int max = start[i].max() + dur[i]; //t.lct();
+	    int k = activeMap[i];
+
+            if (!start[k].singleton()) {  // task that are ground are considered for manadatory tasks
+                int min = start[k].min(); //t.est();
+                int max = start[k].max() + dur[k]; //t.lct();
                 if (!(min > maxProfile || max < minProfile)) {
-                    es[j++] = new Event(pruneStart, i, min, 0); // res[i]);
-                    es[j++] = new Event(pruneEnd, i, max, 0);   // -res[i]);
+                    es[j++] = new Event(pruneStart, k, min, 0); // res[i]);
+                    es[j++] = new Event(pruneEnd, k, max, 0);   // -res[i]);
                 }
             }
         }
@@ -308,6 +322,49 @@ class CumulativePrimary extends Constraint {
                 default:
                     throw new RuntimeException("Internal error in " + getClass().getName());
             }
+        }
+
+       if (!store.propagationHasOccurred)
+           removeNotUsedProfleTasks();
+
+    }
+
+    private void removeNotUsedProfleTasks() {
+
+	// remove ground tasks that make profile but do not contribute
+	// to pruning of other tasks; they are located outside the
+	// range of tasks
+	int minPrune = Integer.MAX_VALUE, maxPrune = Integer.MIN_VALUE;
+	int first = activePnt.value();
+	for (int i = first; i < start.length; i++) {
+	    int k = activeMap[i];
+
+	    if (!start[k].singleton()) {
+		int min = start[k].min();
+		int max = start[k].max() + dur[k];
+		minPrune = (min < minPrune) ? min : minPrune;
+		maxPrune = (max > maxPrune) ? max : maxPrune;
+	    }
+	}
+
+	for (int i = first; i < start.length; i++) {
+	    int k = activeMap[i];
+
+	    int s = start[k].min();
+	    int e = start[k].max() + dur[k];
+	    if (start[k].singleton() && (s > maxPrune || e < minPrune)) {
+		swap(first, i);
+		first++;
+	    }
+	}
+	activePnt.update(first);
+    }
+
+    private void swap(int i, int j) {
+        if (i != j) {
+            int tmp = activeMap[i];
+            activeMap[i] = activeMap[j];
+            activeMap[j] = tmp;
         }
     }
 
