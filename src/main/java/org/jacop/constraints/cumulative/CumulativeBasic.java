@@ -198,7 +198,6 @@ public class CumulativeBasic extends Constraint {
         Event[] es = new Event[4 * taskNormal.length];
         int limitMax = limit.max();
 
-        boolean mandatoryExists = false;
         int j = 0;
         int minProfile = Integer.MAX_VALUE, maxProfile = Integer.MIN_VALUE;
         for (int i = 0; i < taskNormal.length; i++) {
@@ -212,10 +211,9 @@ public class CumulativeBasic extends Constraint {
                 es[j++] = new Event(profile, t, max, -t.res.min());
                 minProfile = (min < minProfile) ? min : minProfile;
                 maxProfile = (max > maxProfile) ? max : maxProfile;
-                mandatoryExists = true;
             }
         }
-        if (!mandatoryExists)
+	if (j == 0)
             return;
 
         for (TaskView t : taskNormal) {
@@ -247,7 +245,7 @@ public class CumulativeBasic extends Constraint {
 
         // used for start variable pruning
         int[] startExcluded = new int[taskNormal.length];
-        Arrays.fill(startExcluded, Integer.MAX_VALUE);
+	boolean[] startConsidered = new boolean[taskNormal.length];
 
         // used for duration variable pruning
         int[] lastBarier = new int[taskNormal.length];
@@ -287,9 +285,10 @@ public class CumulativeBasic extends Constraint {
 
                             // ========= Pruning start variable
                             if (t.exists()) // t.res.min() > 0 && t.dur.min() > 0
-                                if (startExcluded[ti] == Integer.MAX_VALUE) {
+                                if (! startConsidered[ti]) {
                                     if (limitMax - profileValue < t.res.min()) {
                                         startExcluded[ti] = e.date() - t.dur.min() + 1;
+					startConsidered[ti] = true;
                                     }
                                 } else //startExcluded[ti] != Integer.MAX_VALUE
                                     if (limitMax - profileValue >= t.res.min()) {
@@ -305,7 +304,7 @@ public class CumulativeBasic extends Constraint {
                                         if (debugNarr)
                                             System.out.println(" => " + t.start);
 
-                                        startExcluded[ti] = Integer.MAX_VALUE;
+                                        startConsidered[ti] = false;
                                     }
 
                             // ========= for duration pruning
@@ -341,6 +340,7 @@ public class CumulativeBasic extends Constraint {
                     if (t.exists()) // t.res.min() > 0 && t.dur.min() > 0
                         if (limitMax - profileValue < t.res.min()) {
                             startExcluded[ti] = e.date();
+			    startConsidered[ti] = true;
                         }
 
                     // ========= for duration pruning
@@ -363,7 +363,7 @@ public class CumulativeBasic extends Constraint {
 
                     // ========= pruning start variable
                     if (t.exists())
-                        if (startExcluded[ti] != Integer.MAX_VALUE) {
+                        if (startConsidered[ti]) {
                             // task ends and we remove forbidden area
 
                             if (debugNarr)
@@ -377,7 +377,7 @@ public class CumulativeBasic extends Constraint {
 
                         }
 
-                    startExcluded[ti] = Integer.MAX_VALUE;
+                    startConsidered[ti] = false;
 
                     // ========= resource pruning
                     if (limit.max() - profileValue < t.res.max() && t.lst() <= e.date() && e.date() < t.ect())

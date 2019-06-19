@@ -179,7 +179,6 @@ class CumulativePrimary extends Constraint {
         Event[] es = new Event[4 * start.length];
         int limitMax = limit.max();
 
-        boolean mandatoryExists = false;
         int j = 0;
         int minProfile = Integer.MAX_VALUE, maxProfile = Integer.MIN_VALUE;
 	int first = activePnt.value();
@@ -194,10 +193,9 @@ class CumulativePrimary extends Constraint {
                 es[j++] = new Event(profile, k, max, -res[k]);
                 minProfile = (min < minProfile) ? min : minProfile;
                 maxProfile = (max > maxProfile) ? max : maxProfile;
-                mandatoryExists = true;
             }
         }
-        if (!mandatoryExists)
+	if (j == 0)  // no mandatory parts
             return;
 
         for (int i = first; i < start.length; i++) {
@@ -232,7 +230,7 @@ class CumulativePrimary extends Constraint {
 
         // used for start variable pruning
         int[] startExcluded = new int[start.length];
-        Arrays.fill(startExcluded, Integer.MAX_VALUE);
+	boolean[] startConsidered = new boolean[start.length];
 
         for (int i = 0; i < N; i++) {
 
@@ -261,9 +259,10 @@ class CumulativePrimary extends Constraint {
                         for (int ti = tasksToPrune.nextSetBit(0); ti >= 0; ti = tasksToPrune.nextSetBit(ti + 1)) {
 
                             // ========= Pruning start variable
-                            if (startExcluded[ti] == Integer.MAX_VALUE) {
+                            if (! startConsidered[ti]) {
                                 if (!inProfile[ti] && limitMax - curProfile < res[ti]) {
                                     startExcluded[ti] = e.date() - dur[ti] + 1;
+				    startConsidered[ti] = true;
                                 }
                             } else //startExcluded[ti] != Integer.MAX_VALUE
                                 if (inProfile[ti] || limitMax - curProfile >= res[ti]) {
@@ -279,7 +278,7 @@ class CumulativePrimary extends Constraint {
                                     if (debugNarr)
                                         System.out.println(" => " + start[ti]);
 
-                                    startExcluded[ti] = Integer.MAX_VALUE;
+                                    startConsidered[ti] = false;
                                 }
                         }
                     }
@@ -290,8 +289,10 @@ class CumulativePrimary extends Constraint {
                     int ti = e.index;
 
                     // ========= for start pruning
-                    if (!inProfile[ti] && limitMax - curProfile < res[ti])
+                    if (!inProfile[ti] && limitMax - curProfile < res[ti]) {
                         startExcluded[ti] = e.date();
+			startConsidered[ti] = true;
+		    }
 
                     tasksToPrune.set(ti);
                     break;
@@ -300,7 +301,7 @@ class CumulativePrimary extends Constraint {
                     ti = e.index;
 
                     // ========= pruning start variable
-                    if (startExcluded[ti] != Integer.MAX_VALUE) {
+                    if (startConsidered[ti]) {
                         // task ends and we remove forbidden area
 
                         if (debugNarr)
@@ -314,7 +315,7 @@ class CumulativePrimary extends Constraint {
 
                     }
 
-                    startExcluded[ti] = Integer.MAX_VALUE;
+                    startConsidered[ti] = false;
 
                     tasksToPrune.set(ti, false);
                     break;
