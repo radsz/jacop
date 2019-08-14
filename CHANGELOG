@@ -21,7 +21,15 @@ Version 4.7
 
 6. Small corrections in pom.xml to use right version of Scala.
 
-7. Bug corrections.
+7. Restructuring of minizinc library with the new method introduced in
+   Minizinc 2.3. It uses fzn_*.mzn files to define JaCoP specific
+   global constraint
+
+8. Definitions in redefintions.mzn and implementation of half-refified
+   constraints, that is minizinc constraints with the name *_imp. Implementation
+   of JaCoP constraint Implies.
+
+9. Bug corrections.
 
 Version 4.6
 =============

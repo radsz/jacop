@@ -375,6 +375,26 @@ public class Nooverlap extends Constraint {
 
     }
 
+    public boolean satisfied() {
+	for (int i = 0; i < rectangle.length; i++) {
+	    for (int j = i+1; j < rectangle.length; j++) {
+		if (! rectangle[i].noOverlap(rectangle[j], 0) && ! rectangle[i].noOverlap(rectangle[j], 0))
+		    return false;
+	    }
+	}
+	return true;
+    }
+
+    public boolean notSatisfied() {
+	for (int i = 0; i < rectangle.length; i++) {
+	    for (int j = i+1; j < rectangle.length; j++) {
+		if (rectangle[i].doOverlap(rectangle[j]))
+		    return true;
+	    }
+	}
+	return false;
+    }
+
     @Override public String toString() {
 
         StringBuffer result = new StringBuffer(id());

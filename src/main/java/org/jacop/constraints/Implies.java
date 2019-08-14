@@ -42,7 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 /**
- * Constraint b => c (implication or half-reification)
+ * Constraint b {@literal =>} c (implication or half-reification)
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.6
@@ -100,6 +100,7 @@ public class Implies extends PrimitiveConstraint implements UsesQueueVariable {
             if (imposed) {
                 this.removeConstraint();
                 store.impose(c);
+		// c.consistency(store);
                 return;
             } else {
                 c.consistency(store);
@@ -115,7 +116,8 @@ public class Implies extends PrimitiveConstraint implements UsesQueueVariable {
 		b.domain.in(store.level, b, 0,0);
             }
         }
-
+        // if (c.satisfied() && imposed)
+	//     this.removeConstraint();
     }
 
     @Override public boolean notSatisfied() {
@@ -237,7 +239,7 @@ public class Implies extends PrimitiveConstraint implements UsesQueueVariable {
 
     @Override public void queueVariable(int level, Var variable) {
 
-        queueForward.queueForward(level, variable);
+        // queueForward.queueForward(level, variable);
 
     }
 }

@@ -63,16 +63,32 @@ public final class ConstraintFncs {
         bc.gen_array_bool_and(n);
     }
 
+    public void array_bool_and_imp(SimpleNode n) {
+        bc.gen_array_bool_and_imp(n);
+    }
+
     public void array_bool_or(SimpleNode n) {
         bc.gen_array_bool_or(n);
+    }
+
+    public void array_bool_or_imp(SimpleNode n) {
+        bc.gen_array_bool_or_imp(n);
     }
 
     public void array_bool_xor(SimpleNode n) {
         bc.gen_array_bool_xor(n);
     }
 
+    public void array_bool_xor_imp(SimpleNode n) {
+        bc.gen_array_bool_xor_imp(n);
+    }
+
     public void bool_and(SimpleNode n) {
         bc.gen_bool_and(n);
+    }
+
+    public void bool_and_imp(SimpleNode n) {
+        bc.gen_bool_and_imp(n);
     }
 
     public void bool_not(SimpleNode n) {
@@ -95,6 +111,10 @@ public final class ConstraintFncs {
         bc.gen_bool_clause_reif(n);
     }
 
+    public void bool_clause_imp(SimpleNode n) {
+        bc.gen_bool_clause_imp(n);
+    }
+
     public void bool2int(SimpleNode n) {
         bc.gen_bool2int(n);
     }
@@ -108,12 +128,20 @@ public final class ConstraintFncs {
         cc.gen_bool_eq_reif(n);
     }
 
+    public void bool_eq_imp(SimpleNode n) {
+        cc.gen_bool_eq_imp(n);
+    }
+
     public void bool_ne(SimpleNode n) {
         cc.gen_bool_ne(n);
     }
 
     public void bool_ne_reif(SimpleNode n) {
         cc.gen_bool_ne_reif(n);
+    }
+
+    public void bool_ne_imp(SimpleNode n) {
+        cc.gen_bool_ne_imp(n);
     }
 
     public void bool_le(SimpleNode n) {
@@ -124,12 +152,28 @@ public final class ConstraintFncs {
         cc.gen_bool_le_reif(n);
     }
 
+    public void bool_le_imp(SimpleNode n) {
+        cc.gen_bool_le_imp(n);
+    }
+
     public void bool_lt(SimpleNode n) {
         cc.gen_bool_lt(n);
     }
 
     public void bool_lt_reif(SimpleNode n) {
         cc.gen_bool_lt_reif(n);
+    }
+
+    public void bool_lt_imp(SimpleNode n) {
+        cc.gen_bool_lt_imp(n);
+    }
+
+    public void bool_gt_imp(SimpleNode n) {
+        cc.gen_bool_gt_imp(n);
+    }
+
+    public void bool_ge_imp(SimpleNode n) {
+        cc.gen_bool_ge_imp(n);
     }
 
     public void int_eq(SimpleNode n) {
@@ -140,12 +184,20 @@ public final class ConstraintFncs {
         cc.gen_int_eq_reif(n);
     }
 
+    public void int_eq_imp(SimpleNode n) {
+        cc.gen_int_eq_imp(n);
+    }
+
     public void int_ne(SimpleNode n) {
         cc.gen_int_ne(n);
     }
 
     public void int_ne_reif(SimpleNode n) {
         cc.gen_int_ne_reif(n);
+    }
+
+    public void int_ne_imp(SimpleNode n) {
+        cc.gen_int_ne_imp(n);
     }
 
     public void int_le(SimpleNode n) {
@@ -156,12 +208,28 @@ public final class ConstraintFncs {
         cc.gen_int_le_reif(n);
     }
 
+    public void int_le_imp(SimpleNode n) {
+        cc.gen_int_le_imp(n);
+    }
+
     public void int_lt(SimpleNode n) {
         cc.gen_int_lt(n);
     }
 
     public void int_lt_reif(SimpleNode n) {
         cc.gen_int_lt_reif(n);
+    }
+
+    public void int_lt_imp(SimpleNode n) {
+        cc.gen_int_lt_imp(n);
+    }
+
+    public void int_gt_imp(SimpleNode n) {
+        cc.gen_int_gt_imp(n);
+    }
+
+    public void int_ge_imp(SimpleNode n) {
+        cc.gen_int_ge_imp(n);
     }
 
     // Linear bool and int constraints
@@ -205,12 +273,20 @@ public final class ConstraintFncs {
         lc.gen_int_lin_eq_reif(n);
     }
 
+    public void int_lin_eq_imp(SimpleNode n) {
+        lc.gen_int_lin_eq_imp(n);
+    }
+
     public void int_lin_ne(SimpleNode n) {
         lc.gen_int_lin_ne(n);
     }
 
     public void int_lin_ne_reif(SimpleNode n) {
         lc.gen_int_lin_ne_reif(n);
+    }
+
+    public void int_lin_ne_imp(SimpleNode n) {
+        lc.gen_int_lin_ne_imp(n);
     }
 
     public void int_lin_lt(SimpleNode n) {
@@ -221,12 +297,28 @@ public final class ConstraintFncs {
         lc.gen_int_lin_lt_reif(n);
     }
 
+    public void int_lin_lt_imp(SimpleNode n) {
+        lc.gen_int_lin_lt_imp(n);
+    }
+
     public void int_lin_le(SimpleNode n) {
         lc.gen_int_lin_le(n);
     }
 
     public void int_lin_le_reif(SimpleNode n) {
         lc.gen_int_lin_le_reif(n);
+    }
+
+    public void int_lin_le_imp(SimpleNode n) {
+        lc.gen_int_lin_le_imp(n);
+    }
+
+    public void int_lin_gt_imp(SimpleNode n) {
+        lc.gen_int_lin_gt_imp(n);
+    }
+
+    public void int_lin_ge_imp(SimpleNode n) {
+        lc.gen_int_lin_ge_imp(n);
     }
 
     // Diverse int operations
@@ -504,6 +596,10 @@ public final class ConstraintFncs {
 
     public void set_in_reif(SimpleNode n) {
         sc.gen_set_in_reif(n);
+    }
+
+    public void set_in_imp(SimpleNode n) {
+        sc.gen_set_in_imp(n);
     }
 
     public void set_intersect(SimpleNode n) {
