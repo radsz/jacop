@@ -40,3 +40,4 @@ include "diff2.mzn";
 include "stretch.mzn";
 include "soft_all_different_int.mzn";
 include "soft_global_cardinality_int.mzn";
+include "GCC.mzn";
