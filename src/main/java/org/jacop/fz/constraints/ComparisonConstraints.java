@@ -984,7 +984,6 @@ class ComparisonConstraints implements ParserTreeConstants {
                     removeConstraint();
                 } else if (b.min() == 1) {// x==c must be true
                     x.domain.in(store.level, x, c, c);
-                    removeConstraint();
 		}
             }
 

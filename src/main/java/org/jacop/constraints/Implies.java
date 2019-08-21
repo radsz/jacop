@@ -97,9 +97,9 @@ public class Implies extends PrimitiveConstraint implements UsesQueueVariable {
         } else if (b.min() == 1) {
 	    c.consistency(store);
         } else if (c.notSatisfied()) {
-	    removeConstraint();
 	    b.domain.in(store.level, b, 0,0);
-        } else 	if (c.satisfied() && imposed)
+	    removeConstraint();
+        } else if (c.satisfied())
 	    removeConstraint();
     }
 
