@@ -87,37 +87,20 @@ public class Implies extends PrimitiveConstraint implements UsesQueueVariable {
         setConstraintScope(c);
         queueForward = new QueueForward<>(c, arguments());
         this.queueIndex = c.queueIndex;
+
     }
 
     @Override public void consistency(Store store) {
 
 	if (b.max() == 0) {
-            if (imposed) {
-                this.removeConstraint();
-                return;
-	    }
+	    removeConstraint();
         } else if (b.min() == 1) {
-            if (imposed) {
-                this.removeConstraint();
-                store.impose(c);
-		// c.consistency(store);
-                return;
-            } else {
-                c.consistency(store);
-	    }
-        }
-
-        if (c.notSatisfied()) {
-            if (imposed) {
-		this.removeConstraint();
-		b.domain.in(store.level, b, 0,0);
-		return;
-            } else {
-		b.domain.in(store.level, b, 0,0);
-            }
-        }
-        // if (c.satisfied() && imposed)
-	//     this.removeConstraint();
+	    c.consistency(store);
+        } else if (c.notSatisfied()) {
+	    removeConstraint();
+	    b.domain.in(store.level, b, 0,0);
+        } else 	if (c.satisfied() && imposed)
+	    removeConstraint();
     }
 
     @Override public boolean notSatisfied() {
@@ -231,7 +214,7 @@ public class Implies extends PrimitiveConstraint implements UsesQueueVariable {
 
         StringBuffer result = new StringBuffer(id());
 
-        result.append(" : Implies(").append(b).append(", ").append(c).append(" )\n");
+        result.append(" : Implies(").append(b).append(", ").append(c).append(" )");
 
         return result.toString();
 

@@ -510,9 +510,15 @@ class LinearConstraints implements ParserTreeConstants {
 		break;
             case Support.le:
                 if (p1.length == 2 && p1[0] == 1 && p1[1] == -1)
-		    support.pose(new Implies(p4, new XplusClteqZ(p2[0], -p3, p2[1])));
+		    if (p3 == 0)
+			support.pose(new Implies(p4, new XlteqY(p2[0], p2[1])));
+		    else
+			support.pose(new Implies(p4, new XplusClteqZ(p2[0], -p3, p2[1])));
                 else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1)
-		    support.pose(new Implies(p4, new XplusClteqZ(p2[1], -p3, p2[0])));
+		    if (p3 == 0)
+			support.pose(new Implies(p4, new XlteqY(p2[1], p2[0])));
+		    else
+			support.pose(new Implies(p4, new XplusClteqZ(p2[1], -p3, p2[0])));
                 else if (p1.length == 1 && p1[0] == 1)
                     support.pose(new Implies(p4, new org.jacop.constraints.XlteqC(p2[0], p3)));
                 else if (p1.length == 1 && p1[0] == -1)
