@@ -992,7 +992,7 @@ class ComparisonConstraints implements ParserTreeConstants {
             }
 
             @Override public String toString() {
-                return "fz : XeqC_Implied(" + x + ", " + c + ", " + b + " )";
+                return "fz : XeqC_Implied("+ b + ", " + x + ", " + c + " )";
             }
         };
     }

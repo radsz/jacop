@@ -703,7 +703,7 @@ public class Solve implements ParserTreeConstants {
 			       // + "\n%%mzn-stat: backtracks=" + String.format("%,d", backtracks)
 			       + "\n%%mzn-stat; peakDepth=" + depth
 			       + "\n%%mzn-stat: solutions=" + solutions
-			       // + "\n%%mzn-stat-end"
+			       + "\n%%mzn-stat-end"
 			       );
 
             if (options.debug())
@@ -907,7 +907,8 @@ public class Solve implements ParserTreeConstants {
 				   + "\n%%mzn-stat: failers=0"
 				   // + "\n%%mzn-stat: backtracks=0"
 				   + "\n%%mzn-stat: peakDepth=0"
-				   + "\n%%mzn-stat: solutions=1");
+				   + "\n%%mzn-stat: solutions=1"
+				   + "\n%%mzn-stat-end");
 
 	    }
 	    throw new TrivialSolution();
@@ -1204,7 +1205,8 @@ public class Solve implements ParserTreeConstants {
 			       + "\n%%mzn-stat: failers=" + String.format("%,d", wrong) //Wrong search decisions : 
 			       // + "\n%%mzn-stat: backtracks=" + String.format("%,d", backtracks)
 			       + "\n%%mzn-stat: peakDepth=" + depth
-			       + "\n%%mzn-stat: solutions=" + solutions);
+			       + "\n%%mzn-stat: solutions=" + solutions
+			       + "\n%%mzn-stat-end");
         }
 
         if (options.debug())
