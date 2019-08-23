@@ -50,6 +50,10 @@ import org.jacop.set.core.SetVar;
 import org.jacop.util.fsm.FSM;
 import org.jacop.util.fsm.FSMState;
 import org.jacop.util.fsm.FSMTransition;
+import org.jacop.floats.constraints.PeqC;
+import org.jacop.floats.constraints.PeqQ;
+import org.jacop.set.constraints.AeqB;
+import org.jacop.set.constraints.AeqS;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -1044,6 +1048,60 @@ class GlobalConstraints implements ParserTreeConstants {
         }
 
         support.pose(new Geost(objects, constraints, shapes));
+    }
+
+    void gen_jacop_if_then_else_int(SimpleNode node) {
+        IntVar[] b = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+        IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+        IntVar y = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+
+	int n = x.length;
+	PrimitiveConstraint[] cs = new PrimitiveConstraint[n];
+	for (int i = 0; i < n; i++) {
+	    if (x[i].singleton())
+		cs[i] = new XeqC(y, x[i].value());
+	    else
+		cs[i] = new XeqY(y, x[i]);
+	}
+
+	support.pose(new Conditional(b, cs));
+
+    }
+
+    void gen_jacop_if_then_else_float(SimpleNode node) {
+        IntVar[] b = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+        FloatVar[] x = support.getFloatVarArray((SimpleNode) node.jjtGetChild(1));
+        FloatVar y = support.getFloatVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+
+	int n = x.length;
+	PrimitiveConstraint[] cs = new PrimitiveConstraint[n];
+	for (int i = 0; i < n; i++) {
+	    if (x[i].singleton())
+		cs[i] = new PeqC(y, x[i].value());
+	    else
+		cs[i] = new PeqQ(y, x[i]);
+	}
+
+	support.pose(new Conditional(b, cs));
+
+    }
+
+    void gen_jacop_if_then_else_set(SimpleNode node) {
+        IntVar[] b = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+        SetVar[] x = support.getSetVarArray((SimpleNode) node.jjtGetChild(1));
+        SetVar y = support.getSetVariable(node,2);
+
+	int n = x.length;
+	PrimitiveConstraint[] cs = new PrimitiveConstraint[n];
+	for (int i = 0; i < n; i++) {
+	    if (x[i].singleton())
+		cs[i] = new AeqS(y, x[i].domain.glb());
+	    else
+		cs[i] = new AeqB(y, x[i]);
+	}
+
+	support.pose(new Conditional(b, cs));
+
     }
 
     boolean allVarOne(IntVar[] w) {

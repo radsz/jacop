@@ -1141,7 +1141,7 @@ public class VariablesParameters implements ParserTreeConstants {
                     return dictionary.getConstant(val); // new IntVar(store, val, val);
                 case 1: // bool
                     val = ((ASTScalarFlatExpr) child).getInt();
-                    BooleanVar bb = new BooleanVar(store, val, val);
+                    BooleanVar bb = dictionary.getConstantBoolean(val); //new BooleanVar(store, val, val);
                     //numberBooleanVariables++; // not really a variable; constant
                     return bb;
                 case 2: // ident

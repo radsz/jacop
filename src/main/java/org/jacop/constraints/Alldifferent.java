@@ -167,6 +167,7 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
 
     /**
      * Check whether the constraint is not satisfied based on bipartite graph matching.
+     * @return true if constraint is not satisfied
      */
     public boolean notSatisfied() {
 	

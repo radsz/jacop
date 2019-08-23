@@ -572,6 +572,22 @@ public final class ConstraintFncs {
         gc.gen_jacop_geost_bb(n);
     }
 
+    // if-then-else constraints
+    public void jacop_if_then_else_int(SimpleNode n) {
+        gc.gen_jacop_if_then_else_int(n);
+    }
+    
+    public void jacop_if_then_else_bool(SimpleNode n) {
+        gc.gen_jacop_if_then_else_int(n);
+    }
+
+    public void jacop_if_then_else_float(SimpleNode n) {
+        gc.gen_jacop_if_then_else_float(n);
+    }
+
+    public void jacop_if_then_else_set(SimpleNode n) {
+        gc.gen_jacop_if_then_else_set(n);
+    }
 
     // Set constrints
     public void set_card(SimpleNode n) {
