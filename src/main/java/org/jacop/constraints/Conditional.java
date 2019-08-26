@@ -115,19 +115,28 @@ public class Conditional extends Constraint implements SatisfiedPresent {
 
     @Override public void consistency(final Store store) {
 
-	int i = 0;
-	LOOP: while (i < b.length) {
-	    if (b[i].max() == 0) {
-		i++;
-		continue;
-	    } else
-		break LOOP;
-	}
-	if (b[i].min() == 1) {
-	    c[i].consistency(store);
+	boolean prune = true;
 
-	    if (c[i].satisfied())
-		removeConstraint();
+	while (prune) {
+	    int i = 0;
+	    LOOP: while (i < b.length) {
+		if (b[i].max() == 0) {
+		    i++;
+		    continue;
+		} else
+		    break LOOP;
+	    }
+	    prune = false;
+
+	    if (b[i].min() == 1) {
+		c[i].consistency(store);
+
+		if (c[i].satisfied())
+		    removeConstraint();
+	    } else if (c[i].notSatisfied()) {
+		b[i].domain.in(store.level, b[i], 0, 0);
+		prune = true;
+	    }
 	}
     }
 
