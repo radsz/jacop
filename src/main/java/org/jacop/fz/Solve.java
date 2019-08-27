@@ -688,22 +688,22 @@ public class Solve implements ParserTreeConstants {
 
 	    int restarts = (rs != null) ? rs.restarts() : 0;
 	    
-            System.out.println("%%mzn-stat: variables=" + (store.size() + dictionary.getNumberBoolVariables() - dictionary.constantTable.size())
-			       // + "\n%%mzn-stat: boolVariables="+ (dictionary.getNumberBoolVariables()-dictionary.aliasTable.size())
-			       // + "\n%%mzn-stat: setVariables="+ dictionary.getNumberSetVariables()
-			       // + "\n%%mzn-stat: floatVariables="+ dictionary.getNumberFloatVariables()
-			       + "\n%%mzn-stat: propagators=" + (initNumberConstraints - 1)
-			       + "\n\n%%mzn-stat: initTime=" + getInitTime_ms()/1000.0
-			       + "\n%%mzn-stat: solveTime=" + getSearchTime_ms()/1000.0
-			       + "\n%%mzn-stat: nodes=" + String.format("%,d", nodes)
-			       + "\n%%mzn-stat: restarts=" + String.format("%,d", restarts)
-			       + "\n%%mzn-stat: propagations=" + String.format("%,d", store.numberConsistencyCalls)
+            System.out.println("%%%mzn-stat: variables=" + (store.size() + dictionary.getNumberBoolVariables() - dictionary.constantTable.size())
+			       // + "\n%%%mzn-stat: boolVariables="+ (dictionary.getNumberBoolVariables()-dictionary.aliasTable.size())
+			       // + "\n%%%mzn-stat: setVariables="+ dictionary.getNumberSetVariables()
+			       // + "\n%%%mzn-stat: floatVariables="+ dictionary.getNumberFloatVariables()
+			       + "\n%%%mzn-stat: propagators=" + (initNumberConstraints - 1)
+			       + "\n\n%%%mzn-stat: initTime=" + getInitTime_ms()/1000.0
+			       + "\n%%%mzn-stat: solveTime=" + getSearchTime_ms()/1000.0
+			       + "\n%%%mzn-stat: nodes=" + String.format("%,d", nodes)
+			       + "\n%%%mzn-stat: restarts=" + String.format("%,d", restarts)
+			       + "\n%%%mzn-stat: propagations=" + String.format("%,d", store.numberConsistencyCalls)
 			       // + "\n%% Search decisions : "+ String.format("%,d", decisions)
-			       + "\n%%mzn-stat: failers=" + String.format("%,d", wrong) //Wrong search decisions : 
-			       // + "\n%%mzn-stat: backtracks=" + String.format("%,d", backtracks)
-			       + "\n%%mzn-stat; peakDepth=" + depth
-			       + "\n%%mzn-stat: solutions=" + solutions
-			       + "\n%%mzn-stat-end"
+			       + "\n%%%mzn-stat: failers=" + String.format("%,d", wrong) //Wrong search decisions : 
+			       // + "\n%%%mzn-stat: backtracks=" + String.format("%,d", backtracks)
+			       + "\n%%%mzn-stat; peakDepth=" + depth
+			       + "\n%%%mzn-stat: solutions=" + solutions
+			       + "\n%%%mzn-stat-end"
 			       );
 
             if (options.debug())
@@ -813,6 +813,7 @@ public class Solve implements ParserTreeConstants {
                 intSearch.setTimeOutMilliseconds(to);
 
             intAndSetSearch[1] = intSearch;
+
         }
 
         DepthFirstSearch<Var> boolSearch = new DepthFirstSearch<Var>();
@@ -893,22 +894,22 @@ public class Solve implements ParserTreeConstants {
 
             if (options.getStatistics()) {
                 System.out.println(
-				   "%%mzn-stat: variables=" + (store.size() + dictionary.getNumberBoolVariables() - dictionary.constantTable.size())
-				   // + "\n%%mzn-stat: boolVariables="+ (dictionary.getNumberBoolVariables()-dictionary.aliasTable.size())
-				   // + "\n%%mzn-stat: setVariables="+ dictionary.getNumberSetVariables()
-				   // + "\n%%mzn-stat: floatVariables="+ dictionary.getNumberFloatVariables()
-				   + "\n%%mzn-stat: propagators=" + initNumberConstraints
-				   + "\n\n%%mzn-stat: initTime=" + getInitTime_ms()/1000.0
-				   + "\n%%mzn-stat: solveTime=" + "0"
-				   + "\n%%mzn-stat: nodes=0"
+				   "%%%mzn-stat: variables=" + (store.size() + dictionary.getNumberBoolVariables() - dictionary.constantTable.size())
+				   // + "\n%%%mzn-stat: boolVariables="+ (dictionary.getNumberBoolVariables()-dictionary.aliasTable.size())
+				   // + "\n%%%mzn-stat: setVariables="+ dictionary.getNumberSetVariables()
+				   // + "\n%%%mzn-stat: floatVariables="+ dictionary.getNumberFloatVariables()
+				   + "\n%%%mzn-stat: propagators=" + initNumberConstraints
+				   + "\n\n%%%mzn-stat: initTime=" + getInitTime_ms()/1000.0
+				   + "\n%%%mzn-stat: solveTime=" + "0"
+				   + "\n%%%mzn-stat: nodes=0"
 				   + "\n%%man-stat: propagations="+ store.numberConsistencyCalls
-				   + "\n%%mzn-stat: nodes=0"
-				   + "\n%%mzn-stat: restarts=0"
-				   + "\n%%mzn-stat: failers=0"
-				   // + "\n%%mzn-stat: backtracks=0"
-				   + "\n%%mzn-stat: peakDepth=0"
-				   + "\n%%mzn-stat: solutions=1"
-				   + "\n%%mzn-stat-end");
+				   + "\n%%%mzn-stat: nodes=0"
+				   + "\n%%%mzn-stat: restarts=0"
+				   + "\n%%%mzn-stat: failers=0"
+				   // + "\n%%%mzn-stat: backtracks=0"
+				   + "\n%%%mzn-stat: peakDepth=0"
+				   + "\n%%%mzn-stat: solutions=1"
+				   + "\n%%%mzn-stat-end");
 
 	    }
 	    throw new TrivialSolution();
@@ -1191,22 +1192,22 @@ public class Solve implements ParserTreeConstants {
 
 	    int restarts = (rs != null) ? rs.restarts() : 0;
 	    
-            System.out.println("%%mzn-stat: variables=" + (store.size() + dictionary.getNumberBoolVariables() - dictionary.constantTable.size())
-			       // + "\n%%mzn-stat: boolVariables="+ (dictionary.getNumberBoolVariables()-dictionary.aliasTable.size())
-			       // + "\n%%mzn-stat: setVariables="+ dictionary.getNumberSetVariables()
-			       // + "\n%%mzn-stat: floatVariables="+ dictionary.getNumberFloatVariables()
-			       + "\n%%mzn-stat: propagators=" + (initNumberConstraints - 1)
-			       + "\n\n%%mzn-stat: initTime=" + getInitTime_ms()/1000.0
-			       + "\n%%mzn-stat: solveTime=" + getSearchTime_ms()/1000.0
-			       + "\n%%mzn-stat: nodes=" + String.format("%,d", nodes)
-			       + "\n%%mzn-stat: restarts=" + String.format("%,d", restarts)
-			       + "\n%%mzn-stat: propagations=" + String.format("%,d", store.numberConsistencyCalls)
+            System.out.println("%%%mzn-stat: variables=" + (store.size() + dictionary.getNumberBoolVariables() - dictionary.constantTable.size())
+			       // + "\n%%%mzn-stat: boolVariables="+ (dictionary.getNumberBoolVariables()-dictionary.aliasTable.size())
+			       // + "\n%%%mzn-stat: setVariables="+ dictionary.getNumberSetVariables()
+			       // + "\n%%%mzn-stat: floatVariables="+ dictionary.getNumberFloatVariables()
+			       + "\n%%%mzn-stat: propagators=" + (initNumberConstraints - 1)
+			       + "\n\n%%%mzn-stat: initTime=" + getInitTime_ms()/1000.0
+			       + "\n%%%mzn-stat: solveTime=" + getSearchTime_ms()/1000.0
+			       + "\n%%%mzn-stat: nodes=" + String.format("%,d", nodes)
+			       + "\n%%%mzn-stat: restarts=" + String.format("%,d", restarts)
+			       + "\n%%%mzn-stat: propagations=" + String.format("%,d", store.numberConsistencyCalls)
 			       // + "\n%% Search decisions : " + String.format("%,d", decisions)
-			       + "\n%%mzn-stat: failers=" + String.format("%,d", wrong) //Wrong search decisions : 
-			       // + "\n%%mzn-stat: backtracks=" + String.format("%,d", backtracks)
-			       + "\n%%mzn-stat: peakDepth=" + depth
-			       + "\n%%mzn-stat: solutions=" + solutions
-			       + "\n%%mzn-stat-end");
+			       + "\n%%%mzn-stat: failers=" + String.format("%,d", wrong) //Wrong search decisions : 
+			       // + "\n%%%mzn-stat: backtracks=" + String.format("%,d", backtracks)
+			       + "\n%%%mzn-stat: peakDepth=" + depth
+			       + "\n%%%mzn-stat: solutions=" + solutions
+			       + "\n%%%mzn-stat-end");
         }
 
         if (options.debug())
@@ -1485,13 +1486,19 @@ public class Solve implements ParserTreeConstants {
 		nodes += dfs.getNodes();
 		dfs = (dfs.childSearches == null) ? null : (DepthFirstSearch)dfs.childSearches[0];
 	    }
-	    
+
+	    if (costVariable != null)
+		if (costVariable instanceof org.jacop.core.IntVar)
+		    printBuffer.append("%%%mzn-stat objective=" + ((IntVar)costVariable).value() + "\n");
+		else if (costVariable instanceof org.jacop.floats.core.FloatVar)
+		    printBuffer.append("%%%mzn-stat objective=" + ((FloatVar)costVariable).value() + "\n");
 	    double cpuTime = getSearchTime_ms();
-	    printBuffer.append(String.format("%%%% Search nodes : %,d", nodes));
-	    printBuffer.append(String.format(" (%,.1f nodes/s)", (cpuTime == 0) ? 0.0 : (double)nodes/(cpuTime/1000)));
+	    printBuffer.append(String.format("%%%%%%mzn-stat nodes=%,d", nodes));
+	    printBuffer.append(String.format(" (%,.1f nodes/s)\n", (cpuTime == 0) ? 0.0 : (double)nodes/(cpuTime/1000)));
 	    if (restartCalculator != null)
-		printBuffer.append(String.format(", restarts : %,d", rs.restarts()));		
-	    printBuffer.append("\n%% Search time : " + cpuTime/1000 + "s\n");
+		printBuffer.append(String.format("%%%%%%mzn-stat restarts=%,d", rs.restarts()));
+	    printBuffer.append("\n%%%mzn-stat solveTime=" + cpuTime/1000 + "s\n");
+	    printBuffer.append("%%%mzn-stat-end\n");
 	}
 	
         printBuffer.append("----------\n");
