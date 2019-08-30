@@ -89,6 +89,7 @@ public class Solve implements ParserTreeConstants {
     boolean singleSearch;
     boolean Result;
     boolean optimization;
+    boolean minimize = false;
     SearchItem si;
 
     // single search
@@ -288,6 +289,7 @@ public class Solve implements ParserTreeConstants {
                         getCost((ASTSolveExpr) kind.jjtGetChild(0)) :
                         getCostFloat((ASTSolveExpr) kind.jjtGetChild(0));
                     solve = "%% minimize(" + costMin + ") ";
+		    minimize = true;
                     break; // minimize
                 case 2:
                     Var costMax = (getCost((ASTSolveExpr) kind.jjtGetChild(0)) != null) ?
@@ -937,6 +939,7 @@ public class Solve implements ParserTreeConstants {
                         getCost((ASTSolveExpr) kind.jjtGetChild(0)) :
                         getCostFloat((ASTSolveExpr) kind.jjtGetChild(0));
                     solve = "%% minimize(" + costMin + ") ";
+		    minimize = true;
                     break; // minimize
 
                 case 2:
@@ -1488,10 +1491,17 @@ public class Solve implements ParserTreeConstants {
 	    }
 
 	    if (costVariable != null)
-		if (costVariable instanceof org.jacop.core.IntVar)
-		    printBuffer.append("%%%mzn-stat objective=" + ((IntVar)costVariable).value() + "\n");
-		else if (costVariable instanceof org.jacop.floats.core.FloatVar)
-		    printBuffer.append("%%%mzn-stat objective=" + ((FloatVar)costVariable).value() + "\n");
+		if (minimize) {
+		    if (costVariable instanceof org.jacop.core.IntVar)
+			printBuffer.append("%%%mzn-stat objective=" + ((IntVar)costVariable).value() + "\n");
+		    else if (costVariable instanceof org.jacop.floats.core.FloatVar)
+			printBuffer.append("%%%mzn-stat objective=" + ((FloatVar)costVariable).value() + "\n");
+		} else {
+		    if (costVariable instanceof org.jacop.core.IntVar)
+			printBuffer.append("%%%mzn-stat objective=" + (-((IntVar)costVariable).value()) + "\n");
+		    else if (costVariable instanceof org.jacop.floats.core.FloatVar)
+			printBuffer.append("%%%mzn-stat objective=" + (-((FloatVar)costVariable).value()) + "\n");
+		}
 	    double cpuTime = getSearchTime_ms();
 	    printBuffer.append(String.format("%%%%%%mzn-stat nodes=%,d", nodes));
 	    printBuffer.append(String.format(" (%,.1f nodes/s)\n", (cpuTime == 0) ? 0.0 : (double)nodes/(cpuTime/1000)));

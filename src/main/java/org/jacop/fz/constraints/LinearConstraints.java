@@ -460,7 +460,11 @@ class LinearConstraints implements ParserTreeConstants {
                 }
                 break;
             case Support.ne:
-                if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
+		if (p1.length == 1 && p1[0] == 1)
+		    support.pose(new Implies(p4, new XneqC(p2[0], p3)));
+		else if (p1.length == 1 && p1[0] == -1)
+		    support.pose(new Implies(p4, new XneqC(p2[0], -p3)));
+                else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
                     if (p3 == 0)
                         if (p2[0].singleton())
 			    support.pose(new Implies(p4, new XneqC(p2[1], p2[0].value())));

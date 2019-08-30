@@ -37,7 +37,10 @@ import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.util.SophisticatedLengauerTarjan;
+
 
 /**
  * Circuit constraint assures that all variables build a Hamiltonian
@@ -68,6 +71,8 @@ public class Circuit extends Alldiff implements Stateful {
 
     int firstConsistencyLevel;
 
+    SophisticatedLengauerTarjan graphDominance;
+
     /**
      * It constructs a circuit constraint.
      *
@@ -80,6 +85,7 @@ public class Circuit extends Alldiff implements Stateful {
 
         this.numberId = idNumber.incrementAndGet();
         this.list = Arrays.copyOf(list, list.length);
+        this.graphDominance = new SophisticatedLengauerTarjan(list.length + 1);
 
         this.queueIndex = 2;
 
@@ -127,6 +133,15 @@ public class Circuit extends Alldiff implements Stateful {
         } while (store.propagationHasOccurred);
 
         sccs(store); // strongly connected components
+
+	/**
+	 * dominance-based filtering improves pruning but it is rather
+	 * expensive in execution time
+	 */
+	// dominanceFilter(); // filter based on dominance of nodes
+
+        // if (store.propagationHasOccurred)
+        //     store.addChanged(this);
 
     }
 
@@ -308,5 +323,90 @@ public class Circuit extends Alldiff implements Stateful {
         return min;
     }
 
+    Random random = new Random(0);
+
+    private void dominanceFilter() {
+        int n = list.length;
+
+	if (!graphDominance(random.nextInt(n)))
+	    reversedGraphDominance(random.nextInt(n));
+    }
+
+    private boolean graphDominance(int root) {
+
+        int n = list.length;
+        boolean pruning = false;
+
+        graphDominance.init();
+
+        // create graph
+        for (int v = 0; v < n; v++) {
+            for (ValueEnumeration e = list[v].dom().valueEnumeration(); e.hasMoreElements(); ) {
+                int w = e.nextElement() - 1;
+                if (v == root || v == w)
+                    graphDominance.addArc(n, w);
+                else
+                    graphDominance.addArc(v, w);
+            }
+        }
+
+        if (graphDominance.dominators(n)) {
+            for (int v = 0; v < n; v++) {
+                if (v != root)
+                    for (ValueEnumeration e = list[v].domain.valueEnumeration(); e.hasMoreElements(); ) {
+                        int w = e.nextElement() - 1;
+                        if (v != w && graphDominance.dominatedBy(v, w)) {
+                            pruning = true;
+                            // no back to dominator
+                            list[v].domain.inComplement(store.level, list[v], w + 1);
+                            // no back loop for dominator
+                            list[w].domain.inComplement(store.level, list[w], w + 1);
+                        }
+                    }
+            }
+        } else  // root does not reach all nodes -> FAIL
+            throw store.failException;
+
+        return pruning;
+    }
+
+    private boolean reversedGraphDominance(int root) {
+
+        int n = list.length;
+        boolean pruning = false;
+
+        graphDominance.init();
+
+        // create graph
+        // int root = possibleRoots[random.nextInt(pr)];
+        for (int v = 0; v < n; v++) {
+            for (ValueEnumeration e = list[v].dom().valueEnumeration(); e.hasMoreElements(); ) {
+                int w = e.nextElement() - 1;
+                if (w == root || v == w)
+                    graphDominance.addArc(n, v);
+                else
+                    graphDominance.addArc(w, v);
+            }
+        }
+
+        if (graphDominance.dominators(n)) {
+            for (int v = 0; v < n; v++) {
+                if (v != root)
+                    for (ValueEnumeration e = list[v].domain.valueEnumeration(); e.hasMoreElements(); ) {
+                        int w = e.nextElement() - 1;
+                        if (v != w && w != root && graphDominance.dominatedBy(w, v)) {
+                            pruning = true;
+                            // no back loop to dominator
+                            list[v].domain.inComplement(store.level, list[v], w + 1);
+                            // no self loop
+                            list[v].domain.inComplement(store.level, list[v], v + 1);
+                        }
+                    }
+            }
+        } else  // root does not reach all nodes -> FAIL
+            throw store.failException;
+
+        return pruning;
+    }
 
 }
