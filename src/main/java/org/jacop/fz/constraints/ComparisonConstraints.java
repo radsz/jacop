@@ -777,11 +777,9 @@ class ComparisonConstraints implements ParserTreeConstants {
 		} else if (v3.min() == 1) {
 		    v2.domain.in(store.level, v2, i1, i1);
 		    return;
-		} else if (generateForEqC(v2, i1, v3))  // binary variable
-		    return;
-		else {
+		} else {
 		    //     c = new XeqC(v2, i1);
-		    support.pose(fzXeqCReified(v2, i1, v3));
+		    support.pose(fzXeqCImplied(v2, i1, v3));
 		    return;
 		}
 		// break;
@@ -793,9 +791,7 @@ class ComparisonConstraints implements ParserTreeConstants {
 		} else if (v2.min() == i1 && v2.singleton()) {
 		    v3.domain.in(store.level, v3, 0, 0);
 		    return;
-		} else if (generateForNeqC(v2, i1, v3))
-		    return;
-		else
+		} else
 		    c = new XneqC(v2, i1);
 		break;
 	    case Support.lt:
