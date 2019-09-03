@@ -92,15 +92,16 @@ public class Implies extends PrimitiveConstraint implements UsesQueueVariable {
 
     @Override public void consistency(Store store) {
 
-	if (b.max() == 0) {
+	if (c.satisfied()) {
 	    removeConstraint();
-        } else if (b.min() == 1) {
-	    c.consistency(store);
         } else if (c.notSatisfied()) {
 	    b.domain.in(store.level, b, 0,0);
 	    removeConstraint();
-        } else if (c.satisfied())
+	} else if (b.max() == 0) {
 	    removeConstraint();
+        } else if (b.min() == 1) {
+	    c.consistency(store);
+	}
     }
 
     @Override public boolean notSatisfied() {
