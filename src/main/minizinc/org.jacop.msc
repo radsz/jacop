@@ -2,7 +2,7 @@
     "id": "org.jacop",
     "name": "JaCoP",
     "description": "JaCoP FlatZinc executable",
-    "executable": "fzn-jacop",
+    "executable": "../../../bin/fzn-jacop",
     "isGUIApplication": false,
     "mznlib": "-Gjacop",
     "mznlibVersion": 1,
@@ -19,10 +19,10 @@
 	    "float",
 	    "set"],
     "stdFlags": ["-a","-n","-s","-t","-v"],
-    "extraFlags": [["-b", "use bounds consistency whenever possible; overrides annotation ':: domain' and selects constraints implementing bounds consistency (default false)."],
-    		   ["-cs", "complementary search; gathers all model, non-defined variables, to create the final search."],
-    		   ["-p", "precision for floating operations; overrides precision definition in search annotation.", "float", "1e-11"],
-		   ["-f", "defines format (number digits after decimal point); for floating variables.", "float", "1e-11"],
-		   ["-sat", "use SAT solver for boolean constraints."]
+    "extraFlags": [["-b", "use bounds consistency whenever possible; overrides annotation domain.", "", ""],
+    		   ["-cs", "complementary search; gathers all model, non-defined variables, to create the final search.", "", ""],
+    		   ["--precision", "precision for floating operations; overrides precision definition in search annotation.", "float", "1e-11"],
+		   ["--format", "defines format (number digits after decimal point); for floating variables.", "float", "1e-11"],
+		   ["-sat", "use SAT solver for boolean constraints.", "", ""]
     		  ]
 }

@@ -160,7 +160,7 @@ public class Options {
                         System.err.println("%% Precisison parameter not correct; using default precision " + precision);
                     }
                     i++;
-                } else if (args[i].equals("-f") || args[i].equals("-format")) {
+                } else if (args[i].equals("-f") || args[i].equals("--format")) {
                     format = Double.parseDouble(args[++i]);
                     if (format >= 0)
                         FloatDomain.setFormat(format);
