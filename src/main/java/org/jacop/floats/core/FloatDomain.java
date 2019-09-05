@@ -56,7 +56,7 @@ public abstract class FloatDomain extends Domain {
     public static final double MaxFloat = Double.MAX_VALUE; // 1e150;
 
     /**
-     * It specifies the constant pi, as defined in java.lang.Math package.
+     * Minimization step for floating-point cost function minimization.
      */
     public static double minimizationStep = 0;
 
