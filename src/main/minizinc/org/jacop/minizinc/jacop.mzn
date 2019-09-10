@@ -30,8 +30,14 @@ annotation priority_search(
     array[int] of var int: x,
     array[int] of ann: search,
     ann: select,
-    ann: explore,
+    ann: explore
 );
+
+annotation priority_search(
+    array[int] of var int: x,
+    array[int] of ann: search,
+    ann: select
+) = priority_search(x, search, select, complete);
 
 %% ===== JaCoP specific global constraints =====
 include "all_distinct.mzn";
