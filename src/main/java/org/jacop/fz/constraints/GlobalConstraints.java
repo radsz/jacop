@@ -1056,6 +1056,17 @@ class GlobalConstraints implements ParserTreeConstants {
         IntVar y = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
 	int n = x.length;
+	if (n == 2) {
+	    if (x[0].singleton(1) && x[1].singleton(0)) {
+		support.pose(new XeqY(b[0], y));
+		return;
+	    } else if (x[0].singleton(0) && x[1].singleton(1)) {
+		y.domain.in(store.level, y, 0, 1);
+		support.pose(new XneqY(b[0], y));
+		return;
+	    }
+	}
+
 	PrimitiveConstraint[] cs = new PrimitiveConstraint[n];
 	for (int i = 0; i < n; i++) {
 	    if (x[i].singleton())
@@ -1065,7 +1076,6 @@ class GlobalConstraints implements ParserTreeConstants {
 	}
 
 	support.pose(new Conditional(b, cs));
-
     }
 
     void gen_jacop_if_then_else_float(SimpleNode node) {

@@ -1021,6 +1021,7 @@ public class Solve implements ParserTreeConstants {
 
                     if (options.runSearch())
 			if (restartCalculator != null) {
+			    label = masterLabel;
 			    rs = new RestartSearch<>(store, masterLabel, masterSelect, restartCalculator);
 			    Result = rs.labeling();
 			}
@@ -1067,6 +1068,7 @@ public class Solve implements ParserTreeConstants {
 
                     if (options.runSearch())
 			if (restartCalculator != null) {
+			    label = masterLabel;
 			    rs = new RestartSearch<>(store, masterLabel, masterSelect, restartCalculator, cost);
 			    Result = rs.labeling();
 			}
@@ -1115,6 +1117,7 @@ public class Solve implements ParserTreeConstants {
 
                     if (options.runSearch())
 			if (restartCalculator != null) {
+			    label = masterLabel;
 			    rs = new RestartSearch<>(store, masterLabel, masterSelect, restartCalculator, max_cost);
 			    Result = rs.labeling();
 			}
