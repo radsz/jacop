@@ -32,7 +32,10 @@ Version 4.7
 9. Definitions and implementation of fzn_if_then_else_* constraints in
    flatzinc JaCoP library and in Java (constraint Conditional).
 
-10. Bug corrections.
+10. Implementation of Member constraint and making it available from
+    flatzinc (added into the JaCoP library).
+
+11. Bug corrections.
 
 Version 4.6
 =============

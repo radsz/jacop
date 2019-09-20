@@ -603,6 +603,21 @@ class GlobalConstraints implements ParserTreeConstants {
         support.pose(new org.jacop.constraints.Max(x, n));
     }
 
+    void gen_jacop_member(SimpleNode node) {
+        IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+        IntVar y = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
+
+        support.pose(new org.jacop.constraints.Member(x, y));
+    }
+
+    void gen_jacop_member_reif(SimpleNode node) {
+        IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+        IntVar y = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
+	IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+
+        support.pose(new Reified(new org.jacop.constraints.Member(x, y), b));
+    }
+
     void gen_jacop_table_int(SimpleNode node) {
         IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
         int size = v.length;

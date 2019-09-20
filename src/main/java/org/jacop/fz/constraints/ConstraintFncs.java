@@ -496,6 +496,22 @@ public final class ConstraintFncs {
         gc.gen_jacop_maximum(n);
     }
 
+    public void jacop_member_int(SimpleNode n) {
+        gc.gen_jacop_member(n);
+    }
+
+    public void jacop_member_int_reif(SimpleNode n) {
+        gc.gen_jacop_member_reif(n);
+    }
+
+    public void jacop_member_bool(SimpleNode n) {
+        gc.gen_jacop_member(n);
+    }
+
+    public void jacop_member_bool_reif(SimpleNode n) {
+        gc.gen_jacop_member_reif(n);
+    }
+
     public void jacop_table_int(SimpleNode n) {
         gc.gen_jacop_table_int(n);
     }
