@@ -31,6 +31,7 @@
 package org.jacop.constraints;
 
 import org.jacop.core.IntDomain;
+import org.jacop.core.IntervalDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
@@ -58,7 +59,7 @@ public class Member extends PrimitiveConstraint {
     /**
      * It specifies a list of variables being summed.
      */
-    IntVar x[];
+    IntVar[] x;
 
     /**
      * It specifies variable for the overall sum.
@@ -109,57 +110,73 @@ public class Member extends PrimitiveConstraint {
 
     @Override public void consistency(Store store) {
 
-        int start = position.value();
+	int start = position.value();
+
+	IntDomain d = new IntervalDomain();
+	boolean eGround = e.singleton();
 	for (int i = start; i < l; i++) {
-	    if (e.singleton() && x[i].singleton() && x[i].value() == e.value()) {
+
+	    if (eGround && x[i].singleton() && x[i].value() == e.value()) {
 		removeConstraint();
 		return;
 	    }
 	    
 	    if (!x[i].domain.isIntersecting(e.domain)) {
-                swap(start, i);
-                start++;
-	    } 
+		swap(start, i);
+		start++;
+	    } else
+		d.unionAdapt(x[i].domain);
 	}
 
 	if (start == l)
 	    throw store.failException;
+
+	e.domain.in(store.level, e, d);
 
 	if (start == l-1) {
 	    x[l-1].domain.in(store.level, x[l-1], e.domain);
 	    e.domain.in(store.level, e, x[l-1].domain);
 	}
 
-        position.update(start);
+	position.update(start);
     }
 
     @Override public void notConsistency(Store store) {
-        int start = position.value();
-	for (int i = start; i < l; i++) {
-	    if (e.singleton()) 
-		x[i].domain.inComplement(store.level, x[i], e.value());
 
-	    if (x[i].singleton())
-		e.domain.inComplement(store.level, e, x[i].value());
+	int start = position.value();
 
-	    if (!x[i].domain.isIntersecting(e.domain)) {
-                swap(start, i);
-                start++;
-	    }
-	}
+	do {
 
-	if (start == l)
-	    removeConstraint();
+            store.propagationHasOccurred = false;
 
-	if (start == l - 1)
-	    if (e.singleton()) {
-		x[l-1].domain.inComplement(store.level, x[l-1], e.value());
-	    }
-	    else if (x[l-1].singleton()) {
-		e.domain.inComplement(store.level, e, x[l-1].value());
+	    boolean eGround = e.singleton();
+	    for (int i = start; i < l; i++) {
+		if (eGround)
+		    x[i].domain.inComplement(store.level, x[i], e.value());
+
+		if (x[i].singleton())
+		    e.domain.inComplement(store.level, e, x[i].value());
+
+		if (!x[i].domain.isIntersecting(e.domain)) {
+		    swap(start, i);
+		    start++;
+		}
 	    }
 
-        position.update(start);
+	    if (start == l)
+		removeConstraint();
+
+	    if (start == l - 1)
+		if (e.singleton()) {
+		    x[l-1].domain.inComplement(store.level, x[l-1], e.value());
+		}
+		else if (x[l-1].singleton()) {
+		    e.domain.inComplement(store.level, e, x[l-1].value());
+		}
+
+	} while (store.propagationHasOccurred);
+
+	position.update(start);
     }
 
     private void swap(int i, int j) {
@@ -170,7 +187,6 @@ public class Member extends PrimitiveConstraint {
         }
     }
 
-    
     @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.ANY;
     }
