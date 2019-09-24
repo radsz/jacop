@@ -966,7 +966,9 @@ public class VariablesParameters implements ParserTreeConstants {
 		} else {
 		    // simple annotation id
 		    annotations.add(parseAnnExpr((SimpleNode)child.jjtGetChild(0), 0));
-		    return j + annotations.size();
+		    j++;
+		    if (j < count)
+			child = (SimpleNode) node.jjtGetChild(j);
 		}
 	    }
         }
