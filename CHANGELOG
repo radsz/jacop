@@ -35,7 +35,10 @@ Version 4.7
 10. Implementation of Member constraint and making it available from
     flatzinc (added into the JaCoP library).
 
-11. Bug corrections.
+11. Flatzinc annotation "priority(k)" defining constraint priority
+    (0..4) where 0 is the highest and 4 the lowest priority of a constraint.
+
+12. Bug corrections.
 
 Version 4.6
 =============

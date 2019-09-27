@@ -3,6 +3,7 @@
 annotation lds(int: d);
 annotation credit(int: c, ann: b);
 annotation bbs(int: b);
+annotation priority(int: p);
 
 annotation smallest_max;
 annotation smallest_most_constrained;

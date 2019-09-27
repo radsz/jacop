@@ -764,6 +764,27 @@ public class Store {
 
     }
 
+    /**
+     * In some special cases it may be beneficial to compute consistency of
+     * constraint store immediately after the constraint is imposed. This
+     * function will impose a constraint and call the consistency function of
+     * the store immediately.
+     *
+     * @param c constraint to be imposed.
+     * @throws FailException failure exception.
+     */
+
+    public void imposeWithConsistency(Constraint c, int queueIndex) throws FailException {
+
+        assert (queueIndex < queueNo) : "Constraint queue number larger than permitted by store.";
+
+        c.impose(this, queueIndex);
+
+        if (!consistency()) {
+            throw Store.failException;
+        }
+
+    }
 
     /**
      * This function imposes a decomposable constraint to a store. The decomposition is

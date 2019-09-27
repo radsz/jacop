@@ -62,6 +62,7 @@ public class Support implements ParserTreeConstants {
 
     // =========== Annotations ===========
     public boolean boundsConsistency = true, domainConsistency = false;
+    public int constraintPriority = -1;
     // defines_var-- not used yet
     public IntVar definedVar = null;
 
@@ -456,6 +457,7 @@ public class Support implements ParserTreeConstants {
 
 	    // ann.dump("");
 	    // System.out.println ("ann["+i+"] = "+ ann.getAnnId());
+	    constraintPriority = -1;
 
 	    if (ann.getAnnId().equals("$expr")) {
 		ASTScalarFlatExpr n = (ASTScalarFlatExpr)ann.jjtGetChild(0).jjtGetChild(0);
@@ -472,7 +474,14 @@ public class Support implements ParserTreeConstants {
                 Var v = getAnnVar(expr);
 
                 definedVar = (IntVar) v;
+            } else if (ann.getAnnId().equals("priority")) {
+		SimpleNode child = (SimpleNode) ann.jjtGetChild(0);
+                ASTAnnExpr expr = (ASTAnnExpr) child.jjtGetChild(0);
+                int val = getAnnInt(expr);
+
+                constraintPriority = val;
             }
+
         }
 	// System.out.println("defines " + definedVar);
     }
@@ -484,6 +493,17 @@ public class Support implements ParserTreeConstants {
             return dictionary.getVariable(e.getIdent());
         else {
             throw new IllegalArgumentException("Wrong variable identified in \"defines_var\" annotation" + node);
+        }
+    }
+
+    int getAnnInt(ASTAnnExpr node) {
+
+        ASTScalarFlatExpr e = (ASTScalarFlatExpr) node.jjtGetChild(0);
+        if (e != null) {
+	    return getInt(e);
+	}
+        else {
+            throw new IllegalArgumentException("Wrong definition od \"priority\" annotation" + node);
         }
     }
 
@@ -533,7 +553,10 @@ public class Support implements ParserTreeConstants {
 
     void pose(Constraint c) throws FailException {
 
-        store.imposeWithConsistency(c);
+	if (constraintPriority >= 0 && constraintPriority <= 4)
+	    store.imposeWithConsistency(c, constraintPriority);
+	else
+	    store.imposeWithConsistency(c);
 
         if (options.debug())
             System.out.println("% " + c);
