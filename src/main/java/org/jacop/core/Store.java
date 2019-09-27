@@ -771,6 +771,7 @@ public class Store {
      * the store immediately.
      *
      * @param c constraint to be imposed.
+     * @param queueIndex constraint priority for evaluation.
      * @throws FailException failure exception.
      */
 

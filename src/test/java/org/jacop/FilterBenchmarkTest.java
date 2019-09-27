@@ -181,6 +181,7 @@ public class FilterBenchmarkTest extends FilterBenchmark {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     public void testFilter() throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
 
         Class cls = this.getClass();

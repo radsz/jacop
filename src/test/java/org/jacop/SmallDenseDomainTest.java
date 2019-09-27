@@ -30,6 +30,7 @@ public class SmallDenseDomainTest {
 
     private Method prepareMethod;
 
+    @SuppressWarnings("unchecked")
     public SmallDenseDomainTest(String prepareMethodName) throws NoSuchMethodException {
         Class<SmallDenseDomainTest> cls = (Class<SmallDenseDomainTest>) this.getClass();
         prepareMethod = cls.getMethod(prepareMethodName, int[].class);

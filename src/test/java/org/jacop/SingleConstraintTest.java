@@ -633,7 +633,7 @@ public class SingleConstraintTest extends TestHelper {
         IntVar[] x = getShiftedIntVars(store, "x", xLength, xSize + 1);
         IntVar sum = new IntVar(store, "sum", 0, xLength * xSize);
 
-        Sum sumConstraint = new Sum(x, sum);
+        SumInt sumConstraint = new SumInt(x, "==", sum);
 
         store.impose(sumConstraint);
 
@@ -654,7 +654,7 @@ public class SingleConstraintTest extends TestHelper {
 
         IntVar[] x = getShiftedIntVars(store, "x", xLength, xSize + 1);
 
-        Linear linear = new Linear(store, x, new int[] {2, 1, 3, 1}, ">=", 5);
+        LinearInt linear = new LinearInt(x, new int[] {2, 1, 3, 1}, ">=", 5);
 
         store.impose(linear);
 
@@ -675,7 +675,7 @@ public class SingleConstraintTest extends TestHelper {
 
         IntVar[] x = getIntVars(store, "x", xLength, xSize + 1);
 
-        SumWeightDom sum = new SumWeightDom(x, new int[] {1, 2, 3, 4}, 4);
+        LinearIntDom sum = new LinearIntDom(x, new int[] {1, 2, 3, 4}, "==", 4);
 
         store.impose(sum);
 
