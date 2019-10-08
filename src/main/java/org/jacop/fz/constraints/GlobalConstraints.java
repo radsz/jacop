@@ -649,24 +649,27 @@ class GlobalConstraints implements ParserTreeConstants {
         int[] vu = uniqueIndex(v);
         if (vu.length != v.length) { // non unique variables
 
+	    IntVar[] nv = new IntVar[vu.length];
+	    for (int i = 0; i < vu.length; i++)
+		nv[i] = v[vu[i]];
+
             int[][] tt = new int[t.length][vu.length];
             for (int i = 0; i < tt.length; i++)
                 for (int j = 0; j < vu.length; j++)
                     tt[i][j] = t[i][vu[j]];
 
-            IntVar[] uniqueVar = support.unique(v);
-            if (uniqueVar.length == 1) {
+            if (nv.length == 1) {
                 IntervalDomain d = new IntervalDomain();
                 for (int i = 0; i < tt.length; i++)
                     d.addDom(new IntervalDomain(tt[i][0], tt[i][0]));
-                uniqueVar[0].domain.in(store.level, uniqueVar[0], d);
+                nv[0].domain.in(store.level, nv[0], d);
                 if (support.options.debug())
-                    System.out.println("% " + uniqueVar[0] + " in " + d);
+                    System.out.println("% " + nv[0] + " in " + d);
 
             } else if (t.length <= 64)
-                support.pose(new org.jacop.constraints.table.SimpleTable(v, tt, true));
+                support.pose(new org.jacop.constraints.table.SimpleTable(nv, tt, true));
             else
-                support.pose(new org.jacop.constraints.table.Table(v, tt, true));
+                support.pose(new org.jacop.constraints.table.Table(nv, tt, true));
         } else if (t.length <= 64)
             support.pose(new org.jacop.constraints.table.SimpleTable(v, t, true));
         else

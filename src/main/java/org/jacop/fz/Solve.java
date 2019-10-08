@@ -962,14 +962,14 @@ public class Solve implements ParserTreeConstants {
         for (int i = 0; i < si.getSearchItems().size(); i++) {
             if (i == 0) { // master search
                 masterLabel = sub_search(si.getSearchItems().get(i), masterLabel, true);
-                last_search = masterLabel;
+                last_search = getLastSearch(masterLabel);
                 masterSelect = variable_selection;
                 if (!print_search_info)
                     masterLabel.setPrintInfo(false);
             } else {
                 DepthFirstSearch<Var> label = sub_search(si.getSearchItems().get(i), last_search, false);
                 last_search.addChildSearch(label);
-                last_search = label;
+                last_search = getLastSearch(label);
                 if (!print_search_info)
                     last_search.setPrintInfo(false);
             }
@@ -1148,6 +1148,25 @@ public class Solve implements ParserTreeConstants {
     }
 
 
+    @SuppressWarnings("unchecked") 
+    DepthFirstSearch<Var> getLastSearch(DepthFirstSearch<Var> s) {
+	DepthFirstSearch<Var> ns = s;
+	DepthFirstSearch<Var> lastNotNullSearch = ns;
+
+	do {
+
+	    lastNotNullSearch = ns;
+
+	    // find next search
+	    if (ns.childSearches == null)
+		ns = null;
+	    else
+		ns = (DepthFirstSearch<Var>)ns.childSearches[0];
+	} while (ns != null);
+
+	return lastNotNullSearch;
+    }
+
     void printStatisticsForSeqSearch(boolean interrupted, boolean result) {
 
         if (list_seq_searches == null) {
@@ -1258,6 +1277,7 @@ public class Solve implements ParserTreeConstants {
                 heuristicSeqSearch = true;
             }
             list_seq_searches.add(label);
+	    label.setPrintInfo(false);
         } else if (si.type().equals("set_search")) {
             label = set_search(si);
             if (!master)
@@ -1275,21 +1295,23 @@ public class Solve implements ParserTreeConstants {
             }
 
             list_seq_searches.add(label);
+	    label.setPrintInfo(false);
         } else if (si.type().equals("priority_search")) {
             label = priority_search(si);
 
             list_seq_searches.add(label);
         } else if (si.type().equals("seq_search")) {
-            for (int i = 0; i < si.getSearchItems().size(); i++)
+            for (int i = 0; i < si.getSearchItems().size(); i++) {
                 if (i == 0) { // master search
                     DepthFirstSearch<Var> label_seq = sub_search(si.getSearchItems().get(i), last_search, false);
-                    last_search = label_seq;
+		    last_search = getLastSearch(label_seq);
                     label = label_seq;
                 } else {
                     DepthFirstSearch<Var> label_seq = sub_search(si.getSearchItems().get(i), last_search, false);
                     last_search.addChildSearch(label_seq);
-                    last_search = label_seq;
+                    last_search = getLastSearch(label_seq);
                 }
+	    }
         } else if (si.type().equals("float_search")) {
             label = float_search(si);
             if (!master)
@@ -1306,6 +1328,7 @@ public class Solve implements ParserTreeConstants {
                 heuristicSeqSearch = true;
             }
             list_seq_searches.add(label);
+	    label.setPrintInfo(false);
         } else {
             throw new IllegalArgumentException("Not recognized or supported search type \"" + si.type() + "\"; compilation aborted");
         }
@@ -1402,7 +1425,7 @@ public class Solve implements ParserTreeConstants {
 		throw new RuntimeException("Error: Not supported search type " + s.search_type + "in priority_search; execution aborted");
 	}
 
-	ComparatorVariable<IntVar> comparator = comparator = si.getVarSelect();
+	ComparatorVariable<IntVar> comparator = si.getVarSelect();
 
         PrioritySearch<Var> label = new PrioritySearch(si.vars(), comparator, searches);
 	label.setPrintInfo(false);

@@ -41,7 +41,7 @@ import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
 
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -435,7 +435,7 @@ public class Support implements ParserTreeConstants {
 
     IntVar[] unique(IntVar[] vs) {
 
-        HashSet<IntVar> varSet = new HashSet<IntVar>();
+        LinkedHashSet<IntVar> varSet = new LinkedHashSet<IntVar>();
         for (IntVar v : vs)
             varSet.add(v);
 
