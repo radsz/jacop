@@ -57,6 +57,10 @@ import org.jacop.set.constraints.AeqS;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.Arrays;
 
 /**
  * Generation of global constraints in flatzinc
@@ -649,14 +653,17 @@ class GlobalConstraints implements ParserTreeConstants {
         int[] vu = uniqueIndex(v);
         if (vu.length != v.length) { // non unique variables
 
+	    // remove infeasible tuples for duplicated variables
+	    int[][] nt = removeInfeasibleTuples(t);
+
 	    IntVar[] nv = new IntVar[vu.length];
 	    for (int i = 0; i < vu.length; i++)
 		nv[i] = v[vu[i]];
 
-            int[][] tt = new int[t.length][vu.length];
+            int[][] tt = new int[nt.length][vu.length];
             for (int i = 0; i < tt.length; i++)
                 for (int j = 0; j < vu.length; j++)
-                    tt[i][j] = t[i][vu[j]];
+                    tt[i][j] = nt[i][vu[j]];
 
             if (nv.length == 1) {
                 IntervalDomain d = new IntervalDomain();
@@ -1146,19 +1153,74 @@ class GlobalConstraints implements ParserTreeConstants {
         return true;
     }
 
+    ArrayList<Pair> duplicates;
+
     int[] uniqueIndex(IntVar[] vs) {
 
-        ArrayList<Integer> il = new ArrayList<Integer>();
-        HashSet<IntVar> varSet = new HashSet<IntVar>();
-        for (int i = 0; i < vs.length; i++) {
-            boolean r = varSet.add(vs[i]);
-            if (r)
-                il.add(i);
-        }
-        int[] x = new int[il.size()];
-        for (int i = 0; i < x.length; i++)
-            x[i] = il.get(i);
+	Map<IntVar, Integer> map = new LinkedHashMap<>();
+	duplicates = new ArrayList<>();
+	for (int i = 0; i < vs.length; i++) {
+	    if (map.get(vs[i]) == null)
+		map.put(vs[i], i);
+	    else
+		duplicates.add(new Pair(map.get(vs[i]), i));
+	}
 
+	int[] x = new int[map.size()];
+	Set<Map.Entry<IntVar, Integer>> entries = map.entrySet();
+	int i = 0;
+        for (Map.Entry<IntVar, Integer> e : entries) {
+	    int v = e.getValue();
+	    x[i++] = v;
+	}
         return x;
     }
+
+    int[][] removeInfeasibleTuples(int[][] t) {
+	int n = t.length;
+	int[][] nt = new int[n][t[0].length];
+
+	int k = 0;
+	for (int i = 0; i < n; i++) {
+	    int correct = 0;
+	    for (Pair d : duplicates) {
+		if (t[i][d.first()] == t[i][d.second()]) {
+		    correct++;
+		}
+	    }
+	    if (correct == duplicates.size()) {
+		System.arraycopy(t[i], 0, nt[k], 0, t[i].length);
+		k++;
+	    }
+	}
+
+	int[][] tt = new int[k][t[0].length];
+	for (int i = 0; i < k; i++)
+	    System.arraycopy(nt[i], 0, tt[i], 0, nt[i].length);
+	return tt;
+    }
+
+    private class Pair {
+
+	private final int a;
+	private final int b;
+
+	Pair(int a, int b) {
+	    this.a = a;
+	    this.b = b;
+	}
+
+	int first() {
+	    return a;
+	}
+
+	int second() {
+	    return b;
+	}
+
+	public String toString() {
+	    return "("+a+", "+b+")";
+	}
+    }
+
 }
