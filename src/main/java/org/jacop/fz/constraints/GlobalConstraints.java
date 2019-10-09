@@ -1200,7 +1200,7 @@ class GlobalConstraints implements ParserTreeConstants {
 	return tt;
     }
 
-    private class Pair {
+    private static class Pair {
 
 	private final int a;
 	private final int b;
