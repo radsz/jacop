@@ -580,11 +580,13 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 	if (current == n)
 	    return n;
 
-	float currentMeasure = comparator.metric(priority[current]);
-	for (int i = current+1; i < n; i++) {
-	    if (comparator.compare(currentMeasure, priority[i]) < 0 && ! visited.get(i)) {
-		current = i;
+	if (comparator != null) {
+	    float currentMeasure = comparator.metric(priority[current]);
+	    for (int i = current+1; i < n; i++) {
+		if (comparator.compare(currentMeasure, priority[i]) < 0 && ! visited.get(i)) {
+		    current = i;
 		currentMeasure = comparator.metric(priority[current]);
+		}
 	    }
 	}
 	
