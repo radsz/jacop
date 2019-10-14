@@ -102,7 +102,8 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 	    
 	search = new DepthFirstSearch[2*dfs.length];
 	for (int i = 0; i < n; i++) {
-	    
+
+	    dfs[i].setMasterSearch(this);
 	    search[2*i] = dfs[i];
 	    if (!dfs[i].getClass().getName().equals("org.jacop.search.PrioritySearch") && dfs[i].heuristic == null)
 		throw new RuntimeException("heuristic in depth first search must be set");
@@ -240,7 +241,6 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     public boolean labeling(Store store, Var costVar) {
 
 	this.store = store;
-
 	((SimpleSolutionListener)solutionListener).setVariables(allVars);
 
 	if (solutionsLimit == -1)
@@ -763,13 +763,12 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 		    		break;
 			    } else {
 				if (child.getSolutionListener().solutionsNo() > currentChildSolutionNo) {
-			 
 				    noSolutions = child.getSolutionListener().solutionsNo();
 
 				    constraineCostFromChild(child);
 
 				    if (noSolutions >= solutionsLimit)
-					throw new SolutionsLimitReached();				    
+					throw new SolutionsLimitReached();
 
 				    master.solutionListener.executeAfterSolution(this, null);
 
@@ -779,10 +778,10 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 			    }
 		    	}
 
-		        noSolutions++;
-			constraineCostFromChild(childSearch);
-			if (noSolutions >= solutionsLimit)
-			    throw new SolutionsLimitReached();				    
+			 noSolutions += childSearch.getSolutionListener().solutionsNo();
+			 constraineCostFromChild(childSearch);
+			 if (noSolutions >= solutionsLimit)
+			     throw new SolutionsLimitReached();
 
 			master.solutionListener.executeAfterSolution(this, null);
 
