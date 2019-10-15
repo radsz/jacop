@@ -486,14 +486,28 @@ public class Solve implements ParserTreeConstants {
 
                     if (options.runSearch())
 			if (restartCalculator != null) {
+			    if (options.debug()) {
+				System.out.print("% RestartSearch(" + restartCalculator + "), ");
+				label.setSelectChoicePoint(variable_selection);
+				System.out.print(" satisfy ");
+				printSearch(label);
+			    }
+
 			    rs = new RestartSearch<>(store, label, variable_selection, restartCalculator);
 			    int to = options.getTimeOut();
 			    if (to > 0)
 				rs.setTimeOutMilliseconds(to);
 			    Result = rs.labeling();
 			}
-			else
+			else {
+			    if (options.debug()) {
+				label.setSelectChoicePoint(variable_selection);
+				System.out.print("% satisfy ");
+				printSearch(label);
+			    }
+
 			    Result = label.labeling(store, variable_selection);
+			}
                     else {
                         // storing flatiznc defined search
                         flatzincDFS = label;
@@ -517,14 +531,27 @@ public class Solve implements ParserTreeConstants {
 
                     if (options.runSearch())
 			if (restartCalculator != null) {
+			    if (options.debug()) {
+				System.out.print("% RestartSearch(" + restartCalculator + "), ");
+				label.setSelectChoicePoint(variable_selection);
+				System.out.print(" minimize (" + cost +") ");
+				printSearch(label);
+			    }
+
 			    rs = new RestartSearch<>(store, label, variable_selection, restartCalculator, cost);
 			    int to = options.getTimeOut();
 			    if (to > 0)
 				rs.setTimeOutMilliseconds(to);
 			    Result = rs.labeling();
 			}
-			else
+			else {
+			    if (options.debug()) {
+				label.setSelectChoicePoint(variable_selection);
+				System.out.print("% minimize (" + cost +") ");
+				printSearch(label);
+			    }
 			    Result = label.labeling(store, variable_selection, cost);
+			}
                     else {
                         // storing flatiznc defined search
                         flatzincDFS = label;
@@ -552,14 +579,28 @@ public class Solve implements ParserTreeConstants {
 
                     if (options.runSearch())
 			if (restartCalculator != null) {
+			    if (options.debug()) {
+				System.out.print("% RestartSearch(" + restartCalculator + "), ");
+				label.setSelectChoicePoint(variable_selection);
+				System.out.print("% maximize (" + cost +") ");
+				printSearch(label);
+			    }
+
 			    rs = new RestartSearch<>(store, label, variable_selection, restartCalculator, max_cost);
 			    int to = options.getTimeOut();
 			    if (to > 0)
 				rs.setTimeOutMilliseconds(to);
 			    Result = rs.labeling();
 			}
-			else
+			else {
+			    if (options.debug()) {
+				label.setSelectChoicePoint(variable_selection);
+				System.out.print("% maximize (" + cost +") ");
+				printSearch(label);
+			    }
+
 			    Result = label.labeling(store, variable_selection, max_cost);
+			}
                     else {
                         // storing flatiznc defined search
                         flatzincDFS = label;
@@ -1021,11 +1062,24 @@ public class Solve implements ParserTreeConstants {
 
                     if (options.runSearch())
 			if (restartCalculator != null) {
+			    if (options.debug()) {
+				System.out.print("% RestartSearch(" + restartCalculator + "), ");
+				label.setSelectChoicePoint(masterSelect);
+				System.out.print(" satisfy ");
+				printSearch(label);
+			    }
+
 			    label = masterLabel;
 			    rs = new RestartSearch<>(store, masterLabel, masterSelect, restartCalculator);
 			    Result = rs.labeling();
 			}
 			else {
+			    if (options.debug()) {
+				masterLabel.setSelectChoicePoint(masterSelect);
+				System.out.print("% satisfy ");
+				printSearch(masterLabel);
+			    }
+
 			    label = masterLabel;
 			    Result = masterLabel.labeling(store, masterSelect);
 			}
@@ -1068,11 +1122,24 @@ public class Solve implements ParserTreeConstants {
 
                     if (options.runSearch())
 			if (restartCalculator != null) {
+			    if (options.debug()) {
+				System.out.print("% RestartSearch(" + restartCalculator + "), ");
+				label.setSelectChoicePoint(masterSelect);
+				System.out.print(" minimize (" + cost +") ");
+				printSearch(label);
+			    }
+
 			    label = masterLabel;
 			    rs = new RestartSearch<>(store, masterLabel, masterSelect, restartCalculator, cost);
 			    Result = rs.labeling();
 			}
 			else {
+			    if (options.debug()) {
+				masterLabel.setSelectChoicePoint(masterSelect);
+				System.out.print("% minimize (" + cost + ") ");
+				printSearch(masterLabel);
+			    }
+
 			    label = masterLabel;
 			    Result = masterLabel.labeling(store, masterSelect, cost);
 			}
@@ -1117,11 +1184,24 @@ public class Solve implements ParserTreeConstants {
 
                     if (options.runSearch())
 			if (restartCalculator != null) {
+			    if (options.debug()) {
+				System.out.print("% RestartSearch(" + restartCalculator + "), ");
+				label.setSelectChoicePoint(masterSelect);
+				System.out.print(" maximize (" + cost +") ");
+				printSearch(label);
+			    }
+
 			    label = masterLabel;
 			    rs = new RestartSearch<>(store, masterLabel, masterSelect, restartCalculator, max_cost);
 			    Result = rs.labeling();
 			}
 			else {
+			    if (options.debug()) {
+				masterLabel.setSelectChoicePoint(masterSelect);
+				System.out.print("% maximize (" + cost + ") ");
+				printSearch(masterLabel);
+			    }
+
 			    label = masterLabel;
 			    Result = masterLabel.labeling(store, masterSelect, max_cost);
 			}
@@ -1166,6 +1246,7 @@ public class Solve implements ParserTreeConstants {
 
 	return lastNotNullSearch;
     }
+
 
     void printStatisticsForSeqSearch(boolean interrupted, boolean result) {
 
@@ -1674,28 +1755,22 @@ public class Solve implements ParserTreeConstants {
         label.setTimeOutListener(credit);
     }
 
-    @SuppressWarnings("unchecked") void printSearch(Search<? extends Var> label) {
+    @SuppressWarnings("unchecked") void printSearch(DepthFirstSearch<Var> s) {
 
-        int N = 1;
-        System.out.println(N++ + ". " + label);
+	do {
 
-        java.util.LinkedHashSet<Search<? extends Var>> l = new java.util.LinkedHashSet<Search<? extends Var>>();
-        l.add(label);
+	    System.out.print(s);
 
-        while (l.size() != 0) {
-            java.util.LinkedHashSet<Search<? extends Var>> ns = new java.util.LinkedHashSet<Search<? extends Var>>();
-            for (Search s1 : l) {
-                Search<? extends Var>[] child = ((DepthFirstSearch) s1).childSearches;
-                if (child != null)
-                    for (Search s : child) {
-                        System.out.println(N + ". " + s);
-                        ns.add(s);
-                    }
-            }
-            N++;
+	    // find next search
+	    if (s.childSearches == null)
+		s = null;
+	    else {
+		s = (DepthFirstSearch<Var>)s.childSearches[0];
+		System.out.print(", ");
 
-            l = ns;
-        }
+	    }
+	} while (s != null);
+	System.out.println();
     }
 
     int FinalNumberSolutions = 0;

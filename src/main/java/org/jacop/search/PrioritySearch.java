@@ -658,7 +658,17 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     }
     
     public String toString() {
-        return "PrioritySearch(" + java.util.Arrays.asList(priority)+", "+comparator.getClass().getName()+", "+java.util.Arrays.asList(search)+")";
+        StringBuffer b  = new StringBuffer();
+
+	b.append("PrioritySearch(").append(java.util.Arrays.asList(priority)).append(", ").append(comparator.getClass().getName());
+
+	b.append(", [");
+	for (int i = 0; i < search.length/2; i++) {
+	    b.append(search[2*i]+", ");
+	}
+	b.append("])");
+
+	return b.toString();
     }
 
     class LinkingSearch<T extends Var> extends DepthFirstSearch<T> {

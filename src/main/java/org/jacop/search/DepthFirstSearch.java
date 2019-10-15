@@ -1263,6 +1263,17 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
         StringBuffer buf = new StringBuffer();
 
+        buf.append(id + ": DFS(");
+
+        buf.append(heuristic+")");
+
+        return buf.toString();
+    }
+
+    public String toStringFull() {
+
+        StringBuffer buf = new StringBuffer();
+
         buf.append("Depth First Search " + id + "\n");
 
         buf.append(heuristic);
