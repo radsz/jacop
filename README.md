@@ -82,7 +82,7 @@ To use JaCoP with maven you can just include it as a dependency in your `pom.xml
     <dependency>
         <groupId>org.jacop</groupId>
         <artifactId>jacop</artifactId>
-        <version>4.5.0</version>
+        <version>4.7.0</version>
     </dependency>
 
 From the version 4.4.0, JaCoP is uploaded to Maven Central so the above is the only thing you need to do. 
