@@ -34,7 +34,7 @@ package org.jacop.core;
  * It is thrown when search has encountered a dead end and backtracking must occurr.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public final class FailException extends RuntimeException {

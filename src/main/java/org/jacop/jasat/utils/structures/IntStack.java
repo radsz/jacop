@@ -37,7 +37,7 @@ import org.jacop.jasat.utils.MemoryPool;
  * Special class for unboxed int stack
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 public final class IntStack {
 

@@ -42,7 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Bound consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class XplusYplusCeqZ extends PrimitiveConstraint {

@@ -42,7 +42,7 @@ import java.util.List;
  * It is program to solve Kakro puzzles.
  *
  * @author Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  *          <p>
  *          This is a program which uses Constraint Programming to find the solution to a
  *          simple Kakro puzzle. For a moment the problem representation does not allow

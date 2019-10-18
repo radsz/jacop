@@ -68,7 +68,7 @@ import java.util.ArrayList;
  * http://www.hakank.org/JaCoP/ .
  *
  * @author Hakan Kjellerstrand and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class WhoKilledAgatha extends ExampleFD {

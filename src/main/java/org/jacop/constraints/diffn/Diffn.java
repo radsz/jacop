@@ -41,7 +41,7 @@ import java.util.*;
  * does not use sophisticated techniques for efficient backtracking.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public class Diffn extends Nooverlap {

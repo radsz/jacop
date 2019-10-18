@@ -38,7 +38,7 @@ import org.jacop.core.*;
  *
  * @param <T> type of variable being used in search.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class IndomainMedian<T extends IntVar> implements Indomain<T> {

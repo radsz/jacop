@@ -48,7 +48,7 @@ import java.util.List;
  * It shows how to visualize the solving process for Sudoku problem.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public class CPvizSudoku {

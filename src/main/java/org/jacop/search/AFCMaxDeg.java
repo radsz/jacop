@@ -44,7 +44,7 @@ import org.jacop.constraints.Constraint;
  *
  * @param <T> type of variable being compared.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class AFCMaxDeg<T extends Var> implements ComparatorVariable<T> {

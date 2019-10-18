@@ -40,7 +40,7 @@ import java.util.ArrayList;
  * It solves a simple logic puzzle about blueberry muffins.
  *
  * @author Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  *          <p>
  *          Logic Puzzle: Blueberry Muffins
  *          <p>

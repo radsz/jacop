@@ -37,7 +37,7 @@ import org.jacop.core.IntVar;
  * and its weight.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 class BinItem {

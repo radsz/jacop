@@ -40,7 +40,7 @@ import java.util.ArrayList;
  * It models and solves Zebra logic puzzle.
  *
  * @author Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  *          <p>
  *          It was given at The German Institute of Logical Thinking in Berlin, 1981. And 98% FAILED.
  *          <p>

@@ -44,7 +44,7 @@ import java.util.ArrayList;
  * It is a simple newspaper reading job-shop like scheduling problem.
  *
  * @author Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  *          <p>
  *          There are four students: Algy, Bertie, Charlie and Digby, who share a flat.
  *          Four newspapers are delivered to the house: the Financial Times, the Guardian,

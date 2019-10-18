@@ -44,7 +44,7 @@ import java.util.Collection;
  * to other shorter time category.
  *
  * @author Mariusz Świerkot and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 @RunWith(Parameterized.class) public class MinizincBasedTestUpTo10Minutes extends MinizincBasedTestsHelper {
 

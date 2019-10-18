@@ -39,7 +39,7 @@ import java.io.FileInputStream;
  * information about all options used for a given flatzinc file.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 public class Options {
 

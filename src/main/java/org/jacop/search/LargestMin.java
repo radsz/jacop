@@ -37,7 +37,7 @@ import org.jacop.core.IntVar;
  *
  * @param <T> type of IntVar being compared.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class LargestMin<T extends IntVar> implements ComparatorVariable<T> {

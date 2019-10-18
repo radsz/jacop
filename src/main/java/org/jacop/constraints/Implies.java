@@ -45,7 +45,7 @@ import java.util.stream.Stream;
  * Constraint b {@literal =>} c (implication or half-reification)
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class Implies extends PrimitiveConstraint implements UsesQueueVariable {

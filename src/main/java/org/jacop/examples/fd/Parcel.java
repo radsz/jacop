@@ -42,7 +42,7 @@ import java.util.ArrayList;
  * It solves a simple parcel shipment problem.
  *
  * @author Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 public class Parcel extends ExampleFD {
 

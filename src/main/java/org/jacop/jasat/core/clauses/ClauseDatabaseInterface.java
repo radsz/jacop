@@ -38,7 +38,7 @@ import java.io.BufferedWriter;
  * contains clauses and can perform different operations on them.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public interface ClauseDatabaseInterface {

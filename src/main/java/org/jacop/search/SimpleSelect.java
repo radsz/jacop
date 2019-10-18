@@ -41,7 +41,7 @@ import java.util.Map;
  * be enforced by search.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 @SuppressWarnings("unchecked") public class SimpleSelect<T extends Var> implements SelectChoicePoint<T> {

@@ -39,7 +39,7 @@ import org.jacop.jasat.utils.structures.IntVec;
  * a basic preprocessor. It aims at removing trivial clauses
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 public class BasicPreprocessor {
 

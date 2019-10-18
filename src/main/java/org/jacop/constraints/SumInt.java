@@ -52,7 +52,7 @@ import java.util.stream.Stream;
  * by Warwick Harvey and Joachim Schimpf
  *
  * @author Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public class SumInt extends PrimitiveConstraint {

@@ -39,7 +39,7 @@ import java.util.List;
  * Defines a list of exclusive items.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 class ExclusiveList extends ArrayList<ExclusiveItem> {

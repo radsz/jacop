@@ -40,7 +40,7 @@ import java.util.ArrayList;
  * It is a simple logic puzzle about sleeping arrangements.
  *
  * @author Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  *          <p>
  *          The Dillies have five teenaged children, two boys named Ollie and
  *          Rollie, and three girls named Mellie, Nellie, and Pollie. Each is a

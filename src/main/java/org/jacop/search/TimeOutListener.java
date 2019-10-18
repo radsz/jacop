@@ -37,7 +37,7 @@ package org.jacop.search;
  * timeout has occurred.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public interface TimeOutListener {

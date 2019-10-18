@@ -54,7 +54,7 @@ import java.util.stream.Stream;
  * function. The strength of propagation algorithm is incomporable to BC.
  *
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 public class AmongVar extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 

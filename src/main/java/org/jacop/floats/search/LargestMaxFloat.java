@@ -38,7 +38,7 @@ import org.jacop.search.ComparatorVariable;
  *
  * @param <T> type of IntVar being compared.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class LargestMaxFloat<T extends FloatVar> implements ComparatorVariable<T> {

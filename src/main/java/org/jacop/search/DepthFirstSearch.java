@@ -50,7 +50,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * @param <T> type of variables used in this search.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public class DepthFirstSearch<T extends Var> implements Search<T> {

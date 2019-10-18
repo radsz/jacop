@@ -54,7 +54,7 @@ import java.util.Timer;
  * from its components
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 public final class Core implements SolverComponent {
 

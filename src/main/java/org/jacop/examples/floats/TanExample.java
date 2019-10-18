@@ -34,7 +34,7 @@ package org.jacop.examples.floats;
  * It models tan(x) = -x for floating solver.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 import org.jacop.core.Store;

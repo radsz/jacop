@@ -50,7 +50,7 @@ import java.util.Map;
  *
  * @param <T> type of variable being used in the Search.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {

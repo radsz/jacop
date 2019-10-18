@@ -50,7 +50,7 @@ import java.util.stream.Stream;
  * make addressing of list array starting from 1.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class ElementVariableFast extends Constraint implements Stateful, SatisfiedPresent {

@@ -48,7 +48,7 @@ import java.io.IOException;
  * TODO, check if this the efficient way of dealing with ternary clauses.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public final class TernaryClausesDatabase extends AbstractClausesDatabase {

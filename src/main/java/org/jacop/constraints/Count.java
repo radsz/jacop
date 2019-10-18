@@ -47,7 +47,7 @@ import java.util.stream.Stream;
  * specified by variable idNumber.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class Count extends Constraint implements SatisfiedPresent {

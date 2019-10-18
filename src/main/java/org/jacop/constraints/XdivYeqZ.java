@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Constraint X div Y #= Z
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class XdivYeqZ extends Constraint implements SatisfiedPresent {

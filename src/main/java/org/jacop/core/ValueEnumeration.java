@@ -34,7 +34,7 @@ package org.jacop.core;
  * Defines a methods for enumerating values contained in the domain.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public abstract class ValueEnumeration {

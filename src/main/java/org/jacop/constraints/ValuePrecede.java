@@ -54,7 +54,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Principles and Practice of Constraint Programming (CP'2004).
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 public class ValuePrecede extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 

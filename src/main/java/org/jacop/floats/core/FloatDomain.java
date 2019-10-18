@@ -40,7 +40,7 @@ import org.jacop.core.*;
  * any function can not be empty domains.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public abstract class FloatDomain extends Domain {

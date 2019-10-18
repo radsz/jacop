@@ -42,7 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Constraint if constraint1 then constraint2
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {

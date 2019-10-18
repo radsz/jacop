@@ -48,7 +48,7 @@ import java.util.List;
  * hardCounter. It uses value based violation metric.
  *
  * @author Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class SoftGCC extends DecomposedConstraint<Constraint> {

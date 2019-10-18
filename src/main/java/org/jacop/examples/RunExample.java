@@ -42,7 +42,7 @@ import java.lang.reflect.Modifier;
  * the arguments for the executed example.
  *
  * @author Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class RunExample {

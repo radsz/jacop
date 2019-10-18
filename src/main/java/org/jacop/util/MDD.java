@@ -45,7 +45,7 @@ import java.util.TreeMap;
  * on ad-hoc n-ary constraints.", CP 2008.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public class MDD {

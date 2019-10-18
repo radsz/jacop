@@ -42,7 +42,7 @@ import java.util.stream.Collectors;
  * Defines how to construct a constraint out of other constraints.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public abstract class DecomposedConstraint<T extends Constraint> {
