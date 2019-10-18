@@ -53,7 +53,7 @@ import java.util.Map;
  * to efficiently model and solve CrossWord puzzles.
  *
  * @author : Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  *          <p>
  *          This program uses problem instances and dictionary obtained from Hadrien Cambazard.
  */

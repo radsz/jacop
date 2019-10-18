@@ -43,7 +43,7 @@ import java.util.Map;
  *
  * @param <T> type of variable being used in the search.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public class InputOrderSelect<T extends Var> implements SelectChoicePoint<T> {
@@ -167,6 +167,6 @@ public class InputOrderSelect<T extends Var> implements SelectChoicePoint<T> {
     }
 
     public String toString() {
-        return "" + java.util.Arrays.asList(searchVariables);
+        return "" + java.util.Arrays.asList(searchVariables) + ", InputOrder, " + valueOrdering;
     }
 }

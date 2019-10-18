@@ -42,7 +42,7 @@ import java.util.Map;
  *
  * @param <T> type of variable being used in the search.
  * @author Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class IndomainHierarchical<T extends Var> implements Indomain<T> {

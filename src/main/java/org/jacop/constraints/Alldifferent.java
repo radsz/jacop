@@ -34,6 +34,7 @@ package org.jacop.constraints;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
+import org.jacop.util.BipartiteGraphMatching;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -43,7 +44,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * partial consistency technique.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class Alldifferent extends Constraint implements UsesQueueVariable, SatisfiedPresent {
@@ -164,6 +165,55 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
 
     }
 
+    /**
+     * Check whether the constraint is not satisfied based on bipartite graph matching.
+     * @return true if constraint is not satisfied
+     */
+    public boolean notSatisfied() {
+	
+	Map<Integer, Integer> valueMap = new HashMap<>();
+	int valueIndex = 0;
+
+	int[][] adj = new int[list.length + 1][];
+	adj[0] = new int[0];
+
+	for (int i = 0; i < list.length; i++) {
+	    IntVar v = list[i];
+
+	    adj[i + 1] = new int[v.dom().getSize()];
+	    int j = 0;
+	    for (ValueEnumeration e = v.dom().valueEnumeration(); e.hasMoreElements(); ) {
+		int el = e.nextElement();
+		Integer elIndex = valueMap.get(el);
+		if (elIndex == null) {
+		    valueMap.put(el, valueIndex);
+		    adj[i + 1][j] = valueIndex + 1;
+		    valueIndex++;
+		} else {
+		    adj[i + 1][j] = elIndex + 1;
+		}
+		j++;
+	    }
+	}
+	for (int i = 0; i < adj.length; i++) {
+	    System.out.print(i+": ");
+
+	    for (int j = 0; j < adj[i].length; j++) {
+		System.out.print(adj[i][j]+", ");
+	    }
+	    System.out.println();
+
+	}
+	// compute maximal value for count
+	BipartiteGraphMatching matcher = new BipartiteGraphMatching(adj, list.length, valueMap.size());
+	int maxNumberDifferent = matcher.hopcroftKarp();
+
+	if (maxNumberDifferent < list.length)
+	    return true;
+	else
+	    return false;
+    }
+    
     @Override public void impose(Store store) {
 
         super.impose(store);

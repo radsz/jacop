@@ -30,24 +30,36 @@
 
 package org.jacop.search;
 
+import org.jacop.core.Store;
 import org.jacop.core.Var;
 
 /**
- * Defines a WeightedDegree comparator for Variables. Every time a constraint
+ * Defines a WeightedDegree comparator for variables. Every time a constraint
  * failure is encountered all variables within the scope of that constraints
  * have increased weight. The comparator will choose the variable with the
  * highest weight divided by its size.
  *
+ * This implementation is not equivalent to AFCMaxDeg since it takes
+ * all accumulated failures for a variable while AFCMaxDeg sums up
+ * weights for still active constraints only!
+ *
  * @param <T> type of variable being compared.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public class WeightedDegree<T extends Var> implements ComparatorVariable<T> {
 
+
+    private WeightedDegree() {}
+
+    public WeightedDegree(Store store) {
+	store.variableWeightManagement = true;	
+    }
+    
     public int compare(float left, T var) {
 
-        float right = ((float) var.weight) / ((float) var.getSize());
+        double right = ((double)var.weight) / var.getSizeFloat();
 
         if (left > right)
 
@@ -62,10 +74,10 @@ public class WeightedDegree<T extends Var> implements ComparatorVariable<T> {
     }
 
     public int compare(T leftVar, T rightVar) {
+    
+        double left = ((double) leftVar.weight) / leftVar.getSizeFloat();
 
-        float left = ((float) leftVar.weight) / ((float) leftVar.getSize());
-
-        float right = ((float) rightVar.weight) / ((float) rightVar.getSize());
+        double right = ((double) rightVar.weight) / rightVar.getSizeFloat();
 
         if (left > right)
 
@@ -81,7 +93,7 @@ public class WeightedDegree<T extends Var> implements ComparatorVariable<T> {
 
     public float metric(T var) {
 
-        return ((float) var.weight) / ((float) var.getSize());
+        return ((float) var.weight) / ((float)var.getSizeFloat());
 
     }
 

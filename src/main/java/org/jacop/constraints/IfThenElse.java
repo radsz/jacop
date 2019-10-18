@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * *
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable {

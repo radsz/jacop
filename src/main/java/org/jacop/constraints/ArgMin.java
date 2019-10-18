@@ -43,7 +43,7 @@ import java.util.stream.Stream;
  * variable from all variables on the list.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class ArgMin extends Constraint implements SatisfiedPresent {
@@ -198,7 +198,7 @@ public class ArgMin extends Constraint implements SatisfiedPresent {
                 for (int i = 0; i < list.length; i++) {
                     var = list[i];
                     if (var.min() >= minValue && var.min() <= maxValue) // (d.isIntersecting(var.dom()) )
-                        indexDom.addDom(new BoundDomain(i + 1 + indexOffset, i + 1 + indexOffset));
+                        indexDom.unionAdapt(i + 1 + indexOffset, i + 1 + indexOffset);
                 }
 
                 minIndex.domain.in(store.level, minIndex, indexDom);

@@ -41,7 +41,7 @@ import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
 
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -62,6 +62,7 @@ public class Support implements ParserTreeConstants {
 
     // =========== Annotations ===========
     public boolean boundsConsistency = true, domainConsistency = false;
+    public int constraintPriority = -1;
     // defines_var-- not used yet
     public IntVar definedVar = null;
 
@@ -365,7 +366,7 @@ public class Support implements ParserTreeConstants {
 
     SetVar[] getSetVarArray(SimpleNode node) {
         SetVar[] s = null;
-        int arrayIndex = 0;
+        // int arrayIndex = 0;
 
         if (node.getId() == JJTARRAYLITERAL) {
             int count = node.jjtGetNumChildren();
@@ -434,7 +435,7 @@ public class Support implements ParserTreeConstants {
 
     IntVar[] unique(IntVar[] vs) {
 
-        HashSet<IntVar> varSet = new HashSet<IntVar>();
+        LinkedHashSet<IntVar> varSet = new LinkedHashSet<IntVar>();
         for (IntVar v : vs)
             varSet.add(v);
 
@@ -454,22 +455,35 @@ public class Support implements ParserTreeConstants {
         for (int i = 1; i < constraintWithAnnotations.jjtGetNumChildren(); i++) {
             ASTAnnotation ann = (ASTAnnotation) constraintWithAnnotations.jjtGetChild(i);
 
-            //  	    ann.dump("");
-            // 	    System.out.println ("ann["+i+"] = "+ ann.getAnnId());
+	    // ann.dump("");
+	    // System.out.println ("ann["+i+"] = "+ ann.getAnnId());
+	    constraintPriority = -1;
 
-            if (ann.getAnnId().equals("bounds") || ann.getAnnId().equals("boundsZ")) {
-                boundsConsistency = true;
-                domainConsistency = false;
-            } else if (ann.getAnnId().equals("domain")) {
-                boundsConsistency = false;
-                domainConsistency = true;
-            } else if (ann.getAnnId().equals("defines_var")) {  // no used in JaCoP yet
-                ASTAnnExpr expr = (ASTAnnExpr) ann.jjtGetChild(0);
+	    if (ann.getAnnId().equals("$expr")) {
+		ASTScalarFlatExpr n = (ASTScalarFlatExpr)ann.jjtGetChild(0).jjtGetChild(0);
+		if (n.getIdent().equals("bounds") || n.getIdent().equals("boundsZ")) {
+		    boundsConsistency = true;
+		    domainConsistency = false;
+		} else if (n.getIdent().equals("domain")) {
+		    boundsConsistency = false;
+		    domainConsistency = true;
+		}
+	    } else if (ann.getAnnId().equals("defines_var")) {  // no used in JaCoP yet
+		SimpleNode child = (SimpleNode) ann.jjtGetChild(0);		
+                ASTAnnExpr expr = (ASTAnnExpr) child.jjtGetChild(0);
                 Var v = getAnnVar(expr);
 
                 definedVar = (IntVar) v;
+            } else if (ann.getAnnId().equals("priority")) {
+		SimpleNode child = (SimpleNode) ann.jjtGetChild(0);
+                ASTAnnExpr expr = (ASTAnnExpr) child.jjtGetChild(0);
+                int val = getAnnInt(expr);
+
+                constraintPriority = val;
             }
+
         }
+	// System.out.println("defines " + definedVar);
     }
 
     Var getAnnVar(ASTAnnExpr node) {
@@ -482,6 +496,17 @@ public class Support implements ParserTreeConstants {
         }
     }
 
+    int getAnnInt(ASTAnnExpr node) {
+
+        ASTScalarFlatExpr e = (ASTScalarFlatExpr) node.jjtGetChild(0);
+        if (e != null) {
+	    return getInt(e);
+	}
+        else {
+            throw new IllegalArgumentException("Wrong definition od \"priority\" annotation" + node);
+        }
+    }
+
     public void poseDelayedConstraints() {
         // generate channeling constraints for aliases
         // variables that are output variables
@@ -490,7 +515,7 @@ public class Support implements ParserTreeConstants {
         for (Constraint c : delayedConstraints) {
             store.impose(c);
             if (options.debug())
-                System.out.println(c);
+                System.out.println("% " + c);
         }
         poseAlldistinctConstraints();
 
@@ -501,7 +526,7 @@ public class Support implements ParserTreeConstants {
 	    Alldistinct ad = new Alldistinct(v);
             store.impose(ad);
             if (options.debug())
-                System.out.println(ad);
+                System.out.println("% " + ad);
         }
     }
 
@@ -523,14 +548,17 @@ public class Support implements ParserTreeConstants {
 
         store.imposeDecompositionWithConsistency(c);
         if (options.debug())
-            System.out.println(c);
+            System.out.println("% " + c);
     }
 
     void pose(Constraint c) throws FailException {
 
-        store.imposeWithConsistency(c);
+	if (constraintPriority >= 0 && constraintPriority <= 4)
+	    store.imposeWithConsistency(c, constraintPriority);
+	else
+	    store.imposeWithConsistency(c);
 
         if (options.debug())
-            System.out.println(c);
+            System.out.println("% " + c);
     }
 }

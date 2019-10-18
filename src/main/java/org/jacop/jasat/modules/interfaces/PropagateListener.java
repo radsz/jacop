@@ -37,7 +37,7 @@ import org.jacop.jasat.core.SolverComponent;
  * module called when a propagate event is called
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 public interface PropagateListener extends SolverComponent {
 

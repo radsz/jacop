@@ -40,7 +40,7 @@ import java.util.ArrayList;
  * It is a simple logic puzzle about shoe purchases.
  *
  * @author Adam Plonka, Piotr Ogrodzki, and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  *          <p>
  *          Logic Puzzle
  *          <p>

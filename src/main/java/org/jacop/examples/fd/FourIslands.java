@@ -40,7 +40,7 @@ import java.util.ArrayList;
  * It is a very simple puzzle about islands and bridges.
  *
  * @author Waldemar Sliwinski, Zdzislaw Zawada, and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  *          <p>
  *          A tiny nation in the South Pacific contains four islands connected by
  *          bridges as shown (see below). Each of the four islands (Pwana, Quero,

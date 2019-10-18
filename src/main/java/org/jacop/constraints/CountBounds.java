@@ -39,7 +39,6 @@ import org.jacop.core.TimeStamp;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
 
 /**
  * CountBounds constraint implements the counting over number of occurrences of
@@ -47,7 +46,7 @@ import java.util.stream.Stream;
  * specified by lower bound and upper bound, lb and ub.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class CountBounds extends Constraint implements SatisfiedPresent {

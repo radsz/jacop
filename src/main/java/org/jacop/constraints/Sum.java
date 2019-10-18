@@ -43,7 +43,7 @@ import java.util.stream.Stream;
  * the sum from all Variable's on the list.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 

@@ -36,7 +36,7 @@ import java.util.List;
 
 /**
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  *          <p>
  *          This manager works as simple manager to the point when cutoff value for a list
  *          is reached. The objects indexes are continously stored in a list, but they

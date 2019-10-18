@@ -48,7 +48,7 @@ import java.util.List;
  * hardCounter. It uses value based violation metric.
  *
  * @author Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class SoftGCC extends DecomposedConstraint<Constraint> {
@@ -501,7 +501,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
             ValueEnumeration it = all.valueEnumeration();
             for (int i = 0; it.hasMoreElements(); i++) {
                 int value = it.nextElement();
-                doms[i] = new BoundDomain(value, value);
+                doms[i] = new IntervalDomain(value, value);
             }
 
             // create constraint
@@ -645,7 +645,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
         if (hardCounters == null)
             for (int i = 0; i < hardLowerBound.length; i++) {
-                result.append(hardLowerBound[i] + ".." + hardUpperBound);
+                result.append(hardLowerBound[i] + ".." + hardUpperBound[i]);
                 if (i < hardLowerBound.length - 1)
                     result.append(", ");
             }
@@ -659,7 +659,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
         if (softCounters == null)
             for (int i = 0; i < softLowerBound.length; i++) {
-                result.append(softLowerBound[i] + ".." + softUpperBound);
+                result.append(softLowerBound[i] + ".." + softUpperBound[i]);
                 if (i < softLowerBound.length - 1)
                     result.append(", ");
             }

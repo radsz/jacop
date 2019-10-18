@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Constraint c1 /\ c2 ... /\ cn
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 public class And extends PrimitiveConstraint implements UsesQueueVariable {
 
@@ -90,7 +90,9 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
         setScope(listOfC);
         setConstraintScope(listOfC);
         queueForward = new QueueForward<>(listOfC, arguments());
-        this.queueIndex = Arrays.stream(c).max((a, b) -> Integer.max(a.queueIndex, b.queueIndex)).map(a -> a.queueIndex).orElse(0);
+	// KKU, 2019-01-30; next line is wrong! it will always give queueIndex = 0 since primitive constraints have queueIndex = 0
+	// Then... if this constraint is reified, the reified will get queueIndex = 0 as well.
+        //this.queueIndex = Arrays.stream(c).max((a, b) -> Integer.max(a.queueIndex, b.queueIndex)).map(a -> a.queueIndex).orElse(0);
 
     }
 
@@ -132,8 +134,10 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
         int i = 0;
 
         while (numberCertainNotSat == 0 && i < listOfC.length) {
-            if (listOfC[i].notSatisfied())
+            if (listOfC[i].notSatisfied()) {
                 numberCertainNotSat++;
+		removeConstraint();
+	    }
             else {
                 if (listOfC[i].satisfied())
                     numberCertainSat++;
@@ -187,9 +191,10 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
 
         for (int i = 0; i < listOfC.length; i++) {
             result.append(listOfC[i]);
-            if (i == listOfC.length - 1)
-                result.append(",");
+            if (i != listOfC.length - 1)
+                result.append(", ");
         }
+	result.append(")");
         return result.toString();
     }
 

@@ -46,7 +46,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * is equal to C. A /\ B = C.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public class AintersectBeqC extends Constraint implements UsesQueueVariable, SatisfiedPresent {

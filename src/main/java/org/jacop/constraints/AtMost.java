@@ -30,7 +30,6 @@
 
 package org.jacop.constraints;
 
-import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -47,7 +46,7 @@ import java.util.stream.Stream;
  * specified by variable value.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class AtMost extends PrimitiveConstraint {

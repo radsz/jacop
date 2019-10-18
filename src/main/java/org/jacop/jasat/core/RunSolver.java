@@ -48,7 +48,7 @@ import java.io.*;
  * controlled by a master).
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public final class RunSolver {

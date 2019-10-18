@@ -35,7 +35,7 @@ import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.XltC;
 import org.jacop.core.*;
-import org.jacop.floats.constraints.PltC;
+import org.jacop.floats.constraints.PlteqC;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.set.core.SetDomain;
@@ -50,7 +50,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * @param <T> type of variables used in this search.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public class DepthFirstSearch<T extends Var> implements Search<T> {
@@ -523,9 +523,9 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
                 }
                 // cost FloatVar
                 else if (costVariable instanceof FloatVar) {
-                    if (((FloatVar) costVariable).min() <= FloatDomain.previous(costValueFloat))
+                    if (((FloatVar) costVariable).min() < FloatDomain.previousForMinimization(costValueFloat))
                         ((FloatVar) costVariable).domain.in(store.level, (FloatVar) costVariable, ((FloatVar) costVariable).min(),
-                            FloatDomain.previous(costValueFloat));
+                            FloatDomain.previousForMinimization(costValueFloat));
                     else {
                         if (consistencyListener != null)
                             consistencyListener.executeAfterConsistency(false);
@@ -642,9 +642,8 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
                                     double childCostValue = childSearches[currentChildSearch].getCostValueFloat();
                                     if (childCostValue < costValueFloat) {
                                         costValueFloat = childCostValue;
-                                        // cost = new PltC((FloatVar)costVariable, costValueFloat);
-                                        cost = new org.jacop.floats.constraints.PlteqC((FloatVar) costVariable,
-                                            FloatDomain.previous(costValueFloat)); //costValueFloat - FloatDomain.epsilon(costValueFloat));
+                                        cost = new PlteqC((FloatVar) costVariable,
+                                            FloatDomain.previousForMinimization(costValueFloat)); //costValueFloat - FloatDomain.epsilon(costValueFloat));
                                     }
                                     if (childCostValue <= ((FloatVar) costVariable).min())
                                         // other child searches will not be able to find any solutions.
@@ -667,8 +666,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
                                 double childCostValue = childSearches[currentChildSearch].getCostValueFloat();
                                 if (childCostValue < costValueFloat)
                                     costValueFloat = childCostValue;
-                                cost = new PltC((FloatVar) costVariable, costValueFloat);
-                                // cost = new org.jacop.floats.constraints.PlteqC((FloatVar)costVariable, FloatDomain.previous(costValueFloat)); //costValueFloat - FloatDomain.epsilon(costValueFloat));
+                                cost = new PlteqC((FloatVar) costVariable, FloatDomain.previousForMinimization(costValueFloat));
                             }
 
                         }
@@ -707,8 +705,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
                             cost = new XltC((IntVar) costVariable, costValue);
                         } else if (costVariable instanceof FloatVar) {
                             costValueFloat = ((FloatVar) costVariable).dom().max();
-                            cost = new PltC((FloatVar) costVariable, costValueFloat);
-                            // cost = new org.jacop.floats.constraints.PlteqC((FloatVar)costVariable, FloatDomain.previous(costValueFloat)); //costValueFloat - FloatDomain.epsilon(costValueFloat));
+                            cost = new PlteqC((FloatVar) costVariable, FloatDomain.previousForMinimization(costValueFloat));
                         }
 
                     }
@@ -1237,6 +1234,13 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
         timeOut = System.currentTimeMillis() + tOut * 1000;
     }
 
+    public void setTimeOutMilliseconds(long out) {
+        tOut = out;
+        check = true;
+        timeOutCheck = true;
+        timeOut = System.currentTimeMillis() + tOut;
+    }
+
     /**
      * It turns on the wrong decisions out.
      *
@@ -1256,6 +1260,17 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     }
 
     @Override public String toString() {
+
+        StringBuffer buf = new StringBuffer();
+
+        buf.append(id + ": DFS(");
+
+        buf.append(heuristic+")");
+
+        return buf.toString();
+    }
+
+    public String toStringFull() {
 
         StringBuffer buf = new StringBuffer();
 

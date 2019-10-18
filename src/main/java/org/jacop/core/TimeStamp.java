@@ -46,7 +46,7 @@ import org.jacop.api.Stateful;
  *
  * @param <T> a class being stored at different time stamps.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public class TimeStamp<T> implements Stateful {

@@ -40,7 +40,7 @@ import java.util.Arrays;
  *
  * @param <E> Class being stored in SimpleHashSet.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public class SimpleHashSet<E> {

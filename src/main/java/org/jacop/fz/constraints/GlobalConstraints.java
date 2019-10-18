@@ -50,9 +50,17 @@ import org.jacop.set.core.SetVar;
 import org.jacop.util.fsm.FSM;
 import org.jacop.util.fsm.FSMState;
 import org.jacop.util.fsm.FSMTransition;
+import org.jacop.floats.constraints.PeqC;
+import org.jacop.floats.constraints.PeqQ;
+import org.jacop.set.constraints.AeqB;
+import org.jacop.set.constraints.AeqS;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.Arrays;
 
 /**
  * Generation of global constraints in flatzinc
@@ -108,7 +116,10 @@ class GlobalConstraints implements ParserTreeConstants {
         else if (s.length == 1)
             support.pose(new XlteqY(r[0], b));
         else if (b.max() == 1)  // cumulative unary
-            support.delayedConstraints.add(new CumulativeUnary(s, d, r, b, true));
+	    if (allVarOne(d) && allVarOne(r))
+		support.pose(new Alldiff(s));
+	    else
+		support.delayedConstraints.add(new CumulativeUnary(s, d, r, b, true));
         else {
             int min = Math.min(r[0].min(), r[1].min());
             int nextMin = Math.max(r[0].min(), r[1].min());
@@ -596,6 +607,21 @@ class GlobalConstraints implements ParserTreeConstants {
         support.pose(new org.jacop.constraints.Max(x, n));
     }
 
+    void gen_jacop_member(SimpleNode node) {
+        IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+        IntVar y = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
+
+        support.pose(new org.jacop.constraints.Member(x, y));
+    }
+
+    void gen_jacop_member_reif(SimpleNode node) {
+        IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+        IntVar y = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
+	IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+
+        support.pose(new Reified(new org.jacop.constraints.Member(x, y), b));
+    }
+
     void gen_jacop_table_int(SimpleNode node) {
         IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
         int size = v.length;
@@ -627,24 +653,30 @@ class GlobalConstraints implements ParserTreeConstants {
         int[] vu = uniqueIndex(v);
         if (vu.length != v.length) { // non unique variables
 
-            int[][] tt = new int[t.length][vu.length];
+	    // remove infeasible tuples for duplicated variables
+	    int[][] nt = removeInfeasibleTuples(t);
+
+	    IntVar[] nv = new IntVar[vu.length];
+	    for (int i = 0; i < vu.length; i++)
+		nv[i] = v[vu[i]];
+
+            int[][] tt = new int[nt.length][vu.length];
             for (int i = 0; i < tt.length; i++)
                 for (int j = 0; j < vu.length; j++)
-                    tt[i][j] = t[i][vu[j]];
+                    tt[i][j] = nt[i][vu[j]];
 
-            IntVar[] uniqueVar = support.unique(v);
-            if (uniqueVar.length == 1) {
+            if (nv.length == 1) {
                 IntervalDomain d = new IntervalDomain();
                 for (int i = 0; i < tt.length; i++)
                     d.addDom(new IntervalDomain(tt[i][0], tt[i][0]));
-                uniqueVar[0].domain.in(store.level, uniqueVar[0], d);
+                nv[0].domain.in(store.level, nv[0], d);
                 if (support.options.debug())
-                    System.out.println(uniqueVar[0] + " in " + d);
+                    System.out.println("% " + nv[0] + " in " + d);
 
             } else if (t.length <= 64)
-                support.pose(new org.jacop.constraints.table.SimpleTable(v, tt, true));
+                support.pose(new org.jacop.constraints.table.SimpleTable(nv, tt, true));
             else
-                support.pose(new org.jacop.constraints.table.Table(v, tt, true));
+                support.pose(new org.jacop.constraints.table.Table(nv, tt, true));
         } else if (t.length <= 64)
             support.pose(new org.jacop.constraints.table.SimpleTable(v, t, true));
         else
@@ -1043,9 +1075,73 @@ class GlobalConstraints implements ParserTreeConstants {
         support.pose(new Geost(objects, constraints, shapes));
     }
 
+    void gen_jacop_if_then_else_int(SimpleNode node) {
+        IntVar[] b = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+        IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+        IntVar y = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+
+	int n = x.length;
+	if (n == 2) {
+	    if (x[0].singleton(1) && x[1].singleton(0)) {
+		support.pose(new XeqY(b[0], y));
+		return;
+	    } else if (x[0].singleton(0) && x[1].singleton(1)) {
+		y.domain.in(store.level, y, 0, 1);
+		support.pose(new XneqY(b[0], y));
+		return;
+	    }
+	}
+
+	PrimitiveConstraint[] cs = new PrimitiveConstraint[n];
+	for (int i = 0; i < n; i++) {
+	    if (x[i].singleton())
+		cs[i] = new XeqC(y, x[i].value());
+	    else
+		cs[i] = new XeqY(y, x[i]);
+	}
+
+	support.pose(new Conditional(b, cs));
+    }
+
+    void gen_jacop_if_then_else_float(SimpleNode node) {
+        IntVar[] b = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+        FloatVar[] x = support.getFloatVarArray((SimpleNode) node.jjtGetChild(1));
+        FloatVar y = support.getFloatVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+
+	int n = x.length;
+	PrimitiveConstraint[] cs = new PrimitiveConstraint[n];
+	for (int i = 0; i < n; i++) {
+	    if (x[i].singleton())
+		cs[i] = new PeqC(y, x[i].value());
+	    else
+		cs[i] = new PeqQ(y, x[i]);
+	}
+
+	support.pose(new Conditional(b, cs));
+
+    }
+
+    void gen_jacop_if_then_else_set(SimpleNode node) {
+        IntVar[] b = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+        SetVar[] x = support.getSetVarArray((SimpleNode) node.jjtGetChild(1));
+        SetVar y = support.getSetVariable(node,2);
+
+	int n = x.length;
+	PrimitiveConstraint[] cs = new PrimitiveConstraint[n];
+	for (int i = 0; i < n; i++) {
+	    if (x[i].singleton())
+		cs[i] = new AeqS(y, x[i].domain.glb());
+	    else
+		cs[i] = new AeqB(y, x[i]);
+	}
+
+	support.pose(new Conditional(b, cs));
+
+    }
+
     boolean allVarOne(IntVar[] w) {
         for (int i = 0; i < w.length; i++)
-            if (w[i].min() != 1)
+            if (!w[i].singleton(1))
                 return false;
         return true;
     }
@@ -1057,19 +1153,74 @@ class GlobalConstraints implements ParserTreeConstants {
         return true;
     }
 
+    ArrayList<Pair> duplicates;
+
     int[] uniqueIndex(IntVar[] vs) {
 
-        ArrayList<Integer> il = new ArrayList<Integer>();
-        HashSet<IntVar> varSet = new HashSet<IntVar>();
-        for (int i = 0; i < vs.length; i++) {
-            boolean r = varSet.add(vs[i]);
-            if (r)
-                il.add(i);
-        }
-        int[] x = new int[il.size()];
-        for (int i = 0; i < x.length; i++)
-            x[i] = il.get(i);
+	Map<IntVar, Integer> map = new LinkedHashMap<>();
+	duplicates = new ArrayList<>();
+	for (int i = 0; i < vs.length; i++) {
+	    if (map.get(vs[i]) == null)
+		map.put(vs[i], i);
+	    else
+		duplicates.add(new Pair(map.get(vs[i]), i));
+	}
 
+	int[] x = new int[map.size()];
+	Set<Map.Entry<IntVar, Integer>> entries = map.entrySet();
+	int i = 0;
+        for (Map.Entry<IntVar, Integer> e : entries) {
+	    int v = e.getValue();
+	    x[i++] = v;
+	}
         return x;
     }
+
+    int[][] removeInfeasibleTuples(int[][] t) {
+	int n = t.length;
+	int[][] nt = new int[n][t[0].length];
+
+	int k = 0;
+	for (int i = 0; i < n; i++) {
+	    int correct = 0;
+	    for (Pair d : duplicates) {
+		if (t[i][d.first()] == t[i][d.second()]) {
+		    correct++;
+		}
+	    }
+	    if (correct == duplicates.size()) {
+		System.arraycopy(t[i], 0, nt[k], 0, t[i].length);
+		k++;
+	    }
+	}
+
+	int[][] tt = new int[k][t[0].length];
+	for (int i = 0; i < k; i++)
+	    System.arraycopy(nt[i], 0, tt[i], 0, nt[i].length);
+	return tt;
+    }
+
+    private static class Pair {
+
+	private final int a;
+	private final int b;
+
+	Pair(int a, int b) {
+	    this.a = a;
+	    this.b = b;
+	}
+
+	int first() {
+	    return a;
+	}
+
+	int second() {
+	    return b;
+	}
+
+	public String toString() {
+	    return "("+a+", "+b+")";
+	}
+    }
+
 }

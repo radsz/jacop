@@ -41,7 +41,7 @@ import java.util.ArrayList;
  * Defines a Finite Domain Variable (FDV) and related operations on it.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public class SetVar extends Var {
@@ -224,6 +224,16 @@ public class SetVar extends Var {
         return domain.getSize();
     }
 
+
+    /**
+     * It returns the size of the current domain.
+     *
+     * @return the size of the variables domain.
+     */
+
+    public double getSizeFloat() {
+        return (double)getSize();
+    }
 
     /**
      * It checks if the domain is empty.

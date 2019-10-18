@@ -42,7 +42,7 @@ import java.util.Collection;
  * as specified by the problem listing in minizincbasedchosen directory.
  *
  * @author Mariusz Świerkot and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 @RunWith(Parameterized.class) public class MizincBasedChosen extends MinizincBasedTestsHelper {
 

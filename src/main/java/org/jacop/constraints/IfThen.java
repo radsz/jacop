@@ -42,7 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Constraint if constraint1 then constraint2
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
@@ -92,7 +92,8 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
                 store.impose(thenC);
                 return;
             } else {
-                thenC.consistency(store);            }
+                thenC.consistency(store);
+	    }
         }
 
         if (thenC.notSatisfied()) {
@@ -288,7 +289,7 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
 
         StringBuffer result = new StringBuffer(id());
 
-        result.append(" : IfThen(\n").append(condC).append(", \n").append(thenC).append(" )\n");
+        result.append(" : IfThen(").append(condC).append(", ").append(thenC).append(" )\n");
 
         return result.toString();
 

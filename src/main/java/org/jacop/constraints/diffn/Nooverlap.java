@@ -47,7 +47,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * does not use sophisticated techniques for efficient backtracking.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public class Nooverlap extends Constraint {
@@ -185,12 +185,10 @@ public class Nooverlap extends Constraint {
 
         for (List<? extends IntVar> r : rectangle)
             if (r.size() == 4) {
-                for (int j = 0; j < r.size(); j++) {
-                    this.rectangle[i] =
-                        new Rectangle(rectangle.get(i).get(0), rectangle.get(i).get(1), rectangle.get(i).get(2), rectangle.get(i).get(3));
-                    this.rectangle[i].index = i;
-                    i++;
-                }
+		this.rectangle[i] =
+		    new Rectangle(rectangle.get(i).get(0), rectangle.get(i).get(1), rectangle.get(i).get(2), rectangle.get(i).get(3));
+		this.rectangle[i].index = i;
+		i++;
             } else {
                 String s = "\nNot equal sizes of rectangle vectors in Nooverlap";
                 throw new IllegalArgumentException(s);
@@ -369,8 +367,32 @@ public class Nooverlap extends Constraint {
             bs.flip(0, rectangle.length); // set all bits to true == all rectangles overlap
             bs.set(i, false);             // rectangle does not overlaps with itself
             overlapping[i] = new TimeStamp(store, bs);
+
+	    // impose constraint on rectangle length >= 0
+	    rectangle[i].length(0).domain.inMin(store.level, rectangle[i].length(0), 0);
+	    rectangle[i].length(1).domain.inMin(store.level, rectangle[i].length(1), 0);
         }
 
+    }
+
+    public boolean satisfied() {
+	for (int i = 0; i < rectangle.length; i++) {
+	    for (int j = i+1; j < rectangle.length; j++) {
+		if (! rectangle[i].noOverlap(rectangle[j], 0) && ! rectangle[i].noOverlap(rectangle[j], 0))
+		    return false;
+	    }
+	}
+	return true;
+    }
+
+    public boolean notSatisfied() {
+	for (int i = 0; i < rectangle.length; i++) {
+	    for (int j = i+1; j < rectangle.length; j++) {
+		if (rectangle[i].doOverlap(rectangle[j]))
+		    return true;
+	    }
+	}
+	return false;
     }
 
     @Override public String toString() {

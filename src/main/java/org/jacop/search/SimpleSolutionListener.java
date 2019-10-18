@@ -44,7 +44,7 @@ import java.util.Map;
  *
  * @param <T> type of variable being used in search.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public class SimpleSolutionListener<T extends Var> implements SolutionListener<T> {
@@ -68,7 +68,7 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
     /**
      * It specifies the number of solutions we want to find.
      */
-    public int solutionLimit = 1;
+    public int solutionLimit = -1;
 
     protected int noSolutions = 0;
 
@@ -149,6 +149,10 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 
     public int solutionsNo() {
         return noSolutions;
+    }
+
+    public void setSolutionsNo(int no) {
+        noSolutions = no;
     }
 
     /**
@@ -308,6 +312,12 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
             return result;
         } else
             return false;
+    }
+
+    public void setVariables(T[] vs) {
+	vars = vs;
+	solutions = new Domain[1][vars.length];
+	parentSolutionNo = new int[1];
     }
 
     @Override public String toString() {

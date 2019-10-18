@@ -41,6 +41,7 @@ import org.jacop.util.SimpleHashSet;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.DoubleStream;
 import java.util.stream.Stream;
@@ -51,7 +52,7 @@ import java.util.stream.Stream;
  * The weights must be positive integers.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
@@ -150,7 +151,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
         noSat = new TimeStamp<Boolean>(store, false);
 
-        Map<FloatVar, Double> parameters = Var.createEmptyPositioning();
+        Map<FloatVar, Double> parameters = new LinkedHashMap<>();
 
         for (int i = 0; i < list.length; i++) {
             if (weights[i] != 0) {

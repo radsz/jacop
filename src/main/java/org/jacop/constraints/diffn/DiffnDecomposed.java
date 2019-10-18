@@ -47,12 +47,12 @@ import java.util.List;
  * does not use sophisticated techniques for efficient backtracking.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
 
-    private int numberArgs;
+    // private int numberArgs;
 
     private List<Constraint> constraints = null;
 
@@ -109,7 +109,7 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
 
             this.queueIndex = 2;
 
-            this.numberArgs = (short) (size * 4);
+            // this.numberArgs = (short) (size * 4);
 
             x = new IntVar[origin1.length];
             y = new IntVar[origin2.length];

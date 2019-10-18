@@ -43,7 +43,7 @@ import java.util.Map;
  *
  * @param <T> type of the variable for which choice point is being created.
  * @author krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolution<T> {

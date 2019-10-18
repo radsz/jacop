@@ -53,7 +53,7 @@ import java.util.function.Function;
  * 0..1000000 will make it use few MB already and kill the efficiency.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 public class Alldistinct extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 

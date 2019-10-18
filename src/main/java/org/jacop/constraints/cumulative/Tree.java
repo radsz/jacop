@@ -35,7 +35,7 @@ package org.jacop.constraints.cumulative;
  * Implements ThetaLambdaTree and operations on this tree for Cumulative constraint
  *
  * @author Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 

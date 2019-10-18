@@ -44,7 +44,7 @@ import java.util.stream.Stream;
  * Constraint ( x_0 xor x_1 xor ... xor x_n ){@literal <=>} y
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class XorBool extends PrimitiveConstraint {
@@ -257,7 +257,7 @@ public class XorBool extends PrimitiveConstraint {
 
     @Override public String toString() {
 
-        return id() + " : XorBool( (" + java.util.Arrays.asList(x) + ") <=>  " + y + ")";
+        return id() + " : XorBool( (" + Arrays.asList(x) + ") <=>  " + y + ")";
     }
 
 }

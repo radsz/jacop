@@ -38,7 +38,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Constraint X + Y #= C
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public class XplusYeqC extends PrimitiveConstraint {
@@ -77,7 +77,23 @@ public class XplusYeqC extends PrimitiveConstraint {
         this.y = y;
         this.c = c;
 
+	checkForOverflow();
+	
         setScope(x, y);
+    }
+
+    void checkForOverflow() {
+
+        int sumMin = 0, sumMax = 0;
+
+        sumMin = Math.addExact(sumMin, x.min());
+        sumMax = Math.addExact(sumMax, x.max());
+
+        sumMin = Math.addExact(sumMin, y.min());
+        sumMax = Math.addExact(sumMax, y.max());
+
+        Math.subtractExact(sumMin, c);
+        Math.subtractExact(sumMax, c);
     }
 
     @Override public void consistency(final Store store) {

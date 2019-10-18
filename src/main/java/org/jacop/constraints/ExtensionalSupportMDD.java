@@ -56,7 +56,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * test against STR version.
  *
  * @author Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class ExtensionalSupportMDD extends Constraint implements SatisfiedPresent {

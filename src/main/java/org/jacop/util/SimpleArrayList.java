@@ -40,7 +40,7 @@ import java.util.Collection;
  *
  * @param <V> the type which is being stored by this class.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public class SimpleArrayList<V> extends AbstractList<V> {

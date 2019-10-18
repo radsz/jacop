@@ -40,7 +40,7 @@ import java.util.List;
 
 /**
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class Assert {

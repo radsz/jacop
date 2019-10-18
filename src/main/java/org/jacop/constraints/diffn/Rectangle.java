@@ -41,7 +41,7 @@ import java.util.stream.Stream;
  * Defines a rectangle used in the diffn constraint.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public class Rectangle {
@@ -138,10 +138,9 @@ public class Rectangle {
      * This rectangle and rectangle r overlap in both dimensions
      *
      * @param r the other rectangle
-     * @param dim dimension of overlapping
      * @return true if overlapping, false otherwise
      */
-    boolean doOverlap(Rectangle r, int dim) {
+    boolean doOverlap(Rectangle r) {
         return overlap(r, 0) && overlap(r, 1);
     }
 

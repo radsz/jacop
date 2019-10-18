@@ -1,6 +1,8 @@
 {
-    "executable": "fzn-jacop",
     "id": "org.jacop",
+    "name": "JaCoP",
+    "description": "JaCoP FlatZinc executable",
+    "executable": "../../../bin/fzn-jacop",
     "isGUIApplication": false,
     "mznlib": "-Gjacop",
     "mznlibVersion": 1,
@@ -9,24 +11,17 @@
     "needsPathsFile": false,
     "needsSolns2Out": true,
     "needsStdlibDir": false,
-    "stdFlags": [
-        "-a",
-        "-n",
-        "-s",
-	"-v"
-    ],
     "supportsFzn": true,
     "supportsMzn": false,
-    "version": "4.6",
-    "tags": ["cp",
-    	    "int",
-	    "float",
-	    "set"],
-    "extraFlags": [["-b", "use bounds consistency whenever possible; overrides annotation ':: domain' and selects constraints implementing bounds consistency (default false)."],
-    		   ["-cs", "complementary search; gathers all model, non-defined variables, to create the final search."],
-    		   ["-p", "precision for floating operations; overrides precision definition in search annotation.", "float", "1e-11"],
-		   ["-f", "defines format (number digits after decimal point); for floating variables.", "float", "1e-11"],
-		   ["-sat", "use SAT solver for boolean constraints."],
-    		   ["-t", "time-out specification in seconds.", "int", "inf"]
+    "version": "4.7",
+    "tags": ["cp", "int", "float", "set", "restart"],
+    "stdFlags": ["-a","-n","-s","-t","-v"],
+    "extraFlags": [["-b", "use bounds consistency whenever possible; overrides annotation domain.", "bool", "false"],
+                   ["-cs", "complementary search; gathers all model, non-defined variables, to create the final search.", "bool", "false"],
+    		   ["--precision", "precision for floating operations; overrides precision definition in search annotation.", "float", "1e-11"],
+		   ["--format", "defines format (number digits after decimal point); for floating variables.", "float", "1e-11"],
+		   ["-sat", "use SAT solver for boolean constraints.", "bool", "false"],
+ 		   ["--decay", "decay factor for accumulated failure count (afc) and activity-based variable selection heuristic", "float", "0.99"],
+		   ["--step", "distance step for cost function for floating-point optimization (0 means 'minimal distance')", "float", "0"]
     		  ]
 }

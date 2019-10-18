@@ -46,7 +46,6 @@ import org.jacop.satwrapper.SatTranslation;
  */
 class ComparisonConstraints implements ParserTreeConstants {
 
-    boolean reified;
     Support support;
     Store store;
     SatTranslation sat;
@@ -67,7 +66,6 @@ class ComparisonConstraints implements ParserTreeConstants {
             sat.generate_eq(a, b);
             return;
         }
-        reified = false;
         int_comparison(Support.eq, node);
     }
 
@@ -84,8 +82,11 @@ class ComparisonConstraints implements ParserTreeConstants {
             return;
         }
 
-        reified = true;
-        int_comparison(Support.eq, node);
+        int_comparison_reif(Support.eq, node);
+    }
+
+    void gen_bool_eq_imp(SimpleNode node) {
+        int_comparison_imp(Support.eq, node);
     }
 
     void gen_bool_ne(SimpleNode node) {
@@ -98,7 +99,6 @@ class ComparisonConstraints implements ParserTreeConstants {
             return;
         }
 
-        reified = false;
         int_comparison(Support.ne, node);
     }
 
@@ -114,8 +114,11 @@ class ComparisonConstraints implements ParserTreeConstants {
             return;
         }
 
-        reified = true;
-        int_comparison(Support.ne, node);
+        int_comparison_reif(Support.ne, node);
+    }
+
+    void gen_bool_ne_imp(SimpleNode node) {
+        int_comparison_imp(Support.ne, node);
     }
 
     void gen_bool_le(SimpleNode node) {
@@ -129,7 +132,6 @@ class ComparisonConstraints implements ParserTreeConstants {
             return;
         }
 
-        reified = false;
         int_comparison(Support.le, node);
     }
 
@@ -145,8 +147,11 @@ class ComparisonConstraints implements ParserTreeConstants {
             return;
         }
 
-        reified = true;
-        int_comparison(Support.le, node);
+        int_comparison_reif(Support.le, node);
+    }
+
+    void gen_bool_le_imp(SimpleNode node) {
+        int_comparison_imp(Support.le, node);
     }
 
     void gen_bool_lt(SimpleNode node) {
@@ -160,7 +165,6 @@ class ComparisonConstraints implements ParserTreeConstants {
             return;
         }
 
-        reified = false;
         int_comparison(Support.lt, node);
     }
 
@@ -175,49 +179,76 @@ class ComparisonConstraints implements ParserTreeConstants {
             sat.generate_lt_reif(a, b, c);
         }
 
-        reified = true;
-        int_comparison(Support.lt, node);
+        int_comparison_reif(Support.lt, node);
+    }
+
+    void gen_bool_lt_imp(SimpleNode node) {
+        int_comparison_imp(Support.lt, node);
+    }
+
+    void gen_bool_gt_imp(SimpleNode node) {
+        int_comparison_imp(Support.gt, node);
+    }
+
+    void gen_bool_ge_imp(SimpleNode node) {
+        int_comparison_imp(Support.ge, node);
     }
 
     // =========== int =================
     void gen_int_eq(SimpleNode node) {
-        reified = false;
         int_comparison(Support.eq, node);
     }
 
     void gen_int_eq_reif(SimpleNode node) {
-        reified = true;
-        int_comparison(Support.eq, node);
+        int_comparison_reif(Support.eq, node);
+    }
+
+    void gen_int_eq_imp(SimpleNode node) {
+        int_comparison_imp(Support.eq, node);
     }
 
     void gen_int_ne(SimpleNode node) {
-        reified = false;
         int_comparison(Support.ne, node);
     }
 
     void gen_int_ne_reif(SimpleNode node) {
-        reified = true;
-        int_comparison(Support.ne, node);
+        int_comparison_reif(Support.ne, node);
+    }
+
+    void gen_int_ne_imp(SimpleNode node) {
+        int_comparison_imp(Support.ne, node);
     }
 
     void gen_int_le(SimpleNode node) {
-        reified = false;
         int_comparison(Support.le, node);
     }
 
     void gen_int_le_reif(SimpleNode node) {
-        reified = true;
-        int_comparison(Support.le, node);
+        int_comparison_reif(Support.le, node);
+    }
+
+    void gen_int_le_imp(SimpleNode node) {
+        int_comparison_imp(Support.le, node);
     }
 
     void gen_int_lt(SimpleNode node) {
-        reified = false;
         int_comparison(Support.lt, node);
     }
 
     void gen_int_lt_reif(SimpleNode node) {
-        reified = true;
-        int_comparison(Support.lt, node);
+        int_comparison_reif(Support.lt, node);
+    }
+
+    void gen_int_lt_imp(SimpleNode node) {
+        int_comparison_imp(Support.lt, node);
+    }
+
+    void gen_int_gt_imp(SimpleNode node) {
+        int_comparison_imp(Support.gt, node);
+    }
+
+    void gen_int_ge_imp(SimpleNode node) {
+        int_comparison_imp(Support.ge, node);
     }
 
     void int_comparison(int operation, SimpleNode node) {
@@ -225,395 +256,629 @@ class ComparisonConstraints implements ParserTreeConstants {
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
 
-        if (reified) { // reified constraint
-            PrimitiveConstraint c = null;
-            ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
-            IntVar v3 = support.getVariable(p3);
+	if (p1.getType() == 0 || p1.getType() == 1) { // first parameter int or bool
+	    if (p2.getType() == 0 || p2.getType() == 1) { // first parameter int/bool & second parameter int/bool
+		int i1 = support.getInt(p1);
+		if (i1 < IntDomain.MinInt || i1 > IntDomain.MaxInt)
+		    throw new ArithmeticException(
+						  "Constant " + i1 + " outside variable bounds; must be in interval " + IntDomain.MinInt + ".."
+						  + IntDomain.MaxInt);
+		int i2 = support.getInt(p2);
+		if (i2 < IntDomain.MinInt || i2 > IntDomain.MaxInt)
+		    throw new ArithmeticException(
+						  "Constant " + i2 + " outside variable bounds; must be in interval " + IntDomain.MinInt + ".."
+						  + IntDomain.MaxInt);
+		switch (operation) {
+		case Support.eq:
+		    if (i1 != i2)
+			throw Store.failException;
+		    break;
+		case Support.ne:
+		    if (i1 == i2)
+			throw Store.failException;
+		    break;
+		case Support.lt:
+		    if (i1 >= i2)
+			throw Store.failException;
+		    break;
+		case Support.gt:
+		    if (i1 <= i2)
+			throw Store.failException;
+		    break;
+		case Support.le:
+		    if (i1 > i2)
+			throw Store.failException;
+		    break;
+		case Support.ge:
+		    if (i1 < i2)
+			throw Store.failException;
+		    break;
+		default:
+		    throw new RuntimeException("Internal error in " + getClass().getName());
+		}
+	    } else { // first parameter int/bool & second parameter var
 
-            if (p2.getType() == 0 || p2.getType() == 1) { // var rel int or bool
-                IntVar v1 = support.getVariable(p1);
+		int i1 = support.getInt(p1);
+		if (i1 < IntDomain.MinInt || i1 > IntDomain.MaxInt)
+		    throw new ArithmeticException(
+						  "Constant " + i1 + " outside variable bounds; must be in interval " + IntDomain.MinInt + ".."
+						  + IntDomain.MaxInt);
+		IntVar v2 = support.getVariable(p2);
 
-                int i2 = support.getInt(p2);
-                if (i2 < IntDomain.MinInt || i2 > IntDomain.MaxInt)
-                    throw new ArithmeticException(
-                        "Constant " + i2 + " outside variable bounds ; must be in interval " + IntDomain.MinInt + ".." + IntDomain.MaxInt);
-                switch (operation) {
+		switch (operation) {
+		case Support.eq:
+		    v2.domain.in(store.level, v2, i1, i1);
+		    break;
+		case Support.ne:
+		    v2.domain.inComplement(store.level, v2, i1);
+		    break;
+		case Support.lt:
+		    v2.domain.inMin(store.level, v2, i1 + 1);
+		    break;
+		case Support.gt:
+		    v2.domain.inMax(store.level, v2, i1 - 1);
+		    break;
+		case Support.le:
+		    v2.domain.inMin(store.level, v2, i1);
+		    break;
+		case Support.ge:
+		    v2.domain.inMax(store.level, v2, i1);
+		    break;
+		default:
+		    throw new RuntimeException("Internal error in " + getClass().getName());
+		}
+	    }
+	} else { // first parameter var
+	    if (p2.getType() == 0 || p2.getType() == 1) { // first parameter var & second parameter int
 
-                    case Support.eq:
-                        if (!v1.domain.contains(i2)) {
-                            v3.domain.in(store.level, v3, 0, 0);
-                            return;
-                        } else if (v1.min() == i2 && v1.singleton()) {
-                            v3.domain.in(store.level, v3, 1, 1);
-                            return;
-                        } else if (v3.max() == 0) {
-                            v1.domain.inComplement(store.level, v1, i2);
-                            return;
-                        } else if (v3.min() == 1) {
-                            v1.domain.in(store.level, v1, i2, i2);
-                            return;
-                        } else if (generateForEqC(v1, i2, v3))
-                            return;
-                        else {
-                            // if (support.options.useSat()) {  // it can be moved to SAT solver but it is slow in the current implementation
-                            //     sat.generate_eqC_reif(v1, i2, v3);
-                            //     return;
-                            // }
-                            // else
-                            // c = new XeqC(v1, i2);
-                            support.pose(fzXeqCReified(v1, i2, v3));
-                            return;
-                        }
-                        // break;
+		IntVar v1 = support.getVariable(p1);
+		int i2 = support.getInt(p2);
+		if (i2 < IntDomain.MinInt || i2 > IntDomain.MaxInt)
+		    throw new ArithmeticException(
+						  "Constant " + i2 + " outside variable bounds; must be in interval " + IntDomain.MinInt + ".."
+						  + IntDomain.MaxInt);
 
-                    case Support.ne:
-                        if (v1.min() > i2 || v1.max() < i2) {
-                            v3.domain.in(store.level, v3, 1, 1);
-                            return;
-                        } else if (v1.min() == i2 && v1.singleton()) {
-                            v3.domain.in(store.level, v3, 0, 0);
-                            return;
-                        } else if (v3.max() == 0) {
-                            v1.domain.in(store.level, v1, i2, i2);
-                            return;
-                        } else if (v3.min() == 1) {
-                            v1.domain.inComplement(store.level, v1, i2);
-                            return;
-                        } else if (generateForNeqC(v1, i2, v3)) { // binary variable
-                            return;
-                        } else
-                            // if (support.options.useSat()) {  // it can be moved to SAT solver but it is slow in the current implementation
-                            //     sat.generate_neC_reif(v1, i2, v3);
-                            //     return;
-                            // }
-                            // else
-                            c = new XneqC(v1, i2);
-                        break;
-                    case Support.lt:
-                        if (v1.max() < i2) {
-                            v3.domain.in(store.level, v3, 1, 1);
-                            return;
-                        } else if (v1.min() >= i2) {
-                            v3.domain.in(store.level, v3, 0, 0);
-                            return;
-                        } else
-                            c = new XltC(v1, i2);
-                        break;
-                    case Support.gt:
-                        if (v1.min() > i2) {
-                            v3.domain.in(store.level, v3, 1, 1);
-                            return;
-                        } else if (v1.max() <= i2) {
-                            v3.domain.in(store.level, v3, 0, 0);
-                            return;
-                        } else
-                            c = new XgtC(v1, i2);
-                        break;
-                    case Support.le:
-                        if (v1.max() <= i2) {
-                            v3.domain.in(store.level, v3, 1, 1);
-                            return;
-                        } else if (v1.min() > i2) {
-                            v3.domain.in(store.level, v3, 0, 0);
-                            return;
-                        } else
-                            c = new XlteqC(v1, i2);
-                        break;
-                    case Support.ge:
-                        if (v1.min() >= i2) {
-                            v3.domain.in(store.level, v3, 1, 1);
-                            return;
-                        } else if (v1.max() < i2) {
-                            v3.domain.in(store.level, v3, 0, 0);
-                            return;
-                        } else
-                            c = new XgteqC(v1, i2);
-                        break;
-                    default:
-                        throw new RuntimeException("Internal error in " + getClass().getName());
-                }
-            } else if (p1.getType() == 0 || p1.getType() == 1) { // int rel var or bool
-                IntVar v2 = support.getVariable(p2);
-                int i1 = support.getInt(p1);
-                if (i1 < IntDomain.MinInt || i1 > IntDomain.MaxInt)
-                    throw new ArithmeticException(
-                        "Constant " + i1 + " outside variable bounds; must be in interval " + IntDomain.MinInt + ".." + IntDomain.MaxInt);
+		switch (operation) {
+		case Support.eq:
+		    v1.domain.in(store.level, v1, i2, i2);
+		    break;
+		case Support.ne:
+		    v1.domain.inComplement(store.level, v1, i2);
+		    break;
+		case Support.lt:
+		    v1.domain.inMax(store.level, v1, i2 - 1);
+		    break;
+		case Support.gt:
+		    v1.domain.inMin(store.level, v1, i2 + 1);
+		    break;
+		case Support.le:
+		    v1.domain.inMax(store.level, v1, i2);
+		    break;
+		case Support.ge:
+		    v1.domain.inMin(store.level, v1, i2);
+		    break;
+		default:
+		    throw new RuntimeException("Internal error in " + getClass().getName());
+		}
 
-                switch (operation) {
+	    } else { // first parameter var & second parameter var
 
-                    case Support.eq:
-                        if (!v2.domain.contains(i1)) { //v2.min() > i1 || v2.max() < i1) {
-                            v3.domain.in(store.level, v3, 0, 0);
-                            return;
-                        } else if (v2.min() == i1 && v2.singleton()) {
-                            v3.domain.in(store.level, v3, 1, 1);
-                            return;
-                        } else if (v3.max() == 0) {
-                            v2.domain.inComplement(store.level, v2, i1);
-                            return;
-                        } else if (v3.min() == 1) {
-                            v2.domain.in(store.level, v2, i1, i1);
-                            return;
-                        } else if (generateForEqC(v2, i1, v3))  // binary variable
-                            return;
-                        else {
-                            //     c = new XeqC(v2, i1);
-                            support.pose(fzXeqCReified(v2, i1, v3));
-                            return;
-                        }
-                        // break;
+		IntVar v1 = support.getVariable(p1);
+		IntVar v2 = support.getVariable(p2);
 
-                    case Support.ne:
-                        if (v2.min() > i1 || v2.max() < i1) {
-                            v3.domain.in(store.level, v3, 1, 1);
-                            return;
-                        } else if (v2.min() == i1 && v2.singleton()) {
-                            v3.domain.in(store.level, v3, 0, 0);
-                            return;
-                        } else if (generateForNeqC(v2, i1, v3))
-                            return;
-                        else
-                            c = new XneqC(v2, i1);
-                        break;
-                    case Support.lt:
-                        if (i1 < v2.min()) {
-                            v3.domain.in(store.level, v3, 1, 1);
-                            return;
-                        } else if (i1 >= v2.max()) {
-                            v3.domain.in(store.level, v3, 0, 0);
-                            return;
-                        } else
-                            c = new XgtC(v2, i1);
-                        break;
-                    case Support.gt:
-                        if (i1 > v2.max()) {
-                            v3.domain.in(store.level, v3, 1, 1);
-                            return;
-                        } else if (i1 <= v2.min()) {
-                            v3.domain.in(store.level, v3, 0, 0);
-                            return;
-                        } else
-                            c = new XltC(v2, i1);
-                        break;
-                    case Support.le:
-                        if (i1 <= v2.min()) {
-                            v3.domain.in(store.level, v3, 1, 1);
-                            return;
-                        } else if (i1 > v2.max()) {
-                            v3.domain.in(store.level, v3, 0, 0);
-                            return;
-                        } else
-                            // if (support.options.useSat()) {  // it can be moved to SAT solver but it is slow in the current implementation
-                            //     sat.generate_geC_reif(v2, i1, v3);
-                            //     return;
-                            // }
-                            // else
-                            c = new XgteqC(v2, i1);
-                        break;
-                    case Support.ge:
-                        if (i1 > v2.max()) {
-                            v3.domain.in(store.level, v3, 1, 1);
-                            return;
-                        } else if (i1 < v2.min()) {
-                            v3.domain.in(store.level, v3, 0, 0);
-                            return;
-                        } else
-                            c = new XlteqC(v2, i1);
-                        break;
-                    default:
-                        throw new RuntimeException("Internal error in " + getClass().getName());
-                }
-            } else { // var rel var
-                IntVar v1 = support.getVariable(p1);
-                IntVar v2 = support.getVariable(p2);
+		switch (operation) {
+		case Support.eq:
+		    support.pose(new XeqY(v1, v2));
+		    break;
+		case Support.ne:
+		    support.pose(new XneqY(v1, v2));
+		    break;
+		case Support.lt:
+		    support.pose(new XltY(v1, v2));
+		    break;
+		case Support.gt:
+		    support.pose(new XgtY(v1, v2));
+		    break;
+		case Support.le:
+		    support.pose(new XlteqY(v1, v2));
+		    break;
+		case Support.ge:
+		    support.pose(new XgteqY(v1, v2));
+		    break;
+		default:
+		    throw new RuntimeException("Internal error in " + getClass().getName());
+		}
+	    }
+	}
+    }
 
-                switch (operation) {
-                    case Support.eq:
-                        if (generateForEq(v1, v2, v3))
-                            return;
-                        else if (generateForEq(v2, v1, v3))
-                            return;
-                        else if (binaryVar(v1) && binaryVar(v2)) {
-                            support.pose(new Not(new XorBool(new IntVar[] {v1, v2}, v3)));
-                            return;
-                        }
-                        if (v2.singleton())
-                            c = new XeqC(v1, v2.value());
-                        else if (v1.singleton())
-                            c = new XeqC(v2, v1.value());
-                        else
-                            c = new XeqY(v1, v2);
-                        break;
-                    case Support.ne:
-                        if (generateForNeq(v1, v2, v3))
-                            return;
-                        else if (generateForNeq(v2, v1, v3))
-                            return;
-                        else if (binaryVar(v1) && binaryVar(v2)) {
-                            support.pose(new XorBool(new IntVar[] {v1, v2}, v3));
-                            return;
-                        } else
-                            c = new XneqY(v1, v2);
-                        break;
-                    case Support.lt:
-                        c = new XltY(v1, v2);
-                        break;
-                    case Support.gt:
-                        c = new XgtY(v1, v2);
-                        break;
-                    case Support.le:
-                        c = new XlteqY(v1, v2);
-                        break;
-                    case Support.ge:
-                        c = new XgteqY(v1, v2);
-                        break;
-                    default:
-                        throw new RuntimeException("Internal error in " + getClass().getName());
-                }
-            }
+    void int_comparison_reif(int operation, SimpleNode node) {
 
-            Constraint cr = new Reified(c, v3);
-            support.pose(cr);
-        } else { // not reified constraints
+        ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
+        ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
+    
+	PrimitiveConstraint c = null;
+	ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
+	IntVar v3 = support.getVariable(p3);
 
-            if (p1.getType() == 0 || p1.getType() == 1) { // first parameter int or bool
-                if (p2.getType() == 0 || p2.getType() == 1) { // first parameter int/bool & second parameter int/bool
-                    int i1 = support.getInt(p1);
-                    if (i1 < IntDomain.MinInt || i1 > IntDomain.MaxInt)
-                        throw new ArithmeticException(
-                            "Constant " + i1 + " outside variable bounds; must be in interval " + IntDomain.MinInt + ".."
-                                + IntDomain.MaxInt);
-                    int i2 = support.getInt(p2);
-                    if (i2 < IntDomain.MinInt || i2 > IntDomain.MaxInt)
-                        throw new ArithmeticException(
-                            "Constant " + i2 + " outside variable bounds; must be in interval " + IntDomain.MinInt + ".."
-                                + IntDomain.MaxInt);
-                    switch (operation) {
-                        case Support.eq:
-                            if (i1 != i2)
-                                throw Store.failException;
-                            break;
-                        case Support.ne:
-                            if (i1 == i2)
-                                throw Store.failException;
-                            break;
-                        case Support.lt:
-                            if (i1 >= i2)
-                                throw Store.failException;
-                            break;
-                        case Support.gt:
-                            if (i1 <= i2)
-                                throw Store.failException;
-                            break;
-                        case Support.le:
-                            if (i1 > i2)
-                                throw Store.failException;
-                            break;
-                        case Support.ge:
-                            if (i1 < i2)
-                                throw Store.failException;
-                            break;
-                        default:
-                            throw new RuntimeException("Internal error in " + getClass().getName());
-                    }
-                } else { // first parameter int/bool & second parameter var
+	if (p2.getType() == 0 || p2.getType() == 1) { // var rel int or bool
+	    IntVar v1 = support.getVariable(p1);
 
-                    int i1 = support.getInt(p1);
-                    if (i1 < IntDomain.MinInt || i1 > IntDomain.MaxInt)
-                        throw new ArithmeticException(
-                            "Constant " + i1 + " outside variable bounds; must be in interval " + IntDomain.MinInt + ".."
-                                + IntDomain.MaxInt);
-                    IntVar v2 = support.getVariable(p2);
+	    int i2 = support.getInt(p2);
+	    if (i2 < IntDomain.MinInt || i2 > IntDomain.MaxInt)
+		throw new ArithmeticException(
+					      "Constant " + i2 + " outside variable bounds ; must be in interval " + IntDomain.MinInt + ".." + IntDomain.MaxInt);
+	    switch (operation) {
 
-                    switch (operation) {
-                        case Support.eq:
-                            v2.domain.in(store.level, v2, i1, i1);
-                            break;
-                        case Support.ne:
-                            v2.domain.inComplement(store.level, v2, i1);
-                            break;
-                        case Support.lt:
-                            v2.domain.in(store.level, v2, i1 + 1, IntDomain.MaxInt);
-                            break;
-                        case Support.gt:
-                            v2.domain.in(store.level, v2, IntDomain.MinInt, i1 - 1);
-                            break;
-                        case Support.le:
-                            v2.domain.in(store.level, v2, i1, IntDomain.MaxInt);
-                            break;
-                        case Support.ge:
-                            v2.domain.in(store.level, v2, IntDomain.MinInt, i1);
-                            break;
-                        default:
-                            throw new RuntimeException("Internal error in " + getClass().getName());
-                    }
-                }
-            } else { // first parameter var
-                if (p2.getType() == 0 || p2.getType() == 1) { // first parameter var & second parameter int
+	    case Support.eq:
+		if (!v1.domain.contains(i2)) {
+		    v3.domain.in(store.level, v3, 0, 0);
+		    return;
+		} else if (v1.min() == i2 && v1.singleton()) {
+		    v3.domain.in(store.level, v3, 1, 1);
+		    return;
+		} else if (v3.max() == 0) {
+		    v1.domain.inComplement(store.level, v1, i2);
+		    return;
+		} else if (v3.min() == 1) {
+		    v1.domain.in(store.level, v1, i2, i2);
+		    return;
+		} else if (generateForEqC(v1, i2, v3))
+		    return;
+		else {
+		    // if (support.options.useSat()) {  // it can be moved to SAT solver but it is slow in the current implementation
+		    //     sat.generate_eqC_reif(v1, i2, v3);
+		    //     return;
+		    // }
+		    // else
+		    // c = new XeqC(v1, i2);
+		    support.pose(fzXeqCReified(v1, i2, v3));
+		    return;
+		}
+		// break;
 
-                    IntVar v1 = support.getVariable(p1);
-                    int i2 = support.getInt(p2);
-                    if (i2 < IntDomain.MinInt || i2 > IntDomain.MaxInt)
-                        throw new ArithmeticException(
-                            "Constant " + i2 + " outside variable bounds; must be in interval " + IntDomain.MinInt + ".."
-                                + IntDomain.MaxInt);
+	    case Support.ne:
+		if (v1.min() > i2 || v1.max() < i2) {
+		    v3.domain.in(store.level, v3, 1, 1);
+		    return;
+		} else if (v1.min() == i2 && v1.singleton()) {
+		    v3.domain.in(store.level, v3, 0, 0);
+		    return;
+		} else if (v3.max() == 0) {
+		    v1.domain.in(store.level, v1, i2, i2);
+		    return;
+		} else if (v3.min() == 1) {
+		    v1.domain.inComplement(store.level, v1, i2);
+		    return;
+		} else if (generateForNeqC(v1, i2, v3)) { // binary variable
+		    return;
+		} else
+		    // if (support.options.useSat()) {  // it can be moved to SAT solver but it is slow in the current implementation
+		    //     sat.generate_neC_reif(v1, i2, v3);
+		    //     return;
+		    // }
+		    // else
+		    c = new XneqC(v1, i2);
+		break;
+	    case Support.lt:
+		if (v1.max() < i2) {
+		    v3.domain.in(store.level, v3, 1, 1);
+		    return;
+		} else if (v1.min() >= i2) {
+		    v3.domain.in(store.level, v3, 0, 0);
+		    return;
+		} else
+		    c = new XltC(v1, i2);
+		break;
+	    case Support.gt:
+		if (v1.min() > i2) {
+		    v3.domain.in(store.level, v3, 1, 1);
+		    return;
+		} else if (v1.max() <= i2) {
+		    v3.domain.in(store.level, v3, 0, 0);
+		    return;
+		} else
+		    c = new XgtC(v1, i2);
+		break;
+	    case Support.le:
+		if (v1.max() <= i2) {
+		    v3.domain.in(store.level, v3, 1, 1);
+		    return;
+		} else if (v1.min() > i2) {
+		    v3.domain.in(store.level, v3, 0, 0);
+		    return;
+		} else
+		    c = new XlteqC(v1, i2);
+		break;
+	    case Support.ge:
+		if (v1.min() >= i2) {
+		    v3.domain.in(store.level, v3, 1, 1);
+		    return;
+		} else if (v1.max() < i2) {
+		    v3.domain.in(store.level, v3, 0, 0);
+		    return;
+		} else
+		    c = new XgteqC(v1, i2);
+		break;
+	    default:
+		throw new RuntimeException("Internal error in " + getClass().getName());
+	    }
+	} else if (p1.getType() == 0 || p1.getType() == 1) { // int rel var or bool
+	    IntVar v2 = support.getVariable(p2);
+	    int i1 = support.getInt(p1);
+	    if (i1 < IntDomain.MinInt || i1 > IntDomain.MaxInt)
+		throw new ArithmeticException(
+					      "Constant " + i1 + " outside variable bounds; must be in interval " + IntDomain.MinInt + ".." + IntDomain.MaxInt);
 
-                    switch (operation) {
-                        case Support.eq:
-                            v1.domain.in(store.level, v1, i2, i2);
-                            break;
-                        case Support.ne:
-                            v1.domain.inComplement(store.level, v1, i2);
-                            break;
-                        case Support.lt:
-                            v1.domain.in(store.level, v1, IntDomain.MinInt, i2 - 1);
-                            break;
-                        case Support.gt:
-                            v1.domain.in(store.level, v1, i2 + 1, IntDomain.MaxInt);
-                            break;
-                        case Support.le:
-                            v1.domain.in(store.level, v1, IntDomain.MinInt, i2);
-                            break;
-                        case Support.ge:
-                            v1.domain.in(store.level, v1, i2, IntDomain.MaxInt);
-                            break;
-                        default:
-                            throw new RuntimeException("Internal error in " + getClass().getName());
-                    }
+	    switch (operation) {
 
-                } else { // first parameter var & second parameter var
+	    case Support.eq:
+		if (!v2.domain.contains(i1)) { //v2.min() > i1 || v2.max() < i1) {
+		    v3.domain.in(store.level, v3, 0, 0);
+		    return;
+		} else if (v2.min() == i1 && v2.singleton()) {
+		    v3.domain.in(store.level, v3, 1, 1);
+		    return;
+		} else if (v3.max() == 0) {
+		    v2.domain.inComplement(store.level, v2, i1);
+		    return;
+		} else if (v3.min() == 1) {
+		    v2.domain.in(store.level, v2, i1, i1);
+		    return;
+		} else if (generateForEqC(v2, i1, v3))  // binary variable
+		    return;
+		else {
+		    //     c = new XeqC(v2, i1);
+		    support.pose(fzXeqCReified(v2, i1, v3));
+		    return;
+		}
+		// break;
 
-                    IntVar v1 = support.getVariable(p1);
-                    IntVar v2 = support.getVariable(p2);
+	    case Support.ne:
+		if (v2.min() > i1 || v2.max() < i1) {
+		    v3.domain.in(store.level, v3, 1, 1);
+		    return;
+		} else if (v2.min() == i1 && v2.singleton()) {
+		    v3.domain.in(store.level, v3, 0, 0);
+		    return;
+		} else if (generateForNeqC(v2, i1, v3))
+		    return;
+		else
+		    c = new XneqC(v2, i1);
+		break;
+	    case Support.lt:
+		if (i1 < v2.min()) {
+		    v3.domain.in(store.level, v3, 1, 1);
+		    return;
+		} else if (i1 >= v2.max()) {
+		    v3.domain.in(store.level, v3, 0, 0);
+		    return;
+		} else
+		    c = new XgtC(v2, i1);
+		break;
+	    case Support.gt:
+		if (i1 > v2.max()) {
+		    v3.domain.in(store.level, v3, 1, 1);
+		    return;
+		} else if (i1 <= v2.min()) {
+		    v3.domain.in(store.level, v3, 0, 0);
+		    return;
+		} else
+		    c = new XltC(v2, i1);
+		break;
+	    case Support.le:
+		if (i1 <= v2.min()) {
+		    v3.domain.in(store.level, v3, 1, 1);
+		    return;
+		} else if (i1 > v2.max()) {
+		    v3.domain.in(store.level, v3, 0, 0);
+		    return;
+		} else
+		    // if (support.options.useSat()) {  // it can be moved to SAT solver but it is slow in the current implementation
+		    //     sat.generate_geC_reif(v2, i1, v3);
+		    //     return;
+		    // }
+		    // else
+		    c = new XgteqC(v2, i1);
+		break;
+	    case Support.ge:
+		if (i1 > v2.max()) {
+		    v3.domain.in(store.level, v3, 1, 1);
+		    return;
+		} else if (i1 < v2.min()) {
+		    v3.domain.in(store.level, v3, 0, 0);
+		    return;
+		} else
+		    c = new XlteqC(v2, i1);
+		break;
+	    default:
+		throw new RuntimeException("Internal error in " + getClass().getName());
+	    }
+	} else { // var rel var
+	    IntVar v1 = support.getVariable(p1);
+	    IntVar v2 = support.getVariable(p2);
 
-                    switch (operation) {
-                        case Support.eq:
-                            support.pose(new XeqY(v1, v2));
-                            break;
-                        case Support.ne:
-                            support.pose(new XneqY(v1, v2));
-                            break;
-                        case Support.lt:
-                            support.pose(new XltY(v1, v2));
-                            break;
-                        case Support.gt:
-                            support.pose(new XgtY(v1, v2));
-                            break;
-                        case Support.le:
-                            support.pose(new XlteqY(v1, v2));
-                            break;
-                        case Support.ge:
-                            support.pose(new XgteqY(v1, v2));
-                            break;
-                        default:
-                            throw new RuntimeException("Internal error in " + getClass().getName());
-                    }
-                }
-            }
-        }
+	    switch (operation) {
+	    case Support.eq:
+		if (generateForEq(v1, v2, v3))
+		    return;
+		else if (generateForEq(v2, v1, v3))
+		    return;
+		else if (binaryVar(v1) && binaryVar(v2)) {
+		    support.pose(new Not(new XorBool(new IntVar[] {v1, v2}, v3)));
+		    return;
+		}
+		if (v2.singleton())
+		    c = new XeqC(v1, v2.value());
+		else if (v1.singleton())
+		    c = new XeqC(v2, v1.value());
+		else
+		    c = new XeqY(v1, v2);
+		break;
+	    case Support.ne:
+		if (generateForNeq(v1, v2, v3))
+		    return;
+		else if (generateForNeq(v2, v1, v3))
+		    return;
+		else if (binaryVar(v1) && binaryVar(v2)) {
+		    support.pose(new XorBool(new IntVar[] {v1, v2}, v3));
+		    return;
+		} else
+		    c = new XneqY(v1, v2);
+		break;
+	    case Support.lt:
+		c = new XltY(v1, v2);
+		break;
+	    case Support.gt:
+		c = new XgtY(v1, v2);
+		break;
+	    case Support.le:
+		c = new XlteqY(v1, v2);
+		break;
+	    case Support.ge:
+		c = new XgteqY(v1, v2);
+		break;
+	    default:
+		throw new RuntimeException("Internal error in " + getClass().getName());
+	    }
+	}
+
+	Constraint cr = new Reified(c, v3);
+	support.pose(cr);
     }
 
 
+    void int_comparison_imp(int operation, SimpleNode node) {
+
+        ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
+        ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
+    
+	PrimitiveConstraint c = null;
+	ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
+	IntVar v3 = support.getVariable(p3);
+
+	if (p2.getType() == 0 || p2.getType() == 1) { // var rel int or bool
+	    IntVar v1 = support.getVariable(p1);
+
+	    int i2 = support.getInt(p2);
+	    if (i2 < IntDomain.MinInt || i2 > IntDomain.MaxInt)
+		throw new ArithmeticException(
+					      "Constant " + i2 + " outside variable bounds ; must be in interval " + IntDomain.MinInt + ".." + IntDomain.MaxInt);
+	    switch (operation) {
+
+	    case Support.eq:
+		if (!v1.domain.contains(i2)) {
+		    v3.domain.in(store.level, v3, 0, 0);
+		    return;
+		} else if (v3.max() == 0) {
+		    return;
+		} else if (v3.min() == 1) {
+		    v1.domain.in(store.level, v1, i2, i2);
+		    return;
+		} else {
+		    // c = new XeqC(v1, i2);
+		    support.pose(fzXeqCImplied(v1, i2, v3)); // specialized version of Implies...
+		    return;
+		}
+		// break;
+
+	    case Support.ne:
+		if (v1.min() > i2 || v1.max() < i2) {
+		    return;
+		} else if (v1.min() == i2 && v1.singleton()) {
+		    v3.domain.in(store.level, v3, 0, 0);
+		    return;
+		} else if (v3.max() == 0) {
+		    return;
+		} else if (v3.min() == 1) {
+		    v1.domain.inComplement(store.level, v1, i2);
+		    return;
+		} else
+		    c = new XneqC(v1, i2);
+		break;
+	    case Support.lt:
+		if (v1.max() < i2) {
+		    return;
+		} else if (v1.min() >= i2) {
+		    v3.domain.in(store.level, v3, 0, 0);
+		    return;
+		} else if (v3.max() == 0) {
+		    return;
+		} else if (v3.min() == 1) {
+		    v1.domain.inMax(store.level, v1, i2-1);
+		    return;
+		} else
+		    c = new XltC(v1, i2);
+		break;
+	    case Support.gt:
+		if (v1.min() > i2) {
+		    return;
+		} else if (v1.max() <= i2) {
+		    v3.domain.in(store.level, v3, 0, 0);
+		    return;
+		} else if (v3.max() == 0) {
+		    return;
+		} else if (v3.min() == 1) {
+		    v1.domain.inMin(store.level, v1, i2+1);
+		    return;
+		} else
+		    c = new XgtC(v1, i2);
+		break;
+	    case Support.le:
+		if (v1.max() <= i2) {
+		    return;
+		} else if (v1.min() > i2) {
+		    v3.domain.in(store.level, v3, 0, 0);
+		    return;
+		} else if (v3.max() == 0) {
+		    return;
+		} else if (v3.min() == 1) {
+		    v1.domain.inMax(store.level, v1, i2);
+		    return;
+		} else
+		    c = new XlteqC(v1, i2);
+		break;
+	    case Support.ge:
+		if (v1.min() >= i2) {
+		    return;
+		} else if (v1.max() < i2) {
+		    v3.domain.in(store.level, v3, 0, 0);
+		    return;
+		} else if (v3.max() == 0) {
+		    return;
+		} else if (v3.min() == 1) {
+		    v1.domain.inMin(store.level, v1, i2);
+		    return;
+		} else
+		    c = new XgteqC(v1, i2);
+		break;
+	    default:
+		throw new RuntimeException("Internal error in " + getClass().getName());
+	    }
+	} else if (p1.getType() == 0 || p1.getType() == 1) { // int rel var or bool
+	    IntVar v2 = support.getVariable(p2);
+	    int i1 = support.getInt(p1);
+	    if (i1 < IntDomain.MinInt || i1 > IntDomain.MaxInt)
+		throw new ArithmeticException(
+					      "Constant " + i1 + " outside variable bounds; must be in interval " + IntDomain.MinInt + ".." + IntDomain.MaxInt);
+
+	    switch (operation) {
+
+	    case Support.eq:
+		if (!v2.domain.contains(i1)) { //v2.min() > i1 || v2.max() < i1) {
+		    v3.domain.in(store.level, v3, 0, 0);
+		    return;
+		} else if (v2.min() == i1 && v2.singleton()) {
+		    v3.domain.in(store.level, v3, 1, 1);
+		    return;
+		} else if (v3.max() == 0) {
+		    v2.domain.inComplement(store.level, v2, i1);
+		    return;
+		} else if (v3.min() == 1) {
+		    v2.domain.in(store.level, v2, i1, i1);
+		    return;
+		} else {
+		    //     c = new XeqC(v2, i1);
+		    support.pose(fzXeqCImplied(v2, i1, v3));
+		    return;
+		}
+		// break;
+
+	    case Support.ne:
+		if (v2.min() > i1 || v2.max() < i1) {
+		    v3.domain.in(store.level, v3, 1, 1);
+		    return;
+		} else if (v2.min() == i1 && v2.singleton()) {
+		    v3.domain.in(store.level, v3, 0, 0);
+		    return;
+		} else
+		    c = new XneqC(v2, i1);
+		break;
+	    case Support.lt:
+		if (i1 < v2.min()) {
+		    v3.domain.in(store.level, v3, 1, 1);
+		    return;
+		} else if (i1 >= v2.max()) {
+		    v3.domain.in(store.level, v3, 0, 0);
+		    return;
+		} else
+		    c = new XgtC(v2, i1);
+		break;
+	    case Support.gt:
+		if (i1 > v2.max()) {
+		    v3.domain.in(store.level, v3, 1, 1);
+		    return;
+		} else if (i1 <= v2.min()) {
+		    v3.domain.in(store.level, v3, 0, 0);
+		    return;
+		} else
+		    c = new XltC(v2, i1);
+		break;
+	    case Support.le:
+		if (i1 <= v2.min()) {
+		    v3.domain.in(store.level, v3, 1, 1);
+		    return;
+		} else if (i1 > v2.max()) {
+		    v3.domain.in(store.level, v3, 0, 0);
+		    return;
+		} else
+		    c = new XgteqC(v2, i1);
+		break;
+	    case Support.ge:
+		if (i1 > v2.max()) {
+		    v3.domain.in(store.level, v3, 1, 1);
+		    return;
+		} else if (i1 < v2.min()) {
+		    v3.domain.in(store.level, v3, 0, 0);
+		    return;
+		} else
+		    c = new XlteqC(v2, i1);
+		break;
+	    default:
+		throw new RuntimeException("Internal error in " + getClass().getName());
+	    }
+	} else { // var rel var
+	    IntVar v1 = support.getVariable(p1);
+	    IntVar v2 = support.getVariable(p2);
+
+	    switch (operation) {
+	    case Support.eq:
+		if (v2.singleton())
+		    c = new XeqC(v1, v2.value());
+		else if (v1.singleton())
+		    c = new XeqC(v2, v1.value());
+		else
+		    c = new XeqY(v1, v2);
+		break;
+	    case Support.ne:
+		if (v2.singleton())
+		    c = new XneqC(v1, v2.value());
+		else if (v1.singleton())
+		    c = new XneqC(v2, v1.value());
+		else
+		    c = new XneqY(v1, v2);
+		break;
+	    case Support.lt:
+		c = new XltY(v1, v2);
+		break;
+	    case Support.gt:
+		c = new XgtY(v1, v2);
+		break;
+	    case Support.le:
+		c = new XlteqY(v1, v2);
+		break;
+	    case Support.ge:
+		c = new XgteqY(v1, v2);
+		break;
+	    default:
+		throw new RuntimeException("Internal error in " + getClass().getName());
+	    }
+	}
+
+	Constraint cr = new Implies(v3, c);
+	support.pose(cr);
+    }
+    
     boolean generateForEqC(IntVar v1, int i2, IntVar b) {
         if (v1.min() >= 0 && v1.max() <= 1) { // binary variables
             if (i2 == 0) {
@@ -696,6 +961,34 @@ class ComparisonConstraints implements ParserTreeConstants {
 
             @Override public String toString() {
                 return "fz : XeqC_Reified(" + x + ", " + c + ", " + b + " )";
+            }
+        };
+    }
+ 
+   Constraint fzXeqCImplied(IntVar x, Integer c, IntVar b) {
+
+        return new Constraint(new IntVar[] {x, b}) {
+
+            @Override public void consistency(final Store store) {
+
+                if (x.singleton(c)) {
+                    removeConstraint();
+                } else if (!x.domain.contains(c)) {
+                    b.domain.in(store.level, b, 0, 0);
+                    removeConstraint();
+                } else if (b.max() == 0) {
+                    removeConstraint();
+                } else if (b.min() == 1) {// x==c must be true
+                    x.domain.in(store.level, x, c, c);
+		}
+            }
+
+            @Override public int getDefaultConsistencyPruningEvent() {
+                return IntDomain.ANY;
+            }
+
+            @Override public String toString() {
+                return "fz : XeqC_Implied("+ b + ", " + x + ", " + c + " )";
             }
         };
     }

@@ -31,6 +31,7 @@ package org.jacop.fz;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.core.BooleanVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
@@ -48,7 +49,7 @@ import java.util.Set;
  * the variables which are used by search.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 public class Tables {
 
@@ -56,6 +57,7 @@ public class Tables {
     // IntVar zero, one;
 
     HashMap<Integer, IntVar> constantTable = new HashMap<Integer, IntVar>();
+    HashMap<Integer, BooleanVar> constantTableBoolean = new HashMap<Integer, BooleanVar>();
     HashMap<Double, FloatVar> constantFloatTable = new HashMap<Double, FloatVar>();
 
     // intTable keeps both int & bool (0=false, 1=true) parameters
@@ -121,6 +123,17 @@ public class Tables {
         if (v == null) {
             v = new IntVar(store, c, c);
             constantTable.put(c, v);
+        }
+
+        return v;
+    }
+
+    public BooleanVar getConstantBoolean(int c) {
+        BooleanVar v = constantTableBoolean.get(c);
+
+        if (v == null) {
+            v = new BooleanVar(store, c, c);
+            constantTableBoolean.put(c, v);
         }
 
         return v;

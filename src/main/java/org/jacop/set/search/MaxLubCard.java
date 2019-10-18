@@ -40,7 +40,7 @@ import org.jacop.set.core.SetVar;
  *
  * @param <T> type of variable
  * @author Krzysztof Kuchcinski and Robert Åkemalm
- * @version 4.6
+ * @version 4.7
  */
 
 public class MaxLubCard<T extends SetVar> implements ComparatorVariable<T> {

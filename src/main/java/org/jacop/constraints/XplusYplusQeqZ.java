@@ -42,7 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Bound consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class XplusYplusQeqZ extends PrimitiveConstraint {
@@ -88,7 +88,26 @@ public class XplusYplusQeqZ extends PrimitiveConstraint {
         this.q = q;
         this.z = z;
 
+	checkForOverflow();
+
         setScope(x, y, q, z);
+    }
+
+    void checkForOverflow() {
+
+        int sumMin = 0, sumMax = 0;
+
+        sumMin = Math.addExact(sumMin, x.min());
+        sumMax = Math.addExact(sumMax, x.max());
+
+        sumMin = Math.addExact(sumMin, y.min());
+        sumMax = Math.addExact(sumMax, y.max());
+
+        sumMin = Math.addExact(sumMin, q.min());
+        sumMax = Math.addExact(sumMax, q.max());
+
+        Math.subtractExact(sumMin, z.max());
+        Math.subtractExact(sumMax, z.min());
     }
 
     @Override public void consistency(final Store store) {

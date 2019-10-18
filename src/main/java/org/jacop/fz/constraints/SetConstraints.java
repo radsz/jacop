@@ -32,6 +32,7 @@ package org.jacop.fz.constraints;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.Implies;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -39,6 +40,7 @@ import org.jacop.fz.ASTScalarFlatExpr;
 import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
 import org.jacop.set.constraints.*;
+import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
 
@@ -83,7 +85,7 @@ class SetConstraints implements ParserTreeConstants {
         SetVar v1 = support.getSetVariable(node, 0);
         SetVar v2 = support.getSetVariable(node, 1);
 
-        PrimitiveConstraint c = new org.jacop.set.constraints.AeqB(v1, v2);
+        PrimitiveConstraint c = new AeqB(v1, v2);
         support.pose(c);
     }
 
@@ -93,7 +95,7 @@ class SetConstraints implements ParserTreeConstants {
         SetVar v2 = support.getSetVariable(node, 1);
         IntVar v3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
-        PrimitiveConstraint c = new org.jacop.set.constraints.AeqB(v1, v2);
+        PrimitiveConstraint c = new AeqB(v1, v2);
         support.pose(new Reified(c, v3));
     }
 
@@ -144,11 +146,36 @@ class SetConstraints implements ParserTreeConstants {
                 c = new XinA(v1, v2);
             }
         }
-        // FIXME, include AinB here?
 
         IntVar v3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
         support.pose(new Reified(c, v3));
+    }
+
+    void gen_set_in_imp(SimpleNode node) {
+        PrimitiveConstraint c;
+
+        ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
+        SimpleNode v1Type = (SimpleNode) node.jjtGetChild(1);
+        if (v1Type.getId() == JJTSETLITERAL) {
+            IntDomain d = support.getSetLiteral(node, 1);
+            IntVar v1 = support.getVariable(p1);
+            c = new org.jacop.constraints.In(v1, d);
+        } else {
+            SetVar v2 = support.getSetVariable(node, 1);
+
+            if (p1.getType() == 0) { // p1 int
+                int i1 = support.getInt(p1);
+                c = new EinA(i1, v2);
+            } else { // p1 var
+                IntVar v1 = support.getVariable(p1);
+                c = new XinA(v1, v2);
+            }
+        }
+
+        IntVar v3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+
+        support.pose(new Implies(v3, c));
     }
 
     void gen_set_intersect(SimpleNode node) {
@@ -194,7 +221,7 @@ class SetConstraints implements ParserTreeConstants {
         SetVar v1 = support.getSetVariable(node, 0);
         SetVar v2 = support.getSetVariable(node, 1);
 
-        PrimitiveConstraint c = new Not(new org.jacop.set.constraints.AeqB(v1, v2));
+        PrimitiveConstraint c = new Not(new AeqB(v1, v2));
         support.pose(c);
     }
 
@@ -204,7 +231,7 @@ class SetConstraints implements ParserTreeConstants {
         SetVar v2 = support.getSetVariable(node, 1);
         IntVar v3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
-        PrimitiveConstraint c = new Not(new org.jacop.set.constraints.AeqB(v1, v2));
+        PrimitiveConstraint c = new Not(new AeqB(v1, v2));
         support.pose(new Reified(c, v3));
     }
 
@@ -230,8 +257,8 @@ class SetConstraints implements ParserTreeConstants {
         SetVar v2 = support.getSetVariable(node, 1);
         SetVar v3 = support.getSetVariable(node, 2);
 
-        SetVar t1 = new SetVar(store, new BoundSetDomain(IntDomain.MinInt, IntDomain.MaxInt));
-        SetVar t2 = new SetVar(store, new BoundSetDomain(IntDomain.MinInt, IntDomain.MaxInt));
+        SetVar t1 = new SetVar(store, new BoundSetDomain(SetDomain.MinElement, SetDomain.MaxElement));
+	SetVar t2 = new SetVar(store, new BoundSetDomain(SetDomain.MinElement, SetDomain.MaxElement));
 
         support.pose(new AdiffBeqC(v1, v2, t1));
 

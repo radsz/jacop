@@ -34,7 +34,7 @@ package org.jacop.util;
  * Util functions for arrays of tuples.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 public class TupleUtils {
 

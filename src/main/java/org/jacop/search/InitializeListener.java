@@ -37,7 +37,7 @@ import org.jacop.core.Store;
  * the labeling procedure.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public interface InitializeListener {

@@ -44,7 +44,7 @@ import java.util.ArrayList;
  * different search methods.
  *
  * @author Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 public class Queens extends ExampleFD {
 

@@ -42,7 +42,7 @@ import java.util.Random;
  * any function can not be empty domains.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public abstract class IntDomain extends Domain {
@@ -53,12 +53,12 @@ public abstract class IntDomain extends Domain {
     /**
      * It specifies the minimum element in the domain.
      */
-    public static final int MinInt = -536_870_910;
+    public static final int MinInt = -536_870_910;  // Integer.MIN_VALUE/4 + 2
 
     /**
      * It specifies the maximum element in the domain.
      */
-    public static final int MaxInt = 536_870_909;
+    public static final int MaxInt = 536_870_909;  // Integer.MAX_VALUE/4 - 2
 
     /**
      * It specifies the constant for GROUND event. It has to be smaller

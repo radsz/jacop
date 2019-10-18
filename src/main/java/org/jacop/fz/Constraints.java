@@ -39,7 +39,7 @@ import org.jacop.satwrapper.SatTranslation;
  * The part of the parser responsible for parsing constraints.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 public class Constraints implements ParserTreeConstants {
 
@@ -186,7 +186,7 @@ public class Constraints implements ParserTreeConstants {
                 }
 
                 if (debug)
-                    System.out.println("Alias: " + v1 + " == " + v2);
+                    System.out.println("% Alias: " + v1 + " == " + v2);
             }
         }
     }

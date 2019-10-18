@@ -42,7 +42,7 @@ import java.util.List;
  * It is an abstract class to describe all necessary functions of any store.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public abstract class ExampleFD {
@@ -220,7 +220,7 @@ public abstract class ExampleFD {
         T1 = System.currentTimeMillis();
 
         SelectChoicePoint<IntVar> select =
-            new SimpleSelect<>(vars.toArray(new IntVar[1]), new WeightedDegree<>(), new SmallestDomain<>(), new IndomainMin<>());
+            new SimpleSelect<>(vars.toArray(new IntVar[1]), new WeightedDegree<>(store), new SmallestDomain<>(), new IndomainMin<>());
 
         search = new DepthFirstSearch<>();
 

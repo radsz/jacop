@@ -40,7 +40,7 @@ import org.jacop.core.*;
  * any function can not be empty domains.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public abstract class FloatDomain extends Domain {
@@ -54,6 +54,11 @@ public abstract class FloatDomain extends Domain {
      * It specifies the maximum element in the domain.
      */
     public static final double MaxFloat = Double.MAX_VALUE; // 1e150;
+
+    /**
+     * Minimization step for floating-point cost function minimization.
+     */
+    public static double minimizationStep = 0;
 
     /**
      * It specifies the constant pi, as defined in java.lang.Math package.
@@ -201,6 +206,20 @@ public abstract class FloatDomain extends Domain {
     // supposed to be used by methods for domain computations
     public static double previous(double d) {
         return downBit(d); //d - ulp(d);
+    }
+
+    // Sets optimization step for floating point optimization
+    public static void setStep(double s) {
+	minimizationStep = s;
+    }
+    
+    // returns previous floating-point number before d 
+    // for minimization with FloatVar cost function
+    public static double previousForMinimization(double d) {
+	if (minimizationStep == 0)
+	    return previous(d);
+	else
+	    return d - minimizationStep;// + upBit(d);
     }
 
     // returns next (toward inf) floating-point number after d 

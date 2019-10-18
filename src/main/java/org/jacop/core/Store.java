@@ -47,7 +47,7 @@ import java.util.*;
  * It is an abstract class to describe all necessary functions of any store.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public class Store {
@@ -251,6 +251,25 @@ public class Store {
     private Map<Class<? extends Constraint>, Set<Replaceable>> replacements = new HashMap<>();
 
     /**
+     * Variables for accumulated failure count (AFC) for constraints.
+     * constraintAFCManagement- opens AFC menagement
+     * decay- decay factor
+     * allConstraints- all constraints in the store
+     */
+    boolean constraintAFCManagement = false;
+    Set<Constraint>  allConstraints;
+
+    float decay = 0.99f;
+    
+    /**
+     * Variables for pruning count (variable activity) for constraints.
+     * variableActivityManagement- opens activity menagement
+     * variablePrunnedConstraints- all constraints in the store
+     */
+    boolean variableActivityManagement = false;
+    Set<Var>  variablesPrunned;
+    
+    /**
      * Variable given as a parameter no longer watches constraint given as
      * parameter. This function will be called when watch is being moved from
      * one variable to another.
@@ -416,6 +435,9 @@ public class Store {
 
         propagationHasOccurred = true;
 
+	if (variableActivityManagement)
+	    variablesPrunned.add(var);
+
         // It records V as being changed so backtracking later on can be invoked for this variable.
         recordChange(var);
 
@@ -522,8 +544,13 @@ public class Store {
                         currentConstraint = getFirstChanged();
 
                         numberConsistencyCalls++;
+
                         currentConstraint.consistency(this);
 
+			if (variableActivityManagement) {
+			    updateActivities(currentConstraint);
+			    variablesPrunned.clear();
+			}
                     }
 
                 currentQueue++;
@@ -538,6 +565,13 @@ public class Store {
                 if (variableWeightManagement)
                     currentConstraint.increaseWeight();
 
+		if (constraintAFCManagement)
+		    currentConstraint.updateAFC(allConstraints, decay);
+
+		if (variableActivityManagement) {
+		    updateActivities(currentConstraint);
+		    variablesPrunned.clear();
+		}
             }
 
             recentlyFailedConstraint = currentConstraint;
@@ -681,7 +715,7 @@ public class Store {
      * @param c constraint to be imposed.
      */
 
-    public void impose(Constraint c) {
+    @SuppressWarnings("unchecked") public void impose(Constraint c) {
 
         Optional.ofNullable(replacements.get(c.getClass())).ifPresent(
             l -> l.forEach( r -> {
@@ -730,6 +764,28 @@ public class Store {
 
     }
 
+    /**
+     * In some special cases it may be beneficial to compute consistency of
+     * constraint store immediately after the constraint is imposed. This
+     * function will impose a constraint and call the consistency function of
+     * the store immediately.
+     *
+     * @param c constraint to be imposed.
+     * @param queueIndex constraint priority for evaluation.
+     * @throws FailException failure exception.
+     */
+
+    public void imposeWithConsistency(Constraint c, int queueIndex) throws FailException {
+
+        assert (queueIndex < queueNo) : "Constraint queue number larger than permitted by store.";
+
+        c.impose(this, queueIndex);
+
+        if (!consistency()) {
+            throw Store.failException;
+        }
+
+    }
 
     /**
      * This function imposes a decomposable constraint to a store. The decomposition is
@@ -1226,6 +1282,38 @@ public class Store {
         return constraints;
     }
 
+    public void setAllConstraints() {
+	allConstraints = getConstraints();
+    }
+    
+
+    public void setDecay(float d) {
+	decay = d;
+    }
+
+    public float getDecay() {
+	return decay ;
+    }
+
+    public void afcManagement(boolean m) {
+	constraintAFCManagement = m;
+    }
+    
+    public void activityManagement(boolean m) {
+	variableActivityManagement = m;
+	variablesPrunned = new HashSet<Var>();
+    }
+
+    void updateActivities(Constraint constraint) {
+	for (Var v : variablesPrunned)
+	    v.updateActivity();
+
+	if (decay < 1.0f)
+	    for (Var v : constraint.arguments())
+		if (!variablesPrunned.contains(v))
+		    v.applyDecay();
+    }
+    
     /**
      * This function returns a string representation of the constraints pending
      * for re-evaluation.

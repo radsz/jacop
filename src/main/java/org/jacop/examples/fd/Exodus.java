@@ -83,7 +83,7 @@ import java.util.ArrayList;
  * Determine: Age -- Child -- Country -- Story
  *
  * @author Duda Wojciech and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class Exodus extends ExampleFD {

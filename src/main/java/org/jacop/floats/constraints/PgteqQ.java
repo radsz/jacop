@@ -41,7 +41,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Constraints P {@literal >=} Q for floats
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class PgteqQ extends PrimitiveConstraint {

@@ -48,7 +48,7 @@ import java.util.stream.Stream;
  * The weights are integers. Domain consistency is used.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public class LinearIntDom extends LinearInt {

@@ -878,14 +878,14 @@ void annotations() :
 void annotation() #Annotation:
 {Token t;}
 {
-	LOOKAHEAD(5) 
-	t=<IDENT> <LP> ann_exprs() <RP>
-	{jjtThis.setId(t.image); }
+	 LOOKAHEAD(5) 
+	 t=<IDENT> <LP> annotation() (<COMMA> annotation() )* <RP>
+	 {jjtThis.setId(t.image); }
        | 
-	 LOOKAHEAD(2)  // addition to accept seq_search([ int_search(....
-     	 t=<IDENT> <LP> <LBOX> annotation() (<COMMA> annotation() )* <RBOX> <RP> 
-	 {jjtThis.setId(t.image); }
-	|
-	 t=<IDENT>
-	 {jjtThis.setId(t.image); }
+	 LOOKAHEAD(2)  // addition to accept seq_search and priority_search
+     	 <LBOX> annotation() (<COMMA> annotation() )* <RBOX> 
+	 {jjtThis.setId("$vector"); }
+       |
+         ann_expr()
+	 {jjtThis.setId("$expr"); }
 }

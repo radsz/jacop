@@ -48,7 +48,7 @@ import java.util.ArrayList;
 class BoolConstraints implements ParserTreeConstants {
 
     Store store;
-    boolean reified;
+    boolean reified, implied;
     SatTranslation sat;
     Support support;
 
@@ -73,6 +73,19 @@ class BoolConstraints implements ParserTreeConstants {
             support.poseDC(new AndBool(a1, v));
     }
 
+    void gen_array_bool_and_imp(SimpleNode node) {
+
+        IntVar[] a1 = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+        IntVar v = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
+
+        if (allVarOne(a1))
+            return;
+        else if (atLeastOneVarZero(a1))
+            v.domain.in(store.level, v, 0, 0);
+        else
+            support.pose(new Implies(v, new AndBoolVector(a1, support.dictionary.getConstant(1))));
+    }
+
     void gen_bool_and(SimpleNode node) {
 
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
@@ -89,6 +102,19 @@ class BoolConstraints implements ParserTreeConstants {
             support.pose(new AndBoolSimple(v1, v2, v3));
     }
 
+    void gen_bool_and_imp(SimpleNode node) {
+
+        ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
+        ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
+        ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
+
+        IntVar v1 = support.getVariable(p1);
+        IntVar v2 = support.getVariable(p2);
+        IntVar v3 = support.getVariable(p3);
+
+	support.pose(new Implies(v3, new AndBoolSimple(v1, v2, support.dictionary.getConstant(1))));
+    }
+
     void gen_array_bool_or(SimpleNode node) {
         IntVar[] a1 = support.getVarArray((SimpleNode) node.jjtGetChild(0));
         IntVar v = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
@@ -98,7 +124,7 @@ class BoolConstraints implements ParserTreeConstants {
         else {
             if (v.singleton(1))
 		if (a1.length == 2)
-		    support.pose(new org.jacop.constraints.XplusYgtC(a1[0], a1[1], 0));
+		    support.pose(new XplusYgtC(a1[0], a1[1], 0));
 		else
 		    support.pose(new SumBool(a1, ">=", v));
             else if (allVarZero(a1))
@@ -110,6 +136,24 @@ class BoolConstraints implements ParserTreeConstants {
         }
     }
 
+    void gen_array_bool_or_imp(SimpleNode node) {
+
+        IntVar[] a1 = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+        IntVar v = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
+
+	if (v.singleton(1))
+	    if (a1.length == 2)
+		support.pose(new XplusYgtC(a1[0], a1[1], 0));
+	    else
+		support.pose(new SumBool(a1, ">=", v));
+	else if (allVarZero(a1))
+	    v.domain.in(store.level, v, 0, 0);
+	else if (atLeastOneVarOne(a1))
+	    return;
+	else
+	    support.pose(new Implies(v, new OrBoolVector(a1, support.dictionary.getConstant(1))));
+    }
+
     void gen_array_bool_xor(SimpleNode node) {
 
         SimpleNode p1 = (SimpleNode) node.jjtGetChild(0);
@@ -119,6 +163,15 @@ class BoolConstraints implements ParserTreeConstants {
             sat.generate_xor(a1, support.dictionary.getConstant(1));
         else
             support.pose(new XorBool(a1, support.dictionary.getConstant(1)));
+    }
+
+    void gen_array_bool_xor_imp(SimpleNode node) {
+
+        SimpleNode p1 = (SimpleNode) node.jjtGetChild(0);
+        IntVar[] a1 = support.getVarArray(p1);
+        IntVar v = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
+
+	support.pose(new Implies(v, new XorBool(a1, support.dictionary.getConstant(1))));
     }
 
     void gen_bool_not(SimpleNode node) {
@@ -185,6 +238,11 @@ class BoolConstraints implements ParserTreeConstants {
         clause_generation(node);
     }
 
+    void gen_bool_clause_imp(SimpleNode node) {
+        implied = true;
+        clause_generation(node);
+    }
+
     void gen_bool2int(SimpleNode node) {
     }
 
@@ -203,14 +261,14 @@ class BoolConstraints implements ParserTreeConstants {
                         return; // already satisfied since a variable is both negated and not negated
 
         if (a1.length == 0 && a2.length == 0)
-            if (reified) {
+            if (reified || implied) {
                 IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
                 r.domain.in(store.level, r, 1, 1);
                 return;
             } else
                 return;
 
-        if (support.options.useSat()) {
+        if (support.options.useSat() && !implied) {
             if (reified) { // reified
                 IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
                 sat.generate_clause_reif(a1, a2, r);
@@ -220,7 +278,7 @@ class BoolConstraints implements ParserTreeConstants {
             ArrayList<IntVar> a1reduced = new ArrayList<IntVar>();
             for (int i = 0; i < a1.length; i++)
                 if (a1[i].min() == 1)
-                    if (reified) {
+                    if (reified || implied) {
                         IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
                         r.domain.in(store.level, r, 1, 1);
                         return;
@@ -232,7 +290,7 @@ class BoolConstraints implements ParserTreeConstants {
             ArrayList<IntVar> a2reduced = new ArrayList<IntVar>();
             for (int i = 0; i < a2.length; i++)
                 if (a2[i].max() == 0)
-                    if (reified) {
+                    if (reified || implied) {
                         IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
                         r.domain.in(store.level, r, 1, 1);
                         return;
@@ -242,7 +300,7 @@ class BoolConstraints implements ParserTreeConstants {
                     a2reduced.add(a2[i]);
 
             if (a1reduced.size() == 0 && a2reduced.size() == 0)
-                if (reified) {
+                if (reified || implied) {
                     IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
                     r.domain.in(store.level, r, 0, 0);
                     return;
@@ -260,10 +318,15 @@ class BoolConstraints implements ParserTreeConstants {
                 c = new BoolClause(a1reduced, a2reduced);
 
             // bool_clause_reif/3 defined in redefinitions-2.0.
+	    // bool_clause_imp defined in redefinitions.mzn
             if (reified) {
                 IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
                 support.pose(new Reified(c, r));
-            } else
+            } else if (implied) {
+		IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+		support.pose(new Implies(r, c));
+	    }
+	    else
                 support.pose(c);
         }
     }

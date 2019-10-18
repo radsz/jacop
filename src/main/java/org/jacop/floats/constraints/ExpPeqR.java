@@ -46,7 +46,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Domain consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class ExpPeqR extends Constraint implements SatisfiedPresent {

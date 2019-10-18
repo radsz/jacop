@@ -39,7 +39,7 @@ import java.io.FileInputStream;
  * information about all options used for a given flatzinc file.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 public class Options {
 
@@ -70,6 +70,10 @@ public class Options {
 
     boolean complementary_search = false;
 
+    float decay = 0.99f;
+
+    double step = 0.0d;
+    
     boolean debug = false;
 
     String outputFilename = "";
@@ -91,7 +95,7 @@ public class Options {
             if (arg.equals("-h") || arg.equals("--help")) {
                 System.out.println("Usage: java org.jacop.fz.Fz2jacop [<options>] <file>.fzn\n" + "Options:\n" + "    -h, --help\n"
                     + "        Print this message.\n" + "    -a, --all, --all-solutions\n" + "    -v, --verbose\n"
-                    + "    -t <value>, --time-out <value>\n" + "        <value> - time in second.\n" + "    -s, --statistics\n"
+                    + "    -t <value>, --time-out <value>\n" + "        <value> - time in milisecond.\n" + "    -s, --statistics\n"
                     + "    -n <value>, --num-solutions <value>\n" + "        <value> - limit on solution number.\n"
                     + "    -b, --bound - use bounds consistency whenever possible;\n"
                     + "        overrides annotation \":: domain\" and selects constraints\n"
@@ -103,7 +107,12 @@ public class Options {
                     + "    -p <value>, --precision <value> defines precision for floating operations\n"
                     + "        overrides precision definition in search annotation.\n"
                     + "    -f <value>, --format <value> defines format (number digits after decimal point)\n"
-                    + "        for floating variables.\n");
+                    + "        for floating variables.\n"
+		    + "    -o, --outputfile defines file for solver output\n"
+ 		    + "    -d, --decay decay factor for accumulated failure count (afc)\n"
+		    + "         and activity-based variable selection heuristic\n"
+		    + "    --step <value> distance step for cost function for floating-point optimization")
+		    ;
                 System.exit(0);
             } else { // input file
                 fileName = args[0];
@@ -114,6 +123,10 @@ public class Options {
                 // decode options
                 if (args[i].equals("-a") || args[i].equals("--all-solutions") || args[i].equals("--all")) {
                     all = true;
+		    if (number_solutions == -1)
+			number_solutions = Integer.MAX_VALUE;
+		    else
+			System.err.println("%% Option -a ignored since number of solutions has been specified by option -n");
                     i++;
                 } else if (args[i].equals("-t") || args[i].equals("--time-out")) {
                     time_out = Integer.parseInt(args[++i]);
@@ -125,6 +138,8 @@ public class Options {
                     use_sat = true;
                     i++;
                 } else if (args[i].equals("-n") || args[i].equals("--num-solutions")) {
+		    if (number_solutions == Integer.MAX_VALUE)
+			System.err.println("%% Option -a ignored since number of solutions has been specified by option -n");
                     number_solutions = Integer.parseInt(args[++i]);
                     if (number_solutions > 1)
                         all = true;
@@ -145,7 +160,7 @@ public class Options {
                         System.err.println("%% Precisison parameter not correct; using default precision " + precision);
                     }
                     i++;
-                } else if (args[i].equals("-f") || args[i].equals("-format")) {
+                } else if (args[i].equals("-f") || args[i].equals("--format")) {
                     format = Double.parseDouble(args[++i]);
                     if (format >= 0)
                         FloatDomain.setFormat(format);
@@ -163,10 +178,23 @@ public class Options {
                 } else if (args[i].equals("-debug")) {
                     debug = true;
                     i++;
-                } else if (args[i].equals("-outputfile")) {
+                } else if (args[i].equals("-o") || args[i].equals("--outputfile")) {
                     outputFilename = args[++i];
                     i++;
-                } else {
+                } else if (args[i].equals("-d") || args[i].equals("--decay")) {
+                    decay = Float.parseFloat(args[++i]);
+		    if (decay < 0.0f || decay > 1.0f)
+			System.err.println("%% Decay parameter incorrect; assumed default value 0.99");
+		    i++;
+                } else if (args[i].equals("--step")) {
+                    step = Double.parseDouble(args[++i]);
+		    if (step < 0.0f) {
+			System.err.println("%% Step for floating-point optimization is incorrect; assumed default step");
+			step = 0.0d;
+		    }
+		    FloatDomain.setStep(step);
+		    i++;
+		} else {
                     System.out.println("fz2jacop: not recognized option " + args[i]);
                     i++;
                 }
@@ -319,6 +347,10 @@ public class Options {
 
     public String getOutputFilename() {
         return outputFilename;
+    }
+
+    public float getDecay() {
+        return decay;
     }
 
     /**

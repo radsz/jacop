@@ -42,7 +42,7 @@ import org.jacop.core.Var;
  *
  * @param <T> type of variables used in this search.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public interface Search<T extends Var> {
@@ -238,6 +238,13 @@ public interface Search<T extends Var> {
      * @param out defines how many seconds before the search exits.
      */
     public void setTimeOut(long out);
+
+    /**
+     * It turns on the timeout.
+     *
+     * @param out defines how many miliseconds before the search exits.
+     */
+    public void setTimeOutMilliseconds(long out);
 
     /**
      * It turns on the wrong decisions out.

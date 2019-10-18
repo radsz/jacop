@@ -41,10 +41,20 @@ import java.util.Iterator;
  * greatest lower bound(glb). The domain consist of zero, one or several sets.
  *
  * @author Radoslaw Szymanek, Krzysztof Kuchcinski and Robert Åkemalm
- * @version 4.6
+ * @version 4.7
  */
 
 public abstract class SetDomain extends Domain {
+
+    /**
+     * It specifies the minimum element in the set domain.
+     */
+    public static final int MinElement = Math.max(Integer.MIN_VALUE/2 + 1, IntDomain.MinInt);
+
+    /**
+     * It specifies the maximum element in the set domain.
+     */
+    public static final int MaxElement = Math.min(Integer.MAX_VALUE/2 - 1, IntDomain.MaxInt);
 
     /**
      * It specifies an unique ID for the domain.

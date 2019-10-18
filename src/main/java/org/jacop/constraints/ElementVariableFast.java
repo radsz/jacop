@@ -50,7 +50,7 @@ import java.util.stream.Stream;
  * make addressing of list array starting from 1.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class ElementVariableFast extends Constraint implements Stateful, SatisfiedPresent {
@@ -222,7 +222,7 @@ public class ElementVariableFast extends Constraint implements Stateful, Satisfi
     }
 
     private boolean disjoint(IntVar v1, IntVar v2) {
-        return v1.min() > v2.max() || v2.min() > v1.max() || !v1.domain.isIntersecting(v2.domain);
+        return v1.min() > v2.max() || v2.min() > v1.max() || !v2.domain.isIntersecting(v1.domain);
     }
 
     @Override public int getDefaultConsistencyPruningEvent() {

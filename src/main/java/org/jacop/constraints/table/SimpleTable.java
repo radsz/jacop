@@ -48,7 +48,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Programming, CP 2016. pp 207-223
  *
  * @author Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public class SimpleTable extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {

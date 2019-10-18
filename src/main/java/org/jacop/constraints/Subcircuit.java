@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * its position, i.e., x[i] = i.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class Subcircuit extends Alldiff {
@@ -348,7 +348,7 @@ public class Subcircuit extends Alldiff {
         return min;
     }
 
-    java.util.Random random = new java.util.Random(0);
+    Random random = new Random(0);
 
     private void dominanceFilter() {
         int n = list.length;

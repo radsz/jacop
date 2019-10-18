@@ -35,6 +35,7 @@ import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.*;
 import org.jacop.search.*;
+import org.jacop.search.restart.*;
 import org.jacop.set.core.SetVar;
 import org.jacop.set.search.*;
 
@@ -46,7 +47,7 @@ import java.util.Arrays;
  * The part of the parser responsible for parsing search part of the flatzinc specification.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 public class SearchItem implements ParserTreeConstants {
 
@@ -64,6 +65,10 @@ public class SearchItem implements ParserTreeConstants {
 
     ComparatorVariable tieBreaking = null;
 
+    Calculator restartCalculator = null;
+
+    boolean prioritySearch = false;
+    
     /**
      * It constructs search part parsing object based on dictionaries
      * provided as well as store object within which the search will take place.
@@ -78,185 +83,199 @@ public class SearchItem implements ParserTreeConstants {
 
     void searchParameters(SimpleNode node, int n) {
 
-        // node.dump("");
+	// node.dump("");
 
         ASTAnnotation ann = (ASTAnnotation) node.jjtGetChild(n);
         search_type = ann.getAnnId();
 
         if (search_type.equals("int_search") || search_type.equals("bool_search")) {
-            ASTAnnExpr expr1 = (ASTAnnExpr) ann.jjtGetChild(0);
-            search_variables = getVarArray((SimpleNode) expr1.jjtGetChild(0));
+            SimpleNode expr1 = (SimpleNode)ann.jjtGetChild(0);
+            search_variables = getVarArray(expr1);
 
-            ASTAnnExpr expr2 = (ASTAnnExpr) ann.jjtGetChild(1);
+            ASTAnnExpr expr2 = (ASTAnnExpr) ann.jjtGetChild(1).jjtGetChild(0);
             var_selection_heuristic = ((ASTScalarFlatExpr) expr2.jjtGetChild(0)).getIdent();
 
-            ASTAnnExpr expr3 = (ASTAnnExpr) ann.jjtGetChild(2);
+            ASTAnnExpr expr3 = (ASTAnnExpr) ann.jjtGetChild(2).jjtGetChild(0);
             indomain = ((ASTScalarFlatExpr) expr3.jjtGetChild(0)).getIdent();
 
-            ASTAnnExpr expr4 = (ASTAnnExpr) ann.jjtGetChild(3);
-            if (!expr4.idPresent()) //(expr4.jjtGetNumChildren() == 1)
-                explore = ((ASTScalarFlatExpr) expr4.jjtGetChild(0)).getIdent();
-            else if (expr4.getIdent().equals("credit")) {
-                explore = "credit";
-                if (expr4.jjtGetNumChildren() == 2) {
-                    if (((SimpleNode) expr4.jjtGetChild(0)).getId() == JJTANNEXPR) {
-                        ASTAnnExpr cp = (ASTAnnExpr) expr4.jjtGetChild(0);
-                        if (cp.jjtGetNumChildren() == 1) {
-                            creditValue = ((ASTScalarFlatExpr) cp.jjtGetChild(0)).getInt();
-                        }
-                    }
-                    ASTAnnExpr bbs = (ASTAnnExpr) expr4.jjtGetChild(1);
-                    if (bbs.getId() == JJTANNEXPR && bbs.getIdent().equals("bbs")) {
-                        if (bbs.jjtGetNumChildren() == 1) {
-                            if (((SimpleNode) bbs.jjtGetChild(0)).getId() == JJTANNEXPR) {
-                                ASTAnnExpr bv = (ASTAnnExpr) bbs.jjtGetChild(0);
-                                if (bv.jjtGetNumChildren() == 1) {
-                                    bbsValue = ((ASTScalarFlatExpr) bv.jjtGetChild(0)).getInt();
-                                    //  				    System.out.println("Credit("+creditValue+", "+bbsValue+")");
-                                    return;
-                                }
-                            }
-                        }
-                    }
-                }
-                explore = "complete";
-                System.err.println("Warning: not recognized search exploration type; use \"complete\"");
-            } else if (expr4.getIdent().equals("lds")) {
-                explore = "lds";
-                if (expr4.jjtGetNumChildren() == 1) {
-                    if (((SimpleNode) expr4.jjtGetChild(0)).getId() == JJTANNEXPR) {
-                        ASTAnnExpr ae = (ASTAnnExpr) expr4.jjtGetChild(0);
-                        if (ae.jjtGetNumChildren() == 1) {
-                            ldsValue = ((ASTScalarFlatExpr) ae.jjtGetChild(0)).getInt();
-                            return;
-                        }
-                    }
-                }
-                explore = "complete";
-                System.err.println("Warning: not recognized search exploration type; use \"complete\"");
-            } else {
-                throw new RuntimeException("Error: not recognized search exploration type; execution aborted");
-            }
+            ASTAnnotation expr4 = (ASTAnnotation) ann.jjtGetChild(3);
+	    explorationType(expr4);
+	    
         } else if (search_type.equals("set_search")) {
 
-            ASTAnnExpr expr1 = (ASTAnnExpr) ann.jjtGetChild(0);
-            search_variables = getSetVarArray((SimpleNode) expr1.jjtGetChild(0));
+            SimpleNode expr1 = (SimpleNode) ann.jjtGetChild(0);
+            search_variables = getSetVarArray(expr1);
 
-            ASTAnnExpr expr2 = (ASTAnnExpr) ann.jjtGetChild(1);
+            ASTAnnExpr expr2 = (ASTAnnExpr) ann.jjtGetChild(1).jjtGetChild(0);
             var_selection_heuristic = ((ASTScalarFlatExpr) expr2.jjtGetChild(0)).getIdent();
 
-            ASTAnnExpr expr3 = (ASTAnnExpr) ann.jjtGetChild(2);
+            ASTAnnExpr expr3 = (ASTAnnExpr) ann.jjtGetChild(2).jjtGetChild(0);
             indomain = ((ASTScalarFlatExpr) expr3.jjtGetChild(0)).getIdent();
 
-            ASTAnnExpr expr4 = (ASTAnnExpr) ann.jjtGetChild(3);
-            if (!expr4.idPresent())  //(expr4.jjtGetNumChildren() == 1)
-                explore = ((ASTScalarFlatExpr) expr4.jjtGetChild(0)).getIdent();
-            else if (expr4.getIdent().equals("credit")) {
-                // 		explore = expr4.getIdent();
-                explore = "complete";
-                System.err.println("Warning: not recognized search exploration type; use \"complete\"");
-                // 		System.exit(0);
-            } else if (expr4.getIdent().equals("lds")) {
-                explore = "lds";
-                if (expr4.jjtGetNumChildren() == 1) {
-                    if (((SimpleNode) expr4.jjtGetChild(0)).getId() == JJTANNEXPR) {
-                        ASTAnnExpr ae = (ASTAnnExpr) expr4.jjtGetChild(0);
-                        if (ae.jjtGetNumChildren() == 1) {
-                            ldsValue = ((ASTScalarFlatExpr) ae.jjtGetChild(0)).getInt();
-                            return;
-                        }
-                    }
-                }
-                explore = "complete";
-                System.err.println("Warning: not recognized search exploration type; use \"complete\"");
-            } else {
-                throw new IllegalArgumentException("Error: not recognized search exploration type; execution aborted");
-            }
-        }
-
-        if (search_type.equals("float_search")) {
+            ASTAnnotation expr4 = (ASTAnnotation) ann.jjtGetChild(3);
+	    explorationType(expr4);
+	    
+        } else if (search_type.equals("float_search")) {
             floatSearch = true;
 
-            ASTAnnExpr expr1 = (ASTAnnExpr) ann.jjtGetChild(0);
-            search_variables = getFloatVarArray((SimpleNode) expr1.jjtGetChild(0));
+            SimpleNode expr1 = (SimpleNode) ann.jjtGetChild(0);
+            search_variables = getFloatVarArray(expr1);
 
-            ASTAnnExpr expr2 = (ASTAnnExpr) ann.jjtGetChild(2);
+            ASTAnnExpr expr2 = (ASTAnnExpr) ann.jjtGetChild(2).jjtGetChild(0);
             var_selection_heuristic = ((ASTScalarFlatExpr) expr2.jjtGetChild(0)).getIdent();
 
-            ASTAnnExpr expr3 = (ASTAnnExpr) ann.jjtGetChild(3);
+            ASTAnnExpr expr3 = (ASTAnnExpr) ann.jjtGetChild(3).jjtGetChild(0);
             indomain = ((ASTScalarFlatExpr) expr3.jjtGetChild(0)).getIdent();
 
+            ASTAnnotation expr4 = (ASTAnnotation) ann.jjtGetChild(4);	    
+	    explorationType(expr4);
 
-            ASTAnnExpr expr4 = (ASTAnnExpr) ann.jjtGetChild(4);
-            if (!expr4.idPresent()) //(expr4.jjtGetNumChildren() == 1)
-                explore = ((ASTScalarFlatExpr) expr4.jjtGetChild(0)).getIdent();
-            else if (expr4.getIdent().equals("credit")) {
-                explore = "credit";
-                if (expr4.jjtGetNumChildren() == 2) {
-                    if (((SimpleNode) expr4.jjtGetChild(0)).getId() == JJTANNEXPR) {
-                        ASTAnnExpr cp = (ASTAnnExpr) expr4.jjtGetChild(0);
-                        if (cp.jjtGetNumChildren() == 1) {
-                            creditValue = ((ASTScalarFlatExpr) cp.jjtGetChild(0)).getInt();
-                        }
-                    }
-                    ASTAnnExpr bbs = (ASTAnnExpr) expr4.jjtGetChild(1);
-                    if (bbs.getId() == JJTANNEXPR && bbs.getIdent().equals("bbs")) {
-                        if (bbs.jjtGetNumChildren() == 1) {
-                            if (((SimpleNode) bbs.jjtGetChild(0)).getId() == JJTANNEXPR) {
-                                ASTAnnExpr bv = (ASTAnnExpr) bbs.jjtGetChild(0);
-                                if (bv.jjtGetNumChildren() == 1) {
-                                    bbsValue = ((ASTScalarFlatExpr) bv.jjtGetChild(0)).getInt();
-                                    //  				    System.out.println("Credit("+creditValue+", "+bbsValue+")");
-                                    return;
-                                }
-                            }
-                        }
-                    }
-                }
-                explore = "complete";
-                System.err.println("Warning: not recognized search exploration type; use \"complete\"");
-            } else if (expr4.getIdent().equals("lds")) {
-                explore = "lds";
-                if (expr4.jjtGetNumChildren() == 1) {
-                    if (((SimpleNode) expr4.jjtGetChild(0)).getId() == JJTANNEXPR) {
-                        ASTAnnExpr ae = (ASTAnnExpr) expr4.jjtGetChild(0);
-                        if (ae.jjtGetNumChildren() == 1) {
-                            ldsValue = ((ASTScalarFlatExpr) ae.jjtGetChild(0)).getInt();
-                            return;
-                        }
-                    }
-                }
-                explore = "complete";
-                System.err.println("Warning: not recognized search exploration type; use \"complete\"");
-            } else {
-                throw new IllegalArgumentException("Error: not recognized search exploration type; execution aborted");
-            }
-
-            ASTAnnExpr expr5 = (ASTAnnExpr) ann.jjtGetChild(1);
+            ASTAnnExpr expr5 = (ASTAnnExpr) ann.jjtGetChild(1).jjtGetChild(0);
             precision = ((ASTScalarFlatExpr) expr5.jjtGetChild(0)).getFloat();
 
         } else if (search_type.equals("seq_search")) {
-            int count = ann.jjtGetNumChildren();
-            for (int i = 0; i < count; i++) {
-                SearchItem subSearch = new SearchItem(store, dictionary);
-                subSearch.searchParameters(ann, i);
-                if (subSearch.search_variables.length > 0)
-                    search_seq.add(subSearch);
-            }
-        }
+	    SimpleNode body = ((SimpleNode)ann.jjtGetChild(0));
+
+	    makeVectorOfSearches(body);
+
+        } else if (search_type.equals("priority_search")) {
+	    // ann.dump("");
+
+	    prioritySearch = true;
+	    
+            SimpleNode expr1 = (SimpleNode) ann.jjtGetChild(0);
+            search_variables = getVarArray(expr1);
+	    // System.out.println(java.util.Arrays.asList(search_variables));
+
+	    SimpleNode searches = ((SimpleNode)ann.jjtGetChild(1));
+	    makeVectorOfSearches(searches);
+	    // System.out.println(search_seq);
+
+            ASTAnnExpr expr2 = (ASTAnnExpr) ann.jjtGetChild(2).jjtGetChild(0);
+            var_selection_heuristic = ((ASTScalarFlatExpr) expr2.jjtGetChild(0)).getIdent();
+	    // System.out.println(var_selection_heuristic);
+
+            ASTAnnotation expr3 = (ASTAnnotation) ann.jjtGetChild(3);
+	    explorationType(expr3);
+	    // System.out.println(explore);
+	    if (!explore.equals("complete"))
+		System.err.println("Warning: not recognized search exploration type; use \"complete\"");
+	    
+        } else if (search_type.equals("restart_none"))
+	    ;
+	else if (search_type.equals("restart_constant")) {
+	    ASTAnnExpr expr = (ASTAnnExpr) ann.jjtGetChild(0).jjtGetChild(0);
+	    int scale = ((ASTScalarFlatExpr) expr.jjtGetChild(0)).getInt();
+	    restartCalculator = new ConstantCalculator(scale);
+	}
+	else if (search_type.equals("restart_linear")) {
+	    ASTAnnExpr expr = (ASTAnnExpr) ann.jjtGetChild(0).jjtGetChild(0);
+	    int scale = ((ASTScalarFlatExpr) expr.jjtGetChild(0)).getInt();
+	    restartCalculator = new LinearCalculator(scale);
+	}
+	else if (search_type.equals("restart_luby")) {
+	    ASTAnnExpr expr = (ASTAnnExpr) ann.jjtGetChild(0).jjtGetChild(0);
+	    int scale = ((ASTScalarFlatExpr) expr.jjtGetChild(0)).getInt();
+	    restartCalculator = new LubyCalculator(scale);
+	}
+	else if (search_type.equals("restart_geometric")) {
+	    ASTAnnExpr expr1 = (ASTAnnExpr) ann.jjtGetChild(0).jjtGetChild(0);
+	    double base = ((ASTScalarFlatExpr) expr1.jjtGetChild(0)).getFloat();
+	    ASTAnnExpr expr2 = (ASTAnnExpr) ann.jjtGetChild(1).jjtGetChild(0);
+	    int scale = ((ASTScalarFlatExpr) expr2.jjtGetChild(0)).getInt();
+	    restartCalculator = new GeometricCalculator(base, scale);
+	}
+	// else
+	// 	throw new IllegalArgumentException("Not supported search annotation "+search_type+"; compilation aborted.");
     }
 
+    void makeVectorOfSearches(SimpleNode body) {
+    if (((ASTAnnotation) body).getAnnId() == "$vector") {
+	    
+	int count = body.jjtGetNumChildren();
+
+	for (int i = 0; i < count; i++) {	    
+	    SearchItem subSearch = new SearchItem(store, dictionary);
+
+	    ASTAnnotation ann = (ASTAnnotation)body.jjtGetChild(i);
+	    // if (ann.getAnnId().equals("seq_search"))
+	    // 	throw new RuntimeException("Error: Nested seq_search or seq_search in priority_search not supported; execution aborted");
+	    
+	    subSearch.searchParameters(body, i);
+
+	    if (ann.getAnnId().equals("seq_search")) {
+		search_seq.add(subSearch);
+		continue;
+	    }
+	    
+	    if (subSearch.search_variables.length > 0)
+		search_seq.add(subSearch);
+	}
+    }
+    else
+	throw new RuntimeException("Error: Non vector definitionion in seq_search; execution aborted");
+    }
+    
+    void explorationType(ASTAnnotation expr4) {
+	if (expr4.getAnnId() == "$expr")
+	    explore = ((ASTScalarFlatExpr) expr4.jjtGetChild(0).jjtGetChild(0)).getIdent();
+	else if (expr4.getAnnId().equals("credit")) {
+	    explore = "credit";
+	    if (expr4.jjtGetNumChildren() == 2) {
+		if (((ASTAnnotation) expr4.jjtGetChild(0)).getAnnId() == "$expr") {
+		    ASTAnnExpr cp = (ASTAnnExpr) expr4.jjtGetChild(0).jjtGetChild(0);
+		    if (cp.jjtGetNumChildren() == 1) {
+			creditValue = ((ASTScalarFlatExpr) cp.jjtGetChild(0)).getInt();
+		    }
+		}
+		ASTAnnotation bbs = (ASTAnnotation) expr4.jjtGetChild(1);
+		if (bbs.getId() == JJTANNOTATION && bbs.getAnnId().equals("bbs")) {
+		    if (bbs.jjtGetChild(0).jjtGetNumChildren() == 1) {
+			if (((SimpleNode) bbs.jjtGetChild(0).jjtGetChild(0)).getId() == JJTANNEXPR) {
+			    ASTAnnExpr bv = (ASTAnnExpr) bbs.jjtGetChild(0).jjtGetChild(0);
+			    if (bv.jjtGetNumChildren() == 1) {
+				bbsValue = ((ASTScalarFlatExpr) bv.jjtGetChild(0)).getInt();
+				// System.out.println("Credit("+creditValue+", "+bbsValue+")");
+				return;
+			    }
+			}
+		    }
+		}
+	    }
+	    explore = "complete";
+	    System.err.println("Warning: not recognized search exploration type; use \"complete\"");
+	} else if (expr4.getAnnId().equals("lds")) {
+	    explore = "lds";
+
+	    if (expr4.jjtGetNumChildren() == 1) {
+		if (((ASTAnnotation) expr4.jjtGetChild(0)).getAnnId() == "$expr")
+		    if (((SimpleNode) expr4.jjtGetChild(0).jjtGetChild(0)).getId() == JJTANNEXPR) {
+			ASTAnnExpr ae = (ASTAnnExpr) expr4.jjtGetChild(0).jjtGetChild(0);
+			if (ae.jjtGetNumChildren() == 1) {
+			    ldsValue = ((ASTScalarFlatExpr) ae.jjtGetChild(0)).getInt();
+			    return;
+			}
+		    }
+	    }
+	    explore = "complete";
+	    System.err.println("Warning: not recognized search exploration type; use \"complete\"");
+	} else {
+	    throw new RuntimeException("Error: not recognized search exploration type; execution aborted");
+	}
+
+    }
+    
     void searchParametersForSeveralAnnotations(SimpleNode node, int n) {
 
-        //  	node.dump("");
+        // node.dump("");
 
         int count = node.jjtGetNumChildren();
 
         for (int i = 0; i < count - 1; i++) {
             SearchItem subSearch = new SearchItem(store, dictionary);
             subSearch.searchParameters(node, i);
-            if (subSearch.search_variables.length > 0)
-                search_seq.add(subSearch);
+
+	    search_seq.add(subSearch);
         }
     }
 
@@ -271,6 +290,11 @@ public class SearchItem implements ParserTreeConstants {
     }
 
     @SuppressWarnings("unchecked") SelectChoicePoint getIntSelect() {
+	if (var_selection_heuristic.equals("random")) {
+            Indomain indom = getIndomain(indomain);
+            return new RandomSelect(search_variables, indom);
+	}
+
         ComparatorVariable<IntVar> var_sel = getVarSelect();
         IntVar[] searchVars = new IntVar[search_variables.length];
         for (int i = 0; i < search_variables.length; i++)
@@ -281,20 +305,43 @@ public class SearchItem implements ParserTreeConstants {
                 return new SplitSelect<IntVar>(searchVars, var_sel, new IndomainMiddle<IntVar>());
             else
                 return new SplitSelect<IntVar>(searchVars, var_sel, tieBreaking, new IndomainMiddle<IntVar>());
-        } else if (indomain != null && indomain.equals("indomain_reverse_split")) {
-            if (tieBreaking == null) {
-                SplitSelect<IntVar> sel = new SplitSelect<IntVar>(searchVars, var_sel, new IndomainMiddle<IntVar>());
-                sel.leftFirst = false;
-                return sel;
-            } else {
+	} else if (indomain != null && indomain.equals("indomain_split_random")) {
+		if (tieBreaking == null)
+		    return new SplitRandomSelect<IntVar>(searchVars, var_sel, new IndomainMiddle<IntVar>());
+		else
+		    return new SplitRandomSelect<IntVar>(searchVars, var_sel, tieBreaking, new IndomainMiddle<IntVar>());
+	} else if (indomain != null && indomain.equals("indomain_reverse_split")) {
+	    if (tieBreaking == null) {
+		SplitSelect<IntVar> sel = new SplitSelect<IntVar>(searchVars, var_sel, new IndomainMiddle<IntVar>());
+		sel.leftFirst = false;
+		return sel;
+	    } else {
                 SplitSelect<IntVar> sel = new SplitSelect<IntVar>(searchVars, var_sel, tieBreaking, new IndomainMiddle<IntVar>());
                 sel.leftFirst = false;
                 return sel;
             }
-        } else if (var_selection_heuristic.equals("input_order")) {
+        }  else if (indomain != null && indomain.equals("outdomain_max")) {
+            if (tieBreaking == null) {
+                SplitSelect<IntVar> sel = new SplitSelect<IntVar>(searchVars, var_sel, new IndomainMax<IntVar>());
+                return sel;
+            } else {
+                SplitSelect<IntVar> sel = new SplitSelect<IntVar>(searchVars, var_sel, tieBreaking, new IndomainMax<IntVar>());
+                return sel;
+            }
+        }  else if (indomain != null && indomain.equals("outdomain_min")) {
+            if (tieBreaking == null) {
+                SplitSelect<IntVar> sel = new SplitSelect<IntVar>(searchVars, var_sel, new IndomainMin<IntVar>());
+                sel.leftFirst = false;
+                return sel;
+            } else {
+                SplitSelect<IntVar> sel = new SplitSelect<IntVar>(searchVars, var_sel, tieBreaking, new IndomainMin<IntVar>());
+                sel.leftFirst = false;
+                return sel;
+            }
+	} else if (var_selection_heuristic.equals("input_order")) {
             Indomain indom = getIndomain(indomain);
             return new InputOrderSelect(store, search_variables, indom);
-        } else {
+	} else {
             Indomain indom = getIndomain(indomain);
             if (tieBreaking == null)
                 return new SimpleSelect(search_variables, var_sel, indom);
@@ -314,6 +361,11 @@ public class SearchItem implements ParserTreeConstants {
                 return new SplitSelectFloat<FloatVar>(store, searchVars, var_sel);
             else
                 return new SplitSelectFloat<FloatVar>(store, searchVars, var_sel, tieBreaking);
+	} else if (indomain.equals("indomain_split_random")) {
+            if (tieBreaking == null)
+                return new SplitRandomSelectFloat<FloatVar>(store, searchVars, var_sel);
+            else
+                return new SplitRandomSelectFloat<FloatVar>(store, searchVars, var_sel, tieBreaking);
         } else if (indomain.equals("indomain_reverse_split")) {
             if (tieBreaking == null) {
                 SplitSelectFloat<FloatVar> sel = new SplitSelectFloat<FloatVar>(store, searchVars, var_sel);
@@ -326,13 +378,13 @@ public class SearchItem implements ParserTreeConstants {
             }
         } else {
             throw new IllegalArgumentException(
-                "Wrong parameters for float_search. Only indomain_split or indomain_reverse_split are allowed.");
+                "Wrong parameters for float_search. Only indomain_split, indomain_reverse_split or indomain_split_random are allowed.");
         }
     }
 
 
     @SuppressWarnings("unchecked") SelectChoicePoint getSetSelect() {
-        ComparatorVariable<SetVar> var_sel = getsetVarSelect();
+        ComparatorVariable<SetVar> var_sel = getSetVarSelect();
         Indomain<SetVar> indom = getIndomain4Set(indomain);
         SetVar[] searchVars = new SetVar[search_variables.length];
         for (int i = 0; i < search_variables.length; i++)
@@ -385,10 +437,10 @@ public class SearchItem implements ParserTreeConstants {
     public ComparatorVariable<IntVar> getVarSelect() {
 
         tieBreaking = null;
-        if (var_selection_heuristic == null)
+        if (var_selection_heuristic == null || var_selection_heuristic.equals("input_order"))
             return null;
-        else if (var_selection_heuristic.equals("input_order"))
-            return null;
+        else if (var_selection_heuristic.equals("random"))
+	    return new RandomVar<IntVar>();
         else if (var_selection_heuristic.equals("first_fail"))
             return new SmallestDomain<IntVar>();
         else if (var_selection_heuristic.equals("anti_first_fail")) {
@@ -404,14 +456,14 @@ public class SearchItem implements ParserTreeConstants {
             // does not follow flatzinc definition but may give better results ;)
             // tieBreaking = new MostConstrainedStatic();
             //tieBreaking = new SmallestDomain();
+	    // tieBreaking = new WeightedDegree(store);
             return new SmallestMin<IntVar>();
         } else if (var_selection_heuristic.equals("largest"))
             return new LargestMax<IntVar>();
         else if (var_selection_heuristic.equals("max_regret"))
             return new MaxRegret<IntVar>();
-        else if (var_selection_heuristic.equals("weighted_degree")) {
-            store.variableWeightManagement = true;
-            return new WeightedDegree<IntVar>();
+        else if (var_selection_heuristic.equals("dom_w_deg")) {
+            return new WeightedDegree<IntVar>(store);
         } else if (var_selection_heuristic.equals("smallest_max")) {
             // does not follow flatzinc standard (JaCoP specific) ;)
             tieBreaking = new SmallestDomain();
@@ -424,7 +476,31 @@ public class SearchItem implements ParserTreeConstants {
             // does not follow flatzinc standard (JaCoP specific) ;)
             tieBreaking = new SmallestDomain();
             return new SmallestMin<IntVar>();
-        } else
+        } else if (var_selection_heuristic.equals("afc_max"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new AFCMax<IntVar>(store);
+        else if (var_selection_heuristic.equals("afc_min")) 
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new AFCMin<IntVar>(store);
+	else if (var_selection_heuristic.equals("afc_max_deg"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new AFCMaxDeg<IntVar>(store);
+	else if (var_selection_heuristic.equals("afc_min_deg"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new AFCMinDeg<IntVar>(store);
+	else if (var_selection_heuristic.equals("activity_max"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new ActivityMax<IntVar>(store);
+	else if (var_selection_heuristic.equals("activity_min"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new ActivityMin<IntVar>(store);
+	else if (var_selection_heuristic.equals("activity_max_deg"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new ActivityMaxDeg<IntVar>(store);
+	else if (var_selection_heuristic.equals("activity_min_deg"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new ActivityMinDeg<IntVar>(store);
+        else
             System.err
                 .println("Warning: Not implemented variable selection heuristic \"" + var_selection_heuristic + "\"; used input_order");
 
@@ -445,10 +521,10 @@ public class SearchItem implements ParserTreeConstants {
             //tieBreaking = new MostConstrainedStatic();
             return new LargestDomainFloat<FloatVar>();
         }
-        // else if (var_selection_heuristic.equals("most_constrained")) {
-        //     //tieBreaking = new MostConstrainedStatic();
-        //     return new SmallestDomainFloat();
-        // }
+        else if (var_selection_heuristic.equals("most_constrained")) {
+            tieBreaking = new MostConstrainedStatic<FloatVar>();
+            return new SmallestDomainFloat<FloatVar>();
+        }
         else if (var_selection_heuristic.equals("occurrence"))
             return new MostConstrainedStatic<FloatVar>();
         else if (var_selection_heuristic.equals("smallest")) {
@@ -458,12 +534,39 @@ public class SearchItem implements ParserTreeConstants {
             return new SmallestMinFloat<FloatVar>();
         } else if (var_selection_heuristic.equals("largest"))
             return new LargestMaxFloat<FloatVar>();
-            // else if (var_selection_heuristic.equals("max_regret"))
-            //     return new MaxRegret();
-            // else if (var_selection_heuristic.equals("weighted_degree")) {
-            //     store.variableWeightManagement = true;
-            //     return new WeightedDegree();
-            // }
+	// else if (var_selection_heuristic.equals("max_regret"))
+	//     return new MaxRegret();
+	else if (var_selection_heuristic.equals("dom_w_deg")) {
+            return new WeightedDegree<FloatVar>(store);
+	}
+        else if (var_selection_heuristic.equals("afc_max")) 
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new AFCMax<FloatVar>(store);
+        else if (var_selection_heuristic.equals("afc_max_deg")) 
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new AFCMaxDeg<FloatVar>(store);
+        else if (var_selection_heuristic.equals("afc_min")) 
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new AFCMin<FloatVar>(store);
+        else if (var_selection_heuristic.equals("afc_min_deg")) 
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new AFCMinDeg<FloatVar>(store);
+	else if (var_selection_heuristic.equals("activity_max"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new ActivityMax<FloatVar>(store);
+	else if (var_selection_heuristic.equals("activity_max_deg"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new ActivityMaxDeg<FloatVar>(store);
+	else if (var_selection_heuristic.equals("activity_min"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new ActivityMin<FloatVar>(store);
+	else if (var_selection_heuristic.equals("activity_min_deg"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new ActivityMinDeg<FloatVar>(store);
+	// for FloatVar's getSize() is not defined :(
+	// afc*_deg and activity*_deg cannot be used
+	else if (var_selection_heuristic.equals("random"))
+	    return new RandomVar<FloatVar>();
         else
             System.err
                 .println("Warning: Not implemented variable selection heuristic \"" + var_selection_heuristic + "\"; used input_order");
@@ -471,7 +574,7 @@ public class SearchItem implements ParserTreeConstants {
         return null; // input_order
     }
 
-    ComparatorVariable<SetVar> getsetVarSelect() {
+    ComparatorVariable<SetVar> getSetVarSelect() {
 
         tieBreaking = null;
         if (var_selection_heuristic == null)
@@ -486,18 +589,43 @@ public class SearchItem implements ParserTreeConstants {
             return new MostConstrainedStatic<SetVar>();
         else if (var_selection_heuristic.equals("anti_first_fail"))
             return new MaxCardDiff<SetVar>();
-        else if (var_selection_heuristic.equals("weighted_degree")) {
-            store.variableWeightManagement = true;
-            return new WeightedDegree<SetVar>();
-        }
+        else if (var_selection_heuristic.equals("dom_w_deg")) {
+            // store.variableWeightManagement = true;
+            return new WeightedDegree<SetVar>(store);
+        } else if (var_selection_heuristic.equals("afc_max")) 
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new AFCMax<SetVar>(store);
+        else if (var_selection_heuristic.equals("afc_min")) 
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new AFCMin<SetVar>(store);
+	else if (var_selection_heuristic.equals("afc_max_deg"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new AFCMaxDeg<SetVar>(store);
+	else if (var_selection_heuristic.equals("afc_min_deg"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new AFCMinDeg<SetVar>(store);
+	else if (var_selection_heuristic.equals("activity_max"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new ActivityMax<SetVar>(store);
+	else if (var_selection_heuristic.equals("activity_min"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new ActivityMin<SetVar>(store);
+	else if (var_selection_heuristic.equals("activity_max_deg"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new ActivityMaxDeg<SetVar>(store);
+	else if (var_selection_heuristic.equals("activity_min_deg"))
+            // does not follow flatzinc standard (JaCoP specific) ;)
+            return new ActivityMinDeg<SetVar>(store);
         //  	else if (var_selection_heuristic.equals("most_constrained")) {
         // 	    tieBreaking = new MostConstrainedStatic();
         //  	    return new SmallestDomain();
         // 	}
-        else if (var_selection_heuristic.equals("largest"))
+	else if (var_selection_heuristic.equals("largest"))
             return new MaxLubCard<SetVar>();
             // 	else if (var_selection_heuristic.equals("max_regret"))
             // 	    return new MaxRegret();
+	else if (var_selection_heuristic.equals("random"))
+	    return new RandomVar<SetVar>();
         else
             System.err
                 .println("Warning: Not implemented variable selection heuristic \"" + var_selection_heuristic + "\"; used input_order");
@@ -536,18 +664,21 @@ public class SearchItem implements ParserTreeConstants {
     }
 
     IntVar[] getVarArray(SimpleNode node) {
-        if (node.getId() == JJTARRAYLITERAL) {
+	
+        if (((ASTAnnotation)node).getAnnId() == "$vector") {
             int count = node.jjtGetNumChildren();
             IntVar[] aa = new IntVar[count];
             for (int i = 0; i < count; i++) {
-                ASTScalarFlatExpr child = (ASTScalarFlatExpr) node.jjtGetChild(i);
+		SimpleNode n = (SimpleNode)node.jjtGetChild(i).jjtGetChild(0);
+                ASTScalarFlatExpr child = (ASTScalarFlatExpr) n.jjtGetChild(0);
                 IntVar el = getVariable(child);
                 aa[i] = el;
             }
             return aa;
-        } else if (node.getId() == JJTSCALARFLATEXPR) {
-            if (((ASTScalarFlatExpr) node).getType() == 2) // ident
-                return dictionary.getVariableArray(((ASTScalarFlatExpr) node).getIdent());
+        } else if (((ASTAnnotation)node).getAnnId() == "$expr") {
+	    SimpleNode n = (SimpleNode)node.jjtGetChild(0).jjtGetChild(0);
+            if (((ASTScalarFlatExpr) n).getType() == 2) // ident
+                return dictionary.getVariableArray(((ASTScalarFlatExpr) n).getIdent());
             else {
                 throw new IllegalArgumentException("Wrong type of variable array; compilation aborted.");
             }
@@ -557,26 +688,28 @@ public class SearchItem implements ParserTreeConstants {
     }
 
     FloatVar[] getFloatVarArray(SimpleNode node) {
-        if (node.getId() == JJTARRAYLITERAL) {
+	
+        if (((ASTAnnotation)node).getAnnId() == "$vector") {
             int count = node.jjtGetNumChildren();
             FloatVar[] aa = new FloatVar[count];
             for (int i = 0; i < count; i++) {
-                ASTScalarFlatExpr child = (ASTScalarFlatExpr) node.jjtGetChild(i);
-                FloatVar el = (FloatVar) getFloatVariable(child);
+		SimpleNode n = (SimpleNode)node.jjtGetChild(i).jjtGetChild(0);
+                ASTScalarFlatExpr child = (ASTScalarFlatExpr) n.jjtGetChild(0);
+                FloatVar el = getFloatVariable(child);
                 aa[i] = el;
             }
             return aa;
-        } else if (node.getId() == JJTSCALARFLATEXPR) {
-            if (((ASTScalarFlatExpr) node).getType() == 2) // ident
-                return dictionary.getVariableFloatArray(((ASTScalarFlatExpr) node).getIdent());
+        } else if (((ASTAnnotation)node).getAnnId() == "$expr") {
+	    SimpleNode n = (SimpleNode)node.jjtGetChild(0).jjtGetChild(0);
+            if (((ASTScalarFlatExpr) n).getType() == 2) // ident
+                return dictionary.getVariableFloatArray(((ASTScalarFlatExpr) n).getIdent());
             else {
-                throw new IllegalArgumentException("Wrong type of Variable array; compilation aborted.");
+                throw new IllegalArgumentException("Wrong type of variable array; compilation aborted.");
             }
         } else {
-            throw new IllegalArgumentException("Wrong type of Variable array; compilation aborted.");
+            throw new IllegalArgumentException("Wrong type of variable array; compilation aborted.");
         }
     }
-
 
     SetVar getSetVariable(ASTScalarFlatExpr node) {
         if (node.getType() == 2) // ident
@@ -589,18 +722,21 @@ public class SearchItem implements ParserTreeConstants {
     }
 
     SetVar[] getSetVarArray(SimpleNode node) {
-        if (node.getId() == JJTARRAYLITERAL) {
+	
+        if (((ASTAnnotation)node).getAnnId() == "$vector") {
             int count = node.jjtGetNumChildren();
             SetVar[] aa = new SetVar[count];
             for (int i = 0; i < count; i++) {
-                ASTScalarFlatExpr child = (ASTScalarFlatExpr) node.jjtGetChild(i);
+		SimpleNode n = (SimpleNode)node.jjtGetChild(i).jjtGetChild(0);
+                ASTScalarFlatExpr child = (ASTScalarFlatExpr) n.jjtGetChild(0);
                 SetVar el = getSetVariable(child);
                 aa[i] = el;
             }
             return aa;
-        } else if (node.getId() == JJTSCALARFLATEXPR) {
-            if (((ASTScalarFlatExpr) node).getType() == 2) // ident
-                return dictionary.getSetVariableArray(((ASTScalarFlatExpr) node).getIdent());
+        } else if (((ASTAnnotation)node).getAnnId() == "$expr") {
+	    SimpleNode n = (SimpleNode)node.jjtGetChild(0).jjtGetChild(0);
+            if (((ASTScalarFlatExpr) n).getType() == 2) // ident
+                return dictionary.getSetVariableArray(((ASTScalarFlatExpr) n).getIdent());
             else {
                 throw new IllegalArgumentException("Wrong type of variable array; compilation aborted.");
             }
@@ -652,15 +788,35 @@ public class SearchItem implements ParserTreeConstants {
                 s.append("[]");
             else
                 s.append("array1d(1.." + search_variables.length + ", " + Arrays.asList(search_variables));
-            s.append(", " + explore + ", " + var_selection_heuristic + ", " + indomain);
+            s.append(", " + var_selection_heuristic + ", " + indomain + ", " + explore + ")");
             if (floatSearch)
                 s.append(", " + precision);
-        } else {
-            for (int i = 0; i < search_seq.size(); i++) //SearchItem se : search_seq)
+        } else if (prioritySearch) {
+	    s.append("priority_search(");
+	    s.append("array1d(1.." + search_variables.length + ", " + Arrays.asList(search_variables));
+	    
+	    s.append(", [");
+            for (int i = 0; i < search_seq.size(); i++) {
                 if (i == search_seq.size() - 1)
-                    s.append(search_seq.get(i) + ")");
+                    s.append(search_seq.get(i));
                 else
-                    s.append(search_seq.get(i) + "), ");
+                    s.append(search_seq.get(i) + ", ");
+	    }
+	    s.append("]");
+
+            s.append(", " + var_selection_heuristic + ", " + explore + ")");
+	    
+	    s.append(")");
+	}
+	else {
+	    s.append("seq_search([");
+            for (int i = 0; i < search_seq.size(); i++) {//SearchItem se : search_seq)
+                if (i == search_seq.size() - 1)
+                    s.append(search_seq.get(i));
+                else
+                    s.append(search_seq.get(i) + ", ");
+	    }
+	    s.append("])");
         }
         return s.toString();
     }

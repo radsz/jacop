@@ -41,7 +41,7 @@ import java.util.Iterator;
  * CNF file format (low-level) parser.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
 

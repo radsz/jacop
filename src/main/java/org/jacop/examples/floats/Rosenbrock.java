@@ -47,7 +47,7 @@ package org.jacop.examples.floats;
  * It has a global minimum at (x,y) = (1,1) where f(x,y) = 0.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 import org.jacop.core.Store;

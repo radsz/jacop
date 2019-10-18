@@ -47,7 +47,7 @@ import static java.util.stream.Collectors.joining;
  * notSatisfiability, enforce consistency.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public abstract class Constraint extends DecomposedConstraint<Constraint> {
@@ -397,7 +397,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
      * It specifies if upon the failure of the constraint, all variables
      * in the constraint scope should have their weight increased.
      */
-    public boolean increaseWeight = false;
+    public boolean increaseWeight = true;
 
     /**
      * It specifies the event which must occur in order for the consistency function to
@@ -441,6 +441,25 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * Handling of AFC (accumulated failure fail) for constraints
+     *
+     */
+    float afcWeight = 1.0f;
+
+    public float afc() {
+	return afcWeight;
+    }
+    
+    public void updateAFC(Set<Constraint> allConstraints, float decay) {
+	afcWeight += 1.0f;
+
+	if (decay < 1.0f)
+	    for (Constraint c : allConstraints)
+		if (!this.equals(c))
+		    c.afcWeight = c.afcWeight * decay;
+    }
+    
     /**
      * It is executed after the constraint has failed. It allows to clean some
      * data structures.

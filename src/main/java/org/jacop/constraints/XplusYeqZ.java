@@ -42,7 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Bound consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class XplusYeqZ extends PrimitiveConstraint {
@@ -103,6 +103,12 @@ public class XplusYeqZ extends PrimitiveConstraint {
                 z.domain.inShift(store.level, z, x.dom(), y.value());
 
             } else {
+
+		// for large domains (for example, Integer.MIN_VALUE..Integer.MAX_VALUE) uncomment three lines below,
+		// comment three lines after uncommented lines and checkForOverlow in the constructor
+                // x.domain.in(store.level, x, IntDomain.subtractInt(z.min(), y.max()), IntDomain.subtractInt(z.max(), y.min()));
+                // y.domain.in(store.level, y, IntDomain.subtractInt(z.min(), x.max()), IntDomain.subtractInt(z.max(), x.min()));
+                // z.domain.in(store.level, z, IntDomain.addInt(x.min(), y.min()), IntDomain.addInt(x.max(), y.max()));
 
                 x.domain.in(store.level, x, z.min() - y.max(), z.max() - y.min());
                 y.domain.in(store.level, y, z.min() - x.max(), z.max() - x.min());

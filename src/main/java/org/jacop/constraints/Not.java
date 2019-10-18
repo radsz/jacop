@@ -41,7 +41,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Constraint "not costraint"
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class Not extends PrimitiveConstraint implements UsesQueueVariable {

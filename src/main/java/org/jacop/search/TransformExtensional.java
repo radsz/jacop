@@ -45,7 +45,7 @@ import java.util.Set;
  * given the scope of the variables of interest.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public class TransformExtensional implements InitializeListener {

@@ -41,7 +41,7 @@ import java.util.function.Function;
  * Defines a variable and related operations on it.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public abstract class Var implements Backtrackable {
@@ -75,6 +75,11 @@ public abstract class Var implements Backtrackable {
     public Store store;
 
     /**
+     * Pruning activity of this variable.
+     */
+    float pruningActivity = 1.0f;
+
+    /**
      * This function returns current domain of the variable.
      *
      * @return the domain of the variable.
@@ -90,6 +95,14 @@ public abstract class Var implements Backtrackable {
      */
 
     public abstract int getSize();
+
+    /**
+     * It returns the size of the current domain.
+     *
+     * @return the size of the variables domain.
+     */
+
+    public abstract double getSizeFloat();
 
 
     /**
@@ -225,6 +238,26 @@ public abstract class Var implements Backtrackable {
         return index;
     }
 
+
+    public float afcValue() {
+	float value = 0.0f;
+	for (Constraint c : dom().constraints())
+	    value += c.afc();
+	return value;
+    }
+
+    public void updateActivity() {
+	pruningActivity += 1.0;
+    }
+
+    public float activity() {
+	return pruningActivity;
+    }
+    
+    public void applyDecay() {
+	pruningActivity = pruningActivity * store.decay;
+    }
+    
     public static <T extends Var, R> Map<T, R> createEmptyPositioning() {
         return new HashMap<>();
     }

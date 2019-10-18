@@ -48,7 +48,7 @@ import java.util.stream.Stream;
  * max(list) = max.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class Max extends Constraint implements SatisfiedPresent {

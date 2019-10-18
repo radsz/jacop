@@ -1,3 +1,48 @@
+Version 4.7
+=============
+
+1. Implementation of restart search both in JaCoP and flatzinc (uses
+   standard minizinc annotation).
+
+2. Implementation of priority search both in JaCoP and in flatzinc
+   (uses annotation priority_search; check JaCoP specific library
+   definition at jacop.mzn for the definition).
+
+3. Making WeightedDegree variable selection method working correctly;
+   available in flatzinc as dom_w_deg. Adding new variable selection
+   methods based on accumulated failure count (AFC) and pruning
+   activity; defined in flatzinc also.
+
+4. Time-out in flatzinc is changed to be specified in milliseconds (to
+   be compatible with minizinc options).
+
+5. New distance step option for search with cost function specified as
+   FloatVar. Available in both Java and flatzinc.
+
+6. Small corrections in pom.xml to use right version of Scala.
+
+7. Restructuring of minizinc library with the new method introduced in
+   Minizinc 2.3. It uses fzn_*.mzn files to define JaCoP specific
+   global constraint
+
+8. Definitions in redefintions.mzn and implementation of half-reified
+   constraints, that is minizinc constraints with the name *_imp. Implementation
+   of JaCoP constraint Implies.
+
+9. Definitions and implementation of fzn_if_then_else_* constraints in
+   flatzinc JaCoP library and in Java (constraint Conditional).
+
+10. Implementation of Member constraint and making it available from
+    flatzinc (added into the JaCoP library).
+
+11. Flatzinc annotation "priority(k)" defining constraint priority
+    (0..4) where 0 is the highest and 4 the lowest priority of a constraint.
+
+12. New format for methods toString() for depth first search
+    methods. Flatzinc compiler prints search in debug mode.
+
+13. Bug corrections.
+
 Version 4.6
 =============
 

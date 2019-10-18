@@ -30,6 +30,7 @@
 
 package org.jacop.floats.search;
 
+import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.search.ComparatorVariable;
@@ -42,10 +43,16 @@ import org.jacop.search.ComparatorVariable;
  *
  * @param <T> type of variable being compared.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public class WeightedDegreeFloat<T extends Var> implements ComparatorVariable<T> {
+
+    private WeightedDegreeFloat() {}
+
+    public WeightedDegreeFloat(Store store) {
+	store.variableWeightManagement = true;
+    }
 
     public int compare(float left, T var) {
 

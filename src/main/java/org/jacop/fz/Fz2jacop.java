@@ -37,12 +37,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
+import java.nio.charset.Charset;
 
 /**
  * An executable to parse and execute the flatzinc file.
  *
  * @author Krzysztof Kuchcinki
- * @version 4.6
+ * @version 4.7
  */
 
 public class Fz2jacop {
@@ -96,15 +97,15 @@ public class Fz2jacop {
             if (!opt.getOutputFilename().equals("")) {
                 String st = "=====UNSATISFIABLE=====";
                 try {
-                    Files.write(Paths.get(opt.getOutputFilename()), st.getBytes());
+                    Files.write(Paths.get(opt.getOutputFilename()), st.getBytes(Charset.forName("UTF-8")));
                 } catch (IOException e1) {
                     e1.printStackTrace();
                 }
             }
             if (opt.getStatistics()) {
-                System.out.println("%%mzn-stat: variables=" + (parser.getStore().size() + parser.getTables().getNumberBoolVariables()));
-                System.out.println("%%mzn-stat: propagators=" + parser.getStore().numberConstraints());
-                System.out.println("\n%%mzn-stat: propagations=" + parser.getStore().numberConsistencyCalls);
+                System.out.println("%%%mzn-stat: variables=" + (parser.getStore().size() + parser.getTables().getNumberBoolVariables()));
+                System.out.println("%%%mzn-stat: propagators=" + parser.getStore().numberConstraints());
+                System.out.println("\n%%%mzn-stat: propagations=" + parser.getStore().numberConsistencyCalls);
             }
         } catch (ArithmeticException e) {
             System.err.println("%% Evaluation of model resulted in an overflow.");
@@ -141,7 +142,7 @@ public class Fz2jacop {
             final long sec = TimeUnit.MILLISECONDS.toSeconds(execTime - TimeUnit.HOURS.toMillis(hr) - TimeUnit.MINUTES.toMillis(min));
             final long ms = TimeUnit.MILLISECONDS
                 .toMillis(execTime - TimeUnit.HOURS.toMillis(hr) - TimeUnit.MINUTES.toMillis(min) - TimeUnit.SECONDS.toMillis(sec));
-            System.out.printf("%n%%%%mzn-stat: time=%.3f ", (double)execTime/1000.0);
+            System.out.printf("%n%%%%%%mzn-stat: time=%.3f ", (double)execTime/1000.0);
             if (hr == 0) 
                 if (min == 0)
                     System.out.println(); //String.format("(%d.%03d)", sec, ms));

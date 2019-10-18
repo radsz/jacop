@@ -38,7 +38,7 @@ import java.util.ArrayList;
  * Defines a variable and related operations on it.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public class BooleanVar extends IntVar {
@@ -83,6 +83,17 @@ public class BooleanVar extends IntVar {
         this(store, name, new BoundDomain(min, max));
     }
 
+
+    /**
+     * Boolean variable constructor.
+     *
+     * @param store It specifies the store in which boolean variable should be created.
+     * @param min   it specifies the minimum value, which must be greater or equal 0.
+     * @param max   it specifies the maximum value, which must be smaller or equal 1.
+     */
+    public BooleanVar(Store store, int min, int max) {
+        this(store, store.getVariableIdPrefix() + idNumber.incrementAndGet(), new BoundDomain(min, max));
+    }
     /**
      * It creates a Boolean variable.
      *

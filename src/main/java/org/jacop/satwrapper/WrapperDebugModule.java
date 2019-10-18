@@ -41,7 +41,7 @@ import org.jacop.jasat.utils.Utils;
  * a class used to debug, but with additional data
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 public final class WrapperDebugModule
     implements AssertionListener, BackjumpListener, ConflictListener, PropagateListener, SolutionListener, ForgetListener,

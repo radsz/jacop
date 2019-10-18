@@ -38,7 +38,7 @@ import java.awt.*;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  *          <p>
  *          It specifies  a simple functionality to graphically represent 2D geost. It was
  *          mostly used during development phase but it may be still useful if user is interested

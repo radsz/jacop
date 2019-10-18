@@ -55,7 +55,7 @@ import static org.junit.Assert.fail;
  * Test Helper used by all Minizinc based tests.
  *
  * @author Mariusz Świerkot and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 
 public class MinizincBasedTestsHelper {
@@ -106,13 +106,13 @@ public class MinizincBasedTestsHelper {
                     options.add(line);
                 }
                 //fz2jacop compute result with options
-                fz2jacop.main(new String[] {options.get(0), options.get(1), "-outputfile", outputFilename, relativePath + filename});
+                fz2jacop.main(new String[] {options.get(0), options.get(1), "--outputfile", outputFilename, relativePath + filename});
                 FloatDomain.setFormat(Double.MAX_VALUE);
 
             }
         } else
             //fz2jacop compute result
-            fz2jacop.main(new String[] {"-outputfile", outputFilename, relativePath + filename});
+            fz2jacop.main(new String[] {"--outputfile", outputFilename, relativePath + filename});
 
         String result = new String(Files.readAllBytes(Paths.get(outputFilename)));
 

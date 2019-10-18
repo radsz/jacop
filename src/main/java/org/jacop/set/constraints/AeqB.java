@@ -42,7 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * have the same value.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.6
+ * @version 4.7
  */
 
 public class AeqB extends PrimitiveConstraint {

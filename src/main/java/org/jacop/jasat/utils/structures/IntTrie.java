@@ -44,7 +44,7 @@ import java.util.Set;
  *
  * @param <N> the type of the nodes of the Trie
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.6
+ * @version 4.7
  */
 public class IntTrie<N extends IntTrie.Node<N>> {
 
