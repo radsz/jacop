@@ -49,7 +49,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @version 4.7
  */
 
-public class CountBounds extends Constraint implements SatisfiedPresent {
+public class CountBounds extends PrimitiveConstraint {
 
     final static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -125,7 +125,16 @@ public class CountBounds extends Constraint implements SatisfiedPresent {
         equal = new TimeStamp<>(store, 0);
     }
 
+    @Override public void include(Store store) {
+        position = new TimeStamp<>(store, 0);
+        equal = new TimeStamp<>(store, 0);
+    }
+    
     @Override public int getDefaultConsistencyPruningEvent() {
+        return IntDomain.ANY;
+    }
+
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
         return IntDomain.ANY;
     }
 
@@ -176,6 +185,39 @@ public class CountBounds extends Constraint implements SatisfiedPresent {
 	position.update(start);	
     }
 
+    @Override public void notConsistency(final Store store) {
+
+        int numberEq = equal.value();
+	int numberMayBe = 0;
+	int start = position.value();
+        for (int i = start; i < list.length; i++) {
+	    IntVar v = list[i];
+            if (v.domain.contains(value))
+                if (v.singleton()) {
+                    numberEq++;
+		    swap(start, i);
+		    start++;
+		}
+                else
+                    numberMayBe++;
+	    else { // does not have the value in its domain
+                swap(start, i);
+		start++;
+	    }
+	}
+
+	if (numberEq > ub || numberEq + numberMayBe < lb) {
+	    removeConstraint();
+	    return;
+	}
+
+	if (start == list.length && numberEq >= lb && numberEq <= ub)
+	    throw Store.failException;
+
+	equal.update(numberEq);
+	position.update(start);
+    }
+
     private void swap(int i, int j) {
         if (i != j) {
             IntVar tmp = list[i];
@@ -186,15 +228,28 @@ public class CountBounds extends Constraint implements SatisfiedPresent {
 
     @Override public boolean satisfied() {
 
-        if (!grounded())
-            return false;
-
-        int countAll = 0;
+        int eq = 0, notEq = 0;
 
         for (IntVar v : list)
             if (v.singleton(value))
-                countAll++;
-        return (countAll >= lb && countAll <= ub);
+                eq++;
+	    else if (!v.domain.contains(value))
+		notEq++;
+
+	return (eq + notEq == list.length && eq >= lb && eq <= ub);
+    }
+
+    @Override public boolean notSatisfied() {
+
+        int eq = 0, notEq = 0;
+
+        for (IntVar v : list)
+            if (v.singleton(value))
+                eq++;
+	    else if (!v.domain.contains(value))
+		notEq++;
+
+	return (eq + notEq == list.length && (eq < lb || eq > ub));
     }
 
     @Override public String toString() {

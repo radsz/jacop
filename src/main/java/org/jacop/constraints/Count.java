@@ -50,7 +50,7 @@ import java.util.stream.Stream;
  * @version 4.7
  */
 
-public class Count extends Constraint implements SatisfiedPresent {
+public class Count extends PrimitiveConstraint {
 
     final static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -123,11 +123,20 @@ public class Count extends Constraint implements SatisfiedPresent {
         equal = new TimeStamp<>(store, 0);
     }
 
+    @Override public void include(Store store) {
+        position = new TimeStamp<>(store, 0);
+        equal = new TimeStamp<>(store, 0);
+    }
+
     @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.ANY;
     }
 
-      @Override public void consistency(final Store store) {
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
+        return IntDomain.ANY;
+    }
+
+    @Override public void consistency(final Store store) {
 
         int numberEq = equal.value();
 	int numberMayBe = 0;
@@ -181,6 +190,39 @@ public class Count extends Constraint implements SatisfiedPresent {
 
     }
 
+    @Override public void notConsistency(final Store store) {
+
+        int numberEq = equal.value();
+	int numberMayBe = 0;
+	int start = position.value();
+        for (int i = start; i < list.length; i++) {
+	    IntVar v = list[i];
+            if (v.domain.contains(value))
+                if (v.singleton()) {
+                    numberEq++;
+		    swap(start, i);
+		    start++;
+		}
+                else
+                    numberMayBe++;
+	    else { // does not have the value in its domain
+                swap(start, i);
+		start++;
+	    }
+	}
+
+	if (numberEq > counter.max() || numberEq + numberMayBe < counter.min()) {
+	    removeConstraint();
+	    return;
+	}
+
+	if (start == list.length)
+	    counter.domain.inComplement(store.level, counter, numberEq);
+
+	equal.update(numberEq);
+	position.update(start);
+    }
+
     private void swap(int i, int j) {
         if (i != j) {
             IntVar tmp = list[i];
@@ -191,15 +233,28 @@ public class Count extends Constraint implements SatisfiedPresent {
 
     @Override public boolean satisfied() {
 
-        if (!grounded())
-            return false;
-
-        int countAll = 0;
+        int eq = 0, notEq = 0;
 
         for (IntVar v : list)
             if (v.singleton(value))
-                countAll++;
-        return (countAll == counter.min());
+                eq++;
+	    else if (!v.domain.contains(value))
+		notEq++;
+
+	return (eq + notEq == list.length && counter.singleton(eq));
+    }
+
+    @Override public boolean notSatisfied() {
+
+        int eq = 0, notEq = 0;
+
+        for (IntVar v : list)
+            if (v.singleton(value))
+                eq++;
+	    else if (!v.domain.contains(value))
+		notEq++;
+
+	return (eq + notEq == list.length && !counter.domain.contains(eq));
     }
 
     @Override public String toString() {

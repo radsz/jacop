@@ -529,6 +529,24 @@ class GlobalConstraints implements ParserTreeConstants {
             support.pose(new Count(xs, c, y));
     }
 
+    void gen_jacop_count_reif(SimpleNode node) {
+        IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+        int y = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+        IntVar c = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+	IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
+
+	support.pose(new Reified(new Count(x, c, y), b));
+    }
+
+    void gen_count_eq_imp(SimpleNode node) {
+        IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+        int y = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+        IntVar c = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+	IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
+
+	support.pose(new Implies(b, new Count(x, c, y)));
+    }
+
     void gen_jacop_count_bounds(SimpleNode node) {
         IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
         int value = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));

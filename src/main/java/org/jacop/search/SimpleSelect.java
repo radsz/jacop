@@ -325,6 +325,6 @@ import java.util.Map;
     }
 
     public String toString() {
-        return "" + java.util.Arrays.asList(searchVariables) + ", " + variableOrdering +", "+ tieBreakingComparator + ", " + valueOrdering;
+        return "" + java.util.Arrays.asList(searchVariables) + ", SimpleSelect(" + variableOrdering +", "+ tieBreakingComparator + ", " + valueOrdering + ")";
     }
 }
