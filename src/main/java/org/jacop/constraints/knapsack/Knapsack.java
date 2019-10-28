@@ -846,15 +846,15 @@ public class Knapsack extends Constraint implements UsesQueueVariable, Satisfied
 
         StringBuilder result = new StringBuilder();
 
-        result.append("Knapsack[ [");
+        result.append("Knapsack( [");
         for (int i = 0; i < items.length; i++) {
             result.append(items[i].toString());
             if (i < items.length - 1)
-                result.append(",\n");
+                result.append(", ");
         }
-        result.append("], \nCapacity: ").append(knapsackCapacity);
-        result.append(", \nProfit: ").append(knapsackProfit);
-        result.append("]\n");
+        result.append("], Capacity: ").append(knapsackCapacity);
+        result.append(", Profit: ").append(knapsackProfit);
+        result.append("])");
 
         return result.toString();
 
