@@ -207,8 +207,8 @@ public class SearchItem implements ParserTreeConstants {
 		search_seq.add(subSearch);
 		continue;
 	    }
-	    
-	    if (subSearch.search_variables.length > 0)
+
+	    if (subSearch.search_variables != null && subSearch.search_variables.length > 0)
 		search_seq.add(subSearch);
 	}
     }
