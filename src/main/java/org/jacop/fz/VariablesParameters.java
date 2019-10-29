@@ -30,6 +30,7 @@
 package org.jacop.fz;
 
 import org.jacop.constraints.XeqY;
+import org.jacop.constraints.Constraint;
 import org.jacop.core.*;
 import org.jacop.floats.constraints.PeqQ;
 import org.jacop.floats.core.FloatVar;
@@ -70,12 +71,20 @@ public class VariablesParameters implements ParserTreeConstants {
     int numberFloatVariables = 0;
     int numberSetVariables = 0;
 
+    Options options;
+    boolean debug = false;
+    
     /**
      * It constructs variables parameters.
      */
     public VariablesParameters() {
     }
 
+    void setOptions(Options options) {
+        this.options = options;
+        debug = options.debug();
+    }
+    
     /**
      * It generates a parameter from a given node and stores information about it in the table.
      *
@@ -170,7 +179,7 @@ public class VariablesParameters implements ParserTreeConstants {
                     } else {
                         initVar = getScalarFlatExpr_var(store, node, initChild);
                         XeqY c = new XeqY(varInt, initVar);
-                        store.impose(c);
+                        pose(store, c);
                     }
 
                 }
@@ -203,7 +212,7 @@ public class VariablesParameters implements ParserTreeConstants {
                     } else {
                         initVar = getScalarFlatExpr_var(store, node, initChild);
                         XeqY c = new XeqY(varInt, initVar);
-                        store.impose(c);
+                        pose(store, c);
                     }
 
                 }
@@ -232,7 +241,7 @@ public class VariablesParameters implements ParserTreeConstants {
                     } else {
                         initVar = getScalarFlatExpr_var(store, node, initChild);
                         XeqY c = new XeqY(varInt, initVar);
-                        store.impose(c);
+                        pose(store, c);
                     }
                 }
 
@@ -253,7 +262,7 @@ public class VariablesParameters implements ParserTreeConstants {
                     } else {
                         initVar = getScalarFlatExpr_var(store, node, initChild);
                         XeqY c = new XeqY(boolVar, initVar);
-                        store.impose(c);
+                        pose(store, c);
                     }
                 }
 
@@ -272,11 +281,11 @@ public class VariablesParameters implements ParserTreeConstants {
                     if (constant_set(node, initChild)) {
                         setValue = getSetLiteral(node, initChild);
                         AeqS c = new AeqS((SetVar) varSet, setValue);
-                        store.impose(c);
+                        pose(store, c);
                     } else {
                         Var initSetVar = getSetFlatExpr_var(store, node, initChild);
                         AeqB c = new AeqB((SetVar) varSet, (SetVar) initSetVar);
-                        store.impose(c);
+                        pose(store, c);
                     }
                 }
 
@@ -301,11 +310,11 @@ public class VariablesParameters implements ParserTreeConstants {
                     if (constant_set(node, initChild)) {
                         setValue = getSetLiteral(node, initChild);
                         AeqS c = new AeqS((SetVar) varSet, setValue);
-                        store.impose(c);
+                        pose(store, c);
                     } else {
                         Var initSetVar = getSetFlatExpr_var(store, node, initChild);
                         AeqB c = new AeqB((SetVar) varSet, (SetVar) initSetVar);
-                        store.impose(c);
+                        pose(store, c);
                     }
                 }
 
@@ -327,11 +336,11 @@ public class VariablesParameters implements ParserTreeConstants {
                     if (constant_set(node, initChild)) {
                         setValue = getSetLiteral(node, initChild);
                         AeqS c = new AeqS((SetVar) varSet, setValue);
-                        store.impose(c);
+                        pose(store, c);
                     } else {
                         Var initSetVar = getSetFlatExpr_var(store, node, initChild);
                         AeqB c = new AeqB((SetVar) varSet, (SetVar) initSetVar);
-                        store.impose(c);
+                        pose(store, c);
                     }
 
                 }
@@ -351,11 +360,11 @@ public class VariablesParameters implements ParserTreeConstants {
                     if (constant_set(node, initChild)) {
                         setValue = getSetLiteral(node, initChild);
                         AeqS c = new AeqS((SetVar) varSet, setValue);
-                        store.impose(c);
+                        pose(store, c);
                     } else {
                         Var initSetVar = getSetFlatExpr_var(store, node, initChild);
                         AeqB c = new AeqB((SetVar) varSet, (SetVar) initSetVar);
-                        store.impose(c);
+                        pose(store, c);
                     }
                 }
 
@@ -378,7 +387,7 @@ public class VariablesParameters implements ParserTreeConstants {
                     } else {
                         initVarFloat = getScalarFlatExpr_varFloat(store, node, initChild);
                         PeqQ c = new PeqQ(varFloat, initVarFloat);
-                        store.impose(c);
+                        pose(store, c);
                     }
                 }
 
@@ -414,7 +423,7 @@ public class VariablesParameters implements ParserTreeConstants {
                     } else {
                         initVarFloat = getScalarFlatExpr_varFloat(store, node, initChild);
                         PeqQ c = new PeqQ(varFloat, initVarFloat);
-                        store.impose(c);
+                        pose(store, c);
                     }
                 }
 
@@ -1378,5 +1387,12 @@ public class VariablesParameters implements ParserTreeConstants {
 
         return v.singleton();
 
+    }
+    void pose(Store store, Constraint c) throws FailException {
+
+	store.imposeWithConsistency(c);
+
+        if (options.debug())
+            System.out.println("% " + c);
     }
 }

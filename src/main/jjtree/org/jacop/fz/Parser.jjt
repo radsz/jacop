@@ -194,7 +194,7 @@ TOKEN :
 void model() #model:
 {}
 {
-    { cc.setOptions(options); solver.startTimer();}
+    { cc.setOptions(options); cg.setOptions(options); solver.startTimer();}
     pred_decl_items()
     var_decl_items() 
     constraint_items()
