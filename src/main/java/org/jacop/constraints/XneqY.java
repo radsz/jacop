@@ -78,6 +78,10 @@ public class XneqY extends PrimitiveConstraint {
     }
 
     @Override public void consistency(final Store store) {
+        if (x == y) {
+            // If x and y are the same, XneqY is trivially inconsistent.
+            store.throwFailException(x);
+        }
 
         if (y.singleton())
             x.domain.inComplement(store.level, x, y.min());
@@ -104,6 +108,11 @@ public class XneqY extends PrimitiveConstraint {
     }
 
     @Override public void notConsistency(final Store store) {
+
+        if (x == y) {
+            // If x and y are the same, there is trivially nothing to do.
+            return;
+        }
 
         do {
 
