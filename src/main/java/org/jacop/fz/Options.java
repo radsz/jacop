@@ -51,6 +51,8 @@ public class Options {
 
     boolean statistics = false;
 
+    boolean freeSearch = false;
+    
     int time_out = 0;
 
     int number_solutions = -1;
@@ -93,10 +95,15 @@ public class Options {
         } else if (args.length == 1) {
             String arg = args[0];
             if (arg.equals("-h") || arg.equals("--help")) {
-                System.out.println("Usage: java org.jacop.fz.Fz2jacop [<options>] <file>.fzn\n" + "Options:\n" + "    -h, --help\n"
-                    + "        Print this message.\n" + "    -a, --all, --all-solutions\n" + "    -v, --verbose\n"
-                    + "    -t <value>, --time-out <value>\n" + "        <value> - time in milisecond.\n" + "    -s, --statistics\n"
+                System.out.println("Usage: java org.jacop.fz.Fz2jacop [<options>] <file>.fzn\n" + "Options:\n"
+		    + "    -h, --help\n"
+                    + "        Print this message.\n"
+		    + "    -a, --all, --all-solutions\n"
+		    + "    -v, --verbose\n"
+                    + "    -t <value>, --time-out <value>\n" + "        <value> - time in milisecond.\n"
+		    + "    -s, --statistics\n"
                     + "    -n <value>, --num-solutions <value>\n" + "        <value> - limit on solution number.\n"
+		    + "    -f free search; no need to follow search annotations.\n"
                     + "    -b, --bound - use bounds consistency whenever possible;\n"
                     + "        overrides annotation \":: domain\" and selects constraints\n"
                     + "        implementing bounds consistency (default false).\n"
@@ -104,10 +111,10 @@ public class Options {
                     + "    -cs, --complementary-search - gathers all model, non-defined\n"
                     + "         variables to create the final search\n"
                     + "    -i, --interval print intervals instead of values for floating variables\n"
-                    + "    -p <value>, --precision <value> defines precision for floating operations\n"
+                    + "    --precision <value> defines precision for floating operations\n"
                     + "        overrides precision definition in search annotation.\n"
-                    + "    -f <value>, --format <value> defines format (number digits after decimal point)\n"
-                    + "        for floating variables.\n"
+                    + "    --format <value> defines print-out format (uses precision method)\n"
+                    + "        for floating-point variables.\n"
 		    + "    -o, --outputfile defines file for solver output\n"
  		    + "    -d, --decay decay factor for accumulated failure count (afc)\n"
 		    + "         and activity-based variable selection heuristic\n"
@@ -134,6 +141,9 @@ public class Options {
                 } else if (args[i].equals("-s") || args[i].equals("--statistics")) {
                     statistics = true;
                     i++;
+                } else if (args[i].equals("-f")) {
+                    freeSearch = true;
+                    i++;
                 } else if (args[i].equals("-sat")) {
                     use_sat = true;
                     i++;
@@ -150,7 +160,7 @@ public class Options {
                 } else if (args[i].equals("-i") || args[i].equals("--interval")) {
                     interval = true;
                     i++;
-                } else if (args[i].equals("-p") || args[i].equals("--precision")) {
+                } else if (args[i].equals("--precision")) { // removed args[i].equals("-p") || KKU 2019-10-31
                     precisionDefined = true;
                     precision = Double.parseDouble(args[++i]);
                     if (precision >= 0)
@@ -160,7 +170,7 @@ public class Options {
                         System.err.println("%% Precisison parameter not correct; using default precision " + precision);
                     }
                     i++;
-                } else if (args[i].equals("-f") || args[i].equals("--format")) {
+                } else if (args[i].equals("--format")) { // removed args[i].equals("-f") || KKU 2019-10-31
                     format = Double.parseDouble(args[++i]);
                     if (format >= 0)
                         FloatDomain.setFormat(format);
@@ -195,7 +205,7 @@ public class Options {
 		    FloatDomain.setStep(step);
 		    i++;
 		} else {
-                    System.out.println("fz2jacop: not recognized option " + args[i]);
+                    System.out.println("%% fz2jacop: not recognized option " + args[i] + "; ignored");
                     i++;
                 }
             }
@@ -343,6 +353,15 @@ public class Options {
      */
     public boolean debug() {
         return debug;
+    }
+
+    /**
+     * It defines whether search annotation can be ignored.
+     *
+     * @return true if search annotation can be ignored
+     */
+    public boolean freeSearch() {
+        return freeSearch;
     }
 
     public String getOutputFilename() {

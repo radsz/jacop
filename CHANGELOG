@@ -1,3 +1,13 @@
+Version 4.8
+=============
+
+1. Removing -f (format) and -p (precision) option flags. Flatzinc uses
+   instead --format and --precision. Option -f is used to denote free
+   search, based on AFCMaxDeg/AFCMax variable selection method. The
+   default search (no search annotations) still uses the old search
+   method for compatibility reasons.
+2. Improving debug information print-out for flatzinc.
+
 Version 4.7
 =============
 

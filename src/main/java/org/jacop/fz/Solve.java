@@ -36,6 +36,7 @@ import org.jacop.floats.constraints.PplusQeqR;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.floats.search.LargestDomainFloat;
 import org.jacop.satwrapper.SatTranslation;
 import org.jacop.search.*;
 import org.jacop.search.restart.*;
@@ -196,29 +197,18 @@ public class Solve implements ParserTreeConstants {
             // System.out.println("1. *** "+si);
             String search_type = si.type();
 
-            if (search_type.equals("int_search") || search_type.equals("set_search") || search_type.equals("bool_search")) {
+	    kind = (ASTSolveKind) node.jjtGetChild(1);
+	    solveKind = getKind(kind.getKind());
 
-                kind = (ASTSolveKind) node.jjtGetChild(1);
-                solveKind = getKind(kind.getKind());
-
+	    if (opt.freeSearch()) { // free search -> ignoring search annotations
+		run_single_search(solveKind, kind, null);
+	    } else if (search_type.equals("int_search") || search_type.equals("set_search") || search_type.equals("bool_search")) {
                 run_single_search(solveKind, kind, si);
             } else if (search_type.equals("float_search")) {
-
-                kind = (ASTSolveKind) node.jjtGetChild(1);
-                solveKind = getKind(kind.getKind());
-
                 run_single_search(solveKind, kind, si);
             } else if (search_type.equals("seq_search")) {
-
-                kind = (ASTSolveKind) node.jjtGetChild(1);
-                solveKind = getKind(kind.getKind());
-
                 run_sequence_search(solveKind, kind, si);
             } else if (search_type.equals("priority_search")) {
-		
-                kind = (ASTSolveKind) node.jjtGetChild(1);
-                solveKind = getKind(kind.getKind());
-
                 run_single_search(solveKind, kind, si);
             } else {
                 throw new IllegalArgumentException(
@@ -774,7 +764,7 @@ public class Solve implements ParserTreeConstants {
         // VARIABLES override selection if option
         // "complementarySearch" or no search is defined is defined.
         if (int_search_variables.length == 0 && bool_search_variables.length == 0 && set_search_variables.length == 0
-            && float_search_variables.length == 0 || options.complementarySearch()) {
+            && float_search_variables.length == 0 || options.complementarySearch() || options.freeSearch()) {
 
             searchVars.defaultVars();
 
@@ -799,10 +789,12 @@ public class Solve implements ParserTreeConstants {
             if (opt.debug())
                 setSearch.setConsistencyListener(failStatistics);
 
-            SelectChoicePoint<Var> setSelect = new SimpleSelect<Var>(set_search_variables, null,
-                // 								     new org.jacop.search.MostConstrainedStatic<Var>(),
-                new IndomainSetMin());
-            if (variable_selection == null)
+            SelectChoicePoint<Var> setSelect = (options.freeSearch()) ?
+		new SimpleSelect<Var>(set_search_variables, new AFCMaxDeg<Var>(store), new IndomainSetMin())
+		:
+		new SimpleSelect<Var>(set_search_variables, null, new IndomainSetMin());
+
+	    if (variable_selection == null)
                 variable_selection = setSelect;
             setSearch.setSelectChoicePoint(setSelect);
             setSearch.setPrintInfo(false);
@@ -830,10 +822,11 @@ public class Solve implements ParserTreeConstants {
 
         if (int_search_variables.length != 0) {
             // add search containing int variables to be sure that they get a value
-            SelectChoicePoint<Var> intSelect = new SimpleSelect<Var>(int_search_variables, null,
-								     // new org.jacop.search.MostConstrainedDynamic<Var>(),
-								     // new org.jacop.search.SmallestDomain<Var>(),
-                new IndomainMin());
+            SelectChoicePoint<Var> intSelect = (options.freeSearch()) ?
+		new SimpleSelect(int_search_variables, new AFCMaxDeg(store), new IndomainMin())
+		:
+		new SimpleSelect<Var>(int_search_variables, null, new IndomainMin());
+
             if (variable_selection == null)
                 variable_selection = intSelect;
             intSearch.setSelectChoicePoint(intSelect);
@@ -866,9 +859,11 @@ public class Solve implements ParserTreeConstants {
 
         if (bool_search_variables.length != 0) {
             // add search containing boolean variables to be sure that they get a value
-            SelectChoicePoint<Var> boolSelect = new SimpleSelect<Var>(bool_search_variables, null,
-                 								      // new org.jacop.search.MostConstrainedDynamic<Var>(),
-                new IndomainMin());
+            SelectChoicePoint<Var> boolSelect = (options.freeSearch()) ?
+		new SimpleSelect<Var>(bool_search_variables, new AFCMax<Var>(store), new IndomainMin())
+		:
+		new SimpleSelect<Var>(bool_search_variables, null, new IndomainMin());
+
             if (variable_selection == null)
                 variable_selection = boolSelect;
             boolSearch.setSelectChoicePoint(boolSelect);
@@ -901,7 +896,10 @@ public class Solve implements ParserTreeConstants {
             if (opt.debug())
                 floatSearch.setConsistencyListener(failStatistics);
 
-            SelectChoicePoint<Var> floatSelect = new SplitSelectFloat<Var>(store, float_search_variables, null);
+            SelectChoicePoint<Var> floatSelect =  (options.freeSearch()) ?
+		new SplitSelectFloat<Var>(store, float_search_variables, new LargestDomainFloat<Var>())
+		:
+		new SplitSelectFloat<Var>(store, float_search_variables, null);
 
             if (variable_selection == null)
                 variable_selection = floatSelect;
@@ -958,7 +956,7 @@ public class Solve implements ParserTreeConstants {
 	    throw new TrivialSolution();
 	}
 
-        return intAndSetSearch;
+	return intAndSetSearch;
     }	
 
 
