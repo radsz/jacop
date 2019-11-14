@@ -675,17 +675,6 @@ setup to run configuration. -->
 	  <artifactId>scala-xml_2.12</artifactId>
 	  <version>1.1.1</version>
 	</dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>1.7.24</version>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-            <version>1.7.24</version>
-        </dependency>
-
     </dependencies>
 
 </project>
