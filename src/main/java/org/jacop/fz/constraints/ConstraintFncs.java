@@ -103,6 +103,10 @@ public final class ConstraintFncs {
         bc.gen_bool_xor(n);
     }
 
+    public void bool_xor_imp(SimpleNode n) {
+        bc.gen_bool_xor_imp(n);
+    }
+
     public void bool_clause(SimpleNode n) {
         bc.gen_bool_clause(n);
     }

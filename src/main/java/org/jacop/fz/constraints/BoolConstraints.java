@@ -228,6 +228,15 @@ class BoolConstraints implements ParserTreeConstants {
             support.pose(new XorBool(new IntVar[] {v1, v2}, v3));
     }
 
+    void gen_bool_xor_imp(SimpleNode node) {
+
+        IntVar v1 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
+        IntVar v2 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
+        IntVar v3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+
+	support.pose(new Implies(v3, new XorBool(new IntVar[] {v1, v2}, support.dictionary.getConstant(1))));
+    }
+
     void gen_bool_clause(SimpleNode node) {
         reified = false;
         clause_generation(node);
