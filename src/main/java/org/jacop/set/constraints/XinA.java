@@ -62,8 +62,6 @@ public class XinA extends PrimitiveConstraint {
      */
     public SetVar a;
 
-    // private boolean aHasChanged = true;
-
     /**
      * It specifies if the inclusion relation is strict.
      */
@@ -104,7 +102,6 @@ public class XinA extends PrimitiveConstraint {
 
     @Override public void consistency(Store store) {
 
-        // if (aHasChanged)
         x.domain.in(store.level, x, a.domain.lub());
 
         if (strict)
@@ -112,14 +109,11 @@ public class XinA extends PrimitiveConstraint {
         else
             a.domain.inCardinality(store.level, a, 1, Integer.MAX_VALUE);
 
-        // if(x.singleton())
-        // 	a.domain.inGLB(store.level, a, x.value());
+        if(x.singleton())
+	    a.domain.inGLB(store.level, a, x.value());
 
         if (!x.domain.isIntersecting(a.domain.lub()))
             throw Store.failException;
-
-        // aHasChanged = false;
-
     }
 
     @Override public int getConsistencyPruningEvent(Var var) {
@@ -152,7 +146,7 @@ public class XinA extends PrimitiveConstraint {
         }
 
         if (var == x)
-            return IntDomain.GROUND;
+            return IntDomain.ANY;
         else
             return SetDomain.GLB;
 
@@ -160,16 +154,15 @@ public class XinA extends PrimitiveConstraint {
 
     @Override public void notConsistency(Store store) {
 
-        // if (x.singleton())
-        // 	a.domain.inLUBComplement(store.level, a, x.value());
+        if (x.singleton())
+	    a.domain.inLUBComplement(store.level, a, x.value());
 
-        IntDomain xDom = x.domain.subtract(a.domain.glb());
+	IntDomain xDom = x.domain.subtract(a.domain.glb());
 
-        if (xDom.getSize() == 0)
-            throw Store.failException;
+	if (xDom.getSize() == 0)
+	    throw Store.failException;
 
-        x.domain.in(store.level, x, xDom);
-
+	x.domain.in(store.level, x, xDom);
     }
 
     @Override public boolean notSatisfied() {
@@ -207,7 +200,7 @@ public class XinA extends PrimitiveConstraint {
             }
 
             if (var == x)
-                return IntDomain.GROUND;
+                return IntDomain.ANY;
             else
                 return SetDomain.GLB;
 

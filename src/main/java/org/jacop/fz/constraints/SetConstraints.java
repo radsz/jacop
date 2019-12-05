@@ -148,8 +148,12 @@ class SetConstraints implements ParserTreeConstants {
         }
 
         IntVar v3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
-
-        support.pose(new Reified(c, v3));
+	if (v3.singleton(1))
+	    support.pose(c);
+	else if (v3.singleton(0))
+	    support.pose(new Not(c));
+	else
+	    support.pose(new Reified(c, v3));
     }
 
     void gen_set_in_imp(SimpleNode node) {
