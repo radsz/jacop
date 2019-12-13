@@ -8,6 +8,8 @@ Version 4.8
    method for compatibility reasons.
 2. Improving debug information print-out for flatzinc.
 
+3. Improvement in propagation for XinA constraint.
+
 Version 4.7
 =============
 
