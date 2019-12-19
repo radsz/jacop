@@ -540,11 +540,14 @@ class GlobalConstraints implements ParserTreeConstants {
 
     void gen_count_eq_imp(SimpleNode node) {
         IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
-        int y = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+        IntVar y = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
         IntVar c = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 	IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
 
-	support.pose(new Implies(b, new Count(x, c, y)));
+	if (y.singleton())
+	    support.pose(new Implies(b, new Count(x, c, y.value())));
+	else
+	    support.pose(new Implies(b, new CountVar(x, c, y)));
     }
 
     void gen_jacop_count_bounds(SimpleNode node) {
@@ -556,6 +559,45 @@ class GlobalConstraints implements ParserTreeConstants {
 	support.pose(new CountBounds(x, value, lb, ub));
     }
     
+    void gen_jacop_count_var(SimpleNode node) {
+        IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+        IntVar y = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
+        IntVar c = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+
+	if (c.singleton(0)) {
+	    for (IntVar v : x)
+		support.pose(new XneqY(v, y));
+	    return;
+	}
+	else if (c.singleton(x.length)) {
+	    for (IntVar v : x)
+		support.pose(new XeqY(v, y));
+	    return;
+	}
+
+        ArrayList<IntVar> xs = new ArrayList<IntVar>();
+        for (IntVar v : x) {
+            if (v.domain.isIntersecting(y.domain))
+                xs.add(v);
+        }
+        if (xs.size() == 0) {
+            c.domain.in(store.level, c, 0, 0);
+            return;
+        } else if (y.singleton())
+	    support.pose(new Count(xs, c, y.value()));
+	else
+            support.pose(new CountVar(xs, c, y));
+    }
+
+    void gen_jacop_count_var_reif(SimpleNode node) {
+        IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+        IntVar y = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
+        IntVar c = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+	IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
+
+	support.pose(new Reified(new CountVar(x, c, y), b));
+    }
+
     void gen_jacop_atleast(SimpleNode node) {
         IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
         int y = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));

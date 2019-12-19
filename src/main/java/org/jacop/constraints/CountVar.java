@@ -1,5 +1,5 @@
 /*
- * Count.java
+ * CountVar.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -42,7 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 /**
- * Count constraint implements the counting over number of occurrences of
+ * CountVar constraint implements the counting over number of occurrences of
  * a given value in a list of variables. The number of occurrences is
  * specified by variable counter.
  *
@@ -50,7 +50,7 @@ import java.util.stream.Stream;
  * @version 4.7
  */
 
-public class Count extends PrimitiveConstraint {
+public class CountVar extends PrimitiveConstraint {
 
     final static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -67,7 +67,7 @@ public class Count extends PrimitiveConstraint {
     /**
      * The value to which is any variable is equal to makes the constraint count it.
      */
-    final public int value;
+    final public IntVar value;
 
     /*
      * Defines first position of the variable that are not considered;
@@ -81,15 +81,15 @@ public class Count extends PrimitiveConstraint {
     private TimeStamp<Integer> equal;
 
     /**
-     * It constructs a Count constraint.
+     * It constructs a CountVar constraint.
      *
      * @param value   value which is counted
      * @param list    variables which equality to val is counted.
      * @param counter number of variables equal to val.
      */
-    public Count(IntVar[] list, IntVar counter, int value) {
+    public CountVar(IntVar[] list, IntVar counter, IntVar value) {
 
-        checkInputForNullness(new String[] {"list", "counter"}, new Object[][] {list, {counter}});
+        checkInputForNullness(new String[] {"list", "counter", "value"}, new Object[][] {list, {counter}, {value}});
 
         this.queueIndex = 1;
         this.numberId = idNumber.incrementAndGet();
@@ -98,18 +98,18 @@ public class Count extends PrimitiveConstraint {
         this.counter = counter;
         this.value = value;
 
-        setScope(Stream.concat(Arrays.stream(list), Stream.of(counter)));
+        setScope(Stream.concat(Stream.of(value), Stream.concat(Arrays.stream(list), Stream.of(counter))));
 
     }
 
     /**
-     * It constructs a Count constraint.
+     * It constructs a CountVar constraint.
      *
      * @param value   value which is counted
      * @param list    variables which equality to val is counted.
      * @param counter number of variables equal to val.
      */
-    public Count(List<? extends IntVar> list, IntVar counter, int value) {
+    public CountVar(List<? extends IntVar> list, IntVar counter, IntVar value) {
         this(list.toArray(new IntVar[list.size()]), counter, value);
     }
 
@@ -143,8 +143,8 @@ public class Count extends PrimitiveConstraint {
 	int start = position.value();
         for (int i = start; i < list.length; i++) {
 	    IntVar v = list[i];
-            if (v.domain.contains(value))
-                if (v.singleton()) {
+            if (v.domain.isIntersecting(value.domain))
+                if (v.singleton() && value.singleton() && v.value() == value.value()) {
                     numberEq++;
 		    swap(start, i);
 		    start++;
@@ -160,27 +160,30 @@ public class Count extends PrimitiveConstraint {
         if (numberMayBe == counter.min() - numberEq) {
             for (int i = start; i < list.length; i++) {
 		IntVar v = list[i];
-		v.domain.in(store.level, v, value, value);
+		v.domain.in(store.level, v, value.domain);
             }
 
-            numberEq += numberMayBe;
-            numberMayBe = 0;
+	    if (value.singleton()) {
+		numberEq += numberMayBe;
+		numberMayBe = 0;
 
-            counter.domain.in(store.level, counter, numberEq, numberEq);
-            removeConstraint();
-            return;
-
+		counter.domain.in(store.level, counter, numberEq, numberEq);
+		removeConstraint();
+		return;
+	    }
         } else if (numberEq == counter.max()) {
             for (int i = start; i < list.length; i++) {
 		IntVar v = list[i];
-		v.domain.inComplement(store.level, v, value);
+		if (value.singleton())
+		    v.domain.inComplement(store.level, v, value.value());
 	    }
+	    if (value.singleton()) {
+		numberMayBe = 0;
 
-            numberMayBe = 0;
-
-            counter.domain.in(store.level, counter, numberEq, numberEq);
-            removeConstraint();
-            return;
+		counter.domain.in(store.level, counter, numberEq, numberEq);
+		removeConstraint();
+		return;
+	    }
         }
 
 	equal.update(numberEq);
@@ -197,8 +200,8 @@ public class Count extends PrimitiveConstraint {
 	int start = position.value();
         for (int i = start; i < list.length; i++) {
 	    IntVar v = list[i];
-            if (v.domain.contains(value))
-                if (v.singleton()) {
+            if (v.domain.isIntersecting(value.domain))
+                if (v.singleton() && value.singleton() && v.value() == value.value()) {
                     numberEq++;
 		    swap(start, i);
 		    start++;
@@ -236,9 +239,9 @@ public class Count extends PrimitiveConstraint {
         int eq = 0, notEq = 0;
 
         for (IntVar v : list)
-            if (v.singleton(value))
+            if (v.singleton() && value.singleton() && v.value() == value.value())
                 eq++;
-	    else if (!v.domain.contains(value))
+	    else if (!v.domain.isIntersecting(value.domain))
 		notEq++;
 
 	return (eq + notEq == list.length && counter.singleton(eq));
@@ -249,9 +252,9 @@ public class Count extends PrimitiveConstraint {
         int eq = 0, notEq = 0;
 
         for (IntVar v : list)
-            if (v.singleton(value))
+            if (v.singleton() && value.singleton() && v.value() == value.value())
                 eq++;
-	    else if (!v.domain.contains(value))
+	    else if (!v.domain.isIntersecting(value.domain))
 		notEq++;
 
 	return (eq + notEq == list.length && !counter.domain.contains(eq));
@@ -261,7 +264,7 @@ public class Count extends PrimitiveConstraint {
 
         StringBuilder result = new StringBuilder(id());
 
-        result.append(" : count(").append(value).append(",[");
+        result.append(" : countVar(").append(value).append(",[");
 
         for (int i = 0; i < list.length; i++) {
             result.append(list[i]);
