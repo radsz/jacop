@@ -1,0 +1,4 @@
+predicate jacop_atmost_reif(array[int] of var int: x, int: v, int: n, var bool: b);
+
+predicate fzn_count_gt_par_reif(array[int] of var int: x, int: y, int: c, var bool: b) =
+   jacop_atmost_reif(x, y, c - 1, b);
