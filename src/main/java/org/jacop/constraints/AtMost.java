@@ -166,19 +166,19 @@ public class AtMost extends PrimitiveConstraint {
 
 	if (numberEq > counter)
 	    throw Store.failException;
-	else if (!reified)
-	    if (numberEq + numberMayBe <= counter) {
+	else if (numberEq + numberMayBe <= counter) {
+	    if (!reified)
 		removeConstraint();
+	}
+	else if (numberEq == counter) {
+	    for (int i = start; i < list.length; i++) {
+		IntVar v = list[i];
+		if (!v.singleton() && v.domain.contains(value))
+		    v.domain.inComplement(store.level, v, value, value);
 	    }
-	    else if (numberEq == counter) {
-		for (int i = start; i < list.length; i++) {
-		    IntVar v = list[i];
-		    if (!v.singleton() && v.domain.contains(value))
-			v.domain.inComplement(store.level, v, value, value);
-		}
-		if (!reified)
-		    removeConstraint();
-	    }
+	    if (!reified)
+		removeConstraint();
+	}
 
 	equal.update(numberEq);
 	position.update(start);
@@ -207,18 +207,18 @@ public class AtMost extends PrimitiveConstraint {
 
 	if (numberMayBe + numberEq < counter+1)
 	    throw Store.failException;
-	else if (!reified)
-	    if (numberEq >= counter+1) {
+	else if (numberEq >= counter+1) {
+	    if (!reified)
 		removeConstraint();
+	}
+	else if (numberMayBe + numberEq == counter+1) {
+	    for (int i = start; i < list.length; i++) {
+		IntVar v = list[i];
+		v.domain.in(store.level, v, value, value);
 	    }
-	    else if (numberMayBe + numberEq == counter+1) {
-		for (int i = start; i < list.length; i++) {
-		    IntVar v = list[i];
-		    v.domain.in(store.level, v, value, value);
-		}
-		if (!reified)
-		    removeConstraint();
-	    }
+	    if (!reified)
+		removeConstraint();
+	}
 
     	equal.update(numberEq);
 	position.update(start);

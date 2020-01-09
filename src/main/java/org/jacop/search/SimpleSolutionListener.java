@@ -212,10 +212,13 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 
             //TODO connection between parent and child search depending if
             // they are recording solutions.
-            if (parentSolutionListener != null)
-                parentSolutionNo[noSolutions] = parentSolutionListener.solutionsNo() - 1;
-
             noSolutions++;
+            if (parentSolutionListener != null) {
+                parentSolutionNo[noSolutions] = parentSolutionListener.solutionsNo() - 1;
+		// ((SimpleSolutionListener)parentSolutionListener).noSolutions = noSolutions;  //KKU, 2020-01-09, added to make flatzinc option -n X work properly;
+		// it might create problems when recording solutions in sequential search and therefore it is commented here :(
+		// BUT flatzinc does not record solutions!
+	    }
 
         } else {
 
@@ -227,9 +230,11 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 
             //TODO connection between parent and child search depending if
             // they are recording solutions.
-            if (parentSolutionListener != null)
-                parentSolutionNo[0] = parentSolutionListener.solutionsNo();
             noSolutions++;
+            if (parentSolutionListener != null) {
+                parentSolutionNo[0] = parentSolutionListener.solutionsNo();
+		((SimpleSolutionListener)parentSolutionListener).noSolutions = noSolutions;  //KKU, 2020-01-09, added to make flatzinc option -n X work properly
+	    }
 
         }
 

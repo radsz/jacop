@@ -443,31 +443,7 @@ public class Solve implements ParserTreeConstants {
 			if (restartCalculator != null)
 			    throw new IllegalArgumentException("Flatzinc option for search for all solutions (-a) cannot be used in restart search.");
 
-                        label.getSolutionListener().searchAll(true);
-                        label.getSolutionListener().recordSolutions(false);
-
-                        // =====> add "search for all" flag to all sub-searches, 2012-03-19
-                        java.util.LinkedHashSet<Search<? extends Var>> l = new java.util.LinkedHashSet<Search<? extends Var>>();
-                        l.add(label);
-                        while (l.size() != 0) {
-                            java.util.LinkedHashSet<Search<? extends Var>> ns = new java.util.LinkedHashSet<Search<? extends Var>>();
-                            for (Search s1 : l) {
-                                Search<? extends Var>[] child = (Search<? extends Var>[]) ((DepthFirstSearch) s1).childSearches;
-                                if (child != null)
-                                    for (Search<? extends Var> s : child) {
-                                        ns.add(s);
-
-                                        s.getSolutionListener().searchAll(true);
-                                        s.getSolutionListener().recordSolutions(false);
-
-                                    }
-                            }
-                            l = ns;
-                        }
-                        // <=====
-                        if (options.getNumberSolutions() > 0)
-                            last_search.getSolutionListener().setSolutionLimit(options.getNumberSolutions());
-
+			searchForAll(label);
                     }
 
                     // printSearch(label);
@@ -611,6 +587,29 @@ public class Solve implements ParserTreeConstants {
 
         printStatisticsForSingleSearch(false, Result);
 
+    }
+
+    @SuppressWarnings("unchecked") void searchForAll(DepthFirstSearch<Var> label) {
+	int ns = options.getNumberSolutions();
+	DepthFirstSearch<Var> s = label;
+	DepthFirstSearch<Var> parentSearch = null;
+	do {
+	    s.getSolutionListener().recordSolutions(false);
+	    s.getSolutionListener().searchAll(true);
+
+	    if (parentSearch != null)
+		s.getSolutionListener().setParentSolutionListener(parentSearch.getSolutionListener());
+
+	    if (ns > 0)
+		s.getSolutionListener().setSolutionLimit(ns);
+
+	    parentSearch = s;
+	    // find next search
+	    if (s.childSearches == null)
+		s = null;
+	    else
+		s = (DepthFirstSearch<Var>)s.childSearches[0];
+	} while (s != null);
     }
 
     public void statistics(boolean result) {
@@ -1050,12 +1049,7 @@ public class Solve implements ParserTreeConstants {
 			if (restartCalculator != null)
 			    throw new IllegalArgumentException("Flatzinc option for search for all solutions (-a) cannot be used in restart search.");
 
-                        for (int i = 0; i < si.getSearchItems().size(); i++) {  //list_seq_searches.size(); i++) {
-                            list_seq_searches.get(i).getSolutionListener().searchAll(true);
-                            list_seq_searches.get(i).getSolutionListener().recordSolutions(false);
-                            if (ns > 0)
-                                list_seq_searches.get(i).getSolutionListener().setSolutionLimit(ns);
-                        }
+			searchForAll(masterLabel);
                     }
 
                     if (options.runSearch())
