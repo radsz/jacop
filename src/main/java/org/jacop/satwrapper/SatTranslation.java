@@ -78,7 +78,7 @@ public class SatTranslation {
         if (a1reduced.size() == 0 && a2reduced.size() == 0)
             throw store.failException;
         if (debug)
-            System.out.println("generate clause, positive: " + a1reduced + ", negative: " + a2reduced);
+            System.out.println("% generate clause, positive: " + a1reduced + ", negative: " + a2reduced);
 
         for (IntVar v : a1reduced)
             clauses.register(v);
