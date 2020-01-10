@@ -158,7 +158,7 @@ object MUCA extends jacop {
     *
     * @param args the first argument specifies the name of the file containing the problem description.
     */
-  def main(args: Array[String]) {
+  def main(args: Array[String]) : Unit = {
 
     if (args.length > 0)
       filename = args(0)
@@ -169,7 +169,7 @@ object MUCA extends jacop {
   }
 
 
-  def model() {
+  def model() : Unit = {
 
     readAuction(filename)
 
@@ -354,16 +354,16 @@ object MUCA extends jacop {
     print("\t")
 
     for (i <- 0 until maxNoTransformations if transitions(i).value() != 0)
-      print(transitions(i) + "\t")
+      print("" + transitions(i) + "\t")
     println()
 
     for (g <- 0 until noGoods) {
 
-      print(initialQuantity(g) + "\t")
+      print("" + initialQuantity(g) + "\t")
       for (i <- 0 until maxNoTransformations if transitions(i).value() != 0)
-        print(deltasI(i)(g).value() + "," + deltasO(i)(g).value() + "\t")
+        print("" + deltasI(i)(g).value() + "," + deltasO(i)(g).value() + "\t")
 
-      println(summa(g).value() + ">=" + finalQuantity(g))
+      println("" + summa(g).value() + ">=" + finalQuantity(g))
 
     }
 
@@ -430,7 +430,7 @@ object MUCA extends jacop {
     *
     * @param filename file describing the auction problem.
     */
-  def readAuction(filename: String) {
+  def readAuction(filename: String) : Unit = {
 
     noGoods = 0
 

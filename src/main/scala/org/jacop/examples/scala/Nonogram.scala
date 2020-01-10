@@ -82,7 +82,7 @@ object Nonogram extends jacop {
     */
   val extensionalMDD = false
 
-  def readFromFile(filename: String) {
+  def readFromFile(filename: String) : Unit = {
 
     var lines = new Array[String](100)
 
@@ -196,7 +196,7 @@ object Nonogram extends jacop {
 
   }
 
-  def model() {
+  def model() : Unit = {
 
     import org.jacop.constraints.ExtensionalSupportMDD
     import org.jacop.constraints.regular.Regular
@@ -263,7 +263,7 @@ object Nonogram extends jacop {
     *
     * @param matrix matrix containing the grounded variables.
     */
-  def printMatrix(matrix: Array[Array[IntVar]]) {
+  def printMatrix(matrix: Array[Array[IntVar]]) : Unit = {
 
     for (i <- 0 until matrix.length) {
       for (j <- 0 until matrix(i).length) {
@@ -281,7 +281,7 @@ object Nonogram extends jacop {
     *
     * @param args no arguments are read.
     */
-  def main(args: Array[String]) {
+  def main(args: Array[String]) : Unit = {
 
     model()
     printMatrix(board)

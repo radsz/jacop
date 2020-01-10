@@ -61,7 +61,7 @@ object Steiner extends App { //with jacop {
   val result = satisfy(search(sets, input_order, indomain_min_set))
 
   if (result) {
-    sets.foreach(si => print(si.dom + " "))
+    sets.foreach(si => print("" + si.dom + " "))
     println()
   }
   else println("No solution")

@@ -62,12 +62,12 @@ object TinyTSP extends App with jacop {
   val result = minimize(search(visit, input_order, indomain_min), distance, () => printValue)
   statistics
 
-  def printValue() {
-    print(1 + " -> ")
+  def printValue() : Unit = {
+    print("" + 1 + " -> ")
     var index = 1
     for (i <- 1 to N) {
       if (i < N)
-        print(visit(index - 1).value + " -> ")
+        print("" + visit(index - 1).value + " -> ")
       else
         print(visit(index - 1).value)
       index = visit(index - 1).value

@@ -63,7 +63,7 @@ object BIBD extends jacop {
     */
   var lambda = 1
 
-  def main(args: Array[String]) {
+  def main(args: Array[String]) : Unit = {
 
     if (args.length > 1) {
       try {
@@ -80,7 +80,7 @@ object BIBD extends jacop {
     model()
   }
 
-  def model() = {
+  def model() : Unit = {
 
     val x = List.tabulate(v, b)((i, j) => new BoolVar("x" + i + "_" + j))
 

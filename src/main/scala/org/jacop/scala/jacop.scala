@@ -56,7 +56,7 @@ class Model extends org.jacop.core.Store {
 
   val constr = new ListBuffer[Constraint]
 
-  def imposeAllConstraints() {
+  def imposeAllConstraints() : Unit = {
     this.constr.foreach(e => this.impose(e))
     if (trace)
       this.constr.foreach(println(_))
@@ -1526,7 +1526,7 @@ class fsm extends org.jacop.util.fsm.FSM {
     *
     * @param s state.
     */
-  def init(s: state) {
+  def init(s: state) : Unit = {
     initState = s
     states += s
     allStates.add(s)
@@ -1537,7 +1537,7 @@ class fsm extends org.jacop.util.fsm.FSM {
     *
     * @param st array of states.
     */
-  def addFinalStates(st: Array[state]) {
+  def addFinalStates(st: Array[state]) : Unit = {
     st.foreach(s => states += s)
     st.foreach(s => finalStates.add(s))
   }
@@ -1580,7 +1580,7 @@ class state extends org.jacop.util.fsm.FSMState {
     * @param tran values for executing this transition.
     * @param that next state for this transition.
     */
-  def ->(tran: IntSet, that: state) {
+  def ->(tran: IntSet, that: state) : Unit = {
     transitions.add(new FSMTransition(tran, that))
   }
 
@@ -1590,7 +1590,7 @@ class state extends org.jacop.util.fsm.FSMState {
     * @param tran integer value for executing this transition.
     * @param that next state for this transition.
     */
-  def ->(tran: Int, that: state) {
+  def ->(tran: Int, that: state) : Unit = {
     transitions.add(new FSMTransition(new IntSet(tran, tran), that))
   }
 }
@@ -1635,12 +1635,12 @@ class network extends org.jacop.constraints.netflow.NetworkBuilder {
     * @param weight      weight of this arc for cost calculation
     * @param capacity    capacity for the flow on this arc
     */
-  def arc(source: node, destination: node, weight: IntVar, capacity: IntVar) {
+  def arc(source: node, destination: node, weight: IntVar, capacity: IntVar) : Unit = {
     // println(source.name + " -> " + destination.name) 
     addArc(nodes(source), nodes(destination), weight, capacity)
   }
 
-  def cost(c: IntVar) {
+  def cost(c: IntVar) : Unit = {
     setCostVariable(c)
   }
 }

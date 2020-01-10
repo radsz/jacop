@@ -60,7 +60,7 @@ object SocialGolfer extends jacop {
     *
     * @param args - command's arguments
     */
-  def main(args: Array[String]) {
+  def main(args: Array[String]) : Unit = {
 
     setup(3, 2, 2)
     model()
@@ -140,7 +140,7 @@ object SocialGolfer extends jacop {
     * @param g - groups
     * @param p - players
     */
-  def setup(w: Int, g: Int, p: Int) {
+  def setup(w: Int, g: Int, p: Int) : Unit = {
 
     weeks = w
     groups = g
@@ -148,7 +148,7 @@ object SocialGolfer extends jacop {
 
   }
 
-  def model() {
+  def model() : Unit = {
 
     val N = groups * players
 
@@ -207,7 +207,7 @@ object SocialGolfer extends jacop {
 
   }
 
-  def solve() {
+  def solve() : Unit = {
 
     val tread = java.lang.Thread.currentThread()
     val b = java.lang.management.ManagementFactory.getThreadMXBean()
@@ -239,7 +239,7 @@ object SocialGolfer extends jacop {
   def printSolution() = () => {
     for (i <- 0 until weeks) {
       for (j <- 0 until groups) {
-        print(golferGroup(i)(j).dom() + " ")
+        print("" + golferGroup(i)(j).dom() + " ")
       }
       println()
     }

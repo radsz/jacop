@@ -61,6 +61,6 @@ object Adder extends App with jacop {
   println("" + a + " " + b + " " + " " + c + " " + " " + summa + " " + " " + carry)
 
   def printTableRow() = () => {
-    println(a.value + " | " + b.value + " | " + c.value + " || " + summa.value + " | " + carry.value)
+    println("" + a.value + " | " + b.value + " | " + c.value + " || " + summa.value + " | " + carry.value)
   }
 }

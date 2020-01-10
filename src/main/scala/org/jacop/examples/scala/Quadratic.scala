@@ -51,6 +51,6 @@ object Quadratic extends App with jacop {
   2.0 * x * y + y #= 1.0
   x * y #= 0.2
 
-  val result = satisfyAll(search_float(List(x, y), input_order), () => println(x + "\n" + y))
+  val result = satisfyAll(search_float(List(x, y), input_order), () => println("" + x + "\n" + y))
   statistics
 }

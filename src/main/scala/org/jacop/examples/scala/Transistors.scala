@@ -87,6 +87,6 @@ object Transistors extends App with jacop {
 
   val result = satisfyAll(search(List(a, b, c, sum, carry), input_order, indomain_min))
 
-  println(a + " " + b + " " + " " + c + " " + " " + sum + " " + " " + carry)
+  println(""+a + " " + b + " " + " " + c + " " + " " + sum + " " + " " + carry)
 
 }

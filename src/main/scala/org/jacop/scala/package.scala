@@ -119,7 +119,7 @@ package object scala {
     *
     * @param x array of variables to be different.
     */
-  def alldifferent(x: Array[IntVar]) {
+  def alldifferent(x: Array[IntVar]) : Unit = {
     val c = new Alldiff(x.asInstanceOf[Array[org.jacop.core.IntVar]])
     if (trace) println(c)
     impModel.impose(c)
@@ -130,7 +130,7 @@ package object scala {
     *
     * @param x array of variables to be different.
     */
-  def alldistinct(x: Array[IntVar]) {
+  def alldistinct(x: Array[IntVar]) : Unit = {
     val c = new Alldistinct(x.asInstanceOf[Array[org.jacop.core.IntVar]])
     if (trace) println(c)
     impModel.impose(c)
@@ -142,7 +142,7 @@ package object scala {
     * @param x array of variables.
     * @param y array of counters of differnet values from array x.
     */
-  def gcc(x: Array[IntVar], y: Array[IntVar]) {
+  def gcc(x: Array[IntVar], y: Array[IntVar]) : Unit = {
     val c = new GCC(x.asInstanceOf[Array[org.jacop.core.IntVar]], y.asInstanceOf[Array[org.jacop.core.IntVar]])
     if (trace) println(c)
     impModel.impose(c)
@@ -154,7 +154,7 @@ package object scala {
     * @param res    array of variables to be summed up.
     * @param result summation result.
     */
-  def sum[T <: org.jacop.core.IntVar](res: List[T], result: IntVar)(implicit m: ClassTag[T]) {
+  def sum[T <: org.jacop.core.IntVar](res: List[T], result: IntVar)(implicit m: ClassTag[T]) : Unit = {
     val c = if (boolSum(res)) new SumBool(res.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], "==", result)
     else new SumInt(res.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], "==", result)
     if (trace) println(c)
@@ -190,7 +190,7 @@ package object scala {
     * @param w      array of weights.
     * @param result summation result.
     */
-  def weightedSum[T <: org.jacop.core.IntVar](res: List[T], w: Array[Int], result: IntVar)(implicit m: ClassTag[T]) {
+  def weightedSum[T <: org.jacop.core.IntVar](res: List[T], w: Array[Int], result: IntVar)(implicit m: ClassTag[T]) : Unit = {
     val vect = new Array[org.jacop.core.IntVar](res.length + 1)
     val weight = new Array[Int](res.length + 1)
 
@@ -238,7 +238,7 @@ package object scala {
     * @param w      array of weights.
     * @param result summation result.
     */
-  def sumDom[T <: org.jacop.core.IntVar](res: List[T], w: Array[Int], result: IntVar)(implicit m: ClassTag[T]) {
+  def sumDom[T <: org.jacop.core.IntVar](res: List[T], w: Array[Int], result: IntVar)(implicit m: ClassTag[T]) : Unit = {
     val vect = new Array[org.jacop.core.IntVar](res.length + 1)
     val weight = new Array[Int](res.length + 1)
 
@@ -299,7 +299,7 @@ package object scala {
     * @param x  array of variables where maximum values is to be found.
     * @param mx maxumum value.
     */
-  def max[T <: org.jacop.core.IntVar](x: List[T], mx: org.jacop.core.IntVar)(implicit m: ClassTag[T]) {
+  def max[T <: org.jacop.core.IntVar](x: List[T], mx: org.jacop.core.IntVar)(implicit m: ClassTag[T]) : Unit = {
     val c = new org.jacop.constraints.Max(x.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], mx)
     if (trace) println(c)
     impModel.impose(c)
@@ -311,7 +311,7 @@ package object scala {
     * @param x  array of variables where mnimimum values is to be found.
     * @param mn minimum value.
     */
-  def min[T <: org.jacop.core.IntVar](x: List[T], mn: org.jacop.core.IntVar)(implicit m: ClassTag[T]) {
+  def min[T <: org.jacop.core.IntVar](x: List[T], mn: org.jacop.core.IntVar)(implicit m: ClassTag[T]) : Unit = {
     val c = new org.jacop.constraints.Min(x.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], mn)
     if (trace) println(c)
     impModel.impose(c)
@@ -349,7 +349,7 @@ package object scala {
     * @param list  list of variables to count number of values value.
     * @param count of values value.
     */
-  def count[T <: org.jacop.core.IntVar](list: List[T], count: T, value: Int)(implicit m: ClassTag[T]) {
+  def count[T <: org.jacop.core.IntVar](list: List[T], count: T, value: Int)(implicit m: ClassTag[T]) : Unit = {
     val c = new Count(list.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], count, value)
     if (trace) println(c)
     impModel.impose(c)
@@ -376,7 +376,7 @@ package object scala {
     * @param count minimal number of values in list.
     * @param value values to check.
     */
-  def atleast[T <: org.jacop.core.IntVar](list: List[T], count: Int, value: Int)(implicit m: ClassTag[T]) {
+  def atleast[T <: org.jacop.core.IntVar](list: List[T], count: Int, value: Int)(implicit m: ClassTag[T]) : Unit = {
     val c = new AtLeast(list.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], count, value)
     if (trace) println(c)
     impModel.impose(c)
@@ -389,7 +389,7 @@ package object scala {
     * @param count maximal number of values in list.
     * @param value values to check.
     */
-  def atmost[T <: org.jacop.core.IntVar](list: List[T], count: Int, value: Int)(implicit m: ClassTag[T]) {
+  def atmost[T <: org.jacop.core.IntVar](list: List[T], count: Int, value: Int)(implicit m: ClassTag[T]) : Unit = {
     val c = new AtMost(list.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], count, value)
     if (trace) println(c)
     impModel.impose(c)
@@ -401,7 +401,7 @@ package object scala {
     * @param list  list of variables to count number of different values.
     * @param count of different values.
     */
-  def values[T <: org.jacop.core.IntVar](list: List[T], count: IntVar)(implicit m: ClassTag[T]) {
+  def values[T <: org.jacop.core.IntVar](list: List[T], count: IntVar)(implicit m: ClassTag[T]) : Unit = {
     val c = new Values(list.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], count)
     if (trace) println(c)
     impModel.impose(c)
@@ -427,7 +427,7 @@ package object scala {
     * @param elements array of integers that can be assigned to values.
     * @param value    value selected from list of elements.
     */
-  def element(index: org.jacop.core.IntVar, elements: Array[Int], value: org.jacop.core.IntVar) {
+  def element(index: org.jacop.core.IntVar, elements: Array[Int], value: org.jacop.core.IntVar) : Unit = {
     val c = Element.choose(index, elements, value)
     if (trace) println(c)
     impModel.impose(c)
@@ -442,7 +442,7 @@ package object scala {
     * @param value    value selected from list of elements.
     * @param offset   value of index offset (shift).
     */
-  def element(index: org.jacop.core.IntVar, elements: Array[Int], value: org.jacop.core.IntVar, offset: Int) {
+  def element(index: org.jacop.core.IntVar, elements: Array[Int], value: org.jacop.core.IntVar, offset: Int) : Unit = {
     val c = Element.choose(index, elements, value, offset)
     if (trace) println(c)
     impModel.impose(c)
@@ -455,7 +455,7 @@ package object scala {
     * @param elements array of varibales that can be assigned to values.
     * @param value    value selected from list of elements.
     */
-  def element[T <: org.jacop.core.IntVar](index: org.jacop.core.IntVar, elements: List[T], value: org.jacop.core.IntVar)(implicit m: ClassTag[T]) {
+  def element[T <: org.jacop.core.IntVar](index: org.jacop.core.IntVar, elements: List[T], value: org.jacop.core.IntVar)(implicit m: ClassTag[T]) : Unit = {
     val c = Element.choose(index, elements.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], value)
     if (trace) println(c)
     impModel.impose(c)
@@ -469,7 +469,7 @@ package object scala {
     * @param value    value selected from list of elements.
     * @param offset   value of index offset (shift).
     */
-  def element[T <: org.jacop.core.IntVar](index: org.jacop.core.IntVar, elements: List[T], value: org.jacop.core.IntVar, offset: Int)(implicit m: ClassTag[T]) {
+  def element[T <: org.jacop.core.IntVar](index: org.jacop.core.IntVar, elements: List[T], value: org.jacop.core.IntVar, offset: Int)(implicit m: ClassTag[T]) : Unit = {
     val c = Element.choose(index, elements.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], value, offset)
     if (trace) println(c)
     impModel.impose(c)
@@ -529,7 +529,7 @@ package object scala {
     * @param lx length in derection X of rectangle.
     * @param ly length in derection Y of rectangle.
     */
-  def diff2(x: Array[IntVar], y: Array[IntVar], lx: Array[IntVar], ly: Array[IntVar]) {
+  def diff2(x: Array[IntVar], y: Array[IntVar], lx: Array[IntVar], ly: Array[IntVar]) : Unit = {
     val c = new Diff(x.asInstanceOf[Array[org.jacop.core.IntVar]], y.asInstanceOf[Array[org.jacop.core.IntVar]],
       lx.asInstanceOf[Array[org.jacop.core.IntVar]], ly.asInstanceOf[Array[org.jacop.core.IntVar]])
     if (trace) println(c)
@@ -541,7 +541,7 @@ package object scala {
     *
     * @param rectangles array of four element vectors representing rectnagles [x, y, lx, ly]
     */
-  def diff2(rectangles: Array[Array[IntVar]]) {
+  def diff2(rectangles: Array[Array[IntVar]]) : Unit = {
     val c = new Diff(rectangles.asInstanceOf[Array[Array[org.jacop.core.IntVar]]])
     if (trace) println(c)
     impModel.impose(c)
@@ -555,7 +555,7 @@ package object scala {
     * @param lx length in derection X of rectangle.
     * @param ly length in derection Y of rectangle.
     */
-  def diffn(x: Array[IntVar], y: Array[IntVar], lx: Array[IntVar], ly: Array[IntVar]) {
+  def diffn(x: Array[IntVar], y: Array[IntVar], lx: Array[IntVar], ly: Array[IntVar]) : Unit = {
     val c = new Diffn(x.asInstanceOf[Array[org.jacop.core.IntVar]], y.asInstanceOf[Array[org.jacop.core.IntVar]],
       lx.asInstanceOf[Array[org.jacop.core.IntVar]], ly.asInstanceOf[Array[org.jacop.core.IntVar]])
     if (trace) println(c)
@@ -567,7 +567,7 @@ package object scala {
     *
     * @param rectangles array of four element vectors representing rectnagles [x, y, lx, ly]
     */
-  def diffn(rectangles: Array[Array[IntVar]]) {
+  def diffn(rectangles: Array[Array[IntVar]]) : Unit = {
     val c = new Diffn(rectangles.asInstanceOf[Array[Array[org.jacop.core.IntVar]]])
     if (trace) println(c)
     impModel.impose(c)
@@ -581,7 +581,7 @@ package object scala {
     * @param r     array of number of resources of tasks.
     * @param limit limit on number of resources used in a schedule.
     */
-  def cumulative_basic(t: Array[IntVar], d: Array[IntVar], r: Array[IntVar], limit: IntVar) {
+  def cumulative_basic(t: Array[IntVar], d: Array[IntVar], r: Array[IntVar], limit: IntVar) : Unit = {
     val c = new org.jacop.constraints.cumulative.CumulativeBasic(t.asInstanceOf[Array[org.jacop.core.IntVar]],
       d.asInstanceOf[Array[org.jacop.core.IntVar]],
       r.asInstanceOf[Array[org.jacop.core.IntVar]], limit)
@@ -597,7 +597,7 @@ package object scala {
     * @param r     array of number of resources of tasks.
     * @param limit limit on number of resources used in a schedule.
     */
-  def cumulative(t: Array[IntVar], d: Array[IntVar], r: Array[IntVar], limit: IntVar) {
+  def cumulative(t: Array[IntVar], d: Array[IntVar], r: Array[IntVar], limit: IntVar) : Unit = {
     val c = new org.jacop.constraints.cumulative.Cumulative(t.asInstanceOf[Array[org.jacop.core.IntVar]],
       d.asInstanceOf[Array[org.jacop.core.IntVar]],
       r.asInstanceOf[Array[org.jacop.core.IntVar]], limit)
@@ -613,7 +613,7 @@ package object scala {
     * @param r     array of number of resources of tasks.
     * @param limit limit on number of resources used in a schedule.
     */
-  def cumulative_unary(t: Array[IntVar], d: Array[IntVar], r: Array[IntVar], limit: IntVar) {
+  def cumulative_unary(t: Array[IntVar], d: Array[IntVar], r: Array[IntVar], limit: IntVar) : Unit = {
     val c = new org.jacop.constraints.cumulative.CumulativeUnary(t.asInstanceOf[Array[org.jacop.core.IntVar]],
       d.asInstanceOf[Array[org.jacop.core.IntVar]],
       r.asInstanceOf[Array[org.jacop.core.IntVar]], limit)
@@ -626,7 +626,7 @@ package object scala {
     *
     * @param n array of varibales, which domains define next nodes in the graph.
     */
-  def circuit(n: Array[IntVar]) {
+  def circuit(n: Array[IntVar]) : Unit = {
     val c = new Circuit(n.asInstanceOf[Array[org.jacop.core.IntVar]])
     if (trace) println(c)
     impModel.impose(c)
@@ -637,7 +637,7 @@ package object scala {
     *
     * @param n array of varibales, which domains define next nodes in the graph.
     */
-  def subcircuit(n: Array[IntVar]) {
+  def subcircuit(n: Array[IntVar]) : Unit = {
     val c = new Subcircuit(n.asInstanceOf[Array[org.jacop.core.IntVar]])
     if (trace) println(c)
     impModel.impose(c)
@@ -649,7 +649,7 @@ package object scala {
     * @param x array of varibales.
     * @param y array variables that values are permutation of x.
     */
-  def assignment(x: Array[IntVar], y: Array[IntVar]) {
+  def assignment(x: Array[IntVar], y: Array[IntVar]) : Unit = {
     val c = new Assignment(x.asInstanceOf[Array[org.jacop.core.IntVar]], y.asInstanceOf[Array[org.jacop.core.IntVar]])
     if (trace) println(c)
     impModel.impose(c)
@@ -662,7 +662,7 @@ package object scala {
     * @param kSet values to be checked.
     * @param n    number of values found.
     */
-  def among(list: Array[IntVar], kSet: IntSet, n: IntVar) {
+  def among(list: Array[IntVar], kSet: IntSet, n: IntVar) : Unit = {
     val c = new Among(list.asInstanceOf[Array[org.jacop.core.IntVar]], kSet, n)
     if (trace) println(c)
     impModel.impose(c)
@@ -675,7 +675,7 @@ package object scala {
     * @param listY array of varibales to be checked if their values .
     * @param n     number of values found.
     */
-  def among(listX: Array[IntVar], listY: Array[IntVar], n: IntVar) {
+  def among(listX: Array[IntVar], listY: Array[IntVar], n: IntVar) : Unit = {
     val c = new AmongVar(listX.asInstanceOf[Array[org.jacop.core.IntVar]], listY.asInstanceOf[Array[org.jacop.core.IntVar]], n)
     if (trace) println(c)
     impModel.impose(c)
@@ -687,7 +687,7 @@ package object scala {
     * @param list   array of variables.
     * @param tuples array of tuples allowed to be assigned to variables.
     */
-  def table[T <: org.jacop.core.IntVar](list: List[T], tuples: Array[Array[Int]])(implicit m: ClassTag[T]) {
+  def table[T <: org.jacop.core.IntVar](list: List[T], tuples: Array[Array[Int]])(implicit m: ClassTag[T]) : Unit = {
     var c =
       if (tuples.length <= 64)
         new SimpleTable(list.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], tuples)
@@ -704,7 +704,7 @@ package object scala {
     * @param list   array of variables.
     * @param tuples array of tuples allowed to be assigned to variables.
     */
-  def simpleTable[T <: org.jacop.core.IntVar](list: List[T], tuples: Array[Array[Int]])(implicit m: ClassTag[T]) {
+  def simpleTable[T <: org.jacop.core.IntVar](list: List[T], tuples: Array[Array[Int]])(implicit m: ClassTag[T]) : Unit = {
     val c = new SimpleTable(list.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], tuples)
     if (trace) println(c)
     impModel.impose(c)
@@ -720,7 +720,7 @@ package object scala {
     * @param knapsackProfit   profite when selling items.
     */
   def knapsack(profits: Array[Int], weights: Array[Int], quantity: List[IntVar],
-               knapsackCapacity: IntVar, knapsackProfit: IntVar) {
+               knapsackCapacity: IntVar, knapsackProfit: IntVar) : Unit = {
     val c = new Knapsack(profits, weights, quantity.toArray, knapsackCapacity, knapsackProfit)
     if (trace) println(c)
     impModel.impose(c)
@@ -733,7 +733,7 @@ package object scala {
     * @param load list of loads for bins.
     * @param w    array of weights for items.
     */
-  def binpacking(bin: List[IntVar], load: List[IntVar], w: Array[Int]) {
+  def binpacking(bin: List[IntVar], load: List[IntVar], w: Array[Int]) : Unit = {
     val c = new Binpacking(bin.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], load.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], w)
     if (trace) println(c)
     impModel.impose(c)
@@ -745,7 +745,7 @@ package object scala {
     * @param dfa  specification of finite state machine using class fsm.
     * @param vars list of variables assigned to fsm nodes.
     */
-  def regular(dfa: fsm, vars: List[IntVar]) {
+  def regular(dfa: fsm, vars: List[IntVar]) : Unit = {
     val c = new Regular(dfa, vars.toArray)
     if (trace) println(c)
     impModel.impose(c)
@@ -757,7 +757,7 @@ package object scala {
     * @param x list of positive variables.
     * @param y list of negative variables.
     */
-  def clause(x: Array[IntVar], y: Array[IntVar]) {
+  def clause(x: Array[IntVar], y: Array[IntVar]) : Unit = {
     val c = new BoolClause(x.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], y.toArray.asInstanceOf[Array[org.jacop.core.IntVar]])
     if (trace) println(c)
     impModel.impose(c)
@@ -803,7 +803,7 @@ package object scala {
     * @param min  minimal number of occurrences of values in the sub-sequence.
     * @param max  maximal number of occurrences of values in the sub-sequence.
     */
-  def sequence(list: Array[IntVar], set: IntSet, q: Int, min: Int, max: Int) {
+  def sequence(list: Array[IntVar], set: IntSet, q: Int, min: Int, max: Int) : Unit = {
     val c = new Sequence(list.asInstanceOf[Array[org.jacop.core.IntVar]], set, q, min, max)
     if (trace) println(c)
     impModel.imposeDecomposition(c)
@@ -817,7 +817,7 @@ package object scala {
     * @param max    maximal length of the sub-sequence for each value on position i.
     * @param x      list of variables to be constrained.
     */
-  def stretch(values: Array[Int], min: Array[Int], max: Array[Int], x: Array[IntVar]) {
+  def stretch(values: Array[Int], min: Array[Int], max: Array[Int], x: Array[IntVar]) : Unit = {
     val c = new Stretch(values, min, max, x.asInstanceOf[Array[org.jacop.core.IntVar]])
     if (trace) println(c)
     impModel.imposeDecomposition(c)
@@ -828,7 +828,7 @@ package object scala {
     *
     * @param x array of vectors of variables to be lexicographically ordered.
     */
-  def lex(x: Array[IntVar], y: Array[IntVar]) {
+  def lex(x: Array[IntVar], y: Array[IntVar]) : Unit = {
     val c = new LexOrder(x.asInstanceOf[Array[org.jacop.core.IntVar]], y.asInstanceOf[Array[org.jacop.core.IntVar]])
     if (trace) println(c)
     impModel.impose(c)
@@ -839,7 +839,7 @@ package object scala {
     *
     * @param x array of vectors of variables to be lexicographically ordered.
     */
-  def lex(x: Array[Array[IntVar]]) {
+  def lex(x: Array[Array[IntVar]]) : Unit = {
     val c = new org.jacop.constraints.Lex(x.asInstanceOf[Array[Array[org.jacop.core.IntVar]]])
     if (trace) println(c)
     impModel.imposeDecomposition(c)
@@ -852,7 +852,7 @@ package object scala {
     * @param s value occuring first.
     * @param t value occuring next.
     */
-  def valueprocede(x: Array[Array[IntVar]], s: Int, t: Int) {
+  def valueprocede(x: Array[Array[IntVar]], s: Int, t: Int) : Unit = {
     val c = new org.jacop.constraints.ValuePrecede(s, t, x.asInstanceOf[Array[org.jacop.core.IntVar]])
     if (trace) println(c)
     impModel.imposeDecomposition(c)
@@ -864,7 +864,7 @@ package object scala {
     * @param xVars   array of variables to be constrained to be different.
     * @param costVar measures degree of violation (uses value based violation).
     */
-  def softAlldifferent(xVars: Array[IntVar], costVar: IntVar) {
+  def softAlldifferent(xVars: Array[IntVar], costVar: IntVar) : Unit = {
     val violationMeasure = ViolationMeasure.VALUE_BASED
     val c = new SoftAlldifferent(xVars.asInstanceOf[Array[org.jacop.core.IntVar]], costVar, violationMeasure)
     if (trace) println(c)
@@ -881,7 +881,7 @@ package object scala {
     * @param softCounters   specifies preferred values for counters and can be violated.
     */
   def softGCC(xVars: Array[IntVar], hardLowerBound: Array[Int], hardUpperBound: Array[Int], countedValue: Array[Int], softCounters: Array[IntVar],
-              costVar: IntVar) {
+              costVar: IntVar) : Unit = {
     val violationMeasure = ViolationMeasure.VALUE_BASED
     val c = new SoftGCC(xVars.asInstanceOf[Array[org.jacop.core.IntVar]],
       hardLowerBound,
@@ -893,7 +893,7 @@ package object scala {
     impModel.imposeDecomposition(c)
   }
 
-  def network_flow(net: org.jacop.constraints.netflow.NetworkBuilder) {
+  def network_flow(net: org.jacop.constraints.netflow.NetworkBuilder) : Unit = {
     val c = new NetworkFlow(net)
     if (trace) println(c)
     impModel.impose(c)
@@ -988,7 +988,7 @@ package object scala {
     * @param s constrained set variable.
     * @param n cardinality.
     */
-  def card(s: SetVar, n: Int) {
+  def card(s: SetVar, n: Int) : Unit = {
     val c = new CardA(s, n)
     if (trace) println(c)
     impModel.impose(c)
@@ -1000,7 +1000,7 @@ package object scala {
     * @param s constrained set variable.
     * @param n cardinality (IntVar variable).
     */
-  def card(s: SetVar, n: org.jacop.core.IntVar) {
+  def card(s: SetVar, n: org.jacop.core.IntVar) : Unit = {
     val c = new CardAeqX(s, n)
     if (trace) println(c)
     impModel.impose(c)
@@ -1012,7 +1012,7 @@ package object scala {
     * @param a    a set variable to be matched against list of IntVar.
     * @param list varibales that get values from the set.
     */
-  def matching[T <: org.jacop.core.IntVar](a: SetVar, list: List[T])(implicit m: ClassTag[T]) {
+  def matching[T <: org.jacop.core.IntVar](a: SetVar, list: List[T])(implicit m: ClassTag[T]) : Unit = {
     val c = new Match(a, list.toArray)
     if (trace) println(c)
     impModel.impose(c)
@@ -1212,7 +1212,7 @@ package object scala {
     * @param res array of variables to be summed up.
     * @return summation result.
     */
-  def linear[T <: org.jacop.floats.core.FloatVar](res: List[T], weight: Array[Double], result: Double)(implicit m: Manifest[T]) {
+  def linear[T <: org.jacop.floats.core.FloatVar](res: List[T], weight: Array[Double], result: Double)(implicit m: Manifest[T]) : Unit = {
 
     val c = new LinearFloat(res.asInstanceOf[Array[org.jacop.floats.core.FloatVar]], weight, "==", result)
     if (trace) println(c)
@@ -1619,7 +1619,7 @@ package object scala {
     * Defines functions that prints search statistics
     *
     */
-  def statistics() {
+  def statistics() : Unit = {
     var nodes = 0
     var decisions = 0
     var wrong = 0

@@ -52,7 +52,7 @@ object NetExample extends App with jacop {
   assignment()
 
 
-  def simpleNet() {
+  def simpleNet() : Unit = {
     var T1: Long = 0
     var T2: Long = 0
     var T: Long = 0
@@ -124,7 +124,7 @@ object NetExample extends App with jacop {
 
   }
 
-  def transportationProblem() {
+  def transportationProblem() : Unit = {
     var T1: Long = 0
     var T2: Long = 0
     var T: Long = 0
@@ -210,7 +210,7 @@ object NetExample extends App with jacop {
     System.out.println("\n\t*** Execution time = " + T + " ms")
   }
 
-  def assignment() {
+  def assignment() : Unit = {
 
     var T1: Long = 0
     var T2: Long = 0

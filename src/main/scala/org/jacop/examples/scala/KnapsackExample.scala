@@ -59,7 +59,7 @@ object KnapsackExample extends jacop {
   var args: Array[String] = null
   var vars: ArrayBuffer[IntVar] = new ArrayBuffer[IntVar]()
 
-  def main(arguments: Array[String]) {
+  def main(arguments: Array[String]) : Unit = {
 
     args = arguments
 
@@ -71,7 +71,7 @@ object KnapsackExample extends jacop {
     * It stores the parameters of the main function to be
     * used by the model functions.
     */
-  def model() {
+  def model() : Unit = {
 
     var noItems = 3
     var volume = 9
