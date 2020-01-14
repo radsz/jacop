@@ -1469,8 +1469,9 @@ class BoolVar(name: String, min1: Int, max1: Int) extends org.jacop.core.Boolean
     * @return the defined constraint.
     */
   def ->(thenConstr: PrimitiveConstraint): Constraint = {
-    val c: Constraint = new IfThen(new XeqC(this, 1), thenConstr)
-    getModel.constr.remove(getModel.constr.length - 1)
+    // val c: Constraint = new IfThen(new XeqC(this, 1), thenConstr)
+    // getModel.constr.remove(getModel.constr.length - 1)
+    val c: Constraint = new Implies(this, thenConstr)
     getModel.constr += c
     c
   }

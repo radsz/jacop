@@ -39,7 +39,6 @@ import org.jacop.constraints.Reified;
 import org.jacop.constraints.replace.ReifiedIfThen;
 import org.jacop.util.SimpleHashSet;
 import org.jacop.util.SparseSet;
-import scala.collection.immutable.Stream;
 
 import java.util.*;
 
