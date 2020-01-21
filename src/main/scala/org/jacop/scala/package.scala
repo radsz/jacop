@@ -791,6 +791,14 @@ package object scala {
     maxIndex
   }
 
+  def member(x: Array[IntVar]): IntVar = {
+    val m = new IntVar()
+    val c = new Member(x.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], m)
+    if (trace) println(c)
+    impModel.impose(c)
+    m
+  }
+
 
   // ================== Decompose constraints
 
