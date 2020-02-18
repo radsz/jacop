@@ -76,7 +76,7 @@ object Golomb extends App with jacop {
   if (result) {
     print("Golomb ruler : ")
 
-    for (i <- 0 until m) print("" + mark(i).dom + " ")
+    for (i <- 0 until m) printf("%d ", mark(i).value)
 
     println("\n\n*** Execution time = " + (end - start) + " ms")
   }

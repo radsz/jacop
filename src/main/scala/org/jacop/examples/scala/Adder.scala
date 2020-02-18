@@ -58,9 +58,7 @@ object Adder extends App with jacop {
 
   val result = satisfyAll(search(List(a, b, c, summa, carry), input_order, indomain_min), printTableRow())
 
-  println("" + a + " " + b + " " + " " + c + " " + " " + summa + " " + " " + carry)
-
   def printTableRow() = () => {
-    println("" + a.value + " | " + b.value + " | " + c.value + " || " + summa.value + " | " + carry.value)
+    printf("%d |  %d | %d || %d | %d\n", a.value, b.value, c.value, summa.value, carry.value)
   }
 }

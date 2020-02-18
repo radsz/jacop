@@ -239,7 +239,7 @@ object SocialGolfer extends jacop {
   def printSolution() = () => {
     for (i <- 0 until weeks) {
       for (j <- 0 until groups) {
-        print("" + golferGroup(i)(j).dom() + " ")
+        printf("%s ", golferGroup(i)(j).dom)
       }
       println()
     }

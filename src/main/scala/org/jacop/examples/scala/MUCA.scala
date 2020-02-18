@@ -354,16 +354,16 @@ object MUCA extends jacop {
     print("\t")
 
     for (i <- 0 until maxNoTransformations if transitions(i).value() != 0)
-      print("" + transitions(i) + "\t")
+      printf("%s\t", transitions(i))
     println()
 
     for (g <- 0 until noGoods) {
 
-      print("" + initialQuantity(g) + "\t")
+      printf("%d\t", initialQuantity(g))
       for (i <- 0 until maxNoTransformations if transitions(i).value() != 0)
-        print("" + deltasI(i)(g).value() + "," + deltasO(i)(g).value() + "\t")
+        printf("%d,%d\t", deltasI(i)(g).value, deltasO(i)(g).value)
 
-      println("" + summa(g).value() + ">=" + finalQuantity(g))
+      printf("%d>=%d\n", summa(g).value, finalQuantity(g))
 
     }
 

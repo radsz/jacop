@@ -101,7 +101,7 @@ object BIBD extends jacop {
     if (result)
       for (i <- 0 until v) {
         for (j <- 0 until b)
-          print("" + x(i)(j).value + " ")
+          printf("%d ", x(i)(j).value)
         println()
       }
     else println("No solution")

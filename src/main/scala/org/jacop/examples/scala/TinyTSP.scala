@@ -63,11 +63,11 @@ object TinyTSP extends App with jacop {
   statistics
 
   def printValue() : Unit = {
-    print("" + 1 + " -> ")
+    print(" 1 -> ")
     var index = 1
     for (i <- 1 to N) {
       if (i < N)
-        print("" + visit(index - 1).value + " -> ")
+        printf("%d -> ", visit(index - 1).value)
       else
         print(visit(index - 1).value)
       index = visit(index - 1).value
