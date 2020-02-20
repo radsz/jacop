@@ -211,8 +211,8 @@ public class Solve implements ParserTreeConstants {
             } else if (search_type.equals("priority_search")) {
                 run_single_search(solveKind, kind, si);
             } else {
-                throw new IllegalArgumentException(
-                    "Not recognized structure of solve statement \"" + search_type + "\"; compilation aborted");
+		System.err.println("%% Warning: Not supported search annotation: \"" + search_type + "\"; ignored");
+		run_single_search(solveKind, kind, null);
             }
         } else if (count > 2) {// several annotations
 
@@ -239,7 +239,7 @@ public class Solve implements ParserTreeConstants {
 		run_sequence_search(solveKind, kind, si);
 	    }
         } else {
-            throw new IllegalArgumentException("Not recognized structure of solve statement; compilation aborted");
+            throw new IllegalArgumentException("%% Error: Not recognized structure of solve statement; compilation aborted");
         }
     }
 
@@ -255,7 +255,7 @@ public class Solve implements ParserTreeConstants {
 	    else if (s.search_type.endsWith("_search"))// && !s.search_type.equals("priority_search"))
 		ns.add(s);
 	    else
-		System.out.println("%% Warning: Not supported search annotation: "+s.search_type+"; ignored.");
+		System.err.println("%% Warning: Not supported search annotation: "+s.search_type+"; ignored.");
 
 	return ns;
     }
