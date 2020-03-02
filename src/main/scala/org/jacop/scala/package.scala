@@ -799,6 +799,18 @@ package object scala {
     m
   }
 
+  def conditional(b: Array[IntVar], c: Array[PrimitiveConstraint]): Unit = {
+    val cs = new Conditional(b.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], c.toArray.asInstanceOf[Array[org.jacop.constraints.PrimitiveConstraint]])
+    if (trace) println(cs)
+    impModel.impose(cs)
+  }
+
+  def conditional(b: Array[BoolVar], c: Array[PrimitiveConstraint]): Unit = {
+    val cs = new Conditional(b.toArray.asInstanceOf[Array[org.jacop.core.IntVar]], c.toArray.asInstanceOf[Array[org.jacop.constraints.PrimitiveConstraint]])
+    if (trace) println(cs)
+    impModel.impose(cs)
+  }
+
 
   // ================== Decompose constraints
 
