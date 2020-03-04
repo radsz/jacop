@@ -638,14 +638,14 @@ class LinearConstraints implements ParserTreeConstants {
 		    int pos = sumPossible(p1);
 		    if (pos > -1) {
 			// Use SumBool constraint instead of LinearIntDom
-		    	IntVar[] vect = new IntVar[p1.length - 1];
-		    	int n = 0;
-		    	for (int i = 0; i < p2.length; i++)
-		    	    if (i != pos)
-		    		vect[n++] = p2[i];
+			IntVar[] vect = new IntVar[p1.length - 1];
+			int n = 0;
+			for (int i = 0; i < p2.length; i++)
+			    if (i != pos)
+				vect[n++] = p2[i];
 
-		    	if (boolSum(vect))
-		    	    if (p3 == 0)
+			if (boolSum(vect)) {
+			    if (p3 == 0)
 		    		support.pose(new SumBool(vect, "==", p2[pos]));
 		    	    else {
 		    		IntVar tmp = new IntVar(store, 0, org.jacop.core.IntDomain.MaxInt);
@@ -653,6 +653,7 @@ class LinearConstraints implements ParserTreeConstants {
 		    		support.pose(new XplusCeqZ(p2[pos], p3, tmp));
 		    	    }
 		    	    return;
+			}
 		    }
 
 		    support.pose(new LinearIntDom(p2, p1, "==", p3));
