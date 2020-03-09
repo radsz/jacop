@@ -111,6 +111,12 @@ class GlobalConstraints implements ParserTreeConstants {
 	 * initialization every time an added constraint triggers execution of Cumulative.
 	 */
 
+	int resSum = 0;
+	for (int i = 0; i < r.length; i++)
+	    resSum += r[i].max();
+	if (resSum <= b.min())
+	    return;
+
         if (s.length == 0)
             return;
         else if (s.length == 1)
@@ -144,7 +150,7 @@ class GlobalConstraints implements ParserTreeConstants {
                 // for (int i = 0; i < r.length; i++)
                 //   support.pose(new XlteqY(r[i], b));
             } else if (allVarGround(d) && allVarGround(r)) {
-                HashSet<Integer> diff = new HashSet<Integer>();
+		HashSet<Integer> diff = new HashSet<Integer>();
                 for (IntVar e : r)
                     diff.add(e.min());
                 double n = (double) r.length;

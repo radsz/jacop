@@ -248,9 +248,15 @@ public class CumulativeBasic extends Constraint {
 	boolean[] startConsidered = new boolean[taskNormal.length];
 
         // used for duration variable pruning
-        int[] lastBarier = new int[taskNormal.length];
-        Arrays.fill(lastBarier, Integer.MAX_VALUE);
-        boolean[] startAtEnd = new boolean[taskNormal.length];
+	int[] maxDuration = new int[taskNormal.length];
+	// value Integer.MIN_VALUE for maxDuration means that the
+	// duration does not need to be prunned
+	Arrays.fill(maxDuration, Integer.MIN_VALUE);
+	int[] lastStart = new int[taskNormal.length];
+	Arrays.fill(lastStart, Integer.MAX_VALUE);
+	int[] lastFree = new int[taskNormal.length];
+	Arrays.fill(lastFree, Integer.MAX_VALUE);
+	boolean[] barier = new boolean[taskNormal.length];
 
         for (int i = 0; i < N; i++) {
 
@@ -308,16 +314,18 @@ public class CumulativeBasic extends Constraint {
                                     }
 
                             // ========= for duration pruning
-                            if (e.date() <= t.start.max())
-                                if (limitMax - profileValue < t.res.min())
-                                    startAtEnd[ti] = false;
-                                else  // limitMax - profileValue >= t.res.min()
-                                    startAtEnd[ti] = true;
-
-                            if (lastBarier[ti] == Integer.MAX_VALUE && limitMax - profileValue < t.res.min() && e.date() >= t.start.max())
-                                lastBarier[ti] = e.date();
-
-                            // ========= resource pruning;
+			    if (limitMax - profileValue < t.res.min()) {
+				maxDuration[ti] = Math.max(maxDuration[ti], e.date() - lastFree[ti]);
+				barier[ti] = true;
+			    }
+			    else if (barier[ti]) { // free to go
+				barier[ti] = false;
+				lastFree[ti] = e.date();
+				if (e.date() <= t.start.max()) 
+				    lastStart[ti] = e.date();
+			    }
+			    
+			    // ========= resource pruning;
 
                             // cannot use more efficient inProfile[ti] (instead of t.lst() <= e.date() && e.date() < t.ect())
                             // since tasks with res = 0 are not in the profile :(
@@ -344,7 +352,12 @@ public class CumulativeBasic extends Constraint {
                         }
 
                     // ========= for duration pruning
-                    startAtEnd[ti] = true;
+		    if (limitMax - profileValue >= t.res.min()) {
+			lastStart[ti] = t.start.min();
+			lastFree[ti] = t.start.min();
+			barier[ti] = false;
+		    } else
+			barier[ti] = true;
 
                     // ========= resource pruning
                     if (limit.max() - profileValue < t.res.max() && t.lst() <= e.date() && e.date() < t.ect())
@@ -384,27 +397,21 @@ public class CumulativeBasic extends Constraint {
                         t.res.domain.inMax(store.level, t.res, limit.max() - profileValue);
 
                     // ========= duration pruning
-                    if (startAtEnd[ti]) {
-                        int maxDuration = Integer.MIN_VALUE;
-                        Interval lastInterval = null;
+		    if (lastStart[ti] >= lastFree[ti] && limit.max() - profileValue >= t.res.max())
+			    maxDuration[ti] = Math.max(maxDuration[ti], e.date() - lastStart[ti]);
 
-                        for (IntervalEnumeration e1 = t.start.dom().intervalEnumeration(); e1.hasMoreElements(); ) {
-                            Interval i1 = e1.nextElement();
-                            maxDuration = Math.max(maxDuration, i1.max() - i1.min() + t.dur.min());
-                            lastInterval = i1;
-                        }
-                        maxDuration = Math.max(maxDuration, lastBarier[ti] - lastInterval.min());
+		    if (lastStart[ti] == Integer.MAX_VALUE)  // no room for the task; must have 0 duration
+			maxDuration[ti] = 0;
 
-                        if (maxDuration < t.dur.max()) {
-                            if (debugNarr)
-                                System.out.print(">>> CumulativeBasic Profile 3. Narrowed " + t.dur + " in 0.." + maxDuration);
+		    if (maxDuration[ti] != Integer.MIN_VALUE && maxDuration[ti] < t.dur.max()) {
+			if (debugNarr)
+			    System.out.print(">>> CumulativeBasic Profile 3. Narrowed " + t.dur + " in 0.." + maxDuration[ti]);
 
-                            t.dur.domain.inMax(store.level, t.dur, maxDuration);
+			t.dur.domain.inMax(store.level, t.dur, maxDuration[ti]);
 
-                            if (debugNarr)
-                                System.out.println(" => " + t.dur);
-                        }
-                    }
+			if (debugNarr)
+			    System.out.println(" => " + t.dur);
+		    }
 
                     tasksToPrune.set(ti, false);
                     break;
