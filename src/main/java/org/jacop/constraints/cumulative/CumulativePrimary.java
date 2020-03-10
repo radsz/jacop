@@ -176,7 +176,7 @@ class CumulativePrimary extends Constraint {
     // Sweep algorithm for profile
     void sweepPruning(Store store) {
 
-        Event[] es = new Event[4 * start.length];
+	Event[] es = new Event[4 * start.length];
         int limitMax = limit.max();
 
         int j = 0;

@@ -195,7 +195,7 @@ public class CumulativeBasic extends Constraint {
     // Sweep algorithm for profile
     private void sweepPruning(Store store) {
 
-        Event[] es = new Event[4 * taskNormal.length];
+	Event[] es = new Event[4 * taskNormal.length];
         int limitMax = limit.max();
 
         int j = 0;
@@ -206,9 +206,10 @@ public class CumulativeBasic extends Constraint {
 
             // mandatory task parts to create profile
             int min = t.lst(), max = t.ect();
-            if (min < max && t.res.min() > 0) {
-                es[j++] = new Event(profile, t, min, t.res.min());
-                es[j++] = new Event(profile, t, max, -t.res.min());
+	    int tResMin = t.res.min();
+            if (min < max && tResMin > 0) {
+                es[j++] = new Event(profile, t, min, tResMin);
+                es[j++] = new Event(profile, t, max, -tResMin);
                 minProfile = (min < minProfile) ? min : minProfile;
                 maxProfile = (max > maxProfile) ? max : maxProfile;
             }
@@ -288,16 +289,17 @@ public class CumulativeBasic extends Constraint {
                             int profileValue = curProfile;
                             if (inProfile[ti])
                                 profileValue -= t.res.min();
+			    boolean noSpace = limitMax - profileValue < t.res.min();
 
                             // ========= Pruning start variable
                             if (t.exists()) // t.res.min() > 0 && t.dur.min() > 0
                                 if (! startConsidered[ti]) {
-                                    if (limitMax - profileValue < t.res.min()) {
+                                    if (noSpace) {
                                         startExcluded[ti] = e.date() - t.dur.min() + 1;
 					startConsidered[ti] = true;
                                     }
                                 } else //startExcluded[ti] != Integer.MAX_VALUE
-                                    if (limitMax - profileValue >= t.res.min()) {
+                                    if (! noSpace) {
                                         // end of excluded interval
 
                                         if (debugNarr)
@@ -314,7 +316,7 @@ public class CumulativeBasic extends Constraint {
                                     }
 
                             // ========= for duration pruning
-			    if (limitMax - profileValue < t.res.min()) {
+			    if (noSpace) {
 				maxDuration[ti] = Math.max(maxDuration[ti], e.date() - lastFree[ti]);
 				barier[ti] = true;
 			    }
@@ -324,13 +326,13 @@ public class CumulativeBasic extends Constraint {
 				if (e.date() <= t.start.max()) 
 				    lastStart[ti] = e.date();
 			    }
-			    
+
 			    // ========= resource pruning;
 
                             // cannot use more efficient inProfile[ti] (instead of t.lst() <= e.date() && e.date() < t.ect())
                             // since tasks with res = 0 are not in the profile :(
-                            if (limit.max() - profileValue < t.res.max() && t.lst() <= e.date() && e.date() < t.ect())
-                                t.res.domain.inMax(store.level, t.res, limit.max() - profileValue);
+                            if (limitMax - profileValue < t.res.max() && t.lst() <= e.date() && e.date() < t.ect())
+                                t.res.domain.inMax(store.level, t.res, limitMax - profileValue);
                         }
                     }
 
@@ -343,25 +345,27 @@ public class CumulativeBasic extends Constraint {
 
                     if (inProfile[ti])
                         profileValue -= t.res.min();
+		    boolean noSpace = limitMax - profileValue < t.res.min();
 
                     // ========= for start pruning
                     if (t.exists()) // t.res.min() > 0 && t.dur.min() > 0
-                        if (limitMax - profileValue < t.res.min()) {
+                        if (noSpace) {
                             startExcluded[ti] = e.date();
 			    startConsidered[ti] = true;
                         }
 
                     // ========= for duration pruning
-		    if (limitMax - profileValue >= t.res.min()) {
+		    if (noSpace)
+			barier[ti] = true;
+		    else {
 			lastStart[ti] = t.start.min();
 			lastFree[ti] = t.start.min();
 			barier[ti] = false;
-		    } else
-			barier[ti] = true;
+		    }
 
                     // ========= resource pruning
-                    if (limit.max() - profileValue < t.res.max() && t.lst() <= e.date() && e.date() < t.ect())
-                        t.res.domain.inMax(store.level, t.res, limit.max() - profileValue);
+                    if (limitMax - profileValue < t.res.max() && t.lst() <= e.date() && e.date() < t.ect())
+                        t.res.domain.inMax(store.level, t.res, limitMax - profileValue);
 
                     tasksToPrune.set(ti);
                     break;
@@ -393,11 +397,11 @@ public class CumulativeBasic extends Constraint {
                     startConsidered[ti] = false;
 
                     // ========= resource pruning
-                    if (limit.max() - profileValue < t.res.max() && t.lst() <= e.date() && e.date() < t.ect())
-                        t.res.domain.inMax(store.level, t.res, limit.max() - profileValue);
+                    if (limitMax - profileValue < t.res.max() && t.lst() <= e.date() && e.date() < t.ect())
+                        t.res.domain.inMax(store.level, t.res, limitMax - profileValue);
 
                     // ========= duration pruning
-		    if (lastStart[ti] >= lastFree[ti] && limit.max() - profileValue >= t.res.max())
+		    if (lastStart[ti] >= lastFree[ti] && limitMax - profileValue >= t.res.min())
 			    maxDuration[ti] = Math.max(maxDuration[ti], e.date() - lastStart[ti]);
 
 		    if (lastStart[ti] == Integer.MAX_VALUE)  // no room for the task; must have 0 duration
