@@ -6,9 +6,24 @@ Version 4.8
    search, based on AFCMaxDeg/AFCMax variable selection method. The
    default search (no search annotations) still uses the old search
    method for compatibility reasons.
+
 2. Improving debug information print-out for flatzinc.
 
 3. Improvement in propagation for XinA constraint.
+
+4. Improvement in pruning of task duration in Cumulative Basic
+   constraint.
+
+5. New implementation of counting constraints in flatzinc. Some
+   compile to Atleast and AtMost. Original at_least and at_most are
+   deprecated from version 2.4 of Minizinc.
+
+6. New CountVar constraint and its flatzinc interface.
+
+7. Changeing Scala compiler to 2.13.1 and making related code chnages.
+
+8. Not recognized search options in flatzinc are ignored instead of
+   aborting computation.
 
 Version 4.7
 =============
