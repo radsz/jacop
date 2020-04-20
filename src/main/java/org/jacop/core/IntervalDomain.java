@@ -1097,7 +1097,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
             IntDomain temp = null;
 
             try {
-                temp = domain.getClass().newInstance();
+                temp = domain.getClass().getConstructor().newInstance();
             } catch (Exception ex) {
                 System.out.println(ex.getMessage());
             }
