@@ -77,11 +77,18 @@ public class XneqY extends PrimitiveConstraint {
         setScope(x, y);
     }
 
-    @Override public void consistency(final Store store) {
+    @Override public void impose(Store store) {
+
         if (x == y) {
             // If x and y are the same, XneqY is trivially inconsistent.
-            store.throwFailException(x);
+	    throw new IllegalArgumentException("Arguments to XneqY are the same, the model is trivially inconsistent.");
         }
+
+        super.impose(store);
+
+    }
+
+    @Override public void consistency(final Store store) {
 
         if (y.singleton())
             x.domain.inComplement(store.level, x, y.min());
@@ -127,7 +134,7 @@ public class XneqY extends PrimitiveConstraint {
     }
 
     @Override public boolean notSatisfied() {
-        return x.singleton() && y.singleton() && x.min() == y.min();
+        return x == y || x.singleton() && y.singleton() && x.min() == y.min();
     }
 
     @Override public boolean satisfied() {

@@ -77,6 +77,17 @@ public class XeqY extends PrimitiveConstraint {
         setScope(x, y);
     }
 
+    @Override public void impose(Store store) {
+
+        if (x == y) {
+            // If x and y are the same, XeqY is trivially consistent.
+            return;
+        }
+
+        super.impose(store);
+
+    }
+
     @Override public void consistency(final Store store) {
 
         do {
@@ -125,7 +136,7 @@ public class XeqY extends PrimitiveConstraint {
     @Override public boolean satisfied() {
         // return grounded() && x.min() == y.min();  // inefficient grounded() :(
         int xMin = x.min();
-        return x.singleton(xMin) && y.singleton(xMin);
+        return x == y || x.singleton(xMin) && y.singleton(xMin);
     }
 
     @Override public String toString() {
