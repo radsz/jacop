@@ -116,11 +116,6 @@ public class XneqY extends PrimitiveConstraint {
 
     @Override public void notConsistency(final Store store) {
 
-        if (x == y) {
-            // If x and y are the same, there is trivially nothing to do.
-            return;
-        }
-
         do {
 
             x.domain.in(store.level, x, y.domain);

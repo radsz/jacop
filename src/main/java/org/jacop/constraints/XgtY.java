@@ -74,6 +74,17 @@ public class XgtY extends PrimitiveConstraint {
         setScope(x, y);
     }
 
+    @Override public void impose(Store store) {
+
+        if (x == y) {
+            // If x and y are the same, XgtY is trivially inconsistent.
+	    throw new IllegalArgumentException("Arguments to XgtY are the same, the model is trivially inconsistent.");
+        }
+
+        super.impose(store);
+
+    }
+
     @Override public void consistency(final Store store) {
         x.domain.inMin(store.level, x, y.min() + 1);
         y.domain.inMax(store.level, y, x.max() - 1);
@@ -101,7 +112,7 @@ public class XgtY extends PrimitiveConstraint {
     }
 
     @Override public boolean notSatisfied() {
-        return x.max() <= y.min();
+        return x == y || x.max() <= y.min();
     }
 
     @Override public boolean satisfied() {

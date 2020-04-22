@@ -75,6 +75,17 @@ public class XgteqY extends PrimitiveConstraint {
         setScope(x, y);
     }
 
+    @Override public void impose(Store store) {
+
+        if (x == y) {
+            // If x and y are the same, XgteqY is trivially consistent.
+	    return;
+        }
+
+        super.impose(store);
+
+    }
+
     @Override public void consistency(final Store store) {
 
         x.domain.inMin(store.level, x, y.min());
@@ -108,7 +119,7 @@ public class XgteqY extends PrimitiveConstraint {
     }
 
     @Override public boolean satisfied() {
-        return x.min() >= y.max();
+        return x == y || x.min() >= y.max();
     }
 
     @Override public String toString() {
