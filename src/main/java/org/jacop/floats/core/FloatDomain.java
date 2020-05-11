@@ -158,7 +158,7 @@ public abstract class FloatDomain extends Domain {
     public static double down(double d) {
 
         if (outward)
-            return downBit(d); //d - ulp(d);  //
+            return Math.nextDown(d);
         else
             return d;
     }
@@ -168,44 +168,15 @@ public abstract class FloatDomain extends Domain {
     public static double up(double d) {
 
         if (outward)
-            return upBit(d); //d + ulp(d); //
+            return Math.nextUp(d);
         else
             return d;
     }
 
     // returns previous (toward -inf) floating-point number before d 
-    // supposed to be used by constraints
-    public static double upBit(double x) {
-        double y;
-
-        if (Double.isInfinite(x) && x > 0)
-            return FloatDomain.MaxFloat; //Double.NaN;
-
-        long xBits = Double.doubleToLongBits(x);
-        if (x > 0.0)
-            y = Double.longBitsToDouble(xBits + 1);
-        else if (x == 0.0)
-            y = Double.longBitsToDouble(1);
-        else
-            y = Double.longBitsToDouble(xBits - 1);
-        return y;
-    }
-
-    // returns previous (toward -inf) floating-point number before d 
-    // supposed to be used by constraints
-    public static double downBit(double x) {
-
-        if (x == 0.0)
-            return -upBit(0.0);
-        else
-            return -upBit(-x);
-    }
-
-
-    // returns previous (toward -inf) floating-point number before d 
     // supposed to be used by methods for domain computations
     public static double previous(double d) {
-        return downBit(d); //d - ulp(d);
+        return Math.nextDown(d);//downBit(d); //d - ulp(d);
     }
 
     // Sets optimization step for floating point optimization
@@ -225,7 +196,7 @@ public abstract class FloatDomain extends Domain {
     // returns next (toward inf) floating-point number after d 
     // supposed to be used by methods for domain computations
     public static double next(double d) {
-        return upBit(d); // d + ulp(d);
+        return Math.nextUp(d);//upBit(d); // d + ulp(d);
     }
 
 
@@ -1330,8 +1301,14 @@ public abstract class FloatDomain extends Domain {
      */
     public final static FloatIntervalDomain addBounds(double a, double b, double c, double d) {
 
-        double min = down(a + c);
-        double max = up(b + d);
+	// Changing constants to smallest encapsulating intervals to
+	// limit rounding effects problem
+	// if (c == d) {
+	//     c = down(c);
+	//     d = up(d);
+	// }
+	double min = down(a + c);
+	double max = up(b + d);
 
         if (d == 0.0)
             max = b;
@@ -1352,8 +1329,14 @@ public abstract class FloatDomain extends Domain {
      */
     public final static FloatIntervalDomain subBounds(double a, double b, double c, double d) {
 
-        double min = down(a - d);
-        double max = up(b - c);
+	// Changing constants to smallest encapsulating intervals to
+	// limit rounding effects problem
+	// if (c == d) {
+	//     c = down(c);
+	//     d = up(d);
+	// }
+	double min = down(a - d);
+	double max = up(b - c);
 
         if (d == 0.0)
             min = a;
