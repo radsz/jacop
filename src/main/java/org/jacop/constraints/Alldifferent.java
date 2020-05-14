@@ -93,6 +93,7 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
 
     @Override public void consistency(Store store) {
 
+	int groundPos = grounded.value();
         do {
 
             store.propagationHasOccurred = false;
@@ -103,17 +104,16 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
             for (IntVar Q : fdvs)
                 if (Q.singleton()) {
                     int qPos = positionMapping.get(Q);
-                    int groundPos = grounded.value();
                     if (qPos > groundPos) {
                         list[qPos] = list[groundPos];
                         list[groundPos] = Q;
                         positionMapping.put(Q, groundPos);
                         positionMapping.put(list[qPos], qPos);
-                        grounded.update(++groundPos);
+			groundPos++;
                         for (int i = groundPos; i < list.length; i++)
                             list[i].domain.inComplement(store.level, list[i], Q.min());
                     } else if (qPos == groundPos) {
-                        grounded.update(++groundPos);
+			groundPos++;
                         for (int i = groundPos; i < list.length; i++)
                             list[i].domain.inComplement(store.level, list[i], Q.min());
                     }
@@ -121,7 +121,7 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
                 }
 
         } while (store.propagationHasOccurred);
-
+	grounded.update(groundPos);
 
     }
 

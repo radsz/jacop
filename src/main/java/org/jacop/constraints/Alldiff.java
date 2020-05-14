@@ -148,6 +148,7 @@ public class Alldiff extends Alldifferent {
 
         if (store.currentQueue == queueIndex) {
 
+	    int groundPos = grounded.value();
             while (!variableQueue.isEmpty()) {
 
                 LinkedHashSet<IntVar> fdvs = variableQueue;
@@ -156,22 +157,22 @@ public class Alldiff extends Alldifferent {
                 for (IntVar Q : fdvs)
                     if (Q.singleton()) {
                         int qPos = positionMapping.get(Q);
-                        int groundPos = grounded.value();
                         if (qPos > groundPos) {
                             list[qPos] = list[groundPos];
                             list[groundPos] = Q;
                             positionMapping.put(Q, groundPos);
                             positionMapping.put(list[qPos], qPos);
-                            grounded.update(++groundPos);
+			    groundPos++;
                             for (int i = groundPos; i < list.length; i++)
                                 list[i].domain.inComplement(store.level, list[i], Q.min());
                         } else if (qPos == groundPos) {
-                            grounded.update(++groundPos);
+			    groundPos++;
                             for (int i = groundPos; i < list.length; i++)
                                 list[i].domain.inComplement(store.level, list[i], Q.min());
                         }
                     }
             }
+	    grounded.update(groundPos);
 
             if (queueIndex + 1 < store.queueNo) {
                 store.changed[queueIndex + 1].add(this);
