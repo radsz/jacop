@@ -141,7 +141,7 @@ public class Options {
                 } else if (args[i].equals("-s") || args[i].equals("--statistics")) {
                     statistics = true;
                     i++;
-                } else if (args[i].equals("-f")) {
+                } else if (args[i].equals("-f") || args[i].equals("--free-search")) {
                     freeSearch = true;
                     i++;
                 } else if (args[i].equals("-sat")) {
