@@ -103,6 +103,9 @@ public class XdivYeqZ extends Constraint implements SatisfiedPresent {
             if (x.min() >= 0) {
                 reminderMin = 0;
                 reminderMax = Math.max(Math.abs(y.min()), Math.abs(y.max())) - 1;
+
+                reminderMax = Math.min(reminderMax, x.max());
+
             } else if (x.max() < 0) {
                 reminderMax = 0;
                 reminderMin = -Math.max(Math.abs(y.min()), Math.abs(y.max())) + 1;

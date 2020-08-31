@@ -186,7 +186,8 @@ class LinearConstraints implements ParserTreeConstants {
                         } else
                             support.pose(new Reified(new XeqC(p2[0], p3), p4));
                     } else
-                        support.pose(new Reified(new XmulCeqZ(p2[0], p1[0], support.dictionary.getConstant(p3)), p4));
+                        //support.pose(new Reified(new XmulCeqZ(p2[0], p1[0], support.dictionary.getConstant(p3)), p4));
+			support.pose(new Reified(new LinearInt(p2, p1, "==", p3), p4));
                 } else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
                     support.pose(new Reified(new XplusCeqZ(p2[1], p3, p2[0]), p4));
                 } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
@@ -421,7 +422,8 @@ class LinearConstraints implements ParserTreeConstants {
                     if (p1[0] == 1) {
 			support.pose(new Implies(p4, new XeqC(p2[0], p3)));
                     } else
-                        support.pose(new Implies(p4, new XmulCeqZ(p2[0], p1[0], support.dictionary.getConstant(p3))));
+                        // support.pose(new Implies(p4, new XmulCeqZ(p2[0], p1[0], support.dictionary.getConstant(p3))));
+			support.pose(new Implies(p4, new LinearInt(p2, p1, "==", p3)));
                 } else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
                     support.pose(new Implies(p4, new XplusCeqZ(p2[1], p3, p2[0])));
                 } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
@@ -602,9 +604,10 @@ class LinearConstraints implements ParserTreeConstants {
                     else
                         throw store.failException;
 
-                if (p1.length == 1) {
-                    support.pose(new XmulCeqZ(p2[0], p1[0], support.dictionary.getConstant(p3))); // new IntVar(store, p3, p3)));
-                } else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
+                // if (p1.length == 1) {
+                //     support.pose(new XmulCeqZ(p2[0], p1[0], support.dictionary.getConstant(p3))); // new IntVar(store, p3, p3)));
+                // } else
+		if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
                     if (p3 != 0)
                         support.pose(new XplusCeqZ(p2[1], p3, p2[0]));
                     else
@@ -659,17 +662,17 @@ class LinearConstraints implements ParserTreeConstants {
 		    support.pose(new LinearIntDom(p2, p1, "==", p3));
 
                 } else if ((p3 == 0 && p1.length == 3) && ((p1[0] == -1 && p1[1] == -1 && p1[2] == 1) || (p1[0] == 1 && p1[1] == 1
-                    && p1[2] == -1)))
+													  && p1[2] == -1))) {
                     support.pose(new XplusYeqZ(p2[0], p2[1], p2[2]));
-                else if (p3 == 0 && p1.length == 2 && p1[0] == 1) {
-                    support.pose(new XmulCeqZ(p2[1], -p1[1], p2[0]));
-                } else if (p3 == 0 && p1.length == 2 && p1[1] == 1) {
-                    support.pose(new XmulCeqZ(p2[0], -p1[0], p2[1]));
-                } else if (p3 == 0 && p1.length == 2 && p1[0] == -1) {
-                    support.pose(new XmulCeqZ(p2[1], p1[1], p2[0]));
-                } else if (p3 == 0 && p1.length == 2 && p1[1] == -1) {
-                    support.pose(new XmulCeqZ(p2[0], p1[0], p2[1]));
-                } else if ((p3 == 0 && p1.length == 3) && ((p1[0] == 1 && p1[1] == -1 && p1[2] == -1) || (p1[0] == -1 && p1[1] == 1
+                // } else if (p3 == 0 && p1.length == 2 && p1[0] == 1) {
+                //     support.pose(new XmulCeqZ(p2[1], -p1[1], p2[0]));
+                // } else if (p3 == 0 && p1.length == 2 && p1[1] == 1) {
+                //     support.pose(new XmulCeqZ(p2[0], -p1[0], p2[1]));
+                // } else if (p3 == 0 && p1.length == 2 && p1[0] == -1) {
+                //     support.pose(new XmulCeqZ(p2[1], p1[1], p2[0]));
+                // } else if (p3 == 0 && p1.length == 2 && p1[1] == -1) {
+                //     support.pose(new XmulCeqZ(p2[0], p1[0], p2[1]));
+		} else if ((p3 == 0 && p1.length == 3) && ((p1[0] == 1 && p1[1] == -1 && p1[2] == -1) || (p1[0] == -1 && p1[1] == 1
                     && p1[2] == 1))) {
                     if (paramZero(p2[1]))
                         support.pose(new XeqY(p2[2], p2[0]));
