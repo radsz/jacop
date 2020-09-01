@@ -1367,9 +1367,9 @@ public abstract class IntDomain extends Domain {
             result = divIntBounds(a, b, c, -1);
 
         else if ((c > 0 || d < 0) && c <= d) { // case 5
-            float ac = (float) a / c, ad = (float) a / d, bc = (float) b / c, bd = (float) b / d;
-            float low = Math.min(Math.min(ac, ad), Math.min(bc, bd));
-            float high = Math.max(Math.max(ac, ad), Math.max(bc, bd));
+            double ac = (double) a / c, ad = (double) a / d, bc = (double) b / c, bd = (double) b / d;
+            double low = Math.min(Math.min(ac, ad), Math.min(bc, bd));
+            double high = Math.max(Math.max(ac, ad), Math.max(bc, bd));
             min = (int) Math.round(Math.ceil(low));
             max = (int) Math.round(Math.floor(high));
             if (min > max)
