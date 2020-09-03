@@ -131,14 +131,36 @@ public class XmodYeqZ extends Constraint implements SatisfiedPresent {
 		    int absY = Math.abs(y.value());
 		    IntDomain d = makeDomain(x, absY, z);
 		    x.domain.in(store.level, x, d);
-		}
-		else {
+		} else {
 	    	    // bound consistency
 	    	    int absY = Math.abs(y.value());
-	    	    if (!z.domain.contains(x.min() % absY))
-	    		x.domain.inMin(store.level, x, x.min() + 1);
-	    	    else if (!z.domain.contains(x.max() % absY))
-	    		x.domain.inMax(store.level, x, x.max() - 1);
+		    IntDomain zDom = z.dom();
+
+		    // compute LB
+		    int xMin = x.min();
+		    boolean found = false;
+		    for (ValueEnumeration e = x.domain.valueEnumeration(); e.hasMoreElements(); ) {
+			xMin = e.nextElement();
+			if (zDom.contains(xMin % absY)) {
+			    found = true;
+			    break;
+			}
+		    }
+		    if (found)
+			x.domain.inMin(store.level, x, xMin);
+		    else
+			throw Store.failException;
+
+		    // compute UB
+		    int xMax = x.max();
+		    xMin = x.min();
+		    while (!zDom.contains(xMax % absY) && xMax >= xMin) {
+			xMax--;
+		    }
+		    if (xMax >= xMin)
+			x.domain.inMax(store.level, x, xMax);
+		    else
+			throw Store.failException;
 		}
 	    }
 	    
