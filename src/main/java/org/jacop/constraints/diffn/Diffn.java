@@ -274,7 +274,7 @@ public class Diffn extends Nooverlap {
                     }
                 }
             }
-        }
+	}
         if (!mandatoryExists)
             return;
 
@@ -313,7 +313,6 @@ public class Diffn extends Nooverlap {
 
         // used for duration variable pruning
         int lastBarier = Integer.MAX_VALUE;
-        boolean startAtEnd = false;
 
         for (int i = 0; i < N; i++) {
 
@@ -384,14 +383,8 @@ public class Diffn extends Nooverlap {
                                     }
 
                             // ========= for duration pruning
-                            if (e.date() <= r.lst(dim))
-                                if (limit - profileValue < r.length(oDim).min())
-                                    startAtEnd = false;
-                                else  // limit - profileValue >= t.length(oDim).min()
-                                    startAtEnd = true;
-
                             if (lastBarier == Integer.MAX_VALUE && e.date() >= r.lst(dim) && (limit - profileValue < r.length(oDim).min()
-                                || blocking))
+			         || blocking))
                                 lastBarier = e.date();
 
                             // ========= resource pruning
@@ -419,9 +412,6 @@ public class Diffn extends Nooverlap {
                             rr.origin(oDim).max() + rr.length(oDim).min(), rr.length(oDim).min())) {
                             startExcluded = e.date();
                         }
-
-                    // ========= for duration pruning
-                    startAtEnd = true;
 
                     // ========= resource pruning
                     if (rr.lst(dim) <= e.date() && e.date() < rr.ect(dim) && limit - profileValue < rr.length(oDim).max())
@@ -466,20 +456,13 @@ public class Diffn extends Nooverlap {
                         rr.length(oDim).domain.inMax(store.level, rr.length(oDim), limit - profileValue);
 
                     // ========= duration pruning
-                    int maxDuration = Integer.MIN_VALUE;
-                    Interval lastInterval = null;
+		    int maxDuration = IntDomain.subtractInt(lastBarier, rr.origin(dim).min());
 
-                    for (IntervalEnumeration e1 = rr.origin(dim).dom().intervalEnumeration(); e1.hasMoreElements(); ) {
-                        Interval i1 = e1.nextElement();
-                        maxDuration = Math.max(maxDuration, i1.max() - i1.min() + rr.length(dim).min());
-                        lastInterval = i1;
-                    }
-                    if (startAtEnd)
-                        maxDuration = Math.max(maxDuration, lastBarier - lastInterval.min());
-
-                    if (maxDuration < rr.length(dim).max()) {
-                        if (debugNarr)
-                            System.out.print(">>> Diffn Profile 3. Narrowed " + rr.length(dim) + " in 0.." + maxDuration);
+		    if (maxDuration < rr.length(dim).max()) {
+			if (debugNarr) {
+			    System.out.println(">>> " + rr.origin(dim) + ", lastBarier = " + lastBarier + ", e.date() = " + e.date());
+                            System.out.print(">>> Diffn Profile 3. Narrowed " + rr.length(dim) + " in -inf.." + maxDuration);
+			}
 
                         rr.length(dim).domain.inMax(store.level, rr.length(dim), maxDuration);
 
