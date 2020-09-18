@@ -69,23 +69,16 @@ public class ArgMin extends Constraint implements SatisfiedPresent {
     public int indexOffset;
 
     /**
-     * tirbreak == true {@literal -->} select element with the lowest index if exist several
-     */
-    public boolean tiebreak = true;
-
-    /**
      * It constructs max constraint.
      *
      * @param minIndex    variable denoting the index of the maximum value
      * @param list        the array of variables for which the index of the maximum value is imposed.
      * @param indexOffset the offset for the index that is computed from 1 by default (if needed from 0, use -1 for this parameter)
-     * @param tiebreak    defines if tie breaking should be used (returning the least index if several maximum elements
      */
-    public ArgMin(IntVar[] list, IntVar minIndex, int indexOffset, boolean tiebreak) {
+    public ArgMin(IntVar[] list, IntVar minIndex, int indexOffset) {
 
         this(list, minIndex);
         this.indexOffset = indexOffset;
-        this.tiebreak = tiebreak;
     }
 
     public ArgMin(IntVar[] list, IntVar minIndex) {
@@ -107,12 +100,10 @@ public class ArgMin extends Constraint implements SatisfiedPresent {
      * @param minIndex    variable denoting the index of minimum value
      * @param variables   the array of variables for which the minimum value is imposed.
      * @param indexOffset the offset for the index that is computed from 1 by default (if needed from 0, use -1 for this parameter)
-     * @param tiebreak    defines if tie breaking sgould be used (returning the least index if several maximum elements
      */
-    public ArgMin(List<? extends IntVar> variables, IntVar minIndex, int indexOffset, boolean tiebreak) {
+    public ArgMin(List<? extends IntVar> variables, IntVar minIndex, int indexOffset) {
         this(variables, minIndex);
         this.indexOffset = indexOffset;
-        this.tiebreak = tiebreak;
     }
 
     public ArgMin(List<? extends IntVar> variables, IntVar minIndex) {
@@ -123,105 +114,77 @@ public class ArgMin extends Constraint implements SatisfiedPresent {
 
     @Override public void consistency(Store store) {
 
-        IntVar var;
-        IntDomain vDom;
-
         if (firstConsistencyCheck) {
             minIndex.domain.in(store.level, minIndex, 1 + indexOffset, list.length + indexOffset);
             firstConsistencyCheck = false;
         }
 
-        do {
+	do {
 
-            store.propagationHasOccurred = false;
+	    store.propagationHasOccurred = false;
+	
+	    int lb = IntDomain.MaxInt;
+	    int ub = IntDomain.MaxInt;
+	    int pos = -1;
 
-            int minValue = IntDomain.MaxInt;
-            int maxValue = IntDomain.MaxInt;
-            int pos = -1;
+	    // find lower/upper bounds for elements on list
+	    for (int i = 0; i < list.length; i++) {
 
-            int singleMinValue = IntDomain.MaxInt;
-            boolean singleExists = false;
-            for (int i = 0; i < minIndex.min() - 1 - indexOffset; i++) {
+		int vDomMin = list[i].dom().min();
+		if (lb > vDomMin) {
+		    lb = vDomMin;
+		}
 
-                vDom = list[i].dom();
-                int VdomMin = vDom.min(), VdomMax = vDom.max();
+		int vDomMax = list[i].dom().max();
+		if (ub > vDomMax) {
+		    ub = vDomMax;
+		    pos = i;
+		}
+	    }
 
-                if (minValue > VdomMin) {
-                    minValue = VdomMin;
-                    pos = i + 1 + indexOffset;
-                }
-                if (maxValue > VdomMax) {
-                    maxValue = VdomMax;
-                }
+	    if (lb == ub)
+		minIndex.domain.inMax(store.level, minIndex, pos + 1 + indexOffset);
 
-                if (list[i].singleton()) {
-                    singleExists = true;
-                    if (list[i].value() < singleMinValue)
-                        singleMinValue = list[i].value();
-                }
-            }
+	    // find min/max values for index
+	    int idxMin = IntDomain.MaxInt, idxMax = IntDomain.MinInt;
+	    for (int i = 0; i < list.length; i++) {
+		int cp = i + 1 + indexOffset;
 
-            for (ValueEnumeration e = minIndex.dom().valueEnumeration(); e.hasMoreElements(); ) {
-                int i = e.nextElement() - 1 - indexOffset;
+		if (list[i].min() <= ub) {
+		    idxMin = Math.min(idxMin, cp);
+		    idxMax = Math.max(idxMax, cp);
+		}
+	    }
+	    if (idxMin < IntDomain.MaxInt)  // non-empty index
+		minIndex.domain.in(store.level, minIndex, idxMin, idxMax);
+	    else
+		throw Store.failException;
 
-                vDom = list[i].dom();
-                int VdomMin = vDom.min(), VdomMax = vDom.max();
+	    // find min value for variables indexed by index variable
+	    lb = IntDomain.MaxInt;
+	    pos = -1;
+	    for (ValueEnumeration e = minIndex.dom().valueEnumeration(); e.hasMoreElements(); ) {
+		int i = e.nextElement() - 1 - indexOffset;
 
-                if (minValue > VdomMin) {
-                    minValue = VdomMin;
-                    pos = i + 1 + indexOffset;
-                }
-                if (maxValue > VdomMax) {
-                    maxValue = VdomMax;
-                }
-            }
+		int vDomMin = list[i].dom().min();
+		if (lb > vDomMin) {
+		    lb = vDomMin;
+		    pos = i;
+		}
+	    }
+	    if (list[pos].singleton())
+		minIndex.domain.in(store.level, minIndex, pos + 1 + indexOffset, pos + 1 + indexOffset);
 
-            if (tiebreak && minValue == maxValue) { // selecting the element with lowest index
+	    // prune values on the list
+	    int im = minIndex.min();
+	    for (int i = 0; i < list.length; i++) {
+		int cp = i + 1 + indexOffset;
 
-                minIndex.domain.in(store.level, minIndex, pos, pos);
-
-                for (int i = 0; i < list.length; i++) {
-
-                    IntVar vi = list[i];
-
-                    if (i + 1 + indexOffset < pos)
-                        vi.domain.inMin(store.level, vi, minValue + 1);
-                    else if (i + 1 + indexOffset > pos)
-                        vi.domain.inMin(store.level, vi, minValue);
-                }
-
-                return;
-
-            } else { // no selection of a particular element
-                // BoundDomain d = new BoundDomain(minValue, maxValue);
-                IntervalDomain indexDom = new IntervalDomain();
-                for (int i = 0; i < list.length; i++) {
-                    var = list[i];
-                    if (var.min() >= minValue && var.min() <= maxValue) // (d.isIntersecting(var.dom()) )
-                        indexDom.unionAdapt(i + 1 + indexOffset, i + 1 + indexOffset);
-                }
-
-                minIndex.domain.in(store.level, minIndex, indexDom);
-
-                if (minIndex.singleton() && singleExists) {
-                    IntVar sv = list[minIndex.value() - 1 - indexOffset];
-                    sv.domain.inMax(store.level, sv, singleMinValue - 1);
-                }
-
-                for (int i = 0; i < list.length; i++) {
-                    var = list[i];
-
-                    if (!minIndex.dom().isIntersecting(i + 1 + indexOffset, i + 1 + indexOffset)) {
-                        if (tiebreak) {
-                            if (i + 1 + indexOffset < minIndex.min())
-                                var.domain.inMin(store.level, var, minValue + 1);
-                            else if (i + 1 + indexOffset > minIndex.max())
-                                var.domain.inMin(store.level, var, minValue);
-                        } else
-                            var.domain.inMin(store.level, var, minValue + 1);
-                    }
-                }
-            }
+		if (cp < im)
+		    list[i].domain.inMin(store.level, list[i], lb + 1);
+		else if (cp > im)
+		    list[i].domain.inMin(store.level, list[i], lb);
+	    }
 
         } while (store.propagationHasOccurred);
     }

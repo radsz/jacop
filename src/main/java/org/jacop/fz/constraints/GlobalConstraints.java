@@ -1148,12 +1148,11 @@ class GlobalConstraints implements ParserTreeConstants {
 
 	int n = x.length;
 	if (n == 2) {
-	    if (x[0].singleton(1) && x[1].singleton(0)) {
-		support.pose(new XeqY(b[0], y));
+	    if (b[0].singleton(1)) {
+		support.pose(new XeqY(x[0], y));
 		return;
-	    } else if (x[0].singleton(0) && x[1].singleton(1)) {
-		y.domain.in(store.level, y, 0, 1);
-		support.pose(new XneqY(b[0], y));
+	    } else if (b[0].singleton(0) && b[1].singleton(1)) {
+		support.pose(new XeqY(x[1], y));
 		return;
 	    }
 	}
@@ -1165,8 +1164,10 @@ class GlobalConstraints implements ParserTreeConstants {
 	    else
 		cs[i] = new XeqY(y, x[i]);
 	}
-
-	support.pose(new Conditional(b, cs));
+	if (n == 2)
+	    support.pose(new IfThenElse(new XeqC(b[0],1), cs[0], cs[1]));
+	else
+	    support.pose(new Conditional(b, cs));
     }
 
     void gen_jacop_if_then_else_float(SimpleNode node) {
@@ -1183,7 +1184,10 @@ class GlobalConstraints implements ParserTreeConstants {
 		cs[i] = new PeqQ(y, x[i]);
 	}
 
-	support.pose(new Conditional(b, cs));
+	if (n == 2)
+	    support.pose(new IfThenElse(new XeqC(b[0],1), cs[0], cs[1]));
+	else
+	    support.pose(new Conditional(b, cs));
 
     }
 
@@ -1201,7 +1205,10 @@ class GlobalConstraints implements ParserTreeConstants {
 		cs[i] = new AeqB(y, x[i]);
 	}
 
-	support.pose(new Conditional(b, cs));
+	if (n == 2)
+	    support.pose(new IfThenElse(new XeqC(b[0],1), cs[0], cs[1]));
+	else
+	    support.pose(new Conditional(b, cs));
 
     }
 

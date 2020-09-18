@@ -130,11 +130,14 @@ public class Conditional extends Constraint implements SatisfiedPresent {
 
 	    if (b[i].min() == 1) {
 		c[i].consistency(store);
-
+		
 		if (c[i].satisfied())
 		    removeConstraint();
 	    } else if (c[i].notSatisfied()) {
 		b[i].domain.in(store.level, b[i], 0, 0);
+		prune = true;
+	    } else if (b.length == 2 && c[i].satisfied()) {
+		b[i].domain.in(store.level, b[i], 1, 1);
 		prune = true;
 	    }
 	}
