@@ -84,6 +84,7 @@ public class XmulYeqZ extends Constraint implements SatisfiedPresent {
         this.x = x;
         this.y = y;
         this.z = z;
+	this.queueIndex = 1;
 
         // checkForOverflow();
 
