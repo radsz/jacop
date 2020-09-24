@@ -1056,7 +1056,8 @@ public class MUCA extends ExampleFD {
                 store.impose(new XplusYgtC(previousPartialSum, deltasI[i][g], -1));
 
                 IntVar partialSum = new IntVar(store, "partialSum_" + g + "_" + i, 0, maxProducts);
-                store.impose(new XplusYplusQeqZ(previousPartialSum, deltasI[i][g], deltasO[i][g], partialSum));
+                // store.impose(new XplusYplusQeqZ(previousPartialSum, deltasI[i][g], deltasO[i][g], partialSum));
+                store.impose(new SumInt(new IntVar[] {previousPartialSum, deltasI[i][g], deltasO[i][g]}, "==", partialSum));
 
                 // store.impose(new XgteqC(partialSum, 0));
                 previousPartialSum = partialSum;
