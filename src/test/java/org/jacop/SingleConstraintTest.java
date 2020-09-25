@@ -464,44 +464,6 @@ public class SingleConstraintTest extends TestHelper {
     }
 
 
-    @Test public void testXplusYplusCeqZ() {
-
-        Store store = new Store();
-
-        int xLength = 3;
-        int xSize = 3;
-        IntVar[] x = getIntVars(store, "x", xLength, xSize);
-
-        XplusYplusCeqZ xplusYplusQgtC = new XplusYplusCeqZ(x[0], x[1], 1, x[2]);
-
-        store.impose(xplusYplusQgtC);
-
-        store.print();
-        int noOfSolutions = noOfAllSolutions(store, x);
-
-        assertThat(noOfSolutions, is(xSize));
-
-    }
-
-    @Test public void testXplusYplusQgtC() {
-
-        Store store = new Store();
-
-        int xLength = 3;
-        int xSize = 3;
-        IntVar[] x = getIntVars(store, "x", xLength, xSize);
-
-        XplusYplusQgtC xplusYplusQgtC = new XplusYplusQgtC(x[0], x[1], x[2], 2);
-
-        store.impose(xplusYplusQgtC);
-
-        store.print();
-        int noOfSolutions = noOfAllSolutions(store, x);
-
-        assertThat(noOfSolutions, is(17));
-
-    }
-
     @Test public void testAlldiff() {
 
         Store store = new Store();
@@ -591,7 +553,7 @@ public class SingleConstraintTest extends TestHelper {
 
         IntVar[] x = getShiftedIntVars(store, "x", xLength, xSize + 1);
         IntVar index = new IntVar(store, "index", 0, xLength);
-        ArgMin argMin = new ArgMin(x, index, -1, true);
+        ArgMin argMin = new ArgMin(x, index, -1);
 
         store.impose(argMin);
 
@@ -613,7 +575,7 @@ public class SingleConstraintTest extends TestHelper {
 
         IntVar[] x = getShiftedIntVars(store, "x", xLength, xSize + 1);
         IntVar index = new IntVar(store, "index", 0, xLength);
-        ArgMax argMax = new ArgMax(x, index, -1, true);
+        ArgMax argMax = new ArgMax(x, index, -1);
 
         store.impose(argMax);
 

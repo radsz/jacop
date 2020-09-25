@@ -119,22 +119,22 @@ public class XmulYeqZ extends Constraint implements SatisfiedPresent {
         else    // X*Y=Z
             do {
 
+                // Bounds for Z
+                Interval zBounds = IntDomain.mulBounds(x.min(), x.max(), y.min(), y.max());
+
+                z.domain.in(store.level, z, zBounds.min(), zBounds.max());
+
+                store.propagationHasOccurred = false;
+
                 // Bounds for X
                 Interval xBounds = IntDomain.divIntBounds(z.min(), z.max(), y.min(), y.max());
 
                 x.domain.in(store.level, x, xBounds.min(), xBounds.max());
 
-                store.propagationHasOccurred = false;
-
                 // Bounds for Y
                 Interval yBounds = IntDomain.divIntBounds(z.min(), z.max(), x.min(), x.max());
 
                 y.domain.in(store.level, y, yBounds.min(), yBounds.max());
-
-                // Bounds for Z
-                Interval zBounds = IntDomain.mulBounds(x.min(), x.max(), y.min(), y.max());
-
-                z.domain.in(store.level, z, zBounds.min(), zBounds.max());
 
 
             } while (store.propagationHasOccurred);

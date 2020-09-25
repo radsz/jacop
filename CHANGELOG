@@ -11,19 +11,35 @@ Version 4.8
 
 3. Improvement in propagation for XinA constraint.
 
-4. Improvement in pruning of task duration in Cumulative Basic
+4. Improvement of propagation and changing domain consistency for
+   index in ArgMin and ArgMax to bounds for large domains.
+
+5. Generation of IfThenElse constraint instead of Conditional for
+   flatzinc if_then_else_* constraints in cases when it is possible.
+
+6. Improvement in pruning of task duration in Cumulative Basic
    constraint.
 
-5. New implementation of counting constraints in flatzinc. Some
+7. New implementation of counting constraints in flatzinc. Some
    compile to Atleast and AtMost. Original at_least and at_most are
    deprecated from version 2.4 of Minizinc.
 
-6. New CountVar constraint and its flatzinc interface.
+8. New CountVar constraint and its flatzinc interface.
 
-7. Changeing Scala compiler to 2.13.1 and making related code chnages.
+9. Removing limitation in flatzinc compiler that flatzinc variables
+   must have domains within interval
+   IntDomain.MinInt..IntDomain.MaxInt. First constraints might report
+   arithmetic overflow.
 
-8. Not recognized search options in flatzinc are ignored instead of
-   aborting computation.
+10. Changing Scala compiler to 2.13.1 and making related code changes.
+
+11. Not recognized search options in flatzinc are ignored instead of
+    aborting computation.
+
+12. Changing IntDomain.divIntBounds method to use double instead of floats
+    for bounds calculations (better precision).
+
+13. Bug corrections.
 
 Version 4.7
 =============
