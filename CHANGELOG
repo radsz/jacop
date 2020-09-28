@@ -39,7 +39,10 @@ Version 4.8
 12. Changing IntDomain.divIntBounds method to use double instead of floats
     for bounds calculations (better precision).
 
-13. Bug corrections.
+13. Constraints XplusYplusQeqZ, XplusYplusCeqZ and XplusYplusQeqC are
+    removed. Use SumInt instead.
+
+14. Bug corrections.
 
 Version 4.7
 =============

@@ -1296,12 +1296,13 @@ public abstract class IntDomain extends Domain {
      */
     public final static Interval squareBounds(int a, int b) {
 
-        int aa = multiplyInt(a, a), ab = multiplyInt(a, b), bb = multiplyInt(b, b);
-        int min = Math.min(Math.min(aa, ab), bb);
-        int max = Math.max(Math.max(aa, ab), bb);
+        int aa = multiplyInt(a, a),
+	    bb = multiplyInt(b, b);
+        int min = (aa < bb) ? aa : bb; //Math.min(aa, bb);
+	int max = (aa > bb) ? aa : bb; //Math.max(aa, bb);
 
-        if (min < 0)
-            min = 0;
+        if (a < 0 && b > 0)
+	    min = 0;
 
         return new Interval(min, max);
     }

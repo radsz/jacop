@@ -103,17 +103,20 @@ public class XmulYeqZ extends Constraint implements SatisfiedPresent {
                 store.propagationHasOccurred = false;
 
                 // Bounds for X
-
                 int xMin = toInt(Math.round(Math.ceil(Math.sqrt((double) z.min()))));
                 int xMax = toInt(Math.round(Math.floor(Math.sqrt((double) z.max()))));
 
                 if (xMin > xMax)
                     throw Store.failException;
 
-                IntDomain dom = new IntervalDomain(-xMax, -xMin);
-                dom.unionAdapt(xMin, xMax);
+		if (x.min() < 0) {
+		    IntDomain dom = new IntervalDomain(-xMax, -xMin);
+		    dom.unionAdapt(xMin, xMax);
+		    x.domain.in(store.level, x, dom);
+		}
+		else
+		    x.domain.in(store.level, x, xMin, xMax);
 
-                x.domain.in(store.level, x, dom);
 
             } while (store.propagationHasOccurred);
         else    // X*Y=Z
