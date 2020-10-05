@@ -441,7 +441,7 @@ class GlobalConstraints implements ParserTreeConstants {
         int[] cover = support.getIntArray((SimpleNode) node.jjtGetChild(1));
         int[] low = support.getIntArray((SimpleNode) node.jjtGetChild(2));
         int[] up = support.getIntArray((SimpleNode) node.jjtGetChild(3));
-		   
+
         IntDomain gcc_dom = new IntervalDomain();
 	int[] newCover = new int[cover.length];
 	int n=0;
@@ -463,6 +463,11 @@ class GlobalConstraints implements ParserTreeConstants {
             counter[i] = new IntVar(store, "counter" + i, low[newCover[i]], up[newCover[i]]);
 
         support.pose(new GCC(x, counter));
+
+        if (support.domainConsistency && !support.options.getBoundConsistency())
+	    // we add additional CountBounds constraint if domain consistency is required
+	    for (int i = 0; i < low.length; i++)
+		support.pose(new CountBounds(x, cover[i], low[i], up[i]));
     }
 
     boolean varsContain(IntVar[] x, int e) {
@@ -648,8 +653,9 @@ class GlobalConstraints implements ParserTreeConstants {
     void gen_jacop_minimum_arg_int(SimpleNode node) {
         IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
         IntVar index = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
+        int offset = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
 
-        support.pose(new ArgMin(x, index));
+        support.pose(new ArgMin(x, index, offset - 1));
     }
 
     void gen_jacop_minimum(SimpleNode node) {
@@ -662,8 +668,9 @@ class GlobalConstraints implements ParserTreeConstants {
     void gen_jacop_maximum_arg_int(SimpleNode node) {
         IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
         IntVar index = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
+        int offset = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
 
-        support.pose(new ArgMax(x, index));
+        support.pose(new ArgMax(x, index, offset - 1));
     }
 
     void gen_jacop_maximum(SimpleNode node) {

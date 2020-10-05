@@ -11,8 +11,7 @@ Version 4.8
 
 3. Improvement in propagation for XinA constraint.
 
-4. Improvement of propagation and changing domain consistency for
-   index in ArgMin and ArgMax to bounds for large domains.
+4. Improvement of propagation for ArgMin and ArgMax.
 
 5. Generation of IfThenElse constraint instead of Conditional for
    flatzinc if_then_else_* constraints in cases when it is possible.
@@ -42,7 +41,11 @@ Version 4.8
 13. Constraints XplusYplusQeqZ, XplusYplusCeqZ and XplusYplusQeqC are
     removed. Use SumInt instead.
 
-14. Bug corrections.
+14. Additional CountBounds constraint added in flatzinc translation of
+    global_cardinality_low_up_closed if domain consistency annotation
+    is present (GCC does bounds consistency only).
+
+15. Bug corrections and performance improvements.
 
 Version 4.7
 =============

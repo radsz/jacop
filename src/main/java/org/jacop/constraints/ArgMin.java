@@ -119,62 +119,81 @@ public class ArgMin extends Constraint implements SatisfiedPresent {
             firstConsistencyCheck = false;
         }
 
-	do {
+	int lb = IntDomain.MaxInt;
+	int ub = IntDomain.MaxInt;
+	int pos = -1;
 
-	    store.propagationHasOccurred = false;
-	
-	    int lb = IntDomain.MaxInt;
-	    int ub = IntDomain.MaxInt;
-	    int pos = -1;
+	// find lower/upper bounds for elements on list
+	for (int i = 0; i < list.length; i++) {
 
-	    // find lower/upper bounds for elements on list
+	    int vDomMin = list[i].dom().min();
+	    if (lb > vDomMin) {
+		lb = vDomMin;
+	    }
+
+	    int vDomMax = list[i].dom().max();
+	    if (ub > vDomMax) {
+		ub = vDomMax;
+		pos = i;
+	    }
+	}
+
+	if (lb == ub)
+	    minIndex.domain.inMax(store.level, minIndex, pos + 1 + indexOffset);
+
+	// find min/max values for index
+	IntervalDomain idxDomain = new IntervalDomain();
+	for (int i = 0; i < list.length; i++) {
+	    int cp = i + 1 + indexOffset;
+
+	    if (list[i].min() <= ub) {
+		if (idxDomain.getSize() == 0)
+		    idxDomain.unionAdapt(cp, cp);
+		else
+		    idxDomain.addLastElement(cp);
+	    }
+	}
+	if (idxDomain.isEmpty())
+	    throw Store.failException;
+	else
+	    minIndex.domain.in(store.level, minIndex, idxDomain);
+
+	// find min value for variables indexed by index variable
+	lb = IntDomain.MaxInt;
+	pos = -1;
+	for (ValueEnumeration e = minIndex.dom().valueEnumeration(); e.hasMoreElements(); ) {
+	    int i = e.nextElement() - 1 - indexOffset;
+
+	    int vDomMin = list[i].dom().min();
+	    if (lb > vDomMin) {
+		lb = vDomMin;
+		pos = i;
+	    }
+	}
+	if (list[pos].singleton())
+	    minIndex.domain.in(store.level, minIndex, pos + 1 + indexOffset, pos + 1 + indexOffset);
+
+	if (minIndex.singleton()) {
+
+	    int idx = minIndex.value() - 1 - indexOffset;
+	    IntVar y = list[idx];
+
 	    for (int i = 0; i < list.length; i++) {
 
-		int vDomMin = list[i].dom().min();
-		if (lb > vDomMin) {
-		    lb = vDomMin;
+		// prune variables before and after index of max value
+		IntVar x = list[i];
+		if (i < idx) {
+		    // x > y
+		    x.domain.inMin(store.level, x, y.min() + 1);
+		    y.domain.inMax(store.level, y, x.max() - 1);
 		}
-
-		int vDomMax = list[i].dom().max();
-		if (ub > vDomMax) {
-		    ub = vDomMax;
-		    pos = i;
-		}
-	    }
-
-	    if (lb == ub)
-		minIndex.domain.inMax(store.level, minIndex, pos + 1 + indexOffset);
-
-	    // find min/max values for index
-	    int idxMin = IntDomain.MaxInt, idxMax = IntDomain.MinInt;
-	    for (int i = 0; i < list.length; i++) {
-		int cp = i + 1 + indexOffset;
-
-		if (list[i].min() <= ub) {
-		    idxMin = Math.min(idxMin, cp);
-		    idxMax = Math.max(idxMax, cp);
+		else {
+		    // x >= y
+		    x.domain.inMin(store.level, x, y.min());
+		    y.domain.inMax(store.level, y, x.max());
 		}
 	    }
-	    if (idxMin < IntDomain.MaxInt)  // non-empty index
-		minIndex.domain.in(store.level, minIndex, idxMin, idxMax);
-	    else
-		throw Store.failException;
-
-	    // find min value for variables indexed by index variable
-	    lb = IntDomain.MaxInt;
-	    pos = -1;
-	    for (ValueEnumeration e = minIndex.dom().valueEnumeration(); e.hasMoreElements(); ) {
-		int i = e.nextElement() - 1 - indexOffset;
-
-		int vDomMin = list[i].dom().min();
-		if (lb > vDomMin) {
-		    lb = vDomMin;
-		    pos = i;
-		}
-	    }
-	    if (list[pos].singleton())
-		minIndex.domain.in(store.level, minIndex, pos + 1 + indexOffset, pos + 1 + indexOffset);
-
+	} else {
 	    // prune values on the list
 	    int im = minIndex.min();
 	    for (int i = 0; i < list.length; i++) {
@@ -185,12 +204,30 @@ public class ArgMin extends Constraint implements SatisfiedPresent {
 		else if (cp > im)
 		    list[i].domain.inMin(store.level, list[i], lb);
 	    }
+	}
 
-        } while (store.propagationHasOccurred);
+	// if (maxIndex.singleton() && list[maxIndex.value() - 1 - indexOffset].singleton())
+	//     removeConstraint();
     }
 
     @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
+    }
+
+    @Override public int getConsistencyPruningEvent(Var var) {
+
+        // If consistency function mode
+        if (consistencyPruningEvents != null) {
+            Integer possibleEvent = consistencyPruningEvents.get(var);
+            if (possibleEvent != null)
+                return possibleEvent;
+        }
+
+        if (var == minIndex)
+            return IntDomain.ANY;
+        else {
+	    return IntDomain.BOUND;
+	}
     }
 
     @Override public boolean satisfied() {
@@ -224,7 +261,7 @@ public class ArgMin extends Constraint implements SatisfiedPresent {
         }
 
         result.append("], ").append(this.minIndex);
-        result.append(")");
+        result.append(", "+indexOffset+")");
 
         return result.toString();
     }

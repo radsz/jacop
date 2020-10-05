@@ -116,81 +116,118 @@ public class ArgMax extends Constraint implements SatisfiedPresent {
             firstConsistencyCheck = false;
         }
 
-	do {
+	int lb = IntDomain.MinInt;
+	int ub = IntDomain.MinInt;
+	int pos = -1;
 
-	    store.propagationHasOccurred = false;
-	
-	    int lb = IntDomain.MinInt;
-	    int ub = IntDomain.MinInt;
-	    int pos = -1;
+	// find lower/upper bounds for indexed elements on list
+	for (ValueEnumeration e = maxIndex.dom().valueEnumeration(); e.hasMoreElements(); ) {
+	    int cp = e.nextElement();
+	    int i = cp - 1 - indexOffset;
 
-	    // find lower/upper bounds for elements on list
+	    int vDomMin = list[i].min();
+	    if (lb < vDomMin) {
+		lb = vDomMin;
+		pos = i;
+	    }
+
+	    int vDomMax = list[i].max();
+	    if (ub < vDomMax) {
+		ub = vDomMax;
+	    }
+	}
+	if (lb == ub)
+	    maxIndex.domain.inMax(store.level, maxIndex, pos + 1 + indexOffset);
+
+	// find min/max values for index
+	IntervalDomain idxDomain = new IntervalDomain();
+	for (ValueEnumeration e = maxIndex.dom().valueEnumeration(); e.hasMoreElements(); ) {
+	    int cp = e.nextElement();
+	    int i = cp - 1 - indexOffset;
+
+	    if (list[i].max() >= lb) {
+		if (idxDomain.getSize() == 0)
+		    idxDomain.unionAdapt(cp, cp);
+		else
+		    idxDomain.addLastElement(cp);
+	    }
+	}
+	if (idxDomain.isEmpty())
+	    throw Store.failException;
+	else
+	    maxIndex.domain.in(store.level, maxIndex, idxDomain);
+
+	ub = IntDomain.MinInt;
+	pos = -1;
+	for (ValueEnumeration e = maxIndex.dom().valueEnumeration(); e.hasMoreElements(); ) {
+	    int i = e.nextElement() - 1 - indexOffset;
+
+	    int vDomMax = list[i].max();
+	    if (ub < vDomMax) {
+		ub = vDomMax;
+		pos = i;
+	    }
+	}
+	if (list[pos].singleton())
+	    maxIndex.domain.in(store.level, maxIndex, pos + 1 + indexOffset, pos + 1 + indexOffset);
+
+	if (maxIndex.singleton()) {
+
+	    int idx = maxIndex.value() - 1 - indexOffset;
+	    IntVar y = list[idx];
+
 	    for (int i = 0; i < list.length; i++) {
 
-		int vDomMin = list[i].min();
-		if (lb < vDomMin) {
-		    lb = vDomMin;
-		    pos = i;
+		// prune variables before and after index of max value
+		IntVar x = list[i];
+		if (i < idx) {
+		    // x < y
+		    x.domain.inMax(store.level, x, y.max() - 1);
+		    y.domain.inMin(store.level, y, x.min() + 1);
 		}
-
-		int vDomMax = list[i].max();
-		if (ub < vDomMax) {
-		    ub = vDomMax;
-		}
-	    }
-	    if (lb == ub)
-		maxIndex.domain.inMax(store.level, maxIndex, pos + 1 + indexOffset);
-
-	    // find min/max values for index
-	    int idxMin = IntDomain.MaxInt, idxMax = IntDomain.MinInt;
-	    for (ValueEnumeration e = maxIndex.dom().valueEnumeration(); e.hasMoreElements(); ) {
-		int cp = e.nextElement();
-		int i = cp - 1 - indexOffset;
-
-		if (list[i].max() >= lb) {
-		    idxMin = Math.min(idxMin, cp);
-		    idxMax = Math.max(idxMax, cp);
+		else {
+		    // x <= y
+		    x.domain.inMax(store.level, x, y.max());
+		    y.domain.inMin(store.level, y, x.min());
 		}
 	    }
-	    if (idxMin < IntDomain.MaxInt)  // non-empty index
-		maxIndex.domain.in(store.level, maxIndex, idxMin, idxMax);
-	    else
-		throw Store.failException;
-
-	    ub = IntDomain.MinInt;
-	    pos = -1;
-	    for (ValueEnumeration e = maxIndex.dom().valueEnumeration(); e.hasMoreElements(); ) {
-		int i = e.nextElement() - 1 - indexOffset;
-
-		int vDomMax = list[i].max();
-		if (ub < vDomMax) {
-		    ub = vDomMax;
-		    pos = i;
-		}
-	    }
-	    if (list[pos].singleton())
-		maxIndex.domain.in(store.level, maxIndex, pos + 1 + indexOffset, pos + 1 + indexOffset);
-
+	} else {
 	    // prune values on the list
 	    int im = maxIndex.min();
-	    int groundIndex = -1, groundMax = IntDomain.MinInt;
 	    for (int i = 0; i < list.length; i++) {
 		int cp = i + 1 + indexOffset;
 
-		// find max on the list outside max interval
+		// prune variables before and after minimal index of max value
 		IntVar v = list[i];
 		if (cp < im)
 		    v.domain.inMax(store.level, v, ub - 1);
-		else if (cp >= im)
+		else
 		    v.domain.inMax(store.level, v, ub);    
 	    }
+	}
 
-        } while (store.propagationHasOccurred);
+	// if (maxIndex.singleton() && list[maxIndex.value() - 1 - indexOffset].singleton())
+	//     removeConstraint();
     }
-
 
     @Override public int getDefaultConsistencyPruningEvent() {
         return IntDomain.BOUND;
+    }
+
+    @Override public int getConsistencyPruningEvent(Var var) {
+
+        // If consistency function mode
+        if (consistencyPruningEvents != null) {
+            Integer possibleEvent = consistencyPruningEvents.get(var);
+            if (possibleEvent != null)
+                return possibleEvent;
+        }
+
+        if (var == maxIndex)
+            return IntDomain.ANY;
+        else {
+    	    return IntDomain.BOUND;
+    	}
     }
 
     @Override public boolean satisfied() {
@@ -221,7 +258,7 @@ public class ArgMax extends Constraint implements SatisfiedPresent {
         }
 
         result.append("], ").append(this.maxIndex);
-        result.append(")");
+        result.append(", "+indexOffset+")");
 
         return result.toString();
     }
