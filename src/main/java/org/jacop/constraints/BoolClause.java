@@ -160,25 +160,25 @@ public class BoolClause extends PrimitiveConstraint {
             if (x[i].max() == 0) {
                 swap(x, startX, i);
                 startX++;
-                positionX.update(startX);
             } else if (x[i].min() == 1) {
                 removeConstraint();
                 return;
             }
         }
+	positionX.update(startX);
 
         for (int i = startY; i < ly; i++) {
             if (y[i].min() == 1) {
                 swap(y, startY, i);
                 startY++;
-                positionY.update(startY);
             } else if (y[i].max() == 0) {
                 removeConstraint();
                 return;
             }
         }
+	positionY.update(startY);
 
-        // all x are = 0 and all y = 1 => FAIL
+        // all x = 0 and all y = 1 => FAIL
         if (startX == lx && startY == ly)
             throw Store.failException;
             // last x must be 1
@@ -229,8 +229,8 @@ public class BoolClause extends PrimitiveConstraint {
             else if (x[i].max() == 0) {
                 swap(x, startX, i);
                 startX++;
-                positionX.update(startX);
             }
+	positionX.update(startX);
 
         for (int i = startY; i < ly; i++)
             if (y[i].max() == 0)
@@ -238,8 +238,8 @@ public class BoolClause extends PrimitiveConstraint {
             else if (y[i].min() == 1) {
                 swap(y, startY, i);
                 startY++;
-                positionY.update(startY);
             }
+	positionY.update(startY);
 
         return false;
 
@@ -254,17 +254,17 @@ public class BoolClause extends PrimitiveConstraint {
             if (x[i].max() == 0) {
                 swap(x, startX, i);
                 startX++;
-                positionX.update(startX);
             } else
                 return false;
+	positionX.update(startX);
 
         for (int i = startY; i < ly; i++)
             if (y[i].min() == 1) {
                 swap(y, startY, i);
                 startY++;
-                positionY.update(startY);
             } else
                 return false;
+	positionY.update(startY);
 
         return startX == lx && startY == ly;
     }
