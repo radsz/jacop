@@ -25,27 +25,31 @@ Version 4.8
 
 8. New CountVar constraint and its flatzinc interface.
 
-9. Removing limitation in flatzinc compiler that flatzinc variables
-   must have domains within interval
-   IntDomain.MinInt..IntDomain.MaxInt. First constraints might report
-   arithmetic overflow.
+9. New global cardinality constraint CountValues and
+   CountValuesBounds. Changes in minizinc library for global
+   cardinality constraints to use these two new constraints.
 
-10. Changing Scala compiler to 2.13.1 and making related code changes.
+10. Removing limitation in flatzinc compiler that flatzinc variables
+    must have domains within interval
+    IntDomain.MinInt..IntDomain.MaxInt. First constraints might report
+    arithmetic overflow.
 
-11. Not recognized search options in flatzinc are ignored instead of
+11. Changing Scala compiler to 2.13.1 and making related code changes.
+
+12. Not recognized search options in flatzinc are ignored instead of
     aborting computation.
 
-12. Changing IntDomain.divIntBounds method to use double instead of floats
+13. Changing IntDomain.divIntBounds method to use double instead of floats
     for bounds calculations (better precision).
 
-13. Constraints XplusYplusQeqZ, XplusYplusCeqZ and XplusYplusQeqC are
+14. Constraints XplusYplusQeqZ, XplusYplusCeqZ and XplusYplusQeqC are
     removed. Use SumInt instead.
 
-14. Additional CountBounds constraint added in flatzinc translation of
+15. Additional CountBounds constraint added in flatzinc translation of
     global_cardinality_low_up_closed if domain consistency annotation
     is present (GCC does bounds consistency only).
 
-15. Bug corrections and performance improvements.
+16. Bug corrections and performance improvements.
 
 Version 4.7
 =============

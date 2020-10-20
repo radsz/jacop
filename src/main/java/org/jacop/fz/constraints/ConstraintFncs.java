@@ -472,6 +472,14 @@ public final class ConstraintFncs {
         gc.gen_jacop_count_var_reif(n);
     }
 
+    public void jacop_count_values(SimpleNode n) {
+        gc.gen_jacop_count_values(n);
+    }
+
+    public void jacop_count_values_bounds(SimpleNode n) {
+        gc.gen_jacop_count_values_bounds(n);
+    }
+
     public void count_eq_imp(SimpleNode n) {
         gc.gen_count_eq_imp(n);
     }

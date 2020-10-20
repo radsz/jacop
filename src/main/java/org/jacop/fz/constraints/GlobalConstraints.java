@@ -570,6 +570,33 @@ class GlobalConstraints implements ParserTreeConstants {
 	support.pose(new CountBounds(x, value, lb, ub));
     }
     
+    void gen_jacop_count_values(SimpleNode node) {
+        IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+        int[] values = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+        IntVar[] counters = support.getVarArray((SimpleNode) node.jjtGetChild(2));
+
+	if (allVarGround(counters)) {
+	    int[] lb = new int[counters.length],
+		ub = new int[counters.length];
+	    for (int i = 0; i < counters.length; i++) {
+		lb[i] = counters[i].min();
+		ub[i] = counters[i].max();
+	    }
+	    support.pose(new CountValuesBounds(x, lb, ub, values));
+	}
+	else
+	    support.pose(new CountValues(x, counters, values));
+    }
+
+    void gen_jacop_count_values_bounds(SimpleNode node) {
+        IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+        int[] values = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+        int[] lb = support.getIntArray((SimpleNode) node.jjtGetChild(2));
+        int[] ub = support.getIntArray((SimpleNode) node.jjtGetChild(3));
+
+	support.pose(new CountValuesBounds(x, lb, ub, values));
+    }
+
     void gen_jacop_count_var(SimpleNode node) {
         IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
         IntVar y = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
