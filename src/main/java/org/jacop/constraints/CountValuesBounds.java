@@ -51,7 +51,7 @@ import java.util.stream.Stream;
  * @version 4.7
  */
 
-public class CountValuesBounds extends Constraint {
+public class CountValuesBounds extends Constraint implements SatisfiedPresent {
 
     final static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -284,38 +284,28 @@ public class CountValuesBounds extends Constraint {
 
     public boolean satisfied() {
 
-        int eq = 0, notEq = 0;
+	for (int i = 0; i < counter.length; i++) {
+	    int v = values[i];
 
-        for (IntVar v : list)
-            if (valuesDomain.contains(v.value()))
-		if (v.singleton())
-		    eq++;
-		else
-		    return false;
-	    else
-		notEq++;
+	    int cc = 0;
+	    for (int j = 0; j < n; j++) {
+		if (list[j].singleton(v))
+		    cc++;
+	    }
+	    if (cc < counter[i].lb || cc > counter[i].ub)
+		return false;
+	}
 
-	boolean counterSingleton = true;
-	for (Bounds v : counter)
-	    counterSingleton &= v.singleton();
-
-	return (eq + notEq == n && counterSingleton);
+	return true;
     }
 
     @Override public String toString() {
 
         StringBuilder result = new StringBuilder(id());
 
-        result.append(" : CountValuesBounds(").append(java.util.Arrays.toString(values)).append(", ");
-	result.append(java.util.Arrays.toString(lb)).append(", ").append(java.util.Arrays.toString(ub)).append(",[");
-
-        for (int i = 0; i < n; i++) {
-            result.append(list[i]);
-            if (i < n - 1)
-                result.append(", ");
-        }
-
-        result.append("])");
+        result.append(" : CountValuesBounds(").append(java.util.Arrays.asList(list)).append(", ");
+	result.append(java.util.Arrays.toString(lb)).append(", ").append(java.util.Arrays.toString(ub)).append(", ")
+	    .append(java.util.Arrays.toString(values));
 
         return result.toString();
 

@@ -51,7 +51,7 @@ import java.util.stream.Stream;
  * @version 4.7
  */
 
-public class CountValues extends Constraint {
+public class CountValues extends Constraint implements SatisfiedPresent{
 
     final static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -272,37 +272,32 @@ public class CountValues extends Constraint {
 
     public boolean satisfied() {
 
-        int eq = 0, notEq = 0;
-
-        for (IntVar v : list)
-            if (valuesDomain.contains(v.value()))
-		if (v.singleton())
-		    eq++;
-		else
-		    return false;
+	for (int i = 0; i < counter.length; i++) {
+	    int v = values[i];
+	    int c;
+	    if (counter[i].singleton())
+		c = counter[i].value();
 	    else
-		notEq++;
+		return false;
 
-	boolean counterSingleton = true;
-	for (IntVar v : counter)
-	    counterSingleton &= v.singleton();
+	    int cc = 0;
+	    for (int j = 0; j < n; j++) {
+		if (list[j].singleton(v))
+		    cc++;
+	    }
+	    if (cc != counter[i].value())
+		return false;
+	}
 
-	return (eq + notEq == n && counterSingleton);
+	return true;
     }
 
     @Override public String toString() {
 
         StringBuilder result = new StringBuilder(id());
 
-        result.append(" : CountValues(").append(java.util.Arrays.toString(values)).append(",[");
-
-        for (int i = 0; i < n; i++) {
-            result.append(list[i]);
-            if (i < n - 1)
-                result.append(", ");
-        }
-
-        result.append("], ").append(java.util.Arrays.asList(counter)).append(" )");
+        result.append(" : CountValues(").append(java.util.Arrays.asList(list)).append(", ")
+	    .append(java.util.Arrays.asList(counter)).append(", ").append(java.util.Arrays.toString(values));
 
         return result.toString();
 

@@ -30,7 +30,6 @@
 
 package org.jacop.constraints;
 
-import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
