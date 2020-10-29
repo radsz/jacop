@@ -1246,6 +1246,23 @@ class GlobalConstraints implements ParserTreeConstants {
 
     }
 
+    void gen_jacop_channel(SimpleNode node) {
+        IntVar x = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
+        IntVar[] bs = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+        IntDomain vs = support.getSetLiteral(node, 2);
+
+	support.pose(new Channel(x, bs, vs));
+
+	// Decomposition
+	// int[] values = new int[vs.getSize()];
+	// int i = 0;
+	// for (ValueEnumeration e = vs.valueEnumeration(); e.hasMoreElements(); )
+	//     values[i++] = e.nextElement();
+
+	// for (int j = 0; j < bs.length; j++)
+	//     support.pose(new Reified(new XeqC(x, values[j]), bs[j]));
+    }
+
     boolean allVarOne(IntVar[] w) {
         for (int i = 0; i < w.length; i++)
             if (!w[i].singleton(1))

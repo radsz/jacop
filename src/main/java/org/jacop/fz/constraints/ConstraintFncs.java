@@ -633,6 +633,10 @@ public final class ConstraintFncs {
         gc.gen_jacop_if_then_else_set(n);
     }
 
+    public void jacop_channel(SimpleNode n) {
+        gc.gen_jacop_channel(n);
+    }
+
     // Set constrints
     public void set_card(SimpleNode n) {
         sc.gen_set_card(n);
