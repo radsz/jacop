@@ -49,7 +49,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * {1}{@literal <} {2}
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.7
+ * @version 4.8
  */
 
 

@@ -39,7 +39,7 @@ import org.jacop.set.core.SetVar;
  *
  * @param <T> type of variable being used in search.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 
 public class IndomainSetMax<T extends SetVar> implements Indomain<T> {

@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Deterministic Finite Acyclic graph.
  *
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 
 public class FSM {

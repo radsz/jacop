@@ -40,7 +40,7 @@ import java.util.Set;
  * an efficient map with ints as keys. This is a hashtable with arrays.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 public final class IntHashMap<E> {
 

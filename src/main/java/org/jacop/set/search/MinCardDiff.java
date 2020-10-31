@@ -40,7 +40,7 @@ import org.jacop.set.core.SetVar;
  *
  * @param <T> type of variable being used in the search.
  * @author Krzysztof Kuchcinski and Robert Åkemalm
- * @version 4.7
+ * @version 4.8
  */
 
 public class MinCardDiff<T extends SetVar> implements ComparatorVariable<T> {

@@ -42,7 +42,7 @@ import java.util.Map;
  * within Regular constraint.
  *
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 
 public abstract class RegState {

@@ -38,7 +38,7 @@ import java.util.Queue;
  * This algorithm is based on <https://en.wikipedia.org/wiki/Hopcroft–Karp_algorithm>
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 public class BipartiteGraphMatching {
 

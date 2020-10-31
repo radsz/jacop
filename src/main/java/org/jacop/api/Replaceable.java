@@ -38,7 +38,7 @@ import org.jacop.constraints.DecomposedConstraint;
  * replace a particular type of constraints into another one.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.7
+ * @version 4.8
  */
 public interface Replaceable<T extends Constraint>  {
 

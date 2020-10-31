@@ -45,7 +45,7 @@ import java.util.stream.Stream;
  * Member constraint implements the membership of element e on list x.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.7
+ * @version 4.8
  */
 
 public class Member extends PrimitiveConstraint {

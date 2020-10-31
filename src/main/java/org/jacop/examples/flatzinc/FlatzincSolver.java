@@ -42,7 +42,7 @@ import org.jacop.search.SelectChoicePoint;
  * It is used for test purpose only.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.7
+ * @version 4.8
  */
 public class FlatzincSolver {
 

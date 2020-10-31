@@ -37,7 +37,7 @@ import org.jacop.jasat.core.SolverComponent;
  * occur. Allows one to add modules to the Solver.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 public interface AssertionListener extends SolverComponent {
 

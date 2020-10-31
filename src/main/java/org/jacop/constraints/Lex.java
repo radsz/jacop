@@ -46,7 +46,7 @@ import java.util.List;
  * It constructs a Lex (lexicographical order) constraint.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 
 public class Lex extends DecomposedConstraint<Constraint> {

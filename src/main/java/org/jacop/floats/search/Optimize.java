@@ -46,7 +46,7 @@ import org.jacop.search.SimpleSolutionListener;
  * Implements optimization for floating point varibales
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 
 public class Optimize<T extends Var> {

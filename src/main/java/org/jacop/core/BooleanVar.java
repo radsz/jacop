@@ -38,7 +38,7 @@ import java.util.ArrayList;
  * Defines a variable and related operations on it.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.7
+ * @version 4.8
  */
 
 public class BooleanVar extends IntVar {

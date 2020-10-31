@@ -44,7 +44,7 @@ import java.util.Random;
  *
  * @param <T> type of variable being used in the search.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.7
+ * @version 4.8
  */
 
 public class SplitRandomSelect<T extends IntVar> extends SimpleSelect<T> {

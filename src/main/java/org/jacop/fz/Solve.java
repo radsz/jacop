@@ -58,7 +58,7 @@ import java.nio.charset.Charset;
  * that they are ground.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.7
+ * @version 4.8
  */
 public class Solve implements ParserTreeConstants {
 

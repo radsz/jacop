@@ -40,7 +40,7 @@ import java.util.ArrayDeque;
  * is often allocated/deallocated.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 @Deprecated public final class GenericMemoryPool<E> {
 

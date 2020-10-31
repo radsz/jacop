@@ -42,7 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * in the set value of set variable B.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.7
+ * @version 4.8
  */
 
 public class AinB extends PrimitiveConstraint {

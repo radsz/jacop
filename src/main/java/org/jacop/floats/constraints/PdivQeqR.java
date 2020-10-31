@@ -39,7 +39,7 @@ import org.jacop.floats.core.FloatVar;
  * Boundary consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 
 public class PdivQeqR extends PmulQeqR {

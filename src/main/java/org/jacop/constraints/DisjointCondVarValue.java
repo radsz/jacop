@@ -39,7 +39,7 @@ import java.util.List;
  * Defines a current value of the Diff2Var and related operations on it.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 
 class DisjointCondVarValue implements MutableVarValue, Cloneable {

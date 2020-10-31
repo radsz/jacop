@@ -44,7 +44,7 @@ import java.util.List;
  * This is a set of filter scheduling examples, commonly used in High-Level Synthesis.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 
 public class FilterBenchmark {

@@ -60,7 +60,7 @@ import java.io.IOException;
  * literals of each clauses are the watches.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 public final class DefaultClausesDatabase extends AbstractClausesDatabase {
 

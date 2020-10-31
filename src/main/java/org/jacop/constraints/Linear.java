@@ -49,7 +49,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * For other constraints (And, Or, Not, Eq, IfThen, IfThenElse) use LinearInt.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 
 

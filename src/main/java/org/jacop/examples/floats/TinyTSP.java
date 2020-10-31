@@ -34,7 +34,7 @@ package org.jacop.examples.floats;
  * It models traveling slaesperson problem for floating solver.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 
 import org.jacop.constraints.Circuit;

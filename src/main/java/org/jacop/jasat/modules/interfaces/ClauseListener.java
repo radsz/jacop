@@ -36,7 +36,7 @@ import org.jacop.jasat.core.SolverComponent;
  * module that listens to add/removal of clauses
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 public interface ClauseListener extends SolverComponent {
 

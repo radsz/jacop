@@ -38,7 +38,7 @@ import org.jacop.core.Var;
  *
  * @param <T> type of variable being used in the search.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 
 public class SmallestDomain<T extends Var> implements ComparatorVariable<T> {

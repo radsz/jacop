@@ -42,7 +42,7 @@ import java.util.Collection;
  * see if some problems are now being executed faster.
  *
  * @author Mariusz Świerkot and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 @RunWith(Parameterized.class) public class MinizincBasedTestAbove1Hours extends MinizincBasedTestsHelper {
     protected static final String timeCategory = "above1hour/";

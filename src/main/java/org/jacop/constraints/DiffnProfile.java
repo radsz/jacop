@@ -41,7 +41,7 @@ import java.util.List;
  * value.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 
 class DiffnProfile extends Profile {

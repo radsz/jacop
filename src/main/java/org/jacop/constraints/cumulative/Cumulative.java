@@ -57,7 +57,7 @@ import java.util.*;
  * Constraints, 2014, July, vol. 19, no. 3, pp. 243--269.
  * <p>
  * @author Krzysztof Kuchcinski
- * @version 4.7
+ * @version 4.8
  * @see <a href="http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-132172">http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-132172</a>
  */
 

@@ -46,7 +46,7 @@ import org.jacop.set.search.IndomainSetMin;
  * It shows how to visualize solving process for Gardner problem.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.7
+ * @version 4.8
  */
 public class CPvizGardner {
     Store store;

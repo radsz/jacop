@@ -36,7 +36,7 @@ import org.jacop.core.IntVar;
  * Represents tasks for cumulative constraint
  *
  * @author Krzysztof Kuchcinski
- * @version 4.7
+ * @version 4.8
  */
 
 class TaskNormalView extends TaskView {

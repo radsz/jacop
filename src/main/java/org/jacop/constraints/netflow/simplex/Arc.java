@@ -36,7 +36,7 @@ import org.jacop.constraints.netflow.ArcCompanion;
  * A directed, residual arc in the graph.
  *
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 
 public final class Arc {

@@ -37,7 +37,7 @@ package org.jacop.core;
  * interval as BoundDomain by definition is specified by one interval.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 
 public class BoundDomainIntervalEnumeration extends IntervalEnumeration {

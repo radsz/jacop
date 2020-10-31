@@ -37,7 +37,7 @@ import org.junit.runners.Suite;
  * It is class to encompass all tests that belong to min profile.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.7
+ * @version 4.8
  */
 
 @RunWith(Suite.class)

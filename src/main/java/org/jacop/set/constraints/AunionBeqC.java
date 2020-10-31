@@ -46,7 +46,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * A \/ B = C.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.7
+ * @version 4.8
  */
 
 public class AunionBeqC extends Constraint implements UsesQueueVariable, SatisfiedPresent {

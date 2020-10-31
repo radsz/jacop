@@ -50,7 +50,7 @@ import java.util.ArrayList;
  * Robert         723970
  *
  * @author Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 
 public class DonaldGeraldRobert extends ExampleFD {

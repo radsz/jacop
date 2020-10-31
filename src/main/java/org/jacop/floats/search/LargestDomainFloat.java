@@ -40,7 +40,7 @@ import org.jacop.search.ComparatorVariable;
  *
  * @param <T> it specifies the class of the variable being used in this variable selection method.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 
 public class LargestDomainFloat<T extends Var> implements ComparatorVariable<T> {

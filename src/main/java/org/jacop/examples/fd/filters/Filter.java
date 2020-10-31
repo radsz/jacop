@@ -37,7 +37,7 @@ import java.util.List;
  * filter problem.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 public abstract class Filter {
 

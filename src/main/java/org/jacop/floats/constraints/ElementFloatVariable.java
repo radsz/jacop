@@ -53,7 +53,7 @@ import java.util.stream.Stream;
  * make addressing of list array starting from 1.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 
 public class ElementFloatVariable extends Constraint implements Stateful, SatisfiedPresent {

@@ -39,7 +39,7 @@ import java.util.Set;
  * Contains utils for arrays manipulation
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 public final class Utils {
 

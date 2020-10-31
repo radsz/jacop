@@ -36,7 +36,7 @@ package org.jacop.core;
  * implements the interface Enumeration.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 
 public class IntervalDomainIntervalEnumeration extends IntervalEnumeration {

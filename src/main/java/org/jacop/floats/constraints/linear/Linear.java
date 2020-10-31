@@ -52,7 +52,7 @@ import java.util.stream.Stream;
  * The weights must be positive integers.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.7
+ * @version 4.8
  */
 
 public class Linear extends PrimitiveConstraint implements UsesQueueVariable {

@@ -49,7 +49,7 @@ import java.util.HashSet;
  * generateParameters(...) below.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.7
+ * @version 4.8
  */
 public class VariablesParameters implements ParserTreeConstants {
 

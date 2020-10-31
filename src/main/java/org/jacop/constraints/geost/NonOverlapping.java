@@ -35,7 +35,7 @@ import java.util.*;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 public class NonOverlapping implements ExternalConstraint {
 

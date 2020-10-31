@@ -37,7 +37,7 @@ import org.jacop.core.Var;
  *
  * @param <T> Variable type being compared.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 
 public interface ComparatorVariable<T extends Var> {

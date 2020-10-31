@@ -34,7 +34,7 @@ package org.jacop.api;
  * Interface to mark the need of an entity to receive information about level being removed.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.7
+ * @version 4.8
  */
 public interface Stateful {
 

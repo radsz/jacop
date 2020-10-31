@@ -36,7 +36,7 @@ package org.jacop.jasat.utils;
  *
  * @param E the type to produce
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 public interface Factory<E> {
 

@@ -39,7 +39,7 @@ import org.jacop.core.TimeStamp;
  * ReversibleSparseBitSet implements the main data structure for table constraint.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.7
+ * @version 4.8
  */
 
 public class ReversibleSparseBitSet {

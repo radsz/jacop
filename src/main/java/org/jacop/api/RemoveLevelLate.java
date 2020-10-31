@@ -35,7 +35,7 @@ package org.jacop.api;
  * has been removed to finalize the removal of the level for the constraint.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.7
+ * @version 4.8
  */
 public interface RemoveLevelLate {
 

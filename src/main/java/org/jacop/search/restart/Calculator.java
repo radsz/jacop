@@ -37,7 +37,7 @@ import org.jacop.search.ConsistencyListener;
  * Defines interface for a calculator for restart search
  *
  * @author Krzysztof Kuchcinski
- * @version 4.7
+ * @version 4.8
  */
 
 public abstract class Calculator<T extends Var> implements ConsistencyListener {

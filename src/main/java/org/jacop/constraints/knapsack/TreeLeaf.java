@@ -37,7 +37,7 @@ import org.jacop.core.IntVar;
  * It contains information required by the leaf node of the item tree.
  *
  * @author Radoslaw Szymanek and Wadeck Follonier
- * @version 4.7
+ * @version 4.8
  */
 
 public final class TreeLeaf extends TreeNode {

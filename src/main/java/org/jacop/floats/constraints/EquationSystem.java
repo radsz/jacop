@@ -45,7 +45,7 @@ import java.util.stream.Stream;
  * non-linear equations.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 
 public class EquationSystem extends Constraint {

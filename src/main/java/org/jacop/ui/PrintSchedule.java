@@ -42,7 +42,7 @@ import java.util.List;
  * Prints the computed schedule
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 
 public class PrintSchedule {

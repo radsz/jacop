@@ -34,7 +34,7 @@ package org.jacop.fz;
  * It stores information about a single array access encountered during parsing flatzinc file.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.7
+ * @version 4.8
  */
 public class ArrayAccess {
 

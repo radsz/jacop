@@ -40,7 +40,7 @@ import java.util.ArrayList;
  * It solves a simple logic puzzle about reporters breaking news stories.
  *
  * @author Marcin Chrapek, Miroslaw Klos, and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  *          <p>
  *          Logic Puzzle : Breaking News.
  *          <p>

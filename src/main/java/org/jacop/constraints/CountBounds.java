@@ -45,7 +45,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * specified by lower bound and upper bound, lb and ub.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 
 public class CountBounds extends PrimitiveConstraint {

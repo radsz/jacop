@@ -44,7 +44,7 @@ import java.util.stream.Stream;
  * Channel constraints "constraint" {@literal <=>} B
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 
 public class Channel extends Constraint implements SatisfiedPresent {

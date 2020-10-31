@@ -44,7 +44,7 @@ import org.jacop.satwrapper.SatWrapper;
  * of values for a variable
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 @Deprecated  // TODO : implement it completely
 public final class LazyCpVarDomain<E extends IntVar> extends SatCPBridge {

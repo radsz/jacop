@@ -47,7 +47,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * then indexOffset must be specified to be equal to -1.
  *
  * @author Radoslaw Szymanek, Krzysztof Kuchcinski and Robert Åkemalm
- * @version 4.7
+ * @version 4.8
  */
 
 public class ElementSet extends Constraint implements SatisfiedPresent {

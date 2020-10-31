@@ -54,7 +54,7 @@ import java.util.Set;
  * what changes this implies for CP variables
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 public final class SatChangesListener implements AssertionListener, PropagateListener, BackjumpListener {
 

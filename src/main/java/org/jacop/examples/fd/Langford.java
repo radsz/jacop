@@ -40,7 +40,7 @@ import java.util.ArrayList;
  * It solves Langford problem.
  *
  * @author Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 
 public class Langford extends ExampleFD {

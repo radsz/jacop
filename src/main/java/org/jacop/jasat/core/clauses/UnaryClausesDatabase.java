@@ -40,7 +40,7 @@ import java.io.IOException;
  * A database for unit clauses (length 1). It only accepts those.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 
 public final class UnaryClausesDatabase extends AbstractClausesDatabase {

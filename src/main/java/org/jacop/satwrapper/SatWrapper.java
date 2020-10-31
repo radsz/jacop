@@ -78,7 +78,7 @@ import java.util.Set;
  * report those assertions on CP variables domains.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 public final class SatWrapper extends Constraint
     implements ConflictListener, ExplanationListener, StartStopListener, SolutionListener, Stateful, SatisfiedPresent {

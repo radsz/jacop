@@ -48,7 +48,7 @@ import org.jacop.util.SophisticatedLengauerTarjan;
  * the circuit. Variables create one circuit.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 
 public class Circuit extends Alldiff implements Stateful {

@@ -37,7 +37,7 @@ import org.jacop.core.Store;
  * entity operates.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.7
+ * @version 4.8
  */
 public interface StoreAware {
 

@@ -37,7 +37,7 @@ import org.jacop.core.Var;
  *
  * @param <T> type of variable for which the assignment value is being generated.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 
 public interface Indomain<T extends Var> {

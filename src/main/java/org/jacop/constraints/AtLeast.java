@@ -46,7 +46,7 @@ import java.util.stream.Stream;
  * specified by variable value.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 
 public class AtLeast extends PrimitiveConstraint {

@@ -37,7 +37,7 @@ import org.jacop.core.Var;
  * add your own functionality.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.7
+ * @version 4.8
  */
 public class PrintOutListener<T extends Var> extends SimpleSolutionListener<T> implements SolutionListener<T> {
 

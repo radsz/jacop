@@ -42,7 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  *          <p>
  *          1) DONE. FlushAndQueue function should be changed and some functionality
  *          moved to firstConsistencyCheck.

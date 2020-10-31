@@ -36,7 +36,7 @@ import org.jacop.constraints.netflow.simplex.Arc;
  * Interface to the network used by VarHandlers.
  *
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 
 public interface MutableNetwork {

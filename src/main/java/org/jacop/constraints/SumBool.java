@@ -49,7 +49,7 @@ import java.util.stream.Stream;
  * It provides the sum from all variables on the list.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.7
+ * @version 4.8
  */
 
 public class SumBool extends PrimitiveConstraint {

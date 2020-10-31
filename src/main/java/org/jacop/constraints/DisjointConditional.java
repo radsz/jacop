@@ -46,7 +46,7 @@ import java.util.stream.Stream;
  * not overlap otherwise the overlaping is not checked.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 
 public class DisjointConditional extends Diff {

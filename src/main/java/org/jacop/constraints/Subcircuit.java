@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * its position, i.e., x[i] = i.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 
 public class Subcircuit extends Alldiff {

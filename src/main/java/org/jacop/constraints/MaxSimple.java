@@ -44,7 +44,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * max(x1, x2) = max.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 
 public class MaxSimple extends Constraint implements SatisfiedPresent {

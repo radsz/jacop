@@ -42,7 +42,7 @@ import java.util.ArrayList;
  * It solves a simple logic puzzle about artifacts.
  *
  * @author Janusz Kociolek, Sebastian Czypek, and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  *          <p>
  *          Title: Stones of Heaven
  *          Author: Jo Mason

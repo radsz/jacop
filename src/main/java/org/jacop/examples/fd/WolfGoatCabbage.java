@@ -41,7 +41,7 @@ import java.util.ArrayList;
  * A simple logic problem of transporting wolf, goat, and cabbage over the river.
  *
  * @author Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  *          <p>
  *          We need to transfer the cabbage, the goat and the wolf from one bank of the river to
  *          the other bank. But there is only one seat available on his boat !
