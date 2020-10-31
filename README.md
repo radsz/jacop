@@ -1,5 +1,10 @@
 ![](https://travis-ci.org/radsz/jacop.svg?branch=develop)
 
+https://maven-badges.herokuapp.com/maven-central/org.jacop/jacop/badge.svg
+
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.jacop/jacop/badge.svg)]
+(https://maven-badges.herokuapp.com/maven-central/org.jacop/jacop/)
+
 JaCoP
 =====
 
