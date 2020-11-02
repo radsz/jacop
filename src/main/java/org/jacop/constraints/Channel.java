@@ -34,6 +34,8 @@ import org.jacop.core.*;
 import org.jacop.api.SatisfiedPresent;
 
 import java.util.Arrays;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -54,22 +56,19 @@ public class Channel extends Constraint implements SatisfiedPresent {
     final public IntVar x;
     
     /**
-     * It specifies variables b that store  which value is assigne to variable x.
-     */
-    final public IntVar[] bs;
-
-    /**
      * length of vector bs
      */
     final int n;
     
     /**
-     * It specifies indexOffset within bs vector.
+     * It specifies variables b and related values for variable x.
      */
-    final int[] value;
+    final Item[] item;
 
-    boolean firstConsistencyCheck = true;
-    
+    private TimeStamp<Integer> position;
+
+    Map<Integer,IntVar> valueMap = new HashMap<>();
+
     /**
      * It creates Channel constraint.
      *
@@ -79,8 +78,8 @@ public class Channel extends Constraint implements SatisfiedPresent {
      */
     public Channel(IntVar x, IntVar[] bs, int[] value) {
 
-	if (value.length > bs.length)
-	    throw new IllegalArgumentException("Channel: Status array size ("+bs.length+"), lower than number of values "+value.length);
+	if (value.length != bs.length)
+	    throw new IllegalArgumentException("Channel: Status array size ("+bs.length+"), has not equal size as number of values "+value.length);
 	
         checkInputForNullness(new String[] {"x", "bs"}, new Object[][] {{x}, bs});
 	for (IntVar b : bs)
@@ -89,11 +88,15 @@ public class Channel extends Constraint implements SatisfiedPresent {
 
         numberId = idNumber.incrementAndGet();
         this.x = x;
-        this.bs = bs;
 	this.n = bs.length;
 
-	this.value = value;
+	item = new Item[n];
+	for (int i = 0; i < n; i++)
+	    item[i] = new Item(bs[i], value[i]);
 
+	for (int i = 0; i < value.length; i++)
+	    valueMap.put(value[i], bs[i]);
+	
         setScope(Stream.concat(Stream.of(x), Arrays.stream(bs)));
         this.queueIndex = 0;
     }
@@ -127,55 +130,45 @@ public class Channel extends Constraint implements SatisfiedPresent {
     
     @Override public void consistency(final Store store) {
 
-        if (firstConsistencyCheck) {
-	    for (int i = 0; i < value.length; i++) {
-		if (! x.domain.contains(value[i]))
-		    bs[i].domain.in(store.level, bs[i], 0, 0);
+	int start = position.value();
 
-		if (bs[i].max() == 0)
-		    x.domain.inComplement(store.level, x, value[i]);
-	    }
+	for (int i = start; i < n; i++) {
 
-	    if (bs.length > value.length) {
-	    	for (int i = value.length; i < n; i++) 
-	    	    bs[i].domain.in(store.level, bs[i], 0, 0);
+	    if (item[i].b.max() == 0)
+		x.domain.inComplement(store.level, x, item[i].value);
+	    else if (item[i].b.min() == 1)
+		x.domain.in(store.level, x, item[i].value, item[i].value);
+
+	    if (! x.domain.contains(item[i].value)) {
+		item[i].b.domain.in(store.level, item[i].b, 0, 0);
+		swap(start, i);
+		start++;
 	    }
-            firstConsistencyCheck = false;
-        }
+	}
+
+	if (start == n)
+	    throw store.failException;
 	
-	for (int i = 0; i < value.length; i++) {
-	    if (bs[i].max() == 0)
-		x.domain.inComplement(store.level, x, value[i]);
-	    else if (bs[i].min() == 1)
-		x.domain.in(store.level, x, value[i], value[i]);
-	}
-
-	for (int i = 0; i < n; i++) {
-	    if (i < value.length) {
-		if (bs[i].max() != 0 && ! x.domain.contains(value[i]))
-		    bs[i].domain.in(store.level, bs[i], 0, 0);
-	    } else
-		bs[i].domain.in(store.level, bs[i], 0, 0);
-	}
-
 	if (x.singleton()) {
-	    int idx = indexOf(x.value());
+	    IntVar b = valueMap.get(x.value());
+	    b.domain.in(store.level, b, 1, 1);
 
-	    bs[idx].domain.in(store.level, bs[idx], 1, 1);
-
-	    for (int i = 0; i < n; i++) {
-		if (i != idx)
-		    bs[i].domain.in(store.level, bs[i], 0, 0);
-	    }
+	    for (int i = start; i < n; i++)
+		if (item[i].b != b)
+		    item[i].b.domain.in(store.level, item[i].b, 0, 0);
+	    return;
 	}
+
+	position.update(start);
+	
     }
 
-    int indexOf(int v) {
-	for (int i = 0; i < value.length; i++) {
-	    if (v == value[i])
-		return i;
-	}
-	throw Store.failException;
+    private void swap(int i, int j) {
+        if (i != j) {
+	    Item tmp = item[i];
+            item[i] = item[j];
+            item[j] = tmp;
+        }
     }
 
     @Override public int getDefaultConsistencyPruningEvent() {
@@ -187,8 +180,8 @@ public class Channel extends Constraint implements SatisfiedPresent {
 	int one = Integer.MIN_VALUE;
 	if (x.singleton()) {
 	    for (int i = 0; i < n; i++) {
-		if (bs[i].singleton()) {
-		    if (bs[i].value() == 1)
+		if (item[i].b.singleton()) {
+		    if (item[i].b.value() == 1)
 			if (one == -1)
 			    one = i;
 			else
@@ -202,13 +195,34 @@ public class Channel extends Constraint implements SatisfiedPresent {
 	else
 	    return false;
 
-	return (one == Integer.MIN_VALUE) ? false : x.value() == value[one];
+	return (one == Integer.MIN_VALUE) ? false : x.value() == item[one].value;
     }
 	    
+    @Override public void impose(Store store) {
+
+        super.impose(store);
+
+        position = new TimeStamp<>(store, 0);
+    }
 
     @Override public String toString() {
 
-        return id() + " : Channel(" + x + ", " + Arrays.asList(bs) + ", " + Arrays.toString(value) + " )";
+        return id() + " : Channel(" + x + ", " + Arrays.asList(item) + " )";
     }
 
+    class Item {
+
+	int value;
+	IntVar b;
+
+	public Item(IntVar b, int v) {
+	    this.b = b;
+	    this.value = v;
+	}
+	
+	public String toString() {
+
+	    return "["+b+", "+value+"]";
+	}
+    }
 }
