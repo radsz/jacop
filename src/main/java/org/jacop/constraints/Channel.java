@@ -210,7 +210,7 @@ public class Channel extends Constraint implements SatisfiedPresent {
         return id() + " : Channel(" + x + ", " + Arrays.asList(item) + " )";
     }
 
-    class Item {
+    static class Item {
 
 	int value;
 	IntVar b;
