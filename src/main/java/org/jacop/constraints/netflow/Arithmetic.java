@@ -56,9 +56,9 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
         }
     };
 
-    private List<int[]> eqns;
-    private List<IntVar> vars;
-    private Map<IntVar, Integer> map;
+    protected List<int[]> eqns;
+    protected List<IntVar> vars;
+    protected Map<IntVar, Integer> map;
 
     List<Constraint> decomposition;
 
@@ -168,7 +168,6 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
                     }
 
                 result.add(new LinearInt(variables, weights, "==", 0));
-                // result.add(new SumWeight(variables, weights, ZERO));
             }
 
             return result;
@@ -304,18 +303,9 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
                 for (int i = 0; i < eqn.length; i++)
                     sum[i] += eqn[i];
 
-            //		System.out.println(vars);
-            //		System.out.println("sum   = " + Arrays.toString(sum));
-            //		for (int i = 0; i < eqns.size(); i++)
-            //			System.out.println("eqn[" + i +"] = "+Arrays.toString(eqns.get(i)));
-
-            // System.out.println("Before: w = " + weight(sum) + "   " + Arrays.toString(sum));
-
             for (int it = 0; optimize(sum); it++)
                 if (it > 2 * eqns.size())
                     throw new AssertionError(it + " iterations");
-
-            // System.out.println("After: w = " + weight(sum) + "   " + Arrays.toString(sum));
 
             decomposition.add(new ArithmeticBuilder(store, sum).build());
 
