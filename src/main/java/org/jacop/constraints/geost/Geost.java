@@ -1603,7 +1603,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
         this.store = store;
 
         lastLevelLastVar = new TimeStamp<Integer>(store, store.level);
-        lastLevelLastVar.update(0);
+        lastLevelLastVar.update(-1);
 
         genInternalConstraints();
 
@@ -1614,7 +1614,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
         objectList = new SimpleArrayList<GeostObject>();
         updatedObjectSet = new HashSet<GeostObject>();
-
+        
     }
 
     @Override public void increaseWeight() {
