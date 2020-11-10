@@ -30,7 +30,9 @@ Version 4.8
    cardinality constraints to use these two new constraints.
 
 10. New constraint Channel that generalizes Reified
-    constraint. Available in Java and minizinc.
+    constraint. Available in Java and minizinc. Several reified
+    constraints on the same variable are converted to a single channel
+    constraint in flatzinc.
 
 11. Removing limitation in flatzinc compiler that flatzinc variables
     must have domains within interval

@@ -35,6 +35,7 @@ import org.jacop.api.SatisfiedPresent;
 
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Set;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
@@ -117,6 +118,31 @@ public class Channel extends Constraint implements SatisfiedPresent {
 	this(x, bs, toArray(x.domain));
     }
 
+    public Channel(IntVar x, Map<Integer,IntVar> bs) {
+
+        numberId = idNumber.incrementAndGet();
+
+	this.x = x;
+	this.n = bs.size();
+
+	item = new Item[n];
+	IntVar[] bbs = new IntVar[n];
+	int i = 0;
+	Set<Map.Entry<Integer,IntVar>> es = bs.entrySet();
+        for (Map.Entry<Integer,IntVar> e : es) {
+            int val = e.getKey();
+            IntVar b = e.getValue();
+	    item[i] = new Item(b, val);
+
+	    valueMap.put(val, b);
+	    bbs[i] = b;
+	    i++;
+	}
+
+	setScope(Stream.concat(Stream.of(x), Arrays.stream(bbs)));
+        this.queueIndex = 0;
+    }
+
     static int[] toArray(IntDomain d) {
 
     	int[] vs = new int[d.getSize()];
@@ -147,8 +173,8 @@ public class Channel extends Constraint implements SatisfiedPresent {
 	}
 
 	if (start == n)
-	    throw store.failException;
-	
+	    return;
+
 	if (x.singleton()) {
 	    IntVar b = valueMap.get(x.value());
 	    b.domain.in(store.level, b, 1, 1);
@@ -158,9 +184,9 @@ public class Channel extends Constraint implements SatisfiedPresent {
 		    item[i].b.domain.in(store.level, item[i].b, 0, 0);
 	    return;
 	}
-
-	position.update(start);
 	
+	position.update(start);
+
     }
 
     private void swap(int i, int j) {

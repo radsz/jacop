@@ -75,13 +75,15 @@ public class Support implements ParserTreeConstants {
     ArrayList<IntVar[]> parameterListForAlldistincts = new ArrayList<IntVar[]>();
     ArrayList<Constraint> delayedConstraints = new ArrayList<Constraint>();
 
+    ReificationConstraints reif = new ReificationConstraints(this);
+
     public Support(Store store, Tables d, SatTranslation sat) {
         this.store = store;
         this.dictionary = d;
         this.sat = sat;
     }
 
-    int getInt(ASTScalarFlatExpr node) {
+    public int getInt(ASTScalarFlatExpr node) {
         intPresent = true;
 
         if (node.getType() == 0) //int
@@ -519,6 +521,8 @@ public class Support implements ParserTreeConstants {
         }
         poseAlldistinctConstraints();
 
+        // generate channeling constraints instead of reified constraints
+	reif.pose();
     }
 
     void poseAlldistinctConstraints() {
@@ -560,5 +564,13 @@ public class Support implements ParserTreeConstants {
 
         if (options.debug())
             System.out.println("% " + c);
+    }
+
+    public void addReified(IntVar x, int v, IntVar b) {
+	reif.add(x, v, b);
+    }
+
+    public void poseReified(Support s) {
+	reif.pose();
     }
 }
