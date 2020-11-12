@@ -104,6 +104,11 @@ public class Constraints implements ParserTreeConstants {
 
         support.poseDelayedConstraints();
 
+	// to be sure that all constraints queues are empty and the
+	// model is consistent; it can happen that search will not
+	// find out inconsistency if all variables are ground
+	if (!store.consistency())
+	    throw store.failException;
     }
 
     void generateConstraint(SimpleNode constraintWithAnnotations) throws Throwable {
