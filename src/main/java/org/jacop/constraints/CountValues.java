@@ -199,6 +199,8 @@ public class CountValues extends Constraint implements SatisfiedPresent{
 		}
 	    }
 
+	    store.propagationHasOccurred = false;
+
 	    counterRest.domain.in(store.level, counterRest, restEq, restEq + restMayBe);
 
 	    for (int i = 0; i < values.length; i++) 	    
@@ -213,8 +215,6 @@ public class CountValues extends Constraint implements SatisfiedPresent{
 	    	extendedCounter[i].domain.in(store.level, extendedCounter[i],
 	    				     n - max + extendedCounter[i].max(), n - min + extendedCounter[i].min());
 	    }
-
-	    store.propagationHasOccurred = false;
 
 	    for (int i = 0; i < values.length; i++) {
 
