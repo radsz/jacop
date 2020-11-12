@@ -65,12 +65,12 @@ public class NoGood extends Constraint {
     /**
      * It specifies a list of variables in no-good constraint.
      */
-    private IntVar listOfVars[];
+    protected IntVar listOfVars[];
 
     /**
      * It specifies a list of values in no-good constraint.
      */
-    private int listOfValues[];
+    protected int listOfValues[];
 
     private IntVar firstWatch;
 

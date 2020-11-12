@@ -74,7 +74,7 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
     /**
      * It specifies indexOffset within an element constraint list[index - indexOffset] = value.
      */
-    private final int indexOffset;
+    protected final int indexOffset;
 
     /**
      * It specifies list of variables within an element constraint list[index - indexOffset] = value.

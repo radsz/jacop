@@ -52,7 +52,7 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
     /**
      * It specifies a list of constraints which must be satisfied to keep And constraint satisfied.
      */
-    private final PrimitiveConstraint listOfC[];
+    protected final PrimitiveConstraint listOfC[];
 
     private final QueueForward<PrimitiveConstraint> queueForward;
 

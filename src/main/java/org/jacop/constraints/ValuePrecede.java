@@ -71,7 +71,7 @@ public class ValuePrecede extends Constraint implements UsesQueueVariable, State
     /**
      * It specifies values s and t for the constraint.
      */
-    private final int s, t;
+    protected final int s, t;
 
     /**
      * Defines variables alpha, beta, gamma for the algorithm

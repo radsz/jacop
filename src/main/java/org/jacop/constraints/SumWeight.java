@@ -58,17 +58,17 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
     /**
      * It specifies a list of variables being summed.
      */
-    final private IntVar list[];
+    final protected IntVar list[];
 
     /**
      * It specifies a list of weights associated with the variables being summed.
      */
-    final private long weights[];
+    final protected long weights[];
 
     /**
      * It specifies value to which SumWeight is equal to.
      */
-    final private long equalTo;
+    final protected long equalTo;
 
     /**
      * The sum of grounded variables.

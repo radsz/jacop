@@ -111,12 +111,12 @@ public class Knapsack extends Constraint implements UsesQueueVariable, Satisfied
     /**
      * This is a finite domain variable to specify the knapsack capacity.
      */
-    private IntVar knapsackCapacity;
+    protected IntVar knapsackCapacity;
 
     /**
      * This is a finite domain variable to specify the knapsack profit.
      */
-    private IntVar knapsackProfit;
+    protected IntVar knapsackProfit;
 
 
     /**

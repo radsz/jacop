@@ -133,7 +133,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
      * It species variables counters for counting occurences of each possible value from the
      * intial domain of x variables.
      */
-    private IntVar[] counters;
+    protected IntVar[] counters;
 
     private Comparator<XDomain> compareLowerBound = (o1, o2) -> {
         if (o1.min() < o2.min())

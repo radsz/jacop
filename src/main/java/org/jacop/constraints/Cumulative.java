@@ -70,19 +70,19 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     /**
      * It specifies if the edge finding algorithm should be used.
      */
-    private boolean doEdgeFinding = true;
+    protected boolean doEdgeFinding = true;
 
     /**
      * It specifies if the profiles should be computed to propagate
      * onto limit variable.
      */
-    private boolean doProfile = true;
+    protected boolean doProfile = true;
 
     /**
      * It specifies if the data from profiles should be used to propagate
      * onto limit variable.
      */
-    private boolean setLimit = true;
+    protected boolean setLimit = true;
 
     /**
      * It specifies the limit of the profile of cumulative use of resources.
