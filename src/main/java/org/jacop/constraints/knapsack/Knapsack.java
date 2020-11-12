@@ -715,6 +715,9 @@ public class Knapsack extends Constraint implements UsesQueueVariable, Satisfied
 
     @Override public void queueVariable(int level, Var v) {
 
+        if (impositionFailure)
+            return;
+
         countQueueVariable++;
 
         if (debugAll) {
