@@ -88,6 +88,8 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
 
     public IntVar[] list;
 
+    private boolean satisfiedAlreadyAtImposition = false;
+
     /**
      * Partial constructor which stores variables involved in a constraint but
      * does not get information about tuples yet. The tuples must set separately.
@@ -360,6 +362,10 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
         if (debugAll)
             System.out.println("Begin " + this);
 
+        if (satisfiedAlreadyAtImposition) {
+            return;
+        }
+
         boolean pruned = true;
 
         while (pruned) {
@@ -613,6 +619,10 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
                     lastofsequence[i][j][l] = computeLastOfSequence(tuples[i][j], i, l);
             }
 
+        }
+
+        if (tuplesFromConstructor.length == 0) {
+            satisfiedAlreadyAtImposition = true;
         }
 
         tuplesFromConstructor = null;
