@@ -307,7 +307,7 @@ setup to run configuration. -->
                         <dependency>
                             <groupId>com.puppycrawl.tools</groupId>
                             <artifactId>checkstyle</artifactId>
-                            <version>8.5</version>
+                            <version>8.29</version>
                         </dependency>
                     </dependencies>
                     <configuration>
