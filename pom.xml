@@ -78,6 +78,25 @@ setup to run configuration. -->
     <profiles>
 
         <profile>
+            <id>nocs</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-checkstyle-plugin</artifactId>
+                        <version>3.1.1</version>
+                        <executions>
+                            <execution>
+                                <id>checkstyle-check</id>
+                                <phase>none</phase>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <profile>
             <id>min</id>
             <build>
                 <plugins>
@@ -579,7 +598,7 @@ setup to run configuration. -->
                 </configuration>
                 <executions>
                     <execution>
-                        <id>validate</id>
+                        <id>checkstyle-check</id>
                         <phase>validate</phase>
                         <goals>
                             <goal>check</goal>
