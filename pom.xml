@@ -327,6 +327,18 @@ setup to run configuration. -->
                     <version>3.0.0</version>
                 </plugin>
 
+                <plugin>
+                    <groupId>com.github.spotbugs</groupId>
+                    <artifactId>spotbugs-maven-plugin</artifactId>
+                    <version>4.1.4</version>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-site-plugin</artifactId>
+                    <version>3.9.1</version>
+                </plugin>
+
             </plugins>
         </pluginManagement>
 
@@ -511,7 +523,7 @@ setup to run configuration. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-site-plugin</artifactId>
-                <version>3.3</version>
+                <version>3.9.1</version>
                 <!-- Using later versions, for example when tried 3.4 the findbugs report stopped working-->
             </plugin>
 
@@ -591,19 +603,17 @@ setup to run configuration. -->
                 <version>2.5</version>
             </plugin>
             <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>findbugs-maven-plugin</artifactId>
-                <version>3.0.4</version>
-                <!-- Put any additional configuration element here. It is working.
-                 Do not need to use pluginManagement section, where it does not work. -->
+                <groupId>com.github.spotbugs</groupId>
+                <artifactId>spotbugs-maven-plugin</artifactId>
+                <version>4.1.4</version>
                 <configuration>
                     <effort>Max</effort>      <!-- Other working value is Min -->
                     <threshold>Medium</threshold>  <!-- Other working value is Low, High -->
                     <excludeFilterFile>doc/findbugs-exclude.xml</excludeFilterFile>
                     <includeFilterFile>doc/findbugs-include.xml</includeFilterFile>
                 </configuration>
-
             </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-pmd-plugin</artifactId>
@@ -641,7 +651,7 @@ setup to run configuration. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
-                <version>2.17</version>
+                <version>3.1.1</version>
                 <reportSets>
                     <reportSet>
                         <reports>
