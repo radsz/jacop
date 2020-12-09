@@ -31,10 +31,10 @@
 package org.jacop.fz.constraints;
 
 import org.jacop.core.*;
-
 import java.util.Map;
 import java.util.Set;
 import java.util.HashMap;
+import org.jacop.constraints.Channel;
 
 /**
  * It collects all int_eq_reif constraint to create Channel
@@ -44,7 +44,6 @@ import java.util.HashMap;
  * @version 4.7
  */
 
-import org.jacop.constraints.Channel;
 
 class ReificationConstraints {
 
@@ -55,33 +54,33 @@ class ReificationConstraints {
     Support support;
 
     public ReificationConstraints(Support support) {
-	this.support = support;
+        this.support = support;
     }
 
     public void add(IntVar x, int v, IntVar b) {
-	Map<Integer, IntVar> map = cs.get(x);
+        Map<Integer, IntVar> map = cs.get(x);
 
-	if (map != null)
-	    if (map.get(v) != null) {
-		support.delayedConstraints.add(new org.jacop.constraints.XeqY(map.get(v), b));
-	    } else {
-		map.put(v, b);
-		cs.put(x, map);
-	    }
-	else {
-	    map = new HashMap<>();
-	    map.put(v, b);
-	    cs.put(x, map);
-	}
+        if (map != null)
+            if (map.get(v) != null) {
+                support.delayedConstraints.add(new org.jacop.constraints.XeqY(map.get(v), b));
+            } else {
+                map.put(v, b);
+                cs.put(x, map);
+            }
+        else {
+            map = new HashMap<>();
+            map.put(v, b);
+            cs.put(x, map);
+        }
     }
 
     public int size(IntVar v) {
-	Map<Integer, IntVar> m = cs.get(v);
+        Map<Integer, IntVar> m = cs.get(v);
 
-	if (m != null)
-	    return m.size();
-	else
-	    return 0;
+        if (m != null)
+            return m.size();
+        else
+            return 0;
     }
 
     void pose() {
@@ -91,9 +90,9 @@ class ReificationConstraints {
             IntVar var = e.getKey();
             Map<Integer,IntVar> vb = e.getValue();
 
-	    if (vb.size() > minSize)
-		support.pose(new Channel(var, vb));
-	}
+            if (vb.size() > minSize)
+                support.pose(new Channel(var, vb));
+        }
     }
 
     public String toString() {
@@ -105,18 +104,18 @@ class ReificationConstraints {
         for (Map.Entry<IntVar, Map<Integer,IntVar>> e : entries) {
             IntVar var = e.getKey();
             Map<Integer,IntVar> vb = e.getValue();
-	    Set<Map.Entry<Integer,IntVar>> es = vb.entrySet();
+            Set<Map.Entry<Integer,IntVar>> es = vb.entrySet();
 
-	    result.append(var + "[");
+            result.append(var + "[");
 
-	    for (Map.Entry<Integer,IntVar> ei : es) {
-		int val = ei.getKey();
-		IntVar bb = ei.getValue();
+            for (Map.Entry<Integer,IntVar> ei : es) {
+                int val = ei.getKey();
+                IntVar bb = ei.getValue();
 
-		result.append("["+val+", "+bb+"]");
-	    }
-	}
-	result.append("]");
-	return result.toString();
+                result.append("[" + val + ", " + bb + "]");
+            }
+        }
+        result.append("]");
+        return result.toString();
     }
 }
