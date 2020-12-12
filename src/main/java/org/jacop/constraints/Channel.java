@@ -130,7 +130,6 @@ public class Channel extends Constraint implements SatisfiedPresent {
         item = new Item[n];
         IntVar[] bbs = new IntVar[n];
         int i = 0;
-        // Set<Map.Entry<Integer, ? extends IntVar>> es = bs.entrySet();
         for (Map.Entry<Integer, ? extends IntVar> e : bs.entrySet()) {
             int val = e.getKey();
             IntVar b = e.getValue();
