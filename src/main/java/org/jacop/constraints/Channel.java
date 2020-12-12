@@ -32,7 +32,6 @@ package org.jacop.constraints;
 
 import org.jacop.core.*;
 import org.jacop.api.SatisfiedPresent;
-
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
@@ -41,7 +40,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 /**
- * Channel constraints "constraint" {@literal <=>} B
+ * Channel constraints "constraint" {@literal <=>} B.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.8
@@ -49,15 +48,15 @@ import java.util.stream.Stream;
 
 public class Channel extends Constraint implements SatisfiedPresent {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+    static final AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * Variables that is checked for a value.
      */
-    final public IntVar x;
+    public final IntVar x;
     
     /**
-     * length of vector bs
+     * length of vector bs.
      */
     final int n;
     
@@ -79,25 +78,28 @@ public class Channel extends Constraint implements SatisfiedPresent {
      */
     public Channel(IntVar x, IntVar[] bs, int[] value) {
 
-	if (value.length != bs.length)
-	    throw new IllegalArgumentException("Channel: Status array size ("+bs.length+"), has not equal size as number of values "+value.length);
-	
+        if (value.length != bs.length)
+            throw new IllegalArgumentException("Channel: Status array size ("
+                                               + bs.length
+                                               + "), has not equal size as number of values "
+                                               + value.length);
+
         checkInputForNullness(new String[] {"x", "bs"}, new Object[][] {{x}, bs});
-	for (IntVar b : bs)
-	    if (b.min() > 1 || b.max() < 0)
-		throw new IllegalArgumentException("Channel: Variable b in reified constraint must have domain at most 0..1");
+        for (IntVar b : bs)
+            if (b.min() > 1 || b.max() < 0)
+                throw new IllegalArgumentException("Channel: Variable b in reified constraint must have domain at most 0..1");
 
         numberId = idNumber.incrementAndGet();
         this.x = x;
-	this.n = bs.length;
+        this.n = bs.length;
 
-	item = new Item[n];
-	for (int i = 0; i < n; i++)
-	    item[i] = new Item(bs[i], value[i]);
+        item = new Item[n];
+        for (int i = 0; i < n; i++)
+            item[i] = new Item(bs[i], value[i]);
 
-	for (int i = 0; i < value.length; i++)
-	    valueMap.put(value[i], bs[i]);
-	
+        for (int i = 0; i < value.length; i++)
+            valueMap.put(value[i], bs[i]);
+
         setScope(Stream.concat(Stream.of(x), Arrays.stream(bs)));
         this.queueIndex = 0;
     }
@@ -110,88 +112,88 @@ public class Channel extends Constraint implements SatisfiedPresent {
      * @param value set of values that are checked against x.
      */
     public Channel(IntVar x, IntVar[] bs, IntDomain value) {
-	this(x, bs, toArray(value));
+        this(x, bs, toArray(value));
     }
 
     public Channel(IntVar x, IntVar[] bs) {
 
-	this(x, bs, toArray(x.domain));
+        this(x, bs, toArray(x.domain));
     }
 
-    public Channel(IntVar x, Map<Integer,IntVar> bs) {
+    public Channel(IntVar x, Map<Integer, ? extends IntVar> bs) {
 
         numberId = idNumber.incrementAndGet();
 
-	this.x = x;
-	this.n = bs.size();
+        this.x = x;
+        this.n = bs.size();
 
-	item = new Item[n];
-	IntVar[] bbs = new IntVar[n];
-	int i = 0;
-	Set<Map.Entry<Integer,IntVar>> es = bs.entrySet();
-        for (Map.Entry<Integer,IntVar> e : es) {
+        item = new Item[n];
+        IntVar[] bbs = new IntVar[n];
+        int i = 0;
+        // Set<Map.Entry<Integer, ? extends IntVar>> es = bs.entrySet();
+        for (Map.Entry<Integer, ? extends IntVar> e : bs.entrySet()) {
             int val = e.getKey();
             IntVar b = e.getValue();
-	    item[i] = new Item(b, val);
+            item[i] = new Item(b, val);
 
-	    valueMap.put(val, b);
-	    bbs[i] = b;
-	    i++;
-	}
+            valueMap.put(val, b);
+            bbs[i] = b;
+            i++;
+        }
 
-	setScope(Stream.concat(Stream.of(x), Arrays.stream(bbs)));
+        setScope(Stream.concat(Stream.of(x), Arrays.stream(bbs)));
         this.queueIndex = 0;
     }
 
     static int[] toArray(IntDomain d) {
 
-    	int[] vs = new int[d.getSize()];
-    	int i = 0;
-    	for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
-    	    int v = e.nextElement();
-    	    vs[i++] = v;
-    	}
-	return vs;
+        int[] vs = new int[d.getSize()];
+        int i = 0;
+        for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
+            int v = e.nextElement();
+            vs[i++] = v;
+        }
+        return vs;
     }
     
     @Override public void consistency(final Store store) {
 
-	int start = position.value();
+        int start = position.value();
 
-	for (int i = start; i < n; i++) {
+        for (int i = start; i < n; i++) {
 
-	    if (item[i].b.max() == 0)
-		x.domain.inComplement(store.level, x, item[i].value);
-	    else if (item[i].b.min() == 1)
-		x.domain.in(store.level, x, item[i].value, item[i].value);
+            if (item[i].b.max() == 0)
+                x.domain.inComplement(store.level, x, item[i].value);
+            else if (item[i].b.min() == 1)
+                x.domain.in(store.level, x, item[i].value, item[i].value);
 
-	    if (! x.domain.contains(item[i].value)) {
-		item[i].b.domain.in(store.level, item[i].b, 0, 0);
-		swap(start, i);
-		start++;
-	    }
-	}
+            if (! x.domain.contains(item[i].value)) {
+                item[i].b.domain.in(store.level, item[i].b, 0, 0);
+                swap(start, i);
+                start++;
+            }
+        }
 
-	if (start == n)
-	    return;
+        if (start == n)
+            return;
 
-	if (x.singleton()) {
-	    IntVar b = valueMap.get(x.value());
-	    b.domain.in(store.level, b, 1, 1);
+        if (x.singleton()) {
+            IntVar b = valueMap.get(x.value());
+            b.domain.in(store.level, b, 1, 1);
 
-	    for (int i = start; i < n; i++)
-		if (item[i].b != b)
-		    item[i].b.domain.in(store.level, item[i].b, 0, 0);
-	    return;
-	}
-	
-	position.update(start);
+            for (int i = start; i < n; i++)
+                if (item[i].b != b)
+                    item[i].b.domain.in(store.level, item[i].b, 0, 0);
+            return;
+        }
+
+        position.update(start);
 
     }
 
     private void swap(int i, int j) {
         if (i != j) {
-	    Item tmp = item[i];
+            Item tmp = item[i];
             item[i] = item[j];
             item[j] = tmp;
         }
@@ -203,27 +205,26 @@ public class Channel extends Constraint implements SatisfiedPresent {
 
     public boolean satisfied() {
 
-	int one = Integer.MIN_VALUE;
-	if (x.singleton()) {
-	    for (int i = 0; i < n; i++) {
-		if (item[i].b.singleton()) {
-		    if (item[i].b.value() == 1)
-			if (one == -1)
-			    one = i;
-			else
-			    return false;
-		    else
-			return false;
-		} else
-		    return false;
-	    }
-	}
-	else
-	    return false;
+        int one = Integer.MIN_VALUE;
+        if (x.singleton()) {
+            for (int i = 0; i < n; i++) {
+                if (item[i].b.singleton()) {
+                    if (item[i].b.value() == 1)
+                        if (one == -1)
+                            one = i;
+                        else
+                            return false;
+                    else
+                        return false;
+                } else
+                    return false;
+            }
+        } else
+            return false;
 
-	return (one == Integer.MIN_VALUE) ? false : x.value() == item[one].value;
+        return (one == Integer.MIN_VALUE) ? false : x.value() == item[one].value;
     }
-	    
+
     @Override public void impose(Store store) {
 
         super.impose(store);
@@ -238,17 +239,17 @@ public class Channel extends Constraint implements SatisfiedPresent {
 
     static class Item {
 
-	int value;
-	IntVar b;
+        int value;
+        IntVar b;
 
-	public Item(IntVar b, int v) {
-	    this.b = b;
-	    this.value = v;
-	}
-	
-	public String toString() {
+        public Item(IntVar b, int v) {
+            this.b = b;
+            this.value = v;
+        }
 
-	    return "["+b+", "+value+"]";
-	}
+        public String toString() {
+
+            return "[" + b + ", " + value + "]";
+        }
     }
 }
