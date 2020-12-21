@@ -33,10 +33,9 @@ package org.jacop.constraints;
 
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.*;
-
 import java.util.concurrent.atomic.AtomicInteger;
 
-/**
+/*
  * Constraint X * Y #= Z
  * <p>
  * Boundary consistency is used.
@@ -47,24 +46,27 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class XmulYeqZ extends Constraint implements SatisfiedPresent {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+    static final AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies variable x in constraint x * y = z.
      */
-    final public IntVar x;
+    public final IntVar x;
 
     /**
      * It specifies variable y in constraint x * y = z.
      */
-    final public IntVar y;
+    public final IntVar y;
 
     /**
      * It specifies variable z in constraint x * y = z.
      */
-    final public IntVar z;
+    public final IntVar z;
 
     private final boolean xSquare;
+
+    private final XeqY xEqz;
+    private final XeqY yEqz;
 
     /**
      * It constructs a constraint X * Y = Z.
@@ -84,7 +86,10 @@ public class XmulYeqZ extends Constraint implements SatisfiedPresent {
         this.x = x;
         this.y = y;
         this.z = z;
-	this.queueIndex = 1;
+        this.queueIndex = 1;
+
+        xEqz = new XeqY(x, z);
+        yEqz = new XeqY(y, z);
 
         // checkForOverflow();
 
@@ -109,18 +114,30 @@ public class XmulYeqZ extends Constraint implements SatisfiedPresent {
                 if (xMin > xMax)
                     throw Store.failException;
 
-		if (x.min() < 0) {
-		    IntDomain dom = new IntervalDomain(-xMax, -xMin);
-		    dom.unionAdapt(xMin, xMax);
-		    x.domain.in(store.level, x, dom);
-		}
-		else
-		    x.domain.in(store.level, x, xMin, xMax);
+                if (x.min() < 0) {
+                    IntDomain dom = new IntervalDomain(-xMax, -xMin);
+                    dom.unionAdapt(xMin, xMax);
+                    x.domain.in(store.level, x, dom);
+                } else
+                    x.domain.in(store.level, x, xMin, xMax);
 
 
             } while (store.propagationHasOccurred);
-        else    // X*Y=Z
+        else {   // X*Y=Z
+
+            if (x.singleton(1)) {
+                this.queueIndex = 0;
+                yEqz.consistency(store);
+                return;
+            }
+            if (y.singleton(1)) {
+                this.queueIndex = 0;
+                xEqz.consistency(store);
+                return;
+            }
+
             do {
+                this.queueIndex = 1;
 
                 // Bounds for Z
                 Interval zBounds = IntDomain.mulBounds(x.min(), x.max(), y.min(), y.max());
@@ -130,29 +147,26 @@ public class XmulYeqZ extends Constraint implements SatisfiedPresent {
                 store.propagationHasOccurred = false;
 
                 // Bounds for X
-                Interval xBounds = IntDomain.divIntBounds(z.min(), z.max(), y.min(), y.max());
+                if (! y.domain.contains(0)) {
+                    Interval xBounds = IntDomain.divIntBounds(z.min(), z.max(),
+                                                              y.min(), y.max());
 
-                x.domain.in(store.level, x, xBounds.min(), xBounds.max());
+                    x.domain.in(store.level, x, xBounds.min(), xBounds.max());
+                }
 
                 // Bounds for Y
-                Interval yBounds = IntDomain.divIntBounds(z.min(), z.max(), x.min(), x.max());
+                if (! x.domain.contains(0)) {
+                    Interval yBounds = IntDomain.divIntBounds(z.min(), z.max(),
+                                                              x.min(), x.max());
 
-                y.domain.in(store.level, y, yBounds.min(), yBounds.max());
-
+                    y.domain.in(store.level, y, yBounds.min(), yBounds.max());
+                }
 
             } while (store.propagationHasOccurred);
+        }
 
         if (x.singleton(0) || y.singleton(0))
             removeConstraint();
-        else if (y.singleton(1)) {
-            removeConstraint();
-            if (!x.singleton() || !z.singleton())
-                store.impose(new XeqY(x, z));
-        } else if (x.singleton(1)) {
-            removeConstraint();
-            if (!y.singleton() || !z.singleton())
-                store.impose(new XeqY(y, z));
-        }
     }
 
     @Override public int getDefaultConsistencyPruningEvent() {
