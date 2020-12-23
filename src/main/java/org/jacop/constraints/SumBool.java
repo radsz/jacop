@@ -33,14 +33,13 @@ package org.jacop.constraints;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
-/**
+/*
  * SumBool constraint implements the summation over several
  * 0/1 variables.
  * <p>
@@ -56,19 +55,19 @@ public class SumBool extends PrimitiveConstraint {
 
     Store store;
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+    static final AtomicInteger idNumber = new AtomicInteger(0);
 
     boolean reified = true;
 
-    /**
+    /*
      * Defines relations
      */
-    final static byte eq = 0, le = 1, lt = 2, ne = 3, gt = 4, ge = 5;
+    static final byte eq = 0, le = 1, lt = 2, ne = 3, gt = 4, ge = 5;
 
-    /**
+    /*
      * Defines negated relations
      */
-    final static byte[] negRel = {ne, //eq=0,
+    static final byte[] negRel = {ne, //eq=0,
         gt, //le=1,
         ge, //lt=2,
         eq, //ne=3,
@@ -76,27 +75,27 @@ public class SumBool extends PrimitiveConstraint {
         lt  //ge=5;
     };
 
-    /**
+    /*
      * It specifies what relations is used by this constraint
      */
     public byte relationType;
 
-    /**
+    /*
      * It specifies a list of variables being summed.
      */
-    IntVar x[];
+    IntVar[] x;
 
-    /**
+    /*
      * It specifies variable for the overall sum.
      */
     IntVar sum;
 
-    /**
+    /*
      * It specifies the number of variables.
      */
     int l;
 
-    /**
+    /*
      * @param store current store
      * @param list  variables which are being multiplied by weights.
      * @param rel   the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
@@ -123,7 +122,7 @@ public class SumBool extends PrimitiveConstraint {
         setScope(Stream.concat(Stream.of(sum), Arrays.stream(list)));
     }
 
-    /**
+    /*
      * It constructs the constraint SumBool.
      *
      * @param store     current store
@@ -136,7 +135,7 @@ public class SumBool extends PrimitiveConstraint {
         this(store, variables.toArray(new IntVar[variables.size()]), rel, sum);
     }
 
-    /**
+    /*
      * @param list variables which are being multiplied by weights.
      * @param rel  the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
      * @param sum  variable containing the sum of weighted variables.
@@ -145,7 +144,7 @@ public class SumBool extends PrimitiveConstraint {
         this(sum.getStore(), list, rel, sum);
     }
 
-    /**
+    /*
      * It constructs the constraint SumBool.
      *
      * @param variables variables which are being multiplied by weights.
@@ -201,12 +200,11 @@ public class SumBool extends PrimitiveConstraint {
                     if (max <= sum.min())
                         removeConstraint();
 
-                if (sum.singleton() && min != max) {
-                    int sumValue = sum.value();
-                    if (sumValue == min)
-                        for (int i = 0; i < l; i++)
-                            if (!x[i].singleton())
-                                x[i].domain.in(store.level, x[i], 0, 0);
+                if (sum.singleton(min) && min != max) {
+
+                    for (int i = 0; i < l; i++)
+                        if (!x[i].singleton())
+                            x[i].domain.in(store.level, x[i], 0, 0);
                 }
                 break;
             case lt:
@@ -217,12 +215,11 @@ public class SumBool extends PrimitiveConstraint {
                     if (max < sum.min())
                         removeConstraint();
 
-                if (sum.singleton() && min != max) {
-                    int sumValue = sum.value();
-                    if (sumValue - 1 == min)
-                        for (int i = 0; i < l; i++)
-                            if (!x[i].singleton())
-                                x[i].domain.in(store.level, x[i], 0, 0);
+                if (sum.singleton(min + 1) && min != max) {
+
+                    for (int i = 0; i < l; i++)
+                        if (!x[i].singleton())
+                            x[i].domain.in(store.level, x[i], 0, 0);
 
                 }
                 break;
@@ -231,7 +228,8 @@ public class SumBool extends PrimitiveConstraint {
                 if (min == max)
                     sum.domain.inComplement(store.level, sum, min);
 
-                int sumMin = sum.min() - max, sumMax = sum.max() - min;
+                int sumMin = sum.min() - max;
+                int sumMax = sum.max() - min;
                 if (sumMax - sumMin == 1)
                     for (int i = 0; i < l; i++)
                         if (!x[i].singleton())
@@ -245,13 +243,11 @@ public class SumBool extends PrimitiveConstraint {
                     if (min > sum.max())
                         removeConstraint();
 
-                if (sum.singleton() && min != max) {
-                    int sumValue = sum.value();
+                if (sum.singleton(max - 1) && min != max) {
 
-                    if (sumValue + 1 == max)
-                        for (int i = 0; i < l; i++)
-                            if (!x[i].singleton())
-                                x[i].domain.in(store.level, x[i], 1, 1);
+                    for (int i = 0; i < l; i++)
+                        if (!x[i].singleton())
+                            x[i].domain.in(store.level, x[i], 1, 1);
                 }
                 break;
             case ge:
@@ -262,15 +258,16 @@ public class SumBool extends PrimitiveConstraint {
                     if (min >= sum.max())
                         removeConstraint();
 
-                if (sum.singleton() && min != max) {
-                    int sumValue = sum.value();
+                if (sum.singleton(max) && min != max) {
 
-                    if (sumValue == max)
-                        for (int i = 0; i < l; i++)
-                            if (!x[i].singleton())
-                                x[i].domain.in(store.level, x[i], 1, 1);
+                    for (int i = 0; i < l; i++)
+                        if (!x[i].singleton())
+                            x[i].domain.in(store.level, x[i], 1, 1);
                 }
                 break;
+
+            default:
+                throw new RuntimeException("Internal error in SumBool");
         }
     }
 
@@ -315,7 +312,8 @@ public class SumBool extends PrimitiveConstraint {
 
     private boolean entailed(byte rel) {
 
-        int min = 0, max = 0;
+        int min = 0;
+        int max = 0;
 
         for (int i = 0; i < l; i++) {
             IntDomain xd = x[i].dom();
@@ -336,10 +334,9 @@ public class SumBool extends PrimitiveConstraint {
                 return min > sum.max();
             case ge:
                 return min >= sum.max();
+            default:
+                return false;
         }
-
-        return false;
-
     }
 
     public byte relation(String r) {
@@ -381,16 +378,17 @@ public class SumBool extends PrimitiveConstraint {
                 return ">";
             case ge:
                 return ">=";
+            default:
+                return "??";
         }
-
-        return "?";
     }
 
     IntVar[] filterAndOverflow(IntVar[] x) {
 
         List<IntVar> ls = new ArrayList<>();
 
-        int sMin = 0, sMax = 0;
+        int sMin = 0;
+        int sMax = 0;
         for (int i = 0; i < x.length; i++) {
             int n1 = x[i].min();
             int n2 = x[i].max();
