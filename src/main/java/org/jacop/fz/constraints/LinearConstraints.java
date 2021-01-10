@@ -1,4 +1,4 @@
-/**
+/*
  * LinearConstraints.java
  * This file is part of JaCoP.
  * <p>
@@ -27,6 +27,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package org.jacop.fz.constraints;
 
 import org.jacop.constraints.*;
@@ -39,7 +40,7 @@ import org.jacop.fz.SimpleNode;
 import org.jacop.satwrapper.SatTranslation;
 
 /**
- * Generation of linear constraints in flatzinc
+ * Generation of linear constraints in flatzinc.
  *
  * @author Krzysztof Kuchcinski
  */
@@ -64,7 +65,8 @@ class LinearConstraints implements ParserTreeConstants {
         // If a linear term contains only constants and can be evaluated
         // check if satisfied and do not generate constraint
         if (par3.min() == par3.max() && allConstants(p2)) {
-            int el = 0, s = 0;
+            int el = 0;
+            int s = 0;
             while (el < p2.length) {
                 s += p2[el].min() * p1[el];
                 el++;
@@ -187,7 +189,7 @@ class LinearConstraints implements ParserTreeConstants {
                             support.pose(new Reified(new XeqC(p2[0], p3), p4));
                     } else
                         support.pose(new Reified(new XmulCeqZ(p2[0], p1[0], support.dictionary.getConstant(p3)), p4));
-			// support.pose(new Reified(new LinearInt(p2, p1, "==", p3), p4));
+                    // support.pose(new Reified(new LinearInt(p2, p1, "==", p3), p4));
                 } else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
                     support.pose(new Reified(new XplusCeqZ(p2[1], p3, p2[0]), p4));
                 } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
@@ -240,10 +242,10 @@ class LinearConstraints implements ParserTreeConstants {
                             // (x != y) <=> b == x xor y = b
                             support.pose(new XorBool(new IntVar[] {p2[0], p2[1]}, p4));
                         else if (p2[0].singleton())
-			    support.pose(new Reified(new XneqC(p2[1], p2[0].value()), p4));
-			else if (p2[1].singleton())
-			    support.pose(new Reified(new XneqC(p2[0], p2[1].value()), p4));
-			else
+                            support.pose(new Reified(new XneqC(p2[1], p2[0].value()), p4));
+                        else if (p2[1].singleton())
+                            support.pose(new Reified(new XneqC(p2[0], p2[1].value()), p4));
+                        else
                             support.pose(new Reified(new XneqY(p2[0], p2[1]), p4));
                     else
                         support.pose(new Reified(new Not(new XplusCeqZ(p2[1], p3, p2[0])), p4));
@@ -253,9 +255,9 @@ class LinearConstraints implements ParserTreeConstants {
                             // (x != y) <=> b == x xor y = b
                             support.pose(new XorBool(new IntVar[] {p2[0], p2[1]}, p4));
                         else if (p2[0].singleton())
-			    support.pose(new Reified(new XneqC(p2[1], p2[0].value()), p4));
-			else if (p2[1].singleton())
-			    support.pose(new Reified(new XneqC(p2[0], p2[1].value()), p4));
+                            support.pose(new Reified(new XneqC(p2[1], p2[0].value()), p4));
+                        else if (p2[1].singleton())
+                            support.pose(new Reified(new XneqC(p2[0], p2[1].value()), p4));
                         else
                             support.pose(new Reified(new XneqY(p2[0], p2[1]), p4));
                     else
@@ -296,12 +298,12 @@ class LinearConstraints implements ParserTreeConstants {
             case Support.lt:
                 support.pose(new Reified(new LinearInt(p2, p1, "<", p3), p4));
                 break;
-            // gt not present in the newest flatzinc version
-            // case support.gt :
-            // 	t = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
-            // 	support.pose(new SumWeight(p2, p1, t));
-            // 	support.pose(new Reified(new XgtC(t, p3), p4));
-            // 	break;
+                // gt not present in the newest flatzinc version
+                // case support.gt :
+                //  t = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
+                //  support.pose(new SumWeight(p2, p1, t));
+                //  support.pose(new Reified(new XgtC(t, p3), p4));
+                //  break;
             case Support.le:
                 if (p1.length == 2 && p1[0] == 1 && p1[1] == -1)
                     if (p3 == 0)
@@ -310,6 +312,8 @@ class LinearConstraints implements ParserTreeConstants {
                         support.pose(new XplusClteqZ(p2[0], -p3, p2[1]));
                     else if (p4.max() == 0)
                         support.pose(new Not(new XplusClteqZ(p2[0], -p3, p2[1])));
+                    else if (p2[0].singleton())
+                        support.pose(new Reified(new XgteqC(p2[1], p2[0].value() - p3), p4));
                     else
                         support.pose(new Reified(new XplusClteqZ(p2[0], -p3, p2[1]), p4));
                 else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1)
@@ -319,20 +323,22 @@ class LinearConstraints implements ParserTreeConstants {
                         support.pose(new XplusClteqZ(p2[1], -p3, p2[0]));
                     else if (p4.max() == 0)
                         support.pose(new Not(new XplusClteqZ(p2[1], -p3, p2[0])));
+                    else if (p2[1].singleton())
+                        support.pose(new Reified(new XgteqC(p2[0], p2[1].value() - p3), p4));
                     else
                         support.pose(new Reified(new XplusClteqZ(p2[1], -p3, p2[0]), p4));
                 else if (p1.length == 1 && p1[0] == 1)
                     support.pose(new Reified(new org.jacop.constraints.XlteqC(p2[0], p3), p4));
                 else if (p1.length == 1 && p1[0] == -1)
                     support.pose(new Reified(new org.jacop.constraints.XgteqC(p2[0], -p3), p4));
-                else if (boolSum(p2) && p3 == 0 && allPositive(
-                    p1)) // very special case: positive weighted sum of 0/1 variables <= 0 =>  (all p2's zero <=> p4)
+                else if (boolSum(p2) && p3 == 0 && allPositive(p1))
+                    // very special case: positive weighted sum of 0/1 variables <= 0 =>  (all p2's zero <=> p4)
                     if (support.options.useSat())
                         sat.generate_allZero_reif(support.unique(p2), p4);
                     else
                         support.pose(new Not(new OrBoolVector(support.unique(p2), p4)));
-                else if (boolSum(p2) && p3 == 0 && allNonPositive(
-                    p1)) // very special case: negative weighted sum of 0/1 variables <= 0 =>  (p4 = 1)
+                else if (boolSum(p2) && p3 == 0 && allNonPositive(p1))
+                    // very special case: negative weighted sum of 0/1 variables <= 0 =>  (p4 = 1)
                     p4.domain.in(store.level, p4, 1, 1);
                 else if (allWeightsOne(p1)) {
                     t = support.dictionary.getConstant(p3);
@@ -420,16 +426,16 @@ class LinearConstraints implements ParserTreeConstants {
 
                 if (p1.length == 1) {
                     if (p1[0] == 1) {
-			support.pose(new Implies(p4, new XeqC(p2[0], p3)));
+                        support.pose(new Implies(p4, new XeqC(p2[0], p3)));
                     } else
                         support.pose(new Implies(p4, new XmulCeqZ(p2[0], p1[0], support.dictionary.getConstant(p3))));
-		    //support.pose(new Implies(p4, new LinearInt(p2, p1, "==", p3)));
+                    //support.pose(new Implies(p4, new LinearInt(p2, p1, "==", p3)));
                 } else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
                     support.pose(new Implies(p4, new XplusCeqZ(p2[1], p3, p2[0])));
                 } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
                     support.pose(new Implies(p4, new XplusCeqZ(p2[0], p3, p2[1])));
                 } else if (p1.length == 2 && p1[0] == 1 && p1[1] == 1) {
-		    support.pose(new Implies(p4, new XplusYeqC(p2[0], p2[1], p3)));
+                    support.pose(new Implies(p4, new XplusYeqC(p2[0], p2[1], p3)));
                 } else if (p1.length == 2 && p1[0] == -1 && p1[1] == -1) {
                     support.pose(new Implies(p4, new XplusYeqC(p2[0], p2[1], -p3)));
                 } else {
@@ -462,26 +468,26 @@ class LinearConstraints implements ParserTreeConstants {
                 }
                 break;
             case Support.ne:
-		if (p1.length == 1 && p1[0] == 1)
-		    support.pose(new Implies(p4, new XneqC(p2[0], p3)));
-		else if (p1.length == 1 && p1[0] == -1)
-		    support.pose(new Implies(p4, new XneqC(p2[0], -p3)));
+                if (p1.length == 1 && p1[0] == 1)
+                    support.pose(new Implies(p4, new XneqC(p2[0], p3)));
+                else if (p1.length == 1 && p1[0] == -1)
+                    support.pose(new Implies(p4, new XneqC(p2[0], -p3)));
                 else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
                     if (p3 == 0)
                         if (p2[0].singleton())
-			    support.pose(new Implies(p4, new XneqC(p2[1], p2[0].value())));
-			else if (p2[1].singleton())
-			    support.pose(new Implies(p4, new XneqC(p2[0], p2[1].value())));
-			else
+                            support.pose(new Implies(p4, new XneqC(p2[1], p2[0].value())));
+                        else if (p2[1].singleton())
+                            support.pose(new Implies(p4, new XneqC(p2[0], p2[1].value())));
+                        else
                             support.pose(new Implies(p4, new XneqY(p2[0], p2[1])));
                     else
                         support.pose(new Reified(new Not(new XplusCeqZ(p2[1], p3, p2[0])), p4));
                 } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
                     if (p3 == 0)
                         if (p2[0].singleton())
-			    support.pose(new Implies(p4, new XneqC(p2[1], p2[0].value())));
-			else if (p2[1].singleton())
-			    support.pose(new Implies(p4, new XneqC(p2[0], p2[1].value())));
+                            support.pose(new Implies(p4, new XneqC(p2[1], p2[0].value())));
+                        else if (p2[1].singleton())
+                            support.pose(new Implies(p4, new XneqC(p2[0], p2[1].value())));
                         else
                             support.pose(new Implies(p4, new XneqY(p2[0], p2[1])));
                     else
@@ -491,40 +497,48 @@ class LinearConstraints implements ParserTreeConstants {
                 } else if (p1.length == 2 && p1[0] == -1 && p1[1] == -1) {
                     support.pose(new Implies(p4, new Not(new XplusYeqC(p2[0], p2[1], -p3))));
                 } else if (allWeightsOne(p1)) {
-		    t = support.dictionary.getConstant(p3); // new IntVar(store, p3, p3);
-		    if (boolSum(p2))
-			support.pose(new Implies(p4, new SumBool(p2, "!=", t)));
-		    else
-			support.pose(new Implies(p4, new SumInt(p2, "!=", t)));
+                    t = support.dictionary.getConstant(p3); // new IntVar(store, p3, p3);
+                    if (boolSum(p2))
+                        support.pose(new Implies(p4, new SumBool(p2, "!=", t)));
+                    else
+                        support.pose(new Implies(p4, new SumInt(p2, "!=", t)));
                 } else if (allWeightsMinusOne(p1)) {
-		    t = support.dictionary.getConstant(-p3); // new IntVar(store, -p3, -p3);
-		    if (boolSum(p2))
-			support.pose(new Implies(p4, new SumBool(p2, "!=", t)));
-		    else
-			support.pose(new Implies(p4, new SumInt(p2, "!=", t)));
+                    t = support.dictionary.getConstant(-p3); // new IntVar(store, -p3, -p3);
+                    if (boolSum(p2))
+                        support.pose(new Implies(p4, new SumBool(p2, "!=", t)));
+                    else
+                        support.pose(new Implies(p4, new SumInt(p2, "!=", t)));
                 } else
                     support.pose(new Implies(p4, new LinearInt(p2, p1, "!=", p3)));
                 break;
             case Support.lt:
                 support.pose(new Implies(p4, new LinearInt(p2, p1, "<", p3)));
                 break;
-	    case Support.gt:
-		support.pose(new Implies(p4, new LinearInt(p2, p1, ">", p3)));
-		break;
-	    case Support.ge:
-		support.pose(new Implies(p4, new LinearInt(p2, p1, ">=", p3)));
-		break;
+            case Support.gt:
+                support.pose(new Implies(p4, new LinearInt(p2, p1, ">", p3)));
+                break;
+            case Support.ge:
+                support.pose(new Implies(p4, new LinearInt(p2, p1, ">=", p3)));
+                break;
             case Support.le:
                 if (p1.length == 2 && p1[0] == 1 && p1[1] == -1)
-		    if (p3 == 0)
-			support.pose(new Implies(p4, new XlteqY(p2[0], p2[1])));
-		    else
-			support.pose(new Implies(p4, new XplusClteqZ(p2[0], -p3, p2[1])));
+                    if (p3 == 0)
+                        support.pose(new Implies(p4, new XlteqY(p2[0], p2[1])));
+                    else {
+                        if (p2[0].singleton())
+                            support.pose(new Implies(p4, new XgteqC(p2[1], p2[0].value() - p3)));
+                        else
+                            support.pose(new Implies(p4, new XplusClteqZ(p2[0], - p3, p2[1])));
+                    }
                 else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1)
-		    if (p3 == 0)
-			support.pose(new Implies(p4, new XlteqY(p2[1], p2[0])));
-		    else
-			support.pose(new Implies(p4, new XplusClteqZ(p2[1], -p3, p2[0])));
+                    if (p3 == 0)
+                        support.pose(new Implies(p4, new XlteqY(p2[1], p2[0])));
+                    else {
+                        if (p2[1].singleton())
+                            support.pose(new Implies(p4, new XgteqC(p2[0], p2[1].value() - p3)));
+                        else
+                            support.pose(new Implies(p4, new XplusClteqZ(p2[1], -p3, p2[0])));
+                    }
                 else if (p1.length == 1 && p1[0] == 1)
                     support.pose(new Implies(p4, new org.jacop.constraints.XlteqC(p2[0], p3)));
                 else if (p1.length == 1 && p1[0] == -1)
@@ -532,7 +546,7 @@ class LinearConstraints implements ParserTreeConstants {
                 else if (allWeightsOne(p1)) {
                     t = support.dictionary.getConstant(p3);
                     if (boolSum(p2))
-			support.pose(new Implies(p4, new SumBool(p2, "<=", t)));
+                        support.pose(new Implies(p4, new SumBool(p2, "<=", t)));
                     else
                         support.pose(new Implies(p4, new SumInt(p2, "<=", t)));
                 } else if (allWeightsMinusOne(p1)) {
@@ -630,38 +644,38 @@ class LinearConstraints implements ParserTreeConstants {
                     // possible use of Table constraint
                     // int[][] tbl = org.jacop.constraints.table.TableMill.linear(p2, p1, p3);
                     // if (tbl != null)
-                    // 	if (tbl.length <= 64)
-                    // 	    support.pose(new org.jacop.constraints.table.SimpleTable(p2, tbl, true));
-                    // 	else
-                    // 	    support.pose(new org.jacop.constraints.table.Table(p2, tbl, true));
+                    //  if (tbl.length <= 64)
+                    //      support.pose(new org.jacop.constraints.table.SimpleTable(p2, tbl, true));
+                    //  else
+                    //      support.pose(new org.jacop.constraints.table.Table(p2, tbl, true));
                     // else
-                    // 	support.pose(new LinearIntDom(p2, p1, "==", p3));
+                    //  support.pose(new LinearIntDom(p2, p1, "==", p3));
 
-		    int pos = sumPossible(p1);
-		    if (pos > -1) {
-			// Use SumBool constraint instead of LinearIntDom
-			IntVar[] vect = new IntVar[p1.length - 1];
-			int n = 0;
-			for (int i = 0; i < p2.length; i++)
-			    if (i != pos)
-				vect[n++] = p2[i];
+                    int pos = sumPossible(p1);
+                    if (pos > -1) {
+                        // Use SumBool constraint instead of LinearIntDom
+                        IntVar[] vect = new IntVar[p1.length - 1];
+                        int n = 0;
+                        for (int i = 0; i < p2.length; i++)
+                            if (i != pos)
+                                vect[n++] = p2[i];
 
-			if (boolSum(vect)) {
-			    if (p3 == 0)
-		    		support.pose(new SumBool(vect, "==", p2[pos]));
-		    	    else {
-		    		IntVar tmp = new IntVar(store, 0, org.jacop.core.IntDomain.MaxInt);
-		    		support.pose(new SumBool(vect, "==", tmp));
-		    		support.pose(new XplusCeqZ(p2[pos], p3, tmp));
-		    	    }
-		    	    return;
-			}
-		    }
+                        if (boolSum(vect)) {
+                            if (p3 == 0)
+                                support.pose(new SumBool(vect, "==", p2[pos]));
+                            else {
+                                IntVar tmp = new IntVar(store, 0, org.jacop.core.IntDomain.MaxInt);
+                                support.pose(new SumBool(vect, "==", tmp));
+                                support.pose(new XplusCeqZ(p2[pos], p3, tmp));
+                            }
+                            return;
+                        }
+                    }
 
-		    support.pose(new LinearIntDom(p2, p1, "==", p3));
+                    support.pose(new LinearIntDom(p2, p1, "==", p3));
 
                 } else if ((p3 == 0 && p1.length == 3) && ((p1[0] == -1 && p1[1] == -1 && p1[2] == 1) || (p1[0] == 1 && p1[1] == 1
-													  && p1[2] == -1))) {
+                                                                                                          && p1[2] == -1))) {
                     support.pose(new XplusYeqZ(p2[0], p2[1], p2[2]));
                 } else if (p3 == 0 && p1.length == 2 && p1[0] == 1) {
                     support.pose(new XmulCeqZ(p2[1], -p1[1], p2[0]));
@@ -671,8 +685,8 @@ class LinearConstraints implements ParserTreeConstants {
                     support.pose(new XmulCeqZ(p2[1], p1[1], p2[0]));
                 } else if (p3 == 0 && p1.length == 2 && p1[1] == -1) {
                     support.pose(new XmulCeqZ(p2[0], p1[0], p2[1]));
-		} else if ((p3 == 0 && p1.length == 3) && ((p1[0] == 1 && p1[1] == -1 && p1[2] == -1) || (p1[0] == -1 && p1[1] == 1
-                    && p1[2] == 1))) {
+                } else if ((p3 == 0 && p1.length == 3) && ((p1[0] == 1 && p1[1] == -1 && p1[2] == -1) || (p1[0] == -1 && p1[1] == 1
+                                                                                                          && p1[2] == 1))) {
                     if (paramZero(p2[1]))
                         support.pose(new XeqY(p2[2], p2[0]));
                     else if (paramZero(p2[2]))
@@ -682,65 +696,65 @@ class LinearConstraints implements ParserTreeConstants {
                 } else {
                     int pos = sumPossible(p1);
                     if (pos > -1) { 
-			if (p3 == 0) {
-			    IntVar[] vect = new IntVar[p1.length - 1];
-			    int n = 0;
-			    for (int i = 0; i < p2.length; i++)
-				if (i != pos)
-				    vect[n++] = p2[i];
+                        if (p3 == 0) {
+                            IntVar[] vect = new IntVar[p1.length - 1];
+                            int n = 0;
+                            for (int i = 0; i < p2.length; i++)
+                                if (i != pos)
+                                    vect[n++] = p2[i];
 
-			    if (boolSum(vect))
-				support.pose(new SumBool(vect, "==", p2[pos]));
-			    else if (vect.length == 2)
-				support.pose(new XplusYeqZ(vect[0], vect[1], p2[pos]));
-			    else
-				support.pose(new SumInt(vect, "==", p2[pos]));
-			} else {
-			    // p3 != 0
-			    IntVar[] vect = new IntVar[p1.length];
-			    IntVar v = p2[pos];
-			    int n = 0;
-			    if (p1[pos] == 1)
-				for (int i = 0; i < p2.length; i++)
-				    if (i != pos)
-					vect[n++] = p2[i];
-				    else 
-					vect[n++] = support.dictionary.getConstant(p3);
-			    else {// p1[pos] == -1
-				for (int i = 0; i < p2.length; i++)
-				    if (i != pos)
-					vect[n++] = p2[i];
-				    else
-					vect[n++] = support.dictionary.getConstant(-p3);
-			    }
-			    if (boolSum(vect))
-				support.pose(new SumBool(vect, "==", v));
-			    else if (vect.length == 2)
-				support.pose(new XplusYeqZ(vect[0], vect[1], v));
-			    else
-				support.pose(new SumInt(vect, "==", v));
-			}
-		    } else if (allWeightsOne(p1)) {
-			    IntVar v = support.dictionary.getConstant(p3);
-			    if (boolSum(p2))
-				support.pose(new SumBool(p2, "==", v));
-			    else
-				support.pose(new SumInt(p2, "==", v));
-			} else if (allWeightsMinusOne(p1)) {
-			    IntVar v = support.dictionary.getConstant(-p3);
-			    if (boolSum(p2))
-				support.pose(new SumBool(p2, "==", v));
-			    else
-				support.pose(new SumInt(p2, "==", v));
-			} else {
-			    if (p2.length < 30)
-				support.pose(new LinearInt(p2, p1, "==", p3));
-			    else
-				support.pose(new SumWeight(p2, p1, p3));
-			}
+                            if (boolSum(vect))
+                                support.pose(new SumBool(vect, "==", p2[pos]));
+                            else if (vect.length == 2)
+                                support.pose(new XplusYeqZ(vect[0], vect[1], p2[pos]));
+                            else
+                                support.pose(new SumInt(vect, "==", p2[pos]));
+                        } else {
+                            // p3 != 0
+                            IntVar[] vect = new IntVar[p1.length];
+                            IntVar v = p2[pos];
+                            int n = 0;
+                            if (p1[pos] == 1)
+                                for (int i = 0; i < p2.length; i++)
+                                    if (i != pos)
+                                        vect[n++] = p2[i];
+                                    else 
+                                        vect[n++] = support.dictionary.getConstant(p3);
+                            else { // p1[pos] == -1
+                                for (int i = 0; i < p2.length; i++)
+                                    if (i != pos)
+                                        vect[n++] = p2[i];
+                                    else
+                                        vect[n++] = support.dictionary.getConstant(-p3);
+                            }
+                            if (boolSum(vect))
+                                support.pose(new SumBool(vect, "==", v));
+                            else if (vect.length == 2)
+                                support.pose(new XplusYeqZ(vect[0], vect[1], v));
+                            else
+                                support.pose(new SumInt(vect, "==", v));
+                        }
+                    } else if (allWeightsOne(p1)) {
+                        IntVar v = support.dictionary.getConstant(p3);
+                        if (boolSum(p2))
+                            support.pose(new SumBool(p2, "==", v));
+                        else
+                            support.pose(new SumInt(p2, "==", v));
+                    } else if (allWeightsMinusOne(p1)) {
+                        IntVar v = support.dictionary.getConstant(-p3);
+                        if (boolSum(p2))
+                            support.pose(new SumBool(p2, "==", v));
+                        else
+                            support.pose(new SumInt(p2, "==", v));
+                    } else {
+                        if (p2.length < 30)
+                            support.pose(new LinearInt(p2, p1, "==", p3));
+                        else
+                            support.pose(new SumWeight(p2, p1, p3));
+                    }
                 }
                 break;
-	case Support.ne:
+            case Support.ne:
 
                 if (p2Fixed)
                     if (s != p3)
@@ -956,8 +970,10 @@ class LinearConstraints implements ParserTreeConstants {
 
     int sumPossible(int[] ws, int result) {
         if (result == 0) {
-            int one = 0, minusOne = 0;
-            int lastOnePosition = -1, lastMinusOnePosition = -1;
+            int one = 0;
+            int minusOne = 0;
+            int lastOnePosition = -1;
+            int lastMinusOnePosition = -1;
 
             for (int i = 0; i < ws.length; i++)
                 if (ws[i] == 1) {
@@ -980,29 +996,32 @@ class LinearConstraints implements ParserTreeConstants {
 
     int sumPossible(int[] ws) {
 
-            int one = 0, minusOne = 0;
-            int lastOnePosition = -1, lastMinusOnePosition = -1;
+        int one = 0;
+        int minusOne = 0;
+        int lastOnePosition = -1;
+        int lastMinusOnePosition = -1;
 
-            for (int i = 0; i < ws.length; i++)
-                if (ws[i] == 1) {
-                    one++;
-                    lastOnePosition = i;
-                } else if (ws[i] == -1) {
-                    minusOne++;
-                    lastMinusOnePosition = i;
-                }
+        for (int i = 0; i < ws.length; i++)
+            if (ws[i] == 1) {
+                one++;
+                lastOnePosition = i;
+            } else if (ws[i] == -1) {
+                minusOne++;
+                lastMinusOnePosition = i;
+            }
 
-            if (one == 1 && minusOne == ws.length - 1)
-                return lastOnePosition;
-            else if (minusOne == 1 && one == ws.length - 1)
-                return lastMinusOnePosition;
-            else
-                return -1;
+        if (one == 1 && minusOne == ws.length - 1)
+            return lastOnePosition;
+        else if (minusOne == 1 && one == ws.length - 1)
+            return lastMinusOnePosition;
+        else
+            return -1;
     }
 
     int sumLePossible(int[] ws, int result) {
         if (result == 0) {
-            int one = 0, minusOne = 0;
+            int one = 0;
+            int minusOne = 0;
             int lastMinusOnePosition = -1;
 
             for (int i = 0; i < ws.length; i++)
@@ -1023,7 +1042,8 @@ class LinearConstraints implements ParserTreeConstants {
 
     int sumGePossible(int[] ws, int result) {
         if (result == 0) {
-            int one = 0, minusOne = 0;
+            int one = 0;
+            int minusOne = 0;
             int lastOnePosition = -1;
 
             for (int i = 0; i < ws.length; i++)
