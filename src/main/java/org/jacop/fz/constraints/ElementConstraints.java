@@ -1,4 +1,4 @@
-/**
+/*
  * ElementConstraints.java
  * This file is part of JaCoP.
  * <p>
@@ -27,10 +27,12 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package org.jacop.fz.constraints;
 
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementIntegerFast;
+import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.ElementVariableFast;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -46,7 +48,7 @@ import org.jacop.set.constraints.ElementSet;
 import org.jacop.set.constraints.ElementSetVariable;
 import org.jacop.set.core.SetVar;
 
-/**
+/*
  * Generation of boolean constraints in flatzinc
  *
  * @author Krzysztof Kuchcinski
@@ -130,7 +132,11 @@ class ElementConstraints implements ParserTreeConstants {
             IntVar[] newP2 = new IntVar[listLength];
             for (int i = 0; i < listLength; i++)
                 newP2[i] = p2var[p1.min() - 1 + i];
-            support.pose(new ElementVariableFast(p1, newP2, p3, p1.min() - 1));
+
+            if (support.options.getBoundConsistency())
+                support.pose(new ElementVariableFast(p1, newP2, p3, p1.min() - 1));
+            else
+                support.pose(new ElementVariable(p1, newP2, p3, p1.min() - 1));
         }
     }
 
