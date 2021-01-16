@@ -176,7 +176,7 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
 
     }
 
-    private boolean optimize(final int[] sum) {
+    protected boolean optimize(final int[] sum) {
         boolean change = false;
         int[] sum1 = sum;
         int w1 = weight(sum1);

@@ -1,4 +1,4 @@
-/**
+/*
  * Diffn.java
  * This file is part of JaCoP.
  * <p>
@@ -37,7 +37,6 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -54,9 +53,9 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
 
     // private int numberArgs;
 
-    private List<Constraint> constraints = null;
+    protected List<Constraint> constraints = null;
 
-    private List<Var> auxVar = new ArrayList<>();
+    protected List<Var> auxVar = new ArrayList<>();
 
     final IntVar[] x;
     final IntVar[] y;
@@ -191,7 +190,8 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
 
         // add cumulative in x direction
         IntVar[] ey = new IntVar[y.length];
-        int yMin = IntDomain.MaxInt, yMax = IntDomain.MinInt;
+        int yMin = IntDomain.MaxInt;
+        int yMax = IntDomain.MinInt;
         for (int i = 0; i < x.length; i++) {
             yMin = Math.min(yMin, y[i].min());
             yMax = Math.max(yMax, y[i].max() + ly[i].max());
@@ -214,7 +214,8 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
 
         // add cumulative in y direction
         IntVar[] ex = new IntVar[x.length];
-        int xMin = IntDomain.MaxInt, xMax = IntDomain.MinInt;
+        int xMin = IntDomain.MaxInt;
+        int xMax = IntDomain.MinInt;
         for (int i = 0; i < x.length; i++) {
             xMin = Math.min(xMin, x[i].min());
             xMax = Math.max(xMax, x[i].max() + lx[i].max());
