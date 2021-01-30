@@ -31,11 +31,10 @@
 package org.jacop.core;
 
 import org.jacop.constraints.Constraint;
-
 import java.util.ArrayList;
 import java.util.Random;
 
-/**
+/*
  * Defines an integer domain and related operations on it.
  * <p>
  * IntDomain implementations can not assume that arguments to
@@ -64,25 +63,25 @@ public abstract class IntDomain extends Domain {
      * It specifies the constant for GROUND event. It has to be smaller
      * than the constant for events BOUND and ANY.
      */
-    public final static int GROUND = 0;
+    public static final int GROUND = 0;
 
     /**
      * It specifies the constant for BOUND event. It has to be smaller
      * than the constant for event ANY.
      */
-    public final static int BOUND = 1;
+    public static final int BOUND = 1;
 
     /**
      * It specifies the constant for ANY event.
      */
-    public final static int ANY = 2;
+    public static final int ANY = 2;
 
 
     /**
      * It specifies for each event what other events are subsumed by this
      * event. Possibly implement this by bit flags in int.
      */
-    final static int[][] eventsInclusion = {{GROUND, BOUND, ANY}, // GROUND event
+    static final int[][] eventsInclusion = {{GROUND, BOUND, ANY}, // GROUND event
         {BOUND, ANY}, // BOUND event
         {ANY}}; // ANY event
 
@@ -732,7 +731,7 @@ public abstract class IntDomain extends Domain {
 
     }
 
-    /**
+    /*
      * It returns the number of constraints
      *
      * @return the number of constraints attached to this domain.
@@ -1118,9 +1117,11 @@ public abstract class IntDomain extends Domain {
 
     }
 
+    public abstract IntDomain clone();
+
     public abstract IntDomain cloneLight();
 
-    /**
+    /*
      * Returns the lexical ordering between the sets
      *
      * @param domain the set that should be lexically compared to this set
@@ -1131,7 +1132,8 @@ public abstract class IntDomain extends Domain {
         ValueEnumeration thisEnumer = this.valueEnumeration();
         ValueEnumeration paramEnumer = domain.valueEnumeration();
 
-        int i, j;
+        int i;
+        int j;
 
         while (thisEnumer.hasMoreElements()) {
 
@@ -1269,7 +1271,7 @@ public abstract class IntDomain extends Domain {
 
     }
 
-    private final static Random generator = new Random();
+    private static final Random generator = new Random();
 
     /**
      * It returns a random value from the domain.
@@ -1283,10 +1285,12 @@ public abstract class IntDomain extends Domain {
     /*
      * Finds result interval for multiplication of {a..b} * {c..d}
      */
-    public final static Interval mulBounds(int a, int b, int c, int d) {
+    public static final Interval mulBounds(int a, int b, int c, int d) {
 
-	int ac = multiplyInt(a, c), ad = multiplyInt(a, d),
-	    bc = multiplyInt(b, c), bd = multiplyInt(b, d);
+        int ac = multiplyInt(a, c);
+        int ad = multiplyInt(a, d);
+        int bc = multiplyInt(b, c);
+        int bd = multiplyInt(b, d);
         int min = Math.min(Math.min(ac, ad), Math.min(bc, bd));
         int max = Math.max(Math.max(ac, ad), Math.max(bc, bd));
 
@@ -1296,15 +1300,15 @@ public abstract class IntDomain extends Domain {
     /*
      * Finds result interval for {a..b}^2
      */
-    public final static Interval squareBounds(int a, int b) {
+    public static final Interval squareBounds(int a, int b) {
 
-        int aa = multiplyInt(a, a),
-	    bb = multiplyInt(b, b);
+        int aa = multiplyInt(a, a);
+        int bb = multiplyInt(b, b);
         int min = (aa < bb) ? aa : bb; //Math.min(aa, bb);
-	int max = (aa > bb) ? aa : bb; //Math.max(aa, bb);
+        int max = (aa > bb) ? aa : bb; //Math.max(aa, bb);
 
         if (a < 0 && b > 0)
-	    min = 0;
+            min = 0;
 
         return new Interval(min, max);
     }
@@ -1312,9 +1316,10 @@ public abstract class IntDomain extends Domain {
     /*
      * Finds result interval for division of {a..b} / {c..d} for div and mod constraints
      */
-    public final static Interval divBounds(int a, int b, int c, int d) {
+    public static final Interval divBounds(int a, int b, int c, int d) {
 
-        int min, max;
+        int min;
+        int max;
 
         Interval result;
 
@@ -1335,7 +1340,10 @@ public abstract class IntDomain extends Domain {
             result = divBounds(a, b, c, -1);
 
         else if ((c > 0 || d < 0) && c <= d) { // case 5
-            int ac = a / c, ad = a / d, bc = b / c, bd = b / d;
+            int ac = a / c;
+            int ad = a / d;
+            int bc = b / c;
+            int bd = b / d;
             min = Math.min(Math.min(ac, ad), Math.min(bc, bd));
             max = Math.max(Math.max(ac, ad), Math.max(bc, bd));
             result = new Interval(min, max);
@@ -1348,8 +1356,9 @@ public abstract class IntDomain extends Domain {
     /*
      * Finds result interval for division of {a..b} / {c..d} for mul constraints
      */
-    public final static Interval divIntBounds(int a, int b, int c, int d) {
-        int min, max;
+    public static final Interval divIntBounds(int a, int b, int c, int d) {
+        int min;
+        int max;
 
         Interval result;
 
@@ -1370,7 +1379,10 @@ public abstract class IntDomain extends Domain {
             result = divIntBounds(a, b, c, -1);
 
         else if ((c > 0 || d < 0) && c <= d) { // case 5
-            double ac = (double) a / c, ad = (double) a / d, bc = (double) b / c, bd = (double) b / d;
+            double ac = (double) a / c;
+            double ad = (double) a / d;
+            double bc = (double) b / c;
+            double bd = (double) b / d;
             double low = Math.min(Math.min(ac, ad), Math.min(bc, bd));
             double high = Math.max(Math.max(ac, ad), Math.max(bc, bd));
             min = (int) Math.round(Math.ceil(low));

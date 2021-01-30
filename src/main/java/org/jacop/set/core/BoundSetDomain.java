@@ -210,7 +210,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
     /**
      * Clones the domain.
      */
-    @Override public SetDomain clone() {
+    @Override public BoundSetDomain clone() {
 
         BoundSetDomain cloned = new BoundSetDomain(glb.cloneLight(), lub.cloneLight(), cardinality);
         cloned.stamp = stamp;

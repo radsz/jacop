@@ -33,7 +33,7 @@ package org.jacop.floats.core;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.*;
 
-/**
+/*
  * Defines an integer domain and related operations on it.
  * <p>
  * FloatDomain implementations can not assume that arguments to
@@ -45,39 +45,39 @@ import org.jacop.core.*;
 
 public abstract class FloatDomain extends Domain {
 
-    /**
+    /*
      * It specifies the minimum element in the domain.
      */
     public static final double MinFloat = -Double.MAX_VALUE; // -1e150;
 
-    /**
+    /*
      * It specifies the maximum element in the domain.
      */
     public static final double MaxFloat = Double.MAX_VALUE; // 1e150;
 
-    /**
+    /*
      * Minimization step for floating-point cost function minimization.
      */
     public static double minimizationStep = 0;
 
-    /**
+    /*
      * It specifies the constant pi, as defined in java.lang.Math package.
      */
     public static final double PI = java.lang.Math.PI;
 
-    /**
+    /*
      * It specifies the constant e, as defined in java.lang.Math package.
      */
     public static final double E = java.lang.Math.E;
 
-    /**
+    /*
      * It specifies the rounding method;
      * true - extend interval outward
      * false - does not extend interval and use calculation results.
      */
     static boolean outward = true;
 
-    /**
+    /*
      * It defines rounding method
      *
      * @param out defines rounding method true = outward, false = no rounding outward
@@ -86,7 +86,7 @@ public abstract class FloatDomain extends Domain {
         outward = out;
     }
 
-    /**
+    /*
      * It specifies the method for printing a domain.
      * If true, we print each domain as an interval regardles of
      * the current precision of calculations.
@@ -99,7 +99,7 @@ public abstract class FloatDomain extends Domain {
         intervalPrint = p;
     }
 
-    /**
+    /*
      * It specifies the precision format for floating point print-out
      */
     static double format = Double.MAX_VALUE;
@@ -112,7 +112,7 @@ public abstract class FloatDomain extends Domain {
         format = f;
     }
 
-    /**
+    /*
      * It specifies the precision for floating point operations, among others
      * decide when two numbers are equal and when a interval is singleton.
      */
@@ -181,16 +181,16 @@ public abstract class FloatDomain extends Domain {
 
     // Sets optimization step for floating point optimization
     public static void setStep(double s) {
-	minimizationStep = s;
+        minimizationStep = s;
     }
     
     // returns previous floating-point number before d 
     // for minimization with FloatVar cost function
     public static double previousForMinimization(double d) {
-	if (minimizationStep == 0)
-	    return previous(d);
-	else
-	    return d - minimizationStep;// + upBit(d);
+        if (minimizationStep == 0)
+            return previous(d);
+        else
+            return d - minimizationStep;// + upBit(d);
     }
 
     // returns next (toward inf) floating-point number after d 
@@ -211,18 +211,18 @@ public abstract class FloatDomain extends Domain {
      * It specifies the constant for GROUND event. It has to be smaller
      * than the constant for events BOUND and ANY.
      */
-    public final static int GROUND = 0;
+    public static final int GROUND = 0;
 
     /**
      * It specifies the constant for BOUND event. It has to be smaller
      * than the constant for event ANY.
      */
-    public final static int BOUND = 1;
+    public static final int BOUND = 1;
 
     /**
      * It specifies the constant for ANY event.
      */
-    public final static int ANY = 2;
+    public static final int ANY = 2;
 
 
     /**
@@ -236,7 +236,7 @@ public abstract class FloatDomain extends Domain {
      * It specifies for each event what other events are subsumed by this
      * event. Possibly implement this by bit flags in int.
      */
-    final static int[][] eventsInclusion = {{GROUND, BOUND, ANY}, // GROUND event
+    static final int[][] eventsInclusion = {{GROUND, BOUND, ANY}, // GROUND event
         {BOUND, ANY}, // BOUND event
         {ANY}}; // ANY event
 
@@ -285,12 +285,12 @@ public abstract class FloatDomain extends Domain {
             unionAdapt(enumer.nextElement());
       /*
   }
-	else {
-	    ValueEnumeration enumer = domain.valueEnumeration();
-	    while (enumer.hasMoreElements())
-		unionAdapt(enumer.nextElement());
-	}
-	    */
+        else {
+            ValueEnumeration enumer = domain.valueEnumeration();
+            while (enumer.hasMoreElements())
+                unionAdapt(enumer.nextElement());
+        }
+            */
 
     }
 
@@ -329,16 +329,16 @@ public abstract class FloatDomain extends Domain {
             if (isIntersecting(next.min, next.max))
                 return true;
         }
-	/*
-	}
-	else {
+        /*
+        }
+        else {
 
-	    ValueEnumeration enumer = domain.valueEnumeration();
-	    while (enumer.hasMoreElements())
-		if (contains(enumer.nextElement()))
-		    return true;
-	}
-	*/
+            ValueEnumeration enumer = domain.valueEnumeration();
+            while (enumer.hasMoreElements())
+                if (contains(enumer.nextElement()))
+                    return true;
+        }
+        */
         return false;
     }
 
@@ -370,15 +370,15 @@ public abstract class FloatDomain extends Domain {
             if (!contains(next.min, next.max))
                 return false;
         }
-	    /*
-	}
-	else {
-	    ValueEnumeration enumer = domain.valueEnumeration();
-	    while (enumer.hasMoreElements())
-		if (!contains(enumer.nextElement()))
-		    return false;
-	}
-	    */
+            /*
+        }
+        else {
+            ValueEnumeration enumer = domain.valueEnumeration();
+            while (enumer.hasMoreElements())
+                if (!contains(enumer.nextElement()))
+                    return false;
+        }
+            */
         return true;
 
     }
@@ -582,20 +582,20 @@ public abstract class FloatDomain extends Domain {
 
         }
         return result;
-	    /*
-	}
-	else {
-	    ValueEnumeration enumer = domain.valueEnumeration();
-	    int first = enumer.nextElement();
-	    FloatDomain result = this.subtract(first);
-	    while (enumer.hasMoreElements()) {
-		int next = enumer.nextElement();
-		if (result.contains(next))
-		    result.subtractAdapt(next);
-	    }
-	    return result;
-	}
-	    */
+            /*
+        }
+        else {
+            ValueEnumeration enumer = domain.valueEnumeration();
+            int first = enumer.nextElement();
+            FloatDomain result = this.subtract(first);
+            while (enumer.hasMoreElements()) {
+                int next = enumer.nextElement();
+                if (result.contains(next))
+                    result.subtractAdapt(next);
+            }
+            return result;
+        }
+            */
     }
 
     /**
@@ -632,17 +632,17 @@ public abstract class FloatDomain extends Domain {
             result.unionAdapt(next.min, next.max);
         }
         return result;
-	    /*
-	}
-	else {
-	    ValueEnumeration enumer = domain.valueEnumeration();
-	    while (enumer.hasMoreElements()) {
-		int next = enumer.nextElement();
-		result.unionAdapt(next);
-	    }
-	    return result;
-	}
-	    */
+            /*
+        }
+        else {
+            ValueEnumeration enumer = domain.valueEnumeration();
+            while (enumer.hasMoreElements()) {
+                int next = enumer.nextElement();
+                result.unionAdapt(next);
+            }
+            return result;
+        }
+            */
     }
 
     /**
@@ -854,18 +854,18 @@ public abstract class FloatDomain extends Domain {
                 return false;
         }
         return true;
-	    /*
-	}
-	else {
-	    ValueEnumeration enumer = domain.valueEnumeration();
-	    while (enumer.hasMoreElements()) {
-		int next = enumer.nextElement();
-		if (!contains(next))
-		    return false;
-	    }
-	    return true;
-	}
-	    */
+            /*
+        }
+        else {
+            ValueEnumeration enumer = domain.valueEnumeration();
+            while (enumer.hasMoreElements()) {
+                int next = enumer.nextElement();
+                if (!contains(next))
+                    return false;
+            }
+            return true;
+        }
+            */
     }
 
     @Override public void in(int level, Var var, Domain domain) {
@@ -894,7 +894,7 @@ public abstract class FloatDomain extends Domain {
 
     }
 
-    /**
+    /*
      * It returns the number of constraints
      *
      * @return the number of constraints attached to this domain.
@@ -905,9 +905,11 @@ public abstract class FloatDomain extends Domain {
             + modelConstraintsToEvaluate[ANY];
     }
 
+    public abstract FloatDomain clone();
+
     public abstract FloatDomain cloneLight();
 
-    /**
+    /*
      * Returns the lexical ordering between the sets
      *
      * @param domain the set that should be lexically compared to this set
@@ -918,7 +920,8 @@ public abstract class FloatDomain extends Domain {
         ValueEnumeration thisEnumer = this.valueEnumeration();
         ValueEnumeration paramEnumer = domain.valueEnumeration();
 
-        int i, j;
+        int i;
+        int j;
 
         while (thisEnumer.hasMoreElements()) {
 
@@ -950,17 +953,17 @@ public abstract class FloatDomain extends Domain {
      */
     // public int elementsSmallerThan(int el){
 
-    // 	int counter = -1;
+    //  int counter = -1;
 
-    // 	int value = el - 1;
+    //  int value = el - 1;
 
-    // 	while(value != el){
-    // 	    value = el;
-    // 	    el = previousValue(el);
-    // 	    counter++;
-    // 	}
+    //  while(value != el){
+    //      value = el;
+    //      el = previousValue(el);
+    //      counter++;
+    //  }
 
-    // 	return counter;		
+    //  return counter;         
     // }
 
 
@@ -1299,16 +1302,16 @@ public abstract class FloatDomain extends Domain {
     /* 
      * Finds result interval for addition of {a..b} - {c..d}
      */
-    public final static FloatIntervalDomain addBounds(double a, double b, double c, double d) {
+    public static final FloatIntervalDomain addBounds(double a, double b, double c, double d) {
 
-	// Changing constants to smallest encapsulating intervals to
-	// limit rounding effects problem
-	// if (c == d) {
-	//     c = down(c);
-	//     d = up(d);
-	// }
-	double min = down(a + c);
-	double max = up(b + d);
+        // Changing constants to smallest encapsulating intervals to
+        // limit rounding effects problem
+        // if (c == d) {
+        //     c = down(c);
+        //     d = up(d);
+        // }
+        double min = down(a + c);
+        double max = up(b + d);
 
         if (d == 0.0)
             max = b;
@@ -1327,16 +1330,16 @@ public abstract class FloatDomain extends Domain {
     /* 
      * Finds result interval for subtraction of {a..b} - {c..d}
      */
-    public final static FloatIntervalDomain subBounds(double a, double b, double c, double d) {
+    public static final FloatIntervalDomain subBounds(double a, double b, double c, double d) {
 
-	// Changing constants to smallest encapsulating intervals to
-	// limit rounding effects problem
-	// if (c == d) {
-	//     c = down(c);
-	//     d = up(d);
-	// }
-	double min = down(a - d);
-	double max = up(b - c);
+        // Changing constants to smallest encapsulating intervals to
+        // limit rounding effects problem
+        // if (c == d) {
+        //     c = down(c);
+        //     d = up(d);
+        // }
+        double min = down(a - d);
+        double max = up(b - c);
 
         if (d == 0.0)
             min = a;
@@ -1354,7 +1357,7 @@ public abstract class FloatDomain extends Domain {
     /* 
      * Finds result interval for multiplication of {a..b} * {c..d}
      */
-    public final static FloatIntervalDomain mulBounds(double a, double b, double c, double d) {
+    public static final FloatIntervalDomain mulBounds(double a, double b, double c, double d) {
 
         // System.out.println ("[" + a +".." +b +"] * [" + c + ".." + d + "]");
 
@@ -1377,7 +1380,8 @@ public abstract class FloatDomain extends Domain {
         boolean N0_2 = (c < 0 && d == 0);
         boolean N1_2 = (c < 0 && d < 0);
 
-        double min = 0, max = 0;
+        double min = 0;
+        double max = 0;
 
         if (P1_1)
             if (P1_2) { // P1 /\ P1
@@ -1392,7 +1396,7 @@ public abstract class FloatDomain extends Domain {
                 min = down(b * c);
                 max = up(b * d);
                 return new FloatIntervalDomain(min, max);
-            } else if (N1_2) {// P1 /\ N1
+            } else if (N1_2) { // P1 /\ N1
                 min = down(b * c);
                 max = up(a * d);
                 return new FloatIntervalDomain(min, max);
@@ -1400,7 +1404,7 @@ public abstract class FloatDomain extends Domain {
                 min = down(b * c);
                 max = 0.0; // up(a*d);
                 return new FloatIntervalDomain(min, max);
-            } else {// P1 /\ Z
+            } else { // P1 /\ Z
                 return new FloatIntervalDomain(0.0, 0.0);
             }
 
@@ -1417,7 +1421,7 @@ public abstract class FloatDomain extends Domain {
                 min = down(b * c);
                 max = up(b * d);
                 return new FloatIntervalDomain(min, max);
-            } else {//if (Z_2) // P0 /\ Z
+            } else { //if (Z_2) // P0 /\ Z
                 return new FloatIntervalDomain(0.0, 0.0);
             }
 
@@ -1434,7 +1438,7 @@ public abstract class FloatDomain extends Domain {
                 min = down(Math.min(a * d, b * c));
                 max = up(Math.max(a * c, b * d));
                 return new FloatIntervalDomain(min, max);
-            } else {// if (Z_2) M /\ Z
+            } else { // if (Z_2) M /\ Z
                 return new FloatIntervalDomain(0.0, 0.0);
             }
 
@@ -1459,7 +1463,7 @@ public abstract class FloatDomain extends Domain {
                 min = 0.0; //down(b*d);
                 max = up(a * c);
                 return new FloatIntervalDomain(min, max);
-            } else {// N1 /\ Z
+            } else { // N1 /\ Z
                 return new FloatIntervalDomain(0.0, 0.0);
             }
 
@@ -1472,11 +1476,11 @@ public abstract class FloatDomain extends Domain {
                 min = 0.0; //down(b*d);
                 max = up(a * c);
                 return new FloatIntervalDomain(min, max);
-            } else if (M_2) {// N0 /\ M
+            } else if (M_2) { // N0 /\ M
                 min = down(a * d);
                 max = up(a * c);
                 return new FloatIntervalDomain(min, max);
-            } else {// N0 /\ Z
+            } else { // N0 /\ Z
                 return new FloatIntervalDomain(0.0, 0.0);
             }
         else { //  Z /\ {ALL}
@@ -1511,7 +1515,8 @@ public abstract class FloatDomain extends Domain {
         boolean N0_2 = (c < 0 && d == 0);
         boolean N1_2 = (c < 0 && d < 0);
 
-        double min = 0, max = 0;
+        double min = 0;
+        double max = 0;
 
         // FloatIntervalDomain result = null;
 
@@ -1528,7 +1533,7 @@ public abstract class FloatDomain extends Domain {
                 max = up(a / c);
                 return (FloatIntervalDomain) new FloatIntervalDomain(FloatDomain.MinFloat, max)
                     .union(new FloatIntervalDomain(min, FloatDomain.MaxFloat)); //.subtract(0.0)
-            } else if (N1_2) {// P1 /\ N1
+            } else if (N1_2) { // P1 /\ N1
                 min = down(b / d);
                 max = up(a / c);
                 return new FloatIntervalDomain(min, max); //.subtract(0.0);
