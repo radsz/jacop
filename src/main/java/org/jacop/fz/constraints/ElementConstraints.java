@@ -133,7 +133,7 @@ class ElementConstraints implements ParserTreeConstants {
             for (int i = 0; i < listLength; i++)
                 newP2[i] = p2var[p1.min() - 1 + i];
 
-            if (support.boundsConsistency)
+            if (support.boundsConsistency || support.options.getBoundConsistency())
                 support.pose(new ElementVariableFast(p1, newP2, p3, p1.min() - 1));
             else
                 support.pose(new ElementVariable(p1, newP2, p3, p1.min() - 1));
