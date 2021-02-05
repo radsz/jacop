@@ -30,18 +30,16 @@
 
 package org.jacop.constraints;
 
-import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
-/**
+/*
  * CountVar constraint implements the counting over number of occurrences of
  * a given value in a list of variables. The number of occurrences is
  * specified by variable counter.
@@ -52,22 +50,22 @@ import java.util.stream.Stream;
 
 public class CountVar extends PrimitiveConstraint {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+    static final AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
+    /*
      * It specifies variable idNumber to count the number of occurences of the specified value in a list.
      */
-    final public IntVar counter;
+    public final IntVar counter;
 
-    /**
+    /*
      * The list of variables which are checked and counted if equal to specified value.
      */
-    final public IntVar list[];
+    public final IntVar[] list;
 
-    /**
+    /*
      * The value to which is any variable is equal to makes the constraint count it.
      */
-    final public IntVar value;
+    public final IntVar value;
 
     /*
      * Defines first position of the variable that are not considered;
@@ -139,56 +137,55 @@ public class CountVar extends PrimitiveConstraint {
     @Override public void consistency(final Store store) {
 
         int numberEq = equal.value();
-	int numberMayBe = 0;
-	int start = position.value();
+        int numberMayBe = 0;
+        int start = position.value();
         for (int i = start; i < list.length; i++) {
-	    IntVar v = list[i];
+            IntVar v = list[i];
             if (v.domain.isIntersecting(value.domain))
                 if (v.singleton() && value.singleton() && v.value() == value.value()) {
                     numberEq++;
-		    swap(start, i);
-		    start++;
-		}
-                else
+                    swap(start, i);
+                    start++;
+                } else
                     numberMayBe++;
-	    else { // does not have the value in its domain
+            else { // does not have the value in its domain
                 swap(start, i);
-		start++;
-	    }
-	}
-	
+                start++;
+            }
+        }
+        
         if (numberMayBe == counter.min() - numberEq) {
             for (int i = start; i < list.length; i++) {
-		IntVar v = list[i];
-		v.domain.in(store.level, v, value.domain);
+                IntVar v = list[i];
+                v.domain.in(store.level, v, value.domain);
             }
 
-	    if (value.singleton()) {
-		numberEq += numberMayBe;
-		numberMayBe = 0;
+            if (value.singleton()) {
+                numberEq += numberMayBe;
+                numberMayBe = 0;
 
-		counter.domain.in(store.level, counter, numberEq, numberEq);
-		removeConstraint();
-		return;
-	    }
+                counter.domain.in(store.level, counter, numberEq, numberEq);
+                removeConstraint();
+                return;
+            }
         } else if (numberEq == counter.max()) {
             for (int i = start; i < list.length; i++) {
-		IntVar v = list[i];
-		if (value.singleton())
-		    v.domain.inComplement(store.level, v, value.value());
-	    }
-	    if (value.singleton()) {
-		numberMayBe = 0;
+                IntVar v = list[i];
+                if (value.singleton())
+                    v.domain.inComplement(store.level, v, value.value());
+            }
+            if (value.singleton()) {
+                numberMayBe = 0;
 
-		counter.domain.in(store.level, counter, numberEq, numberEq);
-		removeConstraint();
-		return;
-	    }
+                counter.domain.in(store.level, counter, numberEq, numberEq);
+                removeConstraint();
+                return;
+            }
         }
 
-	equal.update(numberEq);
-	position.update(start);
-	
+        equal.update(numberEq);
+        position.update(start);
+        
         counter.domain.in(store.level, counter, numberEq, numberEq + numberMayBe);
 
     }
@@ -196,34 +193,33 @@ public class CountVar extends PrimitiveConstraint {
     @Override public void notConsistency(final Store store) {
 
         int numberEq = equal.value();
-	int numberMayBe = 0;
-	int start = position.value();
+        int numberMayBe = 0;
+        int start = position.value();
         for (int i = start; i < list.length; i++) {
-	    IntVar v = list[i];
+            IntVar v = list[i];
             if (v.domain.isIntersecting(value.domain))
                 if (v.singleton() && value.singleton() && v.value() == value.value()) {
                     numberEq++;
-		    swap(start, i);
-		    start++;
-		}
-                else
+                    swap(start, i);
+                    start++;
+                } else
                     numberMayBe++;
-	    else { // does not have the value in its domain
+            else { // does not have the value in its domain
                 swap(start, i);
-		start++;
-	    }
-	}
+                start++;
+            }
+        }
 
-	if (numberEq > counter.max() || numberEq + numberMayBe < counter.min()) {
-	    removeConstraint();
-	    return;
-	}
+        if (numberEq > counter.max() || numberEq + numberMayBe < counter.min()) {
+            removeConstraint();
+            return;
+        }
 
-	if (start == list.length)
-	    counter.domain.inComplement(store.level, counter, numberEq);
+        if (start == list.length)
+            counter.domain.inComplement(store.level, counter, numberEq);
 
-	equal.update(numberEq);
-	position.update(start);
+        equal.update(numberEq);
+        position.update(start);
     }
 
     private void swap(int i, int j) {
@@ -236,28 +232,30 @@ public class CountVar extends PrimitiveConstraint {
 
     @Override public boolean satisfied() {
 
-        int eq = 0, notEq = 0;
+        int eq = 0;
+        int notEq = 0;
 
         for (IntVar v : list)
             if (v.singleton() && value.singleton() && v.value() == value.value())
                 eq++;
-	    else if (!v.domain.isIntersecting(value.domain))
-		notEq++;
+            else if (!v.domain.isIntersecting(value.domain))
+                notEq++;
 
-	return (eq + notEq == list.length && counter.singleton(eq));
+        return (eq + notEq == list.length && counter.singleton(eq));
     }
 
     @Override public boolean notSatisfied() {
 
-        int eq = 0, notEq = 0;
+        int eq = 0;
+        int notEq = 0;
 
         for (IntVar v : list)
             if (v.singleton() && value.singleton() && v.value() == value.value())
                 eq++;
-	    else if (!v.domain.isIntersecting(value.domain))
-		notEq++;
+            else if (!v.domain.isIntersecting(value.domain))
+                notEq++;
 
-	return (eq + notEq == list.length && !counter.domain.contains(eq));
+        return (eq + notEq == list.length && !counter.domain.contains(eq));
     }
 
     @Override public String toString() {

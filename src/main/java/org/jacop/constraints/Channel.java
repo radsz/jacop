@@ -34,7 +34,6 @@ import org.jacop.core.*;
 import org.jacop.api.SatisfiedPresent;
 import java.util.Arrays;
 import java.util.Map;
-import java.util.Set;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;

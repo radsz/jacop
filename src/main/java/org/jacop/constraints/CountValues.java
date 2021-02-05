@@ -36,13 +36,12 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
-/**
+/*
  * CountValues constraint implements the counting over numbers of occurrences of a given
  * vector of values in a list of variables. The number of occurrences is specified by
  * variable counter.
@@ -51,28 +50,28 @@ import java.util.stream.Stream;
  * @version 4.8
  */
 
-public class CountValues extends Constraint implements SatisfiedPresent{
+public class CountValues extends Constraint implements SatisfiedPresent {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+    static final AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
+    /*
      * It specifies variable idNumber to count the number of occurences of the specified value in a list.
      */
-    final public IntVar[] counter;
+    public final IntVar[] counter;
 
-    final public IntVar counterRest;
-    final public IntVar[] extendedCounter;
+    public final IntVar counterRest;
+    public final IntVar[] extendedCounter;
 
-    /**
+    /*
      * The list of variables which are checked and counted if equal to specified value.
      */
-    final public IntVar list[];
-    final private int n; // length of the list
+    public final IntVar[] list;
+    private final int n; // length of the list
 
-    /**
+    /*
      * The value to which is any variable is equal to makes the constraint count it.
      */
-    final public int[] values;
+    public final int[] values;
     final IntDomain valuesDomain;
     final IntDomain valuesDomainComplement;
 
@@ -102,24 +101,24 @@ public class CountValues extends Constraint implements SatisfiedPresent{
         this.queueIndex = 1;
         this.numberId = idNumber.incrementAndGet();
 
-	this.n = list.length;
+        this.n = list.length;
         this.list = Arrays.copyOf(list, n);
         this.counter = counter;
         this.values = values;
-	this.counterRest = new IntVar(counter[0].getStore(), 0, n);
+        this.counterRest = new IntVar(counter[0].getStore(), 0, n);
 
-	this.valuesDomain = new IntervalDomain();
-	for (int v : values)
-	    valuesDomain.unionAdapt(v);
-	this.valuesDomainComplement = valuesDomain.complement();
+        this.valuesDomain = new IntervalDomain();
+        for (int v : values)
+            valuesDomain.unionAdapt(v);
+        this.valuesDomainComplement = valuesDomain.complement();
 
-	extendedCounter = new IntVar[counter.length+1];
-	for (int i = 0; i < counter.length; i++) {
-	    extendedCounter[i] = counter[i];
-	}
-	extendedCounter[counter.length] = counterRest;
+        extendedCounter = new IntVar[counter.length + 1];
+        for (int i = 0; i < counter.length; i++) {
+            extendedCounter[i] = counter[i];
+        }
+        extendedCounter[counter.length] = counterRest;
 
-	setScope(Stream.concat(Arrays.stream(list), Arrays.stream(counter)));
+        setScope(Stream.concat(Arrays.stream(list), Arrays.stream(counter)));
 
     }
 
@@ -136,16 +135,17 @@ public class CountValues extends Constraint implements SatisfiedPresent{
 
     // registers the constraint in the constraint store and
     // initialize stateful variables
-    @SuppressWarnings("unchecked") @Override public void impose(Store store) {
+    @SuppressWarnings("unchecked")
+    @Override public void impose(Store store) {
 
         super.impose(store);
 
         position = new TimeStamp<>(store, 0);
-	equal = new TimeStamp[values.length];
-	for (int i = 0; i < values.length; i++) {
-	    equal[i] = new TimeStamp<>(store, 0);
-	}
-	rest = new TimeStamp<>(store, 0);
+        equal = new TimeStamp[values.length];
+        for (int i = 0; i < values.length; i++) {
+            equal[i] = new TimeStamp<>(store, 0);
+        }
+        rest = new TimeStamp<>(store, 0);
     }
 
     @Override public int getDefaultConsistencyPruningEvent() {
@@ -154,111 +154,111 @@ public class CountValues extends Constraint implements SatisfiedPresent{
 
     @Override public void consistency(final Store store) {
 
-	int start = position.value();
-	int[] numberMayBe = new int[values.length];
-	int[] numberEq = new int[values.length];
-	int restEq, restMayBe;
+        int start = position.value();
+        int[] numberMayBe = new int[values.length];
+        int[] numberEq = new int[values.length];
+        int restEq;
+        int restMayBe;
 
-	restEq = rest.value();
-	for (int i = 0; i < values.length; i++)
-	    numberEq[i] = equal[i].value();
+        restEq = rest.value();
+        for (int i = 0; i < values.length; i++)
+            numberEq[i] = equal[i].value();
 
-	do {
+        do {
 
-	    restMayBe = 0;
-	    for (int i = 0; i < values.length; i++)
-		numberMayBe[i] = 0;
+            restMayBe = 0;
+            for (int i = 0; i < values.length; i++)
+                numberMayBe[i] = 0;
 
-	    for (int i = start; i < n; i++) {
-		IntVar v = list[i];
-		int noValuesInDomain = 0;
-		int mayBe = 0;
+            for (int i = start; i < n; i++) {
+                IntVar v = list[i];
+                int noValuesInDomain = 0;
 
-		for (int j = 0; j < values.length; j++) {
-		    if (v.domain.contains(values[j]))
-			if (v.singleton()) {
-			    numberEq[j]++;
-			    swap(start, i);
-			    start++;
-			}
-			else {
-			    numberMayBe[j]++;
-			}
-		    else { // does not have the values in its domain
-			noValuesInDomain++;
-		    }
-		}
+                for (int j = 0; j < values.length; j++) {
+                    if (v.domain.contains(values[j]))
+                        if (v.singleton()) {
+                            numberEq[j]++;
+                            swap(start, i);
+                            start++;
+                        } else {
+                            numberMayBe[j]++;
+                        }
+                    else { // does not have the values in its domain
+                        noValuesInDomain++;
+                    }
+                }
 
-		if (! v.domain.subtract(valuesDomain).isEmpty())
-		    restMayBe++;
+                if (! v.domain.subtract(valuesDomain).isEmpty())
+                    restMayBe++;
 
-		if (noValuesInDomain == values.length) {
-		    swap(start, i);
-		    start++;
-		    restEq++;
-		}
-	    }
+                if (noValuesInDomain == values.length) {
+                    swap(start, i);
+                    start++;
+                    restEq++;
+                }
+            }
 
-	    store.propagationHasOccurred = false;
+            store.propagationHasOccurred = false;
 
-	    counterRest.domain.in(store.level, counterRest, restEq, restEq + restMayBe);
+            counterRest.domain.in(store.level, counterRest, restEq, restEq + restMayBe);
 
-	    for (int i = 0; i < values.length; i++) 	    
-	    	counter[i].domain.in(store.level, counter[i], numberEq[i], numberEq[i] + numberMayBe[i]);
+            for (int i = 0; i < values.length; i++)         
+                counter[i].domain.in(store.level, counter[i], numberEq[i], numberEq[i] + numberMayBe[i]);
 
-	    int min = 0, max = 0;
-	    for (int i = 0; i < extendedCounter.length; i++) {
-	    	min += extendedCounter[i].min();
-	    	max += extendedCounter[i].max();
-	    }
-	    for (int i = 0; i < extendedCounter.length; i++) { // sum(extendedCounter) == n (list length)
-	    	extendedCounter[i].domain.in(store.level, extendedCounter[i],
-	    				     n - max + extendedCounter[i].max(), n - min + extendedCounter[i].min());
-	    }
+            int min = 0;
+            int max = 0;
+            for (int i = 0; i < extendedCounter.length; i++) {
+                min += extendedCounter[i].min();
+                max += extendedCounter[i].max();
+            }
+            for (int i = 0; i < extendedCounter.length; i++) { // sum(extendedCounter) == n (list length)
+                extendedCounter[i].domain.in(store.level, extendedCounter[i],
+                                             n - max + extendedCounter[i].max(), n - min + extendedCounter[i].min());
+            }
 
-	    for (int i = 0; i < values.length; i++) {
+            for (int i = 0; i < values.length; i++) {
 
-		if (numberMayBe[i] == counter[i].min() - numberEq[i]) {
+                if (numberMayBe[i] == counter[i].min() - numberEq[i]) {
 
-		    for (int j = start; j < n; j++) {
-			IntVar v = list[j];
-			if (v.domain.contains(values[i]))
-			    v.domain.in(store.level, v, values[i], values[i]);
+                    for (int j = start; j < n; j++) {
+                        IntVar v = list[j];
+                        if (v.domain.contains(values[i]))
+                            v.domain.in(store.level, v, values[i], values[i]);
 
-		    }
-		} else if (numberEq[i] == counter[i].max()) {
+                    }
+                } else if (numberEq[i] == counter[i].max()) {
 
-		    for (int j = start; j < n; j++) {
-			IntVar v = list[j];
-			v.domain.inComplement(store.level, v, values[i]);
-		    }
-		}
-	    }
+                    for (int j = start; j < n; j++) {
+                        IntVar v = list[j];
+                        v.domain.inComplement(store.level, v, values[i]);
+                    }
+                }
+            }
 
-	    if (restMayBe == counterRest.min() - restEq) {
+            if (restMayBe == counterRest.min() - restEq) {
 
-	    	for (int j = start; j < n; j++) {
-	    	    IntVar v = list[j];
-	    	    if (! v.domain.subtract(valuesDomain).isEmpty()) {
-			v.domain.in(store.level, v, valuesDomainComplement);
-	    	    }
-	    	}
-	    } else if (restEq == counterRest.max()) {
+                for (int j = start; j < n; j++) {
+                    IntVar v = list[j];
+                    if (! v.domain.subtract(valuesDomain).isEmpty()) {
+                        v.domain.in(store.level, v, valuesDomainComplement);
+                    }
+                }
+            } else if (restEq == counterRest.max()) {
 
-	    	for (int j = start; j < n; j++) {
-	    	    IntVar v = list[j];
-	    	    v.domain.in(store.level, v, valuesDomain);
-	    	}
-	    }
+                for (int j = start; j < n; j++) {
+                    IntVar v = list[j];
+                    v.domain.in(store.level, v, valuesDomain);
+                }
+            }
 
-	} while (store.propagationHasOccurred);
+        } while (store.propagationHasOccurred);
 
-	for (int i = 0; i < values.length; i++) {
-	    equal[i].update(numberEq[i]);	    
-	}
-	rest.update(restEq);	    
+        for (int i = 0; i < values.length; i++) {
+            equal[i].update(numberEq[i]);           
+        }
+        rest.update(restEq);        
 
-	position.update(start);
+        position.update(start);
 
     }
 
@@ -272,24 +272,24 @@ public class CountValues extends Constraint implements SatisfiedPresent{
 
     public boolean satisfied() {
 
-	for (int i = 0; i < counter.length; i++) {
-	    int v = values[i];
-	    int c;
-	    if (counter[i].singleton())
-		c = counter[i].value();
-	    else
-		return false;
+        for (int i = 0; i < counter.length; i++) {
+            int v = values[i];
+            int c;
+            if (counter[i].singleton())
+                c = counter[i].value();
+            else
+                return false;
 
-	    int cc = 0;
-	    for (int j = 0; j < n; j++) {
-		if (list[j].singleton(v))
-		    cc++;
-	    }
-	    if (cc != counter[i].value())
-		return false;
-	}
+            int cc = 0;
+            for (int j = 0; j < n; j++) {
+                if (list[j].singleton(v))
+                    cc++;
+            }
+            if (cc != counter[i].value())
+                return false;
+        }
 
-	return true;
+        return true;
     }
 
     @Override public String toString() {
@@ -297,7 +297,7 @@ public class CountValues extends Constraint implements SatisfiedPresent{
         StringBuilder result = new StringBuilder(id());
 
         result.append(" : CountValues(").append(java.util.Arrays.asList(list)).append(", ")
-	    .append(java.util.Arrays.asList(counter)).append(", ").append(java.util.Arrays.toString(values));
+            .append(java.util.Arrays.asList(counter)).append(", ").append(java.util.Arrays.toString(values));
 
         return result.toString();
 

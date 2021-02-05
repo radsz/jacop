@@ -34,13 +34,11 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
 
-/**
+/*
  * AtMost constraint implements the counting over number of occurrences of
  * a given value in a list of variables. The number of occurrences is
  * specified by variable value.
@@ -51,22 +49,22 @@ import java.util.stream.Stream;
 
 public class AtMost extends PrimitiveConstraint {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+    static final AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
+    /*
      * It specifies variable idNumber to count the number of occurences of the specified value in a list.
      */
-    final public int counter;
+    public final int counter;
 
-    /**
+    /*
      * The list of variables which are checked and counted if equal to specified value.
      */
-    final public IntVar list[];
+    public final IntVar[] list;
 
-    /**
+    /*
      * The value to which is any variable is equal to makes the constraint count it.
      */
-    final public int value;
+    public final int value;
 
     boolean reified = true;
 
@@ -146,82 +144,78 @@ public class AtMost extends PrimitiveConstraint {
     @Override public void consistency(final Store store) {
 
         int numberEq = equal.value();
-	int numberMayBe = 0;
-	int start = position.value();
+        int numberMayBe = 0;
+        int start = position.value();
         for (int i = start; i < list.length; i++) {
-	    IntVar v = list[i];
+            IntVar v = list[i];
             if (v.domain.contains(value))
                 if (v.singleton()) {
                     numberEq++;
-		    swap(start, i);
-		    start++;
-		}
-                else
+                    swap(start, i);
+                    start++;
+                } else
                     numberMayBe++;
-	    else { // does not have the value in its domain
+            else { // does not have the value in its domain
                 swap(start, i);
-		start++;
-	    }
+                start++;
+            }
         }
 
-	if (numberEq > counter)
-	    throw Store.failException;
-	else if (numberEq + numberMayBe <= counter) {
-	    if (!reified)
-		removeConstraint();
-	}
-	else if (numberEq == counter) {
-	    for (int i = start; i < list.length; i++) {
-		IntVar v = list[i];
-		if (!v.singleton() && v.domain.contains(value))
-		    v.domain.inComplement(store.level, v, value, value);
-	    }
-	    if (!reified)
-		removeConstraint();
-	}
+        if (numberEq > counter)
+            throw Store.failException;
+        else if (numberEq + numberMayBe <= counter) {
+            if (!reified)
+                removeConstraint();
+        } else if (numberEq == counter) {
+            for (int i = start; i < list.length; i++) {
+                IntVar v = list[i];
+                if (!v.singleton() && v.domain.contains(value))
+                    v.domain.inComplement(store.level, v, value, value);
+            }
+            if (!reified)
+                removeConstraint();
+        }
 
-	equal.update(numberEq);
-	position.update(start);
+        equal.update(numberEq);
+        position.update(start);
     }
 
     @Override public void notConsistency(final Store store) {
-	// at least counter + 1 values
+        // at least counter + 1 values
         int numberEq = equal.value();
-	int numberMayBe = 0;
-	int start = position.value();
+        int numberMayBe = 0;
+        int start = position.value();
         for (int i = start; i < list.length; i++) {
-	    IntVar v = list[i];
+            IntVar v = list[i];
             if (v.domain.contains(value))
                 if (v.singleton()) {
                     numberEq++;
-		    swap(start, i);
-		    start++;
-		}
-                else
+                    swap(start, i);
+                    start++;
+                } else
                     numberMayBe++;
-	    else { // does not have the value in its domain
+            else { // does not have the value in its domain
                 swap(start, i);
-		start++;
-	    }
+                start++;
+            }
         }
 
-	if (numberMayBe + numberEq < counter+1)
-	    throw Store.failException;
-	else if (numberEq >= counter+1) {
-	    if (!reified)
-		removeConstraint();
-	}
-	else if (numberMayBe + numberEq == counter+1) {
-	    for (int i = start; i < list.length; i++) {
-		IntVar v = list[i];
-		v.domain.in(store.level, v, value, value);
-	    }
-	    if (!reified)
-		removeConstraint();
-	}
+        if (numberMayBe + numberEq < counter + 1)
+            throw Store.failException;
+        else if (numberEq >= counter + 1) {
+            if (!reified)
+                removeConstraint();
+        } else if (numberMayBe + numberEq == counter + 1) {
+            for (int i = start; i < list.length; i++) {
+                IntVar v = list[i];
+                v.domain.in(store.level, v, value, value);
+            }
+            if (!reified)
+                removeConstraint();
+        }
 
-    	equal.update(numberEq);
-	position.update(start);
+        equal.update(numberEq);
+        position.update(start);
     }
     
     private void swap(int i, int j) {
@@ -234,7 +228,8 @@ public class AtMost extends PrimitiveConstraint {
 
     @Override public boolean satisfied() {
 
-        int numberEq = 0, numberMayBe = 0;
+        int numberEq = 0;
+        int numberMayBe = 0;
         for (IntVar v : list) {
             if (v.domain.contains(value))
                 if (v.singleton())
@@ -243,16 +238,16 @@ public class AtMost extends PrimitiveConstraint {
                     numberMayBe++;
         }
 
-	return numberEq + numberMayBe <= counter;
+        return numberEq + numberMayBe <= counter;
     }
 
     @Override public boolean notSatisfied() {
         int numberEq = 0;
         for (IntVar v : list) 
-	    if (v.singleton(value))
-		numberEq++;
+            if (v.singleton(value))
+                numberEq++;
 
-	return numberEq >= counter+1;
+        return numberEq >= counter + 1;
     }
 
     @Override public String toString() {
