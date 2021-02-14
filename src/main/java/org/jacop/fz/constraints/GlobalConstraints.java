@@ -1,4 +1,4 @@
-/**
+ /*
  * GlobalConstraints.java
  * This file is part of JaCoP.
  * <p>
@@ -27,6 +27,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package org.jacop.fz.constraints;
 
 import org.jacop.constraints.*;
@@ -54,7 +55,6 @@ import org.jacop.floats.constraints.PeqC;
 import org.jacop.floats.constraints.PeqQ;
 import org.jacop.set.constraints.AeqB;
 import org.jacop.set.constraints.AeqS;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -63,7 +63,7 @@ import java.util.Set;
 import java.util.Arrays;
 
 /**
- * Generation of global constraints in flatzinc
+ * Generation of global constraints in flatzinc.
  *
  * @author Krzysztof Kuchcinski
  */
@@ -106,26 +106,26 @@ class GlobalConstraints implements ParserTreeConstants {
         IntVar[] d = duration.toArray(new IntVar[duration.size()]);
         IntVar[] r = resource.toArray(new IntVar[resource.size()]);
 
-	/* !!! IMPORTANT !!!  Cumulative constraint is added after all other constraints are posed since
+        /* !!! IMPORTANT !!!  Cumulative constraint is added after all other constraints are posed since
    * it has expensive consistency method that do not need to be executed during model
-	 * initialization every time an added constraint triggers execution of Cumulative.
-	 */
+         * initialization every time an added constraint triggers execution of Cumulative.
+         */
 
-	int resSum = 0;
-	for (int i = 0; i < r.length; i++)
-	    resSum += r[i].max();
-	if (resSum <= b.min())
-	    return;
+        int resSum = 0;
+        for (int i = 0; i < r.length; i++)
+            resSum += r[i].max();
+        if (resSum <= b.min())
+            return;
 
         if (s.length == 0)
             return;
         else if (s.length == 1)
             support.pose(new XlteqY(r[0], b));
         else if (b.max() == 1)  // cumulative unary
-	    if (allVarOne(d) && allVarOne(r))
-		support.pose(new Alldiff(s));
-	    else
-		support.delayedConstraints.add(new CumulativeUnary(s, d, r, b, true));
+            if (allVarOne(d) && allVarOne(r))
+                support.pose(new Alldiff(s));
+            else
+                support.delayedConstraints.add(new CumulativeUnary(s, d, r, b, true));
         else {
             int min = Math.min(r[0].min(), r[1].min());
             int nextMin = Math.max(r[0].min(), r[1].min());
@@ -150,20 +150,20 @@ class GlobalConstraints implements ParserTreeConstants {
                 // for (int i = 0; i < r.length; i++)
                 //   support.pose(new XlteqY(r[i], b));
             } else if (allVarGround(d) && allVarGround(r)) {
-		HashSet<Integer> diff = new HashSet<Integer>();
+                HashSet<Integer> diff = new HashSet<Integer>();
                 for (IntVar e : r)
                     diff.add(e.min());
                 double n = (double) r.length;
                 double k = (double) diff.size();
                 // KKU, 2018-10-03, use quadratic edge-finding when n*n < n*k*log(n),
 
-		Cumulative cumul = new Cumulative(s, d, r, b);
+                Cumulative cumul = new Cumulative(s, d, r, b);
 
-                if (2*n * n < n * k * Math.log10((double) n) / Math.log10(2.0))
-		    // algorithm with complexity O(n^2) selected
-		    cumul.doQuadraticEdgeFind(true);
-		// algorithm with complexity O(n*k*logn) is default
-		support.delayedConstraints.add(cumul);
+                if (2 * n * n < n * k * Math.log10((double) n) / Math.log10(2.0))
+                    // algorithm with complexity O(n^2) selected
+                    cumul.doQuadraticEdgeFind(true);
+                // algorithm with complexity O(n*k*logn) is default
+                support.delayedConstraints.add(cumul);
 
                 String p = System.getProperty("fz_cumulative_use_disjunctions");
                 if (p != null)
@@ -350,7 +350,7 @@ class GlobalConstraints implements ParserTreeConstants {
             vv = v;
 
         support.delayedConstraints.add(new AmongVar(xx, ss, vv));
-        // 		    support.pose(new AmongVar(x, s, v));
+        //                  support.pose(new AmongVar(x, s, v));
     }
 
     void gen_jacop_among(SimpleNode node) {
@@ -403,7 +403,7 @@ class GlobalConstraints implements ParserTreeConstants {
             if (index_max < x[i].max() && index_max > x[i].min())
                 x[i].domain.inMax(store.level, x[i], index_max);
         }
-        // 		    System.out.println("c = " + Arrays.asList(x));
+        //                  System.out.println("c = " + Arrays.asList(x));
 
         // =========> remove all non-existing-values counters
         IntDomain gcc_dom = new IntervalDomain();
@@ -443,19 +443,19 @@ class GlobalConstraints implements ParserTreeConstants {
         int[] up = support.getIntArray((SimpleNode) node.jjtGetChild(3));
 
         IntDomain gcc_dom = new IntervalDomain();
-	int[] newCover = new int[cover.length];
-	int n=0;
-        for (int i=0; i < cover.length; i++) {
-	    int e = cover[i];
-	    if (varsContain(x, e))
-		newCover[n++] = i;
-	    else if (low[i] != 0)
-		throw store.failException;
+        int[] newCover = new int[cover.length];
+        int n = 0;
+        for (int i = 0; i < cover.length; i++) {
+            int e = cover[i];
+            if (varsContain(x, e))
+                newCover[n++] = i;
+            else if (low[i] != 0)
+                throw store.failException;
 
             gcc_dom = gcc_dom.union(e);
-	}
+        }
 
-	for (IntVar v : x)
+        for (IntVar v : x)
             v.domain.in(store.level, v, gcc_dom);
 
         IntVar[] counter = new IntVar[n];
@@ -465,27 +465,17 @@ class GlobalConstraints implements ParserTreeConstants {
         support.pose(new GCC(x, counter));
 
         if (support.domainConsistency && !support.options.getBoundConsistency())
-	    // we add additional CountBounds constraint if domain consistency is required
-	    for (int i = 0; i < low.length; i++)
-		support.pose(new CountBounds(x, cover[i], low[i], up[i]));
+            // we add additional CountBounds constraint if domain consistency is required
+            for (int i = 0; i < low.length; i++)
+                support.pose(new CountBounds(x, cover[i], low[i], up[i]));
     }
 
     boolean varsContain(IntVar[] x, int e) {
-	for (IntVar v : x)
-	    if (v.domain.contains(e))
-		return true;
+        for (IntVar v : x)
+            if (v.domain.contains(e))
+                return true;
 
-	return false;
-    }
-
-    void gen_jacop_diff2_strict(SimpleNode node) {
-        IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
-        IntVar[] y = support.getVarArray((SimpleNode) node.jjtGetChild(1));
-        IntVar[] lx = support.getVarArray((SimpleNode) node.jjtGetChild(2));
-        IntVar[] ly = support.getVarArray((SimpleNode) node.jjtGetChild(3));
-
-        // support.pose(new Disjoint(x, y, lx, ly));
-        support.pose(new Diffn(x, y, lx, ly, true));
+        return false;
     }
 
     void gen_jacop_diff2(SimpleNode node) {
@@ -500,6 +490,17 @@ class GlobalConstraints implements ParserTreeConstants {
         support.pose(new Diffn(r, false));
     }
 
+    void gen_jacop_diff2_strict(SimpleNode node) {
+        IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+        IntVar[] y = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+        IntVar[] lx = support.getVarArray((SimpleNode) node.jjtGetChild(2));
+        IntVar[] ly = support.getVarArray((SimpleNode) node.jjtGetChild(3));
+
+        // support.pose(new Disjoint(x, y, lx, ly));
+        // support.poseDC(new Diffn(x, y, lx, ly, true));
+        support.pose(new Diffn(x, y, lx, ly, true));
+    }
+
     void gen_jacop_list_diff2(SimpleNode node) {
         IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
         IntVar[] y = support.getVarArray((SimpleNode) node.jjtGetChild(1));
@@ -507,6 +508,7 @@ class GlobalConstraints implements ParserTreeConstants {
         IntVar[] ly = support.getVarArray((SimpleNode) node.jjtGetChild(3));
 
         // support.pose(new Diff2(x, y, lx, ly));
+        // support.poseDC(new Diffn(x, y, lx, ly, false));
         support.pose(new Diffn(x, y, lx, ly, false));
     }
 
@@ -515,17 +517,16 @@ class GlobalConstraints implements ParserTreeConstants {
         int y = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
         IntVar c = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
-	if (c.singleton(0)) {
-	    for (IntVar v : x) 
-		v.domain.inComplement(store.level, v, y);
-	    return;
-	}
-	else if (c.singleton(x.length)) {
-	    for (IntVar v : x) 
-		v.domain.in(store.level, v, y, y);
-	    return;
-	}
-	
+        if (c.singleton(0)) {
+            for (IntVar v : x) 
+                v.domain.inComplement(store.level, v, y);
+            return;
+        } else if (c.singleton(x.length)) {
+            for (IntVar v : x) 
+                v.domain.in(store.level, v, y, y);
+            return;
+        }
+        
         ArrayList<IntVar> xs = new ArrayList<IntVar>();
         for (IntVar v : x) {
             if (v.domain.contains(y)) //y >= v.min() && y <= v.max())
@@ -535,8 +536,8 @@ class GlobalConstraints implements ParserTreeConstants {
             c.domain.in(store.level, c, 0, 0);
             return;
         } else if (c.singleton()) 
-	    support.pose(new CountBounds(xs, y, c.value(), c.value()));
-	else
+            support.pose(new CountBounds(xs, y, c.value(), c.value()));
+        else
             support.pose(new Count(xs, c, y));
     }
 
@@ -544,21 +545,21 @@ class GlobalConstraints implements ParserTreeConstants {
         IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
         int y = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
         IntVar c = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
-	IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
+        IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
 
-	support.pose(new Reified(new Count(x, c, y), b));
+        support.pose(new Reified(new Count(x, c, y), b));
     }
 
     void gen_count_eq_imp(SimpleNode node) {
         IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
         IntVar y = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
         IntVar c = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
-	IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
+        IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
 
-	if (y.singleton())
-	    support.pose(new Implies(b, new Count(x, c, y.value())));
-	else
-	    support.pose(new Implies(b, new CountVar(x, c, y)));
+        if (y.singleton())
+            support.pose(new Implies(b, new Count(x, c, y.value())));
+        else
+            support.pose(new Implies(b, new CountVar(x, c, y)));
     }
 
     void gen_jacop_count_bounds(SimpleNode node) {
@@ -567,7 +568,7 @@ class GlobalConstraints implements ParserTreeConstants {
         int lb = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
         int ub = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3));
 
-	support.pose(new CountBounds(x, value, lb, ub));
+        support.pose(new CountBounds(x, value, lb, ub));
     }
     
     void gen_jacop_count_values(SimpleNode node) {
@@ -575,17 +576,16 @@ class GlobalConstraints implements ParserTreeConstants {
         int[] values = support.getIntArray((SimpleNode) node.jjtGetChild(1));
         IntVar[] counters = support.getVarArray((SimpleNode) node.jjtGetChild(2));
 
-	if (allVarGround(counters)) {
-	    int[] lb = new int[counters.length],
-		ub = new int[counters.length];
-	    for (int i = 0; i < counters.length; i++) {
-		lb[i] = counters[i].min();
-		ub[i] = counters[i].max();
-	    }
-	    support.pose(new CountValuesBounds(x, lb, ub, values));
-	}
-	else
-	    support.pose(new CountValues(x, counters, values));
+        if (allVarGround(counters)) {
+            int[] lb = new int[counters.length];
+            int[] ub = new int[counters.length];
+            for (int i = 0; i < counters.length; i++) {
+                lb[i] = counters[i].min();
+                ub[i] = counters[i].max();
+            }
+            support.pose(new CountValuesBounds(x, lb, ub, values));
+        } else
+            support.pose(new CountValues(x, counters, values));
     }
 
     void gen_jacop_count_values_bounds(SimpleNode node) {
@@ -594,7 +594,7 @@ class GlobalConstraints implements ParserTreeConstants {
         int[] lb = support.getIntArray((SimpleNode) node.jjtGetChild(2));
         int[] ub = support.getIntArray((SimpleNode) node.jjtGetChild(3));
 
-	support.pose(new CountValuesBounds(x, lb, ub, values));
+        support.pose(new CountValuesBounds(x, lb, ub, values));
     }
 
     void gen_jacop_count_var(SimpleNode node) {
@@ -602,16 +602,15 @@ class GlobalConstraints implements ParserTreeConstants {
         IntVar y = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
         IntVar c = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
-	if (c.singleton(0)) {
-	    for (IntVar v : x)
-		support.pose(new XneqY(v, y));
-	    return;
-	}
-	else if (c.singleton(x.length)) {
-	    for (IntVar v : x)
-		support.pose(new XeqY(v, y));
-	    return;
-	}
+        if (c.singleton(0)) {
+            for (IntVar v : x)
+                support.pose(new XneqY(v, y));
+            return;
+        } else if (c.singleton(x.length)) {
+            for (IntVar v : x)
+                support.pose(new XeqY(v, y));
+            return;
+        }
 
         ArrayList<IntVar> xs = new ArrayList<IntVar>();
         for (IntVar v : x) {
@@ -622,8 +621,8 @@ class GlobalConstraints implements ParserTreeConstants {
             c.domain.in(store.level, c, 0, 0);
             return;
         } else if (y.singleton())
-	    support.pose(new Count(xs, c, y.value()));
-	else
+            support.pose(new Count(xs, c, y.value()));
+        else
             support.pose(new CountVar(xs, c, y));
     }
 
@@ -631,9 +630,9 @@ class GlobalConstraints implements ParserTreeConstants {
         IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
         IntVar y = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
         IntVar c = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
-	IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
+        IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
 
-	support.pose(new Reified(new CountVar(x, c, y), b));
+        support.pose(new Reified(new CountVar(x, c, y), b));
     }
 
     void gen_jacop_atleast(SimpleNode node) {
@@ -641,16 +640,16 @@ class GlobalConstraints implements ParserTreeConstants {
         int y = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
         int c = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
 
-	support.pose(new AtLeast(x, c, y));
+        support.pose(new AtLeast(x, c, y));
     }
 
     void gen_jacop_atleast_reif(SimpleNode node) {
         IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
         int y = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
         int c = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
-	IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
-	    
-	support.pose(new Reified(new AtLeast(x, c, y), b));
+        IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
+            
+        support.pose(new Reified(new AtLeast(x, c, y), b));
     }
 
     void gen_jacop_atmost(SimpleNode node) {
@@ -658,16 +657,16 @@ class GlobalConstraints implements ParserTreeConstants {
         int y = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
         int c = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
 
-	support.pose(new AtMost(x, c, y));
+        support.pose(new AtMost(x, c, y));
     }
 
     void gen_jacop_atmost_reif(SimpleNode node) {
         IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
         int y = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
         int c = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
-	IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
-	    
-	support.pose(new Reified(new AtMost(x, c, y), b));
+        IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
+            
+        support.pose(new Reified(new AtMost(x, c, y), b));
     }
 
     void gen_jacop_nvalue(SimpleNode node) {
@@ -717,7 +716,7 @@ class GlobalConstraints implements ParserTreeConstants {
     void gen_jacop_member_reif(SimpleNode node) {
         IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
         IntVar y = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
-	IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+        IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
         support.pose(new Reified(new org.jacop.constraints.Member(x, y), b));
     }
@@ -753,12 +752,12 @@ class GlobalConstraints implements ParserTreeConstants {
         int[] vu = uniqueIndex(v);
         if (vu.length != v.length) { // non unique variables
 
-	    // remove infeasible tuples for duplicated variables
-	    int[][] nt = removeInfeasibleTuples(t);
+            // remove infeasible tuples for duplicated variables
+            int[][] nt = removeInfeasibleTuples(t);
 
-	    IntVar[] nv = new IntVar[vu.length];
-	    for (int i = 0; i < vu.length; i++)
-		nv[i] = v[vu[i]];
+            IntVar[] nv = new IntVar[vu.length];
+            for (int i = 0; i < vu.length; i++)
+                nv[i] = v[vu[i]];
 
             int[][] tt = new int[nt.length][vu.length];
             for (int i = 0; i < tt.length; i++)
@@ -809,16 +808,15 @@ class GlobalConstraints implements ParserTreeConstants {
         int minIndex = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(6));
 
         // ---- KK, 2018-07-27
-	//regular must not have duplicated variables; we create all
+        //regular must not have duplicated variables; we create all
         // different variables and equality constraints here
         IntVar[] xx = new IntVar[x.length];
         HashSet<IntVar> varSet = new HashSet<IntVar>();
         for (int i = 0; i < x.length; i++) {
             if (varSet.contains(x[i])) {
                 xx[i] = new IntVar(store, x[i].min(), x[i].max());
-		support.pose(new XeqY(x[i], xx[i]));
-	    }
-            else {
+                support.pose(new XeqY(x[i], xx[i]));
+            } else {
                 xx[i] = x[i];
                 varSet.add(x[i]);
             }
@@ -929,6 +927,34 @@ class GlobalConstraints implements ParserTreeConstants {
         support.pose(new LexOrder(x, y, false));
     }
 
+    void gen_jacop_increasing(SimpleNode node, boolean strict) {
+        IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+
+        if (x.length == 2)
+            if (strict)
+                support.pose(new XltY(x[0], x[1]));
+            else
+                support.pose(new XlteqY(x[0], x[1]));
+        else
+            support.pose(new Increasing(x, strict));
+            // decompoistion possible
+            // support.poseDC(new Increasing(x, strict));
+    }
+
+    void gen_jacop_decreasing(SimpleNode node, boolean strict) {
+        IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+
+        if (x.length == 2)
+            if (strict)
+                support.pose(new XltY(x[1], x[0]));
+            else
+                support.pose(new XlteqY(x[1], x[0]));
+        else
+            support.pose(new Decreasing(x, strict));
+            // decompoistion possible
+            // support.poseDC(new Decreasing(x, strict));
+    }
+
     void gen_jacop_value_precede_int(SimpleNode node) {
         int s = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(0));
         int t = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
@@ -988,10 +1014,10 @@ class GlobalConstraints implements ParserTreeConstants {
         // System.out.println("dim = " + dim);
         // System.out.print("rect_size = [");
         // for (int i = 0; i < rect_size.length; i++)
-        // 	System.out.print(" " + rect_size[i]);
+        //      System.out.print(" " + rect_size[i]);
         // System.out.print("]\nrect_offset = [");
         // for (int i = 0; i < rect_offset.length; i++)
-        // 	System.out.print(" " + rect_offset[i]);
+        //      System.out.print(" " + rect_offset[i]);
         // System.out.println("]\nshape = " + java.util.Arrays.asList(shape));
         // System.out.println("x = " + java.util.Arrays.asList(x));
         // System.out.println("kind = " + java.util.Arrays.asList(kind));
@@ -1032,7 +1058,7 @@ class GlobalConstraints implements ParserTreeConstants {
         }
 
         // for (int i = 0; i < shapes.size(); i++)
-        // 	System.out.println("*** " + shapes.get(i));
+        //      System.out.println("*** " + shapes.get(i));
 
         ArrayList<GeostObject> objects = new ArrayList<GeostObject>();
 
@@ -1054,7 +1080,7 @@ class GlobalConstraints implements ParserTreeConstants {
 
         // System.out.println("===========");
         // for (int i = 0; i < objects.size(); i++)
-        // 	System.out.println(objects.get(i));
+        //      System.out.println(objects.get(i));
         // System.out.println("===========");
 
         ArrayList<ExternalConstraint> constraints = new ArrayList<ExternalConstraint>();
@@ -1079,10 +1105,10 @@ class GlobalConstraints implements ParserTreeConstants {
         // System.out.println("dim = " + dim);
         // System.out.print("rect_size = [");
         // for (int i = 0; i < rect_size.length; i++)
-        // 	System.out.print(" " + rect_size[i]);
+        //      System.out.print(" " + rect_size[i]);
         // System.out.print("]\nrect_offset = [");
         // for (int i = 0; i < rect_offset.length; i++)
-        // 	System.out.print(" " + rect_offset[i]);
+        //      System.out.print(" " + rect_offset[i]);
         // System.out.println("]\nshape = " + java.util.Arrays.asList(shape));
         // System.out.println("x = " + java.util.Arrays.asList(x));
         // System.out.println("kind = " + java.util.Arrays.asList(kind));
@@ -1123,7 +1149,7 @@ class GlobalConstraints implements ParserTreeConstants {
         }
 
         // for (int i = 0; i < shapes.size(); i++)
-        // 	System.out.println("*** " + shapes.get(i));
+        //      System.out.println("*** " + shapes.get(i));
 
         ArrayList<GeostObject> objects = new ArrayList<GeostObject>();
 
@@ -1145,7 +1171,7 @@ class GlobalConstraints implements ParserTreeConstants {
 
         // System.out.println("===========");
         // for (int i = 0; i < objects.size(); i++)
-        // 	System.out.println(objects.get(i));
+        //      System.out.println(objects.get(i));
         // System.out.println("===========");
 
         ArrayList<ExternalConstraint> constraints = new ArrayList<ExternalConstraint>();
@@ -1162,10 +1188,10 @@ class GlobalConstraints implements ParserTreeConstants {
 
             // System.out.print("[");
             // for (int i = 0; i < lb.length; i++)
-            // 	System.out.print(" " + lb[i]);
+            //  System.out.print(" " + lb[i]);
             // System.out.print("]\n[");
             // for (int i = 0; i < ub.length; i++)
-            // 	System.out.print(" " + ub[i]);
+            //  System.out.print(" " + ub[i]);
             // System.out.println("]");
 
             InArea constraint2 = new InArea(new DBox(lb, ub), null);
@@ -1180,28 +1206,28 @@ class GlobalConstraints implements ParserTreeConstants {
         IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(1));
         IntVar y = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
-	int n = x.length;
-	if (n == 2) {
-	    if (b[0].singleton(1)) {
-		support.pose(new XeqY(x[0], y));
-		return;
-	    } else if (b[0].singleton(0) && b[1].singleton(1)) {
-		support.pose(new XeqY(x[1], y));
-		return;
-	    }
-	}
+        int n = x.length;
+        if (n == 2) {
+            if (b[0].singleton(1)) {
+                support.pose(new XeqY(x[0], y));
+                return;
+            } else if (b[0].singleton(0) && b[1].singleton(1)) {
+                support.pose(new XeqY(x[1], y));
+                return;
+            }
+        }
 
-	PrimitiveConstraint[] cs = new PrimitiveConstraint[n];
-	for (int i = 0; i < n; i++) {
-	    if (x[i].singleton())
-		cs[i] = new XeqC(y, x[i].value());
-	    else
-		cs[i] = new XeqY(y, x[i]);
-	}
-	if (n == 2)
-	    support.pose(new IfThenElse(new XeqC(b[0],1), cs[0], cs[1]));
-	else
-	    support.pose(new Conditional(b, cs));
+        PrimitiveConstraint[] cs = new PrimitiveConstraint[n];
+        for (int i = 0; i < n; i++) {
+            if (x[i].singleton())
+                cs[i] = new XeqC(y, x[i].value());
+            else
+                cs[i] = new XeqY(y, x[i]);
+        }
+        if (n == 2)
+            support.pose(new IfThenElse(new XeqC(b[0],1), cs[0], cs[1]));
+        else
+            support.pose(new Conditional(b, cs));
     }
 
     void gen_jacop_if_then_else_float(SimpleNode node) {
@@ -1209,19 +1235,19 @@ class GlobalConstraints implements ParserTreeConstants {
         FloatVar[] x = support.getFloatVarArray((SimpleNode) node.jjtGetChild(1));
         FloatVar y = support.getFloatVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
-	int n = x.length;
-	PrimitiveConstraint[] cs = new PrimitiveConstraint[n];
-	for (int i = 0; i < n; i++) {
-	    if (x[i].singleton())
-		cs[i] = new PeqC(y, x[i].value());
-	    else
-		cs[i] = new PeqQ(y, x[i]);
-	}
+        int n = x.length;
+        PrimitiveConstraint[] cs = new PrimitiveConstraint[n];
+        for (int i = 0; i < n; i++) {
+            if (x[i].singleton())
+                cs[i] = new PeqC(y, x[i].value());
+            else
+                cs[i] = new PeqQ(y, x[i]);
+        }
 
-	if (n == 2)
-	    support.pose(new IfThenElse(new XeqC(b[0],1), cs[0], cs[1]));
-	else
-	    support.pose(new Conditional(b, cs));
+        if (n == 2)
+            support.pose(new IfThenElse(new XeqC(b[0],1), cs[0], cs[1]));
+        else
+            support.pose(new Conditional(b, cs));
 
     }
 
@@ -1230,19 +1256,19 @@ class GlobalConstraints implements ParserTreeConstants {
         SetVar[] x = support.getSetVarArray((SimpleNode) node.jjtGetChild(1));
         SetVar y = support.getSetVariable(node,2);
 
-	int n = x.length;
-	PrimitiveConstraint[] cs = new PrimitiveConstraint[n];
-	for (int i = 0; i < n; i++) {
-	    if (x[i].singleton())
-		cs[i] = new AeqS(y, x[i].domain.glb());
-	    else
-		cs[i] = new AeqB(y, x[i]);
-	}
+        int n = x.length;
+        PrimitiveConstraint[] cs = new PrimitiveConstraint[n];
+        for (int i = 0; i < n; i++) {
+            if (x[i].singleton())
+                cs[i] = new AeqS(y, x[i].domain.glb());
+            else
+                cs[i] = new AeqB(y, x[i]);
+        }
 
-	if (n == 2)
-	    support.pose(new IfThenElse(new XeqC(b[0],1), cs[0], cs[1]));
-	else
-	    support.pose(new Conditional(b, cs));
+        if (n == 2)
+            support.pose(new IfThenElse(new XeqC(b[0],1), cs[0], cs[1]));
+        else
+            support.pose(new Conditional(b, cs));
 
     }
 
@@ -1251,16 +1277,16 @@ class GlobalConstraints implements ParserTreeConstants {
         IntVar[] bs = support.getVarArray((SimpleNode) node.jjtGetChild(1));
         IntDomain vs = support.getSetLiteral(node, 2);
 
-	support.pose(new Channel(x, bs, vs));
+        support.pose(new Channel(x, bs, vs));
 
-	// Decomposition
-	// int[] values = new int[vs.getSize()];
-	// int i = 0;
-	// for (ValueEnumeration e = vs.valueEnumeration(); e.hasMoreElements(); )
-	//     values[i++] = e.nextElement();
+        // Decomposition
+        // int[] values = new int[vs.getSize()];
+        // int i = 0;
+        // for (ValueEnumeration e = vs.valueEnumeration(); e.hasMoreElements(); )
+        //     values[i++] = e.nextElement();
 
-	// for (int j = 0; j < bs.length; j++)
-	//     support.pose(new Reified(new XeqC(x, values[j]), bs[j]));
+        // for (int j = 0; j < bs.length; j++)
+        //     support.pose(new Reified(new XeqC(x, values[j]), bs[j]));
     }
 
     boolean allVarOne(IntVar[] w) {
@@ -1281,70 +1307,70 @@ class GlobalConstraints implements ParserTreeConstants {
 
     int[] uniqueIndex(IntVar[] vs) {
 
-	Map<IntVar, Integer> map = new LinkedHashMap<>();
-	duplicates = new ArrayList<>();
-	for (int i = 0; i < vs.length; i++) {
-	    if (map.get(vs[i]) == null)
-		map.put(vs[i], i);
-	    else
-		duplicates.add(new Pair(map.get(vs[i]), i));
-	}
+        Map<IntVar, Integer> map = new LinkedHashMap<>();
+        duplicates = new ArrayList<>();
+        for (int i = 0; i < vs.length; i++) {
+            if (map.get(vs[i]) == null)
+                map.put(vs[i], i);
+            else
+                duplicates.add(new Pair(map.get(vs[i]), i));
+        }
 
-	int[] x = new int[map.size()];
-	Set<Map.Entry<IntVar, Integer>> entries = map.entrySet();
-	int i = 0;
+        int[] x = new int[map.size()];
+        Set<Map.Entry<IntVar, Integer>> entries = map.entrySet();
+        int i = 0;
         for (Map.Entry<IntVar, Integer> e : entries) {
-	    int v = e.getValue();
-	    x[i++] = v;
-	}
+            int v = e.getValue();
+            x[i++] = v;
+        }
         return x;
     }
 
     int[][] removeInfeasibleTuples(int[][] t) {
-	int n = t.length;
-	int[][] nt = new int[n][t[0].length];
+        int n = t.length;
+        int[][] nt = new int[n][t[0].length];
 
-	int k = 0;
-	for (int i = 0; i < n; i++) {
-	    int correct = 0;
-	    for (Pair d : duplicates) {
-		if (t[i][d.first()] == t[i][d.second()]) {
-		    correct++;
-		}
-	    }
-	    if (correct == duplicates.size()) {
-		System.arraycopy(t[i], 0, nt[k], 0, t[i].length);
-		k++;
-	    }
-	}
+        int k = 0;
+        for (int i = 0; i < n; i++) {
+            int correct = 0;
+            for (Pair d : duplicates) {
+                if (t[i][d.first()] == t[i][d.second()]) {
+                    correct++;
+                }
+            }
+            if (correct == duplicates.size()) {
+                System.arraycopy(t[i], 0, nt[k], 0, t[i].length);
+                k++;
+            }
+        }
 
-	int[][] tt = new int[k][t[0].length];
-	for (int i = 0; i < k; i++)
-	    System.arraycopy(nt[i], 0, tt[i], 0, nt[i].length);
-	return tt;
+        int[][] tt = new int[k][t[0].length];
+        for (int i = 0; i < k; i++)
+            System.arraycopy(nt[i], 0, tt[i], 0, nt[i].length);
+        return tt;
     }
 
     private static class Pair {
 
-	private final int a;
-	private final int b;
+        private final int a;
+        private final int b;
 
-	Pair(int a, int b) {
-	    this.a = a;
-	    this.b = b;
-	}
+        Pair(int a, int b) {
+            this.a = a;
+            this.b = b;
+        }
 
-	int first() {
-	    return a;
-	}
+        int first() {
+            return a;
+        }
 
-	int second() {
-	    return b;
-	}
+        int second() {
+            return b;
+        }
 
-	public String toString() {
-	    return "("+a+", "+b+")";
-	}
+        public String toString() {
+            return "(" + a + ", " + b + ")";
+        }
     }
 
 }

@@ -34,6 +34,8 @@ package org.jacop.constraints.diffn;
 import org.jacop.core.*;
 
 import java.util.*;
+import org.jacop.constraints.*;
+import org.jacop.constraints.cumulative.CumulativeBasic;
 
 /**
  * Diffn constraint assures that any two rectangles from a vector of rectangles
@@ -49,6 +51,11 @@ public class Diffn extends Nooverlap {
     private static final boolean debug = false, debugNarr = false;
 
     Comparator<Event> eventComparator = (o1, o2) -> (o1.date() == o2.date()) ? o1.type() - o2.type() : o1.date() - o2.date();
+
+    // for decomposed diffn
+    protected List<Constraint> constraints = null;
+
+    protected List<Var> auxVar = new ArrayList<>();
 
     /**
      * It specifies a diff constraint.
@@ -535,6 +542,95 @@ public class Diffn extends Nooverlap {
             s = Math.min(sweepLineElement.max(), end);
         }
         return end - s < length;
+    }
+
+    /**
+     * It imposes DiffnDecomposed in a given store.
+     *
+     * @param store the constraint store to which the constraint is imposed to.
+     */
+    public void imposeDecomposition(Store store) {
+
+        if (constraints == null)
+            constraints = decompose(store);
+
+        for (Constraint c : constraints)
+            store.impose(c, queueIndex);
+
+    }
+
+    public List<Constraint> decompose(Store store) {
+        constraints = new ArrayList<Constraint>();
+
+        IntVar[] x = new IntVar[rectangle.length];
+        IntVar[] y = new IntVar[rectangle.length];
+        IntVar[] lx = new IntVar[rectangle.length];
+        IntVar[] ly = new IntVar[rectangle.length];
+
+        for (int i = 0; i < rectangle.length; i++) {
+            assert (rectangle[i] != null) : i + "-th rectangle in the list is null";
+
+            x[i] = rectangle[i].origin(0);
+            y[i] = rectangle[i].origin(1);
+            lx[i] = rectangle[i].length(0);
+            ly[i] = rectangle[i].length(1);
+        }
+
+        constraints.add(new org.jacop.constraints.diffn.Nooverlap(x, y, lx, ly, strict));
+
+        // add cumulative in x direction
+        IntVar[] ey = new IntVar[y.length];
+        int yMin = IntDomain.MaxInt;
+        int yMax = IntDomain.MinInt;
+        for (int i = 0; i < x.length; i++) {
+            yMin = Math.min(yMin, y[i].min());
+            yMax = Math.max(yMax, y[i].max() + ly[i].max());
+            ey[i] = new IntVar(store, y[i].min() + ly[i].min(), y[i].max() + ly[i].max());
+            constraints.add(new XplusYeqZ(y[i], ly[i], ey[i]));
+            auxVar.add(ey[i]);
+        }
+
+        IntVar byMin = new IntVar(store, yMin, yMax);
+        IntVar byMax = new IntVar(store, yMin, yMax);
+        IntVar by = new IntVar(store, 0, yMax - yMin);
+        auxVar.add(byMin);
+        auxVar.add(byMax);
+        auxVar.add(by);
+        constraints.add(new Max(ey, byMax));
+        constraints.add(new Min(y, byMin));
+        constraints.add(new XplusYeqZ(byMin, by, byMax));
+        CumulativeBasic ccx = new CumulativeBasic(x, lx, ly, by);
+        constraints.add(ccx);
+
+        // add cumulative in y direction
+        IntVar[] ex = new IntVar[x.length];
+        int xMin = IntDomain.MaxInt;
+        int xMax = IntDomain.MinInt;
+        for (int i = 0; i < x.length; i++) {
+            xMin = Math.min(xMin, x[i].min());
+            xMax = Math.max(xMax, x[i].max() + lx[i].max());
+            ex[i] = new IntVar(store, x[i].min() + lx[i].min(), x[i].max() + lx[i].max());
+            constraints.add(new XplusYeqZ(x[i], lx[i], ex[i]));
+            auxVar.add(ex[i]);
+        }
+
+        IntVar bxMin = new IntVar(store, "bxMin", xMin, xMax);
+        IntVar bxMax = new IntVar(store, "bxMax", xMin, xMax);
+        IntVar bx = new IntVar(store, 0, xMax - xMin);
+        auxVar.add(bxMin);
+        auxVar.add(bxMax);
+        auxVar.add(bx);
+        constraints.add(new Max(ex, bxMax));
+        constraints.add(new Min(x, bxMin));
+        constraints.add(new XplusYeqZ(bxMin, bx, bxMax));
+        CumulativeBasic ccy = new CumulativeBasic(y, ly, lx, bx);
+        constraints.add(ccy);
+
+        return constraints;
+    }
+
+    public List<Var> auxiliaryVariables() {
+        return auxVar;
     }
 
     // event type

@@ -1,3 +1,15 @@
+Version 4.9
+=============
+
+1. New constraints, Increasing and Decreasing, both for strict (<) and
+   non-strict (=<) ordering.
+
+2. Changing complementary search (-cs option in flatzinc) to use
+   AFCMaxDeg/AFCMax for variable selection instead of input order
+   criteria.
+
+3. Bug corrections, code cleaning and performance improvements.
+
 Version 4.8
 =============
 

@@ -1,5 +1,5 @@
 /*
- * Diffn.java
+ * DiffnDecomposed.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -63,7 +63,7 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
     final IntVar[] ly;
 
     /**
-     * It specifies a diff constraint.
+     * It specifies a diffn constraint.
      *
      * @param rectangle list of rectangles which can not overlap in at least one dimension.
      */
@@ -90,7 +90,7 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
     }
 
     /**
-     * It constructs a diff constraint.
+     * It constructs a diffn constraint.
      *
      * @param origin1 list of variables denoting origin of the rectangle in the first dimension.
      * @param origin2 list of variables denoting origin of the rectangle in the second dimension.
@@ -155,7 +155,7 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
 
 
     /**
-     * It constructs a diff constraint.
+     * It constructs a diffn constraint.
      *
      * @param x  list of variables denoting origin of the rectangle in the first dimension.
      * @param y  list of variables denoting origin of the rectangle in the second dimension.

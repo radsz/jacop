@@ -1,0 +1,7 @@
+%-----------------------------------------------------------------------------%
+% Requires that the array 'x' is in strict decreasing order
+%-----------------------------------------------------------------------------%
+predicate jacop_strictly_decreasing(array[int] of var int: x);
+
+predicate fzn_strictly_decreasing_int(array[int] of var int: x) =
+   jacop_strictly_decreasing(x);
