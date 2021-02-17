@@ -1148,7 +1148,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
     @Override public String toString() {
 
-        StringBuffer result = new StringBuffer(id());
+        StringBuffer result = new StringBuffer(id()).append("\n");
 
         for (IntVar var : this.listOfX) {
             result.append("X variable ").append(var.id).append(" : ").append(var.domain);
